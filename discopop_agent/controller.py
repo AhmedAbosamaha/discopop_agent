@@ -41,7 +41,7 @@ from .args import AgentArguments
 from .l1_planner import build_candidates
 from .l2_evidence import assemble
 from .l3_llm import call_llm, call_manual
-from .l4_validator import validate
+from .l4_validator import fix_hunk_headers, validate
 from .mock_llm import call_mock
 from .types import HotspotCandidate
 
@@ -364,6 +364,13 @@ def run(args: AgentArguments) -> None:
 
         budget = args.budget
         last_diff: str | None = None
+        # Accumulated conversation for the real LLM (API mode only).
+        # On the first call this is None → call_llm builds the initial prompt.
+        # After each successful diff it holds the full exchange so far.
+        # After each quality-gate failure the controller appends a user turn
+        # with the diagnostic, giving the LLM complete multi-turn context on
+        # every retry instead of just the most recent failed diff as text.
+        tier2_messages: list | None = None
 
         while budget > 0:
             budget -= 1
@@ -377,10 +384,10 @@ def run(args: AgentArguments) -> None:
                 diff = call_manual(evidence, prior_diff=last_diff)
             else:
                 print(f"│  [Tier-2] Calling {args.model}...")
-                diff = call_llm(
+                diff, tier2_messages = call_llm(
                     evidence, args.model,
                     api_key=args.api_key,
-                    prior_diff=last_diff,
+                    messages=tier2_messages,
                 )
 
             if diff is None:
@@ -388,8 +395,6 @@ def run(args: AgentArguments) -> None:
                     print(f"│  [Tier-2] LLM returned invalid diff — retrying")
                 else:
                     print(f"│  [Tier-2] LLM returned invalid diff")
-                # Keep failure_reason as-is so the LLM still sees the original
-                # TSan diagnostic or L4 error on its next attempt.
                 continue
 
             last_diff = diff
@@ -400,8 +405,14 @@ def run(args: AgentArguments) -> None:
             if result.passed:
                 print(f"│  [Tier-2] Quality gate PASSED")
 
+                # Normalise hunk header counts before writing to disk and
+                # applying — LLMs often miscalculate +N,M counts, and the
+                # quality gate fixes these internally (via fix_hunk_headers)
+                # but without this step the raw patch command would reject
+                # the saved file with "malformed patch".
+                clean_diff = fix_hunk_headers(diff)
                 patch_file = output_dir / f"region_{rid.replace(':', '_')}_tier2.patch"
-                patch_file.write_text(diff)
+                patch_file.write_text(clean_diff)
 
                 # Back up original before first modification (never overwrite backup)
                 src_abs = Path(args.source_file).resolve()
@@ -411,10 +422,13 @@ def run(args: AgentArguments) -> None:
                     shutil.copy2(src_abs, backup)
                     print(f"│  [Tier-2] Original backed up → {backup.name}")
 
-                subprocess.run(
+                patch_result = subprocess.run(
                     ["patch", "--quiet", str(src_abs), str(patch_file)],
-                    capture_output=True,
+                    capture_output=True, text=True,
                 )
+                if patch_result.returncode != 0:
+                    print(f"│  [Tier-2] WARNING: patch apply failed: "
+                          f"{(patch_result.stdout + patch_result.stderr).strip()[:200]}")
 
                 print(f"│  [Tier-2] Re-profiling to discover new patterns...")
                 reprofile_ok = _reprofil(args.source_file, dp_dir, args.reprofil_args or None)
@@ -507,6 +521,19 @@ def run(args: AgentArguments) -> None:
                     f"Validation failed at stage '{result.stage}':\n"
                     f"{result.diagnostic[:500]}"
                 )
+                # Extend the API conversation so the next budget retry sees
+                # the quality-gate diagnostic as a proper user turn rather
+                # than embedded text in a fresh prompt.
+                if tier2_messages is not None:
+                    diagnostic_snippet = (result.diagnostic or "(no diagnostic)")[:600]
+                    tier2_messages = tier2_messages + [{
+                        "role": "user",
+                        "content": (
+                            f"Your diff failed at the '{result.stage}' stage.\n\n"
+                            f"Diagnostic:\n{diagnostic_snippet}\n\n"
+                            f"Please try a different restructuring approach."
+                        ),
+                    }]
         else:
             print(f"└─ SKIPPED (budget exhausted)\n")
             skipped.append(rid)

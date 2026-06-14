@@ -63,7 +63,7 @@ import re as _re
 _HUNK_RE = _re.compile(r"^(@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@)(.*)")
 
 
-def _fix_hunk_headers(diff: str) -> str:
+def fix_hunk_headers(diff: str) -> str:
     """Re-derive old/new line counts from the diff body and rewrite @@ headers.
 
     LLMs frequently miscalculate the line counts in unified-diff hunk headers
@@ -117,7 +117,7 @@ def _apply(diff: str, source_file: str, work_dir: Path) -> Tuple[bool, str, Opti
     dst = work_dir / src.name
     shutil.copy2(src, dst)
 
-    diff = _fix_hunk_headers(diff)
+    diff = fix_hunk_headers(diff)
 
     # Rewrite --- / +++ paths to point at our working copy
     fixed_lines = []
