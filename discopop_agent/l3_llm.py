@@ -139,6 +139,51 @@ def _is_valid_diff(diff: str) -> bool:
 # Public API
 # ---------------------------------------------------------------------------
 
+_MANUAL_EOF = "---END---"
+
+
+def call_manual(evidence: EvidencePackage, prior_diff: Optional[str] = None) -> Optional[str]:
+    """Print the full prompt to stdout and read the diff from stdin.
+
+    Interactive: paste the diff and type '---END---' on its own line to submit.
+    Piped input: separate multiple diffs with '---END---' lines; true EOF also works.
+    """
+    user_prompt = _build_prompt(evidence, prior_diff=prior_diff)
+
+    print("\n" + "=" * 70)
+    print("  SYSTEM PROMPT (send to LLM)")
+    print("=" * 70)
+    print(_SYSTEM)
+    print("=" * 70)
+    print("  USER PROMPT (send to LLM)")
+    print("=" * 70)
+    print(user_prompt)
+    print("=" * 70)
+    print(f"  Paste the LLM diff below, then type '{_MANUAL_EOF}' on its own line (or Ctrl-D):")
+    print("=" * 70 + "\n")
+
+    lines = []
+    try:
+        while True:
+            line = input()
+            if line == _MANUAL_EOF:
+                break
+            lines.append(line)
+    except EOFError:
+        pass
+
+    text = "\n".join(lines).strip()
+    if not text:
+        return None
+
+    diff = _extract_diff(text)
+    if diff and _is_valid_diff(diff):
+        return diff
+
+    print("│  [Manual-LLM] Response does not look like a valid unified diff.")
+    return None
+
+
 def call_llm(
     evidence: EvidencePackage,
     model: str,

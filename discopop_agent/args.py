@@ -17,6 +17,7 @@ class AgentArguments:
     output_dir: str
     dry_run: bool
     mock_llm: bool              # bypass real API; use pre-computed diffs for testing
+    manual_llm: bool            # print prompt to stdout, read diff from stdin
     reprofil_args: list         # extra arguments forwarded to ./a.out during re-profiling
 
 
@@ -44,6 +45,8 @@ def parse_args() -> AgentArguments:
                    help="Show plan without calling the LLM or modifying files")
     p.add_argument("--mock-llm", action="store_true",
                    help="Use pre-computed diffs instead of a live LLM call (for testing)")
+    p.add_argument("--manual-llm", action="store_true",
+                   help="Print the LLM prompt to stdout and read the diff from stdin")
     p.add_argument("--reprofil-args", nargs=argparse.REMAINDER, default=[],
                    help="Arguments forwarded to ./a.out during re-profiling (e.g. -- sort input.txt)")
     a = p.parse_args()
@@ -62,5 +65,6 @@ def parse_args() -> AgentArguments:
         output_dir=a.output_dir or f"{a.discopop_dir}/agent_patches",
         dry_run=a.dry_run,
         mock_llm=a.mock_llm,
+        manual_llm=a.manual_llm,
         reprofil_args=a.reprofil_args,
     )
