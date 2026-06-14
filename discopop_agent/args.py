@@ -18,7 +18,7 @@ class AgentArguments:
     dry_run: bool
     mock_llm: bool              # bypass real API; use pre-computed diffs for testing
     manual_llm: bool            # print prompt to stdout, read diff from stdin
-    distance: int               # number of additional discovery passes (0 = original regions only)
+    restructure_depth: int      # max discovery depth at which Tier-2 (LLM) is applied
     reprofil_args: list         # extra arguments forwarded to ./a.out during re-profiling
 
 
@@ -48,13 +48,17 @@ def parse_args() -> AgentArguments:
                    help="Use pre-computed diffs instead of a live LLM call (for testing)")
     p.add_argument("--manual-llm", action="store_true",
                    help="Print the LLM prompt to stdout and read the diff from stdin")
-    p.add_argument("--distance", type=int, default=0,
+    p.add_argument("--restructure-depth", type=int, default=0,
                    help=(
-                       "Number of additional discovery passes after the initial run (default: 0). "
-                       "Pass 0 processes only the original candidates from the initial profile. "
-                       "Each subsequent pass re-profiles the (now-modified) source and processes "
-                       "any newly discovered candidates. --distance 2 means: initial pass + 2 "
-                       "discovery passes."
+                       "Maximum discovery depth at which Tier-2 LLM restructuring is "
+                       "applied (default: 0). "
+                       "Depth 0 = only the initial DiscoPoP candidates may be restructured. "
+                       "After each accepted Tier-2 patch the source is re-profiled; newly "
+                       "exposed candidates are assigned depth+1. "
+                       "Candidates at depth > restructure-depth are processed with Tier-1 "
+                       "only — no LLM call, no further code restructuring. "
+                       "This bounds the restructuring chain and prevents the source from "
+                       "drifting arbitrarily far from the original."
                    ))
     p.add_argument("--reprofil-args", nargs=argparse.REMAINDER, default=[],
                    help="Arguments forwarded to ./a.out during re-profiling (e.g. -- sort input.txt)")
@@ -75,6 +79,6 @@ def parse_args() -> AgentArguments:
         dry_run=a.dry_run,
         mock_llm=a.mock_llm,
         manual_llm=a.manual_llm,
-        distance=a.distance,
+        restructure_depth=a.restructure_depth,
         reprofil_args=a.reprofil_args,
     )
