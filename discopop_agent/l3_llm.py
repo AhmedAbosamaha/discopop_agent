@@ -82,7 +82,15 @@ def _build_prompt(evidence: EvidencePackage, prior_diff: Optional[str] = None) -
     parts = [
         f"## Source file: {evidence.source_file}",
         f"## Region: {evidence.region_id}  type={region_label}  ({exec_info})\n",
-        "### Source (>>> marks the target region)\n```cpp",
+        (
+            "### Source\n"
+            "(Each line is shown as `NNNN >>> code` where `NNNN` is the line number "
+            "and `>>>` marks the target region. "
+            "These prefixes are display-only — they are NOT part of the actual source file. "
+            "When writing diff context lines (lines starting with a single space), "
+            "copy only the raw code indentation, never the `NNNN >>>` prefix.)\n"
+            "```cpp"
+        ),
         evidence.source_region,
         "```\n",
         "### Runtime data dependences (observed across all executions)",
@@ -112,6 +120,9 @@ def _build_prompt(evidence: EvidencePackage, prior_diff: Optional[str] = None) -
         f"Restructure the {region_label} at lines "
         f"{evidence.region_id} in {evidence.source_file} "
         f"so that DiscoPoP can detect a parallelism pattern after re-profiling.\n"
+        f"IMPORTANT: diff context lines (lines beginning with a single space) must match "
+        f"the actual file content exactly — use only the raw code indentation, "
+        f"not the `NNNN >>>` display prefix shown in the Source section above.\n"
         f"Output a unified diff only."
     )
     return "\n".join(parts)
@@ -142,24 +153,47 @@ def _is_valid_diff(diff: str) -> bool:
 _MANUAL_EOF = "---END---"
 
 
-def call_manual(evidence: EvidencePackage, prior_diff: Optional[str] = None) -> Optional[str]:
-    """Print the full prompt to stdout and read the diff from stdin.
+def call_manual(
+    evidence: EvidencePackage,
+    messages: Optional[list] = None,
+) -> tuple[Optional[str], list]:
+    """Print the prompt (or full conversation history) to stdout and read a diff from stdin.
+
+    On the first call for a region pass messages=None — the system prompt and
+    initial user prompt are printed in full.  On subsequent budget retries pass
+    the list returned by the previous call: the full conversation history
+    (prior diffs + quality-gate diagnostics appended by the controller) is
+    printed so the user sees exactly what a real LLM would see before entering
+    the next diff.
 
     Interactive: paste the diff and type '---END---' on its own line to submit.
     Piped input: separate multiple diffs with '---END---' lines; true EOF also works.
     """
-    user_prompt = _build_prompt(evidence, prior_diff=prior_diff)
+    if messages is None:
+        user_prompt = _build_prompt(evidence)
+        messages = [{"role": "user", "content": user_prompt}]
+
+        print("\n" + "=" * 70)
+        print("  SYSTEM PROMPT (send to LLM)")
+        print("=" * 70)
+        print(_SYSTEM)
+        print("=" * 70)
+        print("  USER PROMPT (send to LLM)")
+        print("=" * 70)
+        print(user_prompt)
+    else:
+        print("\n" + "=" * 70)
+        print(f"  CONVERSATION HISTORY ({len(messages)} turn(s))")
+        print("=" * 70)
+        for turn in messages:
+            role = "USER" if turn["role"] == "user" else "ASSISTANT"
+            print(f"\n{'─' * 70}")
+            print(f"  [{role}]")
+            print(f"{'─' * 70}")
+            print(turn["content"])
 
     print("\n" + "=" * 70)
-    print("  SYSTEM PROMPT (send to LLM)")
-    print("=" * 70)
-    print(_SYSTEM)
-    print("=" * 70)
-    print("  USER PROMPT (send to LLM)")
-    print("=" * 70)
-    print(user_prompt)
-    print("=" * 70)
-    print(f"  Paste the LLM diff below, then type '{_MANUAL_EOF}' on its own line (or Ctrl-D):")
+    print(f"  Paste the new diff below, then type '{_MANUAL_EOF}' on its own line (or Ctrl-D):")
     print("=" * 70 + "\n")
 
     lines = []
@@ -174,14 +208,14 @@ def call_manual(evidence: EvidencePackage, prior_diff: Optional[str] = None) -> 
 
     text = "\n".join(lines).strip()
     if not text:
-        return None
+        return None, list(messages)
 
     diff = _extract_diff(text)
     if diff and _is_valid_diff(diff):
-        return diff
+        return diff, list(messages) + [{"role": "assistant", "content": diff}]
 
     print("│  [Manual-LLM] Response does not look like a valid unified diff.")
-    return None
+    return None, list(messages)
 
 
 def call_llm(
