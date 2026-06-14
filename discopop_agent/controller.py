@@ -363,13 +363,13 @@ def run(args: AgentArguments) -> None:
             continue
 
         budget = args.budget
-        last_diff: str | None = None
-        # Accumulated conversation for the real LLM (API mode only).
-        # On the first call this is None → call_llm builds the initial prompt.
-        # After each successful diff it holds the full exchange so far.
-        # After each quality-gate failure the controller appends a user turn
-        # with the diagnostic, giving the LLM complete multi-turn context on
-        # every retry instead of just the most recent failed diff as text.
+        # Accumulated conversation for LLM retries — works for both API and
+        # manual-llm modes.  On the first call this is None so call_llm /
+        # call_manual build the initial prompt from evidence.  After each
+        # successful diff the callee appends the assistant turn and returns the
+        # updated list.  After each quality-gate failure the controller appends
+        # a user turn with the diagnostic so every retry sees the full
+        # multi-turn exchange instead of a fresh, context-free prompt.
         tier2_messages: list | None = None
 
         while budget > 0:
@@ -381,7 +381,7 @@ def run(args: AgentArguments) -> None:
             if args.mock_llm:
                 diff = call_mock(evidence)
             elif args.manual_llm:
-                diff = call_manual(evidence, prior_diff=last_diff)
+                diff, tier2_messages = call_manual(evidence, messages=tier2_messages)
             else:
                 print(f"│  [Tier-2] Calling {args.model}...")
                 diff, tier2_messages = call_llm(
@@ -396,8 +396,6 @@ def run(args: AgentArguments) -> None:
                 else:
                     print(f"│  [Tier-2] LLM returned invalid diff")
                 continue
-
-            last_diff = diff
 
             print(f"│  [Tier-2] Diff received — running quality gate (apply/compile/TSan)")
             result = validate(diff, args.source_file)

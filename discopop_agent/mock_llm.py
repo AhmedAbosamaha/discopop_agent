@@ -23,6 +23,12 @@ Each diff is what a real LLM should produce for the given hotspot:
                       Pass 1 (DOALL over k): write fx_elem[k*8+lnode] — no shared writes.
                       Pass 2 (DOALL over gnode): gather from nodeElemCornerList.
                       Removes WAW scatter dep on mesh.fx/fy/fz.
+
+  smooth            (example5) — double-buffer (Jacobi) restructuring.
+                      In-place stencil creates RAW chain u[i] → u[i-1] across iters.
+                      DiscoPoP misclassifies as Reduction; TSan catches race → Tier-2.
+                      LLM adds tmp[] buffer: inner loop reads frozen u[], writes disjoint
+                      tmp[i] → genuine Do-All after re-profiling.
 """
 from __future__ import annotations
 
@@ -216,10 +222,47 @@ _DIFF_INTEGRATE_STRESS = """\
  // ---------------------------------------------------------------------------
 """
 
+# Diff for smooth (example5/stencil.cpp, outer step loop starts line 25).
+# DiscoPoP misclassifies the step loop as Reduction (empty reduction list).
+# Applying #pragma omp parallel for to the step loop creates races across
+# passes (different threads overwrite the same u[] in different steps).
+# TSan catches this → Tier-1 fails → Tier-2.
+#
+# LLM fix: true Jacobi via double buffering.
+#   - Allocate tmp[]; each step reads from frozen u[], writes to tmp[i].
+#   - tmp[0] and tmp[n-1] keep the boundary values.
+#   - memcpy(u, tmp) promotes the new values at the end of each step.
+# After restructuring, the inner (spatial) loop is a genuine Do-All:
+#   reads u[i-1] and u[i+1] from frozen u[], writes to disjoint tmp[i].
+# Re-profiling detects this as Do-All; TSan passes.
+_DIFF_STENCIL = """\
+--- example5/stencil.cpp
++++ example5/stencil.cpp
+@@ -24,7 +24,12 @@
+ void smooth(float *u, int n, int steps) {
+-    for (int step = 0; step < steps; step++) {
+-        for (int i = 1; i < n - 1; i++) {
+-            u[i] = 0.5f * (u[i - 1] + u[i + 1]);
+-        }
+-    }
++    float *tmp = (float *)malloc(n * sizeof(float));
++    for (int step = 0; step < steps; step++) {
++        tmp[0] = u[0];
++        tmp[n - 1] = u[n - 1];
++        for (int i = 1; i < n - 1; i++) {
++            tmp[i] = 0.5f * (u[i - 1] + u[i + 1]);
++        }
++        memcpy(u, tmp, n * sizeof(float));
++    }
++    free(tmp);
+ }
+"""
+
 # Map region start-line → diff
 _DIFFS_BY_START_LINE = {
     9:  _DIFF_RECURSIVE_PREFIX,   # compute_prefix_sum in example3/recursive_prefix.cpp
     23: _DIFF_BUBBLE_SORT,        # bubble_sort inner loop in example4/bubble_sort.cpp
+    25: _DIFF_STENCIL,            # smooth outer step loop in example5/stencil.cpp
     43: _DIFF_SCALAR_TRANSFORM,   # scalar_transform in example2/example2.cpp
     52: _DIFF_NORMALIZE_FUSED,    # normalize_fused in example2/example2.cpp
     62: _DIFF_DOT_FUSED,          # dot_fused in example2/example2.cpp
