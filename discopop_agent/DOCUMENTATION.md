@@ -117,18 +117,19 @@ score = c · log₂(1 + Ŝ) − λ · 1[tier=2]
 
 **Purpose:** Build a structured prompt from the `EvidencePackage`, call the Claude API, and return a valid unified diff.
 
-**Prompt structure:**
+**Prompt structure (first attempt):**
 
 ```
 [System — cached across all calls]
   You are an expert in parallel programming...
   Do NOT add OpenMP pragmas — DiscoPoP will do that after re-profiling.
 
-[User — rebuilt per attempt]
+[User — turn 1]
   ## Source file: example4/bubble_sort.cpp
   ## Region: 1:23  type=loop  (524,288 iterations)
 
-  ### Source (>>> marks the target region)
+  ### Source
+  (Each line shown as `NNNN >>> code` — `NNNN >>>` is display-only, not part of the file.)
   ```cpp
   ...annotated source...
   ```
@@ -138,19 +139,26 @@ score = c · log₂(1 + Ŝ) − λ · 1[tier=2]
     WAR — write-after-read: none
     WAW — write-after-write: none
 
-  ### Your previous attempt (FAILED)        ← only on retry 2+
-  ```diff
-  ...the diff the LLM produced last time...
-  ```
-
-  ### What went wrong                       ← TSan/compile diagnostic
-  Validation failed at stage 'tsan':
-  DATA RACE on arr[i+1]: thread T1 wrote, thread T2 read at line 22
+  ### What went wrong                       ← TSan/compile diagnostic from Tier-1
+  DiscoPoP suggested do_all but TSan detected a data race...
 
   ### Task
   Restructure the loop at lines 1:23 in example4/bubble_sort.cpp...
   Output a unified diff only.
 ```
+
+**On budget retries the conversation continues (multi-turn):**
+
+```
+[Turn 1 — User]   initial task (as above)
+[Turn 1 — Assistant]  first attempted diff
+[Turn 2 — User]   "Your diff failed at 'tsan'. Diagnostic: ..."
+[Turn 2 — Assistant]  second attempted diff
+[Turn 3 — User]   "Your diff failed at 'compile'. Diagnostic: ..."
+...
+```
+
+The controller appends each quality-gate failure as a proper user turn to `tier2_messages`. On the next budget retry `call_llm` (or `call_manual`) resumes from that history — the LLM sees all previous attempts and diagnostics in their natural conversation positions, not embedded as text in a fresh prompt. `--manual-llm` mode uses the same mechanism: the full conversation history is printed to stdout before the human enters each new diff.
 
 **Two-level retry logic:**
 
@@ -164,14 +172,14 @@ call_llm()
 
 controller budget loop
  └─ while budget > 0:
-       diff = call_llm(..., prior_diff=last_diff)        ← budget retry
+       diff, tier2_messages = call_llm(..., messages=tier2_messages)   ← budget retry
        result = validate(diff)
        if result.passed → accept, break
-       else → update failure_reason + last_diff, continue
+       else → append quality-gate diagnostic as user turn to tier2_messages, continue
 ```
 
 - **Format retries** (`max_format_retries=2`): free, within a single API call session. The LLM's previous bad response is shown back to it with a correction prompt. Does not consume budget.
-- **Budget retries**: each one re-calls `call_llm()` with `prior_diff` set to the diff from the previous attempt and `failure_reason` updated with the real TSan/compile error. Consumes one budget slot per attempt.
+- **Budget retries**: each one continues the same conversation — `tier2_messages` accumulates all prior assistant diffs and quality-gate failure diagnostics as proper user turns. The LLM sees the full multi-turn exchange on each retry. Consumes one budget slot per attempt. `--manual-llm` mode uses the same mechanism: the human sees the full conversation history before entering each new diff.
 
 **Prompt caching:** The system prompt is marked with `cache_control: ephemeral`. The Anthropic API caches it server-side, so it is not re-billed across budget retries within a session.
 
@@ -230,24 +238,26 @@ Compiles with TSan and OpenMP enabled, then runs the binary. A `WARNING: ThreadS
           dry_run? → SKIP
           while budget > 0:
             assemble evidence (L2) with current failure_reason
-            call LLM (L3) with prior_diff from last attempt
+            call LLM (L3) continuing conversation (tier2_messages)
             diff valid? NO  → update failure_reason, continue
             run quality gate (L4)
             PASSED → apply patch in-place, back up original,
-                     re-profile (instrument + run + explore),
+                     re-profile (refresh Tier-1 data, no new candidates),
                      ACCEPT
-            FAILED → update failure_reason + last_diff, continue
+            FAILED → append diagnostic as user turn to tier2_messages, continue
           budget exhausted → SKIP
 ```
 
 **Tier-1 validation matters because:** DiscoPoP's dependency graph uses instruction IDs internally but matches against source line IDs in the pattern detector. This mismatch means dependency edges are sometimes never found, and `do_all: applicable=True` is emitted for loops that have genuine cross-iteration RAW dependencies. TSan always catches this correctly.
 
-**Re-profiling after Tier-2 acceptance:** After the LLM's restructured code is applied to the source, the agent:
+**Re-profiling after Tier-2 acceptance (within a pass):** After the LLM's restructured code is applied to the source, the agent:
 1. Re-instruments with `discopop_cxx`
 2. Runs the binary to collect fresh runtime data
 3. Runs `discopop_explorer` to re-detect patterns
 
-This is necessary because DiscoPoP detects patterns dynamically. The restructured code may now expose a Do-All or Reduction that wasn't visible before.
+This is necessary because DiscoPoP detects patterns dynamically — the restructured code may now expose a Do-All or Reduction that wasn't visible before.
+
+The remaining candidates in the current pass are then **rebuilt by region ID**: each candidate whose region ID still exists in the fresh profile is updated with current pattern data (pattern ID, pragma, patch dir). Candidates whose region ID disappeared — because the restructuring changed the code structure and DiscoPoP assigned new IDs — are dropped from this pass. Those regions will be re-discovered in subsequent `--distance` passes with their new IDs.
 
 ---
 
@@ -355,6 +365,7 @@ python -m discopop_agent \
     --lambda-penalty <float>                 default: 1.0
     --min-speedup   <float>                  default: 1.0
     --output-dir    <path>                   default: <discopop-dir>/agent_patches
+    --distance      <int>                    default: 0
     --dry-run                                plan only, no LLM calls, no file changes
     --mock-llm                               use pre-computed diffs (no API key needed)
 ```
@@ -364,6 +375,14 @@ python -m discopop_agent \
 **`--lambda-penalty`:** Controls how much the Tier-2 LLM cost discounts a candidate's score. Higher values make the agent prefer Tier-1 (DiscoPoP) regions and skip Tier-2 (LLM-only) regions with lower workload.
 
 **`--min-speedup`:** Regions with estimated speedup below this threshold are never processed. Use `--min-speedup 0` to include function regions, which have `workload=0` in Data.xml (only CU nodes carry `instructionsCount`).
+
+**`--distance`:** Number of additional discovery passes to run after the initial candidate list is exhausted.
+
+- `--distance 0` (default): process only the candidates found in the original DiscoPoP profile. After each accepted Tier-2 patch the source is re-profiled to keep Tier-1 pattern data fresh for remaining original candidates, but no new regions are added to the queue mid-pass.
+- `--distance 1`: after all original candidates are processed, re-profile the (now-modified) source and process any newly discovered candidate regions.
+- `--distance N`: repeat the discovery-and-process cycle up to N additional times. Each pass stops early if re-profiling fails or no new candidates are found.
+
+Use `--distance 1` to capture regions that only become parallelisable after a Tier-2 restructuring (e.g. an inner loop that was unreachable via Do-All in the original code becomes visible after double-buffering).
 
 **`--dry-run`:** Prints the priority table and Tier-1 decisions but never calls the LLM or modifies any file. Useful for inspecting what the agent would do.
 
@@ -437,8 +456,8 @@ python -m discopop_agent \
 │  [Tier-2] Diff received — running quality gate (apply/compile/TSan)
 │  [Tier-2] Quality gate PASSED
 │  [Tier-2] Original backed up → bubble_sort.cpp.original
-│  [Tier-2] Re-profiling to discover new patterns...
-│  [Tier-2] Re-profiling complete
+│  [Tier-2] Re-profiling to refresh pattern data...
+│  [Tier-2] Re-profiling complete (1 remaining)
 └─ ACCEPTED
 
 SUMMARY: 2 accepted | 1 skipped
@@ -473,16 +492,13 @@ The agent will load it automatically on startup without requiring any environmen
 
 ## Known Limitations
 
-**1. LLM sees original source on retry, not cumulative patches.**
-If a Tier-2 patch fails validation, the next retry starts from the original source file. Only the failure diagnostic and the previous diff are carried forward. The agent does not build incrementally on a partially-correct intermediate state.
-
-**2. DiscoPoP false positives are pervasive.**
+**1. DiscoPoP false positives are pervasive.**
 DiscoPoP's dependency graph mismatches instruction IDs against source line IDs. As a result, Do-All is frequently reported for loops with genuine cross-iteration RAW dependencies. Tier-1 TSan validation exists specifically to catch this, but it means Tier-1 acceptance rates are lower than DiscoPoP's raw pattern count suggests.
 
-**3. Function-level workload is always 0 in Data.xml.**
+**2. Function-level workload is always 0 in Data.xml.**
 `instructionsCount` is only populated for CU (basic block) nodes. Loops derive a workload proxy from `iteration_count × body_size`; functions have no equivalent fallback and always score 0. Patterns that carry a `workload` field in `patterns.json` can override this, but pure Tier-2 function candidates are always filtered out by `--min-speedup` unless you pass `--min-speedup 0`.
 
-**4. Re-profiling uses the same binary entry point.**
+**3. Re-profiling uses the same binary entry point.**
 `_reprofil()` always runs `./a.out` with the arguments supplied via `--reprofil-args`. If the restructured function is only reachable through a specific call path that `main()` does not exercise by default, pass the required arguments so re-profiling covers the right code paths:
 
 ```bash
@@ -491,5 +507,8 @@ python -m discopop_agent ... --reprofil-args sort input.txt
 
 If `--reprofil-args` is omitted the binary is invoked with no arguments.
 
-**6. Mock LLM is keyed by start line only.**
+**4. Region ID stability after re-profiling.**
+The ID-based queue rebuild assumes that region IDs for code outside the patched function remain stable across re-profiling. This holds in practice — DiscoPoP traverses functions in source order, so only regions inside the modified function are renumbered. However, if a patch changes the number of functions or reorders them, IDs in unrelated functions could shift, causing those candidates to be dropped from the current pass and re-discovered (correctly) in a `--distance` pass.
+
+**5. Mock LLM is keyed by start line only.**
 `mock_llm.py` maps `region.start_line → diff`. If two different source files have regions that start at the same line number, the wrong diff may be returned. This is a demo limitation and does not affect the real LLM path.

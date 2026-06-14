@@ -19,12 +19,11 @@
  *   Odd  phase: independent pairs (1,2), (3,4), (5,6) ... → Do-All
  */
 void bubble_sort(int *arr, int n) {
-    for (int pass = 0; pass < n; pass++) {
-        int phase = pass & 1;
-        for (int i = phase; i + 1 < n; i += 2) {
+    for (int pass = 0; pass < n - 1; pass++) {
+        for (int i = 0; i < n - pass - 1; i++) {
             if (arr[i] > arr[i + 1]) {
-                int tmp    = arr[i];
-                arr[i]     = arr[i + 1];
+                int tmp   = arr[i];
+                arr[i]    = arr[i + 1];
                 arr[i + 1] = tmp;
             }
         }
