@@ -48,7 +48,7 @@ int main(void) {
     int ok = 1;
     if (u[0] != 0.0f || u[N - 1] != 1.0f) ok = 0;
     for (int i = 0; i < N; i++)
-        if (u[i] < -0.01f || u[i] > 1.01f) { ok = 0; break; }
+        if (u[i] < -0.01f || u[i] > 1.01f) { ok = 0; }
 
     printf("u[0]=%.4f  u[N/4]=%.4f  u[N/2]=%.4f  u[N-1]=%.4f\n",
            u[0], u[N / 4], u[N / 2], u[N - 1]);

@@ -451,47 +451,17 @@ The human has complete context before typing the next diff.
 
 ---
 
-## Fix 18 — `--distance`: pass-based discovery; `_refresh_candidates` replaces stale line-map logic
+## Fix 18 — `--distance`: pass-based discovery *(superseded by Fix 21)*
 
 **Files:** `args.py`, `controller.py`
 
-**Problem (two parts):**
+Originally introduced a `--distance N` parameter that ran N additional discovery passes after the initial candidate list was exhausted.  Replaced by Fix 21 with continuous discovery via `--max-reprof`.
 
-**Part A — Candidates lost after re-profiling.**
-After accepting a Tier-2 patch and re-profiling, the controller replaced `candidates[i:]` (all remaining queued regions) using a lookup keyed by exact adjusted start-line (`fresh_by_key.get((file_id, adj_line))`). The `_adjusted_line` function uses proportional intra-hunk interpolation which is approximate — a candidate whose original start-line falls inside the modified hunk maps to the wrong line and misses the lookup, dropping it from the queue. In practice, the inner loop of `example5/stencil.cpp` (start-line 26, inside the diff hunk) adjusted to line 28 but the fresh profile placed it at line 30 — it was silently dropped.
+---
 
-**Part B — Uncontrolled new-candidate discovery.**
-The same post-acceptance block also added "structural parent" candidates from the fresh profile (any region that contained the patched region). This implicit discovery was hard to reason about, interleaved arbitrarily with pass-0 work, and there was no way to bound or disable it.
+## Fix 19 — ID-based rebuild: drop iteration-count-collapsed candidates *(superseded by Fix 21)*
 
-**Fix:**
-- **New `--distance N` CLI parameter** (default 0, added to `AgentArguments`).
-  - `--distance 0`: process only original candidates; no new discovery at all.
-  - `--distance N`: after the initial pass, run up to N additional full discovery passes on the modified source.
-- **Outer pass loop** in `run()`: pass 0 uses the existing profile; passes 1…N re-profile and discover candidates with region IDs not seen in any prior pass (`all_seen_ids` set).
-- **ID-based queue rebuild** replaces the entire `fresh_by_key` / `parent_keys` / `queued_keys` / `updated` block. After a within-pass Tier-2 acceptance and re-profile, the remaining queue is rebuilt by region ID:
-  ```python
-  fresh_by_id = {nc.region.region_id: nc for nc in fresh}
-  remaining = [
-      fresh_by_id[old_c.region.region_id]
-      for old_c in candidates[i:]
-      if old_c.region.region_id not in resolved
-      and old_c.region.region_id in fresh_by_id
-  ]
-  del candidates[i:]
-  candidates.extend(remaining)
-  ```
-  - Candidates whose region ID still exists in the fresh profile (unmodified regions like the bounds-check loop in `main`) are updated with fresh pattern data.
-  - Candidates whose region ID disappeared (the region was structurally changed by the patch, e.g. the inner loop gained a new ID after double-buffering) are dropped from this pass and re-discovered in distance passes.
-  - No line-number arithmetic, no tolerance parameter, no wrong matches.
-- Removed `_adjusted_line`, `_HUNK_RE`, and `HotspotCandidate` import — all were only needed by the old line-based matching logic.
-- Removed `seen_keys` (line-based, per-pass) — superseded by `all_seen_ids` (ID-based, cross-pass).
-- `_print_banner` updated to display the distance setting.
-
-**Effect:**
-- All original candidates survive re-profiling within a pass, even when their lines shifted inside a modified hunk.
-- New-region discovery is explicit and bounded: only happens between passes, never mid-pass.
-- `--distance 1` gives the old "structural parent" behaviour more reliably: re-profile once after all originals are processed, then handle whatever is new.
-- `--distance 0` (default) is safe and predictable: exactly the initial candidate list is processed.
+Originally filtered ID-drifted candidates from the within-pass rebuild by checking `iteration_count > 1`.  The entire ID-based rebuild block was removed by Fix 21, which discards the stale remaining queue after each re-profile instead.
 
 ---
 
@@ -509,41 +479,100 @@ Fix 11 added a global early-exit guard that skipped any candidate with `iteratio
 **Fix:**
 Removed the `if region.iteration_count <= 1: skip` block entirely from the main candidate loop. The score gate (`--min-speedup`) and Tier-1/Tier-2 logic are the sole filters for whether a region is worth processing.
 
-**ID drift is handled separately** by Fix 19: during the within-pass ID-based queue rebuild (after a Tier-2 acceptance), candidates whose fresh `iteration_count` collapsed to ≤ 1 are excluded from `remaining` — because the fresh data is known to be unreliable for those IDs (the ID drifted to different code). This localised filter does not affect initial or discovery-pass candidates.
+---
+
+## Fix 21 — Replace `--distance`/`--max-reprof` with `--restructure-depth`: bounded discovery chain
+
+**Files:** `args.py`, `controller.py`
+
+**Problem:**
+Both `--distance` and `--max-reprof` were blunt cycle counters. They capped re-profiling but did not address the root concern: each Tier-2 restructuring exposes new regions, which could themselves be restructured, exposing more regions — a cascading chain that drifts the source arbitrarily far from the original.
+
+**Fix — `--restructure-depth N` (default 0):**
+
+Every candidate now carries a `discovery_depth`:
+- Initial candidates from the first DiscoPoP profile → `depth=0`
+- Candidates discovered after a Tier-2 re-profile → `depth = parent_depth + 1`
+
+Tier-2 (LLM restructuring) is only applied to candidates at `depth ≤ N`. Candidates at `depth > N` are processed with Tier-1 only. If no pattern is found or Tier-1 fails, they are skipped — no LLM call, no further source modification.
+
+```
+--restructure-depth 0 (default):
+  depth=0  initial regions  → Tier-1 or Tier-2 → re-profile
+  depth=1  discovered       → Tier-1 only       → no re-profile → terminates
+
+--restructure-depth 1:
+  depth=0 → Tier-1/Tier-2 → re-profile → depth=1 → Tier-1/Tier-2 → re-profile
+  depth=2 → Tier-1 only   → terminates
+```
+
+**After each Tier-2 acceptance** the agent (see Fix 22 for the content-matching detail):
+1. Snapshots the content fingerprint of each still-queued candidate (before the patch touches the file).
+2. Applies the patch to source.
+3. Re-profiles the whole file.
+4. Matches survivors by content fingerprint and rebuilds them with fresh data, keeping their depth.
+5. Appends newly discovered candidates (unseen content) at `depth + 1`.
+
+**Termination is guaranteed**: at `depth N+1` no Tier-2 is applied, so the source never changes again, re-profiling stops, and the queue drains.
+
+**Candidate table** now shows a `Depth` column. Summary shows `depth=N` per accepted region.
+
+**Effect:**
+- LLM restructures the source at most at depths 0…N — the chain is explicitly bounded.
+- Discovered regions at depth N+1 are harvested via Tier-1 only, capturing parallelism the restructuring exposed without triggering further code changes.
+- `--restructure-depth 0` (default) is the safe choice: only initial regions are restructured, everything discovered after is Tier-1 only.
 
 ---
 
-## Fix 19 — ID-based rebuild: drop iteration-count-collapsed candidates (ID drift)
+## Fix 22 — Content fingerprinting: track regions across re-profiles by source text, not ID
 
 **File:** `controller.py`
 
 **Problem:**
-After a Tier-2 patch restructures code inside a function, LLVM re-traverses the changed CFG during re-instrumentation and assigns region IDs in a different order. A remaining candidate's ID may still *exist* in the fresh profile but now map to a completely different construct — for example, a single-statement allocation block — rather than the original loop.
+DiscoPoP assigns region IDs from a single global counter (`Structs.hpp:60`: `ID = fileID + ":" + CUIDCounter++`). The counter increments across every CU in every function, in top-to-bottom file order. Patching one function adds/removes CUs, which shifts the counter for **every region defined after it** — even in completely untouched functions.
 
-When this happens, the fresh `iteration_count` for that ID is 1 (or 0). The early-exit guard (Fix 11) then fires:
+Concretely, after patching `smooth()` in `stencil.cpp`:
+- Every region in `main()` (which follows `smooth` in the file) drifts by exactly the number of CUs added — **100% of the time**.
+- Regions inside the patched function drift too.
 
-```
-└─ SKIPPED (only 1 iteration(s) profiled)
-```
-
-The candidate is skipped not because the original region is serial, but because the ID drifted to trivial code. Regions with 12,700 iterations in the initial profile were showing up as 1 iteration after re-profiling.
+So the previous ID-based rebuild (`fresh_by_id[old_id]`) was almost always wrong: the old ID, looked up in the fresh profile, returned a *different* region. There was also no reliable way to tell a genuinely new region apart from an original region that had merely drifted to a new ID.
 
 **Fix:**
-Added an `iteration_count > 1` guard to the ID-based rebuild filter inside the Tier-2 acceptance block:
+Identity is now keyed on the region's **source text**, not its ID. A region's text is invariant under ID drift and line-number shifts — it only changes if that exact region was patched.
 
-```python
-remaining = [
-    fresh_by_id[old_c.region.region_id]
-    for old_c in candidates[i:]
-    if old_c.region.region_id not in resolved
-    and old_c.region.region_id in fresh_by_id
-    # Drop IDs whose iteration count collapsed — signals ID drift to different code.
-    # These regions are re-discovered with correct new IDs in distance passes.
-    and fresh_by_id[old_c.region.region_id].region.iteration_count > 1
-]
-```
+`_fingerprint(source_file, start_line, end_line, name)` returns a normalized signature: whitespace-stripped, blank/comment lines dropped, prefixed with the enclosing region name (function name where available) to disambiguate textually identical siblings.
 
-IDs that drifted to a trivial construct (≤ 1 iteration) are now silently dropped from the current pass's remaining queue instead of being carried forward and immediately skipped.
+The flow on Tier-2 acceptance:
+1. **Before** the patch touches the file, snapshot `old_prints = [(depth, fingerprint) for each remaining candidate]`. (A survivor's text is identical pre/post patch, so its fingerprint will match.)
+2. Apply patch, re-profile, build `fresh_all`.
+3. Index fresh candidates into `fresh_by_print` (a bucket list per fingerprint, so duplicate sibling regions pair up 1:1).
+4. **Survivors**: for each `old_prints` entry, consume one matching fresh candidate — keeps the old depth, adopts the fresh candidate's current lines / pattern / patch data.
+5. **Discovered**: fresh candidates with content never seen (`fp not in all_seen_prints`) and not consumed as a survivor → enqueued at `depth + 1`.
+
+`all_seen_ids` (ID-based, broken by drift) is replaced by `all_seen_prints` (content-based).
+
+**Known limitation:**
+Two byte-for-byte identical regions in the same function are matched arbitrarily within their fingerprint bucket. Folding the function name and surrounding context into the fingerprint reduces, but does not fully eliminate, this ambiguity. A heavily-restructured region whose text changed is treated as new (depth+1), which is acceptable.
+
+**Why not fix it in DiscoPoP instead:**
+The root cause is the global `CUIDCounter`. A per-function counter (`ID = fileID:functionName:localCounter`) in `Structs.hpp` would make IDs stable across patches to other functions. That is the proper long-term fix but requires changing the C++ LLVM pass and its downstream consumers; content fingerprinting solves it entirely at the agent layer without touching the profiler.
+
+---
+
+## Fix 23 — Summary: carry depth on skipped regions, de-duplicate IDs accepted elsewhere
+
+**File:** `controller.py`
+
+**Problem:**
+Because DiscoPoP reuses region IDs across re-profiles, a single ID can describe different *content versions* at different depths. In the `example5` run, the bounds-check loop was skipped as `1:79` at depth 0 (with a `break`, Tier-2 diffs failed), then — after an enclosing region's restructuring removed the `break` — re-appeared as a new-content `1:79` at depth 1 and was accepted at Tier-1. The summary listed the same ID under both ✓ and ✗, which reads as a contradiction. The skipped list also stored bare ID strings with no depth, so there was no way to tell which version was meant.
+
+**Fix:**
+- `skipped` now stores `(region_id, discovery_depth)` tuples instead of bare IDs (all five skip sites updated).
+- The summary:
+  - drops any skipped ID that also appears in `accepted` (it was resolved in some version),
+  - de-duplicates remaining skipped IDs, keeping the lowest depth seen,
+  - prints `depth=N` on each skipped line, matching the accepted lines.
+- The skipped count in the `SUMMARY:` header reflects the de-duplicated total.
 
 **Effect:**
-Drifted IDs no longer consume a candidate slot, do not appear in the `skipped` list, and are not added to `all_seen_ids` — so they remain eligible for re-discovery in subsequent distance passes, where DiscoPoP will assign them the correct new IDs with the correct iteration counts.
+Each region ID appears under exactly one outcome. A loop that was skipped at depth 0 but accepted at depth 1 shows only as accepted. Skipped lines now carry depth, so overlapping/re-profiled versions are distinguishable.
