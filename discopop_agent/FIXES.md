@@ -317,3 +317,87 @@ for (int i = start; i < n - 1; i += 2) {
 
 **Effect:**
 The inner stride-2 loop compiles with `#pragma omp parallel for`, TSan passes (no cross-iteration conflicts at stride 2), and region 1:45 is accepted at Tier-1 without consuming any Tier-2 budget.
+
+---
+
+## Fix 14 — `call_llm`: full conversation history across budget retries
+
+**Files:** `l3_llm.py`, `controller.py`
+
+**Problem:**
+Each budget retry was a completely fresh API call. The only context the LLM had about previous attempts was a single `### Your previous attempt (FAILED)` text block embedded in the new user prompt. This approach had two weaknesses:
+
+1. **Only the most recent attempt was visible** — on budget retry 3, the LLM saw attempt 2's diff but not attempt 1's diff or its failure diagnostic.
+2. **Loss of conversational role structure** — the previous diff was pasted as inert text rather than appearing as an actual assistant turn. The LLM couldn't "own" its previous response or reason about it naturally.
+
+The root cause was that `call_llm` accepted `prior_diff: Optional[str]` (a string) and returned `Optional[str]` (just the diff), with no way to carry state between budget iterations.
+
+**Fix:**
+- **`l3_llm.py`**: Changed `call_llm` signature from `(evidence, ..., prior_diff=None) → Optional[str]` to `(evidence, ..., messages=None) → tuple[Optional[str], list]`.
+  - When `messages=None` (first call), the initial prompt is built from evidence.
+  - When `messages` is provided (subsequent calls), the conversation continues from that history — no prompt rebuild.
+  - Returns `(diff, updated_messages)` on success so the controller can extend the conversation; `(None, current_messages)` on format failure.
+- **`controller.py`**: Added `tier2_messages: list | None = None` before the budget while-loop.
+  - `call_llm` is now called as `diff, tier2_messages = call_llm(..., messages=tier2_messages)`.
+  - After each quality-gate failure, the controller appends a user turn with the stage name and diagnostic to `tier2_messages`:
+    ```python
+    tier2_messages = tier2_messages + [{
+        "role": "user",
+        "content": (
+            f"Your diff failed at the '{result.stage}' stage.\n\n"
+            f"Diagnostic:\n{diagnostic_snippet}\n\n"
+            f"Please try a different restructuring approach."
+        ),
+    }]
+    ```
+  - On the next budget retry, `call_llm` receives these accumulated messages and the LLM sees the full exchange — all previous diffs in their natural assistant-turn positions and all failure diagnostics as user turns.
+
+**Behavior in non-API modes:**
+`call_mock` and `call_manual` are unaffected — they still use `diff = call_mock(evidence)` / `diff = call_manual(evidence, prior_diff=last_diff)`. The `tier2_messages` block inside `if tier2_messages is not None:` does not execute for those modes since the variable remains `None`.
+
+**Effect:**
+On budget retry N, the LLM sees a multi-turn conversation:
+```
+user:      initial task + dependency profile + original failure reason
+assistant: first attempted diff
+user:      "Your diff failed at 'compile'. Diagnostic: ..."
+assistant: second attempted diff
+user:      "Your diff failed at 'tsan'. Diagnostic: ..."
+```
+This gives the LLM complete context to avoid repeating the same mistake or introducing the same category of error twice, without any extra API cost (the system prompt remains cached via `cache_control: ephemeral`).
+
+---
+
+## Fix 15 — `controller.py`: patch written to disk was not header-corrected, apply failure was silent
+
+**Files:** `l4_validator.py`, `controller.py`
+
+**Problem:**
+The L4 quality gate calls `_fix_hunk_headers(diff)` internally before applying the diff to its temporary working copy — this corrects the `@@ -a,b +c,d @@` line counts that LLMs frequently miscalculate. The quality gate therefore PASSES on the corrected version.
+
+However, the controller then:
+1. Wrote the **original** (uncorrected) diff directly to `patch_file`:
+   ```python
+   patch_file.write_text(diff)
+   ```
+2. Applied the **uncorrected** patch to the actual source file:
+   ```python
+   subprocess.run(["patch", "--quiet", str(src_abs), str(patch_file)], capture_output=True)
+   ```
+3. Never checked the return code.
+
+The result: GNU `patch` rejected the malformed hunk header silently (both `--quiet` and `capture_output=True` suppressed all output), the source file was left unmodified, re-profiling ran on the original code, and the agent printed `ACCEPTED` while nothing had actually changed.
+
+**Concrete example:** A `--manual-llm` diff for `example4/bubble_sort.cpp` had header `@@ -22,10 +22,20 @@` but the new hunk body was 17 lines, not 20. The quality gate fixed it to `+22,17` and passed. The controller saved `+22,20` to disk and `patch` rejected it at line 28.
+
+**Fix:**
+- Renamed `_fix_hunk_headers` → `fix_hunk_headers` in `l4_validator.py` (made public).
+- Controller imports `fix_hunk_headers` and applies it to `diff` before writing the patch file:
+  ```python
+  clean_diff = fix_hunk_headers(diff)
+  patch_file.write_text(clean_diff)
+  ```
+- Controller checks `patch_result.returncode` and logs a warning if non-zero.
+
+**Effect:**
+The same header correction used by the quality gate is now also applied when writing the patch to disk. The saved `.patch` file and the applied modification are always consistent. A failed apply is now logged as a WARNING instead of silently accepted.

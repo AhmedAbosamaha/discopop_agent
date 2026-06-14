@@ -189,18 +189,24 @@ def call_llm(
     model: str,
     api_key: Optional[str] = None,
     max_format_retries: int = 2,
-    prior_diff: Optional[str] = None,
-) -> Optional[str]:
-    """Call the LLM and return a valid unified diff, or None on failure.
+    messages: Optional[list] = None,
+) -> tuple[Optional[str], list]:
+    """Call the LLM and return (diff or None, updated messages).
 
-    api_key:    resolved from LLM_API_KEY env var or --api-key CLI arg.
-    prior_diff: the diff produced by the previous budget iteration, if any.
-                Included in the prompt so the LLM can see what it tried and
-                avoid repeating the same mistake.
+    On the first call for a region pass messages=None — the initial prompt is
+    built from evidence.  Pass the list returned by the previous call on
+    subsequent budget retries: the LLM then sees the full conversation history
+    (all prior attempts plus quality-gate diagnostics appended by the
+    controller) instead of a fresh, context-free prompt each time.
     """
     client = anthropic.Anthropic(api_key=api_key)
-    user_prompt = _build_prompt(evidence, prior_diff=prior_diff)
-    messages = [{"role": "user", "content": user_prompt}]
+
+    if messages is None:
+        # First attempt for this region — build initial prompt from evidence.
+        user_prompt = _build_prompt(evidence)
+        messages = [{"role": "user", "content": user_prompt}]
+
+    current = list(messages)
 
     for attempt in range(max_format_retries + 1):
         response = client.messages.create(
@@ -211,26 +217,30 @@ def call_llm(
                 "text": _SYSTEM,
                 "cache_control": {"type": "ephemeral"},
             }],
-            messages=messages,
+            messages=current,
         )
 
         text = response.content[0].text
         diff = _extract_diff(text)
 
         if diff and _is_valid_diff(diff):
-            return diff
+            # Return messages with assistant turn appended so the controller
+            # can extend the conversation with quality-gate feedback and retry.
+            return diff, current + [{"role": "assistant", "content": text}]
 
-        # Free format re-prompt — doesn't consume budget
+        # Free format re-prompt — doesn't consume a budget slot.
         if attempt < max_format_retries:
-            messages.append({"role": "assistant", "content": text})
-            messages.append({
-                "role": "user",
-                "content": (
-                    "Your response must be a unified diff only.\n"
-                    "Start with '--- <original_file>' on its own line,\n"
-                    "then '+++ <modified_file>', then one or more '@@ … @@' hunks.\n"
-                    "No prose, no code fences."
-                ),
-            })
+            current = current + [
+                {"role": "assistant", "content": text},
+                {
+                    "role": "user",
+                    "content": (
+                        "Your response must be a unified diff only.\n"
+                        "Start with '--- <original_file>' on its own line,\n"
+                        "then '+++ <modified_file>', then one or more '@@ … @@' hunks.\n"
+                        "No prose, no code fences."
+                    ),
+                },
+            ]
 
-    return None
+    return None, current
