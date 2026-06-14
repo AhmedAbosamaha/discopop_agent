@@ -576,3 +576,41 @@ Because DiscoPoP reuses region IDs across re-profiles, a single ID can describe 
 
 **Effect:**
 Each region ID appears under exactly one outcome. A loop that was skipped at depth 0 but accepted at depth 1 shows only as accepted. Skipped lines now carry depth, so overlapping/re-profiled versions are distinguishable.
+
+---
+
+## Fix 24 — OpenMP-canonical loop form: prompt constraint + distinct `openmp_compile` stage
+
+**Files:** `l3_llm.py`, `l4_validator.py`, `controller.py`
+
+**Problem:**
+On `example4` (bubble sort), the LLM restructured the inner loop into a correct, race-free odd-even transposition sort — but wrote the phase loops as `for (int i = 0; i + 1 < n; i += 2)`. That condition is logically fine but **not OpenMP-canonical**: OpenMP requires the loop condition to compare the loop variable directly against a loop-invariant bound. When DiscoPoP later generated `#pragma omp parallel for` for those phases (at depth 1), the build failed:
+
+```
+error: condition of OpenMP for loop must be a relational comparison
+       ('<', '<=', '>', '>=', or '!=') of loop variable 'i'
+   31 | for (int i = 0; i + 1 < n; i += 2) {
+```
+
+Two things made this hard to see and impossible to recover from:
+
+1. **Misleading stage.** Stage-2 compile uses plain `clang++`, which *ignores* `#pragma omp`, so it passed. The error only appeared in stage-3, which compiles with `-fopenmp`. But stage-3 returned `stage="tsan"`, so the controller printed `Validation FAILED (stage=tsan) — DiscoPoP false positive` — framing a **compile error** as a **data race / false positive**.
+
+2. **Unrecoverable at depth > restructure-depth.** The phase loops were depth-1 candidates. With `--restructure-depth 0` they get Tier-1 only, so the agent could not escalate to Tier-2 to rewrite `i+1<n` → `i<n-1`. Result: a correct restructuring exposed parallelism that was then **silently discarded** — 2 restructurings accepted, 0 parallel loops validated.
+
+**Fix (three parts):**
+
+1. **Prevent at the source** — added a `CRITICAL` block to the L3 system prompt (`l3_llm.py`) requiring every loop intended for parallelization (including newly created ones) to be OpenMP-canonical:
+   - condition compares the loop variable directly to a loop-invariant bound (`i < n - 1`, never `i + 1 < n`);
+   - increment is `i++`/`i--`/`i += c`/`i -= c`;
+   - no `break`/`continue`/`return`/`goto` in the body (convert early-exit/flag loops to a full scan accumulating into a variable);
+   - computable trip count.
+
+2. **Distinct stage** — `_tsan()` in `l4_validator.py` now returns `(ok, diagnostic, stage)`. An `-fopenmp` build failure returns `stage="openmp_compile"` with the diagnostic `"OpenMP compile failed (loop not in OpenMP-canonical form)"`; a genuine race still returns `stage="tsan"`. `validate()` propagates the returned stage.
+
+3. **Correct framing** — the controller's Tier-1 failure branch now distinguishes `openmp_compile` from `tsan`: it prints `loop not in OpenMP-canonical form` (not "false positive") and, when escalating to Tier-2, gives a targeted instruction to rewrite the loop into canonical form rather than the generic "loop-carried dependency" hint.
+
+**Effect:**
+- The LLM is told up front to emit canonical loops, so the restructuring's exposed loops compile under `-fopenmp` and pass Tier-1 directly at depth+1.
+- When a non-canonical loop does slip through, the diagnostic correctly says "OpenMP compile error", not "data race / false positive", and at depth 0 the Tier-2 retry gets a precise fix instruction.
+- Note the residual design constraint: with `--restructure-depth 0`, exposed loops must be *directly* parallelizable, because depth+1 loops cannot be escalated to Tier-2. The prompt constraint is what makes that constraint satisfiable in practice.

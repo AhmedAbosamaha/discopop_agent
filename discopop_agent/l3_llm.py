@@ -50,6 +50,29 @@ _SYSTEM = textwrap.dedent("""\
       - Do NOT add OpenMP pragmas — DiscoPoP will do that after re-profiling
       - Output ONLY a valid unified diff. No explanation, no code fences.
         The diff must begin with '--- ' and include '+++ ' and '@@ ' markers.
+
+    CRITICAL — every loop you intend to be parallelized (including any new
+    loops your restructuring creates) MUST be in OpenMP-canonical form, or
+    DiscoPoP's generated `#pragma omp parallel for` will fail to compile:
+      - The loop condition must compare the loop variable DIRECTLY against a
+        loop-invariant bound: `i < bound`, `i <= bound`, `i > bound`,
+        `i >= bound`, or `i != bound`.
+        WRONG:  for (int i = 0; i + 1 < n; i += 2)   ← compound expression
+        RIGHT:  for (int i = 0; i < n - 1; i += 2)   ← precompute the bound
+      - The increment must be `i++`, `i--`, `i += c`, or `i -= c` with a
+        loop-invariant `c`.
+      - NO `break`, `continue`, `return`, or `goto` inside the loop body.
+        Convert early-exit searches / flag-setting loops into a full scan that
+        accumulates into a variable (e.g. `found |= (cond);` then test `found`
+        after the loop), so the loop body has a single straight-line path.
+      - The trip count must be computable before the loop runs (no data- or
+        condition-dependent termination).
+
+    >>> OUTPUT A UNIFIED DIFF ONLY. <<<
+    No prose, no explanation, no markdown, no code fences. Your ENTIRE response
+    must be the diff itself, beginning with '--- ' and containing '+++ ' and
+    '@@ ' markers. Any text that is not part of the diff causes the response to
+    be rejected.
 """)
 
 # ---------------------------------------------------------------------------
@@ -123,7 +146,12 @@ def _build_prompt(evidence: EvidencePackage, prior_diff: Optional[str] = None) -
         f"IMPORTANT: diff context lines (lines beginning with a single space) must match "
         f"the actual file content exactly — use only the raw code indentation, "
         f"not the `NNNN >>>` display prefix shown in the Source section above.\n"
-        f"Output a unified diff only."
+        f"\n"
+        f">>> OUTPUT A UNIFIED DIFF ONLY. <<<\n"
+        f"No prose, no explanation, no markdown, no code fences. Your entire "
+        f"response must be the diff itself, beginning with '--- ' and containing "
+        f"'+++ ' and '@@ ' markers. Any text that is not part of the diff will "
+        f"cause the response to be rejected."
     )
     return "\n".join(parts)
 

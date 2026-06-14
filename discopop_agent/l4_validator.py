@@ -5,7 +5,15 @@ Three-stage quality gate for every LLM-generated patch:
 
   Stage 1 — Apply   : patch must apply cleanly to an isolated copy
   Stage 2 — Compile : patched file must compile (plain clang++, not instrumented)
-  Stage 3 — TSan    : compile with -fsanitize=thread and run; no DATA RACE reports
+  Stage 3 — TSan    : compile with -fopenmp -fsanitize=thread and run; no races
+
+Stage 3 has two distinct failure stages in the result:
+  - "openmp_compile" : the -fopenmp build failed because a loop is not in
+                       OpenMP-canonical form (e.g. `i + 1 < n` condition, or a
+                       `break` in the body).  Plain stage-2 compile ignores
+                       `#pragma omp`, so this only surfaces here.  It is a form
+                       error, not a data race.
+  - "tsan"           : the build ran and ThreadSanitizer reported a real race.
 
 On any failure the diagnostic text is returned so L3 can include it in
 the next retry prompt.
@@ -162,7 +170,20 @@ def _compile(source: Path, clangpp: str, work_dir: Path) -> Tuple[bool, str]:
 # Stage 3: ThreadSanitizer
 # ---------------------------------------------------------------------------
 
-def _tsan(source: Path, clangpp: str, work_dir: Path) -> Tuple[bool, str]:
+def _tsan(source: Path, clangpp: str, work_dir: Path) -> Tuple[bool, str, str]:
+    """Compile with -fopenmp + TSan and run.
+
+    Returns (ok, diagnostic, stage).  The stage distinguishes the two very
+    different failure modes of this step:
+      - "openmp_compile" : the OpenMP build failed.  Enabling -fopenmp activates
+                           the `#pragma omp parallel for`, and the compiler then
+                           enforces OpenMP-canonical loop form.  A loop the plain
+                           (stage-2) compile accepted — e.g. `for(i; i+1<n; ...)`
+                           or one containing `break` — is rejected here.  This is
+                           NOT a data race; it means the loop is not in a form
+                           OpenMP can parallelize.
+      - "tsan"           : the build ran and ThreadSanitizer reported a real race.
+    """
     binary = work_dir / "tsan_binary"
     extra = (
         [f"-L{_LLVM_LIBCXX}", f"-Wl,-rpath,{_LLVM_LIBCXX}"]
@@ -179,14 +200,19 @@ def _tsan(source: Path, clangpp: str, work_dir: Path) -> Tuple[bool, str]:
     ] + extra
     compile_result = subprocess.run(cmd, capture_output=True, text=True, cwd=work_dir)
     if compile_result.returncode != 0:
-        return False, f"TSan compile failed:\n{compile_result.stderr[-1000:]}"
+        return (
+            False,
+            f"OpenMP compile failed (loop not in OpenMP-canonical form):\n"
+            f"{compile_result.stderr[-1000:]}",
+            "openmp_compile",
+        )
 
     try:
         run_result = subprocess.run(
             [str(binary)], capture_output=True, text=True, timeout=60, cwd=work_dir
         )
     except subprocess.TimeoutExpired:
-        return False, "TSan run timed out (60 s)"
+        return False, "TSan run timed out (60 s)", "tsan"
 
     stderr = run_result.stderr
     if "WARNING: ThreadSanitizer" in stderr or "DATA RACE" in stderr:
@@ -200,8 +226,8 @@ def _tsan(source: Path, clangpp: str, work_dir: Path) -> Tuple[bool, str]:
                 snippet = snippet[: newline_after + 1 if newline_after >= 0 else summary_idx + 200]
         else:
             snippet = stderr[-1000:]
-        return False, f"Race detected:\n{snippet}"
-    return True, ""
+        return False, f"Race detected:\n{snippet}", "tsan"
+    return True, "", "tsan"
 
 
 # ---------------------------------------------------------------------------
@@ -231,8 +257,8 @@ def validate(diff: str, source_file: str) -> ValidationResult:
             return ValidationResult(passed=False, stage="compile", diagnostic=diag)
 
         # Stage 3
-        ok, diag = _tsan(patched, clangpp, work_dir)
+        ok, diag, stage = _tsan(patched, clangpp, work_dir)
         if not ok:
-            return ValidationResult(passed=False, stage="tsan", diagnostic=diag)
+            return ValidationResult(passed=False, stage=stage, diagnostic=diag)
 
     return ValidationResult(passed=True, stage="accepted")

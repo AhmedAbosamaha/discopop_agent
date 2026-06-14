@@ -343,21 +343,37 @@ def run(args: AgentArguments) -> None:
                             and _is_omp_barrier_false_positive(t1_result.diagnostic)):
                         print(f"│  [Tier-1] TSan OMP-barrier false positive detected — accepting")
                     else:
+                        # Distinguish a real race (DiscoPoP false positive) from an
+                        # OpenMP-canonical-form compile error — they need different
+                        # framing and a different Tier-2 instruction.
+                        if t1_result.stage == "openmp_compile":
+                            reason_label = "loop not in OpenMP-canonical form"
+                            t2_hint = (
+                                f"DiscoPoP suggested a {ptype} pattern (pragma: {pragma}), "
+                                f"but the loop is NOT in OpenMP-canonical form, so the "
+                                f"generated pragma fails to compile.  Rewrite the loop into "
+                                f"canonical form (simple `i < bound` condition, no break/"
+                                f"continue/return in the body).\n"
+                                f"Compiler diagnostic:\n{t1_result.diagnostic}"
+                            )
+                        else:
+                            reason_label = "DiscoPoP false positive (real race)"
+                            t2_hint = (
+                                f"DiscoPoP suggested a {ptype} pattern (pragma: {pragma}), "
+                                f"but the generated patch FAILED validation at stage "
+                                f"'{t1_result.stage}' — likely a false-positive due to a "
+                                f"loop-carried dependency DiscoPoP did not detect.\n"
+                                f"Validation diagnostic:\n{t1_result.diagnostic}"
+                            )
                         print(f"│  [Tier-1] Validation FAILED (stage={t1_result.stage}) "
-                              f"— DiscoPoP false positive")
+                              f"— {reason_label}")
                         if not tier2_allowed:
                             print(f"│  [Tier-1] Tier-2 not allowed at depth {depth} → SKIP")
                             print(f"└─ SKIPPED\n")
                             skipped.append((rid, depth))
                             continue
                         print(f"│  [Tier-1] Escalating to Tier-2 (LLM restructuring)")
-                        failure_reason = (
-                            f"DiscoPoP suggested a {ptype} pattern (pragma: {pragma}), "
-                            f"but the generated patch FAILED validation at stage "
-                            f"'{t1_result.stage}' — likely a false-positive due to a "
-                            f"loop-carried dependency DiscoPoP did not detect.\n"
-                            f"Validation diagnostic:\n{t1_result.diagnostic}"
-                        )
+                        failure_reason = t2_hint
                         tier1_valid = False
 
             if tier1_valid:
