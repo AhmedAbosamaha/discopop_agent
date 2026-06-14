@@ -245,25 +245,19 @@ Multiple Tier-2 diff requests in a single agent run can be served from a single 
 
 ---
 
-## Fix 11 — `controller.py`: 1-iteration early-exit filter
+## Fix 11 — `controller.py`: 1-iteration early-exit filter *(reverted — see Fix 20)*
 
 **File:** `controller.py`
 
-**Problem:**
-After a Tier-2 restructuring, re-profiling creates new LLVM IR constructs at positions that previously held loop headers. DiscoPoP sometimes detects these as 1-iteration "regions" (e.g. an `int start = pass % 2;` statement becoming a pseudo-loop in IR). These were being carried forward via `_adjusted_line` into the work queue and sent through the full Tier-1 → Tier-2 pipeline, consuming budget on constructs with zero parallelization value.
+**Originally added:**
+An early-exit guard `if region.iteration_count <= 1: skip` was placed at the top of the candidate processing loop to avoid spending budget on regions that only ran once during profiling.
 
-**Fix:**
-Added an early-exit guard at the top of the candidate processing loop:
+**Why it was wrong:**
+The profiling run uses a fixed input (e.g. N=256, STEPS=50). The iteration count reflects *that input*, not the production workload. A loop that ran once under the profiling input may run millions of times in production. Filtering on raw iteration count silently discards candidates that the score/speedup system already handles correctly.
 
-```python
-if region.iteration_count <= 1:
-    print(f"└─ SKIPPED (only {region.iteration_count} iteration(s) profiled)\n")
-    skipped.append(rid)
-    continue
-```
+Additionally, after a Tier-2 restructuring causes region IDs to drift (see Fix 19), unrelated constructs inherit the old ID and report ≤ 1 iteration — causing legitimate original regions to be skipped for the wrong reason.
 
-**Effect:**
-Regions profiled with ≤ 1 iteration are skipped immediately before any Tier-1 pattern checking or Tier-2 LLM calls. Budget is preserved for genuinely parallelizable regions.
+**Reverted by Fix 20.** The score and `--min-speedup` system is the correct gate. ID drift in rebuilt candidates is handled separately by Fix 19.
 
 ---
 
@@ -320,7 +314,7 @@ The inner stride-2 loop compiles with `#pragma omp parallel for`, TSan passes (n
 
 ---
 
-## Fix 14 — `call_llm`: full conversation history across budget retries
+## Fix 14 — `call_llm` and `call_manual`: full conversation history across budget retries
 
 **Files:** `l3_llm.py`, `controller.py`
 
@@ -352,8 +346,11 @@ The root cause was that `call_llm` accepted `prior_diff: Optional[str]` (a strin
     ```
   - On the next budget retry, `call_llm` receives these accumulated messages and the LLM sees the full exchange — all previous diffs in their natural assistant-turn positions and all failure diagnostics as user turns.
 
-**Behavior in non-API modes:**
-`call_mock` and `call_manual` are unaffected — they still use `diff = call_mock(evidence)` / `diff = call_manual(evidence, prior_diff=last_diff)`. The `tier2_messages` block inside `if tier2_messages is not None:` does not execute for those modes since the variable remains `None`.
+**Behavior in mock mode:**
+`call_mock` is unaffected — it uses `diff = call_mock(evidence)` (single return value). `tier2_messages` remains `None` and the quality-gate extension block does not fire.
+
+**`call_manual` updated identically (Fix 17):**
+`call_manual` was subsequently updated to the same contract: `(evidence, messages=None) → tuple[Optional[str], list]`. It displays the full conversation history to the user before each diff input, so the human playing the LLM sees exactly the same context a real model would receive.
 
 **Effect:**
 On budget retry N, the LLM sees a multi-turn conversation:
@@ -401,3 +398,152 @@ The result: GNU `patch` rejected the malformed hunk header silently (both `--qui
 
 **Effect:**
 The same header correction used by the quality gate is now also applied when writing the patch to disk. The saved `.patch` file and the applied modification are always consistent. A failed apply is now logged as a WARNING instead of silently accepted.
+
+---
+
+## Fix 16 — `_build_prompt`: clarify that source line-number prefix is display-only
+
+**File:** `l3_llm.py`
+
+**Problem:**
+The source region shown in the prompt used the format `f"{i:4d} {marker} {code_line}"`, producing lines like:
+```
+  25 >>>     for (int step = 0; step < steps; step++) {
+```
+LLMs read this as the actual file content and copied the `  25 >>> ` prefix into diff context lines (lines beginning with a space). GNU `patch` then failed with "1 out of 1 hunks failed" because those context lines did not match the raw source file, which has no line-number prefix.
+
+**Fix:**
+Changed the `### Source` section header in `_build_prompt` to include an explicit note:
+```
+(Each line is shown as `NNNN >>> code` where `NNNN` is the line number and `>>>` marks
+the target region. These prefixes are display-only — NOT part of the actual source file.
+When writing diff context lines copy only the raw code indentation, never the `NNNN >>>` prefix.)
+```
+Also added the same reminder to the `### Task` section at the bottom of the prompt.
+
+**Effect:**
+LLMs write diff context lines with the correct raw indentation, matching the actual file content. Patch apply no longer fails due to line-number padding copied from the source display.
+
+---
+
+## Fix 17 — `call_manual`: full conversation history (mirrors Fix 14)
+
+**File:** `l3_llm.py`, `controller.py`
+
+**Problem:**
+`call_manual` (the `--manual-llm` mode) still used the old `prior_diff: Optional[str]` approach: the previous failed diff was embedded as text under `### Your previous attempt (FAILED)`. The human acting as the LLM only saw the most-recent failed diff, not the full exchange including quality-gate diagnostics, and `tier2_messages` was never populated for manual mode so the quality-gate feedback block (`if tier2_messages is not None:`) never fired.
+
+**Fix:**
+- Changed `call_manual` signature from `(evidence, prior_diff=None) → Optional[str]` to `(evidence, messages=None) → tuple[Optional[str], list]`, matching `call_llm` exactly.
+- First call (`messages=None`): prints system prompt + initial user prompt as before.
+- Subsequent calls (`messages=[...]`): prints the full conversation history (each user and assistant turn labelled) so the human sees the same context a real LLM would receive.
+- Returns `(diff, messages + [{"role": "assistant", "content": diff}])` on success.
+- In `controller.py`: changed `diff = call_manual(evidence, prior_diff=last_diff)` to `diff, tier2_messages = call_manual(evidence, messages=tier2_messages)`. Removed `last_diff`. The quality-gate feedback block now fires for manual mode too.
+
+**Effect:**
+On a manual-LLM retry the terminal shows the full exchange:
+```
+[USER]   initial task + source + dependencies
+[ASSISTANT]  previous diff
+[USER]   "Your diff failed at 'apply'. Diagnostic: ..."
+```
+The human has complete context before typing the next diff.
+
+---
+
+## Fix 18 — `--distance`: pass-based discovery; `_refresh_candidates` replaces stale line-map logic
+
+**Files:** `args.py`, `controller.py`
+
+**Problem (two parts):**
+
+**Part A — Candidates lost after re-profiling.**
+After accepting a Tier-2 patch and re-profiling, the controller replaced `candidates[i:]` (all remaining queued regions) using a lookup keyed by exact adjusted start-line (`fresh_by_key.get((file_id, adj_line))`). The `_adjusted_line` function uses proportional intra-hunk interpolation which is approximate — a candidate whose original start-line falls inside the modified hunk maps to the wrong line and misses the lookup, dropping it from the queue. In practice, the inner loop of `example5/stencil.cpp` (start-line 26, inside the diff hunk) adjusted to line 28 but the fresh profile placed it at line 30 — it was silently dropped.
+
+**Part B — Uncontrolled new-candidate discovery.**
+The same post-acceptance block also added "structural parent" candidates from the fresh profile (any region that contained the patched region). This implicit discovery was hard to reason about, interleaved arbitrarily with pass-0 work, and there was no way to bound or disable it.
+
+**Fix:**
+- **New `--distance N` CLI parameter** (default 0, added to `AgentArguments`).
+  - `--distance 0`: process only original candidates; no new discovery at all.
+  - `--distance N`: after the initial pass, run up to N additional full discovery passes on the modified source.
+- **Outer pass loop** in `run()`: pass 0 uses the existing profile; passes 1…N re-profile and discover candidates with region IDs not seen in any prior pass (`all_seen_ids` set).
+- **ID-based queue rebuild** replaces the entire `fresh_by_key` / `parent_keys` / `queued_keys` / `updated` block. After a within-pass Tier-2 acceptance and re-profile, the remaining queue is rebuilt by region ID:
+  ```python
+  fresh_by_id = {nc.region.region_id: nc for nc in fresh}
+  remaining = [
+      fresh_by_id[old_c.region.region_id]
+      for old_c in candidates[i:]
+      if old_c.region.region_id not in resolved
+      and old_c.region.region_id in fresh_by_id
+  ]
+  del candidates[i:]
+  candidates.extend(remaining)
+  ```
+  - Candidates whose region ID still exists in the fresh profile (unmodified regions like the bounds-check loop in `main`) are updated with fresh pattern data.
+  - Candidates whose region ID disappeared (the region was structurally changed by the patch, e.g. the inner loop gained a new ID after double-buffering) are dropped from this pass and re-discovered in distance passes.
+  - No line-number arithmetic, no tolerance parameter, no wrong matches.
+- Removed `_adjusted_line`, `_HUNK_RE`, and `HotspotCandidate` import — all were only needed by the old line-based matching logic.
+- Removed `seen_keys` (line-based, per-pass) — superseded by `all_seen_ids` (ID-based, cross-pass).
+- `_print_banner` updated to display the distance setting.
+
+**Effect:**
+- All original candidates survive re-profiling within a pass, even when their lines shifted inside a modified hunk.
+- New-region discovery is explicit and bounded: only happens between passes, never mid-pass.
+- `--distance 1` gives the old "structural parent" behaviour more reliably: re-profile once after all originals are processed, then handle whatever is new.
+- `--distance 0` (default) is safe and predictable: exactly the initial candidate list is processed.
+
+---
+
+## Fix 20 — `controller.py`: remove global `≤ 1 iteration` skip (reverts Fix 11)
+
+**File:** `controller.py`
+
+**Problem:**
+Fix 11 added a global early-exit guard that skipped any candidate with `iteration_count ≤ 1`. This was too aggressive:
+
+1. **Profiling input ≠ production workload.** The profiling run uses a fixed input; a loop that ran once on the profiling input may run millions of times in production. The score/speedup system already accounts for observed workload — a second filter on raw iteration count is redundant and wrong.
+2. **Functions are never loops.** Function-level candidates (`type=function`) naturally report `iteration_count = 1` (the function is called once). They can still contain regions worth restructuring, and Tier-2 LLM analysis is exactly what handles them.
+3. **ID drift** (after Tier-2 restructuring changes CFG traversal order) could assign an old ID to a trivial new construct, making an originally-busy region appear to have 1 iteration and be silently dropped.
+
+**Fix:**
+Removed the `if region.iteration_count <= 1: skip` block entirely from the main candidate loop. The score gate (`--min-speedup`) and Tier-1/Tier-2 logic are the sole filters for whether a region is worth processing.
+
+**ID drift is handled separately** by Fix 19: during the within-pass ID-based queue rebuild (after a Tier-2 acceptance), candidates whose fresh `iteration_count` collapsed to ≤ 1 are excluded from `remaining` — because the fresh data is known to be unreliable for those IDs (the ID drifted to different code). This localised filter does not affect initial or discovery-pass candidates.
+
+---
+
+## Fix 19 — ID-based rebuild: drop iteration-count-collapsed candidates (ID drift)
+
+**File:** `controller.py`
+
+**Problem:**
+After a Tier-2 patch restructures code inside a function, LLVM re-traverses the changed CFG during re-instrumentation and assigns region IDs in a different order. A remaining candidate's ID may still *exist* in the fresh profile but now map to a completely different construct — for example, a single-statement allocation block — rather than the original loop.
+
+When this happens, the fresh `iteration_count` for that ID is 1 (or 0). The early-exit guard (Fix 11) then fires:
+
+```
+└─ SKIPPED (only 1 iteration(s) profiled)
+```
+
+The candidate is skipped not because the original region is serial, but because the ID drifted to trivial code. Regions with 12,700 iterations in the initial profile were showing up as 1 iteration after re-profiling.
+
+**Fix:**
+Added an `iteration_count > 1` guard to the ID-based rebuild filter inside the Tier-2 acceptance block:
+
+```python
+remaining = [
+    fresh_by_id[old_c.region.region_id]
+    for old_c in candidates[i:]
+    if old_c.region.region_id not in resolved
+    and old_c.region.region_id in fresh_by_id
+    # Drop IDs whose iteration count collapsed — signals ID drift to different code.
+    # These regions are re-discovered with correct new IDs in distance passes.
+    and fresh_by_id[old_c.region.region_id].region.iteration_count > 1
+]
+```
+
+IDs that drifted to a trivial construct (≤ 1 iteration) are now silently dropped from the current pass's remaining queue instead of being carried forward and immediately skipped.
+
+**Effect:**
+Drifted IDs no longer consume a candidate slot, do not appear in the `skipped` list, and are not added to `all_seen_ids` — so they remain eligible for re-discovery in subsequent distance passes, where DiscoPoP will assign them the correct new IDs with the correct iteration counts.

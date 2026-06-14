@@ -23,14 +23,9 @@
  */
 void smooth(float *u, int n, int steps) {
     for (int step = 0; step < steps; step++) {
-        float *tmp = new float[n];
         for (int i = 1; i < n - 1; i++) {
-            tmp[i] = 0.5f * (u[i - 1] + u[i + 1]);
+            u[i] = 0.5f * (u[i - 1] + u[i + 1]);
         }
-        for (int i = 1; i < n - 1; i++) {
-            u[i] = tmp[i];
-        }
-        delete[] tmp;
     }
 }
 
