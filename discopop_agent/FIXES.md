@@ -198,3 +198,122 @@ Comment accurately reflects the actual behavior. Loops get a workload estimate; 
 | 3 | Function-level workload is always 0 in Data.xml |
 | 4 | Re-profiling uses the same binary entry point (mitigated by `--reprofil-args`) |
 | 5 | Mock LLM is keyed by start line only |
+
+---
+
+## Fix 9 — `_is_omp_barrier_false_positive`: allocation lines matched as access lines
+
+**File:** `controller.py`
+
+**Problem:**
+The false-positive detector checked `"by main thread:" in line` to identify which TSan diagnostic lines indicate the main thread is one of the racing accessors. However, TSan heap-location blocks contain a line such as:
+
+```
+Location is heap block of size N ... allocated by main thread:
+```
+
+This line also matches `"by main thread:"`, so the detector would scan the *allocation* stack frames (which never contain `.omp_outlined`) and conclude there was no worker access — incorrectly classifying a real WAW scatter race as a false positive. The scatter-add kernel in `lulesh/ex2` was silently accepted without escalating to Tier-2.
+
+**Fix:**
+Added `and ("Write" in line or "Read" in line)` to the condition, so only genuine *access* lines (`"Write of size N ... by main thread:"` / `"Read of size N ... by main thread:"`) trigger the false-positive check:
+
+```python
+if "by main thread:" in line and ("Write" in line or "Read" in line):
+```
+
+**Effect:**
+Allocation lines in TSan heap-location blocks are ignored. Only actual write/read-access lines by the main thread trigger the OMP-barrier false-positive path. Real WAW scatter races now correctly escalate to Tier-2.
+
+---
+
+## Fix 10 — `call_manual` (`l3_llm.py`): `---END---` delimiter for piped multi-diff input
+
+**File:** `l3_llm.py`
+
+**Problem:**
+In `--manual-llm` mode, `call_manual()` read stdin until `EOFError`. When multiple diffs are piped in a single shell session (e.g. via process substitution or heredoc), the first call consumes EOF, which closes stdin permanently. Every subsequent `call_manual()` call in the same agent run immediately hit `EOFError` and returned an empty string, exhausting the Tier-2 budget with "LLM returned invalid diff" for all remaining regions.
+
+**Fix:**
+Added `_MANUAL_EOF = "---END---"` as a per-diff terminator. Each `call_manual()` call reads lines until it sees `---END---` on its own line (or true EOF). Piped runs separate diffs with `---END---`:
+
+```bash
+{ echo "$DIFF1"; echo "---END---"; echo "$DIFF2"; echo "---END---"; } | python -m discopop_agent ...
+```
+
+**Effect:**
+Multiple Tier-2 diff requests in a single agent run can be served from a single piped stdin. Interactive users type `---END---` to submit each diff. True EOF still works as a fallback terminator.
+
+---
+
+## Fix 11 — `controller.py`: 1-iteration early-exit filter
+
+**File:** `controller.py`
+
+**Problem:**
+After a Tier-2 restructuring, re-profiling creates new LLVM IR constructs at positions that previously held loop headers. DiscoPoP sometimes detects these as 1-iteration "regions" (e.g. an `int start = pass % 2;` statement becoming a pseudo-loop in IR). These were being carried forward via `_adjusted_line` into the work queue and sent through the full Tier-1 → Tier-2 pipeline, consuming budget on constructs with zero parallelization value.
+
+**Fix:**
+Added an early-exit guard at the top of the candidate processing loop:
+
+```python
+if region.iteration_count <= 1:
+    print(f"└─ SKIPPED (only {region.iteration_count} iteration(s) profiled)\n")
+    skipped.append(rid)
+    continue
+```
+
+**Effect:**
+Regions profiled with ≤ 1 iteration are skipped immediately before any Tier-1 pattern checking or Tier-2 LLM calls. Budget is preserved for genuinely parallelizable regions.
+
+---
+
+## Fix 12 — `_adjusted_line`: proportional intra-hunk line mapping
+
+**File:** `controller.py`
+
+**Problem:**
+`_adjusted_line(diff, old_line)` accumulates per-hunk `(new_count - old_count)` shifts for all hunks that end *before* `old_line`. For lines that fall *inside* a hunk (i.e. within the changed region), the function broke out of the hunk loop without adding any shift, returning the stale pre-patch line number.
+
+Concrete failure: the odd-even bubble sort diff inserts `int start = pass % 2;` before the inner loop, moving it from line 23 to line 24. But `_adjusted_line(diff, 23)` returned 23 (line 23 is inside the `@@ -19,8 +19,9 @@` hunk), so `fresh_by_key.get((file_id, 23))` found a 1-iteration IR artifact at line 23 rather than the real inner loop at line 24. The inner stride-2 loop was never queued and never parallelized.
+
+A secondary bug: using Python's `round()` (banker's rounding) would compute `round(4 × 9/8) = round(4.5) = 4` instead of 5, keeping the result at 23 even after the proportional mapping was added.
+
+**Fix:**
+- Extract `new_start` from the `+N,M` part of the hunk header (previously ignored).
+- For inside-hunk lines, compute a proportional position within the new hunk using classic round-half-up (`int(x + 0.5)`) instead of `round()`:
+
+```python
+if old_line < old_start + old_count:
+    offset = old_line - old_start
+    new_pos = new_start + int(offset * new_count / max(old_count, 1) + 0.5)
+    return min(new_pos, new_start + new_count - 1)
+```
+
+**Effect:**
+`_adjusted_line(diff, 23) = 24` for the bubble sort odd-even diff. `fresh_by_key.get((1, 24))` finds the inner stride-2 loop with 512+ iterations, which is then correctly processed at Tier-1 (TSan passes, OMP barrier false positive correctly identified) and accepted. All context lines within the hunk also map correctly via proportional scaling.
+
+---
+
+## Fix 13 — `mock_llm.py`: invalid OpenMP loop condition `i + 1 < n`
+
+**File:** `mock_llm.py`
+
+**Problem:**
+The pre-computed `_DIFF_BUBBLE_SORT` diff used `for (int i = start; i + 1 < n; i += 2)` for the restructured inner loop. OpenMP requires that the loop condition be a simple relational comparison directly against the loop variable (`i < expr`, `i <= expr`, etc.). The compound expression `i + 1 < n` is rejected at compile time:
+
+```
+error: condition of OpenMP for loop must be a relational comparison
+       ('<', '<=', '>', '>=', or '!=') of loop variable 'i'
+```
+
+This caused the inner loop (region 1:45) to fail at `stage=compile` and exhaust its Tier-2 budget attempting to fix a problem introduced by the mock diff itself.
+
+**Fix:**
+Changed to the mathematically equivalent `i < n - 1`:
+
+```python
+for (int i = start; i < n - 1; i += 2) {
+```
+
+**Effect:**
+The inner stride-2 loop compiles with `#pragma omp parallel for`, TSan passes (no cross-iteration conflicts at stride 2), and region 1:45 is accepted at Tier-1 without consuming any Tier-2 budget.

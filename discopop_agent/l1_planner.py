@@ -260,6 +260,7 @@ def build_candidates(
             region=region,
             source_file=source_file,
             pattern=pattern,
+            pattern_type=pattern_type,
             confidence=confidence,
             estimated_speedup=speedup,
             score=score,

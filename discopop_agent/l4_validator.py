@@ -190,7 +190,17 @@ def _tsan(source: Path, clangpp: str, work_dir: Path) -> Tuple[bool, str]:
 
     stderr = run_result.stderr
     if "WARNING: ThreadSanitizer" in stderr or "DATA RACE" in stderr:
-        return False, f"Race detected:\n{stderr[-2000:]}"
+        # Extract just the first warning block (up to and including the first SUMMARY line)
+        warning_idx = stderr.find("WARNING: ThreadSanitizer")
+        if warning_idx >= 0:
+            snippet = stderr[warning_idx:]
+            summary_idx = snippet.find("SUMMARY: ThreadSanitizer")
+            if summary_idx >= 0:
+                newline_after = snippet.find("\n", summary_idx)
+                snippet = snippet[: newline_after + 1 if newline_after >= 0 else summary_idx + 200]
+        else:
+            snippet = stderr[-1000:]
+        return False, f"Race detected:\n{snippet}"
     return True, ""
 
 
