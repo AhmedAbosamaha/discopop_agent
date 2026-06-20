@@ -166,11 +166,65 @@ def _compile(source: Path, clangpp: str, work_dir: Path) -> Tuple[bool, str]:
     return True, ""
 
 
+def _compile_variant(
+    source: Path, clangpp: str, work_dir: Path, name: str, openmp: bool, optimize: str = "-O2"
+) -> Tuple[bool, str, Optional[Path]]:
+    """Compile `source` to a runnable binary, with or without OpenMP.
+
+    Used by the correctness and performance stages: the same source compiled
+    without -fopenmp runs sequentially (pragmas ignored), with -fopenmp runs
+    in parallel.  Comparing the two isolates the effect of the pragma.
+    """
+    binary = work_dir / name
+    extra = (
+        [f"-L{_LLVM_LIBCXX}", f"-Wl,-rpath,{_LLVM_LIBCXX}"]
+        if Path(_LLVM_LIBCXX).exists() else []
+    ) + (
+        [f"-L{_LIBOMP_DIR}", f"-Wl,-rpath,{_LIBOMP_DIR}"]
+        if (openmp and Path(_LIBOMP_DIR).exists()) else []
+    ) + _macos_sysroot_flag()
+    cmd = [clangpp, str(source), "-o", str(binary), optimize]
+    if openmp:
+        cmd.append("-fopenmp")
+    cmd += extra
+    result = subprocess.run(cmd, capture_output=True, text=True, cwd=work_dir)
+    if result.returncode != 0:
+        return False, result.stderr[-1500:], None
+    return True, "", binary
+
+
+def _run_timed(
+    binary: Path, work_dir: Path, binary_args: Optional[list], repeats: int = 3
+) -> Tuple[bool, str, float, str]:
+    """Run `binary` `repeats` times; return (ok, stdout, best_wall_seconds, diag).
+
+    Uses the minimum wall time across runs — the least noise-inflated sample.
+    """
+    import time as _time
+    args = [str(binary)] + (binary_args or [])
+    best = float("inf")
+    stdout = ""
+    for _ in range(max(1, repeats)):
+        try:
+            t0 = _time.perf_counter()
+            r = subprocess.run(args, capture_output=True, text=True, timeout=120, cwd=work_dir)
+            dt = _time.perf_counter() - t0
+        except subprocess.TimeoutExpired:
+            return False, "", 0.0, "run timed out (120 s)"
+        if r.returncode != 0:
+            return False, r.stdout, 0.0, f"non-zero exit ({r.returncode}):\n{r.stderr[-500:]}"
+        stdout = r.stdout
+        best = min(best, dt)
+    return True, stdout, best, ""
+
+
 # ---------------------------------------------------------------------------
 # Stage 3: ThreadSanitizer
 # ---------------------------------------------------------------------------
 
-def _tsan(source: Path, clangpp: str, work_dir: Path) -> Tuple[bool, str, str]:
+def _tsan(
+    source: Path, clangpp: str, work_dir: Path, skip_race_check: bool = False
+) -> Tuple[bool, str, str]:
     """Compile with -fopenmp + TSan and run.
 
     Returns (ok, diagnostic, stage).  The stage distinguishes the two very
@@ -183,6 +237,11 @@ def _tsan(source: Path, clangpp: str, work_dir: Path) -> Tuple[bool, str, str]:
                            NOT a data race; it means the loop is not in a form
                            OpenMP can parallelize.
       - "tsan"           : the build ran and ThreadSanitizer reported a real race.
+
+    When `skip_race_check` is set, the OpenMP build is still compiled (so an
+    openmp_compile error is still caught) but a reported race is IGNORED — used
+    to re-verify a suspected OMP-barrier false positive against the correctness
+    and performance gates instead of rejecting it on the race alone.
     """
     binary = work_dir / "tsan_binary"
     extra = (
@@ -206,6 +265,10 @@ def _tsan(source: Path, clangpp: str, work_dir: Path) -> Tuple[bool, str, str]:
             f"{compile_result.stderr[-1000:]}",
             "openmp_compile",
         )
+
+    if skip_race_check:
+        # Compile succeeded; deliberately do not run TSan / inspect for races.
+        return True, "", "tsan"
 
     try:
         run_result = subprocess.run(
@@ -234,8 +297,45 @@ def _tsan(source: Path, clangpp: str, work_dir: Path) -> Tuple[bool, str, str]:
 # Public API
 # ---------------------------------------------------------------------------
 
-def validate(diff: str, source_file: str) -> ValidationResult:
-    """Run all three quality-gate stages. Return the first failure or success."""
+def capture_reference_output(source_file: str, binary_args: Optional[list] = None) -> Optional[str]:
+    """Compile the unmodified source (-O2, no OpenMP/TSan) and run it once to
+    capture its stdout as the golden reference.  Returns None if it cannot be
+    built or run, in which case correctness checking is skipped for the session.
+    """
+    clangpp = _find_clangpp()
+    if clangpp is None:
+        return None
+    with tempfile.TemporaryDirectory(prefix="dp_agent_ref_") as tmp:
+        work_dir = Path(tmp)
+        dst = work_dir / Path(source_file).name
+        shutil.copy2(source_file, dst)
+        ok, _, binary = _compile_variant(dst, clangpp, work_dir, "ref_binary", openmp=False)
+        if not ok or binary is None:
+            return None
+        ok, stdout, _, _ = _run_timed(binary, work_dir, binary_args, repeats=1)
+        return stdout if ok else None
+
+
+def validate(
+    diff: str,
+    source_file: str,
+    reference_output: Optional[str] = None,
+    binary_args: Optional[list] = None,
+    require_speedup: bool = False,
+    min_speedup: float = 1.0,
+    skip_race_check: bool = False,
+) -> ValidationResult:
+    """Run the quality-gate stages. Return the first failure or success.
+
+    Stages: apply → compile → tsan/openmp_compile → correctness → performance.
+
+    - correctness (when `reference_output` is given): the patched program,
+      compiled WITH -fopenmp, must reproduce the reference stdout exactly.
+      Catches restructurings that change observable results.
+    - performance (when `require_speedup` and the diff adds a `#pragma omp`):
+      the parallel build must run at least `min_speedup`× faster than the same
+      source built sequentially.  Only meaningful for pragma-bearing patches.
+    """
     clangpp = _find_clangpp()
     if clangpp is None:
         return ValidationResult(
@@ -250,6 +350,7 @@ def validate(diff: str, source_file: str) -> ValidationResult:
         ok, diag, patched = _apply(diff, source_file, work_dir)
         if not ok:
             return ValidationResult(passed=False, stage="apply", diagnostic=diag)
+        assert patched is not None  # _apply returns the path when ok is True
 
         # Stage 2
         ok, diag = _compile(patched, clangpp, work_dir)
@@ -257,8 +358,57 @@ def validate(diff: str, source_file: str) -> ValidationResult:
             return ValidationResult(passed=False, stage="compile", diagnostic=diag)
 
         # Stage 3
-        ok, diag, stage = _tsan(patched, clangpp, work_dir)
+        ok, diag, stage = _tsan(patched, clangpp, work_dir, skip_race_check=skip_race_check)
         if not ok:
             return ValidationResult(passed=False, stage=stage, diagnostic=diag)
 
-    return ValidationResult(passed=True, stage="accepted")
+        # Stage 4 — semantic correctness (observable output must be unchanged)
+        if reference_output is not None:
+            ok, diag, par_bin = _compile_variant(
+                patched, clangpp, work_dir, "correctness_par", openmp=True
+            )
+            if not ok or par_bin is None:
+                return ValidationResult(passed=False, stage="correctness",
+                                        diagnostic=f"parallel build failed:\n{diag}")
+            ok, out, _, rdiag = _run_timed(par_bin, work_dir, binary_args, repeats=1)
+            if not ok:
+                return ValidationResult(passed=False, stage="correctness",
+                                        diagnostic=f"parallel run failed: {rdiag}")
+            if out != reference_output:
+                return ValidationResult(
+                    passed=False, stage="correctness",
+                    diagnostic=(
+                        "Program output changed — restructuring is NOT semantically "
+                        "equivalent.\n"
+                        f"--- expected (original) ---\n{reference_output[:600]}\n"
+                        f"--- got (patched) ---\n{out[:600]}"
+                    ),
+                )
+
+        # Stage 5 — measured speedup (only for patches that add a pragma)
+        measured: Optional[float] = None
+        if require_speedup and "pragma omp" in diff:
+            ok_s, _, seq_bin = _compile_variant(
+                patched, clangpp, work_dir, "perf_seq", openmp=False
+            )
+            ok_p, _, par_bin = _compile_variant(
+                patched, clangpp, work_dir, "perf_par", openmp=True
+            )
+            if ok_s and ok_p and seq_bin and par_bin:
+                s_ok, _, seq_t, _ = _run_timed(seq_bin, work_dir, binary_args)
+                p_ok, _, par_t, _ = _run_timed(par_bin, work_dir, binary_args)
+                if s_ok and p_ok and par_t > 0:
+                    measured = seq_t / par_t
+                    if measured < min_speedup:
+                        return ValidationResult(
+                            passed=False, stage="performance",
+                            diagnostic=(
+                                f"No speedup from parallelization: measured "
+                                f"{measured:.2f}× (sequential {seq_t*1e3:.1f} ms vs "
+                                f"parallel {par_t*1e3:.1f} ms), below the required "
+                                f"{min_speedup:.2f}×."
+                            ),
+                            measured_speedup=measured,
+                        )
+
+    return ValidationResult(passed=True, stage="accepted", measured_speedup=measured)

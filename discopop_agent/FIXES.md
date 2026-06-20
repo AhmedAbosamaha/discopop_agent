@@ -257,7 +257,7 @@ The profiling run uses a fixed input (e.g. N=256, STEPS=50). The iteration count
 
 Additionally, after a Tier-2 restructuring causes region IDs to drift (see Fix 19), unrelated constructs inherit the old ID and report ≤ 1 iteration — causing legitimate original regions to be skipped for the wrong reason.
 
-**Reverted by Fix 20.** The score and `--min-speedup` system is the correct gate. ID drift in rebuilt candidates is handled separately by Fix 19.
+**Reverted by Fix 20.** The score and `--min-workload` system is the correct gate. ID drift in rebuilt candidates is handled separately by Fix 19.
 
 ---
 
@@ -477,7 +477,7 @@ Fix 11 added a global early-exit guard that skipped any candidate with `iteratio
 3. **ID drift** (after Tier-2 restructuring changes CFG traversal order) could assign an old ID to a trivial new construct, making an originally-busy region appear to have 1 iteration and be silently dropped.
 
 **Fix:**
-Removed the `if region.iteration_count <= 1: skip` block entirely from the main candidate loop. The score gate (`--min-speedup`) and Tier-1/Tier-2 logic are the sole filters for whether a region is worth processing.
+Removed the `if region.iteration_count <= 1: skip` block entirely from the main candidate loop. The score gate (`--min-workload`) and Tier-1/Tier-2 logic are the sole filters for whether a region is worth processing.
 
 ---
 
@@ -614,3 +614,96 @@ Two things made this hard to see and impossible to recover from:
 - The LLM is told up front to emit canonical loops, so the restructuring's exposed loops compile under `-fopenmp` and pass Tier-1 directly at depth+1.
 - When a non-canonical loop does slip through, the diagnostic correctly says "OpenMP compile error", not "data race / false positive", and at depth 0 the Tier-2 retry gets a precise fix instruction.
 - Note the residual design constraint: with `--restructure-depth 0`, exposed loops must be *directly* parallelizable, because depth+1 loops cannot be escalated to Tier-2. The prompt constraint is what makes that constraint satisfiable in practice.
+
+---
+
+## Fix 25 — Correctness gate, measured-speedup gate, and correctness prompt guidance
+
+**Files:** `l4_validator.py`, `controller.py`, `args.py`, `types.py`, `l3_llm.py`
+
+**Problem:**
+On `example4`, the LLM's odd-even restructuring used `int total = n - 1` — but odd-even transposition sort needs **`n`** phases. With `n-1` phases the array no longer fully sorts (the program printed `sorted: NO`). The agent **accepted it anyway**: the quality gate checked only apply / compile / race, never whether the program still produced correct output. This directly violated the system prompt's own first rule ("identical observable results"), which was *requested* but never *verified*.
+
+Separately, there was no check that a parallelization actually runs *faster* — a correct but pointless pragma (overhead > benefit) would still be accepted.
+
+**Fix (four parts):**
+
+1. **Correctness gate (Stage 4).** `capture_reference_output()` compiles the unmodified source (`-O2`, no OpenMP/TSan) and runs it once to record golden stdout. `validate()` gained a `reference_output` parameter; after the TSan stage it compiles the patched source **with** `-fopenmp`, runs it, and compares stdout byte-for-byte. A mismatch fails with `stage="correctness"` and an `expected vs got` diagnostic. The controller captures the reference once at start-up and passes it to every `validate()` call.
+
+2. **Measured-speedup gate (Stage 5).** When `--require-speedup` is set and the patch adds a `#pragma omp`, `validate()` builds the patched source both sequentially (no `-fopenmp`) and in parallel (`-fopenmp`), times each (min of 3 runs), and requires `seq_time / par_time ≥ --min-measured-speedup` (default 1.0). Otherwise it fails with `stage="performance"`. The measured ratio is stored on `ValidationResult.measured_speedup` and printed on the accepted line. A performance failure **skips** the region (does not escalate to Tier-2 — restructuring cannot manufacture a bigger workload).
+
+3. **OMP-barrier false positive now ground-truthed.** When the controller suspects a macOS OMP-barrier false positive (TSan race whose other accessor is the sequential main thread), it no longer accepts on the heuristic alone — it re-runs `validate(skip_race_check=True)` so the correctness (and performance) gates verify the patch. `_tsan()` gained `skip_race_check`: it still compiles (so `openmp_compile` errors are caught) but ignores a reported race, letting the later stages decide.
+
+4. **Correctness prompt guidance.** Added a `CORRECTNESS` block to the L3 system prompt telling the LLM its change is auto-verified against reference output and how to stay equivalent: preserve the algorithm's full work (e.g. odd-even sort needs N phases, not N-1), don't drop boundary elements or tighten bounds, prefer the smallest dependency-targeted transform over a wholesale rewrite, and re-derive results identically (same accumulation/order for floating-point).
+
+**New CLI:** `--require-speedup` (default off) and `--min-measured-speedup FLOAT` (default 1.0).
+
+**New result stages:** `correctness`, `performance` (in addition to `openmp_compile` from Fix 24).
+
+**Verified:** on the `example4` odd-even transform, the gate accepts the `n`-phase version (`stage=accepted`) and rejects the `n-1`-phase version (`stage=correctness`).
+
+**Caveat:** the correctness gate needs a program with deterministic, observable output (the examples print results — fine); if the reference can't be captured it is disabled with a warning. The speedup gate is opt-in because tiny workloads may not beat thread-spawn overhead.
+
+---
+
+## Fix 26 — Every validation failure carries its reason into the next LLM prompt
+
+**File:** `controller.py`
+
+**Problem:**
+Two gaps meant the LLM did not always learn *why* a patch was rejected:
+
+1. **Performance failures were a dead end.** A Tier-1 pragma patch that was correct but not faster set `escalate = False` and simply skipped — the LLM was never told the parallelization was rejected for being slow, so it had no chance to try a coarser-grained restructuring.
+2. **The fed-back diagnostic was over-truncated.** The Tier-2 retry message truncated the diagnostic to 600 chars; the correctness stage's `expected vs got` comparison (~1.3 KB) was cut off, so the LLM often couldn't see how the output differed.
+
+**Fix:**
+
+- **Performance failures now escalate to Tier-2** (when depth allows) with a targeted hint: the pragma is correct but measured `X×` < required, so increase parallel granularity / hoist invariant work / fuse tiny loops to amortise thread overhead. The dead `escalate` flag and its guard were removed (all failure stages now escalate; only `tier2_allowed`/depth gates a skip).
+- **Plain-English per-stage guidance.** A `_STAGE_GUIDANCE` map gives every stage (`apply`, `compile`, `openmp_compile`, `tsan`, `correctness`, `performance`) a one-line explanation of what went wrong and what to do, prepended to both `failure_reason` (first Tier-2 prompt) and the appended conversation turn (budget retries).
+- **Wider diagnostic.** The fed-back diagnostic limit was raised from 500/600 to 1400 chars so the correctness `expected vs got` block survives intact.
+
+**Effect:**
+On any rejection — including correctness and speedup — the next prompt the LLM sees states the stage, a human-readable reason, and the full diagnostic. The LLM can act on *why* it failed instead of guessing. Note this makes the speedup gate actively drive restructuring (correct-but-slow regions now get an LLM attempt, bounded by `--budget` and `--restructure-depth`) rather than silently dropping them.
+
+---
+
+## Fix 27 — Restructuring must pay off: revert + retry when no exposed loop speeds up
+
+**File:** `controller.py`
+
+**Problem:**
+A Tier-2 LLM restructuring produces pragma-less code, so it can't be speed-tested on its own — the speedup only appears later, once DiscoPoP parallelizes the loops it exposed (at depth+1, Tier-1). The agent therefore *committed* a restructuring the moment it passed correctness, then judged each exposed loop's speedup **separately and independently** downstream. Nothing ever asked the combined question: *"did this restructuring actually make anything faster?"* A restructuring whose exposed loops all turned out too small to beat thread overhead stayed committed on disk, having changed the source for no benefit, and the LLM never got a chance to try a better decomposition.
+
+**Fix — speedup-gated commit with rollback:**
+When `--require-speedup` is set and the exposed loops are **terminal** (`depth+1 > --restructure-depth`, i.e. they won't get their own Tier-2 pass), the controller now treats the restructuring as *tentative*:
+
+1. Save the pre-patch source; apply the patch; re-profile (queue and `all_seen_prints` are computed **read-only**, not yet mutated).
+2. `_best_exposed_speedup()` runs each exposed loop's DiscoPoP pragma through the full gate (compile + correctness + measured speedup; barrier-FP re-verified). It returns the best qualifying speedup, or `None` if no exposed loop is both correct and faster.
+3. **If `None` → revert:** restore the source, re-profile back to the pre-patch state, delete the patch file, and `continue` the budget loop. The next attempt gets `failure_reason` / a conversation turn explaining *"your restructuring preserved correctness but produced no speedup — expose coarser-grained, higher-payoff parallelism."* Budget is consumed naturally (it was decremented at the loop top), and the remaining queue is intact because `candidates[i:]` was never deleted.
+4. **If a speedup exists → commit:** only now delete `candidates[i:]`, enqueue survivors + discovered, update `all_seen_prints`, record `exposed_speedup`, and accept.
+
+When `--require-speedup` is off, or the exposed loops are non-terminal (`depth+1 ≤ --restructure-depth`, so they can still be restructured further), behaviour is unchanged — commit on correctness.
+
+**Effect:**
+A restructuring is kept only if it demonstrably leads to a faster parallel loop; otherwise it is rolled back and the LLM retries from the same budget with the reason. This closes the loop the user identified: the speedup result now feeds back as an accept/reject **verdict on the restructuring itself**, not just per-exposed-loop verdicts after the fact.
+
+**Cost/limitations:** exposed loops are speed-tested at commit time and again when later processed from the queue (double work — correctness prioritised over caching). The check only applies to terminal exposed loops, so at `--restructure-depth ≥ 1` an intermediate restructuring is still committed on correctness and judged once its descendants become terminal.
+
+---
+
+## Fix 28 — Fast revert: restore a profile snapshot instead of re-profiling
+
+**File:** `controller.py`
+
+**Problem:**
+The speedup-gated revert (Fix 27) restored the source file (cheap) but then called `_reprofil()` to rebuild the `.discopop` state — a full instrument + run + explore — just to get back to a state the agent *already had* a moment earlier. That re-profile dominated the revert cost and is pure waste: a revert returns to a known prior state, so there is nothing new to compute.
+
+**Fix — snapshot + restore:**
+- `_snapshot_profile(dp_dir, output_dir)` copies `.discopop/` to a snapshot under `<output_dir>/.profile_snapshots/` (kept **inside the project**, not the OS temp dir) once, **before** the budget loop (only when a revert is possible: `--require-speedup` and the exposed loops are terminal). It excludes the agent's own `output_dir` (e.g. `agent_patches`) when that lives inside `.discopop`, so accepted records/patches/backups — and the snapshot itself — are never part of the copy.
+- `_restore_profile(snap, dp_dir, output_dir)` reverts on a no-speedup result by deleting the regenerated profile contents (keeping `output_dir`) and copying the snapshot back — pure file operations, **no re-instrumentation/run/explore**.
+- One snapshot serves every retry of a candidate (the pre-patch state is identical across retries, since each revert restores it). The snapshot is removed after the budget loop (commit or skip).
+
+**Effect:**
+A revert is now two directory copies instead of a full DiscoPoP re-profile — the expensive `_reprofil` is gone from the revert path entirely. Verified: restore reverts `Data.xml`/profile dirs, removes the re-profile's new directories, and preserves `agent_patches` (accepted.json, patches written during the attempt).
+
+**Note:** the forward re-profile after applying a patch (needed to *discover* the exposed loops) is unchanged — only the revert's redundant re-profile is eliminated. On APFS/Linux the directory copies are fast; for very large `.discopop` profiles a copy-on-write clone (`cp -c` / reflink) would make it effectively instant.
