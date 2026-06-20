@@ -73,13 +73,13 @@ source file       ──▶
 **Scoring formula:**
 
 ```
-score = c · log₂(1 + Ŝ) − λ · 1[tier=2]
+score = c · log₂(1 + W) − λ · 1[tier=2]
 ```
 
 | Symbol | Meaning |
 |--------|---------|
 | `c` | pattern confidence (1.0 for Do-All, 0.9 for Reduction, 0.7 for Pipeline, 0.3 for Tier-2 baseline) |
-| `Ŝ` | estimated speedup proxy — `instructionsCount` for CUs; `iteration_count × loop_size` for loops |
+| `W` | profiled workload proxy (NOT a measured speedup) — `instructionsCount` for CUs; `iteration_count × loop_size` for loops |
 | `λ` | LLM penalty (`--lambda-penalty`, default 1.0) — discounts Tier-2 candidates to prefer Tier-1 where possible |
 
 **Tier assignment:**
@@ -226,7 +226,7 @@ Compiles with TSan and OpenMP enabled, then runs the binary. A `WARNING: ThreadS
 ┌─ Tier-1: applicable_pattern in patterns.json?
 │
 ├── YES
-│    └─ Ŝ ≥ min_speedup?
+│    └─ W ≥ min_workload?
 │         NO  → SKIP
 │         YES → Read DiscoPoP patch from patch_generator/
 │               Is the loop I/O-only? → skip TSan
@@ -325,8 +325,8 @@ class HotspotCandidate:
     source_file: str
     pattern: Optional[dict]   # from patterns.json, or None
     confidence: float         # [0, 1]
-    estimated_speedup: float  # Ŝ
-    score: float              # c·log₂(1+Ŝ) − λ·1[tier=2]
+    workload_estimate: float  # W
+    score: float              # c·log₂(1+W) − λ·1[tier=2]
     tier: int                 # 1 or 2
 
 @dataclass
@@ -363,7 +363,7 @@ python -m discopop_agent \
     --model         <model-id>               default: claude-opus-4-8
     --api-key       <key>                    fallback: LLM_API_KEY env var
     --lambda-penalty <float>                 default: 1.0
-    --min-speedup   <float>                  default: 1.0
+    --min-workload   <float>                  default: 1.0
     --output-dir    <path>                   default: <discopop-dir>/agent_patches
     --distance      <int>                    default: 0
     --dry-run                                plan only, no LLM calls, no file changes
@@ -374,7 +374,7 @@ python -m discopop_agent \
 
 **`--lambda-penalty`:** Controls how much the Tier-2 LLM cost discounts a candidate's score. Higher values make the agent prefer Tier-1 (DiscoPoP) regions and skip Tier-2 (LLM-only) regions with lower workload.
 
-**`--min-speedup`:** Regions with estimated speedup below this threshold are never processed. Use `--min-speedup 0` to include function regions, which have `workload=0` in Data.xml (only CU nodes carry `instructionsCount`).
+**`--min-workload`:** Regions whose profiled workload proxy (`W`) is below this threshold are never processed. This is a cheap static pre-filter, not a measured speedup. Use `--min-workload 0` to include function regions, which have `workload=0` in Data.xml (only CU nodes carry `instructionsCount`).
 
 **`--distance`:** Number of additional discovery passes to run after the initial candidate list is exhausted.
 
@@ -440,14 +440,14 @@ python -m discopop_agent \
     --source-file  example4/bubble_sort.cpp \
     --discopop-dir example4/.discopop \
     --mock-llm \
-    --min-speedup 0
+    --min-workload 0
 ```
 
 ### Expected output
 
 ```
 ┌─ loop 1:6 (lines 23–29)  score=14.5
-│  [Tier-1] Pattern #1 (do_all): #pragma omp parallel for  (Ŝ=23045)
+│  [Tier-1] Pattern #1 (do_all): #pragma omp parallel for  (W=23045)
 │  [Tier-1] Running TSan validation on generated patch...
 │  [Tier-1] Validation FAILED (stage=tsan) — DiscoPoP false positive
 │  [Tier-1] Escalating to Tier-2 (LLM restructuring)
@@ -477,7 +477,7 @@ python -m discopop_agent \
     --discopop-dir example4/.discopop \
     --model        claude-opus-4-8 \
     --budget       3 \
-    --min-speedup  0
+    --min-workload  0
 ```
 
 Or place the key in a `.env` file in the project root:
@@ -496,7 +496,7 @@ The agent will load it automatically on startup without requiring any environmen
 DiscoPoP's dependency graph mismatches instruction IDs against source line IDs. As a result, Do-All is frequently reported for loops with genuine cross-iteration RAW dependencies. Tier-1 TSan validation exists specifically to catch this, but it means Tier-1 acceptance rates are lower than DiscoPoP's raw pattern count suggests.
 
 **2. Function-level workload is always 0 in Data.xml.**
-`instructionsCount` is only populated for CU (basic block) nodes. Loops derive a workload proxy from `iteration_count × body_size`; functions have no equivalent fallback and always score 0. Patterns that carry a `workload` field in `patterns.json` can override this, but pure Tier-2 function candidates are always filtered out by `--min-speedup` unless you pass `--min-speedup 0`.
+`instructionsCount` is only populated for CU (basic block) nodes. Loops derive a workload proxy from `iteration_count × body_size`; functions have no equivalent fallback and always score 0. Patterns that carry a `workload` field in `patterns.json` can override this, but pure Tier-2 function candidates are always filtered out by `--min-workload` unless you pass `--min-workload 0`.
 
 **3. Re-profiling uses the same binary entry point.**
 `_reprofil()` always runs `./a.out` with the arguments supplied via `--reprofil-args`. If the restructured function is only reachable through a specific call path that `main()` does not exercise by default, pass the required arguments so re-profiling covers the right code paths:

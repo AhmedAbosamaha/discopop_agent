@@ -13,12 +13,14 @@ class AgentArguments:
     model: str
     api_key: Optional[str]      # LLM_API_KEY — provider-agnostic
     lambda_penalty: float
-    min_speedup: float
+    min_workload: float
     output_dir: str
     dry_run: bool
     mock_llm: bool              # bypass real API; use pre-computed diffs for testing
     manual_llm: bool            # print prompt to stdout, read diff from stdin
     restructure_depth: int      # max discovery depth at which Tier-2 (LLM) is applied
+    require_speedup: bool       # gate pragma patches on measured wall-clock speedup
+    min_measured_speedup: float # minimum measured parallel speedup to accept
     reprofil_args: list         # extra arguments forwarded to ./a.out during re-profiling
 
 
@@ -38,8 +40,11 @@ def parse_args() -> AgentArguments:
                    help="LLM API key — falls back to LLM_API_KEY env var")
     p.add_argument("--lambda-penalty", type=float, default=1.0,
                    help="Score penalty λ for invoking LLM tier (default: 1.0)")
-    p.add_argument("--min-speedup", type=float, default=1.0,
-                   help="Minimum estimated speedup to process a region (default: 1.0)")
+    p.add_argument("--min-workload", type=float, default=1.0,
+                   help=("Minimum region workload (profiled instruction-count proxy) to "
+                         "consider a region a candidate (default: 1.0). This is a cheap "
+                         "static pre-filter, NOT a measured speedup — use 0 to include "
+                         "function regions whose workload is reported as 0."))
     p.add_argument("--output-dir", default=None,
                    help="Where to write patches (default: <discopop-dir>/agent_patches)")
     p.add_argument("--dry-run", action="store_true",
@@ -60,6 +65,16 @@ def parse_args() -> AgentArguments:
                        "This bounds the restructuring chain and prevents the source from "
                        "drifting arbitrarily far from the original."
                    ))
+    p.add_argument("--require-speedup", action="store_true",
+                   help=(
+                       "Only accept a parallelization (a patch that adds a "
+                       "#pragma omp) if the parallel build measurably runs faster "
+                       "than the sequential build of the same source. Note: tiny "
+                       "workloads may not show speedup due to thread overhead."
+                   ))
+    p.add_argument("--min-measured-speedup", type=float, default=1.0,
+                   help=("Minimum measured wall-clock speedup (parallel vs sequential) "
+                         "required when --require-speedup is set (default: 1.0)"))
     p.add_argument("--reprofil-args", nargs=argparse.REMAINDER, default=[],
                    help="Arguments forwarded to ./a.out during re-profiling (e.g. -- sort input.txt)")
     a = p.parse_args()
@@ -74,11 +89,13 @@ def parse_args() -> AgentArguments:
         model=a.model,
         api_key=api_key,
         lambda_penalty=a.lambda_penalty,
-        min_speedup=a.min_speedup,
+        min_workload=a.min_workload,
         output_dir=a.output_dir or f"{a.discopop_dir}/agent_patches",
         dry_run=a.dry_run,
         mock_llm=a.mock_llm,
         manual_llm=a.manual_llm,
         restructure_depth=a.restructure_depth,
+        require_speedup=a.require_speedup,
+        min_measured_speedup=a.min_measured_speedup,
         reprofil_args=a.reprofil_args,
     )

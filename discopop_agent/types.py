@@ -31,8 +31,8 @@ class HotspotCandidate:
     pattern: Optional[dict]     # from patterns.json — None if no Tier-1 match
     pattern_type: Optional[str] # "do_all" | "reduction" | "pipeline" | etc.
     confidence: float           # pattern confidence [0, 1]
-    estimated_speedup: float    # Ŝ — workload-based speedup proxy
-    score: float                # c·log₂(1+Ŝ) − λ·1[tier=2]
+    workload_estimate: float    # W — profiled workload proxy (NOT a measured speedup)
+    score: float                # c·log₂(1+W) − λ·1[tier=2]
     tier: int                   # 1 = DiscoPoP pattern available, 2 = LLM needed
 
 
@@ -55,5 +55,8 @@ class EvidencePackage:
 @dataclass
 class ValidationResult:
     passed: bool
-    stage: str          # "apply" | "compile" | "tsan" | "accepted"
+    # "apply" | "compile" | "openmp_compile" | "tsan" | "correctness"
+    # | "performance" | "accepted"
+    stage: str
     diagnostic: str = ""
+    measured_speedup: Optional[float] = None   # set by the performance stage

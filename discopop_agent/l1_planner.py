@@ -164,14 +164,15 @@ def _load_patterns(patterns_path: Path) -> Dict[str, Tuple[str, dict]]:
 # Scoring
 # ---------------------------------------------------------------------------
 
-def _estimated_speedup(workload: int) -> float:
-    """Ŝ: workload proxy used in the scoring formula and the min-speedup gate."""
+def _workload_estimate(workload: int) -> float:
+    """W: profiled workload proxy used in the scoring formula and the
+    min-workload gate.  (This is a static work estimate, not a measured speedup.)"""
     return float(max(0, workload))
 
 
 def _score(workload: int, confidence: float, tier: int, lambda_penalty: float) -> float:
-    """score = c · log₂(1 + Ŝ) − λ · 1[tier=2]"""
-    return confidence * math.log2(1 + _estimated_speedup(workload)) - lambda_penalty * (tier - 1)
+    """score = c · log₂(1 + W) − λ · 1[tier=2]"""
+    return confidence * math.log2(1 + _workload_estimate(workload)) - lambda_penalty * (tier - 1)
 
 
 # ---------------------------------------------------------------------------
@@ -182,11 +183,11 @@ def build_candidates(
     discopop_dir: Path,
     source_file: str,
     lambda_penalty: float,
-    min_speedup: float = 1.0,
+    min_workload: float = 1.0,
 ) -> List[HotspotCandidate]:
     """
     Return hotspot candidates sorted by score descending.
-    Regions whose estimated speedup is below min_speedup are excluded so
+    Regions whose workload estimate is below min_workload are excluded so
     the controller never wastes budget on trivially small regions.
     Covers loops, functions, and CUs — not just loops.
     """
@@ -246,14 +247,14 @@ def build_candidates(
             if p_workload > workload:
                 workload = p_workload
 
-        speedup = _estimated_speedup(workload)
+        workload_est = _workload_estimate(workload)
         score = _score(workload, confidence, tier, lambda_penalty)
 
-        # Skip regions whose estimated speedup falls below the threshold.
-        # For Tier-1 the check uses the raw speedup estimate; for Tier-2
+        # Skip regions whose workload estimate falls below the threshold.
+        # For Tier-1 the check uses the raw workload estimate; for Tier-2
         # the λ penalty already makes low-workload regions score negatively,
         # but we apply the threshold explicitly to both tiers for clarity.
-        if speedup < min_speedup:
+        if workload_est < min_workload:
             continue
 
         candidates.append(HotspotCandidate(
@@ -262,7 +263,7 @@ def build_candidates(
             pattern=pattern,
             pattern_type=pattern_type,
             confidence=confidence,
-            estimated_speedup=speedup,
+            workload_estimate=workload_est,
             score=score,
             tier=tier,
         ))

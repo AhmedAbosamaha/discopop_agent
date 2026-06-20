@@ -191,7 +191,7 @@ python -m discopop_agent \
     --discopop-dir example4/.discopop \
     --source-file   example4/bubble_sort.cpp \
     --mock-llm \
-    --min-speedup 0
+    --min-workload 0
 ```
 
 Expected output summary:
@@ -209,7 +209,7 @@ python -m discopop_agent \
     --source-file   example4/bubble_sort.cpp \
     --model        claude-opus-4-8 \
     --budget       3 \
-    --min-speedup  0
+    --min-workload  0
 ```
 
 ---

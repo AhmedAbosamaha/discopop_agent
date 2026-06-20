@@ -68,6 +68,24 @@ _SYSTEM = textwrap.dedent("""\
       - The trip count must be computable before the loop runs (no data- or
         condition-dependent termination).
 
+    CORRECTNESS — your change is AUTOMATICALLY VERIFIED: the program is run
+    before and after your patch and the outputs are compared byte-for-byte.
+    A patch that alters the observable result is REJECTED, no matter how clean
+    it looks.  To pass:
+      - Preserve the algorithm's FULL work.  If you replace an algorithm with an
+        equivalent one (e.g. an in-place sweep with a transposition-network
+        sweep), reproduce its exact termination/convergence — do not shorten the
+        pass or phase count.  (E.g. odd-even transposition sort needs N phases
+        for N elements, NOT N-1; a Jacobi sweep needs the same number of steps.)
+      - Do not drop boundary elements or tighten loop bounds in a way that skips
+        work the original performed.
+      - Prefer the smallest transformation that removes the specific dependency
+        shown in the profile (loop fission, a temp array, privatization) over a
+        wholesale algorithm rewrite — smaller changes are far less likely to
+        change results.
+      - Re-derive the result the same way: same accumulation, same comparisons,
+        same rounding/order where it affects floating-point output.
+
     >>> OUTPUT A UNIFIED DIFF ONLY. <<<
     No prose, no explanation, no markdown, no code fences. Your ENTIRE response
     must be the diff itself, beginning with '--- ' and containing '+++ ' and
