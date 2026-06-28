@@ -115,7 +115,7 @@ _SYSTEM_FUNCTION = _SYSTEM_CORE + _OUTPUT_FUNCTION
 # Prompt builder
 # ---------------------------------------------------------------------------
 
-def _build_prompt(evidence: EvidencePackage, prior_diff: Optional[str] = None) -> str:
+def _build_prompt(evidence: EvidencePackage) -> str:
     def fmt_deps(deps, label):
         if not deps:
             return f"  {label}: none\n"
@@ -161,12 +161,6 @@ def _build_prompt(evidence: EvidencePackage, prior_diff: Optional[str] = None) -
     if evidence.reduction_vars:
         parts.append(
             f"### Reduction variables: {', '.join(evidence.reduction_vars)}\n"
-        )
-
-    if prior_diff:
-        parts.append(
-            f"### Your previous attempt (FAILED)\n"
-            f"```diff\n{prior_diff}\n```\n"
         )
 
     if evidence.tier1_failure_reason:
@@ -280,88 +274,6 @@ def _extract_code(text: str) -> Optional[str]:
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
-
-_MANUAL_EOF = "---END---"
-
-
-def call_manual(
-    evidence: EvidencePackage,
-    messages: Optional[list] = None,
-    edit_mode: str = "diff",
-) -> tuple[Optional[str], list]:
-    """Print the prompt (or full conversation history) to stdout and read the
-    response from stdin.
-
-    In edit_mode="diff" the expected response is a unified diff; in
-    edit_mode="function" it is the complete rewritten function.
-
-    On the first call for a region pass messages=None — the system prompt and
-    initial user prompt are printed in full.  On subsequent budget retries pass
-    the list returned by the previous call so the full conversation history is
-    printed.
-
-    Interactive: paste the response and type '---END---' on its own line to
-    submit.  Piped input: separate responses with '---END---' lines; EOF works.
-    """
-    function_mode = edit_mode == "function"
-    system = _SYSTEM_FUNCTION if function_mode else _SYSTEM
-    what = "complete rewritten function" if function_mode else "diff"
-
-    if messages is None:
-        user_prompt = _build_function_prompt(evidence) if function_mode else _build_prompt(evidence)
-        messages = [{"role": "user", "content": user_prompt}]
-
-        print("\n" + "=" * 70)
-        print("  SYSTEM PROMPT (send to LLM)")
-        print("=" * 70)
-        print(system)
-        print("=" * 70)
-        print("  USER PROMPT (send to LLM)")
-        print("=" * 70)
-        print(user_prompt)
-    else:
-        print("\n" + "=" * 70)
-        print(f"  CONVERSATION HISTORY ({len(messages)} turn(s))")
-        print("=" * 70)
-        for turn in messages:
-            role = "USER" if turn["role"] == "user" else "ASSISTANT"
-            print(f"\n{'─' * 70}")
-            print(f"  [{role}]")
-            print(f"{'─' * 70}")
-            print(turn["content"])
-
-    print("\n" + "=" * 70)
-    print(f"  Paste the new {what} below, then type '{_MANUAL_EOF}' on its own line (or Ctrl-D):")
-    print("=" * 70 + "\n")
-
-    lines = []
-    try:
-        while True:
-            line = input()
-            if line == _MANUAL_EOF:
-                break
-            lines.append(line)
-    except EOFError:
-        pass
-
-    text = "\n".join(lines).strip()
-    if not text:
-        return None, list(messages)
-
-    if function_mode:
-        code = _extract_code(text)
-        if code is not None:
-            return code, list(messages) + [{"role": "assistant", "content": code}]
-        print("│  [Manual-LLM] Response does not look like a function (needs braces).")
-        return None, list(messages)
-
-    diff = _extract_diff(text)
-    if diff and _is_valid_diff(diff):
-        return diff, list(messages) + [{"role": "assistant", "content": diff}]
-
-    print("│  [Manual-LLM] Response does not look like a valid unified diff.")
-    return None, list(messages)
-
 
 def _make_client(provider: str, api_key: Optional[str], api_base: Optional[str]) -> Any:
     """Create the provider client.  'anthropic' (default) uses the Anthropic SDK;

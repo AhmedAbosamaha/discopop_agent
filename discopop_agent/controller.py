@@ -64,9 +64,8 @@ from typing import List
 from .args import AgentArguments
 from .l1_planner import build_candidates
 from .l2_evidence import assemble
-from .l3_llm import call_llm, call_manual
+from .l3_llm import call_llm
 from .l4_validator import capture_reference_output, fix_hunk_headers, validate
-from .mock_llm import call_mock
 
 _LLVM_LIBCXX = "/usr/local/Cellar/llvm@19/19.1.7/lib/c++"
 _REGION_LABEL = {"loop": "loop", "function": "function", "cu": "block"}
@@ -320,11 +319,7 @@ def _print_banner(args: AgentArguments) -> None:
     if args.require_speedup:
         print(f"  Speedup gate   : require ≥ {args.min_measured_speedup}× measured")
     print(f"  Dry run        : {args.dry_run}")
-    if args.manual_llm:
-        llm_mode = "manual (stdin)"
-    elif args.mock_llm:
-        llm_mode = "mock"
-    elif args.provider == "openai-compat":
+    if args.provider == "openai-compat":
         llm_mode = f"{args.model} @ {args.api_base} (openai-compat)"
     else:
         llm_mode = args.model
@@ -623,27 +618,19 @@ def run(args: AgentArguments) -> None:
 
             evidence = assemble(candidate, profiler_dir, failure_reason)
 
-            if args.mock_llm:
-                diff = call_mock(evidence)          # mock always returns a diff
-            elif args.manual_llm:
-                diff, tier2_messages = call_manual(
-                    evidence, messages=tier2_messages, edit_mode=args.edit_mode
-                )
-            else:
-                print(f"│  [Tier-2] Calling {args.model}...")
-                diff, tier2_messages = call_llm(
-                    evidence, args.model,
-                    api_key=args.api_key,
-                    messages=tier2_messages,
-                    provider=args.provider,
-                    api_base=args.api_base,
-                    edit_mode=args.edit_mode,
-                )
+            print(f"│  [Tier-2] Calling {args.model}...")
+            diff, tier2_messages = call_llm(
+                evidence, args.model,
+                api_key=args.api_key,
+                messages=tier2_messages,
+                provider=args.provider,
+                api_base=args.api_base,
+                edit_mode=args.edit_mode,
+            )
 
             # In function mode the LLM returns the rewritten enclosing function;
-            # splice it in and turn it into a guaranteed-apply diff.  (mock is
-            # always a diff, so skip conversion there.)
-            if diff is not None and args.edit_mode == "function" and not args.mock_llm:
+            # splice it in and turn it into a guaranteed-apply diff.
+            if diff is not None and args.edit_mode == "function":
                 diff = _function_edit_to_diff(
                     args.source_file,
                     evidence.enclosing_function_start,
