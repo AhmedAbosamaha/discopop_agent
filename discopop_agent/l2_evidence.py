@@ -16,6 +16,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import List, Tuple
 
+from .l1_planner import find_enclosing_function
 from .types import Dependency, EvidencePackage, HotspotCandidate
 
 
@@ -143,6 +144,66 @@ def _extract_source_region(source_file: str, start_line: int, end_line: int) -> 
     return "\n".join(region)
 
 
+def _read_span(source_file: str, start_line: int, end_line: int) -> str:
+    """Return the raw source text for lines [start_line, end_line] (no prefixes)."""
+    lines = Path(source_file).read_text().splitlines()
+    return "\n".join(lines[max(0, start_line - 1):end_line])
+
+
+def _brace_match_end(source_file: str, start_line: int) -> int:
+    """Return the 1-based line of the closing `}` that balances the first `{` at
+    or after start_line, ignoring braces in // and /* */ comments and in string /
+    char literals.  Returns 0 if not found.
+
+    DiscoPoP's function `endsAtLine` points at the last *statement*, not the
+    closing brace (e.g. it reports the `return 0;` line, not the `}` after it),
+    so for function-mode splicing we recompute the true span here."""
+    lines = Path(source_file).read_text().splitlines()
+    depth = 0
+    opened = False
+    in_block = False
+    for idx in range(max(0, start_line - 1), len(lines)):
+        line = lines[idx]
+        i = 0
+        while i < len(line):
+            two = line[i:i + 2]
+            if in_block:
+                if two == "*/":
+                    in_block = False
+                    i += 2
+                    continue
+                i += 1
+                continue
+            if two == "//":
+                break
+            if two == "/*":
+                in_block = True
+                i += 2
+                continue
+            ch = line[i]
+            if ch in ('"', "'"):
+                q = ch
+                i += 1
+                while i < len(line):
+                    if line[i] == "\\":
+                        i += 2
+                        continue
+                    if line[i] == q:
+                        i += 1
+                        break
+                    i += 1
+                continue
+            if ch == "{":
+                depth += 1
+                opened = True
+            elif ch == "}":
+                depth -= 1
+                if opened and depth == 0:
+                    return idx + 1
+            i += 1
+    return 0
+
+
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
@@ -160,6 +221,22 @@ def assemble(
         candidate.source_file, region.start_line, region.end_line
     )
 
+    # Enclosing function (for --edit-mode function).  If the region is already a
+    # function, or no containing function is found, fall back to the region span.
+    fn = find_enclosing_function(
+        profiler_dir, region.file_id, region.start_line, region.end_line
+    )
+    if fn is not None:
+        fn_name, fn_start, fn_end = fn.name, fn.start_line, fn.end_line
+    else:
+        fn_name, fn_start, fn_end = region.name, region.start_line, region.end_line
+    # DiscoPoP's end line points at the last statement, not the closing brace —
+    # recompute the true span so function-mode splicing replaces the whole function.
+    true_end = _brace_match_end(candidate.source_file, fn_start)
+    if true_end >= fn_start:
+        fn_end = true_end
+    fn_source = _read_span(candidate.source_file, fn_start, fn_end)
+
     return EvidencePackage(
         region_id=region.region_id,
         region_type=region.region_type,
@@ -173,4 +250,8 @@ def assemble(
         waw_deps=waw,
         reduction_vars=reductions,
         tier1_failure_reason=failure_reason,
+        enclosing_function_name=fn_name,
+        enclosing_function_start=fn_start,
+        enclosing_function_end=fn_end,
+        enclosing_function_source=fn_source,
     )

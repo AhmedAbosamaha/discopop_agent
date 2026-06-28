@@ -739,3 +739,26 @@ python -m discopop_agent \
 ```
 
 **Note:** the OpenAI path does not use Anthropic's ephemeral prompt cache, so the (large) system prompt is re-sent each call — fine for a local/free endpoint, but worth knowing for token accounting on metered OpenAI-compatible services.
+
+---
+
+## Fix 30 — `--edit-mode function`: LLM returns the rewritten function, agent makes the diff
+
+**Files:** `args.py`, `types.py`, `l1_planner.py`, `l2_evidence.py`, `l3_llm.py`, `controller.py`
+
+**Problem:**
+Making the LLM emit a byte-exact unified diff is the single biggest source of wasted budget — most failures we saw were `stage=apply` (wrong `@@` anchors, off indentation, copied `NNNN >>>` prefixes, miscounted hunks), none of which are about parallelization quality. Self-hosted models (Qwen) are especially poor at exact diffs.
+
+**Fix — a second edit mode where the LLM returns code, not a diff:**
+- **`--edit-mode {diff,function}`** (default `diff`, unchanged behavior). In `function` mode the LLM is asked for the **complete rewritten enclosing function**; the agent splices it in by line range and **generates the diff itself**, so the apply step cannot fail on formatting.
+- **`l1_planner.find_enclosing_function(profiler_dir, file_id, start, end)`** — finds the tightest function-type region containing the target (falls back to the region's own span).
+- **`l2_evidence.assemble`** populates new `EvidencePackage` fields: `enclosing_function_{name,start,end,source}`.
+- **`l3_llm`**: system prompt split into `_SYSTEM_CORE` + per-mode output trailer (`_OUTPUT_DIFF` / `_OUTPUT_FUNCTION`); new `_build_function_prompt` (shows the whole function + the target region's dependence profile, asks for the full function) and `_extract_code` (pulls the ```cpp block, requires braces). `call_llm`/`call_manual` take `edit_mode`; in function mode they return the rewritten function text.
+- **`controller`**: `_function_edit_to_diff(source, start, end, new_code)` splices the function over `[start,end]` and emits a `difflib` unified diff — **generated from the real on-disk file, so it always applies**. Everything downstream (validate, correctness/speedup gates, snapshots, revert, `.patch` artifact) is unchanged; it just receives a guaranteed-clean diff.
+
+**Effect:**
+The entire `stage=apply` failure class disappears in function mode — budget is spent only on real issues (compile, race, correctness, speedup). Works identically on Anthropic and the self-hosted Qwen endpoint. Verified: a fenced function reply is extracted, spliced, and the generated diff applies cleanly via `patch`.
+
+**Trade-off:** the LLM rewrites a whole function (more output tokens than a tight diff) and could in principle change more than the target loop — but the correctness gate already rejects any semantic drift, and the change stays bounded to one function.
+
+**Follow-up (brace-match span):** DiscoPoP's function `endsAtLine` points at the last *statement*, not the closing `}` (e.g. it reports `main`'s `return 0;` line, not the `}` after it). Early function-mode runs then failed at `stage=compile` with "extraneous closing brace" because the splice left the original `}` in place beside the LLM's. Fixed with `l2_evidence._brace_match_end(source, start)` — it scans from the function's start line, balancing `{`/`}` (skipping `//`, `/* */`, and string/char literals), to find the true closing-brace line, which `assemble` uses for both the shown function source and the splice span. Verified on `example4`: `main` 33→48 (DiscoPoP said 47), `bubble_sort` 21→31. End-to-end function-mode run against Qwen then accepted 2 Tier-2 rewrites + 1 validated Do-All with zero apply/brace failures.

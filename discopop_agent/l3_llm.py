@@ -13,6 +13,7 @@ a budget slot.
 """
 from __future__ import annotations
 
+import re
 import textwrap
 from typing import Any, Optional
 
@@ -24,7 +25,7 @@ from .types import EvidencePackage
 # System prompt (cached across all calls in a session)
 # ---------------------------------------------------------------------------
 
-_SYSTEM = textwrap.dedent("""\
+_SYSTEM_CORE = textwrap.dedent("""\
     You are an expert in parallel programming and OpenMP for C/C++.
 
     Your task: given a C/C++ code region with its runtime data-dependence
@@ -48,8 +49,6 @@ _SYSTEM = textwrap.dedent("""\
             reduction-variable privatization, loop interchange,
             hoisting loop-invariant code, separating independent statements
       - Do NOT add OpenMP pragmas — DiscoPoP will do that after re-profiling
-      - Output ONLY a valid unified diff. No explanation, no code fences.
-        The diff must begin with '--- ' and include '+++ ' and '@@ ' markers.
 
     CRITICAL — every loop you intend to be parallelized (including any new
     loops your restructuring creates) MUST be in OpenMP-canonical form, or
@@ -70,7 +69,7 @@ _SYSTEM = textwrap.dedent("""\
 
     CORRECTNESS — your change is AUTOMATICALLY VERIFIED: the program is run
     before and after your patch and the outputs are compared byte-for-byte.
-    A patch that alters the observable result is REJECTED, no matter how clean
+    A change that alters the observable result is REJECTED, no matter how clean
     it looks.  To pass:
       - Preserve the algorithm's FULL work.  If you replace an algorithm with an
         equivalent one (e.g. an in-place sweep with a transposition-network
@@ -85,6 +84,10 @@ _SYSTEM = textwrap.dedent("""\
         change results.
       - Re-derive the result the same way: same accumulation, same comparisons,
         same rounding/order where it affects floating-point output.
+""")
+
+# Output-format instruction appended per edit mode.
+_OUTPUT_DIFF = textwrap.dedent("""\
 
     >>> OUTPUT A UNIFIED DIFF ONLY. <<<
     No prose, no explanation, no markdown, no code fences. Your ENTIRE response
@@ -92,6 +95,21 @@ _SYSTEM = textwrap.dedent("""\
     '@@ ' markers. Any text that is not part of the diff causes the response to
     be rejected.
 """)
+
+_OUTPUT_FUNCTION = textwrap.dedent("""\
+
+    >>> OUTPUT THE COMPLETE REWRITTEN FUNCTION ONLY. <<<
+    Return the ENTIRE function — its signature and full body, from the opening
+    `{` to the closing `}` — as a single C++ code block.  Do NOT output a diff,
+    line numbers, markers, or prose.  Rewrite only this one function; do not
+    rename it or change its signature.  The agent applies your function verbatim
+    in place, so it must compile as-is.
+""")
+
+# Diff mode keeps the original system prompt verbatim; function mode swaps the
+# trailing output instruction.
+_SYSTEM = _SYSTEM_CORE + _OUTPUT_DIFF
+_SYSTEM_FUNCTION = _SYSTEM_CORE + _OUTPUT_FUNCTION
 
 # ---------------------------------------------------------------------------
 # Prompt builder
@@ -174,6 +192,59 @@ def _build_prompt(evidence: EvidencePackage, prior_diff: Optional[str] = None) -
     return "\n".join(parts)
 
 
+def _fmt_deps(deps: list, label: str) -> str:
+    if not deps:
+        return f"  {label}: none\n"
+    lines = [f"  {label}:"]
+    for d in deps[:20]:
+        lines.append(f"    line {d.from_line} → {d.to_line}  variable: {d.variable}")
+    return "\n".join(lines) + "\n"
+
+
+def _build_function_prompt(evidence: EvidencePackage) -> str:
+    """Prompt for --edit-mode function: show the whole enclosing function and the
+    target region's dependence profile, and ask for the complete rewritten
+    function back (no diff)."""
+    region_label = {
+        "loop": "loop", "function": "function body", "cu": "basic block",
+    }.get(evidence.region_type, "code region")
+    fname = evidence.enclosing_function_name or "(enclosing function)"
+
+    parts = [
+        f"## Source file: {evidence.source_file}",
+        f"## Function to rewrite: {fname}  "
+        f"(lines {evidence.enclosing_function_start}–{evidence.enclosing_function_end})",
+        f"## Target region: {region_label} {evidence.region_id} at lines "
+        f"{evidence.start_line}–{evidence.end_line}\n",
+        "### Current function (rewrite this whole function):",
+        "```cpp",
+        evidence.enclosing_function_source,
+        "```\n",
+        "### Runtime data dependences in the target region (observed)",
+        _fmt_deps(evidence.raw_deps, "RAW — read-after-write (the blocking ones)"),
+        _fmt_deps(evidence.war_deps, "WAR — write-after-read"),
+        _fmt_deps(evidence.waw_deps, "WAW — write-after-write"),
+    ]
+    if evidence.reduction_vars:
+        parts.append(f"### Reduction variables: {', '.join(evidence.reduction_vars)}\n")
+    if evidence.tier1_failure_reason:
+        parts.append(f"### What went wrong\n{evidence.tier1_failure_reason}\n")
+
+    parts.append(
+        "### Task\n"
+        f"Restructure the {region_label} (lines {evidence.start_line}–"
+        f"{evidence.end_line}) inside `{fname}` so that DiscoPoP can detect a "
+        "parallelism pattern after re-profiling, preserving exact program "
+        "semantics.\n"
+        "\n"
+        ">>> OUTPUT THE COMPLETE REWRITTEN FUNCTION ONLY. <<<\n"
+        "Return the entire function (signature + full body) as one ```cpp code "
+        "block. No diff, no line numbers, no markers, no prose. Keep the same "
+        "function name and signature."
+    )
+    return "\n".join(parts)
+
+
 # ---------------------------------------------------------------------------
 # Diff validation
 # ---------------------------------------------------------------------------
@@ -192,6 +263,20 @@ def _is_valid_diff(diff: str) -> bool:
     return "---" in diff and "+++" in diff and "@@" in diff
 
 
+_CODE_FENCE_RE = re.compile(r"```(?:cpp|c\+\+|cxx|c)?\s*\n(.*?)```", re.DOTALL | re.IGNORECASE)
+
+
+def _extract_code(text: str) -> Optional[str]:
+    """For --edit-mode function: pull the rewritten function out of the response.
+    Prefer a fenced ```cpp block; otherwise use the raw text.  Returns None if it
+    doesn't look like a function (no braces)."""
+    m = _CODE_FENCE_RE.search(text)
+    code = (m.group(1) if m else text).strip("\n")
+    if "{" in code and "}" in code:
+        return code
+    return None
+
+
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
@@ -202,27 +287,34 @@ _MANUAL_EOF = "---END---"
 def call_manual(
     evidence: EvidencePackage,
     messages: Optional[list] = None,
+    edit_mode: str = "diff",
 ) -> tuple[Optional[str], list]:
-    """Print the prompt (or full conversation history) to stdout and read a diff from stdin.
+    """Print the prompt (or full conversation history) to stdout and read the
+    response from stdin.
+
+    In edit_mode="diff" the expected response is a unified diff; in
+    edit_mode="function" it is the complete rewritten function.
 
     On the first call for a region pass messages=None — the system prompt and
     initial user prompt are printed in full.  On subsequent budget retries pass
-    the list returned by the previous call: the full conversation history
-    (prior diffs + quality-gate diagnostics appended by the controller) is
-    printed so the user sees exactly what a real LLM would see before entering
-    the next diff.
+    the list returned by the previous call so the full conversation history is
+    printed.
 
-    Interactive: paste the diff and type '---END---' on its own line to submit.
-    Piped input: separate multiple diffs with '---END---' lines; true EOF also works.
+    Interactive: paste the response and type '---END---' on its own line to
+    submit.  Piped input: separate responses with '---END---' lines; EOF works.
     """
+    function_mode = edit_mode == "function"
+    system = _SYSTEM_FUNCTION if function_mode else _SYSTEM
+    what = "complete rewritten function" if function_mode else "diff"
+
     if messages is None:
-        user_prompt = _build_prompt(evidence)
+        user_prompt = _build_function_prompt(evidence) if function_mode else _build_prompt(evidence)
         messages = [{"role": "user", "content": user_prompt}]
 
         print("\n" + "=" * 70)
         print("  SYSTEM PROMPT (send to LLM)")
         print("=" * 70)
-        print(_SYSTEM)
+        print(system)
         print("=" * 70)
         print("  USER PROMPT (send to LLM)")
         print("=" * 70)
@@ -239,7 +331,7 @@ def call_manual(
             print(turn["content"])
 
     print("\n" + "=" * 70)
-    print(f"  Paste the new diff below, then type '{_MANUAL_EOF}' on its own line (or Ctrl-D):")
+    print(f"  Paste the new {what} below, then type '{_MANUAL_EOF}' on its own line (or Ctrl-D):")
     print("=" * 70 + "\n")
 
     lines = []
@@ -254,6 +346,13 @@ def call_manual(
 
     text = "\n".join(lines).strip()
     if not text:
+        return None, list(messages)
+
+    if function_mode:
+        code = _extract_code(text)
+        if code is not None:
+            return code, list(messages) + [{"role": "assistant", "content": code}]
+        print("│  [Manual-LLM] Response does not look like a function (needs braces).")
         return None, list(messages)
 
     diff = _extract_diff(text)
@@ -280,17 +379,17 @@ def _make_client(provider: str, api_key: Optional[str], api_base: Optional[str])
     return anthropic.Anthropic(api_key=api_key)
 
 
-def _complete(provider: str, client: Any, model: str, current: list) -> str:
+def _complete(provider: str, client: Any, model: str, current: list, system: str) -> str:
     """Run one completion against the chosen provider and return the raw text.
 
-    Both providers receive the same _SYSTEM instructions and the same
+    Both providers receive the same `system` instructions and the same
     user/assistant conversation; only the wire format differs (Anthropic takes
     `system` separately, OpenAI takes it as the first message)."""
     if provider == "openai-compat":
         resp = client.chat.completions.create(
             model=model,
             max_tokens=4096,
-            messages=[{"role": "system", "content": _SYSTEM}] + current,
+            messages=[{"role": "system", "content": system}] + current,
         )
         return resp.choices[0].message.content or ""
     resp = client.messages.create(
@@ -298,7 +397,7 @@ def _complete(provider: str, client: Any, model: str, current: list) -> str:
         max_tokens=4096,
         system=[{
             "type": "text",
-            "text": _SYSTEM,
+            "text": system,
             "cache_control": {"type": "ephemeral"},
         }],
         messages=current,
@@ -314,49 +413,57 @@ def call_llm(
     messages: Optional[list] = None,
     provider: str = "anthropic",
     api_base: Optional[str] = None,
+    edit_mode: str = "diff",
 ) -> tuple[Optional[str], list]:
-    """Call the LLM and return (diff or None, updated messages).
+    """Call the LLM and return (output or None, updated messages).
+
+    In edit_mode="diff" (default) the output is a unified diff.  In
+    edit_mode="function" it is the complete rewritten enclosing function (the
+    controller splices it in by line range and generates the diff itself), which
+    avoids the LLM having to produce a byte-exact diff.
 
     On the first call for a region pass messages=None — the initial prompt is
     built from evidence.  Pass the list returned by the previous call on
-    subsequent budget retries: the LLM then sees the full conversation history
-    (all prior attempts plus quality-gate diagnostics appended by the
-    controller) instead of a fresh, context-free prompt each time.
+    subsequent budget retries so the model sees the full conversation history.
 
     `provider` selects the backend: "anthropic" (default) or "openai-compat"
     (any OpenAI-compatible endpoint at `api_base`, e.g. a self-hosted vLLM).
     """
+    function_mode = edit_mode == "function"
+    system = _SYSTEM_FUNCTION if function_mode else _SYSTEM
     client = _make_client(provider, api_key, api_base)
 
     if messages is None:
         # First attempt for this region — build initial prompt from evidence.
-        user_prompt = _build_prompt(evidence)
+        user_prompt = _build_function_prompt(evidence) if function_mode else _build_prompt(evidence)
         messages = [{"role": "user", "content": user_prompt}]
 
     current = list(messages)
 
     for attempt in range(max_format_retries + 1):
-        text = _complete(provider, client, model, current)
-        diff = _extract_diff(text)
+        text = _complete(provider, client, model, current, system)
+        out = _extract_code(text) if function_mode else _extract_diff(text)
+        valid = out is not None if function_mode else bool(out and _is_valid_diff(out))
 
-        if diff and _is_valid_diff(diff):
+        if valid:
             # Return messages with assistant turn appended so the controller
             # can extend the conversation with quality-gate feedback and retry.
-            return diff, current + [{"role": "assistant", "content": text}]
+            return out, current + [{"role": "assistant", "content": text}]
 
         # Free format re-prompt — doesn't consume a budget slot.
         if attempt < max_format_retries:
+            reprompt = (
+                "Your response must be the complete rewritten function as a single "
+                "```cpp code block — signature and full body, no diff, no prose."
+                if function_mode else
+                "Your response must be a unified diff only.\n"
+                "Start with '--- <original_file>' on its own line,\n"
+                "then '+++ <modified_file>', then one or more '@@ … @@' hunks.\n"
+                "No prose, no code fences."
+            )
             current = current + [
                 {"role": "assistant", "content": text},
-                {
-                    "role": "user",
-                    "content": (
-                        "Your response must be a unified diff only.\n"
-                        "Start with '--- <original_file>' on its own line,\n"
-                        "then '+++ <modified_file>', then one or more '@@ … @@' hunks.\n"
-                        "No prose, no code fences."
-                    ),
-                },
+                {"role": "user", "content": reprompt},
             ]
 
     return None, current

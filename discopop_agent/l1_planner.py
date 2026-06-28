@@ -123,6 +123,22 @@ def _parse_data_xml(profiler_dir: Path) -> List[CodeRegion]:
     return regions
 
 
+def find_enclosing_function(
+    profiler_dir: Path, file_id: int, start_line: int, end_line: int
+) -> Optional[CodeRegion]:
+    """Return the tightest function-type region in the same file that fully
+    contains [start_line, end_line], or None.  Used by --edit-mode function to
+    map a target region to the function the LLM should rewrite."""
+    best: Optional[CodeRegion] = None
+    for r in _parse_data_xml(profiler_dir):
+        if r.region_type != "function" or r.file_id != file_id:
+            continue
+        if r.start_line <= start_line and r.end_line >= end_line:
+            if best is None or (r.end_line - r.start_line) < (best.end_line - best.start_line):
+                best = r
+    return best
+
+
 # ---------------------------------------------------------------------------
 # Profiler text-file parsers
 # ---------------------------------------------------------------------------

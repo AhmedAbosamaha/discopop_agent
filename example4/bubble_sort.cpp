@@ -20,25 +20,13 @@
  */
 void bubble_sort(int *arr, int n) {
     for (int pass = 0; pass < n - 1; pass++) {
-        // Create a temporary array to avoid data races
-        int *temp_arr = new int[n];
-        for (int i = 0; i < n; i++) {
-            temp_arr[i] = arr[i];
-        }
-
         for (int i = 0; i < n - pass - 1; i++) {
-            if (temp_arr[i] > temp_arr[i + 1]) {
-                int tmp   = temp_arr[i];
-                temp_arr[i]    = temp_arr[i + 1];
-                temp_arr[i + 1] = tmp;
+            if (arr[i] > arr[i + 1]) {
+                int tmp   = arr[i];
+                arr[i]    = arr[i + 1];
+                arr[i + 1] = tmp;
             }
         }
-
-        // Copy back to original array
-        for (int i = 0; i < n; i++) {
-            arr[i] = temp_arr[i];
-        }
-        delete[] temp_arr;
     }
 }
 
