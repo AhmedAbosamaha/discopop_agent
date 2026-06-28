@@ -23,9 +23,8 @@ discopop_agent/
 ├── controller.py    orchestration loop (L1 → L2 → L3 → L4)
 ├── l1_planner.py    L1: hotspot discovery, scoring, priority queue
 ├── l2_evidence.py   L2: evidence collector (deps, source, counters)
-├── l3_llm.py        L3: LLM prompt builder + Anthropic API caller
-├── l4_validator.py  L4: quality gate (apply / compile / TSan)
-├── mock_llm.py      pre-computed diffs for offline testing
+├── l3_llm.py        L3: LLM prompt builder + provider clients (Anthropic / OpenAI-compatible)
+├── l4_validator.py  L4: quality gate (apply / compile / TSan / correctness / speedup)
 └── types.py         shared dataclasses
 ```
 
@@ -158,7 +157,7 @@ score = c · log₂(1 + W) − λ · 1[tier=2]
 ...
 ```
 
-The controller appends each quality-gate failure as a proper user turn to `tier2_messages`. On the next budget retry `call_llm` (or `call_manual`) resumes from that history — the LLM sees all previous attempts and diagnostics in their natural conversation positions, not embedded as text in a fresh prompt. `--manual-llm` mode uses the same mechanism: the full conversation history is printed to stdout before the human enters each new diff.
+The controller appends each quality-gate failure as a proper user turn to `tier2_messages`. On the next budget retry `call_llm` resumes from that history — the LLM sees all previous attempts and diagnostics in their natural conversation positions, not embedded as text in a fresh prompt.
 
 **Two-level retry logic:**
 
@@ -179,7 +178,7 @@ controller budget loop
 ```
 
 - **Format retries** (`max_format_retries=2`): free, within a single API call session. The LLM's previous bad response is shown back to it with a correction prompt. Does not consume budget.
-- **Budget retries**: each one continues the same conversation — `tier2_messages` accumulates all prior assistant diffs and quality-gate failure diagnostics as proper user turns. The LLM sees the full multi-turn exchange on each retry. Consumes one budget slot per attempt. `--manual-llm` mode uses the same mechanism: the human sees the full conversation history before entering each new diff.
+- **Budget retries**: each one continues the same conversation — `tier2_messages` accumulates all prior assistant diffs and quality-gate failure diagnostics as proper user turns. The LLM sees the full multi-turn exchange on each retry. Consumes one budget slot per attempt.
 
 **Prompt caching:** The system prompt is marked with `cache_control: ephemeral`. The Anthropic API caches it server-side, so it is not re-billed across budget retries within a session.
 
@@ -366,10 +365,14 @@ python -m discopop_agent \
     --api-base      <url>                    fallback: LLM_API_BASE env var (openai-compat)
     --lambda-penalty <float>                 default: 1.0
     --min-workload   <float>                  default: 1.0
-    --output-dir    <path>                   default: <discopop-dir>/agent_patches
-    --distance      <int>                    default: 0
-    --dry-run                                plan only, no LLM calls, no file changes
-    --mock-llm                               use pre-computed diffs (no API key needed)
+    --output-dir         <path>             default: <discopop-dir>/agent_patches
+    --provider           {anthropic,openai-compat}  default: anthropic
+    --api-base           <url>              openai-compat endpoint (env: LLM_API_BASE)
+    --edit-mode          {diff,function}    default: diff
+    --restructure-depth  <int>             default: 0
+    --require-speedup                       gate pragma patches on measured speedup
+    --min-measured-speedup <float>         default: 1.0 (with --require-speedup)
+    --dry-run                               plan only, no LLM calls, no file changes
 ```
 
 **`--budget`:** Maximum number of LLM retry attempts per region. Each retry costs one API call. A region where the LLM fails every attempt is marked as skipped.
@@ -380,17 +383,13 @@ python -m discopop_agent \
 
 **`--min-workload`:** Regions whose profiled workload proxy (`W`) is below this threshold are never processed. This is a cheap static pre-filter, not a measured speedup. Use `--min-workload 0` to include function regions, which have `workload=0` in Data.xml (only CU nodes carry `instructionsCount`).
 
-**`--distance`:** Number of additional discovery passes to run after the initial candidate list is exhausted.
+**`--edit-mode`:** How the LLM returns a Tier-2 edit. `diff` (default) — a unified diff. `function` — the complete rewritten enclosing function, which the agent splices in by line range and self-diffs (avoids diff-apply failures; recommended for self-hosted models).
 
-- `--distance 0` (default): process only the candidates found in the original DiscoPoP profile. After each accepted Tier-2 patch the source is re-profiled to keep Tier-1 pattern data fresh for remaining original candidates, but no new regions are added to the queue mid-pass.
-- `--distance 1`: after all original candidates are processed, re-profile the (now-modified) source and process any newly discovered candidate regions.
-- `--distance N`: repeat the discovery-and-process cycle up to N additional times. Each pass stops early if re-profiling fails or no new candidates are found.
+**`--restructure-depth`:** Maximum discovery depth at which Tier-2 LLM restructuring is applied. Depth 0 = only the initial DiscoPoP candidates may be restructured; regions discovered after a re-profile (depth+1) get Tier-1 only. Bounds the restructuring chain so the source can't drift arbitrarily far from the original.
 
-Use `--distance 1` to capture regions that only become parallelisable after a Tier-2 restructuring (e.g. an inner loop that was unreachable via Do-All in the original code becomes visible after double-buffering).
+**`--require-speedup` / `--min-measured-speedup`:** When set, a pragma patch is accepted only if the parallel build measurably runs at least `--min-measured-speedup`× faster than the sequential build. A restructuring whose exposed loops show no speedup is reverted and retried.
 
 **`--dry-run`:** Prints the priority table and Tier-1 decisions but never calls the LLM or modifies any file. Useful for inspecting what the agent would do.
-
-**`--mock-llm`:** Replaces every LLM call with a lookup in `mock_llm.py`. Pre-computed diffs are keyed by region start line. Used for the full demo and offline testing.
 
 **API key resolution order:** `--api-key` CLI argument → `LLM_API_KEY` environment variable → `.env` file in the project root.
 
@@ -439,11 +438,11 @@ discopop_cxx bubble_sort.cpp -o a.out
 cd .discopop && discopop_explorer
 cd ../..
 
-# 7. Run the agent (mock LLM, no API key needed)
+# 7. Run the agent (set LLM_API_KEY, or use --provider openai-compat)
 python -m discopop_agent \
     --source-file  example4/bubble_sort.cpp \
     --discopop-dir example4/.discopop \
-    --mock-llm \
+    --model claude-opus-4-8 \
     --min-workload 0
 ```
 
@@ -511,8 +510,5 @@ python -m discopop_agent ... --reprofil-args sort input.txt
 
 If `--reprofil-args` is omitted the binary is invoked with no arguments.
 
-**4. Region ID stability after re-profiling.**
-The ID-based queue rebuild assumes that region IDs for code outside the patched function remain stable across re-profiling. This holds in practice — DiscoPoP traverses functions in source order, so only regions inside the modified function are renumbered. However, if a patch changes the number of functions or reorders them, IDs in unrelated functions could shift, causing those candidates to be dropped from the current pass and re-discovered (correctly) in a `--distance` pass.
-
-**5. Mock LLM is keyed by start line only.**
-`mock_llm.py` maps `region.start_line → diff`. If two different source files have regions that start at the same line number, the wrong diff may be returned. This is a demo limitation and does not affect the real LLM path.
+**4. Region tracking across re-profiling relies on content fingerprints.**
+DiscoPoP assigns region IDs from a single global counter, so patching one function renumbers regions in every function after it. The agent therefore tracks regions across a re-profile by a normalized **source-text fingerprint** rather than by ID. Two byte-for-byte identical regions in the same file are indistinguishable to the fingerprint and may be matched arbitrarily; folding the function name and surrounding context into the fingerprint reduces but does not fully eliminate this.

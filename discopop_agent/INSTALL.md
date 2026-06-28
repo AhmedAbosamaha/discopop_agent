@@ -184,25 +184,9 @@ cd .discopop
 cd ../..
 ```
 
-### Step 5 — Run the agent (mock LLM, no API key needed)
+### Step 5 — Run the agent
 
-```bash
-python -m discopop_agent \
-    --discopop-dir example4/.discopop \
-    --source-file   example4/bubble_sort.cpp \
-    --mock-llm \
-    --min-workload 0
-```
-
-Expected output summary:
-```
-SUMMARY: 2 accepted  |  8 skipped
-  ✓  loop 1:6   [Tier-2]   ← false positive caught by TSan, restructured by LLM
-  ✓  loop 1:28  [Tier-1]   ← genuine Do-All, accepted directly
-```
-
-### Step 6 — Run the agent with a real LLM
-
+With Anthropic (set `LLM_API_KEY` or pass `--api-key`):
 ```bash
 python -m discopop_agent \
     --discopop-dir example4/.discopop \
@@ -210,6 +194,20 @@ python -m discopop_agent \
     --model        claude-opus-4-8 \
     --budget       3 \
     --min-workload  0
+```
+
+Or with a self-hosted OpenAI-compatible endpoint (e.g. a vLLM server; tunnel it
+to localhost first — see `--provider`/`--api-base`):
+```bash
+python -m discopop_agent \
+    --discopop-dir example4/.discopop \
+    --source-file   example4/bubble_sort.cpp \
+    --provider openai-compat \
+    --api-base http://localhost:18000/v1 \
+    --model    Qwen/Qwen3-Coder-30B-A3B-Instruct \
+    --api-key  <key> \
+    --edit-mode function \
+    --budget 3 --min-workload 0
 ```
 
 ---

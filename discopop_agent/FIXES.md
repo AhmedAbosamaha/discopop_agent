@@ -762,3 +762,22 @@ The entire `stage=apply` failure class disappears in function mode — budget is
 **Trade-off:** the LLM rewrites a whole function (more output tokens than a tight diff) and could in principle change more than the target loop — but the correctness gate already rejects any semantic drift, and the change stays bounded to one function.
 
 **Follow-up (brace-match span):** DiscoPoP's function `endsAtLine` points at the last *statement*, not the closing `}` (e.g. it reports `main`'s `return 0;` line, not the `}` after it). Early function-mode runs then failed at `stage=compile` with "extraneous closing brace" because the splice left the original `}` in place beside the LLM's. Fixed with `l2_evidence._brace_match_end(source, start)` — it scans from the function's start line, balancing `{`/`}` (skipping `//`, `/* */`, and string/char literals), to find the true closing-brace line, which `assemble` uses for both the shown function source and the splice span. Verified on `example4`: `main` 33→48 (DiscoPoP said 47), `bubble_sort` 21→31. End-to-end function-mode run against Qwen then accepted 2 Tier-2 rewrites + 1 validated Do-All with zero apply/brace failures.
+
+---
+
+## Fix 31 — Cleanup: remove mock-LLM and manual-LLM modes; drop dead code
+
+**Files:** `mock_llm.py` (deleted), `l3_llm.py`, `controller.py`, `args.py`, `l1_planner.py`, `types.py`, `DOCUMENTATION.md`, `INSTALL.md`
+
+**Why:** With a real provider path in place (Fix 29 `--provider openai-compat` + Fix 30 `--edit-mode function`), the offline testing aids became dead weight. `mock_llm.py` was ~280 lines of pre-computed, example-specific diffs keyed fragilely by start line; `--manual-llm` was a human-in-the-loop crutch. Neither was referenced by any test or CI.
+
+**Removed:**
+- `mock_llm.py` deleted; `call_mock` import, the `--mock-llm` branch, and the `not args.mock_llm` guard removed from `controller.py`.
+- `call_manual` (and `_MANUAL_EOF`) removed from `l3_llm.py`; `call_manual` import removed from `controller.py`.
+- `--mock-llm` / `--manual-llm` flags and `AgentArguments.mock_llm` / `.manual_llm` fields removed from `args.py`. The Tier-2 dispatch is now a single `call_llm(...)` call; the banner shows only the provider/model.
+- Dead `prior_diff` parameter and `### Your previous attempt (FAILED)` block removed from `_build_prompt` (superseded by conversation history, Fix 14).
+- Unused imports removed: `re` in `l1_planner.py`, `field` in `types.py`.
+
+**Docs:** `DOCUMENTATION.md` / `INSTALL.md` updated — removed `mock_llm.py` from the file tree, the `--mock-llm`/`--manual-llm` CLI entries and demo commands; refreshed the CLI reference (it still listed the long-removed `--distance`; replaced with `--provider`/`--api-base`/`--edit-mode`/`--restructure-depth`/`--require-speedup`); rewrote stale Known-Limitations entries (ID-based rebuild → content fingerprinting; dropped the mock-LLM note).
+
+**Effect:** The only LLM paths are now `--provider anthropic` and `--provider openai-compat`. `pyflakes` reports no unused imports/vars; all modules import clean.
