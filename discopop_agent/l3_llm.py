@@ -14,7 +14,7 @@ a budget slot.
 from __future__ import annotations
 
 import textwrap
-from typing import Optional
+from typing import Any, Optional
 
 import anthropic
 
@@ -264,12 +264,56 @@ def call_manual(
     return None, list(messages)
 
 
+def _make_client(provider: str, api_key: Optional[str], api_base: Optional[str]) -> Any:
+    """Create the provider client.  'anthropic' (default) uses the Anthropic SDK;
+    'openai-compat' uses the OpenAI SDK pointed at an OpenAI-compatible endpoint
+    (e.g. a self-hosted vLLM server) via api_base."""
+    if provider == "openai-compat":
+        try:
+            import openai
+        except ImportError as e:  # pragma: no cover
+            raise RuntimeError(
+                "provider 'openai-compat' requires the openai package "
+                "(`venv/bin/pip install openai`)."
+            ) from e
+        return openai.OpenAI(api_key=api_key or "EMPTY", base_url=api_base)
+    return anthropic.Anthropic(api_key=api_key)
+
+
+def _complete(provider: str, client: Any, model: str, current: list) -> str:
+    """Run one completion against the chosen provider and return the raw text.
+
+    Both providers receive the same _SYSTEM instructions and the same
+    user/assistant conversation; only the wire format differs (Anthropic takes
+    `system` separately, OpenAI takes it as the first message)."""
+    if provider == "openai-compat":
+        resp = client.chat.completions.create(
+            model=model,
+            max_tokens=4096,
+            messages=[{"role": "system", "content": _SYSTEM}] + current,
+        )
+        return resp.choices[0].message.content or ""
+    resp = client.messages.create(
+        model=model,
+        max_tokens=4096,
+        system=[{
+            "type": "text",
+            "text": _SYSTEM,
+            "cache_control": {"type": "ephemeral"},
+        }],
+        messages=current,
+    )
+    return str(resp.content[0].text)
+
+
 def call_llm(
     evidence: EvidencePackage,
     model: str,
     api_key: Optional[str] = None,
     max_format_retries: int = 2,
     messages: Optional[list] = None,
+    provider: str = "anthropic",
+    api_base: Optional[str] = None,
 ) -> tuple[Optional[str], list]:
     """Call the LLM and return (diff or None, updated messages).
 
@@ -278,8 +322,11 @@ def call_llm(
     subsequent budget retries: the LLM then sees the full conversation history
     (all prior attempts plus quality-gate diagnostics appended by the
     controller) instead of a fresh, context-free prompt each time.
+
+    `provider` selects the backend: "anthropic" (default) or "openai-compat"
+    (any OpenAI-compatible endpoint at `api_base`, e.g. a self-hosted vLLM).
     """
-    client = anthropic.Anthropic(api_key=api_key)
+    client = _make_client(provider, api_key, api_base)
 
     if messages is None:
         # First attempt for this region — build initial prompt from evidence.
@@ -289,18 +336,7 @@ def call_llm(
     current = list(messages)
 
     for attempt in range(max_format_retries + 1):
-        response = client.messages.create(
-            model=model,
-            max_tokens=4096,
-            system=[{
-                "type": "text",
-                "text": _SYSTEM,
-                "cache_control": {"type": "ephemeral"},
-            }],
-            messages=current,
-        )
-
-        text = response.content[0].text
+        text = _complete(provider, client, model, current)
         diff = _extract_diff(text)
 
         if diff and _is_valid_diff(diff):

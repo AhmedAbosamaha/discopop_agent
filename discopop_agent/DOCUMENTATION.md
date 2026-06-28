@@ -362,6 +362,8 @@ python -m discopop_agent \
     --budget        <int>                    default: 3
     --model         <model-id>               default: claude-opus-4-8
     --api-key       <key>                    fallback: LLM_API_KEY env var
+    --provider      {anthropic,openai-compat} default: anthropic
+    --api-base      <url>                    fallback: LLM_API_BASE env var (openai-compat)
     --lambda-penalty <float>                 default: 1.0
     --min-workload   <float>                  default: 1.0
     --output-dir    <path>                   default: <discopop-dir>/agent_patches
@@ -371,6 +373,8 @@ python -m discopop_agent \
 ```
 
 **`--budget`:** Maximum number of LLM retry attempts per region. Each retry costs one API call. A region where the LLM fails every attempt is marked as skipped.
+
+**`--provider` / `--api-base`:** Selects the LLM backend. `anthropic` (default) uses the Anthropic API. `openai-compat` targets any OpenAI-compatible endpoint (e.g. a self-hosted vLLM server) at `--api-base` (e.g. `http://localhost:18000/v1`), with `--model` as the served model id and `--api-key` as its key. Tunnel a remote endpoint to localhost first (`ssh -fN -L 18000:localhost:18000 <user>@<server>`).
 
 **`--lambda-penalty`:** Controls how much the Tier-2 LLM cost discounts a candidate's score. Higher values make the agent prefer Tier-1 (DiscoPoP) regions and skip Tier-2 (LLM-only) regions with lower workload.
 

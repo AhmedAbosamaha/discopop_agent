@@ -12,6 +12,8 @@ class AgentArguments:
     budget: int
     model: str
     api_key: Optional[str]      # LLM_API_KEY — provider-agnostic
+    provider: str               # "anthropic" | "openai-compat"
+    api_base: Optional[str]     # base URL for openai-compat (e.g. vLLM endpoint)
     lambda_penalty: float
     min_workload: float
     output_dir: str
@@ -38,6 +40,12 @@ def parse_args() -> AgentArguments:
                    help="LLM model ID (default: claude-opus-4-8)")
     p.add_argument("--api-key", default=None,
                    help="LLM API key — falls back to LLM_API_KEY env var")
+    p.add_argument("--provider", choices=["anthropic", "openai-compat"], default="anthropic",
+                   help="LLM backend: 'anthropic' (default) or 'openai-compat' "
+                        "(any OpenAI-compatible endpoint, e.g. a self-hosted vLLM server)")
+    p.add_argument("--api-base", default=None,
+                   help="Base URL for --provider openai-compat (e.g. "
+                        "http://localhost:18000/v1) — falls back to LLM_API_BASE env var")
     p.add_argument("--lambda-penalty", type=float, default=1.0,
                    help="Score penalty λ for invoking LLM tier (default: 1.0)")
     p.add_argument("--min-workload", type=float, default=1.0,
@@ -81,6 +89,8 @@ def parse_args() -> AgentArguments:
 
     # Resolve API key: CLI arg > LLM_API_KEY env var
     api_key = a.api_key or os.environ.get("LLM_API_KEY")
+    # Resolve openai-compat base URL: CLI arg > LLM_API_BASE env var
+    api_base = a.api_base or os.environ.get("LLM_API_BASE")
 
     return AgentArguments(
         discopop_dir=a.discopop_dir,
@@ -88,6 +98,8 @@ def parse_args() -> AgentArguments:
         budget=a.budget,
         model=a.model,
         api_key=api_key,
+        provider=a.provider,
+        api_base=api_base,
         lambda_penalty=a.lambda_penalty,
         min_workload=a.min_workload,
         output_dir=a.output_dir or f"{a.discopop_dir}/agent_patches",

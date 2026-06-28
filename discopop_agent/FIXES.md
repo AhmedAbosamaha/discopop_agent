@@ -707,3 +707,35 @@ The speedup-gated revert (Fix 27) restored the source file (cheap) but then call
 A revert is now two directory copies instead of a full DiscoPoP re-profile — the expensive `_reprofil` is gone from the revert path entirely. Verified: restore reverts `Data.xml`/profile dirs, removes the re-profile's new directories, and preserves `agent_patches` (accepted.json, patches written during the attempt).
 
 **Note:** the forward re-profile after applying a patch (needed to *discover* the exposed loops) is unchanged — only the revert's redundant re-profile is eliminated. On APFS/Linux the directory copies are fast; for very large `.discopop` profiles a copy-on-write clone (`cp -c` / reflink) would make it effectively instant.
+
+---
+
+## Fix 29 — Pluggable LLM provider: OpenAI-compatible endpoints (`--provider openai-compat`)
+
+**Files:** `args.py`, `l3_llm.py`, `controller.py`
+
+**Problem:**
+`call_llm` was hard-wired to the Anthropic SDK, so the agent could only use Claude. Running against a self-hosted model (e.g. a vLLM server exposing an OpenAI-compatible API, such as `Qwen/Qwen3-Coder-30B-A3B-Instruct` on the HPC lab) was impossible without code edits.
+
+**Fix:**
+- **`l3_llm.py`**: factored the backend into `_make_client(provider, api_key, api_base)` and `_complete(provider, client, model, current)`. `call_llm` gained `provider` and `api_base` params.
+  - `provider="anthropic"` (default) — unchanged: `system` sent separately, prompt-cached.
+  - `provider="openai-compat"` — uses the `openai` SDK with `base_url=api_base`; the same `_SYSTEM` text is sent as the first `{"role":"system"}` message, followed by the identical user/assistant conversation. Diff extraction, format-retry, and the message protocol are shared across both.
+- **`args.py`**: `--provider {anthropic,openai-compat}` (default anthropic) and `--api-base` (falls back to `LLM_API_BASE`). New `AgentArguments` fields `provider`, `api_base`.
+- **`controller.py`**: passes `provider`/`api_base` to `call_llm`; banner shows `model @ base (openai-compat)`.
+- Added `openai` to the venv.
+
+**Usage (self-hosted, via SSH port-forward of the endpoint):**
+```bash
+ssh -fN -L 18000:localhost:18000 <user>@<server>     # tunnel the API locally
+python -m discopop_agent \
+    --source-file  example4/bubble_sort.cpp \
+    --discopop-dir example4/.discopop \
+    --provider openai-compat \
+    --api-base http://localhost:18000/v1 \
+    --model    Qwen/Qwen3-Coder-30B-A3B-Instruct \
+    --api-key  ppkitestapikey \
+    --budget 3 --min-workload 0 --restructure-depth 0
+```
+
+**Note:** the OpenAI path does not use Anthropic's ephemeral prompt cache, so the (large) system prompt is re-sent each call — fine for a local/free endpoint, but worth knowing for token accounting on metered OpenAI-compatible services.
