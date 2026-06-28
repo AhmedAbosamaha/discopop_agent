@@ -212,6 +212,33 @@ def _fingerprint(source_file: str, start_line: int, end_line: int, name: str | N
     return f"{name or ''}␟{body}"
 
 
+def _function_edit_to_diff(
+    source_file: str, start_line: int, end_line: int, new_code: str
+) -> str | None:
+    """--edit-mode function: splice the LLM's rewritten function into the file
+    over [start_line, end_line] and return a unified diff of the change.
+
+    The diff is generated from the actual on-disk content, so it always applies
+    cleanly — eliminating the diff-apply failure class.  Returns None if the span
+    is invalid or the edit is a no-op."""
+    import difflib
+
+    old_lines = Path(source_file).read_text().splitlines()
+    if start_line < 1 or end_line > len(old_lines) or start_line > end_line:
+        return None
+    new_block = new_code.splitlines()
+    new_lines = old_lines[: start_line - 1] + new_block + old_lines[end_line:]
+    if new_lines == old_lines:
+        return None
+    diff = difflib.unified_diff(
+        [ln + "\n" for ln in old_lines],
+        [ln + "\n" for ln in new_lines],
+        fromfile=source_file,
+        tofile=source_file,
+    )
+    return "".join(diff)
+
+
 def _read_tier1_patch(patch_dir: Path) -> str | None:
     """Return the content of the first .patch file DiscoPoP generated for a
     pattern, or None if the patch_generator directory is missing / empty."""
@@ -302,6 +329,7 @@ def _print_banner(args: AgentArguments) -> None:
     else:
         llm_mode = args.model
     print(f"  LLM mode       : {llm_mode}")
+    print(f"  Edit mode      : {args.edit_mode}")
     print(f"{'='*60}\n")
 
 
@@ -596,9 +624,11 @@ def run(args: AgentArguments) -> None:
             evidence = assemble(candidate, profiler_dir, failure_reason)
 
             if args.mock_llm:
-                diff = call_mock(evidence)
+                diff = call_mock(evidence)          # mock always returns a diff
             elif args.manual_llm:
-                diff, tier2_messages = call_manual(evidence, messages=tier2_messages)
+                diff, tier2_messages = call_manual(
+                    evidence, messages=tier2_messages, edit_mode=args.edit_mode
+                )
             else:
                 print(f"│  [Tier-2] Calling {args.model}...")
                 diff, tier2_messages = call_llm(
@@ -607,13 +637,27 @@ def run(args: AgentArguments) -> None:
                     messages=tier2_messages,
                     provider=args.provider,
                     api_base=args.api_base,
+                    edit_mode=args.edit_mode,
                 )
+
+            # In function mode the LLM returns the rewritten enclosing function;
+            # splice it in and turn it into a guaranteed-apply diff.  (mock is
+            # always a diff, so skip conversion there.)
+            if diff is not None and args.edit_mode == "function" and not args.mock_llm:
+                diff = _function_edit_to_diff(
+                    args.source_file,
+                    evidence.enclosing_function_start,
+                    evidence.enclosing_function_end,
+                    diff,
+                )
+                if diff is None:
+                    print(f"│  [Tier-2] Rewritten function produced no change — retrying")
 
             if diff is None:
                 if budget > 0:
-                    print(f"│  [Tier-2] LLM returned invalid diff — retrying")
+                    print(f"│  [Tier-2] LLM returned invalid output — retrying")
                 else:
-                    print(f"│  [Tier-2] LLM returned invalid diff")
+                    print(f"│  [Tier-2] LLM returned invalid output")
                 continue
 
             print(f"│  [Tier-2] Diff received — running quality gate "

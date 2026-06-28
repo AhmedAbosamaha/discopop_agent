@@ -20,6 +20,7 @@ class AgentArguments:
     dry_run: bool
     mock_llm: bool              # bypass real API; use pre-computed diffs for testing
     manual_llm: bool            # print prompt to stdout, read diff from stdin
+    edit_mode: str              # "diff" | "function" — how the LLM returns edits
     restructure_depth: int      # max discovery depth at which Tier-2 (LLM) is applied
     require_speedup: bool       # gate pragma patches on measured wall-clock speedup
     min_measured_speedup: float # minimum measured parallel speedup to accept
@@ -61,6 +62,10 @@ def parse_args() -> AgentArguments:
                    help="Use pre-computed diffs instead of a live LLM call (for testing)")
     p.add_argument("--manual-llm", action="store_true",
                    help="Print the LLM prompt to stdout and read the diff from stdin")
+    p.add_argument("--edit-mode", choices=["diff", "function"], default="diff",
+                   help="How the LLM returns a Tier-2 edit: 'diff' (unified diff, default) "
+                        "or 'function' (the complete rewritten enclosing function, which the "
+                        "agent splices in by line range — avoids diff-apply failures)")
     p.add_argument("--restructure-depth", type=int, default=0,
                    help=(
                        "Maximum discovery depth at which Tier-2 LLM restructuring is "
@@ -106,6 +111,7 @@ def parse_args() -> AgentArguments:
         dry_run=a.dry_run,
         mock_llm=a.mock_llm,
         manual_llm=a.manual_llm,
+        edit_mode=a.edit_mode,
         restructure_depth=a.restructure_depth,
         require_speedup=a.require_speedup,
         min_measured_speedup=a.min_measured_speedup,

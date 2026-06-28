@@ -50,6 +50,13 @@ class EvidencePackage:
     waw_deps: List[Dependency]
     reduction_vars: List[str]
     tier1_failure_reason: str = ""
+    # Enclosing function (used by --edit-mode function: the LLM rewrites this whole
+    # function and the agent splices it in by line range).  Falls back to the
+    # region's own span when no containing function is found.
+    enclosing_function_name: str = ""
+    enclosing_function_start: int = 0
+    enclosing_function_end: int = 0
+    enclosing_function_source: str = ""
 
 
 @dataclass
