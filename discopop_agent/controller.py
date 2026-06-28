@@ -293,7 +293,15 @@ def _print_banner(args: AgentArguments) -> None:
     if args.require_speedup:
         print(f"  Speedup gate   : require ≥ {args.min_measured_speedup}× measured")
     print(f"  Dry run        : {args.dry_run}")
-    print(f"  LLM mode       : {'manual (stdin)' if args.manual_llm else 'mock' if args.mock_llm else args.model}")
+    if args.manual_llm:
+        llm_mode = "manual (stdin)"
+    elif args.mock_llm:
+        llm_mode = "mock"
+    elif args.provider == "openai-compat":
+        llm_mode = f"{args.model} @ {args.api_base} (openai-compat)"
+    else:
+        llm_mode = args.model
+    print(f"  LLM mode       : {llm_mode}")
     print(f"{'='*60}\n")
 
 
@@ -597,6 +605,8 @@ def run(args: AgentArguments) -> None:
                     evidence, args.model,
                     api_key=args.api_key,
                     messages=tier2_messages,
+                    provider=args.provider,
+                    api_base=args.api_base,
                 )
 
             if diff is None:
