@@ -255,10 +255,13 @@ def build_candidates(
                     tier = 1
                 break
 
-        # Refine workload from pattern if available
+        # Refine workload from pattern if available.  The new explorer may emit
+        # a null/absent workload, so coerce to int before comparing.
         workload = region.workload
         if pattern:
             p_workload = pattern.get("workload", 0)
+            if not isinstance(p_workload, int):
+                p_workload = 0
             if p_workload > workload:
                 workload = p_workload
 

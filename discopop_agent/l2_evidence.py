@@ -150,6 +150,49 @@ def _read_span(source_file: str, start_line: int, end_line: int) -> str:
     return "\n".join(lines[max(0, start_line - 1):end_line])
 
 
+def _lineid_line(lid: str) -> int:
+    """Extract the line number from a 'fileId:line' LineID string, or -1."""
+    try:
+        return int(str(lid).split(":")[1])
+    except (IndexError, ValueError):
+        return -1
+
+
+def _load_prevented_deps(
+    discopop_dir: Path, file_id: int, start_line: int, end_line: int
+) -> List[dict]:
+    """Load the Do-All blockers DiscoPoP's new detector recorded for this region.
+
+    Reads explorer/doall_prevented.json (written by new_do_all_detector) and
+    returns entries whose loop overlaps [start_line, end_line] in the same file,
+    or whose blocking dependency's source/sink line falls inside the region.
+    Returns [] if the file is absent (e.g. old explorer) or nothing matches.
+    """
+    import json
+
+    f = discopop_dir / "explorer" / "doall_prevented.json"
+    if not f.exists():
+        return []
+    try:
+        records = json.loads(f.read_text())
+    except (OSError, ValueError):
+        return []
+
+    matched: List[dict] = []
+    for rec in records:
+        lf = rec.get("loop_file")
+        ls, le = rec.get("loop_start"), rec.get("loop_end")
+        loop_overlaps = (
+            lf == file_id and ls is not None and le is not None
+            and not (le < start_line or ls > end_line)
+        )
+        src_ln, snk_ln = _lineid_line(rec.get("source_line", "")), _lineid_line(rec.get("sink_line", ""))
+        dep_in_region = (start_line <= src_ln <= end_line) or (start_line <= snk_ln <= end_line)
+        if loop_overlaps or dep_in_region:
+            matched.append(rec)
+    return matched
+
+
 def _brace_match_end(source_file: str, start_line: int) -> int:
     """Return the 1-based line of the closing `}` that balances the first `{` at
     or after start_line, ignoring braces in // and /* */ comments and in string /
@@ -237,6 +280,12 @@ def assemble(
         fn_end = true_end
     fn_source = _read_span(candidate.source_file, fn_start, fn_end)
 
+    # Do-All blockers recorded by DiscoPoP's new detector (if the new explorer
+    # produced explorer/doall_prevented.json).  profiler_dir = <discopop>/profiler.
+    prevented = _load_prevented_deps(
+        profiler_dir.parent, region.file_id, region.start_line, region.end_line
+    )
+
     return EvidencePackage(
         region_id=region.region_id,
         region_type=region.region_type,
@@ -250,6 +299,7 @@ def assemble(
         waw_deps=waw,
         reduction_vars=reductions,
         tier1_failure_reason=failure_reason,
+        prevented_deps=prevented,
         enclosing_function_name=fn_name,
         enclosing_function_start=fn_start,
         enclosing_function_end=fn_end,

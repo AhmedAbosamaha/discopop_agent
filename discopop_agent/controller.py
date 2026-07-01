@@ -687,7 +687,11 @@ def run(args: AgentArguments) -> None:
                 ]
 
                 patch_result = subprocess.run(
-                    ["patch", "--quiet", str(src_abs), str(patch_file)],
+                    # --no-backup-if-mismatch: don't litter the source tree with
+                    # <file>.orig when the patch applies with fuzz/offset (we keep
+                    # our own backup at output_dir/<name>.original).
+                    ["patch", "--quiet", "--no-backup-if-mismatch",
+                     str(src_abs), str(patch_file)],
                     capture_output=True, text=True,
                 )
                 if patch_result.returncode != 0:

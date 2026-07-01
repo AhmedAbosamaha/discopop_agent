@@ -140,7 +140,8 @@ def _apply(diff: str, source_file: str, work_dir: Path) -> Tuple[bool, str, Opti
     patch_path.write_text("\n".join(fixed_lines) + "\n")
 
     result = subprocess.run(
-        ["patch", "--quiet", str(dst), str(patch_path)],
+        # --no-backup-if-mismatch: suppress <file>.orig backups on fuzzy apply.
+        ["patch", "--quiet", "--no-backup-if-mismatch", str(dst), str(patch_path)],
         capture_output=True, text=True,
     )
     if result.returncode != 0:

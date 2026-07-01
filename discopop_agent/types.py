@@ -1,5 +1,5 @@
 from __future__ import annotations
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional, List
 
 
@@ -50,6 +50,11 @@ class EvidencePackage:
     waw_deps: List[Dependency]
     reduction_vars: List[str]
     tier1_failure_reason: str = ""
+    # Do-All blockers from DiscoPoP's new detector (explorer/doall_prevented.json):
+    # the specific dependences that prevented parallelization of this region.
+    # Each dict: {dep_type, source_line, sink_line, var_name, memory_region, origin,
+    #             loop_file, loop_start, loop_end}
+    prevented_deps: List[dict] = field(default_factory=list)
     # Enclosing function (used by --edit-mode function: the LLM rewrites this whole
     # function and the agent splices it in by line range).  Falls back to the
     # region's own span when no containing function is found.

@@ -78,7 +78,37 @@ fi
 # pthread is bundled into libSystem on macOS; only link explicitly on Linux
 PTHREAD_XLINKER_FLAGS=()
 [[ "$(uname)" != "Darwin" ]] && PTHREAD_XLINKER_FLAGS=(-Xlinker -lpthread)
-${LLVM_CLANGPP} "$@" -g -O0 -fno-discard-value-names -Xclang -load -Xclang ${DISCOPOP_PLUGIN} -Xclang -fpass-plugin=${DISCOPOP_PLUGIN} -fPIC -Xlinker -L${PARENT_PATH} -Xlinker -lDiscoPoP_RT "${PTHREAD_XLINKER_FLAGS[@]}" -Xlinker -v
+
+# ---- macOS toolchain flags (added for macOS support) ----------------------
+SYSROOT_FLAGS=()
+LIBCXX_FLAGS=()
+if [[ "$(uname)" == "Darwin" ]]; then
+    # SDK sysroot so Homebrew clang finds system C headers (stdio.h, ...)
+    _sdk=$(xcrun --show-sdk-path 2>/dev/null)
+    [ -n "$_sdk" ] && SYSROOT_FLAGS=(-isysroot "$_sdk")
+    # -isysroot would otherwise link the SDK's libc++, but libDiscoPoP_RT.a needs
+    # LLVM's libc++ (abi:ne...). Resolve LLVM's libc++ robustly (clang path may be
+    # a symlink -> use brew --prefix / readlink -f) and link it explicitly.
+    _llvm_libcxx=""
+    if command -v brew &>/dev/null; then
+        _p=$(brew --prefix llvm@19 2>/dev/null || brew --prefix llvm 2>/dev/null)
+        [ -n "$_p" ] && [ -d "$_p/lib/c++" ] && _llvm_libcxx="$_p/lib/c++"
+    fi
+    if [ -z "$_llvm_libcxx" ]; then
+        _real=$(readlink -f "$LLVM_CLANGPP" 2>/dev/null || echo "$LLVM_CLANGPP")
+        _cand="$(cd "$(dirname "$_real")/../lib/c++" 2>/dev/null && pwd -P)"
+        [ -n "$_cand" ] && [ -d "$_cand" ] && _llvm_libcxx="$_cand"
+    fi
+    if [ -n "$_llvm_libcxx" ] && [ -f "$_llvm_libcxx/libc++.dylib" ]; then
+        LIBCXX_FLAGS=(-nostdlib++ "$_llvm_libcxx/libc++.dylib" "$_llvm_libcxx/libc++abi.dylib" -Wl,-rpath,"$_llvm_libcxx")
+    fi
+fi
+# DiscoPoP runtime filters non-project functions by DP_PROJECT_ROOT_DIR; default to CWD
+: "${DP_PROJECT_ROOT_DIR:=$(pwd)}"
+export DP_PROJECT_ROOT_DIR
+# ---------------------------------------------------------------------------
+
+${LLVM_CLANGPP} "$@" "${SYSROOT_FLAGS[@]}" "${LIBCXX_FLAGS[@]}" -g -O0 -fno-discard-value-names -Xclang -load -Xclang ${DISCOPOP_PLUGIN} -Xclang -fpass-plugin=${DISCOPOP_PLUGIN} -fPIC -Xlinker -L${PARENT_PATH} -Xlinker -lDiscoPoP_RT "${PTHREAD_XLINKER_FLAGS[@]}" -Xlinker -v
 
 # dump ast for later use during pattern detection
 if [ -n "$DOT_DISCOPOP" ]; then
@@ -86,5 +116,5 @@ if [ -n "$DOT_DISCOPOP" ]; then
 else
   TMP_DOT_DISCOPOP="$PWD/.discopop"
 fi
-${LLVM_CLANGPP} "$@" -fsyntax-only -Xclang -ast-dump=json >> "$TMP_DOT_DISCOPOP/profiler/ast_dump.json"
+${LLVM_CLANGPP} "$@" "${SYSROOT_FLAGS[@]}" -fsyntax-only -Xclang -ast-dump=json >> "$TMP_DOT_DISCOPOP/profiler/ast_dump.json"
 # WARNING: OUTPUT IS A .ll FILE, ENDING IS .o

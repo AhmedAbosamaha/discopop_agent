@@ -38,7 +38,7 @@ int main(void) {
 
     int ok = 1;
     for (int i = 0; i < N - 1; i++)
-        if (arr[i] > arr[i + 1]) { ok = 0; break; }
+        if (arr[i] > arr[i + 1]) { ok = 0; }
 
     printf("N=%d  sorted: %s\n", N, ok ? "YES" : "NO");
     printf("arr[0]=%d  arr[N-1]=%d\n", arr[0], arr[N - 1]);

@@ -5,7 +5,9 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
+import json
 import logging
+import os
 import threading
 from typing import Dict, List, Optional, Set, Tuple, cast
 
@@ -112,6 +114,34 @@ def identify_simple_doall_and_reduction(
 
     prevented_loops: Set[NodeID] = set()
 
+    # discopop_agent integration: record WHY each loop is not Do-All (the specific
+    # blocking dependency), persisted to explorer/doall_prevented.json so the agent
+    # can tell the LLM exactly which dependency to break.  Purely additive.
+    prevented_records: List[dict] = []
+
+    def _blocker_record(loop_node: TGNode, dep: Dependency) -> dict:
+        scope = loop_node.created_context.get_code_scope(tg.pet)  # List[LineID] "fid:line"
+        loop_file: Optional[int] = None
+        loop_lines: List[int] = []
+        for lid in scope:
+            try:
+                f, ln = str(lid).split(":")
+                loop_file = int(f)
+                loop_lines.append(int(ln))
+            except (ValueError, AttributeError):
+                pass
+        return {
+            "loop_file": loop_file,
+            "loop_start": min(loop_lines) if loop_lines else None,
+            "loop_end": max(loop_lines) if loop_lines else None,
+            "dep_type": str(dep.dtype),
+            "source_line": str(dep.source_line),
+            "sink_line": str(dep.sink_line),
+            "var_name": str(dep.var_name),
+            "memory_region": str(dep.memory_region),
+            "origin": str(dep.origin),
+        }
+
     for node in tg.graph.nodes():
         # check if node is LoopParent
         if not isinstance(node.created_context, LoopParentContext):
@@ -210,6 +240,7 @@ def identify_simple_doall_and_reduction(
                             if dep.origin == DepOrigin.DYNAMIC_ANALYSIS:
                                 # dependency is trustworthy and definitely breaks doall
                                 dependency_found = True
+                                prevented_records.append(_blocker_record(node, dep))
                                 break
                             else:
                                 # dependency is static and may be too pessimistic.
@@ -241,6 +272,7 @@ def identify_simple_doall_and_reduction(
             if dep.var_name not in firstwritten.union(init).union(reduction):
                 # node is not a valid doall loop
                 prevented_loops.add(node.pet_node_id)
+                prevented_records.append(_blocker_record(node, dep))
                 # print("LOOP: ", node.created_context.get_code_scope(tg.pet))
                 # print("SECOND CHANCEs missed!: ", dep.dtype, dep.var_name)
                 continue
@@ -311,6 +343,15 @@ def identify_simple_doall_and_reduction(
 
     # clean patterns agains prevented loops
     patterns = [p for p in patterns if p.node_id not in prevented_loops]
+
+    # discopop_agent integration: persist the Do-All blockers (fresh each run,
+    # written next to patterns.json in explorer/).  Best-effort; never fatal.
+    try:
+        os.makedirs("explorer", exist_ok=True)
+        with open(os.path.join("explorer", "doall_prevented.json"), "w") as _f:
+            json.dump(prevented_records, _f, indent=2)
+    except OSError as _e:
+        logger.warning("could not write doall_prevented.json: " + str(_e))
 
     return patterns
 

@@ -163,6 +163,10 @@ def _build_prompt(evidence: EvidencePackage) -> str:
             f"### Reduction variables: {', '.join(evidence.reduction_vars)}\n"
         )
 
+    blockers = _fmt_blockers(evidence.prevented_deps)
+    if blockers:
+        parts.append(blockers)
+
     if evidence.tier1_failure_reason:
         parts.append(
             f"### What went wrong\n{evidence.tier1_failure_reason}\n"
@@ -195,6 +199,36 @@ def _fmt_deps(deps: list, label: str) -> str:
     return "\n".join(lines) + "\n"
 
 
+def _fmt_blockers(prevented: list) -> str:
+    """Render DiscoPoP's exact Do-All blockers (from doall_prevented.json).
+    Returns '' when none are available (old explorer / clean loop)."""
+    if not prevented:
+        return ""
+    out = [
+        "### Why DiscoPoP could not parallelize (Do-All blockers)",
+        "DiscoPoP identified these exact dependences as what blocks Do-All — "
+        "target these specifically:",
+    ]
+    for b in prevented[:20]:
+        origin = str(b.get("origin", "")).upper()
+        note = ("dynamic — a real, observed dependency; it must be removed"
+                if "DYNAMIC" in origin
+                else "static — may be resolvable by privatizing / first-writing the variable inside the loop")
+        # Strip enum prefixes (DepType.RAW -> RAW), tidy the variable name.
+        dtype = str(b.get("dep_type", "?")).split(".")[-1]
+        var = str(b.get("var_name", "?"))
+        # Line info is optional in the new detector; show it only when present.
+        src = str(b.get("source_line") or "").split(":")[-1]
+        snk = str(b.get("sink_line") or "").split(":")[-1]
+        if src and snk and src != "None" and snk != "None":
+            where = f"line {src} → {snk}"
+        else:
+            ls, le = b.get("loop_start"), b.get("loop_end")
+            where = f"loop-carried (loop at line{'s' if ls != le else ''} {ls}" + (f"–{le}" if ls != le else "") + ")"
+        out.append(f"  - {dtype} on `{var}`  {where}  [{note}]")
+    return "\n".join(out) + "\n"
+
+
 def _build_function_prompt(evidence: EvidencePackage) -> str:
     """Prompt for --edit-mode function: show the whole enclosing function and the
     target region's dependence profile, and ask for the complete rewritten
@@ -221,6 +255,9 @@ def _build_function_prompt(evidence: EvidencePackage) -> str:
     ]
     if evidence.reduction_vars:
         parts.append(f"### Reduction variables: {', '.join(evidence.reduction_vars)}\n")
+    blockers = _fmt_blockers(evidence.prevented_deps)
+    if blockers:
+        parts.append(blockers)
     if evidence.tier1_failure_reason:
         parts.append(f"### What went wrong\n{evidence.tier1_failure_reason}\n")
 

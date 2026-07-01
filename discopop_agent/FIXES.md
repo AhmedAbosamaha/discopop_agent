@@ -781,3 +781,59 @@ The entire `stage=apply` failure class disappears in function mode — budget is
 **Docs:** `DOCUMENTATION.md` / `INSTALL.md` updated — removed `mock_llm.py` from the file tree, the `--mock-llm`/`--manual-llm` CLI entries and demo commands; refreshed the CLI reference (it still listed the long-removed `--distance`; replaced with `--provider`/`--api-base`/`--edit-mode`/`--restructure-depth`/`--require-speedup`); rewrote stale Known-Limitations entries (ID-based rebuild → content fingerprinting; dropped the mock-LLM note).
 
 **Effect:** The only LLM paths are now `--provider anthropic` and `--provider openai-compat`. `pyflakes` reports no unused imports/vars; all modules import clean.
+
+---
+
+## Fix 33 — Surface DiscoPoP's Do-All blockers to the LLM (`prevents-doall` integration)
+
+**Files:** `explorer/discopop_explorer/pattern_detectors/new_do_all_detector.py` (from the `new_explorer` merge), `l2_evidence.py`, `l3_llm.py`, `types.py`
+
+**Background:** the `new_explorer` merge brought a rewritten Do-All detector that *computes the exact dependency preventing Do-All* (type, source→sink line, variable, memory region, and whether it's a trustworthy `DYNAMIC_ANALYSIS` dep or a possibly-pessimistic static one) — but only threw it away via `logger.debug("Prevents doall: …")`. Previously the agent's Tier-2 prompt could only say the generic "DiscoPoP found no applicable pattern" and dump *all* region deps for the LLM to guess from.
+
+**Fix (three parts):**
+1. **Persist (explorer):** `identify_simple_doall_and_reduction` now collects each blocker at both prevention points (the dynamic definite-breaker and the confirmed static one) via `_blocker_record(node, dep)` and writes `explorer/doall_prevented.json` (fresh each run, next to `patterns.json`). Additive, best-effort.
+2. **Consume (L2):** `l2_evidence._load_prevented_deps` reads that file and returns the blockers whose loop overlaps the candidate region (or whose source/sink line falls inside it); stored on `EvidencePackage.prevented_deps`.
+3. **Prompt (L3):** `_fmt_blockers` renders a `### Why DiscoPoP could not parallelize (Do-All blockers)` section in both the diff- and function-mode prompts — listing the exact dependency(ies) to break and flagging dynamic ("real, must remove") vs static ("may be resolvable by privatization").
+
+**Verified (agent side):** with a synthetic `doall_prevented.json`, L2 matches only the region's blocker and L3 renders the precise section. Explorer edit syntax-checks.
+
+**Activation caveat:** the installed `discopop_explorer` in the venv is the pre-merge copy, so `doall_prevented.json` is not produced until the merged explorer is (re)installed (`pip install ./explorer`, or `-e` for live edits). Reinstalling switches detection to the new task-graph-based engine, so the agent's L1 parsing of `Data.xml`/`patterns.json` should be validated against the new output. Until then the agent runs unchanged (the loader returns `[]` when the file is absent — fully backward-compatible).
+
+---
+
+## Fix 34 — Python 3.11 migration + macOS re-port to activate the merged explorer & prevents-doall
+
+**Files:** environment (venv), `profiler/scripts/CXX_wrapper.sh`, `l1_planner.py`, `l3_llm.py`, `GUI/.../Viewable.py`
+
+**Why:** the `new_explorer` merge (and Fix 33's `doall_prevented.json`) only take effect once the merged explorer is installed — but the merged code (its GUI, imported transitively) requires **Python 3.10+**, while the env was 3.9. Chosen path: upgrade to Python 3.11.
+
+**Migration steps performed:**
+1. `brew install python@3.11` + `python-tk@3.11` (Homebrew python ships without Tk; the merged explorer imports `discopop_gui` → tkinter even headless). New venv on 3.11 (old one kept as `venv_py39_backup`).
+2. Reinstalled the local sources: `library`, `explorer`, `GUI` **editable**; `profiler`, `hotspot_detection` **non-editable** (build the C++ `.so`/`.dylib`). The profiler build needs `--config-settings="cmake.args=-DLLVM_DIST_PATH=/usr/local/opt/llvm@19"`.
+3. Converted the one 3.10 `match` in `GUI/.../Viewable.py` to `if/elif` (defensive; explorer/library themselves are 3.9-clean).
+
+**macOS profiler re-port (the new profiler's `CXX_wrapper.sh` lost the earlier macOS fixes):**
+- Added `-isysroot $(xcrun --show-sdk-path)` so Homebrew clang finds system C headers (`printf`/`free` undeclared without it).
+- `-isysroot` then links the SDK's libc++, but `libDiscoPoP_RT.a` (which now uses `std::stringstream`) needs LLVM's libc++ (`abi:ne190107`). Fixed by linking LLVM's `libc++.dylib`/`libc++abi.dylib` by full path with `-nostdlib++`, locating it robustly via `brew --prefix llvm@19` / `readlink -f` (the `clang++-19` path is a symlink, so a naive `dirname/../lib/c++` resolved to a non-existent dir and silently fell back to the SDK libc++ — the root cause of a long "symbol not found" chase).
+- Re-added the `DP_PROJECT_ROOT_DIR` default (Fix 3). Patched **both** the installed wrapper and the source `profiler/scripts/CXX_wrapper.sh` so it survives future reinstalls.
+
+**Agent compatibility with the new explorer output:**
+- `l1_planner`: the new `patterns.json` may carry a null `workload`; coerce to `int` before comparing (was `TypeError: '>' not supported between NoneType and int`).
+- `l3_llm._fmt_blockers`: strip enum prefixes (`DepType.RAW`→`RAW`) and, since the new detector leaves `source_line`/`sink_line` unset on these deps, fall back to "loop-carried (loop at line N)".
+
+**Verified end-to-end on 3.11:** `discopop_cxx` instruments+runs; `discopop_explorer` produces `patterns.json` **and** `doall_prevented.json`; the agent's L1 parses it, L2 loads the blockers, and the Tier-2 prompt renders, e.g.:
+`RAW on \`GEPRESULT_arr\` loop-carried (loop at line 23) [dynamic — a real, observed dependency; it must be removed]`.
+
+**Follow-ups noted:** the new detector doesn't populate `source_line`/`sink_line` on the blocker deps (they show as loop-level) — a data-quality enrichment for later, along with the earlier #1/#2/#4 blocker enrichments (GEP/scalar + intra/inter-iteration flags, reduction candidacy, memory-region grouping).
+
+---
+
+## Fix 36 — Re-profile crash after Tier-2 accept: missing `discopop` meta-package
+
+**Symptom:** the very first Tier-2 acceptance on a fresh **Python 3.11** venv reached the re-profile step and died: `discopop_explorer`'s internal call to `discopop_patch_generator` exited 1 with `FileNotFoundError: No pattern file found ... Expected pattern file: .../explorer/patterns.json`. This dropped the rest of the agent queue. Manual `discopop_explorer` runs on the same restructured source succeeded (exit 0, `patterns.json` written) — the failure only appeared inside the agent's re-profile.
+
+**Root cause:** when I rebuilt the venv for Python 3.11 (Fix 35) I installed the sub-packages (`library`, `explorer`, `GUI`, `profiler`, `hotspot_detection`) but **not the root `discopop` meta-package**. `importlib.metadata.version("discopop")` therefore raised `PackageNotFoundError: No package metadata was found for discopop`, which cascaded during the patch-generation/version lookup inside the re-profile and surfaced as the misleading "no pattern file" error.
+
+**Fix:** `venv/bin/pip install --no-deps .` from the repo root to register the `discopop` meta-package metadata (installs `discopop-5.0.3a1`). Not a code change — the documented install in CLAUDE.md already includes the leading `.` (`pip install . ./profiler ./library`); my 3.11 rebuild simply omitted it. Noted here so a future fresh-venv rebuild includes the root package.
+
+**Verified:** full agentic flow on `example4/bubble_sort.cpp` against Qwen (`--edit-mode function`, `--restructure-depth 0`) now runs end-to-end: loop 1:28 Tier-1 fails at `openmp_compile` (early `break` → non-canonical) → Tier-2 Qwen removes the `break` → quality gate PASSED (compile/TSan/correctness) → **re-profile succeeds** → ACCEPTED. `SUMMARY: 1 accepted | 0 skipped`.
