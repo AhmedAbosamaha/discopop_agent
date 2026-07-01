@@ -23,6 +23,7 @@ class AgentArguments:
     require_speedup: bool       # gate pragma patches on measured wall-clock speedup
     min_measured_speedup: float # minimum measured parallel speedup to accept
     reprofil_args: list         # extra arguments forwarded to ./a.out during re-profiling
+    verbose: bool               # render the full LLM I/O and gate stages in the terminal
 
 
 def parse_args() -> AgentArguments:
@@ -84,6 +85,10 @@ def parse_args() -> AgentArguments:
                          "required when --require-speedup is set (default: 1.0)"))
     p.add_argument("--reprofil-args", nargs=argparse.REMAINDER, default=[],
                    help="Arguments forwarded to ./a.out during re-profiling (e.g. -- sort input.txt)")
+    p.add_argument("-v", "--verbose", action="store_true",
+                   help="Visualize the whole process in the terminal: the exact prompt "
+                        "sent to the LLM, its raw response, the extracted edit, and each "
+                        "quality-gate stage (apply/compile/TSan/correctness/speedup).")
     a = p.parse_args()
 
     # Resolve API key: CLI arg > LLM_API_KEY env var
@@ -108,4 +113,5 @@ def parse_args() -> AgentArguments:
         require_speedup=a.require_speedup,
         min_measured_speedup=a.min_measured_speedup,
         reprofil_args=a.reprofil_args,
+        verbose=a.verbose,
     )

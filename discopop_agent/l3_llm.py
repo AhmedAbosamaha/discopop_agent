@@ -19,6 +19,7 @@ from typing import Any, Optional
 
 import anthropic
 
+from . import viz
 from .types import EvidencePackage
 
 # ---------------------------------------------------------------------------
@@ -363,6 +364,7 @@ def call_llm(
     provider: str = "anthropic",
     api_base: Optional[str] = None,
     edit_mode: str = "diff",
+    verbose: bool = False,
 ) -> tuple[Optional[str], list]:
     """Call the LLM and return (output or None, updated messages).
 
@@ -388,11 +390,25 @@ def call_llm(
         messages = [{"role": "user", "content": user_prompt}]
 
     current = list(messages)
+    kind = "function" if function_mode else "diff"
 
     for attempt in range(max_format_retries + 1):
+        if verbose:
+            last_user = next(
+                (m["content"] for m in reversed(current) if m["role"] == "user"), ""
+            )
+            viz.llm_request(model, provider, system, last_user, attempt=attempt)
+
         text = _complete(provider, client, model, current, system)
+
+        if verbose:
+            viz.llm_response(text, kind=kind)
+
         out = _extract_code(text) if function_mode else _extract_diff(text)
         valid = out is not None if function_mode else bool(out and _is_valid_diff(out))
+
+        if verbose:
+            viz.llm_extracted(kind, out if valid else None)
 
         if valid:
             # Return messages with assistant turn appended so the controller

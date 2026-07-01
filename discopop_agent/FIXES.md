@@ -837,3 +837,22 @@ The entire `stage=apply` failure class disappears in function mode — budget is
 **Fix:** `venv/bin/pip install --no-deps .` from the repo root to register the `discopop` meta-package metadata (installs `discopop-5.0.3a1`). Not a code change — the documented install in CLAUDE.md already includes the leading `.` (`pip install . ./profiler ./library`); my 3.11 rebuild simply omitted it. Noted here so a future fresh-venv rebuild includes the root package.
 
 **Verified:** full agentic flow on `example4/bubble_sort.cpp` against Qwen (`--edit-mode function`, `--restructure-depth 0`) now runs end-to-end: loop 1:28 Tier-1 fails at `openmp_compile` (early `break` → non-canonical) → Tier-2 Qwen removes the `break` → quality gate PASSED (compile/TSan/correctness) → **re-profile succeeds** → ACCEPTED. `SUMMARY: 1 accepted | 0 skipped`.
+
+---
+
+## Fix 37 — Re-profile crash: explorer picks up a STALE global `discopop_patch_generator` off PATH
+
+**Symptom (the real one behind Fix 36's symptom):** after a Tier-2 accept, the agent's re-profile ran `discopop_explorer`, which exited 1. The explorer's own log showed:
+```
+/Users/ahmedsamir/.local/bin/discopop_patch_generator, line 33 ...
+    __requires__ = 'discopop==5.0.2'
+ValueError: Unknown task type: PARALLELREGION
+subprocess.CalledProcessError: Command '['discopop_patch_generator']' returned non-zero exit status 1
+```
+It was **intermittent** — it only fired when the re-profile's detected patterns included a `PARALLELREGION`, a pattern type the old tool doesn't know.
+
+**Root cause:** `discopop_explorer.py` shells out to a **bare** `discopop_patch_generator` (resolved via `$PATH`). The agent is launched as `venv/bin/python -m discopop_agent` *without activating the venv*, so `venv/bin` is **not on PATH**. `which -a discopop_patch_generator` resolved only to a stale global install at `~/.local/bin/discopop_patch_generator` (`discopop==5.0.2`, pinned to a different `Documents/DiscoPoP/.../python3.9` venv) — which shadows our venv's `5.0.3a1`. The old 5.0.2 patch_generator chokes on the new explorer's `PARALLELREGION` type. Fix 36's meta-package install was a red herring: it removed the `PackageNotFoundError` *warning* but not this failure (manual `../../venv/bin/discopop_patch_generator` worked only because it bypassed PATH).
+
+**Fix:** `_reprofil` now spawns the cxx wrapper, `./a.out`, and the explorer with an env whose `PATH` is prepended by our venv's bin dir (`Path(sys.executable).parent`), via new helper `_venv_env()`. The explorer's internal bare `discopop_patch_generator` then resolves to our matching 5.0.3a1. Verified: `PATH=venv/bin:$PATH discopop_explorer` → exit 0, no `Unknown task type`.
+
+**User-env note:** the stale `~/.local/bin/discopop_patch_generator` (and siblings) from the old `Documents/DiscoPoP` install still shadow the venv for any *manually*-run DiscoPoP command with the venv unactivated (e.g. the user's initial `discopop_explorer` step). The agent's own re-profile is now immune; consider removing/upgrading that global install to avoid surprises elsewhere.

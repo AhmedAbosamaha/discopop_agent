@@ -61,6 +61,7 @@ from collections import defaultdict
 from pathlib import Path
 from typing import List
 
+from . import viz
 from .args import AgentArguments
 from .l1_planner import build_candidates
 from .l2_evidence import assemble
@@ -155,26 +156,46 @@ def _region_is_io_only(source_file: str, start_line: int, end_line: int) -> bool
     )
 
 
+def _venv_env() -> "dict[str, str]":
+    """Environment with our venv's bin dir prepended to PATH.
+
+    The agent is typically launched as `venv/bin/python -m discopop_agent`
+    WITHOUT activating the venv, so `venv/bin` is not on PATH.  The explorer we
+    spawn shells out to a BARE `discopop_patch_generator` (resolved via PATH);
+    without this, PATH may resolve it to a stale/global DiscoPoP install
+    (e.g. ~/.local/bin) that doesn't understand newer pattern types
+    (`ValueError: Unknown task type: PARALLELREGION`) and exits 1, aborting the
+    re-profile.  Prepending our venv's bin guarantees the matching tool wins.
+    """
+    import os
+
+    env = dict(os.environ)
+    venv_bin = str(Path(sys.executable).parent)
+    env["PATH"] = venv_bin + os.pathsep + env.get("PATH", "")
+    return env
+
+
 def _reprofil(source_file: str, discopop_dir: Path, binary_args: list | None = None) -> bool:
     """Re-instrument, run, and re-explore after a Tier-2 patch is accepted."""
     src = Path(source_file).resolve()   # absolute path avoids CWD confusion
     binary = src.parent / "a.out"
     extra = [f"-L{_LLVM_LIBCXX}", f"-Wl,-rpath,{_LLVM_LIBCXX}"] if Path(_LLVM_LIBCXX).exists() else []
+    env = _venv_env()
 
     r = subprocess.run(
         [_cxx_wrapper(), str(src), "-o", str(binary)] + extra,
-        capture_output=True, text=True, cwd=src.parent,
+        capture_output=True, text=True, cwd=src.parent, env=env,
     )
     if r.returncode != 0:
         print(f"      [re-profile] instrumentation failed:\n{r.stderr[-500:]}")
         return False
 
     run_cmd = [str(binary)] + (binary_args or [])
-    subprocess.run(run_cmd, capture_output=True, text=True, cwd=src.parent)
+    subprocess.run(run_cmd, capture_output=True, text=True, cwd=src.parent, env=env)
 
     r = subprocess.run(
         [_explorer_cmd()], capture_output=True, text=True,
-        cwd=discopop_dir.resolve(),
+        cwd=discopop_dir.resolve(), env=env,
     )
     if r.returncode != 0:
         print(f"      [re-profile] explorer failed:\n{r.stderr[-500:]}")
@@ -387,6 +408,7 @@ def run(args: AgentArguments) -> None:
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
+    viz.enable(args.verbose)
     _print_banner(args)
 
     # Golden reference output: the unmodified program's stdout.  Every patched
@@ -493,6 +515,9 @@ def run(args: AgentArguments) -> None:
                         min_speedup=args.min_measured_speedup,
                         skip_race_check=True,
                     )
+
+                viz.gate_result(t1_result.passed, t1_result.stage,
+                                t1_result.diagnostic, t1_result.measured_speedup)
 
                 if not t1_result.passed:
                     stage = t1_result.stage
@@ -626,6 +651,7 @@ def run(args: AgentArguments) -> None:
                 provider=args.provider,
                 api_base=args.api_base,
                 edit_mode=args.edit_mode,
+                verbose=args.verbose,
             )
 
             # In function mode the LLM returns the rewritten enclosing function;
@@ -656,6 +682,8 @@ def run(args: AgentArguments) -> None:
                 require_speedup=args.require_speedup,
                 min_speedup=args.min_measured_speedup,
             )
+            viz.gate_result(result.passed, result.stage, result.diagnostic,
+                            result.measured_speedup)
 
             if result.passed:
                 print(f"│  [Tier-2] Quality gate PASSED")
@@ -697,6 +725,9 @@ def run(args: AgentArguments) -> None:
                 if patch_result.returncode != 0:
                     print(f"│  [Tier-2] WARNING: patch apply failed: "
                           f"{(patch_result.stdout + patch_result.stderr).strip()[:200]}")
+                else:
+                    viz.panel(f"APPLIED PATCH -> {src_abs.name}", clean_diff,
+                              color=viz.GREEN, colorize=viz._color_diff_line, max_lines=60)
 
                 record = {
                     "region_id": rid,
