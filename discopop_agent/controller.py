@@ -525,20 +525,35 @@ def run(args: AgentArguments) -> None:
                         reason_label = "loop not in OpenMP-canonical form"
                         t2_hint = (
                             f"DiscoPoP suggested a {ptype} pattern (pragma: {pragma}), "
-                            f"but the loop is NOT in OpenMP-canonical form, so the "
-                            f"generated pragma fails to compile.  Rewrite the loop into "
-                            f"canonical form (simple `i < bound` condition, no break/"
-                            f"continue/return in the body).\n"
+                            f"but the generated pragma fails to compile because the loop "
+                            f"is not in OpenMP-canonical form (cause 5: non-canonical "
+                            f"control flow).\n"
+                            f"Fix ONLY the specific construct the compiler rejected "
+                            f"(shown in the diagnostic below) — do not restructure "
+                            f"anything else:\n"
+                            f"  - Remove break/continue/return -> replace with a flag "
+                            f"evaluated every iteration (flag |= cond;) and tested after "
+                            f"the loop.\n"
+                            f"  - Fix a non-simple loop condition -> move the compound "
+                            f"expression into the bound (write `i < n - 1`, not "
+                            f"`i + 1 < n`).\n"
+                            f"Make the smallest change that satisfies canonical form. Do "
+                            f"not add new logic and do not change what the loop "
+                            f"computes.\n"
                             f"Compiler diagnostic:\n{t1_result.diagnostic}"
                         )
                     elif stage == "correctness":
                         reason_label = "parallelized output is incorrect"
                         t2_hint = (
                             f"DiscoPoP suggested a {ptype} pattern (pragma: {pragma}), "
-                            f"but applying it CHANGES the program's output — the loop is "
-                            f"not actually independent.  Restructure so each iteration is "
-                            f"truly independent (no loop-carried dependency), preserving "
-                            f"exact observable results.\n"
+                            f"but applying it CHANGES the program's output — the loop "
+                            f"carries a real cross-iteration dependence (RAW) that "
+                            f"DiscoPoP's Do-All detector missed.\n"
+                            f"Diagnose its cause from the raced variable (in-place "
+                            f"coupling, a hidden reduction, storage reuse, or a true "
+                            f"recurrence) and remove that cause so each iteration is "
+                            f"genuinely independent, preserving the exact observable "
+                            f"results.\n"
                             f"Diagnostic:\n{t1_result.diagnostic}"
                         )
                     elif stage == "performance":
@@ -555,23 +570,27 @@ def run(args: AgentArguments) -> None:
                             f"DiscoPoP's {ptype} pattern (pragma: {pragma}) is correct "
                             f"(output unchanged, no data race) but the parallel build "
                             f"was NOT faster than sequential — measured "
-                            f"{t1_result.measured_speedup:.2f}×, below the required "
-                            f"{args.min_measured_speedup:.2f}×.\n"
-                            f"Restructure to make parallelization pay off: increase the "
-                            f"parallel granularity (more work per iteration / fuse tiny "
-                            f"loops), hoist invariant work out of the loop, or merge "
-                            f"adjacent parallel loops to amortise thread-spawn overhead. "
-                            f"If the region is inherently too small to benefit, a "
-                            f"different decomposition may be needed.\n"
+                            f"{t1_result.measured_speedup:.2f}x, below the required "
+                            f"{args.min_measured_speedup:.2f}x.\n"
+                            f"The dependence is already gone; restructure for GRANULARITY, "
+                            f"not correctness (cause 6): increase work per parallel "
+                            f"iteration, fuse adjacent tiny parallel loops, hoist "
+                            f"loop-invariant work out of the loop, or move the parallelism "
+                            f"to an outer level. If the region is inherently too small to "
+                            f"benefit, a coarser decomposition may be needed.\n"
                             f"Diagnostic:\n{t1_result.diagnostic}"
                         )
                     else:  # "tsan"
                         reason_label = "DiscoPoP false positive (real race)"
                         t2_hint = (
                             f"DiscoPoP suggested a {ptype} pattern (pragma: {pragma}), "
-                            f"but the generated patch FAILED validation at stage "
-                            f"'{stage}' — likely a false-positive due to a "
-                            f"loop-carried dependency DiscoPoP did not detect.\n"
+                            f"but ThreadSanitizer found a REAL data race: the loop carries "
+                            f"a cross-iteration dependence that DiscoPoP's Do-All detector "
+                            f"missed.\n"
+                            f"Identify the cause from the raced variable in the diagnostic "
+                            f"(in-place coupling, a hidden reduction, storage reuse, or a "
+                            f"true recurrence) and restructure so the iterations are "
+                            f"genuinely independent — do not merely rename storage.\n"
                             f"Validation diagnostic:\n{t1_result.diagnostic}"
                         )
                     print(f"│  [Tier-1] Validation FAILED (stage={stage}) — {reason_label}")
@@ -801,9 +820,10 @@ def run(args: AgentArguments) -> None:
                             "Your restructuring compiled and preserved correctness, but it "
                             "did NOT speed the program up: none of the loops it exposed ran "
                             "faster than sequential when parallelized (thread overhead "
-                            "outweighed the benefit). Try a restructuring that exposes "
-                            "coarser-grained, higher-payoff parallelism — more work per "
-                            "parallel iteration, fewer/larger parallel loops."
+                            "outweighed the benefit). The dependence is already gone — this "
+                            "is a granularity problem (cause 6). Expose coarser-grained, "
+                            "higher-payoff parallelism: more work per parallel iteration, "
+                            "fewer/larger parallel loops, or parallelism at an outer level."
                         )
                         failure_reason = msg
                         if tier2_messages is not None:
@@ -841,16 +861,21 @@ def run(args: AgentArguments) -> None:
                 _STAGE_GUIDANCE = {
                     "apply": "The diff did not apply — its context lines must match the "
                              "current file exactly (raw indentation, no line-number prefix).",
-                    "compile": "The patched code does not compile. Fix the C/C++ error.",
+                    "compile": "The patched code does not compile. Fix the C/C++ error "
+                             "without changing what the code computes.",
                     "openmp_compile": "A loop you want parallelized is not in OpenMP-canonical "
-                             "form (simple `i < bound` condition, no break/continue/return).",
-                    "tsan": "ThreadSanitizer found a real data race — the loop has a genuine "
-                            "cross-iteration dependency. Restructure so iterations are independent.",
+                             "form (cause 5): use a simple `i < bound` condition and no "
+                             "break/continue/return in the body.",
+                    "tsan": "ThreadSanitizer found a REAL data race — the loop still carries a "
+                            "cross-iteration dependence. Identify its cause (in-place coupling, "
+                            "hidden reduction, storage reuse, or a true recurrence) and make the "
+                            "iterations independent — do not merely rename storage.",
                     "correctness": "The program's output CHANGED — your restructuring is not "
                             "semantically equivalent. Preserve the algorithm's full work and "
-                            "exact results.",
+                            "exact results (same order of operations).",
                     "performance": "The parallel build was correct but NOT faster than sequential. "
-                            "Increase parallel granularity / reduce per-iteration overhead.",
+                            "The dependence is already gone; restructure for granularity (cause 6) "
+                            "— coarsen iterations, fuse tiny loops, or hoist invariant work.",
                 }
                 guidance = _STAGE_GUIDANCE.get(result.stage, "")
                 print(f"│  [Tier-2] Stage '{result.stage}' failed: "

@@ -19,29 +19,15 @@
  *   Odd  phase: independent pairs (1,2), (3,4), (5,6) ... → Do-All
  */
 void bubble_sort(int *arr, int n) {
-    // Create a copy of the array to avoid race conditions during parallel execution
-    int *temp_arr = new int[n];
-    for (int i = 0; i < n; i++) {
-        temp_arr[i] = arr[i];
-    }
-
     for (int pass = 0; pass < n - 1; pass++) {
-        // Perform bubble sort on the temporary array
         for (int i = 0; i < n - pass - 1; i++) {
-            if (temp_arr[i] > temp_arr[i + 1]) {
-                int tmp = temp_arr[i];
-                temp_arr[i] = temp_arr[i + 1];
-                temp_arr[i + 1] = tmp;
+            if (arr[i] > arr[i + 1]) {
+                int tmp   = arr[i];
+                arr[i]    = arr[i + 1];
+                arr[i + 1] = tmp;
             }
         }
     }
-
-    // Copy the sorted values back to the original array
-    for (int i = 0; i < n; i++) {
-        arr[i] = temp_arr[i];
-    }
-
-    delete[] temp_arr;
 }
 
 int main(void) {
@@ -52,7 +38,7 @@ int main(void) {
 
     int ok = 1;
     for (int i = 0; i < N - 1; i++)
-        if (arr[i] > arr[i + 1]) { ok = 0; }
+        if (arr[i] > arr[i + 1]) { ok = 0; break; }
 
     printf("N=%d  sorted: %s\n", N, ok ? "YES" : "NO");
     printf("arr[0]=%d  arr[N-1]=%d\n", arr[0], arr[N - 1]);
