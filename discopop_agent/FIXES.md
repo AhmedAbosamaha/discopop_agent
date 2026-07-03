@@ -856,3 +856,37 @@ It was **intermittent** — it only fired when the re-profile's detected pattern
 **Fix:** `_reprofil` now spawns the cxx wrapper, `./a.out`, and the explorer with an env whose `PATH` is prepended by our venv's bin dir (`Path(sys.executable).parent`), via new helper `_venv_env()`. The explorer's internal bare `discopop_patch_generator` then resolves to our matching 5.0.3a1. Verified: `PATH=venv/bin:$PATH discopop_explorer` → exit 0, no `Unknown task type`.
 
 **User-env note:** the stale `~/.local/bin/discopop_patch_generator` (and siblings) from the old `Documents/DiscoPoP` install still shadow the venv for any *manually*-run DiscoPoP command with the venv unactivated (e.g. the user's initial `discopop_explorer` step). The agent's own re-profile is now immune; consider removing/upgrading that global install to avoid surprises elsewhere.
+
+---
+
+## Fix 38 — Generalize the L3 system prompt: evidence-driven cause taxonomy + guardrails
+
+**File:** `l3_llm.py`, `controller.py`
+
+**Problem:**
+The system prompt (`_SYSTEM_CORE`) was a cookbook keyed to *named algorithms* — bubble sort, shell sort, Jacobi, odd-even transposition. This anchored the model on recognizing an algorithm rather than reasoning from the dependency evidence, and did not generalize. It also lacked two guardrails: the LLM could "solve" a loop with a **sequential optimization** (early-termination) or by **adding a `break`**, neither of which exposes parallelism.
+
+**Fix:**
+- Rewrote `_SYSTEM_CORE` into an algorithm-agnostic method: **classify each blocking dependence by its cause, then fix the cause** — (1) storage/false, (2) reduction, (3) in-place coupling, (4) recurrence/scan, (5) non-canonical control flow, (6) mixed concerns.
+- Added guardrails: **"EXPOSE PARALLELISM, not a faster serial algorithm"** (forbids early-exit shortcuts / algorithm substitution) and **"NEVER INTRODUCE new `break`/`continue`/`return`."**
+- Cause 3 now carries an explicit **decide-first test** (double-buffer only if each new value depends solely on the *previous* sweep; otherwise partition/colour into ordered sub-passes) and names the `arr → temp` rename as a non-fix.
+- Aligned the controller's per-stage failure feedback (`t2_hint`, `_STAGE_GUIDANCE`, the revert message) to the same cause vocabulary; converted Unicode bullets/arrows to ASCII for cross-provider consistency.
+
+**Verified:** Claude derives the correct odd-even transposition from the generalized prompt with **no algorithm named**; the guardrails eliminated the earlier early-exit-plus-`break` answer.
+
+---
+
+## Fix 39 — Richer evidence for the LLM: array/scalar dep tags, DiscoPoP data-sharing classification, profiler granularity signals
+
+**File:** `types.py`, `l2_evidence.py`, `l3_llm.py`
+
+**Problem:**
+DiscoPoP computes far more than the evidence package surfaced. The single most discriminating field — each dependence's **memory region** (`GEPRESULT` array-element vs. scalar) — was stripped in `_parse_dep_line`, so the LLM could not tell an *algorithmic* array dependence from a *privatizable* scalar and repeatedly "fixed" the loop by renaming `arr → temp` (which removes nothing). `doall_prevented.json` is also empty for the classic false-positive loop, so the "why not parallel" signal was blank exactly when it was needed most.
+
+**Fix:**
+- `Dependency` gains `kind` (`"array"`|`"scalar"`), classified from the `GEPRESULT` tag (`_classify_var`); each dep now renders as `… [array element]` / `[scalar]`.
+- `EvidencePackage` gains DiscoPoP's **OpenMP data-sharing classification** (`shared` / `private` / `first_private` / `last_private` / `reduction`) from `patterns.json`, plus three profiler signals: **`loop_trip_counts`** (from `BGN loop` markers — parallel granularity), **`local_vars_in_region`** (loop-local / already-private, from the CU graph's *scope* only — `accessMode` is unreliable for arrays because a CU records the pointer access, not the element read/write), and **`static_only_vars`** (static deps never observed at runtime → likely spurious).
+- `l3_llm` renders `_fmt_classification`, `_array_dep_note` (states plainly that copying/renaming an array cannot remove an array-element dep), `_fmt_trip_counts` (granularity hint), and `_fmt_extra_vars` — in **both** diff-mode and function-mode prompts, each section emitted only when its data is present.
+- `static_only_vars` is compared against **globally**-observed dynamic vars (not region-filtered), fixing a bug where loop-induction variables (`i`/`pass`/`n`) — whose deps sit at the loop header just outside the body window — were wrongly flagged as spurious.
+
+**Verified:** renders correctly on the pristine `example4` profile (`arr[] [array element]`; `shared: arr`; `loop-local: tmp`; trip counts `line 23: 1023 × ~512`). With the enriched prompt Qwen began attempting stride/partition (`i += 2`) — a shift it never made in prior runs — though the 30B model remains the capability ceiling; the `--require-speedup` gate still correctly reverts every non-solution (no false accept).

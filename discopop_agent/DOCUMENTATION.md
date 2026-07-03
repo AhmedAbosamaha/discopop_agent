@@ -101,14 +101,21 @@ score = c · log₂(1 + W) − λ · 1[tier=2]
 | Field | Source file | Description |
 |-------|-------------|-------------|
 | `source_region` | source `.cpp` file | Annotated lines `[start-2 … end+2]`; target lines marked with `>>>` |
-| `raw_deps` | `dynamic_dependencies.txt` | Read-after-write deps crossing iteration boundaries |
-| `war_deps` | `dynamic_dependencies.txt` | Write-after-read deps |
-| `waw_deps` | `dynamic_dependencies.txt` | Write-after-write deps |
+| `raw_deps` | `dynamic_dependencies.txt` | Read-after-write deps crossing iteration boundaries. Each dep is tagged `kind` = **`array`** (an array-element / `GEPRESULT` access — usually an *algorithmic* dependence) or **`scalar`** (usually a storage conflict, removable by privatization) |
+| `war_deps` | `dynamic_dependencies.txt` | Write-after-read deps (with the same array/scalar `kind` tag) |
+| `waw_deps` | `dynamic_dependencies.txt` | Write-after-write deps (with the same array/scalar `kind` tag) |
 | `reduction_vars` | `reduction.txt` | Variables involved in reduction patterns |
 | `iteration_count` | `loop_counter_output.txt` | How many times the loop ran |
+| `prevented_deps` | `explorer/doall_prevented.json` | DiscoPoP's exact Do-All blockers with STATIC/DYNAMIC origin (empty for false-positive loops it wrongly thinks are Do-All) |
+| `shared_vars`, `private_vars`, `firstprivate_vars`, `lastprivate_vars`, `classified_reduction_vars` | `explorer/patterns.json` | DiscoPoP's own OpenMP data-sharing classification for the region (which variables are the shared data vs. privatizable). Empty when no pattern was detected |
+| `loop_trip_counts` | `dynamic_dependencies.txt` (`BGN loop` markers) | Observed trip counts per loop in the region: `{line, total, entries, avg, max}` where `entries` = activations and `avg` = iterations per activation — lets the LLM judge parallel **granularity** |
+| `local_vars_in_region` | `explorer/detection_result_dump.json` (CU graph) | Variables DiscoPoP tracks as loop-**local** (already per-iteration private). Only the CU *scope* is used, not its `accessMode` — the latter is unreliable for arrays (a CU reports the pointer access, not the element read/write) |
+| `static_only_vars` | `static_dependencies.txt` vs `dynamic_dependencies.txt` | Variables with a STATIC (compiler-conservative) dependence in the region that was **never observed at runtime** anywhere → likely spurious / privatizable |
 | `tier1_failure_reason` | previous stage | TSan/compile error text from last failed attempt |
 
 **Key design point:** `tier1_failure_reason` is updated after every failed validation attempt. This means each retry gives the LLM a fresh, accurate failure diagnostic — not the same generic message every time.
+
+**Reasoning signals (why they matter):** the array-vs-scalar `kind` tag and the data-sharing classification let the prompt tell the LLM plainly that a loop-carried dep on array elements (e.g. `arr[]`) is *algorithmic* and cannot be removed by renaming/copying the array — steering it away from the common "copy `arr` into `temp`" non-fix. Trip counts expose fine-grained loops (many activations × few iterations) so the LLM prefers coarser parallelism. These are surfaced in the prompt by `l3_llm._fmt_classification`, `_array_dep_note`, `_fmt_trip_counts`, and `_fmt_extra_vars`.
 
 ---
 
@@ -134,9 +141,24 @@ score = c · log₂(1 + W) − λ · 1[tier=2]
   ```
 
   ### Runtime data dependences
-    RAW — read-after-write: line 22 → 23  variable: arr
+  (each dep tagged [array element] or [scalar])
+    RAW — read-after-write: line 23 → 24  arr[]  [array element]
     WAR — write-after-read: none
     WAW — write-after-write: none
+
+  ### DiscoPoP variable classification (from its own analysis)
+    shared        : arr   (a loop-carried dep on these is ALGORITHMIC)
+    firstprivate  : ok
+
+  ### Additional DiscoPoP variable facts
+    loop-local (already per-iteration private): tmp
+
+  ### Nature of the blocking dependence         ← fires when the blocker is on an array
+  The loop-carried RAW dependence is on ARRAY ELEMENTS (arr[]), not a scalar.
+  Copying/renaming the array (arr -> temp) does NOT remove it...
+
+  ### Loop trip counts (observed — judge parallel granularity)
+    loop at line 23: 1023 activation(s) × ~512 iterations each = 523,776 total
 
   ### What went wrong                       ← TSan/compile diagnostic from Tier-1
   DiscoPoP suggested do_all but TSan detected a data race...
@@ -145,6 +167,8 @@ score = c · log₂(1 + W) − λ · 1[tier=2]
   Restructure the loop at lines 1:23 in example4/bubble_sort.cpp...
   Output a unified diff only.
 ```
+
+The classification, variable-facts, array-nature, and trip-count sections are only emitted when the underlying data is present, so simpler regions produce a leaner prompt.
 
 **On budget retries the conversation continues (multi-turn):**
 
@@ -329,6 +353,14 @@ class HotspotCandidate:
     tier: int                 # 1 or 2
 
 @dataclass
+class Dependency:
+    dep_type: str               # RAW | WAR | WAW
+    from_line: int
+    to_line: int
+    variable: str
+    kind: str = "scalar"        # "array" (GEPRESULT element access) | "scalar"
+
+@dataclass
 class EvidencePackage:
     region_id: str
     region_type: str
@@ -342,6 +374,18 @@ class EvidencePackage:
     waw_deps: List[Dependency]
     reduction_vars: List[str]
     tier1_failure_reason: str   # updated diagnostic per retry
+    prevented_deps: List[dict]  # Do-All blockers (doall_prevented.json)
+    # DiscoPoP's OpenMP data-sharing classification (patterns.json):
+    shared_vars: List[str]
+    private_vars: List[str]
+    firstprivate_vars: List[str]
+    lastprivate_vars: List[str]
+    classified_reduction_vars: List[str]
+    # Phase-2 profiler signals:
+    loop_trip_counts: List[dict]      # [{line,total,entries,avg,max}] granularity
+    local_vars_in_region: List[str]   # loop-local (already private) vars
+    static_only_vars: List[str]       # static-only (likely spurious) dep vars
+    # (enclosing-function fields for --edit-mode function omitted)
 
 @dataclass
 class ValidationResult:

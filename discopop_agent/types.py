@@ -9,6 +9,7 @@ class Dependency:
     from_line: int
     to_line: int
     variable: str
+    kind: str = "scalar"   # "array" (array-element / GEPRESULT access) | "scalar"
 
 
 @dataclass
@@ -50,6 +51,26 @@ class EvidencePackage:
     waw_deps: List[Dependency]
     reduction_vars: List[str]
     tier1_failure_reason: str = ""
+    # DiscoPoP's own OpenMP data-sharing classification for this region, taken
+    # from the detected pattern (patterns.json).  Empty lists when no pattern was
+    # detected for the region.  Tells the LLM which variables DiscoPoP considers
+    # shared data (a loop-carried dep on these is algorithmic) vs. privatizable.
+    shared_vars: List[str] = field(default_factory=list)
+    private_vars: List[str] = field(default_factory=list)
+    firstprivate_vars: List[str] = field(default_factory=list)
+    lastprivate_vars: List[str] = field(default_factory=list)
+    classified_reduction_vars: List[str] = field(default_factory=list)
+    # Observed loop trip counts for loops in this region (from the profiler's
+    # BGN-loop markers).  Each dict: {line, total, entries, avg, max} where
+    # entries = number of activations, avg = iterations per activation.  Lets the
+    # LLM reason about parallel granularity (few iters/activation => fine-grained).
+    loop_trip_counts: List[dict] = field(default_factory=list)
+    # Variables DiscoPoP tracks as loop-LOCAL in this region (from the CU graph):
+    # already per-iteration private, so they need no privatization.
+    local_vars_in_region: List[str] = field(default_factory=list)
+    # Variables whose dependences DiscoPoP found only STATICALLY (compiler-
+    # conservative) but never observed at runtime — likely spurious / privatizable.
+    static_only_vars: List[str] = field(default_factory=list)
     # Do-All blockers from DiscoPoP's new detector (explorer/doall_prevented.json):
     # the specific dependences that prevented parallelization of this region.
     # Each dict: {dep_type, source_line, sink_line, var_name, memory_region, origin,

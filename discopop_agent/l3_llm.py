@@ -248,16 +248,6 @@ _SYSTEM_FUNCTION = _SYSTEM_CORE + _OUTPUT_FUNCTION
 # ---------------------------------------------------------------------------
 
 def _build_prompt(evidence: EvidencePackage) -> str:
-    def fmt_deps(deps, label):
-        if not deps:
-            return f"  {label}: none\n"
-        lines = [f"  {label}:"]
-        for d in deps[:20]:
-            lines.append(
-                f"    line {d.from_line} → {d.to_line}  variable: {d.variable}"
-            )
-        return "\n".join(lines) + "\n"
-
     region_label = {
         "loop": "loop",
         "function": "function body",
@@ -284,16 +274,35 @@ def _build_prompt(evidence: EvidencePackage) -> str:
         ),
         evidence.source_region,
         "```\n",
-        "### Runtime data dependences (observed across all executions)",
-        fmt_deps(evidence.raw_deps, "RAW — read-after-write (the blocking ones)"),
-        fmt_deps(evidence.war_deps, "WAR — write-after-read"),
-        fmt_deps(evidence.waw_deps, "WAW — write-after-write"),
+        "### Runtime data dependences (observed across all executions)\n"
+        "(each dep is tagged [array element] or [scalar]: an array-element dep is "
+        "on the DATA and is usually algorithmic; a scalar dep is usually a "
+        "storage conflict removable by privatization/renaming)",
+        _fmt_deps(evidence.raw_deps, "RAW — read-after-write (the blocking ones)"),
+        _fmt_deps(evidence.war_deps, "WAR — write-after-read"),
+        _fmt_deps(evidence.waw_deps, "WAW — write-after-write"),
     ]
 
     if evidence.reduction_vars:
         parts.append(
             f"### Reduction variables: {', '.join(evidence.reduction_vars)}\n"
         )
+
+    classification = _fmt_classification(evidence)
+    if classification:
+        parts.append(classification)
+
+    extra_vars = _fmt_extra_vars(evidence)
+    if extra_vars:
+        parts.append(extra_vars)
+
+    array_note = _array_dep_note(evidence)
+    if array_note:
+        parts.append(array_note)
+
+    trip_counts = _fmt_trip_counts(evidence)
+    if trip_counts:
+        parts.append(trip_counts)
 
     blockers = _fmt_blockers(evidence.prevented_deps)
     if blockers:
@@ -336,8 +345,99 @@ def _fmt_deps(deps: list, label: str) -> str:
         return f"  {label}: none\n"
     lines = [f"  {label}:"]
     for d in deps[:20]:
-        lines.append(f"    line {d.from_line} → {d.to_line}  variable: {d.variable}")
+        tag = "array element" if getattr(d, "kind", "scalar") == "array" else "scalar"
+        lines.append(
+            f"    line {d.from_line} → {d.to_line}  {d.variable}  [{tag}]"
+        )
     return "\n".join(lines) + "\n"
+
+
+def _fmt_classification(ev: EvidencePackage) -> str:
+    """Render DiscoPoP's own OpenMP data-sharing classification for the region,
+    when a pattern was detected.  Returns '' when nothing was classified."""
+    if not (ev.shared_vars or ev.private_vars or ev.firstprivate_vars
+            or ev.lastprivate_vars or ev.classified_reduction_vars):
+        return ""
+    out = ["### DiscoPoP variable classification (from its own analysis)"]
+    if ev.shared_vars:
+        out.append(
+            f"  shared        : {', '.join(ev.shared_vars)}   "
+            "(the data structures — a loop-carried dep on these is ALGORITHMIC, "
+            "not removable by privatizing/renaming)"
+        )
+    if ev.private_vars:
+        out.append(
+            f"  private       : {', '.join(ev.private_vars)}   "
+            "(each iteration can safely have its own copy)"
+        )
+    if ev.firstprivate_vars:
+        out.append(f"  firstprivate  : {', '.join(ev.firstprivate_vars)}")
+    if ev.lastprivate_vars:
+        out.append(f"  lastprivate   : {', '.join(ev.lastprivate_vars)}")
+    if ev.classified_reduction_vars:
+        out.append(f"  reduction     : {', '.join(ev.classified_reduction_vars)}")
+    return "\n".join(out) + "\n"
+
+
+def _fmt_trip_counts(ev: EvidencePackage) -> str:
+    """Render observed loop trip counts, with a granularity hint.  Returns '' when
+    no trip-count data is available for the region."""
+    if not ev.loop_trip_counts:
+        return ""
+    out = ["### Loop trip counts (observed at runtime — judge parallel granularity)"]
+    for lc in ev.loop_trip_counts:
+        out.append(
+            f"  loop at line {lc['line']}: {lc['entries']} activation(s) "
+            f"× ~{lc['avg']} iterations each = {lc['total']:,} total "
+            f"(max {lc['max']}/activation)"
+        )
+    out.append(
+        "  A loop with FEW iterations per activation but MANY activations is "
+        "fine-grained: parallelizing it directly rarely beats thread overhead — "
+        "prefer coarser parallelism (parallelize an outer level, or make each "
+        "parallel iteration do more work)."
+    )
+    return "\n".join(out) + "\n"
+
+
+def _fmt_extra_vars(ev: EvidencePackage) -> str:
+    """Render loop-local (already-private) variables and static-only (likely
+    spurious) dependence variables.  Returns '' when neither is present."""
+    lines = []
+    if ev.local_vars_in_region:
+        lines.append(
+            f"  loop-local (already per-iteration private — no privatization "
+            f"needed): {', '.join(ev.local_vars_in_region)}"
+        )
+    if ev.static_only_vars:
+        lines.append(
+            f"  static-only deps (compiler-conservative, NEVER observed at "
+            f"runtime → the dependence is likely spurious; exposing or privatizing "
+            f"may already be safe): {', '.join(ev.static_only_vars)}"
+        )
+    if not lines:
+        return ""
+    return "### Additional DiscoPoP variable facts\n" + "\n".join(lines) + "\n"
+
+
+def _array_dep_note(ev: EvidencePackage) -> str:
+    """If the blocking RAW deps are on array elements, state plainly that copying
+    or renaming the array cannot remove them.  Returns '' when the blocking deps
+    are all scalar (where privatization is the right move)."""
+    array_vars = sorted({d.variable for d in ev.raw_deps if getattr(d, "kind", "scalar") == "array"})
+    if not array_vars:
+        return ""
+    return (
+        "### Nature of the blocking dependence (read this before choosing a fix)\n"
+        f"The loop-carried RAW dependence is on ARRAY ELEMENTS ({', '.join(array_vars)}), "
+        "not on a scalar.  This is IN-PLACE COUPLING (cause 3) or a RECURRENCE "
+        "(cause 4).  Copying or renaming the array (e.g. `arr` -> `temp`) does NOT "
+        "remove it — the same order-dependent element writes remain, so the rewrite "
+        "is still serial and will be rejected.  To remove it you must either "
+        "double-buffer (valid ONLY if each new value depends solely on the previous "
+        "sweep) or partition each sweep into independent sub-passes over disjoint, "
+        "non-adjacent elements (colour/phase).\n"
+    )
 
 
 def _fmt_blockers(prevented: list) -> str:
@@ -389,13 +489,28 @@ def _build_function_prompt(evidence: EvidencePackage) -> str:
         "```cpp",
         evidence.enclosing_function_source,
         "```\n",
-        "### Runtime data dependences in the target region (observed)",
+        "### Runtime data dependences in the target region (observed)\n"
+        "(each dep is tagged [array element] or [scalar]: an array-element dep is "
+        "on the DATA and is usually algorithmic; a scalar dep is usually a "
+        "storage conflict removable by privatization/renaming)",
         _fmt_deps(evidence.raw_deps, "RAW — read-after-write (the blocking ones)"),
         _fmt_deps(evidence.war_deps, "WAR — write-after-read"),
         _fmt_deps(evidence.waw_deps, "WAW — write-after-write"),
     ]
     if evidence.reduction_vars:
         parts.append(f"### Reduction variables: {', '.join(evidence.reduction_vars)}\n")
+    classification = _fmt_classification(evidence)
+    if classification:
+        parts.append(classification)
+    extra_vars = _fmt_extra_vars(evidence)
+    if extra_vars:
+        parts.append(extra_vars)
+    array_note = _array_dep_note(evidence)
+    if array_note:
+        parts.append(array_note)
+    trip_counts = _fmt_trip_counts(evidence)
+    if trip_counts:
+        parts.append(trip_counts)
     blockers = _fmt_blockers(evidence.prevented_deps)
     if blockers:
         parts.append(blockers)
