@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import re
 import textwrap
-from typing import Any, Optional
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 import anthropic
 
@@ -32,7 +32,7 @@ _SYSTEM_CORE = textwrap.dedent("""\
     profiler.
 
     ------------------------------------------------------------------
-    HOW YOUR OUTPUT IS USED  (read this — it defines the constraints)
+    HOW YOUR OUTPUT IS USED
     ------------------------------------------------------------------
     DiscoPoP profiled ONE code region and could not extract safe parallelism from
     it: either it found no pattern, or the pattern it found produced an OpenMP
@@ -43,9 +43,19 @@ _SYSTEM_CORE = textwrap.dedent("""\
     explicit and safe.  You do NOT insert OpenMP pragmas — DiscoPoP re-profiles
     your rewrite and inserts them itself.
 
-    Your rewrite is then compiled, run, and its output is compared BYTE-FOR-BYTE
-    with the original program.  Any difference is an automatic rejection.
-    Correctness is an absolute constraint, never traded against performance.
+    ------------------------------------------------------------------
+    THE ONE CONTRACT (verified automatically)
+    ------------------------------------------------------------------
+    Your rewrite is compiled, run sequentially, and its printed OUTPUT is
+    compared BYTE-FOR-BYTE with the original program's.  Any difference is an
+    automatic rejection.  That is the whole contract:
+      - The OUTPUT must be identical.  Execution order, operation count, loop
+        bounds, extra buffers, extra passes — all of these are YOURS TO CHANGE
+        whenever the new schedule needs it.  Doing MORE comparisons or updates
+        than the original is fine; a rewrite is judged by its output, never by
+        how closely its code resembles the original.
+      - Do not rename the function or change its signature; do not add, remove,
+        or reorder I/O or change output formatting.
 
     ------------------------------------------------------------------
     WHAT COUNTS AS SUCCESS
@@ -63,12 +73,10 @@ _SYSTEM_CORE = textwrap.dedent("""\
     A faster serial algorithm is NOT a valid answer.  In particular, do NOT:
       - add an early-termination / "did anything change this pass" shortcut,
       - substitute a lower-complexity but still-serial algorithm,
-      - reorder work to finish sooner while keeping the same loop-carried
-        dependence.
-    None of these remove the blocking dependence; they leave the region just as
-    unparallelizable as before (and are often rejected outright).  Every rewrite
-    must make some loop's iterations genuinely independent (Do-All / Reduction)
-    or split it into independent stages/tasks.
+      - return the original code (or a renamed/reordered copy of it) unchanged.
+    None of these remove the blocking dependence.  Every rewrite must make some
+    loop's iterations genuinely independent (Do-All / Reduction) or split it
+    into independent stages/tasks.
 
     ------------------------------------------------------------------
     READ THE EVIDENCE FIRST — REASON FROM IT, NOT FROM THE ALGORITHM'S NAME
@@ -86,6 +94,9 @@ _SYSTEM_CORE = textwrap.dedent("""\
         out rather than one that truly occurs — often removable by privatizing or
         first-writing the variable inside the loop.  A DYNAMIC origin blocker was
         actually observed at run time and must be genuinely broken.
+      - Loop INDUCTION VARIABLES (listed per loop in the evidence) are handled by
+        OpenMP automatically: dependences on them are never the real blocker.
+        Never restructure to "fix" an induction variable.
 
     ------------------------------------------------------------------
     METHOD — CLASSIFY EACH BLOCKING DEPENDENCE BY ITS CAUSE, THEN FIX THE CAUSE
@@ -112,37 +123,37 @@ _SYSTEM_CORE = textwrap.dedent("""\
          element and its neighbour, a compare-and-swap of adjacent items, or
          writing back into the array being read).
 
-         DECIDE FIRST — what does each new value depend on?  This choice is
-         mandatory; picking the wrong branch does NOT remove the dependence:
-           - If every element's new value depends ONLY on the PREVIOUS sweep's
-             values (a pure map / stencil, e.g. new[i] = f(old[i-1], old[i],
-             old[i+1]), and no element written this sweep is read again this
-             sweep) -> use (a).
-           - If an element's new value depends on another element's value that
-             was WRITTEN earlier in the SAME sweep (the update propagates /
-             cascades along the array, e.g. a swap that may move a value across
-             several positions) -> (a) is INVALID; you MUST use (b).
+         DECIDE FIRST — the same-sweep read-back question: can a value WRITTEN
+         during one sweep be READ again later in the SAME sweep?
+           - NO — every new value depends only on the PREVIOUS sweep (a pure
+             map / stencil, e.g. new[i] = f(old[i-1], old[i], old[i+1]))
+             -> use (a).
+           - YES — the update propagates / cascades along the array within the
+             sweep (e.g. a swap whose result the next iteration compares)
+             -> (a) is INVALID; you MUST use (b).
 
          Fix:
            a) DOUBLE-BUFFER: allocate a separate output array; read every input
               exclusively from the previous-sweep buffer, write every result into
-              the new buffer, then swap the two buffers after the sweep.  Valid
-              ONLY when no element written this sweep is read again this sweep.
+              the new buffer, then swap the buffers after the sweep.
            b) PARTITION / COLOUR: keep the updates in place, but split each sweep
               into ordered sub-passes whose iterations touch DISJOINT,
               non-adjacent elements (e.g. even-indexed pairs, then odd-indexed
               pairs; or "red" cells, then "black").  Within one sub-pass every
-              iteration is independent -> Do-All; running the sub-passes in order
-              reproduces the sequential result.  Preserve the SAME total work —
-              do not drop sub-passes or shorten the sweep count.
+              iteration is independent -> Do-All; running the sub-passes in
+              order reproduces the sequential result.  Under the new schedule a
+              value moves a SHORTER distance per sweep than the old cascade
+              carried it, so RE-DERIVE every loop bound: each sub-pass must
+              cover every element of its class on every sweep — a bound copied
+              from the old code that shrinks with progress (assuming part of
+              the array is already settled) is WRONG here, and covering the
+              full range (more comparisons than the original) is exactly what
+              correctness requires.
 
-         WRONG (removes NOTHING): copying the array into a renamed buffer and then
-              performing the SAME order-dependent, in-place updates on the copy.
-              A rename is not a decoupling: `temp[i] > temp[i+1]` with an in-place
-              swap carries the identical loop-carried dependence that `arr[...]`
-              did.  Real double-buffering (a) reads OLD and writes NEW and is only
-              valid for the map/stencil case above; a cascading in-place update
-              needs (b).
+         WRONG (removes NOTHING): copying the array into a renamed buffer and
+              then performing the SAME order-dependent, in-place updates on the
+              copy.  A rename is not a decoupling — the loop-carried dependence
+              is unchanged, and the rewrite will be rejected.
 
       4. TRUE RECURRENCE / SCAN — iteration i's result is defined in terms of
          iteration i-1's result (running total, propagation, chained state).
@@ -155,10 +166,9 @@ _SYSTEM_CORE = textwrap.dedent("""\
       5. NON-CANONICAL CONTROL FLOW — the loop can't be parallelized because its
          trip count is not known up front: break, continue, return, goto, or a
          non-affine bound.
-         Fix: convert to a fixed-trip-count loop with IDENTICAL results — replace
+         Fix: convert to a fixed-trip-count loop with IDENTICAL output — replace
               early exit with a flag/mask evaluated every iteration and tested
-              after the loop; move compound conditions into the bound.  Change the
-              control structure only, never what is computed.
+              after the loop; move compound conditions into the bound.
 
       6. SERIALIZATION BY MIXED CONCERNS — the body fuses independent
          computations, or repeats loop-invariant work, hiding the parallel part.
@@ -168,15 +178,50 @@ _SYSTEM_CORE = textwrap.dedent("""\
               parallel loops to raise granularity.
 
     ------------------------------------------------------------------
-    TRANSFORM ONLY WHAT THE EVIDENCE JUSTIFIES
+    WORKED EXAMPLE (method applied end-to-end)
     ------------------------------------------------------------------
-    Make the SMALLEST change that removes the specific blocking dependences
-    reported.  Preserve every other line, the algorithm's full amount of work
-    (same passes / sweeps / iterations — never shorten a convergence loop or drop
-    boundary elements), and the exact order of floating-point operations.
-    When the failure was "no speedup" (not a race), the dependence is already
-    gone — restructure for GRANULARITY (coarsen, fuse, hoist, move parallelism to
-    an outer level), not for correctness.
+    Evidence given: RAW on scalar `t` (lines 3→4), RAW on scalar `norm`
+    (line 5→5, also listed as reduction candidate `norm (+)`), induction
+    variable `i`, no array-element RAW.
+
+        1  double t; double norm = 0;
+        2  for (int i = 0; i < n; i++) {
+        3      t = a[i] * s;
+        4      b[i] = t + c[i];
+        5      norm += t * t;
+        6  }
+
+    Reasoning: `t` is written before it is read in EVERY iteration — no value
+    flows between iterations, so the RAW on `t` is cause 1 (storage reuse):
+    declare it inside the body.  `norm` is read-modify-write through `+`, cause
+    2 (reduction): keep exactly one accumulation.  No array-element RAW, so no
+    buffering or partitioning is needed.
+
+    Rewrite (iterations now fully independent Do-All + reduction):
+
+        1  double norm = 0;
+        2  for (int i = 0; i < n; i++) {
+        3      double t = a[i] * s;
+        4      b[i] = t + c[i];
+        5      norm += t * t;
+        6  }
+
+    Byte-identical output — the change removes the reported dependences and
+    touches nothing else.
+
+    ------------------------------------------------------------------
+    SCOPE OF CHANGE
+    ------------------------------------------------------------------
+    Change what the diagnosed cause requires and nothing else: statements
+    unrelated to the blocking dependences, I/O, and code outside the region
+    stay as they are.  But when the cause requires an algorithm-level reshaping
+    (double-buffering, coloured sub-passes, fission, a scan reformulation),
+    carry it out COMPLETELY — including re-derived bounds and initial values.
+    A timid half-measure that keeps the old schedule's bounds or ordering is
+    the most common way to fail.
+    When the reported failure was "no speedup" (not a race), the dependence is
+    already gone — restructure for GRANULARITY (coarsen, fuse, hoist, move
+    parallelism to an outer level), not for correctness.
 
     ------------------------------------------------------------------
     OPENMP-CANONICAL FORM (every loop you intend to be parallel must satisfy ALL)
@@ -186,36 +231,10 @@ _SYSTEM_CORE = textwrap.dedent("""\
       - Increment is i++, i--, i += c, or i -= c with loop-invariant c.
       - Body has NO break, continue, return, or goto.
       - Trip count is computable before the loop begins.
-
     NEVER INTRODUCE new break, continue, return, or goto as part of a
     transformation — not in the target loop and not in any enclosing loop you
-    touch.  Adding control flow that exits a loop early makes its trip count
-    unknown and DISQUALIFIES it from parallelization (the opposite of the goal).
-    If the existing code has such control flow, convert it to canonical form
-    (cause 5); do not add more.
-
-    ------------------------------------------------------------------
-    BEFORE YOU WRITE CODE, verify silently:
-    ------------------------------------------------------------------
-      1. Which cause (1-6) does each reported RAW / blocker fall under?
-      2. Does my transformation REMOVE that exact dependence, or merely relabel it
-         (or just make the sequential version finish faster)?
-      3. Can iteration i and iteration i+1 now run simultaneously with no
-         read/write conflict on any shared location?
-      4. Does the rewrite compute a byte-for-byte identical result, in the same
-         operation order?
-      5. Is every loop I want parallelized in canonical form, and did I avoid
-         adding ANY break/continue/return?
-
-    ------------------------------------------------------------------
-    CORRECTNESS CONTRACT (verified automatically, byte-for-byte)
-    ------------------------------------------------------------------
-      - The sequential output of your rewrite must be IDENTICAL to the original
-        before any OpenMP pragma is applied.
-      - Preserve full work: same passes / sweeps, same bounds, same boundary
-        handling, same rounding.
-      - Do not rename the function or change its signature; do not add or reorder
-        I/O or change output formatting.
+    touch.  If the existing code has such control flow, convert it to canonical
+    form (cause 5); do not add more.
 """)
 
 # Output-format instruction appended per edit mode.
@@ -230,12 +249,21 @@ _OUTPUT_DIFF = textwrap.dedent("""\
 
 _OUTPUT_FUNCTION = textwrap.dedent("""\
 
-    >>> OUTPUT THE COMPLETE REWRITTEN FUNCTION ONLY. <<<
-    Return the ENTIRE function — its signature and full body, from the opening
-    `{` to the closing `}` — as a single C++ code block.  Do NOT output a diff,
-    line numbers, markers, or prose.  Rewrite only this one function; do not
-    rename it or change its signature.  The agent applies your function verbatim
-    in place, so it must compile as-is.
+    >>> OUTPUT FORMAT: PLAN, THEN THE COMPLETE REWRITTEN FUNCTION. <<<
+    First write PLAN — plain text, no code block, in exactly this shape:
+      Line 1: "Same-sweep read-back: YES/NO/N-A — <one line why>"  (can a value
+              written during one sweep be read again later in the SAME sweep?
+              YES means double-buffering is invalid — you must partition.
+              N-A when the region has no in-place array update at all.)
+      Lines 2-5: for each blocking dependence, its cause (1-6) and the fix.
+      Last line: "Loop headers: <the exact for(...) header text of every loop
+              you changed or added>" — the code block must contain these
+              headers verbatim; re-derive any bound the old schedule assumed.
+    Then output the ENTIRE rewritten function — its signature and full body,
+    from the opening `{` to the closing `}` — as ONE ```cpp code block, and end
+    your response there.  Do NOT output a diff, line numbers, or markers.
+    Rewrite only this one function; do not rename it or change its signature.
+    The agent applies the code block verbatim in place, so it must compile as-is.
 """)
 
 # Diff mode keeps the original system prompt verbatim; function mode swaps the
@@ -263,6 +291,7 @@ def _build_prompt(evidence: EvidencePackage) -> str:
     parts = [
         f"## Source file: {evidence.source_file}",
         f"## Region: {evidence.region_id}  type={region_label}  ({exec_info})\n",
+        _fmt_digest(evidence),
         (
             "### Source\n"
             "(Each line is shown as `NNNN >>> code` where `NNNN` is the line number "
@@ -275,12 +304,15 @@ def _build_prompt(evidence: EvidencePackage) -> str:
         evidence.source_region,
         "```\n",
         "### Runtime data dependences (observed across all executions)\n"
-        "(each dep is tagged [array element] or [scalar]: an array-element dep is "
-        "on the DATA and is usually algorithmic; a scalar dep is usually a "
-        "storage conflict removable by privatization/renaming)",
-        _fmt_deps(evidence.raw_deps, "RAW — read-after-write (the blocking ones)"),
-        _fmt_deps(evidence.war_deps, "WAR — write-after-read"),
-        _fmt_deps(evidence.waw_deps, "WAW — write-after-write"),
+        "(grouped per variable; each is tagged [array element] or [scalar]: an "
+        "array-element dep is on the DATA and is usually algorithmic; a scalar "
+        "dep is usually a storage conflict removable by privatization/renaming)",
+        _fmt_deps(evidence.raw_deps, "RAW — read-after-write (the blocking ones)",
+                  evidence.line_text, (evidence.start_line, evidence.end_line)),
+        _fmt_deps(evidence.war_deps, "WAR — write-after-read",
+                  region=(evidence.start_line, evidence.end_line)),
+        _fmt_deps(evidence.waw_deps, "WAW — write-after-write",
+                  region=(evidence.start_line, evidence.end_line)),
     ]
 
     if evidence.reduction_vars:
@@ -300,9 +332,13 @@ def _build_prompt(evidence: EvidencePackage) -> str:
     if array_note:
         parts.append(array_note)
 
-    trip_counts = _fmt_trip_counts(evidence)
-    if trip_counts:
-        parts.append(trip_counts)
+    loop_nest = _fmt_loop_nest(evidence)
+    if loop_nest:
+        parts.append(loop_nest)
+
+    calls = _fmt_calls(evidence)
+    if calls:
+        parts.append(calls)
 
     blockers = _fmt_blockers(evidence.prevented_deps)
     if blockers:
@@ -322,10 +358,15 @@ def _build_prompt(evidence: EvidencePackage) -> str:
         f"cleanly, is race-free under ThreadSanitizer, and achieves measurable "
         f"speedup.\n"
         f"\n"
-        f"Follow the three-step process from the system instructions:\n"
-        f"  1. Identify the dependency category from the profile above.\n"
-        f"  2. Apply the matching transformation (not a superficial workaround).\n"
-        f"  3. Verify the dependency is structurally gone before writing code.\n"
+        f"Work through this checklist before writing the diff:\n"
+        f"  1. Classify each variable under 'RAW' above into causes 1-6 "
+        f"(induction variables and loop-local temps are cause 1; an "
+        f"array-element RAW is cause 3 or 4 — decide with the same-sweep "
+        f"read-back question).\n"
+        f"  2. Apply the matching fix COMPLETELY — including loop bounds "
+        f"re-derived for the new schedule, in canonical form.\n"
+        f"  3. Parallelize at a level with enough iterations x work to beat "
+        f"thread overhead (see the loop structure above).\n"
         f"\n"
         f"IMPORTANT: diff context lines (lines beginning with a single space) must match "
         f"the actual file content exactly — use only the raw code indentation, "
@@ -340,16 +381,137 @@ def _build_prompt(evidence: EvidencePackage) -> str:
     return "\n".join(parts)
 
 
-def _fmt_deps(deps: list, label: str) -> str:
+def _fmt_deps(
+    deps: list,
+    label: str,
+    line_text: Optional[Dict[int, str]] = None,
+    region: Optional[Tuple[int, int]] = None,
+) -> str:
+    """Render one dependence class aggregated PER VARIABLE (a flat list of raw
+    dep lines drowns a small model), quoting the source statement each line
+    number points at so the model never has to cross-reference by itself.
+    Dependences with an endpoint OUTSIDE `region` (e.g. a later consumer of the
+    data in another function) are summarised, not listed — they are not what the
+    rewrite has to remove."""
     if not deps:
         return f"  {label}: none\n"
+    groups: Dict[Tuple[str, str], List[Any]] = {}
+    for d in deps:
+        groups.setdefault((d.variable, getattr(d, "kind", "scalar")), []).append(d)
     lines = [f"  {label}:"]
-    for d in deps[:20]:
-        tag = "array element" if getattr(d, "kind", "scalar") == "array" else "scalar"
-        lines.append(
-            f"    line {d.from_line} → {d.to_line}  {d.variable}  [{tag}]"
+    quoted: Set[int] = set()
+    for (var, kind), ds in groups.items():
+        tag = "array element" if kind == "array" else "scalar"
+        pairs = sorted({(d.from_line, d.to_line) for d in ds})
+        if region:
+            lo, hi = region
+            inside = [p for p in pairs if lo <= p[0] <= hi and lo <= p[1] <= hi]
+            crossing = len(pairs) - len(inside)
+        else:
+            inside, crossing = pairs, 0
+        shown = ", ".join(f"{a}→{b}" for a, b in inside[:8])
+        more = f"  (+{len(inside) - 8} more)" if len(inside) > 8 else ""
+        cross = (
+            f"  (+{crossing} with an endpoint outside the region: values "
+            "produced here are consumed by later code — the rewrite must "
+            "preserve them)" if crossing else ""
         )
+        where = shown or (
+            "(loop-carried; the profiler did not resolve exact in-region line "
+            "pairs — see the Do-All blockers section)"
+        )
+        lines.append(f"    {var}  [{tag}]  at lines {where}{more}{cross}")
+        if line_text:
+            for ln in sorted({x for p in inside[:8] for x in p}):
+                stmt = line_text.get(ln, "").strip()
+                # Skip closing-brace-only lines — DiscoPoP attributes loop-carried
+                # deps to them, but quoting `}` tells the model nothing.
+                if stmt.strip("{}(); ") and ln not in quoted:
+                    quoted.add(ln)
+                    lines.append(f"        line {ln}: `{stmt}`")
     return "\n".join(lines) + "\n"
+
+
+def _fmt_digest(ev: EvidencePackage) -> str:
+    """Compact factual summary placed FIRST in the prompt: what blocks
+    parallelization, on which variables, in which loops.  Small models weight
+    the beginning of the prompt most heavily; every fact here is repeated in
+    detail in later sections."""
+    array_raw = sorted({d.variable for d in ev.raw_deps if getattr(d, "kind", "scalar") == "array"})
+    scalar_raw = sorted({d.variable for d in ev.raw_deps if getattr(d, "kind", "scalar") == "scalar"})
+    out = ["### Evidence digest (details in the sections below)"]
+    if array_raw:
+        out.append(
+            f"  - Loop-carried RAW on ARRAY ELEMENTS of: {', '.join(array_raw)} "
+            "— algorithmic; cannot be removed by privatizing/renaming."
+        )
+    if scalar_raw:
+        out.append(
+            f"  - RAW on SCALARS: {', '.join(scalar_raw)} — usually storage reuse "
+            "or a reduction; check each against the loop's induction variables."
+        )
+    if not ev.raw_deps:
+        out.append("  - No RAW dependences observed — the blocker is structural "
+                   "(control flow) or granularity, not data flow.")
+    for lp in ev.loop_nest:
+        idx = ", ".join(lp["index_vars"])
+        idx_part = f" (index: {idx})" if idx else ""
+        out.append(
+            f"  - {'  ' * lp['depth']}Loop lines {lp['start']}–{lp['end']}"
+            f"{idx_part}: {lp['entries']} activation(s) × ~{lp['avg']} iterations."
+        )
+    if ev.calls_in_region:
+        callees = ", ".join(
+            f"{c['callee']}()" + (" [RECURSIVE]" if c["recursive"] else "")
+            for c in ev.calls_in_region
+        )
+        out.append(f"  - The region CALLS other functions: {callees} — their side "
+                   "effects must stay correct under any restructuring.")
+    if ev.reduction_vars:
+        out.append(f"  - DiscoPoP already recognizes reduction variable(s): "
+                   f"{', '.join(ev.reduction_vars)}.")
+    return "\n".join(out) + "\n"
+
+
+def _fmt_loop_nest(ev: EvidencePackage) -> str:
+    """Loop structure with induction variables and iteration statistics.
+    Supersedes the flat trip-count list when PEGraph loop data is available."""
+    if not ev.loop_nest:
+        return _fmt_trip_counts(ev)
+    out = ["### Loop structure (nesting, induction variables, observed iterations)"]
+    for lp in ev.loop_nest:
+        idx = ", ".join(lp["index_vars"]) or "unknown"
+        out.append(
+            f"  {'  ' * lp['depth']}- loop at lines {lp['start']}–{lp['end']}  "
+            f"induction variable(s): {idx}  |  {lp['entries']} activation(s) "
+            f"× ~{lp['avg']} iterations = {lp['total']:,} total (max {lp['max']})"
+        )
+    out.append(
+        "  Induction variables are managed by OpenMP automatically — dependences "
+        "on them are NEVER the real blocker; do not restructure to 'fix' them.\n"
+        "  A loop with few iterations per activation but many activations is "
+        "fine-grained: prefer parallelizing an outer loop or coarsening the work "
+        "per iteration."
+    )
+    return "\n".join(out) + "\n"
+
+
+def _fmt_calls(ev: EvidencePackage) -> str:
+    """Call sites inside the region.  A call means the body has effects the
+    region source alone may not show; a recursive call rules out simple loop
+    parallelization of the surrounding structure."""
+    if not ev.calls_in_region:
+        return ""
+    out = ["### Function calls inside the region"]
+    for c in ev.calls_in_region:
+        rec = "  [RECURSIVE — calls the enclosing function itself]" if c["recursive"] else ""
+        out.append(f"  - line {c['line']}: calls {c['callee']}(){rec}")
+    out.append(
+        "  Iterations that call a function are independent only if the calls do "
+        "not touch overlapping shared state; check the callee's side effects "
+        "before assuming Do-All."
+    )
+    return "\n".join(out) + "\n"
 
 
 def _fmt_classification(ev: EvidencePackage) -> str:
@@ -430,13 +592,13 @@ def _array_dep_note(ev: EvidencePackage) -> str:
     return (
         "### Nature of the blocking dependence (read this before choosing a fix)\n"
         f"The loop-carried RAW dependence is on ARRAY ELEMENTS ({', '.join(array_vars)}), "
-        "not on a scalar.  This is IN-PLACE COUPLING (cause 3) or a RECURRENCE "
-        "(cause 4).  Copying or renaming the array (e.g. `arr` -> `temp`) does NOT "
-        "remove it — the same order-dependent element writes remain, so the rewrite "
-        "is still serial and will be rejected.  To remove it you must either "
-        "double-buffer (valid ONLY if each new value depends solely on the previous "
-        "sweep) or partition each sweep into independent sub-passes over disjoint, "
-        "non-adjacent elements (colour/phase).\n"
+        "not on a scalar — this is cause 3 (in-place coupling) or cause 4 "
+        "(recurrence); copying or renaming the array removes nothing.  Answer "
+        "the same-sweep read-back question first: can a value WRITTEN during "
+        "one sweep be READ again later in the SAME sweep (e.g. a swapped "
+        "element the next iteration compares)?  If YES -> partition into "
+        "coloured sub-passes (cause 3b, bounds re-derived for the new "
+        "schedule); only if NO -> double-buffer (3a).\n"
     )
 
 
@@ -485,17 +647,21 @@ def _build_function_prompt(evidence: EvidencePackage) -> str:
         f"(lines {evidence.enclosing_function_start}–{evidence.enclosing_function_end})",
         f"## Target region: {region_label} {evidence.region_id} at lines "
         f"{evidence.start_line}–{evidence.end_line}\n",
+        _fmt_digest(evidence),
         "### Current function (rewrite this whole function):",
         "```cpp",
         evidence.enclosing_function_source,
         "```\n",
         "### Runtime data dependences in the target region (observed)\n"
-        "(each dep is tagged [array element] or [scalar]: an array-element dep is "
-        "on the DATA and is usually algorithmic; a scalar dep is usually a "
-        "storage conflict removable by privatization/renaming)",
-        _fmt_deps(evidence.raw_deps, "RAW — read-after-write (the blocking ones)"),
-        _fmt_deps(evidence.war_deps, "WAR — write-after-read"),
-        _fmt_deps(evidence.waw_deps, "WAW — write-after-write"),
+        "(grouped per variable; each is tagged [array element] or [scalar]: an "
+        "array-element dep is on the DATA and is usually algorithmic; a scalar "
+        "dep is usually a storage conflict removable by privatization/renaming)",
+        _fmt_deps(evidence.raw_deps, "RAW — read-after-write (the blocking ones)",
+                  evidence.line_text, (evidence.start_line, evidence.end_line)),
+        _fmt_deps(evidence.war_deps, "WAR — write-after-read",
+                  region=(evidence.start_line, evidence.end_line)),
+        _fmt_deps(evidence.waw_deps, "WAW — write-after-write",
+                  region=(evidence.start_line, evidence.end_line)),
     ]
     if evidence.reduction_vars:
         parts.append(f"### Reduction variables: {', '.join(evidence.reduction_vars)}\n")
@@ -508,9 +674,12 @@ def _build_function_prompt(evidence: EvidencePackage) -> str:
     array_note = _array_dep_note(evidence)
     if array_note:
         parts.append(array_note)
-    trip_counts = _fmt_trip_counts(evidence)
-    if trip_counts:
-        parts.append(trip_counts)
+    loop_nest = _fmt_loop_nest(evidence)
+    if loop_nest:
+        parts.append(loop_nest)
+    calls = _fmt_calls(evidence)
+    if calls:
+        parts.append(calls)
     blockers = _fmt_blockers(evidence.prevented_deps)
     if blockers:
         parts.append(blockers)
@@ -525,15 +694,20 @@ def _build_function_prompt(evidence: EvidencePackage) -> str:
         "Pipeline, or Task-Parallel) that compiles cleanly, is race-free under "
         "ThreadSanitizer, and achieves measurable speedup.\n"
         "\n"
-        "Follow the three-step process from the system instructions:\n"
-        "  1. Identify the dependency category from the profile above.\n"
-        "  2. Apply the matching transformation (not a superficial workaround).\n"
-        "  3. Verify the dependency is structurally gone before writing code.\n"
+        "Work through this checklist:\n"
+        "  1. Classify each variable under 'RAW' above into causes 1-6 "
+        "(induction variables and loop-local temps are cause 1; an "
+        "array-element RAW is cause 3 or 4 — decide with the same-sweep "
+        "read-back question).\n"
+        "  2. Apply the matching fix COMPLETELY — including loop bounds "
+        "re-derived for the new schedule, in canonical form.\n"
+        "  3. Parallelize at a level with enough iterations x work to beat "
+        "thread overhead (see the loop structure above).\n"
         "\n"
-        ">>> OUTPUT THE COMPLETE REWRITTEN FUNCTION ONLY. <<<\n"
-        "Return the entire function (signature + full body) as one ```cpp code "
-        "block. No diff, no line numbers, no markers, no prose. Keep the same "
-        "function name and signature."
+        ">>> OUTPUT exactly as specified in the system instructions: the PLAN "
+        "(same-sweep line, causes + fixes, loop headers), then the ENTIRE "
+        "rewritten function as ONE ```cpp code block, and end the response "
+        "there. Keep the same function name and signature."
     )
     return "\n".join(parts)
 
@@ -561,10 +735,12 @@ _CODE_FENCE_RE = re.compile(r"```(?:cpp|c\+\+|cxx|c)?\s*\n(.*?)```", re.DOTALL |
 
 def _extract_code(text: str) -> Optional[str]:
     """For --edit-mode function: pull the rewritten function out of the response.
-    Prefer a fenced ```cpp block; otherwise use the raw text.  Returns None if it
-    doesn't look like a function (no braces)."""
-    m = _CODE_FENCE_RE.search(text)
-    code = (m.group(1) if m else text).strip("\n")
+    Prefer the LAST fenced ```cpp block (the response may open with a short PLAN,
+    and the final block is the code the model was told to end with); otherwise
+    use the raw text.  Returns None if it doesn't look like a function (no
+    braces)."""
+    matches = list(_CODE_FENCE_RE.finditer(text))
+    code = (matches[-1].group(1) if matches else text).strip("\n")
     if "{" in code and "}" in code:
         return code
     return None
@@ -590,30 +766,48 @@ def _make_client(provider: str, api_key: Optional[str], api_base: Optional[str])
     return anthropic.Anthropic(api_key=api_key)
 
 
+class LLMConnectionError(RuntimeError):
+    """The LLM endpoint could not be reached (server not running, wrong
+    --api-base, or network failure).  Fatal for the whole run — every region
+    would hit the same error — so the controller aborts cleanly on it."""
+
+
 def _complete(provider: str, client: Any, model: str, current: list, system: str) -> str:
     """Run one completion against the chosen provider and return the raw text.
 
     Both providers receive the same `system` instructions and the same
     user/assistant conversation; only the wire format differs (Anthropic takes
     `system` separately, OpenAI takes it as the first message)."""
-    if provider == "openai-compat":
-        resp = client.chat.completions.create(
+    try:
+        if provider == "openai-compat":
+            resp = client.chat.completions.create(
+                model=model,
+                max_tokens=4096,
+                messages=[{"role": "system", "content": system}] + current,
+            )
+            return resp.choices[0].message.content or ""
+        resp = client.messages.create(
             model=model,
             max_tokens=4096,
-            messages=[{"role": "system", "content": system}] + current,
+            system=[{
+                "type": "text",
+                "text": system,
+                "cache_control": {"type": "ephemeral"},
+            }],
+            messages=current,
         )
-        return resp.choices[0].message.content or ""
-    resp = client.messages.create(
-        model=model,
-        max_tokens=4096,
-        system=[{
-            "type": "text",
-            "text": system,
-            "cache_control": {"type": "ephemeral"},
-        }],
-        messages=current,
-    )
-    return str(resp.content[0].text)
+        return str(resp.content[0].text)
+    except Exception as e:
+        # Both the openai and anthropic SDKs raise an `APIConnectionError`
+        # when the endpoint is unreachable; match by name so the openai SDK
+        # stays an optional dependency.
+        if type(e).__name__ == "APIConnectionError":
+            endpoint = getattr(client, "base_url", None) or "the configured endpoint"
+            raise LLMConnectionError(
+                f"cannot reach the LLM endpoint at {endpoint} — "
+                f"is the model server running?"
+            ) from e
+        raise
 
 
 def call_llm(
@@ -679,8 +873,10 @@ def call_llm(
         # Free format re-prompt — doesn't consume a budget slot.
         if attempt < max_format_retries:
             reprompt = (
-                "Your response must be the complete rewritten function as a single "
-                "```cpp code block — signature and full body, no diff, no prose."
+                "Your response must end with the complete rewritten function as a "
+                "single ```cpp code block — signature and full body, no diff. "
+                "A short plain-text PLAN before the code block is allowed; "
+                "nothing may follow the code block."
                 if function_mode else
                 "Your response must be a unified diff only.\n"
                 "Start with '--- <original_file>' on its own line,\n"

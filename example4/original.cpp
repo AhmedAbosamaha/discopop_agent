@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define N 1024
+#define N 16384
 
 /*
  * Bubble sort — inner loop has a cross-iteration swap dependency.

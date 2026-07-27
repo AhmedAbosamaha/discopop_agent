@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define N 1024
+#define N 16384
 
 /*
  * Bubble sort — inner loop has a cross-iteration swap dependency.
@@ -20,11 +20,16 @@
  */
 void bubble_sort(int *arr, int n) {
     for (int pass = 0; pass < n - 1; pass++) {
-        for (int i = 0; i < n - pass - 1; i++) {
+        for (int i = 0; i < n - pass - 1; i += 2) {
             if (arr[i] > arr[i + 1]) {
                 int tmp   = arr[i];
                 arr[i]    = arr[i + 1];
                 arr[i + 1] = tmp;
+            }
+            if (i + 1 < n - pass - 1 && arr[i + 1] > arr[i + 2]) {
+                int tmp   = arr[i + 1];
+                arr[i + 1] = arr[i + 2];
+                arr[i + 2] = tmp;
             }
         }
     }

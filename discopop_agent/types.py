@@ -1,6 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
-from typing import Optional, List
+from typing import Any, Dict, Optional, List
 
 
 @dataclass
@@ -76,6 +76,20 @@ class EvidencePackage:
     # Each dict: {dep_type, source_line, sink_line, var_name, memory_region, origin,
     #             loop_file, loop_start, loop_end}
     prevented_deps: List[dict] = field(default_factory=list)
+    # Loop structure of the region (from the explorer's PEGraph LoopNodes): one
+    # dict per loop overlapping the region, {start, end, depth, index_vars,
+    # entries, avg, total, max}.  depth counts containing loops within the region
+    # (0 = outermost).  index_vars are DiscoPoP's induction variables for the
+    # loop — deps on these are never the real blocker.
+    loop_nest: List[Dict[str, Any]] = field(default_factory=list)
+    # Function calls made inside the region (from Data.xml callsNode): one dict
+    # per call site, {line, callee, recursive}.  Non-empty means the loop body
+    # has side effects the source alone may not show.
+    calls_in_region: List[Dict[str, Any]] = field(default_factory=list)
+    # Raw source text by absolute line number, covering the enclosing function
+    # plus the region.  Lets the prompt quote the exact statement a dependence
+    # points at instead of making the LLM cross-reference line numbers.
+    line_text: Dict[int, str] = field(default_factory=dict)
     # Enclosing function (used by --edit-mode function: the LLM rewrites this whole
     # function and the agent splices it in by line range).  Falls back to the
     # region's own span when no containing function is found.

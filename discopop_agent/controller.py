@@ -53,6 +53,7 @@ Why Tier-1 validation matters:
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -65,7 +66,7 @@ from . import viz
 from .args import AgentArguments
 from .l1_planner import build_candidates
 from .l2_evidence import assemble
-from .l3_llm import call_llm
+from .l3_llm import LLMConnectionError, call_llm
 from .l4_validator import capture_reference_output, fix_hunk_headers, validate
 
 _LLVM_LIBCXX = "/usr/local/Cellar/llvm@19/19.1.7/lib/c++"
@@ -232,6 +233,16 @@ def _fingerprint(source_file: str, start_line: int, end_line: int, name: str | N
     return f"{name or ''}␟{body}"
 
 
+def _normalize_code(text: str) -> str:
+    """Strip // and /* */ comments and all whitespace, for change detection.
+    A rewrite that differs only in comments or formatting is semantically the
+    original code — the LLM must not be able to pass the gate by returning the
+    input function with a comment added."""
+    text = re.sub(r"/\*.*?\*/", "", text, flags=re.DOTALL)
+    text = re.sub(r"//[^\n]*", "", text)
+    return re.sub(r"\s+", "", text)
+
+
 def _function_edit_to_diff(
     source_file: str, start_line: int, end_line: int, new_code: str
 ) -> str | None:
@@ -240,7 +251,7 @@ def _function_edit_to_diff(
 
     The diff is generated from the actual on-disk content, so it always applies
     cleanly — eliminating the diff-apply failure class.  Returns None if the span
-    is invalid or the edit is a no-op."""
+    is invalid or the edit is a no-op (ignoring comments and whitespace)."""
     import difflib
 
     old_lines = Path(source_file).read_text().splitlines()
@@ -248,7 +259,8 @@ def _function_edit_to_diff(
         return None
     new_block = new_code.splitlines()
     new_lines = old_lines[: start_line - 1] + new_block + old_lines[end_line:]
-    if new_lines == old_lines:
+    old_span = "\n".join(old_lines[start_line - 1: end_line])
+    if _normalize_code(new_code) == _normalize_code(old_span):
         return None
     diff = difflib.unified_diff(
         [ln + "\n" for ln in old_lines],
@@ -663,15 +675,21 @@ def run(args: AgentArguments) -> None:
             evidence = assemble(candidate, profiler_dir, failure_reason)
 
             print(f"│  [Tier-2] Calling {args.model}...")
-            diff, tier2_messages = call_llm(
-                evidence, args.model,
-                api_key=args.api_key,
-                messages=tier2_messages,
-                provider=args.provider,
-                api_base=args.api_base,
-                edit_mode=args.edit_mode,
-                verbose=args.verbose,
-            )
+            try:
+                diff, tier2_messages = call_llm(
+                    evidence, args.model,
+                    api_key=args.api_key,
+                    messages=tier2_messages,
+                    provider=args.provider,
+                    api_base=args.api_base,
+                    edit_mode=args.edit_mode,
+                    verbose=args.verbose,
+                )
+            except LLMConnectionError as e:
+                # Fatal for the whole run: every region needs the endpoint.
+                print(f"│  [Tier-2] FATAL: {e}")
+                print(f"└─ aborting — start the LLM server (or fix --api-base) and re-run\n")
+                sys.exit(1)
 
             # In function mode the LLM returns the rewritten enclosing function;
             # splice it in and turn it into a guaranteed-apply diff.
@@ -684,6 +702,23 @@ def run(args: AgentArguments) -> None:
                 )
                 if diff is None:
                     print(f"│  [Tier-2] Rewritten function produced no change — retrying")
+                    # Without feedback the next call would replay the same
+                    # conversation and get the same null answer — tell the model
+                    # explicitly that returning the input is not a valid move.
+                    if tier2_messages is not None:
+                        tier2_messages = tier2_messages + [{
+                            "role": "user",
+                            "content": (
+                                "You returned the function UNCHANGED (comment or "
+                                "formatting edits do not count). That is not a valid "
+                                "answer: the task is to restructure the code so the "
+                                "blocking dependence is gone. If your previous "
+                                "transformation attempt failed validation, do not fall "
+                                "back to the original — apply the OTHER applicable fix "
+                                "for the diagnosed cause and adjust every loop bound "
+                                "and sweep count to match the new schedule."
+                            ),
+                        }]
 
             if diff is None:
                 if budget > 0:
@@ -871,8 +906,20 @@ def run(args: AgentArguments) -> None:
                             "hidden reduction, storage reuse, or a true recurrence) and make the "
                             "iterations independent — do not merely rename storage.",
                     "correctness": "The program's output CHANGED — your restructuring is not "
-                            "semantically equivalent. Preserve the algorithm's full work and "
-                            "exact results (same order of operations).",
+                            "semantically equivalent. Diagnose WHICH kind of error this is "
+                            "before rewriting:\n"
+                            "(a) WRONG TRANSFORMATION for the dependence — e.g. you "
+                            "double-buffered but the original reads values updated earlier in "
+                            "the SAME sweep (re-check the same-sweep read-back question), or "
+                            "you reordered operations whose order affects the result. Then "
+                            "switch to the other applicable fix for the diagnosed cause.\n"
+                            "(b) RIGHT TRANSFORMATION, carried-over detail — the strategy is "
+                            "sound but some bound, initial value, or boundary handling was "
+                            "copied from the old schedule. Re-derive each such detail for the "
+                            "new schedule instead of copying it: a loop bound or skipped "
+                            "element that was safe because of the OLD update order is not "
+                            "automatically safe under the new one. Keep the strategy and fix "
+                            "only that.",
                     "performance": "The parallel build was correct but NOT faster than sequential. "
                             "The dependence is already gone; restructure for granularity (cause 6) "
                             "— coarsen iterations, fuse tiny loops, or hoist invariant work.",
@@ -887,13 +934,32 @@ def run(args: AgentArguments) -> None:
                     f"Validation failed at stage '{result.stage}'. {guidance}\n\n"
                     f"Diagnostic:\n{diag_full}"
                 )
+                # Build failures need the same approach with the error fixed;
+                # semantic failures need an explicit decision about whether the
+                # STRATEGY or a DETAIL was wrong (a blanket "switch strategy"
+                # pushes the model off correct-but-buggy transformations).
+                if result.stage in ("apply", "compile", "openmp_compile"):
+                    retry_instr = (
+                        "Keep your transformation approach and fix ONLY the reported "
+                        "error — do not change strategy over a build problem."
+                    )
+                else:
+                    retry_instr = (
+                        "Do NOT resubmit a variation of the same code. Your next PLAN "
+                        "must open by stating what your previous attempt did, whether "
+                        "the failure was (a) the wrong transformation for this "
+                        "dependence — then name the different one you are switching "
+                        "to — or (b) a detail copied from the old schedule (a bound, "
+                        "boundary, or initial value) — then name that exact detail "
+                        "and its corrected form."
+                    )
                 if tier2_messages is not None:
                     tier2_messages = tier2_messages + [{
                         "role": "user",
                         "content": (
                             f"Your diff failed at the '{result.stage}' stage. {guidance}\n\n"
                             f"Diagnostic:\n{diag_full}\n\n"
-                            f"Please try a different restructuring approach."
+                            f"{retry_instr}"
                         ),
                     }]
         else:

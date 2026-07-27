@@ -14,7 +14,7 @@ Package contents (per thesis slide 10):
 from __future__ import annotations
 
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from .l1_planner import find_enclosing_function
 from .types import Dependency, EvidencePackage, HotspotCandidate
@@ -303,6 +303,140 @@ def _load_local_vars(
     return names
 
 
+def _load_loop_nest(
+    discopop_dir: Path, file_id: int, start_line: int, end_line: int
+) -> List[Dict[str, Any]]:
+    """Loop structure for the region, from the explorer's PEGraph LoopNodes
+    (explorer/detection_result_dump.json): line span, induction variables, and
+    observed iteration statistics per loop, plus a containment depth (0 =
+    outermost within the region).  Returns [] if unavailable."""
+    import json
+
+    f = discopop_dir / "explorer" / "detection_result_dump.json"
+    if not f.exists():
+        return []
+    try:
+        nodes = json.loads(f.read_text())["pet"]["g"]["_node"]
+    except (OSError, ValueError, KeyError, TypeError):
+        return []
+    loops: List[Dict[str, Any]] = []
+    for nd in nodes.values():
+        data = nd.get("data", {}) if isinstance(nd, dict) else {}
+        if "LoopNode" not in str(data.get("py/object", "")) or data.get("file_id") != file_id:
+            continue
+        s, e = data.get("start_line"), data.get("end_line")
+        if s is None or e is None or e < start_line or s > end_line:
+            continue
+        ld = data.get("loop_data") or {}
+        loops.append({
+            "start": s,
+            "end": e,
+            "index_vars": [str(v) for v in (data.get("loop_indices") or [])],
+            "entries": ld.get("entry_count", 0),
+            "avg": ld.get("average_iteration_count", 0),
+            "total": ld.get("total_iteration_count", 0),
+            "max": ld.get("maximum_iteration_count", 0),
+        })
+    # The dump can hold several LoopNodes for one source span (e.g. after
+    # re-profiling a patched file) — keep the best-populated one per span, and
+    # drop never-executed spans when at least one loop actually ran, so the
+    # depth computation below sees each loop once.
+    by_span: Dict[Tuple[int, int], Dict[str, Any]] = {}
+    for lp in loops:
+        key = (lp["start"], lp["end"])
+        if key not in by_span or (lp["entries"], lp["total"]) > (
+            by_span[key]["entries"], by_span[key]["total"]
+        ):
+            by_span[key] = lp
+    loops = list(by_span.values())
+    if any(lp["total"] > 0 for lp in loops):
+        loops = [lp for lp in loops if lp["total"] > 0]
+    loops.sort(key=lambda l: (l["start"], -l["end"]))
+    for lp in loops:
+        lp["depth"] = sum(
+            1 for o in loops
+            if o is not lp and o["start"] <= lp["start"] and o["end"] >= lp["end"]
+        )
+    return loops
+
+
+def _demangle(name: str) -> str:
+    """Best-effort Itanium demangle of a simple `_Z<len><name>...` symbol; falls
+    back to the mangled name."""
+    import re
+    m = re.match(r"_Z(\d+)(\w+)", name)
+    if m:
+        n = int(m.group(1))
+        if len(m.group(2)) >= n:
+            return m.group(2)[:n]
+    return name
+
+
+def _load_calls_in_region(
+    profiler_dir: Path, file_id: int, start_line: int, end_line: int,
+    enclosing_function: str = "",
+) -> List[Dict[str, Any]]:
+    """Function calls made inside [start_line, end_line], from Data.xml's
+    callsNode entries: [{line, callee, recursive}].  `recursive` is set when the
+    callee is the region's own enclosing function.  Returns [] if unavailable."""
+    import re
+    import xml.etree.ElementTree as ET
+
+    f = profiler_dir / "Data.xml"
+    if not f.exists():
+        return []
+    try:
+        # Data.xml holds one <Nodes> document per translation unit back-to-back;
+        # wrap them in a synthetic root so ElementTree accepts the file.
+        root = ET.fromstring("<DP>" + f.read_text() + "</DP>")
+    except ET.ParseError:
+        return []
+    names = {
+        n.get("id"): n.get("name", "")
+        for doc in root for n in doc if n.get("name")
+    }
+    calls: List[Dict[str, Any]] = []
+    seen: Set[Tuple[int, str]] = set()
+    for doc in root:
+        for n in doc:
+            starts = n.get("startsAtLine", "")
+            if ":" not in starts:
+                continue
+            fid_s, _ = starts.split(":", 1)
+            if fid_s != str(file_id):
+                continue
+            calls_node = n.find("callsNode")
+            if calls_node is None:
+                continue
+            for c in calls_node.findall("nodeCalled"):
+                at = c.get("atLine", "")
+                try:
+                    line = int(at.split(":")[-1])
+                except ValueError:
+                    continue
+                if not (start_line <= line <= end_line):
+                    continue
+                callee = _demangle(names.get((c.text or "").strip(), (c.text or "").strip()))
+                key = (line, callee)
+                if key in seen:
+                    continue
+                seen.add(key)
+                calls.append({
+                    "line": line,
+                    "callee": callee,
+                    "recursive": bool(enclosing_function)
+                    and callee == _demangle(enclosing_function),
+                })
+    return sorted(calls, key=lambda c: c["line"])
+
+
+def _line_text_map(source_file: str, start_line: int, end_line: int) -> Dict[int, str]:
+    """{absolute line number: raw source text} for [start_line, end_line]."""
+    lines = Path(source_file).read_text().splitlines()
+    lo, hi = max(1, start_line), min(len(lines), end_line)
+    return {i: lines[i - 1] for i in range(lo, hi + 1)}
+
+
 def _all_observed_dep_vars(profiler_dir: Path) -> set:
     """Every variable name that appears in ANY runtime (dynamic) dependence in the
     whole program.  Used as the reference for static-only detection: a variable
@@ -437,9 +571,9 @@ def assemble(
         profiler_dir, region.file_id, region.start_line, region.end_line
     )
     if fn is not None:
-        fn_name, fn_start, fn_end = fn.name, fn.start_line, fn.end_line
+        fn_name, fn_start, fn_end = _demangle(fn.name), fn.start_line, fn.end_line
     else:
-        fn_name, fn_start, fn_end = region.name, region.start_line, region.end_line
+        fn_name, fn_start, fn_end = _demangle(region.name), region.start_line, region.end_line
     # DiscoPoP's end line points at the last statement, not the closing brace —
     # recompute the true span so function-mode splicing replaces the whole function.
     true_end = _brace_match_end(candidate.source_file, fn_start)
@@ -472,6 +606,22 @@ def assemble(
         profiler_dir, observed_vars, region.start_line, region.end_line
     )
 
+    # Structural facts: loop nest with induction variables, declared variable
+    # types, calls made inside the region, and the raw text of each source line
+    # (so the prompt can quote the statement a dependence points at).
+    loop_nest = _load_loop_nest(
+        profiler_dir.parent, region.file_id, region.start_line, region.end_line
+    )
+    calls = _load_calls_in_region(
+        profiler_dir, region.file_id, region.start_line, region.end_line,
+        enclosing_function=fn_name,
+    )
+    line_text = _line_text_map(
+        candidate.source_file,
+        min(fn_start, region.start_line) - 2,
+        max(fn_end, region.end_line) + 2,
+    )
+
     return EvidencePackage(
         region_id=region.region_id,
         region_type=region.region_type,
@@ -494,6 +644,9 @@ def assemble(
         loop_trip_counts=trip_counts,
         local_vars_in_region=local_vars,
         static_only_vars=static_only,
+        loop_nest=loop_nest,
+        calls_in_region=calls,
+        line_text=line_text,
         enclosing_function_name=fn_name,
         enclosing_function_start=fn_start,
         enclosing_function_end=fn_end,
