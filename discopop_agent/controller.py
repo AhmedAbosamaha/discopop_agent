@@ -67,7 +67,7 @@ from .args import AgentArguments
 from .l1_planner import build_candidates
 from .l2_evidence import assemble
 from .l3_llm import LLMConnectionError, call_llm
-from .l4_validator import capture_reference_output, fix_hunk_headers, validate
+from .l4_validator import capture_reference, fix_hunk_headers, validate
 
 _LLVM_LIBCXX = "/usr/local/Cellar/llvm@19/19.1.7/lib/c++"
 _REGION_LABEL = {"loop": "loop", "function": "function", "cu": "block"}
@@ -96,6 +96,35 @@ def _is_omp_barrier_false_positive(diagnostic: str) -> bool:
     In both cases the main thread's access must be sequential (no .omp_outlined
     in its call stack), confirming it runs outside any parallel region.
     """
+    lines = diagnostic.splitlines()
+
+    # Variant 1: OpenMP REDUCTION gather.  libomp combines per-thread partials
+    # inside its barrier (`.omp.reduction.reduction_func` called from
+    # `__kmp_*barrier_gather`), under runtime-internal synchronization TSan
+    # cannot see because libomp is not TSan-instrumented.  Conservative rule:
+    # EVERY racing access must sit inside those runtime frames — an access in
+    # plain user code (a genuine missing-reduction race) disqualifies.
+    access_blocks = []
+    for idx, line in enumerate(lines):
+        if ("Read" in line or "Write" in line) and (
+            "by main thread:" in line or "by thread T" in line
+        ):
+            frames = []
+            for j in range(idx + 1, len(lines)):
+                if not lines[j].strip():
+                    break
+                frames.append(lines[j])
+            access_blocks.append(frames)
+    if access_blocks and all(
+        any(".omp.reduction.reduction_func" in f or
+            ("__kmp_" in f and "barrier" in f) for f in frames)
+        for frames in access_blocks
+    ):
+        return True
+
+    # Variant 2: OMP worker vs. the main thread running sequential code after
+    # the parallel-for barrier — TSan on macOS does not model that implicit
+    # barrier.
     is_heap = (
         "Location is heap block" in diagnostic
         and "allocated by main thread" in diagnostic
@@ -105,7 +134,6 @@ def _is_omp_barrier_false_positive(diagnostic: str) -> bool:
         return False
     if ".omp_outlined" not in diagnostic:
         return False
-    lines = diagnostic.splitlines()
     for idx, line in enumerate(lines):
         # Match only ACCESS lines ("Write ... by main thread:" / "Read ... by main thread:"),
         # not allocation lines ("allocated by main thread:") which appear in heap-location
@@ -367,6 +395,7 @@ def _best_exposed_speedup(
     args: AgentArguments,
     reference_output: "str | None",
     binary_args: "list | None",
+    reference_time: "float | None" = None,
 ) -> float | None:
     """Return the best measured speedup among the loops a restructuring exposed,
     counting only those whose DiscoPoP `#pragma omp` is correct AND meets the
@@ -393,6 +422,7 @@ def _best_exposed_speedup(
             binary_args=binary_args,
             require_speedup=True,
             min_speedup=args.min_measured_speedup,
+            reference_time=reference_time,
         )
         if (not res.passed and res.stage == "tsan"
                 and _is_omp_barrier_false_positive(res.diagnostic)):
@@ -403,6 +433,7 @@ def _best_exposed_speedup(
                 require_speedup=True,
                 min_speedup=args.min_measured_speedup,
                 skip_race_check=True,
+                reference_time=reference_time,
             )
         if res.passed and res.measured_speedup is not None:
             if best is None or res.measured_speedup > best:
@@ -427,12 +458,13 @@ def run(args: AgentArguments) -> None:
     # version must reproduce it (semantic-equivalence gate).  None if the program
     # can't be built/run cleanly up front, in which case correctness is skipped.
     binary_args = args.reprofil_args or None
-    reference_output = capture_reference_output(args.source_file, binary_args)
+    reference_output, reference_time = capture_reference(args.source_file, binary_args)
     if reference_output is None:
         print("  [warn] Could not capture reference output — correctness gate disabled.\n")
     else:
-        print(f"  [ok] Captured reference output ({len(reference_output)} bytes) "
-              f"for correctness gate.\n")
+        rt = f", {reference_time*1e3:.1f} ms baseline" if reference_time else ""
+        print(f"  [ok] Captured reference output ({len(reference_output)} bytes{rt}) "
+              f"for correctness/performance gates.\n")
 
     accepted: List[dict] = []
     # Each entry is (region_id, discovery_depth).  A region ID can appear more
@@ -510,6 +542,7 @@ def run(args: AgentArguments) -> None:
                     binary_args=binary_args,
                     require_speedup=args.require_speedup,
                     min_speedup=args.min_measured_speedup,
+                    reference_time=reference_time,
                 )
 
                 # Suspected macOS OMP-barrier false positive: re-verify against
@@ -526,6 +559,7 @@ def run(args: AgentArguments) -> None:
                         require_speedup=args.require_speedup,
                         min_speedup=args.min_measured_speedup,
                         skip_race_check=True,
+                        reference_time=reference_time,
                     )
 
                 viz.gate_result(t1_result.passed, t1_result.stage,
@@ -735,6 +769,7 @@ def run(args: AgentArguments) -> None:
                 binary_args=binary_args,
                 require_speedup=args.require_speedup,
                 min_speedup=args.min_measured_speedup,
+                reference_time=reference_time,
             )
             viz.gate_result(result.passed, result.stage, result.diagnostic,
                             result.measured_speedup)
@@ -839,6 +874,7 @@ def run(args: AgentArguments) -> None:
                     exposed_speedup = _best_exposed_speedup(
                         [(d, nc) for d, nc, _ in discovered],
                         dp_dir, args, reference_output, binary_args,
+                        reference_time=reference_time,
                     )
                     if exposed_speedup is None:
                         # REVERT — the restructuring produced no usable speedup.

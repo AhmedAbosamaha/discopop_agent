@@ -24,7 +24,7 @@ import shutil
 import subprocess
 import tempfile
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple
 
 from .types import ValidationResult
 
@@ -219,12 +219,59 @@ def _run_timed(
     return True, stdout, best, ""
 
 
+def _measure_speedup(
+    seq_bin: Path, par_bin: Path, work_dir: Path, binary_args: Optional[List[str]],
+    pairs: int = 5,
+) -> Tuple[bool, float, float, float, str]:
+    """Measure the parallel-over-sequential speedup with interleaved A/B pairs.
+
+    Timing the two binaries in separate blocks lets a machine-load change during
+    one block skew the ratio arbitrarily (observed: the same rewrite measuring
+    1.12x on one run and 0.52x on the next while an LLM server loaded the box).
+    Interleaving seq/par runs pairwise and taking the MEDIAN of the per-pair
+    ratios cancels load drift: whatever the load was during a pair, it affected
+    both sides of that pair's ratio.
+
+    Returns (ok, median_ratio, best_seq_seconds, best_par_seconds, diag).
+    """
+    import statistics
+    import time as _time
+
+    ratios = []
+    best_seq = best_par = float("inf")
+    for _ in range(max(1, pairs)):
+        pair_times = []
+        for binary in (seq_bin, par_bin):
+            args = [str(binary)] + (binary_args or [])
+            try:
+                t0 = _time.perf_counter()
+                r = subprocess.run(args, capture_output=True, text=True,
+                                   timeout=120, cwd=work_dir)
+                dt = _time.perf_counter() - t0
+            except subprocess.TimeoutExpired:
+                return False, 0.0, 0.0, 0.0, "speedup measurement timed out (120 s)"
+            if r.returncode != 0:
+                return False, 0.0, 0.0, 0.0, (
+                    f"speedup measurement: non-zero exit ({r.returncode}):\n"
+                    f"{r.stderr[-500:]}"
+                )
+            pair_times.append(dt)
+        seq_t, par_t = pair_times
+        best_seq, best_par = min(best_seq, seq_t), min(best_par, par_t)
+        if par_t > 0:
+            ratios.append(seq_t / par_t)
+    if not ratios:
+        return False, 0.0, 0.0, 0.0, "speedup measurement produced no valid samples"
+    return True, statistics.median(ratios), best_seq, best_par, ""
+
+
 # ---------------------------------------------------------------------------
 # Stage 3: ThreadSanitizer
 # ---------------------------------------------------------------------------
 
 def _tsan(
-    source: Path, clangpp: str, work_dir: Path, skip_race_check: bool = False
+    source: Path, clangpp: str, work_dir: Path, skip_race_check: bool = False,
+    binary_args: Optional[List[str]] = None,
 ) -> Tuple[bool, str, str]:
     """Compile with -fopenmp + TSan and run.
 
@@ -272,11 +319,14 @@ def _tsan(
         return True, "", "tsan"
 
     try:
+        # Sanitized builds run 5-15x slower than native, so this timeout must
+        # exceed the native run timeout (120 s), not undercut it.
         run_result = subprocess.run(
-            [str(binary)], capture_output=True, text=True, timeout=60, cwd=work_dir
+            [str(binary)] + (binary_args or []),
+            capture_output=True, text=True, timeout=300, cwd=work_dir,
         )
     except subprocess.TimeoutExpired:
-        return False, "TSan run timed out (60 s)", "tsan"
+        return False, "TSan run timed out (300 s)", "tsan"
 
     stderr = run_result.stderr
     if "WARNING: ThreadSanitizer" in stderr or "DATA RACE" in stderr:
@@ -291,6 +341,13 @@ def _tsan(
         else:
             snippet = stderr[-1000:]
         return False, f"Race detected:\n{snippet}", "tsan"
+    if run_result.returncode != 0:
+        # No race reported but the sanitized binary crashed — that is not a
+        # pass; surface it instead of silently treating it as race-free.
+        return False, (
+            f"TSan run exited non-zero ({run_result.returncode}) without a race "
+            f"report:\n{stderr[-500:]}"
+        ), "tsan"
     return True, "", "tsan"
 
 
@@ -298,23 +355,29 @@ def _tsan(
 # Public API
 # ---------------------------------------------------------------------------
 
-def capture_reference_output(source_file: str, binary_args: Optional[list] = None) -> Optional[str]:
-    """Compile the unmodified source (-O2, no OpenMP/TSan) and run it once to
-    capture its stdout as the golden reference.  Returns None if it cannot be
-    built or run, in which case correctness checking is skipped for the session.
+def capture_reference(
+    source_file: str, binary_args: Optional[list] = None
+) -> Tuple[Optional[str], Optional[float]]:
+    """Compile the unmodified source (-O2, no OpenMP/TSan) and run it to capture
+    (stdout, best wall seconds) as the golden reference.  The time is the
+    baseline for the performance gate's net check: a restructured program's
+    parallel build must beat the ORIGINAL sequential program, not merely its own
+    (possibly overhead-slowed) sequential build.  Returns (None, None) if the
+    program cannot be built or run, in which case both checks are skipped for
+    the session.
     """
     clangpp = _find_clangpp()
     if clangpp is None:
-        return None
+        return None, None
     with tempfile.TemporaryDirectory(prefix="dp_agent_ref_") as tmp:
         work_dir = Path(tmp)
         dst = work_dir / Path(source_file).name
         shutil.copy2(source_file, dst)
         ok, _, binary = _compile_variant(dst, clangpp, work_dir, "ref_binary", openmp=False)
         if not ok or binary is None:
-            return None
-        ok, stdout, _, _ = _run_timed(binary, work_dir, binary_args, repeats=1)
-        return stdout if ok else None
+            return None, None
+        ok, stdout, best_t, _ = _run_timed(binary, work_dir, binary_args, repeats=3)
+        return (stdout, best_t) if ok else (None, None)
 
 
 def validate(
@@ -325,17 +388,24 @@ def validate(
     require_speedup: bool = False,
     min_speedup: float = 1.0,
     skip_race_check: bool = False,
+    reference_time: Optional[float] = None,
 ) -> ValidationResult:
     """Run the quality-gate stages. Return the first failure or success.
 
     Stages: apply → compile → tsan/openmp_compile → correctness → performance.
 
+    - tsan (only when the diff carries a `#pragma omp`): a pragma-less rewrite
+      is single-threaded, so there is nothing to race — running the sanitizer
+      on it would only cost time.
     - correctness (when `reference_output` is given): the patched program,
       compiled WITH -fopenmp, must reproduce the reference stdout exactly.
       Catches restructurings that change observable results.
     - performance (when `require_speedup` and the diff adds a `#pragma omp`):
-      the parallel build must run at least `min_speedup`× faster than the same
-      source built sequentially.  Only meaningful for pragma-bearing patches.
+      interleaved A/B measurement; the parallel build must run at least
+      `min_speedup`× faster than the same source built sequentially AND —
+      when `reference_time` is given — must not be slower than the ORIGINAL
+      program (guards against a rewrite whose own sequential build is
+      overhead-slowed making the ratio look good on a losing patch).
     """
     clangpp = _find_clangpp()
     if clangpp is None:
@@ -358,10 +428,14 @@ def validate(
         if not ok:
             return ValidationResult(passed=False, stage="compile", diagnostic=diag)
 
-        # Stage 3
-        ok, diag, stage = _tsan(patched, clangpp, work_dir, skip_race_check=skip_race_check)
-        if not ok:
-            return ValidationResult(passed=False, stage=stage, diagnostic=diag)
+        # Stage 3 — only pragma-bearing patches can race
+        if "pragma omp" in diff:
+            ok, diag, stage = _tsan(
+                patched, clangpp, work_dir,
+                skip_race_check=skip_race_check, binary_args=binary_args,
+            )
+            if not ok:
+                return ValidationResult(passed=False, stage=stage, diagnostic=diag)
 
         # Stage 4 — semantic correctness (observable output must be unchanged)
         if reference_output is not None:
@@ -389,27 +463,48 @@ def validate(
         # Stage 5 — measured speedup (only for patches that add a pragma)
         measured: Optional[float] = None
         if require_speedup and "pragma omp" in diff:
-            ok_s, _, seq_bin = _compile_variant(
+            ok_s, diag_s, seq_bin = _compile_variant(
                 patched, clangpp, work_dir, "perf_seq", openmp=False
             )
-            ok_p, _, par_bin = _compile_variant(
+            ok_p, diag_p, par_bin = _compile_variant(
                 patched, clangpp, work_dir, "perf_par", openmp=True
             )
-            if ok_s and ok_p and seq_bin and par_bin:
-                s_ok, _, seq_t, _ = _run_timed(seq_bin, work_dir, binary_args)
-                p_ok, _, par_t, _ = _run_timed(par_bin, work_dir, binary_args)
-                if s_ok and p_ok and par_t > 0:
-                    measured = seq_t / par_t
-                    if measured < min_speedup:
-                        return ValidationResult(
-                            passed=False, stage="performance",
-                            diagnostic=(
-                                f"No speedup from parallelization: measured "
-                                f"{measured:.2f}× (sequential {seq_t*1e3:.1f} ms vs "
-                                f"parallel {par_t*1e3:.1f} ms), below the required "
-                                f"{min_speedup:.2f}×."
-                            ),
-                            measured_speedup=measured,
-                        )
+            if not (ok_s and ok_p and seq_bin and par_bin):
+                # A failed measurement must not count as a pass.
+                return ValidationResult(
+                    passed=False, stage="performance",
+                    diagnostic=f"speedup measurement build failed:\n{diag_s or diag_p}",
+                )
+            m_ok, measured, seq_t, par_t, m_diag = _measure_speedup(
+                seq_bin, par_bin, work_dir, binary_args
+            )
+            if not m_ok:
+                return ValidationResult(passed=False, stage="performance",
+                                        diagnostic=m_diag)
+            if measured < min_speedup:
+                return ValidationResult(
+                    passed=False, stage="performance",
+                    diagnostic=(
+                        f"No speedup from parallelization: measured "
+                        f"{measured:.2f}× (median of interleaved pairs; best "
+                        f"sequential {seq_t*1e3:.1f} ms vs best parallel "
+                        f"{par_t*1e3:.1f} ms), below the required "
+                        f"{min_speedup:.2f}×."
+                    ),
+                    measured_speedup=measured,
+                )
+            if reference_time is not None and par_t > reference_time:
+                return ValidationResult(
+                    passed=False, stage="performance",
+                    diagnostic=(
+                        f"Net regression vs the ORIGINAL program: parallel build "
+                        f"{par_t*1e3:.1f} ms vs original sequential "
+                        f"{reference_time*1e3:.1f} ms (the rewrite's own "
+                        f"sequential baseline is slower than the original, so "
+                        f"its {measured:.2f}× ratio does not translate into a "
+                        f"real gain)."
+                    ),
+                    measured_speedup=measured,
+                )
 
     return ValidationResult(passed=True, stage="accepted", measured_speedup=measured)

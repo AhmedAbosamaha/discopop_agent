@@ -80,9 +80,11 @@ def parse_args() -> AgentArguments:
                        "than the sequential build of the same source. Note: tiny "
                        "workloads may not show speedup due to thread overhead."
                    ))
-    p.add_argument("--min-measured-speedup", type=float, default=1.0,
+    # 1.1 rather than 1.0: whole-program wall-time ratios carry a few percent of
+    # noise even with interleaved measurement, so near-parity must not pass.
+    p.add_argument("--min-measured-speedup", type=float, default=1.1,
                    help=("Minimum measured wall-clock speedup (parallel vs sequential) "
-                         "required when --require-speedup is set (default: 1.0)"))
+                         "required when --require-speedup is set (default: 1.1)"))
     p.add_argument("--reprofil-args", nargs=argparse.REMAINDER, default=[],
                    help="Arguments forwarded to ./a.out during re-profiling (e.g. -- sort input.txt)")
     p.add_argument("-v", "--verbose", action="store_true",
