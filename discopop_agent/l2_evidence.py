@@ -16,7 +16,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
-from .l1_planner import find_enclosing_function
+from .l1_planner import find_enclosing_function, region_fingerprint
 from .types import Dependency, EvidencePackage, HotspotCandidate
 
 
@@ -559,6 +559,9 @@ def assemble(
 ) -> EvidencePackage:
     """Build the full evidence package for any code region candidate."""
     region = candidate.region
+    fingerprint = region_fingerprint(
+        candidate.source_file, region.start_line, region.end_line, region.name
+    )
     raw, war, waw = _load_dependencies(profiler_dir, region.start_line, region.end_line)
     reductions = _load_reductions(profiler_dir, region.start_line, region.end_line)
     source_region = _extract_source_region(
@@ -635,6 +638,7 @@ def assemble(
         waw_deps=waw,
         reduction_vars=reductions,
         tier1_failure_reason=failure_reason,
+        region_fingerprint=fingerprint,
         prevented_deps=prevented,
         shared_vars=cls.get("shared", []),
         private_vars=cls.get("private", []),

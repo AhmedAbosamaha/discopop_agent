@@ -40,9 +40,14 @@ def parse_args() -> AgentArguments:
                    help="LLM model ID (default: claude-opus-4-8)")
     p.add_argument("--api-key", default=None,
                    help="LLM API key — falls back to LLM_API_KEY env var")
-    p.add_argument("--provider", choices=["anthropic", "openai-compat"], default="anthropic",
-                   help="LLM backend: 'anthropic' (default) or 'openai-compat' "
-                        "(any OpenAI-compatible endpoint, e.g. a self-hosted vLLM server)")
+    p.add_argument("--provider", choices=["anthropic", "openai-compat", "claude-agent-sdk"],
+                   default="anthropic",
+                   help="LLM backend: 'anthropic' (default, billed API key), "
+                        "'openai-compat' (any OpenAI-compatible endpoint, e.g. a "
+                        "self-hosted vLLM server), or 'claude-agent-sdk' (runs the "
+                        "local `claude` CLI headlessly, billed against your Claude "
+                        "Code subscription instead of a per-token API key — no "
+                        "--api-key needed, just `claude login` once)")
     p.add_argument("--api-base", default=None,
                    help="Base URL for --provider openai-compat (e.g. "
                         "http://localhost:18000/v1) — falls back to LLM_API_BASE env var")

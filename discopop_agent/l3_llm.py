@@ -13,6 +13,7 @@ a budget slot.
 """
 from __future__ import annotations
 
+import asyncio
 import re
 import textwrap
 from typing import Any, Dict, List, Optional, Set, Tuple
@@ -753,7 +754,10 @@ def _extract_code(text: str) -> Optional[str]:
 def _make_client(provider: str, api_key: Optional[str], api_base: Optional[str]) -> Any:
     """Create the provider client.  'anthropic' (default) uses the Anthropic SDK;
     'openai-compat' uses the OpenAI SDK pointed at an OpenAI-compatible endpoint
-    (e.g. a self-hosted vLLM server) via api_base."""
+    (e.g. a self-hosted vLLM server) via api_base; 'claude-agent-sdk' has no
+    persistent client — each call spins up the local `claude` CLI headlessly via
+    the Claude Agent SDK, authenticated through the Claude Code subscription
+    login (`claude login`) rather than a billed API key."""
     if provider == "openai-compat":
         try:
             import openai
@@ -763,7 +767,102 @@ def _make_client(provider: str, api_key: Optional[str], api_base: Optional[str])
                 "(`venv/bin/pip install openai`)."
             ) from e
         return openai.OpenAI(api_key=api_key or "EMPTY", base_url=api_base)
+    if provider == "claude-agent-sdk":
+        return None
     return anthropic.Anthropic(api_key=api_key)
+
+
+# One real Claude Code CLI session per region, kept for the life of this
+# process: session_key -> the CLI's own session_id.  Populated/consulted by
+# _complete_claude_agent_sdk() below.  Keyed on EvidencePackage.region_fingerprint
+# (content-based), NOT region_id — DiscoPoP reassigns region_id from a global
+# counter after a re-profile, so it can silently point at a different, unrelated
+# region; resuming a session under a reused region_id would leak that other
+# region's full transcript into this one.
+_region_sessions: Dict[str, str] = {}
+
+
+def _complete_claude_agent_sdk(model: str, system: str, current: list, session_key: str) -> str:
+    """Run one turn through the local `claude` CLI headlessly (Claude Agent
+    SDK), billed against the Claude Code subscription rather than a per-token
+    API key.  `model` accepts Claude Code's own aliases (e.g. "haiku",
+    "sonnet", "opus") as well as full model IDs.  Tool use is disabled and the
+    turn count capped at 1 per call — this call site only ever wants a single
+    text response (a diff or a rewritten function), never agentic file/bash
+    actions against the profiled source tree.
+
+    Unlike the other two providers (stateless HTTP — the full conversation is
+    resent on every call), this keeps one real Claude Code session PER REGION:
+    the first call for a region starts a fresh session; every later call for
+    that same region (a format retry inside call_llm(), or the next budget
+    attempt from the controller) resumes it via `resume=<session_id>` and
+    sends ONLY the newest message (`current[-1]`, by construction always the
+    one new thing to say this turn — see call_llm()'s docstring) — the CLI
+    reconstructs everything else from its own on-disk session transcript, so
+    the model genuinely remembers prior diff attempts and quality-gate
+    feedback for that region instead of having the whole history re-explained
+    to it on every call."""
+    try:
+        from claude_agent_sdk import (  # type: ignore[import-not-found]
+            AssistantMessage,
+            ClaudeAgentOptions,
+            ResultMessage,
+            TextBlock,
+            query,
+        )
+    except ImportError as e:  # pragma: no cover
+        raise RuntimeError(
+            "provider 'claude-agent-sdk' requires the claude-agent-sdk package "
+            "(`venv/bin/pip install claude-agent-sdk`) and the `claude` CLI "
+            "installed and logged in (`claude login`)."
+        ) from e
+
+    prompt = current[-1]["content"]
+
+    def _options(resume: Optional[str]) -> Any:
+        return ClaudeAgentOptions(
+            system_prompt=system,
+            model=model,
+            max_turns=1,
+            allowed_tools=[],
+            permission_mode="dontAsk",
+            # Without this, the CLI auto-loads this project's own CLAUDE.md and
+            # any user/project settings ("user", "project" are the defaults)
+            # into context alongside our system prompt — verified
+            # experimentally: the model becomes aware of unrelated
+            # dev-guideline instructions. Keep the region-restructuring system
+            # prompt uncontaminated.
+            setting_sources=[],
+            resume=resume,
+        )
+
+    async def _run(resume: Optional[str]) -> Tuple[str, Optional[str]]:
+        text = ""
+        session_id: Optional[str] = None
+        async for message in query(prompt=prompt, options=_options(resume)):
+            if isinstance(message, AssistantMessage):
+                for block in message.content:
+                    if isinstance(block, TextBlock):
+                        text += block.text
+            if isinstance(message, ResultMessage):
+                session_id = message.session_id
+        return text, session_id
+
+    resume_id = _region_sessions.get(session_key)
+    try:
+        text, session_id = asyncio.run(_run(resume_id))
+    except Exception:
+        if resume_id is None:
+            raise
+        # The cached session may have gone stale (its on-disk transcript
+        # evicted, etc.) — drop it and retry once as a fresh session rather
+        # than aborting the whole run over a resumable hiccup.
+        _region_sessions.pop(session_key, None)
+        text, session_id = asyncio.run(_run(None))
+
+    if session_id:
+        _region_sessions[session_key] = session_id
+    return text
 
 
 class LLMConnectionError(RuntimeError):
@@ -772,12 +871,18 @@ class LLMConnectionError(RuntimeError):
     would hit the same error — so the controller aborts cleanly on it."""
 
 
-def _complete(provider: str, client: Any, model: str, current: list, system: str) -> str:
+def _complete(
+    provider: str, client: Any, model: str, current: list, system: str, session_key: str = "",
+) -> str:
     """Run one completion against the chosen provider and return the raw text.
 
     Both providers receive the same `system` instructions and the same
     user/assistant conversation; only the wire format differs (Anthropic takes
-    `system` separately, OpenAI takes it as the first message)."""
+    `system` separately, OpenAI takes it as the first message).  `session_key`
+    is only used by 'claude-agent-sdk', to key its per-region CLI session — it
+    must be a content-based identity (EvidencePackage.region_fingerprint), not
+    DiscoPoP's region_id, which gets reassigned to unrelated regions after a
+    re-profile."""
     try:
         if provider == "openai-compat":
             resp = client.chat.completions.create(
@@ -786,6 +891,8 @@ def _complete(provider: str, client: Any, model: str, current: list, system: str
                 messages=[{"role": "system", "content": system}] + current,
             )
             return resp.choices[0].message.content or ""
+        if provider == "claude-agent-sdk":
+            return _complete_claude_agent_sdk(model, system, current, session_key)
         resp = client.messages.create(
             model=model,
             max_tokens=4096,
@@ -806,6 +913,12 @@ def _complete(provider: str, client: Any, model: str, current: list, system: str
             raise LLMConnectionError(
                 f"cannot reach the LLM endpoint at {endpoint} — "
                 f"is the model server running?"
+            ) from e
+        if type(e).__name__ in ("CLINotFoundError", "CLIConnectionError", "ProcessError"):
+            raise LLMConnectionError(
+                f"cannot run the Claude Code CLI for provider 'claude-agent-sdk' — "
+                f"is `claude` installed and on PATH, and are you logged in "
+                f"(`claude login`)? ({e})"
             ) from e
         raise
 
@@ -830,10 +943,24 @@ def call_llm(
 
     On the first call for a region pass messages=None — the initial prompt is
     built from evidence.  Pass the list returned by the previous call on
-    subsequent budget retries so the model sees the full conversation history.
+    subsequent budget retries.  Every entry in `messages` is preserved
+    (controller.py only ever appends), but by construction the LAST entry is
+    always the one genuinely new thing to say this turn: the initial prompt on
+    the very first call, a re-prompt on a format retry, or the quality-gate
+    feedback on the next budget attempt.  The "anthropic"/"openai-compat"
+    providers still resend the full list every call (both are stateless HTTP
+    APIs); "claude-agent-sdk" instead sends only that last entry and relies on
+    its own real per-region CLI session (keyed by evidence.region_fingerprint —
+    a content-based identity, NOT the reassignable region_id) to supply
+    everything earlier — see _complete_claude_agent_sdk().
 
-    `provider` selects the backend: "anthropic" (default) or "openai-compat"
-    (any OpenAI-compatible endpoint at `api_base`, e.g. a self-hosted vLLM).
+    `provider` selects the backend: "anthropic" (default, billed API key),
+    "openai-compat" (any OpenAI-compatible endpoint at `api_base`, e.g. a
+    self-hosted vLLM), or "claude-agent-sdk" (runs the local `claude` CLI
+    headlessly via the Claude Agent SDK, billed against the Claude Code
+    subscription instead of a per-token API key — `model` accepts Claude
+    Code's own aliases like "haiku" as well as full model IDs, and `api_key`
+    is ignored since auth comes from `claude login`).
     """
     function_mode = edit_mode == "function"
     system = _SYSTEM_FUNCTION if function_mode else _SYSTEM
@@ -854,7 +981,8 @@ def call_llm(
             )
             viz.llm_request(model, provider, system, last_user, attempt=attempt)
 
-        text = _complete(provider, client, model, current, system)
+        text = _complete(provider, client, model, current, system,
+                         session_key=evidence.region_fingerprint or evidence.region_id)
 
         if verbose:
             viz.llm_response(text, kind=kind)

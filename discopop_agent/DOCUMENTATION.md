@@ -405,12 +405,12 @@ python -m discopop_agent \
     --budget        <int>                    default: 3
     --model         <model-id>               default: claude-opus-4-8
     --api-key       <key>                    fallback: LLM_API_KEY env var
-    --provider      {anthropic,openai-compat} default: anthropic
+    --provider      {anthropic,openai-compat,claude-agent-sdk} default: anthropic
     --api-base      <url>                    fallback: LLM_API_BASE env var (openai-compat)
     --lambda-penalty <float>                 default: 1.0
     --min-workload   <float>                  default: 1.0
     --output-dir         <path>             default: <discopop-dir>/agent_patches
-    --provider           {anthropic,openai-compat}  default: anthropic
+    --provider           {anthropic,openai-compat,claude-agent-sdk}  default: anthropic
     --api-base           <url>              openai-compat endpoint (env: LLM_API_BASE)
     --edit-mode          {diff,function}    default: diff
     --restructure-depth  <int>             default: 0
@@ -421,7 +421,7 @@ python -m discopop_agent \
 
 **`--budget`:** Maximum number of LLM retry attempts per region. Each retry costs one API call. A region where the LLM fails every attempt is marked as skipped.
 
-**`--provider` / `--api-base`:** Selects the LLM backend. `anthropic` (default) uses the Anthropic API. `openai-compat` targets any OpenAI-compatible endpoint (e.g. a self-hosted vLLM server) at `--api-base` (e.g. `http://localhost:18000/v1`), with `--model` as the served model id and `--api-key` as its key. Tunnel a remote endpoint to localhost first (`ssh -fN -L 18000:localhost:18000 <user>@<server>`).
+**`--provider` / `--api-base`:** Selects the LLM backend. `anthropic` (default) uses the Anthropic API. `openai-compat` targets any OpenAI-compatible endpoint (e.g. a self-hosted vLLM server) at `--api-base` (e.g. `http://localhost:18000/v1`), with `--model` as the served model id and `--api-key` as its key. Tunnel a remote endpoint to localhost first (`ssh -fN -L 18000:localhost:18000 <user>@<server>`). `claude-agent-sdk` runs the local `claude` CLI headlessly (via the Claude Agent SDK) instead of calling the billed API directly — usage is drawn from your Claude Code subscription. Run `claude login` once; no `--api-key` is needed. `--model` accepts Claude Code's own aliases (`haiku`, `sonnet`, `opus`) as well as full model IDs, e.g. `--provider claude-agent-sdk --model haiku`. Requires `pip install claude-agent-sdk` and the `claude` CLI on `PATH`.
 
 **`--lambda-penalty`:** Controls how much the Tier-2 LLM cost discounts a candidate's score. Higher values make the agent prefer Tier-1 (DiscoPoP) regions and skip Tier-2 (LLM-only) regions with lower workload.
 

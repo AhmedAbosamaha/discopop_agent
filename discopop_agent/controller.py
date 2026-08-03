@@ -64,7 +64,7 @@ from typing import List
 
 from . import viz
 from .args import AgentArguments
-from .l1_planner import build_candidates
+from .l1_planner import build_candidates, region_fingerprint
 from .l2_evidence import assemble
 from .l3_llm import LLMConnectionError, call_llm
 from .l4_validator import capture_reference, fix_hunk_headers, validate
@@ -231,34 +231,6 @@ def _reprofil(source_file: str, discopop_dir: Path, binary_args: list | None = N
         return False
 
     return True
-
-
-def _fingerprint(source_file: str, start_line: int, end_line: int, name: str | None = None) -> str:
-    """Content-based identity for a code region, invariant under DiscoPoP's
-    global ID drift and under line-number shifts caused by patching.
-
-    DiscoPoP assigns region IDs from a single global counter (Structs.hpp:60),
-    so patching one function renumbers every region after it — IDs cannot be
-    used to track a region across a re-profile.  Source line numbers also shift
-    when a patch adds/removes lines above a region.  The region's *text*, by
-    contrast, is unchanged unless that exact region was patched.
-
-    The fingerprint normalises whitespace and drops blank/comment lines so that
-    re-indentation alone does not break the match.  The enclosing region name
-    (function name, when available) is folded in to disambiguate textually
-    identical sibling regions in different functions.
-    """
-    try:
-        lines = Path(source_file).read_text().splitlines()
-        region = lines[start_line - 1 : end_line]
-    except (OSError, IndexError):
-        region = []
-
-    body = "\n".join(
-        ln.strip() for ln in region
-        if ln.strip() and not ln.strip().startswith("//")
-    )
-    return f"{name or ''}␟{body}"
 
 
 def _normalize_code(text: str) -> str:
@@ -474,7 +446,7 @@ def run(args: AgentArguments) -> None:
 
     # Tracks the CONTENT fingerprint of every region ever enqueued across all
     # re-profile cycles.  Region IDs drift after a patch (global counter), so
-    # identity is keyed on source text instead — see _fingerprint().
+    # identity is keyed on source text instead — see region_fingerprint() in l1_planner.py.
     all_seen_prints: set = set()
 
     initial = build_candidates(
@@ -488,7 +460,7 @@ def run(args: AgentArguments) -> None:
     # depth=0 → initial profile; depth=N → discovered after N Tier-2 re-profiles
     candidates: list = [(0, c) for c in initial]
     all_seen_prints.update(
-        _fingerprint(args.source_file, c.region.start_line, c.region.end_line, c.region.name)
+        region_fingerprint(args.source_file, c.region.start_line, c.region.end_line, c.region.name)
         for c in initial
     )
 
@@ -534,14 +506,18 @@ def run(args: AgentArguments) -> None:
             io_only = _region_is_io_only(
                 args.source_file, region.start_line, region.end_line
             )
-            if tier1_diff and not args.dry_run and not io_only:
+            if tier1_diff and not args.dry_run:
                 print(f"│  [Tier-1] Running validation on generated patch...")
+                if io_only:
+                    print(f"│  [Tier-1] I/O-only region — skipping the race check "
+                          f"only (apply/compile/correctness/performance still run)")
                 t1_result = validate(
                     tier1_diff, args.source_file,
                     reference_output=reference_output,
                     binary_args=binary_args,
                     require_speedup=args.require_speedup,
                     min_speedup=args.min_measured_speedup,
+                    skip_race_check=io_only,
                     reference_time=reference_time,
                 )
 
@@ -563,7 +539,8 @@ def run(args: AgentArguments) -> None:
                     )
 
                 viz.gate_result(t1_result.passed, t1_result.stage,
-                                t1_result.diagnostic, t1_result.measured_speedup)
+                                t1_result.diagnostic, t1_result.measured_speedup,
+                                skipped_stages=t1_result.skipped_stages)
 
                 if not t1_result.passed:
                     stage = t1_result.stage
@@ -772,7 +749,7 @@ def run(args: AgentArguments) -> None:
                 reference_time=reference_time,
             )
             viz.gate_result(result.passed, result.stage, result.diagnostic,
-                            result.measured_speedup)
+                            result.measured_speedup, skipped_stages=result.skipped_stages)
 
             if result.passed:
                 print(f"│  [Tier-2] Quality gate PASSED")
@@ -797,7 +774,7 @@ def run(args: AgentArguments) -> None:
                 old_prints = [
                     (
                         d,
-                        _fingerprint(args.source_file, c.region.start_line,
+                        region_fingerprint(args.source_file, c.region.start_line,
                                      c.region.end_line, c.region.name),
                     )
                     for d, c in candidates[i:]
@@ -842,7 +819,7 @@ def run(args: AgentArguments) -> None:
                     )
                     fresh_by_print: dict = defaultdict(list)
                     for nc in fresh_all:
-                        fp = _fingerprint(args.source_file, nc.region.start_line,
+                        fp = region_fingerprint(args.source_file, nc.region.start_line,
                                           nc.region.end_line, nc.region.name)
                         fresh_by_print[fp].append(nc)
 
@@ -857,7 +834,7 @@ def run(args: AgentArguments) -> None:
                     for nc in fresh_all:
                         if id(nc) in consumed:
                             continue
-                        fp = _fingerprint(args.source_file, nc.region.start_line,
+                        fp = region_fingerprint(args.source_file, nc.region.start_line,
                                           nc.region.end_line, nc.region.name)
                         if fp not in all_seen_prints:
                             discovered.append((depth + 1, nc, fp))

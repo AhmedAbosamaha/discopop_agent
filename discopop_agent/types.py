@@ -51,6 +51,13 @@ class EvidencePackage:
     waw_deps: List[Dependency]
     reduction_vars: List[str]
     tier1_failure_reason: str = ""
+    # Content-based identity (l1_planner.region_fingerprint), STABLE across
+    # DiscoPoP's region_id renumbering after a re-profile — region_id itself
+    # can be reassigned to a completely different, unrelated region.  Callers
+    # needing to recognize "is this genuinely the same region as last time"
+    # (e.g. keying a real per-region LLM session) must use this, not region_id.
+    # "" when not computed by the caller (e.g. ad-hoc EvidencePackage construction).
+    region_fingerprint: str = ""
     # DiscoPoP's own OpenMP data-sharing classification for this region, taken
     # from the detected pattern (patterns.json).  Empty lists when no pattern was
     # detected for the region.  Tells the LLM which variables DiscoPoP considers
@@ -107,3 +114,9 @@ class ValidationResult:
     stage: str
     diagnostic: str = ""
     measured_speedup: Optional[float] = None   # set by the performance stage
+    # Stages validate() never attempted for THIS diff, independent of pass/fail
+    # (e.g. "openmp_compile"/"tsan" for a pragma-less LLM rewrite, "performance"
+    # when no pragma or --require-speedup wasn't set).  Lets the terminal
+    # renderer (viz.gate_result) show "skipped" instead of falsely claiming a
+    # stage that was never run actually passed.
+    skipped_stages: List[str] = field(default_factory=list)

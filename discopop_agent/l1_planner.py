@@ -21,6 +21,43 @@ from typing import Dict, List, Optional, Tuple
 
 from .types import CodeRegion, HotspotCandidate
 
+
+def region_fingerprint(
+    source_file: str, start_line: int, end_line: int, name: Optional[str] = None
+) -> str:
+    """Content-based identity for a code region, invariant under DiscoPoP's
+    global ID drift and under line-number shifts caused by patching.
+
+    DiscoPoP assigns region IDs from a single global counter (Structs.hpp:60),
+    so patching one function renumbers every region after it — IDs cannot be
+    used to track a region across a re-profile, and CAN be reassigned to a
+    completely different, unrelated region.  Source line numbers also shift
+    when a patch adds/removes lines above a region.  The region's *text*, by
+    contrast, is unchanged unless that exact region was patched.
+
+    The fingerprint normalises whitespace and drops blank/comment lines so that
+    re-indentation alone does not break the match.  The enclosing region name
+    (function name, when available) is folded in to disambiguate textually
+    identical sibling regions in different functions.
+
+    Used by controller.py to track a candidate across re-profiles (matching
+    survivors to their prior queue position) and by l2_evidence.py to give L3
+    a STABLE per-region key (EvidencePackage.region_fingerprint) — e.g. for
+    keying a real per-region LLM session, where relying on the reusable
+    region_id would risk silently resuming an unrelated region's session.
+    """
+    try:
+        lines = Path(source_file).read_text().splitlines()
+        region = lines[start_line - 1 : end_line]
+    except (OSError, IndexError):
+        region = []
+
+    body = "\n".join(
+        ln.strip() for ln in region
+        if ln.strip() and not ln.strip().startswith("//")
+    )
+    return f"{name or ''}␟{body}"
+
 _CONFIDENCE: Dict[str, float] = {
     "do_all": 1.0,
     "reduction": 0.9,

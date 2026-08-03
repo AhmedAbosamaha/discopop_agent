@@ -128,6 +128,19 @@ Verify:
 python -c "import anthropic; print(anthropic.__version__)"
 ```
 
+### Optional — Claude Agent SDK (use your Claude Code subscription instead of a billed API key)
+
+`--provider claude-agent-sdk` runs the local `claude` CLI headlessly instead of
+calling the Anthropic API directly, so usage is billed against your Claude
+Code subscription rather than per-token.
+
+```bash
+pip install claude-agent-sdk
+claude login   # one-time, if not already logged in
+```
+
+No `--api-key`/`LLM_API_KEY` is needed with this provider.
+
 ---
 
 ## 6. Set the API Key
@@ -194,6 +207,18 @@ python -m discopop_agent \
     --model        claude-opus-4-8 \
     --budget       3 \
     --min-workload  0
+```
+
+Or with the Claude Agent SDK, billed against your Claude Code subscription
+(run `claude login` once first — see step 5):
+```bash
+python -m discopop_agent \
+    --discopop-dir example4/.discopop \
+    --source-file   example4/bubble_sort.cpp \
+    --provider claude-agent-sdk \
+    --model    haiku \
+    --budget   3 \
+    --min-workload 0
 ```
 
 Or with a self-hosted OpenAI-compatible endpoint (e.g. a vLLM server; tunnel it

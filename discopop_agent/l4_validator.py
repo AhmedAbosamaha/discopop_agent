@@ -23,6 +23,7 @@ from __future__ import annotations
 import shutil
 import subprocess
 import tempfile
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import List, Optional, Tuple
 
@@ -428,6 +429,11 @@ def validate(
         if not ok:
             return ValidationResult(passed=False, stage="compile", diagnostic=diag)
 
+        # Track stages this diff's own gating rules never attempt, independent
+        # of pass/fail, so the terminal renderer doesn't show a false "passed"
+        # for a check that literally never ran.
+        skipped_stages: List[str] = []
+
         # Stage 3 — only pragma-bearing patches can race
         if "pragma omp" in diff:
             ok, diag, stage = _tsan(
@@ -435,7 +441,10 @@ def validate(
                 skip_race_check=skip_race_check, binary_args=binary_args,
             )
             if not ok:
-                return ValidationResult(passed=False, stage=stage, diagnostic=diag)
+                return ValidationResult(passed=False, stage=stage, diagnostic=diag,
+                                        skipped_stages=skipped_stages)
+        else:
+            skipped_stages += ["openmp_compile", "tsan"]
 
         # Stage 4 — semantic correctness (observable output must be unchanged)
         if reference_output is not None:
@@ -444,11 +453,13 @@ def validate(
             )
             if not ok or par_bin is None:
                 return ValidationResult(passed=False, stage="correctness",
-                                        diagnostic=f"parallel build failed:\n{diag}")
+                                        diagnostic=f"parallel build failed:\n{diag}",
+                                        skipped_stages=skipped_stages)
             ok, out, _, rdiag = _run_timed(par_bin, work_dir, binary_args, repeats=1)
             if not ok:
                 return ValidationResult(passed=False, stage="correctness",
-                                        diagnostic=f"parallel run failed: {rdiag}")
+                                        diagnostic=f"parallel run failed: {rdiag}",
+                                        skipped_stages=skipped_stages)
             if out != reference_output:
                 return ValidationResult(
                     passed=False, stage="correctness",
@@ -458,29 +469,43 @@ def validate(
                         f"--- expected (original) ---\n{reference_output[:600]}\n"
                         f"--- got (patched) ---\n{out[:600]}"
                     ),
+                    skipped_stages=skipped_stages,
                 )
 
         # Stage 5 — measured speedup (only for patches that add a pragma)
         measured: Optional[float] = None
+        if not (require_speedup and "pragma omp" in diff):
+            skipped_stages.append("performance")
         if require_speedup and "pragma omp" in diff:
-            ok_s, diag_s, seq_bin = _compile_variant(
-                patched, clangpp, work_dir, "perf_seq", openmp=False
-            )
-            ok_p, diag_p, par_bin = _compile_variant(
-                patched, clangpp, work_dir, "perf_par", openmp=True
-            )
+            # The two builds are independent (different binaries, same input) —
+            # compile them concurrently rather than one after another. Safe:
+            # subprocess.run releases the GIL while the child runs, so this is
+            # genuine OS-level parallelism, not GIL-limited. The actual TIMED
+            # runs later (_measure_speedup) must stay strictly sequential —
+            # running them concurrently would have them compete for the CPU
+            # and corrupt the very wall-clock comparison we're measuring.
+            with ThreadPoolExecutor(max_workers=2) as pool:
+                fut_seq = pool.submit(
+                    _compile_variant, patched, clangpp, work_dir, "perf_seq", False
+                )
+                fut_par = pool.submit(
+                    _compile_variant, patched, clangpp, work_dir, "perf_par", True
+                )
+                ok_s, diag_s, seq_bin = fut_seq.result()
+                ok_p, diag_p, par_bin = fut_par.result()
             if not (ok_s and ok_p and seq_bin and par_bin):
                 # A failed measurement must not count as a pass.
                 return ValidationResult(
                     passed=False, stage="performance",
                     diagnostic=f"speedup measurement build failed:\n{diag_s or diag_p}",
+                    skipped_stages=skipped_stages,
                 )
             m_ok, measured, seq_t, par_t, m_diag = _measure_speedup(
                 seq_bin, par_bin, work_dir, binary_args
             )
             if not m_ok:
                 return ValidationResult(passed=False, stage="performance",
-                                        diagnostic=m_diag)
+                                        diagnostic=m_diag, skipped_stages=skipped_stages)
             if measured < min_speedup:
                 return ValidationResult(
                     passed=False, stage="performance",
@@ -492,6 +517,7 @@ def validate(
                         f"{min_speedup:.2f}×."
                     ),
                     measured_speedup=measured,
+                    skipped_stages=skipped_stages,
                 )
             if reference_time is not None and par_t > reference_time:
                 return ValidationResult(
@@ -505,6 +531,8 @@ def validate(
                         f"real gain)."
                     ),
                     measured_speedup=measured,
+                    skipped_stages=skipped_stages,
                 )
 
-    return ValidationResult(passed=True, stage="accepted", measured_speedup=measured)
+    return ValidationResult(passed=True, stage="accepted", measured_speedup=measured,
+                            skipped_stages=skipped_stages)

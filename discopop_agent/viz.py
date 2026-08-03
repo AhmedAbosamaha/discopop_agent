@@ -17,7 +17,7 @@ from __future__ import annotations
 import os
 import shutil
 import sys
-from typing import Callable, Optional
+from typing import Callable, List, Optional
 
 # ---------------------------------------------------------------------------
 # Color handling
@@ -200,17 +200,29 @@ _GATE_LABEL = {
 }
 
 
-def gate_result(passed: bool, stage: str, diagnostic: str = "", measured_speedup: Optional[float] = None) -> None:
+def gate_result(
+    passed: bool, stage: str, diagnostic: str = "",
+    measured_speedup: Optional[float] = None,
+    skipped_stages: Optional[List[str]] = None,
+) -> None:
     """Render the quality-gate outcome as a checklist: every stage up to the
-    failing one passed; the failing one is marked, with its diagnostic."""
+    failing one passed; the failing one is marked, with its diagnostic.
+
+    `skipped_stages` are stages this diff's own gating rules never attempted
+    (e.g. TSan/performance for a pragma-less LLM rewrite) — rendered distinctly
+    from a pass, so the checklist never claims a check ran when it didn't."""
     if not _ENABLED:
         return
+    skipped = set(skipped_stages or ())
     color = GREEN if passed else RED
     title = "QUALITY GATE — PASSED" if passed else f"QUALITY GATE — FAILED at '{stage}'"
     lines = []
     reached = True
     for st in _GATE_ORDER:
         label = _GATE_LABEL.get(st, st)
+        if st in skipped:
+            lines.append(f"{GREY}  ·  {label}  (skipped for this diff){RESET}")
+            continue
         if not reached:
             lines.append(f"{GREY}  ·  {label}  (not reached){RESET}")
             continue
@@ -222,9 +234,6 @@ def gate_result(passed: bool, stage: str, diagnostic: str = "", measured_speedup
         else:
             lines.append(f"{RED}  ✗  {label}{RESET}")
             reached = False
-    if passed and measured_speedup:
-        # performance stage may not be in the list if speedup wasn't required
-        pass
     body = "\n".join(lines)
     if diagnostic and not passed:
         snippet = diagnostic.strip()
