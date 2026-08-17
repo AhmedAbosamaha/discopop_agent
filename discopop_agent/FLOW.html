@@ -1,0 +1,857 @@
+<title>DiscoPoP Restructuring Loop</title>
+<style>
+  :root {
+    --ground:    #F6F8F8;
+    --panel:     #FFFFFF;
+    --panel-alt: #EEF3F3;
+    --ink:       #101819;
+    --ink-soft:  #4C5D60;
+    --ink-faint: #7E9094;
+    --rule:      #D5E0E0;
+    --rule-soft: #E7EEEE;
+    --dp:        #0B6E77;
+    --dp-wash:   #DCEDEE;
+    --llm:       #A85B10;
+    --llm-wash:  #F7E7D3;
+    --ok:        #2C6E4B;
+    --ok-wash:   #DCEBE1;
+    --bad:       #A83442;
+    --bad-wash:  #F4DFE1;
+    --write:     #6B3FA0;
+    --write-wash:#EAE1F5;
+    --shadow:    0 1px 2px rgba(16,24,25,.06), 0 8px 24px -16px rgba(16,24,25,.28);
+    --mono: ui-monospace, "SF Mono", Menlo, "JetBrains Mono", "Cascadia Code", Consolas, monospace;
+    --body: "Iowan Old Style", "Palatino Linotype", Palatino, Charter, Georgia, serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:#0C1213; --panel:#141C1E; --panel-alt:#1A2426;
+      --ink:#E3ECEB; --ink-soft:#A2B4B6; --ink-faint:#71888B;
+      --rule:#263335; --rule-soft:#1E2A2C;
+      --dp:#4FC6D0; --dp-wash:#12333A;
+      --llm:#E8A84E; --llm-wash:#3A2A14;
+      --ok:#63C68D; --ok-wash:#16321F;
+      --bad:#EE8494; --bad-wash:#37191E;
+      --write:#BFA0EA; --write-wash:#241A34;
+      --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px -18px rgba(0,0,0,.8);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:#0C1213; --panel:#141C1E; --panel-alt:#1A2426;
+    --ink:#E3ECEB; --ink-soft:#A2B4B6; --ink-faint:#71888B;
+    --rule:#263335; --rule-soft:#1E2A2C;
+    --dp:#4FC6D0; --dp-wash:#12333A;
+    --llm:#E8A84E; --llm-wash:#3A2A14;
+    --ok:#63C68D; --ok-wash:#16321F;
+    --bad:#EE8494; --bad-wash:#37191E;
+    --write:#BFA0EA; --write-wash:#241A34;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px -18px rgba(0,0,0,.8);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--ground); color: var(--ink);
+    font-family: var(--body); font-size: 17px; line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 24px 96px; display: flex; flex-direction: column; gap: 52px; }
+
+  header.mast { padding: 72px 0 0; display: flex; flex-direction: column; gap: 20px; max-width: 68ch; }
+  .eyebrow { font-family: var(--mono); font-size: 11.5px; letter-spacing: .16em; text-transform: uppercase; color: var(--dp); display: flex; gap: 12px; align-items: center; }
+  .eyebrow::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
+  h1 { font-family: var(--mono); font-size: clamp(30px, 4.6vw, 46px); line-height: 1.08; letter-spacing: -.02em; margin: 0; text-wrap: balance; font-weight: 600; }
+  .standfirst { margin: 0; font-size: 19px; color: var(--ink-soft); }
+  .standfirst strong { color: var(--ink); font-weight: 600; }
+
+  section { display: flex; flex-direction: column; gap: 20px; }
+  h2 { font-family: var(--mono); font-size: 13px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink); margin: 0; padding-bottom: 10px; border-bottom: 2px solid var(--ink); display: flex; gap: 14px; align-items: baseline; }
+  h2 .num { color: var(--dp); font-weight: 700; }
+  h3 { font-family: var(--mono); font-size: 13.5px; letter-spacing: .04em; margin: 0 0 2px; color: var(--ink); font-weight: 600; }
+  p { margin: 0; max-width: 72ch; }
+  .prose { display: flex; flex-direction: column; gap: 14px; }
+  code { font-family: var(--mono); font-size: .85em; background: var(--panel-alt); border: 1px solid var(--rule-soft); border-radius: 3px; padding: .08em .32em; color: var(--ink); }
+  em.term { font-style: normal; color: var(--dp); font-weight: 600; }
+
+  figure { margin: 0; background: var(--panel); border: 1px solid var(--rule); border-radius: 4px; box-shadow: var(--shadow); overflow: hidden; }
+  .scroller { overflow-x: auto; padding: 22px 22px 6px; }
+  figure svg { display: block; max-width: 100%; height: auto; min-width: 680px; }
+  figcaption { font-family: var(--mono); font-size: 12px; line-height: 1.55; color: var(--ink-soft); padding: 14px 22px 18px; border-top: 1px solid var(--rule-soft); background: var(--panel-alt); }
+  figcaption b { color: var(--ink); font-weight: 600; }
+
+  .s-box  { fill: var(--panel); stroke: var(--rule); stroke-width: 1.5; }
+  .s-dp   { fill: var(--dp-wash); stroke: var(--dp); stroke-width: 1.5; }
+  .s-llm  { fill: var(--llm-wash); stroke: var(--llm); stroke-width: 1.5; }
+  .s-ok   { fill: var(--ok-wash); stroke: var(--ok); stroke-width: 1.5; }
+  .s-bad  { fill: var(--bad-wash); stroke: var(--bad); stroke-width: 1.5; }
+  .s-wr   { fill: var(--write-wash); stroke: var(--write); stroke-width: 2; }
+  .s-lane { fill: var(--panel-alt); stroke: none; }
+  .s-line { stroke: var(--ink-faint); stroke-width: 1.4; fill: none; }
+  .s-line-dp  { stroke: var(--dp);  stroke-width: 1.6; fill: none; }
+  .s-line-llm { stroke: var(--llm); stroke-width: 1.6; fill: none; }
+  .s-line-ok  { stroke: var(--ok);  stroke-width: 1.8; fill: none; }
+  .s-line-bad { stroke: var(--bad); stroke-width: 1.6; fill: none; stroke-dasharray: 6 4; }
+  .t      { font-family: var(--mono); font-size: 12.5px; fill: var(--ink); }
+  .t-sm   { font-family: var(--mono); font-size: 11px; fill: var(--ink-soft); }
+  .t-tiny { font-family: var(--mono); font-size: 10px; fill: var(--ink-faint); }
+  .t-lane { font-family: var(--mono); font-size: 11px; letter-spacing: .12em; }
+  .t-b    { font-weight: 700; }
+  .fill-dp { fill: var(--dp); } .fill-llm { fill: var(--llm); }
+  .fill-ok { fill: var(--ok); } .fill-bad { fill: var(--bad); }
+  .fill-wr { fill: var(--write); }
+
+  .tbl-wrap { overflow-x: auto; border: 1px solid var(--rule); border-radius: 4px; background: var(--panel); }
+  table { border-collapse: collapse; width: 100%; min-width: 560px; font-size: 14px; }
+  th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--rule-soft); vertical-align: top; }
+  th { font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-faint); font-weight: 600; background: var(--panel-alt); white-space: nowrap; }
+  tbody tr:last-child td { border-bottom: none; }
+  td.mono, th.mono { font-family: var(--mono); font-size: 12.5px; }
+  td.num { font-family: var(--mono); font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+  .pill { font-family: var(--mono); font-size: 10.5px; letter-spacing: .06em; padding: 2px 7px; border-radius: 2px; white-space: nowrap; border: 1px solid; }
+  .pill-ok  { color: var(--ok);  border-color: var(--ok);  background: var(--ok-wash); }
+  .pill-bad { color: var(--bad); border-color: var(--bad); background: var(--bad-wash); }
+  .pill-dp  { color: var(--dp);  border-color: var(--dp);  background: var(--dp-wash); }
+  .pill-llm { color: var(--llm); border-color: var(--llm); background: var(--llm-wash); }
+  .pill-wr  { color: var(--write); border-color: var(--write); background: var(--write-wash); }
+
+  .note { border-left: 3px solid var(--dp); background: var(--panel); border-top: 1px solid var(--rule-soft); border-right: 1px solid var(--rule-soft); border-bottom: 1px solid var(--rule-soft); padding: 16px 20px; display: flex; flex-direction: column; gap: 8px; }
+  .note.warn { border-left-color: var(--bad); }
+  .note.write { border-left-color: var(--write); }
+  .note .lede { font-family: var(--mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--dp); }
+  .note.warn .lede { color: var(--bad); }
+  .note.write .lede { color: var(--write); }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 10px 22px; align-items: center; font-family: var(--mono); font-size: 11.5px; color: var(--ink-soft); }
+  .legend span { display: inline-flex; align-items: center; gap: 7px; }
+  .swatch { width: 13px; height: 13px; border-radius: 2px; border: 1.5px solid; display: inline-block; }
+  .sw-dp  { border-color: var(--dp);  background: var(--dp-wash); }
+  .sw-llm { border-color: var(--llm); background: var(--llm-wash); }
+  .sw-ag  { border-color: var(--rule); background: var(--panel); }
+  .sw-wr  { border-color: var(--write); background: var(--write-wash); }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+  .card { background: var(--panel); border: 1px solid var(--rule); border-radius: 4px; padding: 16px 18px; display: flex; flex-direction: column; gap: 7px; }
+  .card p { font-size: 14.5px; color: var(--ink-soft); }
+  .card .k { font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-faint); }
+
+  footer { font-family: var(--mono); font-size: 11.5px; color: var(--ink-faint); border-top: 1px solid var(--rule); padding-top: 18px; line-height: 1.7; }
+  a { color: var(--dp); }
+</style>
+
+<div class="wrap">
+
+  <header class="mast">
+    <div class="eyebrow">DiscoPoP agentic controller</div>
+    <h1>The Restructuring Loop</h1>
+    <p class="standfirst">DiscoPoP profiles a program and reports where it cannot find parallelism. The agent takes those regions to an LLM, which rewrites the source so the parallelism becomes visible — then hands the rewrite <strong>back to DiscoPoP to judge</strong>. Nothing is kept unless the profiler can parallelize it and the result is measurably faster.</p>
+    <div class="legend">
+      <span><i class="swatch sw-dp"></i> DiscoPoP toolchain</span>
+      <span><i class="swatch sw-ag"></i> Agent controller</span>
+      <span><i class="swatch sw-llm"></i> LLM</span>
+      <span><i class="swatch sw-wr"></i> writes your source file</span>
+    </div>
+  </header>
+
+  <!-- MASTER FLOW -->
+  <section>
+    <h2><span class="num">01</span> The complete flowchart</h2>
+    <div class="prose">
+      <p>One region's entire journey, from the command line to the summary. Every decision, every exit, and every file the agent reads or writes. Long back-edges would make a chart this tall unreadable, so returns are drawn as lettered connectors:</p>
+      <div class="legend">
+        <span><b>Q</b> &nbsp;back to the queue</span>
+        <span><b>R</b> &nbsp;back to the budget check (retry)</span>
+        <span><b>T2</b> &nbsp;jump into Tier 2</span>
+        <span><b>C</b> &nbsp;join the commit step</span>
+      </div>
+      <div class="legend">
+        <span><i class="swatch sw-dp"></i> DiscoPoP does the work</span>
+        <span><i class="swatch sw-llm"></i> the LLM does the work</span>
+        <span><i class="swatch sw-wr"></i> your source file is written</span>
+        <span><i class="swatch sw-ag"></i> the controller decides</span>
+      </div>
+    </div>
+
+    <figure>
+      <div class="scroller">
+<svg viewBox="0 0 1160 3330" role="img" aria-label="Complete flowchart of the DiscoPoP agent, from the command line through profiling, ranking, Tier 1 pragma validation, Tier 2 LLM restructuring, re-profiling, verification against DiscoPoP, and the two points where the source file is written, to the final summary.">
+<defs><marker id="am" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="context-stroke"/></marker></defs>
+<rect class="s-ok" x="318" y="34" width="424" height="70" rx="20"/>
+<text class="t t-b fill-ok" x="332" y="55">START</text>
+<text class="t-sm" x="332" y="71">python -m discopop_agent --source-file X.cpp</text>
+<text class="t-sm" x="332" y="87">--discopop-dir X/.discopop</text>
+<text class="t-sm t-b" x="20" y="52">PRECONDITION</text>
+<text class="t-tiny" x="20" y="67">X/.discopop must already exist, from</text>
+<text class="t-tiny" x="20" y="82">discopop_cxx  -&gt;  ./a.out  -&gt;  discopop_explorer</text>
+<text class="t-tiny" x="20" y="97">The agent never creates the first profile.</text>
+<rect class="s-box" x="318" y="126" width="424" height="70" rx="3"/>
+<text class="t t-b " x="332" y="147">capture_reference()</text>
+<text class="t-sm" x="332" y="163">build the ORIGINAL at -O2, run it 3 times,</text>
+<text class="t-sm" x="332" y="179">keep its stdout and its best wall time</text>
+<text class="t-sm t-b" x="20" y="148">IF THIS FAILS</text>
+<text class="t-tiny" x="20" y="163">the correctness and speedup gates are</text>
+<text class="t-tiny" x="20" y="178">disabled for the whole run — warned, not fatal</text>
+<rect class="s-box" x="318" y="218" width="424" height="102" rx="3"/>
+<text class="t t-b " x="332" y="239">L1  build_candidates()</text>
+<text class="t-sm" x="332" y="255">dedup regions by (file, start line, end line)</text>
+<text class="t-sm" x="332" y="271">workload: CU instructions | loop iters x body | function 0</text>
+<text class="t-sm" x="332" y="287">score = c x log2(1 + W) - lambda x [tier 2]</text>
+<text class="t-sm" x="332" y="303">sort by score, highest first</text>
+<text class="t-sm t-b" x="20" y="240">READS</text>
+<text class="t-tiny" x="20" y="255">profiler/Data.xml            regions, calls</text>
+<text class="t-tiny" x="20" y="270">explorer/patterns.json       detected patterns</text>
+<text class="t-tiny" x="20" y="285">loop_counter_output.txt      trip counts</text>
+<rect class="s-box" x="318" y="342" width="424" height="54" rx="20"/>
+<text class="t t-b " x="332" y="363">THE QUEUE   take the next (depth, region)</text>
+<text class="t-sm" x="332" y="379">grows during the run: accepted rewrites append to it</text>
+<polygon class="s-box" points="530,418 742,447 530,476 318,447"/>
+<text class="t" x="530" y="452" text-anchor="middle">queue empty?</text>
+<rect class="s-ok" x="772" y="412" width="368" height="86" rx="20"/>
+<text class="t t-b fill-ok" x="786" y="433">END   run complete</text>
+<text class="t-sm" x="786" y="449">SUMMARY: n accepted | n skipped</text>
+<text class="t-sm" x="786" y="465">accepted.json · region_*.patch · &lt;name&gt;.original</text>
+<text class="t-sm" x="786" y="481">and your source, now parallelized</text>
+<rect class="s-box" x="318" y="498" width="424" height="70" rx="3"/>
+<text class="t t-b " x="332" y="519">tier2_allowed  =  depth &lt;= --restructure-depth</text>
+<text class="t-sm" x="332" y="535">default 0 — only regions from the first profile</text>
+<text class="t-sm" x="332" y="551">may be restructured, which is what makes it terminate</text>
+<polygon class="s-box" points="530,590 742,619 530,648 318,619"/>
+<text class="t" x="530" y="624" text-anchor="middle">applicable_pattern in patterns.json?</text>
+<rect class="s-lane" x="306" y="670" width="448" height="32" rx="3"/>
+<text class="t t-b " x="320" y="691">TIER 1   —   try DiscoPoP's own pragma first</text>
+<polygon class="s-box" points="530,724 742,753 530,782 318,753"/>
+<text class="t" x="530" y="758" text-anchor="middle">workload &gt;= --min-workload?</text>
+<rect class="s-bad" x="772" y="730" width="368" height="38" rx="3"/>
+<text class="t t-b fill-bad" x="786" y="751">SKIP  too small to be worth it</text>
+<rect class="s-dp" x="318" y="804" width="424" height="54" rx="3"/>
+<text class="t t-b fill-dp" x="332" y="825">read  patch_generator/&lt;pattern_id&gt;/*.patch</text>
+<text class="t-sm" x="332" y="841">the #pragma omp DiscoPoP generated for this loop</text>
+<rect class="s-box" x="318" y="880" width="424" height="70" rx="3"/>
+<text class="t t-b " x="332" y="901">is the region I/O only?</text>
+<text class="t-sm" x="332" y="917">if so skip the RACE CHECK only — stdio buffers race</text>
+<text class="t-sm" x="332" y="933">harmlessly; every other stage still runs</text>
+<rect class="s-box" x="318" y="972" width="424" height="118" rx="3" stroke-width="2.5"/>
+<text class="t t-b " x="332" y="993">QUALITY GATE      result cached on (patch, source bytes)</text>
+<text class="t-sm" x="332" y="1009">1  apply       the patch onto a TEMP COPY</text>
+<text class="t-sm" x="332" y="1025">2  compile     clang++ -O1, OpenMP off</text>
+<text class="t-sm" x="332" y="1041">3  tsan        -fopenmp -fsanitize=thread     [pragma only]</text>
+<text class="t-sm" x="332" y="1057">4  correctness stdout byte-for-byte vs the reference</text>
+<text class="t-sm" x="332" y="1073">5  performance 5 interleaved A/B pairs, median [pragma only]</text>
+<text class="t-sm t-b" x="20" y="1000">NOTHING HERE TOUCHES YOUR FILE</text>
+<text class="t-tiny" x="20" y="1015">every stage runs in a temp directory.</text>
+<text class="t-tiny" x="20" y="1030">Only the two purple boxes below write</text>
+<text class="t-tiny" x="20" y="1045">to the source, and only after a pass.</text>
+<polygon class="s-box" points="530,1112 742,1149 530,1186 318,1149"/>
+<text class="t" x="530" y="1146" text-anchor="middle">a race, but shaped like the</text>
+<text class="t" x="530" y="1162" text-anchor="middle">macOS OMP-barrier artefact?</text>
+<rect class="s-box" x="772" y="1112" width="368" height="70" rx="3"/>
+<text class="t t-b " x="786" y="1133">re-run the gate with the race check off</text>
+<text class="t-sm" x="786" y="1149">and judge on correctness + speed instead</text>
+<text class="t-sm" x="786" y="1165">of trusting the heuristic alone</text>
+<polygon class="s-box" points="530,1208 742,1237 530,1266 318,1237"/>
+<text class="t" x="530" y="1242" text-anchor="middle">gate passed?</text>
+<rect class="s-bad" x="772" y="1212" width="368" height="118" rx="3"/>
+<text class="t t-b fill-bad" x="786" y="1233">GATE FAILED — build the hint for the LLM</text>
+<text class="t-sm" x="786" y="1249">openmp_compile   loop is not in canonical form</text>
+<text class="t-sm" x="786" y="1265">tsan             a real race DiscoPoP missed</text>
+<text class="t-sm" x="786" y="1281">correctness      the pragma changes the output</text>
+<text class="t-sm" x="786" y="1297">performance      correct, but not faster</text>
+<text class="t-sm" x="786" y="1313">if tier2_allowed is false -&gt; SKIP instead</text>
+<rect class="s-wr" x="318" y="1288" width="424" height="70" rx="3"/>
+<text class="t t-b fill-wr" x="332" y="1309">WRITE 1   apply the pragma to YOUR SOURCE</text>
+<text class="t-sm" x="332" y="1325">backs up &lt;name&gt;.original first</text>
+<text class="t-sm" x="332" y="1341">disable with --no-apply-patches</text>
+<rect class="s-ok" x="318" y="1380" width="424" height="38" rx="3"/>
+<text class="t t-b fill-ok" x="332" y="1401">ACCEPT   record tier 1 in accepted.json</text>
+<rect class="s-lane" x="306" y="1452" width="448" height="32" rx="3"/>
+<text class="t t-b " x="320" y="1473">TIER 2   —   the LLM restructures the region     [ T2 ]</text>
+<text class="t-sm t-b" x="20" y="1472">REACHED FROM TWO PLACES</text>
+<text class="t-tiny" x="20" y="1487">· no applicable pattern at all</text>
+<text class="t-tiny" x="20" y="1502">· Tier 1 found one but it failed the gate</text>
+<polygon class="s-box" points="530,1506 742,1535 530,1564 318,1535"/>
+<text class="t" x="530" y="1540" text-anchor="middle">--dry-run?</text>
+<rect class="s-bad" x="772" y="1512" width="368" height="38" rx="3"/>
+<text class="t t-b fill-bad" x="786" y="1533">SKIP  plan only, no LLM call, no changes</text>
+<rect class="s-box" x="318" y="1586" width="424" height="86" rx="3"/>
+<text class="t t-b " x="332" y="1607">SNAPSHOT the source and the whole .discopop profile</text>
+<text class="t-sm" x="332" y="1623">budget        = --budget          (3)</text>
+<text class="t-sm" x="332" y="1639">build_retries = --build-retries   (2)</text>
+<text class="t-sm" x="332" y="1655">any attempt below can be undone from this snapshot</text>
+<polygon class="s-box" points="530,1694 742,1723 530,1752 318,1723"/>
+<text class="t" x="530" y="1728" text-anchor="middle">budget &gt; 0?</text>
+<rect class="s-bad" x="772" y="1700" width="368" height="38" rx="3"/>
+<text class="t t-b fill-bad" x="786" y="1721">SKIP  budget exhausted, region left alone</text>
+<rect class="s-dp" x="318" y="1774" width="424" height="198" rx="3"/>
+<text class="t t-b fill-dp" x="332" y="1795">L2  assemble the evidence   —   nine signals</text>
+<text class="t-sm" x="332" y="1811">region source + line numbers        Data.xml</text>
+<text class="t-sm" x="332" y="1827">RAW / WAR / WAW, grouped per var    dynamic_dependencies.txt</text>
+<text class="t-sm" x="332" y="1843">array element vs scalar             GEPRESULT tag</text>
+<text class="t-sm" x="332" y="1859">reduction candidates                reduction.txt</text>
+<text class="t-sm" x="332" y="1875">exact Do-All blockers + origin      doall_prevented.json</text>
+<text class="t-sm" x="332" y="1891">shared / private / firstprivate     patterns.json</text>
+<text class="t-sm" x="332" y="1907">loop nest + induction variables     detection_result_dump.json</text>
+<text class="t-sm" x="332" y="1923">trip counts per activation          loop_counter_output.txt</text>
+<text class="t-sm" x="332" y="1939">calls in region + recursion flag    Data.xml callsNode</text>
+<text class="t-sm" x="332" y="1955">and: why the LAST attempt failed</text>
+<rect class="s-llm" x="318" y="1994" width="424" height="102" rx="3"/>
+<text class="t t-b fill-llm" x="332" y="2015">L3  call the LLM</text>
+<text class="t-sm" x="332" y="2031">system prompt cached; evidence digest first, detail after</text>
+<text class="t-sm" x="332" y="2047">edit mode  diff | function | direct (edits a private copy)</text>
+<text class="t-sm" x="332" y="2063">2 free format re-prompts — budget is not charged</text>
+<text class="t-sm" x="332" y="2079">the model is told NOT to write any pragma</text>
+<rect class="s-ok" x="20" y="1998" width="262" height="102" rx="20"/>
+<text class="t t-b fill-ok" x="34" y="2019">END   abort</text>
+<text class="t-sm" x="34" y="2035">the LLM endpoint is unreachable.</text>
+<text class="t-sm" x="34" y="2051">Every region would fail identically,</text>
+<text class="t-sm" x="34" y="2067">so the run stops cleanly rather than</text>
+<text class="t-sm" x="34" y="2083">burning the whole queue.</text>
+<polygon class="s-box" points="530,2118 742,2147 530,2176 318,2147"/>
+<text class="t" x="530" y="2152" text-anchor="middle">a usable edit, and the file actually changed?</text>
+<rect class="s-bad" x="772" y="2124" width="368" height="70" rx="3"/>
+<text class="t t-b fill-bad" x="786" y="2145">"you returned the input unchanged —</text>
+<text class="t-sm" x="786" y="2161">that is not a valid answer"</text>
+<text class="t-sm" x="786" y="2177">budget - 1</text>
+<rect class="s-box" x="318" y="2198" width="424" height="86" rx="3" stroke-width="2.5"/>
+<text class="t t-b " x="332" y="2219">QUALITY GATE   the same five stages</text>
+<text class="t-sm" x="332" y="2235">a pragma-less rewrite is single-threaded, so tsan and</text>
+<text class="t-sm" x="332" y="2251">performance are SKIPPED here — those questions belong</text>
+<text class="t-sm" x="332" y="2267">to DiscoPoP's pragma, and are asked further down</text>
+<polygon class="s-box" points="530,2306 742,2335 530,2364 318,2335"/>
+<text class="t" x="530" y="2340" text-anchor="middle">gate passed?</text>
+<rect class="s-bad" x="772" y="2312" width="368" height="86" rx="3"/>
+<text class="t t-b fill-bad" x="786" y="2333">stage-specific instruction, appended as</text>
+<text class="t-sm" x="786" y="2349">the next user turn</text>
+<text class="t-sm" x="786" y="2365">apply / compile / openmp_compile:</text>
+<text class="t-sm" x="786" y="2381">budget REFUNDED, build_retries - 1</text>
+<rect class="s-wr" x="318" y="2386" width="424" height="54" rx="3"/>
+<text class="t t-b fill-wr" x="332" y="2407">WRITE 2   apply the rewrite to YOUR SOURCE</text>
+<text class="t-sm" x="332" y="2423">still sequential — there is no pragma in it</text>
+<rect class="s-dp" x="318" y="2462" width="424" height="70" rx="3"/>
+<text class="t t-b fill-dp" x="332" y="2483">RE-PROFILE the rewritten program</text>
+<text class="t-sm" x="332" y="2499">discopop_cxx  -&gt;  ./a.out  -&gt;  discopop_explorer</text>
+<text class="t-sm" x="332" y="2515">about 15 s — the most expensive step in the loop</text>
+<polygon class="s-box" points="530,2554 742,2583 530,2612 318,2583"/>
+<text class="t" x="530" y="2588" text-anchor="middle">did profiling succeed?</text>
+<rect class="s-bad" x="772" y="2560" width="368" height="86" rx="3"/>
+<text class="t t-b fill-bad" x="786" y="2581">REVERT from the snapshot</text>
+<text class="t-sm" x="786" y="2597">verdict: reprofile_failed</text>
+<text class="t-sm" x="786" y="2613">"your rewrite broke instrumentation"</text>
+<text class="t-sm" x="786" y="2629">budget - 1</text>
+<rect class="s-box" x="318" y="2634" width="424" height="86" rx="3"/>
+<text class="t t-b " x="332" y="2655">_touched_span(diff)  —  the lines this patch changed</text>
+<text class="t-sm" x="332" y="2671">rebuild the candidate list from the fresh profile</text>
+<text class="t-sm" x="332" y="2687">keep only patterns OVERLAPPING those lines:</text>
+<text class="t-sm" x="332" y="2703">a pattern elsewhere proves nothing about this rewrite</text>
+<polygon class="s-box" points="530,2742 742,2771 530,2800 318,2771"/>
+<text class="t" x="530" y="2776" text-anchor="middle">did DiscoPoP find a pattern there?</text>
+<rect class="s-bad" x="772" y="2748" width="368" height="102" rx="3"/>
+<text class="t t-b fill-bad" x="786" y="2769">REVERT   verdict: no_pattern</text>
+<text class="t-sm" x="786" y="2785">send the FRESH blockers — DiscoPoP's</text>
+<text class="t-sm" x="786" y="2801">analysis of the model's OWN rewrite,</text>
+<text class="t-sm" x="786" y="2817">labelled as such, not of the original</text>
+<text class="t-sm" x="786" y="2833">budget - 1</text>
+<polygon class="s-box" points="530,2822 742,2859 530,2896 318,2859"/>
+<text class="t" x="530" y="2856" text-anchor="middle">is this the last chance to act on it?</text>
+<text class="t" x="530" y="2872" text-anchor="middle">depth + 1 &gt; --restructure-depth</text>
+<rect class="s-ok" x="772" y="2826" width="368" height="86" rx="3"/>
+<text class="t t-b fill-ok" x="786" y="2847">ACCEPT   verdict: exposed</text>
+<text class="t-sm" x="786" y="2863">a deeper Tier-2 pass may still improve</text>
+<text class="t-sm" x="786" y="2879">this loop, so validating its first-cut</text>
+<text class="t-sm" x="786" y="2895">pragma now would revert real progress</text>
+<rect class="s-box" x="318" y="2918" width="424" height="70" rx="3" stroke-width="2.5"/>
+<text class="t t-b " x="332" y="2939">validate DiscoPoP's pragma      (same cache)</text>
+<text class="t-sm" x="332" y="2955">largest workload first; the FIRST qualifying one wins</text>
+<text class="t-sm" x="332" y="2971">-&gt; this is the result Tier 1 reuses one queue step later</text>
+<polygon class="s-box" points="530,3010 742,3047 530,3084 318,3047"/>
+<text class="t" x="530" y="3044" text-anchor="middle">race-free, identical output,</text>
+<text class="t" x="530" y="3060" text-anchor="middle">and at least --min-measured-speedup?</text>
+<rect class="s-bad" x="772" y="3016" width="368" height="118" rx="3"/>
+<text class="t t-b fill-bad" x="786" y="3037">REVERT   the verdict picks the message</text>
+<text class="t-sm" x="786" y="3053">pattern_broken  "keep the structure that made</text>
+<text class="t-sm" x="786" y="3069">   it detectable, fix what the diagnostic says"</text>
+<text class="t-sm" x="786" y="3085">no_speedup      "the dependence is already GONE —</text>
+<text class="t-sm" x="786" y="3101">   this is granularity, do not hunt deps again"</text>
+<text class="t-sm" x="786" y="3117">budget - 1</text>
+<rect class="s-ok" x="318" y="3106" width="424" height="86" rx="3"/>
+<text class="t t-b fill-ok" x="332" y="3127">COMMIT   verdict: ok      [ C ]</text>
+<text class="t-sm" x="332" y="3143">truncate the queue, re-add the untouched survivors,</text>
+<text class="t-sm" x="332" y="3159">enqueue the loops this rewrite EXPOSED at depth + 1</text>
+<text class="t-sm" x="332" y="3175">record tier 2 in accepted.json</text>
+<rect class="s-box" x="318" y="3214" width="424" height="70" rx="20"/>
+<text class="t t-b " x="332" y="3235">the exposed loops go back to THE QUEUE</text>
+<text class="t-sm" x="332" y="3251">they arrive as ordinary candidates and take the Tier-1</text>
+<text class="t-sm" x="332" y="3267">path, where WRITE 1 puts the pragma in your source</text>
+<path class="s-line" d="M 530 104 V 126" marker-end="url(#am)"/>
+<path class="s-line" d="M 530 196 V 218" marker-end="url(#am)"/>
+<path class="s-line" d="M 530 320 V 342" marker-end="url(#am)"/>
+<path class="s-line" d="M 530 396 V 418" marker-end="url(#am)"/>
+<path class="s-line-ok" d="M 742 447 H 772" marker-end="url(#am)"/>
+<text class="t-tiny t-b" x="750" y="441">yes</text>
+<path class="s-line" d="M 530 476 V 498" marker-end="url(#am)"/>
+<text class="t-tiny t-b" x="538" y="490">no</text>
+<path class="s-line" d="M 530 568 V 590" marker-end="url(#am)"/>
+<path class="s-line" d="M 530 648 V 670" marker-end="url(#am)"/>
+<text class="t-tiny t-b" x="538" y="662">yes</text>
+<path class="s-line" d="M 530 702 V 724" marker-end="url(#am)"/>
+<path class="s-line-bad" d="M 742 753 H 772" marker-end="url(#am)"/>
+<text class="t-tiny t-b" x="750" y="747">no</text>
+<path class="s-line" d="M 530 782 V 804" marker-end="url(#am)"/>
+<text class="t-tiny t-b" x="538" y="796">yes</text>
+<path class="s-line" d="M 530 858 V 880" marker-end="url(#am)"/>
+<path class="s-line" d="M 530 950 V 972" marker-end="url(#am)"/>
+<path class="s-line" d="M 530 1090 V 1112" marker-end="url(#am)"/>
+<path class="s-line" d="M 742 1149 H 772" marker-end="url(#am)"/>
+<text class="t-tiny t-b" x="750" y="1143">yes</text>
+<path class="s-line" d="M 530 1186 V 1208" marker-end="url(#am)"/>
+<text class="t-tiny t-b" x="538" y="1200">no</text>
+<path class="s-line-bad" d="M 742 1237 H 772" marker-end="url(#am)"/>
+<text class="t-tiny t-b" x="750" y="1231">no</text>
+<path class="s-line-ok" d="M 530 1266 V 1288" marker-end="url(#am)"/>
+<text class="t-tiny t-b" x="538" y="1280">yes</text>
+<path class="s-line" d="M 530 1358 V 1380" marker-end="url(#am)"/>
+<path class="s-line" d="M 530 1484 V 1506" marker-end="url(#am)"/>
+<path class="s-line-bad" d="M 742 1535 H 772" marker-end="url(#am)"/>
+<text class="t-tiny t-b" x="750" y="1529">yes</text>
+<path class="s-line" d="M 530 1564 V 1586" marker-end="url(#am)"/>
+<text class="t-tiny t-b" x="538" y="1578">no</text>
+<path class="s-line" d="M 530 1672 V 1694" marker-end="url(#am)"/>
+<path class="s-line-bad" d="M 742 1723 H 772" marker-end="url(#am)"/>
+<text class="t-tiny t-b" x="750" y="1717">no</text>
+<path class="s-line" d="M 530 1752 V 1774" marker-end="url(#am)"/>
+<text class="t-tiny t-b" x="538" y="1766">yes</text>
+<path class="s-line" d="M 530 1972 V 1994" marker-end="url(#am)"/>
+<path class="s-line-bad" d="M 742 2045 H 20" marker-end="url(#am)"/>
+<text class="t-tiny t-b" x="750" y="2039">connection error</text>
+<path class="s-line" d="M 530 2096 V 2118" marker-end="url(#am)"/>
+<path class="s-line-bad" d="M 742 2147 H 772" marker-end="url(#am)"/>
+<text class="t-tiny t-b" x="750" y="2141">no</text>
+<path class="s-line" d="M 530 2176 V 2198" marker-end="url(#am)"/>
+<text class="t-tiny t-b" x="538" y="2190">yes</text>
+<path class="s-line" d="M 530 2284 V 2306" marker-end="url(#am)"/>
+<path class="s-line-bad" d="M 742 2335 H 772" marker-end="url(#am)"/>
+<text class="t-tiny t-b" x="750" y="2329">no</text>
+<path class="s-line-ok" d="M 530 2364 V 2386" marker-end="url(#am)"/>
+<text class="t-tiny t-b" x="538" y="2378">yes</text>
+<path class="s-line" d="M 530 2440 V 2462" marker-end="url(#am)"/>
+<path class="s-line" d="M 530 2532 V 2554" marker-end="url(#am)"/>
+<path class="s-line-bad" d="M 742 2583 H 772" marker-end="url(#am)"/>
+<text class="t-tiny t-b" x="750" y="2577">no</text>
+<path class="s-line" d="M 530 2612 V 2634" marker-end="url(#am)"/>
+<text class="t-tiny t-b" x="538" y="2626">yes</text>
+<path class="s-line" d="M 530 2720 V 2742" marker-end="url(#am)"/>
+<path class="s-line-bad" d="M 742 2771 H 772" marker-end="url(#am)"/>
+<text class="t-tiny t-b" x="750" y="2765">no</text>
+<path class="s-line" d="M 530 2800 V 2822" marker-end="url(#am)"/>
+<text class="t-tiny t-b" x="538" y="2814">yes</text>
+<path class="s-line-ok" d="M 742 2859 H 772" marker-end="url(#am)"/>
+<text class="t-tiny t-b" x="750" y="2853">no</text>
+<path class="s-line" d="M 530 2896 V 2918" marker-end="url(#am)"/>
+<text class="t-tiny t-b" x="538" y="2910">yes</text>
+<path class="s-line" d="M 530 2988 V 3010" marker-end="url(#am)"/>
+<path class="s-line-bad" d="M 742 3047 H 772" marker-end="url(#am)"/>
+<text class="t-tiny t-b" x="750" y="3041">no</text>
+<path class="s-line-ok" d="M 530 3084 V 3106" marker-end="url(#am)"/>
+<text class="t-tiny t-b" x="538" y="3098">yes</text>
+<path class="s-line" d="M 530 3192 V 3214" marker-end="url(#am)"/>
+<circle class="s-ok" cx="298" cy="369" r="14"/>
+<text class="t t-b fill-ok" x="298" y="374" text-anchor="middle">Q</text>
+<circle class="s-ok" cx="1160" cy="749" r="14"/>
+<text class="t t-b fill-ok" x="1160" y="754" text-anchor="middle">Q</text>
+<circle class="s-lane" cx="1160" cy="1271" r="14"/>
+<text class="t t-b " x="1160" y="1276" text-anchor="middle">T2</text>
+<circle class="s-ok" cx="762" cy="1399" r="14"/>
+<text class="t t-b fill-ok" x="762" y="1404" text-anchor="middle">Q</text>
+<circle class="s-lane" cx="286" cy="1468" r="14"/>
+<text class="t t-b " x="286" y="1473" text-anchor="middle">T2</text>
+<circle class="s-ok" cx="1160" cy="1531" r="14"/>
+<text class="t t-b fill-ok" x="1160" y="1536" text-anchor="middle">Q</text>
+<circle class="s-bad" cx="298" cy="1723" r="14"/>
+<text class="t t-b fill-bad" x="298" y="1728" text-anchor="middle">R</text>
+<circle class="s-ok" cx="1160" cy="1719" r="14"/>
+<text class="t t-b fill-ok" x="1160" y="1724" text-anchor="middle">Q</text>
+<circle class="s-bad" cx="1160" cy="2159" r="14"/>
+<text class="t t-b fill-bad" x="1160" y="2164" text-anchor="middle">R</text>
+<circle class="s-bad" cx="1160" cy="2355" r="14"/>
+<text class="t t-b fill-bad" x="1160" y="2360" text-anchor="middle">R</text>
+<circle class="s-bad" cx="1160" cy="2603" r="14"/>
+<text class="t t-b fill-bad" x="1160" y="2608" text-anchor="middle">R</text>
+<circle class="s-bad" cx="1160" cy="2799" r="14"/>
+<text class="t t-b fill-bad" x="1160" y="2804" text-anchor="middle">R</text>
+<circle class="s-ok" cx="1160" cy="2869" r="14"/>
+<text class="t t-b fill-ok" x="1160" y="2874" text-anchor="middle">C</text>
+<circle class="s-bad" cx="1160" cy="3075" r="14"/>
+<text class="t t-b fill-bad" x="1160" y="3080" text-anchor="middle">R</text>
+<circle class="s-ok" cx="298" cy="3149" r="14"/>
+<text class="t t-b fill-ok" x="298" y="3154" text-anchor="middle">C</text>
+<circle class="s-ok" cx="762" cy="3249" r="14"/>
+<text class="t t-b fill-ok" x="762" y="3254" text-anchor="middle">Q</text>
+</svg>
+      </div>
+      <figcaption><b>Figure 1 · the whole agent.</b> Two things worth finding before anything else. <b>The two purple boxes</b> are the only points where your source file changes — WRITE 2 is the LLM's restructuring (still sequential), WRITE 1 is DiscoPoP's pragma. <b>The bottom of the chart returns to the top</b>: an accepted rewrite puts the loops it exposed back in the queue at depth + 1, where they come round again as ordinary Tier-1 candidates — that is how a restructured loop finally gets its pragma.</figcaption>
+    </figure>
+  </section>
+
+  <!-- REAL TRACE -->
+  <section>
+    <h2><span class="num">02</span> One region, followed all the way</h2>
+    <div class="prose">
+      <p>The benchmark case <code>array_accumulator</code>, exactly as it ran. It shows the handoff both ways: DiscoPoP gives up, the LLM restructures, DiscoPoP re-judges its own analysis of the rewrite, and Tier 1 finishes the job.</p>
+    </div>
+
+    <figure>
+      <div class="scroller">
+        <svg viewBox="0 0 1140 430" role="img" aria-label="Timeline of the array_accumulator benchmark case. At depth zero DiscoPoP finds no applicable pattern, so the LLM rewrites an array-slot accumulator into a scalar one. The rewrite passes the gate, is written to the source, and after re-profiling DiscoPoP reports a do_all and a reduction, whose pragma measures 4.93 times, so the rewrite is accepted. The exposed loop re-enters the queue at depth one, where Tier 1 reuses the verification verdict instead of re-running the gate and writes the pragma. The finished program is 5.99 times faster with one pragma and identical output.">
+          <defs>
+            <marker id="art" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="context-stroke"/>
+            </marker>
+          </defs>
+
+          <text class="t-lane fill-dp" x="20" y="26">DEPTH 0 — the LLM may restructure</text>
+          <text class="t-lane fill-ok" x="830" y="26">DEPTH 1 — Tier 1 only</text>
+          <line class="s-line" x1="812" y1="36" x2="812" y2="330" stroke-dasharray="4 4"/>
+          <line class="s-line" x1="20" y1="52" x2="1120" y2="52"/>
+
+          <rect class="s-box" x="20" y="66" width="250" height="104" rx="3"/>
+          <text class="t t-b" x="32" y="86">① Tier 1</text>
+          <text class="t-sm" x="32" y="105">no applicable pattern —</text>
+          <text class="t-sm" x="32" y="121">acc[0] += reads as a</text>
+          <text class="t-sm" x="32" y="137">loop-carried RAW</text>
+          <text class="t-tiny" x="32" y="157">→ hand the region to the LLM</text>
+
+          <line class="s-line" x1="270" y1="118" x2="288" y2="118" marker-end="url(#art)"/>
+
+          <rect class="s-wr" x="290" y="66" width="250" height="104" rx="3"/>
+          <text class="t t-b fill-wr" x="302" y="86">② Tier 2 · the rewrite</text>
+          <text class="t-sm" x="302" y="105">scalar accumulator +</text>
+          <text class="t-sm" x="302" y="121">write-back after the loop</text>
+          <text class="t-sm fill-wr" x="302" y="137">WRITE ② — still no pragma</text>
+          <text class="t-tiny" x="302" y="157">gate PASSED → re-profile</text>
+
+          <line class="s-line" x1="540" y1="118" x2="558" y2="118" marker-end="url(#art)"/>
+
+          <rect class="s-box" x="560" y="66" width="250" height="104" rx="3" stroke-width="2.5"/>
+          <text class="t t-b" x="572" y="86">③ VERIFY</text>
+          <text class="t-sm" x="572" y="105">do_all @ 20–20</text>
+          <text class="t-sm" x="572" y="121">reduction @ 18–23</text>
+          <text class="t-sm fill-ok" x="572" y="137">its pragma measures 4.93×</text>
+          <text class="t-tiny fill-ok" x="572" y="157">→ ACCEPT, keep the rewrite</text>
+
+          <path class="s-line-ok" d="M 810 118 H 838" marker-end="url(#art)"/>
+
+          <rect class="s-wr" x="840" y="66" width="250" height="104" rx="3"/>
+          <text class="t t-b fill-wr" x="852" y="86">④ Tier 1, depth 1</text>
+          <text class="t-sm" x="852" y="105">the exposed loop, re-queued</text>
+          <text class="t-sm fill-ok" x="852" y="121">reuses ③'s 4.93× verdict</text>
+          <text class="t-sm fill-wr" x="852" y="137">WRITE ① — the pragma</text>
+          <text class="t-tiny" x="852" y="157">gate not re-run</text>
+
+          <path class="s-line-ok" d="M 685 170 V 200 H 965 V 172" marker-end="url(#art)"/>
+          <text class="t-sm fill-ok t-b" x="700" y="216">Ⓐ the exposed loop re-enters the queue at depth 1 — this is Tier 1 running again</text>
+
+          <path class="s-line" d="M 660 236 V 252 H 990 V 236" stroke-dasharray="4 3"/>
+          <text class="t-sm fill-ok" x="668" y="270">measured once, in ③ — ④ reuses that verdict instead of re-running the gate</text>
+          <text class="t-tiny" x="668" y="286">cached on (patch, source bytes): once another pragma changes the file, the next ask correctly re-measures</text>
+
+          <rect class="s-bad" x="20" y="236" width="600" height="56" rx="3"/>
+          <text class="t t-b fill-bad" x="34" y="256">had ③ said no_pattern, pattern_broken or no_speedup</text>
+          <text class="t-sm" x="34" y="274">revert to the snapshot, tell the model why, and retry — figure 1's dashed path</text>
+
+          <rect class="s-ok" x="20" y="308" width="1100" height="66" rx="3"/>
+          <text class="t t-b fill-ok" x="34" y="330">RESULT · 2 accepted — 1 Tier-2 restructuring + 1 Tier-1 pragma</text>
+          <text class="t-sm" x="34" y="349">independently re-measured: 5.99× faster than the original, output byte-identical, 142 s end to end</text>
+          <text class="t-tiny" x="34" y="366">every box that touches your file is purple; gates run on temporary copies</text>
+        </svg>
+      </div>
+      <figcaption><b>Figure 2 · one region, followed across both depths.</b> Steps ② and ④ answer the question directly: the LLM's rewrite is written first and is still sequential; DiscoPoP's pragma arrives only when the exposed loop comes back round as an ordinary Tier-1 candidate. Trace taken from a real <code>array_accumulator</code> run.</figcaption>
+    </figure>
+
+    <div class="note write">
+      <div class="lede">Who writes the pragma, and when</div>
+      <p><strong>DiscoPoP writes every pragma</strong> — its patch generator emits them into <code>.discopop/patch_generator/&lt;id&gt;/</code>. The LLM is forbidden to, and complies: not one Tier-2 patch in the benchmark contains <code>#pragma omp</code>. The agent copies a pragma into your file at exactly one place, <code>_apply_to_source</code> in the Tier-1 branch, after that pragma passes the gate. Verification measures pragmas too, but only inside a temporary directory — it decides whether to <em>keep</em> the rewrite, never what your file contains. <code>--no-apply-patches</code> suppresses the pragma write and leaves only the record.</p>
+    </div>
+  </section>
+
+  <!-- GATE -->
+  <section>
+    <h2><span class="num">03</span> Zoom in · the quality gate</h2>
+    <div class="prose">
+      <p>The <code>QUALITY GATE</code> boxes in figure 1, opened up. Both tiers pass through the same five stages, in a temporary directory — the real source is never touched until every stage passes. Two stages are conditional, and the gate reports which ones it skipped rather than implying they passed.</p>
+    </div>
+
+    <figure>
+      <div class="scroller">
+        <svg viewBox="0 0 1080 300" role="img" aria-label="The five gate stages in order: apply, compile, ThreadSanitizer, correctness, performance. ThreadSanitizer and performance only run for patches containing an OpenMP pragma. Any failure returns a stage-specific diagnostic to the LLM, and the first two stages refund the budget slot.">
+          <defs>
+            <marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="context-stroke"/>
+            </marker>
+          </defs>
+
+          <text class="t-lane" x="20" y="28" fill="currentColor">STAGES RUN IN ORDER — FIRST FAILURE STOPS THE GATE</text>
+
+          <rect class="s-box" x="20"  y="48" width="186" height="66" rx="3"/>
+          <text class="t t-b" x="32" y="70">1 · apply</text>
+          <text class="t-sm"  x="32" y="88">patch onto a temp copy</text>
+          <text class="t-tiny" x="32" y="104">unreachable in function/direct mode</text>
+
+          <rect class="s-box" x="230" y="48" width="186" height="66" rx="3"/>
+          <text class="t t-b" x="242" y="70">2 · compile</text>
+          <text class="t-sm"  x="242" y="88">clang++ −O1, no OpenMP</text>
+          <text class="t-tiny" x="242" y="104">catches broken syntax</text>
+
+          <rect class="s-dp" x="440" y="48" width="186" height="66" rx="3"/>
+          <text class="t t-b" x="452" y="70">3 · ThreadSanitizer</text>
+          <text class="t-sm"  x="452" y="88">−fopenmp −fsanitize=thread</text>
+          <text class="t-tiny" x="452" y="104">only if the diff has a pragma</text>
+
+          <rect class="s-box" x="650" y="48" width="186" height="66" rx="3"/>
+          <text class="t t-b" x="662" y="70">4 · correctness</text>
+          <text class="t-sm"  x="662" y="88">stdout, byte for byte</text>
+          <text class="t-tiny" x="662" y="104">vs the original program</text>
+
+          <rect class="s-dp" x="860" y="48" width="200" height="66" rx="3"/>
+          <text class="t t-b" x="872" y="70">5 · performance</text>
+          <text class="t-sm"  x="872" y="88">5 interleaved A/B pairs</text>
+          <text class="t-tiny" x="872" y="104">only if pragma + gate on</text>
+
+          <line class="s-line" x1="206" y1="81" x2="228" y2="81" marker-end="url(#ar2)"/>
+          <line class="s-line" x1="416" y1="81" x2="438" y2="81" marker-end="url(#ar2)"/>
+          <line class="s-line" x1="626" y1="81" x2="648" y2="81" marker-end="url(#ar2)"/>
+          <line class="s-line" x1="836" y1="81" x2="858" y2="81" marker-end="url(#ar2)"/>
+
+          <path class="s-line-bad" d="M 113 114 V 168" marker-end="url(#ar2)"/>
+          <path class="s-line-bad" d="M 323 114 V 168" marker-end="url(#ar2)"/>
+          <path class="s-line-bad" d="M 533 114 V 168" marker-end="url(#ar2)"/>
+          <path class="s-line-bad" d="M 743 114 V 168" marker-end="url(#ar2)"/>
+          <path class="s-line-bad" d="M 960 114 V 168" marker-end="url(#ar2)"/>
+          <rect class="s-bad" x="20" y="170" width="1040" height="46" rx="3"/>
+          <text class="t t-b fill-bad" x="34" y="190">FAIL → a different instruction per stage, appended as the next user turn</text>
+          <text class="t-sm" x="34" y="208">“keep your approach, fix the build error” for stages 1–2 · “decide whether the strategy or a detail was wrong” for 3–5</text>
+
+          <rect class="s-box" x="20" y="234" width="500" height="46" rx="3"/>
+          <text class="t t-b" x="34" y="254">stages 1–2 refund the budget slot</text>
+          <text class="t-sm" x="34" y="271">a build error is a typo, not a failed parallelization idea — capped at 2</text>
+
+          <rect class="s-dp" x="540" y="234" width="520" height="46" rx="3"/>
+          <text class="t t-b" x="554" y="254">TSAN_OPTIONS=halt_on_error=1</text>
+          <text class="t-sm" x="554" y="271">37 s → 0.7 s on a 0.2 s kernel, race still reported 3 runs of 3</text>
+        </svg>
+      </div>
+      <figcaption><b>Figure 3 · what each stage can and cannot prove.</b> A pragma-less LLM rewrite is single-threaded, so stages 3 and 5 are skipped for it — the race and speed questions belong to DiscoPoP's pragma, checked after the re-profile.</figcaption>
+    </figure>
+
+    <div class="note warn">
+      <div class="lede">The trap this design avoids</div>
+      <p>Reducing <code>OMP_NUM_THREADS</code> to 4 made ThreadSanitizer far faster still — and the same real race then went <strong>undetected on two runs out of two</strong>. Detection is probabilistic; a gate that passes because it looked less hard is worse than a slow one. Only the redundant work <em>after</em> the first report was removed.</p>
+    </div>
+  </section>
+
+  <!-- CHANNEL -->
+  <section>
+    <h2><span class="num">04</span> Zoom in · what the two sides say</h2>
+    <div class="prose">
+      <p>The <code>L2</code> and <code>L3</code> boxes in figure 1, opened up. The channel is deliberately lopsided. DiscoPoP sends nine signals, each traceable to a file it wrote. The model sends back exactly one thing — restructured source — and the profiler re-derives everything else itself.</p>
+    </div>
+
+    <figure>
+      <div class="scroller">
+        <svg viewBox="0 0 1080 560" role="img" aria-label="Two-way channel. DiscoPoP sends nine evidence signals to the LLM: region source, dependences, array versus scalar, reductions, Do-All blockers, variable classification, loop nest, trip counts, calls, plus the reason the previous attempt failed. The LLM returns only restructured source, containing no pragmas.">
+          <defs>
+            <marker id="ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="context-stroke"/>
+            </marker>
+          </defs>
+
+          <rect class="s-dp" x="20" y="24" width="200" height="44" rx="3"/>
+          <text class="t t-b" x="34" y="44">DISCOPOP</text>
+          <text class="t-sm"  x="34" y="60">what it knows</text>
+
+          <rect class="s-llm" x="860" y="24" width="200" height="44" rx="3"/>
+          <text class="t t-b" x="874" y="44">LLM</text>
+          <text class="t-sm"  x="874" y="60">what it returns</text>
+
+          <rect class="s-box" x="20" y="86"  width="330" height="34" rx="3"/>
+          <text class="t" x="32" y="108">region source + line numbers</text>
+          <text class="t-tiny" x="358" y="108">Data.xml</text>
+
+          <rect class="s-box" x="20" y="128" width="330" height="34" rx="3"/>
+          <text class="t" x="32" y="150">RAW / WAR / WAW per variable</text>
+          <text class="t-tiny" x="358" y="150">dynamic_dependencies.txt</text>
+
+          <rect class="s-box" x="20" y="170" width="330" height="34" rx="3"/>
+          <text class="t" x="32" y="192">array element vs scalar</text>
+          <text class="t-tiny" x="358" y="192">GEPRESULT tag</text>
+
+          <rect class="s-box" x="20" y="212" width="330" height="34" rx="3"/>
+          <text class="t" x="32" y="234">reduction candidates</text>
+          <text class="t-tiny" x="358" y="234">reduction.txt</text>
+
+          <rect class="s-box" x="20" y="254" width="330" height="34" rx="3"/>
+          <text class="t" x="32" y="276">exact Do-All blockers + origin</text>
+          <text class="t-tiny" x="358" y="276">doall_prevented.json</text>
+
+          <rect class="s-box" x="20" y="296" width="330" height="34" rx="3"/>
+          <text class="t" x="32" y="318">shared / private / firstprivate</text>
+          <text class="t-tiny" x="358" y="318">patterns.json</text>
+
+          <rect class="s-box" x="20" y="338" width="330" height="34" rx="3"/>
+          <text class="t" x="32" y="360">loop nest + induction variables</text>
+          <text class="t-tiny" x="358" y="360">detection_result_dump.json</text>
+
+          <rect class="s-box" x="20" y="380" width="330" height="34" rx="3"/>
+          <text class="t" x="32" y="402">trip counts per activation</text>
+          <text class="t-tiny" x="358" y="402">loop_counter_output.txt</text>
+
+          <rect class="s-box" x="20" y="422" width="330" height="34" rx="3"/>
+          <text class="t" x="32" y="444">calls in region, recursion flag</text>
+          <text class="t-tiny" x="358" y="444">Data.xml callsNode</text>
+
+          <rect class="s-bad" x="20" y="464" width="330" height="52" rx="3"/>
+          <text class="t t-b" x="32" y="484">why the last attempt failed</text>
+          <text class="t-sm" x="32" y="502">gate stage, or DiscoPoP's verdict on the rewrite</text>
+
+          <path class="s-line-dp" d="M 500 103 H 560 V 270" marker-end="url(#ar3)"/>
+          <path class="s-line-dp" d="M 500 145 H 560"/>
+          <path class="s-line-dp" d="M 500 187 H 560"/>
+          <path class="s-line-dp" d="M 500 229 H 560"/>
+          <path class="s-line-dp" d="M 500 271 H 560"/>
+          <path class="s-line-dp" d="M 500 313 H 560"/>
+          <path class="s-line-dp" d="M 500 355 H 560"/>
+          <path class="s-line-dp" d="M 500 397 H 560"/>
+          <path class="s-line-dp" d="M 500 439 H 560"/>
+          <path class="s-line-dp" d="M 500 490 H 560 V 290"/>
+
+          <rect class="s-box" x="576" y="248" width="230" height="60" rx="3" stroke-width="2.5"/>
+          <text class="t t-b" x="590" y="270">one prompt</text>
+          <text class="t-sm" x="590" y="288">digest first, then detail</text>
+          <text class="t-tiny" x="590" y="302">system prompt cached across calls</text>
+
+          <path class="s-line-dp" d="M 806 278 H 856" marker-end="url(#ar3)"/>
+
+          <path class="s-line-llm" d="M 960 68 V 100 H 640 V 240" marker-end="url(#ar3)"/>
+          <rect class="s-llm" x="836" y="112" width="224" height="76" rx="3"/>
+          <text class="t t-b" x="848" y="134">restructured source</text>
+          <text class="t-sm"  x="848" y="152">and nothing else</text>
+          <text class="t-tiny" x="848" y="170">no pragmas · no explanation used</text>
+          <path class="s-line-llm" d="M 836 150 H 700 V 240" marker-end="url(#ar3)"/>
+          <text class="t-tiny fill-llm" x="646" y="214">the rewrite is the whole reply</text>
+        </svg>
+      </div>
+      <figcaption><b>Figure 4 · nine signals out, one artifact back.</b> The model is told not to insert pragmas: DiscoPoP re-derives the parallelism from the rewritten code, which is the only way its verdict means anything.</figcaption>
+    </figure>
+  </section>
+
+  <!-- VERDICTS -->
+  <section>
+    <h2><span class="num">05</span> Zoom in · the six verdicts</h2>
+    <div class="prose">
+      <p>The two diamonds after <code>RE-PROFILE</code> in figure 1, and what each answer sends back. The agent asks one question — <em class="term">did DiscoPoP parallelize the lines that changed?</em> — and the answer decides both whether the rewrite survives and what the model hears next. These mean opposite things, so a single “try again” actively misleads: telling a model to hunt for dependences when the dependence is already gone pushes it off a working transformation.</p>
+    </div>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr><th class="mono">verdict</th><th>what DiscoPoP reported</th><th>outcome</th><th>what the model is told</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="mono">ok</td><td>a pattern in the changed lines; its pragma is race-free, correct and faster</td><td><span class="pill pill-ok">keep</span></td><td>— (done)</td></tr>
+          <tr><td class="mono">exposed</td><td>a pattern was found; a deeper pass may still improve it</td><td><span class="pill pill-ok">keep</span></td><td>— (validation deferred)</td></tr>
+          <tr><td class="mono">no_pattern</td><td>nothing — the blocking dependence is still there</td><td><span class="pill pill-bad">revert</span></td><td>the fresh blockers <strong>for its own rewrite</strong>, named as such</td></tr>
+          <tr><td class="mono">pattern_broken</td><td>a pattern, but the pragma races or miscomputes</td><td><span class="pill pill-bad">revert</span></td><td>“progress — keep the structure, fix only what the diagnostic reports”</td></tr>
+          <tr><td class="mono">no_speedup</td><td>correct parallelism, no measured gain</td><td><span class="pill pill-bad">revert</span></td><td>“the dependence is already gone — this is granularity, stop hunting dependences”</td></tr>
+          <tr><td class="mono">reprofile_failed</td><td>the rewrite broke instrumentation itself</td><td><span class="pill pill-bad">revert</span></td><td>avoid constructs the profiler cannot follow</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note">
+      <div class="lede">Why this step exists</div>
+      <p>Passing the gate proves a rewrite <strong>compiles and preserves output</strong> — that it is harmless, not that it is useful. Without this check the agent could print <code>1 accepted</code> for a rewrite that parallelized nothing. Two benchmark cases proved it: <code>bubble_sort</code> and <code>prefix_sum</code> both produced rewrites that passed every gate stage and were reverted here, ending at 0 pragmas.</p>
+    </div>
+  </section>
+
+  <!-- RETRY -->
+  <section>
+    <h2><span class="num">06</span> What each retry costs</h2>
+    <div class="cards">
+      <div class="card">
+        <div class="k">budget · default 3</div>
+        <h3>real attempts</h3>
+        <p>One per genuine parallelization idea. Spent when a rewrite is semantically wrong, races, or fails to pay off.</p>
+      </div>
+      <div class="card">
+        <div class="k">build-retries · default 2</div>
+        <h3>free build fixes</h3>
+        <p>Apply and compile failures refund the slot — a typo says nothing about the idea. Capped so a model that cannot produce compiling code still terminates.</p>
+      </div>
+      <div class="card">
+        <div class="k">format retries · 2</div>
+        <h3>free, inside one call</h3>
+        <p>The reply was unusable — no diff, or the file left untouched in direct mode. Re-prompted without touching budget.</p>
+      </div>
+      <div class="card">
+        <div class="k">restructure-depth · default 0</div>
+        <h3>how far the source may drift</h3>
+        <p>Only the initial candidates may be rewritten. Loops exposed by a rewrite get Tier 1 alone, which is what makes the loop terminate.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- RESULTS -->
+  <section>
+    <h2><span class="num">07</span> The loop, measured</h2>
+    <div class="prose">
+      <p>Eight benchmark cases, one per class of obstacle. The verdict is measured by the benchmark driver — original built sequentially against the agent's final source built with <code>-fopenmp</code>, same input — not reported by the agent about itself.</p>
+    </div>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr><th class="mono">case</th><th>obstacle</th><th>path</th><th class="num">speedup</th><th>output</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="mono">doall_clean</td><td>none — baseline</td><td><span class="pill pill-dp">Tier 1</span></td><td class="num">5.29×</td><td>identical</td></tr>
+          <tr><td class="mono">storage_reuse</td><td>storage reuse</td><td><span class="pill pill-dp">Tier 1</span></td><td class="num">5.27×</td><td>identical</td></tr>
+          <tr><td class="mono">array_accumulator</td><td>reduction hidden in an array slot</td><td><span class="pill pill-llm">Tier 2</span> → Tier 1</td><td class="num">5.95×</td><td>identical</td></tr>
+          <tr><td class="mono">stencil_war</td><td>in-place, no same-sweep read-back</td><td><span class="pill pill-llm">Tier 2</span> → Tier 1</td><td class="num">4.48×</td><td>identical</td></tr>
+          <tr><td class="mono">early_exit</td><td>non-canonical control flow</td><td><span class="pill pill-llm">Tier 2</span> → Tier 1</td><td class="num">5.60×</td><td>identical</td></tr>
+          <tr><td class="mono">fine_grained</td><td>granularity — a correct but tiny Do-All</td><td><span class="pill pill-llm">Tier 2</span> → Tier 1 ×2</td><td class="num">2.28×</td><td>identical</td></tr>
+          <tr><td class="mono">bubble_sort</td><td>in-place, same-sweep read-back</td><td><span class="pill pill-bad">reverted</span></td><td class="num">—</td><td>identical</td></tr>
+          <tr><td class="mono">prefix_sum</td><td>true recurrence</td><td><span class="pill pill-bad">reverted</span></td><td class="num">—</td><td>identical</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="prose">
+      <p>Six of eight end faster; none produce wrong output, which is the property the correctness stage exists to guarantee. The two reverted cases are the hardest transformations in the set — an odd-even partition with re-derived bounds, and a parallel scan. In both, every rewrite passed the gate and was caught by the verification step: <strong>the agent declined rather than claiming a win it had not earned.</strong></p>
+    </div>
+  </section>
+
+  <!-- CODE MAP -->
+  <section>
+    <h2><span class="num">08</span> Where each step lives</h2>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr><th class="mono">file</th><th>role</th><th class="mono">read this first</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="mono">l1_planner.py</td><td>rank regions, assign tiers, content fingerprints</td><td class="mono">build_candidates</td></tr>
+          <tr><td class="mono">l2_evidence.py</td><td>gather the nine signals for one region</td><td class="mono">assemble</td></tr>
+          <tr><td class="mono">l3_llm.py</td><td>prompt, provider, edit modes</td><td class="mono">call_llm</td></tr>
+          <tr><td class="mono">l4_validator.py</td><td>the five gate stages</td><td class="mono">validate</td></tr>
+          <tr><td class="mono">controller.py</td><td>the queue, both tiers, depth bookkeeping</td><td class="mono">run</td></tr>
+          <tr><td class="mono">controller.py</td><td>the verdict on each rewrite</td><td class="mono">_verify_rewrite</td></tr>
+          <tr><td class="mono">controller.py</td><td>what the model hears after a revert</td><td class="mono">_rewrite_feedback</td></tr>
+          <tr><td class="mono">controller.py</td><td><b>the only writer of your source file</b></td><td class="mono">_apply_to_source</td></tr>
+          <tr><td class="mono">benchmark/run.py</td><td>independent re-measurement of the result</td><td class="mono">_measure</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer>
+    DiscoPoP agentic controller · flow as of the current branch<br>
+    Timings measured on an 8-thread machine: profile cycle ≈15 s, gate ≈1–10 s, one benchmark case 28–240 s end to end.
+  </footer>
+
+</div>

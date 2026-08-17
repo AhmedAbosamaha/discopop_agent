@@ -210,16 +210,22 @@ python -m discopop_agent \
 ```
 
 Or with the Claude Agent SDK, billed against your Claude Code subscription
-(run `claude login` once first — see step 5):
+(run `claude login` once first — see step 5).  This is the only provider that
+supports `--edit-mode direct`, where the model edits a private copy of the file
+with its own tools instead of writing out a diff:
 ```bash
 python -m discopop_agent \
     --discopop-dir example4/.discopop \
     --source-file   example4/bubble_sort.cpp \
-    --provider claude-agent-sdk \
-    --model    haiku \
-    --budget   3 \
+    --provider  claude-agent-sdk \
+    --model     haiku \
+    --edit-mode direct \
+    --budget    3 \
     --min-workload 0
 ```
+
+To watch the whole loop — prompts, the model's edit, every gate stage, and
+DiscoPoP's verdict on the rewrite — add `-v`.
 
 Or with a self-hosted OpenAI-compatible endpoint (e.g. a vLLM server; tunnel it
 to localhost first — see `--provider`/`--api-base`):

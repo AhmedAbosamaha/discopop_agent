@@ -121,7 +121,7 @@ score = c · log₂(1 + W) − λ · 1[tier=2]
 
 ### L3 — LLM Engine (`l3_llm.py`)
 
-**Purpose:** Build a structured prompt from the `EvidencePackage`, call the Claude API, and return a valid unified diff.
+**Purpose:** Build a structured prompt from the `EvidencePackage`, call the LLM, and return the edit as a unified diff — whether the model expressed it as a diff, as a rewritten function, or by editing the file itself (see **Edit modes** below).
 
 **Prompt structure (first attempt):**
 
@@ -206,6 +206,16 @@ controller budget loop
 
 **Prompt caching:** The system prompt is marked with `cache_control: ephemeral`. The Anthropic API caches it server-side, so it is not re-billed across budget retries within a session.
 
+**Edit modes.** The system prompt's analysis half (`_SYSTEM_CORE`) and the evidence body (`_evidence_sections`) are identical in all three `--edit-mode`s; only the output instruction and how the agent recovers a diff differ:
+
+```
+diff      model prints a unified diff       → _extract_diff()          → gate
+function  model prints the whole function   → spliced by line range    → gate
+direct    model EDITS a private file copy   → diffed against the source → gate
+```
+
+In `direct` mode (`--provider claude-agent-sdk` only) `call_llm` seeds a per-region workspace with a copy of the source (`_sync_workspace`), hands the CLI session `Read`/`Edit`/`Write` confined to that directory, and afterwards reads the file back and diffs it (`_workspace_diff`). The model's prose is ignored entirely; an unchanged file returns `""` so the controller can distinguish "made no edit" from "produced no usable answer". Workspaces and CLI sessions are both keyed on `region_fingerprint` (content-based) rather than `region_id`, which DiscoPoP reassigns after a re-profile.
+
 ---
 
 ### L4 — Validator (`l4_validator.py`)
@@ -259,17 +269,50 @@ Compiles with TSan and OpenMP enabled, then runs the binary. A `WARNING: ThreadS
 │
 └── NO → Tier-2
           dry_run? → SKIP
+          snapshot source + profile (so any attempt can be undone)
           while budget > 0:
             assemble evidence (L2) with current failure_reason
             call LLM (L3) continuing conversation (tier2_messages)
-            diff valid? NO  → update failure_reason, continue
-            run quality gate (L4)
-            PASSED → apply patch in-place, back up original,
-                     re-profile (refresh Tier-1 data, no new candidates),
-                     ACCEPT
-            FAILED → append diagnostic as user turn to tier2_messages, continue
+            edit valid? NO  → update failure_reason, continue
+            run quality gate (L4): apply → compile → TSan → correctness
+            FAILED → append diagnostic as user turn, continue
+                     (build errors refund the budget slot, up to --build-retries)
+            PASSED → apply patch in-place, back up original, RE-PROFILE
+                     │
+                     └─ VERIFY: what does DiscoPoP now say about the
+                        lines that changed?  (always — this is the point)
+                          no_pattern     → REVERT + send DiscoPoP's fresh
+                                           blockers for the rewrite, retry
+                          pattern_broken → REVERT + "you exposed it, but the
+                                           pragma still races/miscomputes", retry
+                          no_speedup     → REVERT + "correct but not faster,
+                                           this is granularity", retry
+                          exposed        → ACCEPT (a deeper Tier-2 pass is
+                                           still allowed to improve it)
+                          ok             → ACCEPT (pragma validated + faster)
           budget exhausted → SKIP
 ```
+
+**Passing the quality gate is not acceptance.** The gate only proves a rewrite is
+*harmless* — it compiles and its output is byte-identical. A rewrite exists to
+make DiscoPoP able to parallelize code it previously could not, so after
+re-profiling the agent asks exactly that question about the lines the patch
+touched (`_touched_span` → `_verify_rewrite`), and reverts when the answer is
+no. Without this step the agent's headline "accepted" could mean "the LLM
+rewrote the code and nothing was parallelized".
+
+Patterns are checked largest-workload-first and the first qualifying one wins:
+the question is "did anything pay off", so validating the rest only spends time
+on a question already answered.
+
+**Gate results are cached within a run** (`_validate_cached`). The verification
+step measures an exposed pattern to decide whether to *keep* a restructuring,
+and the depth+1 Tier-1 pass would otherwise measure the same pattern again to
+decide whether to *apply* it. The cache key is `(patch, current source bytes,
+skip_race_check)` — hashing the source is what makes reuse safe, since a patch
+measured before another region's pragma was applied says nothing about the file
+afterwards. On a hit the log says so explicitly rather than implying the gate
+ran.
 
 **Tier-1 validation matters because:** DiscoPoP's dependency graph uses instruction IDs internally but matches against source line IDs in the pattern detector. This mismatch means dependency edges are sometimes never found, and `do_all: applicable=True` is emitted for loops that have genuine cross-iteration RAW dependencies. TSan always catches this correctly.
 
@@ -412,10 +455,13 @@ python -m discopop_agent \
     --output-dir         <path>             default: <discopop-dir>/agent_patches
     --provider           {anthropic,openai-compat,claude-agent-sdk}  default: anthropic
     --api-base           <url>              openai-compat endpoint (env: LLM_API_BASE)
-    --edit-mode          {diff,function}    default: diff
+    --edit-mode          {diff,function,direct}  default: diff
+                                            ('direct' requires --provider claude-agent-sdk)
     --restructure-depth  <int>             default: 0
-    --require-speedup                       gate pragma patches on measured speedup
-    --min-measured-speedup <float>         default: 1.0 (with --require-speedup)
+    --require-speedup / --no-require-speedup   default: ON
+    --min-measured-speedup <float>         default: 1.1
+    --build-retries      <int>             default: 2 (apply/compile retries, free)
+    --apply-patches / --no-apply-patches       default: ON (write Tier-1 pragmas to source)
     --dry-run                               plan only, no LLM calls, no file changes
 ```
 
@@ -427,15 +473,62 @@ python -m discopop_agent \
 
 **`--min-workload`:** Regions whose profiled workload proxy (`W`) is below this threshold are never processed. This is a cheap static pre-filter, not a measured speedup. Use `--min-workload 0` to include function regions, which have `workload=0` in Data.xml (only CU nodes carry `instructionsCount`).
 
-**`--edit-mode`:** How the LLM returns a Tier-2 edit. `diff` (default) — a unified diff. `function` — the complete rewritten enclosing function, which the agent splices in by line range and self-diffs (avoids diff-apply failures; recommended for self-hosted models).
+**`--edit-mode`:** How the LLM returns a Tier-2 edit.
+
+| mode | what the model produces | how the agent gets a diff |
+|---|---|---|
+| `diff` (default) | a unified diff, as text | uses it as-is (hunk headers auto-corrected) |
+| `function` | the complete rewritten enclosing function, as text | splices it in by line range and self-diffs |
+| `direct` | nothing textual — it **edits the file itself** with its Read/Edit/Write tools | diffs the edited file against the source |
+
+`function` avoids diff-apply failures and is recommended for self-hosted models. `direct` goes one step further: the model never has to express the edit as text at all.
+
+**`--edit-mode direct` in detail** (requires `--provider claude-agent-sdk`, the only backend with file tools):
+
+- Each region gets a throwaway workspace holding a **private copy** of the source file, and the CLI session is confined to that directory (`cwd`, tools limited to `Read`/`Edit`/`Write`, no `Bash`). The real, profiled source is not reachable from there and its path is never shown to the model, so nothing can touch the project tree; the agent applies the change only after the quality gate passes, exactly as in the other modes.
+- The answer is the **file's final content**, not the model's prose. The agent diffs the copy against the on-disk source and feeds that diff to the same L4 gate (apply → compile → TSan → correctness → speedup). Since the diff is generated from real file content it always applies cleanly, like `function` mode.
+- Retries within a region are **cumulative**: the workspace keeps the model's earlier edits, so a second attempt refines its own rewrite against the gate diagnostic instead of restarting from the original. The workspace is re-seeded from disk whenever the real file changed underneath it (another region's patch was accepted, or this one was reverted).
+- If the model leaves the file unchanged (or only touches comments/whitespace), it is re-prompted for free twice; a still-unchanged file is reported to the controller as "no change" and costs one budget slot, with the same "returning the input is not a valid answer" feedback used by `function` mode.
+- Because the model can read the whole file, this is the only mode where it can consult code outside the region it is rewriting.
 
 **`--restructure-depth`:** Maximum discovery depth at which Tier-2 LLM restructuring is applied. Depth 0 = only the initial DiscoPoP candidates may be restructured; regions discovered after a re-profile (depth+1) get Tier-1 only. Bounds the restructuring chain so the source can't drift arbitrarily far from the original.
 
-**`--require-speedup` / `--min-measured-speedup`:** When set, a pragma patch is accepted only if the parallel build measurably runs at least `--min-measured-speedup`× faster than the sequential build. A restructuring whose exposed loops show no speedup is reverted and retried.
+**`--require-speedup` / `--min-measured-speedup`:** On by default. A pragma patch is accepted only if the parallel build measurably runs at least `--min-measured-speedup`× faster than the sequential build, and a restructuring whose exposed loops show no speedup is reverted and retried. Pass `--no-require-speedup` to accept correct-but-not-faster parallelizations — appropriate when the profiled workload is too small to amortise thread startup (the agent still enforces compilation, race-freedom and identical output). Note that reverting still happens for the *other* verdicts either way: a rewrite that exposes no pattern at all is never kept.
+
+**`--apply-patches`:** On by default. When a Tier-1 pattern passes validation, DiscoPoP's generated `#pragma omp` is written into the source file (the original is backed up to `<output-dir>/<name>.original` first). Tier-2 rewrites are always written — they are what gets re-profiled. Pass `--no-apply-patches` to leave the source untouched for Tier-1 and only record the result in `accepted.json`, with the patch left in `patch_generator/`. The agent's deliverable is a parallelized program, so the default is to produce one: without this, a run that proved a 5× parallelization ended with the user's file unchanged.
+
+**`--build-retries`:** How many apply/compile failures may be retried **without** consuming budget (default 2). A build error is a mechanical fix that says nothing about the model's parallelization idea, so charging a full attempt for one wastes the region's real chances; the cap keeps a model that cannot produce compiling code from looping forever.
 
 **`--dry-run`:** Prints the priority table and Tier-1 decisions but never calls the LLM or modifies any file. Useful for inspecting what the agent would do.
 
 **API key resolution order:** `--api-key` CLI argument → `LLM_API_KEY` environment variable → `.env` file in the project root.
+
+---
+
+## Benchmark
+
+`discopop_agent/benchmark/` runs the whole pipeline over eight cases — one per
+cause in the L3 taxonomy, plus a Do-All baseline the LLM should never be asked
+about — and reports what the agent actually achieved.
+
+```bash
+venv/bin/python -m discopop_agent.benchmark.run --list
+venv/bin/python -m discopop_agent.benchmark.run --cases stencil_war --verbose
+venv/bin/python -m discopop_agent.benchmark.run          # all eight
+```
+
+The verdict is **measured by the driver, not reported by the agent**: after the
+agent finishes, the driver compiles the original source sequentially and the
+agent's final source with `-fopenmp`, runs both, and compares wall time and
+stdout itself. Verdicts are `FASTER`, `parallel-not-faster`,
+`changed-not-parallel`, `no-change`, and `BROKEN` — the last meaning the output
+differs from the original, which is exactly what the correctness gate exists to
+prevent and should never appear.
+
+Each run writes `runs/<timestamp>/report.md`, `results.json`, and per case the
+agent log, the diff it produced, and its `.discopop` directory. See
+`benchmark/README.md` for the case list and the design rules that keep the
+cases fair under a byte-identical-output contract.
 
 ---
 

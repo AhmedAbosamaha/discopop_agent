@@ -890,3 +890,84 @@ DiscoPoP computes far more than the evidence package surfaced. The single most d
 - `static_only_vars` is compared against **globally**-observed dynamic vars (not region-filtered), fixing a bug where loop-induction variables (`i`/`pass`/`n`) — whose deps sit at the loop header just outside the body window — were wrongly flagged as spurious.
 
 **Verified:** renders correctly on the pristine `example4` profile (`arr[] [array element]`; `shared: arr`; `loop-local: tmp`; trip counts `line 23: 1023 × ~512`). With the enriched prompt Qwen began attempting stride/partition (`i += 2`) — a shift it never made in prior runs — though the 30B model remains the capability ceiling; the `--require-speedup` gate still correctly reverts every non-solution (no false accept).
+
+---
+
+## Fix 40 — `--edit-mode direct`: the LLM edits the file itself instead of describing an edit
+
+**Files:** `args.py`, `l3_llm.py`, `controller.py`, `viz.py`
+
+**Problem:**
+Both existing edit modes make the model *serialize* its change into the reply: a byte-exact unified diff (`diff`) or the whole function pasted back (`function`). `function` removed the `stage=apply` failure class, but the model still cannot look at anything outside the function it was handed, and every retry re-states the entire function just to change three lines. With `--provider claude-agent-sdk` the model already runs inside a real Claude Code session — it has file tools it was simply never given.
+
+**Fix — a third edit mode where the answer is a file, not text:**
+- **`--edit-mode {diff,function,direct}`** (default `diff`, unchanged). `direct` requires `--provider claude-agent-sdk` — the only backend with file tools — and `args.py` rejects the combination up front rather than failing mid-run.
+- **Per-region workspace** (`l3_llm._sync_workspace`): a throwaway directory holding a **private copy** of the source file. `_complete_claude_agent_sdk` gets `cwd=<workspace>`, `allowed_tools=["Read","Edit","Write"]`, `permission_mode="acceptEdits"`, `max_turns=24`. The real profiled source is not reachable from that directory and its path never appears in the prompt, so no tool call can touch the project tree; `Bash` stays off.
+- **The answer is the file's final content** (`_workspace_diff`): the agent reads the copy back and diffs it against the on-disk source with `difflib`. As in `function` mode the diff is built from real file content, so it always applies — the same L4 gate (apply → compile → TSan → correctness → speedup) runs unchanged. Model prose is ignored.
+- **Retries are cumulative within a region**: the workspace keeps the earlier edits, so attempt *n+1* refines its own rewrite against the gate diagnostic instead of restarting from the original — which is what the resumed per-region CLI session already assumed. It is re-seeded from disk whenever the real file changed underneath (another region's patch accepted, or this one reverted), keyed on `region_fingerprint` like the session (not the reassignable `region_id`).
+- **No-op handling**: an unchanged (or comment/whitespace-only) file gets two free re-prompts, then returns `""` — distinct from `None` ("no usable answer") — so the controller reports "produced no change" and sends the existing "returning the input is not a valid answer" feedback. That branch is now shared with `function` mode instead of duplicated.
+- Housekeeping: the evidence body common to all three prompts factored into `_evidence_sections` / `_TASK_CHECKLIST` (was copy-pasted between `_build_prompt` and `_build_function_prompt`); `_normalize_code` moved from `controller` to `l3_llm.normalize_code` (both no-op detectors now share it); `viz` renders the model's file edit as a diff panel and distinguishes "did not edit the file" from "could not extract an edit".
+
+**Also fixed — latent EOF-newline bug in self-generated diffs (affected `function` mode too):**
+Building a diff from a source file whose last line has no trailing newline makes `difflib` emit an unterminated `-` line that runs straight into the following `+` line (`-int x;+int y;`), which the apply stage rejects as malformed. `function` mode papered over it by forcing `"\n"` onto every line — which instead produces context that no longer matches the file, so BSD `patch` rejects the hunk (verified: `1 out of 1 hunks failed`). Both modes now go through one shared builder, **`l3_llm.make_diff(old_text, new_text, path)`**, which emits the standard `\ No newline at end of file` marker (accepted by both GNU and BSD patch — verified). `l4_validator.fix_hunk_headers` skips `\`-prefixed lines when recounting, since the marker is not a line of either file and counting it corrupts the very header being fixed. Triggered whenever an edit lands within ~3 lines of EOF in a file with no final newline.
+
+**Verified:** live `claude-agent-sdk` turn edits the workspace file and a resumed second turn builds on its own edit; offline test covers edit→applicable diff (`patch` exits 0), cumulative retry, comment-only→`""` after 2 free re-prompts, workspace re-seeding after an external source change, and rejection of `direct` with a non-tool provider.
+
+---
+
+## Fix 41 — Make the agent's acceptance criterion its actual purpose; add the DiscoPoP→LLM feedback channel and a benchmark
+
+**Files:** `controller.py`, `l3_llm.py`, `l4_validator.py`, `l2_evidence.py`, `args.py`, `benchmark/*`
+
+**Problem — the agent could report success without doing its job.**
+A Tier-2 rewrite exists for exactly one reason: to let DiscoPoP parallelize code it previously could not. But the check for that (`_best_exposed_speedup`) only ran when `--require-speedup` was passed **and** the exposed loops were terminal:
+
+```python
+if (args.require_speedup and reprofile_ok and (depth + 1) > args.restructure_depth):
+```
+
+`--require-speedup` was opt-in, so by **default** a rewrite was ACCEPTED as soon as it compiled and reproduced the original output — even if the re-profile found nothing at all. Passing the quality gate only proves a rewrite is *harmless*. `SUMMARY: 1 accepted` could therefore mean "the LLM rewrote the code and nothing was parallelized". A second gap: the LLM was never told what DiscoPoP made of its rewrite, so on retry it re-reasoned from the ORIGINAL code's blockers — the one piece of evidence guaranteed to be out of date.
+
+**Fix — verify against DiscoPoP every time, and say what it found:**
+- **`_verify_rewrite()`** now runs after **every** accepted-by-the-gate rewrite, not conditionally. `_touched_span()` parses the patch's `@@` headers to get the rewritten line range, and only patterns overlapping *those lines* count — a pattern elsewhere in the file proves nothing about this rewrite. Verdicts: `ok` (pragma validated, and faster when required), `exposed` (a deeper Tier-2 pass may still improve it, so validation is deferred), `no_pattern`, `pattern_broken`, `no_speedup`, `reprofile_failed`. Anything other than `ok`/`exposed` reverts via the existing snapshot restore.
+- **`_rewrite_feedback()`** turns each verdict into a different instruction, because they mean opposite things. `no_pattern` re-runs `load_prevented_deps()` against the **fresh** profile and shows DiscoPoP's Do-All blockers **for the model's own rewritten code** ("not of the original code") — this is the signal that was missing entirely. `no_speedup` explicitly tells the model the dependence is *already gone* and to stop hunting for dependences (the previous single message conflated the two and pushed models off correct transformations).
+- **`--require-speedup` now defaults ON** (`--no-require-speedup` to disable), matching the project's premise that a restructuring is worth keeping only if it ends in measured speedup.
+- A failed re-profile is now a revert too, instead of a silent commit with `reprofiled: false`.
+- The system prompt's "THE ONE CONTRACT" section was replaced by the real four-step pipeline (compile → byte-identical output → DiscoPoP finds a pattern → its pragma is race-free and faster), stating plainly that steps 1-2 are the constraint and 3-4 are the goal, and that a correct Do-All over too few iterations is a *failed* rewrite.
+
+**Speed — the gate's dominant cost was TSan, and it was almost all waste.**
+Measured on a 0.2 s benchmark kernel, the sanitized parallel build took **37 s** (185x). Nearly all of it is spent *after* the first race is found: the default is to report and keep going, unwinding a stack for every further racing access, while the agent only ever uses the first warning block. Setting `TSAN_OPTIONS=halt_on_error=1` cut it to **0.7 s with the race still reported on 3 runs out of 3**.
+Capping `OMP_NUM_THREADS=4` was tried and **rejected**: it was faster still, but the same race then went **undetected on 2 runs out of 2** on an 8-thread machine. Race detection is probabilistic, and a gate that passes because it looked less hard is worse than a slow one — so thread count is left alone and only the redundant post-report work is removed.
+Also: `_measure_speedup` stops after 3 of its 5 interleaved pairs once the running median is clear of the threshold (only borderline ratios spend the full budget), and `_verify_rewrite` stops at the first qualifying pattern instead of validating them all.
+
+**Budget — build errors no longer cost a real attempt.**
+`--build-retries` (default 2) refunds the budget slot when a rewrite fails at `apply`/`compile`/`openmp_compile`. Those are mechanical fixes that say nothing about the parallelization idea; the cap keeps a model that cannot produce compiling code terminating.
+
+**Benchmark (`discopop_agent/benchmark/`).**
+Eight self-contained cases, one per cause in the taxonomy (plus a Do-All baseline that the LLM should never be asked about), and a driver that runs profile → agent → **independent re-measurement**: it compiles the original sequentially and the agent's final source with `-fopenmp` and compares wall time and stdout **itself**, so the report measures the agent rather than echoing its self-assessment. Verdicts include `BROKEN` (output differs — a gate escape, which should never appear). Two design rules keep the cases fair under a byte-identical-output contract: all cross-element accumulation is integer (FP reduction is not associative, so a *correct* parallelization would fail the correctness gate), and per-element arithmetic is schedule-independent. Cases are sized from measurement, not guesswork: the arithmetic-heavy/memory-light shape keeps DiscoPoP's profiled run near 15 s while the timed run stays long enough (~0.2 s) to resolve a 1.1x ratio. The driver passes `--min-workload 500000` because each case's small checksum loop is otherwise proposed as a candidate in its own right.
+
+**Two further defects the benchmark exposed on its first run (both agent bugs, not case bugs):**
+
+1. **A validated Tier-1 parallelization never reached the source file.** Tier-2 rewrites were written back, but an accepted Tier-1 pattern was only recorded in `accepted.json` with its patch left in `patch_generator/`. The benchmark's independent re-measurement showed it plainly: the agent reported `ACCEPTED (measured 5.03x)` while the final source still had **zero** `#pragma omp` and measured 0.46x. The agent's deliverable is a parallelized program, so accepted patches of either tier now land in the file via `_apply_to_source()` (shared with the Tier-2 path, same backup). `--no-apply-patches` restores the old record-only behaviour. Re-measured after the fix: **5.29x end-to-end, output identical**.
+
+2. **The macOS OMP-barrier false-positive guard ignored globals.** `_is_omp_barrier_false_positive()` recognised only `Location is heap block ... allocated by main thread` and `Location is stack of main thread`. TSan reports `Location is global 'main::out'` for `static` arrays, so on a *correctly* parallelized Do-All over a static array the guard returned False, Tier-1 "failed", and the agent spent LLM budget restructuring code that was already right. The location clause only establishes the main-thread-vs-worker shape — the reasoning (one access inside `.omp_outlined`, the other in sequential main-thread code) is storage-class agnostic — so globals were added. Verified: the real report is now classified as a false positive, and a synthetic worker-vs-worker race over a global is still rejected.
+
+**Verified end to end:** `doall_clean` — Tier-1 detected, OMP-barrier false positive correctly identified, validated at 4.81x, pragma applied to the source, driver's independent verdict `FASTER 5.29x` with identical output, whole case in **28 s** (the same case took over 10 minutes before the TSan fix).
+
+---
+
+## Fix 42 — Stop measuring the same pragma twice
+
+**File:** `controller.py`
+
+**Problem:**
+Fix 41's verification step measures an exposed pattern to decide whether to KEEP a restructuring. One queue position later the same pattern arrives as an ordinary depth+1 candidate and the Tier-1 branch measures it **again** to decide whether to APPLY it — a full duplicate gate run for the same verdict: two compiles, a ThreadSanitizer build and run, a correctness run, and up to five interleaved timing pairs. Visible in the `fine_grained` log as the same `3.03×` printed twice, once by verification and once by Tier-1.
+
+**Fix:**
+- **`_validate_cached(cache, diff, args, …)`** — runs the gate or returns the answer already computed for that exact question, and is now the single entry point for both call sites.
+- **`_gate_key()`** keys on `(patch bytes, current source bytes, skip_race_check)`. Hashing the source is what makes reuse safe: a patch measured before another region's pragma was applied says nothing about the file afterwards, and that case genuinely occurs — a rewrite that exposes two loops has the first loop's pragma applied before the second is measured, so the second correctly misses the cache and re-validates.
+- The macOS OMP-barrier false-positive re-check moved inside the helper, so both callers get it identically instead of implementing it twice (it was duplicated between the Tier-1 branch and `_verify_rewrite`), and the re-checked verdict is what gets cached — a hit never has to redo it.
+- The cache is a local in `run()`, not a module global, so nothing leaks between runs.
+- Tier-1 now prints `Reusing the verification result for this patch (accepted, 3.03×) — gate not re-run` on a hit, so the log never implies a check ran when it didn't.
+
+**Verified:** unit test counts real `validate()` calls through a stub — repeat asks reuse the result, a changed source file invalidates the hit, `skip_race_check` is keyed separately, and the barrier re-check is cached as one unit.

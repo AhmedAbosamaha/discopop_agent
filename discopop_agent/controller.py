@@ -52,6 +52,7 @@ Why Tier-1 validation matters:
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import shutil
@@ -59,15 +60,17 @@ import subprocess
 import sys
 import tempfile
 from collections import defaultdict
+from dataclasses import dataclass
 from pathlib import Path
 from typing import List
 
 from . import viz
 from .args import AgentArguments
 from .l1_planner import build_candidates, region_fingerprint
-from .l2_evidence import assemble
-from .l3_llm import LLMConnectionError, call_llm
+from .l2_evidence import assemble, load_prevented_deps
+from .l3_llm import LLMConnectionError, call_llm, fmt_blockers, make_diff, normalize_code
 from .l4_validator import capture_reference, fix_hunk_headers, validate
+from .types import ValidationResult
 
 _LLVM_LIBCXX = "/usr/local/Cellar/llvm@19/19.1.7/lib/c++"
 _REGION_LABEL = {"loop": "loop", "function": "function", "cu": "block"}
@@ -90,9 +93,14 @@ def _is_omp_barrier_false_positive(diagnostic: str) -> bool:
     main thread running sequential code after the barrier — TSan on macOS
     does not model the implicit barrier at the end of #pragma omp parallel for.
 
-    Covers two location variants:
+    Covers three location variants:
       - "Location is heap block allocated by main thread"  (vector data on heap)
       - "Location is stack of main thread"                 (vector object / local var)
+      - "Location is global '<name>'"                      (static / file-scope array)
+    The location clause only establishes the main-thread-vs-worker shape; the
+    reasoning is about WHERE THE ACCESSES RUN, so it holds for any storage
+    class.  Omitting globals made the agent escalate correctly-parallel loops
+    over `static` arrays to the LLM — caught by the benchmark's Do-All baseline.
     In both cases the main thread's access must be sequential (no .omp_outlined
     in its call stack), confirming it runs outside any parallel region.
     """
@@ -130,7 +138,8 @@ def _is_omp_barrier_false_positive(diagnostic: str) -> bool:
         and "allocated by main thread" in diagnostic
     )
     is_stack = "Location is stack of main thread" in diagnostic
-    if not (is_heap or is_stack):
+    is_global = "Location is global" in diagnostic
+    if not (is_heap or is_stack or is_global):
         return False
     if ".omp_outlined" not in diagnostic:
         return False
@@ -233,16 +242,6 @@ def _reprofil(source_file: str, discopop_dir: Path, binary_args: list | None = N
     return True
 
 
-def _normalize_code(text: str) -> str:
-    """Strip // and /* */ comments and all whitespace, for change detection.
-    A rewrite that differs only in comments or formatting is semantically the
-    original code — the LLM must not be able to pass the gate by returning the
-    input function with a comment added."""
-    text = re.sub(r"/\*.*?\*/", "", text, flags=re.DOTALL)
-    text = re.sub(r"//[^\n]*", "", text)
-    return re.sub(r"\s+", "", text)
-
-
 def _function_edit_to_diff(
     source_file: str, start_line: int, end_line: int, new_code: str
 ) -> str | None:
@@ -252,23 +251,46 @@ def _function_edit_to_diff(
     The diff is generated from the actual on-disk content, so it always applies
     cleanly — eliminating the diff-apply failure class.  Returns None if the span
     is invalid or the edit is a no-op (ignoring comments and whitespace)."""
-    import difflib
-
-    old_lines = Path(source_file).read_text().splitlines()
+    old_text = Path(source_file).read_text()
+    old_lines = old_text.splitlines(keepends=True)
     if start_line < 1 or end_line > len(old_lines) or start_line > end_line:
         return None
-    new_block = new_code.splitlines()
+    new_block = [ln + "\n" for ln in new_code.splitlines()]
     new_lines = old_lines[: start_line - 1] + new_block + old_lines[end_line:]
-    old_span = "\n".join(old_lines[start_line - 1: end_line])
-    if _normalize_code(new_code) == _normalize_code(old_span):
+    old_span = "".join(old_lines[start_line - 1: end_line])
+    if normalize_code(new_code) == normalize_code(old_span):
         return None
-    diff = difflib.unified_diff(
-        [ln + "\n" for ln in old_lines],
-        [ln + "\n" for ln in new_lines],
-        fromfile=source_file,
-        tofile=source_file,
+    return make_diff(old_text, "".join(new_lines), source_file)
+
+
+def _apply_to_source(diff: str, source_file: str, output_dir: Path, label: str) -> bool:
+    """Write a validated patch into the real source file, backing the original
+    up first.  Returns True if the file now carries the change.
+
+    Tier-2 rewrites were always written back, but a validated Tier-1 pragma used
+    to be recorded and then left on disk in patch_generator/ — so a run that
+    proved a 5x parallelization ended with the user's source untouched and
+    nothing to show for it.  The agent's output is a parallelized program, so
+    accepted patches of either tier land in the file.
+    """
+    src = Path(source_file).resolve()
+    backup = output_dir / f"{src.name}.original"
+    if not backup.exists():
+        shutil.copy2(src, backup)
+        print(f"│  [{label}] Original backed up → {backup.name}")
+    patch_path = output_dir / f".apply_{label.lower()}.patch"
+    patch_path.write_text(fix_hunk_headers(diff) + "\n")
+    r = subprocess.run(
+        ["patch", "--quiet", "--no-backup-if-mismatch", str(src), str(patch_path)],
+        capture_output=True, text=True,
     )
-    return "".join(diff)
+    patch_path.unlink(missing_ok=True)
+    if r.returncode != 0:
+        print(f"│  [{label}] WARNING: could not apply the validated patch to "
+              f"{src.name}: {(r.stdout + r.stderr).strip()[:160]}")
+        return False
+    print(f"│  [{label}] Applied to {src.name}")
+    return True
 
 
 def _read_tier1_patch(patch_dir: Path) -> str | None:
@@ -344,13 +366,15 @@ def _print_banner(args: AgentArguments) -> None:
     print(f"  Source         : {args.source_file}")
     print(f"  DiscoPoP dir   : {args.discopop_dir}")
     print(f"  Model          : {args.model}")
-    print(f"  Budget         : {args.budget} LLM retries/region")
+    print(f"  Budget         : {args.budget} LLM retries/region "
+          f"(+{args.build_retries} free build fixes)")
     print(f"  λ penalty      : {args.lambda_penalty}")
     print(f"  Min workload   : {args.min_workload}")
     print(f"  Restruct. depth: {args.restructure_depth} "
           f"(Tier-2 allowed at depth 0–{args.restructure_depth})")
-    if args.require_speedup:
-        print(f"  Speedup gate   : require ≥ {args.min_measured_speedup}× measured")
+    print(f"  Speedup gate   : "
+          + (f"require ≥ {args.min_measured_speedup}× measured"
+             if args.require_speedup else "OFF (--no-require-speedup)"))
     print(f"  Dry run        : {args.dry_run}")
     if args.provider == "openai-compat":
         llm_mode = f"{args.model} @ {args.api_base} (openai-compat)"
@@ -361,56 +385,262 @@ def _print_banner(args: AgentArguments) -> None:
     print(f"{'='*60}\n")
 
 
-def _best_exposed_speedup(
-    discovered: list,
+_HUNK_NEW_RE = re.compile(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@")
+
+
+def _touched_span(diff: str) -> "tuple[int, int] | None":
+    """Line range the patch rewrote, in NEW-file coordinates, from its @@ headers.
+
+    Used to ask the post-restructuring question precisely: did DiscoPoP find a
+    pattern *in the code the model actually changed*?  A pattern somewhere else
+    in the file proves nothing about this rewrite.  Returns None when no hunk
+    header parses (then the caller falls back to file scope).
+    """
+    lo = hi = None
+    for line in diff.splitlines():
+        m = _HUNK_NEW_RE.match(line)
+        if not m:
+            continue
+        start = int(m.group(1))
+        count = int(m.group(2)) if m.group(2) is not None else 1
+        end = start + max(count, 1) - 1
+        lo = start if lo is None else min(lo, start)
+        hi = end if hi is None else max(hi, end)
+    return (lo, hi) if lo is not None and hi is not None else None
+
+
+def _gate_key(diff: str, source_file: str, skip_race_check: bool) -> str:
+    """Identity of one gate run: this patch, against this exact source text.
+
+    The source hash is what makes reuse safe — a patch validated before another
+    region's pragma was applied says nothing about the file afterwards, and that
+    case really happens (a rewrite exposes two loops; applying the first one's
+    pragma changes the file the second is measured against).
+    """
+    h = hashlib.sha1()
+    h.update(Path(source_file).read_bytes())
+    h.update(b"\0")
+    h.update(diff.encode())
+    h.update(b"\0")
+    h.update(b"1" if skip_race_check else b"0")
+    return h.hexdigest()
+
+
+def _validate_cached(
+    cache: dict,
+    diff: str,
+    args: AgentArguments,
+    reference_output: "str | None",
+    binary_args: "list | None",
+    reference_time: "float | None",
+    skip_race_check: bool = False,
+) -> "tuple[ValidationResult, bool, bool]":
+    """Run the gate on `diff`, or return the answer already computed for it.
+
+    Returns (result, served_from_cache, barrier_false_positive_suspected).
+
+    Two call sites ask the identical question about the identical patch: the
+    verification step measures a pattern to decide whether to KEEP a rewrite,
+    and the Tier-1 pass measures it again to decide whether to APPLY it — a full
+    duplicate gate run (two compiles, a sanitizer run, a correctness run, and up
+    to five timing pairs) for the same verdict.  Whichever asks first pays.
+
+    The macOS OMP-barrier false-positive re-check lives here too, so both
+    callers get it identically instead of implementing it twice.
+    """
+    key = _gate_key(diff, args.source_file, skip_race_check)
+    hit = cache.get(key)
+    if hit is not None:
+        return hit, True, False
+
+    def _run(skip: bool) -> ValidationResult:
+        return validate(
+            diff, args.source_file,
+            reference_output=reference_output,
+            binary_args=binary_args,
+            require_speedup=args.require_speedup,
+            min_speedup=args.min_measured_speedup,
+            skip_race_check=skip,
+            reference_time=reference_time,
+        )
+
+    res = _run(skip_race_check)
+    barrier_fp = (
+        not res.passed and res.stage == "tsan"
+        and _is_omp_barrier_false_positive(res.diagnostic)
+    )
+    if barrier_fp:
+        # Suspected macOS barrier artefact: re-verify against the correctness
+        # and performance gates rather than accepting on the heuristic alone.
+        res = _run(True)
+    cache[key] = res
+    return res, False, barrier_fp
+
+
+@dataclass
+class RewriteOutcome:
+    """Did the restructuring achieve what it exists to achieve?
+
+    status:
+      "ok"             — DiscoPoP found a pattern in the rewritten code and its
+                         pragma passed the gate (and was fast enough, if required)
+      "exposed"        — a pattern was found; validating it is deferred to the
+                         next depth, which is allowed to restructure it further
+      "no_pattern"     — DiscoPoP re-profiled the rewrite and still found nothing
+      "pattern_broken" — a pattern was found but its pragma fails the gate
+      "no_speedup"     — the pragma is correct but not faster
+    """
+    status: str
+    speedup: "float | None" = None
+    pattern_label: str = ""
+    diagnostic: str = ""
+
+
+def _verify_rewrite(
+    fresh: list,
+    touched: "tuple[int, int] | None",
     dp_dir: Path,
     args: AgentArguments,
     reference_output: "str | None",
     binary_args: "list | None",
-    reference_time: "float | None" = None,
-) -> float | None:
-    """Return the best measured speedup among the loops a restructuring exposed,
-    counting only those whose DiscoPoP `#pragma omp` is correct AND meets the
-    threshold; None if no exposed loop yields a qualifying speedup.
+    reference_time: "float | None",
+    validate_patterns: bool,
+    gate_cache: dict,
+) -> RewriteOutcome:
+    """Decide whether an accepted-by-the-gate rewrite actually did its job.
 
-    Used to decide whether an LLM restructuring actually paid off: the
-    restructuring is only worth keeping if at least one loop it exposed becomes a
-    correct, faster parallel loop.  Each exposed loop's generated pragma patch is
-    run through the full gate (compile + correctness + speedup); a suspected
-    macOS OMP-barrier false positive is re-verified with the race check skipped.
+    A rewrite exists for exactly one reason: to let DiscoPoP parallelize code it
+    previously could not.  Compiling and preserving output is necessary but says
+    nothing about that — so after re-profiling we check what DiscoPoP now
+    reports for the rewritten lines, and (when this is the last chance to act on
+    it) run its generated pragma through the full gate.
+
+    Patterns are tried largest-workload-first and the FIRST qualifying one wins:
+    the decision is "did anything pay off", so validating the rest only burns
+    time on a question already answered.
     """
-    best: float | None = None
-    for _depth, cand in discovered:
-        patt = cand.pattern
-        if not (cand.tier == 1 and patt and patt.get("applicable_pattern")):
-            continue
-        pid = patt.get("pattern_id", "?")
+    exposed = [
+        c for c in fresh
+        if c.tier == 1 and c.pattern and c.pattern.get("applicable_pattern")
+        and (touched is None
+             or not (c.region.end_line < touched[0] or c.region.start_line > touched[1]))
+    ]
+    if not exposed:
+        return RewriteOutcome("no_pattern")
+
+    exposed.sort(key=lambda c: c.workload_estimate, reverse=True)
+    label = ", ".join(
+        f"{c.pattern_type or 'pattern'} @ lines {c.region.start_line}–{c.region.end_line}"
+        for c in exposed[:3]
+    )
+    if not validate_patterns:
+        # A deeper Tier-2 pass may still restructure this loop; requiring its
+        # first-cut pragma to be perfect now would revert genuine progress.
+        return RewriteOutcome("exposed", pattern_label=label)
+
+    worst = RewriteOutcome("pattern_broken", pattern_label=label)
+    for cand in exposed:
+        pid = cand.pattern.get("pattern_id", "?") if cand.pattern else "?"
         patch = _read_tier1_patch(dp_dir / "patch_generator" / str(pid))
         if not patch:
             continue
-        res = validate(
-            patch, args.source_file,
-            reference_output=reference_output,
-            binary_args=binary_args,
-            require_speedup=True,
-            min_speedup=args.min_measured_speedup,
-            reference_time=reference_time,
+        res, _cached, _fp = _validate_cached(
+            gate_cache, patch, args, reference_output, binary_args, reference_time
         )
-        if (not res.passed and res.stage == "tsan"
-                and _is_omp_barrier_false_positive(res.diagnostic)):
-            res = validate(
-                patch, args.source_file,
-                reference_output=reference_output,
-                binary_args=binary_args,
-                require_speedup=True,
-                min_speedup=args.min_measured_speedup,
-                skip_race_check=True,
-                reference_time=reference_time,
+        if res.passed:
+            return RewriteOutcome("ok", res.measured_speedup, label)
+        # "no speedup" is closer to success than "still racing": prefer to
+        # report it, so the retry prompt talks about granularity, not correctness.
+        if res.stage == "performance":
+            worst = RewriteOutcome("no_speedup", res.measured_speedup, label, res.diagnostic)
+        elif worst.status != "no_speedup":
+            worst = RewriteOutcome("pattern_broken", None, label, res.diagnostic)
+    return worst
+
+
+_OUTCOME_LABEL = {
+    "no_pattern": "DiscoPoP still finds no parallelism in the rewritten lines",
+    "pattern_broken": "DiscoPoP found a pattern, but its pragma fails validation",
+    "no_speedup": "DiscoPoP parallelized it, but it is not faster",
+    "reprofile_failed": "the rewrite broke DiscoPoP's profiling run",
+}
+
+
+def _rewrite_feedback(
+    outcome: RewriteOutcome, dp_dir: Path, file_id: int,
+    touched: "tuple[int, int] | None",
+) -> str:
+    """Turn a failed post-restructuring verdict into the message the LLM sees.
+
+    This is the only place DiscoPoP's own opinion of the model's rewrite reaches
+    the model.  Each verdict gets a different instruction, because they mean
+    opposite things: "no pattern" means the dependence is still there, while
+    "no speedup" means it is gone and only granularity is wrong — telling the
+    model to keep hunting for dependences in that case sends it backwards.
+    """
+    if outcome.status == "no_pattern":
+        msg = (
+            "DiscoPoP re-profiled your rewrite. Your code compiles and its output is "
+            "correct, but DiscoPoP STILL finds no parallel pattern in the lines you "
+            "changed — so the rewrite achieved nothing and has been reverted.\n\n"
+            "The blocking dependence is therefore still present. Do not re-submit a "
+            "variation of the same structure: re-read the blockers below (they are "
+            "DiscoPoP's own analysis OF YOUR REWRITE, not of the original code), name "
+            "which cause (1-6) each one is, and apply the fix for that cause."
+        )
+        blockers = fmt_blockers(
+            load_prevented_deps(dp_dir, file_id, *(touched or (1, 10**9)))[:12]
+        )
+        if blockers:
+            msg += (
+                "\n\nWhat DiscoPoP reports about YOUR REWRITTEN CODE:\n" + blockers
             )
-        if res.passed and res.measured_speedup is not None:
-            if best is None or res.measured_speedup > best:
-                best = res.measured_speedup
-    return best
+        else:
+            msg += (
+                "\n\nDiscoPoP reported no specific Do-All blocker for those lines, "
+                "which usually means the loop is not in a form it analyses at all: "
+                "check that the loop you intended to be parallel has a computable "
+                "trip count, a simple `i < bound` condition, and no break/continue/"
+                "return in its body."
+            )
+        return msg
+
+    if outcome.status == "pattern_broken":
+        return (
+            f"Progress: after your rewrite DiscoPoP DID detect parallelism "
+            f"({outcome.pattern_label}). But when its generated `#pragma omp` is "
+            f"applied, the result fails validation — so the rewrite has been "
+            f"reverted.\n\n"
+            f"Keep the structure that made the loop detectable and fix only what "
+            f"the diagnostic below reports. A pattern that is detected but wrong "
+            f"means some iterations still interfere: find the remaining shared "
+            f"state and make each iteration's work independent of the others.\n\n"
+            f"Diagnostic:\n{outcome.diagnostic[:1200]}"
+        )
+
+    if outcome.status == "no_speedup":
+        got = f"{outcome.speedup:.2f}x" if outcome.speedup else "no measurable gain"
+        return (
+            f"Your rewrite worked in every respect except the one that matters: "
+            f"DiscoPoP parallelized it ({outcome.pattern_label}) and the parallel "
+            f"build is CORRECT, but it is not faster ({got}). It has been reverted.\n\n"
+            f"The dependence is already gone — this is purely a granularity problem "
+            f"(cause 6), so do NOT go looking for dependences again. Make each "
+            f"parallel iteration do MORE work: parallelize an outer loop instead of "
+            f"an inner one, fuse adjacent tiny parallel loops into one, hoist "
+            f"loop-invariant work out, or block/tile the iteration space so threads "
+            f"get large contiguous chunks.\n\n"
+            f"Diagnostic:\n{outcome.diagnostic[:800]}"
+        )
+
+    return (
+        "Your rewrite compiled and produced correct output, but DiscoPoP could not "
+        "instrument or profile it, so it cannot be parallelized at all. It has been "
+        "reverted. Avoid constructs that change the program's structure in ways the "
+        "profiler cannot follow (unusual templates, macros, computed control flow); "
+        "prefer a plain loop rewrite.\n\n"
+        f"{outcome.diagnostic}"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -437,6 +667,13 @@ def run(args: AgentArguments) -> None:
         rt = f", {reference_time*1e3:.1f} ms baseline" if reference_time else ""
         print(f"  [ok] Captured reference output ({len(reference_output)} bytes{rt}) "
               f"for correctness/performance gates.\n")
+
+    # Gate results for this run, keyed by (patch, source text, skip_race_check).
+    # A pattern measured by the post-rewrite verification is normally measured
+    # again by the Tier-1 pass that applies it, one queue position later; this
+    # lets the second ask reuse the first answer.  Scoped to the run rather than
+    # module-global so nothing leaks between runs.
+    gate_cache: dict = {}
 
     accepted: List[dict] = []
     # Each entry is (region_id, discovery_depth).  A region ID can appear more
@@ -507,36 +744,25 @@ def run(args: AgentArguments) -> None:
                 args.source_file, region.start_line, region.end_line
             )
             if tier1_diff and not args.dry_run:
-                print(f"│  [Tier-1] Running validation on generated patch...")
                 if io_only:
                     print(f"│  [Tier-1] I/O-only region — skipping the race check "
                           f"only (apply/compile/correctness/performance still run)")
-                t1_result = validate(
-                    tier1_diff, args.source_file,
-                    reference_output=reference_output,
-                    binary_args=binary_args,
-                    require_speedup=args.require_speedup,
-                    min_speedup=args.min_measured_speedup,
-                    skip_race_check=io_only,
-                    reference_time=reference_time,
+                t1_result, from_cache, barrier_fp = _validate_cached(
+                    gate_cache, tier1_diff, args, reference_output, binary_args,
+                    reference_time, skip_race_check=io_only,
                 )
-
-                # Suspected macOS OMP-barrier false positive: re-verify against
-                # the correctness/performance gates (skipping the race check)
-                # rather than accepting on the heuristic alone.
-                if (not t1_result.passed and t1_result.stage == "tsan"
-                        and _is_omp_barrier_false_positive(t1_result.diagnostic)):
-                    print(f"│  [Tier-1] TSan OMP-barrier false positive suspected "
-                          f"— verifying correctness/performance...")
-                    t1_result = validate(
-                        tier1_diff, args.source_file,
-                        reference_output=reference_output,
-                        binary_args=binary_args,
-                        require_speedup=args.require_speedup,
-                        min_speedup=args.min_measured_speedup,
-                        skip_race_check=True,
-                        reference_time=reference_time,
-                    )
+                if from_cache:
+                    # Already measured when the restructuring that exposed this
+                    # loop was verified, against this same source text.
+                    spd = (f", {t1_result.measured_speedup:.2f}×"
+                           if t1_result.measured_speedup else "")
+                    print(f"│  [Tier-1] Reusing the verification result for this "
+                          f"patch ({t1_result.stage}{spd}) — gate not re-run")
+                else:
+                    print(f"│  [Tier-1] Running validation on generated patch...")
+                    if barrier_fp:
+                        print(f"│  [Tier-1] TSan OMP-barrier false positive suspected "
+                              f"— verified correctness/performance instead")
 
                 viz.gate_result(t1_result.passed, t1_result.stage,
                                 t1_result.diagnostic, t1_result.measured_speedup,
@@ -632,6 +858,11 @@ def run(args: AgentArguments) -> None:
             if tier1_valid:
                 spd = f"  (measured {t1_speedup:.2f}×)" if t1_speedup else ""
                 print(f"│  [Tier-1] Validation PASSED{spd}")
+                applied = False
+                if args.apply_patches and tier1_diff and not args.dry_run:
+                    applied = _apply_to_source(
+                        tier1_diff, args.source_file, output_dir, label="Tier-1"
+                    )
                 print(f"└─ ACCEPTED\n")
                 record = {
                     "region_id": rid,
@@ -642,6 +873,7 @@ def run(args: AgentArguments) -> None:
                     "patch_dir": str(patch_dir),
                     "discovery_depth": depth,
                     "measured_speedup": t1_speedup,
+                    "applied_to_source": applied,
                 }
                 accepted.append(record)
                 _write_record(output_dir, record)
@@ -668,16 +900,22 @@ def run(args: AgentArguments) -> None:
         budget = args.budget
         tier2_messages: list | None = None
 
-        # If a non-paying restructuring may need reverting, snapshot the profile
-        # ONCE up front so each revert restores it by file-copy instead of a full
-        # re-profile.  The pre-patch source is identical across retries (revert
-        # restores it), so one snapshot serves every attempt for this candidate.
-        revert_possible = args.require_speedup and (depth + 1) > args.restructure_depth
+        # Any restructuring may need reverting — it is kept only if DiscoPoP can
+        # parallelize it afterwards — so snapshot the profile ONCE up front and
+        # restore by file-copy instead of a full re-profile.  The pre-patch
+        # source is identical across retries (revert restores it), so one
+        # snapshot serves every attempt for this candidate.
         dp_snapshot: Path | None = None
         pre_patch_src: str | None = None
-        if revert_possible:
-            pre_patch_src = Path(args.source_file).resolve().read_text()
-            dp_snapshot = _snapshot_profile(dp_dir, output_dir)
+        pre_patch_src = Path(args.source_file).resolve().read_text()
+        dp_snapshot = _snapshot_profile(dp_dir, output_dir)
+
+        # Build errors (bad syntax, non-canonical loop) are mechanical fixes that
+        # say nothing about the model's parallelization idea; spending a whole
+        # budget slot on one wastes the region's real attempts.  They get their
+        # own small allowance instead, capped so a model that cannot produce
+        # compiling code still terminates.
+        build_retries = args.build_retries
 
         while budget > 0:
             budget -= 1
@@ -703,7 +941,10 @@ def run(args: AgentArguments) -> None:
                 sys.exit(1)
 
             # In function mode the LLM returns the rewritten enclosing function;
-            # splice it in and turn it into a guaranteed-apply diff.
+            # splice it in and turn it into a guaranteed-apply diff.  In direct
+            # mode it edited a copy of the file itself and call_llm already
+            # returned that copy's diff ("" if it changed nothing).
+            unchanged = False
             if diff is not None and args.edit_mode == "function":
                 diff = _function_edit_to_diff(
                     args.source_file,
@@ -711,28 +952,38 @@ def run(args: AgentArguments) -> None:
                     evidence.enclosing_function_end,
                     diff,
                 )
-                if diff is None:
-                    print(f"│  [Tier-2] Rewritten function produced no change — retrying")
-                    # Without feedback the next call would replay the same
-                    # conversation and get the same null answer — tell the model
-                    # explicitly that returning the input is not a valid move.
-                    if tier2_messages is not None:
-                        tier2_messages = tier2_messages + [{
-                            "role": "user",
-                            "content": (
-                                "You returned the function UNCHANGED (comment or "
-                                "formatting edits do not count). That is not a valid "
-                                "answer: the task is to restructure the code so the "
-                                "blocking dependence is gone. If your previous "
-                                "transformation attempt failed validation, do not fall "
-                                "back to the original — apply the OTHER applicable fix "
-                                "for the diagnosed cause and adjust every loop bound "
-                                "and sweep count to match the new schedule."
-                            ),
-                        }]
+                unchanged = diff is None
+            elif diff == "":
+                diff, unchanged = None, True
+
+            if unchanged:
+                what = ("You left the file UNCHANGED"
+                        if args.edit_mode == "direct"
+                        else "You returned the function UNCHANGED")
+                print(f"│  [Tier-2] LLM produced no change"
+                      f"{' — retrying' if budget > 0 else ''}")
+                # Without feedback the next call would replay the same
+                # conversation and get the same null answer — tell the model
+                # explicitly that returning the input is not a valid move.
+                if tier2_messages is not None:
+                    tier2_messages = tier2_messages + [{
+                        "role": "user",
+                        "content": (
+                            f"{what} (comment or "
+                            "formatting edits do not count). That is not a valid "
+                            "answer: the task is to restructure the code so the "
+                            "blocking dependence is gone. If your previous "
+                            "transformation attempt failed validation, do not fall "
+                            "back to the original — apply the OTHER applicable fix "
+                            "for the diagnosed cause and adjust every loop bound "
+                            "and sweep count to match the new schedule."
+                        ),
+                    }]
 
             if diff is None:
-                if budget > 0:
+                if unchanged:
+                    pass  # already reported above
+                elif budget > 0:
                     print(f"│  [Tier-2] LLM returned invalid output — retrying")
                 else:
                     print(f"│  [Tier-2] LLM returned invalid output")
@@ -759,10 +1010,6 @@ def run(args: AgentArguments) -> None:
                 patch_file.write_text(clean_diff)
 
                 src_abs = Path(args.source_file).resolve()
-                backup = output_dir / f"{src_abs.name}.original"
-                if not backup.exists():
-                    shutil.copy2(src_abs, backup)
-                    print(f"│  [Tier-2] Original backed up → {backup.name}")
 
                 # Snapshot the CONTENT fingerprint of each still-queued candidate
                 # BEFORE the patch touches the file.  A survivor (a region we
@@ -780,18 +1027,7 @@ def run(args: AgentArguments) -> None:
                     for d, c in candidates[i:]
                 ]
 
-                patch_result = subprocess.run(
-                    # --no-backup-if-mismatch: don't litter the source tree with
-                    # <file>.orig when the patch applies with fuzz/offset (we keep
-                    # our own backup at output_dir/<name>.original).
-                    ["patch", "--quiet", "--no-backup-if-mismatch",
-                     str(src_abs), str(patch_file)],
-                    capture_output=True, text=True,
-                )
-                if patch_result.returncode != 0:
-                    print(f"│  [Tier-2] WARNING: patch apply failed: "
-                          f"{(patch_result.stdout + patch_result.stderr).strip()[:200]}")
-                else:
+                if _apply_to_source(clean_diff, args.source_file, output_dir, "Tier-2"):
                     viz.panel(f"APPLIED PATCH -> {src_abs.name}", clean_diff,
                               color=viz.GREEN, colorize=viz._color_diff_line, max_lines=60)
 
@@ -813,6 +1049,7 @@ def run(args: AgentArguments) -> None:
                 # all_seen_prints are only mutated once we decide to COMMIT.
                 rebuilt: list = []
                 discovered: list = []   # (depth+1, candidate, fingerprint)
+                fresh_all: list = []
                 if reprofile_ok:
                     fresh_all = build_candidates(
                         dp_dir, args.source_file, args.lambda_penalty, args.min_workload
@@ -839,48 +1076,53 @@ def run(args: AgentArguments) -> None:
                         if fp not in all_seen_prints:
                             discovered.append((depth + 1, nc, fp))
 
-                # Speedup acceptance: when the exposed loops are TERMINAL (they
-                # won't get their own Tier-2 pass, i.e. depth+1 > restructure_depth),
-                # the restructuring is only worth keeping if at least one of them
-                # parallelizes correctly AND faster.  Otherwise revert + retry.
-                exposed_speedup = None
-                if (args.require_speedup and reprofile_ok
-                        and (depth + 1) > args.restructure_depth):
-                    print(f"│  [Tier-2] Checking whether the restructuring exposed "
-                          f"a faster parallel loop...")
-                    exposed_speedup = _best_exposed_speedup(
-                        [(d, nc) for d, nc, _ in discovered],
-                        dp_dir, args, reference_output, binary_args,
-                        reference_time=reference_time,
+                # ── THE POINT OF THE WHOLE EXERCISE ───────────────────────────
+                # Compiling and preserving output only makes the rewrite HARMLESS.
+                # It is WORTH keeping only if DiscoPoP can now parallelize the
+                # lines that changed.  Ask it, every time — never assume.
+                if not reprofile_ok:
+                    outcome = RewriteOutcome(
+                        "reprofile_failed",
+                        diagnostic="DiscoPoP could not instrument, run, or analyse the "
+                                   "rewritten program (see the log above).",
                     )
-                    if exposed_speedup is None:
-                        # REVERT — the restructuring produced no usable speedup.
-                        # Restore source + the pre-patch profile from the snapshot
-                        # (file copy) instead of re-profiling — far cheaper.
-                        if pre_patch_src is not None:
-                            src_abs.write_text(pre_patch_src)
-                        if dp_snapshot is not None:
-                            _restore_profile(dp_snapshot, dp_dir, output_dir)
-                        patch_file.unlink(missing_ok=True)
-                        print(f"│  [Tier-2] No exposed loop ran faster — reverting "
-                              f"restructuring (snapshot restore) and retrying")
-                        msg = (
-                            "Your restructuring compiled and preserved correctness, but it "
-                            "did NOT speed the program up: none of the loops it exposed ran "
-                            "faster than sequential when parallelized (thread overhead "
-                            "outweighed the benefit). The dependence is already gone — this "
-                            "is a granularity problem (cause 6). Expose coarser-grained, "
-                            "higher-payoff parallelism: more work per parallel iteration, "
-                            "fewer/larger parallel loops, or parallelism at an outer level."
-                        )
-                        failure_reason = msg
-                        if tier2_messages is not None:
-                            tier2_messages = tier2_messages + [{
-                                "role": "user",
-                                "content": f"{msg}\n\nPlease try a different restructuring approach.",
-                            }]
-                        print(f"└─ retry (budget remaining: {budget})\n")
-                        continue  # budget already decremented at loop top
+                else:
+                    # Validating the exposed pragma is deferred only when a deeper
+                    # Tier-2 pass is still allowed to work on it.
+                    terminal = (depth + 1) > args.restructure_depth
+                    print(f"│  [Tier-2] Asking DiscoPoP what it now finds in the "
+                          f"rewritten lines"
+                          f"{' (and validating its pragma)' if terminal else ''}...")
+                    outcome = _verify_rewrite(
+                        fresh_all, _touched_span(clean_diff), dp_dir, args,
+                        reference_output, binary_args, reference_time,
+                        validate_patterns=terminal, gate_cache=gate_cache,
+                    )
+
+                if outcome.status not in ("ok", "exposed"):
+                    # REVERT — the restructuring did not achieve its purpose.
+                    # Restore source + the pre-patch profile from the snapshot
+                    # (file copy) instead of re-profiling — far cheaper.
+                    if pre_patch_src is not None:
+                        src_abs.write_text(pre_patch_src)
+                    if dp_snapshot is not None:
+                        _restore_profile(dp_snapshot, dp_dir, output_dir)
+                    patch_file.unlink(missing_ok=True)
+                    msg = _rewrite_feedback(
+                        outcome, dp_dir, region.file_id, _touched_span(clean_diff)
+                    )
+                    print(f"│  [Tier-2] {_OUTCOME_LABEL[outcome.status]} — reverting "
+                          f"(snapshot restore)")
+                    viz.panel("DISCOPOP → LLM FEEDBACK", msg, color=viz.YELLOW, max_lines=30)
+                    failure_reason = msg
+                    if tier2_messages is not None:
+                        tier2_messages = tier2_messages + [
+                            {"role": "user", "content": msg}
+                        ]
+                    print(f"└─ retry (budget remaining: {budget})\n")
+                    continue  # budget already decremented at loop top
+
+                exposed_speedup = outcome.speedup
 
                 # ── COMMIT ────────────────────────────────────────────────────
                 del candidates[i:]
@@ -892,10 +1134,15 @@ def run(args: AgentArguments) -> None:
                     print(f"│  [Tier-2] {len(rebuilt)} survivor(s) rebuilt, "
                           f"{len(discovered)} new at depth {depth + 1}")
                     record["reprofiled"] = True
+                record["exposed_pattern"] = outcome.pattern_label
+                print(f"│  [Tier-2] DiscoPoP now finds: {outcome.pattern_label}")
                 if exposed_speedup is not None:
                     record["exposed_speedup"] = exposed_speedup
                     print(f"│  [Tier-2] Restructuring pays off "
                           f"(best exposed loop {exposed_speedup:.2f}×)")
+                elif outcome.status == "exposed":
+                    print(f"│  [Tier-2] Pragma validation deferred to depth "
+                          f"{depth + 1} (still allowed to restructure)")
 
                 accepted.append(record)
                 _write_record(output_dir, record)
@@ -938,7 +1185,12 @@ def run(args: AgentArguments) -> None:
                             "— coarsen iterations, fuse tiny loops, or hoist invariant work.",
                 }
                 guidance = _STAGE_GUIDANCE.get(result.stage, "")
-                print(f"│  [Tier-2] Stage '{result.stage}' failed: "
+                refunded = ""
+                if result.stage in ("apply", "compile", "openmp_compile") and build_retries > 0:
+                    build_retries -= 1
+                    budget += 1     # a build error must not cost a real attempt
+                    refunded = f" (build fix — budget not charged, {build_retries} left)"
+                print(f"│  [Tier-2] Stage '{result.stage}' failed{refunded}: "
                       f"{result.diagnostic[:200].replace(chr(10), ' ')}")
                 # Keep enough of the diagnostic that the correctness expected-vs-got
                 # comparison survives (it can run ~1.3 KB).

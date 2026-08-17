@@ -176,7 +176,7 @@ def _lineid_line(lid: str) -> int:
         return -1
 
 
-def _load_prevented_deps(
+def load_prevented_deps(
     discopop_dir: Path, file_id: int, start_line: int, end_line: int
 ) -> List[dict]:
     """Load the Do-All blockers DiscoPoP's new detector recorded for this region.
@@ -586,7 +586,7 @@ def assemble(
 
     # Do-All blockers recorded by DiscoPoP's new detector (if the new explorer
     # produced explorer/doall_prevented.json).  profiler_dir = <discopop>/profiler.
-    prevented = _load_prevented_deps(
+    prevented = load_prevented_deps(
         profiler_dir.parent, region.file_id, region.start_line, region.end_line
     )
 

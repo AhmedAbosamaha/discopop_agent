@@ -14,8 +14,11 @@ a budget slot.
 from __future__ import annotations
 
 import asyncio
+import difflib
 import re
+import tempfile
 import textwrap
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 import anthropic
@@ -45,11 +48,23 @@ _SYSTEM_CORE = textwrap.dedent("""\
     your rewrite and inserts them itself.
 
     ------------------------------------------------------------------
-    THE ONE CONTRACT (verified automatically)
+    WHAT HAPPENS TO YOUR REWRITE (all of it automatic, in this order)
     ------------------------------------------------------------------
-    Your rewrite is compiled, run sequentially, and its printed OUTPUT is
-    compared BYTE-FOR-BYTE with the original program's.  Any difference is an
-    automatic rejection.  That is the whole contract:
+      1. It must COMPILE.
+      2. It is run and its printed OUTPUT is compared BYTE-FOR-BYTE with the
+         original program's.  Any difference is an automatic rejection.
+      3. DiscoPoP RE-PROFILES the rewritten program and looks for a parallel
+         pattern IN THE LINES YOU CHANGED.  If it finds none, your rewrite is
+         REVERTED — passing 1 and 2 only proves the rewrite was harmless.
+      4. DiscoPoP generates the `#pragma omp` itself and that parallel build is
+         checked for data races, for identical output, and for being FASTER
+         than sequential.  If it is correct but not faster, your rewrite is
+         also reverted.
+    You are told which of these steps failed, and DiscoPoP's own analysis of
+    YOUR rewritten code, before each retry.  Read that feedback: it describes
+    the code you just wrote, not the original.
+
+    Steps 1-2 are the constraint; steps 3-4 are the goal.  So:
       - The OUTPUT must be identical.  Execution order, operation count, loop
         bounds, extra buffers, extra passes — all of these are YOURS TO CHANGE
         whenever the new schedule needs it.  Doing MORE comparisons or updates
@@ -67,8 +82,11 @@ _SYSTEM_CORE = textwrap.dedent("""\
       - Reduction     — iterations combine into an associative/commutative accumulator.
       - Pipeline      — ordered producer -> consumer stages with no back-edges.
       - Task-parallel — independent regions connected by explicit data flow.
-    Aim for a rewrite that not only is detectable but actually pays off: coarse
-    enough that thread-spawn overhead is amortised.
+    And it must expose it at a granularity that PAYS: the parallel build has to
+    beat the sequential one on the wall clock, so the parallel loop needs enough
+    total work to amortise thread startup.  A correct Do-All over 50 cheap
+    iterations is a failed rewrite, because step 4 will reject it.  Prefer the
+    OUTERMOST loop you can legally parallelize.
 
     Your job is to EXPOSE PARALLELISM, not to speed up the sequential version.
     A faster serial algorithm is NOT a valid answer.  In particular, do NOT:
@@ -136,7 +154,19 @@ _SYSTEM_CORE = textwrap.dedent("""\
          Fix:
            a) DOUBLE-BUFFER: allocate a separate output array; read every input
               exclusively from the previous-sweep buffer, write every result into
-              the new buffer, then swap the buffers after the sweep.
+              the new buffer, then swap the two after the sweep.
+              Two things to get right, because they are easy to get wrong and
+              nothing will fail the checks if you do:
+                - SWAP, don't copy back.  Exchanging the two buffers (or
+                  alternating their roles by sweep parity) is free; a copy-back
+                  loop adds a whole extra pass over the data every sweep.  Copy
+                  only if code after the loop must find the result in the
+                  original array — and then copy ONCE, after the last sweep.
+                - Give the scratch buffer the SAME storage class and lifetime as
+                  the array it mirrors, and allocate it ONCE outside the sweep
+                  loop.  A large mirror declared inside the loop body lands on
+                  the stack and is re-created every sweep; if the original array
+                  is static/global/heap, the mirror must be too.
            b) PARTITION / COLOUR: keep the updates in place, but split each sweep
               into ordered sub-passes whose iterations touch DISJOINT,
               non-adjacent elements (e.g. even-indexed pairs, then odd-indexed
@@ -267,10 +297,45 @@ _OUTPUT_FUNCTION = textwrap.dedent("""\
     The agent applies the code block verbatim in place, so it must compile as-is.
 """)
 
-# Diff mode keeps the original system prompt verbatim; function mode swaps the
-# trailing output instruction.
+_OUTPUT_DIRECT = textwrap.dedent("""\
+
+    >>> OUTPUT FORMAT: EDIT THE FILE YOURSELF WITH YOUR TOOLS. <<<
+    You have Read / Edit / Write tools on a private working COPY of the source
+    file; its path is given in the request.  Do NOT print a diff and do NOT
+    paste the rewritten code in your reply — apply the change to the file with
+    the Edit tool.  Only the file's final content is used; your prose is not.
+
+    Procedure for this turn:
+      1. Read the file (the request shows only an excerpt).
+      2. Write a short PLAN in plain text, in exactly this shape:
+           Line 1: "Same-sweep read-back: YES/NO/N-A — <one line why>"  (can a
+                   value written during one sweep be read again later in the
+                   SAME sweep?  YES means double-buffering is invalid — you
+                   must partition.  N-A when the region has no in-place array
+                   update at all.)
+           Lines 2-5: for each blocking dependence, its cause (1-6) and the fix.
+           Last line: "Loop headers: <the exact for(...) header text of every
+                   loop you changed or added>" — re-derive any bound the old
+                   schedule assumed.
+      3. Apply the rewrite with Edit calls.
+      4. Stop.  One-line summary at most.
+
+    Rules for the edits:
+      - Edit ONLY the file named in the request; create no other files.
+      - Restrict the change to the target region and the function containing
+        it; do not rename that function or change its signature.
+      - The file must still compile as a whole when you are done — you have no
+        compiler here, so re-read anything you are unsure about before editing.
+      - If you already edited this file on an earlier turn, the file still
+        holds those edits: build on them or replace them, but never restore the
+        original code.
+""")
+
+# Diff mode keeps the original system prompt verbatim; function and direct
+# modes swap the trailing output instruction.
 _SYSTEM = _SYSTEM_CORE + _OUTPUT_DIFF
 _SYSTEM_FUNCTION = _SYSTEM_CORE + _OUTPUT_FUNCTION
+_SYSTEM_DIRECT = _SYSTEM_CORE + _OUTPUT_DIRECT
 
 # ---------------------------------------------------------------------------
 # Prompt builder
@@ -304,51 +369,9 @@ def _build_prompt(evidence: EvidencePackage) -> str:
         ),
         evidence.source_region,
         "```\n",
-        "### Runtime data dependences (observed across all executions)\n"
-        "(grouped per variable; each is tagged [array element] or [scalar]: an "
-        "array-element dep is on the DATA and is usually algorithmic; a scalar "
-        "dep is usually a storage conflict removable by privatization/renaming)",
-        _fmt_deps(evidence.raw_deps, "RAW — read-after-write (the blocking ones)",
-                  evidence.line_text, (evidence.start_line, evidence.end_line)),
-        _fmt_deps(evidence.war_deps, "WAR — write-after-read",
-                  region=(evidence.start_line, evidence.end_line)),
-        _fmt_deps(evidence.waw_deps, "WAW — write-after-write",
-                  region=(evidence.start_line, evidence.end_line)),
     ]
-
-    if evidence.reduction_vars:
-        parts.append(
-            f"### Reduction variables: {', '.join(evidence.reduction_vars)}\n"
-        )
-
-    classification = _fmt_classification(evidence)
-    if classification:
-        parts.append(classification)
-
-    extra_vars = _fmt_extra_vars(evidence)
-    if extra_vars:
-        parts.append(extra_vars)
-
-    array_note = _array_dep_note(evidence)
-    if array_note:
-        parts.append(array_note)
-
-    loop_nest = _fmt_loop_nest(evidence)
-    if loop_nest:
-        parts.append(loop_nest)
-
-    calls = _fmt_calls(evidence)
-    if calls:
-        parts.append(calls)
-
-    blockers = _fmt_blockers(evidence.prevented_deps)
-    if blockers:
-        parts.append(blockers)
-
-    if evidence.tier1_failure_reason:
-        parts.append(
-            f"### What went wrong\n{evidence.tier1_failure_reason}\n"
-        )
+    parts.extend(_evidence_sections(evidence, "### Runtime data dependences "
+                                              "(observed across all executions)"))
 
     parts.append(
         f"### Task\n"
@@ -360,15 +383,7 @@ def _build_prompt(evidence: EvidencePackage) -> str:
         f"speedup.\n"
         f"\n"
         f"Work through this checklist before writing the diff:\n"
-        f"  1. Classify each variable under 'RAW' above into causes 1-6 "
-        f"(induction variables and loop-local temps are cause 1; an "
-        f"array-element RAW is cause 3 or 4 — decide with the same-sweep "
-        f"read-back question).\n"
-        f"  2. Apply the matching fix COMPLETELY — including loop bounds "
-        f"re-derived for the new schedule, in canonical form.\n"
-        f"  3. Parallelize at a level with enough iterations x work to beat "
-        f"thread overhead (see the loop structure above).\n"
-        f"\n"
+        f"{_TASK_CHECKLIST}\n"
         f"IMPORTANT: diff context lines (lines beginning with a single space) must match "
         f"the actual file content exactly — use only the raw code indentation, "
         f"not the `NNNN >>>` display prefix shown in the Source section above.\n"
@@ -380,6 +395,52 @@ def _build_prompt(evidence: EvidencePackage) -> str:
         f"cause the response to be rejected."
     )
     return "\n".join(parts)
+
+
+# The three analysis steps every edit mode asks for, verbatim.
+_TASK_CHECKLIST = (
+    "  1. Classify each variable under 'RAW' above into causes 1-6 "
+    "(induction variables and loop-local temps are cause 1; an "
+    "array-element RAW is cause 3 or 4 — decide with the same-sweep "
+    "read-back question).\n"
+    "  2. Apply the matching fix COMPLETELY — including loop bounds "
+    "re-derived for the new schedule, in canonical form.\n"
+    "  3. Parallelize at a level with enough iterations x work to beat "
+    "thread overhead (see the loop structure above).\n"
+)
+
+
+def _evidence_sections(ev: EvidencePackage, deps_header: str) -> List[str]:
+    """The evidence body shared by every edit mode: dependences, reductions,
+    DiscoPoP's classification, loop nest, calls, Do-All blockers, and the last
+    failure reason.  Only the surrounding header/source/task text differs
+    between --edit-mode diff, function and direct."""
+    region = (ev.start_line, ev.end_line)
+    parts = [
+        f"{deps_header}\n"
+        "(grouped per variable; each is tagged [array element] or [scalar]: an "
+        "array-element dep is on the DATA and is usually algorithmic; a scalar "
+        "dep is usually a storage conflict removable by privatization/renaming)",
+        _fmt_deps(ev.raw_deps, "RAW — read-after-write (the blocking ones)",
+                  ev.line_text, region),
+        _fmt_deps(ev.war_deps, "WAR — write-after-read", region=region),
+        _fmt_deps(ev.waw_deps, "WAW — write-after-write", region=region),
+    ]
+    if ev.reduction_vars:
+        parts.append(f"### Reduction variables: {', '.join(ev.reduction_vars)}\n")
+    for section in (
+        _fmt_classification(ev),
+        _fmt_extra_vars(ev),
+        _array_dep_note(ev),
+        _fmt_loop_nest(ev),
+        _fmt_calls(ev),
+        fmt_blockers(ev.prevented_deps),
+    ):
+        if section:
+            parts.append(section)
+    if ev.tier1_failure_reason:
+        parts.append(f"### What went wrong\n{ev.tier1_failure_reason}\n")
+    return parts
 
 
 def _fmt_deps(
@@ -603,7 +664,7 @@ def _array_dep_note(ev: EvidencePackage) -> str:
     )
 
 
-def _fmt_blockers(prevented: list) -> str:
+def fmt_blockers(prevented: list) -> str:
     """Render DiscoPoP's exact Do-All blockers (from doall_prevented.json).
     Returns '' when none are available (old explorer / clean loop)."""
     if not prevented:
@@ -653,39 +714,9 @@ def _build_function_prompt(evidence: EvidencePackage) -> str:
         "```cpp",
         evidence.enclosing_function_source,
         "```\n",
-        "### Runtime data dependences in the target region (observed)\n"
-        "(grouped per variable; each is tagged [array element] or [scalar]: an "
-        "array-element dep is on the DATA and is usually algorithmic; a scalar "
-        "dep is usually a storage conflict removable by privatization/renaming)",
-        _fmt_deps(evidence.raw_deps, "RAW — read-after-write (the blocking ones)",
-                  evidence.line_text, (evidence.start_line, evidence.end_line)),
-        _fmt_deps(evidence.war_deps, "WAR — write-after-read",
-                  region=(evidence.start_line, evidence.end_line)),
-        _fmt_deps(evidence.waw_deps, "WAW — write-after-write",
-                  region=(evidence.start_line, evidence.end_line)),
     ]
-    if evidence.reduction_vars:
-        parts.append(f"### Reduction variables: {', '.join(evidence.reduction_vars)}\n")
-    classification = _fmt_classification(evidence)
-    if classification:
-        parts.append(classification)
-    extra_vars = _fmt_extra_vars(evidence)
-    if extra_vars:
-        parts.append(extra_vars)
-    array_note = _array_dep_note(evidence)
-    if array_note:
-        parts.append(array_note)
-    loop_nest = _fmt_loop_nest(evidence)
-    if loop_nest:
-        parts.append(loop_nest)
-    calls = _fmt_calls(evidence)
-    if calls:
-        parts.append(calls)
-    blockers = _fmt_blockers(evidence.prevented_deps)
-    if blockers:
-        parts.append(blockers)
-    if evidence.tier1_failure_reason:
-        parts.append(f"### What went wrong\n{evidence.tier1_failure_reason}\n")
+    parts.extend(_evidence_sections(
+        evidence, "### Runtime data dependences in the target region (observed)"))
 
     parts.append(
         "### Task\n"
@@ -696,19 +727,58 @@ def _build_function_prompt(evidence: EvidencePackage) -> str:
         "ThreadSanitizer, and achieves measurable speedup.\n"
         "\n"
         "Work through this checklist:\n"
-        "  1. Classify each variable under 'RAW' above into causes 1-6 "
-        "(induction variables and loop-local temps are cause 1; an "
-        "array-element RAW is cause 3 or 4 — decide with the same-sweep "
-        "read-back question).\n"
-        "  2. Apply the matching fix COMPLETELY — including loop bounds "
-        "re-derived for the new schedule, in canonical form.\n"
-        "  3. Parallelize at a level with enough iterations x work to beat "
-        "thread overhead (see the loop structure above).\n"
+        f"{_TASK_CHECKLIST}"
         "\n"
         ">>> OUTPUT exactly as specified in the system instructions: the PLAN "
         "(same-sweep line, causes + fixes, loop headers), then the ENTIRE "
         "rewritten function as ONE ```cpp code block, and end the response "
         "there. Keep the same function name and signature."
+    )
+    return "\n".join(parts)
+
+
+def _build_direct_prompt(evidence: EvidencePackage, ws_file: Path) -> str:
+    """Prompt for --edit-mode direct: the model edits `ws_file` (a private
+    working copy of the source) with its own Read/Edit/Write tools instead of
+    emitting an edit as text.  The excerpt below is context only — the file on
+    disk is the authority, and the model is told to read it."""
+    region_label = {
+        "loop": "loop", "function": "function body", "cu": "basic block",
+    }.get(evidence.region_type, "code region")
+    fname = evidence.enclosing_function_name or "(enclosing function)"
+
+    parts = [
+        f"## File to edit: {ws_file}",
+        f"## Function containing the target region: {fname}  "
+        f"(lines {evidence.enclosing_function_start}–{evidence.enclosing_function_end})",
+        f"## Target region: {region_label} {evidence.region_id} at lines "
+        f"{evidence.start_line}–{evidence.end_line}\n",
+        _fmt_digest(evidence),
+        "### The function as it currently stands in the file (excerpt — read the "
+        "file itself before editing; line numbers here are the file's own):",
+        "```cpp",
+        evidence.enclosing_function_source,
+        "```\n",
+    ]
+    parts.extend(_evidence_sections(
+        evidence, "### Runtime data dependences in the target region (observed)"))
+
+    parts.append(
+        "### Task\n"
+        f"Edit `{ws_file}` so that the {region_label} (lines "
+        f"{evidence.start_line}–{evidence.end_line}) inside `{fname}` is "
+        "restructured for parallelism: after re-profiling, DiscoPoP must detect "
+        "a genuinely parallel pattern (Do-All, Reduction, Pipeline, or "
+        "Task-Parallel) that compiles cleanly, is race-free under "
+        "ThreadSanitizer, and achieves measurable speedup.\n"
+        "\n"
+        "Work through this checklist:\n"
+        f"{_TASK_CHECKLIST}"
+        "\n"
+        ">>> Read the file, state the PLAN (same-sweep line, causes + fixes, "
+        "loop headers), then APPLY the rewrite with the Edit tool. Do not print "
+        "a diff or the rewritten code — the file's content is what is used. "
+        "Keep the function's name and signature, and edit no other file."
     )
     return "\n".join(parts)
 
@@ -729,6 +799,35 @@ def _extract_diff(text: str) -> Optional[str]:
 
 def _is_valid_diff(diff: str) -> bool:
     return "---" in diff and "+++" in diff and "@@" in diff
+
+
+def make_diff(old_text: str, new_text: str, path: str) -> str:
+    """Unified diff between two full file contents, safe for `patch`.
+
+    Both edit modes that build their own diff go through here.  The subtlety is
+    a file whose last line has no newline: difflib then emits an unterminated
+    '-' line that runs straight into the following '+' line, producing a patch
+    the apply stage rejects as malformed.  Standard unified-diff form marks that
+    case explicitly instead, which GNU and BSD patch both accept."""
+    diff = difflib.unified_diff(
+        old_text.splitlines(keepends=True),
+        new_text.splitlines(keepends=True),
+        fromfile=path,
+        tofile=path,
+    )
+    out = []
+    for line in diff:
+        out.append(line if line.endswith("\n")
+                   else line + "\n\\ No newline at end of file\n")
+    return "".join(out)
+
+
+def normalize_code(text: str) -> str:
+    """Strip comments and all whitespace so a 'rewrite' that only reformats or
+    re-comments the input is recognised as the no-op it is."""
+    text = re.sub(r"/\*.*?\*/", "", text, flags=re.DOTALL)
+    text = re.sub(r"//[^\n]*", "", text)
+    return re.sub(r"\s+", "", text)
 
 
 _CODE_FENCE_RE = re.compile(r"```(?:cpp|c\+\+|cxx|c)?\s*\n(.*?)```", re.DOTALL | re.IGNORECASE)
@@ -781,15 +880,66 @@ def _make_client(provider: str, api_key: Optional[str], api_base: Optional[str])
 # region's full transcript into this one.
 _region_sessions: Dict[str, str] = {}
 
+# --edit-mode direct: one throwaway workspace per region, keyed the same way.
+# Each holds a single file — a copy of the source the model is allowed to edit
+# — plus the on-disk content it was copied from, so a later call can tell an
+# edit the model made from a change the controller made (another region's
+# accepted patch, or a revert).
+_region_workspaces: Dict[str, Tuple[Path, str]] = {}
 
-def _complete_claude_agent_sdk(model: str, system: str, current: list, session_key: str) -> str:
+
+def _sync_workspace(session_key: str, source_file: str) -> Tuple[Path, str]:
+    """Return (workspace copy of `source_file`, its current on-disk content).
+
+    The workspace is created on the region's first direct-mode call and then
+    reused: within one region, retries keep whatever the model already edited,
+    so it refines its own attempt against the quality-gate feedback instead of
+    starting from the original every time.  It is re-seeded from disk whenever
+    the real file changed underneath it (another region's patch was applied, or
+    this region's was reverted), because the stale edits no longer apply."""
+    disk = Path(source_file).read_text()
+    entry = _region_workspaces.get(session_key)
+    if entry is not None:
+        ws_file, base = entry
+        if ws_file.exists() and base == disk:
+            return ws_file, disk
+    else:
+        ws_file = Path(tempfile.mkdtemp(prefix="dp_agent_edit_")) / Path(source_file).name
+    ws_file.write_text(disk)
+    _region_workspaces[session_key] = (ws_file, disk)
+    return ws_file, disk
+
+
+def _workspace_diff(ws_file: Path, source_file: str, disk: str) -> Optional[str]:
+    """Unified diff of the model's edited copy against the real source, ready
+    for the L4 gate.  Built from the actual on-disk content, so it always
+    applies cleanly.  None when the model changed nothing that matters (no
+    edit, or a comment/whitespace-only edit)."""
+    edited = ws_file.read_text()
+    if normalize_code(edited) == normalize_code(disk):
+        return None
+    return make_diff(disk, edited, source_file)
+
+
+def _complete_claude_agent_sdk(
+    model: str,
+    system: str,
+    current: list,
+    session_key: str,
+    workspace: Optional[Path] = None,
+) -> str:
     """Run one turn through the local `claude` CLI headlessly (Claude Agent
     SDK), billed against the Claude Code subscription rather than a per-token
     API key.  `model` accepts Claude Code's own aliases (e.g. "haiku",
-    "sonnet", "opus") as well as full model IDs.  Tool use is disabled and the
-    turn count capped at 1 per call — this call site only ever wants a single
-    text response (a diff or a rewritten function), never agentic file/bash
-    actions against the profiled source tree.
+    "sonnet", "opus") as well as full model IDs.
+
+    Without `workspace` (edit modes diff/function) tool use is disabled and the
+    turn count capped at 1 — the call site wants a single text response, never
+    agentic file/bash actions against the profiled source tree.  With
+    `workspace` (--edit-mode direct) the model gets Read/Edit/Write confined to
+    that directory, which holds nothing but a private COPY of the source file:
+    the real, profiled source is not reachable from there, and the answer is
+    the copy's final content rather than anything the model prints.
 
     Unlike the other two providers (stateless HTTP — the full conversation is
     resent on every call), this keeps one real Claude Code session PER REGION:
@@ -823,9 +973,12 @@ def _complete_claude_agent_sdk(model: str, system: str, current: list, session_k
         return ClaudeAgentOptions(
             system_prompt=system,
             model=model,
-            max_turns=1,
-            allowed_tools=[],
-            permission_mode="dontAsk",
+            # Direct mode needs several turns (read → edit → …); the text modes
+            # want exactly one response and nothing else.
+            max_turns=24 if workspace else 1,
+            allowed_tools=["Read", "Edit", "Write"] if workspace else [],
+            cwd=str(workspace) if workspace else None,
+            permission_mode="acceptEdits" if workspace else "dontAsk",
             # Without this, the CLI auto-loads this project's own CLAUDE.md and
             # any user/project settings ("user", "project" are the defaults)
             # into context alongside our system prompt — verified
@@ -873,6 +1026,7 @@ class LLMConnectionError(RuntimeError):
 
 def _complete(
     provider: str, client: Any, model: str, current: list, system: str, session_key: str = "",
+    workspace: Optional[Path] = None,
 ) -> str:
     """Run one completion against the chosen provider and return the raw text.
 
@@ -882,7 +1036,8 @@ def _complete(
     is only used by 'claude-agent-sdk', to key its per-region CLI session — it
     must be a content-based identity (EvidencePackage.region_fingerprint), not
     DiscoPoP's region_id, which gets reassigned to unrelated regions after a
-    re-profile."""
+    re-profile.  `workspace` (--edit-mode direct, claude-agent-sdk only) is the
+    directory the model may edit; passing it turns on its file tools."""
     try:
         if provider == "openai-compat":
             resp = client.chat.completions.create(
@@ -892,7 +1047,7 @@ def _complete(
             )
             return resp.choices[0].message.content or ""
         if provider == "claude-agent-sdk":
-            return _complete_claude_agent_sdk(model, system, current, session_key)
+            return _complete_claude_agent_sdk(model, system, current, session_key, workspace)
         resp = client.messages.create(
             model=model,
             max_tokens=4096,
@@ -939,7 +1094,13 @@ def call_llm(
     In edit_mode="diff" (default) the output is a unified diff.  In
     edit_mode="function" it is the complete rewritten enclosing function (the
     controller splices it in by line range and generates the diff itself), which
-    avoids the LLM having to produce a byte-exact diff.
+    avoids the LLM having to produce a byte-exact diff.  In edit_mode="direct"
+    (claude-agent-sdk only) the model EDITS a private copy of the file with its
+    own Read/Edit/Write tools and the returned string is the diff of that copy
+    against the real source — the model never has to express an edit as text at
+    all.  Direct mode returns "" (not None) when the model left the file
+    unchanged, so the controller can tell "made no edit" apart from "produced
+    no usable answer".
 
     On the first call for a region pass messages=None — the initial prompt is
     built from evidence.  Pass the list returned by the previous call on
@@ -963,16 +1124,35 @@ def call_llm(
     is ignored since auth comes from `claude login`).
     """
     function_mode = edit_mode == "function"
-    system = _SYSTEM_FUNCTION if function_mode else _SYSTEM
+    direct_mode = edit_mode == "direct"
+    if direct_mode and provider != "claude-agent-sdk":
+        raise RuntimeError(
+            "--edit-mode direct requires --provider claude-agent-sdk (it is the "
+            "only backend that can edit files itself)."
+        )
+    system = (_SYSTEM_DIRECT if direct_mode
+              else _SYSTEM_FUNCTION if function_mode else _SYSTEM)
     client = _make_client(provider, api_key, api_base)
+    session_key = evidence.region_fingerprint or evidence.region_id
+
+    workspace_file: Optional[Path] = None
+    disk = ""
+    if direct_mode:
+        workspace_file, disk = _sync_workspace(session_key, evidence.source_file)
 
     if messages is None:
         # First attempt for this region — build initial prompt from evidence.
-        user_prompt = _build_function_prompt(evidence) if function_mode else _build_prompt(evidence)
+        if direct_mode:
+            assert workspace_file is not None
+            user_prompt = _build_direct_prompt(evidence, workspace_file)
+        elif function_mode:
+            user_prompt = _build_function_prompt(evidence)
+        else:
+            user_prompt = _build_prompt(evidence)
         messages = [{"role": "user", "content": user_prompt}]
 
     current = list(messages)
-    kind = "function" if function_mode else "diff"
+    kind = "direct" if direct_mode else "function" if function_mode else "diff"
 
     for attempt in range(max_format_retries + 1):
         if verbose:
@@ -982,13 +1162,22 @@ def call_llm(
             viz.llm_request(model, provider, system, last_user, attempt=attempt)
 
         text = _complete(provider, client, model, current, system,
-                         session_key=evidence.region_fingerprint or evidence.region_id)
+                         session_key=session_key,
+                         workspace=workspace_file.parent if workspace_file else None)
 
         if verbose:
             viz.llm_response(text, kind=kind)
 
-        out = _extract_code(text) if function_mode else _extract_diff(text)
-        valid = out is not None if function_mode else bool(out and _is_valid_diff(out))
+        if direct_mode:
+            assert workspace_file is not None
+            # The answer is the file the model left behind, not its prose.
+            out = _workspace_diff(workspace_file, evidence.source_file, disk)
+        else:
+            out = _extract_code(text) if function_mode else _extract_diff(text)
+        valid = (
+            out is not None if function_mode or direct_mode
+            else bool(out and _is_valid_diff(out))
+        )
 
         if verbose:
             viz.llm_extracted(kind, out if valid else None)
@@ -1001,6 +1190,10 @@ def call_llm(
         # Free format re-prompt — doesn't consume a budget slot.
         if attempt < max_format_retries:
             reprompt = (
+                f"You did not change `{workspace_file}` (comment or formatting "
+                "edits do not count). Read the file, then APPLY your rewrite "
+                "with the Edit tool — describing it in your reply has no effect."
+                if direct_mode else
                 "Your response must end with the complete rewritten function as a "
                 "single ```cpp code block — signature and full body, no diff. "
                 "A short plain-text PLAN before the code block is allowed; "
@@ -1016,4 +1209,6 @@ def call_llm(
                 {"role": "user", "content": reprompt},
             ]
 
-    return None, current
+    # Direct mode's only failure here is "the model never edited the file" —
+    # report it as the no-op ("") the controller feeds back, not as garbage output.
+    return ("" if direct_mode else None), current

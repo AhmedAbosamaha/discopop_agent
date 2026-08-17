@@ -168,21 +168,33 @@ def llm_request(model: str, provider: str, system: str, user: str, attempt: int 
 
 
 def llm_response(text: str, kind: str = "diff") -> None:
-    """Show the raw text the LLM returned."""
+    """Show the raw text the LLM returned.  In direct-edit mode this is only
+    the model's narration — the edit itself lives in the file it wrote."""
     if not _ENABLED:
         return
-    panel("LLM RAW RESPONSE", text, color=CYAN)
+    title = "LLM RAW RESPONSE" + (
+        "  (narration — the edit is in the file)" if kind == "direct" else ""
+    )
+    panel(title, text, color=CYAN)
 
 
 def llm_extracted(kind: str, code: str | None) -> None:
-    """Show the edit the agent extracted from the response (diff or function)."""
+    """Show the edit the agent took from the model: a diff, a rewritten
+    function, or (direct mode) the diff of the file the model edited itself."""
     if not _ENABLED:
         return
     if code is None:
-        note("could not extract a valid edit from the response — will re-prompt / retry", color=YELLOW)
+        if kind == "direct":
+            note("the model did not edit the file — will re-prompt / retry", color=YELLOW)
+        else:
+            note("could not extract a valid edit from the response — will re-prompt / retry",
+                 color=YELLOW)
         return
     if kind == "diff":
         panel("EXTRACTED DIFF", code, color=GREEN, colorize=_color_diff_line)
+    elif kind == "direct":
+        panel("MODEL'S EDIT (file diff vs source)", code, color=GREEN,
+              colorize=_color_diff_line)
     else:
         panel("EXTRACTED FUNCTION (rewritten)", code, color=GREEN)
 

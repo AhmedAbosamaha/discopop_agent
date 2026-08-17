@@ -103,6 +103,12 @@ def fix_hunk_headers(diff: str) -> str:
             ln = lines[j]
             if ln.startswith("@@") or ln.startswith("--- ") or ln.startswith("+++ "):
                 break
+            if ln.startswith("\\"):
+                # "\ No newline at end of file" annotates the preceding line;
+                # it is not itself a line of either file, so it must not be
+                # counted — doing so would corrupt the header we're fixing.
+                j += 1
+                continue
             if ln.startswith("-"):
                 old_count += 1
             elif ln.startswith("+"):
@@ -222,7 +228,7 @@ def _run_timed(
 
 def _measure_speedup(
     seq_bin: Path, par_bin: Path, work_dir: Path, binary_args: Optional[List[str]],
-    pairs: int = 5,
+    pairs: int = 5, min_pairs: int = 3, threshold: Optional[float] = None,
 ) -> Tuple[bool, float, float, float, str]:
     """Measure the parallel-over-sequential speedup with interleaved A/B pairs.
 
@@ -233,14 +239,24 @@ def _measure_speedup(
     ratios cancels load drift: whatever the load was during a pair, it affected
     both sides of that pair's ratio.
 
+    Runs up to `pairs` pairs but stops after `min_pairs` once the verdict is no
+    longer in doubt — the running median sits well clear of `threshold` (the
+    accept cutoff) in either direction.  Measurement is the single most
+    expensive part of the gate (2 program runs per pair), and a rewrite that is
+    3x faster or 3x slower does not need five pairs to prove it; only genuinely
+    borderline ratios spend the full budget.
+
     Returns (ok, median_ratio, best_seq_seconds, best_par_seconds, diag).
     """
     import statistics
     import time as _time
 
-    ratios = []
+    ratios: List[float] = []
     best_seq = best_par = float("inf")
-    for _ in range(max(1, pairs)):
+    for done in range(max(1, pairs)):
+        if (threshold is not None and done >= min_pairs and ratios
+                and not (0.75 * threshold < statistics.median(ratios) < 1.35 * threshold)):
+            break
         pair_times = []
         for binary in (seq_bin, par_bin):
             args = [str(binary)] + (binary_args or [])
@@ -269,6 +285,31 @@ def _measure_speedup(
 # ---------------------------------------------------------------------------
 # Stage 3: ThreadSanitizer
 # ---------------------------------------------------------------------------
+
+def _tsan_env() -> dict:
+    """Environment for the ThreadSanitizer run.
+
+    TSan is by far the most expensive stage of the gate: on a 0.2 s benchmark
+    kernel the sanitized parallel build took 37 s (185x).  Almost all of that is
+    spent AFTER the first race is found — the default is to report and keep
+    going, unwinding a stack for every further racing access.  We only ever use
+    the first warning block, so `halt_on_error=1` stops at exactly the point
+    where the rest of the run stopped mattering: measured on the same kernel,
+    37 s -> 0.7 s with the race still reported on 3 runs out of 3.
+
+    Deliberately NOT set here: OMP_NUM_THREADS.  Capping it to 4 on this
+    8-thread machine was even faster, but the race then went undetected on 2
+    runs out of 2 — a gate that passes because it looked less hard is worse
+    than a slow one.  Detection is probabilistic; keep every thread the machine
+    would really use.  (Set OMP_NUM_THREADS yourself and it is respected.)
+    """
+    import os
+
+    env = dict(os.environ)
+    existing = env.get("TSAN_OPTIONS", "")
+    env["TSAN_OPTIONS"] = (existing + ":" if existing else "") + "halt_on_error=1"
+    return env
+
 
 def _tsan(
     source: Path, clangpp: str, work_dir: Path, skip_race_check: bool = False,
@@ -325,9 +366,13 @@ def _tsan(
         run_result = subprocess.run(
             [str(binary)] + (binary_args or []),
             capture_output=True, text=True, timeout=300, cwd=work_dir,
+            env=_tsan_env(),
         )
     except subprocess.TimeoutExpired:
-        return False, "TSan run timed out (300 s)", "tsan"
+        return False, (
+            "TSan run timed out (300 s) — the sanitized build is too slow to "
+            "check this workload for races"
+        ), "tsan"
 
     stderr = run_result.stderr
     if "WARNING: ThreadSanitizer" in stderr or "DATA RACE" in stderr:
@@ -501,7 +546,7 @@ def validate(
                     skipped_stages=skipped_stages,
                 )
             m_ok, measured, seq_t, par_t, m_diag = _measure_speedup(
-                seq_bin, par_bin, work_dir, binary_args
+                seq_bin, par_bin, work_dir, binary_args, threshold=min_speedup
             )
             if not m_ok:
                 return ValidationResult(passed=False, stage="performance",
