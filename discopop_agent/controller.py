@@ -5,15 +5,16 @@ Targets any hotspot code region (loop, function body, CU), not just loops.
 
 Main loop (per thesis flowchart, slide 9):
 
-The quality gate (L4) is deliberately Tier-2 only: it exists to prove that
-code the LLM restructured is valid.  DiscoPoP's own pragma is trusted and
-applied as generated, so a region with an applicable pattern never reaches
-the LLM.
+DiscoPoP's own pragma gets only a REDUCED gate — compile and output, never
+races or timing — and a failure there just means the pragma is not inserted.
+A region with an applicable pattern therefore never reaches the LLM either
+way; the full gate exists to prove that code the LLM restructured is valid.
 
   For each candidate (priority order):
     ┌─ Tier-1: DiscoPoP pattern found & applicable?
-    │    Yes → apply the pragma as generated → ACCEPT
-    │              (no gate, no measurement, no LLM call, no re-profile)
+    │    Yes → reduced gate: does it compile and keep the output?
+    │              PASS → apply the pragma → ACCEPT (no LLM, no re-profile)
+    │              FAIL → leave the pragma out → SKIP (still no LLM)
     │    No  → Tier-2 allowed at this depth?
     │              No  → SKIP
     │              Yes → Tier-2:
@@ -446,8 +447,8 @@ def _print_banner(args: AgentArguments) -> None:
     print(f"  Min workload   : {args.min_workload}")
     print(f"  Restruct. depth: {args.restructure_depth} "
           f"(Tier-2 allowed at depth 0–{args.restructure_depth})")
-    print(f"  Quality gate   : Tier-2 only (LLM rewrites); "
-          f"Tier-1 pragmas applied unvalidated")
+    print(f"  Quality gate   : Tier-1 = compile + output only (no escalation); "
+          f"Tier-2 = full")
     print(f"  Speedup gate   : "
           + (f"require ≥ {args.min_measured_speedup}× measured"
              if args.require_speedup else "OFF (--no-require-speedup)"))
@@ -685,13 +686,25 @@ def _rewrite_feedback(
     if outcome.status == "pattern_broken":
         return (
             f"Progress: after your rewrite DiscoPoP DID detect parallelism "
-            f"({outcome.pattern_label}). But when its generated `#pragma omp` is "
-            f"applied, the result fails validation — so the rewrite has been "
-            f"reverted.\n\n"
-            f"Keep the structure that made the loop detectable and fix only what "
-            f"the diagnostic below reports. A pattern that is detected but wrong "
-            f"means some iterations still interfere: find the remaining shared "
-            f"state and make each iteration's work independent of the others.\n\n"
+            f"({outcome.pattern_label}).\n\n"
+            f"Your rewrite is already CORRECT ON ITS OWN — it passed the "
+            f"sequential output check before this. What failed is running it IN "
+            f"PARALLEL: DiscoPoP added its `#pragma omp` to your code and that "
+            f"build broke. The rewrite has been reverted.\n\n"
+            f"So do not go hunting for a bug in your logic. Look for an ORDERING "
+            f"ASSUMPTION — something in the body that is only correct when "
+            f"iterations run one after another: a value carried from one "
+            f"iteration to the next, a variable shared where each iteration "
+            f"needed its own, or an accumulation that is not a clean reduction. "
+            f"Keep the structure that made the loop detectable and remove that "
+            f"assumption.\n\n"
+            f"Two things to read the diagnostic correctly. It was produced while "
+            f"validating YOUR CODE PLUS THAT PRAGMA, so where it says the "
+            f"program is not semantically equivalent, it is not saying your "
+            f"rewrite alone is wrong. And if the outputs differ only in the last "
+            f"digits of floating-point numbers, the parallel reduction simply "
+            f"summed them in a different order — that is reassociation, not a "
+            f"dependence, so do not invent one to explain it.\n\n"
             f"Diagnostic:\n{outcome.diagnostic[:1200]}"
         )
 
@@ -827,14 +840,43 @@ def run(args: AgentArguments) -> None:
             tier1_diff = _repair_pragma_clauses(
                 _read_tier1_patch(patch_dir), args.source_file
             )
-            # Tier-1 applies DiscoPoP's own pragma exactly as generated.  The
-            # quality gate is reserved for code the LLM restructured, so nothing
-            # is measured here — and because escalation to Tier-2 used to be
-            # driven by a Tier-1 gate FAILURE, a region with an applicable
-            # pattern now always ends here.  The LLM sees only regions where
-            # DiscoPoP found no pattern at all.
-            print(f"│  [Tier-1] Applying DiscoPoP's pragma as generated "
-                  f"(quality gate is Tier-2 only)")
+            # Tier-1 trusts DiscoPoP's pragma, but does not insert it blind: a
+            # REDUCED gate checks it compiles (including the -fopenmp build, so
+            # a non-canonical loop is caught) and leaves the program's output
+            # unchanged.  Races and speed are deliberately not measured — those
+            # questions belong to the LLM path.
+            #
+            # A failure here means only "do not insert this pragma".  There is
+            # no escalation: the region is left exactly as DiscoPoP found it and
+            # the run moves on, so a bad suggestion costs one compile, not an
+            # LLM budget slot.
+            #
+            # Called directly rather than through _validate_cached: that cache is
+            # keyed on (patch, source) with no notion of mode, so a reduced
+            # result must never be served to the full gate at verification time.
+            if tier1_diff and not args.dry_run:
+                print(f"│  [Tier-1] Checking the pragma compiles and preserves "
+                      f"output (no race or speed check)")
+                t1_res = validate(
+                    tier1_diff, args.source_file,
+                    reference_output=reference_output,
+                    reference_outputs=reference_outputs,
+                    binary_args=binary_args,
+                    require_speedup=False,
+                    reference_time=reference_time,
+                    mode="safety",
+                )
+                viz.gate_result(t1_res.passed, t1_res.stage, t1_res.diagnostic,
+                                t1_res.measured_speedup,
+                                skipped_stages=t1_res.skipped_stages)
+                if not t1_res.passed:
+                    print(f"│  [Tier-1] Stage '{t1_res.stage}' failed: "
+                          f"{t1_res.diagnostic[:200].replace(chr(10), ' ')}")
+                    print(f"│  [Tier-1] Leaving the pragma OUT — source unchanged, "
+                          f"no LLM escalation")
+                    print(f"└─ SKIPPED (pragma rejected)\n")
+                    skipped.append((rid, depth))
+                    continue
             applied = False
             if args.apply_patches and tier1_diff and not args.dry_run:
                 applied = _apply_to_source(

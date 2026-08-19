@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define N 16384
+#define N 4
 
 /*
  * Bubble sort — inner loop has a cross-iteration swap dependency.
@@ -20,17 +20,7 @@
  */
 void bubble_sort(int *arr, int n) {
     for (int pass = 0; pass < n - 1; pass++) {
-        /* Even-indexed pairs: (0,1), (2,3), (4,5), ... are independent */
-        #pragma omp parallel for firstprivate(n) shared(arr) 
-        for (int i = 0; i < n - 1; i += 2) {
-            if (arr[i] > arr[i + 1]) {
-                int tmp   = arr[i];
-                arr[i]    = arr[i + 1];
-                arr[i + 1] = tmp;
-            }
-        }
-        /* Odd-indexed pairs: (1,2), (3,4), (5,6), ... are independent */
-        for (int i = 1; i < n - 1; i += 2) {
+        for (int i = 0; i < n - pass - 1; i++) {
             if (arr[i] > arr[i + 1]) {
                 int tmp   = arr[i];
                 arr[i]    = arr[i + 1];
@@ -47,9 +37,9 @@ int main(void) {
     bubble_sort(arr, N);
 
     int ok = 1;
-    #pragma omp parallel for private(ok) shared(arr) 
+    #pragma omp parallel for firstprivate(ok) shared(arr) 
     for (int i = 0; i < N - 1; i++)
-        if (arr[i] > arr[i + 1]) { ok = 0; }
+        if (arr[i] > arr[i + 1]) { ok = 0; break; }
 
     printf("N=%d  sorted: %s\n", N, ok ? "YES" : "NO");
     printf("arr[0]=%d  arr[N-1]=%d\n", arr[0], arr[N - 1]);

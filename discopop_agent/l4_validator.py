@@ -469,6 +469,7 @@ def validate(
     min_speedup: float = 1.0,
     skip_race_check: bool = False,
     reference_time: Optional[float] = None,
+    mode: str = "full",
 ) -> ValidationResult:
     """Run the quality-gate stages. Return the first failure or success.
 
@@ -481,6 +482,12 @@ def validate(
       compiled WITH -fopenmp, must reproduce the reference stdout exactly.
       Catches restructurings that change observable results.  Note this is the
       PARALLEL binary — the stage that catches a race corrupting the output.
+    `mode="safety"` runs the subset that answers "is this change safe to
+    insert?" — apply, compile, the -fopenmp build, and correctness — and skips
+    the two stages that ask whether it is GOOD: the sanitizer and the timing
+    runs.  Tier-1 uses it to avoid inserting a pragma that breaks the build or
+    changes the output, without paying for a measurement it will not act on.
+
     - performance (when `require_speedup` and the diff adds a `#pragma omp`):
       interleaved A/B on ONE binary, OMP_NUM_THREADS=1 against unrestricted;
       the median ratio must reach `min_speedup`× AND — when `reference_time` is
@@ -488,6 +495,13 @@ def validate(
       (guards against a rewrite whose own single-threaded build is
       overhead-slowed making the ratio look flattering).
     """
+    if mode not in ("safety", "full"):
+        raise ValueError(f"validate(mode=): unknown mode {mode!r}")
+    if mode == "safety":
+        # Compile the -fopenmp build (so a non-canonical loop is still caught)
+        # but do not run the sanitizer, and do not time anything.
+        skip_race_check = True
+
     clangpp = _find_clangpp()
     if clangpp is None:
         return ValidationResult(
@@ -523,6 +537,8 @@ def validate(
             if not ok:
                 return ValidationResult(passed=False, stage=stage, diagnostic=diag,
                                         skipped_stages=skipped_stages)
+            if skip_race_check:
+                skipped_stages.append("tsan")
         else:
             skipped_stages += ["openmp_compile", "tsan"]
 
@@ -564,8 +580,9 @@ def validate(
                     return ValidationResult(
                         passed=False, stage="correctness",
                         diagnostic=(
-                            f"Program output changed{where} — the restructuring is "
-                            "NOT semantically equivalent.\n"
+                            f"Program output changed{where} — the patched "
+                            "program is NOT semantically equivalent to the "
+                            "original.\n"
                             + ("This input differs from the one the profile was taken "
                                "on: the rewrite is right for the profiled size but "
                                "wrong here, which usually means a loop bound, an "
@@ -580,9 +597,12 @@ def validate(
 
         # Stage 5 — measured speedup (only for patches that add a pragma)
         measured: Optional[float] = None
-        if not (require_speedup and "pragma omp" in diff):
+        want_perf = (
+            mode != "safety" and require_speedup and "pragma omp" in diff
+        )
+        if not want_perf:
             skipped_stages.append("performance")
-        if require_speedup and "pragma omp" in diff:
+        if want_perf:
             ok_b, diag_b = _check_build()
             if not ok_b or check_bin is None:
                 # A failed measurement must not count as a pass.

@@ -54,6 +54,15 @@ _SYSTEM_CORE = textwrap.dedent("""\
       4. DiscoPoP generates the `#pragma omp` itself; that build must be
          race-free, produce the same output, and be FASTER than sequential.
          Correct but not faster -> also reverted.
+    Steps 1-2 run your rewrite SEQUENTIALLY, so passing them proves only that
+    it is correct in serial.  Step 4 runs the SAME code with its iterations
+    executing CONCURRENTLY, in no guaranteed order, with the pragma DiscoPoP
+    adds afterwards.  Any ordering your code still relies on sails through
+    step 2 and fails step 4.  So write every loop you intend to be parallel
+    such that its iterations would give the same result in ANY order, or run
+    at the same time — that, not merely reproducing the output in serial, is
+    what you are being asked for.
+
     Steps 1-2 are the constraint; steps 3-4 are the goal.  Before each retry you
     are told which step failed and what DiscoPoP found in YOUR rewrite — that
     feedback describes the code you just wrote, not the original.
