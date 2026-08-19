@@ -178,9 +178,13 @@ def _compile_variant(
 ) -> Tuple[bool, str, Optional[Path]]:
     """Compile `source` to a runnable binary, with or without OpenMP.
 
-    Used by the correctness and performance stages: the same source compiled
-    without -fopenmp runs sequentially (pragmas ignored), with -fopenmp runs
-    in parallel.  Comparing the two isolates the effect of the pragma.
+    Both the correctness and performance stages want the SAME `-O2 -fopenmp`
+    binary, and `validate()` builds it once and memoises it.  The speedup
+    comparison no longer builds a second, non-OpenMP variant: it varies
+    OMP_NUM_THREADS on this one binary instead, so identical machine code sits
+    on both sides of the ratio (see `_measure_speedup`).  `openmp=False` is
+    therefore unused by the gate today and kept only for callers that want a
+    genuinely sequential build.
     """
     binary = work_dir / name
     extra = (
@@ -468,20 +472,21 @@ def validate(
 ) -> ValidationResult:
     """Run the quality-gate stages. Return the first failure or success.
 
-    Stages: apply → compile → tsan/openmp_compile → correctness → performance.
+    Stages: apply → compile → openmp_compile/tsan → correctness → performance.
 
-    - tsan (only when the diff carries a `#pragma omp`): a pragma-less rewrite
-      is single-threaded, so there is nothing to race — running the sanitizer
-      on it would only cost time.
+    - openmp_compile / tsan (only when the diff carries a `#pragma omp`): a
+      pragma-less rewrite is single-threaded, so there is nothing to race, and
+      there is no pragma for clang to reject as non-canonical either.
     - correctness (when `reference_output` is given): the patched program,
       compiled WITH -fopenmp, must reproduce the reference stdout exactly.
-      Catches restructurings that change observable results.
+      Catches restructurings that change observable results.  Note this is the
+      PARALLEL binary — the stage that catches a race corrupting the output.
     - performance (when `require_speedup` and the diff adds a `#pragma omp`):
-      interleaved A/B measurement; the parallel build must run at least
-      `min_speedup`× faster than the same source built sequentially AND —
-      when `reference_time` is given — must not be slower than the ORIGINAL
-      program (guards against a rewrite whose own sequential build is
-      overhead-slowed making the ratio look good on a losing patch).
+      interleaved A/B on ONE binary, OMP_NUM_THREADS=1 against unrestricted;
+      the median ratio must reach `min_speedup`× AND — when `reference_time` is
+      given — the parallel run must not be slower than the ORIGINAL program
+      (guards against a rewrite whose own single-threaded build is
+      overhead-slowed making the ratio look flattering).
     """
     clangpp = _find_clangpp()
     if clangpp is None:

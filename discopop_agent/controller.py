@@ -5,13 +5,15 @@ Targets any hotspot code region (loop, function body, CU), not just loops.
 
 Main loop (per thesis flowchart, slide 9):
 
+The quality gate (L4) is deliberately Tier-2 only: it exists to prove that
+code the LLM restructured is valid.  DiscoPoP's own pragma is trusted and
+applied as generated, so a region with an applicable pattern never reaches
+the LLM.
+
   For each candidate (priority order):
     ┌─ Tier-1: DiscoPoP pattern found & applicable?
-    │    Yes → validate patch (compile + TSan with -fopenmp)
-    │              PASS → ACCEPT (write record, no LLM call, no re-profile)
-    │              FAIL → Tier-2 allowed at this depth?
-    │                       No  → SKIP
-    │                       Yes → escalate to Tier-2
+    │    Yes → apply the pragma as generated → ACCEPT
+    │              (no gate, no measurement, no LLM call, no re-profile)
     │    No  → Tier-2 allowed at this depth?
     │              No  → SKIP
     │              Yes → Tier-2:
@@ -30,7 +32,7 @@ Discovery depth (--restructure-depth N):
 
   Tier-2 (LLM restructuring) is only applied to candidates at depth ≤ N.
   Candidates at depth > N are processed with Tier-1 only — if no pattern is
-  found or Tier-1 fails validation, they are skipped without any LLM call.
+  found they are skipped without any LLM call.
 
   With --restructure-depth 0 (default):
     depth=0 (initial)  → Tier-1 or Tier-2
@@ -159,39 +161,6 @@ def _is_omp_barrier_false_positive(diagnostic: str) -> bool:
             if not any(".omp_outlined" in f for f in main_frames):
                 return True
     return False
-
-
-_IO_CALLS = frozenset({
-    "printf", "fprintf", "sprintf", "snprintf", "puts", "putchar",
-    "fwrite", "fread", "fgets", "fputs", "scanf", "fscanf",
-    "cout", "cerr", "cin",
-})
-
-def _region_is_io_only(source_file: str, start_line: int, end_line: int) -> bool:
-    """Return True when every non-blank line in the region is an I/O call.
-
-    TSan can produce false positives on loops that only call stdio/iostream
-    functions because their internal buffers are touched before the lock is
-    taken.  Skipping TSan for pure I/O regions avoids that noise without
-    masking real computation races.
-    """
-    try:
-        lines = Path(source_file).read_text().splitlines()
-        region = lines[start_line - 1 : end_line]
-    except (OSError, IndexError):
-        return False
-
-    compute_lines = [
-        ln.strip() for ln in region
-        if ln.strip() and not ln.strip().startswith("//")
-    ]
-    if not compute_lines:
-        return False
-
-    return all(
-        any(io in ln for io in _IO_CALLS)
-        for ln in compute_lines
-    )
 
 
 def _venv_env() -> "dict[str, str]":
@@ -477,6 +446,8 @@ def _print_banner(args: AgentArguments) -> None:
     print(f"  Min workload   : {args.min_workload}")
     print(f"  Restruct. depth: {args.restructure_depth} "
           f"(Tier-2 allowed at depth 0–{args.restructure_depth})")
+    print(f"  Quality gate   : Tier-2 only (LLM rewrites); "
+          f"Tier-1 pragmas applied unvalidated")
     print(f"  Speedup gate   : "
           + (f"require ≥ {args.min_measured_speedup}× measured"
              if args.require_speedup else "OFF (--no-require-speedup)"))
@@ -514,7 +485,7 @@ def _touched_span(diff: str) -> "tuple[int, int] | None":
     return (lo, hi) if lo is not None and hi is not None else None
 
 
-def _gate_key(diff: str, source_file: str, skip_race_check: bool) -> str:
+def _gate_key(diff: str, source_file: str) -> str:
     """Identity of one gate run: this patch, against this exact source text.
 
     The source hash is what makes reuse safe — a patch validated before another
@@ -526,8 +497,6 @@ def _gate_key(diff: str, source_file: str, skip_race_check: bool) -> str:
     h.update(Path(source_file).read_bytes())
     h.update(b"\0")
     h.update(diff.encode())
-    h.update(b"\0")
-    h.update(b"1" if skip_race_check else b"0")
     return h.hexdigest()
 
 
@@ -538,23 +507,22 @@ def _validate_cached(
     reference_output: "str | None",
     binary_args: "list | None",
     reference_time: "float | None",
-    skip_race_check: bool = False,
     reference_outputs: "list | None" = None,
 ) -> "tuple[ValidationResult, bool, bool]":
     """Run the gate on `diff`, or return the answer already computed for it.
 
     Returns (result, served_from_cache, barrier_false_positive_suspected).
 
-    Two call sites ask the identical question about the identical patch: the
-    verification step measures a pattern to decide whether to KEEP a rewrite,
-    and the Tier-1 pass measures it again to decide whether to APPLY it — a full
-    duplicate gate run (two compiles, a sanitizer run, a correctness run, and up
-    to five timing pairs) for the same verdict.  Whichever asks first pays.
+    Only the post-rewrite verification calls this now — the Tier-1 pass applies
+    DiscoPoP's pragma without gating it.  The cache still earns its place: one
+    verification measures every pattern the rewrite exposed, and a later region
+    can present an identical patch against identical source bytes — a full
+    duplicate gate run (three compiles, a sanitizer run, a correctness run, and
+    up to five timing pairs) for a verdict already known.
 
-    The macOS OMP-barrier false-positive re-check lives here too, so both
-    callers get it identically instead of implementing it twice.
+    The macOS OMP-barrier false-positive re-check lives here too.
     """
-    key = _gate_key(diff, args.source_file, skip_race_check)
+    key = _gate_key(diff, args.source_file)
     hit = cache.get(key)
     if hit is not None:
         return hit, True, False
@@ -571,7 +539,7 @@ def _validate_cached(
             reference_time=reference_time,
         )
 
-    res = _run(skip_race_check)
+    res = _run(False)
     barrier_fp = (
         not res.passed and res.stage == "tsan"
         and _is_omp_barrier_false_positive(res.diagnostic)
@@ -787,7 +755,7 @@ def run(args: AgentArguments) -> None:
                   "would still pass. Add --check-input to widen the check.")
         print()
 
-    # Gate results for this run, keyed by (patch, source text, skip_race_check).
+    # Gate results for this run, keyed by (patch, source text).
     # A pattern measured by the post-rewrite verification is normally measured
     # again by the Tier-1 pass that applies it, one queue position later; this
     # lets the second ask reuse the first answer.  Scoped to the run rather than
@@ -859,148 +827,34 @@ def run(args: AgentArguments) -> None:
             tier1_diff = _repair_pragma_clauses(
                 _read_tier1_patch(patch_dir), args.source_file
             )
-            tier1_valid = True
-            t1_speedup = None
-            io_only = _region_is_io_only(
-                args.source_file, region.start_line, region.end_line
-            )
-            if tier1_diff and not args.dry_run:
-                if io_only:
-                    print(f"│  [Tier-1] I/O-only region — skipping the race check "
-                          f"only (apply/compile/correctness/performance still run)")
-                t1_result, from_cache, barrier_fp = _validate_cached(
-                    gate_cache, tier1_diff, args, reference_output, binary_args,
-                    reference_time, skip_race_check=io_only,
-                    reference_outputs=reference_outputs,
+            # Tier-1 applies DiscoPoP's own pragma exactly as generated.  The
+            # quality gate is reserved for code the LLM restructured, so nothing
+            # is measured here — and because escalation to Tier-2 used to be
+            # driven by a Tier-1 gate FAILURE, a region with an applicable
+            # pattern now always ends here.  The LLM sees only regions where
+            # DiscoPoP found no pattern at all.
+            print(f"│  [Tier-1] Applying DiscoPoP's pragma as generated "
+                  f"(quality gate is Tier-2 only)")
+            applied = False
+            if args.apply_patches and tier1_diff and not args.dry_run:
+                applied = _apply_to_source(
+                    tier1_diff, args.source_file, output_dir, label="Tier-1"
                 )
-                if from_cache:
-                    # Already measured when the restructuring that exposed this
-                    # loop was verified, against this same source text.
-                    spd = (f", {t1_result.measured_speedup:.2f}×"
-                           if t1_result.measured_speedup else "")
-                    print(f"│  [Tier-1] Reusing the verification result for this "
-                          f"patch ({t1_result.stage}{spd}) — gate not re-run")
-                else:
-                    print(f"│  [Tier-1] Running validation on generated patch...")
-                    if barrier_fp:
-                        print(f"│  [Tier-1] TSan OMP-barrier false positive suspected "
-                              f"— verified correctness/performance instead")
-
-                viz.gate_result(t1_result.passed, t1_result.stage,
-                                t1_result.diagnostic, t1_result.measured_speedup,
-                                skipped_stages=t1_result.skipped_stages)
-
-                if not t1_result.passed:
-                    stage = t1_result.stage
-                    if stage == "openmp_compile":
-                        reason_label = "loop not in OpenMP-canonical form"
-                        t2_hint = (
-                            f"DiscoPoP suggested a {ptype} pattern (pragma: {pragma}), "
-                            f"but the generated pragma fails to compile because the loop "
-                            f"is not in OpenMP-canonical form (cause 5: non-canonical "
-                            f"control flow).\n"
-                            f"Fix ONLY the specific construct the compiler rejected "
-                            f"(shown in the diagnostic below) — do not restructure "
-                            f"anything else:\n"
-                            f"  - Remove break/continue/return -> replace with a flag "
-                            f"evaluated every iteration (flag |= cond;) and tested after "
-                            f"the loop.\n"
-                            f"  - Fix a non-simple loop condition -> move the compound "
-                            f"expression into the bound (write `i < n - 1`, not "
-                            f"`i + 1 < n`).\n"
-                            f"Make the smallest change that satisfies canonical form. Do "
-                            f"not add new logic and do not change what the loop "
-                            f"computes.\n"
-                            f"Compiler diagnostic:\n{t1_result.diagnostic}"
-                        )
-                    elif stage == "correctness":
-                        reason_label = "parallelized output is incorrect"
-                        t2_hint = (
-                            f"DiscoPoP suggested a {ptype} pattern (pragma: {pragma}), "
-                            f"but applying it CHANGES the program's output — the loop "
-                            f"carries a real cross-iteration dependence (RAW) that "
-                            f"DiscoPoP's Do-All detector missed.\n"
-                            f"Diagnose its cause from the raced variable (in-place "
-                            f"coupling, a hidden reduction, storage reuse, or a true "
-                            f"recurrence) and remove that cause so each iteration is "
-                            f"genuinely independent, preserving the exact observable "
-                            f"results.\n"
-                            f"Diagnostic:\n{t1_result.diagnostic}"
-                        )
-                    elif stage == "performance":
-                        # Correct, but the parallel build was not faster.  Escalate
-                        # to Tier-2 so the LLM can try a coarser-grained / lower-
-                        # overhead restructuring — and, per design, so the next
-                        # prompt explicitly carries the reason it was rejected.
-                        reason_label = (
-                            f"no measured speedup "
-                            f"({t1_result.measured_speedup:.2f}× < "
-                            f"{args.min_measured_speedup:.2f}×)"
-                        )
-                        t2_hint = (
-                            f"DiscoPoP's {ptype} pattern (pragma: {pragma}) is correct "
-                            f"(output unchanged, no data race) but the parallel build "
-                            f"was NOT faster than sequential — measured "
-                            f"{t1_result.measured_speedup:.2f}x, below the required "
-                            f"{args.min_measured_speedup:.2f}x.\n"
-                            f"The dependence is already gone; restructure for GRANULARITY, "
-                            f"not correctness (cause 6): increase work per parallel "
-                            f"iteration, fuse adjacent tiny parallel loops, hoist "
-                            f"loop-invariant work out of the loop, or move the parallelism "
-                            f"to an outer level. If the region is inherently too small to "
-                            f"benefit, a coarser decomposition may be needed.\n"
-                            f"Diagnostic:\n{t1_result.diagnostic}"
-                        )
-                    else:  # "tsan"
-                        reason_label = "DiscoPoP false positive (real race)"
-                        t2_hint = (
-                            f"DiscoPoP suggested a {ptype} pattern (pragma: {pragma}), "
-                            f"but ThreadSanitizer found a REAL data race: the loop carries "
-                            f"a cross-iteration dependence that DiscoPoP's Do-All detector "
-                            f"missed.\n"
-                            f"Identify the cause from the raced variable in the diagnostic "
-                            f"(in-place coupling, a hidden reduction, storage reuse, or a "
-                            f"true recurrence) and restructure so the iterations are "
-                            f"genuinely independent — do not merely rename storage.\n"
-                            f"Validation diagnostic:\n{t1_result.diagnostic}"
-                        )
-                    print(f"│  [Tier-1] Validation FAILED (stage={stage}) — {reason_label}")
-
-                    if not tier2_allowed:
-                        print(f"│  [Tier-1] Tier-2 not allowed at depth {depth} → SKIP")
-                        print(f"└─ SKIPPED\n")
-                        skipped.append((rid, depth))
-                        continue
-                    print(f"│  [Tier-1] Escalating to Tier-2 (LLM restructuring)")
-                    failure_reason = t2_hint
-                    tier1_valid = False
-                else:
-                    t1_speedup = t1_result.measured_speedup
-
-            if tier1_valid:
-                spd = f"  (measured {t1_speedup:.2f}×)" if t1_speedup else ""
-                print(f"│  [Tier-1] Validation PASSED{spd}")
-                applied = False
-                if args.apply_patches and tier1_diff and not args.dry_run:
-                    applied = _apply_to_source(
-                        tier1_diff, args.source_file, output_dir, label="Tier-1"
-                    )
-                print(f"└─ ACCEPTED\n")
-                record = {
-                    "region_id": rid,
-                    "region_type": region.region_type,
-                    "tier": 1,
-                    "pattern_id": pid,
-                    "pragma": pragma,
-                    "patch_dir": str(patch_dir),
-                    "discovery_depth": depth,
-                    "measured_speedup": t1_speedup,
-                    "applied_to_source": applied,
-                }
-                accepted.append(record)
-                _write_record(output_dir, record, args.dry_run)
-                continue
-            # tier1_valid is False → fall through to Tier-2 check below
+            print(f"└─ ACCEPTED\n")
+            record = {
+                "region_id": rid,
+                "region_type": region.region_type,
+                "tier": 1,
+                "pattern_id": pid,
+                "pragma": pragma,
+                "patch_dir": str(patch_dir),
+                "discovery_depth": depth,
+                "measured_speedup": None,
+                "applied_to_source": applied,
+            }
+            accepted.append(record)
+            _write_record(output_dir, record, args.dry_run)
+            continue
 
         # ── Tier-2: LLM restructuring ─────────────────────────────────────────
         if candidate.tier != 1:
@@ -1112,7 +966,7 @@ def run(args: AgentArguments) -> None:
                 continue
 
             print(f"│  [Tier-2] Diff received — running quality gate "
-                  f"(apply/compile/TSan/correctness)")
+                  f"(apply/compile/correctness)")
             result = validate(
                 diff, args.source_file,
                 reference_output=reference_output,
