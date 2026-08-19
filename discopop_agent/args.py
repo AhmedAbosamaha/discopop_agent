@@ -1,6 +1,7 @@
 from __future__ import annotations
 import argparse
 import os
+import shlex
 from dataclasses import dataclass
 from typing import Optional
 
@@ -24,6 +25,7 @@ class AgentArguments:
     build_retries: int          # apply/compile retries that do not consume budget
     apply_patches: bool         # write accepted Tier-1 pragmas into the source file
     min_measured_speedup: float # minimum measured parallel speedup to accept
+    check_inputs: list          # extra argv sets the rewrite must also reproduce
     reprofil_args: list         # extra arguments forwarded to ./a.out during re-profiling
     verbose: bool               # render the full LLM I/O and gate stages in the terminal
 
@@ -110,6 +112,14 @@ def parse_args() -> AgentArguments:
     p.add_argument("--min-measured-speedup", type=float, default=1.1,
                    help=("Minimum measured wall-clock speedup (parallel vs sequential) "
                          "required when --require-speedup is set (default: 1.1)"))
+    p.add_argument("--check-input", action="append", default=[], metavar="ARGS",
+                   help=("Extra program arguments the rewrite must ALSO reproduce, "
+                         "repeatable (e.g. --check-input '0' --check-input '1' "
+                         "--check-input '9999'). Correctness is otherwise judged on a "
+                         "single input, so a rewrite that is right for the profiled "
+                         "size and wrong at 0, 1 or an odd count would pass. Each value "
+                         "is split like a shell command line; inputs the ORIGINAL "
+                         "program cannot run are dropped with a warning."))
     p.add_argument("--reprofil-args", nargs=argparse.REMAINDER, default=[],
                    help="Arguments forwarded to ./a.out during re-profiling (e.g. -- sort input.txt)")
     p.add_argument("-v", "--verbose", action="store_true",
@@ -147,6 +157,7 @@ def parse_args() -> AgentArguments:
         build_retries=a.build_retries,
         apply_patches=a.apply_patches,
         min_measured_speedup=a.min_measured_speedup,
+        check_inputs=[shlex.split(x) for x in a.check_input],
         reprofil_args=a.reprofil_args,
         verbose=a.verbose,
     )

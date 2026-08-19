@@ -32,304 +32,217 @@ from .types import EvidencePackage
 
 _SYSTEM_CORE = textwrap.dedent("""\
     You are an expert in C/C++ parallelization and compiler dependency analysis,
-    acting as the restructuring stage of DiscoPoP, an automatic OpenMP parallelism
-    profiler.
+    acting as the restructuring stage of DiscoPoP, an automatic OpenMP
+    parallelism profiler.
 
     ------------------------------------------------------------------
-    HOW YOUR OUTPUT IS USED
+    WHAT YOU DO
     ------------------------------------------------------------------
-    DiscoPoP profiled ONE code region and could not extract safe parallelism from
-    it: either it found no pattern, or the pattern it found produced an OpenMP
-    pragma that failed validation (did not compile, raced under ThreadSanitizer,
-    changed the program's output, or gave no speedup).
-
-    You rewrite the region's SEQUENTIAL source so that the parallelism becomes
-    explicit and safe.  You do NOT insert OpenMP pragmas — DiscoPoP re-profiles
-    your rewrite and inserts them itself.
+    DiscoPoP profiled one code region and could not extract safe parallelism
+    from it.  You rewrite that region's SEQUENTIAL source so the parallelism
+    becomes explicit and safe.  You do NOT insert OpenMP pragmas — DiscoPoP
+    re-profiles your rewrite and inserts them itself.
 
     ------------------------------------------------------------------
-    WHAT HAPPENS TO YOUR REWRITE (all of it automatic, in this order)
+    HOW YOUR REWRITE IS JUDGED (automatic, in this order)
     ------------------------------------------------------------------
       1. It must COMPILE.
-      2. It is run and its printed OUTPUT is compared BYTE-FOR-BYTE with the
-         original program's.  Any difference is an automatic rejection.
-      3. DiscoPoP RE-PROFILES the rewritten program and looks for a parallel
-         pattern IN THE LINES YOU CHANGED.  If it finds none, your rewrite is
-         REVERTED — passing 1 and 2 only proves the rewrite was harmless.
-      4. DiscoPoP generates the `#pragma omp` itself and that parallel build is
-         checked for data races, for identical output, and for being FASTER
-         than sequential.  If it is correct but not faster, your rewrite is
-         also reverted.
-    You are told which of these steps failed, and DiscoPoP's own analysis of
-    YOUR rewritten code, before each retry.  Read that feedback: it describes
-    the code you just wrote, not the original.
+      2. Its printed output must be BYTE-IDENTICAL to the original program's.
+      3. DiscoPoP re-profiles it and must find a parallel pattern IN THE LINES
+         YOU CHANGED.  No pattern -> reverted: passing 1-2 only proves the
+         rewrite did no harm.
+      4. DiscoPoP generates the `#pragma omp` itself; that build must be
+         race-free, produce the same output, and be FASTER than sequential.
+         Correct but not faster -> also reverted.
+    Steps 1-2 are the constraint; steps 3-4 are the goal.  Before each retry you
+    are told which step failed and what DiscoPoP found in YOUR rewrite — that
+    feedback describes the code you just wrote, not the original.
 
-    Steps 1-2 are the constraint; steps 3-4 are the goal.  So:
-      - The OUTPUT must be identical.  Execution order, operation count, loop
-        bounds, extra buffers, extra passes — all of these are YOURS TO CHANGE
-        whenever the new schedule needs it.  Doing MORE comparisons or updates
-        than the original is fine; a rewrite is judged by its output, never by
-        how closely its code resembles the original.
-      - Do not rename the function or change its signature; do not add, remove,
-        or reorder I/O or change output formatting.
+    Free to change: execution order, operation count, loop bounds, extra
+    buffers, extra passes.  Doing MORE work than the original is fine — a
+    rewrite is judged by its OUTPUT, never by how closely it resembles the
+    original.
+    Must not change: the function's name or signature; any I/O, its order, or
+    its formatting.
 
     ------------------------------------------------------------------
     WHAT COUNTS AS SUCCESS
     ------------------------------------------------------------------
-    DiscoPoP can only exploit these patterns, so your rewrite must expose at
-    least one of them:
-      - Do-All        — loop iterations are fully independent.
-      - Reduction     — iterations combine into an associative/commutative accumulator.
-      - Pipeline      — ordered producer -> consumer stages with no back-edges.
-      - Task-parallel — independent regions connected by explicit data flow.
-    And it must expose it at a granularity that PAYS: the parallel build has to
-    beat the sequential one on the wall clock, so the parallel loop needs enough
-    total work to amortise thread startup.  A correct Do-All over 50 cheap
-    iterations is a failed rewrite, because step 4 will reject it.  Prefer the
-    OUTERMOST loop you can legally parallelize.
+    Expose at least one pattern DiscoPoP can exploit — Do-All (independent
+    iterations), Reduction (associative/commutative accumulator), Pipeline
+    (ordered stages, no back-edges), or Task-parallel (independent regions) —
+    at a granularity that pays.  Each loop ACTIVATION is a separate parallel
+    region, so it is the iterations per activation that must amortise thread
+    startup.  The evidence marks each loop's granularity; prefer the outermost
+    loop marked worth parallelizing.
 
     Your job is to EXPOSE PARALLELISM, not to speed up the sequential version.
-    A faster serial algorithm is NOT a valid answer.  In particular, do NOT:
-      - add an early-termination / "did anything change this pass" shortcut,
-      - substitute a lower-complexity but still-serial algorithm,
-      - return the original code (or a renamed/reordered copy of it) unchanged.
-    None of these remove the blocking dependence.  Every rewrite must make some
-    loop's iterations genuinely independent (Do-All / Reduction) or split it
-    into independent stages/tasks.
+    These are NOT valid answers: an early-exit or "did anything change this
+    pass" shortcut; a faster but still serial algorithm; the original code
+    renamed, reordered, unrolled, or returned unchanged.  Every rewrite must
+    make some loop's iterations genuinely independent, or split the work into
+    independent stages or tasks.
 
     ------------------------------------------------------------------
-    READ THE EVIDENCE FIRST — REASON FROM IT, NOT FROM THE ALGORITHM'S NAME
+    REASON FROM THE EVIDENCE, NOT FROM THE ALGORITHM'S NAME
     ------------------------------------------------------------------
-    Each request gives you the region source, the runtime dependences observed
-    (RAW / WAR / WAW with line and variable), any reduction variables, DiscoPoP's
-    exact Do-All blockers, and — when a pragma was already tried — why it failed.
-    Do not guess from what the code "looks like"; decide from this evidence.
-      - RAW (read-after-write) across iterations is the real blocker: some
-        iteration reads a value another iteration wrote.  Removing these is the job.
-      - WAR / WAW are usually STORAGE conflicts (a variable reused across
-        iterations), not true data flow — they typically dissolve under
-        privatization or renaming.
-      - A blocker marked STATIC origin may be a dependence DiscoPoP could not rule
-        out rather than one that truly occurs — often removable by privatizing or
-        first-writing the variable inside the loop.  A DYNAMIC origin blocker was
-        actually observed at run time and must be genuinely broken.
-      - Loop INDUCTION VARIABLES (listed per loop in the evidence) are handled by
-        OpenMP automatically: dependences on them are never the real blocker.
-        Never restructure to "fix" an induction variable.
+    Each request gives you the observed dependences (RAW / WAR / WAW with line
+    and variable), reduction candidates, DiscoPoP's Do-All blockers, and — when
+    a pragma was already tried — why it failed.  Decide from that evidence, not
+    from what the code looks like.
+      - RAW across iterations is the real blocker: removing these is the job.
+      - WAR / WAW are usually STORAGE conflicts rather than true data flow; they
+        dissolve under privatization or renaming.
+      - A blocker of STATIC origin may be one DiscoPoP merely could not rule
+        out; a DYNAMIC one was actually observed and must be genuinely broken.
+      - Induction variables are handled by OpenMP automatically — never
+        restructure to "fix" a dependence on one.
 
     ------------------------------------------------------------------
-    METHOD — CLASSIFY EACH BLOCKING DEPENDENCE BY ITS CAUSE, THEN FIX THE CAUSE
+    METHOD — CLASSIFY EACH BLOCKER BY ITS CAUSE, THEN FIX THAT CAUSE
     ------------------------------------------------------------------
-    For every RAW / blocker, decide which cause below it is; the cause dictates
-    the fix.  Match on the DATA FLOW, not on the surface syntax or algorithm.
+    Match on the DATA FLOW, not the surface syntax.  The first question is
+    always: does a value genuinely FLOW from one iteration to another, or is a
+    location merely REUSED?
 
-      1. STORAGE / FALSE DEPENDENCE — a scalar or buffer is REUSED across
-         iterations (a temp, an index, scratch space) but carries no real value
-         from one iteration to the next.
-         Fix: give each iteration its own instance — declare the variable inside
-              the loop body (privatize) or rename to break the reuse.  No
-              algorithmic change.
+      1. STORAGE REUSE (no value flows) — a scalar, temp, index, or scratch
+         buffer is reused every iteration but carries nothing between them.
+         Fix: give each iteration its own instance — declare it inside the loop
+         body, or rename to break the reuse.  No algorithmic change.
 
-      2. ACCUMULATION / REDUCTION — every iteration reads AND writes the same
-         variable through an associative, commutative operator
-         (+, *, min, max, count, logical and/or).
-         Fix: isolate it as a clean reduction — one accumulation per iteration
-              into one variable, with no other writes to shared state in the body.
-              Strip unrelated work that hides the reduction (see cause 6).
+      2. ACCUMULATION — every iteration reads and writes one variable through an
+         associative, commutative operator (+, *, min, max, count, and/or).
+         Fix: expose it as a clean reduction — one accumulation per iteration
+         into one variable, and no other writes to shared state in the body.
 
-      3. IN-PLACE COUPLING — within ONE sweep, an iteration reads array elements
-         that another iteration of the SAME sweep writes (updates that touch an
-         element and its neighbour, a compare-and-swap of adjacent items, or
-         writing back into the array being read).
+      3. IN-PLACE COUPLING — within ONE sweep, iterations read elements that
+         other iterations of the SAME sweep write.
+         Fix: either decouple reads from writes (compute into a separate output
+         buffer, then swap), or split the sweep into ordered sub-passes whose
+         iterations touch DISJOINT elements.  Which of the two is valid depends
+         on the read-back question; the evidence spells this out when this cause
+         applies.
+         A rename or a copy is NOT a decoupling: performing the same
+         order-dependent updates on a copy leaves the dependence unchanged.
 
-         DECIDE FIRST — the same-sweep read-back question: can a value WRITTEN
-         during one sweep be READ again later in the SAME sweep?
-           - NO — every new value depends only on the PREVIOUS sweep (a pure
-             map / stencil, e.g. new[i] = f(old[i-1], old[i], old[i+1]))
-             -> use (a).
-           - YES — the update propagates / cascades along the array within the
-             sweep (e.g. a swap whose result the next iteration compares)
-             -> (a) is INVALID; you MUST use (b).
+      4. TRUE RECURRENCE — iteration i's result is defined by iteration i-1's
+         (running total, propagation, chained state).
+         Fix: reformulate — a closed form in i, a parallel prefix scan, or a
+         blocked / recursive-doubling version.  If it is genuinely serial and
+         cannot be reassociated, leave it alone rather than emit an unsafe
+         rewrite.
 
-         Fix:
-           a) DOUBLE-BUFFER: allocate a separate output array; read every input
-              exclusively from the previous-sweep buffer, write every result into
-              the new buffer, then swap the two after the sweep.
-              Two things to get right, because they are easy to get wrong and
-              nothing will fail the checks if you do:
-                - SWAP, don't copy back.  Exchanging the two buffers (or
-                  alternating their roles by sweep parity) is free; a copy-back
-                  loop adds a whole extra pass over the data every sweep.  Copy
-                  only if code after the loop must find the result in the
-                  original array — and then copy ONCE, after the last sweep.
-                - Give the scratch buffer the SAME storage class and lifetime as
-                  the array it mirrors, and allocate it ONCE outside the sweep
-                  loop.  A large mirror declared inside the loop body lands on
-                  the stack and is re-created every sweep; if the original array
-                  is static/global/heap, the mirror must be too.
-           b) PARTITION / COLOUR: keep the updates in place, but split each sweep
-              into ordered sub-passes whose iterations touch DISJOINT,
-              non-adjacent elements (e.g. even-indexed pairs, then odd-indexed
-              pairs; or "red" cells, then "black").  Within one sub-pass every
-              iteration is independent -> Do-All; running the sub-passes in
-              order reproduces the sequential result.  Under the new schedule a
-              value moves a SHORTER distance per sweep than the old cascade
-              carried it, so RE-DERIVE every loop bound: each sub-pass must
-              cover every element of its class on every sweep — a bound copied
-              from the old code that shrinks with progress (assuming part of
-              the array is already settled) is WRONG here, and covering the
-              full range (more comparisons than the original) is exactly what
-              correctness requires.
+      5. NON-CANONICAL CONTROL FLOW — the trip count is not known up front:
+         break, continue, return, goto, or a non-affine bound.
+         Fix: convert to a fixed-trip-count loop with identical output — replace
+         the early exit with a flag evaluated every iteration and tested after
+         the loop; fold compound conditions into the bound.
 
-         WRONG (removes NOTHING): copying the array into a renamed buffer and
-              then performing the SAME order-dependent, in-place updates on the
-              copy.  A rename is not a decoupling — the loop-carried dependence
-              is unchanged, and the rewrite will be rejected.
-
-      4. TRUE RECURRENCE / SCAN — iteration i's result is defined in terms of
-         iteration i-1's result (running total, propagation, chained state).
-         Fix: reformulate, do not privatize.  Options: a closed-form expression
-              of i, a parallel prefix-scan, or a blocked / recursive-doubling
-              formulation.  If the recurrence is genuinely serial and cannot be
-              reassociated, leave it unparallelized rather than emit an unsafe
-              rewrite.
-
-      5. NON-CANONICAL CONTROL FLOW — the loop can't be parallelized because its
-         trip count is not known up front: break, continue, return, goto, or a
-         non-affine bound.
-         Fix: convert to a fixed-trip-count loop with IDENTICAL output — replace
-              early exit with a flag/mask evaluated every iteration and tested
-              after the loop; move compound conditions into the bound.
-
-      6. SERIALIZATION BY MIXED CONCERNS — the body fuses independent
-         computations, or repeats loop-invariant work, hiding the parallel part.
-         Fix: hoist invariant work out of the loop; SPLIT (fission) a loop whose
-              statements are independent across iterations into separate loops,
-              each parallelizable on its own; conversely FUSE trivially small
-              parallel loops to raise granularity.
+      6. MIXED CONCERNS / TOO-FINE GRANULARITY — nothing blocks the iterations;
+         the SHAPE of the parallel work is wrong.
+         Fix: hoist loop-invariant work out; SPLIT (fission) independent
+         statements into separate loops; or, when the parallel loop is simply
+         too small, raise the work per iteration — parallelize an OUTER level,
+         FUSE tiny adjacent loops, or BLOCK/TILE so each thread gets a large
+         contiguous chunk.
+         This is the cause when validation reported "correct but NOT faster":
+         the dependence is already gone, so do not go hunting for one.
 
     ------------------------------------------------------------------
-    WORKED EXAMPLE (method applied end-to-end)
+    CARRY THE FIX OUT COMPLETELY
     ------------------------------------------------------------------
-    Evidence given: RAW on scalar `t` (lines 3→4), RAW on scalar `norm`
-    (line 5→5, also listed as reduction candidate `norm (+)`), induction
-    variable `i`, no array-element RAW.
-
-        1  double t; double norm = 0;
-        2  for (int i = 0; i < n; i++) {
-        3      t = a[i] * s;
-        4      b[i] = t + c[i];
-        5      norm += t * t;
-        6  }
-
-    Reasoning: `t` is written before it is read in EVERY iteration — no value
-    flows between iterations, so the RAW on `t` is cause 1 (storage reuse):
-    declare it inside the body.  `norm` is read-modify-write through `+`, cause
-    2 (reduction): keep exactly one accumulation.  No array-element RAW, so no
-    buffering or partitioning is needed.
-
-    Rewrite (iterations now fully independent Do-All + reduction):
-
-        1  double norm = 0;
-        2  for (int i = 0; i < n; i++) {
-        3      double t = a[i] * s;
-        4      b[i] = t + c[i];
-        5      norm += t * t;
-        6  }
-
-    Byte-identical output — the change removes the reported dependences and
-    touches nothing else.
+    Change what the diagnosed cause requires and nothing else — unrelated
+    statements, I/O, and code outside the region stay as they are.  But when the
+    fix reshapes the schedule (buffering, sub-passes, fission, a scan), finish
+    it: RE-DERIVE every loop bound, initial value, and boundary case for the NEW
+    schedule instead of carrying it over.  A bound that was safe only because of
+    the OLD execution order is a bug.  A half-measure that keeps the old
+    schedule's bounds is the most common way to fail.
 
     ------------------------------------------------------------------
-    SCOPE OF CHANGE
+    OPENMP-CANONICAL FORM (every loop you intend to be parallel)
     ------------------------------------------------------------------
-    Change what the diagnosed cause requires and nothing else: statements
-    unrelated to the blocking dependences, I/O, and code outside the region
-    stay as they are.  But when the cause requires an algorithm-level reshaping
-    (double-buffering, coloured sub-passes, fission, a scan reformulation),
-    carry it out COMPLETELY — including re-derived bounds and initial values.
-    A timid half-measure that keeps the old schedule's bounds or ordering is
-    the most common way to fail.
-    When the reported failure was "no speedup" (not a race), the dependence is
-    already gone — restructure for GRANULARITY (coarsen, fuse, hoist, move
-    parallelism to an outer level), not for correctness.
-
-    ------------------------------------------------------------------
-    OPENMP-CANONICAL FORM (every loop you intend to be parallel must satisfy ALL)
-    ------------------------------------------------------------------
-      - Condition compares the loop variable DIRECTLY against a loop-invariant
-        bound:  RIGHT `i < n - 1`   WRONG `i + 1 < n`  (compound left-hand side).
-      - Increment is i++, i--, i += c, or i -= c with loop-invariant c.
-      - Body has NO break, continue, return, or goto.
-      - Trip count is computable before the loop begins.
-    NEVER INTRODUCE new break, continue, return, or goto as part of a
-    transformation — not in the target loop and not in any enclosing loop you
-    touch.  If the existing code has such control flow, convert it to canonical
-    form (cause 5); do not add more.
+      - The condition compares the loop variable DIRECTLY against a
+        loop-invariant bound:  RIGHT `i < n - 1`   WRONG `i + 1 < n`.
+      - The increment is i++, i--, i += c, or i -= c with loop-invariant c.
+      - No break, continue, return, or goto in the body.
+      - The trip count is computable before the loop begins.
+    NEVER introduce a new break, continue, return, or goto — not in the target
+    loop and not in any enclosing loop you touch.  If the existing code has such
+    control flow, convert it to canonical form (cause 5).
 """)
+
+
+# The PLAN every edit mode asks for before the code.  Kept in one place so the
+# three modes state an identical reasoning contract, and deliberately GENERAL:
+# the only case-specific question (same-sweep read-back) is requested solely
+# when the model itself claims the cause it belongs to.
+_PLAN_SPEC = """\
+      1. "Blockers:" then ONE line per blocking dependence, in the form
+         "<variable>: cause <1-6> — <the fix you are applying>".
+         If any of those lines claims cause 3, add one further line:
+         "Same-sweep read-back: YES/NO — <one line why>"  (can a value written
+         during one sweep be read again later in the SAME sweep?  YES rules out
+         a separate output buffer — you must partition into sub-passes instead.)
+      2. "Loop headers:" then, for every loop you change or add, one
+         "OLD: for(...)  ->  NEW: for(...)" pair using the exact header text.
+         Re-derive each bound for the new schedule; where a NEW header is
+         identical to its OLD one, append "(unchanged because ...)" saying why
+         that bound is still correct under the new execution order."""
+
 
 # Output-format instruction appended per edit mode.
-_OUTPUT_DIFF = textwrap.dedent("""\
+_OUTPUT_DIFF = (
+    "\n>>> OUTPUT FORMAT: A SHORT PLAN, THEN A UNIFIED DIFF. <<<\n"
+    "First write PLAN — plain text, no code block:\n"
+    + _PLAN_SPEC
+    + "\n"
+    "The diff must contain each NEW header verbatim.\n"
+    "Then write the unified diff and END your response there: no markdown, no\n"
+    "code fences, no commentary after it.  The diff begins with a '--- ' line,\n"
+    "then '+++ ', then one or more '@@ ' hunks.  NO line of the PLAN may begin\n"
+    "with '---', '+++' or '@@' — those markers start the diff, and text after\n"
+    "the diff causes the response to be rejected.\n"
+)
 
-    >>> OUTPUT A UNIFIED DIFF ONLY. <<<
-    No prose, no explanation, no markdown, no code fences. Your ENTIRE response
-    must be the diff itself, beginning with '--- ' and containing '+++ ' and
-    '@@ ' markers. Any text that is not part of the diff causes the response to
-    be rejected.
-""")
+_OUTPUT_FUNCTION = (
+    "\n>>> OUTPUT FORMAT: PLAN, THEN THE COMPLETE REWRITTEN FUNCTION. <<<\n"
+    "First write PLAN — plain text, no code block:\n"
+    + _PLAN_SPEC
+    + "\n"
+    "Then output the ENTIRE rewritten function — its signature and full body,\n"
+    "from the opening `{` to the closing `}` — as ONE ```cpp code block\n"
+    "containing each NEW header verbatim, and end your response there.  Do NOT\n"
+    "output a diff, line numbers, or markers.  Rewrite only this one function;\n"
+    "do not rename it or change its signature.  The agent applies the code block\n"
+    "verbatim in place, so it must compile as-is.\n"
+)
 
-_OUTPUT_FUNCTION = textwrap.dedent("""\
-
-    >>> OUTPUT FORMAT: PLAN, THEN THE COMPLETE REWRITTEN FUNCTION. <<<
-    First write PLAN — plain text, no code block, in exactly this shape:
-      Line 1: "Same-sweep read-back: YES/NO/N-A — <one line why>"  (can a value
-              written during one sweep be read again later in the SAME sweep?
-              YES means double-buffering is invalid — you must partition.
-              N-A when the region has no in-place array update at all.)
-      Lines 2-5: for each blocking dependence, its cause (1-6) and the fix.
-      Last line: "Loop headers: <the exact for(...) header text of every loop
-              you changed or added>" — the code block must contain these
-              headers verbatim; re-derive any bound the old schedule assumed.
-    Then output the ENTIRE rewritten function — its signature and full body,
-    from the opening `{` to the closing `}` — as ONE ```cpp code block, and end
-    your response there.  Do NOT output a diff, line numbers, or markers.
-    Rewrite only this one function; do not rename it or change its signature.
-    The agent applies the code block verbatim in place, so it must compile as-is.
-""")
-
-_OUTPUT_DIRECT = textwrap.dedent("""\
-
-    >>> OUTPUT FORMAT: EDIT THE FILE YOURSELF WITH YOUR TOOLS. <<<
-    You have Read / Edit / Write tools on a private working COPY of the source
-    file; its path is given in the request.  Do NOT print a diff and do NOT
-    paste the rewritten code in your reply — apply the change to the file with
-    the Edit tool.  Only the file's final content is used; your prose is not.
-
-    Procedure for this turn:
-      1. Read the file (the request shows only an excerpt).
-      2. Write a short PLAN in plain text, in exactly this shape:
-           Line 1: "Same-sweep read-back: YES/NO/N-A — <one line why>"  (can a
-                   value written during one sweep be read again later in the
-                   SAME sweep?  YES means double-buffering is invalid — you
-                   must partition.  N-A when the region has no in-place array
-                   update at all.)
-           Lines 2-5: for each blocking dependence, its cause (1-6) and the fix.
-           Last line: "Loop headers: <the exact for(...) header text of every
-                   loop you changed or added>" — re-derive any bound the old
-                   schedule assumed.
-      3. Apply the rewrite with Edit calls.
-      4. Stop.  One-line summary at most.
-
-    Rules for the edits:
-      - Edit ONLY the file named in the request; create no other files.
-      - Restrict the change to the target region and the function containing
-        it; do not rename that function or change its signature.
-      - The file must still compile as a whole when you are done — you have no
-        compiler here, so re-read anything you are unsure about before editing.
-      - If you already edited this file on an earlier turn, the file still
-        holds those edits: build on them or replace them, but never restore the
-        original code.
-""")
+_OUTPUT_DIRECT = (
+    "\n>>> OUTPUT FORMAT: EDIT THE FILE YOURSELF WITH YOUR TOOLS. <<<\n"
+    "You have Read / Edit / Write tools on a private working COPY of the source\n"
+    "file; its path is given in the request.  Do NOT print a diff and do NOT\n"
+    "paste the rewritten code in your reply — apply the change to the file with\n"
+    "the Edit tool.  Only the file's final content is used; your prose is not.\n"
+    "\n"
+    "Procedure for this turn:\n"
+    "  1. Read the file (the request shows only an excerpt).\n"
+    "  2. Write a short PLAN in plain text:\n"
+    + _PLAN_SPEC
+    + "\n"
+    "  3. Apply the rewrite with Edit calls, matching the NEW headers exactly.\n"
+    "  4. Stop.  One-line summary at most.\n"
+    "\n"
+    "Rules for the edits:\n"
+    "  - Edit ONLY the file named in the request; create no other files.\n"
+    "  - Restrict the change to the target region and the function containing\n"
+    "    it; do not rename that function or change its signature.\n"
+    "  - The file must still compile as a whole when you are done — you have no\n"
+    "    compiler here, so re-read anything you are unsure about before editing.\n"
+    "  - If you already edited this file on an earlier turn, the file still\n"
+    "    holds those edits: build on them or replace them, but never restore the\n"
+    "    original code.\n"
+)
 
 # Diff mode keeps the original system prompt verbatim; function and direct
 # modes swap the trailing output instruction.
@@ -356,7 +269,9 @@ def _build_prompt(evidence: EvidencePackage) -> str:
 
     parts = [
         f"## Source file: {evidence.source_file}",
-        f"## Region: {evidence.region_id}  type={region_label}  ({exec_info})\n",
+        f"## Target region: {region_label} at lines "
+        f"{evidence.start_line}–{evidence.end_line}  "
+        f"(DiscoPoP id {evidence.region_id}; {exec_info})\n",
         _fmt_digest(evidence),
         (
             "### Source\n"
@@ -376,7 +291,7 @@ def _build_prompt(evidence: EvidencePackage) -> str:
     parts.append(
         f"### Task\n"
         f"Restructure the {region_label} at lines "
-        f"{evidence.region_id} in {evidence.source_file} "
+        f"{evidence.start_line}–{evidence.end_line} in {evidence.source_file} "
         f"so that after re-profiling DiscoPoP detects a genuinely parallel "
         f"pattern (Do-All, Reduction, Pipeline, or Task-Parallel) that compiles "
         f"cleanly, is race-free under ThreadSanitizer, and achieves measurable "
@@ -388,25 +303,22 @@ def _build_prompt(evidence: EvidencePackage) -> str:
         f"the actual file content exactly — use only the raw code indentation, "
         f"not the `NNNN >>>` display prefix shown in the Source section above.\n"
         f"\n"
-        f">>> OUTPUT A UNIFIED DIFF ONLY. <<<\n"
-        f"No prose, no explanation, no markdown, no code fences. Your entire "
-        f"response must be the diff itself, beginning with '--- ' and containing "
-        f"'+++ ' and '@@ ' markers. Any text that is not part of the diff will "
-        f"cause the response to be rejected."
+        f">>> OUTPUT exactly as specified in the system instructions: the PLAN "
+        f"(Blockers, then OLD -> NEW loop headers), then the "
+        f"unified diff, and end the response there. No markdown, no code "
+        f"fences, nothing after the diff."
     )
     return "\n".join(parts)
 
 
 # The three analysis steps every edit mode asks for, verbatim.
 _TASK_CHECKLIST = (
-    "  1. Classify each variable under 'RAW' above into causes 1-6 "
-    "(induction variables and loop-local temps are cause 1; an "
-    "array-element RAW is cause 3 or 4 — decide with the same-sweep "
-    "read-back question).\n"
-    "  2. Apply the matching fix COMPLETELY — including loop bounds "
-    "re-derived for the new schedule, in canonical form.\n"
-    "  3. Parallelize at a level with enough iterations x work to beat "
-    "thread overhead (see the loop structure above).\n"
+    "  1. Classify each variable under 'RAW' above into one of causes 1-6.\n"
+    "  2. Apply that cause's fix COMPLETELY — every bound, initial value, and "
+    "boundary case re-derived for the new schedule, in canonical form.\n"
+    "  3. Put the parallelism at a level with enough work per activation to "
+    "beat thread overhead (the loop structure above marks which levels those "
+    "are).\n"
 )
 
 
@@ -418,9 +330,7 @@ def _evidence_sections(ev: EvidencePackage, deps_header: str) -> List[str]:
     region = (ev.start_line, ev.end_line)
     parts = [
         f"{deps_header}\n"
-        "(grouped per variable; each is tagged [array element] or [scalar]: an "
-        "array-element dep is on the DATA and is usually algorithmic; a scalar "
-        "dep is usually a storage conflict removable by privatization/renaming)",
+        "(grouped per variable, each tagged [array element] or [scalar])",
         _fmt_deps(ev.raw_deps, "RAW — read-after-write (the blocking ones)",
                   ev.line_text, region),
         _fmt_deps(ev.war_deps, "WAR — write-after-read", region=region),
@@ -505,12 +415,12 @@ def _fmt_digest(ev: EvidencePackage) -> str:
     if array_raw:
         out.append(
             f"  - Loop-carried RAW on ARRAY ELEMENTS of: {', '.join(array_raw)} "
-            "— algorithmic; cannot be removed by privatizing/renaming."
+            "— usually cause 3 or 4 (see 'Choosing the fix' below)."
         )
     if scalar_raw:
         out.append(
-            f"  - RAW on SCALARS: {', '.join(scalar_raw)} — usually storage reuse "
-            "or a reduction; check each against the loop's induction variables."
+            f"  - RAW on SCALARS: {', '.join(scalar_raw)} — usually cause 1 "
+            "(storage reuse) or cause 2 (a reduction)."
         )
     if not ev.raw_deps:
         out.append("  - No RAW dependences observed — the blocker is structural "
@@ -535,6 +445,13 @@ def _fmt_digest(ev: EvidencePackage) -> str:
     return "\n".join(out) + "\n"
 
 
+# Iterations per loop activation below which OpenMP thread startup (tens of
+# microseconds) tends to outweigh the work, so the parallel build is not faster
+# and the L4 performance gate reverts the rewrite.  A coarse rule of thumb — it
+# is stated to the model as one, not as a hard cutoff.
+_FINE_GRAINED_ITERS = 1000
+
+
 def _fmt_loop_nest(ev: EvidencePackage) -> str:
     """Loop structure with induction variables and iteration statistics.
     Supersedes the flat trip-count list when PEGraph loop data is available."""
@@ -543,17 +460,31 @@ def _fmt_loop_nest(ev: EvidencePackage) -> str:
     out = ["### Loop structure (nesting, induction variables, observed iterations)"]
     for lp in ev.loop_nest:
         idx = ", ".join(lp["index_vars"]) or "unknown"
+        # Each activation of a loop is one parallel region, so what has to
+        # amortise thread startup is the iterations per activation, not the
+        # total across all activations.
+        if lp["avg"] < _FINE_GRAINED_ITERS:
+            verdict = (
+                f"  <-- TOO FINE-GRAINED on its own (~{lp['avg']} iterations per "
+                f"activation, and each activation is a separate parallel region): "
+                f"parallelize an enclosing loop instead, or make each iteration "
+                f"do more work"
+            )
+        else:
+            verdict = "  <-- enough iterations per activation to be worth parallelizing"
         out.append(
             f"  {'  ' * lp['depth']}- loop at lines {lp['start']}–{lp['end']}  "
             f"induction variable(s): {idx}  |  {lp['entries']} activation(s) "
             f"× ~{lp['avg']} iterations = {lp['total']:,} total (max {lp['max']})"
+            f"{verdict}"
         )
     out.append(
         "  Induction variables are managed by OpenMP automatically — dependences "
         "on them are NEVER the real blocker; do not restructure to 'fix' them.\n"
-        "  A loop with few iterations per activation but many activations is "
-        "fine-grained: prefer parallelizing an outer loop or coarsening the work "
-        "per iteration."
+        f"  Rule of thumb used above: below ~{_FINE_GRAINED_ITERS} iterations per "
+        "activation, thread startup costs more than the loop saves, so step 4 "
+        "rejects the rewrite for lack of speedup. Prefer the OUTERMOST loop you "
+        "can legally parallelize among those marked worth parallelizing."
     )
     return "\n".join(out) + "\n"
 
@@ -610,16 +541,22 @@ def _fmt_trip_counts(ev: EvidencePackage) -> str:
         return ""
     out = ["### Loop trip counts (observed at runtime — judge parallel granularity)"]
     for lc in ev.loop_trip_counts:
+        verdict = (
+            "  <-- TOO FINE-GRAINED on its own: parallelize an enclosing loop "
+            "instead, or make each iteration do more work"
+            if lc["avg"] < _FINE_GRAINED_ITERS
+            else "  <-- enough iterations per activation to be worth parallelizing"
+        )
         out.append(
             f"  loop at line {lc['line']}: {lc['entries']} activation(s) "
             f"× ~{lc['avg']} iterations each = {lc['total']:,} total "
-            f"(max {lc['max']}/activation)"
+            f"(max {lc['max']}/activation){verdict}"
         )
     out.append(
-        "  A loop with FEW iterations per activation but MANY activations is "
-        "fine-grained: parallelizing it directly rarely beats thread overhead — "
-        "prefer coarser parallelism (parallelize an outer level, or make each "
-        "parallel iteration do more work)."
+        f"  Rule of thumb used above: each activation is a separate parallel "
+        f"region, so it is the ~{_FINE_GRAINED_ITERS} iterations PER ACTIVATION "
+        "that must amortise thread startup, not the total across activations. "
+        "Prefer the outermost loop marked worth parallelizing."
     )
     return "\n".join(out) + "\n"
 
@@ -645,22 +582,52 @@ def _fmt_extra_vars(ev: EvidencePackage) -> str:
 
 
 def _array_dep_note(ev: EvidencePackage) -> str:
-    """If the blocking RAW deps are on array elements, state plainly that copying
-    or renaming the array cannot remove them.  Returns '' when the blocking deps
-    are all scalar (where privatization is the right move)."""
+    """Cause 3/4 playbook, injected ONLY when the blocking RAW deps are on array
+    elements.  The system prompt states cause 3 in one general paragraph; the
+    tactical detail (which decoupling is valid, and the ways each one is
+    silently botched) lives here so it reaches the model exactly when the
+    profile says it applies, instead of costing every region its context.
+    Returns '' when the blocking deps are all scalar — there privatization is
+    the right move and none of this is relevant."""
     array_vars = sorted({d.variable for d in ev.raw_deps if getattr(d, "kind", "scalar") == "array"})
     if not array_vars:
         return ""
     return (
-        "### Nature of the blocking dependence (read this before choosing a fix)\n"
-        f"The loop-carried RAW dependence is on ARRAY ELEMENTS ({', '.join(array_vars)}), "
-        "not on a scalar — this is cause 3 (in-place coupling) or cause 4 "
-        "(recurrence); copying or renaming the array removes nothing.  Answer "
-        "the same-sweep read-back question first: can a value WRITTEN during "
-        "one sweep be READ again later in the SAME sweep (e.g. a swapped "
-        "element the next iteration compares)?  If YES -> partition into "
-        "coloured sub-passes (cause 3b, bounds re-derived for the new "
-        "schedule); only if NO -> double-buffer (3a).\n"
+        "### Choosing the fix for this array dependence\n"
+        f"The loop-carried RAW dependence is on ARRAY ELEMENTS "
+        f"({', '.join(array_vars)}), not on a scalar.  Work down this list:\n"
+        "  - Is the array SCRATCH space that each iteration fully overwrites "
+        "before reading (no value flows between iterations)?  Then it is cause "
+        "1 after all: give each iteration its own copy and stop there.\n"
+        "  - Otherwise a value really does flow, so answer the SAME-SWEEP "
+        "READ-BACK question: can a value written during one sweep be read again "
+        "later in the SAME sweep?\n"
+        "      NO  — each new value depends only on the previous sweep (a map or "
+        "stencil).  Use a SEPARATE OUTPUT BUFFER: read every input from the "
+        "previous-sweep buffer, write every result into the new one, then SWAP "
+        "the two (or alternate their roles by sweep parity).  Do not copy back "
+        "— that adds a whole extra pass per sweep; copy once after the last "
+        "sweep only if later code must find the result in the original array.  "
+        "Give the scratch buffer the SAME storage class and lifetime as the "
+        "array it mirrors and allocate it ONCE outside the sweep loop; a large "
+        "mirror declared inside the loop lands on the stack and is rebuilt "
+        "every sweep.\n"
+        "      YES — the update cascades along the array within the sweep, so a "
+        "separate buffer is INVALID.  PARTITION instead: split each sweep into "
+        "ordered sub-passes whose iterations touch DISJOINT, non-adjacent "
+        "elements (even-indexed pairs then odd-indexed, or red cells then "
+        "black).  Each sub-pass is then a Do-All, and running them in order "
+        "reproduces the sequential result.  Under this schedule a value moves a "
+        "SHORTER distance per sweep than the old cascade carried it, so "
+        "RE-DERIVE every bound: each sub-pass must cover its whole class on "
+        "every sweep.  A bound copied from the old code that shrinks as it "
+        "progresses (because part of the array was already settled) is WRONG "
+        "here, and doing more comparisons than the original is exactly what "
+        "correctness requires.\n"
+        "  - If neither applies because iteration i needs iteration i-1's "
+        "result outright, it is cause 4 (recurrence): reformulate or leave it.\n"
+        "  Copying or renaming the array is never a fix on its own: the same "
+        "order-dependent updates performed on a copy carry the same dependence.\n"
     )
 
 
@@ -730,7 +697,7 @@ def _build_function_prompt(evidence: EvidencePackage) -> str:
         f"{_TASK_CHECKLIST}"
         "\n"
         ">>> OUTPUT exactly as specified in the system instructions: the PLAN "
-        "(same-sweep line, causes + fixes, loop headers), then the ENTIRE "
+        "(Blockers, then OLD -> NEW loop headers), then the ENTIRE "
         "rewritten function as ONE ```cpp code block, and end the response "
         "there. Keep the same function name and signature."
     )
@@ -775,8 +742,8 @@ def _build_direct_prompt(evidence: EvidencePackage, ws_file: Path) -> str:
         "Work through this checklist:\n"
         f"{_TASK_CHECKLIST}"
         "\n"
-        ">>> Read the file, state the PLAN (same-sweep line, causes + fixes, "
-        "loop headers), then APPLY the rewrite with the Edit tool. Do not print "
+        ">>> Read the file, state the PLAN (Blockers, then OLD -> NEW loop "
+        "headers), then APPLY the rewrite with the Edit tool. Do not print "
         "a diff or the rewritten code — the file's content is what is used. "
         "Keep the function's name and signature, and edit no other file."
     )
@@ -788,13 +755,22 @@ def _build_direct_prompt(evidence: EvidencePackage, ws_file: Path) -> str:
 # ---------------------------------------------------------------------------
 
 def _extract_diff(text: str) -> Optional[str]:
+    """Pull the unified diff out of the response.  A short plain-text PLAN is
+    allowed before it (see _OUTPUT_DIFF), so scan for the header rather than
+    assuming the diff starts at line 0.  A '--- ' line only starts the diff if
+    the NEXT line is its '+++ ' partner; that way a stray dash-run or a plan
+    line beginning with '---' does not swallow the real header."""
     lines = text.splitlines()
-    start = None
+    fallback = None
     for i, line in enumerate(lines):
-        if line.startswith("--- ") or line.startswith("diff --git"):
-            start = i
-            break
-    return "\n".join(lines[start:]) if start is not None else None
+        if line.startswith("diff --git"):
+            return "\n".join(lines[i:])
+        if line.startswith("--- "):
+            if i + 1 < len(lines) and lines[i + 1].startswith("+++ "):
+                return "\n".join(lines[i:])
+            if fallback is None:
+                fallback = i
+    return "\n".join(lines[fallback:]) if fallback is not None else None
 
 
 def _is_valid_diff(diff: str) -> bool:
@@ -1199,10 +1175,12 @@ def call_llm(
                 "A short plain-text PLAN before the code block is allowed; "
                 "nothing may follow the code block."
                 if function_mode else
-                "Your response must be a unified diff only.\n"
-                "Start with '--- <original_file>' on its own line,\n"
-                "then '+++ <modified_file>', then one or more '@@ … @@' hunks.\n"
-                "No prose, no code fences."
+                "Your response must END with a unified diff.\n"
+                "After your short plain-text PLAN, write '--- <original_file>' "
+                "on its own line, then '+++ <modified_file>' on the next, then "
+                "one or more '@@ … @@' hunks — and stop there.\n"
+                "No code fences, and no PLAN line may start with '---', '+++' "
+                "or '@@'."
             )
             current = current + [
                 {"role": "assistant", "content": text},

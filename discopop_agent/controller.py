@@ -67,7 +67,7 @@ from typing import List
 from . import viz
 from .args import AgentArguments
 from .l1_planner import build_candidates, region_fingerprint
-from .l2_evidence import assemble, load_prevented_deps
+from .l2_evidence import _brace_match_end, assemble, load_prevented_deps
 from .l3_llm import LLMConnectionError, call_llm, fmt_blockers, make_diff, normalize_code
 from .l4_validator import capture_reference, fix_hunk_headers, validate
 from .types import ValidationResult
@@ -293,6 +293,104 @@ def _apply_to_source(diff: str, source_file: str, output_dir: Path, label: str) 
     return True
 
 
+_PRAGMA_SHARED_RE = re.compile(r"\bshared\s*\(([^)]*)\)")
+_HUNK_OLD_RE = re.compile(r"^@@ -(\d+)(?:,\d+)? \+\d+(?:,\d+)? @@")
+
+
+def _declared_in(lines: List[str], name: str) -> bool:
+    """Is `name` DECLARED anywhere in these lines (not merely used)?"""
+    decl = re.compile(
+        r"(?:^|[;{}(,]|\s)"                       # statement boundary
+        r"(?:const\s+|static\s+|volatile\s+|unsigned\s+|signed\s+)*"
+        r"(?:auto|bool|char|short|int|long|float|double|size_t|"
+        r"[A-Za-z_]\w*(?:::\w+)*)"                # a type name
+        r"[\s*&]+"
+        r"(?:[\w\s,*&]*?\b)?"                     # other names in the same decl
+        + re.escape(name) + r"\b\s*(?=[=;,\[)])"
+    )
+    return any(decl.search(ln) for ln in lines)
+
+
+def _repair_pragma_clauses(diff: "str | None", source_file: str) -> "str | None":
+    """Drop names from a generated pragma's `shared()` clause when they are not
+    in scope at the pragma.
+
+    DiscoPoP sometimes lists a loop-BODY local in `shared()`.  Observed on
+    example4: for a loop whose body opens `int tmp = arr[i];` it emitted
+    `shared(tmp,arr)`, and the -fopenmp build then fails outright with
+    "use of undeclared identifier 'tmp'".  The gate correctly rejects that
+    pattern, but the only recovery was Tier-2 — an LLM call, gated by
+    --restructure-depth — for what is a one-token defect in a generated clause.
+    Deleting the name is not restructuring, so it happens here instead: at any
+    depth, for free, before the gate.
+
+    Only `shared()` is touched, and that makes the repair semantically free:
+    a variable from an enclosing scope is shared by DEFAULT in a `parallel for`,
+    so removing it from the clause cannot change the meaning — it is either
+    redundant or (the bug case) not in scope at all.  `private`, `firstprivate`,
+    `lastprivate` and `reduction` are left alone, since removing a name there
+    WOULD change semantics.  A pragma carrying `default(none)` is skipped
+    entirely, because there the clause is load-bearing.
+
+    Returns the diff unchanged (same object) when there is nothing to fix, so
+    the gate cache key is unaffected.
+    """
+    if not diff or "#pragma omp" not in diff:
+        return diff
+
+    try:
+        src_lines = Path(source_file).read_text().splitlines()
+    except OSError:
+        return diff
+
+    out: List[str] = []
+    old_line = 0           # 1-based line in the ORIGINAL file
+    changed = False
+
+    for line in diff.splitlines():
+        m = _HUNK_OLD_RE.match(line)
+        if m:
+            old_line = int(m.group(1))
+            out.append(line)
+            continue
+
+        if line.startswith("+") and "#pragma omp" in line and "default(none)" not in line:
+            # The pragma is inserted BEFORE original line `old_line`, which is
+            # the loop it applies to.  Its body is that loop's brace span.
+            body: List[str] = []
+            if 0 < old_line <= len(src_lines):
+                end = _brace_match_end(source_file, old_line)
+                if end >= old_line:
+                    body = src_lines[old_line - 1:end]
+            if body:
+                def _strip(mm: "re.Match") -> str:
+                    names = [n.strip() for n in mm.group(1).split(",") if n.strip()]
+                    kept = [n for n in names if not _declared_in(body, n)]
+                    if len(kept) == len(names):
+                        return str(mm.group(0))
+                    dropped = [n for n in names if n not in kept]
+                    print(f"│  [Tier-1] Repairing the generated pragma: "
+                          f"{', '.join(dropped)} "
+                          f"{'is' if len(dropped) == 1 else 'are'} declared inside "
+                          f"the loop body, so cannot appear in shared()")
+                    return f"shared({','.join(kept)})" if kept else ""
+
+                fixed = str(_PRAGMA_SHARED_RE.sub(_strip, line))
+                if fixed != line:
+                    changed = True
+                    line = fixed.rstrip() + " "
+            out.append(line)
+            continue
+
+        if not line.startswith("+"):
+            # context and removed lines both advance the original-file position
+            if not line.startswith("---") and not line.startswith("\\"):
+                old_line += 1
+        out.append(line)
+
+    return "\n".join(out) + ("\n" if diff.endswith("\n") else "") if changed else diff
+
+
 def _read_tier1_patch(patch_dir: Path) -> str | None:
     """Return the content of the first .patch file DiscoPoP generated for a
     pattern, or None if the patch_generator directory is missing / empty."""
@@ -341,7 +439,14 @@ def _restore_profile(snap: Path, dp_dir: Path, output_dir: Path) -> None:
             shutil.copy2(item, dst)
 
 
-def _write_record(output_dir: Path, record: dict) -> None:
+def _write_record(output_dir: Path, record: dict, dry_run: bool = False) -> None:
+    """Append one accepted region to accepted.json.
+
+    A dry run still evaluates Tier-1 patches for real (it only skips the LLM),
+    so its verdicts belong in the printed summary — but --dry-run promises no
+    file changes, so nothing is written."""
+    if dry_run:
+        return
     f = output_dir / "accepted.json"
     records: List[dict] = json.loads(f.read_text()) if f.exists() else []
     records.append(record)
@@ -434,6 +539,7 @@ def _validate_cached(
     binary_args: "list | None",
     reference_time: "float | None",
     skip_race_check: bool = False,
+    reference_outputs: "list | None" = None,
 ) -> "tuple[ValidationResult, bool, bool]":
     """Run the gate on `diff`, or return the answer already computed for it.
 
@@ -457,6 +563,7 @@ def _validate_cached(
         return validate(
             diff, args.source_file,
             reference_output=reference_output,
+            reference_outputs=reference_outputs,
             binary_args=binary_args,
             require_speedup=args.require_speedup,
             min_speedup=args.min_measured_speedup,
@@ -506,6 +613,7 @@ def _verify_rewrite(
     reference_time: "float | None",
     validate_patterns: bool,
     gate_cache: dict,
+    reference_outputs: "list | None" = None,
 ) -> RewriteOutcome:
     """Decide whether an accepted-by-the-gate rewrite actually did its job.
 
@@ -545,7 +653,8 @@ def _verify_rewrite(
         if not patch:
             continue
         res, _cached, _fp = _validate_cached(
-            gate_cache, patch, args, reference_output, binary_args, reference_time
+            gate_cache, patch, args, reference_output, binary_args, reference_time,
+            reference_outputs=reference_outputs,
         )
         if res.passed:
             return RewriteOutcome("ok", res.measured_speedup, label)
@@ -651,7 +760,9 @@ def run(args: AgentArguments) -> None:
     dp_dir = Path(args.discopop_dir)
     profiler_dir = dp_dir / "profiler"
     output_dir = Path(args.output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
+    # A dry run promises no file changes, so don't even create the output dir.
+    if not args.dry_run:
+        output_dir.mkdir(parents=True, exist_ok=True)
 
     viz.enable(args.verbose)
     _print_banner(args)
@@ -660,13 +771,21 @@ def run(args: AgentArguments) -> None:
     # version must reproduce it (semantic-equivalence gate).  None if the program
     # can't be built/run cleanly up front, in which case correctness is skipped.
     binary_args = args.reprofil_args or None
-    reference_output, reference_time = capture_reference(args.source_file, binary_args)
+    reference_output, reference_time, reference_outputs = capture_reference(
+        args.source_file, binary_args, extra_inputs=args.check_inputs or None
+    )
     if reference_output is None:
         print("  [warn] Could not capture reference output — correctness gate disabled.\n")
     else:
         rt = f", {reference_time*1e3:.1f} ms baseline" if reference_time else ""
-        print(f"  [ok] Captured reference output ({len(reference_output)} bytes{rt}) "
-              f"for correctness/performance gates.\n")
+        n = len(reference_outputs or [])
+        extra = f" on {n} inputs" if n > 1 else " on 1 input"
+        print(f"  [ok] Captured reference output{extra} ({len(reference_output)} bytes{rt}) "
+              f"for the correctness/performance gates.")
+        if n == 1:
+            print("  [note] one input only — a rewrite that is wrong for other sizes "
+                  "would still pass. Add --check-input to widen the check.")
+        print()
 
     # Gate results for this run, keyed by (patch, source text, skip_race_check).
     # A pattern measured by the post-rewrite verification is normally measured
@@ -737,7 +856,9 @@ def run(args: AgentArguments) -> None:
             patch_dir = dp_dir / "patch_generator" / str(pid)
             print(f"│  [Tier-1] Pattern #{pid} ({ptype}): {pragma}  (W={candidate.workload_estimate:.0f})")
 
-            tier1_diff = _read_tier1_patch(patch_dir)
+            tier1_diff = _repair_pragma_clauses(
+                _read_tier1_patch(patch_dir), args.source_file
+            )
             tier1_valid = True
             t1_speedup = None
             io_only = _region_is_io_only(
@@ -750,6 +871,7 @@ def run(args: AgentArguments) -> None:
                 t1_result, from_cache, barrier_fp = _validate_cached(
                     gate_cache, tier1_diff, args, reference_output, binary_args,
                     reference_time, skip_race_check=io_only,
+                    reference_outputs=reference_outputs,
                 )
                 if from_cache:
                     # Already measured when the restructuring that exposed this
@@ -876,7 +998,7 @@ def run(args: AgentArguments) -> None:
                     "applied_to_source": applied,
                 }
                 accepted.append(record)
-                _write_record(output_dir, record)
+                _write_record(output_dir, record, args.dry_run)
                 continue
             # tier1_valid is False → fall through to Tier-2 check below
 
@@ -994,6 +1116,7 @@ def run(args: AgentArguments) -> None:
             result = validate(
                 diff, args.source_file,
                 reference_output=reference_output,
+                reference_outputs=reference_outputs,
                 binary_args=binary_args,
                 require_speedup=args.require_speedup,
                 min_speedup=args.min_measured_speedup,
@@ -1097,6 +1220,7 @@ def run(args: AgentArguments) -> None:
                         fresh_all, _touched_span(clean_diff), dp_dir, args,
                         reference_output, binary_args, reference_time,
                         validate_patterns=terminal, gate_cache=gate_cache,
+                        reference_outputs=reference_outputs,
                     )
 
                 if outcome.status not in ("ok", "exposed"):
@@ -1145,7 +1269,7 @@ def run(args: AgentArguments) -> None:
                           f"{depth + 1} (still allowed to restructure)")
 
                 accepted.append(record)
-                _write_record(output_dir, record)
+                _write_record(output_dir, record, args.dry_run)
                 print(f"└─ ACCEPTED\n")
                 break
 
@@ -1168,11 +1292,11 @@ def run(args: AgentArguments) -> None:
                     "correctness": "The program's output CHANGED — your restructuring is not "
                             "semantically equivalent. Diagnose WHICH kind of error this is "
                             "before rewriting:\n"
-                            "(a) WRONG TRANSFORMATION for the dependence — e.g. you "
-                            "double-buffered but the original reads values updated earlier in "
-                            "the SAME sweep (re-check the same-sweep read-back question), or "
-                            "you reordered operations whose order affects the result. Then "
-                            "switch to the other applicable fix for the diagnosed cause.\n"
+                            "(a) WRONG TRANSFORMATION for the dependence — you assumed an "
+                            "independence the code does not have, or reordered operations "
+                            "whose order affects the result. Re-check the cause you "
+                            "diagnosed against the evidence, then switch to the other fix "
+                            "that cause allows.\n"
                             "(b) RIGHT TRANSFORMATION, carried-over detail — the strategy is "
                             "sound but some bound, initial value, or boundary handling was "
                             "copied from the old schedule. Re-derive each such detail for the "
@@ -1216,7 +1340,11 @@ def run(args: AgentArguments) -> None:
                         "dependence — then name the different one you are switching "
                         "to — or (b) a detail copied from the old schedule (a bound, "
                         "boundary, or initial value) — then name that exact detail "
-                        "and its corrected form."
+                        "and its corrected form.\n"
+                        "Then give the OLD -> NEW loop header pairs as usual, and make "
+                        "the code you emit match those NEW headers character for "
+                        "character. Stating the right bound and then writing the old "
+                        "one is the single most common way this retry fails."
                     )
                 if tier2_messages is not None:
                     tier2_messages = tier2_messages + [{

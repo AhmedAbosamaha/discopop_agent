@@ -461,6 +461,7 @@ python -m discopop_agent \
     --require-speedup / --no-require-speedup   default: ON
     --min-measured-speedup <float>         default: 1.1
     --build-retries      <int>             default: 2 (apply/compile retries, free)
+    --check-input        <args>            repeatable: extra inputs correctness must match
     --apply-patches / --no-apply-patches       default: ON (write Tier-1 pragmas to source)
     --dry-run                               plan only, no LLM calls, no file changes
 ```
@@ -496,6 +497,8 @@ python -m discopop_agent \
 **`--require-speedup` / `--min-measured-speedup`:** On by default. A pragma patch is accepted only if the parallel build measurably runs at least `--min-measured-speedup`× faster than the sequential build, and a restructuring whose exposed loops show no speedup is reverted and retried. Pass `--no-require-speedup` to accept correct-but-not-faster parallelizations — appropriate when the profiled workload is too small to amortise thread startup (the agent still enforces compilation, race-freedom and identical output). Note that reverting still happens for the *other* verdicts either way: a rewrite that exposes no pattern at all is never kept.
 
 **`--apply-patches`:** On by default. When a Tier-1 pattern passes validation, DiscoPoP's generated `#pragma omp` is written into the source file (the original is backed up to `<output-dir>/<name>.original` first). Tier-2 rewrites are always written — they are what gets re-profiled. Pass `--no-apply-patches` to leave the source untouched for Tier-1 and only record the result in `accepted.json`, with the patch left in `patch_generator/`. The agent's deliverable is a parallelized program, so the default is to produce one: without this, a run that proved a 5× parallelization ended with the user's file unchanged.
+
+**`--check-input`:** Extra program arguments the rewrite must **also** reproduce, repeatable. Correctness is otherwise judged on a single input, so a rewrite that is right for the profiled size and wrong at 0, 1, or an odd count passes — exactly the "bound carried over from the old schedule" failure the L3 prompt warns about. Verified: a partition whose bound is right for even `n` and wrong for odd `n` passes the gate on one input and fails it once `999` is added. Inputs the original program cannot run cleanly are dropped with a warning.
 
 **`--build-retries`:** How many apply/compile failures may be retried **without** consuming budget (default 2). A build error is a mechanical fix that says nothing about the model's parallelization idea, so charging a full attempt for one wastes the region's real chances; the cap keeps a model that cannot produce compiling code from looping forever.
 

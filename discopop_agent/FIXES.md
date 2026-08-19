@@ -971,3 +971,38 @@ Fix 41's verification step measures an exposed pattern to decide whether to KEEP
 - Tier-1 now prints `Reusing the verification result for this patch (accepted, 3.03×) — gate not re-run` on a hit, so the log never implies a check ran when it didn't.
 
 **Verified:** unit test counts real `validate()` calls through a stub — repeat asks reuse the result, a changed source file invalidates the hit, `skip_race_check` is keyed separately, and the barrier re-check is cached as one unit.
+
+---
+
+## Fix 43 — Fix the two oracles: attributable speedup, and correctness on more than one input
+
+**File:** `l4_validator.py`, `controller.py`, `args.py`
+
+Both of the agent's oracles were weaker than the decisions resting on them.
+
+**Problem 1 — the speedup ratio was not attributable to the parallelism.**
+`_measure_speedup` compared two DIFFERENT BUILDS: the source without `-fopenmp` against the source with it. `-fopenmp` changes codegen and layout, so part of every ratio came from the compiler rather than from the pragma. Near the 1.1x threshold that decided accept/reject, the noise swamped the signal — the same pragma on `fine_grained` measured **0.89x on one run and 1.10x on the next**, straddling the cutoff, so the verdict was partly a coin flip.
+
+**Fix:** measure ONE binary under `OMP_NUM_THREADS=1` and then unrestricted. Identical machine code on both sides, so whatever changes is the parallelism. Measured on the same kernel, 7 interleaved repetitions each:
+
+```
+OLD  seq build vs par build : median 5.69x  range 1.57-5.87  spread 76%
+NEW  same binary, 1 vs N    : median 5.70x  range 5.19-5.91  spread 13%
+```
+
+Same median — the old instrument was unbiased, just noisy — with the spread cut by a factor of six, and the 1.57x outlier (the kind that flips a threshold decision) gone. The correctness stage's `-O2 -fopenmp` build is now reused for the timed runs, so the gate compiles this source **once** instead of three times, and `ThreadPoolExecutor` is no longer needed.
+
+**Problem 2 — semantic equivalence was proven on a single input.**
+Correctness compared stdout for exactly one argv, so a rewrite correct at the profiled size and wrong at 0, 1, or an odd count passed — precisely the "bound carried over from the old schedule" failure the L3 prompt warns about. The benchmark cases even had to be *designed around* the oracle (integer checksums, because FP reduction reassociation would fail a *correct* parallelization).
+
+**Fix:** `--check-input` (repeatable) records extra argument vectors from the ORIGINAL program, and the correctness stage replays every one of them. Inputs the original cannot run cleanly are dropped with a warning rather than failing the run. When only one input is in play the startup banner says so explicitly, so a thin check never looks like a thorough one. A failure on a non-profiled input gets its own diagnostic naming the input and the likely cause.
+
+**Verified** with a rewrite whose partition bound is right for even `n` and wrong for odd `n` (correct at 0, 1, 2, 8, 1000; wrong at 7, 999):
+
+```
+1. one input  (n=1000)          -> accepted     passed=True     <- fooled
+2. four inputs (adds 999, 1, 0) -> correctness  passed=False    <- caught
+3. correct rewrite, four inputs -> accepted     passed=True     <- no false positive
+```
+
+**Known gap:** the benchmark cases hard-code their problem size and take no argv, so they cannot exercise `--check-input` yet; giving them a size argument is the natural follow-up.
