@@ -12,7 +12,7 @@ way; the full gate exists to prove that code the LLM restructured is valid.
 
   For each candidate (priority order):
     ┌─ Tier-1: DiscoPoP pattern found & applicable?
-    │    Yes → reduced gate: does it compile and keep the output?
+    │    Yes → reduced gate: compiles, race-free, output unchanged?
     │              PASS → apply the pragma → ACCEPT (no LLM, no re-profile)
     │              FAIL → leave the pragma out → SKIP (still no LLM)
     │    No  → Tier-2 allowed at this depth?
@@ -72,7 +72,7 @@ from .args import AgentArguments
 from .l1_planner import build_candidates, region_fingerprint
 from .l2_evidence import _brace_match_end, assemble, load_prevented_deps
 from .l3_llm import LLMConnectionError, call_llm, fmt_blockers, make_diff, normalize_code
-from .l4_validator import capture_reference, fix_hunk_headers, validate
+from .l4_validator import capture_reference, fix_hunk_headers, run_patch, validate
 from .types import ValidationResult
 
 _LLVM_LIBCXX = "/usr/local/Cellar/llvm@19/19.1.7/lib/c++"
@@ -250,14 +250,11 @@ def _apply_to_source(diff: str, source_file: str, output_dir: Path, label: str) 
         print(f"│  [{label}] Original backed up → {backup.name}")
     patch_path = output_dir / f".apply_{label.lower()}.patch"
     patch_path.write_text(fix_hunk_headers(diff) + "\n")
-    r = subprocess.run(
-        ["patch", "--quiet", "--no-backup-if-mismatch", str(src), str(patch_path)],
-        capture_output=True, text=True,
-    )
+    ok, diag = run_patch(src, patch_path)
     patch_path.unlink(missing_ok=True)
-    if r.returncode != 0:
+    if not ok:
         print(f"│  [{label}] WARNING: could not apply the validated patch to "
-              f"{src.name}: {(r.stdout + r.stderr).strip()[:160]}")
+              f"{src.name}: {diag[:160]}")
         return False
     print(f"│  [{label}] Applied to {src.name}")
     return True
@@ -447,7 +444,7 @@ def _print_banner(args: AgentArguments) -> None:
     print(f"  Min workload   : {args.min_workload}")
     print(f"  Restruct. depth: {args.restructure_depth} "
           f"(Tier-2 allowed at depth 0–{args.restructure_depth})")
-    print(f"  Quality gate   : Tier-1 = compile + output only (no escalation); "
+    print(f"  Quality gate   : Tier-1 = all but speed, no escalation; "
           f"Tier-2 = full")
     print(f"  Speedup gate   : "
           + (f"require ≥ {args.min_measured_speedup}× measured"
@@ -486,18 +483,25 @@ def _touched_span(diff: str) -> "tuple[int, int] | None":
     return (lo, hi) if lo is not None and hi is not None else None
 
 
-def _gate_key(diff: str, source_file: str) -> str:
-    """Identity of one gate run: this patch, against this exact source text.
+def _gate_key(diff: str, source_file: str, mode: str) -> str:
+    """Identity of one gate run: this patch, against this exact source text,
+    asking this set of questions.
 
     The source hash is what makes reuse safe — a patch validated before another
     region's pragma was applied says nothing about the file afterwards, and that
     case really happens (a rewrite exposes two loops; applying the first one's
     pragma changes the file the second is measured against).
+
+    `mode` is in the key because the modes are not interchangeable: "safety"
+    skips the timing runs, so serving one of its results to a "full" caller
+    would silently report an unmeasured patch as fast enough.
     """
     h = hashlib.sha1()
     h.update(Path(source_file).read_bytes())
     h.update(b"\0")
     h.update(diff.encode())
+    h.update(b"\0")
+    h.update(mode.encode())
     return h.hexdigest()
 
 
@@ -509,21 +513,28 @@ def _validate_cached(
     binary_args: "list | None",
     reference_time: "float | None",
     reference_outputs: "list | None" = None,
+    mode: str = "full",
 ) -> "tuple[ValidationResult, bool, bool]":
     """Run the gate on `diff`, or return the answer already computed for it.
 
     Returns (result, served_from_cache, barrier_false_positive_suspected).
 
-    Only the post-rewrite verification calls this now — the Tier-1 pass applies
-    DiscoPoP's pragma without gating it.  The cache still earns its place: one
-    verification measures every pattern the rewrite exposed, and a later region
-    can present an identical patch against identical source bytes — a full
-    duplicate gate run (three compiles, a sanitizer run, a correctness run, and
-    up to five timing pairs) for a verdict already known.
+    Both gate sites come through here: Tier-1 in mode="safety", the post-rewrite
+    verification in mode="full".  Two reasons it is worth the indirection.
 
-    The macOS OMP-barrier false-positive re-check lives here too.
+    The cache: one verification measures every pattern a rewrite exposed, and a
+    later region can present an identical patch against identical source bytes —
+    a full duplicate gate run (three compiles, a sanitizer run, a correctness
+    run, and up to five timing pairs) for a verdict already known.
+
+    The macOS OMP-barrier false-positive re-check: TSan reports a race between a
+    write inside `.omp_outlined` and the main thread's read after the region,
+    with no barrier edge it can see.  Legitimate pragmas trip it, so a `tsan`
+    failure carrying that signature is re-verified with the race check off
+    rather than being trusted.  Any caller that skips this wrapper rejects
+    correct pragmas on macOS.
     """
-    key = _gate_key(diff, args.source_file)
+    key = _gate_key(diff, args.source_file, mode)
     hit = cache.get(key)
     if hit is not None:
         return hit, True, False
@@ -538,6 +549,7 @@ def _validate_cached(
             min_speedup=args.min_measured_speedup,
             skip_race_check=skip,
             reference_time=reference_time,
+            mode=mode,
         )
 
     res = _run(False)
@@ -662,9 +674,9 @@ def _rewrite_feedback(
             "correct, but DiscoPoP STILL finds no parallel pattern in the lines you "
             "changed — so the rewrite achieved nothing and has been reverted.\n\n"
             "The blocking dependence is therefore still present. Do not re-submit a "
-            "variation of the same structure: re-read the blockers below (they are "
-            "DiscoPoP's own analysis OF YOUR REWRITE, not of the original code), name "
-            "which cause (1-6) each one is, and apply the fix for that cause."
+            "variation of the same structure — the blockers below are DiscoPoP's "
+            "analysis OF YOUR REWRITE, not of the original code, so read them as a "
+            "description of what you just wrote."
         )
         blockers = fmt_blockers(
             load_prevented_deps(dp_dir, file_id, *(touched or (1, 10**9)))[:12]
@@ -687,24 +699,18 @@ def _rewrite_feedback(
         return (
             f"Progress: after your rewrite DiscoPoP DID detect parallelism "
             f"({outcome.pattern_label}).\n\n"
-            f"Your rewrite is already CORRECT ON ITS OWN — it passed the "
-            f"sequential output check before this. What failed is running it IN "
-            f"PARALLEL: DiscoPoP added its `#pragma omp` to your code and that "
-            f"build broke. The rewrite has been reverted.\n\n"
-            f"So do not go hunting for a bug in your logic. Look for an ORDERING "
-            f"ASSUMPTION — something in the body that is only correct when "
-            f"iterations run one after another: a value carried from one "
-            f"iteration to the next, a variable shared where each iteration "
-            f"needed its own, or an accumulation that is not a clean reduction. "
-            f"Keep the structure that made the loop detectable and remove that "
-            f"assumption.\n\n"
-            f"Two things to read the diagnostic correctly. It was produced while "
-            f"validating YOUR CODE PLUS THAT PRAGMA, so where it says the "
-            f"program is not semantically equivalent, it is not saying your "
-            f"rewrite alone is wrong. And if the outputs differ only in the last "
-            f"digits of floating-point numbers, the parallel reduction simply "
-            f"summed them in a different order — that is reassociation, not a "
-            f"dependence, so do not invent one to explain it.\n\n"
+            f"Your rewrite is correct on its own — it already passed the sequential "
+            f"output check. What failed is running it in parallel: DiscoPoP added "
+            f"its `#pragma omp` to your code and that build broke. The rewrite has "
+            f"been reverted.\n\n"
+            f"So the thing to find is not a bug in your logic but an ordering "
+            f"assumption — something in the body that only holds when iterations run "
+            f"one after another. Keep the structure that made the loop detectable.\n\n"
+            f"Reading the diagnostic: it comes from validating YOUR CODE PLUS THAT "
+            f"PRAGMA, so a complaint that the program is not semantically equivalent "
+            f"is not about your rewrite alone. And if the outputs differ only in the "
+            f"last digits of floating-point values, a parallel reduction reassociated "
+            f"the arithmetic — that is not a dependence.\n\n"
             f"Diagnostic:\n{outcome.diagnostic[:1200]}"
         )
 
@@ -714,12 +720,10 @@ def _rewrite_feedback(
             f"Your rewrite worked in every respect except the one that matters: "
             f"DiscoPoP parallelized it ({outcome.pattern_label}) and the parallel "
             f"build is CORRECT, but it is not faster ({got}). It has been reverted.\n\n"
-            f"The dependence is already gone — this is purely a granularity problem "
-            f"(cause 6), so do NOT go looking for dependences again. Make each "
-            f"parallel iteration do MORE work: parallelize an outer loop instead of "
-            f"an inner one, fuse adjacent tiny parallel loops into one, hoist "
-            f"loop-invariant work out, or block/tile the iteration space so threads "
-            f"get large contiguous chunks.\n\n"
+            f"The dependence is already gone, so do not go looking for one again. "
+            f"The parallel work is too fine-grained to cover thread startup: each "
+            f"iteration needs to do more, or the parallelism needs to move to a "
+            f"level that has more work per activation.\n\n"
             f"Diagnostic:\n{outcome.diagnostic[:800]}"
         )
 
@@ -842,30 +846,38 @@ def run(args: AgentArguments) -> None:
             )
             # Tier-1 trusts DiscoPoP's pragma, but does not insert it blind: a
             # REDUCED gate checks it compiles (including the -fopenmp build, so
-            # a non-canonical loop is caught) and leaves the program's output
-            # unchanged.  Races and speed are deliberately not measured — those
-            # questions belong to the LLM path.
+            # a non-canonical loop is caught), is race-free, and leaves the
+            # program's output unchanged.  Only the SPEED question is skipped —
+            # that one belongs to the LLM path.
+            #
+            # ThreadSanitizer is here because correctness cannot replace it: a
+            # falsely-detected Do-All can still print the right answer on the
+            # one profiled input while racing, and be wrong at every other size.
             #
             # A failure here means only "do not insert this pragma".  There is
             # no escalation: the region is left exactly as DiscoPoP found it and
             # the run moves on, so a bad suggestion costs one compile, not an
             # LLM budget slot.
             #
-            # Called directly rather than through _validate_cached: that cache is
-            # keyed on (patch, source) with no notion of mode, so a reduced
-            # result must never be served to the full gate at verification time.
+            # Routed through _validate_cached so this shares the run cache AND,
+            # crucially, the macOS OMP-barrier false-positive re-check — without
+            # it TSan rejects perfectly good pragmas here.  The cache key
+            # includes the mode, so a "safety" verdict can never be handed to
+            # the full gate at verification time.
             if tier1_diff and not args.dry_run:
-                print(f"│  [Tier-1] Checking the pragma compiles and preserves "
-                      f"output (no race or speed check)")
-                t1_res = validate(
-                    tier1_diff, args.source_file,
-                    reference_output=reference_output,
-                    reference_outputs=reference_outputs,
-                    binary_args=binary_args,
-                    require_speedup=False,
-                    reference_time=reference_time,
+                print(f"│  [Tier-1] Checking the pragma compiles, is race-free "
+                      f"and preserves output (no speed check)")
+                t1_res, t1_cached, t1_barrier_fp = _validate_cached(
+                    gate_cache, tier1_diff, args, reference_output, binary_args,
+                    reference_time, reference_outputs=reference_outputs,
                     mode="safety",
                 )
+                if t1_barrier_fp:
+                    print(f"│  [Tier-1] TSan OMP-barrier false positive suspected "
+                          f"— re-verified on output instead")
+                elif t1_cached:
+                    print(f"│  [Tier-1] Reusing the verdict for this patch "
+                          f"({t1_res.stage}) — gate not re-run")
                 viz.gate_result(t1_res.passed, t1_res.stage, t1_res.diagnostic,
                                 t1_res.measured_speedup,
                                 skipped_stages=t1_res.skipped_stages)
@@ -987,14 +999,10 @@ def run(args: AgentArguments) -> None:
                     tier2_messages = tier2_messages + [{
                         "role": "user",
                         "content": (
-                            f"{what} (comment or "
-                            "formatting edits do not count). That is not a valid "
-                            "answer: the task is to restructure the code so the "
-                            "blocking dependence is gone. If your previous "
-                            "transformation attempt failed validation, do not fall "
-                            "back to the original — apply the OTHER applicable fix "
-                            "for the diagnosed cause and adjust every loop bound "
-                            "and sweep count to match the new schedule."
+                            f"{what} (comment or formatting edits do not count). "
+                            "That is not an answer: the blocking dependence has to be "
+                            "gone. If your last attempt failed validation, do not fall "
+                            "back to the original — restructure it a different way."
                         ),
                     }]
 
@@ -1179,7 +1187,7 @@ def run(args: AgentArguments) -> None:
                     "compile": "The patched code does not compile. Fix the C/C++ error "
                              "without changing what the code computes.",
                     "openmp_compile": "A loop you want parallelized is not in OpenMP-canonical "
-                             "form (cause 5): use a simple `i < bound` condition and no "
+                             "form: it needs a simple `i < bound` condition and no "
                              "break/continue/return in the body.",
                     "tsan": "ThreadSanitizer found a REAL data race — the loop still carries a "
                             "cross-iteration dependence. Identify its cause (in-place coupling, "
@@ -1188,11 +1196,10 @@ def run(args: AgentArguments) -> None:
                     "correctness": "The program's output CHANGED — your restructuring is not "
                             "semantically equivalent. Diagnose WHICH kind of error this is "
                             "before rewriting:\n"
-                            "(a) WRONG TRANSFORMATION for the dependence — you assumed an "
-                            "independence the code does not have, or reordered operations "
-                            "whose order affects the result. Re-check the cause you "
-                            "diagnosed against the evidence, then switch to the other fix "
-                            "that cause allows.\n"
+                            "(a) WRONG TRANSFORMATION — you assumed an independence the "
+                            "code does not have, or reordered operations whose order affects "
+                            "the result. Re-check that against the evidence and restructure "
+                            "differently.\n"
                             "(b) RIGHT TRANSFORMATION, carried-over detail — the strategy is "
                             "sound but some bound, initial value, or boundary handling was "
                             "copied from the old schedule. Re-derive each such detail for the "
@@ -1200,9 +1207,9 @@ def run(args: AgentArguments) -> None:
                             "element that was safe because of the OLD update order is not "
                             "automatically safe under the new one. Keep the strategy and fix "
                             "only that.",
-                    "performance": "The parallel build was correct but NOT faster than sequential. "
-                            "The dependence is already gone; restructure for granularity (cause 6) "
-                            "— coarsen iterations, fuse tiny loops, or hoist invariant work.",
+                    "performance": "The parallel build was correct but NOT faster than "
+                            "sequential. The dependence is already gone; the parallel work is "
+                            "just too fine-grained to cover thread startup.",
                 }
                 guidance = _STAGE_GUIDANCE.get(result.stage, "")
                 refunded = ""
@@ -1230,17 +1237,11 @@ def run(args: AgentArguments) -> None:
                     )
                 else:
                     retry_instr = (
-                        "Do NOT resubmit a variation of the same code. Your next PLAN "
-                        "must open by stating what your previous attempt did, whether "
-                        "the failure was (a) the wrong transformation for this "
-                        "dependence — then name the different one you are switching "
-                        "to — or (b) a detail copied from the old schedule (a bound, "
-                        "boundary, or initial value) — then name that exact detail "
-                        "and its corrected form.\n"
-                        "Then give the OLD -> NEW loop header pairs as usual, and make "
-                        "the code you emit match those NEW headers character for "
-                        "character. Stating the right bound and then writing the old "
-                        "one is the single most common way this retry fails."
+                        "Do not resubmit a variation of the same code. Say in one line "
+                        "which of (a) or (b) this was and what you are changing because "
+                        "of it — then make sure the code you write actually differs in "
+                        "that way. Stating the right bound and then writing the old one "
+                        "is the most common way this retry fails."
                     )
                 if tier2_messages is not None:
                     tier2_messages = tier2_messages + [{

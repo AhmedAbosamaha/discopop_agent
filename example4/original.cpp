@@ -1,23 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define N 4
+#define N 513
 
-/*
- * Bubble sort — inner loop has a cross-iteration swap dependency.
- *
- * Iteration i  writes arr[i] and arr[i+1].
- * Iteration i+1 reads  arr[i+1] (just written by iteration i).
- *
- * This is a RAW dependency: the inner loop is NOT safe to parallelize.
- * DiscoPoP will incorrectly label it as Do-All (applicable=True).
- * Applying the pragma causes races on arr[i+1] at thread-chunk boundaries.
- * TSan catches it → Tier-1 validation FAILS → agent escalates to Tier-2.
- *
- * LLM restructures to odd-even transposition sort:
- *   Even phase: independent pairs (0,1), (2,3), (4,5) ... → Do-All
- *   Odd  phase: independent pairs (1,2), (3,4), (5,6) ... → Do-All
- */
 void bubble_sort(int *arr, int n) {
     for (int pass = 0; pass < n - 1; pass++) {
         for (int i = 0; i < n - pass - 1; i++) {

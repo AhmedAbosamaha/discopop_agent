@@ -126,6 +126,40 @@ def fix_hunk_headers(diff: str) -> str:
 # Stage 1: apply patch
 # ---------------------------------------------------------------------------
 
+def run_patch(target: Path, patch_path: Path) -> Tuple[bool, str]:
+    """Apply `patch_path` to `target`, without any way to hang.
+
+    GNU patch goes INTERACTIVE whenever it cannot work out what to do — "File
+    to patch:", "Reversed (or previously applied) patch detected!  Assume -R?"
+    — and reads the answer from stdin.  Under subprocess.run(capture_output=True)
+    stdout and stderr are piped but stdin is inherited, so those prompts are
+    invisible and the call blocks forever.  That really happened: a run sat on
+    an unanswerable prompt for six minutes before it was killed.
+
+    Three guards, each closing a different route to a hang:
+      --batch            never ask; take the default for every question
+      --forward          skip a patch that looks already applied instead of
+                         asking about it (the case that hung: an earlier pragma
+                         had already changed the lines this patch expected)
+      stdin=DEVNULL      any prompt that still appears reads EOF and gives up
+      timeout            a backstop — patch works in milliseconds, so anything
+                         approaching a minute is pathological
+    """
+    try:
+        r = subprocess.run(
+            # --no-backup-if-mismatch: suppress <file>.orig backups on fuzzy apply.
+            ["patch", "--batch", "--forward", "--quiet",
+             "--no-backup-if-mismatch", str(target), str(patch_path)],
+            capture_output=True, text=True,
+            stdin=subprocess.DEVNULL, timeout=60,
+        )
+    except subprocess.TimeoutExpired:
+        return False, "patch timed out after 60 s (it should take milliseconds)"
+    if r.returncode != 0:
+        return False, (r.stdout + r.stderr).strip() or f"patch exited {r.returncode}"
+    return True, ""
+
+
 def _apply(diff: str, source_file: str, work_dir: Path) -> Tuple[bool, str, Optional[Path]]:
     src = Path(source_file)
     dst = work_dir / src.name
@@ -145,13 +179,8 @@ def _apply(diff: str, source_file: str, work_dir: Path) -> Tuple[bool, str, Opti
     patch_path = work_dir / "llm.patch"
     patch_path.write_text("\n".join(fixed_lines) + "\n")
 
-    result = subprocess.run(
-        # --no-backup-if-mismatch: suppress <file>.orig backups on fuzzy apply.
-        ["patch", "--quiet", "--no-backup-if-mismatch", str(dst), str(patch_path)],
-        capture_output=True, text=True,
-    )
-    if result.returncode != 0:
-        diag = (result.stdout + result.stderr).strip()
+    ok, diag = run_patch(dst, patch_path)
+    if not ok:
         return False, f"patch failed:\n{diag}", None
     return True, "", dst
 
@@ -482,11 +511,13 @@ def validate(
       compiled WITH -fopenmp, must reproduce the reference stdout exactly.
       Catches restructurings that change observable results.  Note this is the
       PARALLEL binary — the stage that catches a race corrupting the output.
-    `mode="safety"` runs the subset that answers "is this change safe to
-    insert?" — apply, compile, the -fopenmp build, and correctness — and skips
-    the two stages that ask whether it is GOOD: the sanitizer and the timing
-    runs.  Tier-1 uses it to avoid inserting a pragma that breaks the build or
-    changes the output, without paying for a measurement it will not act on.
+    `mode="safety"` runs everything except the timing: apply, compile, the
+    -fopenmp build, ThreadSanitizer, and correctness.  It answers "is this
+    change safe to insert?" and skips only the stage that asks whether it is
+    WORTH inserting.  Tier-1 uses it, and the sanitizer is not optional there:
+    correctness alone cannot catch a falsely-detected Do-All, because a racy
+    pragma can still print the right answer on a small profiled input and be
+    wrong at every other size.
 
     - performance (when `require_speedup` and the diff adds a `#pragma omp`):
       interleaved A/B on ONE binary, OMP_NUM_THREADS=1 against unrestricted;
@@ -497,11 +528,6 @@ def validate(
     """
     if mode not in ("safety", "full"):
         raise ValueError(f"validate(mode=): unknown mode {mode!r}")
-    if mode == "safety":
-        # Compile the -fopenmp build (so a non-canonical loop is still caught)
-        # but do not run the sanitizer, and do not time anything.
-        skip_race_check = True
-
     clangpp = _find_clangpp()
     if clangpp is None:
         return ValidationResult(
