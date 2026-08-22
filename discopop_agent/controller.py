@@ -63,7 +63,7 @@ import subprocess
 import sys
 import tempfile
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List
 
@@ -72,7 +72,9 @@ from .args import AgentArguments
 from .l1_planner import build_candidates, region_fingerprint
 from .l2_evidence import _brace_match_end, assemble, load_prevented_deps
 from .l3_llm import LLMConnectionError, call_llm, fmt_blockers, make_diff, normalize_code
-from .l4_validator import capture_reference, fix_hunk_headers, run_patch, validate
+from .l4_validator import (capture_reference, check_pragma_compiles,
+                           fix_hunk_headers, measure_marginal, noise_floor,
+                           run_patch, time_source, validate)
 from .types import ValidationResult
 
 _LLVM_LIBCXX = "/usr/local/Cellar/llvm@19/19.1.7/lib/c++"
@@ -358,6 +360,225 @@ def _repair_pragma_clauses(diff: "str | None", source_file: str) -> "str | None"
     return "\n".join(out) + ("\n" if diff.endswith("\n") else "") if changed else diff
 
 
+_PRIVATE_CLAUSE_RE = re.compile(r"\b(private|firstprivate)\s*\(([^)]*)\)")
+_LOOP_HEAD_RE = re.compile(r"^\s*(for|while)\s*\(")
+
+
+def _loop_span(lines: List[str], head_idx: int) -> "tuple[int, int] | None":
+    """Line range of the loop whose header is at `head_idx`, by brace balance.
+
+    Returns (first, last) 0-based inclusive.  A brace-less single-statement body
+    ends at the first line that closes the header's parentheses and then carries
+    a `;`, which covers the common `for (...)\n    stmt;` shape.
+    """
+    depth = 0
+    seen_brace = False
+    for i in range(head_idx, min(len(lines), head_idx + 400)):
+        ln = lines[i]
+        for ch in ln:
+            if ch == "{":
+                depth += 1
+                seen_brace = True
+            elif ch == "}":
+                depth -= 1
+                if seen_brace and depth <= 0:
+                    return head_idx, i
+        if not seen_brace and i > head_idx and ln.rstrip().endswith(";"):
+            return head_idx, i
+        if not seen_brace and i == head_idx and ln.rstrip().endswith(";") and ")" in ln:
+            return head_idx, i
+    return None
+
+
+def _read_after(lines: List[str], name: str, after_idx: int, limit: int = 60) -> bool:
+    """Is `name` READ somewhere after line `after_idx`, before it is redeclared?
+
+    Deliberately crude and deliberately conservative in the direction that
+    matters: any mention that is not a plain assignment to the name counts as a
+    read.  A false "yes" costs one rejected pragma; a false "no" ships a silently
+    wrong program.
+    """
+    word = re.compile(r"\b" + re.escape(name) + r"\b")
+    assign_only = re.compile(r"^\s*" + re.escape(name) + r"\s*=[^=]")
+    for ln in lines[after_idx + 1: after_idx + 1 + limit]:
+        if not word.search(ln):
+            continue
+        if _declared_in([ln], name):     # shadowed / redeclared — stop looking
+            return False
+        if assign_only.match(ln):
+            continue
+        return True
+    return False
+
+
+def _written_in(lines: List[str], name: str) -> bool:
+    """Is `name` ASSIGNED anywhere in these lines?
+
+    The write-back rule only bites when the loop actually produces a value.  A
+    read-only scalar in `firstprivate` — a loop bound, a size, a function
+    parameter — is correct and idiomatic OpenMP, and rejecting it was throwing
+    away five of six good pragmas.
+    """
+    pat = re.compile(
+        r"\b" + re.escape(name) + r"\s*(?:"
+        r"(?<![=!<>+\-*/%&|^])=(?!=)"      # x = ...   (not ==, !=, <=, +=, ...)
+        r"|\+=|-=|\*=|/=|%=|&=|\|=|\^=|<<=|>>="
+        r"|\+\+|--"                        # x++ / x--
+        r")"
+    )
+    pre = re.compile(r"(?:\+\+|--)\s*\b" + re.escape(name) + r"\b")   # ++x / --x
+    return any(pat.search(ln) or pre.search(ln) for ln in lines)
+
+
+def _pragma_and_anchor(diff: str) -> "tuple[str, str] | None":
+    """From a generated patch, the pragma line it adds and the loop header that
+    follows it.  Together those are everything needed to place the pragma
+    against ANY version of the file — which is what makes replaying a stored
+    diff unnecessary."""
+    dl = diff.splitlines()
+    pi = next((i for i, l in enumerate(dl)
+               if l.startswith("+") and "#pragma omp" in l), None)
+    if pi is None:
+        return None
+    pragma = dl[pi][1:]
+    for l in dl[pi + 1:]:
+        if l.startswith("-"):
+            continue
+        text = l[1:] if l[:1] in ("+", " ") else l
+        st = text.strip()
+        if not st or st.startswith("//") or st.startswith("/*") or st.startswith("*"):
+            continue                      # a comment may sit between the two
+        if _LOOP_HEAD_RE.match(text):
+            return pragma, text
+        break
+    return None
+
+
+def _locate_header(src: List[str], header: str, near: int) -> "int | None":
+    """Index of `header` in `src`, nearest to `near`.  Identical sibling loops
+    are common, so proximity to the patch's own hunk breaks the tie."""
+    cands = [i for i, l in enumerate(src) if l.strip() == header.strip()]
+    if not cands:
+        return None
+    return min(cands, key=lambda i: abs(i - near))
+
+
+def derive_pragma_patch(stored_diff: "str | None", source_file: str) -> "str | None":
+    """Rebuild a generated pragma's patch against the CURRENT file.
+
+    DiscoPoP's patches are produced once, against the source as it was profiled.
+    Phase B then applies them one after another, and every applied pragma shifts
+    every line below it — so the second stored patch already describes a file
+    that no longer exists, and `patch` refuses it.  Before `--forward` that hung
+    the run; after it, the pragma is silently skipped, which works directly
+    against the goal of ending up with MORE pragmas.
+
+    Replaying the stored diff is the mistake.  A pragma is really just two
+    facts: the text to insert, and the loop it belongs to.  Locate that loop in
+    the file as it stands now and emit a fresh diff, and it applies by
+    construction no matter how much has moved above it.
+    """
+    if not stored_diff:
+        return None
+    pa = _pragma_and_anchor(stored_diff)
+    if pa is None:
+        return stored_diff              # not a shape we understand — leave it alone
+    pragma, header = pa
+    try:
+        old_text = Path(source_file).read_text()
+    except OSError:
+        return stored_diff
+    src = old_text.splitlines()
+    span = _touched_span(stored_diff)
+    head = _locate_header(src, header, (span[0] - 1) if span else 0)
+    if head is None:
+        return None                     # the loop is gone; the pragma is meaningless
+    if head > 0 and src[head - 1].strip() == pragma.strip():
+        return None                     # already carries exactly this pragma
+    new = src[:head] + [pragma] + src[head:]
+    return make_diff(old_text, "\n".join(new) + "\n", source_file)
+
+
+def check_pragma_clauses(diff: "str | None", source_file: str) -> "str | None":
+    """Reject a generated pragma whose data-sharing clauses cannot be right.
+
+    Returns None when the pragma is acceptable, or a one-line reason when it is
+    not.  Static: nothing is compiled or executed.
+
+    This exists because the runtime gate structurally cannot see the worst case.
+    On example4, DiscoPoP emitted `private(ok)` for
+
+        int ok = 1;
+        for (...) if (arr[i] > arr[i+1]) ok = 0;
+        printf(... ok ? "YES" : "NO");
+
+    `private` gives each thread its own uninitialised copy and discards it at
+    the end of the region, so the writes never reach the `ok` that printf reads.
+    The program then prints "sorted: YES" even with the sort deleted — verified.
+    It compiles, races nowhere (each thread owns its copy), and prints
+    byte-identical output whenever the array really is sorted, so compile, TSan
+    and correctness all pass it.  Only this check sees it.
+
+    Two rules, both about a name that must not be in the clause at all:
+      - read after the loop  -> its value has to survive; `private` severs that
+        and `firstprivate` copies in without copying out.
+      - declared inside the body -> not in scope at the pragma; the -fopenmp
+        build fails with "use of undeclared identifier" (the `private(tmp)`
+        case, which at least fails loudly).
+    """
+    if not diff or "#pragma omp" not in diff:
+        return None
+    try:
+        src = Path(source_file).read_text().splitlines()
+    except OSError:
+        return None
+
+    # The pragma and the loop it governs, as they will look once applied.
+    added = [l[1:] for l in diff.splitlines()
+             if l.startswith("+") and not l.startswith("+++")]
+    pragma = next((l for l in added if "#pragma omp" in l), None)
+    if pragma is None:
+        return None
+    names: List[str] = []
+    for kind, body in _PRIVATE_CLAUSE_RE.findall(pragma):
+        for n in body.split(","):
+            n = n.strip()
+            if n:
+                names.append(n)
+    if not names:
+        return None
+
+    # The loop this pragma governs is the next loop header AFTER IT IN THE DIFF.
+    # Line arithmetic from the hunk start does not work: it picks up whichever
+    # loop happens to sit nearby, which on example4 meant checking the array-init
+    # loop instead of the one the pragma was attached to.
+    pa = _pragma_and_anchor(diff)
+    if pa is None:
+        return None
+    _pragma_text, header = pa
+    span = _touched_span(diff)
+    head = _locate_header(src, header, (span[0] - 1) if span else 0)
+    if head is None:
+        return None
+    loop = _loop_span(src, head)
+    if loop is None:
+        return None
+    body = src[loop[0]: loop[1] + 1]
+
+    for n in names:
+        if _declared_in(body[1:], n):
+            return (f"clause names `{n}`, which is declared inside the loop body — "
+                    f"it is already per-iteration and is not in scope at the pragma")
+        # The write-back rule needs BOTH halves: the loop has to produce a value
+        # AND something after the loop has to read it.  A read-only scalar in
+        # firstprivate (a bound, a size, a parameter) is perfectly correct.
+        if _written_in(body[1:], n) and _read_after(src, n, loop[1]):
+            return (f"clause names `{n}`, which the loop writes and later code "
+                    f"reads — private/firstprivate discard those writes, so that "
+                    f"read would see a stale value")
+    return None
+
+
 def _read_tier1_patch(patch_dir: Path) -> str | None:
     """Return the content of the first .patch file DiscoPoP generated for a
     pattern, or None if the patch_generator directory is missing / empty."""
@@ -582,6 +803,11 @@ class RewriteOutcome:
     speedup: "float | None" = None
     pattern_label: str = ""
     diagnostic: str = ""
+    # Content fingerprints of the regions this rewrite exposed.  A rewrite is
+    # justified at the end only if Phase B applied a pragma to one of them —
+    # matched on identity, not on line numbers, which drift as later changes
+    # land above them.
+    exposed_prints: List[str] = field(default_factory=list)
 
 
 def _verify_rewrite(
@@ -622,10 +848,37 @@ def _verify_rewrite(
         f"{c.pattern_type or 'pattern'} @ lines {c.region.start_line}–{c.region.end_line}"
         for c in exposed[:3]
     )
+    prints = [
+        region_fingerprint(args.source_file, c.region.start_line,
+                           c.region.end_line, c.region.name)
+        for c in exposed
+    ]
     if not validate_patterns:
-        # A deeper Tier-2 pass may still restructure this loop; requiring its
-        # first-cut pragma to be perfect now would revert genuine progress.
-        return RewriteOutcome("exposed", pattern_label=label)
+        # "A pattern appeared" is a weaker claim than "a pragma works", and
+        # DiscoPoP makes the first one for loops clang rejects outright — a
+        # runtime bound, a surviving `break`.  Keeping such a rewrite spends an
+        # LLM call and a re-profile on something that can never pay off, so
+        # check the cheap half now: the clauses, and one -fopenmp build.
+        for c in exposed:
+            cpid = c.pattern.get("pattern_id", "?") if c.pattern else "?"
+            patch = derive_pragma_patch(
+                _read_tier1_patch(dp_dir / "patch_generator" / str(cpid)),
+                args.source_file,
+            )
+            if not patch or check_pragma_clauses(patch, args.source_file):
+                continue
+            ok_c, _diag = check_pragma_compiles(patch, args.source_file)
+            if ok_c:
+                return RewriteOutcome("exposed", pattern_label=label,
+                                      exposed_prints=prints)
+        return RewriteOutcome(
+            "no_usable_pragma", pattern_label=label, exposed_prints=prints,
+            diagnostic="DiscoPoP reports a pattern for the rewritten lines, but "
+                       "every pragma it generates for them is rejected before it "
+                       "can run — the clauses are wrong, or the loop is not in a "
+                       "form OpenMP accepts.",
+        )
+
 
     worst = RewriteOutcome("pattern_broken", pattern_label=label)
     for cand in exposed:
@@ -653,7 +906,339 @@ _OUTCOME_LABEL = {
     "pattern_broken": "DiscoPoP found a pattern, but its pragma fails validation",
     "no_speedup": "DiscoPoP parallelized it, but it is not faster",
     "reprofile_failed": "the rewrite broke DiscoPoP's profiling run",
+    "no_usable_pragma": "DiscoPoP sees a pattern, but no pragma it generates for it can run",
 }
+
+
+# Fallback only.  The real threshold is measured per run by noise_floor() — an
+# unchanged program does not measure 1.000, and how far off it lands depends on
+# the host and the program, not on a number chosen here.  This value is used
+# only when that calibration cannot run.
+_MARGINAL_NOISE = 0.97
+
+
+def _apply_in_memory(diff: str, source_file: str) -> "str | None":
+    """What `source_file` would contain with `diff` applied — without touching
+    the real file.  Stages a candidate pragma so it can be timed before the
+    decision to keep it is made."""
+    with tempfile.TemporaryDirectory(prefix="dp_agent_stage_") as tmp:
+        work = Path(tmp)
+        dst = work / Path(source_file).name
+        shutil.copy2(source_file, dst)
+        pf = work / "stage.patch"
+        pf.write_text(fix_hunk_headers(diff) + "\n")
+        ok, _diag = run_patch(dst, pf)
+        return dst.read_text() if ok else None
+
+
+def _apply_change_log(original_text: str, keep: list, args: AgentArguments) -> list:
+    """Write `original_text` to the source, then re-apply `keep` in order.
+
+    Returns the subset that actually applied.  Nothing is ever un-applied, so a
+    change that stood on one that has been dropped simply fails here — which is
+    the signal that it has to go too.
+    """
+    src = Path(args.source_file)
+    src.write_text(original_text)
+    landed: list = []
+    with tempfile.TemporaryDirectory(prefix="dp_agent_apply_") as tmp:
+        work = Path(tmp)
+        for ch in keep:
+            pf = work / "rb.patch"
+            pf.write_text(fix_hunk_headers(ch["diff"]) + "\n")
+            ok, _diag = run_patch(src, pf)
+            if ok:
+                landed.append(ch)
+    return landed
+
+
+def _check_final_source(
+    args: AgentArguments, original_text: str, reference_output: "str | None",
+    reference_outputs: "list | None", binary_args: "list | None",
+    reference_time: "float | None",
+) -> "tuple[bool, str]":
+    """Is the file ON DISK sound, and is it better than what the user started with?
+
+    Every gate before this validated a candidate patch against a temp copy.  The
+    file that ends up on disk is a RECONSTRUCTION — the survivors re-applied
+    onto the original — and that is not automatically the thing any gate looked
+    at.  Trusting the reconstruction is how a pragma the gate rejects
+    deterministically ended up in the source.
+
+    So this re-runs the real gate against the actual final content: compile, the
+    -fopenmp build, ThreadSanitizer, and output.  Speed is asked only under
+    --require-speedup, and separately, because it is the user's switch for
+    whether that question is asked at all.
+    """
+    final_text = Path(args.source_file).read_text()
+    if normalize_code(final_text) == normalize_code(original_text):
+        return True, "source unchanged"
+
+    with tempfile.TemporaryDirectory(prefix="dp_agent_check_") as tmp:
+        base = Path(tmp) / Path(args.source_file).name
+        base.write_text(original_text)
+        cumulative = make_diff(original_text, final_text, str(base))
+        def _run(skip: bool) -> ValidationResult:
+            return validate(
+                cumulative, str(base), reference_output=reference_output,
+                reference_outputs=reference_outputs, binary_args=binary_args,
+                require_speedup=False, reference_time=reference_time,
+                skip_race_check=skip, mode="safety",
+            )
+
+        res = _run(False)
+        # The macOS OMP-barrier artefact applies here exactly as it does to a
+        # single pragma, and forgetting it is worse at this end: every pragma
+        # would pass its own gate (which does re-check) and then be thrown away
+        # by this one, so the run could never keep anything on this platform.
+        if (not res.passed and res.stage == "tsan"
+                and _is_omp_barrier_false_positive(res.diagnostic)):
+            print(f"  [note] TSan OMP-barrier false positive on the finished file "
+                  f"— re-verifying on output instead")
+            res = _run(True)
+        if not res.passed:
+            return False, (f"the finished file fails at '{res.stage}': "
+                           f"{res.diagnostic[:160].replace(chr(10), ' ')}")
+
+        if args.require_speedup and reference_time is not None:
+            ok_t, t_final, _out, tdiag = time_source(
+                final_text, args.source_file, Path(tmp), "final", binary_args, repeats=5
+            )
+            if not ok_t:
+                return False, f"could not time the finished program: {tdiag[:120]}"
+            if t_final > reference_time:
+                return False, (f"slower than the original: {t_final*1e3:.1f} ms vs "
+                               f"{reference_time*1e3:.1f} ms")
+            return True, (f"output matches, {t_final*1e3:.1f} ms vs "
+                          f"{reference_time*1e3:.1f} ms original")
+    return True, "output matches the original"
+
+
+def _settle(
+    original_text: str, change_log: list, args: AgentArguments,
+    output_dir: Path, reference_output: "str | None",
+    reference_outputs: "list | None", binary_args: "list | None",
+    reference_time: "float | None",
+) -> "tuple[list, list]":
+    """Reduce the run to a set of changes that is sound AND worth keeping.
+
+    Three things happen here, in one loop, because they are the same operation:
+
+      1. ORPHANS.  A Phase-A rewrite exists to let DiscoPoP parallelize
+         something.  If no kept pragma targets a region it exposed, it achieved
+         nothing — and it is not free, so it goes.  Justification is by region
+         FINGERPRINT, not line containment: regions nest, and their line spans
+         drift as changes land above them.
+
+      2. RECONSTRUCTION.  Rebuild by re-applying survivors onto a fresh copy of
+         the original rather than un-applying anything, so no patch is ever
+         reversed and dependence is discovered instead of computed.
+
+      3. VERIFICATION.  Re-gate the RESULT.  Every earlier gate judged a
+         candidate patch against a temp copy; the reconstruction is a different
+         artifact and has to earn its own verdict.  While it fails, drop the
+         most recently applied pragma and rebuild again — newest first, because
+         later pragmas are the least likely to be load-bearing and the most
+         likely to be the interaction that broke it.
+
+    Returns (surviving change log, human-readable notes about what was dropped).
+    """
+    notes: list = []
+    keep = list(change_log)
+
+    while True:
+        applied_prints = {c["fingerprint"] for c in keep
+                          if c["kind"] == "pragma" and c.get("fingerprint")}
+        pruned: list = []
+        for ch in keep:
+            if ch["kind"] == "pragma":
+                pruned.append(ch)
+            elif applied_prints & set(ch.get("exposed", [])):
+                pruned.append(ch)
+            else:
+                notes.append(f"rewrite of {ch['region_id']} — exposed "
+                             f"{len(ch.get('exposed', []))} region(s), none kept a pragma")
+        keep = pruned
+
+        landed = _apply_change_log(original_text, keep, args)
+        for ch in keep:
+            if ch not in landed:
+                notes.append(f"{ch['kind']} for {ch['region_id']} — depended on a "
+                             f"change that was dropped, so it no longer applies")
+        keep = landed
+
+        ok, why = _check_final_source(args, original_text, reference_output,
+                                      reference_outputs, binary_args, reference_time)
+        if ok:
+            if why != "source unchanged":
+                print(f"  [ok] finished source verified — {why}")
+            return keep, notes
+
+        pragmas = [c for c in keep if c["kind"] == "pragma"]
+        if not pragmas:
+            # Nothing left to drop and it still does not hold up: the rewrites
+            # alone are the problem, so put the user back where they started.
+            Path(args.source_file).write_text(original_text)
+            notes.append(f"everything reverted — {why}")
+            print(f"  [revert] {why}")
+            return [], notes
+
+        victim = pragmas[-1]
+        keep.remove(victim)
+        notes.append(f"pragma for {victim['region_id']} — dropped because {why}")
+        print(f"  [repair] {why}")
+        print(f"           → dropping the pragma for {victim['region_id']} and re-checking")
+
+
+def _phase_b(
+    args: AgentArguments, dp_dir: Path, output_dir: Path,
+    reference_output: "str | None", reference_outputs: "list | None",
+    binary_args: "list | None", reference_time: "float | None",
+    gate_cache: dict, change_log: list,
+) -> list:
+    """Annotate: apply every DiscoPoP pragma that survives validation.
+
+    Runs ONCE, after all restructuring, and never re-profiles.  That is the
+    whole point: the source is pragma-free on entry, so the profile in dp_dir
+    describes exactly the code being annotated.  Interleaving this with
+    restructuring is what used to leave every queued patch racing a file that
+    had already shifted under it.
+
+    Order is by workload, largest first, so the pragma most likely to matter is
+    measured against the cleanest baseline.  Each patch is re-derived against
+    the CURRENT file rather than replayed from a stored diff, so applying one
+    pragma cannot invalidate the next.
+    """
+    kept: list = []
+    fresh = build_candidates(dp_dir, args.source_file, args.lambda_penalty,
+                             args.min_workload)
+    todo = [c for c in fresh
+            if c.tier == 1 and c.pattern and c.pattern.get("applicable_pattern")]
+    todo.sort(key=lambda c: c.workload_estimate, reverse=True)
+
+    print(f"\n{'='*60}")
+    print(f"  PHASE B — annotate  ({len(todo)} candidate pragma(s))")
+    print(f"{'='*60}\n")
+    if not todo:
+        print("  DiscoPoP proposes no applicable pattern for the final source.\n")
+        return kept
+
+    # What counts as "not slower" is whatever this machine's jitter can already
+    # produce for an unchanged file.  One compile, then alternating runs.
+    threshold = _MARGINAL_NOISE
+    if args.require_speedup and not args.dry_run:
+        ok_n, floor, ndiag = noise_floor(
+            Path(args.source_file).read_text(), args.source_file, binary_args
+        )
+        if ok_n:
+            threshold = min(floor - 0.01, 0.99)
+            print(f"  Timing noise floor on this machine: {floor:.3f} "
+                  f"→ keep anything at or above {threshold:.3f}\n")
+        else:
+            print(f"  [warn] could not calibrate timing noise ({ndiag[:60]}); "
+                  f"falling back to {threshold:.2f}\n")
+
+    for cand in todo:
+        rid = cand.region.region_id
+        pid = cand.pattern.get("pattern_id", "?") if cand.pattern else "?"
+        pragma = (cand.pattern or {}).get("pragma", "")
+        lines = f"{cand.region.start_line}–{cand.region.end_line}"
+        print(f"┌─ pattern #{pid}  {cand.pattern_type or 'pattern'} @ lines {lines}"
+              f"  (W={cand.workload_estimate:.0f})")
+        print(f"│  {pragma}")
+
+        if cand.workload_estimate < args.min_workload:
+            print(f"│  workload below --min-workload → not worth a thread")
+            print(f"└─ SKIPPED\n")
+            continue
+
+        # Re-derive against the file as it stands: earlier pragmas in this same
+        # phase have already moved every line below them.
+        diff = _repair_pragma_clauses(
+            derive_pragma_patch(
+                _read_tier1_patch(dp_dir / "patch_generator" / str(pid)),
+                args.source_file,
+            ),
+            args.source_file,
+        )
+        if not diff:
+            print(f"│  no generated patch on disk")
+            print(f"└─ SKIPPED\n")
+            continue
+
+        # 1. static — the only check that sees a clause handing back a value it
+        #    cannot hand back.
+        problem = check_pragma_clauses(diff, args.source_file)
+        if problem:
+            print(f"│  clause check: {problem}")
+            print(f"└─ DROPPED (bad data-sharing clause)\n")
+            continue
+
+        if args.dry_run:
+            print(f"└─ DRY RUN — not applied\n")
+            continue
+
+        # 2. does it work?  Everything except the timing.
+        res, from_cache, barrier_fp = _validate_cached(
+            gate_cache, diff, args, reference_output, binary_args,
+            reference_time, reference_outputs=reference_outputs, mode="safety",
+        )
+        if barrier_fp:
+            print(f"│  TSan OMP-barrier false positive — re-verified on output")
+        if not res.passed:
+            print(f"│  gate failed at '{res.stage}': "
+                  f"{res.diagnostic[:150].replace(chr(10), ' ')}")
+            print(f"└─ DROPPED\n")
+            continue
+
+        # 3. is it worth it?  Only when the user asked for that question.
+        marginal = None
+        if args.require_speedup:
+            before = Path(args.source_file).read_text()
+            after = _apply_in_memory(diff, args.source_file)
+            if after is None:
+                print(f"│  could not stage the patch for measurement")
+                print(f"└─ DROPPED\n")
+                continue
+            ok_m, marginal, mdiag = measure_marginal(
+                before, after, args.source_file, binary_args
+            )
+            if not ok_m:
+                print(f"│  measurement failed: {mdiag[:120]}")
+                print(f"└─ DROPPED\n")
+                continue
+            if marginal < threshold:
+                print(f"│  marginal {marginal:.2f}× — costs more than it saves")
+                print(f"└─ DROPPED (slower)\n")
+                continue
+            print(f"│  marginal {marginal:.2f}×")
+
+        fp_before = region_fingerprint(args.source_file, cand.region.start_line,
+                                       cand.region.end_line, cand.region.name)
+        if not _apply_to_source(diff, args.source_file, output_dir, "Phase-B"):
+            print(f"└─ DROPPED (patch would not apply)\n")
+            continue
+
+        record = {
+            "region_id": rid,
+            "region_type": cand.region.region_type,
+            "phase": "B",
+            "pattern_id": pid,
+            "pragma": pragma,
+            "lines": lines,
+            "marginal_speedup": marginal,
+            "applied_to_source": True,
+        }
+        # Identity of the region this pragma landed on, taken BEFORE the patch
+        # went in, so it matches what Phase A recorded as exposed.
+        change_log.append({
+            "kind": "pragma", "region_id": rid, "diff": diff,
+            "fingerprint": fp_before,
+        })
+        kept.append(record)
+        _write_record(output_dir, record, args.dry_run)
+        print(f"└─ APPLIED\n")
+    return kept
 
 
 def _rewrite_feedback(
@@ -712,6 +1297,24 @@ def _rewrite_feedback(
             f"last digits of floating-point values, a parallel reduction reassociated "
             f"the arithmetic — that is not a dependence.\n\n"
             f"Diagnostic:\n{outcome.diagnostic[:1200]}"
+        )
+
+    if outcome.status == "no_usable_pragma":
+        return (
+            f"Close: after your rewrite DiscoPoP DOES report parallelism "
+            f"({outcome.pattern_label}). But every pragma it generates for those "
+            f"lines is rejected before it can run, so the rewrite cannot lead to "
+            f"a parallel build and has been reverted.\n\n"
+            f"That is almost always the loop's SHAPE. OpenMP needs the trip count "
+            f"known before the loop starts: the condition has to compare the loop "
+            f"variable directly against a bound that does not change inside the "
+            f"loop, and the body must contain no break, continue, return or goto. "
+            f"A bound computed at run time — `for (i = start; ...)` where `start` "
+            f"is set inside an enclosing loop — reads as parallel to the profiler "
+            f"and is rejected by the compiler.\n\n"
+            f"Rewrite the loop so its bounds are plain expressions of the loop "
+            f"variable and loop-invariant values.\n\n"
+            f"{outcome.diagnostic}"
         )
 
     if outcome.status == "no_speedup":
@@ -780,6 +1383,13 @@ def run(args: AgentArguments) -> None:
     gate_cache: dict = {}
 
     accepted: List[dict] = []
+    # Regions DiscoPoP can already parallelize: Phase A skips them, Phase B
+    # picks them up from the final profile.
+    deferred: List[tuple] = []
+    original_text = Path(args.source_file).read_text()
+    # Ordered record of every change written to the source, so the end of the
+    # run can rebuild from the original keeping only what earned its place.
+    change_log: List[dict] = []
     # Each entry is (region_id, discovery_depth).  A region ID can appear more
     # than once (different content versions across re-profiles reuse IDs); the
     # summary de-duplicates and drops IDs that were ultimately accepted.
@@ -799,6 +1409,33 @@ def run(args: AgentArguments) -> None:
 
     # candidates: list of (discovery_depth, HotspotCandidate)
     # depth=0 → initial profile; depth=N → discovered after N Tier-2 re-profiles
+    # P0 — what DiscoPoP achieves unaided.  Counted to the SAME standard the
+    # run's own output is held to: a pattern DiscoPoP merely claims is not a
+    # working pragma.  On example4 the one "applicable" pattern is
+    # `private(ok)` on the sortedness check, which compiles into a program that
+    # reports success even with the sort deleted — so the honest baseline there
+    # is 0, and counting it as 1 made every run look like a regression.
+    claimed = [c for c in initial
+               if c.tier == 1 and c.pattern and c.pattern.get("applicable_pattern")]
+    baseline_pragmas = 0
+    for c in claimed:
+        cpid = c.pattern.get("pattern_id", "?") if c.pattern else "?"
+        d = derive_pragma_patch(
+            _read_tier1_patch(dp_dir / "patch_generator" / str(cpid)),
+            args.source_file,
+        )
+        if not d or check_pragma_clauses(d, args.source_file):
+            continue
+        ok_c, _diag = check_pragma_compiles(d, args.source_file)
+        baseline_pragmas += 1 if ok_c else 0
+    dropped_baseline = len(claimed) - baseline_pragmas
+    print(f"  Baseline       : DiscoPoP proposes {len(claimed)} applicable "
+          f"pattern(s) unaided; {baseline_pragmas} of them produce a usable pragma"
+          + (f" ({dropped_baseline} rejected before it could run)"
+             if dropped_baseline else ""))
+    print(f"                   → the run beats DiscoPoP by ending with more than "
+          f"{baseline_pragmas}\n")
+
     candidates: list = [(0, c) for c in initial]
     all_seen_prints.update(
         region_fingerprint(args.source_file, c.region.start_line, c.region.end_line, c.region.name)
@@ -807,6 +1444,10 @@ def run(args: AgentArguments) -> None:
 
     print("  Initial candidates")
     _print_candidates(candidates)
+
+    print(f"{'='*60}")
+    print(f"  PHASE A — restructure  (the source stays pragma-free)")
+    print(f"{'='*60}\n")
 
     # ── Candidate loop ────────────────────────────────────────────────────────
     # Index-based so candidates appended mid-run (from re-profiling) are
@@ -828,86 +1469,16 @@ def run(args: AgentArguments) -> None:
         # ── Tier-1 ───────────────────────────────────────────────────────────
         failure_reason = "DiscoPoP found no applicable parallelism pattern for this region"
         if candidate.tier == 1 and candidate.pattern and candidate.pattern.get("applicable_pattern"):
-            if candidate.workload_estimate < args.min_workload:
-                print(f"│  [Tier-1] Workload {candidate.workload_estimate:.0f} < "
-                      f"min {args.min_workload:.0f} — too small to bother")
-                print(f"└─ SKIPPED\n")
-                skipped.append((rid, depth))
-                continue
-
+            # PHASE A leaves this alone.  DiscoPoP can already parallelize it,
+            # so there is nothing to restructure — and inserting its pragma now
+            # is exactly what used to invalidate the profile every later
+            # decision depends on.  Phase B collects it from the final profile
+            # and applies it there, once, with nothing left to shift underneath.
             pragma = candidate.pattern.get("pragma", "")
-            pid = candidate.pattern.get("pattern_id", "?")
-            ptype = candidate.pattern_type or "pattern"
-            patch_dir = dp_dir / "patch_generator" / str(pid)
-            print(f"│  [Tier-1] Pattern #{pid} ({ptype}): {pragma}  (W={candidate.workload_estimate:.0f})")
-
-            tier1_diff = _repair_pragma_clauses(
-                _read_tier1_patch(patch_dir), args.source_file
-            )
-            # Tier-1 trusts DiscoPoP's pragma, but does not insert it blind: a
-            # REDUCED gate checks it compiles (including the -fopenmp build, so
-            # a non-canonical loop is caught), is race-free, and leaves the
-            # program's output unchanged.  Only the SPEED question is skipped —
-            # that one belongs to the LLM path.
-            #
-            # ThreadSanitizer is here because correctness cannot replace it: a
-            # falsely-detected Do-All can still print the right answer on the
-            # one profiled input while racing, and be wrong at every other size.
-            #
-            # A failure here means only "do not insert this pragma".  There is
-            # no escalation: the region is left exactly as DiscoPoP found it and
-            # the run moves on, so a bad suggestion costs one compile, not an
-            # LLM budget slot.
-            #
-            # Routed through _validate_cached so this shares the run cache AND,
-            # crucially, the macOS OMP-barrier false-positive re-check — without
-            # it TSan rejects perfectly good pragmas here.  The cache key
-            # includes the mode, so a "safety" verdict can never be handed to
-            # the full gate at verification time.
-            if tier1_diff and not args.dry_run:
-                print(f"│  [Tier-1] Checking the pragma compiles, is race-free "
-                      f"and preserves output (no speed check)")
-                t1_res, t1_cached, t1_barrier_fp = _validate_cached(
-                    gate_cache, tier1_diff, args, reference_output, binary_args,
-                    reference_time, reference_outputs=reference_outputs,
-                    mode="safety",
-                )
-                if t1_barrier_fp:
-                    print(f"│  [Tier-1] TSan OMP-barrier false positive suspected "
-                          f"— re-verified on output instead")
-                elif t1_cached:
-                    print(f"│  [Tier-1] Reusing the verdict for this patch "
-                          f"({t1_res.stage}) — gate not re-run")
-                viz.gate_result(t1_res.passed, t1_res.stage, t1_res.diagnostic,
-                                t1_res.measured_speedup,
-                                skipped_stages=t1_res.skipped_stages)
-                if not t1_res.passed:
-                    print(f"│  [Tier-1] Stage '{t1_res.stage}' failed: "
-                          f"{t1_res.diagnostic[:200].replace(chr(10), ' ')}")
-                    print(f"│  [Tier-1] Leaving the pragma OUT — source unchanged, "
-                          f"no LLM escalation")
-                    print(f"└─ SKIPPED (pragma rejected)\n")
-                    skipped.append((rid, depth))
-                    continue
-            applied = False
-            if args.apply_patches and tier1_diff and not args.dry_run:
-                applied = _apply_to_source(
-                    tier1_diff, args.source_file, output_dir, label="Tier-1"
-                )
-            print(f"└─ ACCEPTED\n")
-            record = {
-                "region_id": rid,
-                "region_type": region.region_type,
-                "tier": 1,
-                "pattern_id": pid,
-                "pragma": pragma,
-                "patch_dir": str(patch_dir),
-                "discovery_depth": depth,
-                "measured_speedup": None,
-                "applied_to_source": applied,
-            }
-            accepted.append(record)
-            _write_record(output_dir, record, args.dry_run)
+            print(f"│  [Phase-A] DiscoPoP already has a pattern here "
+                  f"({candidate.pattern_type or 'pattern'}) — deferred to Phase B")
+            print(f"└─ DEFERRED\n")
+            deferred.append((rid, depth))
             continue
 
         # ── Tier-2: LLM restructuring ─────────────────────────────────────────
@@ -1116,14 +1687,15 @@ def run(args: AgentArguments) -> None:
                 else:
                     # Validating the exposed pragma is deferred only when a deeper
                     # Tier-2 pass is still allowed to work on it.
-                    terminal = (depth + 1) > args.restructure_depth
-                    print(f"│  [Tier-2] Asking DiscoPoP what it now finds in the "
-                          f"rewritten lines"
-                          f"{' (and validating its pragma)' if terminal else ''}...")
+                    # Phase A asks one question: did the rewrite expose a
+                    # pattern in the lines it changed?  Whether the resulting
+                    # pragma works is Phase B's question, asked once, later.
+                    print(f"│  [Phase-A] Asking DiscoPoP what it now finds in the "
+                          f"rewritten lines...")
                     outcome = _verify_rewrite(
                         fresh_all, _touched_span(clean_diff), dp_dir, args,
                         reference_output, binary_args, reference_time,
-                        validate_patterns=terminal, gate_cache=gate_cache,
+                        validate_patterns=False, gate_cache=gate_cache,
                         reference_outputs=reference_outputs,
                     )
 
@@ -1163,6 +1735,10 @@ def run(args: AgentArguments) -> None:
                           f"{len(discovered)} new at depth {depth + 1}")
                     record["reprofiled"] = True
                 record["exposed_pattern"] = outcome.pattern_label
+                change_log.append({
+                    "kind": "rewrite", "region_id": rid, "diff": clean_diff,
+                    "exposed": outcome.exposed_prints,
+                })
                 print(f"│  [Tier-2] DiscoPoP now finds: {outcome.pattern_label}")
                 if exposed_speedup is not None:
                     record["exposed_speedup"] = exposed_speedup
@@ -1261,6 +1837,45 @@ def run(args: AgentArguments) -> None:
         if dp_snapshot is not None and dp_snapshot.exists():
             shutil.rmtree(dp_snapshot, ignore_errors=True)
 
+    # ── Phase B: annotate ────────────────────────────────────────────────────
+    # Everything above only restructured code.  Now, once, from the profile the
+    # last kept rewrite produced, apply every pragma that survives validation.
+    annotated = _phase_b(
+        args, dp_dir, output_dir, reference_output, reference_outputs,
+        binary_args, reference_time, gate_cache, change_log,
+    )
+    accepted.extend(annotated)
+
+    # ── Settle: drop orphans, rebuild, verify the result, repair ─────────────
+    # This is the only check against the program the user actually started with,
+    # and the only one that looks at the file as it finally exists rather than
+    # at a candidate patch on a temp copy.
+    if not args.dry_run and change_log:
+        print(f"{'='*60}")
+        print(f"  SETTLING — verify the finished source, drop what does not hold up")
+        print(f"{'='*60}")
+        survivors, notes = _settle(
+            original_text, change_log, args, output_dir, reference_output,
+            reference_outputs, binary_args, reference_time,
+        )
+        if notes:
+            print(f"  Dropped {len(notes)} change(s):")
+            for n in notes:
+                print(f"    · {n}")
+        print()
+
+        # accepted.json must describe the file on disk, not everything that was
+        # ever provisionally accepted.
+        kept_pragma_ids = {c["region_id"] for c in survivors if c["kind"] == "pragma"}
+        kept_rewrite_ids = {c["region_id"] for c in survivors if c["kind"] == "rewrite"}
+        accepted = [
+            r for r in accepted
+            if (r.get("phase") == "B" and r["region_id"] in kept_pragma_ids)
+            or (r.get("tier") == 2 and r["region_id"] in kept_rewrite_ids)
+        ]
+        f = output_dir / "accepted.json"
+        f.write_text(json.dumps(accepted, indent=2))
+
     # ── Summary ──────────────────────────────────────────────────────────────
     # De-duplicate skipped IDs and drop any that were ultimately accepted in
     # some version (e.g. a loop skipped at depth 0 but accepted at depth 1 after
@@ -1274,11 +1889,24 @@ def run(args: AgentArguments) -> None:
         if rid not in skipped_by_id or d < skipped_by_id[rid]:
             skipped_by_id[rid] = d
 
+    n_pragmas = len([r for r in accepted if r.get("phase") == "B"])
+    n_rewrites = len([r for r in accepted if r.get("tier") == 2])
     print(f"\n{'='*60}")
-    print(f"  SUMMARY: {len(accepted)} accepted  |  {len(skipped_by_id)} skipped")
+    print(f"  SUMMARY: {n_rewrites} rewrite(s) kept  |  {n_pragmas} pragma(s) applied "
+          f"|  {len(skipped_by_id)} skipped")
+    verdict = ("BEAT" if n_pragmas > baseline_pragmas
+               else "MATCHED" if n_pragmas == baseline_pragmas else "BELOW")
+    print(f"  DiscoPoP unaided: {baseline_pragmas} usable pragma(s)  →  this run: "
+          f"{n_pragmas}   [{verdict}]")
     for r in accepted:
         d = r.get("discovery_depth", 0)
-        print(f"    ✓  {r['region_type']} {r['region_id']}  [Tier-{r['tier']}]  depth={d}")
+        # Phase-B records carry "phase", Phase-A ones carry "tier".
+        kind = "Phase-B pragma" if r.get("phase") == "B" else f"Tier-{r.get('tier', '?')}"
+        extra = ""
+        if r.get("marginal_speedup") is not None:
+            extra = f"  marginal {r['marginal_speedup']:.2f}×"
+        print(f"    ✓  {r.get('region_type', '?')} {r['region_id']}  "
+              f"[{kind}]  depth={d}{extra}")
     for rid, d in skipped_by_id.items():
         print(f"    ✗  {rid}  [skipped]  depth={d}")
     print(f"\n  Results → {output_dir}/accepted.json")

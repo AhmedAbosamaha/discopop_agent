@@ -488,6 +488,145 @@ def capture_reference(
         return stdout, best_t, pairs
 
 
+def time_source(
+    source_text: str, source_file: str, work_dir: Path, name: str,
+    binary_args: Optional[list] = None, repeats: int = 5,
+) -> Tuple[bool, float, str, str]:
+    """Build `source_text` with -O2 -fopenmp; return (ok, best time, stdout, diag).
+
+    Used by the marginal measurement, which needs to time two states of the same
+    file.  Both sides are -fopenmp builds differing only by one pragma, so the
+    compiler is out of the comparison — the mistake `_measure_speedup` documents
+    (comparing an -fopenmp build against a non-fopenmp one) is not repeated here.
+    """
+    clangpp = _find_clangpp()
+    if clangpp is None:
+        return False, 0.0, "", "no supported clang++ found"
+    src = work_dir / f"{name}_{Path(source_file).name}"
+    src.write_text(source_text)
+    ok, diag, binary = _compile_variant(src, clangpp, work_dir, name, openmp=True)
+    if not ok or binary is None:
+        return False, 0.0, "", f"build failed:\n{diag}"
+    best = float("inf")
+    out = ""
+    for _ in range(max(1, repeats)):
+        ok_r, out, dt, rdiag = _run_timed(binary, work_dir, binary_args, repeats=1)
+        if not ok_r:
+            return False, 0.0, "", f"run failed: {rdiag}"
+        best = min(best, dt)
+    return True, best, out, ""
+
+
+def check_pragma_compiles(diff: str, source_file: str) -> Tuple[bool, str]:
+    """Does this generated pragma survive an -fopenmp build?  One compile, no run.
+
+    DiscoPoP reports `do_all` for loops whose generated pragma clang then
+    rejects — a loop whose bound is a runtime value, or one still containing a
+    `break`.  Phase A needs to know that BEFORE it keeps a rewrite, because
+    "a pattern appeared" is not the same claim as "a pragma works", and the
+    difference costs an LLM call and a re-profile to discover later.
+    """
+    clangpp = _find_clangpp()
+    if clangpp is None:
+        return False, "no supported clang++ found"
+    with tempfile.TemporaryDirectory(prefix="dp_agent_pc_") as tmp:
+        work = Path(tmp)
+        ok, diag, patched = _apply(diff, source_file, work)
+        if not ok or patched is None:
+            return False, f"patch did not apply: {diag[:160]}"
+        ok, diag, _b = _compile_variant(patched, clangpp, work, "pc", openmp=True)
+        if not ok:
+            return False, diag[:400]
+    return True, ""
+
+
+def noise_floor(
+    source_text: str, source_file: str, binary_args: Optional[list] = None,
+    pairs: int = 5, trials: int = 3,
+) -> Tuple[bool, float, str]:
+    """Worst marginal ratio an UNCHANGED program produces on this machine.
+
+    `measure_marginal` compares two states of a file; run it on two IDENTICAL
+    states and every ratio should be 1.0.  It is not — on the development
+    machine an unchanged example4 measured between 0.981 and 1.030 across six
+    trials.  The keep/drop threshold has to sit below that floor, or run-to-run
+    jitter alone starts discarding pragmas that cost nothing.
+
+    Measured rather than assumed, because the floor is a property of the host
+    and the program, not a constant: a hardcoded 0.97 happens to clear 0.981
+    here and would be wrong on a noisier machine.
+
+    Builds ONCE and times the same binary on both sides of each pair, so this
+    costs one compile rather than the fourteen a full marginal run would.
+
+    Critically it computes the SAME statistic the decision uses — the median of
+    `pairs` ratios — repeated `trials` times, and returns the worst of those
+    medians.  Taking the minimum of raw pair ratios instead measures a much
+    wider distribution (0.88 vs 0.98 on the same machine) and would set a
+    threshold loose enough to accept a real 12% regression.
+    """
+    import statistics
+    clangpp = _find_clangpp()
+    if clangpp is None:
+        return False, 0.0, "no supported clang++ found"
+    with tempfile.TemporaryDirectory(prefix="dp_agent_noise_") as tmp:
+        work = Path(tmp)
+        src = work / Path(source_file).name
+        src.write_text(source_text)
+        ok, diag, binary = _compile_variant(src, clangpp, work, "noise", openmp=True)
+        if not ok or binary is None:
+            return False, 0.0, f"build failed:\n{diag}"
+        medians: List[float] = []
+        for _ in range(max(1, trials)):
+            ratios: List[float] = []
+            for _ in range(max(1, pairs)):
+                ok_a, _oa, ta, da = _run_timed(binary, work, binary_args, repeats=1)
+                ok_b, _ob, tb, db = _run_timed(binary, work, binary_args, repeats=1)
+                if not (ok_a and ok_b):
+                    return False, 0.0, f"run failed: {da or db}"
+                if tb > 0:
+                    ratios.append(ta / tb)
+            if ratios:
+                medians.append(statistics.median(ratios))
+    if not medians:
+        return False, 0.0, "no valid timing samples"
+    return True, min(medians), ""
+
+
+def measure_marginal(
+    before_text: str, after_text: str, source_file: str,
+    binary_args: Optional[list] = None, pairs: int = 5,
+) -> Tuple[bool, float, str]:
+    """How much does the one change between these two states cost or save?
+
+    Returns (ok, ratio, diag) where ratio = before / after — above 1.0 means the
+    change made the program faster.  Both states are timed in the SAME temp dir,
+    interleaved pair by pair so machine-load drift hits both sides of each pair,
+    and the median of the per-pair ratios is taken.
+
+    This is the per-region number that actually matters: what a pragma is worth
+    in the program it will ship in, not in isolation.
+    """
+    import statistics
+    ratios: List[float] = []
+    with tempfile.TemporaryDirectory(prefix="dp_agent_marg_") as tmp:
+        work_dir = Path(tmp)
+        for i in range(max(1, pairs)):
+            ok_b, tb, _ob, diag_b = time_source(before_text, source_file, work_dir,
+                                                f"before{i}", binary_args, repeats=1)
+            if not ok_b:
+                return False, 0.0, diag_b
+            ok_a, ta, _oa, diag_a = time_source(after_text, source_file, work_dir,
+                                                f"after{i}", binary_args, repeats=1)
+            if not ok_a:
+                return False, 0.0, diag_a
+            if ta > 0:
+                ratios.append(tb / ta)
+    if not ratios:
+        return False, 0.0, "no valid timing samples"
+    return True, statistics.median(ratios), ""
+
+
 def validate(
     diff: str,
     source_file: str,

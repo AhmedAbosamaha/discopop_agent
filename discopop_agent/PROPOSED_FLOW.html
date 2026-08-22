@@ -1,0 +1,709 @@
+<title>Restructure, Then Annotate</title>
+<style>
+  :root {
+    --ground:     #F5F7F7;
+    --panel:      #FFFFFF;
+    --panel-alt:  #EDF2F2;
+    --band:       #F0F4F4;
+    --ink:        #0F1718;
+    --ink-soft:   #4A5B5E;
+    --ink-faint:  #7C8E92;
+    --rule:       #D3DEDE;
+    --rule-soft:  #E6EDED;
+    --dp:         #0B6E77;
+    --dp-wash:    #DBECED;
+    --llm:        #A05611;
+    --llm-wash:   #F7E6D2;
+    --write:      #6A3E9E;
+    --write-wash: #E9E0F4;
+    --ok:         #2B6D4A;
+    --ok-wash:    #DAEAE0;
+    --bad:        #A53341;
+    --bad-wash:   #F3DEE0;
+    --shadow: 0 1px 2px rgba(15,23,24,.06), 0 10px 28px -18px rgba(15,23,24,.30);
+    --mono: ui-monospace, "SF Mono", Menlo, "JetBrains Mono", Consolas, monospace;
+    --body: "Iowan Old Style", "Palatino Linotype", Palatino, Charter, Georgia, serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:#0B1112; --panel:#131B1D; --panel-alt:#192325; --band:#101819;
+      --ink:#E2EBEA; --ink-soft:#A0B2B4; --ink-faint:#6F8689;
+      --rule:#25322F; --rule-soft:#1D2829;
+      --dp:#4FC6D0; --dp-wash:#11323A;
+      --llm:#E8A84E; --llm-wash:#392913;
+      --write:#BFA0EA; --write-wash:#231933;
+      --ok:#63C68D; --ok-wash:#15311E;
+      --bad:#EE8494; --bad-wash:#36181D;
+      --shadow:0 1px 2px rgba(0,0,0,.42), 0 12px 32px -20px rgba(0,0,0,.85);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:#0B1112; --panel:#131B1D; --panel-alt:#192325; --band:#101819;
+    --ink:#E2EBEA; --ink-soft:#A0B2B4; --ink-faint:#6F8689;
+    --rule:#25322F; --rule-soft:#1D2829;
+    --dp:#4FC6D0; --dp-wash:#11323A;
+    --llm:#E8A84E; --llm-wash:#392913;
+    --write:#BFA0EA; --write-wash:#231933;
+    --ok:#63C68D; --ok-wash:#15311E;
+    --bad:#EE8494; --bad-wash:#36181D;
+    --shadow:0 1px 2px rgba(0,0,0,.42), 0 12px 32px -20px rgba(0,0,0,.85);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--ground); color: var(--ink);
+    font-family: var(--body); font-size: 17px; line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px 96px;
+          display: flex; flex-direction: column; gap: 56px; }
+
+  header.mast { padding: 76px 0 0; display: flex; flex-direction: column;
+                gap: 18px; max-width: 62ch; }
+  .eyebrow { font-family: var(--mono); font-size: 11.5px; letter-spacing: .17em;
+             text-transform: uppercase; color: var(--dp); }
+  h1 { margin: 0; font-size: clamp(38px, 5.4vw, 58px); line-height: 1.05;
+       letter-spacing: -.021em; font-weight: 600; text-wrap: balance; }
+  .standfirst { margin: 0; font-size: 19.5px; color: var(--ink-soft); text-wrap: pretty; }
+  .standfirst strong { color: var(--ink); font-weight: 600; }
+
+  section { display: flex; flex-direction: column; gap: 22px; }
+  h2 { margin: 0; font-size: 15px; font-family: var(--mono); font-weight: 600;
+       letter-spacing: .07em; text-transform: uppercase; color: var(--ink); }
+  h2 + p { margin: 0; max-width: 68ch; color: var(--ink-soft); }
+
+  .goal { background: var(--panel); border: 1px solid var(--rule);
+          border-left: 3px solid var(--ok); border-radius: 10px;
+          padding: 22px 26px; display: flex; flex-direction: column; gap: 10px; }
+  .goal .k { font-family: var(--mono); font-size: 11.5px; letter-spacing: .1em;
+             text-transform: uppercase; color: var(--ok); }
+  .goal p { margin: 0; font-size: 17.5px; }
+  .goal code { font-family: var(--mono); font-size: .86em; }
+
+  /* diagram — classes, not presentation attributes, so var() resolves */
+  .dgm text { font-family: var(--mono); fill: var(--ink); }
+  .dgm .n       { stroke-width: 2; }
+  .dgm .n.dp    { fill: var(--dp-wash);    stroke: var(--dp); }
+  .dgm .n.llm   { fill: var(--llm-wash);   stroke: var(--llm); }
+  .dgm .n.wr    { fill: var(--write-wash); stroke: var(--write); }
+  .dgm .n.ok    { fill: var(--ok-wash);    stroke: var(--ok); }
+  .dgm .n.bad   { fill: var(--bad-wash);   stroke: var(--bad); }
+  .dgm .n.ctl   { fill: var(--panel-alt);  stroke: var(--ink-faint); stroke-width: 1.8; }
+  .dgm .n.dia   { fill: var(--panel);      stroke: var(--ink-faint); stroke-width: 1.8; }
+  .dgm .band    { fill: var(--band); stroke: var(--rule); stroke-width: 1; }
+  .dgm .h { font-size: 12px; font-weight: 600; }
+  .dgm .m { font-size: 11px; }
+  .dgm .b { font-size: 10.5px; fill: var(--ink-soft); }
+  .dgm .f { font-size: 10.5px; fill: var(--ink-faint); }
+  .dgm .d { font-size: 11.5px; }
+  .dgm .e { font-size: 11px; }
+  .dgm .lbl { font-size: 12.5px; font-weight: 600; letter-spacing: .12em; }
+  .dgm .c-dp{fill:var(--dp);} .dgm .c-llm{fill:var(--llm);} .dgm .c-wr{fill:var(--write);}
+  .dgm .c-ok{fill:var(--ok);} .dgm .c-bad{fill:var(--bad);}
+  .dgm .c-ink{fill:var(--ink);} .dgm .c-faint{fill:var(--ink-faint);}
+  .dgm .edge     { fill:none; stroke-width:1.6; stroke:var(--ink-faint); color:var(--ink-faint); }
+  .dgm .edge-ok  { fill:none; stroke-width:1.6; stroke:var(--ok);  color:var(--ok);  stroke-dasharray:6 4; }
+  .dgm .edge-bad { fill:none; stroke-width:1.6; stroke:var(--bad); color:var(--bad); stroke-dasharray:6 4; }
+  .dgm .hair     { stroke: var(--dp); stroke-width:1; opacity:.38; }
+
+  figure { margin: 0; display: flex; flex-direction: column; gap: 16px; }
+  .canvas { background: var(--panel); border: 1px solid var(--rule);
+            border-radius: 12px; box-shadow: var(--shadow);
+            padding: 24px 20px; overflow-x: auto; }
+  .canvas svg { display: block; width: 100%; min-width: 760px; height: auto; }
+  figcaption { font-size: 15px; color: var(--ink-soft); max-width: 74ch; text-wrap: pretty; }
+  figcaption strong { color: var(--ink); font-weight: 600; }
+
+  table { border-collapse: collapse; width: 100%; font-size: 15px; }
+  caption { text-align: left; font-family: var(--mono); font-size: 12px;
+            letter-spacing: .07em; text-transform: uppercase;
+            color: var(--ink-faint); padding-bottom: 10px; }
+  th, td { text-align: left; padding: 11px 14px;
+           border-bottom: 1px solid var(--rule-soft); vertical-align: top; }
+  thead th { font-family: var(--mono); font-size: 11.5px; letter-spacing: .06em;
+             text-transform: uppercase; color: var(--ink-faint); font-weight: 600;
+             border-bottom: 1px solid var(--rule); }
+  tbody td:first-child { font-family: var(--mono); font-size: 13px;
+                         color: var(--ink); white-space: nowrap; }
+  tbody tr:last-child td { border-bottom: none; }
+  .tbl { overflow-x: auto; background: var(--panel); border: 1px solid var(--rule);
+         border-radius: 10px; padding: 18px 20px; }
+
+  .tag { font-family: var(--mono); font-size: 11px; padding: 2px 7px;
+         border-radius: 4px; border: 1px solid; white-space: nowrap; }
+  .t-dp{color:var(--dp);border-color:var(--dp);background:var(--dp-wash);}
+  .t-wr{color:var(--write);border-color:var(--write);background:var(--write-wash);}
+  .t-ok{color:var(--ok);border-color:var(--ok);background:var(--ok-wash);}
+  .t-bad{color:var(--bad);border-color:var(--bad);background:var(--bad-wash);}
+  .t-a{color:var(--ink-faint);border-color:var(--rule);background:var(--panel-alt);}
+
+  code { font-family: var(--mono); font-size: .88em; background: var(--panel-alt);
+         padding: 1px 5px; border-radius: 4px; }
+
+  .note { border-left: 3px solid var(--dp); background: var(--dp-wash);
+          padding: 18px 22px; border-radius: 0 10px 10px 0; font-size: 16px; }
+  .note p { margin: 0; }
+  .note p + p { margin-top: 10px; }
+
+  footer { border-top: 1px solid var(--rule); padding-top: 22px;
+           font-family: var(--mono); font-size: 12px; color: var(--ink-faint); }
+
+  @media (max-width: 640px) {
+    body { font-size: 16px; }
+    .wrap { padding: 0 18px 72px; gap: 44px; }
+    header.mast { padding-top: 52px; }
+  }
+</style>
+
+<div class="wrap">
+
+  <header class="mast">
+    <div class="eyebrow">DiscoPoP agentic controller · proposed architecture</div>
+    <h1>Restructure, Then Annotate</h1>
+    <p class="standfirst">
+      Today the agent interleaves rewriting code and inserting pragmas, so every pragma
+      it adds invalidates the profile the next decision depends on. Splitting those into
+      two phases — <strong>all restructuring first, all annotation last</strong> — dissolves
+      the staleness, the duplicates, and the depth problems at once.
+    </p>
+  </header>
+
+  <section>
+    <div class="goal">
+      <div class="k">The goal, as a measurable outcome</div>
+      <p>
+        The final source carries the DiscoPoP pragmas that <strong>actually work</strong>, and
+        there are more of them than DiscoPoP achieves on its own. Success is
+        <code>P_final &gt; P₀</code>, with the program still correct and no slower.
+      </p>
+      <p style="font-size:16px;color:var(--ink-soft)">
+        <strong>Both sides counted the same way.</strong> P₀ is not "patterns DiscoPoP claims" —
+        it is patterns whose generated pragma passes the clause check and compiles, exactly the
+        bar the run's own output has to clear. On example4 DiscoPoP claims one applicable
+        pattern, and it is <code>private(ok)</code> on the sortedness check: a pragma that
+        compiles into a program reporting success even with the sort deleted. Counted honestly,
+        <strong>that baseline is 0, not 1</strong> — and scoring the baseline generously while
+        scoring the result strictly made every run look like a regression when it was a tie.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <h2>The flow</h2>
+    <p>
+      The source stays <strong>pragma-free for the whole of Phase A</strong>. Nothing writes a
+      pragma until every rewrite is settled — which is what makes the second phase able to work
+      from a single, trustworthy profile.
+    </p>
+
+    <figure>
+      <div class="canvas">
+        <svg class="dgm" viewBox="0 0 1080 1810" role="img"
+             aria-label="Two-phase flow: a first DiscoPoP profile establishes the baseline pragma count; Phase A repeatedly has an LLM restructure regions, gating each rewrite on compile and identical output and keeping it only if re-profiling finds more parallel patterns; Phase B then applies every candidate pragma once, checking clauses, running the safety gate and measuring each pragma's marginal contribution before writing it; a final whole-program check compares output and wall clock against the original.">
+          <defs>
+            <marker id="pa" viewBox="0 0 10 10" refX="9" refY="5"
+                    markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/>
+            </marker>
+          </defs>
+
+          <rect class="band" x="30" y="352" width="1020" height="700" rx="14"/>
+          <rect class="band" x="30" y="1086" width="1020" height="540" rx="14"/>
+
+          <g class="edge" marker-end="url(#pa)">
+            <line x1="380" y1="66"   x2="380" y2="94"/>
+            <line x1="380" y1="208"  x2="380" y2="236"/>
+            <line x1="380" y1="320"  x2="380" y2="386"/>
+            <line x1="380" y1="440"  x2="380" y2="470"/>
+            <line x1="380" y1="562"  x2="380" y2="592"/>
+            <line x1="380" y1="660"  x2="380" y2="690"/>
+            <line x1="380" y1="744"  x2="380" y2="774"/>
+            <line x1="380" y1="866"  x2="380" y2="896"/>
+            <line x1="380" y1="964"  x2="380" y2="994"/>
+            <line x1="380" y1="1052" x2="380" y2="1120"/>
+            <line x1="380" y1="1184" x2="380" y2="1214"/>
+            <line x1="380" y1="1284" x2="380" y2="1314"/>
+            <line x1="380" y1="1380" x2="380" y2="1410"/>
+            <line x1="380" y1="1480" x2="380" y2="1510"/>
+            <line x1="380" y1="1568" x2="380" y2="1650"/>
+            <line x1="380" y1="1738" x2="380" y2="1768"/>
+            <line x1="560" y1="626"  x2="614" y2="626"/>
+            <line x1="560" y1="930"  x2="614" y2="930"/>
+            <line x1="560" y1="1249" x2="614" y2="1249"/>
+            <line x1="560" y1="1345" x2="614" y2="1345"/>
+            <line x1="560" y1="1445" x2="614" y2="1445"/>
+            <line x1="560" y1="1694" x2="614" y2="1694"/>
+          </g>
+
+          <g class="edge-ok" marker-end="url(#pa)">
+            <path d="M 200 1020 L 120 1020 L 120 415 L 194 415"/>
+            <path d="M 200 1536 L 150 1536 L 150 1249 L 194 1249"/>
+          </g>
+          <text class="e c-ok" x="106" y="720" text-anchor="middle"
+                transform="rotate(-90 106 720)">next region / next round</text>
+          <text class="e c-ok" x="136" y="1400" text-anchor="middle"
+                transform="rotate(-90 136 1400)">next pragma</text>
+
+          <g class="edge-bad" marker-end="url(#pa)">
+            <path d="M 1000 1738 L 1030 1738 L 1030 1620 L 380 1620 L 380 1646"/>
+          </g>
+          <text class="e c-bad" x="700" y="1612" text-anchor="middle">re-check after dropping</text>
+
+          <g class="edge-bad" marker-end="url(#pa)">
+            <path d="M 1000 656 L 1030 656 L 1030 500 L 386 500"/>
+            <path d="M 1000 960 L 1024 960 L 1024 512 L 386 512"/>
+          </g>
+          <text class="e c-bad" x="1044" y="740" text-anchor="middle"
+                transform="rotate(-90 1044 740)">retry — budget − 1</text>
+
+          <rect class="n ok" x="200" y="22" width="360" height="44" rx="22"/>
+          <text class="m c-ok" x="222" y="50">START</text>
+          <text class="d c-ink" x="538" y="50" text-anchor="end">prog.cpp — sequential</text>
+
+          <rect class="n dp" x="200" y="94" width="360" height="114" rx="9"/>
+          <text class="h c-dp" x="218" y="118">FIRST PROFILE — you run this</text>
+          <line class="hair" x1="218" y1="128" x2="542" y2="128"/>
+          <text class="m c-ink" x="218" y="147">discopop_cxx  →  ./a.out  →  explorer</text>
+          <text class="b" x="218" y="168">record P₀ = how many applicable patterns</text>
+          <text class="b" x="218" y="186">DiscoPoP finds unaided — the bar to beat</text>
+          <text class="f c-dp" x="218" y="203">→ .discopop/</text>
+
+          <rect class="n ctl" x="200" y="236" width="360" height="84" rx="9"/>
+          <text class="h c-ink" x="218" y="260">AGENT STARTS</text>
+          <text class="b" x="218" y="282">record the original's stdout + best wall time</text>
+          <text class="b" x="218" y="302">queue the regions, hottest first</text>
+
+          <text class="lbl c-dp" x="52" y="382">PHASE A · RESTRUCTURE — the source stays pragma-free</text>
+
+          <rect class="n ctl" x="200" y="386" width="360" height="54" rx="9"/>
+          <text class="m c-ink" x="218" y="409">take a region with NO applicable pattern</text>
+          <text class="b" x="218" y="430">DiscoPoP already handles the rest — leave them</text>
+
+          <rect class="n llm" x="200" y="470" width="360" height="92" rx="9"/>
+          <text class="h c-llm" x="218" y="494">THE LLM RESTRUCTURES IT</text>
+          <text class="b" x="218" y="516">evidence: deps, blockers, loop nest, trip counts</text>
+          <text class="b c-ink" x="218" y="536">it is forbidden to write any pragma</text>
+          <text class="f c-llm" x="218" y="555">budget: 3 attempts per region</text>
+
+          <rect class="n ctl" x="200" y="592" width="360" height="68" rx="9"/>
+          <text class="m c-ink" x="218" y="615">GATE A — on a TEMP COPY</text>
+          <text class="b" x="218" y="635">compiles?  output byte-identical?</text>
+          <text class="f" x="218" y="653">no timing, no races — there is no pragma yet</text>
+          <text class="e c-bad" x="588" y="620" text-anchor="middle">fail</text>
+
+          <rect class="n bad" x="614" y="596" width="386" height="60" rx="9"/>
+          <text class="m c-bad" x="630" y="619">RETRY · nothing was written yet</text>
+          <text class="b" x="630" y="640">tell the model the stage; a build error refunds budget</text>
+
+          <rect class="n wr" x="200" y="690" width="360" height="54" rx="9"/>
+          <text class="m c-wr" x="218" y="713">WRITE the rewrite → your source</text>
+          <text class="b" x="218" y="734">still sequential; no pragma in it</text>
+
+          <rect class="n dp" x="200" y="774" width="360" height="92" rx="9"/>
+          <text class="h c-dp" x="218" y="798">RE-PROFILE</text>
+          <text class="m c-ink" x="218" y="820">discopop_cxx  →  ./a.out  →  explorer</text>
+          <text class="b" x="218" y="841">the only place profiling happens after the start</text>
+          <text class="f" x="218" y="859">≈15 s</text>
+
+          <polygon class="n dia" points="380,896 560,930 380,964 200,930"/>
+          <text class="d c-ink" x="380" y="927" text-anchor="middle">MORE applicable patterns</text>
+          <text class="d c-ink" x="380" y="942" text-anchor="middle">in the lines you changed?</text>
+          <text class="e c-bad" x="588" y="924" text-anchor="middle">no</text>
+          <text class="e c-ok"  x="394" y="984">yes</text>
+
+          <rect class="n bad" x="614" y="900" width="386" height="60" rx="9"/>
+          <text class="m c-bad" x="630" y="923">REVERT ① · source AND profile, from the snapshot</text>
+          <text class="b" x="630" y="944">no pattern, or none whose pragma can even compile</text>
+
+          <rect class="n ok" x="200" y="994" width="360" height="58" rx="9"/>
+          <text class="m c-ok" x="218" y="1017">KEEP it · record the lines it touched</text>
+          <text class="b" x="218" y="1040">rebuild the queue by content fingerprint</text>
+
+          <text class="lbl c-dp" x="52" y="1116">PHASE B · ANNOTATE — runs once, from one profile</text>
+
+          <rect class="n ctl" x="200" y="1120" width="360" height="64" rx="9"/>
+          <text class="m c-ink" x="218" y="1143">collect EVERY applicable pattern</text>
+          <text class="b" x="218" y="1164">sort by workload, largest first</text>
+
+          <polygon class="n dia" points="380,1214 560,1249 380,1284 200,1249"/>
+          <text class="d c-ink" x="380" y="1246" text-anchor="middle">clauses valid?</text>
+          <text class="d c-ink" x="380" y="1261" text-anchor="middle">(static — nothing runs)</text>
+          <text class="e c-bad" x="588" y="1243" text-anchor="middle">no</text>
+
+          <rect class="n bad" x="614" y="1219" width="386" height="60" rx="9"/>
+          <text class="m c-bad" x="630" y="1242">DROP ② · nothing written — the file is untouched</text>
+          <text class="b" x="630" y="1263">a clause handing back a value it cannot hand back</text>
+
+          <rect class="n ctl" x="200" y="1314" width="360" height="66" rx="9"/>
+          <text class="m c-ink" x="218" y="1337">GATE B — on a TEMP COPY</text>
+          <text class="b" x="218" y="1357">compile · openmp · races · output identical</text>
+          <text class="f" x="218" y="1374">patch re-derived against the file as it stands</text>
+          <text class="e c-bad" x="588" y="1339" text-anchor="middle">fail</text>
+
+          <rect class="n bad" x="614" y="1315" width="386" height="60" rx="9"/>
+          <text class="m c-bad" x="630" y="1338">DROP ③ · nothing written</text>
+          <text class="b" x="630" y="1359">move to the next candidate</text>
+
+          <polygon class="n dia" points="380,1410 560,1445 380,1480 200,1445"/>
+          <text class="d c-ink" x="380" y="1442" text-anchor="middle">--require-speedup on, and</text>
+          <text class="d c-ink" x="380" y="1457" text-anchor="middle">adding it slows things down?</text>
+          <text class="e c-bad" x="588" y="1439" text-anchor="middle">yes</text>
+          <text class="e c-ok"  x="394" y="1500">no</text>
+
+          <rect class="n bad" x="614" y="1415" width="386" height="60" rx="9"/>
+          <text class="m c-bad" x="630" y="1438">DROP ④ · costs more than it saves</text>
+          <text class="b" x="630" y="1459">flag off → no timing at all, nothing dropped here</text>
+
+          <rect class="n wr" x="200" y="1510" width="360" height="58" rx="9"/>
+          <text class="m c-wr" x="218" y="1533">WRITE the pragma → your source</text>
+          <text class="b" x="218" y="1556">this state becomes the baseline for the next</text>
+
+          <rect class="n ctl" x="200" y="1650" width="360" height="88" rx="9"/>
+          <text class="h c-ink" x="218" y="1674">SETTLE — the only check on the FILE</text>
+          <text class="b" x="218" y="1695">1 drop rewrites no pragma justified</text>
+          <text class="b" x="218" y="1714">2 rebuild from the original, survivors only</text>
+          <text class="b" x="218" y="1732">3 re-gate the RESULT + speed if asked</text>
+          <text class="e c-bad" x="588" y="1688" text-anchor="middle">fails</text>
+
+          <rect class="n bad" x="614" y="1650" width="386" height="88" rx="9"/>
+          <text class="m c-bad" x="630" y="1673">REVERT ② · drop the newest pragma, rebuild</text>
+          <text class="b" x="630" y="1694">repeat while it fails; orphaned rewrites go here too</text>
+          <text class="b" x="630" y="1712">nothing left to drop → REVERT ③ · the WHOLE run</text>
+          <text class="f" x="630" y="1730">a reconstruction is not what any gate looked at</text>
+
+          <rect class="n ok" x="200" y="1768" width="360" height="44" rx="22"/>
+          <text class="m c-ok" x="222" y="1796">END</text>
+          <text class="d c-ink" x="538" y="1796" text-anchor="end">P_final vs P₀</text>
+        </svg>
+      </div>
+      <figcaption>
+        <strong>The whole pipeline.</strong> Profiling (teal) happens at the start and after every
+        kept rewrite — never during Phase B. The two purple boxes are the only writes to your
+        file, and they are cleanly separated in time: rewrites in Phase A, pragmas in Phase B.
+        Red edges are every rejection: a <strong>DROP</strong> discards a candidate before
+        anything is written, a <strong>REVERT</strong> puts your file back. There are three
+        reverts — &#9312; a rewrite that exposed nothing usable, &#9313; settle dropping a change
+        that does not hold up, and &#9314; settle running out of things to drop and undoing the
+        whole run. Note that
+        <strong>SETTLE is the only step that judges the file itself</strong> — everything above it
+        judged a candidate patch against a temporary copy.
+      </figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <h2>When we profile</h2>
+    <div class="tbl">
+      <table>
+        <caption>Three points, and only three</caption>
+        <thead><tr><th>When</th><th>What it is for</th><th>Cost</th></tr></thead>
+        <tbody>
+          <tr><td>before the agent</td>
+              <td>establishes <code>.discopop/</code> and <strong>P₀</strong>, the number of applicable patterns DiscoPoP finds unaided</td>
+              <td><span class="tag t-a">you run it</span></td></tr>
+          <tr><td>after each kept rewrite</td>
+              <td>the only way to learn whether the rewrite exposed anything; also refreshes the candidate queue</td>
+              <td><span class="tag t-dp">≈15 s each</span></td></tr>
+          <tr><td>never in Phase B</td>
+              <td>all pragmas come from the single profile taken after the last kept rewrite</td>
+              <td><span class="tag t-ok">free</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="note">
+      <p>
+        <strong>This is the change that fixes the staleness.</strong> Today a Tier-1 pragma is
+        applied without re-profiling, so every queued patch targets a file that has already
+        shifted — which is what left <code>patch</code> hanging on an interactive prompt. Here,
+        nothing is profiled while pragmas are being inserted, and each patch is re-derived from
+        the pragma text and its anchor against the current file rather than replayed from a
+        stored diff.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <h2>When we check, and for what</h2>
+    <div class="tbl">
+      <table>
+        <caption>Each gate asks one question; nothing is asked twice</caption>
+        <thead><tr><th>Check</th><th>Phase</th><th>Asks</th><th>Runs</th></tr></thead>
+        <tbody>
+          <tr><td>Gate A</td><td>A</td>
+              <td>is this rewrite harmless? compiles, and prints byte-identical output</td>
+              <td>apply · compile · correctness</td></tr>
+          <tr><td>pattern count</td><td>A</td>
+              <td>did the rewrite expose parallelism DiscoPoP can use, in the lines it changed?</td>
+              <td>no build — a count from the fresh profile</td></tr>
+          <tr><td>clause check</td><td>B</td>
+              <td>is this pragma's data sharing even legal?</td>
+              <td>static; nothing executes</td></tr>
+          <tr><td>Gate B</td><td>B</td>
+              <td>does this pragma work?</td>
+              <td>apply · compile · openmp · tsan · correctness</td></tr>
+          <tr><td>final check</td><td>end</td>
+              <td>is the finished program correct and no slower than what the user started with?</td>
+              <td>one build, one run per recorded input, timing</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>
+      Phase A never runs ThreadSanitizer or timing — a pragma-free rewrite is single-threaded, so
+      both questions are meaningless there. They belong to Phase B, where a real pragma exists.
+    </p>
+  </section>
+
+  <section>
+    <h2>How the speedup is measured</h2>
+    <p>
+      Nothing here runs unless <code>--require-speedup</code> is on. When it is, speed is asked
+      at exactly two moments, and they answer different questions.
+    </p>
+
+    <div class="tbl">
+      <table>
+        <caption>Step 0 · calibrate, once per run</caption>
+        <thead><tr><th>What</th><th>How</th></tr></thead>
+        <tbody>
+          <tr><td>noise floor</td>
+              <td>Build the current source ONCE, then time that one binary against
+                  <em>itself</em> in alternating pairs. Every ratio should be 1.000; it is not.
+                  On this machine an unchanged example4 measured between
+                  <strong>0.947 and 1.020</strong>. The keep threshold is set just below the worst
+                  median observed, so jitter alone can never discard a pragma.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="tbl">
+      <table>
+        <caption>Step 1 · per pragma, in Phase B</caption>
+        <thead><tr><th>Metric</th><th>Compares</th><th>Answers</th></tr></thead>
+        <tbody>
+          <tr><td>marginal</td>
+              <td><code>state</code> against <code>state + p</code> — the file as it stands versus
+                  the same file with this one pragma added. Both built <code>-O2 -fopenmp</code>,
+                  timed in interleaved pairs, median of the per-pair ratios.</td>
+              <td><strong>This is the per-region speedup.</strong> What the pragma is worth in the
+                  program it will actually ship in — not in isolation.</td></tr>
+          <tr><td>scaling</td>
+              <td><code>state + p</code> at <code>OMP_NUM_THREADS=1</code> against unrestricted —
+                  the same binary, run two ways.</td>
+              <td>whether it parallelizes at all, or only adds barrier cost</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note">
+      <p>
+        <strong>Why both sides are <code>-fopenmp</code>.</strong> An earlier version compared an
+        OpenMP build against a non-OpenMP one. That flag changes codegen and layout on its own, so
+        part of every difference came from the compiler rather than the parallelism — the same
+        pragma on the same case measured 0.89&#215; and 1.10&#215; on consecutive runs. Building
+        both sides the same way and changing only the pragma keeps the compiler out of the ratio.
+      </p>
+      <p>
+        <strong>Why interleaved pairs and a median.</strong> Whatever the machine was doing during
+        a pair affected both halves of that pair, so the ratio survives load drift. The median
+        then discards the outliers a single slow run would otherwise create.
+      </p>
+    </div>
+
+    <div class="tbl">
+      <table>
+        <caption>Step 2 · once, on the finished file</caption>
+        <thead><tr><th>Metric</th><th>Compares</th><th>Answers</th></tr></thead>
+        <tbody>
+          <tr><td>net</td>
+              <td>the finished source against the ORIGINAL program's wall time, recorded before
+                  anything was touched</td>
+              <td>did the whole run leave the user better off? Every per-pragma verdict can pass
+                  while this still fails — that is not a contradiction, it is why the check
+                  exists</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note">
+      <p>
+        <strong>The keep rule.</strong> Faster &#8594; keep. Within the measured noise floor
+        &#8594; keep, because the region may be hot on other inputs and it costs nothing.
+        Measurably slower &#8594; drop. That discards a pragma on 513 trivial stores while keeping
+        every pragma too small to measure — which is what the goal, <em>more working pragmas</em>,
+        asks for.
+      </p>
+      <p>
+        <strong>With the flag off</strong>, none of the above runs: no calibration, no marginal, no
+        scaling, no net check. Every safe pragma is kept and nothing guards against ending up
+        slower.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <h2>When we revert, and when we write</h2>
+    <p>
+      Every gate runs on a temporary copy, so a failing check never touches your source. There are
+      only two writes, and each happens after its own check has passed — plus the settle step,
+      which can undo any of them.
+    </p>
+    <div class="tbl">
+      <table>
+        <caption>Every path that changes — or un-changes — your file</caption>
+        <thead><tr><th>When</th><th>Event</th><th>Action</th><th>Your file</th></tr></thead>
+        <tbody>
+          <tr><td>Phase A</td><td>Gate A fails</td><td>feedback to the model, retry</td>
+              <td><span class="tag t-a">untouched</span></td></tr>
+          <tr><td>Phase A</td><td>rewrite passes Gate A</td><td>apply it</td>
+              <td><span class="tag t-wr">WRITE</span></td></tr>
+          <tr><td>Phase A</td>
+              <td>re-profile finds no pattern in the changed lines, <em>or no pattern whose
+                  pragma passes the clause check and compiles</em></td>
+              <td>restore source <em>and</em> profile from the snapshot; the model is told the
+                  loop shape is the problem</td>
+              <td><span class="tag t-bad">REVERT &#9312;</span></td></tr>
+          <tr><td>Phase B</td><td>clause check rejects the pragma</td><td>drop it, next candidate</td>
+              <td><span class="tag t-a">untouched</span></td></tr>
+          <tr><td>Phase B</td><td>Gate B fails</td><td>drop it, next candidate</td>
+              <td><span class="tag t-a">untouched</span></td></tr>
+          <tr><td>Phase B</td><td>marginal is a regression <em>(only with --require-speedup)</em></td>
+              <td>drop it, next candidate</td>
+              <td><span class="tag t-a">untouched</span></td></tr>
+          <tr><td>Phase B</td><td>pragma kept</td>
+              <td>apply it; it becomes the baseline for the next</td>
+              <td><span class="tag t-wr">WRITE</span></td></tr>
+          <tr><td>Settle</td><td>a rewrite has no pragma justifying it</td>
+              <td>dropped from the rebuild</td>
+              <td><span class="tag t-bad">REVERT &#9313;</span></td></tr>
+          <tr><td>Settle</td><td>a change depended on one that was dropped</td>
+              <td>its patch no longer applies — dropped too</td>
+              <td><span class="tag t-bad">REVERT &#9313;</span></td></tr>
+          <tr><td>Settle</td><td>the rebuilt file fails the gate, or is slower</td>
+              <td>drop the newest pragma, rebuild, re-check</td>
+              <td><span class="tag t-bad">REVERT &#9313;</span></td></tr>
+          <tr><td>Settle</td><td>nothing left to drop and it still fails</td>
+              <td>put the user back where they started</td>
+              <td><span class="tag t-bad">REVERT &#9314; — all of it</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="note">
+      <p>
+        <strong>Why settle re-gates rather than trusting the rebuild.</strong> Every earlier gate
+        judged a candidate patch applied to a temporary copy. The file that ends up on disk is a
+        <em>reconstruction</em> — the survivors re-applied onto the original — and that is not the
+        artifact any gate looked at. Skipping this step is how a pragma the gate rejects
+        deterministically ended up in a real source file.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Depth &gt; 0</h2>
+    <p>
+      Depth now exists only in Phase A, and Phase A has no pragmas in it. That is what makes the
+      old depth problems disappear rather than get managed.
+    </p>
+    <div class="tbl">
+      <table>
+        <thead><tr><th>Broke at depth &gt; 0 before</th><th>Under the split</th></tr></thead>
+        <tbody>
+          <tr><td>pragma validation deferred</td>
+              <td>gone — <code>terminal</code> has nothing to defer, because no pragma is validated in Phase A at all</td></tr>
+          <tr><td>LLM handed parallelized code</td>
+              <td>gone — the source is pragma-free for the whole of Phase A</td></tr>
+          <tr><td>duplicate pragma proposals</td>
+              <td>gone — DiscoPoP is never re-profiled on a file containing its own output</td></tr>
+          <tr><td>stale patches from line shifts</td>
+              <td>gone — the only writes in Phase A are rewrites, and each is immediately followed by a re-profile</td></tr>
+          <tr><td>context-line pragma flips the gate</td>
+              <td>gone — no pragma exists anywhere in the file, so it cannot appear in a diff's context</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>
+      What still has to work, and does: region identity across rounds is content fingerprints, as
+      today — and it gets <em>easier</em>, because the only text that changes is a rewrite, which
+      is meant to change identity, rather than a pragma insertion, which is not. Termination is
+      unchanged: new regions enter at depth + 1, and after <code>--restructure-depth</code> rounds
+      none qualify.
+    </p>
+    <div class="note">
+      <p>
+        <strong>One new risk, and it grows with depth.</strong> Every round can leave the code
+        slower <em>sequentially</em> — odd-even transposition sweeps the full range where bubble
+        sort shrank, costing about 22&#37; before any threading. Phase B then measures each pragma
+        against that restructured baseline, so every marginal gain can look fine while the final
+        check, which compares against the ORIGINAL, still fails.
+      </p>
+      <p>
+        When that happens, bisecting the pragmas is aimed at the wrong thing — the cost is in the
+        rewrites. So the rollback unit has to be <strong>a rewrite together with the pragmas
+        inside it</strong>, unwound in reverse order of application. A rewrite that needs its own
+        pragma just to break even is worth less than no rewrite at all.
+      </p>
+    </div>
+    <p>
+      The riskiest combination is therefore <code>--restructure-depth &gt; 0</code> with
+      <code>--no-require-speedup</code>: more rounds accumulating serial cost, and no final speed
+      check to notice. If you raise depth, leave the speedup gate on.
+    </p>
+  </section>
+
+  <section>
+    <h2>Dropping rewrites that earned nothing</h2>
+    <p>
+      A Phase-A rewrite exists to make DiscoPoP able to parallelize something. If Phase B applied
+      no pragma to any region it exposed, it achieved nothing — and it is not free: odd-even
+      transposition sweeps the full range where bubble sort shrank. <strong>A rewrite stays only
+      if it has pragmas.</strong> Being incidentally faster on its own does not save it.
+    </p>
+    <div class="tbl">
+      <table>
+        <caption>Justification is by identity, because regions nest and line spans drift</caption>
+        <thead><tr><th>Case</th><th>Verdict</th></tr></thead>
+        <tbody>
+          <tr><td>pragma on an inner loop, inside an outer rewrite</td>
+              <td>outer rewrite <strong>justified</strong> — it exposed that loop</td></tr>
+          <tr><td>nested rewrites, one pragma inside both</td>
+              <td><strong>both justified</strong>; each genuinely contributed</td></tr>
+          <tr><td>pragma on a region DiscoPoP could always parallelize</td>
+              <td>justifies <strong>nothing</strong> — no rewrite enabled it</td></tr>
+          <tr><td>rewrite built on top of a dropped rewrite</td>
+              <td>its patch fails to apply on the rebuild — <strong>dropped too</strong>, and reported</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="note">
+      <p>
+        <strong>Rebuild, do not un-apply.</strong> The file ends as
+        <code>original + r₁ + r₂ + … + pragmas</code>, so reverting one rewrite in place means
+        reversing a patch that later changes were written on top of. Instead, re-apply the
+        survivors onto a fresh copy of the original: nothing is ever reversed, and dependence is
+        <em>discovered</em> rather than computed — a change that stood on a dropped one simply
+        fails to apply, which is the signal that it goes too.
+      </p>
+      <p>
+        This is also the rollback unit the depth &gt; 0 problem needs: a rewrite and the pragmas
+        inside it travel together, because dropping the rewrite makes its pragmas fail to apply.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <h2>What this does not solve</h2>
+    <p>
+      Phase B validates each pragma against a file accumulating the others, so a late failure can
+      be an interaction rather than that pragma's own fault — the bisect at the end exists for
+      exactly that. And the Phase A criterion, <em>"a pattern appeared"</em>, is weaker than
+      <em>"a pragma works"</em>: DiscoPoP will report a <code>do_all</code> for a loop whose
+      generated pragma cannot compile, so a rewrite can pass Phase A and still earn nothing. The
+      rebuild catches it, but only after the LLM call and the re-profile have been spent.
+    </p>
+  </section>
+
+  <footer>
+    proposed · supersedes the interleaved Tier-1 / Tier-2 flow in controller.py
+  </footer>
+
+</div>
