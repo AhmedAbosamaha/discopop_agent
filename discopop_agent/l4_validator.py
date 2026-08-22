@@ -328,6 +328,44 @@ def _measure_speedup(
 # Stage 3: ThreadSanitizer
 # ---------------------------------------------------------------------------
 
+def find_archer() -> Optional[str]:
+    """The libarcher OMPT tool, if this machine has one.
+
+    ThreadSanitizer only reports accesses it cannot order, and it learns the
+    order from synchronization it can see.  It cannot see OpenMP's: the barrier
+    ending every `parallel for` is inside libomp, which is not instrumented.
+    Archer bridges that — it subscribes to the runtime's OMPT callbacks and
+    calls TSan's AnnotateHappensBefore/After on each one.
+
+    Without it TSan reports a race between ANY two parallel regions touching the
+    same data.  Measured here: a program whose second parallel loop reads what
+    the first one wrote is bit-identical over 20 runs at 1/2/4/8/16 threads, and
+    is reported as a race; with archer loaded it is clean, while a genuine race
+    inside a single region is still caught.
+
+    Homebrew builds libomp with -DOPENMP_ENABLE_OMPT_TOOLS=OFF, so no archer
+    ships with it — build one with `discopop_agent/tools/build_archer.sh`.
+    When there is none, the gate falls back to the _is_omp_barrier_false_positive
+    heuristic in controller.py, which covers the barrier shape but not `nowait`
+    or tasks.
+    """
+    import os
+
+    explicit = os.environ.get("DP_ARCHER_LIB")
+    if explicit:
+        return explicit if Path(explicit).exists() else None
+    for cand in (
+        Path.home() / ".local/lib/libarcher.dylib",
+        Path("/usr/local/opt/libomp/lib/libarcher.dylib"),
+        Path("/opt/homebrew/opt/libomp/lib/libarcher.dylib"),
+        Path.home() / ".local/lib/libarcher.so",
+        Path("/usr/lib/llvm/lib/libarcher.so"),
+    ):
+        if cand.exists():
+            return str(cand)
+    return None
+
+
 def _tsan_env() -> dict:
     """Environment for the ThreadSanitizer run.
 
@@ -348,8 +386,22 @@ def _tsan_env() -> dict:
     import os
 
     env = dict(os.environ)
-    existing = env.get("TSAN_OPTIONS", "")
-    env["TSAN_OPTIONS"] = (existing + ":" if existing else "") + "halt_on_error=1"
+    opts = [env["TSAN_OPTIONS"]] if env.get("TSAN_OPTIONS") else []
+    opts.append("halt_on_error=1")
+
+    # Load archer when we have one, so TSan can see OpenMP's barriers instead of
+    # reporting every pair of parallel regions as a race.  `ignore_noninstrumented_modules`
+    # is archer's own recommendation, and it is only correct WITH archer: it
+    # silences reports raised from inside the uninstrumented runtime, which is
+    # exactly where the barrier artefacts surface.  Never set it on its own —
+    # that would hide reports without adding the ordering that makes them wrong.
+    archer = find_archer()
+    if archer:
+        env["OMP_TOOL_LIBRARIES"] = archer
+        env["OMP_TOOL"] = "enabled"
+        opts.append("ignore_noninstrumented_modules=1")
+
+    env["TSAN_OPTIONS"] = ":".join(opts)
     return env
 
 

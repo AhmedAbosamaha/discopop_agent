@@ -18,6 +18,7 @@ import difflib
 import re
 import tempfile
 import textwrap
+import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
@@ -30,10 +31,23 @@ from .types import EvidencePackage
 # System prompt (cached across all calls in a session)
 # ---------------------------------------------------------------------------
 
-_SYSTEM_CORE = textwrap.dedent("""\
+# The system prompt is assembled from blocks rather than written out twice.
+# The two modes differ in exactly three places — who writes the pragma, what
+# "success" means, and how the answer is judged — and share everything else.
+
+_ROLE = textwrap.dedent("""\
     You are the restructuring stage of DiscoPoP, a profiler that finds OpenMP
     parallelism in C/C++ programs.
 
+""")
+
+_ROLE_ANNOTATE = textwrap.dedent("""\
+    You are the restructuring and annotation stage of DiscoPoP, a profiler that
+    finds OpenMP parallelism in C/C++ programs.
+
+""")
+
+_ASK = textwrap.dedent("""\
     ------------------------------------------------------------------
     WHAT WE ASK OF YOU
     ------------------------------------------------------------------
@@ -47,6 +61,27 @@ _SYSTEM_CORE = textwrap.dedent("""\
     changed, and the pragma it then generates is race-free, output-preserving,
     and faster than the sequential build.
 
+""")
+
+_ASK_ANNOTATE = textwrap.dedent("""\
+    ------------------------------------------------------------------
+    WHAT WE ASK OF YOU
+    ------------------------------------------------------------------
+    DiscoPoP profiled one region and could not extract safe parallelism from
+    it.  Rewrite that region's sequential source so the parallelism becomes
+    explicit, and annotate it yourself: every loop you intend to run in
+    parallel carries its own `#pragma omp`, with its data-sharing clauses
+    spelled out.
+
+    You have succeeded when the annotated code compiles, runs race-free,
+    reproduces the original output byte for byte, and is measurably faster than
+    the same build held to one thread.  Nothing downstream adds a pragma to the
+    code you rewrite — a loop you leave unannotated stays sequential, and a
+    rewrite with no pragma in it has parallelized nothing.
+
+""")
+
+_GIVEN = textwrap.dedent("""\
     ------------------------------------------------------------------
     WHAT WE GIVE YOU
     ------------------------------------------------------------------
@@ -65,6 +100,9 @@ _SYSTEM_CORE = textwrap.dedent("""\
     dependence on an induction variable is never the blocker, because OpenMP
     handles those itself.
 
+""")
+
+_CONTRACT_OPEN = textwrap.dedent("""\
     ------------------------------------------------------------------
     THE CONTRACT
     ------------------------------------------------------------------
@@ -73,11 +111,34 @@ _SYSTEM_CORE = textwrap.dedent("""\
         extra passes.  Doing more work than the original is fine.
       - Do not rename the function or change its signature, and do not touch
         I/O or its formatting.
-      - Do not write `#pragma omp` yourself.
-      - The original code returned unchanged — renamed, reordered, unrolled, or
-        wrapped in an early-exit shortcut — is not an answer, and neither is a
-        faster serial algorithm.  The blocking dependence has to be gone.
+""")
 
+_CONTRACT_NO_PRAGMA = "  - Do not write `#pragma omp` yourself.\n"
+
+_CONTRACT_PRAGMA = """\
+  - Annotate what you parallelize: a rewrite with no `#pragma omp` in it is
+    still a sequential program, however independent its iterations are.
+  - Say what every variable does.  `reduction(op:var)` for an accumulator,
+    `private` for per-iteration scratch declared OUTSIDE the loop,
+    `firstprivate` for a value read in and not needed after.  Two rules
+    decide the cases that go wrong silently:
+      · a variable DECLARED inside the loop body is already per-iteration —
+        it must not appear in any clause at all
+      · a variable the loop WRITES and code after the loop READS must never
+        be `private` or `firstprivate`.  Those discard the writes, so the
+        later read sees a stale value and the program keeps running with a
+        wrong answer.  Use `reduction`, or `lastprivate`, or leave it shared
+        and make the write itself safe.
+"""
+
+_CONTRACT_CLOSE = """\
+  - The original code returned unchanged — renamed, reordered, unrolled, or
+    wrapped in an early-exit shortcut — is not an answer, and neither is a
+    faster serial algorithm.  The blocking dependence has to be gone.
+
+"""
+
+_CHECKED = textwrap.dedent("""\
     ------------------------------------------------------------------
     HOW YOUR REWRITE IS CHECKED
     ------------------------------------------------------------------
@@ -99,6 +160,36 @@ _SYSTEM_CORE = textwrap.dedent("""\
     across activations, that has to cover thread startup.  The evidence marks
     which loops qualify; prefer the outermost one that does.
 
+""")
+
+_CHECKED_ANNOTATE = textwrap.dedent("""\
+    ------------------------------------------------------------------
+    HOW YOUR REWRITE IS CHECKED
+    ------------------------------------------------------------------
+      1. the clauses on every pragma you wrote are read statically and held to
+         the two rules above — a clause that breaks one is rejected before
+         anything is built
+      2. it must compile, plain and again with -fopenmp
+      3. ThreadSanitizer runs the parallel build: any real race fails it
+      4. the parallel build is run and its output compared byte-for-byte
+      5. that same build is timed against itself pinned to one thread, and has
+         to be faster
+
+    Steps 3-5 run your loops with iterations overlapping in arbitrary order.  A
+    loop you marked parallel has to give the same result whatever order its
+    iterations run in — reproducing the output in serial proves nothing about
+    that.  Nothing here re-profiles your code: this list is the whole judgement,
+    and a pragma you did not write is a loop that was never parallelized.
+
+    Step 5 also decides granularity: each ACTIVATION of a loop is a separate
+    parallel region, so it is the iterations per activation, not the total
+    across activations, that has to cover thread startup.  The evidence marks
+    which loops qualify; annotate the outermost one that does, and leave the
+    loops nested inside it alone — one pragma per nest.
+
+""")
+
+_OMP_RULES = textwrap.dedent("""\
     ------------------------------------------------------------------
     WHAT OPENMP REQUIRES OF A PARALLEL LOOP
     ------------------------------------------------------------------
@@ -112,6 +203,22 @@ _SYSTEM_CORE = textwrap.dedent("""\
     after the loop is a valid way to fix that, but only when the iterations it
     now runs have no side effects and cannot fault.
 """)
+
+_PRAGMA_FORMS = textwrap.dedent("""\
+
+    Stay with the worksharing forms: `#pragma omp parallel for`, plus
+    `reduction(...)`, `schedule(...)` or `collapse(n)` where they earn their
+    place.  No nested parallel regions, no `#pragma omp parallel` around a loop
+    you then hand-partition by thread id, and nothing that needs a runtime call
+    to be correct.
+""")
+
+_SYSTEM_CORE = (_ROLE + _ASK + _GIVEN + _CONTRACT_OPEN + _CONTRACT_NO_PRAGMA
+                + _CONTRACT_CLOSE + _CHECKED + _OMP_RULES)
+
+_SYSTEM_CORE_ANNOTATE = (_ROLE_ANNOTATE + _ASK_ANNOTATE + _GIVEN + _CONTRACT_OPEN
+                         + _CONTRACT_PRAGMA + _CONTRACT_CLOSE + _CHECKED_ANNOTATE
+                         + _OMP_RULES + _PRAGMA_FORMS)
 
 # Asked for before the code in every edit mode.  Deliberately not a form: the
 # point is to make the model commit to which dependence it is removing before
@@ -159,6 +266,19 @@ _OUTPUT_DIRECT = (
 _SYSTEM = _SYSTEM_CORE + _OUTPUT_DIFF
 _SYSTEM_FUNCTION = _SYSTEM_CORE + _OUTPUT_FUNCTION
 _SYSTEM_DIRECT = _SYSTEM_CORE + _OUTPUT_DIRECT
+
+
+def _system_prompt(edit_mode: str, llm_pragmas: bool) -> str:
+    """The system prompt for one (edit mode, who-writes-the-pragma) pair.
+
+    Kept as module-level constants rather than built per call: the prompt is
+    sent with `cache_control: ephemeral`, so it has to be byte-identical across
+    every call in a session for the cache to hit.
+    """
+    core = _SYSTEM_CORE_ANNOTATE if llm_pragmas else _SYSTEM_CORE
+    tail = (_OUTPUT_DIRECT if edit_mode == "direct"
+            else _OUTPUT_FUNCTION if edit_mode == "function" else _OUTPUT_DIFF)
+    return core + tail
 
 # ---------------------------------------------------------------------------
 # Prompt builder
@@ -851,12 +971,15 @@ def _complete_claude_agent_sdk(
     try:
         text, session_id = asyncio.run(_run(resume_id))
     except Exception:
-        if resume_id is None:
-            raise
-        # The cached session may have gone stale (its on-disk transcript
-        # evicted, etc.) — drop it and retry once as a fresh session rather
-        # than aborting the whole run over a resumable hiccup.
+        # Two different hiccups land here, and neither is worth losing a run
+        # over.  A cached session can go stale (its on-disk transcript evicted),
+        # and the CLI itself can fail a call transiently — observed once as
+        # `Claude Code returned an error result: success`, with the identical
+        # call succeeding immediately afterwards.  Either way: drop any session
+        # we were resuming and try once more from scratch.  A real problem
+        # (not logged in, no CLI) fails the same way twice and still raises.
         _region_sessions.pop(session_key, None)
+        time.sleep(2)
         text, session_id = asyncio.run(_run(None))
 
     if session_id:
@@ -933,6 +1056,7 @@ def call_llm(
     provider: str = "anthropic",
     api_base: Optional[str] = None,
     edit_mode: str = "diff",
+    llm_pragmas: bool = False,
     verbose: bool = False,
 ) -> tuple[Optional[str], list]:
     """Call the LLM and return (output or None, updated messages).
@@ -961,6 +1085,10 @@ def call_llm(
     a content-based identity, NOT the reassignable region_id) to supply
     everything earlier — see _complete_claude_agent_sdk().
 
+    `llm_pragmas` switches the system prompt: off (default) the model is told
+    DiscoPoP will insert the pragmas, on it is told to write them itself and
+    that nothing downstream will add one for it.
+
     `provider` selects the backend: "anthropic" (default, billed API key),
     "openai-compat" (any OpenAI-compatible endpoint at `api_base`, e.g. a
     self-hosted vLLM), or "claude-agent-sdk" (runs the local `claude` CLI
@@ -976,8 +1104,7 @@ def call_llm(
             "--edit-mode direct requires --provider claude-agent-sdk (it is the "
             "only backend that can edit files itself)."
         )
-    system = (_SYSTEM_DIRECT if direct_mode
-              else _SYSTEM_FUNCTION if function_mode else _SYSTEM)
+    system = _system_prompt(edit_mode, llm_pragmas)
     client = _make_client(provider, api_key, api_base)
     session_key = evidence.region_fingerprint or evidence.region_id
 

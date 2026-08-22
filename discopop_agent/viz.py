@@ -200,8 +200,10 @@ def llm_extracted(kind: str, code: str | None) -> None:
 
 
 # Human-readable, ordered gate stages.
-_GATE_ORDER = ["apply", "compile", "openmp_compile", "tsan", "correctness", "performance"]
+_GATE_ORDER = ["clause", "apply", "compile", "openmp_compile", "tsan",
+               "correctness", "performance"]
 _GATE_LABEL = {
+    "clause": "data-sharing clauses (static)",
     "apply": "apply patch",
     "compile": "compile (sequential)",
     "openmp_compile": "compile (-fopenmp)",

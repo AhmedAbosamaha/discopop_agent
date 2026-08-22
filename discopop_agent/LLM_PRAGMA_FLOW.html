@@ -1,0 +1,810 @@
+<title>Who Writes the Pragma</title>
+<style>
+  :root {
+    --ground:     #F5F7F7;
+    --panel:      #FFFFFF;
+    --panel-alt:  #EDF2F2;
+    --ink:        #0F1718;
+    --ink-soft:   #4A5B5E;
+    --ink-faint:  #7C8E92;
+    --rule:       #D3DEDE;
+    --rule-soft:  #E6EDED;
+    --dp:         #0B6E77;
+    --dp-wash:    #DBECED;
+    --llm:        #A05611;
+    --llm-wash:   #F7E6D2;
+    --write:      #6A3E9E;
+    --write-wash: #E9E0F4;
+    --ok:         #2B6D4A;
+    --ok-wash:    #DAEAE0;
+    --bad:        #A53341;
+    --bad-wash:   #F3DEE0;
+    --shadow: 0 1px 2px rgba(15,23,24,.06), 0 10px 28px -18px rgba(15,23,24,.30);
+    --mono: ui-monospace, "SF Mono", Menlo, "JetBrains Mono", Consolas, monospace;
+    --body: "Iowan Old Style", "Palatino Linotype", Palatino, Charter, Georgia, serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:#0B1112; --panel:#131B1D; --panel-alt:#192325;
+      --ink:#E2EBEA; --ink-soft:#A0B2B4; --ink-faint:#6F8689;
+      --rule:#25322F; --rule-soft:#1D2829;
+      --dp:#4FC6D0; --dp-wash:#11323A;
+      --llm:#E8A84E; --llm-wash:#392913;
+      --write:#BFA0EA; --write-wash:#231933;
+      --ok:#63C68D; --ok-wash:#15311E;
+      --bad:#EE8494; --bad-wash:#36181D;
+      --shadow:0 1px 2px rgba(0,0,0,.42), 0 12px 32px -20px rgba(0,0,0,.85);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:#0B1112; --panel:#131B1D; --panel-alt:#192325;
+    --ink:#E2EBEA; --ink-soft:#A0B2B4; --ink-faint:#6F8689;
+    --rule:#25322F; --rule-soft:#1D2829;
+    --dp:#4FC6D0; --dp-wash:#11323A;
+    --llm:#E8A84E; --llm-wash:#392913;
+    --write:#BFA0EA; --write-wash:#231933;
+    --ok:#63C68D; --ok-wash:#15311E;
+    --bad:#EE8494; --bad-wash:#36181D;
+    --shadow:0 1px 2px rgba(0,0,0,.42), 0 12px 32px -20px rgba(0,0,0,.85);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--body);
+    font-size: 17px;
+    line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 0 24px 96px;
+    display: flex;
+    flex-direction: column;
+    gap: 56px;
+  }
+
+  header.mast {
+    padding: 76px 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    max-width: 64ch;
+  }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    letter-spacing: .17em;
+    text-transform: uppercase;
+    color: var(--dp);
+  }
+  h1 {
+    margin: 0;
+    font-size: clamp(38px, 5.4vw, 60px);
+    line-height: 1.04;
+    letter-spacing: -.021em;
+    font-weight: 600;
+    text-wrap: balance;
+  }
+  .standfirst { margin: 0; font-size: 19.5px; color: var(--ink-soft); text-wrap: pretty; }
+  .standfirst strong { color: var(--ink); font-weight: 600; }
+
+  section { display: flex; flex-direction: column; gap: 22px; }
+  h2 {
+    margin: 0;
+    font-size: 15px;
+    font-family: var(--mono);
+    font-weight: 600;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: var(--ink);
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+  }
+  h2::before {
+    content: attr(data-n);
+    color: var(--dp);
+    font-size: 12px;
+    letter-spacing: .1em;
+  }
+  h2 + p, .lede { margin: 0; max-width: 68ch; color: var(--ink-soft); }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 26px;
+    padding: 16px 20px;
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    border-radius: 10px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--ink-soft);
+  }
+  .legend span { display: inline-flex; align-items: center; gap: 9px; }
+  .swatch { width: 13px; height: 13px; border-radius: 3px; border: 1.5px solid; flex: none; }
+  .s-dp    { background: var(--dp-wash);    border-color: var(--dp); }
+  .s-llm   { background: var(--llm-wash);   border-color: var(--llm); }
+  .s-write { background: var(--write-wash); border-color: var(--write); }
+  .s-ctl   { background: var(--panel-alt);  border-color: var(--ink-faint); }
+  .s-term  { background: var(--ok-wash);    border-color: var(--ok); }
+
+  /* ---- diagram ---------------------------------------------------------
+     Styled through classes rather than presentation attributes: var() is
+     unreliable inside attributes like fill="", but works everywhere here. */
+  .dgm text { font-family: var(--mono); fill: var(--ink); }
+  .dgm .n       { stroke-width: 2; }
+  .dgm .n.dp    { fill: var(--dp-wash);    stroke: var(--dp); }
+  .dgm .n.llm   { fill: var(--llm-wash);   stroke: var(--llm); }
+  .dgm .n.wr    { fill: var(--write-wash); stroke: var(--write); }
+  .dgm .n.ok    { fill: var(--ok-wash);    stroke: var(--ok); }
+  .dgm .n.bad   { fill: var(--bad-wash);   stroke: var(--bad); }
+  .dgm .n.ctl   { fill: var(--panel-alt);  stroke: var(--ink-faint); stroke-width: 1.8; }
+  .dgm .n.dia   { fill: var(--panel);      stroke: var(--ink-faint); stroke-width: 1.8; }
+
+  .dgm .h { font-size: 12px;   font-weight: 600; }
+  .dgm .m { font-size: 11px; }
+  .dgm .b { font-size: 10.5px; fill: var(--ink-soft); }
+  .dgm .f { font-size: 10.5px; fill: var(--ink-faint); }
+  .dgm .d { font-size: 11.5px; }
+  .dgm .e { font-size: 11px; }
+
+  .dgm .c-dp    { fill: var(--dp); }
+  .dgm .c-llm   { fill: var(--llm); }
+  .dgm .c-wr    { fill: var(--write); }
+  .dgm .c-ok    { fill: var(--ok); }
+  .dgm .c-bad   { fill: var(--bad); }
+  .dgm .c-ink   { fill: var(--ink); }
+  .dgm .c-faint { fill: var(--ink-faint); }
+
+  .dgm .edge     { fill: none; stroke-width: 1.6; stroke: var(--ink-faint); color: var(--ink-faint); }
+  .dgm .edge-ok  { fill: none; stroke-width: 1.6; stroke: var(--ok);  color: var(--ok);  stroke-dasharray: 6 4; }
+  .dgm .edge-bad { fill: none; stroke-width: 1.6; stroke: var(--bad); color: var(--bad); stroke-dasharray: 6 4; }
+  .dgm .hair     { stroke: var(--dp); stroke-width: 1; opacity: .38; }
+
+  figure { margin: 0; display: flex; flex-direction: column; gap: 16px; }
+  .canvas {
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    padding: 24px 20px;
+    overflow-x: auto;
+  }
+  .canvas svg { display: block; width: 100%; min-width: 720px; height: auto; }
+  figcaption { font-size: 15px; color: var(--ink-soft); max-width: 74ch; text-wrap: pretty; }
+  figcaption strong { color: var(--ink); font-weight: 600; }
+
+  .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(268px, 1fr)); gap: 20px; }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    border-left: 3px solid var(--dp);
+    border-radius: 10px;
+    padding: 20px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+  }
+  .card.llm   { border-left-color: var(--llm); }
+  .card.write { border-left-color: var(--write); }
+  .card h3 {
+    margin: 0;
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: var(--dp);
+    font-weight: 600;
+  }
+  .card.llm h3   { color: var(--llm); }
+  .card.write h3 { color: var(--write); }
+  .card p { margin: 0; font-size: 15.5px; color: var(--ink-soft); }
+  .card p strong { color: var(--ink); font-weight: 600; }
+
+  table { border-collapse: collapse; width: 100%; font-size: 15px; }
+  caption {
+    text-align: left;
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    padding-bottom: 10px;
+  }
+  th, td { text-align: left; padding: 11px 14px; border-bottom: 1px solid var(--rule-soft); vertical-align: top; }
+  thead th {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    font-weight: 600;
+    border-bottom: 1px solid var(--rule);
+  }
+  tbody td:first-child { font-family: var(--mono); font-size: 13px; color: var(--ink); white-space: nowrap; }
+  tbody tr:last-child td { border-bottom: none; }
+  .tag {
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 2px 7px;
+    border-radius: 4px;
+    border: 1px solid;
+    white-space: nowrap;
+  }
+  .t-skip { color: var(--ink-faint); border-color: var(--rule); background: var(--panel-alt); }
+  .t-run  { color: var(--ok); border-color: var(--ok); background: var(--ok-wash); }
+
+  code { font-family: var(--mono); font-size: .88em; background: var(--panel-alt); padding: 1px 5px; border-radius: 4px; }
+
+  .note {
+    border-left: 3px solid var(--dp);
+    background: var(--dp-wash);
+    padding: 18px 22px;
+    border-radius: 0 10px 10px 0;
+    font-size: 16px;
+    color: var(--ink);
+  }
+  .note p { margin: 0; }
+  .note p + p { margin-top: 10px; }
+
+  footer { border-top: 1px solid var(--rule); padding-top: 22px; font-family: var(--mono); font-size: 12px; color: var(--ink-faint); }
+
+  @media (max-width: 640px) {
+    body { font-size: 16px; }
+    .wrap { padding: 0 18px 72px; gap: 44px; }
+    header.mast { padding-top: 52px; }
+  }
+</style>
+<style>
+  /* companion page: the --llm-pragmas branch */
+  .dgm .band {
+    fill: var(--llm-wash); stroke: var(--llm); stroke-width: 1;
+    stroke-dasharray: 5 5; opacity: .55;
+  }
+  .dgm .colhead { font-size: 11.5px; letter-spacing: .09em; font-weight: 600; }
+  .card.ok { border-left-color: var(--ok); }
+  .card.ok h3 { color: var(--ok); }
+  .note.warn { border-left-color: var(--llm); background: var(--llm-wash); }
+  .runs { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+  .run {
+    background: var(--panel); border: 1px solid var(--rule); border-radius: 10px;
+    padding: 18px 20px; display: flex; flex-direction: column; gap: 10px;
+  }
+  .run h3 {
+    margin: 0; font-family: var(--mono); font-size: 12px; letter-spacing: .06em;
+    text-transform: uppercase; font-weight: 600; color: var(--ink);
+    display: flex; align-items: center; gap: 9px;
+  }
+  .run p { margin: 0; font-size: 15px; color: var(--ink-soft); }
+  .run .num {
+    font-family: var(--mono); font-size: 26px; color: var(--ink);
+    font-variant-numeric: tabular-nums; letter-spacing: -.01em;
+  }
+  .run .num small { font-size: 13px; color: var(--ink-faint); letter-spacing: .04em; }
+  ul.tight { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 7px; color: var(--ink-soft); }
+  ul.tight strong { color: var(--ink); font-weight: 600; }
+  ul.tight li { max-width: 72ch; }
+</style>
+
+<div class="wrap">
+
+  <header class="mast">
+    <div class="eyebrow">DiscoPoP agentic controller &#183; --llm-pragmas</div>
+    <h1>Who Writes the Pragma</h1>
+    <p class="standfirst">
+      By default the LLM restructures and DiscoPoP annotates, so a rewrite is kept only if
+      re-profiling makes the profiler find something. Under <code>--llm-pragmas</code> the model
+      writes the <code>#pragma omp</code> in the same edit — and the rewrite is
+      <strong>judged on its own merits</strong>: clauses, sanitizer, output from the parallel
+      build, clock.
+    </p>
+  </header>
+
+  <section>
+    <h2 data-n="01">Where the flow forks</h2>
+    <p>
+      Everything before Phase A is unchanged: profile, rank, collect evidence. The fork is
+      one question asked of the model's diff — <strong>does it carry a pragma?</strong> — and
+      it decides who gets to say whether the rewrite was worth making.
+    </p>
+
+    <div class="legend">
+      <span><i class="swatch s-dp"></i> DiscoPoP does the work</span>
+      <span><i class="swatch s-ctl"></i> the agent decides</span>
+      <span><i class="swatch s-llm"></i> the LLM does the work</span>
+      <span><i class="swatch s-write"></i> your source file is written</span>
+      <span><i class="swatch s-term"></i> outcome</span>
+    </div>
+
+    <figure>
+      <div class="canvas">
+        <svg class="dgm" viewBox="0 0 1140 1170" role="img"
+             aria-label="Flowchart of Phase A forking on whether the LLM's diff contains an OpenMP pragma. The left branch is the default: a gate of apply, compile and sequential output, then the file is written, re-profiled, and kept only if DiscoPoP finds a pattern with a usable pragma in the touched lines, otherwise reverted and retried. The right branch is --llm-pragmas: a static clause check, then a gate of apply, compile, fopenmp build, ThreadSanitizer, parallel output and measured speedup, then the file is written and re-profiled only to refresh line numbers, and the rewrite is kept because the gate already decided. Both branches converge on Phase B and the settle step.">
+          <defs>
+            <marker id="ah2" viewBox="0 0 10 10" refX="9" refY="5"
+                    markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/>
+            </marker>
+          </defs>
+
+          <rect class="band" x="694" y="326" width="412" height="600" rx="14"/>
+
+          <!-- spine -->
+          <g class="edge" marker-end="url(#ah2)">
+            <line x1="570" y1="102" x2="570" y2="132"/>
+            <line x1="570" y1="186" x2="570" y2="216"/>
+            <line x1="240" y1="438" x2="240" y2="468"/>
+            <line x1="240" y1="556" x2="240" y2="586"/>
+            <line x1="240" y1="674" x2="240" y2="704"/>
+            <line x1="240" y1="792" x2="240" y2="822"/>
+            <line x1="900" y1="438" x2="900" y2="468"/>
+            <line x1="900" y1="556" x2="900" y2="586"/>
+            <line x1="900" y1="674" x2="900" y2="704"/>
+            <line x1="900" y1="792" x2="900" y2="822"/>
+            <line x1="570" y1="1016" x2="570" y2="1046"/>
+          </g>
+
+          <!-- the fork -->
+          <g class="edge" marker-end="url(#ah2)">
+            <path d="M 570 302 L 570 320 L 240 320 L 240 348"/>
+            <path d="M 570 302 L 570 320 L 900 320 L 900 348"/>
+          </g>
+          <text class="e c-faint" x="352" y="314" text-anchor="middle">no pragma in the diff</text>
+          <text class="e c-llm"   x="792" y="314" text-anchor="middle">the diff carries a pragma</text>
+
+          <!-- converge -->
+          <g class="edge" marker-end="url(#ah2)">
+            <path d="M 240 910 L 240 934 L 570 934 L 570 950"/>
+            <path d="M 900 910 L 900 934 L 570 934 L 570 950"/>
+          </g>
+
+          <!-- retry back edges -->
+          <g class="edge-bad" marker-end="url(#ah2)">
+            <path d="M 50 866 L 22 866 L 22 159 L 416 159"/>
+            <path d="M 1106 391 L 1124 391 L 1124 159 L 724 159"/>
+            <path d="M 1106 509 L 1118 509 L 1118 391"/>
+          </g>
+          <text class="e c-bad" x="36" y="520" text-anchor="middle"
+                transform="rotate(-90 36 520)">failure &#8594; retry with the diagnostic</text>
+
+          <!-- top -->
+          <rect class="n ctl" x="420" y="46" width="300" height="56" rx="9"/>
+          <text class="h c-ink" x="436" y="70">A REGION DISCOPOP CANNOT PARALLELIZE</text>
+          <text class="b" x="436" y="88">Phase A, in workload order</text>
+
+          <rect class="n llm" x="420" y="132" width="300" height="54" rx="9"/>
+          <text class="h c-llm" x="436" y="156">THE LLM REWRITES IT</text>
+          <text class="b" x="436" y="174">--llm-pragmas: and annotates it</text>
+
+          <rect class="n dia" x="420" y="216" width="300" height="86" rx="9"/>
+          <text class="h c-ink" x="436" y="242">DOES THE EDIT CARRY #pragma omp ?</text>
+          <text class="b" x="436" y="262">one grep over the diff &#8212; and the same</text>
+          <text class="b" x="436" y="280">question validate() already asks itself</text>
+
+          <!-- column heads -->
+          <text class="colhead c-faint" x="50" y="340">DEFAULT &#8212; DISCOPOP DECIDES</text>
+          <text class="colhead c-llm"   x="710" y="340">--LLM-PRAGMAS &#8212; THE GATE DECIDES</text>
+
+          <!-- LEFT COLUMN -->
+          <rect class="n ctl" x="50" y="352" width="380" height="86" rx="9"/>
+          <text class="h c-ink" x="66" y="376">GATE &#183; apply &#183; compile &#183; output</text>
+          <text class="b" x="66" y="396">sequential build. -fopenmp, TSan and the</text>
+          <text class="b" x="66" y="414">timing are skipped: nothing here can race</text>
+
+          <rect class="n wr" x="50" y="470" width="380" height="86" rx="9"/>
+          <text class="h c-wr" x="66" y="494">WRITE THE FILE</text>
+          <text class="b" x="66" y="514">source + profile snapshotted first, so a</text>
+          <text class="b" x="66" y="532">revert is a file copy, not another profile</text>
+
+          <rect class="n dp" x="50" y="588" width="380" height="86" rx="9"/>
+          <text class="h c-dp" x="66" y="612">RE-PROFILE &#183; ~15 s</text>
+          <text class="b" x="66" y="632">discopop_cxx &#8594; ./a.out &#8594; discopop_explorer</text>
+          <text class="b" x="66" y="650">this is the step that renders the verdict</text>
+
+          <rect class="n dia" x="50" y="706" width="380" height="86" rx="9"/>
+          <text class="h c-ink" x="66" y="730">A PATTERN IN THE TOUCHED LINES?</text>
+          <text class="b" x="66" y="750">and does the pragma DiscoPoP generates</text>
+          <text class="b" x="66" y="768">for it pass the clause check and compile?</text>
+
+          <rect class="n ctl" x="50" y="824" width="380" height="86" rx="9"/>
+          <text class="h c-ok"  x="66" y="848">&#10003; KEEP &#183; queue what the rewrite exposed</text>
+          <text class="h c-bad" x="66" y="874">&#10007; REVERT &#183; source and profile, then retry</text>
+          <text class="b" x="66" y="896">the pragma itself is Phase B's question</text>
+
+          <!-- RIGHT COLUMN -->
+          <rect class="n ctl" x="710" y="352" width="380" height="86" rx="9"/>
+          <text class="h c-ink" x="726" y="376">CLAUSE CHECK &#183; static, nothing built</text>
+          <text class="b" x="726" y="396">every pragma the edit adds, read against</text>
+          <text class="b" x="726" y="414">the PATCHED text &#8212; the loops are new code</text>
+
+          <rect class="n ctl" x="710" y="470" width="380" height="86" rx="9"/>
+          <text class="h c-ink" x="726" y="494">GATE &#183; the full ladder</text>
+          <text class="b" x="726" y="514">apply &#183; compile &#183; -fopenmp &#183; ThreadSanitizer</text>
+          <text class="b" x="726" y="532">&#183; output from the PARALLEL build &#183; speedup</text>
+
+          <rect class="n wr" x="710" y="588" width="380" height="86" rx="9"/>
+          <text class="h c-wr" x="726" y="612">WRITE THE FILE</text>
+          <text class="b" x="726" y="632">the parallelization is already in it &#8212; the</text>
+          <text class="b" x="726" y="650">pragma and the restructuring are one edit</text>
+
+          <rect class="n dp" x="710" y="706" width="380" height="86" rx="9"/>
+          <text class="h c-dp" x="726" y="728">RE-PROFILE &#183; ~15 s, no longer the judge</text>
+          <text class="b" x="726" y="747">refreshes line numbers for the queue and</text>
+          <text class="b" x="726" y="765">finds newly exposed regions. Built without</text>
+          <text class="b" x="726" y="783">-fopenmp, so the pragmas are ignored</text>
+
+          <rect class="n ok" x="710" y="824" width="380" height="86" rx="9"/>
+          <text class="h c-ok" x="726" y="848">&#10003; KEEP &#8212; the gate already decided</text>
+          <text class="b" x="726" y="868">if the re-profile fails the rewrite still</text>
+          <text class="b" x="726" y="886">stands; Phase B is what gets skipped</text>
+
+          <!-- converge -->
+          <rect class="n dp" x="380" y="950" width="380" height="66" rx="9"/>
+          <text class="h c-dp" x="396" y="974">PHASE B &#183; annotate what is left</text>
+          <text class="b" x="396" y="994">skips any loop the LLM already annotated</text>
+
+          <rect class="n ok" x="380" y="1046" width="380" height="66" rx="9"/>
+          <text class="h c-ok" x="396" y="1070">SETTLE &#183; re-gate the finished file</text>
+          <text class="b" x="396" y="1090">drops the newest pragma until it holds up</text>
+        </svg>
+      </div>
+      <figcaption>
+        The left branch is the flow as it was, unchanged. A rewrite that arrives without a
+        pragma still takes it — so the two modes mix: <strong>the model annotates what it can,
+        Phase B picks up the rest.</strong>
+      </figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <h2 data-n="02">The gate, both ways</h2>
+    <p>
+      Most of this was already built. <code>validate()</code> keys the <code>-fopenmp</code>
+      build, ThreadSanitizer and the timing on the diff containing a <code>#pragma omp</code>,
+      so three stages that were structurally dead for an LLM rewrite come alive the moment the
+      model writes one. Only the first row is new code.
+    </p>
+
+    <div class="canvas">
+      <table>
+        <caption>Phase A, per stage</caption>
+        <thead>
+          <tr><th>stage</th><th>default</th><th>--llm-pragmas</th><th>what it can catch</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>clauses</td>
+            <td><span class="tag t-skip">n/a</span></td>
+            <td><span class="tag t-run">runs</span></td>
+            <td>a clause that compiles, races nowhere, prints the right answer and still discards the loop&#8217;s results</td>
+          </tr>
+          <tr>
+            <td>apply</td>
+            <td><span class="tag t-run">runs</span></td>
+            <td><span class="tag t-run">runs</span></td>
+            <td>a diff whose context does not match the file</td>
+          </tr>
+          <tr>
+            <td>compile</td>
+            <td><span class="tag t-run">runs</span></td>
+            <td><span class="tag t-run">runs</span></td>
+            <td>the ordinary C++ error</td>
+          </tr>
+          <tr>
+            <td>openmp_compile</td>
+            <td><span class="tag t-skip">skipped</span></td>
+            <td><span class="tag t-run">runs</span></td>
+            <td>a loop clang will not accept as canonical &#8212; a runtime bound, a surviving <code>break</code></td>
+          </tr>
+          <tr>
+            <td>tsan</td>
+            <td><span class="tag t-skip">skipped</span></td>
+            <td><span class="tag t-run">runs</span></td>
+            <td>the cross-iteration dependence the model thought it had removed</td>
+          </tr>
+          <tr>
+            <td>correctness</td>
+            <td><span class="tag t-run">sequential</span></td>
+            <td><span class="tag t-run">parallel</span></td>
+            <td>same check, but now against the build that actually runs the threads</td>
+          </tr>
+          <tr>
+            <td>performance</td>
+            <td><span class="tag t-skip">skipped</span></td>
+            <td><span class="tag t-run">runs</span></td>
+            <td>a correct parallelization too fine-grained to pay for its threads</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note">
+      <p>
+        <strong>The division of labour is unchanged, only relocated.</strong> The LLM still
+        exposes parallelism and a measurement still decides whether it was worth it. What moved
+        is where that measurement happens: from &#8220;re-profile, then time whatever DiscoPoP
+        found&#8221; to &#8220;time the thing the model wrote.&#8221; <code>--require-speedup</code>
+        remains the switch for whether the question is asked at all.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <h2 data-n="03">The one genuinely new check</h2>
+    <p>
+      A pragma the model wrote gets the same two static rules the agent already applies to
+      DiscoPoP&#8217;s generated clauses &#8212; because clauses go wrong in the same two ways
+      whoever writes them. The rules run against the <strong>patched</strong> text: the loops
+      being annotated do not exist in the file yet.
+    </p>
+
+    <div class="cols">
+      <div class="card">
+        <h3>Rule 1 &#183; not in scope</h3>
+        <p>
+          A name <strong>declared inside the loop body</strong> is already per-iteration and
+          cannot appear in a clause at all. This one fails loudly &#8212;
+          <code>use of undeclared identifier</code> &#8212; but failing it in a static read costs
+          nothing instead of a build.
+        </p>
+      </div>
+      <div class="card llm">
+        <h3>Rule 2 &#183; the silent one</h3>
+        <p>
+          A name the loop <strong>writes and later code reads</strong> must never be
+          <code>private</code> or <code>firstprivate</code>: those discard the writes, so the
+          later read sees a stale value and the program keeps running with a wrong answer. No
+          compiler, sanitizer or output check sees this.
+        </p>
+      </div>
+      <div class="card ok">
+        <h3>Arrays, not pointers</h3>
+        <p>
+          Rule 2 now also counts <code>arr[i] = &#8230;</code>, but only when <code>arr</code> is
+          declared with <strong>array storage</strong>. <code>private</code> on an array copies
+          the array and loses the writes; <code>private</code> on a <em>pointer</em> copies the
+          pointer and the writes still land. Treating them alike would reject correct pragmas.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2 data-n="04">Then what is the re-profile still for</h2>
+    <p>
+      It stops being the arbiter and becomes bookkeeping &#8212; but it is not optional
+      bookkeeping. It costs the same ~15 s it always did.
+    </p>
+    <ul class="tight">
+      <li><strong>Line numbers.</strong> Every candidate still queued was located by line. One accepted rewrite moves all of them, and regions are re-matched across the re-profile by content fingerprint.</li>
+      <li><strong>New candidates.</strong> A rewrite often exposes loops that did not exist before; those enter the queue at depth + 1.</li>
+      <li><strong>Phase B&#8217;s raw material.</strong> <code>patterns.json</code> and the generated patches are what Phase B annotates from, for every region the model never touched.</li>
+      <li><strong>Not the verdict.</strong> DiscoPoP&#8217;s opinion of a self-annotated rewrite is logged and otherwise ignored. If the re-profile fails outright, the rewrite is kept &#8212; it passed the whole gate &#8212; and Phase B is skipped for the run, because no profile then describes the file on disk.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2 data-n="05">Two places downstream had to learn about it</h2>
+    <div class="cols">
+      <div class="card">
+        <h3>Phase B &#183; do not double-annotate</h3>
+        <p>
+          The instrumented build carries no <code>-fopenmp</code>, so the re-profile reads the
+          annotated source as sequential &#8212; correctly &#8212; and then proposes a pattern for
+          a loop that is <strong>already parallel</strong>. Phase B now checks the line above the
+          loop it is about to annotate and leaves it alone.
+        </p>
+      </div>
+      <div class="card write">
+        <h3>Settle &#183; not an orphan</h3>
+        <p>
+          A rewrite is normally dropped at the end unless a kept pragma targets a region it
+          exposed. A self-annotated rewrite <strong>is its own justification</strong>. It can
+          still be dropped when the finished file fails its final gate &#8212; but only after
+          every DiscoPoP pragma has been dropped first.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2 data-n="06">What was actually run</h2>
+    <p>
+      One live run on <code>example4/bubble_sort.cpp</code>, haiku through the Claude Code
+      subscription, <code>--edit-mode direct --budget 3 --min-workload 0
+      --no-require-speedup --llm-pragmas</code>. DiscoPoP&#8217;s only applicable pattern there
+      is <code>firstprivate(ok)</code> on the sortedness check, which the clause rule rejects
+      &#8212; so the baseline is <strong>0 usable pragmas</strong>.
+    </p>
+
+    <div class="runs">
+      <div class="run">
+        <h3><i class="swatch s-term"></i> example4 &#183; first attempt</h3>
+        <div class="num">2 pragmas <small>BEAT 0</small></div>
+        <p>
+          haiku replaced the cascading swap loop with a correct odd-even transposition sort
+          &#8212; <code>n</code> phases, two annotated loops, clauses clean. Verified
+          independently: <strong>byte-identical to the original on 200 runs</strong> across
+          1/2/4/8/16 threads.
+        </p>
+      </div>
+      <div class="run">
+        <h3><i class="swatch s-llm"></i> and yet</h3>
+        <div class="num">0.80&#215; <small>vs the original</small></div>
+        <p>
+          9.6 ms sequential against 12.1 ms parallel. At N=513 the threads cost more than the
+          sort saves, which is why the run needed <code>--no-require-speedup</code>. With the
+          default speedup gate this rewrite is correctly <strong>rejected</strong> &#8212; the
+          gate is not the thing that is wrong here, the benchmark size is.
+        </p>
+      </div>
+      <div class="run">
+        <h3><i class="swatch s-dp"></i> re-profile crashed</h3>
+        <div class="num">kept anyway <small>Phase B skipped</small></div>
+        <p>
+          <code>discopop_explorer</code> died with <code>IndexError</code> in
+          <code>TaskGraph.recursive_assignment</code> on the rewritten source &#8212;
+          reproducible, and upstream, not the agent. The rewrite had already passed the whole
+          gate, so it stayed; Phase B was skipped because no profile then described the file.
+        </p>
+      </div>
+    </div>
+
+    <p>
+      And three stubbed runs on <code>stencil_war</code> (in-place stencil sweep; DiscoPoP reports a
+      <em>false</em> Do-All on the inner loop). The LLM was <strong>stubbed</strong> &#8212; a fixed,
+      hand-written answer per variant &#8212; so the control flow is what is under test here, not
+      any model&#8217;s ability to produce it.
+    </p>
+
+    <div class="runs">
+      <div class="run">
+        <h3><i class="swatch s-term"></i> annotated rewrite</h3>
+        <div class="num">4.32&#215; <small>gate</small></div>
+        <p>
+          Double-buffered sweep carrying <code>#pragma omp parallel for</code>. Clause check
+          clean, TSan clean, output byte-identical, kept. Phase B then skipped
+          <strong>two</strong> candidates as already annotated and dropped two more on TSan.
+          Finished file: <strong>57.3 ms vs 210.2 ms</strong> for the original.
+        </p>
+      </div>
+      <div class="run">
+        <h3><i class="swatch s-llm"></i> bad clause</h3>
+        <div class="num">rejected <small>before any build</small></div>
+        <p>
+          The same rewrite with <code>private(b)</code> on the buffer it fills. Before the array
+          rule it got as far as the correctness stage &#8212; <code>checksum 1350</code> against
+          <code>checksum 59103040</code>. Now it stops at the clause stage, with a diagnostic
+          naming <code>b</code> and why.
+        </p>
+      </div>
+      <div class="run">
+        <h3><i class="swatch s-dp"></i> no pragma</h3>
+        <div class="num">fell back <small>to DiscoPoP</small></div>
+        <p>
+          The same restructuring with the pragma removed. The flag changes nothing: gate is
+          apply/compile/output, the file is re-profiled, DiscoPoP finds three Do-Alls, and Phase B
+          applies the one that survives TSan at <strong>1.48&#215;</strong> marginal.
+        </p>
+      </div>
+    </div>
+
+    <div class="note warn">
+      <p>
+        <strong>One number to read carefully.</strong> The run summary compares against
+        &#8220;DiscoPoP unaided&#8221;, counted as patterns whose pragma passes the clause check
+        and compiles. On <code>stencil_war</code> that baseline is 1 &#8212; and that one pragma
+        is the false Do-All the agent&#8217;s own TSan stage throws out. So a run that ends 3.7&#215;
+        faster still prints <code>MATCHED</code>. The metric counts pragmas, not speed, and it
+        does not run the baseline&#8217;s pragma before counting it.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <h2 data-n="07">The sanitizer had to be fixed first</h2>
+    <p>
+      The first live attempt failed at TSan three times in a row, on code that was correct.
+      There is no <code>libarcher.dylib</code> in this machine&#8217;s LLVM 19 / libomp
+      install &#8212; Homebrew&#8217;s runtime carries no ThreadSanitizer annotations, so TSan
+      sees <strong>none</strong> of OpenMP&#8217;s synchronization and reports a race between
+      any two parallel regions that touch the same data.
+    </p>
+    <p class="lede">
+      Proof, not inference: a program whose second <code>parallel for</code> reads what the
+      first one wrote &#8212; indices reversed, so a different thread reads each element
+      &#8212; is bit-identical over 20 runs at each of 1/2/4/8/16 threads, and TSan calls it a
+      data race.
+    </p>
+
+    <div class="canvas">
+      <table>
+        <caption>the discriminator, from three real TSan reports</caption>
+        <thead><tr><th>program</th><th>racing frames</th><th>verdict</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>odd-even sort</td>
+            <td><code>.omp_outlined.2</code> line 12 vs <code>.omp_outlined</code> line 7</td>
+            <td>artefact &#8212; different regions, barrier between</td>
+          </tr>
+          <tr>
+            <td>two-region toy</td>
+            <td><code>.omp_outlined.2</code> line 13 vs <code>.omp_outlined</code> line 11</td>
+            <td>artefact &#8212; same reason</td>
+          </tr>
+          <tr>
+            <td>naive parallel bubble</td>
+            <td><code>.omp_outlined</code> line 6 vs <code>.omp_outlined</code> line 6</td>
+            <td><strong>real</strong> &#8212; one region, genuinely concurrent</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>
+      The cause is one line in Homebrew&#8217;s own formula:
+      <code>-DOPENMP_ENABLE_OMPT_TOOLS=OFF</code>. That flag is what builds
+      <strong>archer</strong> &#8212; the tool that subscribes to the OpenMP runtime&#8217;s
+      OMPT callbacks and calls TSan&#8217;s <code>AnnotateHappensBefore</code> on every
+      barrier. Turned off, the chain <em>runtime → OMPT → archer → TSan</em> breaks at the
+      third link and TSan never hears about a single barrier.
+    </p>
+
+    <div class="note">
+      <p>
+        <strong>Fixed at the root.</strong> The runtime side needed nothing &#8212;
+        Homebrew&#8217;s libomp already has OMPT compiled in, it looks up
+        <code>ompt_start_tool</code> and honours <code>OMP_TOOL_LIBRARIES</code>. Only the
+        tool was missing, and it is one source file:
+        <code>discopop_agent/tools/build_archer.sh</code> fetches
+        <code>openmp/tools/archer/ompt-tsan.cpp</code> at the LLVM tag matching the installed
+        libomp and builds it. <code>find_archer()</code> picks it up, <code>_tsan_env()</code>
+        loads it, and the banner says which mode a run is in.
+      </p>
+    </div>
+
+    <div class="canvas">
+      <table>
+        <caption>the real gate, on three diffs whose verdicts are known independently</caption>
+        <thead><tr><th>diff</th><th>without archer</th><th>with archer</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>odd-even, n phases</td>
+            <td>rejected at <code>tsan</code></td>
+            <td><strong>accepted</strong></td>
+          </tr>
+          <tr>
+            <td>odd-even, n-1 phases</td>
+            <td>rejected at <code>tsan</code></td>
+            <td>rejected at <code>correctness</code> &#8212; the real reason</td>
+          </tr>
+          <tr>
+            <td>naive parallel bubble</td>
+            <td>rejected at <code>tsan</code></td>
+            <td>rejected at <code>tsan</code> &#8212; still caught</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <ul class="tight">
+      <li><strong>The fallback stays.</strong> On a machine with no archer, <code>_is_omp_barrier_false_positive</code> reads the artefact off the report: every racing access inside an <code>.omp_outlined*</code> frame but in <em>different</em> outlined functions means a barrier separates them. Same outlined function on both sides is one region, and is left alone. Disabled when the code uses <code>nowait</code> or tasks.</li>
+      <li><strong>Nothing is accepted on that heuristic.</strong> It re-runs with the race check off, and the patch must still reproduce the output exactly &#8212; which is what caught the first attempt&#8217;s real defect, an odd-even sort left at <code>n-1</code> phases.</li>
+      <li><strong><code>ignore_noninstrumented_modules=1</code> is set only alongside archer.</strong> On its own it suppresses reports from inside the uninstrumented runtime without supplying the ordering that makes them wrong &#8212; hiding real races along with the artefacts.</li>
+      <li><strong>A parser bug it uncovered.</strong> TSan capitalises only the first access (<code>Write of size 4&#8230;</code>) and writes the second as <code>Previous write</code>. Matching on <code>&quot;Read&quot;</code>/<code>&quot;Write&quot;</code> saw one of the two, quietly weakening every rule phrased as &#8220;every racing access&#8221;.</li>
+      <li><strong>Phase A never ran the re-check at all.</strong> It called <code>validate()</code> directly, while the re-verification lives in <code>_validate_cached</code>. Harmless while LLM rewrites carried no pragmas; fatal the moment they did.</li>
+    </ul>
+  </section>
+
+  <footer>
+    args.py &#183; l3_llm.py (system prompt, two variants; SDK retry) &#183; controller.py (clause
+    check, Phase A fork, Phase B guard, settle, TSan barrier fallback) &#183; l4_validator.py
+    (find_archer, _tsan_env) &#183; tools/build_archer.sh &#183; viz.py &#183; DOCUMENTATION.md
+  </footer>
+
+</div>

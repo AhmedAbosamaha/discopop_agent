@@ -65,7 +65,7 @@ import tempfile
 from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List
+from typing import Any, Dict, List
 
 from . import viz
 from .args import AgentArguments
@@ -73,8 +73,8 @@ from .l1_planner import build_candidates, region_fingerprint
 from .l2_evidence import _brace_match_end, assemble, load_prevented_deps
 from .l3_llm import LLMConnectionError, call_llm, fmt_blockers, make_diff, normalize_code
 from .l4_validator import (capture_reference, check_pragma_compiles,
-                           fix_hunk_headers, measure_marginal, noise_floor,
-                           run_patch, time_source, validate)
+                           find_archer, fix_hunk_headers, measure_marginal,
+                           noise_floor, run_patch, time_source, validate)
 from .types import ValidationResult
 
 _LLVM_LIBCXX = "/usr/local/Cellar/llvm@19/19.1.7/lib/c++"
@@ -89,7 +89,45 @@ def _explorer_cmd() -> str:
     return str(Path(sys.executable).parent / "discopop_explorer")
 
 
-def _is_omp_barrier_false_positive(diagnostic: str) -> bool:
+_OUTLINED_RE = re.compile(r"\.omp_outlined[A-Za-z0-9_.]*")
+
+# Constructs that remove the barrier this reasoning depends on.  `nowait` drops
+# the implicit barrier at the end of a worksharing region outright; a task can
+# outlive the region that spawned it.  Either makes two distinct outlined
+# regions genuinely concurrent, so Variant 3 must not fire.
+_NO_BARRIER_RE = re.compile(r"\bnowait\b|#\s*pragma\s+omp\s+(?:task|taskloop)\b")
+
+
+# TSan opens the first access with "Write of size 4 at 0x... by thread T1:" and
+# the second with "Previous write of size 4 ... by main thread:" — capitalised
+# only on the first.  Matching on "Read"/"Write" therefore saw ONE of the two
+# accesses, which silently weakened every rule phrased as "all racing accesses".
+_ACCESS_RE = re.compile(
+    r"^\s*(?:Previous\s+)?(?:atomic\s+)?(?:read|write)\s+of size\s+\d+.*"
+    r"\bby (?:main thread|thread T\d+):\s*$",
+    re.IGNORECASE,
+)
+
+
+def _access_blocks(lines: List[str]) -> List[List[str]]:
+    """The stack frames of each racing access in a TSan report, in order.
+
+    An access line opens the block and the next blank line closes it; everything
+    between is that access's stack.
+    """
+    blocks: List[List[str]] = []
+    for idx, line in enumerate(lines):
+        if _ACCESS_RE.search(line):
+            frames = []
+            for j in range(idx + 1, len(lines)):
+                if not lines[j].strip():
+                    break
+                frames.append(lines[j])
+            blocks.append(frames)
+    return blocks
+
+
+def _is_omp_barrier_false_positive(diagnostic: str, code: str = "") -> bool:
     """Detect macOS TSan false positive: OMP worker accesses memory, main thread
     accesses it sequentially after the parallel-for barrier exits.
 
@@ -110,6 +148,7 @@ def _is_omp_barrier_false_positive(diagnostic: str) -> bool:
     in its call stack), confirming it runs outside any parallel region.
     """
     lines = diagnostic.splitlines()
+    access_blocks = _access_blocks(lines)
 
     # Variant 1: OpenMP REDUCTION gather.  libomp combines per-thread partials
     # inside its barrier (`.omp.reduction.reduction_func` called from
@@ -117,23 +156,37 @@ def _is_omp_barrier_false_positive(diagnostic: str) -> bool:
     # cannot see because libomp is not TSan-instrumented.  Conservative rule:
     # EVERY racing access must sit inside those runtime frames — an access in
     # plain user code (a genuine missing-reduction race) disqualifies.
-    access_blocks = []
-    for idx, line in enumerate(lines):
-        if ("Read" in line or "Write" in line) and (
-            "by main thread:" in line or "by thread T" in line
-        ):
-            frames = []
-            for j in range(idx + 1, len(lines)):
-                if not lines[j].strip():
-                    break
-                frames.append(lines[j])
-            access_blocks.append(frames)
     if access_blocks and all(
         any(".omp.reduction.reduction_func" in f or
             ("__kmp_" in f and "barrier" in f) for f in frames)
         for frames in access_blocks
     ):
         return True
+
+    # Variant 3: two DIFFERENT parallel regions.  Every racing access sits
+    # inside an outlined region, but not the SAME one — so a barrier separates
+    # them and they cannot overlap.  Verified on this host: a program whose
+    # second `parallel for` reads what the first one wrote (indices reversed, so
+    # a different thread reads each element) is reported as a race, while being
+    # bit-deterministic over 20 runs at 1/2/4/8/16 threads.  The distinction is
+    # exact rather than statistical:
+    #   same outlined function on both sides  -> one region, genuinely concurrent
+    #   different outlined functions          -> a barrier between them
+    # (Homebrew's libomp carries no TSan annotations — there is no libarcher —
+    # so TSan sees none of OpenMP's synchronization.)  `code` is the source this
+    # patch produces; when it uses `nowait` or tasks the barrier is not there to
+    # reason about and this variant is skipped.
+    if not (code and _NO_BARRIER_RE.search(code)):
+        outlined: List[str] = []
+        for frames in access_blocks:
+            hit = next((_OUTLINED_RE.search(f) for f in frames
+                        if ".omp_outlined" in f), None)
+            if hit is None:
+                outlined = []
+                break
+            outlined.append(hit.group(0))
+        if len(outlined) >= 2 and len(set(outlined)) >= 2:
+            return True
 
     # Variant 2: OMP worker vs. the main thread running sequential code after
     # the parallel-for barrier — TSan on macOS does not model that implicit
@@ -411,13 +464,30 @@ def _read_after(lines: List[str], name: str, after_idx: int, limit: int = 60) ->
     return False
 
 
-def _written_in(lines: List[str], name: str) -> bool:
+def _declared_as_array(lines: List[str], name: str) -> bool:
+    """Is `name` declared with ARRAY storage, as opposed to a pointer to it?
+
+    The distinction decides whether writing `name[i]` counts as writing `name`
+    for the clause rules.  `private` on an array gives each thread its own
+    copy, so the element writes are thrown away; `private` on a POINTER copies
+    the pointer, and the writes still land in the one shared buffer.  Treating
+    the two alike would reject correct pointer pragmas.
+    """
+    sub = re.compile(r"\b" + re.escape(name) + r"\s*\[")
+    return any(_declared_in([ln], name) and sub.search(ln) for ln in lines)
+
+
+def _written_in(lines: List[str], name: str, subscript: bool = False) -> bool:
     """Is `name` ASSIGNED anywhere in these lines?
 
     The write-back rule only bites when the loop actually produces a value.  A
     read-only scalar in `firstprivate` — a loop bound, a size, a function
     parameter — is correct and idiomatic OpenMP, and rejecting it was throwing
     away five of six good pragmas.
+
+    `subscript` also counts `name[expr] = ...`, which is what an array-valued
+    clause turns into.  Off by default because it is only sound once the name
+    is known to BE an array — see _declared_as_array.
     """
     pat = re.compile(
         r"\b" + re.escape(name) + r"\s*(?:"
@@ -427,7 +497,12 @@ def _written_in(lines: List[str], name: str) -> bool:
         r")"
     )
     pre = re.compile(r"(?:\+\+|--)\s*\b" + re.escape(name) + r"\b")   # ++x / --x
-    return any(pat.search(ln) or pre.search(ln) for ln in lines)
+    elem = re.compile(
+        r"\b" + re.escape(name) + r"\s*\[[^\]]*\]\s*"
+        r"(?:(?<![=!<>+\-*/%&|^])=(?!=)|\+=|-=|\*=|/=|%=|&=|\|=|\^=)"
+    ) if subscript else None
+    return any(pat.search(ln) or pre.search(ln)
+               or (elem is not None and elem.search(ln)) for ln in lines)
 
 
 def _pragma_and_anchor(diff: str) -> "tuple[str, str] | None":
@@ -539,15 +614,6 @@ def check_pragma_clauses(diff: "str | None", source_file: str) -> "str | None":
     pragma = next((l for l in added if "#pragma omp" in l), None)
     if pragma is None:
         return None
-    names: List[str] = []
-    for kind, body in _PRIVATE_CLAUSE_RE.findall(pragma):
-        for n in body.split(","):
-            n = n.strip()
-            if n:
-                names.append(n)
-    if not names:
-        return None
-
     # The loop this pragma governs is the next loop header AFTER IT IN THE DIFF.
     # Line arithmetic from the hunk start does not work: it picks up whichever
     # loop happens to sit nearby, which on example4 meant checking the array-init
@@ -560,6 +626,26 @@ def check_pragma_clauses(diff: "str | None", source_file: str) -> "str | None":
     head = _locate_header(src, header, (span[0] - 1) if span else 0)
     if head is None:
         return None
+    return _clause_problem(src, pragma, head)
+
+
+def _clause_problem(src: List[str], pragma: str, head: int) -> "str | None":
+    """The two rules above, applied to ONE pragma governing the loop at `head`.
+
+    Split out from check_pragma_clauses because the rules do not care who wrote
+    the pragma — DiscoPoP's generated clauses and the LLM's own are wrong in
+    exactly the same two ways, and `private(ok)` is invisible to compile, TSan
+    and output whichever of them produced it.
+    """
+    names: List[str] = []
+    for kind, body in _PRIVATE_CLAUSE_RE.findall(pragma):
+        for n in body.split(","):
+            n = n.strip()
+            if n:
+                names.append(n)
+    if not names:
+        return None
+
     loop = _loop_span(src, head)
     if loop is None:
         return None
@@ -572,10 +658,67 @@ def check_pragma_clauses(diff: "str | None", source_file: str) -> "str | None":
         # The write-back rule needs BOTH halves: the loop has to produce a value
         # AND something after the loop has to read it.  A read-only scalar in
         # firstprivate (a bound, a size, a parameter) is perfectly correct.
-        if _written_in(body[1:], n) and _read_after(src, n, loop[1]):
-            return (f"clause names `{n}`, which the loop writes and later code "
-                    f"reads — private/firstprivate discard those writes, so that "
+        is_array = _declared_as_array(src, n)
+        if (_written_in(body[1:], n, subscript=is_array)
+                and _read_after(src, n, loop[1])):
+            what = "fills and later code reads" if is_array else "writes and later code reads"
+            return (f"clause names `{n}`, which the loop {what} — "
+                    f"private/firstprivate discard those writes, so that "
                     f"read would see a stale value")
+    return None
+
+
+_PRAGMA_LINE_RE = re.compile(r"^\s*#\s*pragma\s+omp\b")
+
+
+def _next_loop_header(src: List[str], after: int, limit: int = 6) -> "int | None":
+    """Index of the loop header a pragma at `after` applies to, or None.
+
+    Only blank lines, comments and continued pragma lines may sit between the
+    two; anything else means the pragma is not annotating a loop (a `parallel`
+    block, a `task`, a `barrier`) and the clause rules do not apply to it.
+    """
+    for i in range(after + 1, min(len(src), after + 1 + limit)):
+        st = src[i].strip()
+        if not st or st.startswith("//") or st.startswith("/*") or st.startswith("*"):
+            continue
+        if src[i - 1].rstrip().endswith("\\") or _PRAGMA_LINE_RE.match(src[i]):
+            continue
+        return i if _LOOP_HEAD_RE.match(src[i]) else None
+    return None
+
+
+def check_llm_pragmas(diff: "str | None", source_file: str) -> "str | None":
+    """The clause rules, run over every pragma the LLM's OWN edit introduces.
+
+    check_pragma_clauses above reads a generated patch: one pragma, inserted
+    before a loop that already exists in the file.  An LLM rewrite is neither —
+    it may carry several pragmas, and the loops they govern are new code that
+    the current file does not contain yet.  So the check runs against the
+    PATCHED text instead, over the lines the diff actually wrote.
+
+    Returns None when every pragma is acceptable, or a one-line reason naming
+    the offending pragma.  This is the one gate stage that can see a clause
+    which compiles, races nowhere, and still silently drops the loop's results
+    — see check_pragma_clauses for the `private(ok)` case that motivated it.
+    """
+    if not diff or "#pragma omp" not in diff:
+        return None
+    patched = _apply_in_memory(diff, source_file)
+    if patched is None:
+        return None            # it does not even apply; that is stage 1's answer
+    src = patched.splitlines()
+    span = _touched_span(diff)
+    lo, hi = ((span[0] - 1, span[1] - 1) if span else (0, len(src) - 1))
+    for i in range(max(lo, 0), min(hi, len(src) - 1) + 1):
+        if not _PRAGMA_LINE_RE.match(src[i]):
+            continue
+        head = _next_loop_header(src, i)
+        if head is None:
+            continue
+        problem = _clause_problem(src, src[i], head)
+        if problem:
+            return f"`{src[i].strip()}` — {problem}"
     return None
 
 
@@ -667,6 +810,12 @@ def _print_banner(args: AgentArguments) -> None:
           f"(Tier-2 allowed at depth 0–{args.restructure_depth})")
     print(f"  Quality gate   : Tier-1 = all but speed, no escalation; "
           f"Tier-2 = full")
+    _archer = find_archer()
+    print(f"  TSan           : "
+          + (f"barrier-aware (archer: {_archer})" if _archer else
+             "no libarcher — TSan cannot see OpenMP barriers and will report "
+             "any two parallel regions as racing; falling back to the "
+             "barrier heuristic. Build one: discopop_agent/tools/build_archer.sh"))
     print(f"  Speedup gate   : "
           + (f"require ≥ {args.min_measured_speedup}× measured"
              if args.require_speedup else "OFF (--no-require-speedup)"))
@@ -677,6 +826,9 @@ def _print_banner(args: AgentArguments) -> None:
         llm_mode = args.model
     print(f"  LLM mode       : {llm_mode}")
     print(f"  Edit mode      : {args.edit_mode}")
+    print(f"  Pragmas        : "
+          + ("LLM writes them with the rewrite, gate decides (--llm-pragmas)"
+             if args.llm_pragmas else "DiscoPoP writes them in Phase B"))
     print(f"{'='*60}\n")
 
 
@@ -702,6 +854,18 @@ def _touched_span(diff: str) -> "tuple[int, int] | None":
         lo = start if lo is None else min(lo, start)
         hi = end if hi is None else max(hi, end)
     return (lo, hi) if lo is not None and hi is not None else None
+
+
+def _added_pragmas(diff: str) -> List[str]:
+    """The `#pragma omp` lines a diff introduces, in order.
+
+    Under --llm-pragmas this is what turns a restructuring into a
+    parallelization: the gate's TSan, correctness and timing stages all key on
+    the diff carrying a pragma, and an empty list here means the LLM produced a
+    sequential rewrite that still needs DiscoPoP's verdict.
+    """
+    return [l[1:].strip() for l in diff.splitlines()
+            if l.startswith("+") and not l.startswith("+++") and "#pragma omp" in l]
 
 
 def _gate_key(diff: str, source_file: str, mode: str) -> str:
@@ -795,6 +959,9 @@ class RewriteOutcome:
                          pragma passed the gate (and was fast enough, if required)
       "exposed"        — a pattern was found; validating it is deferred to the
                          next depth, which is allowed to restructure it further
+      "self_annotated" — --llm-pragmas: the rewrite carries its own pragmas and
+                         has already passed the full gate, so DiscoPoP's opinion
+                         of it is not what decides
       "no_pattern"     — DiscoPoP re-profiled the rewrite and still found nothing
       "pattern_broken" — a pattern was found but its pragma fails the gate
       "no_speedup"     — the pragma is correct but not faster
@@ -1028,7 +1195,10 @@ def _settle(
          something.  If no kept pragma targets a region it exposed, it achieved
          nothing — and it is not free, so it goes.  Justification is by region
          FINGERPRINT, not line containment: regions nest, and their line spans
-         drift as changes land above them.
+         drift as changes land above them.  A rewrite that carries its OWN
+         pragmas (--llm-pragmas) is its own justification and is never an
+         orphan — the parallelism is in the change itself, not in what DiscoPoP
+         made of it afterwards.
 
       2. RECONSTRUCTION.  Rebuild by re-applying survivors onto a fresh copy of
          the original rather than un-applying anything, so no patch is ever
@@ -1053,6 +1223,8 @@ def _settle(
         for ch in keep:
             if ch["kind"] == "pragma":
                 pruned.append(ch)
+            elif ch.get("self_annotated"):
+                pruned.append(ch)
             elif applied_prints & set(ch.get("exposed", [])):
                 pruned.append(ch)
             else:
@@ -1074,8 +1246,12 @@ def _settle(
                 print(f"  [ok] finished source verified — {why}")
             return keep, notes
 
-        pragmas = [c for c in keep if c["kind"] == "pragma"]
-        if not pragmas:
+        # Newest first, and DiscoPoP's pragmas before the LLM's own: a pragma
+        # applied on top of finished code is the cheaper thing to lose than a
+        # restructuring that carries its parallelism with it.
+        droppable = ([c for c in keep if c["kind"] == "pragma"]
+                     or [c for c in keep if c.get("self_annotated")])
+        if not droppable:
             # Nothing left to drop and it still does not hold up: the rewrites
             # alone are the problem, so put the user back where they started.
             Path(args.source_file).write_text(original_text)
@@ -1083,11 +1259,43 @@ def _settle(
             print(f"  [revert] {why}")
             return [], notes
 
-        victim = pragmas[-1]
+        victim = droppable[-1]
+        what = ("pragma" if victim["kind"] == "pragma"
+                else "self-annotated rewrite")
         keep.remove(victim)
-        notes.append(f"pragma for {victim['region_id']} — dropped because {why}")
+        notes.append(f"{what} for {victim['region_id']} — dropped because {why}")
         print(f"  [repair] {why}")
-        print(f"           → dropping the pragma for {victim['region_id']} and re-checking")
+        print(f"           → dropping the {what} for {victim['region_id']} and re-checking")
+
+
+def _already_annotated(diff: str, source_file: str) -> bool:
+    """Does the loop this generated patch targets already carry a pragma?
+
+    Under --llm-pragmas this really happens: the LLM annotates a loop, the
+    re-profile runs on the annotated source — the instrumented build has no
+    -fopenmp, so the pragmas are ignored and the dependences come out
+    sequential, exactly as they should — and DiscoPoP then proposes a pattern
+    for a loop that is already parallel.  Applying its pragma on top would put
+    one worksharing construct directly inside another.
+    """
+    pa = _pragma_and_anchor(diff)
+    if pa is None:
+        return False
+    _pragma, header = pa
+    try:
+        src = Path(source_file).read_text().splitlines()
+    except OSError:
+        return False
+    span = _touched_span(diff)
+    head = _locate_header(src, header, (span[0] - 1) if span else 0)
+    if head is None:
+        return False
+    for j in range(head - 1, max(head - 4, -1), -1):
+        st = src[j].strip()
+        if not st or st.startswith("//"):
+            continue
+        return bool(_PRAGMA_LINE_RE.match(src[j]))
+    return False
 
 
 def _phase_b(
@@ -1164,6 +1372,11 @@ def _phase_b(
         if not diff:
             print(f"│  no generated patch on disk")
             print(f"└─ SKIPPED\n")
+            continue
+
+        if _already_annotated(diff, args.source_file):
+            print(f"│  this loop is already annotated in the source")
+            print(f"└─ SKIPPED (nothing to add)\n")
             continue
 
         # 1. static — the only check that sees a clause handing back a value it
@@ -1382,6 +1595,11 @@ def run(args: AgentArguments) -> None:
     # module-global so nothing leaks between runs.
     gate_cache: dict = {}
 
+    # Set only when a kept rewrite could not be re-profiled (--llm-pragmas keeps
+    # such a rewrite because the gate, not DiscoPoP, judged it).  Phase B has no
+    # profile it can trust after that, so it does not run.
+    profile_stale = False
+
     accepted: List[dict] = []
     # Regions DiscoPoP can already parallelize: Phase A skips them, Phase B
     # picks them up from the final profile.
@@ -1533,6 +1751,7 @@ def run(args: AgentArguments) -> None:
                     provider=args.provider,
                     api_base=args.api_base,
                     edit_mode=args.edit_mode,
+                    llm_pragmas=args.llm_pragmas,
                     verbose=args.verbose,
                 )
             except LLMConnectionError as e:
@@ -1586,19 +1805,59 @@ def run(args: AgentArguments) -> None:
                     print(f"│  [Tier-2] LLM returned invalid output")
                 continue
 
-            print(f"│  [Tier-2] Diff received — running quality gate "
-                  f"(apply/compile/correctness)")
-            result = validate(
-                diff, args.source_file,
-                reference_output=reference_output,
-                reference_outputs=reference_outputs,
-                binary_args=binary_args,
-                require_speedup=args.require_speedup,
-                min_speedup=args.min_measured_speedup,
-                reference_time=reference_time,
-            )
+            # Under --llm-pragmas a diff that carries a pragma is a finished
+            # parallelization, not a step towards one: validate() then runs its
+            # -fopenmp build, ThreadSanitizer, the output check against the
+            # PARALLEL binary and (with --require-speedup) the timing — all of
+            # which it skips for a pragma-less diff, because there is nothing
+            # there to race or to speed up.
+            pragmas = _added_pragmas(diff) if args.llm_pragmas else []
+            self_annotated = bool(pragmas)
+            if self_annotated:
+                stages = ("apply/compile/openmp/TSan/output"
+                          + ("/speed" if args.require_speedup else ""))
+                print(f"│  [Tier-2] Diff received with {len(pragmas)} pragma(s) — "
+                      f"running quality gate ({stages})")
+                for pr in pragmas[:4]:
+                    print(f"│           {pr}")
+            else:
+                print(f"│  [Tier-2] Diff received — running quality gate "
+                      f"(apply/compile/correctness)")
+
+            # Cheapest stage first, and the only one that can see a clause which
+            # compiles, races nowhere, prints the right answer, and still throws
+            # the loop's results away.
+            result = None
+            barrier_fp = False
+            if self_annotated:
+                problem = check_llm_pragmas(diff, args.source_file)
+                if problem:
+                    result = ValidationResult(passed=False, stage="clause",
+                                              diagnostic=problem)
+            if result is None:
+                # Through _validate_cached, not validate() directly: this is
+                # where a suspected OMP-barrier false positive is re-verified
+                # against output instead of being trusted.  Phase A used to call
+                # validate() raw, so that re-check never applied to an LLM
+                # rewrite — which only started to matter once the rewrite could
+                # carry pragmas of its own, and TSan on this platform reports a
+                # race between any two parallel regions.
+                result, _cached, barrier_fp = _validate_cached(
+                    gate_cache, diff, args, reference_output, binary_args,
+                    reference_time, reference_outputs=reference_outputs,
+                )
+            if barrier_fp:
+                print(f"│  [Tier-2] TSan flagged two DIFFERENT parallel regions — a "
+                      f"barrier separates them, so this is the libomp/TSan artefact. "
+                      f"Re-verified on output instead.")
+            # The clause check is the controller's stage, not validate()'s, so
+            # it has to declare itself skipped when it does not apply — the
+            # renderer would otherwise show a green tick for a check that never ran.
+            gate_skipped = list(result.skipped_stages)
+            if not self_annotated:
+                gate_skipped.insert(0, "clause")
             viz.gate_result(result.passed, result.stage, result.diagnostic,
-                            result.measured_speedup, skipped_stages=result.skipped_stages)
+                            result.measured_speedup, skipped_stages=gate_skipped)
 
             if result.passed:
                 print(f"│  [Tier-2] Quality gate PASSED")
@@ -1678,7 +1937,29 @@ def run(args: AgentArguments) -> None:
                 # Compiling and preserving output only makes the rewrite HARMLESS.
                 # It is WORTH keeping only if DiscoPoP can now parallelize the
                 # lines that changed.  Ask it, every time — never assume.
-                if not reprofile_ok:
+                if self_annotated:
+                    # The question Phase A normally asks DiscoPoP — "can you
+                    # parallelize this now?" — has already been answered, by the
+                    # model, in the diff.  The gate above judged that answer the
+                    # hard way: sanitizer, output from the parallel build, clock.
+                    # Re-profiling still runs, but only to refresh line numbers
+                    # and find new candidates; its verdict no longer decides.
+                    outcome = RewriteOutcome(
+                        "self_annotated", speedup=result.measured_speedup,
+                        pattern_label=f"{len(pragmas)} LLM pragma(s): "
+                                      + "; ".join(pragmas[:2]),
+                    )
+                    if not reprofile_ok:
+                        # The parallelization is validated and stays.  What is
+                        # unusable is the PROFILE, so put the coherent one back
+                        # and stop trusting DiscoPoP for the rest of this run.
+                        if dp_snapshot is not None:
+                            _restore_profile(dp_snapshot, dp_dir, output_dir)
+                        profile_stale = True
+                        print(f"│  [Tier-2] Re-profiling failed — the rewrite is kept "
+                              f"(it passed the whole gate), but Phase B is skipped: "
+                              f"there is no profile that describes this file")
+                elif not reprofile_ok:
                     outcome = RewriteOutcome(
                         "reprofile_failed",
                         diagnostic="DiscoPoP could not instrument, run, or analyse the "
@@ -1699,7 +1980,7 @@ def run(args: AgentArguments) -> None:
                         reference_outputs=reference_outputs,
                     )
 
-                if outcome.status not in ("ok", "exposed"):
+                if outcome.status not in ("ok", "exposed", "self_annotated"):
                     # REVERT — the restructuring did not achieve its purpose.
                     # Restore source + the pre-patch profile from the snapshot
                     # (file copy) instead of re-profiling — far cheaper.
@@ -1735,15 +2016,26 @@ def run(args: AgentArguments) -> None:
                           f"{len(discovered)} new at depth {depth + 1}")
                     record["reprofiled"] = True
                 record["exposed_pattern"] = outcome.pattern_label
+                if self_annotated:
+                    record["pragmas"] = len(pragmas)
+                    record["pragma_text"] = pragmas
+                    record["self_annotated"] = True
                 change_log.append({
                     "kind": "rewrite", "region_id": rid, "diff": clean_diff,
                     "exposed": outcome.exposed_prints,
+                    "self_annotated": self_annotated,
+                    "pragmas": len(pragmas),
                 })
-                print(f"│  [Tier-2] DiscoPoP now finds: {outcome.pattern_label}")
+                if self_annotated:
+                    print(f"│  [Tier-2] Kept on its own pragmas: {len(pragmas)} "
+                          f"annotated loop(s), gate passed end to end")
+                else:
+                    print(f"│  [Tier-2] DiscoPoP now finds: {outcome.pattern_label}")
                 if exposed_speedup is not None:
                     record["exposed_speedup"] = exposed_speedup
                     print(f"│  [Tier-2] Restructuring pays off "
-                          f"(best exposed loop {exposed_speedup:.2f}×)")
+                          f"({'measured' if self_annotated else 'best exposed loop'} "
+                          f"{exposed_speedup:.2f}×)")
                 elif outcome.status == "exposed":
                     print(f"│  [Tier-2] Pragma validation deferred to depth "
                           f"{depth + 1} (still allowed to restructure)")
@@ -1758,6 +2050,12 @@ def run(args: AgentArguments) -> None:
                 # next prompt always says WHY (apply/compile/openmp_compile/tsan/
                 # correctness/performance) and what to do about it.
                 _STAGE_GUIDANCE = {
+                    "clause": "A data-sharing clause on a pragma YOU wrote cannot be "
+                             "right. Fix the clause — this is not a reason to change "
+                             "the parallelization strategy. A name declared inside the "
+                             "loop body belongs in no clause at all; a name the loop "
+                             "writes and later code reads needs reduction or "
+                             "lastprivate, never private or firstprivate.",
                     "apply": "The diff did not apply — its context lines must match the "
                              "current file exactly (raw indentation, no line-number prefix).",
                     "compile": "The patched code does not compile. Fix the C/C++ error "
@@ -1840,10 +2138,16 @@ def run(args: AgentArguments) -> None:
     # ── Phase B: annotate ────────────────────────────────────────────────────
     # Everything above only restructured code.  Now, once, from the profile the
     # last kept rewrite produced, apply every pragma that survives validation.
-    annotated = _phase_b(
-        args, dp_dir, output_dir, reference_output, reference_outputs,
-        binary_args, reference_time, gate_cache, change_log,
-    )
+    if profile_stale:
+        print(f"\n{'='*60}")
+        print(f"  PHASE B — skipped (no profile describes the current source)")
+        print(f"{'='*60}\n")
+        annotated: List[Dict[str, Any]] = []
+    else:
+        annotated = _phase_b(
+            args, dp_dir, output_dir, reference_output, reference_outputs,
+            binary_args, reference_time, gate_cache, change_log,
+        )
     accepted.extend(annotated)
 
     # ── Settle: drop orphans, rebuild, verify the result, repair ─────────────
@@ -1889,11 +2193,17 @@ def run(args: AgentArguments) -> None:
         if rid not in skipped_by_id or d < skipped_by_id[rid]:
             skipped_by_id[rid] = d
 
-    n_pragmas = len([r for r in accepted if r.get("phase") == "B"])
+    # The metric is pragmas that survive in the finished file, whoever wrote
+    # them: Phase B's, plus the ones an --llm-pragmas rewrite carries itself.
+    n_dp_pragmas = len([r for r in accepted if r.get("phase") == "B"])
+    n_llm_pragmas = sum(r.get("pragmas", 0) for r in accepted if r.get("tier") == 2)
+    n_pragmas = n_dp_pragmas + n_llm_pragmas
     n_rewrites = len([r for r in accepted if r.get("tier") == 2])
     print(f"\n{'='*60}")
-    print(f"  SUMMARY: {n_rewrites} rewrite(s) kept  |  {n_pragmas} pragma(s) applied "
-          f"|  {len(skipped_by_id)} skipped")
+    breakdown = (f" ({n_dp_pragmas} DiscoPoP + {n_llm_pragmas} LLM)"
+                 if n_llm_pragmas else "")
+    print(f"  SUMMARY: {n_rewrites} rewrite(s) kept  |  {n_pragmas} pragma(s) applied"
+          f"{breakdown}  |  {len(skipped_by_id)} skipped")
     verdict = ("BEAT" if n_pragmas > baseline_pragmas
                else "MATCHED" if n_pragmas == baseline_pragmas else "BELOW")
     print(f"  DiscoPoP unaided: {baseline_pragmas} usable pragma(s)  →  this run: "
@@ -1905,6 +2215,10 @@ def run(args: AgentArguments) -> None:
         extra = ""
         if r.get("marginal_speedup") is not None:
             extra = f"  marginal {r['marginal_speedup']:.2f}×"
+        elif r.get("self_annotated"):
+            extra = f"  {r.get('pragmas', 0)} own pragma(s)"
+            if r.get("exposed_speedup") is not None:
+                extra += f", {r['exposed_speedup']:.2f}×"
         print(f"    ✓  {r.get('region_type', '?')} {r['region_id']}  "
               f"[{kind}]  depth={d}{extra}")
     for rid, d in skipped_by_id.items():

@@ -20,6 +20,7 @@ class AgentArguments:
     output_dir: str
     dry_run: bool
     edit_mode: str              # "diff" | "function" | "direct" — how the LLM returns edits
+    llm_pragmas: bool           # LLM writes the OpenMP pragmas itself alongside the rewrite
     restructure_depth: int      # max discovery depth at which Tier-2 (LLM) is applied
     require_speedup: bool       # gate pragma patches on measured wall-clock speedup
     build_retries: int          # apply/compile retries that do not consume budget
@@ -74,6 +75,16 @@ def parse_args() -> AgentArguments:
                         "its Read/Edit/Write tools; the agent diffs that copy against the "
                         "real source and gates it as usual — requires "
                         "--provider claude-agent-sdk)")
+    p.add_argument("--llm-pragmas", action=argparse.BooleanOptionalAction, default=False,
+                   help=("Let the LLM write the OpenMP pragmas itself, in the same "
+                         "edit as the restructuring, instead of leaving them to "
+                         "DiscoPoP (default: off). The rewrite is then judged on its "
+                         "own merits — static clause check, ThreadSanitizer, "
+                         "byte-identical output from the PARALLEL build, and measured "
+                         "speedup — rather than on whether re-profiling makes DiscoPoP "
+                         "find a pattern. A rewrite that carries no pragma still falls "
+                         "back to DiscoPoP's verdict, and Phase B still annotates every "
+                         "region the LLM did not touch."))
     p.add_argument("--restructure-depth", type=int, default=0,
                    help=(
                        "Maximum discovery depth at which Tier-2 LLM restructuring is "
@@ -152,6 +163,7 @@ def parse_args() -> AgentArguments:
         output_dir=a.output_dir or f"{a.discopop_dir}/agent_patches",
         dry_run=a.dry_run,
         edit_mode=a.edit_mode,
+        llm_pragmas=a.llm_pragmas,
         restructure_depth=a.restructure_depth,
         require_speedup=a.require_speedup,
         build_retries=a.build_retries,

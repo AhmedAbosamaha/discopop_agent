@@ -457,6 +457,7 @@ python -m discopop_agent \
     --api-base           <url>              openai-compat endpoint (env: LLM_API_BASE)
     --edit-mode          {diff,function,direct}  default: diff
                                             ('direct' requires --provider claude-agent-sdk)
+    --llm-pragmas / --no-llm-pragmas       default: OFF (LLM writes the pragmas itself)
     --restructure-depth  <int>             default: 0
     --require-speedup / --no-require-speedup   default: ON
     --min-measured-speedup <float>         default: 1.1
@@ -491,6 +492,59 @@ python -m discopop_agent \
 - Retries within a region are **cumulative**: the workspace keeps the model's earlier edits, so a second attempt refines its own rewrite against the gate diagnostic instead of restarting from the original. The workspace is re-seeded from disk whenever the real file changed underneath it (another region's patch was accepted, or this one was reverted).
 - If the model leaves the file unchanged (or only touches comments/whitespace), it is re-prompted for free twice; a still-unchanged file is reported to the controller as "no change" and costs one budget slot, with the same "returning the input is not a valid answer" feedback used by `function` mode.
 - Because the model can read the whole file, this is the only mode where it can consult code outside the region it is rewriting.
+
+**`--llm-pragmas`:** Off by default. When set, the LLM writes the OpenMP pragmas **in the same edit as the restructuring**, and the agent judges that edit on its own merits instead of asking DiscoPoP to re-discover the parallelism.
+
+What changes:
+
+| | default (`--no-llm-pragmas`) | `--llm-pragmas` |
+|---|---|---|
+| system prompt | "you do NOT write pragmas" | "annotate what you parallelize; nothing downstream adds one for you" |
+| Phase-A gate | apply → compile → output (sequential build) | **clauses (static)** → apply → compile → `-fopenmp` → **TSan** → output (**parallel** build) → **speedup** |
+| keep / revert decision | re-profile, and keep only if DiscoPoP finds a pattern in the touched lines whose pragma is usable | the gate above — the parallelism is already in the diff |
+| re-profile | decides the outcome | still runs, but only to refresh line numbers and discover new candidates |
+| Phase B | annotates everything DiscoPoP can | same, minus any loop the LLM already annotated |
+| Settle | a rewrite is an orphan unless a kept pragma targets a region it exposed | a self-annotated rewrite is its own justification; it can still be dropped, but only after every DiscoPoP pragma |
+
+The three gate stages that were previously dead for an LLM rewrite come alive on their own, because `validate()` keys TSan, the `-fopenmp` build and the timing on the diff containing a `#pragma omp`. The one genuinely new stage is the **static clause check** (`check_llm_pragmas` in `controller.py`), which runs the same two rules used on DiscoPoP's generated clauses over every pragma the model's edit introduces, against the **patched** text:
+
+- a name declared inside the loop body must not appear in any clause (not in scope at the pragma);
+- a name the loop writes — or whose elements it fills, when it is an array rather than a pointer — and that later code reads must not be `private`/`firstprivate`, since those discard the writes.
+
+That check is the only stage that can see the failure mode where the pragma compiles, races nowhere, prints the right answer on the profiled input, and still throws the loop's results away. Verified: a rewrite carrying `private(b)` on the double buffer it fills is rejected before anything is built.
+
+**A rewrite that carries no pragma falls back to the default behaviour** — DiscoPoP's verdict after re-profiling still decides — so the two modes mix cleanly: the model annotates what it can, Phase B picks up the rest.
+
+If re-profiling fails after a self-annotated rewrite, the rewrite is **kept** (it passed the whole gate) but Phase B is skipped for the run, since no profile then describes the file on disk.
+
+### ThreadSanitizer and OpenMP barriers (`libarcher`)
+
+TSan only reports accesses it cannot order, and it learns the order from synchronization it can *see*. It cannot see OpenMP's: the implicit barrier at the end of every `parallel for` lives inside `libomp`, which is not instrumented. The bridge is **archer**, an OMPT tool that subscribes to the runtime's callbacks and calls TSan's `AnnotateHappensBefore`/`AnnotateHappensAfter`.
+
+Homebrew builds libomp with `-DOPENMP_ENABLE_OMPT_TOOLS=OFF`, so **no archer ships with it**. Without archer, TSan reports a data race between *any two parallel regions* touching the same data. Verified: a program whose second parallel loop reads what the first one wrote (indices reversed, so a different thread reads each element) is bit-identical over 20 runs at 1/2/4/8/16 threads, and TSan calls it a race.
+
+Build one — the runtime side needs nothing, since Homebrew's libomp already has OMPT support compiled in:
+
+```bash
+discopop_agent/tools/build_archer.sh          # installs to ~/.local/lib
+discopop_agent/tools/build_archer.sh /some/dir
+```
+
+It fetches `openmp/tools/archer/ompt-tsan.cpp` at the LLVM tag matching your installed libomp and builds it as a single shared library. `find_archer()` in `l4_validator.py` then picks it up automatically (`DP_ARCHER_LIB` overrides the search), `_tsan_env()` loads it via `OMP_TOOL_LIBRARIES`, and the banner prints which mode the run is in.
+
+Measured on the three cases whose verdicts are known independently:
+
+| diff | without archer | with archer |
+|---|---|---|
+| odd-even sort, `n` phases (correct) | rejected at `tsan` | **accepted** |
+| odd-even sort, `n-1` phases (wrong result) | rejected at `tsan` | rejected at `correctness` — the real reason |
+| naive parallel bubble sort (genuine race) | rejected at `tsan` | rejected at `tsan` |
+
+`ignore_noninstrumented_modules=1` is set **only** alongside archer. On its own it would suppress reports raised from inside the uninstrumented runtime without supplying the ordering that makes them wrong — hiding real races as well as artefacts.
+
+**Fallback when archer is absent.** `_is_omp_barrier_false_positive()` (controller.py) recognises the artefact from the report itself: when every racing access sits inside an `.omp_outlined*` frame but in *different* outlined functions, a barrier separates them and it cannot be a real race (same outlined function on both sides means one region, and is left alone). It is disabled when the code uses `nowait` or tasks, which genuinely remove the barrier. Suspected artefacts are never accepted on the heuristic — the gate re-runs with the race check off, so correctness and speed still have to pass.
+
+---
 
 **`--restructure-depth`:** Maximum discovery depth at which Tier-2 LLM restructuring is applied. Depth 0 = only the initial DiscoPoP candidates may be restructured; regions discovered after a re-profile (depth+1) get Tier-1 only. Bounds the restructuring chain so the source can't drift arbitrarily far from the original.
 
