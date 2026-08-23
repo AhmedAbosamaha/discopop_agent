@@ -4,58 +4,71 @@
       "name": "doall_clean",
       "cause": "none (baseline)",
       "expect": "tier1",
-      "summary": "Already a clean Do-All — DiscoPoP should handle it alone.",
+      "summary": "Already a clean Do-All \u2014 DiscoPoP should handle it alone.",
       "agent_args": []
     },
     {
       "name": "storage_reuse",
-      "cause": "1 — storage / false dependence",
+      "cause": "1 \u2014 storage / false dependence",
       "expect": "tier1-or-tier2",
       "summary": "Scalar hoisted out of the loop; privatize it.",
       "agent_args": []
     },
     {
       "name": "array_accumulator",
-      "cause": "2 — accumulation hidden in an array slot",
+      "cause": "2 \u2014 accumulation hidden in an array slot",
       "expect": "tier2",
       "summary": "acc[0] += ... reads as a loop-carried RAW; turn it into a scalar reduction.",
       "agent_args": []
     },
     {
       "name": "stencil_war",
-      "cause": "3a — in-place coupling, same-sweep read-back NO",
+      "cause": "3a \u2014 in-place coupling, same-sweep read-back NO",
       "expect": "tier2",
       "summary": "Every input is a previous-sweep value; double-buffer the sweep.",
       "agent_args": []
     },
     {
       "name": "bubble_sort",
-      "cause": "3b — in-place coupling, same-sweep read-back YES",
+      "cause": "3b \u2014 in-place coupling, same-sweep read-back YES",
       "expect": "tier2",
       "summary": "Swaps cascade within a sweep; partition into odd-even sub-passes.",
-      "agent_args": ["--no-require-speedup"],
+      "agent_args": [
+        "--no-require-speedup"
+      ],
       "notes": "Sorting is memory-bound: the profiled run caps N, so the timed run is too short to resolve a 1.1x speedup. Correctness (identical sorted output) is still enforced."
     },
     {
       "name": "prefix_sum",
-      "cause": "4 — true recurrence",
+      "cause": "4 \u2014 true recurrence",
       "expect": "tier2",
       "summary": "Running total; split the independent work out and scan the rest.",
       "agent_args": []
     },
     {
       "name": "early_exit",
-      "cause": "5 — non-canonical control flow",
+      "cause": "5 \u2014 non-canonical control flow",
       "expect": "tier2",
       "summary": "break makes the trip count unknown; hoist the guard, then a canonical loop.",
       "agent_args": []
     },
     {
       "name": "fine_grained",
-      "cause": "6 — granularity",
+      "cause": "6 \u2014 granularity",
       "expect": "tier2",
       "summary": "Inner loop is a correct Do-All but too small to pay; must be coarsened.",
       "agent_args": []
+    },
+    {
+      "name": "priority_mix",
+      "cause": "prioritization \u2014 work count vs actual time",
+      "expect": "tier1-or-tier2",
+      "summary": "A 4M-iteration cold loop and a 2k-iteration hot one; the hot loop must be attempted first.",
+      "agent_args": [
+        "--min-workload",
+        "0"
+      ],
+      "notes": "Ranks wrong without --hotspots: the workload proxy puts a 0.1 ms checksum loop first."
     }
   ]
 }

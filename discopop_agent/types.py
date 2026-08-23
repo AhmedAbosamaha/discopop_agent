@@ -33,8 +33,13 @@ class HotspotCandidate:
     pattern_type: Optional[str] # "do_all" | "reduction" | "pipeline" | etc.
     confidence: float           # pattern confidence [0, 1]
     workload_estimate: float    # W — profiled workload proxy (NOT a measured speedup)
-    score: float                # c·log₂(1+W) − λ·1[tier=2]
+    score: float                # ΔT in seconds when measured; else c·log₂(1+W) − λ·1[tier=2]
     tier: int                   # 1 = DiscoPoP pattern available, 2 = LLM needed
+    # Measured impact, when hotspot detection has run.  None means the ranking
+    # fell back to the static workload proxy for this region.
+    impact_seconds: "float | None" = None   # ΔT: predicted whole-program time saved
+    runtime_fraction: "float | None" = None # f: measured share of total runtime
+    hotness: "str | None" = None            # DiscoPoP's own YES / MAYBE / NO
 
 
 @dataclass

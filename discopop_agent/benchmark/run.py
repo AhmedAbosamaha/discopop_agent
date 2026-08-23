@@ -400,6 +400,19 @@ def main() -> int:
     # kernel each case is about, so a workload floor keeps the agent — and the
     # benchmark's runtime — on the loop under test.
     p.add_argument("--min-workload", type=float, default=500000)
+    # The features added on top of the original loop.  They default to the
+    # agent's own defaults so the benchmark measures what a user actually gets,
+    # and each can be turned off to measure its contribution in isolation.
+    p.add_argument("--llm-pragmas", action=argparse.BooleanOptionalAction, default=None,
+                   help="LLM writes the OpenMP pragmas itself (agent default: on)")
+    p.add_argument("--fast-refresh", action=argparse.BooleanOptionalAction, default=None,
+                   help="skip the instrumented run between rewrites (agent default: on)")
+    p.add_argument("--llm-deps", action=argparse.BooleanOptionalAction, default=None,
+                   help="let the LLM judge static Do-All blockers in new code")
+    p.add_argument("--hotspots", action=argparse.BooleanOptionalAction, default=None,
+                   help="rank candidates by measured time saved (agent default: on)")
+    p.add_argument("--min-impact", type=float, default=None,
+                   help="skip regions predicted to save less than this many seconds")
     p.add_argument("--timeout", type=int, default=1800,
                    help="per-phase timeout in seconds (default: 1800)")
     p.add_argument("--out", default=None,
@@ -439,8 +452,22 @@ def main() -> int:
         "--min-workload", str(a.min_workload),
     ] + (["-v"] if a.verbose else [])
 
+    # Only pass a feature flag when it was actually asked for, so an unset one
+    # exercises the agent's own default rather than pinning it here.
+    for flag, value in (("llm-pragmas", a.llm_pragmas), ("fast-refresh", a.fast_refresh),
+                        ("llm-deps", a.llm_deps), ("hotspots", a.hotspots)):
+        if value is not None:
+            agent_args.append(f"--{flag}" if value else f"--no-{flag}")
+    if a.min_impact is not None:
+        agent_args += ["--min-impact", str(a.min_impact)]
+
     print(f"DiscoPoP agent benchmark — {len(selected)} case(s) → {out_root}")
     print(f"  {a.model} via {a.provider}, edit mode {a.edit_mode}, budget {a.budget}")
+    tweaks = [x for x in agent_args if x.startswith("--") and x not in (
+        "--provider", "--model", "--edit-mode", "--budget", "--restructure-depth",
+        "--min-measured-speedup", "--min-workload", "-v")]
+    if tweaks:
+        print(f"  feature flags: {' '.join(tweaks)}")
 
     t0 = time.perf_counter()
     results = []

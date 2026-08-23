@@ -9,9 +9,17 @@ Regions with an applicable Tier-1 pattern are scored at tier=1.
 Regions with no pattern but non-trivial workload become tier=2 candidates
 for LLM-driven restructuring.
 
-Score formula (thesis):
+Ranking.  When DiscoPoP's hotspot detection has measured the program, regions
+are ranked by the time parallelizing them would actually save (impact.py), which
+is a number in seconds and directly comparable across regions.  Without that
+measurement the old proxy score is used instead:
+
     score = c · log₂(1 + Ŝ) − λ · 1[tier=2]
     c = pattern confidence, Ŝ = workload proxy, λ = LLM-tier penalty
+
+The proxy is kept as a fallback, not as the primary: it ranked example4's
+sortedness CHECK loop above the SORT it verifies, and array_accumulator's serial
+inner recurrence above the outer Do-All that holds 99.7% of the runtime.
 """
 from __future__ import annotations
 
@@ -19,6 +27,7 @@ import math
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
+from .impact import ImpactModel
 from .types import CodeRegion, HotspotCandidate
 
 
@@ -236,11 +245,23 @@ def build_candidates(
     source_file: str,
     lambda_penalty: float,
     min_workload: float = 1.0,
+    impact: "ImpactModel | None" = None,
+    min_impact: float = 0.0,
+    skip_cold: bool = True,
 ) -> List[HotspotCandidate]:
     """
-    Return hotspot candidates sorted by score descending.
-    Regions whose workload estimate is below min_workload are excluded so
-    the controller never wastes budget on trivially small regions.
+    Return hotspot candidates in priority order.
+
+    With `impact` (hotspot detection has run), regions are ordered by PREDICTED
+    TIME SAVED and two filters apply that the workload proxy cannot express:
+    a region DiscoPoP measured as cold (`hotness == "NO"`) is skipped outright,
+    and one whose predicted saving is under `min_impact` seconds is skipped as
+    not worth an attempt.  Ties go to the OUTERMOST region — an inner loop and
+    the loop containing it show nearly the same time, and the outer one is the
+    better target (more work per thread, and parallelizing it covers the inner).
+
+    Without `impact` the old workload proxy and `min_workload` are used, so
+    behaviour is unchanged wherever hotspot detection is unavailable.
     Covers loops, functions, and CUs — not just loops.
     """
     profiler_dir = discopop_dir / "profiler"
@@ -305,12 +326,28 @@ def build_candidates(
         workload_est = _workload_estimate(workload)
         score = _score(workload, confidence, tier, lambda_penalty)
 
-        # Skip regions whose workload estimate falls below the threshold.
-        # For Tier-1 the check uses the raw workload estimate; for Tier-2
-        # the λ penalty already makes low-workload regions score negatively,
-        # but we apply the threshold explicitly to both tiers for clarity.
-        if workload_est < min_workload:
-            continue
+        saving = frac = None
+        hotness = None
+        if impact is not None and impact.available:
+            saving = impact.predicted_saving(
+                region.file_id, region.start_line, region.end_line
+            )
+            frac = impact.fraction(region.file_id, region.start_line, region.end_line)
+            hs = impact.lookup(region.file_id, region.start_line, region.end_line)
+            hotness = hs.hotness if hs else None
+
+        if saving is not None:
+            # Measured: rank on seconds saved, and let DiscoPoP's own verdict
+            # retire the cold regions the proxy would happily have queued.
+            if skip_cold and hotness == "NO":
+                continue
+            if saving < min_impact:
+                continue
+            score = saving
+        else:
+            # No measurement for this region — fall back to the proxy gate.
+            if workload_est < min_workload:
+                continue
 
         candidates.append(HotspotCandidate(
             region=region,
@@ -321,7 +358,42 @@ def build_candidates(
             workload_estimate=workload_est,
             score=score,
             tier=tier,
+            impact_seconds=saving,
+            runtime_fraction=frac,
+            hotness=hotness,
         ))
 
-    candidates.sort(key=lambda c: -c.score)
+    # Highest predicted saving first.  Two tie-breaks, in order:
+    #   1. a LOOP beats the FUNCTION containing it.  A function's measured time
+    #      is just the sum of its loops, and a loop is the thing OpenMP actually
+    #      parallelizes, so at equal time the loop is the actionable unit —
+    #      otherwise `main` (100% of runtime, by definition) heads every queue.
+    #   2. the OUTERMOST region wins, so an enclosing loop is attempted before
+    #      the loop nested inside it, whose time it already contains.
+    # A FUNCTION's measured time is by definition at least that of every loop
+    # inside it, so ranking on time alone puts `main` (100% of runtime) at the
+    # head of every queue — and "restructure all of main" is not the actionable
+    # unit.  When a loop inside a function already accounts for essentially all
+    # of the function's time, the loop IS the target, and the function is
+    # demoted to just below it: still ahead of smaller regions, no longer ahead
+    # of the loop that carries its time.
+    _COVERED_BY_LOOP = 0.9
+    for c in candidates:
+        if c.region.region_type != "function" or c.impact_seconds is None:
+            continue
+        inner = [
+            o for o in candidates
+            if o.region.region_type == "loop" and o.impact_seconds is not None
+            and o.region.file_id == c.region.file_id
+            and c.region.start_line <= o.region.start_line
+            and o.region.end_line <= c.region.end_line
+            and o.impact_seconds >= _COVERED_BY_LOOP * c.impact_seconds
+        ]
+        if inner:
+            c.score = max(o.score for o in inner) * 0.999
+
+    # Highest predicted saving first; then the OUTERMOST region, so an enclosing
+    # loop is attempted before the loop nested inside it whose time it contains.
+    candidates.sort(key=lambda c: (-c.score,
+                                   -(c.region.end_line - c.region.start_line)))
     return candidates

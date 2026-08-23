@@ -23,6 +23,8 @@ class AgentArguments:
     llm_pragmas: bool           # LLM writes the OpenMP pragmas itself alongside the rewrite
     fast_refresh: bool          # skip the instrumented run; translate dependences instead
     llm_deps: bool              # let the LLM judge static deps in code it just wrote
+    hotspots: bool              # measure per-region runtime and rank by time saved
+    min_impact: float           # skip regions predicted to save less than this (seconds)
     restructure_depth: int      # max discovery depth at which Tier-2 (LLM) is applied
     require_speedup: bool       # gate pragma patches on measured wall-clock speedup
     build_retries: int          # apply/compile retries that do not consume budget
@@ -116,6 +118,23 @@ def parse_args() -> AgentArguments:
                          "Every judgement is written to <output-dir>/llm_deps.json, and a "
                          "pragma resting on one still has to pass ThreadSanitizer, the "
                          "byte-identical output check and the speedup gate."))
+    p.add_argument("--hotspots", action=argparse.BooleanOptionalAction, default=True,
+                   help=("Measure how long each region actually takes, with DiscoPoP's "
+                         "own hotspot detection, and rank candidates by the time "
+                         "parallelizing them would SAVE rather than by an instruction "
+                         "count (default: on). Costs one extra instrumented run of the "
+                         "program, once. Without it the old workload proxy is used, which "
+                         "ranked example4's sortedness check above the sort it verifies "
+                         "and array_accumulator's serial inner recurrence above the outer "
+                         "Do-All holding 99.7% of the runtime."))
+    p.add_argument("--min-impact", type=float, default=0.0,
+                   help=("Skip any region predicted to save less than this many SECONDS "
+                         "(default: 0.0 — off). Unlike --min-workload this is a real "
+                         "unit: it is Amdahl's law applied to the region's measured share "
+                         "of runtime at this machine's thread count, so 0.05 means "
+                         "'do not spend an LLM attempt on anything that cannot save 50 ms'. "
+                         "Needs --hotspots; regions with no measurement fall back to "
+                         "--min-workload."))
     p.add_argument("--restructure-depth", type=int, default=0,
                    help=(
                        "Maximum discovery depth at which Tier-2 LLM restructuring is "
@@ -222,6 +241,8 @@ def parse_args() -> AgentArguments:
         llm_pragmas=a.llm_pragmas,
         fast_refresh=a.fast_refresh,
         llm_deps=a.llm_deps,
+        hotspots=a.hotspots,
+        min_impact=a.min_impact,
         restructure_depth=a.restructure_depth,
         require_speedup=a.require_speedup,
         build_retries=a.build_retries,

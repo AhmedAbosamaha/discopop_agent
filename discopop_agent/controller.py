@@ -57,6 +57,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -67,9 +68,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List
 
-from . import fast_refresh, viz
+from . import fast_refresh, impact as impact_mod, viz
 from .args import AgentArguments
 from .l1_planner import build_candidates, region_fingerprint
+from .types import HotspotCandidate
 from .l2_evidence import _brace_match_end, assemble, load_prevented_deps
 from .l3_llm import (LLMConnectionError, call_llm, fmt_blockers, make_diff,
                       normalize_code, review_dependences)
@@ -248,6 +250,28 @@ _RUN_ARTIFACTS = (
     "reduction.txt",
     "memory_regions.txt",
 )
+
+
+def _measure_hotspots(args: AgentArguments, dp_dir: Path) -> "tuple[bool, str]":
+    """Run DiscoPoP's hotspot detection once, unless it has already run.
+
+    Separate from the dependence profile in every way: its own instrumentation
+    pass, its own binary, its own output directory.  It answers a question the
+    dependence profile cannot — how long each region actually takes — which is
+    what turns "how much work is in here" into "how much time would this save".
+    """
+    def run_cmd(cmd: List[str], cwd: Path, env: Dict[str, str]) -> "tuple[bool, str]":
+        try:
+            r = subprocess.run(cmd, capture_output=True, text=True, cwd=cwd, env=env)
+        except OSError as e:
+            return False, str(e)
+        return r.returncode == 0, (r.stderr or r.stdout or "")
+
+    if (dp_dir / "hotspot_detection" / "Hotspots.json").exists():
+        return True, "reusing the measurements already in .discopop"
+    return impact_mod.run_hotspot_detection(
+        args.source_file, dp_dir, args.reprofil_args or None, _venv_env(), run_cmd
+    )
 
 
 def _reprofil_fast(
@@ -1019,12 +1043,26 @@ def _write_record(output_dir: Path, record: dict, dry_run: bool = False) -> None
 
 def _print_candidates(candidates: list) -> None:
     """Print candidate table. candidates is a list of (depth, HotspotCandidate)."""
-    print(f"{'Region ID':<12} {'Type':<10} {'Score':>7}  {'Tier':>4}  {'Depth':>5}  {'Workload':>12}  Name")
-    print("-" * 76)
-    for depth, c in candidates:
-        r = c.region
-        name = r.name or f"lines {r.start_line}–{r.end_line}"
-        print(f"  {r.region_id:<10} {r.region_type:<10} {c.score:>7.1f}  {c.tier:>4}  {depth:>5}  {c.workload_estimate:>12,.0f}  {name}")
+    measured = any(c.impact_seconds is not None for _d, c in candidates)
+    if measured:
+        # Ranked by time saved: show the numbers the ranking is actually made of.
+        print(f"{'Region ID':<12} {'Type':<10} {'Saves':>9}  {'% run':>7}  {'Hot':>5}  "
+              f"{'Tier':>4}  {'Depth':>5}  Name")
+        print("-" * 86)
+        for depth, c in candidates:
+            r = c.region
+            name = r.name or f"lines {r.start_line}–{r.end_line}"
+            saves = f"{c.impact_seconds*1e3:.1f} ms" if c.impact_seconds is not None else "—"
+            frac = f"{c.runtime_fraction*100:.1f}%" if c.runtime_fraction is not None else "—"
+            print(f"  {r.region_id:<10} {r.region_type:<10} {saves:>9}  {frac:>7}  "
+                  f"{(c.hotness or '—'):>5}  {c.tier:>4}  {depth:>5}  {name}")
+    else:
+        print(f"{'Region ID':<12} {'Type':<10} {'Score':>7}  {'Tier':>4}  {'Depth':>5}  {'Workload':>12}  Name")
+        print("-" * 76)
+        for depth, c in candidates:
+            r = c.region
+            name = r.name or f"lines {r.start_line}–{r.end_line}"
+            print(f"  {r.region_id:<10} {r.region_type:<10} {c.score:>7.1f}  {c.tier:>4}  {depth:>5}  {c.workload_estimate:>12,.0f}  {name}")
     print()
 
 
@@ -1541,7 +1579,8 @@ def _phase_b(
     reference_output: "str | None", reference_outputs: "list | None",
     binary_args: "list | None", reference_time: "float | None",
     gate_cache: dict, change_log: list,
-) -> list:
+    impact: "impact_mod.ImpactModel | None" = None,
+) -> List[Dict[str, Any]]:
     """Annotate: apply every DiscoPoP pragma that survives validation.
 
     Runs ONCE, after all restructuring, and never re-profiles.  That is the
@@ -1557,10 +1596,16 @@ def _phase_b(
     """
     kept: list = []
     fresh = build_candidates(dp_dir, args.source_file, args.lambda_penalty,
-                             args.min_workload)
+                             args.min_workload, impact=impact, min_impact=args.min_impact)
     todo = [c for c in fresh
             if c.tier == 1 and c.pattern and c.pattern.get("applicable_pattern")]
-    todo.sort(key=lambda c: c.workload_estimate, reverse=True)
+    if impact is not None and impact.available:
+        # Annotate the pragma that saves the most time first, so the biggest win
+        # is measured against the cleanest baseline.
+        todo.sort(key=lambda c: (-(c.impact_seconds or 0.0),
+                                 -(c.region.end_line - c.region.start_line)))
+    else:
+        todo.sort(key=lambda c: c.workload_estimate, reverse=True)
 
     print(f"\n{'='*60}")
     print(f"  PHASE B — annotate  ({len(todo)} candidate pragma(s))")
@@ -1663,7 +1708,12 @@ def _phase_b(
                 print(f"└─ DROPPED (slower)\n")
                 continue
             print(f"│  marginal {marginal:.2f}×")
+            if impact is not None and impact.available:
+                impact.observe_speedup(marginal)
 
+        if impact is not None and impact.available:
+            impact.mark_covered(cand.region.file_id, cand.region.start_line,
+                                cand.region.end_line)
         fp_before = region_fingerprint(args.source_file, cand.region.start_line,
                                        cand.region.end_line, cand.region.name)
         if not _apply_to_source(diff, args.source_file, output_dir, "Phase-B"):
@@ -1860,9 +1910,36 @@ def run(args: AgentArguments) -> None:
     # identity is keyed on source text instead — see region_fingerprint() in l1_planner.py.
     all_seen_prints: set = set()
 
-    initial = build_candidates(
-        dp_dir, args.source_file, args.lambda_penalty, args.min_workload
-    )
+    # Measure before ranking.  One extra instrumented run, once, and it is what
+    # lets the queue be ordered by time saved instead of instruction count.
+    impact = impact_mod.ImpactModel(threads=os.cpu_count() or 1)
+    if not args.hotspots:
+        hs_note = "disabled (--no-hotspots)"
+    elif args.dry_run:
+        # A dry run promises to change nothing, so it never RUNS the program —
+        # but it will happily use a measurement that is already there, which is
+        # what makes `--dry-run` useful for inspecting the queue order.
+        hs_note = "not measured on a dry run; using whatever is already in .discopop"
+    else:
+        ok_hs, hs_note = _measure_hotspots(args, dp_dir)
+        if not ok_hs:
+            print(f"  [warn] hotspot detection unavailable: {hs_note}")
+    if args.hotspots:
+        impact = impact_mod.load_hotspots(dp_dir, threads=os.cpu_count() or 1)
+    if impact.available:
+        print(f"  Hotspots       : {hs_note} — {len(impact.by_line)} region(s) measured, "
+              f"{impact.total_runtime*1e3:.1f} ms total, ranking by predicted time saved "
+              f"at {impact.threads} threads\n")
+    else:
+        print(f"  Hotspots       : {hs_note} — falling back to the static workload proxy "
+              f"for ranking\n")
+
+    def _candidates(dd: Path) -> List[HotspotCandidate]:
+        return build_candidates(dd, args.source_file, args.lambda_penalty,
+                                args.min_workload, impact=impact,
+                                min_impact=args.min_impact)
+
+    initial = _candidates(dp_dir)
     if not initial:
         print("No hotspot regions found. Run discopop_explorer first.")
         return
@@ -2193,9 +2270,7 @@ def run(args: AgentArguments) -> None:
                 discovered: list = []   # (depth+1, candidate, fingerprint)
                 fresh_all: list = []
                 if reprofile_ok:
-                    fresh_all = build_candidates(
-                        dp_dir, args.source_file, args.lambda_penalty, args.min_workload
-                    )
+                    fresh_all = _candidates(dp_dir)
                     fresh_by_print: dict = defaultdict(list)
                     for nc in fresh_all:
                         fp = region_fingerprint(args.source_file, nc.region.start_line,
@@ -2301,6 +2376,12 @@ def run(args: AgentArguments) -> None:
                           f"{len(discovered)} new at depth {depth + 1}")
                     record["reprofiled"] = True
                 record["exposed_pattern"] = outcome.pattern_label
+                if impact.available:
+                    # Stage 3: this region's time is now spoken for, so anything
+                    # nested inside it has nothing left to win.
+                    impact.mark_covered(region.file_id, region.start_line, region.end_line)
+                    if result.measured_speedup:
+                        impact.observe_speedup(result.measured_speedup)
                 if self_annotated:
                     record["pragmas"] = len(pragmas)
                     record["pragma_text"] = pragmas
@@ -2438,7 +2519,7 @@ def run(args: AgentArguments) -> None:
     else:
         annotated = _phase_b(
             args, dp_dir, output_dir, reference_output, reference_outputs,
-            binary_args, reference_time, gate_cache, change_log,
+            binary_args, reference_time, gate_cache, change_log, impact,
         )
     accepted.extend(annotated)
 

@@ -532,6 +532,65 @@ That check is the only stage that can see the failure mode where the pragma comp
 
 If re-profiling fails after a self-annotated rewrite, the rewrite is **kept** (it passed the whole gate) but Phase B is skipped for the run, since no profile then describes the file on disk.
 
+### Prioritization — ranking by time saved, not work counted (`--hotspots`, `--min-impact`)
+
+**On by default.** The agent runs DiscoPoP's own hotspot detection once (`discopop_hotspot_cxx` → run → `discopop_hotspot_analyzer`, ~2 s plus one ordinary run of the program), reads `.discopop/hotspot_detection/Hotspots.json`, and ranks candidates by **how much time parallelizing them would save** instead of by an instruction count.
+
+**Why the old score was wrong, not merely crude.** `score = c · log₂(1 + Ŝ) − λ · 1[tier=2]` produced these rankings:
+
+| program | old #1 | what it actually costs | old #2 |
+|---|---|---|---|
+| example4 | the sortedness **check** loop (W=512) | — | the **sort** it verifies (W=1,050,624) |
+| array_accumulator | the inner `k` loop — a serial `x = x*c + …` recurrence that can never be parallelized | 97% (nested) | the outer **Do-All** |
+| priority_mix | a checksum loop (W=40,000,000) | **0.1 ms — 0.0% of runtime** | the hot loop at 91% |
+
+`log₂` compresses three orders of magnitude into ten points, λ then outweighs them, and Ŝ counts instructions rather than time — so a loop that runs for 0.1 ms can head the queue.
+
+**The replacement is Amdahl's law**, in `impact.py`:
+
+```
+S  = 1 / (1 − f + f/(P·e))          predicted whole-program speedup
+ΔT = T_total · f · (1 − 1/(P·e))    predicted time saved
+```
+
+`f` is the region's measured share of runtime, `P` the machine's thread count, `e` the parallel efficiency. ΔT is **in seconds**, which is what retires λ: cost and benefit are finally the same unit.
+
+Three refinements matter in practice:
+
+- **Cold regions are skipped outright** when DiscoPoP itself measured them as `hotness: "NO"` — its own verdict, not a threshold of ours.
+- **Nesting.** Parallelizing an outer loop parallelizes everything inside it, so an accepted region marks its contents *covered* and their remaining ΔT drops to zero. Without this the agent re-attacks time it has already won.
+- **An enclosing function never outranks its own loop.** A function's measured time is by definition ≥ every loop inside it, so ranking on time alone puts `main` (100% of runtime) at the head of every queue. When a loop accounts for ≥90% of a function's time, the function is demoted to just below it — still ahead of smaller regions, no longer ahead of the loop carrying its time.
+- **Efficiency is calibrated during the run.** `e` starts at 1.0 and is replaced by the median of `measured_speedup / P` from every pragma the gate actually times, so later predictions use what this machine delivers rather than an ideal.
+
+**`--min-impact <seconds>`** (default 0.0, off) skips any region predicted to save less than that. Unlike `--min-workload` it is a real unit: `--min-impact 0.05` means "do not spend an LLM attempt on anything that cannot save 50 ms."
+
+`--min-workload` and `--lambda-penalty` still exist and still apply to regions with **no** measurement, so behaviour is unchanged wherever hotspot detection is unavailable.
+
+**macOS note.** Hotspot detection never ran on macOS before this: `hotspot_detection/scripts/CXX_wrapper.sh` used `readlink -fm` (a GNU extension BSD rejects, collapsing the plugin path to `/LLVMHotspotDetection.so`), lacked the SDK sysroot and libc++ flags, and looked for a `.so` when the macOS build produces `LLVMHotspotDetection.dylib`. All three are fixed in the repo script; the copy that actually runs is `venv/lib/python3.11/site-packages/discopop-hotspot-detection.libs/CXX_wrapper.sh`, so **re-copy it after `pip install`**, exactly as `INSTALL.md` says for `CXX_wrapper.sh`.
+
+---
+
+### Feature regression suite (no LLM)
+
+`benchmark/run.py` measures how well a *model* does and needs an API key. The deterministic half lives in `benchmark/test_features.py` and should pass on every commit:
+
+```bash
+venv/bin/python -m discopop_agent.benchmark.test_features
+venv/bin/python -m discopop_agent.benchmark.test_features --only clause tsan
+```
+
+| check | asserts |
+|---|---|
+| impact ranking | the top candidate holds the majority of runtime, and no cold region outranks it |
+| min-impact filter | a 50 ms floor removes the small regions and keeps nothing below it |
+| fast refresh | a semantically empty edit carries **every** dependence and trip count forward |
+| clause checks | `private` on a live-out scalar, on an array the loop fills, and on a body-local are all rejected; a clean pragma is not |
+| TSan barrier | a genuine race is reported; two barrier-separated regions are not (or, without archer, the heuristic catches the artefact and still does not excuse the real race) |
+
+Anything whose tooling is missing reports `skip`, not `fail`. `benchmark/run.py` also gained `--llm-pragmas`, `--fast-refresh`, `--llm-deps`, `--hotspots` and `--min-impact`, each unset by default so the benchmark exercises the agent's own defaults, and a new `priority_mix` case whose whole purpose is that the ranking must not follow the instruction count.
+
+---
+
 **`--fast-refresh` / `--llm-deps`:** Off by default. After a kept Phase-A rewrite, refresh the profile **without running the instrumented program** — only `discopop_cxx` runs, and the previous run's observed dependences are translated onto the new instruction numbering (`fast_refresh.py`).
 
 Measured cost of one re-profile, by step:
