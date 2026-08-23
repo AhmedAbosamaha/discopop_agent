@@ -446,18 +446,21 @@ python -m discopop_agent \
     --source-file   <path/to/source.cpp>     required
     --discopop-dir  <path/to/.discopop>      required
     --budget        <int>                    default: 3
-    --model         <model-id>               default: claude-opus-4-8
+    --model         <model-id>               default: follows --provider
+                                             ('haiku' for claude-agent-sdk, 'claude-opus-5'
+                                              for anthropic, REQUIRED for openai-compat)
     --api-key       <key>                    fallback: LLM_API_KEY env var
-    --provider      {anthropic,openai-compat,claude-agent-sdk} default: anthropic
+    --provider      {anthropic,openai-compat,claude-agent-sdk} default: claude-agent-sdk
     --api-base      <url>                    fallback: LLM_API_BASE env var (openai-compat)
     --lambda-penalty <float>                 default: 1.0
-    --min-workload   <float>                  default: 1.0
+    --min-workload   <float>                  default: 0.0
     --output-dir         <path>             default: <discopop-dir>/agent_patches
     --provider           {anthropic,openai-compat,claude-agent-sdk}  default: anthropic
     --api-base           <url>              openai-compat endpoint (env: LLM_API_BASE)
-    --edit-mode          {diff,function,direct}  default: diff
-                                            ('direct' requires --provider claude-agent-sdk)
-    --llm-pragmas / --no-llm-pragmas       default: OFF (LLM writes the pragmas itself)
+    --edit-mode          {diff,function,direct}  default: follows --provider
+                                            ('direct' for claude-agent-sdk, 'diff' otherwise;
+                                             'direct' requires --provider claude-agent-sdk)
+    --llm-pragmas / --no-llm-pragmas       default: ON (LLM writes the pragmas itself)
     --restructure-depth  <int>             default: 0
     --require-speedup / --no-require-speedup   default: ON
     --min-measured-speedup <float>         default: 1.1
@@ -466,6 +469,18 @@ python -m discopop_agent \
     --apply-patches / --no-apply-patches       default: ON (write Tier-1 pragmas to source)
     --dry-run                               plan only, no LLM calls, no file changes
 ```
+
+**Defaults, and why three of them are computed rather than fixed.** The out-of-the-box configuration is the one that actually produces results on this machine: `--provider claude-agent-sdk --model haiku --edit-mode direct --min-workload 0 --llm-pragmas --fast-refresh --llm-deps`, with `--require-speedup` left ON.
+
+Three defaults are resolved after parsing because they are coupled to another flag, and a fixed value would fail at the first LLM call with an unrelated-looking error:
+
+| flag | resolution |
+|---|---|
+| `--model` | `haiku` for `claude-agent-sdk` (Claude Code's own aliases), `claude-opus-5` for `anthropic`, **required** for `openai-compat` (the name is whatever your endpoint serves) |
+| `--edit-mode` | `direct` for `claude-agent-sdk`, `diff` otherwise — `direct` needs a backend with file tools |
+| `--llm-deps` | follows `--fast-refresh`; passing `--no-fast-refresh` silently switches it off rather than erroring, and it only errors when explicitly asked for without it |
+
+So `--provider anthropic` on its own is a working invocation, not a broken one.
 
 **`--budget`:** Maximum number of LLM retry attempts per region. Each retry costs one API call. A region where the LLM fails every attempt is marked as skipped.
 
@@ -516,6 +531,42 @@ That check is the only stage that can see the failure mode where the pragma comp
 **A rewrite that carries no pragma falls back to the default behaviour** — DiscoPoP's verdict after re-profiling still decides — so the two modes mix cleanly: the model annotates what it can, Phase B picks up the rest.
 
 If re-profiling fails after a self-annotated rewrite, the rewrite is **kept** (it passed the whole gate) but Phase B is skipped for the run, since no profile then describes the file on disk.
+
+**`--fast-refresh` / `--llm-deps`:** Off by default. After a kept Phase-A rewrite, refresh the profile **without running the instrumented program** — only `discopop_cxx` runs, and the previous run's observed dependences are translated onto the new instruction numbering (`fast_refresh.py`).
+
+Measured cost of one re-profile, by step:
+
+| step | example4 (513 elem) | array_accumulator (104M ops) | needs the program to run? |
+|---|---|---|---|
+| `discopop_cxx` | 1.80 s | 1.06 s | no |
+| instrumented `./a.out` | 0.37 s | **7.91 s** (17× native) | **yes** |
+| `discopop_explorer` | **6.49 s** | 3.45 s | no |
+
+So this saves ~4% on a tiny program and ~64% on a compute-heavy one, and the multiplier grows with memory traffic — the saving is largest on exactly the programs that hurt most to profile.
+
+**What makes it possible:** `static_dependencies.txt`, `Data.xml`, `loop_meta.txt` and `instructionID_to_lineID_mapping.txt` are all written by the *compile*, before `./a.out` has ever run. Only `dynamic_dependencies.txt`, `memory_regions.txt` and the loop trip counts need the run.
+
+**What makes it delicate:** instruction ids come from one counter in module order, so an edit renumbers everything after it (verified: an edit in `bubble_sort` diverged the numbering at instruction 19). A dependence re-pointed at the wrong instruction doesn't fail — it silently misinforms the analysis. Four things the translation has to get right:
+
+- the obvious key doesn't work: `instructionID_to_lineID_mapping.txt` is many-to-one (ids 3, 6, 9, 12 all → `1:6:0`) and ~20% of instructions have no position at all;
+- what works is **sequence alignment** — both files are the same program's instructions in order, so old positions are rewritten into new-line coordinates and the two are aligned, letting positionless entries match by context;
+- `67@43` is **not** line 43 — the number after `@` is callpath state (instruction 67 sits at line 11), which `parser.py` strips before use, so the id is translated and the state travels untouched;
+- static deps live in the dynamic file too (bare id, `S-` region — 50 of 114 lines on example4) and are **dropped**, since the compile just regenerated them and the explorer reads that file separately.
+
+Anything that cannot be translated with certainty is dropped, never guessed. Verified: an identity edit (a comment inserted) carries **64/64** dependences with 0 unmatched instructions; a real rewrite carries 3/64, correctly, because the rest belonged to code that no longer exists; and every translated dependence is independently re-checked to land on identical source text — **0 mistranslations across both**.
+
+**When a full re-profile still happens:** before restructuring at a deeper level (`depth + 1 ≤ --restructure-depth`), and once before Phase B. A fast refresh may relocate the queue and find new regions; it is never the basis of a deeper restructuring or of Phase B. If it fails any of its own checks, the agent falls back to a full re-profile.
+
+**`--llm-deps`** (requires `--fast-refresh`): rewritten code ends up covered by *static* dependences only, and static analysis reports a dependence whenever it cannot prove there is none — so a newly written loop is usually blocked by something that does not actually happen, with no dynamic data to settle it. This matters because a rewrite **creates new regions**, and at depth > 0 those are the regions the agent is meant to parallelize; static caution alone would keep them sequential forever.
+
+Two rules keep the question narrow, and both were learned the hard way:
+
+- **Only DiscoPoP's own Do-All blockers are reviewed** (`doall_prevented.json`), not every dependence in the region. The first version asked about every static dep in the rewritten lines: 76 questions on example4, of which 37 were induction variables and 3 were body-locals — things the agent already knows are never blockers, and which the L3 prompt already tells the model to ignore. It discharged 70 of 76, with at least one visibly wrong justification. Asking a model 40 questions whose answers are already known is how it learns to answer carelessly. Targeted at blockers, the same run asks **zero** questions and reaches the same result.
+- **Only STATIC-origin blockers are reviewable.** A dependence DiscoPoP actually observed at run time is ground truth and is never up for discussion.
+
+Every judgement is written to `<output-dir>/llm_deps.json`. This is the one place a model's claim enters DiscoPoP's analysis, so be clear-eyed: a wrong SPURIOUS produces a racy loop. What contains it — the model is told to answer REAL when unsure (a dependence wrongly called real costs only a missed parallelization), the record is auditable, discharged deps are matched back to the exact dependence lines they came from and the explorer is re-run (restoring the original analysis if it then fails), and any pragma resting on one still faces ThreadSanitizer, the byte-identical output check and the speedup gate.
+
+---
 
 ### ThreadSanitizer and OpenMP barriers (`libarcher`)
 

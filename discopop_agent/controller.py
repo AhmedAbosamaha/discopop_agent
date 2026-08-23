@@ -67,11 +67,12 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List
 
-from . import viz
+from . import fast_refresh, viz
 from .args import AgentArguments
 from .l1_planner import build_candidates, region_fingerprint
 from .l2_evidence import _brace_match_end, assemble, load_prevented_deps
-from .l3_llm import LLMConnectionError, call_llm, fmt_blockers, make_diff, normalize_code
+from .l3_llm import (LLMConnectionError, call_llm, fmt_blockers, make_diff,
+                      normalize_code, review_dependences)
 from .l4_validator import (capture_reference, check_pragma_compiles,
                            find_archer, fix_hunk_headers, measure_marginal,
                            noise_floor, run_patch, time_source, validate)
@@ -236,6 +237,238 @@ def _venv_env() -> "dict[str, str]":
     venv_bin = str(Path(sys.executable).parent)
     env["PATH"] = venv_bin + os.pathsep + env.get("PATH", "")
     return env
+
+
+# Artifacts the instrumented RUN produces.  A fast refresh re-runs only the
+# compile, which does not write these, so they are preserved across it and
+# translated onto the new numbering instead.
+_RUN_ARTIFACTS = (
+    "dynamic_dependencies.txt",
+    "loop_counter_output.txt",
+    "reduction.txt",
+    "memory_regions.txt",
+)
+
+
+def _reprofil_fast(
+    source_file: str, discopop_dir: Path, old_text: str, new_text: str,
+    output_dir: Path,
+) -> "tuple[bool, str]":
+    """Refresh the profile WITHOUT running the instrumented program.
+
+    The instrumented run is the step that scales with the workload — 17x native
+    on a 104M-operation kernel here, and worse the more memory traffic there is.
+    Everything else DiscoPoP needs is static: re-running `discopop_cxx` alone
+    regenerates `Data.xml`, `static_dependencies.txt` and the instruction
+    mapping for the new code in about a second.
+
+    So the compile runs, and the PREVIOUS run's observed dependences are
+    translated onto the new instruction numbering (fast_refresh.py) rather than
+    re-measured.  A dependence that cannot be translated with certainty is
+    dropped, never guessed: the rewritten region ends up covered by static
+    dependences alone, which are over-approximate and can only make the agent
+    more cautious.
+
+    Returns (ok, human-readable note).  On any doubt it returns False so the
+    caller can fall back to a full re-profile — a wrong dependence is far worse
+    than a slow one.
+    """
+    src = Path(source_file).resolve()
+    binary = src.parent / "a.out"
+    profiler = (discopop_dir / "profiler").resolve()
+    extra = [f"-L{_LLVM_LIBCXX}", f"-Wl,-rpath,{_LLVM_LIBCXX}"] if Path(_LLVM_LIBCXX).exists() else []
+    env = _venv_env()
+
+    lmap = fast_refresh.line_map(old_text, new_text)
+    problems = fast_refresh.verify_translation(old_text, new_text, lmap)
+    if problems:
+        return False, f"line map failed its own check ({problems[0][:80]})"
+
+    # The compile overwrites the instruction mapping, so the old one — the half
+    # of the translation that describes where the dependences came from — has to
+    # be taken out of the way first.
+    saved: "dict[str, str]" = {}
+    for name in _RUN_ARTIFACTS + ("instructionID_to_lineID_mapping.txt",):
+        f = profiler / name
+        if f.exists():
+            saved[name] = f.read_text()
+    if "dynamic_dependencies.txt" not in saved or "instructionID_to_lineID_mapping.txt" not in saved:
+        return False, "no previous profile to carry forward"
+
+    r = subprocess.run(
+        [_cxx_wrapper(), str(src), "-o", str(binary)] + extra,
+        capture_output=True, text=True, cwd=src.parent, env=env,
+    )
+    if r.returncode != 0:
+        return False, f"instrumentation failed: {r.stderr[-200:]}"
+
+    old_map = output_dir / ".fast_refresh_old_mapping.txt"
+    old_map.write_text(saved["instructionID_to_lineID_mapping.txt"])
+    new_map = profiler / "instructionID_to_lineID_mapping.txt"
+
+    dep_text, stats = fast_refresh.remap_dependencies(
+        saved["dynamic_dependencies.txt"], old_map, new_map, lmap
+    )
+    (profiler / "dynamic_dependencies.txt").write_text(dep_text)
+    if "loop_counter_output.txt" in saved:
+        (profiler / "loop_counter_output.txt").write_text(
+            fast_refresh.remap_loop_counters(saved["loop_counter_output.txt"], lmap)
+        )
+    if "reduction.txt" in saved:
+        (profiler / "reduction.txt").write_text(
+            fast_refresh.remap_reduction(saved["reduction.txt"], lmap)
+        )
+    # Memory-region ids are runtime identities the carried dependences still
+    # refer to by name, so this file travels unchanged.
+    if "memory_regions.txt" in saved:
+        (profiler / "memory_regions.txt").write_text(saved["memory_regions.txt"])
+    old_map.unlink(missing_ok=True)
+
+    r = subprocess.run(
+        [_explorer_cmd()], capture_output=True, text=True,
+        cwd=discopop_dir.resolve(), env=env,
+    )
+    if r.returncode != 0:
+        return False, f"explorer failed on the refreshed profile: {r.stderr[-200:]}"
+
+    return True, stats.summary()
+
+
+def _llm_dep_review(
+    args: AgentArguments, dp_dir: Path, old_text: str, new_text: str,
+    output_dir: Path, file_id: int,
+) -> str:
+    """--llm-deps: let the model discharge static dependences that block a Do-All.
+
+    Why this exists.  A fast refresh leaves rewritten code covered by STATIC
+    dependences only, and static analysis reports a dependence whenever it
+    cannot prove there is none.  A freshly written loop is therefore usually
+    blocked by something that does not actually happen, with no dynamic data to
+    settle it — and since a rewrite CREATES regions, and depth > 0 exists to
+    parallelize them, static caution alone would keep them sequential forever.
+
+    Two rules keep the question narrow, and both matter:
+
+      * only DiscoPoP's own Do-All BLOCKERS are reviewed, not every dependence
+        in the region.  On example4 the unfiltered version asked about 76
+        dependences of which 37 were induction variables and 3 were body-locals
+        — things the agent already knows are never blockers.  Asking a model 40
+        questions whose answers are already known is how it learns to answer
+        carelessly.
+      * only STATIC-origin blockers are reviewable.  A dependence DiscoPoP
+        actually observed at run time is ground truth and is never up for
+        discussion.
+
+    Every judgement is recorded in llm_deps.json.  This is the one place a
+    model's claim enters DiscoPoP's analysis, so be plain about the exposure: a
+    wrong SPURIOUS produces a racy loop, and what stands behind it is the gate.
+    """
+    profiler = (dp_dir / "profiler").resolve()
+    static_file = profiler / "static_dependencies.txt"
+    if not static_file.exists():
+        return ""
+
+    lmap = fast_refresh.line_map(old_text, new_text)
+    carried_over = set(lmap.values())
+    new_lines = new_text.splitlines()
+    rewritten = [n for n in range(1, len(new_lines) + 1) if n not in carried_over]
+    if not rewritten:
+        return "nothing was rewritten — no dependences to review"
+
+    blockers = load_prevented_deps(dp_dir, file_id, min(rewritten), max(rewritten))
+    # A dependence that was actually observed is not a candidate for discharge,
+    # whatever a model thinks of it.
+    blockers = [b for b in blockers
+                if "STATIC" in str(b.get("origin", "")).upper()]
+    if not blockers:
+        return "no static Do-All blockers in the rewritten lines"
+
+    def _ln(v: object) -> "int | None":
+        try:
+            return int(str(v).split(":")[-1])
+        except (TypeError, ValueError):
+            return None
+
+    items: List[Dict[str, Any]] = []
+    for b in blockers:
+        snk, src = _ln(b.get("sink_line")), _ln(b.get("source_line"))
+        ls, le = b.get("loop_start"), b.get("loop_end")
+        items.append({
+            "dep_type": str(b.get("dep_type", "?")).split(".")[-1],
+            "var": str(b.get("var_name", "?")),
+            "sink_line": snk,
+            "source_line": src,
+            "sink_text": new_lines[snk - 1] if snk and snk <= len(new_lines) else "",
+            "source_text": new_lines[src - 1] if src and src <= len(new_lines) else "",
+            "loop": f"{ls}-{le}" if ls is not None else "",
+            "loop_carried": snk is not None and src is not None and src >= snk,
+        })
+
+    lo = max(min(rewritten) - 3, 1)
+    hi = min(max(rewritten) + 3, len(new_lines))
+    excerpt = "\n".join(f"{n:4d}  {new_lines[n - 1]}" for n in range(lo, hi + 1))
+
+    try:
+        verdicts = review_dependences(
+            items, excerpt, args.model, api_key=args.api_key,
+            provider=args.provider, api_base=args.api_base, verbose=args.verbose,
+        )
+    except Exception as e:                      # a review failure must not fail the run
+        return f"dependence review unavailable ({str(e)[:60]}) — keeping every blocker"
+
+    # Silence means REAL: an unanswered blocker keeps blocking.
+    discharged = [items[i - 1] for i, (real, _r) in verdicts.items() if not real]
+    record = [
+        {**items[i - 1], "verdict": "REAL" if real else "SPURIOUS", "reason": reason}
+        for i, (real, reason) in sorted(verdicts.items())
+    ]
+    log = output_dir / "llm_deps.json"
+    existing = json.loads(log.read_text()) if log.exists() else []
+    existing.append({"source": args.source_file, "reviewed": record})
+    log.write_text(json.dumps(existing, indent=2))
+
+    if not discharged:
+        return f"reviewed {len(items)} static blocker(s) — none discharged"
+
+    # Translate the discharged blockers back into the static dependence lines
+    # that produced them, matched on (type, variable, both endpoints).
+    fwd, _rev = fast_refresh.load_instruction_keys(
+        profiler / "instructionID_to_lineID_mapping.txt"
+    )
+
+    def _line_of(token: str) -> "int | None":
+        key = fwd.get(token.split("@")[0])
+        return key[1] if key else None
+
+    targets = {(d["dep_type"], d["var"], d["sink_line"], d["source_line"])
+               for d in discharged}
+    raw_lines = static_file.read_text().splitlines()
+    keep: List[str] = []
+    removed = 0
+    for raw in raw_lines:
+        f = raw.split()
+        if len(f) >= 4 and f[1] == "NOM" and "|" in f[3]:
+            src_tok, _, var_part = f[3].partition("|")
+            key = (f[2], var_part.split("(")[0], _line_of(f[0]),
+                   _line_of(src_tok) if src_tok not in ("*", "0@0") else None)
+            if key in targets:
+                removed += 1
+                continue
+        keep.append(raw)
+
+    if not removed:
+        return (f"reviewed {len(items)} static blocker(s), {len(discharged)} judged "
+                f"spurious, but none matched a dependence line — nothing changed")
+
+    static_file.write_text("\n".join(keep) + "\n")
+    r = subprocess.run([_explorer_cmd()], capture_output=True, text=True,
+                       cwd=dp_dir.resolve(), env=_venv_env())
+    if r.returncode != 0:
+        static_file.write_text("\n".join(raw_lines) + "\n")
+        return (f"discharged {len(discharged)} blocker(s) but the explorer then "
+                f"failed — restored the original analysis")
+    return (f"reviewed {len(items)} static blocker(s), discharged {len(discharged)} "
+            f"({removed} dependence line(s) removed, recorded in {log.name})")
 
 
 def _reprofil(source_file: str, discopop_dir: Path, binary_args: list | None = None) -> bool:
@@ -826,6 +1059,11 @@ def _print_banner(args: AgentArguments) -> None:
         llm_mode = args.model
     print(f"  LLM mode       : {llm_mode}")
     print(f"  Edit mode      : {args.edit_mode}")
+    print(f"  Re-profiling   : "
+          + ("fast refresh (compile only) between rewrites; full before a deeper "
+             "level and before Phase B" if args.fast_refresh
+             else "full (instrument + run + explore) after every kept rewrite")
+          + ("; LLM judges static deps in new code" if args.llm_deps else ""))
     print(f"  Pragmas        : "
           + ("LLM writes them with the rewrite, gate decides (--llm-pragmas)"
              if args.llm_pragmas else "DiscoPoP writes them in Phase B"))
@@ -1599,6 +1837,10 @@ def run(args: AgentArguments) -> None:
     # such a rewrite because the gate, not DiscoPoP, judged it).  Phase B has no
     # profile it can trust after that, so it does not run.
     profile_stale = False
+    # True once a fast refresh has left carried-forward dependence data in the
+    # profile.  Phase B annotates from measured data, so this is settled with one
+    # full re-profile before it runs rather than being allowed to accumulate.
+    profile_is_fast = False
 
     accepted: List[dict] = []
     # Regions DiscoPoP can already parallelize: Phase A skips them, Phase B
@@ -1759,6 +2001,15 @@ def run(args: AgentArguments) -> None:
                 print(f"│  [Tier-2] FATAL: {e}")
                 print(f"└─ aborting — start the LLM server (or fix --api-base) and re-run\n")
                 sys.exit(1)
+            except Exception as e:                   # noqa: BLE001 - reported below
+                # The backend failed this call even after its own retries.  That
+                # is a bad attempt, not a broken run: everything already accepted
+                # stays, and the next region still gets its chance.  Losing an
+                # entire run to one flaky call is how a 20-minute job ends with
+                # nothing to show.
+                print(f"│  [Tier-2] LLM call failed: {str(e)[:120]}")
+                print(f"│           counting it as a failed attempt and moving on")
+                diff, tier2_messages = None, tier2_messages
 
             # In function mode the LLM returns the rewritten enclosing function;
             # splice it in and turn it into a guaranteed-apply diff.  In direct
@@ -1897,10 +2148,44 @@ def run(args: AgentArguments) -> None:
                     "discovery_depth": depth,
                 }
 
-                print(f"│  [Tier-2] Re-profiling to refresh data and discover new candidates...")
-                reprofile_ok = _reprofil(
-                    args.source_file, dp_dir, args.reprofil_args or None
-                )
+                # A deeper Tier-2 pass restructures from this profile, so it
+                # gets measured data; a refresh that only has to relocate the
+                # queue and find new regions does not.  Phase B is covered
+                # separately, by one full re-profile before it runs.
+                deeper_coming = (depth + 1) <= args.restructure_depth
+                use_fast = args.fast_refresh and not deeper_coming
+                if use_fast:
+                    print(f"│  [Tier-2] Fast refresh (compile only, no instrumented run)...")
+                    reprofile_ok, note = _reprofil_fast(
+                        args.source_file, dp_dir, pre_patch_src or "",
+                        Path(args.source_file).read_text(), output_dir,
+                    )
+                    if reprofile_ok:
+                        print(f"│           {note}")
+                        profile_is_fast = True
+                        if args.llm_deps:
+                            gaps = _llm_dep_review(
+                                args, dp_dir, pre_patch_src or "",
+                                Path(args.source_file).read_text(), output_dir,
+                                region.file_id,
+                            )
+                            if gaps:
+                                print(f"│           {gaps}")
+                    else:
+                        print(f"│           fast refresh not usable ({note}) "
+                              f"— falling back to a full re-profile")
+                        reprofile_ok = _reprofil(
+                            args.source_file, dp_dir, args.reprofil_args or None
+                        )
+                else:
+                    if args.fast_refresh and deeper_coming:
+                        print(f"│  [Tier-2] Full re-profile — depth {depth + 1} will "
+                              f"restructure from this data")
+                    else:
+                        print(f"│  [Tier-2] Re-profiling to refresh data and discover new candidates...")
+                    reprofile_ok = _reprofil(
+                        args.source_file, dp_dir, args.reprofil_args or None
+                    )
 
                 # rebuilt / discovered are computed read-only first; the queue and
                 # all_seen_prints are only mutated once we decide to COMMIT.
@@ -2138,6 +2423,13 @@ def run(args: AgentArguments) -> None:
     # ── Phase B: annotate ────────────────────────────────────────────────────
     # Everything above only restructured code.  Now, once, from the profile the
     # last kept rewrite produced, apply every pragma that survives validation.
+    if profile_is_fast and not profile_stale and not args.dry_run:
+        print(f"\n  One full re-profile before Phase B — it annotates from measured "
+              f"dependences, not carried-forward ones.")
+        if not _reprofil(args.source_file, dp_dir, args.reprofil_args or None):
+            print(f"  [warn] that re-profile failed; Phase B will be skipped.")
+            profile_stale = True
+
     if profile_stale:
         print(f"\n{'='*60}")
         print(f"  PHASE B — skipped (no profile describes the current source)")

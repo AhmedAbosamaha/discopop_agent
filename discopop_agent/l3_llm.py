@@ -967,20 +967,31 @@ def _complete_claude_agent_sdk(
                 session_id = message.session_id
         return text, session_id
 
+    # Two different hiccups are retried here, and neither is worth losing a run
+    # over.  A cached session can go stale (its on-disk transcript evicted), and
+    # the CLI itself fails calls transiently — observed repeatedly as
+    # `Claude Code returned an error result: success`, with the identical call
+    # succeeding moments later.  After the first failure the session is dropped
+    # and every further attempt starts fresh, so a bad transcript cannot poison
+    # the retries.  A real problem (not logged in, no CLI) fails every attempt
+    # and the last exception is re-raised.
     resume_id = _region_sessions.get(session_key)
-    try:
-        text, session_id = asyncio.run(_run(resume_id))
-    except Exception:
-        # Two different hiccups land here, and neither is worth losing a run
-        # over.  A cached session can go stale (its on-disk transcript evicted),
-        # and the CLI itself can fail a call transiently — observed once as
-        # `Claude Code returned an error result: success`, with the identical
-        # call succeeding immediately afterwards.  Either way: drop any session
-        # we were resuming and try once more from scratch.  A real problem
-        # (not logged in, no CLI) fails the same way twice and still raises.
-        _region_sessions.pop(session_key, None)
-        time.sleep(2)
-        text, session_id = asyncio.run(_run(None))
+    text = ""
+    session_id = None
+    last_error: Optional[BaseException] = None
+    for attempt in range(3):
+        try:
+            text, session_id = asyncio.run(_run(resume_id if attempt == 0 else None))
+            last_error = None
+            break
+        except Exception as e:                       # noqa: BLE001 - reported below
+            last_error = e
+            _region_sessions.pop(session_key, None)
+            resume_id = None
+            if attempt < 2:
+                time.sleep(2 * (attempt + 1))
+    if last_error is not None:
+        raise last_error
 
     if session_id:
         _region_sessions[session_key] = session_id
@@ -1187,3 +1198,107 @@ def call_llm(
     # Direct mode's only failure here is "the model never edited the file" —
     # report it as the no-op ("") the controller feeds back, not as garbage output.
     return ("" if direct_mode else None), current
+
+
+# ---------------------------------------------------------------------------
+# Dependence review (--llm-deps)
+# ---------------------------------------------------------------------------
+
+_SYSTEM_DEPS = textwrap.dedent("""\
+    You are reviewing DiscoPoP's STATIC dependence analysis of C/C++ code.
+
+    Static analysis is over-approximate by construction: it reports a dependence
+    whenever it cannot PROVE the absence of one.  For code that was just
+    rewritten there is no profiling data to settle the question, so each
+    reported dependence is either real or an artefact of what the analysis
+    could not prove.
+
+    Every dependence below is one DiscoPoP names as the reason it will not
+    parallelize a loop, and every one comes from STATIC analysis — anything it
+    actually observed running is not shown to you and is not up for discussion.
+    You are given the variable, the loop it blocks, and the two source lines.
+    Decide:
+
+      REAL      the dependence genuinely occurs at run time — a value written in
+                one iteration is read in another, so the loop cannot run its
+                iterations in parallel
+      SPURIOUS  it cannot occur — the accesses are to disjoint memory, or they
+                never overlap between iterations, or the "dependence" is on a
+                location each iteration writes before reading (which
+                privatization handles)
+
+    Two things are already handled and will not be asked about, so do not reason
+    as if they were the issue: the loop's own induction variable, and variables
+    declared inside the loop body.
+
+    Judge only what the code shows.  If you cannot tell, answer REAL: a
+    dependence wrongly called spurious produces a racy parallel loop, while one
+    wrongly called real only costs a missed parallelization.
+
+    Answer with one line per dependence and nothing else:
+
+        <number>: REAL|SPURIOUS - <at most 15 words of reason>
+""")
+
+_DEP_VERDICT_RE = re.compile(r"^\s*(\d+)\s*[:.]\s*(REAL|SPURIOUS)\b[\s-]*(.*)$",
+                             re.IGNORECASE | re.MULTILINE)
+
+
+def review_dependences(
+    items: List[Dict[str, Any]],
+    code: str,
+    model: str,
+    api_key: Optional[str] = None,
+    provider: str = "anthropic",
+    api_base: Optional[str] = None,
+    verbose: bool = False,
+) -> Dict[int, Tuple[bool, str]]:
+    """Ask the model which of these static dependences are real.
+
+    Returns {index: (is_real, reason)}.  An item the model does not answer for
+    is absent from the result, and the caller must treat that as REAL — silence
+    is not permission.
+    """
+    if not items:
+        return {}
+
+    lines = [
+        "Here is the code under review:",
+        "",
+        "```cpp",
+        code,
+        "```",
+        "",
+        f"DiscoPoP reports {len(items)} static dependence(s) blocking "
+        f"parallelization of the lines that were just rewritten:",
+        "",
+    ]
+    for i, it in enumerate(items, 1):
+        carried = " (loop-carried)" if it.get("loop_carried") else ""
+        loop = f", blocking the loop at lines {it['loop']}" if it.get("loop") else ""
+        lines.append(
+            f"{i}. {it['dep_type']} on `{it['var']}`{carried}{loop}: "
+            f"line {it['sink_line']} depends on line {it['source_line']}"
+        )
+        if it.get("sink_text"):
+            lines.append(f"     line {it['sink_line']}: {it['sink_text'].strip()}")
+        if it.get("source_text"):
+            lines.append(f"     line {it['source_line']}: {it['source_text'].strip()}")
+    lines += ["", "Give your verdict for each, one per line."]
+    prompt = "\n".join(lines)
+
+    client = _make_client(provider, api_key, api_base)
+    if verbose:
+        viz.llm_request(model, provider, _SYSTEM_DEPS, prompt, attempt=0)
+    text = _complete(provider, client, model,
+                     [{"role": "user", "content": prompt}], _SYSTEM_DEPS,
+                     session_key="dep-review")
+    if verbose:
+        viz.llm_response(text, kind="dep verdicts")
+
+    out: Dict[int, Tuple[bool, str]] = {}
+    for m in _DEP_VERDICT_RE.finditer(text or ""):
+        idx = int(m.group(1))
+        if 1 <= idx <= len(items):
+            out[idx] = (m.group(2).upper() == "REAL", m.group(3).strip()[:120])
+    return out

@@ -1,0 +1,596 @@
+<title>Dependences Without the Run</title>
+<style>
+  :root {
+    --ground:     #F5F7F7;
+    --panel:      #FFFFFF;
+    --panel-alt:  #EDF2F2;
+    --ink:        #0F1718;
+    --ink-soft:   #4A5B5E;
+    --ink-faint:  #7C8E92;
+    --rule:       #D3DEDE;
+    --rule-soft:  #E6EDED;
+    --dp:         #0B6E77;
+    --dp-wash:    #DBECED;
+    --llm:        #A05611;
+    --llm-wash:   #F7E6D2;
+    --write:      #6A3E9E;
+    --write-wash: #E9E0F4;
+    --ok:         #2B6D4A;
+    --ok-wash:    #DAEAE0;
+    --bad:        #A53341;
+    --bad-wash:   #F3DEE0;
+    --shadow: 0 1px 2px rgba(15,23,24,.06), 0 10px 28px -18px rgba(15,23,24,.30);
+    --mono: ui-monospace, "SF Mono", Menlo, "JetBrains Mono", Consolas, monospace;
+    --body: "Iowan Old Style", "Palatino Linotype", Palatino, Charter, Georgia, serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:#0B1112; --panel:#131B1D; --panel-alt:#192325;
+      --ink:#E2EBEA; --ink-soft:#A0B2B4; --ink-faint:#6F8689;
+      --rule:#25322F; --rule-soft:#1D2829;
+      --dp:#4FC6D0; --dp-wash:#11323A;
+      --llm:#E8A84E; --llm-wash:#392913;
+      --write:#BFA0EA; --write-wash:#231933;
+      --ok:#63C68D; --ok-wash:#15311E;
+      --bad:#EE8494; --bad-wash:#36181D;
+      --shadow:0 1px 2px rgba(0,0,0,.42), 0 12px 32px -20px rgba(0,0,0,.85);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:#0B1112; --panel:#131B1D; --panel-alt:#192325;
+    --ink:#E2EBEA; --ink-soft:#A0B2B4; --ink-faint:#6F8689;
+    --rule:#25322F; --rule-soft:#1D2829;
+    --dp:#4FC6D0; --dp-wash:#11323A;
+    --llm:#E8A84E; --llm-wash:#392913;
+    --write:#BFA0EA; --write-wash:#231933;
+    --ok:#63C68D; --ok-wash:#15311E;
+    --bad:#EE8494; --bad-wash:#36181D;
+    --shadow:0 1px 2px rgba(0,0,0,.42), 0 12px 32px -20px rgba(0,0,0,.85);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--body);
+    font-size: 17px;
+    line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 0 24px 96px;
+    display: flex;
+    flex-direction: column;
+    gap: 56px;
+  }
+
+  header.mast {
+    padding: 76px 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    max-width: 64ch;
+  }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    letter-spacing: .17em;
+    text-transform: uppercase;
+    color: var(--dp);
+  }
+  h1 {
+    margin: 0;
+    font-size: clamp(38px, 5.4vw, 60px);
+    line-height: 1.04;
+    letter-spacing: -.021em;
+    font-weight: 600;
+    text-wrap: balance;
+  }
+  .standfirst { margin: 0; font-size: 19.5px; color: var(--ink-soft); text-wrap: pretty; }
+  .standfirst strong { color: var(--ink); font-weight: 600; }
+
+  section { display: flex; flex-direction: column; gap: 22px; }
+  h2 {
+    margin: 0;
+    font-size: 15px;
+    font-family: var(--mono);
+    font-weight: 600;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: var(--ink);
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+  }
+  h2::before {
+    content: attr(data-n);
+    color: var(--dp);
+    font-size: 12px;
+    letter-spacing: .1em;
+  }
+  h2 + p, .lede { margin: 0; max-width: 68ch; color: var(--ink-soft); }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 26px;
+    padding: 16px 20px;
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    border-radius: 10px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--ink-soft);
+  }
+  .legend span { display: inline-flex; align-items: center; gap: 9px; }
+  .swatch { width: 13px; height: 13px; border-radius: 3px; border: 1.5px solid; flex: none; }
+  .s-dp    { background: var(--dp-wash);    border-color: var(--dp); }
+  .s-llm   { background: var(--llm-wash);   border-color: var(--llm); }
+  .s-write { background: var(--write-wash); border-color: var(--write); }
+  .s-ctl   { background: var(--panel-alt);  border-color: var(--ink-faint); }
+  .s-term  { background: var(--ok-wash);    border-color: var(--ok); }
+
+  /* ---- diagram ---------------------------------------------------------
+     Styled through classes rather than presentation attributes: var() is
+     unreliable inside attributes like fill="", but works everywhere here. */
+  .dgm text { font-family: var(--mono); fill: var(--ink); }
+  .dgm .n       { stroke-width: 2; }
+  .dgm .n.dp    { fill: var(--dp-wash);    stroke: var(--dp); }
+  .dgm .n.llm   { fill: var(--llm-wash);   stroke: var(--llm); }
+  .dgm .n.wr    { fill: var(--write-wash); stroke: var(--write); }
+  .dgm .n.ok    { fill: var(--ok-wash);    stroke: var(--ok); }
+  .dgm .n.bad   { fill: var(--bad-wash);   stroke: var(--bad); }
+  .dgm .n.ctl   { fill: var(--panel-alt);  stroke: var(--ink-faint); stroke-width: 1.8; }
+  .dgm .n.dia   { fill: var(--panel);      stroke: var(--ink-faint); stroke-width: 1.8; }
+
+  .dgm .h { font-size: 12px;   font-weight: 600; }
+  .dgm .m { font-size: 11px; }
+  .dgm .b { font-size: 10.5px; fill: var(--ink-soft); }
+  .dgm .f { font-size: 10.5px; fill: var(--ink-faint); }
+  .dgm .d { font-size: 11.5px; }
+  .dgm .e { font-size: 11px; }
+
+  .dgm .c-dp    { fill: var(--dp); }
+  .dgm .c-llm   { fill: var(--llm); }
+  .dgm .c-wr    { fill: var(--write); }
+  .dgm .c-ok    { fill: var(--ok); }
+  .dgm .c-bad   { fill: var(--bad); }
+  .dgm .c-ink   { fill: var(--ink); }
+  .dgm .c-faint { fill: var(--ink-faint); }
+
+  .dgm .edge     { fill: none; stroke-width: 1.6; stroke: var(--ink-faint); color: var(--ink-faint); }
+  .dgm .edge-ok  { fill: none; stroke-width: 1.6; stroke: var(--ok);  color: var(--ok);  stroke-dasharray: 6 4; }
+  .dgm .edge-bad { fill: none; stroke-width: 1.6; stroke: var(--bad); color: var(--bad); stroke-dasharray: 6 4; }
+  .dgm .hair     { stroke: var(--dp); stroke-width: 1; opacity: .38; }
+
+  figure { margin: 0; display: flex; flex-direction: column; gap: 16px; }
+  .canvas {
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    padding: 24px 20px;
+    overflow-x: auto;
+  }
+  .canvas svg { display: block; width: 100%; min-width: 720px; height: auto; }
+  figcaption { font-size: 15px; color: var(--ink-soft); max-width: 74ch; text-wrap: pretty; }
+  figcaption strong { color: var(--ink); font-weight: 600; }
+
+  .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(268px, 1fr)); gap: 20px; }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    border-left: 3px solid var(--dp);
+    border-radius: 10px;
+    padding: 20px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+  }
+  .card.llm   { border-left-color: var(--llm); }
+  .card.write { border-left-color: var(--write); }
+  .card h3 {
+    margin: 0;
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: var(--dp);
+    font-weight: 600;
+  }
+  .card.llm h3   { color: var(--llm); }
+  .card.write h3 { color: var(--write); }
+  .card p { margin: 0; font-size: 15.5px; color: var(--ink-soft); }
+  .card p strong { color: var(--ink); font-weight: 600; }
+
+  table { border-collapse: collapse; width: 100%; font-size: 15px; }
+  caption {
+    text-align: left;
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    padding-bottom: 10px;
+  }
+  th, td { text-align: left; padding: 11px 14px; border-bottom: 1px solid var(--rule-soft); vertical-align: top; }
+  thead th {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    font-weight: 600;
+    border-bottom: 1px solid var(--rule);
+  }
+  tbody td:first-child { font-family: var(--mono); font-size: 13px; color: var(--ink); white-space: nowrap; }
+  tbody tr:last-child td { border-bottom: none; }
+  .tag {
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 2px 7px;
+    border-radius: 4px;
+    border: 1px solid;
+    white-space: nowrap;
+  }
+  .t-skip { color: var(--ink-faint); border-color: var(--rule); background: var(--panel-alt); }
+  .t-run  { color: var(--ok); border-color: var(--ok); background: var(--ok-wash); }
+
+  code { font-family: var(--mono); font-size: .88em; background: var(--panel-alt); padding: 1px 5px; border-radius: 4px; }
+
+  .note {
+    border-left: 3px solid var(--dp);
+    background: var(--dp-wash);
+    padding: 18px 22px;
+    border-radius: 0 10px 10px 0;
+    font-size: 16px;
+    color: var(--ink);
+  }
+  .note p { margin: 0; }
+  .note p + p { margin-top: 10px; }
+
+  footer { border-top: 1px solid var(--rule); padding-top: 22px; font-family: var(--mono); font-size: 12px; color: var(--ink-faint); }
+
+  @media (max-width: 640px) {
+    body { font-size: 16px; }
+    .wrap { padding: 0 18px 72px; gap: 44px; }
+    header.mast { padding-top: 52px; }
+  }
+</style>
+<style>
+  /* companion page: the --llm-pragmas branch */
+  .dgm .band {
+    fill: var(--llm-wash); stroke: var(--llm); stroke-width: 1;
+    stroke-dasharray: 5 5; opacity: .55;
+  }
+  .dgm .colhead { font-size: 11.5px; letter-spacing: .09em; font-weight: 600; }
+  .card.ok { border-left-color: var(--ok); }
+  .card.ok h3 { color: var(--ok); }
+  .note.warn { border-left-color: var(--llm); background: var(--llm-wash); }
+  .runs { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+  .run {
+    background: var(--panel); border: 1px solid var(--rule); border-radius: 10px;
+    padding: 18px 20px; display: flex; flex-direction: column; gap: 10px;
+  }
+  .run h3 {
+    margin: 0; font-family: var(--mono); font-size: 12px; letter-spacing: .06em;
+    text-transform: uppercase; font-weight: 600; color: var(--ink);
+    display: flex; align-items: center; gap: 9px;
+  }
+  .run p { margin: 0; font-size: 15px; color: var(--ink-soft); }
+  .run .num {
+    font-family: var(--mono); font-size: 26px; color: var(--ink);
+    font-variant-numeric: tabular-nums; letter-spacing: -.01em;
+  }
+  .run .num small { font-size: 13px; color: var(--ink-faint); letter-spacing: .04em; }
+  ul.tight { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 7px; color: var(--ink-soft); }
+  ul.tight strong { color: var(--ink); font-weight: 600; }
+  ul.tight li { max-width: 72ch; }
+</style>
+
+<div class="wrap">
+
+  <header class="mast">
+    <div class="eyebrow">DiscoPoP agentic controller &#183; --fast-refresh</div>
+    <h1>Dependences Without the Run</h1>
+    <p class="standfirst">
+      Re-profiling after every rewrite costs 8&#8211;12 s, and the part that scales badly is the
+      instrumented run &#8212; 17&#215; native on a 104M-operation kernel. Everything else DiscoPoP
+      needs is static. So skip the run and <strong>translate the previous one&#8217;s observed
+      dependences</strong> onto the new code instead.
+    </p>
+  </header>
+
+  <section>
+    <h2 data-n="01">Where the time actually goes</h2>
+    <p>
+      Measured on this machine, and the answer depends on the program &#8212; which is why the
+      feature is a flag and not the default.
+    </p>
+    <div class="canvas">
+      <table>
+        <caption>one re-profile, by step</caption>
+        <thead><tr><th>step</th><th>example4 (513 elements)</th><th>array_accumulator (104M ops)</th><th>needs the program to run?</th></tr></thead>
+        <tbody>
+          <tr><td>discopop_cxx</td><td>1.80 s</td><td>1.06 s</td><td>no</td></tr>
+          <tr><td>instrumented ./a.out</td><td>0.37 s</td><td><strong>7.91 s</strong> &#8212; 17&#215; native</td><td><strong>yes</strong></td></tr>
+          <tr><td>discopop_explorer</td><td><strong>6.49 s</strong></td><td>3.45 s</td><td>no</td></tr>
+          <tr><td>total</td><td>8.67 s</td><td>12.41 s</td><td></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="lede">
+      On a tiny program the explorer dominates and skipping the run saves 4%. On a
+      compute-heavy one the run dominates and skipping it saves 64% &#8212; and that multiplier
+      grows with memory traffic, so the saving is largest on exactly the programs that are
+      most painful to profile.
+    </p>
+  </section>
+
+  <section>
+    <h2 data-n="02">What each step actually produces</h2>
+    <p>
+      This is the fact the whole feature rests on, and it is checkable: after
+      <code>discopop_cxx</code> and <strong>before</strong> <code>./a.out</code> has ever run,
+      <code>.discopop/profiler/</code> already holds a complete <code>Data.xml</code>.
+    </p>
+    <div class="cols">
+      <div class="card">
+        <h3>from the compile &#183; free</h3>
+        <p>
+          <code>Data.xml</code> (regions, CUs, loops, call sites) &#183;
+          <code>static_dependencies.txt</code> &#183;
+          <code>instructionID_to_lineID_mapping.txt</code> &#183;
+          <code>loop_meta.txt</code> &#183; <code>ast_dump.json</code>
+        </p>
+      </div>
+      <div class="card llm">
+        <h3>from the run &#183; the expensive half</h3>
+        <p>
+          <code>dynamic_dependencies.txt</code> &#8212; the <strong>observed</strong> dependences &#183;
+          <code>memory_regions.txt</code> &#183; and the loop trip counts that fill
+          <code>loop_counter_output.txt</code>
+        </p>
+      </div>
+      <div class="card write">
+        <h3>carried forward</h3>
+        <p>
+          Everything in the second column, <strong>translated</strong> onto the new
+          instruction numbering. What cannot be translated with certainty is dropped, so the
+          rewritten code ends up covered by static dependences alone.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2 data-n="03">The flow</h2>
+    <p>
+      One decision after each kept rewrite, and one full re-profile before Phase B. No
+      decision rests on carried-forward data for longer than a level.
+    </p>
+
+    <div class="legend">
+      <span><i class="swatch s-dp"></i> DiscoPoP runs</span>
+      <span><i class="swatch s-ctl"></i> the agent decides</span>
+      <span><i class="swatch s-llm"></i> the LLM is consulted</span>
+      <span><i class="swatch s-term"></i> measured data</span>
+    </div>
+
+    <figure>
+      <div class="canvas">
+        <svg class="dgm" viewBox="0 0 1140 1010" role="img"
+             aria-label="Flowchart of the fast refresh. After a rewrite is kept, the agent asks whether a deeper level will restructure from this profile. If yes, a full re-profile runs: instrument, run the instrumented binary, explore. If no, a fast refresh runs: compile only, then the previous run's dependences are translated onto the new instruction numbering, optionally reviewed by the LLM for the rewritten lines, then the explorer runs. Both paths lead back to the candidate queue, and one full re-profile happens before Phase B.">
+          <defs>
+            <marker id="ah3" viewBox="0 0 10 10" refX="9" refY="5"
+                    markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/>
+            </marker>
+          </defs>
+
+          <rect class="band" x="596" y="300" width="510" height="472" rx="14"/>
+
+          <g class="edge" marker-end="url(#ah3)">
+            <line x1="570" y1="88" x2="570" y2="118"/>
+            <line x1="300" y1="412" x2="300" y2="442"/>
+            <line x1="300" y1="530" x2="300" y2="560"/>
+            <line x1="850" y1="412" x2="850" y2="442"/>
+            <line x1="850" y1="530" x2="850" y2="560"/>
+            <line x1="850" y1="648" x2="850" y2="678"/>
+            <line x1="570" y1="856" x2="570" y2="886"/>
+          </g>
+          <g class="edge" marker-end="url(#ah3)">
+            <path d="M 570 204 L 570 250 L 300 250 L 300 288"/>
+            <path d="M 570 204 L 570 250 L 850 250 L 850 288"/>
+            <path d="M 300 648 L 300 700 L 570 700 L 570 830"/>
+            <path d="M 850 772 L 850 810 L 570 810 L 570 830"/>
+          </g>
+          <text class="e c-faint" x="424" y="244" text-anchor="middle">yes &#8212; it needs measured data</text>
+          <text class="e c-llm"   x="726" y="244" text-anchor="middle">no</text>
+
+          <rect class="n ok" x="420" y="32" width="300" height="56" rx="9"/>
+          <text class="h c-ok" x="436" y="56">A REWRITE PASSED THE GATE</text>
+          <text class="b" x="436" y="74">and has been written to the file</text>
+
+          <rect class="n dia" x="420" y="118" width="300" height="86" rx="9"/>
+          <text class="h c-ink" x="436" y="144">WILL DEPTH+1 RESTRUCTURE FROM THIS?</text>
+          <text class="b" x="436" y="164">depth + 1 &#8804; --restructure-depth. New regions</text>
+          <text class="b" x="436" y="182">appear here, and deeper passes work on them</text>
+
+          <text class="colhead c-faint" x="110" y="276">FULL RE-PROFILE</text>
+          <text class="colhead c-llm"   x="620" y="276">FAST REFRESH</text>
+
+          <rect class="n dp" x="110" y="288" width="380" height="124" rx="9"/>
+          <text class="h c-dp" x="126" y="312">1 &#183; INSTRUMENT &#183; 2 &#183; RUN &#183; 3 &#183; EXPLORE</text>
+          <text class="b" x="126" y="334">discopop_cxx &#8594; ./a.out &#8594; discopop_explorer</text>
+          <text class="b" x="126" y="352">the instrumented binary executes the whole</text>
+          <text class="b" x="126" y="370">workload, 17&#215; native on the heavy case</text>
+          <text class="b c-dp" x="126" y="394">8.7&#8211;12.4 s</text>
+
+          <rect class="n ok" x="110" y="442" width="380" height="88" rx="9"/>
+          <text class="h c-ok" x="126" y="466">MEASURED DEPENDENCES</text>
+          <text class="b" x="126" y="486">every dependence observed, every trip count</text>
+          <text class="b" x="126" y="504">real. Nothing carried, nothing inferred</text>
+
+          <rect class="n ctl" x="110" y="560" width="380" height="88" rx="9"/>
+          <text class="h c-ink" x="126" y="584">QUEUE REBUILT, NEW REGIONS FOUND</text>
+          <text class="b" x="126" y="604">survivors re-matched by content fingerprint,</text>
+          <text class="b" x="126" y="622">new ones enqueued at depth + 1</text>
+
+          <rect class="n dp" x="620" y="288" width="460" height="124" rx="9"/>
+          <text class="h c-dp" x="636" y="312">1 &#183; COMPILE ONLY</text>
+          <text class="b" x="636" y="334">discopop_cxx alone. Fresh Data.xml, fresh static</text>
+          <text class="b" x="636" y="352">dependences, fresh instruction mapping for the</text>
+          <text class="b" x="636" y="370">new code. The program is never executed</text>
+          <text class="b c-dp" x="636" y="394">~1&#8211;2 s</text>
+
+          <rect class="n wr" x="620" y="442" width="460" height="88" rx="9"/>
+          <text class="h c-wr" x="636" y="466">2 &#183; TRANSLATE THE PREVIOUS RUN</text>
+          <text class="b" x="636" y="486">observed dependences re-pointed at the new</text>
+          <text class="b" x="636" y="504">instruction ids. Untranslatable &#8594; DROPPED</text>
+
+          <rect class="n llm" x="620" y="560" width="460" height="88" rx="9"/>
+          <text class="h c-llm" x="636" y="584">3 &#183; --llm-deps &#183; optional</text>
+          <text class="b" x="636" y="604">the model judges the static dependences in the</text>
+          <text class="b" x="636" y="622">lines it just wrote: REAL or SPURIOUS</text>
+
+          <rect class="n dp" x="620" y="678" width="460" height="94" rx="9"/>
+          <text class="h c-dp" x="636" y="702">4 &#183; EXPLORE</text>
+          <text class="b" x="636" y="722">discopop_explorer, on carried-forward dynamic</text>
+          <text class="b" x="636" y="740">deps + fresh static deps. Same analysis, same</text>
+          <text class="b" x="636" y="758">patterns, one input it did not measure itself</text>
+
+          <rect class="n ctl" x="380" y="830" width="380" height="66" rx="9"/>
+          <text class="h c-ink" x="396" y="854">BACK TO THE CANDIDATE QUEUE</text>
+          <text class="b" x="396" y="874">Phase A continues at this depth</text>
+
+          <rect class="n ok" x="380" y="916" width="380" height="66" rx="9"/>
+          <text class="h c-ok" x="396" y="940">ONE FULL RE-PROFILE BEFORE PHASE B</text>
+          <text class="b" x="396" y="960">it annotates from measured data, not carried</text>
+        </svg>
+      </div>
+      <figcaption>
+        The rule in one line: <strong>a fast refresh is allowed to relocate the queue and find
+        new regions, never to be the basis of a deeper restructuring or of Phase B.</strong>
+        If a fast refresh fails any of its own checks, the agent falls back to a full
+        re-profile rather than proceeding on doubtful data.
+      </figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <h2 data-n="04">The translation is the part that can go wrong quietly</h2>
+    <p>
+      DiscoPoP numbers instructions from a single counter in module order, so an edit
+      renumbers everything after it &#8212; verified: an edit inside <code>bubble_sort</code>
+      diverged the numbering at instruction 19 and renumbered all of <code>main</code> behind
+      it. A dependence re-pointed at the wrong instruction does not fail; it silently
+      misinforms the analysis. Four things had to be got right.
+    </p>
+    <ul class="tight">
+      <li><strong>The obvious key does not work.</strong> <code>instructionID_to_lineID_mapping.txt</code> maps an instruction to <code>file:line:col</code>, but many-to-one &#8212; ids 3, 6, 9 and 12 all map to <code>1:6:0</code> &#8212; so it cannot be inverted. And about a fifth of instructions (36 of 178) have no position at all.</li>
+      <li><strong>What works is alignment.</strong> Both files are the same program&#8217;s instructions in order, so old and new are aligned as sequences after rewriting the old positions into new-line coordinates. Positionless entries then match by context, the way a blank line does in a text diff. Instructions in rewritten code are given a token that can never match.</li>
+      <li><strong><code>67@43</code> is not line 43.</strong> The number after the <code>@</code> is callpath state &#8212; instruction 67 sits at line 11 &#8212; and <code>parser.py</code> strips it before use. So the instruction id is translated and the state travels untouched.</li>
+      <li><strong>Static dependences live in the dynamic file too</strong>, written with a bare instruction id and an <code>S-</code> memory region (50 of 114 lines here). They are dropped rather than translated: the compile has just regenerated all of them, and the explorer reads that file separately.</li>
+    </ul>
+    <div class="note">
+      <p>
+        Also verified, and load-bearing: instruction numbering is <strong>deterministic</strong>
+        &#8212; two compiles of the same file produce byte-identical mapping files. Static
+        memory-region ids are <strong>not</strong> (<code>S-1208730495</code> vs
+        <code>S-1084334991</code> for the same variable), so nothing here matches on them;
+        DiscoPoP&#8217;s own <code>map_static_and_dynamic_dependencies()</code> matches those by
+        variable name.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <h2 data-n="05">Verification</h2>
+    <p>
+      The translation gets its own tests, because its failure mode is silence.
+    </p>
+    <div class="runs">
+      <div class="run">
+        <h3><i class="swatch s-term"></i> identity edit</h3>
+        <div class="num">64/64 <small>lossless</small></div>
+        <p>
+          A comment inserted at the top &#8212; semantically empty, so <em>every</em> observed
+          dependence must survive. It does: 64 of 64 carried, 0 instructions unmatched, 4 of 4
+          trip counts.
+        </p>
+      </div>
+      <div class="run">
+        <h3><i class="swatch s-llm"></i> real rewrite</h3>
+        <div class="num">3/64 <small>and that is correct</small></div>
+        <p>
+          Bubble sort &#8594; odd-even. Nearly every dependence in this program touches
+          <code>arr</code> inside the rewritten function, so 61 are correctly dropped as
+          belonging to code that no longer exists.
+        </p>
+      </div>
+      <div class="run">
+        <h3><i class="swatch s-dp"></i> cross-check</h3>
+        <div class="num">0 wrong <small>of 149</small></div>
+        <p>
+          Every translated dependence is independently re-checked: the instruction it now
+          points at must sit on <strong>identical source text</strong> at the same column. Zero
+          mistranslations across both cases.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2 data-n="06">The gap, and who fills it</h2>
+    <p>
+      Dropping what cannot be translated leaves rewritten code covered by <em>static</em>
+      dependences only. Static analysis reports a dependence whenever it cannot prove there
+      is none, so a freshly written loop is usually blocked by something that does not
+      actually happen &#8212; and there is no dynamic data for new code to settle it.
+    </p>
+    <p class="lede">
+      That matters precisely because a rewrite <strong>creates new regions</strong>, and at
+      depth &gt; 0 those are the regions the agent is supposed to parallelize. Left alone,
+      static caution would keep them sequential forever.
+    </p>
+    <div class="note warn">
+      <p>
+        <strong><code>--llm-deps</code> lets the model discharge them</strong>, and it is worth
+        being plain about what that costs. Everywhere else the agent treats DiscoPoP&#8217;s
+        analysis as ground truth; this is the one place a model&#8217;s claim is allowed into it.
+        A wrong <em>SPURIOUS</em> produces a racy loop.
+      </p>
+      <p>
+        Two rules keep the question narrow, and both were learned by getting them wrong first.
+        Only DiscoPoP&#8217;s own Do-All <strong>blockers</strong> are reviewed &#8212; the first
+        version asked about every static dependence in the rewritten lines, 76 of them on
+        example4, of which 37 were induction variables and 3 were body-locals that the agent
+        already knows are never blockers. It discharged 70 of 76, with at least one visibly
+        wrong justification. Asking a model forty questions whose answers are already known is
+        how it learns to answer carelessly; targeted at blockers, the same run asks
+        <strong>zero</strong> and reaches the same result. And only <strong>static-origin</strong>
+        blockers are reviewable: a dependence DiscoPoP actually observed is not up for
+        discussion.
+      </p>
+      <p>
+        What contains the rest: the model is told to answer REAL when unsure, since a
+        dependence wrongly called real costs only a missed parallelization; every judgement is
+        written to <code>llm_deps.json</code>; discharged dependences are matched back to the
+        exact lines that produced them and the explorer re-run, restoring the original
+        analysis if it then fails; and a pragma resting on one still has to pass
+        ThreadSanitizer, the byte-identical output check, and the speedup gate.
+      </p>
+    </div>
+  </section>
+
+  <footer>
+    fast_refresh.py (line map, alignment, remap) &#183; controller.py (_reprofil_fast,
+    _llm_dep_review, the depth rule) &#183; l3_llm.py (review_dependences) &#183; args.py
+    (--fast-refresh, --llm-deps)
+  </footer>
+
+</div>
