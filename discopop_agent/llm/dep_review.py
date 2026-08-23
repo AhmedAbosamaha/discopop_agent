@@ -66,14 +66,14 @@ def review_dependences(
     for i, it in enumerate(items, 1):
         carried = " (loop-carried)" if it.get("loop_carried") else ""
         loop = f", blocking the loop at lines {it['loop']}" if it.get("loop") else ""
-        lines.append(
-            f"{i}. {it['dep_type']} on `{it['var']}`{carried}{loop}: "
-            f"line {it['sink_line']} depends on line {it['source_line']}"
-        )
-        if it.get("sink_text"):
+        where = (f"line {it['sink_line']} depends on line {it['source_line']}"
+                 if it.get("sink_line") and it.get("source_line")
+                 else "carried between iterations")
+        lines.append(f"{i}. {it['dep_type']} on `{it['var']}`{carried}{loop}: {where}")
+        if it.get("loop_lines"):
+            lines.append(it["loop_lines"])
+        elif it.get("sink_text"):
             lines.append(f"     line {it['sink_line']}: {it['sink_text'].strip()}")
-        if it.get("source_text"):
-            lines.append(f"     line {it['source_line']}: {it['source_text'].strip()}")
     lines += ["", "Give your verdict for each, one per line."]
     prompt = "\n".join(lines)
 
@@ -149,19 +149,48 @@ def _llm_dep_review(
         except (TypeError, ValueError):
             return None
 
+    # The new detector records the LOOP a dependence blocks, its variable and
+    # its memory region — but writes the string "None" for both line fields.
+    # Reading them as lines produced (type, var, None, None), a key that matches
+    # nothing, which is why every discharge used to be silently discarded.  The
+    # loop and the memory region are what is actually there, so they are what
+    # gets used: the loop to describe the dependence, the memory region to find
+    # it again.
     items: List[Dict[str, Any]] = []
+    seen: Set[Tuple[Any, ...]] = set()
     for b in blockers:
-        snk, src = _ln(b.get("sink_line")), _ln(b.get("source_line"))
+        dep_type = str(b.get("dep_type", "?")).split(".")[-1]
+        var = str(b.get("var_name", "?"))
+        region = str(b.get("memory_region", "") or "")
         ls, le = b.get("loop_start"), b.get("loop_end")
+        # The detector emits one record per blocking edge, so the same
+        # (variable, loop) pair repeats — asking about it four times invites
+        # four inconsistent answers.
+        key = (dep_type, var, region, ls, le)
+        if key in seen:
+            continue
+        seen.add(key)
+        snk, src = _ln(b.get("sink_line")), _ln(b.get("source_line"))
+        loop_lines = ""
+        if isinstance(ls, int):
+            end = le if isinstance(le, int) else ls
+            body_end = min(max(end, ls) + 6, len(new_lines))
+            loop_lines = "\n".join(f"{n:6d}  {new_lines[n - 1]}"
+                                    for n in range(ls, body_end + 1)
+                                    if 1 <= n <= len(new_lines))
         items.append({
-            "dep_type": str(b.get("dep_type", "?")).split(".")[-1],
-            "var": str(b.get("var_name", "?")),
+            "dep_type": dep_type,
+            "var": var,
+            "memory_region": region,
             "sink_line": snk,
             "source_line": src,
             "sink_text": new_lines[snk - 1] if snk and snk <= len(new_lines) else "",
             "source_text": new_lines[src - 1] if src and src <= len(new_lines) else "",
             "loop": f"{ls}-{le}" if ls is not None else "",
-            "loop_carried": snk is not None and src is not None and src >= snk,
+            "loop_lines": loop_lines,
+            # Every blocker here is one the detector says prevents a Do-All, so
+            # it is loop-carried with respect to that loop by construction.
+            "loop_carried": True,
         })
 
     lo = max(min(rewritten) - 3, 1)
@@ -200,18 +229,26 @@ def _llm_dep_review(
         key = fwd.get(token.split("@")[0])
         return key[1] if key else None
 
-    targets = {(d["dep_type"], d["var"], d["sink_line"], d["source_line"])
-               for d in discharged}
+    # (type, variable, memory region) is the join: all three appear on both
+    # sides, and the memory region pins one specific instance of the variable.
+    # The dependence must also sit in the lines that were rewritten — the only
+    # lines this review was asked about.
+    targets = {(d["dep_type"], d["var"], d["memory_region"])
+               for d in discharged if d.get("memory_region")}
+    rewritten_set = set(rewritten)
     raw_lines = static_file.read_text().splitlines()
     keep: List[str] = []
     removed = 0
     for raw in raw_lines:
         f = raw.split()
         if len(f) >= 4 and f[1] == "NOM" and "|" in f[3]:
-            src_tok, _, var_part = f[3].partition("|")
-            key = (f[2], var_part.split("(")[0], _line_of(f[0]),
-                   _line_of(src_tok) if src_tok not in ("*", "0@0") else None)
-            if key in targets:
+            _src_tok, _, var_part = f[3].partition("|")
+            var = var_part.split("(")[0]
+            region = var_part[var_part.find("(") + 1:var_part.rfind(")")] \
+                if "(" in var_part else ""
+            sink_line = _line_of(f[0])
+            if ((f[2], var, region) in targets
+                    and (sink_line is None or sink_line in rewritten_set)):
                 removed += 1
                 continue
         keep.append(raw)

@@ -11,6 +11,7 @@ that are supposed to be deterministic, and it must pass on every commit:
   * fast refresh      an edit that changes nothing loses no dependence data,
                       and a refresh reaches the same conclusions as a full re-profile
   * clause checks     the pragma defects that compile, run and print the right answer
+  * dep review        a discharged blocker actually removes dependence lines
   * TSan barrier      a real race is caught; an artefact of the OpenMP runtime is not
 
 Run it from the repository root:
@@ -391,6 +392,7 @@ _STENCIL_ORIG = """    for (int s = 0; s < SWEEPS; s++) {
         }
     }
 """
+
 _STENCIL_REWRITE = """    static double b[N];
     for (int s = 0; s < SWEEPS; s++) {
         for (int i = 0; i < N - 1; i++) {
@@ -402,6 +404,8 @@ _STENCIL_REWRITE = """    static double b[N];
         for (int i = 0; i < N; i++) a[i] = b[i];
     }
 """
+
+
 def _patterns(dp: Path) -> Optional[List[Tuple[str, str, str, bool, str]]]:
     f = dp / "explorer" / "patterns.json"
     if not f.exists():
@@ -414,6 +418,8 @@ def _patterns(dp: Path) -> Optional[List[Tuple[str, str, str, bool, str]]]:
             out.append((kind, str(e.get("start_line")), str(e.get("end_line")),
                         bool(e.get("applicable_pattern")), (e.get("pragma") or "").strip()))
     return sorted(out)
+
+
 def check_fast_refresh_equivalence(work: Path) -> Result:
     """A fast refresh must reach the SAME conclusions as a full re-profile.
 
@@ -478,12 +484,85 @@ def check_fast_refresh_equivalence(work: Path) -> Result:
                   f"identical DiscoPoP conclusions ({len(full_p)} patterns) — {note}")
 
 
+def check_dep_review(work: Path) -> Result:
+    """A discharged blocker must actually remove dependence lines.
+
+    The failure this guards against was silent and total: the match key was
+    built from the blocker's `sink_line` / `source_line`, which the detector
+    writes as the STRING "None", so every verdict matched nothing and the whole
+    feature was an expensive no-op.  Nothing looked wrong — the model answered,
+    the log said "judged spurious", and the analysis was untouched.
+
+    The model is stubbed to call everything impossible, so this tests the
+    plumbing, not any model's judgement.
+    """
+    src_name = "prefix_sum.cpp"
+    d = work / "review"
+    d.mkdir(parents=True, exist_ok=True)
+    shutil.copy(_CASES / src_name, d / src_name)
+    ok, err = _profile(d, src_name, hotspots=False)
+    if not ok:
+        return Result("dependence review", "skip", err)
+
+    static = d / ".discopop" / "profiler" / "static_dependencies.txt"
+    if not static.exists():
+        return Result("dependence review", "skip", "no static_dependencies.txt")
+    blockers = d / ".discopop" / "explorer" / "doall_prevented.json"
+    import json
+    if not blockers.exists() or not json.loads(blockers.read_text()):
+        return Result("dependence review", "skip", "this case produced no blockers")
+
+    from ..llm import dep_review as dr
+    from ..args import AgentArguments
+
+    before = len(static.read_text().splitlines())
+    # Stub the model's verdicts and the explorer re-run: this check is about the
+    # plumbing between a verdict and the dependence file, not about either.
+    real_review = dr.review_dependences
+    real_run = dr.subprocess.run                      # type: ignore[attr-defined]
+    setattr(dr, "review_dependences", lambda items, code, model, **kw: {
+        i: (False, "stub") for i in range(1, len(items) + 1)})
+    setattr(dr.subprocess, "run", lambda *a, **k: type(  # type: ignore[attr-defined]
+        "R", (), {"returncode": 0, "stdout": "", "stderr": ""})())
+    try:
+        src = d / src_name
+        old_text = src.read_text()
+        lines = old_text.splitlines()
+        # mark the loop body as rewritten, which is the scope the review covers
+        new_text = "\n".join(l + ("  // touched" if 18 <= i + 1 <= 23 else "")
+                             for i, l in enumerate(lines)) + "\n"
+        src.write_text(new_text)
+        out = d / "out"
+        out.mkdir(exist_ok=True)
+        args = AgentArguments(
+            discopop_dir=str(d / ".discopop"), source_file=str(src), budget=1,
+            model="haiku", api_key=None, provider="claude-agent-sdk", api_base=None,
+            lambda_penalty=1.0, min_workload=0.0, output_dir=str(out), dry_run=False,
+            edit_mode="direct", llm_pragmas=True, fast_refresh=True, llm_deps=True,
+            hotspots=False, min_impact=0.0, restructure_depth=0, require_speedup=False,
+            build_retries=2, apply_patches=True, min_measured_speedup=1.1,
+            check_inputs=[], reprofil_args=[], verbose=False)
+        note = dr._llm_dep_review(args, d / ".discopop", old_text, new_text, out, 1)
+    finally:
+        setattr(dr, "review_dependences", real_review)
+        setattr(dr.subprocess, "run", real_run)       # type: ignore[attr-defined]
+
+    after = len(static.read_text().splitlines())
+    if after >= before:
+        return Result("dependence review", "fail",
+                      f"every blocker discharged but no dependence line removed "
+                      f"({before} lines before and after) — {note}")
+    return Result("dependence review", "pass",
+                  f"{before - after} dependence line(s) removed — {note}")
+
+
 _CHECKS: List[Tuple[str, Callable[[Path], Result]]] = [
     ("impact", check_impact_ranking),
     ("min-impact", check_min_impact),
     ("fast-refresh", check_fast_refresh),
     ("fast-refresh-eq", check_fast_refresh_equivalence),
     ("clause", check_clauses),
+    ("dep-review", check_dep_review),
     ("tsan", check_tsan_barrier),
 ]
 
