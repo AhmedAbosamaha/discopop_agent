@@ -207,8 +207,24 @@ def build_candidates(
         if inner:
             c.score = max(o.score for o in inner) * 0.999
 
-    # Highest predicted saving first; then the OUTERMOST region, so an enclosing
-    # loop is attempted before the loop nested inside it whose time it contains.
-    candidates.sort(key=lambda c: (-c.score,
-                                   -(c.region.end_line - c.region.start_line)))
+    # Measured regions come first, then the rest.  Without this the sort
+    # compares two incompatible scales: a measured region scores in SECONDS
+    # (0.0003) and an unmeasured one on the log-workload proxy (19.6), so
+    # sorting descending put every unmeasured region ahead of every measured one
+    # — exactly backwards.  And the ordering is not arbitrary: if hotspot
+    # detection ran and did not report a region, that is DiscoPoP's own
+    # measurement saying the region is below its threshold, so ranking it last
+    # is what the evidence supports.  With no measurements at all this term is
+    # constant and the proxy ordering is unchanged.
+    measured_available = impact is not None and impact.available
+
+    def _rank(c: HotspotCandidate) -> Tuple[int, float, int]:
+        unmeasured = 1 if (measured_available and c.impact_seconds is None) else 0
+        # Highest predicted saving first; then the OUTERMOST region, so an
+        # enclosing loop is attempted before the loop nested inside it whose
+        # time it already contains.
+        return (unmeasured, -c.score,
+                -(c.region.end_line - c.region.start_line))
+
+    candidates.sort(key=_rank)
     return candidates

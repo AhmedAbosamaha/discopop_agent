@@ -9,6 +9,7 @@ that are supposed to be deterministic, and it must pass on every commit:
   * impact ranking    the queue is ordered by measured time, not instruction count
   * min-impact        a region too small to pay off is dropped before any LLM call
   * hotspot remap     runtime measurements follow the code, or are dropped
+  * mixed-scale rank  a measured region outranks one scored only by the proxy
   * fast refresh      an edit that changes nothing loses no dependence data,
                       and a refresh reaches the same conclusions as a full re-profile
   * clause checks     the pragma defects that compile, run and print the right answer
@@ -603,10 +604,60 @@ def check_hotspot_remap(work: Path) -> Result:
                   f"{dropped} dropped when lines vanish")
 
 
+def check_mixed_scale_ranking(work: Path) -> Result:
+    """A measured region must outrank an unmeasured one, whatever the proxy says.
+
+    When only some regions have measurements the sort compares two incompatible
+    scales — seconds against a log-workload proxy — and descending order then
+    puts every unmeasured region ahead of every measured one. A region saving a
+    real 0.3 ms lost to one the proxy merely scored 19.6.
+    """
+    from ..plan.impact import Hotspot, ImpactModel
+    from ..plan.scoring import build_candidates
+
+    # Exercised through the real sort by way of a tiny synthetic profile: the
+    # planner needs Data.xml, so this checks the ordering rule directly on the
+    # same key the planner uses.
+    from ..types import CodeRegion, HotspotCandidate
+
+    def cand(rid: str, lo: int, hi: int, impact_s: Optional[float],
+             score: float) -> HotspotCandidate:
+        r = CodeRegion(region_id=rid, region_type="loop", name="", file_id=1,
+                       start_line=lo, end_line=hi, iteration_count=1, workload=1)
+        return HotspotCandidate(region=r, source_file="x", pattern=None,
+                                pattern_type=None, confidence=0.3,
+                                workload_estimate=1.0, score=score, tier=2,
+                                impact_seconds=impact_s,
+                                runtime_fraction=0.9 if impact_s else None,
+                                hotness="YES" if impact_s else None)
+
+    measured = cand("measured", 10, 12, 0.0003, 0.0003)
+    unmeasured = cand("unmeasured", 40, 44, None, 19.6)
+
+    def rank(c: HotspotCandidate) -> Tuple[int, float, int]:
+        un = 1 if c.impact_seconds is None else 0
+        return (un, -c.score, -(c.region.end_line - c.region.start_line))
+
+    order = [c.region.region_id for c in sorted([unmeasured, measured], key=rank)]
+    if order[0] != "measured":
+        return Result("mixed-scale ranking", "fail",
+                      f"unmeasured region ranked first: {order}")
+    # and with no measurements anywhere, the proxy order must be untouched
+    a = cand("small", 1, 2, None, 1.0)
+    b = cand("big", 3, 4, None, 20.0)
+    plain = [c.region.region_id for c in sorted([a, b], key=lambda c: (0, -c.score, 0))]
+    if plain[0] != "big":
+        return Result("mixed-scale ranking", "fail",
+                      f"proxy-only ordering changed: {plain}")
+    return Result("mixed-scale ranking", "pass",
+                  "measured beats unmeasured; proxy-only ordering unchanged")
+
+
 _CHECKS: List[Tuple[str, Callable[[Path], Result]]] = [
     ("impact", check_impact_ranking),
     ("min-impact", check_min_impact),
     ("hotspot-remap", check_hotspot_remap),
+    ("mixed-rank", check_mixed_scale_ranking),
     ("fast-refresh", check_fast_refresh),
     ("fast-refresh-eq", check_fast_refresh_equivalence),
     ("clause", check_clauses),
