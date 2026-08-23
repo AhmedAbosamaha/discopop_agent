@@ -20,11 +20,63 @@ The system is split into four layers plus a controller that ties them together:
 discopop_agent/
 ├── __main__.py      entry point (python -m discopop_agent)
 ├── args.py          CLI argument parsing → AgentArguments
-├── controller.py    orchestration loop (L1 → L2 → L3 → L4)
-├── l1_planner.py    L1: hotspot discovery, scoring, priority queue
-├── l2_evidence.py   L2: evidence collector (deps, source, counters)
-├── l3_llm.py        L3: LLM prompt builder + provider clients (Anthropic / OpenAI-compatible)
-├── l4_validator.py  L4: quality gate (apply / compile / TSan / correctness / speedup)
+├── run.py             the orchestrator: setup → Phase A → Phase B → settle → summary
+├── args.py            the CLI surface (several defaults are computed, see below)
+├── types.py           shared dataclasses
+├── viz.py             terminal rendering
+│
+├── plan/              what to work on, in what order
+│   ├── regions.py       Data.xml → CodeRegion; region_fingerprint (content identity)
+│   ├── scoring.py       build_candidates: rank by time saved, or by the old proxy
+│   └── impact.py        Amdahl model over DiscoPoP's measured hotspots
+│
+├── evidence/          what is known about a region
+│   ├── deps.py          dependence parsing, reductions, static-only variables
+│   ├── context.py       loop nest, calls, trip counts, locals, source span
+│   ├── blockers.py      doall_prevented.json — DiscoPoP's own Do-All blockers
+│   └── package.py       assemble() — the EvidencePackage the LLM sees
+│
+├── llm/               talking to the model
+│   ├── prompts.py       the system prompts, composed from blocks, both modes
+│   ├── render.py        rendering evidence into prompt text
+│   ├── request.py       per-edit-mode request builders
+│   ├── providers.py     anthropic / openai-compat / claude-agent-sdk
+│   ├── diffs.py         extracting and normalising the edit that comes back
+│   ├── client.py        call_llm — format retries, direct-mode conventions
+│   └── dep_review.py    --llm-deps: judging static Do-All blockers
+│
+├── gate/              is a change safe, correct, and worth keeping
+│   ├── toolchain.py     clang, macOS SDK, libarcher, TSAN_OPTIONS
+│   ├── patching.py      apply a diff and build it (incl. hunk-header repair)
+│   ├── timing.py        interleaved speedup measurement, noise floor, baselines
+│   ├── tsan.py          the sanitizer stage + the barrier-artefact analysis
+│   └── validate.py      stage order; _validate_cached is the entry point
+│
+├── pragmas/           reading and writing `#pragma omp`
+│   ├── scope.py         is a name declared / written / read after the loop?
+│   ├── parse.py         loop spans, pragma anchors, touched spans
+│   ├── clauses.py       the two clause rules (DiscoPoP's pragmas and the LLM's)
+│   └── patch.py         re-deriving a pragma patch against the current file
+│
+├── sources/           changing the user's file, reversibly
+│   ├── edits.py         apply to source / in memory / replay a change log
+│   └── snapshots.py     profile snapshot and restore
+│
+├── profiling/         producing and refreshing DiscoPoP data
+│   ├── tools.py         wrapper paths and the venv PATH the explorer needs
+│   ├── runner.py        full re-profile, fast refresh, hotspot measurement
+│   └── fast_refresh.py  translating dependences onto a rebuilt program
+│
+├── phases/            the pipeline
+│   ├── phase_a.py       the restructuring loop + RunState
+│   ├── phase_b.py       annotate, once, from the final profile
+│   ├── settle.py        judge the finished FILE, drop what does not hold up
+│   ├── verdicts.py      did the rewrite achieve anything? + the feedback for it
+│   └── report.py        banner, candidate table, accepted.json
+│
+├── benchmark/         run.py (LLM cases) and test_features.py (deterministic)
+├── tools/             build_archer.sh
+└── docs/              this file, INSTALL.md, FIXES.md, and the flow charts
 └── types.py         shared dataclasses
 ```
 
@@ -60,7 +112,7 @@ source file       ──▶
 
 ## Layer Reference
 
-### L1 — Planner (`l1_planner.py`)
+### Plan — what to work on (`plan/`)
 
 **Purpose:** Discover every profiled region from DiscoPoP's output, match it against detected parallelism patterns, score it, and return a ranked priority queue.
 
@@ -92,7 +144,7 @@ score = c · log₂(1 + W) − λ · 1[tier=2]
 
 ---
 
-### L2 — Evidence Collector (`l2_evidence.py`)
+### Evidence — what is known (`evidence/`)
 
 **Purpose:** Given a candidate region, read DiscoPoP's runtime profiler output and assemble a complete `EvidencePackage` to send to the LLM.
 
@@ -115,11 +167,11 @@ score = c · log₂(1 + W) − λ · 1[tier=2]
 
 **Key design point:** `tier1_failure_reason` is updated after every failed validation attempt. This means each retry gives the LLM a fresh, accurate failure diagnostic — not the same generic message every time.
 
-**Reasoning signals (why they matter):** the array-vs-scalar `kind` tag and the data-sharing classification let the prompt tell the LLM plainly that a loop-carried dep on array elements (e.g. `arr[]`) is *algorithmic* and cannot be removed by renaming/copying the array — steering it away from the common "copy `arr` into `temp`" non-fix. Trip counts expose fine-grained loops (many activations × few iterations) so the LLM prefers coarser parallelism. These are surfaced in the prompt by `l3_llm._fmt_classification`, `_array_dep_note`, `_fmt_trip_counts`, and `_fmt_extra_vars`.
+**Reasoning signals (why they matter):** the array-vs-scalar `kind` tag and the data-sharing classification let the prompt tell the LLM plainly that a loop-carried dep on array elements (e.g. `arr[]`) is *algorithmic* and cannot be removed by renaming/copying the array — steering it away from the common "copy `arr` into `temp`" non-fix. Trip counts expose fine-grained loops (many activations × few iterations) so the LLM prefers coarser parallelism. These are surfaced in the prompt by `llm/render.py`'s `_fmt_classification`, `_array_dep_note`, `_fmt_trip_counts`, and `_fmt_extra_vars`.
 
 ---
 
-### L3 — LLM Engine (`l3_llm.py`)
+### LLM — talking to the model (`llm/`)
 
 **Purpose:** Build a structured prompt from the `EvidencePackage`, call the LLM, and return the edit as a unified diff — whether the model expressed it as a diff, as a rewritten function, or by editing the file itself (see **Edit modes** below).
 
@@ -218,7 +270,7 @@ In `direct` mode (`--provider claude-agent-sdk` only) `call_llm` seeds a per-reg
 
 ---
 
-### L4 — Validator (`l4_validator.py`)
+### Gate — safe, correct, worth it (`gate/`)
 
 **Purpose:** Run a three-stage quality gate on every diff before it is applied to the real source file.
 
@@ -249,7 +301,7 @@ Compiles with TSan and OpenMP enabled, then runs the binary. A `WARNING: ThreadS
 
 ---
 
-### Controller (`controller.py`)
+### Pipeline (`phases/`, driven by `run.py`)
 
 **Purpose:** Tie all four layers together into the main per-candidate processing loop.
 
@@ -521,7 +573,7 @@ What changes:
 | Phase B | annotates everything DiscoPoP can | same, minus any loop the LLM already annotated |
 | Settle | a rewrite is an orphan unless a kept pragma targets a region it exposed | a self-annotated rewrite is its own justification; it can still be dropped, but only after every DiscoPoP pragma |
 
-The three gate stages that were previously dead for an LLM rewrite come alive on their own, because `validate()` keys TSan, the `-fopenmp` build and the timing on the diff containing a `#pragma omp`. The one genuinely new stage is the **static clause check** (`check_llm_pragmas` in `controller.py`), which runs the same two rules used on DiscoPoP's generated clauses over every pragma the model's edit introduces, against the **patched** text:
+The three gate stages that were previously dead for an LLM rewrite come alive on their own, because `validate()` keys TSan, the `-fopenmp` build and the timing on the diff containing a `#pragma omp`. The one genuinely new stage is the **static clause check** (`check_llm_pragmas` in `pragmas/clauses.py`), which runs the same two rules used on DiscoPoP's generated clauses over every pragma the model's edit introduces, against the **patched** text:
 
 - a name declared inside the loop body must not appear in any clause (not in scope at the pragma);
 - a name the loop writes — or whose elements it fills, when it is an array rather than a pointer — and that later code reads must not be `private`/`firstprivate`, since those discard the writes.
@@ -640,7 +692,7 @@ discopop_agent/tools/build_archer.sh          # installs to ~/.local/lib
 discopop_agent/tools/build_archer.sh /some/dir
 ```
 
-It fetches `openmp/tools/archer/ompt-tsan.cpp` at the LLVM tag matching your installed libomp and builds it as a single shared library. `find_archer()` in `l4_validator.py` then picks it up automatically (`DP_ARCHER_LIB` overrides the search), `_tsan_env()` loads it via `OMP_TOOL_LIBRARIES`, and the banner prints which mode the run is in.
+It fetches `openmp/tools/archer/ompt-tsan.cpp` at the LLVM tag matching your installed libomp and builds it as a single shared library. `find_archer()` in `gate/toolchain.py` then picks it up automatically (`DP_ARCHER_LIB` overrides the search), `_tsan_env()` loads it via `OMP_TOOL_LIBRARIES`, and the banner prints which mode the run is in.
 
 Measured on the three cases whose verdicts are known independently:
 
@@ -652,7 +704,7 @@ Measured on the three cases whose verdicts are known independently:
 
 `ignore_noninstrumented_modules=1` is set **only** alongside archer. On its own it would suppress reports raised from inside the uninstrumented runtime without supplying the ordering that makes them wrong — hiding real races as well as artefacts.
 
-**Fallback when archer is absent.** `_is_omp_barrier_false_positive()` (controller.py) recognises the artefact from the report itself: when every racing access sits inside an `.omp_outlined*` frame but in *different* outlined functions, a barrier separates them and it cannot be a real race (same outlined function on both sides means one region, and is left alone). It is disabled when the code uses `nowait` or tasks, which genuinely remove the barrier. Suspected artefacts are never accepted on the heuristic — the gate re-runs with the race check off, so correctness and speed still have to pass.
+**Fallback when archer is absent.** `_is_omp_barrier_false_positive()` (`gate/tsan.py`) recognises the artefact from the report itself: when every racing access sits inside an `.omp_outlined*` frame but in *different* outlined functions, a barrier separates them and it cannot be a real race (same outlined function on both sides means one region, and is left alone). It is disabled when the code uses `nowait` or tasks, which genuinely remove the barrier. Suspected artefacts are never accepted on the heuristic — the gate re-runs with the race check off, so correctness and speed still have to pass.
 
 ---
 

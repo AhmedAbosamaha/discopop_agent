@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 
 from .args import parse_args
-from .controller import run
+from .run import run
 
 
 def _load_dotenv() -> None:

@@ -37,10 +37,12 @@ import json
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Tuple
 
 
 @dataclass
+
+
 class Hotspot:
     """One measured region from Hotspots.json."""
     file_id: int
@@ -52,6 +54,8 @@ class Hotspot:
 
 
 @dataclass
+
+
 class ImpactModel:
     """Measured runtime per region, and what parallelizing each would be worth.
 

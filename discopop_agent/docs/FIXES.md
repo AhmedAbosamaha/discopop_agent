@@ -1,5 +1,12 @@
 # Bug Fixes & Improvements Log
 
+> **Note on file names.** This is a historical changelog: entries name the files as
+> they were at the time. The package was reorganised on 2026-08-23 — `controller.py`
+> became `run.py` plus `phases/`, and `l1_planner` / `l2_evidence` / `l3_llm` /
+> `l4_validator` became `plan/` / `evidence/` / `llm/` / `gate/`. See
+> DOCUMENTATION.md for the current layout.
+
+
 Chronological record of all fixes applied to the `discopop_agent` layer.
 
 ---

@@ -56,7 +56,7 @@ class EvidencePackage:
     waw_deps: List[Dependency]
     reduction_vars: List[str]
     tier1_failure_reason: str = ""
-    # Content-based identity (l1_planner.region_fingerprint), STABLE across
+    # Content-based identity (plan.region_fingerprint), STABLE across
     # DiscoPoP's region_id renumbering after a re-profile — region_id itself
     # can be reassigned to a completely different, unrelated region.  Callers
     # needing to recognize "is this genuinely the same region as last time"

@@ -30,13 +30,14 @@ import sys
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Tuple
 
-from ..fast_refresh import line_map, remap_dependencies, verify_translation
-from ..impact import load_hotspots
-from ..l1_planner import build_candidates
-from ..l3_llm import make_diff
-from ..l4_validator import _find_clangpp, _macos_sysroot_flag, find_archer
+from ..profiling.fast_refresh import (line_map, remap_dependencies,
+                                      verify_translation)
+from ..plan.impact import load_hotspots
+from ..plan import build_candidates
+from ..llm import make_diff
+from ..gate.toolchain import _find_clangpp, _macos_sysroot_flag, find_archer
 
 _HERE = Path(__file__).resolve().parent
 _CASES = _HERE / "cases"
@@ -240,7 +241,7 @@ def check_clauses(work: Path) -> Result:
     only a static read can reject it.  The pointer case is the guard against
     over-rejection.
     """
-    from ..controller import check_llm_pragmas
+    from ..pragmas import check_llm_pragmas
 
     src = work / "clause_case.cpp"
     src.write_text(_CLAUSE_SRC)
@@ -324,7 +325,7 @@ def check_tsan_barrier(work: Path) -> Result:
     a race too — so this check is what tells you whether the sanitizer on this
     machine is trustworthy, and whether the fallback heuristic agrees with it.
     """
-    from ..controller import _is_omp_barrier_false_positive
+    from ..gate.tsan import _is_omp_barrier_false_positive
 
     clangpp = _find_clangpp()
     if clangpp is None:

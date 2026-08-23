@@ -21,7 +21,7 @@
 #
 # Usage:  discopop_agent/tools/build_archer.sh [install_dir]
 # Default install_dir is ~/.local/lib.  The agent finds the result automatically
-# (see _find_archer in l4_validator.py); DP_ARCHER_LIB overrides the search.
+# (see find_archer in gate/toolchain.py); DP_ARCHER_LIB overrides the search.
 set -euo pipefail
 
 INSTALL_DIR="${1:-$HOME/.local/lib}"

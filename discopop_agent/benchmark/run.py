@@ -32,8 +32,8 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from ..l3_llm import make_diff
-from ..l4_validator import _find_clangpp, _macos_sysroot_flag
+from ..llm import make_diff
+from ..gate.toolchain import _find_clangpp, _macos_sysroot_flag
 
 _HERE = Path(__file__).resolve().parent
 _CASES = _HERE / "cases"

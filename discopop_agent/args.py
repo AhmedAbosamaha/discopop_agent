@@ -126,7 +126,7 @@ def parse_args() -> AgentArguments:
                          "program, once. Without it the old workload proxy is used, which "
                          "ranked example4's sortedness check above the sort it verifies "
                          "and array_accumulator's serial inner recurrence above the outer "
-                         "Do-All holding 99.7% of the runtime."))
+                         "Do-All holding 99.7%% of the runtime."))
     p.add_argument("--min-impact", type=float, default=0.0,
                    help=("Skip any region predicted to save less than this many SECONDS "
                          "(default: 0.0 — off). Unlike --min-workload this is a real "
