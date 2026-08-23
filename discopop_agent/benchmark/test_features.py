@@ -8,6 +8,7 @@ that are supposed to be deterministic, and it must pass on every commit:
 
   * impact ranking    the queue is ordered by measured time, not instruction count
   * min-impact        a region too small to pay off is dropped before any LLM call
+  * hotspot remap     runtime measurements follow the code, or are dropped
   * fast refresh      an edit that changes nothing loses no dependence data,
                       and a refresh reaches the same conclusions as a full re-profile
   * clause checks     the pragma defects that compile, run and print the right answer
@@ -556,9 +557,56 @@ def check_dep_review(work: Path) -> Result:
                   f"{before - after} dependence line(s) removed — {note}")
 
 
+def check_hotspot_remap(work: Path) -> Result:
+    """Runtime measurements must move with the code, or be dropped.
+
+    Hotspots are keyed by line number.  After a rewrite shifts lines they do not
+    merely go stale — a region inherits whatever used to sit at its line number,
+    and is then ranked confidently on another region's runtime.  That is worse
+    than having no measurement at all, and nothing downstream can detect it.
+    """
+    from ..plan.impact import Hotspot, ImpactModel
+    from ..profiling.fast_refresh import line_map
+
+    m = ImpactModel(threads=8, total_runtime=1.0)
+    m.by_line = {
+        (1, 10): Hotspot(1, 10, "LOOP", "", "MAYBE", 0.01),
+        (1, 20): Hotspot(1, 20, "LOOP", "", "YES", 0.90),
+    }
+    m.mark_covered(1, 20, 25)
+
+    old = "\n".join(f"line{i}" for i in range(1, 31))
+    new = "\n".join(["added"] * 5 + [f"line{i}" for i in range(1, 31)])
+    dropped = m.remap_lines(1, line_map(old, new))
+
+    hot = m.by_line.get((1, 25))
+    if hot is None or abs(hot.avg_runtime - 0.90) > 1e-9:
+        return Result("hotspot remap", "fail",
+                      f"the hot measurement did not move to line 25: "
+                      f"{sorted(m.by_line)}")
+    if (1, 20) in m.by_line and m.by_line[(1, 20)].avg_runtime == 0.90:
+        return Result("hotspot remap", "fail",
+                      "the hot measurement is still pinned to its old line")
+    if m.covered != [(1, 25, 30)]:
+        return Result("hotspot remap", "fail",
+                      f"covered spans did not move with it: {m.covered}")
+
+    # a measurement whose line is deleted must be dropped, never re-pointed
+    m2 = ImpactModel(threads=8, total_runtime=1.0)
+    m2.by_line = {(1, 3): Hotspot(1, 3, "LOOP", "", "YES", 0.5)}
+    gone = m2.remap_lines(1, line_map("a\nb\nGONE\nd\n", "a\nb\nd\n"))
+    if gone != 1 or m2.by_line:
+        return Result("hotspot remap", "fail",
+                      f"a deleted line's measurement survived: {m2.by_line}")
+    return Result("hotspot remap", "pass",
+                  f"measurements and covered spans follow the code; "
+                  f"{dropped} dropped when lines vanish")
+
+
 _CHECKS: List[Tuple[str, Callable[[Path], Result]]] = [
     ("impact", check_impact_ranking),
     ("min-impact", check_min_impact),
+    ("hotspot-remap", check_hotspot_remap),
     ("fast-refresh", check_fast_refresh),
     ("fast-refresh-eq", check_fast_refresh_equivalence),
     ("clause", check_clauses),

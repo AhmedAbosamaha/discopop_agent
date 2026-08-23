@@ -32,9 +32,10 @@ from ..gate import _validate_cached, fix_hunk_headers
 from ..llm import LLMConnectionError, call_llm
 from ..llm.dep_review import _llm_dep_review
 from ..plan import build_candidates, region_fingerprint
-from ..plan.impact import ImpactModel
+from ..plan.impact import ImpactModel, load_hotspots
 from ..pragmas import _added_pragmas, _touched_span, check_llm_pragmas
-from ..profiling import _reprofil, _reprofil_fast
+from ..profiling import _measure_hotspots, _reprofil, _reprofil_fast
+from ..profiling import fast_refresh
 from ..sources import (_apply_to_source, _function_edit_to_diff,
                        _restore_profile, _snapshot_profile)
 from ..types import HotspotCandidate, ValidationResult
@@ -355,6 +356,21 @@ def phase_a(state: RunState) -> None:
                     if reprofile_ok:
                         print(f"│           {note}")
                         profile_is_fast = True
+                        if impact.available:
+                            # Hotspots are keyed by LINE, so a rewrite that
+                            # shifts lines does not merely make them stale — it
+                            # makes them point at whatever now sits at that
+                            # number.  Translate them the way the dependences
+                            # were translated, and drop what cannot be.
+                            lost = impact.remap_lines(
+                                region.file_id,
+                                fast_refresh.line_map(
+                                    pre_patch_src or "",
+                                    Path(args.source_file).read_text()),
+                            )
+                            if lost:
+                                print(f"│           {lost} runtime measurement(s) "
+                                      f"dropped — their lines were rewritten")
                         if args.llm_deps:
                             gaps = _llm_dep_review(
                                 args, dp_dir, pre_patch_src or "",
@@ -378,6 +394,24 @@ def phase_a(state: RunState) -> None:
                     reprofile_ok = _reprofil(
                         args.source_file, dp_dir, args.reprofil_args or None
                     )
+                    if (reprofile_ok and deeper_coming and args.hotspots
+                            and impact.available):
+                        # The next level ranks by time saved, and the regions it
+                        # will rank are the ones this rewrite just created —
+                        # which have no measurement at all.  Measuring again is
+                        # one native-speed run, next to the instrumented one
+                        # already paid for here.
+                        ok_hs, hs_note = _measure_hotspots(args, dp_dir, force=True)
+                        fresh = load_hotspots(dp_dir, threads=impact.threads) \
+                            if ok_hs else None
+                        if fresh is not None and fresh.available:
+                            impact.adopt(fresh)
+                            print(f"│  [Tier-2] Re-measured runtimes: "
+                                  f"{len(impact.by_line)} region(s), "
+                                  f"{impact.total_runtime*1e3:.1f} ms total")
+                        else:
+                            print(f"│  [Tier-2] could not re-measure runtimes — "
+                                  f"new regions will rank on the workload proxy")
 
                 # rebuilt / discovered are computed read-only first; the queue and
                 # all_seen_prints are only mutated once we decide to COMMIT.

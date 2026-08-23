@@ -37,7 +37,8 @@ _RUN_ARTIFACTS = (
 )
 
 
-def _measure_hotspots(args: AgentArguments, dp_dir: Path) -> "tuple[bool, str]":
+def _measure_hotspots(args: AgentArguments, dp_dir: Path,
+                      force: bool = False) -> "tuple[bool, str]":
     """Run DiscoPoP's hotspot detection once, unless it has already run.
 
     Separate from the dependence profile in every way: its own instrumentation
@@ -52,8 +53,13 @@ def _measure_hotspots(args: AgentArguments, dp_dir: Path) -> "tuple[bool, str]":
             return False, str(e)
         return r.returncode == 0, (r.stderr or r.stdout or "")
 
-    if (dp_dir / "hotspot_detection" / "Hotspots.json").exists():
-        return True, "reusing the measurements already in .discopop"
+    existing = dp_dir / "hotspot_detection" / "Hotspots.json"
+    if existing.exists():
+        if not force:
+            return True, "reusing the measurements already in .discopop"
+        # A rewrite moved the lines these are keyed on, so they have to be
+        # re-measured rather than reused.
+        existing.unlink()
     return impact_mod.run_hotspot_detection(
         args.source_file, dp_dir, args.reprofil_args or None, _venv_env(), run_cmd
     )

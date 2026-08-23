@@ -131,6 +131,55 @@ class ImpactModel:
         parallel_part = f / max(self.threads * self.efficiency, 1e-9)
         return 1.0 / max(1.0 - f + parallel_part, 1e-9)
 
+    def remap_lines(self, file_id: int, lmap: Dict[int, int]) -> int:
+        """Move the measurements onto a rewritten file, dropping what moved away.
+
+        Measurements are keyed by LINE, so after a rewrite shifts lines they do
+        not merely go stale — they are silently mis-attributed, and a region can
+        inherit the runtime of whatever used to sit at its line number.  A fast
+        refresh has the exact old->new line map, so the honest thing is to
+        translate what survived and discard the rest: a region with no
+        measurement falls back to the workload proxy, which is wrong-ish, while
+        a region with the WRONG measurement is ranked confidently and wrongly.
+
+        Returns how many measurements were dropped.
+        """
+        moved: Dict[Tuple[int, int], Hotspot] = {}
+        dropped = 0
+        for (fid, line), hs in self.by_line.items():
+            if fid != file_id:
+                moved[(fid, line)] = hs
+                continue
+            new_line = lmap.get(line)
+            if new_line is None:
+                dropped += 1
+                continue
+            moved[(fid, new_line)] = Hotspot(fid, new_line, hs.node_type, hs.name,
+                                             hs.hotness, hs.avg_runtime)
+        self.by_line = moved
+        # Covered spans move with the file too; one that no longer exists is
+        # dropped rather than left pointing at unrelated lines.
+        moved_covered: List[Tuple[int, int, int]] = []
+        for f, s, e in self.covered:
+            if f != file_id:
+                moved_covered.append((f, s, e))
+                continue
+            ns, ne = lmap.get(s), lmap.get(e)
+            if ns is not None and ne is not None:
+                moved_covered.append((f, ns, ne))
+        self.covered = moved_covered
+        return dropped
+
+    def adopt(self, fresh: "ImpactModel") -> None:
+        """Take a new measurement's numbers, keep what this run has learned.
+
+        `covered` and `efficiency` are run-level knowledge — which regions are
+        already parallelized, and what this machine actually delivers — and a
+        re-measurement says nothing about either.
+        """
+        self.by_line = fresh.by_line
+        self.total_runtime = fresh.total_runtime
+
     def mark_covered(self, file_id: int, start_line: int, end_line: int) -> None:
         self.covered.append((file_id, start_line, end_line))
 
