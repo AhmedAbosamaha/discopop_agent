@@ -46,7 +46,6 @@ them.
 from __future__ import annotations
 
 import difflib
-import json
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -61,6 +60,8 @@ Key = Tuple[str, int, int, int]      # file, line, column, occurrence
 
 
 @dataclass
+
+
 class RemapStats:
     """What survived the translation, and what did not.
 
@@ -96,14 +97,43 @@ def line_map(old_text: str, new_text: str) -> Dict[int, int]:
     """
     old_lines = old_text.splitlines()
     new_lines = new_text.splitlines()
+    # Compared with indentation STRIPPED.  Wrapping a block in an `if` or a new
+    # loop re-indents every line inside it, and a verbatim comparison then calls
+    # all of them "changed" — discarding every dependence they carry, though the
+    # statements are identical.  Measured on a pure block-wrap: 13 of 16
+    # dependences lost to nothing but leading whitespace.  The column shift that
+    # comes with it is recovered exactly by indent_shifts() below, so this costs
+    # no precision.
     out: Dict[int, int] = {}
-    sm = difflib.SequenceMatcher(None, old_lines, new_lines, autojunk=False)
+    sm = difflib.SequenceMatcher(None, [l.strip() for l in old_lines],
+                                 [l.strip() for l in new_lines], autojunk=False)
     for tag, i1, i2, j1, j2 in sm.get_opcodes():
         if tag != "equal":
             continue
         for off in range(i2 - i1):
             out[i1 + off + 1] = j1 + off + 1
     return out
+
+
+def indent_shifts(
+    old_text: str, new_text: str, lmap: Dict[int, int]
+) -> Dict[int, int]:
+    """old line -> how far its indentation moved (new indent minus old).
+
+    An instruction's identity includes its COLUMN, so a re-indented line's
+    instructions no longer match by position even though they are the same
+    instructions.  The shift is known exactly — it is the difference in leading
+    whitespace — so applying it recovers the match without loosening anything.
+    """
+    old_lines = old_text.splitlines()
+    new_lines = new_text.splitlines()
+    shifts: Dict[int, int] = {}
+    for o, n in lmap.items():
+        if not (1 <= o <= len(old_lines)) or not (1 <= n <= len(new_lines)):
+            continue
+        ol, nl = old_lines[o - 1], new_lines[n - 1]
+        shifts[o] = (len(nl) - len(nl.lstrip())) - (len(ol) - len(ol.lstrip()))
+    return shifts
 
 
 def load_instruction_sequence(mapping_file: Path) -> List[Tuple[str, str]]:
@@ -131,7 +161,8 @@ def load_instruction_sequence(mapping_file: Path) -> List[Tuple[str, str]]:
 
 
 def build_id_map(
-    old_map: Path, new_map: Path, lmap: Dict[int, int]
+    old_map: Path, new_map: Path, lmap: Dict[int, int],
+    col_shifts: Optional[Dict[int, int]] = None,
 ) -> Tuple[Dict[str, str], int]:
     """old instruction id -> new instruction id, by aligning the two mappings.
 
@@ -165,7 +196,11 @@ def build_id_map(
         new_line = lmap.get(line)
         if new_line is None:
             return f"\0changed{idx}"     # unique: never matches
-        return f"{parts[0]}:{new_line}:{parts[2]}"
+        try:
+            col = int(parts[2]) + (col_shifts or {}).get(line, 0)
+        except ValueError:
+            return f"{parts[0]}:{new_line}:{parts[2]}"
+        return f"{parts[0]}:{new_line}:{col}"
 
     old_tokens = [normalise(p, i) for i, (_, p) in enumerate(old_seq)]
     new_tokens = [p for _, p in new_seq]
@@ -219,10 +254,13 @@ def load_instruction_keys(mapping_file: Path) -> Tuple[Dict[str, Key], Dict[Key,
 class _Translator:
     """old instruction id + old line -> new instruction id + new line."""
 
-    def __init__(self, old_map: Path, new_map: Path, lmap: Dict[int, int]) -> None:
+    def __init__(self, old_map: Path, new_map: Path, lmap: Dict[int, int],
+                 col_shifts: Optional[Dict[int, int]] = None) -> None:
         self.old_fwd, _ = load_instruction_keys(old_map)
         self.new_fwd, self.new_rev = load_instruction_keys(new_map)
-        self.id_map, self.unmatched = build_id_map(old_map, new_map, lmap)
+        self.col_shifts = col_shifts or {}
+        self.id_map, self.unmatched = build_id_map(old_map, new_map, lmap,
+                                                   self.col_shifts)
         self.lmap = lmap
 
     def line(self, line: int) -> Optional[int]:
@@ -244,8 +282,9 @@ class _Translator:
         if old_key is not None:
             new_key = self.new_fwd.get(new_id)
             expected_line = self.lmap.get(old_key[1])
+            expected_col = old_key[2] + self.col_shifts.get(old_key[1], 0)
             if (new_key is None or expected_line is None
-                    or new_key[1] != expected_line or new_key[2] != old_key[2]):
+                    or new_key[1] != expected_line or new_key[2] != expected_col):
                 return None
         return new_id
 
@@ -288,7 +327,8 @@ class _Translator:
 
 
 def remap_dependencies(
-    dep_text: str, old_map: Path, new_map: Path, lmap: Dict[int, int]
+    dep_text: str, old_map: Path, new_map: Path, lmap: Dict[int, int],
+    col_shifts: Optional[Dict[int, int]] = None,
 ) -> Tuple[str, RemapStats]:
     """Translate a `dynamic_dependencies.txt` onto a new build of the source.
 
@@ -297,7 +337,7 @@ def remap_dependencies(
     worse than a dependence that is missing, because the missing one is covered
     by the static analysis while the wrong one silently misinforms it.
     """
-    tr = _Translator(old_map, new_map, lmap)
+    tr = _Translator(old_map, new_map, lmap, col_shifts)
     stats = RemapStats()
     out: List[str] = []
 
@@ -449,7 +489,7 @@ def verify_translation(
         if not (1 <= old_ln <= len(old_lines)) or not (1 <= new_ln <= len(new_lines)):
             problems.append(f"line {old_ln}->{new_ln} is out of range")
             continue
-        if old_lines[old_ln - 1] != new_lines[new_ln - 1]:
+        if old_lines[old_ln - 1].strip() != new_lines[new_ln - 1].strip():
             problems.append(
                 f"line {old_ln}->{new_ln} claims unchanged but differs: "
                 f"{old_lines[old_ln - 1]!r} vs {new_lines[new_ln - 1]!r}"

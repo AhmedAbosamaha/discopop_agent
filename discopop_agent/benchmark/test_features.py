@@ -8,7 +8,8 @@ that are supposed to be deterministic, and it must pass on every commit:
 
   * impact ranking    the queue is ordered by measured time, not instruction count
   * min-impact        a region too small to pay off is dropped before any LLM call
-  * fast refresh      an edit that changes nothing loses no dependence data
+  * fast refresh      an edit that changes nothing loses no dependence data,
+                      and a refresh reaches the same conclusions as a full re-profile
   * clause checks     the pragma defects that compile, run and print the right answer
   * TSan barrier      a real race is caught; an artefact of the OpenMP runtime is not
 
@@ -382,10 +383,106 @@ def check_tsan_barrier(work: Path) -> Result:
                   "no archer: artefact recognised by the heuristic, real race still caught")
 
 
+_STENCIL_ORIG = """    for (int s = 0; s < SWEEPS; s++) {
+        for (int i = 0; i < N - 1; i++) {
+            double x = 0.5 * (a[i] + a[i + 1]);
+            for (int k = 0; k < WORK; k++) x = x * 0.9999993 + 1e-7 * (k & 7);
+            a[i] = x;
+        }
+    }
+"""
+_STENCIL_REWRITE = """    static double b[N];
+    for (int s = 0; s < SWEEPS; s++) {
+        for (int i = 0; i < N - 1; i++) {
+            double x = 0.5 * (a[i] + a[i + 1]);
+            for (int k = 0; k < WORK; k++) x = x * 0.9999993 + 1e-7 * (k & 7);
+            b[i] = x;
+        }
+        b[N - 1] = a[N - 1];
+        for (int i = 0; i < N; i++) a[i] = b[i];
+    }
+"""
+def _patterns(dp: Path) -> Optional[List[Tuple[str, str, str, bool, str]]]:
+    f = dp / "explorer" / "patterns.json"
+    if not f.exists():
+        return None
+    import json
+    raw = json.loads(f.read_text())
+    out = []
+    for kind, entries in raw.get("patterns", {}).items():
+        for e in entries or []:
+            out.append((kind, str(e.get("start_line")), str(e.get("end_line")),
+                        bool(e.get("applicable_pattern")), (e.get("pragma") or "").strip()))
+    return sorted(out)
+def check_fast_refresh_equivalence(work: Path) -> Result:
+    """A fast refresh must reach the SAME conclusions as a full re-profile.
+
+    Losslessness on an identity edit says the translation preserves data; this
+    says the translation preserves MEANING.  The same rewrite is profiled both
+    ways and DiscoPoP's patterns are compared — kind, lines, applicability and
+    the pragma text.  If a fast refresh ever changes what DiscoPoP concludes,
+    every decision downstream of it is standing on different ground.
+    """
+    base = work / "eq_full"
+    fast = work / "eq_fast"
+    for d in (base, fast):
+        d.mkdir(parents=True, exist_ok=True)
+        shutil.copy(_CASES / "stencil_war.cpp", d / "s.cpp")
+
+    for d in (base, fast):
+        ok, err = _profile(d, "s.cpp", hotspots=False)
+        if not ok:
+            return Result("fast refresh ≡ full", "skip", err)
+
+    for d in (base, fast):
+        src = d / "s.cpp"
+        text = src.read_text()
+        if _STENCIL_ORIG not in text:
+            return Result("fast refresh ≡ full", "skip", "the case no longer matches")
+        (d / "old.cpp").write_text(text)
+        src.write_text(text.replace(_STENCIL_ORIG, _STENCIL_REWRITE, 1))
+
+    ok, err = _profile(base, "s.cpp", hotspots=False)          # the full path
+    if not ok:
+        return Result("fast refresh ≡ full", "skip", err)
+
+    from ..args import AgentArguments
+    from ..profiling.runner import _reprofil_fast
+    out = fast / "out"
+    out.mkdir(exist_ok=True)
+    args = AgentArguments(
+        discopop_dir=str(fast / ".discopop"), source_file=str(fast / "s.cpp"),
+        budget=1, model="haiku", api_key=None, provider="claude-agent-sdk",
+        api_base=None, lambda_penalty=1.0, min_workload=0.0, output_dir=str(out),
+        dry_run=False, edit_mode="direct", llm_pragmas=True, fast_refresh=True,
+        llm_deps=False, hotspots=False, min_impact=0.0, restructure_depth=0,
+        require_speedup=False, build_retries=2, apply_patches=True,
+        min_measured_speedup=1.1, check_inputs=[], reprofil_args=[], verbose=False)
+    ok, note = _reprofil_fast(args.source_file, Path(args.discopop_dir),
+                              (fast / "old.cpp").read_text(),
+                              (fast / "s.cpp").read_text(), out)
+    if not ok:
+        return Result("fast refresh ≡ full", "fail", f"fast refresh failed: {note}")
+
+    full_p = _patterns(base / ".discopop")
+    fast_p = _patterns(fast / ".discopop")
+    if full_p is None or fast_p is None:
+        return Result("fast refresh ≡ full", "skip", "no patterns.json from one side")
+    if full_p != fast_p:
+        only_full = sorted(set(full_p) - set(fast_p))[:2]
+        only_fast = sorted(set(fast_p) - set(full_p))[:2]
+        return Result("fast refresh ≡ full", "fail",
+                      f"{len(full_p)} vs {len(fast_p)} patterns; "
+                      f"only-full={only_full} only-fast={only_fast}")
+    return Result("fast refresh ≡ full", "pass",
+                  f"identical DiscoPoP conclusions ({len(full_p)} patterns) — {note}")
+
+
 _CHECKS: List[Tuple[str, Callable[[Path], Result]]] = [
     ("impact", check_impact_ranking),
     ("min-impact", check_min_impact),
     ("fast-refresh", check_fast_refresh),
+    ("fast-refresh-eq", check_fast_refresh_equivalence),
     ("clause", check_clauses),
     ("tsan", check_tsan_barrier),
 ]

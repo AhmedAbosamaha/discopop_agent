@@ -89,6 +89,7 @@ def _reprofil_fast(
     env = _venv_env()
 
     lmap = fast_refresh.line_map(old_text, new_text)
+    col_shifts = fast_refresh.indent_shifts(old_text, new_text, lmap)
     problems = fast_refresh.verify_translation(old_text, new_text, lmap)
     if problems:
         return False, f"line map failed its own check ({problems[0][:80]})"
@@ -116,7 +117,7 @@ def _reprofil_fast(
     new_map = profiler / "instructionID_to_lineID_mapping.txt"
 
     dep_text, stats = fast_refresh.remap_dependencies(
-        saved["dynamic_dependencies.txt"], old_map, new_map, lmap
+        saved["dynamic_dependencies.txt"], old_map, new_map, lmap, col_shifts
     )
     (profiler / "dynamic_dependencies.txt").write_text(dep_text)
     if "loop_counter_output.txt" in saved:
