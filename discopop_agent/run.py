@@ -42,7 +42,8 @@ from typing import Any, Dict, List
 
 from . import viz
 from .args import AgentArguments
-from .gate import capture_reference, check_pragma_compiles
+from .gate import (capture_reference, check_pragma_compiles,
+                   numerical_noise_floor)
 from .phases import (RunState, _phase_b, _print_banner, _print_candidates,
                      _settle, phase_a)
 from .plan import build_candidates, region_fingerprint
@@ -80,6 +81,24 @@ def run(args: AgentArguments) -> None:
         if n == 1:
             print("  [note] one input only — a rewrite that is wrong for other sizes "
                   "would still pass. Add --check-input to widen the check.")
+        print()
+
+    # Numerical calibration, once per run.  The counterpart of the timing noise
+    # floor: before disbelieving a rewrite whose digits moved, find out how far
+    # this program's own digits already move between builds that mean the same
+    # thing.  A program printing no floating point measures 0.0 and stays under
+    # byte-exact comparison, which is where every integer-output case lands.
+    if args.numeric_tolerance and reference_output is not None and not args.dry_run:
+        nf = numerical_noise_floor(args.source_file, binary_args)
+        args.noise_floor = nf.value
+        if nf.value > 0.0:
+            print(f"  [ok] Numerical noise floor {nf.value:.2e} of output scale "
+                  f"({nf.diagnostic}).")
+            print("  [note] values may move that far without failing the correctness "
+                  "gate; labels, line structure and integers must still match exactly.")
+        else:
+            print(f"  [ok] Numerical noise floor 0 — {nf.diagnostic}; "
+                  f"output is compared byte-for-byte.")
         print()
 
     # Gate results for this run, keyed by (patch, source text).

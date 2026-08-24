@@ -114,8 +114,8 @@ class EvidencePackage:
 @dataclass
 class ValidationResult:
     passed: bool
-    # "apply" | "compile" | "openmp_compile" | "tsan" | "correctness"
-    # | "performance" | "accepted"
+    # "apply" | "compile" | "openmp_compile" | "tsan" | "dependences"
+    # | "schedules" | "correctness" | "performance" | "accepted"
     stage: str
     diagnostic: str = ""
     measured_speedup: Optional[float] = None   # set by the performance stage
@@ -125,3 +125,13 @@ class ValidationResult:
     # renderer (viz.gate_result) show "skipped" instead of falsely claiming a
     # stage that was never run actually passed.
     skipped_stages: List[str] = field(default_factory=list)
+    # How the verdict was reached, not just what it was.  A patch accepted on
+    # byte-identical output and one accepted because its values stayed inside
+    # the program's measured numerical noise are different claims, and the
+    # accepted record has to be able to tell them apart.  Keys in use:
+    #   comparison   "exact" | "numeric"      how correctness was judged
+    #   deviation    float                    largest scaled value movement
+    #   floor        float                    slack in effect
+    #   schedules    list[str]                configurations B6 covered
+    #   reordered    bool                     values moved across thread counts
+    evidence: Dict[str, object] = field(default_factory=dict)

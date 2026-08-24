@@ -132,6 +132,8 @@ def _phase_b(
         res, from_cache, barrier_fp = _validate_cached(
             gate_cache, diff, args, reference_output, binary_args,
             reference_time, reference_outputs=reference_outputs, mode="safety",
+            dep_region=(cand.region.file_id, cand.region.start_line,
+                        cand.region.end_line),
         )
         if barrier_fp:
             print(f"│  TSan OMP-barrier false positive — re-verified on output")
@@ -183,6 +185,11 @@ def _phase_b(
             "lines": lines,
             "marginal_speedup": marginal,
             "applied_to_source": True,
+            # What the gate actually leaned on: "exact" means byte-identical
+            # output, "numeric" means the values moved and were judged against
+            # the measured noise floor.  `schedules` lists the thread/schedule
+            # configurations the race check covered.
+            "evidence": dict(res.evidence),
         }
         # Identity of the region this pragma landed on, taken BEFORE the patch
         # went in, so it matches what Phase A recorded as exposed.

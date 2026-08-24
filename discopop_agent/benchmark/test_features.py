@@ -12,9 +12,16 @@ that are supposed to be deterministic, and it must pass on every commit:
   * mixed-scale rank  a measured region outranks one scored only by the proxy
   * fast refresh      an edit that changes nothing loses no dependence data,
                       and a refresh reaches the same conclusions as a full re-profile
+  * reduction carry   a refresh keeps the measured reductions — the one thing it
+                      can drop that makes the agent LESS cautious, not more
   * clause checks     the pragma defects that compile, run and print the right answer
   * dep review        a discharged blocker actually removes dependence lines
   * TSan barrier      a real race is caught; an artefact of the OpenMP runtime is not
+  * equivalence       reordered arithmetic is accepted, everything else rejected
+  * noise floor       a float reduction measures slack, an integer program none
+  * schedule stress   a race fails on repeatability, a correct reduction survives
+  * dep evidence      a real recurrence is contradicted; unprofiled code says so
+  * dep lines         a dependence is attributed to the line it is really on
 
 Run it from the repository root:
 
@@ -37,7 +44,7 @@ from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple
 
 from ..profiling.fast_refresh import (line_map, remap_dependencies,
-                                      verify_translation)
+                                      remap_reduction, verify_translation)
 from ..plan.impact import load_hotspots
 from ..plan import build_candidates
 from ..llm import make_diff
@@ -217,6 +224,70 @@ def check_fast_refresh(work: Path) -> Result:
     return Result("fast refresh", "pass",
                   f"{stats.deps_out}/{stats.deps_in} dependences and "
                   f"{stats.loops_out}/{stats.loops_in} trip counts carried, lossless")
+
+
+
+def check_reduction_carry(work: Path) -> Result:
+    """A refresh must carry the measured REDUCTIONS, not only the dependences.
+
+    Losing them is conservative — measured directly: emptying `reduction.txt`
+    over an otherwise byte-identical profile makes the `reduction` suggestion
+    disappear rather than become an unguarded `do_all`, because the
+    loop-carried dependence on the accumulator still blocks Do-All by itself.
+    So this guards an opportunity, not a race: every reduction the profiler
+    measured was being thrown away, and those loops silently stopped being
+    suggested at all.
+
+    It failed silently and totally.  `reduction.txt` is written in a LABELLED
+    form — `FileID : 1 Loop Line Number : 17 Reduction Line Number : 21 ...` —
+    but the remapper read it as bare `fileID line` columns, so `int(fields[1])`
+    was `int(":")` on every line, every line raised, and the file came out
+    EMPTY.  Not "empty after a big rewrite": empty after an edit that changed
+    nothing at all, which is what this checks.
+    """
+    src_name = "array_accumulator.cpp"
+    base = work / "rc_base"
+    base.mkdir(parents=True, exist_ok=True)
+    shutil.copy(_CASES / src_name, base / src_name)
+
+    ok, err = _profile(base, src_name, hotspots=False)
+    if not ok:
+        return Result("reduction carry", "skip", err)
+
+    measured = (base / ".discopop" / "profiler" / "reduction.txt").read_text()
+    records = [ln for ln in measured.splitlines() if ln.strip()]
+    if not records:
+        return Result("reduction carry", "skip",
+                      "the profile detected no reduction to carry")
+
+    old_src = (base / src_name).read_text()
+    # An edit that shifts every line down by one and changes nothing else: the
+    # records must all survive, with both of their line numbers moved.
+    new_src = "// a semantically empty edit\n" + old_src
+    lmap = line_map(old_src, new_src)
+    carried = [ln for ln in remap_reduction(measured, lmap).splitlines() if ln.strip()]
+
+    if len(carried) != len(records):
+        return Result("reduction carry", "fail",
+                      f"a one-line shift lost {len(records) - len(carried)} of "
+                      f"{len(records)} reduction record(s) — the loops they "
+                      f"describe become plain do_all, with no reduction clause")
+
+    # Both line numbers move, and they move by the same shift the edit applied.
+    import re as _re
+    field = _re.compile(r"Loop Line Number : (\d+) Reduction Line Number : (\d+)")
+    for before, after in zip(records, carried):
+        b, a = field.search(before), field.search(after)
+        if b is None or a is None:
+            return Result("reduction carry", "fail",
+                          f"the carried record no longer parses: {after!r}")
+        if (int(a.group(1)), int(a.group(2))) != (int(b.group(1)) + 1, int(b.group(2)) + 1):
+            return Result("reduction carry", "fail",
+                          f"lines did not follow the shift: {before.strip()!r} "
+                          f"-> {after.strip()!r}")
+    return Result("reduction carry", "pass",
+                  f"{len(carried)}/{len(records)} reduction record(s) carried, "
+                  f"both line numbers shifted with the edit")
 
 
 _CLAUSE_SRC = """#include <cstdio>
@@ -653,6 +724,263 @@ def check_mixed_scale_ranking(work: Path) -> Result:
                   "measured beats unmeasured; proxy-only ordering unchanged")
 
 
+# ---------------------------------------------------------------------------
+# Correctness-gate calibration: comparison rules, noise floor, schedule matrix
+# ---------------------------------------------------------------------------
+
+# Real LULESH 2.0 output, serial build vs the stock OpenMP build at 48 threads,
+# measured at -s 30 -i 200.  This pair is the reason the numeric comparison
+# exists: it is LLNL's OWN reference parallelization, and a byte-identical gate
+# reverts it.  The energy differs from the 16th digit and the symmetry residuals
+# differ by more than 2x — the residuals being roundoff measured directly, which
+# is why they must be judged against the output's scale, not their own.
+_LULESH_SERIAL = """Run completed:
+   Problem size        =  30
+   Iteration count     =  200
+   Final Origin Energy =  8.10592723224514280e+05
+   Testing Plane 0 of Energy Array on rank 0:
+        MaxAbsDiff   = 2.04636307898908854e-12
+        TotalAbsDiff = 2.05779837614272765e-12
+"""
+_LULESH_OMP48 = """Run completed:
+   Problem size        =  30
+   Iteration count     =  200
+   Final Origin Energy =  8.10592723224514397e+05
+   Testing Plane 0 of Energy Array on rank 0:
+        MaxAbsDiff   = 9.09494701772928238e-13
+        TotalAbsDiff = 9.21013265653414237e-13
+"""
+
+
+def check_output_equivalence(work: Path) -> Result:
+    """The comparison must accept reordered arithmetic and nothing else."""
+    from ..gate.equivalence import compare_outputs
+    floor = 1e-14
+    ser, omp = _LULESH_SERIAL, _LULESH_OMP48
+    cases: List[Tuple[str, bool, str, str, float]] = [
+        # what it is,                        should pass, expected, got, floor
+        ("LULESH serial vs its own OpenMP",  True,  ser, omp, floor),
+        ("identical output",                 True,  ser, ser, floor),
+        ("no floor -> byte-exact",           False, ser, omp, 0.0),
+        ("iteration count changed",          False, ser,
+         omp.replace("=  200", "=  199"), floor),
+        ("a printed line disappears",        False, ser,
+         "\n".join(l for l in omp.splitlines() if "TotalAbsDiff" not in l) + "\n", floor),
+        ("a label changed",                  False, ser,
+         omp.replace("MaxAbsDiff", "MaxAbsDif0"), floor),
+        ("energy corrupted, 7th digit",      False, ser,
+         omp.replace("8.10592723224514397e+05", "8.10592109224514397e+05"), floor),
+        ("a value became nan",               False, ser,
+         omp.replace("9.09494701772928238e-13", "nan"), floor),
+        ("integer output, value changed",    False,
+         "total 4950\ncount 100\n", "total 4951\ncount 100\n", 1e-6),
+    ]
+    bad = []
+    for name, want, exp, got, fl in cases:
+        m = compare_outputs(exp, got, fl)
+        if m.equal != want:
+            bad.append(f"{name}: expected {'accept' if want else 'reject'}, "
+                       f"got {'accept' if m.equal else 'reject'} ({m.mode})")
+    if bad:
+        return Result("equivalence", "fail", "; ".join(bad))
+    return Result("equivalence", "pass",
+                  f"{len(cases)} comparison rules hold, LULESH's own OpenMP included")
+
+
+def check_noise_floor(work: Path) -> Result:
+    """A reducing program must measure a floor; an integer one must measure zero.
+
+    The zero case is what keeps every existing benchmark case byte-exact, and
+    the non-zero case is what stops the gate reverting correct parallel sums.
+    """
+    from ..gate.equivalence import numerical_noise_floor
+    from ..gate.toolchain import _find_clangpp
+    if _find_clangpp() is None:
+        return Result("noise-floor", "skip", "no supported clang++ found")
+
+    d = work / "floor"
+    d.mkdir(parents=True, exist_ok=True)
+    fp = d / "reduce.cpp"
+    fp.write_text(
+        "#include <cstdio>\n#include <cmath>\n"
+        "int main(){const int N=2000000;double*a=new double[N];\n"
+        "for(int i=0;i<N;i++)a[i]=std::sin(i*0.0001)*1e3+1.0/(i+1);\n"
+        "double s=0.0;for(int i=0;i<N;i++)s+=a[i];\n"
+        "printf(\"count %d\\nsum %.17e\\n\",N,s);delete[] a;return 0;}\n"
+    )
+    ints = d / "ints.cpp"
+    ints.write_text(
+        "#include <cstdio>\n"
+        "int main(){long t=0;for(int i=0;i<100;i++)t+=i;\n"
+        "printf(\"total %ld\\n\",t);return 0;}\n"
+    )
+    f_float = numerical_noise_floor(str(fp))
+    f_int = numerical_noise_floor(str(ints))
+    if f_int.value != 0.0:
+        return Result("noise-floor", "fail",
+                      f"integer-only program measured a non-zero floor {f_int.value:.2e} "
+                      f"— existing cases would stop being byte-exact")
+    if f_float.value <= 0.0:
+        return Result("noise-floor", "fail",
+                      "a two-million-element float reduction measured a floor of 0; "
+                      "the reassociating build variant is not taking effect, so correct "
+                      "parallel sums would be reverted")
+    return Result("noise-floor", "pass",
+                  f"reduction {f_float.value:.1e}, integer program 0 (stays strict)")
+
+
+def check_schedule_stress(work: Path) -> Result:
+    """A race must fail on repeatability; a correct reduction must survive."""
+    from ..gate.equivalence import numerical_noise_floor
+    from ..gate.patching import _compile_variant
+    from ..gate.schedules import stress_schedules
+    from ..gate.toolchain import _find_clangpp
+    clangpp = _find_clangpp()
+    if clangpp is None:
+        return Result("schedule-stress", "skip", "no supported clang++ found")
+
+    d = work / "stress"
+    d.mkdir(parents=True, exist_ok=True)
+    racy = d / "racy.cpp"
+    racy.write_text(
+        "#include <cstdio>\n"
+        "int main(){const int N=200000;long long s=0;\n"
+        "#pragma omp parallel for\n"
+        "for(int i=0;i<N;i++)s+=i;\n"
+        "printf(\"count %d\\nsum %lld\\n\",N,s);return 0;}\n"
+    )
+    good = d / "good.cpp"
+    good.write_text(
+        "#include <cstdio>\n#include <cmath>\n"
+        "int main(){const int N=2000000;double*a=new double[N];\n"
+        "for(int i=0;i<N;i++)a[i]=std::sin(i*0.0001)*1e3+1.0/(i+1);\n"
+        "double s=0.0;\n"
+        "#pragma omp parallel for reduction(+:s)\n"
+        "for(int i=0;i<N;i++)s+=a[i];\n"
+        "printf(\"count %d\\nsum %.17e\\n\",N,s);delete[] a;return 0;}\n"
+    )
+    out = []
+    for src, expect_ok in ((racy, False), (good, True)):
+        ok_b, diag, binary = _compile_variant(src, clangpp, d, f"b_{src.stem}", openmp=True)
+        if not ok_b or binary is None:
+            return Result("schedule-stress", "skip",
+                          f"no working -fopenmp build ({diag.splitlines()[0][:60] if diag else '?'})")
+        floor = numerical_noise_floor(str(src)).value if expect_ok else 0.0
+        st = stress_schedules(binary, d, None, floor=floor)
+        if st.ok != expect_ok:
+            return Result("schedule-stress", "fail",
+                          f"{src.name}: expected {'pass' if expect_ok else 'race'}, "
+                          f"got verdict={st.verdict} ({st.diagnostic[:110]})")
+        if not expect_ok and not st.hard:
+            return Result("schedule-stress", "fail",
+                          f"{src.name}: a race must be a hard failure, not overridable")
+        out.append(f"{src.stem}={st.verdict}")
+    return Result("schedule-stress", "pass",
+                  f"{', '.join(out)}; race caught by repeatability, not by a diff")
+
+
+def check_dependence_evidence(work: Path) -> Result:
+    """The profile must contradict a pragma on a real recurrence, and abstain otherwise.
+
+    Four verdicts, and the three non-failing ones matter as much as the failing
+    one: a stage that answered "looks fine" where it knows nothing would be
+    worse than no stage at all.  The recurrence here is deliberately an ARRAY
+    one (`a[i] = a[i-1] + 2`) rather than an accumulator: `run += a[i]` is a
+    reduction, which the detector is right not to record as a blocker, and
+    testing with it would assert the opposite of correct behaviour.
+    """
+    from ..gate.dependences import dependence_evidence
+
+    if dependence_evidence(None, None, None, None).verdict != "unavailable":
+        return Result("dep-evidence", "fail", "no profile did not give 'unavailable'")
+    if dependence_evidence(str(work / "nope"), 1, 1, 10).verdict != "unavailable":
+        return Result("dep-evidence", "fail", "missing .discopop did not give 'unavailable'")
+
+    d = work / "depev"
+    d.mkdir(parents=True, exist_ok=True)
+    src = d / "recurrence.cpp"
+    src.write_text(
+        "#include <cstdio>\n"
+        "int main() {\n"
+        "  const int N = 20000;\n"
+        "  static long a[20000];\n"
+        "  for (int i = 0; i < N; i++) {\n"
+        "    a[i] = i;\n"
+        "  }\n"
+        "  for (int i = 1; i < N; i++) {\n"
+        "    a[i] = a[i - 1] + 2;\n"
+        "  }\n"
+        "  printf(\"last %ld\\n\", a[N - 1]);\n"
+        "  return 0;\n"
+        "}\n"
+    )
+    ok, err = _profile(d, src.name, hotspots=False)
+    if not ok:
+        return Result("dep-evidence", "skip", f"could not profile ({err[:70]})")
+    dp = str(d / ".discopop")
+
+    rec = dependence_evidence(dp, 1, 8, 9)      # a[i] = a[i-1] + 2
+    clean = dependence_evidence(dp, 1, 5, 6)    # a[i] = i
+    gap = dependence_evidence(dp, 1, 900, 910)  # nothing there
+
+    if rec.verdict != "contradicted":
+        return Result("dep-evidence", "fail",
+                      f"a true array recurrence gave '{rec.verdict}', expected "
+                      f"'contradicted' ({rec.diagnostic[:90]})")
+    if clean.verdict != "no-blocker":
+        return Result("dep-evidence", "fail",
+                      f"a clean Do-All gave '{clean.verdict}', expected 'no-blocker'")
+    if gap.verdict != "no-data":
+        return Result("dep-evidence", "fail",
+                      f"unprofiled lines gave '{gap.verdict}', expected 'no-data'")
+    if "not proof" not in clean.diagnostic.lower():
+        return Result("dep-evidence", "fail",
+                      "'no-blocker' must not read as a clean bill of health")
+    return Result("dep-evidence", "pass",
+                  "recurrence=contradicted, clean loop=no-blocker, "
+                  "unprofiled=no-data, no profile=unavailable")
+
+
+def check_dep_line_resolution(work: Path) -> Result:
+    """A dependence must be attributed to the line it is actually on.
+
+    The endpoints in dynamic_dependencies.txt are instruction ids, and the
+    number after an `@` is callpath STATE, not a line.  Reading it as a line
+    put a region's dependences almost anywhere: the `fileID:lineID` form
+    resolved to line 0 and was dropped from every region, and the rest landed
+    wherever the state number happened to point.  This pins the fix by asking
+    for a loop whose carried dependence is known by construction.
+    """
+    from ..evidence.deps import _load_dependencies
+
+    d = work / "depev"
+    dp = d / ".discopop" / "profiler"
+    if not (dp / "dynamic_dependencies.txt").exists():
+        return Result("dep-lines", "skip", "no profile available (dep-evidence skipped)")
+
+    raw, war, waw = _load_dependencies(dp, 8, 9)     # a[i] = a[i-1] + 2
+    if not raw:
+        return Result("dep-lines", "fail",
+                      "the recurrence loop reported no RAW dependence at all — "
+                      "endpoints are not being resolved to source lines")
+    carried = [dep for dep in raw if dep.from_line == 9 and dep.to_line == 9]
+    if not carried:
+        placed = sorted({(dep.from_line, dep.to_line) for dep in raw})
+        return Result("dep-lines", "fail",
+                      f"no loop-carried RAW on line 9; dependences landed at {placed[:6]}")
+    # And nothing may be attributed to a line the file does not have.
+    n_lines = len((d / "recurrence.cpp").read_text().splitlines())
+    stray = [dep for dep in raw + war + waw
+             if dep.from_line > n_lines or dep.to_line > n_lines]
+    if stray:
+        return Result("dep-lines", "fail",
+                      f"{len(stray)} dependence(s) attributed past the end of a "
+                      f"{n_lines}-line file, e.g. {stray[0]}")
+    return Result("dep-lines", "pass",
+                  f"{len(carried)} loop-carried RAW found on line 9; "
+                  f"{len(raw + war + waw)} deps all within {n_lines} lines")
+
+
 _CHECKS: List[Tuple[str, Callable[[Path], Result]]] = [
     ("impact", check_impact_ranking),
     ("min-impact", check_min_impact),
@@ -660,9 +988,15 @@ _CHECKS: List[Tuple[str, Callable[[Path], Result]]] = [
     ("mixed-rank", check_mixed_scale_ranking),
     ("fast-refresh", check_fast_refresh),
     ("fast-refresh-eq", check_fast_refresh_equivalence),
+    ("reduction-carry", check_reduction_carry),
     ("clause", check_clauses),
     ("dep-review", check_dep_review),
     ("tsan", check_tsan_barrier),
+    ("equivalence", check_output_equivalence),
+    ("noise-floor", check_noise_floor),
+    ("schedule-stress", check_schedule_stress),
+    ("dep-evidence", check_dependence_evidence),
+    ("dep-lines", check_dep_line_resolution),
 ]
 
 

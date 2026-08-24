@@ -289,6 +289,7 @@ def phase_a(state: RunState) -> None:
                 result, _cached, barrier_fp = _validate_cached(
                     gate_cache, diff, args, reference_output, binary_args,
                     reference_time, reference_outputs=reference_outputs,
+                    dep_region=(region.file_id, region.start_line, region.end_line),
                 )
             if barrier_fp:
                 print(f"│  [Tier-2] TSan flagged two DIFFERENT parallel regions — a "
@@ -339,6 +340,9 @@ def phase_a(state: RunState) -> None:
                     "patch_file": str(patch_file),
                     "reprofiled": False,
                     "discovery_depth": depth,
+                    # See phase_b: how the gate reached this verdict, not just
+                    # what it was.
+                    "evidence": dict(result.evidence),
                 }
 
                 # A deeper Tier-2 pass restructures from this profile, so it

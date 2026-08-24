@@ -457,20 +457,50 @@ def remap_loop_counters(text: str, lmap: Dict[int, int]) -> str:
     return "\n".join(out) + ("\n" if out else "")
 
 
+# `reduction.txt` is written in a LABELLED form, not as bare columns:
+#
+#   FileID : 1 Loop Line Number : 17 Reduction Line Number : 21 \
+#       Variable Name : sum Operation Name : +
+#
+# and the explorer reads it back with a regex over exactly those labels
+# (parser.py: `FileID : ([0-9]*) Loop Line Number : [0-9]* Reduction Line
+# Number : ([0-9]*) `), so the layout is reproduced verbatim and only the two
+# line numbers move.
+_REDUCTION = re.compile(
+    r"^(\s*FileID\s*:\s*)(\d+)(\s+Loop Line Number\s*:\s*)(\d+)"
+    r"(\s+Reduction Line Number\s*:\s*)(\d+)(\s.*)$"
+)
+
+
 def remap_reduction(text: str, lmap: Dict[int, int]) -> str:
-    """Translate `reduction.txt`, whose first two fields are `fileID line`."""
+    """Translate `reduction.txt` onto the new line numbering.
+
+    Both line numbers have to move, and a record is kept only if BOTH survived
+    the edit.  They are used for different things and a record with one stale
+    half is worse than no record: the loop line is what `is_reduction_var`
+    matches a variable against, and the reduction line is one the explorer
+    re-reads from the source file to confirm the statement still looks like an
+    accumulation — with an assert that it is within the file.
+
+    Losing a record is CONSERVATIVE, not dangerous, and it is worth being exact
+    about which: emptying this file and re-running the explorer over an
+    otherwise byte-identical profile makes the `reduction` suggestion vanish,
+    it does not downgrade it to an unguarded `do_all`.  The loop-carried
+    dependence on the accumulator still blocks Do-All on its own; the record is
+    only what PROMOTES that loop to a reduction suggestion.  So the cost of
+    getting this wrong is parallelism left on the table, not a racing pragma.
+    """
     out: List[str] = []
     for raw in text.splitlines():
-        fields = raw.split()
-        if len(fields) < 2:
+        m = _REDUCTION.match(raw)
+        if m is None:
             continue
-        try:
-            new_line = lmap.get(int(fields[1]))
-        except ValueError:
+        loop_line = lmap.get(int(m.group(4)))
+        red_line = lmap.get(int(m.group(6)))
+        if loop_line is None or red_line is None:
             continue
-        if new_line is None:
-            continue
-        out.append(" ".join([fields[0], str(new_line)] + fields[2:]))
+        out.append(f"{m.group(1)}{m.group(2)}{m.group(3)}{loop_line}"
+                   f"{m.group(5)}{red_line}{m.group(7)}")
     return "\n".join(out) + ("\n" if out else "")
 
 

@@ -6,11 +6,32 @@ SINK is the LATER access (docs/data/Profiling_and_instrumentation_output.md).
 `_parse_dep_line` assigns from_line=sink and to_line=source, so a rendered arrow
 reads later->earlier — backwards from data flow, and worth knowing before
 reading a prompt built from it.
+
+An endpoint appears in three forms, and only one of them is a source position:
+
+    49      instruction 49
+    56@24   instruction 56, plus callpath STATE 24 -- the number after the `@`
+            is NOT a line, and the explorer strips it before use
+            (parser.py: `sink = sink[: sink.index("@")]`)
+    1:18    a plain fileID:lineID, which IS a source line
+
+Reading the state as a line is the mistake this module used to make: it took
+`56@24` to mean line 24 and gave the `1:18` form line 0.  Since `_load_dependencies`
+filters by line, that silently selected the wrong dependences for a region --
+`1:18` endpoints were excluded always, and the rest survived by coincidence.
+Everything downstream inherited it, including the dependence lists put in front
+of the model (see evidence/package.py).
+
+Instruction ids become positions through `instructionID_to_lineID_mapping.txt`,
+whose lines are `<instructionID> <fileID>:<line>:<column>` (or `*` for an
+instruction with no source position -- about a fifth of them).  That file is the
+only thing that can answer "where is this dependence", so line filtering without
+it is guesswork, and `_load_dependencies` now loads it.
 """
 from __future__ import annotations
 
 from pathlib import Path
-from typing import List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from ..types import Dependency
 
@@ -38,19 +59,69 @@ def _classify_var(raw_name: str) -> Tuple[str, str]:
     return (raw_name, "scalar")
 
 
-def _parse_dep_line(line: str) -> List[Tuple[str, int, int, str, str]]:
+def _load_instruction_lines(profiler_dir: Path) -> Dict[str, Tuple[int, int]]:
+    """Map instruction id -> (file id, source line).
+
+    Instructions with no source position (`*`) are absent from the map, so a
+    dependence that refers to one resolves to "unknown" rather than to a
+    plausible-looking wrong line.
+    """
+    out: Dict[str, Tuple[int, int]] = {}
+    f = profiler_dir / "instructionID_to_lineID_mapping.txt"
+    if not f.exists():
+        return out
+    for raw in f.read_text().splitlines():
+        parts = raw.split()
+        if len(parts) < 2 or parts[1] == "*":
+            continue
+        bits = parts[1].split(":")
+        if len(bits) < 2:
+            continue
+        try:
+            out[parts[0]] = (int(bits[0]), int(bits[1]))
+        except ValueError:
+            continue
+    return out
+
+
+def _endpoint_position(
+    token: str, instr_lines: Dict[str, Tuple[int, int]]
+) -> Tuple[int, int]:
+    """Resolve one endpoint to (file id, line); (0, 0) when it cannot be placed."""
+    token = token.strip()
+    if not token:
+        return (0, 0)
+    if ":" in token:                       # fileID:lineID — already a position
+        bits = token.split(":")
+        try:
+            return (int(bits[0]), int(bits[1]))
+        except (ValueError, IndexError):
+            return (0, 0)
+    instr = token.split("@")[0]            # drop callpath state, as the explorer does
+    return instr_lines.get(instr, (0, 0))
+
+
+def _parse_dep_line(
+    line: str, instr_lines: Optional[Dict[str, Tuple[int, int]]] = None,
+) -> List[Tuple[str, int, int, str, str]]:
     """Parse one line of dynamic_dependencies.txt.
 
-    Format: <instr>@<from_line> NOM  <DEP_TYPE> <instr>@<to_line>|<var>(<region>) …
+    Format: <sink> NOM  <DEP_TYPE> <source>|<var>(<region>) …
     Returns list of (dep_type, from_line, to_line, variable, kind).
+
+    `instr_lines` resolves instruction ids to source lines (see
+    `_load_instruction_lines`).  Without it the variable names and dependence
+    types are still correct — that is all `_all_observed_dep_vars` needs — but
+    both line numbers come back 0, meaning "not placed", rather than a wrong
+    number that would pass a line filter.
     """
     results: List[Tuple[str, int, int, str, str]] = []
     parts = line.strip().split()
     if len(parts) < 4:
         return results
 
-    from_part = parts[0]
-    from_line = int(from_part.split("@")[1]) if "@" in from_part else 0
+    lines_map = instr_lines or {}
+    _from_file, from_line = _endpoint_position(parts[0], lines_map)
 
     dep_type = parts[2]
     if dep_type not in ("RAW", "WAR", "WAW"):
@@ -60,7 +131,7 @@ def _parse_dep_line(line: str) -> List[Tuple[str, int, int, str, str]]:
         if "|" not in target:
             continue
         to_part, var_part = target.split("|", 1)
-        to_line = int(to_part.split("@")[1]) if "@" in to_part else 0
+        _to_file, to_line = _endpoint_position(to_part, lines_map)
         variable, kind = _classify_var(var_part.split("(")[0])
         results.append((dep_type, from_line, to_line, variable, kind))
 
@@ -72,7 +143,12 @@ def _load_dependencies(
     start_line: int,
     end_line: int,
 ) -> Tuple[List[Dependency], List[Dependency], List[Dependency]]:
-    """Load deps where at least one endpoint falls inside [start_line, end_line]."""
+    """Load deps where at least one endpoint falls inside [start_line, end_line].
+
+    Endpoints are resolved through the instruction->line mapping first; an
+    endpoint with no source position cannot be placed in any region and is not
+    counted as being in this one.
+    """
     raw: List[Dependency] = []
     war: List[Dependency] = []
     waw: List[Dependency] = []
@@ -81,11 +157,13 @@ def _load_dependencies(
     if not dep_file.exists():
         return raw, war, waw
 
+    instr_lines = _load_instruction_lines(profiler_dir)
     for line in dep_file.read_text().splitlines():
         if not line.strip() or line.startswith("START"):
             continue
-        for dep_type, fl, tl, var, kind in _parse_dep_line(line):
-            in_region = (start_line <= fl <= end_line) or (start_line <= tl <= end_line)
+        for dep_type, fl, tl, var, kind in _parse_dep_line(line, instr_lines):
+            in_region = (fl and start_line <= fl <= end_line) or \
+                        (tl and start_line <= tl <= end_line)
             if not in_region:
                 continue
             dep = Dependency(dep_type=dep_type, from_line=fl, to_line=tl, variable=var, kind=kind)

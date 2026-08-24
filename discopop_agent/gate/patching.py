@@ -11,7 +11,7 @@ import re
 import shutil
 import subprocess
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple
 
 from .toolchain import _LIBOMP_DIR, _LLVM_LIBCXX, _macos_sysroot_flag
 
@@ -149,7 +149,8 @@ def _compile(source: Path, clangpp: str, work_dir: Path) -> Tuple[bool, str]:
 
 
 def _compile_variant(
-    source: Path, clangpp: str, work_dir: Path, name: str, openmp: bool, optimize: str = "-O2"
+    source: Path, clangpp: str, work_dir: Path, name: str, openmp: bool,
+    optimize: str = "-O2", extra_flags: Optional[List[str]] = None,
 ) -> Tuple[bool, str, Optional[Path]]:
     """Compile `source` to a runnable binary, with or without OpenMP.
 
@@ -160,6 +161,10 @@ def _compile_variant(
     on both sides of the ratio (see `_measure_speedup`).  `openmp=False` is
     therefore unused by the gate today and kept only for callers that want a
     genuinely sequential build.
+
+    `extra_flags` carries the semantically neutral codegen switches the
+    numerical calibration varies (contraction, vectorization) — see
+    `equivalence.numerical_noise_floor`.
     """
     binary = work_dir / name
     extra = (
@@ -172,6 +177,7 @@ def _compile_variant(
     cmd = [clangpp, str(source), "-o", str(binary), optimize]
     if openmp:
         cmd.append("-fopenmp")
+    cmd += list(extra_flags or [])
     cmd += extra
     result = subprocess.run(cmd, capture_output=True, text=True, cwd=work_dir)
     if result.returncode != 0:

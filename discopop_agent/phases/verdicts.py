@@ -130,6 +130,8 @@ def _verify_rewrite(
         res, _cached, _fp = _validate_cached(
             gate_cache, patch, args, reference_output, binary_args, reference_time,
             reference_outputs=reference_outputs,
+            dep_region=(cand.region.file_id, cand.region.start_line,
+                        cand.region.end_line),
         )
         if res.passed:
             return RewriteOutcome("ok", res.measured_speedup, label)

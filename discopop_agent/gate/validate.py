@@ -1,10 +1,20 @@
 """
 The quality gate — stage order, and the one place results are reused
 ----------------------------------------------------------------------
-Stages, in order: apply -> compile -> openmp_compile/tsan -> correctness ->
-performance.  Two of them are conditional on the diff carrying a `#pragma omp`,
-because a pragma-less rewrite is single-threaded: there is nothing to race and
+Stages, in order: apply -> compile -> openmp_compile/tsan -> dependences ->
+schedules -> correctness -> performance.  Four of them are conditional on the
+diff carrying a `#pragma omp`, because a pragma-less rewrite is single-threaded:
+there is nothing to race, no dependence question, no schedule to vary, and
 nothing to speed up.
+
+The two tracks ask different questions and are checked differently.  A rewrite
+with no pragma is a sequential-to-sequential transformation, so it is judged on
+a SEQUENTIAL build: threads are not part of that question and building with
+-fopenmp only mixed an irrelevant variable into it.  A patch that adds a pragma
+is judged on concurrency evidence — the sanitizer, then the schedule matrix —
+with the output comparison demoted to the cheap end-to-end check it is actually
+good at.  No single stage concludes "correct"; the verdict is their conjunction,
+and `ValidationResult.evidence` records which of them carried it.
 
 `mode="safety"` runs everything except the timing — "is this change safe to
 insert?" without "is it worth inserting?".
@@ -21,11 +31,15 @@ from __future__ import annotations
 import hashlib
 import tempfile
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from ..args import AgentArguments
 from ..types import ValidationResult
+from .dependences import dependence_evidence
+from .equivalence import compare_outputs
 from .patching import _apply, _compile, _compile_variant
+from .schedules import (DEFAULT_REPEATS, DEFAULT_SCHEDULES, DEFAULT_THREADS,
+                        stress_schedules)
 from .timing import _measure_speedup, _run_timed
 from .toolchain import _find_clangpp
 from .tsan import _is_omp_barrier_false_positive, _tsan
@@ -65,6 +79,11 @@ def validate(
     skip_race_check: bool = False,
     reference_time: Optional[float] = None,
     mode: str = "full",
+    noise_floor: float = 0.0,
+    stress: bool = True,
+    stress_threads: Optional[Tuple[int, ...]] = None,
+    discopop_dir: Optional[str] = None,
+    dep_region: Optional[Tuple[int, int, int]] = None,
 ) -> ValidationResult:
     """Run the quality-gate stages. Return the first failure or success.
 
@@ -120,8 +139,15 @@ def validate(
         # for a check that literally never ran.
         skipped_stages: List[str] = []
 
+        # Which track this diff is on.  A pragma-free rewrite is a
+        # sequential-to-sequential transformation; a pragma-bearing patch is a
+        # concurrency change.  They are checked differently from here down.
+        has_pragma = "pragma omp" in diff
+        evidence: Dict[str, object] = {"comparison": "exact"}
+        tsan_ran = False
+
         # Stage 3 — only pragma-bearing patches can race
-        if "pragma omp" in diff:
+        if has_pragma:
             ok, diag, stage = _tsan(
                 patched, clangpp, work_dir,
                 skip_race_check=skip_race_check, binary_args=binary_args,
@@ -131,13 +157,42 @@ def validate(
                                         skipped_stages=skipped_stages)
             if skip_race_check:
                 skipped_stages.append("tsan")
+            else:
+                tsan_ran = True
         else:
             skipped_stages += ["openmp_compile", "tsan"]
 
-        # One -O2 -fopenmp build serves BOTH remaining stages: the correctness
-        # run and, since the speedup measurement now varies OMP_NUM_THREADS
-        # rather than the build, the timed runs too.  The gate used to compile
-        # this same source three times.
+        # Stage 3b — what the profile says about this loop.  Free: no build, no
+        # run, just reading DiscoPoP's own account of why a region is or is not
+        # a Do-All.  Only an OBSERVED loop-carried dependence fails a patch; a
+        # static-only blocker or a gap in the profile is recorded and passed,
+        # because neither is evidence that the pragma is wrong.
+        if has_pragma:
+            dep = dependence_evidence(
+                discopop_dir,
+                dep_region[0] if dep_region else None,
+                dep_region[1] if dep_region else None,
+                dep_region[2] if dep_region else None,
+            )
+            evidence["dependences"] = dep.verdict
+            if dep.verdict != "supported":
+                evidence["dependences_detail"] = dep.diagnostic
+            if dep.contradicts:
+                return ValidationResult(
+                    passed=False, stage="dependences", diagnostic=dep.diagnostic,
+                    skipped_stages=skipped_stages, evidence=evidence)
+        else:
+            skipped_stages.append("dependences")
+
+        # One build serves every remaining stage: the schedule matrix, the
+        # correctness run and — since the speedup measurement varies
+        # OMP_NUM_THREADS rather than the build — the timed runs too.
+        #
+        # `-fopenmp` only when the diff actually contains a pragma.  A
+        # pragma-free rewrite used to be checked on an OpenMP build as well,
+        # which put a variable into the comparison that the question does not
+        # involve: nothing in that diff can run in parallel, so the only thing
+        # -fopenmp could contribute to the verdict was codegen noise.
         check_bin: Optional[Path] = None
 
         def _check_build() -> Tuple[bool, str]:
@@ -145,20 +200,61 @@ def validate(
             if check_bin is not None:
                 return True, ""
             ok_b, diag_b, binary = _compile_variant(
-                patched, clangpp, work_dir, "check_par", openmp=True
+                patched, clangpp, work_dir, "check_par", openmp=has_pragma
             )
             check_bin = binary
             return (ok_b and binary is not None), diag_b
 
-        # Stage 4 — semantic correctness (observable output must be unchanged),
-        # checked on EVERY recorded input, not just the profiled one.
+        # Stage 4 — schedule stress.  Does the program repeat itself at a fixed
+        # thread count, and does it still agree with itself when the schedule
+        # changes?  This is the stage that actually looks for races; the output
+        # diff below never could, because one run samples one interleaving.
+        if has_pragma and stress:
+            ok, diag = _check_build()
+            if not ok or check_bin is None:
+                return ValidationResult(
+                    passed=False, stage="schedules",
+                    diagnostic=f"parallel build failed:\n{diag}",
+                    skipped_stages=skipped_stages, evidence=evidence)
+            st = stress_schedules(
+                check_bin, work_dir, binary_args, floor=noise_floor,
+                threads=stress_threads or DEFAULT_THREADS,
+                schedules=DEFAULT_SCHEDULES, repeats=DEFAULT_REPEATS,
+            )
+            evidence["schedules"] = st.covered
+            evidence["reordered"] = st.reordered
+            if not st.ok:
+                # A hard verdict — unrepeatable at fixed threads, a structural
+                # change, or a failed run — is never overridden.  A soft one
+                # (values moved further across thread counts than the measured
+                # floor allows) is inconclusive on its own, and may stand only
+                # on a sanitizer run that actually happened and found nothing.
+                # Only the sanitizer can carry this.  The dependence stage is
+                # fail-only: "no blocker recorded" reads identically for a safe
+                # loop and for one the profile has never seen, so it is not
+                # evidence of safety and may not rescue anything.
+                if st.hard or not tsan_ran:
+                    return ValidationResult(
+                        passed=False, stage="schedules", diagnostic=st.diagnostic,
+                        skipped_stages=skipped_stages, evidence=evidence)
+                evidence["schedules_beyond_floor"] = st.max_deviation
+                evidence["carried_by"] = "tsan"
+        else:
+            skipped_stages.append("schedules")
+
+        # Stage 5 — semantic correctness, checked on EVERY recorded input, not
+        # just the profiled one.  Demoted: for a pragma this is the cheap
+        # end-to-end smoke test that catches gross breakage, not the stage that
+        # establishes thread safety.  For a pragma-free rewrite it is still the
+        # whole question, and it is asked of a sequential build.
         if reference_output is not None:
             ok, diag = _check_build()
             par_bin = check_bin
             if not ok or par_bin is None:
                 return ValidationResult(passed=False, stage="correctness",
                                         diagnostic=f"parallel build failed:\n{diag}",
-                                        skipped_stages=skipped_stages)
+                                        skipped_stages=skipped_stages,
+                                        evidence=evidence)
             cases = reference_outputs or [(list(binary_args or []), reference_output)]
             for argv, expected in cases:
                 ok, out, _, rdiag = _run_timed(par_bin, work_dir, argv, repeats=1)
@@ -167,8 +263,15 @@ def validate(
                     return ValidationResult(
                         passed=False, stage="correctness",
                         diagnostic=f"parallel run failed{where}: {rdiag}",
-                        skipped_stages=skipped_stages)
-                if out != expected:
+                        skipped_stages=skipped_stages, evidence=evidence)
+                m = compare_outputs(expected, out, noise_floor)
+                if m.mode == "numeric" and m.equal:
+                    evidence["comparison"] = "numeric"
+                    prev = evidence.get("deviation", 0.0)
+                    evidence["deviation"] = max(
+                        prev if isinstance(prev, float) else 0.0, m.max_deviation)
+                    evidence["floor"] = noise_floor
+                if not m.equal:
                     return ValidationResult(
                         passed=False, stage="correctness",
                         diagnostic=(
@@ -181,13 +284,14 @@ def validate(
                                "initial value, or a boundary case was carried over "
                                "from the old schedule instead of re-derived.\n"
                                if argv != list(binary_args or []) else "")
+                            + f"{m.diagnostic}\n"
                             + f"--- expected (original) ---\n{expected[:600]}\n"
                             f"--- got (patched) ---\n{out[:600]}"
                         ),
-                        skipped_stages=skipped_stages,
+                        skipped_stages=skipped_stages, evidence=evidence,
                     )
 
-        # Stage 5 — measured speedup (only for patches that add a pragma)
+        # Stage 6 — measured speedup (only for patches that add a pragma)
         measured: Optional[float] = None
         want_perf = (
             mode != "safety" and require_speedup and "pragma omp" in diff
@@ -239,7 +343,7 @@ def validate(
                 )
 
     return ValidationResult(passed=True, stage="accepted", measured_speedup=measured,
-                            skipped_stages=skipped_stages)
+                            skipped_stages=skipped_stages, evidence=evidence)
 
 
 def _gate_key(diff: str, source_file: str, mode: str) -> str:
@@ -273,6 +377,7 @@ def _validate_cached(
     reference_time: "float | None",
     reference_outputs: "list | None" = None,
     mode: str = "full",
+    dep_region: "tuple | None" = None,
 ) -> "tuple[ValidationResult, bool, bool]":
     """Run the gate on `diff`, or return the answer already computed for it.
 
@@ -309,6 +414,12 @@ def _validate_cached(
             skip_race_check=skip,
             reference_time=reference_time,
             mode=mode,
+            noise_floor=getattr(args, "noise_floor", 0.0),
+            discopop_dir=getattr(args, "discopop_dir", None),
+            dep_region=dep_region,
+            stress=getattr(args, "schedule_stress", True),
+            stress_threads=tuple(getattr(args, "stress_threads", None) or ())
+            or None,
         )
 
     res = _run(False)

@@ -3,7 +3,7 @@ import argparse
 import os
 import shlex
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, Tuple
 
 
 @dataclass
@@ -33,6 +33,15 @@ class AgentArguments:
     check_inputs: list          # extra argv sets the rewrite must also reproduce
     reprofil_args: list         # extra arguments forwarded to ./a.out during re-profiling
     verbose: bool               # render the full LLM I/O and gate stages in the terminal
+    # Correctness-gate calibration.  Defaults keep the gate strict on programs
+    # that do not need slack: an integer-only program measures a floor of 0 and
+    # is compared byte-for-byte exactly as before.
+    numeric_tolerance: bool = True   # measure the program's numerical noise floor
+    schedule_stress: bool = True     # vary threads/schedule instead of one run
+    stress_threads: Tuple[int, ...] = (1, 2, 4)  # thread counts the matrix covers
+    # Computed at startup by run.py, not parsed: how far this program's own
+    # numbers move under legal build variation.  0.0 means byte-exact.
+    noise_floor: float = 0.0
 
 
 def parse_args() -> AgentArguments:
@@ -183,6 +192,32 @@ def parse_args() -> AgentArguments:
                          "program cannot run are dropped with a warning."))
     p.add_argument("--reprofil-args", nargs=argparse.REMAINDER, default=[],
                    help="Arguments forwarded to ./a.out during re-profiling (e.g. -- sort input.txt)")
+    p.add_argument("--numeric-tolerance", action=argparse.BooleanOptionalAction, default=True,
+                   help=("Before judging anything, measure how far this program's own "
+                         "numbers move under semantically neutral build variation — "
+                         "vectorization, FMA contraction, optimization level — and allow "
+                         "a rewrite's values to move that far (default: on). Programs "
+                         "whose output holds no floating point measure a floor of zero "
+                         "and stay byte-exact, so this changes nothing for them. It "
+                         "exists because parallelizing a reduction reorders the "
+                         "additions, which moves the last digits: LULESH's own reference "
+                         "OpenMP disagrees with its serial build from the sixteenth "
+                         "digit, and a byte-identical gate reverts it. Everything that "
+                         "is not a number — labels, line structure, how many values are "
+                         "printed — must still match exactly, and integers are never "
+                         "given slack."))
+    p.add_argument("--schedule-stress", action=argparse.BooleanOptionalAction, default=True,
+                   help=("Run a pragma-bearing patch across several thread counts and "
+                         "OpenMP schedules instead of once (default: on). A single run "
+                         "samples a single interleaving, which is why an output diff "
+                         "alone cannot catch a race. Output that moves between runs at "
+                         "the SAME thread count is a race and fails at any magnitude; "
+                         "output stable at fixed threads that moves across thread counts "
+                         "is reordered arithmetic and is judged against the noise floor."))
+    p.add_argument("--stress-threads", default="1,2,4",
+                   help=("Thread counts the schedule matrix covers (default: 1,2,4). "
+                         "Small on purpose — a race needs more than one thread, not many "
+                         "— so the gate stays usable on a shared machine."))
     p.add_argument("-v", "--verbose", action="store_true",
                    help="Visualize the whole process in the terminal: the exact prompt "
                         "sent to the LLM, its raw response, the extracted edit, and each "
@@ -251,4 +286,9 @@ def parse_args() -> AgentArguments:
         check_inputs=[shlex.split(x) for x in a.check_input],
         reprofil_args=a.reprofil_args,
         verbose=a.verbose,
+        numeric_tolerance=a.numeric_tolerance,
+        schedule_stress=a.schedule_stress,
+        stress_threads=tuple(
+            int(x) for x in str(a.stress_threads).split(",") if x.strip()
+        ) or (1, 2, 4),
     )
