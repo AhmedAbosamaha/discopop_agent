@@ -85,7 +85,7 @@ class RemapStats:
     deps_out: int = 0
     deps_dropped_changed: int = 0     # an endpoint sits in rewritten code
     deps_dropped_unmapped: int = 0    # the instruction no longer exists
-    deps_static_carried: int = 0      # static-form row, translated with the rest
+    deps_bare_id: int = 0             # observed row with no callpath state
     loops_in: int = 0
     loops_out: int = 0
     notes: List[str] = field(default_factory=list)
@@ -94,7 +94,7 @@ class RemapStats:
         return (f"{self.deps_out}/{self.deps_in} observed dependences carried "
                 f"forward ({self.deps_dropped_changed} in rewritten code, "
                 f"{self.deps_dropped_unmapped} no longer present; "
-                f"{self.deps_static_carried} static-form rows translated), "
+                f"{self.deps_bare_id} without callpath state), "
                 f"{self.loops_out}/{self.loops_in} loop trip counts")
 
 
@@ -395,11 +395,14 @@ def remap_dependencies(
 
         # `<sink> NOM  <TYPE> <source>|<var>(<region>) [<TYPE> <source>|...]`
         if len(fields) >= 4 and fields[1] == "NOM":
-            # Rows with a bare instruction id — the STATIC dependences that also
-            # live in this file — used to be DROPPED here, on the reasoning that
-            # the compile regenerates them into static_dependencies.txt anyway.
-            # It does, but that is not the same thing: the explorer needs them in
-            # THIS file to anchor a blocker to the right loop.  Measured on
+            # Rows with a bare instruction id used to be DROPPED here as "static
+            # dependences the compile regenerates anyway".  They are nothing of
+            # the kind: measured on prefix_sum they share ZERO rows with
+            # static_dependencies.txt, use a different instruction-id range, and
+            # appear only after the binary has run.  They are OBSERVED rows that
+            # simply carry no callpath state — 42 of 52 — so dropping them threw
+            # away 80% of the measurement every refresh, and left the explorer
+            # unable to anchor a blocker to the right loop.  Measured on
             # prefix_sum, dropping them moved the `running` recurrence off the
             # loop at line 28 and onto the enclosing `if` at line 27, leaving the
             # prefix sum looking parallel and yielding a do_all on it.  Re-adding
@@ -408,7 +411,7 @@ def remap_dependencies(
             # objection (stale ids meaning something else) is answered by
             # translating them rather than by discarding them.
             if "@" not in fields[0] and ":" not in fields[0]:
-                stats.deps_static_carried += 1
+                stats.deps_bare_id += 1
 
             stats.deps_in += 1
             sink = tr.endpoint(fields[0])
@@ -458,50 +461,25 @@ def remap_dependencies(
     return "\n".join(out) + "\n", stats
 
 
-def _loop_end(lines: List[str], head: int) -> int:
-    """Last line of the loop whose header is at 1-based `head`, by brace count.
-
-    Falls back to the header itself for a braceless one-statement body, and to
-    the end of file for an unbalanced source (which the compile would already
-    have rejected).
-    """
-    depth = 0
-    seen = False
-    for n in range(head, len(lines) + 1):
-        for ch in lines[n - 1]:
-            if ch == "{":
-                depth += 1
-                seen = True
-            elif ch == "}":
-                depth -= 1
-        if seen and depth <= 0:
-            return n
-        if not seen and n > head:
-            return head          # single-statement body, no braces
-    return len(lines)
-
-
-def remap_loop_counters(text: str, lmap: Dict[int, int],
-                        new_text: str = "") -> str:
+def remap_loop_counters(text: str, lmap: Dict[int, int]) -> str:
     """Translate `loop_counter_output.txt` (`fileID line count`) onto new lines.
 
     Trip counts drive the workload score and the granularity advice in the
     prompt.  A loop whose header moved keeps its count; one inside rewritten
     code loses it and is scored from static information only.
 
-    The header surviving is NOT enough, which is what this used to test.  A
-    rewrite that leaves `for (int i = 0; i < N; i++) {` untouched and changes the
-    body underneath it keeps a trip count that is no longer the truth — measured
-    by the refresh harness as `loops_wrong`, and silently wrong is precisely what
-    the rest of this module refuses to be.  So the count is kept only when the
-    loop's WHOLE SPAN is carried over; if any line inside it was rewritten the
-    count is dropped, turning a wrong number into an honestly missing one.
-
-    `new_text` is optional so existing callers keep working; without it the old
-    header-only rule applies.
+    TRIED AND REMOVED: a stricter rule that also required the loop's whole SPAN
+    to be carried over, on the reasoning that a rewrite can leave the header
+    intact and change the body underneath, keeping a count that is no longer
+    true.  Sound reasoning, no measurable effect — on clean baselines the refresh
+    harness reported loops_wrong=8, loops_missing=36, UNSAFE=8, diverged=10 with
+    the rule and byte-identical numbers without it.  (An earlier 11 -> 5
+    improvement was an artefact of profiles corrupted by the append bug that
+    runner.py now clears.)  If it is ever reintroduced, measure it first: it also
+    needs an exemption for lines that strip to nothing but braces, since
+    wrapping a loop in `if (...) {` re-indents its closing brace and difflib
+    cannot carry it, which made the strict rule discard perfectly good counts.
     """
-    carried = set(lmap.values())
-    new_lines = new_text.splitlines() if new_text else []
     out: List[str] = []
     for raw in text.splitlines():
         fields = raw.split()
@@ -513,18 +491,6 @@ def remap_loop_counters(text: str, lmap: Dict[int, int],
             continue
         if new_line is None:
             continue
-        if new_lines and 1 <= new_line <= len(new_lines):
-            end = _loop_end(new_lines, new_line)
-            # Structural lines are excluded from the test.  A brace on its own
-            # is ambiguous to difflib — there are many identical ones — so
-            # wrapping a loop in `if (N > 0) {` re-indents its closing brace and
-            # the line map fails to carry it, while every statement in the body
-            # IS carried.  Counting that as "the body changed" threw away a
-            # perfectly good trip count for a purely cosmetic reason.
-            if any(n not in carried
-                   and new_lines[n - 1].strip().strip("{}();")
-                   for n in range(new_line, end + 1)):
-                continue          # a real statement changed: the count no longer applies
         out.append(f"{fields[0]} {new_line} {fields[2]}")
     return "\n".join(out) + ("\n" if out else "")
 
@@ -546,6 +512,13 @@ _REDUCTION = re.compile(
 
 def remap_reduction(text: str, lmap: Dict[int, int]) -> str:
     """Translate `reduction.txt` onto the new line numbering.
+
+    NO LONGER USED BY THE FAST REFRESH, and kept only because the file
+    format handling is worth preserving if reduction.txt ever becomes a
+    run artifact.  `discopop_cxx` writes reduction.txt itself, correctly,
+    for the new source — so carrying the previous run's copy forward and
+    translating it OVERWROTE good data with a stale record whose reduction
+    line no longer mapped.  See _COMPILE_ARTIFACTS in runner.py.
 
     Both line numbers have to move, and a record is kept only if BOTH survived
     the edit.  They are used for different things and a record with one stale
