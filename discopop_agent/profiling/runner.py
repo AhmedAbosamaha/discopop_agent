@@ -128,7 +128,8 @@ def _reprofil_fast(
     (profiler / "dynamic_dependencies.txt").write_text(dep_text)
     if "loop_counter_output.txt" in saved:
         (profiler / "loop_counter_output.txt").write_text(
-            fast_refresh.remap_loop_counters(saved["loop_counter_output.txt"], lmap)
+            fast_refresh.remap_loop_counters(
+                saved["loop_counter_output.txt"], lmap, new_text)
         )
     if "reduction.txt" in saved:
         (profiler / "reduction.txt").write_text(

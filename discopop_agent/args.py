@@ -126,7 +126,13 @@ def parse_args() -> AgentArguments:
     p.add_argument("--llm-deps", action=argparse.BooleanOptionalAction, default=None,
                    help=("With --fast-refresh: ask the LLM to judge the STATIC dependences "
                          "DiscoPoP reports for code the LLM itself just wrote (default: "
-                         "follows --fast-refresh, so ON unless you pass --no-fast-refresh). "
+                         "OFF). Kept for comparison experiments, not recommended: it is the "
+                         "only place a model's claim EDITS DiscoPoP's analysis instead of "
+                         "being tested against the program, and --llm-pragmas is the sound "
+                         "channel for the same judgement (the model writes the pragma; the "
+                         "gate has to be convinced). It also rarely pays for itself — a "
+                         "fast refresh saves only the instrumented run (8.6 s and 7.9 s on "
+                         "the two benchmark cases), and one LLM call usually costs more. "
                          "It only DELETES over-cautious static dependences; it never adds "
                          "one, and observed (dynamic) dependences are filtered out before "
                          "the model sees them. Static analysis is over-approximate, so a newly written "
@@ -254,7 +260,15 @@ def parse_args() -> AgentArguments:
         a.edit_mode = "direct" if sdk else "diff"
     explicit_llm_deps = a.llm_deps is not None
     if a.llm_deps is None:
-        a.llm_deps = a.fast_refresh
+        # OFF by default (it used to follow --fast-refresh).  It is the one place
+        # a model's claim edits DiscoPoP's own analysis rather than being tested
+        # against the program, and the honest channel for the same judgement is
+        # --llm-pragmas, where the model writes the pragma and the gate has to be
+        # convinced by TSan, the schedule matrix and the clock.  It is also
+        # unlikely to pay for itself: a fast refresh saves only the instrumented
+        # run (measured 8.6 s on prefix_sum, 7.9 s on array_accumulator), and one
+        # LLM call per kept rewrite typically costs more than that.
+        a.llm_deps = False
 
     # Direct editing needs a backend with file tools; the HTTP providers only
     # return text.

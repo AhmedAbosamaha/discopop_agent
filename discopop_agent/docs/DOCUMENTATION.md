@@ -518,7 +518,7 @@ python -m discopop_agent \
     --check-input        <args>            repeatable: extra inputs correctness must match
     --apply-patches / --no-apply-patches       default: ON (write Tier-1 pragmas to source)
     --fast-refresh / --no-fast-refresh         default: ON (skip the instrumented run)
-    --llm-deps / --no-llm-deps                 default: follows --fast-refresh
+    --llm-deps / --no-llm-deps                 default: OFF (comparison only)
     --hotspots / --no-hotspots                 default: ON (rank by measured time saved)
     --min-impact         <seconds>             default: 0.0 (off); needs --hotspots
     --numeric-tolerance / --no-...             default: ON (measure the numerical floor)
@@ -529,7 +529,7 @@ python -m discopop_agent \
     --dry-run                               plan only, no LLM calls, no file changes
 ```
 
-**Defaults, and why three of them are computed rather than fixed.** The out-of-the-box configuration is the one that actually produces results on this machine: `--provider claude-agent-sdk --model haiku --edit-mode direct --min-workload 0 --llm-pragmas --fast-refresh --llm-deps`, with `--require-speedup` left ON.
+**Defaults, and why two of them are computed rather than fixed.** The out-of-the-box configuration is the one that actually produces results on this machine: `--provider claude-agent-sdk --model haiku --edit-mode direct --min-workload 0 --llm-pragmas --fast-refresh`, with `--require-speedup` left ON and `--llm-deps` OFF.
 
 Three defaults are resolved after parsing because they are coupled to another flag, and a fixed value would fail at the first LLM call with an unrelated-looking error:
 
@@ -537,7 +537,7 @@ Three defaults are resolved after parsing because they are coupled to another fl
 |---|---|
 | `--model` | `haiku` for `claude-agent-sdk` (Claude Code's own aliases), `claude-opus-5` for `anthropic`, **required** for `openai-compat` (the name is whatever your endpoint serves) |
 | `--edit-mode` | `direct` for `claude-agent-sdk`, `diff` otherwise — `direct` needs a backend with file tools |
-| `--llm-deps` | follows `--fast-refresh`; passing `--no-fast-refresh` silently switches it off rather than erroring, and it only errors when explicitly asked for without it |
+| `--llm-deps` | **off** by default (it used to follow `--fast-refresh`); still errors when explicitly asked for without `--fast-refresh`, since there is no gap to fill then |
 
 So `--provider anthropic` on its own is a working invocation, not a broken one.
 
@@ -650,7 +650,7 @@ Anything whose tooling is missing reports `skip`, not `fail`. `benchmark/run.py`
 
 ---
 
-**`--fast-refresh` / `--llm-deps`:** **On by default** (`--llm-deps` follows `--fast-refresh`). After a kept Phase-A rewrite, refresh the profile **without running the instrumented program** — only `discopop_cxx` runs, and the previous run's observed dependences are translated onto the new instruction numbering (`fast_refresh.py`).
+**`--fast-refresh`:** **On by default.** **`--llm-deps`: OFF by default** — kept for comparison experiments only, see below. After a kept Phase-A rewrite, refresh the profile **without running the instrumented program** — only `discopop_cxx` runs, and the previous run's observed dependences are translated onto the new instruction numbering (`fast_refresh.py`).
 
 Measured cost of one re-profile, by step:
 
@@ -681,6 +681,8 @@ Two rules keep the question narrow, and both were learned the hard way:
 
 - **Only DiscoPoP's own Do-All blockers are reviewed** (`doall_prevented.json`), not every dependence in the region. The first version asked about every static dep in the rewritten lines: 76 questions on example4, of which 37 were induction variables and 3 were body-locals — things the agent already knows are never blockers, and which the L3 prompt already tells the model to ignore. It discharged 70 of 76, with at least one visibly wrong justification. Asking a model 40 questions whose answers are already known is how it learns to answer carelessly. Targeted at blockers, the same run asks **zero** questions and reaches the same result.
 - **Only STATIC-origin blockers are reviewable.** A dependence DiscoPoP actually observed at run time is ground truth and is never up for discussion.
+
+**Why it is off by default.** It is the only place a model's claim EDITS DiscoPoP's analysis rather than being tested against the program. The same judgement has a sound channel — `--llm-pragmas`, where the model writes the pragma and the gate has to be convinced by ThreadSanitizer, the schedule matrix, the output check and the clock: a hypothesis that must survive, rather than a claim that is believed. It also rarely pays for itself. A fast refresh saves only the instrumented run — measured 8.6 s on `prefix_sum` and 7.9 s on `array_accumulator` — and one LLM call per kept rewrite usually costs more than that, so the feature tends to be slower *and* less sound. It is kept behind the flag so a run with and without it can be compared and reported.
 
 **It only ever DELETES.** No dependence anywhere in the profile originates from the model: it removes over-cautious lines from `static_dependencies.txt` and writes nothing else, and silence is treated as REAL so an unanswered blocker keeps blocking. Every judgement is written to `<output-dir>/llm_deps.json`. This is the one place a model's claim enters DiscoPoP's analysis, so be clear-eyed: a wrong SPURIOUS produces a racy loop. What contains it — the model is told to answer REAL when unsure (a dependence wrongly called real costs only a missed parallelization), the record is auditable, discharged deps are matched back to the exact dependence lines they came from and the explorer is re-run (restoring the original analysis if it then fails), and any pragma resting on one still faces ThreadSanitizer, the byte-identical output check and the speedup gate.
 
