@@ -239,6 +239,28 @@ def validate(
                         skipped_stages=skipped_stages, evidence=evidence)
                 evidence["schedules_beyond_floor"] = st.max_deviation
                 evidence["carried_by"] = "tsan"
+            # The matrix compared its seven runs only to EACH OTHER, so a
+            # rewrite that is self-consistent and simply WRONG passes it.  The
+            # anchor run is already in hand, and the reference is already known,
+            # so checking one against the other costs nothing and closes that
+            # gap earlier than the correctness stage below — at a FIXED thread
+            # count, which is the configuration a race is most likely to show.
+            if st.anchor is not None and reference_output is not None:
+                m0 = compare_outputs(reference_output, st.anchor, noise_floor)
+                if not m0.equal:
+                    return ValidationResult(
+                        passed=False, stage="correctness",
+                        diagnostic=(
+                            "Program output changed under the parallel build at a "
+                            "fixed thread count — the patched program is NOT "
+                            f"semantically equivalent to the original.\n{m0.diagnostic}\n"
+                            f"--- expected (original) ---\n{reference_output[:600]}\n"
+                            f"--- got (patched) ---\n{st.anchor[:600]}"
+                        ),
+                        skipped_stages=skipped_stages, evidence=evidence)
+                if m0.mode == "numeric":
+                    evidence["comparison"] = "numeric"
+                    evidence["floor"] = noise_floor
         else:
             skipped_stages.append("schedules")
 

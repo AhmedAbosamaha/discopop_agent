@@ -31,11 +31,19 @@ renumbers everything after the first changed instruction (verified: an edit in
 `file:line:col`, but it is MANY-to-one — ids 3, 6, 9 and 12 all map to `1:6:0` —
 so it cannot simply be inverted.
 
-The identity that works is `(file, line, column, k)` where k counts instructions
-sharing that position, in id order.  It is stable because the numbering is
-deterministic for identical source (verified: two compiles of the same file
-produce byte-identical mapping files) and locally stable across an edit, since
-instructions are emitted in source order.
+That key does NOT work as the identity: an instruction with no source position
+(`*`) has no such key, and there are plenty of them.  What works is SEQUENCE
+ALIGNMENT — both files are the same program's instructions in order, so old
+positions are rewritten into new-line coordinates and the two token streams are
+aligned with difflib (`build_id_map`); `*` entries then match by context, the
+way a blank line does in a text diff.
+
+The position key `(file, line, column, k)` is still built (`load_instruction_keys`),
+but only as an INDEPENDENT CROSS-CHECK: `_Translator.instr` re-derives where the
+matched instruction should have landed and drops the dependence when the two
+methods disagree, so an alignment that slipped cannot attach a dependence to the
+wrong instruction.  The numbering is deterministic for identical source
+(verified: two compiles of the same file produce byte-identical mapping files).
 
 Static memory-region ids are NOT stable — they are pointer-derived and differ
 between two compiles of the same source (`S-1208730495` vs `S-1084334991`).

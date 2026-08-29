@@ -1,10 +1,15 @@
 """
 Phase A — restructure, with the source kept pragma-free
 ---------------------------------------------------------
-Regions DiscoPoP can already parallelize are DEFERRED, not processed: inserting
-their pragmas now is exactly what used to invalidate the profile every later
-decision depends on.  A region with no pattern goes to the LLM, and what comes
-back is gated, written, and re-profiled.
+Regions DiscoPoP can already parallelize are DEFERRED, not processed.  The
+reason is line numbers, not profile validity: the instrumented build carries no
+-fopenmp, so a pragma is a comment to DiscoPoP and re-analysing after one returns
+the same dependences.  But `assemble()` reads a region's span from the profile
+and the TEXT from the source file, so a pragma inserted above a still-queued
+region would hand the next LLM call the wrong lines.  Deferring also lets Phase B
+order every pragma globally by predicted time saved, which is impossible here
+because this queue is still growing.  A region with no pattern goes to the LLM,
+and what comes back is gated, written, and re-profiled.
 
 What decides whether the rewrite stays depends on who wrote the pragmas.  Under
 --llm-pragmas the diff carries them and the gate has already judged them —
@@ -353,9 +358,14 @@ def phase_a(state: RunState) -> None:
                 use_fast = args.fast_refresh and not deeper_coming
                 if use_fast:
                     print(f"│  [Tier-2] Fast refresh (compile only, no instrumented run)...")
+                    # Read ONCE.  The refresh, the hotspot remap and the
+                    # dependence review each used to re-read this file, so the
+                    # three of them could in principle disagree about what "the
+                    # new source" is, and the line map got rebuilt each time.
+                    post_patch_src = Path(args.source_file).read_text()
                     reprofile_ok, note = _reprofil_fast(
                         args.source_file, dp_dir, pre_patch_src or "",
-                        Path(args.source_file).read_text(), output_dir,
+                        post_patch_src, output_dir,
                     )
                     if reprofile_ok:
                         print(f"│           {note}")
@@ -368,9 +378,8 @@ def phase_a(state: RunState) -> None:
                             # were translated, and drop what cannot be.
                             lost = impact.remap_lines(
                                 region.file_id,
-                                fast_refresh.line_map(
-                                    pre_patch_src or "",
-                                    Path(args.source_file).read_text()),
+                                fast_refresh.line_map(pre_patch_src or "",
+                                                      post_patch_src),
                             )
                             if lost:
                                 print(f"│           {lost} runtime measurement(s) "
@@ -378,8 +387,7 @@ def phase_a(state: RunState) -> None:
                         if args.llm_deps:
                             gaps = _llm_dep_review(
                                 args, dp_dir, pre_patch_src or "",
-                                Path(args.source_file).read_text(), output_dir,
-                                region.file_id,
+                                post_patch_src, output_dir, region.file_id,
                             )
                             if gaps:
                                 print(f"│           {gaps}")

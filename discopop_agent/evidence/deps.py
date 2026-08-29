@@ -251,23 +251,33 @@ def _load_static_only_vars(
     f = profiler_dir / "static_dependencies.txt"
     if not f.exists():
         return []
+    # Endpoints here are bare INSTRUCTION IDS -- `74 NOM RAW 60|k(S-...)` means
+    # instruction 74 depends on instruction 60, NOT line 74 on line 60.  This
+    # function used to read them as lines (and `55@43` as line 43, which is the
+    # callpath state), so the region filter below compared instruction ids
+    # against a line range: variables were selected because an unrelated id
+    # happened to land inside the span, and every dependence whose id exceeded
+    # the file's line count was excluded outright.  Same mistake the module
+    # docstring describes, left behind in this one function.
+    instr_lines = _load_instruction_lines(profiler_dir)
+
+    def _line_of(token: str) -> int:
+        pos = instr_lines.get(token.split("@")[0])
+        return pos[1] if pos else -1
+
     static_vars: set = set()
     for line in f.read_text().splitlines():
         parts = line.split()
         if len(parts) < 4 or parts[2] not in ("RAW", "WAR", "WAW"):
             continue
-        try:
-            sink_line = int(parts[0].split(":")[-1])
-        except ValueError:
+        sink_line = _line_of(parts[0])
+        if sink_line < 0:
             continue
         for target in parts[3:]:
             if "|" not in target:
                 continue
             src, var_part = target.split("|", 1)
-            try:
-                src_line = int(src.split("@")[-1].split(":")[-1])
-            except ValueError:
-                src_line = -1
+            src_line = -1 if src == "*" else _line_of(src)
             if not ((start_line <= sink_line <= end_line) or (start_line <= src_line <= end_line)):
                 continue
             name, _ = _classify_var(var_part.split("(")[0])

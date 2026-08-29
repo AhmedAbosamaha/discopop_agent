@@ -12,10 +12,18 @@ in its own package.  What happens, in order:
   3. Establish the baseline to beat — counted honestly as patterns whose pragma
      passes the clause check AND compiles, not merely patterns DiscoPoP claims.
   4. PHASE A (`phases/phase_a.py`) — restructure, with the source kept
-     pragma-free.  Regions DiscoPoP can already parallelize are DEFERRED here,
-     not processed: inserting their pragmas now is what used to invalidate the
-     profile every later decision depends on.
+     pragma-free.  Regions DiscoPoP can already parallelize are DEFERRED here.
+     NOT because a pragma corrupts the profile — the instrumented build carries
+     no -fopenmp, so DiscoPoP reads pragmas as comments and re-analysing after
+     one returns identical data.  What an insertion really breaks is LINE
+     NUMBERS: `assemble()` takes a region's span from the profile and then reads
+     the SOURCE at those numbers, so a pragma inserted above a queued region
+     would show the next LLM call the wrong lines.
   5. PHASE B (`phases/phase_b.py`) — annotate, once, from the final profile.
+     The structural reason this is a second pass: Phase A's queue GROWS while it
+     runs (each kept rewrite appends newly discovered regions at depth+1), so
+     the full set of annotatable regions — and therefore a global ordering by
+     predicted time saved — is not knowable until Phase A has finished.
      Every patch is re-derived against the file as it currently stands, since
      each applied pragma shifts every line below it.
   6. SETTLE (`phases/settle.py`) — the only step that judges the FILE.  Drop
@@ -37,6 +45,7 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -70,8 +79,22 @@ def run(args: AgentArguments) -> None:
     reference_output, reference_time, reference_outputs = capture_reference(
         args.source_file, binary_args, extra_inputs=args.check_inputs or None
     )
+    if reference_output is None and not args.allow_unverified:
+        # Failing OPEN here is the worst available outcome: the run continues and
+        # accepts patches whose output was never compared to anything, while the
+        # summary reports them as accepted.  If the original program cannot be
+        # built or run there is nothing to compare against, and the honest
+        # response to that is to stop.
+        print("  [FATAL] Could not build or run the ORIGINAL program, so there is no\n"
+              "          reference output and the correctness gate cannot run.\n"
+              "          Fix the program (or its --reprofil-args), or pass\n"
+              "          --allow-unverified to accept patches that were never checked\n"
+              "          for semantic equivalence.\n")
+        sys.exit(1)
     if reference_output is None:
-        print("  [warn] Could not capture reference output — correctness gate disabled.\n")
+        print("  [warn] --allow-unverified: no reference output — the correctness gate\n"
+              "         is OFF for this run. Nothing below is checked against the\n"
+              "         original program's behaviour.\n")
     else:
         rt = f", {reference_time*1e3:.1f} ms baseline" if reference_time else ""
         n = len(reference_outputs or [])

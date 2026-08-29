@@ -82,7 +82,7 @@ def review_dependences(
         viz.llm_request(model, provider, _SYSTEM_DEPS, prompt, attempt=0)
     text = _complete(provider, client, model,
                      [{"role": "user", "content": prompt}], _SYSTEM_DEPS,
-                     session_key="dep-review")
+                     session_key="dep-review", stateless=True)
     if verbose:
         viz.llm_response(text, kind="dep verdicts")
 
@@ -169,6 +169,14 @@ def _llm_dep_review(
         key = (dep_type, var, region, ls, le)
         if key in seen:
             continue
+        # load_prevented_deps takes a SPAN (min..max of the rewritten lines), so
+        # a rewrite touching lines 40 and 90 pulls in everything between them.
+        # The review is only entitled to code the model just wrote, so a blocker
+        # whose loop does not overlap a rewritten line is not asked about.
+        if isinstance(ls, int):
+            _le = le if isinstance(le, int) else ls
+            if not (set(range(ls, max(_le, ls) + 1)) & set(rewritten)):
+                continue
         seen.add(key)
         snk, src = _ln(b.get("sink_line")), _ln(b.get("source_line"))
         loop_lines = ""
@@ -247,8 +255,12 @@ def _llm_dep_review(
             region = var_part[var_part.find("(") + 1:var_part.rfind(")")] \
                 if "(" in var_part else ""
             sink_line = _line_of(f[0])
+            # An unresolvable sink used to be removed anyway; that let a
+            # discharge reach a dependence outside the rewritten lines, which is
+            # exactly what this review is not entitled to touch.  No line, no
+            # removal.
             if ((f[2], var, region) in targets
-                    and (sink_line is None or sink_line in rewritten_set)):
+                    and sink_line is not None and sink_line in rewritten_set):
                 removed += 1
                 continue
         keep.append(raw)

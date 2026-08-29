@@ -28,7 +28,8 @@ from .parse import (_PRAGMA_LINE_RE, _PRIVATE_CLAUSE_RE,
                     _loop_span, _locate_header, _next_loop_header,
                     _pragma_and_anchor, _touched_span)
 from ..sources.edits import _apply_in_memory
-from .scope import _declared_as_array, _declared_in, _read_after, _written_in
+from .scope import (_declared_as_array, _declared_in, _read_after,
+                    _strip_loop_header, _written_in)
 
 
 def check_pragma_clauses(diff: "str | None", source_file: str) -> "str | None":
@@ -106,18 +107,23 @@ def _clause_problem(src: List[str], pragma: str, head: int) -> "str | None":
     loop = _loop_span(src, head)
     if loop is None:
         return None
-    body = src[loop[0]: loop[1] + 1]
+    # The FIRST line is the loop header, whose induction-variable assignment must
+    # not count as a write — but on a one-line loop it also carries the body, so
+    # strip the control clause instead of dropping the line.
+    raw = src[loop[0]: loop[1] + 1]
+    body = [_strip_loop_header(raw[0])] + raw[1:]
+    head_indent = len(src[head]) - len(src[head].lstrip())
 
     for n in names:
-        if _declared_in(body[1:], n):
+        if _declared_in(body, n):
             return (f"clause names `{n}`, which is declared inside the loop body — "
                     f"it is already per-iteration and is not in scope at the pragma")
         # The write-back rule needs BOTH halves: the loop has to produce a value
         # AND something after the loop has to read it.  A read-only scalar in
         # firstprivate (a bound, a size, a parameter) is perfectly correct.
         is_array = _declared_as_array(src, n)
-        if (_written_in(body[1:], n, subscript=is_array)
-                and _read_after(src, n, loop[1])):
+        if (_written_in(body, n, subscript=is_array)
+                and _read_after(src, n, loop[1], stop_indent=head_indent)):
             what = "fills and later code reads" if is_array else "writes and later code reads"
             return (f"clause names `{n}`, which the loop {what} — "
                     f"private/firstprivate discard those writes, so that "

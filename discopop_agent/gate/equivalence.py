@@ -312,6 +312,21 @@ def numerical_noise_floor(
             ok_r, out, _t, _d = _run_timed(binary, work, binary_args, repeats=1)
             if ok_r:
                 outputs.append((name, out))
+                # An output whose every number is an integer token can only
+                # produce a floor of 0.0: the comparison below skips integer
+                # tokens outright, so no later variant can move `worst`.  The
+                # remaining five build+run pairs would prove a foregone
+                # conclusion, and on a large program that is the most expensive
+                # thing setup does.
+                if len(outputs) == 1:
+                    _, _first_nums = _tokenize(out)
+                    if all(_is_integer_token(t) for t in _first_nums):
+                        return NoiseFloor(
+                            variants_run=[name],
+                            diagnostic=("output holds no non-integer number; the "
+                                        "floor is 0 by construction, so the "
+                                        "remaining build variants were skipped"),
+                        )
 
     if len(outputs) < 2:
         return NoiseFloor(

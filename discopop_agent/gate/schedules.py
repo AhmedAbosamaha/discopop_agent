@@ -58,6 +58,11 @@ class ScheduleStress:
     covered: List[str] = field(default_factory=list)
     max_deviation: float = 0.0
     reordered: bool = False        # values moved across thread counts, within floor
+    # stdout of the anchor run (t_max, static schedule).  Carried out so the
+    # caller can compare it against the REFERENCE for free: this stage only ever
+    # compared its runs to EACH OTHER, so a rewrite that is perfectly
+    # self-consistent and wrong passed it without comment.
+    anchor: Optional[str] = None
 
 
 def _run_env(
@@ -162,7 +167,7 @@ def stress_schedules(
             reordered = True
 
     return ScheduleStress(
-        ok=True, verdict="stable", covered=covered,
+        ok=True, verdict="stable", covered=covered, anchor=anchor,
         max_deviation=worst, reordered=reordered,
         diagnostic=(
             f"stable across {len(covered)} configurations"

@@ -97,7 +97,11 @@ def _apply_change_log(original_text: str, keep: list, args: AgentArguments) -> l
         for ch in keep:
             pf = work / "rb.patch"
             pf.write_text(fix_hunk_headers(ch["diff"]) + "\n")
-            ok, _diag = run_patch(src, pf)
+            # exact=True: this replay's whole logic is that a change whose
+            # foundation was dropped must FAIL here.  Fuzzy matching would let
+            # it apply anyway, near the right place, and the signal would be
+            # lost.
+            ok, _diag = run_patch(src, pf, exact=True)
             if ok:
                 landed.append(ch)
     return landed

@@ -73,7 +73,7 @@ def fix_hunk_headers(diff: str) -> str:
 # ---------------------------------------------------------------------------
 
 
-def run_patch(target: Path, patch_path: Path) -> Tuple[bool, str]:
+def run_patch(target: Path, patch_path: Path, exact: bool = False) -> Tuple[bool, str]:
     """Apply `patch_path` to `target`, without any way to hang.
 
     GNU patch goes INTERACTIVE whenever it cannot work out what to do — "File
@@ -91,17 +91,34 @@ def run_patch(target: Path, patch_path: Path) -> Tuple[bool, str]:
       stdin=DEVNULL      any prompt that still appears reads EOF and gives up
       timeout            a backstop — patch works in milliseconds, so anything
                          approaching a minute is pathological
+
+    `exact=True` adds -F0.  GNU patch defaults to a fuzz factor of 2, so it will
+    apply a hunk whose CONTEXT does not match — verified: a hunk carrying
+    `// CTX ONE CHANGED` against a file holding `// CTX ONE` applied cleanly and
+    exited 0.  That is tolerable when validating a candidate (the result is
+    checked afterwards anyway), but it breaks the invariant the change-log
+    REPLAY rests on: `_apply_change_log` treats "this patch no longer applies" as
+    the signal that a change depended on one that was dropped.  Fuzz turns that
+    signal into a silent apply somewhere near the intended place.
     """
     try:
         r = subprocess.run(
             # --no-backup-if-mismatch: suppress <file>.orig backups on fuzzy apply.
+            # --reject-file: a failed hunk otherwise drops <target>.rej beside
+            # the target, and one caller's target is the USER'S SOURCE FILE.
+            # Send rejects next to the patch instead, which always lives in a
+            # temp dir or the agent's own output dir.
             ["patch", "--batch", "--forward", "--quiet",
-             "--no-backup-if-mismatch", str(target), str(patch_path)],
+             "--no-backup-if-mismatch",
+             f"--reject-file={patch_path}.rej"]
+            + (["-F0"] if exact else [])
+            + [str(target), str(patch_path)],
             capture_output=True, text=True,
             stdin=subprocess.DEVNULL, timeout=60,
         )
     except subprocess.TimeoutExpired:
         return False, "patch timed out after 60 s (it should take milliseconds)"
+    Path(f"{patch_path}.rej").unlink(missing_ok=True)
     if r.returncode != 0:
         return False, (r.stdout + r.stderr).strip() or f"patch exited {r.returncode}"
     return True, ""
@@ -158,9 +175,10 @@ def _compile_variant(
     binary, and `validate()` builds it once and memoises it.  The speedup
     comparison no longer builds a second, non-OpenMP variant: it varies
     OMP_NUM_THREADS on this one binary instead, so identical machine code sits
-    on both sides of the ratio (see `_measure_speedup`).  `openmp=False` is
-    therefore unused by the gate today and kept only for callers that want a
-    genuinely sequential build.
+    on both sides of the ratio (see `_measure_speedup`).  `openmp=False` is what a
+    PRAGMA-FREE rewrite gets (validate() passes `openmp=has_pragma`): nothing in
+    such a diff can run in parallel, so -fopenmp could only add codegen noise to
+    the comparison.
 
     `extra_flags` carries the semantically neutral codegen switches the
     numerical calibration varies (contraction, vectorization) — see

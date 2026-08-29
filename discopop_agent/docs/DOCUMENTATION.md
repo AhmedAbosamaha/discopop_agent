@@ -507,8 +507,6 @@ python -m discopop_agent \
     --lambda-penalty <float>                 default: 1.0
     --min-workload   <float>                  default: 0.0
     --output-dir         <path>             default: <discopop-dir>/agent_patches
-    --provider           {anthropic,openai-compat,claude-agent-sdk}  default: anthropic
-    --api-base           <url>              openai-compat endpoint (env: LLM_API_BASE)
     --edit-mode          {diff,function,direct}  default: follows --provider
                                             ('direct' for claude-agent-sdk, 'diff' otherwise;
                                              'direct' requires --provider claude-agent-sdk)
@@ -519,6 +517,15 @@ python -m discopop_agent \
     --build-retries      <int>             default: 2 (apply/compile retries, free)
     --check-input        <args>            repeatable: extra inputs correctness must match
     --apply-patches / --no-apply-patches       default: ON (write Tier-1 pragmas to source)
+    --fast-refresh / --no-fast-refresh         default: ON (skip the instrumented run)
+    --llm-deps / --no-llm-deps                 default: follows --fast-refresh
+    --hotspots / --no-hotspots                 default: ON (rank by measured time saved)
+    --min-impact         <seconds>             default: 0.0 (off); needs --hotspots
+    --numeric-tolerance / --no-...             default: ON (measure the numerical floor)
+    --schedule-stress / --no-schedule-stress   default: ON (vary threads and schedules)
+    --stress-threads     <n,n,n>               default: 1,2,4
+    --reprofil-args      <args...>             forwarded to ./a.out when re-profiling
+    --verbose / -v                             render full LLM I/O and gate stages
     --dry-run                               plan only, no LLM calls, no file changes
 ```
 
@@ -536,7 +543,7 @@ So `--provider anthropic` on its own is a working invocation, not a broken one.
 
 **`--budget`:** Maximum number of LLM retry attempts per region. Each retry costs one API call. A region where the LLM fails every attempt is marked as skipped.
 
-**`--provider` / `--api-base`:** Selects the LLM backend. `anthropic` (default) uses the Anthropic API. `openai-compat` targets any OpenAI-compatible endpoint (e.g. a self-hosted vLLM server) at `--api-base` (e.g. `http://localhost:18000/v1`), with `--model` as the served model id and `--api-key` as its key. Tunnel a remote endpoint to localhost first (`ssh -fN -L 18000:localhost:18000 <user>@<server>`). `claude-agent-sdk` runs the local `claude` CLI headlessly (via the Claude Agent SDK) instead of calling the billed API directly — usage is drawn from your Claude Code subscription. Run `claude login` once; no `--api-key` is needed. `--model` accepts Claude Code's own aliases (`haiku`, `sonnet`, `opus`) as well as full model IDs, e.g. `--provider claude-agent-sdk --model haiku`. Requires `pip install claude-agent-sdk` and the `claude` CLI on `PATH`.
+**`--provider` / `--api-base`:** Selects the LLM backend. `anthropic` uses the Anthropic API. `openai-compat` targets any OpenAI-compatible endpoint (e.g. a self-hosted vLLM server) at `--api-base` (e.g. `http://localhost:18000/v1`), with `--model` as the served model id and `--api-key` as its key. Tunnel a remote endpoint to localhost first (`ssh -fN -L 18000:localhost:18000 <user>@<server>`). `claude-agent-sdk` (**the default**) runs the local `claude` CLI headlessly (via the Claude Agent SDK) instead of calling the billed API directly — usage is drawn from your Claude Code subscription. Run `claude login` once; no `--api-key` is needed. `--model` accepts Claude Code's own aliases (`haiku`, `sonnet`, `opus`) as well as full model IDs, e.g. `--provider claude-agent-sdk --model haiku`. Requires `pip install claude-agent-sdk` and the `claude` CLI on `PATH`.
 
 **`--lambda-penalty`:** Controls how much the Tier-2 LLM cost discounts a candidate's score. Higher values make the agent prefer Tier-1 (DiscoPoP) regions and skip Tier-2 (LLM-only) regions with lower workload.
 
@@ -560,11 +567,11 @@ So `--provider anthropic` on its own is a working invocation, not a broken one.
 - If the model leaves the file unchanged (or only touches comments/whitespace), it is re-prompted for free twice; a still-unchanged file is reported to the controller as "no change" and costs one budget slot, with the same "returning the input is not a valid answer" feedback used by `function` mode.
 - Because the model can read the whole file, this is the only mode where it can consult code outside the region it is rewriting.
 
-**`--llm-pragmas`:** Off by default. When set, the LLM writes the OpenMP pragmas **in the same edit as the restructuring**, and the agent judges that edit on its own merits instead of asking DiscoPoP to re-discover the parallelism.
+**`--llm-pragmas`:** **On by default.** When set, the LLM writes the OpenMP pragmas **in the same edit as the restructuring**, and the agent judges that edit on its own merits instead of asking DiscoPoP to re-discover the parallelism.
 
 What changes:
 
-| | default (`--no-llm-pragmas`) | `--llm-pragmas` |
+| | `--no-llm-pragmas` | `--llm-pragmas` (default) |
 |---|---|---|
 | system prompt | "you do NOT write pragmas" | "annotate what you parallelize; nothing downstream adds one for you" |
 | Phase-A gate | apply → compile → output (sequential build) | **clauses (static)** → apply → compile → `-fopenmp` → **TSan** → output (**parallel** build) → **speedup** |
@@ -643,7 +650,7 @@ Anything whose tooling is missing reports `skip`, not `fail`. `benchmark/run.py`
 
 ---
 
-**`--fast-refresh` / `--llm-deps`:** Off by default. After a kept Phase-A rewrite, refresh the profile **without running the instrumented program** — only `discopop_cxx` runs, and the previous run's observed dependences are translated onto the new instruction numbering (`fast_refresh.py`).
+**`--fast-refresh` / `--llm-deps`:** **On by default** (`--llm-deps` follows `--fast-refresh`). After a kept Phase-A rewrite, refresh the profile **without running the instrumented program** — only `discopop_cxx` runs, and the previous run's observed dependences are translated onto the new instruction numbering (`fast_refresh.py`).
 
 Measured cost of one re-profile, by step:
 
@@ -675,7 +682,7 @@ Two rules keep the question narrow, and both were learned the hard way:
 - **Only DiscoPoP's own Do-All blockers are reviewed** (`doall_prevented.json`), not every dependence in the region. The first version asked about every static dep in the rewritten lines: 76 questions on example4, of which 37 were induction variables and 3 were body-locals — things the agent already knows are never blockers, and which the L3 prompt already tells the model to ignore. It discharged 70 of 76, with at least one visibly wrong justification. Asking a model 40 questions whose answers are already known is how it learns to answer carelessly. Targeted at blockers, the same run asks **zero** questions and reaches the same result.
 - **Only STATIC-origin blockers are reviewable.** A dependence DiscoPoP actually observed at run time is ground truth and is never up for discussion.
 
-Every judgement is written to `<output-dir>/llm_deps.json`. This is the one place a model's claim enters DiscoPoP's analysis, so be clear-eyed: a wrong SPURIOUS produces a racy loop. What contains it — the model is told to answer REAL when unsure (a dependence wrongly called real costs only a missed parallelization), the record is auditable, discharged deps are matched back to the exact dependence lines they came from and the explorer is re-run (restoring the original analysis if it then fails), and any pragma resting on one still faces ThreadSanitizer, the byte-identical output check and the speedup gate.
+**It only ever DELETES.** No dependence anywhere in the profile originates from the model: it removes over-cautious lines from `static_dependencies.txt` and writes nothing else, and silence is treated as REAL so an unanswered blocker keeps blocking. Every judgement is written to `<output-dir>/llm_deps.json`. This is the one place a model's claim enters DiscoPoP's analysis, so be clear-eyed: a wrong SPURIOUS produces a racy loop. What contains it — the model is told to answer REAL when unsure (a dependence wrongly called real costs only a missed parallelization), the record is auditable, discharged deps are matched back to the exact dependence lines they came from and the explorer is re-run (restoring the original analysis if it then fails), and any pragma resting on one still faces ThreadSanitizer, the byte-identical output check and the speedup gate.
 
 ---
 

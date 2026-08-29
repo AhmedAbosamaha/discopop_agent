@@ -14,7 +14,7 @@ pragma most likely to matter is measured against the cleanest baseline.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 
 from ..args import AgentArguments
 from ..gate import _validate_cached, measure_marginal, noise_floor
@@ -83,6 +83,15 @@ def _phase_b(
             print(f"  [warn] could not calibrate timing noise ({ndiag[:60]}); "
                   f"falling back to {threshold:.2f}\n")
 
+    # Spans that already carry a pragma applied by THIS pass.  `todo` is built
+    # once, before the loop, so impact.mark_covered() cannot remove a nested
+    # candidate from it, and _already_annotated() only matches the SAME loop
+    # header — neither catches an inner loop whose enclosing loop was just
+    # annotated.  Until now that was caught only by the marginal measurement
+    # (the inner pragma scores ~1.0x and is dropped), which means
+    # --no-require-speedup let one through.
+    applied_spans: List[Tuple[int, int, int]] = []
+
     for cand in todo:
         rid = cand.region.region_id
         pid = cand.pattern.get("pattern_id", "?") if cand.pattern else "?"
@@ -114,6 +123,22 @@ def _phase_b(
         if _already_annotated(diff, args.source_file):
             print(f"│  this loop is already annotated in the source")
             print(f"└─ SKIPPED (nothing to add)\n")
+            continue
+
+        # Nested inside a loop this pass already parallelized.  Applying it
+        # would put one worksharing construct inside another; with nesting off
+        # (the OpenMP default) the inner team is a single thread, so it buys
+        # nothing and costs the region's own overhead.
+        enclosing = next(
+            ((f, a, b) for f, a, b in applied_spans
+             if f == cand.region.file_id
+             and a <= cand.region.start_line and cand.region.end_line <= b),
+            None,
+        )
+        if enclosing is not None:
+            print(f"│  nested inside the already-parallelized region at lines "
+                  f"{enclosing[1]}–{enclosing[2]}")
+            print(f"└─ SKIPPED (enclosing loop is already parallel)\n")
             continue
 
         # 1. static — the only check that sees a clause handing back a value it
@@ -170,8 +195,21 @@ def _phase_b(
         if impact is not None and impact.available:
             impact.mark_covered(cand.region.file_id, cand.region.start_line,
                                 cand.region.end_line)
+        applied_spans.append((cand.region.file_id, cand.region.start_line,
+                              cand.region.end_line))
         fp_before = region_fingerprint(args.source_file, cand.region.start_line,
                                        cand.region.end_line, cand.region.name)
+        if not args.apply_patches:
+            # Recorded and validated, but deliberately not written: the patch
+            # stays in patch_generator/ and accepted.json describes it.
+            print(f"└─ VALIDATED, not written (--no-apply-patches)\n")
+            kept.append({
+                "region_id": rid, "region_type": cand.region.region_type,
+                "phase": "B", "pattern_id": pid, "pragma": pragma, "lines": lines,
+                "marginal_speedup": marginal, "applied_to_source": False,
+                "evidence": dict(res.evidence),
+            })
+            continue
         if not _apply_to_source(diff, args.source_file, output_dir, "Phase-B"):
             print(f"└─ DROPPED (patch would not apply)\n")
             continue

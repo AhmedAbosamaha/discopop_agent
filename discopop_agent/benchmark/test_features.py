@@ -316,7 +316,8 @@ def check_clauses(work: Path) -> Result:
     only a static read can reject it.  The pointer case is the guard against
     over-rejection.
     """
-    from ..pragmas import check_llm_pragmas
+    from ..pragmas import check_llm_pragmas, check_pragma_clauses
+    from ..llm import make_diff
 
     src = work / "clause_case.cpp"
     src.write_text(_CLAUSE_SRC)
@@ -356,7 +357,48 @@ def check_clauses(work: Path) -> Result:
                             f"{'rejection' if should_reject else 'acceptance'}")
     if failures:
         return Result("clause checks", "fail", "; ".join(failures))
-    return Result("clause checks", "pass", f"{len(cases)}/{len(cases)} verdicts correct")
+    # Two false negatives that both shipped the exact defect this module exists
+    # to catch, found by varying only distance and only line breaks:
+    #   * the lookahead stopped after a fixed 60 lines, so the same private(ok)
+    #     was caught at gap 40 and missed at gap 70;
+    #   * a ONE-LINE loop body was dropped wholesale by `body[1:]`, so the write
+    #     was never seen at any distance.
+    def _sortedness(gap: int, one_line: bool, read_after: bool = True) -> Tuple[str, str]:
+        body = ("    for (int i=0;i<99;i++) { if (arr[i] > arr[i+1]) ok = 0; }\n"
+                if one_line else
+                "    for (int i=0;i<99;i++) {\n"
+                "        if (arr[i] > arr[i+1]) ok = 0;\n    }\n")
+        pad = "".join(f"    volatile int pad{i} = {i};\n" for i in range(gap))
+        tail = ('    printf("sorted: %s\\n", ok ? "YES" : "NO");\n' if read_after
+                else '    printf("done\\n");\n')
+        text = ("#include <cstdio>\nint main(){\n    int arr[100];\n"
+                "    for (int i=0;i<100;i++) arr[i]=i;\n    int ok = 1;\n"
+                + body + pad + tail + "    return 0;\n}\n")
+        return text, body.splitlines()[0] + "\n"
+
+    scope_dir = work / "clause_scope"
+    scope_dir.mkdir(parents=True, exist_ok=True)
+    checked = 0
+    for one_line in (False, True):
+        for gap in (5, 40, 70, 200):
+            for read_after in (True, False):
+                text, head = _sortedness(gap, one_line, read_after)
+                f = scope_dir / f"s_{int(one_line)}_{gap}_{int(read_after)}.cpp"
+                f.write_text(text)
+                patched = text.replace(head, "    #pragma omp parallel for private(ok)\n" + head)
+                got = check_pragma_clauses(make_diff(text, patched, str(f)), str(f))
+                want = read_after          # rejected iff the value is read afterwards
+                if bool(got) != want:
+                    shape = "one-line body" if one_line else "multi-line body"
+                    return Result("clause checks", "fail",
+                                  f"private(ok), {shape}, read {gap} lines after, "
+                                  f"read_after={read_after}: expected "
+                                  f"{'rejection' if want else 'acceptance'}, got "
+                                  f"{got or 'acceptance'}")
+                checked += 1
+    return Result("clause checks", "pass",
+                  f"{len(cases)}/{len(cases)} verdicts correct; "
+                  f"{checked} scope cases (distance and one-line bodies) correct")
 
 
 _TWO_REGIONS = """#include <cstdio>
@@ -583,7 +625,18 @@ def check_dep_review(work: Path) -> Result:
     blockers = d / ".discopop" / "explorer" / "doall_prevented.json"
     import json
     if not blockers.exists() or not json.loads(blockers.read_text()):
-        return Result("dependence review", "skip", "this case produced no blockers")
+        # Not benign, and not this check's fault.  Measured on prefix_sum.cpp:
+        # roughly one profile run in six produces 0 blockers and 4 do_all
+        # patterns, where the other five produce 4 blockers and 3 patterns —
+        # from dependence data that is byte-identical once the pointer-derived
+        # memory-region ids are normalised.  The explorer is deterministic given
+        # a fixed .discopop (8/8), so the outcome is varying with the region ids
+        # themselves.  Reported rather than retried, so the instability stays
+        # visible instead of being papered over.
+        return Result("dependence review", "skip",
+                      "0 blockers from this profile — upstream explorer instability "
+                      "(see the comment here), not an agent fault; re-run to exercise "
+                      "the review path")
 
     from ..llm import dep_review as dr
     from ..args import AgentArguments
@@ -842,12 +895,19 @@ def check_schedule_stress(work: Path) -> Result:
     d = work / "stress"
     d.mkdir(parents=True, exist_ok=True)
     racy = d / "racy.cpp"
+    # An unsynchronised histogram, not `s += i`.  With a single accumulator at
+    # -O2 clang keeps the sum in a per-thread register and stores roughly once
+    # per chunk, so there are only a handful of racing writes and the lost
+    # update frequently does not happen — the check failed about half the time
+    # for that reason alone.  Many threads hammering eight shared counters
+    # cannot be register-promoted and loses updates on essentially every run.
     racy.write_text(
         "#include <cstdio>\n"
-        "int main(){const int N=200000;long long s=0;\n"
+        "int main(){const int N=4000000;long long h[8]={0,0,0,0,0,0,0,0};\n"
         "#pragma omp parallel for\n"
-        "for(int i=0;i<N;i++)s+=i;\n"
-        "printf(\"count %d\\nsum %lld\\n\",N,s);return 0;}\n"
+        "for(int i=0;i<N;i++)h[i&7]+=1;\n"
+        "long long t=0;for(int k=0;k<8;k++)t+=h[k];\n"
+        "printf(\"count %d\\ntotal %lld\\n\",N,t);return 0;}\n"
     )
     good = d / "good.cpp"
     good.write_text(
@@ -877,6 +937,65 @@ def check_schedule_stress(work: Path) -> Result:
         out.append(f"{src.stem}={st.verdict}")
     return Result("schedule-stress", "pass",
                   f"{', '.join(out)}; race caught by repeatability, not by a diff")
+
+
+def check_anchor_correctness(work: Path) -> Result:
+    """The schedule matrix must be checked against the REFERENCE, not only itself.
+
+    Its seven runs used to be compared only to each other, so a parallelization
+    that is perfectly self-consistent and simply computes the wrong answer
+    passed this stage without comment and relied on the later correctness run.
+    A deterministic-but-wrong pragma must now fail here, and a correct one must
+    still pass.
+    """
+    from ..gate.timing import capture_reference
+    from ..gate.toolchain import _find_clangpp
+    from ..gate.validate import validate
+    from ..llm import make_diff
+    if _find_clangpp() is None:
+        return Result("anchor-vs-ref", "skip", "no supported clang++ found")
+
+    orig = (
+        "#include <cstdio>\n"
+        "int main(){\n"
+        "    long s = 0;\n"
+        "    for (int i = 0; i < 200000; i++) { s += i; }\n"
+        '    printf("%ld\\n", s);\n'
+        "    return 0;\n"
+        "}\n"
+    )
+    par = "    #pragma omp parallel for reduction(+:s)\n    for (int i = 0; i < 200000;"
+    right = orig.replace("    for (int i = 0; i < 200000;", par)
+    # deterministic under every thread count and schedule, and short by one element
+    wrong = right.replace("i < 200000", "i < 199999")
+
+    d = work / "anchor"
+    d.mkdir(parents=True, exist_ok=True)
+    src = d / "m.cpp"
+    src.write_text(orig)
+    ref, _t, refs = capture_reference(str(src))
+    if ref is None:
+        return Result("anchor-vs-ref", "skip", "could not capture a reference")
+
+    notes = []
+    for label, text, want_pass in (("wrong", wrong, False), ("correct", right, True)):
+        r = validate(make_diff(orig, text, str(src)), str(src),
+                     reference_output=ref, reference_outputs=refs,
+                     mode="safety", stress=True, stress_threads=(1, 2, 4))
+        if r.passed != want_pass:
+            return Result("anchor-vs-ref", "fail",
+                          f"{label} parallelization: expected passed={want_pass}, "
+                          f"got passed={r.passed} at stage {r.stage!r}")
+        if label == "wrong":
+            if "at a fixed thread count" not in (r.diagnostic or ""):
+                return Result("anchor-vs-ref", "fail",
+                              "the wrong pragma failed, but not at the schedule "
+                              f"anchor — stage {r.stage!r}. The anchor-vs-reference "
+                              "comparison did not fire.")
+            notes.append("deterministic-but-wrong caught at the anchor")
+        else:
+            notes.append("correct reduction still passes")
+    return Result("anchor-vs-ref", "pass", "; ".join(notes))
 
 
 def check_dependence_evidence(work: Path) -> Result:
@@ -995,6 +1114,7 @@ _CHECKS: List[Tuple[str, Callable[[Path], Result]]] = [
     ("equivalence", check_output_equivalence),
     ("noise-floor", check_noise_floor),
     ("schedule-stress", check_schedule_stress),
+    ("anchor-vs-ref", check_anchor_correctness),
     ("dep-evidence", check_dependence_evidence),
     ("dep-lines", check_dep_line_resolution),
 ]

@@ -23,6 +23,7 @@ from ..gate import validate
 from ..gate.tsan import _is_omp_barrier_false_positive
 from ..gate.timing import time_source
 from ..llm import make_diff, normalize_code
+from .verdicts import _MARGINAL_NOISE
 from ..sources import _apply_change_log
 from ..types import ValidationResult
 
@@ -81,9 +82,21 @@ def _check_final_source(
             )
             if not ok_t:
                 return False, f"could not time the finished program: {tdiag[:120]}"
-            if t_final > reference_time:
+            # NOT a bare `>`.  Two things make a bare comparison a coin flip
+            # here, and it decides whether a whole run survives:
+            #   * whole-program wall-time carries a few tenths of a percent of
+            #     noise even at best-of-5 (measured: an UNCHANGED file failed
+            #     this check in 4 of 8 trials, ratios 0.991-1.006);
+            #   * the two sides are not even the same build — reference_time
+            #     comes from a NON-fopenmp compile (capture_reference) while
+            #     t_final comes from an -fopenmp one (time_source), which is the
+            #     mismatch `_measure_speedup` documents avoiding.
+            # So the same tolerance the rest of the gate uses for "not slower"
+            # applies: a real regression has to clear the noise, not tie with it.
+            if t_final > reference_time / _MARGINAL_NOISE:
                 return False, (f"slower than the original: {t_final*1e3:.1f} ms vs "
-                               f"{reference_time*1e3:.1f} ms")
+                               f"{reference_time*1e3:.1f} ms "
+                               f"(beyond the {1/_MARGINAL_NOISE - 1:.0%} noise allowance)")
             return True, (f"output matches, {t_final*1e3:.1f} ms vs "
                           f"{reference_time*1e3:.1f} ms original")
     return True, "output matches the original"

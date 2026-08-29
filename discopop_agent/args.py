@@ -36,6 +36,9 @@ class AgentArguments:
     # Correctness-gate calibration.  Defaults keep the gate strict on programs
     # that do not need slack: an integer-only program measures a floor of 0 and
     # is compared byte-for-byte exactly as before.
+    # Proceed with no reference output at all (correctness gate OFF). Defaulted
+    # so it stays opt-in and existing constructors keep working.
+    allow_unverified: bool = False
     numeric_tolerance: bool = True   # measure the program's numerical noise floor
     schedule_stress: bool = True     # vary threads/schedule instead of one run
     stress_threads: Tuple[int, ...] = (1, 2, 4)  # thread counts the matrix covers
@@ -88,7 +91,9 @@ def parse_args() -> AgentArguments:
     p.add_argument("--dry-run", action="store_true",
                    help="Show plan without calling the LLM or modifying files")
     p.add_argument("--edit-mode", choices=["diff", "function", "direct"], default=None,
-                   help="How the LLM returns a Tier-2 edit: 'diff' (unified diff, default), "
+                   help="How the LLM returns a Tier-2 edit (default: computed from "
+                        "--provider — 'direct' for claude-agent-sdk, 'diff' otherwise). "
+                        "'diff' (unified diff), "
                         "'function' (the complete rewritten enclosing function, which the "
                         "agent splices in by line range — avoids diff-apply failures), or "
                         "'direct' (the model edits a private copy of the file itself with "
@@ -98,7 +103,7 @@ def parse_args() -> AgentArguments:
     p.add_argument("--llm-pragmas", action=argparse.BooleanOptionalAction, default=True,
                    help=("Let the LLM write the OpenMP pragmas itself, in the same "
                          "edit as the restructuring, instead of leaving them to "
-                         "DiscoPoP (default: off). The rewrite is then judged on its "
+                         "DiscoPoP (default: on). The rewrite is then judged on its "
                          "own merits — static clause check, ThreadSanitizer, "
                          "byte-identical output from the PARALLEL build, and measured "
                          "speedup — rather than on whether re-profiling makes DiscoPoP "
@@ -107,7 +112,7 @@ def parse_args() -> AgentArguments:
                          "region the LLM did not touch."))
     p.add_argument("--fast-refresh", action=argparse.BooleanOptionalAction, default=True,
                    help=("After a kept rewrite, refresh the profile WITHOUT re-running "
-                         "the instrumented program (default: off). Only `discopop_cxx` "
+                         "the instrumented program (default: on). Only `discopop_cxx` "
                          "runs — about a second — and the previous run's observed "
                          "dependences are translated onto the new instruction numbering; "
                          "anything that cannot be translated with certainty is dropped, "
@@ -121,7 +126,10 @@ def parse_args() -> AgentArguments:
     p.add_argument("--llm-deps", action=argparse.BooleanOptionalAction, default=None,
                    help=("With --fast-refresh: ask the LLM to judge the STATIC dependences "
                          "DiscoPoP reports for code the LLM itself just wrote (default: "
-                         "off). Static analysis is over-approximate, so a newly written "
+                         "follows --fast-refresh, so ON unless you pass --no-fast-refresh). "
+                         "It only DELETES over-cautious static dependences; it never adds "
+                         "one, and observed (dynamic) dependences are filtered out before "
+                         "the model sees them. Static analysis is over-approximate, so a newly written "
                          "loop is usually blocked by a dependence that does not really "
                          "occur — and there is no dynamic data for new code to settle it. "
                          "Every judgement is written to <output-dir>/llm_deps.json, and a "
@@ -172,6 +180,13 @@ def parse_args() -> AgentArguments:
                          "re-profiled. With --no-apply-patches an accepted Tier-1 pattern "
                          "is only recorded in accepted.json and its patch left in "
                          "patch_generator/, so the source is never modified for Tier-1."))
+    p.add_argument("--allow-unverified", action="store_true",
+                   help=("Continue even when the ORIGINAL program cannot be built or "
+                         "run, which leaves the correctness gate with nothing to compare "
+                         "against and therefore switched off (default: off — the run "
+                         "aborts instead). Without a reference, a rewrite's output is "
+                         "never checked, so patches can be accepted that were never "
+                         "shown to preserve semantics."))
     p.add_argument("--build-retries", type=int, default=2,
                    help=("Retries that do NOT consume budget when the LLM's rewrite "
                          "fails to apply or compile (default: 2). A build error is a "
@@ -281,6 +296,7 @@ def parse_args() -> AgentArguments:
         restructure_depth=a.restructure_depth,
         require_speedup=a.require_speedup,
         build_retries=a.build_retries,
+        allow_unverified=a.allow_unverified,
         apply_patches=a.apply_patches,
         min_measured_speedup=a.min_measured_speedup,
         check_inputs=[shlex.split(x) for x in a.check_input],

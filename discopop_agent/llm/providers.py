@@ -14,6 +14,9 @@ region's transcript.
 from __future__ import annotations
 
 import asyncio
+import atexit
+import hashlib
+import shutil
 import tempfile
 import time
 from pathlib import Path
@@ -38,6 +41,22 @@ _region_sessions: Dict[str, str] = {}
 # edit the model made from a change the controller made (another region's
 # accepted patch, or a revert).
 _region_workspaces: Dict[str, Tuple[Path, str]] = {}
+# One ROOT for all of them, removed at exit.  Each workspace used to be its own
+# mkdtemp that nothing ever cleaned up, so a run left one directory per region
+# behind in /tmp for the life of the machine (66 were sitting there when this
+# was found).  A per-key subdirectory keeps the same isolation — the file inside
+# is named after the source, so a shared flat directory would collide.
+_workspace_root: Optional[Path] = None
+
+
+def _ws_dir(session_key: str) -> Path:
+    global _workspace_root
+    if _workspace_root is None or not _workspace_root.exists():
+        _workspace_root = Path(tempfile.mkdtemp(prefix="dp_agent_edit_"))
+        atexit.register(shutil.rmtree, _workspace_root, ignore_errors=True)
+    d = _workspace_root / hashlib.sha1(session_key.encode()).hexdigest()[:16]
+    d.mkdir(parents=True, exist_ok=True)
+    return d
 
 
 # ---------------------------------------------------------------------------
@@ -82,7 +101,8 @@ def _sync_workspace(session_key: str, source_file: str) -> Tuple[Path, str]:
         if ws_file.exists() and base == disk:
             return ws_file, disk
     else:
-        ws_file = Path(tempfile.mkdtemp(prefix="dp_agent_edit_")) / Path(source_file).name
+        ws_file = _ws_dir(session_key) / Path(source_file).name
+    ws_file.parent.mkdir(parents=True, exist_ok=True)
     ws_file.write_text(disk)
     _region_workspaces[session_key] = (ws_file, disk)
     return ws_file, disk
@@ -105,6 +125,7 @@ def _complete_claude_agent_sdk(
     current: list,
     session_key: str,
     workspace: Optional[Path] = None,
+    stateless: bool = False,
 ) -> str:
     """Run one turn through the local `claude` CLI headlessly (Claude Agent
     SDK), billed against the Claude Code subscription rather than a per-token
@@ -187,7 +208,14 @@ def _complete_claude_agent_sdk(
     # and every further attempt starts fresh, so a bad transcript cannot poison
     # the retries.  A real problem (not logged in, no CLI) fails every attempt
     # and the last exception is re-raised.
-    resume_id = _region_sessions.get(session_key)
+    # `stateless`: ask, answer, forget.  The dependence review passes this
+    # because its session key is a module-level CONSTANT — every --llm-deps call
+    # in a run was resuming one shared, growing transcript, so region 3's
+    # verdicts were produced with regions 1 and 2's dependence discussions still
+    # in context.  That works directly against the review's own design rule of
+    # keeping each question as narrow as possible, and the transcript grew
+    # without bound over a long run.  Each review is self-contained anyway.
+    resume_id = None if stateless else _region_sessions.get(session_key)
     text = ""
     session_id = None
     last_error: Optional[BaseException] = None
@@ -205,7 +233,7 @@ def _complete_claude_agent_sdk(
     if last_error is not None:
         raise last_error
 
-    if session_id:
+    if session_id and not stateless:
         _region_sessions[session_key] = session_id
     return text
 
@@ -218,7 +246,7 @@ class LLMConnectionError(RuntimeError):
 
 def _complete(
     provider: str, client: Any, model: str, current: list, system: str, session_key: str = "",
-    workspace: Optional[Path] = None,
+    workspace: Optional[Path] = None, stateless: bool = False,
 ) -> str:
     """Run one completion against the chosen provider and return the raw text.
 
@@ -239,7 +267,8 @@ def _complete(
             )
             return resp.choices[0].message.content or ""
         if provider == "claude-agent-sdk":
-            return _complete_claude_agent_sdk(model, system, current, session_key, workspace)
+            return _complete_claude_agent_sdk(model, system, current, session_key,
+                                              workspace, stateless=stateless)
         resp = client.messages.create(
             model=model,
             max_tokens=4096,
