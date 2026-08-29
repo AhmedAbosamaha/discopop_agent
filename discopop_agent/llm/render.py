@@ -24,33 +24,59 @@ from ..types import EvidencePackage
 _FINE_GRAINED_ITERS = 1000
 
 
-def _evidence_sections(ev: EvidencePackage, deps_header: str) -> List[str]:
-    """The evidence body shared by every edit mode: dependences, reductions,
-    DiscoPoP's classification, loop nest, calls, Do-All blockers, and the last
-    failure reason.  Only the surrounding header/source/task text differs
-    between --edit-mode diff, function and direct."""
+# The evidence package, named section by section, so an ablation can remove one
+# and measure what it was worth.  `--evidence` selects a subset; the names here
+# are the vocabulary that flag speaks.
+EVIDENCE_SECTIONS = (
+    "deps",            # RAW / WAR / WAW, grouped per variable
+    "reductions",      # variables DiscoPoP saw accumulating
+    "classification",  # its own private/shared/reduction clause suggestion
+    "extra_vars",      # static-only and loop-local names
+    "array_note",      # how to fix an array-carried dependence
+    "loop_nest",       # nesting, induction variables, observed trip counts
+    "calls",           # what the region calls
+    "blockers",        # doall_prevented — why it will not parallelize this
+    "failure",         # why the previous attempt failed the gate
+)
+
+
+def _evidence_sections(ev: EvidencePackage, deps_header: str,
+                       include: Optional[Set[str]] = None) -> List[str]:
+    """The evidence body shared by every edit mode.  Only the surrounding
+    header/source/task text differs between --edit-mode diff, function and direct.
+
+    `include` names the sections to render; None means all of them.  Each section
+    is independently omittable so the ablation can ask what any one of them is
+    actually worth — measured on gate pass rate, attempts to first pass, and
+    prompt tokens.  Note `failure` is NOT DiscoPoP evidence: it is the gate's own
+    diagnostic from the previous attempt, so an ablation that leaves it in is
+    measuring static analysis against a model that still gets empirical feedback.
+    """
+    want = (lambda name: True) if include is None else (lambda name: name in include)
     region = (ev.start_line, ev.end_line)
-    parts = [
-        f"{deps_header}\n"
-        "(grouped per variable, each tagged [array element] or [scalar])",
-        _fmt_deps(ev.raw_deps, "RAW — read-after-write (the blocking ones)",
-                  ev.line_text, region),
-        _fmt_deps(ev.war_deps, "WAR — write-after-read", region=region),
-        _fmt_deps(ev.waw_deps, "WAW — write-after-write", region=region),
-    ]
-    if ev.reduction_vars:
+    parts: List[str] = []
+    if want("deps"):
+        parts += [
+            f"{deps_header}\n"
+            "(grouped per variable, each tagged [array element] or [scalar])",
+            _fmt_deps(ev.raw_deps, "RAW — read-after-write (the blocking ones)",
+                      ev.line_text, region),
+            _fmt_deps(ev.war_deps, "WAR — write-after-read", region=region),
+            _fmt_deps(ev.waw_deps, "WAW — write-after-write", region=region),
+        ]
+    if want("reductions") and ev.reduction_vars:
         parts.append(f"### Reduction variables: {', '.join(ev.reduction_vars)}\n")
-    for section in (
-        _fmt_classification(ev),
-        _fmt_extra_vars(ev),
-        _array_dep_note(ev),
-        _fmt_loop_nest(ev),
-        _fmt_calls(ev),
-        fmt_blockers(ev.prevented_deps),
+    for name, section in (
+        ("classification", _fmt_classification(ev)),
+        ("extra_vars", _fmt_extra_vars(ev)),
+        ("array_note", _array_dep_note(ev)),
+        ("loop_nest", _fmt_loop_nest(ev)),
+        ("calls", _fmt_calls(ev)),
+        ("blockers", fmt_blockers(ev.prevented_deps)),
     ):
-        if section:
+        if want(name) and section:
             parts.append(section)
-    if ev.tier1_failure_reason:
+    if want("failure") and ev.tier1_failure_reason:
         parts.append(f"### What went wrong\n{ev.tier1_failure_reason}\n")
     return parts
 

@@ -9,6 +9,7 @@ produce.
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Optional, Set
 
 from ..types import EvidencePackage
 from .render import _evidence_sections, _fmt_digest
@@ -29,7 +30,8 @@ _TASK_CHECKLIST = (
 # ---------------------------------------------------------------------------
 
 
-def _build_prompt(evidence: EvidencePackage) -> str:
+def _build_prompt(evidence: EvidencePackage,
+                  include: Optional[Set[str]] = None) -> str:
     region_label = {
         "loop": "loop",
         "function": "function body",
@@ -61,7 +63,8 @@ def _build_prompt(evidence: EvidencePackage) -> str:
         "```\n",
     ]
     parts.extend(_evidence_sections(evidence, "### Runtime data dependences "
-                                              "(observed across all executions)"))
+                                              "(observed across all executions)",
+                                    include))
 
     parts.append(
         f"### Task\n"
@@ -84,7 +87,8 @@ def _build_prompt(evidence: EvidencePackage) -> str:
     return "\n".join(parts)
 
 
-def _build_function_prompt(evidence: EvidencePackage) -> str:
+def _build_function_prompt(evidence: EvidencePackage,
+                           include: Optional[Set[str]] = None) -> str:
     """Prompt for --edit-mode function: show the whole enclosing function and the
     target region's dependence profile, and ask for the complete rewritten
     function back (no diff)."""
@@ -106,7 +110,8 @@ def _build_function_prompt(evidence: EvidencePackage) -> str:
         "```\n",
     ]
     parts.extend(_evidence_sections(
-        evidence, "### Runtime data dependences in the target region (observed)"))
+        evidence, "### Runtime data dependences in the target region (observed)",
+        include))
 
     parts.append(
         "### Task\n"
@@ -126,7 +131,8 @@ def _build_function_prompt(evidence: EvidencePackage) -> str:
     return "\n".join(parts)
 
 
-def _build_direct_prompt(evidence: EvidencePackage, ws_file: Path) -> str:
+def _build_direct_prompt(evidence: EvidencePackage, ws_file: Path,
+                         include: Optional[Set[str]] = None) -> str:
     """Prompt for --edit-mode direct: the model edits `ws_file` (a private
     working copy of the source) with its own Read/Edit/Write tools instead of
     emitting an edit as text.  The excerpt below is context only — the file on
@@ -150,7 +156,8 @@ def _build_direct_prompt(evidence: EvidencePackage, ws_file: Path) -> str:
         "```\n",
     ]
     parts.extend(_evidence_sections(
-        evidence, "### Runtime data dependences in the target region (observed)"))
+        evidence, "### Runtime data dependences in the target region (observed)",
+        include))
 
     parts.append(
         "### Task\n"

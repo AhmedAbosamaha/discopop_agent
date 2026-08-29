@@ -3,7 +3,7 @@ import argparse
 import os
 import shlex
 from dataclasses import dataclass
-from typing import Optional, Tuple
+from typing import Optional, Set, Tuple
 
 
 @dataclass
@@ -39,6 +39,9 @@ class AgentArguments:
     # Proceed with no reference output at all (correctness gate OFF). Defaulted
     # so it stays opt-in and existing constructors keep working.
     allow_unverified: bool = False
+    # Ablation control (--evidence): which evidence sections render.
+    # None means all of them, which is the default behaviour.
+    evidence_sections: Optional[Set[str]] = None
     numeric_tolerance: bool = True   # measure the program's numerical noise floor
     schedule_stress: bool = True     # vary threads/schedule instead of one run
     stress_threads: Tuple[int, ...] = (1, 2, 4)  # thread counts the matrix covers
@@ -186,6 +189,23 @@ def parse_args() -> AgentArguments:
                          "re-profiled. With --no-apply-patches an accepted Tier-1 pattern "
                          "is only recorded in accepted.json and its patch left in "
                          "patch_generator/, so the source is never modified for Tier-1."))
+    p.add_argument("--evidence", default="full",
+                   help=("Which parts of DiscoPoP's evidence the LLM is shown "
+                         "(default: full). An ABLATION control: the point of the "
+                         "agent is that profiling data helps a model parallelize, "
+                         "and that claim is testable by removing the data. "
+                         "`full` = everything; `none` = source and task only, no "
+                         "DiscoPoP data at all; a comma list SELECTS sections "
+                         "(`deps,blockers`); a list of `-name` entries SUBTRACTS "
+                         "from full — write that form with an equals sign, "
+                         "`--evidence=-classification,-loop_nest`, since a "
+                         "leading dash is otherwise read as a flag. Sections: "
+                         "deps, reductions, classification, extra_vars, "
+                         "array_note, loop_nest, calls, blockers, failure. "
+                         "NOTE `failure` is the GATE's diagnostic, not DiscoPoP's "
+                         "— leaving it in means a no-evidence run still gets "
+                         "empirical feedback, so pair the ablation with "
+                         "--budget 1 to isolate the two."))
     p.add_argument("--allow-unverified", action="store_true",
                    help=("Continue even when the ORIGINAL program cannot be built or "
                          "run, which leaves the correctness gate with nothing to compare "
@@ -284,6 +304,27 @@ def parse_args() -> AgentArguments:
                     "region has freshly measured dependences and there is no gap to fill")
         a.llm_deps = False
 
+    # --evidence: full | none | a,b,c (select) | -a,-b (subtract from full)
+    from .llm.render import EVIDENCE_SECTIONS
+    raw = (a.evidence or "full").strip()
+    if raw == "full":
+        evidence_sections = None
+    elif raw == "none":
+        evidence_sections = set()
+    else:
+        picks = [t.strip() for t in raw.split(",") if t.strip()]
+        unknown = [t.lstrip("-") for t in picks if t.lstrip("-") not in EVIDENCE_SECTIONS]
+        if unknown:
+            p.error(f"--evidence: unknown section(s) {', '.join(unknown)}; "
+                    f"choose from {', '.join(EVIDENCE_SECTIONS)}")
+        if all(t.startswith("-") for t in picks):
+            evidence_sections = set(EVIDENCE_SECTIONS) - {t[1:] for t in picks}
+        elif any(t.startswith("-") for t in picks):
+            p.error("--evidence: mixing selected and -subtracted sections is "
+                    "ambiguous; use one form or the other")
+        else:
+            evidence_sections = set(picks)
+
     # Resolve API key: CLI arg > LLM_API_KEY env var
     api_key = a.api_key or os.environ.get("LLM_API_KEY")
     # Resolve openai-compat base URL: CLI arg > LLM_API_BASE env var
@@ -311,6 +352,7 @@ def parse_args() -> AgentArguments:
         require_speedup=a.require_speedup,
         build_retries=a.build_retries,
         allow_unverified=a.allow_unverified,
+        evidence_sections=evidence_sections,
         apply_patches=a.apply_patches,
         min_measured_speedup=a.min_measured_speedup,
         check_inputs=[shlex.split(x) for x in a.check_input],

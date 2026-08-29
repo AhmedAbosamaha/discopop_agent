@@ -265,6 +265,54 @@ def _fast_refresh(work: Path, old_text: str, new_text: str) -> Tuple[bool, str]:
                           old_text, new_text, scratch)
 
 
+def _fast_llm(work: Path, old_text: str, new_text: str,
+              model: str, provider: str, api_key: Optional[str],
+              api_base: Optional[str], reply: Optional[str] = None,
+              ) -> Tuple[bool, str]:
+    """Fast refresh, then ask a model for the dependences it could not carry.
+
+    This is the arm that answers whether a model can stand in for the skipped
+    run.  It is scored against the same ground truth as the others, on the same
+    asymmetry: a suggestion the measured profile does not support is the failure
+    that matters, and one the refresh misses is only over-caution.
+
+    The upper bound is worth knowing before reading any result.  Feeding a
+    refresh EVERY dependence the full profile has, merged by sink, closes the
+    gap completely on stencil_war (6 do_all -> the full profile's 5) and does
+    NOT close it on prefix_sum step 2 (5 stays 5).  So on at least one case no
+    reconstruction can succeed, and a score here has to be read per case rather
+    than as one number.
+    """
+    from ..llm.dep_reconstruct import reconstruct
+    from ..profiling import fast_refresh as fr
+
+    ok, note = _fast_refresh(work, old_text, new_text)
+    if not ok:
+        return False, note
+
+    lmap = fr.line_map(old_text, new_text)
+    carried = set(lmap.values())
+    lines = new_text.splitlines()
+    rewritten = {n for n in range(1, len(lines) + 1) if n not in carried}
+    if not rewritten:
+        return True, note + "; nothing rewritten, no reconstruction needed"
+
+    lo, hi = max(min(rewritten) - 6, 1), min(max(rewritten) + 6, len(lines))
+    excerpt = "\n".join(f"{n:4d}  {lines[n - 1]}" for n in range(lo, hi + 1))
+    loops = [n for n in range(lo, hi + 1)
+             if re.match(r"\s*(for|while)\s*\(", lines[n - 1])]
+
+    rep = reconstruct(work / ".discopop" / "profiler", excerpt, loops, rewritten,
+                      model, api_key=api_key, provider=provider,
+                      api_base=api_base, reply=reply)
+    if rep.error:
+        return False, f"{note}; {rep.summary()}"
+    ok2, err = _run([_venv_bin("discopop_explorer")], work / ".discopop")
+    if not ok2:
+        return False, f"explorer failed after reconstruction: {err[-200:]}"
+    return True, f"{note}; {rep.summary()}"
+
+
 # ---------------------------------------------------------------------------
 # Reading what DiscoPoP concluded
 # ---------------------------------------------------------------------------
@@ -441,7 +489,9 @@ def _apply(text: str, step: Step) -> Optional[str]:
 
 
 def run_case(case: str, steps: List[Step], root: Path,
-             arms: Sequence[str]) -> List[Comparison]:
+             arms: Sequence[str],
+             llm: Tuple[str, str, Optional[str], Optional[str]] =
+                 ("haiku", "claude-agent-sdk", None, None)) -> List[Comparison]:
     """Drive one case to `len(steps)` depth on every arm and compare each step."""
     out: List[Comparison] = []
     src0 = (_CASES / f"{case}.cpp").read_text()
@@ -451,6 +501,8 @@ def run_case(case: str, steps: List[Step], root: Path,
         dirs["fast-step"] = root / f"{case}_faststep"
     if "fast-chain" in arms:
         dirs["fast-chain"] = root / f"{case}_fastchain"
+    if "fast-llm" in arms:
+        dirs["fast-llm"] = root / f"{case}_fastllm"
     for d in dirs.values():
         d.mkdir(parents=True, exist_ok=True)
         (d / "s.cpp").write_text(src0)
@@ -474,10 +526,20 @@ def run_case(case: str, steps: List[Step], root: Path,
                                   "the rewrite no longer matches the case"))
             return out
 
-        # The full arm's profile BEFORE this rewrite is what fast-step starts
+        # The full arm's profile BEFORE this rewrite is what a STEPPED arm starts
         # from, so it has to be taken before the full arm moves on.
-        if "fast-step" in dirs:
-            snap = dirs["fast-step"]
+        #
+        # fast-llm is stepped too, and was not — it ran unseeded, refreshing on
+        # top of its own previous refresh, which makes it a CHAINED arm.  Scored
+        # against stepped fast-step that is not a comparison: chaining loses
+        # roughly twice the edges, so the two arms were reading different
+        # profiles and any difference between them measured the seeding, not the
+        # reconstruction.  Both stepped arms are seeded here; use fast-chain when
+        # the accumulating behaviour is what you want to measure.
+        for _stepped in ("fast-step", "fast-llm"):
+            if _stepped not in dirs:
+                continue
+            snap = dirs[_stepped]
             shutil.rmtree(snap / ".discopop", ignore_errors=True)
             shutil.copytree(dirs["full"] / ".discopop", snap / ".discopop")
             # FileMapping.txt holds ABSOLUTE paths.  Left pointing at the full
@@ -501,11 +563,15 @@ def run_case(case: str, steps: List[Step], root: Path,
             return out
         print(f"     depth {depth}  {'full':<10} full profile  {full_secs:5.1f}s")
 
-        for name in ("fast-step", "fast-chain"):
+        for name in ("fast-step", "fast-chain", "fast-llm"):
             if name not in dirs:
                 continue
             t0 = time.time()
-            ok, note = _fast_refresh(dirs[name], prev_text, new_text)
+            if name == "fast-llm":
+                ok, note = _fast_llm(dirs[name], prev_text, new_text,
+                                     llm[0], llm[1], llm[2], llm[3])
+            else:
+                ok, note = _fast_refresh(dirs[name], prev_text, new_text)
             secs = time.time() - t0
             if not ok:
                 out.append(Comparison(case, depth, name, "error",
@@ -555,7 +621,16 @@ def main() -> int:
     p.add_argument("--depth", type=int, default=3,
                    help="how many successive rewrites to chain (default 3)")
     p.add_argument("--arms", nargs="*", default=["fast-step", "fast-chain"],
-                   choices=["fast-step", "fast-chain"])
+                   choices=["fast-step", "fast-chain", "fast-llm"],
+                   help=("fast-llm asks a model for the dependences the refresh "
+                         "could not carry, then scores the result against the "
+                         "same ground truth. It COSTS one LLM call per step and "
+                         "is off by default for that reason."))
+    p.add_argument("--model", default="haiku", help="model for the fast-llm arm")
+    p.add_argument("--provider", default="claude-agent-sdk",
+                   help="provider for the fast-llm arm")
+    p.add_argument("--api-key", default=None)
+    p.add_argument("--api-base", default=None)
     p.add_argument("--json", type=str, default=None, help="write the full result here")
     p.add_argument("--keep", action="store_true", help="keep the working directories")
     a = p.parse_args()
@@ -569,7 +644,8 @@ def main() -> int:
         if a.case and case not in a.case:
             continue
         try:
-            results += run_case(case, steps[:a.depth], root, a.arms)
+            results += run_case(case, steps[:a.depth], root, a.arms,
+                                (a.model, a.provider, a.api_key, a.api_base))
         except Exception as e:                    # noqa: BLE001 - reported, not raised
             results.append(Comparison(case, -1, "-", "error", f"{type(e).__name__}: {e}"))
 

@@ -286,3 +286,52 @@ _SYSTEM_DEPS = textwrap.dedent("""\
 
         <number>: REAL|SPURIOUS - <at most 15 words of reason>
 """)
+
+
+# ---------------------------------------------------------------------------
+# Dependence reconstruction (harness arm: fast-llm)
+# ---------------------------------------------------------------------------
+# The fast refresh cannot carry a dependence whose endpoint sits in code the
+# rewrite created — the previous run predates that code, so it was never
+# observed.  Measured across two cases, 39 of 39 dependences the full profile
+# has and a refresh lacks have an endpoint on a rewritten line, and NONE were
+# carryable.  That is the whole remaining gap, and it is the one thing a model
+# that just wrote the code is in a position to know.
+#
+# What is asked for is deliberately narrow and in SOURCE terms only: the model
+# never sees or invents an instruction id or a memory region.  It names lines
+# and variables; the agent resolves those against the fresh instruction mapping
+# and the static analysis, so a claim that cannot be resolved is dropped rather
+# than guessed at.
+_SYSTEM_RECONSTRUCT = textwrap.dedent("""\
+    You are reporting the DATA DEPENDENCES in C/C++ code that was just rewritten.
+
+    A profiler would normally observe these by running the program.  That run has
+    been skipped, so for the lines below there is no measurement — you are being
+    asked what a run WOULD have observed, because you have the code in front of
+    you.
+
+    Report only dependences carried BETWEEN ITERATIONS of a loop, and only for
+    the lines shown.  A dependence within one iteration does not constrain
+    parallelism and must not be reported.
+
+      RAW  an iteration reads a location an earlier iteration wrote
+      WAR  an iteration writes a location an earlier iteration read
+      WAW  two iterations write the same location
+
+    Do NOT report the loop's own induction variable: it is handled separately and
+    is never a blocker.
+
+    Completeness matters more than precision here.  A dependence you omit makes a
+    sequential loop look parallel, which is a race.  A dependence you add that is
+    not real only costs a missed parallelization.  When you are unsure whether
+    iterations touch the same location, REPORT IT.
+
+    Answer with one line per dependence and nothing else:
+
+        LOOP <loop-header-line> <RAW|WAR|WAW> <variable> <writer-line> <reader-line>
+
+    and for a loop whose iterations are genuinely independent, exactly:
+
+        LOOP <loop-header-line> NONE
+""")

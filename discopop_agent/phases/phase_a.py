@@ -193,6 +193,7 @@ def phase_a(state: RunState) -> None:
                     edit_mode=args.edit_mode,
                     llm_pragmas=args.llm_pragmas,
                     verbose=args.verbose,
+                    evidence_sections=args.evidence_sections,
                 )
             except LLMConnectionError as e:
                 # Fatal for the whole run: every region needs the endpoint.

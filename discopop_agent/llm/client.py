@@ -13,7 +13,7 @@ callers should not have to think about:
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Set
 
 from .. import viz
 from ..types import EvidencePackage
@@ -36,6 +36,7 @@ def call_llm(
     edit_mode: str = "diff",
     llm_pragmas: bool = False,
     verbose: bool = False,
+    evidence_sections: Optional[Set[str]] = None,
 ) -> tuple[Optional[str], list]:
     """Call the LLM and return (output or None, updated messages).
 
@@ -95,11 +96,12 @@ def call_llm(
         # First attempt for this region — build initial prompt from evidence.
         if direct_mode:
             assert workspace_file is not None
-            user_prompt = _build_direct_prompt(evidence, workspace_file)
+            user_prompt = _build_direct_prompt(evidence, workspace_file,
+                                               evidence_sections)
         elif function_mode:
-            user_prompt = _build_function_prompt(evidence)
+            user_prompt = _build_function_prompt(evidence, evidence_sections)
         else:
-            user_prompt = _build_prompt(evidence)
+            user_prompt = _build_prompt(evidence, evidence_sections)
         messages = [{"role": "user", "content": user_prompt}]
 
     current = list(messages)
