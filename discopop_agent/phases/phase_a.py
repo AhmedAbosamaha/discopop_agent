@@ -23,7 +23,9 @@ that appear as a result are appended and picked up in the same pass.
 """
 from __future__ import annotations
 
+import re
 import shutil
+import subprocess
 import sys
 from collections import defaultdict
 from dataclasses import dataclass, field
@@ -41,6 +43,7 @@ from ..plan.impact import ImpactModel, load_hotspots
 from ..pragmas import _added_pragmas, _touched_span, check_llm_pragmas
 from ..profiling import _measure_hotspots, _reprofil, _reprofil_fast
 from ..profiling import fast_refresh
+from ..profiling.tools import _explorer_cmd, _venv_env
 from ..sources import (_apply_to_source, _function_edit_to_diff,
                        _restore_profile, _snapshot_profile)
 from ..types import HotspotCandidate, ValidationResult
@@ -184,7 +187,7 @@ def phase_a(state: RunState) -> None:
 
             print(f"│  [Tier-2] Calling {args.model}...")
             try:
-                diff, tier2_messages = call_llm(
+                diff, tier2_messages, reply_text = call_llm(
                     evidence, args.model,
                     api_key=args.api_key,
                     messages=tier2_messages,
@@ -194,6 +197,8 @@ def phase_a(state: RunState) -> None:
                     llm_pragmas=args.llm_pragmas,
                     verbose=args.verbose,
                     evidence_sections=args.evidence_sections,
+                    llm_recon=(args.llm_recon
+                               and args.llm_recon_mode == "folded"),
                 )
             except LLMConnectionError as e:
                 # Fatal for the whole run: every region needs the endpoint.
@@ -208,7 +213,7 @@ def phase_a(state: RunState) -> None:
                 # nothing to show.
                 print(f"│  [Tier-2] LLM call failed: {str(e)[:120]}")
                 print(f"│           counting it as a failed attempt and moving on")
-                diff, tier2_messages = None, tier2_messages
+                diff, tier2_messages, reply_text = None, tier2_messages, ""
 
             # In function mode the LLM returns the rewritten enclosing function;
             # splice it in and turn it into a guaranteed-apply diff.  In direct
@@ -385,6 +390,82 @@ def phase_a(state: RunState) -> None:
                             if lost:
                                 print(f"│           {lost} runtime measurement(s) "
                                       f"dropped — their lines were rewritten")
+                        if args.llm_recon:
+                            # followup: a fresh turn on the SAME session, asked
+                            # only now that the rewrite is accepted and the
+                            # refreshed instruction mapping exists.  folded: the
+                            # claims already rode out on the rewrite reply.
+                            if args.llm_recon_mode == "followup":
+                                from ..llm.dep_reconstruct import ask_after_gate
+                                _lines = post_patch_src.splitlines()
+                                _lm = fast_refresh.line_map(
+                                    pre_patch_src or "", post_patch_src)
+                                _new = {n for n in range(1, len(_lines) + 1)
+                                        if n not in set(_lm.values())}
+                                if _new:
+                                    _lo = max(min(_new) - 6, 1)
+                                    _hi = min(max(_new) + 6, len(_lines))
+                                    _exc = "\n".join(
+                                        f"{n:4d}  {_lines[n - 1]}"
+                                        for n in range(_lo, _hi + 1))
+                                    _loops = [
+                                        str(n) for n in range(_lo, _hi + 1)
+                                        if re.match(r"\s*(for|while)\s*\(",
+                                                    _lines[n - 1])]
+                                    try:
+                                        reply_text = ask_after_gate(
+                                            _exc, _loops, args.model,
+                                            session_key=region_fingerprint(
+                                                args.source_file,
+                                                region.start_line,
+                                                region.end_line, region.name),
+                                            messages=tier2_messages,
+                                            api_key=args.api_key,
+                                            provider=args.provider,
+                                            api_base=args.api_base)
+                                    except Exception as e:      # never fail the run
+                                        print(f"│           reconstruction call "
+                                              f"failed: {str(e)[:80]}")
+                                        reply_text = ""
+
+                        if args.llm_recon and reply_text:
+                            # The claims rode out on the SAME call that produced
+                            # this rewrite — no extra request, and the model had
+                            # the code in front of it.  They are applied only
+                            # HERE, after the refresh has been accepted: a
+                            # rewrite that gets reverted takes its claims with
+                            # it, so nothing is reconstructed for code that
+                            # never lands.
+                            from ..llm.dep_reconstruct import reconstruct
+                            lmap2 = fast_refresh.line_map(
+                                pre_patch_src or "", post_patch_src)
+                            nl2 = len(post_patch_src.splitlines())
+                            rewritten2 = {n for n in range(1, nl2 + 1)
+                                          if n not in set(lmap2.values())}
+                            prof2 = (dp_dir / "profiler").resolve()
+                            rep = reconstruct(
+                                prof2, "", [], rewritten2, args.model,
+                                reply=reply_text,
+                                audit_path=output_dir / "llm_recon.json",
+                                source_file=args.source_file,
+                                source_lines=post_patch_src.splitlines())
+                            if rep.rows:
+                                r2 = subprocess.run(
+                                    [_explorer_cmd()], capture_output=True,
+                                    text=True, cwd=dp_dir.resolve(), env=_venv_env())
+                                if r2.returncode != 0:
+                                    print(f"│           reconstruction broke the "
+                                          f"explorer — profile left as refreshed")
+                            print(f"│           reconstruction: {rep.summary()}")
+                            for _ln, _v, _t in rep.contradicted[:3]:
+                                # Detected, never acted on: static analysis is
+                                # over-approximate, so this is often the model
+                                # being right.  It is logged because an omission
+                                # is the one direction that can ship a race.
+                                print(f"│           [warn] model called loop "
+                                      f"{_ln} independent, but static analysis "
+                                      f"records a {_t} on {_v} there")
+
                         if args.llm_deps:
                             gaps = _llm_dep_review(
                                 args, dp_dir, pre_patch_src or "",

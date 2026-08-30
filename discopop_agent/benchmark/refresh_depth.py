@@ -302,9 +302,17 @@ def _fast_llm(work: Path, old_text: str, new_text: str,
     loops = [n for n in range(lo, hi + 1)
              if re.match(r"\s*(for|while)\s*\(", lines[n - 1])]
 
+    # source_lines is NOT optional in practice: without it the contradiction
+    # check cannot exclude induction variables and loop-body locals, and static
+    # analysis records a RAW on those for essentially every loop.  Run without
+    # it, three repeats reported 18 contradictions across 27 steps — all of that
+    # noise.  audit_path likewise: a claim nobody can read back is not evidence.
     rep = reconstruct(work / ".discopop" / "profiler", excerpt, loops, rewritten,
                       model, api_key=api_key, provider=provider,
-                      api_base=api_base, reply=reply)
+                      api_base=api_base, reply=reply,
+                      audit_path=work / "llm_recon.json",
+                      source_file=str(work / "s.cpp"),
+                      source_lines=lines)
     if rep.error:
         return False, f"{note}; {rep.summary()}"
     ok2, err = _run([_venv_bin("discopop_explorer")], work / ".discopop")

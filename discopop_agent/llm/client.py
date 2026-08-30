@@ -37,8 +37,17 @@ def call_llm(
     llm_pragmas: bool = False,
     verbose: bool = False,
     evidence_sections: Optional[Set[str]] = None,
-) -> tuple[Optional[str], list]:
-    """Call the LLM and return (output or None, updated messages).
+    llm_recon: bool = False,
+) -> tuple[Optional[str], list, str]:
+    """Call the LLM and return (output or None, updated messages, raw reply).
+
+    The raw reply is carried out because --llm-recon reads dependence claims from
+    the SAME call that produced the rewrite.  A second call would cost more than
+    the instrumented run the whole fast refresh exists to avoid — the mistake
+    --llm-deps makes — and the model has more context here than it will ever have
+    again, having just written the code.  In --edit-mode direct the reply is not
+    the answer (the edited file is), but it is still returned, which is what lets
+    the claims ride along in every edit mode without a side-channel file.
 
     In edit_mode="diff" (default) the output is a unified diff.  In
     edit_mode="function" it is the complete rewritten enclosing function (the
@@ -83,7 +92,7 @@ def call_llm(
             "--edit-mode direct requires --provider claude-agent-sdk (it is the "
             "only backend that can edit files itself)."
         )
-    system = _system_prompt(edit_mode, llm_pragmas)
+    system = _system_prompt(edit_mode, llm_pragmas, llm_recon)
     client = _make_client(provider, api_key, api_base)
     session_key = evidence.region_fingerprint or evidence.region_id
 
@@ -138,7 +147,8 @@ def call_llm(
         if valid:
             # Return messages with assistant turn appended so the controller
             # can extend the conversation with quality-gate feedback and retry.
-            return out, current + [{"role": "assistant", "content": text}]
+            return (out, current + [{"role": "assistant", "content": text}],
+                    text)
 
         # Free format re-prompt — doesn't consume a budget slot.
         if attempt < max_format_retries:
@@ -166,4 +176,4 @@ def call_llm(
 
     # Direct mode's only failure here is "the model never edited the file" —
     # report it as the no-op ("") the controller feeds back, not as garbage output.
-    return ("" if direct_mode else None), current
+    return ("" if direct_mode else None), current, ""

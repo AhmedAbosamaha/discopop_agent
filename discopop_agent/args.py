@@ -39,6 +39,13 @@ class AgentArguments:
     # Proceed with no reference output at all (correctness gate OFF). Defaulted
     # so it stays opt-in and existing constructors keep working.
     allow_unverified: bool = False
+    # --llm-recon: the model reports the dependences for code it just
+    # wrote, in the same call as the rewrite.  Adds dependences; the
+    # opposite direction to llm_deps, which removes them.
+    llm_recon: bool = False
+    # 'followup' = a separate turn after the gate; 'folded' = appended
+    # to the rewrite prompt.  See --llm-recon-mode.
+    llm_recon_mode: str = "followup"
     # Ablation control (--evidence): which evidence sections render.
     # None means all of them, which is the default behaviour.
     evidence_sections: Optional[Set[str]] = None
@@ -144,6 +151,36 @@ def parse_args() -> AgentArguments:
                          "Every judgement is written to <output-dir>/llm_deps.json, and a "
                          "pragma resting on one still has to pass ThreadSanitizer, the "
                          "byte-identical output check and the speedup gate."))
+    p.add_argument("--llm-recon", action=argparse.BooleanOptionalAction, default=False,
+                   help=("With --fast-refresh: have the LLM report the dependences "
+                         "in the code it just wrote, IN THE SAME CALL as the "
+                         "rewrite (default: off). A fast refresh cannot carry a "
+                         "dependence whose endpoint is in new code — the previous "
+                         "run predates it — and measured across two chains, 39 of "
+                         "39 dependences a refresh lacks have an endpoint on a "
+                         "rewritten line and NONE were carryable. That gap is the "
+                         "one thing a model that just wrote the code can close. "
+                         "It works the OPPOSITE way to --llm-deps: it ADDS "
+                         "dependences (more conservative, closer to what a run "
+                         "would have measured) rather than deleting them, and it "
+                         "costs no extra call. The model speaks in source terms "
+                         "only — loop line, type, variable, writer and reader "
+                         "lines — and the agent resolves those to instruction ids "
+                         "itself; a claim it cannot place is dropped, not guessed."))
+    p.add_argument("--llm-recon-mode", choices=["followup", "folded"],
+                   default="followup",
+                   help=("How --llm-recon asks (default: followup). `followup` "
+                         "asks in a SEPARATE turn after the rewrite has passed "
+                         "the gate and the refresh has run — the rewrite is "
+                         "written with the model's whole attention on it, the "
+                         "instruction mapping the claims resolve against already "
+                         "exists, and only KEPT rewrites cost a request. "
+                         "`folded` appends the request to the rewrite prompt "
+                         "instead: no extra request at all, but the model splits "
+                         "its attention while writing, which may cost rewrite "
+                         "quality. Which produces better dependences is an open "
+                         "question — the two modes exist to be measured against "
+                         "each other."))
     p.add_argument("--hotspots", action=argparse.BooleanOptionalAction, default=True,
                    help=("Measure how long each region actually takes, with DiscoPoP's "
                          "own hotspot detection, and rank candidates by the time "
@@ -298,6 +335,15 @@ def parse_args() -> AgentArguments:
 
     # Only complain when it was ASKED for: with --no-fast-refresh it simply
     # follows along and switches itself off.
+    if a.llm_recon and not a.fast_refresh:
+        p.error("--llm-recon only applies with --fast-refresh: a full re-profile "
+                "measures the new code, so there is no gap to reconstruct")
+    if a.llm_recon and a.llm_deps:
+        p.error("--llm-recon and --llm-deps pull in opposite directions — one adds "
+                "dependences for new code, the other deletes ones it judges "
+                "spurious — so running both lets the model argue with itself "
+                "inside one profile. Choose one")
+
     if a.llm_deps and not a.fast_refresh:
         if explicit_llm_deps:
             p.error("--llm-deps only applies with --fast-refresh: without it every "
@@ -352,6 +398,8 @@ def parse_args() -> AgentArguments:
         require_speedup=a.require_speedup,
         build_retries=a.build_retries,
         allow_unverified=a.allow_unverified,
+        llm_recon=a.llm_recon,
+        llm_recon_mode=a.llm_recon_mode,
         evidence_sections=evidence_sections,
         apply_patches=a.apply_patches,
         min_measured_speedup=a.min_measured_speedup,

@@ -91,7 +91,10 @@ def _print_banner(args: AgentArguments) -> None:
           + ("fast refresh (compile only) between rewrites; full before a deeper "
              "level and before Phase B" if args.fast_refresh
              else "full (instrument + run + explore) after every kept rewrite")
-          + ("; LLM judges static deps in new code" if args.llm_deps else ""))
+          + ("; LLM judges static deps in new code" if args.llm_deps else "")
+          + (f"; LLM reports deps for the code it writes "
+             f"({getattr(args, 'llm_recon_mode', 'followup')})"
+             if getattr(args, "llm_recon", False) else ""))
     print(f"  Pragmas        : "
           + ("LLM writes them with the rewrite, gate decides (--llm-pragmas)"
              if args.llm_pragmas else "DiscoPoP writes them in Phase B"))

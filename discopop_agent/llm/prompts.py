@@ -236,7 +236,8 @@ _SYSTEM_FUNCTION = _SYSTEM_CORE + _OUTPUT_FUNCTION
 _SYSTEM_DIRECT = _SYSTEM_CORE + _OUTPUT_DIRECT
 
 
-def _system_prompt(edit_mode: str, llm_pragmas: bool) -> str:
+def _system_prompt(edit_mode: str, llm_pragmas: bool,
+                   llm_recon: bool = False) -> str:
     """The system prompt for one (edit mode, who-writes-the-pragma) pair.
 
     Kept as module-level constants rather than built per call: the prompt is
@@ -246,7 +247,7 @@ def _system_prompt(edit_mode: str, llm_pragmas: bool) -> str:
     core = _SYSTEM_CORE_ANNOTATE if llm_pragmas else _SYSTEM_CORE
     tail = (_OUTPUT_DIRECT if edit_mode == "direct"
             else _OUTPUT_FUNCTION if edit_mode == "function" else _OUTPUT_DIFF)
-    return core + tail
+    return core + tail + (_RECON_ADDENDUM if llm_recon else "")
 # ---------------------------------------------------------------------------
 # Dependence review (--llm-deps)
 # ---------------------------------------------------------------------------
@@ -334,4 +335,33 @@ _SYSTEM_RECONSTRUCT = textwrap.dedent("""\
     and for a loop whose iterations are genuinely independent, exactly:
 
         LOOP <loop-header-line> NONE
+""")
+
+
+# Appended to the restructuring system prompt under --llm-recon.  Asking in the
+# SAME call is the whole point: a separate request costs more than the
+# instrumented run the fast refresh exists to skip, and the model has more
+# context here than it will ever have again.  The format is the one
+# dep_reconstruct.parse_claims already reads, so the claims ride out on the
+# reply text in every edit mode — including `direct`, where the edited file is
+# the answer and the reply would otherwise be discarded.
+_RECON_ADDENDUM = textwrap.dedent("""\
+
+    ALSO REPORT THE DEPENDENCES IN THE CODE YOU WRITE.
+
+    The profiler will not be re-run on your rewrite, so nothing will be measured
+    there.  Only you know what the new code does.  After your edit, list the
+    dependences a run WOULD have observed, carried BETWEEN ITERATIONS of a loop:
+
+        LOOP <loop-header-line> <RAW|WAR|WAW> <variable> <writer-line> <reader-line>
+
+    and for a loop whose iterations are genuinely independent, exactly:
+
+        LOOP <loop-header-line> NONE
+
+    Use the line numbers of the code AFTER your edit.  Skip the loop's own
+    induction variable.  Report anything you are unsure about: a dependence you
+    omit makes a sequential loop look parallel, which is a race, while one you
+    add that is not real costs only a missed parallelization.  These lines go
+    after your edit, not instead of it.
 """)
