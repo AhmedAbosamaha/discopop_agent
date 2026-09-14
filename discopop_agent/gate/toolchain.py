@@ -8,17 +8,29 @@ barriers and reports every pair of parallel regions as a race.
 """
 from __future__ import annotations
 
+import os
 import shutil
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional, Union
 
 
-# Prefer LLVM 19 clang++ (same toolchain used for the profiler)
+# Prefer the LLVM the profiler was built with: 19 on the macOS development
+# machine (Homebrew keg), 20 on the Linux evaluation server — where clang-19 is
+# installed too but has no omp.h (libomp-19-dev absent), so it must not win.
+# DP_CXX / DP_CC override the search on a machine where neither fits.
 _CLANGPP_CANDIDATES = [
     "/usr/local/Cellar/llvm@19/19.1.7/bin/clang++",
+    "clang++-20",
     "/usr/local/bin/clang++-19",
     "clang++-19",
     "clang++",
+]
+_CLANG_CANDIDATES = [
+    "/usr/local/Cellar/llvm@19/19.1.7/bin/clang",
+    "clang-20",
+    "/usr/local/bin/clang-19",
+    "clang-19",
+    "clang",
 ]
 # LLVM's own libc++ — named explicitly on macOS or the link fails with
 # "library 'c++' not found".
@@ -41,14 +53,57 @@ def _macos_sysroot_flag() -> list:
         return []
 
 
-def _find_clangpp() -> Optional[str]:
-    for candidate in _CLANGPP_CANDIDATES:
+def _first_available(candidates: List[str]) -> Optional[str]:
+    for candidate in candidates:
         p = Path(candidate)
         if p.is_absolute() and p.exists():
             return str(p)
         if shutil.which(candidate):
             return shutil.which(candidate)
     return None
+
+
+def _find_clangpp() -> Optional[str]:
+    return _first_available([os.environ.get("DP_CXX", "")] * bool(os.environ.get("DP_CXX"))
+                            + _CLANGPP_CANDIDATES)
+
+
+def _find_clang() -> Optional[str]:
+    return _first_available([os.environ.get("DP_CC", "")] * bool(os.environ.get("DP_CC"))
+                            + _CLANG_CANDIDATES)
+
+
+# ---------------------------------------------------------------------------
+# Source language — C is built as C, never silently as C++
+# ---------------------------------------------------------------------------
+# DiscoPoP instruments both languages (discopop_cc / discopop_cxx), and so does
+# the agent. The distinction matters because clang++ accepts a `.c` file and
+# compiles it AS C++: `void*` no longer converts implicitly, `restrict` and VLA
+# parameters are rejected, and identifiers like `new` become keywords.
+# PolyBench's own allocator fails exactly that way.
+
+def is_c_source(source: Union[str, Path]) -> bool:
+    return Path(str(source)).suffix == ".c"
+
+
+def compiler_for(source: Union[str, Path], clangpp: str) -> str:
+    """The compiler matching `source`'s language.
+
+    Call sites look up the C++ compiler once and pass it along; a C source is
+    switched to clang here. With no clang available the bare name is returned so
+    the build fails visibly instead of quietly compiling C as C++."""
+    if not is_c_source(source):
+        return clangpp
+    return _find_clang() or "clang"
+
+
+def link_flags_for(source: Union[str, Path]) -> List[str]:
+    """Language-specific link flags: libc++ for C++ on macOS, libm for C (C++
+    programs get it through the C++ standard library; C programs must ask)."""
+    if is_c_source(source):
+        return ["-lm"]
+    return ([f"-L{_LLVM_LIBCXX}", f"-Wl,-rpath,{_LLVM_LIBCXX}"]
+            if Path(_LLVM_LIBCXX).exists() else [])
 # ---------------------------------------------------------------------------
 # Stage 3: ThreadSanitizer
 # ---------------------------------------------------------------------------
@@ -85,6 +140,10 @@ def find_archer() -> Optional[str]:
         Path("/usr/local/opt/libomp/lib/libarcher.dylib"),
         Path("/opt/homebrew/opt/libomp/lib/libarcher.dylib"),
         Path.home() / ".local/lib/libarcher.so",
+        # Debian/Ubuntu LLVM packages ship it per version; 20 first, matching
+        # the compiler preferred above.
+        Path("/usr/lib/llvm-20/lib/libarcher.so"),
+        Path("/usr/lib/llvm-19/lib/libarcher.so"),
         Path("/usr/lib/llvm/lib/libarcher.so"),
     ):
         if cand.exists():

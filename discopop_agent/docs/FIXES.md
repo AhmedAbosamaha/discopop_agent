@@ -1013,3 +1013,162 @@ Correctness compared stdout for exactly one argv, so a rewrite correct at the pr
 ```
 
 **Known gap:** the benchmark cases hard-code their problem size and take no argv, so they cannot exercise `--check-input` yet; giving them a size argument is the natural follow-up.
+
+---
+
+## Fix 44 — `discopop_cxx` APPENDS to every artifact: three profiles into one directory merged into one corrupt analysis
+
+**File:** `profiling/runner.py`, `benchmark/refresh_depth.py`
+
+**Problem:**
+`discopop_cxx` appends to every artifact it writes and never truncates. Profiling into a directory that already held an analysis **merged the two**. Measured on **one unchanged source**, three profiles into the same directory:
+
+| artifact | 1st | 2nd | 3rd |
+|---|---|---|---|
+| `Data.xml` | 444 | 888 | 1332 |
+| `instructionID_to_lineID_mapping.txt` | 90 | 180 | 270 |
+| `static_dependencies.txt` | 23 | 46 | 69 |
+
+Every re-profile the agent performed, and every profile the benchmark harness took, was reading a superset of two or more runs.
+
+**Fix:**
+`_reprofil` and `_reprofil_fast` both `shutil.rmtree` the `profiler/` directory before the compile. `benchmark/refresh_depth.py`'s `_full_profile` does the same. `reduction.txt` moved out of `_RUN_ARTIFACTS` into `_COMPILE_ARTIFACTS` — the compile writes it correctly for the new source, so preserving the old one was wrong.
+
+**Effect — and why this is the most important entry in this file:**
+The corruption **flattered**. One benchmark case scored a perfect 6/6 and revealed **five** unsafe divergences once the fix was in. Corruption that penalised would have been noticed immediately; corruption that improves the score looks like success.
+
+**Every measurement taken before this fix is void.** The measuring instrument shared a defect with the subject it was measuring — which belongs in the thesis's threats-to-validity chapter, stated plainly.
+
+---
+
+## Fix 45 — `remap_dependencies` dropped the observed rows (71% of the data)
+
+**File:** `profiling/fast_refresh.py`
+
+**Problem:**
+Dependence rows carrying a **bare instruction id** — no `@callpath-state` suffix — were treated as unparseable and dropped. They are not malformed: they are the **observed** rows, about 71% of the file. They have zero overlap with `static_dependencies.txt`, and that file does not exist at all after a compile-only build, so nothing else covered them.
+
+A fast refresh was therefore discarding most of the dynamic evidence it existed to preserve.
+
+**Fix:**
+Added `_BARE_INSTR = re.compile(r"^\d+$")`. `endpoint()` and `endpoint_line()` translate bare ids like any other. The statistic was renamed `deps_bare_id` and is reported in `RemapStats.summary()` rather than hidden — a refresh that silently dropped most of the profile would otherwise look identical to one that worked.
+
+---
+
+## Fix 46 — Settle's re-gate compared timings with a bare `>`, so it failed on identical source 5 times in 8
+
+**File:** `phases/settle.py`
+
+**Problem:**
+The final whole-file re-gate compared `t_final > reference_time` with **no tolerance at all**. Ordinary timing wobble was read as a regression.
+
+**Verified:** on completely unchanged source, **5 false failures out of 8**, with ratios 0.961–1.010. The verdict was close to a coin flip.
+
+**Fix:**
+`if t_final > reference_time / _MARGINAL_NOISE:` — the same measured-noise principle the correctness gate already used for numbers, applied to the clock.
+
+---
+
+## Fix 47 — `--evidence`: making the agent's own premise testable
+
+**File:** `args.py`, `llm/render.py`
+
+**Problem:**
+The premise of the whole agent is that DiscoPoP's evidence helps a model parallelize. Nothing in the tool could test that claim, because the evidence could not be turned off.
+
+**Fix:**
+`--evidence` gates the nine sections named in `EVIDENCE_SECTIONS` (`deps`, `reductions`, `classification`, `extra_vars`, `array_note`, `loop_nest`, `calls`, `blockers`, `failure`) via `_evidence_sections(ev, deps_header, include=None)`. `full` (default), `none`, a comma list to **select**, or `-name` entries to **subtract** — the subtract form needs `--evidence=-a,-b` since a leading dash is otherwise read as a flag.
+
+**Measured:** the evidence block is **48% of the prompt** — 3748 characters at `full`, 1986 at `none`.
+
+**Trap, documented in the help text:** `failure` is the **gate's** diagnostic, not DiscoPoP's, so a no-evidence run still receives empirical feedback about why its last attempt was rejected. Pair the ablation with `--budget 1` to isolate the two variables.
+
+Also added `--allow-unverified`: the run now **aborts** when the original program cannot be built or run, instead of continuing with the correctness gate silently switched off. Continuing is still possible, but only as an explicit opt-in with a loud warning.
+
+---
+
+## Fix 48 — `--llm-deps` defaults to OFF
+
+**File:** `args.py`
+
+**Problem:**
+`--llm-deps` followed `--fast-refresh`, so it was on in the default configuration. It is the only place a model's claim **edits DiscoPoP's analysis** rather than being tested against the program, and it only ever *deletes* — the unsound direction, where a wrong judgement produces a racy loop.
+
+It also rarely pays for itself. A fast refresh saves only the instrumented run — measured **8.6 s** on `prefix_sum` and **7.9 s** on `array_accumulator` — and one LLM call per kept rewrite usually costs more than that. Slower *and* less sound.
+
+**Fix:**
+The flag now parses to `None` and resolves to `False`. It is kept behind the flag so runs with and without it can be compared and reported, and it still errors when asked for explicitly without `--fast-refresh`. `--llm-pragmas` is the sound channel for the same judgement: the model writes the pragma and the gate has to be convinced.
+
+---
+
+## Fix 49 — `--llm-recon`: closing the refresh's gap by ADDING dependences
+
+**File:** `llm/dep_reconstruct.py` (new), `llm/prompts.py`, `phases/phase_a.py`, `args.py`
+
+**Problem:**
+A fast refresh cannot carry a dependence whose endpoint sits in code the rewrite *created* — that code did not exist when the program last ran. **Measured across two chains: 39 of 39 dependences a full profile has and a refresh lacks have an endpoint on a rewritten line, and NONE were carryable.** That is the entire remaining gap.
+
+**Fix:**
+The model reports the dependences in the code it just wrote, in the opposite direction to `--llm-deps` — it **adds**, which is the conservative direction. Three rules keep it honest:
+
+- **Source terms only.** `LOOP <line> <RAW|WAR|WAW> <var> <writer-line> <reader-line>`, or `LOOP <line> NONE`. The model never sees or emits an instruction id, callpath state or memory region — those are compiler-internal and pointer-derived, and a model guessing them would be fabricating identity, not reporting dependence.
+- **Resolution by lookup, never guessing.** A claimed variable is resolved against the dependence files of *this* build. A claim that does not resolve is dropped and counted, not approximated.
+- **Rows are MERGED per sink, not appended.** Verified the hard way: appending a full profile's 60 rows produced **zero** change in the explorer's output, because an appended row is silently shadowed by the existing row for that sink.
+
+`--llm-recon-mode` picks when to ask. `followup` (default) is a fresh turn on the **same session** after the gate passed, so the model still has its own code in view and the refreshed instruction mapping already exists; only kept rewrites cost a request. `folded` appends the ask to the rewrite prompt for no extra request at all. The `followup` prompt carries a warning with no counterpart in `folded`: the model knows its rewrite passed TSan by then, and *"no race was found, so there is no dependence"* is exactly wrong for a pragma-free rewrite — TSan ran on code with no pragma, running sequentially, so its silence is not evidence.
+
+**Verification is containment, not proof.** Over-claiming is safe by construction (a wrong added dependence costs only a missed parallelization). The failure that hurts is **omission**, and nothing at run time can catch it — the premise is that the program was not run. The partial check is `contradictions()`: static analysis is over-approximate, so a dependence it records for a loop the model called independent is the shape of a dangerous omission. It **detects, it does not decide** — nothing is blocked on one.
+
+**`_not_carried` is what makes that check usable.** Unfiltered it fired on induction variables and body locals — all four loops in a two-loop test. Filtered: 4 → 0.
+
+**Measured:** control arm **4 unsafe divergences / 9 comparisons** (zero variance over 10 repeats); reconstruction arm **1**, identical across 3 repeats, repairing the **same three** comparisons each time.
+
+`--llm-recon` and `--llm-deps` are mutually exclusive — they move the analysis in opposite directions — and both require `--fast-refresh`.
+
+---
+
+## Fix 50 — Harness: the chained arm was never seeded, and a trip-count rule was added then removed
+
+**File:** `benchmark/refresh_depth.py`, `profiling/fast_refresh.py`
+
+**Problem 1 — the seeding bug produced four wrong diagnoses in a row.**
+`fast-llm` is a **chained** arm; the stepped arms were reset from `full` before each step and it was not. The resulting divergence on `prefix_sum` loop 27/28 was diagnosed in turn as a lost dependence, then trip counts, then corrupted profiles, then model over-reporting. All four were wrong. The cause was the missing seed.
+
+**Fix:** both stepped arms are reset from `full`. `_edges` no longer excludes bare-id rows (see Fix 45), and `_full_profile` clears the profiler directory (see Fix 44). The harness now passes `source_lines` and `audit_path` through to `reconstruct` — without `source_lines` the contradiction filter cannot run, and an earlier reported figure of "18 contradictions" was noise from exactly that.
+
+**Problem 2 — a fix that was measured and then reverted.**
+A trip-count **span** rule was added to `remap_loop_counters` so counts could survive re-indentation. It dropped counts over a re-indented brace and made trip problems **worse** (8 → 12). Relaxed to semantic lines, then **removed entirely** when a clean-baseline measurement showed zero effect either way.
+
+`remap_loop_counters(text, lmap)` is header-only, deliberately, with a note in the source recording the failed experiment so it is not re-attempted. `remap_reduction` is marked as no longer used by the fast refresh.
+
+---
+
+## Fix 51 — C sources are built and profiled as C; LLVM 20 and its archer on the evaluation server
+
+**Files:** `gate/toolchain.py`, `gate/patching.py`, `gate/tsan.py`, `profiling/tools.py`, `profiling/runner.py`, `profiling/__init__.py`, `plan/impact.py`, `profiler/scripts/CC_wrapper.sh`, `hotspot_detection/scripts/CC_wrapper.sh` (and their installed copies in the venv)
+
+**Problem 1 — the agent was C++-only by accident.**
+`--source-file` is documented as "C/C++" and the prompts say "C/C++ programs", but every build went through `_find_clangpp()` and every profile through `discopop_cxx`. `clang++` accepts a `.c` file and compiles it **as C++**, so a C program was either rejected (implicit `void*` conversion, `restrict`, identifiers such as `new`) or silently analysed as a different language. Measured on PolyBench `seidel-2d` at SMALL, one profile each: DiscoPoP reports **4** `do_all` for the C++ translation and **7** for the C original. The benchmark suites the thesis evaluates on (PolyBench, NPB, most of Rodinia) are C.
+
+**Fix:** the language is taken from the file extension at the few places that build or instrument.
+- `toolchain.is_c_source`, `compiler_for(source, clangpp)` (clang for `.c`, never a silent fall-back to clang++), `link_flags_for(source)` (`-lm` for C; LLVM's libc++ on macOS for C++ as before).
+- `patching._compile`, `patching._compile_variant` and `tsan._tsan` — the only three places a gate compile command is built — use them, so every stage (compile, OpenMP build, TSan, timing, noise floor, Settle) follows.
+- `tools._wrapper_for` picks `discopop_cc`/`discopop_cxx`; `runner._reprofil` and `runner._reprofil_fast` use it; `impact.run_hotspot_detection` picks `discopop_hotspot_cc`/`discopop_hotspot_cxx`.
+
+**Problem 2 — the C wrapper scripts never got the macOS fixes.**
+Fixes 2–3 and the hotspot-detection fixes (Fix 38-era) were applied to both `CXX_wrapper.sh` files only. On macOS `discopop_cc` failed with `'stdio.h' file not found` (no SDK sysroot) and `discopop_hotspot_cc` loaded `/LLVMHotspotDetection.so` (GNU-only `readlink -fm`, `.so` hard-coded).
+
+**Fix:** ported the same blocks into both `CC_wrapper.sh` sources — SDK sysroot, LLVM's libc++ in place of `-lstdc++` (the runtime libraries are C++ built against it), symlink-safe script path, `.dylib` plugin fallback, `DP_PROJECT_ROOT_DIR` default. All platform-specific parts are inside `uname == Darwin`; on Linux the scripts run exactly as before. Installed copies replaced; INSTALL.md §4 updated.
+
+**Problem 3 — the evaluation server's toolchain.**
+The candidate list tried `clang++-19` before anything else available there, and that clang-19 has no `omp.h` (`libomp-19-dev` absent), so every OpenMP build would fail. `find_archer` did not look under `/usr/lib/llvm-20/lib`, where the server's archer is, so TSan would have fallen back to the barrier heuristic.
+
+**Fix:** `clang++-20`/`clang-20` are tried before 19 (the macOS Homebrew keg path stays first); `DP_CXX`/`DP_CC` override the search; `/usr/lib/llvm-20/lib/libarcher.so` and `/usr/lib/llvm-19/lib/libarcher.so` added to the archer candidates.
+
+**Verified (macOS, LLVM 19):**
+- mypy: 82 errors before, 82 after, none in changed lines.
+- A C OpenMP program with an implicit `void*` conversion passes `_compile`, `_compile_variant` (runs, correct output) and `_tsan` (clean) — the identical `.cpp` copy fails to compile, as it should.
+- `_reprofil` on PolyBench `seidel-2d.c` through `discopop_cc`: OK in 17.7 s, 416 dynamic dependence rows, 7 `do_all`. Hotspot detection through `discopop_hotspot_cc`: OK, `Hotspots.json` written.
+- Feature suite (C++ paths unchanged): **16 passed, 0 failed, 0 skipped**, archer active.
+
+Not yet verified: the LLVM-20 selection and archer path on the server itself (to be checked when the checkout there is synced).

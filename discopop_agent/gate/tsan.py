@@ -26,8 +26,8 @@ import subprocess
 from pathlib import Path
 from typing import List, Optional, Tuple
 
-from .toolchain import (_LIBOMP_DIR, _LLVM_LIBCXX, _macos_sysroot_flag,
-                        _tsan_env)
+from .toolchain import (_LIBOMP_DIR, _macos_sysroot_flag, _tsan_env,
+                        compiler_for, link_flags_for)
 
 
 _OUTLINED_RE = re.compile(r"\.omp_outlined[A-Za-z0-9_.]*")
@@ -180,17 +180,14 @@ def _tsan(
     and performance gates instead of rejecting it on the race alone.
     """
     binary = work_dir / "tsan_binary"
-    extra = (
-        [f"-L{_LLVM_LIBCXX}", f"-Wl,-rpath,{_LLVM_LIBCXX}"]
-        if Path(_LLVM_LIBCXX).exists() else []
-    ) + (
+    extra = link_flags_for(source) + (
         [f"-L{_LIBOMP_DIR}", f"-Wl,-rpath,{_LIBOMP_DIR}"]
         if Path(_LIBOMP_DIR).exists() else []
     ) + _macos_sysroot_flag()
     # -fopenmp is required so that #pragma omp parallel for actually runs in
     # parallel; without it TSan never sees cross-thread access on loop vars.
     cmd = [
-        clangpp, str(source), "-o", str(binary),
+        compiler_for(source, clangpp), str(source), "-o", str(binary),
         "-fsanitize=thread", "-fopenmp", "-g", "-O1",
     ] + extra
     compile_result = subprocess.run(cmd, capture_output=True, text=True, cwd=work_dir)

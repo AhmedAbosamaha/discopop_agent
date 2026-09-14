@@ -23,8 +23,8 @@ from typing import Dict, List
 from ..args import AgentArguments
 from ..plan import impact as impact_mod
 from . import fast_refresh
-from ..gate.toolchain import _LLVM_LIBCXX
-from .tools import _cxx_wrapper, _explorer_cmd, _venv_env
+from ..gate.toolchain import link_flags_for
+from .tools import _explorer_cmd, _venv_env, _wrapper_for
 
 
 # Artifacts the instrumented RUN produces.  A fast refresh re-runs only the
@@ -110,7 +110,7 @@ def _reprofil_fast(
     src = Path(source_file).resolve()
     binary = src.parent / "a.out"
     profiler = (discopop_dir / "profiler").resolve()
-    extra = [f"-L{_LLVM_LIBCXX}", f"-Wl,-rpath,{_LLVM_LIBCXX}"] if Path(_LLVM_LIBCXX).exists() else []
+    extra = link_flags_for(src)
     env = _venv_env()
 
     lmap = fast_refresh.line_map(old_text, new_text)
@@ -154,7 +154,7 @@ def _reprofil_fast(
         shutil.rmtree(profiler, ignore_errors=True)
 
     r = subprocess.run(
-        [_cxx_wrapper(), str(src), "-o", str(binary)] + extra,
+        [_wrapper_for(src), str(src), "-o", str(binary)] + extra,
         capture_output=True, text=True, cwd=src.parent, env=env,
     )
     if r.returncode != 0:
@@ -208,7 +208,7 @@ def _reprofil(source_file: str, discopop_dir: Path, binary_args: list | None = N
     """
     src = Path(source_file).resolve()   # absolute path avoids CWD confusion
     binary = src.parent / "a.out"
-    extra = [f"-L{_LLVM_LIBCXX}", f"-Wl,-rpath,{_LLVM_LIBCXX}"] if Path(_LLVM_LIBCXX).exists() else []
+    extra = link_flags_for(src)
     env = _venv_env()
 
     profiler = (discopop_dir / "profiler").resolve()
@@ -216,7 +216,7 @@ def _reprofil(source_file: str, discopop_dir: Path, binary_args: list | None = N
         shutil.rmtree(profiler, ignore_errors=True)
 
     r = subprocess.run(
-        [_cxx_wrapper(), str(src), "-o", str(binary)] + extra,
+        [_wrapper_for(src), str(src), "-o", str(binary)] + extra,
         capture_output=True, text=True, cwd=src.parent, env=env,
     )
     if r.returncode != 0:

@@ -519,6 +519,10 @@ python -m discopop_agent \
     --apply-patches / --no-apply-patches       default: ON (write Tier-1 pragmas to source)
     --fast-refresh / --no-fast-refresh         default: ON (skip the instrumented run)
     --llm-deps / --no-llm-deps                 default: OFF (comparison only)
+    --llm-recon / --no-llm-recon               default: OFF (model reports its own deps)
+    --llm-recon-mode  {followup,folded}        default: followup
+    --evidence      <spec>                     default: full (ablation control)
+    --allow-unverified                         default: off (run aborts instead)
     --hotspots / --no-hotspots                 default: ON (rank by measured time saved)
     --min-impact         <seconds>             default: 0.0 (off); needs --hotspots
     --numeric-tolerance / --no-...             default: ON (measure the numerical floor)
@@ -538,6 +542,7 @@ Three defaults are resolved after parsing because they are coupled to another fl
 | `--model` | `haiku` for `claude-agent-sdk` (Claude Code's own aliases), `claude-opus-5` for `anthropic`, **required** for `openai-compat` (the name is whatever your endpoint serves) |
 | `--edit-mode` | `direct` for `claude-agent-sdk`, `diff` otherwise — `direct` needs a backend with file tools |
 | `--llm-deps` | **off** by default (it used to follow `--fast-refresh`); still errors when explicitly asked for without `--fast-refresh`, since there is no gap to fill then |
+| `--llm-recon` | off by default; also requires `--fast-refresh`, and is **mutually exclusive** with `--llm-deps` — they move the analysis in opposite directions, so asking for both is a contradiction, not a combination |
 
 So `--provider anthropic` on its own is a working invocation, not a broken one.
 
@@ -685,6 +690,52 @@ Two rules keep the question narrow, and both were learned the hard way:
 **Why it is off by default.** It is the only place a model's claim EDITS DiscoPoP's analysis rather than being tested against the program. The same judgement has a sound channel — `--llm-pragmas`, where the model writes the pragma and the gate has to be convinced by ThreadSanitizer, the schedule matrix, the output check and the clock: a hypothesis that must survive, rather than a claim that is believed. It also rarely pays for itself. A fast refresh saves only the instrumented run — measured 8.6 s on `prefix_sum` and 7.9 s on `array_accumulator` — and one LLM call per kept rewrite usually costs more than that, so the feature tends to be slower *and* less sound. It is kept behind the flag so a run with and without it can be compared and reported.
 
 **It only ever DELETES.** No dependence anywhere in the profile originates from the model: it removes over-cautious lines from `static_dependencies.txt` and writes nothing else, and silence is treated as REAL so an unanswered blocker keeps blocking. Every judgement is written to `<output-dir>/llm_deps.json`. This is the one place a model's claim enters DiscoPoP's analysis, so be clear-eyed: a wrong SPURIOUS produces a racy loop. What contains it — the model is told to answer REAL when unsure (a dependence wrongly called real costs only a missed parallelization), the record is auditable, discharged deps are matched back to the exact dependence lines they came from and the explorer is re-run (restoring the original analysis if it then fails), and any pragma resting on one still faces ThreadSanitizer, the byte-identical output check and the speedup gate.
+
+**`--llm-recon`** (requires `--fast-refresh`, mutually exclusive with `--llm-deps`): the same gap, closed from the other side. A refresh cannot carry a dependence whose endpoint sits in code the rewrite *created* — that code did not exist when the program last ran, so nothing was measured there. Measured across two chains, **39 of 39** dependences a full profile has and a refresh lacks have an endpoint on a rewritten line, and **none** of them were carryable. That is the entire remaining gap, and it is exactly what a model that just wrote the code is in a position to know.
+
+**It only ever ADDS**, which is the whole reason it is the sound direction. A dependence the model omits makes a sequential loop look parallel — that is a race. One it invents costs only a missed parallelization. So recall is the safety number and precision is merely efficiency, and the prompt tells the model to report anything it is unsure about.
+
+Three rules keep it honest:
+
+- **Source terms only.** The model reports `LOOP <line> <RAW|WAR|WAW> <var> <writer-line> <reader-line>`, or `LOOP <line> NONE`. It never sees or emits an instruction id, a callpath state or a memory region — those are compiler-internal and pointer-derived, and a model guessing them would be fabricating identity rather than reporting dependence.
+- **Resolution is lookup, never guessing.** A claimed variable is resolved against the dependence files of *this* build, which already pair that name with real instruction ids and a real memory region (scalars in `static_dependencies.txt`, arrays in `dynamic_dependencies.txt` under their mangled form). A claim that does not resolve is **dropped and counted**, not approximated.
+- **Rows are merged per sink, not appended.** An appended row is silently shadowed by the existing row for that sink — verified by appending a full profile's 60 rows and observing zero change in the explorer's output.
+
+**`--llm-recon-mode`** decides *when* the model is asked, and the two modes are not simply the same question at different times:
+
+| mode | requests | what it buys |
+|---|---|---|
+| `followup` (default) | one extra per **kept** rewrite | a follow-up turn on the **same session**, so the model still has the code it wrote in view. The rewrite was written with the model's whole attention on it, and the refreshed instruction mapping the claims resolve against already exists |
+| `folded` | none — the ask rides on the rewrite prompt | no extra request at all, but the model splits its attention while writing |
+
+The `followup` prompt carries a warning that has no counterpart in `folded`, and it is not padding. By that point the model knows its rewrite passed ThreadSanitizer, and the tempting inference — *"no race was found, so there is no dependence"* — is exactly wrong for a pragma-free rewrite: TSan ran on code with no pragma, executing sequentially, so there was nothing to race and its silence is not evidence. Left unchallenged that premise biases the model towards reporting independence, which is the racy direction.
+
+**What is checked, and what is not.** Over-claiming is contained by construction. The failure that can hurt is **omission**, and nothing at run time can catch it here — the whole premise is that the program was not run. The partial check is `contradictions()`: static analysis is over-approximate, so a dependence it records for a loop the model declared independent is a direct contradiction between a cautious analysis and a confident model, which is the shape of a dangerous omission. It **detects, it does not decide** — nothing is blocked on one, because a contradiction is often the model being right and the analysis being conservative. Induction variables and loop-body locals are excluded, and that exclusion is what makes the check usable: unfiltered it fired on all four loops in a two-loop test.
+
+Everything is written to an audit log, and the report separates claims *correctly skipped* (about code the rewrite did not touch, which the refresh already carries) from claims the resolver *could not place* — reported as one number those are indistinguishable, and the raw resolved/claimed ratio reads as a failure rate when most of it is by design.
+
+**Which mode produces better dependences is an open question.** Neither has been measured inside the agent; `followup` is the default on reasoning, not evidence. The module is a research instrument, not a production path — it exists so the question *"can a model substitute for measurement on code it wrote?"* can be answered with a number.
+
+---
+
+### `--evidence` — the ablation control
+
+The premise of the whole agent is that profiling data helps a model parallelize. That claim is testable by removing the data, and this flag is how.
+
+Nine sections: `deps`, `reductions`, `classification`, `extra_vars`, `array_note`, `loop_nest`, `calls`, `blockers`, `failure`.
+
+| spec | meaning |
+|---|---|
+| `full` | everything (default) |
+| `none` | source and task only, no DiscoPoP data at all |
+| `deps,blockers` | **select** those sections |
+| `--evidence=-classification,-loop_nest` | **subtract** from full — write this form with an equals sign, since a leading dash is otherwise read as a flag |
+
+Measured: the evidence block is **48% of the prompt** — 3748 characters at `full`, 1986 at `none`. Half the prompt is under test, which is what makes the ablation non-trivial a priori.
+
+One trap. **`failure` is the GATE's diagnostic, not DiscoPoP's.** Leaving it in means a no-evidence run still receives empirical feedback about why its last attempt was rejected, so the two variables are entangled. Pair the ablation with `--budget 1` to isolate them.
+
+**`--allow-unverified`** continues even when the ORIGINAL program cannot be built or run. That leaves the correctness gate with nothing to compare against and therefore **switched off**, so patches can be accepted that were never shown to preserve semantics. The run aborts instead by default; this is the explicit opt-in, and it prints a loud warning.
 
 ---
 

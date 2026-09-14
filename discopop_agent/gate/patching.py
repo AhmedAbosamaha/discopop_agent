@@ -13,7 +13,7 @@ import subprocess
 from pathlib import Path
 from typing import List, Optional, Tuple
 
-from .toolchain import _LIBOMP_DIR, _LLVM_LIBCXX, _macos_sysroot_flag
+from .toolchain import _LIBOMP_DIR, _macos_sysroot_flag, compiler_for, link_flags_for
 
 
 _HUNK_RE = re.compile(r"^(@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@)(.*)")
@@ -154,11 +154,8 @@ def _apply(diff: str, source_file: str, work_dir: Path) -> Tuple[bool, str, Opti
 
 def _compile(source: Path, clangpp: str, work_dir: Path) -> Tuple[bool, str]:
     binary = work_dir / "validate_binary"
-    extra = (
-        [f"-L{_LLVM_LIBCXX}", f"-Wl,-rpath,{_LLVM_LIBCXX}"]
-        if Path(_LLVM_LIBCXX).exists() else []
-    ) + _macos_sysroot_flag()
-    cmd = [clangpp, str(source), "-o", str(binary), "-g", "-O1"] + extra
+    extra = link_flags_for(source) + _macos_sysroot_flag()
+    cmd = [compiler_for(source, clangpp), str(source), "-o", str(binary), "-g", "-O1"] + extra
     result = subprocess.run(cmd, capture_output=True, text=True, cwd=work_dir)
     if result.returncode != 0:
         return False, result.stderr[-2000:]
@@ -185,14 +182,11 @@ def _compile_variant(
     `equivalence.numerical_noise_floor`.
     """
     binary = work_dir / name
-    extra = (
-        [f"-L{_LLVM_LIBCXX}", f"-Wl,-rpath,{_LLVM_LIBCXX}"]
-        if Path(_LLVM_LIBCXX).exists() else []
-    ) + (
+    extra = link_flags_for(source) + (
         [f"-L{_LIBOMP_DIR}", f"-Wl,-rpath,{_LIBOMP_DIR}"]
         if (openmp and Path(_LIBOMP_DIR).exists()) else []
     ) + _macos_sysroot_flag()
-    cmd = [clangpp, str(source), "-o", str(binary), optimize]
+    cmd = [compiler_for(source, clangpp), str(source), "-o", str(binary), optimize]
     if openmp:
         cmd.append("-fopenmp")
     cmd += list(extra_flags or [])

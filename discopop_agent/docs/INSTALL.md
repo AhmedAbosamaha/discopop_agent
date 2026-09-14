@@ -76,6 +76,21 @@ venv/bin/discopop_explorer --help > /dev/null && echo "discopop_explorer install
 
 Two bugs in the installed wrapper must be patched manually after installation.
 
+> **Since 2026-09-14 the repository sources already carry these fixes, for both languages** —
+> `profiler/scripts/{CC,CXX}_wrapper.sh` and `hotspot_detection/scripts/{CC,CXX}_wrapper.sh`
+> (the agent handles C sources through `discopop_cc` / `discopop_hotspot_cc`; see FIXES.md
+> Fix 51). If an installed copy in the venv is older than its source, copy the source over it:
+>
+> ```bash
+> S=venv/lib/python3.11/site-packages
+> cp profiler/scripts/CC_wrapper.sh           $S/discopop-profiler.libs/
+> cp profiler/scripts/CXX_wrapper.sh          $S/discopop-profiler.libs/
+> cp hotspot_detection/scripts/CC_wrapper.sh  $S/discopop-hotspot-detection.libs/
+> cp hotspot_detection/scripts/CXX_wrapper.sh $S/discopop-hotspot-detection.libs/
+> ```
+>
+> The manual steps below are kept for installs from older sources.
+
 ### Find the wrapper
 
 ```bash

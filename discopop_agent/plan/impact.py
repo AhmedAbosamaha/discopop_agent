@@ -257,7 +257,11 @@ def run_hotspot_detection(
     binary = src.parent / ".dp_hotspot.out"
     dp = discopop_dir.resolve()
 
-    ok, err = run_cmd(["discopop_hotspot_cxx", str(src), "-o", str(binary)],
+    # C is instrumented as C (discopop_hotspot_cc), never through the C++
+    # wrapper; C programs also need libm linked explicitly.
+    is_c = src.suffix == ".c"
+    wrapper = "discopop_hotspot_cc" if is_c else "discopop_hotspot_cxx"
+    ok, err = run_cmd([wrapper, str(src), "-o", str(binary)] + (["-lm"] if is_c else []),
                       src.parent, env)
     if not ok:
         return False, f"hotspot instrumentation failed: {err[-160:]}"

@@ -17,6 +17,14 @@ def _cxx_wrapper() -> str:
     return str(Path(sys.executable).parent / "discopop_cxx")
 
 
+def _wrapper_for(source: "str | Path") -> str:
+    """DiscoPoP's compiler wrapper for `source`'s language: `discopop_cc` for C,
+    `discopop_cxx` otherwise — instrumenting C through the C++ wrapper would
+    compile it as C++ (see gate.toolchain.is_c_source)."""
+    name = "discopop_cc" if Path(str(source)).suffix == ".c" else "discopop_cxx"
+    return str(Path(sys.executable).parent / name)
+
+
 def _explorer_cmd() -> str:
     return str(Path(sys.executable).parent / "discopop_explorer")
 
