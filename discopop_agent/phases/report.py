@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import List
+from typing import Any, Dict, List
 
 from ..args import AgentArguments
 from ..gate import find_archer
@@ -33,6 +33,28 @@ def _write_record(output_dir: Path, record: dict, dry_run: bool = False) -> None
     records: List[dict] = json.loads(f.read_text()) if f.exists() else []
     records.append(record)
     f.write_text(json.dumps(records, indent=2))
+def _record_candidate(output_dir: Path, entry: Dict[str, Any], diff: str,
+                      dry_run: bool = False) -> None:
+    """Keep EVERY candidate the gate judged, accepted or not, with its verdict.
+
+    accepted.json describes only what survived.  Judging the gate itself — how often
+    it rejects a correct change or accepts a wrong one — needs the rejected
+    candidates too, so each is written to candidates/NNNN.patch with one line in
+    candidates.jsonl (phase, region, verdict, stage, diagnostic).  A dry run writes
+    nothing, as everywhere else."""
+    if dry_run:
+        return
+    cdir = output_dir / "candidates"
+    cdir.mkdir(parents=True, exist_ok=True)
+    index = output_dir / "candidates.jsonl"
+    n = sum(1 for _ in index.open()) if index.exists() else 0
+    patch = cdir / f"{n:04d}.patch"
+    patch.write_text(diff)
+    with index.open("a") as fh:
+        fh.write(json.dumps(dict(entry, n=n, patch=str(patch.relative_to(output_dir))),
+                            default=str) + "\n")
+
+
 def _print_candidates(candidates: list) -> None:
     """Print candidate table. candidates is a list of (depth, HotspotCandidate)."""
     measured = any(c.impact_seconds is not None for _d, c in candidates)

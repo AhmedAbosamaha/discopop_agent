@@ -119,6 +119,33 @@ def _workspace_diff(ws_file: Path, source_file: str, disk: str) -> Optional[str]
     return make_diff(disk, edited, source_file)
 
 
+def _record_usage(provider: str, model: str, usage: Any, cost_usd: Optional[float] = None,
+                  duration_ms: Optional[int] = None, turns: Optional[int] = None,
+                  model_usage: Any = None) -> None:
+    """Append one model call's token usage to $DP_LLM_USAGE_LOG (JSON lines), if set.
+
+    Cost is part of the evaluation — tokens per accepted parallelization — and the
+    experiment harness points this at each trial's directory.  Unset, nothing is
+    written.  Never raises: accounting must not be able to fail a run."""
+    import json
+    import os
+    import time as _t
+    path = os.environ.get("DP_LLM_USAGE_LOG")
+    if not path:
+        return
+    try:
+        if usage is not None and not isinstance(usage, dict):
+            usage = {k: getattr(usage, k) for k in dir(usage)
+                     if not k.startswith("_") and isinstance(getattr(usage, k, None), (int, float))}
+        with open(path, "a") as fh:
+            fh.write(json.dumps({"t": _t.time(), "provider": provider, "model": model,
+                                 "usage": usage, "cost_usd": cost_usd,
+                                 "duration_ms": duration_ms, "turns": turns,
+                                 "model_usage": model_usage}, default=str) + "\n")
+    except Exception:  # noqa: BLE001 — accounting is best-effort
+        pass
+
+
 def _complete_claude_agent_sdk(
     model: str,
     system: str,
@@ -198,6 +225,8 @@ def _complete_claude_agent_sdk(
                         text += block.text
             if isinstance(message, ResultMessage):
                 session_id = message.session_id
+                _record_usage("claude-agent-sdk", model, message.usage, message.total_cost_usd,
+                              message.duration_ms, message.num_turns, message.model_usage)
         return text, session_id
 
     # Two different hiccups are retried here, and neither is worth losing a run
@@ -265,6 +294,7 @@ def _complete(
                 max_tokens=4096,
                 messages=[{"role": "system", "content": system}] + current,
             )
+            _record_usage("openai-compat", model, getattr(resp, "usage", None))
             return resp.choices[0].message.content or ""
         if provider == "claude-agent-sdk":
             return _complete_claude_agent_sdk(model, system, current, session_key,

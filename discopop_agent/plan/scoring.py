@@ -63,6 +63,8 @@ def build_candidates(
     impact: "ImpactModel | None" = None,
     min_impact: float = 0.0,
     skip_cold: bool = True,
+    min_runtime_share: float = 0.0,
+    exclude_functions: Tuple[str, ...] = (),
 ) -> List[HotspotCandidate]:
     """
     Return hotspot candidates in priority order.
@@ -106,7 +108,16 @@ def build_candidates(
 
     candidates: List[HotspotCandidate] = []
 
+    # Functions the caller declares out of scope (a benchmark harness's own output,
+    # timing and setup code) are skipped together with every region inside them.
+    excluded = set(exclude_functions)
+    excluded_spans = [(r.file_id, r.start_line, r.end_line) for r in unique_regions
+                      if r.region_type == "function" and r.name in excluded]
+
     for region in unique_regions:
+        if any(f == region.file_id and s <= region.start_line and region.end_line <= e
+               for f, s, e in excluded_spans):
+            continue
         # Skip trivial CUs (very low workload, not worth parallelizing)
         if region.region_type == "cu" and region.workload < _MIN_WORKLOAD_TIER2:
             continue
@@ -158,8 +169,17 @@ def build_candidates(
                 continue
             if saving < min_impact:
                 continue
+            # A share of the measured runtime, unlike seconds, does not depend on the
+            # problem size the program was profiled at.
+            if min_runtime_share and (frac or 0.0) < min_runtime_share:
+                continue
             score = saving
         else:
+            # Hotspot detection ran and did not report this region: DiscoPoP's own
+            # measurement put it below its threshold. With a share floor set, that is
+            # below the floor too — it must not win a model call on the proxy.
+            if min_runtime_share and impact is not None and impact.available:
+                continue
             # No measurement for this region — fall back to the proxy gate.
             if workload_est < min_workload:
                 continue

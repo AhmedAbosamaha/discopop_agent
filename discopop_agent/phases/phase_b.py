@@ -24,7 +24,7 @@ from ..pragmas import (_already_annotated, _read_tier1_patch,
                        _repair_pragma_clauses, check_pragma_clauses,
                        derive_pragma_patch)
 from ..sources import _apply_in_memory, _apply_to_source
-from .report import _write_record
+from .report import _record_candidate, _write_record
 from .verdicts import _MARGINAL_NOISE
 
 
@@ -50,7 +50,9 @@ def _phase_b(
     """
     kept: list = []
     fresh = build_candidates(dp_dir, args.source_file, args.lambda_penalty,
-                             args.min_workload, impact=impact, min_impact=args.min_impact)
+                             args.min_workload, impact=impact, min_impact=args.min_impact,
+                             min_runtime_share=args.min_runtime_share,
+                             exclude_functions=args.exclude_functions)
     todo = [c for c in fresh
             if c.tier == 1 and c.pattern and c.pattern.get("applicable_pattern")]
     if impact is not None and impact.available:
@@ -145,6 +147,10 @@ def _phase_b(
         #    cannot hand back.
         problem = check_pragma_clauses(diff, args.source_file)
         if problem:
+            _record_candidate(output_dir, {
+                "phase": "B", "region_id": cand.region.region_id, "passed": False,
+                "stage": "clause", "diagnostic": problem[:2000],
+            }, diff, args.dry_run)
             print(f"│  clause check: {problem}")
             print(f"└─ DROPPED (bad data-sharing clause)\n")
             continue
@@ -160,6 +166,11 @@ def _phase_b(
             dep_region=(cand.region.file_id, cand.region.start_line,
                         cand.region.end_line),
         )
+        _record_candidate(output_dir, {
+            "phase": "B", "region_id": cand.region.region_id, "passed": res.passed,
+            "stage": res.stage, "diagnostic": (res.diagnostic or "")[:2000],
+            "from_cache": from_cache, "barrier_false_positive": barrier_fp,
+        }, diff, args.dry_run)
         if barrier_fp:
             print(f"│  TSan OMP-barrier false positive — re-verified on output")
         if not res.passed:

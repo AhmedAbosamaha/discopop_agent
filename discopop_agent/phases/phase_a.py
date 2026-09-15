@@ -47,7 +47,7 @@ from ..profiling.tools import _explorer_cmd, _venv_env
 from ..sources import (_apply_to_source, _function_edit_to_diff,
                        _restore_profile, _snapshot_profile)
 from ..types import HotspotCandidate, ValidationResult
-from .report import _REGION_LABEL, _write_record
+from .report import _REGION_LABEL, _record_candidate, _write_record
 from .verdicts import (_OUTCOME_LABEL, RewriteOutcome, _rewrite_feedback,
                        _verify_rewrite)
 
@@ -86,7 +86,9 @@ class RunState:
     def candidates_for(self, dd: Path) -> List[HotspotCandidate]:
         return build_candidates(dd, self.args.source_file,
                                 self.args.lambda_penalty, self.args.min_workload,
-                                impact=self.impact, min_impact=self.args.min_impact)
+                                impact=self.impact, min_impact=self.args.min_impact,
+                                min_runtime_share=self.args.min_runtime_share,
+                                exclude_functions=self.args.exclude_functions)
 
 
 def phase_a(state: RunState) -> None:
@@ -309,6 +311,14 @@ def phase_a(state: RunState) -> None:
             # The clause check is the controller's stage, not validate()'s, so
             # it has to declare itself skipped when it does not apply — the
             # renderer would otherwise show a green tick for a check that never ran.
+            _record_candidate(output_dir, {
+                "phase": "A", "region_id": rid, "depth": depth,
+                "attempt_budget_left": budget, "self_annotated": self_annotated,
+                "pragmas": pragmas, "passed": result.passed, "stage": result.stage,
+                "diagnostic": (result.diagnostic or "")[:2000],
+                "measured_speedup": result.measured_speedup,
+                "barrier_false_positive": barrier_fp,
+            }, fix_hunk_headers(diff), args.dry_run)
             gate_skipped = list(result.skipped_stages)
             if not self_annotated:
                 gate_skipped.insert(0, "clause")

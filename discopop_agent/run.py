@@ -185,9 +185,18 @@ def run(args: AgentArguments) -> None:
     def _candidates(dd: Path) -> List[HotspotCandidate]:
         return build_candidates(dd, args.source_file, args.lambda_penalty,
                                 args.min_workload, impact=impact,
-                                min_impact=args.min_impact)
+                                min_impact=args.min_impact,
+                                min_runtime_share=args.min_runtime_share,
+                                exclude_functions=args.exclude_functions)
 
     initial = _candidates(dp_dir)
+    if impact.available and initial and all(c.impact_seconds is None for c in initial):
+        # Measured, but nothing attached: hotspots are keyed by (file id, line), and a
+        # file id differs when the profile was taken at another path (DiscoPoP maps
+        # files by absolute path). Ranking would silently fall back to the proxy.
+        print("  [warn] hotspot measurements exist but match NO region — ranking falls "
+              "back to the static workload proxy. The profile was probably taken at a "
+              "different path (check .discopop/FileMapping.txt).")
     if not initial:
         print("No hotspot regions found. Run discopop_explorer first.")
         return

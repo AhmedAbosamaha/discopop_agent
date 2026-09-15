@@ -55,6 +55,12 @@ class AgentArguments:
     # Computed at startup by run.py, not parsed: how far this program's own
     # numbers move under legal build variation.  0.0 means byte-exact.
     noise_floor: float = 0.0
+    # --min-runtime-share: skip regions below this fraction of the measured runtime
+    # (and, when hotspots were measured, regions the detector did not report).
+    min_runtime_share: float = 0.0
+    # --exclude-functions: functions (and every region inside them) never ranked —
+    # e.g. a benchmark harness's output and setup code.
+    exclude_functions: Tuple[str, ...] = ()
 
 
 def parse_args() -> AgentArguments:
@@ -198,6 +204,19 @@ def parse_args() -> AgentArguments:
                          "'do not spend an LLM attempt on anything that cannot save 50 ms'. "
                          "Needs --hotspots; regions with no measurement fall back to "
                          "--min-workload."))
+    p.add_argument("--min-runtime-share", type=float, default=0.0,
+                   help=("Skip any region whose measured share of the program's runtime is "
+                         "below this fraction (default: 0.0 — off; 0.05 = regions under 5%%). "
+                         "Unlike --min-impact (seconds) it does not depend on the problem "
+                         "size the program was profiled at. When hotspots were measured, a "
+                         "region the detector did not report is skipped too, instead of "
+                         "competing for model calls on the static proxy. Needs --hotspots."))
+    p.add_argument("--exclude-functions", default="",
+                   help=("Comma-separated function names that are out of scope: the "
+                         "functions and every region inside them are never ranked or "
+                         "attempted (default: none). Meant for code that is not the "
+                         "computation under study — a benchmark harness's output, timing "
+                         "and setup routines — so it cannot win model calls."))
     p.add_argument("--restructure-depth", type=int, default=0,
                    help=(
                        "Maximum discovery depth at which Tier-2 LLM restructuring is "
@@ -394,6 +413,8 @@ def parse_args() -> AgentArguments:
         llm_deps=a.llm_deps,
         hotspots=a.hotspots,
         min_impact=a.min_impact,
+        min_runtime_share=a.min_runtime_share,
+        exclude_functions=tuple(x.strip() for x in a.exclude_functions.split(",") if x.strip()),
         restructure_depth=a.restructure_depth,
         require_speedup=a.require_speedup,
         build_retries=a.build_retries,

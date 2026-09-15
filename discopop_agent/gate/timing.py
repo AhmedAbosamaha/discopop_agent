@@ -10,9 +10,18 @@ The speedup is measured on ONE binary at `OMP_NUM_THREADS=1` against the same
 binary unrestricted.  Comparing two builds instead — one with `-fopenmp`, one
 without — made an unchanged program measure 0.89x and then 1.10x, because the
 two builds differ by more than the pragma.
+
+What is timed: if the program reports its own computation time on stderr as
+`DP_TIMED_REGION_SECONDS <seconds>` (the PolyBench packaging does, around the
+kernel), that is used instead of whole-process wall-clock. Allocation,
+initialisation and output are then out of the ratio — at small problem sizes
+they can dominate it and hide a real kernel speedup. A program without the line
+is timed exactly as before. A rewrite that deletes the markers falls back to
+wall-clock and looks slower than its timed original: rejected, the safe way.
 """
 from __future__ import annotations
 
+import re
 import shutil
 import subprocess
 import tempfile
@@ -21,6 +30,15 @@ from typing import List, Optional, Tuple
 
 from .toolchain import _find_clangpp
 from .patching import _compile_variant
+
+
+_REGION_RE = re.compile(r"^DP_TIMED_REGION_SECONDS\s+([0-9.eE+-]+)\s*$", re.M)
+
+
+def _elapsed(r: "subprocess.CompletedProcess[str]", wall: float) -> float:
+    """The program's own timed region if it reports one (summed over reports), else wall."""
+    marks = _REGION_RE.findall(r.stderr or "")
+    return sum(float(x) for x in marks) if marks else wall
 
 
 def _run_timed(
@@ -44,7 +62,7 @@ def _run_timed(
         if r.returncode != 0:
             return False, r.stdout, 0.0, f"non-zero exit ({r.returncode}):\n{r.stderr[-500:]}"
         stdout = r.stdout
-        best = min(best, dt)
+        best = min(best, _elapsed(r, dt))
     return True, stdout, best, ""
 
 
@@ -104,7 +122,7 @@ def _measure_speedup(
                     f"speedup measurement: non-zero exit ({r.returncode}):\n"
                     f"{r.stderr[-500:]}"
                 )
-            pair_times.append(dt)
+            pair_times.append(_elapsed(r, dt))
         seq_t, par_t = pair_times
         best_seq, best_par = min(best_seq, seq_t), min(best_par, par_t)
         if par_t > 0:

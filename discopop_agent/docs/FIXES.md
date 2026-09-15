@@ -1172,3 +1172,55 @@ The candidate list tried `clang++-19` before anything else available there, and 
 - Feature suite (C++ paths unchanged): **16 passed, 0 failed, 0 skipped**, archer active.
 
 Not yet verified: the LLVM-20 selection and archer path on the server itself (to be checked when the checkout there is synced).
+
+---
+
+## Fix 52 — The speedup gate can time the computation instead of the whole process
+
+**File:** `gate/timing.py`
+
+**Problem:**
+Every timing in the gate was whole-process wall-clock: allocation, initialisation, the computation and output. At the small problem sizes the agent profiles and gates at, the computation can be a small share of that — PolyBench `2mm` at MINI spends 69 µs in its kernel inside a process that takes milliseconds. A real kernel speedup is diluted by work no pragma can touch, and a correct parallelization can be rejected as `no_speedup`. Benchmark suites time the kernel for this reason (PolyBench's own `POLYBENCH_TIME` convention).
+
+**Fix:**
+A program may report its computation time on stderr as `DP_TIMED_REGION_SECONDS <seconds>`. `_elapsed()` returns that (summed if reported more than once) and falls back to wall-clock when the line is absent. It is used at the only two places the gate measures time: `_run_timed` (therefore also the reference time, `time_source`, `noise_floor`, `measure_marginal`) and the interleaved pair loop of `_measure_speedup`. stdout is untouched, so output comparison is unaffected.
+
+Nothing changes for a program that does not print the line. The harness's PolyBench packaging (generator v4) prints it around the kernel. A rewrite that deletes the markers is timed on wall-clock against a kernel-timed reference and looks slower — rejected, the conservative direction. A rewrite that *moves* work out of the timed region is not caught here; the harness records whole-program speedup alongside kernel speedup and flags a kernel gain the program does not share.
+
+**Verified:** mypy 82 → 82 (no new errors). All 30 packaged PolyBench kernels (v4) print exactly one `DP_TIMED_REGION_SECONDS` line and still reproduce the original output byte for byte. Feature suite: **16 passed, 0 failed, 0 skipped**.
+
+---
+
+## Fix 53 — Every gate candidate and every model call's token usage are recorded
+
+**Files:** `phases/report.py`, `phases/phase_a.py`, `phases/phase_b.py`, `llm/providers.py`
+
+**Problem:**
+Two things an evaluation needs were not recorded. (1) `accepted.json` keeps only what survived, and Phase A overwrote `region_*_tier2.patch` with the last passing diff — every rejected candidate was lost. The gate can therefore not be evaluated as a classifier (how often it rejects a correct change or accepts a wrong one): the rejections are the data. (2) The SDK's `ResultMessage` carries `usage`, `model_usage`, `total_cost_usd` and `duration_ms`, and the agent discarded them, so cost could only be reported in wall-clock and call counts.
+
+**Fix:**
+- `report._record_candidate(output_dir, entry, diff, dry_run)` writes `candidates/NNNN.patch` and one line in `candidates.jsonl`: phase, region, verdict, stage, diagnostic (first 2,000 chars), measured speedup, barrier re-check. Called after every Phase A gate verdict (model rewrites, including the controller's own clause stage) and at both Phase B decision points (DiscoPoP pragmas: static clause check and `_validate_cached`). A dry run writes nothing.
+- `providers._record_usage(...)` appends one JSON line per call to `$DP_LLM_USAGE_LOG` when that variable is set (the experiment harness sets it per trial); unset, nothing is written. Hooked into the `claude-agent-sdk` result and the `openai-compat` response. Best-effort: it cannot raise.
+
+Neither changes a decision; both only write files.
+
+**Verified:** unit test without a model — two usage records summarised correctly (2,000 input / 400 output tokens, $0.0052); two candidates written with index lines, a dry-run call writes nothing. Harness side (`_summarise_usage`, `candidates_recorded`) type-checks.
+
+---
+
+## Fix 54 — Model calls went to cold regions: measurements matched nothing, and nothing kept cold regions out
+
+**Files:** `run.py`, `plan/scoring.py`, `args.py`, `phases/phase_a.py`, `phases/phase_b.py`
+
+**Problem 1 — hotspot measurements silently matched no region.**
+Hotspots are keyed by (file id, line), and DiscoPoP assigns file ids by **absolute path** in `.discopop/FileMapping.txt`. When the profile was taken in one directory and the agent runs in another (the experiment harness copies the profile into each trial; a server checkout does the same), the agent's hotspot detection registers the source again as a **new file id**. Every measurement then carried file id 2, every region file id 1, and ranking fell back to the static workload proxy while the banner still said "ranking by predicted time saved". Reproduced on the seidel-2d smoke profile: 15 measurements, 0 of 19 regions matched; with the mapping pointed at the copy, 14 of 19 matched. In the smoke trial this spread 35 model calls over 11 regions — `xmalloc`, `init_array`, `print_array` and small helpers received as many attempts as the kernel.
+
+**Fix:** `run.py` now warns loudly when measurements exist but match no region. (The harness fixes the mapping in each trial copy.)
+
+**Problem 2 — ranking only ordered the queue; every region was still attempted.** `--min-impact` defaults to 0, and it is in seconds, which depend on the problem size profiled at.
+
+**Fix:** `--min-runtime-share F` skips any region below fraction F of the measured runtime and, when hotspots were measured, any region the detector did not report at all (instead of competing on the proxy). `--exclude-functions a,b,…` removes named functions and every region inside them — for code outside the computation under study, such as a benchmark's output and setup routines. Both default to off: the agent as shipped behaves exactly as before.
+
+**Verified:** mypy 82 → 82. On the seidel-2d smoke profile: without filters 19 candidates (14 measured); `--min-runtime-share 0.05` → 9; plus the packaging's exclusions (`print_array`, `init_array`, allocators, digest/timer helpers) → 5: `main`, `kernel_seidel_2d` and the kernel's three loops. Model restructuring can now reach 2 regions instead of 11. Feature suite: **16 passed, 0 failed, 0 skipped**.
+
+**Known, not changed:** `main` still ranks first (100 % of runtime): the function-demotion rule only fires when one loop inside carries ≥ 90 % of the function's time. Left as tuned earlier; the server pilot measures how many calls it costs.
