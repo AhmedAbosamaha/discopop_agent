@@ -215,6 +215,17 @@ def _complete_claude_agent_sdk(
             resume=resume,
         )
 
+    # A failed call arrives as a RESULT message with is_error set, after which
+    # the CLI exits non-zero and the SDK reports `Claude Code returned an error
+    # result: <subtype>` — and the subtype is "success" even for a rejected
+    # credential, so the SDK's exception never names the cause.  The cause is in
+    # the result body, which is kept here and classified below, once the stream
+    # has ended.  Nothing is raised from inside the loop: throwing into a
+    # suspended async generator makes the generator's own close fail ("aclose():
+    # asynchronous generator is already running"), printing a second, irrelevant
+    # traceback over the real error.
+    err_detail: List[str] = []
+
     async def _run(resume: Optional[str]) -> Tuple[str, Optional[str]]:
         text = ""
         session_id: Optional[str] = None
@@ -227,6 +238,10 @@ def _complete_claude_agent_sdk(
                 session_id = message.session_id
                 _record_usage("claude-agent-sdk", model, message.usage, message.total_cost_usd,
                               message.duration_ms, message.num_turns, message.model_usage)
+                if getattr(message, "is_error", False):
+                    err_detail.append(str(getattr(message, "result", "")
+                                          or getattr(message, "subtype", "")
+                                          or "unknown error"))
         return text, session_id
 
     # Two different hiccups are retried here, and neither is worth losing a run
@@ -251,9 +266,26 @@ def _complete_claude_agent_sdk(
     for attempt in range(3):
         try:
             text, session_id = asyncio.run(_run(resume_id if attempt == 0 else None))
+            if err_detail:        # a failed result the CLI did not also exit on
+                _raise_for_result(err_detail.pop())
             last_error = None
             break
+        except LLMConnectionError:
+            # Not a hiccup: a rejected credential fails every region the same
+            # way.  Retrying it only converts a broken run into a run full of
+            # empty results, so it goes straight up to the controller.
+            raise
         except Exception as e:                       # noqa: BLE001 - reported below
+            # `e` is the SDK's generic stand-in; the CLI already said why. Swap
+            # in the real reason — fatal for a rejected credential, otherwise
+            # the CLI's own wording, retried as before.
+            if err_detail:
+                try:
+                    _raise_for_result(err_detail.pop())
+                except LLMConnectionError:
+                    raise
+                except Exception as real:            # noqa: BLE001 - replaces e
+                    e = real
             last_error = e
             _region_sessions.pop(session_key, None)
             resume_id = None
@@ -271,6 +303,32 @@ class LLMConnectionError(RuntimeError):
     """The LLM endpoint could not be reached (server not running, wrong
     --api-base, or network failure).  Fatal for the whole run — every region
     would hit the same error — so the controller aborts cleanly on it."""
+
+
+# Substrings that identify a rejected credential rather than a transient fault.
+# Matched case-insensitively against the CLI's own result text.
+_AUTH_MARKERS = ("oauth token is invalid", "failed to authenticate", "api error: 401",
+                 "api error: 403", "invalid api key", "authentication_error",
+                 "invalid_api_key", "unauthorized")
+
+
+def _raise_for_result(detail: str) -> None:
+    """Raise a *named* error for a failed Claude Code result.
+
+    Authentication is separated from everything else because the two need
+    opposite handling.  A transient fault is worth retrying; a rejected
+    credential is not — it fails identically on every call, and the retry path
+    quietly downgrades it to "a bad attempt, moving on", so a whole campaign
+    reports clean `no-change` trials while no model ever answered.  That is
+    exactly what happened to the first server pilot (Fix 58)."""
+    detail = detail.strip()
+    low = detail.lower()
+    if any(m in low for m in _AUTH_MARKERS):
+        raise LLMConnectionError(
+            f"Claude Code could not authenticate: {detail}. The credential is "
+            f"rejected — CLAUDE_CODE_OAUTH_TOKEN is invalid or expired. "
+            f"Create a new one with `claude setup-token`.")
+    raise RuntimeError(f"Claude Code returned an error result: {detail}")
 
 
 def _complete(

@@ -1254,3 +1254,23 @@ Hotspots are keyed by (file id, line), and DiscoPoP assigns file ids by **absolu
 **Fix:** where the libomp library directory is added, its sibling `include` directory is added too (`-I/usr/local/opt/libomp/include`), in both the gate's compile helper and the ThreadSanitizer build.
 
 **Verified:** before the fix, the probe built without `-fopenmp` and failed with `-fopenmp` (`'omp.h' file not found`). New feature check `omp-include`: a C and a C++ program that include `<omp.h>` build with `-fopenmp` and run. mypy 82 → 82. Feature suite: **18 passed, 0 failed, 0 skipped**.
+
+## Fix 58 — A rejected credential was reported as a clean run with no changes
+
+**Files:** `llm/providers.py`
+
+**Problem.** The first server pilot finished in four minutes, spent zero tokens, produced no candidate, and recorded the outcome `no-change` — in `trial.json` indistinguishable from the agent correctly deciding a kernel needed no restructuring. In fact **all nine of its model calls had failed**: the OAuth token was invalid and the API answered 401 every time.
+
+Three faults let that pass for a result:
+
+1. **The CLI signals an auth failure as a success.** It emits a result message with `is_error: true`, `subtype: "success"`, `api_error_status: 401` — and exits **0**. The reason lives only in the result body (`Failed to authenticate. API Error: 401 OAuth access token is invalid.`).
+2. **The SDK's exception dropped the reason.** When the CLI exits non-zero, the SDK replaces its `ProcessError` with `Claude Code returned an error result: <text>`, where the text is `"; ".join(errors)` or, when that is empty, the **subtype** — which is `"success"`. Every failure, whatever its cause, therefore produced the identical and self-contradictory string `Claude Code returned an error result: success`. A local smoke run logged 10 such lines among 35 calls and they could not be told apart from these.
+3. **The agent retried, then carried on.** `_complete_claude_agent_sdk` retried three times and re-raised; Phase A caught it as "a bad attempt, not a broken run" and moved on — the right rule for a flaky call, the wrong one for a credential that fails identically on every region. Nine calls became three exhausted budgets, three skipped regions, and a clean-looking run.
+
+**Fix:** the result body is read where it exists. `_run` inspects the `ResultMessage`: when `is_error` is set it records the body, **leaves the stream**, and calls `_raise_for_result` — breaking out rather than raising into the suspended async generator, which would make the generator's own close fail (`aclose(): asynchronous generator is already running`) and print a second, irrelevant traceback over the real error. `_raise_for_result` classifies the text: an authentication failure (`_AUTH_MARKERS`: `oauth token is invalid`, `api error: 401/403`, `invalid api key`, …) raises `LLMConnectionError`, which the retry loop re-raises untouched and Phase A already treats as fatal for the whole run; anything else raises `RuntimeError` carrying the CLI's own wording and is retried as before. A broken credential now aborts on the first call; a transient fault still costs one attempt; both name their cause in the log.
+
+**Verified:** with the invalid token and an isolated `CLAUDE_CONFIG_DIR`, the call fails in ~2 s with `LLMConnectionError: Claude Code could not authenticate: Failed to authenticate. API Error: 401 OAuth access token is invalid. … Create a new one with 'claude setup-token'`, no retries and no spurious traceback — where before it retried three times and reported `error result: success`. mypy **0 → 0**, feature suite **18 passed, 0 failed, 0 skipped**.
+
+The success path was re-checked against a working credential, because the fix adds code to it: one call returned `'banana'` in 6.1 s and wrote a usage record of `input_tokens=10, output_tokens=66, cache_read=9517, cost=0.0092` — the first direct confirmation that token accounting populates at all, the pilot's zeros having been a consequence of every call failing rather than a fault in `_record_usage`. The two failure modes are also distinguishable now where they were not before: a rejected credential reports `401 OAuth access token is invalid` and a missing one reports `Not logged in · Please run /login`, both previously collapsing to the single string `Claude Code returned an error result: success`.
+
+Companion changes outside this repo: the harness records `llm_call_failures` per trial (in `trial.json` and as a `trials.csv` column), and `job.sh` refuses to start a campaign whose credential cannot answer one probe call.
