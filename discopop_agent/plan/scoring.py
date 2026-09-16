@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import math
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from ..types import CodeRegion, HotspotCandidate
 from .impact import ImpactModel
@@ -101,9 +101,9 @@ def build_candidates(
     # entries across profiling runs; keep the one with the highest workload
     dedup: Dict[Tuple[int, int, int], CodeRegion] = {}
     for r in regions:
-        key = (r.file_id, r.start_line, r.end_line)
-        if key not in dedup or r.workload > dedup[key].workload:
-            dedup[key] = r
+        span = (r.file_id, r.start_line, r.end_line)
+        if span not in dedup or r.workload > dedup[span].workload:
+            dedup[span] = r
     unique_regions = list(dedup.values())
 
     candidates: List[HotspotCandidate] = []
@@ -123,7 +123,7 @@ def build_candidates(
             continue
 
         # Look for a Tier-1 pattern via start_line or region_id
-        pattern: Optional[dict] = None
+        pattern: Optional[Dict[str, Any]] = None
         pattern_type: Optional[str] = None
         tier = 2
         confidence = 0.3  # base confidence for Tier-2

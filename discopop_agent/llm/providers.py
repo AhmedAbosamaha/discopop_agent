@@ -20,7 +20,7 @@ import shutil
 import tempfile
 import time
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import anthropic
 
@@ -149,7 +149,7 @@ def _record_usage(provider: str, model: str, usage: Any, cost_usd: Optional[floa
 def _complete_claude_agent_sdk(
     model: str,
     system: str,
-    current: list,
+    current: List[Any],
     session_key: str,
     workspace: Optional[Path] = None,
     stateless: bool = False,
@@ -274,7 +274,7 @@ class LLMConnectionError(RuntimeError):
 
 
 def _complete(
-    provider: str, client: Any, model: str, current: list, system: str, session_key: str = "",
+    provider: str, client: Any, model: str, current: List[Any], system: str, session_key: str = "",
     workspace: Optional[Path] = None, stateless: bool = False,
 ) -> str:
     """Run one completion against the chosen provider and return the raw text.

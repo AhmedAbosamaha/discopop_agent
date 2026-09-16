@@ -162,7 +162,7 @@ def phase_a(state: RunState) -> None:
             continue
 
         budget = args.budget
-        tier2_messages: list | None = None
+        tier2_messages: List[Any] | None = None
 
         # Any restructuring may need reverting — it is kept only if DiscoPoP can
         # parallelize it afterwards — so snapshot the profile ONCE up front and
@@ -519,18 +519,18 @@ def phase_a(state: RunState) -> None:
 
                 # rebuilt / discovered are computed read-only first; the queue and
                 # all_seen_prints are only mutated once we decide to COMMIT.
-                rebuilt: list = []
-                discovered: list = []   # (depth+1, candidate, fingerprint)
-                fresh_all: list = []
+                rebuilt: List[Any] = []
+                discovered: List[Any] = []   # (depth+1, candidate, fingerprint)
+                fresh_all: List[Any] = []
                 if reprofile_ok:
                     fresh_all = _candidates(dp_dir)
-                    fresh_by_print: dict = defaultdict(list)
+                    fresh_by_print: Dict[Any, List[Any]] = defaultdict(list)
                     for nc in fresh_all:
                         fp = region_fingerprint(args.source_file, nc.region.start_line,
                                           nc.region.end_line, nc.region.name)
                         fresh_by_print[fp].append(nc)
 
-                    consumed: set = set()
+                    consumed: Set[Any] = set()
                     for old_depth, fp in old_prints:
                         for nc in fresh_by_print.get(fp, []):
                             if id(nc) not in consumed:

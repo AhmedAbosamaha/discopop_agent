@@ -189,7 +189,7 @@ def _reprofil_fast(
     return True, stats.summary()
 
 
-def _reprofil(source_file: str, discopop_dir: Path, binary_args: list | None = None) -> bool:
+def _reprofil(source_file: str, discopop_dir: Path, binary_args: List[str] | None = None) -> bool:
     """Re-instrument, run, and re-explore after a Tier-2 patch is accepted.
 
     The profiler directory is emptied first.  `discopop_cxx` APPENDS to every

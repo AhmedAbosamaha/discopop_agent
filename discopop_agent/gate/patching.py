@@ -29,7 +29,7 @@ def fix_hunk_headers(diff: str) -> str:
     errors don't discard an otherwise correct patch.
     """
     lines = diff.splitlines()
-    out: list = []
+    out: List[str] = []
     i = 0
     while i < len(lines):
         m = _HUNK_RE.match(lines[i])
@@ -183,7 +183,7 @@ def _compile_variant(
     """
     binary = work_dir / name
     extra = link_flags_for(source) + (
-        [f"-L{_LIBOMP_DIR}", f"-Wl,-rpath,{_LIBOMP_DIR}"]
+        [f"-I{Path(_LIBOMP_DIR).parent / 'include'}", f"-L{_LIBOMP_DIR}", f"-Wl,-rpath,{_LIBOMP_DIR}"]
         if (openmp and Path(_LIBOMP_DIR).exists()) else []
     ) + _macos_sysroot_flag()
     cmd = [compiler_for(source, clangpp), str(source), "-o", str(binary), optimize]

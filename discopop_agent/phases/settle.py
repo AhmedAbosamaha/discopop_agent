@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import tempfile
 from pathlib import Path
+from typing import Any, List, Tuple
 
 from ..args import AgentArguments
 from ..gate import validate
@@ -30,7 +31,7 @@ from ..types import ValidationResult
 
 def _check_final_source(
     args: AgentArguments, original_text: str, reference_output: "str | None",
-    reference_outputs: "list | None", binary_args: "list | None",
+    reference_outputs: "List[Tuple[List[str], str]] | None", binary_args: "List[str] | None",
     reference_time: "float | None",
 ) -> "tuple[bool, str]":
     """Is the file ON DISK sound, and is it better than what the user started with?
@@ -78,7 +79,8 @@ def _check_final_source(
 
         if args.require_speedup and reference_time is not None:
             ok_t, t_final, _out, tdiag = time_source(
-                final_text, args.source_file, Path(tmp), "final", binary_args, repeats=5
+                final_text, args.source_file, Path(tmp), "final", binary_args, repeats=5,
+                extra_flags=list(args.timing_cflags) or None,
             )
             if not ok_t:
                 return False, f"could not time the finished program: {tdiag[:120]}"
@@ -101,11 +103,11 @@ def _check_final_source(
                           f"{reference_time*1e3:.1f} ms original")
     return True, "output matches the original"
 def _settle(
-    original_text: str, change_log: list, args: AgentArguments,
+    original_text: str, change_log: List[Any], args: AgentArguments,
     output_dir: Path, reference_output: "str | None",
-    reference_outputs: "list | None", binary_args: "list | None",
+    reference_outputs: "List[Tuple[List[str], str]] | None", binary_args: "List[str] | None",
     reference_time: "float | None",
-) -> "tuple[list, list]":
+) -> "Tuple[List[Any], List[Any]]":
     """Reduce the run to a set of changes that is sound AND worth keeping.
 
     Three things happen here, in one loop, because they are the same operation:
@@ -132,13 +134,13 @@ def _settle(
 
     Returns (surviving change log, human-readable notes about what was dropped).
     """
-    notes: list = []
+    notes: List[Any] = []
     keep = list(change_log)
 
     while True:
         applied_prints = {c["fingerprint"] for c in keep
                           if c["kind"] == "pragma" and c.get("fingerprint")}
-        pruned: list = []
+        pruned: List[Any] = []
         for ch in keep:
             if ch["kind"] == "pragma":
                 pruned.append(ch)

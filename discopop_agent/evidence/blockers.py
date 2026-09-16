@@ -12,14 +12,14 @@ dependence review is ever allowed to discharge.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from .context import _lineid_line
 
 
 def load_prevented_deps(
     discopop_dir: Path, file_id: int, start_line: int, end_line: int
-) -> List[dict]:
+) -> List[Dict[str, Any]]:
     """Load the Do-All blockers DiscoPoP's new detector recorded for this region.
 
     Reads explorer/doall_prevented.json (written by new_do_all_detector) and
@@ -37,7 +37,7 @@ def load_prevented_deps(
     except (OSError, ValueError):
         return []
 
-    matched: List[dict] = []
+    matched: List[Dict[str, Any]] = []
     for rec in records:
         lf = rec.get("loop_file")
         ls, le = rec.get("loop_start"), rec.get("loop_end")
@@ -52,7 +52,7 @@ def load_prevented_deps(
     return matched
 
 
-def _var_classification(pattern: Optional[dict]) -> dict:
+def _var_classification(pattern: Optional[Dict[str, Any]]) -> Dict[str, Any]:
     """Pull DiscoPoP's OpenMP data-sharing classification out of a detected
     pattern (a patterns.json entry, carried on the candidate).
 

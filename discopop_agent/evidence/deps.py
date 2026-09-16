@@ -31,7 +31,7 @@ it is guesswork, and `_load_dependencies` now loads it.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 
 from ..types import Dependency
 
@@ -218,7 +218,7 @@ def _load_reductions(profiler_dir: Path, start_line: int, end_line: int) -> List
     return list(dict.fromkeys(reds))
 
 
-def _all_observed_dep_vars(profiler_dir: Path) -> set:
+def _all_observed_dep_vars(profiler_dir: Path) -> Set[str]:
     """Every variable name that appears in ANY runtime (dynamic) dependence in the
     whole program.  Used as the reference for static-only detection: a variable
     observed dynamically anywhere is NOT spurious, even if a given region's window
@@ -226,7 +226,7 @@ def _all_observed_dep_vars(profiler_dir: Path) -> set:
     wrongly flags loop-induction variables, whose deps often sit at the loop
     header just outside the body window.)"""
     f = profiler_dir / "dynamic_dependencies.txt"
-    out: set = set()
+    out: Set[str] = set()
     if not f.exists():
         return out
     for line in f.read_text().splitlines():
@@ -238,7 +238,7 @@ def _all_observed_dep_vars(profiler_dir: Path) -> set:
 
 
 def _load_static_only_vars(
-    profiler_dir: Path, observed_vars: set, start_line: int, end_line: int
+    profiler_dir: Path, observed_vars: Set[str], start_line: int, end_line: int
 ) -> List[str]:
     """Variables that appear in STATIC dependences overlapping the region but were
     never observed in the runtime (dynamic) dependences ANYWHERE — i.e. compiler-
@@ -265,7 +265,7 @@ def _load_static_only_vars(
         pos = instr_lines.get(token.split("@")[0])
         return pos[1] if pos else -1
 
-    static_vars: set = set()
+    static_vars: Set[str] = set()
     for line in f.read_text().splitlines():
         parts = line.split()
         if len(parts) < 4 or parts[2] not in ("RAW", "WAR", "WAW"):

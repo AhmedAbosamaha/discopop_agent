@@ -50,7 +50,7 @@ def _lineid_line(lid: str) -> int:
 
 def _load_loop_trip_counts(
     profiler_dir: Path, file_id: int, start_line: int, end_line: int
-) -> List[dict]:
+) -> List[Dict[str, Any]]:
     """Observed trip counts for loops in [start_line, end_line], read from the
     `BGN loop` markers in dynamic_dependencies.txt.
 
@@ -62,7 +62,7 @@ def _load_loop_trip_counts(
     f = profiler_dir / "dynamic_dependencies.txt"
     if not f.exists():
         return []
-    out: List[dict] = []
+    out: List[Dict[str, Any]] = []
     for line in f.read_text().splitlines():
         parts = line.split()
         if len(parts) < 7 or parts[1] != "BGN" or parts[2] != "loop" or ":" not in parts[0]:

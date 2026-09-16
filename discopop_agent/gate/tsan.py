@@ -181,7 +181,7 @@ def _tsan(
     """
     binary = work_dir / "tsan_binary"
     extra = link_flags_for(source) + (
-        [f"-L{_LIBOMP_DIR}", f"-Wl,-rpath,{_LIBOMP_DIR}"]
+        [f"-I{Path(_LIBOMP_DIR).parent / 'include'}", f"-L{_LIBOMP_DIR}", f"-Wl,-rpath,{_LIBOMP_DIR}"]
         if Path(_LIBOMP_DIR).exists() else []
     ) + _macos_sysroot_flag()
     # -fopenmp is required so that #pragma omp parallel for actually runs in

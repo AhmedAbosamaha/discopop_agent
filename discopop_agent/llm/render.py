@@ -82,7 +82,7 @@ def _evidence_sections(ev: EvidencePackage, deps_header: str,
 
 
 def _fmt_deps(
-    deps: list,
+    deps: List[Any],
     label: str,
     line_text: Optional[Dict[int, str]] = None,
     region: Optional[Tuple[int, int]] = None,
@@ -317,7 +317,7 @@ def _array_dep_note(ev: EvidencePackage) -> str:
     )
 
 
-def fmt_blockers(prevented: list) -> str:
+def fmt_blockers(prevented: List[Dict[str, Any]]) -> str:
     """Render DiscoPoP's exact Do-All blockers (from doall_prevented.json).
     Returns '' when none are available (old explorer / clean loop)."""
     if not prevented:

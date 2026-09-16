@@ -1224,3 +1224,33 @@ Hotspots are keyed by (file id, line), and DiscoPoP assigns file ids by **absolu
 **Verified:** mypy 82 → 82. On the seidel-2d smoke profile: without filters 19 candidates (14 measured); `--min-runtime-share 0.05` → 9; plus the packaging's exclusions (`print_array`, `init_array`, allocators, digest/timer helpers) → 5: `main`, `kernel_seidel_2d` and the kernel's three loops. Model restructuring can now reach 2 regions instead of 11. Feature suite: **16 passed, 0 failed, 0 skipped**.
 
 **Known, not changed:** `main` still ranks first (100 % of runtime): the function-demotion rule only fires when one loop inside carries ≥ 90 % of the function's time. Left as tuned earlier; the server pilot measures how many calls it costs.
+
+## Fix 55 — The speed check can time a larger size than the one profiled and checked
+
+**Files:** `args.py`, `run.py`, `gate/timing.py`, `gate/validate.py`, `phases/phase_b.py`, `phases/settle.py`, `benchmark/test_features.py`
+
+**Problem.** Every timed build used the same source and size as profiling and the correctness checks. For programs whose size is fixed at compile time (PolyBench's dataset macros), that size is chosen small so DiscoPoP's instrumented run stays affordable — and there the computation is too short to time. Measured on the evaluation server: at SMALL the serial kernels take 0.06–15 ms (2mm 3 ms, lu 0.7 ms, trisolv 0.06 ms), below the cost of starting an OpenMP thread team, so the performance stage judged noise and rejected correct rewrites (10 such rejections in the seeded smoke trial). The only alternative was `--no-require-speedup`, which removes the check that keeps changes that do not pay off out of the program.
+
+**Fix:** `--timing-cflags FLAGS` (write it as `--timing-cflags=-DLARGE_DATASET`). The flags are added only to the builds that are timed: the gate's performance stage builds a separate `check_timing` binary of the same patched source (every correctness stage still uses `check_par`); Phase B's noise floor and marginal measurement; Settle's final timing; and the timed reference build, so the net-regression baseline comes from the same size (the reference *output* still comes from the plain build). A timing build of the original that fails is fatal rather than silently dropping the speed baseline. Empty by default and used only with `--require-speedup`: the agent as shipped behaves exactly as before.
+
+**Verified:** mypy 82 → 82. New feature check `timing-size`: a probe reports a fixed timed region (0.001 s without the flag; 0.5 s sequential and 0.25 s parallel with it), so the result is deterministic — the reference time moves 0.001 → 0.5 s; `time_source`, `noise_floor` and `measure_marginal` receive the flags (a flag that makes the build `#error` fails them); the gate measures 2.0× and accepts with the flag and rejects at `performance` without; a correctness-only gate run with the breaking flag still passes, so no correctness build takes it. Feature suite: **18 passed, 0 failed, 0 skipped** (with Fix 56).
+
+## Fix 57 — mypy: 82 errors down to zero
+
+**Files:** annotations in 24 files across the package; one variable renamed in `plan/scoring.py`
+
+**Problem.** The project's mypy configuration sets `disallow_any_generics`, and the package carried a standing baseline of 82 errors: 78 "Missing type arguments for generic type" (a bare `dict`, `list`, `set`, `tuple`, `re.Match` or `subprocess.CompletedProcess` in an annotation) and 4 in `plan/scoring.py`, where one local variable `key` held a string for the loop-count lookup and a `(file_id, start_line, end_line)` tuple for the deduplication dictionary a few lines later — legal at runtime, but it left mypy reporting the dictionary's key type as wrong. A baseline of 82 is not free: every change had to be checked as "82 → 82" instead of "no errors", so a new error of the same kind would have been invisible.
+
+**Fix:** type parameters written at each site, taken from the call sites rather than filled in with `Any` where the type is evident — `binary_args: List[str]`, reference outputs `List[Tuple[List[str], str]]`, `dep_region: Tuple[int, int, int]`, JSON-shaped records `Dict[str, Any]`, `re.Match[str]`, `subprocess.CompletedProcess[str]`; `Any` only where the element type genuinely varies (message lists, change-log entries). In `plan/scoring.py` the second use is renamed to `span`. Annotations only — every file already has `from __future__ import annotations`, so nothing is evaluated at runtime.
+
+**Verified:** mypy 82 → **0 errors in 55 source files**. `python -m discopop_agent --help` runs. Feature suite: **18 passed, 0 failed, 0 skipped**. From here a new type error is visible as such, and the rule for future work is "mypy stays at zero" rather than "do not add to 82".
+
+## Fix 56 — On macOS, a candidate that includes `<omp.h>` could not build
+
+**Files:** `gate/patching.py`, `gate/tsan.py`, `benchmark/test_features.py`
+
+**Problem.** OpenMP builds on macOS linked Homebrew's libomp (`-L/usr/local/opt/libomp/lib` plus rpath) but never added its headers, and LLVM 19 from Homebrew ships no `omp.h` of its own. Any candidate calling an OpenMP runtime function — `omp_get_thread_num`, `omp_get_wtime`, `omp_get_max_threads` — failed at `openmp_compile` with `'omp.h' file not found`, reported as if the model had written invalid code. Found while testing Fix 55, whose first probe included `omp.h`. The existing feature checks never included it, and neither do the packaged benchmarks, which is why it stayed hidden. Linux is unaffected: the path does not exist there, and LLVM 20 on the server finds its own `omp.h`.
+
+**Fix:** where the libomp library directory is added, its sibling `include` directory is added too (`-I/usr/local/opt/libomp/include`), in both the gate's compile helper and the ThreadSanitizer build.
+
+**Verified:** before the fix, the probe built without `-fopenmp` and failed with `-fopenmp` (`'omp.h' file not found`). New feature check `omp-include`: a C and a C++ program that include `<omp.h>` build with `-fopenmp` and run. mypy 82 → 82. Feature suite: **18 passed, 0 failed, 0 skipped**.

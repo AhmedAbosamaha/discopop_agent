@@ -76,7 +76,7 @@ def _repair_pragma_clauses(diff: "str | None", source_file: str) -> "str | None"
                 if end >= old_line:
                     body = src_lines[old_line - 1:end]
             if body:
-                def _strip(mm: "re.Match") -> str:
+                def _strip(mm: "re.Match[str]") -> str:
                     names = [n.strip() for n in mm.group(1).split(",") if n.strip()]
                     kept = [n for n in names if not _declared_in(body, n)]
                     if len(kept) == len(names):

@@ -21,7 +21,7 @@ from ..gate import find_archer
 
 
 _REGION_LABEL = {"loop": "loop", "function": "function", "cu": "block"}
-def _write_record(output_dir: Path, record: dict, dry_run: bool = False) -> None:
+def _write_record(output_dir: Path, record: Dict[str, Any], dry_run: bool = False) -> None:
     """Append one accepted region to accepted.json.
 
     A dry run still evaluates Tier-1 patches for real (it only skips the LLM),
@@ -30,7 +30,7 @@ def _write_record(output_dir: Path, record: dict, dry_run: bool = False) -> None
     if dry_run:
         return
     f = output_dir / "accepted.json"
-    records: List[dict] = json.loads(f.read_text()) if f.exists() else []
+    records: List[Dict[str, Any]] = json.loads(f.read_text()) if f.exists() else []
     records.append(record)
     f.write_text(json.dumps(records, indent=2))
 def _record_candidate(output_dir: Path, entry: Dict[str, Any], diff: str,
@@ -55,7 +55,7 @@ def _record_candidate(output_dir: Path, entry: Dict[str, Any], diff: str,
                             default=str) + "\n")
 
 
-def _print_candidates(candidates: list) -> None:
+def _print_candidates(candidates: List[Any]) -> None:
     """Print candidate table. candidates is a list of (depth, HotspotCandidate)."""
     measured = any(c.impact_seconds is not None for _d, c in candidates)
     if measured:

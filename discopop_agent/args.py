@@ -3,7 +3,7 @@ import argparse
 import os
 import shlex
 from dataclasses import dataclass
-from typing import Optional, Set, Tuple
+from typing import List, Optional, Set, Tuple
 
 
 @dataclass
@@ -30,8 +30,8 @@ class AgentArguments:
     build_retries: int          # apply/compile retries that do not consume budget
     apply_patches: bool         # write accepted Tier-1 pragmas into the source file
     min_measured_speedup: float # minimum measured parallel speedup to accept
-    check_inputs: list          # extra argv sets the rewrite must also reproduce
-    reprofil_args: list         # extra arguments forwarded to ./a.out during re-profiling
+    check_inputs: List[List[str]]          # extra argv sets the rewrite must also reproduce
+    reprofil_args: List[str]         # extra arguments forwarded to ./a.out during re-profiling
     verbose: bool               # render the full LLM I/O and gate stages in the terminal
     # Correctness-gate calibration.  Defaults keep the gate strict on programs
     # that do not need slack: an integer-only program measures a floor of 0 and
@@ -61,6 +61,9 @@ class AgentArguments:
     # --exclude-functions: functions (and every region inside them) never ranked —
     # e.g. a benchmark harness's output and setup code.
     exclude_functions: Tuple[str, ...] = ()
+    # --timing-cflags: extra compile flags for the builds the speed check TIMES
+    # (never for profiling or any correctness check), e.g. a larger dataset.
+    timing_cflags: Tuple[str, ...] = ()
 
 
 def parse_args() -> AgentArguments:
@@ -279,6 +282,16 @@ def parse_args() -> AgentArguments:
     p.add_argument("--min-measured-speedup", type=float, default=1.1,
                    help=("Minimum measured wall-clock speedup (parallel vs sequential) "
                          "required when --require-speedup is set (default: 1.1)"))
+    p.add_argument("--timing-cflags", default="",
+                   help=("Extra compiler flags for the builds the speed check TIMES — the "
+                         "gate's performance stage, Phase B's noise floor and marginal "
+                         "measurement, Settle's final timing, and the timed reference "
+                         "(default: none). Profiling and every correctness check keep the "
+                         "plain build. For programs whose size is fixed at compile time: "
+                         "profile and check at a small size, measure speed where it is "
+                         "measurable, e.g. --timing-cflags=-DLARGE_DATASET (write it with "
+                         "'=', a leading dash is otherwise read as a flag). Only used with "
+                         "--require-speedup."))
     p.add_argument("--check-input", action="append", default=[], metavar="ARGS",
                    help=("Extra program arguments the rewrite must ALSO reproduce, "
                          "repeatable (e.g. --check-input '0' --check-input '1' "
@@ -415,6 +428,7 @@ def parse_args() -> AgentArguments:
         min_impact=a.min_impact,
         min_runtime_share=a.min_runtime_share,
         exclude_functions=tuple(x.strip() for x in a.exclude_functions.split(",") if x.strip()),
+        timing_cflags=tuple(shlex.split(a.timing_cflags)),
         restructure_depth=a.restructure_depth,
         require_speedup=a.require_speedup,
         build_retries=a.build_retries,

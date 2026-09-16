@@ -30,9 +30,9 @@ from .verdicts import _MARGINAL_NOISE
 
 def _phase_b(
     args: AgentArguments, dp_dir: Path, output_dir: Path,
-    reference_output: "str | None", reference_outputs: "list | None",
-    binary_args: "list | None", reference_time: "float | None",
-    gate_cache: dict, change_log: list,
+    reference_output: "str | None", reference_outputs: "List[Tuple[List[str], str]] | None",
+    binary_args: "List[str] | None", reference_time: "float | None",
+    gate_cache: Dict[str, Any], change_log: List[Any],
     impact: "impact_mod.ImpactModel | None" = None,
 ) -> List[Dict[str, Any]]:
     """Annotate: apply every DiscoPoP pragma that survives validation.
@@ -48,7 +48,7 @@ def _phase_b(
     the CURRENT file rather than replayed from a stored diff, so applying one
     pragma cannot invalidate the next.
     """
-    kept: list = []
+    kept: List[Any] = []
     fresh = build_candidates(dp_dir, args.source_file, args.lambda_penalty,
                              args.min_workload, impact=impact, min_impact=args.min_impact,
                              min_runtime_share=args.min_runtime_share,
@@ -75,7 +75,8 @@ def _phase_b(
     threshold = _MARGINAL_NOISE
     if args.require_speedup and not args.dry_run:
         ok_n, floor, ndiag = noise_floor(
-            Path(args.source_file).read_text(), args.source_file, binary_args
+            Path(args.source_file).read_text(), args.source_file, binary_args,
+            extra_flags=list(args.timing_cflags) or None,
         )
         if ok_n:
             threshold = min(floor - 0.01, 0.99)
@@ -189,7 +190,8 @@ def _phase_b(
                 print(f"└─ DROPPED\n")
                 continue
             ok_m, marginal, mdiag = measure_marginal(
-                before, after, args.source_file, binary_args
+                before, after, args.source_file, binary_args,
+                extra_flags=list(args.timing_cflags) or None,
             )
             if not ok_m:
                 print(f"│  measurement failed: {mdiag[:120]}")

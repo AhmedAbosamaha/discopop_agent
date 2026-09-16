@@ -42,7 +42,7 @@ def _elapsed(r: "subprocess.CompletedProcess[str]", wall: float) -> float:
 
 
 def _run_timed(
-    binary: Path, work_dir: Path, binary_args: Optional[list], repeats: int = 3
+    binary: Path, work_dir: Path, binary_args: Optional[List[str]], repeats: int = 3
 ) -> Tuple[bool, str, float, str]:
     """Run `binary` `repeats` times; return (ok, stdout, best_wall_seconds, diag).
 
@@ -136,8 +136,9 @@ def _measure_speedup(
 
 
 def capture_reference(
-    source_file: str, binary_args: Optional[list] = None,
+    source_file: str, binary_args: Optional[List[str]] = None,
     extra_inputs: Optional[List[List[str]]] = None,
+    timing_flags: Optional[List[str]] = None,
 ) -> Tuple[Optional[str], Optional[float], Optional[List[Tuple[List[str], str]]]]:
     """Compile the unmodified source (-O2, no OpenMP/TSan) and record what it
     does, as the golden reference every rewrite is judged against.
@@ -154,6 +155,13 @@ def capture_reference(
     re-derived loop bounds break — so each extra input becomes another output
     the rewrite must reproduce.  Inputs the ORIGINAL program cannot run cleanly
     are dropped with a warning rather than failing the run.
+
+    `timing_flags` (--timing-cflags): the speed check times a build made with
+    these flags, so the baseline time must come from the same flags — otherwise
+    the net check would compare two different problem sizes.  The reference
+    OUTPUT still comes from the plain build, the one every correctness check
+    uses.  A timing build that fails is fatal rather than silently dropping the
+    speed baseline.
     """
     clangpp = _find_clangpp()
     if clangpp is None:
@@ -168,6 +176,15 @@ def capture_reference(
         ok, stdout, best_t, _ = _run_timed(binary, work_dir, binary_args, repeats=3)
         if not ok:
             return None, None, None
+        if timing_flags:
+            ok_t, tdiag, tbin = _compile_variant(dst, clangpp, work_dir, "ref_timing",
+                                                 openmp=False, extra_flags=list(timing_flags))
+            if ok_t and tbin is not None:
+                ok_t, _tout, best_t, tdiag = _run_timed(tbin, work_dir, binary_args, repeats=3)
+            if not ok_t:
+                print(f"  [FATAL] the timing build (--timing-cflags {' '.join(timing_flags)}) "
+                      f"of the original failed: {tdiag.strip()[:200]}")
+                return None, None, None
         pairs: List[Tuple[List[str], str]] = [(list(binary_args or []), stdout)]
         for argv in extra_inputs or []:
             ok_i, out_i, _, diag_i = _run_timed(binary, work_dir, argv, repeats=1)
@@ -182,7 +199,8 @@ def capture_reference(
 
 def time_source(
     source_text: str, source_file: str, work_dir: Path, name: str,
-    binary_args: Optional[list] = None, repeats: int = 5,
+    binary_args: Optional[List[str]] = None, repeats: int = 5,
+    extra_flags: Optional[List[str]] = None,
 ) -> Tuple[bool, float, str, str]:
     """Build `source_text` with -O2 -fopenmp; return (ok, best time, stdout, diag).
 
@@ -196,7 +214,8 @@ def time_source(
         return False, 0.0, "", "no supported clang++ found"
     src = work_dir / f"{name}_{Path(source_file).name}"
     src.write_text(source_text)
-    ok, diag, binary = _compile_variant(src, clangpp, work_dir, name, openmp=True)
+    ok, diag, binary = _compile_variant(src, clangpp, work_dir, name, openmp=True,
+                                        extra_flags=extra_flags)
     if not ok or binary is None:
         return False, 0.0, "", f"build failed:\n{diag}"
     best = float("inf")
@@ -210,8 +229,8 @@ def time_source(
 
 
 def noise_floor(
-    source_text: str, source_file: str, binary_args: Optional[list] = None,
-    pairs: int = 5, trials: int = 3,
+    source_text: str, source_file: str, binary_args: Optional[List[str]] = None,
+    pairs: int = 5, trials: int = 3, extra_flags: Optional[List[str]] = None,
 ) -> Tuple[bool, float, str]:
     """Worst marginal ratio an UNCHANGED program produces on this machine.
 
@@ -242,7 +261,8 @@ def noise_floor(
         work = Path(tmp)
         src = work / Path(source_file).name
         src.write_text(source_text)
-        ok, diag, binary = _compile_variant(src, clangpp, work, "noise", openmp=True)
+        ok, diag, binary = _compile_variant(src, clangpp, work, "noise", openmp=True,
+                                            extra_flags=extra_flags)
         if not ok or binary is None:
             return False, 0.0, f"build failed:\n{diag}"
         medians: List[float] = []
@@ -264,7 +284,8 @@ def noise_floor(
 
 def measure_marginal(
     before_text: str, after_text: str, source_file: str,
-    binary_args: Optional[list] = None, pairs: int = 5,
+    binary_args: Optional[List[str]] = None, pairs: int = 5,
+    extra_flags: Optional[List[str]] = None,
 ) -> Tuple[bool, float, str]:
     """How much does the one change between these two states cost or save?
 
@@ -282,11 +303,13 @@ def measure_marginal(
         work_dir = Path(tmp)
         for i in range(max(1, pairs)):
             ok_b, tb, _ob, diag_b = time_source(before_text, source_file, work_dir,
-                                                f"before{i}", binary_args, repeats=1)
+                                                f"before{i}", binary_args, repeats=1,
+                                                extra_flags=extra_flags)
             if not ok_b:
                 return False, 0.0, diag_b
             ok_a, ta, _oa, diag_a = time_source(after_text, source_file, work_dir,
-                                                f"after{i}", binary_args, repeats=1)
+                                                f"after{i}", binary_args, repeats=1,
+                                                extra_flags=extra_flags)
             if not ok_a:
                 return False, 0.0, diag_a
             if ta > 0:

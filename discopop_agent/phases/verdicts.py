@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List
+from typing import Any, Dict, List, Tuple
 
 from ..args import AgentArguments
 from ..evidence import load_prevented_deps
@@ -53,16 +53,16 @@ class RewriteOutcome:
     # land above them.
     exposed_prints: List[str] = field(default_factory=list)
 def _verify_rewrite(
-    fresh: list,
+    fresh: List[Any],
     touched: "tuple[int, int] | None",
     dp_dir: Path,
     args: AgentArguments,
     reference_output: "str | None",
-    binary_args: "list | None",
+    binary_args: "List[str] | None",
     reference_time: "float | None",
     validate_patterns: bool,
-    gate_cache: dict,
-    reference_outputs: "list | None" = None,
+    gate_cache: Dict[str, Any],
+    reference_outputs: "List[Tuple[List[str], str]] | None" = None,
 ) -> RewriteOutcome:
     """Decide whether an accepted-by-the-gate rewrite actually did its job.
 

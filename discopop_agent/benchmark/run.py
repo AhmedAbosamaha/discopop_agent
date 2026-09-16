@@ -30,7 +30,7 @@ import sys
 import time
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from ..llm import make_diff
 from ..gate.toolchain import _find_clangpp, _macos_sysroot_flag
@@ -78,8 +78,8 @@ class CaseResult:
 # Shell helpers
 # ---------------------------------------------------------------------------
 
-def _run(cmd: List[str], cwd: Path, timeout: int, env: Optional[dict] = None
-         ) -> subprocess.CompletedProcess:
+def _run(cmd: List[str], cwd: Path, timeout: int, env: Optional[Dict[str, str]] = None
+         ) -> subprocess.CompletedProcess[str]:
     return subprocess.run(cmd, cwd=cwd, timeout=timeout, capture_output=True,
                           text=True, env=env)
 
@@ -88,7 +88,7 @@ def _venv_bin(name: str) -> str:
     return str(Path(sys.executable).parent / name)
 
 
-def _agent_env() -> dict:
+def _agent_env() -> Dict[str, str]:
     """The agent must import from THIS checkout and find our venv's tools on
     PATH (the explorer shells out to a bare `discopop_patch_generator`)."""
     import os
@@ -196,7 +196,7 @@ def _measure(work: Path, original: Path, final: Path, clangpp: str) -> Dict[str,
 # One case
 # ---------------------------------------------------------------------------
 
-def run_case(case: dict, out_root: Path, agent_args: List[str], timeout: int,
+def run_case(case: Dict[str, Any], out_root: Path, agent_args: List[str], timeout: int,
              clangpp: str) -> CaseResult:
     name = case["name"]
     r = CaseResult(name=name, cause=case["cause"], expect=case["expect"],
@@ -304,7 +304,7 @@ def _verdict(r: CaseResult) -> str:
     return "changed-not-parallel"
 
 
-def write_report(results: List[CaseResult], out_root: Path, meta: dict) -> Path:
+def write_report(results: List[CaseResult], out_root: Path, meta: Dict[str, Any]) -> Path:
     lines = [
         "# DiscoPoP agent — benchmark report",
         "",

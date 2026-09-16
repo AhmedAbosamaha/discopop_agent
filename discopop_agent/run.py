@@ -47,7 +47,7 @@ import json
 import os
 import sys
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Set, Tuple
 
 from . import viz
 from .args import AgentArguments
@@ -77,7 +77,8 @@ def run(args: AgentArguments) -> None:
     # can't be built/run cleanly up front, in which case correctness is skipped.
     binary_args = args.reprofil_args or None
     reference_output, reference_time, reference_outputs = capture_reference(
-        args.source_file, binary_args, extra_inputs=args.check_inputs or None
+        args.source_file, binary_args, extra_inputs=args.check_inputs or None,
+        timing_flags=(list(args.timing_cflags) or None) if args.require_speedup else None,
     )
     if reference_output is None and not args.allow_unverified:
         # Failing OPEN here is the worst available outcome: the run continues and
@@ -129,7 +130,7 @@ def run(args: AgentArguments) -> None:
     # again by the Tier-1 pass that applies it, one queue position later; this
     # lets the second ask reuse the first answer.  Scoped to the run rather than
     # module-global so nothing leaks between runs.
-    gate_cache: dict = {}
+    gate_cache: Dict[str, Any] = {}
 
     # Set only when a kept rewrite could not be re-profiled (--llm-pragmas keeps
     # such a rewrite because the gate, not DiscoPoP, judged it).  Phase B has no
@@ -140,23 +141,23 @@ def run(args: AgentArguments) -> None:
     # full re-profile before it runs rather than being allowed to accumulate.
     profile_is_fast = False
 
-    accepted: List[dict] = []
+    accepted: List[Dict[str, Any]] = []
     # Regions DiscoPoP can already parallelize: Phase A skips them, Phase B
     # picks them up from the final profile.
-    deferred: List[tuple] = []
+    deferred: List[Tuple[Any, ...]] = []
     original_text = Path(args.source_file).read_text()
     # Ordered record of every change written to the source, so the end of the
     # run can rebuild from the original keeping only what earned its place.
-    change_log: List[dict] = []
+    change_log: List[Dict[str, Any]] = []
     # Each entry is (region_id, discovery_depth).  A region ID can appear more
     # than once (different content versions across re-profiles reuse IDs); the
     # summary de-duplicates and drops IDs that were ultimately accepted.
-    skipped: List[tuple] = []
+    skipped: List[Tuple[Any, ...]] = []
 
     # Tracks the CONTENT fingerprint of every region ever enqueued across all
     # re-profile cycles.  Region IDs drift after a patch (global counter), so
     # identity is keyed on source text instead — see region_fingerprint() in plan/regions.py.
-    all_seen_prints: set = set()
+    all_seen_prints: Set[Any] = set()
 
     # Measure before ranking.  One extra instrumented run, once, and it is what
     # lets the queue be ordered by time saved instead of instruction count.
@@ -230,7 +231,7 @@ def run(args: AgentArguments) -> None:
     print(f"                   → the run beats DiscoPoP by ending with more than "
           f"{baseline_pragmas}\n")
 
-    candidates: list = [(0, c) for c in initial]
+    candidates: List[Any] = [(0, c) for c in initial]
     all_seen_prints.update(
         region_fingerprint(args.source_file, c.region.start_line, c.region.end_line, c.region.name)
         for c in initial
@@ -313,7 +314,7 @@ def run(args: AgentArguments) -> None:
     # an enclosing region's restructuring made it parallelisable).  Keep the
     # lowest depth at which each remaining ID was skipped.
     accepted_ids = {r["region_id"] for r in accepted}
-    skipped_by_id: dict = {}
+    skipped_by_id: Dict[Any, Any] = {}
     for rid, d in skipped:
         if rid in accepted_ids:
             continue

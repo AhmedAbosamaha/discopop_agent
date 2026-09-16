@@ -29,7 +29,7 @@ class CodeRegion:
 class HotspotCandidate:
     region: CodeRegion
     source_file: str
-    pattern: Optional[dict]     # from patterns.json — None if no Tier-1 match
+    pattern: Optional[Dict[str, Any]]     # from patterns.json — None if no Tier-1 match
     pattern_type: Optional[str] # "do_all" | "reduction" | "pipeline" | etc.
     confidence: float           # pattern confidence [0, 1]
     workload_estimate: float    # W — profiled workload proxy (NOT a measured speedup)
@@ -76,7 +76,7 @@ class EvidencePackage:
     # BGN-loop markers).  Each dict: {line, total, entries, avg, max} where
     # entries = number of activations, avg = iterations per activation.  Lets the
     # LLM reason about parallel granularity (few iters/activation => fine-grained).
-    loop_trip_counts: List[dict] = field(default_factory=list)
+    loop_trip_counts: List[Dict[str, Any]] = field(default_factory=list)
     # Variables DiscoPoP tracks as loop-LOCAL in this region (from the CU graph):
     # already per-iteration private, so they need no privatization.
     local_vars_in_region: List[str] = field(default_factory=list)
@@ -87,7 +87,7 @@ class EvidencePackage:
     # the specific dependences that prevented parallelization of this region.
     # Each dict: {dep_type, source_line, sink_line, var_name, memory_region, origin,
     #             loop_file, loop_start, loop_end}
-    prevented_deps: List[dict] = field(default_factory=list)
+    prevented_deps: List[Dict[str, Any]] = field(default_factory=list)
     # Loop structure of the region (from the explorer's PEGraph LoopNodes): one
     # dict per loop overlapping the region, {start, end, depth, index_vars,
     # entries, avg, total, max}.  depth counts containing loops within the region

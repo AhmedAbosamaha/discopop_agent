@@ -13,7 +13,7 @@ callers should not have to think about:
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional, Set
+from typing import Any, List, Optional, Set
 
 from .. import viz
 from ..types import EvidencePackage
@@ -30,7 +30,7 @@ def call_llm(
     model: str,
     api_key: Optional[str] = None,
     max_format_retries: int = 2,
-    messages: Optional[list] = None,
+    messages: Optional[List[Any]] = None,
     provider: str = "anthropic",
     api_base: Optional[str] = None,
     edit_mode: str = "diff",
@@ -38,7 +38,7 @@ def call_llm(
     verbose: bool = False,
     evidence_sections: Optional[Set[str]] = None,
     llm_recon: bool = False,
-) -> tuple[Optional[str], list, str]:
+) -> tuple[Optional[str], List[Any], str]:
     """Call the LLM and return (output or None, updated messages, raw reply).
 
     The raw reply is carried out because --llm-recon reads dependence claims from

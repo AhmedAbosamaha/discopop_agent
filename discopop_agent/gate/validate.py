@@ -31,7 +31,7 @@ from __future__ import annotations
 import hashlib
 import tempfile
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from ..args import AgentArguments
 from ..types import ValidationResult
@@ -73,7 +73,7 @@ def validate(
     source_file: str,
     reference_output: Optional[str] = None,
     reference_outputs: Optional[List[Tuple[List[str], str]]] = None,
-    binary_args: Optional[list] = None,
+    binary_args: Optional[List[str]] = None,
     require_speedup: bool = False,
     min_speedup: float = 1.0,
     skip_race_check: bool = False,
@@ -84,6 +84,7 @@ def validate(
     stress_threads: Optional[Tuple[int, ...]] = None,
     discopop_dir: Optional[str] = None,
     dep_region: Optional[Tuple[int, int, int]] = None,
+    timing_flags: Optional[List[str]] = None,
 ) -> ValidationResult:
     """Run the quality-gate stages. Return the first failure or success.
 
@@ -329,10 +330,26 @@ def validate(
                     diagnostic=f"speedup measurement build failed:\n{diag_b}",
                     skipped_stages=skipped_stages,
                 )
+            # --timing-cflags: time a build of the SAME patched source made with
+            # the timing flags (e.g. a larger dataset).  Every correctness stage
+            # above used check_bin; this binary is only ever timed.
+            timed_bin: Path = check_bin
+            if timing_flags:
+                ok_t, diag_t, t_bin = _compile_variant(
+                    patched, clangpp, work_dir, "check_timing", openmp=True,
+                    extra_flags=list(timing_flags),
+                )
+                if not ok_t or t_bin is None:
+                    return ValidationResult(
+                        passed=False, stage="performance",
+                        diagnostic=f"timing build (--timing-cflags) failed:\n{diag_t}",
+                        skipped_stages=skipped_stages,
+                    )
+                timed_bin = t_bin
             # Same binary, 1 thread vs all — the compiler is out of the
             # comparison, so the ratio is attributable to the parallelism.
             m_ok, measured, seq_t, par_t, m_diag = _measure_speedup(
-                check_bin, work_dir, binary_args, threshold=min_speedup
+                timed_bin, work_dir, binary_args, threshold=min_speedup
             )
             if not m_ok:
                 return ValidationResult(passed=False, stage="performance",
@@ -391,15 +408,15 @@ def _gate_key(diff: str, source_file: str, mode: str) -> str:
 
 
 def _validate_cached(
-    cache: dict,
+    cache: Dict[str, Any],
     diff: str,
     args: AgentArguments,
     reference_output: "str | None",
-    binary_args: "list | None",
+    binary_args: "List[str] | None",
     reference_time: "float | None",
-    reference_outputs: "list | None" = None,
+    reference_outputs: "List[Tuple[List[str], str]] | None" = None,
     mode: str = "full",
-    dep_region: "tuple | None" = None,
+    dep_region: "Tuple[int, int, int] | None" = None,
 ) -> "tuple[ValidationResult, bool, bool]":
     """Run the gate on `diff`, or return the answer already computed for it.
 
@@ -439,6 +456,7 @@ def _validate_cached(
             noise_floor=getattr(args, "noise_floor", 0.0),
             discopop_dir=getattr(args, "discopop_dir", None),
             dep_region=dep_region,
+            timing_flags=list(getattr(args, "timing_cflags", ()) or ()) or None,
             stress=getattr(args, "schedule_stress", True),
             stress_threads=tuple(getattr(args, "stress_threads", None) or ())
             or None,

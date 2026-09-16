@@ -13,7 +13,7 @@ was patched, so identity across a re-profile is content-based.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from ..types import CodeRegion
 
@@ -87,7 +87,7 @@ def _parse_data_xml(profiler_dir: Path) -> List[CodeRegion]:
     except ET.ParseError:
         return []
 
-    seen_ids: set = set()
+    seen_ids: Set[str] = set()
     regions: List[CodeRegion] = []
 
     for node in root.iter("Node"):
@@ -177,13 +177,13 @@ def _load_loop_counts(profiler_dir: Path) -> Dict[str, int]:
     return counts
 
 
-def _load_patterns(patterns_path: Path) -> Dict[str, Tuple[str, dict]]:
+def _load_patterns(patterns_path: Path) -> Dict[str, Tuple[str, Dict[str, Any]]]:
     """
     Index patterns.json by both start_line and node_id.
     Returns {key: (pattern_type, pattern_dict)}.
     """
     import json
-    index: Dict[str, Tuple[str, dict]] = {}
+    index: Dict[str, Tuple[str, Dict[str, Any]]] = {}
     if not patterns_path.exists():
         return index
     data = json.loads(patterns_path.read_text())

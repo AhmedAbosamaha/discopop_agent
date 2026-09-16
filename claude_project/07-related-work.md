@@ -45,6 +45,37 @@ abstract on at least one point — it claimed no dynamic profiling while the abs
 or dynamic, and what "workload-specific checks" means. If those checks are strong, C2
 weakens and C1/C3 must carry more.
 
+### Update 2026-09-15 (read from the arXiv HTML and the public repository)
+
+- **Code is public:** https://github.com/Qlalq/RepoOMP_Simplified. Its README calls it a
+  *simplified* version: the full MAP, Bear compilation database, tree-sitter, transitive
+  confidence propagation, blocker merging and High/Middle/Low routing are missing. What remains:
+  rules first, LLM fallback (OpenAI-compatible endpoint), compile + verify + time, uftrace
+  hotspots, a heuristic single-file dependency analyzer. It ships NPB 3.0 OpenMP C (bt, cg, ep,
+  ft, is, lu, mg, sp) with an expert version per program, plus BOTS.
+- **Their acceptance, in their own threats section:** compile, "workload-specific executable
+  checks", measurable speedup; five-run means at 16 threads for nine kernels, a dynamic race
+  audit for those — and explicitly *"they do not establish schedule-independent correctness,
+  race freedom, or exhaustive statistical coverage"*. That is the gap C2 (the gate) addresses.
+- **Their baseline** is "the unstructured Claude Code baseline" — our `no_evidence` arm is the
+  same kind of control, which makes the positioning direct.
+- **Possible head-to-head** (not planned, author to decide): their simplified tool and our agent
+  on the same NPB C files (`is`, `mg`, `lu` overlap with our portfolio), both judged by our
+  harness verification. Published numbers are not comparable across hardware, threads and
+  acceptance rules — compare only on identical inputs.
+
+### Further work found 2026-09-15 (abstracts only — verify before citing)
+
+- **ComPilot** — Agentic Auto-Scheduling, arXiv 2511.00592. LLM proposes loop transformations,
+  compiler returns legality and measured speedup; PolyBench; compared with Pluto. Same suite and
+  closed-loop idea; transformations, not OpenMP restructuring.
+- **ParaCodex** — arXiv 2601.04327. Codex agent with staged hotspot analysis, correctness gating,
+  profiling-guided refinement; serial → OpenMP GPU offload on HeCBench, Rodinia, NAS. Same agent
+  shape, different target.
+- **P4OMP** — arXiv 2506.22703. Retrieval-augmented prompting for OpenMP pragmas, no fine-tuning.
+- **OMPILOT** — arXiv 2511.03866. Domain-specific transformer for C++ → OpenMP.
+- **ParBench** — arXiv 2607.22588. Benchmark for LLM parallel code *translation* (not our task).
+
 ## §3.1 Classical automatic parallelization
 
 Polyhedral (Pluto, Polly/LLVM), Cetus, ROSE, production compiler autoparallelization.

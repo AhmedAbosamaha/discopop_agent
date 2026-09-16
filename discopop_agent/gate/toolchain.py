@@ -11,7 +11,7 @@ from __future__ import annotations
 import os
 import shutil
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import Dict, List, Optional, Union
 
 
 # Prefer the LLVM the profiler was built with: 19 on the macOS development
@@ -40,7 +40,7 @@ _LLVM_LIBCXX = "/usr/local/Cellar/llvm@19/19.1.7/lib/c++"
 _LIBOMP_DIR = "/usr/local/opt/libomp/lib"
 
 
-def _macos_sysroot_flag() -> list:
+def _macos_sysroot_flag() -> List[str]:
     """Return -isysroot flag pointing at the available macOS SDK, or []."""
     import subprocess, platform
     if platform.system() != "Darwin":
@@ -151,7 +151,7 @@ def find_archer() -> Optional[str]:
     return None
 
 
-def _tsan_env() -> dict:
+def _tsan_env() -> Dict[str, str]:
     """Environment for the ThreadSanitizer run.
 
     TSan is by far the most expensive stage of the gate: on a 0.2 s benchmark

@@ -66,11 +66,14 @@ through is noise.
 50 of 52 files would change. **Match the surrounding manual style**; do not run the
 formatter across the tree.
 
-## 9. mypy baseline is 82
+## 9. mypy is clean — keep it that way
 
-Not zero. Regressions introduced three times during one session — a dataclass field
-missing a default, a bare `-> tuple` without type args, a shadowed name plus a late
-import. Check against 82, not against clean.
+**Since 2026-09-16 (Fix 57) the package has 0 errors in 55 files.** It was 82 for a long
+time: 78 bare generics (`dict`, `list`, `-> tuple`) that `disallow_any_generics` rejects,
+plus one variable in `plan/scoring.py` holding a string and later a tuple. Check against
+**clean**, not against 82 — that baseline is what let three regressions through in a single
+session (a dataclass field missing a default, a bare `-> tuple`, a shadowed name with a late
+import): with 82 lines of output nobody reads, a new error looks like the old ones.
 
 ## 10. Timing tolerance was a bare `>`
 

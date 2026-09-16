@@ -11,6 +11,8 @@ apply, and that failure is the signal that it has to go too.
 """
 from __future__ import annotations
 
+from typing import Any, List
+
 import shutil
 import tempfile
 from pathlib import Path
@@ -82,7 +84,7 @@ def _apply_in_memory(diff: str, source_file: str) -> "str | None":
         return dst.read_text() if ok else None
 
 
-def _apply_change_log(original_text: str, keep: list, args: AgentArguments) -> list:
+def _apply_change_log(original_text: str, keep: List[Any], args: AgentArguments) -> List[Any]:
     """Write `original_text` to the source, then re-apply `keep` in order.
 
     Returns the subset that actually applied.  Nothing is ever un-applied, so a
@@ -91,7 +93,7 @@ def _apply_change_log(original_text: str, keep: list, args: AgentArguments) -> l
     """
     src = Path(args.source_file)
     src.write_text(original_text)
-    landed: list = []
+    landed: List[Any] = []
     with tempfile.TemporaryDirectory(prefix="dp_agent_apply_") as tmp:
         work = Path(tmp)
         for ch in keep:

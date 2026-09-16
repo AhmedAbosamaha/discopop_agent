@@ -1140,6 +1140,136 @@ def check_dep_line_resolution(work: Path) -> Result:
                   f"{len(raw + war + waw)} deps all within {n_lines} lines")
 
 
+def check_omp_include(work: Path) -> Result:
+    """A candidate that includes <omp.h> must build wherever OpenMP builds.
+
+    On macOS the gate linked Homebrew's libomp (-L) but never added its headers
+    (-I), and that LLVM ships no omp.h of its own.  Every candidate calling an
+    OpenMP runtime function (omp_get_thread_num, omp_get_wtime, ...) was rejected
+    at the OpenMP compile on the Mac only — reported as if the model had written
+    invalid code.
+    """
+    from ..gate.patching import _compile_variant
+    from ..gate.toolchain import _find_clangpp
+
+    name = "omp include"
+    clangpp = _find_clangpp()
+    if clangpp is None:
+        return Result(name, "skip", "no supported clang")
+    d = work / "omp_include"
+    d.mkdir(parents=True, exist_ok=True)
+    body = ("#include <omp.h>\n#include <stdio.h>\n"
+            "int main(void) {\n    int n = 0;\n    #pragma omp parallel reduction(+:n)\n"
+            "    n += 1;\n    printf(\"%d %d\\n\", n > 0, omp_get_max_threads() > 0);\n"
+            "    return 0;\n}\n")
+    failed: List[str] = []
+    for ext in (".c", ".cpp"):
+        src = d / f"probe{ext}"
+        src.write_text(body)
+        ok, diag, binary = _compile_variant(src, clangpp, d, f"probe_{ext[1:]}", openmp=True)
+        if not ok or binary is None:
+            first = diag.strip().splitlines()[0][:100] if diag.strip() else "build failed"
+            failed.append(f"{ext}: {first}")
+            continue
+        r = subprocess.run([str(binary)], capture_output=True, text=True, timeout=60)
+        if r.returncode != 0 or r.stdout.strip() != "1 1":
+            failed.append(f"{ext}: exit {r.returncode}, output {r.stdout.strip()!r}")
+    if failed:
+        return Result(name, "fail", "; ".join(failed))
+    return Result(name, "pass", "C and C++ programs including <omp.h> build with -fopenmp and run")
+
+
+_TIMING_LOOP = "    for (int i = 0; i < N; i++) a[i] = i;\n"
+_TIMING_PROBE = (
+    "#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n"
+    "#ifdef DP_TIMING_BREAK\n#error \"timing flags reached this build\"\n#endif\n"
+    "#define N 1000\nstatic int a[N];\nint main(void) {\n"
+    + _TIMING_LOOP
+    + "    long s = 0;\n    for (int i = 0; i < N; i++) s += a[i];\n"
+    "    printf(\"sum %ld\\n\", s);\n"
+    "#ifdef DP_TIMING_BIG\n    int parallel = 0;\n#  ifdef _OPENMP\n"
+    "    const char *t = getenv(\"OMP_NUM_THREADS\");\n"
+    "    parallel = !(t && strcmp(t, \"1\") == 0);\n#  endif\n"
+    "    fprintf(stderr, \"DP_TIMED_REGION_SECONDS %s\\n\", parallel ? \"0.25\" : \"0.5\");\n"
+    "#else\n    fprintf(stderr, \"DP_TIMED_REGION_SECONDS 0.001\\n\");\n#endif\n"
+    "    return 0;\n}\n"
+)
+
+
+def check_timing_size(work: Path) -> Result:
+    """--timing-cflags must reach every build the speed check times, and no other.
+
+    The option lets a program be profiled and checked at a small size and timed
+    at one where speed is measurable.  Its failure would be silent: a timed build
+    that drops the flag measures the small size again, so the speed check goes
+    back to judging noise while the run says it timed the large one; and a
+    correctness build that picked the flag up would compare two sizes' outputs.
+
+    The probe REPORTS its timed region instead of computing one, so the check is
+    deterministic: with DP_TIMING_BIG it reports 0.5 s when built without OpenMP
+    or run with OMP_NUM_THREADS=1 (what the speed measurement sets for its
+    sequential side), 0.25 s otherwise (a 2.0x speedup); without the flag 0.001 s
+    either way.  It reads OMP_NUM_THREADS instead of calling omp_get_max_threads,
+    so it needs no omp.h — which a macOS LLVM may not have on its include path.
+    DP_TIMING_BREAK makes the build fail, which proves a function compiled with
+    the flags.
+    """
+    from ..gate.timing import capture_reference, measure_marginal, noise_floor, time_source
+    from ..gate.toolchain import _find_clangpp
+    from ..gate.validate import validate
+    from ..llm import make_diff
+
+    name = "timing size"
+    if _find_clangpp() is None:
+        return Result(name, "skip", "no supported clang")
+    if (os.cpu_count() or 1) < 2:
+        return Result(name, "skip", "needs at least 2 cores")
+    d = work / "timing"
+    d.mkdir(parents=True, exist_ok=True)
+    src = d / "probe.c"
+    src.write_text(_TIMING_PROBE)
+    big, broken = ["-DDP_TIMING_BIG"], ["-DDP_TIMING_BREAK"]
+    problems: List[str] = []
+
+    out, ref_small, _ = capture_reference(str(src))
+    out_big, ref_big, _ = capture_reference(str(src), timing_flags=big)
+    if out is None or out != out_big or ref_small != 0.001 or ref_big != 0.5:
+        problems.append(f"reference: times {ref_small}/{ref_big} (expected 0.001/0.5), "
+                        f"output {'unchanged' if out == out_big else 'CHANGED'}")
+    if capture_reference(str(src), timing_flags=broken)[0] is not None:
+        problems.append("reference: a failing timing build was not fatal")
+
+    text = src.read_text()
+    ok_t, t_big, _o, tdiag = time_source(text, str(src), d, "t", extra_flags=big)
+    if not ok_t or t_big not in (0.25, 0.5):
+        problems.append(f"time_source: {t_big} with the flag, expected 0.25 ({tdiag[:60]})")
+    if noise_floor(text, str(src), pairs=1, trials=1, extra_flags=broken)[0]:
+        problems.append("noise_floor: built without the timing flags")
+    if measure_marginal(text, text, str(src), pairs=1, extra_flags=broken)[0]:
+        problems.append("measure_marginal: built without the timing flags")
+
+    diff = make_diff(text, text.replace(_TIMING_LOOP, "#pragma omp parallel for\n" + _TIMING_LOOP),
+                     str(src))
+    timed = validate(diff, str(src), reference_output=out, require_speedup=True, min_speedup=1.1,
+                     skip_race_check=True, stress=False, reference_time=ref_big, timing_flags=big)
+    untimed = validate(diff, str(src), reference_output=out, require_speedup=True, min_speedup=1.1,
+                       skip_race_check=True, stress=False, reference_time=ref_small)
+    safety = validate(diff, str(src), reference_output=out, skip_race_check=True, stress=False,
+                      timing_flags=broken)
+    if not timed.passed:
+        problems.append(f"gate with the flag failed at '{timed.stage}': {timed.diagnostic[:80]}")
+    if untimed.passed or untimed.stage != "performance":
+        problems.append(f"gate without the flag: expected a performance rejection, got '{untimed.stage}'")
+    if not safety.passed:
+        problems.append(f"correctness stages picked up the timing flags: failed at '{safety.stage}'")
+    if problems:
+        return Result(name, "fail", "; ".join(problems))
+    return Result(name, "pass",
+                  f"reference 0.001 → 0.5 s, timed builds and noise/marginal builds take the flag; "
+                  f"gate {timed.measured_speedup:.1f}× with it, rejected at 'performance' without; "
+                  f"correctness builds untouched")
+
+
 _CHECKS: List[Tuple[str, Callable[[Path], Result]]] = [
     ("impact", check_impact_ranking),
     ("min-impact", check_min_impact),
@@ -1157,6 +1287,8 @@ _CHECKS: List[Tuple[str, Callable[[Path], Result]]] = [
     ("anchor-vs-ref", check_anchor_correctness),
     ("dep-evidence", check_dependence_evidence),
     ("dep-lines", check_dep_line_resolution),
+    ("timing-size", check_timing_size),
+    ("omp-include", check_omp_include),
 ]
 
 
