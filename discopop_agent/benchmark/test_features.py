@@ -47,6 +47,7 @@ from ..profiling.fast_refresh import (line_map, remap_dependencies,
                                       remap_reduction, verify_translation)
 from ..plan.impact import load_hotspots
 from ..plan import build_candidates
+from ..types import HotspotCandidate
 from ..llm import make_diff
 from ..gate.toolchain import _find_clangpp, _macos_sysroot_flag, find_archer
 
@@ -370,9 +371,38 @@ def check_clauses(work: Path) -> Result:
         False,
     ))
 
+    # Four false rejections found in local_obs1 (2mm, jacobi-2d-imper): a counter
+    # declared once per function and reused by the NEXT loop nest is not live-out,
+    # and neither a later pragma nor a comment reads anything. Each of these
+    # refused a correct pragma; the last case must still be rejected.
+    reuse = ("void f(int n, double *a) {\n  int i, j;\n"
+             "  for (i = 0; i < n; i++)\n    for (j = 0; j < n; j++)\n      a[i*n+j] = 0;\n"
+             "%s"
+             "  for (i = 0; i < n; i++)\n    for (j = 0; j < n; j++)\n      a[i*n+j] += 1;\n%s}\n")
+    head = "  for (i = 0; i < n; i++)\n    for (j = 0; j < n; j++)\n      a[i*n+j] = 0;\n"
+    prag = "  #pragma omp parallel for private(j)\n" + head
+    for label, text, should_reject in [
+        ("counter re-initialised by the next loop", reuse % ("", ""), False),
+        ("a later pragma naming the counter",
+         reuse % ("  #pragma omp parallel for private(j)\n", ""), False),
+        ("a comment mentioning the counter",
+         reuse % ("  /* second phase: independent (i,j) iterations */\n", ""), False),
+        ("a genuine read after the re-initialising loop",
+         reuse % ("", "  a[0] = j;\n"), True),
+    ]:
+        cases.append((label, text.replace(head, prag, 1), should_reject))
+
     failures = []
     for label, new_text, should_reject in cases:
-        problem = check_llm_pragmas(make_diff(orig, new_text, str(src)), str(src))
+        base = orig if label not in {
+            "counter re-initialised by the next loop", "a later pragma naming the counter",
+            "a comment mentioning the counter", "a genuine read after the re-initialising loop",
+        } else new_text.replace(prag, head, 1)
+        if base is not orig:
+            src.write_text(base)
+        problem = check_llm_pragmas(make_diff(base, new_text, str(src)), str(src))
+        if base is not orig:
+            src.write_text(orig)
         if bool(problem) != should_reject:
             failures.append(f"{label}: expected "
                             f"{'rejection' if should_reject else 'acceptance'}")
@@ -1270,9 +1300,134 @@ def check_timing_size(work: Path) -> Result:
                   f"correctness builds untouched")
 
 
+def check_exclude_cxx(work: Path) -> Result:
+    """--exclude-functions must work on C++, whose names DiscoPoP writes mangled.
+
+    Data.xml names a C++ function `_ZL6helperv` (file-local), `_Z4workiPd` or
+    `_ZN2ns6nestedEv`, while the caller writes `helper`, `work`, `nested`. The
+    comparison used the raw name, so on every C++ program the exclusion list
+    matched nothing and the agent could spend model calls on a benchmark's
+    setup, output and timing code.
+    """
+    name = "exclude c++"
+    d = work / "exclude_cxx"
+    d.mkdir(parents=True, exist_ok=True)
+    src = d / "probe.cpp"
+    src.write_text(
+        "static int helper(int* a, int n) {\n  int s = 0;\n"
+        "  for (int i = 0; i < n; i++) s += a[i];\n  return s;\n}\n"
+        "namespace ns {\nint nested(int* a, int n) {\n  int s = 0;\n"
+        "  for (int i = 0; i < n; i++) s ^= a[i];\n  return s;\n}\n}\n"
+        "int kept(int* a, int n) {\n  int s = 0;\n"
+        "  for (int i = 0; i < n; i++) s += 2 * a[i];\n  return s;\n}\n"
+        "int main() {\n  int a[64];\n  for (int i = 0; i < 64; i++) a[i] = i;\n"
+        "  return (helper(a, 64) + ns::nested(a, 64) + kept(a, 64)) > 0 ? 0 : 1;\n}\n")
+    shutil.rmtree(d / ".discopop", ignore_errors=True)
+    ok, err = _run([_venv_bin("discopop_cxx"), src.name, "-o", "a.out"], d)
+    if not ok:
+        return Result(name, "fail", f"discopop_cxx: {err[-160:]}")
+
+    def spans(excl: Tuple[str, ...]) -> List[Tuple[str, int]]:
+        cands = build_candidates(d / ".discopop", str(src), 1.0, min_workload=0,
+                                 exclude_functions=excl)
+        return sorted({(c.region.region_type, c.region.start_line) for c in cands})
+
+    # The function regions themselves: an excluded function takes its own span and
+    # everything inside it out of the queue. (Its loops need a profiled run for
+    # iteration counts before they become candidates at all.)
+    lines = src.read_text().splitlines()
+    helper = next(i for i, l in enumerate(lines, 1) if "static int helper" in l)
+    nested = next(i for i, l in enumerate(lines, 1) if "int nested" in l)
+    kept = next(i for i, l in enumerate(lines, 1) if "int kept" in l)
+
+    def has_fn(ss: List[Tuple[str, int]], line: int) -> bool:
+        return ("function", line) in ss
+
+    before = spans(())
+    after = spans(("helper", "nested"))
+    if not (has_fn(before, helper) and has_fn(before, nested) and has_fn(before, kept)):
+        return Result(name, "fail", f"DiscoPoP did not report the three functions: {before}")
+    problems = []
+    if has_fn(after, helper):
+        problems.append("the file-local `helper` (_ZL...) was not excluded")
+    if has_fn(after, nested):
+        problems.append("the namespaced `ns::nested` (_ZN...E) was not excluded")
+    if not has_fn(after, kept):
+        problems.append("`kept` was excluded although it is not on the list")
+    if problems:
+        return Result(name, "fail", "; ".join(problems))
+    return Result(name, "pass", f"{len(before)} -> {len(after)} candidates; `helper` (file-local) "
+                                f"and `ns::nested` excluded by plain name, `kept` kept")
+
+
+def check_covered_skip(work: Path) -> Result:
+    """A region inside an already-accepted one must leave the queue.
+
+    Once a region is parallelised, `ImpactModel.mark_covered` sets the predicted
+    saving of everything nested inside it to 0. The queue used to drop a region
+    only when its saving was BELOW `--min-impact` (default 0), so a saving of
+    exactly 0 passed and every covered region still received a full model budget.
+    """
+    name = "covered skip"
+    dp = work / ".discopop"
+    src = str(work / "priority_mix.cpp")
+    if not (dp / "hotspot_detection" / "Hotspots.json").exists():
+        return Result(name, "skip", "needs the impact-ranking profile")
+    model = load_hotspots(dp, threads=8)
+    before = build_candidates(dp, src, 1.0, 0.0, impact=model, min_impact=0.0)
+    loops = [c for c in before if c.region.region_type == "loop" and c.impact_seconds]
+    if not loops:
+        return Result(name, "skip", "no measured loop to cover")
+    outer = max(loops, key=lambda c: (c.region.end_line - c.region.start_line, c.impact_seconds or 0.0))
+    r = outer.region
+
+    def inside(c: HotspotCandidate) -> bool:
+        return bool(c.region.file_id == r.file_id and r.start_line <= c.region.start_line
+                and c.region.end_line <= r.end_line)
+
+    nested = [c for c in before if inside(c)]
+    model.mark_covered(r.file_id, r.start_line, r.end_line)
+    after = build_candidates(dp, src, 1.0, 0.0, impact=model, min_impact=0.0)
+    left = [c for c in after if inside(c) and c.impact_seconds is not None]
+    outside_before = [c for c in before if not inside(c)]
+    outside_after = [c for c in after if not inside(c)]
+    if left:
+        return Result(name, "fail", f"{len(left)} covered region(s) still queued, e.g. "
+                                    f"{left[0].region.region_id} saving {left[0].impact_seconds}")
+    if len(outside_after) != len(outside_before):
+        return Result(name, "fail", f"regions outside the covered span changed: "
+                                    f"{len(outside_before)} -> {len(outside_after)}")
+    return Result(name, "pass", f"covering lines {r.start_line}–{r.end_line} removed "
+                                f"{len(nested)} region(s); {len(outside_after)} outside it kept")
+
+
+def check_budget_policy(work: Path) -> Result:
+    """--budget-policy share scales attempts with runtime share; fixed is unchanged."""
+    from ..plan import region_budget
+    name = "budget policy"
+    cases = [
+        (("fixed", 3, 1, 0.05, 1.0), 3),   # fixed ignores the share
+        (("fixed", 0, 1, 1.0, 1.0), 0),    # discopop_gate: no calls under either policy
+        (("share", 0, 1, 1.0, 1.0), 0),
+        (("share", 5, 1, 1.0, 1.0), 5),    # the largest share gets the maximum
+        (("share", 5, 1, 0.5, 1.0), 3),
+        (("share", 5, 1, 0.01, 1.0), 1),   # a small share gets the minimum
+        (("share", 5, 1, None, 1.0), 1),   # unmeasured: the minimum
+        (("share", 5, 1, 0.3, 0.6), 3),    # relative to the largest queued share
+        (("share", 3, 1, 2.0, 1.0), 3),    # never above the maximum
+    ]
+    bad = [f"{a} -> {region_budget(*a)} (want {w})" for a, w in cases if region_budget(*a) != w]
+    if bad:
+        return Result(name, "fail", "; ".join(bad))
+    return Result(name, "pass", f"{len(cases)} cases: fixed unchanged, share from min to max, "
+                                f"unmeasured at min, zero budget stays zero")
+
+
 _CHECKS: List[Tuple[str, Callable[[Path], Result]]] = [
     ("impact", check_impact_ranking),
     ("min-impact", check_min_impact),
+    ("covered-skip", check_covered_skip),
+    ("budget-policy", check_budget_policy),
     ("hotspot-remap", check_hotspot_remap),
     ("mixed-rank", check_mixed_scale_ranking),
     ("fast-refresh", check_fast_refresh),
@@ -1289,6 +1444,7 @@ _CHECKS: List[Tuple[str, Callable[[Path], Result]]] = [
     ("dep-lines", check_dep_line_resolution),
     ("timing-size", check_timing_size),
     ("omp-include", check_omp_include),
+    ("exclude-cxx", check_exclude_cxx),
 ]
 
 

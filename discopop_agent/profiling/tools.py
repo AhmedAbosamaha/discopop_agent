@@ -9,6 +9,7 @@ understand newer pattern types and aborts the whole re-profile.
 """
 from __future__ import annotations
 
+import subprocess
 import sys
 from pathlib import Path
 
@@ -27,6 +28,44 @@ def _wrapper_for(source: "str | Path") -> str:
 
 def _explorer_cmd() -> str:
     return str(Path(sys.executable).parent / "discopop_explorer")
+
+
+# Attempts of discopop_explorer on one unchanged profile (see run_explorer).
+EXPLORER_ATTEMPTS = 20
+
+
+def run_explorer(discopop_dir: Path, env: "dict[str, str] | None" = None
+                 ) -> "subprocess.CompletedProcess[str]":
+    """Run discopop_explorer in `discopop_dir`, retrying a crash on the same profile.
+
+    The explorer is not deterministic on a fixed profile: run repeatedly on ONE
+    profile it reports different task patterns each time and, on some programs,
+    raises `IndexError: string index out of range` in
+    `TaskGraph.recursive_assignment` on some attempts and not others (Rodinia
+    `pathfinder`: 15 crashes in 20 attempts on one profile, so 20 attempts
+    leave a 0.75^20 ≈ 0.3 % chance of losing the step). Fixing PYTHONHASHSEED does not change
+    that. So a crash is a draw, not a verdict on the code: treating it as one
+    reverted rewrites and discarded the dependence review for no reason. The
+    profile is never touched between attempts; only the explorer's own partial
+    output is cleared before a retry. Each retry is printed so a log shows it.
+    Returns the last attempt's result.
+    """
+    import shutil
+
+    r = subprocess.run([_explorer_cmd()], capture_output=True, text=True,
+                       cwd=discopop_dir.resolve(), env=env if env is not None else _venv_env())
+    attempt = 1
+    while r.returncode != 0 and attempt < EXPLORER_ATTEMPTS:
+        last = (r.stderr.strip().splitlines() or ["no output"])[-1][:120]
+        print(f"      [explorer] attempt {attempt} failed ({last}) — retrying on the same profile")
+        shutil.rmtree(discopop_dir / "explorer", ignore_errors=True)
+        attempt += 1
+        r = subprocess.run([_explorer_cmd()], capture_output=True, text=True,
+                           cwd=discopop_dir.resolve(), env=env if env is not None else _venv_env())
+    if attempt > 1:
+        outcome = "succeeded" if r.returncode == 0 else "failed every time"
+        print(f"      [explorer] {outcome} after {attempt} attempt(s)")
+    return r
 
 
 def _venv_env() -> "dict[str, str]":

@@ -23,7 +23,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from ..types import CodeRegion, HotspotCandidate
 from .impact import ImpactModel
-from .regions import (_load_loop_counts, _load_patterns, _parse_data_xml)
+from .regions import (_load_loop_counts, _load_patterns, _parse_data_xml, demangle)
 
 
 _CONFIDENCE: Dict[str, float] = {
@@ -53,6 +53,28 @@ def _score(workload: int, confidence: float, tier: int, lambda_penalty: float) -
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
+
+
+def region_budget(policy: str, budget: int, budget_min: int,
+                  share: Optional[float], top_share: float) -> int:
+    """Model attempts for one region.
+
+    "fixed": `budget` for every region, the behaviour before decision D3.
+    "share": `budget_min + round((budget - budget_min) * share / top_share)`, so the
+    region with the largest measured share in the queue gets `budget` and a region
+    with a small share gets close to `budget_min`. A region without a measurement
+    gets `budget_min`. `budget` <= 0 (no model calls at all, as in `discopop_gate`)
+    stays 0 under either policy.
+    """
+    if budget <= 0:
+        return 0
+    if policy != "share":
+        return budget
+    low = max(0, min(budget_min, budget))
+    if share is None or top_share <= 0:
+        return low
+    ratio = min(max(share / top_share, 0.0), 1.0)
+    return low + int(round((budget - low) * ratio))
 
 
 def build_candidates(
@@ -110,9 +132,13 @@ def build_candidates(
 
     # Functions the caller declares out of scope (a benchmark harness's own output,
     # timing and setup code) are skipped together with every region inside them.
+    # Names are compared demangled: DiscoPoP writes C++ names mangled
+    # (`_ZL7pb_emitd`), the caller writes them as in the source (`pb_emit`), and a
+    # raw comparison silently excluded nothing in every C++ program.
     excluded = set(exclude_functions)
     excluded_spans = [(r.file_id, r.start_line, r.end_line) for r in unique_regions
-                      if r.region_type == "function" and r.name in excluded]
+                      if r.region_type == "function"
+                      and (r.name in excluded or demangle(r.name) in excluded)]
 
     for region in unique_regions:
         if any(f == region.file_id and s <= region.start_line and region.end_line <= e
@@ -166,6 +192,14 @@ def build_candidates(
             # Measured: rank on seconds saved, and let DiscoPoP's own verdict
             # retire the cold regions the proxy would happily have queued.
             if skip_cold and hotness == "NO":
+                continue
+            # Nothing left to win: the region lies inside one already parallelised
+            # (ImpactModel.mark_covered), so its predicted saving is exactly 0. The
+            # `min_impact` test below lets 0 through at its default of 0, which gave
+            # every covered region a full model budget for time already won.
+            # This is not what --restructure-depth controls: depth concerns regions a
+            # rewrite created, this concerns regions queued from the start.
+            if saving <= 0.0:
                 continue
             if saving < min_impact:
                 continue

@@ -171,15 +171,12 @@ def _load_loop_nest(
 
 
 def _demangle(name: str) -> str:
-    """Best-effort Itanium demangle of a simple `_Z<len><name>...` symbol; falls
-    back to the mangled name."""
-    import re
-    m = re.match(r"_Z(\d+)(\w+)", name)
-    if m:
-        n = int(m.group(1))
-        if len(m.group(2)) >= n:
-            return m.group(2)[:n]
-    return name
+    """Plain name of a (possibly mangled) function symbol — see plan.regions.demangle.
+
+    This used to handle only `_Z<len><name>`, which left file-local `static`
+    functions (`_ZL…`) and nested names (`_ZN…E`) mangled in the model's prompt."""
+    from ..plan.regions import demangle
+    return demangle(name)
 
 
 def _load_calls_in_region(

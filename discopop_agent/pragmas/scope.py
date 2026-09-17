@@ -18,6 +18,45 @@ import re
 from typing import List
 
 
+def _without_comments(lines: List[str]) -> List[str]:
+    """The same lines with comment text blanked out, indices and indentation kept.
+
+    Comments are prose and read nothing at runtime, but they mention variables:
+    a model's own note, `/* Second phase: copy B to A. Independent (i,j) ... */`,
+    made `_read_after` see a read of `j` and refused a correct `private(i, j)`
+    (local_obs1, jacobi-2d-imper). String literals are left alone: they cannot
+    contain a C identifier that matters here, and blanking them would change
+    indentation bookkeeping for no gain.
+    """
+    out: List[str] = []
+    in_block = False
+    for ln in lines:
+        res = []
+        i = 0
+        while i < len(ln):
+            if in_block:
+                end = ln.find("*/", i)
+                if end < 0:
+                    res.append(" " * (len(ln) - i))
+                    i = len(ln)
+                else:
+                    res.append(" " * (end + 2 - i))
+                    i = end + 2
+                    in_block = False
+            elif ln.startswith("//", i):
+                res.append(" " * (len(ln) - i))
+                i = len(ln)
+            elif ln.startswith("/*", i):
+                in_block = True
+                res.append("  ")
+                i += 2
+            else:
+                res.append(ln[i])
+                i += 1
+        out.append("".join(res))
+    return out
+
+
 def _declared_in(lines: List[str], name: str) -> bool:
     """Is `name` DECLARED anywhere in these lines (not merely used)?"""
     decl = re.compile(
@@ -49,18 +88,46 @@ def _read_after(lines: List[str], name: str, after_idx: int,
     the variable lives in.  That is bounded by structure rather than by an
     arbitrary count, and it cannot be escaped by padding.
     """
+    from .parse import _loop_span
+
+    lines = _without_comments(lines)
     word = re.compile(r"\b" + re.escape(name) + r"\b")
     assign_only = re.compile(r"^\s*" + re.escape(name) + r"\s*=[^=]")
-    for ln in lines[after_idx + 1:]:
+    # A later loop whose header starts by assigning the name: `for (j = 0; ...)`.
+    # Every use of `j` inside that loop reads the value the header just wrote,
+    # never the one the parallel loop left behind, so the whole loop is skipped.
+    # Uses AFTER it are still examined — if the loop ran zero times (it may sit
+    # inside another loop), the old value survives and a later read sees it.
+    # Without this, every PolyBench kernel was refused `private(j)`: the counters
+    # are declared once per function and the next loop nest re-initialises them.
+    init_kill = re.compile(r"^\s*for\s*\(\s*" + re.escape(name) + r"\s*=(?!=)([^;]*);")
+    i = after_idx + 1
+    while i < len(lines):
+        ln = lines[i]
         if stop_indent is not None:
             stripped = ln.strip()
             if stripped.startswith("}") and (len(ln) - len(ln.lstrip())) <= stop_indent:
                 return False          # left the block the name is declared in
         if not word.search(ln):
+            i += 1
+            continue
+        if ln.lstrip().startswith("#"):
+            # A directive is not a runtime read: the name in a later
+            # `#pragma omp parallel for private(j, k)` is a clause for the NEXT
+            # loop, and counting it as a read refused every correct pragma in a
+            # kernel with two loop nests in a row (2mm, jacobi-2d-imper).
+            i += 1
             continue
         if _declared_in([ln], name):     # shadowed / redeclared — stop looking
             return False
+        kill = init_kill.match(ln)
+        if kill and not word.search(kill.group(1)):
+            span = _loop_span(lines, i)
+            if span is not None and span[1] >= i:
+                i = span[1] + 1
+                continue
         if assign_only.match(ln):
+            i += 1
             continue
         return True
     return False

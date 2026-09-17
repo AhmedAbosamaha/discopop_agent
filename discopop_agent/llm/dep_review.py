@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple
 from .. import viz
 from ..evidence import load_prevented_deps
 from ..profiling import fast_refresh
-from ..profiling.tools import _explorer_cmd, _venv_env
+from ..profiling.tools import _explorer_cmd, _venv_env, run_explorer
 from .prompts import _SYSTEM_DEPS
 from .providers import _complete, _make_client
 
@@ -270,8 +270,7 @@ def _llm_dep_review(
                 f"spurious, but none matched a dependence line — nothing changed")
 
     static_file.write_text("\n".join(keep) + "\n")
-    r = subprocess.run([_explorer_cmd()], capture_output=True, text=True,
-                       cwd=dp_dir.resolve(), env=_venv_env())
+    r = run_explorer(dp_dir)
     if r.returncode != 0:
         static_file.write_text("\n".join(raw_lines) + "\n")
         return (f"discharged {len(discharged)} blocker(s) but the explorer then "

@@ -85,7 +85,9 @@ def _print_banner(args: AgentArguments) -> None:
     print(f"  Source         : {args.source_file}")
     print(f"  DiscoPoP dir   : {args.discopop_dir}")
     print(f"  Model          : {args.model}")
-    print(f"  Budget         : {args.budget} LLM retries/region "
+    policy = ("" if args.budget_policy == "fixed"
+              else f" max, policy {args.budget_policy} (min {args.budget_min})")
+    print(f"  Budget         : {args.budget}{policy} LLM retries/region "
           f"(+{args.build_retries} free build fixes)")
     print(f"  λ penalty      : {args.lambda_penalty}")
     print(f"  Min workload   : {args.min_workload}")

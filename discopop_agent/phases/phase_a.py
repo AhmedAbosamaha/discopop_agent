@@ -38,12 +38,12 @@ from ..evidence import assemble
 from ..gate import _validate_cached, fix_hunk_headers
 from ..llm import LLMConnectionError, call_llm
 from ..llm.dep_review import _llm_dep_review
-from ..plan import build_candidates, region_fingerprint
+from ..plan import build_candidates, region_budget, region_fingerprint
 from ..plan.impact import ImpactModel, load_hotspots
 from ..pragmas import _added_pragmas, _touched_span, check_llm_pragmas
 from ..profiling import _measure_hotspots, _reprofil, _reprofil_fast
 from ..profiling import fast_refresh
-from ..profiling.tools import _explorer_cmd, _venv_env
+from ..profiling.tools import _explorer_cmd, _venv_env, run_explorer
 from ..sources import (_apply_to_source, _function_edit_to_diff,
                        _restore_profile, _snapshot_profile)
 from ..types import HotspotCandidate, ValidationResult
@@ -161,7 +161,20 @@ def phase_a(state: RunState) -> None:
             skipped.append((rid, depth))
             continue
 
-        budget = args.budget
+        # Decision D3: under --budget-policy share, attempts follow the region's share
+        # of runtime relative to the largest share queued at this moment.
+        top_share = max((c.runtime_fraction or 0.0) for _d, c in candidates) if candidates else 0.0
+        budget = region_budget(args.budget_policy, args.budget, args.budget_min,
+                               candidate.runtime_fraction, top_share)
+        if args.budget_policy != "fixed":
+            share_txt = (f"{candidate.runtime_fraction * 100:.1f}%"
+                         if candidate.runtime_fraction is not None else "unmeasured")
+            print(f"│  [Tier-2] Budget {budget} (policy {args.budget_policy}: share {share_txt}, "
+                  f"largest queued {top_share * 100:.1f}%)")
+        if args.budget_policy != "fixed" and budget <= 0:
+            print(f"└─ SKIPPED (no model budget for this region)\n")
+            skipped.append((rid, depth))
+            continue
         tier2_messages: List[Any] | None = None
 
         # Any restructuring may need reverting — it is kept only if DiscoPoP can
@@ -460,9 +473,7 @@ def phase_a(state: RunState) -> None:
                                 source_file=args.source_file,
                                 source_lines=post_patch_src.splitlines())
                             if rep.rows:
-                                r2 = subprocess.run(
-                                    [_explorer_cmd()], capture_output=True,
-                                    text=True, cwd=dp_dir.resolve(), env=_venv_env())
+                                r2 = run_explorer(dp_dir)
                                 if r2.returncode != 0:
                                     print(f"│           reconstruction broke the "
                                           f"explorer — profile left as refreshed")

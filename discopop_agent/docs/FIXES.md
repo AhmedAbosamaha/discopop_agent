@@ -1274,3 +1274,78 @@ Three faults let that pass for a result:
 The success path was re-checked against a working credential, because the fix adds code to it: one call returned `'banana'` in 6.1 s and wrote a usage record of `input_tokens=10, output_tokens=66, cache_read=9517, cost=0.0092` — the first direct confirmation that token accounting populates at all, the pilot's zeros having been a consequence of every call failing rather than a fault in `_record_usage`. The two failure modes are also distinguishable now where they were not before: a rejected credential reports `401 OAuth access token is invalid` and a missing one reports `Not logged in · Please run /login`, both previously collapsing to the single string `Claude Code returned an error result: success`.
 
 Companion changes outside this repo: the harness records `llm_call_failures` per trial (in `trial.json` and as a `trials.csv` column), and `job.sh` refuses to start a campaign whose credential cannot answer one probe call.
+
+## Fix 59 — `--exclude-functions` matched nothing in C++ programs
+
+**Files:** `plan/regions.py` (new `demangle`), `plan/scoring.py`, `evidence/context.py`, `benchmark/test_features.py`
+
+**Problem.** DiscoPoP writes C++ function names into `Data.xml` mangled — `_Z10initializeiiPdPiS_S_S_`, `_ZL7pb_emitd` for a file-local `static` function, `_ZN2ns6nestedEPii` for a namespaced one — and `build_candidates` compared them unchanged against `--exclude-functions`, which names functions as the source does (`initialize`, `pb_emit`). On every C++ program the list therefore excluded nothing, silently. Found while measuring runtime shares for the seven packaged applications, all C++: for `burkardt/md` the agent's queue held 26 candidates where the packaging meant 13, including `initialize`'s six loops and the harness's own `pb_emit`, `pb_seed`, `pb_uniform`, `pb_report` and timer functions. The C pilots could not show it. The evidence path had its own `_demangle`, but it understood only `_Z<len><name>`, so `_ZL…` and `_ZN…E` names also reached the model's prompt mangled.
+
+**Fix:** `plan.regions.demangle` returns the innermost identifier of an Itanium-mangled name (handles `L` internal linkage, `N…E` nesting with cv-qualifiers, `St`, and ABI tags such as `B8ne190107`) and leaves C names unchanged. The exclusion compares both the raw and the demangled name. `evidence.context._demangle` now delegates to it. Region names are otherwise unchanged, so the region fingerprint that keys model sessions is unaffected.
+
+**Verified:** 11 name cases, including a `std::__1::__math::pow` template with an ABI tag, all give the plain name. On `md`'s own profile the queue shrinks from 26 to 13 candidates, and exactly the listed functions and their loops leave it. New feature check `exclude-cxx`: a C++ probe with a `static` helper, a namespaced function and a plain one. The first two are excluded by plain name, the third stays. It **passes with the fix and fails with the old comparison restored**. mypy **0**.
+
+## Fix 60 — A crash of DiscoPoP's explorer was treated as a verdict on the code
+
+**Files:** `profiling/tools.py` (new `run_explorer`), `profiling/runner.py`, `phases/phase_a.py`, `llm/dep_review.py`
+
+**Problem.** DiscoPoP's pattern explorer is not deterministic on a fixed profile. Measured by profiling a program once and running only `discopop_explorer` on that same profile again and again:
+
+- **2mm, 10 runs:** 10 different `patterns.json`. Do-All stayed at 21 every time, while task patterns ranged from 6 to 57, and 2 reduction patterns appeared in some runs only.
+- **Rodinia `pathfinder`, 20 runs:** 15 crashed with `IndexError: string index out of range` in `TaskGraph.recursive_assignment` (`loopstate_info[loopstate_position]`, an unchecked string index); 5 succeeded.
+- **Fixing `PYTHONHASHSEED`** (0 or 7, five runs each) changed neither result. The variation is not string-hash randomisation.
+- **Likely cause** (not proven): the task-graph code keeps sets of `Context` objects, which have no `__hash__` of their own, so they hash by memory address and are walked in a different order on every run.
+- **No switch avoids it:** the task graph is built on every run, whichever patterns are requested, and the Do-All/reduction detector uses it too.
+
+The agent runs the explorer at four places, and none of them retried:
+
+1. the full re-profile after a kept rewrite (`_reprofil`), where a crash means `reprofile_failed` and the rewrite is reverted unless the model annotated it;
+2. the fast refresh (`_reprofil_fast`);
+3. the re-exploration after reconstruction (`--llm-recon`);
+4. the dependence review (`--llm-deps`), which then threw its result away.
+
+In each case a random crash of the comparison tool was treated as a property of the rewrite. On `pathfinder`, three out of four such decisions would have gone against the code for no reason.
+
+**Fix:** `profiling.tools.run_explorer` runs the explorer and, on failure, clears only the explorer's own partial output and runs it again on the **unchanged** profile, up to `EXPLORER_ATTEMPTS` = 20 times. Each retry is printed (`[explorer] attempt N failed (...) — retrying on the same profile`). At a 75 % crash rate, 20 attempts leave a 0.75²⁰ ≈ 0.3 % chance of losing the step. All four call sites use it.
+
+DiscoPoP itself is deliberately not patched. It is the baseline the agent is compared against, and a retry changes nothing about its analysis: it only draws another of its outputs, as a user re-running it would.
+
+**Verified:** mypy **0**. On the `pathfinder` profile, three calls of `run_explorer` all succeeded, after 5, 2 and 4 attempts, with every retry logged. The harness counts the retries per trial (`explorer_retries` in `trial.json` and `trials.csv`) and applies the same policy to its own once-per-run profile (`explore_attempts`, `explore_failures`).
+
+## Fix 61 — A region already covered by an accepted rewrite still received a full model budget
+
+**Files:** `plan/scoring.py`, `benchmark/test_features.py`
+
+**Problem.** When a region is parallelised, `ImpactModel.mark_covered` records its span, and every region nested inside it then has a predicted saving of exactly 0: the time is already won. `build_candidates` dropped a measured region only when its saving was *below* `min_impact`, whose default is 0, so a saving of exactly 0 passed. Each covered region, for example the inner loops of an accepted outer loop, therefore went on to use the full `--budget` of model calls with nothing left to gain.
+
+This is separate from `--restructure-depth`, which decides whether regions *created or revealed* by a kept rewrite may be rewritten in turn. The covered regions here were in the queue from the start (depth 0), so depth never stopped them.
+
+**Fix:** a measured region whose predicted saving is ≤ 0 is dropped from the queue before the `min_impact` test. This applies to Phase A and Phase B alike, since both build their queues with `build_candidates`. Regions without a measurement are unaffected.
+
+**Verified:** new feature check `covered-skip` on the `priority_mix` profile. Covering the outer loop (lines 20–24) removes the 2 regions inside it and keeps the 3 outside. The check **fails with the old comparison restored** (1 passed, 1 failed) and passes with the fix. `impact` and `min-impact` still pass. mypy **0**. Decision D2 in the harness's thesis record (§5d).
+
+## Fix 62 — Model attempts can follow a region's share of runtime (`--budget-policy share`)
+
+**Files:** `args.py`, `plan/scoring.py` (new `region_budget`), `plan/__init__.py`, `phases/phase_a.py`, `phases/report.py`, `benchmark/test_features.py`
+
+**Why.** Every region reaching the model got the same `--budget` of attempts, so a loop at 2 % of runtime cost as much as the kernel at 90 %. The author asked for more attempts where the time is (decision D3 in the harness's thesis record, §5d). The data to set the values does not exist yet: across the three trials in which the model answered, 3 regions were accepted, all on the second attempt, and no third attempt succeeded in about 14. So this change adds the mechanism only. The default stays `fixed`, and no existing arm changes behaviour.
+
+**What.** `--budget-policy {fixed,share}` and `--budget-min` (default 1). Under `share`, a region gets `budget_min + round((budget − budget_min) · f / f_top)` attempts, where `f` is its measured runtime share and `f_top` the largest share among the regions still queued when it is reached. So the top region gets `--budget` and small ones approach `--budget-min`. An unmeasured region gets `--budget-min`. `--budget 0` stays 0 under both policies. Under `share` each region's allowance is logged (`[Tier-2] Budget N (policy share: share X%, largest queued Y%)`), and a region given 0 attempts is skipped before its profile snapshot is taken. Under `fixed` the code path and the log are unchanged.
+
+**Verified:** mypy **0**. New feature check `budget-policy` covers 9 cases: `fixed` unchanged, `share` running from minimum to maximum, unmeasured regions at the minimum, zero staying zero, and the result never above the maximum. `--help` lists the options. The values for the default (`--budget`, `--budget-min`) come from a calibration run on benchmarks held out of the evaluation, before the default changes.
+
+## Fix 63 — The clause check refused correct pragmas on every PolyBench-style kernel
+
+**Files:** `pragmas/scope.py`, `benchmark/test_features.py`
+
+**Problem.** The clause stage rejects `private(x)` when the loop writes `x` and later code reads it, because the writes are then discarded. `_read_after` answered "is it read later?" by treating **any** later mention of the name as a read, except a line beginning with a plain assignment. Three kinds of mention are not reads, and each refused a correct pragma in the observed run `local_obs1`:
+
+1. **The next loop re-initialises the counter.** PolyBench declares `int i, j, k;` once per function and every nest reuses them: `for (j = 0; j < _PB_NJ; j++)` overwrites `j` before reading it, so the parallel loop's value is dead. This is the normal shape of every kernel in the suite.
+2. **A later pragma names it.** `#pragma omp parallel for private(j, k)` for the *next* loop was counted as a read of `j`. A directive reads nothing at runtime.
+3. **A comment mentions it.** The model's own note — `/* Second phase: copy B to A. Independent (i,j) iterations. */` — was counted as a read of `j`. Comments are never stripped in this analysis.
+
+Measured on the recorded candidates: `2mm` was rejected for `private(j, k)` and `jacobi-2d-imper` for `private(i, j)`, both correct pragmas; the same rejection appears twice in `pilot2`. The model then produced `lastprivate(j, k)`, which is accepted but needless, so the defect also costs attempts.
+
+**Fix:** in `_read_after`, comments are blanked first (`_without_comments`, keeping line indices and indentation); directive lines are skipped; and a later `for (name = …; …)` header whose initialiser does not itself read the name is treated as killing the value — the loop's whole span is skipped, while uses **after** it are still examined, because a loop nested inside another may run zero times and leave the old value live. The direction of caution is unchanged: a missed read would ship a wrong program, so only mentions that provably cannot read the stale value are discounted.
+
+**Verified:** all 11 recorded candidates of `2mm`, `jacobi-2d-imper` and `seidel-2d` now pass the clause stage; before the fix, 2 of them were refused. Four cases added to the feature check `clause` (counter re-initialised by the next loop, a later pragma naming it, a comment mentioning it — all three must be accepted; a genuine read after the re-initialising loop — must still be rejected), giving **8/8 verdicts and 16 scope cases**. With the three changes reverted the check **fails on exactly those three cases**. mypy **0**.

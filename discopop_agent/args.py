@@ -64,6 +64,12 @@ class AgentArguments:
     # --timing-cflags: extra compile flags for the builds the speed check TIMES
     # (never for profiling or any correctness check), e.g. a larger dataset.
     timing_cflags: Tuple[str, ...] = ()
+    # --budget-policy: "fixed" gives every region --budget attempts; "share" scales a
+    # region's attempts with its measured runtime share, between --budget-min and
+    # --budget (plan.scoring.region_budget). Decision D3: "share" becomes the default
+    # once a calibration run has fixed its values.
+    budget_policy: str = "fixed"
+    budget_min: int = 1
 
 
 def parse_args() -> AgentArguments:
@@ -76,6 +82,13 @@ def parse_args() -> AgentArguments:
                    help="Path to the C/C++ source file that was profiled")
     p.add_argument("--budget", type=int, default=3,
                    help="Max LLM retry attempts per region (default: 3)")
+    p.add_argument("--budget-policy", choices=["fixed", "share"], default="fixed",
+                   help=("How many attempts each region gets. 'fixed' (default): --budget for "
+                         "every region. 'share': scaled with the region's measured runtime share "
+                         "relative to the largest in the queue, from --budget-min up to --budget; "
+                         "regions without a measurement get --budget-min."))
+    p.add_argument("--budget-min", type=int, default=1,
+                   help="Fewest attempts a region gets under --budget-policy share (default: 1)")
     p.add_argument("--model", default=None,
                    help=("LLM model ID. The default follows --provider, because the two "
                          "name models differently: 'haiku' for claude-agent-sdk (Claude "
@@ -412,6 +425,8 @@ def parse_args() -> AgentArguments:
         discopop_dir=a.discopop_dir,
         source_file=a.source_file,
         budget=a.budget,
+        budget_policy=a.budget_policy,
+        budget_min=a.budget_min,
         model=a.model,
         api_key=api_key,
         provider=a.provider,

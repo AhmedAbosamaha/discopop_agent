@@ -24,7 +24,7 @@ from ..args import AgentArguments
 from ..plan import impact as impact_mod
 from . import fast_refresh
 from ..gate.toolchain import link_flags_for
-from .tools import _explorer_cmd, _venv_env, _wrapper_for
+from .tools import _explorer_cmd, _venv_env, _wrapper_for, run_explorer
 
 
 # Artifacts the instrumented RUN produces.  A fast refresh re-runs only the
@@ -179,10 +179,7 @@ def _reprofil_fast(
         (profiler / "memory_regions.txt").write_text(saved["memory_regions.txt"])
     old_map.unlink(missing_ok=True)
 
-    r = subprocess.run(
-        [_explorer_cmd()], capture_output=True, text=True,
-        cwd=discopop_dir.resolve(), env=env,
-    )
+    r = run_explorer(discopop_dir, env)
     if r.returncode != 0:
         return False, f"explorer failed on the refreshed profile: {r.stderr[-200:]}"
 
@@ -226,10 +223,7 @@ def _reprofil(source_file: str, discopop_dir: Path, binary_args: List[str] | Non
     run_cmd = [str(binary)] + (binary_args or [])
     subprocess.run(run_cmd, capture_output=True, text=True, cwd=src.parent, env=env)
 
-    r = subprocess.run(
-        [_explorer_cmd()], capture_output=True, text=True,
-        cwd=discopop_dir.resolve(), env=env,
-    )
+    r = run_explorer(discopop_dir, env)
     if r.returncode != 0:
         print(f"      [re-profile] explorer failed:\n{r.stderr[-500:]}")
         return False

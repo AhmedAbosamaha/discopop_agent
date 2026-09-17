@@ -62,6 +62,52 @@ def region_fingerprint(
 # ---------------------------------------------------------------------------
 
 
+def demangle(name: str) -> str:
+    """The plain name of an Itanium-mangled C++ symbol, or `name` unchanged.
+
+    DiscoPoP writes C++ function names mangled into Data.xml — `_Z7computeiiPd…`,
+    `_ZL7pb_emitd` for a file-local `static` function, `_ZN3foo3barE…` for a
+    nested one — while everything that NAMES a function (``--exclude-functions``,
+    the source text, the model's prompt) uses the plain name. Returning the
+    innermost identifier is exactly what those comparisons need; parameter types,
+    template arguments and ABI tags are dropped. C names are returned unchanged.
+    """
+    import re
+    if not name.startswith("_Z"):
+        return name
+    i = 2
+    if name.startswith("L", i):             # internal linkage (static)
+        i += 1
+    nested = name.startswith("N", i)
+    if nested:
+        i += 1
+        while i < len(name) and name[i] in "rVKOR":   # cv/ref qualifiers
+            i += 1
+        if name.startswith("St", i):         # std::
+            i += 2
+    last = ""
+    while i < len(name):
+        m = re.match(r"\d+", name[i:])
+        if not m:
+            break
+        n = int(m.group(0))
+        i += len(m.group(0))
+        if i + n > len(name):
+            break
+        last = name[i:i + n]
+        i += n
+        if not nested:
+            break
+        while name.startswith("B", i):        # ABI tag, e.g. B8ne190107
+            t = re.match(r"B(\d+)", name[i:])
+            if not t:
+                break
+            i += len(t.group(0)) + int(t.group(1))
+        if i < len(name) and name[i] in "EI":
+            break
+    return last or name
+
+
 def _parse_data_xml(profiler_dir: Path) -> List[CodeRegion]:
     """
     Parse Data.xml (which may contain multiple <Nodes> root elements from
