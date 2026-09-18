@@ -732,6 +732,20 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         warnings.warn("Not implemented!")
         return queue
 
+    def __function_name_of_loop(self, loop_id: Optional[NodeID]) -> str:
+        """Name of the function that contains the PET loop `loop_id` (cached; "" if unknown)."""
+        if loop_id is None:
+            return ""
+        if not hasattr(self, "_function_name_of_loop_cache"):
+            self._function_name_of_loop_cache: Dict[NodeID, str] = {}
+        if loop_id not in self._function_name_of_loop_cache:
+            try:
+                name = get_parent_function(self.pet, self.pet.node_at(loop_id)).name
+            except Exception:
+                name = ""
+            self._function_name_of_loop_cache[loop_id] = name
+        return self._function_name_of_loop_cache[loop_id]
+
     def __loop_body_cu_ids(self, header_cu_id: NodeID) -> Set[NodeID]:
         """The ids of every CU in the body of the innermost PET loop that contains the CU
         `header_cu_id` (the loop's header, as __break_cycles identifies it), the header
@@ -2523,6 +2537,16 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                     loopstate_position = parent_loop_ctx.loopstate_position
                     if loopstate_position is None:
                         raise ValueError("loopstate position is None")
+                    # A loop state "<function>_loopstate<digits>" has one digit per loop OF THAT
+                    # FUNCTION, and loopstate_position counts loops within the function that owns
+                    # the loop. The search continues into successor contexts after a missed state,
+                    # and a successor may belong to ANOTHER function (the caller, once an inlined
+                    # call is left): its position was then read from the wrong function's digits —
+                    # a silently wrong match when it fits, "IndexError: string index out of range"
+                    # when the other function has more loops (NPB mg: every explorer attempt).
+                    # A loop state can only match a loop of its own function.
+                    if callstate[0].split("_loopstate")[0] != self.__function_name_of_loop(parent_loop_ctx.parent_loop):
+                        return False
                     if int(loopstate_info[loopstate_position]) in ctx.loopstate_iteration_ids:
                         # HIT LOOPSTATE
                         # replace iteration id with processed marker "4"
