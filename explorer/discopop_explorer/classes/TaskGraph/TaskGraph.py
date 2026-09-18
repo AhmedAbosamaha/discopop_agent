@@ -732,6 +732,29 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         warnings.warn("Not implemented!")
         return queue
 
+    def __loop_body_cu_ids(self, header_cu_id: NodeID) -> Set[NodeID]:
+        """The ids of every CU in the body of the innermost PET loop that contains the CU
+        `header_cu_id` (the loop's header, as __break_cycles identifies it), the header
+        included; empty when the CU is in no loop. Cached per header."""
+        if not hasattr(self, "_loop_body_cu_ids_cache"):
+            self._loop_body_cu_ids_cache: Dict[NodeID, Set[NodeID]] = {}
+        if header_cu_id in self._loop_body_cu_ids_cache:
+            return self._loop_body_cu_ids_cache[header_cu_id]
+        from discopop_explorer.functions.PEGraph.queries.subtree import subtree_of_type
+        from discopop_explorer.functions.PEGraph.traversal.children import direct_children
+
+        body: Set[NodeID] = set()
+        try:
+            cu = self.pet.node_at(header_cu_id)
+            loops = [s for s, t, d in in_edges(self.pet, cu.id, EdgeType.CHILD)
+                     if isinstance(self.pet.node_at(s), LoopNode)]
+            if loops:
+                body = {n.id for n in subtree_of_type(self.pet, self.pet.node_at(loops[0]), CUNode)}
+        except Exception:  # an unknown id, or a marker node without a PET node: not a loop header
+            body = set()
+        self._loop_body_cu_ids_cache[header_cu_id] = body
+        return body
+
     def __break_cycles(self) -> None:
         # search for cycles in each function and replace them with two distinct iteraions
         logger.info("Breaking cycles...")
@@ -797,6 +820,23 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                         continue
 
                 iteration_exit_points: List[TGNode] = [p for p in self.get_predecessors(entry_node) if p in cycle_nodes]
+                # A loop body with several paths back to its header — `continue` statements, or
+                # the arms of a branch that both end the iteration — has several back edges,
+                # but nx.find_cycle reports ONE cycle, so only that cycle's back edge was broken
+                # and marked. The remaining back edges were then re-wired to the new StartLoop
+                # marker together with the loop's real predecessors (below), which produced a
+                # second cycle through the same header, a second set of markers chained onto
+                # the first (StartIteration -> StartIteration), and "Invalid iteration
+                # structure" in __assign_loop_contexts (Rodinia nw, traceback loop with three
+                # `continue`s). Every predecessor of the header that lies in the loop's own
+                # body, as the CU graph knows it, is a back edge and gets its own
+                # end-of-iteration marker in this first pass.
+                if entry_node is not None and entry_node.pet_node_id is not None:
+                    body_cus = self.__loop_body_cu_ids(entry_node.pet_node_id)
+                    for pred in self.get_predecessors(entry_node):
+                        if pred not in iteration_exit_points and pred is not entry_node \
+                                and pred.pet_node_id in body_cus:
+                            iteration_exit_points.append(pred)
 
                 #                print("Found entry node: ", entry_node.get_label() if entry_node is not None else "NONE")
                 #                print("Found exit node: ", exit_node.get_label() if exit_node is not None else "NONE")

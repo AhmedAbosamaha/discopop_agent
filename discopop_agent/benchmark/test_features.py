@@ -35,6 +35,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import json
 import shutil
 import subprocess
 import sys
@@ -2116,6 +2117,71 @@ def check_noise_floor_inputs(work: Path) -> Result:
                                 f"a correct reduction passes the gate and Settle")
 
 
+_MULTI_BACKEDGE_SRC = r"""
+#include <stdio.h>
+#include <stdlib.h>
+#define N 60
+static int m[N * N];
+static double b[N * N];
+int main(void) {
+  int i, j;
+  for (i = 0; i < N * N; i++) { m[i] = (i * 7919) % 13; b[i] = 0.0; }
+  /* a loop with several paths back to its header: two `continue`s and the plain end */
+  for (i = 0; i < N * N; i++) {
+    if (i % 3 == 0) { b[i] = m[i] * 2.0; continue; }
+    if (i % 5 == 0) { b[i] = m[i] + 1.0; continue; }
+    b[i] = m[i] - 1.0;
+  }
+  /* Rodinia nw's traceback walk: a short-circuit condition in the header (a branch at the
+     loop's entry), no increment, and three `continue`s — four back edges to one header */
+  long walked = 0;
+  for (i = N - 1, j = N - 1; i >= 0 && j >= 0;) {
+    int here = m[i * N + j];
+    if (i == 0 && j == 0) break;
+    walked += here;
+    if (i > 0 && j > 0 && here % 3 == 0) { i--; j--; continue; }
+    else if (j > 0 && here % 3 == 1) { j--; continue; }
+    else if (i > 0) { i--; continue; }
+    else { break; }
+  }
+  double s = 0.0;
+  for (i = 0; i < N * N; i++) s += b[i];
+  printf("%.3f %ld\n", s, walked);
+  return 0;
+}
+"""
+
+
+def check_explorer_multi_backedge(work: Path) -> Result:
+    """DiscoPoP's explorer must analyse a loop with several back edges (Fix 80).
+
+    The task-graph builder broke ONE cycle per loop header and re-wired the other
+    back edges — `continue` statements, the arms of a branch — to the new StartLoop
+    marker, which made a second cycle through the same header, a second set of
+    markers chained onto the first and 'Invalid iteration structure' in
+    __assign_loop_contexts.  Rodinia nw's traceback loop (three `continue`s) failed
+    that way on every attempt, so no trial of nw could have existed.  Here: one
+    bounded loop with two `continue`s and one unbounded loop that leaves only by
+    break/continue; the explorer must finish and report the bounded loop's
+    independent iterations as a Do-All.
+    """
+    name = "explorer multi-backedge"
+    d = work / "multi_backedge"
+    shutil.rmtree(d, ignore_errors=True)
+    d.mkdir(parents=True)
+    (d / "walk.c").write_text(_MULTI_BACKEDGE_SRC)
+    ok, err = _profile(d, "walk.c", hotspots=False, c_as_c=True)
+    if not ok:
+        return Result(name, "fail", err[:200])
+    patterns = json.loads((d / ".discopop" / "explorer" / "patterns.json").read_text())["patterns"]
+    lines = sorted(int(str(p.get("start_line", "0:0")).split(":")[1]) for p in patterns.get("do_all", []))
+    src_lines = _MULTI_BACKEDGE_SRC.splitlines()
+    want = next(i for i, l in enumerate(src_lines, 1) if "for (i = 0; i < N * N; i++) {" in l)
+    if want not in lines:
+        return Result(name, "fail", f"the loop with two `continue`s (line {want}) is not a Do-All; do_all at {lines}")
+    return Result(name, "pass", f"explorer finished; Do-All at lines {lines} includes the multi-back-edge loop ({want})")
+
+
 _CHECKS: List[Tuple[str, Callable[[Path], Result]]] = [
     ("impact", check_impact_ranking),
     ("min-impact", check_min_impact),
@@ -2145,6 +2211,7 @@ _CHECKS: List[Tuple[str, Callable[[Path], Result]]] = [
     ("timing-size", check_timing_size),
     ("omp-include", check_omp_include),
     ("exclude-cxx", check_exclude_cxx),
+    ("explorer-multi-backedge", check_explorer_multi_backedge),
 ]
 
 
