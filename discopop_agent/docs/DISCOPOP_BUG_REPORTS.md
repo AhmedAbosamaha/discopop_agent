@@ -15,7 +15,7 @@ LLVM 19 (macOS) and LLVM 20 (Linux).
 |---|---|---|---|
 | B1 | explorer, `ASTLoader.build_path_mapping` | fixed (agent Fix 78) | files reached through a relative include path lose every `private`/`firstprivate` clause |
 | B2 | explorer, `TaskGraph.__break_cycles` | fixed (agent Fix 80) | a loop with several back edges (`continue`) crashes the task-graph builder |
-| B3 | profiler, `utils/CFA.cpp` + `instrumentLoopExit` | **diagnosed, fix pending** | a loop that is the last statement of an `else` block gets no loop markers → explorer `IndexError` at random, and silently wrong loop-state matching |
+| B3 | profiler, `utils/CFA.cpp` + `instrumentLoopExit` | fixed (agent Fix 81) | a loop that is the last statement of an `else` block gets no loop markers → explorer `IndexError` at random, and silently wrong loop-state matching |
 | B4 | explorer, task-graph traversal order | open (consequence of B3, to re-measure after it) | the explorer's output differs between runs on one unchanged profile |
 | L1 | profiler | limitation | NPB-CPP `lu` (4,134 lines): the instrumenting compile exceeds two hours |
 | L2 | profiler + explorer | limitation | Rodinia `nw`: 531,606 call-path states; the explorer's state assignment needs ≈ 25 h |
@@ -71,10 +71,14 @@ matched to the wrong position without any error**, which changes which dependenc
 as loop-carried. Whether a run crashes depends only on whether the traversal
 (`ret_val or recursive_assignment(...)`, over sets) reaches the out-of-range context before
 it short-circuits — hence "random", and independent of `PYTHONHASHSEED`.
-**Fix (planned).** In `CFA.cpp`, do not require a debug line in the exit block; in
-`instrumentLoopExit`, fall back to the loop header's line id when the exit block has none.
-Then re-measure explorer determinism (T0.7) and profile stability (T0.2).
-**Reproducer.** `agent/prepared/rodinia-3.1/pathfinder/pathfinder.cpp` in the harness;
+**Fix.** `CFA.cpp` no longer requires a debug line in the exit block (a valid header is
+enough); `instrumentLoopExit(bb, id, fallbackLID)` marks an exit block that has no line id
+with the loop header's. **Measured:** `pathfinder`, one profile, explorer run ten times —
+before 1 of 6 runs finished, after **10 of 10**; `pf_init`'s loop states have 6 positions
+for its 6 loops. DiscoPoP's own profiler tests: 184 of 184 pass; the agent's suite passes.
+What remains after the fix is B4 (1 run in 10 still reports 11 Do-Alls instead of 10).
+**Reproducer.** agent feature check `profiler-else-loop` (5 positions before, 6 after);
+`agent/prepared/rodinia-3.1/pathfinder/pathfinder.cpp` in the harness;
 `discopop_cxx -S -emit-llvm` shows five `__dp_loop_entry` calls in `pf_init`; minimal form:
 a function whose last statement inside an `else { … }` is a loop nest.
 

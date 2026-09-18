@@ -36,6 +36,7 @@ from __future__ import annotations
 import argparse
 import os
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -2182,6 +2183,68 @@ def check_explorer_multi_backedge(work: Path) -> Result:
     return Result(name, "pass", f"explorer finished; Do-All at lines {lines} includes the multi-back-edge loop ({want})")
 
 
+_ELSE_LOOP_SRC = r"""
+#include <stdio.h>
+#include <stdlib.h>
+#define N 40
+static double w[N][N], r[N];
+static void fill(int seeded) {
+  int i, j;
+  for (i = 0; i < N; i++) r[i] = 0.0;
+  if (seeded) {
+    for (i = 0; i < N; i++)
+      for (j = 0; j < N; j++)
+        w[i][j] = (double)((i * 31 + j * 17) % 10);
+  } else {
+    for (i = 0; i < N; i++)
+      for (j = 0; j < N; j++)
+        w[i][j] = (double)((i + j) % 10);
+  }
+  for (j = 0; j < N; j++) r[j] = w[0][j];
+}
+int main(int argc, char** argv) {
+  fill(argc > 1);
+  double s = 0.0;
+  for (int j = 0; j < N; j++) s += r[j];
+  printf("%.1f\n", s);
+  return 0;
+}
+"""
+
+
+def check_profiler_else_loop(work: Path) -> Result:
+    """Every loop of a function gets loop markers — also one that ends an `else` block.
+
+    DiscoPoP bug B3 (docs/DISCOPOP_BUG_REPORTS.md): clang gives the branch that ends an
+    `else` block no debug line, the profiler skipped a loop whose exit block had none, and
+    the function's call-path loop states came out one position short.  The explorer then
+    indexed past them (IndexError in TaskGraph.recursive_assignment, on SOME runs of one
+    profile: pathfinder 40 of 60, NPB mg every attempt) and matched every later loop of the
+    function to the wrong position.  Here `fill` has six loops, one nest ending an `else`:
+    its loop states must have six positions, and the explorer must finish five times of five.
+    """
+    name = "profiler else-loop"
+    d = work / "else_loop"
+    shutil.rmtree(d, ignore_errors=True)
+    d.mkdir(parents=True)
+    (d / "fill.c").write_text(_ELSE_LOOP_SRC)
+    ok, err = _profile(d, "fill.c", hotspots=False, c_as_c=True)
+    mapping = d / ".discopop" / "profiler" / "stateID_to_callpath_mapping.txt"
+    if not mapping.exists():
+        return Result(name, "fail", f"no call-path mapping: {err[:160]}")
+    widths = {len(m) for m in re.findall(r"\bfill_loopstate(\d+)", mapping.read_text())}
+    if widths != {6}:
+        return Result(name, "fail", f"`fill` has 6 loops, its loop states have {sorted(widths)} positions")
+    crashes = 0 if ok else 1
+    for _ in range(4):
+        shutil.rmtree(d / ".discopop" / "explorer", ignore_errors=True)
+        good, _e = _run([_venv_bin("discopop_explorer")], d / ".discopop")
+        crashes += not good
+    if crashes:
+        return Result(name, "fail", f"the explorer crashed in {crashes} of 5 runs on one profile")
+    return Result(name, "pass", "6 loops, 6 loop-state positions; explorer finished 5 of 5 runs")
+
+
 _CHECKS: List[Tuple[str, Callable[[Path], Result]]] = [
     ("impact", check_impact_ranking),
     ("min-impact", check_min_impact),
@@ -2212,6 +2275,7 @@ _CHECKS: List[Tuple[str, Callable[[Path], Result]]] = [
     ("omp-include", check_omp_include),
     ("exclude-cxx", check_exclude_cxx),
     ("explorer-multi-backedge", check_explorer_multi_backedge),
+    ("profiler-else-loop", check_profiler_else_loop),
 ]
 
 

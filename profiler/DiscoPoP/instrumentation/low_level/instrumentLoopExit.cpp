@@ -12,10 +12,11 @@
 
 #include "../../DiscoPoP.hpp"
 
-void DiscoPoP::instrumentLoopExit(BasicBlock *bb, int32_t id) {
+void DiscoPoP::instrumentLoopExit(BasicBlock *bb, int32_t id, LID fallbackLID) {
   BasicBlock *currentBB = bb;
   vector<Value *> args;
   LID lid = 0;
+  bool inserted = false;
 
   for (BasicBlock::iterator BI = currentBB->begin(), EI = currentBB->end(); BI != EI; ++BI) {
     lid = getLID(&*BI, fileID);
@@ -30,7 +31,20 @@ void DiscoPoP::instrumentLoopExit(BasicBlock *bb, int32_t id) {
       CallInst::Create(DpLoopExit, args, "",
                        &*currentBB->begin()); // always insert to the beiginning
 #endif
+      inserted = true;
       break;
     }
+  }
+  // No instruction of the exit block has a line id (see CFA.cpp): mark the exit with the
+  // loop header's line instead of leaving the loop without markers.
+  if (!inserted && fallbackLID > 0) {
+    args.push_back(ConstantInt::get(Int32, fallbackLID));
+    args.push_back(ConstantInt::get(Int32, id));
+    args.push_back(ConstantInt::get(Int32, 0));
+#if LLVM_VERSION_MAJOR >= 22
+    CallInst::Create(DpLoopExit, args, "", currentBB->getFirstInsertionPt());
+#else
+    CallInst::Create(DpLoopExit, args, "", &*currentBB->getFirstInsertionPt());
+#endif
   }
 }

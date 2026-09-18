@@ -102,16 +102,33 @@ void DiscoPoP::CFA(Function &F, LoopInfo &LI) {
           break;
       }
 
-      if (hasValidEntry && hasValidExit) {
+      // A loop's exit block may carry no debug line at all: clang gives the branch that ends an
+      // `else` block no location, so a loop that is the last statement of an `else` has a
+      // `for.end` holding only `br label %if.end`. Such a loop used to be skipped here — no
+      // __dp_loop_entry, no __dp_loop_exit — while loop_meta and the CU graph still listed it.
+      // The static call-path states are built from the __dp_loop_entry calls in the IR, so the
+      // function's loop-state strings were one position short: the explorer indexed past them
+      // (IndexError in TaskGraph.recursive_assignment, on some runs) and matched every later loop
+      // of the function to the wrong position without any error. The exit marker now falls back
+      // to the header's line id (instrumentLoopExit), so a valid header is enough.
+      (void)hasValidExit;
+      if (hasValidEntry) {
         auto tmp_loop_id = get_or_register_loop_id(L);
         // Instrument loop header block.
         instrumentLoopEntry(tmpBB, tmp_loop_id);
 
+        // line id of the header, for exit blocks without one
+        LID headerLID = 0;
+        for (BasicBlock::iterator HI = tmpBB->begin(), HE = tmpBB->end(); HI != HE; ++HI) {
+          headerLID = getLID(&*HI, fileID);
+          if (headerLID > 0)
+            break;
+        }
 
         // Instrument loop exit block(s).
         for (SmallVectorImpl<BasicBlock *>::iterator EI = RealExitBlocks.begin(), END = RealExitBlocks.end(); EI != END;
              ++EI) {
-          instrumentLoopExit(*EI, tmp_loop_id);
+          instrumentLoopExit(*EI, tmp_loop_id, headerLID);
         }
       }
     }

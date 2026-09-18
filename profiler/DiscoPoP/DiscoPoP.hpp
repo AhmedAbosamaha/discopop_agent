@@ -180,7 +180,7 @@ private:
 
   void instrumentLoopEntry(BasicBlock *bb, int32_t id);
 
-  void instrumentLoopExit(BasicBlock *bb, int32_t id);
+  void instrumentLoopExit(BasicBlock *bb, int32_t id, LID fallbackLID = 0);
 
   int64_t uniqueNum;
 
