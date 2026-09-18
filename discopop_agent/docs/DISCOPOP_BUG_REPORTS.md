@@ -16,9 +16,11 @@ LLVM 19 (macOS) and LLVM 20 (Linux).
 | B1 | explorer, `ASTLoader.build_path_mapping` | fixed (agent Fix 78) | files reached through a relative include path lose every `private`/`firstprivate` clause |
 | B2 | explorer, `TaskGraph.__break_cycles` | fixed (agent Fix 80) | a loop with several back edges (`continue`) crashes the task-graph builder |
 | B3 | profiler, `utils/CFA.cpp` + `instrumentLoopExit` | fixed (agent Fix 81) | a loop that is the last statement of an `else` block gets no loop markers → explorer `IndexError` at random, and silently wrong loop-state matching |
+| B5 | explorer, `TaskGraph.recursive_assignment` | fixed (agent Fix 82) | a loop state of one function is matched against loops of another → `IndexError` (NPB `mg`, every attempt) or a silent wrong match |
 | B4 | explorer, task-graph traversal order | open (consequence of B3, to re-measure after it) | the explorer's output differs between runs on one unchanged profile |
 | L1 | profiler | limitation | NPB-CPP `lu` (4,134 lines): the instrumenting compile exceeds two hours |
 | L2 | profiler + explorer | limitation | Rodinia `nw`: 531,606 call-path states; the explorer's state assignment needs ≈ 25 h |
+| L3 | explorer | limitation | NPB `mg`: 5,118 states at ≈ 1.5 s each — ≈ 2 h per explorer run (state assignment re-walks the context tree per state) |
 
 ---
 
@@ -88,3 +90,17 @@ Measured (harness T0.7, 60 runs per program): 2mm — the `shared()` clause of s
 present or empty, 50 distinct task-pattern sets; `pathfinder` — 10 or 11 Do-Alls; NPB `is`
 — 14 task sets. To be re-measured once B3 is fixed, since B3 makes the state matching
 depend on traversal order.
+
+## B5 — a loop state is matched against loops of another function
+
+**Symptom.** Same `IndexError` as B3, but on every run, and with every function's loop-state
+width correct (NPB `mg` after B3's fix).
+**Cause.** In `recursive_assignment`, an `IterationContext` reads digit
+`loopstate_position` of `callstate[0]` without checking that the string belongs to the
+function owning that loop. After a missed state the search continues with
+`ctx.successor`, which can be a context of the *caller*; its position then indexes the
+callee's (shorter) string — or silently matches the wrong digit when it fits.
+**Fix.** Return a miss unless `callstate[0].split("_loopstate")[0]` equals the name of the
+loop's parent function.
+**Reproducer.** NPB-CPP `mg` (class S) profiled through a unity unit; the explorer fails
+within five minutes on every run without the check.

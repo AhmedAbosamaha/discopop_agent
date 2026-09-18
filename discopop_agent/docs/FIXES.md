@@ -1513,3 +1513,13 @@ When a self-annotated rewrite was kept but its re-profile failed, the rest of th
 **Fix.** A valid header is enough; an exit block without a line id is marked with the header's.
 
 **Verified:** `profiler-else-loop` check (six loops, one nest ending an `else`: 5 loop-state positions and a failing check on the unfixed pass, 6 positions and five explorer runs of five on the fixed one). `pathfinder`: explorer finished 1 of 6 runs before, **10 of 10 after**. DiscoPoP's own profiler tests 184/184; agent suite 28 passed, 1 skipped (the known explorer-instability skip), 0 failed. The 20-attempt retry stays as a safety net and its count is recorded per profile; profiles and instrument studies taken before this fix (T0.2, T0.6, T0.7, T0.8) describe the unfixed pass and are re-run.
+
+## Fix 82 — DiscoPoP's explorer: a loop state is matched only against loops of its own function
+
+**Files:** `explorer/discopop_explorer/classes/TaskGraph/TaskGraph.py` (`recursive_assignment`, new `__function_name_of_loop`). Upstream report: `docs/DISCOPOP_BUG_REPORTS.md` B5.
+
+**Problem.** With Fix 81 every function of NPB `mg` has as many loop-state positions as loops, and the explorer still stopped with the same `IndexError` on every attempt. A call-path element `<function>_loopstate<digits>` carries one digit per loop *of that function*; `recursive_assignment` reads digit `loopstate_position` of it for the loop context it is visiting, and after a missed state it continues into successor contexts — which may belong to another function (the caller, once an inlined call is left). The position is then read from the wrong function's digits: a wrong match when it fits, an `IndexError` when the other function has more loops.
+
+**Fix.** A loop state is compared only with loops whose function it names; otherwise it is a miss.
+
+**Verified:** `mg`'s profile on the server gets past the crash (every earlier attempt died within 5 minutes). Do-All/reduction sets unchanged on 2mm, vecsum, NPB `is`; pathfinder 5 of 5; explorer tests 100/100; mypy 0. **What this exposes:** `mg`'s state assignment then walks 5,118 call-path states at ≈ 1.5 s each — about two hours per explorer run (measured run in progress). Like `nw`, a scalability limit of the call-path-state design, to be decided on (optimise, or report).
