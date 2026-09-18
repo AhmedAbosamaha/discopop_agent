@@ -9,12 +9,13 @@ failed last time and what DiscoPoP made of the model's own rewrite.
 from __future__ import annotations
 
 from pathlib import Path
+from typing import List
 
 from ..plan import find_enclosing_function, region_fingerprint
-from ..types import EvidencePackage, HotspotCandidate
+from ..types import Dependency, EvidencePackage, HotspotCandidate
 from .blockers import _var_classification, load_prevented_deps
-from .context import (_brace_match_end, _demangle, _extract_source_region,
-                      _line_text_map,
+from .context import (_array_accesses, _brace_match_end, _demangle,
+                      _extract_source_region, _inner_patterns, _line_text_map,
                       _load_calls_in_region, _load_local_vars,
                       _load_loop_nest, _load_loop_trip_counts, _read_span)
 from .deps import (_all_observed_dep_vars, _load_dependencies,
@@ -31,8 +32,12 @@ def assemble(
     fingerprint = region_fingerprint(
         candidate.source_file, region.start_line, region.end_line, region.name
     )
-    raw, war, waw = _load_dependencies(profiler_dir, region.start_line, region.end_line)
-    reductions = _load_reductions(profiler_dir, region.start_line, region.end_line)
+    # In a project every line number is qualified by the region's file; for a
+    # single-file program there is only one file and nothing to qualify.
+    from .. import project as project_mod
+    fid = region.file_id if project_mod.active() is not None else None
+    raw, war, waw = _load_dependencies(profiler_dir, region.start_line, region.end_line, fid)
+    reductions = _load_reductions(profiler_dir, region.start_line, region.end_line, fid)
     source_region = _extract_source_region(
         candidate.source_file, region.start_line, region.end_line
     )
@@ -75,7 +80,7 @@ def assemble(
     )
     observed_vars = _all_observed_dep_vars(profiler_dir)
     static_only = _load_static_only_vars(
-        profiler_dir, observed_vars, region.start_line, region.end_line
+        profiler_dir, observed_vars, region.start_line, region.end_line, fid
     )
 
     # Structural facts: loop nest with induction variables, declared variable
@@ -94,6 +99,34 @@ def assemble(
         max(fn_end, region.end_line) + 2,
     )
 
+    # Which names are ARRAYS is read from the source, not guessed from DiscoPoP's
+    # spelling: it prefixes array accesses with GEPRESULT_ in C++ and names them
+    # plainly in C, so every PolyBench array used to reach the model tagged [scalar]
+    # — next to a digest line saying scalar dependences are "usually a reused
+    # location, not a value travelling between iterations" (review P1).
+    accesses = _array_accesses(candidate.source_file, min(fn_start, region.start_line),
+                               max(fn_end, region.end_line))
+    arrays = set(accesses)
+
+    def _retag(deps: List[Dependency]) -> List[Dependency]:
+        # One spelling per variable: DiscoPoP's prefixed form arrives as `b[]`, its
+        # plain form as `b` — sometimes both for one array in the same profile — and
+        # the access summary and the source say `b`.
+        out: List[Dependency] = []
+        seen = set()
+        for d in deps:
+            var = d.variable[:-2] if d.variable.endswith("[]") else d.variable
+            kind = "array" if (var in arrays or d.kind == "array") else d.kind
+            key = (d.dep_type, d.from_line, d.to_line, var)
+            if key not in seen:
+                seen.add(key)
+                out.append(Dependency(d.dep_type, d.from_line, d.to_line, var, kind))
+        return out
+
+    raw, war, waw = _retag(raw), _retag(war), _retag(waw)
+    region_accesses = _array_accesses(candidate.source_file, region.start_line, region.end_line)
+    inner = _inner_patterns(profiler_dir.parent, region.file_id, region.start_line,
+                            region.end_line, region.start_line)
     return EvidencePackage(
         region_id=region.region_id,
         region_type=region.region_type,
@@ -124,4 +157,7 @@ def assemble(
         enclosing_function_start=fn_start,
         enclosing_function_end=fn_end,
         enclosing_function_source=fn_source,
+        array_accesses=region_accesses,
+        inner_patterns=inner,
+        runtime_share=candidate.runtime_fraction,
     )

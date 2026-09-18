@@ -14,16 +14,18 @@ pragma most likely to matter is measured against the cleanest baseline.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
+from .. import project as project_mod
 from ..args import AgentArguments
 from ..gate import _validate_cached, measure_marginal, noise_floor
 from ..plan import build_candidates, region_fingerprint
 from ..plan import impact as impact_mod
 from ..pragmas import (_already_annotated, _read_tier1_patch,
                        _repair_pragma_clauses, check_pragma_clauses,
-                       derive_pragma_patch)
+                       derive_pragma_patch, existing_parallel_spans)
 from ..sources import _apply_in_memory, _apply_to_source
+from ..types import HotspotCandidate
 from .report import _record_candidate, _write_record
 from .verdicts import _MARGINAL_NOISE
 
@@ -86,28 +88,48 @@ def _phase_b(
             print(f"  [warn] could not calibrate timing noise ({ndiag[:60]}); "
                   f"falling back to {threshold:.2f}\n")
 
-    # Spans that already carry a pragma applied by THIS pass.  `todo` is built
-    # once, before the loop, so impact.mark_covered() cannot remove a nested
-    # candidate from it, and _already_annotated() only matches the SAME loop
-    # header — neither catches an inner loop whose enclosing loop was just
-    # annotated.  Until now that was caught only by the marginal measurement
-    # (the inner pragma scores ~1.0x and is dropped), which means
-    # --no-require-speedup let one through.
-    applied_spans: List[Tuple[int, int, int]] = []
+    # Spans that already run in parallel: loops annotated by THIS pass, and loops
+    # that were parallel on entry — a Phase A rewrite the model annotated itself.
+    # `todo` is built once, before the loop, so impact.mark_covered() cannot remove
+    # a nested candidate from it, and _already_annotated() only matches the SAME
+    # loop header — neither catches an inner loop whose enclosing loop is parallel.
+    # The entry scan matters when there are no runtime measurements
+    # (--no-hotspots): "covered" is then unknown, and DiscoPoP's pragma for an
+    # inner loop went INSIDE the model's parallel loop — a nested region that the
+    # safety gate passes and, with the speed check off, nothing removes.
+    applied_spans: List[Tuple[Optional[int], int, int]] = []
+    if args.project is None:
+        applied_spans = [(None, a, b) for a, b in
+                         existing_parallel_spans(Path(args.source_file).read_text())]
+    else:
+        # One scan per project file, each span tied to that file's DiscoPoP id.
+        for fid, path in project_mod.load_file_mapping(dp_dir).items():
+            if args.project.contains(path) and path.is_file():
+                applied_spans += [(fid, a, b) for a, b in
+                                  existing_parallel_spans(path.read_text())]
+    if applied_spans:
+        print(f"  {len(applied_spans)} loop(s) are already parallel in the source; "
+              f"nothing is nested inside them.\n")
 
-    for cand in todo:
+    def annotate(cand: HotspotCandidate, ptype: Optional[str],
+                 pattern: Optional[Dict[str, Any]]) -> str:
+        """Try ONE of DiscoPoP's patterns for this loop.
+
+        Returns "kept", "skipped" (nothing about this pattern — an alternative would
+        fare the same) or "dropped" (this pattern's pragma failed: try the next)."""
+        project_mod.work_on(args, cand.source_file)
         rid = cand.region.region_id
-        pid = cand.pattern.get("pattern_id", "?") if cand.pattern else "?"
-        pragma = (cand.pattern or {}).get("pragma", "")
+        pid = pattern.get("pattern_id", "?") if pattern else "?"
+        pragma = (pattern or {}).get("pragma", "")
         lines = f"{cand.region.start_line}–{cand.region.end_line}"
-        print(f"┌─ pattern #{pid}  {cand.pattern_type or 'pattern'} @ lines {lines}"
+        print(f"┌─ pattern #{pid}  {ptype or 'pattern'} @ lines {lines}"
               f"  (W={cand.workload_estimate:.0f})")
         print(f"│  {pragma}")
 
         if cand.workload_estimate < args.min_workload:
             print(f"│  workload below --min-workload → not worth a thread")
             print(f"└─ SKIPPED\n")
-            continue
+            return "skipped"
 
         # Re-derive against the file as it stands: earlier pragmas in this same
         # phase have already moved every line below them.
@@ -121,20 +143,20 @@ def _phase_b(
         if not diff:
             print(f"│  no generated patch on disk")
             print(f"└─ SKIPPED\n")
-            continue
+            return "dropped"
 
         if _already_annotated(diff, args.source_file):
             print(f"│  this loop is already annotated in the source")
             print(f"└─ SKIPPED (nothing to add)\n")
-            continue
+            return "skipped"
 
-        # Nested inside a loop this pass already parallelized.  Applying it
+        # Nested inside a loop that already runs in parallel.  Applying it
         # would put one worksharing construct inside another; with nesting off
         # (the OpenMP default) the inner team is a single thread, so it buys
         # nothing and costs the region's own overhead.
         enclosing = next(
             ((f, a, b) for f, a, b in applied_spans
-             if f == cand.region.file_id
+             if (f is None or f == cand.region.file_id)
              and a <= cand.region.start_line and cand.region.end_line <= b),
             None,
         )
@@ -142,7 +164,7 @@ def _phase_b(
             print(f"│  nested inside the already-parallelized region at lines "
                   f"{enclosing[1]}–{enclosing[2]}")
             print(f"└─ SKIPPED (enclosing loop is already parallel)\n")
-            continue
+            return "skipped"
 
         # 1. static — the only check that sees a clause handing back a value it
         #    cannot hand back.
@@ -150,15 +172,15 @@ def _phase_b(
         if problem:
             _record_candidate(output_dir, {
                 "phase": "B", "region_id": cand.region.region_id, "passed": False,
-                "stage": "clause", "diagnostic": problem[:2000],
+                "stage": "clause", "diagnostic": problem[:2000], "pattern_type": ptype,
             }, diff, args.dry_run)
             print(f"│  clause check: {problem}")
             print(f"└─ DROPPED (bad data-sharing clause)\n")
-            continue
+            return "dropped"
 
         if args.dry_run:
             print(f"└─ DRY RUN — not applied\n")
-            continue
+            return "skipped"
 
         # 2. does it work?  Everything except the timing.
         res, from_cache, barrier_fp = _validate_cached(
@@ -171,6 +193,7 @@ def _phase_b(
             "phase": "B", "region_id": cand.region.region_id, "passed": res.passed,
             "stage": res.stage, "diagnostic": (res.diagnostic or "")[:2000],
             "from_cache": from_cache, "barrier_false_positive": barrier_fp,
+            "pattern_type": ptype,
         }, diff, args.dry_run)
         if barrier_fp:
             print(f"│  TSan OMP-barrier false positive — re-verified on output")
@@ -178,7 +201,7 @@ def _phase_b(
             print(f"│  gate failed at '{res.stage}': "
                   f"{res.diagnostic[:150].replace(chr(10), ' ')}")
             print(f"└─ DROPPED\n")
-            continue
+            return "dropped"
 
         # 3. is it worth it?  Only when the user asked for that question.
         marginal = None
@@ -188,7 +211,7 @@ def _phase_b(
             if after is None:
                 print(f"│  could not stage the patch for measurement")
                 print(f"└─ DROPPED\n")
-                continue
+                return "dropped"
             ok_m, marginal, mdiag = measure_marginal(
                 before, after, args.source_file, binary_args,
                 extra_flags=list(args.timing_cflags) or None,
@@ -196,59 +219,70 @@ def _phase_b(
             if not ok_m:
                 print(f"│  measurement failed: {mdiag[:120]}")
                 print(f"└─ DROPPED\n")
-                continue
+                return "dropped"
             if marginal < threshold:
                 print(f"│  marginal {marginal:.2f}× — costs more than it saves")
                 print(f"└─ DROPPED (slower)\n")
-                continue
+                return "dropped"
             print(f"│  marginal {marginal:.2f}×")
             if impact is not None and impact.available:
                 impact.observe_speedup(marginal)
 
+        fp_before = region_fingerprint(args.source_file, cand.region.start_line,
+                                       cand.region.end_line, cand.region.name)
+        if args.apply_patches and not _apply_to_source(diff, args.source_file,
+                                                       output_dir, "Phase-B"):
+            print(f"└─ DROPPED (patch would not apply)\n")
+            return "dropped"
+        # Only now is this loop spoken for.  Marking it before the patch had
+        # actually gone in left a failed apply "covering" every loop inside it.
         if impact is not None and impact.available:
             impact.mark_covered(cand.region.file_id, cand.region.start_line,
                                 cand.region.end_line)
         applied_spans.append((cand.region.file_id, cand.region.start_line,
                               cand.region.end_line))
-        fp_before = region_fingerprint(args.source_file, cand.region.start_line,
-                                       cand.region.end_line, cand.region.name)
-        if not args.apply_patches:
-            # Recorded and validated, but deliberately not written: the patch
-            # stays in patch_generator/ and accepted.json describes it.
-            print(f"└─ VALIDATED, not written (--no-apply-patches)\n")
-            kept.append({
-                "region_id": rid, "region_type": cand.region.region_type,
-                "phase": "B", "pattern_id": pid, "pragma": pragma, "lines": lines,
-                "marginal_speedup": marginal, "applied_to_source": False,
-                "evidence": dict(res.evidence),
-            })
-            continue
-        if not _apply_to_source(diff, args.source_file, output_dir, "Phase-B"):
-            print(f"└─ DROPPED (patch would not apply)\n")
-            continue
-
         record = {
             "region_id": rid,
             "region_type": cand.region.region_type,
             "phase": "B",
             "pattern_id": pid,
+            "pattern_type": ptype,
             "pragma": pragma,
             "lines": lines,
             "marginal_speedup": marginal,
-            "applied_to_source": True,
+            "applied_to_source": bool(args.apply_patches),
             # What the gate actually leaned on: "exact" means byte-identical
             # output, "numeric" means the values moved and were judged against
             # the measured noise floor.  `schedules` lists the thread/schedule
             # configurations the race check covered.
             "evidence": dict(res.evidence),
         }
+        kept.append(record)
+        if not args.apply_patches:
+            # Recorded and validated, but deliberately not written: the patch
+            # stays in patch_generator/ and accepted.json describes it.
+            print(f"└─ VALIDATED, not written (--no-apply-patches)\n")
+            return "kept"
         # Identity of the region this pragma landed on, taken BEFORE the patch
         # went in, so it matches what Phase A recorded as exposed.
         change_log.append({
             "kind": "pragma", "region_id": rid, "diff": diff,
             "fingerprint": fp_before,
+            "file": str(Path(args.source_file).resolve()),
         })
-        kept.append(record)
         _write_record(output_dir, record, args.dry_run)
         print(f"└─ APPLIED\n")
+        return "kept"
+
+    for cand in todo:
+        # DiscoPoP can report more than one applicable pattern for a loop (a Do-All
+        # and a Reduction on the same line).  They differ in their clauses, so when
+        # the first one's pragma does not survive, the next is a different question.
+        options: List[Any] = [(cand.pattern_type, cand.pattern)] + list(cand.alternates)
+        for n, (ptype, pattern) in enumerate(options):
+            if annotate(cand, ptype, pattern) != "dropped":
+                break
+            if n + 1 < len(options):
+                print(f"   DiscoPoP reports another pattern for this loop "
+                      f"({options[n + 1][0]}) — trying it\n")
     return kept

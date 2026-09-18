@@ -6,13 +6,22 @@ writes the pragma, what "success" means, and how the answer is judged.  Writing
 them out twice guarantees they drift, so they are composed from named blocks
 instead.
 
+The "how it is judged" block is GENERATED from the gate that is configured for
+the run (`GateFacts`), not written as a constant: a prompt that promises a
+timing step which is switched off, or a byte-for-byte comparison where a measured
+tolerance applies, steers the model away from exactly the rewrites the gate would
+accept (review P3).
+
 The prompt is sent with `cache_control: ephemeral`, so it must be byte-identical
-across every call in a session for the cache to hit — which is why these are
-module-level constants rather than something built per call.
+across every call in a session for the cache to hit.  It still is: the gate facts
+are fixed for a run, so the same text is built on every call.
 """
 from __future__ import annotations
 
 import textwrap
+from typing import Optional, Set
+
+from ..types import GateFacts
 
 
 # ---------------------------------------------------------------------------
@@ -22,6 +31,8 @@ import textwrap
 # The system prompt is assembled from blocks rather than written out twice.
 # The two modes differ in exactly three places — who writes the pragma, what
 # "success" means, and how the answer is judged — and share everything else.
+
+_RULE = "------------------------------------------------------------------\n"
 
 _ROLE = textwrap.dedent("""\
     You are the restructuring stage of DiscoPoP, a profiler that finds OpenMP
@@ -58,40 +69,66 @@ _ASK_ANNOTATE = textwrap.dedent("""\
     parallel carries its own `#pragma omp`, with its data-sharing clauses
     spelled out.
 
-    You have succeeded when the annotated code compiles, runs race-free,
-    reproduces the original output byte for byte, and is measurably faster than
-    the same build held to one thread.  Nothing downstream adds a pragma to the
-    code you rewrite — a loop you leave unannotated stays sequential, and a
-    rewrite with no pragma in it has parallelized nothing.
+    You have succeeded when the annotated code compiles, runs race-free and
+    reproduces the original program's results{SPEED_GOAL}.  Nothing downstream adds
+    a pragma to the code you rewrite — a loop you leave unannotated stays
+    sequential, and a rewrite with no pragma in it has parallelized nothing.
 
 """)
-_GIVEN = textwrap.dedent("""\
-    ------------------------------------------------------------------
-    WHAT WE GIVE YOU
-    ------------------------------------------------------------------
-    Every request carries the region's source and, from the profile: the
-    dependences observed at run time (RAW / WAR / WAW, grouped per variable,
-    tagged array or scalar, quoted against the statements they point at),
-    DiscoPoP's own Do-All blockers with their origin (static = a dependence it
-    could not rule out, dynamic = one it actually observed), the loop nest with
-    induction variables and iterations per activation, any calls in the region,
-    and — after a failed attempt — which check failed and what DiscoPoP found
-    in YOUR rewrite.
+_GIVEN_ITEMS = (
+    ("deps", "the dependences observed at run time (RAW / WAR / WAW, grouped per "
+             "variable, tagged array or scalar, quoted against the statements they "
+             "point at)"),
+    ("accesses", "the index expressions each array is written and read with"),
+    ("blockers", "DiscoPoP's own Do-All blockers with their origin (static = a "
+                 "dependence it could not rule out, dynamic = one it actually observed)"),
+    ("loop_nest", "the loop nest with induction variables and iterations per activation"),
+    ("inner_patterns", "the loops inside the region DiscoPoP already reports as parallel"),
+    ("calls", "any calls in the region"),
+)
 
-    Work from that evidence rather than from what the algorithm is called.  Two
-    things in it are easy to misread on inspection: WAR and WAW usually mean a
-    location is reused, not that a value travels between iterations; and a
-    dependence on an induction variable is never the blocker, because OpenMP
-    handles those itself.
 
-""")
+def _wrap(text: str, indent: str = "") -> str:
+    return textwrap.fill(text, width=74, initial_indent=indent, subsequent_indent=indent,
+                         break_long_words=False, break_on_hyphens=False)
+
+
+def _given(include: Optional[Set[str]]) -> str:
+    """The "what we give you" block, listing only what the request really carries.
+
+    It used to be a constant describing the full package.  Under `--evidence none`
+    the model was therefore told it had been given observed dependences, Do-All
+    blockers and a loop nest, and then shown none of them."""
+    items = [text for name, text in _GIVEN_ITEMS if include is None or name in include]
+    head = _RULE + "WHAT WE GIVE YOU\n" + _RULE
+    after = "after a failed attempt, which check failed and why"
+    if not items:
+        return (head + _wrap(
+            "Every request carries the region's source and, " + after + ".  No profiling "
+            "data is provided for this region: work from the code itself.") + "\n\n")
+    body = _wrap("Every request carries the region's source and, from the profile: "
+                 + ", ".join(items) + " — and, " + after + ".")
+    advice = "Work from that evidence rather than from what the algorithm is called."
+    if include is None or "deps" in include:
+        advice = _wrap(
+            "Work from that evidence rather than from what the algorithm is called.  Two "
+            "things in it are easy to misread on inspection: WAR and WAW usually mean a "
+            "location is reused, not that a value travels between iterations; and a "
+            "dependence on a loop's own counter is never the blocker, because "
+            "privatising the counter removes it.")
+    return head + body + "\n\n" + advice + "\n\n"
+
+
 _CONTRACT_OPEN = textwrap.dedent("""\
     ------------------------------------------------------------------
     THE CONTRACT
     ------------------------------------------------------------------
       - The program's output must stay byte-identical.  Everything else is
-        yours: execution order, operation count, loop bounds, extra buffers,
-        extra passes.  Doing more work than the original is fine.
+        yours: execution order, loop bounds, extra buffers, extra passes.
+      - Extra work is fine within a constant factor — a second buffer, one
+        more pass.  Work that GROWS with the input is not: recomputing from
+        scratch what the original carried forward turns an O(n) loop into
+        O(n^2), which passes every check here and loses at full size.
       - Do not rename the function or change its signature, and do not touch
         I/O or its formatting.
 """)
@@ -117,55 +154,110 @@ _CONTRACT_CLOSE = """\
     faster serial algorithm.  The blocking dependence has to be gone.
 
 """
-_CHECKED = textwrap.dedent("""\
-    ------------------------------------------------------------------
-    HOW YOUR REWRITE IS CHECKED
-    ------------------------------------------------------------------
-      1. it must compile
-      2. it is run, and its output compared byte-for-byte
-      3. it is re-profiled, and a pattern must appear IN THE LINES YOU CHANGED,
-         or the rewrite is reverted — passing 1 and 2 only shows it did no harm
-      4. DiscoPoP's pragma is applied, and that build is checked for races,
-         output, and speed
+def _step(text: str) -> str:
+    """One numbered step's text, wrapped with the hanging indent the list uses."""
+    return _wrap(text, "     ").lstrip()
 
-    Steps 1-2 run your code sequentially, so passing them says nothing about
-    step 4, which runs it with iterations overlapping in arbitrary order.  A
-    loop you intend to be parallel has to give the same result whatever order
-    its iterations run in — that, not merely reproducing the output in serial,
-    is what is being asked for.
 
-    Step 4 also decides granularity: each ACTIVATION of a loop is a separate
-    parallel region, so it is the iterations per activation, not the total
-    across activations, that has to cover thread startup.  The evidence marks
-    which loops qualify; prefer the outermost one that does.
+def _how_compared(gate: GateFacts) -> str:
+    """How outputs are compared, in the words the gate would use."""
+    how = ("floating-point values may differ only by the rounding that reordering "
+           "additions legitimately causes; labels, counts and integers must match exactly"
+           if gate.numeric else "byte for byte")
+    if gate.n_inputs > 1:
+        return _step(f"its output is compared with the original program's on {gate.n_inputs} "
+                     f"different inputs, not only the one that was profiled — {how}.  A "
+                     "rewrite that is right for one input and wrong for another fails here")
+    return _step(f"its output is compared with the original program's — {how}")
 
-""")
-_CHECKED_ANNOTATE = textwrap.dedent("""\
-    ------------------------------------------------------------------
-    HOW YOUR REWRITE IS CHECKED
-    ------------------------------------------------------------------
-      1. the clauses on every pragma you wrote are read statically and held to
-         the two rules above — a clause that breaks one is rejected before
-         anything is built
-      2. it must compile, plain and again with -fopenmp
-      3. ThreadSanitizer runs the parallel build: any real race fails it
-      4. the parallel build is run and its output compared byte-for-byte
-      5. that same build is timed against itself pinned to one thread, and has
-         to be faster
 
-    Steps 3-5 run your loops with iterations overlapping in arbitrary order.  A
-    loop you marked parallel has to give the same result whatever order its
-    iterations run in — reproducing the output in serial proves nothing about
-    that.  Nothing here re-profiles your code: this list is the whole judgement,
-    and a pragma you did not write is a loop that was never parallelized.
+def _granularity(gate: GateFacts, step: int, verb: str) -> str:
+    """The closing paragraph on which loop to make parallel.
 
-    Step 5 also decides granularity: each ACTIVATION of a loop is a separate
-    parallel region, so it is the iterations per activation, not the total
-    across activations, that has to cover thread startup.  The evidence marks
-    which loops qualify; annotate the outermost one that does, and leave the
-    loops nested inside it alone — one pragma per nest.
+    With the speed check off, the old text was actively harmful: the agent profiles
+    at a deliberately small size, where EVERY loop of a PolyBench kernel has ~32
+    iterations per activation, so "prefer the outermost one that qualifies" named
+    no loop at all (review P4)."""
+    if gate.require_speedup:
+        return (f"Step {step} also decides granularity: each ACTIVATION of a loop is a separate\n"
+                "parallel region, so it is the iterations per activation, not the total\n"
+                "across activations, that has to cover thread startup.  The evidence marks\n"
+                f"which loops qualify; {verb} the outermost one that does, and leave the\n"
+                "loops nested inside it alone — one pragma per nest.\n\n")
+    return ("Speed is NOT judged here.  The program was profiled on a deliberately\n"
+            "small input, so the iteration counts in the evidence are far below what\n"
+            "the code runs in practice, and its speed is measured afterwards at full\n"
+            "size — which is where your rewrite finally has to win, so keep its work\n"
+            "within a constant factor of the original's.  Do not leave a loop\n"
+            "sequential because its count looks small:\n"
+            f"{verb} the OUTERMOST loop that can be made independent — it has the\n"
+            "most work per activation at any size — and leave the loops nested\n"
+            "inside it alone, one pragma per nest.\n\n")
 
-""")
+
+def _checked(gate: GateFacts) -> str:
+    """"How it is checked" when DiscoPoP writes the pragmas (--no-llm-pragmas)."""
+    judged = ["races (ThreadSanitizer)"]
+    if gate.stress:
+        judged.append("agreement across thread counts and static, dynamic and\n"
+                      "     guided schedules")
+    judged.append("output")
+    if gate.require_speedup:
+        judged.append("speed against the same build on one thread")
+    steps = [
+        "it must compile",
+        "it is run sequentially, and " + _how_compared(gate),
+        "it is re-profiled, and a pattern must appear IN THE LINES YOU CHANGED,\n"
+        "     or the rewrite is reverted — passing 1 and 2 only shows it did no harm",
+        "DiscoPoP's pragma is applied, and that build is checked for "
+        + ", ".join(judged[:-1]) + " and " + judged[-1],
+    ]
+    body = "\n".join(f"  {i}. {t}" for i, t in enumerate(steps, 1))
+    return (_RULE + "HOW YOUR REWRITE IS CHECKED\n" + _RULE + f"{body}\n\n"
+            "Steps 1-2 run your code sequentially, so passing them says nothing about\n"
+            "step 4, which runs it with iterations overlapping in arbitrary order.  A\n"
+            "loop you intend to be parallel has to give the same result whatever order\n"
+            "its iterations run in — that, not merely reproducing the output in serial,\n"
+            "is what is being asked for.\n\n"
+            + _granularity(gate, 4, "expose"))
+
+
+def _checked_annotate(gate: GateFacts) -> str:
+    """"How it is checked" when the model writes the pragmas (the default).
+
+    It used to be a constant, and it described a gate that was not the one in use:
+    a timing step that is switched off in the whole campaign, "byte-for-byte" where
+    a measured numeric tolerance applies, and no mention of the two checks that
+    catch most wrong rewrites — the schedule matrix and the second input.  A model
+    told its loop must beat one thread at a deliberately tiny profiling size has a
+    reason not to parallelise at all (review P3).
+    """
+    steps = [
+        "the clauses on every pragma you wrote are read statically and held to\n"
+        "     the two rules above — a clause that breaks one is rejected before\n"
+        "     anything is built",
+        "it must compile, plain and again with -fopenmp",
+        "ThreadSanitizer runs the parallel build: any real race fails it",
+    ]
+    if gate.stress:
+        steps.append(
+            "the parallel build is run repeatedly at one thread count, then at\n"
+            "     other thread counts and under static, dynamic and guided schedules:\n"
+            "     every run has to agree with the others")
+    steps.append(_how_compared(gate))
+    if gate.require_speedup:
+        steps.append("that same build is timed against itself pinned to one thread, and\n"
+                     "     has to be faster")
+    body = "\n".join(f"  {i}. {t}" for i, t in enumerate(steps, 1))
+    return (_RULE + "HOW YOUR REWRITE IS CHECKED\n" + _RULE + f"{body}\n\n"
+            f"Steps 3-{len(steps)} run your loops with iterations overlapping in arbitrary order.  A\n"
+            "loop you marked parallel has to give the same result whatever order its\n"
+            "iterations run in — reproducing the output in serial proves nothing about\n"
+            "that.  Nothing here re-profiles your code: this list is the whole judgement,\n"
+            "and a pragma you did not write is a loop that was never parallelized.\n\n"
+            + _granularity(gate, len(steps), "annotate"))
+
+
 _OMP_RULES = textwrap.dedent("""\
     ------------------------------------------------------------------
     WHAT OPENMP REQUIRES OF A PARALLEL LOOP
@@ -188,11 +280,39 @@ _PRAGMA_FORMS = textwrap.dedent("""\
     you then hand-partition by thread id, and nothing that needs a runtime call
     to be correct.
 """)
-_SYSTEM_CORE = (_ROLE + _ASK + _GIVEN + _CONTRACT_OPEN + _CONTRACT_NO_PRAGMA
-                + _CONTRACT_CLOSE + _CHECKED + _OMP_RULES)
-_SYSTEM_CORE_ANNOTATE = (_ROLE_ANNOTATE + _ASK_ANNOTATE + _GIVEN + _CONTRACT_OPEN
-                         + _CONTRACT_PRAGMA + _CONTRACT_CLOSE + _CHECKED_ANNOTATE
-                         + _OMP_RULES + _PRAGMA_FORMS)
+def _contract_open(gate: GateFacts) -> str:
+    """The contract's first line promised byte-identical output; under a measured
+    numeric tolerance that is not what is enforced, and a model that believes it will
+    refuse the reduction that reorders a sum."""
+    if not gate.numeric:
+        return _CONTRACT_OPEN
+    # Only the FIRST bullet changes; everything after it stays as written.
+    start = _CONTRACT_OPEN.index("  - The program's output")
+    end = _CONTRACT_OPEN.index("\n  - ", start + 1) + 1
+    bullet = _wrap(
+        "The program's results must stay the same: every label, count and integer "
+        "exactly, floating-point values up to the rounding a reordered sum causes.  "
+        "Everything else is yours: execution order, loop bounds, extra buffers, extra "
+        "passes.", "    ")
+    return _CONTRACT_OPEN[:start] + "  - " + bullet.lstrip() + "\n" + _CONTRACT_OPEN[end:]
+
+
+def _system_core(gate: GateFacts, include: Optional[Set[str]]) -> str:
+    ask = _ASK if gate.require_speedup else _ASK.replace(
+        "race-free, output-preserving,\nand faster than the sequential build.",
+        "race-free and output-preserving.")
+    return (_ROLE + ask + _given(include) + _contract_open(gate) + _CONTRACT_NO_PRAGMA
+            + _CONTRACT_CLOSE + _checked(gate) + _OMP_RULES)
+
+
+def _system_core_annotate(gate: GateFacts, include: Optional[Set[str]]) -> str:
+    goal = (", and is measurably faster than the same build held to one thread"
+            if gate.require_speedup else "")
+    return (_ROLE_ANNOTATE + _ASK_ANNOTATE.replace("{SPEED_GOAL}", goal) + _given(include)
+            + _contract_open(gate) + _CONTRACT_PRAGMA + _CONTRACT_CLOSE
+            + _checked_annotate(gate) + _OMP_RULES + _PRAGMA_FORMS)
+
+
 # Asked for before the code in every edit mode.  Deliberately not a form: the
 # point is to make the model commit to which dependence it is removing before
 # it writes, not to fill in fields.
@@ -231,23 +351,24 @@ _OUTPUT_DIRECT = (
     "edited this file on an earlier turn those edits are still there: build on\n"
     "them or replace them, but never restore the original code.\n"
 )
-_SYSTEM = _SYSTEM_CORE + _OUTPUT_DIFF
-_SYSTEM_FUNCTION = _SYSTEM_CORE + _OUTPUT_FUNCTION
-_SYSTEM_DIRECT = _SYSTEM_CORE + _OUTPUT_DIRECT
-
-
-def _system_prompt(edit_mode: str, llm_pragmas: bool,
-                   llm_recon: bool = False) -> str:
+def _system_prompt(edit_mode: str, llm_pragmas: bool, llm_recon: bool = False,
+                   gate: GateFacts = GateFacts(),
+                   evidence_sections: Optional[Set[str]] = None) -> str:
     """The system prompt for one (edit mode, who-writes-the-pragma) pair.
 
-    Kept as module-level constants rather than built per call: the prompt is
-    sent with `cache_control: ephemeral`, so it has to be byte-identical across
-    every call in a session for the cache to hit.
+    `gate` describes the gate that will judge the rewrite and `evidence_sections`
+    the evidence the requests will carry (None = all of it), so the prompt tells the
+    model what is actually checked and what it is actually given.  Both are constant
+    for a run, so the text stays byte-identical across every call in a session and
+    the prompt cache still hits.
     """
-    core = _SYSTEM_CORE_ANNOTATE if llm_pragmas else _SYSTEM_CORE
+    core = (_system_core_annotate(gate, evidence_sections) if llm_pragmas
+            else _system_core(gate, evidence_sections))
     tail = (_OUTPUT_DIRECT if edit_mode == "direct"
             else _OUTPUT_FUNCTION if edit_mode == "function" else _OUTPUT_DIFF)
     return core + tail + (_RECON_ADDENDUM if llm_recon else "")
+
+
 # ---------------------------------------------------------------------------
 # Dependence review (--llm-deps)
 # ---------------------------------------------------------------------------

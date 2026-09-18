@@ -72,8 +72,6 @@ Key = Tuple[str, int, int, int]      # file, line, column, occurrence
 
 
 @dataclass
-
-
 class RemapStats:
     """What survived the translation, and what did not.
 
@@ -175,6 +173,7 @@ def load_instruction_sequence(mapping_file: Path) -> List[Tuple[str, str]]:
 def build_id_map(
     old_map: Path, new_map: Path, lmap: Dict[int, int],
     col_shifts: Optional[Dict[int, int]] = None,
+    file_id: Optional[str] = None,
 ) -> Tuple[Dict[str, str], int]:
     """old instruction id -> new instruction id, by aligning the two mappings.
 
@@ -205,6 +204,8 @@ def build_id_map(
             line = int(parts[1])
         except ValueError:
             return pos
+        if file_id is not None and parts[0] != file_id:
+            return pos                   # another file of the project: nothing moved
         new_line = lmap.get(line)
         if new_line is None:
             return f"\0changed{idx}"     # unique: never matches
@@ -267,15 +268,25 @@ class _Translator:
     """old instruction id + old line -> new instruction id + new line."""
 
     def __init__(self, old_map: Path, new_map: Path, lmap: Dict[int, int],
-                 col_shifts: Optional[Dict[int, int]] = None) -> None:
+                 col_shifts: Optional[Dict[int, int]] = None,
+                 file_id: Optional[str] = None) -> None:
         self.old_fwd, _ = load_instruction_keys(old_map)
         self.new_fwd, self.new_rev = load_instruction_keys(new_map)
         self.col_shifts = col_shifts or {}
+        # The one file the line map describes.  None means a single-file program,
+        # where every position is in that file; in a project, positions in any
+        # OTHER file are already correct and pass through unchanged.
+        self.file_id = file_id
         self.id_map, self.unmatched = build_id_map(old_map, new_map, lmap,
-                                                   self.col_shifts)
+                                                   self.col_shifts, file_id)
         self.lmap = lmap
 
-    def line(self, line: int) -> Optional[int]:
+    def _moved(self, file: str) -> bool:
+        return self.file_id is None or file == self.file_id
+
+    def line(self, line: int, file: Optional[str] = None) -> Optional[int]:
+        if file is not None and not self._moved(file):
+            return line
         return self.lmap.get(line)
 
     def instr(self, instr_id: str) -> Optional[str]:
@@ -293,8 +304,9 @@ class _Translator:
         old_key = self.old_fwd.get(instr_id)
         if old_key is not None:
             new_key = self.new_fwd.get(new_id)
-            expected_line = self.lmap.get(old_key[1])
-            expected_col = old_key[2] + self.col_shifts.get(old_key[1], 0)
+            moved = self._moved(old_key[0])
+            expected_line = self.lmap.get(old_key[1]) if moved else old_key[1]
+            expected_col = old_key[2] + (self.col_shifts.get(old_key[1], 0) if moved else 0)
             if (new_key is None or expected_line is None
                     or new_key[1] != expected_line or new_key[2] != expected_col):
                 return None
@@ -322,7 +334,7 @@ class _Translator:
             return f"{new_instr}@{m.group(2)}"
         m = _FILE_LINE.match(token)
         if m:
-            new_line = self.line(int(m.group(2)))
+            new_line = self.line(int(m.group(2)), m.group(1))
             if new_line is None:
                 return None
             return f"{m.group(1)}:{new_line}"
@@ -348,6 +360,7 @@ class _Translator:
 def remap_dependencies(
     dep_text: str, old_map: Path, new_map: Path, lmap: Dict[int, int],
     col_shifts: Optional[Dict[int, int]] = None,
+    file_id: Optional[str] = None,
 ) -> Tuple[str, RemapStats]:
     """Translate a `dynamic_dependencies.txt` onto a new build of the source.
 
@@ -356,7 +369,7 @@ def remap_dependencies(
     worse than a dependence that is missing, because the missing one is covered
     by the static analysis while the wrong one silently misinforms it.
     """
-    tr = _Translator(old_map, new_map, lmap, col_shifts)
+    tr = _Translator(old_map, new_map, lmap, col_shifts, file_id)
     stats = RemapStats()
     out: List[str] = []
 
@@ -461,7 +474,8 @@ def remap_dependencies(
     return "\n".join(out) + "\n", stats
 
 
-def remap_loop_counters(text: str, lmap: Dict[int, int]) -> str:
+def remap_loop_counters(text: str, lmap: Dict[int, int],
+                        file_id: Optional[str] = None) -> str:
     """Translate `loop_counter_output.txt` (`fileID line count`) onto new lines.
 
     Trip counts drive the workload score and the granularity advice in the
@@ -486,9 +500,12 @@ def remap_loop_counters(text: str, lmap: Dict[int, int]) -> str:
         if len(fields) != 3:
             continue
         try:
-            new_line = lmap.get(int(fields[1]))
+            old_line = int(fields[1])
         except ValueError:
             continue
+        # A counter of another project file keeps its line: only `file_id` moved.
+        new_line = (lmap.get(old_line) if file_id is None or fields[0] == file_id
+                    else old_line)
         if new_line is None:
             continue
         out.append(f"{fields[0]} {new_line} {fields[2]}")

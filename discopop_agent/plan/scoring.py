@@ -23,7 +23,8 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from ..types import CodeRegion, HotspotCandidate
 from .impact import ImpactModel
-from .regions import (_load_loop_counts, _load_patterns, _parse_data_xml, demangle)
+from .regions import (_load_loop_counts, _load_pattern_options, _parse_data_xml,
+                      demangle, line_key, node_key)
 
 
 _CONFIDENCE: Dict[str, float] = {
@@ -108,7 +109,7 @@ def build_candidates(
 
     regions = _parse_data_xml(profiler_dir)
     loop_counts = _load_loop_counts(profiler_dir)
-    pattern_index = _load_patterns(patterns_path)
+    pattern_options = _load_pattern_options(patterns_path)
 
     # Annotate loop iteration counts
     for r in regions:
@@ -130,6 +131,29 @@ def build_candidates(
 
     candidates: List[HotspotCandidate] = []
 
+    # Which FILE a region lives in.  A region is identified by (file id, line), and
+    # the id is resolved through DiscoPoP's own FileMapping.  In a project every
+    # region is worked on in its own file; a region outside the project root (a
+    # system or third-party header) is not the agent's to edit.  For a single-file
+    # program a region that the mapping places in a DIFFERENT file — code in a
+    # project header the file includes — used to be read as lines of the source
+    # file; it is skipped instead.  The mapping is only believed when it knows the
+    # source file itself, so a profile copied from another path changes nothing.
+    from .. import project as project_mod
+    proj = project_mod.active()
+    fmap = {fid: path.resolve() for fid, path in
+            project_mod.load_file_mapping(discopop_dir).items()}
+    own = Path(source_file).resolve()
+    mapping_knows_source = own in fmap.values()
+
+    def file_of(region: CodeRegion) -> Optional[str]:
+        mapped = fmap.get(region.file_id)
+        if proj is not None:
+            return str(mapped) if mapped is not None and proj.contains(mapped) else None
+        if mapped is not None and mapping_knows_source and mapped != own:
+            return None
+        return source_file
+
     # Functions the caller declares out of scope (a benchmark harness's own output,
     # timing and setup code) are skipped together with every region inside them.
     # Names are compared demangled: DiscoPoP writes C++ names mangled
@@ -147,6 +171,9 @@ def build_candidates(
         # Skip trivial CUs (very low workload, not worth parallelizing)
         if region.region_type == "cu" and region.workload < _MIN_WORKLOAD_TIER2:
             continue
+        region_file = file_of(region)
+        if region_file is None:
+            continue
 
         # Look for a Tier-1 pattern via start_line or region_id
         pattern: Optional[Dict[str, Any]] = None
@@ -154,15 +181,21 @@ def build_candidates(
         tier = 2
         confidence = 0.3  # base confidence for Tier-2
 
+        alternates: List[Any] = []
         for lookup_key in (
-            f"{region.file_id}:{region.start_line}",
-            region.region_id,
+            line_key(region.file_id, region.start_line),
+            node_key(region.region_id),
         ):
-            if lookup_key in pattern_index:
-                pattern_type, pattern = pattern_index[lookup_key]
+            if lookup_key in pattern_options:
+                # Best first: applicable before not, loop patterns before task
+                # patterns, reduction before do_all (regions._pattern_rank).
+                options = pattern_options[lookup_key]
+                pattern_type, pattern = options[0]
                 if pattern.get("applicable_pattern", False):
                     confidence = _CONFIDENCE.get(pattern_type, 0.5)
                     tier = 1
+                    alternates = [o for o in options[1:]
+                                  if o[1].get("applicable_pattern", False)]
                 break
 
         # Refine workload from pattern if available.  The new explorer may emit
@@ -184,7 +217,9 @@ def build_candidates(
             saving = impact.predicted_saving(
                 region.file_id, region.start_line, region.end_line
             )
-            frac = impact.fraction(region.file_id, region.start_line, region.end_line)
+            # What is still sequential in the region, not what it once measured: a
+            # function whose hot loop already runs in parallel is worth the rest.
+            frac = impact.remaining_fraction(region.file_id, region.start_line, region.end_line)
             hs = impact.lookup(region.file_id, region.start_line, region.end_line)
             hotness = hs.hotness if hs else None
 
@@ -220,7 +255,7 @@ def build_candidates(
 
         candidates.append(HotspotCandidate(
             region=region,
-            source_file=source_file,
+            source_file=region_file,
             pattern=pattern,
             pattern_type=pattern_type,
             confidence=confidence,
@@ -230,6 +265,7 @@ def build_candidates(
             impact_seconds=saving,
             runtime_fraction=frac,
             hotness=hotness,
+            alternates=alternates,
         ))
 
     # Highest predicted saving first.  Two tie-breaks, in order:

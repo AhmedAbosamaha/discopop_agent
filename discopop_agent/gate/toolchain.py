@@ -83,6 +83,12 @@ def _find_clang() -> Optional[str]:
 # PolyBench's own allocator fails exactly that way.
 
 def is_c_source(source: Union[str, Path]) -> bool:
+    """Is this program C?  For a project the PROGRAM's language decides, not the
+    suffix of the one file under test — which may be a header, or a temp copy."""
+    from .. import project as project_mod
+    proj = project_mod.active()
+    if proj is not None:
+        return not proj.is_cxx
     return Path(str(source)).suffix == ".c"
 
 

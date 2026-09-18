@@ -26,6 +26,49 @@ def _wrapper_for(source: "str | Path") -> str:
     return str(Path(sys.executable).parent / name)
 
 
+class InstrumentedBuild:
+    """How to build the program through one of DiscoPoP's compiler wrappers.
+
+    `cmd` is run in `cwd` — which is also where DiscoPoP puts `.discopop` — and
+    produces `binary`.  For a project the command compiles a generated unity unit
+    (see project.py for why), which `cleanup()` removes again; the user's tree
+    gains no file that outlives the build."""
+
+    def __init__(self, source: "str | Path", binary_name: str = "a.out",
+                 hotspot: bool = False) -> None:
+        from .. import project as project_mod
+        from ..gate.toolchain import link_flags_for
+
+        proj = project_mod.active()
+        self._unity: "Path | None" = None
+        if proj is None:
+            src = Path(source).resolve()
+            is_c = src.suffix == ".c"
+            self.cwd = src.parent
+            self.binary = src.parent / binary_name
+            body = [str(src), "-o", str(self.binary)]
+            # The hotspot wrapper links libm for C itself being asked to; the
+            # dependence wrapper takes the agent's usual link flags.
+            tail = (["-lm"] if is_c else []) if hotspot else link_flags_for(src)
+        else:
+            is_c = not proj.is_cxx
+            self.cwd = proj.root
+            self.binary = proj.root / binary_name
+            self._unity = proj.unity_path()
+            self._unity.write_text(proj.unity_text())
+            body = ([str(self._unity)] + proj.include_flags() + [f"-I{proj.root}"]
+                    + list(proj.cflags) + ["-o", str(self.binary)])
+            tail = list(proj.ldflags) + ((["-lm"] if is_c else []) if hotspot
+                                         else link_flags_for(self._unity))
+        stem = "discopop_hotspot_" if hotspot else "discopop_"
+        wrapper = str(Path(sys.executable).parent / f"{stem}{'cc' if is_c else 'cxx'}")
+        self.cmd = [wrapper] + body + tail
+
+    def cleanup(self) -> None:
+        if self._unity is not None:
+            self._unity.unlink(missing_ok=True)
+
+
 def _explorer_cmd() -> str:
     return str(Path(sys.executable).parent / "discopop_explorer")
 

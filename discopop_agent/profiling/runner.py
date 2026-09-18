@@ -24,7 +24,8 @@ from ..args import AgentArguments
 from ..plan import impact as impact_mod
 from . import fast_refresh
 from ..gate.toolchain import link_flags_for
-from .tools import _explorer_cmd, _venv_env, _wrapper_for, run_explorer
+from .tools import (InstrumentedBuild, _explorer_cmd, _venv_env, _wrapper_for,
+                    run_explorer)
 
 
 # Artifacts the instrumented RUN produces.  A fast refresh re-runs only the
@@ -84,6 +85,18 @@ def _measure_hotspots(args: AgentArguments, dp_dir: Path,
     )
 
 
+def _file_id_of(discopop_dir: Path, source: Path) -> "str | None":
+    """DiscoPoP's id for `source`, or None for a single-file program — where every
+    position belongs to the one file and nothing needs telling apart."""
+    from .. import project as project_mod
+    if project_mod.active() is None:
+        return None
+    for fid, path in project_mod.load_file_mapping(discopop_dir).items():
+        if path.resolve() == source.resolve():
+            return str(fid)
+    return None
+
+
 def _reprofil_fast(
     source_file: str, discopop_dir: Path, old_text: str, new_text: str,
     output_dir: Path,
@@ -108,9 +121,7 @@ def _reprofil_fast(
     than a slow one.
     """
     src = Path(source_file).resolve()
-    binary = src.parent / "a.out"
     profiler = (discopop_dir / "profiler").resolve()
-    extra = link_flags_for(src)
     env = _venv_env()
 
     lmap = fast_refresh.line_map(old_text, new_text)
@@ -153,24 +164,31 @@ def _reprofil_fast(
     if profiler.exists():
         shutil.rmtree(profiler, ignore_errors=True)
 
-    r = subprocess.run(
-        [_wrapper_for(src), str(src), "-o", str(binary)] + extra,
-        capture_output=True, text=True, cwd=src.parent, env=env,
-    )
+    build = InstrumentedBuild(src)
+    try:
+        r = subprocess.run(build.cmd, capture_output=True, text=True, cwd=build.cwd, env=env)
+    finally:
+        build.cleanup()
     if r.returncode != 0:
         return False, f"instrumentation failed: {r.stderr[-200:]}"
+
+    # In a project only the rewritten FILE's lines move; every other file's
+    # positions are already right and must pass through untouched.
+    file_id = _file_id_of(discopop_dir, src)
 
     old_map = output_dir / ".fast_refresh_old_mapping.txt"
     old_map.write_text(saved["instructionID_to_lineID_mapping.txt"])
     new_map = profiler / "instructionID_to_lineID_mapping.txt"
 
     dep_text, stats = fast_refresh.remap_dependencies(
-        saved["dynamic_dependencies.txt"], old_map, new_map, lmap, col_shifts
+        saved["dynamic_dependencies.txt"], old_map, new_map, lmap, col_shifts,
+        file_id=file_id,
     )
     (profiler / "dynamic_dependencies.txt").write_text(dep_text)
     if "loop_counter_output.txt" in saved:
         (profiler / "loop_counter_output.txt").write_text(
-            fast_refresh.remap_loop_counters(saved["loop_counter_output.txt"], lmap)
+            fast_refresh.remap_loop_counters(saved["loop_counter_output.txt"], lmap,
+                                             file_id=file_id)
         )
     # reduction.txt is deliberately NOT restored: see _COMPILE_ARTIFACTS above.
     # Memory-region ids are runtime identities the carried dependences still
@@ -204,24 +222,35 @@ def _reprofil(source_file: str, discopop_dir: Path, binary_args: List[str] | Non
     anchored to lines that were loops only in an earlier version of the source.
     """
     src = Path(source_file).resolve()   # absolute path avoids CWD confusion
-    binary = src.parent / "a.out"
-    extra = link_flags_for(src)
     env = _venv_env()
 
     profiler = (discopop_dir / "profiler").resolve()
     if profiler.exists():
         shutil.rmtree(profiler, ignore_errors=True)
 
-    r = subprocess.run(
-        [_wrapper_for(src), str(src), "-o", str(binary)] + extra,
-        capture_output=True, text=True, cwd=src.parent, env=env,
-    )
+    build = InstrumentedBuild(src)
+    try:
+        r = subprocess.run(build.cmd, capture_output=True, text=True, cwd=build.cwd, env=env)
+    finally:
+        build.cleanup()
     if r.returncode != 0:
         print(f"      [re-profile] instrumentation failed:\n{r.stderr[-500:]}")
         return False
 
-    run_cmd = [str(binary)] + (binary_args or [])
-    subprocess.run(run_cmd, capture_output=True, text=True, cwd=src.parent, env=env)
+    run_cmd = [str(build.binary)] + (binary_args or [])
+    ran = subprocess.run(run_cmd, capture_output=True, text=True, cwd=build.cwd, env=env)
+    # The run is what MEASURES the dependences.  Its result used to be ignored, so a
+    # program that died under instrumentation left a partial profile — or none —
+    # and the explorer then reported every unobserved loop as free of dependences.
+    # Every other place the agent runs the program treats a non-zero exit as a
+    # failure; so does this one.
+    deps = profiler / "dynamic_dependencies.txt"
+    if ran.returncode != 0 or not deps.exists() or deps.stat().st_size == 0:
+        why = (f"exit code {ran.returncode}" if ran.returncode != 0
+               else "it wrote no dynamic_dependencies.txt")
+        print(f"      [re-profile] the instrumented run failed ({why}):\n"
+              f"{(ran.stderr or ran.stdout or '')[-300:]}")
+        return False
 
     r = run_explorer(discopop_dir, env)
     if r.returncode != 0:

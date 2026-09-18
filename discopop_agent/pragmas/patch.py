@@ -24,26 +24,38 @@ from .parse import (_HUNK_OLD_RE, _PRAGMA_LINE_RE,
 from .scope import _declared_in
 
 
+_CLAUSE_RE = re.compile(r"\b(shared|private|firstprivate|lastprivate)\s*\(([^)]*)\)")
+_REDUCTION_CLAUSE_RE = re.compile(r"\breduction\s*\(\s*([^:()]+?)\s*:\s*([^)]*)\)")
+
+
 def _repair_pragma_clauses(diff: "str | None", source_file: str) -> "str | None":
-    """Drop names from a generated pragma's `shared()` clause when they are not
-    in scope at the pragma.
+    """Drop names from a generated pragma's clauses when they are declared INSIDE
+    the loop the pragma governs.
 
-    DiscoPoP sometimes lists a loop-BODY local in `shared()`.  Observed on
-    example4: for a loop whose body opens `int tmp = arr[i];` it emitted
-    `shared(tmp,arr)`, and the -fopenmp build then fails outright with
-    "use of undeclared identifier 'tmp'".  The gate correctly rejects that
-    pattern, but the only recovery was Tier-2 — an LLM call, gated by
-    --restructure-depth — for what is a one-token defect in a generated clause.
-    Deleting the name is not restructuring, so it happens here instead: at any
-    depth, for free, before the gate.
+    DiscoPoP lists loop-body locals in its clauses.  Observed on example4:
+    `shared(tmp,arr)` for a loop whose body opens `int tmp = arr[i];`, and on
+    NPB `is` (C++, 18 Sep 2026): `private(x)`, `private(num_bucket_keys)`,
+    `private(m)` for variables the body declares.  Such a name is not in scope
+    at the pragma, so the -fopenmp build fails outright ("use of undeclared
+    identifier"), and three of DiscoPoP's four suggestions for `is` were lost to
+    a one-token defect in a generated clause.  The gate correctly rejects the
+    pragma as written; the only recovery used to be Tier-2 — an LLM call, gated
+    by --restructure-depth — for what is not restructuring at all.  So it
+    happens here: at any depth, for free, before the gate.
 
-    Only `shared()` is touched, and that makes the repair semantically free:
-    a variable from an enclosing scope is shared by DEFAULT in a `parallel for`,
-    so removing it from the clause cannot change the meaning — it is either
-    redundant or (the bug case) not in scope at all.  `private`, `firstprivate`,
-    `lastprivate` and `reduction` are left alone, since removing a name there
-    WOULD change semantics.  A pragma carrying `default(none)` is skipped
-    entirely, because there the clause is load-bearing.
+    Removing a BODY-DECLARED name is semantically free in every clause: the
+    variable is created afresh in each iteration by its own declaration, so it
+    can neither carry a value between iterations (`private`, `reduction`), nor
+    receive one from before the loop (`firstprivate`), nor hand one out after it
+    (`lastprivate`), nor be shared at all — the clause is either redundant or
+    (the bug) refers to something that does not exist at the pragma.  Names from
+    an ENCLOSING scope are never touched: removing one of those from `private`
+    or `reduction` would change the meaning, and the clause check judges them.
+    A pragma carrying `default(none)` is skipped entirely, because there every
+    clause is load-bearing.  The rule is the same one the clause check applies
+    to the model's own pragmas ("a name declared inside the loop body belongs in
+    no clause at all"); the model gets that as feedback and a retry, DiscoPoP
+    gets the repair.
 
     Returns the diff unchanged (same object) when there is nothing to fix, so
     the gate cache key is unaffected.
@@ -76,22 +88,37 @@ def _repair_pragma_clauses(diff: "str | None", source_file: str) -> "str | None"
                 if end >= old_line:
                     body = src_lines[old_line - 1:end]
             if body:
-                def _strip(mm: "re.Match[str]") -> str:
-                    names = [n.strip() for n in mm.group(1).split(",") if n.strip()]
+                dropped_all: List[str] = []
+
+                def _keep(names: List[str]) -> List[str]:
                     kept = [n for n in names if not _declared_in(body, n)]
+                    dropped_all.extend(n for n in names if n not in kept)
+                    return kept
+
+                def _strip(mm: "re.Match[str]") -> str:
+                    names = [n.strip() for n in mm.group(2).split(",") if n.strip()]
+                    kept = _keep(names)
                     if len(kept) == len(names):
                         return str(mm.group(0))
-                    dropped = [n for n in names if n not in kept]
+                    return f"{mm.group(1)}({','.join(kept)})" if kept else ""
+
+                def _strip_reduction(mm: "re.Match[str]") -> str:
+                    names = [n.strip() for n in mm.group(2).split(",") if n.strip()]
+                    kept = _keep(names)
+                    if len(kept) == len(names):
+                        return str(mm.group(0))
+                    return f"reduction({mm.group(1)}:{','.join(kept)})" if kept else ""
+
+                fixed = str(_CLAUSE_RE.sub(_strip, line))
+                fixed = str(_REDUCTION_CLAUSE_RE.sub(_strip_reduction, fixed))
+                if fixed != line:
+                    dropped = list(dict.fromkeys(dropped_all))
                     print(f"│  [Tier-1] Repairing the generated pragma: "
                           f"{', '.join(dropped)} "
                           f"{'is' if len(dropped) == 1 else 'are'} declared inside "
-                          f"the loop body, so cannot appear in shared()")
-                    return f"shared({','.join(kept)})" if kept else ""
-
-                fixed = str(_PRAGMA_SHARED_RE.sub(_strip, line))
-                if fixed != line:
+                          f"the loop body, so cannot appear in a clause")
                     changed = True
-                    line = fixed.rstrip() + " "
+                    line = re.sub(r"\s{2,}", " ", fixed).rstrip() + " "
             out.append(line)
             continue
 

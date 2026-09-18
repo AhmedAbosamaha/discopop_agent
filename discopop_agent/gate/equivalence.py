@@ -259,6 +259,7 @@ class NoiseFloor:
 def numerical_noise_floor(
     source_file: str, binary_args: Optional[List[str]] = None,
     margin: float = 10.0,
+    extra_inputs: Optional[List[List[str]]] = None,
 ) -> NoiseFloor:
     """Measure the original program against itself under legal build variation.
 
@@ -272,6 +273,13 @@ def numerical_noise_floor(
     additions the way a parallel schedule does.  Without it this function
     reports zero for every program, since optimization level alone may not
     reassociate floating point.
+
+    `extra_inputs` are the further argument vectors the gate will compare outputs
+    on (--check-input).  The floor is the MAXIMUM over all of them, because it is
+    applied to all of them: a default input whose values are exactly representable
+    in binary rounds nowhere, measures 0, and would leave a perturbed input — which
+    does round — under byte-exact comparison, rejecting every correct reduction
+    (measured on a dot product: 0 on the default input, 1.0e-12 on the seeded one).
 
     Returns 0.0 — meaning "stay byte-exact" — whenever the program's output has
     no float in it, or every variant agreed, or too few variants built to form a
@@ -296,6 +304,16 @@ def numerical_noise_floor(
     clangpp = _find_clangpp()
     if clangpp is None:
         return NoiseFloor(diagnostic="no supported clang++ found")
+
+    inputs: List[Optional[List[str]]] = [binary_args] + [list(x) for x in (extra_inputs or [])]
+    if len(inputs) > 1:
+        # Measured once per input; the floor is the largest, because it is applied
+        # to every one of them.
+        floors = [(argv, numerical_noise_floor(source_file, argv, margin)) for argv in inputs]
+        argv_max, worst_floor = max(floors, key=lambda f: f[1].value)
+        if worst_floor.value > 0.0 and argv_max != binary_args:
+            worst_floor.diagnostic += f" — on input {' '.join(argv_max or [])!r}"
+        return worst_floor
 
     outputs: List[Tuple[str, str]] = []
     with tempfile.TemporaryDirectory(prefix="dp_agent_floor_") as tmp:

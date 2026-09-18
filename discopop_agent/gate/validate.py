@@ -35,11 +35,11 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from ..args import AgentArguments
 from ..types import ValidationResult
-from .dependences import dependence_evidence
+from .dependences import annotated_loop_lines, dependence_evidence
 from .equivalence import compare_outputs
 from .patching import _apply, _compile, _compile_variant
 from .schedules import (DEFAULT_REPEATS, DEFAULT_SCHEDULES, DEFAULT_THREADS,
-                        stress_schedules)
+                        stress_schedules, with_runtime_schedule)
 from .timing import _measure_speedup, _run_timed
 from .toolchain import _find_clangpp
 from .tsan import _is_omp_barrier_false_positive, _tsan
@@ -168,12 +168,21 @@ def validate(
         # a Do-All.  Only an OBSERVED loop-carried dependence fails a patch; a
         # static-only blocker or a gap in the profile is recorded and passed,
         # because neither is evidence that the pragma is wrong.
-        if has_pragma:
+        loop_lines = annotated_loop_lines(diff) if has_pragma else None
+        if has_pragma and loop_lines is None:
+            # A rewrite: the profile describes the code this patch replaced, so it
+            # has no standing to judge it.  Recorded, never failed (review F6).
+            evidence["dependences"] = "rewritten-code"
+            evidence["dependences_detail"] = (
+                "the patch rewrites code, so the profile predates what is being "
+                "parallelised; the sanitizer and the schedule matrix carry it")
+        elif has_pragma:
             dep = dependence_evidence(
                 discopop_dir,
                 dep_region[0] if dep_region else None,
                 dep_region[1] if dep_region else None,
                 dep_region[2] if dep_region else None,
+                loop_lines=loop_lines,
             )
             evidence["dependences"] = dep.verdict
             if dep.verdict != "supported":
@@ -217,8 +226,25 @@ def validate(
                     passed=False, stage="schedules",
                     diagnostic=f"parallel build failed:\n{diag}",
                     skipped_stages=skipped_stages, evidence=evidence)
+            # The matrix varies OMP_SCHEDULE, which only loops declaring
+            # `schedule(runtime)` obey — so the stress build declares it on every
+            # loop that names no schedule of its own (review F8).  Every other
+            # stage keeps using the program exactly as written.
+            stress_bin = check_bin
+            stress_text, n_sched = with_runtime_schedule(patched.read_text())
+            if n_sched:
+                stress_src = work_dir / f"stress_{patched.name}"
+                stress_src.write_text(stress_text)
+                # In a project the other units' loops get the clause as well, so the
+                # matrix varies every parallel loop of the program, not one file's.
+                ok_s, _diag_s, s_bin = _compile_variant(
+                    stress_src, clangpp, work_dir, "check_stress", openmp=True,
+                    transform_all=lambda t: with_runtime_schedule(t)[0])
+                if ok_s and s_bin is not None:
+                    stress_bin = s_bin
+                    evidence["schedule_runtime_loops"] = n_sched
             st = stress_schedules(
-                check_bin, work_dir, binary_args, floor=noise_floor,
+                stress_bin, work_dir, binary_args, floor=noise_floor,
                 threads=stress_threads or DEFAULT_THREADS,
                 schedules=DEFAULT_SCHEDULES, repeats=DEFAULT_REPEATS,
             )
@@ -385,6 +411,13 @@ def validate(
                             skipped_stages=skipped_stages, evidence=evidence)
 
 
+def _read_text(path: str) -> str:
+    try:
+        return Path(path).read_text()
+    except OSError:
+        return ""
+
+
 def _gate_key(diff: str, source_file: str, mode: str) -> str:
     """Identity of one gate run: this patch, against this exact source text,
     asking this set of questions.
@@ -465,7 +498,11 @@ def _validate_cached(
     res = _run(False)
     barrier_fp = (
         not res.passed and res.stage == "tsan"
-        and _is_omp_barrier_false_positive(res.diagnostic)
+        # The source AND the patch: `nowait` or a task anywhere in the program
+        # removes the barrier the heuristic reasons from, and it must then not
+        # fire.  It used to be called without this, leaving that guard dead.
+        and _is_omp_barrier_false_positive(
+            res.diagnostic, _read_text(args.source_file) + "\n" + diff)
     )
     if barrier_fp:
         # Suspected macOS barrier artefact: re-verify against the correctness

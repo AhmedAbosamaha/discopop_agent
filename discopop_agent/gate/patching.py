@@ -10,9 +10,12 @@ from __future__ import annotations
 import re
 import shutil
 import subprocess
+import os
+import shlex
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Callable, List, Optional, Tuple
 
+from .. import project as project_mod
 from .toolchain import _LIBOMP_DIR, _macos_sysroot_flag, compiler_for, link_flags_for
 
 
@@ -124,6 +127,69 @@ def run_patch(target: Path, patch_path: Path, exact: bool = False) -> Tuple[bool
     return True, ""
 
 
+def run_build(
+    source: Path, clangpp: str, out: Path, flags: List[str], work_dir: Path,
+    transform_all: Optional[Callable[[str], str]] = None,
+) -> "subprocess.CompletedProcess[str]":
+    """Build the program whose file under test is `source`, into `out`.
+
+    THE build seam: every compile the gate performs goes through here.  For a
+    single-file program `source` is the program and this is the one command each
+    site used to run itself.  For a project (`project.active()`), `source` holds
+    the candidate content of ONE file — the focus — and the program is built for
+    real: the tree is staged into a fresh directory under `work_dir`, the candidate
+    replaces the focus file there, and every unit is compiled.  The user's tree is
+    only ever read.
+
+    `transform_all` rewrites every staged unit before the build (the schedule
+    stress build declares `schedule(runtime)` program-wide this way); for a single
+    file the caller has already applied it to `source`.
+    """
+    proj = project_mod.active()
+    if proj is None:
+        cmd = [compiler_for(source, clangpp), str(source), "-o", str(out)] + flags
+        return subprocess.run(cmd, capture_output=True, text=True, cwd=work_dir)
+
+    focus = project_mod.focus()
+    staged = work_dir / f"_dp_proj_{out.name}"
+    shutil.rmtree(staged, ignore_errors=True)
+    proj.stage(staged, {focus: source.read_text()} if focus else None)
+    if transform_all is not None:
+        for unit in proj.units:
+            f = staged / unit
+            if f.exists() and unit != focus:
+                f.write_text(transform_all(f.read_text()))
+    compiler = compiler_for(source, clangpp)
+    try:
+        if proj.build_cmd:
+            # The project's own build.  Flags reach it through the conventional
+            # variables AND as placeholders, since Makefiles differ in which they
+            # honour; -fopenmp / -fsanitize have to reach compile and link alike.
+            joined = " ".join(shlex.quote(f) for f in flags + list(proj.cflags))
+            env = dict(os.environ)
+            for var in ("CFLAGS", "CXXFLAGS", "LDFLAGS", "DP_FLAGS"):
+                env[var] = joined
+            env.update({"CC": compiler, "CXX": compiler, "DP_OUT": str(out)})
+            cmd_text = (proj.build_cmd.replace("{flags}", joined).replace("{out}", shlex.quote(str(out)))
+                        .replace("{cc}", shlex.quote(compiler)).replace("{cxx}", shlex.quote(compiler)))
+            r = subprocess.run(["/bin/sh", "-c", cmd_text], capture_output=True, text=True,
+                               cwd=staged, env=env)
+            built = staged / proj.binary
+            if r.returncode == 0 and not out.exists() and built.exists():
+                shutil.copy2(built, out)
+            if r.returncode == 0 and not out.exists():
+                r = subprocess.CompletedProcess(r.args, 1, r.stdout, (r.stderr or "")
+                                                + f"\nthe build command produced neither {out} nor {proj.binary}")
+            return r
+        cmd = ([compiler] + proj.unit_paths(staged) + proj.include_flags(staged)
+               + ["-o", str(out)] + flags + list(proj.cflags) + list(proj.ldflags))
+        return subprocess.run(cmd, capture_output=True, text=True, cwd=staged)
+    finally:
+        # The binary has been written to `out`; the staged sources are dead weight,
+        # and there is one of these per build.
+        shutil.rmtree(staged, ignore_errors=True)
+
+
 def _apply(diff: str, source_file: str, work_dir: Path) -> Tuple[bool, str, Optional[Path]]:
     src = Path(source_file)
     dst = work_dir / src.name
@@ -155,8 +221,7 @@ def _apply(diff: str, source_file: str, work_dir: Path) -> Tuple[bool, str, Opti
 def _compile(source: Path, clangpp: str, work_dir: Path) -> Tuple[bool, str]:
     binary = work_dir / "validate_binary"
     extra = link_flags_for(source) + _macos_sysroot_flag()
-    cmd = [compiler_for(source, clangpp), str(source), "-o", str(binary), "-g", "-O1"] + extra
-    result = subprocess.run(cmd, capture_output=True, text=True, cwd=work_dir)
+    result = run_build(source, clangpp, binary, ["-g", "-O1"] + extra, work_dir)
     if result.returncode != 0:
         return False, result.stderr[-2000:]
     return True, ""
@@ -165,6 +230,7 @@ def _compile(source: Path, clangpp: str, work_dir: Path) -> Tuple[bool, str]:
 def _compile_variant(
     source: Path, clangpp: str, work_dir: Path, name: str, openmp: bool,
     optimize: str = "-O2", extra_flags: Optional[List[str]] = None,
+    transform_all: Optional[Callable[[str], str]] = None,
 ) -> Tuple[bool, str, Optional[Path]]:
     """Compile `source` to a runnable binary, with or without OpenMP.
 
@@ -186,12 +252,8 @@ def _compile_variant(
         [f"-I{Path(_LIBOMP_DIR).parent / 'include'}", f"-L{_LIBOMP_DIR}", f"-Wl,-rpath,{_LIBOMP_DIR}"]
         if (openmp and Path(_LIBOMP_DIR).exists()) else []
     ) + _macos_sysroot_flag()
-    cmd = [compiler_for(source, clangpp), str(source), "-o", str(binary), optimize]
-    if openmp:
-        cmd.append("-fopenmp")
-    cmd += list(extra_flags or [])
-    cmd += extra
-    result = subprocess.run(cmd, capture_output=True, text=True, cwd=work_dir)
+    flags = [optimize] + (["-fopenmp"] if openmp else []) + list(extra_flags or []) + extra
+    result = run_build(source, clangpp, binary, flags, work_dir, transform_all)
     if result.returncode != 0:
         return False, result.stderr[-1500:], None
     return True, "", binary

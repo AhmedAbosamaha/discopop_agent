@@ -236,6 +236,117 @@ def _load_calls_in_region(
     return sorted(calls, key=lambda c: c["line"])
 
 
+_C_KEYWORDS = {"if", "for", "while", "switch", "return", "sizeof", "do", "else", "case"}
+# Words that may directly precede a subscripted name inside an EXPRESSION.
+_EXPR_WORDS = {"return", "else", "case", "do", "sizeof", "goto", "throw", "delete", "new",
+               "co_return", "co_yield", "and", "or", "not"}
+
+
+def _subscript_chain(text: str, pos: int) -> int:
+    """Index just past a run of `[...]` groups starting at `pos` (brackets balanced)."""
+    i = pos
+    while i < len(text) and text[i] == "[":
+        depth = 0
+        while i < len(text):
+            if text[i] == "[":
+                depth += 1
+            elif text[i] == "]":
+                depth -= 1
+                if depth == 0:
+                    i += 1
+                    break
+            i += 1
+        else:
+            return i
+    return i
+
+
+def _array_accesses(source_file: str, start_line: int, end_line: int
+                    ) -> Dict[str, Dict[str, List[str]]]:
+    """Per array, the index expressions the region writes and reads — from the source.
+
+    DiscoPoP says THAT a dependence exists on `path`; it does not say the region
+    writes `path[i][j]` while reading `path[i][k]` and `path[k][j]`, and that is
+    the fact a restructuring is designed around.  It also settles which names are
+    arrays at all: DiscoPoP marks array accesses with a `GEPRESULT_` prefix in C++
+    but names them plainly in the C kernels, where every array used to be labelled
+    a scalar (review P1).
+
+    A deliberately simple reading: `name[...]...` followed by an assignment operator
+    is a write (a compound one is also a read); everything else is a read.  Handles
+    `(*name)[i][j]`, the form PolyBench's array macros expand to.
+    """
+    import re
+    try:
+        lines = Path(source_file).read_text().splitlines()[max(start_line - 1, 0):end_line]
+    except OSError:
+        return {}
+    text = "\n".join(re.sub(r"//.*", "", ln) for ln in lines)
+    text = re.sub(r"/\*.*?\*/", " ", text, flags=re.S)
+    out: Dict[str, Dict[str, List[str]]] = {}
+    for m in re.finditer(r"\(\s*\*\s*([A-Za-z_]\w*)\s*\)\s*(?=\[)|\b([A-Za-z_]\w*)\s*(?=\[)", text):
+        name = m.group(1) or m.group(2)
+        if name in _C_KEYWORDS:
+            continue
+        # `double a[R][T];` and `double (*A)[8][8]` DECLARE an array: its bounds are
+        # not an access.  An expression never puts two identifiers side by side, so
+        # a word right before the name (a type) marks a declaration.
+        before = re.search(r"([A-Za-z_]\w*)[\s\*&]*$", text[:m.start()])
+        if before and before.group(1) not in _EXPR_WORDS:
+            continue
+        end = _subscript_chain(text, m.end())
+        idx = re.sub(r"\s+", "", text[m.end():end])
+        if not idx:
+            continue
+        rest = text[end:end + 4].lstrip()
+        op = re.match(r"(=(?!=)|[-+*/%&|^]=|<<=|>>=)", rest)
+        entry = out.setdefault(name, {"writes": [], "reads": []})
+        if op:
+            if idx not in entry["writes"]:
+                entry["writes"].append(idx)
+            if op.group(1) != "=" and idx not in entry["reads"]:
+                entry["reads"].append(idx)
+        elif idx not in entry["reads"]:
+            entry["reads"].append(idx)
+    return out
+
+
+def _inner_patterns(discopop_dir: Path, file_id: int, start_line: int, end_line: int,
+                    own_start: int) -> List[Dict[str, Any]]:
+    """Loops inside the region that DiscoPoP already reports as parallel.
+
+    A function region used to show the model none of this, so a loop needing one
+    pragma looked the same as one needing a rewrite (review P7)."""
+    import json
+    f = discopop_dir / "explorer" / "patterns.json"
+    if not f.exists():
+        return []
+    try:
+        pats = json.loads(f.read_text()).get("patterns", {})
+    except (OSError, ValueError):
+        return []
+    seen: Dict[int, Dict[str, Any]] = {}
+    for kind in ("reduction", "do_all"):
+        for p in pats.get(kind, []) or []:
+            if str(p.get("applicable_pattern")) != "True":
+                continue
+            try:
+                fid, line = (int(x) for x in str(p.get("start_line", "0:0")).split(":"))
+            except ValueError:
+                continue
+            if fid != file_id or not (start_line <= line <= end_line) or line in seen:
+                continue
+            clauses = [f"{k}({', '.join(str(v) for v in vals)})"
+                       for k, vals in (("reduction", p.get("reduction")),
+                                       ("private", p.get("private")),
+                                       ("firstprivate", p.get("first_private")),
+                                       ("lastprivate", p.get("last_private")))
+                       if isinstance(vals, list) and vals]
+            seen[line] = {"line": line, "kind": kind, "clauses": " ".join(clauses),
+                          "is_target": line == own_start}
+    return [seen[k] for k in sorted(seen)]
+
+
 def _line_text_map(source_file: str, start_line: int, end_line: int) -> Dict[int, str]:
     """{absolute line number: raw source text} for [start_line, end_line]."""
     lines = Path(source_file).read_text().splitlines()

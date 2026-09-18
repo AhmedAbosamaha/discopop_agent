@@ -117,6 +117,40 @@ def _touched_span(diff: str) -> "tuple[int, int] | None":
     return (lo, hi) if lo is not None and hi is not None else None
 
 
+def changed_span(diff: str) -> "tuple[int, int] | None":
+    """Line range a patch really CHANGED, in new-file coordinates — context excluded.
+
+    `_touched_span` reads the hunk headers, which include three lines of context on
+    each side; that is right for "did a pattern appear near the change" and too wide
+    for "which lines are now spoken for".  Added lines count as themselves; a pure
+    deletion counts as the line it was removed after."""
+    marks: List[int] = []
+    new_ln = 0
+    pending_delete = False
+    for line in diff.splitlines():
+        m = _HUNK_NEW_RE.match(line)
+        if m:
+            if pending_delete:
+                marks.append(max(new_ln - 1, 1))
+            new_ln, pending_delete = int(m.group(1)), False
+            continue
+        if not new_ln or line.startswith(("---", "+++", "\\")):
+            continue
+        if line.startswith("-"):
+            pending_delete = True
+            continue
+        if line.startswith("+"):
+            marks.append(new_ln)
+            pending_delete = False      # a replacement: the added lines stand for it
+        elif pending_delete:
+            marks.append(max(new_ln - 1, 1))
+            pending_delete = False
+        new_ln += 1
+    if pending_delete:
+        marks.append(max(new_ln - 1, 1))
+    return (min(marks), max(marks)) if marks else None
+
+
 def _added_pragmas(diff: str) -> List[str]:
     """The `#pragma omp` lines a diff introduces, in order.
 
@@ -127,3 +161,40 @@ def _added_pragmas(diff: str) -> List[str]:
     """
     return [l[1:].strip() for l in diff.splitlines()
             if l.startswith("+") and not l.startswith("+++") and "#pragma omp" in l]
+
+
+def net_new_pragmas(diff: str) -> int:
+    """How many `#pragma omp` lines the file GAINS from this diff.
+
+    A diff that re-spells an existing pragma removes one line and adds one: it
+    introduces a pragma line (so `_added_pragmas` is non-empty and the gate judges
+    it as parallel code, rightly) but adds no parallel loop.  Counting added lines
+    alone reported 4 pragmas for a file that held 3."""
+    removed = sum(1 for l in diff.splitlines()
+                  if l.startswith("-") and not l.startswith("---") and "#pragma omp" in l)
+    return max(len(_added_pragmas(diff)) - removed, 0)
+
+
+_PARALLEL_PRAGMA_RE = re.compile(r"^\s*#\s*pragma\s+omp\s+(?:[a-z ]*\s)?parallel\b")
+
+
+def existing_parallel_spans(text: str) -> List["tuple[int, int]"]:
+    """1-based line spans of the constructs that already run in parallel in `text`.
+
+    A `parallel for` spans its loop; a bare `parallel` spans the block after it.
+    Phase B reads this on entry so it never puts DiscoPoP's pragma INSIDE a loop the
+    model annotated in Phase A."""
+    lines = text.splitlines()
+    spans: List["tuple[int, int]"] = []
+    for i, ln in enumerate(lines):
+        if not _PARALLEL_PRAGMA_RE.match(ln):
+            continue
+        head = _next_loop_header(lines, i)
+        if head is None:
+            head = next((j for j in range(i + 1, min(len(lines), i + 8))
+                         if lines[j].strip() and not _PRAGMA_LINE_RE.match(lines[j])
+                         and not lines[j - 1].rstrip().endswith("\\")), None)
+        span = _loop_span(lines, head) if head is not None else None
+        if span is not None:
+            spans.append((span[0] + 1, span[1] + 1))
+    return spans

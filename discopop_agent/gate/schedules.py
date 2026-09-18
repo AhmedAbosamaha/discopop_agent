@@ -32,6 +32,7 @@ treated as a race, because nothing benign moves a value that far.
 from __future__ import annotations
 
 import os
+import re
 import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -46,6 +47,40 @@ from .equivalence import compare_outputs
 DEFAULT_THREADS: Tuple[int, ...] = (1, 2, 4)
 DEFAULT_SCHEDULES: Tuple[str, ...] = ("static", "dynamic,1", "guided")
 DEFAULT_REPEATS = 3
+
+
+_FOR_PRAGMA_RE = re.compile(r"^\s*#\s*pragma\s+omp\s+(?:[a-z_]+\s+)*for\b", re.IGNORECASE)
+
+
+def with_runtime_schedule(text: str) -> Tuple[str, int]:
+    """`text` with `schedule(runtime)` added to every worksharing loop that has none.
+
+    `OMP_SCHEDULE` is consulted ONLY by loops that declare `schedule(runtime)`; a
+    plain `#pragma omp parallel for` ignores it and runs the implementation's
+    default.  Measured: a plain loop's iteration-to-thread map was identical
+    (`0000111122223333`) under static, dynamic,1 and guided, and changed only once
+    the clause was present.  So without this, the matrix's dynamic and guided rows
+    are repeats of the static one.
+
+    Sound because a loop with no `schedule` clause has an implementation-defined
+    schedule, so a conforming program must be correct under any of them; a loop
+    that names its schedule is left exactly as written.  Returns (text, count).
+    """
+    lines = text.split("\n")
+    changed = 0
+    i = 0
+    while i < len(lines):
+        if _FOR_PRAGMA_RE.match(lines[i]):
+            j = i
+            while lines[j].rstrip().endswith("\\") and j + 1 < len(lines):
+                j += 1
+            whole = " ".join(lines[i:j + 1])
+            if "schedule(" not in whole.replace(" ", "").lower().replace("schedule (", "schedule("):
+                lines[j] = lines[j].rstrip() + " schedule(runtime)"
+                changed += 1
+            i = j
+        i += 1
+    return "\n".join(lines), changed
 
 
 @dataclass

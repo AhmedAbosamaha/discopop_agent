@@ -11,7 +11,7 @@ apply, and that failure is the signal that it has to go too.
 """
 from __future__ import annotations
 
-from typing import Any, List
+from typing import Any, Dict, List
 
 import shutil
 import tempfile
@@ -84,15 +84,25 @@ def _apply_in_memory(diff: str, source_file: str) -> "str | None":
         return dst.read_text() if ok else None
 
 
-def _apply_change_log(original_text: str, keep: List[Any], args: AgentArguments) -> List[Any]:
-    """Write `original_text` to the source, then re-apply `keep` in order.
+def _apply_change_log(originals: "Dict[str, str]", keep: List[Any],
+                      args: AgentArguments) -> List[Any]:
+    """Put every file back as it started, then re-apply `keep` in order.
+
+    `originals` maps each file the run may have changed to its text at the start
+    (one entry for a single-file program).  A change names its file; one recorded
+    before files existed belongs to the only file there was.
 
     Returns the subset that actually applied.  Nothing is ever un-applied, so a
     change that stood on one that has been dropped simply fails here — which is
     the signal that it has to go too.
     """
-    src = Path(args.source_file)
-    src.write_text(original_text)
+    default = str(Path(args.source_file).resolve())
+    if len(originals) == 1:
+        default = next(iter(originals))
+    for path, text in originals.items():
+        f = Path(path)
+        if not f.exists() or f.read_text() != text:
+            f.write_text(text)
     landed: List[Any] = []
     with tempfile.TemporaryDirectory(prefix="dp_agent_apply_") as tmp:
         work = Path(tmp)
@@ -103,7 +113,7 @@ def _apply_change_log(original_text: str, keep: List[Any], args: AgentArguments)
             # foundation was dropped must FAIL here.  Fuzzy matching would let
             # it apply anyway, near the right place, and the signal would be
             # lost.
-            ok, _diag = run_patch(src, pf, exact=True)
+            ok, _diag = run_patch(Path(ch.get("file") or default), pf, exact=True)
             if ok:
                 landed.append(ch)
     return landed

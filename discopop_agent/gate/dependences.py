@@ -95,14 +95,68 @@ def _describe(b: Dict[str, Any]) -> str:
     return f"{dtype} on {var}{where}"
 
 
+def annotated_loop_lines(diff: str) -> Optional[List[int]]:
+    """Old-file line numbers of the statements a PURE annotation puts a pragma on.
+
+    Returns None when the diff is anything other than a pure annotation — that
+    is, when it removes a line or adds anything that is not a `#pragma` (or
+    blank).  That distinction decides whether the profile may judge the patch:
+
+      * a pure annotation leaves the profiled code untouched, so what DiscoPoP
+        observed about that loop is about exactly the code being parallelised;
+      * a rewrite replaces it, and the profile describes code that no longer
+        exists.  A region reaches the model BECAUSE it has a blocking dependence,
+        and removing that dependence is what the rewrite is for — judging it by
+        the original loop's blockers rejects every successful restructuring.
+        (Measured: the correct Floyd–Warshall parallelisation, race-free under
+        ThreadSanitizer and identical in output, failed here.)
+    """
+    lines: List[int] = []
+    old_line = 0
+    pending = False
+    for raw in diff.splitlines():
+        if raw.startswith(("--- ", "+++ ")):
+            continue
+        if raw.startswith("@@"):
+            try:
+                old_line = int(raw.split("-")[1].split(",")[0].split()[0])
+            except (IndexError, ValueError):
+                return None
+            pending = False
+            continue
+        if raw.startswith("-"):
+            return None                          # something was removed: a rewrite
+        if raw.startswith("+"):
+            body = raw[1:].strip()
+            if not body:
+                continue
+            if not body.startswith("#") or "pragma" not in body:
+                return None                      # new code, not just a pragma
+            pending = True
+            continue
+        # context line
+        if pending and raw[1:].strip():
+            lines.append(old_line)
+            pending = False
+        old_line += 1
+    return lines
+
+
 def dependence_evidence(
     discopop_dir: Optional[str], file_id: Optional[int],
     start_line: Optional[int], end_line: Optional[int],
+    loop_lines: Optional[List[int]] = None,
 ) -> DependenceEvidence:
     """Consult the profile about [start_line, end_line] of `file_id`.
 
     Every argument is optional because callers that cannot say which region a
     diff targets should get "unavailable" rather than a wrong answer.
+
+    `loop_lines` names the loops a pragma is actually being put on (see
+    `annotated_loop_lines`).  When given, only blockers recorded for THOSE loops
+    count.  Matching by overlap with the region instead let a blocker on an
+    enclosing or a nested loop fail a pragma on a different loop — an inner
+    Do-All under an outer recurrence is exactly that shape.
     """
     if (discopop_dir is None or file_id is None
             or start_line is None or end_line is None):
@@ -117,6 +171,8 @@ def dependence_evidence(
             diagnostic="explorer/doall_prevented.json absent (older explorer, or no profile)")
 
     blockers = load_prevented_deps(dp, file_id, start_line, end_line)
+    if loop_lines is not None:
+        blockers = [b for b in blockers if b.get("loop_start") in set(loop_lines)]
     observed = [b for b in blockers if "DYNAMIC" in str(b.get("origin", "")).upper()]
     static = [b for b in blockers if "DYNAMIC" not in str(b.get("origin", "")).upper()]
 

@@ -32,6 +32,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
+from .. import project as project_mod
 from .. import viz
 from ..args import AgentArguments
 from ..evidence import assemble
@@ -40,13 +41,15 @@ from ..llm import LLMConnectionError, call_llm
 from ..llm.dep_review import _llm_dep_review
 from ..plan import build_candidates, region_budget, region_fingerprint
 from ..plan.impact import ImpactModel, load_hotspots
-from ..pragmas import _added_pragmas, _touched_span, check_llm_pragmas
+from ..pragmas import (_added_pragmas, _touched_span, changed_span,
+                       check_llm_pragmas, existing_parallel_spans,
+                       net_new_pragmas)
 from ..profiling import _measure_hotspots, _reprofil, _reprofil_fast
 from ..profiling import fast_refresh
 from ..profiling.tools import _explorer_cmd, _venv_env, run_explorer
 from ..sources import (_apply_to_source, _function_edit_to_diff,
                        _restore_profile, _snapshot_profile)
-from ..types import HotspotCandidate, ValidationResult
+from ..types import GateFacts, HotspotCandidate, ValidationResult
 from .report import _REGION_LABEL, _record_candidate, _write_record
 from .verdicts import (_OUTCOME_LABEL, RewriteOutcome, _rewrite_feedback,
                        _verify_rewrite)
@@ -91,6 +94,38 @@ class RunState:
                                 exclude_functions=self.args.exclude_functions)
 
 
+def covered_spans_after(start_line: int, end_line: int, pre_text: str, post_text: str,
+                        diff: str, self_annotated: bool) -> List[Tuple[int, int]]:
+    """The lines a KEPT rewrite has made parallel, in the rewritten file's coordinates.
+
+    Nothing for a rewrite that carries no pragma.  Such a rewrite has parallelised
+    nothing yet: it exists so that DiscoPoP can, and the loops it exposed are exactly
+    what Phase B must annotate.  Marking its region covered — as used to happen for
+    every kept rewrite — made `build_candidates` drop those loops (a covered region
+    predicts no saving), so under --no-llm-pragmas with runtime measurements Phase B
+    had nothing to apply and Settle then discarded the rewrite as an orphan.
+
+    For a self-annotated rewrite it is the PARALLEL CONSTRUCTS inside the region as
+    it now stands — not the region.  The whole edited span used to be covered (and in
+    its OLD line numbers), which hid a sibling loop of the same function from
+    Phase B and meant a deeper restructuring level could never see anything a
+    rewrite had created.  If no construct can be located the region's span is the
+    fallback, so something is always covered."""
+    if not self_annotated:
+        return []
+    lm = fast_refresh.line_map(pre_text, post_text)
+    grown = len(post_text.splitlines()) - len(pre_text.splitlines())
+    new_start = lm.get(start_line, start_line)
+    new_end = lm.get(end_line) or (end_line + grown)
+    ch = changed_span(diff)
+    if ch is not None:
+        new_start, new_end = min(new_start, ch[0]), max(new_end, ch[1])
+    new_end = max(new_end, new_start)
+    inside = [(a, b) for a, b in existing_parallel_spans(post_text)
+              if new_start <= a and b <= new_end + 1]
+    return inside or [(new_start, new_end)]
+
+
 def phase_a(state: RunState) -> None:
     """Run the restructuring pass over the candidate queue."""
     args = state.args
@@ -121,6 +156,8 @@ def phase_a(state: RunState) -> None:
         depth, candidate = candidates[i]
         i += 1
         region = candidate.region
+        # In a project each region is worked on in the file it lives in.
+        project_mod.work_on(args, candidate.source_file)
         rid = region.region_id
         rtype = _REGION_LABEL.get(region.region_type, region.region_type)
         label = f"{rtype} {rid} (lines {region.start_line}–{region.end_line})"
@@ -129,6 +166,26 @@ def phase_a(state: RunState) -> None:
         tier2_allowed = (depth <= args.restructure_depth)
 
         print(f"┌─ [depth={depth}] {label}  score={candidate.score:.1f}")
+
+        # Already inside a construct that runs in parallel in the file AS IT NOW
+        # STANDS — a loop the model annotated a moment ago, typically.  There is
+        # nothing left to win there, and asking anyway is what produced a second
+        # "rewrite" that only re-spelled the pragma of the first (observed on the
+        # two-file end-to-end run).  Read from the source, so it holds with or
+        # without runtime measurements; the impact model's covered spans say the
+        # same thing only when hotspots were measured, and only from the NEXT queue
+        # rebuild on.
+        try:
+            parallel_now = existing_parallel_spans(Path(args.source_file).read_text())
+        except OSError:
+            parallel_now = []
+        enclosing_par = next(((a, b) for a, b in parallel_now
+                              if a <= region.start_line and region.end_line <= b), None)
+        if enclosing_par is not None:
+            print(f"│  already inside the parallel construct at lines "
+                  f"{enclosing_par[0]}–{enclosing_par[1]} — nothing left to win here")
+            print(f"└─ COVERED\n")
+            continue
 
         # ── Tier-1 ───────────────────────────────────────────────────────────
         failure_reason = "DiscoPoP found no applicable parallelism pattern for this region"
@@ -178,14 +235,17 @@ def phase_a(state: RunState) -> None:
         tier2_messages: List[Any] | None = None
 
         # Any restructuring may need reverting — it is kept only if DiscoPoP can
-        # parallelize it afterwards — so snapshot the profile ONCE up front and
-        # restore by file-copy instead of a full re-profile.  The pre-patch
-        # source is identical across retries (revert restores it), so one
-        # snapshot serves every attempt for this candidate.
+        # parallelize it afterwards — so the profile is snapshotted and restored by
+        # file-copy instead of a full re-profile.  The snapshot is taken LAZILY, the
+        # first time a rewrite has passed the gate and is about to touch the file:
+        # nothing before that point writes to the profile, and most attempts never
+        # get that far.  It used to be taken before the first model call, for every
+        # region — a copy of all of .discopop, 7.1 GB on LULESH, usually for nothing.
+        # The pre-patch source is identical across retries (revert restores it), so
+        # one snapshot serves every attempt for this candidate.
         dp_snapshot: Path | None = None
         pre_patch_src: str | None = None
         pre_patch_src = Path(args.source_file).resolve().read_text()
-        dp_snapshot = _snapshot_profile(dp_dir, output_dir)
 
         # Build errors (bad syntax, non-canonical loop) are mechanical fixes that
         # say nothing about the model's parallelization idea; spending a whole
@@ -214,6 +274,11 @@ def phase_a(state: RunState) -> None:
                     evidence_sections=args.evidence_sections,
                     llm_recon=(args.llm_recon
                                and args.llm_recon_mode == "folded"),
+                    gate=GateFacts(
+                        require_speedup=args.require_speedup,
+                        n_inputs=1 + len(args.check_inputs or []),
+                        numeric=args.noise_floor > 0.0,
+                        stress=args.schedule_stress),
                 )
             except LLMConnectionError as e:
                 # Fatal for the whole run: every region needs the endpoint.
@@ -357,15 +422,29 @@ def phase_a(state: RunState) -> None:
                 old_prints = [
                     (
                         d,
-                        region_fingerprint(args.source_file, c.region.start_line,
+                        region_fingerprint(c.source_file, c.region.start_line,
                                      c.region.end_line, c.region.name),
                     )
                     for d, c in candidates[i:]
                 ]
 
-                if _apply_to_source(clean_diff, args.source_file, output_dir, "Tier-2"):
-                    viz.panel(f"APPLIED PATCH -> {src_abs.name}", clean_diff,
-                              color=viz.GREEN, colorize=viz._color_diff_line, max_lines=60)
+                if dp_snapshot is None:
+                    dp_snapshot = _snapshot_profile(dp_dir, output_dir)
+                if not _apply_to_source(clean_diff, args.source_file, output_dir, "Tier-2"):
+                    # The gate applied this very diff to a copy, so this is rare — the
+                    # file changed underneath, or `patch` stopped half way.  It used to
+                    # be ignored: the run re-profiled the UNPATCHED source and recorded
+                    # the rewrite as accepted.  Put the file back exactly, keep nothing.
+                    if pre_patch_src is not None:
+                        src_abs.write_text(pre_patch_src)
+                    patch_file.unlink(missing_ok=True)
+                    print(f"│  [Tier-2] the validated rewrite could not be written to "
+                          f"{src_abs.name} — source restored, region left unchanged")
+                    print(f"└─ SKIPPED (patch did not apply to the real file)\n")
+                    skipped.append((rid, depth))
+                    break
+                viz.panel(f"APPLIED PATCH -> {src_abs.name}", clean_diff,
+                          color=viz.GREEN, colorize=viz._color_diff_line, max_lines=60)
 
                 record = {
                     "region_id": rid,
@@ -385,34 +464,27 @@ def phase_a(state: RunState) -> None:
                 # separately, by one full re-profile before it runs.
                 deeper_coming = (depth + 1) <= args.restructure_depth
                 use_fast = args.fast_refresh and not deeper_coming
+                # Read ONCE.  The refresh, the hotspot remap and the dependence
+                # review each used to re-read this file, so the three of them
+                # could in principle disagree about what "the new source" is,
+                # and the line map got rebuilt each time.
+                post_patch_src = Path(args.source_file).read_text()
+                remeasured = False
+                refreshed_fast = False
+                # Taken before anything moves the measurements onto the new file: a
+                # reverted rewrite restores source and profile, and the runtimes have
+                # to go back with them.  They did not, so after a revert every later
+                # region was ranked with lines from a file that no longer existed.
+                impact_before = impact.snapshot()
                 if use_fast:
                     print(f"│  [Tier-2] Fast refresh (compile only, no instrumented run)...")
-                    # Read ONCE.  The refresh, the hotspot remap and the
-                    # dependence review each used to re-read this file, so the
-                    # three of them could in principle disagree about what "the
-                    # new source" is, and the line map got rebuilt each time.
-                    post_patch_src = Path(args.source_file).read_text()
                     reprofile_ok, note = _reprofil_fast(
                         args.source_file, dp_dir, pre_patch_src or "",
                         post_patch_src, output_dir,
                     )
                     if reprofile_ok:
                         print(f"│           {note}")
-                        profile_is_fast = True
-                        if impact.available:
-                            # Hotspots are keyed by LINE, so a rewrite that
-                            # shifts lines does not merely make them stale — it
-                            # makes them point at whatever now sits at that
-                            # number.  Translate them the way the dependences
-                            # were translated, and drop what cannot be.
-                            lost = impact.remap_lines(
-                                region.file_id,
-                                fast_refresh.line_map(pre_patch_src or "",
-                                                      post_patch_src),
-                            )
-                            if lost:
-                                print(f"│           {lost} runtime measurement(s) "
-                                      f"dropped — their lines were rewritten")
+                        refreshed_fast = True
                         if args.llm_recon:
                             # followup: a fresh turn on the SAME session, asked
                             # only now that the rewrite is accepted and the
@@ -521,12 +593,55 @@ def phase_a(state: RunState) -> None:
                             if ok_hs else None
                         if fresh is not None and fresh.available:
                             impact.adopt(fresh)
+                            remeasured = True
                             print(f"│  [Tier-2] Re-measured runtimes: "
                                   f"{len(impact.by_line)} region(s), "
                                   f"{impact.total_runtime*1e3:.1f} ms total")
                         else:
                             print(f"│  [Tier-2] could not re-measure runtimes — "
                                   f"new regions will rank on the workload proxy")
+
+                if reprofile_ok and impact.available:
+                    # Runtimes and covered spans are keyed by LINE, so a rewrite that
+                    # shifts lines does not merely make them stale — it makes them
+                    # point at whatever now sits at that number.  They are translated
+                    # the way the dependences are, and what cannot be is dropped.
+                    # This used to happen on the fast-refresh path ONLY: after a full
+                    # re-profile (the --no-fast-refresh arms, and the fallback when a
+                    # refresh is unusable) every region below the rewrite inherited
+                    # the runtime of whatever used to sit at its line number.  Fresh
+                    # measurements are already in new coordinates — then only the
+                    # covered spans move.
+                    lost = impact.remap_lines(
+                        region.file_id,
+                        fast_refresh.line_map(pre_patch_src or "", post_patch_src),
+                        measurements=not remeasured)
+                    if lost:
+                        print(f"│           {lost} runtime measurement(s) dropped — "
+                              f"their lines were rewritten")
+
+                now_parallel = covered_spans_after(region.start_line, region.end_line,
+                                                   pre_patch_src or "", post_patch_src,
+                                                   clean_diff, self_annotated)
+                if reprofile_ok and impact.available and now_parallel:
+                    # Marked BEFORE the queue is rebuilt below — it used to come
+                    # after, so the regions nested in the rewrite just kept were
+                    # rebuilt as survivors and attempted anyway.  A revert restores
+                    # `impact`, this included.
+                    # Each construct is charged its measured share; one whose lines
+                    # were rewritten has lost its measurement, and such constructs
+                    # split what is left of the region's share between them — so the
+                    # region reads as finished unless a measurement says otherwise.
+                    shares = {sp: impact.fraction(region.file_id, sp[0], sp[1])
+                              for sp in now_parallel}
+                    unknown = [sp for sp, v in shares.items() if v is None]
+                    residual = max((candidate.runtime_fraction or 0.0)
+                                   - sum(v for v in shares.values() if v is not None), 0.0)
+                    for sp in now_parallel:
+                        known = shares[sp]
+                        impact.mark_covered(region.file_id, sp[0], sp[1],
+                                            known if known is not None
+                                            else residual / max(len(unknown), 1))
 
                 # rebuilt / discovered are computed read-only first; the queue and
                 # all_seen_prints are only mutated once we decide to COMMIT.
@@ -537,7 +652,7 @@ def phase_a(state: RunState) -> None:
                     fresh_all = _candidates(dp_dir)
                     fresh_by_print: Dict[Any, List[Any]] = defaultdict(list)
                     for nc in fresh_all:
-                        fp = region_fingerprint(args.source_file, nc.region.start_line,
+                        fp = region_fingerprint(nc.source_file, nc.region.start_line,
                                           nc.region.end_line, nc.region.name)
                         fresh_by_print[fp].append(nc)
 
@@ -552,7 +667,7 @@ def phase_a(state: RunState) -> None:
                     for nc in fresh_all:
                         if id(nc) in consumed:
                             continue
-                        fp = region_fingerprint(args.source_file, nc.region.start_line,
+                        fp = region_fingerprint(nc.source_file, nc.region.start_line,
                                           nc.region.end_line, nc.region.name)
                         if fp not in all_seen_prints:
                             discovered.append((depth + 1, nc, fp))
@@ -612,6 +727,7 @@ def phase_a(state: RunState) -> None:
                         src_abs.write_text(pre_patch_src)
                     if dp_snapshot is not None:
                         _restore_profile(dp_snapshot, dp_dir, output_dir)
+                    impact.restore(impact_before)
                     patch_file.unlink(missing_ok=True)
                     msg = _rewrite_feedback(
                         outcome, dp_dir, region.file_id, _touched_span(clean_diff)
@@ -630,7 +746,24 @@ def phase_a(state: RunState) -> None:
                 exposed_speedup = outcome.speedup
 
                 # ── COMMIT ────────────────────────────────────────────────────
+                # Without a re-profile nothing describes the file as it now stands:
+                # the queued regions' line numbers and evidence belong to the old
+                # text.  They are not attempted — and that is SAID, and counted.
+                if reprofile_ok:
+                    # What the profile on disk now IS: carried-forward data after a
+                    # fast refresh, measured data after a full re-profile.  Decided
+                    # here, at commit — it used to be set as soon as a refresh ran,
+                    # so a rewrite that was then reverted (its snapshot restored)
+                    # still cost the run a full re-profile before Phase B, and a full
+                    # re-profile never cleared it.
+                    profile_is_fast = refreshed_fast
+                unreachable = [] if reprofile_ok else list(candidates[i:])
                 del candidates[i:]
+                if unreachable:
+                    print(f"│  [Tier-2] {len(unreachable)} queued region(s) will NOT be "
+                          f"attempted: no profile describes the rewritten file")
+                    for d_left, c_left in unreachable:
+                        skipped.append((c_left.region.region_id, d_left))
                 candidates.extend(rebuilt)
                 candidates.extend((d, nc) for d, nc, _ in discovered)
                 for _d, _nc, fp in discovered:
@@ -641,20 +774,18 @@ def phase_a(state: RunState) -> None:
                     record["reprofiled"] = True
                 record["exposed_pattern"] = outcome.pattern_label
                 if impact.available:
-                    # Stage 3: this region's time is now spoken for, so anything
-                    # nested inside it has nothing left to win.
-                    impact.mark_covered(region.file_id, region.start_line, region.end_line)
                     if result.measured_speedup:
                         impact.observe_speedup(result.measured_speedup)
                 if self_annotated:
-                    record["pragmas"] = len(pragmas)
+                    record["pragmas"] = net_new_pragmas(clean_diff)
                     record["pragma_text"] = pragmas
                     record["self_annotated"] = True
                 change_log.append({
                     "kind": "rewrite", "region_id": rid, "diff": clean_diff,
+                    "file": str(Path(args.source_file).resolve()),
                     "exposed": outcome.exposed_prints,
                     "self_annotated": self_annotated,
-                    "pragmas": len(pragmas),
+                    "pragmas": net_new_pragmas(clean_diff),
                 })
                 if self_annotated:
                     print(f"│  [Tier-2] Kept on its own pragmas: {len(pragmas)} "
@@ -714,6 +845,17 @@ def phase_a(state: RunState) -> None:
                     "performance": "The parallel build was correct but NOT faster than "
                             "sequential. The dependence is already gone; the parallel work is "
                             "just too fine-grained to cover thread startup.",
+                    "schedules": "The parallel build does not give ONE answer: its output "
+                            "changed with the thread count or the schedule. Iterations of a "
+                            "loop you marked parallel still depend on the order they run in — "
+                            "a dependence the sanitizer did not flag (an order-dependent update, "
+                            "a value one iteration leaves for the next), or a clause that hands "
+                            "threads the wrong starting value.",
+                    "dependences": "The pragma sits on a loop for which DiscoPoP OBSERVED a "
+                            "loop-carried dependence while profiling this exact code, and the "
+                            "code of that loop is unchanged. Annotating it cannot be right: "
+                            "remove that dependence by restructuring, or put the pragma on a "
+                            "loop that does not carry it.",
                 }
                 guidance = _STAGE_GUIDANCE.get(result.stage, "")
                 refunded = ""
@@ -734,18 +876,41 @@ def phase_a(state: RunState) -> None:
                 # semantic failures need an explicit decision about whether the
                 # STRATEGY or a DETAIL was wrong (a blanket "switch strategy"
                 # pushes the model off correct-but-buggy transformations).
+                # The instruction has to fit the stage.  One text used to serve every
+                # non-build failure: it asked "which of (a) or (b) this was" — options
+                # only the correctness guidance defines — and told the model not to
+                # resubmit a variation right after the clause guidance had said to
+                # keep the strategy and fix only the clause.
                 if result.stage in ("apply", "compile", "openmp_compile"):
                     retry_instr = (
                         "Keep your transformation approach and fix ONLY the reported "
                         "error — do not change strategy over a build problem."
                     )
-                else:
+                elif result.stage == "clause":
+                    retry_instr = (
+                        "Keep your restructuring and the loop you chose to parallelize; "
+                        "change ONLY the clause named above."
+                    )
+                elif result.stage == "correctness":
                     retry_instr = (
                         "Do not resubmit a variation of the same code. Say in one line "
                         "which of (a) or (b) this was and what you are changing because "
                         "of it — then make sure the code you write actually differs in "
                         "that way. Stating the right bound and then writing the old one "
                         "is the most common way this retry fails."
+                    )
+                elif result.stage == "performance":
+                    retry_instr = (
+                        "Keep what removed the dependence. Give each parallel region more "
+                        "work — move the pragma to an enclosing loop, or merge regions — "
+                        "and do not fall back to the sequential code."
+                    )
+                else:
+                    retry_instr = (
+                        "Do not resubmit a variation of the same code. Say in one line "
+                        "which iterations still touch the same location, or depend on "
+                        "each other's order, and what you are changing because of it — "
+                        "then make sure the code you write actually differs in that way."
                     )
                 if tier2_messages is not None:
                     tier2_messages = tier2_messages + [{

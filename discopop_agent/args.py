@@ -3,7 +3,10 @@ import argparse
 import os
 import shlex
 from dataclasses import dataclass
+from pathlib import Path
 from typing import List, Optional, Set, Tuple
+
+from .project import Project
 
 
 @dataclass
@@ -70,6 +73,12 @@ class AgentArguments:
     # once a calibration run has fixed its values.
     budget_policy: str = "fixed"
     budget_min: int = 1
+    # --project-dir: the program is several files (project.py).  None — the default —
+    # is the single-file program every earlier run used, handled exactly as before.
+    # In a project `source_file` is the file CURRENTLY under work: the phases point
+    # it at each region's own file in turn.
+    project: Optional[Project] = None
+    profile_only: bool = False
 
 
 def parse_args() -> AgentArguments:
@@ -78,8 +87,36 @@ def parse_args() -> AgentArguments:
     )
     p.add_argument("--discopop-dir", required=True,
                    help="Path to the .discopop directory produced by DiscoPoP")
-    p.add_argument("--source-file", required=True,
-                   help="Path to the C/C++ source file that was profiled")
+    p.add_argument("--source-file", default=None,
+                   help=("Path to the C/C++ source file that was profiled. Required for a "
+                         "single-file program; with --project-dir it is optional."))
+    p.add_argument("--project-dir", default=None,
+                   help=("Root of a MULTI-FILE program. The agent then profiles the whole "
+                         "program (through a generated unity translation unit, so DiscoPoP "
+                         "sees every function's loops — see docs/MULTIFILE.md), builds the "
+                         "real multi-file program for every check, and edits each region in "
+                         "the file it lives in. --discopop-dir must be <project-dir>/.discopop."))
+    p.add_argument("--project-units", default="",
+                   help=("Comma-separated translation units, relative to --project-dir, in "
+                         "build order (default: every .c/.cpp/.cc/.cxx under it, sorted)."))
+    p.add_argument("--project-include", default=None,
+                   help=("Comma-separated include directories relative to --project-dir "
+                         "(default: every directory under it that holds a header)."))
+    p.add_argument("--project-cflags", default="",
+                   help="Extra compile flags for every build of the project, e.g. '-DCLASS_S'.")
+    p.add_argument("--project-ldflags", default="",
+                   help="Extra link flags for every build of the project.")
+    p.add_argument("--build-cmd", default="",
+                   help=("The project's own build command, run in a staged copy of the tree, "
+                         "for programs a plain compile of the units cannot build. The gate's "
+                         "flags arrive as CC/CXX/CFLAGS/CXXFLAGS/LDFLAGS and as {cc} {cxx} "
+                         "{flags} {out}; the result must land at {out} or --project-binary."))
+    p.add_argument("--profile-only", action="store_true",
+                   help=("Take the initial DiscoPoP profile and stop — for a project, through "
+                         "the unity unit. Lets a harness profile a program once and reuse "
+                         "that profile across runs, exactly as it does for one file."))
+    p.add_argument("--project-binary", default="a.out",
+                   help="What --build-cmd produces, relative to the project root (default: a.out).")
     p.add_argument("--budget", type=int, default=3,
                    help="Max LLM retry attempts per region (default: 3)")
     p.add_argument("--budget-policy", choices=["fixed", "share"], default="fixed",
@@ -421,7 +458,39 @@ def parse_args() -> AgentArguments:
     # Resolve openai-compat base URL: CLI arg > LLM_API_BASE env var
     api_base = a.api_base or os.environ.get("LLM_API_BASE")
 
+    project: Optional[Project] = None
+    if a.project_dir:
+        project = Project.discover(
+            a.project_dir,
+            units=[u.strip() for u in a.project_units.split(",") if u.strip()] or None,
+            include_dirs=([d.strip() for d in a.project_include.split(",") if d.strip()]
+                          if a.project_include is not None else None),
+            cflags=shlex.split(a.project_cflags), ldflags=shlex.split(a.project_ldflags),
+            build_cmd=a.build_cmd, binary=a.project_binary)
+        if not project.units:
+            p.error(f"--project-dir {a.project_dir}: no C/C++ translation unit found")
+        missing = [u for u in project.units if not (project.root / u).is_file()]
+        if missing:
+            p.error(f"--project-units: not found under the project root: {', '.join(missing)}")
+        suffixes = {Path(u).suffix == ".c" for u in project.units}
+        if len(suffixes) > 1 and not a.build_cmd:
+            p.error("the project mixes C and C++ units; one compiler invocation cannot "
+                    "build that — give the project's own build with --build-cmd")
+        if Path(a.discopop_dir).resolve() != (project.root / ".discopop").resolve():
+            p.error("--discopop-dir must be <project-dir>/.discopop: DiscoPoP writes its "
+                    "profile into the directory the program is built in")
+        if a.source_file and not project.contains(a.source_file):
+            p.error(f"--source-file {a.source_file} is not inside --project-dir")
+        if not a.source_file:
+            a.source_file = str(project.root / project.units[0])
+    elif not a.source_file:
+        p.error("--source-file is required (or give --project-dir for a multi-file program)")
+    elif a.build_cmd or a.project_units or a.project_include is not None:
+        p.error("--build-cmd / --project-units / --project-include need --project-dir")
+
     return AgentArguments(
+        project=project,
+        profile_only=a.profile_only,
         discopop_dir=a.discopop_dir,
         source_file=a.source_file,
         budget=a.budget,

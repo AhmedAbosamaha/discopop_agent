@@ -47,7 +47,7 @@ from ..profiling.fast_refresh import (line_map, remap_dependencies,
                                       remap_reduction, verify_translation)
 from ..plan.impact import load_hotspots
 from ..plan import build_candidates
-from ..types import HotspotCandidate
+from ..types import EvidencePackage, HotspotCandidate
 from ..llm import make_diff
 from ..gate.toolchain import _find_clangpp, _macos_sysroot_flag, find_archer
 
@@ -83,7 +83,8 @@ def _run(cmd: List[str], cwd: Path, timeout: int = 900) -> Tuple[bool, str]:
     return r.returncode == 0, (r.stderr or r.stdout or "")
 
 
-def _profile(work: Path, src_name: str, hotspots: bool = True) -> Tuple[bool, str]:
+def _profile(work: Path, src_name: str, hotspots: bool = True,
+             c_as_c: bool = False) -> Tuple[bool, str]:
     """Dependence profile, and optionally the hotspot measurement beside it.
 
     Clears the profiler directory first, as production does: discopop_cxx
@@ -93,9 +94,10 @@ def _profile(work: Path, src_name: str, hotspots: bool = True) -> Tuple[bool, st
     comparing against an inflated baseline.
     """
     shutil.rmtree(work / ".discopop" / "profiler", ignore_errors=True)
-    ok, err = _run([_venv_bin("discopop_cxx"), src_name, "-o", "a.out"], work)
+    wrapper = "discopop_cc" if c_as_c and src_name.endswith(".c") else "discopop_cxx"
+    ok, err = _run([_venv_bin(wrapper), src_name, "-o", "a.out"], work)
     if not ok:
-        return False, f"discopop_cxx: {err[-200:]}"
+        return False, f"{wrapper}: {err[-200:]}"
     ok, err = _run(["./a.out"], work)
     if not ok:
         return False, f"profiled run: {err[-200:]}"
@@ -447,6 +449,22 @@ def check_clauses(work: Path) -> Result:
                                   f"{'rejection' if want else 'acceptance'}, got "
                                   f"{got or 'acceptance'}")
                 checked += 1
+    # Phase B's repair of DiscoPoP's own clauses (Fix 79): a name declared inside the
+    # loop body leaves EVERY clause; names from the enclosing scope are never touched.
+    from ..pragmas import _repair_pragma_clauses
+    rsrc = ("void f(int n, double* a) {\n  int i, k;\n  double acc = 0.0;\n"
+            "  for (i = 0; i < n; i++) {\n    int x = i * 2;\n    double t = a[i];\n"
+            "    acc += t * x;\n  }\n}\n")
+    rfile = work / "repair.c"
+    rfile.write_text(rsrc)
+    rdiff = make_diff(rsrc, rsrc.replace("  for (i = 0; i < n; i++) {\n",
+        "  #pragma omp parallel for private(x, k) firstprivate(t) shared(a, x) reduction(+:acc, x)\n"
+        "  for (i = 0; i < n; i++) {\n", 1), str(rfile))
+    repaired = next((l for l in (_repair_pragma_clauses(rdiff, str(rfile)) or "").splitlines()
+                     if "pragma" in l), "")
+    if "private(k) shared(a) reduction(+:acc)" not in repaired or "firstprivate" in repaired:
+        return Result("clause checks", "fail",
+                      f"clause repair produced {repaired!r}, want private(k) shared(a) reduction(+:acc)")
     return Result("clause checks", "pass",
                   f"{len(cases)}/{len(cases)} verdicts correct; "
                   f"{checked} scope cases (distance and one-line bodies) correct")
@@ -793,9 +811,67 @@ def check_hotspot_remap(work: Path) -> Result:
     if gone != 1 or m2.by_line:
         return Result("hotspot remap", "fail",
                       f"a deleted line's measurement survived: {m2.by_line}")
+    # Freshly re-measured runtimes are already in new coordinates: only the covered
+    # spans move (the full re-profile path at depth >= 1).
+    m3 = ImpactModel(threads=8, total_runtime=1.0)
+    m3.by_line = {(1, 25): Hotspot(1, 25, "LOOP", "", "YES", 0.90)}
+    m3.mark_covered(1, 20, 25)
+    m3.remap_lines(1, line_map(old, new), measurements=False)
+    if sorted(m3.by_line) != [(1, 25)] or m3.covered != [(1, 25, 30)]:
+        return Result("hotspot remap", "fail",
+                      f"covered-only remap moved the wrong thing: {sorted(m3.by_line)} {m3.covered}")
+
+    # A reverted rewrite puts the source back; the measurements must go back too.
+    m4 = ImpactModel(threads=8, total_runtime=1.0)
+    m4.by_line = {(1, 3): Hotspot(1, 3, "LOOP", "", "YES", 0.5)}
+    m4.mark_covered(1, 3, 4)
+    before = m4.snapshot()
+    m4.remap_lines(1, line_map("a\nb\nGONE\nd\n", "a\nb\nd\n"))
+    m4.restore(before)
+    if sorted(m4.by_line) != [(1, 3)] or m4.covered != [(1, 3, 4)]:
+        return Result("hotspot remap", "fail",
+                      f"a revert did not restore the measurements: {sorted(m4.by_line)} {m4.covered}")
+
+    # The span a kept rewrite covers is what it CHANGED, without the diff's context.
+    from ..pragmas import changed_span
+    a_text = "\n".join(f"line{i}" for i in range(1, 21)) + "\n"
+    b_text = a_text.replace("line10\n", "new10a\nnew10b\nnew10c\n").replace("line12\n", "")
+    span = changed_span(make_diff(a_text, b_text, "f.c"))
+    if span != (10, 13):
+        return Result("hotspot remap", "fail", f"changed span read as {span}, want (10, 13)")
+    # What a kept rewrite covers.  A pragma-free rewrite covers NOTHING: the loops it
+    # exposed are what Phase B has to annotate, and a covered region is dropped from
+    # every later queue (review F20).  An annotated one covers the loops that are
+    # actually PARALLEL, not everything that was edited (review F21).
+    from ..phases.phase_a import covered_spans_after
+    fn_old = ("void f(int n) {\n  int i;\n  for (i = 0; i < n; i++)\n    a[i] = a[i] * 2;\n"
+              "  for (i = 1; i < n; i++)\n    b[i] = b[i-1] + a[i];\n}\n")
+    fn_new = fn_old.replace("  for (i = 0; i < n; i++)\n", "  #pragma omp parallel for\n  for (i = 0; i < n; i++)\n", 1)
+    d_fn = make_diff(fn_old, fn_new, "f.c")
+    if covered_spans_after(1, 7, fn_old, fn_new, d_fn, self_annotated=False):
+        return Result("hotspot remap", "fail",
+                      "a pragma-free rewrite marked its region covered — Phase B would then "
+                      "never see the loops it exposed")
+    got_spans = covered_spans_after(1, 7, fn_old, fn_new, d_fn, self_annotated=True)
+    if got_spans != [(4, 5)]:
+        return Result("hotspot remap", "fail",
+                      f"an annotated rewrite of f() covers {got_spans}, want only its parallel loop [(4, 5)]")
+    # The function keeps what is still sequential in it; the sibling loop stays visible.
+    m5 = ImpactModel(threads=8, total_runtime=1.0)
+    m5.by_line = {(1, 1): Hotspot(1, 1, "FUNCTION", "f", "YES", 0.90),
+                  (1, 4): Hotspot(1, 4, "LOOP", "", "YES", 0.50),
+                  (1, 6): Hotspot(1, 6, "LOOP", "", "YES", 0.40)}
+    m5.mark_covered(1, 4, 5, m5.fraction(1, 4, 5))
+    left = (m5.remaining_fraction(1, 1, 8), m5.remaining_fraction(1, 4, 5),
+            m5.remaining_fraction(1, 5, 5), m5.remaining_fraction(1, 6, 7))
+    want = (0.40, 0.0, 0.0, 0.40)
+    if any(g is None or abs(g - w) > 1e-9 for g, w in zip(left, want)):
+        return Result("hotspot remap", "fail",
+                      f"remaining shares (function, parallel loop, its body, sibling loop) = {left}, want {want}")
     return Result("hotspot remap", "pass",
                   f"measurements and covered spans follow the code; "
-                  f"{dropped} dropped when lines vanish")
+                  f"{dropped} dropped when lines vanish; a revert restores them; "
+                  f"a rewrite's span excludes diff context")
 
 
 def check_mixed_scale_ranking(work: Path) -> Result:
@@ -1423,11 +1499,635 @@ def check_budget_policy(work: Path) -> Result:
                                 f"unmeasured at min, zero budget stays zero")
 
 
+def _fw_evidence() -> "EvidencePackage":
+    """Floyd–Warshall's kernel as the agent sees it, written out by hand so the prompt
+    checks need no profile: three loops of 32 iterations, RAW on the array, and the
+    induction-variable and signature-line entries DiscoPoP really reports with it."""
+    from ..types import Dependency, EvidencePackage
+    text = {414: "void kernel_floyd_warshall(int n,", 415: "\t\t\t   double path[N][N])", 416: "{",
+            417: "  int i, j, k;", 418: "  for (k = 0; k < n; k++)", 419: "    {",
+            420: "      for(i = 0; i < n; i++)", 421: "\tfor (j = 0; j < n; j++)",
+            422: "\t  path[i][j] = path[i][j] < path[i][k] + path[k][j] ?",
+            423: "\t    path[i][j] : path[i][k] + path[k][j];", 424: "    }", 425: "}"}
+    raw = [Dependency("RAW", 422, 422, "path", "array"), Dependency("RAW", 423, 422, "path", "array"),
+           Dependency("RAW", 422, 414, "path", "array"), Dependency("RAW", 422, 418, "k"),
+           Dependency("RAW", 422, 421, "j"), Dependency("RAW", 422, 420, "i"),
+           Dependency("RAW", 418, 414, "n")]
+    nest = [{"start": 418, "end": 424, "depth": 0, "index_vars": ["k"], "entries": 1, "avg": 32, "total": 32, "max": 32},
+            {"start": 420, "end": 423, "depth": 1, "index_vars": ["i"], "entries": 32, "avg": 32, "total": 1024, "max": 32},
+            {"start": 421, "end": 423, "depth": 2, "index_vars": ["j"], "entries": 1024, "avg": 32, "total": 32768, "max": 32}]
+    return EvidencePackage(
+        region_id="1:68", region_type="function", start_line=414, end_line=425,
+        source_file="/tmp/fw.c",
+        source_region="\n".join(f"{k:4d} >>> {text[k]}" for k in sorted(text)), iteration_count=1,
+        raw_deps=raw, war_deps=[Dependency("WAR", 420, 420, "i")], waw_deps=[], reduction_vars=[],
+        tier1_failure_reason="DiscoPoP found no applicable parallelism pattern for this region",
+        loop_nest=nest, line_text=text, enclosing_function_name="kernel_floyd_warshall",
+        enclosing_function_start=414, enclosing_function_end=425,
+        enclosing_function_source="\n".join(text[k] for k in sorted(text)),
+        array_accesses={"path": {"writes": ["[i][j]"], "reads": ["[i][j]", "[i][k]", "[k][j]"]}},
+        inner_patterns=[], runtime_share=0.97)
+
+
+def check_prompt_truth(work: Path) -> Result:
+    """The prompt describes the gate that runs and the evidence that is sent.
+
+    Found by rendering a real prompt and reading it as the model does (review
+    P2-P5, P9).  It promised a timing step that is off in every arm, "byte for
+    byte" where a measured tolerance applies, and a re-profile that does not
+    happen in the default mode; it branded every loop "too fine-grained" at the
+    profiling size; and `--evidence none`, the arm the evidence claim is measured
+    against, still opened with DiscoPoP's dependence digest.
+    """
+    from ..llm.prompts import _system_prompt
+    from ..llm.request import _build_direct_prompt, _build_function_prompt, _build_prompt
+    from ..types import GateFacts
+    name = "prompt truth"
+    ev = _fw_evidence()
+    ws = Path("/tmp/ws/fw.c")
+    campaign = GateFacts(require_speedup=False, n_inputs=2, numeric=True, stress=True)
+    strict = GateFacts(require_speedup=True, n_inputs=1, numeric=False, stress=False)
+    problems: List[str] = []
+
+    def need(text: str, present: List[str], absent: List[str], what: str) -> None:
+        flat = " ".join(text.split())
+        problems.extend(f"{what}: missing {x!r}" for x in present if x not in flat)
+        problems.extend(f"{what}: still says {x!r}" for x in absent if x in flat)
+
+    # 1. The system prompt follows the gate — in both pragma modes.
+    need(_system_prompt("direct", True, False, campaign),
+         ["Speed is NOT judged", "2 different inputs", "guided schedules", "rounding",
+          "within a constant factor", "O(n^2)"],
+         ["has to be faster", "byte for byte", "byte-identical", "measurably faster"],
+         "default mode, campaign gate")
+    need(_system_prompt("direct", True, False, strict),
+         ["has to be faster", "byte for byte", "byte-identical", "measurably faster"],
+         ["Speed is NOT judged", "guided schedules", "different inputs"],
+         "default mode, strict gate")
+    need(_system_prompt("diff", False, False, campaign),
+         ["re-profiled", "Speed is NOT judged", "Do not write `#pragma omp`"],
+         ["faster than the sequential build", "speed against", "byte for byte"],
+         "DiscoPoP-annotates mode, campaign gate")
+    need(_system_prompt("diff", False, False, strict),
+         ["faster than the sequential build", "speed against the same build"], [],
+         "DiscoPoP-annotates mode, strict gate")
+    if _system_prompt("direct", True, False, campaign) != _system_prompt("direct", True, False, campaign):
+        problems.append("the system prompt is not byte-identical across calls (prompt cache would miss)")
+
+    # 2. The task says what the running mode does, in every edit mode.
+    for label, build in (("direct", lambda lp, g, inc: _build_direct_prompt(ev, ws, inc, lp, g)),
+                         ("function", lambda lp, g, inc: _build_function_prompt(ev, inc, lp, g)),
+                         ("diff", lambda lp, g, inc: _build_prompt(ev, inc, lp, g))):
+        need(build(True, campaign, None), ["ANNOTATED BY YOU", "Nothing re-profiles"],
+             ["after re-profiling", "measurable speedup", "faster than"], f"{label} task, model annotates")
+        need(build(False, strict, None), ["after re-profiling", "measurable speedup",
+                                          "Do not write `#pragma omp`"], ["ANNOTATED BY YOU"],
+             f"{label} task, DiscoPoP annotates")
+        # 3. --evidence none is the source and the task: nothing DiscoPoP measured.
+        bare = build(True, campaign, set())
+        need(bare, ["path[i][j]"],
+             ["Evidence digest", "RAW", "activation", "Do-All blockers", "32 iterations",
+              "accounts for", "written as"], f"{label} prompt under --evidence none")
+    import dataclasses
+    loop_ev = dataclasses.replace(ev, region_type="loop", iteration_count=32768)
+    need(_build_prompt(loop_ev, set(), True, campaign), [], ["32,768"],
+         "diff header of a loop region under --evidence none")
+    need(_system_prompt("direct", True, False, campaign, set()), ["No profiling data"],
+         ["dependences observed at run time", "Do-All blockers"], "system prompt under --evidence none")
+
+    # 4. Granularity is only marked when speed is really judged at this size.
+    full = _build_direct_prompt(ev, ws, None, True, campaign)
+    need(full, ["deliberately small profiling input"], ["too fine-grained"], "loop structure, speed off")
+    need(_build_direct_prompt(ev, ws, None, True, strict), ["too fine-grained"], [], "loop structure, speed on")
+
+    # 5. Signal before noise: no induction variables, no signature line, arrays named as arrays.
+    need(full, ["ARRAY ELEMENTS of: path", "path [array element]", "written as [i][j]",
+                "[i][k], [k][j]", "private(...)", "about 97%", "Why this region is here"],
+         ["RAW on SCALARS", "422→414", "418→414", "k [scalar]", "What went wrong"], "evidence body")
+    if problems:
+        return Result(name, "fail", "; ".join(problems[:6]) + (f" (+{len(problems) - 6} more)" if len(problems) > 6 else ""))
+    return Result(name, "pass", "system prompt and task follow the gate and the pragma mode in all three "
+                                "edit modes; --evidence none carries no DiscoPoP data; no granularity "
+                                "verdict without a speed check; induction and signature noise dropped")
+
+
+_ENRICH_SRC = (
+    "#include <stdio.h>\n#define R 300\n#define T 40\n"
+    "static double a[R][T];\nstatic double b[R];\n"
+    "void kernel(int n)\n{\n  int i, t;\n"
+    "  for (i = 0; i < n; i++)\n    for (t = 1; t < T; t++)\n"
+    "      a[i][t] = a[i][t-1] * 0.5 + 1.0;\n"
+    "  for (i = 1; i < n; i++)\n    b[i] = b[i-1] + a[i][T-1];\n}\n"
+    "int main(void) {\n  int i;\n"
+    "  for (i = 0; i < R; i++) { a[i][0] = 1.0 + (i % 17) * 0.25; b[i] = 0.0; }\n"
+    "  kernel(R);\n  printf(\"%.10f\\n\", b[R-1]);\n  return 0;\n}\n")
+
+
+def check_evidence_enrichment(work: Path) -> Result:
+    """Arrays are recognised in C, and the evidence carries what the source shows.
+
+    DiscoPoP marks an array access with a `GEPRESULT_` prefix in C++ and names it
+    plainly in C, so every array of the 30 PolyBench kernels reached the model
+    tagged [scalar] (review P1).  The access summary (P6) and the loops DiscoPoP
+    already reports parallel inside a region (P7) are checked on the same profile.
+    """
+    import json
+    from ..evidence import assemble
+    from ..evidence.context import _array_accesses
+    name = "evidence enrichment"
+    d = work / "enrich"
+    d.mkdir(parents=True, exist_ok=True)
+    src = d / "kern.c"
+    src.write_text(_ENRICH_SRC)
+    problems: List[str] = []
+
+    acc = _array_accesses(str(src), 1, len(_ENRICH_SRC.splitlines()))
+    if acc.get("a", {}).get("writes") != ["[i][t]", "[i][0]"]:
+        problems.append(f"writes of a read as {acc.get('a', {}).get('writes')}")
+    if "[i][t-1]" not in acc.get("a", {}).get("reads", []) or "[i-1]" not in acc.get("b", {}).get("reads", []):
+        problems.append(f"reads not recognised: {acc}")
+    macro = d / "macro.c"
+    macro.write_text("void f(int n, double (*A)[8][8]) {\n  int i;\n  for (i = 1; i < n; i++)\n"
+                     "    (*A)[i][0] += (*A)[i-1][0];  // A[9] in a comment\n}\n")
+    m = _array_accesses(str(macro), 1, 5).get("A", {})
+    if m.get("writes") != ["[i][0]"] or sorted(m.get("reads", [])) != ["[i-1][0]", "[i][0]"]:
+        problems.append(f"`(*A)[i][0] +=` read as {m}")
+
+    if shutil.which(_venv_bin("discopop_cxx")) is None:
+        return Result(name, "fail" if problems else "skip",
+                      "; ".join(problems) or "DiscoPoP not installed — source-level parts passed")
+    # Profiled twice: as C, where DiscoPoP names arrays plainly, and as C++, where it
+    # prefixes and mangles them.  Both have to reach the model as `a` and `b`.
+    cxx = work / "enrich_cxx"
+    cxx.mkdir(parents=True, exist_ok=True)
+    (cxx / "kern.cpp").write_text(_ENRICH_SRC)
+    from ..plan.regions import demangle
+
+    def kernel_evidence(root: Path, file: Path) -> "Optional[EvidencePackage]":
+        cands = build_candidates(root / ".discopop", str(file), 0.0, min_workload=0.0)
+        kern = [c for c in cands if demangle(c.region.name) == "kernel"]
+        return assemble(kern[0], root / ".discopop" / "profiler", "") if kern else None
+
+    def judge(ev: "EvidencePackage", lang: str) -> None:
+        kinds = {x.variable: x.kind for x in ev.raw_deps + ev.war_deps + ev.waw_deps}
+        odd = sorted(v for v in kinds if v.startswith(("_Z", "ZL", "GEP")) or v.endswith("[]"))
+        if odd:
+            problems.append(f"{lang}: names reach the model as {odd}")
+        wrong = sorted(v for v in ("a", "b") if kinds.get(v, "array") != "array")
+        if wrong:
+            problems.append(f"{lang}: array(s) {wrong} tagged scalar")
+        if not {"a", "b"} & set(kinds):
+            problems.append(f"{lang}: no dependence on a or b reached the evidence ({sorted(kinds)})")
+
+    ok, err = _profile(cxx, "kern.cpp", hotspots=False)
+    if ok:
+        ev_cxx = kernel_evidence(cxx, cxx / "kern.cpp")
+        if ev_cxx is None:
+            problems.append("C++: no function region for `kernel`")
+        else:
+            judge(ev_cxx, "C++")
+    ok, err = _profile(d, src.name, hotspots=False, c_as_c=True)
+    if not ok:
+        return Result(name, "fail" if problems else "skip", "; ".join(problems) or f"could not profile: {err}")
+    dp = d / ".discopop"
+    ev_c = kernel_evidence(d, src)
+    if ev_c is None:
+        return Result(name, "fail", "C: no function region for `kernel`")
+    ev = ev_c
+    judge(ev, "C")
+    if ev.array_accesses.get("b", {}).get("reads") != ["[i-1]"]:
+        problems.append(f"access summary of b: {ev.array_accesses.get('b')}")
+    pats = json.loads((dp / "explorer" / "patterns.json").read_text())["patterns"]
+    want = sorted({int(str(p["start_line"]).split(":")[1]) for k in ("do_all", "reduction")
+                   for p in pats.get(k, []) if str(p.get("applicable_pattern")) == "True"
+                   and ev.start_line <= int(str(p["start_line"]).split(":")[1]) <= ev.end_line})
+    got = sorted(p["line"] for p in ev.inner_patterns)
+    if got != want:
+        problems.append(f"inner patterns {got}, patterns.json says {want}")
+    if problems:
+        return Result(name, "fail", "; ".join(problems))
+    return Result(name, "pass", f"arrays a, b tagged array in C; subscripts read from the source "
+                                f"(incl. `(*A)[i][0] +=`); {len(got)} loop(s) already parallel inside "
+                                f"`kernel` reported")
+
+
+def check_pattern_choice(work: Path) -> Result:
+    """The pattern that speaks for a loop, and the loops Phase B must not nest into.
+
+    patterns.json lists `task` before `do_all` before `reduction`, and the index
+    kept whichever came first — so a task entry (no patch exists for those, and it
+    is usually not applicable) hid the loop pattern on the same line, in every arm
+    including the DiscoPoP baseline (review F1).  And without runtime measurements
+    Phase B could put DiscoPoP's pragma inside a loop the model had already made
+    parallel (review F12).
+    """
+    import json
+    from ..plan.regions import _load_pattern_options, _load_patterns
+    from ..pragmas import existing_parallel_spans
+    name = "pattern choice"
+    d = work / "pattern_choice"
+    d.mkdir(parents=True, exist_ok=True)
+    pj = d / "patterns.json"
+    mk = lambda pid, line, ok: {"pattern_id": pid, "start_line": f"1:{line}", "node_id": f"1:{pid + 40}",
+                                "applicable_pattern": ok, "pragma": "#pragma omp parallel for"}
+    pj.write_text(json.dumps({"patterns": {
+        "optimizer_output": [mk(9, 10, True)],
+        "task": [mk(1, 10, False), mk(2, 20, True)],
+        "do_all": [mk(3, 10, True), mk(4, 20, False), mk(5, 30, True)],
+        "reduction": [mk(6, 10, True)]}}))
+    from ..plan.regions import line_key, node_key
+    best, opts = _load_patterns(pj), _load_pattern_options(pj)
+    problems = []
+    l10, l20 = line_key(1, 10), line_key(1, 20)
+    if best[l10][0] != "reduction":
+        problems.append(f"line 10 is represented by {best[l10][0]!r}, want reduction")
+    if [t for t, _p in opts[l10]] != ["reduction", "do_all", "task"]:
+        problems.append(f"line 10 options ordered {[t for t, _p in opts[l10]]}")
+    if best[l20][0] != "task":
+        problems.append("an applicable task pattern lost to a non-applicable do_all")
+    if any(t == "optimizer_output" for o in opts.values() for t, _p in o):
+        problems.append("an aggregate entry was indexed as a pattern")
+    if best[node_key("1:43")][1]["pattern_id"] != 3:
+        problems.append("node_id lookup does not reach the pattern")
+    # Line 43 of file 1 is NOT node 1:43: a region starting there has no pattern.
+    if line_key(1, 43) in best:
+        problems.append("a node id answered a START-LINE lookup (1:43 as a line)")
+
+    text = ("void f(int n) {\n"                                   # 1
+            "  int i, j;\n"                                       # 2
+            "  #pragma omp parallel for private(j)\n"             # 3
+            "  for (i = 0; i < n; i++)\n"                         # 4
+            "    for (j = 0; j < n; j++)\n"                       # 5
+            "      a[i][j] = 0;\n"                                # 6
+            "  for (i = 0; i < n; i++) b[i] = 0;\n"               # 7
+            "  #pragma omp parallel\n"                            # 8
+            "  {\n"                                               # 9
+            "    work();\n"                                       # 10
+            "  }\n"                                               # 11
+            "  #pragma omp simd\n"                                # 12
+            "  for (i = 0; i < n; i++) c[i] = 0;\n"               # 13
+            "}\n")
+    spans = existing_parallel_spans(text)
+    if spans != [(4, 6), (9, 11)]:
+        problems.append(f"parallel spans read as {spans}, want [(4, 6), (9, 11)]")
+    if problems:
+        return Result(name, "fail", "; ".join(problems))
+    return Result(name, "pass", "reduction > do_all > task per loop, applicable first, alternates kept; "
+                                "parallel loops and blocks located, `simd` and serial loops not")
+
+
+_PROJ_HEADER = ("#ifndef KERN_H\n#define KERN_H\n#define R 300\n#define T 40\n"
+                "extern double a[R][T];\nextern double b[R];\n"
+                "void kernel(int n);\nvoid smooth(int n);\n#endif\n")
+_PROJ_KERN = ("#include \"kern.h\"\ndouble a[R][T];\ndouble b[R];\n"
+              "void kernel(int n)\n{\n  int i, t;\n"
+              "  for (i = 0; i < n; i++)\n    for (t = 1; t < T; t++)\n"
+              "      a[i][t] = a[i][t-1] * 0.5 + 1.0;\n}\n"
+              "void smooth(int n)\n{\n  int i;\n"
+              "  for (i = 1; i < n; i++)\n    b[i] = b[i-1] * 0.5 + a[i][T-1];\n}\n")
+_PROJ_MAIN = ("#include <stdio.h>\n#include \"kern.h\"\nint main(void) {\n  int i;\n"
+              "  for (i = 0; i < R; i++) { a[i][0] = 1.0 + (i % 17) * 0.25; b[i] = 0.0; }\n"
+              "  kernel(R);\n  smooth(R);\n  double s = 0.0;\n"
+              "  for (i = 0; i < R; i++) s += b[i];\n  printf(\"%.10f\\n\", s);\n  return 0;\n}\n")
+
+
+def check_project_mode(work: Path) -> Result:
+    """A multi-file program: profiled whole, built for real, edited file by file.
+
+    The reason for the unity unit is checked, not assumed: profiled the way
+    DiscoPoP documents (unit by unit) this two-file program has BOTH of its
+    recurrences reported as applicable Do-All, because loops outside main's unit
+    get no loop states; through the unity unit they are blocked, and every region
+    still carries its real file and line (docs/MULTIFILE.md).
+    """
+    import json
+    from .. import project as project_mod
+    from ..gate import capture_reference
+    from ..gate.validate import validate
+    from ..profiling import _reprofil
+    name = "project mode"
+    if shutil.which(_venv_bin("discopop_cc")) is None:
+        return Result(name, "skip", "DiscoPoP not installed")
+    root = work / "proj"
+    (root / "src").mkdir(parents=True, exist_ok=True)
+    (root / "include").mkdir(parents=True, exist_ok=True)
+    (root / "include" / "kern.h").write_text(_PROJ_HEADER)
+    (root / "src" / "kern.c").write_text(_PROJ_KERN)
+    (root / "src" / "main.c").write_text(_PROJ_MAIN)
+    problems: List[str] = []
+    proj = project_mod.Project.discover(root)
+    if proj.units != ("src/kern.c", "src/main.c") or proj.include_dirs != ("include",):
+        return Result(name, "fail", f"discovery found units {proj.units}, includes {proj.include_dirs}")
+    kern, main_c = root / "src" / "kern.c", root / "src" / "main.c"
+
+    def loops(dp: Path) -> Dict[Tuple[str, int], bool]:
+        fm = {fid: p.name for fid, p in project_mod.load_file_mapping(dp).items()}
+        pats = json.loads((dp / "explorer" / "patterns.json").read_text())["patterns"]
+        out: Dict[Tuple[str, int], bool] = {}
+        for p in pats.get("do_all", []) + pats.get("reduction", []):
+            fid, line = (int(x) for x in str(p["start_line"]).split(":"))
+            out[(fm.get(fid, "?"), line)] = str(p.get("applicable_pattern")) == "True"
+        return out
+
+    # 1. DiscoPoP's own way, unit by unit — recorded, because it is WHY the unity unit exists.
+    per_unit = work / "proj_per_unit"
+    shutil.copytree(root, per_unit)
+    ok, err = _run([_venv_bin("discopop_cc"), "src/kern.c", "src/main.c", "-Iinclude", "-o", "a.out"], per_unit)
+    note = "per-unit profile not available"
+    if ok and _run(["./a.out"], per_unit)[0] and _run([_venv_bin("discopop_explorer")], per_unit / ".discopop")[0]:
+        wrong = sorted(l for (f, l), okp in loops(per_unit / ".discopop").items() if f == "kern.c" and okp and l in (8, 14))
+        note = (f"DiscoPoP unit by unit calls the recurrence(s) at kern.c:{wrong} Do-All" if wrong
+                else "DiscoPoP unit by unit no longer mis-reports the recurrences (unity unit may be unnecessary)")
+
+    project_mod.activate(proj)
+    try:
+        project_mod.set_focus(kern)
+        dp = root / ".discopop"
+        if not _reprofil(str(kern), dp, None):
+            return Result(name, "fail", "the unity profile failed")
+        if proj.unity_path().exists():
+            problems.append("the generated unity unit was left in the project")
+        found = loops(dp)
+        if not found.get(("kern.c", 7)):
+            problems.append(f"the independent loop kern.c:7 is not reported parallel ({found})")
+        # The clauses come from the explorer's AST-based classification, which matches
+        # declarations to files by path: compiled by a relative name the unity unit's
+        # includes are recorded as "./src/kern.c" and every loop lost its clauses.
+        pats = json.loads((dp / "explorer" / "patterns.json").read_text())["patterns"]
+        kern_id = next(i for i, pth in project_mod.load_file_mapping(dp).items() if pth.name == "kern.c")
+        outer = [p for p in pats.get("do_all", []) if str(p.get("start_line")) == f"{kern_id}:7"]
+        if not outer or "t" not in (outer[0].get("private") or []):
+            problems.append(f"the Do-All on kern.c:7 lost its clauses in the unity profile: "
+                            f"{outer[0] if outer else 'no pattern'}")
+        bad = sorted(l for (f, l), okp in found.items() if f == "kern.c" and okp and l in (8, 14))
+        if bad:
+            problems.append(f"recurrence(s) at kern.c:{bad} reported Do-All through the unity unit")
+
+        # 2. Every region is attributed to the file it lives in.
+        cands = build_candidates(dp, str(kern), 0.0, min_workload=0.0)
+        by_file = {Path(c.source_file).name for c in cands}
+        if by_file != {"kern.c", "main.c"}:
+            problems.append(f"regions attributed to {sorted(by_file)}")
+        if any(Path(c.source_file).name == "kern.c" and c.region.start_line == 3 for c in cands):
+            problems.append("main()'s region (main.c:3) was attributed to kern.c")
+
+        # 3. The gate builds the REAL program and judges a change in the unit without main().
+        ref, _t, refs = capture_reference(str(kern), None)
+        if ref is None:
+            return Result(name, "fail", "the multi-file program could not be built for the reference")
+        text = kern.read_text()
+        good = make_diff(text, text.replace("  for (i = 0; i < n; i++)\n", "  #pragma omp parallel for private(t)\n  for (i = 0; i < n; i++)\n", 1), str(kern))
+        racy = make_diff(text, text.replace("  for (i = 1; i < n; i++)\n", "  #pragma omp parallel for\n  for (i = 1; i < n; i++)\n", 1), str(kern))
+        r_good = validate(good, str(kern), reference_output=ref, reference_outputs=refs, mode="safety")
+        r_racy = validate(racy, str(kern), reference_output=ref, reference_outputs=refs, mode="safety")
+        if not r_good.passed:
+            problems.append(f"a correct pragma in kern.c failed at {r_good.stage}: {r_good.diagnostic[:80]}")
+        if r_racy.passed:
+            problems.append("a pragma on the recurrence in kern.c passed the gate")
+        if kern.read_text() != text:
+            problems.append("the gate modified the project's real file")
+
+        # 3b. The project's OWN build command, both ways flags can reach it.
+        from ..gate.patching import run_build
+        from ..gate.toolchain import _find_clangpp, _macos_sysroot_flag, link_flags_for
+        cand = work / "kern_candidate.c"
+        cand.write_text(text.replace("* 0.5 + 1.0", "* 0.5 + 2.0"))
+        for label, cmd in (("placeholders", "{cc} {flags} src/kern.c src/main.c -Iinclude -o {out}"),
+                           ("environment", 'sh -c "$CC $CFLAGS src/kern.c src/main.c -Iinclude -o a.out"')):
+            custom = project_mod.Project.discover(root, build_cmd=cmd, binary="a.out")
+            project_mod.activate(custom)
+            project_mod.set_focus(kern)
+            out_bin = work / f"bin_{label}"
+            r = run_build(cand, _find_clangpp() or "clang++", out_bin,
+                          ["-O2"] + link_flags_for(cand) + _macos_sysroot_flag(), work)
+            got = subprocess.run([str(out_bin)], capture_output=True, text=True).stdout.strip() if out_bin.exists() else ""
+            if r.returncode != 0 or not got.startswith("2383.99"):
+                problems.append(f"--build-cmd via {label}: rc {r.returncode}, output {got!r} "
+                                f"(the candidate should double the constant)")
+        if kern.read_text() != text or any(p.name.startswith("_dp_proj") for p in work.iterdir()):
+            problems.append("a build-cmd build touched the real tree or left its staging behind")
+        project_mod.activate(proj)
+        project_mod.set_focus(kern)
+
+        # 4. A fast refresh after an edit to kern.c moves kern.c's lines and nobody else's.
+        from ..evidence.deps import _load_instruction_lines
+        from ..profiling import _reprofil_fast
+
+        def deps_within(file_name: str) -> int:
+            """Observed dependence rows whose sink AND sources all sit in `file_name`."""
+            fid = next(i for i, pth in project_mod.load_file_mapping(dp).items() if pth.name == file_name)
+            where = _load_instruction_lines(dp / "profiler")
+            n = 0
+            for row in (dp / "profiler" / "dynamic_dependencies.txt").read_text().splitlines():
+                f = row.split()
+                if len(f) < 4 or f[1] != "NOM":
+                    continue
+                ends = [f[0]] + [t.split("|")[0] for t in f[3::2] if "|" in t]
+                files = {where.get(e.split("@")[0], (0, 0))[0] for e in ends if e not in ("*", "0@0")}
+                n += files == {fid}
+            return n
+
+        main_deps_before = deps_within("main.c")
+        new_text = text.replace("void kernel(int n)\n", "/* added */\n/* lines */\nvoid kernel(int n)\n", 1)
+        kern.write_text(new_text)
+        out_dir = work / "proj_out"
+        out_dir.mkdir(exist_ok=True)
+        ok_f, note_f = _reprofil_fast(str(kern), dp, text, new_text, out_dir)
+        kern.write_text(text)
+        if not ok_f:
+            problems.append(f"fast refresh failed on the project: {note_f}")
+        else:
+            moved = loops(dp)
+            if not moved.get(("kern.c", 9)) or ("kern.c", 7) in moved:
+                problems.append(f"kern.c's loop did not move 7 -> 9 ({sorted(moved)})")
+            if ("main.c", 5) not in moved:
+                problems.append(f"main.c's loop at line 5 moved although main.c was not edited ({sorted(moved)})")
+            main_deps_after = deps_within("main.c")
+            if main_deps_before == 0 or main_deps_after != main_deps_before:
+                problems.append(f"main.c was not edited, yet {main_deps_before} of its observed "
+                                f"dependences became {main_deps_after} after the refresh")
+    finally:
+        project_mod.activate(None)
+    if problems:
+        return Result(name, "fail", "; ".join(problems))
+    return Result(name, "pass", f"{note}; through the unity unit they are blocked (clauses intact) and regions "
+                                f"keep their real file and line; the gate built both units, passed a correct "
+                                f"pragma in the unit without main() and caught a racy one; --build-cmd works "
+                                f"with placeholders and with CC/CFLAGS; a refresh moved only the edited file")
+
+
+_NEST_SRC = (
+    "#include <stdio.h>\n#define R 300\n#define T 40\nstatic double a[R][T];\n"
+    "int main(void) {\n  int i, t;\n"
+    "  for (i = 0; i < R; i++) a[i][0] = 1.0 + (i % 17) * 0.25;\n"
+    "  for (i = 0; i < R; i++)\n    for (t = 1; t < T; t++)\n"
+    "      a[i][t] = a[i][t-1] * 0.5 + 1.0;\n"
+    "  double s = 0.0;\n  for (i = 0; i < R; i++) s += a[i][T-1];\n"
+    "  printf(\"%.10f\\n\", s);\n  return 0;\n}\n")
+
+
+def check_dependence_standing(work: Path) -> Result:
+    """The profile may judge a pragma only on code it actually profiled.
+
+    Two defects, both found on real benchmarks (review F6).  The stage judged a
+    REWRITE by the original loop's observed dependences — so the correct
+    Floyd-Warshall parallelisation failed, removing that dependence being the
+    whole point of the rewrite.  And it matched blockers by OVERLAP with the
+    region, so an inner recurrence failed DiscoPoP's own correct pragma on the
+    independent loop around it.  The blocker file is written by hand here, so
+    the check does not depend on which output the explorer happens to draw.
+    """
+    import json
+    from ..gate.dependences import annotated_loop_lines, dependence_evidence
+    name = "dep standing"
+    d = work / "dep_standing"
+    (d / ".discopop" / "explorer").mkdir(parents=True, exist_ok=True)
+    src = d / "nest.c"
+    src.write_text(_NEST_SRC)
+    lines = _NEST_SRC.splitlines()
+    outer = next(i for i, l in enumerate(lines, 1) if l.startswith("  for (i = 0; i < R; i++)") and "a[i][0]" not in l and "s +=" not in l)
+    inner = outer + 1
+    (d / ".discopop" / "explorer" / "doall_prevented.json").write_text(json.dumps([{
+        "loop_file": 1, "loop_start": inner, "loop_end": inner, "dep_type": "DepType.RAW",
+        "source_line": "None", "sink_line": "None", "var_name": "GEPRESULT_a",
+        "origin": "DepOrigin.DYNAMIC_ANALYSIS"}]))
+    dp = str(d / ".discopop")
+    text = src.read_text()
+    o_head, i_head = lines[outer - 1] + "\n", lines[inner - 1] + "\n"
+
+    ann_outer = make_diff(text, text.replace(o_head + i_head, "  #pragma omp parallel for private(t)\n" + o_head + i_head, 1), str(src))
+    ann_inner = make_diff(text, text.replace(o_head + i_head, o_head + "    #pragma omp parallel for\n" + i_head, 1), str(src))
+    rewrite = make_diff(text, text.replace(i_head, "    for (t = 1; t < T; t += 1)\n", 1).replace(
+        o_head, "  #pragma omp parallel for private(t)\n" + o_head, 1), str(src))
+
+    problems = []
+    if annotated_loop_lines(ann_outer) != [outer]:
+        problems.append(f"outer annotation located at {annotated_loop_lines(ann_outer)}, want [{outer}]")
+    if annotated_loop_lines(rewrite) is not None:
+        problems.append("a diff that changes code was classified as a pure annotation")
+    v_outer = dependence_evidence(dp, 1, outer, inner + 1, loop_lines=annotated_loop_lines(ann_outer)).verdict
+    v_inner = dependence_evidence(dp, 1, outer, inner + 1, loop_lines=annotated_loop_lines(ann_inner)).verdict
+    if v_outer == "contradicted":
+        problems.append("an INNER loop's blocker failed a pragma on the independent outer loop")
+    if v_inner != "contradicted":
+        problems.append(f"a pragma on the loop with the OBSERVED dependence was not contradicted ({v_inner})")
+    # End to end: the rewrite must reach the evidence as "rewritten-code", never fail here.
+    from ..gate import capture_reference
+    from ..gate.validate import validate
+    ref, _t, refs = capture_reference(str(src), None)
+    res = validate(rewrite, str(src), reference_output=ref, reference_outputs=refs,
+                   discopop_dir=dp, dep_region=(1, outer, inner + 1), mode="safety")
+    if res.stage == "dependences":
+        problems.append("a rewrite was failed by the original code's dependences")
+    elif res.evidence.get("dependences") != "rewritten-code":
+        problems.append(f"rewrite evidence reads {res.evidence.get('dependences')!r}")
+    if problems:
+        return Result(name, "fail", "; ".join(problems))
+    return Result(name, "pass", "rewrite not judged by the old profile; outer Do-All survives an inner "
+                                "blocker; the blocked loop itself is still contradicted")
+
+
+def check_schedule_runtime(work: Path) -> Result:
+    """The schedule matrix must actually vary the schedule (review F8).
+
+    OMP_SCHEDULE is obeyed only by loops declaring `schedule(runtime)`, so the
+    stress build has to add it to every worksharing loop that names no schedule.
+    """
+    from ..gate.schedules import with_runtime_schedule
+    name = "schedule runtime"
+    cases = [
+        ("#pragma omp parallel for\nfor(;;);", 1),
+        ("  #pragma omp parallel for private(j) reduction(+:s)\n", 1),
+        ("#pragma omp for\n", 1),
+        ("#pragma omp parallel for schedule(static)\n", 0),      # named: left alone
+        ("#pragma omp parallel for schedule (dynamic, 4)\n", 0),
+        ("#pragma omp parallel\n{\n", 0),                         # not a loop construct
+        ("#pragma omp simd\n", 0),
+        ("#pragma omp task\n", 0),
+        ("#pragma omp parallel for \\\n    private(j)\n", 1),     # continuation line
+        ("// #pragma omp parallel for is mentioned in a comment\n", 0),
+    ]
+    bad = []
+    for text, want in cases:
+        out, n = with_runtime_schedule(text)
+        if n != want or (want and "schedule(runtime)" not in out) or (not want and out != text):
+            bad.append(f"{text.splitlines()[0][:40]!r}: changed {n}, want {want}")
+    cont, _ = with_runtime_schedule("#pragma omp parallel for \\\n    private(j)\n")
+    if not cont.splitlines()[1].rstrip().endswith("schedule(runtime)"):
+        bad.append("a continued pragma did not get the clause on its LAST line")
+    if bad:
+        return Result(name, "fail", "; ".join(bad))
+    return Result(name, "pass", f"{len(cases)} pragma shapes: clause added only to unscheduled loop constructs")
+
+
+_REDUCE_SRC = (
+    "#include <stdio.h>\n#include <stdlib.h>\n#define N 400000\nstatic double a[N], b[N];\n"
+    "int main(int argc, char** argv) {\n  int i; double acc = 0.0;\n"
+    "  for (i = 0; i < N; i++) { a[i] = (i % 613) * 0.125; b[i] = (i % 149) * 0.75; }\n"
+    "  if (argc > 1) { unsigned long long st = strtoull(argv[1], 0, 10) * 2654435761ULL + 1;\n"
+    "    for (i = 0; i < N; i++) { st = st * 6364136223846793005ULL + 1442695040888963407ULL;\n"
+    "      a[i] += (double)(st >> 11) / 9007199254740992.0; } }\n"
+    "  for (i = 0; i < N; i++)\n    acc += a[i] * b[i];\n"
+    "  printf(\"%.17g\\n\", acc);\n  return 0;\n}\n")
+
+
+def check_noise_floor_inputs(work: Path) -> Result:
+    """The floor is measured on every input it is applied to, and Settle uses it.
+
+    Review F10: the default input of this program is exactly representable, so it
+    rounds nowhere and measures a floor of 0, while the seeded input does round —
+    and a correct `reduction` was then rejected on it byte-for-byte.  Review F9:
+    Settle re-judged the finished file with no floor at all.
+    """
+    from ..gate import capture_reference, numerical_noise_floor
+    from ..gate.validate import validate
+    name = "noise floor inputs"
+    d = work / "floor_inputs"
+    d.mkdir(parents=True, exist_ok=True)
+    src = d / "reduce.c"
+    src.write_text(_REDUCE_SRC)
+    f_default = numerical_noise_floor(str(src), None).value
+    f_all = numerical_noise_floor(str(src), None, extra_inputs=[["7"]]).value
+    if f_default != 0.0:
+        return Result(name, "skip", f"default input is not rounding-free here ({f_default:.1e})")
+    if f_all <= 0.0:
+        return Result(name, "fail", "the floor ignores the extra input (still 0)")
+    text = src.read_text()
+    loop = "  for (i = 0; i < N; i++)\n    acc += a[i] * b[i];"
+    diff = make_diff(text, text.replace(loop, "  #pragma omp parallel for reduction(+:acc)\n" + loop, 1), str(src))
+    ref, _t, refs = capture_reference(str(src), None, extra_inputs=[["7"]])
+    with_floor = validate(diff, str(src), reference_output=ref, reference_outputs=refs,
+                          noise_floor=f_all, mode="safety")
+    if not with_floor.passed:
+        return Result(name, "fail", f"a correct reduction failed at '{with_floor.stage}' with the floor in effect")
+
+    # Settle must judge the finished file with that same floor.
+    from types import SimpleNamespace
+    from ..phases.settle import _check_final_source
+    final = text.replace(loop, "  #pragma omp parallel for reduction(+:acc)\n" + loop, 1)
+    src.write_text(final)
+    args = SimpleNamespace(source_file=str(src), noise_floor=f_all, schedule_stress=True,
+                           stress_threads=(1, 2, 4), require_speedup=False, timing_cflags=())
+    ok, why = _check_final_source(args, text, ref, refs, None, None)   # type: ignore[arg-type]
+    src.write_text(text)
+    if not ok:
+        return Result(name, "fail", f"Settle rejected what the gate accepted: {why[:120]}")
+    return Result(name, "pass", f"floor 0 on the default input, {f_all:.1e} with the seeded one; "
+                                f"a correct reduction passes the gate and Settle")
+
+
 _CHECKS: List[Tuple[str, Callable[[Path], Result]]] = [
     ("impact", check_impact_ranking),
     ("min-impact", check_min_impact),
     ("covered-skip", check_covered_skip),
     ("budget-policy", check_budget_policy),
+    ("project-mode", check_project_mode),
+    ("pattern-choice", check_pattern_choice),
+    ("prompt-truth", check_prompt_truth),
+    ("evidence-enrich", check_evidence_enrichment),
+    ("dep-standing", check_dependence_standing),
+    ("schedule-runtime", check_schedule_runtime),
+    ("noise-floor-inputs", check_noise_floor_inputs),
     ("hotspot-remap", check_hotspot_remap),
     ("mixed-rank", check_mixed_scale_ranking),
     ("fast-refresh", check_fast_refresh),

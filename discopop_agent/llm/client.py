@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any, List, Optional, Set
 
 from .. import viz
-from ..types import EvidencePackage
+from ..types import EvidencePackage, GateFacts
 from .diffs import _extract_code, _extract_diff, _is_valid_diff
 from .prompts import _system_prompt
 from .request import (_build_direct_prompt, _build_function_prompt,
@@ -38,6 +38,7 @@ def call_llm(
     verbose: bool = False,
     evidence_sections: Optional[Set[str]] = None,
     llm_recon: bool = False,
+    gate: Optional[GateFacts] = None,
 ) -> tuple[Optional[str], List[Any], str]:
     """Call the LLM and return (output or None, updated messages, raw reply).
 
@@ -77,6 +78,10 @@ def call_llm(
     DiscoPoP will insert the pragmas, on it is told to write them itself and
     that nothing downstream will add one for it.
 
+    `gate` says what the gate judging this rewrite really checks, so the system
+    prompt and the task describe THAT gate — not a fixed one with a timing step
+    and a byte-for-byte comparison regardless of configuration.
+
     `provider` selects the backend: "anthropic" (default, billed API key),
     "openai-compat" (any OpenAI-compatible endpoint at `api_base`, e.g. a
     self-hosted vLLM), or "claude-agent-sdk" (runs the local `claude` CLI
@@ -92,7 +97,8 @@ def call_llm(
             "--edit-mode direct requires --provider claude-agent-sdk (it is the "
             "only backend that can edit files itself)."
         )
-    system = _system_prompt(edit_mode, llm_pragmas, llm_recon)
+    gate = gate or GateFacts()
+    system = _system_prompt(edit_mode, llm_pragmas, llm_recon, gate, evidence_sections)
     client = _make_client(provider, api_key, api_base)
     session_key = evidence.region_fingerprint or evidence.region_id
 
@@ -106,11 +112,12 @@ def call_llm(
         if direct_mode:
             assert workspace_file is not None
             user_prompt = _build_direct_prompt(evidence, workspace_file,
-                                               evidence_sections)
+                                               evidence_sections, llm_pragmas, gate)
         elif function_mode:
-            user_prompt = _build_function_prompt(evidence, evidence_sections)
+            user_prompt = _build_function_prompt(evidence, evidence_sections,
+                                                 llm_pragmas, gate)
         else:
-            user_prompt = _build_prompt(evidence, evidence_sections)
+            user_prompt = _build_prompt(evidence, evidence_sections, llm_pragmas, gate)
         messages = [{"role": "user", "content": user_prompt}]
 
     current = list(messages)

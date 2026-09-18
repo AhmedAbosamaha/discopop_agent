@@ -37,12 +37,10 @@ import json
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 
 @dataclass
-
-
 class Hotspot:
     """One measured region from Hotspots.json."""
     file_id: int
@@ -54,8 +52,6 @@ class Hotspot:
 
 
 @dataclass
-
-
 class ImpactModel:
     """Measured runtime per region, and what parallelizing each would be worth.
 
@@ -78,6 +74,10 @@ class ImpactModel:
     # remaining value is zero — without this the agent re-attacks time it has
     # already won.
     covered: List[Tuple[int, int, int]] = field(default_factory=list)
+    # Share of the runtime each covered span accounts for, when it is known at the
+    # moment of covering.  A region that CONTAINS covered spans is worth only what
+    # is left after them.
+    covered_time: Dict[Tuple[int, int, int], float] = field(default_factory=dict)
 
     @property
     def available(self) -> bool:
@@ -104,20 +104,50 @@ class ImpactModel:
             return None
         return min(h.avg_runtime / self.total_runtime, 1.0)
 
+    def remaining_fraction(
+        self, file_id: int, start_line: int, end_line: int
+    ) -> Optional[float]:
+        """Share of the runtime still SEQUENTIAL in this region, or None if unmeasured.
+
+        0.0 for a region inside a covered span — a loop nested in one that already
+        runs in parallel has nothing left to win.  For a region that CONTAINS covered
+        spans (a function one of whose loops was parallelised) it is the region's
+        share minus theirs: what remains is what a further attempt could still win.
+        Covering used to be all-or-nothing on the span of whatever was EDITED, which
+        hid a sibling loop in the same function from Phase B and left a deeper
+        restructuring level (--restructure-depth) with nothing it could ever see.
+        """
+        mine = [(cf, cs, ce) for cf, cs, ce in self.covered if cf == file_id]
+        # Inside a parallel construct there is nothing left to win — measured or not.
+        # (An unmeasured nested region used to come back as "no measurement" and
+        # could then be queued on the workload proxy.)
+        if any(cs <= start_line and end_line <= ce for _cf, cs, ce in mine):
+            return 0.0
+        f = self.fraction(file_id, start_line, end_line)
+        if f is None:
+            return None
+        inside = [c for c in mine if start_line <= c[1] and c[2] <= end_line]
+        # Only the outermost ones count: a covered loop inside a covered loop is
+        # already part of the outer one's time.
+        outer = [c for c in inside
+                 if not any(o is not c and o[1] <= c[1] and c[2] <= o[2] for o in inside)]
+        spoken = 0.0
+        for c in outer:
+            known = self.covered_time.get(c)
+            spoken += known if known is not None else (self.fraction(*c) or 0.0)
+        return max(f - spoken, 0.0)
+
     def predicted_saving(
         self, file_id: int, start_line: int, end_line: int
     ) -> Optional[float]:
         """ΔT in seconds, or None when this region has no measurement.
 
-        Returns 0.0 for a region already inside an accepted parallelization —
-        the time is spoken for, so there is nothing left to win here.
+        Computed on what is still sequential (`remaining_fraction`), so it is 0.0
+        for a region whose time is already spoken for.
         """
-        f = self.fraction(file_id, start_line, end_line)
+        f = self.remaining_fraction(file_id, start_line, end_line)
         if f is None:
             return None
-        for cf, cs, ce in self.covered:
-            if cf == file_id and cs <= start_line and end_line <= ce:
-                return 0.0
         speedup_factor = 1.0 - 1.0 / max(self.threads * self.efficiency, 1.0)
         return self.total_runtime * f * speedup_factor
 
@@ -131,8 +161,12 @@ class ImpactModel:
         parallel_part = f / max(self.threads * self.efficiency, 1e-9)
         return 1.0 / max(1.0 - f + parallel_part, 1e-9)
 
-    def remap_lines(self, file_id: int, lmap: Dict[int, int]) -> int:
+    def remap_lines(self, file_id: int, lmap: Dict[int, int],
+                    measurements: bool = True) -> int:
         """Move the measurements onto a rewritten file, dropping what moved away.
+
+        With `measurements=False` only the covered spans move: the runtimes were
+        just re-measured on the new file and are already in its coordinates.
 
         Measurements are keyed by LINE, so after a rewrite shifts lines they do
         not merely go stale — they are silently mis-attributed, and a region can
@@ -146,7 +180,7 @@ class ImpactModel:
         """
         moved: Dict[Tuple[int, int], Hotspot] = {}
         dropped = 0
-        for (fid, line), hs in self.by_line.items():
+        for (fid, line), hs in (self.by_line.items() if measurements else ()):
             if fid != file_id:
                 moved[(fid, line)] = hs
                 continue
@@ -156,18 +190,25 @@ class ImpactModel:
                 continue
             moved[(fid, new_line)] = Hotspot(fid, new_line, hs.node_type, hs.name,
                                              hs.hotness, hs.avg_runtime)
-        self.by_line = moved
+        if measurements:
+            self.by_line = moved
         # Covered spans move with the file too; one that no longer exists is
         # dropped rather than left pointing at unrelated lines.
         moved_covered: List[Tuple[int, int, int]] = []
+        moved_time: Dict[Tuple[int, int, int], float] = {}
         for f, s, e in self.covered:
             if f != file_id:
-                moved_covered.append((f, s, e))
+                target: Optional[Tuple[int, int, int]] = (f, s, e)
+            else:
+                ns, ne = lmap.get(s), lmap.get(e)
+                target = (f, ns, ne) if ns is not None and ne is not None else None
+            if target is None:
                 continue
-            ns, ne = lmap.get(s), lmap.get(e)
-            if ns is not None and ne is not None:
-                moved_covered.append((f, ns, ne))
+            moved_covered.append(target)
+            if (f, s, e) in self.covered_time:
+                moved_time[target] = self.covered_time[(f, s, e)]
         self.covered = moved_covered
+        self.covered_time = moved_time
         return dropped
 
     def adopt(self, fresh: "ImpactModel") -> None:
@@ -180,8 +221,27 @@ class ImpactModel:
         self.by_line = fresh.by_line
         self.total_runtime = fresh.total_runtime
 
-    def mark_covered(self, file_id: int, start_line: int, end_line: int) -> None:
-        self.covered.append((file_id, start_line, end_line))
+    def mark_covered(self, file_id: int, start_line: int, end_line: int,
+                     share: Optional[float] = None) -> None:
+        """Record that this span now runs in parallel.
+
+        `share` is the runtime share it accounts for, when the caller knows it and
+        the measurement keyed on the span's own line may not (a rewritten loop's
+        measurement is dropped with its lines)."""
+        span = (file_id, start_line, end_line)
+        if span not in self.covered:
+            self.covered.append(span)
+        if share is not None:
+            self.covered_time[span] = share
+
+    def snapshot(self) -> Tuple[Any, ...]:
+        """The line-keyed state, to put back when a rewrite is reverted."""
+        return (dict(self.by_line), list(self.covered), self.total_runtime,
+                dict(self.covered_time))
+
+    def restore(self, snap: Tuple[Any, ...]) -> None:
+        self.by_line, self.covered, self.total_runtime = dict(snap[0]), list(snap[1]), snap[2]
+        self.covered_time = dict(snap[3]) if len(snap) > 3 else {}
 
     def observe_speedup(self, measured: float) -> None:
         """Calibrate efficiency from a speedup the gate actually measured.
@@ -253,20 +313,23 @@ def run_hotspot_detection(
     replace `a.out`, which is the dependence profiler's binary and is re-run
     later.
     """
-    src = Path(source_file).resolve()
-    binary = src.parent / ".dp_hotspot.out"
+    from ..profiling.tools import InstrumentedBuild
     dp = discopop_dir.resolve()
 
     # C is instrumented as C (discopop_hotspot_cc), never through the C++
-    # wrapper; C programs also need libm linked explicitly.
-    is_c = src.suffix == ".c"
-    wrapper = "discopop_hotspot_cc" if is_c else "discopop_hotspot_cxx"
-    ok, err = run_cmd([wrapper, str(src), "-o", str(binary)] + (["-lm"] if is_c else []),
-                      src.parent, env)
+    # wrapper; C programs also need libm linked explicitly.  A project goes
+    # through the same unity unit as the dependence profile, so both speak of
+    # the same files by the same ids.
+    build = InstrumentedBuild(source_file, ".dp_hotspot.out", hotspot=True)
+    binary = build.binary
+    try:
+        ok, err = run_cmd(build.cmd, build.cwd, env)
+    finally:
+        build.cleanup()
     if not ok:
         return False, f"hotspot instrumentation failed: {err[-160:]}"
 
-    ok, err = run_cmd([str(binary)] + (binary_args or []), src.parent, env)
+    ok, err = run_cmd([str(binary)] + (binary_args or []), build.cwd, env)
     if not ok:
         return False, f"the hotspot-instrumented program failed: {err[-160:]}"
 

@@ -79,6 +79,8 @@ def _verify_rewrite(
     exposed = [
         c for c in fresh
         if c.tier == 1 and c.pattern and c.pattern.get("applicable_pattern")
+        # "in the lines that changed" means in the FILE that changed, too.
+        and Path(c.source_file).resolve() == Path(args.source_file).resolve()
         and (touched is None
              or not (c.region.end_line < touched[0] or c.region.start_line > touched[1]))
     ]
@@ -91,7 +93,7 @@ def _verify_rewrite(
         for c in exposed[:3]
     )
     prints = [
-        region_fingerprint(args.source_file, c.region.start_line,
+        region_fingerprint(c.source_file, c.region.start_line,
                            c.region.end_line, c.region.name)
         for c in exposed
     ]

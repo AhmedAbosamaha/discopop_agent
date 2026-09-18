@@ -17,8 +17,9 @@ from __future__ import annotations
 
 import tempfile
 from pathlib import Path
-from typing import Any, List, Tuple
+from typing import Any, Dict, List, Tuple
 
+from .. import project as project_mod
 from ..args import AgentArguments
 from ..gate import validate
 from ..gate.tsan import _is_omp_barrier_false_positive
@@ -30,7 +31,7 @@ from ..types import ValidationResult
 
 
 def _check_final_source(
-    args: AgentArguments, original_text: str, reference_output: "str | None",
+    args: AgentArguments, originals: "Dict[str, str] | str", reference_output: "str | None",
     reference_outputs: "List[Tuple[List[str], str]] | None", binary_args: "List[str] | None",
     reference_time: "float | None",
 ) -> "tuple[bool, str]":
@@ -47,12 +48,28 @@ def _check_final_source(
     --require-speedup, and separately, because it is the user's switch for
     whether that question is asked at all.
     """
-    final_text = Path(args.source_file).read_text()
-    if normalize_code(final_text) == normalize_code(original_text):
+    if isinstance(originals, str):
+        # The single-file form: the one file's text as it stood at the start.
+        originals = {str(Path(args.source_file).resolve()): originals}
+    changed = [p for p, text in originals.items()
+               if normalize_code(Path(p).read_text()) != normalize_code(text)]
+    if not changed:
         return True, "source unchanged"
+    # One file is handed to the gate as "original + cumulative diff"; in a project
+    # the staged tree already holds every OTHER file in its final state, so the
+    # program that gets built and judged is the finished one either way.  The file
+    # chosen is one whose diff carries a pragma, when any does, because that is
+    # what switches the gate to its parallel track (-fopenmp, the sanitizer, the
+    # schedule matrix) — and those then cover every pragma in the program.
+    def _adds_pragma(p: str) -> bool:
+        return "#pragma omp" in Path(p).read_text() and "#pragma omp" not in originals[p]
+    target = next((p for p in changed if _adds_pragma(p)), changed[0])
+    project_mod.work_on(args, target)
+    original_text = originals[target]
+    final_text = Path(target).read_text()
 
     with tempfile.TemporaryDirectory(prefix="dp_agent_check_") as tmp:
-        base = Path(tmp) / Path(args.source_file).name
+        base = Path(tmp) / Path(target).name
         base.write_text(original_text)
         cumulative = make_diff(original_text, final_text, str(base))
         def _run(skip: bool) -> ValidationResult:
@@ -61,6 +78,13 @@ def _check_final_source(
                 reference_outputs=reference_outputs, binary_args=binary_args,
                 require_speedup=False, reference_time=reference_time,
                 skip_race_check=skip, mode="safety",
+                # The SAME tolerance and stress settings every earlier gate used.
+                # Without them this re-check compared byte-for-byte, so a reduction
+                # accepted under the measured noise floor failed here and the whole
+                # run was reverted (review F9).
+                noise_floor=getattr(args, "noise_floor", 0.0),
+                stress=getattr(args, "schedule_stress", True),
+                stress_threads=tuple(getattr(args, "stress_threads", None) or ()) or None,
             )
 
         res = _run(False)
@@ -69,7 +93,7 @@ def _check_final_source(
         # would pass its own gate (which does re-check) and then be thrown away
         # by this one, so the run could never keep anything on this platform.
         if (not res.passed and res.stage == "tsan"
-                and _is_omp_barrier_false_positive(res.diagnostic)):
+                and _is_omp_barrier_false_positive(res.diagnostic, final_text)):
             print(f"  [note] TSan OMP-barrier false positive on the finished file "
                   f"— re-verifying on output instead")
             res = _run(True)
@@ -79,7 +103,7 @@ def _check_final_source(
 
         if args.require_speedup and reference_time is not None:
             ok_t, t_final, _out, tdiag = time_source(
-                final_text, args.source_file, Path(tmp), "final", binary_args, repeats=5,
+                final_text, target, Path(tmp), "final", binary_args, repeats=5,
                 extra_flags=list(args.timing_cflags) or None,
             )
             if not ok_t:
@@ -103,7 +127,7 @@ def _check_final_source(
                           f"{reference_time*1e3:.1f} ms original")
     return True, "output matches the original"
 def _settle(
-    original_text: str, change_log: List[Any], args: AgentArguments,
+    originals: "Dict[str, str] | str", change_log: List[Any], args: AgentArguments,
     output_dir: Path, reference_output: "str | None",
     reference_outputs: "List[Tuple[List[str], str]] | None", binary_args: "List[str] | None",
     reference_time: "float | None",
@@ -136,6 +160,9 @@ def _settle(
     """
     notes: List[Any] = []
     keep = list(change_log)
+    if isinstance(originals, str):
+        # The single-file form: the one file's text as it stood at the start.
+        originals = {str(Path(args.source_file).resolve()): originals}
 
     while True:
         applied_prints = {c["fingerprint"] for c in keep
@@ -153,14 +180,14 @@ def _settle(
                              f"{len(ch.get('exposed', []))} region(s), none kept a pragma")
         keep = pruned
 
-        landed = _apply_change_log(original_text, keep, args)
+        landed = _apply_change_log(originals, keep, args)
         for ch in keep:
             if ch not in landed:
                 notes.append(f"{ch['kind']} for {ch['region_id']} — depended on a "
                              f"change that was dropped, so it no longer applies")
         keep = landed
 
-        ok, why = _check_final_source(args, original_text, reference_output,
+        ok, why = _check_final_source(args, originals, reference_output,
                                       reference_outputs, binary_args, reference_time)
         if ok:
             if why != "source unchanged":
@@ -175,7 +202,9 @@ def _settle(
         if not droppable:
             # Nothing left to drop and it still does not hold up: the rewrites
             # alone are the problem, so put the user back where they started.
-            Path(args.source_file).write_text(original_text)
+            for path, text in originals.items():
+                if Path(path).read_text() != text:
+                    Path(path).write_text(text)
             notes.append(f"everything reverted — {why}")
             print(f"  [revert] {why}")
             return [], notes

@@ -94,6 +94,8 @@ def _sync_workspace(session_key: str, source_file: str) -> Tuple[Path, str]:
     starting from the original every time.  It is re-seeded from disk whenever
     the real file changed underneath it (another region's patch was applied, or
     this region's was reverted), because the stale edits no longer apply."""
+    from .. import project as project_mod
+
     disk = Path(source_file).read_text()
     entry = _region_workspaces.get(session_key)
     if entry is not None:
@@ -102,6 +104,13 @@ def _sync_workspace(session_key: str, source_file: str) -> Tuple[Path, str]:
             return ws_file, disk
     else:
         ws_file = _ws_dir(session_key) / Path(source_file).name
+    proj = project_mod.active()
+    rel = proj.rel(source_file) if proj is not None else None
+    if proj is not None and rel is not None:
+        # A project: the model gets the whole tree to READ — the headers a kernel
+        # includes, the callers of a function — with the file to edit at its real
+        # relative path.  Only that one file's changes are taken back.
+        ws_file = proj.stage(_ws_dir(session_key)) / rel
     ws_file.parent.mkdir(parents=True, exist_ok=True)
     ws_file.write_text(disk)
     _region_workspaces[session_key] = (ws_file, disk)

@@ -75,6 +75,16 @@ def demangle(name: str) -> str:
     import re
     if not name.startswith("_Z"):
         return name
+    if name.startswith("_ZZ"):
+        # A `static` local: `_ZZ4mainE7contrib` is `contrib` inside main().  The
+        # entity follows the LAST `E<len>` whose length fits what remains (an
+        # optional `_<n>` discriminator may trail it).
+        for hit in reversed(list(re.finditer(r"E(\d+)", name))):
+            n, start = int(hit.group(1)), hit.end()
+            rest = name[start + n:]
+            if n and start + n <= len(name) and re.fullmatch(r"(_\d*)?", rest):
+                return name[start:start + n]
+        return name
     i = 2
     if name.startswith("L", i):             # internal linkage (static)
         i += 1
@@ -223,21 +233,74 @@ def _load_loop_counts(profiler_dir: Path) -> Dict[str, int]:
     return counts
 
 
-def _load_patterns(patterns_path: Path) -> Dict[str, Tuple[str, Dict[str, Any]]]:
-    """
-    Index patterns.json by both start_line and node_id.
-    Returns {key: (pattern_type, pattern_dict)}.
-    """
+# Which pattern speaks for a loop when DiscoPoP reports several on one line.  The
+# loop patterns come first because they are the ones DiscoPoP generates a patch
+# for; `reduction` leads `do_all` because where both are reported the reduction
+# pattern is the one that carries the accumulator's clause.
+_PATTERN_PREFERENCE = ("reduction", "do_all", "pipeline", "geometric_decomposition",
+                       "task", "task_parallelism")
+
+
+def _pattern_rank(ptype: str, pattern: Dict[str, Any]) -> Tuple[int, int]:
+    applicable = str(pattern.get("applicable_pattern")) == "True"
+    order = (_PATTERN_PREFERENCE.index(ptype) if ptype in _PATTERN_PREFERENCE
+             else len(_PATTERN_PREFERENCE))
+    return (0 if applicable else 1, order)
+
+
+def line_key(file_id: int, line: int) -> str:
+    return f"L{file_id}:{line}"
+
+
+def node_key(node_id: str) -> str:
+    return f"N{node_id}"
+
+
+def _load_pattern_options(patterns_path: Path) -> Dict[str, List[Tuple[str, Dict[str, Any]]]]:
+    """Every pattern per start line (`line_key`) and per node id (`node_key`), best
+    first (see `_pattern_rank`).
+
+    The two are DIFFERENT key spaces that happen to be spelled alike: `1:4` is line
+    4 of file 1 as a start line and node 4 of file 1 as a node id.  They used to
+    share one dictionary, so a function starting at line 4 was handed the pattern of
+    node 1:4 — a loop somewhere else — became "already parallelisable", and was
+    never sent to the model."""
     import json
-    index: Dict[str, Tuple[str, Dict[str, Any]]] = {}
+    options: Dict[str, List[Tuple[str, Dict[str, Any]]]] = {}
     if not patterns_path.exists():
-        return index
+        return options
     data = json.loads(patterns_path.read_text())
     for ptype, plist in data.get("patterns", {}).items():
         if ptype in _SKIP_PATTERN_TYPES:
             continue
         for p in plist:
-            for key in (p.get("start_line", ""), p.get("node_id", "")):
-                if key and key not in index:
-                    index[key] = (ptype, p)
-    return index
+            keys = []
+            start = str(p.get("start_line", ""))
+            if ":" in start:
+                try:
+                    keys.append(line_key(int(start.split(":")[0]), int(start.split(":")[1])))
+                except ValueError:
+                    pass
+            if p.get("node_id"):
+                keys.append(node_key(str(p["node_id"])))
+            for key in keys:
+                if not any(q is p for _t, q in options.get(key, [])):
+                    options.setdefault(key, []).append((ptype, p))
+    for key in options:
+        options[key].sort(key=lambda tp: _pattern_rank(tp[0], tp[1]))
+    return options
+
+
+def _load_patterns(patterns_path: Path) -> Dict[str, Tuple[str, Dict[str, Any]]]:
+    """
+    Index patterns.json by both start_line and node_id.
+    Returns {key: (pattern_type, pattern_dict)} — the BEST pattern per key.
+
+    It used to keep whichever pattern came FIRST in the file, and patterns.json
+    lists `task` before `do_all` before `reduction`.  A task entry — which DiscoPoP
+    generates no patch for, and which is usually not even applicable — therefore
+    hid the loop pattern on the same line: 44 such lines across the suite (T0.6),
+    each one a DiscoPoP suggestion that no arm, the DiscoPoP baseline included,
+    could ever apply.  On 11 kernel lines a `do_all` likewise hid a `reduction`.
+    """
+    return {key: opts[0] for key, opts in _load_pattern_options(patterns_path).items()}

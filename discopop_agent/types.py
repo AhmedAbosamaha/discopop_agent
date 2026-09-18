@@ -40,6 +40,25 @@ class HotspotCandidate:
     impact_seconds: "float | None" = None   # ΔT: predicted whole-program time saved
     runtime_fraction: "float | None" = None # f: measured share of total runtime
     hotness: "str | None" = None            # DiscoPoP's own YES / MAYBE / NO
+    # DiscoPoP's OTHER applicable patterns for this same loop, best first, as
+    # (pattern_type, pattern).  Phase B falls back to them when the first one's
+    # pragma does not survive the gate.
+    alternates: List[Any] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class GateFacts:
+    """What the gate that will judge a rewrite really checks, as told to the model.
+
+    The prompt used to describe a fixed gate — a timing step, a byte-for-byte
+    comparison on one input — whatever was actually configured.  These are constant
+    for a run, so a prompt built from them is still byte-identical across calls and
+    the provider's prompt cache still hits.
+    """
+    require_speedup: bool = True   # is the parallel build timed against one thread?
+    n_inputs: int = 1              # inputs the output is compared on (profiled + --check-input)
+    numeric: bool = False          # a measured rounding tolerance applies (noise floor > 0)
+    stress: bool = True            # the thread-count / schedule matrix runs
 
 
 @dataclass
@@ -98,6 +117,15 @@ class EvidencePackage:
     # per call site, {line, callee, recursive}.  Non-empty means the loop body
     # has side effects the source alone may not show.
     calls_in_region: List[Dict[str, Any]] = field(default_factory=list)
+    # What the region READS and WRITES, per array, as index expressions taken from
+    # the source: {"path": {"writes": ["[i][j]"], "reads": ["[i][j]", "[i][k]", "[k][j]"]}}.
+    # DiscoPoP reports THAT a dependence exists; this is what shows its shape.
+    array_accesses: Dict[str, Dict[str, List[str]]] = field(default_factory=dict)
+    # Loops inside the region DiscoPoP ALREADY reports as parallel (Do-All or
+    # reduction): {line, kind, clauses, is_target}.  They need a pragma, not a rewrite.
+    inner_patterns: List[Dict[str, Any]] = field(default_factory=list)
+    # The region's measured share of program runtime (0..1), when known.
+    runtime_share: Optional[float] = None
     # Raw source text by absolute line number, covering the enclosing function
     # plus the region.  Lets the prompt quote the exact statement a dependence
     # points at instead of making the LLM cross-reference line numbers.

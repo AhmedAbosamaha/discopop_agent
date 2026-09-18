@@ -1349,3 +1349,147 @@ Measured on the recorded candidates: `2mm` was rejected for `private(j, k)` and 
 **Fix:** in `_read_after`, comments are blanked first (`_without_comments`, keeping line indices and indentation); directive lines are skipped; and a later `for (name = …; …)` header whose initialiser does not itself read the name is treated as killing the value — the loop's whole span is skipped, while uses **after** it are still examined, because a loop nested inside another may run zero times and leave the old value live. The direction of caution is unchanged: a missed read would ship a wrong program, so only mentions that provably cannot read the stale value are discounted.
 
 **Verified:** all 11 recorded candidates of `2mm`, `jacobi-2d-imper` and `seidel-2d` now pass the clause stage; before the fix, 2 of them were refused. Four cases added to the feature check `clause` (counter re-initialised by the next loop, a later pragma naming it, a comment mentioning it — all three must be accepted; a genuine read after the re-initialising loop — must still be rejected), giving **8/8 verdicts and 16 scope cases**. With the three changes reverted the check **fails on exactly those three cases**. mypy **0**.
+
+---
+
+# Fixes 64–73 — the September 2026 full review
+
+Found by reading every module in pipeline order and by rendering a real prompt and reading it as the model does (`docs/REVIEW_2026-09.md` has the finding list, F1–F17 and P1–P12). No thesis experiment had run; `pilot2` and `local_obs1` predate these fixes and are not comparable with later runs.
+
+## Fix 64 — The `dependences` stage judged a rewrite by the code it replaced
+
+**Files:** `gate/dependences.py`, `gate/validate.py`, `benchmark/test_features.py`
+
+**Problem.** Stage 3b fails a pragma when DiscoPoP OBSERVED a loop-carried dependence on the annotated loop. Phase A passed the ORIGINAL region's span, and blockers were matched by any OVERLAP with it. But a region reaches the model precisely because it has such a blocker, and removing it is what the rewrite is for. **Proven on Floyd–Warshall:** the correct parallelisation (copy row k and column k, `parallel for` on the i loop) is ThreadSanitizer-clean, agrees over 7 thread/schedule configurations and reproduces the output on both inputs — and was rejected at `dependences`. A second defect in the same match: an INNER loop's blocker failed DiscoPoP's own correct pragma on the independent loop around it. Whether the blocker file exists at all is an explorer draw (seidel-2d: 2 of 6 profiles), so the verdict was also random.
+
+**Fix:** `annotated_loop_lines(diff)` returns the old-file lines of the loops a PURE annotation puts a pragma on, or `None` when the diff changes code. A rewrite is recorded as `evidence["dependences"] = "rewritten-code"` and never fails this stage — the profile does not describe that code. A pure annotation is judged against blockers of exactly the annotated loop (`loop_start` equality), not any loop overlapping the region.
+
+**Verified:** feature check `dep-standing` (hand-written blocker file, so it does not depend on the explorer's draw): rewrite not judged by the old profile; outer Do-All survives an inner blocker; the blocked loop itself is still contradicted. Fails with the fix reverted.
+
+## Fix 65 — The schedule matrix did not vary the schedule
+
+**Files:** `gate/schedules.py`, `gate/validate.py`, `benchmark/test_features.py`
+
+**Problem.** The matrix set `OMP_SCHEDULE`, which OpenMP applies only to loops declaring `schedule(runtime)`. Measured: the iteration→thread map of a plain `parallel for` is identical (`0000111122223333`) under `static`, `dynamic,1` and `guided`. So two of the three schedule entries in every `evidence["schedules"]` list were repeats of the static run, and `dynamic,1` — the configuration that interleaves neighbouring iterations and exposes a recurrence — never ran.
+
+**Fix:** `with_runtime_schedule(text)` adds `schedule(runtime)` to every worksharing-loop pragma that has no schedule clause of its own, for the stress build only (`check_stress` binary); the count is recorded as `evidence["schedule_runtime_loops"]`. A loop with an explicit schedule keeps it.
+
+**Verified:** feature check `schedule-runtime`, 10 pragma shapes (clause added only to unscheduled loop constructs; `sections`, `simd`, explicit schedules untouched). Fails reverted.
+
+## Fix 66 — Numeric tolerance: calibrated on one input, ignored by Settle; a dead guard
+
+**Files:** `gate/equivalence.py`, `run.py`, `phases/settle.py`, `gate/validate.py`, `benchmark/test_features.py`
+
+**Problem.** (a) The numerical noise floor was measured on the default input only and applied to every `--check-input`. When the default input is rounding-free (integer-derived initial values) the floor is 0 and the perturbed input — which does round — was compared byte for byte. **Proven on `calib/dotprod`:** floor 0 on the default input, 1.0e-12 on the seeded one; the textbook `reduction(+:acc)` was rejected at `correctness`. (b) Settle re-judged the finished file without `noise_floor` (nor the stress settings), so a reduction accepted in Phase A/B under tolerance failed Settle and, with nothing else left, the whole run was reverted. (c) The OMP-barrier false-positive heuristic must not fire when the patch uses `nowait` or tasks; both callers omitted the `code` argument, so that guard was dead.
+
+**Fix:** `numerical_noise_floor(..., extra_inputs=…)` takes the maximum over all inputs the gate will compare; `_check_final_source` passes `noise_floor`, `stress` and `stress_threads`; both heuristic callers pass the code.
+
+**Verified:** feature check `noise-floor-inputs`: floor 0 on the default input, non-zero with the seeded one; a correct reduction passes the gate AND Settle. Fails reverted.
+
+## Fix 67 — The prompt described a gate that was not the one running
+
+**Files:** `llm/prompts.py`, `llm/request.py`, `llm/client.py`, `phases/phase_a.py`, `types.py` (`GateFacts`)
+
+**Problem.** "HOW YOUR REWRITE IS CHECKED" was a constant. It listed a timing step ("has to be faster") that is off in every arm of the campaign; it said "byte for byte" where a measured tolerance applies; it omitted the two checks that catch most wrong rewrites (the schedule matrix, the second input). The task text was one constant too: in the default mode it said "after re-profiling, DiscoPoP must detect a genuinely parallel pattern … and achieves measurable speedup" while the system prompt said "nothing here re-profiles your code". And the loop-structure section branded every loop "too fine-grained on its own" against ~1000 iterations — the campaign profiles at a size where every PolyBench loop has 32 — while the system prompt said to annotate "the outermost one that qualifies". None did. A model told its loop must beat one thread at a deliberately tiny size has a reason not to parallelise at all.
+
+**Fix:** `GateFacts(require_speedup, n_inputs, numeric, stress)` is built from the run's arguments and drives the system prompt (both pragma modes), the task text (`_goal`, `_task_checklist`) and the loop-structure rendering. With the speed check off the prompt says so, explains that the iteration counts come from a small profiling input, and asks for the OUTERMOST loop that can be made independent. The facts are constant for a run, so the prompt stays byte-identical across calls and the prompt cache still hits.
+
+**Verified:** feature check `prompt-truth` renders all three edit modes under the campaign gate and a strict gate and asserts what each must and must not say. Fails with any of three mutations (section filter, granularity marker, task text).
+
+## Fix 68 — `--evidence none` still carried DiscoPoP's evidence
+
+**Files:** `llm/render.py`, `llm/request.py`, `llm/prompts.py`
+
+**Problem.** The "Evidence digest" was printed unconditionally, outside the `--evidence` filter: under `none` the request still opened with the dependence variables, the loop nest with trip counts, the calls and the reductions (and, in diff mode, the iteration count in the header). The system prompt told the model it had been given observed dependences. This is the arm the thesis's evidence claim is measured against (B4, X1, E2-feedback).
+
+**Fix:** every digest line belongs to a named section and is dropped with it; with no section there is no digest. The "what we give you" block is generated from the sections actually sent; under `none` it says no profiling data is provided.
+
+**Verified:** `prompt-truth` asserts that under `none` every edit mode carries the source and the task and nothing DiscoPoP measured.
+
+## Fix 69 — Evidence: arrays called scalars, mangled names, noise before signal, and three missing facts
+
+**Files:** `evidence/package.py`, `evidence/context.py`, `evidence/deps.py`, `plan/regions.py`, `llm/render.py`, `types.py`
+
+**Problem.** (P1) Array-ness was inferred from DiscoPoP's `GEPRESULT_` prefix, which the C kernels do not get — and C++ only sometimes. All PolyBench arrays reached the model as `[scalar]`, beside a digest line saying scalar dependences are "usually a reused location, not a value travelling between iterations": the opposite of the truth for the one array the kernel is about. (P12) Names arrived mangled or mutilated (`ZL1b[]`, `_ZL1a`, `_ZZ4mainE7contrib`). (P5) Dependences on the induction variables and on the function's signature line (the parameter being passed in) were listed at the weight of the real one.
+
+**Fix:** arrays are recognised from the source (`_array_accesses`: `name[...]`, including `(*name)[i][j]`; declarations are not accesses) and the dependences re-tagged; names are demangled (`demangle` now handles `_ZZ…E<n><name>`), one spelling per variable. Induction-variable and signature-line entries are left out and said to be. Added: **array accesses** — per array, the subscripts written and read (`path: written as [i][j] | read as [i][j], [i][k], [k][j]`), the fact a restructuring is designed around (P6); **loops DiscoPoP already reports parallel inside the region** (P7); the region's **share of runtime** (P8); and a note naming the loop indices declared outside their `for`, which a pragma on an enclosing loop must list `private` (P11). The array-dependence note now first asks WHICH loop carries the dependence. All new sections are named in `EVIDENCE_SECTIONS`, so ablations can remove them.
+
+**Verified:** feature check `evidence-enrich` profiles one kernel as C and as C++ and asserts array tags, plain names, the access summary and the inner patterns against `patterns.json`. Fails with any of three mutations.
+
+## Fix 70 — Gate feedback: two stages without guidance, one instruction for every failure
+
+**Files:** `phases/phase_a.py`
+
+**Problem / fix.** `schedules` and `dependences` had no guidance text. The retry instruction asked "which of (a) or (b)" for every non-build failure although only `correctness` defines those, and contradicted the `clause` guidance. Each stage now has guidance and an instruction that fits it (build: fix the error only; clause: change only the clause; correctness: (a)/(b); performance: keep the dependence removal, coarsen; race/schedule/dependence: say which iterations still interact).
+
+## Fix 71 — The pattern index hid DiscoPoP's own suggestions; Phase B could nest pragmas
+
+**Files:** `plan/regions.py`, `plan/scoring.py`, `phases/phase_b.py`, `pragmas/parse.py`, `types.py`
+
+**Problem.** `_load_patterns` kept the FIRST pattern per line and `patterns.json` lists `task` before `do_all` before `reduction`. A task entry — DiscoPoP generates no patch for those, and most are not applicable — hid the loop pattern on the same line: 44 lines across the suite (T0.6), each a suggestion no arm could apply, the DiscoPoP baseline included. On 11 kernel lines a `do_all` hid a `reduction`. In Phase B, a loop was marked covered before its patch was written, and without runtime measurements nothing stopped DiscoPoP's pragma going inside a loop the model had already parallelised.
+
+**Fix:** per loop, patterns are ordered applicable-first, then `reduction` > `do_all` > others; the best one speaks for the loop and the other applicable ones ride along as `HotspotCandidate.alternates`, which Phase B tries when the first pragma does not survive. Phase B reads the loops already parallel in the source on entry (`existing_parallel_spans`) and records a span only after its patch is on disk.
+
+**Verified:** feature check `pattern-choice`. Fails reverted.
+
+## Fix 72 — Phase A bookkeeping: a silent queue drop, an eager 7 GB copy, an ignored write failure
+
+**Files:** `phases/phase_a.py`
+
+When a self-annotated rewrite was kept but its re-profile failed, the rest of the queue was deleted without a word — now each region is counted as skipped and the reason printed. The profile snapshot (all of `.discopop`; 7.1 GB on LULESH) was taken before the first model call of every region — now it is taken when a rewrite has passed the gate and is about to touch the file. If the validated patch could not be written to the real file the run carried on, re-profiled the unpatched source and recorded the rewrite as accepted — now the source is restored and the region skipped.
+
+## Fix 73 — Line-keyed state in the wrong coordinates; re-profile failures unnoticed
+
+**Files:** `phases/phase_a.py`, `plan/impact.py`, `pragmas/parse.py`, `profiling/runner.py`
+
+**Problem.** Runtime measurements and "covered" spans are keyed by line. (a) They were translated onto the rewritten file on the fast-refresh path only; after a full re-profile (`--no-fast-refresh` arms, and the fallback) every region below a rewrite inherited the runtime of whatever used to sit at its line. (b) The covered span used the region's OLD line numbers. (c) A reverted rewrite restored source and profile but not the measurements. (d) `_reprofil` ignored the instrumented run's exit status.
+
+**Fix:** one translation after either refresh path (`remap_lines(..., measurements=False)` when the runtimes were just re-measured); the covered span is computed in new coordinates from the line map and the diff's changed lines (`changed_span`, context excluded); `ImpactModel.snapshot()/restore()` around every attempt that reaches the file; the re-profile fails on a non-zero exit or a missing `dynamic_dependencies.txt`. `profile_is_fast` is decided at commit.
+
+**Verified:** feature check `hotspot-remap` extended (covered-only remap, revert restore, changed span). Suite: **27 passed, 0 failed**; mypy **0 errors**.
+
+## Fix 74 — Multi-file programs
+
+**Files:** `project.py` (new), `gate/patching.py` (`run_build`), `gate/toolchain.py`, `gate/tsan.py`, `gate/validate.py`, `profiling/tools.py` (`InstrumentedBuild`), `profiling/runner.py`, `profiling/fast_refresh.py`, `plan/impact.py`, `plan/scoring.py`, `evidence/deps.py`, `evidence/package.py`, `phases/*`, `sources/edits.py`, `llm/providers.py`, `llm/request.py`, `args.py`, `run.py`. Design, measurements and the reproducer: `docs/MULTIFILE.md`.
+
+**Problem.** One `--source-file`, so every benchmark had to be merged into one translation unit. And the obvious alternative is unsafe: profiled the way DiscoPoP documents (unit by unit), a two-file program had **both of its recurrences reported as applicable Do-All** — this DiscoPoP build constructs its call-path state graph from `main`'s unit only, so loops in other units get no loop states and no dependence is seen as loop-carried.
+
+**Fix.** `--project-dir` turns on project mode. (1) **Profile** through a generated unity unit (one file that `#include`s every unit, compiled as one by the wrapper, removed again): DiscoPoP sees the whole program, and `FileMapping.txt` still names the real files and lines. (2) **Judge the real program:** every compile the gate performs already handed one candidate file to one of three functions; they now share `run_build`, which for a project stages the tree into a fresh directory, replaces the focus file with the candidate and builds all units (or runs `--build-cmd`). The user's tree is only read. (3) **Work per file:** regions resolve to their file through `FileMapping.txt`; the phases point `args.source_file` at each region's own file (`project.work_on`); dependences, reductions and static-only variables are filtered by file id; the fast refresh moves only the rewritten file's positions; Settle keeps originals and replays changes per file. (4) **Direct edit mode** gives the model the whole staged tree to read and takes back only the one file's changes. With no `--project-dir` no new path is taken.
+
+**Verified:** feature check `project-mode` — the unit-by-unit false Do-Alls are recorded, the unity profile blocks them; regions carry their real file; the gate passes a correct pragma in the unit without `main` and catches a racy one without touching the user's files; after an edit to `kern.c` a fast refresh keeps all 23 of `main.c`'s observed dependences (22 are lost with the file-aware translation reverted). Three mutations killed. End to end with a model: unity profile → rewrite in `kern.c` → real two-unit gate → fast refresh → full re-profile → Settle, exit 0.
+
+## Fix 75 — The pattern index mixed start lines with node ids
+
+**Files:** `plan/regions.py` (`line_key`, `node_key`), `plan/scoring.py`. One dictionary held patterns by `start_line` ("1:7") and by `node_id` ("1:4"); a region looked up by `file:start_line` could hit a NODE id. A function starting at line 4 inherited the pattern of node 1:4, was deferred as "already parallelisable" and never reached the model. The two key spaces are now distinct. **Verified:** `pattern-choice` asserts a node id cannot answer a start-line lookup; fails reverted.
+
+## Fix 76 — What "covered" means: the parallel loops, with their time — not the edited region
+
+**Files:** `phases/phase_a.py` (`covered_spans_after`, the inside-parallel skip), `plan/impact.py` (`remaining_fraction`, `covered_time`), `plan/scoring.py`, `pragmas/parse.py` (`existing_parallel_spans`, `net_new_pragmas`).
+
+**Problem.** Three defects around one idea. (F19) The covered mark was set after the queue had been rebuilt, so a loop nested in the loop the model had just parallelised came back as a survivor and was sent to the model — a wasted call whose "rewrite" re-spelled the pragma, counted as a second accepted rewrite and a fourth pragma in a file holding three. (F20) A pragma-free rewrite marked its region covered; since Fix 61 drops covered regions from every queue, Phase B never saw the loops such a rewrite had exposed, and Settle discarded the rewrite as an orphan — the `--no-llm-pragmas` arms could not keep a rewrite. (F21) The WHOLE edited span was covered: sibling loops of the same function were hidden from Phase B, and since everything a rewrite creates lies inside its own span, `--restructure-depth` ≥ 1 could never see anything.
+
+**Fix.** Covered = the parallel constructs found in the rewritten source inside the region, each charged its measured share (constructs whose measurement was lost with their lines share what is left of the region's). Marked before the queue is rebuilt; nothing is marked for a pragma-free rewrite. `remaining_fraction` = a region's share minus the covered constructs it contains (0 inside one, measured or not); ranking, the 1 % floor and the share-weighted budget all use it. Independently of runtime measurements, Phase A skips a region that lies inside a construct already parallel in the source. Pragma counts are net of re-spelled lines.
+
+**Verified:** `hotspot-remap` — pragma-free covers nothing; an annotated rewrite of a two-loop function covers only its parallel loop; remaining shares (function 0.40, parallel loop 0, its body 0, sibling loop 0.40). End to end: the nested loop is no longer attempted (2 model calls instead of 3, 2 pragmas reported for 2 in the file).
+
+## Fix 77 — The contract bounds extra work
+
+**Files:** `llm/prompts.py`. With the speed check off the prompt said speed is not judged and that "doing more work than the original is fine". Observed: a linear recurrence parallelised by recomputing every element from the start — O(n) → O(n²), correct, race-free, and certain to lose at full size. Extra work is now allowed within a constant factor, with that example named, and the speed note says where the rewrite finally has to win. **Verified:** `prompt-truth` asserts the wording in the campaign configuration.
+
+## Fix 78 — Included units lost their clauses in the explorer's AST matching
+
+**Files:** `explorer/discopop_explorer/utilities/ASTUtils/ASTLoader.py`, harness `agent/tools/cli.py` (`profile_once`), `benchmark/test_features.py`.
+
+**Problem.** The explorer takes `private`/`firstprivate`/`shared` from the AST dump and matches AST file names to `FileMapping.txt` with `endswith("/" + path)`. Clang spells a unit found through a relative include directory as `./src/kern.c`, which never matches, so every declaration in the file was invisible and every Do-All there lost its clauses. Seen on the harness's first project profile (`privtemp_proj`): DiscoPoP's `#pragma omp parallel for` without `private(t)`, rejected at `tsan`, outcome `no-change`.
+
+**Fix.** The matcher normalises the AST path (`os.path.normpath`, leading `./` removed) before the suffix match; the harness compiles the unity unit by its absolute path with absolute include directories, as the agent already did. **Verified:** explorer tests 23 passed; `project-mode` asserts `private(t)` on the kernel loop; the harness smoke run on `privtemp_proj` and `vecsum_proj` now applies the pragma in `src/kernel.c` and verifies FASTER (2.17×, 1.58× at 8 threads, digests exact).
+
+## Fix 79 — Phase B repairs every clause that names a loop-body local, not only `shared()`
+
+**Files:** `pragmas/patch.py` (`_repair_pragma_clauses`), `benchmark/test_features.py` (`clause`).
+
+**Problem.** DiscoPoP lists loop-body locals in the clauses of its generated pragmas — in C++ especially (`private(x)` for `int x` declared in the body). Such a name is not in scope at the pragma, so the `-fopenmp` build fails outright. The repair covered `shared()` only; on the first project trial of NPB `is` (18 Sep) three of DiscoPoP's four suggestions were dropped for `private(x)`, `private(num_bucket_keys)`, `private(m)` before any real judge saw them.
+
+**Fix.** A name declared inside the loop the pragma governs is removed from *every* clause (`private`, `firstprivate`, `lastprivate`, `shared`, `reduction`). That is semantically free: the variable is created afresh by its own declaration in each iteration, so it can carry nothing between iterations or across the loop's boundary. Names from an enclosing scope are never touched — there the clause check still decides. `default(none)` pragmas are left alone.
+
+**Verified:** `clause` check — `private(x, k) firstprivate(t) shared(a, x) reduction(+:acc, x)` on a loop declaring `x` and `t` becomes `private(k) shared(a) reduction(+:acc)`; fails with the repair reverted to `shared()` only. Re-running Phase B on the `is` profile: the three repaired pragmas reach ThreadSanitizer, where all three are real races (`randlc`'s state, `rank`'s writes) — a baseline result, not a scope artefact.

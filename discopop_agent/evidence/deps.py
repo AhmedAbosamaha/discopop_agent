@@ -51,12 +51,19 @@ def _classify_var(raw_name: str) -> Tuple[str, str]:
     loop-carried dep on array elements is algorithmic (cannot be privatized away),
     whereas a scalar dep is usually a storage conflict (privatizable).
 
+    Names are returned as the SOURCE spells them.  A file-`static` array compiled
+    as C++ arrives as `GEPRESULT__ZL1b`; stripping every leading underscore took the
+    mangling prefix with it and the model was shown a variable called `ZL1b[]`,
+    while scalars kept their full mangled spelling (`_ZL5total`).
+
     Returns (display_name, kind) where kind is "array" or "scalar".
     """
+    from ..plan.regions import demangle
     if raw_name.startswith("GEPRESULT"):
-        base = raw_name[len("GEPRESULT"):].lstrip("_")
+        base = raw_name[len("GEPRESULT"):]
+        base = demangle(base[1:] if base.startswith("_") else base)
         return (f"{base}[]" if base else raw_name, "array")
-    return (raw_name, "scalar")
+    return (demangle(raw_name), "scalar")
 
 
 def _load_instruction_lines(profiler_dir: Path) -> Dict[str, Tuple[int, int]]:
@@ -103,6 +110,7 @@ def _endpoint_position(
 
 def _parse_dep_line(
     line: str, instr_lines: Optional[Dict[str, Tuple[int, int]]] = None,
+    file_id: Optional[int] = None,
 ) -> List[Tuple[str, int, int, str, str]]:
     """Parse one line of dynamic_dependencies.txt.
 
@@ -121,7 +129,12 @@ def _parse_dep_line(
         return results
 
     lines_map = instr_lines or {}
-    _from_file, from_line = _endpoint_position(parts[0], lines_map)
+    from_file, from_line = _endpoint_position(parts[0], lines_map)
+    # In a project a line number means nothing without its file: an endpoint in
+    # ANOTHER file is reported as unplaced (0) rather than as that number in this
+    # one, where it would select — and quote — an unrelated statement.
+    if file_id is not None and from_file != file_id:
+        from_line = 0
 
     dep_type = parts[2]
     if dep_type not in ("RAW", "WAR", "WAW"):
@@ -131,7 +144,9 @@ def _parse_dep_line(
         if "|" not in target:
             continue
         to_part, var_part = target.split("|", 1)
-        _to_file, to_line = _endpoint_position(to_part, lines_map)
+        to_file, to_line = _endpoint_position(to_part, lines_map)
+        if file_id is not None and to_file != file_id:
+            to_line = 0
         variable, kind = _classify_var(var_part.split("(")[0])
         results.append((dep_type, from_line, to_line, variable, kind))
 
@@ -142,6 +157,7 @@ def _load_dependencies(
     profiler_dir: Path,
     start_line: int,
     end_line: int,
+    file_id: Optional[int] = None,
 ) -> Tuple[List[Dependency], List[Dependency], List[Dependency]]:
     """Load deps where at least one endpoint falls inside [start_line, end_line].
 
@@ -161,7 +177,7 @@ def _load_dependencies(
     for line in dep_file.read_text().splitlines():
         if not line.strip() or line.startswith("START"):
             continue
-        for dep_type, fl, tl, var, kind in _parse_dep_line(line, instr_lines):
+        for dep_type, fl, tl, var, kind in _parse_dep_line(line, instr_lines, file_id):
             in_region = (fl and start_line <= fl <= end_line) or \
                         (tl and start_line <= tl <= end_line)
             if not in_region:
@@ -190,7 +206,8 @@ def _load_dependencies(
 # ---------------------------------------------------------------------------
 
 
-def _load_reductions(profiler_dir: Path, start_line: int, end_line: int) -> List[str]:
+def _load_reductions(profiler_dir: Path, start_line: int, end_line: int,
+                     file_id: Optional[int] = None) -> List[str]:
     """Load reduction variables for any region overlapping [start_line, end_line]."""
     reds: List[str] = []
     red_file = profiler_dir / "reduction.txt"
@@ -208,6 +225,8 @@ def _load_reductions(profiler_dir: Path, start_line: int, end_line: int) -> List
         try:
             region_line = int(fields.get("Loop Line Number", -1))
         except ValueError:
+            continue
+        if file_id is not None and fields.get("FileID", str(file_id)) != str(file_id):
             continue
         if start_line <= region_line <= end_line:
             var = fields.get("Variable Name", "")
@@ -238,7 +257,8 @@ def _all_observed_dep_vars(profiler_dir: Path) -> Set[str]:
 
 
 def _load_static_only_vars(
-    profiler_dir: Path, observed_vars: Set[str], start_line: int, end_line: int
+    profiler_dir: Path, observed_vars: Set[str], start_line: int, end_line: int,
+    file_id: Optional[int] = None,
 ) -> List[str]:
     """Variables that appear in STATIC dependences overlapping the region but were
     never observed in the runtime (dynamic) dependences ANYWHERE — i.e. compiler-
@@ -263,7 +283,9 @@ def _load_static_only_vars(
 
     def _line_of(token: str) -> int:
         pos = instr_lines.get(token.split("@")[0])
-        return pos[1] if pos else -1
+        if pos is None or (file_id is not None and pos[0] != file_id):
+            return -1
+        return pos[1]
 
     static_vars: Set[str] = set()
     for line in f.read_text().splitlines():

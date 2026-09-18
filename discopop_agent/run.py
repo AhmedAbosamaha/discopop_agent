@@ -49,6 +49,7 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List, Set, Tuple
 
+from . import project as project_mod
 from . import viz
 from .args import AgentArguments
 from .gate import (capture_reference, check_pragma_compiles,
@@ -71,6 +72,29 @@ def run(args: AgentArguments) -> None:
 
     viz.enable(args.verbose)
     _print_banner(args)
+
+    # A multi-file program: from here on every build is the whole project, with the
+    # file under work as its focus.  None (the default) changes nothing.
+    project_mod.activate(args.project)
+    if args.project is not None:
+        project_mod.set_focus(args.source_file)
+        print(f"  Project        : {args.project.root}  ({len(args.project.units)} unit(s): "
+              f"{', '.join(args.project.units[:6])}{' …' if len(args.project.units) > 6 else ''})\n")
+
+    # A project has to be profiled THROUGH THE AGENT: DiscoPoP's own per-unit build
+    # gives loops outside main's unit no loop states and reports recurrences there
+    # as Do-All (docs/MULTIFILE.md).  So the profile is taken here when there is
+    # none, and `--profile-only` does just that and stops.
+    have_profile = (profiler_dir / "dynamic_dependencies.txt").exists()
+    if args.profile_only or (args.project is not None and not have_profile and not args.dry_run):
+        print("  Profiling the program"
+              + (" through a unity translation unit" if args.project is not None else "") + " …")
+        if not _reprofil(args.source_file, dp_dir, args.reprofil_args or None):
+            print("  [FATAL] the initial profile failed (see above).")
+            sys.exit(1)
+        print(f"  [ok] profile written to {dp_dir}\n")
+        if args.profile_only:
+            return
 
     # Golden reference output: the unmodified program's stdout.  Every patched
     # version must reproduce it (semantic-equivalence gate).  None if the program
@@ -113,7 +137,8 @@ def run(args: AgentArguments) -> None:
     # thing.  A program printing no floating point measures 0.0 and stays under
     # byte-exact comparison, which is where every integer-output case lands.
     if args.numeric_tolerance and reference_output is not None and not args.dry_run:
-        nf = numerical_noise_floor(args.source_file, binary_args)
+        nf = numerical_noise_floor(args.source_file, binary_args,
+                                   extra_inputs=args.check_inputs or None)
         args.noise_floor = nf.value
         if nf.value > 0.0:
             print(f"  [ok] Numerical noise floor {nf.value:.2e} of output scale "
@@ -146,6 +171,13 @@ def run(args: AgentArguments) -> None:
     # picks them up from the final profile.
     deferred: List[Tuple[Any, ...]] = []
     original_text = Path(args.source_file).read_text()
+    # Every file the run may change, as it stood at the start — Settle rebuilds
+    # from these.  One entry for a single-file program.
+    originals: Dict[str, str] = {str(Path(args.source_file).resolve()): original_text}
+    if args.project is not None:
+        for fid_path in project_mod.load_file_mapping(dp_dir).values():
+            if args.project.contains(fid_path) and fid_path.is_file():
+                originals[str(fid_path.resolve())] = fid_path.read_text()
     # Ordered record of every change written to the source, so the end of the
     # run can rebuild from the original keeping only what earned its place.
     change_log: List[Dict[str, Any]] = []
@@ -214,6 +246,7 @@ def run(args: AgentArguments) -> None:
                if c.tier == 1 and c.pattern and c.pattern.get("applicable_pattern")]
     baseline_pragmas = 0
     for c in claimed:
+        project_mod.work_on(args, c.source_file)
         cpid = c.pattern.get("pattern_id", "?") if c.pattern else "?"
         d = derive_pragma_patch(
             _read_tier1_patch(dp_dir / "patch_generator" / str(cpid)),
@@ -233,7 +266,7 @@ def run(args: AgentArguments) -> None:
 
     candidates: List[Any] = [(0, c) for c in initial]
     all_seen_prints.update(
-        region_fingerprint(args.source_file, c.region.start_line, c.region.end_line, c.region.name)
+        region_fingerprint(c.source_file, c.region.start_line, c.region.end_line, c.region.name)
         for c in initial
     )
 
@@ -287,7 +320,7 @@ def run(args: AgentArguments) -> None:
         print(f"  SETTLING — verify the finished source, drop what does not hold up")
         print(f"{'='*60}")
         survivors, notes = _settle(
-            original_text, change_log, args, output_dir, reference_output,
+            originals, change_log, args, output_dir, reference_output,
             reference_outputs, binary_args, reference_time,
         )
         if notes:
@@ -334,8 +367,11 @@ def run(args: AgentArguments) -> None:
           f"{breakdown}  |  {len(skipped_by_id)} skipped")
     verdict = ("BEAT" if n_pragmas > baseline_pragmas
                else "MATCHED" if n_pragmas == baseline_pragmas else "BELOW")
-    print(f"  DiscoPoP unaided: {baseline_pragmas} usable pragma(s)  →  this run: "
-          f"{n_pragmas}   [{verdict}]")
+    # Against ONE explorer draw of the initial profile: the explorer is not
+    # deterministic (T0.7), so this is a log line, not a result — the harness
+    # judges every trial independently and never reads it.
+    print(f"  DiscoPoP unaided: {baseline_pragmas} usable pragma(s) in this profile's draw  "
+          f"→  this run: {n_pragmas}   [{verdict}, informational]")
     for r in accepted:
         d = r.get("discovery_depth", 0)
         # Phase-B records carry "phase", Phase-A ones carry "tier".

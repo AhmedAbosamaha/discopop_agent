@@ -7,6 +7,7 @@
 # directory for details.
 
 import json
+import os
 from pathlib import Path
 from typing import Any, Optional
 
@@ -156,10 +157,20 @@ class ClangASTLoader:
             if not ast_path or ast_path.startswith("<") or ast_path in filemapping_set:
                 continue
 
+            # Clang spells a file found through an include directory given relatively
+            # as "./src/kern.c" (or "src/../src/kern.c"); a FileMapping path never
+            # contains such segments, so they are removed before the suffix match.
+            # Without this, every declaration in a file included that way was
+            # invisible to the variable classification and the loop's pragma lost
+            # its clauses (a `private` missing is a data race).
+            needle = os.path.normpath(ast_path)
+            if needle.startswith("./"):
+                needle = needle[2:]
+
             # Find a FileMapping entry whose path ends with /<ast_path>.
             # The separator guard prevents "other_test.cpp".endswith("/test.cpp") from matching.
             for fm_entry in filemapping_entries:
-                if fm_entry.endswith("/" + ast_path) or fm_entry.endswith("\\" + ast_path):
+                if fm_entry.endswith("/" + needle) or fm_entry.endswith("\\" + needle):
                     mapping[ast_path] = fm_entry
                     break
 

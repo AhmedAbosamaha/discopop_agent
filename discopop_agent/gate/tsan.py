@@ -26,6 +26,7 @@ import subprocess
 from pathlib import Path
 from typing import List, Optional, Tuple
 
+from .patching import run_build
 from .toolchain import (_LIBOMP_DIR, _macos_sysroot_flag, _tsan_env,
                         compiler_for, link_flags_for)
 
@@ -186,11 +187,8 @@ def _tsan(
     ) + _macos_sysroot_flag()
     # -fopenmp is required so that #pragma omp parallel for actually runs in
     # parallel; without it TSan never sees cross-thread access on loop vars.
-    cmd = [
-        compiler_for(source, clangpp), str(source), "-o", str(binary),
-        "-fsanitize=thread", "-fopenmp", "-g", "-O1",
-    ] + extra
-    compile_result = subprocess.run(cmd, capture_output=True, text=True, cwd=work_dir)
+    compile_result = run_build(source, clangpp, binary,
+                               ["-fsanitize=thread", "-fopenmp", "-g", "-O1"] + extra, work_dir)
     if compile_result.returncode != 0:
         return (
             False,
