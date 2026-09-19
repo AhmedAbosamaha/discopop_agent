@@ -2501,13 +2501,28 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         #        for state_id in state_mappings_dict:
         #            print("->", state_id, " -> ", state_mappings_dict[state_id])
 
+        assignment_memo: Dict[Tuple[int, Tuple[str, ...]], bool] = {}
+
         def recursive_assignment(state_id: int, callstate: Tuple[str, ...], ctx: Context) -> bool:
             """assigns state_id to the matching states.
             Returns True, if state_id was assigned to at least one Context.
             Returns False otherwise."""
             if len(callstate) == 0:
                 return False
+            # The same (context, remaining call path) pair is reached along many routes — through
+            # `contained contexts` and again through `successor` chains — and its answer never
+            # changes within one state: without this memo the walk is exponential in the nesting
+            # (NPB-C CG: 25 min, NPB-CPP mg and Rodinia nw: hours). A pair answered True has
+            # already received the state id; asking again must not append it twice.
+            memo_key = (id(ctx), callstate)
+            if memo_key in assignment_memo:
+                return assignment_memo[memo_key]
+            assignment_memo[memo_key] = False      # a pair still being answered counts as a miss
+            result = recursive_assignment_uncached(state_id, callstate, ctx)
+            assignment_memo[memo_key] = result
+            return result
 
+        def recursive_assignment_uncached(state_id: int, callstate: Tuple[str, ...], ctx: Context) -> bool:
             if isinstance(ctx, FunctionContext):
                 if "_loopstate" in callstate[0]:
                     # remove leading loopstate entries
@@ -2656,6 +2671,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
             #            print("Clean CallState: ", callstate)
             entry_points: List[Context] = [c for c in self.contexts if isinstance(c, FunctionContext)]
             callstate_tuple: Tuple[str, ...] = tuple(callstate)
+            assignment_memo.clear()                 # answers hold for ONE state id only
             could_be_assigned: bool = False
             for entry_point in entry_points:
                 could_be_assigned = could_be_assigned or recursive_assignment(

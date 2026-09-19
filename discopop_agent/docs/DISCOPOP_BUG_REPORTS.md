@@ -18,6 +18,8 @@ LLVM 19 (macOS) and LLVM 20 (Linux).
 | B3 | profiler, `utils/CFA.cpp` + `instrumentLoopExit` | fixed (agent Fix 81) | a loop that is the last statement of an `else` block gets no loop markers → explorer `IndexError` at random, and silently wrong loop-state matching |
 | B5 | explorer, `TaskGraph.recursive_assignment` | fixed (agent Fix 82) | a loop state of one function is matched against loops of another → `IndexError` (NPB `mg`, every attempt) or a silent wrong match |
 | B4 | explorer, task-graph traversal order | open (consequence of B3, to re-measure after it) | the explorer's output differs between runs on one unchanged profile |
+| P1 | explorer, `TaskGraph.__assign_state_ids` | fixed (agent Fix 83) | performance: the state assignment re-answers the same (context, call path) pair exponentially often — hours on `mg`/`nw`, seconds once memoised |
+| B6 | `discopop_patch_generator` (called by the explorer) | open | hangs on some runs: 3 of 20 explorer runs on one unchanged profile of a 40-line program never return from the patch-generator subprocess |
 | L1 | profiler | limitation | NPB-CPP `lu` (4,134 lines): the instrumenting compile exceeds two hours |
 | L2 | profiler + explorer | limitation | Rodinia `nw`: 531,606 call-path states; the explorer's state assignment needs ≈ 25 h |
 | L3 | explorer | limitation | NPB `mg`: 5,118 states at ≈ 1.5 s each — ≈ 2 h per explorer run (state assignment re-walks the context tree per state) |
@@ -104,3 +106,19 @@ callee's (shorter) string — or silently matches the wrong digit when it fits.
 loop's parent function.
 **Reproducer.** NPB-CPP `mg` (class S) profiled through a unity unit; the explorer fails
 within five minutes on every run without the check.
+
+## P1 — call-path state assignment is exponential
+
+`recursive_assignment` explores `ctx.get_contained_contexts()` and then `ctx.successor` for
+every context, with no record of what it has already answered; the same (context, remaining
+call path) pair is reached along many routes. Fix: memoise per state id (agent Fix 83).
+NPB-C `CG`: > 20 min → < 1 s for this phase, identical Do-All/reduction sets. L2 and L3
+below were measured BEFORE this fix and are to be re-measured.
+
+## B6 — the patch generator sometimes never returns
+
+`discopop_explorer` ends by running `discopop_patch_generator` as a subprocess
+(`discopop_explorer.py:327`). On the agent's `explorer-multi-backedge` program (40 lines,
+two loops with `continue`s), 3 of 20 explorer runs on one unchanged profile hang in that
+subprocess (stack: `subprocess.communicate`), with or without Fix 83. Not yet diagnosed;
+callers should give the explorer a timeout.

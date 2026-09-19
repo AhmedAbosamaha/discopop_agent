@@ -1523,3 +1523,13 @@ When a self-annotated rewrite was kept but its re-profile failed, the rest of th
 **Fix.** A loop state is compared only with loops whose function it names; otherwise it is a miss.
 
 **Verified:** `mg`'s profile on the server gets past the crash (every earlier attempt died within 5 minutes). Do-All/reduction sets unchanged on 2mm, vecsum, NPB `is`; pathfinder 5 of 5; explorer tests 100/100; mypy 0. **What this exposes:** `mg`'s state assignment then walks 5,118 call-path states at ≈ 1.5 s each — about two hours per explorer run (measured run in progress). Like `nw`, a scalability limit of the call-path-state design, to be decided on (optimise, or report).
+
+## Fix 83 — DiscoPoP's explorer: call-path state assignment memoised (hours → seconds)
+
+**Files:** `explorer/discopop_explorer/classes/TaskGraph/TaskGraph.py` (`__assign_state_ids`: `recursive_assignment` now answers each (context, remaining call path) pair once per state id). Upstream report: `docs/DISCOPOP_BUG_REPORTS.md` P1.
+
+**Problem.** For every call-path state the explorer walks the context graph from every function context, descending into contained contexts and again along successor chains. The same (context, remaining call path) pair is reached along many routes and re-answered every time, so the walk grows exponentially with nesting. Once Fixes 80–82 stopped the crashes, this was what remained: Rodinia `nw` ≈ 25 h, NPB-CPP `mg` hours, RepoOMP's NPB-C `CG` (469 lines) more than 20 minutes in this phase alone.
+
+**Fix.** A per-state memo keyed by (context identity, remaining call path). The answer for a pair cannot change within one state id, a pair already answered `True` has already received the id (so the id is no longer appended twice), and a pair still being answered counts as a miss.
+
+**Verified:** NPB-C `CG`: state assignment 278 states in under a second (was > 20 min, unfinished); whole explorer 99 s. Do-All and reduction sets on 2mm, vecsum, NPB `is` and `pathfinder` equal the known sets (two runs each); explorer tests 100/100; mypy 0. NPB-CPP `mg` on the server: past the phase that took hours (run in progress at the time of writing).
