@@ -81,7 +81,7 @@ def check_pragma_clauses(diff: "str | None", source_file: str) -> "str | None":
         return None
     _pragma_text, header = pa
     span = _touched_span(diff)
-    head = _locate_header(src, header, (span[0] - 1) if span else 0)
+    head = _locate_header(src, header, (span[0] - 1) if span else 0, diff)
     if head is None:
         return None
     return _clause_problem(src, pragma, head)

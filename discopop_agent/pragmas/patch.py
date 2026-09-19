@@ -158,7 +158,7 @@ def derive_pragma_patch(stored_diff: "str | None", source_file: str) -> "str | N
         return stored_diff
     src = old_text.splitlines()
     span = _touched_span(stored_diff)
-    head = _locate_header(src, header, (span[0] - 1) if span else 0)
+    head = _locate_header(src, header, (span[0] - 1) if span else 0, stored_diff)
     if head is None:
         return None                     # the loop is gone; the pragma is meaningless
     if head > 0 and src[head - 1].strip() == pragma.strip():
@@ -196,7 +196,7 @@ def _already_annotated(diff: str, source_file: str) -> bool:
     except OSError:
         return False
     span = _touched_span(diff)
-    head = _locate_header(src, header, (span[0] - 1) if span else 0)
+    head = _locate_header(src, header, (span[0] - 1) if span else 0, diff)
     if head is None:
         return False
     for j in range(head - 1, max(head - 4, -1), -1):

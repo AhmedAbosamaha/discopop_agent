@@ -68,13 +68,48 @@ def _pragma_and_anchor(diff: str) -> "tuple[str, str] | None":
     return None
 
 
-def _locate_header(src: List[str], header: str, near: int) -> "int | None":
-    """Index of `header` in `src`, nearest to `near`.  Identical sibling loops
-    are common, so proximity to the patch's own hunk breaks the tie."""
+def _locate_header(src: List[str], header: str, near: int,
+                   diff: "str | None" = None) -> "int | None":
+    """Index of `header` in `src`: the loop the patch `diff` annotates.
+
+    Identical sibling loops are common (PolyBench atax: two `for (j = 0; j < _PB_NY;
+    j++)` two lines apart), so the header text alone does not identify the loop.  With
+    `diff`, candidates are ranked by how much of the patch's own CONTEXT they reproduce
+    — the lines that follow the header (the loop body) and the lines that precede the
+    pragma — and only ties are broken by distance to `near`.  Without it, distance alone
+    decides, measured from the pragma's line, not from the hunk's first context line:
+    that offset of three lines used to put the second sibling's pragma on the first
+    (Fix 84)."""
     cands = [i for i, l in enumerate(src) if l.strip() == header.strip()]
     if not cands:
         return None
-    return min(cands, key=lambda i: abs(i - near))
+    before: List[str] = []
+    after: List[str] = []
+    if diff:
+        anchor = _pragma_anchor_index(diff)
+        if anchor is not None:
+            near = anchor
+        before, after = _pragma_context(diff)
+
+    def _agreement(i: int) -> int:
+        n = 0
+        j = i + 1
+        for want in after:                         # the loop body, downwards
+            while j < len(src) and _PRAGMA_LINE_RE.match(src[j]):
+                j += 1                             # a pragma applied since is not a mismatch
+            if j >= len(src) or src[j].strip() != want:
+                break
+            n, j = n + 1, j + 1
+        j = i - 1
+        for want in reversed(before):              # what stands above, upwards
+            while j >= 0 and _PRAGMA_LINE_RE.match(src[j]):
+                j -= 1
+            if j < 0 or src[j].strip() != want:
+                break
+            n, j = n + 1, j - 1
+        return n
+
+    return min(cands, key=lambda i: (-_agreement(i), abs(i - near)))
 _PRAGMA_LINE_RE = re.compile(r"^\s*#\s*pragma\s+omp\b")
 
 
@@ -94,6 +129,59 @@ def _next_loop_header(src: List[str], after: int, limit: int = 6) -> "int | None
         return i if _LOOP_HEAD_RE.match(src[i]) else None
     return None
 _HUNK_NEW_RE = re.compile(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@")
+_HUNK_OLD_RE = re.compile(r"^@@ -(\d+)(?:,\d+)? \+\d+(?:,\d+)? @@")
+
+
+def _pragma_anchor_index(diff: str) -> "int | None":
+    """0-based index, in the file the patch was made against, of the line the added
+    pragma stands in front of — the loop header, not the hunk's first context line."""
+    old_ln = 0
+    for line in diff.splitlines():
+        m = _HUNK_OLD_RE.match(line)
+        if m:
+            old_ln = int(m.group(1))
+            continue
+        if not old_ln or line.startswith(("---", "+++", "\\")):
+            continue
+        if line.startswith("+"):
+            if "#pragma omp" in line:
+                return old_ln - 1
+            continue
+        old_ln += 1
+    return None
+
+
+def _pragma_context(diff: str) -> "tuple[List[str], List[str]]":
+    """The patch's unchanged lines around the pragma it adds: (those before the pragma,
+    those after the loop header), stripped, blank lines dropped.  Only the hunk that
+    holds the pragma is read."""
+    before: List[str] = []
+    after: List[str] = []
+    seen_pragma = seen_header = False
+    for line in diff.splitlines():
+        if _HUNK_OLD_RE.match(line):
+            if seen_pragma:
+                break
+            before = []
+            continue
+        if line.startswith(("---", "+++", "\\")):
+            continue
+        if line.startswith("+"):
+            if not seen_pragma and "#pragma omp" in line:
+                seen_pragma = True
+            continue
+        if line.startswith("-"):
+            continue
+        text = line[1:].strip()
+        if not text:
+            continue
+        if not seen_pragma:
+            before.append(text)
+        elif not seen_header:
+            seen_header = True                     # the loop header itself
+        else:
+            after.append(text)
+    return (before, after) if seen_pragma else ([], [])
 
 
 def _touched_span(diff: str) -> "tuple[int, int] | None":

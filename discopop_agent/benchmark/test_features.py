@@ -2245,6 +2245,61 @@ def check_profiler_else_loop(work: Path) -> Result:
     return Result(name, "pass", "6 loops, 6 loop-state positions; explorer finished 5 of 5 runs")
 
 
+_SIBLING_SRC = """\
+void kernel(int n, double **A, double *x, double *y, double *tmp) {
+  int i, j;
+  for (i = 0; i < n; i++)
+    {
+      tmp[i] = 0;
+      for (j = 0; j < n; j++)
+        tmp[i] = tmp[i] + A[i][j] * x[j];
+      for (j = 0; j < n; j++)
+        y[j] = y[j] + A[i][j] * tmp[i];
+    }
+}
+"""
+
+_SIBLING_PATCH = """\
+--- a/k.c
++++ b/k.c
+@@ -6,6 +6,7 @@
+       tmp[i] = 0;
+       for (j = 0; j < n; j++)
+         tmp[i] = tmp[i] + A[i][j] * x[j];
++      #pragma omp parallel for
+       for (j = 0; j < n; j++)
+         y[j] = y[j] + A[i][j] * tmp[i];
+     }
+"""
+
+
+def check_pragma_sibling_loops(work: Path) -> Result:
+    """Fix 84: a generated pragma must land on ITS loop when a sibling has the same header.
+
+    PolyBench atax: two `for (j = 0; j < _PB_NY; j++)` two lines apart; DiscoPoP's patch
+    for the second (a valid Do-All) was re-anchored onto the first (a recurrence on
+    tmp[i]), raced under TSan and was dropped — the DiscoPoP-only baseline lost a pragma
+    DiscoPoP had placed correctly.  Checked on the file as profiled and on the file after
+    a pragma was inserted above (the shift that turns distance into a tie)."""
+    name = "pragma on a sibling loop"
+    from discopop_agent.pragmas.patch import derive_pragma_patch
+    d = work / "sibling"
+    d.mkdir(parents=True, exist_ok=True)
+    shifted = _SIBLING_SRC.replace("  for (i = 0;", "  #pragma omp parallel for private(j)\n  for (i = 0;", 1)
+    for label, text in (("as profiled", _SIBLING_SRC), ("after a pragma above", shifted)):
+        f = d / "k.c"
+        f.write_text(text)
+        diff = derive_pragma_patch(_SIBLING_PATCH, str(f))
+        if not diff:
+            return Result(name, "fail", f"{label}: no patch derived")
+        lines = diff.splitlines()
+        at = next((k for k, l in enumerate(lines) if l.startswith("+") and "#pragma omp" in l), None)
+        body = lines[at + 2].strip() if at is not None and at + 2 < len(lines) else ""
+        if not body.startswith("y[j]"):
+            return Result(name, "fail", f"{label}: the pragma for the y[j] loop was placed before `{body}`")
+    return Result(name, "pass", "second of two identical loop headers annotated, as profiled and after a shift")
+
+
 _CHECKS: List[Tuple[str, Callable[[Path], Result]]] = [
     ("impact", check_impact_ranking),
     ("min-impact", check_min_impact),
@@ -2276,6 +2331,7 @@ _CHECKS: List[Tuple[str, Callable[[Path], Result]]] = [
     ("exclude-cxx", check_exclude_cxx),
     ("explorer-multi-backedge", check_explorer_multi_backedge),
     ("profiler-else-loop", check_profiler_else_loop),
+    ("pragma-sibling-loops", check_pragma_sibling_loops),
 ]
 
 
