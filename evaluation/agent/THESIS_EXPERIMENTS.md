@@ -1194,11 +1194,60 @@ recipe (dataset guards, digest, perturbed input, timed region) and the server pr
 profile is 23 s instrument at 28 GB (server only); results compare within the measured noise
 floor (the scatter→gather reorders additions, 1e-16).
 
+### 5l. Audit of the agent's DEFAULTS — a default is a decision, not a neutral act (2026-09-20)
+
+**Why.** The author's standing rule is that every parameter of every experiment has a stated
+reason. The plan's table "Every agent setting, accounted for" gives each field a role
+(*studied* / *fixed with a reason* / *computed* / *plumbing*), but it had a hole: for a field
+marked "studied in E3", nothing said what value the experiments running BEFORE E3 hold it at, or
+why. E10 found the cost of that hole — see `llm_pragmas` below. From now on a field marked
+*studied* must also state its **held value and the justification for it**, and any result that
+depends on that value says so.
+
+| default | justification today | verdict |
+|---|---|---|
+| `llm_pragmas = True` | **design argument only, never measured.** The model writes the pragma with the rewrite, so the rewrite is judged on its own merits (clause check, TSan, identical output from the parallel build, measured speed) instead of on whether re-profiling makes DiscoPoP rediscover a pattern | **weakest default in the agent.** E3 decides it; until then every result carries it as a stated condition. Bounded by Fix 85 (below) |
+| `require_speedup = True` (agent) vs `--no-require-speedup` (every campaign arm, 15 Sep) | the campaign turned it off because at SMALL sizes kernels run in milliseconds and the check measured noise | **the campaign default is now wrong by measurement.** E10: the check ON at the kernel's timing size is the only arm with 0 unsafe and 0 lost; OFF keeps 5 slower programs and 1 BROKEN. D8 already moves E1 to `speed_gate_large`; the agent's own default (ON) was right all along, and what was wrong was the SIZE it was measured at |
+| `budget = 3` | was an assumption (D10). **Now measured** over every archived run, Phase-A attempts by number: 1st 40 accepted of 127, 2nd 12 of 91, 3rd **6 of 82**, 4th 2 of 8 (4th/5th exist because build-error retries are refunded) | keep 3, and report the curve: the 3rd attempt costs 82 calls for 6 acceptances (10 % of all acceptances, ~40 % of the calls). The earlier claim "no third attempt ever succeeded" is superseded |
+| `min_measured_speedup = 1.1` | T0.4: serial timing CV ≈ 4 % on the loaded server, so 1.1× is the smallest ratio resolvable; identical to the harness's `FASTER` threshold, so agent and harness cannot disagree | justified |
+| `fast_refresh = True` | feature check `fast-refresh-eq`: the carried-forward dependences agree with a full re-profile on the checked cases; a full re-profile still runs before Phase B and before a deeper level | justified; studied in E3's 2×2 |
+| `hotspots = True` | T0.5: measured time saved ranks regions correctly where the static proxy does not (feature checks `impact`, `mixed-rank`, `hotspot-remap`) | justified; studied in E9 |
+| `evidence = "full"` | the thesis's object of study | studied in E2 |
+| `restructure_depth = 0` | held at 0 so every experiment before E8 measures one level only | studied in E8, held with a reason |
+| `schedule_stress`, `numeric_tolerance`, `check_inputs` | T0.3: the perturbed input is the ONLY thing that catches 14 of 23 wrong programs; schedule stress catches 2 benign races TSan alone reports | justified; ablated offline in E7 |
+| `build_retries = 2` | build errors are mechanical, the retries are refunded and counted as cost | justified |
+| `lambda_penalty = 1.0`, `min_workload = 0.0` | λ only orders regions where no measurement exists; `min_workload > 0` drops every function region (DiscoPoP reports their workload as 0) | justified |
+| `stress_threads = 1,2,4`; `budget_policy = "fixed"`; `llm_recon = False`, `llm_deps = off` | width of a matrix that is itself a studied stage (E7); D3 pending calibration; E4's object of study, held off because `llm_deps` is the one channel where a model's claim EDITS the analysis | justified / studied |
+
+**Fix 85 — pragma authorship inside a rewritten region (D21).** The collision the author asked
+about ("how is this even possible?") is real and is NOT a failure of the deferral rule. On
+`jacobi-2d` DiscoPoP claims the two stencil loops and the agent defers them to Phase B, exactly
+as designed. But the *enclosing function* is a separate candidate, has no pattern of its own, and
+goes to the model — which, with `llm_pragmas`, annotates those same loops from inside its rewrite
+(`collapse(2)`). Phase B then reports "no applicable pattern for the final source", and
+DiscoPoP's `parallel for private(j)` — twice as fast on this machine — is never measured.
+
+*Measured frequency:* across every archived run, **22 trials** end with a deferred DiscoPoP
+pattern and only LLM pragmas applied (`floyd-warshall`, `jacobi-2d`, `lu`). Displacement is not
+uniformly bad: on `lu` the model's pragmas give 2.6–2.8× where DiscoPoP's own give **0.21×**; on
+`jacobi-2d` they give 2.5× where DiscoPoP's give 5.9×. **So the fix must not pick a side — it
+must measure both.**
+
+1. The prompt names the loops inside the region that DiscoPoP has already claimed and says their
+   pragmas belong to Phase B; the model restructures, and annotates only what it created.
+2. Where a model pragma sits on a claimed loop anyway, Phase B builds DiscoPoP's pragma for that
+   loop as an alternative, measures both, and keeps the faster (the loser is recorded).
+
+With (2) the agent cannot end below DiscoPoP alone by displacing its pragmas, and the thesis gains
+a directly measured answer to "who writes the better pragma, the model or the analysis tool?" on
+every collision — data E3 would otherwise have to produce separately. Feature check required.
+
 ## 6. Change log
 
 | Date | Repo | Change | Why |
 |---|---|---|---|
 | 2026-09-20 | repositories | **D20 — one repository.** The harness moves into the agent repository as `evaluation/` (`agent/`, `shared/run_store.py`, `benchmarks/` = the SOURCES of the suites it uses: PolyBench 3.2, NPB, RepoOMP's NPB-C, TSVC-2, LULESH, `md`, Rodinia `nw`/`pathfinder`/`hotspot`). Left behind: the group's three harnesses and GUI, 4 GB of reference outputs and data files nothing here reads. Copied from `new_benchmark_harness@1514ceb` (tracked files only, 5,350 files, 42 MB); relative paths unchanged, so every `agent/...` path in this record still holds under `evaluation/`. **Proof the move changed nothing:** a FRESH CLONE (53 MB) regenerates all 70 packages byte-identical to the old ones (every file, every metadata field, every `output_sha256`) — the clone test caught what the working copy hid: the root `.gitignore`'s `data*/` swallowed PolyBench's `datamining/` kernels, and `prepare_polybench.py` discovered kernels through the old harness's per-kernel config directories (now: PolyBench's own layout, same 30 kernels); integrity test 30/30, scaffold test 0 failures; a no-model smoke run (`move_smoke`, `atax`) reproduces `dp_alone_fix84_mac`'s outcome. Code changes: only how the agent repository is located (`cli.py`, `profile_stability.py`, the three shell scripts) and `server.sh sync` (one `git` fast-forward instead of `git` + `rsync`). The repository is a PUBLIC fork (GitHub cannot make a fork private) and the author chose to publish: the server's address and account were moved out of the tracked files into the untracked `agent/tools/server.local` first; a scan found no credential, token value or address left. Old repository frozen and tagged: archived runs up to `e10` record ITS commit hashes | the author: one place; and the old repository is 4 GB and cannot be cloned in full from GitLab, which a reader of the thesis would have to do |
+| 2026-09-20 | plan + agent | **§5l: audit of the agent's DEFAULTS.** Every default now carries its justification, and a field marked "studied in a later experiment" must also state the value earlier experiments hold it at and why. Findings: `llm_pragmas = True` rests on a design argument alone and drove E10's `jacobi-2d` regression (22 trials across the archive end with a deferred DiscoPoP pattern and only LLM pragmas); `budget = 3` is now measured rather than assumed (acceptances by attempt: 40/127, 12/91, 6/82); the campaign's `--no-require-speedup` is wrong by E10's own result — the agent's default was right, the SIZE was not. **D21 = Fix 85**: the prompt reserves claimed loops for Phase B, and where a model pragma lands on one anyway Phase B measures DiscoPoP's against it and keeps the faster (displacement is a win on `lu` 0.21×→2.8× and a loss on `jacobi-2d` 5.9×→2.5×, so the fix measures instead of choosing) | the author: "we should review the agent default and see if this is the right default"; "for every experiment every parameter selected should have a reason" |
 | 2026-09-20 | plan + agent | **The main comparison for E10 exists (§7 `e10_dp_alone`, `e10_lu_fix84`): D8 confirmed, and `speed_gate_small` shown to be destructive — 10 of 21 trials `lost` because the speed check at the agent's small size deletes DiscoPoP's OWN pragmas (`marginal 0.00×`).** Agent vs DiscoPoP alone, median 1.00× on this class-A set (no harm, as intended); `lu` better ×10, `floyd-warshall` gained, `jacobi-2d` worse (→ Fix 85). Classification fixed: correct-but-slower-than-doing-nothing counts as `worse`, not `gained-not-faster` | D19; the author's question "how is this even possible?" about a loop carrying both a model pragma and a DiscoPoP suggestion |
 | 2026-09-20 | plan | **D8 decided by E10: `speed_gate_large` is E1's agent arm** — 11 FASTER / 0 slower programs kept / 0 BROKEN, against `full` 8 / 5 / 1 and `speed_gate_small` 2 / 0 / 0 (16 of 18 unchanged, 29 performance rejections) | pre-registered rule of D8; §7 `e10` |
 | 2026-09-19 | plan + harness | **D19 — the main comparison is DiscoPoP alone vs DiscoPoP + agent; the sequential original is the reference (§5k).** Every experiment carries `discopop_gate` on the same benchmarks in the same run; each agent trial gets a verdict against DiscoPoP alone (gained / better / equal / worse / lost / neither / unsafe); `vs_discopop_alone.csv/.md`, `fig_vs_discopop_alone`, and every `overview.md` opens with it (or says MISSING). Trials record `host`; ratios are withheld across hosts/sizes/thread sets. E6 (LULESH) becomes the application-scale main comparison with LLNL's expert version as ceiling. Figures: Helvetica dropped (macOS `.ttc` cannot be embedded) | the author: "the main comparison is between DiscoPoP alone and DiscoPoP with the agent … this is a rule"; "LULESH had examples before and after parallelization" |
