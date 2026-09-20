@@ -1393,6 +1393,26 @@ PolyBench almost every loop is already parallel, so there is nothing to restruct
 finding of §5k and the reason for the TSVC class-R suite; the restructuring gallery fills when E1
 runs on benchmarks that need it.
 
+**Were the four verified?** Yes, and by the harness rather than by the agent: each was rebuilt at
+its VERIFICATION size (larger than the agent ever saw), run on the shipped input AND the perturbed
+one, and its full value dump compared with the original's. All three that survive are
+**byte-identical on both inputs** (`dump_exact` and `dump_exact_seeded` true, relative error 0.0)
+and stable across repeats at a fixed thread count. The fourth, `floyd`'s stack array, produced
+identical values where it ran and then **crashed at 6 threads at the verification size** — caught
+by the harness, not by the agent, whose own gate had only seen the small size. That is the case
+that justifies keeping the two checks at different sizes.
+
+Read as semantics: `trisolv`'s rewrite is equivalence-preserving by inspection — the loop is
+`for (j = 0; j <= i - 1; j++)`, so it never reads `x[i]` through `x[j]`, and accumulating into
+`sum` and subtracting once is the same computation, with only the addition ORDER changed by the
+reduction. The gate cannot do that reasoning; what it can do is falsify, and §7 `t0_3_oracle_mac`
+measures how well: of 23 programs the gate rejected for a runtime reason the independent oracle
+confirms 19 wrong, and of 19 it accepted the oracle agrees on all 19 — no false accept in that
+corpus. The limits are equally measured and must be stated with the result: **not one** of the 14
+wrong programs caught by output differed on the shipped input (all 14 only under the perturbed
+one), and two genuinely racy programs produced identical output in 12 runs — only TSan saw them.
+Output comparison alone would have passed both classes.
+
 Two of the four are also the thesis's best negative examples, and both concern the gate:
 `floyd`'s stack array is an unsafe acceptance that the speed check catches at size, and `hotspot`
 is a correct restructuring defeated by the clause the model paired with it.
