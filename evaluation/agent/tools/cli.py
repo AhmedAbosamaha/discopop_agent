@@ -700,8 +700,17 @@ def profile_once(bench_dir: Path, src_name: str, dest: Path, agent_repo: Path, t
     # already taken and stays untouched, so another attempt is only another draw of the
     # explorer's output; every failed attempt is recorded, and a benchmark is lost only
     # when all attempts fail.
+    # A TIMEOUT is not a draw. The retries above exist for a crash, which happens in the
+    # first seconds and costs nothing to repeat; an explorer still running at the limit is
+    # one that will not finish, and retrying it costs the limit again — 20 attempts at the
+    # 90-minute default is 30 hours for ONE benchmark. Measured on the TSVC loops: `s291`
+    # spent 5,403 s in a single attempt, `s3112` was still running after 80 minutes, while
+    # every other loop of the suite explored in 4 s. So a timeout stops the loop and is
+    # reported, like the other DiscoPoP cost limitations (NPB `lu`/`mg`, Rodinia `nw`,
+    # PolyBench `adi`).
     failures: List[str] = []
     total = 0.0
+    timed_out = False
     for attempt in range(1, EXPLORER_ATTEMPTS + 1):
         shutil.rmtree(dest / ".discopop" / "explorer", ignore_errors=True)
         rc, secs, tail = _run(["discopop_explorer"], dest / ".discopop", env, timeout,
@@ -710,8 +719,13 @@ def profile_once(bench_dir: Path, src_name: str, dest: Path, agent_repo: Path, t
         if rc == 0:
             break
         failures.append(tail.strip().splitlines()[-1][:200] if tail.strip() else f"rc={rc}")
+        if rc == -9:
+            timed_out = True
+            failures[-1] = f"timeout after {secs:.0f}s (no retry: a timeout is not a crash)"
+            break
     rec["explore_s"] = round(total, 2)
     rec["explore_attempts"] = attempt
+    rec["explore_timed_out"] = timed_out
     rec["explore_failures"] = failures
     if rc != 0:
         rec["error"] = f"explore failed on all {EXPLORER_ATTEMPTS} attempts: {failures[-1]}"
