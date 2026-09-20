@@ -1297,6 +1297,49 @@ a confound"*. On the repaired pairings it prints exactly one line each (E3: `llm
 `fast-refresh`; E8: `--restructure-depth`; E9: `hotspots`; E1: `--budget`); on the old broken
 pairing it prints three, including `require-speedup` and `timing_size`.
 
+### The agent's default changes again: the model no longer writes the pragmas (2026-09-20, D23)
+
+The author: *"i do not like having --llm-pragmas as the default, it should be added when needed
+for a specific experiment."* Done — `--llm-pragmas` now defaults to **OFF**.
+
+**Why this is the right default, not only the author's preference.** With it off, the division of
+labour is the one the pipeline was designed around and the one the thesis argues for: the model
+restructures, DiscoPoP re-discovers what the rewrite exposed, and Phase B annotates once at the
+end. A rewrite is then kept only if the ANALYSIS finds parallelism in it — never on the model's
+say-so. That is the claim the thesis makes (dependence-guided restructuring), and it should be
+what the agent does unless an experiment deliberately asks the other question. With it on, the
+rewrite is judged on its own merits instead (clause check, TSan, identical output from the
+parallel build, measured speed): sound, but a different question, and the one E3 exists to ask.
+E10 showed the cost of having it on by default — on `jacobi-2d` the model annotated loops DiscoPoP
+had already claimed and its clauses were 2.4x slower, which is how the agent finished below
+DiscoPoP alone. Fix 85 bounds that; it is not a reason to keep the default.
+
+**What it changes in the arms.** `--llm-pragmas` is now pinned explicitly wherever an experiment
+needs it, and nowhere else:
+
+| arm | now | why |
+|---|---|---|
+| `full`, `speed_gate_large`, `speed_gate_small` | carry `--llm-pragmas` explicitly | E10 ran with it on; pinning keeps the archived runs reproducible and the names meaning what they meant |
+| `llm_pragmas_full_reprofile`, new **`llm_pragmas_fast`** | carry `--llm-pragmas` | E3's two "the model writes them" cells. The (model, fast refresh) cell was the default until today and had no name of its own |
+| **`default`** | `--no-llm-pragmas` by inheritance | E1's agent arm and the baseline cell of E3, E4, E8, E9 |
+| `discopop_pragmas_fast` | unchanged, now identical to `default` | kept as an explicit name for the runs that used it |
+| everything else (`full_b1`, `no_evidence*`, `full_depth*`, `full_no_hotspots`, `llm_recon`, E4's arms) | follows the new default | they are about evidence, depth, ranking or dependence handling, not about who writes pragmas |
+
+**Consequences to state.** (i) D8 chose `speed_gate_large` as E1's agent arm from E10, where
+`--llm-pragmas` was on; E1's agent arm is now `default`, which keeps D8's finding (the speed check
+at the kernel's timing size) and drops the pragma authorship. The finding transfers: E10's
+sharpest result — `speed_gate_small` losing 10 of 21 trials — was the check deleting *DiscoPoP's*
+pragmas in Phase B, i.e. exactly the path `default` uses. (ii) Acceptance now rests on DiscoPoP
+re-discovering a pattern in the rewritten code, which is the stricter test and the slower one; the
+refresh (fast or full) happens either way, so this is not an extra re-profile. (iii) Fix 85's
+arbitration only runs with `--llm-pragmas`, so by default it never fires; it protects E3's
+`llm_pragmas_*` cells and E10's arms, and `--no-pragma-arbitration` turns it off for the E3 cell
+that wants the two authorships unmixed. (iv) **E2's arms** (`full_b1`, `no_evidence_b1`,
+`no_evidence`) now follow the new default rather than the configuration they were registered
+with. That is deliberate — E2 should measure the agent as it ships — but it is a change to a
+pre-registered experiment and is recorded here as one; it is open for the author to reverse
+before E2 runs.
+
 **Fix 85 against the other experiments.** It runs only with `--llm-pragmas`, `--require-speedup`
 and an actual collision, so it cannot touch E4's `--no-llm-pragmas` arms or anything with the
 check off. It DOES touch E3, whose question is who should write the pragma: the `--llm-pragmas`
@@ -1305,11 +1348,91 @@ cell can now fall back to DiscoPoP's pragma where the two collide. That is the r
 it blurs the contrast E3 measures, so **`--no-pragma-arbitration`** exists for E3 to run a cell
 without it. Cost: one gate run and one timing pair per collision, only where a collision exists.
 
+### 5n. Every argument of every arm is DECLARED and verified against the agent's own parser (2026-09-20)
+
+The author: *"for every experiment every agent argument should be clearly set to serve the purpose
+of the experiment, making sure that nothing wired or inherited would break the intended argument
+selection."* Two things on 20 Sep showed why the inheritance chain (`common_flags` → the arm's own
+flags → the agent's defaults) is not safe on its own: making the speed check the campaign default
+confounded four matrix experiments, and flipping `--llm-pragmas` changed what five arms meant.
+Both were caught by reading, which is not a guarantee.
+
+**The guarantee.** Every arm in `arms.json` now carries a `settings` block naming each argument
+that carries its purpose — for example `default`: `budget 3`, `llm_pragmas False`,
+`require_speedup True`, `hotspots True`, `fast_refresh True`, `restructure_depth 0`,
+`pragma_arbitration True`. Before a run starts the harness builds each arm's full command line,
+adds the new agent option **`--print-config`** (which resolves every argument, prints them as JSON
+and exits without touching a profile), and compares. **Any difference stops the run**:
+
+```
+arm settings do NOT match what the agent parses:
+    default: declares llm_pragmas=True but the agent parsed False
+refusing to run: fix arms.json `settings` or the arm's flags
+```
+
+The check is made against the AGENT'S OWN PARSER, not against the harness's model of it, so it
+covers changed defaults, flags inherited from `common_flags`, flags an arm adds, the order in
+which they override one another, and typos — anything that could leave an arm running something
+other than the experiment it serves. Credentials are redacted from the dump (`api_key`,
+`api_base`), because it reaches logs, manifests and the terminal.
+
+Together with `check_arm_compatibility()` (§ above), every run now prints, before anything
+executes: the arms whose declared settings were verified, and the settings on which those arms
+differ — which must be exactly the experiment's variable. An arm without a `settings` block is
+refused, so the declaration cannot be skipped for a new arm.
+
+### 5m. The studies that were decisions, not protocols — now specified (2026-09-20)
+
+The author asked whether the separate studies are prepared and written down. Honest answer at the
+time: **E1–E11 are specified** in the plan (arms, benchmarks, hypotheses, repeats, scoring), but
+two things the record keeps calling "a separate study" were only DECISIONS — a sentence saying
+they would happen, with no protocol. They are specified here, so neither can quietly become
+"we ran out of time".
+
+**S1 — Budget efficiency (the old D3).** *Question:* what does the third attempt buy, and would a
+budget that follows a region's runtime share buy the same for fewer calls? *Why it is a study and
+not a default:* a share-weighted budget makes the number of attempts a function of the benchmark,
+so every cross-arm and cross-benchmark comparison would vary in two things at once — the confound
+this record had to repair elsewhere on 20 Sep. D10 stands: `--budget 3` fixed everywhere.
+*Protocol, no new model runs for part (a):*
+ (a) **Offline, from data in hand.** Every archived `candidates.jsonl` already records the attempt
+     number of each Phase-A candidate and whether it passed. Measured across the archive:
+     accepted 40 of 127 first attempts, 12 of 91 second, 6 of 82 third, 2 of 8 fourth. Report the
+     curve, the calls-per-acceptance at budgets 1, 2 and 3, and — by replaying the recorded
+     outcomes — which FASTER results a budget of 1 or 2 would have lost. This is a real result and
+     it costs nothing.
+ (b) **On-policy, only if (a) leaves the question open.** `--budget-policy share` against
+     `--budget 3` on the class-R set, one repeat, same model: calls per verified-parallel result.
+     Pre-registered stopping rule: if (a) shows the third attempt contributes < 5 % of acceptances,
+     (b) is dropped and the offline result is reported instead.
+*Threat to state:* the 60 acceptances come from the evaluation's own benchmarks, so they cannot
+calibrate a policy that is then evaluated on the same benchmarks; (a) is descriptive, not a
+calibration, and the write-up says so.
+
+**S2 — Fix 85's arbitration as a measurement.** *Question:* on a loop both could annotate, whose
+pragma is faster — the model's or DiscoPoP's? *Data:* every collision already writes
+`pragma_arbitration` (winner, reason, ratio) into `candidates.jsonl`, so this accrues from every
+run with `--llm-pragmas` at no extra cost. *Protocol:* report the win/loss/noise counts and the
+ratio distribution over E3 (whose cells carry `--llm-pragmas`) plus E10's archived runs, per
+benchmark class. *Pre-registered reading:* a result in either direction is publishable — if
+DiscoPoP wins most collisions that is an argument for the new default (D23); if the model wins
+most, the E3 arms are where the default should be revisited. *Known bias to state:* arbitration
+only fires where the model chose to annotate a claimed loop, which is not a random sample of
+loops.
+
+**What is specified elsewhere, so it is not repeated here:** E1–E11 (plan §5, with the
+benchmark-to-experiment mapping and its "why" in §3), the instruments T0.1–T0.12 (§5e and §7), the
+gate-stage ablation E7 (offline replay of saved candidates), and the pre-flight every experiment
+must pass (§5k, RUNBOOK step 0/0a).
+
 ## 6. Change log
 
 | Date | Repo | Change | Why |
 |---|---|---|---|
 | 2026-09-20 | repositories | **D20 — one repository.** The harness moves into the agent repository as `evaluation/` (`agent/`, `shared/run_store.py`, `benchmarks/` = the SOURCES of the suites it uses: PolyBench 3.2, NPB, RepoOMP's NPB-C, TSVC-2, LULESH, `md`, Rodinia `nw`/`pathfinder`/`hotspot`). Left behind: the group's three harnesses and GUI, 4 GB of reference outputs and data files nothing here reads. Copied from `new_benchmark_harness@1514ceb` (tracked files only, 5,350 files, 42 MB); relative paths unchanged, so every `agent/...` path in this record still holds under `evaluation/`. **Proof the move changed nothing:** a FRESH CLONE (53 MB) regenerates all 70 packages byte-identical to the old ones (every file, every metadata field, every `output_sha256`) — the clone test caught what the working copy hid: the root `.gitignore`'s `data*/` swallowed PolyBench's `datamining/` kernels, and `prepare_polybench.py` discovered kernels through the old harness's per-kernel config directories (now: PolyBench's own layout, same 30 kernels); integrity test 30/30, scaffold test 0 failures; a no-model smoke run (`move_smoke`, `atax`) reproduces `dp_alone_fix84_mac`'s outcome. Code changes: only how the agent repository is located (`cli.py`, `profile_stability.py`, the three shell scripts) and `server.sh sync` (one `git` fast-forward instead of `git` + `rsync`). The repository is a PUBLIC fork (GitHub cannot make a fork private) and the author chose to publish: the server's address and account were moved out of the tracked files into the untracked `agent/tools/server.local` first; a scan found no credential, token value or address left. Old repository frozen and tagged: archived runs up to `e10` record ITS commit hashes | the author: one place; and the old repository is 4 GB and cannot be cloned in full from GitLab, which a reader of the thesis would have to do |
+| 2026-09-20 | agent + harness | **D24 — every arm DECLARES every argument that carries its purpose, and the harness verifies it against the agent's own parser before a run starts (§5n).** New agent option `--print-config` (resolved configuration as JSON, credentials redacted); `settings` block on all 19 arms; any mismatch refuses the run, and an arm without a declaration is refused too | the author: "for every experiment every agent argument should be clearly set to serve the purpose of the experiment, making sure that nothing wired or inherited would break the intended argument selection" — after two changes on one day silently altered what four experiments and five arms meant |
+| 2026-09-20 | agent + plan | **D23 — `--llm-pragmas` is no longer the default; pragma authorship is opt-in per experiment.** Off, the model restructures and DiscoPoP annotates, so a rewrite is kept only if the analysis finds parallelism in it — the division of labour the thesis argues for. Pinned explicitly in E10's three arms (reproducibility) and E3's two "model writes them" cells (new arm `llm_pragmas_fast`); `default` becomes E1's agent arm and the baseline cell of E3, E4, E8, E9. E2's arms now follow the new default, which is a deliberate change to a pre-registered experiment and is flagged as one | the author: "i do not like having --llm-pragmas as the default it should be added when needed for a specific experiment"; E10's `jacobi-2d` showed the cost of having it on by default |
+| 2026-09-20 | plan + harness | **The defaults change HAD broken four unrun experiments; found by checking, fixed, and guarded.** E3, E4's matrix cell, E8 and E9 each paired a variant against `full`, which was pinned to the old behaviour → new arm `default` is the baseline cell of every matrix experiment. Eight kernels with no timing size (incl. `bicg`, class R) would have become unrunnable → the speed check switches off for them and the fact is recorded (`speed_check_off`). Guard: `check_arm_compatibility()`, printed before every run — "each line must be this experiment's variable; anything else is a confound" | the author: "make sure that these changes would not harm other experiments, should check" |
 | 2026-09-20 | plan + agent | **§5l: audit of the agent's DEFAULTS.** Every default now carries its justification, and a field marked "studied in a later experiment" must also state the value earlier experiments hold it at and why. Findings: `llm_pragmas = True` rests on a design argument alone and drove E10's `jacobi-2d` regression (22 trials across the archive end with a deferred DiscoPoP pattern and only LLM pragmas); `budget = 3` is now measured rather than assumed (acceptances by attempt: 40/127, 12/91, 6/82); the campaign's `--no-require-speedup` is wrong by E10's own result — the agent's default was right, the SIZE was not. **D21 = Fix 85**: the prompt reserves claimed loops for Phase B, and where a model pragma lands on one anyway Phase B measures DiscoPoP's against it and keeps the faster (displacement is a win on `lu` 0.21×→2.8× and a loss on `jacobi-2d` 5.9×→2.5×, so the fix measures instead of choosing) | the author: "we should review the agent default and see if this is the right default"; "for every experiment every parameter selected should have a reason" |
 | 2026-09-20 | plan + agent | **The main comparison for E10 exists (§7 `e10_dp_alone`, `e10_lu_fix84`): D8 confirmed, and `speed_gate_small` shown to be destructive — 10 of 21 trials `lost` because the speed check at the agent's small size deletes DiscoPoP's OWN pragmas (`marginal 0.00×`).** Agent vs DiscoPoP alone, median 1.00× on this class-A set (no harm, as intended); `lu` better ×10, `floyd-warshall` gained, `jacobi-2d` worse (→ Fix 85). Classification fixed: correct-but-slower-than-doing-nothing counts as `worse`, not `gained-not-faster` | D19; the author's question "how is this even possible?" about a loop carrying both a model pragma and a DiscoPoP suggestion |
 | 2026-09-20 | plan | **D8 decided by E10: `speed_gate_large` is E1's agent arm** — 11 FASTER / 0 slower programs kept / 0 BROKEN, against `full` 8 / 5 / 1 and `speed_gate_small` 2 / 0 / 0 (16 of 18 unchanged, 29 performance rejections) | pre-registered rule of D8; §7 `e10` |

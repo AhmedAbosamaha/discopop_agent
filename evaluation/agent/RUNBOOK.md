@@ -203,6 +203,14 @@ regenerate it with the prepare tool. If the archived copy differs, delete
 ### The checklist for EVERY experiment (a new session starts here)
 
 **Before launching**
+0b. **Every argument of every arm is declared and verified (D24).** Each arm in `arms.json`
+   carries a `settings` block naming the arguments that carry its purpose; the harness checks
+   them against `discopop_agent --print-config` before a run starts and REFUSES to run on any
+   difference, including a missing declaration. Adding an arm therefore means adding its
+   `settings`. Every run also prints the settings its arms differ on — that list must contain
+   exactly the experiment's variable and nothing else. The agent's default is
+   `--no-llm-pragmas` (D23): the model restructures, DiscoPoP annotates. An experiment that
+   wants the model to write the pragmas says so in its arm.
 0a. **The main comparison is DiscoPoP alone vs DiscoPoP + agent (D19, the author's rule).** Every
    model-driven run includes `discopop_gate` on the same benchmarks (`--arms discopop_gate,<arms>`);
    the read-out starts from `overview.md`'s first table / `vs_discopop_alone.md` (gained · better ·

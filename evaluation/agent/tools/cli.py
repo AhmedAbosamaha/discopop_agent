@@ -251,6 +251,51 @@ def _last_switch_in(flags: List[str], name: str) -> Optional[bool]:
     return value
 
 
+def verify_arm_settings(arm_names: List[str], arms: Dict[str, dict], agent_repo: Path,
+                        benchmark: str) -> List[str]:
+    """Ask the agent what it parsed, and compare with what each arm DECLARED.
+
+    An arm's `settings` block names every argument that carries its purpose. Building the
+    command line from flags and inheritance is not enough on its own: a changed default, a
+    flag inherited from `common_flags`, or a typo can all leave an arm running something
+    other than the experiment it serves — which happened twice on 2026-09-20 (the speed check
+    became the default and confounded four matrix experiments; `--llm-pragmas` stopped being
+    the default and changed the meaning of five arms). So the check is made against the
+    agent's OWN parser, not against the harness's model of it: `--print-config` resolves the
+    arguments and prints them, and every declared key must match.
+
+    Returns a list of human-readable problems; empty means every arm runs what it declares.
+    """
+    problems: List[str] = []
+    py = str(agent_repo / "venv" / "bin" / "python")
+    for name in arm_names:
+        spec = arms[name]
+        declared = spec.get("settings")
+        if not declared:
+            problems.append(f"{name}: no `settings` block — every arm must declare the "
+                            f"arguments that carry its purpose (arms.json `settings_note`)")
+            continue
+        cmd = [py, "-m", "discopop_agent", "--discopop-dir", ".", "--source-file", "x.c",
+               *_common_flags(), *spec.get("flags", []), *_timing_flags(spec, benchmark),
+               "--print-config"]
+        proc = subprocess.run(cmd, capture_output=True, text=True,
+                              env={**os.environ, **_agent_env(agent_repo)}, timeout=120)
+        if proc.returncode != 0:
+            problems.append(f"{name}: the agent rejected this arm's arguments "
+                            f"({(proc.stderr or proc.stdout).strip().splitlines()[-1:] or ['?']})")
+            continue
+        try:
+            actual = json.loads(proc.stdout)
+        except ValueError:
+            problems.append(f"{name}: could not read the agent's resolved configuration")
+            continue
+        for key, want in declared.items():
+            got = actual.get(key, "<absent>")
+            if got != want:
+                problems.append(f"{name}: declares {key}={want!r} but the agent parsed {got!r}")
+    return problems
+
+
 def check_arm_compatibility(arm_names: List[str], arms: Dict[str, dict]) -> List[str]:
     """Differences between the arms of one run, as human-readable lines.
 
@@ -1204,6 +1249,18 @@ def cmd_run(a: argparse.Namespace) -> int:
     # only that thing. Changing the campaign default on 2026-09-20 silently confounded four
     # planned experiments whose variant arms were paired against `full`; this makes that
     # class of mistake visible at launch instead of at analysis.
+    # Every argument an arm declares must be what the agent actually parses. Checked against
+    # the agent's own parser before anything runs, so nothing inherited or mistyped can
+    # silently change what an experiment measures.
+    problems = verify_arm_settings(list(a.arms), arms, Path(a.agent_repo).resolve(),
+                                   wanted[0] if wanted else "")
+    if problems:
+        print("arm settings do NOT match what the agent parses:")
+        for pr in problems:
+            print(f"    {pr}")
+        sys.exit("refusing to run: fix arms.json `settings` or the arm's flags")
+    print(f"arm settings verified against the agent's own parser ({len(a.arms)} arm(s))")
+
     differences = check_arm_compatibility(list(a.arms), arms)
     if differences:
         print("arms differ in:")

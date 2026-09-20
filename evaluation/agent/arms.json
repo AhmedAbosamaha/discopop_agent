@@ -16,18 +16,35 @@
       "flags": [
         "--budget",
         "0"
-      ]
+      ],
+      "settings": {
+        "budget": 0,
+        "llm_pragmas": false,
+        "require_speedup": true,
+        "hotspots": true,
+        "fast_refresh": true,
+        "restructure_depth": 0
+      }
     },
     "full": {
       "ids": [
         "B5",
         "E5"
       ],
-      "description": "The agent with the speed check OFF: the LLM restructures and writes pragmas, fast refresh, full evidence, everything of the gate except the timing. This was the campaign default until 2026-09-20; E10 showed it keeps correct-but-slower programs (lu 0.20x, hotspot 0.09x) and was the only arm with an unsafe acceptance, so it is now an EXPERIMENTAL arm, not the default. Kept unchanged so E10's trials stay comparable.",
+      "description": "The agent with the speed check OFF: the LLM restructures and writes pragmas, fast refresh, full evidence, everything of the gate except the timing. This was the campaign default until 2026-09-20; E10 showed it keeps correct-but-slower programs (lu 0.20x, hotspot 0.09x) and was the only arm with an unsafe acceptance, so it is now an EXPERIMENTAL arm, not the default. Kept unchanged so E10's trials stay comparable. Carries --llm-pragmas explicitly since 2026-09-20, when that stopped being the default: E10 ran with it on, and pinning it keeps this arm reproducible.",
       "flags": [
+        "--llm-pragmas",
         "--no-require-speedup"
       ],
-      "timing_size": "agent"
+      "timing_size": "agent",
+      "settings": {
+        "budget": 3,
+        "llm_pragmas": true,
+        "require_speedup": false,
+        "hotspots": true,
+        "fast_refresh": true,
+        "restructure_depth": 0
+      }
     },
     "full_b1": {
       "ids": [
@@ -37,7 +54,13 @@
       "flags": [
         "--budget",
         "1"
-      ]
+      ],
+      "settings": {
+        "budget": 1,
+        "llm_pragmas": false,
+        "require_speedup": true,
+        "evidence_sections": null
+      }
     },
     "no_evidence_b1": {
       "ids": [
@@ -50,7 +73,13 @@
         "1",
         "--evidence",
         "none"
-      ]
+      ],
+      "settings": {
+        "budget": 1,
+        "llm_pragmas": false,
+        "require_speedup": true,
+        "evidence_sections": []
+      }
     },
     "discopop_annotates": {
       "ids": [
@@ -61,16 +90,28 @@
       "flags": [
         "--no-llm-pragmas",
         "--no-fast-refresh"
-      ]
+      ],
+      "settings": {
+        "budget": 3,
+        "llm_pragmas": false,
+        "require_speedup": true,
+        "fast_refresh": false,
+        "restructure_depth": 0
+      }
     },
     "discopop_pragmas_fast": {
-      "ids": [
-        "E3-matrix"
-      ],
-      "description": "LLM restructures but may not write pragmas; DiscoPoP's re-discovery decides; fast refresh between rewrites. With discopop_annotates, full and llm_pragmas_full_reprofile this completes the pragma-author x refresh 2x2.",
+      "ids": [],
+      "description": "LLM restructures but may not write pragmas; DiscoPoP's re-discovery decides; fast refresh between rewrites. With discopop_annotates, full and llm_pragmas_full_reprofile this completes the pragma-author x refresh 2x2. Since 2026-09-20 identical in configuration to `default` (--no-llm-pragmas is the default); kept as an explicit name for the archived runs that used it.",
       "flags": [
         "--no-llm-pragmas"
-      ]
+      ],
+      "settings": {
+        "budget": 3,
+        "llm_pragmas": false,
+        "require_speedup": true,
+        "fast_refresh": true,
+        "restructure_depth": 0
+      }
     },
     "llm_pragmas_full_reprofile": {
       "ids": [
@@ -78,8 +119,16 @@
       ],
       "description": "Defaults (LLM writes pragmas, gate decides) but a full instrumented re-profile after every kept rewrite instead of a fast refresh.",
       "flags": [
+        "--llm-pragmas",
         "--no-fast-refresh"
-      ]
+      ],
+      "settings": {
+        "budget": 3,
+        "llm_pragmas": true,
+        "require_speedup": true,
+        "fast_refresh": false,
+        "restructure_depth": 0
+      }
     },
     "discopop_pragmas_recon": {
       "ids": [
@@ -89,7 +138,13 @@
       "flags": [
         "--no-llm-pragmas",
         "--llm-recon"
-      ]
+      ],
+      "settings": {
+        "budget": 3,
+        "llm_pragmas": false,
+        "require_speedup": true,
+        "llm_recon": true
+      }
     },
     "full_depth1": {
       "ids": [
@@ -99,7 +154,13 @@
       "flags": [
         "--restructure-depth",
         "1"
-      ]
+      ],
+      "settings": {
+        "budget": 3,
+        "llm_pragmas": false,
+        "require_speedup": true,
+        "restructure_depth": 1
+      }
     },
     "full_depth2": {
       "ids": [
@@ -109,7 +170,13 @@
       "flags": [
         "--restructure-depth",
         "2"
-      ]
+      ],
+      "settings": {
+        "budget": 3,
+        "llm_pragmas": false,
+        "require_speedup": true,
+        "restructure_depth": 2
+      }
     },
     "no_evidence": {
       "ids": [
@@ -119,7 +186,13 @@
       "flags": [
         "--evidence",
         "none"
-      ]
+      ],
+      "settings": {
+        "budget": 3,
+        "llm_pragmas": false,
+        "require_speedup": true,
+        "evidence_sections": []
+      }
     },
     "discopop_pragmas_llmdeps": {
       "ids": [
@@ -129,7 +202,13 @@
       "flags": [
         "--no-llm-pragmas",
         "--llm-deps"
-      ]
+      ],
+      "settings": {
+        "budget": 3,
+        "llm_pragmas": false,
+        "require_speedup": true,
+        "llm_deps": true
+      }
     },
     "discopop_pragmas_recon_folded": {
       "ids": [
@@ -141,7 +220,14 @@
         "--llm-recon",
         "--llm-recon-mode",
         "folded"
-      ]
+      ],
+      "settings": {
+        "budget": 3,
+        "llm_pragmas": false,
+        "require_speedup": true,
+        "llm_recon": true,
+        "llm_recon_mode": "folded"
+      }
     },
     "full_no_hotspots": {
       "ids": [
@@ -150,27 +236,51 @@
       "description": "Defaults, but regions ranked by DiscoPoP's static workload proxy instead of measured time saved (--no-hotspots).",
       "flags": [
         "--no-hotspots"
-      ]
+      ],
+      "settings": {
+        "budget": 3,
+        "llm_pragmas": false,
+        "require_speedup": true,
+        "hotspots": false
+      }
     },
     "speed_gate_large": {
       "ids": [
         "E10"
       ],
-      "description": "The campaign default since 2026-09-20 (D8): the speed check ON, timed at the kernel's measured timing size (agent/kernel_sizes.json, T0.1) via --timing-cflags; profiling and every correctness check stay at the agent size. E1's agent arm. The flags are now inherited from common_flags; they are repeated here so the arm reads the same as when E10 ran it.",
+      "description": "The campaign default since 2026-09-20 (D8): the speed check ON, timed at the kernel's measured timing size (agent/kernel_sizes.json, T0.1) via --timing-cflags; profiling and every correctness check stay at the agent size. E1's agent arm. The flags are now inherited from common_flags; they are repeated here so the arm reads the same as when E10 ran it. Carries --llm-pragmas explicitly since 2026-09-20, when that stopped being the default: E10 ran with it on, and pinning it keeps this arm reproducible.",
       "flags": [
+        "--llm-pragmas",
         "--require-speedup"
       ],
-      "timing_size": "per_kernel"
+      "timing_size": "per_kernel",
+      "settings": {
+        "budget": 3,
+        "llm_pragmas": true,
+        "require_speedup": true,
+        "hotspots": true,
+        "fast_refresh": true,
+        "restructure_depth": 0
+      }
     },
     "speed_gate_small": {
       "ids": [
         "E10"
       ],
-      "description": "Defaults with the speed check ON, timed at the agent size (SMALL) as the agent does without --timing-cflags: measures how many changes the check rejects where kernels run in milliseconds, and whether the harness later finds them faster.",
+      "description": "Defaults with the speed check ON, timed at the agent size (SMALL) as the agent does without --timing-cflags: measures how many changes the check rejects where kernels run in milliseconds, and whether the harness later finds them faster. Carries --llm-pragmas explicitly since 2026-09-20, when that stopped being the default: E10 ran with it on, and pinning it keeps this arm reproducible.",
       "flags": [
+        "--llm-pragmas",
         "--require-speedup"
       ],
-      "timing_size": "agent"
+      "timing_size": "agent",
+      "settings": {
+        "budget": 3,
+        "llm_pragmas": true,
+        "require_speedup": true,
+        "hotspots": true,
+        "fast_refresh": true,
+        "restructure_depth": 0
+      }
     },
     "llm_recon": {
       "ids": [
@@ -180,19 +290,52 @@
       "description": "Defaults plus LLM dependence reconstruction for code it just wrote.",
       "flags": [
         "--llm-recon"
-      ]
+      ],
+      "settings": {
+        "budget": 3,
+        "llm_pragmas": false,
+        "require_speedup": true,
+        "llm_recon": true
+      }
     },
     "default": {
       "ids": [
+        "E1",
         "E3-matrix",
         "E4-matrix",
         "E8",
         "E9"
       ],
-      "description": "The campaign default with nothing added: the agent as every later experiment inherits it (speed check ON at the kernel's timing size, LLM writes pragmas, fast refresh, full evidence, budget 3). This is the BASELINE CELL of the matrix experiments \u2014 E3's (llm_pragmas, fast refresh) cell, E4's, E8's depth 0 and E9's measured ranking \u2014 which until 2026-09-20 was `full`. Identical in configuration to `speed_gate_large`; the two names are kept apart because `speed_gate_large` is E10's arm and names the thing E10 varied, while this one names 'whatever the default currently is'.",
-      "flags": []
+      "description": "The campaign default with nothing added: the agent as every later experiment inherits it \u2014 the model restructures and DiscoPoP annotates (--no-llm-pragmas), fast refresh, speed check ON at the kernel's timing size, full evidence, budget 3. The BASELINE CELL of the matrix experiments (E3's (DiscoPoP annotates, fast refresh) cell, E4's, E8's depth 0, E9's measured ranking) and E1's agent arm. Until 2026-09-20 that cell was `full`, which is now pinned to the older configuration so E10 stays comparable.",
+      "flags": [],
+      "settings": {
+        "budget": 3,
+        "llm_pragmas": false,
+        "require_speedup": true,
+        "hotspots": true,
+        "fast_refresh": true,
+        "restructure_depth": 0,
+        "pragma_arbitration": true
+      }
+    },
+    "llm_pragmas_fast": {
+      "ids": [
+        "E3-matrix"
+      ],
+      "description": "E3's (the LLM writes the pragmas, fast refresh) cell: the default plus --llm-pragmas. Until 2026-09-20 this was the default itself and had no name of its own; it needs one now that pragma authorship is opt-in.",
+      "flags": [
+        "--llm-pragmas"
+      ],
+      "settings": {
+        "budget": 3,
+        "llm_pragmas": true,
+        "require_speedup": true,
+        "fast_refresh": true,
+        "restructure_depth": 0
+      }
     }
   },
   "common_timing_size": "per_kernel",
-  "common_flags_note": "Fixed configuration every arm inherits. Until 2026-09-20 this was --no-require-speedup (15 Sep: at SMALL sizes kernels run in milliseconds and the check measured noise). E10 settled it: the check ON at the kernel's TIMING size is the only configuration with no unsafe acceptance and no result below DiscoPoP alone, while OFF kept 5 slower programs and 1 BROKEN, and ON at the small size deleted DiscoPoP's own pragmas in 10 of 21 trials. What was wrong in September was the size, not the check. An arm that wants the old behaviour says so explicitly. --min-runtime-share 0.01 is unchanged (D1, from T0.5)."
+  "common_flags_note": "Fixed configuration every arm inherits. Until 2026-09-20 this was --no-require-speedup (15 Sep: at SMALL sizes kernels run in milliseconds and the check measured noise). E10 settled it: the check ON at the kernel's TIMING size is the only configuration with no unsafe acceptance and no result below DiscoPoP alone, while OFF kept 5 slower programs and 1 BROKEN, and ON at the small size deleted DiscoPoP's own pragmas in 10 of 21 trials. What was wrong in September was the size, not the check. An arm that wants the old behaviour says so explicitly. --min-runtime-share 0.01 is unchanged (D1, from T0.5).",
+  "settings_note": "`settings` is what each arm DECLARES the agent must be configured with for the experiment it serves. Before a run the harness asks the agent what it actually parsed (`--print-config`) and refuses to start on any difference, so a changed default, an inherited flag or a typo cannot silently change what an arm means. Add a key here for every argument that carries the arm's purpose; leave out the ones it genuinely does not care about (paths, model, credentials)."
 }

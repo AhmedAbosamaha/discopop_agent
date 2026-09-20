@@ -4,7 +4,7 @@ import os
 import shlex
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional, Set, Tuple
+from typing import Any, List, Optional, Set, Tuple
 
 from .project import Project
 
@@ -170,16 +170,28 @@ def parse_args() -> AgentArguments:
                         "its Read/Edit/Write tools; the agent diffs that copy against the "
                         "real source and gates it as usual — requires "
                         "--provider claude-agent-sdk)")
-    p.add_argument("--llm-pragmas", action=argparse.BooleanOptionalAction, default=True,
-                   help=("Let the LLM write the OpenMP pragmas itself, in the same "
-                         "edit as the restructuring, instead of leaving them to "
-                         "DiscoPoP (default: on). The rewrite is then judged on its "
-                         "own merits — static clause check, ThreadSanitizer, "
-                         "byte-identical output from the PARALLEL build, and measured "
-                         "speedup — rather than on whether re-profiling makes DiscoPoP "
-                         "find a pattern. A rewrite that carries no pragma still falls "
-                         "back to DiscoPoP's verdict, and Phase B still annotates every "
-                         "region the LLM did not touch."))
+    p.add_argument("--llm-pragmas", action=argparse.BooleanOptionalAction, default=False,
+                   help=("Let the LLM write the OpenMP pragmas itself, in the same edit as "
+                         "the restructuring, instead of leaving them to DiscoPoP "
+                         "(default: OFF since 2026-09-20). Off, the division of labour is "
+                         "the one the pipeline was designed around and the one the thesis "
+                         "argues for: the model restructures, DiscoPoP re-discovers what "
+                         "the rewrite exposed, and Phase B annotates once at the end — so "
+                         "a rewrite is kept only if the ANALYSIS finds parallelism in it, "
+                         "never on the model's say-so. On, the rewrite is judged on its own "
+                         "merits instead (clause check, ThreadSanitizer, identical output "
+                         "from the PARALLEL build, measured speedup), which is a sound but "
+                         "different question — turn it on for the experiment that asks it "
+                         "(E3), not by default. It was the default until 20 Sep 2026; E10 "
+                         "showed the cost (jacobi-2d: the model annotated loops DiscoPoP "
+                         "had already claimed, and its clauses were 2.4x slower), which "
+                         "Fix 85 now bounds but does not make into a reason to keep it on."))
+    p.add_argument("--print-config", action="store_true",
+                   help=("Print the fully resolved configuration as JSON and exit, without "
+                         "reading a profile or calling anything. The experiment harness uses "
+                         "it to check that every argument an experiment's arm DECLARES is "
+                         "what the agent actually parsed, so a changed default can never "
+                         "silently change what an arm means."))
     p.add_argument("--pragma-arbitration", action=argparse.BooleanOptionalAction, default=True,
                    help=("With --llm-pragmas and --require-speedup: where the model has "
                          "annotated a loop DiscoPoP had already claimed, build DiscoPoP's "
@@ -500,7 +512,7 @@ def parse_args() -> AgentArguments:
     elif a.build_cmd or a.project_units or a.project_include is not None:
         p.error("--build-cmd / --project-units / --project-include need --project-dir")
 
-    return AgentArguments(
+    args = AgentArguments(
         project=project,
         profile_only=a.profile_only,
         discopop_dir=a.discopop_dir,
@@ -544,3 +556,28 @@ def parse_args() -> AgentArguments:
             int(x) for x in str(a.stress_threads).split(",") if x.strip()
         ) or (1, 2, 4),
     )
+
+    if a.print_config:
+        # What the agent ACTUALLY parsed, for the harness to check an experiment's arms
+        # against what that experiment declared (every argument set on purpose, nothing
+        # inherited by accident).  Printed as JSON and nothing else; the process then exits.
+        import dataclasses
+        import json as _json
+
+        def _plain(v: Any) -> Any:
+            if isinstance(v, (str, int, float, bool)) or v is None:
+                return v
+            if isinstance(v, (list, tuple)):
+                return [_plain(x) for x in v]
+            if dataclasses.is_dataclass(v) and not isinstance(v, type):
+                return {k: _plain(x) for k, x in dataclasses.asdict(v).items()}
+            return str(v)
+
+        # A credential must never reach a log, a run manifest or a terminal, and this
+        # output is written to all three.
+        secret = {"api_key", "api_base"}
+        print(_json.dumps({f.name: ("<set>" if getattr(args, f.name) else None)
+                           if f.name in secret else _plain(getattr(args, f.name))
+                           for f in dataclasses.fields(args)}, indent=2, sort_keys=True))
+        raise SystemExit(0)
+    return args
