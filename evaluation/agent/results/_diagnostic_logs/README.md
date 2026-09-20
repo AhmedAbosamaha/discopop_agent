@@ -13,6 +13,9 @@ checkout on 2026-09-20.
 | `_mgprof` | NPB-CPP `mg` profile, explored under Fixes 82 and 83 (`explore_fix82.log`, `explore_fix83.log`) | **L3** — `mg` is past the state-assignment phase after Fix 83 but never leaves task detection; the run was stopped unfinished after 11 h 24 min |
 | `_prepare`, `_t0` | packaging and instrument-chain launch logs | provenance for the T0 studies and the packaging validations |
 
+| `_prefix_determinism` | `prefix_sum.cpp`, the probe behind §5b | **DiscoPoP's Do-All verdict varies between profiles of the same program** — loop 18 is a true recurrence, and 8 of 11 Mac profiles reported 4 blockers while 3 reported none. The finding that made "one profile per benchmark per run" a rule, and T0.2 an instrument |
+| `_build_dp_2026-08-23` | the original server build script and its log | how DiscoPoP was first built on the experiment host (LLVM 20), kept because the record cites it |
+
 Fetched from `~/new_benchmark_harness/agent/runs/` on the server before that directory was
-removed. Binaries, IR dumps of no evidentiary value and profile trees were left behind; only
+removed, and from the probe directories in the server's home on 2026-09-20. Binaries, IR dumps of no evidentiary value and profile trees were left behind; only
 logs, `meta.json` and CSVs were kept.
