@@ -44,3 +44,4 @@ Every row is a directory under `agent/results/` holding a run's complete results
 | `t0_8_packaging_fix` | other | 2026-09-19T14:25 | — | files | 0 | — | 2 | 0.1 MB |
 | `t0_8_packaging_mac` | T0.8 packaging equivalence | 2026-09-18T15:15 | ahmeds-MacBook-Pro.local | files | 0 | — | 2 | 0.1 MB |
 | `vs_polly` | trials | 2026-09-16T07:16 | rms14562 | running | 1 | FASTER 1 | 8 | 0.0 MB |
+- [_launcher_logs](_launcher_logs/) — the launch command, progress and credential sweep of every run executed on the server (provenance)
