@@ -1370,6 +1370,40 @@ cell can now fall back to DiscoPoP's pragma where the two collide. That is the r
 it blurs the contrast E3 measures, so **`--no-pragma-arbitration`** exists for E3 to run a cell
 without it. Cost: one gate run and one timing pair per collision, only where a collision exists.
 
+### 5p. What the agent has actually DONE so far: restructurings vs pragmas (2026-09-20)
+
+The author, looking at the exhibits: *"I only see before and after adding pragmas but I don't see
+code restructuring."* Correct — and the exhibits were part of the problem, reporting "lines added"
+without saying what those lines were. Counted properly (comments stripped, block comments tracked
+across lines, pragmas excluded), the archive holds **12 trials that changed code, on 4 programs,
+out of 180**:
+
+| program | what the model did | outcome |
+|---|---|---|
+| `floyd-warshall` | peels the k-th row and column out of the nest and guards the rest with `if (i != k && j != k)`, so the update no longer reads what it writes | FASTER, 9.6× at 12 threads |
+| `floyd-warshall` | a variant that moves the row into a stack array | **BROKEN** — it overflows at the verification size |
+| `trisolv` | scalar expansion: `x[i] = x[i] - A[i][j]*x[j]` becomes a `sum` accumulated under `reduction(+:sum)` and subtracted once | correct; the kernel is too short to time |
+| `hotspot` | removes a recurrence carried by POINTERS — the original swaps `r`/`t` every iteration, the rewrite derives both from the iteration's parity | correct, but **12× slower**: the model kept the loop sequential with `#pragma omp ordered` |
+| `2mm`, `lu`, `jacobi-2d` | nothing but pragmas, and comments explaining them | FASTER |
+
+So the agent CAN restructure, and the four cases are genuinely different transformations —
+index-set splitting with peeling, scalar expansion into a reduction, and removing a
+pointer-carried recurrence. What is missing is not the capability but the OPPORTUNITY: on
+PolyBench almost every loop is already parallel, so there is nothing to restructure. That is the
+finding of §5k and the reason for the TSVC class-R suite; the restructuring gallery fills when E1
+runs on benchmarks that need it.
+
+Two of the four are also the thesis's best negative examples, and both concern the gate:
+`floyd`'s stack array is an unsafe acceptance that the speed check catches at size, and `hotspot`
+is a correct restructuring defeated by the clause the model paired with it.
+
+**Exhibit tool fixed** (`thesis_material.py`): each exhibit now carries `change_kind` —
+*restructuring* / *annotation* / *unchanged* — with code lines counted after stripping comments,
+and `INDEX.md` groups the case studies under "the agent changed the code", "the agent only added
+pragmas" and "the agent changed nothing (declined)". Before this, `2mm` and `lu` counted the
+model's multi-line `/* … */` explanations as changed code and read as restructurings; they are
+annotations. New exhibits: `floyd_restructured_peeling`, `trisolv_reduction_extracted`.
+
 ### 5o. The server moved to the one-repository layout (2026-09-20)
 
 `evaluation/` lives inside the agent repository, so the server now needs ONE checkout instead of
@@ -1477,30 +1511,6 @@ must pass (§5k, RUNBOOK step 0/0a).
 |---|---|---|---|
 | 2026-09-20 | repositories | **D20 — one repository.** The harness moves into the agent repository as `evaluation/` (`agent/`, `shared/run_store.py`, `benchmarks/` = the SOURCES of the suites it uses: PolyBench 3.2, NPB, RepoOMP's NPB-C, TSVC-2, LULESH, `md`, Rodinia `nw`/`pathfinder`/`hotspot`). Left behind: the group's three harnesses and GUI, 4 GB of reference outputs and data files nothing here reads. Copied from `new_benchmark_harness@1514ceb` (tracked files only, 5,350 files, 42 MB); relative paths unchanged, so every `agent/...` path in this record still holds under `evaluation/`. **Proof the move changed nothing:** a FRESH CLONE (53 MB) regenerates all 70 packages byte-identical to the old ones (every file, every metadata field, every `output_sha256`) — the clone test caught what the working copy hid: the root `.gitignore`'s `data*/` swallowed PolyBench's `datamining/` kernels, and `prepare_polybench.py` discovered kernels through the old harness's per-kernel config directories (now: PolyBench's own layout, same 30 kernels); integrity test 30/30, scaffold test 0 failures; a no-model smoke run (`move_smoke`, `atax`) reproduces `dp_alone_fix84_mac`'s outcome. Code changes: only how the agent repository is located (`cli.py`, `profile_stability.py`, the three shell scripts) and `server.sh sync` (one `git` fast-forward instead of `git` + `rsync`). The repository is a PUBLIC fork (GitHub cannot make a fork private) and the author chose to publish: the server's address and account were moved out of the tracked files into the untracked `agent/tools/server.local` first; a scan found no credential, token value or address left. Old repository frozen and tagged: archived runs up to `e10` record ITS commit hashes | the author: one place; and the old repository is 4 GB and cannot be cloned in full from GitLab, which a reader of the thesis would have to do |
 | 2026-09-20 | server | **The server moved to the one-repository layout (§5o).** One checkout; `server.sh sync` is now a single `git fetch` + `merge --ff-only`, so the harness on the server cannot drift from the Mac's. Parity OK; packages regenerated there are identical to the Mac's file by file (295 files, 0 differences); a no-model smoke ran end to end. The old `~/new_benchmark_harness` (19 GB) is unused — its launcher logs are now tracked at `results/_launcher_logs/` so nothing is lost with it | D20; and the server had been running from a checkout that no longer received any of the day's changes |
-### 5o. The server moved to the one-repository layout (2026-09-20)
-
-`evaluation/` lives inside the agent repository, so the server now needs ONE checkout instead of
-two, and `server.sh sync` is a single `git fetch` + `merge --ff-only` where it used to be a git
-update of the agent plus an rsync of the harness working tree. That removes a whole class of
-drift: the harness on the server can no longer be a different state from the harness on the Mac,
-because there is no separate harness to copy.
-
-*Done and verified.* Server checkout fast-forwarded to `b19d675e`; parity OK on every item
-(agent head, harness head, both trees clean, wrappers, explorer and library as checkouts,
-`anthropic` and `claude-agent-sdk` versions). Packages regenerated there from the new location and
-compared file by file with the Mac's: **295 files, 0 differences** — so a run on either machine
-measures the same program. A no-model smoke (`polybench/2mm`, arms `default` and `discopop_gate`)
-ran end to end from the new layout, with the new checks printing first: *"arm settings verified
-against the agent's own parser (2 arm(s))"*.
-
-*What is left of the old repository on the server.* `~/new_benchmark_harness` (19 GB: 13 GB of
-run directories, 4 GB of benchmark sources) is now unused. Every experiment run in it is archived
-in `results/` here, and the two things that were NOT — `t0_1_calib`, which turned out to hold no
-trials, and the launcher logs — have been dealt with: the logs are now tracked at
-`results/_launcher_logs/` as provenance (the launch command, the progress, the credential sweep
-of every server run), since they would otherwise be lost with the directory. The server's disk is
-at 99 % (32 GB free), so removing it is worth 19 GB — the author's call, not an automatic one.
-
 ### 5n. Every argument of every arm is DECLARED every arm DECLARES every argument that carries its purpose, and the harness verifies it against the agent's own parser before a run starts (§5n).** New agent option `--print-config` (resolved configuration as JSON, credentials redacted); `settings` block on all 19 arms; any mismatch refuses the run, and an arm without a declaration is refused too | the author: "for every experiment every agent argument should be clearly set to serve the purpose of the experiment, making sure that nothing wired or inherited would break the intended argument selection" — after two changes on one day silently altered what four experiments and five arms meant |
 | 2026-09-20 | agent + plan | **D23 — `--llm-pragmas` is no longer the default; pragma authorship is opt-in per experiment.** Off, the model restructures and DiscoPoP annotates, so a rewrite is kept only if the analysis finds parallelism in it — the division of labour the thesis argues for. Pinned explicitly in E10's three arms (reproducibility) and E3's two "model writes them" cells (new arm `llm_pragmas_fast`); `default` becomes E1's agent arm and the baseline cell of E3, E4, E8, E9. E2's arms now follow the new default, which is a deliberate change to a pre-registered experiment and is flagged as one | the author: "i do not like having --llm-pragmas as the default it should be added when needed for a specific experiment"; E10's `jacobi-2d` showed the cost of having it on by default |
 | 2026-09-20 | plan + harness | **The defaults change HAD broken four unrun experiments; found by checking, fixed, and guarded.** E3, E4's matrix cell, E8 and E9 each paired a variant against `full`, which was pinned to the old behaviour → new arm `default` is the baseline cell of every matrix experiment. Eight kernels with no timing size (incl. `bicg`, class R) would have become unrunnable → the speed check switches off for them and the fact is recorded (`speed_check_off`). Guard: `check_arm_compatibility()`, printed before every run — "each line must be this experiment's variable; anything else is a confound" | the author: "make sure that these changes would not harm other experiments, should check" |
