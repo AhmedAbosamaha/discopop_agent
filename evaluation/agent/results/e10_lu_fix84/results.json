@@ -1,0 +1,2298 @@
+{
+  "run_id": "e10_lu_fix84",
+  "harness": "agent",
+  "timestamp": "e10_lu_fix84",
+  "invocation": {
+    "benchmarks": [
+      "polybench/lu"
+    ],
+    "arms": [
+      "discopop_gate",
+      "full",
+      "speed_gate_large",
+      "speed_gate_small"
+    ],
+    "models": [
+      "claude-haiku-4-5-20251001"
+    ],
+    "repeats_per_trial": 3,
+    "provider": "claude-agent-sdk",
+    "edit_mode": "direct",
+    "extra_agent_args": [],
+    "verify_size": "per_kernel",
+    "threads": [
+      6,
+      12
+    ],
+    "repeats": 5,
+    "timeout_s": 5400,
+    "check_seed": "7",
+    "min_runtime_share": 0.0,
+    "cc": "/usr/bin/clang-20",
+    "cxx": "/usr/bin/clang++-20",
+    "host": "rms14562",
+    "platform": "Linux-6.8.0-138-generic-x86_64-with-glibc2.39",
+    "agent_git": {
+      "path": "/home/ahmedabosamaha/discopop_agent",
+      "head": "58d959f2e7dd2e86f6cb2931f9767a68df22307e",
+      "branch": "agentic_DiscoPop",
+      "dirty_sha256": null
+    },
+    "harness_git": {
+      "path": "/home/ahmedabosamaha/new_benchmark_harness",
+      "head": "1514ceb83d2345ac3cc5e4313e1653e45bd31015",
+      "branch": "agent-experiments",
+      "dirty_sha256": null
+    },
+    "argv": [
+      "agent/benchmark",
+      "run",
+      "polybench/lu",
+      "--arms",
+      "discopop_gate,full,speed_gate_large,speed_gate_small",
+      "--models",
+      "claude-haiku-4-5-20251001",
+      "--trials",
+      "3",
+      "--threads",
+      "6,12",
+      "--repeats",
+      "5",
+      "--run-id",
+      "e10_lu_fix84"
+    ],
+    "tool_versions": {
+      "claude_agent_sdk": "0.2.128",
+      "claude_cli_bundled": "2.1.220 (Claude Code)"
+    },
+    "common_flags": [
+      "--no-require-speedup",
+      "--min-runtime-share",
+      "0.01"
+    ],
+    "timing_sizes": {
+      "polybench/lu": "LARGE"
+    },
+    "verify_sizes": {
+      "polybench/lu": "LARGE"
+    },
+    "arm_flags": {
+      "discopop_gate": [
+        "--budget",
+        "0"
+      ],
+      "full": [],
+      "speed_gate_large": [
+        "--require-speedup"
+      ],
+      "speed_gate_small": [
+        "--require-speedup"
+      ]
+    }
+  },
+  "runs": [
+    {
+      "benchmark": "polybench/lu",
+      "kernel": "lu",
+      "source": "lu.c",
+      "arm": "discopop_gate",
+      "model": "claude-haiku-4-5-20251001",
+      "arm_flags": [
+        "--no-require-speedup",
+        "--min-runtime-share",
+        "0.01",
+        "--budget",
+        "0"
+      ],
+      "started_at": "2026-09-20T00:05:15",
+      "host": "rms14562",
+      "host_load_start": [
+        1367.6796875,
+        1926.02587890625,
+        1731.33740234375
+      ],
+      "agent_cmd": [
+        "/home/ahmedabosamaha/discopop_agent/venv/bin/python",
+        "-m",
+        "discopop_agent",
+        "--project-dir",
+        ".",
+        "--project-units",
+        "lu.c,polybench.c",
+        "--project-include",
+        ".",
+        "--discopop-dir",
+        ".discopop",
+        "--provider",
+        "claude-agent-sdk",
+        "--model",
+        "claude-haiku-4-5-20251001",
+        "--edit-mode",
+        "direct",
+        "--no-require-speedup",
+        "--min-runtime-share",
+        "0.01",
+        "--budget",
+        "0",
+        "--check-input",
+        "7",
+        "--exclude-functions",
+        "print_array,init_array,main,pb_emit,pb_report,pb_seed,pb_uniform,pb_timer_start,pb_timer_stop,rtclock,polybench_flush_cache,polybench_linux_fifo_scheduler,polybench_linux_standard_scheduler,test_fail,polybench_papi_init,polybench_papi_close,polybench_papi_start_counter,polybench_papi_stop_counter,polybench_papi_print,polybench_prepare_instruments,polybench_timer_start,polybench_timer_stop,polybench_timer_print,xmalloc,polybench_alloc_data"
+      ],
+      "agent_s": 5.7,
+      "agent_rc": 0,
+      "llm_calls": 0,
+      "llm_call_failures": 0,
+      "explorer_retries": 0,
+      "reverts": 0,
+      "gate_failures_phase_a": {},
+      "gate_failures_phase_b": {
+        "tsan": 1
+      },
+      "gate_passes_phase_a": 0,
+      "region_verdicts": {
+        "DEFERRED": 2,
+        "SKIPPED": 2,
+        "DROPPED": 1,
+        "APPLIED": 1
+      },
+      "settle_dropped": 0,
+      "baseline_claimed": 2,
+      "baseline_pragmas": 2,
+      "rewrites_kept": 0,
+      "pragmas_applied": 1,
+      "pragmas_discopop": 1,
+      "pragmas_llm": 0,
+      "regions_skipped": 2,
+      "llm_usage": null,
+      "layout": "project",
+      "files_changed": [
+        "lu.c"
+      ],
+      "source_changed": true,
+      "scaffold": {
+        "ok": true,
+        "problems": [],
+        "applies": true
+      },
+      "pragmas_added": 1,
+      "pragmas_in_final": 1,
+      "candidates_recorded": 2,
+      "verify": {
+        "verify_size": "LARGE",
+        "threads": [
+          6,
+          12
+        ],
+        "repeats": 5,
+        "compiler": "/usr/bin/clang-20",
+        "final_flags": [],
+        "dump_exact": true,
+        "dump_max_rel_err": 0.0,
+        "seed": "7",
+        "dump_exact_seeded": true,
+        "dump_seeded_max_rel_err": 0.0,
+        "seq_median_s": 1.0766,
+        "seq_kernel_median_s": 1.061696,
+        "timing_basis": "kernel",
+        "par": {
+          "6": {
+            "median_s": 5.0249,
+            "program_speedup": 0.214,
+            "max_rel_err": 0.0,
+            "kernel_median_s": 5.010078,
+            "kernel_speedup": 0.212,
+            "speedup": 0.212
+          },
+          "12": {
+            "median_s": 6.8083,
+            "program_speedup": 0.158,
+            "max_rel_err": 0.0,
+            "kernel_median_s": 6.792555,
+            "kernel_speedup": 0.156,
+            "speedup": 0.156
+          }
+        },
+        "digest_max_rel_err": 0.0,
+        "stable_at_fixed_threads": true,
+        "kernel_program_disagree": false,
+        "digest_seeded_rel_err": 0.0,
+        "status": "ok",
+        "speed_measurable": true
+      },
+      "verify_s": 72.0,
+      "status": "done",
+      "outcome": "parallel-not-faster",
+      "finished_at": "2026-09-20T00:06:33",
+      "host_load_end": [
+        370.7900390625,
+        1476.68115234375,
+        1589.51123046875
+      ],
+      "profile": {
+        "wrapper": "discopop_cc",
+        "layout": "project",
+        "units": [
+          "lu.c",
+          "polybench.c"
+        ],
+        "instrument_s": 0.21,
+        "profiled_run_s": 0.06,
+        "explore_s": 2.32,
+        "explore_attempts": 1,
+        "explore_failures": [],
+        "patterns": {
+          "optimizer_output": 0,
+          "merged_pattern": 0,
+          "task": 9,
+          "do_all": 9,
+          "reduction": 0
+        },
+        "profile_sha256": "a19fd8bca9f7ca404b31c63ff3bf030aa2d2da581d5fb8b9961bf42769083005"
+      },
+      "package_integrity": {
+        "before": {
+          "checked": "before trial",
+          "at": "2026-09-20T00:05:15",
+          "prepared_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "packager_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "archived_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "profile_sha256": "a19fd8bca9f7ca404b31c63ff3bf030aa2d2da581d5fb8b9961bf42769083005",
+          "ok": true
+        },
+        "after": {
+          "checked": "after trial",
+          "at": "2026-09-20T00:06:33",
+          "prepared_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "packager_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "archived_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "profile_sha256": "a19fd8bca9f7ca404b31c63ff3bf030aa2d2da581d5fb8b9961bf42769083005",
+          "ok": true
+        }
+      },
+      "repeat": 1
+    },
+    {
+      "benchmark": "polybench/lu",
+      "kernel": "lu",
+      "source": "lu.c",
+      "arm": "discopop_gate",
+      "model": "claude-haiku-4-5-20251001",
+      "arm_flags": [
+        "--no-require-speedup",
+        "--min-runtime-share",
+        "0.01",
+        "--budget",
+        "0"
+      ],
+      "started_at": "2026-09-20T00:06:33",
+      "host": "rms14562",
+      "host_load_start": [
+        370.7900390625,
+        1476.68115234375,
+        1589.51123046875
+      ],
+      "agent_cmd": [
+        "/home/ahmedabosamaha/discopop_agent/venv/bin/python",
+        "-m",
+        "discopop_agent",
+        "--project-dir",
+        ".",
+        "--project-units",
+        "lu.c,polybench.c",
+        "--project-include",
+        ".",
+        "--discopop-dir",
+        ".discopop",
+        "--provider",
+        "claude-agent-sdk",
+        "--model",
+        "claude-haiku-4-5-20251001",
+        "--edit-mode",
+        "direct",
+        "--no-require-speedup",
+        "--min-runtime-share",
+        "0.01",
+        "--budget",
+        "0",
+        "--check-input",
+        "7",
+        "--exclude-functions",
+        "print_array,init_array,main,pb_emit,pb_report,pb_seed,pb_uniform,pb_timer_start,pb_timer_stop,rtclock,polybench_flush_cache,polybench_linux_fifo_scheduler,polybench_linux_standard_scheduler,test_fail,polybench_papi_init,polybench_papi_close,polybench_papi_start_counter,polybench_papi_stop_counter,polybench_papi_print,polybench_prepare_instruments,polybench_timer_start,polybench_timer_stop,polybench_timer_print,xmalloc,polybench_alloc_data"
+      ],
+      "agent_s": 5.6,
+      "agent_rc": 0,
+      "llm_calls": 0,
+      "llm_call_failures": 0,
+      "explorer_retries": 0,
+      "reverts": 0,
+      "gate_failures_phase_a": {},
+      "gate_failures_phase_b": {
+        "tsan": 1
+      },
+      "gate_passes_phase_a": 0,
+      "region_verdicts": {
+        "DEFERRED": 2,
+        "SKIPPED": 2,
+        "DROPPED": 1,
+        "APPLIED": 1
+      },
+      "settle_dropped": 0,
+      "baseline_claimed": 2,
+      "baseline_pragmas": 2,
+      "rewrites_kept": 0,
+      "pragmas_applied": 1,
+      "pragmas_discopop": 1,
+      "pragmas_llm": 0,
+      "regions_skipped": 2,
+      "llm_usage": null,
+      "layout": "project",
+      "files_changed": [
+        "lu.c"
+      ],
+      "source_changed": true,
+      "scaffold": {
+        "ok": true,
+        "problems": [],
+        "applies": true
+      },
+      "pragmas_added": 1,
+      "pragmas_in_final": 1,
+      "candidates_recorded": 2,
+      "verify": {
+        "verify_size": "LARGE",
+        "threads": [
+          6,
+          12
+        ],
+        "repeats": 5,
+        "compiler": "/usr/bin/clang-20",
+        "final_flags": [],
+        "dump_exact": true,
+        "dump_max_rel_err": 0.0,
+        "seed": "7",
+        "dump_exact_seeded": true,
+        "dump_seeded_max_rel_err": 0.0,
+        "seq_median_s": 1.0851,
+        "seq_kernel_median_s": 1.069951,
+        "timing_basis": "kernel",
+        "par": {
+          "6": {
+            "median_s": 2.0024,
+            "program_speedup": 0.542,
+            "max_rel_err": 0.0,
+            "kernel_median_s": 1.988471,
+            "kernel_speedup": 0.538,
+            "speedup": 0.538
+          },
+          "12": {
+            "median_s": 7.1828,
+            "program_speedup": 0.151,
+            "max_rel_err": 0.0,
+            "kernel_median_s": 7.1673,
+            "kernel_speedup": 0.149,
+            "speedup": 0.149
+          }
+        },
+        "digest_max_rel_err": 0.0,
+        "stable_at_fixed_threads": true,
+        "kernel_program_disagree": false,
+        "digest_seeded_rel_err": 0.0,
+        "status": "ok",
+        "speed_measurable": true
+      },
+      "verify_s": 67.8,
+      "status": "done",
+      "outcome": "parallel-not-faster",
+      "finished_at": "2026-09-20T00:07:46",
+      "host_load_end": [
+        707.34521484375,
+        1402.93505859375,
+        1558.9599609375
+      ],
+      "profile": {
+        "wrapper": "discopop_cc",
+        "layout": "project",
+        "units": [
+          "lu.c",
+          "polybench.c"
+        ],
+        "instrument_s": 0.21,
+        "profiled_run_s": 0.06,
+        "explore_s": 2.32,
+        "explore_attempts": 1,
+        "explore_failures": [],
+        "patterns": {
+          "optimizer_output": 0,
+          "merged_pattern": 0,
+          "task": 9,
+          "do_all": 9,
+          "reduction": 0
+        },
+        "profile_sha256": "a19fd8bca9f7ca404b31c63ff3bf030aa2d2da581d5fb8b9961bf42769083005"
+      },
+      "package_integrity": {
+        "before": {
+          "checked": "before trial",
+          "at": "2026-09-20T00:06:33",
+          "prepared_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "packager_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "archived_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "profile_sha256": "a19fd8bca9f7ca404b31c63ff3bf030aa2d2da581d5fb8b9961bf42769083005",
+          "ok": true
+        },
+        "after": {
+          "checked": "after trial",
+          "at": "2026-09-20T00:07:46",
+          "prepared_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "packager_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "archived_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "profile_sha256": "a19fd8bca9f7ca404b31c63ff3bf030aa2d2da581d5fb8b9961bf42769083005",
+          "ok": true
+        }
+      },
+      "repeat": 2
+    },
+    {
+      "benchmark": "polybench/lu",
+      "kernel": "lu",
+      "source": "lu.c",
+      "arm": "discopop_gate",
+      "model": "claude-haiku-4-5-20251001",
+      "arm_flags": [
+        "--no-require-speedup",
+        "--min-runtime-share",
+        "0.01",
+        "--budget",
+        "0"
+      ],
+      "started_at": "2026-09-20T00:07:46",
+      "host": "rms14562",
+      "host_load_start": [
+        707.34521484375,
+        1402.93505859375,
+        1558.9599609375
+      ],
+      "agent_cmd": [
+        "/home/ahmedabosamaha/discopop_agent/venv/bin/python",
+        "-m",
+        "discopop_agent",
+        "--project-dir",
+        ".",
+        "--project-units",
+        "lu.c,polybench.c",
+        "--project-include",
+        ".",
+        "--discopop-dir",
+        ".discopop",
+        "--provider",
+        "claude-agent-sdk",
+        "--model",
+        "claude-haiku-4-5-20251001",
+        "--edit-mode",
+        "direct",
+        "--no-require-speedup",
+        "--min-runtime-share",
+        "0.01",
+        "--budget",
+        "0",
+        "--check-input",
+        "7",
+        "--exclude-functions",
+        "print_array,init_array,main,pb_emit,pb_report,pb_seed,pb_uniform,pb_timer_start,pb_timer_stop,rtclock,polybench_flush_cache,polybench_linux_fifo_scheduler,polybench_linux_standard_scheduler,test_fail,polybench_papi_init,polybench_papi_close,polybench_papi_start_counter,polybench_papi_stop_counter,polybench_papi_print,polybench_prepare_instruments,polybench_timer_start,polybench_timer_stop,polybench_timer_print,xmalloc,polybench_alloc_data"
+      ],
+      "agent_s": 5.6,
+      "agent_rc": 0,
+      "llm_calls": 0,
+      "llm_call_failures": 0,
+      "explorer_retries": 0,
+      "reverts": 0,
+      "gate_failures_phase_a": {},
+      "gate_failures_phase_b": {
+        "tsan": 1
+      },
+      "gate_passes_phase_a": 0,
+      "region_verdicts": {
+        "DEFERRED": 2,
+        "SKIPPED": 2,
+        "DROPPED": 1,
+        "APPLIED": 1
+      },
+      "settle_dropped": 0,
+      "baseline_claimed": 2,
+      "baseline_pragmas": 2,
+      "rewrites_kept": 0,
+      "pragmas_applied": 1,
+      "pragmas_discopop": 1,
+      "pragmas_llm": 0,
+      "regions_skipped": 2,
+      "llm_usage": null,
+      "layout": "project",
+      "files_changed": [
+        "lu.c"
+      ],
+      "source_changed": true,
+      "scaffold": {
+        "ok": true,
+        "problems": [],
+        "applies": true
+      },
+      "pragmas_added": 1,
+      "pragmas_in_final": 1,
+      "candidates_recorded": 2,
+      "verify": {
+        "verify_size": "LARGE",
+        "threads": [
+          6,
+          12
+        ],
+        "repeats": 5,
+        "compiler": "/usr/bin/clang-20",
+        "final_flags": [],
+        "dump_exact": true,
+        "dump_max_rel_err": 0.0,
+        "seed": "7",
+        "dump_exact_seeded": true,
+        "dump_seeded_max_rel_err": 0.0,
+        "seq_median_s": 1.0776,
+        "seq_kernel_median_s": 1.062528,
+        "timing_basis": "kernel",
+        "par": {
+          "6": {
+            "median_s": 5.1818,
+            "program_speedup": 0.208,
+            "max_rel_err": 0.0,
+            "kernel_median_s": 5.167368,
+            "kernel_speedup": 0.206,
+            "speedup": 0.206
+          },
+          "12": {
+            "median_s": 6.3185,
+            "program_speedup": 0.171,
+            "max_rel_err": 0.0,
+            "kernel_median_s": 6.302538,
+            "kernel_speedup": 0.169,
+            "speedup": 0.169
+          }
+        },
+        "digest_max_rel_err": 0.0,
+        "stable_at_fixed_threads": true,
+        "kernel_program_disagree": false,
+        "digest_seeded_rel_err": 0.0,
+        "status": "ok",
+        "speed_measurable": true
+      },
+      "verify_s": 71.6,
+      "status": "done",
+      "outcome": "parallel-not-faster",
+      "finished_at": "2026-09-20T00:09:03",
+      "host_load_end": [
+        197.41650390625,
+        1076.740234375,
+        1431.455078125
+      ],
+      "profile": {
+        "wrapper": "discopop_cc",
+        "layout": "project",
+        "units": [
+          "lu.c",
+          "polybench.c"
+        ],
+        "instrument_s": 0.21,
+        "profiled_run_s": 0.06,
+        "explore_s": 2.32,
+        "explore_attempts": 1,
+        "explore_failures": [],
+        "patterns": {
+          "optimizer_output": 0,
+          "merged_pattern": 0,
+          "task": 9,
+          "do_all": 9,
+          "reduction": 0
+        },
+        "profile_sha256": "a19fd8bca9f7ca404b31c63ff3bf030aa2d2da581d5fb8b9961bf42769083005"
+      },
+      "package_integrity": {
+        "before": {
+          "checked": "before trial",
+          "at": "2026-09-20T00:07:46",
+          "prepared_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "packager_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "archived_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "profile_sha256": "a19fd8bca9f7ca404b31c63ff3bf030aa2d2da581d5fb8b9961bf42769083005",
+          "ok": true
+        },
+        "after": {
+          "checked": "after trial",
+          "at": "2026-09-20T00:09:03",
+          "prepared_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "packager_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "archived_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "profile_sha256": "a19fd8bca9f7ca404b31c63ff3bf030aa2d2da581d5fb8b9961bf42769083005",
+          "ok": true
+        }
+      },
+      "repeat": 3
+    },
+    {
+      "benchmark": "polybench/lu",
+      "kernel": "lu",
+      "source": "lu.c",
+      "arm": "full",
+      "model": "claude-haiku-4-5-20251001",
+      "arm_flags": [
+        "--no-require-speedup",
+        "--min-runtime-share",
+        "0.01"
+      ],
+      "started_at": "2026-09-20T00:09:03",
+      "host": "rms14562",
+      "host_load_start": [
+        197.41650390625,
+        1076.740234375,
+        1431.455078125
+      ],
+      "agent_cmd": [
+        "/home/ahmedabosamaha/discopop_agent/venv/bin/python",
+        "-m",
+        "discopop_agent",
+        "--project-dir",
+        ".",
+        "--project-units",
+        "lu.c,polybench.c",
+        "--project-include",
+        ".",
+        "--discopop-dir",
+        ".discopop",
+        "--provider",
+        "claude-agent-sdk",
+        "--model",
+        "claude-haiku-4-5-20251001",
+        "--edit-mode",
+        "direct",
+        "--no-require-speedup",
+        "--min-runtime-share",
+        "0.01",
+        "--check-input",
+        "7",
+        "--exclude-functions",
+        "print_array,init_array,main,pb_emit,pb_report,pb_seed,pb_uniform,pb_timer_start,pb_timer_stop,rtclock,polybench_flush_cache,polybench_linux_fifo_scheduler,polybench_linux_standard_scheduler,test_fail,polybench_papi_init,polybench_papi_close,polybench_papi_start_counter,polybench_papi_stop_counter,polybench_papi_print,polybench_prepare_instruments,polybench_timer_start,polybench_timer_stop,polybench_timer_print,xmalloc,polybench_alloc_data"
+      ],
+      "agent_s": 161.7,
+      "agent_rc": 0,
+      "llm_calls": 1,
+      "llm_call_failures": 0,
+      "explorer_retries": 0,
+      "reverts": 0,
+      "gate_failures_phase_a": {},
+      "gate_failures_phase_b": {},
+      "gate_passes_phase_a": 1,
+      "region_verdicts": {
+        "DEFERRED": 1,
+        "ACCEPTED": 1
+      },
+      "settle_dropped": 0,
+      "baseline_claimed": 2,
+      "baseline_pragmas": 2,
+      "rewrites_kept": 1,
+      "pragmas_applied": 2,
+      "pragmas_discopop": 0,
+      "pragmas_llm": 2,
+      "regions_skipped": 0,
+      "llm_usage": {
+        "calls_recorded": 1,
+        "input_tokens": 50,
+        "output_tokens": 14230,
+        "cache_read_input_tokens": 179033,
+        "cache_creation_input_tokens": 23116,
+        "cost_usd": 0.1389,
+        "model_seconds": 152.3
+      },
+      "layout": "project",
+      "files_changed": [
+        "lu.c"
+      ],
+      "source_changed": true,
+      "scaffold": {
+        "ok": true,
+        "problems": [],
+        "applies": true
+      },
+      "pragmas_added": 2,
+      "pragmas_in_final": 2,
+      "candidates_recorded": 1,
+      "verify": {
+        "verify_size": "LARGE",
+        "threads": [
+          6,
+          12
+        ],
+        "repeats": 5,
+        "compiler": "/usr/bin/clang-20",
+        "final_flags": [],
+        "dump_exact": true,
+        "dump_max_rel_err": 0.0,
+        "seed": "7",
+        "dump_exact_seeded": true,
+        "dump_seeded_max_rel_err": 0.0,
+        "seq_median_s": 1.0755,
+        "seq_kernel_median_s": 1.061244,
+        "timing_basis": "kernel",
+        "par": {
+          "6": {
+            "median_s": 0.6849,
+            "program_speedup": 1.57,
+            "max_rel_err": 0.0,
+            "kernel_median_s": 0.669031,
+            "kernel_speedup": 1.586,
+            "speedup": 1.586
+          },
+          "12": {
+            "median_s": 0.4055,
+            "program_speedup": 2.653,
+            "max_rel_err": 0.0,
+            "kernel_median_s": 0.390209,
+            "kernel_speedup": 2.72,
+            "speedup": 2.72
+          }
+        },
+        "digest_max_rel_err": 0.0,
+        "stable_at_fixed_threads": true,
+        "kernel_program_disagree": false,
+        "digest_seeded_rel_err": 0.0,
+        "status": "ok",
+        "speed_measurable": true
+      },
+      "verify_s": 12.8,
+      "status": "done",
+      "outcome": "FASTER",
+      "finished_at": "2026-09-20T00:11:58",
+      "host_load_end": [
+        1759.3193359375,
+        1570.17822265625,
+        1569.7607421875
+      ],
+      "profile": {
+        "wrapper": "discopop_cc",
+        "layout": "project",
+        "units": [
+          "lu.c",
+          "polybench.c"
+        ],
+        "instrument_s": 0.21,
+        "profiled_run_s": 0.06,
+        "explore_s": 2.32,
+        "explore_attempts": 1,
+        "explore_failures": [],
+        "patterns": {
+          "optimizer_output": 0,
+          "merged_pattern": 0,
+          "task": 9,
+          "do_all": 9,
+          "reduction": 0
+        },
+        "profile_sha256": "a19fd8bca9f7ca404b31c63ff3bf030aa2d2da581d5fb8b9961bf42769083005"
+      },
+      "package_integrity": {
+        "before": {
+          "checked": "before trial",
+          "at": "2026-09-20T00:09:03",
+          "prepared_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "packager_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "archived_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "profile_sha256": "a19fd8bca9f7ca404b31c63ff3bf030aa2d2da581d5fb8b9961bf42769083005",
+          "ok": true
+        },
+        "after": {
+          "checked": "after trial",
+          "at": "2026-09-20T00:11:58",
+          "prepared_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "packager_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "archived_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "profile_sha256": "a19fd8bca9f7ca404b31c63ff3bf030aa2d2da581d5fb8b9961bf42769083005",
+          "ok": true
+        }
+      },
+      "repeat": 1
+    },
+    {
+      "benchmark": "polybench/lu",
+      "kernel": "lu",
+      "source": "lu.c",
+      "arm": "full",
+      "model": "claude-haiku-4-5-20251001",
+      "arm_flags": [
+        "--no-require-speedup",
+        "--min-runtime-share",
+        "0.01"
+      ],
+      "started_at": "2026-09-20T00:11:58",
+      "host": "rms14562",
+      "host_load_start": [
+        1759.3193359375,
+        1570.17822265625,
+        1569.7607421875
+      ],
+      "agent_cmd": [
+        "/home/ahmedabosamaha/discopop_agent/venv/bin/python",
+        "-m",
+        "discopop_agent",
+        "--project-dir",
+        ".",
+        "--project-units",
+        "lu.c,polybench.c",
+        "--project-include",
+        ".",
+        "--discopop-dir",
+        ".discopop",
+        "--provider",
+        "claude-agent-sdk",
+        "--model",
+        "claude-haiku-4-5-20251001",
+        "--edit-mode",
+        "direct",
+        "--no-require-speedup",
+        "--min-runtime-share",
+        "0.01",
+        "--check-input",
+        "7",
+        "--exclude-functions",
+        "print_array,init_array,main,pb_emit,pb_report,pb_seed,pb_uniform,pb_timer_start,pb_timer_stop,rtclock,polybench_flush_cache,polybench_linux_fifo_scheduler,polybench_linux_standard_scheduler,test_fail,polybench_papi_init,polybench_papi_close,polybench_papi_start_counter,polybench_papi_stop_counter,polybench_papi_print,polybench_prepare_instruments,polybench_timer_start,polybench_timer_stop,polybench_timer_print,xmalloc,polybench_alloc_data"
+      ],
+      "agent_s": 132.1,
+      "agent_rc": 0,
+      "llm_calls": 1,
+      "llm_call_failures": 0,
+      "explorer_retries": 0,
+      "reverts": 0,
+      "gate_failures_phase_a": {},
+      "gate_failures_phase_b": {},
+      "gate_passes_phase_a": 1,
+      "region_verdicts": {
+        "DEFERRED": 1,
+        "ACCEPTED": 1
+      },
+      "settle_dropped": 0,
+      "baseline_claimed": 2,
+      "baseline_pragmas": 2,
+      "rewrites_kept": 1,
+      "pragmas_applied": 2,
+      "pragmas_discopop": 0,
+      "pragmas_llm": 2,
+      "regions_skipped": 0,
+      "llm_usage": {
+        "calls_recorded": 1,
+        "input_tokens": 34,
+        "output_tokens": 11368,
+        "cache_read_input_tokens": 102094,
+        "cache_creation_input_tokens": 17407,
+        "cost_usd": 0.1055,
+        "model_seconds": 122.1
+      },
+      "layout": "project",
+      "files_changed": [
+        "lu.c"
+      ],
+      "source_changed": true,
+      "scaffold": {
+        "ok": true,
+        "problems": [],
+        "applies": true
+      },
+      "pragmas_added": 2,
+      "pragmas_in_final": 2,
+      "candidates_recorded": 1,
+      "verify": {
+        "verify_size": "LARGE",
+        "threads": [
+          6,
+          12
+        ],
+        "repeats": 5,
+        "compiler": "/usr/bin/clang-20",
+        "final_flags": [],
+        "dump_exact": true,
+        "dump_max_rel_err": 0.0,
+        "seed": "7",
+        "dump_exact_seeded": true,
+        "dump_seeded_max_rel_err": 0.0,
+        "seq_median_s": 1.1182,
+        "seq_kernel_median_s": 1.104713,
+        "timing_basis": "kernel",
+        "par": {
+          "6": {
+            "median_s": 0.6866,
+            "program_speedup": 1.629,
+            "max_rel_err": 0.0,
+            "kernel_median_s": 0.672264,
+            "kernel_speedup": 1.643,
+            "speedup": 1.643
+          },
+          "12": {
+            "median_s": 0.3998,
+            "program_speedup": 2.797,
+            "max_rel_err": 0.0,
+            "kernel_median_s": 0.380784,
+            "kernel_speedup": 2.901,
+            "speedup": 2.901
+          }
+        },
+        "digest_max_rel_err": 0.0,
+        "stable_at_fixed_threads": true,
+        "kernel_program_disagree": false,
+        "digest_seeded_rel_err": 0.0,
+        "status": "ok",
+        "speed_measurable": true
+      },
+      "verify_s": 13.1,
+      "status": "done",
+      "outcome": "FASTER",
+      "finished_at": "2026-09-20T00:14:23",
+      "host_load_end": [
+        2844.18408203125,
+        2183.85400390625,
+        1803.99609375
+      ],
+      "profile": {
+        "wrapper": "discopop_cc",
+        "layout": "project",
+        "units": [
+          "lu.c",
+          "polybench.c"
+        ],
+        "instrument_s": 0.21,
+        "profiled_run_s": 0.06,
+        "explore_s": 2.32,
+        "explore_attempts": 1,
+        "explore_failures": [],
+        "patterns": {
+          "optimizer_output": 0,
+          "merged_pattern": 0,
+          "task": 9,
+          "do_all": 9,
+          "reduction": 0
+        },
+        "profile_sha256": "a19fd8bca9f7ca404b31c63ff3bf030aa2d2da581d5fb8b9961bf42769083005"
+      },
+      "package_integrity": {
+        "before": {
+          "checked": "before trial",
+          "at": "2026-09-20T00:11:58",
+          "prepared_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "packager_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "archived_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "profile_sha256": "a19fd8bca9f7ca404b31c63ff3bf030aa2d2da581d5fb8b9961bf42769083005",
+          "ok": true
+        },
+        "after": {
+          "checked": "after trial",
+          "at": "2026-09-20T00:14:23",
+          "prepared_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "packager_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "archived_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "profile_sha256": "a19fd8bca9f7ca404b31c63ff3bf030aa2d2da581d5fb8b9961bf42769083005",
+          "ok": true
+        }
+      },
+      "repeat": 2
+    },
+    {
+      "benchmark": "polybench/lu",
+      "kernel": "lu",
+      "source": "lu.c",
+      "arm": "full",
+      "model": "claude-haiku-4-5-20251001",
+      "arm_flags": [
+        "--no-require-speedup",
+        "--min-runtime-share",
+        "0.01"
+      ],
+      "started_at": "2026-09-20T00:14:23",
+      "host": "rms14562",
+      "host_load_start": [
+        2844.18408203125,
+        2183.85400390625,
+        1803.99609375
+      ],
+      "agent_cmd": [
+        "/home/ahmedabosamaha/discopop_agent/venv/bin/python",
+        "-m",
+        "discopop_agent",
+        "--project-dir",
+        ".",
+        "--project-units",
+        "lu.c,polybench.c",
+        "--project-include",
+        ".",
+        "--discopop-dir",
+        ".discopop",
+        "--provider",
+        "claude-agent-sdk",
+        "--model",
+        "claude-haiku-4-5-20251001",
+        "--edit-mode",
+        "direct",
+        "--no-require-speedup",
+        "--min-runtime-share",
+        "0.01",
+        "--check-input",
+        "7",
+        "--exclude-functions",
+        "print_array,init_array,main,pb_emit,pb_report,pb_seed,pb_uniform,pb_timer_start,pb_timer_stop,rtclock,polybench_flush_cache,polybench_linux_fifo_scheduler,polybench_linux_standard_scheduler,test_fail,polybench_papi_init,polybench_papi_close,polybench_papi_start_counter,polybench_papi_stop_counter,polybench_papi_print,polybench_prepare_instruments,polybench_timer_start,polybench_timer_stop,polybench_timer_print,xmalloc,polybench_alloc_data"
+      ],
+      "agent_s": 98.1,
+      "agent_rc": 0,
+      "llm_calls": 1,
+      "llm_call_failures": 0,
+      "explorer_retries": 0,
+      "reverts": 0,
+      "gate_failures_phase_a": {},
+      "gate_failures_phase_b": {},
+      "gate_passes_phase_a": 1,
+      "region_verdicts": {
+        "DEFERRED": 1,
+        "ACCEPTED": 1
+      },
+      "settle_dropped": 0,
+      "baseline_claimed": 2,
+      "baseline_pragmas": 2,
+      "rewrites_kept": 1,
+      "pragmas_applied": 2,
+      "pragmas_discopop": 0,
+      "pragmas_llm": 2,
+      "regions_skipped": 0,
+      "llm_usage": {
+        "calls_recorded": 1,
+        "input_tokens": 26,
+        "output_tokens": 10585,
+        "cache_read_input_tokens": 66104,
+        "cache_creation_input_tokens": 16772,
+        "cost_usd": 0.0967,
+        "model_seconds": 89.0
+      },
+      "layout": "project",
+      "files_changed": [
+        "lu.c"
+      ],
+      "source_changed": true,
+      "scaffold": {
+        "ok": true,
+        "problems": [],
+        "applies": true
+      },
+      "pragmas_added": 2,
+      "pragmas_in_final": 2,
+      "candidates_recorded": 1,
+      "verify": {
+        "verify_size": "LARGE",
+        "threads": [
+          6,
+          12
+        ],
+        "repeats": 5,
+        "compiler": "/usr/bin/clang-20",
+        "final_flags": [],
+        "dump_exact": true,
+        "dump_max_rel_err": 0.0,
+        "seed": "7",
+        "dump_exact_seeded": true,
+        "dump_seeded_max_rel_err": 0.0,
+        "seq_median_s": 1.0761,
+        "seq_kernel_median_s": 1.061927,
+        "timing_basis": "kernel",
+        "par": {
+          "6": {
+            "median_s": 0.1225,
+            "program_speedup": 8.785,
+            "max_rel_err": 0.0,
+            "kernel_median_s": 0.106541,
+            "kernel_speedup": 9.967,
+            "speedup": 9.967
+          },
+          "12": {
+            "median_s": 0.1198,
+            "program_speedup": 8.979,
+            "max_rel_err": 0.0,
+            "kernel_median_s": 0.104396,
+            "kernel_speedup": 10.172,
+            "speedup": 10.172
+          }
+        },
+        "digest_max_rel_err": 0.0,
+        "stable_at_fixed_threads": true,
+        "kernel_program_disagree": false,
+        "digest_seeded_rel_err": 0.0,
+        "status": "ok",
+        "speed_measurable": true
+      },
+      "verify_s": 8.3,
+      "status": "done",
+      "outcome": "FASTER",
+      "finished_at": "2026-09-20T00:16:10",
+      "host_load_end": [
+        1345.98974609375,
+        2006.46484375,
+        1790.86181640625
+      ],
+      "profile": {
+        "wrapper": "discopop_cc",
+        "layout": "project",
+        "units": [
+          "lu.c",
+          "polybench.c"
+        ],
+        "instrument_s": 0.21,
+        "profiled_run_s": 0.06,
+        "explore_s": 2.32,
+        "explore_attempts": 1,
+        "explore_failures": [],
+        "patterns": {
+          "optimizer_output": 0,
+          "merged_pattern": 0,
+          "task": 9,
+          "do_all": 9,
+          "reduction": 0
+        },
+        "profile_sha256": "a19fd8bca9f7ca404b31c63ff3bf030aa2d2da581d5fb8b9961bf42769083005"
+      },
+      "package_integrity": {
+        "before": {
+          "checked": "before trial",
+          "at": "2026-09-20T00:14:23",
+          "prepared_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "packager_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "archived_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "profile_sha256": "a19fd8bca9f7ca404b31c63ff3bf030aa2d2da581d5fb8b9961bf42769083005",
+          "ok": true
+        },
+        "after": {
+          "checked": "after trial",
+          "at": "2026-09-20T00:16:10",
+          "prepared_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "packager_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "archived_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "profile_sha256": "a19fd8bca9f7ca404b31c63ff3bf030aa2d2da581d5fb8b9961bf42769083005",
+          "ok": true
+        }
+      },
+      "repeat": 3
+    },
+    {
+      "benchmark": "polybench/lu",
+      "kernel": "lu",
+      "source": "lu.c",
+      "arm": "speed_gate_large",
+      "model": "claude-haiku-4-5-20251001",
+      "arm_flags": [
+        "--no-require-speedup",
+        "--min-runtime-share",
+        "0.01",
+        "--require-speedup",
+        "--timing-cflags=-DLARGE_DATASET"
+      ],
+      "started_at": "2026-09-20T00:16:10",
+      "host": "rms14562",
+      "host_load_start": [
+        1345.98974609375,
+        2006.46484375,
+        1790.86181640625
+      ],
+      "agent_cmd": [
+        "/home/ahmedabosamaha/discopop_agent/venv/bin/python",
+        "-m",
+        "discopop_agent",
+        "--project-dir",
+        ".",
+        "--project-units",
+        "lu.c,polybench.c",
+        "--project-include",
+        ".",
+        "--discopop-dir",
+        ".discopop",
+        "--provider",
+        "claude-agent-sdk",
+        "--model",
+        "claude-haiku-4-5-20251001",
+        "--edit-mode",
+        "direct",
+        "--no-require-speedup",
+        "--min-runtime-share",
+        "0.01",
+        "--require-speedup",
+        "--timing-cflags=-DLARGE_DATASET",
+        "--check-input",
+        "7",
+        "--exclude-functions",
+        "print_array,init_array,main,pb_emit,pb_report,pb_seed,pb_uniform,pb_timer_start,pb_timer_stop,rtclock,polybench_flush_cache,polybench_linux_fifo_scheduler,polybench_linux_standard_scheduler,test_fail,polybench_papi_init,polybench_papi_close,polybench_papi_start_counter,polybench_papi_stop_counter,polybench_papi_print,polybench_prepare_instruments,polybench_timer_start,polybench_timer_stop,polybench_timer_print,xmalloc,polybench_alloc_data"
+      ],
+      "agent_s": 135.7,
+      "agent_rc": 0,
+      "llm_calls": 1,
+      "llm_call_failures": 0,
+      "explorer_retries": 0,
+      "reverts": 0,
+      "gate_failures_phase_a": {},
+      "gate_failures_phase_b": {},
+      "gate_passes_phase_a": 1,
+      "region_verdicts": {
+        "DEFERRED": 1,
+        "ACCEPTED": 1
+      },
+      "settle_dropped": 0,
+      "baseline_claimed": 2,
+      "baseline_pragmas": 2,
+      "rewrites_kept": 1,
+      "pragmas_applied": 2,
+      "pragmas_discopop": 0,
+      "pragmas_llm": 2,
+      "regions_skipped": 0,
+      "llm_usage": {
+        "calls_recorded": 1,
+        "input_tokens": 26,
+        "output_tokens": 10488,
+        "cache_read_input_tokens": 62095,
+        "cache_creation_input_tokens": 18680,
+        "cost_usd": 0.0996,
+        "model_seconds": 107.1
+      },
+      "layout": "project",
+      "files_changed": [
+        "lu.c"
+      ],
+      "source_changed": true,
+      "scaffold": {
+        "ok": true,
+        "problems": [],
+        "applies": true
+      },
+      "pragmas_added": 2,
+      "pragmas_in_final": 2,
+      "candidates_recorded": 1,
+      "verify": {
+        "verify_size": "LARGE",
+        "threads": [
+          6,
+          12
+        ],
+        "repeats": 5,
+        "compiler": "/usr/bin/clang-20",
+        "final_flags": [],
+        "dump_exact": true,
+        "dump_max_rel_err": 0.0,
+        "seed": "7",
+        "dump_exact_seeded": true,
+        "dump_seeded_max_rel_err": 0.0,
+        "seq_median_s": 1.0761,
+        "seq_kernel_median_s": 1.061523,
+        "timing_basis": "kernel",
+        "par": {
+          "6": {
+            "median_s": 0.6723,
+            "program_speedup": 1.601,
+            "max_rel_err": 0.0,
+            "kernel_median_s": 0.657771,
+            "kernel_speedup": 1.614,
+            "speedup": 1.614
+          },
+          "12": {
+            "median_s": 0.3952,
+            "program_speedup": 2.723,
+            "max_rel_err": 0.0,
+            "kernel_median_s": 0.379073,
+            "kernel_speedup": 2.8,
+            "speedup": 2.8
+          }
+        },
+        "digest_max_rel_err": 0.0,
+        "stable_at_fixed_threads": true,
+        "kernel_program_disagree": false,
+        "digest_seeded_rel_err": 0.0,
+        "status": "ok",
+        "speed_measurable": true
+      },
+      "verify_s": 12.8,
+      "status": "done",
+      "outcome": "FASTER",
+      "finished_at": "2026-09-20T00:18:38",
+      "host_load_end": [
+        396.9560546875,
+        1479.1015625,
+        1634.451171875
+      ],
+      "profile": {
+        "wrapper": "discopop_cc",
+        "layout": "project",
+        "units": [
+          "lu.c",
+          "polybench.c"
+        ],
+        "instrument_s": 0.21,
+        "profiled_run_s": 0.06,
+        "explore_s": 2.32,
+        "explore_attempts": 1,
+        "explore_failures": [],
+        "patterns": {
+          "optimizer_output": 0,
+          "merged_pattern": 0,
+          "task": 9,
+          "do_all": 9,
+          "reduction": 0
+        },
+        "profile_sha256": "a19fd8bca9f7ca404b31c63ff3bf030aa2d2da581d5fb8b9961bf42769083005"
+      },
+      "package_integrity": {
+        "before": {
+          "checked": "before trial",
+          "at": "2026-09-20T00:16:10",
+          "prepared_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "packager_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "archived_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "profile_sha256": "a19fd8bca9f7ca404b31c63ff3bf030aa2d2da581d5fb8b9961bf42769083005",
+          "ok": true
+        },
+        "after": {
+          "checked": "after trial",
+          "at": "2026-09-20T00:18:38",
+          "prepared_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "packager_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "archived_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "profile_sha256": "a19fd8bca9f7ca404b31c63ff3bf030aa2d2da581d5fb8b9961bf42769083005",
+          "ok": true
+        }
+      },
+      "repeat": 1
+    },
+    {
+      "benchmark": "polybench/lu",
+      "kernel": "lu",
+      "source": "lu.c",
+      "arm": "speed_gate_large",
+      "model": "claude-haiku-4-5-20251001",
+      "arm_flags": [
+        "--no-require-speedup",
+        "--min-runtime-share",
+        "0.01",
+        "--require-speedup",
+        "--timing-cflags=-DLARGE_DATASET"
+      ],
+      "started_at": "2026-09-20T00:18:38",
+      "host": "rms14562",
+      "host_load_start": [
+        396.9560546875,
+        1479.1015625,
+        1634.451171875
+      ],
+      "agent_cmd": [
+        "/home/ahmedabosamaha/discopop_agent/venv/bin/python",
+        "-m",
+        "discopop_agent",
+        "--project-dir",
+        ".",
+        "--project-units",
+        "lu.c,polybench.c",
+        "--project-include",
+        ".",
+        "--discopop-dir",
+        ".discopop",
+        "--provider",
+        "claude-agent-sdk",
+        "--model",
+        "claude-haiku-4-5-20251001",
+        "--edit-mode",
+        "direct",
+        "--no-require-speedup",
+        "--min-runtime-share",
+        "0.01",
+        "--require-speedup",
+        "--timing-cflags=-DLARGE_DATASET",
+        "--check-input",
+        "7",
+        "--exclude-functions",
+        "print_array,init_array,main,pb_emit,pb_report,pb_seed,pb_uniform,pb_timer_start,pb_timer_stop,rtclock,polybench_flush_cache,polybench_linux_fifo_scheduler,polybench_linux_standard_scheduler,test_fail,polybench_papi_init,polybench_papi_close,polybench_papi_start_counter,polybench_papi_stop_counter,polybench_papi_print,polybench_prepare_instruments,polybench_timer_start,polybench_timer_stop,polybench_timer_print,xmalloc,polybench_alloc_data"
+      ],
+      "agent_s": 176.7,
+      "agent_rc": 0,
+      "llm_calls": 1,
+      "llm_call_failures": 0,
+      "explorer_retries": 0,
+      "reverts": 0,
+      "gate_failures_phase_a": {},
+      "gate_failures_phase_b": {},
+      "gate_passes_phase_a": 1,
+      "region_verdicts": {
+        "DEFERRED": 1,
+        "ACCEPTED": 1
+      },
+      "settle_dropped": 0,
+      "baseline_claimed": 2,
+      "baseline_pragmas": 2,
+      "rewrites_kept": 1,
+      "pragmas_applied": 2,
+      "pragmas_discopop": 0,
+      "pragmas_llm": 2,
+      "regions_skipped": 0,
+      "llm_usage": {
+        "calls_recorded": 1,
+        "input_tokens": 26,
+        "output_tokens": 13992,
+        "cache_read_input_tokens": 76132,
+        "cache_creation_input_tokens": 20554,
+        "cost_usd": 0.1223,
+        "model_seconds": 155.6
+      },
+      "layout": "project",
+      "files_changed": [
+        "lu.c"
+      ],
+      "source_changed": true,
+      "scaffold": {
+        "ok": true,
+        "problems": [],
+        "applies": true
+      },
+      "pragmas_added": 2,
+      "pragmas_in_final": 2,
+      "candidates_recorded": 1,
+      "verify": {
+        "verify_size": "LARGE",
+        "threads": [
+          6,
+          12
+        ],
+        "repeats": 5,
+        "compiler": "/usr/bin/clang-20",
+        "final_flags": [],
+        "dump_exact": true,
+        "dump_max_rel_err": 0.0,
+        "seed": "7",
+        "dump_exact_seeded": true,
+        "dump_seeded_max_rel_err": 0.0,
+        "seq_median_s": 1.1409,
+        "seq_kernel_median_s": 1.126489,
+        "timing_basis": "kernel",
+        "par": {
+          "6": {
+            "median_s": 0.3144,
+            "program_speedup": 3.629,
+            "max_rel_err": 0.0,
+            "kernel_median_s": 0.299199,
+            "kernel_speedup": 3.765,
+            "speedup": 3.765
+          },
+          "12": {
+            "median_s": 0.2832,
+            "program_speedup": 4.029,
+            "max_rel_err": 0.0,
+            "kernel_median_s": 0.26762,
+            "kernel_speedup": 4.209,
+            "speedup": 4.209
+          }
+        },
+        "digest_max_rel_err": 0.0,
+        "stable_at_fixed_threads": true,
+        "kernel_program_disagree": false,
+        "digest_seeded_rel_err": 0.0,
+        "status": "ok",
+        "speed_measurable": true
+      },
+      "verify_s": 11.1,
+      "status": "done",
+      "outcome": "FASTER",
+      "finished_at": "2026-09-20T00:21:46",
+      "host_load_end": [
+        4528.1962890625,
+        2609.6845703125,
+        2024.30078125
+      ],
+      "profile": {
+        "wrapper": "discopop_cc",
+        "layout": "project",
+        "units": [
+          "lu.c",
+          "polybench.c"
+        ],
+        "instrument_s": 0.21,
+        "profiled_run_s": 0.06,
+        "explore_s": 2.32,
+        "explore_attempts": 1,
+        "explore_failures": [],
+        "patterns": {
+          "optimizer_output": 0,
+          "merged_pattern": 0,
+          "task": 9,
+          "do_all": 9,
+          "reduction": 0
+        },
+        "profile_sha256": "a19fd8bca9f7ca404b31c63ff3bf030aa2d2da581d5fb8b9961bf42769083005"
+      },
+      "package_integrity": {
+        "before": {
+          "checked": "before trial",
+          "at": "2026-09-20T00:18:38",
+          "prepared_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "packager_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "archived_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "profile_sha256": "a19fd8bca9f7ca404b31c63ff3bf030aa2d2da581d5fb8b9961bf42769083005",
+          "ok": true
+        },
+        "after": {
+          "checked": "after trial",
+          "at": "2026-09-20T00:21:46",
+          "prepared_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "packager_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "archived_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "profile_sha256": "a19fd8bca9f7ca404b31c63ff3bf030aa2d2da581d5fb8b9961bf42769083005",
+          "ok": true
+        }
+      },
+      "repeat": 2
+    },
+    {
+      "benchmark": "polybench/lu",
+      "kernel": "lu",
+      "source": "lu.c",
+      "arm": "speed_gate_large",
+      "model": "claude-haiku-4-5-20251001",
+      "arm_flags": [
+        "--no-require-speedup",
+        "--min-runtime-share",
+        "0.01",
+        "--require-speedup",
+        "--timing-cflags=-DLARGE_DATASET"
+      ],
+      "started_at": "2026-09-20T00:21:46",
+      "host": "rms14562",
+      "host_load_start": [
+        4528.1962890625,
+        2609.6845703125,
+        2024.30078125
+      ],
+      "agent_cmd": [
+        "/home/ahmedabosamaha/discopop_agent/venv/bin/python",
+        "-m",
+        "discopop_agent",
+        "--project-dir",
+        ".",
+        "--project-units",
+        "lu.c,polybench.c",
+        "--project-include",
+        ".",
+        "--discopop-dir",
+        ".discopop",
+        "--provider",
+        "claude-agent-sdk",
+        "--model",
+        "claude-haiku-4-5-20251001",
+        "--edit-mode",
+        "direct",
+        "--no-require-speedup",
+        "--min-runtime-share",
+        "0.01",
+        "--require-speedup",
+        "--timing-cflags=-DLARGE_DATASET",
+        "--check-input",
+        "7",
+        "--exclude-functions",
+        "print_array,init_array,main,pb_emit,pb_report,pb_seed,pb_uniform,pb_timer_start,pb_timer_stop,rtclock,polybench_flush_cache,polybench_linux_fifo_scheduler,polybench_linux_standard_scheduler,test_fail,polybench_papi_init,polybench_papi_close,polybench_papi_start_counter,polybench_papi_stop_counter,polybench_papi_print,polybench_prepare_instruments,polybench_timer_start,polybench_timer_stop,polybench_timer_print,xmalloc,polybench_alloc_data"
+      ],
+      "agent_s": 142.2,
+      "agent_rc": 0,
+      "llm_calls": 1,
+      "llm_call_failures": 0,
+      "explorer_retries": 0,
+      "reverts": 0,
+      "gate_failures_phase_a": {},
+      "gate_failures_phase_b": {},
+      "gate_passes_phase_a": 1,
+      "region_verdicts": {
+        "DEFERRED": 1,
+        "ACCEPTED": 1
+      },
+      "settle_dropped": 0,
+      "baseline_claimed": 2,
+      "baseline_pragmas": 2,
+      "rewrites_kept": 1,
+      "pragmas_applied": 2,
+      "pragmas_discopop": 0,
+      "pragmas_llm": 2,
+      "regions_skipped": 0,
+      "llm_usage": {
+        "calls_recorded": 1,
+        "input_tokens": 26,
+        "output_tokens": 10239,
+        "cache_read_input_tokens": 72046,
+        "cache_creation_input_tokens": 16457,
+        "cost_usd": 0.0949,
+        "model_seconds": 110.7
+      },
+      "layout": "project",
+      "files_changed": [
+        "lu.c"
+      ],
+      "source_changed": true,
+      "scaffold": {
+        "ok": true,
+        "problems": [],
+        "applies": true
+      },
+      "pragmas_added": 2,
+      "pragmas_in_final": 2,
+      "candidates_recorded": 1,
+      "verify": {
+        "verify_size": "LARGE",
+        "threads": [
+          6,
+          12
+        ],
+        "repeats": 5,
+        "compiler": "/usr/bin/clang-20",
+        "final_flags": [],
+        "dump_exact": true,
+        "dump_max_rel_err": 0.0,
+        "seed": "7",
+        "dump_exact_seeded": true,
+        "dump_seeded_max_rel_err": 0.0,
+        "seq_median_s": 1.1399,
+        "seq_kernel_median_s": 1.125745,
+        "timing_basis": "kernel",
+        "par": {
+          "6": {
+            "median_s": 0.7624,
+            "program_speedup": 1.495,
+            "max_rel_err": 0.0,
+            "kernel_median_s": 0.749116,
+            "kernel_speedup": 1.503,
+            "speedup": 1.503
+          },
+          "12": {
+            "median_s": 0.6823,
+            "program_speedup": 1.671,
+            "max_rel_err": 0.0,
+            "kernel_median_s": 0.667609,
+            "kernel_speedup": 1.686,
+            "speedup": 1.686
+          }
+        },
+        "digest_max_rel_err": 0.0,
+        "stable_at_fixed_threads": true,
+        "kernel_program_disagree": false,
+        "digest_seeded_rel_err": 0.0,
+        "status": "ok",
+        "speed_measurable": true
+      },
+      "verify_s": 14.9,
+      "status": "done",
+      "outcome": "FASTER",
+      "finished_at": "2026-09-20T00:24:23",
+      "host_load_end": [
+        2612.73291015625,
+        2874.8681640625,
+        2246.14404296875
+      ],
+      "profile": {
+        "wrapper": "discopop_cc",
+        "layout": "project",
+        "units": [
+          "lu.c",
+          "polybench.c"
+        ],
+        "instrument_s": 0.21,
+        "profiled_run_s": 0.06,
+        "explore_s": 2.32,
+        "explore_attempts": 1,
+        "explore_failures": [],
+        "patterns": {
+          "optimizer_output": 0,
+          "merged_pattern": 0,
+          "task": 9,
+          "do_all": 9,
+          "reduction": 0
+        },
+        "profile_sha256": "a19fd8bca9f7ca404b31c63ff3bf030aa2d2da581d5fb8b9961bf42769083005"
+      },
+      "package_integrity": {
+        "before": {
+          "checked": "before trial",
+          "at": "2026-09-20T00:21:46",
+          "prepared_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "packager_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "archived_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "profile_sha256": "a19fd8bca9f7ca404b31c63ff3bf030aa2d2da581d5fb8b9961bf42769083005",
+          "ok": true
+        },
+        "after": {
+          "checked": "after trial",
+          "at": "2026-09-20T00:24:23",
+          "prepared_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "packager_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "archived_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "profile_sha256": "a19fd8bca9f7ca404b31c63ff3bf030aa2d2da581d5fb8b9961bf42769083005",
+          "ok": true
+        }
+      },
+      "repeat": 3
+    },
+    {
+      "benchmark": "polybench/lu",
+      "kernel": "lu",
+      "source": "lu.c",
+      "arm": "speed_gate_small",
+      "model": "claude-haiku-4-5-20251001",
+      "arm_flags": [
+        "--no-require-speedup",
+        "--min-runtime-share",
+        "0.01",
+        "--require-speedup"
+      ],
+      "started_at": "2026-09-20T00:24:23",
+      "host": "rms14562",
+      "host_load_start": [
+        2612.73291015625,
+        2874.8681640625,
+        2246.14404296875
+      ],
+      "agent_cmd": [
+        "/home/ahmedabosamaha/discopop_agent/venv/bin/python",
+        "-m",
+        "discopop_agent",
+        "--project-dir",
+        ".",
+        "--project-units",
+        "lu.c,polybench.c",
+        "--project-include",
+        ".",
+        "--discopop-dir",
+        ".discopop",
+        "--provider",
+        "claude-agent-sdk",
+        "--model",
+        "claude-haiku-4-5-20251001",
+        "--edit-mode",
+        "direct",
+        "--no-require-speedup",
+        "--min-runtime-share",
+        "0.01",
+        "--require-speedup",
+        "--check-input",
+        "7",
+        "--exclude-functions",
+        "print_array,init_array,main,pb_emit,pb_report,pb_seed,pb_uniform,pb_timer_start,pb_timer_stop,rtclock,polybench_flush_cache,polybench_linux_fifo_scheduler,polybench_linux_standard_scheduler,test_fail,polybench_papi_init,polybench_papi_close,polybench_papi_start_counter,polybench_papi_stop_counter,polybench_papi_print,polybench_prepare_instruments,polybench_timer_start,polybench_timer_stop,polybench_timer_print,xmalloc,polybench_alloc_data"
+      ],
+      "agent_s": 784.2,
+      "agent_rc": 0,
+      "llm_calls": 7,
+      "llm_call_failures": 0,
+      "explorer_retries": 0,
+      "reverts": 0,
+      "gate_failures_phase_a": {
+        "performance": 4,
+        "tsan": 2,
+        "openmp_compile": 1
+      },
+      "gate_failures_phase_b": {
+        "tsan": 1
+      },
+      "gate_passes_phase_a": 0,
+      "region_verdicts": {
+        "DEFERRED": 2,
+        "SKIPPED": 2,
+        "DROPPED": 2
+      },
+      "settle_dropped": 0,
+      "baseline_claimed": 2,
+      "baseline_pragmas": 2,
+      "rewrites_kept": 0,
+      "pragmas_applied": 0,
+      "pragmas_discopop": 0,
+      "pragmas_llm": 0,
+      "regions_skipped": 2,
+      "llm_usage": {
+        "calls_recorded": 7,
+        "input_tokens": 142,
+        "output_tokens": 92194,
+        "cache_read_input_tokens": 632694,
+        "cache_creation_input_tokens": 106537,
+        "cost_usd": 0.7445,
+        "model_seconds": 762.9
+      },
+      "layout": "project",
+      "files_changed": [],
+      "source_changed": false,
+      "scaffold": {
+        "ok": true,
+        "problems": [],
+        "applies": true
+      },
+      "pragmas_added": 0,
+      "pragmas_in_final": 0,
+      "candidates_recorded": 9,
+      "verify": {
+        "verify_size": "LARGE",
+        "threads": [
+          6,
+          12
+        ],
+        "repeats": 5,
+        "compiler": "/usr/bin/clang-20",
+        "final_flags": [],
+        "dump_exact": true,
+        "dump_max_rel_err": 0.0,
+        "seed": "7",
+        "dump_exact_seeded": true,
+        "dump_seeded_max_rel_err": 0.0,
+        "seq_median_s": 1.1341,
+        "seq_kernel_median_s": 1.121158,
+        "timing_basis": "kernel",
+        "par": {
+          "6": {
+            "median_s": 1.1459,
+            "program_speedup": 0.99,
+            "max_rel_err": 0.0,
+            "kernel_median_s": 1.132133,
+            "kernel_speedup": 0.99,
+            "speedup": 0.99
+          },
+          "12": {
+            "median_s": 1.1363,
+            "program_speedup": 0.998,
+            "max_rel_err": 0.0,
+            "kernel_median_s": 1.123866,
+            "kernel_speedup": 0.998,
+            "speedup": 0.998
+          }
+        },
+        "digest_max_rel_err": 0.0,
+        "stable_at_fixed_threads": true,
+        "kernel_program_disagree": false,
+        "digest_seeded_rel_err": 0.0,
+        "status": "ok",
+        "speed_measurable": true
+      },
+      "verify_s": 19.9,
+      "status": "done",
+      "outcome": "no-change",
+      "finished_at": "2026-09-20T00:37:48",
+      "host_load_end": [
+        3285.0625,
+        2342.3720703125,
+        1992.4013671875
+      ],
+      "profile": {
+        "wrapper": "discopop_cc",
+        "layout": "project",
+        "units": [
+          "lu.c",
+          "polybench.c"
+        ],
+        "instrument_s": 0.21,
+        "profiled_run_s": 0.06,
+        "explore_s": 2.32,
+        "explore_attempts": 1,
+        "explore_failures": [],
+        "patterns": {
+          "optimizer_output": 0,
+          "merged_pattern": 0,
+          "task": 9,
+          "do_all": 9,
+          "reduction": 0
+        },
+        "profile_sha256": "a19fd8bca9f7ca404b31c63ff3bf030aa2d2da581d5fb8b9961bf42769083005"
+      },
+      "package_integrity": {
+        "before": {
+          "checked": "before trial",
+          "at": "2026-09-20T00:24:23",
+          "prepared_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "packager_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "archived_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "profile_sha256": "a19fd8bca9f7ca404b31c63ff3bf030aa2d2da581d5fb8b9961bf42769083005",
+          "ok": true
+        },
+        "after": {
+          "checked": "after trial",
+          "at": "2026-09-20T00:37:48",
+          "prepared_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "packager_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "archived_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "profile_sha256": "a19fd8bca9f7ca404b31c63ff3bf030aa2d2da581d5fb8b9961bf42769083005",
+          "ok": true
+        }
+      },
+      "repeat": 1
+    },
+    {
+      "benchmark": "polybench/lu",
+      "kernel": "lu",
+      "source": "lu.c",
+      "arm": "speed_gate_small",
+      "model": "claude-haiku-4-5-20251001",
+      "arm_flags": [
+        "--no-require-speedup",
+        "--min-runtime-share",
+        "0.01",
+        "--require-speedup"
+      ],
+      "started_at": "2026-09-20T00:37:48",
+      "host": "rms14562",
+      "host_load_start": [
+        3285.0625,
+        2342.3720703125,
+        1992.4013671875
+      ],
+      "agent_cmd": [
+        "/home/ahmedabosamaha/discopop_agent/venv/bin/python",
+        "-m",
+        "discopop_agent",
+        "--project-dir",
+        ".",
+        "--project-units",
+        "lu.c,polybench.c",
+        "--project-include",
+        ".",
+        "--discopop-dir",
+        ".discopop",
+        "--provider",
+        "claude-agent-sdk",
+        "--model",
+        "claude-haiku-4-5-20251001",
+        "--edit-mode",
+        "direct",
+        "--no-require-speedup",
+        "--min-runtime-share",
+        "0.01",
+        "--require-speedup",
+        "--check-input",
+        "7",
+        "--exclude-functions",
+        "print_array,init_array,main,pb_emit,pb_report,pb_seed,pb_uniform,pb_timer_start,pb_timer_stop,rtclock,polybench_flush_cache,polybench_linux_fifo_scheduler,polybench_linux_standard_scheduler,test_fail,polybench_papi_init,polybench_papi_close,polybench_papi_start_counter,polybench_papi_stop_counter,polybench_papi_print,polybench_prepare_instruments,polybench_timer_start,polybench_timer_stop,polybench_timer_print,xmalloc,polybench_alloc_data"
+      ],
+      "agent_s": 559.2,
+      "agent_rc": 0,
+      "llm_calls": 6,
+      "llm_call_failures": 0,
+      "explorer_retries": 0,
+      "reverts": 0,
+      "gate_failures_phase_a": {
+        "performance": 3,
+        "tsan": 3
+      },
+      "gate_failures_phase_b": {
+        "tsan": 1
+      },
+      "gate_passes_phase_a": 0,
+      "region_verdicts": {
+        "DEFERRED": 2,
+        "SKIPPED": 2,
+        "DROPPED": 2
+      },
+      "settle_dropped": 0,
+      "baseline_claimed": 2,
+      "baseline_pragmas": 2,
+      "rewrites_kept": 0,
+      "pragmas_applied": 0,
+      "pragmas_discopop": 0,
+      "pragmas_llm": 0,
+      "regions_skipped": 2,
+      "llm_usage": {
+        "calls_recorded": 6,
+        "input_tokens": 124,
+        "output_tokens": 60137,
+        "cache_read_input_tokens": 476612,
+        "cache_creation_input_tokens": 74528,
+        "cost_usd": 0.5045,
+        "model_seconds": 543.4
+      },
+      "layout": "project",
+      "files_changed": [],
+      "source_changed": false,
+      "scaffold": {
+        "ok": true,
+        "problems": [],
+        "applies": true
+      },
+      "pragmas_added": 0,
+      "pragmas_in_final": 0,
+      "candidates_recorded": 8,
+      "verify": {
+        "verify_size": "LARGE",
+        "threads": [
+          6,
+          12
+        ],
+        "repeats": 5,
+        "compiler": "/usr/bin/clang-20",
+        "final_flags": [],
+        "dump_exact": true,
+        "dump_max_rel_err": 0.0,
+        "seed": "7",
+        "dump_exact_seeded": true,
+        "dump_seeded_max_rel_err": 0.0,
+        "seq_median_s": 1.0886,
+        "seq_kernel_median_s": 1.073928,
+        "timing_basis": "kernel",
+        "par": {
+          "6": {
+            "median_s": 1.0844,
+            "program_speedup": 1.004,
+            "max_rel_err": 0.0,
+            "kernel_median_s": 1.069743,
+            "kernel_speedup": 1.004,
+            "speedup": 1.004
+          },
+          "12": {
+            "median_s": 1.0955,
+            "program_speedup": 0.994,
+            "max_rel_err": 0.0,
+            "kernel_median_s": 1.081147,
+            "kernel_speedup": 0.993,
+            "speedup": 0.993
+          }
+        },
+        "digest_max_rel_err": 0.0,
+        "stable_at_fixed_threads": true,
+        "kernel_program_disagree": false,
+        "digest_seeded_rel_err": 0.0,
+        "status": "ok",
+        "speed_measurable": true
+      },
+      "verify_s": 19.2,
+      "status": "done",
+      "outcome": "no-change",
+      "finished_at": "2026-09-20T00:47:26",
+      "host_load_end": [
+        1120.1005859375,
+        1309.921875,
+        1671.38623046875
+      ],
+      "profile": {
+        "wrapper": "discopop_cc",
+        "layout": "project",
+        "units": [
+          "lu.c",
+          "polybench.c"
+        ],
+        "instrument_s": 0.21,
+        "profiled_run_s": 0.06,
+        "explore_s": 2.32,
+        "explore_attempts": 1,
+        "explore_failures": [],
+        "patterns": {
+          "optimizer_output": 0,
+          "merged_pattern": 0,
+          "task": 9,
+          "do_all": 9,
+          "reduction": 0
+        },
+        "profile_sha256": "a19fd8bca9f7ca404b31c63ff3bf030aa2d2da581d5fb8b9961bf42769083005"
+      },
+      "package_integrity": {
+        "before": {
+          "checked": "before trial",
+          "at": "2026-09-20T00:37:48",
+          "prepared_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "packager_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "archived_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "profile_sha256": "a19fd8bca9f7ca404b31c63ff3bf030aa2d2da581d5fb8b9961bf42769083005",
+          "ok": true
+        },
+        "after": {
+          "checked": "after trial",
+          "at": "2026-09-20T00:47:26",
+          "prepared_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "packager_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "archived_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "profile_sha256": "a19fd8bca9f7ca404b31c63ff3bf030aa2d2da581d5fb8b9961bf42769083005",
+          "ok": true
+        }
+      },
+      "repeat": 2
+    },
+    {
+      "benchmark": "polybench/lu",
+      "kernel": "lu",
+      "source": "lu.c",
+      "arm": "speed_gate_small",
+      "model": "claude-haiku-4-5-20251001",
+      "arm_flags": [
+        "--no-require-speedup",
+        "--min-runtime-share",
+        "0.01",
+        "--require-speedup"
+      ],
+      "started_at": "2026-09-20T00:47:26",
+      "host": "rms14562",
+      "host_load_start": [
+        1120.1005859375,
+        1309.921875,
+        1671.38623046875
+      ],
+      "agent_cmd": [
+        "/home/ahmedabosamaha/discopop_agent/venv/bin/python",
+        "-m",
+        "discopop_agent",
+        "--project-dir",
+        ".",
+        "--project-units",
+        "lu.c,polybench.c",
+        "--project-include",
+        ".",
+        "--discopop-dir",
+        ".discopop",
+        "--provider",
+        "claude-agent-sdk",
+        "--model",
+        "claude-haiku-4-5-20251001",
+        "--edit-mode",
+        "direct",
+        "--no-require-speedup",
+        "--min-runtime-share",
+        "0.01",
+        "--require-speedup",
+        "--check-input",
+        "7",
+        "--exclude-functions",
+        "print_array,init_array,main,pb_emit,pb_report,pb_seed,pb_uniform,pb_timer_start,pb_timer_stop,rtclock,polybench_flush_cache,polybench_linux_fifo_scheduler,polybench_linux_standard_scheduler,test_fail,polybench_papi_init,polybench_papi_close,polybench_papi_start_counter,polybench_papi_stop_counter,polybench_papi_print,polybench_prepare_instruments,polybench_timer_start,polybench_timer_stop,polybench_timer_print,xmalloc,polybench_alloc_data"
+      ],
+      "agent_s": 567.4,
+      "agent_rc": 0,
+      "llm_calls": 6,
+      "llm_call_failures": 0,
+      "explorer_retries": 0,
+      "reverts": 0,
+      "gate_failures_phase_a": {
+        "performance": 5,
+        "tsan": 1
+      },
+      "gate_failures_phase_b": {
+        "tsan": 1
+      },
+      "gate_passes_phase_a": 0,
+      "region_verdicts": {
+        "DEFERRED": 2,
+        "SKIPPED": 2,
+        "DROPPED": 2
+      },
+      "settle_dropped": 0,
+      "baseline_claimed": 2,
+      "baseline_pragmas": 2,
+      "rewrites_kept": 0,
+      "pragmas_applied": 0,
+      "pragmas_discopop": 0,
+      "pragmas_llm": 0,
+      "regions_skipped": 2,
+      "llm_usage": {
+        "calls_recorded": 6,
+        "input_tokens": 132,
+        "output_tokens": 64699,
+        "cache_read_input_tokens": 491384,
+        "cache_creation_input_tokens": 78367,
+        "cost_usd": 0.5365,
+        "model_seconds": 551.5
+      },
+      "layout": "project",
+      "files_changed": [],
+      "source_changed": false,
+      "scaffold": {
+        "ok": true,
+        "problems": [],
+        "applies": true
+      },
+      "pragmas_added": 0,
+      "pragmas_in_final": 0,
+      "candidates_recorded": 8,
+      "verify": {
+        "verify_size": "LARGE",
+        "threads": [
+          6,
+          12
+        ],
+        "repeats": 5,
+        "compiler": "/usr/bin/clang-20",
+        "final_flags": [],
+        "dump_exact": true,
+        "dump_max_rel_err": 0.0,
+        "seed": "7",
+        "dump_exact_seeded": true,
+        "dump_seeded_max_rel_err": 0.0,
+        "seq_median_s": 1.0809,
+        "seq_kernel_median_s": 1.067397,
+        "timing_basis": "kernel",
+        "par": {
+          "6": {
+            "median_s": 1.0827,
+            "program_speedup": 0.998,
+            "max_rel_err": 0.0,
+            "kernel_median_s": 1.0681,
+            "kernel_speedup": 0.999,
+            "speedup": 0.999
+          },
+          "12": {
+            "median_s": 1.0682,
+            "program_speedup": 1.012,
+            "max_rel_err": 0.0,
+            "kernel_median_s": 1.053405,
+            "kernel_speedup": 1.013,
+            "speedup": 1.013
+          }
+        },
+        "digest_max_rel_err": 0.0,
+        "stable_at_fixed_threads": true,
+        "kernel_program_disagree": false,
+        "digest_seeded_rel_err": 0.0,
+        "status": "ok",
+        "speed_measurable": true
+      },
+      "verify_s": 18.8,
+      "status": "done",
+      "outcome": "no-change",
+      "finished_at": "2026-09-20T00:57:13",
+      "host_load_end": [
+        1161.6611328125,
+        1362.75146484375,
+        1493.05615234375
+      ],
+      "profile": {
+        "wrapper": "discopop_cc",
+        "layout": "project",
+        "units": [
+          "lu.c",
+          "polybench.c"
+        ],
+        "instrument_s": 0.21,
+        "profiled_run_s": 0.06,
+        "explore_s": 2.32,
+        "explore_attempts": 1,
+        "explore_failures": [],
+        "patterns": {
+          "optimizer_output": 0,
+          "merged_pattern": 0,
+          "task": 9,
+          "do_all": 9,
+          "reduction": 0
+        },
+        "profile_sha256": "a19fd8bca9f7ca404b31c63ff3bf030aa2d2da581d5fb8b9961bf42769083005"
+      },
+      "package_integrity": {
+        "before": {
+          "checked": "before trial",
+          "at": "2026-09-20T00:47:26",
+          "prepared_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "packager_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "archived_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "profile_sha256": "a19fd8bca9f7ca404b31c63ff3bf030aa2d2da581d5fb8b9961bf42769083005",
+          "ok": true
+        },
+        "after": {
+          "checked": "after trial",
+          "at": "2026-09-20T00:57:13",
+          "prepared_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "packager_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "archived_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+          "profile_sha256": "a19fd8bca9f7ca404b31c63ff3bf030aa2d2da581d5fb8b9961bf42769083005",
+          "ok": true
+        }
+      },
+      "repeat": 3
+    }
+  ]
+}

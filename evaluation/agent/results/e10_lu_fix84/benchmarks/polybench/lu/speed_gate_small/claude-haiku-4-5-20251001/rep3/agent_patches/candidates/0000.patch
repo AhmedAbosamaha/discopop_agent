@@ -1,0 +1,17 @@
+--- /home/ahmedabosamaha/new_benchmark_harness/agent/runs/e10_lu_fix84/benchmarks/polybench/lu/speed_gate_small/claude-haiku-4-5-20251001/rep3/work/lu.c
++++ /home/ahmedabosamaha/new_benchmark_harness/agent/runs/e10_lu_fix84/benchmarks/polybench/lu/speed_gate_small/claude-haiku-4-5-20251001/rep3/work/lu.c
+@@ -61,8 +61,14 @@
+ #pragma scop
+   for (k = 0; k < _PB_N; k++)
+     {
++      /* Normalize k-th row: all j iterations are independent (write different A[k][j], read shared A[k][k]) */
++#pragma omp parallel for
+       for (j = k + 1; j < _PB_N; j++)
+ 	A[k][j] = A[k][j] / A[k][k];
++
++      /* Update trailing matrix: i and j iterations are independent.
++         Collapse both loops to get sufficient granularity (~5000+ iters/k). */
++#pragma omp parallel for collapse(2)
+       for(i = k + 1; i < _PB_N; i++)
+ 	for (j = k + 1; j < _PB_N; j++)
+ 	  A[i][j] = A[i][j] - A[i][k] * A[k][j];

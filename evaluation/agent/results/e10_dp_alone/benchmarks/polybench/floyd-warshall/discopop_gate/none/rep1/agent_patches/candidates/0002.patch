@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/new_benchmark_harness/agent/runs/e10_dp_alone/benchmarks/polybench/floyd-warshall/discopop_gate/none/rep1/work/floyd-warshall.c
++++ /home/ahmedabosamaha/new_benchmark_harness/agent/runs/e10_dp_alone/benchmarks/polybench/floyd-warshall/discopop_gate/none/rep1/work/floyd-warshall.c
+@@ -62,6 +62,7 @@
+   for (k = 0; k < _PB_N; k++)
+     {
+       for(i = 0; i < _PB_N; i++)
++	#pragma omp parallel for firstprivate(i,n) shared(path) 
+ 	for (j = 0; j < _PB_N; j++)
+ 	  path[i][j] = path[i][j] < path[i][k] + path[k][j] ?
+ 	    path[i][j] : path[i][k] + path[k][j];

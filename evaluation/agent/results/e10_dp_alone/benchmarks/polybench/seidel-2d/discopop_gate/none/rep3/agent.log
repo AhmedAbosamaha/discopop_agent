@@ -1,0 +1,96 @@
+
+============================================================
+  DiscoPoP Agentic Controller
+============================================================
+  Source         : /home/ahmedabosamaha/new_benchmark_harness/agent/runs/e10_dp_alone/benchmarks/polybench/seidel-2d/discopop_gate/none/rep3/work/seidel-2d.c
+  DiscoPoP dir   : .discopop
+  Model          : none
+  Budget         : 0 LLM retries/region (+2 free build fixes)
+  λ penalty      : 1.0
+  Min workload   : 0.0
+  Restruct. depth: 0 (Tier-2 allowed at depth 0–0)
+  Quality gate   : Tier-1 = all but speed, no escalation; Tier-2 = full
+  TSan           : barrier-aware (archer: /usr/lib/llvm-20/lib/libarcher.so)
+  Speedup gate   : OFF (--no-require-speedup)
+  Dry run        : False
+  LLM mode       : none
+  Edit mode      : direct
+  Re-profiling   : fast refresh (compile only) between rewrites; full before a deeper level and before Phase B
+  Pragmas        : LLM writes them with the rewrite, gate decides (--llm-pragmas)
+============================================================
+
+  Project        : /home/ahmedabosamaha/new_benchmark_harness/agent/runs/e10_dp_alone/benchmarks/polybench/seidel-2d/discopop_gate/none/rep3/work  (2 unit(s): seidel-2d.c, polybench.c)
+
+  [ok] Captured reference output on 2 inputs (69 bytes, 14.7 ms baseline) for the correctness/performance gates.
+
+  [ok] Numerical noise floor 4.67e-19 of output scale (widest disagreement 4.67e-20 of output scale across 6 build variants, x10 margin — on input '7').
+  [note] values may move that far without failing the correctness gate; labels, line structure and integers must still match exactly.
+
+  Hotspots       : measured per-region runtimes are available — 17 region(s) measured, 38.6 ms total, ranking by predicted time saved at 48 threads
+
+  Baseline       : DiscoPoP proposes 3 applicable pattern(s) unaided; 3 of them produce a usable pragma
+                   → the run beats DiscoPoP by ending with more than 3
+
+  Initial candidates
+Region ID    Type           Saves    % run    Hot  Tier  Depth  Name
+--------------------------------------------------------------------------------------
+  1:64       loop         19.9 ms    52.6%    YES     1      0  lines 63–68
+  1:67       loop         19.9 ms    52.6%    YES     1      0  lines 64–68
+  3:61       function     19.9 ms    52.6%    YES     2      0  kernel_seidel_2d
+  1:70       loop         19.8 ms    52.2%    YES     1      0  lines 65–68
+
+============================================================
+  PHASE A — restructure  (the source stays pragma-free)
+============================================================
+
+┌─ [depth=0] loop 1:64 (lines 63–68)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:67 (lines 64–68)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] function 3:61 (lines 56–71)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:70 (lines 65–68)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+
+============================================================
+  PHASE B — annotate  (3 candidate pragma(s))
+============================================================
+
+  5 loop(s) are already parallel in the source; nothing is nested inside them.
+
+┌─ pattern #20  do_all @ lines 63–68  (W=24900)
+│  #pragma omp parallel for
+│  [Tier-1] Repairing the generated pragma: n is declared inside the loop body, so cannot appear in a clause
+│  gate failed at 'tsan': Race detected: WARNING: ThreadSanitizer: data race (pid=2506178)   Read of size 8 at 0x7ffff4e17fb0 by thread T2:     #0 kernel_seidel_2d.omp_outlined
+└─ DROPPED
+
+┌─ pattern #19  do_all @ lines 64–68  (W=9920160)
+│  #pragma omp parallel for
+│  [Tier-1] Repairing the generated pragma: n is declared inside the loop body, so cannot appear in a clause
+│  gate failed at 'tsan': Race detected: WARNING: ThreadSanitizer: data race (pid=2506213)   Read of size 8 at 0x7d29bfd9ca68 by thread T18:     #0 kernel_seidel_2d.omp_outline
+└─ DROPPED
+
+┌─ pattern #18  do_all @ lines 65–68  (W=1500)
+│  #pragma omp parallel for
+│  [Tier-1] Repairing the generated pragma: n is declared inside the loop body, so cannot appear in a clause
+│  TSan OMP-barrier false positive — re-verified on output
+│  gate failed at 'correctness': Program output changed for input '7' — the patched program is NOT semantically equivalent to the original. This input differs from the one the profile
+└─ DROPPED
+
+
+============================================================
+  SUMMARY: 0 rewrite(s) kept  |  0 pragma(s) applied  |  1 skipped
+  DiscoPoP unaided: 3 usable pragma(s) in this profile's draw  →  this run: 0   [BELOW, informational]
+    ✗  3:61  [skipped]  depth=0
+
+  Results → .discopop/agent_patches/accepted.json
+============================================================
+

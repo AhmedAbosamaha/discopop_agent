@@ -1,0 +1,132 @@
+
+============================================================
+  DiscoPoP Agentic Controller
+============================================================
+  Source         : /home/ahmedabosamaha/new_benchmark_harness/agent/runs/e10_dp_alone/benchmarks/polybench/2mm/discopop_gate/none/rep3/work/2mm.c
+  DiscoPoP dir   : .discopop
+  Model          : none
+  Budget         : 0 LLM retries/region (+2 free build fixes)
+  λ penalty      : 1.0
+  Min workload   : 0.0
+  Restruct. depth: 0 (Tier-2 allowed at depth 0–0)
+  Quality gate   : Tier-1 = all but speed, no escalation; Tier-2 = full
+  TSan           : barrier-aware (archer: /usr/lib/llvm-20/lib/libarcher.so)
+  Speedup gate   : OFF (--no-require-speedup)
+  Dry run        : False
+  LLM mode       : none
+  Edit mode      : direct
+  Re-profiling   : fast refresh (compile only) between rewrites; full before a deeper level and before Phase B
+  Pragmas        : LLM writes them with the rewrite, gate decides (--llm-pragmas)
+============================================================
+
+  Project        : /home/ahmedabosamaha/new_benchmark_harness/agent/runs/e10_dp_alone/benchmarks/polybench/2mm/discopop_gate/none/rep3/work  (2 unit(s): 2mm.c, polybench.c)
+
+  [ok] Captured reference output on 2 inputs (77 bytes, 2.9 ms baseline) for the correctness/performance gates.
+
+  [ok] Numerical noise floor 2.42e-19 of output scale (widest disagreement 2.42e-20 of output scale across 6 build variants, x10 margin — on input '7').
+  [note] values may move that far without failing the correctness gate; labels, line structure and integers must still match exactly.
+
+  Hotspots       : measured per-region runtimes are available — 26 region(s) measured, 15.6 ms total, ranking by predicted time saved at 48 threads
+
+  Baseline       : DiscoPoP proposes 6 applicable pattern(s) unaided; 6 of them produce a usable pragma
+                   → the run beats DiscoPoP by ending with more than 6
+
+  Initial candidates
+Region ID    Type           Saves    % run    Hot  Tier  Depth  Name
+--------------------------------------------------------------------------------------
+  3:143      function     13.6 ms    89.2%    YES     2      0  kernel_2mm
+  1:146      loop          7.1 ms    46.8%    YES     1      0  lines 84–90
+  1:149      loop          7.1 ms    46.7%    YES     1      0  lines 85–90
+  1:153      loop          6.5 ms    42.6%    YES     1      0  lines 88–89
+  1:163      loop          6.5 ms    42.5%    YES     1      0  lines 91–97
+  1:166      loop          6.5 ms    42.5%    YES     1      0  lines 92–97
+  1:170      loop          5.8 ms    38.2%    YES     1      0  lines 95–96
+
+============================================================
+  PHASE A — restructure  (the source stays pragma-free)
+============================================================
+
+┌─ [depth=0] function 3:143 (lines 71–100)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:146 (lines 84–90)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:149 (lines 85–90)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:153 (lines 88–89)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:163 (lines 91–97)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:166 (lines 92–97)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:170 (lines 95–96)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+
+============================================================
+  PHASE B — annotate  (6 candidate pragma(s))
+============================================================
+
+  5 loop(s) are already parallel in the source; nothing is nested inside them.
+
+┌─ pattern #39  do_all @ lines 84–90  (W=98304)
+│  #pragma omp parallel for
+│  [Tier-1] Repairing the generated pragma: A is declared inside the loop body, so cannot appear in a clause
+│  [Phase-B] Original backed up → 2mm.c.original
+│  [Phase-B] Applied to 2mm.c
+└─ APPLIED
+
+┌─ pattern #38  do_all @ lines 85–90  (W=10485760)
+│  #pragma omp parallel for
+│  [Tier-1] Repairing the generated pragma: A is declared inside the loop body, so cannot appear in a clause
+│  nested inside the already-parallelized region at lines 84–90
+└─ SKIPPED (enclosing loop is already parallel)
+
+┌─ pattern #37  do_all @ lines 88–89  (W=128)
+│  #pragma omp parallel for
+│  nested inside the already-parallelized region at lines 84–90
+└─ SKIPPED (enclosing loop is already parallel)
+
+┌─ pattern #42  do_all @ lines 91–97  (W=98304)
+│  #pragma omp parallel for
+│  [Phase-B] Applied to 2mm.c
+└─ APPLIED
+
+┌─ pattern #41  do_all @ lines 92–97  (W=10485760)
+│  #pragma omp parallel for
+│  nested inside the already-parallelized region at lines 91–97
+└─ SKIPPED (enclosing loop is already parallel)
+
+┌─ pattern #40  do_all @ lines 95–96  (W=128)
+│  #pragma omp parallel for
+│  nested inside the already-parallelized region at lines 91–97
+└─ SKIPPED (enclosing loop is already parallel)
+
+============================================================
+  SETTLING — verify the finished source, drop what does not hold up
+============================================================
+  [ok] finished source verified — output matches the original
+
+
+============================================================
+  SUMMARY: 0 rewrite(s) kept  |  2 pragma(s) applied  |  1 skipped
+  DiscoPoP unaided: 6 usable pragma(s) in this profile's draw  →  this run: 2   [BELOW, informational]
+    ✓  loop 1:146  [Phase-B pragma]  depth=0
+    ✓  loop 1:163  [Phase-B pragma]  depth=0
+    ✗  3:143  [skipped]  depth=0
+
+  Results → .discopop/agent_patches/accepted.json
+============================================================
+

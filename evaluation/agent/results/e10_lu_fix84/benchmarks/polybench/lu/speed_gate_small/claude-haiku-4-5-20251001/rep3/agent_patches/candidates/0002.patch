@@ -1,0 +1,26 @@
+--- /home/ahmedabosamaha/new_benchmark_harness/agent/runs/e10_lu_fix84/benchmarks/polybench/lu/speed_gate_small/claude-haiku-4-5-20251001/rep3/work/lu.c
++++ /home/ahmedabosamaha/new_benchmark_harness/agent/runs/e10_lu_fix84/benchmarks/polybench/lu/speed_gate_small/claude-haiku-4-5-20251001/rep3/work/lu.c
+@@ -59,10 +59,23 @@
+   int i, j, k;
+ 
+ #pragma scop
++  /* Parallel region wraps entire k loop: threads created once, reused for all k.
++     - #pragma omp single: sequential normalization (one thread per k iteration)
++     - #pragma omp for collapse(2): parallel update (all threads per k iteration)
++     - Implicit barrier between directives respects A[k][j] RAW dependence
++     - Explicit barrier after second loop synchronizes before next k iteration
++  */
++#pragma omp parallel
+   for (k = 0; k < _PB_N; k++)
+     {
++      /* Normalize k-th row: done by single thread (sequential, small work) */
++#pragma omp single
+       for (j = k + 1; j < _PB_N; j++)
+ 	A[k][j] = A[k][j] / A[k][k];
++
++      /* Update trailing matrix: parallelized across all threads with collapse(2)
++         to achieve sufficient granularity (~5000+ iterations per k). */
++#pragma omp for collapse(2)
+       for(i = k + 1; i < _PB_N; i++)
+ 	for (j = k + 1; j < _PB_N; j++)
+ 	  A[i][j] = A[i][j] - A[i][k] * A[k][j];

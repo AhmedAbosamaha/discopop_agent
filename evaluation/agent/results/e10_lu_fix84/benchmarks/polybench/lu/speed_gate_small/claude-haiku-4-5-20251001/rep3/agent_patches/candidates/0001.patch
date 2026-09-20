@@ -1,0 +1,31 @@
+--- /home/ahmedabosamaha/new_benchmark_harness/agent/runs/e10_lu_fix84/benchmarks/polybench/lu/speed_gate_small/claude-haiku-4-5-20251001/rep3/work/lu.c
++++ /home/ahmedabosamaha/new_benchmark_harness/agent/runs/e10_lu_fix84/benchmarks/polybench/lu/speed_gate_small/claude-haiku-4-5-20251001/rep3/work/lu.c
+@@ -61,11 +61,23 @@
+ #pragma scop
+   for (k = 0; k < _PB_N; k++)
+     {
+-      for (j = k + 1; j < _PB_N; j++)
+-	A[k][j] = A[k][j] / A[k][k];
+-      for(i = k + 1; i < _PB_N; i++)
+-	for (j = k + 1; j < _PB_N; j++)
+-	  A[i][j] = A[i][j] - A[i][k] * A[k][j];
++      /* Wrap both worksharing regions in a single parallel block to amortize
++         thread startup cost. Implicit barrier between the two regions ensures
++         A[k][j] written in first loop is visible to the second loop. */
++#pragma omp parallel
++      {
++        /* Normalize k-th row: all j iterations are independent */
++#pragma omp for
++        for (j = k + 1; j < _PB_N; j++)
++	  A[k][j] = A[k][j] / A[k][k];
++
++        /* Update trailing matrix: collapse i and j loops for sufficient granularity (~5000 iters/k).
++           Implicit barrier after first loop ensures A[k][j] is computed before this loop reads it. */
++#pragma omp for collapse(2)
++        for(i = k + 1; i < _PB_N; i++)
++	  for (j = k + 1; j < _PB_N; j++)
++	    A[i][j] = A[i][j] - A[i][k] * A[k][j];
++      }
+     }
+ #pragma endscop
+ 

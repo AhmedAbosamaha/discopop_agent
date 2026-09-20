@@ -194,7 +194,7 @@ VS_ORDER: List[Tuple[str, str]] = [
     ("gained-not-faster", "as gained, but the agent's program is not faster (or the kernel is too short to time)"),
     ("better", "both parallel and correct; the agent's program is >= 1.1x faster than DiscoPoP alone's"),
     ("equal", "both parallel and correct; within 1.1x of each other (or not timeable)"),
-    ("worse", "both parallel and correct; the agent's program is >= 1.1x slower than DiscoPoP alone's"),
+    ("worse", "correct, but the agent's program is >= 1.1x slower than the one DiscoPoP alone leaves"),
     ("lost", "DiscoPoP alone reaches a verified parallel program; the agent's trial does not"),
     ("neither", "neither reaches a verified parallel program"),
     ("unsafe", "the agent's final program computes different values (BROKEN)"),
@@ -254,7 +254,15 @@ def vs_discopop_alone(trials: List[dict]) -> List[dict]:
         elif not dp_parallel:
             # DiscoPoP alone left the sequential original: the agent's speedup over the original IS
             # its speedup over DiscoPoP alone, whatever machine the baseline was classified on.
-            verdict = "gained" if o == "FASTER" else "gained-not-faster"
+            # A parallel program that RUNS SLOWER than the one DiscoPoP alone leaves behind is not a
+            # gain, however new the parallelism is — `hotspot` at 0.09× is 11× slower than doing
+            # nothing. Those are counted as `worse`, like any other regression.
+            if o == "FASTER":
+                verdict = "gained"
+            elif a_speed and a_speed <= 1 / WIN_RATIO:
+                verdict = "worse"
+            else:
+                verdict = "gained-not-faster"
         elif not comparable and a_speed and dp_speed:
             verdict = "not-comparable"
         elif ratio is None or o == "parallel-speed-not-measurable":

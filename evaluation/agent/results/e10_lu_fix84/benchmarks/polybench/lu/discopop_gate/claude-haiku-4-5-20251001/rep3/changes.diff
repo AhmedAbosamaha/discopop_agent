@@ -1,0 +1,10 @@
+--- original.c
++++ final.c
+@@ -65,6 +65,7 @@
+       for (j = k + 1; j < _PB_N; j++)
+ 	A[k][j] = A[k][j] / A[k][k];
+       for(i = k + 1; i < _PB_N; i++)
++	#pragma omp parallel for firstprivate(i,n) shared(A) 
+ 	for (j = k + 1; j < _PB_N; j++)
+ 	  A[i][j] = A[i][j] - A[i][k] * A[k][j];
+     }

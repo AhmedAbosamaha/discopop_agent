@@ -1,0 +1,17 @@
+| Benchmark | Arm | Model | Rep | Outcome | Best speedup | Pragmas (DP+LLM) | Rewrites | Baseline | LLM calls | Agent s |
+|---|---|---|---:|---|---:|---|---:|---:|---:|---:|
+| polybench/2mm | discopop_gate | none | 1 | FASTER | 10.09x | 2+0 | 0 | 6 | 0 | 5.6 |
+| polybench/2mm | discopop_gate | none | 2 | FASTER | 10.31x | 2+0 | 0 | 6 | 0 | 5.9 |
+| polybench/2mm | discopop_gate | none | 3 | FASTER | 10.50x | 2+0 | 0 | 6 | 0 | 5.9 |
+| polybench/floyd-warshall | discopop_gate | none | 1 | no-change | 1.01x | 0+0 | 0 | 3 | 0 | 4.4 |
+| polybench/floyd-warshall | discopop_gate | none | 2 | no-change | 1.05x | 0+0 | 0 | 3 | 0 | 4.5 |
+| polybench/floyd-warshall | discopop_gate | none | 3 | no-change | 1.03x | 0+0 | 0 | 3 | 0 | 4.3 |
+| polybench/jacobi-2d-imper | discopop_gate | none | 1 | FASTER | 6.45x | 2+0 | 0 | 5 | 0 | 6.1 |
+| polybench/jacobi-2d-imper | discopop_gate | none | 2 | FASTER | 5.89x | 2+0 | 0 | 5 | 0 | 6.2 |
+| polybench/jacobi-2d-imper | discopop_gate | none | 3 | FASTER | 5.00x | 2+0 | 0 | 5 | 0 | 6.1 |
+| polybench/seidel-2d | discopop_gate | none | 1 | no-change | 1.02x | 0+0 | 0 | 3 | 0 | 6.7 |
+| polybench/seidel-2d | discopop_gate | none | 2 | no-change | 1.00x | 0+0 | 0 | 3 | 0 | 4.2 |
+| polybench/seidel-2d | discopop_gate | none | 3 | no-change | 0.99x | 0+0 | 0 | 3 | 0 | 5.9 |
+| rodinia-3.1/hotspot | discopop_gate | none | 1 | no-change | 1.01x | 0+0 | 0 | 6 | 0 | 479.0 |
+| rodinia-3.1/hotspot | discopop_gate | none | 2 | no-change | 0.97x | 0+0 | 0 | 6 | 0 | 485.4 |
+| rodinia-3.1/hotspot | discopop_gate | none | 3 | no-change | 0.99x | 0+0 | 0 | 6 | 0 | 480.4 |

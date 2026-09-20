@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/new_benchmark_harness/agent/runs/e10_dp_alone/benchmarks/polybench/seidel-2d/discopop_gate/none/rep1/work/seidel-2d.c
++++ /home/ahmedabosamaha/new_benchmark_harness/agent/runs/e10_dp_alone/benchmarks/polybench/seidel-2d/discopop_gate/none/rep1/work/seidel-2d.c
+@@ -62,6 +62,7 @@
+ #pragma scop
+   for (t = 0; t <= _PB_TSTEPS - 1; t++)
+     for (i = 1; i<= _PB_N - 2; i++)
++ #pragma omp parallel for firstprivate(i) shared(A) 
+       for (j = 1; j <= _PB_N - 2; j++)
+ 	A[i][j] = (A[i-1][j-1] + A[i-1][j] + A[i-1][j+1]
+ 		   + A[i][j-1] + A[i][j] + A[i][j+1]

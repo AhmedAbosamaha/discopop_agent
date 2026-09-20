@@ -1199,6 +1199,7 @@ floor (the scatter→gather reorders additions, 1e-16).
 | Date | Repo | Change | Why |
 |---|---|---|---|
 | 2026-09-20 | repositories | **D20 — one repository.** The harness moves into the agent repository as `evaluation/` (`agent/`, `shared/run_store.py`, `benchmarks/` = the SOURCES of the suites it uses: PolyBench 3.2, NPB, RepoOMP's NPB-C, TSVC-2, LULESH, `md`, Rodinia `nw`/`pathfinder`/`hotspot`). Left behind: the group's three harnesses and GUI, 4 GB of reference outputs and data files nothing here reads. Copied from `new_benchmark_harness@1514ceb` (tracked files only, 5,350 files, 42 MB); relative paths unchanged, so every `agent/...` path in this record still holds under `evaluation/`. **Proof the move changed nothing:** a FRESH CLONE (53 MB) regenerates all 70 packages byte-identical to the old ones (every file, every metadata field, every `output_sha256`) — the clone test caught what the working copy hid: the root `.gitignore`'s `data*/` swallowed PolyBench's `datamining/` kernels, and `prepare_polybench.py` discovered kernels through the old harness's per-kernel config directories (now: PolyBench's own layout, same 30 kernels); integrity test 30/30, scaffold test 0 failures; a no-model smoke run (`move_smoke`, `atax`) reproduces `dp_alone_fix84_mac`'s outcome. Code changes: only how the agent repository is located (`cli.py`, `profile_stability.py`, the three shell scripts) and `server.sh sync` (one `git` fast-forward instead of `git` + `rsync`). The repository is a PUBLIC fork (GitHub cannot make a fork private) and the author chose to publish: the server's address and account were moved out of the tracked files into the untracked `agent/tools/server.local` first; a scan found no credential, token value or address left. Old repository frozen and tagged: archived runs up to `e10` record ITS commit hashes | the author: one place; and the old repository is 4 GB and cannot be cloned in full from GitLab, which a reader of the thesis would have to do |
+| 2026-09-20 | plan + agent | **The main comparison for E10 exists (§7 `e10_dp_alone`, `e10_lu_fix84`): D8 confirmed, and `speed_gate_small` shown to be destructive — 10 of 21 trials `lost` because the speed check at the agent's small size deletes DiscoPoP's OWN pragmas (`marginal 0.00×`).** Agent vs DiscoPoP alone, median 1.00× on this class-A set (no harm, as intended); `lu` better ×10, `floyd-warshall` gained, `jacobi-2d` worse (→ Fix 85). Classification fixed: correct-but-slower-than-doing-nothing counts as `worse`, not `gained-not-faster` | D19; the author's question "how is this even possible?" about a loop carrying both a model pragma and a DiscoPoP suggestion |
 | 2026-09-20 | plan | **D8 decided by E10: `speed_gate_large` is E1's agent arm** — 11 FASTER / 0 slower programs kept / 0 BROKEN, against `full` 8 / 5 / 1 and `speed_gate_small` 2 / 0 / 0 (16 of 18 unchanged, 29 performance rejections) | pre-registered rule of D8; §7 `e10` |
 | 2026-09-19 | plan + harness | **D19 — the main comparison is DiscoPoP alone vs DiscoPoP + agent; the sequential original is the reference (§5k).** Every experiment carries `discopop_gate` on the same benchmarks in the same run; each agent trial gets a verdict against DiscoPoP alone (gained / better / equal / worse / lost / neither / unsafe); `vs_discopop_alone.csv/.md`, `fig_vs_discopop_alone`, and every `overview.md` opens with it (or says MISSING). Trials record `host`; ratios are withheld across hosts/sizes/thread sets. E6 (LULESH) becomes the application-scale main comparison with LLNL's expert version as ceiling. Figures: Helvetica dropped (macOS `.ttc` cannot be embedded) | the author: "the main comparison is between DiscoPoP alone and DiscoPoP with the agent … this is a rule"; "LULESH had examples before and after parallelization" |
 | 2026-09-19 | agent | **Fix 84 — generated pragmas were placed on the wrong one of two identical sibling loops** (29 of 539 DiscoPoP pragmas, 12 of 26 PolyBench kernels); it under-measured the DiscoPoP-alone baseline. `discopop_gate` numbers before it on those kernels are void; E10's `polybench/lu` to be re-run | found while checking why DiscoPoP alone "failed" on `atax` — the class of a benchmark must be real, not an artefact |
@@ -1339,6 +1340,63 @@ Added 2026-09-15 (see §6 rows of that date):
   Speedup and fraction of expert speedup are reported descriptively.
 
 ## 7. Run log
+
+### `e10_dp_alone`, `e10_lu_fix84` — 2026-09-20, server, **E10 completed by the main comparison (D19)**
+
+- **Why.** E10 measured the agent's three arms against the SEQUENTIAL original. The author's rule
+  (D19) makes DiscoPoP alone the comparison, and E10 had no such arm; `lu` additionally ran with
+  the misplaced Phase-B pragma (Fix 84).
+- **Setup.** `e10_dp_alone`: `discopop_gate`, no model, the five other E10 kernels × 3, node 1.
+  `e10_lu_fix84`: `lu` × all four arms × 3, Haiku, node 0, agent `58d959f2` (with Fix 84). Same
+  sizes, threads (6/12) and repeats as E10. Host load 197–5,279 (median ≈ 1,400).
+- **The main comparison**, 21 agent trials per arm against DiscoPoP alone on the same benchmark
+  (`analysis/e10_e10_dp_alone_e10_lu_fix84/vs_discopop_alone.md`, `fig_vs_discopop_alone`):
+
+  | arm | gained | better | equal | worse | **lost** | neither | unsafe | median agent ÷ DiscoPoP alone |
+  |---|---:|---:|---:|---:|---:|---:|---:|---:|
+  | `full` | 1 | 4 | 5 | 5 | **0** | 4 | **1** | 0.99× |
+  | `speed_gate_large` | 2 | 6 | 2 | 4 | **0** | 7 | 0 | 1.00× |
+  | `speed_gate_small` | 0 | 0 | 0 | 2 | **10** | 9 | 0 | 1.00× |
+
+  Per benchmark (12 threads, median over repeats): `lu` DiscoPoP alone **0.21×** vs agent 2.6–2.8×
+  → **better ×10**; `floyd-warshall` DiscoPoP alone `no-change` vs agent 1.9–2.8× → **gained ×3**
+  (the only restructuring in the set); `2mm` 10.3× vs 10.2× → equal; `jacobi-2d` DiscoPoP alone
+  **5.9×** vs agent **2.5×** → **worse ×6**; `seidel-2d` neither (both decline, correct);
+  `hotspot` DiscoPoP alone `no-change`, `full` leaves a correct program at **0.09×** → worse.
+
+- **What the new baseline changes.**
+  1. **D8 is confirmed, and for a stronger reason.** `speed_gate_large` is the only arm with no
+     unsafe acceptance AND no `lost`, the most `better`/`gained`, and the best worst case.
+  2. **`speed_gate_small` is not merely wasteful, it is destructive: 10 of 21 trials `lost`** —
+     DiscoPoP alone reaches a verified parallel program and the agent's arm does not. Cause read
+     from the logs: Phase B applies the speed check to **DiscoPoP's own pragmas** at a size where
+     the kernel runs in milliseconds, measures `marginal 0.00× — costs more than it saves`, and
+     drops them (`lu`, all three repeats). A speed check at the wrong size does not only block the
+     model; it deletes the analysis tool's correct suggestions. This is a thesis result in its own
+     right (H10b, sharpened).
+  3. **The agent is NOT better than DiscoPoP alone on this set** (median 1.00×) — as it should be:
+     five of the six kernels are class A. Here the agent must do no harm, and `speed_gate_large`
+     nearly manages that (0 lost, 0 unsafe); the exception is `jacobi-2d`, below. C1 is carried by
+     class R, which this set contains only once (`floyd-warshall`, where the agent gains).
+  4. **DiscoPoP alone varies by profile draw.** On `lu` the server draw gives an innermost-loop
+     Do-All and **0.21×** (all three repeats, one profile); the Mac draw of the same kernel gave
+     3.4×. Repeats within a run share one profile, so they are not independent draws: T0.11 must
+     profile separately per repeat.
+  5. **Classification fixed** (`figures.py`): a correct parallel program that runs ≥ 1.1× SLOWER
+     than what DiscoPoP alone leaves is counted `worse`, even where DiscoPoP alone changed
+     nothing — `hotspot` at 0.09× was being reported as `gained-not-faster`.
+
+- **The `jacobi-2d` regression → Fix 85 (agreed with the author, to build before E1).** DiscoPoP
+  claims the two inner stencil loops; the agent defers them to Phase B, correctly. But the
+  *enclosing function* is also a candidate, has no pattern of its own, and goes to the model —
+  which, with `--llm-pragmas`, writes `collapse(2)` on those same loops from inside the rewrite.
+  Phase B then finds "no applicable pattern" (the loops are annotated) and DiscoPoP's own
+  `parallel for private(j)`, twice as fast here, is never measured. Fix: (a) the prompt names the
+  loops inside the region that DiscoPoP has already claimed and reserves their pragmas for Phase B;
+  (b) where a model pragma sits on a claimed loop anyway, Phase B measures DiscoPoP's version
+  against it and keeps the faster. Feature check required.
+- **Archives.** `results/e10_dp_alone/` (15 trials), `results/e10_lu_fix84/` (12 trials).
+
 
 ### `e10` — 2026-09-19/20, server, **E10: the speed check** (full · speed_gate_large · speed_gate_small × 6 kernels × 3, Haiku 4.5) — decides D8
 

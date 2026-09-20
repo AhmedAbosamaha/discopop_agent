@@ -1,0 +1,20 @@
+--- /home/ahmedabosamaha/new_benchmark_harness/agent/runs/e10_lu_fix84/benchmarks/polybench/lu/speed_gate_small/claude-haiku-4-5-20251001/rep1/work/lu.c
++++ /home/ahmedabosamaha/new_benchmark_harness/agent/runs/e10_lu_fix84/benchmarks/polybench/lu/speed_gate_small/claude-haiku-4-5-20251001/rep1/work/lu.c
+@@ -61,11 +61,13 @@
+ #pragma scop
+   for (k = 0; k < _PB_N; k++)
+     {
++      #pragma omp parallel for private(i)
+       for (j = k + 1; j < _PB_N; j++)
+-	A[k][j] = A[k][j] / A[k][k];
+-      for(i = k + 1; i < _PB_N; i++)
+-	for (j = k + 1; j < _PB_N; j++)
+-	  A[i][j] = A[i][j] - A[i][k] * A[k][j];
++	{
++	  A[k][j] = A[k][j] / A[k][k];
++	  for(i = k + 1; i < _PB_N; i++)
++	    A[i][j] = A[i][j] - A[i][k] * A[k][j];
++	}
+     }
+ #pragma endscop
+ 

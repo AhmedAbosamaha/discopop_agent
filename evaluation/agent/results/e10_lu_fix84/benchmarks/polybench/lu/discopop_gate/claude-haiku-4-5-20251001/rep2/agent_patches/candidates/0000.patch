@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/new_benchmark_harness/agent/runs/e10_lu_fix84/benchmarks/polybench/lu/discopop_gate/claude-haiku-4-5-20251001/rep2/work/lu.c
++++ /home/ahmedabosamaha/new_benchmark_harness/agent/runs/e10_lu_fix84/benchmarks/polybench/lu/discopop_gate/claude-haiku-4-5-20251001/rep2/work/lu.c
+@@ -59,6 +59,7 @@
+   int i, j, k;
+ 
+ #pragma scop
++  #pragma omp parallel for firstprivate(n) private(j,i) shared(A) 
+   for (k = 0; k < _PB_N; k++)
+     {
+       for (j = k + 1; j < _PB_N; j++)
