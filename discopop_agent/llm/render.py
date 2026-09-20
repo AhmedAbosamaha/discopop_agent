@@ -292,9 +292,17 @@ def _fmt_inner_patterns(ev: EvidencePackage, llm_pragmas: bool) -> str:
         clauses = f"  with {p['clauses']}" if p.get("clauses") else ""
         out.append(f"  - loop at line {p['line']}: {kind}{clauses}")
     out.append(
-        ("  These loops need no restructuring.  What is asked of you is whatever stops "
-         "a loop OUTSIDE them from running in parallel; if nothing can be done there, "
-         "annotating one of these as it stands is a valid answer."
+        # Fix 85.  These loops are DiscoPoP's, in both modes.  Telling the model it may
+        # annotate them "as it stands" (which this said under --llm-pragmas) invited it to
+        # put its own pragma where DiscoPoP already had one: on jacobi-2d it wrote
+        # `collapse(2)` over the two stencil loops from inside a function-level rewrite,
+        # Phase B then found nothing left to annotate, and DiscoPoP's own `private(j)` —
+        # twice as fast on that machine — was never measured.
+        ("  These loops need no restructuring and DiscoPoP annotates them itself, after "
+         "you are done.  Do NOT put a pragma on them: write pragmas only for loops you "
+         "restructure or create.  What is asked of you is whatever stops a loop OUTSIDE "
+         "them from running in parallel; if nothing can be done there, say so — leaving "
+         "these loops to DiscoPoP is a valid answer."
          if llm_pragmas else
          "  These loops need no restructuring and DiscoPoP annotates them itself.  What "
          "is asked of you is whatever stops a loop OUTSIDE them from running in parallel.")

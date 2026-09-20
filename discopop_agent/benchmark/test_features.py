@@ -2300,6 +2300,72 @@ def check_pragma_sibling_loops(work: Path) -> Result:
     return Result(name, "pass", "second of two identical loop headers annotated, as profiled and after a shift")
 
 
+_ARB_SRC = """\
+void kernel(int n, double **A, double **B) {
+  int t, i, j;
+  for (t = 0; t < 20; t++)
+    {
+      for (i = 1; i < n - 1; i++)
+        for (j = 1; j < n - 1; j++)
+          B[i][j] = 0.2 * (A[i][j] + A[i][j-1] + A[i][1+j] + A[1+i][j] + A[i-1][j]);
+      for (i = 1; i < n-1; i++)
+        for (j = 1; j < n-1; j++)
+          A[i][j] = B[i][j];
+    }
+}
+"""
+
+
+def check_pragma_arbitration(work: Path) -> Result:
+    """Fix 85: a model pragma on a loop DiscoPoP claimed is measured against DiscoPoP's.
+
+    jacobi-2d: DiscoPoP claims the two stencil loops and Phase A defers them, but the
+    enclosing FUNCTION goes to the model, which annotates them from inside its rewrite; Phase B
+    then reports "no applicable pattern" and DiscoPoP's own pragma is never built. Checks the
+    three outcomes without a model or a compiler: DiscoPoP's pragma wins when it measures
+    faster, the model's stands inside the noise band, and a pragma identical to DiscoPoP's is
+    not a collision at all."""
+    name = "pragma arbitration (Fix 85)"
+    from discopop_agent.pragmas import arbitrate_pragmas, pragma_collisions
+    original = _ARB_SRC
+    annotated = original.replace("      for (i = 1; i < n - 1; i++)",
+                                 "      #pragma omp parallel for collapse(2) shared(A, B)\n      for (i = 1; i < n - 1; i++)", 1)
+    inner = [{"line": 5, "kind": "do_all", "clauses": "private(j) shared(A, B)"}]
+    found = pragma_collisions(original, annotated, inner)
+    if len(found) != 1 or "collapse(2)" not in found[0]["model_pragma"]:
+        return Result(name, "fail", f"the collision on the claimed loop was not found: {found}")
+
+    def _gate_ok(_text: str) -> "tuple[bool, str]":
+        return True, ""
+
+    quiet = lambda *_a, **_k: None
+    # DiscoPoP's is twice as fast -> its pragma must end up in the kept text
+    text, rec = arbitrate_pragmas(annotated, original, inner, "k.c", _gate_ok,
+                                  lambda b, a: (True, 0.5, ""), log=quiet)
+    if rec[0]["winner"] != "discopop" or "private(j)" not in text or "collapse(2)" in text:
+        return Result(name, "fail", f"DiscoPoP's faster pragma was not taken: {rec}")
+    # within the noise band -> the model's stands
+    text2, rec2 = arbitrate_pragmas(annotated, original, inner, "k.c", _gate_ok,
+                                    lambda b, a: (True, 1.02, ""), log=quiet)
+    if rec2[0]["winner"] != "model" or text2 != annotated:
+        return Result(name, "fail", f"inside the noise band the model's pragma must stand: {rec2}")
+    # DiscoPoP's alternative rejected by the gate -> the model's stands, and it is recorded
+    _t3, rec3 = arbitrate_pragmas(annotated, original, inner, "k.c",
+                                  lambda _t: (False, "race"), lambda b, a: (True, 0.5, ""), log=quiet)
+    if rec3[0]["winner"] != "model" or rec3[0]["reason"] != "discopop_alternative_rejected":
+        return Result(name, "fail", f"a rejected alternative must leave the model's pragma: {rec3}")
+    # the same pragma written by either side is not a collision
+    same = annotated.replace("#pragma omp parallel for collapse(2) shared(A, B)",
+                             "#pragma omp parallel for private(j) shared(A, B)")
+    if pragma_collisions(original, same, inner):
+        return Result(name, "fail", "an identical pragma was reported as a collision")
+    # a loop left to Phase B, as the prompt now asks, is not a collision either
+    if pragma_collisions(original, original, inner):
+        return Result(name, "fail", "an unannotated loop was reported as a collision")
+    return Result(name, "pass", "collision found; faster side taken; noise band, gate rejection "
+                                "and identical/absent pragmas handled")
+
+
 _CHECKS: List[Tuple[str, Callable[[Path], Result]]] = [
     ("impact", check_impact_ranking),
     ("min-impact", check_min_impact),
@@ -2332,6 +2398,7 @@ _CHECKS: List[Tuple[str, Callable[[Path], Result]]] = [
     ("explorer-multi-backedge", check_explorer_multi_backedge),
     ("profiler-else-loop", check_profiler_else_loop),
     ("pragma-sibling-loops", check_pragma_sibling_loops),
+    ("pragma-arbitration", check_pragma_arbitration),
 ]
 
 

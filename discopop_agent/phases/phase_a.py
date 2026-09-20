@@ -36,13 +36,14 @@ from .. import project as project_mod
 from .. import viz
 from ..args import AgentArguments
 from ..evidence import assemble
-from ..gate import _validate_cached, fix_hunk_headers
+from ..gate import _validate_cached, fix_hunk_headers, measure_marginal
 from ..llm import LLMConnectionError, call_llm
+from ..llm.diffs import make_diff
 from ..llm.dep_review import _llm_dep_review
 from ..plan import build_candidates, region_budget, region_fingerprint
 from ..plan.impact import ImpactModel, load_hotspots
-from ..pragmas import (_added_pragmas, _touched_span, changed_span,
-                       check_llm_pragmas, existing_parallel_spans,
+from ..pragmas import (_added_pragmas, _touched_span, arbitrate_pragmas,
+                       changed_span, check_llm_pragmas, existing_parallel_spans,
                        net_new_pragmas)
 from ..profiling import _measure_hotspots, _reprofil, _reprofil_fast
 from ..profiling import fast_refresh
@@ -744,6 +745,49 @@ def phase_a(state: RunState) -> None:
                     continue  # budget already decremented at loop top
 
                 exposed_speedup = outcome.speedup
+
+                # ── Fix 85: who writes the better pragma here? ───────────────
+                # The model may have annotated a loop DiscoPoP had already claimed
+                # (it reaches those loops through an enclosing region, even though
+                # the loops themselves were deferred).  Phase B will then find
+                # nothing to annotate and DiscoPoP's pragma is never measured.
+                # Build it, gate it, time the two against each other, keep the
+                # faster — arbitration needs a measurement, so it runs only where
+                # the run already measures.
+                arb_records: List[Dict[str, Any]] = []
+                if (self_annotated and args.require_speedup
+                        and getattr(evidence, "inner_patterns", None)
+                        and pre_patch_src is not None):
+                    timing_flags = list(getattr(args, "timing_cflags", ()) or ()) or None
+
+                    def _gate_alt(alt_text: str) -> "tuple[bool, str]":
+                        alt_diff = make_diff(src_abs.read_text(), alt_text, args.source_file)
+                        if not alt_diff.strip():
+                            return False, "no change"
+                        res_alt, _c, _b = _validate_cached(
+                            gate_cache, alt_diff, args, reference_output, binary_args,
+                            reference_time, reference_outputs=reference_outputs,
+                            mode="safety",
+                            dep_region=(region.file_id, region.start_line, region.end_line),
+                        )
+                        return res_alt.passed, (res_alt.diagnostic or res_alt.stage or "")
+
+                    def _time_pair(before_text: str, after_text: str) -> "tuple[bool, float, str]":
+                        return measure_marginal(before_text, after_text, args.source_file,
+                                                binary_args, extra_flags=timing_flags)
+
+                    kept_text, arb_records = arbitrate_pragmas(
+                        src_abs.read_text(), pre_patch_src, evidence.inner_patterns,
+                        args.source_file, _gate_alt, _time_pair,
+                        min_ratio=args.min_measured_speedup,
+                    )
+                    if arb_records and kept_text != src_abs.read_text():
+                        src_abs.write_text(kept_text)
+                        clean_diff = fix_hunk_headers(
+                            make_diff(pre_patch_src, kept_text, args.source_file))
+                        pragmas = _added_pragmas(clean_diff)
+                    if arb_records:
+                        record["pragma_arbitration"] = arb_records
 
                 # ── COMMIT ────────────────────────────────────────────────────
                 # Without a re-profile nothing describes the file as it now stands:

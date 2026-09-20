@@ -1,93 +1,187 @@
 {
   "_comment": "Agent configurations ('arms'). Each arm adds its flags on top of the common flags passed by `run` (--provider, --model, --edit-mode). Ids B*/E*/X* refer to claude_project/06-thesis-plan.md and the Restructuring Spine artifact. Change an arm only together with an entry in agent/THESIS_EXPERIMENTS.md.",
-  "_common_flags_comment": "Passed to the agent in EVERY arm, before the arm's own flags. --no-require-speedup: the agent keeps correct parallelizations without timing them; speed is judged only by the harness verification at the per-kernel verification size (THESIS_EXPERIMENTS.md §6, 2026-09-15). At the agent's size kernels run 0.06-15 ms, below thread start-up cost, so the agent's own speed stage measured noise. --min-runtime-share 0.01 (decision D1, 2026-09-16, THESIS_EXPERIMENTS.md §5d): regions below 1% of measured runtime are not attempted, in every arm and in Phase B alike; T0.5 bounds the runtime this can give up at 1.7% in any benchmark (1.2% at the verification size).",
-  "common_flags": ["--no-require-speedup", "--min-runtime-share", "0.01"],
+  "_common_flags_comment": "Passed to the agent in EVERY arm, before the arm's own flags. --no-require-speedup: the agent keeps correct parallelizations without timing them; speed is judged only by the harness verification at the per-kernel verification size (THESIS_EXPERIMENTS.md \u00a76, 2026-09-15). At the agent's size kernels run 0.06-15 ms, below thread start-up cost, so the agent's own speed stage measured noise. --min-runtime-share 0.01 (decision D1, 2026-09-16, THESIS_EXPERIMENTS.md \u00a75d): regions below 1% of measured runtime are not attempted, in every arm and in Phase B alike; T0.5 bounds the runtime this can give up at 1.7% in any benchmark (1.2% at the verification size).",
+  "common_flags": [
+    "--require-speedup",
+    "--min-runtime-share",
+    "0.01"
+  ],
   "arms": {
     "discopop_gate": {
-      "ids": ["B1", "E1"],
-      "description": "DiscoPoP's own suggestions through the agent's gate; no LLM call is ever made (--budget 0).",
-      "flags": ["--budget", "0"]
+      "ids": [
+        "B1",
+        "E1"
+      ],
+      "description": "DiscoPoP's own suggestions through the agent's gate; no LLM call is ever made (--budget 0). THE BASELINE of the main comparison (D19), so it inherits the same fixed configuration as the agent arm and differs from it only in the model: since 2026-09-20 that includes the speed check at the kernel's timing size, which lets it reject a DiscoPoP pragma that makes the program slower. Runs before that date (e10_dp_alone) applied DiscoPoP's pragmas WITHOUT a speed check -- a weaker baseline; see THESIS_EXPERIMENTS 5l.",
+      "flags": [
+        "--budget",
+        "0"
+      ]
     },
     "full": {
-      "ids": ["B5", "E5"],
-      "description": "The agent with its defaults: LLM restructures and writes pragmas, fast refresh, full evidence, full gate.",
-      "flags": []
+      "ids": [
+        "B5",
+        "E5"
+      ],
+      "description": "The agent with the speed check OFF: the LLM restructures and writes pragmas, fast refresh, full evidence, everything of the gate except the timing. This was the campaign default until 2026-09-20; E10 showed it keeps correct-but-slower programs (lu 0.20x, hotspot 0.09x) and was the only arm with an unsafe acceptance, so it is now an EXPERIMENTAL arm, not the default. Kept unchanged so E10's trials stay comparable.",
+      "flags": [
+        "--no-require-speedup"
+      ],
+      "timing_size": "agent"
     },
     "full_b1": {
-      "ids": ["X1-full"],
+      "ids": [
+        "X1-full"
+      ],
       "description": "Defaults with a single LLM attempt per region, so the gate's failure feedback cannot substitute for evidence.",
-      "flags": ["--budget", "1"]
+      "flags": [
+        "--budget",
+        "1"
+      ]
     },
     "no_evidence_b1": {
-      "ids": ["B4", "X1-none"],
+      "ids": [
+        "B4",
+        "X1-none"
+      ],
       "description": "Single attempt, no DiscoPoP evidence in the prompt (source and task only). Paired with full_b1.",
-      "flags": ["--budget", "1", "--evidence", "none"]
+      "flags": [
+        "--budget",
+        "1",
+        "--evidence",
+        "none"
+      ]
     },
     "discopop_annotates": {
-      "ids": ["E2"],
+      "ids": [
+        "E2"
+      ],
       "description": "LLM restructures but may not write pragmas; DiscoPoP's re-discovery decides and Phase B annotates. Full re-profile after every kept rewrite.",
-      "flags": ["--no-llm-pragmas", "--no-fast-refresh"]
+      "flags": [
+        "--no-llm-pragmas",
+        "--no-fast-refresh"
+      ]
     },
     "discopop_pragmas_fast": {
-      "ids": ["E3-matrix"],
+      "ids": [
+        "E3-matrix"
+      ],
       "description": "LLM restructures but may not write pragmas; DiscoPoP's re-discovery decides; fast refresh between rewrites. With discopop_annotates, full and llm_pragmas_full_reprofile this completes the pragma-author x refresh 2x2.",
-      "flags": ["--no-llm-pragmas"]
+      "flags": [
+        "--no-llm-pragmas"
+      ]
     },
     "llm_pragmas_full_reprofile": {
-      "ids": ["E4-matrix"],
+      "ids": [
+        "E4-matrix"
+      ],
       "description": "Defaults (LLM writes pragmas, gate decides) but a full instrumented re-profile after every kept rewrite instead of a fast refresh.",
-      "flags": ["--no-fast-refresh"]
+      "flags": [
+        "--no-fast-refresh"
+      ]
     },
     "discopop_pragmas_recon": {
-      "ids": ["E4"],
+      "ids": [
+        "E4"
+      ],
       "description": "DiscoPoP decides keep/revert from the refreshed profile (--no-llm-pragmas), and the model reconstructs the dependences of the code it just wrote (--llm-recon). Reconstruction only changes a decision in this mode: when the model writes its own pragmas the gate decides and the refreshed profile only relocates the queue.",
-      "flags": ["--no-llm-pragmas", "--llm-recon"]
+      "flags": [
+        "--no-llm-pragmas",
+        "--llm-recon"
+      ]
     },
     "full_depth1": {
-      "ids": ["E8"],
+      "ids": [
+        "E8"
+      ],
       "description": "Defaults, but regions exposed by a kept rewrite may themselves be restructured once more (--restructure-depth 1). Depth-0 rewrites then get a full re-profile; fast refresh applies at the last level only.",
-      "flags": ["--restructure-depth", "1"]
+      "flags": [
+        "--restructure-depth",
+        "1"
+      ]
     },
     "full_depth2": {
-      "ids": ["E8"],
+      "ids": [
+        "E8"
+      ],
       "description": "Defaults with two further restructuring levels (--restructure-depth 2).",
-      "flags": ["--restructure-depth", "2"]
+      "flags": [
+        "--restructure-depth",
+        "2"
+      ]
     },
     "no_evidence": {
-      "ids": ["E2-feedback"],
+      "ids": [
+        "E2-feedback"
+      ],
       "description": "No DiscoPoP evidence in the prompt, full budget (3 attempts): the gate's failure feedback is the only information beyond the source. Paired with full, full_b1 and no_evidence_b1 for the evidence x feedback 2x2.",
-      "flags": ["--evidence", "none"]
+      "flags": [
+        "--evidence",
+        "none"
+      ]
     },
     "discopop_pragmas_llmdeps": {
-      "ids": ["E4-direction"],
-      "description": "DiscoPoP decides from the refreshed profile, and the model may DELETE static dependences it judges spurious in code it just wrote (--llm-deps) — the unsound direction, kept to test the add-vs-delete principle against discopop_pragmas_recon.",
-      "flags": ["--no-llm-pragmas", "--llm-deps"]
+      "ids": [
+        "E4-direction"
+      ],
+      "description": "DiscoPoP decides from the refreshed profile, and the model may DELETE static dependences it judges spurious in code it just wrote (--llm-deps) \u2014 the unsound direction, kept to test the add-vs-delete principle against discopop_pragmas_recon.",
+      "flags": [
+        "--no-llm-pragmas",
+        "--llm-deps"
+      ]
     },
     "discopop_pragmas_recon_folded": {
-      "ids": ["E4-mode"],
+      "ids": [
+        "E4-mode"
+      ],
       "description": "As discopop_pragmas_recon, but the reconstruction request rides on the rewrite call (--llm-recon-mode folded): no extra model call.",
-      "flags": ["--no-llm-pragmas", "--llm-recon", "--llm-recon-mode", "folded"]
+      "flags": [
+        "--no-llm-pragmas",
+        "--llm-recon",
+        "--llm-recon-mode",
+        "folded"
+      ]
     },
     "full_no_hotspots": {
-      "ids": ["E9"],
+      "ids": [
+        "E9"
+      ],
       "description": "Defaults, but regions ranked by DiscoPoP's static workload proxy instead of measured time saved (--no-hotspots).",
-      "flags": ["--no-hotspots"]
+      "flags": [
+        "--no-hotspots"
+      ]
     },
     "speed_gate_large": {
-      "ids": ["E10"],
-      "description": "Defaults with the speed check ON (--require-speedup, overriding the common --no-require-speedup), timed at the kernel's measured timing size (agent/kernel_sizes.json, T0.1) via --timing-cflags; profiling and every correctness check stay at the agent size. Paired with full (check off) and speed_gate_small.",
-      "flags": ["--require-speedup"],
+      "ids": [
+        "E10"
+      ],
+      "description": "The campaign default since 2026-09-20 (D8): the speed check ON, timed at the kernel's measured timing size (agent/kernel_sizes.json, T0.1) via --timing-cflags; profiling and every correctness check stay at the agent size. E1's agent arm. The flags are now inherited from common_flags; they are repeated here so the arm reads the same as when E10 ran it.",
+      "flags": [
+        "--require-speedup"
+      ],
       "timing_size": "per_kernel"
     },
     "speed_gate_small": {
-      "ids": ["E10"],
+      "ids": [
+        "E10"
+      ],
       "description": "Defaults with the speed check ON, timed at the agent size (SMALL) as the agent does without --timing-cflags: measures how many changes the check rejects where kernels run in milliseconds, and whether the harness later finds them faster.",
-      "flags": ["--require-speedup"]
+      "flags": [
+        "--require-speedup"
+      ],
+      "timing_size": "agent"
     },
     "llm_recon": {
-      "ids": ["E6", "RQ6"],
+      "ids": [
+        "E6",
+        "RQ6"
+      ],
       "description": "Defaults plus LLM dependence reconstruction for code it just wrote.",
-      "flags": ["--llm-recon"]
+      "flags": [
+        "--llm-recon"
+      ]
     }
-  }
+  },
+  "common_timing_size": "per_kernel",
+  "common_flags_note": "Fixed configuration every arm inherits. Until 2026-09-20 this was --no-require-speedup (15 Sep: at SMALL sizes kernels run in milliseconds and the check measured noise). E10 settled it: the check ON at the kernel's TIMING size is the only configuration with no unsafe acceptance and no result below DiscoPoP alone, while OFF kept 5 slower programs and 1 BROKEN, and ON at the small size deleted DiscoPoP's own pragmas in 10 of 21 trials. What was wrong in September was the size, not the check. An arm that wants the old behaviour says so explicitly. --min-runtime-share 0.01 is unchanged (D1, from T0.5)."
 }

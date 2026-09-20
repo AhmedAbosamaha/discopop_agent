@@ -1208,7 +1208,7 @@ depends on that value says so.
 |---|---|---|
 | `llm_pragmas = True` | **design argument only, never measured.** The model writes the pragma with the rewrite, so the rewrite is judged on its own merits (clause check, TSan, identical output from the parallel build, measured speed) instead of on whether re-profiling makes DiscoPoP rediscover a pattern | **weakest default in the agent.** E3 decides it; until then every result carries it as a stated condition. Bounded by Fix 85 (below) |
 | `require_speedup = True` (agent) vs `--no-require-speedup` (every campaign arm, 15 Sep) | the campaign turned it off because at SMALL sizes kernels run in milliseconds and the check measured noise | **the campaign default is now wrong by measurement.** E10: the check ON at the kernel's timing size is the only arm with 0 unsafe and 0 lost; OFF keeps 5 slower programs and 1 BROKEN. D8 already moves E1 to `speed_gate_large`; the agent's own default (ON) was right all along, and what was wrong was the SIZE it was measured at |
-| `budget = 3` | was an assumption (D10). **Now measured** over every archived run, Phase-A attempts by number: 1st 40 accepted of 127, 2nd 12 of 91, 3rd **6 of 82**, 4th 2 of 8 (4th/5th exist because build-error retries are refunded) | keep 3, and report the curve: the 3rd attempt costs 82 calls for 6 acceptances (10 % of all acceptances, ~40 % of the calls). The earlier claim "no third attempt ever succeeded" is superseded |
+| `budget = 3` | was an assumption (D10). **Now measured** over every archived run, Phase-A attempts by number: 1st 40 accepted of 127, 2nd 12 of 91, 3rd **6 of 82**, 4th 2 of 8 (4th/5th exist because build-error retries are refunded) | **D10 stands — the default stays 3 in every arm, and the share-weighted policy remains a separate efficiency study (D3); this audit changes the EVIDENCE, not the decision.** Report the curve: the 3rd attempt costs 82 calls for 6 acceptances (10 % of all acceptances, ~40 % of the calls). The earlier claim "no third attempt ever succeeded" is superseded. The 60 acceptances do not calibrate D3, because they come from the evaluation's own benchmarks and a calibration needs a held-out set |
 | `min_measured_speedup = 1.1` | T0.4: serial timing CV ≈ 4 % on the loaded server, so 1.1× is the smallest ratio resolvable; identical to the harness's `FASTER` threshold, so agent and harness cannot disagree | justified |
 | `fast_refresh = True` | feature check `fast-refresh-eq`: the carried-forward dependences agree with a full re-profile on the checked cases; a full re-profile still runs before Phase B and before a deeper level | justified; studied in E3's 2×2 |
 | `hotspots = True` | T0.5: measured time saved ranks regions correctly where the static proxy does not (feature checks `impact`, `mixed-rank`, `hotspot-remap`) | justified; studied in E9 |
@@ -1240,7 +1240,33 @@ must measure both.**
 
 With (2) the agent cannot end below DiscoPoP alone by displacing its pragmas, and the thesis gains
 a directly measured answer to "who writes the better pragma, the model or the analysis tool?" on
-every collision — data E3 would otherwise have to produce separately. Feature check required.
+every collision — data E3 would otherwise have to produce separately.
+
+**Both parts BUILT, 2026-09-20** (agent `FIXES.md` Fix 85; `pragmas/arbitrate.py`, the step in
+`phases/phase_a.py` before COMMIT, the prompt in `llm/render.py`). The winner, the reason and the
+measured ratio are recorded per collision in `candidates.jsonl` as `pragma_arbitration`, so the
+answer is in the data of every run from now on. Arbitration needs a measurement, so it runs where
+the run measures (`--require-speedup`) — which, since the defaults change below, is every arm but
+`full` and the historical ones. Feature check `pragma-arbitration` covers all five outcomes
+(DiscoPoP faster → taken; inside the noise band → the model's stands; DiscoPoP's alternative fails
+the gate → the model's stands, reason recorded; identical pragma → not a collision; loop left to
+Phase B → not a collision), with no model and no compiler.
+
+### The defaults, CHANGED (2026-09-20)
+
+The audit above is not a document; it changed what the campaign runs.
+
+| what | before | now | why |
+|---|---|---|---|
+| `arms.json` `common_flags` | `--no-require-speedup --min-runtime-share 0.01` | **`--require-speedup --min-runtime-share 0.01`** | E10: the check ON at the kernel's timing size is the only configuration with no unsafe acceptance and nothing below DiscoPoP alone; OFF kept 5 slower programs and 1 BROKEN. September's reason (at SMALL sizes the check measures noise) was about the SIZE, not the check |
+| `arms.json` `common_timing_size` | — (per-arm only) | **`per_kernel`** | so every arm added later (E2's evidence arms, E3, E4, E8) inherits the size T0.1 measured, instead of silently inheriting the wrong one |
+| arm `full` | the campaign default | **an experimental arm**, now carrying `--no-require-speedup` and `timing_size: agent` explicitly | its meaning and E10's trials are unchanged; it is simply no longer what a new arm inherits |
+| arm `discopop_gate` | applied DiscoPoP's pragmas with no speed check | **inherits the same configuration as the agent arm** | the baseline must differ from the agent arm ONLY in the model. A baseline deliberately denied the speed check is a weakened one, and comparing against it would inflate our result — exactly what D19 forbids. **This makes our own numbers smaller**: on `lu`, DiscoPoP alone with the check would reject its own 0.21× pragma and end at 1.00×, so the agent's "better ×10" becomes "gained". `e10_dp_alone` used the old, weaker configuration and its `lu` row is labelled accordingly |
+| `--budget 3` | assumed | unchanged, now **measured** (40/127, 12/91, 6/82, 2/8 by attempt) | D10 stands — the default stays 3, the share-weighted policy stays a separate efficiency study (D3). The audit changed the evidence, not the decision |
+| `--llm-pragmas True` | design argument only | unchanged, now **bounded by Fix 85** | E3 decides the default; until then Fix 85 removes the harm (the agent can no longer end below DiscoPoP alone by displacing its pragmas) and makes E3 fair, since today's `--llm-pragmas` arm can silently displace what the `--no-llm-pragmas` arm would have used |
+
+Consequence for E1: its two arms are `discopop_gate` and `speed_gate_large`, both with the speed
+check at the kernel's timing size, differing only in whether a model is called.
 
 ## 6. Change log
 

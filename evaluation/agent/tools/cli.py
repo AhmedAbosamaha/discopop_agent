@@ -216,9 +216,15 @@ def _timing_size(kernel: str) -> str:
     return str(size)
 
 
+def _common_timing_size() -> str:
+    """The timing size every arm inherits (arms.json `common_timing_size`); "per_kernel" since
+    2026-09-20 (D8). An arm overrides it with its own `timing_size`, e.g. "agent"."""
+    return str(json.loads(ARMS_FILE.read_text()).get("common_timing_size", "agent"))
+
+
 def _timing_flags(spec: dict, benchmark: str) -> List[str]:
     """--timing-cflags for arms that time at the benchmark's measured timing size."""
-    if spec.get("timing_size") != "per_kernel":
+    if spec.get("timing_size", _common_timing_size()) != "per_kernel":
         return []
     return [f"--timing-cflags=-D{_timing_size(benchmark)}_DATASET"]
 
@@ -1132,7 +1138,7 @@ def cmd_run(a: argparse.Namespace) -> int:
     # Checked before the run is created: a kernel without a timing size would
     # otherwise stop the run halfway through.
     timing_sizes: Dict[str, str] = {}
-    if any(arms[x].get("timing_size") == "per_kernel" for x in a.arms):
+    if any(arms[x].get("timing_size", _common_timing_size()) == "per_kernel" for x in a.arms):
         timing_sizes = {b: _timing_size(b) for b in wanted}
     verify_sizes = {b: _verify_size(a.verify_size, b)[0] for b in wanted}
     agent_repo = Path(a.agent_repo).resolve()
