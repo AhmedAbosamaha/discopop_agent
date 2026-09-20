@@ -66,10 +66,14 @@ def _numa_nodes() -> List[List[int]]:
     return nodes or [list(range(os.cpu_count() or 1))]
 
 
-def _lane_sets(lane_cores: int, lanes: int) -> List[Tuple[List[int], int]]:
-    """`lanes` disjoint core sets of `lane_cores` cores, filling one NUMA node before the next."""
+def _lane_sets(lane_cores: int, lanes: int, first_node: int = 0) -> List[Tuple[List[int], int]]:
+    """`lanes` disjoint core sets of `lane_cores` cores, filling one NUMA node before the next,
+    starting at `first_node` and wrapping — so the study can be placed on the node that is free."""
     out: List[Tuple[List[int], int]] = []
-    for node_id, cpus in enumerate(_numa_nodes()):
+    nodes = _numa_nodes()
+    order = list(range(first_node, len(nodes))) + list(range(0, first_node))
+    for node_id in order:
+        cpus = nodes[node_id]
         for i in range(0, len(cpus) - lane_cores + 1, lane_cores):
             out.append((cpus[i:i + lane_cores], node_id))
             if len(out) == lanes:
@@ -127,6 +131,12 @@ def main() -> int:
     ap.add_argument("--repeats", type=int, default=10)
     ap.add_argument("--lanes", type=int, default=4)
     ap.add_argument("--lane-cores", type=int, default=12)
+    ap.add_argument("--first-node", type=int, default=0,
+                   help=("NUMA node the first lane sits on (default 0). Set it to the free "
+                         "node when the other one is busy: this tool pins each lane itself, "
+                         "so running it UNDER `numactl --cpunodebind=N` makes every inner "
+                         "pin to another node fail and the `alone` condition collects no "
+                         "samples at all — which is how the 20 Sep pass was lost."))
     ap.add_argument("--threads", type=int, default=12, help="OMP threads for the parallel binary")
     ap.add_argument("--size", default="per_kernel", help="dataset size, or per_kernel (verification size)")
     ap.add_argument("--timeout", type=float, default=900)
@@ -144,7 +154,7 @@ def main() -> int:
     log = open(out / "run.log", "a")
     cxx = cli._find_tool(a.cxx, "AGENT_CXX", cli._CXX_CANDIDATES, "clang++")
     cc = cli._find_tool(a.cc, "AGENT_CC", cli._CC_CANDIDATES, "clang")
-    lanes = _lane_sets(a.lane_cores, a.lanes)
+    lanes = _lane_sets(a.lane_cores, a.lanes, a.first_node)
     started, load0 = time.strftime("%Y-%m-%dT%H:%M:%S"), _load()
     rows: List[dict] = []
     summary: Dict[str, dict] = {}
