@@ -1,0 +1,68 @@
+--- hotspot.cpp
++++ hotspot.cpp
+@@ -5,6 +5,7 @@
+ #include <string.h>
+ #include <math.h>
+ #include <time.h>
++#include <omp.h>
+ 
+ #ifdef PB_FULL_DUMP
+ /* PB_DUMP_FORMAT is the recipe's, because the dump is compared against the ORIGINAL's own
+@@ -250,18 +251,48 @@
+ 	#endif
+ 
+         {
+-            FLOAT* r = result;
+-            FLOAT* t = temp;
+-            for (int i = 0; i < num_iterations ; i++)
++            // Time-stepping has a true recurrence: iteration i+1 must read iteration i's output.
++            // To eliminate storage races, allocate a circular ring of buffers. Each iteration i
++            // computes into buffer (i % NUM_BUFFERS) and reads from buffer ((i-1) % NUM_BUFFERS).
++            // This prevents multiple iterations from writing to the same result/temp arrays.
++            int grid_size = row * col;
++            const int NUM_BUFFERS = 8;
++
++            FLOAT** ring = (FLOAT**)malloc(NUM_BUFFERS * sizeof(FLOAT*));
++            ring[0] = result;
++            ring[1] = temp;
++            for (int b = 2; b < NUM_BUFFERS; b++) {
++                ring[b] = (FLOAT*)malloc(grid_size * sizeof(FLOAT));
++                memcpy(ring[b], result, grid_size * sizeof(FLOAT));
++            }
++
++            #pragma omp parallel for \
++                    shared(ring, power, row, col, Cap_1, Rx_1, Ry_1, Rz_1, step, num_iterations, grid_size)
++            for (int i = 0; i < num_iterations; i++)
+             {
++                int out_idx = i % NUM_BUFFERS;
++                int in_idx = (i - 1 + NUM_BUFFERS) % NUM_BUFFERS;
++
+                 #ifdef VERBOSE
+-                fprintf(stdout, "iteration %d\n", i++);
++                #pragma omp critical
++                fprintf(stdout, "iteration %d\n", i);
+                 #endif
+-                single_iteration(r, t, power, row, col, Cap_1, Rx_1, Ry_1, Rz_1, step);
+-                FLOAT* tmp = t;
+-                t = r;
+-                r = tmp;
+-            }	
++
++                single_iteration(ring[out_idx], ring[in_idx], power, row, col, Cap_1, Rx_1, Ry_1, Rz_1, step);
++            }
++
++            // Copy final answer back to result/temp based on parity.
++            int final_idx = (num_iterations - 1) % NUM_BUFFERS;
++            if (num_iterations % 2 == 1) {
++                memcpy(result, ring[final_idx], grid_size * sizeof(FLOAT));
++            } else {
++                memcpy(temp, ring[final_idx], grid_size * sizeof(FLOAT));
++            }
++
++            for (int b = 2; b < NUM_BUFFERS; b++) {
++                free(ring[b]);
++            }
++            free(ring);
+         }
+ 	#ifdef VERBOSE
+ 	fprintf(stdout, "iteration %d\n", i++);

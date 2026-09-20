@@ -1,0 +1,10 @@
+--- /Users/ahmedsamir/new_benchmark_harness/agent/runs/dp_alone_look_mac/benchmarks/polybench/fdtd-2d/discopop_gate/none/rep1/work/fdtd-2d.c
++++ /Users/ahmedsamir/new_benchmark_harness/agent/runs/dp_alone_look_mac/benchmarks/polybench/fdtd-2d/discopop_gate/none/rep1/work/fdtd-2d.c
+@@ -82,6 +82,7 @@
+ 
+   for(t = 0; t < _PB_TMAX; t++)
+     {
++	#pragma omp parallel for firstprivate(i,ny) shared(ey,hz) 
+       for (j = 0; j < _PB_NY; j++)
+ 	ey[0][j] = _fict_[t];
+       for (i = 1; i < _PB_NX; i++)

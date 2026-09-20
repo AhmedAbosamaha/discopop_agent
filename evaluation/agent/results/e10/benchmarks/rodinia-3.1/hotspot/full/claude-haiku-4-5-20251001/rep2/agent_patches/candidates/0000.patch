@@ -1,0 +1,29 @@
+--- hotspot.cpp
++++ hotspot.cpp
+@@ -250,18 +250,18 @@
+ 	#endif
+ 
+         {
+-            FLOAT* r = result;
+-            FLOAT* t = temp;
+             for (int i = 0; i < num_iterations ; i++)
+             {
+                 #ifdef VERBOSE
+-                fprintf(stdout, "iteration %d\n", i++);
++                fprintf(stdout, "iteration %d\n", i);
+                 #endif
+-                single_iteration(r, t, power, row, col, Cap_1, Rx_1, Ry_1, Rz_1, step);
+-                FLOAT* tmp = t;
+-                t = r;
+-                r = tmp;
+-            }	
++                /* Compute buffer roles from iteration index to eliminate loop-carried
++                   scalar-pointer dependence. Even iterations: read temp, write result.
++                   Odd iterations: read result, write temp. */
++                FLOAT* src = (i & 1) ? result : temp;
++                FLOAT* dst = (i & 1) ? temp : result;
++                single_iteration(dst, src, power, row, col, Cap_1, Rx_1, Ry_1, Rz_1, step);
++            }
+         }
+ 	#ifdef VERBOSE
+ 	fprintf(stdout, "iteration %d\n", i++);

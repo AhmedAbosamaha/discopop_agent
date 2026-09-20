@@ -1,0 +1,58 @@
+{
+  "suite": "burkardt",
+  "kernel": "md",
+  "source": "benchmarks/burkardt/md/md.cpp",
+  "category": "molecular-dynamics",
+  "language": "cpp",
+  "exclude_functions": [
+    "timestamp",
+    "initialize",
+    "r8_uniform_01",
+    "pb_emit",
+    "pb_report",
+    "pb_seed",
+    "pb_uniform",
+    "pb_timer_start",
+    "pb_timer_stop"
+  ],
+  "agent_dataset": "SMALL",
+  "generator_version": 1,
+  "sizes": {
+    "MINI": {
+      "MD_ND": "3",
+      "MD_NP": "50",
+      "MD_STEPS": "10"
+    },
+    "SMALL": {
+      "MD_ND": "3",
+      "MD_NP": "500",
+      "MD_STEPS": "20"
+    },
+    "STANDARD": {
+      "MD_ND": "3",
+      "MD_NP": "1000",
+      "MD_STEPS": "50"
+    },
+    "LARGE": {
+      "MD_ND": "3",
+      "MD_NP": "2000",
+      "MD_STEPS": "100"
+    },
+    "EXTRALARGE": {
+      "MD_ND": "3",
+      "MD_NP": "4000",
+      "MD_STEPS": "200"
+    }
+  },
+  "note": "the force loop in compute() carries a reduction over potential and kinetic energy",
+  "inputs_sha256": "81375c7cd6bd302e8d49d6c9f56eebc8b37d0537ceb58b377f99fe22420961c9",
+  "file": "md.cpp",
+  "layout": "single",
+  "removed": [
+    "4 commented-out OpenMP pragmas (\u00a71a: the model would read the answer)",
+    "omp.h, omp_get_num_procs/omp_get_max_threads banner, omp_get_wtime timing",
+    "timestamp() wall-clock lines and the cout banner",
+    "the original main(), replaced by a fixed-size, seeded driver"
+  ],
+  "output_sha256": "67c0b6db36cad5a786327869cba3c7e67949568b627cf33d729b83d398f5e446"
+}

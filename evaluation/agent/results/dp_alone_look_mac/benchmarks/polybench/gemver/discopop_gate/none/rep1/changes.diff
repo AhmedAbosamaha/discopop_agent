@@ -1,0 +1,12 @@
+--- original.c
++++ final.c
+@@ -91,7 +91,9 @@
+ 
+ #pragma scop
+ 
++ #pragma omp parallel for private(j) shared(x,y) 
+   for (i = 0; i < _PB_N; i++)
++ #pragma omp parallel for firstprivate(i) shared(v1,u1,u2,v2) 
+     for (j = 0; j < _PB_N; j++)
+       A[i][j] = A[i][j] + u1[i] * v1[j] + u2[i] * v2[j];
+ 

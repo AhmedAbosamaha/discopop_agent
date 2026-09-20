@@ -1,0 +1,89 @@
+
+============================================================
+  DiscoPoP Agentic Controller
+============================================================
+  Source         : /home/ahmedabosamaha/new_benchmark_harness/agent/runs/e10/benchmarks/polybench/jacobi-2d-imper/full/claude-haiku-4-5-20251001/rep3/work/jacobi-2d-imper.c
+  DiscoPoP dir   : .discopop
+  Model          : claude-haiku-4-5-20251001
+  Budget         : 3 LLM retries/region (+2 free build fixes)
+  λ penalty      : 1.0
+  Min workload   : 0.0
+  Restruct. depth: 0 (Tier-2 allowed at depth 0–0)
+  Quality gate   : Tier-1 = all but speed, no escalation; Tier-2 = full
+  TSan           : barrier-aware (archer: /usr/lib/llvm-20/lib/libarcher.so)
+  Speedup gate   : OFF (--no-require-speedup)
+  Dry run        : False
+  LLM mode       : claude-haiku-4-5-20251001
+  Edit mode      : direct
+  Re-profiling   : fast refresh (compile only) between rewrites; full before a deeper level and before Phase B
+  Pragmas        : LLM writes them with the rewrite, gate decides (--llm-pragmas)
+============================================================
+
+  Project        : /home/ahmedabosamaha/new_benchmark_harness/agent/runs/e10/benchmarks/polybench/jacobi-2d-imper/full/claude-haiku-4-5-20251001/rep3/work  (2 unit(s): jacobi-2d-imper.c, polybench.c)
+
+  [ok] Captured reference output on 2 inputs (69 bytes, 1.2 ms baseline) for the correctness/performance gates.
+
+  [ok] Numerical noise floor 0 — 6 build variants agreed exactly; output is compared byte-for-byte.
+
+  Hotspots       : measured per-region runtimes are available — 19 region(s) measured, 31.7 ms total, ranking by predicted time saved at 48 threads
+
+  Baseline       : DiscoPoP proposes 5 applicable pattern(s) unaided; 5 of them produce a usable pragma
+                   → the run beats DiscoPoP by ending with more than 5
+
+  Initial candidates
+Region ID    Type           Saves    % run    Hot  Tier  Depth  Name
+--------------------------------------------------------------------------------------
+  1:78       loop          9.3 ms    29.9%    YES     1      0  lines 68–76
+  3:75       function      9.3 ms    29.9%    YES     2      0  kernel_jacobi_2d_imper
+  1:81       loop          6.4 ms    20.7%  MAYBE     1      0  lines 70–72
+  1:84       loop          6.3 ms    20.2%  MAYBE     1      0  lines 71–72
+  1:91       loop          2.9 ms     9.2%  MAYBE     1      0  lines 73–75
+  1:94       loop          2.7 ms     8.6%  MAYBE     1      0  lines 74–75
+
+============================================================
+  PHASE A — restructure  (the source stays pragma-free)
+============================================================
+
+┌─ [depth=0] loop 1:78 (lines 68–76)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] function 3:75 (lines 60–79)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 2 pragma(s) — running quality gate (apply/compile/openmp/TSan/output)
+│           #pragma omp parallel for collapse(2) firstprivate(n)
+│           #pragma omp parallel for collapse(2) firstprivate(n)
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Original backed up → jacobi-2d-imper.c.original
+│  [Tier-2] Applied to jacobi-2d-imper.c
+│  [Tier-2] Fast refresh (compile only, no instrumented run)...
+│           311/311 observed dependences carried forward (0 in rewritten code, 0 no longer present; 132 without callpath state), 9/9 loop trip counts
+│  [Tier-2] 0 survivor(s) rebuilt, 0 new at depth 1
+│  [Tier-2] Kept on its own pragmas: 2 annotated loop(s), gate passed end to end
+└─ ACCEPTED
+
+
+  One full re-profile before Phase B — it annotates from measured dependences, not carried-forward ones.
+
+============================================================
+  PHASE B — annotate  (0 candidate pragma(s))
+============================================================
+
+  DiscoPoP proposes no applicable pattern for the final source.
+
+============================================================
+  SETTLING — verify the finished source, drop what does not hold up
+============================================================
+  [ok] finished source verified — output matches the original
+
+
+============================================================
+  SUMMARY: 1 rewrite(s) kept  |  2 pragma(s) applied (0 DiscoPoP + 2 LLM)  |  0 skipped
+  DiscoPoP unaided: 5 usable pragma(s) in this profile's draw  →  this run: 2   [BELOW, informational]
+    ✓  function 3:75  [Tier-2]  depth=0  2 own pragma(s)
+
+  Results → .discopop/agent_patches/accepted.json
+============================================================
+

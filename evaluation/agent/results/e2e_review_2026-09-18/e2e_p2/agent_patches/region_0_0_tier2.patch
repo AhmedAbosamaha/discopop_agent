@@ -1,0 +1,10 @@
+--- /private/tmp/claude-501/-Users-ahmedsamir-discopop-agent/436822e3-c111-4da4-bd96-90a25b95970d/scratchpad/e2e_p2/src/kern.c
++++ /private/tmp/claude-501/-Users-ahmedsamir-discopop-agent/436822e3-c111-4da4-bd96-90a25b95970d/scratchpad/e2e_p2/src/kern.c
+@@ -4,6 +4,7 @@
+ void kernel(int n)
+ {
+   int i, t;
++  #pragma omp parallel for private(t) firstprivate(n)
+   for (i = 0; i < n; i++)
+     for (t = 1; t < T; t++)
+       a[i][t] = a[i][t-1] * 0.5 + 1.0;

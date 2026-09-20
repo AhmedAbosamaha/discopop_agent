@@ -1,0 +1,42 @@
+--- hotspot.cpp
++++ hotspot.cpp
+@@ -250,18 +250,31 @@
+ 	#endif
+ 
+         {
+-            FLOAT* r = result;
+-            FLOAT* t = temp;
+-            for (int i = 0; i < num_iterations ; i++)
++            /* Declare and initialize src/dst inside the loop, computed from i.
++               This breaks the loop-carried dependence on the pointer variable assignments.
++               Even iterations (i%2==0) read from temp, write to result.
++               Odd iterations (i%2==1) read from result, write to temp.
++               Each iteration determines its buffers independently from i, not from prior iterations. */
++            #pragma omp parallel for
++            for (int i = 0; i < num_iterations; i++)
+             {
++                FLOAT* src, *dst;
++
++                /* First-write: compute buffer assignment based on iteration parity.
++                   No dependence on prior iteration's values; pointer assignments determined solely by i. */
++                if (i % 2 == 0) {
++                    src = temp;
++                    dst = result;
++                } else {
++                    src = result;
++                    dst = temp;
++                }
++
+                 #ifdef VERBOSE
+                 fprintf(stdout, "iteration %d\n", i++);
+                 #endif
+-                single_iteration(r, t, power, row, col, Cap_1, Rx_1, Ry_1, Rz_1, step);
+-                FLOAT* tmp = t;
+-                t = r;
+-                r = tmp;
+-            }	
++                single_iteration(dst, src, power, row, col, Cap_1, Rx_1, Ry_1, Rz_1, step);
++            }
+         }
+ 	#ifdef VERBOSE
+ 	fprintf(stdout, "iteration %d\n", i++);

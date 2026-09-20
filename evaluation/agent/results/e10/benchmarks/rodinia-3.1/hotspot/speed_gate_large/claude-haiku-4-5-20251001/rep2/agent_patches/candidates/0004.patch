@@ -1,0 +1,41 @@
+--- hotspot.cpp
++++ hotspot.cpp
+@@ -5,6 +5,7 @@
+ #include <string.h>
+ #include <math.h>
+ #include <time.h>
++#include <omp.h>
+ 
+ #ifdef PB_FULL_DUMP
+ /* PB_DUMP_FORMAT is the recipe's, because the dump is compared against the ORIGINAL's own
+@@ -252,16 +253,21 @@
+         {
+             FLOAT* r = result;
+             FLOAT* t = temp;
+-            for (int i = 0; i < num_iterations ; i++)
++            #pragma omp parallel for ordered \
++                    shared(r, t, power, row, col, Cap_1, Rx_1, Ry_1, Rz_1, step)
++            for (int i = 0; i < num_iterations; i++)
+             {
+-                #ifdef VERBOSE
+-                fprintf(stdout, "iteration %d\n", i++);
+-                #endif
+-                single_iteration(r, t, power, row, col, Cap_1, Rx_1, Ry_1, Rz_1, step);
+-                FLOAT* tmp = t;
+-                t = r;
+-                r = tmp;
+-            }	
++                #pragma omp ordered
++                {
++                    #ifdef VERBOSE
++                    fprintf(stdout, "iteration %d\n", i);
++                    #endif
++                    single_iteration(r, t, power, row, col, Cap_1, Rx_1, Ry_1, Rz_1, step);
++                    FLOAT* tmp = t;
++                    t = r;
++                    r = tmp;
++                }
++            }
+         }
+ 	#ifdef VERBOSE
+ 	fprintf(stdout, "iteration %d\n", i++);

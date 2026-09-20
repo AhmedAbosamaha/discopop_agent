@@ -1,0 +1,57 @@
+--- seidel-2d.c
++++ seidel-2d.c
+@@ -436,8 +436,52 @@
+   /* Start timer. */
+   polybench_start_instruments;
+ 
+-  /* Run kernel. */
+-  kernel_seidel_2d (tsteps, n, POLYBENCH_ARRAY(A));
++  /* Run kernel - inlined with parallelism exposed. */
++  {
++    int t, i, j;
++    /* Allocate temporary buffer to enable parallelization of i,j loops */
++    DATA_TYPE (*temp)[n + POLYBENCH_PADDING_FACTOR];
++    temp = (DATA_TYPE(*)[n + POLYBENCH_PADDING_FACTOR])
++      polybench_alloc_data((n + POLYBENCH_PADDING_FACTOR) * (n + POLYBENCH_PADDING_FACTOR), sizeof(DATA_TYPE));
++
++    for (t = 0; t <= _PB_TSTEPS - 1; t++) {
++      /* Parallel computation: compute stencil result into temp array.
++         All (i,j) iterations are independent because each writes to a unique temp[i][j]
++         and reads only from the unmodified A array.
++         i: loop induction variable (private to parallel loop)
++         j: loop induction variable (private to parallel loop)
++         t: shared loop variable (constant within this parallel region)
++         A: shared, read-only during this parallel region
++         temp: shared, each iteration writes to distinct temp[i][j]
++         n: shared, constant (array dimension) */
++      #pragma omp parallel for collapse(2) default(shared) schedule(static)
++      for (i = 1; i<= _PB_N - 2; i++) {
++        for (j = 1; j <= _PB_N - 2; j++) {
++          temp[i][j] = ((*A)[i-1][j-1] + (*A)[i-1][j] + (*A)[i-1][j+1]
++                        + (*A)[i][j-1] + (*A)[i][j] + (*A)[i][j+1]
++                        + (*A)[i+1][j-1] + (*A)[i+1][j] + (*A)[i+1][j+1])/9.0;
++        }
++      }
++
++      /* Parallel copy of updated values from temp back to A.
++         All (i,j) iterations are independent because each writes to a unique A[i][j]
++         and reads from a unique temp[i][j].
++         i: loop induction variable (private to parallel loop)
++         j: loop induction variable (private to parallel loop)
++         A: shared, each iteration writes to distinct A[i][j]
++         temp: shared, each iteration reads from distinct temp[i][j]
++         n: shared, constant (array dimension) */
++      #pragma omp parallel for collapse(2) default(shared) schedule(static)
++      for (i = 1; i<= _PB_N - 2; i++) {
++        for (j = 1; j <= _PB_N - 2; j++) {
++          (*A)[i][j] = temp[i][j];
++        }
++      }
++    }
++
++    /* Free temporary buffer */
++    free((void*)temp);
++  }
+ 
+   /* Stop and print timer. */
+   polybench_stop_instruments;

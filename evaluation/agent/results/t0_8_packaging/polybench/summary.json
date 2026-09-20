@@ -1,0 +1,5924 @@
+{
+  "study": "T0.8 packaging equivalence",
+  "host": "rms14562",
+  "rows": [
+    {
+      "benchmark": "2mm",
+      "single_seconds": 4.2,
+      "project_seconds": 3.5,
+      "kernel_deps_single": 125,
+      "kernel_deps_project": 125,
+      "kernel_deps_identical": true,
+      "kernel_deps_only_single": [],
+      "kernel_deps_only_project": [],
+      "deps_single": 147,
+      "deps_project": 148,
+      "deps_only_single": [
+        [
+          "if (!ptr || ret)",
+          "RAW",
+          "int ret = posix_memalign(&ptr, 32, num);",
+          "ret"
+        ],
+        [
+          "if (!ptr || ret)",
+          "RAW",
+          "void* ptr = NULL;",
+          "ptr"
+        ],
+        [
+          "int ret = posix_memalign(&ptr, 32, num);",
+          "RAW",
+          "static void* xmalloc(size_t num)",
+          "num"
+        ],
+        [
+          "return ptr;",
+          "RAW",
+          "void* ptr = NULL;",
+          "ptr"
+        ],
+        [
+          "return xmalloc(val);",
+          "RAW",
+          "val *= elt_size;",
+          "val"
+        ],
+        [
+          "void* ptr = NULL;",
+          "WAR",
+          "return ptr;",
+          "ptr"
+        ]
+      ],
+      "deps_only_project": [
+        [
+          "if (! new || ret)",
+          "RAW",
+          "int ret = posix_memalign (&new, 32, num);",
+          "ret"
+        ],
+        [
+          "if (! new || ret)",
+          "RAW",
+          "void* new = NULL;",
+          "new"
+        ],
+        [
+          "int ret = posix_memalign (&new, 32, num);",
+          "RAW",
+          "xmalloc (size_t num)",
+          "num"
+        ],
+        [
+          "return new;",
+          "RAW",
+          "void* new = NULL;",
+          "new"
+        ],
+        [
+          "return ret;",
+          "RAW",
+          "void* ret = xmalloc (val);",
+          "ret"
+        ],
+        [
+          "void* new = NULL;",
+          "WAR",
+          "return new;",
+          "new"
+        ],
+        [
+          "void* ret = xmalloc (val);",
+          "RAW",
+          "val *= elt_size;",
+          "val"
+        ]
+      ],
+      "deps_identical": false,
+      "blockers_single": [],
+      "blockers_project": [],
+      "blockers_identical": true,
+      "patterns_single": [
+        [
+          "do_all",
+          "PB_PERTURB(A, (NI + POLYBENCH_PADDING_FACTOR) * (NK + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(B, (NK + POLYBENCH_PADDING_FACTOR) * (NJ + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(C, (NL + POLYBENCH_PADDING_FACTOR) * (NJ + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(D, (NI + POLYBENCH_PADDING_FACTOR) * (NL + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(tmp, (NI + POLYBENCH_PADDING_FACTOR) * (NJ + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < _PB_NI; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < ni; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < nk; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < nl; i++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < _PB_NJ; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < _PB_NL; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < nj; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < nk; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < nl; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < nl; j++) {"
+        ],
+        [
+          "do_all",
+          "for (k = 0; k < _PB_NJ; ++k)"
+        ],
+        [
+          "do_all",
+          "for (k = 0; k < _PB_NK; ++k)"
+        ],
+        [
+          "reduction",
+          "for (k = 0; k < _PB_NJ; ++k)"
+        ],
+        [
+          "reduction",
+          "for (k = 0; k < _PB_NK; ++k)"
+        ]
+      ],
+      "patterns_project": [
+        [
+          "do_all",
+          "PB_PERTURB(A, (NI + POLYBENCH_PADDING_FACTOR) * (NK + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(B, (NK + POLYBENCH_PADDING_FACTOR) * (NJ + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(C, (NL + POLYBENCH_PADDING_FACTOR) * (NJ + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(D, (NI + POLYBENCH_PADDING_FACTOR) * (NL + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(tmp, (NI + POLYBENCH_PADDING_FACTOR) * (NJ + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < _PB_NI; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < cs; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < ni; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < nk; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < nl; i++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < _PB_NJ; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < _PB_NL; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < nj; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < nk; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < nl; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < nl; j++) {"
+        ],
+        [
+          "do_all",
+          "for (k = 0; k < _PB_NJ; ++k)"
+        ],
+        [
+          "do_all",
+          "for (k = 0; k < _PB_NK; ++k)"
+        ]
+      ],
+      "patterns_identical": false
+    },
+    {
+      "benchmark": "3mm",
+      "single_seconds": 5.3,
+      "project_seconds": 4.4,
+      "kernel_deps_single": 158,
+      "kernel_deps_project": 158,
+      "kernel_deps_identical": true,
+      "kernel_deps_only_single": [],
+      "kernel_deps_only_project": [],
+      "deps_single": 180,
+      "deps_project": 181,
+      "deps_only_single": [
+        [
+          "if (!ptr || ret)",
+          "RAW",
+          "int ret = posix_memalign(&ptr, 32, num);",
+          "ret"
+        ],
+        [
+          "if (!ptr || ret)",
+          "RAW",
+          "void* ptr = NULL;",
+          "ptr"
+        ],
+        [
+          "int ret = posix_memalign(&ptr, 32, num);",
+          "RAW",
+          "static void* xmalloc(size_t num)",
+          "num"
+        ],
+        [
+          "return ptr;",
+          "RAW",
+          "void* ptr = NULL;",
+          "ptr"
+        ],
+        [
+          "return xmalloc(val);",
+          "RAW",
+          "val *= elt_size;",
+          "val"
+        ],
+        [
+          "void* ptr = NULL;",
+          "WAR",
+          "return ptr;",
+          "ptr"
+        ]
+      ],
+      "deps_only_project": [
+        [
+          "if (! new || ret)",
+          "RAW",
+          "int ret = posix_memalign (&new, 32, num);",
+          "ret"
+        ],
+        [
+          "if (! new || ret)",
+          "RAW",
+          "void* new = NULL;",
+          "new"
+        ],
+        [
+          "int ret = posix_memalign (&new, 32, num);",
+          "RAW",
+          "xmalloc (size_t num)",
+          "num"
+        ],
+        [
+          "return new;",
+          "RAW",
+          "void* new = NULL;",
+          "new"
+        ],
+        [
+          "return ret;",
+          "RAW",
+          "void* ret = xmalloc (val);",
+          "ret"
+        ],
+        [
+          "void* new = NULL;",
+          "WAR",
+          "return new;",
+          "new"
+        ],
+        [
+          "void* ret = xmalloc (val);",
+          "RAW",
+          "val *= elt_size;",
+          "val"
+        ]
+      ],
+      "deps_identical": false,
+      "blockers_single": [],
+      "blockers_project": [],
+      "blockers_identical": true,
+      "patterns_single": [
+        [
+          "do_all",
+          "PB_PERTURB(A, (NI + POLYBENCH_PADDING_FACTOR) * (NK + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(B, (NK + POLYBENCH_PADDING_FACTOR) * (NJ + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(C, (NJ + POLYBENCH_PADDING_FACTOR) * (NM + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(D, (NM + POLYBENCH_PADDING_FACTOR) * (NL + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(E, (NI + POLYBENCH_PADDING_FACTOR) * (NJ + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(F, (NJ + POLYBENCH_PADDING_FACTOR) * (NL + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(G, (NI + POLYBENCH_PADDING_FACTOR) * (NL + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < _PB_NI; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < _PB_NJ; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < ni; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < nj; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < nk; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < nm; i++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < _PB_NJ; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < _PB_NL; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < nj; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < nk; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < nl; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < nl; j++) {"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < nm; j++)"
+        ],
+        [
+          "do_all",
+          "for (k = 0; k < _PB_NJ; ++k)"
+        ],
+        [
+          "do_all",
+          "for (k = 0; k < _PB_NK; ++k)"
+        ],
+        [
+          "do_all",
+          "for (k = 0; k < _PB_NM; ++k)"
+        ],
+        [
+          "reduction",
+          "for (k = 0; k < _PB_NJ; ++k)"
+        ],
+        [
+          "reduction",
+          "for (k = 0; k < _PB_NK; ++k)"
+        ],
+        [
+          "reduction",
+          "for (k = 0; k < _PB_NM; ++k)"
+        ]
+      ],
+      "patterns_project": [
+        [
+          "do_all",
+          "PB_PERTURB(A, (NI + POLYBENCH_PADDING_FACTOR) * (NK + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(B, (NK + POLYBENCH_PADDING_FACTOR) * (NJ + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(C, (NJ + POLYBENCH_PADDING_FACTOR) * (NM + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(D, (NM + POLYBENCH_PADDING_FACTOR) * (NL + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(E, (NI + POLYBENCH_PADDING_FACTOR) * (NJ + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(F, (NJ + POLYBENCH_PADDING_FACTOR) * (NL + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(G, (NI + POLYBENCH_PADDING_FACTOR) * (NL + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < _PB_NI; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < _PB_NJ; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < cs; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < ni; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < nj; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < nk; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < nm; i++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < _PB_NJ; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < _PB_NL; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < nj; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < nk; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < nl; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < nl; j++) {"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < nm; j++)"
+        ],
+        [
+          "do_all",
+          "for (k = 0; k < _PB_NJ; ++k)"
+        ],
+        [
+          "do_all",
+          "for (k = 0; k < _PB_NK; ++k)"
+        ],
+        [
+          "do_all",
+          "for (k = 0; k < _PB_NM; ++k)"
+        ]
+      ],
+      "patterns_identical": false
+    },
+    {
+      "benchmark": "adi",
+      "single_seconds": 1800.1,
+      "error": "single: instrument: timeout"
+    },
+    {
+      "benchmark": "atax",
+      "single_seconds": 2.2,
+      "project_seconds": 2.5,
+      "kernel_deps_single": 73,
+      "kernel_deps_project": 73,
+      "kernel_deps_identical": true,
+      "kernel_deps_only_single": [],
+      "kernel_deps_only_project": [],
+      "deps_single": 95,
+      "deps_project": 96,
+      "deps_only_single": [
+        [
+          "if (!ptr || ret)",
+          "RAW",
+          "int ret = posix_memalign(&ptr, 32, num);",
+          "ret"
+        ],
+        [
+          "if (!ptr || ret)",
+          "RAW",
+          "void* ptr = NULL;",
+          "ptr"
+        ],
+        [
+          "int ret = posix_memalign(&ptr, 32, num);",
+          "RAW",
+          "static void* xmalloc(size_t num)",
+          "num"
+        ],
+        [
+          "return ptr;",
+          "RAW",
+          "void* ptr = NULL;",
+          "ptr"
+        ],
+        [
+          "return xmalloc(val);",
+          "RAW",
+          "val *= elt_size;",
+          "val"
+        ],
+        [
+          "void* ptr = NULL;",
+          "WAR",
+          "return ptr;",
+          "ptr"
+        ]
+      ],
+      "deps_only_project": [
+        [
+          "if (! new || ret)",
+          "RAW",
+          "int ret = posix_memalign (&new, 32, num);",
+          "ret"
+        ],
+        [
+          "if (! new || ret)",
+          "RAW",
+          "void* new = NULL;",
+          "new"
+        ],
+        [
+          "int ret = posix_memalign (&new, 32, num);",
+          "RAW",
+          "xmalloc (size_t num)",
+          "num"
+        ],
+        [
+          "return new;",
+          "RAW",
+          "void* new = NULL;",
+          "new"
+        ],
+        [
+          "return ret;",
+          "RAW",
+          "void* ret = xmalloc (val);",
+          "ret"
+        ],
+        [
+          "void* new = NULL;",
+          "WAR",
+          "return new;",
+          "new"
+        ],
+        [
+          "void* ret = xmalloc (val);",
+          "RAW",
+          "val *= elt_size;",
+          "val"
+        ]
+      ],
+      "deps_identical": false,
+      "blockers_single": [],
+      "blockers_project": [
+        [
+          "tmp",
+          "for (j = 0; j < _PB_NY; j++)",
+          "DYNAMIC_ANALYSIS"
+        ],
+        [
+          "y",
+          "for (i = 0; i < _PB_NX; i++)",
+          "DYNAMIC_ANALYSIS"
+        ],
+        [
+          "y",
+          "for (j = 0; j < _PB_NY; j++)",
+          "DYNAMIC_ANALYSIS"
+        ]
+      ],
+      "blockers_identical": false,
+      "patterns_single": [
+        [
+          "do_all",
+          "PB_PERTURB(A, (NX + POLYBENCH_PADDING_FACTOR) * (NY + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(tmp, (NX + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(x, (NY + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(y, (NY + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < _PB_NX; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < _PB_NY; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < nx; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < nx; i++) {"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < ny; i++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < _PB_NY; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < ny; j++)"
+        ]
+      ],
+      "patterns_project": [
+        [
+          "do_all",
+          "PB_PERTURB(A, (NX + POLYBENCH_PADDING_FACTOR) * (NY + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(tmp, (NX + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(x, (NY + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(y, (NY + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < _PB_NY; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < cs; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < nx; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < nx; i++) {"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < ny; i++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < ny; j++)"
+        ]
+      ],
+      "patterns_identical": false
+    },
+    {
+      "benchmark": "bicg",
+      "single_seconds": 2.4,
+      "project_seconds": 2.6,
+      "kernel_deps_single": 85,
+      "kernel_deps_project": 85,
+      "kernel_deps_identical": true,
+      "kernel_deps_only_single": [],
+      "kernel_deps_only_project": [],
+      "deps_single": 107,
+      "deps_project": 108,
+      "deps_only_single": [
+        [
+          "if (!ptr || ret)",
+          "RAW",
+          "int ret = posix_memalign(&ptr, 32, num);",
+          "ret"
+        ],
+        [
+          "if (!ptr || ret)",
+          "RAW",
+          "void* ptr = NULL;",
+          "ptr"
+        ],
+        [
+          "int ret = posix_memalign(&ptr, 32, num);",
+          "RAW",
+          "static void* xmalloc(size_t num)",
+          "num"
+        ],
+        [
+          "return ptr;",
+          "RAW",
+          "void* ptr = NULL;",
+          "ptr"
+        ],
+        [
+          "return xmalloc(val);",
+          "RAW",
+          "val *= elt_size;",
+          "val"
+        ],
+        [
+          "void* ptr = NULL;",
+          "WAR",
+          "return ptr;",
+          "ptr"
+        ]
+      ],
+      "deps_only_project": [
+        [
+          "if (! new || ret)",
+          "RAW",
+          "int ret = posix_memalign (&new, 32, num);",
+          "ret"
+        ],
+        [
+          "if (! new || ret)",
+          "RAW",
+          "void* new = NULL;",
+          "new"
+        ],
+        [
+          "int ret = posix_memalign (&new, 32, num);",
+          "RAW",
+          "xmalloc (size_t num)",
+          "num"
+        ],
+        [
+          "return new;",
+          "RAW",
+          "void* new = NULL;",
+          "new"
+        ],
+        [
+          "return ret;",
+          "RAW",
+          "void* ret = xmalloc (val);",
+          "ret"
+        ],
+        [
+          "void* new = NULL;",
+          "WAR",
+          "return new;",
+          "new"
+        ],
+        [
+          "void* ret = xmalloc (val);",
+          "RAW",
+          "val *= elt_size;",
+          "val"
+        ]
+      ],
+      "deps_identical": false,
+      "blockers_single": [],
+      "blockers_project": [],
+      "blockers_identical": true,
+      "patterns_single": [
+        [
+          "do_all",
+          "PB_PERTURB(A, (NX + POLYBENCH_PADDING_FACTOR) * (NY + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(p, (NY + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(q, (NX + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(r, (NX + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(s, (NY + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < _PB_NX; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < _PB_NY; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < nx; i++) {"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < ny; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < ny; i++) {"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < _PB_NY; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < ny; j++)"
+        ]
+      ],
+      "patterns_project": [
+        [
+          "do_all",
+          "PB_PERTURB(A, (NX + POLYBENCH_PADDING_FACTOR) * (NY + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(p, (NY + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(q, (NX + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(r, (NX + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(s, (NY + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < _PB_NX; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < _PB_NY; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < cs; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < nx; i++) {"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < ny; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < ny; i++) {"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < _PB_NY; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < ny; j++)"
+        ]
+      ],
+      "patterns_identical": false
+    },
+    {
+      "benchmark": "cholesky",
+      "single_seconds": 2.6,
+      "project_seconds": 2.4,
+      "kernel_deps_single": 89,
+      "kernel_deps_project": 89,
+      "kernel_deps_identical": true,
+      "kernel_deps_only_single": [],
+      "kernel_deps_only_project": [],
+      "deps_single": 111,
+      "deps_project": 112,
+      "deps_only_single": [
+        [
+          "if (!ptr || ret)",
+          "RAW",
+          "int ret = posix_memalign(&ptr, 32, num);",
+          "ret"
+        ],
+        [
+          "if (!ptr || ret)",
+          "RAW",
+          "void* ptr = NULL;",
+          "ptr"
+        ],
+        [
+          "int ret = posix_memalign(&ptr, 32, num);",
+          "RAW",
+          "static void* xmalloc(size_t num)",
+          "num"
+        ],
+        [
+          "return ptr;",
+          "RAW",
+          "void* ptr = NULL;",
+          "ptr"
+        ],
+        [
+          "return xmalloc(val);",
+          "RAW",
+          "val *= elt_size;",
+          "val"
+        ],
+        [
+          "void* ptr = NULL;",
+          "WAR",
+          "return ptr;",
+          "ptr"
+        ]
+      ],
+      "deps_only_project": [
+        [
+          "if (! new || ret)",
+          "RAW",
+          "int ret = posix_memalign (&new, 32, num);",
+          "ret"
+        ],
+        [
+          "if (! new || ret)",
+          "RAW",
+          "void* new = NULL;",
+          "new"
+        ],
+        [
+          "int ret = posix_memalign (&new, 32, num);",
+          "RAW",
+          "xmalloc (size_t num)",
+          "num"
+        ],
+        [
+          "return new;",
+          "RAW",
+          "void* new = NULL;",
+          "new"
+        ],
+        [
+          "return ret;",
+          "RAW",
+          "void* ret = xmalloc (val);",
+          "ret"
+        ],
+        [
+          "void* new = NULL;",
+          "WAR",
+          "return new;",
+          "new"
+        ],
+        [
+          "void* ret = xmalloc (val);",
+          "RAW",
+          "val *= elt_size;",
+          "val"
+        ]
+      ],
+      "deps_identical": false,
+      "blockers_single": [],
+      "blockers_project": [],
+      "blockers_identical": true,
+      "patterns_single": [
+        [
+          "do_all",
+          "PB_PERTURB(A, (N + POLYBENCH_PADDING_FACTOR) * (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(p, (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < _PB_N; ++i)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < n; i++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < n; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < n; j++) {"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j <= i - 1; ++j)"
+        ],
+        [
+          "do_all",
+          "for (j = i + 1; j < _PB_N; ++j)"
+        ],
+        [
+          "do_all",
+          "for (k = 0; k <= i - 1; ++k)"
+        ],
+        [
+          "reduction",
+          "for (j = 0; j <= i - 1; ++j)"
+        ],
+        [
+          "reduction",
+          "for (k = 0; k <= i - 1; ++k)"
+        ]
+      ],
+      "patterns_project": [
+        [
+          "do_all",
+          "PB_PERTURB(A, (N + POLYBENCH_PADDING_FACTOR) * (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(p, (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < _PB_N; ++i)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < cs; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < n; i++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < n; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < n; j++) {"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j <= i - 1; ++j)"
+        ],
+        [
+          "do_all",
+          "for (j = i + 1; j < _PB_N; ++j)"
+        ],
+        [
+          "do_all",
+          "for (k = 0; k <= i - 1; ++k)"
+        ],
+        [
+          "reduction",
+          "for (j = 0; j <= i - 1; ++j)"
+        ],
+        [
+          "reduction",
+          "for (k = 0; k <= i - 1; ++k)"
+        ]
+      ],
+      "patterns_identical": false
+    },
+    {
+      "benchmark": "correlation",
+      "single_seconds": 6.5,
+      "project_seconds": 6.3,
+      "kernel_deps_single": 127,
+      "kernel_deps_project": 127,
+      "kernel_deps_identical": true,
+      "kernel_deps_only_single": [],
+      "kernel_deps_only_project": [],
+      "deps_single": 149,
+      "deps_project": 150,
+      "deps_only_single": [
+        [
+          "if (!ptr || ret)",
+          "RAW",
+          "int ret = posix_memalign(&ptr, 32, num);",
+          "ret"
+        ],
+        [
+          "if (!ptr || ret)",
+          "RAW",
+          "void* ptr = NULL;",
+          "ptr"
+        ],
+        [
+          "int ret = posix_memalign(&ptr, 32, num);",
+          "RAW",
+          "static void* xmalloc(size_t num)",
+          "num"
+        ],
+        [
+          "return ptr;",
+          "RAW",
+          "void* ptr = NULL;",
+          "ptr"
+        ],
+        [
+          "return xmalloc(val);",
+          "RAW",
+          "val *= elt_size;",
+          "val"
+        ],
+        [
+          "void* ptr = NULL;",
+          "WAR",
+          "return ptr;",
+          "ptr"
+        ]
+      ],
+      "deps_only_project": [
+        [
+          "if (! new || ret)",
+          "RAW",
+          "int ret = posix_memalign (&new, 32, num);",
+          "ret"
+        ],
+        [
+          "if (! new || ret)",
+          "RAW",
+          "void* new = NULL;",
+          "new"
+        ],
+        [
+          "int ret = posix_memalign (&new, 32, num);",
+          "RAW",
+          "xmalloc (size_t num)",
+          "num"
+        ],
+        [
+          "return new;",
+          "RAW",
+          "void* new = NULL;",
+          "new"
+        ],
+        [
+          "return ret;",
+          "RAW",
+          "void* ret = xmalloc (val);",
+          "ret"
+        ],
+        [
+          "void* new = NULL;",
+          "WAR",
+          "return new;",
+          "new"
+        ],
+        [
+          "void* ret = xmalloc (val);",
+          "RAW",
+          "val *= elt_size;",
+          "val"
+        ]
+      ],
+      "deps_identical": false,
+      "blockers_single": [
+        [
+          "i",
+          "for (j1 = 0; j1 < _PB_M-1; j1++)",
+          "STATIC_ANALYSIS"
+        ],
+        [
+          "i",
+          "for (j2 = j1+1; j2 < _PB_M; j2++)",
+          "STATIC_ANALYSIS"
+        ]
+      ],
+      "blockers_project": [],
+      "blockers_identical": false,
+      "patterns_single": [
+        [
+          "do_all",
+          "PB_PERTURB(data, (M + POLYBENCH_PADDING_FACTOR) * (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(mean, (M + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(stddev, (M + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(symmat, (M + POLYBENCH_PADDING_FACTOR) * (M + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < _PB_N; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < m; i++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < _PB_M; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < m; j++) {"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < n; j++)"
+        ]
+      ],
+      "patterns_project": [
+        [
+          "do_all",
+          "PB_PERTURB(data, (M + POLYBENCH_PADDING_FACTOR) * (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(mean, (M + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(stddev, (M + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(symmat, (M + POLYBENCH_PADDING_FACTOR) * (M + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < _PB_N; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < cs; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < m; i++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < _PB_M; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < m; j++) {"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < n; j++)"
+        ],
+        [
+          "do_all",
+          "for (j1 = 0; j1 < _PB_M-1; j1++)"
+        ],
+        [
+          "do_all",
+          "for (j2 = j1+1; j2 < _PB_M; j2++)"
+        ]
+      ],
+      "patterns_identical": false
+    },
+    {
+      "benchmark": "covariance",
+      "single_seconds": 6.3,
+      "project_seconds": 6.3,
+      "kernel_deps_single": 88,
+      "kernel_deps_project": 88,
+      "kernel_deps_identical": true,
+      "kernel_deps_only_single": [],
+      "kernel_deps_only_project": [],
+      "deps_single": 110,
+      "deps_project": 111,
+      "deps_only_single": [
+        [
+          "if (!ptr || ret)",
+          "RAW",
+          "int ret = posix_memalign(&ptr, 32, num);",
+          "ret"
+        ],
+        [
+          "if (!ptr || ret)",
+          "RAW",
+          "void* ptr = NULL;",
+          "ptr"
+        ],
+        [
+          "int ret = posix_memalign(&ptr, 32, num);",
+          "RAW",
+          "static void* xmalloc(size_t num)",
+          "num"
+        ],
+        [
+          "return ptr;",
+          "RAW",
+          "void* ptr = NULL;",
+          "ptr"
+        ],
+        [
+          "return xmalloc(val);",
+          "RAW",
+          "val *= elt_size;",
+          "val"
+        ],
+        [
+          "void* ptr = NULL;",
+          "WAR",
+          "return ptr;",
+          "ptr"
+        ]
+      ],
+      "deps_only_project": [
+        [
+          "if (! new || ret)",
+          "RAW",
+          "int ret = posix_memalign (&new, 32, num);",
+          "ret"
+        ],
+        [
+          "if (! new || ret)",
+          "RAW",
+          "void* new = NULL;",
+          "new"
+        ],
+        [
+          "int ret = posix_memalign (&new, 32, num);",
+          "RAW",
+          "xmalloc (size_t num)",
+          "num"
+        ],
+        [
+          "return new;",
+          "RAW",
+          "void* new = NULL;",
+          "new"
+        ],
+        [
+          "return ret;",
+          "RAW",
+          "void* ret = xmalloc (val);",
+          "ret"
+        ],
+        [
+          "void* new = NULL;",
+          "WAR",
+          "return new;",
+          "new"
+        ],
+        [
+          "void* ret = xmalloc (val);",
+          "RAW",
+          "val *= elt_size;",
+          "val"
+        ]
+      ],
+      "deps_identical": false,
+      "blockers_single": [
+        [
+          "mean",
+          "for (i = 0; i < _PB_N; i++)",
+          "DYNAMIC_ANALYSIS"
+        ]
+      ],
+      "blockers_project": [
+        [
+          "mean",
+          "for (i = 0; i < _PB_N; i++)",
+          "DYNAMIC_ANALYSIS"
+        ]
+      ],
+      "blockers_identical": true,
+      "patterns_single": [
+        [
+          "do_all",
+          "PB_PERTURB(data, (M + POLYBENCH_PADDING_FACTOR) * (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(mean, (M + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(symmat, (M + POLYBENCH_PADDING_FACTOR) * (M + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < M; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < _PB_N; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < m; i++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < N; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < _PB_M; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < m; j++) {"
+        ],
+        [
+          "do_all",
+          "for (j1 = 0; j1 < _PB_M; j1++)"
+        ],
+        [
+          "do_all",
+          "for (j2 = j1; j2 < _PB_M; j2++)"
+        ],
+        [
+          "reduction",
+          "for (i = 0; i < _PB_N; i++)"
+        ]
+      ],
+      "patterns_project": [
+        [
+          "do_all",
+          "PB_PERTURB(data, (M + POLYBENCH_PADDING_FACTOR) * (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(mean, (M + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(symmat, (M + POLYBENCH_PADDING_FACTOR) * (M + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < M; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < _PB_N; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < cs; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < m; i++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < N; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < _PB_M; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < m; j++) {"
+        ],
+        [
+          "do_all",
+          "for (j1 = 0; j1 < _PB_M; j1++)"
+        ],
+        [
+          "do_all",
+          "for (j2 = j1; j2 < _PB_M; j2++)"
+        ],
+        [
+          "reduction",
+          "for (i = 0; i < _PB_N; i++)"
+        ]
+      ],
+      "patterns_identical": false
+    },
+    {
+      "benchmark": "doitgen",
+      "single_seconds": 4.1,
+      "project_seconds": 3.4,
+      "kernel_deps_single": 95,
+      "kernel_deps_project": 95,
+      "kernel_deps_identical": true,
+      "kernel_deps_only_single": [],
+      "kernel_deps_only_project": [],
+      "deps_single": 117,
+      "deps_project": 118,
+      "deps_only_single": [
+        [
+          "if (!ptr || ret)",
+          "RAW",
+          "int ret = posix_memalign(&ptr, 32, num);",
+          "ret"
+        ],
+        [
+          "if (!ptr || ret)",
+          "RAW",
+          "void* ptr = NULL;",
+          "ptr"
+        ],
+        [
+          "int ret = posix_memalign(&ptr, 32, num);",
+          "RAW",
+          "static void* xmalloc(size_t num)",
+          "num"
+        ],
+        [
+          "return ptr;",
+          "RAW",
+          "void* ptr = NULL;",
+          "ptr"
+        ],
+        [
+          "return xmalloc(val);",
+          "RAW",
+          "val *= elt_size;",
+          "val"
+        ],
+        [
+          "void* ptr = NULL;",
+          "WAR",
+          "return ptr;",
+          "ptr"
+        ]
+      ],
+      "deps_only_project": [
+        [
+          "if (! new || ret)",
+          "RAW",
+          "int ret = posix_memalign (&new, 32, num);",
+          "ret"
+        ],
+        [
+          "if (! new || ret)",
+          "RAW",
+          "void* new = NULL;",
+          "new"
+        ],
+        [
+          "int ret = posix_memalign (&new, 32, num);",
+          "RAW",
+          "xmalloc (size_t num)",
+          "num"
+        ],
+        [
+          "return new;",
+          "RAW",
+          "void* new = NULL;",
+          "new"
+        ],
+        [
+          "return ret;",
+          "RAW",
+          "void* ret = xmalloc (val);",
+          "ret"
+        ],
+        [
+          "void* new = NULL;",
+          "WAR",
+          "return new;",
+          "new"
+        ],
+        [
+          "void* ret = xmalloc (val);",
+          "RAW",
+          "val *= elt_size;",
+          "val"
+        ]
+      ],
+      "deps_identical": false,
+      "blockers_single": [],
+      "blockers_project": [],
+      "blockers_identical": true,
+      "patterns_single": [
+        [
+          "do_all",
+          "PB_PERTURB(A, (NR + POLYBENCH_PADDING_FACTOR) * (NQ + POLYBENCH_PADDING_FACTOR) * (NP + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(C4, (NP + POLYBENCH_PADDING_FACTOR) * (NP + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(sum, (NR + POLYBENCH_PADDING_FACTOR) * (NQ + POLYBENCH_PADDING_FACTOR) * (NP + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < np; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < nr; i++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < np; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < nq; j++)"
+        ],
+        [
+          "do_all",
+          "for (k = 0; k < np; k++)"
+        ],
+        [
+          "do_all",
+          "for (k = 0; k < np; k++) {"
+        ],
+        [
+          "do_all",
+          "for (p = 0; p < _PB_NP; p++) {"
+        ],
+        [
+          "do_all",
+          "for (p = 0; p < _PB_NR; p++)"
+        ],
+        [
+          "do_all",
+          "for (q = 0; q < _PB_NQ; q++) {"
+        ],
+        [
+          "do_all",
+          "for (r = 0; r < _PB_NR; r++)"
+        ],
+        [
+          "do_all",
+          "for (s = 0; s < _PB_NP; s++)"
+        ]
+      ],
+      "patterns_project": [
+        [
+          "do_all",
+          "PB_PERTURB(A, (NR + POLYBENCH_PADDING_FACTOR) * (NQ + POLYBENCH_PADDING_FACTOR) * (NP + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(C4, (NP + POLYBENCH_PADDING_FACTOR) * (NP + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(sum, (NR + POLYBENCH_PADDING_FACTOR) * (NQ + POLYBENCH_PADDING_FACTOR) * (NP + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < cs; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < np; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < nr; i++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < np; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < nq; j++)"
+        ],
+        [
+          "do_all",
+          "for (k = 0; k < np; k++)"
+        ],
+        [
+          "do_all",
+          "for (k = 0; k < np; k++) {"
+        ],
+        [
+          "do_all",
+          "for (p = 0; p < _PB_NP; p++) {"
+        ],
+        [
+          "do_all",
+          "for (p = 0; p < _PB_NR; p++)"
+        ],
+        [
+          "do_all",
+          "for (q = 0; q < _PB_NQ; q++) {"
+        ],
+        [
+          "do_all",
+          "for (r = 0; r < _PB_NR; r++)"
+        ],
+        [
+          "do_all",
+          "for (s = 0; s < _PB_NP; s++)"
+        ]
+      ],
+      "patterns_identical": false
+    },
+    {
+      "benchmark": "durbin",
+      "single_seconds": 2.5,
+      "project_seconds": 2.6,
+      "kernel_deps_single": 122,
+      "kernel_deps_project": 122,
+      "kernel_deps_identical": true,
+      "kernel_deps_only_single": [],
+      "kernel_deps_only_project": [],
+      "deps_single": 144,
+      "deps_project": 145,
+      "deps_only_single": [
+        [
+          "if (!ptr || ret)",
+          "RAW",
+          "int ret = posix_memalign(&ptr, 32, num);",
+          "ret"
+        ],
+        [
+          "if (!ptr || ret)",
+          "RAW",
+          "void* ptr = NULL;",
+          "ptr"
+        ],
+        [
+          "int ret = posix_memalign(&ptr, 32, num);",
+          "RAW",
+          "static void* xmalloc(size_t num)",
+          "num"
+        ],
+        [
+          "return ptr;",
+          "RAW",
+          "void* ptr = NULL;",
+          "ptr"
+        ],
+        [
+          "return xmalloc(val);",
+          "RAW",
+          "val *= elt_size;",
+          "val"
+        ],
+        [
+          "void* ptr = NULL;",
+          "WAR",
+          "return ptr;",
+          "ptr"
+        ]
+      ],
+      "deps_only_project": [
+        [
+          "if (! new || ret)",
+          "RAW",
+          "int ret = posix_memalign (&new, 32, num);",
+          "ret"
+        ],
+        [
+          "if (! new || ret)",
+          "RAW",
+          "void* new = NULL;",
+          "new"
+        ],
+        [
+          "int ret = posix_memalign (&new, 32, num);",
+          "RAW",
+          "xmalloc (size_t num)",
+          "num"
+        ],
+        [
+          "return new;",
+          "RAW",
+          "void* new = NULL;",
+          "new"
+        ],
+        [
+          "return ret;",
+          "RAW",
+          "void* ret = xmalloc (val);",
+          "ret"
+        ],
+        [
+          "void* new = NULL;",
+          "WAR",
+          "return new;",
+          "new"
+        ],
+        [
+          "void* ret = xmalloc (val);",
+          "RAW",
+          "val *= elt_size;",
+          "val"
+        ]
+      ],
+      "deps_identical": false,
+      "blockers_single": [],
+      "blockers_project": [],
+      "blockers_identical": true,
+      "patterns_single": [
+        [
+          "do_all",
+          "PB_PERTURB(alpha, (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(beta, (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(out, (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(r, (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(sum, (N + POLYBENCH_PADDING_FACTOR) * (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(y, (N + POLYBENCH_PADDING_FACTOR) * (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < _PB_N; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < n; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < n; i++) {"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i <= k - 1; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i <= k-1; i++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < n; j++) {"
+        ],
+        [
+          "do_all",
+          "for (k = 1; k < _PB_N; k++)"
+        ]
+      ],
+      "patterns_project": [
+        [
+          "do_all",
+          "PB_PERTURB(alpha, (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(beta, (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(out, (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(r, (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(sum, (N + POLYBENCH_PADDING_FACTOR) * (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(y, (N + POLYBENCH_PADDING_FACTOR) * (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < _PB_N; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < cs; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < n; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < n; i++) {"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i <= k - 1; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i <= k-1; i++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < n; j++) {"
+        ],
+        [
+          "do_all",
+          "for (k = 1; k < _PB_N; k++)"
+        ]
+      ],
+      "patterns_identical": false
+    },
+    {
+      "benchmark": "dynprog",
+      "single_seconds": 3.0,
+      "project_seconds": 3.2,
+      "kernel_deps_single": 95,
+      "kernel_deps_project": 95,
+      "kernel_deps_identical": true,
+      "kernel_deps_only_single": [],
+      "kernel_deps_only_project": [],
+      "deps_single": 111,
+      "deps_project": 112,
+      "deps_only_single": [
+        [
+          "if (!ptr || ret)",
+          "RAW",
+          "int ret = posix_memalign(&ptr, 32, num);",
+          "ret"
+        ],
+        [
+          "if (!ptr || ret)",
+          "RAW",
+          "void* ptr = NULL;",
+          "ptr"
+        ],
+        [
+          "int ret = posix_memalign(&ptr, 32, num);",
+          "RAW",
+          "static void* xmalloc(size_t num)",
+          "num"
+        ],
+        [
+          "return ptr;",
+          "RAW",
+          "void* ptr = NULL;",
+          "ptr"
+        ],
+        [
+          "return xmalloc(val);",
+          "RAW",
+          "val *= elt_size;",
+          "val"
+        ],
+        [
+          "void* ptr = NULL;",
+          "WAR",
+          "return ptr;",
+          "ptr"
+        ]
+      ],
+      "deps_only_project": [
+        [
+          "if (! new || ret)",
+          "RAW",
+          "int ret = posix_memalign (&new, 32, num);",
+          "ret"
+        ],
+        [
+          "if (! new || ret)",
+          "RAW",
+          "void* new = NULL;",
+          "new"
+        ],
+        [
+          "int ret = posix_memalign (&new, 32, num);",
+          "RAW",
+          "xmalloc (size_t num)",
+          "num"
+        ],
+        [
+          "return new;",
+          "RAW",
+          "void* new = NULL;",
+          "new"
+        ],
+        [
+          "return ret;",
+          "RAW",
+          "void* ret = xmalloc (val);",
+          "ret"
+        ],
+        [
+          "void* new = NULL;",
+          "WAR",
+          "return new;",
+          "new"
+        ],
+        [
+          "void* ret = xmalloc (val);",
+          "RAW",
+          "val *= elt_size;",
+          "val"
+        ]
+      ],
+      "deps_identical": false,
+      "blockers_single": [],
+      "blockers_project": [],
+      "blockers_identical": true,
+      "patterns_single": [
+        [
+          "do_all",
+          "PB_PERTURB(W, (LENGTH + POLYBENCH_PADDING_FACTOR) * (LENGTH + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(c, (LENGTH + POLYBENCH_PADDING_FACTOR) * (LENGTH + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(sum_c, (LENGTH + POLYBENCH_PADDING_FACTOR) * (LENGTH + POLYBENCH_PADDING_FACTOR) * (LENGTH + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < length; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i <= _PB_LENGTH - 1; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i <= _PB_LENGTH - 2; i++)"
+        ],
+        [
+          "do_all",
+          "for (iter = 0; iter < _PB_TSTEPS; iter++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < length; j++) {"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j <= _PB_LENGTH - 1; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = i + 1; j <= _PB_LENGTH - 1; j++)"
+        ],
+        [
+          "do_all",
+          "for (k = i + 1; k <= j-1; k++)"
+        ],
+        [
+          "reduction",
+          "for (iter = 0; iter < _PB_TSTEPS; iter++)"
+        ]
+      ],
+      "patterns_project": [
+        [
+          "do_all",
+          "PB_PERTURB(W, (LENGTH + POLYBENCH_PADDING_FACTOR) * (LENGTH + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(c, (LENGTH + POLYBENCH_PADDING_FACTOR) * (LENGTH + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(sum_c, (LENGTH + POLYBENCH_PADDING_FACTOR) * (LENGTH + POLYBENCH_PADDING_FACTOR) * (LENGTH + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < cs; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < length; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i <= _PB_LENGTH - 1; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i <= _PB_LENGTH - 2; i++)"
+        ],
+        [
+          "do_all",
+          "for (iter = 0; iter < _PB_TSTEPS; iter++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < length; j++) {"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j <= _PB_LENGTH - 1; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = i + 1; j <= _PB_LENGTH - 1; j++)"
+        ],
+        [
+          "do_all",
+          "for (k = i + 1; k <= j-1; k++)"
+        ],
+        [
+          "reduction",
+          "for (iter = 0; iter < _PB_TSTEPS; iter++)"
+        ]
+      ],
+      "patterns_identical": false
+    },
+    {
+      "benchmark": "fdtd-2d",
+      "single_seconds": 6.1,
+      "project_seconds": 5.7,
+      "kernel_deps_single": 126,
+      "kernel_deps_project": 126,
+      "kernel_deps_identical": true,
+      "kernel_deps_only_single": [],
+      "kernel_deps_only_project": [],
+      "deps_single": 148,
+      "deps_project": 149,
+      "deps_only_single": [
+        [
+          "if (!ptr || ret)",
+          "RAW",
+          "int ret = posix_memalign(&ptr, 32, num);",
+          "ret"
+        ],
+        [
+          "if (!ptr || ret)",
+          "RAW",
+          "void* ptr = NULL;",
+          "ptr"
+        ],
+        [
+          "int ret = posix_memalign(&ptr, 32, num);",
+          "RAW",
+          "static void* xmalloc(size_t num)",
+          "num"
+        ],
+        [
+          "return ptr;",
+          "RAW",
+          "void* ptr = NULL;",
+          "ptr"
+        ],
+        [
+          "return xmalloc(val);",
+          "RAW",
+          "val *= elt_size;",
+          "val"
+        ],
+        [
+          "void* ptr = NULL;",
+          "WAR",
+          "return ptr;",
+          "ptr"
+        ]
+      ],
+      "deps_only_project": [
+        [
+          "if (! new || ret)",
+          "RAW",
+          "int ret = posix_memalign (&new, 32, num);",
+          "ret"
+        ],
+        [
+          "if (! new || ret)",
+          "RAW",
+          "void* new = NULL;",
+          "new"
+        ],
+        [
+          "int ret = posix_memalign (&new, 32, num);",
+          "RAW",
+          "xmalloc (size_t num)",
+          "num"
+        ],
+        [
+          "return new;",
+          "RAW",
+          "void* new = NULL;",
+          "new"
+        ],
+        [
+          "return ret;",
+          "RAW",
+          "void* ret = xmalloc (val);",
+          "ret"
+        ],
+        [
+          "void* new = NULL;",
+          "WAR",
+          "return new;",
+          "new"
+        ],
+        [
+          "void* ret = xmalloc (val);",
+          "RAW",
+          "val *= elt_size;",
+          "val"
+        ]
+      ],
+      "deps_identical": false,
+      "blockers_single": [
+        [
+          "j",
+          "for (i = 0; i < _PB_NX; i++)",
+          "STATIC_ANALYSIS"
+        ]
+      ],
+      "blockers_project": [],
+      "blockers_identical": false,
+      "patterns_single": [
+        [
+          "do_all",
+          "PB_PERTURB(_fict_, (TMAX + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(ex, (NX + POLYBENCH_PADDING_FACTOR) * (NY + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(ey, (NX + POLYBENCH_PADDING_FACTOR) * (NY + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(hz, (NX + POLYBENCH_PADDING_FACTOR) * (NY + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < _PB_NX - 1; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < nx; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < tmax; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 1; i < _PB_NX; i++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < _PB_NY - 1; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < _PB_NY; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < ny; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < ny; j++) {"
+        ],
+        [
+          "do_all",
+          "for (j = 1; j < _PB_NY; j++)"
+        ],
+        [
+          "do_all",
+          "for(t = 0; t < _PB_TMAX; t++)"
+        ]
+      ],
+      "patterns_project": [
+        [
+          "do_all",
+          "PB_PERTURB(_fict_, (TMAX + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(ex, (NX + POLYBENCH_PADDING_FACTOR) * (NY + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(ey, (NX + POLYBENCH_PADDING_FACTOR) * (NY + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(hz, (NX + POLYBENCH_PADDING_FACTOR) * (NY + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < _PB_NX - 1; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < _PB_NX; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < cs; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < nx; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < tmax; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 1; i < _PB_NX; i++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < _PB_NY - 1; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < _PB_NY; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < ny; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < ny; j++) {"
+        ],
+        [
+          "do_all",
+          "for (j = 1; j < _PB_NY; j++)"
+        ],
+        [
+          "do_all",
+          "for(t = 0; t < _PB_TMAX; t++)"
+        ]
+      ],
+      "patterns_identical": false
+    },
+    {
+      "benchmark": "fdtd-apml",
+      "single_seconds": 11.3,
+      "project_seconds": 10.6,
+      "kernel_deps_single": 361,
+      "kernel_deps_project": 361,
+      "kernel_deps_identical": true,
+      "kernel_deps_only_single": [],
+      "kernel_deps_only_project": [],
+      "deps_single": 383,
+      "deps_project": 384,
+      "deps_only_single": [
+        [
+          "if (!ptr || ret)",
+          "RAW",
+          "int ret = posix_memalign(&ptr, 32, num);",
+          "ret"
+        ],
+        [
+          "if (!ptr || ret)",
+          "RAW",
+          "void* ptr = NULL;",
+          "ptr"
+        ],
+        [
+          "int ret = posix_memalign(&ptr, 32, num);",
+          "RAW",
+          "static void* xmalloc(size_t num)",
+          "num"
+        ],
+        [
+          "return ptr;",
+          "RAW",
+          "void* ptr = NULL;",
+          "ptr"
+        ],
+        [
+          "return xmalloc(val);",
+          "RAW",
+          "val *= elt_size;",
+          "val"
+        ],
+        [
+          "void* ptr = NULL;",
+          "WAR",
+          "return ptr;",
+          "ptr"
+        ]
+      ],
+      "deps_only_project": [
+        [
+          "if (! new || ret)",
+          "RAW",
+          "int ret = posix_memalign (&new, 32, num);",
+          "ret"
+        ],
+        [
+          "if (! new || ret)",
+          "RAW",
+          "void* new = NULL;",
+          "new"
+        ],
+        [
+          "int ret = posix_memalign (&new, 32, num);",
+          "RAW",
+          "xmalloc (size_t num)",
+          "num"
+        ],
+        [
+          "return new;",
+          "RAW",
+          "void* new = NULL;",
+          "new"
+        ],
+        [
+          "return ret;",
+          "RAW",
+          "void* ret = xmalloc (val);",
+          "ret"
+        ],
+        [
+          "void* new = NULL;",
+          "WAR",
+          "return new;",
+          "new"
+        ],
+        [
+          "void* ret = xmalloc (val);",
+          "RAW",
+          "val *= elt_size;",
+          "val"
+        ]
+      ],
+      "deps_identical": false,
+      "blockers_single": [
+        [
+          "Bza",
+          "for (ix = 0; ix < _PB_CXM; ix++)",
+          "DYNAMIC_ANALYSIS"
+        ],
+        [
+          "Bza",
+          "for (iy = 0; iy < _PB_CYM; iy++)",
+          "DYNAMIC_ANALYSIS"
+        ]
+      ],
+      "blockers_project": [
+        [
+          "Bza",
+          "for (iy = 0; iy < _PB_CYM; iy++)",
+          "DYNAMIC_ANALYSIS"
+        ],
+        [
+          "Hz",
+          "for (ix = 0; ix < _PB_CXM; ix++)",
+          "DYNAMIC_ANALYSIS"
+        ]
+      ],
+      "blockers_identical": false,
+      "patterns_single": [
+        [
+          "do_all",
+          "PB_PERTURB(Ax, (CZ+1 + POLYBENCH_PADDING_FACTOR) * (CYM+1 + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(Bza, (CZ+1 + POLYBENCH_PADDING_FACTOR) * (CYM+1 + POLYBENCH_PADDING_FACTOR) * (CXM+1 + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(Ex, (CZ+1 + POLYBENCH_PADDING_FACTOR) * (CYM+1 + POLYBENCH_PADDING_FACTOR) * (CXM+1 + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(Ey, (CZ+1 + POLYBENCH_PADDING_FACTOR) * (CYM+1 + POLYBENCH_PADDING_FACTOR) * (CXM+1 + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(Hz, (CZ+1 + POLYBENCH_PADDING_FACTOR) * (CYM+1 + POLYBENCH_PADDING_FACTOR) * (CXM+1 + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(Ry, (CZ+1 + POLYBENCH_PADDING_FACTOR) * (CYM+1 + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(clf, (CYM+1 + POLYBENCH_PADDING_FACTOR) * (CXM+1 + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(cxmh, (CXM+1 + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(cxph, (CXM+1 + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(cymh, (CYM+1 + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(cyph, (CYM+1 + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(czm, (CZ+1 + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(czp, (CZ+1 + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(tmp, (CYM+1 + POLYBENCH_PADDING_FACTOR) * (CXM+1 + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i <= cxm; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i <= cym; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i <= cz; i++)"
+        ],
+        [
+          "do_all",
+          "for (ix = 0; ix < _PB_CXM; ix++)"
+        ],
+        [
+          "do_all",
+          "for (iz = 0; iz < _PB_CZ; iz++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j <= cym; j++)"
+        ],
+        [
+          "do_all",
+          "for (k = 0; k <= cxm; k++)"
+        ],
+        [
+          "do_all",
+          "for (k = 0; k <= cxm; k++) {"
+        ]
+      ],
+      "patterns_project": [
+        [
+          "do_all",
+          "PB_PERTURB(Ax, (CZ+1 + POLYBENCH_PADDING_FACTOR) * (CYM+1 + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(Bza, (CZ+1 + POLYBENCH_PADDING_FACTOR) * (CYM+1 + POLYBENCH_PADDING_FACTOR) * (CXM+1 + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(Ex, (CZ+1 + POLYBENCH_PADDING_FACTOR) * (CYM+1 + POLYBENCH_PADDING_FACTOR) * (CXM+1 + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(Ey, (CZ+1 + POLYBENCH_PADDING_FACTOR) * (CYM+1 + POLYBENCH_PADDING_FACTOR) * (CXM+1 + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(Hz, (CZ+1 + POLYBENCH_PADDING_FACTOR) * (CYM+1 + POLYBENCH_PADDING_FACTOR) * (CXM+1 + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(Ry, (CZ+1 + POLYBENCH_PADDING_FACTOR) * (CYM+1 + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(clf, (CYM+1 + POLYBENCH_PADDING_FACTOR) * (CXM+1 + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(cxmh, (CXM+1 + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(cxph, (CXM+1 + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(cymh, (CYM+1 + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(cyph, (CYM+1 + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(czm, (CZ+1 + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(czp, (CZ+1 + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(tmp, (CYM+1 + POLYBENCH_PADDING_FACTOR) * (CXM+1 + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < cs; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i <= cxm; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i <= cym; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i <= cz; i++)"
+        ],
+        [
+          "do_all",
+          "for (ix = 0; ix < _PB_CXM; ix++)"
+        ],
+        [
+          "do_all",
+          "for (iz = 0; iz < _PB_CZ; iz++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j <= cym; j++)"
+        ],
+        [
+          "do_all",
+          "for (k = 0; k <= cxm; k++)"
+        ],
+        [
+          "do_all",
+          "for (k = 0; k <= cxm; k++) {"
+        ]
+      ],
+      "patterns_identical": false
+    },
+    {
+      "benchmark": "floyd-warshall",
+      "single_seconds": 3.2,
+      "project_seconds": 2.6,
+      "kernel_deps_single": 52,
+      "kernel_deps_project": 52,
+      "kernel_deps_identical": true,
+      "kernel_deps_only_single": [],
+      "kernel_deps_only_project": [],
+      "deps_single": 73,
+      "deps_project": 74,
+      "deps_only_single": [
+        [
+          "if (!ptr || ret)",
+          "RAW",
+          "int ret = posix_memalign(&ptr, 32, num);",
+          "ret"
+        ],
+        [
+          "if (!ptr || ret)",
+          "RAW",
+          "void* ptr = NULL;",
+          "ptr"
+        ],
+        [
+          "int ret = posix_memalign(&ptr, 32, num);",
+          "RAW",
+          "static void* xmalloc(size_t num)",
+          "num"
+        ],
+        [
+          "return ptr;",
+          "RAW",
+          "void* ptr = NULL;",
+          "ptr"
+        ],
+        [
+          "return xmalloc(val);",
+          "RAW",
+          "val *= elt_size;",
+          "val"
+        ]
+      ],
+      "deps_only_project": [
+        [
+          "if (! new || ret)",
+          "RAW",
+          "int ret = posix_memalign (&new, 32, num);",
+          "ret"
+        ],
+        [
+          "if (! new || ret)",
+          "RAW",
+          "void* new = NULL;",
+          "new"
+        ],
+        [
+          "int ret = posix_memalign (&new, 32, num);",
+          "RAW",
+          "xmalloc (size_t num)",
+          "num"
+        ],
+        [
+          "return new;",
+          "RAW",
+          "void* new = NULL;",
+          "new"
+        ],
+        [
+          "return ret;",
+          "RAW",
+          "void* ret = xmalloc (val);",
+          "ret"
+        ],
+        [
+          "void* ret = xmalloc (val);",
+          "RAW",
+          "val *= elt_size;",
+          "val"
+        ]
+      ],
+      "deps_identical": false,
+      "blockers_single": [
+        [
+          "path",
+          "for (j = 0; j < _PB_N; j++)",
+          "DYNAMIC_ANALYSIS"
+        ],
+        [
+          "path",
+          "for (k = 0; k < _PB_N; k++)",
+          "DYNAMIC_ANALYSIS"
+        ],
+        [
+          "path",
+          "for(i = 0; i < _PB_N; i++)",
+          "DYNAMIC_ANALYSIS"
+        ]
+      ],
+      "blockers_project": [],
+      "blockers_identical": false,
+      "patterns_single": [
+        [
+          "do_all",
+          "PB_PERTURB(path, (N + POLYBENCH_PADDING_FACTOR) * (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < n; i++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < n; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < n; j++) {"
+        ]
+      ],
+      "patterns_project": [
+        [
+          "do_all",
+          "PB_PERTURB(path, (N + POLYBENCH_PADDING_FACTOR) * (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < cs; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < n; i++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < _PB_N; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < n; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < n; j++) {"
+        ],
+        [
+          "do_all",
+          "for (k = 0; k < _PB_N; k++)"
+        ],
+        [
+          "do_all",
+          "for(i = 0; i < _PB_N; i++)"
+        ]
+      ],
+      "patterns_identical": false
+    },
+    {
+      "benchmark": "gemm",
+      "single_seconds": 2.6,
+      "project_seconds": 2.9,
+      "kernel_deps_single": 85,
+      "kernel_deps_project": 85,
+      "kernel_deps_identical": true,
+      "kernel_deps_only_single": [],
+      "kernel_deps_only_project": [],
+      "deps_single": 107,
+      "deps_project": 108,
+      "deps_only_single": [
+        [
+          "if (!ptr || ret)",
+          "RAW",
+          "int ret = posix_memalign(&ptr, 32, num);",
+          "ret"
+        ],
+        [
+          "if (!ptr || ret)",
+          "RAW",
+          "void* ptr = NULL;",
+          "ptr"
+        ],
+        [
+          "int ret = posix_memalign(&ptr, 32, num);",
+          "RAW",
+          "static void* xmalloc(size_t num)",
+          "num"
+        ],
+        [
+          "return ptr;",
+          "RAW",
+          "void* ptr = NULL;",
+          "ptr"
+        ],
+        [
+          "return xmalloc(val);",
+          "RAW",
+          "val *= elt_size;",
+          "val"
+        ],
+        [
+          "void* ptr = NULL;",
+          "WAR",
+          "return ptr;",
+          "ptr"
+        ]
+      ],
+      "deps_only_project": [
+        [
+          "if (! new || ret)",
+          "RAW",
+          "int ret = posix_memalign (&new, 32, num);",
+          "ret"
+        ],
+        [
+          "if (! new || ret)",
+          "RAW",
+          "void* new = NULL;",
+          "new"
+        ],
+        [
+          "int ret = posix_memalign (&new, 32, num);",
+          "RAW",
+          "xmalloc (size_t num)",
+          "num"
+        ],
+        [
+          "return new;",
+          "RAW",
+          "void* new = NULL;",
+          "new"
+        ],
+        [
+          "return ret;",
+          "RAW",
+          "void* ret = xmalloc (val);",
+          "ret"
+        ],
+        [
+          "void* new = NULL;",
+          "WAR",
+          "return new;",
+          "new"
+        ],
+        [
+          "void* ret = xmalloc (val);",
+          "RAW",
+          "val *= elt_size;",
+          "val"
+        ]
+      ],
+      "deps_identical": false,
+      "blockers_single": [],
+      "blockers_project": [],
+      "blockers_identical": true,
+      "patterns_single": [
+        [
+          "do_all",
+          "PB_PERTURB(A, (NI + POLYBENCH_PADDING_FACTOR) * (NK + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(B, (NK + POLYBENCH_PADDING_FACTOR) * (NJ + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(C, (NI + POLYBENCH_PADDING_FACTOR) * (NJ + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < _PB_NI; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < ni; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < nk; i++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < _PB_NJ; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < nj; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < nj; j++) {"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < nk; j++)"
+        ],
+        [
+          "do_all",
+          "for (k = 0; k < _PB_NK; ++k)"
+        ]
+      ],
+      "patterns_project": [
+        [
+          "do_all",
+          "PB_PERTURB(A, (NI + POLYBENCH_PADDING_FACTOR) * (NK + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(B, (NK + POLYBENCH_PADDING_FACTOR) * (NJ + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(C, (NI + POLYBENCH_PADDING_FACTOR) * (NJ + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < _PB_NI; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < cs; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < ni; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < nk; i++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < _PB_NJ; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < nj; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < nj; j++) {"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < nk; j++)"
+        ],
+        [
+          "do_all",
+          "for (k = 0; k < _PB_NK; ++k)"
+        ]
+      ],
+      "patterns_identical": false
+    },
+    {
+      "benchmark": "gemver",
+      "single_seconds": 3.0,
+      "project_seconds": 3.1,
+      "kernel_deps_single": 111,
+      "kernel_deps_project": 111,
+      "kernel_deps_identical": true,
+      "kernel_deps_only_single": [],
+      "kernel_deps_only_project": [],
+      "deps_single": 133,
+      "deps_project": 134,
+      "deps_only_single": [
+        [
+          "if (!ptr || ret)",
+          "RAW",
+          "int ret = posix_memalign(&ptr, 32, num);",
+          "ret"
+        ],
+        [
+          "if (!ptr || ret)",
+          "RAW",
+          "void* ptr = NULL;",
+          "ptr"
+        ],
+        [
+          "int ret = posix_memalign(&ptr, 32, num);",
+          "RAW",
+          "static void* xmalloc(size_t num)",
+          "num"
+        ],
+        [
+          "return ptr;",
+          "RAW",
+          "void* ptr = NULL;",
+          "ptr"
+        ],
+        [
+          "return xmalloc(val);",
+          "RAW",
+          "val *= elt_size;",
+          "val"
+        ],
+        [
+          "void* ptr = NULL;",
+          "WAR",
+          "return ptr;",
+          "ptr"
+        ]
+      ],
+      "deps_only_project": [
+        [
+          "if (! new || ret)",
+          "RAW",
+          "int ret = posix_memalign (&new, 32, num);",
+          "ret"
+        ],
+        [
+          "if (! new || ret)",
+          "RAW",
+          "void* new = NULL;",
+          "new"
+        ],
+        [
+          "int ret = posix_memalign (&new, 32, num);",
+          "RAW",
+          "xmalloc (size_t num)",
+          "num"
+        ],
+        [
+          "return new;",
+          "RAW",
+          "void* new = NULL;",
+          "new"
+        ],
+        [
+          "return ret;",
+          "RAW",
+          "void* ret = xmalloc (val);",
+          "ret"
+        ],
+        [
+          "void* new = NULL;",
+          "WAR",
+          "return new;",
+          "new"
+        ],
+        [
+          "void* ret = xmalloc (val);",
+          "RAW",
+          "val *= elt_size;",
+          "val"
+        ]
+      ],
+      "deps_identical": false,
+      "blockers_single": [],
+      "blockers_project": [],
+      "blockers_identical": true,
+      "patterns_single": [
+        [
+          "do_all",
+          "PB_PERTURB(A, (N + POLYBENCH_PADDING_FACTOR) * (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(u1, (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(u2, (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(v1, (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(v2, (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(w, (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(x, (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(y, (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(z, (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < _PB_N; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < n; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < n; i++) {"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < _PB_N; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < n; j++)"
+        ]
+      ],
+      "patterns_project": [
+        [
+          "do_all",
+          "PB_PERTURB(A, (N + POLYBENCH_PADDING_FACTOR) * (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(u1, (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(u2, (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(v1, (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(v2, (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(w, (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(x, (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(y, (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(z, (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < _PB_N; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < cs; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < n; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < n; i++) {"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < _PB_N; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < n; j++)"
+        ]
+      ],
+      "patterns_identical": false
+    },
+    {
+      "benchmark": "gesummv",
+      "single_seconds": 2.7,
+      "project_seconds": 2.4,
+      "kernel_deps_single": 81,
+      "kernel_deps_project": 81,
+      "kernel_deps_identical": true,
+      "kernel_deps_only_single": [],
+      "kernel_deps_only_project": [],
+      "deps_single": 103,
+      "deps_project": 104,
+      "deps_only_single": [
+        [
+          "if (!ptr || ret)",
+          "RAW",
+          "int ret = posix_memalign(&ptr, 32, num);",
+          "ret"
+        ],
+        [
+          "if (!ptr || ret)",
+          "RAW",
+          "void* ptr = NULL;",
+          "ptr"
+        ],
+        [
+          "int ret = posix_memalign(&ptr, 32, num);",
+          "RAW",
+          "static void* xmalloc(size_t num)",
+          "num"
+        ],
+        [
+          "return ptr;",
+          "RAW",
+          "void* ptr = NULL;",
+          "ptr"
+        ],
+        [
+          "return xmalloc(val);",
+          "RAW",
+          "val *= elt_size;",
+          "val"
+        ],
+        [
+          "void* ptr = NULL;",
+          "WAR",
+          "return ptr;",
+          "ptr"
+        ]
+      ],
+      "deps_only_project": [
+        [
+          "if (! new || ret)",
+          "RAW",
+          "int ret = posix_memalign (&new, 32, num);",
+          "ret"
+        ],
+        [
+          "if (! new || ret)",
+          "RAW",
+          "void* new = NULL;",
+          "new"
+        ],
+        [
+          "int ret = posix_memalign (&new, 32, num);",
+          "RAW",
+          "xmalloc (size_t num)",
+          "num"
+        ],
+        [
+          "return new;",
+          "RAW",
+          "void* new = NULL;",
+          "new"
+        ],
+        [
+          "return ret;",
+          "RAW",
+          "void* ret = xmalloc (val);",
+          "ret"
+        ],
+        [
+          "void* new = NULL;",
+          "WAR",
+          "return new;",
+          "new"
+        ],
+        [
+          "void* ret = xmalloc (val);",
+          "RAW",
+          "val *= elt_size;",
+          "val"
+        ]
+      ],
+      "deps_identical": false,
+      "blockers_single": [],
+      "blockers_project": [],
+      "blockers_identical": true,
+      "patterns_single": [
+        [
+          "do_all",
+          "PB_PERTURB(A, (N + POLYBENCH_PADDING_FACTOR) * (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(B, (N + POLYBENCH_PADDING_FACTOR) * (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(tmp, (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(x, (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(y, (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < _PB_N; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < n; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < n; i++) {"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < _PB_N; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < n; j++) {"
+        ]
+      ],
+      "patterns_project": [
+        [
+          "do_all",
+          "PB_PERTURB(A, (N + POLYBENCH_PADDING_FACTOR) * (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(B, (N + POLYBENCH_PADDING_FACTOR) * (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(tmp, (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(x, (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(y, (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < _PB_N; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < cs; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < n; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < n; i++) {"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < _PB_N; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < n; j++) {"
+        ]
+      ],
+      "patterns_identical": false
+    },
+    {
+      "benchmark": "gramschmidt",
+      "single_seconds": 3.7,
+      "project_seconds": 3.8,
+      "kernel_deps_single": 123,
+      "kernel_deps_project": 123,
+      "kernel_deps_identical": true,
+      "kernel_deps_only_single": [],
+      "kernel_deps_only_project": [],
+      "deps_single": 145,
+      "deps_project": 146,
+      "deps_only_single": [
+        [
+          "if (!ptr || ret)",
+          "RAW",
+          "int ret = posix_memalign(&ptr, 32, num);",
+          "ret"
+        ],
+        [
+          "if (!ptr || ret)",
+          "RAW",
+          "void* ptr = NULL;",
+          "ptr"
+        ],
+        [
+          "int ret = posix_memalign(&ptr, 32, num);",
+          "RAW",
+          "static void* xmalloc(size_t num)",
+          "num"
+        ],
+        [
+          "return ptr;",
+          "RAW",
+          "void* ptr = NULL;",
+          "ptr"
+        ],
+        [
+          "return xmalloc(val);",
+          "RAW",
+          "val *= elt_size;",
+          "val"
+        ],
+        [
+          "void* ptr = NULL;",
+          "WAR",
+          "return ptr;",
+          "ptr"
+        ]
+      ],
+      "deps_only_project": [
+        [
+          "if (! new || ret)",
+          "RAW",
+          "int ret = posix_memalign (&new, 32, num);",
+          "ret"
+        ],
+        [
+          "if (! new || ret)",
+          "RAW",
+          "void* new = NULL;",
+          "new"
+        ],
+        [
+          "int ret = posix_memalign (&new, 32, num);",
+          "RAW",
+          "xmalloc (size_t num)",
+          "num"
+        ],
+        [
+          "return new;",
+          "RAW",
+          "void* new = NULL;",
+          "new"
+        ],
+        [
+          "return ret;",
+          "RAW",
+          "void* ret = xmalloc (val);",
+          "ret"
+        ],
+        [
+          "void* new = NULL;",
+          "WAR",
+          "return new;",
+          "new"
+        ],
+        [
+          "void* ret = xmalloc (val);",
+          "RAW",
+          "val *= elt_size;",
+          "val"
+        ]
+      ],
+      "deps_identical": false,
+      "blockers_single": [],
+      "blockers_project": [
+        [
+          "A",
+          "for (j = k + 1; j < _PB_NJ; j++)",
+          "DYNAMIC_ANALYSIS"
+        ],
+        [
+          "A",
+          "for (k = 0; k < _PB_NJ; k++)",
+          "DYNAMIC_ANALYSIS"
+        ]
+      ],
+      "blockers_identical": false,
+      "patterns_single": [
+        [
+          "do_all",
+          "PB_PERTURB(A, (NI + POLYBENCH_PADDING_FACTOR) * (NJ + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(Q, (NI + POLYBENCH_PADDING_FACTOR) * (NJ + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(R, (NJ + POLYBENCH_PADDING_FACTOR) * (NJ + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < _PB_NI; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < ni; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < nj; i++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < nj; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < nj; j++) {"
+        ],
+        [
+          "do_all",
+          "for (j = k + 1; j < _PB_NJ; j++)"
+        ],
+        [
+          "do_all",
+          "for (k = 0; k < _PB_NJ; k++)"
+        ],
+        [
+          "reduction",
+          "for (i = 0; i < _PB_NI; i++)"
+        ]
+      ],
+      "patterns_project": [
+        [
+          "do_all",
+          "PB_PERTURB(A, (NI + POLYBENCH_PADDING_FACTOR) * (NJ + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(Q, (NI + POLYBENCH_PADDING_FACTOR) * (NJ + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(R, (NJ + POLYBENCH_PADDING_FACTOR) * (NJ + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < _PB_NI; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < cs; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < ni; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < nj; i++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < nj; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < nj; j++) {"
+        ],
+        [
+          "reduction",
+          "for (i = 0; i < _PB_NI; i++)"
+        ]
+      ],
+      "patterns_identical": false
+    },
+    {
+      "benchmark": "jacobi-1d-imper",
+      "single_seconds": 2.1,
+      "project_seconds": 2.0,
+      "kernel_deps_single": 48,
+      "kernel_deps_project": 48,
+      "kernel_deps_identical": true,
+      "kernel_deps_only_single": [],
+      "kernel_deps_only_project": [],
+      "deps_single": 70,
+      "deps_project": 71,
+      "deps_only_single": [
+        [
+          "if (!ptr || ret)",
+          "RAW",
+          "int ret = posix_memalign(&ptr, 32, num);",
+          "ret"
+        ],
+        [
+          "if (!ptr || ret)",
+          "RAW",
+          "void* ptr = NULL;",
+          "ptr"
+        ],
+        [
+          "int ret = posix_memalign(&ptr, 32, num);",
+          "RAW",
+          "static void* xmalloc(size_t num)",
+          "num"
+        ],
+        [
+          "return ptr;",
+          "RAW",
+          "void* ptr = NULL;",
+          "ptr"
+        ],
+        [
+          "return xmalloc(val);",
+          "RAW",
+          "val *= elt_size;",
+          "val"
+        ],
+        [
+          "void* ptr = NULL;",
+          "WAR",
+          "return ptr;",
+          "ptr"
+        ]
+      ],
+      "deps_only_project": [
+        [
+          "if (! new || ret)",
+          "RAW",
+          "int ret = posix_memalign (&new, 32, num);",
+          "ret"
+        ],
+        [
+          "if (! new || ret)",
+          "RAW",
+          "void* new = NULL;",
+          "new"
+        ],
+        [
+          "int ret = posix_memalign (&new, 32, num);",
+          "RAW",
+          "xmalloc (size_t num)",
+          "num"
+        ],
+        [
+          "return new;",
+          "RAW",
+          "void* new = NULL;",
+          "new"
+        ],
+        [
+          "return ret;",
+          "RAW",
+          "void* ret = xmalloc (val);",
+          "ret"
+        ],
+        [
+          "void* new = NULL;",
+          "WAR",
+          "return new;",
+          "new"
+        ],
+        [
+          "void* ret = xmalloc (val);",
+          "RAW",
+          "val *= elt_size;",
+          "val"
+        ]
+      ],
+      "deps_identical": false,
+      "blockers_single": [
+        [
+          "A",
+          "for (t = 0; t < _PB_TSTEPS; t++)",
+          "DYNAMIC_ANALYSIS"
+        ]
+      ],
+      "blockers_project": [
+        [
+          "A",
+          "for (t = 0; t < _PB_TSTEPS; t++)",
+          "DYNAMIC_ANALYSIS"
+        ]
+      ],
+      "blockers_identical": true,
+      "patterns_single": [
+        [
+          "do_all",
+          "PB_PERTURB(A, (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(B, (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < n; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 1; i < _PB_N - 1; i++)"
+        ],
+        [
+          "do_all",
+          "for (j = 1; j < _PB_N - 1; j++)"
+        ]
+      ],
+      "patterns_project": [
+        [
+          "do_all",
+          "PB_PERTURB(A, (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(B, (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < cs; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < n; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 1; i < _PB_N - 1; i++)"
+        ],
+        [
+          "do_all",
+          "for (j = 1; j < _PB_N - 1; j++)"
+        ]
+      ],
+      "patterns_identical": false
+    },
+    {
+      "benchmark": "jacobi-2d-imper",
+      "single_seconds": 2.9,
+      "project_seconds": 3.3,
+      "kernel_deps_single": 69,
+      "kernel_deps_project": 69,
+      "kernel_deps_identical": true,
+      "kernel_deps_only_single": [],
+      "kernel_deps_only_project": [],
+      "deps_single": 91,
+      "deps_project": 92,
+      "deps_only_single": [
+        [
+          "if (!ptr || ret)",
+          "RAW",
+          "int ret = posix_memalign(&ptr, 32, num);",
+          "ret"
+        ],
+        [
+          "if (!ptr || ret)",
+          "RAW",
+          "void* ptr = NULL;",
+          "ptr"
+        ],
+        [
+          "int ret = posix_memalign(&ptr, 32, num);",
+          "RAW",
+          "static void* xmalloc(size_t num)",
+          "num"
+        ],
+        [
+          "return ptr;",
+          "RAW",
+          "void* ptr = NULL;",
+          "ptr"
+        ],
+        [
+          "return xmalloc(val);",
+          "RAW",
+          "val *= elt_size;",
+          "val"
+        ],
+        [
+          "void* ptr = NULL;",
+          "WAR",
+          "return ptr;",
+          "ptr"
+        ]
+      ],
+      "deps_only_project": [
+        [
+          "if (! new || ret)",
+          "RAW",
+          "int ret = posix_memalign (&new, 32, num);",
+          "ret"
+        ],
+        [
+          "if (! new || ret)",
+          "RAW",
+          "void* new = NULL;",
+          "new"
+        ],
+        [
+          "int ret = posix_memalign (&new, 32, num);",
+          "RAW",
+          "xmalloc (size_t num)",
+          "num"
+        ],
+        [
+          "return new;",
+          "RAW",
+          "void* new = NULL;",
+          "new"
+        ],
+        [
+          "return ret;",
+          "RAW",
+          "void* ret = xmalloc (val);",
+          "ret"
+        ],
+        [
+          "void* new = NULL;",
+          "WAR",
+          "return new;",
+          "new"
+        ],
+        [
+          "void* ret = xmalloc (val);",
+          "RAW",
+          "val *= elt_size;",
+          "val"
+        ]
+      ],
+      "deps_identical": false,
+      "blockers_single": [],
+      "blockers_project": [],
+      "blockers_identical": true,
+      "patterns_single": [
+        [
+          "do_all",
+          "PB_PERTURB(A, (N + POLYBENCH_PADDING_FACTOR) * (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(B, (N + POLYBENCH_PADDING_FACTOR) * (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < n; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 1; i < _PB_N - 1; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 1; i < _PB_N-1; i++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < n; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < n; j++) {"
+        ],
+        [
+          "do_all",
+          "for (j = 1; j < _PB_N - 1; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 1; j < _PB_N-1; j++)"
+        ],
+        [
+          "do_all",
+          "for (t = 0; t < _PB_TSTEPS; t++)"
+        ]
+      ],
+      "patterns_project": [
+        [
+          "do_all",
+          "PB_PERTURB(A, (N + POLYBENCH_PADDING_FACTOR) * (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(B, (N + POLYBENCH_PADDING_FACTOR) * (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < cs; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < n; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 1; i < _PB_N - 1; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 1; i < _PB_N-1; i++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < n; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < n; j++) {"
+        ],
+        [
+          "do_all",
+          "for (j = 1; j < _PB_N - 1; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 1; j < _PB_N-1; j++)"
+        ],
+        [
+          "do_all",
+          "for (t = 0; t < _PB_TSTEPS; t++)"
+        ]
+      ],
+      "patterns_identical": false
+    },
+    {
+      "benchmark": "lu",
+      "single_seconds": 2.5,
+      "project_seconds": 2.3,
+      "kernel_deps_single": 56,
+      "kernel_deps_project": 56,
+      "kernel_deps_identical": true,
+      "kernel_deps_only_single": [],
+      "kernel_deps_only_project": [],
+      "deps_single": 77,
+      "deps_project": 78,
+      "deps_only_single": [
+        [
+          "if (!ptr || ret)",
+          "RAW",
+          "int ret = posix_memalign(&ptr, 32, num);",
+          "ret"
+        ],
+        [
+          "if (!ptr || ret)",
+          "RAW",
+          "void* ptr = NULL;",
+          "ptr"
+        ],
+        [
+          "int ret = posix_memalign(&ptr, 32, num);",
+          "RAW",
+          "static void* xmalloc(size_t num)",
+          "num"
+        ],
+        [
+          "return ptr;",
+          "RAW",
+          "void* ptr = NULL;",
+          "ptr"
+        ],
+        [
+          "return xmalloc(val);",
+          "RAW",
+          "val *= elt_size;",
+          "val"
+        ]
+      ],
+      "deps_only_project": [
+        [
+          "if (! new || ret)",
+          "RAW",
+          "int ret = posix_memalign (&new, 32, num);",
+          "ret"
+        ],
+        [
+          "if (! new || ret)",
+          "RAW",
+          "void* new = NULL;",
+          "new"
+        ],
+        [
+          "int ret = posix_memalign (&new, 32, num);",
+          "RAW",
+          "xmalloc (size_t num)",
+          "num"
+        ],
+        [
+          "return new;",
+          "RAW",
+          "void* new = NULL;",
+          "new"
+        ],
+        [
+          "return ret;",
+          "RAW",
+          "void* ret = xmalloc (val);",
+          "ret"
+        ],
+        [
+          "void* ret = xmalloc (val);",
+          "RAW",
+          "val *= elt_size;",
+          "val"
+        ]
+      ],
+      "deps_identical": false,
+      "blockers_single": [
+        [
+          "A",
+          "for (k = 0; k < _PB_N; k++)",
+          "DYNAMIC_ANALYSIS"
+        ]
+      ],
+      "blockers_project": [
+        [
+          "j",
+          "for(i = k + 1; i < _PB_N; i++)",
+          "STATIC_ANALYSIS"
+        ]
+      ],
+      "blockers_identical": false,
+      "patterns_single": [
+        [
+          "do_all",
+          "PB_PERTURB(A, (N + POLYBENCH_PADDING_FACTOR) * (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < n; i++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < n; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < n; j++) {"
+        ],
+        [
+          "do_all",
+          "for (j = k + 1; j < _PB_N; j++)"
+        ],
+        [
+          "do_all",
+          "for(i = k + 1; i < _PB_N; i++)"
+        ],
+        [
+          "reduction",
+          "for (j = k + 1; j < _PB_N; j++)"
+        ],
+        [
+          "reduction",
+          "for(i = k + 1; i < _PB_N; i++)"
+        ]
+      ],
+      "patterns_project": [
+        [
+          "do_all",
+          "PB_PERTURB(A, (N + POLYBENCH_PADDING_FACTOR) * (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < cs; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < n; i++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < n; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < n; j++) {"
+        ],
+        [
+          "do_all",
+          "for (j = k + 1; j < _PB_N; j++)"
+        ],
+        [
+          "do_all",
+          "for (k = 0; k < _PB_N; k++)"
+        ]
+      ],
+      "patterns_identical": false
+    },
+    {
+      "benchmark": "ludcmp",
+      "single_seconds": 2.9,
+      "project_seconds": 3.2,
+      "kernel_deps_single": 181,
+      "kernel_deps_project": 181,
+      "kernel_deps_identical": true,
+      "kernel_deps_only_single": [],
+      "kernel_deps_only_project": [],
+      "deps_single": 203,
+      "deps_project": 204,
+      "deps_only_single": [
+        [
+          "if (!ptr || ret)",
+          "RAW",
+          "int ret = posix_memalign(&ptr, 32, num);",
+          "ret"
+        ],
+        [
+          "if (!ptr || ret)",
+          "RAW",
+          "void* ptr = NULL;",
+          "ptr"
+        ],
+        [
+          "int ret = posix_memalign(&ptr, 32, num);",
+          "RAW",
+          "static void* xmalloc(size_t num)",
+          "num"
+        ],
+        [
+          "return ptr;",
+          "RAW",
+          "void* ptr = NULL;",
+          "ptr"
+        ],
+        [
+          "return xmalloc(val);",
+          "RAW",
+          "val *= elt_size;",
+          "val"
+        ],
+        [
+          "void* ptr = NULL;",
+          "WAR",
+          "return ptr;",
+          "ptr"
+        ]
+      ],
+      "deps_only_project": [
+        [
+          "if (! new || ret)",
+          "RAW",
+          "int ret = posix_memalign (&new, 32, num);",
+          "ret"
+        ],
+        [
+          "if (! new || ret)",
+          "RAW",
+          "void* new = NULL;",
+          "new"
+        ],
+        [
+          "int ret = posix_memalign (&new, 32, num);",
+          "RAW",
+          "xmalloc (size_t num)",
+          "num"
+        ],
+        [
+          "return new;",
+          "RAW",
+          "void* new = NULL;",
+          "new"
+        ],
+        [
+          "return ret;",
+          "RAW",
+          "void* ret = xmalloc (val);",
+          "ret"
+        ],
+        [
+          "void* new = NULL;",
+          "WAR",
+          "return new;",
+          "new"
+        ],
+        [
+          "void* ret = xmalloc (val);",
+          "RAW",
+          "val *= elt_size;",
+          "val"
+        ]
+      ],
+      "deps_identical": false,
+      "blockers_single": [],
+      "blockers_project": [
+        [
+          "A",
+          "for (i = 0; i < _PB_N; i++)",
+          "DYNAMIC_ANALYSIS"
+        ]
+      ],
+      "blockers_identical": false,
+      "patterns_single": [
+        [
+          "do_all",
+          "PB_PERTURB(A, (N+1 + POLYBENCH_PADDING_FACTOR) * (N+1 + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(b, (N+1 + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(x, (N+1 + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(y, (N+1 + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < _PB_N; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i <= _PB_N - 1; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i <= n; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i <= n; i++) {"
+        ],
+        [
+          "do_all",
+          "for (i = 1; i <= _PB_N; i++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < i; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j <= n; j++) {"
+        ],
+        [
+          "do_all",
+          "for (j = _PB_N - i; j <= _PB_N; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = i+1; j <= _PB_N; j++)"
+        ],
+        [
+          "do_all",
+          "for (k = 0; k < i; k++)"
+        ],
+        [
+          "do_all",
+          "for (k = 0; k <= i; k++)"
+        ],
+        [
+          "reduction",
+          "for (j = 0; j < i; j++)"
+        ],
+        [
+          "reduction",
+          "for (j = _PB_N - i; j <= _PB_N; j++)"
+        ],
+        [
+          "reduction",
+          "for (k = 0; k < i; k++)"
+        ],
+        [
+          "reduction",
+          "for (k = 0; k <= i; k++)"
+        ]
+      ],
+      "patterns_project": [
+        [
+          "do_all",
+          "PB_PERTURB(A, (N+1 + POLYBENCH_PADDING_FACTOR) * (N+1 + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(b, (N+1 + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(x, (N+1 + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(y, (N+1 + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < cs; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i <= _PB_N - 1; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i <= n; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i <= n; i++) {"
+        ],
+        [
+          "do_all",
+          "for (i = 1; i <= _PB_N; i++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j <= n; j++) {"
+        ],
+        [
+          "do_all",
+          "for (j = i+1; j <= _PB_N; j++)"
+        ],
+        [
+          "reduction",
+          "for (j = 0; j < i; j++)"
+        ],
+        [
+          "reduction",
+          "for (j = _PB_N - i; j <= _PB_N; j++)"
+        ],
+        [
+          "reduction",
+          "for (k = 0; k < i; k++)"
+        ],
+        [
+          "reduction",
+          "for (k = 0; k <= i; k++)"
+        ]
+      ],
+      "patterns_identical": false
+    },
+    {
+      "benchmark": "mvt",
+      "single_seconds": 2.3,
+      "project_seconds": 2.5,
+      "kernel_deps_single": 72,
+      "kernel_deps_project": 72,
+      "kernel_deps_identical": true,
+      "kernel_deps_only_single": [],
+      "kernel_deps_only_project": [],
+      "deps_single": 94,
+      "deps_project": 95,
+      "deps_only_single": [
+        [
+          "if (!ptr || ret)",
+          "RAW",
+          "int ret = posix_memalign(&ptr, 32, num);",
+          "ret"
+        ],
+        [
+          "if (!ptr || ret)",
+          "RAW",
+          "void* ptr = NULL;",
+          "ptr"
+        ],
+        [
+          "int ret = posix_memalign(&ptr, 32, num);",
+          "RAW",
+          "static void* xmalloc(size_t num)",
+          "num"
+        ],
+        [
+          "return ptr;",
+          "RAW",
+          "void* ptr = NULL;",
+          "ptr"
+        ],
+        [
+          "return xmalloc(val);",
+          "RAW",
+          "val *= elt_size;",
+          "val"
+        ],
+        [
+          "void* ptr = NULL;",
+          "WAR",
+          "return ptr;",
+          "ptr"
+        ]
+      ],
+      "deps_only_project": [
+        [
+          "if (! new || ret)",
+          "RAW",
+          "int ret = posix_memalign (&new, 32, num);",
+          "ret"
+        ],
+        [
+          "if (! new || ret)",
+          "RAW",
+          "void* new = NULL;",
+          "new"
+        ],
+        [
+          "int ret = posix_memalign (&new, 32, num);",
+          "RAW",
+          "xmalloc (size_t num)",
+          "num"
+        ],
+        [
+          "return new;",
+          "RAW",
+          "void* new = NULL;",
+          "new"
+        ],
+        [
+          "return ret;",
+          "RAW",
+          "void* ret = xmalloc (val);",
+          "ret"
+        ],
+        [
+          "void* new = NULL;",
+          "WAR",
+          "return new;",
+          "new"
+        ],
+        [
+          "void* ret = xmalloc (val);",
+          "RAW",
+          "val *= elt_size;",
+          "val"
+        ]
+      ],
+      "deps_identical": false,
+      "blockers_single": [],
+      "blockers_project": [],
+      "blockers_identical": true,
+      "patterns_single": [
+        [
+          "do_all",
+          "PB_PERTURB(A, (N + POLYBENCH_PADDING_FACTOR) * (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(x1, (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(x2, (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(y_1, (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(y_2, (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < _PB_N; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < n; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < n; i++) {"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < _PB_N; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < n; j++)"
+        ]
+      ],
+      "patterns_project": [
+        [
+          "do_all",
+          "PB_PERTURB(A, (N + POLYBENCH_PADDING_FACTOR) * (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(x1, (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(x2, (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(y_1, (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(y_2, (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < _PB_N; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < cs; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < n; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < n; i++) {"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < _PB_N; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < n; j++)"
+        ]
+      ],
+      "patterns_identical": false
+    },
+    {
+      "benchmark": "reg_detect",
+      "single_seconds": 144.4,
+      "project_seconds": 144.5,
+      "kernel_deps_single": 125,
+      "kernel_deps_project": 125,
+      "kernel_deps_identical": true,
+      "kernel_deps_only_single": [],
+      "kernel_deps_only_project": [],
+      "deps_single": 147,
+      "deps_project": 148,
+      "deps_only_single": [
+        [
+          "if (!ptr || ret)",
+          "RAW",
+          "int ret = posix_memalign(&ptr, 32, num);",
+          "ret"
+        ],
+        [
+          "if (!ptr || ret)",
+          "RAW",
+          "void* ptr = NULL;",
+          "ptr"
+        ],
+        [
+          "int ret = posix_memalign(&ptr, 32, num);",
+          "RAW",
+          "static void* xmalloc(size_t num)",
+          "num"
+        ],
+        [
+          "return ptr;",
+          "RAW",
+          "void* ptr = NULL;",
+          "ptr"
+        ],
+        [
+          "return xmalloc(val);",
+          "RAW",
+          "val *= elt_size;",
+          "val"
+        ],
+        [
+          "void* ptr = NULL;",
+          "WAR",
+          "return ptr;",
+          "ptr"
+        ]
+      ],
+      "deps_only_project": [
+        [
+          "if (! new || ret)",
+          "RAW",
+          "int ret = posix_memalign (&new, 32, num);",
+          "ret"
+        ],
+        [
+          "if (! new || ret)",
+          "RAW",
+          "void* new = NULL;",
+          "new"
+        ],
+        [
+          "int ret = posix_memalign (&new, 32, num);",
+          "RAW",
+          "xmalloc (size_t num)",
+          "num"
+        ],
+        [
+          "return new;",
+          "RAW",
+          "void* new = NULL;",
+          "new"
+        ],
+        [
+          "return ret;",
+          "RAW",
+          "void* ret = xmalloc (val);",
+          "ret"
+        ],
+        [
+          "void* new = NULL;",
+          "WAR",
+          "return new;",
+          "new"
+        ],
+        [
+          "void* ret = xmalloc (val);",
+          "RAW",
+          "val *= elt_size;",
+          "val"
+        ]
+      ],
+      "deps_identical": false,
+      "blockers_single": [],
+      "blockers_project": [
+        [
+          "i",
+          "for (j = 1; j <= _PB_MAXGRID - 1; j++)",
+          "STATIC_ANALYSIS"
+        ]
+      ],
+      "blockers_identical": false,
+      "patterns_single": [
+        [
+          "do_all",
+          "PB_PERTURB(diff, (MAXGRID + POLYBENCH_PADDING_FACTOR) * (MAXGRID + POLYBENCH_PADDING_FACTOR) * (LENGTH + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(mean, (MAXGRID + POLYBENCH_PADDING_FACTOR) * (MAXGRID + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(path, (MAXGRID + POLYBENCH_PADDING_FACTOR) * (MAXGRID + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(sum_diff, (MAXGRID + POLYBENCH_PADDING_FACTOR) * (MAXGRID + POLYBENCH_PADDING_FACTOR) * (LENGTH + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(sum_tang, (MAXGRID + POLYBENCH_PADDING_FACTOR) * (MAXGRID + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "for (cnt = 0; cnt <= _PB_LENGTH - 1; cnt++)"
+        ],
+        [
+          "do_all",
+          "for (cnt = 1; cnt <= _PB_LENGTH - 1; cnt++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < maxgrid; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i <= _PB_MAXGRID - 1; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = j; i <= _PB_MAXGRID - 1; i++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < maxgrid; j++) {"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j <= _PB_MAXGRID - 1; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 1; j <= _PB_MAXGRID - 1; j++)"
+        ],
+        [
+          "do_all",
+          "for (t = 0; t < _PB_NITER; t++)"
+        ]
+      ],
+      "patterns_project": [
+        [
+          "do_all",
+          "PB_PERTURB(diff, (MAXGRID + POLYBENCH_PADDING_FACTOR) * (MAXGRID + POLYBENCH_PADDING_FACTOR) * (LENGTH + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(mean, (MAXGRID + POLYBENCH_PADDING_FACTOR) * (MAXGRID + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(path, (MAXGRID + POLYBENCH_PADDING_FACTOR) * (MAXGRID + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(sum_diff, (MAXGRID + POLYBENCH_PADDING_FACTOR) * (MAXGRID + POLYBENCH_PADDING_FACTOR) * (LENGTH + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(sum_tang, (MAXGRID + POLYBENCH_PADDING_FACTOR) * (MAXGRID + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "for (cnt = 0; cnt <= _PB_LENGTH - 1; cnt++)"
+        ],
+        [
+          "do_all",
+          "for (cnt = 1; cnt <= _PB_LENGTH - 1; cnt++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < cs; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < maxgrid; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i <= _PB_MAXGRID - 1; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = j; i <= _PB_MAXGRID - 1; i++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < maxgrid; j++) {"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j <= _PB_MAXGRID - 1; j++)"
+        ],
+        [
+          "do_all",
+          "for (t = 0; t < _PB_NITER; t++)"
+        ]
+      ],
+      "patterns_identical": false
+    },
+    {
+      "benchmark": "seidel-2d",
+      "single_seconds": 2.6,
+      "project_seconds": 2.8,
+      "kernel_deps_single": 54,
+      "kernel_deps_project": 54,
+      "kernel_deps_identical": true,
+      "kernel_deps_only_single": [],
+      "kernel_deps_only_project": [],
+      "deps_single": 75,
+      "deps_project": 76,
+      "deps_only_single": [
+        [
+          "if (!ptr || ret)",
+          "RAW",
+          "int ret = posix_memalign(&ptr, 32, num);",
+          "ret"
+        ],
+        [
+          "if (!ptr || ret)",
+          "RAW",
+          "void* ptr = NULL;",
+          "ptr"
+        ],
+        [
+          "int ret = posix_memalign(&ptr, 32, num);",
+          "RAW",
+          "static void* xmalloc(size_t num)",
+          "num"
+        ],
+        [
+          "return ptr;",
+          "RAW",
+          "void* ptr = NULL;",
+          "ptr"
+        ],
+        [
+          "return xmalloc(val);",
+          "RAW",
+          "val *= elt_size;",
+          "val"
+        ]
+      ],
+      "deps_only_project": [
+        [
+          "if (! new || ret)",
+          "RAW",
+          "int ret = posix_memalign (&new, 32, num);",
+          "ret"
+        ],
+        [
+          "if (! new || ret)",
+          "RAW",
+          "void* new = NULL;",
+          "new"
+        ],
+        [
+          "int ret = posix_memalign (&new, 32, num);",
+          "RAW",
+          "xmalloc (size_t num)",
+          "num"
+        ],
+        [
+          "return new;",
+          "RAW",
+          "void* new = NULL;",
+          "new"
+        ],
+        [
+          "return ret;",
+          "RAW",
+          "void* ret = xmalloc (val);",
+          "ret"
+        ],
+        [
+          "void* ret = xmalloc (val);",
+          "RAW",
+          "val *= elt_size;",
+          "val"
+        ]
+      ],
+      "deps_identical": false,
+      "blockers_single": [],
+      "blockers_project": [
+        [
+          "A",
+          "for (i = 1; i<= _PB_N - 2; i++)",
+          "DYNAMIC_ANALYSIS"
+        ],
+        [
+          "A",
+          "for (j = 1; j <= _PB_N - 2; j++)",
+          "DYNAMIC_ANALYSIS"
+        ],
+        [
+          "A",
+          "for (t = 0; t <= _PB_TSTEPS - 1; t++)",
+          "DYNAMIC_ANALYSIS"
+        ]
+      ],
+      "blockers_identical": false,
+      "patterns_single": [
+        [
+          "do_all",
+          "PB_PERTURB(A, (N + POLYBENCH_PADDING_FACTOR) * (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < n; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 1; i<= _PB_N - 2; i++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < n; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < n; j++) {"
+        ],
+        [
+          "do_all",
+          "for (j = 1; j <= _PB_N - 2; j++)"
+        ],
+        [
+          "do_all",
+          "for (t = 0; t <= _PB_TSTEPS - 1; t++)"
+        ]
+      ],
+      "patterns_project": [
+        [
+          "do_all",
+          "PB_PERTURB(A, (N + POLYBENCH_PADDING_FACTOR) * (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < cs; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < n; i++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < n; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < n; j++) {"
+        ]
+      ],
+      "patterns_identical": false
+    },
+    {
+      "benchmark": "symm",
+      "single_seconds": 3.1,
+      "project_seconds": 2.7,
+      "kernel_deps_single": 101,
+      "kernel_deps_project": 101,
+      "kernel_deps_identical": true,
+      "kernel_deps_only_single": [],
+      "kernel_deps_only_project": [],
+      "deps_single": 123,
+      "deps_project": 124,
+      "deps_only_single": [
+        [
+          "if (!ptr || ret)",
+          "RAW",
+          "int ret = posix_memalign(&ptr, 32, num);",
+          "ret"
+        ],
+        [
+          "if (!ptr || ret)",
+          "RAW",
+          "void* ptr = NULL;",
+          "ptr"
+        ],
+        [
+          "int ret = posix_memalign(&ptr, 32, num);",
+          "RAW",
+          "static void* xmalloc(size_t num)",
+          "num"
+        ],
+        [
+          "return ptr;",
+          "RAW",
+          "void* ptr = NULL;",
+          "ptr"
+        ],
+        [
+          "return xmalloc(val);",
+          "RAW",
+          "val *= elt_size;",
+          "val"
+        ],
+        [
+          "void* ptr = NULL;",
+          "WAR",
+          "return ptr;",
+          "ptr"
+        ]
+      ],
+      "deps_only_project": [
+        [
+          "if (! new || ret)",
+          "RAW",
+          "int ret = posix_memalign (&new, 32, num);",
+          "ret"
+        ],
+        [
+          "if (! new || ret)",
+          "RAW",
+          "void* new = NULL;",
+          "new"
+        ],
+        [
+          "int ret = posix_memalign (&new, 32, num);",
+          "RAW",
+          "xmalloc (size_t num)",
+          "num"
+        ],
+        [
+          "return new;",
+          "RAW",
+          "void* new = NULL;",
+          "new"
+        ],
+        [
+          "return ret;",
+          "RAW",
+          "void* ret = xmalloc (val);",
+          "ret"
+        ],
+        [
+          "void* new = NULL;",
+          "WAR",
+          "return new;",
+          "new"
+        ],
+        [
+          "void* ret = xmalloc (val);",
+          "RAW",
+          "val *= elt_size;",
+          "val"
+        ]
+      ],
+      "deps_identical": false,
+      "blockers_single": [],
+      "blockers_project": [],
+      "blockers_identical": true,
+      "patterns_single": [
+        [
+          "do_all",
+          "PB_PERTURB(A, (NJ + POLYBENCH_PADDING_FACTOR) * (NJ + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(B, (NI + POLYBENCH_PADDING_FACTOR) * (NJ + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(C, (NI + POLYBENCH_PADDING_FACTOR) * (NJ + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < _PB_NI; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < ni; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < nj; i++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < _PB_NJ; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < nj; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < nj; j++) {"
+        ],
+        [
+          "reduction",
+          "for (k = 0; k < j - 1; k++)"
+        ]
+      ],
+      "patterns_project": [
+        [
+          "do_all",
+          "PB_PERTURB(A, (NJ + POLYBENCH_PADDING_FACTOR) * (NJ + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(B, (NI + POLYBENCH_PADDING_FACTOR) * (NJ + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(C, (NI + POLYBENCH_PADDING_FACTOR) * (NJ + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < _PB_NI; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < cs; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < ni; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < nj; i++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < _PB_NJ; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < nj; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < nj; j++) {"
+        ],
+        [
+          "do_all",
+          "for (k = 0; k < j - 1; k++)"
+        ],
+        [
+          "reduction",
+          "for (k = 0; k < j - 1; k++)"
+        ]
+      ],
+      "patterns_identical": false
+    },
+    {
+      "benchmark": "syr2k",
+      "single_seconds": 2.7,
+      "project_seconds": 2.8,
+      "kernel_deps_single": 88,
+      "kernel_deps_project": 88,
+      "kernel_deps_identical": true,
+      "kernel_deps_only_single": [],
+      "kernel_deps_only_project": [],
+      "deps_single": 110,
+      "deps_project": 111,
+      "deps_only_single": [
+        [
+          "if (!ptr || ret)",
+          "RAW",
+          "int ret = posix_memalign(&ptr, 32, num);",
+          "ret"
+        ],
+        [
+          "if (!ptr || ret)",
+          "RAW",
+          "void* ptr = NULL;",
+          "ptr"
+        ],
+        [
+          "int ret = posix_memalign(&ptr, 32, num);",
+          "RAW",
+          "static void* xmalloc(size_t num)",
+          "num"
+        ],
+        [
+          "return ptr;",
+          "RAW",
+          "void* ptr = NULL;",
+          "ptr"
+        ],
+        [
+          "return xmalloc(val);",
+          "RAW",
+          "val *= elt_size;",
+          "val"
+        ],
+        [
+          "void* ptr = NULL;",
+          "WAR",
+          "return ptr;",
+          "ptr"
+        ]
+      ],
+      "deps_only_project": [
+        [
+          "if (! new || ret)",
+          "RAW",
+          "int ret = posix_memalign (&new, 32, num);",
+          "ret"
+        ],
+        [
+          "if (! new || ret)",
+          "RAW",
+          "void* new = NULL;",
+          "new"
+        ],
+        [
+          "int ret = posix_memalign (&new, 32, num);",
+          "RAW",
+          "xmalloc (size_t num)",
+          "num"
+        ],
+        [
+          "return new;",
+          "RAW",
+          "void* new = NULL;",
+          "new"
+        ],
+        [
+          "return ret;",
+          "RAW",
+          "void* ret = xmalloc (val);",
+          "ret"
+        ],
+        [
+          "void* new = NULL;",
+          "WAR",
+          "return new;",
+          "new"
+        ],
+        [
+          "void* ret = xmalloc (val);",
+          "RAW",
+          "val *= elt_size;",
+          "val"
+        ]
+      ],
+      "deps_identical": false,
+      "blockers_single": [],
+      "blockers_project": [],
+      "blockers_identical": true,
+      "patterns_single": [
+        [
+          "do_all",
+          "PB_PERTURB(A, (NI + POLYBENCH_PADDING_FACTOR) * (NJ + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(B, (NI + POLYBENCH_PADDING_FACTOR) * (NJ + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(C, (NI + POLYBENCH_PADDING_FACTOR) * (NI + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < _PB_NI; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < ni; i++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < _PB_NI; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < ni; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < ni; j++) {"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < nj; j++) {"
+        ],
+        [
+          "do_all",
+          "for (k = 0; k < _PB_NJ; k++)"
+        ]
+      ],
+      "patterns_project": [
+        [
+          "do_all",
+          "PB_PERTURB(A, (NI + POLYBENCH_PADDING_FACTOR) * (NJ + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(B, (NI + POLYBENCH_PADDING_FACTOR) * (NJ + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(C, (NI + POLYBENCH_PADDING_FACTOR) * (NI + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < _PB_NI; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < cs; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < ni; i++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < _PB_NI; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < ni; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < ni; j++) {"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < nj; j++) {"
+        ],
+        [
+          "do_all",
+          "for (k = 0; k < _PB_NJ; k++)"
+        ]
+      ],
+      "patterns_identical": false
+    },
+    {
+      "benchmark": "syrk",
+      "single_seconds": 2.9,
+      "project_seconds": 2.6,
+      "kernel_deps_single": 71,
+      "kernel_deps_project": 71,
+      "kernel_deps_identical": true,
+      "kernel_deps_only_single": [],
+      "kernel_deps_only_project": [],
+      "deps_single": 93,
+      "deps_project": 94,
+      "deps_only_single": [
+        [
+          "if (!ptr || ret)",
+          "RAW",
+          "int ret = posix_memalign(&ptr, 32, num);",
+          "ret"
+        ],
+        [
+          "if (!ptr || ret)",
+          "RAW",
+          "void* ptr = NULL;",
+          "ptr"
+        ],
+        [
+          "int ret = posix_memalign(&ptr, 32, num);",
+          "RAW",
+          "static void* xmalloc(size_t num)",
+          "num"
+        ],
+        [
+          "return ptr;",
+          "RAW",
+          "void* ptr = NULL;",
+          "ptr"
+        ],
+        [
+          "return xmalloc(val);",
+          "RAW",
+          "val *= elt_size;",
+          "val"
+        ],
+        [
+          "void* ptr = NULL;",
+          "WAR",
+          "return ptr;",
+          "ptr"
+        ]
+      ],
+      "deps_only_project": [
+        [
+          "if (! new || ret)",
+          "RAW",
+          "int ret = posix_memalign (&new, 32, num);",
+          "ret"
+        ],
+        [
+          "if (! new || ret)",
+          "RAW",
+          "void* new = NULL;",
+          "new"
+        ],
+        [
+          "int ret = posix_memalign (&new, 32, num);",
+          "RAW",
+          "xmalloc (size_t num)",
+          "num"
+        ],
+        [
+          "return new;",
+          "RAW",
+          "void* new = NULL;",
+          "new"
+        ],
+        [
+          "return ret;",
+          "RAW",
+          "void* ret = xmalloc (val);",
+          "ret"
+        ],
+        [
+          "void* new = NULL;",
+          "WAR",
+          "return new;",
+          "new"
+        ],
+        [
+          "void* ret = xmalloc (val);",
+          "RAW",
+          "val *= elt_size;",
+          "val"
+        ]
+      ],
+      "deps_identical": false,
+      "blockers_single": [],
+      "blockers_project": [],
+      "blockers_identical": true,
+      "patterns_single": [
+        [
+          "do_all",
+          "PB_PERTURB(A, (NI + POLYBENCH_PADDING_FACTOR) * (NJ + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(C, (NI + POLYBENCH_PADDING_FACTOR) * (NI + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < _PB_NI; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < ni; i++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < _PB_NI; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < ni; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < ni; j++) {"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < nj; j++)"
+        ],
+        [
+          "do_all",
+          "for (k = 0; k < _PB_NJ; k++)"
+        ],
+        [
+          "reduction",
+          "for (k = 0; k < _PB_NJ; k++)"
+        ]
+      ],
+      "patterns_project": [
+        [
+          "do_all",
+          "PB_PERTURB(A, (NI + POLYBENCH_PADDING_FACTOR) * (NJ + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(C, (NI + POLYBENCH_PADDING_FACTOR) * (NI + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < _PB_NI; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < cs; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < ni; i++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < _PB_NI; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < ni; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < ni; j++) {"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < nj; j++)"
+        ],
+        [
+          "do_all",
+          "for (k = 0; k < _PB_NJ; k++)"
+        ]
+      ],
+      "patterns_identical": false
+    },
+    {
+      "benchmark": "trisolv",
+      "single_seconds": 2.0,
+      "project_seconds": 2.1,
+      "kernel_deps_single": 62,
+      "kernel_deps_project": 62,
+      "kernel_deps_identical": true,
+      "kernel_deps_only_single": [],
+      "kernel_deps_only_project": [],
+      "deps_single": 84,
+      "deps_project": 85,
+      "deps_only_single": [
+        [
+          "if (!ptr || ret)",
+          "RAW",
+          "int ret = posix_memalign(&ptr, 32, num);",
+          "ret"
+        ],
+        [
+          "if (!ptr || ret)",
+          "RAW",
+          "void* ptr = NULL;",
+          "ptr"
+        ],
+        [
+          "int ret = posix_memalign(&ptr, 32, num);",
+          "RAW",
+          "static void* xmalloc(size_t num)",
+          "num"
+        ],
+        [
+          "return ptr;",
+          "RAW",
+          "void* ptr = NULL;",
+          "ptr"
+        ],
+        [
+          "return xmalloc(val);",
+          "RAW",
+          "val *= elt_size;",
+          "val"
+        ],
+        [
+          "void* ptr = NULL;",
+          "WAR",
+          "return ptr;",
+          "ptr"
+        ]
+      ],
+      "deps_only_project": [
+        [
+          "if (! new || ret)",
+          "RAW",
+          "int ret = posix_memalign (&new, 32, num);",
+          "ret"
+        ],
+        [
+          "if (! new || ret)",
+          "RAW",
+          "void* new = NULL;",
+          "new"
+        ],
+        [
+          "int ret = posix_memalign (&new, 32, num);",
+          "RAW",
+          "xmalloc (size_t num)",
+          "num"
+        ],
+        [
+          "return new;",
+          "RAW",
+          "void* new = NULL;",
+          "new"
+        ],
+        [
+          "return ret;",
+          "RAW",
+          "void* ret = xmalloc (val);",
+          "ret"
+        ],
+        [
+          "void* new = NULL;",
+          "WAR",
+          "return new;",
+          "new"
+        ],
+        [
+          "void* ret = xmalloc (val);",
+          "RAW",
+          "val *= elt_size;",
+          "val"
+        ]
+      ],
+      "deps_identical": false,
+      "blockers_single": [],
+      "blockers_project": [],
+      "blockers_identical": true,
+      "patterns_single": [
+        [
+          "do_all",
+          "PB_PERTURB(A, (N + POLYBENCH_PADDING_FACTOR) * (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(c, (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(x, (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < _PB_N; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < n; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < n; i++) {"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < n; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j <= i - 1; j++)"
+        ]
+      ],
+      "patterns_project": [
+        [
+          "do_all",
+          "PB_PERTURB(A, (N + POLYBENCH_PADDING_FACTOR) * (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(c, (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(x, (N + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < _PB_N; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < cs; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < n; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < n; i++) {"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < n; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j <= i - 1; j++)"
+        ]
+      ],
+      "patterns_identical": false
+    },
+    {
+      "benchmark": "trmm",
+      "single_seconds": 2.6,
+      "project_seconds": 2.4,
+      "kernel_deps_single": 56,
+      "kernel_deps_project": 56,
+      "kernel_deps_identical": true,
+      "kernel_deps_only_single": [],
+      "kernel_deps_only_project": [],
+      "deps_single": 78,
+      "deps_project": 79,
+      "deps_only_single": [
+        [
+          "if (!ptr || ret)",
+          "RAW",
+          "int ret = posix_memalign(&ptr, 32, num);",
+          "ret"
+        ],
+        [
+          "if (!ptr || ret)",
+          "RAW",
+          "void* ptr = NULL;",
+          "ptr"
+        ],
+        [
+          "int ret = posix_memalign(&ptr, 32, num);",
+          "RAW",
+          "static void* xmalloc(size_t num)",
+          "num"
+        ],
+        [
+          "return ptr;",
+          "RAW",
+          "void* ptr = NULL;",
+          "ptr"
+        ],
+        [
+          "return xmalloc(val);",
+          "RAW",
+          "val *= elt_size;",
+          "val"
+        ],
+        [
+          "void* ptr = NULL;",
+          "WAR",
+          "return ptr;",
+          "ptr"
+        ]
+      ],
+      "deps_only_project": [
+        [
+          "if (! new || ret)",
+          "RAW",
+          "int ret = posix_memalign (&new, 32, num);",
+          "ret"
+        ],
+        [
+          "if (! new || ret)",
+          "RAW",
+          "void* new = NULL;",
+          "new"
+        ],
+        [
+          "int ret = posix_memalign (&new, 32, num);",
+          "RAW",
+          "xmalloc (size_t num)",
+          "num"
+        ],
+        [
+          "return new;",
+          "RAW",
+          "void* new = NULL;",
+          "new"
+        ],
+        [
+          "return ret;",
+          "RAW",
+          "void* ret = xmalloc (val);",
+          "ret"
+        ],
+        [
+          "void* new = NULL;",
+          "WAR",
+          "return new;",
+          "new"
+        ],
+        [
+          "void* ret = xmalloc (val);",
+          "RAW",
+          "val *= elt_size;",
+          "val"
+        ]
+      ],
+      "deps_identical": false,
+      "blockers_single": [],
+      "blockers_project": [],
+      "blockers_identical": true,
+      "patterns_single": [
+        [
+          "do_all",
+          "PB_PERTURB(A, (NI + POLYBENCH_PADDING_FACTOR) * (NI + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(B, (NI + POLYBENCH_PADDING_FACTOR) * (NI + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < ni; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 1; i < _PB_NI; i++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < _PB_NI; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < ni; j++) {"
+        ],
+        [
+          "do_all",
+          "for (k = 0; k < i; k++)"
+        ],
+        [
+          "reduction",
+          "for (i = 1; i < _PB_NI; i++)"
+        ],
+        [
+          "reduction",
+          "for (j = 0; j < _PB_NI; j++)"
+        ],
+        [
+          "reduction",
+          "for (k = 0; k < i; k++)"
+        ]
+      ],
+      "patterns_project": [
+        [
+          "do_all",
+          "PB_PERTURB(A, (NI + POLYBENCH_PADDING_FACTOR) * (NI + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "PB_PERTURB(B, (NI + POLYBENCH_PADDING_FACTOR) * (NI + POLYBENCH_PADDING_FACTOR));"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < cs; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 0; i < ni; i++)"
+        ],
+        [
+          "do_all",
+          "for (i = 1; i < _PB_NI; i++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < _PB_NI; j++)"
+        ],
+        [
+          "do_all",
+          "for (j = 0; j < ni; j++) {"
+        ],
+        [
+          "do_all",
+          "for (k = 0; k < i; k++)"
+        ]
+      ],
+      "patterns_identical": false
+    }
+  ]
+}

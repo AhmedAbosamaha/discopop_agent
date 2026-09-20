@@ -1,0 +1,10 @@
+--- /Users/ahmedsamir/new_benchmark_harness/agent/runs/dp_alone_look_mac/benchmarks/polybench/doitgen/discopop_gate/none/rep1/work/doitgen.c
++++ /Users/ahmedsamir/new_benchmark_harness/agent/runs/dp_alone_look_mac/benchmarks/polybench/doitgen/discopop_gate/none/rep1/work/doitgen.c
+@@ -73,6 +73,7 @@
+ 	for (s = 0; s < _PB_NP; s++)
+ 	  sum[r][q][p] = sum[r][q][p] + A[r][q][s] * C4[s][p];
+       }
++      #pragma omp parallel for firstprivate(nr,r,q) shared(A,sum) 
+       for (p = 0; p < _PB_NR; p++)
+ 	A[r][q][p] = sum[r][q][p];
+     }

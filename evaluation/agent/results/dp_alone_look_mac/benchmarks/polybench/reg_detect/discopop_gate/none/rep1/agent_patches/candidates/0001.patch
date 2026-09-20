@@ -1,0 +1,10 @@
+--- /Users/ahmedsamir/new_benchmark_harness/agent/runs/dp_alone_look_mac/benchmarks/polybench/reg_detect/discopop_gate/none/rep1/work/reg_detect.c
++++ /Users/ahmedsamir/new_benchmark_harness/agent/runs/dp_alone_look_mac/benchmarks/polybench/reg_detect/discopop_gate/none/rep1/work/reg_detect.c
+@@ -70,6 +70,7 @@
+ #pragma scop
+   for (t = 0; t < _PB_NITER; t++)
+     {
++      #pragma omp parallel for firstprivate(length,maxgrid) private(i,cnt) shared(sum_diff,diff,mean) 
+       for (j = 0; j <= _PB_MAXGRID - 1; j++)
+ 	for (i = j; i <= _PB_MAXGRID - 1; i++)
+ 	  for (cnt = 0; cnt <= _PB_LENGTH - 1; cnt++)

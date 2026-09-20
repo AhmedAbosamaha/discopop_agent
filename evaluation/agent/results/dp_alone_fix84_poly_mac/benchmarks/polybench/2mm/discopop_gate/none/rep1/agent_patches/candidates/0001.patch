@@ -1,0 +1,10 @@
+--- /Users/ahmedsamir/new_benchmark_harness/agent/runs/dp_alone_fix84_poly_mac/benchmarks/polybench/2mm/discopop_gate/none/rep1/work/2mm.c
++++ /Users/ahmedsamir/new_benchmark_harness/agent/runs/dp_alone_fix84_poly_mac/benchmarks/polybench/2mm/discopop_gate/none/rep1/work/2mm.c
+@@ -89,6 +89,7 @@
+ 	for (k = 0; k < _PB_NK; ++k)
+ 	  tmp[i][j] += alpha * A[i][k] * B[k][j];
+       }
++  #pragma omp parallel for firstprivate(beta,nj,nl,ni) private(j,k) shared(tmp,C,D) 
+   for (i = 0; i < _PB_NI; i++)
+     for (j = 0; j < _PB_NL; j++)
+       {

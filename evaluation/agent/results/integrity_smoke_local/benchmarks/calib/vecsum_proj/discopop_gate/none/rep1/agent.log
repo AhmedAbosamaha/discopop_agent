@@ -1,0 +1,82 @@
+
+============================================================
+  DiscoPoP Agentic Controller
+============================================================
+  Source         : /Users/ahmedsamir/new_benchmark_harness/agent/runs/integrity_smoke_local/benchmarks/calib/vecsum_proj/discopop_gate/none/rep1/work/src/kernel.c
+  DiscoPoP dir   : .discopop
+  Model          : none
+  Budget         : 0 LLM retries/region (+2 free build fixes)
+  λ penalty      : 1.0
+  Min workload   : 0.0
+  Restruct. depth: 0 (Tier-2 allowed at depth 0–0)
+  Quality gate   : Tier-1 = all but speed, no escalation; Tier-2 = full
+  TSan           : barrier-aware (archer: /Users/ahmedsamir/.local/lib/libarcher.dylib)
+  Speedup gate   : OFF (--no-require-speedup)
+  Dry run        : False
+  LLM mode       : none
+  Edit mode      : direct
+  Re-profiling   : fast refresh (compile only) between rewrites; full before a deeper level and before Phase B
+  Pragmas        : LLM writes them with the rewrite, gate decides (--llm-pragmas)
+============================================================
+
+  Project        : /Users/ahmedsamir/new_benchmark_harness/agent/runs/integrity_smoke_local/benchmarks/calib/vecsum_proj/discopop_gate/none/rep1/work  (2 unit(s): src/kernel.c, src/main.c)
+
+  [ok] Captured reference output on 2 inputs (62 bytes, 15.0 ms baseline) for the correctness/performance gates.
+
+  [ok] Numerical noise floor 0 — 6 build variants agreed exactly; output is compared byte-for-byte.
+
+  Hotspots       : measured per-region runtimes are available — 10 region(s) measured, 54.9 ms total, ranking by predicted time saved at 8 threads
+
+  Baseline       : DiscoPoP proposes 1 applicable pattern(s) unaided; 1 of them produce a usable pragma
+                   → the run beats DiscoPoP by ending with more than 1
+
+  Initial candidates
+Region ID    Type           Saves    % run    Hot  Tier  Depth  Name
+--------------------------------------------------------------------------------------
+  1:3        loop         29.1 ms    60.7%    YES     2      0  lines 10–12
+  1:6        loop         29.1 ms    60.7%    YES     1      0  lines 11–12
+  0:0        function     29.1 ms    60.7%    YES     2      0  kernel_vecsum
+
+============================================================
+  PHASE A — restructure  (the source stays pragma-free)
+============================================================
+
+┌─ [depth=0] loop 1:3 (lines 10–12)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:6 (lines 11–12)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] function 0:0 (lines 7–13)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+
+============================================================
+  PHASE B — annotate  (1 candidate pragma(s))
+============================================================
+
+┌─ pattern #24  do_all @ lines 11–12  (W=0)
+│  #pragma omp parallel for
+│  [Phase-B] Original backed up → kernel.c.original
+│  [Phase-B] Applied to kernel.c
+└─ APPLIED
+
+============================================================
+  SETTLING — verify the finished source, drop what does not hold up
+============================================================
+  [ok] finished source verified — output matches the original
+
+
+============================================================
+  SUMMARY: 0 rewrite(s) kept  |  1 pragma(s) applied  |  2 skipped
+  DiscoPoP unaided: 1 usable pragma(s) in this profile's draw  →  this run: 1   [MATCHED, informational]
+    ✓  loop 1:6  [Phase-B pragma]  depth=0
+    ✗  1:3  [skipped]  depth=0
+    ✗  0:0  [skipped]  depth=0
+
+  Results → .discopop/agent_patches/accepted.json
+============================================================
+

@@ -1,0 +1,238 @@
+{
+  "run_id": "pilot2",
+  "harness": "agent",
+  "timestamp": "pilot2",
+  "invocation": {
+    "benchmarks": [
+      "polybench/seidel-2d"
+    ],
+    "arms": [
+      "full"
+    ],
+    "models": [
+      "claude-haiku-4-5-20251001"
+    ],
+    "repeats_per_trial": 1,
+    "provider": "claude-agent-sdk",
+    "edit_mode": "direct",
+    "extra_agent_args": [],
+    "verify_size": "per_kernel",
+    "threads": [
+      6,
+      12
+    ],
+    "repeats": 3,
+    "timeout_s": 5400,
+    "check_seed": "7",
+    "min_runtime_share": 0.0,
+    "cc": "/usr/bin/clang-20",
+    "cxx": "/usr/bin/clang++-20",
+    "host": "rms14562",
+    "platform": "Linux-6.8.0-138-generic-x86_64-with-glibc2.39",
+    "agent_git": {
+      "path": "/home/ahmedabosamaha/discopop_agent",
+      "head": "3b5ab817f67e1fec458dfa4697e8cd78f62f0ed6",
+      "branch": "agentic_DiscoPop",
+      "dirty_sha256": null
+    },
+    "harness_git": {
+      "path": "/home/ahmedabosamaha/new_benchmark_harness",
+      "head": "ee9fe07f3781ab05717e082be79491c4ee75f4b5",
+      "branch": "agent-experiments",
+      "dirty_sha256": null
+    },
+    "argv": [
+      "agent/benchmark",
+      "run",
+      "polybench/seidel-2d",
+      "--arms",
+      "full",
+      "--models",
+      "claude-haiku-4-5-20251001",
+      "--trials",
+      "1",
+      "--threads",
+      "6,12",
+      "--repeats",
+      "3",
+      "--run-id",
+      "pilot2"
+    ],
+    "tool_versions": {
+      "claude_agent_sdk": "0.2.128",
+      "claude_cli_bundled": "2.1.220 (Claude Code)"
+    },
+    "common_flags": [
+      "--no-require-speedup"
+    ],
+    "timing_sizes": {},
+    "verify_sizes": {
+      "polybench/seidel-2d": "EXTRALARGE"
+    },
+    "arm_flags": {
+      "full": []
+    }
+  },
+  "runs": [
+    {
+      "benchmark": "polybench/seidel-2d",
+      "kernel": "seidel-2d",
+      "source": "seidel-2d.c",
+      "arm": "full",
+      "model": "claude-haiku-4-5-20251001",
+      "arm_flags": [
+        "--no-require-speedup"
+      ],
+      "started_at": "2026-09-16T19:44:18",
+      "host_load_start": [
+        6.2646484375,
+        3.8212890625,
+        3.07763671875
+      ],
+      "agent_cmd": [
+        "/home/ahmedabosamaha/discopop_agent/venv/bin/python",
+        "-m",
+        "discopop_agent",
+        "--source-file",
+        "seidel-2d.c",
+        "--discopop-dir",
+        ".discopop",
+        "--provider",
+        "claude-agent-sdk",
+        "--model",
+        "claude-haiku-4-5-20251001",
+        "--edit-mode",
+        "direct",
+        "--no-require-speedup",
+        "--check-input",
+        "7",
+        "--exclude-functions",
+        "print_array,init_array,xmalloc,polybench_alloc_data,pb_emit,pb_report,pb_seed,pb_uniform,pb_timer_start,pb_timer_stop"
+      ],
+      "agent_s": 587.6,
+      "agent_rc": 0,
+      "llm_calls": 8,
+      "llm_call_failures": 0,
+      "reverts": 0,
+      "gate_failures_phase_a": {
+        "correctness": 3,
+        "tsan": 2,
+        "clause": 2
+      },
+      "gate_failures_phase_b": {
+        "tsan": 2,
+        "correctness": 3
+      },
+      "gate_passes_phase_a": 1,
+      "region_verdicts": {
+        "ACCEPTED": 1,
+        "DEFERRED": 5,
+        "SKIPPED": 3,
+        "DROPPED": 5
+      },
+      "settle_dropped": 0,
+      "baseline_claimed": 0,
+      "baseline_pragmas": 0,
+      "rewrites_kept": 1,
+      "pragmas_applied": 1,
+      "pragmas_discopop": 0,
+      "pragmas_llm": 1,
+      "regions_skipped": 2,
+      "agent_verdict": "BEAT",
+      "llm_usage": {
+        "calls_recorded": 8,
+        "input_tokens": 168,
+        "output_tokens": 61834,
+        "cache_read_input_tokens": 628785,
+        "cache_creation_input_tokens": 102670,
+        "cost_usd": 0.584,
+        "model_seconds": 569.1
+      },
+      "source_changed": true,
+      "pragmas_in_final": 1,
+      "candidates_recorded": 13,
+      "verify": {
+        "verify_size": "EXTRALARGE",
+        "threads": [
+          6,
+          12
+        ],
+        "repeats": 3,
+        "compiler": "/usr/bin/clang-20",
+        "final_flags": [],
+        "dump_exact": true,
+        "seed": "7",
+        "dump_exact_seeded": true,
+        "seq_median_s": 9.6493,
+        "seq_kernel_median_s": 9.603706,
+        "timing_basis": "kernel",
+        "par": {
+          "6": {
+            "median_s": 9.6466,
+            "program_speedup": 1.0,
+            "max_rel_err": 0.0,
+            "kernel_median_s": 9.594565,
+            "kernel_speedup": 1.001,
+            "speedup": 1.001
+          },
+          "12": {
+            "median_s": 9.6647,
+            "program_speedup": 0.998,
+            "max_rel_err": 0.0,
+            "kernel_median_s": 9.613105,
+            "kernel_speedup": 0.999,
+            "speedup": 0.999
+          }
+        },
+        "digest_max_rel_err": 0.0,
+        "stable_at_fixed_threads": true,
+        "kernel_program_disagree": false,
+        "digest_seeded_rel_err": 0.0,
+        "status": "ok",
+        "speed_measurable": true
+      },
+      "verify_s": 106.9,
+      "status": "done",
+      "outcome": "SCAFFOLD_MODIFIED",
+      "finished_at": "2026-09-16T19:55:53",
+      "host_load_end": [
+        3.61865234375,
+        3.60302734375,
+        3.3330078125
+      ],
+      "profile": {
+        "wrapper": "discopop_cc",
+        "instrument_s": 0.21,
+        "profiled_run_s": 0.26,
+        "explore_s": 2.17,
+        "patterns": {
+          "optimizer_output": 0,
+          "merged_pattern": 0,
+          "task": 21,
+          "do_all": 5,
+          "reduction": 0
+        }
+      },
+      "repeat": 1,
+      "scaffold": {
+        "ok": false,
+        "problems": [
+          "scaffolding line removed or edited: PB_PERTURB(A, (N + POLYBENCH_PADDING_FACTOR) * (N + POLYBENCH_PADDING_FACTOR));",
+          "scaffolding line added: DATA_TYPE* pb_p = (DATA_TYPE*)(A);",
+          "scaffolding line added: unsigned long long pb_k, pb_n = (unsigned long long)((N + POLYBENCH_PADDING_FACTOR) * (N + POLYBENCH",
+          "scaffolding line added: DATA_TYPE* pb_randoms = (DATA_TYPE*)malloc(pb_n * sizeof(DATA_TYPE));",
+          "scaffolding line added: for (pb_k = 0; pb_k < pb_n; pb_k++) {",
+          "scaffolding line added: pb_randoms[pb_k] = (DATA_TYPE)(pb_uniform(&pb_state) * 3.0);"
+        ],
+        "applies": true
+      },
+      "outcome_history": [
+        {
+          "outcome": "parallel-not-faster",
+          "replaced_at": "2026-09-16T22:20:04",
+          "reason": "rescore"
+        }
+      ]
+    }
+  ]
+}

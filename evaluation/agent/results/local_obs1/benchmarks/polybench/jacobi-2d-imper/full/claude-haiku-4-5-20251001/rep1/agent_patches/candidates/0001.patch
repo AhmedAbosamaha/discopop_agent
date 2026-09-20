@@ -1,0 +1,29 @@
+--- jacobi-2d-imper.c
++++ jacobi-2d-imper.c
+@@ -465,8 +465,24 @@
+   /* Start timer. */
+   pb_timer_start();
+ 
+-  /* Run kernel. */
+-  kernel_jacobi_2d_imper (tsteps, n, POLYBENCH_ARRAY(A), POLYBENCH_ARRAY(B));
++  /* Run kernel - inlined jacobi_2d_imper computation. */
++  {
++    int t, i, j;
++    for (t = 0; t < _PB_TSTEPS; t++)
++      {
++        /* First phase: compute new B values from A. Independent (i,j) iterations. */
++        #pragma omp parallel for collapse(2) shared(A, B, n)
++        for (i = 1; i < _PB_N - 1; i++)
++          for (j = 1; j < _PB_N - 1; j++)
++            B[i][j] = 0.2 * (A[i][j] + A[i][j-1] + A[i][1+j] + A[1+i][j] + A[i-1][j]);
++
++        /* Second phase: copy B to A. Independent (i,j) iterations. */
++        #pragma omp parallel for collapse(2) shared(A, B, n)
++        for (i = 1; i < _PB_N-1; i++)
++          for (j = 1; j < _PB_N-1; j++)
++            A[i][j] = B[i][j];
++      }
++  }
+ 
+   /* Stop and print timer. */
+   pb_timer_stop();

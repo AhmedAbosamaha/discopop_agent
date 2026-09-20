@@ -1,0 +1,649 @@
+<title>Agent Evaluation Campaign</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@400;500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --ground:#F4F5F1; --surface:#FFFFFF; --sunk:#E9ECE6;
+  --ink:#1C2127; --ink-2:#434B55; --muted:#6A727B;
+  --rule:#D5D9D2; --rule-soft:#E4E7E1;
+  --accent:#35549A; --accent-soft:#E3E9F5;
+  --unsafe:#A4501F; --unsafe-soft:#F6E6DB;
+  --ok:#2E6A4C; --ok-soft:#E0EEE6;
+  --hold:#7A6414; --hold-soft:#F2EBD3;
+  --f-head:"IBM Plex Sans Condensed","Arial Narrow",system-ui,sans-serif;
+  --f-body:"Source Serif 4",Georgia,"Times New Roman",serif;
+  --f-mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ground:#13171B; --surface:#1A1F24; --sunk:#20262C;
+    --ink:#E3E7EA; --ink-2:#B5BDC5; --muted:#8C959E;
+    --rule:#2C333A; --rule-soft:#242A30;
+    --accent:#8EA9E6; --accent-soft:#1E2940;
+    --unsafe:#E29468; --unsafe-soft:#3A2419;
+    --ok:#7CC39E; --ok-soft:#18302A;
+    --hold:#D9BC62; --hold-soft:#342C14;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#13171B; --surface:#1A1F24; --sunk:#20262C;
+  --ink:#E3E7EA; --ink-2:#B5BDC5; --muted:#8C959E;
+  --rule:#2C333A; --rule-soft:#242A30;
+  --accent:#8EA9E6; --accent-soft:#1E2940;
+  --unsafe:#E29468; --unsafe-soft:#3A2419;
+  --ok:#7CC39E; --ok-soft:#18302A;
+  --hold:#D9BC62; --hold-soft:#342C14;
+}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font-family:var(--f-body);font-size:17px;line-height:1.62;
+  margin:0;padding-inline:20px;padding-block:0 96px;-webkit-font-smoothing:antialiased}
+.page{max-width:980px;margin:0 auto}
+.col{max-width:68ch}
+header{padding-block:56px 28px;border-bottom:2px solid var(--ink);margin-bottom:8px}
+.kicker{font-family:var(--f-head);font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);font-weight:600;margin:0 0 12px}
+h1{font-family:var(--f-head);font-weight:700;font-size:clamp(34px,6vw,52px);line-height:1.02;letter-spacing:-.01em;margin:0 0 16px;text-wrap:balance}
+.lede{font-size:19px;color:var(--ink-2);margin:0;max-width:62ch}
+.meta{display:flex;flex-wrap:wrap;gap:6px 22px;margin-top:20px;font-family:var(--f-head);font-size:14px;color:var(--muted)}
+.meta b{color:var(--ink-2);font-weight:600}
+section{padding-block:44px 8px;border-top:1px solid var(--rule)}
+header + section{border-top:0}
+.sec{display:flex;align-items:baseline;gap:14px;margin:0 0 14px}
+.sec .n{font-family:var(--f-mono);font-size:14px;color:var(--accent);flex:none}
+h2{font-family:var(--f-head);font-weight:700;font-size:29px;line-height:1.12;margin:0;text-wrap:balance}
+h3{font-family:var(--f-head);font-weight:600;font-size:20px;margin:30px 0 8px;text-wrap:balance}
+p{margin:0 0 14px}
+code,.mono{font-family:var(--f-mono);font-size:.84em}
+code{background:var(--sunk);padding:1px 5px;border-radius:3px;color:var(--ink)}
+strong{font-weight:600}
+ul,ol{margin:0 0 14px;padding-left:22px}
+li{margin:0 0 6px}
+a{color:var(--accent)}
+.label{font-family:var(--f-head);font-size:12px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;color:var(--muted)}
+
+/* the spine */
+.spine{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:1px;background:var(--rule);border:1px solid var(--rule);margin:22px 0 10px}
+.spine > div{background:var(--surface);padding:18px 18px 20px;display:flex;flex-direction:column;gap:8px}
+.spine .tag{font-family:var(--f-head);font-size:13px;font-weight:700;letter-spacing:.06em;color:var(--accent)}
+.spine .claim{font-family:var(--f-head);font-size:19px;font-weight:600;line-height:1.25}
+.spine p{font-size:15.5px;color:var(--ink-2);margin:0}
+
+/* flow of chapter 6 */
+.flow{list-style:none;padding:0;margin:20px 0 0;display:flex;flex-direction:column;gap:0;border-left:2px solid var(--rule)}
+.flow li{position:relative;padding:0 0 18px 24px;margin:0}
+.flow li::before{content:"";position:absolute;left:-7px;top:8px;width:12px;height:12px;border-radius:50%;background:var(--ground);border:2px solid var(--accent)}
+.flow .q{font-family:var(--f-head);font-weight:600;font-size:18px}
+.flow .x{font-family:var(--f-mono);font-size:13px;color:var(--accent)}
+.flow p{margin:2px 0 0;font-size:15.5px;color:var(--ink-2)}
+
+/* tables */
+.tw{overflow-x:auto;margin:16px 0 20px;border:1px solid var(--rule);background:var(--surface)}
+table{border-collapse:collapse;width:100%;min-width:640px;font-family:var(--f-head);font-size:15px}
+th{text-align:left;font-weight:600;font-size:12.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);
+  padding:10px 12px;border-bottom:1px solid var(--rule);background:var(--sunk);vertical-align:bottom}
+td{padding:9px 12px;border-bottom:1px solid var(--rule-soft);vertical-align:top;color:var(--ink-2)}
+tr:last-child td{border-bottom:0}
+td:first-child{color:var(--ink);font-weight:600}
+td.num{font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right}
+td code{font-size:12.5px}
+
+.chip{display:inline-block;font-family:var(--f-head);font-size:12px;font-weight:600;letter-spacing:.04em;padding:1px 7px;border-radius:2px;white-space:nowrap}
+.c-acc{background:var(--accent-soft);color:var(--accent)}
+.c-ok{background:var(--ok-soft);color:var(--ok)}
+.c-bad{background:var(--unsafe-soft);color:var(--unsafe)}
+.c-hold{background:var(--hold-soft);color:var(--hold)}
+
+/* experiment blocks */
+.exp{border-top:1px solid var(--rule);padding-top:22px;margin-top:26px}
+.exp-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 14px;margin-bottom:8px}
+.exp-id{font-family:var(--f-mono);font-size:15px;font-weight:500;color:var(--accent)}
+.exp-title{font-family:var(--f-head);font-size:22px;font-weight:700;margin:0}
+.kv{display:grid;grid-template-columns:150px 1fr;gap:6px 18px;margin:12px 0 4px;font-size:15.5px}
+.kv dt{font-family:var(--f-head);font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding-top:3px}
+.kv dd{margin:0;color:var(--ink-2)}
+@media (max-width:560px){.kv{grid-template-columns:1fr;gap:2px}.kv dd{margin-bottom:8px}}
+.cmd{font-family:var(--f-mono);font-size:13px;line-height:1.6;background:var(--sunk);border:1px solid var(--rule);padding:12px 14px;overflow-x:auto;white-space:pre;margin:10px 0 6px;color:var(--ink)}
+.expect{border-left:3px solid var(--accent);padding:10px 14px;background:var(--surface);margin:12px 0;font-size:15.5px}
+.expect.risk{border-left-color:var(--unsafe)}
+.expect .label{display:block;margin-bottom:4px}
+.expect p:last-child{margin:0}
+
+/* budget bars */
+.budget{display:flex;flex-direction:column;gap:10px;margin:18px 0 8px}
+.brow{display:grid;grid-template-columns:190px 1fr 90px;gap:12px;align-items:center;font-family:var(--f-head);font-size:15px}
+.brow .name{color:var(--ink)}
+.bar{height:14px;background:var(--sunk);position:relative}
+.bar span{position:absolute;left:0;top:0;bottom:0;background:var(--accent)}
+.bar span.nollm{background:var(--muted)}
+.brow .h{font-variant-numeric:tabular-nums;color:var(--ink-2);text-align:right}
+@media (max-width:560px){.brow{grid-template-columns:1fr 70px}.brow .bar{grid-column:1 / -1;order:3}}
+
+.twocol{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px;margin:14px 0}
+.box{background:var(--surface);border:1px solid var(--rule);padding:14px 16px}
+.box h4{font-family:var(--f-head);font-size:16px;font-weight:600;margin:0 0 6px}
+.box p,.box li{font-size:15px;color:var(--ink-2)}
+footer{margin-top:48px;padding-top:16px;border-top:2px solid var(--ink);font-family:var(--f-head);font-size:14px;color:var(--muted)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<div class="page">
+
+<header>
+  <p class="kicker">Master's thesis · Chapter 6 · evaluation plan</p>
+  <h1>Agent Evaluation Campaign</h1>
+  <p class="lede">What we run, on what, with which exact configuration — and which sentence of the thesis each result is allowed to support. Every experiment below answers one research question and finishes in hours on the TU Darmstadt server.</p>
+  <div class="meta">
+    <span><b>Harness</b> discopop_agent/evaluation (one repository since 20 Sep; before: new_benchmark_harness · agent-experiments)</span>
+    <span><b>Agent</b> discopop_agent · Fixes 51–63</span>
+    <span><b>Host</b> the group's shared server · 2× EPYC 9255, 48 cores</span>
+    <span><b>Drafted</b> 14 Sep 2026</span>
+    <span><b>Updated</b> 20 Sep 2026 · v21: E10 done — the speed check at a proper size wins (D8: <code>speed_gate_large</code> is E1's agent arm); v20: main comparison = DiscoPoP alone vs agent (D19), benchmark classes measured (D18), TSVC suite, LULESH serial path, Fix 84</span>
+  </div>
+</header>
+
+<section>
+  <div class="sec"><span class="n">0</span><h2>The argument the experiments have to carry</h2></div>
+  <div class="col">
+    <p>The thesis makes one move: a dependence DiscoPoP reports is read as a <em>diagnosis</em>, not a limit, and a language model re-encodes the code so the dependence is gone. That move creates two problems annotation tools never face. The evaluation is built to show the move pays off, and that both problems are handled.</p>
+  </div>
+  <div class="spine">
+    <div><span class="tag">C1 · COVERAGE</span><span class="claim">Restructuring parallelizes what DiscoPoP alone cannot.</span><p>Measured against DiscoPoP's own suggestions pushed through the same gate.</p></div>
+    <div><span class="tag">C2 · TRUST</span><span class="claim">A gate strong enough to permit rewriting — and where it is still blind.</span><p>Every accepted change is re-judged independently; unsafe acceptances are counted, never averaged away.</p></div>
+    <div><span class="tag">C3 · COST</span><span class="claim">Dependence evidence stays valid across edits without re-profiling from scratch.</span><p>Fast refresh and model reconstruction, measured for fidelity and for what they save at scale.</p></div>
+  </div>
+
+  <h3>How Chapter 6 reads: first the whole system, then one region through each stage</h3>
+  <div class="col"><p>After the instruments are proven and the whole agent is measured once, the chapter follows a single region through the agent in the order the agent handles it. Each section asks one question — <em>what does this stage contribute, and what would happen without it?</em> — so every experiment has a place in the story and none stands alone.</p></div>
+  <ol class="flow">
+    <li><span class="q">6.1 Prove the instruments</span> <span class="x">T0.1–T0.7</span><p>Sizes, DiscoPoP's own variation (in its profile labels and in its explorer), timing noise on a shared host, whether the correctness oracle can see a wrong program at all — opening with the seidel-2d case, where it could not — and where each program's runtime goes, which fixes the region filter.</p></li>
+    <li><span class="q">6.2 The whole system — RQ1, RQ3</span> <span class="x">E1 · E11</span><p>What the agent delivers against DiscoPoP alone, the Polly auto-parallelizer and expert OpenMP, across kernels and applications; then against the closest published system, RepoOMP, on identical NPB programs.</p></li>
+    <li><span class="q">6.3 Stage 1 · Where to look</span> <span class="x">E9</span><p>Ranking by measured time saved versus a static proxy: are model calls spent where the runtime is?</p></li>
+    <li><span class="q">6.4 Stage 2 · What the model is told, how often it may try, and how strong it is — RQ4</span> <span class="x">E2</span><p>DiscoPoP's evidence against the gate's feedback, crossed with model strength.</p></li>
+    <li><span class="q">6.5 Stage 3 · Who judges the result — RQ2, C2</span> <span class="x">E7 · E10</span><p>The gate as a classifier: its error rate, what each stage uniquely catches, and how the input shapes its verdicts; then the speed check — does it keep changes that do not pay off out of the program, and at which size can it judge speed at all?</p></li>
+    <li><span class="q">6.6 Stage 4 · Who writes the pragma, and how evidence survives the edit — RQ5–RQ7, C3</span> <span class="x">E3 · E4</span><p>Pragma author × profile refresh; then adding versus deleting dependences — the thesis's soundness principle, tested.</p></li>
+    <li><span class="q">6.7 Stage 5 · How far to chain restructuring — RQ8</span> <span class="x">E8</span><p>Depth 0, 1 and 2: what each level adds and what it costs.</p></li>
+    <li><span class="q">6.8 What it costs, and at what scale</span> <span class="x">E5 · E6</span><p>Profiling cost as problem size grows; the agent on LULESH; time, calls and tokens from every run.</p></li>
+  </ol>
+</section>
+
+<section>
+  <div class="sec"><span class="n">1</span><h2>What stays fixed in every run</h2></div>
+  <div class="col">
+    <p>Changing any of these between arms changes what "accepted" means, and the comparison stops being about the variable under test. They are recorded in each run's <code>manifest.json</code>.</p>
+  </div>
+  <div class="tw"><table>
+    <thead><tr><th>Setting</th><th>Value</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td>Code</td><td>Both repos committed; server checkout identical (HEAD + diff hash checked)</td><td>A result must trace to code the author can read locally</td></tr>
+      <tr><td>Toolchain</td><td>LLVM 20 on the server (clang-20, libarcher from <code>/usr/lib/llvm-20</code>)</td><td>clang-19 there has no <code>omp.h</code></td></tr>
+      <tr><td>Provider</td><td><code>--provider claude-agent-sdk --edit-mode direct</code></td><td>The agent's defaults; subscription-billed</td></tr>
+      <tr><td>Models</td><td><code>claude-haiku-4-5-20251001</code>, <code>claude-sonnet-5</code> — full ids, not aliases. Proposed: <code>Qwen/Qwen3-Coder-30B-A3B-Instruct</code> on the group's GPU server, same experiment, <code>direct</code> mode (D5)</td><td>An alias can move to a newer model mid-campaign</td></tr>
+      <tr><td>Agent gate</td><td>budget 3 (except <code>_b1</code> arms) until the budget calibration; then an importance-weighted budget becomes the default (D3), restructure depth 0 (varied only in E8), speed check off (<code>--no-require-speedup</code>, the common flag in <code>arms.json</code>; studied only in E10), numeric tolerance on, schedule stress <code>1,2,4</code></td><td>Measure the agent as shipped, except the speed check: at the agent size kernels run in 0.06–15 ms, so it would judge noise. Speed is judged by the harness at the verification size</td></tr>
+      <tr><td>Extra input</td><td><code>--check-input 7</code> (perturbed input seed)</td><td>The shipped input of some kernels cannot detect an algorithm change</td></tr>
+      <tr><td>Targeting</td><td><code>--exclude-functions</code> from each benchmark's packaging (output, setup, allocation, digest/timer helpers), matched on demangled names so it also works on C++ (Fix 59); <code>--min-runtime-share 0.01</code> in every arm and in Phase B (D1); regions inside an accepted region get no call (D2, Fix 61); <code>main</code> pending D4</td><td>Model calls go to the computation under study. The first smoke run spent 35 calls on 11 regions because measurements matched nothing (Fix 54). On C++ the exclusions had matched nothing at all: <code>md</code> queued 26 regions instead of 13. T0.5 bounds what the 1 % floor can give up at 1.7 % of runtime in any benchmark</td></tr>
+      <tr><td>Sizes</td><td>Agent size SMALL for every PolyBench kernel (profiling and all correctness checks). Per kernel from T0.1: verification size = smallest size whose serial kernel reaches 1 s; timing size (E10 only) = smallest reaching 0.25 s. Kernels that reach neither at any size that runs are reported as too small to time</td><td>Cheap profiling; speed measured only where thread start-up is a small share of the run</td></tr>
+      <tr><td>Verification</td><td><code>--threads 6,12 --repeats 5 --check-seed 7</code></td><td>Median of 5; seeded dump and digest</td></tr>
+      <tr><td>Isolation</td><td>Up to 4 lanes, each a harness process pinned to 12 cores (<code>taskset</code>)</td><td>Parallel trials without timing interference</td></tr>
+      <tr><td>Profile</td><td>One DiscoPoP profile per kernel per run, copied into every trial; DiscoPoP's explorer retried up to 20 times on that same profile when it crashes, in the harness and inside the agent (Fix 60), every retry recorded</td><td>Arms compared on identical evidence; tool variation measured separately (T0.2, T0.7). The explorer crashed in 15 of 20 runs on one <code>pathfinder</code> profile; without retries a crash lost every trial of that benchmark in a run, and inside the agent it reverted correct rewrites</td></tr>
+      <tr><td>Instrument integrity</td><td>After every trial the harness compares the packaging's own code between original and final source (timer calls and their position, perturbed-input code, digest). The timed region may gain computation — the model may inline the kernel into it — but nothing may leave it</td><td>A rewrite of the instrument is not a result. <code>pilot2</code> kept a parallelised <code>PB_PERTURB</code>, and nothing stopped a rewrite from moving the timer</td></tr>
+      <tr><td>Package integrity</td><td>Every trial starts from the run's archived copy of the package and works in its own fresh copy. The runner proves it: at run start, before and after <em>every</em> trial it compares the prepared package with the packager's digest (<code>output_sha256</code> in <code>meta.json</code>), the archived sources with the package, and the archived DiscoPoP profile tree with the digest recorded when it was taken (<code>profile_sha256</code>). Both checks are stored in <code>trial.json</code>. A difference stops the run (<code>aborted_package_corrupted</code>, exit status 2) with the last trial's record kept — the next trial never starts (record §5j; <code>test_integrity.py</code>, 30 checks)</td><td>One damaged trial must not feed the next. Requested by the author on 18 Sep; 45 of 45 packages carry and match their digest</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Decisions taken after the pilots · 16 Sep 2026</h3>
+  <div class="tw"><table>
+    <thead><tr><th>ID</th><th>Decision</th><th>Evidence</th><th>Effect on the evaluation</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td>D1</td><td><code>--min-runtime-share 0.01</code>, identical in every arm</td><td>T0.5: removes 185 of 445 in-scope loops; gives up at most 1.7 % of runtime (1.2 % at the verification size). 5 % would give up 16.4 % of NPB <code>mg</code></td><td>Applies to DiscoPoP's pragmas in Phase B too, so both are compared on the same regions; DiscoPoP's unfiltered counts stay in <code>trials.csv</code>. Speedup moves by at most the bound; counts fall; calls fall. It finds no extra parallelism</td><td><span class="chip c-ok">in arms.json</span></td></tr>
+      <tr><td>D2′</td><td>"Covered" means the constructs that actually run in parallel, each charged its measured share — not the span that was edited; a pragma-free rewrite covers nothing</td><td>End-to-end run, 18 Sep: a loop nested in the loop the model had just parallelised was sent to the model again (its "rewrite" re-spelled the pragma); the whole edited span was covered, which hid sibling loops from Phase B and left <code>--restructure-depth</code> ≥ 1 nothing to see; a pragma-free rewrite's exposed loops were dropped before Phase B, so the <code>--no-llm-pragmas</code> arms could keep no rewrite (record §5g, F19–F21)</td><td>Sibling loops stay visible to Phase B; a region containing a parallel loop is worth what is still sequential in it; E8 measures what it claims</td><td><span class="chip c-ok">Fix 76</span></td></tr>
+      <tr><td>D2</td><td>A region inside an already accepted region gets no model call</td><td>Scoring code: a saving of exactly 0 passed the <code>min_impact</code> test. Not the same as <code>--restructure-depth</code>, which concerns regions a rewrite created</td><td>Fewer calls, no parallelisation lost (the time is already won)</td><td><span class="chip c-ok">Fix 61</span></td></tr>
+      <tr><td>D3</td><td>Model budget weighted by a region's runtime share, made the default after calibration</td><td>Too thin to set values: 3 acceptances so far, all on the 2nd attempt; no 3rd attempt succeeded in about 14. A calibration run (up to 5 attempts per region) counts on which attempt regions succeed; about 30 successes are needed</td><td>Values come from benchmarks <em>not</em> in the evaluation — every packaged benchmark is in E1, so the choice is the agent's own small test programs or PolyBench 4.2 kernels packaged for the purpose (open). E2's budget comparison (1 vs 3) is redefined before E2 runs</td><td><span class="chip c-acc">Fix 62 in</span> <span class="chip c-hold">default fixed until calibrated</span></td></tr>
+      <tr><td>D4</td><td><code>main</code> is excluded only if DiscoPoP on its own proposes nothing there</td><td>T0.5: <code>main</code> is scaffolding in all 30 kernels; <code>md</code>'s timed work and <code>pathfinder</code>'s 77.9 % untimed generator sit in <code>main</code>. T0.6 locates DiscoPoP's own suggestions; on <code>seidel-2d</code> it proposes a task pattern over <code>main</code>'s body</td><td>Keeping <code>main</code> keeps DiscoPoP's own suggestions there comparable; the scaffolding check protects the instrument either way</td><td><span class="chip c-hold">T0.6 running</span></td></tr>
+      <tr><td>D5</td><td>A small open model, Qwen3-Coder-30B, as a third model — same experiment, <code>direct</code> mode, no change on any server</td><td>Its server runs vLLM 0.10.1.1: tool calling on, 256k context, but only the OpenAI format — Claude Code's Anthropic format returns 404. In <code>direct</code> mode Claude Code runs the file tools and the model only decides, so Qwen needs either a translator (LiteLLM, user space, pinned) or the agent's own tool loop</td><td>Extends H5 to a genuinely small, open-weights model; no subscription usage. With a translator, both models run through the same Claude Code loop, so only the model differs; with the agent's own loop, model and loop are confounded</td><td><span class="chip c-hold">proposed</span></td></tr>
+      <tr><td>D6</td><td>Multi-file programs are supported and profiled through a generated unity unit; benchmarks need not be merged</td><td>Two-file reproducer: profiled unit by unit — DiscoPoP's documented way — both recurrences outside <code>main</code>'s unit are reported as applicable Do-All (the call-path state graph is built from <code>main</code>'s unit only); through one unit that <code>#include</code>s every file the analysis equals the merged file's, with real file names and lines (record §5g D6; agent <code>docs/MULTIFILE.md</code>; feature check <code>project-mode</code>)</td><td>Merging was what made DiscoPoP's analysis correct, not a convenience. The gate builds the real multi-file program; edits land in each region's own file. A benchmark is measured in one packaging only; PolyBench (one file each) is unaffected. Switching a benchmark's packaging re-runs T0.1/T0.5/T0.6 for it — the author's call, not yet made</td><td><span class="chip c-ok">Fix 74, harness project layout</span></td></tr>
+      <tr><td>D8</td><td>E10 runs <em>before</em> E1; if the speed check at the kernel's timing size removes useless kept changes without lowering the delivered speedup, that configuration becomes E1's <code>full</code></td><td>End-to-end runs of 18 Sep: an O(n²) recomputation and an all-work-in-the-last-repetition trick both passed a gate that does not judge speed, and a kept useless rewrite covers its region</td><td>E1's default is fixed by data, before E1 runs, not after</td><td><span class="chip c-ok">the author, 18 Sep</span></td></tr>
+      <tr><td>D9</td><td>The E1 model follows the pilot: Haiku if it yields ≥ 2 FASTER outcomes in group B, else Sonnet (E2 keeps both)</td><td>Sonnet needed two attempts on easy calibration programs; if Haiku produces no FASTER on the core ten, H1 cannot be tested with it</td><td>H1 is tested with a model that can reach the outcome it predicts</td><td><span class="chip c-ok">the author, 18 Sep</span></td></tr>
+      <tr><td>D10</td><td><code>--budget 3</code> stays fixed for the whole campaign; D3's share-weighted budget becomes an efficiency study (calls saved per FASTER), not a default</td><td>A share-weighted budget entangles the ranking question (E9) with the evidence and feedback questions (E2); the calibration is off the critical path</td><td>Every arm compared at the same budget; D3's mechanism (Fix 62) stays available</td><td><span class="chip c-ok">the author, 18 Sep</span></td></tr>
+      <tr><td>D11</td><td>H6's second half stays as registered; T0.9 is reported as evidence in hand before E3</td><td>T0.9: decisions differ under chained fast refresh in 8 of 18 synthetic comparisons</td><td>E3 decides H6 on real kernels; the prior evidence is stated, not hidden</td><td><span class="chip c-ok">the author, 18 Sep</span></td></tr>
+      <tr><td>D12</td><td>The core ten's <code>lu</code> slot is PolyBench <code>lu</code> in every model-driven experiment; NPB <code>lu</code> stays a verify-only contestant in E11 and the cost outlier of E5</td><td>DiscoPoP's instrumenting compile of NPB <code>lu</code> exceeds two hours in both layouts (record §7, 17 Sep)</td><td>Group C keeps an "order matters" LU program that can actually be profiled; the pre-registered group is amended, not silently swapped</td><td><span class="chip c-ok">18 Sep</span></td></tr>
+      <tr><td>D13</td><td>Rodinia <code>nw</code> leaves the model-driven core ten (nine remain); it stays as a verify-only baseline (its own OpenMP version) and a second cost outlier in E5</td><td>Its profile holds 531,606 call-path states (2mm: 577) — some twenty sibling and nested loops whose first-iteration positions combine — and the explorer's state assignment needs ≈ 25 h per run; a trial runs it two or three times. Found only after Fix 80 let the explorer get past <code>nw</code>'s traceback loop</td><td>A DiscoPoP scalability limit, reported as such; E1's group C is seidel-2d, trisolv, PolyBench <code>lu</code></td><td><span class="chip c-ok">18 Sep</span></td></tr>
+      <tr><td>D14</td><td>Bugs in DiscoPoP are fixed at the root, the fixed DiscoPoP is used in <em>every</em> arm including the DiscoPoP-only baseline, and each fix is stated in the thesis and logged for the maintainers (agent <code>docs/DISCOPOP_BUG_REPORTS.md</code>, B1–B5, L1–L3)</td><td>The explorer's "random" <code>IndexError</code> (T0.7: 40 of 60 runs on <code>pathfinder</code>) had been handled by 20 retries. Root causes: the profiler gave a loop that ends an <code>else</code> block no loop markers, so its function's call-path loop states were one position short (Fix 81); and the explorer matched a loop state against loops of another function (Fix 82). Both also mis-matched loops <em>silently</em> in the runs that did not crash</td><td><code>pathfinder</code>: explorer 1 of 6 runs before, 10 of 10 after; pilot4: first attempt on all 8 profiles. T0.2/T0.6/T0.7/T0.8 re-run on the fixed DiscoPoP; pilot3 superseded</td><td><span class="chip c-ok">the author, 18 Sep</span></td></tr>
+      <tr><td>D15</td><td>NPB <code>mg</code> leaves the model-driven core for now (eight remain); E10 includes <code>hotspot</code> as a stated deviation</td><td>With Fixes 81/82 <code>mg</code>'s explorer no longer crashes but advanced a quarter of its 5,118 call-path states in two hours — hours per explorer run (upstream L3). <code>hotspot</code>: both pilots kept DiscoPoP's own inner-loop pragma at 0.08×</td><td>Group B: jacobi-2d-imper, floyd-warshall, md. E10 reported with and without <code>hotspot</code></td><td><span class="chip c-ok">19 Sep</span></td></tr>
+      <tr><td>D16</td><td><strong>E2 extended before any E2 trial exists.</strong> (i) Two evidence-source arms beside <code>full</code> and <code>no_evidence</code>: <code>hotspot_only</code> (where the time goes, no dependence information) and <code>compiler_remarks</code> (clang/Polly's own remarks on why a loop is not vectorized or parallelized, injected where DiscoPoP's digest goes) — none → static tool → dynamic DiscoPoP. (ii) Part C unconditional and grouped: six evidence groups (dependences · data-sharing · structure · where · how-to · feedback), each left OUT of full evidence and given ALONE. (iii) New Part D: leave one prompt part out (contract · gate description · granularity/steps · checklist)</td><td>The author's questions of 19 Sep: does DiscoPoP's evidence help, which part of it, which part of the prompt. Two arms alone cannot tell "this evidence helps" from "any hint helps"; overlapping sections hide each other in a leave-one-out alone</td><td>Parts C/D: Haiku, budget 1, six group-B/C benchmarks, ×3; exploratory — effect sizes and secondary measures (calls per success, rejection stage, tokens), not significance tests</td><td><span class="chip c-ok">19 Sep</span></td></tr>
+      <tr><td>D17</td><td><strong>E11 widened to RepoOMP's eight NPB-C kernels</strong> (BT, CG, EP, FT, IS, LU, MG, SP) on their own pragma-free inputs, against their released outputs — RepoOMP with three models, their Claude Code, Codex and AutoPar baselines — and the expert versions, all through one verification</td><td>The C versions are 170–2,600 lines and within DiscoPoP's reach (probe, no model: EP 43 s, IS 20 s, CG 99 s) where the C++ port's <code>mg</code>/<code>lu</code> are not. CG needed Fix 83: the explorer's call-path state assignment re-answered the same question exponentially often — &gt; 20 min unfinished before, under a second after, identical Do-All sets</td><td>The state-of-the-art comparison covers the same eight programs as RepoOMP's paper; mostly verification, ≈ 40 agent trials</td><td><span class="chip c-ok">19 Sep</span></td></tr>
+      <tr><td>D18</td><td><strong>The benchmark set is redesigned: classes are measured, and every experiment names the class it needs</strong> (§3). R = DiscoPoP alone fails and a verified expert solution exists; A = parallel as written; D = must decline; M = multi-region application</td><td>19 Sep audit: of 25 FASTER trials 21 changed nothing but pragmas; DiscoPoP + gate alone parallelizes most PolyBench kernels</td><td>The planned core set could not test C1, and E2/E3/E4/E8 would have measured nothing. New restructuring suite: 25 TSVC-2 loops with expert references kept outside the packages; a no-model suitability pre-flight precedes every experiment</td><td><span class="chip c-ok">19 Sep</span></td></tr>
+      <tr><td>D19</td><td><strong>The main comparison is DiscoPoP alone vs DiscoPoP + agent; the sequential original is the reference</strong></td><td>Rule set by the author (19 Sep): a speedup over sequential code does not show what the agent adds. The same audit found an agent bug that under-measured the baseline (Fix 84: 29 of 539 DiscoPoP pragmas placed on the wrong one of two identical sibling loops, 12 PolyBench kernels)</td><td>Every run carries <code>discopop_gate</code> on the same benchmarks; every agent trial gets a verdict against DiscoPoP alone (gained · better · equal · worse · lost · neither · unsafe); reports and figures lead with it. Baseline numbers on the 12 kernels are re-measured</td><td><span class="chip c-ok">19 Sep</span></td></tr>
+      <tr><td>D7</td><td>The contract bounds extra work to a constant factor</td><td>End-to-end run: with speed unjudged the model "parallelised" a linear recurrence by recomputing every element from the start — O(n) to O(n²), race-free, bit-identical, certain to lose at full size</td><td>Removes an incentive the prompt had created; the harness's <code>parallel-not-faster</code> verdict is unchanged</td><td><span class="chip c-ok">Fix 77</span></td></tr>
+    </tbody>
+  </table></div>
+  <div class="col"><p><strong>The review before the first experiment</strong> (§5g of the record, 17–18 Sep). Every module was read in pipeline order, a real prompt was rendered and read as the model reads it, and the agent was run end to end with a model. 21 code findings and 13 prompt findings, all fixed (Fixes 64–78), each with a feature check that fails when the fix is reverted (28 checks, mypy 0). The ones that would have confounded a specific experiment: the no-evidence arms still received DiscoPoP's digest (P9); the prompt described a gate that was not running (P3/P4); every PolyBench array reached the model tagged scalar (P1); a rewrite was judged by the dependences of the code it replaced (F6); the schedule matrix never varied the schedule (F8); runtime measurements were not moved or restored on the no-fast-refresh and revert paths (F16/F17). No experiment had run; the pilots are not comparable with anything run afterwards. Full flow, every branch: the <a href="https://claude.ai/artifact/FNsRJjnicDw7gBB6mXgKbQ">pipeline chart</a>.</p></div>
+  <div class="col"><p><strong>How regions are ordered</strong> (§5c of the record). The agent scores a region by Amdahl's predicted saving, <code>T·f·(1 − 1/(P·e))</code>. <code>T</code>, <code>P</code> and <code>e</code> are one value for the whole run, so the order equals the order of runtime share <code>f</code>: it is the upper bound of what each region could save, not a prediction that accounts for whether it can be parallelised. That is kept deliberately, as the only ordering with no estimated parameter; whether a region can be parallelised is left to the model, the gate and the budget. T0.5 shows the order is the same at the agent size and the verification size (top loop identical in 22 of 23 benchmarks).</p></div>
+
+  <h3>How every trial is scored</h3>
+  <div class="col">
+    <p>The agent's own verdict is logged but never counted. The harness rebuilds the original and the final source and decides one outcome per trial. Results then go into a 2×2 whose every cell is reported:</p>
+  </div>
+  <div class="tw"><table>
+    <thead><tr><th></th><th>Actually correct</th><th>Actually wrong</th></tr></thead>
+    <tbody>
+      <tr><td>Accepted</td><td><span class="chip c-ok">FASTER</span> / <span class="chip c-acc">parallel-not-faster</span> — speedup is reported only here. On the 8 kernels T0.1 found too short to time at any runnable size: <span class="chip c-hold">parallel-speed-not-measurable</span> — counted for correctness, excluded from every speed statistic and from H1, ratios listed separately as not being speedups</td><td><span class="chip c-bad">BROKEN</span> — unsafe acceptance. Reported as a count with every case named, target zero</td></tr>
+      <tr><td>Rejected</td><td>Over-caution — detectable only on kernels with a known parallel form (category A/B hypotheses, checked by hand)</td><td>True negative — the category C kernels exist to make this cell visible</td></tr>
+    </tbody>
+  </table></div>
+  <div class="col"><p><span class="chip c-bad">SCAFFOLD_MODIFIED</span> sits outside the 2×2: the rewrite changed the instrument (timer, perturbation or digest), so neither verdict measures the program. It is checked before correctness and speed, listed, and never counted as a result.</p></div>
+  <div class="col"><p>Statistics stay proportionate: medians and IQRs, Mann–Whitney U for paired arm comparisons, no p-value on a count of unsafe acceptances, geometric mean if speedups are ever aggregated.</p></div>
+</section>
+
+<section>
+  <div class="sec"><span class="n">2</span><h2>The standard the evaluation holds itself to</h2></div>
+  <div class="col">
+    <p>A master's thesis evaluation is judged on whether its claims could have come out otherwise, whether the comparisons are fair, and whether someone else could redo it. Four commitments answer that before the first run.</p>
+  </div>
+
+  <h3>Hypotheses, fixed before any agent run</h3>
+  <div class="col"><p>This page, <code>arms.json</code> and <code>kernel_groups.json</code> are committed as the pre-registration; the thesis cites that commit hash. A result against a hypothesis is reported as such, not re-framed.</p></div>
+  <div class="tw"><table>
+    <thead><tr><th>ID</th><th>RQ</th><th>Prediction</th><th>Test</th><th>Refuted if</th></tr></thead>
+    <tbody>
+      <tr><td>H1</td><td>RQ1</td><td>The agent delivers correct speedups on group B where DiscoPoP through the gate does not</td><td>E1: FASTER outcomes per benchmark, <code>full</code> vs <code>discopop_gate</code>, paired by benchmark — speed-measurable benchmarks only (T0.1)</td><td>No significant difference on B, or a loss on A</td></tr>
+      <tr><td>H2</td><td>RQ2</td><td>Every change the agent accepts computes the original's values</td><td>All trials, harness oracle incl. perturbed input</td><td>Any BROKEN trial — each is listed and analysed, never averaged away</td></tr>
+      <tr><td>H3</td><td>RQ2 · C2</td><td>The gate rejects wrong candidates and each stage catches something the others miss</td><td>E7: gate verdict vs oracle verdict for every candidate</td><td>A stage with no unique catch, or false accepts the oracle finds</td></tr>
+      <tr><td>H4</td><td>RQ3</td><td>Accepted results scale with threads and approach expert OpenMP where one exists</td><td>E1: kernel speedup at 1–24 threads; Rodinia OpenMP versions and Polly as references</td><td>Accepted results do not scale past a few threads on any group-B benchmark</td></tr>
+      <tr><td>H5</td><td>RQ4</td><td>Evidence raises the success rate, more for Haiku than for Sonnet</td><td>E2: 2×2 evidence × model, interaction</td><td>No main effect of evidence</td></tr>
+      <tr><td>H6</td><td>RQ5 · RQ7</td><td>Model-written pragmas accept more correct changes than DiscoPoP re-discovery, and fast refresh saves time without changing decisions</td><td>E3: 2×2 pragma author × refresh</td><td>More BROKEN with model pragmas, or decisions that differ under fast refresh</td></tr>
+      <tr><td>H7</td><td>RQ6</td><td>Reconstruction reduces decisions that differ from a full re-profile</td><td>E4, with DiscoPoP deciding keep/revert: <code>discopop_pragmas_recon</code> vs <code>discopop_pragmas_fast</code>, against <code>discopop_annotates</code></td><td>No reduction, or an increase in unsafe differences</td></tr>
+      <tr><td>H8</td><td>RQ8</td><td>A second restructuring level parallelizes regions that the first level's rewrites exposed; a third adds little</td><td>E8: depth 0 vs 1 vs 2</td><td>Depth 1 adds no correct speedup on groups B/C, or raises BROKEN or the sequential cost of rewrites</td></tr>
+      <tr><td>H5b</td><td>RQ4</td><td>The gate's failure feedback partly substitutes for DiscoPoP's evidence: extra attempts help most when evidence is absent</td><td>E2: evidence × budget (1 vs 3), Haiku</td><td>No budget effect, or the same budget effect with and without evidence</td></tr>
+      <tr><td>H5c <span class="chip c-hold">proposed</span></td><td>RQ4</td><td>Evidence raises the small open model's success rate more than Haiku's</td><td>E2 Part A with Qwen3-Coder-30B as a third model (D5)</td><td>The evidence effect is no larger for Qwen than for Haiku</td></tr>
+      <tr><td>H7b</td><td>RQ6 · C3</td><td>Letting the model <em>delete</em> dependences produces unsafe keep decisions; letting it <em>add</em> them does not</td><td>E4: <code>discopop_pragmas_llmdeps</code> vs <code>discopop_pragmas_recon</code>, against the full re-profile</td><td>Deletion produces no more unsafe decisions than addition</td></tr>
+      <tr><td>H9</td><td>RQ9</td><td>Ranking by measured time saved spends fewer model calls before the first correct speedup than the static proxy</td><td>E9: <code>full</code> vs <code>full_no_hotspots</code></td><td>No difference in calls-to-first-FASTER or in time saved per call</td></tr>
+      <tr><td>H10</td><td>RQ2 · C2</td><td>Timed at a size where speed is measurable, the speed check removes kept changes that do not pay off without lowering the speedup delivered</td><td>E10: <code>speed_gate_large</code> vs <code>full</code> (check off)</td><td><code>speed_gate_large</code> keeps as many correct-but-not-faster changes as <code>full</code>, or delivers a lower verification speedup</td></tr>
+      <tr><td>H10b</td><td>RQ2</td><td>Timed at the agent's small size, the speed check rejects changes that are faster at the verification size</td><td>E10: every candidate <code>speed_gate_small</code> rejected for speed, re-timed at the verification size</td><td>None of the rejected candidates is faster at the verification size</td></tr>
+      <tr><td>H11</td><td>RQ1 · RQ3 · related work</td><td>On identical programs and under identical verification, the agent's results are verified correct at least as often as RepoOMP's released outputs</td><td>E11: NPB <code>is</code>, <code>mg</code>, <code>lu</code>; every contestant through this harness's verification</td><td>A lower share of the agent's results passes verification than of RepoOMP's released outputs</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Baselines outside the agent</h3>
+  <div class="tw"><table>
+    <thead><tr><th>Baseline</th><th>Where</th><th>What it establishes</th></tr></thead>
+    <tbody>
+      <tr><td>Sequential original</td><td>every benchmark</td><td>The speedup denominator</td></tr>
+      <tr><td>DiscoPoP + the same gate</td><td>every benchmark (<code>discopop_gate</code>)</td><td>What the tool the agent extends achieves unaided — the coverage floor</td></tr>
+      <tr><td>Expert OpenMP</td><td>Rodinia <code>nw</code>, <code>pathfinder</code>, <code>hotspot</code> (the suite's own OpenMP versions, in the harness)</td><td>A speedup ceiling, and over-caution: parallelism that exists but the agent declined</td></tr>
+      <tr><td>Polly auto-parallelizer</td><td>PolyBench and NPB, LLVM 20 on the server (<code>LLVMPolly.so</code>; exact invocation confirmed in T0)</td><td>What a classical polyhedral compiler does with no model — the comparison a reviewer will ask for</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Statistics</h3>
+  <div class="col"><ul>
+    <li><strong>Repeats sized to the claim:</strong> ×5 for the headline model-driven comparisons (E1 core, E2), ×3 for E3/E4, ×1 for breadth runs — the variance is the model's; the pipeline without a model is deterministic (measured, zero variance over 10 runs).</li>
+    <li><strong>Paired by benchmark:</strong> Wilcoxon signed-rank on per-benchmark medians for arm comparisons; Cliff's delta as effect size.</li>
+    <li><strong>Uncertainty shown, not implied:</strong> Wilson 95 % intervals on rates, bootstrap intervals on median speedups.</li>
+    <li><strong>Several tests, one error budget:</strong> Holm–Bonferroni across H1–H7.</li>
+    <li><strong>Unsafe acceptances are counts,</strong> each case named with its diff — never a p-value.</li>
+  </ul></div>
+
+  <h3>Reproducibility and qualitative analysis</h3>
+  <div class="col"><ul>
+    <li>Every run records both repos' commit and diff hash, full model ids, SDK/CLI versions, compiler, host load; the server checkout is proven identical to the local one before each experiment.</li>
+    <li>Every run is archived <strong>in the repository</strong>: <code>agent/benchmark archive</code> copies a run's <code>trials.csv</code>, <code>gate_failures.csv</code>, figures, tables, every trial's record, log, diff and candidate patches, and the program every trial started from into the tracked <code>agent/results/&lt;run&gt;/</code> (sha256 per file in <code>ARCHIVE.json</code>; <code>INDEX.md</code> lists the runs; <code>README.md</code> maps thesis material to files). <code>server.sh fetch</code> archives what it fetches; the one manual step is the commit. A number that is not in <code>agent/results/</code> does not exist. <code>agent/benchmark plots</code> regenerates every figure and table from the archived data.</li>
+    <li>Cost is reported in time, model calls and <strong>tokens</strong> (read from the SDK's usage record — an agent addition).</li>
+    <li>Every BROKEN trial and a random sample of rejected rewrites are coded into a failure taxonomy with a written codebook, so the chapter explains <em>why</em>, not only <em>how often</em>.</li>
+  </ul></div>
+
+  <h3>Every agent setting, accounted for</h3>
+  <div class="col"><p>Each field of the agent's <code>AgentArguments</code> has exactly one role: <strong>studied</strong> (a design decision with a hypothesis), <strong>held fixed</strong> (varying it would confound the comparison — the reason is stated), or <strong>plumbing</strong> (changes no decision). Nothing is varied without a question behind it, and nothing is silently left out.</p></div>
+  <div class="tw"><table>
+    <thead><tr><th>Stage</th><th>Setting</th><th>Role</th><th>Where · why</th></tr></thead>
+    <tbody>
+      <tr><td>Planning</td><td><code>hotspots</code></td><td><span class="chip c-acc">studied</span></td><td>E9 · measured time saved vs static proxy</td></tr>
+      <tr><td>Planning</td><td><code>min_impact</code></td><td><span class="chip c-acc">studied</span></td><td>E9, offline: which attempts a 10/50/100 ms floor would have skipped in E1, and what they delivered</td></tr>
+      <tr><td>Planning</td><td><code>min_runtime_share</code> · <code>exclude_functions</code></td><td><span class="chip c-hold">fixed</span></td><td>0.01 in every arm (D1, from T0.5); exclusions from each benchmark's packaging, demangled for C++; <code>main</code> per D4</td></tr>
+      <tr><td>Planning</td><td><code>lambda_penalty</code> · <code>min_workload</code></td><td><span class="chip c-hold">fixed</span></td><td>λ only orders regions without a measurement; <code>min_workload</code> must stay 0 or every function region is dropped (DiscoPoP reports their workload as 0)</td></tr>
+      <tr><td>Evidence</td><td><code>evidence_sections</code></td><td><span class="chip c-acc">studied</span></td><td>E2 full vs none; leave-one-out per section only if H5 holds (conditional, pre-registered)</td></tr>
+      <tr><td>Model</td><td><code>budget</code></td><td><span class="chip c-acc">studied</span></td><td>E2 · 1 vs 3 attempts: the gate's feedback as a second information source (H5b). With D3 the default becomes a share-weighted budget after calibration; E2's comparison is redefined before it runs</td></tr>
+      <tr><td>Model</td><td><code>model</code></td><td><span class="chip c-acc">studied</span></td><td>E2 · Haiku vs Sonnet</td></tr>
+      <tr><td>Model</td><td><code>provider</code> · <code>edit_mode</code></td><td><span class="chip c-hold">fixed</span></td><td>Claude via the SDK with <code>direct</code> edits. The open model (D5) is to run through the same Claude Code loop in <code>direct</code> mode, so the edit channel stays the same and only the model changes</td></tr>
+      <tr><td>Model</td><td><code>build_retries</code></td><td><span class="chip c-hold">fixed</span></td><td>2 · build errors are mechanical; refunded retries are counted and reported as cost</td></tr>
+      <tr><td>Gate</td><td><code>check_inputs</code></td><td><span class="chip c-acc">studied</span></td><td>E7 · with and without the perturbed input on group C</td></tr>
+      <tr><td>Gate</td><td><code>numeric_tolerance</code> · <code>schedule_stress</code></td><td><span class="chip c-acc">studied</span></td><td>E7, by replaying saved candidates with the stage switched off — no model calls</td></tr>
+      <tr><td>Gate</td><td><code>require_speedup</code> · <code>min_measured_speedup</code></td><td><span class="chip c-acc">studied</span></td><td>E10 · off in every other experiment; on and timed at the kernel's timing size vs on at SMALL (H10, H10b); thresholds 1.0–1.2 applied offline to E10's logged ratios</td></tr>
+      <tr><td>Gate</td><td><code>timing_cflags</code></td><td><span class="chip c-acc">studied</span></td><td>E10 · empty except in <code>speed_gate_large</code>, where the harness sets the kernel's timing size from T0.1</td></tr>
+      <tr><td>Gate</td><td><code>stress_threads</code></td><td><span class="chip c-hold">fixed</span></td><td>1, 2, 4 · the matrix is studied as a stage in E7; its width is not</td></tr>
+      <tr><td>Maintenance</td><td><code>llm_pragmas</code> · <code>fast_refresh</code></td><td><span class="chip c-acc">studied</span></td><td>E3 · 2×2</td></tr>
+      <tr><td>Maintenance</td><td><code>llm_recon</code> · <code>llm_recon_mode</code> · <code>llm_deps</code></td><td><span class="chip c-acc">studied</span></td><td>E4 · add vs delete (H7b); followup vs folded (cost)</td></tr>
+      <tr><td>Loop</td><td><code>restructure_depth</code></td><td><span class="chip c-acc">studied</span></td><td>E8 · 0, 1, 2</td></tr>
+      <tr><td>Computed</td><td><code>noise_floor</code></td><td><span class="chip c-ok">reported</span></td><td>T0 · measured per benchmark, not set</td></tr>
+      <tr><td>Plumbing</td><td><code>discopop_dir</code> · <code>source_file</code> · <code>output_dir</code> · <code>api_key</code> · <code>api_base</code> · <code>apply_patches</code> · <code>allow_unverified</code> · <code>dry_run</code> · <code>verbose</code> · <code>reprofil_args</code></td><td><span class="chip c-hold">fixed</span></td><td>Paths, credentials and output switches; <code>allow_unverified</code> off because the correctness gate must never be disabled; <code>reprofil_args</code> set per benchmark by the harness</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <div class="sec"><span class="n">3</span><h2>The benchmarks</h2></div>
+  <div class="col">
+    <p><strong>Redesigned on 19 Sep (D18, D19) — read this first; the "core ten" below is superseded.</strong> The author asked what <em>FASTER</em> is measured against and whether any benchmark forces the model to restructure. The data answered: <em>FASTER</em> was "against the sequential original", 21 of 25 such results changed nothing but pragmas, and DiscoPoP with the gate, without any model, parallelizes most PolyBench kernels. PolyBench was written for polyhedral compilers — its kernels are parallel as written — so the central claim (restructuring parallelizes what DiscoPoP alone cannot) could not be tested on it, and the evidence, refresh and depth experiments would have had nothing to measure. Two rules fix this. <strong>The main comparison is DiscoPoP alone against DiscoPoP + agent</strong>, per benchmark, in the same run; the sequential original is the reference axis, not the result. And <strong>a benchmark's class is measured, never assumed</strong>, and each experiment uses the class that lets its arms differ.</p>
+  </div>
+  <div class="tw"><table>
+    <thead><tr><th>Class</th><th>Definition (measured with no model)</th><th>Benchmarks</th><th>Expected verdict vs DiscoPoP alone</th></tr></thead>
+    <tbody>
+      <tr><td><span class="chip c-acc">R</span> needs restructuring</td><td>DiscoPoP + gate alone reaches no verified parallel program, <em>and</em> an expert reference solution exists that the harness verifies correct</td><td>18 TSVC-2 loops (statement reordering, loop distribution, node splitting, scalar expansion, index-set splitting, peeling, induction variables, search loops, packing) · PolyBench <code>bicg</code>, <code>floyd-warshall</code> · LULESH's force scatter and time-constraint kernels · NPB-C kernels (E11)</td><td><strong>gained</strong> — this is claim C1</td></tr>
+      <tr><td><span class="chip c-ok">A</span> parallel as written</td><td>DiscoPoP + gate alone reaches a verified parallel program</td><td>most of PolyBench (2mm, 3mm, jacobi-2d, atax after Fix 84, …) · TSVC controls s000, vpvtv, s313 · hotspot</td><td>better / equal / worse — what the agent's choice of loop level, clauses and grain adds; reported separately from C1; never <em>lost</em></td></tr>
+      <tr><td><span class="chip c-hold">D</span> must decline</td><td>A genuine recurrence; the reference is the sequential program</td><td>TSVC s321, s322, s323, s3112 · <code>seidel-2d</code> · <code>trisolv</code></td><td>neither, and zero <em>unsafe</em></td></tr>
+      <tr><td><span class="chip">M</span> multi-region application</td><td>≥ 10 candidate regions with unequal runtime shares</td><td><code>md</code>, <code>hotspot</code>, <code>pathfinder</code>, NPB-C kernels, LULESH</td><td>per region, as above</td></tr>
+    </tbody>
+  </table></div>
+  <div class="col">
+    <p><strong>What is measured so far</strong> (Mac, no model, a look — the instrument is T0.11 on the server, three profiles). TSVC: DiscoPoP alone ends <code>no-change</code> on all 18 R loops and all 4 D loops and parallelizes all 3 controls; it nevertheless <em>claimed</em> 22 Do-Alls there, of which the gate rejected every one (21 by TSan, 1 by the output check). All 21 expert references compute the original's values; on the server they are 1.2–4.6× faster at 12 threads under a host load of 2,000 (T0.10) — these loops are memory-bound, so for class R the headline is "verified-correct parallelization reached", with speed as a fraction of the expert's. PolyBench, 26 kernels: 6 FASTER, 15 parallel but not faster (several far slower than sequential: inner-loop pragmas), 5 unchanged. <strong>LULESH</strong> carries LLNL's own before/after in one source — the serial force scatter and, under <code>numthreads &gt; 1</code>, the experts' gather over per-element arrays; the input is the serial path only, the upstream OpenMP version is the ceiling.</p>
+  </div>
+  <h3>Which experiment uses which benchmarks, and why</h3>
+  <div class="tw"><table>
+    <thead><tr><th>Experiment</th><th>Benchmarks</th><th>Why these — what lets the arms differ</th></tr></thead>
+    <tbody>
+      <tr><td><strong>E1</strong> agent vs DiscoPoP alone (C1)</td><td>R × 5 repeats · A × 1 · D × 3; arms <code>discopop_gate</code>, <code>full</code>, a bare-model baseline on R</td><td>On R, DiscoPoP alone fails by measurement and a verified solution exists, so <em>gained</em> is attributable to restructuring. A shows no harm, D shows no unsafe acceptance</td></tr>
+      <tr><td><strong>E2</strong> evidence (none · hotspot only · compiler remarks · DiscoPoP; grouped sections; prompt parts)</td><td>R only</td><td>On A the model succeeds in one call with or without evidence (seen in pilot4 and E10) — a ceiling. On R the dependence that blocks the loop is exactly what the evidence names</td></tr>
+      <tr><td><strong>E3</strong> pragma author × refresh · <strong>E4</strong> add vs delete dependences</td><td>R only</td><td>Both concern what happens <em>after</em> a rewrite; without a rewrite the refresh path never runs</td></tr>
+      <tr><td><strong>E7</strong> the gate as a classifier</td><td>every candidate of every run + DataRaceBench</td><td>Needs right and wrong candidates; R produces wrong ones (floyd-warshall's stack array); DataRaceBench gives external ground truth for races</td></tr>
+      <tr><td><strong>E8</strong> depth</td><td>R cases where one rewrite exposes another: <code>bicg</code>/<code>atax</code> (fission, then interchange), partial recurrences, NPB-C</td><td><span class="chip c-hold">at risk</span> depth only matters if a first rewrite creates a new region; a smoke must show depth 1 ever triggers, or E8 is dropped and said so</td></tr>
+      <tr><td><strong>E9</strong> ranking</td><td>M only</td><td>Ranking cannot matter on a kernel with one hot loop</td></tr>
+      <tr><td><strong>E10</strong> speed check <span class="chip c-ok">done 20 Sep</span></td><td>2mm, jacobi-2d, floyd-warshall, lu, seidel-2d, hotspot</td><td><strong>Result:</strong> <code>speed_gate_large</code> 11 FASTER, 0 slower programs kept, 0 BROKEN · <code>full</code> 8 / 5 / 1 (on <code>lu</code> a <code>parallel for</code> on the innermost loop, 5× slower, twice; on <code>hotspot</code> 12× slower) · <code>speed_gate_small</code> 2 FASTER, 16 of 18 unchanged, 29 speed rejections, highest cost. <strong>D8: <code>speed_gate_large</code> is E1's agent arm.</strong> Host load median 1,374: classes usable, magnitudes not. Owed: <code>discopop_gate</code> on the same six (D19), <code>lu</code> re-run after Fix 84</td></tr>
+      <tr><td><strong>E11</strong> vs RepoOMP</td><td>RepoOMP's eight NPB-C inputs</td><td>Identical programs, their released outputs</td></tr>
+      <tr><td><strong>E5</strong> cost · <strong>E6</strong> application scale</td><td>size sweep on 2mm, NPB <code>is</code> · LULESH (serial path)</td><td>E6 is now the main comparison at application scale: sequential (reference) · DiscoPoP alone · agent · LLNL's expert OpenMP</td></tr>
+    </tbody>
+  </table></div>
+  <div class="col">
+    <p><strong>Pre-flight before any experiment (no model).</strong> (1) class measured with <code>discopop_gate</code>, three profiles; (2) for R, the reference verified and its speedup at the verification size known — a loop whose own expert solution is not ≥ 1.1× is reported for correctness only; (3) sizes from T0.1; (4) one smoke trial per arm on two benchmarks, and the log <em>read</em> to confirm the arm's code path ran. An experiment whose arms cannot differ on its benchmarks is not run.</p>
+  </div>
+  <h3>The portfolio as first planned (14–18 Sep)</h3>
+  <div class="col">
+    <p>A portfolio, not one suite: <strong>kernels</strong> for control, <strong>applications</strong> for realism, one <strong>large code</strong> for scale. Every benchmark reaches the agent as one self-contained file in its own language, with results on stdout, the computation timed on stderr, and — where the input can be blind — a perturbed input. The code under test is never rewritten by the packaging.</p>
+  </div>
+  <div class="tw"><table>
+    <thead><tr><th>Layer</th><th>Benchmarks</th><th>Why it is in</th><th>Packaging still to do</th></tr></thead>
+    <tbody>
+      <tr><td>Kernels</td><td>PolyBench/C 3.2 — 27 of 30 (C)</td><td>Isolated loop shapes with a known answer; categories can be controlled</td><td><span class="chip c-ok">done</span> 30/30 output identical, timer, perturbed input</td></tr>
+      <tr><td>Applications</td><td>NPB <code>is</code> (780 lines), <code>mg</code> (1,269), <code>lu</code> (3,279) — C++ port</td><td>The community's reference suite; NPB verifies its own result</td><td>merge benchmark + <code>common/</code> into one file; move timing lines off stdout; NPB timer → region time</td></tr>
+      <tr><td>Applications</td><td>burkardt <code>md</code> (643, C++)</td><td>Molecular dynamics: force loop with a reduction</td><td>remove date and wall-time prints from stdout</td></tr>
+      <tr><td>Applications</td><td>Rodinia <code>nw</code> (376), <code>pathfinder</code> (125), <code>hotspot</code> (334) — C++</td><td>Dynamic programming and a thermal stencil from a second suite</td><td>timing prints off stdout; <code>hotspot</code>'s output file → stdout digest; input files as arguments</td></tr>
+      <tr><td>Scale</td><td>LULESH 2.0 (C++, already merged on the server)</td><td>Profiling cost where it hurts (28 GB peak at <code>-s 5</code>)</td><td>E5 only, plus two agent trials at a small size</td></tr>
+      <tr><td>Out</td><td>miniFE (28 files) · NPB <code>bt</code> · PolyBench <code>cholesky</code>, <code>trmm</code>, <code>durbin</code></td><td colspan="2">miniFE and BT: too many files / too large to package faithfully in scope. The three kernels: NaN/inf output, so no correctness check means anything</td></tr>
+    </tbody>
+  </table></div>
+  <div class="col">
+    <p><strong>Packaging (D6, 18 Sep).</strong> Every benchmark is used in its original file layout: a PolyBench kernel is <code>&lt;kernel&gt;.c</code>, <code>&lt;kernel&gt;.h</code>, <code>polybench.h</code> and <code>polybench.c</code> verbatim plus one harness header; NPB is the benchmark file with <code>common/</code> beside it; Rodinia and md were one file to begin with. The harness's three edits to the kernel file (prints to a digest, timer markers, the perturbed input) are unchanged. DiscoPoP profiles the whole program through a generated unity unit; T0.8 checks it sees the same program as in the merged file. <code>main</code> is excluded where DiscoPoP proposes nothing there (D4: everywhere except <code>md</code>, <code>pathfinder</code>, and <code>nw</code> pending its re-run).</p>
+    <p>A stratified <strong>core ten</strong> — kernels <em>and</em> applications — carries every repeated and model-heavy experiment. The groups are hypotheses written down <em>before</em> any agent run, so they cannot be fitted to results; E1 confirms or corrects them.</p>
+  </div>
+  <div class="tw"><table>
+    <thead><tr><th>Group</th><th>Core ten</th><th>What it tests</th></tr></thead>
+    <tbody>
+      <tr><td><span class="chip c-ok">A</span> DiscoPoP-ready</td><td><code>2mm</code> · Rodinia <code>hotspot</code></td><td>Parallel as written. The LLM should add little; the gate should keep DiscoPoP's good pragmas and time them.</td></tr>
+      <tr><td><span class="chip c-acc">B</span> Restructurable</td><td><code>jacobi-2d-imper</code> · <code>floyd-warshall</code> · NPB <code>mg</code> · <code>md</code></td><td>Parallelism exists after a change: buffering, the <code>i</code> loop under a fixed <code>k</code>, a hidden reduction. This is where C1 has to show.</td></tr>
+      <tr><td><span class="chip c-hold">C</span> Order matters</td><td><code>seidel-2d</code> · <code>trisolv</code> · NPB <code>lu</code> · Rodinia <code>nw</code></td><td>Genuine recurrences — Gauss-Seidel sweeps, substitution, a dynamic-programming wavefront. Correct answers: decline, or an order-preserving transformation. A Jacobi-style rewrite is wrong — and <code>lu</code> sets that trap at application scale.</td></tr>
+    </tbody>
+  </table></div>
+  <div class="col"><p>NPB <code>is</code>, Rodinia <code>pathfinder</code> and the other 22 PolyBench kernels run in E1 only.</p></div>
+</section>
+
+<section>
+  <div class="sec"><span class="n">4</span><h2>Prove the instruments first</h2></div>
+  <div class="col"><p>None of these call a model. They make every later number interpretable, and they are cheap enough to run first.</p></div>
+
+  <div class="tw"><table>
+    <thead><tr><th>ID</th><th>Study</th><th>Setup</th><th>Delivers</th><th class="num">Est. wall</th></tr></thead>
+    <tbody>
+      <tr><td>T0.1 <span class="chip c-ok">done · re-run 18 Sep</span></td><td>Size calibration</td><td>Every packaged benchmark (34, without cholesky/trmm/durbin) × SMALL…EXTRALARGE, sequential native time on the server, pinned to one NUMA node; re-run on the original-format packages (D6), run <code>t0_1_sizes_v2</code></td><td>Per-kernel verification and timing size (the committed table). <strong>Re-run: all 34 sizes identical</strong>; serial times within ±7 % of the merged-package run under a host load of 15–250 — the pinning holds</td><td class="num">≈ 1 h</td></tr>
+      <tr><td>T0.2 <span class="chip c-ok">done · re-run 18 Sep</span></td><td>DiscoPoP stability</td><td>The 6 PolyBench kernels of the core ten × 10 profiles each at agent size (run <code>t0_2_stability</code>); applications join once packaged</td><td><strong>Profiling is deterministic, reporting is not.</strong> The dependence multiset (sink, type, source, variable, per-run labels dropped) has one value per kernel across all 60 profiles, while <code>patterns.json</code> differs in every profile, the suggestion count moves by up to a factor of three (2mm 30–77), and the Do-All blockers appear in some profiles of a kernel and not in others. Confirms profile-once-per-kernel; <code>discopop_gate</code> is itself a draw. Refined by T0.7: the explorer varies on its own too. <strong>Re-run on the original layout (<code>t0_2_stability_v2</code>): reproduced exactly</strong> — one dependence multiset per kernel in all 60 profiles, <code>patterns.json</code> different in every profile, counts 18–33 (seidel-2d) to 34–82 (2mm), blockers varying between profiles</td><td class="num">3 min</td></tr>
+      <tr><td>T0.3 <span class="chip c-ok">done · Mac, 18 Sep</span></td><td>Oracle adequacy + bad-rewrite corpus</td><td><code>oracle_study.py</code>: every candidate the gate judged in any archived run (82 from 7 runs: 26 accepted, 22 rejected at <code>correctness</code>, 20 at <code>tsan</code>, 1 at <code>schedules</code>, 13 rejected before a build) is rebuilt as the gate saw it — the trial's original plus the patches accepted before it, then the candidate's own — and replayed through the harness verification (full dump, digest, perturbed input, repeats at fixed threads). The corpus includes Jacobi-for-Gauss-Seidel, the O(n²) recomputation, the all-work-in-the-last-repetition trick, the rewrite right for the profiled input and wrong for the perturbed one, a segfault at 4 threads</td><td><strong>42 replayable. Gate-rejected at runtime: 19 of 23 flagged</strong> — 14 by the perturbed input <em>only</em> (all 14 agreed with the original on the shipped input: without <code>--check-seed</code> the oracle would have passed them), 5 by a crash at 4 threads. The 4 not flagged: 2 benign races (DiscoPoP pragmas that had lost their <code>private</code> clause before Fix 78) that only ThreadSanitizer sees — identical output in 12 runs — and 2 correct parallel scans the gate over-rejected at 10⁻¹⁶ because its measured noise floor for that program was zero (a false-reject class for E7). <strong>Gate-accepted: 19 of 19 agree</strong>, no false accept in the corpus. Record §7 <code>t0_3_oracle_mac</code></td><td class="num">1 h 45, no model</td></tr>
+      <tr><td>T0.4</td><td>Timing on a shared host</td><td>One binary, 10 repeats, 1 vs 4 concurrent pinned lanes</td><td>The smallest speedup the setup can resolve; whether lanes interfere</td><td class="num">≈ 0.5 h</td></tr>
+      <tr><td>T0.5 <span class="chip c-ok">done · re-run 18 Sep</span></td><td>Runtime share per region</td><td><code>share_study.py</code>: DiscoPoP's hotspot detection as the agent runs it, 37 benchmarks at the agent size and 23 at the verification size; each region placed in its function, span, timed region</td><td>What a share floor removes and, by Amdahl, the most runtime it can give up; ranking stable across sizes; what <code>main</code> holds. Basis of D1 and D4. <strong>Re-run (<code>t0_5_shares</code>, 36 benchmarks): the 1 % floor drops 76 of 280 loops and gives up at most 1.96 % of runtime (ludcmp); 5 % would give up 17.4 % on NPB <code>mg</code>; the top region is the same at both sizes in 23 of 23; <code>main</code> holds timed work only in <code>md</code> and <code>pathfinder</code></strong></td><td class="num">7 min</td></tr>
+      <tr><td>T0.6 <span class="chip c-ok">done · re-run 18 Sep, 33 of 36</span></td><td>DiscoPoP's suggestions in <code>main</code></td><td><code>dp_main_study.py</code>: profile as the harness does; every unfiltered pattern placed in its function via DiscoPoP's own spans; patterns lying only on packaging code marked</td><td>Whether excluding <code>main</code> would remove DiscoPoP's own suggestions (D4). <strong>Re-run (<code>t0_6_dp_main_v2</code>): inside <code>main</code> DiscoPoP's applicable non-scaffolding patterns are task patterns only in every PolyBench kernel and NPB <code>is</code>, none in <code>hotspot</code>, a Do-All only in <code>md</code></strong> — D4 as applied. Three benchmarks lost their explorer on all 3 attempts: <code>mg</code>, <code>pathfinder</code> to the random crash (the tool now retries 20× like the harness), and <code>nw</code> to a deterministic explorer bug on its traceback loop — <strong>fixed (agent Fix 80)</strong>, after which <code>nw</code>'s explorer runs but needs ≈ 25 h (D13)</td><td class="num">1 h 16</td></tr>
+      <tr><td>T0.8 <span class="chip c-ok">done · Mac + server, 18 Sep</span></td><td>Packaging equivalence (D6)</td><td><code>packaging_equivalence.py</code>: merged file vs original layout through the unity unit, both profiled as the harness does; observed dependences, Do-All blockers and applicable patterns compared by source-line text</td><td><strong>29 of 29 kernels: identical kernel dependences in both layouts.</strong> Every differing edge lies in <code>xmalloc</code>/<code>polybench_alloc_data</code>, which the merge had rewritten; blockers differ in 14 kernels — the explorer's own draw, reproduced within one layout on trisolv. <strong>Server: 29 of 29 PolyBench kernels again identical, and NPB <code>is</code> identical in dependences, blockers and patterns</strong> (<code>mg</code>'s merged profile lost its explorer to the random crash; <code>adi</code>'s merged file does not instrument in time)</td><td class="num">≈ 40 s per kernel</td></tr>
+      <tr><td>T0.9 <span class="chip c-ok">done · Mac</span></td><td>Fast refresh vs full profile over rewrite chains</td><td>agent <code>benchmark/refresh_depth.py</code>: three programs × three rewrites; full / fast-step / fast-chain on identical source; what DiscoPoP concludes, then the dependence edges</td><td>8 of 18 comparisons identical; <strong>8 produced a Do-All the full profile does not support</strong>, every one at a step whose rewrite dropped observed dependences; 2 lost one. The refresh is a queue-maintenance optimisation, not an analysis substitute — record §5h</td><td class="num">≈ 10 min</td></tr>
+      <tr><td>T0.7 <span class="chip c-ok">done · Mac + server, 18 Sep</span></td><td>DiscoPoP's explorer on one profile</td><td>Now a tool, <code>explorer_determinism.py</code>: one profile per benchmark taken as the harness takes it; <code>discopop_explorer</code> re-run 20 times with the hash seed free and 20 per fixed seed, its outputs (including its pattern-id counter) cleared before every run; per run the digest of the pattern <em>set</em> (ids, task-group numbers and order removed), one digest per pattern type, counts and crashes. On 2mm, <code>pathfinder</code> and NPB <code>is</code> in the chain</td><td>2mm (Mac, by hand): Do-All fixed at 21, task patterns 6–57, reductions in some runs; <code>pathfinder</code>: 15 crashes in 20 runs. Not hash randomisation. <strong>Server (<code>t0_7_explorer</code>, 60 runs per benchmark):</strong> 2mm — no crash, 22 Do-Alls in every run, but two Do-All <em>sets</em> (the <code>shared()</code> clause of the init loops, present or empty; <code>private</code>/<code>reduction</code> never vary) and 50 distinct task sets; <code>pathfinder</code> — <strong>40 of 60 runs crash</strong>, and the runs that finish report 10 or 11 Do-Alls (a loop suggested parallel in some runs of one unchanged profile); NPB <code>is</code> — no crash, one Do-All set, 14 task sets. A fixed hash seed changes nothing. Basis of the 20-attempt retry policy and of reporting <code>discopop_gate</code> on <code>pathfinder</code> as a range</td><td class="num">≈ 15 min</td></tr>
+    </tbody>
+  </table></div>
+  <div class="expect risk"><span class="label">Already found — the reason T0.3 exists</span><p>The first local run returned <strong>FASTER, 2.9×</strong> on <code>seidel-2d</code>. Haiku had replaced the Gauss-Seidel sweep with a Jacobi sweep, and every check passed: PolyBench starts from a bilinear field that both sweeps leave unchanged. With the perturbed input the same rewrite is classified <strong>BROKEN</strong> (seeded relative error 3.8·10⁻⁷). That is a finding for C2, not a footnote.</p></div>
+</section>
+
+<section>
+  <div class="sec"><span class="n">5</span><h2>The main experiments</h2></div>
+
+  <div class="exp">
+    <div class="exp-head"><span class="exp-id">E1</span><h3 class="exp-title">Coverage and safety</h3><span class="chip c-acc">RQ1 · RQ2 · RQ3</span></div>
+    <div class="col"><p>The anchor of the chapter: does restructuring deliver parallelism DiscoPoP cannot, and does anything wrong get through?</p></div>
+    <dl class="kv">
+      <dt>Arms</dt><dd><code>discopop_gate</code> (B1: DiscoPoP's suggestions through the gate, no model) vs <code>full</code> (B5: the agent)</dd>
+      <dt>Model</dt><dd>Haiku</dd>
+      <dt>Benchmarks</dt><dd>All 34: 27 PolyBench kernels + NPB <code>is</code>, <code>mg</code>, <code>lu</code> + <code>md</code> + Rodinia <code>nw</code>, <code>pathfinder</code>, <code>hotspot</code></dd>
+      <dt>Repeats</dt><dd><code>discopop_gate</code> ×1 · <code>full</code> ×5 on the core ten, ×1 on the other 24</dd>
+      <dt>Trials</dt><dd>34 without a model + 74 with Haiku</dd>
+      <dt>Baselines</dt><dd>Sequential original; expert OpenMP (Rodinia <code>nw</code>, <code>pathfinder</code>, <code>hotspot</code>); Polly on PolyBench and NPB — all timed with the same verification at 1, 2, 4, 8, 12, 24 threads</dd>
+      <dt>Reads out</dt><dd>Outcome counts by category; the 2×2 per arm; speedup per kernel at the verification size; which gate stage rejected what. <code>discopop_gate</code>'s suggestion count is reported as a range with the run's profile archived beside it — T0.2 showed the same kernel can yield three times as many suggestions from one profile as from another</dd>
+    </dl>
+    <div class="cmd">agent/benchmark run $CORE10 --arms discopop_gate,full --models claude-haiku-4-5-20251001 \
+    --trials 5 --threads 1,2,4,8,12,24 --repeats 5 --check-seed 7 --run-id e1_core
+agent/benchmark run $OTHER17 --arms discopop_gate,full --models claude-haiku-4-5-20251001 \
+    --trials 1 --threads 6,12 --repeats 5 --check-seed 7 --run-id e1_rest</div>
+    <div class="expect"><span class="label">What would support C1</span><p>More FASTER outcomes than <code>discopop_gate</code> in category B, no loss in category A, declines or order-preserving changes in category C — and a BROKEN count of zero, or every case named and explained.</p></div>
+  </div>
+
+  <div class="exp">
+    <div class="exp-head"><span class="exp-id">E2</span><h3 class="exp-title">Evidence, feedback and model strength</h3><span class="chip c-acc">RQ4 · X1 · X2</span></div>
+    <div class="col"><p>The thesis's premise is that DiscoPoP's evidence helps the model. The model has two sources of information besides the code: what the <strong>profiler</strong> says before it tries, and what the <strong>gate</strong> says after a failed attempt. E2 separates them, then crosses the evidence with model strength: if Haiku <em>with</em> evidence matches Sonnet <em>without</em>, the evidence is what makes the cheap model viable.</p></div>
+    <dl class="kv">
+      <dt>Part A · evidence × model</dt><dd><code>full_b1</code> vs <code>no_evidence_b1</code> (one attempt, so gate feedback cannot stand in for evidence) × Haiku, Sonnet · core ten · ×5 · 200 trials, one session per model</dd>
+      <dt>Part B · evidence × feedback</dt><dd>Haiku · adds <code>no_evidence</code> (3 attempts, no evidence) · with <code>full</code> from E1 this completes evidence {on, off} × attempts {1, 3} · core ten · ×5 · 50 new trials</dd>
+      <dt>Part C · which evidence (conditional)</dt><dd>Only if H5 shows an evidence effect: leave one section out (<code>deps</code>, <code>blockers</code>, <code>accesses</code>, <code>loop_nest</code>, <code>inner_patterns</code> — <code>classification</code> is dropped: it renders only for regions that already have a DiscoPoP pattern, which the model is never asked about) · Haiku · one attempt · core ten · ×3 · 120 trials. Pre-registered as conditional, so running it is not a choice made after seeing results</dd>
+      <dt>Part D · small open model (proposed)</dt><dd>Part A repeated with <code>Qwen/Qwen3-Coder-30B-A3B-Instruct</code> in <code>direct</code> mode · core ten · ×5 · 100 trials, no subscription usage · only after a smoke test shows it can run the same loop (D5)</dd>
+      <dt>Reads out</dt><dd>Interaction plots of FASTER rate and BROKEN count (evidence × model; evidence × attempts); model calls, tokens and time per trial</dd>
+    </dl>
+    <div class="cmd">agent/benchmark run $CORE10 --arms full_b1,no_evidence_b1 \
+    --models claude-haiku-4-5-20251001,claude-sonnet-5 --trials 5 \
+    --threads 6,12 --repeats 5 --check-seed 7 --run-id e2</div>
+    <div class="expect"><span class="label">Either answer is publishable</span><p>If evidence helps Haiku more than Sonnet, it substitutes for capability. If it helps neither, half the prompt is ballast — also worth stating, with the 48 % prompt share measured earlier.</p></div>
+  </div>
+
+  <div class="exp">
+    <div class="exp-head"><span class="exp-id">E3</span><h3 class="exp-title">Who writes the pragma × how the profile is refreshed</h3><span class="chip c-acc">RQ5 · RQ7 · C3</span></div>
+    <div class="col">
+      <p>Two design decisions were flipped to on during development, and both sit in every default run. <strong>LLM pragmas:</strong> the model writes the <code>#pragma omp</code> with its rewrite and the gate judges it, instead of DiscoPoP re-discovering parallelism after a re-profile. <strong>Fast refresh:</strong> after a kept rewrite, only the compile runs and the previous run's observed dependences are translated onto the new code, instead of a full instrumented re-profile.</p>
+      <p>Each is tested with the other held fixed — a 2×2, so neither effect hides inside the other.</p>
+    </div>
+    <div class="tw"><table>
+      <thead><tr><th></th><th>Fast refresh</th><th>Full re-profile</th></tr></thead>
+      <tbody>
+        <tr><td>LLM writes pragmas</td><td><code>full</code> — the default; reused from E1</td><td><code>llm_pragmas_full_reprofile</code> · <code>--no-fast-refresh</code></td></tr>
+        <tr><td>DiscoPoP writes pragmas</td><td><code>discopop_pragmas_fast</code> · <code>--no-llm-pragmas</code></td><td><code>discopop_annotates</code> · <code>--no-llm-pragmas --no-fast-refresh</code></td></tr>
+      </tbody>
+    </table></div>
+    <dl class="kv">
+      <dt>Model · benchmarks</dt><dd>Haiku · groups B and C of the core ten (8 benchmarks) — where rewrites are kept, so a refresh actually happens</dd>
+      <dt>Repeats</dt><dd>×3</dd>
+      <dt>Trials</dt><dd>3 new arms × 8 × 3 = 72 (the <code>full</code> cell comes from E1)</dd>
+      <dt>Reads out</dt><dd><strong>Row effect:</strong> accepted changes, BROKEN count, and which stage decided — the gate or DiscoPoP's re-discovery. <strong>Column effect:</strong> profiling seconds per kept rewrite, and whether the refreshed evidence led to different decisions than a full re-profile</dd>
+    </dl>
+    <div class="cmd">agent/benchmark run $CORE_BC --arms llm_pragmas_full_reprofile,discopop_pragmas_fast,discopop_annotates \
+    --models claude-haiku-4-5-20251001 --trials 3 --threads 6,12 --repeats 5 --check-seed 7 --run-id e3</div>
+    <div class="expect"><span class="label">Where the refresh can change a decision — read from the agent's code</span><p>When the model writes its own pragma, the gate decides keep or revert; the refreshed profile only relocates the queue and finds new regions. Only in the DiscoPoP row does the refreshed profile decide (DiscoPoP must find a pattern in the rewritten lines). So the column effect is expected in the DiscoPoP row and near zero in the model row — the model row doubles as a check that nothing else differs.</p></div>
+    <div class="expect"><span class="label">What is already known</span><p>A fast refresh saves only the instrumented run (8.6 s and 7.9 s measured on two synthetic cases), and 39 of 39 dependences it cannot carry sit on rewritten lines. E3 shows whether that gap changes <em>decisions</em> on real kernels; E5 shows what the saved run is worth at scale.</p></div>
+  </div>
+
+  <div class="exp">
+    <div class="exp-head"><span class="exp-id">E4</span><h3 class="exp-title">Closing the refresh's gap with the model</h3><span class="chip c-acc">RQ6 · C3</span></div>
+    <div class="col"><p>A fast refresh cannot know the dependences of code that did not exist when the program last ran. Reconstruction asks the model to report them for the code it just wrote — adding dependences, the direction in which a wrong claim costs a missed parallelization, never a race.</p></div>
+    <dl class="kv">
+      <dt>Arms</dt><dd><code>discopop_pragmas_recon</code> (<code>--no-llm-pragmas --llm-recon</code>) vs <code>discopop_pragmas_fast</code> (fast refresh alone) vs <code>discopop_annotates</code> (full re-profile, ground truth) — the last two from E3</dd>
+      <dt>Direction</dt><dd>+ <code>discopop_pragmas_llmdeps</code> (<code>--llm-deps</code>): the model <em>deletes</em> static dependences it calls spurious. The thesis argues a model's claim may enter a sound analysis only in the direction where an error costs opportunity, not correctness; adding (recon) vs deleting (llm-deps) tests that principle directly (H7b)</dd>
+      <dt>Mode</dt><dd>+ <code>discopop_pragmas_recon_folded</code>: the reconstruction request rides on the rewrite call — no extra call; does it cost quality?</dd>
+      <dt>Why this mode</dt><dd>Reconstructed dependences can only change a decision where the refreshed profile decides — when DiscoPoP, not the gate, judges the rewrite. In the default mode (model writes pragmas) this experiment would measure nothing by construction.</dd>
+      <dt>Model · benchmarks</dt><dd>Haiku · the same 8 benchmarks, ×3</dd>
+      <dt>Trials</dt><dd>3 new arms × 8 × 3 = 72, plus the existing refresh-fidelity study re-run under final conditions</dd>
+      <dt>Reads out</dt><dd>Keep/revert decisions that differ from the full re-profile arm, split into unsafe (kept, full profile would revert) and over-cautious; extra model calls per kept rewrite</dd>
+    </dl>
+  </div>
+
+  <div class="exp">
+    <div class="exp-head"><span class="exp-id">E5</span><h3 class="exp-title">Why profiling cost matters</h3><span class="chip c-hold">C3 stakes · no model</span></div>
+    <div class="col"><p>On microbenchmarks a fast refresh saves about 8 seconds, which does not motivate a chapter. The claim needs the cost curve.</p></div>
+    <dl class="kv">
+      <dt>Setup</dt><dd>Instrument, profiled run, explorer: time and peak memory for 6 kernels across MINI…LARGE, plus LULESH at several <code>-s</code> values, using the harness's existing memory-overhead tooling</dd>
+      <dt>Anchor</dt><dd>LULESH <code>-s 5</code>: 23 s instrument at 28 GB peak, 4.5 s run, 16 s explorer, 7.1 GB profile</dd>
+      <dt>Reads out</dt><dd>Log–log cost against problem size, with the extrapolation stated explicitly</dd>
+    </dl>
+  </div>
+
+  <div class="exp">
+    <div class="exp-head"><span class="exp-id">E6</span><h3 class="exp-title">The agent on a large code</h3><span class="chip c-hold">external validity · scale</span></div>
+    <div class="col"><p>Applications are now part of E1–E4. E6 asks the remaining question: does the loop still work when one profile costs tens of gigabytes?</p></div>
+    <dl class="kv">
+      <dt>Benchmark</dt><dd>LULESH 2.0 at a small size (<code>-s 5</code>), the single-file merge already on the server</dd>
+      <dt>Arms · models</dt><dd><code>full</code> · Haiku and Sonnet · ×1</dd>
+      <dt>Trials</dt><dd>2</dd>
+    </dl>
+  </div>
+
+  <div class="exp">
+    <div class="exp-head"><span class="exp-id">E7</span><h3 class="exp-title">The gate as a classifier</h3><span class="chip c-acc">RQ2 · C2 · no extra model calls</span></div>
+    <div class="col"><p>Outcome counts say how often something wrong was <em>accepted</em>. They cannot say how good the gate is, because they never look at what it <em>rejected</em>. E7 re-judges every candidate the agent produced in E1–E4 — accepted or not — with the harness oracle, and scores the gate like any classifier.</p></div>
+    <dl class="kv">
+      <dt>Input</dt><dd>Every candidate patch with the stage that accepted or rejected it — saved by the agent during E1–E4 (an agent addition: today only the accepted patch is kept)</dd>
+      <dt>Oracle</dt><dd>Harness verification: exact and perturbed-input output, repeated at fixed threads, ThreadSanitizer run independently of the gate</dd>
+      <dt>Reads out</dt><dd>Confusion matrix of gate vs oracle; precision and recall of the gate; per stage, the wrong candidates only that stage caught; every false accept and false reject listed</dd>
+      <dt>Stage ablation</dt><dd>The saved candidates replayed through the gate with numeric tolerance, schedule stress, the dependence stage or ThreadSanitizer switched off: what each stage's absence would have let through — no model calls</dd>
+      <dt>Input</dt><dd>12 trials of <code>full</code> on group C without the perturbed input (<code>--check-seed ""</code>): how much of the gate's safety comes from the input, not the stages</dd>
+      <dt>Speed</dt><dd>Moved to E10: the main runs do not ask the speed question (<code>--no-require-speedup</code>). Thresholds 1.0, 1.05, 1.1 and 1.2 are applied to E10's logged ratios instead</dd>
+      <dt>Cost</dt><dd>≈ 3 h of builds and runs, plus 12 trials</dd>
+    </dl>
+    <div class="expect"><span class="label">Why this experiment exists</span><p>It turns C2 from "the gate caught these examples" into a measured property with an error rate — and is the fair answer to "what would have shipped without the gate", which the agent cannot run as an arm.</p></div>
+  </div>
+
+  <div class="exp">
+    <div class="exp-head"><span class="exp-id">E8</span><h3 class="exp-title">How deep should restructuring go?</h3><span class="chip c-acc">RQ8 · C1 · C3</span></div>
+    <div class="col">
+      <p>A kept rewrite often exposes new loops. With <code>--restructure-depth 0</code> — the default, and every other experiment here — those loops get DiscoPoP's pragmas at most, never a second rewrite. Depth decides how far the agent may chain restructuring, and it changes cost too: before a deeper level the agent pays for a full instrumented re-profile and re-measures runtimes, and fast refresh is used only at the last level.</p>
+      <p><strong>What a deeper level can see (D2′).</strong> After a kept rewrite the parallel constructs it created are covered with their measured share; the rewritten function itself stays a candidate only if measurable sequential time remains in it (its share minus the covered loops', above the 1 % floor), and any loop inside a parallel construct is never a candidate. Before Fix 76 the whole edited region was covered, so depth 1 and 2 could never receive a candidate — the three arms would have been identical.</p>
+    </div>
+    <dl class="kv">
+      <dt>Arms</dt><dd><code>full</code> (depth 0, from E1) vs <code>full_depth1</code> vs <code>full_depth2</code></dd>
+      <dt>Model · benchmarks</dt><dd>Haiku · groups B and C of the core ten (8), where rewrites expose new regions</dd>
+      <dt>Repeats · trials</dt><dd>×3 · 2 new arms × 8 × 3 = 48</dd>
+      <dt>Reads out</dt><dd>Correct speedup gained per level; regions <em>seen</em> and regions parallelized at depth 1 and 2 (so "nothing left to do" is told apart from "did nothing"); full re-profiles, model calls and time per level; BROKEN count; the sequential cost of kept rewrites (a rewrite can be slower serially — measured on one case at 22 % — and later levels compound it)</dd>
+    </dl>
+    <div class="expect risk"><span class="label">The risk E8 must show honestly</span><p>Each level moves the source further from the original, and a rewrite that needs its own pragma just to break even is worth less than none. The verify step compares against the original program, so compounding serial cost shows up in the result rather than hiding in per-level gains.</p></div>
+  </div>
+
+  <div class="exp">
+    <div class="exp-head"><span class="exp-id">E9</span><h3 class="exp-title">Where the agent looks first</h3><span class="chip c-acc">RQ9 · planning stage</span></div>
+    <div class="col"><p>Every model call is spent on some region. The agent ranks regions by measured runtime share — written as Amdahl's time saved, but with one thread count and efficiency for the whole run that is the same order (the upper bound of what each region could save) — instead of a static instruction count — a decision made because the proxy once ranked a 0.1 ms checksum loop first. E9 measures whether that choice saves model calls.</p></div>
+    <dl class="kv">
+      <dt>Arms</dt><dd><code>full</code> (from E1) vs <code>full_no_hotspots</code></dd>
+      <dt>Model · benchmarks</dt><dd>Haiku · core ten · ×3 · 30 new trials</dd>
+      <dt>Offline</dt><dd>From E1's logs: rank correlation of each scorer with the time actually saved per region; the attempts a <code>min_impact</code> floor of 10, 50 or 100 ms would have skipped, and what those attempts delivered</dd>
+      <dt>Reads out</dt><dd>Model calls before the first FASTER outcome; time saved per model call; share of calls spent on regions under 1 % of runtime</dd>
+    </dl>
+  </div>
+
+  <div class="exp">
+    <div class="exp-head"><span class="exp-id">E10</span><h3 class="exp-title">Does the speed check keep unnecessary changes out?</h3><span class="chip c-acc">RQ2 · C2 · gate</span></div>
+    <div class="col"><p>The speed check exists so that a change which does not pay off is not kept: the gate's performance stage (≥ 1.1× measured), Phase B's marginal check (a pragma that costs more than it saves is dropped) and Settle's final check (the finished program must not be slower than the original). Every other experiment runs with it off (<code>--no-require-speedup</code>): at the agent's size the kernels take 0.06–15 ms, below the cost of starting threads, and the check would judge noise. E10 studies the check where it can measure — profiling and every correctness check stay at the agent size, and only the timed builds use a larger per-kernel size (<code>--timing-cflags</code>, an agent addition).</p></div>
+    <dl class="kv">
+      <dt>Arms</dt><dd><code>full</code> (check off, from E1) vs <code>speed_gate_large</code> (check on, timed at the kernel's timing size from T0.1) vs <code>speed_gate_small</code> (check on, timed at SMALL)</dd>
+      <dt>Model · benchmarks</dt><dd>Haiku · the PolyBench kernels of the core ten that have a timing size in T0.1; a kernel whose serial run never reaches the timing target cannot be timed and is listed as excluded</dd>
+      <dt>Repeats · trials</dt><dd>×3 · 2 new arms × ≈ 5 kernels × 3 ≈ 30 (final count after T0.1)</dd>
+      <dt>Reads out</dt><dd>Changes and pragmas kept; diff size of the final file; rejections by the performance stage, Phase B and Settle; speedup at the verification size; accepted results that are correct but not faster; model calls, tokens, trial time. For <code>speed_gate_small</code>, every candidate rejected for speed re-timed at the verification size (candidates are saved)</dd>
+      <dt>Hypotheses</dt><dd>H10, H10b</dd>
+    </dl>
+    <div class="expect risk"><span class="label">What would make the check look better than it is</span><p>A check that rejects everything also keeps nothing unnecessary. E10 reports kept changes and delivered speedup together: the check earns its place only if it removes changes that do not pay off while the verification speedup stays level with <code>full</code>.</p></div>
+  </div>
+
+  <div class="exp">
+    <div class="exp-head"><span class="exp-id">E11</span><h3 class="exp-title">Against the closest published system</h3><span class="chip c-acc">RQ1 · RQ3 · related work</span></div>
+    <div class="col"><p>RepoOMP (arXiv 2608.05855, August 2026) is the closest published system: profiled hotspots, rules plus an LLM agent, and structured dependence context. Its public repository ships its NPB inputs and the outputs it produced, so the agent can be compared on identical programs without re-running their tool — whose own README says the simplified public version does not reach those outputs.</p></div>
+    <dl class="kv">
+      <dt>Input</dt><dd>NPB 3.0 OpenMP C <code>is</code>, <code>mg</code>, <code>lu</code>: the serial <code>XXX_#_omp.c</code> files (every pragma removed) from their repository, commit <code>45a1b9f</code>, Apache-2.0</dd>
+      <dt>Contestants</dt><dd>The agent (<code>full</code>, Haiku and Sonnet, ×5); RepoOMP's released outputs (<code>_aaai</code>, <code>_reclaude</code>, <code>_regpt</code>); their released Claude Code and Codex baseline outputs; NPB's expert OpenMP (<code>XXX_ori.c</code>); <code>discopop_gate</code>; Polly</dd>
+      <dt>Verification</dt><dd>One procedure for all, on this server: NPB's own verification at the chosen class and at a second class (the changed input), ThreadSanitizer with Archer, kernel speedup at 1–24 threads, <code>-O3</code></dd>
+      <dt>Reads out</dt><dd>Per program and contestant: verified correct or not, and why; speedup; fraction of the expert version's speedup; regions parallelized compared with the expert version; RepoOMP's own acceptance beside ours</dd>
+      <dt>Trials</dt><dd>3 programs × 2 models × 5 = 30 agent trials; released outputs are only verified</dd>
+      <dt>Hypothesis</dt><dd>H11</dd>
+    </dl>
+    <div class="expect risk"><span class="label">Limits stated with the result</span><p>Their outputs were produced on other hardware and models, and their repository builds at <code>-O0</code>; re-verified at <code>-O3</code> their speedups can fall, so their own reported acceptance is shown beside ours. The meaning of the output file names is confirmed from the paper before use. NPB's OpenMP version is public and may be in any model's training data.</p></div>
+  </div>
+</section>
+
+<section>
+  <div class="sec"><span class="n">6</span><h2>Time and usage budget</h2></div>
+  <div class="col"><p>Estimates drafted before the pilots. The first server pilot (<code>pilot_seidel</code>) is <strong>void</strong>: all its model calls failed on a truncated token and it still recorded a clean result. The second (<code>pilot2</code>, <code>seidel-2d</code>, Haiku) gives the first real figure: <strong>11.6 min per trial</strong> (agent 587.6 s, of which 97 % was waiting for the model; verification 106.9 s), <strong>8 model calls</strong>, 61,834 output tokens, $0.58 at API rates. At that rate the ~620 trials below take about <strong>120 h back to back</strong> — the hours on the bars assume 4 pinned lanes and are to be recomputed. Applications have more regions and Sonnet is slower, so 11.6 min is a lower bound.</p></div>
+  <div class="budget" role="img" aria-label="Estimated wall-clock hours per experiment with four lanes: T0 four hours without a model, E1 six hours, E11 three hours, E10 three hours, E2 ten hours over three sessions, E3 five hours, E4 four hours, E5 three hours without a model, E6 two hours, E7 three hours, E8 four hours, E9 three hours.">
+    <div class="brow"><span class="name">T0 instruments</span><div class="bar"><span class="nollm" style="width:40%"></span></div><span class="h">≈ 4 h</span></div>
+    <div class="brow"><span class="name">E1 the whole system</span><div class="bar"><span style="width:60%"></span></div><span class="h">≈ 6 h</span></div>
+    <div class="brow"><span class="name">E11 against RepoOMP</span><div class="bar"><span style="width:30%"></span></div><span class="h">≈ 3 h</span></div>
+    <div class="brow"><span class="name">E9 where to look</span><div class="bar"><span style="width:30%"></span></div><span class="h">≈ 3 h</span></div>
+    <div class="brow"><span class="name">E2 evidence · feedback · model</span><div class="bar"><span style="width:100%"></span></div><span class="h">≈ 10 h</span></div>
+    <div class="brow"><span class="name">E7 the gate</span><div class="bar"><span style="width:30%"></span></div><span class="h">≈ 3 h</span></div>
+    <div class="brow"><span class="name">E10 the speed check</span><div class="bar"><span style="width:30%"></span></div><span class="h">≈ 3 h</span></div>
+    <div class="brow"><span class="name">E3 pragmas × refresh</span><div class="bar"><span style="width:50%"></span></div><span class="h">≈ 5 h</span></div>
+    <div class="brow"><span class="name">E4 add vs delete, recon</span><div class="bar"><span style="width:40%"></span></div><span class="h">≈ 4 h</span></div>
+    <div class="brow"><span class="name">E8 restructuring depth</span><div class="bar"><span style="width:40%"></span></div><span class="h">≈ 4 h</span></div>
+    <div class="brow"><span class="name">E5 profiling cost</span><div class="bar"><span class="nollm" style="width:30%"></span></div><span class="h">≈ 3 h</span></div>
+    <div class="brow"><span class="name">E6 LULESH</span><div class="bar"><span style="width:20%"></span></div><span class="h">≈ 2 h</span></div>
+  </div>
+  <p class="label">In chapter order · blue: calls a model · grey: no model · E2 split over three sessions; Part C conditional and not included</p>
+  <div class="col">
+    <p><strong>About 620 model-calling trials</strong> in total (E1 74, E2 250, E3 72, E4 72, E6 2, E7 12, E8 48, E9 30, E10 ≈ 30, E11 30), plus 120 if E2 Part C is triggered — sized by the statistics in §2, not by convenience. Depth-1 and depth-2 trials are the slowest per trial: each adds full re-profiles and model calls.</p>
+    <p><strong>If usage forces cuts, they follow a fixed order</strong>, decided now: first E2 Part C, then E6, then E9's model runs (its offline analysis stays), then E4's folded-mode arm, then E2 Part B. E1, E2 Part A, E3, E4's add-vs-delete comparison, E7 and E8 carry the hypotheses the thesis's contributions rest on and are not cut. Applications profile and gate more slowly than kernels, so these hours are the least certain figures on the page. Each experiment fits one session; the campaign spans several.</p>
+  </div>
+  <div class="expect risk"><span class="label">The binding constraint is subscription usage, not the server</span><p>At ~20 calls per trial the campaign is several thousand model calls, a good part of them Sonnet. The pilot measures calls per trial per model; if the budget does not fit, repeats drop from 3 to 2 on E2 and E6 is cut before anything else.</p></div>
+</section>
+
+<section>
+  <div class="sec"><span class="n">7</span><h2>Order of work</h2></div>
+  <div class="tw"><table>
+    <thead><tr><th>Step</th><th>What</th><th>Needs first</th></tr></thead>
+    <tbody>
+      <tr><td>1 <span class="chip c-ok">done</span></td><td>Commit this plan, <code>arms.json</code> and <code>kernel_groups.json</code> as the pre-registration; sync to the server; parity check; token launcher that leaves nothing behind</td><td>Author's go-ahead</td></tr>
+      <tr><td>2 <span class="chip c-ok">done</span></td><td>Package the applications (NPB <code>is</code>/<code>mg</code>/<code>lu</code>, <code>md</code>, Rodinia <code>nw</code>/<code>pathfinder</code>/<code>hotspot</code>), each validated against its original output; harness additions: per-benchmark size table, pinned lanes, baseline runners (expert OpenMP, Polly), statistics in <code>plots</code>; agent additions: save every candidate with its gate verdict (E7), record token usage from the SDK (gate attribution, figures and kernel timing are already done); for E10 the agent's <code>--timing-cflags</code> and per-kernel timing sizes from T0.1; for E11 the NPB C programs and released outputs from RepoOMP's repository, and a verify-only mode for given source files (also used for the expert and Polly baselines)</td><td>—</td></tr>
+      <tr><td>3 <span class="chip c-hold">running · 18 Sep</span></td><td>T0.1, T0.2, T0.5, T0.6 <span class="chip c-ok">done on the merged packages</span> — <strong>re-run on the server on the original-format packages (D6)</strong> in one detached chain (<code>t0_chain.sh</code>: T0.1 → T0.5 → T0.6 → T0.2 → T0.8 PolyBench + NPB → T0.7), packages regenerated and validated on the server first (28/30 + 7/7 + 8 calibration, 45/45 digests); T0.3 from the saved candidates on the Mac at the same time; T0.4 running after the chain. <strong>All done 18 Sep except T0.4 (running)</strong>; results archived under <code>agent/results/</code> and committed</td><td>Step 1; D6 packaging committed and synced <span class="chip c-ok">done</span></td></tr>
+      <tr><td>4 <span class="chip c-ok">pilot4 done · 19 Sep</span></td><td>Pilot on the server: <code>pilot_seidel</code> void (token), <code>pilot2</code> done on the merged packaging, the full local run observed by hand done (<code>local_obs1</code>, e2e review). <strong><code>pilot3</code>: the nine model-driven core benchmarks × <code>full</code> × 1, Haiku, on the original-format packages after every fix — measures calls and minutes per trial and decides D9 (the E1 model)</strong>; recompute the budget from it. <strong>pilot4 (fixed DiscoPoP, 8 benchmarks): FASTER on 2mm 9.5×, jacobi-2d-imper 5.9×, floyd-warshall 2.9×, lu 2.9×; seidel-2d declined; trisolv correct but untimeable; hotspot 0.08× (DiscoPoP's own pragma, speed unjudged); md SCAFFOLD_MODIFIED (12 calls, 53 min). 22 calls, median ≈ 2 min per trial → D9: E1 with Haiku; E1 ≈ 9 h on two lanes.</strong> pilot3 (unfixed profiler) stopped after 4 trials; its floyd-warshall rewrite put <code>temp[N][N]</code> on the stack — exact at SMALL, a segfault at LARGE, now scored BROKEN. The D3 calibration is off the critical path (D10); the Qwen feasibility test (D5) later</td><td>Steps 2–3</td></tr>
+      <tr><td>4b <span class="chip c-ok">decided 18 Sep · D8–D11</span></td><td><strong>Four decisions the plan review (record §5i) left to the author — all taken as proposed:</strong> (A) run E10 <em>before</em> E1 and let it fix E1's default configuration — the speed check at the kernel's timing size, if it removes useless kept changes without lowering the delivered speedup; (B) the E1 model — Haiku if the pilot yields ≥ 2 FASTER outcomes in group B, else Sonnet; (C) keep <code>--budget 3</code> fixed and treat D3 as an efficiency study, not a default; (D) H6's second half stays as registered, with T0.9 reported as evidence in hand</td><td>Steps 3–4</td></tr>
+      <tr><td>4c <span class="chip c-hold">running · 19 Sep</span></td><td><strong>E10 first (D8)</strong>: <code>full</code>, <code>speed_gate_large</code>, <code>speed_gate_small</code> × 2mm, jacobi-2d-imper, floyd-warshall, lu, seidel-2d + hotspot × 3, Haiku (54 trials, run <code>e10</code>); its winner becomes E1's default</td><td>pilot4</td></tr>
+      <tr><td>5</td><td>E1 and E11, then E2</td><td>Pilot within budget · the author's go-ahead</td></tr>
+      <tr><td>6</td><td>E3 and E4 (reuse E1 trials), E5, E10 (reuses E1's <code>full</code> trials)</td><td>E1</td></tr>
+      <tr><td>7</td><td>E6 on LULESH</td><td>Time left</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <div class="sec"><span class="n">8</span><h2>Threats the design already answers</h2></div>
+  <div class="col"><p><strong>Added by the review of 18 Sep:</strong> every finding of §5g would have confounded a specific arm — the fixes precede the first run. The gate cannot tell useful from useless parallel code while the speed check is off (decision A above). A profile taken unit by unit, DiscoPoP's documented workflow, is unsafe outside <code>main</code>'s unit (D6) — stated for anyone reproducing this. The fast refresh's Do-All verdicts are not to be trusted where a pragma is decided (T0.9); the agent never does so in its default configuration.</p></div>
+  <div class="tw"><table>
+    <thead><tr><th>Threat</th><th>Answer in the design</th></tr></thead>
+    <tbody>
+      <tr><td>The oracle cannot see a wrong program</td><td>Perturbed input on 27 kernels; weak-oracle kernels excluded; T0.3 corpus shows what each check catches</td></tr>
+      <tr><td>DiscoPoP is not deterministic</td><td>Measured in T0.2 over 60 profiles: it observes the same dependences every run, but what it reports from them differs in every profile. So one profile per kernel per run is shared by all arms, that profile is archived with the run, and <code>discopop_gate</code>'s suggestion count is reported as a range rather than a number. T0.7: the explorer also varies, and crashes, on one fixed profile; it is retried on the same profile, never replaced</td></tr>
+      <tr><td>The agent edits the instrument</td><td>The scaffolding check: a trial that changed the timer, the perturbation or the digest is <code>SCAFFOLD_MODIFIED</code> and never counted</td></tr>
+      <tr><td>A failed model call looks like a decision</td><td>A rejected credential aborts the run (Fix 58); the job checks the credential before starting; every trial records failed calls beside its call count</td></tr>
+      <tr><td>Shared, busy server distorts timing</td><td>Pinned lanes, T0.4 resolution limit, median of 5, agent's measured noise floor</td></tr>
+      <tr><td>The model changes under us</td><td>Full model ids and CLI version recorded per run</td></tr>
+      <tr><td>Benchmarks chosen to flatter the agent</td><td>Categories fixed before any run; E1 reports all 27, not just the core ten</td></tr>
+      <tr><td>The gate refuses correct parallelisations</td><td>Measured, not assumed: E7 scores every candidate against the oracle. Reviewing one local run by hand already found two false rejections by the clause stage (agent Fix 63) — a correct <code>private(j, k)</code> refused because the next loop nest re-initialises the counter, a later pragma names it, and a comment mentions it</td></tr>
+      <tr><td>A tool that hangs corrupts the measurements beside it</td><td>A timed-out command is killed as a whole process group (harness, 17 Sep): DiscoPoP's compile of NPB <code>lu</code> had kept a core busy for over an hour after its timeout</td></tr>
+      <tr><td>The agent's own metric misleads</td><td>Outcomes come from independent verification only; the agent's BELOW on a 2.9× run is documented as a design issue</td></tr>
+      <tr><td>Results fitted after the fact</td><td>Hypotheses, arms and benchmark groups committed before the first run; the thesis cites the commit</td></tr>
+      <tr><td>Too few repeats for a stochastic model</td><td>×5 on headline comparisons, paired tests, intervals, Holm–Bonferroni; the model-free pipeline shown deterministic</td></tr>
+      <tr><td>Only internal comparisons</td><td>Expert OpenMP and Polly as external baselines; E11 against the closest published system on identical inputs; E7 measures the gate's own error rate</td></tr>
+      <tr><td>The agent's speed check switched off without evidence</td><td>Off in the main runs for a measured reason (kernels run in milliseconds at the agent size); E10 studies the check where speed is measurable and at the small size</td></tr>
+      <tr><td>The model has seen the answer</td><td>Disabled or commented OpenMP code removed in packaging; public expert versions named as a training-data threat; the no-evidence arm as a bound</td></tr>
+      <tr><td>An effect that cannot occur, or a setting never varied</td><td>Each mechanism is tested where the agent's code lets it change a decision (E4 with DiscoPoP deciding; E3's model row as a null check); restructuring depth varied in E8</td></tr>
+      <tr><td>Only one kind of benchmark</td><td>Kernels, applications from two further suites (NPB, Rodinia) and a stand-alone code, in both C and C++; the core ten mixes kernels and applications</td></tr>
+      <tr><td>Synthetic scale</td><td>E5 cost curve and E6 agent trials on LULESH; miniFE and NPB BT named as out of scope</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<footer>
+  Companion to <span class="mono">agent/THESIS_EXPERIMENTS.md</span> (decisions, change log, run log) and <span class="mono">claude_project/06-thesis-plan.md</span>. Categories A/B/C are hypotheses; hour estimates are pre-pilot and are being recomputed from <code>pilot2</code>. Last updated 18 Sep 2026.
+</footer>
+</div>

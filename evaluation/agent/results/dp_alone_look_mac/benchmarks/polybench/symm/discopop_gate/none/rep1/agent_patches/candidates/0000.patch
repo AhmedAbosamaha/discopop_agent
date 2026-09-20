@@ -1,0 +1,10 @@
+--- /Users/ahmedsamir/new_benchmark_harness/agent/runs/dp_alone_look_mac/benchmarks/polybench/symm/discopop_gate/none/rep1/work/symm.c
++++ /Users/ahmedsamir/new_benchmark_harness/agent/runs/dp_alone_look_mac/benchmarks/polybench/symm/discopop_gate/none/rep1/work/symm.c
+@@ -75,6 +75,7 @@
+ 
+ #pragma scop
+   /*  C := alpha*A*B + beta*C, A is symetric */
++ #pragma omp parallel for firstprivate(alpha,beta,nj,ni) private(j,k) shared(B) 
+   for (i = 0; i < _PB_NI; i++)
+     for (j = 0; j < _PB_NJ; j++)
+       {

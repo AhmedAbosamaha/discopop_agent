@@ -1,0 +1,100 @@
+--- hotspot.cpp
++++ hotspot.cpp
+@@ -257,11 +257,95 @@
+                 #ifdef VERBOSE
+                 fprintf(stdout, "iteration %d\n", i++);
+                 #endif
+-                single_iteration(r, t, power, row, col, Cap_1, Rx_1, Ry_1, Rz_1, step);
++                {
++                    FLOAT delta;
++                    int chunk, r_idx, c_idx;
++                    int num_chunk = row*col / (BLOCK_SIZE_R * BLOCK_SIZE_C);
++                    int chunks_in_row = col/BLOCK_SIZE_C;
++                    int chunks_in_col = row/BLOCK_SIZE_R;
++
++                    #pragma omp parallel for private(chunk, r_idx, c_idx, delta) shared(r, t, power, row, col, Cap_1, Rx_1, Ry_1, Rz_1, step, num_chunk, chunks_in_row, chunks_in_col)
++                    for ( chunk = 0; chunk < num_chunk; ++chunk )
++                    {
++                        int r_start = BLOCK_SIZE_R*(chunk/chunks_in_col);
++                        int c_start = BLOCK_SIZE_C*(chunk%chunks_in_row);
++                        int r_end = r_start + BLOCK_SIZE_R > row ? row : r_start + BLOCK_SIZE_R;
++                        int c_end = c_start + BLOCK_SIZE_C > col ? col : c_start + BLOCK_SIZE_C;
++
++                        if ( r_start == 0 || c_start == 0 || r_end == row || c_end == col )
++                        {
++                            for ( r_idx = r_start; r_idx < r_start + BLOCK_SIZE_R; ++r_idx ) {
++                                for ( c_idx = c_start; c_idx < c_start + BLOCK_SIZE_C; ++c_idx ) {
++                                    if ( (r_idx == 0) && (c_idx == 0) ) {
++                                        delta = (Cap_1) * (power[0] +
++                                            (t[1] - t[0]) * Rx_1 +
++                                            (t[col] - t[0]) * Ry_1 +
++                                            (amb_temp - t[0]) * Rz_1);
++                                    }
++                                    else if ((r_idx == 0) && (c_idx == col-1)) {
++                                        delta = (Cap_1) * (power[c_idx] +
++                                            (t[c_idx-1] - t[c_idx]) * Rx_1 +
++                                            (t[c_idx+col] - t[c_idx]) * Ry_1 +
++                                        (   amb_temp - t[c_idx]) * Rz_1);
++                                    }
++                                    else if ((r_idx == row-1) && (c_idx == col-1)) {
++                                        delta = (Cap_1) * (power[r_idx*col+c_idx] +
++                                            (t[r_idx*col+c_idx-1] - t[r_idx*col+c_idx]) * Rx_1 +
++                                            (t[(r_idx-1)*col+c_idx] - t[r_idx*col+c_idx]) * Ry_1 +
++                                        (   amb_temp - t[r_idx*col+c_idx]) * Rz_1);
++                                    }
++                                    else if ((r_idx == row-1) && (c_idx == 0)) {
++                                        delta = (Cap_1) * (power[r_idx*col] +
++                                            (t[r_idx*col+1] - t[r_idx*col]) * Rx_1 +
++                                            (t[(r_idx-1)*col] - t[r_idx*col]) * Ry_1 +
++                                            (amb_temp - t[r_idx*col]) * Rz_1);
++                                    }
++                                    else if (r_idx == 0) {
++                                        delta = (Cap_1) * (power[c_idx] +
++                                            (t[c_idx+1] + t[c_idx-1] - 2.0*t[c_idx]) * Rx_1 +
++                                            (t[col+c_idx] - t[c_idx]) * Ry_1 +
++                                            (amb_temp - t[c_idx]) * Rz_1);
++                                    }
++                                    else if (c_idx == col-1) {
++                                        delta = (Cap_1) * (power[r_idx*col+c_idx] +
++                                            (t[(r_idx+1)*col+c_idx] + t[(r_idx-1)*col+c_idx] - 2.0*t[r_idx*col+c_idx]) * Ry_1 +
++                                            (t[r_idx*col+c_idx-1] - t[r_idx*col+c_idx]) * Rx_1 +
++                                            (amb_temp - t[r_idx*col+c_idx]) * Rz_1);
++                                    }
++                                    else if (r_idx == row-1) {
++                                        delta = (Cap_1) * (power[r_idx*col+c_idx] +
++                                            (t[r_idx*col+c_idx+1] + t[r_idx*col+c_idx-1] - 2.0*t[r_idx*col+c_idx]) * Rx_1 +
++                                            (t[(r_idx-1)*col+c_idx] - t[r_idx*col+c_idx]) * Ry_1 +
++                                            (amb_temp - t[r_idx*col+c_idx]) * Rz_1);
++                                    }
++                                    else if (c_idx == 0) {
++                                        delta = (Cap_1) * (power[r_idx*col] +
++                                            (t[(r_idx+1)*col] + t[(r_idx-1)*col] - 2.0*t[r_idx*col]) * Ry_1 +
++                                            (t[r_idx*col+1] - t[r_idx*col]) * Rx_1 +
++                                            (amb_temp - t[r_idx*col]) * Rz_1);
++                                    }
++                                    r[r_idx*col+c_idx] = t[r_idx*col+c_idx] + delta;
++                                }
++                            }
++                            continue;
++                        }
++
++                        for ( r_idx = r_start; r_idx < r_start + BLOCK_SIZE_R; ++r_idx ) {
++                            for ( c_idx = c_start; c_idx < c_start + BLOCK_SIZE_C; ++c_idx ) {
++                                r[r_idx*col+c_idx] = t[r_idx*col+c_idx] +
++                                     ( Cap_1 * (power[r_idx*col+c_idx] +
++                                    (t[(r_idx+1)*col+c_idx] + t[(r_idx-1)*col+c_idx] - 2.f*t[r_idx*col+c_idx]) * Ry_1 +
++                                    (t[r_idx*col+c_idx+1] + t[r_idx*col+c_idx-1] - 2.f*t[r_idx*col+c_idx]) * Rx_1 +
++                                    (amb_temp - t[r_idx*col+c_idx]) * Rz_1));
++                            }
++                        }
++                    }
++                }
++
+                 FLOAT* tmp = t;
+                 t = r;
+                 r = tmp;
+-            }	
++            }
+         }
+ 	#ifdef VERBOSE
+ 	fprintf(stdout, "iteration %d\n", i++);

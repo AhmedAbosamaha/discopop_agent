@@ -1,0 +1,30 @@
+--- /home/ahmedabosamaha/new_benchmark_harness/agent/runs/e10/benchmarks/polybench/seidel-2d/speed_gate_small/claude-haiku-4-5-20251001/rep1/work/seidel-2d.c
++++ /home/ahmedabosamaha/new_benchmark_harness/agent/runs/e10/benchmarks/polybench/seidel-2d/speed_gate_small/claude-haiku-4-5-20251001/rep1/work/seidel-2d.c
+@@ -62,10 +62,26 @@
+ #pragma scop
+   for (t = 0; t <= _PB_TSTEPS - 1; t++)
+     for (i = 1; i<= _PB_N - 2; i++)
+-      for (j = 1; j <= _PB_N - 2; j++)
++    {
++      /* Within each row, split j-loop into two passes to break loop-carried
++         dependence: j-1 is computed before j, but j+1 remains stale (from t-1)
++         as in the original sequential order. Pass 1 (odd j) and Pass 2 (even j)
++         are independent within their pass, enabling parallelism per pass. */
++
++      /* Pass 1: odd j values (1, 3, 5, ...) parallel */
++#pragma omp parallel for shared(A)
++      for (int j = 1; j <= _PB_N - 2; j += 2)
+ 	A[i][j] = (A[i-1][j-1] + A[i-1][j] + A[i-1][j+1]
+ 		   + A[i][j-1] + A[i][j] + A[i][j+1]
+ 		   + A[i+1][j-1] + A[i+1][j] + A[i+1][j+1])/9.0;
++
++      /* Pass 2: even j values (2, 4, 6, ...) parallel */
++#pragma omp parallel for shared(A)
++      for (int j = 2; j <= _PB_N - 2; j += 2)
++	A[i][j] = (A[i-1][j-1] + A[i-1][j] + A[i-1][j+1]
++		   + A[i][j-1] + A[i][j] + A[i][j+1]
++		   + A[i+1][j-1] + A[i+1][j] + A[i+1][j+1])/9.0;
++    }
+ #pragma endscop
+ 
+ }

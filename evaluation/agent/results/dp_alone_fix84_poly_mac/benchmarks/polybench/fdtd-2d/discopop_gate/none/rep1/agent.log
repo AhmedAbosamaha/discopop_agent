@@ -1,0 +1,129 @@
+
+============================================================
+  DiscoPoP Agentic Controller
+============================================================
+  Source         : /Users/ahmedsamir/new_benchmark_harness/agent/runs/dp_alone_fix84_poly_mac/benchmarks/polybench/fdtd-2d/discopop_gate/none/rep1/work/fdtd-2d.c
+  DiscoPoP dir   : .discopop
+  Model          : none
+  Budget         : 0 LLM retries/region (+2 free build fixes)
+  λ penalty      : 1.0
+  Min workload   : 0.0
+  Restruct. depth: 0 (Tier-2 allowed at depth 0–0)
+  Quality gate   : Tier-1 = all but speed, no escalation; Tier-2 = full
+  TSan           : barrier-aware (archer: /Users/ahmedsamir/.local/lib/libarcher.dylib)
+  Speedup gate   : OFF (--no-require-speedup)
+  Dry run        : False
+  LLM mode       : none
+  Edit mode      : direct
+  Re-profiling   : fast refresh (compile only) between rewrites; full before a deeper level and before Phase B
+  Pragmas        : LLM writes them with the rewrite, gate decides (--llm-pragmas)
+============================================================
+
+  Project        : /Users/ahmedsamir/new_benchmark_harness/agent/runs/dp_alone_fix84_poly_mac/benchmarks/polybench/fdtd-2d/discopop_gate/none/rep1/work  (2 unit(s): fdtd-2d.c, polybench.c)
+
+  [ok] Captured reference output on 2 inputs (70 bytes, 4.8 ms baseline) for the correctness/performance gates.
+
+  [ok] Numerical noise floor 6.11e-13 of output scale (widest disagreement 6.11e-14 of output scale across 6 build variants, x10 margin).
+  [note] values may move that far without failing the correctness gate; labels, line structure and integers must still match exactly.
+
+  Hotspots       : measured per-region runtimes are available — 21 region(s) measured, 89.2 ms total, ranking by predicted time saved at 8 threads
+
+  Baseline       : DiscoPoP proposes 4 applicable pattern(s) unaided; 4 of them produce a usable pragma
+                   → the run beats DiscoPoP by ending with more than 4
+
+  Initial candidates
+Region ID    Type           Saves    % run    Hot  Tier  Depth  Name
+--------------------------------------------------------------------------------------
+  1:107      loop         27.3 ms    34.9%    YES     1      0  lines 83–97
+  3:104      function     27.3 ms    34.9%    YES     2      0  kernel_fdtd_2d
+  1:137      loop         11.2 ms    14.3%  MAYBE     2      0  lines 93–96
+  1:140      loop         11.0 ms    14.1%  MAYBE     1      0  lines 94–96
+  1:126      loop          8.4 ms    10.8%  MAYBE     2      0  lines 90–92
+  1:129      loop          8.3 ms    10.6%  MAYBE     1      0  lines 91–92
+  1:115      loop          7.7 ms     9.8%  MAYBE     2      0  lines 87–89
+  1:118      loop          7.5 ms     9.7%  MAYBE     1      0  lines 88–89
+
+============================================================
+  PHASE A — restructure  (the source stays pragma-free)
+============================================================
+
+┌─ [depth=0] loop 1:107 (lines 83–97)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] function 3:104 (lines 71–100)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:137 (lines 93–96)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:140 (lines 94–96)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:126 (lines 90–92)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:129 (lines 91–92)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:115 (lines 87–89)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:118 (lines 88–89)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+
+============================================================
+  PHASE B — annotate  (4 candidate pragma(s))
+============================================================
+
+  5 loop(s) are already parallel in the source; nothing is nested inside them.
+
+┌─ pattern #35  do_all @ lines 83–97  (W=70000)
+│  #pragma omp parallel for
+│  gate failed at 'tsan': Race detected: WARNING: ThreadSanitizer: data race (pid=32459)   Write of size 8 at 0x0001077eb000 by thread T4:     #0 kernel_fdtd_2d.omp_outlined fd
+└─ DROPPED
+
+┌─ pattern #33  do_all @ lines 94–96  (W=1000)
+│  #pragma omp parallel for
+│  [Phase-B] Original backed up → fdtd-2d.c.original
+│  [Phase-B] Applied to fdtd-2d.c
+└─ APPLIED
+
+┌─ pattern #31  do_all @ lines 91–92  (W=4990)
+│  #pragma omp parallel for
+│  [Phase-B] Applied to fdtd-2d.c
+└─ APPLIED
+
+┌─ pattern #29  do_all @ lines 88–89  (W=5000)
+│  #pragma omp parallel for
+│  [Phase-B] Applied to fdtd-2d.c
+└─ APPLIED
+
+============================================================
+  SETTLING — verify the finished source, drop what does not hold up
+============================================================
+  [ok] finished source verified — output matches the original
+
+
+============================================================
+  SUMMARY: 0 rewrite(s) kept  |  3 pragma(s) applied  |  4 skipped
+  DiscoPoP unaided: 4 usable pragma(s) in this profile's draw  →  this run: 3   [BELOW, informational]
+    ✓  loop 1:140  [Phase-B pragma]  depth=0
+    ✓  loop 1:129  [Phase-B pragma]  depth=0
+    ✓  loop 1:118  [Phase-B pragma]  depth=0
+    ✗  3:104  [skipped]  depth=0
+    ✗  1:137  [skipped]  depth=0
+    ✗  1:126  [skipped]  depth=0
+    ✗  1:115  [skipped]  depth=0
+
+  Results → .discopop/agent_patches/accepted.json
+============================================================
+

@@ -1,0 +1,28 @@
+  Quality gate   : Tier-1 = all but speed, no escalation; Tier-2 = full
+  Speedup gate   : OFF (--no-require-speedup)
+  Re-profiling   : fast refresh (compile only) between rewrites; full before a deeper level and before Phase B
+                   → the run beats DiscoPoP by ending with more than 3
+Region ID    Type           Saves    % run    Hot  Tier  Depth  Name
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 2 pragma(s) — running quality gate (apply/compile/openmp/TSan/output)
+│  [Tier-2] Stage 'correctness' failed: Program output changed under the parallel build at a fixed thread count — the patched program is NOT semantically equivalent to the original. value 2 moved further than this program's own numerical no
+│  [Tier-2] Assembling evidence (budget remaining: 1)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 2 pragma(s) — running quality gate (apply/compile/openmp/TSan/output)
+│  [Tier-2] Stage 'correctness' failed: Program output changed for input '7' — the patched program is NOT semantically equivalent to the original. This input differs from the one the profile was taken on: the rewrite is right for the profil
+│  [Tier-2] Assembling evidence (budget remaining: 0)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 2 pragma(s) — running quality gate (apply/compile/openmp/TSan/output)
+│  [Tier-2] Stage 'tsan' failed: Race detected: WARNING: ThreadSanitizer: data race (pid=1646119)   Read of size 8 at 0x7ffff4e690a0 by thread T3:     #0 kernel_seidel_2d.omp_outlined_debug__ /tmp/dp_agent_val_qrp2vxqw/_dp_proj_tsan_
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+│  gate failed at 'tsan': Race detected: WARNING: ThreadSanitizer: data race (pid=1646154)   Read of size 8 at 0x7ffff4e18f48 by thread T7:     #0 kernel_seidel_2d.omp_outlined
+│  gate failed at 'tsan': Race detected: WARNING: ThreadSanitizer: data race (pid=1646189)   Read of size 8 at 0x7d959802b828 by thread T1:     #0 kernel_seidel_2d.omp_outlined
+│  gate failed at 'tsan': Race detected: WARNING: ThreadSanitizer: data race (pid=1646224)   Read of size 8 at 0x7ffff4e18a28 by thread T15:     #0 kernel_seidel_2d.omp_outline
+  SUMMARY: 0 rewrite(s) kept  |  0 pragma(s) applied  |  1 skipped
+  DiscoPoP unaided: 3 usable pragma(s) in this profile's draw  →  this run: 0   [BELOW, informational]
+    ✗  3:61  [skipped]  depth=0
+  Results → .discopop/agent_patches/accepted.json

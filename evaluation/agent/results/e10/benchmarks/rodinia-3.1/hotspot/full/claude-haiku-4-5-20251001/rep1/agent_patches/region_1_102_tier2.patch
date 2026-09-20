@@ -1,0 +1,35 @@
+--- hotspot.cpp
++++ hotspot.cpp
+@@ -250,18 +250,22 @@
+ 	#endif
+ 
+         {
+-            FLOAT* r = result;
+-            FLOAT* t = temp;
++            #pragma omp parallel for ordered
+             for (int i = 0; i < num_iterations ; i++)
+             {
+-                #ifdef VERBOSE
+-                fprintf(stdout, "iteration %d\n", i++);
+-                #endif
+-                single_iteration(r, t, power, row, col, Cap_1, Rx_1, Ry_1, Rz_1, step);
+-                FLOAT* tmp = t;
+-                t = r;
+-                r = tmp;
+-            }	
++                #pragma omp ordered
++                {
++                    #ifdef VERBOSE
++                    fprintf(stdout, "iteration %d\n", i);
++                    #endif
++                    // Compute buffer pointers based on iteration parity without loop-carried
++                    // pointer mutations. Each iteration determines which buffer to read from
++                    // and write to independently, removing the recurrence on pointer variables.
++                    FLOAT* r = (i % 2 == 0) ? result : temp;
++                    FLOAT* t = (i % 2 == 0) ? temp : result;
++                    single_iteration(r, t, power, row, col, Cap_1, Rx_1, Ry_1, Rz_1, step);
++                }
++            }
+         }
+ 	#ifdef VERBOSE
+ 	fprintf(stdout, "iteration %d\n", i++);

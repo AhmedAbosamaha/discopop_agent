@@ -1,0 +1,33 @@
+--- /home/ahmedabosamaha/new_benchmark_harness/agent/runs/e10/benchmarks/polybench/seidel-2d/speed_gate_large/claude-haiku-4-5-20251001/rep1/work/seidel-2d.c
++++ /home/ahmedabosamaha/new_benchmark_harness/agent/runs/e10/benchmarks/polybench/seidel-2d/speed_gate_large/claude-haiku-4-5-20251001/rep1/work/seidel-2d.c
+@@ -58,14 +58,26 @@
+ 		      DATA_TYPE POLYBENCH_2D(A,N,N,n,n))
+ {
+   int t, i, j;
++  DATA_TYPE POLYBENCH_2D(tmp_A, N, N, n, n);
+ 
+ #pragma scop
+-  for (t = 0; t <= _PB_TSTEPS - 1; t++)
++  for (t = 0; t <= _PB_TSTEPS - 1; t++) {
++    /* Compute new values into temporary buffer in parallel.
++       All (i,j) pairs are independent because each reads from current A
++       and writes to a distinct tmp_A[i][j]. */
++    #pragma omp parallel for collapse(2) private(i, j) shared(A, tmp_A, n)
+     for (i = 1; i<= _PB_N - 2; i++)
+       for (j = 1; j <= _PB_N - 2; j++)
+-	A[i][j] = (A[i-1][j-1] + A[i-1][j] + A[i-1][j+1]
+-		   + A[i][j-1] + A[i][j] + A[i][j+1]
+-		   + A[i+1][j-1] + A[i+1][j] + A[i+1][j+1])/9.0;
++	tmp_A[i][j] = (A[i-1][j-1] + A[i-1][j] + A[i-1][j+1]
++		       + A[i][j-1] + A[i][j] + A[i][j+1]
++		       + A[i+1][j-1] + A[i+1][j] + A[i+1][j+1])/9.0;
++
++    /* Copy results back to A in parallel. */
++    #pragma omp parallel for collapse(2) private(i, j) shared(A, tmp_A, n)
++    for (i = 1; i<= _PB_N - 2; i++)
++      for (j = 1; j <= _PB_N - 2; j++)
++	A[i][j] = tmp_A[i][j];
++  }
+ #pragma endscop
+ 
+ }

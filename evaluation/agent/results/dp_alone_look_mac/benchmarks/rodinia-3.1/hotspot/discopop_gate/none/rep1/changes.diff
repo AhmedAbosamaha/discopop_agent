@@ -1,0 +1,10 @@
+--- original.cpp
++++ final.cpp
+@@ -144,6 +144,7 @@
+     #endif
+     
+ #endif
++    #pragma omp parallel for firstprivate(Rx_1,temp,Rz_1,row,num_chunk,col,Cap_1,Ry_1,chunks_in_row,chunks_in_col) private(delta,r,c) shared(power,result) 
+     for ( chunk = 0; chunk < num_chunk; ++chunk )
+     {
+         int r_start = BLOCK_SIZE_R*(chunk/chunks_in_col);

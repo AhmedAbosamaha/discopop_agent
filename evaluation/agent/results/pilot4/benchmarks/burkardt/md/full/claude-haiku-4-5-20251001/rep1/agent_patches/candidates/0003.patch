@@ -1,0 +1,26 @@
+--- md.cpp
++++ md.cpp
+@@ -250,12 +250,6 @@
+   pe = 0.0;
+   ke = 0.0;
+ 
+-//# pragma omp parallel \
+-  shared ( f, nd, np, pos, vel ) \
+-  private ( i, j, k, rij, d, d2 )
+-  
+-
+-//# pragma omp for reduction ( + : pe, ke )
+   for ( k = 0; k < np; k++ )
+   {
+ //
+@@ -266,6 +260,10 @@
+       f[i+k*nd] = 0.0;
+     }
+ 
++#pragma omp parallel for \
++    reduction(+:pe) \
++    private(i, d2, d) \
++    firstprivate(rij, PI2, nd, np)
+     for ( j = 0; j < np; j++ )
+     {
+       if ( k != j )

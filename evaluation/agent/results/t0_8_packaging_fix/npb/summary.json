@@ -1,0 +1,263 @@
+{
+  "study": "T0.8 packaging equivalence",
+  "host": "rms14562",
+  "rows": [
+    {
+      "benchmark": "is",
+      "single_seconds": 54.9,
+      "project_seconds": 48.7,
+      "kernel_deps_single": 247,
+      "kernel_deps_project": 247,
+      "kernel_deps_identical": true,
+      "kernel_deps_only_single": [],
+      "kernel_deps_only_project": [],
+      "deps_single": 330,
+      "deps_project": 330,
+      "deps_only_single": [
+        [
+          "pb_sum += v;",
+          "RAW",
+          "static void pb_emit(double v)",
+          "v"
+        ],
+        [
+          "pb_wsum += v * (double)((pb_count % 9973) + 1);",
+          "RAW",
+          "static void pb_emit(double v)",
+          "v"
+        ]
+      ],
+      "deps_only_project": [
+        [
+          "pb_sum += v;",
+          "RAW",
+          "void pb_emit(double v)",
+          "v"
+        ],
+        [
+          "pb_wsum += v * (double)((pb_count % 9973) + 1);",
+          "RAW",
+          "void pb_emit(double v)",
+          "v"
+        ]
+      ],
+      "deps_identical": false,
+      "blockers_single": [
+        [
+          "bucket_ptrs",
+          "for( i=0; i<NUM_KEYS; i++ ){",
+          "DYNAMIC_ANALYSIS"
+        ],
+        [
+          "bucket_ptrs",
+          "for( i=1; i< NUM_BUCKETS; i++ ) {",
+          "DYNAMIC_ANALYSIS"
+        ],
+        [
+          "k",
+          "for( i=0; i< NUM_BUCKETS; i++ ) {",
+          "STATIC_ANALYSIS"
+        ],
+        [
+          "key_buff_ptr_global",
+          "for ( i = k1; i < bucket_ptrs[j]; i++ ) {",
+          "DYNAMIC_ANALYSIS"
+        ],
+        [
+          "passed_verification",
+          "for( i=0; i<TEST_ARRAY_SIZE; i++ ){",
+          "DYNAMIC_ANALYSIS"
+        ],
+        [
+          "work_buff",
+          "for( i=0; i<NUM_KEYS; i++ )",
+          "DYNAMIC_ANALYSIS"
+        ],
+        [
+          "x",
+          "for(i=0; i<n; i++){",
+          "STATIC_ANALYSIS"
+        ]
+      ],
+      "blockers_project": [
+        [
+          "bucket_ptrs",
+          "for( i=0; i<NUM_KEYS; i++ ){",
+          "DYNAMIC_ANALYSIS"
+        ],
+        [
+          "bucket_ptrs",
+          "for( i=1; i< NUM_BUCKETS; i++ ) {",
+          "DYNAMIC_ANALYSIS"
+        ],
+        [
+          "k",
+          "for( i=0; i< NUM_BUCKETS; i++ ) {",
+          "STATIC_ANALYSIS"
+        ],
+        [
+          "key_buff_ptr_global",
+          "for ( i = k1; i < bucket_ptrs[j]; i++ ) {",
+          "DYNAMIC_ANALYSIS"
+        ],
+        [
+          "passed_verification",
+          "for( i=0; i<TEST_ARRAY_SIZE; i++ ){",
+          "DYNAMIC_ANALYSIS"
+        ],
+        [
+          "work_buff",
+          "for( i=0; i<NUM_KEYS; i++ )",
+          "DYNAMIC_ANALYSIS"
+        ],
+        [
+          "x",
+          "for(i=0; i<n; i++){",
+          "STATIC_ANALYSIS"
+        ]
+      ],
+      "blockers_identical": true,
+      "patterns_single": [
+        [
+          "do_all",
+          "for ( k = k1+1; k < k2; k++ )"
+        ],
+        [
+          "do_all",
+          "for ( k = k1; k < k2; k++ )"
+        ],
+        [
+          "do_all",
+          "for ( k = m; k < bucket_ptrs[i]; k++ )"
+        ],
+        [
+          "do_all",
+          "for (int i = 0; i < TEST_ARRAY_SIZE; i++) pb_emit((double)partial_verify_vals[i]);"
+        ],
+        [
+          "do_all",
+          "for( i=0; i< NUM_BUCKETS; i++ )"
+        ],
+        [
+          "do_all",
+          "for( i=0; i<NUM_BUCKETS; i++ )"
+        ],
+        [
+          "do_all",
+          "for( i=0; i<NUM_KEYS; i++ )"
+        ],
+        [
+          "do_all",
+          "for( i=0; i<TEST_ARRAY_SIZE; i++ )"
+        ],
+        [
+          "do_all",
+          "for( i=1; i<NUM_KEYS; i++ )"
+        ],
+        [
+          "do_all",
+          "for( j=0; j< NUM_BUCKETS; j++ ) {"
+        ],
+        [
+          "do_all",
+          "for( k=0; k< myid; k++ )"
+        ],
+        [
+          "do_all",
+          "for( k=myid+1; k< num_procs; k++ )"
+        ],
+        [
+          "do_all",
+          "for( k=myid; k< num_procs; k++ )"
+        ],
+        [
+          "do_all",
+          "for(i = 0; i < num_procs; i++){"
+        ],
+        [
+          "do_all",
+          "for(i=k1; i<k2; i++){"
+        ],
+        [
+          "do_all",
+          "for(iteration=1; iteration<=MAX_ITERATIONS; iteration++){"
+        ],
+        [
+          "do_all",
+          "while( kk > 1 ){"
+        ]
+      ],
+      "patterns_project": [
+        [
+          "do_all",
+          "for ( k = k1+1; k < k2; k++ )"
+        ],
+        [
+          "do_all",
+          "for ( k = k1; k < k2; k++ )"
+        ],
+        [
+          "do_all",
+          "for ( k = m; k < bucket_ptrs[i]; k++ )"
+        ],
+        [
+          "do_all",
+          "for (int i = 0; i < TEST_ARRAY_SIZE; i++) pb_emit((double)partial_verify_vals[i]);"
+        ],
+        [
+          "do_all",
+          "for( i=0; i< NUM_BUCKETS; i++ )"
+        ],
+        [
+          "do_all",
+          "for( i=0; i<NUM_BUCKETS; i++ )"
+        ],
+        [
+          "do_all",
+          "for( i=0; i<NUM_KEYS; i++ )"
+        ],
+        [
+          "do_all",
+          "for( i=0; i<TEST_ARRAY_SIZE; i++ )"
+        ],
+        [
+          "do_all",
+          "for( i=1; i<NUM_KEYS; i++ )"
+        ],
+        [
+          "do_all",
+          "for( j=0; j< NUM_BUCKETS; j++ ) {"
+        ],
+        [
+          "do_all",
+          "for( k=0; k< myid; k++ )"
+        ],
+        [
+          "do_all",
+          "for( k=myid+1; k< num_procs; k++ )"
+        ],
+        [
+          "do_all",
+          "for( k=myid; k< num_procs; k++ )"
+        ],
+        [
+          "do_all",
+          "for(i = 0; i < num_procs; i++){"
+        ],
+        [
+          "do_all",
+          "for(i=k1; i<k2; i++){"
+        ],
+        [
+          "do_all",
+          "for(iteration=1; iteration<=MAX_ITERATIONS; iteration++){"
+        ],
+        [
+          "do_all",
+          "while( kk > 1 ){"
+        ]
+      ],
+      "patterns_identical": true
+    }
+  ]
+}

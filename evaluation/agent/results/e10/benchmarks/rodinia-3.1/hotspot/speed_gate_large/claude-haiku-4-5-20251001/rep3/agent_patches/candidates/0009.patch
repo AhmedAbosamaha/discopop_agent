@@ -1,0 +1,10 @@
+--- hotspot.cpp
++++ hotspot.cpp
+@@ -154,6 +154,7 @@
+         if ( r_start == 0 || c_start == 0 || r_end == row || c_end == col )
+         {
+             for ( r = r_start; r < r_start + BLOCK_SIZE_R; ++r ) {
++                #pragma omp parallel for firstprivate(num_chunk,Ry_1,c_start,temp,Rz_1,col,r_start,Cap_1,Rx_1) private(delta) lastprivate(r,chunk) shared(result,power) 
+                 for ( c = c_start; c < c_start + BLOCK_SIZE_C; ++c ) {
+                     /* Corner 1 */
+                     if ( (r == 0) && (c == 0) ) {

@@ -1,0 +1,67 @@
+--- /private/tmp/claude-501/-Users-ahmedsamir-discopop-agent/436822e3-c111-4da4-bd96-90a25b95970d/scratchpad/matrix_prefix2/no_hotspots/prefix.c
++++ /private/tmp/claude-501/-Users-ahmedsamir-discopop-agent/436822e3-c111-4da4-bd96-90a25b95970d/scratchpad/matrix_prefix2/no_hotspots/prefix.c
+@@ -101,11 +101,60 @@
+ 
+ static void kernel_prefix(double* a, double* c)
+ {
+-  int r, i;
++  /* The sequential scan c[i] = c[i-1] + a[i] carries a genuine
++   * value-to-value dependence along the array within one sweep, so no
++   * reordering of that single loop is safe.  Instead each sweep is
++   * restructured into a two-pass (work-efficient) block scan: the N
++   * elements are split into a fixed number of disjoint blocks, each
++   * block computes its own local scan independently (pass 1), the
++   * small per-block totals are turned into exclusive offsets
++   * sequentially (pass 2, cost independent of N), and those offsets
++   * are added back into each block independently (pass 3).  Blocks
++   * never overlap, so passes 1 and 3 carry no cross-block dependence. */
++  int r, i, b;
++  const int nblk = 4096;
++  const int bs = (N + nblk - 1) / nblk;  /* block size, sized so... */
++  const int nb  = (N + bs - 1) / bs;     /* ...nb never exceeds nblk */
++  static double blockSum[4096];
++
+   for (r = 0; r < R; r++) {
+-    c[0] = a[0];
+-    for (i = 1; i < N; i++)
+-      c[i] = c[i-1] + a[i];
++    /* Pass 1: independent local inclusive scan inside each block. */
++#pragma omp parallel for private(i) shared(a, c, blockSum, bs, nb) schedule(static)
++    for (b = 0; b < nb; b++) {
++      int start = b * bs;
++      int end = start + bs;
++      double run = 0.0;
++      if (end > N) end = N;
++      for (i = start; i < end; i++) {
++        run += a[i];
++        c[i] = run;
++      }
++      blockSum[b] = run;
++    }
++
++    /* Pass 2: sequential exclusive prefix over the nb (<= nblk, i.e.
++     * independent of N) block totals. */
++    {
++      double offset = 0.0;
++      int bb;
++      for (bb = 0; bb < nb; bb++) {
++        double s = blockSum[bb];
++        blockSum[bb] = offset;
++        offset += s;
++      }
++    }
++
++    /* Pass 3: add each block's exclusive offset to every element of
++     * that block; disjoint ranges again, independent across b. */
++#pragma omp parallel for private(i) shared(c, blockSum, bs, nb) schedule(static)
++    for (b = 0; b < nb; b++) {
++      int start = b * bs;
++      int end = start + bs;
++      double off = blockSum[b];
++      if (end > N) end = N;
++      for (i = start; i < end; i++)
++        c[i] += off;
++    }
+   }
+ }
+ 

@@ -1,0 +1,44 @@
+--- /home/ahmedabosamaha/new_benchmark_harness/agent/runs/e10/benchmarks/polybench/seidel-2d/full/claude-haiku-4-5-20251001/rep3/work/seidel-2d.c
++++ /home/ahmedabosamaha/new_benchmark_harness/agent/runs/e10/benchmarks/polybench/seidel-2d/full/claude-haiku-4-5-20251001/rep3/work/seidel-2d.c
+@@ -60,12 +60,36 @@
+   int t, i, j;
+ 
+ #pragma scop
+-  for (t = 0; t <= _PB_TSTEPS - 1; t++)
+-    for (i = 1; i<= _PB_N - 2; i++)
++  /* Allocate second buffer for A to enable parallelization.
++     Each sweep (i,j nested loops) reads from A_old, writes to A_new, then swaps.
++     Removes both i and j loop dependences: all threads read consistent state. */
++  DATA_TYPE** A_new = (DATA_TYPE**)malloc(_PB_N * sizeof(DATA_TYPE*));
++  for (int ii = 0; ii < _PB_N; ii++)
++    A_new[ii] = (DATA_TYPE*)malloc(_PB_N * sizeof(DATA_TYPE));
++
++  for (t = 0; t <= _PB_TSTEPS - 1; t++) {
++    /* Parallel sweep: all (i,j) pairs compute in parallel.
++       Each iteration reads from A (current iteration's input), writes to A_new.
++       No loop-carried dependencies: concurrent iterations see same A values. */
++    #pragma omp parallel for collapse(2) schedule(static) private(i, j)
++    for (i = 1; i <= _PB_N - 2; i++) {
++      for (j = 1; j <= _PB_N - 2; j++) {
++	A_new[i][j] = (A[i-1][j-1] + A[i-1][j] + A[i-1][j+1]
++		       + A[i][j-1] + A[i][j] + A[i][j+1]
++		       + A[i+1][j-1] + A[i+1][j] + A[i+1][j+1])/9.0;
++      }
++    }
++
++    /* Copy back computed interior only (rows/cols 1 to _PB_N-2); preserve
++       boundary rows/cols 0 and _PB_N-1 which are never computed. */
++    for (i = 1; i <= _PB_N - 2; i++)
+       for (j = 1; j <= _PB_N - 2; j++)
+-	A[i][j] = (A[i-1][j-1] + A[i-1][j] + A[i-1][j+1]
+-		   + A[i][j-1] + A[i][j] + A[i][j+1]
+-		   + A[i+1][j-1] + A[i+1][j] + A[i+1][j+1])/9.0;
++	A[i][j] = A_new[i][j];
++  }
++
++  for (int ii = 0; ii < _PB_N; ii++)
++    free(A_new[ii]);
++  free(A_new);
+ #pragma endscop
+ 
+ }

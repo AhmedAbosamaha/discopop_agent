@@ -1,0 +1,45 @@
+--- hotspot.cpp
++++ hotspot.cpp
+@@ -250,18 +250,33 @@
+ 	#endif
+ 
+         {
+-            FLOAT* r = result;
+-            FLOAT* t = temp;
+-            for (int i = 0; i < num_iterations ; i++)
++            // Restructure to expose iteration independence: instead of swapping pointers
++            // at runtime, statically determine which buffer to read/write based on parity.
++            // Even iterations: read temp, write result. Odd iterations: read result, write temp.
++            // This preserves correctness (final answer location matches original) and removes
++            // the loop-carried dependence on r and t pointers.
++            #pragma omp parallel for \
++                    shared(result, temp, power, row, col, Cap_1, Rx_1, Ry_1, Rz_1, step, num_iterations)
++            for (int i = 0; i < num_iterations; i++)
+             {
+                 #ifdef VERBOSE
+-                fprintf(stdout, "iteration %d\n", i++);
++                int iter_id = i;
++                #pragma omp critical
++                fprintf(stdout, "iteration %d\n", iter_id);
+                 #endif
+-                single_iteration(r, t, power, row, col, Cap_1, Rx_1, Ry_1, Rz_1, step);
+-                FLOAT* tmp = t;
+-                t = r;
+-                r = tmp;
+-            }	
++
++                FLOAT* read_buf;
++                FLOAT* write_buf;
++                if (i % 2 == 0) {
++                    read_buf = temp;
++                    write_buf = result;
++                } else {
++                    read_buf = result;
++                    write_buf = temp;
++                }
++
++                single_iteration(write_buf, read_buf, power, row, col, Cap_1, Rx_1, Ry_1, Rz_1, step);
++            }
+         }
+ 	#ifdef VERBOSE
+ 	fprintf(stdout, "iteration %d\n", i++);

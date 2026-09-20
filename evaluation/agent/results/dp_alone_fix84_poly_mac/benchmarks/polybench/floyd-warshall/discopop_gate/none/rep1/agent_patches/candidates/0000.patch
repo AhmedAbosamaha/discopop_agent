@@ -1,0 +1,10 @@
+--- /Users/ahmedsamir/new_benchmark_harness/agent/runs/dp_alone_fix84_poly_mac/benchmarks/polybench/floyd-warshall/discopop_gate/none/rep1/work/floyd-warshall.c
++++ /Users/ahmedsamir/new_benchmark_harness/agent/runs/dp_alone_fix84_poly_mac/benchmarks/polybench/floyd-warshall/discopop_gate/none/rep1/work/floyd-warshall.c
+@@ -59,6 +59,7 @@
+   int i, j, k;
+ 
+ #pragma scop
++  #pragma omp parallel for firstprivate(n) private(j,i) shared(path) 
+   for (k = 0; k < _PB_N; k++)
+     {
+       for(i = 0; i < _PB_N; i++)

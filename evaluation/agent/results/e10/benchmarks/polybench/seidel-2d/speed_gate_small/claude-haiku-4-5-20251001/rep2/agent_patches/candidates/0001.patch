@@ -1,0 +1,40 @@
+--- /home/ahmedabosamaha/new_benchmark_harness/agent/runs/e10/benchmarks/polybench/seidel-2d/speed_gate_small/claude-haiku-4-5-20251001/rep2/work/seidel-2d.c
++++ /home/ahmedabosamaha/new_benchmark_harness/agent/runs/e10/benchmarks/polybench/seidel-2d/speed_gate_small/claude-haiku-4-5-20251001/rep2/work/seidel-2d.c
+@@ -61,11 +61,32 @@
+ 
+ #pragma scop
+   for (t = 0; t <= _PB_TSTEPS - 1; t++)
+-    for (i = 1; i<= _PB_N - 2; i++)
+-      for (j = 1; j <= _PB_N - 2; j++)
+-	A[i][j] = (A[i-1][j-1] + A[i-1][j] + A[i-1][j+1]
+-		   + A[i][j-1] + A[i][j] + A[i][j+1]
+-		   + A[i+1][j-1] + A[i+1][j] + A[i+1][j+1])/9.0;
++    {
++      /* Red-black Gauss-Seidel relaxation. Process cells in two passes
++	 based on checkerboard coloring (i+j parity), enabling parallel
++	 updates within each pass while maintaining Gauss-Seidel semantics
++	 (each cell uses the most recently computed neighbor values). */
++
++      /* RED PASS: update all cells where (i+j) is even. */
++#pragma omp parallel for collapse(2) private(i, j) schedule(static)
++      for (i = 1; i<= _PB_N - 2; i++)
++	for (j = 1; j <= _PB_N - 2; j++)
++	  if ((i + j) % 2 == 0)
++	    A[i][j] = (A[i-1][j-1] + A[i-1][j] + A[i-1][j+1]
++		       + A[i][j-1] + A[i][j] + A[i][j+1]
++		       + A[i+1][j-1] + A[i+1][j] + A[i+1][j+1])/9.0;
++
++      /* BLACK PASS: update all cells where (i+j) is odd.
++	 Implicit synchronization between passes ensures red cells
++	 computed above are visible when black cells read them. */
++#pragma omp parallel for collapse(2) private(i, j) schedule(static)
++      for (i = 1; i<= _PB_N - 2; i++)
++	for (j = 1; j <= _PB_N - 2; j++)
++	  if ((i + j) % 2 == 1)
++	    A[i][j] = (A[i-1][j-1] + A[i-1][j] + A[i-1][j+1]
++		       + A[i][j-1] + A[i][j] + A[i][j+1]
++		       + A[i+1][j-1] + A[i+1][j] + A[i+1][j+1])/9.0;
++    }
+ #pragma endscop
+ 
+ }

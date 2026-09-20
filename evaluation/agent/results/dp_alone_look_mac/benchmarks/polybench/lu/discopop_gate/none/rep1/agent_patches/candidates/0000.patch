@@ -1,0 +1,10 @@
+--- /Users/ahmedsamir/new_benchmark_harness/agent/runs/dp_alone_look_mac/benchmarks/polybench/lu/discopop_gate/none/rep1/work/lu.c
++++ /Users/ahmedsamir/new_benchmark_harness/agent/runs/dp_alone_look_mac/benchmarks/polybench/lu/discopop_gate/none/rep1/work/lu.c
+@@ -63,6 +63,7 @@
+     {
+       for (j = k + 1; j < _PB_N; j++)
+ 	A[k][j] = A[k][j] / A[k][k];
++      #pragma omp parallel for firstprivate(n) private(j) shared(A) 
+       for(i = k + 1; i < _PB_N; i++)
+ 	for (j = k + 1; j < _PB_N; j++)
+ 	  A[i][j] = A[i][j] - A[i][k] * A[k][j];

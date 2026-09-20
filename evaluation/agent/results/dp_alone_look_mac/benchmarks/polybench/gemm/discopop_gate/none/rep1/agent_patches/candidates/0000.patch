@@ -1,0 +1,10 @@
+--- /Users/ahmedsamir/new_benchmark_harness/agent/runs/dp_alone_look_mac/benchmarks/polybench/gemm/discopop_gate/none/rep1/work/gemm.c
++++ /Users/ahmedsamir/new_benchmark_harness/agent/runs/dp_alone_look_mac/benchmarks/polybench/gemm/discopop_gate/none/rep1/work/gemm.c
+@@ -75,6 +75,7 @@
+ 
+ #pragma scop
+   /* C := alpha*A*B + beta*C */
++ #pragma omp parallel for firstprivate(ni,alpha,nk,beta,nj) private(k,j) shared(C,B) 
+   for (i = 0; i < _PB_NI; i++)
+     for (j = 0; j < _PB_NJ; j++)
+       {

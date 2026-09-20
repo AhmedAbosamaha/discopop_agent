@@ -1,0 +1,88 @@
+[
+  {
+    "region_id": "1:52",
+    "region_type": "cu",
+    "tier": 2,
+    "patch_file": ".discopop/agent_patches/region_1_52_tier2.patch",
+    "reprofiled": true,
+    "discovery_depth": 0,
+    "evidence": {
+      "comparison": "exact",
+      "dependences": "no-blocker",
+      "dependences_detail": "the profiler covered lines 384-386 (16 RAW, 0 WAR, 0 WAW observed) and the Do-All detector recorded no blocker. Not proof the pragma is safe \u2014 the detector rules out what it can prove \u2014 so this neither passes nor fails the patch on its own",
+      "schedules": [
+        "T4/static#1",
+        "T4/static#2",
+        "T4/static#3",
+        "T1/static",
+        "T2/static",
+        "T4/dynamic,1",
+        "T4/guided"
+      ],
+      "reordered": false
+    },
+    "exposed_pattern": "1 LLM pragma(s): #pragma omp parallel for collapse(2) default(shared) schedule(static)",
+    "pragmas": 1,
+    "pragma_text": [
+      "#pragma omp parallel for collapse(2) default(shared) schedule(static)"
+    ],
+    "self_annotated": true,
+    "exposed_speedup": 1.74024905081973
+  },
+  {
+    "region_id": "2:16",
+    "region_type": "function",
+    "tier": 2,
+    "patch_file": ".discopop/agent_patches/region_2_16_tier2.patch",
+    "reprofiled": true,
+    "discovery_depth": 0,
+    "evidence": {
+      "comparison": "exact",
+      "dependences": "no-data",
+      "dependences_detail": "the profile holds no dependence at all for lines 423-455 \u2014 code written after the profile was taken. This stage has nothing to say about it; the sanitizer and the schedule matrix carry this patch",
+      "schedules": [
+        "T4/static#1",
+        "T4/static#2",
+        "T4/static#3",
+        "T1/static",
+        "T2/static",
+        "T4/dynamic,1",
+        "T4/guided"
+      ],
+      "reordered": false
+    },
+    "exposed_pattern": "2 LLM pragma(s): #pragma omp parallel for collapse(2) default(shared) schedule(static); #pragma omp parallel for collapse(2) default(shared) schedule(static)",
+    "pragmas": 2,
+    "pragma_text": [
+      "#pragma omp parallel for collapse(2) default(shared) schedule(static)",
+      "#pragma omp parallel for collapse(2) default(shared) schedule(static)"
+    ],
+    "self_annotated": true,
+    "exposed_speedup": 2.254585578392555
+  },
+  {
+    "region_id": "2:60",
+    "region_type": "loop",
+    "phase": "B",
+    "pattern_id": 26,
+    "pragma": "#pragma omp parallel for",
+    "lines": "349\u2013351",
+    "marginal_speedup": 1.0068147915598504,
+    "applied_to_source": true,
+    "evidence": {
+      "comparison": "exact",
+      "dependences": "no-blocker",
+      "dependences_detail": "the profiler covered lines 349-351 (11 RAW, 2 WAR, 0 WAW observed) and the Do-All detector recorded no blocker. Not proof the pragma is safe \u2014 the detector rules out what it can prove \u2014 so this neither passes nor fails the patch on its own",
+      "schedules": [
+        "T4/static#1",
+        "T4/static#2",
+        "T4/static#3",
+        "T1/static",
+        "T2/static",
+        "T4/dynamic,1",
+        "T4/guided"
+      ],
+      "reordered": false
+    }
+  }
+]

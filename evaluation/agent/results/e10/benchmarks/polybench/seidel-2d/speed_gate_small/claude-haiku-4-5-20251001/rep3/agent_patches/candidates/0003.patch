@@ -1,0 +1,36 @@
+--- /home/ahmedabosamaha/new_benchmark_harness/agent/runs/e10/benchmarks/polybench/seidel-2d/speed_gate_small/claude-haiku-4-5-20251001/rep3/work/seidel-2d.c
++++ /home/ahmedabosamaha/new_benchmark_harness/agent/runs/e10/benchmarks/polybench/seidel-2d/speed_gate_small/claude-haiku-4-5-20251001/rep3/work/seidel-2d.c
+@@ -57,15 +57,26 @@
+ 		      int n,
+ 		      DATA_TYPE POLYBENCH_2D(A,N,N,n,n))
+ {
+-  int t, i, j;
++  int t, i, j, k;
+ 
+ #pragma scop
+-  for (t = 0; t <= _PB_TSTEPS - 1; t++)
+-    for (i = 1; i<= _PB_N - 2; i++)
+-      for (j = 1; j <= _PB_N - 2; j++)
+-	A[i][j] = (A[i-1][j-1] + A[i-1][j] + A[i-1][j+1]
+-		   + A[i][j-1] + A[i][j] + A[i][j+1]
+-		   + A[i+1][j-1] + A[i+1][j] + A[i+1][j+1])/9.0;
++  for (t = 0; t <= _PB_TSTEPS - 1; t++) {
++    /* Process by anti-diagonals (wavefronts) where k = i+j.
++       Within each wavefront, iterations are independent and can run in parallel.
++       Wavefronts are processed sequentially to maintain Gauss-Seidel semantics. */
++    for (k = 2; k <= 2*(_PB_N - 2); k++) {
++      int i_min = (k - (_PB_N - 2) > 1) ? k - (_PB_N - 2) : 1;
++      int i_max = ((k - 1) < (_PB_N - 2)) ? (k - 1) : (_PB_N - 2);
++
++      #pragma omp parallel for shared(A)
++      for (i = i_min; i <= i_max; i++) {
++        j = k - i;
++        A[i][j] = (A[i-1][j-1] + A[i-1][j] + A[i-1][j+1]
++                   + A[i][j-1] + A[i][j] + A[i][j+1]
++                   + A[i+1][j-1] + A[i+1][j] + A[i+1][j+1])/9.0;
++      }
++    }
++  }
+ #pragma endscop
+ 
+ }

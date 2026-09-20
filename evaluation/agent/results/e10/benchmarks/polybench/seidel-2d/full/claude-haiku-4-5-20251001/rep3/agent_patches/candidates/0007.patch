@@ -1,0 +1,46 @@
+--- /home/ahmedabosamaha/new_benchmark_harness/agent/runs/e10/benchmarks/polybench/seidel-2d/full/claude-haiku-4-5-20251001/rep3/work/seidel-2d.c
++++ /home/ahmedabosamaha/new_benchmark_harness/agent/runs/e10/benchmarks/polybench/seidel-2d/full/claude-haiku-4-5-20251001/rep3/work/seidel-2d.c
+@@ -61,11 +61,38 @@
+ 
+ #pragma scop
+   for (t = 0; t <= _PB_TSTEPS - 1; t++)
+-    for (i = 1; i<= _PB_N - 2; i++)
+-      for (j = 1; j <= _PB_N - 2; j++)
+-	A[i][j] = (A[i-1][j-1] + A[i-1][j] + A[i-1][j+1]
+-		   + A[i][j-1] + A[i][j] + A[i][j+1]
+-		   + A[i+1][j-1] + A[i+1][j] + A[i+1][j+1])/9.0;
++    {
++      /* Red-black coloring: split each time step into two independent passes.
++         Color based on (i+j) mod 2: red (even) can be computed in parallel,
++         then black (odd). This preserves Gauss-Seidel semantics (new values
++         flow through rows/columns) while breaking data dependencies.
++
++         Red cells (i+j even) depend only on:
++         - Black cells from (i-1,j), (i,j-1), (i-1,j-1) [already computed]
++         - Red cells from (i-1,j+1), (i+1,j-1) [not yet computed, but read as old values]
++         - (i+1,j) and (i,j+1) [old values from previous time step]
++         Disjoint red cells have independent writes. */
++
++      /* Pass 1: compute and update all red cells (i+j even) in parallel. */
++      #pragma omp parallel for collapse(2) schedule(static)
++      for (i = 1; i<= _PB_N - 2; i++)
++        for (j = 1; j <= _PB_N - 2; j++)
++          if ((i + j) % 2 == 0)
++            A[i][j] = (A[i-1][j-1] + A[i-1][j] + A[i-1][j+1]
++                       + A[i][j-1] + A[i][j] + A[i][j+1]
++                       + A[i+1][j-1] + A[i+1][j] + A[i+1][j+1])/9.0;
++
++      /* Pass 2: compute and update all black cells (i+j odd) in parallel.
++         Now black cells read from updated red cells where available,
++         preserving Gauss-Seidel's new-value flow. */
++      #pragma omp parallel for collapse(2) schedule(static)
++      for (i = 1; i<= _PB_N - 2; i++)
++        for (j = 1; j <= _PB_N - 2; j++)
++          if ((i + j) % 2 == 1)
++            A[i][j] = (A[i-1][j-1] + A[i-1][j] + A[i-1][j+1]
++                       + A[i][j-1] + A[i][j] + A[i][j+1]
++                       + A[i+1][j-1] + A[i+1][j] + A[i+1][j+1])/9.0;
++    }
+ #pragma endscop
+ 
+ }

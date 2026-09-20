@@ -1,0 +1,10 @@
+--- vecsum.c
++++ vecsum.c
+@@ -104,6 +104,7 @@
+ {
+   int r, i;
+   for (r = 0; r < R; r++)
++    #pragma omp parallel for shared(b,c,a) 
+     for (i = 0; i < N; i++)
+       c[i] = 0.5 * c[i] + a[i] * b[i] + 0.5 * a[i];
+ }

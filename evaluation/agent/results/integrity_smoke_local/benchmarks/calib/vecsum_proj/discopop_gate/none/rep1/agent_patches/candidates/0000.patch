@@ -1,0 +1,10 @@
+--- /Users/ahmedsamir/new_benchmark_harness/agent/runs/integrity_smoke_local/benchmarks/calib/vecsum_proj/discopop_gate/none/rep1/work/src/kernel.c
++++ /Users/ahmedsamir/new_benchmark_harness/agent/runs/integrity_smoke_local/benchmarks/calib/vecsum_proj/discopop_gate/none/rep1/work/src/kernel.c
+@@ -8,6 +8,7 @@
+ {
+   int r, i;
+   for (r = 0; r < R; r++)
++    #pragma omp parallel for shared(b,a,c) 
+     for (i = 0; i < N; i++)
+       c[i] = 0.5 * c[i] + a[i] * b[i] + 0.5 * a[i];
+ }

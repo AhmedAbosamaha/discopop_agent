@@ -1,0 +1,38 @@
+--- hotspot.cpp
++++ hotspot.cpp
+@@ -250,18 +250,27 @@
+ 	#endif
+ 
+         {
+-            FLOAT* r = result;
+-            FLOAT* t = temp;
+-            for (int i = 0; i < num_iterations ; i++)
++            FLOAT* src = temp;    /* input buffer for current iteration */
++            FLOAT* dst = result;  /* output buffer for current iteration */
++
++            /* The iterations form a time-stepping loop where each iteration i+1 depends on
++               iteration i's output: the result computed in iteration i becomes the input for i+1.
++               This loop-carried dependence on the buffers themselves (not their contents through
++               array indices) is inherent to thermal diffusion and cannot be removed without
++               changing the algorithm. The iterations cannot be made independent. */
++            for (int i = 0; i < num_iterations; i++)
+             {
+                 #ifdef VERBOSE
+                 fprintf(stdout, "iteration %d\n", i++);
+                 #endif
+-                single_iteration(r, t, power, row, col, Cap_1, Rx_1, Ry_1, Rz_1, step);
+-                FLOAT* tmp = t;
+-                t = r;
+-                r = tmp;
+-            }	
++                /* Compute next thermal state: read from src, write to dst */
++                single_iteration(dst, src, power, row, col, Cap_1, Rx_1, Ry_1, Rz_1, step);
++
++                /* Prepare for next iteration: swap buffers so dst output becomes src input */
++                FLOAT* tmp = src;
++                src = dst;
++                dst = tmp;
++            }
+         }
+ 	#ifdef VERBOSE
+ 	fprintf(stdout, "iteration %d\n", i++);

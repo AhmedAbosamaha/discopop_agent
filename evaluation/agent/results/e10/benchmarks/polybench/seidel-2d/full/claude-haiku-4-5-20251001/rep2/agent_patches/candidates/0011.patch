@@ -1,0 +1,49 @@
+--- /home/ahmedabosamaha/new_benchmark_harness/agent/runs/e10/benchmarks/polybench/seidel-2d/full/claude-haiku-4-5-20251001/rep2/work/seidel-2d.c
++++ /home/ahmedabosamaha/new_benchmark_harness/agent/runs/e10/benchmarks/polybench/seidel-2d/full/claude-haiku-4-5-20251001/rep2/work/seidel-2d.c
+@@ -57,15 +57,40 @@
+ 		      int n,
+ 		      DATA_TYPE POLYBENCH_2D(A,N,N,n,n))
+ {
+-  int t, i, j;
++  int t, i, j, d;
+ 
+ #pragma scop
+   for (t = 0; t <= _PB_TSTEPS - 1; t++)
+-    for (i = 1; i<= _PB_N - 2; i++)
+-      for (j = 1; j <= _PB_N - 2; j++)
+-	A[i][j] = (A[i-1][j-1] + A[i-1][j] + A[i-1][j+1]
+-		   + A[i][j-1] + A[i][j] + A[i][j+1]
+-		   + A[i+1][j-1] + A[i+1][j] + A[i+1][j+1])/9.0;
++    /* Process diagonals where i+j = d. Within each diagonal, split into parity passes
++       (odd i, then even i) to avoid in-place coupling: iteration i reads from A[i+1][...]
++       which iteration i+1 writes to. Odd pass reads only from even rows (not yet written),
++       even pass reads only from odd rows (already written in previous pass).
++       This preserves Gauss-Seidel order while eliminating races.
++       Diagonal d ranges from 2 to 2*N-4 (min: 1+1, max: (N-2)+(N-2)). */
++    for (d = 2; d <= 2*_PB_N - 4; d++)
++      {
++	/* Odd i pass: process odd row indices on this diagonal, reading from even rows. */
++	#pragma omp parallel for private(i, j)
++	for (i = 1; i <= _PB_N - 2; i += 2)
++	  {
++	    j = d - i;
++	    if (j >= 1 && j <= _PB_N - 2)
++	      A[i][j] = (A[i-1][j-1] + A[i-1][j] + A[i-1][j+1]
++			 + A[i][j-1] + A[i][j] + A[i][j+1]
++			 + A[i+1][j-1] + A[i+1][j] + A[i+1][j+1])/9.0;
++	  }
++
++	/* Even i pass: process even row indices on this diagonal, reading from odd rows. */
++	#pragma omp parallel for private(i, j)
++	for (i = 2; i <= _PB_N - 2; i += 2)
++	  {
++	    j = d - i;
++	    if (j >= 1 && j <= _PB_N - 2)
++	      A[i][j] = (A[i-1][j-1] + A[i-1][j] + A[i-1][j+1]
++			 + A[i][j-1] + A[i][j] + A[i][j+1]
++			 + A[i+1][j-1] + A[i+1][j] + A[i+1][j+1])/9.0;
++	  }
++      }
+ #pragma endscop
+ 
+ }

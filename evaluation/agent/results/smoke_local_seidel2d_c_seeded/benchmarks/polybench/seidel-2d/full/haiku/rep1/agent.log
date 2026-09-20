@@ -1,0 +1,381 @@
+
+============================================================
+  DiscoPoP Agentic Controller
+============================================================
+  Source         : seidel-2d.c
+  DiscoPoP dir   : .discopop
+  Model          : haiku
+  Budget         : 3 LLM retries/region (+2 free build fixes)
+  λ penalty      : 1.0
+  Min workload   : 0.0
+  Restruct. depth: 0 (Tier-2 allowed at depth 0–0)
+  Quality gate   : Tier-1 = all but speed, no escalation; Tier-2 = full
+  TSan           : barrier-aware (archer: /Users/ahmedsamir/.local/lib/libarcher.dylib)
+  Speedup gate   : require ≥ 1.1× measured
+  Dry run        : False
+  LLM mode       : haiku
+  Edit mode      : direct
+  Re-profiling   : fast refresh (compile only) between rewrites; full before a deeper level and before Phase B
+  Pragmas        : LLM writes them with the rewrite, gate decides (--llm-pragmas)
+============================================================
+
+  [ok] Captured reference output on 2 inputs (69 bytes, 30.3 ms baseline) for the correctness/performance gates.
+
+  [ok] Numerical noise floor 0 — 6 build variants agreed exactly; output is compared byte-for-byte.
+
+  Hotspots       : measured per-region runtimes are available — 15 region(s) measured, 56.0 ms total, ranking by predicted time saved at 8 threads
+
+  Baseline       : DiscoPoP proposes 8 applicable pattern(s) unaided; 7 of them produce a usable pragma (1 rejected before it could run)
+                   → the run beats DiscoPoP by ending with more than 7
+
+  Initial candidates
+Region ID    Type         Score  Tier  Depth      Workload  Name
+----------------------------------------------------------------------------
+  1:71       loop          23.2     1      0     9,920,160  lines 405–409
+  1:86       loop          19.9     1      0     1,000,000  lines 387–391
+  1:47       loop          18.9     1      0       500,000  lines 372–374
+  1:68       loop          14.6     1      0        24,900  lines 404–409
+  1:74       loop          10.6     1      0         1,500  lines 406–409
+  1:29       loop           9.0     1      0           500  lines 430–430
+  1:50       loop           3.5     1      0            10  lines 373–374
+  1:89       loop           2.0     1      0             3  lines 388–391
+  1:76       cu             1.0     2      0           102  lines 407–409
+  1:16       function      -1.0     2      0             0  main
+  1:83       function      -1.0     2      0             0  print_array
+  1:65       function      -1.0     2      0             0  kernel_seidel_2d
+  1:7        function      -1.0     2      0             0  xmalloc
+  1:44       function      -1.0     2      0             0  init_array
+  1:105      function      -1.0     2      0             0  pb_emit
+  0:0        function      -1.0     2      0             0  polybench_alloc_data
+  1:61       function      -1.0     2      0             0  pb_uniform
+  1:100      function      -1.0     2      0             0  pb_report
+  1:58       function      -1.0     2      0             0  pb_seed
+
+============================================================
+  PHASE A — restructure  (the source stays pragma-free)
+============================================================
+
+┌─ [depth=0] loop 1:71 (lines 405–409)  score=23.2
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:86 (lines 387–391)  score=19.9
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:47 (lines 372–374)  score=18.9
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:68 (lines 404–409)  score=14.6
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:74 (lines 406–409)  score=10.6
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:29 (lines 430–430)  score=9.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:50 (lines 373–374)  score=3.5
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:89 (lines 388–391)  score=2.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] block 1:76 (lines 407–409)  score=1.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling haiku...
+│  [Tier-2] Diff received with 1 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for collapse(2) private(i, j) shared(A, temp, n)
+│  [Tier-2] Stage 'clause' failed: `#pragma omp parallel for collapse(2) private(i, j) shared(A, temp, n)` — clause names `j`, which the loop writes and later code reads — private/firstprivate discard those writes, so that read would s
+│  [Tier-2] Assembling evidence (budget remaining: 1)
+│  [Tier-2] Calling haiku...
+│  [Tier-2] Diff received with 1 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for collapse(2) shared(A, temp, n)
+│  [Tier-2] Stage 'correctness' failed: Program output changed for input '7' — the patched program is NOT semantically equivalent to the original. This input differs from the one the profile was taken on: the rewrite is right for the profil
+│  [Tier-2] Assembling evidence (budget remaining: 0)
+│  [Tier-2] Calling haiku...
+│  [Tier-2] Diff received with 2 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for collapse(2) shared(A)
+│           #pragma omp parallel for collapse(2) shared(A)
+│  [Tier-2] Stage 'tsan' failed: Race detected: WARNING: ThreadSanitizer: data race (pid=19793)   Read of size 8 at 0x00010893ec58 by main thread:     #0 kernel_seidel_2d.omp_outlined seidel-2d.c:407 (tsan_binary:x86_64+0x100001908) 
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] function 1:16 (lines 413–453)  score=-1.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling haiku...
+│  [Tier-2] Diff received with 1 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for collapse(2) shared(A)
+│  [Tier-2] Stage 'compile' failed (build fix — budget not charged, 1 left): /var/folders/cq/rp6ywwsd4hx7y0r51kcbdn4w0000gn/T/dp_agent_val_rko0zorb/seidel-2d.c:444:34: error: invalid operands to binary expression ('double[500]' and 'double[500]')   444 |           A[i][j] = (A
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling haiku...
+│  [Tier-2] Diff received with 1 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for collapse(2) shared(A)
+│  [Tier-2] Stage 'tsan' failed: Race detected: WARNING: ThreadSanitizer: data race (pid=19971)   Read of size 8 at 0x00010af5cc50 by main thread:     #0 main.omp_outlined seidel-2d.c:441 (tsan_binary:x86_64+0x100001cdc)     #1 __kmp
+│  [Tier-2] Assembling evidence (budget remaining: 1)
+│  [Tier-2] Calling haiku...
+│  [Tier-2] Diff received with 1 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for collapse(2) shared(A)
+│  [Tier-2] Stage 'performance' failed: No speedup from parallelization: measured 1.03× (same binary, median of interleaved pairs; best at 1 thread 33.8 ms vs best at all threads 33.5 ms), below the required 1.10×.
+│  [Tier-2] Assembling evidence (budget remaining: 0)
+│  [Tier-2] Calling haiku...
+│  [Tier-2] Diff received with 3 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for collapse(2) shared(A)
+│           #pragma omp parallel for collapse(2) shared(A, A_tmp)
+│           #pragma omp parallel for collapse(2) shared(A, A_tmp)
+│  [Tier-2] Stage 'correctness' failed: Program output changed for input '7' — the patched program is NOT semantically equivalent to the original. This input differs from the one the profile was taken on: the rewrite is right for the profil
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] function 1:83 (lines 381–393)  score=-1.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling haiku...
+│  [Tier-2] Diff received with 2 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for collapse(2) shared(A, n)
+│           #pragma omp critical
+│  [Tier-2] Stage 'schedules' failed: the program does not repeat itself: two runs at the SAME thread count (4) printed different output. That is a data race, independent of how small the difference is. output differs and no numerical sla
+│  [Tier-2] Assembling evidence (budget remaining: 1)
+│  [Tier-2] Calling haiku...
+│  [Tier-2] Diff received with 2 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for collapse(2) shared(A, n) ordered
+│           #pragma omp ordered
+│  [Tier-2] Stage 'performance' failed: No speedup from parallelization: measured 0.82× (same binary, median of interleaved pairs; best at 1 thread 39.6 ms vs best at all threads 49.0 ms), below the required 1.10×.
+│  [Tier-2] Assembling evidence (budget remaining: 0)
+│  [Tier-2] Calling haiku...
+│  [Tier-2] Diff received with 1 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for collapse(2) shared(A, n) reduction(+:pb_count, pb_sum, pb_wsum)
+│  [Tier-2] Stage 'correctness' failed: Program output changed — the patched program is NOT semantically equivalent to the original. output differs and no numerical slack is in effect first difference at line 2:   expected: pb_sum 31375625.
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] function 1:65 (lines 399–410)  score=-1.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling haiku...
+│  [Tier-2] Diff received with 2 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for collapse(2)
+│           #pragma omp parallel for collapse(2)
+│  [Tier-2] Stage 'correctness' failed: Program output changed for input '7' — the patched program is NOT semantically equivalent to the original. This input differs from the one the profile was taken on: the rewrite is right for the profil
+│  [Tier-2] Assembling evidence (budget remaining: 1)
+│  [Tier-2] Calling haiku...
+│  [Tier-2] Diff received with 1 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for collapse(2) private(i, j)
+│  [Tier-2] Stage 'correctness' failed: Program output changed for input '7' — the patched program is NOT semantically equivalent to the original. This input differs from the one the profile was taken on: the rewrite is right for the profil
+│  [Tier-2] Assembling evidence (budget remaining: 0)
+│  [Tier-2] Calling haiku...
+│  [Tier-2] Diff received with 2 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for collapse(2) schedule(static)
+│           #pragma omp parallel for collapse(2) schedule(static)
+│  [Tier-2] Stage 'correctness' failed: Program output changed for input '7' — the patched program is NOT semantically equivalent to the original. This input differs from the one the profile was taken on: the rewrite is right for the profil
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] function 1:7 (lines 223–232)  score=-1.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling haiku...
+│  [Tier-2] LLM produced no change — retrying
+│  [Tier-2] Assembling evidence (budget remaining: 1)
+│  [Tier-2] Calling haiku...
+│  [Tier-2] Diff received with 1 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for reduction(|:ret)
+│  [Tier-2] Stage 'performance' failed: No speedup from parallelization: measured 1.01× (same binary, median of interleaved pairs; best at 1 thread 33.9 ms vs best at all threads 33.9 ms), below the required 1.10×.
+│  [Tier-2] Assembling evidence (budget remaining: 0)
+│  [Tier-2] Calling haiku...
+│  [Tier-2] Diff received with 1 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for
+│  [Tier-2] Stage 'performance' failed: No speedup from parallelization: measured 1.02× (same binary, median of interleaved pairs; best at 1 thread 34.3 ms vs best at all threads 33.9 ms), below the required 1.10×.
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] function 1:44 (lines 367–375)  score=-1.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling haiku...
+│  [Tier-2] Diff received with 1 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for collapse(2) shared(n, A)
+│  [Tier-2] Stage 'performance' failed: No speedup from parallelization: measured 0.99× (same binary, median of interleaved pairs; best at 1 thread 33.3 ms vs best at all threads 34.2 ms), below the required 1.10×.
+│  [Tier-2] Assembling evidence (budget remaining: 1)
+│  [Tier-2] Calling haiku...
+│  [Tier-2] Diff received with 1 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for shared(n, A)
+│  [Tier-2] Stage 'performance' failed: No speedup from parallelization: measured 1.03× (same binary, median of interleaved pairs; best at 1 thread 35.9 ms vs best at all threads 34.5 ms), below the required 1.10×.
+│  [Tier-2] Assembling evidence (budget remaining: 0)
+│  [Tier-2] Calling haiku...
+│  [Tier-2] Diff received with 1 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for shared(n, A)
+│  [Tier-2] Stage 'performance' failed: No speedup from parallelization: measured 1.01× (same binary, median of interleaved pairs; best at 1 thread 33.4 ms vs best at all threads 33.6 ms), below the required 1.10×.
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] function 1:105 (lines 307–312)  score=-1.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling haiku...
+│  [Tier-2] Diff received with 3 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp atomic capture
+│           #pragma omp atomic
+│           #pragma omp atomic
+│  [Tier-2] Stage 'performance' failed: No speedup from parallelization: measured 1.01× (same binary, median of interleaved pairs; best at 1 thread 35.7 ms vs best at all threads 36.0 ms), below the required 1.10×.
+│  [Tier-2] Assembling evidence (budget remaining: 1)
+│  [Tier-2] Calling haiku...
+│  [Tier-2] Diff received with 2 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp threadprivate(pb_local_count, pb_local_sum, pb_local_wsum, pb_local_batched)
+│           #pragma omp critical
+│  [Tier-2] Stage 'openmp_compile' failed (build fix — budget not charged, 1 left): OpenMP compile failed (loop not in OpenMP-canonical form): sum, pb_local_batched)       |                           ^ /var/folders/cq/rp6ywwsd4hx7y0r51kcbdn4w0000gn/T/dp_agent_val_tx0lfz19/seidel-2d.c
+│  [Tier-2] Assembling evidence (budget remaining: 1)
+│  [Tier-2] Calling haiku...
+│  [Tier-2] Diff received with 2 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp threadprivate(pb_local_count, pb_local_sum, pb_local_wsum, pb_local_batched)
+│           #pragma omp critical
+│  [Tier-2] Stage 'correctness' failed: Program output changed under the parallel build at a fixed thread count — the patched program is NOT semantically equivalent to the original. output differs and no numerical slack is in effect first d
+│  [Tier-2] Assembling evidence (budget remaining: 0)
+│  [Tier-2] Calling haiku...
+│  [Tier-2] Diff received with 1 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp critical
+│  [Tier-2] Stage 'performance' failed: No speedup from parallelization: measured 0.99× (same binary, median of interleaved pairs; best at 1 thread 41.9 ms vs best at all threads 41.7 ms), below the required 1.10×.
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] function 0:0 (lines 235–239)  score=-1.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling haiku...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Original backed up → seidel-2d.c.original
+│  [Tier-2] Applied to seidel-2d.c
+│  [Tier-2] Fast refresh (compile only, no instrumented run)...
+│           0/387 observed dependences carried forward (5 in rewritten code, 382 no longer present; 114 without callpath state), 7/7 loop trip counts
+│  [Phase-A] Asking DiscoPoP what it now finds in the rewritten lines...
+│  [Tier-2] DiscoPoP still finds no parallelism in the rewritten lines — reverting (snapshot restore)
+└─ retry (budget remaining: 2)
+
+│  [Tier-2] Assembling evidence (budget remaining: 1)
+│  [Tier-2] Calling haiku...
+│  [Tier-2] Diff received with 1 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for reduction(+:val)
+│  [Tier-2] Stage 'performance' failed: No speedup from parallelization: measured 1.02× (same binary, median of interleaved pairs; best at 1 thread 33.7 ms vs best at all threads 33.6 ms), below the required 1.10×.
+│  [Tier-2] Assembling evidence (budget remaining: 0)
+│  [Tier-2] Calling haiku...
+│  [Tier-2] LLM call failed: Claude Code returned an error result: success
+│           counting it as a failed attempt and moving on
+│  [Tier-2] LLM returned invalid output
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] function 1:61 (lines 332–335)  score=-1.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling haiku...
+│  [Tier-2] LLM call failed: Claude Code returned an error result: success
+│           counting it as a failed attempt and moving on
+│  [Tier-2] LLM returned invalid output — retrying
+│  [Tier-2] Assembling evidence (budget remaining: 1)
+│  [Tier-2] Calling haiku...
+│  [Tier-2] LLM call failed: Claude Code returned an error result: success
+│           counting it as a failed attempt and moving on
+│  [Tier-2] LLM returned invalid output — retrying
+│  [Tier-2] Assembling evidence (budget remaining: 0)
+│  [Tier-2] Calling haiku...
+│  [Tier-2] LLM call failed: Claude Code returned an error result: success
+│           counting it as a failed attempt and moving on
+│  [Tier-2] LLM returned invalid output
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] function 1:100 (lines 316–319)  score=-1.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling haiku...
+│  [Tier-2] LLM call failed: Claude Code returned an error result: success
+│           counting it as a failed attempt and moving on
+│  [Tier-2] LLM returned invalid output — retrying
+│  [Tier-2] Assembling evidence (budget remaining: 1)
+│  [Tier-2] Calling haiku...
+│  [Tier-2] LLM call failed: Claude Code returned an error result: success
+│           counting it as a failed attempt and moving on
+│  [Tier-2] LLM returned invalid output — retrying
+│  [Tier-2] Assembling evidence (budget remaining: 0)
+│  [Tier-2] Calling haiku...
+│  [Tier-2] LLM call failed: Claude Code returned an error result: success
+│           counting it as a failed attempt and moving on
+│  [Tier-2] LLM returned invalid output
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] function 1:58 (lines 328–330)  score=-1.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling haiku...
+│  [Tier-2] LLM call failed: Claude Code returned an error result: success
+│           counting it as a failed attempt and moving on
+│  [Tier-2] LLM returned invalid output — retrying
+│  [Tier-2] Assembling evidence (budget remaining: 1)
+│  [Tier-2] Calling haiku...
+│  [Tier-2] LLM call failed: Claude Code returned an error result: success
+│           counting it as a failed attempt and moving on
+│  [Tier-2] LLM returned invalid output — retrying
+│  [Tier-2] Assembling evidence (budget remaining: 0)
+│  [Tier-2] Calling haiku...
+│  [Tier-2] LLM call failed: Claude Code returned an error result: success
+│           counting it as a failed attempt and moving on
+│  [Tier-2] LLM returned invalid output
+└─ SKIPPED (budget exhausted)
+
+
+  One full re-profile before Phase B — it annotates from measured dependences, not carried-forward ones.
+
+============================================================
+  PHASE B — annotate  (4 candidate pragma(s))
+============================================================
+
+  Timing noise floor on this machine: 0.990 → keep anything at or above 0.980
+
+┌─ pattern #31  do_all @ lines 387–391  (W=1000000)
+│  #pragma omp parallel for
+│  gate failed at 'tsan': Race detected: WARNING: ThreadSanitizer: data race (pid=25580)   Write of size 8 at 0x000101e1d088 by main thread:     #0 print_array.omp_outlined sei
+└─ DROPPED
+
+┌─ pattern #30  do_all @ lines 388–391  (W=3)
+│  #pragma omp parallel for
+│  gate failed at 'tsan': Race detected: WARNING: ThreadSanitizer: data race (pid=25593)   Read of size 8 at 0x00010205a098 by thread T7:     #0 print_array.omp_outlined seidel
+└─ DROPPED
+
+┌─ pattern #26  do_all @ lines 372–374  (W=500000)
+│  #pragma omp parallel for
+│  marginal 1.00×
+│  [Phase-B] Applied to seidel-2d.c
+└─ APPLIED
+
+┌─ pattern #25  do_all @ lines 373–374  (W=10)
+│  #pragma omp parallel for
+│  nested inside the already-parallelized region at lines 372–374
+└─ SKIPPED (enclosing loop is already parallel)
+
+============================================================
+  SETTLING — verify the finished source, drop what does not hold up
+============================================================
+  [repair] slower than the original: 34.2 ms vs 30.3 ms (beyond the 3% noise allowance)
+           → dropping the pragma for 2:47 and re-checking
+  Dropped 1 change(s):
+    · pragma for 2:47 — dropped because slower than the original: 34.2 ms vs 30.3 ms (beyond the 3% noise allowance)
+
+
+============================================================
+  SUMMARY: 0 rewrite(s) kept  |  0 pragma(s) applied  |  11 skipped
+  DiscoPoP unaided: 7 usable pragma(s)  →  this run: 0   [BELOW]
+    ✗  1:76  [skipped]  depth=0
+    ✗  1:16  [skipped]  depth=0
+    ✗  1:83  [skipped]  depth=0
+    ✗  1:65  [skipped]  depth=0
+    ✗  1:7  [skipped]  depth=0
+    ✗  1:44  [skipped]  depth=0
+    ✗  1:105  [skipped]  depth=0
+    ✗  0:0  [skipped]  depth=0
+    ✗  1:61  [skipped]  depth=0
+    ✗  1:100  [skipped]  depth=0
+    ✗  1:58  [skipped]  depth=0
+
+  Results → .discopop/agent_patches/accepted.json
+============================================================
+

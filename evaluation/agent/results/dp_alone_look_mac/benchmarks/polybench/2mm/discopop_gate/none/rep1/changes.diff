@@ -1,0 +1,18 @@
+--- original.c
++++ final.c
+@@ -82,6 +82,7 @@
+ 
+ #pragma scop
+   /* D := alpha*A*B*C + beta*D */
++ #pragma omp parallel for firstprivate(nj,alpha,nk,ni) private(j,k) shared(B,tmp) 
+   for (i = 0; i < _PB_NI; i++)
+     for (j = 0; j < _PB_NJ; j++)
+       {
+@@ -90,6 +91,7 @@
+ 	  tmp[i][j] += alpha * A[i][k] * B[k][j];
+       }
+   for (i = 0; i < _PB_NI; i++)
++    #pragma omp parallel for firstprivate(nj,nl,i,beta) private(k) shared(D,tmp,C) 
+     for (j = 0; j < _PB_NL; j++)
+       {
+ 	D[i][j] *= beta;

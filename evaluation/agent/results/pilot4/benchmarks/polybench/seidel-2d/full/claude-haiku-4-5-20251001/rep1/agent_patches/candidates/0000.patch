@@ -1,0 +1,38 @@
+--- /home/ahmedabosamaha/new_benchmark_harness/agent/runs/pilot4/benchmarks/polybench/seidel-2d/full/claude-haiku-4-5-20251001/rep1/work/seidel-2d.c
++++ /home/ahmedabosamaha/new_benchmark_harness/agent/runs/pilot4/benchmarks/polybench/seidel-2d/full/claude-haiku-4-5-20251001/rep1/work/seidel-2d.c
+@@ -60,12 +60,30 @@
+   int t, i, j;
+ 
+ #pragma scop
++  /* Allocate temporary buffer for each timestep computation */
++  DATA_TYPE (*B)[_PB_N] = (DATA_TYPE (*)[_PB_N])malloc(sizeof(DATA_TYPE) * _PB_N * _PB_N);
++
+   for (t = 0; t <= _PB_TSTEPS - 1; t++)
+-    for (i = 1; i<= _PB_N - 2; i++)
+-      for (j = 1; j <= _PB_N - 2; j++)
+-	A[i][j] = (A[i-1][j-1] + A[i-1][j] + A[i-1][j+1]
+-		   + A[i][j-1] + A[i][j] + A[i][j+1]
+-		   + A[i+1][j-1] + A[i+1][j] + A[i+1][j+1])/9.0;
++    {
++      /* Compute new values into B from current state A (parallel region)
++         All j and i iterations are independent since they read from unchanged A
++         and write to distinct B[i][j] locations */
++      #pragma omp parallel for collapse(2) private(i, j)
++      for (i = 1; i<= _PB_N - 2; i++)
++        for (j = 1; j <= _PB_N - 2; j++)
++          B[i][j] = (A[i-1][j-1] + A[i-1][j] + A[i-1][j+1]
++                     + A[i][j-1] + A[i][j] + A[i][j+1]
++                     + A[i+1][j-1] + A[i+1][j] + A[i+1][j+1])/9.0;
++
++      /* Copy updated values from B back to A for next timestep (parallel region)
++         Each iteration writes to a distinct A[i][j] location */
++      #pragma omp parallel for collapse(2) private(i, j)
++      for (i = 0; i < _PB_N; i++)
++        for (j = 0; j < _PB_N; j++)
++          A[i][j] = B[i][j];
++    }
++
++  free(B);
+ #pragma endscop
+ 
+ }

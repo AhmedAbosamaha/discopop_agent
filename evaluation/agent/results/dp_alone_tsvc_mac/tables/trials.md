@@ -1,0 +1,27 @@
+| Benchmark | Arm | Model | Rep | Outcome | Best speedup | Pragmas (DP+LLM) | Rewrites | Baseline | LLM calls | Agent s |
+|---|---|---|---:|---|---:|---|---:|---:|---:|---:|
+| tsvc/s000 | discopop_gate | none | 1 | parallel-not-faster | 0.07x | 1+0 | 0 | 2 | 0 | 29.1 |
+| tsvc/s112 | discopop_gate | none | 1 | no-change | 1.02x | 0+0 | 0 | 1 | 0 | 16.4 |
+| tsvc/s121 | discopop_gate | none | 1 | no-change | 1.11x | 0+0 | 0 | 1 | 0 | 16.5 |
+| tsvc/s1213 | discopop_gate | none | 1 | no-change | 0.99x | 0+0 | 0 | 0 | 0 | 13.8 |
+| tsvc/s127 | discopop_gate | none | 1 | no-change | 0.81x | 0+0 | 0 | 1 | 0 | 16.6 |
+| tsvc/s211 | discopop_gate | none | 1 | no-change | 1.18x | 0+0 | 0 | 0 | 0 | 13.8 |
+| tsvc/s212 | discopop_gate | none | 1 | no-change | 1.21x | 0+0 | 0 | 1 | 0 | 17.2 |
+| tsvc/s241 | discopop_gate | none | 1 | no-change | 1.00x | 0+0 | 0 | 1 | 0 | 16.7 |
+| tsvc/s243 | discopop_gate | none | 1 | no-change | 1.79x | 0+0 | 0 | 1 | 0 | 16.7 |
+| tsvc/s244 | discopop_gate | none | 1 | no-change | 0.98x | 0+0 | 0 | 1 | 0 | 16.6 |
+| tsvc/s252 | discopop_gate | none | 1 | no-change | 0.95x | 0+0 | 0 | 1 | 0 | 16.3 |
+| tsvc/s254 | discopop_gate | none | 1 | no-change | 1.45x | 0+0 | 0 | 1 | 0 | 16.5 |
+| tsvc/s255 | discopop_gate | none | 1 | no-change | 1.40x | 0+0 | 0 | 1 | 0 | 16.7 |
+| tsvc/s281 | discopop_gate | none | 1 | no-change | 1.07x | 0+0 | 0 | 0 | 0 | 13.5 |
+| tsvc/s291 | discopop_gate | none | 1 | no-change | 1.60x | 0+0 | 0 | 2 | 0 | 19.9 |
+| tsvc/s292 | discopop_gate | none | 1 | no-change | 1.91x | 0+0 | 0 | 1 | 0 | 18.2 |
+| tsvc/s293 | discopop_gate | none | 1 | no-change | 1.04x | 0+0 | 0 | 1 | 0 | 20.1 |
+| tsvc/s3112 | discopop_gate | none | 1 | no-change | 1.00x | 0+0 | 0 | 1 | 0 | 19.3 |
+| tsvc/s313 | discopop_gate | none | 1 | parallel-not-faster | 0.19x | 1+0 | 0 | 2 | 0 | 25.1 |
+| tsvc/s321 | discopop_gate | none | 1 | no-change | 0.96x | 0+0 | 0 | 0 | 0 | 15.1 |
+| tsvc/s322 | discopop_gate | none | 1 | no-change | 1.09x | 0+0 | 0 | 0 | 0 | 15.8 |
+| tsvc/s323 | discopop_gate | none | 1 | no-change | 0.98x | 0+0 | 0 | 1 | 0 | 37.0 |
+| tsvc/s331 | discopop_gate | none | 1 | no-change | 0.98x | 0+0 | 0 | 2 | 0 | 28.9 |
+| tsvc/s341 | discopop_gate | none | 1 | no-change | 0.99x | 0+0 | 0 | 2 | 0 | 25.1 |
+| tsvc/vpvtv | discopop_gate | none | 1 | parallel-not-faster | 0.10x | 1+0 | 0 | 1 | 0 | 31.4 |

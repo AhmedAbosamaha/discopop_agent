@@ -1,0 +1,21 @@
+--- /private/tmp/claude-501/-Users-ahmedsamir-discopop-agent/436822e3-c111-4da4-bd96-90a25b95970d/scratchpad/matrix_prefix2/no_evidence_b1/prefix.c
++++ /private/tmp/claude-501/-Users-ahmedsamir-discopop-agent/436822e3-c111-4da4-bd96-90a25b95970d/scratchpad/matrix_prefix2/no_evidence_b1/prefix.c
+@@ -102,10 +102,16 @@
+ static void kernel_prefix(double* a, double* c)
+ {
+   int r, i;
++  double sum;
+   for (r = 0; r < R; r++) {
+     c[0] = a[0];
+-    for (i = 1; i < N; i++)
+-      c[i] = c[i-1] + a[i];
++    sum = c[0];
++    #pragma omp parallel for shared(a, c) reduction(inscan, +:sum)
++    for (i = 1; i < N; i++) {
++      sum += a[i];
++      #pragma omp scan inclusive(sum)
++      c[i] = sum;
++    }
+   }
+ }
+ 

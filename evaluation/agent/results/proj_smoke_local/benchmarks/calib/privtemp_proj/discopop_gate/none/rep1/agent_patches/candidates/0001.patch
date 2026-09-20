@@ -1,0 +1,10 @@
+--- /Users/ahmedsamir/new_benchmark_harness/agent/runs/proj_smoke_local/benchmarks/calib/privtemp_proj/discopop_gate/none/rep1/work/src/kernel.c
++++ /Users/ahmedsamir/new_benchmark_harness/agent/runs/proj_smoke_local/benchmarks/calib/privtemp_proj/discopop_gate/none/rep1/work/src/kernel.c
+@@ -8,6 +8,7 @@
+   int r, i;
+   double t;
+   for (r = 0; r < R; r++)
++    #pragma omp parallel for private(t) shared(a,c) 
+     for (i = 0; i < N; i++) {
+       t = a[i] * a[i] + 1.0;
+       c[i] = t * 0.5 + sqrt(t);

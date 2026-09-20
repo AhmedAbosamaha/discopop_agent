@@ -1,0 +1,12 @@
+\begin{lstlisting}[language=diff,basicstyle=\ttfamily\scriptsize,breaklines=true,caption={rodinia-3.1/hotspot — parallel-not-faster (pilot4)}]
+--- original.cpp
++++ final.cpp
+@@ -210,6 +210,7 @@
+             continue;
+         }
+ 
++        #pragma omp parallel for firstprivate(c_start,temp,Rx_1,Rz_1,Cap_1,r_start,col,Ry_1) private(c) shared(result,power) 
+         for ( r = r_start; r < r_start + BLOCK_SIZE_R; ++r ) {
+     
+             for ( c = c_start; c < c_start + BLOCK_SIZE_C; ++c ) {
+\end{lstlisting}

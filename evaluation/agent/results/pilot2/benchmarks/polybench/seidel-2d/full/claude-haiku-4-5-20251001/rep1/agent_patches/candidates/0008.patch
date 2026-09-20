@@ -1,0 +1,10 @@
+--- seidel-2d.c
++++ seidel-2d.c
+@@ -422,6 +422,7 @@
+ 		      DATA_TYPE POLYBENCH_2D(A,N,N,n,n))
+ {
+   int t, i, j;
++  #pragma omp parallel for firstprivate(n,tsteps) private(i,j) shared(A) 
+   for (t = 0; t <= _PB_TSTEPS - 1; t++)
+     for (i = 1; i<= _PB_N - 2; i++)
+       for (j = 1; j <= _PB_N - 2; j++)

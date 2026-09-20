@@ -1,0 +1,10 @@
+--- seidel-2d.c
++++ seidel-2d.c
+@@ -453,6 +453,7 @@
+ 
+       /* Generate random perturbations sequentially to preserve RNG order. */
+       DATA_TYPE* pb_randoms = (DATA_TYPE*)malloc(pb_n * sizeof(DATA_TYPE));
++      #pragma omp parallel for 
+       for (pb_k = 0; pb_k < pb_n; pb_k++) {
+         pb_randoms[pb_k] = (DATA_TYPE)(pb_uniform(&pb_state) * 3.0);
+       }

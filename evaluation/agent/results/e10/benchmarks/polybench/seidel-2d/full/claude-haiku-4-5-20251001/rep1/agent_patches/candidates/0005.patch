@@ -1,0 +1,38 @@
+--- /home/ahmedabosamaha/new_benchmark_harness/agent/runs/e10/benchmarks/polybench/seidel-2d/full/claude-haiku-4-5-20251001/rep1/work/seidel-2d.c
++++ /home/ahmedabosamaha/new_benchmark_harness/agent/runs/e10/benchmarks/polybench/seidel-2d/full/claude-haiku-4-5-20251001/rep1/work/seidel-2d.c
+@@ -61,11 +61,31 @@
+ 
+ #pragma scop
+   for (t = 0; t <= _PB_TSTEPS - 1; t++)
+-    for (i = 1; i<= _PB_N - 2; i++)
++  {
++    /* Red-black coloring: partition grid by (i+j) parity.
++       Pass 1: update red (i+j even) in parallel.
++       Pass 2: update black (i+j odd) in parallel, reading newly-updated reds.
++       This preserves Gauss-Seidel semantics: earlier rows are always updated
++       before later rows (per pass), and row i+1 hasn't been touched yet. */
++
++    /* Pass 1: Update red elements (i+j even) */
++    #pragma omp parallel for collapse(2) private(i, j)
++    for (i = 1; i <= _PB_N - 2; i++)
+       for (j = 1; j <= _PB_N - 2; j++)
+-	A[i][j] = (A[i-1][j-1] + A[i-1][j] + A[i-1][j+1]
+-		   + A[i][j-1] + A[i][j] + A[i][j+1]
+-		   + A[i+1][j-1] + A[i+1][j] + A[i+1][j+1])/9.0;
++        if ((i + j) % 2 == 0)
++          A[i][j] = (A[i-1][j-1] + A[i-1][j] + A[i-1][j+1]
++                     + A[i][j-1] + A[i][j] + A[i][j+1]
++                     + A[i+1][j-1] + A[i+1][j] + A[i+1][j+1])/9.0;
++
++    /* Pass 2: Update black elements (i+j odd) */
++    #pragma omp parallel for collapse(2) private(i, j)
++    for (i = 1; i <= _PB_N - 2; i++)
++      for (j = 1; j <= _PB_N - 2; j++)
++        if ((i + j) % 2 == 1)
++          A[i][j] = (A[i-1][j-1] + A[i-1][j] + A[i-1][j+1]
++                     + A[i][j-1] + A[i][j] + A[i][j+1]
++                     + A[i+1][j-1] + A[i+1][j] + A[i+1][j+1])/9.0;
++  }
+ #pragma endscop
+ 
+ }

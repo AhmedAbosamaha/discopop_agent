@@ -1,0 +1,109 @@
+
+============================================================
+  DiscoPoP Agentic Controller
+============================================================
+  Source         : /Users/ahmedsamir/new_benchmark_harness/agent/runs/dp_alone_fix84_poly_mac/benchmarks/polybench/gramschmidt/discopop_gate/none/rep1/work/gramschmidt.c
+  DiscoPoP dir   : .discopop
+  Model          : none
+  Budget         : 0 LLM retries/region (+2 free build fixes)
+  λ penalty      : 1.0
+  Min workload   : 0.0
+  Restruct. depth: 0 (Tier-2 allowed at depth 0–0)
+  Quality gate   : Tier-1 = all but speed, no escalation; Tier-2 = full
+  TSan           : barrier-aware (archer: /Users/ahmedsamir/.local/lib/libarcher.dylib)
+  Speedup gate   : OFF (--no-require-speedup)
+  Dry run        : False
+  LLM mode       : none
+  Edit mode      : direct
+  Re-profiling   : fast refresh (compile only) between rewrites; full before a deeper level and before Phase B
+  Pragmas        : LLM writes them with the rewrite, gate decides (--llm-pragmas)
+============================================================
+
+  Project        : /Users/ahmedsamir/new_benchmark_harness/agent/runs/dp_alone_fix84_poly_mac/benchmarks/polybench/gramschmidt/discopop_gate/none/rep1/work  (2 unit(s): gramschmidt.c, polybench.c)
+
+  [ok] Captured reference output on 2 inputs (39 bytes, 3.9 ms baseline) for the correctness/performance gates.
+
+  [ok] Numerical noise floor 2.54e-19 of output scale (widest disagreement 2.54e-20 of output scale across 6 build variants, x10 margin — on input '7').
+  [note] values may move that far without failing the correctness gate; labels, line structure and integers must still match exactly.
+
+  Hotspots       : measured per-region runtimes are available — 25 region(s) measured, 15.0 ms total, ranking by predicted time saved at 8 threads
+
+  Baseline       : DiscoPoP proposes 4 applicable pattern(s) unaided; 4 of them produce a usable pragma
+                   → the run beats DiscoPoP by ending with more than 4
+
+  Initial candidates
+Region ID    Type           Saves    % run    Hot  Tier  Depth  Name
+--------------------------------------------------------------------------------------
+  1:99       loop          9.4 ms    71.5%    YES     1      0  lines 86–102
+  3:96       function      9.4 ms    71.5%    YES     2      0  kernel_gramschmidt
+  1:116      loop          9.2 ms    70.3%    YES     1      0  lines 94–101
+  1:126      loop          4.6 ms    35.3%    YES     1      0  lines 99–100
+  1:120      loop          4.1 ms    31.4%    YES     1      0  lines 97–98
+
+============================================================
+  PHASE A — restructure  (the source stays pragma-free)
+============================================================
+
+┌─ [depth=0] loop 1:99 (lines 86–102)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] function 3:96 (lines 76–105)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:116 (lines 94–101)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:126 (lines 99–100)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:120 (lines 97–98)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+
+============================================================
+  PHASE B — annotate  (4 candidate pragma(s))
+============================================================
+
+  5 loop(s) are already parallel in the source; nothing is nested inside them.
+
+┌─ pattern #78  do_all @ lines 86–102  (W=262144)
+│  #pragma omp parallel for
+│  gate failed at 'tsan': Race detected: WARNING: ThreadSanitizer: data race (pid=33930)   Write of size 8 at 0x72d000000080 by main thread:     #0 kernel_gramschmidt.omp_outli
+└─ DROPPED
+
+┌─ pattern #77  do_all @ lines 94–101  (W=7282688)
+│  #pragma omp parallel for
+│  [Phase-B] Original backed up → gramschmidt.c.original
+│  [Phase-B] Applied to gramschmidt.c
+└─ APPLIED
+
+┌─ pattern #76  do_all @ lines 99–100  (W=128)
+│  #pragma omp parallel for
+│  nested inside the already-parallelized region at lines 94–101
+└─ SKIPPED (enclosing loop is already parallel)
+
+┌─ pattern #75  do_all @ lines 97–98  (W=1040384)
+│  #pragma omp parallel for
+│  nested inside the already-parallelized region at lines 94–101
+└─ SKIPPED (enclosing loop is already parallel)
+
+============================================================
+  SETTLING — verify the finished source, drop what does not hold up
+============================================================
+  [ok] finished source verified — output matches the original
+
+
+============================================================
+  SUMMARY: 0 rewrite(s) kept  |  1 pragma(s) applied  |  1 skipped
+  DiscoPoP unaided: 4 usable pragma(s) in this profile's draw  →  this run: 1   [BELOW, informational]
+    ✓  loop 1:116  [Phase-B pragma]  depth=0
+    ✗  3:96  [skipped]  depth=0
+
+  Results → .discopop/agent_patches/accepted.json
+============================================================
+

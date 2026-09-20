@@ -1,0 +1,18 @@
+--- original.c
++++ final.c
+@@ -86,12 +86,15 @@
+       for (j = 0; j < _PB_NY; j++)
+ 	ey[0][j] = _fict_[t];
+       for (i = 1; i < _PB_NX; i++)
++	#pragma omp parallel for firstprivate(ny,i) shared(hz,ey) 
+ 	for (j = 0; j < _PB_NY; j++)
+ 	  ey[i][j] = ey[i][j] - 0.5*(hz[i][j]-hz[i-1][j]);
+       for (i = 0; i < _PB_NX; i++)
++	#pragma omp parallel for firstprivate(ny,i) shared(ex,hz) 
+ 	for (j = 1; j < _PB_NY; j++)
+ 	  ex[i][j] = ex[i][j] - 0.5*(hz[i][j]-hz[i][j-1]);
+       for (i = 0; i < _PB_NX - 1; i++)
++	#pragma omp parallel for firstprivate(ny,i) shared(ex,hz,ey) 
+ 	for (j = 0; j < _PB_NY - 1; j++)
+ 	  hz[i][j] = hz[i][j] - 0.7*  (ex[i][j+1] - ex[i][j] +
+ 				       ey[i+1][j] - ey[i][j]);

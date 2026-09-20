@@ -1,0 +1,14 @@
+--- original.c
++++ final.c
+@@ -62,9 +62,11 @@
+ #pragma scop
+   for (k = 0; k < _PB_N; k++)
+     {
++      #pragma omp parallel for shared(A)
+       for (j = k + 1; j < _PB_N; j++)
+ 	A[k][j] = A[k][j] / A[k][k];
+       for(i = k + 1; i < _PB_N; i++)
++	#pragma omp parallel for shared(A) firstprivate(i, k)
+ 	for (j = k + 1; j < _PB_N; j++)
+ 	  A[i][j] = A[i][j] - A[i][k] * A[k][j];
+     }

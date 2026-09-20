@@ -1,0 +1,177 @@
+
+============================================================
+  DiscoPoP Agentic Controller
+============================================================
+  Source         : hotspot.cpp
+  DiscoPoP dir   : .discopop
+  Model          : claude-haiku-4-5-20251001
+  Budget         : 3 LLM retries/region (+2 free build fixes)
+  λ penalty      : 1.0
+  Min workload   : 0.0
+  Restruct. depth: 0 (Tier-2 allowed at depth 0–0)
+  Quality gate   : Tier-1 = all but speed, no escalation; Tier-2 = full
+  TSan           : barrier-aware (archer: /usr/lib/llvm-20/lib/libarcher.so)
+  Speedup gate   : require ≥ 1.1× measured
+  Dry run        : False
+  LLM mode       : claude-haiku-4-5-20251001
+  Edit mode      : direct
+  Re-profiling   : fast refresh (compile only) between rewrites; full before a deeper level and before Phase B
+  Pragmas        : LLM writes them with the rewrite, gate decides (--llm-pragmas)
+============================================================
+
+  [ok] Captured reference output on 2 inputs (70 bytes, 324.2 ms baseline) for the correctness/performance gates.
+
+  [ok] Numerical noise floor 1.67e-11 of output scale (widest disagreement 1.67e-12 of output scale across 6 build variants, x10 margin — on input '7').
+  [note] values may move that far without failing the correctness gate; labels, line structure and integers must still match exactly.
+
+  Hotspots       : measured per-region runtimes are available — 17 region(s) measured, 4333.3 ms total, ranking by predicted time saved at 48 threads
+
+  Baseline       : DiscoPoP proposes 6 applicable pattern(s) unaided; 6 of them produce a usable pragma
+                   → the run beats DiscoPoP by ending with more than 6
+
+  Initial candidates
+Region ID    Type           Saves    % run    Hot  Tier  Depth  Name
+--------------------------------------------------------------------------------------
+  1:102      loop       4048.9 ms    95.4%    YES     2      0  lines 255–264
+  1:4        loop       4048.9 ms    95.4%    YES     1      0  lines 147–224
+  1:94       function   4048.9 ms    95.4%    YES     2      0  _Z17compute_tran_tempPfiS_S_ii
+  0:0        function   4048.9 ms    95.4%    YES     1      0  _Z16single_iterationPfS_S_iifffff
+  1:76       loop       3750.3 ms    88.4%    YES     1      0  lines 213–223
+  1:79       loop       2730.6 ms    64.4%    YES     1      0  lines 215–222
+  1:14       loop        231.4 ms     5.5%  MAYBE     1      0  lines 156–209
+  1:17       loop        164.2 ms     3.9%  MAYBE     1      0  lines 157–208
+
+============================================================
+  PHASE A — restructure  (the source stays pragma-free)
+============================================================
+
+┌─ [depth=0] loop 1:102 (lines 255–264)  score=4.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 2 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for \
+│           #pragma omp critical
+│  [Tier-2] Stage 'tsan' failed: Race detected: WARNING: ThreadSanitizer: data race (pid=2412454)   Write of size 4 at 0x7ffff39fe008 by thread T16:     #0 single_iteration(float*, float*, float*, int, int, float, float, float, float
+│  [Tier-2] Assembling evidence (budget remaining: 1)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 4 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel
+│           #pragma omp master
+│           #pragma omp parallel for \
+│           #pragma omp critical
+│  [Tier-2] Stage 'compile' failed (build fix — budget not charged, 1 left): /tmp/dp_agent_val_sqdxbcgc/hotspot.cpp:263:31: error: use of undeclared identifier 'omp_get_num_threads'   263 |                 num_threads = omp_get_num_threads();       |                           
+│  [Tier-2] Assembling evidence (budget remaining: 1)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 4 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel
+│           #pragma omp master
+│           #pragma omp parallel for \
+│           #pragma omp critical
+│  [Tier-2] Stage 'compile' failed (build fix — budget not charged, 0 left): /usr/bin/ld: /tmp/hotspot-4d87ac.o: in function `compute_tran_temp(float*, int, float*, float*, int, int)': /tmp/dp_agent_val_j7_ugsee/hotspot.cpp:264:(.text+0x61f): undefined reference to `omp_get_nu
+│  [Tier-2] Assembling evidence (budget remaining: 1)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 2 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for \
+│           #pragma omp critical
+│  [Tier-2] Stage 'tsan' failed: Race detected: WARNING: ThreadSanitizer: data race (pid=2414456)   Write of size 4 at 0x7fde12bfb000 by thread T4:     #0 single_iteration(float*, float*, float*, int, int, float, float, float, float,
+│  [Tier-2] Assembling evidence (budget remaining: 0)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 2 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for ordered \
+│           #pragma omp ordered
+│  [Tier-2] Stage 'performance' failed: No speedup from parallelization: measured 0.95× (same binary, median of interleaved pairs; best at 1 thread 311.3 ms vs best at all threads 327.8 ms), below the required 1.10×.
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:4 (lines 147–224)  score=4.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] function 1:94 (lines 226–269)  score=4.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 2 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for shared(result, temp, power, row, col, Cap_1, Rx_1, Ry_1, Rz_1, step)
+│           #pragma omp critical
+│  [Tier-2] Stage 'tsan' failed: Race detected: WARNING: ThreadSanitizer: data race (pid=2418347)   Write of size 4 at 0x7ffff39fe000 by thread T4:     #0 single_iteration(float*, float*, float*, int, int, float, float, float, float,
+│  [Tier-2] Assembling evidence (budget remaining: 1)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 1 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for private(idx) shared(result, temp, power, row, col, Cap_1, Rx_1, Ry_1, Rz_1)
+│  [Tier-2] Stage 'correctness' failed: Program output changed under the parallel build at a fixed thread count — the patched program is NOT semantically equivalent to the original. value 2 moved further than this program's own numerical no
+│  [Tier-2] Assembling evidence (budget remaining: 0)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 2 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for collapse(2) private(r, c, delta) shared(result, temp, power, row, col, Cap_1, Rx_1, Ry_1, Rz_1, r_start, c_start)
+│           #pragma omp parallel for collapse(2) private(r, c, delta) shared(result, temp, power, row, col, Cap_1, Rx_1, Ry_1, Rz_1, r_start, c_start)
+│  [Tier-2] Stage 'schedules' failed: the program does not repeat itself: two runs at the SAME thread count (4) printed different output. That is a data race, independent of how small the difference is. value 2 moved further than this pro
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] function 0:0 (lines 147–225)  score=4.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:76 (lines 213–223)  score=3.8
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:79 (lines 215–222)  score=2.7
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:14 (lines 156–209)  score=0.2
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:17 (lines 157–208)  score=0.2
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+
+============================================================
+  PHASE B — annotate  (6 candidate pragma(s))
+============================================================
+
+  Timing noise floor on this machine: 0.996 → keep anything at or above 0.986
+
+┌─ pattern #130  do_all @ lines 147–225  (W=0)
+│  #pragma omp parallel for
+│  gate failed at 'correctness': Program output changed — the patched program is NOT semantically equivalent to the original. value 3 moved further than this program's own numerical n
+└─ DROPPED
+
+┌─ pattern #130  do_all @ lines 147–224  (W=155232000)
+│  #pragma omp parallel for
+│  gate failed at 'correctness': Program output changed — the patched program is NOT semantically equivalent to the original. value 3 moved further than this program's own numerical n
+└─ DROPPED
+
+┌─ pattern #132  do_all @ lines 213–223  (W=322560000)
+│  #pragma omp parallel for
+│  marginal 0.01× — costs more than it saves
+└─ DROPPED (slower)
+
+┌─ pattern #131  do_all @ lines 215–222  (W=215264000)
+│  #pragma omp parallel for
+│  gate failed at 'tsan': TSan run timed out (300 s) — the sanitized build is too slow to check this workload for races
+└─ DROPPED
+
+┌─ pattern #129  do_all @ lines 156–209  (W=26077696000)
+│  #pragma omp parallel for
+│  gate failed at 'schedules': the program does not repeat itself: two runs at the SAME thread count (4) printed different output. That is a data race, independent of how small the 
+└─ DROPPED
+
+┌─ pattern #128  do_all @ lines 157–208  (W=25500)
+│  #pragma omp parallel for
+│  gate failed at 'correctness': Program output changed under the parallel build at a fixed thread count — the patched program is NOT semantically equivalent to the original. value 2 
+└─ DROPPED
+
+
+============================================================
+  SUMMARY: 0 rewrite(s) kept  |  0 pragma(s) applied  |  2 skipped
+  DiscoPoP unaided: 6 usable pragma(s) in this profile's draw  →  this run: 0   [BELOW, informational]
+    ✗  1:102  [skipped]  depth=0
+    ✗  1:94  [skipped]  depth=0
+
+  Results → .discopop/agent_patches/accepted.json
+============================================================
+

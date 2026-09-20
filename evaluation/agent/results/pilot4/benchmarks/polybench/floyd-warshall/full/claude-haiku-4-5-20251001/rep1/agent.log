@@ -1,0 +1,95 @@
+
+============================================================
+  DiscoPoP Agentic Controller
+============================================================
+  Source         : /home/ahmedabosamaha/new_benchmark_harness/agent/runs/pilot4/benchmarks/polybench/floyd-warshall/full/claude-haiku-4-5-20251001/rep1/work/floyd-warshall.c
+  DiscoPoP dir   : .discopop
+  Model          : claude-haiku-4-5-20251001
+  Budget         : 3 LLM retries/region (+2 free build fixes)
+  λ penalty      : 1.0
+  Min workload   : 0.0
+  Restruct. depth: 0 (Tier-2 allowed at depth 0–0)
+  Quality gate   : Tier-1 = all but speed, no escalation; Tier-2 = full
+  TSan           : barrier-aware (archer: /usr/lib/llvm-20/lib/libarcher.so)
+  Speedup gate   : OFF (--no-require-speedup)
+  Dry run        : False
+  LLM mode       : claude-haiku-4-5-20251001
+  Edit mode      : direct
+  Re-profiling   : fast refresh (compile only) between rewrites; full before a deeper level and before Phase B
+  Pragmas        : LLM writes them with the rewrite, gate decides (--llm-pragmas)
+============================================================
+
+  Project        : /home/ahmedabosamaha/new_benchmark_harness/agent/runs/pilot4/benchmarks/polybench/floyd-warshall/full/claude-haiku-4-5-20251001/rep1/work  (2 unit(s): floyd-warshall.c, polybench.c)
+
+  [ok] Captured reference output on 2 inputs (61 bytes, 0.8 ms baseline) for the correctness/performance gates.
+
+  [ok] Numerical noise floor 0 — 6 build variants agreed exactly; output is compared byte-for-byte.
+
+  Hotspots       : measured per-region runtimes are available — 17 region(s) measured, 7.6 ms total, ranking by predicted time saved at 48 threads
+
+  Baseline       : DiscoPoP proposes 3 applicable pattern(s) unaided; 3 of them produce a usable pragma
+                   → the run beats DiscoPoP by ending with more than 3
+
+  Initial candidates
+Region ID    Type           Saves    % run    Hot  Tier  Depth  Name
+--------------------------------------------------------------------------------------
+  1:63       loop          6.1 ms    82.0%    YES     1      0  lines 62–68
+  1:66       loop          6.1 ms    82.0%    YES     1      0  lines 64–67
+  3:60       function      6.1 ms    82.0%    YES     2      0  kernel_floyd_warshall
+  1:69       loop          5.4 ms    73.3%    YES     1      0  lines 65–67
+
+============================================================
+  PHASE A — restructure  (the source stays pragma-free)
+============================================================
+
+┌─ [depth=0] loop 1:63 (lines 62–68)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:66 (lines 64–67)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] function 3:60 (lines 56–71)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 1 pragma(s) — running quality gate (apply/compile/openmp/TSan/output)
+│           #pragma omp parallel for collapse(2) shared(path)
+│  [Tier-2] Stage 'tsan' failed: Race detected: WARNING: ThreadSanitizer: data race (pid=1613218)   Read of size 8 at 0x72d000000020 by thread T12:     #0 kernel_floyd_warshall.omp_outlined_debug__ /tmp/dp_agent_val_zcjx0_yx/_dp_proj
+│  [Tier-2] Assembling evidence (budget remaining: 1)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 1 pragma(s) — running quality gate (apply/compile/openmp/TSan/output)
+│           #pragma omp parallel for collapse(2) shared(path)
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Original backed up → floyd-warshall.c.original
+│  [Tier-2] Applied to floyd-warshall.c
+│  [Tier-2] Fast refresh (compile only, no instrumented run)...
+│           344/344 observed dependences carried forward (0 in rewritten code, 0 no longer present; 104 without callpath state), 7/7 loop trip counts
+│  [Tier-2] 0 survivor(s) rebuilt, 0 new at depth 1
+│  [Tier-2] Kept on its own pragmas: 1 annotated loop(s), gate passed end to end
+└─ ACCEPTED
+
+
+  One full re-profile before Phase B — it annotates from measured dependences, not carried-forward ones.
+
+============================================================
+  PHASE B — annotate  (0 candidate pragma(s))
+============================================================
+
+  DiscoPoP proposes no applicable pattern for the final source.
+
+============================================================
+  SETTLING — verify the finished source, drop what does not hold up
+============================================================
+  [ok] finished source verified — output matches the original
+
+
+============================================================
+  SUMMARY: 1 rewrite(s) kept  |  1 pragma(s) applied (0 DiscoPoP + 1 LLM)  |  0 skipped
+  DiscoPoP unaided: 3 usable pragma(s) in this profile's draw  →  this run: 1   [BELOW, informational]
+    ✓  function 3:60  [Tier-2]  depth=0  1 own pragma(s)
+
+  Results → .discopop/agent_patches/accepted.json
+============================================================
+

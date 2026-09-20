@@ -1,0 +1,19 @@
+--- md.cpp
++++ md.cpp
+@@ -348,10 +348,15 @@
+   int i;
+ 
+   d = 0.0;
++  #pragma omp parallel for reduction(+:d) firstprivate(nd)
+   for ( i = 0; i < nd; i++ )
+   {
++    double diff = r1[i] - r2[i];
++    d = d + diff * diff;
++  }
++  for ( i = 0; i < nd; i++ )
++  {
+     dr[i] = r1[i] - r2[i];
+-    d = d + dr[i] * dr[i];
+   }
+   d = sqrt ( d );
+ 

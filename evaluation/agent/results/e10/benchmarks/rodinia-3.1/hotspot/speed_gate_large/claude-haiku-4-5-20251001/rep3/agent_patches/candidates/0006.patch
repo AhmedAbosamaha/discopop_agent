@@ -1,0 +1,10 @@
+--- hotspot.cpp
++++ hotspot.cpp
+@@ -210,6 +210,7 @@
+             continue;
+         }
+ 
++        #pragma omp parallel for firstprivate(Ry_1,c_start,temp,Rz_1,col,r_start,Cap_1,Rx_1) private(c) shared(result,power) 
+         for ( r = r_start; r < r_start + BLOCK_SIZE_R; ++r ) {
+     
+             for ( c = c_start; c < c_start + BLOCK_SIZE_C; ++c ) {

@@ -1,0 +1,36 @@
+--- /home/ahmedabosamaha/new_benchmark_harness/agent/runs/e10/benchmarks/polybench/seidel-2d/speed_gate_small/claude-haiku-4-5-20251001/rep3/work/seidel-2d.c
++++ /home/ahmedabosamaha/new_benchmark_harness/agent/runs/e10/benchmarks/polybench/seidel-2d/speed_gate_small/claude-haiku-4-5-20251001/rep3/work/seidel-2d.c
+@@ -58,17 +58,31 @@
+ 		      DATA_TYPE POLYBENCH_2D(A,N,N,n,n))
+ {
+   int t, i, j;
++  DATA_TYPE *temp = (DATA_TYPE *)malloc((_PB_N) * sizeof(DATA_TYPE));
+ 
+ #pragma scop
+   for (t = 0; t <= _PB_TSTEPS - 1; t++)
+-    for (i = 1; i<= _PB_N - 2; i++)
++    for (i = 1; i<= _PB_N - 2; i++) {
++      /* Parallelize j-loop within each row.
++	 All iterations read from already-finalized row i-1, the original
++	 (not yet updated in this pass) row i, and row i+1 (unchanged from
++	 prior timestep). Each parallel iteration writes to a different
++	 location in temp[j], so no races occur. */
++#pragma omp parallel for private(j) shared(A,temp)
+       for (j = 1; j <= _PB_N - 2; j++)
+-	A[i][j] = (A[i-1][j-1] + A[i-1][j] + A[i-1][j+1]
++	temp[j] = (A[i-1][j-1] + A[i-1][j] + A[i-1][j+1]
+ 		   + A[i][j-1] + A[i][j] + A[i][j+1]
+ 		   + A[i+1][j-1] + A[i+1][j] + A[i+1][j+1])/9.0;
++
++      /* Copy the computed row back to A, finalizing it before next row. */
++      for (j = 1; j <= _PB_N - 2; j++)
++	A[i][j] = temp[j];
++    }
+ #pragma endscop
+ 
++  free(temp);
+ }
++
+ 
+ 
+ int main(int argc, char** argv)

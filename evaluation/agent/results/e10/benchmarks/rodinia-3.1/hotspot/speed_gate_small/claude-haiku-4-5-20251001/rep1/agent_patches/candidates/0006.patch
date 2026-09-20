@@ -1,0 +1,10 @@
+--- hotspot.cpp
++++ hotspot.cpp
+@@ -144,6 +144,7 @@
+     #endif
+     
+ #endif
++    #pragma omp parallel for firstprivate(temp,chunks_in_col,Cap_1,col,chunks_in_row,Ry_1,Rz_1,row,num_chunk,Rx_1) private(delta,r,c) shared(result,power) 
+     for ( chunk = 0; chunk < num_chunk; ++chunk )
+     {
+         int r_start = BLOCK_SIZE_R*(chunk/chunks_in_col);

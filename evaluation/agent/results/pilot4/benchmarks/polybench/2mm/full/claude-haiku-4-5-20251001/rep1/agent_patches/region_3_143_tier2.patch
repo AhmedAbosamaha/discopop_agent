@@ -1,0 +1,25 @@
+--- /home/ahmedabosamaha/new_benchmark_harness/agent/runs/pilot4/benchmarks/polybench/2mm/full/claude-haiku-4-5-20251001/rep1/work/2mm.c
++++ /home/ahmedabosamaha/new_benchmark_harness/agent/runs/pilot4/benchmarks/polybench/2mm/full/claude-haiku-4-5-20251001/rep1/work/2mm.c
+@@ -81,6 +81,10 @@
+ 
+ #pragma scop
+   /* D := alpha*A*B*C + beta*D */
++  /* First nest: compute tmp = A*B.
++     Parallelize (i,j) pairs; each pair computes independent tmp[i][j].
++     k-loop is sequential accumulation within each pair. */
++#pragma omp parallel for collapse(2) private(k) firstprivate(alpha, ni, nj, nk)
+   for (i = 0; i < _PB_NI; i++)
+     for (j = 0; j < _PB_NJ; j++)
+       {
+@@ -88,6 +92,11 @@
+ 	for (k = 0; k < _PB_NK; ++k)
+ 	  tmp[i][j] += alpha * A[i][k] * B[k][j];
+       }
++
++  /* Second nest: compute D = beta*D + tmp*C.
++     Parallelize (i,j) pairs; each pair computes independent D[i][j].
++     k-loop is sequential accumulation within each pair. */
++#pragma omp parallel for collapse(2) private(k) firstprivate(beta, ni, nj, nl)
+   for (i = 0; i < _PB_NI; i++)
+     for (j = 0; j < _PB_NL; j++)
+       {

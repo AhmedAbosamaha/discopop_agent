@@ -1,0 +1,31 @@
+--- /home/ahmedabosamaha/new_benchmark_harness/agent/runs/e10/benchmarks/polybench/seidel-2d/speed_gate_small/claude-haiku-4-5-20251001/rep3/work/seidel-2d.c
++++ /home/ahmedabosamaha/new_benchmark_harness/agent/runs/e10/benchmarks/polybench/seidel-2d/speed_gate_small/claude-haiku-4-5-20251001/rep3/work/seidel-2d.c
+@@ -61,11 +61,23 @@
+ 
+ #pragma scop
+   for (t = 0; t <= _PB_TSTEPS - 1; t++)
+-    for (i = 1; i<= _PB_N - 2; i++)
+-      for (j = 1; j <= _PB_N - 2; j++)
+-	A[i][j] = (A[i-1][j-1] + A[i-1][j] + A[i-1][j+1]
+-		   + A[i][j-1] + A[i][j] + A[i][j+1]
+-		   + A[i+1][j-1] + A[i+1][j] + A[i+1][j+1])/9.0;
++    {
++      /* Process even rows in parallel: dependencies only on odd neighbors (not updated yet) */
++      #pragma omp parallel for shared(A) private(j)
++      for (i = 2; i <= _PB_N - 2; i += 2)
++	for (j = 1; j <= _PB_N - 2; j++)
++	  A[i][j] = (A[i-1][j-1] + A[i-1][j] + A[i-1][j+1]
++		     + A[i][j-1] + A[i][j] + A[i][j+1]
++		     + A[i+1][j-1] + A[i+1][j] + A[i+1][j+1])/9.0;
++
++      /* Process odd rows in parallel: dependencies only on even neighbors (already updated) */
++      #pragma omp parallel for shared(A) private(j)
++      for (i = 1; i <= _PB_N - 2; i += 2)
++	for (j = 1; j <= _PB_N - 2; j++)
++	  A[i][j] = (A[i-1][j-1] + A[i-1][j] + A[i-1][j+1]
++		     + A[i][j-1] + A[i][j] + A[i][j+1]
++		     + A[i+1][j-1] + A[i+1][j] + A[i+1][j+1])/9.0;
++    }
+ #pragma endscop
+ 
+ }

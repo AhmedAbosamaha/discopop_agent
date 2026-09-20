@@ -1,0 +1,24 @@
+--- /home/ahmedabosamaha/new_benchmark_harness/agent/runs/e10/benchmarks/polybench/seidel-2d/speed_gate_small/claude-haiku-4-5-20251001/rep1/work/seidel-2d.c
++++ /home/ahmedabosamaha/new_benchmark_harness/agent/runs/e10/benchmarks/polybench/seidel-2d/speed_gate_small/claude-haiku-4-5-20251001/rep1/work/seidel-2d.c
+@@ -61,11 +61,17 @@
+ 
+ #pragma scop
+   for (t = 0; t <= _PB_TSTEPS - 1; t++)
+-    for (i = 1; i<= _PB_N - 2; i++)
++    for (i = 1; i <= _PB_N - 2; i++) {
++      DATA_TYPE B[_PB_N];
++      #pragma omp parallel for private(j) schedule(static)
+       for (j = 1; j <= _PB_N - 2; j++)
+-	A[i][j] = (A[i-1][j-1] + A[i-1][j] + A[i-1][j+1]
+-		   + A[i][j-1] + A[i][j] + A[i][j+1]
+-		   + A[i+1][j-1] + A[i+1][j] + A[i+1][j+1])/9.0;
++	B[j] = (A[i-1][j-1] + A[i-1][j] + A[i-1][j+1]
++		+ A[i][j-1] + A[i][j] + A[i][j+1]
++		+ A[i+1][j-1] + A[i+1][j] + A[i+1][j+1])/9.0;
++      #pragma omp parallel for private(j) schedule(static)
++      for (j = 1; j <= _PB_N - 2; j++)
++	A[i][j] = B[j];
++    }
+ #pragma endscop
+ 
+ }

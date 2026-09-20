@@ -1,0 +1,122 @@
+--- hotspot.cpp
++++ hotspot.cpp
+@@ -250,18 +250,116 @@
+ 	#endif
+ 
+         {
++            // Inline single_iteration and parallelize the spatial loops (over grid chunks/cells).
++            // Time steps must stay sequential (iteration i reads output of i-1), but the grid
++            // updates within each time step can run in parallel. Each thread computes a
++            // disjoint set of cells, eliminating write-write races.
++
+             FLOAT* r = result;
+             FLOAT* t = temp;
+-            for (int i = 0; i < num_iterations ; i++)
++
++            for (int i = 0; i < num_iterations; i++)
+             {
+                 #ifdef VERBOSE
+                 fprintf(stdout, "iteration %d\n", i++);
+                 #endif
+-                single_iteration(r, t, power, row, col, Cap_1, Rx_1, Ry_1, Rz_1, step);
++
++                // Inlined single_iteration with parallelized spatial loops
++                FLOAT delta;
++                int chunk;
++                int num_chunk = row * col / (BLOCK_SIZE_R * BLOCK_SIZE_C);
++                int chunks_in_row = col / BLOCK_SIZE_C;
++                int chunks_in_col = row / BLOCK_SIZE_R;
++
++                #pragma omp parallel for shared(r, t, power, row, col, Cap_1, Rx_1, Ry_1, Rz_1, step, num_chunk, chunks_in_row, chunks_in_col, amb_temp) private(chunk, delta)
++                for (chunk = 0; chunk < num_chunk; ++chunk)
++                {
++                    int r_start = BLOCK_SIZE_R * (chunk / chunks_in_col);
++                    int c_start = BLOCK_SIZE_C * (chunk % chunks_in_row);
++                    int r_end = r_start + BLOCK_SIZE_R > row ? row : r_start + BLOCK_SIZE_R;
++                    int c_end = c_start + BLOCK_SIZE_C > col ? col : c_start + BLOCK_SIZE_C;
++
++                    if (r_start == 0 || c_start == 0 || r_end == row || c_end == col)
++                    {
++                        for (int rr = r_start; rr < r_start + BLOCK_SIZE_R; ++rr) {
++                            for (int cc = c_start; cc < c_start + BLOCK_SIZE_C; ++cc) {
++                                /* Corner 1 */
++                                if ((rr == 0) && (cc == 0)) {
++                                    delta = (Cap_1) * (power[0] +
++                                        (t[1] - t[0]) * Rx_1 +
++                                        (t[col] - t[0]) * Ry_1 +
++                                        (amb_temp - t[0]) * Rz_1);
++                                }
++                                /* Corner 2 */
++                                else if ((rr == 0) && (cc == col-1)) {
++                                    delta = (Cap_1) * (power[cc] +
++                                        (t[cc-1] - t[cc]) * Rx_1 +
++                                        (t[cc+col] - t[cc]) * Ry_1 +
++                                        (amb_temp - t[cc]) * Rz_1);
++                                }
++                                /* Corner 3 */
++                                else if ((rr == row-1) && (cc == col-1)) {
++                                    delta = (Cap_1) * (power[rr*col+cc] +
++                                        (t[rr*col+cc-1] - t[rr*col+cc]) * Rx_1 +
++                                        (t[(rr-1)*col+cc] - t[rr*col+cc]) * Ry_1 +
++                                        (amb_temp - t[rr*col+cc]) * Rz_1);
++                                }
++                                /* Corner 4 */
++                                else if ((rr == row-1) && (cc == 0)) {
++                                    delta = (Cap_1) * (power[rr*col] +
++                                        (t[rr*col+1] - t[rr*col]) * Rx_1 +
++                                        (t[(rr-1)*col] - t[rr*col]) * Ry_1 +
++                                        (amb_temp - t[rr*col]) * Rz_1);
++                                }
++                                /* Edge 1 */
++                                else if (rr == 0) {
++                                    delta = (Cap_1) * (power[cc] +
++                                        (t[cc+1] + t[cc-1] - 2.0*t[cc]) * Rx_1 +
++                                        (t[col+cc] - t[cc]) * Ry_1 +
++                                        (amb_temp - t[cc]) * Rz_1);
++                                }
++                                /* Edge 2 */
++                                else if (cc == col-1) {
++                                    delta = (Cap_1) * (power[rr*col+cc] +
++                                        (t[(rr+1)*col+cc] + t[(rr-1)*col+cc] - 2.0*t[rr*col+cc]) * Ry_1 +
++                                        (t[rr*col+cc-1] - t[rr*col+cc]) * Rx_1 +
++                                        (amb_temp - t[rr*col+cc]) * Rz_1);
++                                }
++                                /* Edge 3 */
++                                else if (rr == row-1) {
++                                    delta = (Cap_1) * (power[rr*col+cc] +
++                                        (t[rr*col+cc+1] + t[rr*col+cc-1] - 2.0*t[rr*col+cc]) * Rx_1 +
++                                        (t[(rr-1)*col+cc] - t[rr*col+cc]) * Ry_1 +
++                                        (amb_temp - t[rr*col+cc]) * Rz_1);
++                                }
++                                /* Edge 4 */
++                                else if (cc == 0) {
++                                    delta = (Cap_1) * (power[rr*col] +
++                                        (t[(rr+1)*col] + t[(rr-1)*col] - 2.0*t[rr*col]) * Ry_1 +
++                                        (t[rr*col+1] - t[rr*col]) * Rx_1 +
++                                        (amb_temp - t[rr*col]) * Rz_1);
++                                }
++                                r[rr*col+cc] = t[rr*col+cc] + delta;
++                            }
++                        }
++                        continue;
++                    }
++
++                    for (int rr = r_start; rr < r_start + BLOCK_SIZE_R; ++rr) {
++                        for (int cc = c_start; cc < c_start + BLOCK_SIZE_C; ++cc) {
++                            r[rr*col+cc] = t[rr*col+cc] +
++                                (Cap_1 * (power[rr*col+cc] +
++                                (t[(rr+1)*col+cc] + t[(rr-1)*col+cc] - 2.f*t[rr*col+cc]) * Ry_1 +
++                                (t[rr*col+cc+1] + t[rr*col+cc-1] - 2.f*t[rr*col+cc]) * Rx_1 +
++                                (amb_temp - t[rr*col+cc]) * Rz_1));
++                        }
++                    }
++                }
++
+                 FLOAT* tmp = t;
+                 t = r;
+                 r = tmp;
+-            }	
++            }
+         }
+ 	#ifdef VERBOSE
+ 	fprintf(stdout, "iteration %d\n", i++);

@@ -1,0 +1,57 @@
+--- /private/tmp/claude-501/-Users-ahmedsamir-discopop-agent/436822e3-c111-4da4-bd96-90a25b95970d/scratchpad/matrix_prefix2/dp_annotates/prefix.c
++++ /private/tmp/claude-501/-Users-ahmedsamir-discopop-agent/436822e3-c111-4da4-bd96-90a25b95970d/scratchpad/matrix_prefix2/dp_annotates/prefix.c
+@@ -102,10 +102,51 @@
+ static void kernel_prefix(double* a, double* c)
+ {
+   int r, i;
++  int nb, b, block_size;
++
++  block_size = (int)sqrt((double)N);
++  if (block_size < 1) block_size = 1;
++  nb = (N + block_size - 1) / block_size;
++
+   for (r = 0; r < R; r++) {
+-    c[0] = a[0];
+-    for (i = 1; i < N; i++)
+-      c[i] = c[i-1] + a[i];
++    double* block_off = (double*)malloc((size_t)nb * sizeof(double));
++
++    /* Pass 1: each block's total sum - independent of every other block. */
++    for (b = 0; b < nb; b++) {
++      int s = b * block_size;
++      int e = s + block_size;
++      double acc = 0.0;
++      if (e > N) e = N;
++      for (i = s; i < e; i++)
++        acc += a[i];
++      block_off[b] = acc;
++    }
++
++    /* Pass 2: turn the nb (<< N) block totals into exclusive running
++       offsets across blocks. Inherently sequential but negligible cost. */
++    {
++      double running = 0.0;
++      for (b = 0; b < nb; b++) {
++        double total = block_off[b];
++        block_off[b] = running;
++        running += total;
++      }
++    }
++
++    /* Pass 3: each block re-scans its own elements seeded with its
++       offset - independent of every other block again. */
++    for (b = 0; b < nb; b++) {
++      int s = b * block_size;
++      int e = s + block_size;
++      double acc = block_off[b];
++      if (e > N) e = N;
++      for (i = s; i < e; i++) {
++        acc += a[i];
++        c[i] = acc;
++      }
++    }
++
++    free(block_off);
+   }
+ }
+ 

@@ -1,0 +1,37 @@
+--- md.cpp
++++ md.cpp
+@@ -141,26 +141,25 @@
+   compute ( np, nd, pos, vel, mass, force, &potential, &kinetic );
+   e0 = potential + kinetic;
+ 
+-  step_print = 0;
+-  step_print_index = 0;
+   step_print_num = 10;
+   pb_emit ( potential );
+   pb_emit ( kinetic );
+   pb_emit ( ( potential + kinetic - e0 ) / e0 );
+-  step_print_index = step_print_index + 1;
+-  step_print = ( step_print_index * step_num ) / step_print_num;
+ 
+   pb_timer_start ( );
+-  for ( step = 1; step <= step_num; step++ )
+-    {
++  /* Restructure to declare loop variable in the for statement for OpenMP compatibility.
++     The induction variable i is declared inside the for initialization, and the condition
++     is a direct comparison against a loop-invariant bound. The actual step number is
++     computed as i+1. This removes the loop-carried dependence on step_print. */
++  for ( int i = 0; i < step_num; i++ )
++    {
++      step = i + 1;
+       compute ( np, nd, pos, vel, mass, force, &potential, &kinetic );
+-      if ( step == step_print )
++      if ( ( step * step_print_num ) % step_num == 0 )
+         {
+           pb_emit ( potential );
+           pb_emit ( kinetic );
+           pb_emit ( ( potential + kinetic - e0 ) / e0 );
+-          step_print_index = step_print_index + 1;
+-          step_print = ( step_print_index * step_num ) / step_print_num;
+         }
+       update ( np, nd, pos, vel, force, acc, mass, dt );
+     }

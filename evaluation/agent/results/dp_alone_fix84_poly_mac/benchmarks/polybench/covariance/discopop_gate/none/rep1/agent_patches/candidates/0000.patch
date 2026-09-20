@@ -1,0 +1,10 @@
+--- /Users/ahmedsamir/new_benchmark_harness/agent/runs/dp_alone_fix84_poly_mac/benchmarks/polybench/covariance/discopop_gate/none/rep1/work/covariance.c
++++ /Users/ahmedsamir/new_benchmark_harness/agent/runs/dp_alone_fix84_poly_mac/benchmarks/polybench/covariance/discopop_gate/none/rep1/work/covariance.c
+@@ -80,6 +80,7 @@
+       data[i][j] -= mean[j];
+ 
+   /* Calculate the m * m covariance matrix. */
++  #pragma omp parallel for firstprivate(m,n) private(i,j2) shared(data,symmat) 
+   for (j1 = 0; j1 < _PB_M; j1++)
+     for (j2 = j1; j2 < _PB_M; j2++)
+       {

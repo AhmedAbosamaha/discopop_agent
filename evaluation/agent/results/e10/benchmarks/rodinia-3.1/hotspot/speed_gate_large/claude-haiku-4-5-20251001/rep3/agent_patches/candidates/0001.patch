@@ -1,0 +1,71 @@
+--- hotspot.cpp
++++ hotspot.cpp
+@@ -257,11 +257,66 @@
+                 #ifdef VERBOSE
+                 fprintf(stdout, "iteration %d\n", i++);
+                 #endif
+-                single_iteration(r, t, power, row, col, Cap_1, Rx_1, Ry_1, Rz_1, step);
++
++                // Parallelize the spatial computation within each time step
++                #pragma omp parallel for collapse(2) shared(r, t, power, row, col, Cap_1, Rx_1, Ry_1, Rz_1, step, amb_temp)
++                for (int rr = 0; rr < row; rr++) {
++                    for (int cc = 0; cc < col; cc++) {
++                        FLOAT delta;
++                        if ((rr == 0) && (cc == 0)) {
++                            delta = (Cap_1) * (power[0] +
++                                (t[1] - t[0]) * Rx_1 +
++                                (t[col] - t[0]) * Ry_1 +
++                                (amb_temp - t[0]) * Rz_1);
++                        } else if ((rr == 0) && (cc == col-1)) {
++                            delta = (Cap_1) * (power[cc] +
++                                (t[cc-1] - t[cc]) * Rx_1 +
++                                (t[cc+col] - t[cc]) * Ry_1 +
++                                (amb_temp - t[cc]) * Rz_1);
++                        } else if ((rr == row-1) && (cc == col-1)) {
++                            delta = (Cap_1) * (power[rr*col+cc] +
++                                (t[rr*col+cc-1] - t[rr*col+cc]) * Rx_1 +
++                                (t[(rr-1)*col+cc] - t[rr*col+cc]) * Ry_1 +
++                                (amb_temp - t[rr*col+cc]) * Rz_1);
++                        } else if ((rr == row-1) && (cc == 0)) {
++                            delta = (Cap_1) * (power[rr*col] +
++                                (t[rr*col+1] - t[rr*col]) * Rx_1 +
++                                (t[(rr-1)*col] - t[rr*col]) * Ry_1 +
++                                (amb_temp - t[rr*col]) * Rz_1);
++                        } else if (rr == 0) {
++                            delta = (Cap_1) * (power[cc] +
++                                (t[cc+1] + t[cc-1] - 2.0*t[cc]) * Rx_1 +
++                                (t[col+cc] - t[cc]) * Ry_1 +
++                                (amb_temp - t[cc]) * Rz_1);
++                        } else if (cc == col-1) {
++                            delta = (Cap_1) * (power[rr*col+cc] +
++                                (t[(rr+1)*col+cc] + t[(rr-1)*col+cc] - 2.0*t[rr*col+cc]) * Ry_1 +
++                                (t[rr*col+cc-1] - t[rr*col+cc]) * Rx_1 +
++                                (amb_temp - t[rr*col+cc]) * Rz_1);
++                        } else if (rr == row-1) {
++                            delta = (Cap_1) * (power[rr*col+cc] +
++                                (t[rr*col+cc+1] + t[rr*col+cc-1] - 2.0*t[rr*col+cc]) * Rx_1 +
++                                (t[(rr-1)*col+cc] - t[rr*col+cc]) * Ry_1 +
++                                (amb_temp - t[rr*col+cc]) * Rz_1);
++                        } else if (cc == 0) {
++                            delta = (Cap_1) * (power[rr*col] +
++                                (t[(rr+1)*col] + t[(rr-1)*col] - 2.0*t[rr*col]) * Ry_1 +
++                                (t[rr*col+1] - t[rr*col]) * Rx_1 +
++                                (amb_temp - t[rr*col]) * Rz_1);
++                        } else {
++                            delta = (Cap_1) * (power[rr*col+cc] +
++                                (t[(rr+1)*col+cc] + t[(rr-1)*col+cc] - 2.0*t[rr*col+cc]) * Ry_1 +
++                                (t[rr*col+cc+1] + t[rr*col+cc-1] - 2.0*t[rr*col+cc]) * Rx_1 +
++                                (amb_temp - t[rr*col+cc]) * Rz_1);
++                        }
++                        r[rr*col+cc] = t[rr*col+cc] + delta;
++                    }
++                }
++
+                 FLOAT* tmp = t;
+                 t = r;
+                 r = tmp;
+-            }	
++            }
+         }
+ 	#ifdef VERBOSE
+ 	fprintf(stdout, "iteration %d\n", i++);

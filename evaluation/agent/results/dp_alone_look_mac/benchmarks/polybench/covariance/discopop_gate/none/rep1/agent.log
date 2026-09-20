@@ -1,0 +1,99 @@
+
+============================================================
+  DiscoPoP Agentic Controller
+============================================================
+  Source         : /Users/ahmedsamir/new_benchmark_harness/agent/runs/dp_alone_look_mac/benchmarks/polybench/covariance/discopop_gate/none/rep1/work/covariance.c
+  DiscoPoP dir   : .discopop
+  Model          : none
+  Budget         : 0 LLM retries/region (+2 free build fixes)
+  λ penalty      : 1.0
+  Min workload   : 0.0
+  Restruct. depth: 0 (Tier-2 allowed at depth 0–0)
+  Quality gate   : Tier-1 = all but speed, no escalation; Tier-2 = full
+  TSan           : barrier-aware (archer: /Users/ahmedsamir/.local/lib/libarcher.dylib)
+  Speedup gate   : OFF (--no-require-speedup)
+  Dry run        : False
+  LLM mode       : none
+  Edit mode      : direct
+  Re-profiling   : fast refresh (compile only) between rewrites; full before a deeper level and before Phase B
+  Pragmas        : LLM writes them with the rewrite, gate decides (--llm-pragmas)
+============================================================
+
+  Project        : /Users/ahmedsamir/new_benchmark_harness/agent/runs/dp_alone_look_mac/benchmarks/polybench/covariance/discopop_gate/none/rep1/work  (2 unit(s): covariance.c, polybench.c)
+
+  [ok] Captured reference output on 2 inputs (78 bytes, 67.7 ms baseline) for the correctness/performance gates.
+
+  [ok] Numerical noise floor 4.67e-15 of output scale (widest disagreement 4.67e-16 of output scale across 6 build variants, x10 margin).
+  [note] values may move that far without failing the correctness gate; labels, line structure and integers must still match exactly.
+
+  Hotspots       : measured per-region runtimes are available — 21 region(s) measured, 277.3 ms total, ranking by predicted time saved at 8 threads
+
+  Baseline       : DiscoPoP proposes 3 applicable pattern(s) unaided; 3 of them produce a usable pragma
+                   → the run beats DiscoPoP by ending with more than 3
+
+  Initial candidates
+Region ID    Type           Saves    % run    Hot  Tier  Depth  Name
+--------------------------------------------------------------------------------------
+  1:110      loop        224.5 ms    92.5%    YES     1      0  lines 83–90
+  1:113      loop        224.4 ms    92.5%    YES     1      0  lines 84–90
+  3:86       function    225.7 ms    93.0%    YES     2      0  kernel_covariance
+  1:117      loop        219.9 ms    90.7%    YES     1      0  lines 87–88
+
+============================================================
+  PHASE A — restructure  (the source stays pragma-free)
+============================================================
+
+┌─ [depth=0] loop 1:110 (lines 83–90)  score=0.2
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:113 (lines 84–90)  score=0.2
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] function 3:86 (lines 59–93)  score=0.2
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:117 (lines 87–88)  score=0.2
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+
+============================================================
+  PHASE B — annotate  (3 candidate pragma(s))
+============================================================
+
+  5 loop(s) are already parallel in the source; nothing is nested inside them.
+
+┌─ pattern #33  do_all @ lines 83–90  (W=1750000)
+│  #pragma omp parallel for
+│  [Phase-B] Original backed up → covariance.c.original
+│  [Phase-B] Applied to covariance.c
+└─ APPLIED
+
+┌─ pattern #32  do_all @ lines 84–90  (W=3000)
+│  #pragma omp parallel for
+│  nested inside the already-parallelized region at lines 83–90
+└─ SKIPPED (enclosing loop is already parallel)
+
+┌─ pattern #31  do_all @ lines 87–88  (W=250000)
+│  #pragma omp parallel for
+│  nested inside the already-parallelized region at lines 83–90
+└─ SKIPPED (enclosing loop is already parallel)
+
+============================================================
+  SETTLING — verify the finished source, drop what does not hold up
+============================================================
+  [ok] finished source verified — output matches the original
+
+
+============================================================
+  SUMMARY: 0 rewrite(s) kept  |  1 pragma(s) applied  |  1 skipped
+  DiscoPoP unaided: 3 usable pragma(s) in this profile's draw  →  this run: 1   [BELOW, informational]
+    ✓  loop 1:110  [Phase-B pragma]  depth=0
+    ✗  3:86  [skipped]  depth=0
+
+  Results → .discopop/agent_patches/accepted.json
+============================================================
+

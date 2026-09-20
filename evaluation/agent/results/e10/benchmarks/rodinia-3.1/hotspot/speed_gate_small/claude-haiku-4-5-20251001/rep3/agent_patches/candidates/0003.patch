@@ -1,0 +1,34 @@
+--- hotspot.cpp
++++ hotspot.cpp
+@@ -250,18 +250,23 @@
+ 	#endif
+ 
+         {
+-            FLOAT* r = result;
+-            FLOAT* t = temp;
+-            for (int i = 0; i < num_iterations ; i++)
++            #pragma omp parallel for shared(result, temp, power, row, col, Cap_1, Rx_1, Ry_1, Rz_1, step, num_iterations)
++            for (int i = 0; i < num_iterations; i++)
+             {
+                 #ifdef VERBOSE
+-                fprintf(stdout, "iteration %d\n", i++);
++                fprintf(stdout, "iteration %d\n", i);
+                 #endif
++                FLOAT* r;
++                FLOAT* t;
++                if (i % 2 == 0) {
++                    r = result;
++                    t = temp;
++                } else {
++                    r = temp;
++                    t = result;
++                }
+                 single_iteration(r, t, power, row, col, Cap_1, Rx_1, Ry_1, Rz_1, step);
+-                FLOAT* tmp = t;
+-                t = r;
+-                r = tmp;
+-            }	
++            }
+         }
+ 	#ifdef VERBOSE
+ 	fprintf(stdout, "iteration %d\n", i++);

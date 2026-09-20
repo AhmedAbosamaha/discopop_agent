@@ -1,0 +1,26 @@
+--- seidel-2d.c
++++ seidel-2d.c
+@@ -448,7 +448,22 @@
+   if (argc > 1)
+     {
+       unsigned long long pb_state = pb_seed(argv[1]);
+-      PB_PERTURB(A, (N + POLYBENCH_PADDING_FACTOR) * (N + POLYBENCH_PADDING_FACTOR));
++      DATA_TYPE* pb_p = (DATA_TYPE*)(A);
++      unsigned long long pb_k, pb_n = (unsigned long long)((N + POLYBENCH_PADDING_FACTOR) * (N + POLYBENCH_PADDING_FACTOR));
++
++      /* Generate random perturbations sequentially to preserve RNG order. */
++      DATA_TYPE* pb_randoms = (DATA_TYPE*)malloc(pb_n * sizeof(DATA_TYPE));
++      for (pb_k = 0; pb_k < pb_n; pb_k++) {
++        pb_randoms[pb_k] = (DATA_TYPE)(pb_uniform(&pb_state) * 3.0);
++      }
++
++      /* Apply perturbations in parallel — iteration order is irrelevant. */
++      #pragma omp parallel for shared(pb_p, pb_randoms, pb_n) private(pb_k)
++      for (pb_k = 0; pb_k < pb_n; pb_k++) {
++        pb_p[pb_k] += pb_randoms[pb_k];
++      }
++
++      free(pb_randoms);
+     }
+ 
+ 

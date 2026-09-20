@@ -1,0 +1,26 @@
+--- md.cpp
++++ md.cpp
+@@ -128,6 +128,7 @@
+   double *pos = new double[nd*np];
+   double *vel = new double[nd*np];
+ 
++  #pragma omp parallel for firstprivate(nd)
+   for ( int i = 0; i < nd; i++ ) box[i] = 10.0;
+ 
+   initialize ( np, nd, box, &seed, pos, vel, acc );
+@@ -135,6 +136,7 @@
+     {
+       /* Perturbed input: every particle nudged deterministically before the run. */
+       pb_seed ( argv[1] );
++      #pragma omp parallel for firstprivate(nd, np)
+       for ( int i = 0; i < nd*np; i++ ) pos[i] += pb_uniform() * 0.01;
+     }
+ 
+@@ -170,6 +172,7 @@
+   /* Digest only. The original never prints positions, so the full dump stays exactly the
+      original's energy table; the digest still folds them in, which stops a rewrite that
+      reproduces the energies while moving the particles. */
++  #pragma omp parallel for firstprivate(nd, np)
+   for ( int i = 0; i < nd*np; i++ ) pb_emit ( pos[i] );
+ #endif
+   pb_report ( );

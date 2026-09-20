@@ -1,0 +1,34 @@
+--- seidel-2d.c
++++ seidel-2d.c
+@@ -422,12 +422,29 @@
+ 		      DATA_TYPE POLYBENCH_2D(A,N,N,n,n))
+ {
+   int t, i, j;
+-  for (t = 0; t <= _PB_TSTEPS - 1; t++)
+-    for (i = 1; i<= _PB_N - 2; i++)
++  for (t = 0; t <= _PB_TSTEPS - 1; t++) {
++    /* Red-black phase 1: update odd-indexed rows in parallel.
++       Odd rows (1,3,5,...) read from stale even rows and boundary, so no race.
++       Loop variable i is automatic private; j is a nested loop variable so use lastprivate. */
++    #pragma omp parallel for lastprivate(j)
++    for (i = 1; i <= _PB_N - 2; i += 2)
+       for (j = 1; j <= _PB_N - 2; j++)
+ 	A[i][j] = (A[i-1][j-1] + A[i-1][j] + A[i-1][j+1]
+ 		   + A[i][j-1] + A[i][j] + A[i][j+1]
+ 		   + A[i+1][j-1] + A[i+1][j] + A[i+1][j+1])/9.0;
++
++    /* Implicit barrier here. */
++
++    /* Red-black phase 2: update even-indexed rows in parallel.
++       Even rows (2,4,6,...) read from fresh odd rows and stale even rows, so no race.
++       Loop variable i is automatic private; j is a nested loop variable so use lastprivate. */
++    #pragma omp parallel for lastprivate(j)
++    for (i = 2; i <= _PB_N - 2; i += 2)
++      for (j = 1; j <= _PB_N - 2; j++)
++	A[i][j] = (A[i-1][j-1] + A[i-1][j] + A[i-1][j+1]
++		   + A[i][j-1] + A[i][j] + A[i][j+1]
++		   + A[i+1][j-1] + A[i+1][j] + A[i+1][j+1])/9.0;
++  }
+ }
+ 
+ 

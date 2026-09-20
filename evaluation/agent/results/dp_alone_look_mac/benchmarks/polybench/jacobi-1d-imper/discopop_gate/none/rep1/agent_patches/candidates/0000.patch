@@ -1,0 +1,10 @@
+--- /Users/ahmedsamir/new_benchmark_harness/agent/runs/dp_alone_look_mac/benchmarks/polybench/jacobi-1d-imper/discopop_gate/none/rep1/work/jacobi-1d-imper.c
++++ /Users/ahmedsamir/new_benchmark_harness/agent/runs/dp_alone_look_mac/benchmarks/polybench/jacobi-1d-imper/discopop_gate/none/rep1/work/jacobi-1d-imper.c
+@@ -66,6 +66,7 @@
+ #pragma scop
+   for (t = 0; t < _PB_TSTEPS; t++)
+     {
++      #pragma omp parallel for firstprivate(n) shared(A,B) 
+       for (i = 1; i < _PB_N - 1; i++)
+ 	B[i] = 0.33333 * (A[i-1] + A[i] + A[i + 1]);
+       for (j = 1; j < _PB_N - 1; j++)

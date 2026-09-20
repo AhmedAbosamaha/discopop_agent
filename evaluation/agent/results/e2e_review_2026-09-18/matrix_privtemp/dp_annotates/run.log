@@ -1,0 +1,92 @@
+
+============================================================
+  DiscoPoP Agentic Controller
+============================================================
+  Source         : /private/tmp/claude-501/-Users-ahmedsamir-discopop-agent/436822e3-c111-4da4-bd96-90a25b95970d/scratchpad/matrix_privtemp/dp_annotates/privtemp.c
+  DiscoPoP dir   : /private/tmp/claude-501/-Users-ahmedsamir-discopop-agent/436822e3-c111-4da4-bd96-90a25b95970d/scratchpad/matrix_privtemp/dp_annotates/.discopop
+  Model          : sonnet
+  Budget         : 2 LLM retries/region (+2 free build fixes)
+  λ penalty      : 1.0
+  Min workload   : 0.0
+  Restruct. depth: 0 (Tier-2 allowed at depth 0–0)
+  Quality gate   : Tier-1 = all but speed, no escalation; Tier-2 = full
+  TSan           : barrier-aware (archer: /Users/ahmedsamir/.local/lib/libarcher.dylib)
+  Speedup gate   : OFF (--no-require-speedup)
+  Dry run        : False
+  LLM mode       : sonnet
+  Edit mode      : direct
+  Re-profiling   : full (instrument + run + explore) after every kept rewrite
+  Pragmas        : DiscoPoP writes them in Phase B
+============================================================
+
+  [ok] Captured reference output on 2 inputs (67 bytes, 8.0 ms baseline) for the correctness/performance gates.
+
+  [ok] Numerical noise floor 0 — 6 build variants agreed exactly; output is compared byte-for-byte.
+
+  Hotspots       : measured per-region runtimes are available — 10 region(s) measured, 28.1 ms total, ranking by predicted time saved at 8 threads
+
+  Baseline       : DiscoPoP proposes 1 applicable pattern(s) unaided; 1 of them produce a usable pragma
+                   → the run beats DiscoPoP by ending with more than 1
+
+  Initial candidates
+Region ID    Type           Saves    % run    Hot  Tier  Depth  Name
+--------------------------------------------------------------------------------------
+  1:48       loop         19.1 ms    77.6%    YES     2      0  lines 106–110
+  1:51       loop         19.1 ms    77.6%    YES     1      0  lines 107–110
+  1:45       function     19.1 ms    77.6%    YES     2      0  kernel_privtemp
+
+============================================================
+  PHASE A — restructure  (the source stays pragma-free)
+============================================================
+
+┌─ [depth=0] loop 1:48 (lines 106–110)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Assembling evidence (budget remaining: 1)
+│  [Tier-2] Calling sonnet...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Original backed up → privtemp.c.original
+│  [Tier-2] Applied to privtemp.c
+│  [Tier-2] Re-profiling to refresh data and discover new candidates...
+│           1 runtime measurement(s) dropped — their lines were rewritten
+│  [Phase-A] Asking DiscoPoP what it now finds in the rewritten lines...
+│  [Tier-2] 0 survivor(s) rebuilt, 2 new at depth 1
+│  [Tier-2] DiscoPoP now finds: do_all @ lines 106–114
+│  [Tier-2] Pragma validation deferred to depth 1 (still allowed to restructure)
+└─ ACCEPTED
+
+┌─ [depth=1] loop 1:48 (lines 106–114)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=1] function 1:45 (lines 102–115)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Restructuring not allowed at depth 1 (--restructure-depth=0) → SKIP
+└─ SKIPPED
+
+
+============================================================
+  PHASE B — annotate  (1 candidate pragma(s))
+============================================================
+
+┌─ pattern #19  do_all @ lines 106–114  (W=32000000)
+│  #pragma omp parallel for
+│  [Phase-B] Applied to privtemp.c
+└─ APPLIED
+
+============================================================
+  SETTLING — verify the finished source, drop what does not hold up
+============================================================
+  [ok] finished source verified — output matches the original
+
+
+============================================================
+  SUMMARY: 1 rewrite(s) kept  |  1 pragma(s) applied  |  1 skipped
+  DiscoPoP unaided: 1 usable pragma(s)  →  this run: 1   [MATCHED]
+    ✓  loop 1:48  [Tier-2]  depth=0
+    ✓  loop 1:48  [Phase-B pragma]  depth=0
+    ✗  1:45  [skipped]  depth=1
+
+  Results → /private/tmp/claude-501/-Users-ahmedsamir-discopop-agent/436822e3-c111-4da4-bd96-90a25b95970d/scratchpad/matrix_privtemp/dp_annotates/.discopop/agent_patches/accepted.json
+============================================================
+

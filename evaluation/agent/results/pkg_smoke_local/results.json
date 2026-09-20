@@ -1,0 +1,380 @@
+{
+  "run_id": "pkg_smoke_local",
+  "harness": "agent",
+  "timestamp": "pkg_smoke_local",
+  "invocation": {
+    "benchmarks": [
+      "polybench/2mm",
+      "npb/is"
+    ],
+    "arms": [
+      "discopop_gate"
+    ],
+    "models": [
+      "none"
+    ],
+    "repeats_per_trial": 1,
+    "provider": "claude-agent-sdk",
+    "edit_mode": "direct",
+    "extra_agent_args": [],
+    "verify_size": "per_kernel",
+    "threads": [
+      8
+    ],
+    "repeats": 3,
+    "timeout_s": 5400,
+    "check_seed": "7",
+    "min_runtime_share": 0.0,
+    "cc": "/usr/local/Cellar/llvm@19/19.1.7/bin/clang",
+    "cxx": "/usr/local/Cellar/llvm@19/19.1.7/bin/clang++",
+    "host": "ahmeds-MacBook-Pro.local",
+    "platform": "macOS-10.16-x86_64-i386-64bit",
+    "agent_git": {
+      "path": "/Users/ahmedsamir/discopop_agent",
+      "head": "728d63be7b8c292bca9da53c1700488a6d5107d5",
+      "branch": "agentic_DiscoPop",
+      "dirty_sha256": "5248579e2b498a15f3b04ffeed7b34881c155db7c96575e4e130150028c34d61"
+    },
+    "harness_git": {
+      "path": "/Users/ahmedsamir/new_benchmark_harness",
+      "head": "a31064928c269d8590b46b38a5b7778c7ff4da13",
+      "branch": "agent-experiments",
+      "dirty_sha256": "10426f264e8cbdac34fdb24df727c765eec963e13b205070e209c383c6358a60"
+    },
+    "argv": [
+      "agent/benchmark",
+      "run",
+      "polybench/2mm",
+      "npb/is",
+      "--arms",
+      "discopop_gate",
+      "--models",
+      "none",
+      "--trials",
+      "1",
+      "--run-id",
+      "pkg_smoke_local",
+      "--agent-repo",
+      "/Users/ahmedsamir/discopop_agent"
+    ],
+    "tool_versions": {
+      "claude_agent_sdk": "0.2.128",
+      "claude_cli_bundled": "2.1.220 (Claude Code)"
+    },
+    "common_flags": [
+      "--no-require-speedup",
+      "--min-runtime-share",
+      "0.01"
+    ],
+    "timing_sizes": {},
+    "verify_sizes": {
+      "polybench/2mm": "STANDARD",
+      "npb/is": "LARGE"
+    },
+    "arm_flags": {
+      "discopop_gate": [
+        "--budget",
+        "0"
+      ]
+    }
+  },
+  "runs": [
+    {
+      "benchmark": "npb/is",
+      "kernel": "is",
+      "source": "IS/is.cpp",
+      "arm": "discopop_gate",
+      "model": "none",
+      "arm_flags": [
+        "--no-require-speedup",
+        "--min-runtime-share",
+        "0.01",
+        "--budget",
+        "0"
+      ],
+      "started_at": "2026-09-18T15:06:41",
+      "host_load_start": [
+        3.66796875,
+        4.103515625,
+        4.470703125
+      ],
+      "agent_cmd": [
+        "/Users/ahmedsamir/discopop_agent/venv/bin/python",
+        "-m",
+        "discopop_agent",
+        "--project-dir",
+        ".",
+        "--project-units",
+        "IS/is.cpp,pb_harness.cpp,common/c_print_results.cpp,common/c_randdp.cpp,common/c_timers.cpp,common/wtime.cpp",
+        "--project-include",
+        "IS,common",
+        "--discopop-dir",
+        ".discopop",
+        "--provider",
+        "claude-agent-sdk",
+        "--model",
+        "none",
+        "--edit-mode",
+        "direct",
+        "--no-require-speedup",
+        "--min-runtime-share",
+        "0.01",
+        "--budget",
+        "0",
+        "--check-input",
+        "7",
+        "--exclude-functions",
+        "pb_emit,pb_report,pb_seed,pb_uniform,pb_timer_start,pb_timer_stop,c_print_results,timer_start,timer_stop,timer_read,timer_clear,wtime,elapsed_time,randlc,vranlc,main"
+      ],
+      "agent_s": 33.5,
+      "agent_rc": 0,
+      "llm_calls": 0,
+      "llm_call_failures": 0,
+      "explorer_retries": 0,
+      "reverts": 0,
+      "gate_failures_phase_a": {},
+      "gate_failures_phase_b": {
+        "tsan": 1
+      },
+      "gate_passes_phase_a": 0,
+      "region_verdicts": {
+        "SKIPPED": 5,
+        "DEFERRED": 4,
+        "DROPPED": 4
+      },
+      "settle_dropped": 0,
+      "baseline_claimed": 4,
+      "baseline_pragmas": 1,
+      "rewrites_kept": 0,
+      "pragmas_applied": 0,
+      "pragmas_discopop": 0,
+      "pragmas_llm": 0,
+      "regions_skipped": 5,
+      "llm_usage": null,
+      "layout": "project",
+      "files_changed": [],
+      "source_changed": false,
+      "scaffold": {
+        "ok": true,
+        "problems": [],
+        "applies": true
+      },
+      "pragmas_in_final": 0,
+      "candidates_recorded": 4,
+      "verify": {
+        "verify_size": "LARGE",
+        "threads": [
+          8
+        ],
+        "repeats": 3,
+        "compiler": "/usr/local/Cellar/llvm@19/19.1.7/bin/clang++",
+        "final_flags": [],
+        "dump_exact": true,
+        "dump_max_rel_err": 0.0,
+        "seed": "7",
+        "dump_exact_seeded": true,
+        "dump_seeded_max_rel_err": 0.0,
+        "seq_median_s": 4.6392,
+        "seq_kernel_median_s": 1.155322,
+        "timing_basis": "kernel",
+        "par": {
+          "8": {
+            "median_s": 4.6177,
+            "program_speedup": 1.005,
+            "max_rel_err": 0.0,
+            "kernel_median_s": 1.141093,
+            "kernel_speedup": 1.012,
+            "speedup": 1.012
+          }
+        },
+        "digest_max_rel_err": 0.0,
+        "stable_at_fixed_threads": true,
+        "kernel_program_disagree": false,
+        "digest_seeded_rel_err": 0.0,
+        "status": "ok",
+        "speed_measurable": false
+      },
+      "verify_s": 51.8,
+      "status": "done",
+      "outcome": "no-change",
+      "finished_at": "2026-09-18T15:08:06",
+      "host_load_end": [
+        4.09619140625,
+        4.15576171875,
+        4.4560546875
+      ],
+      "profile": {
+        "wrapper": "discopop_cxx",
+        "layout": "project",
+        "units": [
+          "IS/is.cpp",
+          "pb_harness.cpp",
+          "common/c_print_results.cpp",
+          "common/c_randdp.cpp",
+          "common/c_timers.cpp",
+          "common/wtime.cpp"
+        ],
+        "instrument_s": 3.61,
+        "profiled_run_s": 2840.11,
+        "explore_s": 46.31,
+        "explore_attempts": 1,
+        "explore_failures": [],
+        "patterns": {
+          "optimizer_output": 0,
+          "merged_pattern": 0,
+          "task": 24,
+          "do_all": 20,
+          "reduction": 0
+        }
+      },
+      "repeat": 1
+    },
+    {
+      "benchmark": "polybench/2mm",
+      "kernel": "2mm",
+      "source": "2mm.c",
+      "arm": "discopop_gate",
+      "model": "none",
+      "arm_flags": [
+        "--no-require-speedup",
+        "--min-runtime-share",
+        "0.01",
+        "--budget",
+        "0"
+      ],
+      "started_at": "2026-09-18T14:16:28",
+      "host_load_start": [
+        13.1357421875,
+        7.0810546875,
+        4.9091796875
+      ],
+      "agent_cmd": [
+        "/Users/ahmedsamir/discopop_agent/venv/bin/python",
+        "-m",
+        "discopop_agent",
+        "--project-dir",
+        ".",
+        "--project-units",
+        "2mm.c,polybench.c",
+        "--project-include",
+        ".",
+        "--discopop-dir",
+        ".discopop",
+        "--provider",
+        "claude-agent-sdk",
+        "--model",
+        "none",
+        "--edit-mode",
+        "direct",
+        "--no-require-speedup",
+        "--min-runtime-share",
+        "0.01",
+        "--budget",
+        "0",
+        "--check-input",
+        "7",
+        "--exclude-functions",
+        "print_array,init_array,main,pb_emit,pb_report,pb_seed,pb_uniform,pb_timer_start,pb_timer_stop,rtclock,polybench_flush_cache,polybench_linux_fifo_scheduler,polybench_linux_standard_scheduler,test_fail,polybench_papi_init,polybench_papi_close,polybench_papi_start_counter,polybench_papi_stop_counter,polybench_papi_print,polybench_prepare_instruments,polybench_timer_start,polybench_timer_stop,polybench_timer_print,xmalloc,polybench_alloc_data"
+      ],
+      "agent_s": 58.1,
+      "agent_rc": 0,
+      "llm_calls": 0,
+      "llm_call_failures": 0,
+      "explorer_retries": 0,
+      "reverts": 0,
+      "gate_failures_phase_a": {},
+      "gate_failures_phase_b": {},
+      "gate_passes_phase_a": 0,
+      "region_verdicts": {
+        "SKIPPED": 5,
+        "DEFERRED": 6,
+        "APPLIED": 2
+      },
+      "settle_dropped": 0,
+      "baseline_claimed": 6,
+      "baseline_pragmas": 4,
+      "rewrites_kept": 0,
+      "pragmas_applied": 2,
+      "pragmas_discopop": 2,
+      "pragmas_llm": 0,
+      "regions_skipped": 1,
+      "llm_usage": null,
+      "layout": "project",
+      "files_changed": [
+        "2mm.c"
+      ],
+      "source_changed": true,
+      "scaffold": {
+        "ok": true,
+        "problems": [],
+        "applies": true
+      },
+      "pragmas_in_final": 2,
+      "candidates_recorded": 2,
+      "verify": {
+        "verify_size": "STANDARD",
+        "threads": [
+          8
+        ],
+        "repeats": 3,
+        "compiler": "/usr/local/Cellar/llvm@19/19.1.7/bin/clang",
+        "final_flags": [],
+        "dump_exact": true,
+        "dump_max_rel_err": 0.0,
+        "seed": "7",
+        "dump_exact_seeded": true,
+        "dump_seeded_max_rel_err": 0.0,
+        "seq_median_s": 10.7927,
+        "seq_kernel_median_s": 10.407135,
+        "timing_basis": "kernel",
+        "par": {
+          "8": {
+            "median_s": 3.9281,
+            "program_speedup": 2.748,
+            "max_rel_err": 0.0,
+            "kernel_median_s": 3.685265,
+            "kernel_speedup": 2.824,
+            "speedup": 2.824
+          }
+        },
+        "digest_max_rel_err": 0.0,
+        "stable_at_fixed_threads": true,
+        "kernel_program_disagree": false,
+        "digest_seeded_rel_err": 0.0,
+        "status": "ok",
+        "speed_measurable": true
+      },
+      "verify_s": 63.5,
+      "status": "done",
+      "outcome": "FASTER",
+      "finished_at": "2026-09-18T14:18:30",
+      "host_load_end": [
+        8.8388671875,
+        7.53125,
+        5.38232421875
+      ],
+      "profile": {
+        "wrapper": "discopop_cc",
+        "layout": "project",
+        "units": [
+          "2mm.c",
+          "polybench.c"
+        ],
+        "instrument_s": 4.36,
+        "profiled_run_s": 2.6,
+        "explore_s": 32.12,
+        "explore_attempts": 1,
+        "explore_failures": [],
+        "patterns": {
+          "optimizer_output": 0,
+          "merged_pattern": 0,
+          "task": 54,
+          "do_all": 22,
+          "reduction": 2
+        }
+      },
+      "repeat": 1,
+      "pragmas_added": 2
+    }
+  ]
+}

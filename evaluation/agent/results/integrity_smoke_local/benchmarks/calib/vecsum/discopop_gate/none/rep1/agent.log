@@ -1,0 +1,80 @@
+
+============================================================
+  DiscoPoP Agentic Controller
+============================================================
+  Source         : vecsum.c
+  DiscoPoP dir   : .discopop
+  Model          : none
+  Budget         : 0 LLM retries/region (+2 free build fixes)
+  λ penalty      : 1.0
+  Min workload   : 0.0
+  Restruct. depth: 0 (Tier-2 allowed at depth 0–0)
+  Quality gate   : Tier-1 = all but speed, no escalation; Tier-2 = full
+  TSan           : barrier-aware (archer: /Users/ahmedsamir/.local/lib/libarcher.dylib)
+  Speedup gate   : OFF (--no-require-speedup)
+  Dry run        : False
+  LLM mode       : none
+  Edit mode      : direct
+  Re-profiling   : fast refresh (compile only) between rewrites; full before a deeper level and before Phase B
+  Pragmas        : LLM writes them with the rewrite, gate decides (--llm-pragmas)
+============================================================
+
+  [ok] Captured reference output on 2 inputs (62 bytes, 14.8 ms baseline) for the correctness/performance gates.
+
+  [ok] Numerical noise floor 0 — 6 build variants agreed exactly; output is compared byte-for-byte.
+
+  Hotspots       : measured per-region runtimes are available — 10 region(s) measured, 61.6 ms total, ranking by predicted time saved at 8 threads
+
+  Baseline       : DiscoPoP proposes 1 applicable pattern(s) unaided; 1 of them produce a usable pragma
+                   → the run beats DiscoPoP by ending with more than 1
+
+  Initial candidates
+Region ID    Type           Saves    % run    Hot  Tier  Depth  Name
+--------------------------------------------------------------------------------------
+  1:58       loop         31.0 ms    57.5%    YES     2      0  lines 106–108
+  1:61       loop         31.0 ms    57.5%    YES     1      0  lines 107–108
+  1:55       function     31.0 ms    57.5%    YES     2      0  kernel_vecsum
+
+============================================================
+  PHASE A — restructure  (the source stays pragma-free)
+============================================================
+
+┌─ [depth=0] loop 1:58 (lines 106–108)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:61 (lines 107–108)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] function 1:55 (lines 103–109)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+
+============================================================
+  PHASE B — annotate  (1 candidate pragma(s))
+============================================================
+
+┌─ pattern #25  do_all @ lines 107–108  (W=1)
+│  #pragma omp parallel for
+│  [Phase-B] Original backed up → vecsum.c.original
+│  [Phase-B] Applied to vecsum.c
+└─ APPLIED
+
+============================================================
+  SETTLING — verify the finished source, drop what does not hold up
+============================================================
+  [ok] finished source verified — output matches the original
+
+
+============================================================
+  SUMMARY: 0 rewrite(s) kept  |  1 pragma(s) applied  |  2 skipped
+  DiscoPoP unaided: 1 usable pragma(s) in this profile's draw  →  this run: 1   [MATCHED, informational]
+    ✓  loop 1:61  [Phase-B pragma]  depth=0
+    ✗  1:58  [skipped]  depth=0
+    ✗  1:55  [skipped]  depth=0
+
+  Results → .discopop/agent_patches/accepted.json
+============================================================
+

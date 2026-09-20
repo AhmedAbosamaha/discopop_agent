@@ -1,0 +1,186 @@
+{
+  "benchmark": "polybench/lu",
+  "kernel": "lu",
+  "source": "lu.c",
+  "arm": "speed_gate_small",
+  "model": "claude-haiku-4-5-20251001",
+  "arm_flags": [
+    "--no-require-speedup",
+    "--min-runtime-share",
+    "0.01",
+    "--require-speedup"
+  ],
+  "started_at": "2026-09-19T13:48:11",
+  "host_load_start": [
+    1937.8740234375,
+    1459.955078125,
+    1397.84423828125
+  ],
+  "agent_cmd": [
+    "/home/ahmedabosamaha/discopop_agent/venv/bin/python",
+    "-m",
+    "discopop_agent",
+    "--project-dir",
+    ".",
+    "--project-units",
+    "lu.c,polybench.c",
+    "--project-include",
+    ".",
+    "--discopop-dir",
+    ".discopop",
+    "--provider",
+    "claude-agent-sdk",
+    "--model",
+    "claude-haiku-4-5-20251001",
+    "--edit-mode",
+    "direct",
+    "--no-require-speedup",
+    "--min-runtime-share",
+    "0.01",
+    "--require-speedup",
+    "--check-input",
+    "7",
+    "--exclude-functions",
+    "print_array,init_array,main,pb_emit,pb_report,pb_seed,pb_uniform,pb_timer_start,pb_timer_stop,rtclock,polybench_flush_cache,polybench_linux_fifo_scheduler,polybench_linux_standard_scheduler,test_fail,polybench_papi_init,polybench_papi_close,polybench_papi_start_counter,polybench_papi_stop_counter,polybench_papi_print,polybench_prepare_instruments,polybench_timer_start,polybench_timer_stop,polybench_timer_print,xmalloc,polybench_alloc_data"
+  ],
+  "agent_s": 914.5,
+  "agent_rc": 0,
+  "llm_calls": 9,
+  "llm_call_failures": 0,
+  "explorer_retries": 0,
+  "reverts": 0,
+  "gate_failures_phase_a": {
+    "performance": 7,
+    "tsan": 2
+  },
+  "gate_failures_phase_b": {
+    "openmp_compile": 1
+  },
+  "gate_passes_phase_a": 0,
+  "region_verdicts": {
+    "SKIPPED": 3,
+    "DEFERRED": 1,
+    "DROPPED": 2
+  },
+  "settle_dropped": 0,
+  "baseline_claimed": 1,
+  "baseline_pragmas": 0,
+  "rewrites_kept": 0,
+  "pragmas_applied": 0,
+  "pragmas_discopop": 0,
+  "pragmas_llm": 0,
+  "regions_skipped": 3,
+  "llm_usage": {
+    "calls_recorded": 9,
+    "input_tokens": 202,
+    "output_tokens": 87349,
+    "cache_read_input_tokens": 799797,
+    "cache_creation_input_tokens": 107819,
+    "cost_usd": 0.7431,
+    "model_seconds": 890.5
+  },
+  "layout": "project",
+  "files_changed": [],
+  "source_changed": false,
+  "scaffold": {
+    "ok": true,
+    "problems": [],
+    "applies": true
+  },
+  "pragmas_added": 0,
+  "pragmas_in_final": 0,
+  "candidates_recorded": 11,
+  "verify": {
+    "verify_size": "LARGE",
+    "threads": [
+      6,
+      12
+    ],
+    "repeats": 5,
+    "compiler": "/usr/bin/clang-20",
+    "final_flags": [],
+    "dump_exact": true,
+    "dump_max_rel_err": 0.0,
+    "seed": "7",
+    "dump_exact_seeded": true,
+    "dump_seeded_max_rel_err": 0.0,
+    "seq_median_s": 1.0783,
+    "seq_kernel_median_s": 1.064322,
+    "timing_basis": "kernel",
+    "par": {
+      "6": {
+        "median_s": 1.0804,
+        "program_speedup": 0.998,
+        "max_rel_err": 0.0,
+        "kernel_median_s": 1.066643,
+        "kernel_speedup": 0.998,
+        "speedup": 0.998
+      },
+      "12": {
+        "median_s": 1.076,
+        "program_speedup": 1.002,
+        "max_rel_err": 0.0,
+        "kernel_median_s": 1.06154,
+        "kernel_speedup": 1.003,
+        "speedup": 1.003
+      }
+    },
+    "digest_max_rel_err": 0.0,
+    "stable_at_fixed_threads": true,
+    "kernel_program_disagree": false,
+    "digest_seeded_rel_err": 0.0,
+    "status": "ok",
+    "speed_measurable": true
+  },
+  "verify_s": 18.8,
+  "status": "done",
+  "outcome": "no-change",
+  "finished_at": "2026-09-19T14:03:44",
+  "host_load_end": [
+    219.7724609375,
+    1123.8876953125,
+    1380.6875
+  ],
+  "profile": {
+    "wrapper": "discopop_cc",
+    "layout": "project",
+    "units": [
+      "lu.c",
+      "polybench.c"
+    ],
+    "instrument_s": 0.21,
+    "profiled_run_s": 0.06,
+    "explore_s": 2.22,
+    "explore_attempts": 1,
+    "explore_failures": [],
+    "patterns": {
+      "optimizer_output": 0,
+      "merged_pattern": 0,
+      "task": 24,
+      "do_all": 8,
+      "reduction": 1
+    },
+    "profile_sha256": "5dd9e7f3acb4a483e398b6f716c73b236674510c849c43e5e381b013e08ea71c"
+  },
+  "package_integrity": {
+    "before": {
+      "checked": "before trial",
+      "at": "2026-09-19T13:48:11",
+      "prepared_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+      "packager_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+      "archived_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+      "profile_sha256": "5dd9e7f3acb4a483e398b6f716c73b236674510c849c43e5e381b013e08ea71c",
+      "ok": true
+    },
+    "after": {
+      "checked": "after trial",
+      "at": "2026-09-19T14:03:44",
+      "prepared_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+      "packager_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+      "archived_sha256": "0c1bc2a19aa855753a9e5a949a7d7e4fbf3a0acb19888b5c02451aaa125eb55c",
+      "profile_sha256": "5dd9e7f3acb4a483e398b6f716c73b236674510c849c43e5e381b013e08ea71c",
+      "ok": true
+    }
+  },
+  "repeat": 3
+}

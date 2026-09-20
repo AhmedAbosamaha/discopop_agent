@@ -1,0 +1,73 @@
+--- /home/ahmedabosamaha/new_benchmark_harness/agent/runs/e10/benchmarks/polybench/seidel-2d/speed_gate_small/claude-haiku-4-5-20251001/rep1/work/seidel-2d.c
++++ /home/ahmedabosamaha/new_benchmark_harness/agent/runs/e10/benchmarks/polybench/seidel-2d/speed_gate_small/claude-haiku-4-5-20251001/rep1/work/seidel-2d.c
+@@ -58,15 +58,66 @@
+ 		      DATA_TYPE POLYBENCH_2D(A,N,N,n,n))
+ {
+   int t, i, j;
++  DATA_TYPE **A_temp;
++
++  /* Allocate temporary buffer for two-pass red-black iteration.
++     Each pass writes to one color from a consistent read buffer,
++     enabling race-free parallel updates within each pass. */
++  A_temp = (DATA_TYPE**)malloc(_PB_N * sizeof(DATA_TYPE*));
++  for (i = 0; i < _PB_N; i++)
++    A_temp[i] = (DATA_TYPE*)malloc(_PB_N * sizeof(DATA_TYPE));
+ 
+ #pragma scop
+   for (t = 0; t <= _PB_TSTEPS - 1; t++)
+-    for (i = 1; i<= _PB_N - 2; i++)
++  {
++    /* Red pass: update elements where (i+j) % 2 == 0, preserving black.
++       All red elements are independent (no red reads another red in stencil),
++       so they update in parallel from the start-of-pass state. ~124k elements. */
++    #pragma omp parallel for collapse(2) private(i, j)
++    for (i = 1; i <= _PB_N - 2; i++)
+       for (j = 1; j <= _PB_N - 2; j++)
+-	A[i][j] = (A[i-1][j-1] + A[i-1][j] + A[i-1][j+1]
+-		   + A[i][j-1] + A[i][j] + A[i][j+1]
+-		   + A[i+1][j-1] + A[i+1][j] + A[i+1][j+1])/9.0;
++      {
++        if ((i + j) % 2 == 0)
++          A_temp[i][j] = (A[i-1][j-1] + A[i-1][j] + A[i-1][j+1]
++                          + A[i][j-1] + A[i][j] + A[i][j+1]
++                          + A[i+1][j-1] + A[i+1][j] + A[i+1][j+1]) / 9.0;
++        else
++          A_temp[i][j] = A[i][j];
++      }
++
++    /* Copy result back to A. */
++    #pragma omp parallel for collapse(2) private(i, j)
++    for (i = 0; i < _PB_N; i++)
++      for (j = 0; j < _PB_N; j++)
++        A[i][j] = A_temp[i][j];
++
++    /* Black pass: update elements where (i+j) % 2 == 1, preserving red.
++       All black elements are independent; they update from post-red state.
++       This allows black elements to read updated red neighbors. ~124k elements. */
++    #pragma omp parallel for collapse(2) private(i, j)
++    for (i = 1; i <= _PB_N - 2; i++)
++      for (j = 1; j <= _PB_N - 2; j++)
++      {
++        if ((i + j) % 2 == 1)
++          A_temp[i][j] = (A[i-1][j-1] + A[i-1][j] + A[i-1][j+1]
++                          + A[i][j-1] + A[i][j] + A[i][j+1]
++                          + A[i+1][j-1] + A[i+1][j] + A[i+1][j+1]) / 9.0;
++        else
++          A_temp[i][j] = A[i][j];
++      }
++
++    /* Copy result back to A. */
++    #pragma omp parallel for collapse(2) private(i, j)
++    for (i = 0; i < _PB_N; i++)
++      for (j = 0; j < _PB_N; j++)
++        A[i][j] = A_temp[i][j];
++  }
+ #pragma endscop
++
++  /* Free temporary buffer. */
++  for (i = 0; i < _PB_N; i++)
++    free(A_temp[i]);
++  free(A_temp);
+ 
+ }
+ 

@@ -1,0 +1,68 @@
+--- /private/tmp/claude-501/-Users-ahmedsamir-discopop-agent/436822e3-c111-4da4-bd96-90a25b95970d/scratchpad/matrix_prefix/full/prefix.c
++++ /private/tmp/claude-501/-Users-ahmedsamir-discopop-agent/436822e3-c111-4da4-bd96-90a25b95970d/scratchpad/matrix_prefix/full/prefix.c
+@@ -101,12 +101,61 @@
+ 
+ static void kernel_prefix(double* a, double* c)
+ {
+-  int r, i;
++  int r;
++  const int n = N;
++  const int bs = 4096;
++  const int nb = (n + bs - 1) / bs;
++  double* blockSum = (double*)malloc((size_t)nb * sizeof(double));
++
+   for (r = 0; r < R; r++) {
+-    c[0] = a[0];
+-    for (i = 1; i < N; i++)
+-      c[i] = c[i-1] + a[i];
++    int b;
++
++    /* Pass 1: each block computes its own local prefix sum, starting
++       fresh from a[start]; the true carry-in from earlier blocks is
++       added in pass 3. Blocks touch disjoint ranges of c, so there is
++       no loop-carried dependence across b. */
++    #pragma omp parallel for private(b) shared(a, c, blockSum) firstprivate(n, bs, nb) schedule(static)
++    for (b = 0; b < nb; b++) {
++      int start = b * bs;
++      int end = (start + bs < n) ? (start + bs) : n;
++      int i;
++      double acc = a[start];
++      c[start] = acc;
++      for (i = start + 1; i < end; i++) {
++        acc += a[i];
++        c[i] = acc;
++      }
++      blockSum[b] = acc;
++    }
++
++    /* Pass 2: turn per-block totals into exclusive prefix offsets.
++       Sequential but O(nb), a small constant-factor addition, not an
++       O(N) recomputation. */
++    {
++      double running = 0.0;
++      int b2;
++      for (b2 = 0; b2 < nb; b2++) {
++        double s = blockSum[b2];
++        blockSum[b2] = running;
++        running += s;
++      }
++    }
++
++    /* Pass 3: add each block's carry-in offset to its own elements.
++       Disjoint ranges again, so blocks are independent; block 0's
++       offset is 0 and needs no update. */
++    #pragma omp parallel for private(b) shared(c, blockSum) firstprivate(n, bs, nb) schedule(static)
++    for (b = 1; b < nb; b++) {
++      int start = b * bs;
++      int end = (start + bs < n) ? (start + bs) : n;
++      int i;
++      double off = blockSum[b];
++      for (i = start; i < end; i++)
++        c[i] += off;
++    }
+   }
++
++  free(blockSum);
+ }
+ 
+ int main(int argc, char** argv)

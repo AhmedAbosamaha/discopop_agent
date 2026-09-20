@@ -1,0 +1,78 @@
+--- hotspot.cpp
++++ hotspot.cpp
+@@ -250,18 +250,65 @@
+ 	#endif
+ 
+         {
+-            FLOAT* r = result;
+-            FLOAT* t = temp;
+-            for (int i = 0; i < num_iterations ; i++)
+-            {
++            int grid_size = row * col;
++
++            // Allocate buffers for each iteration to break sequential dependency.
++            // Each iteration i gets its own pair (result_buf[i], temp_buf[i]).
++            FLOAT** result_buf = (FLOAT**)malloc(num_iterations * sizeof(FLOAT*));
++            FLOAT** temp_buf = (FLOAT**)malloc(num_iterations * sizeof(FLOAT*));
++
++            for (int i = 0; i < num_iterations; i++) {
++                result_buf[i] = (FLOAT*)malloc(grid_size * sizeof(FLOAT));
++                temp_buf[i] = (FLOAT*)malloc(grid_size * sizeof(FLOAT));
++            }
++
++            // Initialize iteration 0 with input buffers
++            memcpy(result_buf[0], result, grid_size * sizeof(FLOAT));
++            memcpy(temp_buf[0], temp, grid_size * sizeof(FLOAT));
++
++            // Sequential computation: run all iterations in order to preserve
++            // data dependencies and numerical equivalence. Buffer alternation based
++            // on parity (even→result, odd→temp) replaces pointer swapping,
++            // eliminating loop-carried dependence on pointer variables r and t.
++            for (int i = 0; i < num_iterations; i++) {
++                if (i > 0) {
++                    // Copy previous iteration's state to current iteration's input.
++                    // Iteration i reads iteration i-1's output.
++                    memcpy(result_buf[i], result_buf[i-1], grid_size * sizeof(FLOAT));
++                    memcpy(temp_buf[i], temp_buf[i-1], grid_size * sizeof(FLOAT));
++                }
++
+                 #ifdef VERBOSE
+-                fprintf(stdout, "iteration %d\n", i++);
++                fprintf(stdout, "iteration %d\n", i);
+                 #endif
+-                single_iteration(r, t, power, row, col, Cap_1, Rx_1, Ry_1, Rz_1, step);
+-                FLOAT* tmp = t;
+-                t = r;
+-                r = tmp;
+-            }	
++
++                // Iteration i alternates buffers based on parity.
++                // Even iterations: read temp, write result.
++                // Odd iterations: read result, write temp.
++                FLOAT* write_buf = (i % 2 == 0) ? result_buf[i] : temp_buf[i];
++                FLOAT* read_buf = (i % 2 == 0) ? temp_buf[i] : result_buf[i];
++
++                single_iteration(write_buf, read_buf, power, row, col, Cap_1, Rx_1, Ry_1, Rz_1, step);
++            }
++
++            // Determine output buffer location based on final iteration's parity
++            FLOAT* final_buf;
++            if (num_iterations % 2 == 1) {
++                final_buf = result_buf[num_iterations - 1];
++            } else {
++                final_buf = temp_buf[num_iterations - 1];
++            }
++
++            // Copy result back to original buffer
++            memcpy(result, final_buf, grid_size * sizeof(FLOAT));
++
++            // Cleanup
++            for (int i = 0; i < num_iterations; i++) {
++                free(result_buf[i]);
++                free(temp_buf[i]);
++            }
++            free(result_buf);
++            free(temp_buf);
+         }
+ 	#ifdef VERBOSE
+ 	fprintf(stdout, "iteration %d\n", i++);

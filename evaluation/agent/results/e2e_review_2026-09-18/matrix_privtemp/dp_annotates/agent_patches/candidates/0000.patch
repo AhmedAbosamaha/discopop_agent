@@ -1,0 +1,22 @@
+--- /private/tmp/claude-501/-Users-ahmedsamir-discopop-agent/436822e3-c111-4da4-bd96-90a25b95970d/scratchpad/matrix_privtemp/dp_annotates/privtemp.c
++++ /private/tmp/claude-501/-Users-ahmedsamir-discopop-agent/436822e3-c111-4da4-bd96-90a25b95970d/scratchpad/matrix_privtemp/dp_annotates/privtemp.c
+@@ -103,11 +103,15 @@
+ {
+   int r, i;
+   double t;
+-  for (r = 0; r < R; r++)
+-    for (i = 0; i < N; i++) {
+-      t = a[i] * a[i] + 1.0;
+-      c[i] = 0.5 * c[i] + t * 0.5 + sqrt(t);
++  for (i = 0; i < N; i++) {
++    double ai = a[i];
++    double ci = c[i];
++    for (r = 0; r < R; r++) {
++      t = ai * ai + 1.0;
++      ci = 0.5 * ci + t * 0.5 + sqrt(t);
+     }
++    c[i] = ci;
++  }
+ }
+ 
+ int main(int argc, char** argv)

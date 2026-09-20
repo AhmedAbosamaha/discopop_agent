@@ -1,0 +1,55 @@
+--- /private/tmp/claude-501/-Users-ahmedsamir-discopop-agent/436822e3-c111-4da4-bd96-90a25b95970d/scratchpad/matrix_prefix2/dp_annotates/prefix.c
++++ /private/tmp/claude-501/-Users-ahmedsamir-discopop-agent/436822e3-c111-4da4-bd96-90a25b95970d/scratchpad/matrix_prefix2/dp_annotates/prefix.c
+@@ -99,13 +99,48 @@
+   for (i = 0; i < N; i++) a[i] = (double)(i % 251) * 0.02;
+ }
+ 
++#define PB_NB 64
++
+ static void kernel_prefix(double* a, double* c)
+ {
+-  int r, i;
++  int r, i, b;
++  double blockSum[PB_NB];
++  double blockOffset[PB_NB];
++  int blockSize = (N + PB_NB - 1) / PB_NB;
++
+   for (r = 0; r < R; r++) {
+-    c[0] = a[0];
+-    for (i = 1; i < N; i++)
+-      c[i] = c[i-1] + a[i];
++    /* Phase 1: block-local inclusive prefix sums. Each block's chain starts
++       fresh at its own first element and never reads another block's c[],
++       so the blocks are independent of one another; only the short chain
++       inside one block is still sequential. */
++    for (b = 0; b < PB_NB; b++) {
++      int start = b * blockSize;
++      int end = start + blockSize;
++      if (end > N) end = N;
++      if (start >= end) { blockSum[b] = 0.0; continue; }
++      c[start] = a[start];
++      for (i = start + 1; i < end; i++)
++        c[i] = c[i-1] + a[i];
++      blockSum[b] = c[end-1];
++    }
++
++    /* Phase 2: tiny sequential exclusive scan over the PB_NB block totals
++       (constant-size work, independent of N). */
++    blockOffset[0] = 0.0;
++    for (b = 1; b < PB_NB; b++)
++      blockOffset[b] = blockOffset[b-1] + blockSum[b-1];
++
++    /* Phase 3: fold each block's carry-in into its local sums; blocks are
++       independent again. */
++    for (b = 0; b < PB_NB; b++) {
++      int start = b * blockSize;
++      int end = start + blockSize;
++      double off = blockOffset[b];
++      if (end > N) end = N;
++      if (start >= end || off == 0.0) continue;
++      for (i = start; i < end; i++)
++        c[i] += off;
++    }
+   }
+ }
+ 

@@ -1,0 +1,47 @@
+--- /home/ahmedabosamaha/new_benchmark_harness/agent/runs/e10/benchmarks/polybench/seidel-2d/speed_gate_small/claude-haiku-4-5-20251001/rep3/work/seidel-2d.c
++++ /home/ahmedabosamaha/new_benchmark_harness/agent/runs/e10/benchmarks/polybench/seidel-2d/speed_gate_small/claude-haiku-4-5-20251001/rep3/work/seidel-2d.c
+@@ -58,17 +58,41 @@
+ 		      DATA_TYPE POLYBENCH_2D(A,N,N,n,n))
+ {
+   int t, i, j;
++  DATA_TYPE *temp = (DATA_TYPE *)malloc((_PB_N) * sizeof(DATA_TYPE));
+ 
+ #pragma scop
+-  for (t = 0; t <= _PB_TSTEPS - 1; t++)
+-    for (i = 1; i<= _PB_N - 2; i++)
++  for (t = 0; t <= _PB_TSTEPS - 1; t++) {
++    /* First pass: parallelize j-loop within each row, reading from old A values.
++       This computes row i in parallel, then finalizes it before the next row. */
++    for (i = 1; i<= _PB_N - 2; i++) {
++#pragma omp parallel for private(j) shared(A,temp)
+       for (j = 1; j <= _PB_N - 2; j++)
+-	A[i][j] = (A[i-1][j-1] + A[i-1][j] + A[i-1][j+1]
++	temp[j] = (A[i-1][j-1] + A[i-1][j] + A[i-1][j+1]
+ 		   + A[i][j-1] + A[i][j] + A[i][j+1]
+ 		   + A[i+1][j-1] + A[i+1][j] + A[i+1][j+1])/9.0;
++
++      for (j = 1; j <= _PB_N - 2; j++)
++	A[i][j] = temp[j];
++    }
++
++    /* Second pass: repeat the sweep using now-updated A values to propagate updates
++       row-by-row and converge to the Seidel solution. */
++    for (i = 1; i<= _PB_N - 2; i++) {
++#pragma omp parallel for private(j) shared(A,temp)
++      for (j = 1; j <= _PB_N - 2; j++)
++	temp[j] = (A[i-1][j-1] + A[i-1][j] + A[i-1][j+1]
++		   + A[i][j-1] + A[i][j] + A[i][j+1]
++		   + A[i+1][j-1] + A[i+1][j] + A[i+1][j+1])/9.0;
++
++      for (j = 1; j <= _PB_N - 2; j++)
++	A[i][j] = temp[j];
++    }
++  }
+ #pragma endscop
+ 
++  free(temp);
+ }
++
+ 
+ 
+ int main(int argc, char** argv)

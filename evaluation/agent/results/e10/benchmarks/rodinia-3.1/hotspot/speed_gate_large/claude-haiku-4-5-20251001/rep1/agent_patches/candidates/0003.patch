@@ -1,0 +1,42 @@
+--- hotspot.cpp
++++ hotspot.cpp
+@@ -250,18 +250,31 @@
+ 	#endif
+ 
+         {
+-            FLOAT* r = result;
+-            FLOAT* t = temp;
++            #pragma omp parallel for shared(result, temp, power, row, col) \
++                firstprivate(Cap_1, Rx_1, Ry_1, Rz_1, step) schedule(static, 1)
+             for (int i = 0; i < num_iterations ; i++)
+             {
++                FLOAT* r_local;
++                FLOAT* t_local;
++
++                // Each iteration computes its buffer pointers locally based on parity,
++                // eliminating the loop-carried dependence on the pointer variables.
++                // Even iterations (i % 2 == 0): read from temp, write to result
++                // Odd iterations (i % 2 == 1): read from result, write to temp
++                if (i % 2 == 0) {
++                    r_local = result;
++                    t_local = temp;
++                } else {
++                    r_local = temp;
++                    t_local = result;
++                }
++
+                 #ifdef VERBOSE
+-                fprintf(stdout, "iteration %d\n", i++);
++                fprintf(stdout, "iteration %d\n", i);
+                 #endif
+-                single_iteration(r, t, power, row, col, Cap_1, Rx_1, Ry_1, Rz_1, step);
+-                FLOAT* tmp = t;
+-                t = r;
+-                r = tmp;
+-            }	
++
++                single_iteration(r_local, t_local, power, row, col, Cap_1, Rx_1, Ry_1, Rz_1, step);
++            }
+         }
+ 	#ifdef VERBOSE
+ 	fprintf(stdout, "iteration %d\n", i++);

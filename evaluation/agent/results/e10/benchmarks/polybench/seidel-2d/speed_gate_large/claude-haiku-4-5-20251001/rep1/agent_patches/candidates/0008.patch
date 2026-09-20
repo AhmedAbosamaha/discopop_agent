@@ -1,0 +1,36 @@
+--- /home/ahmedabosamaha/new_benchmark_harness/agent/runs/e10/benchmarks/polybench/seidel-2d/speed_gate_large/claude-haiku-4-5-20251001/rep1/work/seidel-2d.c
++++ /home/ahmedabosamaha/new_benchmark_harness/agent/runs/e10/benchmarks/polybench/seidel-2d/speed_gate_large/claude-haiku-4-5-20251001/rep1/work/seidel-2d.c
+@@ -60,12 +60,27 @@
+   int t, i, j;
+ 
+ #pragma scop
+-  for (t = 0; t <= _PB_TSTEPS - 1; t++)
+-    for (i = 1; i<= _PB_N - 2; i++)
+-      for (j = 1; j <= _PB_N - 2; j++)
+-	A[i][j] = (A[i-1][j-1] + A[i-1][j] + A[i-1][j+1]
+-		   + A[i][j-1] + A[i][j] + A[i][j+1]
+-		   + A[i+1][j-1] + A[i+1][j] + A[i+1][j+1])/9.0;
++  for (t = 0; t <= _PB_TSTEPS - 1; t++) {
++    /* Wavefront (diagonal) ordering: process cells in order of constant i+j.
++       All cells in wavefront k have sum i+j=k. When computing [i][j] at diagonal k:
++       - [i-1][...] already computed (smaller i, earlier wavefronts)
++       - [i+1][...] not yet computed (larger i, same/later wavefront) → read from prior t
++       - [i][j-1] already computed (earlier wavefront)
++       - [i][j+1] not yet computed (same wavefront) → read from prior t
++       This preserves Gauss-Seidel semantics while making iterations in each wavefront independent.
++       Wavefronts are sequential (barriers between k and k+1), but within each k: parallel. */
++    for (int diag = 2; diag <= 2*(_PB_N - 2); diag++) {
++#pragma omp parallel for schedule(static)
++      for (i = 1; i <= _PB_N - 2; i++) {
++        int j = diag - i;
++        if (j >= 1 && j <= _PB_N - 2) {
++          A[i][j] = (A[i-1][j-1] + A[i-1][j] + A[i-1][j+1]
++                     + A[i][j-1] + A[i][j] + A[i][j+1]
++                     + A[i+1][j-1] + A[i+1][j] + A[i+1][j+1])/9.0;
++        }
++      }
++    }
++  }
+ #pragma endscop
+ 
+ }

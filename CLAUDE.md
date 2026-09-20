@@ -21,6 +21,7 @@ This document contains critical information about working with this codebase. Fo
 - Utilities for the pattern analysis as well as further tools are located in the folder `discopop_library`
 - The projects wiki page is defined in the folder`docs`
 - The code for the graphical user interface is located in the folder `GUI`
+- The thesis's experiment harness (runner, packagers, instruments, results archive, experiment record) is located in the folder `evaluation`; start at `evaluation/README.md`, run its commands from inside `evaluation/`
 
 # Code Style
 - verify the type correctness of python code
@@ -37,6 +38,10 @@ This document contains critical information about working with this codebase. Fo
 ### Python
 - install prerequisites via `venv/bin/pip install mypy`
 - to execute type checking of python files use the following command as the basis: `venv/bin/python -m mypy --config-file=mypy.ini -p`
+
+### Python — evaluation harness
+- the harness is a set of scripts, not a package; type check it with `venv/bin/python -m mypy --config-file=evaluation/mypy.ini evaluation/agent/tools/*.py evaluation/shared/*.py`
+- its own tests: `venv/bin/python evaluation/agent/tools/test_integrity.py` and `venv/bin/python evaluation/agent/tools/test_scaffold.py`
 
 ## Formatting
 ### Python

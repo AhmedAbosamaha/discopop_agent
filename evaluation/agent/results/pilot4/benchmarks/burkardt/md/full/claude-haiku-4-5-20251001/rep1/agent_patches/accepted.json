@@ -1,0 +1,33 @@
+[
+  {
+    "region_id": "0:0",
+    "region_type": "function",
+    "tier": 2,
+    "patch_file": ".discopop/agent_patches/region_0_0_tier2.patch",
+    "reprofiled": true,
+    "discovery_depth": 0,
+    "evidence": {
+      "comparison": "exact",
+      "dependences": "rewritten-code",
+      "dependences_detail": "the patch rewrites code, so the profile predates what is being parallelised; the sanitizer and the schedule matrix carry it",
+      "schedule_runtime_loops": 2,
+      "schedules": [
+        "T4/static#1",
+        "T4/static#2",
+        "T4/static#3",
+        "T1/static",
+        "T2/static",
+        "T4/dynamic,1",
+        "T4/guided"
+      ],
+      "reordered": false
+    },
+    "exposed_pattern": "2 LLM pragma(s): #pragma omp parallel for firstprivate(nd); #pragma omp parallel for firstprivate(nd, np)",
+    "pragmas": 2,
+    "pragma_text": [
+      "#pragma omp parallel for firstprivate(nd)",
+      "#pragma omp parallel for firstprivate(nd, np)"
+    ],
+    "self_annotated": true
+  }
+]

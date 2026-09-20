@@ -1,0 +1,10 @@
+--- /Users/ahmedsamir/new_benchmark_harness/agent/runs/dp_alone_look_mac/benchmarks/polybench/syr2k/discopop_gate/none/rep1/work/syr2k.c
++++ /Users/ahmedsamir/new_benchmark_harness/agent/runs/dp_alone_look_mac/benchmarks/polybench/syr2k/discopop_gate/none/rep1/work/syr2k.c
+@@ -74,6 +74,7 @@
+ 
+ #pragma scop
+   /*    C := alpha*A*B' + alpha*B*A' + beta*C */
++ #pragma omp parallel for firstprivate(ni,alpha,nj) private(k,j) shared(C) 
+   for (i = 0; i < _PB_NI; i++)
+     for (j = 0; j < _PB_NI; j++)
+       C[i][j] *= beta;

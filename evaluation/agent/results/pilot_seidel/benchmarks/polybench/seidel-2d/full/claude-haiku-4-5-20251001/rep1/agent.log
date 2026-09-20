@@ -1,0 +1,155 @@
+
+============================================================
+  DiscoPoP Agentic Controller
+============================================================
+  Source         : seidel-2d.c
+  DiscoPoP dir   : .discopop
+  Model          : claude-haiku-4-5-20251001
+  Budget         : 3 LLM retries/region (+2 free build fixes)
+  λ penalty      : 1.0
+  Min workload   : 0.0
+  Restruct. depth: 0 (Tier-2 allowed at depth 0–0)
+  Quality gate   : Tier-1 = all but speed, no escalation; Tier-2 = full
+  TSan           : barrier-aware (archer: /usr/lib/llvm-20/lib/libarcher.so)
+  Speedup gate   : OFF (--no-require-speedup)
+  Dry run        : False
+  LLM mode       : claude-haiku-4-5-20251001
+  Edit mode      : direct
+  Re-profiling   : fast refresh (compile only) between rewrites; full before a deeper level and before Phase B
+  Pragmas        : LLM writes them with the rewrite, gate decides (--llm-pragmas)
+============================================================
+
+  [ok] Captured reference output on 2 inputs (69 bytes, 14.7 ms baseline) for the correctness/performance gates.
+
+  [ok] Numerical noise floor 0 — 6 build variants agreed exactly; output is compared byte-for-byte.
+
+  Hotspots       : measured per-region runtimes are available — 17 region(s) measured, 39.5 ms total, ranking by predicted time saved at 48 threads
+
+  Baseline       : DiscoPoP proposes 4 applicable pattern(s) unaided; 3 of them produce a usable pragma (1 rejected before it could run)
+                   → the run beats DiscoPoP by ending with more than 3
+
+  Initial candidates
+Region ID    Type           Saves    % run    Hot  Tier  Depth  Name
+--------------------------------------------------------------------------------------
+  1:16       function     38.6 ms   100.0%    YES     2      0  main
+  1:72       loop         20.0 ms    51.7%    YES     1      0  lines 425–430
+  1:75       loop         20.0 ms    51.7%    YES     1      0  lines 426–430
+  1:69       function     20.0 ms    51.7%    YES     2      0  kernel_seidel_2d
+  1:78       loop         19.8 ms    51.3%    YES     1      0  lines 427–430
+  1:29       loop               —        —      —     1      0  lines 451–451
+  1:80       cu                 —        —      —     2      0  lines 428–430
+
+============================================================
+  PHASE A — restructure  (the source stays pragma-free)
+============================================================
+
+┌─ [depth=0] function 1:16 (lines 434–474)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] LLM call failed: Claude Code returned an error result: success
+│           counting it as a failed attempt and moving on
+│  [Tier-2] LLM returned invalid output — retrying
+│  [Tier-2] Assembling evidence (budget remaining: 1)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] LLM call failed: Claude Code returned an error result: success
+│           counting it as a failed attempt and moving on
+│  [Tier-2] LLM returned invalid output — retrying
+│  [Tier-2] Assembling evidence (budget remaining: 0)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] LLM call failed: Claude Code returned an error result: success
+│           counting it as a failed attempt and moving on
+│  [Tier-2] LLM returned invalid output
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:72 (lines 425–430)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:75 (lines 426–430)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] function 1:69 (lines 420–431)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] LLM call failed: Claude Code returned an error result: success
+│           counting it as a failed attempt and moving on
+│  [Tier-2] LLM returned invalid output — retrying
+│  [Tier-2] Assembling evidence (budget remaining: 1)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] LLM call failed: Claude Code returned an error result: success
+│           counting it as a failed attempt and moving on
+│  [Tier-2] LLM returned invalid output — retrying
+│  [Tier-2] Assembling evidence (budget remaining: 0)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] LLM call failed: Claude Code returned an error result: success
+│           counting it as a failed attempt and moving on
+│  [Tier-2] LLM returned invalid output
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:78 (lines 427–430)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:29 (lines 451–451)  score=9.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] block 1:80 (lines 428–430)  score=1.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] LLM call failed: Claude Code returned an error result: success
+│           counting it as a failed attempt and moving on
+│  [Tier-2] LLM returned invalid output — retrying
+│  [Tier-2] Assembling evidence (budget remaining: 1)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] LLM call failed: Claude Code returned an error result: success
+│           counting it as a failed attempt and moving on
+│  [Tier-2] LLM returned invalid output — retrying
+│  [Tier-2] Assembling evidence (budget remaining: 0)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] LLM call failed: Claude Code returned an error result: success
+│           counting it as a failed attempt and moving on
+│  [Tier-2] LLM returned invalid output
+└─ SKIPPED (budget exhausted)
+
+
+============================================================
+  PHASE B — annotate  (4 candidate pragma(s))
+============================================================
+
+┌─ pattern #15  do_all @ lines 425–430  (W=24900)
+│  #pragma omp parallel for
+│  gate failed at 'tsan': Race detected: WARNING: ThreadSanitizer: data race (pid=2973906)   Read of size 8 at 0x7ffff4e17fb0 by thread T6:     #0 kernel_seidel_2d.omp_outlined
+└─ DROPPED
+
+┌─ pattern #14  do_all @ lines 426–430  (W=9920160)
+│  #pragma omp parallel for
+│  gate failed at 'tsan': Race detected: WARNING: ThreadSanitizer: data race (pid=2973939)   Read of size 8 at 0x7ffff4f22948 by thread T12:     #0 kernel_seidel_2d.omp_outline
+└─ DROPPED
+
+┌─ pattern #13  do_all @ lines 427–430  (W=1500)
+│  #pragma omp parallel for
+│  TSan OMP-barrier false positive — re-verified on output
+│  gate failed at 'correctness': Program output changed for input '7' — the patched program is NOT semantically equivalent to the original. This input differs from the one the profile
+└─ DROPPED
+
+┌─ pattern #10  do_all @ lines 451–451  (W=500)
+│  #pragma omp parallel for
+│  gate failed at 'openmp_compile': OpenMP compile failed (loop not in OpenMP-canonical form): /tmp/dp_agent_val_maxtlcwt/seidel-2d.c:452:7: error: statement after '#pragma omp parallel 
+└─ DROPPED
+
+
+============================================================
+  SUMMARY: 0 rewrite(s) kept  |  0 pragma(s) applied  |  3 skipped
+  DiscoPoP unaided: 3 usable pragma(s)  →  this run: 0   [BELOW]
+    ✗  1:16  [skipped]  depth=0
+    ✗  1:69  [skipped]  depth=0
+    ✗  1:80  [skipped]  depth=0
+
+  Results → .discopop/agent_patches/accepted.json
+============================================================
+

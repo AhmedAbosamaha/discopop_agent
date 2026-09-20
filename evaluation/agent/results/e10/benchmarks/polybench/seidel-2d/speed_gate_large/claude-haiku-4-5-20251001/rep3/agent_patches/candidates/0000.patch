@@ -1,0 +1,46 @@
+--- /home/ahmedabosamaha/new_benchmark_harness/agent/runs/e10/benchmarks/polybench/seidel-2d/speed_gate_large/claude-haiku-4-5-20251001/rep3/work/seidel-2d.c
++++ /home/ahmedabosamaha/new_benchmark_harness/agent/runs/e10/benchmarks/polybench/seidel-2d/speed_gate_large/claude-haiku-4-5-20251001/rep3/work/seidel-2d.c
+@@ -59,15 +59,38 @@
+ {
+   int t, i, j;
+ 
++  /* Allocate temporary buffer for Jacobi-style update */
++  DATA_TYPE** B = (DATA_TYPE**)malloc(n * sizeof(DATA_TYPE*));
++  for (i = 0; i < n; i++) {
++    B[i] = (DATA_TYPE*)malloc(n * sizeof(DATA_TYPE));
++  }
++
+ #pragma scop
+   for (t = 0; t <= _PB_TSTEPS - 1; t++)
+-    for (i = 1; i<= _PB_N - 2; i++)
+-      for (j = 1; j <= _PB_N - 2; j++)
+-	A[i][j] = (A[i-1][j-1] + A[i-1][j] + A[i-1][j+1]
+-		   + A[i][j-1] + A[i][j] + A[i][j+1]
+-		   + A[i+1][j-1] + A[i+1][j] + A[i+1][j+1])/9.0;
++    {
++      /* Parallel region: compute new values from old array.
++         All iterations read from unchanged A, so no loop-carried dependence.
++         Collapse(2) combines i and j for ~248K iterations per timestep. */
++#pragma omp parallel for collapse(2) private(i, j)
++      for (i = 1; i<= _PB_N - 2; i++)
++	for (j = 1; j <= _PB_N - 2; j++)
++	  B[i][j] = (A[i-1][j-1] + A[i-1][j] + A[i-1][j+1]
++		     + A[i][j-1] + A[i][j] + A[i][j+1]
++		     + A[i+1][j-1] + A[i+1][j] + A[i+1][j+1])/9.0;
++
++      /* Copy B back to A for next timestep (sequential).
++         Must update A in place for subsequent iterations to see new values. */
++      for (i = 1; i<= _PB_N - 2; i++)
++	for (j = 1; j <= _PB_N - 2; j++)
++	  A[i][j] = B[i][j];
++    }
+ #pragma endscop
+ 
++  /* Deallocate temporary buffer */
++  for (i = 0; i < n; i++) {
++    free(B[i]);
++  }
++  free(B);
+ }
+ 
+ 

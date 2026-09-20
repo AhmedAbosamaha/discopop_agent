@@ -1,0 +1,41 @@
+--- original.c
++++ final.c
+@@ -483,6 +483,7 @@
+   /* Variable declaration/allocation. */
+   DATA_TYPE alpha;
+   DATA_TYPE beta;
++  int i, j, k;
+   POLYBENCH_2D_ARRAY_DECL(tmp,DATA_TYPE,NI,NJ,ni,nj);
+   POLYBENCH_2D_ARRAY_DECL(A,DATA_TYPE,NI,NK,ni,nk);
+   POLYBENCH_2D_ARRAY_DECL(B,DATA_TYPE,NK,NJ,nk,nj);
+@@ -512,13 +513,23 @@
+   pb_timer_start();
+ 
+   /* Run kernel. */
+-  kernel_2mm (ni, nj, nk, nl,
+-	      alpha, beta,
+-	      POLYBENCH_ARRAY(tmp),
+-	      POLYBENCH_ARRAY(A),
+-	      POLYBENCH_ARRAY(B),
+-	      POLYBENCH_ARRAY(C),
+-	      POLYBENCH_ARRAY(D));
++  /* D := alpha*A*B*C + beta*D */
++  #pragma omp parallel for lastprivate(j, k)
++  for (i = 0; i < _PB_NI; i++)
++    for (j = 0; j < _PB_NJ; j++)
++      {
++	(*tmp)[i][j] = 0;
++	for (k = 0; k < _PB_NK; ++k)
++	  (*tmp)[i][j] += alpha * (*A)[i][k] * (*B)[k][j];
++      }
++  #pragma omp parallel for lastprivate(j, k)
++  for (i = 0; i < _PB_NI; i++)
++    for (j = 0; j < _PB_NL; j++)
++      {
++	(*D)[i][j] *= beta;
++	for (k = 0; k < _PB_NJ; ++k)
++	  (*D)[i][j] += (*tmp)[i][k] * (*C)[k][j];
++      }
+ 
+   /* Stop and print timer. */
+   pb_timer_stop();

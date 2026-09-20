@@ -1,0 +1,115 @@
+
+============================================================
+  DiscoPoP Agentic Controller
+============================================================
+  Source         : /Users/ahmedsamir/new_benchmark_harness/agent/runs/dp_alone_look_mac/benchmarks/polybench/jacobi-2d-imper/discopop_gate/none/rep1/work/jacobi-2d-imper.c
+  DiscoPoP dir   : .discopop
+  Model          : none
+  Budget         : 0 LLM retries/region (+2 free build fixes)
+  λ penalty      : 1.0
+  Min workload   : 0.0
+  Restruct. depth: 0 (Tier-2 allowed at depth 0–0)
+  Quality gate   : Tier-1 = all but speed, no escalation; Tier-2 = full
+  TSan           : barrier-aware (archer: /Users/ahmedsamir/.local/lib/libarcher.dylib)
+  Speedup gate   : OFF (--no-require-speedup)
+  Dry run        : False
+  LLM mode       : none
+  Edit mode      : direct
+  Re-profiling   : fast refresh (compile only) between rewrites; full before a deeper level and before Phase B
+  Pragmas        : LLM writes them with the rewrite, gate decides (--llm-pragmas)
+============================================================
+
+  Project        : /Users/ahmedsamir/new_benchmark_harness/agent/runs/dp_alone_look_mac/benchmarks/polybench/jacobi-2d-imper/discopop_gate/none/rep1/work  (2 unit(s): jacobi-2d-imper.c, polybench.c)
+
+  [ok] Captured reference output on 2 inputs (69 bytes, 2.4 ms baseline) for the correctness/performance gates.
+
+  [ok] Numerical noise floor 0 — 6 build variants agreed exactly; output is compared byte-for-byte.
+
+  Hotspots       : measured per-region runtimes are available — 19 region(s) measured, 41.0 ms total, ranking by predicted time saved at 8 threads
+
+  Baseline       : DiscoPoP proposes 4 applicable pattern(s) unaided; 4 of them produce a usable pragma
+                   → the run beats DiscoPoP by ending with more than 4
+
+  Initial candidates
+Region ID    Type           Saves    % run    Hot  Tier  Depth  Name
+--------------------------------------------------------------------------------------
+  1:78       loop         15.5 ms    43.3%    YES     2      0  lines 68–76
+  3:75       function     15.5 ms    43.3%    YES     2      0  kernel_jacobi_2d_imper
+  1:81       loop         11.0 ms    30.5%    YES     1      0  lines 70–72
+  1:84       loop         10.8 ms    30.1%    YES     1      0  lines 71–72
+  1:91       loop          4.6 ms    12.7%  MAYBE     1      0  lines 73–75
+  1:94       loop          4.4 ms    12.2%  MAYBE     1      0  lines 74–75
+
+============================================================
+  PHASE A — restructure  (the source stays pragma-free)
+============================================================
+
+┌─ [depth=0] loop 1:78 (lines 68–76)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] function 3:75 (lines 60–79)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:81 (lines 70–72)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:84 (lines 71–72)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:91 (lines 73–75)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:94 (lines 74–75)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+
+============================================================
+  PHASE B — annotate  (4 candidate pragma(s))
+============================================================
+
+  5 loop(s) are already parallel in the source; nothing is nested inside them.
+
+┌─ pattern #47  do_all @ lines 70–72  (W=4960080)
+│  #pragma omp parallel for
+│  [Phase-B] Original backed up → jacobi-2d-imper.c.original
+│  [Phase-B] Applied to jacobi-2d-imper.c
+└─ APPLIED
+
+┌─ pattern #46  do_all @ lines 71–72  (W=4980)
+│  #pragma omp parallel for
+│  nested inside the already-parallelized region at lines 70–72
+└─ SKIPPED (enclosing loop is already parallel)
+
+┌─ pattern #49  do_all @ lines 73–75  (W=4960080)
+│  #pragma omp parallel for
+│  [Phase-B] Applied to jacobi-2d-imper.c
+└─ APPLIED
+
+┌─ pattern #48  do_all @ lines 74–75  (W=500)
+│  #pragma omp parallel for
+│  nested inside the already-parallelized region at lines 73–75
+└─ SKIPPED (enclosing loop is already parallel)
+
+============================================================
+  SETTLING — verify the finished source, drop what does not hold up
+============================================================
+  [ok] finished source verified — output matches the original
+
+
+============================================================
+  SUMMARY: 0 rewrite(s) kept  |  2 pragma(s) applied  |  2 skipped
+  DiscoPoP unaided: 4 usable pragma(s) in this profile's draw  →  this run: 2   [BELOW, informational]
+    ✓  loop 1:81  [Phase-B pragma]  depth=0
+    ✓  loop 1:91  [Phase-B pragma]  depth=0
+    ✗  1:78  [skipped]  depth=0
+    ✗  3:75  [skipped]  depth=0
+
+  Results → .discopop/agent_patches/accepted.json
+============================================================
+

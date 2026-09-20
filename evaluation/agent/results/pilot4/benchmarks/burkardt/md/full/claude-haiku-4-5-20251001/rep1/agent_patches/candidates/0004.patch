@@ -1,0 +1,51 @@
+--- md.cpp
++++ md.cpp
+@@ -141,30 +141,41 @@
+   compute ( np, nd, pos, vel, mass, force, &potential, &kinetic );
+   e0 = potential + kinetic;
+ 
+-  step_print = 0;
+-  step_print_index = 0;
+   step_print_num = 10;
+   pb_emit ( potential );
+   pb_emit ( kinetic );
+   pb_emit ( ( potential + kinetic - e0 ) / e0 );
+-  step_print_index = step_print_index + 1;
+-  step_print = ( step_print_index * step_num ) / step_print_num;
++
++  /* Precompute which steps should emit output: removes step_print loop-carried dependence.
++     The emission schedule is determined entirely by iteration count, not loop state. */
++  bool *emit_at_step = new bool[step_num + 1];
++  for ( int i = 0; i <= step_num; i++ )
++    {
++      emit_at_step[i] = false;
++    }
++  for ( int i = 1; i <= step_print_num; i++ )
++    {
++      int step_to_emit = ( i * step_num ) / step_print_num;
++      if ( step_to_emit >= 1 && step_to_emit <= step_num )
++        {
++          emit_at_step[step_to_emit] = true;
++        }
++    }
+ 
+   pb_timer_start ( );
+   for ( step = 1; step <= step_num; step++ )
+     {
+       compute ( np, nd, pos, vel, mass, force, &potential, &kinetic );
+-      if ( step == step_print )
++      if ( emit_at_step[step] )
+         {
+           pb_emit ( potential );
+           pb_emit ( kinetic );
+           pb_emit ( ( potential + kinetic - e0 ) / e0 );
+-          step_print_index = step_print_index + 1;
+-          step_print = ( step_print_index * step_num ) / step_print_num;
+         }
+       update ( np, nd, pos, vel, force, acc, mass, dt );
+     }
+   pb_timer_stop ( );
++  delete [] emit_at_step;
+ 
+ #ifndef PB_FULL_DUMP
+   /* Digest only. The original never prints positions, so the full dump stays exactly the

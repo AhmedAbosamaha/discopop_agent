@@ -1,0 +1,10 @@
+--- /Users/ahmedsamir/new_benchmark_harness/agent/runs/dp_alone_look_mac/benchmarks/polybench/doitgen/discopop_gate/none/rep1/work/doitgen.c
++++ /Users/ahmedsamir/new_benchmark_harness/agent/runs/dp_alone_look_mac/benchmarks/polybench/doitgen/discopop_gate/none/rep1/work/doitgen.c
+@@ -68,6 +68,7 @@
+ #pragma scop
+   for (r = 0; r < _PB_NR; r++)
+     for (q = 0; q < _PB_NQ; q++)  {
++      #pragma omp parallel for firstprivate(np) shared(C4,A) 
+       for (p = 0; p < _PB_NP; p++)  {
+ 	sum[r][q][p] = 0;
+ 	for (s = 0; s < _PB_NP; s++)

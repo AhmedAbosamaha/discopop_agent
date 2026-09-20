@@ -1,0 +1,29 @@
+--- original.c
++++ final.c
+@@ -448,7 +448,25 @@
+   if (argc > 1)
+     {
+       unsigned long long pb_state = pb_seed(argv[1]);
+-      PB_PERTURB(A, (N + POLYBENCH_PADDING_FACTOR) * (N + POLYBENCH_PADDING_FACTOR));
++
++      /* Separate sequential RNG from parallel perturbation application.
++         pb_uniform has a sequential RAW dependency on pb_state; pre-generate
++         all values, then apply them in parallel to array elements. */
++      DATA_TYPE* pb_p = (DATA_TYPE*)(POLYBENCH_ARRAY(A));
++      unsigned long long pb_n = (N + POLYBENCH_PADDING_FACTOR) * (N + POLYBENCH_PADDING_FACTOR);
++
++      /* Sequential: generate random perturbations (LCG state must be sequential) */
++      DATA_TYPE* pb_perturb = (DATA_TYPE*)malloc(pb_n * sizeof(DATA_TYPE));
++      unsigned long long pb_k;
++      for (pb_k = 0; pb_k < pb_n; pb_k++)
++        pb_perturb[pb_k] = (DATA_TYPE)(pb_uniform(&pb_state) * 3.0);
++
++      /* Parallel: apply perturbations (Do-All loop, no loop-carried deps) */
++      #pragma omp parallel for shared(pb_p, pb_perturb, pb_n) private(pb_k)
++      for (pb_k = 0; pb_k < pb_n; pb_k++)
++        pb_p[pb_k] += pb_perturb[pb_k];
++
++      free(pb_perturb);
+     }
+ 
+ 

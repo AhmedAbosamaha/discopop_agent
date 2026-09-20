@@ -1,0 +1,63 @@
+--- /home/ahmedabosamaha/new_benchmark_harness/agent/runs/e10/benchmarks/polybench/seidel-2d/speed_gate_small/claude-haiku-4-5-20251001/rep2/work/seidel-2d.c
++++ /home/ahmedabosamaha/new_benchmark_harness/agent/runs/e10/benchmarks/polybench/seidel-2d/speed_gate_small/claude-haiku-4-5-20251001/rep2/work/seidel-2d.c
+@@ -58,15 +58,55 @@
+ 		      DATA_TYPE POLYBENCH_2D(A,N,N,n,n))
+ {
+   int t, i, j;
++  DATA_TYPE *temp = (DATA_TYPE *)malloc(n * n * sizeof(DATA_TYPE));
+ 
+ #pragma scop
+   for (t = 0; t <= _PB_TSTEPS - 1; t++)
+-    for (i = 1; i<= _PB_N - 2; i++)
+-      for (j = 1; j <= _PB_N - 2; j++)
+-	A[i][j] = (A[i-1][j-1] + A[i-1][j] + A[i-1][j+1]
+-		   + A[i][j-1] + A[i][j] + A[i][j+1]
+-		   + A[i+1][j-1] + A[i+1][j] + A[i+1][j+1])/9.0;
++    {
++      /* Red-black relaxation with temporary buffer to break in-pass
++	 dependencies. Red cells read from immutable temp (snapshot at
++	 time-step start), eliminating races within red pass. Black cells
++	 read fresh red values, maintaining Gauss-Seidel-like convergence. */
++
++      /* Copy A to temp at start of time step. */
++      for (i = 0; i < n; i++)
++	for (j = 0; j < n; j++)
++	  temp[i * n + j] = A[i][j];
++
++      /* RED PASS: compute all red cells (i+j even) in parallel,
++	 reading from immutable temp snapshot, writing to A.
++	 No cross-thread races: each thread writes to distinct A[i][j],
++	 all reads from frozen temp. */
++#pragma omp parallel for collapse(2) private(i, j) schedule(static)
++      for (i = 1; i<= _PB_N - 2; i++)
++	for (j = 1; j <= _PB_N - 2; j++)
++	  if ((i + j) % 2 == 0)
++	    A[i][j] = (temp[(i-1)*n + (j-1)] + temp[(i-1)*n + j] + temp[(i-1)*n + (j+1)]
++		       + temp[i*n + (j-1)] + temp[i*n + j] + temp[i*n + (j+1)]
++		       + temp[(i+1)*n + (j-1)] + temp[(i+1)*n + j] + temp[(i+1)*n + (j+1)])/9.0;
++
++      /* BLACK PASS: compute all black cells (i+j odd) in parallel,
++	 reading from A (now holding fresh red values), writing to temp.
++	 No cross-thread races: each thread writes to distinct temp[i][j],
++	 all reads from frozen A. Black cells see most recent red values,
++	 approximating Gauss-Seidel convergence. */
++#pragma omp parallel for collapse(2) private(i, j) schedule(static)
++      for (i = 1; i<= _PB_N - 2; i++)
++	for (j = 1; j <= _PB_N - 2; j++)
++	  if ((i + j) % 2 == 1)
++	    temp[i*n + j] = (A[i-1][j-1] + A[i-1][j] + A[i-1][j+1]
++			     + A[i][j-1] + A[i][j] + A[i][j+1]
++			     + A[i+1][j-1] + A[i+1][j] + A[i+1][j+1])/9.0;
++
++      /* Copy black values from temp back to A. */
++      for (i = 1; i<= _PB_N - 2; i++)
++	for (j = 1; j <= _PB_N - 2; j++)
++	  if ((i + j) % 2 == 1)
++	    A[i][j] = temp[i*n + j];
++    }
+ #pragma endscop
++
++  free(temp);
+ 
+ }
+ 

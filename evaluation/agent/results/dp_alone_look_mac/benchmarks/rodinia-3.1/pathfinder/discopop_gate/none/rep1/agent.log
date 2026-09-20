@@ -1,0 +1,110 @@
+
+============================================================
+  DiscoPoP Agentic Controller
+============================================================
+  Source         : pathfinder.cpp
+  DiscoPoP dir   : .discopop
+  Model          : none
+  Budget         : 0 LLM retries/region (+2 free build fixes)
+  λ penalty      : 1.0
+  Min workload   : 0.0
+  Restruct. depth: 0 (Tier-2 allowed at depth 0–0)
+  Quality gate   : Tier-1 = all but speed, no escalation; Tier-2 = full
+  TSan           : barrier-aware (archer: /Users/ahmedsamir/.local/lib/libarcher.dylib)
+  Speedup gate   : OFF (--no-require-speedup)
+  Dry run        : False
+  LLM mode       : none
+  Edit mode      : direct
+  Re-profiling   : fast refresh (compile only) between rewrites; full before a deeper level and before Phase B
+  Pragmas        : LLM writes them with the rewrite, gate decides (--llm-pragmas)
+============================================================
+
+  [ok] Captured reference output on 2 inputs (56 bytes, 10.3 ms baseline) for the correctness/performance gates.
+
+  [ok] Numerical noise floor 0 — output holds no non-integer number; the floor is 0 by construction, so the remaining build variants were skipped; output is compared byte-for-byte.
+
+  Hotspots       : measured per-region runtimes are available — 14 region(s) measured, 853.8 ms total, ranking by predicted time saved at 8 threads
+
+  Baseline       : DiscoPoP proposes 4 applicable pattern(s) unaided; 3 of them produce a usable pragma (1 rejected before it could run)
+                   → the run beats DiscoPoP by ending with more than 3
+
+  Initial candidates
+Region ID    Type           Saves    % run    Hot  Tier  Depth  Name
+--------------------------------------------------------------------------------------
+  0:0        function    747.0 ms   100.0%    YES     2      0  main
+  1:31       loop        568.7 ms    76.1%    YES     1      0  lines 170–172
+  1:34       loop        568.7 ms    76.1%    YES     1      0  lines 171–172
+  1:7        loop        100.5 ms    13.5%  MAYBE     2      0  lines 153–165
+  1:12       loop        100.5 ms    13.4%  MAYBE     2      0  lines 157–164
+  1:101      loop         64.0 ms     8.6%  MAYBE     1      0  lines 135–137
+  1:104      loop         64.0 ms     8.6%  MAYBE     1      0  lines 136–137
+
+============================================================
+  PHASE A — restructure  (the source stays pragma-free)
+============================================================
+
+┌─ [depth=0] function 0:0 (lines 142–181)  score=0.7
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:31 (lines 170–172)  score=0.6
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:34 (lines 171–172)  score=0.6
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:7 (lines 153–165)  score=0.1
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:12 (lines 157–164)  score=0.1
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:101 (lines 135–137)  score=0.1
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:104 (lines 136–137)  score=0.1
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+
+============================================================
+  PHASE B — annotate  (4 candidate pragma(s))
+============================================================
+
+┌─ pattern #44  do_all @ lines 170–172  (W=20000000)
+│  #pragma omp parallel for
+│  gate failed at 'tsan': Race detected: WARNING: ThreadSanitizer: data race (pid=28478)   Write of size 8 at 0x00010fdb80d0 by main thread:     #0 main.omp_outlined pathfinder
+└─ DROPPED
+
+┌─ pattern #43  do_all @ lines 171–172  (W=100000)
+│  #pragma omp parallel for
+│  gate failed at 'tsan': Race detected: WARNING: ThreadSanitizer: data race (pid=28505)   Write of size 8 at 0x00010c35c0d0 by main thread:     #0 main.omp_outlined pathfinder
+└─ DROPPED
+
+┌─ pattern #52  do_all @ lines 135–137  (W=20000000)
+│  #pragma omp parallel for
+│  [Tier-1] Repairing the generated pragma: j is declared inside the loop body, so cannot appear in a clause
+│  gate failed at 'schedules': the program does not repeat itself: two runs at the SAME thread count (4) printed different output. That is a data race, independent of how small the 
+└─ DROPPED
+
+┌─ pattern #51  do_all @ lines 136–137  (W=100000)
+│  #pragma omp parallel for
+│  gate failed at 'schedules': the program does not repeat itself: two runs at the SAME thread count (4) printed different output. That is a data race, independent of how small the 
+└─ DROPPED
+
+
+============================================================
+  SUMMARY: 0 rewrite(s) kept  |  0 pragma(s) applied  |  3 skipped
+  DiscoPoP unaided: 3 usable pragma(s) in this profile's draw  →  this run: 0   [BELOW, informational]
+    ✗  0:0  [skipped]  depth=0
+    ✗  1:7  [skipped]  depth=0
+    ✗  1:12  [skipped]  depth=0
+
+  Results → .discopop/agent_patches/accepted.json
+============================================================
+

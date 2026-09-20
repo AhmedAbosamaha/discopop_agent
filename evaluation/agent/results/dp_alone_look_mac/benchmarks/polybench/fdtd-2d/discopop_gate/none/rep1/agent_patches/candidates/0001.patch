@@ -1,0 +1,10 @@
+--- /Users/ahmedsamir/new_benchmark_harness/agent/runs/dp_alone_look_mac/benchmarks/polybench/fdtd-2d/discopop_gate/none/rep1/work/fdtd-2d.c
++++ /Users/ahmedsamir/new_benchmark_harness/agent/runs/dp_alone_look_mac/benchmarks/polybench/fdtd-2d/discopop_gate/none/rep1/work/fdtd-2d.c
+@@ -88,6 +88,7 @@
+ 	for (j = 0; j < _PB_NY; j++)
+ 	  ey[i][j] = ey[i][j] - 0.5*(hz[i][j]-hz[i-1][j]);
+       for (i = 0; i < _PB_NX; i++)
++	#pragma omp parallel for firstprivate(i,ny) shared(ex,hz) 
+ 	for (j = 1; j < _PB_NY; j++)
+ 	  ex[i][j] = ex[i][j] - 0.5*(hz[i][j]-hz[i][j-1]);
+       for (i = 0; i < _PB_NX - 1; i++)

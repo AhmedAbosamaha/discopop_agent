@@ -1,0 +1,47 @@
+--- /home/ahmedabosamaha/new_benchmark_harness/agent/runs/e10/benchmarks/polybench/seidel-2d/full/claude-haiku-4-5-20251001/rep2/work/seidel-2d.c
++++ /home/ahmedabosamaha/new_benchmark_harness/agent/runs/e10/benchmarks/polybench/seidel-2d/full/claude-haiku-4-5-20251001/rep2/work/seidel-2d.c
+@@ -57,15 +57,38 @@
+ 		      int n,
+ 		      DATA_TYPE POLYBENCH_2D(A,N,N,n,n))
+ {
+-  int t, i, j;
++  int t, i, j, diag;
+ 
+ #pragma scop
++  /* Process each time step sequentially (t-loop has data dependencies between steps) */
+   for (t = 0; t <= _PB_TSTEPS - 1; t++)
+-    for (i = 1; i<= _PB_N - 2; i++)
+-      for (j = 1; j <= _PB_N - 2; j++)
+-	A[i][j] = (A[i-1][j-1] + A[i-1][j] + A[i-1][j+1]
+-		   + A[i][j-1] + A[i][j] + A[i][j+1]
+-		   + A[i+1][j-1] + A[i+1][j] + A[i+1][j+1])/9.0;
++    /* Use anti-diagonal ordering: process all cells where i+j=diag in parallel.
++       This preserves Gauss-Seidel (using updated values from same sweep) while
++       exposing parallelism: all cells on a diagonal are independent. */
++    for (diag = 2; diag <= 2 * (_PB_N - 2); diag++)
++      {
++        /* For this diagonal, compute valid bounds for i:
++           i+j = diag, 1 <= i <= N-2, 1 <= j <= N-2
++           => 1 <= i <= N-2 and 1 <= diag-i <= N-2
++           => i_start = max(1, diag-(N-2))
++           => i_end = min(N-2, diag-1) */
++        int i_start = (diag > _PB_N - 1) ? (diag - (_PB_N - 2)) : 1;
++        int i_end = (diag <= _PB_N - 1) ? (diag - 1) : (_PB_N - 2);
++
++        /* Parallel loop over i; j is computed from diag and i.
++           - i: induction variable (privatized by omp parallel for)
++           - j: derived from i, computed inside loop (local to each iteration)
++           - t, diag: shared loop indices, read-only within this loop
++           - A: shared array, elements A[i][j] written, neighbors read */
++#pragma omp parallel for private(j)
++        for (i = i_start; i <= i_end; i++)
++          {
++            j = diag - i;
++            A[i][j] = (A[i-1][j-1] + A[i-1][j] + A[i-1][j+1]
++                       + A[i][j-1] + A[i][j] + A[i][j+1]
++                       + A[i+1][j-1] + A[i+1][j] + A[i+1][j+1])/9.0;
++          }
++      }
+ #pragma endscop
+ 
+ }

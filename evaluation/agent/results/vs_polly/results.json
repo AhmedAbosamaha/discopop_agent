@@ -1,0 +1,112 @@
+{
+  "run_id": "vs_polly",
+  "harness": "agent",
+  "timestamp": "vs_polly",
+  "invocation": {
+    "kind": "baselines",
+    "benchmarks": [
+      "polybench/2mm"
+    ],
+    "verify_size": "per_kernel",
+    "threads": [
+      24
+    ],
+    "repeats": 1,
+    "check_seed": "7",
+    "cc": "/usr/lib/llvm-20/bin/clang",
+    "cxx": "/usr/bin/clang++-20",
+    "host": "rms14562",
+    "platform": "Linux-6.8.0-138-generic-x86_64-with-glibc2.39",
+    "harness_git": {
+      "path": "/home/ahmedabosamaha/new_benchmark_harness",
+      "head": "40fd846c98ae54c05bde7ea48ed04bc02d5840c7",
+      "branch": "agent-experiments",
+      "dirty_sha256": "2c40e6278d2e9893ba1f65852c238a1865c37c0b5603573955c3b32b36b01e22"
+    },
+    "argv": [
+      "agent/benchmark",
+      "verify-source",
+      "polybench/2mm",
+      "--label",
+      "polly",
+      "--cc",
+      "/usr/lib/llvm-20/bin/clang",
+      "--final-flags",
+      "-mllvm -polly -mllvm -polly-parallel -mllvm -polly-process-unprofitable",
+      "--repeats",
+      "1",
+      "--threads",
+      "24",
+      "--run-id",
+      "vs_polly"
+    ]
+  },
+  "runs": [
+    {
+      "benchmark": "polybench/2mm",
+      "kernel": "2mm",
+      "source": "2mm.c",
+      "arm": "polly",
+      "model": "none",
+      "repeat": 1,
+      "kind": "baseline",
+      "candidate": "/home/ahmedabosamaha/new_benchmark_harness/agent/prepared/polybench/2mm/2mm.c",
+      "candidate_sha256": "d5d788355c53f975d844e4fd285c45fb1b329e425f8fac9f2f5e319dde933840",
+      "source_changed": false,
+      "pragmas_in_final": 0,
+      "started_at": "2026-09-16T07:16:57",
+      "host_load_start": [
+        3.3408203125,
+        2.58349609375,
+        2.36328125
+      ],
+      "verify": {
+        "verify_size": "STANDARD",
+        "threads": [
+          24
+        ],
+        "repeats": 1,
+        "compiler": "/usr/lib/llvm-20/bin/clang",
+        "final_flags": [
+          "-mllvm",
+          "-polly",
+          "-mllvm",
+          "-polly-parallel",
+          "-mllvm",
+          "-polly-process-unprofitable"
+        ],
+        "dump_exact": true,
+        "seed": "7",
+        "dump_exact_seeded": true,
+        "seq_median_s": 7.3311,
+        "seq_kernel_median_s": 7.32036,
+        "timing_basis": "kernel",
+        "par": {
+          "24": {
+            "median_s": 0.2199,
+            "program_speedup": 33.339,
+            "max_rel_err": 0.0,
+            "kernel_median_s": 0.208,
+            "kernel_speedup": 35.194,
+            "speedup": 35.194
+          }
+        },
+        "digest_max_rel_err": 0.0,
+        "stable_at_fixed_threads": true,
+        "kernel_program_disagree": false,
+        "digest_seeded_rel_err": 0.0,
+        "status": "ok",
+        "speed_measurable": true
+      },
+      "verify_s": 17.6,
+      "status": "done",
+      "outcome": "FASTER",
+      "finished_at": "2026-09-16T07:17:15",
+      "host_load_end": [
+        3.8427734375,
+        2.74267578125,
+        2.42041015625
+      ]
+    }
+  ]
+}

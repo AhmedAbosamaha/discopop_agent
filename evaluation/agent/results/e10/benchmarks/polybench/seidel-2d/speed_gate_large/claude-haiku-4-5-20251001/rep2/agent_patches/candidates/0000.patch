@@ -1,0 +1,39 @@
+--- /home/ahmedabosamaha/new_benchmark_harness/agent/runs/e10/benchmarks/polybench/seidel-2d/speed_gate_large/claude-haiku-4-5-20251001/rep2/work/seidel-2d.c
++++ /home/ahmedabosamaha/new_benchmark_harness/agent/runs/e10/benchmarks/polybench/seidel-2d/speed_gate_large/claude-haiku-4-5-20251001/rep2/work/seidel-2d.c
+@@ -58,16 +58,32 @@
+ 		      DATA_TYPE POLYBENCH_2D(A,N,N,n,n))
+ {
+   int t, i, j;
++  /* Allocate temporary buffer for Jacobi-style update (decouples iterations) */
++  DATA_TYPE (*A_tmp)[n] = (DATA_TYPE (*)[n])malloc(n * n * sizeof(DATA_TYPE));
+ 
+ #pragma scop
+-  for (t = 0; t <= _PB_TSTEPS - 1; t++)
++  for (t = 0; t <= _PB_TSTEPS - 1; t++) {
++    /* Compute stencil in parallel: read from A, write to A_tmp (independent iterations).
++       Shared: A (read-only), A_tmp (each thread writes disjoint A_tmp[i][j]).
++       Private: i, j (implicitly privatized by collapse(2)). */
++    #pragma omp parallel for collapse(2) private(i,j)
+     for (i = 1; i<= _PB_N - 2; i++)
+       for (j = 1; j <= _PB_N - 2; j++)
+-	A[i][j] = (A[i-1][j-1] + A[i-1][j] + A[i-1][j+1]
+-		   + A[i][j-1] + A[i][j] + A[i][j+1]
+-		   + A[i+1][j-1] + A[i+1][j] + A[i+1][j+1])/9.0;
++	A_tmp[i][j] = (A[i-1][j-1] + A[i-1][j] + A[i-1][j+1]
++		       + A[i][j-1] + A[i][j] + A[i][j+1]
++		       + A[i+1][j-1] + A[i+1][j] + A[i+1][j+1])/9.0;
++
++    /* Copy result back to A for next time step.
++       Shared: A (write-only disjoint elements), A_tmp (read-only).
++       Private: i, j (implicitly privatized by collapse(2)). */
++    #pragma omp parallel for collapse(2) private(i,j)
++    for (i = 1; i<= _PB_N - 2; i++)
++      for (j = 1; j <= _PB_N - 2; j++)
++	A[i][j] = A_tmp[i][j];
++  }
+ #pragma endscop
+ 
++  free(A_tmp);
+ }
+ 
+ 

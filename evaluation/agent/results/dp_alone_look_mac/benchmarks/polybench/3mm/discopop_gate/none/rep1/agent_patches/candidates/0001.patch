@@ -1,0 +1,10 @@
+--- /Users/ahmedsamir/new_benchmark_harness/agent/runs/dp_alone_look_mac/benchmarks/polybench/3mm/discopop_gate/none/rep1/work/3mm.c
++++ /Users/ahmedsamir/new_benchmark_harness/agent/runs/dp_alone_look_mac/benchmarks/polybench/3mm/discopop_gate/none/rep1/work/3mm.c
+@@ -86,6 +86,7 @@
+ 	  E[i][j] += A[i][k] * B[k][j];
+       }
+   /* F := C*D */
++  #pragma omp parallel for firstprivate(nm,nj,nl) private(k,j) shared(F,C,D) 
+   for (i = 0; i < _PB_NJ; i++)
+     for (j = 0; j < _PB_NL; j++)
+       {

@@ -1,0 +1,253 @@
+{
+  "run_id": "dp_alone_fix84_mac",
+  "harness": "agent",
+  "timestamp": "dp_alone_fix84_mac",
+  "invocation": {
+    "benchmarks": [
+      "polybench/atax"
+    ],
+    "arms": [
+      "discopop_gate"
+    ],
+    "models": [
+      "none"
+    ],
+    "repeats_per_trial": 1,
+    "provider": "claude-agent-sdk",
+    "edit_mode": "direct",
+    "extra_agent_args": [],
+    "verify_size": "per_kernel",
+    "threads": [
+      4
+    ],
+    "repeats": 3,
+    "timeout_s": 5400,
+    "check_seed": "7",
+    "min_runtime_share": 0.0,
+    "cc": "/usr/local/Cellar/llvm@19/19.1.7/bin/clang",
+    "cxx": "/usr/local/Cellar/llvm@19/19.1.7/bin/clang++",
+    "host": "ahmeds-MacBook-Pro.local",
+    "platform": "macOS-10.16-x86_64-i386-64bit",
+    "agent_git": {
+      "path": "/Users/ahmedsamir/discopop_agent",
+      "head": "6eefbdf04627f666d34f4b17c560e432e17db232",
+      "branch": "agentic_DiscoPop",
+      "dirty_sha256": "c1d6f5236f24e989d7db69d631daf52e54999ff1a2fc4bcc0e87952b44db8ff0"
+    },
+    "harness_git": {
+      "path": "/Users/ahmedsamir/new_benchmark_harness",
+      "head": "13af1efe815fbfbf2d20e9be8bb90d20339ad603",
+      "branch": "agent-experiments",
+      "dirty_sha256": "79661d7f7a0cf01ab66092a04868473168d337134b49ac2a883e680df0ac1b3c"
+    },
+    "argv": [
+      "./agent/benchmark",
+      "run",
+      "polybench/atax",
+      "--arms",
+      "discopop_gate",
+      "--models",
+      "none",
+      "--trials",
+      "1",
+      "--threads",
+      "4",
+      "--repeats",
+      "3",
+      "--run-id",
+      "dp_alone_fix84_mac"
+    ],
+    "tool_versions": {
+      "claude_agent_sdk": "0.2.128",
+      "claude_cli_bundled": "2.1.220 (Claude Code)"
+    },
+    "common_flags": [
+      "--no-require-speedup",
+      "--min-runtime-share",
+      "0.01"
+    ],
+    "timing_sizes": {},
+    "verify_sizes": {
+      "polybench/atax": "LARGE"
+    },
+    "arm_flags": {
+      "discopop_gate": [
+        "--budget",
+        "0"
+      ]
+    }
+  },
+  "runs": [
+    {
+      "benchmark": "polybench/atax",
+      "kernel": "atax",
+      "source": "atax.c",
+      "arm": "discopop_gate",
+      "model": "none",
+      "arm_flags": [
+        "--no-require-speedup",
+        "--min-runtime-share",
+        "0.01",
+        "--budget",
+        "0"
+      ],
+      "started_at": "2026-09-19T20:06:49",
+      "host_load_start": [
+        9.75439453125,
+        9.04931640625,
+        6.5546875
+      ],
+      "agent_cmd": [
+        "/Users/ahmedsamir/discopop_agent/venv/bin/python",
+        "-m",
+        "discopop_agent",
+        "--project-dir",
+        ".",
+        "--project-units",
+        "atax.c,polybench.c",
+        "--project-include",
+        ".",
+        "--discopop-dir",
+        ".discopop",
+        "--provider",
+        "claude-agent-sdk",
+        "--model",
+        "none",
+        "--edit-mode",
+        "direct",
+        "--no-require-speedup",
+        "--min-runtime-share",
+        "0.01",
+        "--budget",
+        "0",
+        "--check-input",
+        "7",
+        "--exclude-functions",
+        "print_array,init_array,main,pb_emit,pb_report,pb_seed,pb_uniform,pb_timer_start,pb_timer_stop,rtclock,polybench_flush_cache,polybench_linux_fifo_scheduler,polybench_linux_standard_scheduler,test_fail,polybench_papi_init,polybench_papi_close,polybench_papi_start_counter,polybench_papi_stop_counter,polybench_papi_print,polybench_prepare_instruments,polybench_timer_start,polybench_timer_stop,polybench_timer_print,xmalloc,polybench_alloc_data"
+      ],
+      "agent_s": 47.1,
+      "agent_rc": 0,
+      "llm_calls": 0,
+      "llm_call_failures": 0,
+      "explorer_retries": 0,
+      "reverts": 0,
+      "gate_failures_phase_a": {},
+      "gate_failures_phase_b": {
+        "tsan": 2
+      },
+      "gate_passes_phase_a": 0,
+      "region_verdicts": {
+        "DEFERRED": 3,
+        "SKIPPED": 1,
+        "DROPPED": 2,
+        "APPLIED": 1
+      },
+      "settle_dropped": 0,
+      "baseline_claimed": 3,
+      "baseline_pragmas": 3,
+      "rewrites_kept": 0,
+      "pragmas_applied": 1,
+      "pragmas_discopop": 1,
+      "pragmas_llm": 0,
+      "regions_skipped": 1,
+      "llm_usage": null,
+      "layout": "project",
+      "files_changed": [
+        "atax.c"
+      ],
+      "source_changed": true,
+      "scaffold": {
+        "ok": true,
+        "problems": [],
+        "applies": true
+      },
+      "pragmas_added": 1,
+      "pragmas_in_final": 1,
+      "candidates_recorded": 3,
+      "verify": {
+        "verify_size": "LARGE",
+        "threads": [
+          4
+        ],
+        "repeats": 3,
+        "compiler": "/usr/local/Cellar/llvm@19/19.1.7/bin/clang",
+        "final_flags": [],
+        "dump_exact": true,
+        "dump_max_rel_err": 0.0,
+        "seed": "7",
+        "dump_exact_seeded": true,
+        "dump_seeded_max_rel_err": 0.0,
+        "seq_median_s": 0.4883,
+        "seq_kernel_median_s": 0.123769,
+        "timing_basis": "kernel",
+        "par": {
+          "4": {
+            "median_s": 0.4857,
+            "program_speedup": 1.005,
+            "max_rel_err": 0.0,
+            "kernel_median_s": 0.119239,
+            "kernel_speedup": 1.038,
+            "speedup": 1.038
+          }
+        },
+        "digest_max_rel_err": 0.0,
+        "stable_at_fixed_threads": true,
+        "kernel_program_disagree": false,
+        "digest_seeded_rel_err": 0.0,
+        "status": "ok",
+        "speed_measurable": false
+      },
+      "verify_s": 10.7,
+      "status": "done",
+      "outcome": "parallel-speed-not-measurable",
+      "finished_at": "2026-09-19T20:07:47",
+      "host_load_end": [
+        9.29443359375,
+        8.95458984375,
+        6.66796875
+      ],
+      "profile": {
+        "wrapper": "discopop_cc",
+        "layout": "project",
+        "units": [
+          "atax.c",
+          "polybench.c"
+        ],
+        "instrument_s": 2.31,
+        "profiled_run_s": 0.81,
+        "explore_s": 19.78,
+        "explore_attempts": 1,
+        "explore_failures": [],
+        "patterns": {
+          "optimizer_output": 0,
+          "merged_pattern": 0,
+          "task": 18,
+          "do_all": 13,
+          "reduction": 0
+        },
+        "profile_sha256": "3fb676ff128a47b30b5584f48fc9cbda415b5e73b8e5165b3d7f6d3dfe53e661"
+      },
+      "package_integrity": {
+        "before": {
+          "checked": "before trial",
+          "at": "2026-09-19T20:06:49",
+          "prepared_sha256": "16f5332914ab1f73597dab4ecde346e59bdd5d4994dbc6968a262f51781d9419",
+          "packager_sha256": "16f5332914ab1f73597dab4ecde346e59bdd5d4994dbc6968a262f51781d9419",
+          "archived_sha256": "16f5332914ab1f73597dab4ecde346e59bdd5d4994dbc6968a262f51781d9419",
+          "profile_sha256": "3fb676ff128a47b30b5584f48fc9cbda415b5e73b8e5165b3d7f6d3dfe53e661",
+          "ok": true
+        },
+        "after": {
+          "checked": "after trial",
+          "at": "2026-09-19T20:07:47",
+          "prepared_sha256": "16f5332914ab1f73597dab4ecde346e59bdd5d4994dbc6968a262f51781d9419",
+          "packager_sha256": "16f5332914ab1f73597dab4ecde346e59bdd5d4994dbc6968a262f51781d9419",
+          "archived_sha256": "16f5332914ab1f73597dab4ecde346e59bdd5d4994dbc6968a262f51781d9419",
+          "profile_sha256": "3fb676ff128a47b30b5584f48fc9cbda415b5e73b8e5165b3d7f6d3dfe53e661",
+          "ok": true
+        }
+      },
+      "repeat": 1
+    }
+  ]
+}

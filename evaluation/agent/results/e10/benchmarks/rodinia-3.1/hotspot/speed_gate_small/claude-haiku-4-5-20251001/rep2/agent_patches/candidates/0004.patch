@@ -1,0 +1,35 @@
+--- hotspot.cpp
++++ hotspot.cpp
+@@ -250,18 +250,24 @@
+ 	#endif
+ 
+         {
+-            FLOAT* r = result;
+-            FLOAT* t = temp;
+-            for (int i = 0; i < num_iterations ; i++)
++            for (int i = 0; i < num_iterations; i++)
+             {
++                /* Privatize and first-write r and t based on iteration parity to match the original alternation
++                   without loop-carried dependence. Each iteration gets its own pointer pair. */
++                FLOAT* r;
++                FLOAT* t;
++                if (i % 2 == 0) {
++                    r = result;
++                    t = temp;
++                } else {
++                    r = temp;
++                    t = result;
++                }
+                 #ifdef VERBOSE
+-                fprintf(stdout, "iteration %d\n", i++);
++                fprintf(stdout, "iteration %d\n", i);
+                 #endif
+                 single_iteration(r, t, power, row, col, Cap_1, Rx_1, Ry_1, Rz_1, step);
+-                FLOAT* tmp = t;
+-                t = r;
+-                r = tmp;
+-            }	
++            }
+         }
+ 	#ifdef VERBOSE
+ 	fprintf(stdout, "iteration %d\n", i++);

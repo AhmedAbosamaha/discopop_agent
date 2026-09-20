@@ -1,0 +1,10 @@
+--- /Users/ahmedsamir/new_benchmark_harness/agent/runs/dp_alone_look_mac/benchmarks/polybench/ludcmp/discopop_gate/none/rep1/work/ludcmp.c
++++ /Users/ahmedsamir/new_benchmark_harness/agent/runs/dp_alone_look_mac/benchmarks/polybench/ludcmp/discopop_gate/none/rep1/work/ludcmp.c
+@@ -85,6 +85,7 @@
+       for (j = i+1; j <= _PB_N; j++)
+         {
+ 	  w = A[i+1][j];
++	  #pragma omp parallel for firstprivate(i,j) shared(A) reduction(+:w) 
+ 	  for (k = 0; k <= i; k++)
+ 	    w = w  - A[i+1][k] * A[k][j];
+ 	  A[i+1][j] = w;

@@ -1,0 +1,10 @@
+--- /Users/ahmedsamir/new_benchmark_harness/agent/runs/dp_alone_fix84_poly_mac/benchmarks/polybench/mvt/discopop_gate/none/rep1/work/mvt.c
++++ /Users/ahmedsamir/new_benchmark_harness/agent/runs/dp_alone_fix84_poly_mac/benchmarks/polybench/mvt/discopop_gate/none/rep1/work/mvt.c
+@@ -73,6 +73,7 @@
+   int i, j;
+ 
+ #pragma scop
++ #pragma omp parallel for private(j) shared(x1,y_1,A) 
+   for (i = 0; i < _PB_N; i++)
+     for (j = 0; j < _PB_N; j++)
+       x1[i] = x1[i] + A[i][j] * y_1[j];

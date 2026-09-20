@@ -1,0 +1,93 @@
+[
+  {
+    "region_id": "0:0",
+    "region_type": "function",
+    "tier": 2,
+    "patch_file": "/private/tmp/claude-501/-Users-ahmedsamir-discopop-agent/436822e3-c111-4da4-bd96-90a25b95970d/scratchpad/e2e_p2/.discopop/agent_patches/region_0_0_tier2.patch",
+    "reprofiled": true,
+    "discovery_depth": 0,
+    "evidence": {
+      "comparison": "exact",
+      "dependences": "no-blocker",
+      "dependences_detail": "the profiler covered lines 4-10 (17 RAW, 6 WAR, 1 WAW observed) and the Do-All detector recorded no blocker. Not proof the pragma is safe \u2014 the detector rules out what it can prove \u2014 so this neither passes nor fails the patch on its own",
+      "schedule_runtime_loops": 1,
+      "schedules": [
+        "T4/static#1",
+        "T4/static#2",
+        "T4/static#3",
+        "T1/static",
+        "T2/static",
+        "T4/dynamic,1",
+        "T4/guided"
+      ],
+      "reordered": false
+    },
+    "exposed_pattern": "1 LLM pragma(s): #pragma omp parallel for private(t) firstprivate(n)",
+    "pragmas": 1,
+    "pragma_text": [
+      "#pragma omp parallel for private(t) firstprivate(n)"
+    ],
+    "self_annotated": true
+  },
+  {
+    "region_id": "1:6",
+    "region_type": "loop",
+    "tier": 2,
+    "patch_file": "/private/tmp/claude-501/-Users-ahmedsamir-discopop-agent/436822e3-c111-4da4-bd96-90a25b95970d/scratchpad/e2e_p2/.discopop/agent_patches/region_1_6_tier2.patch",
+    "reprofiled": true,
+    "discovery_depth": 0,
+    "evidence": {
+      "comparison": "exact",
+      "dependences": "rewritten-code",
+      "dependences_detail": "the patch rewrites code, so the profile predates what is being parallelised; the sanitizer and the schedule matrix carry it",
+      "schedule_runtime_loops": 1,
+      "schedules": [
+        "T4/static#1",
+        "T4/static#2",
+        "T4/static#3",
+        "T1/static",
+        "T2/static",
+        "T4/dynamic,1",
+        "T4/guided"
+      ],
+      "reordered": false
+    },
+    "exposed_pattern": "1 LLM pragma(s): #pragma omp parallel for private(t) shared(a) firstprivate(n)",
+    "pragmas": 1,
+    "pragma_text": [
+      "#pragma omp parallel for private(t) shared(a) firstprivate(n)"
+    ],
+    "self_annotated": true
+  },
+  {
+    "region_id": "1:17",
+    "region_type": "loop",
+    "tier": 2,
+    "patch_file": "/private/tmp/claude-501/-Users-ahmedsamir-discopop-agent/436822e3-c111-4da4-bd96-90a25b95970d/scratchpad/e2e_p2/.discopop/agent_patches/region_1_17_tier2.patch",
+    "reprofiled": true,
+    "discovery_depth": 0,
+    "evidence": {
+      "comparison": "exact",
+      "dependences": "rewritten-code",
+      "dependences_detail": "the patch rewrites code, so the profile predates what is being parallelised; the sanitizer and the schedule matrix carry it",
+      "schedule_runtime_loops": 1,
+      "schedules": [
+        "T4/static#1",
+        "T4/static#2",
+        "T4/static#3",
+        "T1/static",
+        "T2/static",
+        "T4/dynamic,1",
+        "T4/guided"
+      ],
+      "reordered": false
+    },
+    "exposed_pattern": "2 LLM pragma(s): #pragma omp parallel for schedule(static) firstprivate(m, nb) shared(a, b); #pragma omp parallel for schedule(static) firstprivate(m, nb) shared(b, carry)",
+    "pragmas": 2,
+    "pragma_text": [
+      "#pragma omp parallel for schedule(static) firstprivate(m, nb) shared(a, b)",
+      "#pragma omp parallel for schedule(static) firstprivate(m, nb) shared(b, carry)"
+    ],
+    "self_annotated": true
+  }
+]

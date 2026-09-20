@@ -1,0 +1,138 @@
+
+============================================================
+  DiscoPoP Agentic Controller
+============================================================
+  Source         : /home/ahmedabosamaha/new_benchmark_harness/agent/runs/e10/benchmarks/polybench/jacobi-2d-imper/speed_gate_small/claude-haiku-4-5-20251001/rep1/work/jacobi-2d-imper.c
+  DiscoPoP dir   : .discopop
+  Model          : claude-haiku-4-5-20251001
+  Budget         : 3 LLM retries/region (+2 free build fixes)
+  λ penalty      : 1.0
+  Min workload   : 0.0
+  Restruct. depth: 0 (Tier-2 allowed at depth 0–0)
+  Quality gate   : Tier-1 = all but speed, no escalation; Tier-2 = full
+  TSan           : barrier-aware (archer: /usr/lib/llvm-20/lib/libarcher.so)
+  Speedup gate   : require ≥ 1.1× measured
+  Dry run        : False
+  LLM mode       : claude-haiku-4-5-20251001
+  Edit mode      : direct
+  Re-profiling   : fast refresh (compile only) between rewrites; full before a deeper level and before Phase B
+  Pragmas        : LLM writes them with the rewrite, gate decides (--llm-pragmas)
+============================================================
+
+  Project        : /home/ahmedabosamaha/new_benchmark_harness/agent/runs/e10/benchmarks/polybench/jacobi-2d-imper/speed_gate_small/claude-haiku-4-5-20251001/rep1/work  (2 unit(s): jacobi-2d-imper.c, polybench.c)
+
+  [ok] Captured reference output on 2 inputs (69 bytes, 1.2 ms baseline) for the correctness/performance gates.
+
+  [ok] Numerical noise floor 0 — 6 build variants agreed exactly; output is compared byte-for-byte.
+
+  Hotspots       : measured per-region runtimes are available — 19 region(s) measured, 27.3 ms total, ranking by predicted time saved at 48 threads
+
+  Baseline       : DiscoPoP proposes 5 applicable pattern(s) unaided; 5 of them produce a usable pragma
+                   → the run beats DiscoPoP by ending with more than 5
+
+  Initial candidates
+Region ID    Type           Saves    % run    Hot  Tier  Depth  Name
+--------------------------------------------------------------------------------------
+  1:78       loop          8.0 ms    29.8%    YES     1      0  lines 68–76
+  3:75       function      8.0 ms    29.8%    YES     2      0  kernel_jacobi_2d_imper
+  1:81       loop          5.6 ms    21.1%  MAYBE     1      0  lines 70–72
+  1:84       loop          5.5 ms    20.5%  MAYBE     1      0  lines 71–72
+  1:91       loop          2.3 ms     8.7%  MAYBE     1      0  lines 73–75
+  1:94       loop          2.2 ms     8.1%  MAYBE     1      0  lines 74–75
+
+============================================================
+  PHASE A — restructure  (the source stays pragma-free)
+============================================================
+
+┌─ [depth=0] loop 1:78 (lines 68–76)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] function 3:75 (lines 60–79)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 2 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for collapse(2) private(i, j) shared(A, B)
+│           #pragma omp parallel for collapse(2) private(i, j) shared(A, B)
+│  [Tier-2] Stage 'performance' failed: Net regression vs the ORIGINAL program: this build at full threads takes 4.4 ms, the untouched original 1.2 ms. The 1.93× scaling is real but starts from a slower baseline, so the user ends up with a 
+│  [Tier-2] Assembling evidence (budget remaining: 1)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 1 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for collapse(2) private(i, j) shared(A, B)
+│  [Tier-2] Stage 'tsan' failed: Race detected: WARNING: ThreadSanitizer: data race (pid=2029977)   Read of size 8 at 0x7ffff4f33ad8 by thread T13:     #0 kernel_jacobi_2d_imper.omp_outlined_debug__ /tmp/dp_agent_val_2r0051cv/_dp_pro
+│  [Tier-2] Assembling evidence (budget remaining: 0)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 3 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel
+│           #pragma omp for collapse(2) private(i, j) shared(A, B)
+│           #pragma omp for collapse(2) private(i, j) shared(A, B)
+│  [Tier-2] Stage 'openmp_compile' failed (build fix — budget not charged, 1 left): OpenMP compile failed (loop not in OpenMP-canonical form): /tmp/dp_agent_val_skc6eu5x/_dp_proj_tsan_binary/jacobi-2d-imper.c:72:43: error: unexpected OpenMP clause 'shared' in directive '#pragma omp f
+│  [Tier-2] Assembling evidence (budget remaining: 0)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 3 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel shared(A, B)
+│           #pragma omp for collapse(2) private(i, j)
+│           #pragma omp for collapse(2) private(i, j)
+│  [Tier-2] Stage 'performance' failed: Net regression vs the ORIGINAL program: this build at full threads takes 8.4 ms, the untouched original 1.2 ms. The 1.59× scaling is real but starts from a slower baseline, so the user ends up with a 
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:81 (lines 70–72)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:84 (lines 71–72)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:91 (lines 73–75)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:94 (lines 74–75)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+
+============================================================
+  PHASE B — annotate  (5 candidate pragma(s))
+============================================================
+
+  Timing noise floor on this machine: 0.966 → keep anything at or above 0.956
+
+  5 loop(s) are already parallel in the source; nothing is nested inside them.
+
+┌─ pattern #20  do_all @ lines 68–76  (W=39840)
+│  #pragma omp parallel for
+│  gate failed at 'tsan': Race detected: WARNING: ThreadSanitizer: data race (pid=2030671)   Write of size 8 at 0x7ffff4417fa8 by thread T2:     #0 kernel_jacobi_2d_imper.omp_o
+└─ DROPPED
+
+┌─ pattern #17  do_all @ lines 70–72  (W=4960080)
+│  #pragma omp parallel for
+│  marginal 0.16× — costs more than it saves
+└─ DROPPED (slower)
+
+┌─ pattern #16  do_all @ lines 71–72  (W=4980)
+│  #pragma omp parallel for
+│  marginal 0.01× — costs more than it saves
+└─ DROPPED (slower)
+
+┌─ pattern #19  do_all @ lines 73–75  (W=4960080)
+│  #pragma omp parallel for
+│  marginal 0.18× — costs more than it saves
+└─ DROPPED (slower)
+
+┌─ pattern #18  do_all @ lines 74–75  (W=500)
+│  #pragma omp parallel for
+│  marginal 0.01× — costs more than it saves
+└─ DROPPED (slower)
+
+
+============================================================
+  SUMMARY: 0 rewrite(s) kept  |  0 pragma(s) applied  |  1 skipped
+  DiscoPoP unaided: 5 usable pragma(s) in this profile's draw  →  this run: 0   [BELOW, informational]
+    ✗  3:75  [skipped]  depth=0
+
+  Results → .discopop/agent_patches/accepted.json
+============================================================
+

@@ -1,0 +1,24 @@
+--- md.cpp
++++ md.cpp
+@@ -250,12 +250,6 @@
+   pe = 0.0;
+   ke = 0.0;
+ 
+-//# pragma omp parallel \
+-  shared ( f, nd, np, pos, vel ) \
+-  private ( i, j, k, rij, d, d2 )
+-  
+-
+-//# pragma omp for reduction ( + : pe, ke )
+   for ( k = 0; k < np; k++ )
+   {
+ //
+@@ -285,6 +279,8 @@
+ 
+         pe = pe + 0.5 * pow ( sin ( d2 ), 2 );
+ 
++#pragma omp parallel for \
++        private(i)
+         for ( i = 0; i < nd; i++ )
+         {
+           f[i+k*nd] = f[i+k*nd] - rij[i] * sin ( 2.0 * d2 ) / d;

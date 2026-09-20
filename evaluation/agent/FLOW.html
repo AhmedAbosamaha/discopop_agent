@@ -1,0 +1,633 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DiscoPoP Agent Pipeline</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@400;500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --ground:#F4F5F1; --surface:#FFFFFF; --sunk:#E9ECE6;
+  --ink:#1C2127; --ink-2:#434B55; --muted:#6A727B;
+  --rule:#D5D9D2; --rule-soft:#E4E7E1;
+  --accent:#35549A; --accent-soft:#E3E9F5;
+  --unsafe:#A4501F; --unsafe-soft:#F6E6DB;
+  --ok:#2E6A4C; --ok-soft:#E0EEE6;
+  --hold:#7A6414; --hold-soft:#F2EBD3;
+  --model:#6B3F8C; --model-soft:#EEE5F5;
+  --f-head:"IBM Plex Sans Condensed","Arial Narrow",system-ui,sans-serif;
+  --f-body:"Source Serif 4",Georgia,"Times New Roman",serif;
+  --f-mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ground:#13171B; --surface:#1A1F24; --sunk:#20262C;
+    --ink:#E3E7EA; --ink-2:#B5BDC5; --muted:#8C959E;
+    --rule:#2C333A; --rule-soft:#242A30;
+    --accent:#8EA9E6; --accent-soft:#1E2940;
+    --unsafe:#E29468; --unsafe-soft:#3A2419;
+    --ok:#7CC39E; --ok-soft:#18302A;
+    --hold:#D9BC62; --hold-soft:#342C14;
+    --model:#C3A0E0; --model-soft:#2B2038;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#13171B; --surface:#1A1F24; --sunk:#20262C;
+  --ink:#E3E7EA; --ink-2:#B5BDC5; --muted:#8C959E;
+  --rule:#2C333A; --rule-soft:#242A30;
+  --accent:#8EA9E6; --accent-soft:#1E2940;
+  --unsafe:#E29468; --unsafe-soft:#3A2419;
+  --ok:#7CC39E; --ok-soft:#18302A;
+  --hold:#D9BC62; --hold-soft:#342C14;
+  --model:#C3A0E0; --model-soft:#2B2038;
+}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font-family:var(--f-body);font-size:17px;line-height:1.6;
+  margin:0;padding-inline:20px;padding-block:0 96px;-webkit-font-smoothing:antialiased}
+.page{max-width:1080px;margin:0 auto}
+header{padding-block:52px 24px;border-bottom:2px solid var(--ink)}
+.kicker{font-family:var(--f-head);font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);font-weight:600;margin:0 0 12px}
+h1{font-family:var(--f-head);font-weight:700;font-size:clamp(32px,5.4vw,46px);line-height:1.04;margin:0 0 14px;text-wrap:balance}
+.lede{font-size:19px;color:var(--ink-2);margin:0;max-width:66ch}
+.meta{display:flex;flex-wrap:wrap;gap:6px 22px;margin-top:18px;font-family:var(--f-head);font-size:14px;color:var(--muted)}
+.meta b{color:var(--ink-2);font-weight:600}
+nav{display:flex;flex-wrap:wrap;gap:6px 8px;padding-block:18px 4px}
+nav a{font-family:var(--f-head);font-size:14px;color:var(--ink-2);text-decoration:none;border:1px solid var(--rule);
+  padding:3px 10px;border-radius:3px;background:var(--surface)}
+nav a:hover,nav a:focus-visible{border-color:var(--accent);color:var(--accent);outline:none}
+section{padding-block:38px 6px;border-top:1px solid var(--rule)}
+nav + section{border-top:0;padding-top:10px}
+.sec{display:flex;align-items:baseline;gap:14px;margin:0 0 10px}
+.sec .n{font-family:var(--f-mono);font-size:14px;color:var(--accent);flex:none}
+h2{font-family:var(--f-head);font-weight:700;font-size:27px;line-height:1.14;margin:0;text-wrap:balance}
+p{margin:0 0 14px;max-width:72ch}
+code,.mono{font-family:var(--f-mono);font-size:.84em}
+code{background:var(--sunk);padding:1px 5px;border-radius:3px;color:var(--ink)}
+.legend{display:flex;flex-wrap:wrap;gap:8px 10px;margin:6px 0 4px;font-family:var(--f-head);font-size:14px}
+.legend span{display:inline-flex;align-items:center;gap:7px;padding:3px 10px 3px 8px;border:1px solid var(--rule);border-radius:3px;background:var(--surface)}
+.legend i{width:13px;height:13px;border-radius:2px;border:1.5px solid;display:inline-block}
+.k-step i{background:var(--surface);border-color:var(--ink-2)}
+.k-dec i{background:var(--accent-soft);border-color:var(--accent);transform:rotate(45deg) scale(.82)}
+.k-model i{background:var(--model-soft);border-color:var(--model)}
+.k-ok i{background:var(--ok-soft);border-color:var(--ok)}
+.k-hold i{background:var(--hold-soft);border-color:var(--hold)}
+.k-bad i{background:var(--unsafe-soft);border-color:var(--unsafe)}
+figure{margin:18px 0 8px}
+.chart{background:var(--surface);border:1px solid var(--rule);border-radius:4px;padding:14px;overflow-x:auto}
+.chart svg{display:block;margin:0 auto;max-width:none;height:auto}
+.chart pre{font-family:var(--f-mono);font-size:12px;white-space:pre-wrap;color:var(--ink-2);margin:0}
+figcaption{font-family:var(--f-head);font-size:14px;color:var(--muted);margin-top:8px;max-width:88ch}
+.tablewrap{overflow-x:auto;margin:14px 0 8px}
+table{border-collapse:collapse;width:100%;font-size:15px;min-width:640px}
+th,td{text-align:left;vertical-align:top;padding:7px 12px 7px 0;border-bottom:1px solid var(--rule-soft)}
+th{font-family:var(--f-head);font-weight:600;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--rule)}
+td:first-child{font-family:var(--f-mono);font-size:13px;white-space:nowrap;color:var(--ink)}
+td .tag{font-family:var(--f-head);font-size:12.5px;font-weight:600;letter-spacing:.04em;padding:1px 6px;border-radius:2px;white-space:nowrap}
+.t-ok{color:var(--ok);background:var(--ok-soft)} .t-bad{color:var(--unsafe);background:var(--unsafe-soft)}
+.t-hold{color:var(--hold);background:var(--hold-soft)} .t-acc{color:var(--accent);background:var(--accent-soft)}
+footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--rule);font-family:var(--f-head);font-size:14px;color:var(--muted)}
+@media (max-width:640px){body{font-size:16px} h2{font-size:23px}}
+</style>
+
+<div class="page">
+<header>
+  <p class="kicker">Agentic DiscoPoP · control flow</p>
+  <h1>From the first DiscoPoP run to the judged result</h1>
+  <p class="lede">Every path the agent and the experiment harness can take, drawn from the code as it stands: each decision, each way a step can fail, what happens next, and what is written down. Eleven diagrams, one per stage; every exit of every diagram is listed under it.</p>
+  <div class="meta"><span><b>Agent</b> branch agentic_DiscoPop, after the September review</span><span><b>Harness</b> branch agent-experiments</span><span><b>Drawn</b> 18 Sep 2026</span></div>
+</header>
+
+<nav aria-label="Diagrams">
+  <a href="#d0">0 Whole pipeline</a><a href="#d1">1 Harness: profile</a><a href="#d2">2 Start-up</a>
+  <a href="#d3">3 Planning</a><a href="#d4">4 Phase A: one region</a><a href="#d5">5 Model call</a>
+  <a href="#d6">6 The gate</a><a href="#d7">7 After a pass</a><a href="#d8">8 Phase B</a>
+  <a href="#d9">9 Settle</a><a href="#d10">10 Harness: verdict</a>
+</nav>
+
+<section>
+  <div class="legend" aria-label="Legend">
+    <span class="k-step"><i></i>step</span><span class="k-dec"><i></i>decision</span>
+    <span class="k-model"><i></i>model call</span><span class="k-ok"><i></i>kept / passed</span>
+    <span class="k-hold"><i></i>skipped or retried — nothing lost</span><span class="k-bad"><i></i>rejected, reverted or aborted</span>
+  </div>
+</section>
+
+<!-- ============================================================ 0 -->
+<section id="d0">
+  <div class="sec"><span class="n">0</span><h2>The whole pipeline</h2></div>
+  <p>The harness owns everything outside the agent: packaging, the one DiscoPoP profile per benchmark, and the verdict. The agent never grades itself — its own summary line is a log, not a result.</p>
+  <figure><div class="chart" data-d="d0"></div>
+  <figcaption>The grey box is one agent process. A trial always ends in exactly one of eleven outcomes (diagram 10).</figcaption></figure>
+</section>
+<script type="text/plain" class="src" data-d="d0">
+flowchart TD
+  P["Package the benchmark<br/>one file, or a project directory"]:::step --> PR["DiscoPoP profile<br/>ONCE per benchmark per run"]:::step
+  PR -->|"cannot be profiled"| PE["PROFILE_ERROR"]:::bad
+  PR --> T["per arm x trial:<br/>fresh copy of source and profile"]:::step
+  T --> S
+  subgraph AG["one agent run"]
+    S["Start-up<br/>reference, tolerance, runtimes"]:::step --> PL["Planning<br/>regions to a ranked queue"]:::step
+    PL --> A["PHASE A  restructure<br/>model rewrites, gate judges"]:::model
+    A --> Q{"profile holds<br/>carried-forward data?"}:::dec
+    Q -->|"yes"| RP["one full re-profile"]:::step
+    Q -->|"no"| B
+    RP -->|"ok"| B["PHASE B  annotate<br/>DiscoPoP pragmas through the gate"]:::step
+    RP -->|"fails"| NB["Phase B skipped"]:::hold
+    A -->|"kept rewrite could not be re-profiled"| NB
+    B --> ST["SETTLE<br/>rebuild from the change log,<br/>re-judge the finished files"]:::step
+    NB --> ST
+  end
+  S -->|"original cannot be built or run"| AE["AGENT_ERROR"]:::bad
+  A -->|"credential rejected or endpoint down"| AE
+  ST --> OUT["final source, accepted.json,<br/>candidates.jsonl, usage log"]:::ok
+  PL -->|"no region at all"| OUT
+  OUT --> V["Independent verification<br/>by the harness"]:::step --> O["one outcome per trial"]:::ok
+</script>
+
+<!-- ============================================================ 1 -->
+<section id="d1">
+  <div class="sec"><span class="n">1</span><h2>Harness: from a benchmark to one profile</h2></div>
+  <p>DiscoPoP is not deterministic — the same profile explored twice gives different task patterns, and on some programs the explorer crashes on one attempt and succeeds on the next (T0.7). So a benchmark is profiled <em>once</em> per run and every arm and trial starts from a copy of that profile; a crash is retried on the <em>same</em> profile and every retry is counted.</p>
+  <figure><div class="chart" data-d="d1"></div>
+  <figcaption>A multi-file program is profiled through a generated unity unit: profiled unit by unit, DiscoPoP reports recurrences outside <code>main</code>'s unit as Do-All (MULTIFILE.md).</figcaption></figure>
+  <div class="tablewrap"><table>
+    <tr><th>Exit</th><th>When</th><th>Recorded as</th></tr>
+    <tr><td>PROFILE_ERROR</td><td>instrumenting compile fails or times out (process group killed), instrumented run fails, or the explorer fails 20 times</td><td><span class="tag t-bad">not run</span> benchmark listed with the reason; <code>profile_explore_attempts</code></td></tr>
+    <tr><td>profile ready</td><td>explorer succeeded on attempt k ≤ 20</td><td><code>explorer_retries = k − 1</code> on every trial of the benchmark</td></tr>
+  </table></div>
+</section>
+<script type="text/plain" class="src" data-d="d1">
+flowchart TD
+  A["prepared benchmark<br/>source, meta.json, excluded functions"]:::step --> K{"single file<br/>or project?"}:::dec
+  K -->|"single file"| C1["discopop_cc or discopop_cxx<br/>file -o a.out"]:::step
+  K -->|"project"| C2["write a unity unit that includes every unit,<br/>wrapper compiles it as ONE unit,<br/>unity file removed again"]:::step
+  C1 --> CT{"compiled within<br/>the time limit?"}:::dec
+  C2 --> CT
+  CT -->|"no: kill the process group"| PE["PROFILE_ERROR"]:::bad
+  CT -->|"yes"| R["run the instrumented binary<br/>at the agent's dataset size"]:::step
+  R -->|"non-zero exit or timeout"| PE
+  R --> E["discopop_explorer"]:::step
+  E --> EC{"exit code 0?"}:::dec
+  EC -->|"no, attempt below 20"| E2["clear explorer output only,<br/>same profile, count the retry"]:::hold --> E
+  EC -->|"no, attempt 20"| PE
+  EC -->|"yes"| OK["profile stored once,<br/>copied into every trial directory"]:::ok
+</script>
+
+<!-- ============================================================ 2 -->
+<section id="d2">
+  <div class="sec"><span class="n">2</span><h2>Agent start-up: what every later check is measured against</h2></div>
+  <p>Three measurements are taken before any region is looked at: what the untouched program prints (on every input), how far its own numbers move between builds that mean the same thing, and how long each region runs.</p>
+  <figure><div class="chart" data-d="d2"></div></figure>
+  <div class="tablewrap"><table>
+    <tr><th>Exit</th><th>When</th><th>Effect</th></tr>
+    <tr><td>FATAL, exit 1</td><td>the original cannot be built or run and <code>--allow-unverified</code> is off; the timing build (<code>--timing-cflags</code>) fails; the initial profile of a project fails</td><td><span class="tag t-bad">aborted</span> nothing is changed</td></tr>
+    <tr><td>correctness gate OFF</td><td><code>--allow-unverified</code> with no reference</td><td><span class="tag t-hold">warned</span> outputs are never compared</td></tr>
+    <tr><td>proxy ranking</td><td>hotspots disabled, dry run without measurements, or detection failed</td><td><span class="tag t-hold">fallback</span> queue ordered by the static workload proxy</td></tr>
+    <tr><td>profile-only</td><td><code>--profile-only</code></td><td>profile written, process ends</td></tr>
+  </table></div>
+</section>
+<script type="text/plain" class="src" data-d="d2">
+flowchart TD
+  A0["parse arguments"]:::step --> PJ{"--project-dir given?"}:::dec
+  PJ -->|"yes"| PJ1["discover units and include dirs,<br/>activate the project, focus = first unit"]:::step --> HP
+  PJ -->|"no"| HP{"profile present?<br/>--profile-only?"}:::dec
+  HP -->|"project without a profile,<br/>or --profile-only"| IP["take the profile<br/>project: through the unity unit"]:::step
+  IP -->|"fails"| F1["FATAL exit 1"]:::bad
+  IP -->|"--profile-only"| END["stop"]:::ok
+  IP --> REF
+  HP -->|"present"| REF["build the ORIGINAL with -O2, run it on the<br/>profiled input and on every --check-input"]:::step
+  REF --> RQ{"reference output captured?"}:::dec
+  RQ -->|"no, --allow-unverified off"| F1
+  RQ -->|"no, --allow-unverified on"| W1["correctness gate OFF for this run"]:::hold --> HS
+  RQ -->|"yes; inputs the original<br/>cannot run are dropped"| TF{"--require-speedup<br/>with --timing-cflags?"}:::dec
+  TF -->|"yes"| TB["timing build of the original<br/>gives the baseline time"]:::step
+  TB -->|"fails"| F1
+  TB --> NF
+  TF -->|"no"| NF["numerical noise floor:<br/>six legal build variants per input,<br/>largest deviation x 10,<br/>maximum over all inputs"]:::step
+  NF --> NQ{"does the output hold<br/>a non-integer number?"}:::dec
+  NQ -->|"no"| N0["floor 0: compared byte for byte"]:::step --> HS
+  NQ -->|"yes"| N1["floor above 0 where variants differ:<br/>numeric comparison, structure exact"]:::step --> HS
+  HS{"runtime measurement"}:::dec
+  HS -->|"--no-hotspots"| PX["rank on the workload proxy"]:::hold --> PL
+  HS -->|"dry run"| DR["use measurements if already there"]:::hold --> PL
+  HS -->|"Hotspots.json exists"| RU["reuse"]:::step --> PL
+  HS -->|"otherwise"| HM["hotspot build, one run, analyzer"]:::step
+  HM -->|"fails"| PX
+  HM --> PL["planning, diagram 3"]:::ok
+</script>
+
+<!-- ============================================================ 3 -->
+<section id="d3">
+  <div class="sec"><span class="n">3</span><h2>Planning: which regions are worth an attempt, and in what order</h2></div>
+  <p>Every function, loop and basic block DiscoPoP recorded is a region. A region is ranked by the time parallelising it would save, ΔT = T · f · (1 − 1/(P·e)), where <em>f</em> is the share of runtime still <em>sequential</em> in it. With P and e fixed this orders regions by f; ties go to the outermost region.</p>
+  <figure><div class="chart" data-d="d3"></div>
+  <figcaption>Tier 1 = DiscoPoP already has an applicable pattern (Phase B will annotate it). Tier 2 = it has none, so the model is asked. A loop can carry several patterns: applicable first, then reduction, do_all, others; the rest are kept as alternates.</figcaption></figure>
+  <div class="tablewrap"><table>
+    <tr><th>Dropped because</th><th>Rule</th></tr>
+    <tr><td>excluded function</td><td>the region lies in a function named in <code>--exclude-functions</code> (names compared demangled) — packaging code, and <code>main</code> where DiscoPoP itself proposes nothing (D4)</td></tr>
+    <tr><td>trivial block</td><td>a basic block with a workload under 100 instructions</td></tr>
+    <tr><td>not editable</td><td>project: the region's file lies outside the project root; single file: the region lives in a different file (code in an included header)</td></tr>
+    <tr><td>cold</td><td>measured, and DiscoPoP's hotspot verdict is NO</td></tr>
+    <tr><td>covered</td><td>inside a construct that already runs in parallel, or nothing sequential is left in it (remaining share 0)</td></tr>
+    <tr><td>too small</td><td>predicted saving under <code>--min-impact</code>, or remaining share under <code>--min-runtime-share</code> (campaign: 1 %, D1)</td></tr>
+    <tr><td>unmeasured</td><td>hotspots ran and did not report it, while a share floor is set; without a floor: workload under <code>--min-workload</code></td></tr>
+  </table></div>
+</section>
+<script type="text/plain" class="src" data-d="d3">
+flowchart TD
+  R0["Data.xml: functions, loops, basic blocks<br/>duplicates merged, loop counts attached"]:::step --> R1{"in an excluded function?"}:::dec
+  R1 -->|"yes"| X["dropped"]:::hold
+  R1 -->|"no"| R2{"trivial basic block?"}:::dec
+  R2 -->|"yes"| X
+  R2 -->|"no"| R3{"file resolved through FileMapping<br/>and editable?"}:::dec
+  R3 -->|"no"| X
+  R3 -->|"yes"| PT["patterns for this region:<br/>by start line, then by node id<br/>two separate key spaces"]:::step
+  PT --> PA{"best pattern applicable?"}:::dec
+  PA -->|"yes"| T1["Tier 1<br/>other applicable patterns kept as alternates"]:::step
+  PA -->|"no, or none"| T2["Tier 2"]:::step
+  T1 --> M{"runtime measured<br/>for this region?"}:::dec
+  T2 --> M
+  M -->|"yes"| C1{"hotness = NO?"}:::dec
+  C1 -->|"yes"| X
+  C1 -->|"no"| C2{"remaining sequential share = 0?"}:::dec
+  C2 -->|"yes"| X
+  C2 -->|"no"| C3{"saving under --min-impact, or<br/>share under --min-runtime-share?"}:::dec
+  C3 -->|"yes"| X
+  C3 -->|"no"| SC["score = predicted time saved"]:::step
+  M -->|"no"| U1{"hotspots available<br/>and a share floor set?"}:::dec
+  U1 -->|"yes"| X
+  U1 -->|"no"| U2{"workload under --min-workload?"}:::dec
+  U2 -->|"yes"| X
+  U2 -->|"no"| SP["score = workload proxy"]:::step
+  SC --> Q["queue: highest saving first,<br/>ties to the outermost region,<br/>every entry at depth 0"]:::ok
+  SP --> Q
+  Q --> BL["baseline count: DiscoPoP's applicable patterns<br/>whose pragma passes the clause check and compiles"]:::step
+</script>
+
+<!-- ============================================================ 4 -->
+<section id="d4">
+  <div class="sec"><span class="n">4</span><h2>Phase A: what happens to one region</h2></div>
+  <p>The queue is walked by index, because a kept rewrite re-profiles the program and the regions that appear are appended and picked up in the same pass. Only Tier-2 regions reach the model; everything DiscoPoP can already do is left for Phase B.</p>
+  <figure><div class="chart" data-d="d4"></div>
+  <figcaption>Budget: <code>--budget</code> attempts per region, or under <code>--budget-policy share</code> between <code>--budget-min</code> and <code>--budget</code> in proportion to the region's share of the largest share queued (D3). Build failures get up to <code>--build-retries</code> attempts that are not charged.</figcaption></figure>
+  <div class="tablewrap"><table>
+    <tr><th>Exit</th><th>When</th><th>Recorded</th></tr>
+    <tr><td>COVERED</td><td>the region lies inside a construct that already runs in parallel in the file as it now stands</td><td><span class="tag t-hold">no call</span> not counted as skipped</td></tr>
+    <tr><td>DEFERRED</td><td>Tier 1 with an applicable pattern</td><td><span class="tag t-acc">Phase B</span> <code>deferred</code></td></tr>
+    <tr><td>SKIPPED</td><td>depth above <code>--restructure-depth</code>; dry run; no budget under the share policy; budget exhausted; the validated patch could not be written to the real file</td><td><span class="tag t-hold">skipped</span> with its depth</td></tr>
+    <tr><td>ACCEPTED</td><td>gate passed and the rewrite was kept (diagram 7)</td><td><span class="tag t-ok">kept</span> patch file, record, change log</td></tr>
+    <tr><td>run aborted</td><td>credential rejected or endpoint unreachable — fatal for every region, so the run stops</td><td><span class="tag t-bad">AGENT_ERROR</span> exit 1</td></tr>
+  </table></div>
+</section>
+<script type="text/plain" class="src" data-d="d4">
+flowchart TD
+  N["next queue entry: depth and region<br/>project: switch to the region's own file"]:::step --> I{"inside a construct that is already<br/>parallel in the source?"}:::dec
+  I -->|"yes"| CV["COVERED"]:::hold
+  I -->|"no"| T{"Tier 1 with an<br/>applicable pattern?"}:::dec
+  T -->|"yes"| DF["DEFERRED to Phase B"]:::hold
+  T -->|"no"| D{"depth within<br/>--restructure-depth?"}:::dec
+  D -->|"no"| SK["SKIPPED"]:::hold
+  D -->|"yes"| DRY{"--dry-run?"}:::dec
+  DRY -->|"yes"| SK
+  DRY -->|"no"| BU["budget for this region:<br/>fixed, or scaled with its runtime share"]:::step
+  BU --> B0{"budget above 0?"}:::dec
+  B0 -->|"no"| SK
+  B0 -->|"yes"| EV["assemble evidence from the CURRENT profile"]:::step
+  EV --> LLM["model call, diagram 5"]:::model
+  LLM -->|"credential or endpoint failure"| AB["abort the run, exit 1"]:::bad
+  LLM -->|"call failed after its own retries"| FA["counted as a failed attempt"]:::hold --> MORE
+  LLM -->|"unchanged, or no usable answer"| FB0["feedback: that is not an answer"]:::hold --> MORE
+  LLM -->|"a diff"| CL{"diff carries pragmas<br/>under --llm-pragmas?"}:::dec
+  CL -->|"yes"| CC{"clause check passes?"}:::dec
+  CL -->|"no"| G
+  CC -->|"no"| FB1["feedback: fix only the clause"]:::bad --> MORE
+  CC -->|"yes"| G["quality gate, diagram 6<br/>cached per patch and source text"]:::step
+  G -->|"apply, compile, openmp_compile"| RF{"free build retries left?"}:::dec
+  RF -->|"yes"| RF1["attempt not charged,<br/>feedback: fix only the error"]:::hold --> MORE
+  RF -->|"no"| FB2["stage-specific feedback"]:::bad --> MORE
+  G -->|"tsan, dependences, schedules,<br/>correctness, performance"| FB2
+  G -->|"passed"| KEEP["after a pass, diagram 7"]:::ok
+  KEEP -->|"reverted: nothing DiscoPoP can use"| FB3["feedback: DiscoPoP's verdict on the rewrite"]:::bad --> MORE
+  KEEP -->|"kept"| ACC["ACCEPTED"]:::ok
+  MORE{"attempts left?"}:::dec
+  MORE -->|"yes"| EV
+  MORE -->|"no"| SK
+</script>
+
+<!-- ============================================================ 5 -->
+<section id="d5">
+  <div class="sec"><span class="n">5</span><h2>One model call</h2></div>
+  <p>The system prompt is generated from the gate that is really configured (is speed judged, how many inputs, exact or numeric comparison, is the schedule matrix on) and from the evidence sections that are really sent, so it describes what will happen. It is identical for every call of a run, which keeps the provider's prompt cache warm. Format problems are re-prompted without charging the region's budget.</p>
+  <figure><div class="chart" data-d="d5"></div>
+  <figcaption>Evidence sections (<code>--evidence</code>): deps, reductions, classification, extra_vars, array_note, loop_nest, calls, blockers, accesses, inner_patterns, runtime_share, failure. With <code>none</code> the request is the source and the task and nothing DiscoPoP measured.</figcaption></figure>
+</section>
+<script type="text/plain" class="src" data-d="d5">
+flowchart TD
+  S1["system prompt: role, ask, what is given, contract,<br/>how it is checked, OpenMP loop rules, output format,<br/>built from the gate facts and the evidence sections"]:::step --> FIRST{"first call for this region?"}:::dec
+  FIRST -->|"yes"| UP["user prompt: digest, function source, array accesses,<br/>dependences per variable, loop nest, blockers,<br/>loops already parallel, task for the pragma mode"]:::step
+  FIRST -->|"no"| CONT["conversation so far plus the gate's feedback"]:::step
+  UP --> MODE{"--edit-mode"}:::dec
+  CONT --> MODE
+  MODE -->|"direct"| WS["private working copy;<br/>project: the whole tree as context;<br/>model edits with Read, Edit, Write"]:::model
+  MODE -->|"function"| FN["model returns the whole function"]:::model
+  MODE -->|"diff"| DF["model returns a unified diff"]:::model
+  WS --> ERR{"backend error?"}:::dec
+  FN --> ERR
+  DF --> ERR
+  ERR -->|"authentication or connection"| FATAL["LLMConnectionError: the run aborts"]:::bad
+  ERR -->|"other, after 3 tries with backoff"| FAIL["failed attempt"]:::hold
+  ERR -->|"none"| VAL{"answer usable?<br/>direct: file changed beyond comments<br/>function: one code block<br/>diff: valid hunks"}:::dec
+  VAL -->|"no, format retries left, up to 2"| RP["re-prompt, not charged"]:::hold --> MODE
+  VAL -->|"no, none left"| NONE["no answer; direct mode: unchanged"]:::hold
+  VAL -->|"yes"| OUT["diff against the real file;<br/>function mode: spliced in by line range;<br/>usage and cost appended to the usage log"]:::ok
+</script>
+
+<!-- ============================================================ 6 -->
+<section id="d6">
+  <div class="sec"><span class="n">6</span><h2>The quality gate</h2></div>
+  <p>Two tracks. A rewrite with no pragma is a sequential-to-sequential change and is judged on a sequential build. A patch that carries a pragma is judged on concurrency evidence — the sanitizer, then the schedule matrix — with the output comparison as the end-to-end check. No single stage concludes "correct"; the verdict is their conjunction, and the evidence of each is recorded. For a project every build below is the whole staged program with the candidate in place of the one file under test.</p>
+  <figure><div class="chart" data-d="d6"></div>
+  <figcaption><code>mode=safety</code> (Phase B, Settle) is everything except the timing. In the campaign the speed check is off in every arm; speed is judged afterwards by the harness at full size.</figcaption></figure>
+  <div class="tablewrap"><table>
+    <tr><th>Fails at</th><th>Meaning</th></tr>
+    <tr><td>clause</td><td>a data-sharing clause that cannot be right — a name declared inside the loop in a clause; a name the loop writes and later code reads made <code>private</code>/<code>firstprivate</code> (checked before anything is built)</td></tr>
+    <tr><td>apply</td><td>the diff does not apply to a copy of the file (hunk headers are recounted first)</td></tr>
+    <tr><td>compile</td><td>the patched program does not build</td></tr>
+    <tr><td>openmp_compile</td><td>with <code>-fopenmp</code> the annotated loop is not in OpenMP-canonical form</td></tr>
+    <tr><td>tsan</td><td>ThreadSanitizer reports a race (with libarcher it sees OpenMP's barriers; without it, a race between two barrier-separated regions is re-judged with the race check off — never when the code uses <code>nowait</code> or tasks)</td></tr>
+    <tr><td>dependences</td><td>a pure annotation on a loop for which DiscoPoP <em>observed</em> a loop-carried dependence. A rewrite is never judged by the profile of the code it replaced</td></tr>
+    <tr><td>schedules</td><td>the parallel build does not repeat itself, or disagrees across thread counts and schedules beyond the measured floor</td></tr>
+    <tr><td>correctness</td><td>output differs from the original on some input (exact, or numeric within the floor; structure, labels and integers always exact)</td></tr>
+    <tr><td>performance</td><td>only with <code>--require-speedup</code>: slower than itself on one thread, or slower than the original</td></tr>
+  </table></div>
+</section>
+<script type="text/plain" class="src" data-d="d6">
+flowchart TD
+  C0{"verdict cached for this patch<br/>on this exact source text?"}:::dec
+  C0 -->|"yes"| CR["reuse it"]:::ok
+  C0 -->|"no"| AP["apply to a temporary copy"]:::step
+  AP -->|"fails"| F_AP["FAIL apply"]:::bad
+  AP --> CO["build with -O1 -g"]:::step
+  CO -->|"fails"| F_CO["FAIL compile"]:::bad
+  CO --> HP{"does the diff contain a pragma?"}:::dec
+  HP -->|"no: sequential track"| SEQ["build -O2 without OpenMP"]:::step --> CORR
+  HP -->|"yes: parallel track"| TB["build -fopenmp -fsanitize=thread"]:::step
+  TB -->|"fails"| F_OC["FAIL openmp_compile"]:::bad
+  TB --> TR["run under ThreadSanitizer, all threads"]:::step
+  TR -->|"timeout 300 s, or crash"| F_TS["FAIL tsan"]:::bad
+  TR -->|"race reported"| BH{"two regions separated by a barrier,<br/>no archer, no nowait or tasks?"}:::dec
+  BH -->|"no"| F_TS
+  BH -->|"yes"| TS2["re-judge with the race check off"]:::hold --> DEP
+  TR -->|"clean"| DEP{"pure annotation,<br/>or a rewrite?"}:::dec
+  DEP -->|"rewrite"| DR["recorded as rewritten-code:<br/>the profile has no standing"]:::step --> STR
+  DEP -->|"annotation"| DB{"DiscoPoP blocker on exactly<br/>the annotated loop?"}:::dec
+  DB -->|"observed at run time"| F_DP["FAIL dependences"]:::bad
+  DB -->|"static only, none, or no data"| DR2["recorded, passes"]:::step --> STR
+  STR{"--schedule-stress?"}:::dec
+  STR -->|"off"| CORR
+  STR -->|"on"| SB["parallel build -O2 -fopenmp, plus a stress build<br/>declaring schedule runtime on every loop<br/>that names no schedule of its own"]:::step
+  SB --> MX["repeat at a fixed thread count, then<br/>threads 1, 2, 4 under static, dynamic 1, guided"]:::step
+  MX -->|"unrepeatable, structural change,<br/>or a failed run"| F_SC["FAIL schedules"]:::bad
+  MX -->|"values differ beyond the floor"| SOFT{"did the sanitizer run<br/>and find nothing?"}:::dec
+  SOFT -->|"no"| F_SC
+  SOFT -->|"yes"| CB["recorded: carried by tsan"]:::step --> AN
+  MX -->|"agree"| AN{"anchor run equals the reference?"}:::dec
+  AN -->|"no"| F_CR["FAIL correctness"]:::bad
+  AN -->|"yes"| CORR["run on EVERY recorded input,<br/>compare with the original's output"]:::step
+  CORR -->|"differs on any input, or a run fails"| F_CR
+  CORR --> PF{"mode = full, --require-speedup,<br/>and a pragma?"}:::dec
+  PF -->|"no"| PASS["PASSED<br/>evidence recorded per stage"]:::ok
+  PF -->|"yes"| TM["timing build with --timing-cflags;<br/>one binary, 1 thread against all threads,<br/>median of interleaved pairs"]:::step
+  TM -->|"below --min-measured-speedup,<br/>or slower than the original"| F_PF["FAIL performance"]:::bad
+  TM --> PASS
+</script>
+
+<!-- ============================================================ 7 -->
+<section id="d7">
+  <div class="sec"><span class="n">7</span><h2>After a rewrite passes the gate</h2></div>
+  <p>The rewrite is written to the real file, the profile is brought up to date, and only then is it decided whether the rewrite stays. Who decides depends on who wrote the pragmas: when the model did (the default), the gate has already judged the parallel code and the refreshed profile only relocates the queue; otherwise DiscoPoP must now find a usable pattern in the lines that changed.</p>
+  <figure><div class="chart" data-d="d7"></div>
+  <figcaption>Fast refresh: recompile only, then translate the previous run's observed dependences onto the new instruction numbering by sequence alignment with an independent position cross-check; whatever cannot be placed with certainty is dropped. In a project only the rewritten file's positions move.</figcaption></figure>
+  <div class="tablewrap"><table>
+    <tr><th>Outcome</th><th>When</th><th>Effect</th></tr>
+    <tr><td>self_annotated</td><td>the diff carries its own pragmas</td><td><span class="tag t-ok">kept</span> the parallel constructs are marked covered with their measured share</td></tr>
+    <tr><td>… re-profile failed</td><td>self-annotated, but no profile could be produced</td><td><span class="tag t-ok">kept</span> profile restored from the snapshot, Phase B skipped, remaining regions counted as skipped</td></tr>
+    <tr><td>exposed</td><td>DiscoPoP now reports a pattern in the changed lines and one of its pragmas passes the clause check and compiles</td><td><span class="tag t-ok">kept</span> Phase B validates it</td></tr>
+    <tr><td>no_pattern<br>no_usable_pragma<br>reprofile_failed</td><td>pragma-free rewrite that achieved nothing DiscoPoP can use</td><td><span class="tag t-bad">reverted</span> source, profile and runtime measurements restored; feedback built from DiscoPoP's blockers <em>for the rewrite</em></td></tr>
+  </table></div>
+</section>
+<script type="text/plain" class="src" data-d="d7">
+flowchart TD
+  G["gate PASSED"]:::ok --> SN["snapshot the profile, first time for this region;<br/>remember source text and runtime measurements"]:::step
+  SN --> W["write the patch to the real file"]:::step
+  W -->|"does not apply"| WX["restore the file, region SKIPPED"]:::bad
+  W --> DC{"is a deeper level still allowed?<br/>depth + 1 within --restructure-depth"}:::dec
+  DC -->|"yes"| FULL["FULL re-profile: clear, instrument, run, explore,<br/>then re-measure runtimes"]:::step
+  DC -->|"no, --fast-refresh"| FAST["FAST refresh: compile only,<br/>carry observed dependences forward"]:::step
+  DC -->|"no, --no-fast-refresh"| FULL
+  FAST -->|"line map fails its check, no previous profile,<br/>compile or explorer fails"| FULL
+  FAST --> XT{"--llm-recon or --llm-deps?"}:::dec
+  XT -->|"recon"| RC["model states the dependences of the code it wrote,<br/>folded into the rewrite call or as a follow-up turn;<br/>claims are ADDED to the profile"]:::model --> RM
+  XT -->|"deps"| LD["model may discharge STATIC blockers in new code"]:::model --> RM
+  XT -->|"neither"| RM
+  FULL -->|"instrumented run fails, no dependence file,<br/>or explorer fails 20 times"| RPF["re-profile failed"]:::bad
+  FULL --> RM["move runtime measurements and covered spans<br/>onto the new line numbers"]:::step
+  RM --> CVR{"self-annotated?"}:::dec
+  CVR -->|"yes"| MK["mark the PARALLEL CONSTRUCTS covered,<br/>each with its measured share"]:::step --> QB
+  CVR -->|"no"| QB["rebuild the queue from the new profile:<br/>survivors matched by content fingerprint keep their depth,<br/>unseen regions enter at depth + 1"]:::step
+  QB --> WHO{"who wrote the pragmas?"}:::dec
+  RPF --> WHO
+  WHO -->|"the model, profile ok"| KEEP["COMMIT"]:::ok
+  WHO -->|"the model, re-profile failed"| ST["restore the snapshot profile, mark it stale,<br/>remaining queue emptied and counted"]:::hold --> KEEP
+  WHO -->|"DiscoPoP, re-profile failed"| REV
+  WHO -->|"DiscoPoP"| VR{"applicable pattern in the changed lines<br/>of the changed file, with a pragma that<br/>passes the clause check and compiles?"}:::dec
+  VR -->|"yes: exposed"| KEEP
+  VR -->|"no"| REV["REVERT: source, profile and measurements restored<br/>from the snapshot; feedback to the model"]:::bad
+  KEEP --> REC["change log entry with file, diff, exposed regions;<br/>accepted record with the gate's evidence;<br/>profile flagged fast or measured"]:::ok
+</script>
+
+<!-- ============================================================ 8 -->
+<section id="d8">
+  <div class="sec"><span class="n">8</span><h2>Phase B: DiscoPoP's pragmas, once, from a measured profile</h2></div>
+  <p>Phase A leaves DiscoPoP's pragmas out of the source so that line numbers and the profile stay valid while code is still moving. Phase B then applies every pragma that survives, largest predicted saving first, each one re-derived against the file as it stands.</p>
+  <figure><div class="chart" data-d="d8"></div></figure>
+  <div class="tablewrap"><table>
+    <tr><th>Exit</th><th>When</th></tr>
+    <tr><td>SKIPPED</td><td>workload under <code>--min-workload</code>; the loop is already annotated; the loop lies inside a construct that is already parallel (read from the source on entry, extended by each pragma applied here); dry run</td></tr>
+    <tr><td>DROPPED, next pattern</td><td>no generated patch; clause check fails after the clause repair; gate fails (<code>mode=safety</code>); with <code>--require-speedup</code> the marginal ratio is under the machine's measured timing noise floor; the patch will not apply</td></tr>
+    <tr><td>APPLIED / VALIDATED</td><td>written to the file and logged — or, with <code>--no-apply-patches</code>, only recorded</td></tr>
+  </table></div>
+</section>
+<script type="text/plain" class="src" data-d="d8">
+flowchart TD
+  E{"state of the profile"}:::dec
+  E -->|"stale: a kept rewrite was never profiled"| SKP["Phase B skipped"]:::hold
+  E -->|"carried forward by a fast refresh"| FR["one full re-profile"]:::step
+  FR -->|"fails"| SKP
+  FR --> L
+  E -->|"measured"| L["candidates from the final profile:<br/>Tier 1 with an applicable pattern,<br/>ordered by predicted time saved"]:::step
+  L -->|"none"| NO["nothing to annotate"]:::hold
+  L --> NZ{"--require-speedup?"}:::dec
+  NZ -->|"yes"| NF["timing noise floor of THIS machine:<br/>the unchanged program against itself"]:::step --> SP
+  NZ -->|"no"| SP["read the loops that are already parallel,<br/>per file in a project"]:::step
+  SP --> C["next candidate, switch to its file;<br/>options = best pattern, then alternates"]:::step
+  C --> W{"workload under --min-workload?"}:::dec
+  W -->|"yes"| SK["SKIPPED"]:::hold --> NX
+  W -->|"no"| DP["re-derive the patch against the current file,<br/>repair clauses the scope analysis can fix"]:::step
+  DP -->|"no patch on disk"| DRP["DROPPED"]:::bad
+  DP --> AA{"loop already annotated, or inside a<br/>construct that is already parallel?"}:::dec
+  AA -->|"yes"| SK
+  AA -->|"no"| CQ{"clause check passes?"}:::dec
+  CQ -->|"no"| DRP
+  CQ -->|"yes"| DRY{"--dry-run?"}:::dec
+  DRY -->|"yes"| SK
+  DRY -->|"no"| GT["quality gate, mode = safety, diagram 6"]:::step
+  GT -->|"fails"| DRP
+  GT --> RS{"--require-speedup?"}:::dec
+  RS -->|"yes"| MG["marginal measurement: the file with and without<br/>this one pragma, interleaved pairs"]:::step
+  MG -->|"under the noise threshold,<br/>or cannot be measured"| DRP
+  MG --> AP
+  RS -->|"no"| AP{"--apply-patches?"}:::dec
+  AP -->|"no"| VAL["VALIDATED, recorded only"]:::ok --> NX
+  AP -->|"yes"| WR["write to the real file"]:::step
+  WR -->|"does not apply"| DRP
+  WR --> OK["APPLIED: span marked covered,<br/>change log entry with file and fingerprint"]:::ok --> NX
+  DRP --> ALT{"another applicable pattern<br/>for this loop?"}:::dec
+  ALT -->|"yes"| DP
+  ALT -->|"no"| NX{"more candidates?"}:::dec
+  NX -->|"yes"| C
+  NX -->|"no"| DONE["to Settle"]:::ok
+</script>
+
+<!-- ============================================================ 9 -->
+<section id="d9">
+  <div class="sec"><span class="n">9</span><h2>Settle: the only step that judges the finished files</h2></div>
+  <p>Every gate before this judged one candidate patch on a temporary copy. What ends up on disk is a reconstruction — the surviving changes re-applied onto the originals — and it has to earn its own verdict, with the same tolerance and stress settings the earlier gates used.</p>
+  <figure><div class="chart" data-d="d9"></div>
+  <figcaption>Nothing is ever un-applied: a change that stood on a dropped one simply fails to re-apply (exact matching, no fuzz), which is the signal that it goes too.</figcaption></figure>
+</section>
+<script type="text/plain" class="src" data-d="d9">
+flowchart TD
+  S0{"anything changed,<br/>and not a dry run?"}:::dec
+  S0 -->|"no"| END0["accepted.json as recorded"]:::ok
+  S0 -->|"yes"| PR["prune ORPHANS: a pragma-free rewrite stays only if<br/>a kept pragma landed on a region it exposed,<br/>matched by fingerprint; self-annotated rewrites always stay"]:::step
+  PR --> RB["restore every changed file to its original,<br/>re-apply the survivors in order, exact matching"]:::step
+  RB --> NA{"a change no longer applies?"}:::dec
+  NA -->|"yes"| DR1["dropped: it stood on something that was dropped"]:::hold --> CK
+  NA -->|"no"| CK{"files differ from the originals?"}:::dec
+  CK -->|"no"| OKU["source unchanged"]:::ok
+  CK -->|"yes"| GT["quality gate, mode = safety, on the cumulative diff;<br/>project: the file that carries a pragma is the focus,<br/>the staged tree holds every other file in its final state"]:::step
+  GT -->|"tsan, barrier artefact"| G2["re-judge with the race check off"]:::hold --> GR
+  GT --> GR{"passed?"}:::dec
+  GR -->|"yes"| SPD{"--require-speedup?"}:::dec
+  SPD -->|"no"| OK["finished source verified"]:::ok
+  SPD -->|"yes"| TM{"finished program slower than the<br/>original beyond the noise allowance?"}:::dec
+  TM -->|"no"| OK
+  TM -->|"yes"| FIX
+  GR -->|"no"| FIX{"anything left to drop?<br/>DiscoPoP pragmas first, newest first,<br/>then self-annotated rewrites"}:::dec
+  FIX -->|"yes"| DV["drop it, note why"]:::hold --> PR
+  FIX -->|"no"| RV["REVERT EVERYTHING to the originals"]:::bad
+  OK --> AJ["accepted.json rewritten to describe the files on disk"]:::ok
+  RV --> AJ
+</script>
+
+<!-- ============================================================ 10 -->
+<section id="d10">
+  <div class="sec"><span class="n">10</span><h2>Harness: the verdict on a trial</h2></div>
+  <p>The harness builds the original and the final source itself, at the per-kernel verification size (T0.1), runs them at several thread counts with repeats, and compares digests and a full dump of the results on the default and on a perturbed input. The order of the checks below is the order in the code: an instrument that was tampered with is caught before any number is believed.</p>
+  <figure><div class="chart" data-d="d10"></div>
+  <figcaption>FASTER means correct and at least 1.1× at some thread count. Correctness tolerance: relative error 1e-9 on digests and dumps. Trials whose kernel cannot reach a measurable serial time are judged on correctness only and left out of the speed statistics.</figcaption></figure>
+  <div class="tablewrap"><table>
+    <tr><th>Also recorded per trial</th><th>Why</th></tr>
+    <tr><td>llm_call_failures</td><td>a run whose calls all failed must never read as "the model changed nothing" (the voided pilot)</td></tr>
+    <tr><td>explorer_retries</td><td>DiscoPoP's crash rate is a result in itself (T0.7)</td></tr>
+    <tr><td>tokens, cost, turns, duration</td><td>cost per accepted parallelisation is part of the evaluation</td></tr>
+    <tr><td>kernel_program_disagree</td><td>work moved out of the timed region would show up as a kernel gain the whole program does not share</td></tr>
+    <tr><td>candidates.jsonl</td><td>every gate verdict with its stage, diagnostic and evidence — accepted and rejected alike</td></tr>
+  </table></div>
+</section>
+<script type="text/plain" class="src" data-d="d10">
+flowchart TD
+  A{"how did the agent process end?"}:::dec
+  A -->|"the profile failed earlier"| O1["PROFILE_ERROR"]:::bad
+  A -->|"time limit, process group killed"| O2["AGENT_TIMEOUT"]:::bad
+  A -->|"non-zero exit: credential,<br/>endpoint, fatal start-up"| O3["AGENT_ERROR"]:::bad
+  A -->|"exit 0"| SC{"packaging code untouched?<br/>pb_ definitions, ordered uses,<br/>timed region boundaries"}:::dec
+  SC -->|"no"| O4["SCAFFOLD_MODIFIED<br/>never counted as a result"]:::bad
+  SC -->|"yes"| VB["build original and final at the verification size,<br/>run sequential and at each thread count, with repeats"]:::step
+  VB -->|"build or run fails"| O5["VERIFY_FAILED"]:::bad
+  VB --> CR{"digests and dumps within 1e-9 on both inputs,<br/>and stable at a fixed thread count?"}:::dec
+  CR -->|"no"| O6["BROKEN"]:::bad
+  CR -->|"yes"| CH{"source changed?"}:::dec
+  CH -->|"no"| O7["no-change"]:::hold
+  CH -->|"yes"| PG{"any pragma in the final source?"}:::dec
+  PG -->|"no"| O8["changed-not-parallel"]:::hold
+  PG -->|"yes"| MS{"serial time measurable<br/>for this kernel?"}:::dec
+  MS -->|"no"| O9["parallel-speed-not-measurable"]:::hold
+  MS -->|"yes"| SP{"best speedup at least 1.1?"}:::dec
+  SP -->|"yes"| O10["FASTER"]:::ok
+  SP -->|"no"| O11["parallel-not-faster"]:::hold
+</script>
+
+<footer>Sources: <code>discopop_agent/run.py</code>, <code>plan/scoring.py</code>, <code>phases/phase_a.py</code>, <code>llm/client.py</code>, <code>gate/validate.py</code>, <code>profiling/runner.py</code>, <code>phases/phase_b.py</code>, <code>phases/settle.py</code>; harness <code>agent/tools/cli.py</code>. Findings behind the branches: <code>docs/REVIEW_2026-09.md</code>, <code>docs/FIXES.md</code>, <code>docs/MULTIFILE.md</code>.</footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.9.1/mermaid.min.js"></script>
+<script>
+(function () {
+  var sources = {};
+  document.querySelectorAll("script.src").forEach(function (s) { sources[s.dataset.d] = s.textContent.trim(); });
+  function v(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+  function classDefs() {
+    var t = "color:" + v("--ink") + ",";
+    return [
+      "classDef step fill:" + v("--surface") + ",stroke:" + v("--ink-2") + "," + t + "stroke-width:1.2px",
+      "classDef dec fill:" + v("--accent-soft") + ",stroke:" + v("--accent") + "," + t + "stroke-width:1.4px",
+      "classDef model fill:" + v("--model-soft") + ",stroke:" + v("--model") + "," + t + "stroke-width:1.4px",
+      "classDef ok fill:" + v("--ok-soft") + ",stroke:" + v("--ok") + "," + t + "stroke-width:1.4px",
+      "classDef hold fill:" + v("--hold-soft") + ",stroke:" + v("--hold") + "," + t + "stroke-width:1.2px",
+      "classDef bad fill:" + v("--unsafe-soft") + ",stroke:" + v("--unsafe") + "," + t + "stroke-width:1.4px"
+    ].join("\n");
+  }
+  function showSource(c, why) {
+    c.innerHTML = "<pre></pre>";
+    c.firstChild.textContent = (why ? why + "\n\n" : "") + sources[c.dataset.d];
+  }
+  var round = 0;
+  function draw() {
+    var charts = document.querySelectorAll(".chart");
+    if (!window.mermaid) {
+      charts.forEach(function (c) { showSource(c, "The diagram library could not be loaded; this is the diagram's source."); });
+      return;
+    }
+    round += 1;
+    mermaid.initialize({
+      startOnLoad: false, securityLevel: "loose", theme: "base",
+      flowchart: { htmlLabels: true, curve: "basis", nodeSpacing: 34, rankSpacing: 42, useMaxWidth: false },
+      themeVariables: {
+        fontFamily: v("--f-head"), fontSize: "14.5px",
+        primaryColor: v("--surface"), primaryTextColor: v("--ink"), primaryBorderColor: v("--ink-2"),
+        lineColor: v("--muted"), textColor: v("--ink"), mainBkg: v("--surface"),
+        edgeLabelBackground: v("--surface"), clusterBkg: v("--sunk"), clusterBorder: v("--rule"),
+        titleColor: v("--ink-2")
+      }
+    });
+    var chain = Promise.resolve();
+    charts.forEach(function (c) {
+      chain = chain.then(function () {
+        return mermaid.render("m_" + c.dataset.d + "_" + round, sources[c.dataset.d] + "\n" + classDefs())
+          .then(function (out) { c.innerHTML = out.svg; })
+          .catch(function (err) {
+            showSource(c, "This diagram could not be drawn (" + String(err && err.message ? err.message : err).split("\n")[0] + ").");
+          });
+      });
+    });
+  }
+  draw();
+  var mq = window.matchMedia("(prefers-color-scheme: dark)");
+  if (mq.addEventListener) mq.addEventListener("change", draw);
+  new MutationObserver(draw).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+})();
+</script>
+</html>

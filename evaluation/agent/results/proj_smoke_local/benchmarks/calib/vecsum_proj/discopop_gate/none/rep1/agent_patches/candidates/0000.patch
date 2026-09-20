@@ -1,0 +1,10 @@
+--- /Users/ahmedsamir/new_benchmark_harness/agent/runs/proj_smoke_local/benchmarks/calib/vecsum_proj/discopop_gate/none/rep1/work/src/kernel.c
++++ /Users/ahmedsamir/new_benchmark_harness/agent/runs/proj_smoke_local/benchmarks/calib/vecsum_proj/discopop_gate/none/rep1/work/src/kernel.c
+@@ -7,6 +7,7 @@
+ void kernel_vecsum(double* a, double* b, double* c)
+ {
+   int r, i;
++  #pragma omp parallel for private(i) shared(c,a,b) 
+   for (r = 0; r < R; r++)
+     for (i = 0; i < N; i++)
+       c[i] = a[i] * b[i] + 0.5 * a[i];

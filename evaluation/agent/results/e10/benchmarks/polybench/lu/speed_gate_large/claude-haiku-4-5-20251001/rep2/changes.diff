@@ -1,0 +1,20 @@
+--- original.c
++++ final.c
+@@ -62,8 +62,17 @@
+ #pragma scop
+   for (k = 0; k < _PB_N; k++)
+     {
++      /* Parallelize row normalization: each j iteration writes to a different
++         column of row k, so there is no inter-iteration dependence */
++      #pragma omp parallel for shared(A) firstprivate(k, n)
+       for (j = k + 1; j < _PB_N; j++)
+ 	A[k][j] = A[k][j] / A[k][k];
++
++      /* Parallelize submatrix update using collapse(2) to combine i and j
++         iterations: ~(n-k)^2 iterations per k-activation provides sufficient
++         work per thread to justify parallelization overhead. Each (i,j) pair
++         writes to a different element A[i][j], so iterations are independent */
++      #pragma omp parallel for collapse(2) shared(A) firstprivate(k, n)
+       for(i = k + 1; i < _PB_N; i++)
+ 	for (j = k + 1; j < _PB_N; j++)
+ 	  A[i][j] = A[i][j] - A[i][k] * A[k][j];

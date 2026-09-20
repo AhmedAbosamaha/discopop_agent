@@ -1,0 +1,30 @@
+--- /home/ahmedabosamaha/new_benchmark_harness/agent/runs/e10/benchmarks/polybench/floyd-warshall/full/claude-haiku-4-5-20251001/rep3/work/floyd-warshall.c
++++ /home/ahmedabosamaha/new_benchmark_harness/agent/runs/e10/benchmarks/polybench/floyd-warshall/full/claude-haiku-4-5-20251001/rep3/work/floyd-warshall.c
+@@ -61,8 +61,26 @@
+ #pragma scop
+   for (k = 0; k < _PB_N; k++)
+     {
++      /* Phase 1: Update path[i][j] for j < k (no dependence on path[i][k] update in this k) */
++#pragma omp parallel for shared(path, k)
+       for(i = 0; i < _PB_N; i++)
+-	for (j = 0; j < _PB_N; j++)
++	for (j = 0; j < k; j++)
++	  path[i][j] = path[i][j] < path[i][k] + path[k][j] ?
++	    path[i][j] : path[i][k] + path[k][j];
++
++      /* Phase 2: Update path[i][k] for all i (writes finalized, barrier before phase 3) */
++#pragma omp parallel for shared(path, k)
++      for (i = 0; i < _PB_N; i++)
++	{
++	  j = k;
++	  path[i][j] = path[i][j] < path[i][k] + path[k][j] ?
++	    path[i][j] : path[i][k] + path[k][j];
++	}
++
++      /* Phase 3: Update path[i][j] for j > k (reads updated path[i][k] from phase 2) */
++#pragma omp parallel for shared(path, k)
++      for(i = 0; i < _PB_N; i++)
++	for (j = k+1; j < _PB_N; j++)
+ 	  path[i][j] = path[i][j] < path[i][k] + path[k][j] ?
+ 	    path[i][j] : path[i][k] + path[k][j];
+     }

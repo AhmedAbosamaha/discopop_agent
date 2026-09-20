@@ -1,0 +1,118 @@
+
+============================================================
+  DiscoPoP Agentic Controller
+============================================================
+  Source         : /Users/ahmedsamir/new_benchmark_harness/agent/runs/dp_alone_look_mac/benchmarks/polybench/doitgen/discopop_gate/none/rep1/work/doitgen.c
+  DiscoPoP dir   : .discopop
+  Model          : none
+  Budget         : 0 LLM retries/region (+2 free build fixes)
+  λ penalty      : 1.0
+  Min workload   : 0.0
+  Restruct. depth: 0 (Tier-2 allowed at depth 0–0)
+  Quality gate   : Tier-1 = all but speed, no escalation; Tier-2 = full
+  TSan           : barrier-aware (archer: /Users/ahmedsamir/.local/lib/libarcher.dylib)
+  Speedup gate   : OFF (--no-require-speedup)
+  Dry run        : False
+  LLM mode       : none
+  Edit mode      : direct
+  Re-profiling   : fast refresh (compile only) between rewrites; full before a deeper level and before Phase B
+  Pragmas        : LLM writes them with the rewrite, gate decides (--llm-pragmas)
+============================================================
+
+  Project        : /Users/ahmedsamir/new_benchmark_harness/agent/runs/dp_alone_look_mac/benchmarks/polybench/doitgen/discopop_gate/none/rep1/work  (2 unit(s): doitgen.c, polybench.c)
+
+  [ok] Captured reference output on 2 inputs (59 bytes, 1.0 ms baseline) for the correctness/performance gates.
+
+  [ok] Numerical noise floor 0 — 6 build variants agreed exactly; output is compared byte-for-byte.
+
+  Hotspots       : measured per-region runtimes are available — 22 region(s) measured, 8.7 ms total, ranking by predicted time saved at 8 threads
+
+  Baseline       : DiscoPoP proposes 5 applicable pattern(s) unaided; 5 of them produce a usable pragma
+                   → the run beats DiscoPoP by ending with more than 5
+
+  Initial candidates
+Region ID    Type           Saves    % run    Hot  Tier  Depth  Name
+--------------------------------------------------------------------------------------
+  1:105      loop          5.2 ms    68.8%    YES     1      0  lines 69–78
+  1:108      loop          5.2 ms    68.7%    YES     1      0  lines 70–78
+  3:102      function      5.2 ms    68.8%    YES     2      0  kernel_doitgen
+  1:111      loop          5.0 ms    66.7%    YES     1      0  lines 71–75
+  1:115      loop          4.0 ms    52.7%    YES     1      0  lines 73–74
+  1:123      loop          0.1 ms     1.5%  MAYBE     1      0  lines 76–77
+
+============================================================
+  PHASE A — restructure  (the source stays pragma-free)
+============================================================
+
+┌─ [depth=0] loop 1:105 (lines 69–78)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:108 (lines 70–78)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] function 3:102 (lines 61–81)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:111 (lines 71–75)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:115 (lines 73–74)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:123 (lines 76–77)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+
+============================================================
+  PHASE B — annotate  (5 candidate pragma(s))
+============================================================
+
+  5 loop(s) are already parallel in the source; nothing is nested inside them.
+
+┌─ pattern #32  do_all @ lines 69–78  (W=9216)
+│  #pragma omp parallel for
+│  gate failed at 'tsan': Race detected: WARNING: ThreadSanitizer: data race (pid=9271)   Write of size 4 at 0x7ff7b73861b4 by thread T2:     #0 kernel_doitgen.omp_outlined doi
+└─ DROPPED
+
+┌─ pattern #31  do_all @ lines 70–78  (W=262144)
+│  #pragma omp parallel for
+│  gate failed at 'tsan': Race detected: WARNING: ThreadSanitizer: data race (pid=9287)   Write of size 4 at 0x7ff7baa1c1b0 by thread T7:     #0 kernel_doitgen.omp_outlined doi
+└─ DROPPED
+
+┌─ pattern #29  do_all @ lines 71–75  (W=4194304)
+│  #pragma omp parallel for
+│  gate failed at 'tsan': Race detected: WARNING: ThreadSanitizer: data race (pid=9313)   Write of size 4 at 0x7ff7be2881ac by thread T2:     #0 kernel_doitgen.omp_outlined doi
+└─ DROPPED
+
+┌─ pattern #28  do_all @ lines 73–74  (W=32768)
+│  #pragma omp parallel for
+│  gate failed at 'tsan': Race detected: WARNING: ThreadSanitizer: data race (pid=9338)   Write of size 8 at 0x00010e752000 by thread T2:     #0 kernel_doitgen.omp_outlined doi
+└─ DROPPED
+
+┌─ pattern #30  do_all @ lines 76–77  (W=32)
+│  #pragma omp parallel for
+│  [Phase-B] Original backed up → doitgen.c.original
+│  [Phase-B] Applied to doitgen.c
+└─ APPLIED
+
+============================================================
+  SETTLING — verify the finished source, drop what does not hold up
+============================================================
+  [ok] finished source verified — output matches the original
+
+
+============================================================
+  SUMMARY: 0 rewrite(s) kept  |  1 pragma(s) applied  |  1 skipped
+  DiscoPoP unaided: 5 usable pragma(s) in this profile's draw  →  this run: 1   [BELOW, informational]
+    ✓  loop 1:123  [Phase-B pragma]  depth=0
+    ✗  3:102  [skipped]  depth=0
+
+  Results → .discopop/agent_patches/accepted.json
+============================================================
+

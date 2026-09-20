@@ -1,0 +1,67 @@
+--- hotspot.cpp
++++ hotspot.cpp
+@@ -250,18 +250,55 @@
+ 	#endif
+ 
+         {
+-            FLOAT* r = result;
+-            FLOAT* t = temp;
+-            for (int i = 0; i < num_iterations ; i++)
++            /* Allocate separate output buffer for each iteration to eliminate storage reuse races.
++               Iteration i reads from buffer i and writes to buffer i+1.
++               Each iteration writes to a distinct location (buffers[i+1]), so parallel iterations
++               do not race. The sequential dependence is now explicit via the buffer chain:
++               iteration i+1 logically depends on iteration i's output, but from memory-safety
++               perspective, each iteration writes to its own distinct array. */
++
++            FLOAT **buffers = (FLOAT**)malloc((num_iterations + 1) * sizeof(FLOAT*));
++            buffers[0] = temp;  /* Start with input temperature grid */
++
++            /* Allocate output buffers for each iteration */
++            for (int i = 1; i <= num_iterations; i++) {
++                buffers[i] = (FLOAT*)malloc(row * col * sizeof(FLOAT));
++            }
++            /* buffers[0] and buffers[1] intentionally left uninitialized for iteration writes */
++            if (num_iterations > 0) {
++                buffers[1] = result;  /* First iteration outputs to the result buffer */
++            }
++
++            /* Parallelize over iterations: each iteration reads buffers[i], writes buffers[i+1].
++               No two iterations write to the same buffer. */
++            #pragma omp parallel for schedule(static)
++            for (int i = 0; i < num_iterations; i++)
+             {
+                 #ifdef VERBOSE
+-                fprintf(stdout, "iteration %d\n", i++);
++                fprintf(stdout, "iteration %d\n", i);
+                 #endif
+-                single_iteration(r, t, power, row, col, Cap_1, Rx_1, Ry_1, Rz_1, step);
+-                FLOAT* tmp = t;
+-                t = r;
+-                r = tmp;
+-            }	
++                /* Iteration i reads state from iteration i-1's output, writes new state to buffers[i+1] */
++                single_iteration(buffers[i + 1], buffers[i], power, row, col, Cap_1, Rx_1, Ry_1, Rz_1, step);
++            }
++
++            /* Copy final result back to the appropriate original buffer based on iteration parity */
++            if (num_iterations > 0) {
++                FLOAT *final_buffer = buffers[num_iterations];
++                /* After num_iterations, final state is in buffers[num_iterations].
++                   Original code expects result for odd iterations, temp for even. */
++                if (num_iterations % 2 == 1) {
++                    /* Odd iterations: final state should be in result. buffers[num_iterations] IS result. */
++                } else {
++                    /* Even iterations: final state should be in temp. Copy from buffers[num_iterations]. */
++                    memcpy(temp, final_buffer, row * col * sizeof(FLOAT));
++                }
++            }
++
++            /* Free intermediate buffers (not buffers[0]=temp or buffers[1]=result which are external) */
++            for (int i = 2; i <= num_iterations; i++) {
++                free(buffers[i]);
++            }
++            free(buffers);
+         }
+ 	#ifdef VERBOSE
+ 	fprintf(stdout, "iteration %d\n", i++);

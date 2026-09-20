@@ -1,0 +1,64 @@
+--- /private/tmp/claude-501/-Users-ahmedsamir-discopop-agent/436822e3-c111-4da4-bd96-90a25b95970d/scratchpad/matrix_prefix/dp_annotates/prefix.c
++++ /private/tmp/claude-501/-Users-ahmedsamir-discopop-agent/436822e3-c111-4da4-bd96-90a25b95970d/scratchpad/matrix_prefix/dp_annotates/prefix.c
+@@ -101,11 +101,58 @@
+ 
+ static void kernel_prefix(double* a, double* c)
+ {
+-  int r, i;
++  int r;
++  const int NB = 64;
+   for (r = 0; r < R; r++) {
++    double block_sum[64];
++    double block_off[64];
++    int b;
++    int block_size = ((N - 1) + NB - 1) / NB;
++    if (block_size < 1) block_size = 1;
++
+     c[0] = a[0];
+-    for (i = 1; i < N; i++)
+-      c[i] = c[i-1] + a[i];
++
++    /* Phase 1: each block computes its own local (block-relative) prefix
++     * sum independently -- disjoint index ranges across b, so the b-loop
++     * carries no dependence (the running sum only travels within a block,
++     * along the sequential inner i-loop, which stays untouched). */
++    for (b = 0; b < NB; b++) {
++      int lo = 1 + b * block_size;
++      int hi = lo + block_size;
++      int i;
++      double run = 0.0;
++      if (hi > N) hi = N;
++      if (lo > N) lo = N;
++      for (i = lo; i < hi; i++) {
++        run += a[i];
++        c[i] = run;
++      }
++      block_sum[b] = run;
++    }
++
++    /* Phase 2: small sequential exclusive scan (NB items) turning each
++     * block's total into the offset that must be added to that block's
++     * local prefix so it becomes a global prefix. */
++    {
++      double offset = c[0];
++      for (b = 0; b < NB; b++) {
++        block_off[b] = offset;
++        offset += block_sum[b];
++      }
++    }
++
++    /* Phase 3: each block adds its own (already-known) offset to its own
++     * elements independently -- again disjoint ranges across b. */
++    for (b = 0; b < NB; b++) {
++      int lo = 1 + b * block_size;
++      int hi = lo + block_size;
++      int i;
++      double off = block_off[b];
++      if (hi > N) hi = N;
++      if (lo > N) lo = N;
++      for (i = lo; i < hi; i++)
++        c[i] += off;
++    }
+   }
+ }
+ 

@@ -1,0 +1,10 @@
+--- md.cpp
++++ md.cpp
+@@ -271,6 +271,7 @@
+       f[i+k*nd] = 0.0;
+     }
+ 
++    #pragma omp parallel for firstprivate(nd,PI2,np,k,rij) private(d2,i,d) shared(f,pos) reduction(+:pe) 
+     for ( j = 0; j < np; j++ )
+     {
+       if ( k != j )

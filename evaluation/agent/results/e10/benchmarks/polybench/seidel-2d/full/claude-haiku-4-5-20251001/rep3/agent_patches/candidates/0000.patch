@@ -1,0 +1,40 @@
+--- /home/ahmedabosamaha/new_benchmark_harness/agent/runs/e10/benchmarks/polybench/seidel-2d/full/claude-haiku-4-5-20251001/rep3/work/seidel-2d.c
++++ /home/ahmedabosamaha/new_benchmark_harness/agent/runs/e10/benchmarks/polybench/seidel-2d/full/claude-haiku-4-5-20251001/rep3/work/seidel-2d.c
+@@ -58,16 +58,34 @@
+ 		      DATA_TYPE POLYBENCH_2D(A,N,N,n,n))
+ {
+   int t, i, j;
++  int n_padded = _PB_N + POLYBENCH_PADDING_FACTOR;
++  DATA_TYPE* A_temp = (DATA_TYPE*)malloc(n_padded * n_padded * sizeof(DATA_TYPE));
+ 
+ #pragma scop
+   for (t = 0; t <= _PB_TSTEPS - 1; t++)
++  {
++    /* Compute new values into A_temp using current values from A.
++       Since each iteration reads only from A and writes only to A_temp,
++       all iterations are independent and can be parallelized.
++    */
++    #pragma omp parallel for collapse(2) private(i, j)
+     for (i = 1; i<= _PB_N - 2; i++)
+       for (j = 1; j <= _PB_N - 2; j++)
+-	A[i][j] = (A[i-1][j-1] + A[i-1][j] + A[i-1][j+1]
+-		   + A[i][j-1] + A[i][j] + A[i][j+1]
+-		   + A[i+1][j-1] + A[i+1][j] + A[i+1][j+1])/9.0;
++	A_temp[i * n_padded + j] = (A[i-1][j-1] + A[i-1][j] + A[i-1][j+1]
++				    + A[i][j-1] + A[i][j] + A[i][j+1]
++				    + A[i+1][j-1] + A[i+1][j] + A[i+1][j+1])/9.0;
++
++    /* Copy new values from A_temp back to A.
++       Parallelized independently of the computation loop.
++    */
++    #pragma omp parallel for collapse(2) private(i, j)
++    for (i = 1; i<= _PB_N - 2; i++)
++      for (j = 1; j <= _PB_N - 2; j++)
++	A[i][j] = A_temp[i * n_padded + j];
++  }
+ #pragma endscop
+ 
++  free(A_temp);
+ }
+ 
+ 

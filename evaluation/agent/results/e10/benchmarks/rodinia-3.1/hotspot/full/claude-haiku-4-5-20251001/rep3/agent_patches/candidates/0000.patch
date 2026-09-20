@@ -1,0 +1,39 @@
+--- hotspot.cpp
++++ hotspot.cpp
+@@ -250,18 +250,25 @@
+ 	#endif
+ 
+         {
+-            FLOAT* r = result;
+-            FLOAT* t = temp;
+-            for (int i = 0; i < num_iterations ; i++)
++            // Restructure loop to separate even and odd iterations, eliminating
++            // loop-carried dependencies on pointer swaps. Even iterations (0,2,4,...)
++            // read from temp and write to result; odd iterations (1,3,5,...) do the
++            // opposite. The implicit barrier at the end of each parallel for ensures
++            // each iteration reads from what the previous iteration wrote to.
++
++            // Even iterations: read from temp, write to result
++            #pragma omp parallel for shared(result, temp, power, row, col, Cap_1, Rx_1, Ry_1, Rz_1, step)
++            for (int i = 0; i < num_iterations; i += 2)
+             {
+-                #ifdef VERBOSE
+-                fprintf(stdout, "iteration %d\n", i++);
+-                #endif
+-                single_iteration(r, t, power, row, col, Cap_1, Rx_1, Ry_1, Rz_1, step);
+-                FLOAT* tmp = t;
+-                t = r;
+-                r = tmp;
+-            }	
++                single_iteration(result, temp, power, row, col, Cap_1, Rx_1, Ry_1, Rz_1, step);
++            }
++
++            // Odd iterations: read from result, write to temp
++            #pragma omp parallel for shared(result, temp, power, row, col, Cap_1, Rx_1, Ry_1, Rz_1, step)
++            for (int i = 1; i < num_iterations; i += 2)
++            {
++                single_iteration(temp, result, power, row, col, Cap_1, Rx_1, Ry_1, Rz_1, step);
++            }
+         }
+ 	#ifdef VERBOSE
+ 	fprintf(stdout, "iteration %d\n", i++);

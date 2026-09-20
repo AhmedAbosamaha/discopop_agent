@@ -1,0 +1,88 @@
+
+============================================================
+  DiscoPoP Agentic Controller
+============================================================
+  Source         : /home/ahmedabosamaha/new_benchmark_harness/agent/runs/e10/benchmarks/polybench/2mm/speed_gate_large/claude-haiku-4-5-20251001/rep3/work/2mm.c
+  DiscoPoP dir   : .discopop
+  Model          : claude-haiku-4-5-20251001
+  Budget         : 3 LLM retries/region (+2 free build fixes)
+  λ penalty      : 1.0
+  Min workload   : 0.0
+  Restruct. depth: 0 (Tier-2 allowed at depth 0–0)
+  Quality gate   : Tier-1 = all but speed, no escalation; Tier-2 = full
+  TSan           : barrier-aware (archer: /usr/lib/llvm-20/lib/libarcher.so)
+  Speedup gate   : require ≥ 1.1× measured
+  Dry run        : False
+  LLM mode       : claude-haiku-4-5-20251001
+  Edit mode      : direct
+  Re-profiling   : fast refresh (compile only) between rewrites; full before a deeper level and before Phase B
+  Pragmas        : LLM writes them with the rewrite, gate decides (--llm-pragmas)
+============================================================
+
+  Project        : /home/ahmedabosamaha/new_benchmark_harness/agent/runs/e10/benchmarks/polybench/2mm/speed_gate_large/claude-haiku-4-5-20251001/rep3/work  (2 unit(s): 2mm.c, polybench.c)
+
+  [ok] Captured reference output on 2 inputs (77 bytes, 6949.1 ms baseline) for the correctness/performance gates.
+
+  [ok] Numerical noise floor 2.42e-19 of output scale (widest disagreement 2.42e-20 of output scale across 6 build variants, x10 margin — on input '7').
+  [note] values may move that far without failing the correctness gate; labels, line structure and integers must still match exactly.
+
+  Hotspots       : measured per-region runtimes are available — 26 region(s) measured, 14.6 ms total, ranking by predicted time saved at 48 threads
+
+  Baseline       : DiscoPoP proposes 6 applicable pattern(s) unaided; 6 of them produce a usable pragma
+                   → the run beats DiscoPoP by ending with more than 6
+
+  Initial candidates
+Region ID    Type           Saves    % run    Hot  Tier  Depth  Name
+--------------------------------------------------------------------------------------
+  3:143      function     13.0 ms    91.2%    YES     2      0  kernel_2mm
+  1:146      loop          6.5 ms    45.7%    YES     1      0  lines 84–90
+  1:149      loop          6.5 ms    45.7%    YES     1      0  lines 85–90
+  1:163      loop          6.5 ms    45.5%    YES     1      0  lines 91–97
+  1:166      loop          6.5 ms    45.5%    YES     1      0  lines 92–97
+  1:153      loop          6.0 ms    41.9%    YES     1      0  lines 88–89
+  1:170      loop          6.0 ms    41.8%    YES     1      0  lines 95–96
+
+============================================================
+  PHASE A — restructure  (the source stays pragma-free)
+============================================================
+
+┌─ [depth=0] function 3:143 (lines 71–100)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 2 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for private(j, k) firstprivate(nk, ni, alpha, nj)
+│           #pragma omp parallel for private(j, k) firstprivate(beta, ni, nl, nj)
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Original backed up → 2mm.c.original
+│  [Tier-2] Applied to 2mm.c
+│  [Tier-2] Fast refresh (compile only, no instrumented run)...
+│           533/533 observed dependences carried forward (0 in rewritten code, 0 no longer present; 217 without callpath state), 16/16 loop trip counts
+│  [Tier-2] 0 survivor(s) rebuilt, 0 new at depth 1
+│  [Tier-2] Kept on its own pragmas: 2 annotated loop(s), gate passed end to end
+│  [Tier-2] Restructuring pays off (measured 11.20×)
+└─ ACCEPTED
+
+
+  One full re-profile before Phase B — it annotates from measured dependences, not carried-forward ones.
+
+============================================================
+  PHASE B — annotate  (0 candidate pragma(s))
+============================================================
+
+  DiscoPoP proposes no applicable pattern for the final source.
+
+============================================================
+  SETTLING — verify the finished source, drop what does not hold up
+============================================================
+  [ok] finished source verified — output matches, 739.8 ms vs 6949.1 ms original
+
+
+============================================================
+  SUMMARY: 1 rewrite(s) kept  |  2 pragma(s) applied (0 DiscoPoP + 2 LLM)  |  0 skipped
+  DiscoPoP unaided: 6 usable pragma(s) in this profile's draw  →  this run: 2   [BELOW, informational]
+    ✓  function 3:143  [Tier-2]  depth=0  2 own pragma(s), 11.20×
+
+  Results → .discopop/agent_patches/accepted.json
+============================================================
+

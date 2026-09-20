@@ -1,0 +1,42 @@
+--- /home/ahmedabosamaha/new_benchmark_harness/agent/runs/e10/benchmarks/polybench/seidel-2d/full/claude-haiku-4-5-20251001/rep2/work/seidel-2d.c
++++ /home/ahmedabosamaha/new_benchmark_harness/agent/runs/e10/benchmarks/polybench/seidel-2d/full/claude-haiku-4-5-20251001/rep2/work/seidel-2d.c
+@@ -57,15 +57,33 @@
+ 		      int n,
+ 		      DATA_TYPE POLYBENCH_2D(A,N,N,n,n))
+ {
+-  int t, i, j;
++  int t, i, j, c, color;
+ 
+ #pragma scop
+   for (t = 0; t <= _PB_TSTEPS - 1; t++)
+-    for (i = 1; i<= _PB_N - 2; i++)
+-      for (j = 1; j <= _PB_N - 2; j++)
+-	A[i][j] = (A[i-1][j-1] + A[i-1][j] + A[i-1][j+1]
+-		   + A[i][j-1] + A[i][j] + A[i][j+1]
+-		   + A[i+1][j-1] + A[i+1][j] + A[i+1][j+1])/9.0;
++    {
++      /* Process in 9 color passes in the order they first appear in the
++         original (i,j) iteration order. This preserves Gauss-Seidel semantics
++         where newly-computed values are available from earlier colors.
++         Points with the same color are spaced 3 apart in both dimensions and
++         cannot neighbor each other in a 3x3 stencil, allowing independent
++         parallel updates. Color order [4,5,3,7,8,6,1,2,0] respects the
++         original i-loop then j-loop traversal. */
++      int color_order[9] = {4, 5, 3, 7, 8, 6, 1, 2, 0};
++      for (c = 0; c < 9; c++)
++        {
++          color = color_order[c];
++          #pragma omp parallel for collapse(2) private(i, j)
++          for (i = 1; i <= _PB_N - 2; i++)
++            for (j = 1; j <= _PB_N - 2; j++)
++              {
++                if ((i % 3) * 3 + (j % 3) == color)
++                  A[i][j] = (A[i-1][j-1] + A[i-1][j] + A[i-1][j+1]
++                             + A[i][j-1] + A[i][j] + A[i][j+1]
++                             + A[i+1][j-1] + A[i+1][j] + A[i+1][j+1])/9.0;
++              }
++        }
++    }
+ #pragma endscop
+ 
+ }

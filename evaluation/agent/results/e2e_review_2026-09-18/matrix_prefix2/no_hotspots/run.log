@@ -1,0 +1,85 @@
+
+============================================================
+  DiscoPoP Agentic Controller
+============================================================
+  Source         : /private/tmp/claude-501/-Users-ahmedsamir-discopop-agent/436822e3-c111-4da4-bd96-90a25b95970d/scratchpad/matrix_prefix2/no_hotspots/prefix.c
+  DiscoPoP dir   : /private/tmp/claude-501/-Users-ahmedsamir-discopop-agent/436822e3-c111-4da4-bd96-90a25b95970d/scratchpad/matrix_prefix2/no_hotspots/.discopop
+  Model          : sonnet
+  Budget         : 1 LLM retries/region (+2 free build fixes)
+  λ penalty      : 1.0
+  Min workload   : 0.0
+  Restruct. depth: 0 (Tier-2 allowed at depth 0–0)
+  Quality gate   : Tier-1 = all but speed, no escalation; Tier-2 = full
+  TSan           : barrier-aware (archer: /Users/ahmedsamir/.local/lib/libarcher.dylib)
+  Speedup gate   : OFF (--no-require-speedup)
+  Dry run        : False
+  LLM mode       : sonnet
+  Edit mode      : direct
+  Re-profiling   : fast refresh (compile only) between rewrites; full before a deeper level and before Phase B
+  Pragmas        : LLM writes them with the rewrite, gate decides (--llm-pragmas)
+============================================================
+
+  [ok] Captured reference output on 2 inputs (64 bytes, 8.5 ms baseline) for the correctness/performance gates.
+
+  [ok] Numerical noise floor 0 — 6 build variants agreed exactly; output is compared byte-for-byte.
+
+  Hotspots       : disabled (--no-hotspots) — falling back to the static workload proxy for ranking
+
+  Baseline       : DiscoPoP proposes 1 applicable pattern(s) unaided; 1 of them produce a usable pragma
+                   → the run beats DiscoPoP by ending with more than 1
+
+  Initial candidates
+Region ID    Type         Score  Tier  Depth      Workload  Name
+----------------------------------------------------------------------------
+  1:48       loop          23.9     1      0    15,999,984  lines 105–109
+  1:52       loop          -0.7     2      0             1  lines 107–108
+  1:45       function      -1.0     2      0             0  kernel_prefix
+
+============================================================
+  PHASE A — restructure  (the source stays pragma-free)
+============================================================
+
+┌─ [depth=0] loop 1:48 (lines 105–109)  score=23.9
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:52 (lines 107–108)  score=-0.7
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Assembling evidence (budget remaining: 0)
+│  [Tier-2] Calling sonnet...
+│  [Tier-2] Diff received with 2 pragma(s) — running quality gate (apply/compile/openmp/TSan/output)
+│           #pragma omp parallel for shared(a, c, block_sum, num_blocks, block_size)
+│           #pragma omp parallel for shared(c, block_offset, num_blocks, block_size)
+│  [Tier-2] Stage 'correctness' failed: Program output changed under the parallel build at a fixed thread count — the patched program is NOT semantically equivalent to the original. output differs and no numerical slack is in effect first d
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] function 1:45 (lines 102–110)  score=-1.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Assembling evidence (budget remaining: 0)
+│  [Tier-2] Calling sonnet...
+│  [Tier-2] Diff received with 2 pragma(s) — running quality gate (apply/compile/openmp/TSan/output)
+│           #pragma omp parallel for private(i) shared(a, c, blockSum, bs, nb) schedule(static)
+│           #pragma omp parallel for private(i) shared(c, blockSum, bs, nb) schedule(static)
+│  [Tier-2] Stage 'correctness' failed: Program output changed under the parallel build at a fixed thread count — the patched program is NOT semantically equivalent to the original. output differs and no numerical slack is in effect first d
+└─ SKIPPED (budget exhausted)
+
+
+============================================================
+  PHASE B — annotate  (1 candidate pragma(s))
+============================================================
+
+┌─ pattern #19  do_all @ lines 105–109  (W=15999984)
+│  #pragma omp parallel for
+│  gate failed at 'tsan': Race detected: WARNING: ThreadSanitizer: data race (pid=1160)   Write of size 8 at 0x00010d35c280 by thread T3:     #0 kernel_prefix.omp_outlined pref
+└─ DROPPED
+
+
+============================================================
+  SUMMARY: 0 rewrite(s) kept  |  0 pragma(s) applied  |  2 skipped
+  DiscoPoP unaided: 1 usable pragma(s)  →  this run: 0   [BELOW]
+    ✗  1:52  [skipped]  depth=0
+    ✗  1:45  [skipped]  depth=0
+
+  Results → /private/tmp/claude-501/-Users-ahmedsamir-discopop-agent/436822e3-c111-4da4-bd96-90a25b95970d/scratchpad/matrix_prefix2/no_hotspots/.discopop/agent_patches/accepted.json
+============================================================
+

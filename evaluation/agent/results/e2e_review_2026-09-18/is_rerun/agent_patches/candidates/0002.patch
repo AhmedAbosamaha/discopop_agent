@@ -1,0 +1,10 @@
+--- /private/tmp/claude-501/-Users-ahmedsamir-discopop-agent/436822e3-c111-4da4-bd96-90a25b95970d/scratchpad/is_rerun/IS/is.cpp
++++ /private/tmp/claude-501/-Users-ahmedsamir-discopop-agent/436822e3-c111-4da4-bd96-90a25b95970d/scratchpad/is_rerun/IS/is.cpp
+@@ -619,6 +619,7 @@
+ 	/* each bucket, which can be done in parallel.  Because the distribution */
+ 	/* of the number of keys in the buckets is Gaussian, the use of */
+ 	/* a dynamic schedule should improve load balance, thus, performance */
++	#pragma omp parallel for private(k,k1,k2) shared(key_buff_ptr2,key_buff_ptr) 
+ 	for( i=0; i< NUM_BUCKETS; i++ ) {
+ 		/* Clear the work array section associated with each bucket */
+ 		k1 = i * num_bucket_keys;
