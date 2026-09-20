@@ -1,5 +1,4 @@
   Quality gate   : Tier-1 = all but speed, no escalation; Tier-2 = full
-  Speedup gate   : OFF (--no-require-speedup)
   Re-profiling   : fast refresh (compile only) between rewrites; full before a deeper level and before Phase B
                    → the run beats DiscoPoP by ending with more than 3
 Region ID    Type           Saves    % run    Hot  Tier  Depth  Name
@@ -7,15 +6,20 @@ Region ID    Type           Saves    % run    Hot  Tier  Depth  Name
 │  [Tier-1] No applicable pattern → Tier-2 (LLM)
 │  [Tier-2] Assembling evidence (budget remaining: 2)
 │  [Tier-2] Calling claude-haiku-4-5-20251001...
-│  [Tier-2] Diff received with 2 pragma(s) — running quality gate (apply/compile/openmp/TSan/output)
+│  [Tier-2] Diff received with 1 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│  [Tier-2] Stage 'tsan' failed: Race detected: WARNING: ThreadSanitizer: data race (pid=2065293)   Write of size 8 at 0x72d000000000 by main thread:     #0 kernel_floyd_warshall.omp_outlined_debug__ /tmp/dp_agent_val_b7l0bf5z/_dp_pr
+│  [Tier-2] Assembling evidence (budget remaining: 1)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 1 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
 │  [Tier-2] Quality gate PASSED
 │  [Tier-2] Original backed up → floyd-warshall.c.original
 │  [Tier-2] Applied to floyd-warshall.c
 │  [Tier-2] Fast refresh (compile only, no instrumented run)...
 │  [Tier-2] 0 survivor(s) rebuilt, 0 new at depth 1
-│  [Tier-2] Kept on its own pragmas: 2 annotated loop(s), gate passed end to end
+│  [Tier-2] Kept on its own pragmas: 1 annotated loop(s), gate passed end to end
+│  [Tier-2] Restructuring pays off (measured 3.30×)
   One full re-profile before Phase B — it annotates from measured dependences, not carried-forward ones.
-  SUMMARY: 1 rewrite(s) kept  |  2 pragma(s) applied (0 DiscoPoP + 2 LLM)  |  0 skipped
-  DiscoPoP unaided: 3 usable pragma(s) in this profile's draw  →  this run: 2   [BELOW, informational]
-    ✓  function 3:60  [Tier-2]  depth=0  2 own pragma(s)
+  SUMMARY: 1 rewrite(s) kept  |  1 pragma(s) applied (0 DiscoPoP + 1 LLM)  |  0 skipped
+  DiscoPoP unaided: 3 usable pragma(s) in this profile's draw  →  this run: 1   [BELOW, informational]
+    ✓  function 3:60  [Tier-2]  depth=0  1 own pragma(s), 3.30×
   Results → .discopop/agent_patches/accepted.json

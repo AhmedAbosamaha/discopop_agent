@@ -1,0 +1,17 @@
+\begin{lstlisting}[language=diff,basicstyle=\ttfamily\scriptsize,breaklines=true,caption={polybench/trisolv — parallel-speed-not-measurable (pilot4)}]
+--- original.c
++++ final.c
+@@ -753,8 +753,11 @@
+   for (i = 0; i < _PB_N; i++)
+     {
+       x[i] = c[i];
++      DATA_TYPE sum = 0.0;
++      #pragma omp parallel for reduction(+:sum)
+       for (j = 0; j <= i - 1; j++)
+-        x[i] = x[i] - A[i][j] * x[j];
++        sum += A[i][j] * x[j];
++      x[i] = x[i] - sum;
+       x[i] = x[i] / A[i][i];
+     }
+ #pragma endscop
+\end{lstlisting}

@@ -27,7 +27,7 @@ import re
 import sys
 import textwrap
 from pathlib import Path
-from typing import List
+from typing import Dict, List, Set
 
 AGENT_DIR = Path(__file__).resolve().parents[1]
 RESULTS = AGENT_DIR / "results"
@@ -112,7 +112,49 @@ def _side_by_side(trial: Path, t: dict, path: Path, context: int = 5) -> dict:
         cands = [json.loads(l) for l in cj.read_text().splitlines() if l.strip()]
     depth = max([c.get("depth") or 0 for c in cands if c.get("passed")] or [0])
     pragmas_after = [i for i, l in enumerate(b) if "#pragma omp" in l]
-    facts = {"file": fname, "lines_before": len(a), "lines_after": len(b), "lines_removed": len(touched_a),
+    # What KIND of change this is, stated rather than left to the reader to infer from a
+    # line count. A pragma is not a restructuring, and neither is a comment the model wrote to
+    # explain itself: on `2mm` and `lu` every "added line" beyond the pragmas is commentary.
+    # Counting those as changed code overstated the agent's work in the first exhibits.
+    def _code_lines(lines: List[str]) -> Set[int]:
+        """Indices of lines that carry code — block comments tracked across lines, because a
+        model explains itself in multi-line `/* ... */`, whose middle lines start with a word
+        and were being counted as restructuring (`lu`, `2mm`)."""
+        out: Set[int] = set()
+        in_block = False
+        for i, line in enumerate(lines):
+            rest, code = line, ""
+            while rest:
+                if in_block:
+                    end = rest.find("*/")
+                    if end < 0:
+                        rest = ""
+                    else:
+                        rest, in_block = rest[end + 2:], False
+                    continue
+                start = rest.find("/*")
+                line_cmt = rest.find("//")
+                if line_cmt >= 0 and (start < 0 or line_cmt < start):
+                    code += rest[:line_cmt]
+                    break
+                if start < 0:
+                    code += rest
+                    break
+                code += rest[:start]
+                rest, in_block = rest[start + 2:], True
+            if code.strip() and "#pragma" not in code:
+                out.add(i)
+        return out
+
+    code_a, code_b = _code_lines(a), _code_lines(b)
+    code_added = len(touched_b & code_b)
+    code_removed = len(touched_a & code_a)
+    kind = ("restructuring" if (code_added or code_removed)
+            else "annotation" if len(pragmas_after) > len([l for l in a if "#pragma omp" in l])
+            else "unchanged")
+    facts = {"file": fname, "change_kind": kind,
+             "code_lines_added": code_added, "code_lines_removed": code_removed,
+             "lines_before": len(a), "lines_after": len(b), "lines_removed": len(touched_a),
              "lines_added": len(touched_b), "pragmas_added": t.get("pragmas_added", len(pragmas_after)),
              "candidates_judged": len(cands), "candidates_kept": sum(1 for c in cands if c.get("passed")),
              "rejected_at": sorted({c.get("stage") for c in cands if not c.get("passed")}),
@@ -130,7 +172,10 @@ def _side_by_side(trial: Path, t: dict, path: Path, context: int = 5) -> dict:
     ax.text(0.012, 1 - 2.2 * lh / H,
             f"−{facts['lines_removed']} / +{facts['lines_added']} lines of {len(a)}   ·   {facts['pragmas_added']} parallel region(s) added"
             f"   ·   {facts['candidates_kept']} of {facts['candidates_judged']} candidate(s) kept"
-            f"   ·   restructuring level {depth}", color=INK, family="monospace", fontsize=8.5, va="top")
+            f"   ·   {kind.upper()}"
+            + (f" ({code_added} code line(s) added, {code_removed} removed)" if kind == "restructuring" else "")
+            + f"   ·   restructuring level {depth}",
+            color=INK, family="monospace", fontsize=8.5, va="top")
     ax.text(0.03, y0 + 0.2 * lh / H, "BEFORE", color=DIM, family="monospace", fontsize=8, weight="bold")
     ax.text(0.50, y0 + 0.2 * lh / H, "AFTER", color=DIM, family="monospace", fontsize=8, weight="bold")
     for idx, (ln, lt, lk, rn, rt, rk) in enumerate(rows):
@@ -211,11 +256,31 @@ def main() -> int:
         d = build(spec, out)
         print(f"{spec} -> {d}")
     index = ["# Thesis material — case studies", "",
-             "Built by `agent/tools/thesis_material.py` from the archived runs; every number is in `facts.json`.", ""]
+             "Built by `agent/tools/thesis_material.py` from the archived runs; every number is in "
+             "`facts.json`. Grouped by what the agent actually DID, because that is the question a "
+             "reader asks first and a line count does not answer it: a pragma is not a "
+             "restructuring, and neither is a comment the model wrote to explain itself.", ""]
+    groups: Dict[str, List[str]] = {"restructuring": [], "annotation": [], "unchanged": []}
     for d in sorted(p for p in out.iterdir() if p.is_dir()):
-        f = json.loads((d / "facts.json").read_text())
-        index.append(f"- **{d.name}** — {f['benchmark']}, `{f['arm']}`, {f['model']}: **{f['outcome']}**, "
-                     f"kernel speedup {f['kernel_speedup_by_threads']}, {f['llm_calls']} call(s), {f['agent_s']} s")
+        fp = d / "facts.json"
+        if not fp.exists():
+            continue
+        f = json.loads(fp.read_text())
+        c = f.get("change") or {}
+        kind = c.get("change_kind", "unchanged")
+        detail = (f"code +{c.get('code_lines_added', 0)}/−{c.get('code_lines_removed', 0)}, "
+                  f"{c.get('pragmas_added', 0)} pragma(s)" if kind == "restructuring"
+                  else f"{c.get('pragmas_added', 0)} pragma(s), no code changed" if kind == "annotation"
+                  else "nothing changed")
+        groups.setdefault(kind, []).append(
+            f"- **{d.name}** — {f['benchmark']}, `{f['arm']}`: **{f['outcome']}**, {detail}, "
+            f"kernel speedup {f['kernel_speedup_by_threads']}, {f['llm_calls']} call(s), {f['agent_s']} s")
+    titles = {"restructuring": "## The agent changed the code",
+              "annotation": "## The agent only added pragmas",
+              "unchanged": "## The agent changed nothing (declined)"}
+    for kind in ("restructuring", "annotation", "unchanged"):
+        if groups.get(kind):
+            index += [titles[kind], ""] + groups[kind] + [""]
     (out / "INDEX.md").write_text("\n".join(index) + "\n")
     return 0
 
