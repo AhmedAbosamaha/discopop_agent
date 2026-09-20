@@ -130,6 +130,12 @@ def main() -> int:
     ap.add_argument("--threads", type=int, default=12, help="OMP threads for the parallel binary")
     ap.add_argument("--size", default="per_kernel", help="dataset size, or per_kernel (verification size)")
     ap.add_argument("--timeout", type=float, default=900)
+    ap.add_argument("--serial-only", action="store_true",
+                   help=("Measure the serial binary only. Polly's parallel build of `hotspot` "
+                         "runs minutes per execution (it parallelises the stencil at the wrong "
+                         "level), which is what stopped the first pass of this study; the "
+                         "question the study asks — how much does a timed measurement vary on "
+                         "this host — is answered by the serial binary alone."))
     ap.add_argument("--cc", default=None)
     ap.add_argument("--cxx", default=None)
     a = ap.parse_args()
@@ -155,11 +161,12 @@ def main() -> int:
                 print(f"   serial build failed: {err}", flush=True)
                 continue
             binaries["serial"] = (root / "serial", None)
-            ok, err = _build(root, meta, size, POLLY, True, cc, cxx, root / "polly")
-            if ok:
-                binaries["polly_parallel"] = (root / "polly", a.threads)
-            else:
-                print(f"   polly build failed (serial only): {err[-200:]}", file=log, flush=True)
+            if not a.serial_only:
+                ok, err = _build(root, meta, size, POLLY, True, cc, cxx, root / "polly")
+                if ok:
+                    binaries["polly_parallel"] = (root / "polly", a.threads)
+                else:
+                    print(f"   polly build failed (serial only): {err[-200:]}", file=log, flush=True)
             summary[name] = {"size": size}
             for label, (binary, threads) in binaries.items():
                 conds: Dict[str, List[float]] = {}
