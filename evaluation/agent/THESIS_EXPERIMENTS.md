@@ -1733,6 +1733,44 @@ Added 2026-09-15 (see §6 rows of that date):
 
 ## 7. Run log
 
+### `t0_4_timing_v2` — 2026-09-20, server, **T0.4 repeated under the load the campaign actually runs at**
+
+- **Why repeat it.** The September pass was taken at a host load of 15–430 and stopped before it
+  finished (Polly's parallel build of `hotspot` runs minutes per execution). The campaign runs at
+  a load of 1,300–6,800, and since D22 the speed check is ON by default — so the number that
+  justifies the 1.1× threshold was measured on a far quieter machine than the one that uses it.
+- **Setup.** `timing_noise.py --serial-only --repeats 10 --first-node 1 --lanes 2`, four
+  benchmarks spanning the suites (`2mm`, `hotspot`, `jacobi-2d`, `tsvc/s211`), three conditions
+  (alone / unpinned / two lanes), 160 timed runs. Host load **min 1,307, median 5,701, max 6,758**.
+  Two tool fixes were needed first: `--serial-only` (the switch the first pass lacked) and
+  `--first-node`, because running the tool under `numactl --cpunodebind` makes its own per-lane
+  pinning fail and the `alone` condition silently collects **zero** samples — which is how the
+  first attempt of this repeat was lost.
+- **Result.** Per-run variation differs by an order of magnitude between benchmarks:
+
+  | benchmark | CV (alone) | resolvable, ONE run | resolvable, MEDIAN OF 5 |
+  |---|---:|---:|---:|
+  | `tsvc/s211` | 0.7 % | 1.015× | **1.007×** |
+  | `jacobi-2d` | 1.3 % | 1.026× | **1.012×** |
+  | `2mm` | 3.3 % | 1.065× | **1.029×** |
+  | `hotspot` | 5.2 % | 1.104× | **1.046×** |
+
+- **Reading, and the correction that matters.** On single runs, three cells exceed the 1.1×
+  threshold — `2mm` in two lanes reaches **1.131×** and `hotspot` **1.104–1.113×**. Read naively
+  that would say our threshold is inside the noise. It is not, because **the harness never
+  compares single runs**: `verify()` takes the median of 5 on each side, and the standard error of
+  a median falls with √n, so the resolvable ratio is 1 + 2·CV/√5. The worst case anywhere is then
+  **1.058×** (`2mm`, two lanes), and `hotspot`'s is 1.046×. **The 1.1× threshold holds on every
+  benchmark, with margin, at a load of 5,700** — but it holds *because of* the repeats, which is
+  the sentence the thesis must write rather than quoting a raw CV.
+- **Two secondary findings.** Running two lanes raises `2mm`'s variation from 3.3 % to 6.5 % while
+  leaving `s211` and `jacobi-2d` untouched, so headline speed numbers stay one job per node and
+  correctness-only work may share. And variation is a property of the BENCHMARK, not of the
+  machine's load: `s211` stays at 0.7 % under load 6,758 while `hotspot` sits at 5.2 % — so a
+  per-benchmark noise floor, which the gate already measures, is the right design.
+- Supersedes the partial September pass; archive `results/t0_4_timing_v2/`.
+
+
 ### `e10_dp_alone`, `e10_lu_fix84` — 2026-09-20, server, **E10 completed by the main comparison (D19)**
 
 - **Why.** E10 measured the agent's three arms against the SEQUENTIAL original. The author's rule
