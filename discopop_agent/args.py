@@ -24,6 +24,7 @@ class AgentArguments:
     dry_run: bool
     edit_mode: str              # "diff" | "function" | "direct" — how the LLM returns edits
     llm_pragmas: bool           # LLM writes the OpenMP pragmas itself alongside the rewrite
+    pragma_arbitration: bool    # Fix 85: on a collision, keep whichever pragma measures faster
     fast_refresh: bool          # skip the instrumented run; translate dependences instead
     llm_deps: bool              # let the LLM judge static deps in code it just wrote
     hotspots: bool              # measure per-region runtime and rank by time saved
@@ -179,6 +180,17 @@ def parse_args() -> AgentArguments:
                          "find a pattern. A rewrite that carries no pragma still falls "
                          "back to DiscoPoP's verdict, and Phase B still annotates every "
                          "region the LLM did not touch."))
+    p.add_argument("--pragma-arbitration", action=argparse.BooleanOptionalAction, default=True,
+                   help=("With --llm-pragmas and --require-speedup: where the model has "
+                         "annotated a loop DiscoPoP had already claimed, build DiscoPoP's "
+                         "pragma as an alternative, gate it, time the two against each other "
+                         "and keep the faster (default: on, Fix 85). The model reaches such a "
+                         "loop through an ENCLOSING region even though the loop itself was "
+                         "deferred to Phase B; without this, Phase B finds it annotated, "
+                         "reports no applicable pattern, and DiscoPoP's pragma is never "
+                         "measured. Turn it off to study the two authorships in isolation "
+                         "(E3), not to save time: it costs one gate run and one timing pair "
+                         "per collision, and only where a collision exists."))
     p.add_argument("--fast-refresh", action=argparse.BooleanOptionalAction, default=True,
                    help=("After a kept rewrite, refresh the profile WITHOUT re-running "
                          "the instrumented program (default: on). Only `discopop_cxx` "
@@ -506,6 +518,7 @@ def parse_args() -> AgentArguments:
         dry_run=a.dry_run,
         edit_mode=a.edit_mode,
         llm_pragmas=a.llm_pragmas,
+        pragma_arbitration=a.pragma_arbitration,
         fast_refresh=a.fast_refresh,
         llm_deps=a.llm_deps,
         hotspots=a.hotspots,

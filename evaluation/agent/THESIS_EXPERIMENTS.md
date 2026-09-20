@@ -1268,6 +1268,43 @@ The audit above is not a document; it changed what the campaign runs.
 Consequence for E1: its two arms are `discopop_gate` and `speed_gate_large`, both with the speed
 check at the kernel's timing size, differing only in whether a model is called.
 
+**Checked against every other experiment — and it HAD broken four of them.** The author asked
+whether the change could harm experiments that have not run. It could, and it did, in two ways
+that a check now makes impossible to repeat.
+
+1. **Four matrix experiments were confounded.** E3 (pragma author × refresh), E4's matrix cell,
+   E8 (depth 0/1/2) and E9 (measured ranking vs static proxy) each pair a variant arm against
+   `full`, which the change pinned to `--no-require-speedup`. Their variant arms inherit the new
+   default, so each comparison would have measured its own variable **and** the speed check.
+   *Fixed:* a new arm **`default`** (no flags of its own) is the baseline cell of every matrix
+   experiment — the campaign default, whatever it currently is. `full` keeps the old behaviour
+   and belongs to E5 and the historical E10 runs only. Identical in configuration to
+   `speed_gate_large`; the names are kept apart because that one names what E10 varied.
+2. **Eight kernels would have become unrunnable.** `_timing_size` exited when T0.1 found no size
+   at which a kernel runs long enough — right while only E10 asked for a timing size, fatal once
+   every arm does. It would have removed `atax`, **`bicg`**, `gemver`, `gesummv`, `jacobi-1d`,
+   `mvt`, `reg_detect` and `trisolv` — and `bicg` is one of the few class-R benchmarks E1 needs.
+   *Fixed:* on such a kernel the speed check is switched OFF and the fact recorded (per trial and
+   in the manifest, `speed_check_off`), because there the check can only reject noise — which is
+   precisely what E10 measured `speed_gate_small` doing. The harness's own verification still
+   judges the kernel's speed afterwards.
+
+**The guard.** `check_arm_compatibility()` compares the EFFECTIVE configuration of the arms in a
+run — the speed check, the timing size, hotspots, the pragma mode, fast refresh, arbitration,
+budget, evidence, depth — and every run now prints the settings its arms disagree on before
+anything executes, with the line *"each line must be this experiment's variable; anything else is
+a confound"*. On the repaired pairings it prints exactly one line each (E3: `llm-pragmas`,
+`fast-refresh`; E8: `--restructure-depth`; E9: `hotspots`; E1: `--budget`); on the old broken
+pairing it prints three, including `require-speedup` and `timing_size`.
+
+**Fix 85 against the other experiments.** It runs only with `--llm-pragmas`, `--require-speedup`
+and an actual collision, so it cannot touch E4's `--no-llm-pragmas` arms or anything with the
+check off. It DOES touch E3, whose question is who should write the pragma: the `--llm-pragmas`
+cell can now fall back to DiscoPoP's pragma where the two collide. That is the right default
+(it removes an artefact rather than adding one — those loops were DiscoPoP's in both cells), but
+it blurs the contrast E3 measures, so **`--no-pragma-arbitration`** exists for E3 to run a cell
+without it. Cost: one gate run and one timing pair per collision, only where a collision exists.
+
 ## 6. Change log
 
 | Date | Repo | Change | Why |

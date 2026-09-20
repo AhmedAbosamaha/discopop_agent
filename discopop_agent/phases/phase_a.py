@@ -756,6 +756,7 @@ def phase_a(state: RunState) -> None:
                 # the run already measures.
                 arb_records: List[Dict[str, Any]] = []
                 if (self_annotated and args.require_speedup
+                        and getattr(args, "pragma_arbitration", True)
                         and getattr(evidence, "inner_patterns", None)
                         and pre_patch_src is not None):
                     timing_flags = list(getattr(args, "timing_cflags", ()) or ()) or None

@@ -646,7 +646,7 @@ def check_fast_refresh_equivalence(work: Path) -> Result:
         discopop_dir=str(fast / ".discopop"), source_file=str(fast / "s.cpp"),
         budget=1, model="haiku", api_key=None, provider="claude-agent-sdk",
         api_base=None, lambda_penalty=1.0, min_workload=0.0, output_dir=str(out),
-        dry_run=False, edit_mode="direct", llm_pragmas=True, fast_refresh=True,
+        dry_run=False, edit_mode="direct", llm_pragmas=True, pragma_arbitration=True, fast_refresh=True,
         llm_deps=False, hotspots=False, min_impact=0.0, restructure_depth=0,
         require_speedup=False, build_retries=2, apply_patches=True,
         min_measured_speedup=1.1, check_inputs=[], reprofil_args=[], verbose=False)
@@ -754,7 +754,7 @@ def check_dep_review(work: Path) -> Result:
             discopop_dir=str(d / ".discopop"), source_file=str(src), budget=1,
             model="haiku", api_key=None, provider="claude-agent-sdk", api_base=None,
             lambda_penalty=1.0, min_workload=0.0, output_dir=str(out), dry_run=False,
-            edit_mode="direct", llm_pragmas=True, fast_refresh=True, llm_deps=True,
+            edit_mode="direct", llm_pragmas=True, pragma_arbitration=True, fast_refresh=True, llm_deps=True,
             hotspots=False, min_impact=0.0, restructure_depth=0, require_speedup=False,
             build_retries=2, apply_patches=True, min_measured_speedup=1.1,
             check_inputs=[], reprofil_args=[], verbose=False)

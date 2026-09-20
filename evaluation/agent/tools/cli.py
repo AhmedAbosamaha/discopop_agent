@@ -207,13 +207,67 @@ def _sizes_for(benchmark: str) -> Dict[str, Any]:
     return {}
 
 
-def _timing_size(kernel: str) -> str:
-    """The benchmark's timing size from T0.1; exits when there is none to time at."""
+def _timing_size(kernel: str) -> Optional[str]:
+    """The benchmark's timing size from T0.1, or None when no size reached the target.
+
+    Eight of the packaged kernels have none (atax, bicg, gemver, gesummv, jacobi-1d, mvt,
+    reg_detect, trisolv): they run in milliseconds at every size the harness can build. This
+    used to exit, which was right while only E10's arms asked for a timing size; since the
+    speed check became the campaign default (2026-09-20) it would have made those kernels
+    unrunnable — including `bicg`, one of the few class-R benchmarks E1 needs.
+    """
     size = _sizes_for(kernel).get("timing_size")
-    if not size:
-        sys.exit(f"kernel {kernel} has no timing size in {KERNEL_SIZES_FILE.name}: no size tried "
-                 f"reached the timing target, so its speed cannot be checked — leave it out of this arm")
-    return str(size)
+    return str(size) if size else None
+
+
+# Flags that are part of the FIXED configuration: two arms of one comparison must agree on
+# them, or the comparison measures them as well as its own variable. `--require-speedup` and
+# the timing size are here because changing the campaign default on 2026-09-20 silently
+# confounded E3, E4, E8 and E9, whose variant arms were paired against `full`.
+_FIXED_CONFIG_SWITCHES = ("require-speedup", "hotspots", "llm-pragmas", "fast-refresh",
+                          "pragma-arbitration")
+
+
+def _effective_config(spec: dict, benchmark: str) -> Dict[str, Any]:
+    """What an arm actually runs with, for the compatibility check below."""
+    flags = _common_flags() + list(spec.get("flags", []))
+    cfg: Dict[str, Any] = {"timing_size": spec.get("timing_size", _common_timing_size())}
+    for name in _FIXED_CONFIG_SWITCHES:
+        cfg[name] = _last_switch_in(flags, name)
+    for opt in ("--budget", "--evidence", "--restructure-depth", "--llm-recon-mode",
+                "--min-runtime-share"):
+        vals = [flags[i + 1] for i, f in enumerate(flags[:-1]) if f == opt]
+        cfg[opt] = vals[-1] if vals else None
+    return cfg
+
+
+def _last_switch_in(flags: List[str], name: str) -> Optional[bool]:
+    value: Optional[bool] = None
+    for f in flags:
+        if f == f"--{name}":
+            value = True
+        elif f == f"--no-{name}":
+            value = False
+    return value
+
+
+def check_arm_compatibility(arm_names: List[str], arms: Dict[str, dict]) -> List[str]:
+    """Differences between the arms of one run, as human-readable lines.
+
+    An experiment varies ONE thing. Two arms that also differ in the speed check, the timing
+    size or the pragma mode measure that difference too, and the result cannot be attributed.
+    This lists every setting on which the arms disagree so the caller can say whether each
+    one is the experiment's variable or an accident.
+    """
+    if len(arm_names) < 2:
+        return []
+    cfgs = {n: _effective_config(arms[n], "") for n in arm_names}
+    out: List[str] = []
+    for key in sorted({k for c in cfgs.values() for k in c}):
+        values = {n: c.get(key) for n, c in cfgs.items()}
+        if len(set(map(str, values.values()))) > 1:
+            out.append(f"{key}: " + ", ".join(f"{n}={v}" for n, v in values.items()))
+    return out
 
 
 def _common_timing_size() -> str:
@@ -223,10 +277,20 @@ def _common_timing_size() -> str:
 
 
 def _timing_flags(spec: dict, benchmark: str) -> List[str]:
-    """--timing-cflags for arms that time at the benchmark's measured timing size."""
+    """Per-benchmark timing flags, and the speed check turned OFF where nothing is timeable.
+
+    On a kernel with no timing size the speed check can only ever REJECT: every measurement is
+    noise, and E10 showed what that costs — at the agent's small size the check deleted
+    DiscoPoP's own pragmas in 10 of 21 trials. So rather than time such a kernel badly, the
+    check is switched off for it and the fact is recorded per trial (`speed_check_off`) and in
+    the manifest. The harness's own verification judges its speed afterwards, as always.
+    """
     if spec.get("timing_size", _common_timing_size()) != "per_kernel":
         return []
-    return [f"--timing-cflags=-D{_timing_size(benchmark)}_DATASET"]
+    size = _timing_size(benchmark)
+    if size is None:
+        return ["--no-require-speedup"]
+    return [f"--timing-cflags=-D{size}_DATASET"]
 
 
 def _verify_size(requested: str, kernel: str) -> tuple[str, Optional[bool]]:
@@ -1135,11 +1199,35 @@ def cmd_run(a: argparse.Namespace) -> int:
     bad = [x for x in a.arms if x not in arms]
     if bad:
         sys.exit(f"unknown arm(s): {', '.join(bad)} — see `list-arms`")
+    # Every setting on which this run's arms disagree, printed before anything runs: an
+    # experiment varies ONE thing, and the reader has to be able to see that the list holds
+    # only that thing. Changing the campaign default on 2026-09-20 silently confounded four
+    # planned experiments whose variant arms were paired against `full`; this makes that
+    # class of mistake visible at launch instead of at analysis.
+    differences = check_arm_compatibility(list(a.arms), arms)
+    if differences:
+        print("arms differ in:")
+        for d in differences:
+            print(f"    {d}")
+        print("    ^ each line must be this experiment's variable; anything else is a confound.")
+    elif len(a.arms) > 1:
+        print("arms differ in: nothing — identical configuration (a repeatability check)")
+
     # Checked before the run is created: a kernel without a timing size would
     # otherwise stop the run halfway through.
     timing_sizes: Dict[str, str] = {}
+    no_timing: List[str] = []
     if any(arms[x].get("timing_size", _common_timing_size()) == "per_kernel" for x in a.arms):
-        timing_sizes = {b: _timing_size(b) for b in wanted}
+        for b in wanted:
+            size = _timing_size(b)
+            if size is None:
+                no_timing.append(b)
+            else:
+                timing_sizes[b] = size
+    if no_timing:
+        print(f"speed check OFF for {len(no_timing)} benchmark(s) with no timing size (T0.1): "
+              f"{', '.join(no_timing)}")
+        print("    every size runs in milliseconds there, so the check could only reject noise.")
     verify_sizes = {b: _verify_size(a.verify_size, b)[0] for b in wanted}
     agent_repo = Path(a.agent_repo).resolve()
     if not (agent_repo / "venv" / "bin" / "python").exists():
@@ -1160,7 +1248,7 @@ def cmd_run(a: argparse.Namespace) -> int:
         "harness_git": _git_state(HARNESS_ROOT), "argv": sys.argv,
         "tool_versions": _tool_versions(agent_repo),
         "common_flags": _common_flags(),
-        "timing_sizes": timing_sizes,
+        "timing_sizes": timing_sizes, "speed_check_off": no_timing,
         "verify_sizes": verify_sizes,
         "arm_flags": {x: arms[x]["flags"] for x in a.arms},
     }
