@@ -1006,6 +1006,33 @@ evidence), and E3/E4/E8 exercise code paths that only run after a REWRITE, which
 never happened. Found before E1, E2, E3, E4 and E8 ran; the pilots and E10 stay valid for
 what they measure (cost per trial, the speed check).
 
+**D26 — the scope rule: a benchmark that DiscoPoP cannot PROFILE is out of the set; a benchmark
+DiscoPoP profiles but finds nothing in STAYS** (the author, 2026-09-20: *"our experiments and the
+thesis is about the agent added upon DiscoPoP, not about DiscoPoP and whatever its limitation is.
+If a benchmark is not working well for DiscoPoP, or breaks DiscoPoP, or hits a limitation in
+DiscoPoP, we should avoid it"*).
+
+The object of study is the DELTA the agent adds. Where DiscoPoP cannot produce a usable profile
+the agent has no evidence to work from AND the DiscoPoP-alone baseline has no value, so the
+comparison the thesis leads with (D19) is undefined; time spent there measures DiscoPoP's
+engineering, not this contribution.
+
+**The distinction this rule turns on, which must not be lost in the writing:**
+
+| | what it means | what we do |
+|---|---|---|
+| DiscoPoP cannot RUN | crash, timeout, absurd cost — no profile exists | **exclude**, measure once, report the cost |
+| DiscoPoP runs and finds NOTHING | a profile exists; it reports no applicable pattern | **keep — this is class R, the whole point** |
+
+Excluding the second would delete the central claim, so the two are never conflated.
+
+**Excluded under this rule, each measured once and reported** (`docs/DISCOPOP_BUG_REPORTS.md`):
+NPB `lu` (instrumentation > 2 h, L1) · Rodinia `nw` (explorer ≈ 25 h, L2) · NPB `mg` (task
+detection unfinished after 11 h, L3) · PolyBench `adi` (40 min instrument, L4) · TSVC `s291` and
+`s3112` (explorer 90 min and > 80 min against 4 s for every other loop of the same suite, L5).
+Six of 61 candidates. The thesis states this as scope and as a threat to validity: *the agent is
+evaluated where DiscoPoP is usable*, with the six named and costed — not silently dropped.
+
 **D18 — benchmark classes are MEASURED, and every experiment names the class it needs.**
 
 | class | definition (measured, not assumed) | role |
@@ -1549,6 +1576,7 @@ must pass (§5k, RUNBOOK step 0/0a).
 | Date | Repo | Change | Why |
 |---|---|---|---|
 | 2026-09-20 | repositories | **D20 — one repository.** The harness moves into the agent repository as `evaluation/` (`agent/`, `shared/run_store.py`, `benchmarks/` = the SOURCES of the suites it uses: PolyBench 3.2, NPB, RepoOMP's NPB-C, TSVC-2, LULESH, `md`, Rodinia `nw`/`pathfinder`/`hotspot`). Left behind: the group's three harnesses and GUI, 4 GB of reference outputs and data files nothing here reads. Copied from `new_benchmark_harness@1514ceb` (tracked files only, 5,350 files, 42 MB); relative paths unchanged, so every `agent/...` path in this record still holds under `evaluation/`. **Proof the move changed nothing:** a FRESH CLONE (53 MB) regenerates all 70 packages byte-identical to the old ones (every file, every metadata field, every `output_sha256`) — the clone test caught what the working copy hid: the root `.gitignore`'s `data*/` swallowed PolyBench's `datamining/` kernels, and `prepare_polybench.py` discovered kernels through the old harness's per-kernel config directories (now: PolyBench's own layout, same 30 kernels); integrity test 30/30, scaffold test 0 failures; a no-model smoke run (`move_smoke`, `atax`) reproduces `dp_alone_fix84_mac`'s outcome. Code changes: only how the agent repository is located (`cli.py`, `profile_stability.py`, the three shell scripts) and `server.sh sync` (one `git` fast-forward instead of `git` + `rsync`). The repository is a PUBLIC fork (GitHub cannot make a fork private) and the author chose to publish: the server's address and account were moved out of the tracked files into the untracked `agent/tools/server.local` first; a scan found no credential, token value or address left. Old repository frozen and tagged: archived runs up to `e10` record ITS commit hashes | the author: one place; and the old repository is 4 GB and cannot be cloned in full from GitLab, which a reader of the thesis would have to do |
+| 2026-09-20 | plan | **D26 — scope rule (§5k): a benchmark DiscoPoP cannot PROFILE is excluded, measured once and reported; a benchmark DiscoPoP profiles but finds nothing in STAYS (that is class R, the claim itself).** Excluded so far: NPB `lu`, `mg`, Rodinia `nw`, PolyBench `adi`, TSVC `s291`, `s3112` — six of 61, each with its cost, reported as scope and as a threat to validity | the author: "the thesis is about the agent added upon DiscoPoP, not about DiscoPoP and whatever its limitation is" |
 | 2026-09-20 | plan | **D25 — `polybench/adi` out of the model-driven set**: its instrumenting compile is 2,387 s per profile, 41 of the 135 minutes a T0.11 draw takes, two hours across three draws. Draw A's single measurement (`FASTER`, 19 Do-Alls) is kept as evidence of the cost; the class is left undetermined. Reported as a DiscoPoP limitation (L4) beside NPB `lu`, `mg` and Rodinia `nw` | the author asked why PolyBench is still needed; the answer is that 22 of its 27 kernels are the no-harm CONTROL and four are restructuring or decline cases — `adi` is neither, and it was the most expensive kernel in the set |
 * **`polybench/adi` leaves the model-driven set (D25, author's call).** Its instrumenting compile
   takes **2,387 s — 40 minutes — per profile**, which is 41 of the 135 minutes a T0.11 draw needs;

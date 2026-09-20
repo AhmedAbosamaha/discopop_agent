@@ -203,6 +203,11 @@ regenerate it with the prepare tool. If the archived copy differs, delete
 ### The checklist for EVERY experiment (a new session starts here)
 
 **Before launching**
+0c. **Scope (D26): exclude what DiscoPoP cannot profile, keep what it profiles but finds nothing
+   in.** A benchmark whose profile cannot be produced within the phase timeout leaves the
+   model-driven set, is measured once, and is reported with its cost. A benchmark DiscoPoP
+   profiles happily while reporting no applicable pattern is class R — the thesis's whole point —
+   and is never excluded. Do not conflate the two.
 0b. **Every argument of every arm is declared and verified (D24).** Each arm in `arms.json`
    carries a `settings` block naming the arguments that carry its purpose; the harness checks
    them against `discopop_agent --print-config` before a run starts and REFUSES to run on any
