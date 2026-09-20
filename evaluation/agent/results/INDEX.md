@@ -47,3 +47,4 @@ Every row is a directory under `agent/results/` holding a run's complete results
 - [_launcher_logs](_launcher_logs/) — the launch command, progress and credential sweep of every run executed on the server (provenance)
 - [_diagnostic_logs](_diagnostic_logs/) — the probes behind the DiscoPoP bug reports (B2, B3, B5, L2, L3) and the packaging/instrument launch logs
 - [t0_10_tsvc_ceiling](t0_10_tsvc_ceiling/) — T0.10: what the expert solution of each TSVC loop reaches on the server (42 rows, all correct, 0.87x-4.64x)
+- [t0_10_tsvc_ceiling_v2](t0_10_tsvc_ceiling_v2/) — T0.10 re-measured at the sizes the experiments use: 42/42 correct, 1.87x-6.40x (median 4.10x); supersedes the v1 measurement

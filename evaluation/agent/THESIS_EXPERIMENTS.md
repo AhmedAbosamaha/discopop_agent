@@ -1071,6 +1071,28 @@ speedups); NPB-C (E11) contributes application-scale cases.
 | **E5** cost | size sweep on 2mm and NPB `is` | independent of class | — |
 | **E6** application scale | LULESH 2.0, serial path only (threaded branches removed) | the one program with LLNL's expert before/after in the same source: ≈ 40 loops parallel as written + the force scatter→gather and min-with-index restructurings | DiscoPoP alone cannot parallelize the scatter; the expert version is the ceiling |
 
+**Pre-flight for E1 — done 2026-09-20, all without a model.**
+
+* **T0.1 for TSVC** (`results/t0_1_tsvc`, server node 1): all 25 loops get a verification size
+  (20 EXTRALARGE, 5 LARGE) and a timing size (22 LARGE). Merged into `kernel_sizes.json`, now 59
+  entries. Needed before anything else: a benchmark with no timing size has the speed check
+  switched off automatically, so without this TSVC would silently have run in a different
+  configuration from PolyBench.
+* **T0.10 re-measured at those sizes** (`results/t0_10_tsvc_ceiling_v2`, supersedes the v1 run):
+  42 rows, all correct, expert references **1.87×–6.40×, median 4.10×** at 12 threads. **This
+  removes a limitation of the suite.** At the v1 sizes three references did not reach 1.1× even
+  written by hand, because these loops are memory-bound at small sizes, and the plan therefore
+  said class R would be reported on correctness with speed only as a fraction. At the v2 sizes
+  every loop clears 1.87× (`s331` 2.35→6.40×, `s255` 1.23→2.57×), so **both** can be reported:
+  whether a verified-correct parallelization was reached, and how much of the expert's speedup it
+  captured.
+* **T0.11, the class measurement** (running, server node 0): `discopop_gate` over 56 benchmarks —
+  27 PolyBench (the three weak oracles out), 25 TSVC, `md`, `is`, `pathfinder`, `hotspot`; NPB
+  `lu`/`mg` and `nw` excluded as L1/L2/L3. Run as **three separate runs**, not three repeats: a
+  run profiles each benchmark once, and DiscoPoP alone depends on the draw (`lu` 0.21× on the
+  server, 3.4× on the Mac), so three runs give three independent draws and the class is the
+  majority of them.
+
 **Instruments owed by this change:** T0.1 for `tsvc/*`; T0.10 (expert ceiling, all loops,
 final sizes, server); T0.11 (class measurement: `discopop_gate` × 3 profiles on every
 benchmark, server); the feature suite and the scaffold check on a TSVC package; then the
