@@ -1,0 +1,46 @@
+md             -> burkardt/md  (md.cpp, 566 lines)
+    removed: 4 commented-out OpenMP pragmas (§1a: the model would read the answer)
+    removed: omp.h, omp_get_num_procs/omp_get_max_threads banner, omp_get_wtime timing
+    removed: timestamp() wall-clock lines and the cout banner
+    removed: the original main(), replaced by a fixed-size, seeded driver
+    {"app": "md", "MINI": {"original_ok": true, "dump_identical": true, "dump_values": 33, "digest_ok": true, "timed_region": true, "digest_run_s": 0.003, "perturb_deterministic": true, "perturb_changes_output": true, "perturb_finite": true}, "SMALL": {"original_ok": true, "dump_identical": true, "dump_values": 33, "digest_ok": true, "timed_region": true, "digest_run_s": 0.162, "perturb_deterministic"
+pathfinder     -> rodinia-3.1/pathfinder  (pathfinder.cpp, 182 lines)
+    removed: timer.h: rdtsc inline assembly and the pin_stats_* macros (x86-only, replaced by the timed region)
+    removed: BENCH_PRINT block, replaced by the digest
+    removed: argv sizes, replaced by the dataset guard
+    removed: the `timer: <cycles>` line (a measurement, not a result)
+    {"app": "pathfinder", "MINI": {"original_ok": true, "dump_identical": true, "dump_values": 12000, "digest_ok": true, "timed_region": true, "digest_run_s": 0.002, "perturb_deterministic": true, "perturb_changes_output": true, "perturb_finite": true}, "SMALL": {"original_ok": true, "dump_identical": true, "dump_values": 520000, "digest_ok": true, "timed_region": true, "digest_run_s": 0.009, "perturb
+nw             -> rodinia-3.1/nw  (nw.cpp, 323 lines)
+    removed: 5 disabled #ifdef OPENMP / OMP_OFFLOAD block(s) inside nw_optimized (§1a: the serial file is the OpenMP version with //#define OPENMP)
+    removed: 1 progress printf line(s) inside the kernel — stdout carries the digest only
+    removed: omp.h, the num_threads argument and the 'Num of threads' line
+    removed: get_time()/gettimeofday timing and the 'Total time' line
+    removed: the traceback's result.txt file, replaced by the digest
+    {"app": "nw", "MINI": {"original_ok": true, "dump_identical": true, "dump_values": 533, "digest_ok": true, "timed_region": true, "digest_run_s": 0.004, "perturb_deterministic": true, "perturb_changes_output": true, "perturb_finite": true}, "SMALL": {"original_ok": true, "dump_identical": true, "dump_values": 2124, "digest_ok": true, "timed_region": true, "digest_run_s": 0.023, "perturb_determinist
+is             -> npb/is  (10 files, IS/is.cpp)
+    removed: npbparams.hpp replaced by the dataset guard (NPB's own class parameters)
+    removed: the compile-date and compiler-version strings c_print_results echoes
+    removed: the benchmark's main renamed to npb_main; its output (integer bucket sort; the ranking loop is the timed region) goes to stderr
+    {"app": "is", "MINI": {"original_ok": true, "dump_identical": true, "dump_values": 1, "digest_ok": true, "timed_region": true, "digest_run_s": 0.008, "perturbation": "n/a \u2014 verifies against NPB's reference values"}, "SMALL": {"original_ok": true, "dump_identical": true, "dump_values": 1, "digest_ok": true, "timed_region": true, "digest_run_s": 0.088, "perturbation": "n/a \u2014 verifies again
+mg             -> npb/mg  (10 files, MG/mg.cpp)
+    removed: npbparams.hpp replaced by the dataset guard (NPB's own class parameters)
+    removed: the compile-date and compiler-version strings c_print_results echoes
+    removed: the benchmark's main renamed to npb_main; its output (multigrid V-cycles; the residual norm is the verified result) goes to stderr
+    removed: hoisted a result variable to file scope so the digest can read it: double rnm2, rnmu, epsilon; (declaration only)
+    removed: hoisted a result variable to file scope so the digest can read it: boolean verified; (declaration only)
+    {"app": "mg", "MINI": {"original_ok": true, "dump_identical": true, "dump_values": 1, "digest_ok": true, "timed_region": true, "digest_run_s": 0.005, "perturbation": "n/a \u2014 verifies against NPB's reference values"}, "SMALL": {"original_ok": true, "dump_identical": true, "dump_values": 1, "digest_ok": true, "timed_region": true, "digest_run_s": 0.142, "perturbation": "n/a \u2014 verifies again
+lu             -> npb/lu  (10 files, LU/lu.cpp)
+    removed: npbparams.hpp replaced by the dataset guard (NPB's own class parameters)
+    removed: the compile-date and compiler-version strings c_print_results echoes
+    removed: the benchmark's main renamed to npb_main; its output (SSOR solver; rsdnm, errnm and frc are already file scope) goes to stderr
+    removed: hoisted a result variable to file scope so the digest can read it: boolean verified; (declaration only)
+    {"app": "lu", "MINI": {"original_ok": true, "dump_identical": true, "dump_values": 1, "digest_ok": true, "timed_region": true, "digest_run_s": 0.016, "perturbation": "n/a \u2014 verifies against NPB's reference values"}, "SMALL": {"original_ok": true, "dump_identical": true, "dump_values": 1, "digest_ok": true, "timed_region": true, "digest_run_s": 2.308, "perturbation": "n/a \u2014 verifies again
+hotspot        -> rodinia-3.1/hotspot  (hotspot.cpp, 331 lines)
+    removed: 1 disabled #ifdef OMP_OFFLOAD block(s) in the kernel (§1a)
+    removed: 1 omp_set_num_threads() call(s) and the num_omp_threads declaration — the pragma they configure is disabled in the serial file
+    removed: omp.h and the thread-count argument
+    removed: get_time()/gettimeofday timing and the 'Start computing' line
+    removed: read_input() and writeoutput(): the grids are generated in-process and the result becomes the digest, because the harness passes no arguments
+    {"app": "hotspot", "MINI": {"original_ok": true, "dump_identical": true, "dump_values": 4096, "digest_ok": true, "timed_region": true, "digest_run_s": 0.002, "perturb_deterministic": true, "perturb_changes_output": true, "perturb_finite": true}, "SMALL": {"original_ok": true, "dump_identical": true, "dump_values": 262144, "digest_ok": true, "timed_region": true, "digest_run_s": 0.017, "perturb_det
+
+validation -> /home/ahmedabosamaha/new_benchmark_harness/agent/prepared/apps_validation.json
