@@ -43,7 +43,7 @@ import sys
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from ..profiling.fast_refresh import (line_map, remap_dependencies,
                                       remap_reduction, verify_translation)
@@ -1438,6 +1438,68 @@ def check_exclude_cxx(work: Path) -> Result:
                                 f"and `ns::nested` excluded by plain name, `kept` kept")
 
 
+def check_new_region_ranking(work: Path) -> Result:
+    """A loop a REWRITE created must still be rankable when Phase B gets to it.  (Fix 86)
+
+    The two halves of the bug this pins:
+
+      1. THE HAZARD.  With `--min-runtime-share` set, `build_candidates` drops a
+         region the hotspot model has no measurement for instead of falling back to
+         the workload proxy — sound for a region that existed when the runtimes were
+         taken and was found cold, wrong for one that did not exist yet.
+      2. THE CONSEQUENCE.  Runtimes were re-measured only when a DEEPER restructuring
+         level was coming, so at the default `--restructure-depth 0` they never were.
+         Every loop a rewrite exposed therefore reached Phase B unmeasured and was
+         dropped, Phase B kept nothing, and Settle discarded the rewrite as an orphan
+         — the whole restructuring path reporting `no-change`.  Measured on
+         `tsvc/s211`: the model distributed the loop correctly, DiscoPoP reported
+         `do_all` on BOTH halves, and the parallel one was never offered.
+
+    So the re-measurement may not depend on the depth, and that is asserted here.
+    """
+    name = "new-region ranking"
+    import inspect
+    from ..phases.phase_a import should_remeasure_runtimes
+
+    depends_on = [p for p in inspect.signature(should_remeasure_runtimes).parameters
+                  if "depth" in p or "deeper" in p]
+    if depends_on:
+        return Result(name, "fail",
+                      f"re-measuring runtimes still depends on {depends_on} — at "
+                      f"--restructure-depth 0 the regions a rewrite created stay unmeasured")
+    if not should_remeasure_runtimes(True, True, True):
+        return Result(name, "fail", "runtimes are not re-measured after a kept rewrite")
+    if should_remeasure_runtimes(True, False, True):
+        return Result(name, "fail", "--no-hotspots must not trigger a runtime measurement")
+
+    dp = work / ".discopop"
+    src = str(work / "priority_mix.cpp")
+    if not (dp / "hotspot_detection" / "Hotspots.json").exists():
+        return Result(name, "skip", "needs the impact-ranking profile (invariant checked)")
+    model = load_hotspots(dp, threads=8)
+    full = build_candidates(dp, src, 1.0, 0.0, impact=model, min_runtime_share=0.01)
+    if not full:
+        return Result(name, "skip", "no candidate survives a 1 % share floor")
+
+    # The state a rewrite leaves behind: the model was measured on the OLD program, so
+    # NOTHING inside the region the rewrite created is in it.  `ImpactModel.lookup`
+    # falls back to any measured line within the span, so dropping the start line
+    # alone would still find one and would not reproduce the case.
+    victim = min(full, key=lambda c: c.region.end_line - c.region.start_line)
+    stale = load_hotspots(dp, threads=8)
+    stale.by_line = {(f, l): h for (f, l), h in stale.by_line.items()
+                     if not (f == victim.region.file_id
+                             and victim.region.start_line <= l <= victim.region.end_line)}
+    after = {c.region.region_id for c in
+             build_candidates(dp, src, 1.0, 0.0, impact=stale, min_runtime_share=0.01)}
+    if victim.region.region_id in after:
+        return Result(name, "skip",
+                      "this profile does not reproduce the hazard (invariant checked)")
+    return Result(name, "pass",
+                  f"an unmeasured region is dropped at a 1 % share floor "
+                  f"({victim.region.region_id}), so runtimes are re-measured at every depth")
+
+
 def check_covered_skip(work: Path) -> Result:
     """A region inside an already-accepted one must leave the queue.
 
@@ -2386,7 +2448,7 @@ def check_arg_dependencies(work: Path) -> Result:
     name = "argument dependencies"
     import subprocess
 
-    def resolve(extra: List[str]) -> "tuple[int, dict]":
+    def resolve(extra: List[str]) -> "Tuple[int, Dict[str, Any]]":
         r = subprocess.run([sys.executable, "-m", "discopop_agent", "--discopop-dir", ".",
                             "--source-file", "a.c", *extra, "--print-config"],
                            capture_output=True, text=True, cwd=str(_REPO), env=_env())
@@ -2426,6 +2488,7 @@ def check_arg_dependencies(work: Path) -> Result:
 _CHECKS: List[Tuple[str, Callable[[Path], Result]]] = [
     ("impact", check_impact_ranking),
     ("min-impact", check_min_impact),
+    ("new-region-ranking", check_new_region_ranking),
     ("covered-skip", check_covered_skip),
     ("budget-policy", check_budget_policy),
     ("project-mode", check_project_mode),

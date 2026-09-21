@@ -95,6 +95,25 @@ class RunState:
                                 exclude_functions=self.args.exclude_functions)
 
 
+def should_remeasure_runtimes(reprofile_ok: bool, hotspots: bool,
+                              impact_available: bool) -> bool:
+    """Whether to re-measure runtimes after a kept rewrite.  (Fix 86)
+
+    Note what is NOT a parameter: the restructuring depth.  The regions a rewrite
+    creates have no measurement, and something always ranks them — a deeper Tier-2
+    level only when one is coming, but PHASE B on every single run.  While this was
+    gated on `deeper_coming` it never fired at the default --restructure-depth 0, so
+    every exposed loop reached Phase B unmeasured, `predicted_saving` returned None
+    for all of them, and --min-runtime-share (0.01 in the campaign) dropped them —
+    leaving Phase B nothing to apply and Settle discarding the rewrite as an orphan.
+    The whole restructuring path then reported `no-change`.
+
+    Cost of getting it right: one native-speed run, beside the instrumented one the
+    re-profile has already paid for.
+    """
+    return reprofile_ok and hotspots and impact_available
+
+
 def covered_spans_after(start_line: int, end_line: int, pre_text: str, post_text: str,
                         diff: str, self_annotated: bool) -> List[Tuple[int, int]]:
     """The lines a KEPT rewrite has made parallel, in the rewritten file's coordinates.
@@ -582,13 +601,8 @@ def phase_a(state: RunState) -> None:
                     reprofile_ok = _reprofil(
                         args.source_file, dp_dir, args.reprofil_args or None
                     )
-                    if (reprofile_ok and deeper_coming and args.hotspots
-                            and impact.available):
-                        # The next level ranks by time saved, and the regions it
-                        # will rank are the ones this rewrite just created —
-                        # which have no measurement at all.  Measuring again is
-                        # one native-speed run, next to the instrumented one
-                        # already paid for here.
+                    if should_remeasure_runtimes(reprofile_ok, args.hotspots,
+                                                 impact.available):
                         ok_hs, hs_note = _measure_hotspots(args, dp_dir, force=True)
                         fresh = load_hotspots(dp_dir, threads=impact.threads) \
                             if ok_hs else None
