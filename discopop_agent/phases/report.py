@@ -119,6 +119,13 @@ def _print_banner(args: AgentArguments) -> None:
           + (f"; LLM reports deps for the code it writes "
              f"({getattr(args, 'llm_recon_mode', 'followup')})"
              if getattr(args, "llm_recon", False) else ""))
+    _omit = tuple(getattr(args, "prompt_omit", ()) or ())
+    _ext = getattr(args, "external_evidence", "") or ""
+    if _omit or _ext:
+        print(f"  Prompt (E2)    : "
+              + (f"parts LEFT OUT: {', '.join(_omit)}" if _omit else "every part")
+              + (f"; external remarks from {getattr(args, 'evidence_file', '?')} "
+                 f"({len(_ext)} chars)" if _ext else ""))
     _et = getattr(args, "explorer_timeout", 0.0)
     print(f"  Explorer       : "
           + (f"one attempt may take {_et:.0f} s, then the draw is repeated (random stall, L5)"

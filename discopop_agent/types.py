@@ -1,6 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
-from typing import Any, Dict, Optional, List
+from typing import Tuple, Any, Dict, Optional, List
 
 
 @dataclass
@@ -59,6 +59,15 @@ class GateFacts:
     n_inputs: int = 1              # inputs the output is compared on (profiled + --check-input)
     numeric: bool = False          # a measured rounding tolerance applies (noise floor > 0)
     stress: bool = True            # the thread-count / schedule matrix runs
+    # E2's two instruments (D16).  Both are constant for a run, like the rest.
+    # Prompt parts deliberately LEFT OUT (--prompt-omit), to measure what each contributes:
+    # "contract", "gate" (how the rewrite is checked), "granularity" (which loop to pick),
+    # "checklist" (the three questions before writing).
+    omit: Tuple[str, ...] = ()
+    # Text from --evidence-file: another tool's remarks about this code (clang's or Polly's
+    # own), shown where DiscoPoP's digest goes — so "DiscoPoP's evidence helps" can be told
+    # apart from "any hint helps".
+    external_evidence: str = ""
 
 
 @dataclass

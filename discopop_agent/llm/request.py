@@ -44,6 +44,25 @@ def _goal(llm_pragmas: bool, gate: GateFacts) -> str:
             + tail + ".  Do not write `#pragma omp` yourself.")
 
 
+def _external_evidence(gate: GateFacts) -> str:
+    """Another tool's remarks about this code (--evidence-file), placed where DiscoPoP's digest
+    goes.  Labelled as what it is: the model must not take a compiler's remark for a measured
+    dependence."""
+    text = gate.external_evidence.strip()
+    if not text:
+        return ""
+    return ("### What the compiler reports about this code\n"
+            "(Remarks from the compiler's own static analysis — NOT measured, and not from "
+            "DiscoPoP.)\n```\n" + text + "\n```\n")
+
+
+def _checklist_block(gate: GateFacts, include: Optional[Set[str]]) -> str:
+    """The checklist under its heading — or nothing, under `--prompt-omit checklist`."""
+    if "checklist" in gate.omit:
+        return ""
+    return "Worth settling before you write:\n" + _task_checklist(gate, include)
+
+
 def _task_checklist(gate: GateFacts, include: Optional[Set[str]]) -> str:
     """The three analysis steps every edit mode asks for."""
     shown = include is None or "loop_nest" in include
@@ -90,6 +109,7 @@ def _build_prompt(evidence: EvidencePackage,
         f"{evidence.start_line}–{evidence.end_line}  "
         f"(DiscoPoP id {evidence.region_id}; {exec_info})\n",
         _fmt_digest(evidence, include),
+        _external_evidence(gate),
         (
             "### Source\n"
             "(Each line is shown as `NNNN >>> code` where `NNNN` is the line number "
@@ -112,8 +132,7 @@ def _build_prompt(evidence: EvidencePackage,
         f"{evidence.start_line}–{evidence.end_line} in {evidence.source_file} "
         f"is to be {_goal(llm_pragmas, gate)}\n"
         f"\n"
-        f"Worth settling before you write:\n"
-        f"{_task_checklist(gate, include)}\n"
+        f"{_checklist_block(gate, include)}\n"
         f"IMPORTANT: diff context lines (lines beginning with a single space) must match "
         f"the actual file content exactly — use only the raw code indentation, "
         f"not the `NNNN >>>` display prefix shown in the Source section above.\n"
@@ -143,6 +162,7 @@ def _build_function_prompt(evidence: EvidencePackage,
         f"## Target region: {region_label} {evidence.region_id} at lines "
         f"{evidence.start_line}–{evidence.end_line}\n",
         _fmt_digest(evidence, include),
+        _external_evidence(gate),
         "### Current function (rewrite this whole function):",
         "```cpp",
         evidence.enclosing_function_source,
@@ -157,8 +177,7 @@ def _build_function_prompt(evidence: EvidencePackage,
         f"The {region_label} (lines {evidence.start_line}–"
         f"{evidence.end_line}) inside `{fname}` is to be {_goal(llm_pragmas, gate)}\n"
         "\n"
-        "Worth settling before you write:\n"
-        f"{_task_checklist(gate, include)}"
+        f"{_checklist_block(gate, include)}"
         "\n"
         ">>> OUTPUT as specified in the system instructions: the short plan, "
         "then the ENTIRE rewritten function as ONE ```cpp code block, and end "
@@ -199,6 +218,7 @@ def _build_direct_prompt(evidence: EvidencePackage, ws_file: Path,
         f"## Target region: {region_label} {evidence.region_id} at lines "
         f"{evidence.start_line}–{evidence.end_line}\n",
         _fmt_digest(evidence, include),
+        _external_evidence(gate),
         "### The function as it currently stands in the file (excerpt — read the "
         "file itself before editing; line numbers here are the file's own):",
         "```cpp",
@@ -215,8 +235,7 @@ def _build_direct_prompt(evidence: EvidencePackage, ws_file: Path,
         f"{evidence.start_line}–{evidence.end_line}) inside `{fname}` is to be "
         f"{_goal(llm_pragmas, gate)}\n"
         "\n"
-        "Worth settling before you write:\n"
-        f"{_task_checklist(gate, include)}"
+        f"{_checklist_block(gate, include)}"
         "\n"
         ">>> Read the file, give the short plan, then APPLY the rewrite with the "
         "Edit tool. Do not print a diff or the rewritten code — the file's "

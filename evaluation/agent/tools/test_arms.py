@@ -40,7 +40,8 @@ def _resolved(name: str, spec: dict, repo: Path, benchmark: str) -> dict:
     import subprocess
     cmd = [str(repo / "venv" / "bin" / "python"), "-m", "discopop_agent", "--discopop-dir", ".",
            "--source-file", "x.c", *cli._common_flags(), *spec.get("flags", []),
-           *cli._timing_flags(spec, benchmark), "--print-config"]
+           *cli._timing_flags(spec, benchmark),
+           *cli._evidence_file_flags(spec, benchmark, None, "", ""), "--print-config"]
     proc = subprocess.run(cmd, capture_output=True, text=True,
                           env={**os.environ, **cli._agent_env(repo)}, timeout=120)
     if proc.returncode != 0:

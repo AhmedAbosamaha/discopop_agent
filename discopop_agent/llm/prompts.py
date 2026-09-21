@@ -184,6 +184,8 @@ def _granularity(gate: GateFacts, step: int, verb: str) -> str:
     at a deliberately small size, where EVERY loop of a PolyBench kernel has ~32
     iterations per activation, so "prefer the outermost one that qualifies" named
     no loop at all (review P4)."""
+    if "granularity" in gate.omit:
+        return ""
     if gate.require_speedup:
         return (f"Step {step} also decides granularity: each ACTIVATION of a loop is a separate\n"
                 "parallel region, so it is the iterations per activation, not the total\n"
@@ -303,20 +305,32 @@ def _contract_open(gate: GateFacts) -> str:
     return _CONTRACT_OPEN[:start] + "  - " + bullet.lstrip() + "\n" + _CONTRACT_OPEN[end:]
 
 
+PROMPT_PARTS = ("contract", "gate", "granularity", "checklist")
+
+
+def _contract(gate: GateFacts, pragma_rule: str) -> str:
+    """The contract — or, under `--prompt-omit contract`, only the line that says who writes
+    the pragmas.  That line is the pragma MODE, not contract content: dropping it with the
+    rest would turn a prompt ablation into a change of E3's variable."""
+    if "contract" in gate.omit:
+        return _RULE + "ONE RULE\n" + _RULE + pragma_rule + "\n"
+    return _contract_open(gate) + pragma_rule + _CONTRACT_CLOSE
+
+
 def _system_core(gate: GateFacts, include: Optional[Set[str]]) -> str:
     ask = _ASK if gate.require_speedup else _ASK.replace(
         "race-free, output-preserving,\nand faster than the sequential build.",
         "race-free and output-preserving.")
-    return (_ROLE + ask + _given(include) + _contract_open(gate) + _CONTRACT_NO_PRAGMA
-            + _CONTRACT_CLOSE + _checked(gate) + _OMP_RULES)
+    return (_ROLE + ask + _given(include) + _contract(gate, _CONTRACT_NO_PRAGMA)
+            + ("" if "gate" in gate.omit else _checked(gate)) + _OMP_RULES)
 
 
 def _system_core_annotate(gate: GateFacts, include: Optional[Set[str]]) -> str:
     goal = (", and is measurably faster than the same build held to one thread"
             if gate.require_speedup else "")
     return (_ROLE_ANNOTATE + _ASK_ANNOTATE.replace("{SPEED_GOAL}", goal) + _given(include)
-            + _contract_open(gate) + _CONTRACT_PRAGMA + _CONTRACT_CLOSE
-            + _checked_annotate(gate) + _OMP_RULES + _PRAGMA_FORMS)
+            + _contract(gate, _CONTRACT_PRAGMA)
+            + ("" if "gate" in gate.omit else _checked_annotate(gate)) + _OMP_RULES + _PRAGMA_FORMS)
 
 
 # Asked for before the code in every edit mode.  Deliberately not a form: the

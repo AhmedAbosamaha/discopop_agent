@@ -49,6 +49,7 @@ import socket
 import statistics
 import subprocess
 import sys
+import tempfile
 import time
 from collections import Counter
 from pathlib import Path
@@ -309,7 +310,7 @@ def _verify_one_arm(name: str, spec: dict, py: str, agent_repo: Path, benchmark:
                 f"carry its purpose (arms.json `settings_note`)"]
     cmd = [py, "-m", "discopop_agent", "--discopop-dir", ".", "--source-file", "x.c",
            *_common_flags(), *spec.get("flags", []), *_timing_flags(spec, benchmark),
-           "--print-config"]
+           *_evidence_file_flags(spec, benchmark, None, "", ""), "--print-config"]
     proc = subprocess.run(cmd, capture_output=True, text=True,
                           env={**os.environ, **_agent_env(agent_repo)}, timeout=120)
     if proc.returncode != 0:
@@ -396,6 +397,35 @@ def _timing_flags(spec: dict, benchmark: str) -> List[str]:
     if size is None:
         return ["--no-require-speedup"]
     return [f"--timing-cflags=-D{size}_DATASET"]
+
+
+def _evidence_file_flags(spec: dict, bench: str, run_dir: Optional[Path], cc: str, cxx: str) -> List[str]:
+    """`--evidence-file` for an arm whose evidence comes from ANOTHER tool (E2, D16).
+
+    `"evidence_file": "compiler_remarks"` in an arm means: what the campaign's compiler itself
+    reports about this benchmark's kernel (tools/compiler_remarks.py), generated once per
+    benchmark per run under `<run>/evidence/<bench>/` — beside the profile, never inside it —
+    with the commands that produced it. A kernel the compiler has nothing to say about still
+    gets a file that SAYS so: that is a state of this evidence source, and an empty file
+    would make the arm silently identical to `no_evidence` (the agent refuses one).
+    """
+    kind = spec.get("evidence_file")
+    if not kind:
+        return []
+    if kind != "compiler_remarks":
+        sys.exit(f"arms.json: unknown evidence_file kind {kind!r} (known: compiler_remarks)")
+    if run_dir is None:                               # argument verification: any readable text
+        probe = Path(tempfile.gettempdir()) / "dp_evidence_probe.txt"
+        probe.write_text("probe: a remark\n")
+        return ["--evidence-file", str(probe)]
+    import compiler_remarks
+    out_dir = run_dir / "evidence" / bench
+    txt = out_dir / "compiler_remarks.txt"
+    if not txt.exists():
+        compiler_remarks.write(bench, out_dir, cc, cxx)
+        if not txt.read_text().strip():
+            txt.write_text("(the compiler's vectorizer and Polly report nothing about this code)\n")
+    return ["--evidence-file", str(txt.resolve())]
 
 
 def _verify_size(requested: str, kernel: str) -> tuple[str, Optional[bool]]:
@@ -1455,7 +1485,8 @@ def cmd_run(a: argparse.Namespace) -> int:
                                 "before": check_package(bench, bench_dir, profile_dir, "before trial")}
                             rec = run_trial(bench, bench_dir, profile_dir, trial, arm,
                                             [*_common_flags(), *arms[arm]["flags"],
-                                             *_timing_flags(arms[arm], bench)],
+                                             *_timing_flags(arms[arm], bench),
+                                             *_evidence_file_flags(arms[arm], bench, run_dir, cc, cxx)],
                                             model, a, cc, cxx)
                             rec["profile"] = prof
                             rec["package_integrity"] = integrity

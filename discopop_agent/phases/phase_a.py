@@ -298,7 +298,9 @@ def phase_a(state: RunState) -> None:
                         require_speedup=args.require_speedup,
                         n_inputs=1 + len(args.check_inputs or []),
                         numeric=args.noise_floor > 0.0,
-                        stress=args.schedule_stress),
+                        stress=args.schedule_stress,
+                        omit=tuple(getattr(args, "prompt_omit", ()) or ()),
+                        external_evidence=getattr(args, "external_evidence", "") or ""),
                 )
             except LLMConnectionError as e:
                 # Fatal for the whole run: every region needs the endpoint.

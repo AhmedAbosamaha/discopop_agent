@@ -56,6 +56,11 @@ class AgentArguments:
     # Ablation control (--evidence): which evidence sections render.
     # None means all of them, which is the default behaviour.
     evidence_sections: Optional[Set[str]] = None
+    # E2's instruments (D16): text of another tool's remarks shown where DiscoPoP's digest
+    # goes, and prompt parts deliberately left out.  Both constant for a run.
+    external_evidence: str = ""
+    evidence_file: Optional[str] = None
+    prompt_omit: Tuple[str, ...] = ()
     numeric_tolerance: bool = True   # measure the program's numerical noise floor
     schedule_stress: bool = True     # vary threads/schedule instead of one run
     stress_threads: Tuple[int, ...] = (1, 2, 4)  # thread counts the matrix covers
@@ -350,6 +355,19 @@ def parse_args() -> AgentArguments:
                          "— leaving it in means a no-evidence run still gets "
                          "empirical feedback, so pair the ablation with "
                          "--budget 1 to isolate the two."))
+    p.add_argument("--evidence-file", default=None, metavar="PATH",
+                   help=("A text file with ANOTHER tool's remarks about this code — the "
+                         "compiler's own vectorizer/Polly remarks — shown to the model where "
+                         "DiscoPoP's digest goes, labelled as static compiler output. An E2 "
+                         "instrument: with `--evidence none` it answers whether DiscoPoP's "
+                         "measured evidence helps, or whether any hint would (none -> static "
+                         "tool -> dynamic DiscoPoP). At most 6,000 characters are used."))
+    p.add_argument("--prompt-omit", default="", metavar="PARTS",
+                   help=("Comma list of prompt parts to LEAVE OUT, to measure what each "
+                         "contributes (E2 Part D): contract, gate (how the rewrite is "
+                         "checked), granularity (which loop to pick), checklist (the questions "
+                         "before writing). The line saying who writes the pragmas is kept even "
+                         "without the contract: it is the pragma mode, not contract content."))
     p.add_argument("--allow-unverified", action="store_true",
                    help=("Continue even when the ORIGINAL program cannot be built or "
                          "run, which leaves the correctness gate with nothing to compare "
@@ -515,6 +533,22 @@ def parse_args() -> AgentArguments:
         else:
             evidence_sections = set(picks)
 
+    from .llm.prompts import PROMPT_PARTS
+    prompt_omit = tuple(sorted({t.strip() for t in (a.prompt_omit or "").split(",") if t.strip()}))
+    unknown_parts = [t for t in prompt_omit if t not in PROMPT_PARTS]
+    if unknown_parts:
+        p.error(f"--prompt-omit: unknown part(s) {', '.join(unknown_parts)} "
+                f"(known: {', '.join(PROMPT_PARTS)})")
+    external_evidence = ""
+    if a.evidence_file:
+        try:
+            external_evidence = Path(a.evidence_file).read_text(errors="replace").strip()[:6000]
+        except OSError as e:
+            p.error(f"--evidence-file: cannot read {a.evidence_file}: {e}")
+        if not external_evidence and not a.print_config:
+            # An empty file would make the arm silently identical to the one without it.
+            p.error(f"--evidence-file: {a.evidence_file} is empty — the arm would measure nothing")
+
     # Resolve API key: CLI arg > LLM_API_KEY env var
     api_key = a.api_key or os.environ.get("LLM_API_KEY")
     # Resolve openai-compat base URL: CLI arg > LLM_API_BASE env var
@@ -584,6 +618,9 @@ def parse_args() -> AgentArguments:
         llm_recon_mode=a.llm_recon_mode,
         explorer_timeout=a.explorer_timeout,
         evidence_sections=evidence_sections,
+        external_evidence=external_evidence,
+        evidence_file=a.evidence_file,
+        prompt_omit=prompt_omit,
         apply_patches=a.apply_patches,
         min_measured_speedup=a.min_measured_speedup,
         check_inputs=[shlex.split(x) for x in a.check_input],
@@ -621,8 +658,20 @@ def parse_args() -> AgentArguments:
         # A credential must never reach a log, a run manifest or a terminal, and this
         # output is written to all three.
         secret = {"api_key", "api_base"}
-        print(_json.dumps({f.name: ("<set>" if getattr(args, f.name) else None)
-                           if f.name in secret else _plain(getattr(args, f.name))
-                           for f in dataclasses.fields(args)}, indent=2, sort_keys=True))
+        import hashlib as _hashlib
+
+        def _shown(name: str) -> Any:
+            v = getattr(args, name)
+            if name in secret:
+                return "<set>" if v else None
+            if name == "external_evidence":
+                # Content, not configuration: its size and digest identify it; the text
+                # itself (up to 6,000 characters) does not belong in a manifest.
+                return (f"{len(v)} chars, sha256 {_hashlib.sha256(v.encode()).hexdigest()[:12]}"
+                        if v else "")
+            return _plain(v)
+
+        print(_json.dumps({f.name: _shown(f.name) for f in dataclasses.fields(args)},
+                          indent=2, sort_keys=True))
         raise SystemExit(0)
     return args

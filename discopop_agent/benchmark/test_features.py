@@ -1669,6 +1669,78 @@ def check_loop_counts(work: Path) -> Result:
                   f"(loop_counter_output.txt: {upstream}: { {n: raw.get(n) for n in want} })")
 
 
+def check_prompt_ablation(work: Path) -> Result:
+    """E2's two instruments change EXACTLY what they name, in every edit mode.  (D16)
+
+    `--prompt-omit` removes one part of the prompt so its contribution can be measured; an
+    omission that took a second part with it — or left the part in one edit mode — would make
+    the ablation measure something else.  `--evidence-file` shows another tool's remarks where
+    DiscoPoP's digest goes; under `--evidence none` the request must then carry those remarks
+    and NOTHING DiscoPoP measured.
+    """
+    import dataclasses
+    from ..llm.prompts import PROMPT_PARTS, _system_prompt
+    from ..llm.request import _build_direct_prompt, _build_function_prompt, _build_prompt
+    from ..types import GateFacts
+    name = "prompt ablation"
+    ev = _fw_evidence()
+    ws = Path("/tmp/ws/fw.c")
+    base = GateFacts(require_speedup=True, n_inputs=2, numeric=False, stress=True)
+    marks = {                                        # a phrase only that part contains
+        "contract": "THE CONTRACT",
+        "gate": "HOW YOUR REWRITE IS CHECKED",
+        "granularity": "decides granularity",
+        "checklist": "Worth settling before you write",
+    }
+    if set(marks) != set(PROMPT_PARTS):
+        return Result(name, "fail", f"the check knows {sorted(marks)}, the agent {sorted(PROMPT_PARTS)}")
+    problems: List[str] = []
+
+    def whole(g: GateFacts, pragmas: bool, mode: str) -> str:
+        req = (_build_direct_prompt(ev, ws, None, pragmas, g) if mode == "direct"
+               else _build_function_prompt(ev, None, pragmas, g) if mode == "function"
+               else _build_prompt(ev, None, pragmas, g))
+        return " ".join((_system_prompt(mode, pragmas, False, g) + "\n" + req).split())
+
+    for pragmas in (False, True):
+        for mode in ("direct", "function", "diff"):
+            full = whole(base, pragmas, mode)
+            for part, phrase in marks.items():
+                if phrase not in full:
+                    problems.append(f"{mode}/{pragmas}: the full prompt lacks {phrase!r}")
+                cut = whole(dataclasses.replace(base, omit=(part,)), pragmas, mode)
+                if phrase in cut:
+                    problems.append(f"{mode}/{pragmas}: --prompt-omit {part} left {phrase!r} in")
+                # omitting `gate` takes its closing paragraph (granularity) with it, by design
+                for other, other_phrase in marks.items():
+                    if other != part and not (part == "gate" and other == "granularity") \
+                            and other_phrase not in cut:
+                        problems.append(f"{mode}/{pragmas}: --prompt-omit {part} also removed {other}")
+            # without the contract the pragma MODE must still be stated
+            cut = whole(dataclasses.replace(base, omit=("contract",)), pragmas, mode)
+            rule = "Annotate what you parallelize" if pragmas else "Do not write `#pragma omp` yourself"
+            if rule not in cut:
+                problems.append(f"{mode}/{pragmas}: without the contract the pragma rule is gone")
+
+    remark = "loop not vectorized: unsafe dependent memory operations in loop"
+    g_ext = dataclasses.replace(base, external_evidence=f"fw.c:12:3: remark: {remark}")
+    for mode in ("direct", "function", "diff"):
+        req = (_build_direct_prompt(ev, ws, set(), False, g_ext) if mode == "direct"
+               else _build_function_prompt(ev, set(), False, g_ext) if mode == "function"
+               else _build_prompt(ev, set(), False, g_ext))
+        flat = " ".join(req.split())
+        if remark not in flat or "NOT measured" not in flat:
+            problems.append(f"{mode}: the external remarks (or their label) are missing")
+        for leak in ("Runtime data dependences", "RAW", "measured runtime"):
+            if leak in flat:
+                problems.append(f"{mode}: --evidence none with an evidence file still shows {leak!r}")
+    if problems:
+        return Result(name, "fail", "; ".join(problems[:4]) + (f" (+{len(problems) - 4} more)" if len(problems) > 4 else ""))
+    return Result(name, "pass",
+                  "each of 4 parts removed alone in 3 edit modes x 2 pragma modes, the pragma rule kept "
+                  "without the contract; external remarks shown and labelled, no DiscoPoP data beside them")
+
+
 def check_covered_skip(work: Path) -> Result:
     """A region inside an already-accepted one must leave the queue.
 
@@ -2666,6 +2738,7 @@ _CHECKS: List[Tuple[str, Callable[[Path], Result]]] = [
     ("project-mode", check_project_mode),
     ("pattern-choice", check_pattern_choice),
     ("prompt-truth", check_prompt_truth),
+    ("prompt-ablation", check_prompt_ablation),
     ("evidence-enrich", check_evidence_enrichment),
     ("dep-standing", check_dependence_standing),
     ("schedule-runtime", check_schedule_runtime),

@@ -47,7 +47,10 @@
     },
     "full_b1": {
       "ids": [
-        "E2"
+        "E2",
+        "E2-source",
+        "E2-C",
+        "E2-D"
       ],
       "description": "E2's (full evidence, budget 1) cell: the campaign default with a single LLM attempt per region, so the gate's failure feedback cannot substitute for evidence. Until 2026-09-21 it carried --fast-refresh, pinned there by D27's blanket 'keep what was implicit' \u2014 which left E2's 2x2 differing from its own baseline (`default`, full re-profile) in the refresh as well as in evidence and budget. Removed: the refresh is E3's variable, not E2's.",
       "flags": [
@@ -64,7 +67,8 @@
     },
     "no_evidence_b1": {
       "ids": [
-        "E2"
+        "E2",
+        "E2-source"
       ],
       "description": "E2's (no evidence, budget 1) cell: single attempt, no DiscoPoP evidence in the prompt (source and task only). Follows the campaign default in everything else (no --fast-refresh since 2026-09-21, see `full_b1`).",
       "flags": [
@@ -373,6 +377,455 @@
         "fast_refresh": false,
         "restructure_depth": 0
       }
+    },
+    "hotspot_only_b1": {
+      "ids": [
+        "E2-source"
+      ],
+      "description": "E2 evidence-source arm: only WHERE the time goes (`runtime_share`), no dependence information; budget 1 so the gate's feedback cannot substitute. Between `no_evidence_b1` and `full_b1`.",
+      "flags": [
+        "--budget",
+        "1",
+        "--evidence",
+        "runtime_share"
+      ],
+      "settings": {
+        "budget": 1,
+        "llm_pragmas": false,
+        "require_speedup": true,
+        "evidence_sections": [
+          "runtime_share"
+        ],
+        "fast_refresh": false,
+        "prompt_omit": []
+      }
+    },
+    "compiler_remarks_b1": {
+      "ids": [
+        "E2-source"
+      ],
+      "description": "E2 evidence-source arm: NO DiscoPoP data; instead the campaign compiler's own remarks about the kernel (vectorizer and Polly; tools/compiler_remarks.py) shown where DiscoPoP's digest goes. Separates 'DiscoPoP's measured evidence helps' from 'any hint helps': none -> static tool -> dynamic DiscoPoP. Budget 1.",
+      "flags": [
+        "--budget",
+        "1",
+        "--evidence",
+        "none"
+      ],
+      "settings": {
+        "budget": 1,
+        "llm_pragmas": false,
+        "require_speedup": true,
+        "evidence_sections": [],
+        "fast_refresh": false,
+        "prompt_omit": []
+      },
+      "evidence_file": "compiler_remarks"
+    },
+    "ev_without_deps_b1": {
+      "ids": [
+        "E2-C"
+      ],
+      "description": "E2 Part C: full evidence WITHOUT the `deps` group (deps, blockers, reductions) \u2014 is the group necessary? Budget 1.",
+      "flags": [
+        "--budget",
+        "1",
+        "--evidence=-deps,-blockers,-reductions"
+      ],
+      "settings": {
+        "budget": 1,
+        "llm_pragmas": false,
+        "require_speedup": true,
+        "evidence_sections": [
+          "accesses",
+          "array_note",
+          "calls",
+          "classification",
+          "extra_vars",
+          "failure",
+          "inner_patterns",
+          "loop_nest",
+          "runtime_share"
+        ],
+        "fast_refresh": false,
+        "prompt_omit": []
+      }
+    },
+    "ev_only_deps_b1": {
+      "ids": [
+        "E2-C"
+      ],
+      "description": "E2 Part C: ONLY the `deps` group (deps, blockers, reductions) \u2014 is the group sufficient? Overlapping sections hide each other in a leave-one-out alone. Budget 1.",
+      "flags": [
+        "--budget",
+        "1",
+        "--evidence",
+        "deps,blockers,reductions"
+      ],
+      "settings": {
+        "budget": 1,
+        "llm_pragmas": false,
+        "require_speedup": true,
+        "evidence_sections": [
+          "blockers",
+          "deps",
+          "reductions"
+        ],
+        "fast_refresh": false,
+        "prompt_omit": []
+      }
+    },
+    "ev_without_sharing_b1": {
+      "ids": [
+        "E2-C"
+      ],
+      "description": "E2 Part C: full evidence WITHOUT the `sharing` group (classification, extra_vars) \u2014 is the group necessary? Budget 1.",
+      "flags": [
+        "--budget",
+        "1",
+        "--evidence=-classification,-extra_vars"
+      ],
+      "settings": {
+        "budget": 1,
+        "llm_pragmas": false,
+        "require_speedup": true,
+        "evidence_sections": [
+          "accesses",
+          "array_note",
+          "blockers",
+          "calls",
+          "deps",
+          "failure",
+          "inner_patterns",
+          "loop_nest",
+          "reductions",
+          "runtime_share"
+        ],
+        "fast_refresh": false,
+        "prompt_omit": []
+      }
+    },
+    "ev_only_sharing_b1": {
+      "ids": [
+        "E2-C"
+      ],
+      "description": "E2 Part C: ONLY the `sharing` group (classification, extra_vars) \u2014 is the group sufficient? Overlapping sections hide each other in a leave-one-out alone. Budget 1.",
+      "flags": [
+        "--budget",
+        "1",
+        "--evidence",
+        "classification,extra_vars"
+      ],
+      "settings": {
+        "budget": 1,
+        "llm_pragmas": false,
+        "require_speedup": true,
+        "evidence_sections": [
+          "classification",
+          "extra_vars"
+        ],
+        "fast_refresh": false,
+        "prompt_omit": []
+      }
+    },
+    "ev_without_struct_b1": {
+      "ids": [
+        "E2-C"
+      ],
+      "description": "E2 Part C: full evidence WITHOUT the `struct` group (loop_nest, accesses, calls, inner_patterns) \u2014 is the group necessary? Budget 1.",
+      "flags": [
+        "--budget",
+        "1",
+        "--evidence=-loop_nest,-accesses,-calls,-inner_patterns"
+      ],
+      "settings": {
+        "budget": 1,
+        "llm_pragmas": false,
+        "require_speedup": true,
+        "evidence_sections": [
+          "array_note",
+          "blockers",
+          "classification",
+          "deps",
+          "extra_vars",
+          "failure",
+          "reductions",
+          "runtime_share"
+        ],
+        "fast_refresh": false,
+        "prompt_omit": []
+      }
+    },
+    "ev_only_struct_b1": {
+      "ids": [
+        "E2-C"
+      ],
+      "description": "E2 Part C: ONLY the `struct` group (loop_nest, accesses, calls, inner_patterns) \u2014 is the group sufficient? Overlapping sections hide each other in a leave-one-out alone. Budget 1.",
+      "flags": [
+        "--budget",
+        "1",
+        "--evidence",
+        "loop_nest,accesses,calls,inner_patterns"
+      ],
+      "settings": {
+        "budget": 1,
+        "llm_pragmas": false,
+        "require_speedup": true,
+        "evidence_sections": [
+          "accesses",
+          "calls",
+          "inner_patterns",
+          "loop_nest"
+        ],
+        "fast_refresh": false,
+        "prompt_omit": []
+      }
+    },
+    "ev_without_where_b1": {
+      "ids": [
+        "E2-C"
+      ],
+      "description": "E2 Part C: full evidence WITHOUT the `where` group (runtime_share) \u2014 is the group necessary? Budget 1.",
+      "flags": [
+        "--budget",
+        "1",
+        "--evidence=-runtime_share"
+      ],
+      "settings": {
+        "budget": 1,
+        "llm_pragmas": false,
+        "require_speedup": true,
+        "evidence_sections": [
+          "accesses",
+          "array_note",
+          "blockers",
+          "calls",
+          "classification",
+          "deps",
+          "extra_vars",
+          "failure",
+          "inner_patterns",
+          "loop_nest",
+          "reductions"
+        ],
+        "fast_refresh": false,
+        "prompt_omit": []
+      }
+    },
+    "ev_only_where_b1": {
+      "ids": [
+        "E2-C"
+      ],
+      "description": "E2 Part C: ONLY the `where` group (runtime_share) \u2014 is the group sufficient? Overlapping sections hide each other in a leave-one-out alone. Budget 1.",
+      "flags": [
+        "--budget",
+        "1",
+        "--evidence",
+        "runtime_share"
+      ],
+      "settings": {
+        "budget": 1,
+        "llm_pragmas": false,
+        "require_speedup": true,
+        "evidence_sections": [
+          "runtime_share"
+        ],
+        "fast_refresh": false,
+        "prompt_omit": []
+      }
+    },
+    "ev_without_howto_b1": {
+      "ids": [
+        "E2-C"
+      ],
+      "description": "E2 Part C: full evidence WITHOUT the `howto` group (array_note) \u2014 is the group necessary? Budget 1.",
+      "flags": [
+        "--budget",
+        "1",
+        "--evidence=-array_note"
+      ],
+      "settings": {
+        "budget": 1,
+        "llm_pragmas": false,
+        "require_speedup": true,
+        "evidence_sections": [
+          "accesses",
+          "blockers",
+          "calls",
+          "classification",
+          "deps",
+          "extra_vars",
+          "failure",
+          "inner_patterns",
+          "loop_nest",
+          "reductions",
+          "runtime_share"
+        ],
+        "fast_refresh": false,
+        "prompt_omit": []
+      }
+    },
+    "ev_only_howto_b1": {
+      "ids": [
+        "E2-C"
+      ],
+      "description": "E2 Part C: ONLY the `howto` group (array_note) \u2014 is the group sufficient? Overlapping sections hide each other in a leave-one-out alone. Budget 1.",
+      "flags": [
+        "--budget",
+        "1",
+        "--evidence",
+        "array_note"
+      ],
+      "settings": {
+        "budget": 1,
+        "llm_pragmas": false,
+        "require_speedup": true,
+        "evidence_sections": [
+          "array_note"
+        ],
+        "fast_refresh": false,
+        "prompt_omit": []
+      }
+    },
+    "ev_without_feedback_b1": {
+      "ids": [
+        "E2-C"
+      ],
+      "description": "E2 Part C: full evidence WITHOUT the `feedback` group (failure) \u2014 is the group necessary? Budget 1.",
+      "flags": [
+        "--budget",
+        "1",
+        "--evidence=-failure"
+      ],
+      "settings": {
+        "budget": 1,
+        "llm_pragmas": false,
+        "require_speedup": true,
+        "evidence_sections": [
+          "accesses",
+          "array_note",
+          "blockers",
+          "calls",
+          "classification",
+          "deps",
+          "extra_vars",
+          "inner_patterns",
+          "loop_nest",
+          "reductions",
+          "runtime_share"
+        ],
+        "fast_refresh": false,
+        "prompt_omit": []
+      }
+    },
+    "ev_only_feedback_b1": {
+      "ids": [
+        "E2-C"
+      ],
+      "description": "E2 Part C: ONLY the `feedback` group (failure) \u2014 is the group sufficient? Overlapping sections hide each other in a leave-one-out alone. Budget 1.",
+      "flags": [
+        "--budget",
+        "1",
+        "--evidence",
+        "failure"
+      ],
+      "settings": {
+        "budget": 1,
+        "llm_pragmas": false,
+        "require_speedup": true,
+        "evidence_sections": [
+          "failure"
+        ],
+        "fast_refresh": false,
+        "prompt_omit": []
+      }
+    },
+    "prompt_without_contract_b1": {
+      "ids": [
+        "E2-D"
+      ],
+      "description": "E2 Part D: the prompt WITHOUT its `contract` part, evidence held at full, budget 1. The line saying who writes the pragmas is kept even without the contract (it is the pragma mode, E3's variable).",
+      "flags": [
+        "--budget",
+        "1",
+        "--prompt-omit",
+        "contract"
+      ],
+      "settings": {
+        "budget": 1,
+        "llm_pragmas": false,
+        "require_speedup": true,
+        "evidence_sections": null,
+        "fast_refresh": false,
+        "prompt_omit": [
+          "contract"
+        ]
+      }
+    },
+    "prompt_without_gate_b1": {
+      "ids": [
+        "E2-D"
+      ],
+      "description": "E2 Part D: the prompt WITHOUT its `gate` part, evidence held at full, budget 1. The line saying who writes the pragmas is kept even without the contract (it is the pragma mode, E3's variable).",
+      "flags": [
+        "--budget",
+        "1",
+        "--prompt-omit",
+        "gate"
+      ],
+      "settings": {
+        "budget": 1,
+        "llm_pragmas": false,
+        "require_speedup": true,
+        "evidence_sections": null,
+        "fast_refresh": false,
+        "prompt_omit": [
+          "gate"
+        ]
+      }
+    },
+    "prompt_without_granularity_b1": {
+      "ids": [
+        "E2-D"
+      ],
+      "description": "E2 Part D: the prompt WITHOUT its `granularity` part, evidence held at full, budget 1. The line saying who writes the pragmas is kept even without the contract (it is the pragma mode, E3's variable).",
+      "flags": [
+        "--budget",
+        "1",
+        "--prompt-omit",
+        "granularity"
+      ],
+      "settings": {
+        "budget": 1,
+        "llm_pragmas": false,
+        "require_speedup": true,
+        "evidence_sections": null,
+        "fast_refresh": false,
+        "prompt_omit": [
+          "granularity"
+        ]
+      }
+    },
+    "prompt_without_checklist_b1": {
+      "ids": [
+        "E2-D"
+      ],
+      "description": "E2 Part D: the prompt WITHOUT its `checklist` part, evidence held at full, budget 1. The line saying who writes the pragmas is kept even without the contract (it is the pragma mode, E3's variable).",
+      "flags": [
+        "--budget",
+        "1",
+        "--prompt-omit",
+        "checklist"
+      ],
+      "settings": {
+        "budget": 1,
+        "llm_pragmas": false,
+        "require_speedup": true,
+        "evidence_sections": null,
+        "fast_refresh": false,
+        "prompt_omit": [
+          "checklist"
+        ]
+      }
     }
   },
   "common_timing_size": "per_kernel",
@@ -490,6 +943,57 @@
       "variable": [],
       "consequences": [],
       "why": "The class measurement: one arm, no comparison."
+    },
+    "E2-source": {
+      "arms": [
+        "no_evidence_b1",
+        "compiler_remarks_b1",
+        "hotspot_only_b1",
+        "full_b1"
+      ],
+      "variable": [
+        "evidence_sections",
+        "external_evidence",
+        "evidence_file"
+      ],
+      "consequences": [],
+      "why": "Where the evidence comes from (D16): none -> the compiler's static remarks -> where the time goes -> DiscoPoP's full dynamic evidence. Budget 1 everywhere, so the gate's feedback cannot substitute for evidence."
+    },
+    "E2-C": {
+      "arms": [
+        "full_b1",
+        "ev_without_deps_b1",
+        "ev_without_sharing_b1",
+        "ev_without_struct_b1",
+        "ev_without_where_b1",
+        "ev_without_howto_b1",
+        "ev_without_feedback_b1",
+        "ev_only_deps_b1",
+        "ev_only_sharing_b1",
+        "ev_only_struct_b1",
+        "ev_only_where_b1",
+        "ev_only_howto_b1",
+        "ev_only_feedback_b1"
+      ],
+      "variable": [
+        "evidence_sections"
+      ],
+      "consequences": [],
+      "why": "Which PART of DiscoPoP's evidence matters (D16 Part C): six groups, each left OUT of full evidence (necessary?) and given ALONE (sufficient?). Exploratory: effect sizes, not significance tests."
+    },
+    "E2-D": {
+      "arms": [
+        "full_b1",
+        "prompt_without_contract_b1",
+        "prompt_without_gate_b1",
+        "prompt_without_granularity_b1",
+        "prompt_without_checklist_b1"
+      ],
+      "variable": [
+        "prompt_omit"
+      ],
+      "consequences": [],
+      "why": "Which part of the PROMPT matters (D16 Part D): leave one part out, evidence held at full. Read with gate rejections by stage \u2014 a prompt part may prevent wasted attempts rather than failures."
     }
   }
 }
