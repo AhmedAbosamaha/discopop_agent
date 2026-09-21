@@ -45,7 +45,7 @@ def strip_pragmas(text: str) -> str:
     return "\n".join(l for l in text.splitlines() if not PRAGMA.match(l)) + "\n"
 
 
-def run_one(loop: str, out: Path, repo: Path, timeout: int) -> Dict[str, object]:
+def run_one(loop: str, out: Path, repo: Path, timeout: int, speed: bool = True) -> Dict[str, object]:
     bench = f"tsvc/{loop}"
     ref = AGENT_DIR / "reference_solutions" / "tsvc" / f"{loop}.c"
     meta = json.loads((AGENT_DIR / "prepared" / bench / "meta.json").read_text())
@@ -68,8 +68,12 @@ def run_one(loop: str, out: Path, repo: Path, timeout: int) -> Dict[str, object]
         rec.update(result="PROFILE_ERROR", detail=(prof.stdout + prof.stderr)[-300:])
         return rec
     size = cli._timing_size(bench)
+    # `speed=False`: the SAFETY ceiling only. Speed belongs on the campaign's server at the
+    # kernel's timing size (T0.10 measured the expert versions there); on a laptop, or with
+    # anything else running, a timing verdict masks the question this instrument asks —
+    # whether the gate rejects CORRECT code.
     flags = [*cli._common_flags(), "--budget", "0",
-             *([f"--timing-cflags=-D{size}_DATASET"] if size else ["--no-require-speedup"])]
+             *([f"--timing-cflags=-D{size}_DATASET"] if size and speed else ["--no-require-speedup"])]
     cmd = [py, "-m", "discopop_agent", "--source-file", src.name, "--discopop-dir", ".discopop",
            "--provider", "claude-agent-sdk", "--model", "none", *flags, "--check-input", "7",
            "--exclude-functions", ",".join(meta.get("exclude_functions") or [])]
@@ -98,6 +102,8 @@ def main() -> int:
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--agent-repo", type=Path, default=AGENT_DIR.parent.parent)
     ap.add_argument("--timeout", type=int, default=3600)
+    ap.add_argument("--no-speed", action="store_true",
+                    help="safety ceiling only: run the gate without its speed check")
     a = ap.parse_args()
     classes = json.loads((AGENT_DIR / "benchmark_classes.json").read_text())["classes"]
     cls = {b.split("/")[1]: c for c, bs in classes.items() for b in bs if b.startswith("tsvc/")}
@@ -106,7 +112,7 @@ def main() -> int:
     rows: List[Dict[str, object]] = []
     for loop in loops:
         try:
-            rec = run_one(loop, a.out, a.agent_repo.resolve(), a.timeout)
+            rec = run_one(loop, a.out, a.agent_repo.resolve(), a.timeout, speed=not a.no_speed)
         except subprocess.TimeoutExpired:
             rec = {"loop": loop, "result": "TIMEOUT"}
         rec["class"] = cls.get(loop, "?")

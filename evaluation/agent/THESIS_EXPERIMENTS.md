@@ -1839,6 +1839,42 @@ Added 2026-09-15 (see §6 rows of that date):
 
 ## 7. Run log
 
+### `t0_13_default_arm_ceiling` — 2026-09-21, Mac, **T0.13: what the pipeline does with a PERFECT rewrite** (no model)
+
+- **Why.** The author's concern once E1 was running: *"all code changes will be rejected."* Four
+  smokes had ended `no-change`, and E1's first agent trial (`hotspot`) rejected all seven
+  pragmas. The question can be asked with known ground truth and no model: take every TSVC
+  EXPERT restructuring (verified correct and faster, T0.10), strip its pragmas — exactly what a
+  perfect model hands over under `--no-llm-pragmas` — and run the agent on it with `--budget 0`
+  and the campaign's flags: DiscoPoP re-profiles it, Phase B pushes DiscoPoP's pragmas through
+  the gate, Settle verifies. Speed check OFF here (`--no-speed`): a laptop is no place to judge
+  speed, which T0.10 measured on the server (every class-R reference ≥ 1.45× at the gate's own
+  timing size); the question is whether CORRECT code is rejected. (A first pass with the speed
+  check on was discarded: 48-thread `hotspot` checks ran beside it and spoiled its timings.)
+- **Result: KEPT on 18 of 21 loops; class R: 16 of 18.** In every kept loop the only rejection
+  is ONE TSan hit on the outer repetition loop (`nl`, which rewrites the same arrays every
+  pass) — a true race on a loop DiscoPoP should not have offered; the kernel loops themselves
+  were applied and the finished files verified.
+- **The three not kept, each inspected — none is a false rejection by the gate:**
+  - `s331` (R): the expert's solution is `reduction(max:j)`; DiscoPoP can only offer a plain
+    `parallel for`, which IS a race — caught by the schedule matrix ("two runs at the SAME thread
+    count printed different output").
+  - `s341` (R): the expert's solution is a hand-written `#pragma omp parallel` region with
+    `omp_get_thread_num()` (count → prefix sum → pack); without its pragmas no loop in it is a
+    `parallel for`, so DiscoPoP has nothing to annotate (and the file cannot be instrumented
+    without OpenMP's header).
+  - `s313` (A, not part of the claim): on the reference's one-line loop DiscoPoP reports
+    `do_all` instead of the reduction it finds in the package, so its pragma lacks
+    `reduction(+:dot)` — a real race, rightly rejected.
+- **What it means for E1.** Code changes are NOT bound to be rejected: given a good rewrite the
+  `default` arm keeps it on 16 of the 18 TSVC class-R loops, so a `neither` there is about the
+  model's rewrite. On `s331` and `s341` the KNOWN solution lies outside what DiscoPoP can write
+  (a max-reduction, an explicit SPMD region): under `default` they can only be won by a
+  different, block-wise restructuring, and they are exactly where E3's variable — who writes the
+  pragma — should show. Stated with E1's result, not discovered after it.
+- Files: `results/_analysis/t0_13_default_arm_ceiling/` (`ceiling_safety_mac.csv`, the run log,
+  three agent logs). Tool: `agent/tools/default_arm_ceiling.py`.
+
 ### `e1_smoke5` — 2026-09-21, server, **the pre-flight smoke that finally passes: one benchmark of every kind E1 contains** (8 trials, Haiku)
 
 - **Setup.** `tsvc/s211` (class R), `polybench/bicg` (class R, NO timing size — the harness
