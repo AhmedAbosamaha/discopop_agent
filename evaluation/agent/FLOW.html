@@ -231,7 +231,7 @@ flowchart TD
     <tr><td>cold</td><td>measured, and DiscoPoP's hotspot verdict is NO</td></tr>
     <tr><td>covered</td><td>inside a construct that already runs in parallel, or nothing sequential is left in it (remaining share 0)</td></tr>
     <tr><td>too small</td><td>predicted saving under <code>--min-impact</code>, or remaining share under <code>--min-runtime-share</code> (campaign: 1 %, D1)</td></tr>
-    <tr><td>unmeasured</td><td>hotspots ran and did not report it, while a share floor is set; without a floor: workload under <code>--min-workload</code></td></tr>
+    <tr><td>unmeasured</td><td>hotspots ran and did not report it, while a share floor is set; without a floor: workload under <code>--min-workload</code>. Sound only for a region that EXISTED when the runtimes were taken and was found cold — a region a rewrite <em>created</em> is unmeasured merely because it did not exist yet, which is why runtimes are re-measured after every kept rewrite (Fix 86). While that re-measurement was gated on a deeper restructuring level it never ran at the default depth 0, and every loop a rewrite exposed was dropped here before Phase B could annotate it</td></tr>
   </table></div>
 </section>
 <script type="text/plain" class="src" data-d="d3">

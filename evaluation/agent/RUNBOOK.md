@@ -203,6 +203,16 @@ regenerate it with the prepare tool. If the archived copy differs, delete
 ### The checklist for EVERY experiment (a new session starts here)
 
 **Before launching**
+0d. **Arguments that depend on other arguments (D28).** The agent REFUSES a combination that
+   cannot work — `--llm-recon` and `--llm-deps` each need `--fast-refresh`; `--pragma-arbitration`
+   needs both `--llm-pragmas` and `--require-speedup`; `--llm-recon` with `--llm-deps` is a
+   contradiction — so those cannot reach a run. The dangerous kind is the one that raises no
+   error: a setting another setting makes INERT. Every run prints them before it starts; read
+   that list and check it against the experiment's variable. Known: `--no-hotspots` makes
+   `--min-runtime-share` and `--min-impact` inert (E9's `full_no_hotspots` varies both together,
+   and its write-up must say so); `--restructure-depth > 0` with `--fast-refresh` refreshes only
+   at the last level; `--no-require-speedup` with a per-kernel timing size. The agent's default
+   is a FULL re-profile after a kept rewrite (`--no-fast-refresh`, D27).
 0c. **Scope (D26): exclude what DiscoPoP cannot profile, keep what it profiles but finds nothing
    in.** A benchmark whose profile cannot be produced within the phase timeout leaves the
    model-driven set, is measured once, and is reported with its cost. A benchmark DiscoPoP
@@ -228,6 +238,13 @@ regenerate it with the prepare tool. If the archived copy differs, delete
    verification size known (`tsvc_ceiling.py`, T0.10); sizes from T0.1; then ONE smoke trial
    per arm on two benchmarks and READ the logs — did the arm's code path run (a rewrite, a
    refresh, depth 1)? An experiment whose arms cannot differ on its benchmarks is not run.
+   **"The code path ran" is not enough — follow it to the end (the Fix 86 lesson).** Smoke 3
+   accepted a correct, gate-passing rewrite in both trials and still reported `no-change` in
+   both, because the loops the rewrite exposed were filtered out before Phase B could annotate
+   them and Settle then discarded the rewrite as an orphan. So for every accepted rewrite,
+   check the log in order: DiscoPoP reports a pattern in the rewritten lines → **that region
+   appears in Phase B's candidate list** → the pragma reaches a gate verdict. A `DROPPED` with
+   a named reason (tsan, slower) is a real result; a region that never appears at all is a bug.
 1. The experiment, its arms, benchmarks, repeats and hypotheses are in the plan; any deviation
    is written into `THESIS_EXPERIMENTS.md` §6 (change log) with its reason **before the first
    trial exists**.
