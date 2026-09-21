@@ -73,6 +73,24 @@ def _groups() -> Dict[str, str]:
     return {k: g for g, ks in spec.items() for k in ks}
 
 
+CLASSES_FILE = Path(__file__).resolve().parents[1] / "benchmark_classes.json"
+
+
+def _classes() -> Dict[str, str]:
+    """benchmark -> its MEASURED class (R / A / D, T0.11), from the campaign's input file.
+
+    The main comparison is read per class: the claim is about R (DiscoPoP alone reaches
+    nothing there), A shows no harm, D shows no unsafe acceptance. Pooled over all classes the
+    verdict counts would mostly reflect how many benchmarks of each class a run happened to
+    contain. The guessed groups of kernel_groups.json stay for the runs made before T0.11.
+    """
+    try:
+        spec = json.loads(CLASSES_FILE.read_text())["classes"]
+    except (OSError, ValueError, KeyError):
+        return {}
+    return {b: c for c, bs in spec.items() for b in bs}
+
+
 def best_speedup(t: dict) -> Optional[float]:
     par = (t.get("verify") or {}).get("par") or {}
     vals = [p.get("speedup") for p in par.values() if p.get("speedup")]
@@ -231,6 +249,7 @@ def vs_discopop_alone(trials: List[dict]) -> List[dict]:
         if t.get("arm") == BASELINE_ARM and t.get("kind") != "baseline":
             base.setdefault(str(t.get("benchmark")), []).append(t)
     groups = _groups()
+    classes = _classes()
     rows: List[dict] = []
     for t in trials:
         if t.get("arm") == BASELINE_ARM or t.get("kind") == "baseline":
@@ -276,6 +295,7 @@ def vs_discopop_alone(trials: List[dict]) -> List[dict]:
         rows.append({
             "run_id": t.get("run_id"), "benchmark": t.get("benchmark"), "kernel": t.get("kernel"),
             "group": groups.get(t.get("kernel", ""), ""), "arm": t.get("arm"), "model": t.get("model"),
+            "class": classes.get(str(t.get("benchmark")), ""),
             "repeat": t.get("repeat"),
             "dp_alone_trials": len(bs), "dp_alone_outcomes": ",".join(sorted(str(b.get("outcome")) for b in bs)),
             "dp_alone_parallel": dp_parallel if bs else None,
@@ -307,6 +327,24 @@ def vs_discopop_alone_md(trials: List[dict]) -> str:
         med = f"{statistics.median(ratios):.2f}x (n={len(ratios)})" if ratios else "—"
         out.append(f"| {arm} | {model} | {len(rs)} | "
                    + " | ".join(str(sum(1 for r in rs if r["verdict"] == n)) for n in names) + f" | {med} |")
+    # Per measured class: THIS is the table the claim is read from (class R), with A as the
+    # no-harm control and D as the must-decline control.
+    if any(r.get("class") for r in rows):
+        out += ["", "| Class | Arm | Model | Benchmarks | Trials | " + " | ".join(names)
+                + " | median agent / DiscoPoP alone |",
+                "|---|---|---|---:|---:|" + "---:|" * len(names) + "---:|"]
+        for cls in ("R", "A", "D", ""):
+            for arm, model in series:
+                rs = [r for r in rows if (r["arm"], r["model"]) == (arm, model) and (r.get("class") or "") == cls]
+                if not rs:
+                    continue
+                ratios = [r["agent_vs_dp_alone"] for r in rs if r["agent_vs_dp_alone"]]
+                med = f"{statistics.median(ratios):.2f}x (n={len(ratios)})" if ratios else "—"
+                out.append(f"| {cls or 'unclassified'} | {arm} | {model} | {len({r['benchmark'] for r in rs})} | {len(rs)} | "
+                           + " | ".join(str(sum(1 for r in rs if r["verdict"] == n)) for n in names) + f" | {med} |")
+        out += ["", "Classes are MEASURED (T0.11, `benchmark_classes.json`): R = DiscoPoP alone reaches no verified "
+                    "parallel program in any of three profile draws; A = it does in the majority; D = R, and a true "
+                    "recurrence by design. The claim is read from R; A is the no-harm control; D the must-decline control."]
     out += ["", "| Benchmark | Arm | Model | DiscoPoP alone (outcomes · x over seq.) | Agent (outcomes · median x over seq.) | "
                 "Agent / DiscoPoP alone | Verdicts |", "|---|---|---|---|---|---:|---|"]
     keys: List[Tuple[str, str, str]] = []

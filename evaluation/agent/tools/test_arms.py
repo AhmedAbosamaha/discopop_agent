@@ -87,6 +87,35 @@ def check_experiments(doc: dict, repo: Path, benchmark: str) -> int:
     return failures
 
 
+def check_classes() -> int:
+    """benchmark_classes.json — E1's input — names real, prepared, sized benchmarks, once each."""
+    doc = json.loads((HERE.parent / "benchmark_classes.json").read_text())
+    failures = 0
+    seen: dict = {}
+    for cls, benches in doc["classes"].items():
+        for b in benches:
+            problems = []
+            if b in seen:
+                problems.append(f"also in class {seen[b]}")
+            seen[b] = cls
+            if b in doc.get("excluded", {}):
+                problems.append("listed as excluded")
+            if not (HERE.parent / "prepared" / b / "meta.json").exists():
+                problems.append("no prepared package")
+            try:
+                cli._verify_size("per_kernel", b)
+            except SystemExit:
+                problems.append("no verification size (T0.1)")
+            if problems:
+                failures += 1
+                print(f"  [FAIL] {cls} {b}: {', '.join(problems)}")
+    counts = {c: len(v) for c, v in doc["classes"].items()}
+    timeable = sum(1 for b in seen if cli._timing_size(b))
+    print(f"  [{'pass' if not failures else 'FAIL'}] benchmark classes {counts}: every one prepared and sized; "
+          f"{timeable} timeable, {len(seen) - timeable} with the agent's speed check off")
+    return failures
+
+
 def main() -> int:
     doc = json.loads((HERE.parent / "arms.json").read_text())
     arms = doc["arms"]
@@ -108,6 +137,8 @@ def main() -> int:
         failures += len(problems)
     print()
     failures += check_experiments(doc, Path(repo), timeable)
+    print()
+    failures += check_classes()
     print("\nALL PASS" if not failures else f"\nFAILURES: {failures}")
     return 1 if failures else 0
 
