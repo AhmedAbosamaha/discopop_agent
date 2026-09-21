@@ -26,7 +26,7 @@ LLVM 19 (macOS) and LLVM 20 (Linux).
 | B4 | explorer, task-graph traversal order | open (consequence of B3, to re-measure after it) | the explorer's output differs between runs on one unchanged profile |
 | P1 | explorer, `TaskGraph.__assign_state_ids` | fixed (agent Fix 83) | performance: the state assignment re-answers the same (context, call path) pair exponentially often — hours on `mg`/`nw`, seconds once memoised |
 | B6 | `discopop_patch_generator` (called by the explorer) | open | hangs on some runs: 3 of 20 explorer runs on one unchanged profile of a 40-line program never return from the patch-generator subprocess |
-| B7 | profiler runtime, `loop_counter_output.txt` | worked around (agent Fix 88), open upstream | the per-loop iteration counts are paired with the WRONG loops: 277 of 337 counts (82 %) over 41 profiles disagree with the `BGN loop` markers of the same run |
+| B7 | profiler runtime, `dp_loop_output.cpp` → `loop_counter_output.txt` | root cause found, patch written, worked around (agent Fix 88); present in upstream `new_explorer` `28ac4d47` | the per-loop iteration counts are paired with the WRONG loops: 277 of 337 counts (82 %) over 41 profiles disagree with the `BGN loop` markers of the same run |
 | N1 | hotspot detection (`hotspot_detection/private/`) | usage hazard, not a bug (agent Fix 87) | region ids and results ACCUMULATE across builds and runs by design; re-instrumenting a CHANGED program into the same directory reports the old program's lines, halved times, and nothing for new regions |
 | L1 | profiler | limitation | NPB-CPP `lu` (4,134 lines): the instrumenting compile exceeds two hours |
 | L2 | profiler + explorer | limitation | Rodinia `nw`: 531,606 call-path states; the explorer's state assignment needs ≈ 25 h |
@@ -147,9 +147,49 @@ for (int r = 0; r < R; r++) {                                   /* line 7:  R = 
 | line 8 | 6,986 | 6,986 | 6,986 |
 | line 9 | 6,986 | 6,986 | **1,000** (the count of the init loop at line 6) |
 
-The counts look shifted against the loop ids of `loop_meta.txt` — each loop receives the
-count of a neighbouring id — so the join between the runtime's counter array and the loop
-table is off; not traced into the runtime yet. Extent, over 41 profiles of the evaluation's
+**Root cause** — `profiler/rtlib/injected_functions/dp_loop_output.cpp`, two defects in the
+same ten lines. The counters are indexed by LOOP ID, and ids start at 0; the writer reads
+`loop_meta.txt` (`<file> <loop id> <line>`) into a vector behind a dummy element and then
+pairs by POSITION, starting at 1:
+
+```cpp
+loop_infos.push_back(loop_info_t()); // dummy
+... loop_infos.push_back(loop_info);           // in FILE order, which is not id order
+for (auto i = 1; i < loop_counters.size(); ++i) {
+  loop_info_t &loop_info = loop_infos[i];      // the i-th LINE of loop_meta.txt, i.e. id i-1
+  ofile << ... loop_info.line_nr_ << " " << loop_counters[i];   // the count of id i
+```
+
+So (a) every count is written against the loop whose id is one LOWER (the dummy shifts the
+vector by one while the ids are 0-based), the count of id 0 is never written and the last
+loop never gets one; and (b) where `loop_meta.txt` is not sorted by id — it lists ids
+`0 1 2 3 4 8 7 6 5` for the `s211` rewrite — position and id disagree further. This reproduces
+the file exactly: line 160 (id 0) gets id 1's 32,000, line 109 (id 1) gets id 2's 48, line 136
+gets 137's 1,535,904, line 140 (id 4) gets id 5's 160.
+
+**Patch** — pair by id, from 0:
+
+```cpp
+std::unordered_map<int, loop_info_t> by_id;          // instead of the vector + dummy
+...   if (cnt == 3) by_id[loop_info.loop_id_] = loop_info;
+for (size_t i = 0; i < loop_counters.size(); ++i) {
+  auto it = by_id.find(static_cast<int>(i));
+  if (it == by_id.end()) continue;
+  ofile << it->second.file_id_ << " " << it->second.line_nr_ << " " << loop_counters[i] << "\n";
+}
+```
+
+**Upstream status (checked 2026-09-21):** `dp_loop_output.cpp` is byte-identical in
+`new_explorer` at `28ac4d47` (17 Sep 2026), so the defect is present there. **Who is affected:**
+NOT the explorer's pattern detection — it takes its loop data (`LoopData`: total, entries,
+average, maximum) from the `BGN loop` markers of the dependence file
+(`utilities/PEGraphConstruction/parser.py`; `loop_counter_file` is still passed around, with a
+`TODO` saying it should not be needed). So DiscoPoP's own suggestions are correct, and this
+project's DiscoPoP-alone baseline is untouched. Affected is whoever reads the file itself —
+this agent did, until Fix 88. **Not yet patched in this project's DiscoPoP:** the runtime is
+linked into every profiled binary, a rebuild on two machines in the middle of a running
+experiment is not acceptable, and since Fix 88 nothing here reads the file; the patch above
+goes in after the campaign together with the rebase onto current `new_explorer`. Extent, over 41 profiles of the evaluation's
 benchmarks (PolyBench, TSVC-2, `md`, `is`, `hotspot`, `pathfinder`): **277 of 337 loop counts
 (82 %) differ from the marker of the same run, in 38 of 41 programs** — typically the outer
 repetition loop carries its inner loop's total (TSVC: 48 reported as 1,536,000).
@@ -172,6 +212,11 @@ the edited file has it at 149), every average halved by a run that never execute
 and no entry for a region the edit created — without any warning. A tool that re-measures an
 edited program must delete `hotspot_detection/` first (agent Fix 87). A cheap upstream guard:
 store a hash of the source beside `cs_id.txt` and refuse, or reset, on a mismatch.
+
+Where: `hotspot_detection/HotspotDetection/HotspotDetection.cpp` opens `cs_id.txt` (lines 515, 723)
+and `temp.txt` (784) with `std::ios_base::app`. **Upstream status (checked 2026-09-21):** the pass is
+unchanged in `new_explorer` at `28ac4d47`; `hotspot_analyzer.py` has been reworked there (83 lines),
+so the averaging should be re-checked after the rebase, but the appending is the same.
 
 ## B6 — the patch generator sometimes never returns
 
