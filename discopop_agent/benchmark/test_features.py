@@ -2375,6 +2375,54 @@ def check_pragma_arbitration(work: Path) -> Result:
                                 "and identical/absent pragmas handled")
 
 
+def check_arg_dependencies(work: Path) -> Result:
+    """Arguments that only work in combination must SAY so — error or resolve, never pretend.
+
+    An argument silently ignored because of another is how an experiment measures something
+    other than what its arm declares: `--llm-recon` does nothing without `--fast-refresh`,
+    `--pragma-arbitration` does nothing without `--llm-pragmas`. Each pair is checked twice —
+    asked for explicitly it must be refused, and left at its default it must resolve to what
+    actually happens."""
+    name = "argument dependencies"
+    import subprocess
+
+    def resolve(extra: List[str]) -> "tuple[int, dict]":
+        r = subprocess.run([sys.executable, "-m", "discopop_agent", "--discopop-dir", ".",
+                            "--source-file", "a.c", *extra, "--print-config"],
+                           capture_output=True, text=True, cwd=str(_REPO), env=_env())
+        try:
+            return r.returncode, json.loads(r.stdout)
+        except ValueError:
+            return r.returncode, {}
+
+    # asked for explicitly, with its prerequisite missing -> refused
+    for extra, why in ((["--llm-recon", "--no-fast-refresh"], "--llm-recon without --fast-refresh"),
+                       (["--pragma-arbitration", "--no-llm-pragmas"], "--pragma-arbitration without --llm-pragmas"),
+                       (["--pragma-arbitration", "--llm-pragmas", "--no-require-speedup"],
+                        "--pragma-arbitration without --require-speedup"),
+                       (["--llm-recon", "--llm-deps", "--fast-refresh"], "--llm-recon together with --llm-deps"),
+                       (["--llm-deps", "--no-fast-refresh"], "--llm-deps without --fast-refresh")):
+        rc, _ = resolve(extra)
+        if rc == 0:
+            return Result(name, "fail", f"{why} was accepted; it should be refused")
+
+    # left at its default, the resolved value must be what actually happens
+    rc, cfg = resolve([])
+    if rc != 0:
+        return Result(name, "fail", "the default configuration was refused")
+    if cfg.get("pragma_arbitration") is not False:
+        return Result(name, "fail", "arbitration reports True under the default --no-llm-pragmas, "
+                                    "where it can never fire")
+    rc, cfg = resolve(["--llm-pragmas"])
+    if cfg.get("pragma_arbitration") is not True:
+        return Result(name, "fail", "arbitration reports False with --llm-pragmas and the speed check on")
+    rc, cfg = resolve([])
+    if cfg.get("llm_deps"):
+        return Result(name, "fail", "llm_deps is on by default; it must be opt-in")
+    return Result(name, "pass", "5 impossible combinations refused; arbitration resolves to "
+                                "what actually happens (False without --llm-pragmas)")
+
+
 _CHECKS: List[Tuple[str, Callable[[Path], Result]]] = [
     ("impact", check_impact_ranking),
     ("min-impact", check_min_impact),
@@ -2408,6 +2456,7 @@ _CHECKS: List[Tuple[str, Callable[[Path], Result]]] = [
     ("profiler-else-loop", check_profiler_else_loop),
     ("pragma-sibling-loops", check_pragma_sibling_loops),
     ("pragma-arbitration", check_pragma_arbitration),
+    ("arg-dependencies", check_arg_dependencies),
 ]
 
 

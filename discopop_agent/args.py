@@ -192,7 +192,7 @@ def parse_args() -> AgentArguments:
                          "it to check that every argument an experiment's arm DECLARES is "
                          "what the agent actually parsed, so a changed default can never "
                          "silently change what an arm means."))
-    p.add_argument("--pragma-arbitration", action=argparse.BooleanOptionalAction, default=True,
+    p.add_argument("--pragma-arbitration", action=argparse.BooleanOptionalAction, default=None,
                    help=("With --llm-pragmas and --require-speedup: where the model has "
                          "annotated a loop DiscoPoP had already claimed, build DiscoPoP's "
                          "pragma as an alternative, gate it, time the two against each other "
@@ -457,6 +457,25 @@ def parse_args() -> AgentArguments:
                 "dependences for new code, the other deletes ones it judges "
                 "spurious — so running both lets the model argue with itself "
                 "inside one profile. Choose one")
+
+    # Arbitration compares a MODEL-written pragma with DiscoPoP's, and it decides by
+    # measuring — so it cannot do anything without --llm-pragmas (nothing to compare) or
+    # without --require-speedup (nothing to decide with). Silently inert settings are how an
+    # experiment ends up measuring something other than what its arm declares.
+    explicit_arb = a.pragma_arbitration is not None
+    if a.pragma_arbitration is None:
+        a.pragma_arbitration = True
+    if a.pragma_arbitration and explicit_arb:
+        if not a.llm_pragmas:
+            p.error("--pragma-arbitration needs --llm-pragmas: it compares the pragma the "
+                    "MODEL wrote with DiscoPoP's, and without --llm-pragmas the model writes "
+                    "none, so there is never a collision to arbitrate")
+        if not a.require_speedup:
+            p.error("--pragma-arbitration needs --require-speedup: it decides between the two "
+                    "pragmas by TIMING them, and with the speed check off there is no "
+                    "measurement to decide with")
+    if a.pragma_arbitration and not (a.llm_pragmas and a.require_speedup):
+        a.pragma_arbitration = False          # inert: say so in the resolved configuration
 
     if a.llm_deps and not a.fast_refresh:
         if explicit_llm_deps:
