@@ -304,6 +304,8 @@ def _verify_one_arm(name: str, spec: dict, py: str, agent_repo: Path, benchmark:
     """`verify_arm_settings` for one arm on one benchmark; `speed_off` = the harness turned
     the speed check off for this kernel, which overrides what the arm declares for it."""
     where = f" [{benchmark}: no timing size, speed check off]" if speed_off else ""
+    if spec.get("runner"):
+        return []            # not the agent: no agent arguments exist to be declared or parsed
     declared = spec.get("settings")
     if not declared:
         return [f"{name}: no `settings` block — every arm must declare the arguments that "
@@ -1138,15 +1140,26 @@ def run_trial(bench: str, bench_dir: Path, profile_dir: Path, trial: Path, arm: 
                  "started_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
                  "host": socket.gethostname(),
                  "host_load_start": list(os.getloadavg())}
-    cmd = [str(Path(a.agent_repo) / "venv" / "bin" / "python"), "-m", "discopop_agent",
-           *(["--source-file", src_name] if proj is None else _project_agent_flags(proj)),
-           "--discopop-dir", ".discopop",
-           "--provider", a.provider, "--model", model, "--edit-mode", a.edit_mode,
-           *arm_flags, *(["--check-input", a.check_seed] if a.check_seed else []),
-           *(["--exclude-functions", ",".join(_excluded_functions(bench_dir))]
-             if _excluded_functions(bench_dir) else []),
-           *(["--min-runtime-share", str(a.min_runtime_share)] if a.min_runtime_share else []),
-           *a.agent_arg]
+    if _load_arms().get(arm, {}).get("runner") == "bare_llm":
+        # The bare-LLM baseline (discopop_agent/bare_llm.py): the same model through the same
+        # client, given the program and asked to parallelize it — no DiscoPoP, no gate, one
+        # attempt. It takes none of the agent's arguments, so none are passed: common flags,
+        # timing flags and --check-input all configure a pipeline this arm does not have.
+        cmd = [str(Path(a.agent_repo) / "venv" / "bin" / "python"), "-m", "discopop_agent.bare_llm",
+               *(["--source-file", src_name] if proj is None else _project_agent_flags(proj)),
+               "--model", model,
+               *(["--exclude-functions", ",".join(_excluded_functions(bench_dir))]
+                 if _excluded_functions(bench_dir) else [])]
+    else:
+        cmd = [str(Path(a.agent_repo) / "venv" / "bin" / "python"), "-m", "discopop_agent",
+               *(["--source-file", src_name] if proj is None else _project_agent_flags(proj)),
+               "--discopop-dir", ".discopop",
+               "--provider", a.provider, "--model", model, "--edit-mode", a.edit_mode,
+               *arm_flags, *(["--check-input", a.check_seed] if a.check_seed else []),
+               *(["--exclude-functions", ",".join(_excluded_functions(bench_dir))]
+                 if _excluded_functions(bench_dir) else []),
+               *(["--min-runtime-share", str(a.min_runtime_share)] if a.min_runtime_share else []),
+               *a.agent_arg]
     rec["agent_cmd"] = cmd
     print(f"    agent: {' '.join(cmd[3:])}", flush=True)
     print(f"    log:   tail -f {trial / 'agent.log'}", flush=True)

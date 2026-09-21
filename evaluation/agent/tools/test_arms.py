@@ -67,6 +67,14 @@ def check_experiments(doc: dict, repo: Path, benchmark: str) -> int:
             print(f"  [FAIL] {exp}: unknown arm(s) {missing}")
             failures += 1
             continue
+        if spec.get("check") == "runner":
+            runners = [n for n in names if arms[n].get("runner")]
+            agents = [n for n in names if not arms[n].get("runner")]
+            ok = len(runners) == 1 and agents == ["default"]
+            print(f"  [{'pass' if ok else 'FAIL'}] {exp}: runner arm {runners} beside {agents} "
+                  f"(a separate runner takes no agent arguments; nothing to resolve)")
+            failures += 0 if ok else 1
+            continue
         cfg = {n: _resolved(n, arms[n], repo, benchmark) for n in names}
         keys = sorted({k for c in cfg.values() for k in c} - PLUMBING)
         differing = [k for k in keys

@@ -826,6 +826,14 @@
           "checklist"
         ]
       }
+    },
+    "bare_llm": {
+      "ids": [
+        "E1-bare"
+      ],
+      "description": "E1's secondary baseline \u2014 'what does the pipeline add over just asking the model?'. The SAME model through the same client call and the same contract text, handed the program and asked to parallelize it: no DiscoPoP (no profile read, nothing ranked, no evidence), no gate (nothing compiled, run, raced or timed), one attempt, no feedback. Whatever it leaves in the file is judged by the harness like any other trial, so BROKEN programs are expected and counted. A separate runner (discopop_agent/bare_llm.py), deliberately NOT the agent with switches off. It does NOT enter the main comparison's verdict against DiscoPoP alone as 'the agent' \u2014 it is reported beside it.",
+      "runner": "bare_llm",
+      "flags": []
     }
   },
   "common_timing_size": "per_kernel",
@@ -994,6 +1002,18 @@
       ],
       "consequences": [],
       "why": "Which part of the PROMPT matters (D16 Part D): leave one part out, evidence held at full. Read with gate rejections by stage \u2014 a prompt part may prevent wasted attempts rather than failures."
+    },
+    "E1-bare": {
+      "arms": [
+        "default",
+        "bare_llm"
+      ],
+      "variable": [
+        "runner"
+      ],
+      "consequences": [],
+      "check": "runner",
+      "why": "The whole pipeline (DiscoPoP's evidence, ranking, the gate, feedback, DiscoPoP's pragmas) against the same model asked directly. `bare_llm` has its own runner and takes no agent arguments, so the arms cannot be compared setting by setting: the test only checks that the runner arm exists and the other one is the campaign default."
     }
   }
 }

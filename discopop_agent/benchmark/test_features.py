@@ -1741,6 +1741,67 @@ def check_prompt_ablation(work: Path) -> Result:
                   "without the contract; external remarks shown and labelled, no DiscoPoP data beside them")
 
 
+def check_bare_llm(work: Path) -> Result:
+    """The bare-LLM baseline shows the model NOTHING of DiscoPoP's, promises no gate, and keeps
+    whatever the model leaves.  A stand-in for the client edits the working copy, so the
+    wiring is tested without a model call."""
+    name = "bare-LLM baseline"
+    import contextlib
+    import io
+    from .. import bare_llm
+
+    sub = work / "bare"
+    sub.mkdir(parents=True, exist_ok=True)
+    src = sub / "k.c"
+    src.write_text("#include <stdio.h>\nvoid kernel(double*a,int n){for(int i=0;i<n;i++)a[i]*=2;}\n"
+                   "int main(void){double a[8]={0};kernel(a,8);printf(\"%f\\n\",a[0]);return 0;}\n")
+    (sub / "k.h").write_text("/* a header the model may read */\n")
+    seen: Dict[str, Any] = {}
+
+    def fake(model: str, system: str, current: List[Any], session_key: str,
+             workspace: Optional[Path] = None, stateless: bool = False) -> str:
+        seen.update(system=system, request=current[-1]["content"], stateless=stateless,
+                    files=sorted(f.name for f in Path(str(workspace)).iterdir()))
+        f = Path(str(workspace)) / "k.c"
+        f.write_text(f.read_text().replace("for(int i", "#pragma omp parallel for\nfor(int i"))
+        return "Plan: the loop is independent."
+
+    saved, saved_argv = getattr(bare_llm, "_complete_claude_agent_sdk"), sys.argv
+    setattr(bare_llm, "_complete_claude_agent_sdk", fake)
+    sys.argv = ["bare_llm", "--project-dir", str(sub), "--project-units", "k.c", "--model", "m",
+                "--exclude-functions", "main"]
+    out = io.StringIO()
+    try:
+        with contextlib.redirect_stdout(out):
+            rc = bare_llm.main()
+    finally:
+        setattr(bare_llm, "_complete_claude_agent_sdk", saved)
+        sys.argv = saved_argv
+    problems: List[str] = []
+    flat_sys, flat_req = " ".join(seen.get("system", "").split()), " ".join(seen.get("request", "").split())
+    if rc != 0 or "#pragma omp parallel for" not in src.read_text():
+        problems.append("the model's edit was not copied back")
+    if "k.h" not in seen.get("files", []):
+        problems.append("the header was not in the model's working copy")
+    if "] Calling m" not in out.getvalue():
+        problems.append("the call is not logged in the form the harness counts")
+    for phrase in ("THE CONTRACT", "HEAP-allocated"):
+        if phrase not in flat_sys:
+            problems.append(f"the contract lost {phrase!r}")
+    for leak in ("HOW YOUR REWRITE IS CHECKED", "DiscoPoP", "ThreadSanitizer", "re-profiled"):
+        if leak in flat_sys or leak in flat_req:
+            problems.append(f"the bare arm's prompt mentions {leak!r}")
+    if "main" not in flat_req or "one attempt" not in flat_req:
+        problems.append("the request does not name the excluded functions or the single attempt")
+    if not seen.get("stateless"):
+        problems.append("the call is not stateless")
+    if problems:
+        return Result(name, "fail", "; ".join(problems))
+    return Result(name, "pass",
+                  "same contract, no gate described, no DiscoPoP word anywhere, excluded functions named, "
+                  "headers readable, the edit kept unchecked")
+
+
 def check_covered_skip(work: Path) -> Result:
     """A region inside an already-accepted one must leave the queue.
 
@@ -2739,6 +2800,7 @@ _CHECKS: List[Tuple[str, Callable[[Path], Result]]] = [
     ("pattern-choice", check_pattern_choice),
     ("prompt-truth", check_prompt_truth),
     ("prompt-ablation", check_prompt_ablation),
+    ("bare-llm", check_bare_llm),
     ("evidence-enrich", check_evidence_enrichment),
     ("dep-standing", check_dependence_standing),
     ("schedule-runtime", check_schedule_runtime),
