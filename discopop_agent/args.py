@@ -203,9 +203,17 @@ def parse_args() -> AgentArguments:
                          "measured. Turn it off to study the two authorships in isolation "
                          "(E3), not to save time: it costs one gate run and one timing pair "
                          "per collision, and only where a collision exists."))
-    p.add_argument("--fast-refresh", action=argparse.BooleanOptionalAction, default=True,
+    p.add_argument("--fast-refresh", action=argparse.BooleanOptionalAction, default=False,
                    help=("After a kept rewrite, refresh the profile WITHOUT re-running "
-                         "the instrumented program (default: on). Only `discopop_cxx` "
+                         "the instrumented program (default: OFF since 2026-09-21). Off, "
+                         "a kept rewrite is followed by a FULL re-profile: instrument, run, "
+                         "explore — so every later decision rests on dependences DiscoPoP "
+                         "actually observed in the rewritten code, which is what the thesis "
+                         "argues for. On, it is an optimisation that trades accuracy for "
+                         "time, and E3 is where that trade is measured; turn it on for that "
+                         "experiment, not by default. Note --llm-recon only takes effect "
+                         "with this on, since reconstruction exists to repair what the fast "
+                         "refresh could not translate. Only `discopop_cxx` "
                          "runs — about a second — and the previous run's observed "
                          "dependences are translated onto the new instruction numbering; "
                          "anything that cannot be translated with certainty is dropped, "

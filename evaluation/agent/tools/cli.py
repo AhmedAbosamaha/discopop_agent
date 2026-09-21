@@ -224,8 +224,12 @@ def _timing_size(kernel: str) -> Optional[str]:
 # them, or the comparison measures them as well as its own variable. `--require-speedup` and
 # the timing size are here because changing the campaign default on 2026-09-20 silently
 # confounded E3, E4, E8 and E9, whose variant arms were paired against `full`.
+# Every boolean that changes what an arm DOES. `llm-recon` and `llm-deps` were missing, so the
+# check reported "no differences" for E4 — whose entire variable is those two — and would have
+# passed an E4 whose cells were identical.
 _FIXED_CONFIG_SWITCHES = ("require-speedup", "hotspots", "llm-pragmas", "fast-refresh",
-                          "pragma-arbitration")
+                          "pragma-arbitration", "llm-recon", "llm-deps", "apply-patches",
+                          "numeric-tolerance", "schedule-stress")
 
 
 def _effective_config(spec: dict, benchmark: str) -> Dict[str, Any]:

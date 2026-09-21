@@ -1378,6 +1378,39 @@ a confound"*. On the repaired pairings it prints exactly one line each (E3: `llm
 `fast-refresh`; E8: `--restructure-depth`; E9: `hotspots`; E1: `--budget`); on the old broken
 pairing it prints three, including `require-speedup` and `timing_size`.
 
+### The agent's default changes again: the full re-profile replaces the fast refresh (2026-09-21, D27)
+
+The author: *"fast refresh on should not be the default also"* — the same principle as D23, and
+it lands the same way. `--fast-refresh` now defaults to **OFF**: a kept rewrite is followed by a
+FULL re-profile (instrument, run, explore), so every later decision rests on dependences DiscoPoP
+actually OBSERVED in the rewritten code. That is what the thesis argues for. The fast refresh is
+an optimisation that trades accuracy for time — it carries observed dependences forward onto the
+new instruction numbering and drops whatever it cannot translate with certainty, leaving the
+rewritten region under static, over-approximate dependences. E3 is where that trade is measured;
+it should not be what the agent does by default.
+
+**A dependency that had to be found first: `--llm-recon` only takes effect inside the
+fast-refresh branch** (`phase_a.py`: the reconstruction call sits under `if use_fast:`), because
+reconstruction exists to repair what the fast refresh could not translate. So E4's arms — whose
+entire subject is reconstruction — must carry `--fast-refresh` explicitly, or they would measure
+nothing at all. They now do, and E4's baseline is `discopop_pragmas_fast` rather than `default`,
+since every E4 cell needs the refresh on.
+
+**The compatibility check earned its keep twice in five minutes.** Pinning the refresh where it
+was previously implicit immediately confounded **E8** (its depth arms would have differed in the
+refresh as well as the depth) and left **E4** paired against a baseline that does a full
+re-profile. Both were caught before anything ran. It also exposed a hole in the check itself: it
+never looked at `llm-recon` or `llm-deps`, so it reported "no differences" for E4 — an experiment
+whose only variable is those two — and would have passed an E4 whose cells were identical. Now
+checked: `llm-recon`, `llm-deps`, `apply-patches`, `numeric-tolerance`, `schedule-stress`.
+
+**Every experiment's arms now differ in exactly their own variable**, verified: E1 budget · E3
+`llm-pragmas` × `fast-refresh` · E4 `llm-recon` / `llm-deps` · E8 depth · E9 hotspots · E10
+(archived) the speed check and its size.
+
+**Cost.** A full re-profile after each kept rewrite costs one instrumented run — 4 s on a TSVC
+loop, 30 s on `md`, 54 s on NPB `is` (T0.11) — and only where a rewrite was actually kept.
+
 ### The agent's default changes again: the model no longer writes the pragmas (2026-09-20, D23)
 
 The author: *"i do not like having --llm-pragmas as the default, it should be added when needed
@@ -1601,6 +1634,7 @@ must pass (§5k, RUNBOOK step 0/0a).
   thesis reports rather than works around; `docs/DISCOPOP_BUG_REPORTS.md` L4.
 | 2026-09-20 | server | **The server moved to the one-repository layout (§5o).** One checkout; `server.sh sync` is now a single `git fetch` + `merge --ff-only`, so the harness on the server cannot drift from the Mac's. Parity OK; packages regenerated there are identical to the Mac's file by file (295 files, 0 differences); a no-model smoke ran end to end. The old `~/new_benchmark_harness` (19 GB) is unused — its launcher logs are now tracked at `results/_launcher_logs/` so nothing is lost with it | D20; and the server had been running from a checkout that no longer received any of the day's changes |
 | 2026-09-20 | agent + harness | **D24 — every arm DECLARES every argument that carries its purpose, and the harness verifies it against the agent's own parser before a run starts (§5n).** New agent option `--print-config` (resolved configuration as JSON, credentials redacted); `settings` block on all 19 arms; any mismatch refuses the run, and an arm without a declaration is refused too | the author: "for every experiment every agent argument should be clearly set to serve the purpose of the experiment, making sure that nothing wired or inherited would break the intended argument selection" — after two changes on one day silently altered what four experiments and five arms meant |
+| 2026-09-21 | agent + plan | **D27 — `--fast-refresh` is no longer the default either.** A kept rewrite is followed by a FULL re-profile, so decisions rest on dependences DiscoPoP observed in the rewritten code; the fast refresh is an accuracy-for-time trade that E3 measures. Found on the way: `--llm-recon` only runs inside the fast-refresh branch, so E4's arms pin it explicitly and E4's baseline becomes `discopop_pragmas_fast`. The compatibility check caught two confounds this created (E8, E4) and a hole in itself — it never checked `llm-recon`/`llm-deps`, so it had reported "no differences" for E4 | the author: "fast refresh on should not be the default also" |
 | 2026-09-20 | agent + plan | **D23 — `--llm-pragmas` is no longer the default; pragma authorship is opt-in per experiment.** Off, the model restructures and DiscoPoP annotates, so a rewrite is kept only if the analysis finds parallelism in it — the division of labour the thesis argues for. Pinned explicitly in E10's three arms (reproducibility) and E3's two "model writes them" cells (new arm `llm_pragmas_fast`); `default` becomes E1's agent arm and the baseline cell of E3, E4, E8, E9. E2's arms now follow the new default, which is a deliberate change to a pre-registered experiment and is flagged as one | the author: "i do not like having --llm-pragmas as the default it should be added when needed for a specific experiment"; E10's `jacobi-2d` showed the cost of having it on by default |
 | 2026-09-20 | plan + harness | **D22 — the campaign's fixed configuration becomes the speed check ON at the kernel's timing size, for every arm including the baseline; and the change HAD broken four unrun experiments; found by checking, fixed, and guarded.** E3, E4's matrix cell, E8 and E9 each paired a variant against `full`, which was pinned to the old behaviour → new arm `default` is the baseline cell of every matrix experiment. Eight kernels with no timing size (incl. `bicg`, class R) would have become unrunnable → the speed check switches off for them and the fact is recorded (`speed_check_off`). Guard: `check_arm_compatibility()`, printed before every run — "each line must be this experiment's variable; anything else is a confound" | the author: "make sure that these changes would not harm other experiments, should check" |
 | 2026-09-20 | plan + agent | **§5l: audit of the agent's DEFAULTS.** Every default now carries its justification, and a field marked "studied in a later experiment" must also state the value earlier experiments hold it at and why. Findings: `llm_pragmas = True` rests on a design argument alone and drove E10's `jacobi-2d` regression (22 trials across the archive end with a deferred DiscoPoP pattern and only LLM pragmas); `budget = 3` is now measured rather than assumed (acceptances by attempt: 40/127, 12/91, 6/82); the campaign's `--no-require-speedup` is wrong by E10's own result — the agent's default was right, the SIZE was not. **D21 = Fix 85**: the prompt reserves claimed loops for Phase B, and where a model pragma lands on one anyway Phase B measures DiscoPoP's against it and keeps the faster (displacement is a win on `lu` 0.21×→2.8× and a loss on `jacobi-2d` 5.9×→2.5×, so the fix measures instead of choosing) | the author: "we should review the agent default and see if this is the right default"; "for every experiment every parameter selected should have a reason" |
