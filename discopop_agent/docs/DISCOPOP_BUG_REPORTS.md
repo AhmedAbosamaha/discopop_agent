@@ -8,7 +8,13 @@ fixes are in `FIXES.md`; this file holds only what concerns DiscoPoP's code.
 Rule of the thesis: a bug found in DiscoPoP is fixed, the **fixed DiscoPoP is used in every
 arm** — the DiscoPoP-only baseline included — and the fix is stated in the thesis.
 
-DiscoPoP version: the checkout under this repository (`profiler/`, `rtlib/`, `explorer/`),
+DiscoPoP version: this work branches from **`new_explorer`**, not `master` — merge base
+`6a2ef0fa` (25 June 2026, "Merge pull request #806"). Everything below was found on that base
+plus this project's own commits. **`new_explorer` has since advanced by 178 commits, 19 of them
+touching `TaskGraph.py`**, which is where B2, B4, B5 and P1 live — so those four should be
+re-checked against current `new_explorer` before they are reported, in case they are already
+fixed. `CFA.cpp` (B3) has had no upstream commit since the base. The checkout under this
+repository (`profiler/`, `rtlib/`, `explorer/`),
 LLVM 19 (macOS) and LLVM 20 (Linux).
 
 | # | Component | Status | One line |

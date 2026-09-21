@@ -14,6 +14,14 @@ Rules this campaign follows (set by the author, 2026-09-14):
 - At least one experiment compares a stronger model (Sonnet) against the default (haiku),
   to measure how model quality interacts with the dependence evidence.
 - Results are stored permanently, with graphs, for later use in the thesis.
+- **The DiscoPoP under test is the `new_explorer` branch, not `master`** — merge base `6a2ef0fa`
+  (25 June 2026), plus this project's own 100 commits, plus Fixes 80–84. The thesis cites that,
+  because `master` is a different and older code base (April 2026) and none of these numbers
+  applies to it. `new_explorer` has advanced by 178 commits since the base, 19 of them in
+  `TaskGraph.py`; the campaign deliberately does NOT follow them, because every measurement —
+  E10, T0.11, E1 — is against one fixed DiscoPoP and would stop being comparable if it moved.
+  Re-basing onto current `new_explorer` is a post-campaign task, and it is also when the upstream
+  bug reports are re-checked in case any were fixed there.
 - Experiments run on the research group's shared server at TU Darmstadt (address not in this
   public repository: `agent/tools/server.local`). The checkouts there must be
   **identical** to the local ones; code is never edited on the server.
