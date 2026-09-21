@@ -1798,7 +1798,13 @@ def cmd_verify_source(a: argparse.Namespace) -> int:
     candidate = Path(a.source).resolve() if a.source else original
     if not candidate.exists():
         sys.exit(f"no such source: {candidate}")
-    if candidate.suffix != ext:
+    if candidate.is_dir():
+        # Only a project benchmark takes a directory, and it must hold the benchmark's own file.
+        if _project_of(bench_dir) is None:
+            sys.exit(f"{candidate} is a directory, but {a.benchmark} is a single-file benchmark")
+        if not (candidate / src_name).is_file():
+            sys.exit(f"{candidate} holds no {src_name} — not a version of {a.benchmark}")
+    elif candidate.suffix != ext:
         sys.exit(f"{candidate.name} is a {candidate.suffix} file, the benchmark is {ext}")
     flags = a.final_flags.split()
     if candidate == original and not flags:
@@ -1834,7 +1840,15 @@ def cmd_verify_source(a: argparse.Namespace) -> int:
         for d in ("original", "final"):
             shutil.rmtree(trial / d, ignore_errors=True)
             _copy_tree(bench_dir, trial / d)
-        if candidate != original:
+        if candidate.is_dir():
+            # An expert version that is several files (LLNL's LULESH needs its own header and
+            # init unit beside lulesh.cc): every file of the given directory replaces its
+            # namesake; the rest of the package stays.
+            for f in sorted(candidate.rglob("*")):
+                if f.is_file():
+                    (trial / "final" / f.relative_to(candidate)).parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(f, trial / "final" / f.relative_to(candidate))
+        elif candidate != original:
             shutil.copy2(candidate, trial / "final" / src_name)
         text, orig_text = _project_text(trial / "final"), _project_text(trial / "original")
 
@@ -1842,7 +1856,8 @@ def cmd_verify_source(a: argparse.Namespace) -> int:
         "benchmark": a.benchmark, "kernel": bench_dir.name, "source": src_name,
         "arm": a.label, "model": "none", "repeat": 1, "kind": "baseline",
         "candidate": str(candidate),
-        "candidate_sha256": hashlib.sha256(candidate.read_bytes()).hexdigest(),
+        "candidate_sha256": (_tree_digest(candidate) if candidate.is_dir()
+                             else hashlib.sha256(candidate.read_bytes()).hexdigest()),
         "source_changed": text != orig_text,
         "pragmas_in_final": (text.count("#pragma omp") if proj is None
                              else _pragmas_added(orig_text, text)),

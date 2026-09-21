@@ -95,7 +95,7 @@ footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--rule);font-fa
   <p class="kicker">Agentic DiscoPoP · control flow</p>
   <h1>From the first DiscoPoP run to the judged result</h1>
   <p class="lede">Every path the agent and the experiment harness can take, drawn from the code as it stands: each decision, each way a step can fail, what happens next, and what is written down. Eleven diagrams, one per stage; every exit of every diagram is listed under it.</p>
-  <div class="meta"><span><b>Agent</b> branch agentic_DiscoPop, after the September review</span><span><b>Harness</b> branch agent-experiments</span><span><b>Drawn</b> 18 Sep 2026</span></div>
+  <div class="meta"><span><b>Agent</b> branch agentic_DiscoPop, after the September review</span><span><b>Harness</b> the same repository, <code>evaluation/</code> (D20)</span><span><b>Drawn</b> 18 Sep 2026</span><span><b>Revised</b> 21 Sep 2026 — the three campaign defaults that changed (D22, D23, D27), pragma arbitration (Fix 85), the runtime re-measurement after every kept rewrite and what it took to make it honest (Fixes 86, 87, D29), the explorer's stall limit, where a loop's iteration count really comes from (Fix 88), what the default arm can keep at best (T0.13), and two lessons about the harness's verdict (the expert <code>hotspot</code> pragma the gate rightly rejected; T0.14)</span></div>
 </header>
 
 <nav aria-label="Diagrams">
@@ -148,7 +148,7 @@ flowchart TD
 <!-- ============================================================ 1 -->
 <section id="d1">
   <div class="sec"><span class="n">1</span><h2>Harness: from a benchmark to one profile</h2></div>
-  <p>DiscoPoP is not deterministic — the same profile explored twice gives different task patterns, and on some programs the explorer crashes on one attempt and succeeds on the next (T0.7). So a benchmark is profiled <em>once</em> per run and every arm and trial starts from a copy of that profile; a crash is retried on the <em>same</em> profile and every retry is counted.</p>
+  <p>DiscoPoP is not deterministic — the same profile explored twice gives different task patterns, and on some programs the explorer crashes on one attempt and succeeds on the next (T0.7). So a benchmark is profiled <em>once</em> per run and every arm and trial starts from a copy of that profile; a crash is retried on the <em>same</em> profile and every retry is counted. So is a <strong>stall</strong>: over 166 profile draws the explorer needed a median of 3.5 s and at most 33 s, while 7 % of the draws never finished — at random, not on particular loops. One attempt is therefore limited to 600 s and a stalled draw repeated, in the harness and inside the agent alike (<code>--explorer-timeout</code>); until 21 Sep the agent's own call had no limit at all.</p>
   <figure><div class="chart" data-d="d1"></div>
   <figcaption>A multi-file program is profiled through a generated unity unit: profiled unit by unit, DiscoPoP reports recurrences outside <code>main</code>'s unit as Do-All (MULTIFILE.md).</figcaption></figure>
   <div class="tablewrap"><table>
@@ -168,6 +168,9 @@ flowchart TD
   CT -->|"yes"| R["run the instrumented binary<br/>at the agent's dataset size"]:::step
   R -->|"non-zero exit or timeout"| PE
   R --> E["discopop_explorer"]:::step
+  E -->|"STALLED: no result after 600 s,<br/>killed with its process group"| ES{"fifth stall?"}:::dec
+  ES -->|"no: a stall is a random draw (L5)"| E2
+  ES -->|"yes"| PE
   E --> EC{"exit code 0?"}:::dec
   EC -->|"no, attempt below 20"| E2["clear explorer output only,<br/>same profile, count the retry"]:::hold --> E
   EC -->|"no, attempt 20"| PE
@@ -221,6 +224,7 @@ flowchart TD
 <section id="d3">
   <div class="sec"><span class="n">3</span><h2>Planning: which regions are worth an attempt, and in what order</h2></div>
   <p>Every function, loop and basic block DiscoPoP recorded is a region. A region is ranked by the time parallelising it would save, ΔT = T · f · (1 − 1/(P·e)), where <em>f</em> is the share of runtime still <em>sequential</em> in it. With P and e fixed this orders regions by f; ties go to the outermost region.</p>
+  <p><strong>Where a loop's iteration count comes from (Fix 88, 21 Sep).</strong> Not from DiscoPoP's <code>loop_counter_output.txt</code>: that file pairs counts with the wrong loops — 82 % of 337 loops over 41 archived profiles; an outer loop of 7 around two sibling loops of 998 is reported as 6986 / 6986 / 1000. The agent sums the <code>BGN loop</code> markers of <code>dynamic_dependencies.txt</code>, which is what DiscoPoP's own explorer reads, so the DiscoPoP-alone baseline was never affected. The wrong counts had fed the workload proxy and the "N iterations" in every prompt header (a recorded limitation of <code>pilot4</code> and E10).</p>
   <figure><div class="chart" data-d="d3"></div>
   <figcaption>Tier 1 = DiscoPoP already has an applicable pattern (Phase B will annotate it). Tier 2 = it has none, so the model is asked. A loop can carry several patterns: applicable first, then reduction, do_all, others; the rest are kept as alternates.</figcaption></figure>
   <div class="tablewrap"><table>
@@ -231,7 +235,7 @@ flowchart TD
     <tr><td>cold</td><td>measured, and DiscoPoP's hotspot verdict is NO</td></tr>
     <tr><td>covered</td><td>inside a construct that already runs in parallel, or nothing sequential is left in it (remaining share 0)</td></tr>
     <tr><td>too small</td><td>predicted saving under <code>--min-impact</code>, or remaining share under <code>--min-runtime-share</code> (campaign: 1 %, D1)</td></tr>
-    <tr><td>unmeasured</td><td>hotspots ran and did not report it, while a share floor is set; without a floor: workload under <code>--min-workload</code>. Sound only for a region that EXISTED when the runtimes were taken and was found cold — a region a rewrite <em>created</em> is unmeasured merely because it did not exist yet, which is why runtimes are re-measured after every kept rewrite (Fix 86). While that re-measurement was gated on a deeper restructuring level it never ran at the default depth 0, and every loop a rewrite exposed was dropped here before Phase B could annotate it</td></tr>
+    <tr><td>unmeasured</td><td>hotspots ran and did not report it, while a share floor is set; without a floor: workload under <code>--min-workload</code>. Sound only for a region that EXISTED when the runtimes were taken and was measured cold — a region a rewrite <em>created</em> is unmeasured merely because it did not exist yet, which is why the runtimes are now re-measured after every kept rewrite (Fix 86, diagram 7)</td></tr>
   </table></div>
 </section>
 <script type="text/plain" class="src" data-d="d3">
@@ -348,7 +352,7 @@ flowchart TD
   <div class="sec"><span class="n">6</span><h2>The quality gate</h2></div>
   <p>Two tracks. A rewrite with no pragma is a sequential-to-sequential change and is judged on a sequential build. A patch that carries a pragma is judged on concurrency evidence — the sanitizer, then the schedule matrix — with the output comparison as the end-to-end check. No single stage concludes "correct"; the verdict is their conjunction, and the evidence of each is recorded. For a project every build below is the whole staged program with the candidate in place of the one file under test.</p>
   <figure><div class="chart" data-d="d6"></div>
-  <figcaption><code>mode=safety</code> (Phase B, Settle) is everything except the timing. In the campaign the speed check is off in every arm; speed is judged afterwards by the harness at full size.</figcaption></figure>
+  <figcaption><code>mode=safety</code> (Phase B, Settle) is everything except the timing. <strong>The gate has been right against an expert (21 Sep):</strong> it rejected the parallelization of Rodinia <code>hotspot</code> that Rodinia's own OpenMP version uses — that pragma carries a stale <code>delta</code> across boundary chunks, and the result depends on thread count and schedule (visible at 24 threads under a dynamic schedule, invisible at 4). A correct version exists and needs a restructuring: the chunk loop split, boundary chunks in order, interior chunks parallel — byte-identical through the harness. <strong>Since D22 the campaign runs the speed check ON in every arm — including the DiscoPoP-alone baseline — timed at the kernel's own measured timing size</strong> (<code>--require-speedup</code>, <code>common_timing_size: per_kernel</code>). It used to be off everywhere, because at the AGENT size kernels run in 0.06–15 ms and the check judged noise; E10 showed the fault was the size, not the check. The harness still judges speed independently afterwards, at the verification size.</figcaption></figure>
   <div class="tablewrap"><table>
     <tr><th>Fails at</th><th>Meaning</th></tr>
     <tr><td>clause</td><td>a data-sharing clause that cannot be right — a name declared inside the loop in a clause; a name the loop writes and later code reads made <code>private</code>/<code>firstprivate</code> (checked before anything is built)</td></tr>
@@ -406,7 +410,8 @@ flowchart TD
 <!-- ============================================================ 7 -->
 <section id="d7">
   <div class="sec"><span class="n">7</span><h2>After a rewrite passes the gate</h2></div>
-  <p>The rewrite is written to the real file, the profile is brought up to date, and only then is it decided whether the rewrite stays. Who decides depends on who wrote the pragmas: when the model did (the default), the gate has already judged the parallel code and the refreshed profile only relocates the queue; otherwise DiscoPoP must now find a usable pattern in the lines that changed.</p>
+  <p>The rewrite is written to the real file, the profile is brought up to date, and only then is it decided whether the rewrite stays. Who decides depends on who wrote the pragmas. <strong>Since D23 the model does not write them by default</strong>, so the usual path is the second one: DiscoPoP must now find a usable pattern in the lines that changed, and a rewrite it cannot use is reverted. Where the model did write them (<code>--llm-pragmas</code>, opt-in per experiment), the gate has already judged the parallel code and the refreshed profile only relocates the queue.</p>
+  <p><strong>Two things on this path changed on 21 Sep.</strong> The runtimes are now re-measured after <em>every</em> kept rewrite, not only when a deeper restructuring level was coming — Phase B ranks the regions a rewrite created on every run, and while the re-measurement was gated on a deeper level it never ran at the default <code>--restructure-depth 0</code>, so those regions arrived unmeasured and <code>--min-runtime-share</code> dropped every one of them (Fix 86). The re-measurement itself then had to be made honest: DiscoPoP's hotspot detection accumulates region ids and averages over runs, so re-measuring into the same directory reported the OLD program's lines, halved, with nothing for a created region (Fix 87 — the directory is cleared first). Since D29 the fast refresh re-measures as well — it exists to skip the <em>instrumented</em> run, and this is one native-speed run; without it E3's fast arm alone could not rank the loops a rewrite created. Every refresh is recorded as what it actually was (<code>[refresh] kind=fast</code>, <code>full</code> or <code>fallback</code>; per trial <code>refresh_fallback</code>), so a fast-refresh trial that fell back to a full re-profile is visible in E3's read-out: 0 of 108 so far. And where a model-written pragma sits on a loop DiscoPoP has also claimed, the two are now timed against each other and the faster is kept (Fix 85) — that step needs both <code>--llm-pragmas</code> and <code>--require-speedup</code>, so by default it never fires.</p>
   <figure><div class="chart" data-d="d7"></div>
   <figcaption>Fast refresh: recompile only, then translate the previous run's observed dependences onto the new instruction numbering by sequence alignment with an independent position cross-check; whatever cannot be placed with certainty is dropped. In a project only the rewritten file's positions move.</figcaption></figure>
   <div class="tablewrap"><table>
@@ -422,23 +427,25 @@ flowchart TD
   G["gate PASSED"]:::ok --> SN["snapshot the profile, first time for this region;<br/>remember source text and runtime measurements"]:::step
   SN --> W["write the patch to the real file"]:::step
   W -->|"does not apply"| WX["restore the file, region SKIPPED"]:::bad
-  W --> DC{"is a deeper level still allowed?<br/>depth + 1 within --restructure-depth"}:::dec
-  DC -->|"yes"| FULL["FULL re-profile: clear, instrument, run, explore,<br/>then re-measure runtimes"]:::step
-  DC -->|"no, --fast-refresh"| FAST["FAST refresh: compile only,<br/>carry observed dependences forward"]:::step
-  DC -->|"no, --no-fast-refresh"| FULL
-  FAST -->|"line map fails its check, no previous profile,<br/>compile or explorer fails"| FULL
+  W --> DC{"--fast-refresh AND no deeper<br/>level coming?"}:::dec
+  DC -->|"no: the default, and always<br/>when a deeper level follows"| FULL["FULL re-profile:<br/>clear, instrument, run, explore"]:::step
+  DC -->|"yes"| FAST["FAST refresh: compile only,<br/>carry observed dependences forward"]:::step
+  FULL --> HSR["RE-MEASURE RUNTIMES (Fix 86):<br/>clear hotspot_detection/ FIRST (Fix 87 — DiscoPoP<br/>accumulates ids and averages over runs, so a<br/>leftover table describes the OLD program), then<br/>hotspot build, one run, analyzer"]:::step
+  FAST -->|"line map fails its check, no previous profile,<br/>compile or explorer fails"| FB["fall back to a full re-profile —<br/>RECORDED as kind=fallback, so E3 can<br/>see a fast trial that was not one"]:::hold --> HSR
   FAST --> XT{"--llm-recon or --llm-deps?"}:::dec
-  XT -->|"recon"| RC["model states the dependences of the code it wrote,<br/>folded into the rewrite call or as a follow-up turn;<br/>claims are ADDED to the profile"]:::model --> RM
-  XT -->|"deps"| LD["model may discharge STATIC blockers in new code"]:::model --> RM
-  XT -->|"neither"| RM
+  XT -->|"recon"| RC["model states the dependences of the code it wrote,<br/>folded into the rewrite call or as a follow-up turn;<br/>claims are ADDED to the profile"]:::model --> HSR
+  XT -->|"deps"| LD["model may discharge STATIC blockers in new code"]:::model --> HSR
+  XT -->|"neither"| HSR
   FULL -->|"instrumented run fails, no dependence file,<br/>or explorer fails 20 times"| RPF["re-profile failed"]:::bad
-  FULL --> RM["move runtime measurements and covered spans<br/>onto the new line numbers"]:::step
+  HSR --> RM["move covered spans onto the new line numbers —<br/>and the measurements too, unless they were<br/>just re-measured and are already in them"]:::step
   RM --> CVR{"self-annotated?"}:::dec
   CVR -->|"yes"| MK["mark the PARALLEL CONSTRUCTS covered,<br/>each with its measured share"]:::step --> QB
   CVR -->|"no"| QB["rebuild the queue from the new profile:<br/>survivors matched by content fingerprint keep their depth,<br/>unseen regions enter at depth + 1"]:::step
   QB --> WHO{"who wrote the pragmas?"}:::dec
   RPF --> WHO
-  WHO -->|"the model, profile ok"| KEEP["COMMIT"]:::ok
+  WHO -->|"the model, profile ok"| ARB{"a model pragma on a loop<br/>DiscoPoP also claimed?<br/>(needs --llm-pragmas AND --require-speedup)"}:::dec
+  ARB -->|"no collision, or off"| KEEP["COMMIT"]:::ok
+  ARB -->|"yes"| ARB2["Fix 85: build DiscoPoP's pragma as an alternative,<br/>put it through the SAME gate, time the two,<br/>keep the faster; the loser is recorded either way"]:::step --> KEEP
   WHO -->|"the model, re-profile failed"| ST["restore the snapshot profile, mark it stale,<br/>remaining queue emptied and counted"]:::hold --> KEEP
   WHO -->|"DiscoPoP, re-profile failed"| REV
   WHO -->|"DiscoPoP"| VR{"applicable pattern in the changed lines<br/>of the changed file, with a pragma that<br/>passes the clause check and compiles?"}:::dec
@@ -538,6 +545,7 @@ flowchart TD
   <p>The harness builds the original and the final source itself, at the per-kernel verification size (T0.1), runs them at several thread counts with repeats, and compares digests and a full dump of the results on the default and on a perturbed input. The order of the checks below is the order in the code: an instrument that was tampered with is caught before any number is believed.</p>
   <figure><div class="chart" data-d="d10"></div>
   <figcaption>FASTER means correct and at least 1.1× at some thread count. Correctness tolerance: relative error 1e-9 on digests and dumps. Trials whose kernel cannot reach a measurable serial time are judged on correctness only and left out of the speed statistics.</figcaption></figure>
+  <p><strong>What the verdict can and cannot be trusted with (21 Sep).</strong> (1) <em>The dump must hold results only.</em> The LULESH package emitted LULESH's three symmetry differences — mathematically equal energies, subtracted: rounding residue that a correct parallel version moves by 25 % — and the harness called LLNL's own OpenMP release <code>BROKEN</code> while every energy agreed to 2e-16. The agent's gate reads the digest and would have accepted the same program, so the trial would have been scored <code>unsafe</code>. Fixed; and from now on every package must accept its own expert version before it is used (<strong>T0.14</strong>). (2) <em>The ceiling of the default arm is measured, not assumed</em> (<strong>T0.13</strong>): the expert restructuring with its pragmas stripped, <code>--budget 0</code> — DiscoPoP's pragmas on it are kept on 16 of 18 class-R TSVC loops; the other two need a pragma DiscoPoP cannot write. (3) <em>A correctness verdict at four threads is provisional</em>: the expert <code>hotspot</code> pragma passes every check on a laptop.</p>
   <div class="tablewrap"><table>
     <tr><th>Also recorded per trial</th><th>Why</th></tr>
     <tr><td>llm_call_failures</td><td>a run whose calls all failed must never read as "the model changed nothing" (the voided pilot)</td></tr>
@@ -570,7 +578,7 @@ flowchart TD
   SP -->|"no"| O11["parallel-not-faster"]:::hold
 </script>
 
-<footer>Sources: <code>discopop_agent/run.py</code>, <code>plan/scoring.py</code>, <code>phases/phase_a.py</code>, <code>llm/client.py</code>, <code>gate/validate.py</code>, <code>profiling/runner.py</code>, <code>phases/phase_b.py</code>, <code>phases/settle.py</code>; harness <code>agent/tools/cli.py</code>. Findings behind the branches: <code>docs/REVIEW_2026-09.md</code>, <code>docs/FIXES.md</code>, <code>docs/MULTIFILE.md</code>.</footer>
+<footer>Sources: <code>discopop_agent/run.py</code>, <code>plan/scoring.py</code>, <code>phases/phase_a.py</code>, <code>llm/client.py</code>, <code>gate/validate.py</code>, <code>profiling/runner.py</code>, <code>phases/phase_b.py</code>, <code>phases/settle.py</code>; harness <code>evaluation/agent/tools/cli.py</code> (one repository since D20). Findings behind the branches: <code>docs/REVIEW_2026-09.md</code>, <code>docs/FIXES.md</code>, <code>docs/MULTIFILE.md</code>, and the change log in <code>evaluation/agent/THESIS_EXPERIMENTS.md</code> §6.</footer>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.9.1/mermaid.min.js"></script>

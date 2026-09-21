@@ -350,6 +350,23 @@ explorer run from that checkout, so the run's conditions would change between tr
 
 ## 6. Traps — every one of these cost hours to find
 
+- **A package's dump may hold RESULTS only — never a diagnostic that subtracts equal numbers.**
+  LULESH prints three symmetry differences; on the symmetric input they are rounding residue
+  (2e-11 against energies of 3e+5) and a correct parallel version moves them by 25 %. The
+  package emitted them, so the harness called LLNL's own OpenMP release `BROKEN` while every
+  energy agreed to 2e-16 — and the agent's gate, which reads the digest, would have accepted
+  the same program: `unsafe` for both arms on the campaign's one application. **Before a
+  benchmark is used, run its expert version through `verify-source` (T0.14); `BROKEN` there is
+  a defect of the package until shown otherwise.**
+- **Four threads cannot see a schedule-dependent result.** Rodinia's own `hotspot` pragma
+  passes every check on the Mac and fails at 24 threads under a dynamic schedule. A correctness
+  verdict taken on the Mac is provisional; repeat it on the server at 6 / 12 / 24 threads
+  before citing it.
+- **The Mac has 8 GB. DiscoPoP-profiling an application on it (NPB, Rodinia, LULESH) — or
+  leaving two jobs in the background — swaps until the disk is full** (21 Sep: 1.7 GiB left).
+  Those jobs go to the server, in a scratch directory outside the campaign's checkout while an
+  experiment runs. On the Mac: TSVC and small PolyBench kernels, tests, `verify-source`, one
+  job at a time; check `df -h /System/Volumes/Data` first.
 - **`SCAFFOLD_MODIFIED` is not a result.** A trial whose final source changed the packaging's
   own code (timer calls or their position, `PB_PERTURB`, the digest) gets this outcome and is
   never counted. The check is `agent/tools/scaffold.py`; `pilot2` is the example.
@@ -426,5 +443,9 @@ explorer run from that checkout, so the run's conditions would change between tr
    the agent's own verdict is recorded but never counted.
 5. **Deviations get written down, not smoothed over** — a packaging that changes data, a
    check that cannot apply, a number that flatters. The thesis record already carries several.
-6. **Every run is archived and committed** (`server.sh fetch` → `git commit agent/results`)
+6. **A benchmark is in an experiment by a rule that never looks at the agent's results** (D30,
+   record §5r): DiscoPoP profiles it; DiscoPoP alone reaches nothing verified; an expert
+   version verifies (T0.10, T0.14); the no-model ceiling test keeps it (T0.13). The scope is
+   TSVC-2, LULESH and RepoOMP's NPB-C; §5s says which instrument each still owes.
+7. **Every run is archived and committed** (`server.sh fetch` → `git commit agent/results`)
    before it is quoted anywhere. A number that is not in `agent/results/` does not exist.

@@ -20,12 +20,14 @@ Every row is a directory under `agent/results/` holding a run's complete results
 | `integrity_smoke_local` | trials | 2026-09-18T16:24 | ahmeds-MacBook-Pro.local | finished | 4 | FASTER 4 | 72 | 0.3 MB |
 | `local_obs1` | trials | 2026-09-16T23:29 | ahmeds-MacBook-Pro.local | running | 3 | FASTER 1, SCAFFOLD_MODIFIED 1, parallel-not-faster 1 | 69 | 0.5 MB |
 | `local_obs1_md` | trials | 2026-09-17T20:08 | ahmeds-MacBook-Pro.local | running | 1 | parallel-not-faster 1 | 8 | 0.0 MB |
+| `lulesh_ref_check` | trials | 2026-09-21T23:00 | ahmeds-MacBook-Pro.local | running | 2 | FASTER 1, parallel-not-faster 1 | 43 | 0.9 MB |
 | `pilot2` | trials | 2026-09-16T19:44 | rms14562 | finished | 1 | SCAFFOLD_MODIFIED 1 | 44 | 0.3 MB |
 | `pilot3` | trials | 2026-09-18T19:31 | rms14562 | running | 4 | BROKEN 1, FASTER 2, parallel-not-faster 1 | 151 | 3.7 MB |
 | `pilot4` | trials | 2026-09-18T21:37 | rms14562 | finished | 8 | FASTER 4, SCAFFOLD_MODIFIED 1, no-change 1, parallel-not-faster 1, parallel-speed-not-measurable 1 | 264 | 2.2 MB |
 | `pilot_seidel` | trials | 2026-09-16T15:11 | rms14562 | finished | 1 | no-change 1 | 28 | 0.2 MB |
 | `pkg_smoke_local` | trials | 2026-09-18T14:15 | ahmeds-MacBook-Pro.local | finished | 2 | FASTER 1, no-change 1 | 76 | 0.4 MB |
 | `proj_smoke_local` | trials | 2026-09-18T07:23 | ahmeds-MacBook-Pro.local | finished | 2 | FASTER 2 | 50 | 0.1 MB |
+| `ref_check_mac` | trials | 2026-09-21T23:05 | ahmeds-MacBook-Pro.local | running | 2 | FASTER 2 | 19 | 0.1 MB |
 | `smoke_local_seidel2d_c` | trials | 2026-09-14T18:11 | ahmeds-MacBook-Pro.local | finished | 1 | FASTER 1 | 28 | 0.2 MB |
 | `smoke_local_seidel2d_c_seeded` | trials | 2026-09-14T22:05 | ahmeds-MacBook-Pro.local | finished | 1 | no-change 1 | 23 | 0.2 MB |
 | `t0_11_classes_a` | trials | 2026-09-20T14:00 | rms14562 | finished | 56 | FASTER 16, PROFILE_ERROR 2, no-change 29, parallel-not-faster 3, parallel-speed-not-measurable 6 | 1151 | 15.4 MB |

@@ -46,13 +46,16 @@ def strip_pragmas(text: str) -> str:
 
 
 def run_one(loop: str, out: Path, repo: Path, timeout: int, speed: bool = True) -> Dict[str, object]:
-    bench = f"tsvc/{loop}"
-    ref = AGENT_DIR / "reference_solutions" / "tsvc" / f"{loop}.c"
+    # `s211` is a TSVC loop; `rodinia-3.1/hotspot` names any single-file package that has an
+    # expert reference under reference_solutions/<suite>/<kernel>.<ext>.
+    bench = loop if "/" in loop else f"tsvc/{loop}"
     meta = json.loads((AGENT_DIR / "prepared" / bench / "meta.json").read_text())
-    work = out / loop
+    ext = Path(meta["file"]).suffix
+    ref = AGENT_DIR / "reference_solutions" / bench.split("/")[0] / f"{bench.split('/')[1]}{ext}"
+    work = out / bench.replace("/", "_")
     shutil.rmtree(work, ignore_errors=True)
     work.mkdir(parents=True)
-    src = work / f"{loop}.c"
+    src = work / Path(meta["file"]).name
     text = ref.read_text()
     n_expert = sum(1 for l in text.splitlines() if PRAGMA.match(l))
     src.write_text(strip_pragmas(text))
@@ -106,7 +109,7 @@ def main() -> int:
                     help="safety ceiling only: run the gate without its speed check")
     a = ap.parse_args()
     classes = json.loads((AGENT_DIR / "benchmark_classes.json").read_text())["classes"]
-    cls = {b.split("/")[1]: c for c, bs in classes.items() for b in bs if b.startswith("tsvc/")}
+    cls = {(b.split("/")[1] if b.startswith("tsvc/") else b): c for c, bs in classes.items() for b in bs}
     loops = a.loops or sorted(p.stem for p in (AGENT_DIR / "reference_solutions" / "tsvc").glob("*.c"))
     a.out.mkdir(parents=True, exist_ok=True)
     rows: List[Dict[str, object]] = []

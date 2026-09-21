@@ -191,6 +191,18 @@ class Recipe:
     # Compile flags the packaged PROJECT needs on every build (LULESH: -DUSE_MPI=0). They go
     # into meta.json's `project.cflags`, which the harness and the agent pass to every build.
     project_cflags: List[str] = field(default_factory=list)
+    # The benchmark's own EXPERT parallel version, unmodified, when the package can be derived
+    # from it by the same edits (LULESH: LLNL's release). `--references` writes it in package
+    # form under agent/reference_solutions/<suite>/<name>/ for `verify-source --source DIR`.
+    reference_dir: Optional[Path] = None
+    # Extra macros for the VALIDATOR's dump build only. The full dump has two readers with
+    # different needs: the validator compares it with what the ORIGINAL prints, the harness
+    # compares it between the original and a changed program under a relative tolerance. Where
+    # the original prints something that is not a result (LULESH's symmetry differences: the
+    # residue of subtracting equal numbers, which any reordered addition moves by tens of
+    # percent), the package emits it under this macro alone and keeps it out of the harness's
+    # comparison.
+    validate_macros: List[str] = field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -1110,8 +1122,11 @@ def _lulesh_deterministic(out: str) -> str:
     return "\n".join(vals)
 
 
-def _lulesh_assemble_project(r: Recipe) -> Tuple[Dict[str, str], List[str]]:
-    body = r.source.read_text()
+def _lulesh_assemble_project(r: Recipe, src_dir: Optional[Path] = None) -> Tuple[Dict[str, str], List[str]]:
+    """`src_dir` = LLNL's unmodified release gives the EXPERT REFERENCE in package form: the very
+    same edits applied to LLNL's own OpenMP program, so the harness judges it like any trial."""
+    src_dir = src_dir or LULESH_DIR
+    body = (src_dir / "lulesh.cc").read_text()
 
     def once(old: str, new: str, what: str) -> None:
         nonlocal body
@@ -1174,9 +1189,15 @@ int main(int argc, char** argv)
    dup2(saved, 1);                   /* stdout back, for the digest */
    close(saved);
    Domain& domain = *pb_lulesh_domain;
-#ifdef PB_FULL_DUMP
-   /* exactly what the original prints that is deterministic: the iteration count, the final
-      origin energy and the three symmetry differences (VerifyAndWriteFinalOutput) */
+#ifdef PB_ORIGINAL_REPORT
+   /* For the packaging validator ONLY: exactly what the original prints that is deterministic —
+      the iteration count, the final origin energy and the three symmetry differences
+      (VerifyAndWriteFinalOutput). The three differences are NOT results: they subtract
+      energies that are mathematically equal, so on the symmetric input they are rounding
+      residue (1e-11 against energies of 1e+5), and a correct parallel version that adds in
+      another order moves them by tens of percent — LLNL's own OpenMP release differs from
+      its serial path by 25 % there while every energy agrees to 2e-16. They therefore stay
+      out of what the harness compares (below). */
    const Index_t nx = domain.sizeX();
    Real_t maxAbsDiff = Real_t(0.0), totalAbsDiff = Real_t(0.0), maxRelDiff = Real_t(0.0);
    for (Index_t j = 0; j < nx; ++j)
@@ -1193,8 +1214,9 @@ int main(int argc, char** argv)
    pb_emit((double)totalAbsDiff);
    pb_emit((double)maxRelDiff);
 #else
-   /* the digest reads the whole state, not five numbers: every element's energy, pressure and
-      relative volume, every node's position and velocity */
+   /* The program's RESULT, for the digest and for the full dump alike: the whole final state —
+      every element's energy, pressure and relative volume, every node's position and velocity
+      (the final origin energy LLNL reports is the first energy). */
    pb_emit((double)domain.cycle());
    for (Index_t i = 0; i < domain.numElem(); ++i) {
       pb_emit((double)domain.e(i)); pb_emit((double)domain.p(i)); pb_emit((double)domain.v(i));
@@ -1217,10 +1239,12 @@ int main(int argc, char** argv)
                                                    '#define PB_HARNESS_HPP\n#include "pb_sizes.h"\n', 1),
         "pb_harness.cpp": ('#include "pb_harness.hpp"\n'
                            + re.sub(r"^static (void|double) (pb_\w+\()", r"\1 \2", _PRELUDE, flags=re.M)),
-        "lulesh.h": (LULESH_DIR / "lulesh.h").read_text(),
+        "lulesh.h": (src_dir / "lulesh.h").read_text(),
     }
     for name in _LULESH_OTHER_UNITS:
-        files[name] = (LULESH_DIR / name).read_text()
+        files[name] = (src_dir / name).read_text()
+    if (src_dir / "lulesh_tuple.h").exists() and "lulesh_tuple.h" in "".join(files.values()):
+        files["lulesh_tuple.h"] = (src_dir / "lulesh_tuple.h").read_text()
     removed = [
         "main renamed to lulesh_main; its report (elapsed time, FOM, progress) goes to stderr",
         "the command-line parser is not called: -s and -i come from the dataset guard",
@@ -1256,12 +1280,14 @@ LULESH = Recipe(
     # the other side of a half (3.245955e+04 -> 32459.5, but the exact 32459.5524 -> 32459.6),
     # so the dump prints in the original's own format and the two texts agree digit for digit.
     dump_format="%.6e\\n",
+    validate_macros=["PB_ORIGINAL_REPORT"],
     original_sources=lambda rr: [str(LULESH_DIR / n) for n in _LULESH_OTHER_UNITS],
     original_includes=lambda rr: [str(LULESH_DIR)],
     assemble_project=_lulesh_assemble_project,
     project_units=["lulesh.cc", "pb_harness.cpp", *_LULESH_OTHER_UNITS],
     project_include_dirs=["."],
     project_cflags=["-DUSE_MPI=0"],
+    reference_dir=BENCHMARKS / "LULESH" / "LULESH_LLNL_OMP",
 )
 
 
@@ -1347,6 +1373,7 @@ def validate(r: Recipe, packaged: Path, work: Path, cxx: str,
         else:
             inputs = [str(packaged)]
         err = _build([cxx, "-O2", f"-D{size}_DATASET", "-DPB_FULL_DUMP",
+                      *[f"-D{m}" for m in r.validate_macros],
                       f'-DPB_DUMP_FORMAT="{r.dump_format}"', *_sysroot(),
                       *inputs, "-o", str(dump_bin)], work)
         err = err or _build([cxx, "-O2", f"-D{size}_DATASET", *_sysroot(), *inputs,
@@ -1410,6 +1437,9 @@ def main() -> int:
     p.add_argument("--out", required=True, type=Path)
     p.add_argument("--size", default="SMALL", help="dataset the agent profiles at")
     p.add_argument("--validate", action="store_true")
+    p.add_argument("--references", action="store_true",
+                   help="also write each benchmark's expert version in package form under "
+                        "agent/reference_solutions/ (recipes that name a reference_dir)")
     p.add_argument("--validate-sizes", default="MINI,SMALL")
     p.add_argument("--cxx", default=None)
     p.add_argument("--layout", choices=["project", "single"], default="project",
@@ -1465,6 +1495,14 @@ def main() -> int:
             meta.update({"file": packaged.name, "layout": "single"})
             digest_of = packaged.read_bytes()
             what = f"{packaged.name}, {len(text.splitlines())} lines"
+        if a.references and r.reference_dir is not None and r.assemble_project is not None:
+            ref_files, _ = r.assemble_project(r, r.reference_dir)          # type: ignore[call-arg]
+            ref_out = AGENT_DIR / "reference_solutions" / r.suite / r.name
+            shutil.rmtree(ref_out, ignore_errors=True)
+            for rel, text in ref_files.items():
+                (ref_out / rel).parent.mkdir(parents=True, exist_ok=True)
+                (ref_out / rel).write_text(text)
+            print(f"    expert reference ({r.reference_dir.name}, same edits) -> {ref_out.relative_to(HARNESS_ROOT)}")
         meta["removed"] = removed
         meta["output_sha256"] = hashlib.sha256(digest_of).hexdigest()
         (out_dir / "meta.json").write_text(json.dumps(meta, indent=2) + "\n")

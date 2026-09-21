@@ -681,6 +681,10 @@ data next to a summary and records the host.
 | T0.8 | Does DiscoPoP see the same program in the project layout as in the merged file? | `packaging_equivalence.py` | Both layouts profiled as the harness profiles them (merged file directly; project through the unity unit); the observed dependence multiset, the Do-All blockers and the applicable patterns compared keyed by source-line TEXT, so line numbers cannot differ | `summary.json` | **Mac, done: 29 of 29 kernels profiled in both layouts have identical kernel dependences**; every differing edge lies in `xmalloc`/`polybench_alloc_data`, which the merge had rewritten (`ptr` for `new`); blockers differ in 14 kernels and patterns in all — the explorer's own draw, reproduced within one layout on trisolv (2 blockers in one run, 0 in three). `adi`'s merged file did not instrument within the limit (known). NPB and the applications: on the server |
 | T0.9 | Does a fast refresh reach the full profile's conclusions, and does it decay when chained? | agent `benchmark/refresh_depth.py` | Three synthetic programs × three rewrites; arms full / fast-step / fast-chain on identical source; patterns, applicable suggestions (unsafe = suggested only after refresh) and dependence edges compared | stdout table | §5h: 8/18 identical, 8 unsafe (all in rewritten code), 2 lost |
 | T0.7 | Is DiscoPoP's explorer deterministic on one profile? | `explorer_determinism.py` (first taken by hand, §5b) | One profile per benchmark taken as the harness takes it; `discopop_explorer` re-run N times with the hash seed free and N per fixed seed, every explorer output — including its pattern-id counter `next_free_pattern_id.txt` — cleared before each run, the profiler's files digested to prove they never change. Per run: the sha256 of the pattern SET (counter-assigned `pattern_id`, traversal-assigned `task_group` and list order removed), the sha256 of the file as written, one digest per pattern type, counts, crash message | `runs.csv`, `summary.json` | Mac by hand (§5b): 2mm Do-All fixed at 21, tasks 6–57; `pathfinder` 15 crashes in 20. Tool on `vecsum` (Mac): the raw file differs in every run, the Do-All SET is identical in every run, the task SET differs in every run — so the earlier "10 different outputs" counted order and labels as well as content. Server: in the 18 Sep chain (2mm, pathfinder, NPB is; 20 + 2×20 runs each) |
+| T0.10 | Is there, for every restructuring benchmark, an expert version that is correct AND faster? | `verify-source` on `reference_solutions/` | each reference judged exactly as a trial is: full dump and digest against the original on the shipped and the seeded input, stability at fixed threads, speed at the kernel's timing size | one baseline trial per reference | TSVC: 18 of 18 class-R loops ≥ 1.45× (server). LULESH (LLNL), `hotspot`, `floyd-warshall`: Mac only, 21 Sep (§7 `lulesh_ref_check`, `ref_check_mac`); server owed |
+| T0.11 | Which class is each benchmark in — does DiscoPoP alone reach a verified parallel program? | arm `discopop_capability`, three independent profiles | the pipeline with no model, three draws; R = no draw reaches a verified parallel program (needs restructuring), A = the majority do (parallel as written), D = R by measurement AND a true recurrence by design (the reference solution is the sequential program) | `benchmark_classes.json` | done for the registered set (§7 `t0_11_classes_a/b/c`): R 26, A 25, D 4; LULESH and NPB-C owed |
+| T0.13 | Can the arm under test KEEP a perfect rewrite? | `default_arm_ceiling.py` | the expert restructuring with its pragmas stripped, `--budget 0`: DiscoPoP profiles it, Phase B pushes its pragmas through the campaign's gate, Settle verifies | `ceiling.csv` | TSVC, Mac, 21 Sep: kept on 18 of 21, class R 16 of 18 (`s331`, `s341` need a pragma DiscoPoP cannot write). Server repeat, `hotspot`, `floyd-warshall`, LULESH owed (§5s) |
+| T0.14 | Does each package accept its own expert version? | `verify-source --source <reference>` (a directory for project benchmarks) | the reference must come out correct; a `BROKEN` is a defect of the PACKAGE until shown otherwise | the baseline trial | new 21 Sep — it caught the LULESH package emitting rounding residue as a result (§6). TSVC and LULESH pass; NPB-C before E11 |
 
 **Which settings rest on which study:**
 
@@ -1560,19 +1564,53 @@ WITHOUT calling a model, so no benchmark is chosen or dropped by what the agent 
 | Suite | Role | By the rule |
 |---|---|---|
 | **TSVC-2**, 25 loops | the controlled suite with ground truth: E1's claim and every ablation (E2, E3, E4, E8) | 18 R (16 keepable under `default`, T0.13; `s331`, `s341` need a pragma DiscoPoP cannot write — E3's material), 3 A, 4 D; expert ceilings ≥ 1.45× at the gate's timing size; ≈ 10 min per agent trial |
-| **LULESH 2.0**, serial path | the real application (E6): sequential · DiscoPoP alone · DiscoPoP + agent · LLNL's expert OpenMP | one profile = 23 s instrument (28 GB), 4.5 s run, 16 s explore; source prepared and validated (§5k); to be packaged and pre-flighted |
+| **LULESH 2.0**, serial path | the real application (E6): sequential · DiscoPoP alone · DiscoPoP + agent · LLNL's expert OpenMP | one profile = 23 s instrument (28 GB), 4.5 s run, 16 s explore; **packaged** (`llnl/lulesh`, equal to the original's report at three sizes) with LLNL's OpenMP release as its expert reference, verified correct through the harness (§6, 21 Sep); server pre-flight owed (§5s) |
 | **RepoOMP's NPB-C**, 8 kernels | against the closest published system on identical programs (E11) | EP, IS, CG profile in 20–99 s; BT, SP, LU, FT, MG to be probed; to be packaged and pre-flighted |
 
-**Out, with the reason each fails the rule:** `rodinia-3.1/hotspot` — condition 3: no
-output-equivalent parallel version exists; Rodinia's own OpenMP version gives a thread-count- and
-schedule-dependent result (shown 21 Sep, §6). `polybench/seidel-2d` — condition 3: a true
-Gauss–Seidel recurrence; by the class definitions it is a D, filed R only because its package
-declares no `restructuring_class`. `burkardt/md`, `npb/is` — condition 3 never verified,
-35 and 20 minutes per agent trial, and in all six finished agent trials every DiscoPoP pragma on
-the restructured code was rejected. **PolyBench's 25 class-A kernels** — they cannot show a
-benefit of the agent (DiscoPoP alone already parallelizes them); dropped by the author.
-PolyBench's four cheap class-R kernels (`bicg`, `doitgen`, `floyd-warshall`, `trisolv`) have no
-verified reference either and leave with the suite.
+**Out — corrected the same evening.** The author asked: *"before removing the benchmarks did
+you verify that they are with not much value? and what about the rest of Rodinia; also see
+whether NAS is useful."* They had not been verified, and one reason given in the first version
+of this section was wrong. What was then checked, all of it without a model:
+
+| Benchmark | What was checked | Result | Under the rule |
+|---|---|---|---|
+| `rodinia-3.1/hotspot` | a hand-written restructuring — the chunk loop split in two, boundary chunks sequential and in order, interior chunks `parallel for` (`reference_solutions/rodinia-3.1/hotspot.cpp`) — judged by the harness (`verify-source`, run `ref_check_mac`) | `FASTER`; dump byte-identical on the shipped AND the seeded input, digest error 0; 1.44× / 1.52× at 2 / 4 threads (Mac, LARGE); by hand bit-identical at 1–48 threads under static, dynamic and guided schedules | **The first version said "no output-equivalent parallel version exists". Wrong**: it is Rodinia's OWN OpenMP version that is schedule-dependent (§6), not the problem. Conditions 1–3 hold; condition 4 (T0.13) is owed on the server |
+| `polybench/floyd-warshall` | the textbook shared-memory form, written by hand: write only on improvement, i-loop parallel for fixed k — row and column k are fixed points of step k whenever `path[k][k] ≥ 0` (`reference_solutions/polybench/floyd-warshall.c`) | `FASTER`; dump byte-identical on both inputs; 2.46× / 3.61× at 2 / 4 threads (Mac, LARGE) | conditions 1–3 hold; condition 4 owed on the server (the ceiling tool must first learn the project layout). E1's own trials on it — 3 of 5 `gained`, 5.1–10.3×, DiscoPoP alone 0 of 5 — are NOT what admits it |
+| `burkardt/md` | Burkardt's source carries his OpenMP version as commented-out pragmas (`md.cpp` 275–280 and 626–630): one `parallel` region, one `for reduction(+: pe, ke)` | the expert changed no code | not a restructuring benchmark — what it lacks is a pragma DiscoPoP does not write. Out of every restructuring experiment; a candidate for E3 only, at 35 minutes per trial |
+| `polybench/seidel-2d` | — | a true Gauss–Seidel recurrence; an exact parallel form exists in theory (wavefront skewing), none verified is at hand, and by the class definitions it is a D | out: condition 3 not shown |
+| `npb/is` | — | the same program is one of RepoOMP's NPB-C kernels | covered by E11; the separate package is redundant |
+| `polybench/bicg`, `trisolv`, `doitgen` | T0.1 | `bicg` and `trisolv` cannot be timed at any size, so the speed check is off for them (D22) and they cannot show a speed result at all; none of the three has a verified reference | out |
+| PolyBench's 25 class-A kernels | T0.11 | DiscoPoP alone already parallelizes them | out by the author's decision: they cannot show a benefit of the agent |
+
+**The two surveys behind "the rest of Rodinia" and "is NAS useful" (no model, 21 Sep):**
+
+* **Rodinia 3.1.** In all 19 programs that ship a serial and an OpenMP version, the expert
+  version is the serial code plus pragmas: 0 to 7 code lines differ. Rodinia's experts did not
+  restructure, so where DiscoPoP alone fails there, what is missing is a pragma or a clause and
+  not a rewrite. `hotspot` is the exception that proves it — its expert pragma is WRONG, and the
+  correct version needs the split above.
+* **RepoOMP's NPB-C.** Each expert `<k>_ori.c` equals the pragma-free `<k>_#_omp.c` plus
+  pragmas: 0 to 18 lines differ (continuation lines and block comments counted properly).
+  RepoOMP made its sequential versions by deleting the pragmas from NPB's OpenMP code, so the
+  code is ALREADY restructured for parallelism (per-thread buckets in IS); what remains is
+  pragma authorship — parallel regions, `for nowait`, `master`, `threadprivate`. Probe on the
+  Mac (`results/e11_npbc_probe_mac`): EP, IS and CG profile in under two minutes each with NPB's
+  verification SUCCESSFUL, and DiscoPoP already reports 6 + 2, 10 and 24 + 9 do-all + reduction
+  patterns in them. FT did not finish instrumenting within 30 minutes on the 8 GB Mac and is
+  inconclusive; FT, MG, BT, SP, LU go to the server.
+* **So NPB-C is useful, but not for the restructuring claim.** It carries E11 (the comparison
+  with the closest published system on identical programs), the no-harm question at application
+  scale, and E3's question (who writes the pragma). Under the `default` arm it is EXPECTED to
+  show little benefit of the agent, and that expectation is written here before the runs.
+* **LULESH is the opposite case, which is why it is the campaign's application.** LLNL's OpenMP
+  release differs from the serial path by **168 code lines beyond its 44 pragmas**: 67 in
+  `CalcFBHourglassForceForElems` and 44 in `IntegrateStressForElems` (forces computed into
+  per-element buffers and gathered per node, instead of scattered into nodes that elements
+  share), 10 in each of the two constraint functions (per-thread minima), 20 in the main loop.
+  The expert RESTRUCTURED, in the two most expensive force routines.
+
+**Whether `hotspot` and `floyd-warshall` re-enter is the author's decision**, to be taken when
+T0.13 has run on the server for both; until then D30's three suites stand.
 
 **What is NOT hidden.** Everything E1's class-R run executes before and after this decision is
 archived and reported — the 26 benchmarks as registered, and the subset the rule admits — and
@@ -1592,6 +1630,71 @@ follow-up runs shrink to TSVC's 3 + 4 loops. E2, E3, E4, E8 run on TSVC's class 
 packaging and no-model pre-flight (sizes, DiscoPoP-alone class, feasibility) before any model
 call. E5 (profiling cost) and E7 (gate as classifier, offline) are unaffected. E9 (ranking) needs
 multi-region programs and moves to LULESH and the NPB-C kernels.
+
+### 5s. Every instrument and every experiment re-examined after D29, D30 and Fixes 86–88 (2026-09-21)
+
+The author: *"check the planned experiments if something needs to be changed, and the previous
+ones we ran — the Ts for example — does anything need adjustments or a re-run?"* Three things
+moved under them on 21 Sep: the scope (D30), what the pipeline does after a kept rewrite
+(Fixes 86–88, D29), and — found while answering the author's question about a LULESH reference
+— what the LULESH package prints (§6).
+
+**Instruments**
+
+| ID | Still valid? | Why | Owed |
+|---|---|---|---|
+| T0.1 sizes | yes, for TSVC | a property of each benchmark on the server; TSVC's sizes are what E1 runs with | **LULESH and the NPB-C kernels** (verification size ≥ 1 s serial, timing size ≥ 0.25 s) |
+| T0.2 stability, T0.7 explorer | yes | properties of DiscoPoP, not of a suite: one profile per trial, DiscoPoP alone reported as a range, explorer retried. The kernels they were measured on left the scope, the policy did not | nothing separate: E1's `discopop_gate` arm IS five independent profiles of every TSVC loop — its spread is read out with E1. LULESH: three profiles in its pre-flight |
+| T0.3 oracle | yes | replays archived candidates through the harness verification; independent of scope | one addition, below: every package with an expert reference must pass the **reference acceptance check** |
+| T0.4 timing noise | yes | a property of the host under the campaign's load (v2): 1.1× resolvable with 5-repeat medians | none |
+| T0.5 shares | yes, where it was run | fresh directory per measurement, so DiscoPoP's accumulating hotspot files (Fix 87, N1) never touched it; it does not read loop counts (Fix 88) | **LULESH and NPB-C** — multi-region programs: which regions pass `--min-runtime-share 0.01`, how many candidates a trial has, and what share the two force routines LLNL restructured hold |
+| T0.6 patterns in `main` | yes | D4 rests on it | **LULESH** (`lulesh_main` holds the time-step loop and stays in scope; `main` is the package's driver) and NPB-C |
+| T0.8 layouts | yes | compares the project layout with the merged file | not applicable to LULESH (project only) and NPB-C (single files) — skipped with this reason |
+| T0.9 fast refresh | **re-run before E3** | it compares patterns and dependences, which D29 does not change, but the refresh code path it exercises did change (runtime re-measurement, recorded kind), and E3's reading cites it | `benchmark/refresh_depth.py`, three synthetic programs, Mac-safe |
+| T0.10 expert references | yes for TSVC (18 of 18 ≥ 1.45× at the timing size, server) | — | today's three references are verified on the MAC ONLY, at 2 and 4 threads: LLNL's LULESH (correct to 5.6e-15, 1.70× at STANDARD), `hotspot` split (1.52×), `floyd-warshall` textbook (3.61×). **Server re-verification at 6 / 12 / 24 threads is owed before any of them is cited** — `hotspot` showed that four threads cannot see a schedule-dependent result |
+| T0.11 classes | yes | the `discopop_capability` arm keeps no rewrite, so Fixes 86–88 never ran in it | **LULESH and NPB-C.** Expectation, stated before measuring: LULESH is class **A at program level** (DiscoPoP alone will parallelize many of its ≈ 40 parallel loops and come out `FASTER`), so the agent's verdict there is `better`/`equal`/`worse` — a speedup ratio against DiscoPoP alone — and not `gained` |
+| T0.13 default-arm ceiling | yes for TSVC, with one caveat | run after Fixes 86–88; but on the Mac, where the gate's schedule stress reaches 4 threads | **repeat on the server** (no model, ≈ 1 min per loop) and extend to `hotspot`, `floyd-warshall` and LULESH (LLNL's restructured routines with the pragmas stripped: does DiscoPoP find the do-alls, and do its pragmas pass?). The tool needs the project layout first |
+
+**New instrument — the reference acceptance check (T0.14).** For every package that has an
+expert version, `verify-source` on that version must come out correct. It is what caught the
+LULESH defect (§6): the package would have called every correct parallel LULESH `BROKEN`,
+LLNL's own included. TSVC passes by T0.10; LULESH passes since today's fix; each NPB-C kernel
+must pass with its `<k>_ori.c` before E11 starts.
+
+**Experiments**
+
+| | Change | Reason |
+|---|---|---|
+| E1 (running) | arms unchanged. The PRIMARY set becomes TSVC: R 18 ×5, A 3 ×1, D 4 ×3; the eight non-TSVC class-R benchmarks already in the run are reported in full as registered, in a second table. Follow-up runs A and D shrink to TSVC's 3 + 4 loops | D30 |
+| E1-bare | TSVC class R, as planned | — |
+| E2 (2 × 2) and E2-source | TSVC class R, all 18 loops | D30 |
+| E2-C (13 arms), E2-D (5 arms) | **seven loops, fixed here by a rule that looks at no result**: the first loop in TSVC's source order of each of TSVC's OWN categories among the 16 loops T0.13 found keepable — `s112` (linear dependence, loop reversal), `s121` (induction variable), `s211` (statement reordering), `s241` (node splitting), `s252` (scalar expansion), `s281` (crossing thresholds), `s291` (loop peeling). N = 3, as screening experiments and not headline claims (N to be confirmed by the author) | 13 arms on 18 loops at N = 5 would be 1,170 trials, ≈ 195 lane-hours, for a secondary question |
+| E3 | TSVC class R; `s331` and `s341` are read separately (they need a pragma DiscoPoP cannot write); two or three NPB-C kernels may join as the application-scale pragma-authorship case once packaged. **T0.9 is re-run first** | NPB-C's and `md`'s experts are pragmas only (§5r) |
+| E4, E4-mode | **conditional**: run only if E3 shows that the fast refresh loses or wrongly accepts something on TSVC. If it does not, there is no gap for `--llm-recon` / `--llm-deps` to close, and E4 is reported as not needed, with E3's numbers as the reason | both need `--fast-refresh` (D28); 0 of 108 archived fast refreshes fell back |
+| E5 cost | unchanged; it now has per-trial refresh kinds and counts to read (D29) and LULESH's measured profile cost | — |
+| E6 LULESH | arms: sequential · `discopop_gate` · `default` · LLNL's expert (`verify-source --source reference_solutions/llnl/lulesh`, in place since today). Pre-flight owed: T0.1, T0.5, T0.11, T0.13, three profiles for stability, and the profile's disk footprint (28 GB measured earlier) against the server's free space | package corrected today |
+| E7 gate as classifier | offline, unaffected; its corpus gains a labelled case — Rodinia's own `hotspot` pragma, an expert version that is wrong. Must be replayed on the SERVER: at four threads the Mac passes it | hotspot finding (§6) |
+| E8 depth | TSVC class R. H8 stated in advance: depth 0 suffices on single-nest loops, so a null result is the expected outcome and a finding. LULESH ×3 added if E6's budget allows | depth only matters where a kept rewrite exposes further regions |
+| E9 ranking | moves to LULESH and NPB-C (EP, IS, CG) — TSVC kernels have one region, nothing to rank. D28's caveat stands: `full_no_hotspots` also makes the share filter inert | D30, D28 |
+| E10 speed check | finished, reported as it ran (PolyBench, six kernels). Not re-run: its conclusion (D22, the speed check at the kernel's timing size) was confirmed on TSVC by T0.13 — 16 of 18 kept with the check on. Limitation recorded: its prompts carried DiscoPoP's mispaired iteration counts (Fix 88) | — |
+| E11 RepoOMP | the agent's entry is the `default` arm, pre-stated; the `llm_pragmas_full_reprofile` arm is reported beside it because NPB's difficulty is pragma authorship. Others: DiscoPoP alone, RepoOMP's released outputs, the expert `<k>_ori.c`, all through `verify-source`. Packaging, T0.14, T0.1, T0.11 owed | §5r |
+
+**Nothing already run has to be repeated with a model.** `pilot4` and E10 ran with
+`--llm-pragmas` on, where a rewrite annotates itself and never passes through the path Fixes 86
+and 87 repaired; their prompts did carry wrong iteration counts (Fix 88), which is recorded as a
+limitation of those two runs. E1 runs on a commit that has all three fixes.
+
+**Merge gate for the work branch.** Before `e1-readout-e2-prep` is merged into the campaign
+branch, `test_arms.py` must show that the resolved configuration of `default` and
+`discopop_gate` is identical before and after — the branch adds options (`--evidence-file`,
+`--prompt-omit`) that must be inert when unset.
+
+**Order on the server once E1's lanes are free, no model calls:** (1) re-verify the three
+references at 6 / 12 / 24 threads; (2) T0.13 on TSVC, `hotspot`, `floyd-warshall`; (3) LULESH
+pre-flight — T0.1, T0.5, T0.6, T0.11 ×3, T0.13, disk footprint; (4) NPB-C probe of FT, MG, BT,
+SP, LU, then packaging, T0.14, T0.1, T0.11. **None of this runs on the Mac**: it has 8 GB of
+memory, and on 21 Sep two such jobs left in the background pushed it so far into swap that the
+disk ran full (1.7 GiB left; 28 GiB again a minute after they were stopped).
 
 ### 5q. Arguments that depend on each other (2026-09-21)
 
@@ -1729,6 +1832,12 @@ must pass (§5k, RUNBOOK step 0/0a).
   thesis reports rather than works around; `docs/DISCOPOP_BUG_REPORTS.md` L4.
 | 2026-09-20 | server | **The server moved to the one-repository layout (§5o).** One checkout; `server.sh sync` is now a single `git fetch` + `merge --ff-only`, so the harness on the server cannot drift from the Mac's. Parity OK; packages regenerated there are identical to the Mac's file by file (295 files, 0 differences); a no-model smoke ran end to end. The old `~/new_benchmark_harness` (19 GB) is unused — its launcher logs are now tracked at `results/_launcher_logs/` so nothing is lost with it | D20; and the server had been running from a checkout that no longer received any of the day's changes |
 | 2026-09-20 | agent + harness | **D24 — every arm DECLARES every argument that carries its purpose, and the harness verifies it against the agent's own parser before a run starts (§5n).** New agent option `--print-config` (resolved configuration as JSON, credentials redacted); `settings` block on all 19 arms; any mismatch refuses the run, and an arm without a declaration is refused too | the author: "for every experiment every agent argument should be clearly set to serve the purpose of the experiment, making sure that nothing wired or inherited would break the intended argument selection" — after two changes on one day silently altered what four experiments and five arms meant |
+| 2026-09-21 | finding + harness | **The LULESH package would have called EVERY correct parallel LULESH `BROKEN` — LLNL's own included. Found because the author asked whether a reference solution had been checked; fixed.** LLNL's OpenMP release (`benchmarks/LULESH/LULESH_LLNL_OMP/`, upstream `3e01c40`, 44 pragmas, with `PROVENANCE.txt`) was put into package form by the recipe's own edits (`prepare_apps.py --references` → `reference_solutions/llnl/lulesh/`) and judged by `verify-source`: `BROKEN`, dump error 0.25, while the digest agreed to 1.8e-16. Cause: under `PB_FULL_DUMP` the package emitted the five numbers the original prints, and three of them are LULESH's SYMMETRY differences — energies that are mathematically equal, subtracted. On the symmetric input they are rounding residue (2e-11 against energies of 3e+5), and adding in another order moves them by tens of percent: serial 2.18e-11, OpenMP 2.91e-11. They are diagnostics, not results. Now the five numbers are emitted under `PB_ORIGINAL_REPORT`, which only the packaging validator sets (new `Recipe.validate_macros`); the full dump is the whole final state, the very values the digest already read — every element's energy, pressure, volume, every node's position and velocity | Measured before relying on it: over 1,672 / 5,911 / 34,702 state values (MINI / SMALL / STANDARD), shipped and seeded input, LLNL's version against the serial path is bit-identical at 1 thread and within **5.6e-15** at 2 and 4 — six orders of magnitude inside the 1e-9 tolerance; LULESH's own cut-offs snap small values to exact zero, so there is no noise tail. The package still equals the original's report at three sizes. After the fix: LLNL's version `FASTER` 1.70× at STANDARD, `parallel-not-faster` at SMALL (8³ elements), Mac, 4 threads (`results/lulesh_ref_check`). The agent's own gate reads the digest and would have ACCEPTED such a program, so the harness would have scored the campaign's one application `unsafe` for both arms. Rule from now on: **T0.14, the reference acceptance check (§5s)** |
+| 2026-09-21 | finding | **LLNL restructured LULESH; Rodinia's and NPB's experts did not (§5r).** LLNL's OpenMP `lulesh.cc` differs from the serial path by 168 code lines beyond its 44 pragmas — 67 in `CalcFBHourglassForceForElems`, 44 in `IntegrateStressForElems` (per-element force buffers gathered per node), 10 in each constraint function (per-thread minima). Rodinia: 0–7 code lines in all 19 programs. RepoOMP's NPB-C: 0–18 | the author: "what about the rest of Rodinia; also see whether NAS is useful". It decides what each suite can show: LULESH the restructuring claim at application scale, NPB-C the external comparison (E11), no-harm and pragma authorship (E3) — and under `default` little benefit of the agent, written down before the runs |
+| 2026-09-21 | plan | **D30 corrected: `hotspot` DOES have a verified output-identical parallel version, and so does `floyd-warshall` (§5r).** Hand-written, no model: `hotspot`'s chunk loop split (boundary chunks in order, interior chunks parallel) — `FASTER`, dump byte-identical on both inputs, 1.52× at 4 Mac threads; `floyd-warshall` in its textbook form (write only on improvement) — `FASTER`, byte-identical, 3.61×. `md`'s expert version is two commented-out pragmas in Burkardt's own source: not a restructuring benchmark | the author: "before removing the benchmarks did you verify that they are with not much value?" — no, and the reason recorded for `hotspot` was wrong. Both re-enter only if T0.13 on the server keeps their reference, and only by the author's decision; D30's three suites stand until then |
+| 2026-09-21 | plan | **Every instrument and experiment re-examined (§5s).** No finished run has to be repeated with a model. Owed without a model, on the server: T0.1 / T0.5 / T0.6 / T0.11 / T0.13 for LULESH, T0.13 repeated for TSVC at more than four threads, the three new references re-verified at 6 / 12 / 24 threads, NPB-C probe and packaging; T0.9 re-run before E3. E2-C and E2-D get seven loops fixed by TSVC's own categories (`s112 s121 s211 s241 s252 s281 s291`); E4 becomes conditional on E3; E9 moves to LULESH and NPB-C; E11's agent entry is pre-stated as `default` | the author: "check the planned experiments if something needs to be changed, and the previous ones we ran, the Ts for example" |
+| 2026-09-21 | harness | `verify-source --source DIR` for project benchmarks (every file of the directory replaces its namesake; candidate hashed as a tree; refused for single-file benchmarks or when the directory lacks the benchmark's own file); `prepare_apps.py --references` and `Recipe.reference_dir` / `validate_macros`; `default_arm_ceiling.py` accepts `suite/kernel` for any single-file package with a reference | an expert version that is several files (LLNL's LULESH) had no way into the harness |
+| 2026-09-21 | process | **No DiscoPoP profiling of application-size code on the Mac.** Two background jobs (the NPB-C probe compiling FT under DiscoPoP's pass, the `hotspot` ceiling test running an instrumented binary) drove the 8 GB machine into swap until the disk had 1.7 GiB left; 28 GiB again a minute after both were stopped. Their results are therefore partial (`results/e11_npbc_probe_mac`: EP, IS, CG only; no `hotspot` ceiling) and the rest is owed on the server | the author: "my disk space is almost full" |
 | 2026-09-21 | plan | **D30 — the campaign's scope is narrowed to TSVC-2, LULESH and RepoOMP's NPB-C (§5r).** A benchmark enters a restructuring experiment only if, decided WITHOUT a model, (1) DiscoPoP can profile it, (2) DiscoPoP alone reaches no verified parallel program, (3) a verified output-equivalent parallel version exists, (4) the no-model ceiling test shows the arm can keep that version. Out: `hotspot` (no equivalent parallel version exists), `seidel-2d` (a true recurrence, really class D), `md` and `npb/is` (never verified, 35 and 20 min per trial), PolyBench's class-A kernels (cannot show a benefit of the agent — the author's call against keeping one no-harm run) and its four unverified class-R kernels. Everything E1 has run stays archived and is reported beside the restricted set; the rule is recorded before any TSVC result of E1 exists. LULESH and NPB-C get packaging and a no-model pre-flight before any model call | the author, five hours into E1 with 35 of 35 finished trials `no-change`: "pick only the ones that will show results, not just taking so long then nothing" |
 | 2026-09-21 | finding (C2) | **The gate rejected the parallelization of Rodinia `hotspot` that Rodinia's own OpenMP version uses — and it was right.** E1's first agent trial ended `no-change` with all seven of DiscoPoP's pragmas rejected; the suspicious one was the chunk loop of `single_iteration` (`private(c,delta,r)`, equivalent to Rodinia's `private(chunk, r, c, delta)`), rejected at `correctness` because a checksum moved by 1.7 × 10⁻⁸ — 1,000× the program's measured rounding floor (1.67 × 10⁻¹¹), identical in two candidates, so deterministic and not a race TSan could see. Checked apart from the agent, on the original source with DiscoPoP's exact pragma: static schedule, 1–16 threads reproduce the sequential checksum `1692807788529.6304` bit for bit; **24 threads give `1692807817763.9468` — the very value the gate reported on the server** — 48 threads another, and `dynamic,1` / `guided` at 4 threads two more. Cause: the boundary branch is an `if / else if` chain over four corners and four edges with NO final `else`, so an interior cell of a boundary chunk is updated with the `delta` left over from the previous cell, and the first such cell of a bottom- or right-edge chunk with the `delta` of the PREVIOUS CHUNK. That is a loop-carried dependence through `delta`; `private(delta)` cuts it, and the result then depends on which chunk each thread starts with. The gate sees it because it checks all threads of the NUMA node and the schedule matrix, not one configuration. Consequences: (i) the answer to "will the gate reject everything?" is that its rejections have held up wherever they were checked; (ii) `hotspot` has no parallel version that is output-equivalent to its sequential one without first repairing that dependence, so `neither` is the expected verdict there and says nothing against the agent; (iii) an exhibit for C2 — a latent defect in a published benchmark's own OpenMP version, found by the gate | the author: "I have a concern that all code changes will be rejected" |
 | 2026-09-21 | harness | **E1's read-out exists before E1's data does.** `tools/main_comparison_stats.py` computes exactly what the plan pre-registered and nothing chosen after seeing results — Wilson 95 % intervals on rates, Wilcoxon signed-rank on per-benchmark medians (one-sided, paired by benchmark), Cliff's delta, a bootstrap interval on the median agent ÷ DiscoPoP-alone ratio (fixed seed), unsafe acceptances and every missing trial NAMED — per measured class, with untimeable kernels left out of every speed statistic and a block on what actually happened inside the trials (refresh kinds, fallbacks, explorer stalls, speed check off, host load). `plots` writes it beside the figures. New figure `fig_verdict_matrix`: one square per agent trial, rows grouped by class, on the hues of the validated outcome palette. Tried on `e1_smoke5` | written while E1 runs so that the analysis cannot be shaped by the numbers |
@@ -1891,6 +2000,33 @@ Added 2026-09-15 (see §6 rows of that date):
   Speedup and fraction of expert speedup are reported descriptively.
 
 ## 7. Run log
+
+### `lulesh_ref_check`, `ref_check_mac`, `e11_npbc_probe_mac` — 2026-09-21, Mac, **the expert references through the harness** (no model)
+
+**Question.** Do the expert versions the campaign measures itself against pass the harness's
+own verification — LLNL's OpenMP LULESH, and hand-written references for the two dropped
+benchmarks whose exclusion had not been verified (§5r)?
+
+**How.** `agent/benchmark verify-source <bench> --source <reference> --threads 2,4 --repeats 3`;
+LULESH at SMALL and STANDARD, the two kernels at their T0.1 verification size (LARGE).
+
+| Reference | Verdict | Output | Speed (2 / 4 threads) |
+|---|---|---|---|
+| LLNL LULESH 2.0 OpenMP, SMALL | `parallel-not-faster` | dump 5.6e-15, seeded 4.2e-15, digest 1.8e-16 | 0.63× / 0.55× (8³ elements, 20 iterations) |
+| LLNL LULESH 2.0 OpenMP, STANDARD | `FASTER` | the same | 1.31× / 1.70× |
+| `hotspot`, chunk loop split | `FASTER` | byte-identical, shipped and seeded; digest error 0 | 1.44× / 1.52× |
+| `floyd-warshall`, textbook form | `FASTER` | byte-identical, shipped and seeded; digest error 0 | 2.46× / 3.61× |
+
+The FIRST LULESH run said `BROKEN` with a dump error of 0.25: a defect of the package, not of
+LLNL's code (§6, same date) — corrected before the table above was taken. All four are Mac
+numbers at no more than four threads: the speeds are indicative, and the correctness verdicts
+must be repeated on the server at 6 / 12 / 24 threads before they are cited (`hotspot` is the
+proof that four threads cannot see a schedule-dependent result).
+
+**NPB-C probe (partial).** EP: instrument 1.9 s, run 10.0 s, explore 19.5 s, 6 do-all + 2
+reduction patterns; IS: 1.8 / 0.7 / 18.8 s, 10 do-all; CG: 17.1 / 9.3 / 79.8 s, 24 + 9; NPB's
+verification SUCCESSFUL in all three. FT had not finished instrumenting after 30 minutes when
+the probe was stopped (the Mac was swapping, §6); FT, MG, BT, SP, LU are owed on the server.
 
 ### `t0_13_default_arm_ceiling` — 2026-09-21, Mac, **T0.13: what the pipeline does with a PERFECT rewrite** (no model)
 
