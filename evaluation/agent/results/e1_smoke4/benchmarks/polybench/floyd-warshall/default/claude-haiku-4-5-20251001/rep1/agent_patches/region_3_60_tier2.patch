@@ -1,0 +1,41 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_smoke4/benchmarks/polybench/floyd-warshall/default/claude-haiku-4-5-20251001/rep1/work/floyd-warshall.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_smoke4/benchmarks/polybench/floyd-warshall/default/claude-haiku-4-5-20251001/rep1/work/floyd-warshall.c
+@@ -57,16 +57,34 @@
+ 			   DATA_TYPE POLYBENCH_2D(path,N,N,n,n))
+ {
+   int i, j, k;
++  int const_n = n;
++
++  /* Allocate temporary buffer to break read-after-write dependence
++     across k-iterations, allowing inner loops to be parallelized. */
++  DATA_TYPE **tmp = (DATA_TYPE **)malloc(const_n * sizeof(DATA_TYPE *));
++  for (i = 0; i < const_n; i++)
++    tmp[i] = (DATA_TYPE *)malloc(const_n * sizeof(DATA_TYPE));
+ 
+ #pragma scop
+-  for (k = 0; k < _PB_N; k++)
++  for (k = 0; k < const_n; k++)
+     {
+-      for(i = 0; i < _PB_N; i++)
+-	for (j = 0; j < _PB_N; j++)
+-	  path[i][j] = path[i][j] < path[i][k] + path[k][j] ?
++      /* Compute shortest paths through vertex k.
++         Write to tmp instead of path to enable parallelism in i,j loops. */
++      for(i = 0; i < const_n; i++)
++	for (j = 0; j < const_n; j++)
++	  tmp[i][j] = path[i][j] < path[i][k] + path[k][j] ?
+ 	    path[i][j] : path[i][k] + path[k][j];
++
++      /* Copy results back to path for use in next k-iteration. */
++      for(i = 0; i < const_n; i++)
++	for (j = 0; j < const_n; j++)
++	  path[i][j] = tmp[i][j];
+     }
+ #pragma endscop
++
++  for (i = 0; i < const_n; i++)
++    free(tmp[i]);
++  free(tmp);
+ 
+ }
+ 

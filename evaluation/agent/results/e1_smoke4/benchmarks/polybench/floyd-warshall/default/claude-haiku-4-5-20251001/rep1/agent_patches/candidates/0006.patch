@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_smoke4/benchmarks/polybench/floyd-warshall/default/claude-haiku-4-5-20251001/rep1/work/floyd-warshall.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_smoke4/benchmarks/polybench/floyd-warshall/default/claude-haiku-4-5-20251001/rep1/work/floyd-warshall.c
+@@ -62,6 +62,7 @@
+   /* Allocate temporary buffer to break read-after-write dependence
+      across k-iterations, allowing inner loops to be parallelized. */
+   DATA_TYPE **tmp = (DATA_TYPE **)malloc(const_n * sizeof(DATA_TYPE *));
++  #pragma omp parallel for 
+   for (i = 0; i < const_n; i++)
+     tmp[i] = (DATA_TYPE *)malloc(const_n * sizeof(DATA_TYPE));
+ 

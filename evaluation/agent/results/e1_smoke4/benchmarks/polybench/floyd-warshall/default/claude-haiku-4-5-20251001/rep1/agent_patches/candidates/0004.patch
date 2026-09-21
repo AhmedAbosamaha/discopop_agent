@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_smoke4/benchmarks/polybench/floyd-warshall/default/claude-haiku-4-5-20251001/rep1/work/floyd-warshall.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_smoke4/benchmarks/polybench/floyd-warshall/default/claude-haiku-4-5-20251001/rep1/work/floyd-warshall.c
+@@ -70,6 +70,7 @@
+     {
+       /* Compute shortest paths through vertex k.
+          Write to tmp instead of path to enable parallelism in i,j loops. */
++      #pragma omp parallel for firstprivate(k,const_n) private(j) shared(path,tmp) 
+       for(i = 0; i < const_n; i++)
+ 	for (j = 0; j < const_n; j++)
+ 	  tmp[i][j] = path[i][j] < path[i][k] + path[k][j] ?

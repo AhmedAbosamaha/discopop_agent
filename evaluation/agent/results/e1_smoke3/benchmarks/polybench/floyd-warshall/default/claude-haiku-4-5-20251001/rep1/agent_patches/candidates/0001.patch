@@ -1,0 +1,32 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_smoke3/benchmarks/polybench/floyd-warshall/default/claude-haiku-4-5-20251001/rep1/work/floyd-warshall.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_smoke3/benchmarks/polybench/floyd-warshall/default/claude-haiku-4-5-20251001/rep1/work/floyd-warshall.c
+@@ -57,18 +57,28 @@
+ 			   DATA_TYPE POLYBENCH_2D(path,N,N,n,n))
+ {
+   int i, j, k;
++  DATA_TYPE** path_tmp = (DATA_TYPE**)malloc(_PB_N * sizeof(DATA_TYPE*));
++  for (i = 0; i < _PB_N; i++)
++    path_tmp[i] = (DATA_TYPE*)malloc(_PB_N * sizeof(DATA_TYPE));
+ 
+ #pragma scop
+   for (k = 0; k < _PB_N; k++)
+     {
+       for(i = 0; i < _PB_N; i++)
+ 	for (j = 0; j < _PB_N; j++)
+-	  path[i][j] = path[i][j] < path[i][k] + path[k][j] ?
++	  path_tmp[i][j] = path[i][j] < path[i][k] + path[k][j] ?
+ 	    path[i][j] : path[i][k] + path[k][j];
++      for(i = 0; i < _PB_N; i++)
++	for (j = 0; j < _PB_N; j++)
++	  path[i][j] = path_tmp[i][j];
+     }
+ #pragma endscop
+ 
++  for (i = 0; i < _PB_N; i++)
++    free(path_tmp[i]);
++  free(path_tmp);
+ }
++
+ 
+ 
+ int main(int argc, char** argv)

@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_smoke4/benchmarks/polybench/floyd-warshall/default/claude-haiku-4-5-20251001/rep1/work/floyd-warshall.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_smoke4/benchmarks/polybench/floyd-warshall/default/claude-haiku-4-5-20251001/rep1/work/floyd-warshall.c
+@@ -66,6 +66,7 @@
+     tmp[i] = (DATA_TYPE *)malloc(const_n * sizeof(DATA_TYPE));
+ 
+ #pragma scop
++ #pragma omp parallel for private(j) shared(path) 
+   for (k = 0; k < const_n; k++)
+     {
+       /* Compute shortest paths through vertex k.

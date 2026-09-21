@@ -11,6 +11,10 @@ Every row is a directory under `agent/results/` holding a run's complete results
 | `e10` | trials | 2026-09-19T11:14 | rms14562 | finished | 54 | BROKEN 1, FASTER 21, no-change 27, parallel-not-faster 5 | 1201 | 5.6 MB |
 | `e10_dp_alone` | trials | 2026-09-20T00:05 | rms14562 | finished | 15 | FASTER 6, no-change 9 | 300 | 1.5 MB |
 | `e10_lu_fix84` | trials | 2026-09-20T00:05 | rms14562 | finished | 12 | FASTER 6, no-change 3, parallel-not-faster 3 | 266 | 1.4 MB |
+| `e1_smoke` | trials | 2026-09-21T05:12 | rms14562 | finished | 4 | no-change 4 | 86 | 0.5 MB |
+| `e1_smoke2` | trials | 2026-09-21T05:42 | rms14562 | finished | 1 | no-change 1 | 45 | 0.2 MB |
+| `e1_smoke3` | trials | 2026-09-21T05:52 | rms14562 | finished | 2 | no-change 2 | 64 | 0.3 MB |
+| `e1_smoke4` | trials | 2026-09-21T06:38 | rms14562 | finished | 4 | no-change 4 | 88 | 0.5 MB |
 | `e2e_review_2026-09-18` | e2e review 2026-09-18: the whole agent under the arms' argument sets (Sonnet, calibration programs; not an experiment) | 2026-09-17T23:30 | ahmeds-MacBook-Pro.local | files | 0 | — | 151 | 0.3 MB |
 | `integrity_smoke_local` | trials | 2026-09-18T16:24 | ahmeds-MacBook-Pro.local | finished | 4 | FASTER 4 | 72 | 0.3 MB |
 | `local_obs1` | trials | 2026-09-16T23:29 | ahmeds-MacBook-Pro.local | running | 3 | FASTER 1, SCAFFOLD_MODIFIED 1, parallel-not-faster 1 | 69 | 0.5 MB |
