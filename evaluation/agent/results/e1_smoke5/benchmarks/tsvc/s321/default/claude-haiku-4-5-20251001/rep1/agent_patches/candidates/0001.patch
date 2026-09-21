@@ -1,0 +1,32 @@
+--- s321.c
++++ s321.c
+@@ -134,8 +134,27 @@
+ static real_t kernel_s321(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
+-        for (int i = 1; i < LEN_1D; i++) {
+-            a[i] += a[i-1] * b[i];
++        /* Split into ordered sub-passes over disjoint (odd/even) elements.
++         * Each pass updates a subset with no intra-pass dependencies.
++         * Repeat passes to allow wavefront propagation through the array.
++         */
++        int num_rounds = 1;
++        int tmp = LEN_1D;
++        while (tmp > 1) { tmp >>= 1; num_rounds++; }
++
++        for (int round = 0; round < num_rounds; round++) {
++            /* Odd-indexed pass: a[1], a[3], a[5], ...
++             * Each reads a[i-1] (even, not updated in this pass).
++             */
++            for (int i = 1; i < LEN_1D; i += 2) {
++                a[i] += a[i-1] * b[i];
++            }
++            /* Even-indexed pass: a[2], a[4], a[6], ...
++             * Each reads a[i-1] (odd, updated by previous odd pass).
++             */
++            for (int i = 2; i < LEN_1D; i += 2) {
++                a[i] += a[i-1] * b[i];
++            }
+         }
+         pb_mix(nl);
+     }

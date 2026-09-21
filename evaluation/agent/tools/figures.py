@@ -157,6 +157,7 @@ def flat_row(t: dict) -> dict:
         "model_seconds": (t.get("llm_usage") or {}).get("model_seconds"),
         "candidates_recorded": t.get("candidates_recorded"),
         "reverts": t.get("reverts"), "gate_passes_phase_a": t.get("gate_passes_phase_a"),
+        "speed_check_off": t.get("speed_check_off"),
         "refresh_fast": t.get("refresh_fast"), "refresh_full": t.get("refresh_full"),
         "refresh_fallback": t.get("refresh_fallback"),
         "runtime_remeasurements": t.get("runtime_remeasurements"),

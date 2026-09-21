@@ -1,0 +1,21 @@
+--- s321.c
++++ s321.c
+@@ -134,8 +134,16 @@
+ static real_t kernel_s321(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
+-        for (int i = 1; i < LEN_1D; i++) {
+-            a[i] += a[i-1] * b[i];
++        /* Logarithmic iterations: each round allows values to propagate one doubling distance */
++        for (int round = 0; round < 32; round++) {  /* log2(LEN_1D) rounds for full propagation */
++            /* Process odd indices: independent within the round */
++            for (int i = 1; i < LEN_1D; i += 2) {
++                a[i] += a[i-1] * b[i];
++            }
++            /* Process even indices: independent within the round */
++            for (int i = 2; i < LEN_1D; i += 2) {
++                a[i] += a[i-1] * b[i];
++            }
+         }
+         pb_mix(nl);
+     }

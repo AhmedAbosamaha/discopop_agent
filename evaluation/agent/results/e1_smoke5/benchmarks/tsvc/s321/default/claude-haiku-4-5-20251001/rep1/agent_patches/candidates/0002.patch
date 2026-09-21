@@ -1,0 +1,23 @@
+--- s321.c
++++ s321.c
+@@ -134,7 +134,19 @@
+ static real_t kernel_s321(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
+-        for (int i = 1; i < LEN_1D; i++) {
++        /* Split into ordered sub-passes over disjoint (odd/even) elements.
++         * Each pass updates a subset with no intra-pass dependencies → Do-All.
++         * Odd-indexed pass: a[1], a[3], a[5], ...
++         * Each iteration reads a[i-1] (even, untouched in this pass).
++         */
++        for (int i = 1; i < LEN_1D; i += 2) {
++            a[i] += a[i-1] * b[i];
++        }
++        /* Even-indexed pass: a[2], a[4], a[6], ...
++         * Each iteration reads a[i-1] (odd, updated by preceding pass).
++         * No intra-pass dependencies because even indices do not depend on each other.
++         */
++        for (int i = 2; i < LEN_1D; i += 2) {
+             a[i] += a[i-1] * b[i];
+         }
+         pb_mix(nl);

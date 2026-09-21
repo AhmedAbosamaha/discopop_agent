@@ -1,0 +1,22 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_smoke5/benchmarks/polybench/bicg/default/claude-haiku-4-5-20251001/rep1/work/bicg.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_smoke5/benchmarks/polybench/bicg/default/claude-haiku-4-5-20251001/rep1/work/bicg.c
+@@ -75,12 +75,18 @@
+ #pragma scop
+   for (i = 0; i < _PB_NY; i++)
+     s[i] = 0;
++  for (j = 0; j < _PB_NY; j++)
++    {
++      for (i = 0; i < _PB_NX; i++)
++	{
++	  s[j] = s[j] + r[i] * A[i][j];
++	}
++    }
+   for (i = 0; i < _PB_NX; i++)
+     {
+       q[i] = 0;
+       for (j = 0; j < _PB_NY; j++)
+ 	{
+-	  s[j] = s[j] + r[i] * A[i][j];
+ 	  q[i] = q[i] + A[i][j] * p[j];
+ 	}
+     }

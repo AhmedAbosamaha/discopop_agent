@@ -1832,6 +1832,55 @@ Added 2026-09-15 (see §6 rows of that date):
 
 ## 7. Run log
 
+### `e1_smoke5` — 2026-09-21, server, **the pre-flight smoke that finally passes: one benchmark of every kind E1 contains** (8 trials, Haiku)
+
+- **Setup.** `tsvc/s211` (class R), `polybench/bicg` (class R, NO timing size — the harness
+  switches the agent's speed check off), `polybench/2mm` (class A), `tsvc/s321` (class D) ×
+  `discopop_gate`, `default` × 1; threads 6/12, 5 repeats; commit `721369dd`; host load
+  5,000–7,000 from other users. Arm check: the arms differ in `--budget` only, verified with
+  the untimeable kernel in the list (which would have refused the run the day before).
+- **Main comparison (D19):**
+
+  | benchmark | class | DiscoPoP alone | agent | agent / DiscoPoP alone | verdict |
+  |---|---|---|---|---:|---|
+  | `polybench/2mm` | A | FASTER 9.49× | FASTER 10.62× | 1.12× | **better** |
+  | `polybench/bicg` | R | no-change | no-change | 1.00× | neither |
+  | `tsvc/s211` | R | no-change | parallel-not-faster 1.06× | 1.06× | **gained-not-faster** |
+  | `tsvc/s321` | D | no-change | no-change (9 calls) | 1.00× | neither — no unsafe acceptance |
+
+- **`s211`: the restructuring path works end to end for the first time under the campaign's
+  defaults.** `[refresh] kind=full` → `Re-measured runtimes: 17 region(s), 4.9 ms` (no longer
+  halved, Fix 87) → `4 new at depth 1` → `DiscoPoP now finds: do_all @ 137–139, do_all @
+  140–142` → Phase B with TWO candidates: the racy half **dropped by TSan** (a genuine DiscoPoP
+  false positive), the parallel half `marginal 1.17×` → **APPLIED** → Settle verifies the
+  finished file. Both loops now show `W=3,071,808`; the second read `320` before Fix 88.
+  Verified independently at 1.06× / 1.04× (6 / 12 threads): only half of the kernel is parallel
+  and the model split the loop without the temporary the expert reference uses (2.73× with all
+  three loops parallel), so the honest verdict is *gained, not faster*. The agent keeps a
+  Phase B pragma that is not slower (marginal ≥ the measured noise floor) and whose finished
+  program is not slower than the original; 1.1× is what the HARNESS asks before it calls a
+  result FASTER. Both are reported.
+- **`bicg`**: speed check correctly OFF (no size of this kernel can be timed). The rewrite
+  passed the gate; all three DiscoPoP pragmas on it were racy and were rejected — one by TSan,
+  two by the schedule matrix ("two runs at the SAME thread count printed different output").
+- **`2mm`**: the model FUSED the two outer loops (row *i* of `D` needs only row *i* of `tmp`),
+  DiscoPoP annotated the one fused loop: one parallel region instead of two.
+- **`s321`**: nine attempts, every wrong rewrite rejected at `correctness`.
+- **New per-trial records, all populated:** `refresh_full` 1 / `refresh_fast` 0 /
+  `refresh_fallback` 0, `runtime_remeasurements` 1, `explorer_stalls` 0. **Found by reading
+  them:** `speed_check_off` was promised per trial and written to the run manifest only —
+  `None` on every trial; now on each trial and in `trials.csv`, with the timing flags used.
+- **`floyd-warshall`, the open question from smoke 3/4, settled by measurement:** on the
+  ORIGINAL all three DiscoPoP pragmas fail TSan (iteration *k* writes row *k*, with the value
+  it already holds, while the others read it — benign, and formally a race). The model's
+  race-free rewrites differ in cost: the full N×N copy of smoke 3/4 verifies at **0.69×**
+  (STANDARD) and **0.76×** (LARGE) with DiscoPoP's pragma, 6/12/24 threads, measured apart from
+  the agent — the gate's 0.28–0.37× rejection was RIGHT; E10's accepted version copies only
+  row *k* (O(N) per step) and verified at 5.8–9.6×. So floyd can be won under `default`, and
+  whether it is depends on the model's draw — which is what five repeats are for.
+- **Exhibits:** `s211_distributed_dp_annotates_exposed_loop`, `2mm_default_vs_dp_alone`,
+  `s321_recurrence_declined_9_attempts`.
+
 ### `e1_smoke3`, `e1_smoke4` — 2026-09-21, server, **the smoke followed to the end: two defects between a correct rewrite and Phase B** (Fixes 86, 87)
 
 - **Setup.** `polybench/floyd-warshall` and `tsvc/s211`, arm `default`, Haiku, × 1, threads 6/12,

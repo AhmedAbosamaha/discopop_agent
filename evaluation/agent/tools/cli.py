@@ -1459,6 +1459,15 @@ def cmd_run(a: argparse.Namespace) -> int:
                                             model, a, cc, cxx)
                             rec["profile"] = prof
                             rec["package_integrity"] = integrity
+                            # What the agent's own speed check was given for THIS kernel: the
+                            # harness switches it off where no size can be timed, and a gain on
+                            # such a kernel was never speed-judged inside the agent. It was
+                            # promised "per trial" and written to the manifest only until
+                            # 2026-09-21, where no per-trial analysis could see it.
+                            _tf = _timing_flags(arms[arm], bench)
+                            rec["speed_check_off"] = ("--no-require-speedup" in _tf
+                                                      or "--no-require-speedup" in arms[arm]["flags"])
+                            rec["timing_flags"] = _tf
                             try:
                                 integrity["after"] = check_package(bench, bench_dir, profile_dir,
                                                                    "after trial")
