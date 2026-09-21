@@ -1,0 +1,10 @@
+--- s313.c
++++ s313.c
+@@ -134,6 +134,7 @@
+ static real_t kernel_s313(void)
+ {
+     real_t dot;
++    #pragma omp parallel for lastprivate(dot) 
+     for (int nl = 0; nl < R; nl++) {
+         dot = (real_t)0.;
+         for (int i = 0; i < LEN_1D; i++) {

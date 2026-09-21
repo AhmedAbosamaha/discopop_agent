@@ -1,0 +1,124 @@
+
+============================================================
+  DiscoPoP Agentic Controller
+============================================================
+  Source         : hotspot.cpp
+  DiscoPoP dir   : .discopop
+  Model          : none
+  Budget         : 0 LLM retries/region (+2 free build fixes)
+  λ penalty      : 1.0
+  Min workload   : 0.0
+  Restruct. depth: 0 (Tier-2 allowed at depth 0–0)
+  Quality gate   : Tier-1 = all but speed, no escalation; Tier-2 = full
+  TSan           : barrier-aware (archer: /usr/lib/llvm-20/lib/libarcher.so)
+  Speedup gate   : OFF (--no-require-speedup)
+  Dry run        : False
+  LLM mode       : none
+  Edit mode      : direct
+  Re-profiling   : fast refresh (compile only) between rewrites; full before a deeper level and before Phase B
+  Pragmas        : DiscoPoP writes them in Phase B
+============================================================
+
+  [ok] Captured reference output on 2 inputs (70 bytes, 307.7 ms baseline) for the correctness/performance gates.
+
+  [ok] Numerical noise floor 1.67e-11 of output scale (widest disagreement 1.67e-12 of output scale across 6 build variants, x10 margin — on input '7').
+  [note] values may move that far without failing the correctness gate; labels, line structure and integers must still match exactly.
+
+  Hotspots       : measured per-region runtimes are available — 17 region(s) measured, 4330.0 ms total, ranking by predicted time saved at 48 threads
+
+  Baseline       : DiscoPoP proposes 6 applicable pattern(s) unaided; 6 of them produce a usable pragma
+                   → the run beats DiscoPoP by ending with more than 6
+
+  Initial candidates
+Region ID    Type           Saves    % run    Hot  Tier  Depth  Name
+--------------------------------------------------------------------------------------
+  1:102      loop       4045.6 ms    95.4%    YES     2      0  lines 255–264
+  1:4        loop       4045.5 ms    95.4%    YES     1      0  lines 147–224
+  1:94       function   4045.6 ms    95.4%    YES     2      0  _Z17compute_tran_tempPfiS_S_ii
+  0:0        function   4045.5 ms    95.4%    YES     1      0  _Z16single_iterationPfS_S_iifffff
+  1:76       loop       3751.3 ms    88.5%    YES     1      0  lines 213–223
+  1:79       loop       2732.7 ms    64.5%    YES     1      0  lines 215–222
+  1:14       loop        227.4 ms     5.4%  MAYBE     1      0  lines 156–209
+  1:17       loop        160.8 ms     3.8%  MAYBE     1      0  lines 157–208
+
+============================================================
+  PHASE A — restructure  (the source stays pragma-free)
+============================================================
+
+┌─ [depth=0] loop 1:102 (lines 255–264)  score=4.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:4 (lines 147–224)  score=4.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] function 1:94 (lines 226–269)  score=4.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] function 0:0 (lines 147–225)  score=4.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:76 (lines 213–223)  score=3.8
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:79 (lines 215–222)  score=2.7
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:14 (lines 156–209)  score=0.2
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:17 (lines 157–208)  score=0.2
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+
+============================================================
+  PHASE B — annotate  (6 candidate pragma(s))
+============================================================
+
+┌─ pattern #166  do_all @ lines 147–225  (W=0)
+│  #pragma omp parallel for
+│  gate failed at 'schedules': output changed at 4 threads with schedule dynamic,1 relative to 4 threads. the patched program printed 1 numbers, the original 3 — a different amount 
+└─ DROPPED
+
+┌─ pattern #166  do_all @ lines 147–224  (W=77)
+│  #pragma omp parallel for
+│  gate failed at 'schedules': output changed at 4 threads with schedule dynamic,1 relative to 4 threads. the patched program printed 1 numbers, the original 3 — a different amount 
+└─ DROPPED
+
+┌─ pattern #168  do_all @ lines 213–223  (W=10)
+│  #pragma omp parallel for
+│  gate failed at 'tsan': Race detected: WARNING: ThreadSanitizer: data race (pid=2803008)   Write of size 4 at 0x7fffffffe774 by thread T3:     #0 single_iteration(float*, flo
+└─ DROPPED
+
+┌─ pattern #167  do_all @ lines 215–222  (W=7)
+│  #pragma omp parallel for
+│  gate failed at 'tsan': TSan run timed out (300 s) — the sanitized build is too slow to check this workload for races
+└─ DROPPED
+
+┌─ pattern #165  do_all @ lines 156–209  (W=53)
+│  #pragma omp parallel for
+│  gate failed at 'schedules': the program does not repeat itself: two runs at the SAME thread count (4) printed different output. That is a data race, independent of how small the 
+└─ DROPPED
+
+┌─ pattern #164  do_all @ lines 157–208  (W=51)
+│  #pragma omp parallel for
+│  gate failed at 'schedules': the program does not repeat itself: two runs at the SAME thread count (4) printed different output. That is a data race, independent of how small the 
+└─ DROPPED
+
+
+============================================================
+  SUMMARY: 0 rewrite(s) kept  |  0 pragma(s) applied  |  2 skipped
+  DiscoPoP unaided: 6 usable pragma(s) in this profile's draw  →  this run: 0   [BELOW, informational]
+    ✗  1:102  [skipped]  depth=0
+    ✗  1:94  [skipped]  depth=0
+
+  Results → .discopop/agent_patches/accepted.json
+============================================================
+

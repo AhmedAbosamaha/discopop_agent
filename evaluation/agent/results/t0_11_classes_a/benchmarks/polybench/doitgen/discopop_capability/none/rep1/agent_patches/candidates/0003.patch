@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/t0_11_classes_a/benchmarks/polybench/doitgen/discopop_capability/none/rep1/work/doitgen.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/t0_11_classes_a/benchmarks/polybench/doitgen/discopop_capability/none/rep1/work/doitgen.c
+@@ -70,6 +70,7 @@
+     for (q = 0; q < _PB_NQ; q++)  {
+       for (p = 0; p < _PB_NP; p++)  {
+ 	sum[r][q][p] = 0;
++	#pragma omp parallel for firstprivate(q,r,np,p) shared(C4,A,sum) 
+ 	for (s = 0; s < _PB_NP; s++)
+ 	  sum[r][q][p] = sum[r][q][p] + A[r][q][s] * C4[s][p];
+       }

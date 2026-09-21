@@ -23,6 +23,9 @@ Every row is a directory under `agent/results/` holding a run's complete results
 | `proj_smoke_local` | trials | 2026-09-18T07:23 | ahmeds-MacBook-Pro.local | finished | 2 | FASTER 2 | 50 | 0.1 MB |
 | `smoke_local_seidel2d_c` | trials | 2026-09-14T18:11 | ahmeds-MacBook-Pro.local | finished | 1 | FASTER 1 | 28 | 0.2 MB |
 | `smoke_local_seidel2d_c_seeded` | trials | 2026-09-14T22:05 | ahmeds-MacBook-Pro.local | finished | 1 | no-change 1 | 23 | 0.2 MB |
+| `t0_11_classes_a` | trials | 2026-09-20T14:00 | rms14562 | finished | 56 | FASTER 16, PROFILE_ERROR 2, no-change 29, parallel-not-faster 3, parallel-speed-not-measurable 6 | 1151 | 15.4 MB |
+| `t0_11_classes_b` | trials | 2026-09-20T21:15 | rms14562 | finished | 55 | FASTER 14, PROFILE_ERROR 5, no-change 26, parallel-not-faster 3, parallel-speed-not-measurable 7 | 1102 | 8.1 MB |
+| `t0_11_classes_c` | trials | 2026-09-21T00:18 | rms14562 | finished | 55 | FASTER 14, PROFILE_ERROR 5, no-change 26, parallel-not-faster 3, parallel-speed-not-measurable 7 | 1102 | 8.1 MB |
 | `t0_1_apps` | T0.1 verification size per kernel | 2026-09-16T15:03 | rms14562 | files | 0 | — | 2 | 0.0 MB |
 | `t0_1_sizes` | T0.1 verification size per kernel | 2026-09-15T20:43 | rms14562 | files | 0 | — | 2 | 0.0 MB |
 | `t0_1_sizes_v2` | T0.1 verification size per kernel | 2026-09-18T14:43 | rms14562 | files | 0 | — | 2 | 0.0 MB |
@@ -44,7 +47,3 @@ Every row is a directory under `agent/results/` holding a run's complete results
 | `t0_8_packaging_fix` | other | 2026-09-19T14:25 | — | files | 0 | — | 2 | 0.1 MB |
 | `t0_8_packaging_mac` | T0.8 packaging equivalence | 2026-09-18T15:15 | ahmeds-MacBook-Pro.local | files | 0 | — | 2 | 0.1 MB |
 | `vs_polly` | trials | 2026-09-16T07:16 | rms14562 | running | 1 | FASTER 1 | 8 | 0.0 MB |
-- [_launcher_logs](_launcher_logs/) — the launch command, progress and credential sweep of every run executed on the server (provenance)
-- [_diagnostic_logs](_diagnostic_logs/) — the probes behind the DiscoPoP bug reports (B2, B3, B5, L2, L3) and the packaging/instrument launch logs
-- [t0_10_tsvc_ceiling](t0_10_tsvc_ceiling/) — T0.10: what the expert solution of each TSVC loop reaches on the server (42 rows, all correct, 0.87x-4.64x)
-- [t0_10_tsvc_ceiling_v2](t0_10_tsvc_ceiling_v2/) — T0.10 re-measured at the sizes the experiments use: 42/42 correct, 1.87x-6.40x (median 4.10x); supersedes the v1 measurement

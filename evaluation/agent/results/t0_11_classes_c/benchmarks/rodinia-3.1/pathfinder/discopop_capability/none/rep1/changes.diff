@@ -1,0 +1,10 @@
+--- original.cpp
++++ final.cpp
+@@ -154,6 +154,7 @@
+       temp = src;
+       src = dst;
+       dst = temp;
++      #pragma omp parallel for firstprivate(src,t) private(min) shared(dst) 
+       for(int n = 0; n < cols; n++){
+         min = src[n];
+         if (n > 0)

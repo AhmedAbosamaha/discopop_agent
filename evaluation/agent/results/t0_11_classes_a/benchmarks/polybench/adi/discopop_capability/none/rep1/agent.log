@@ -1,0 +1,161 @@
+
+============================================================
+  DiscoPoP Agentic Controller
+============================================================
+  Source         : /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/t0_11_classes_a/benchmarks/polybench/adi/discopop_capability/none/rep1/work/adi.c
+  DiscoPoP dir   : .discopop
+  Model          : none
+  Budget         : 0 LLM retries/region (+2 free build fixes)
+  λ penalty      : 1.0
+  Min workload   : 0.0
+  Restruct. depth: 0 (Tier-2 allowed at depth 0–0)
+  Quality gate   : Tier-1 = all but speed, no escalation; Tier-2 = full
+  TSan           : barrier-aware (archer: /usr/lib/llvm-20/lib/libarcher.so)
+  Speedup gate   : OFF (--no-require-speedup)
+  Dry run        : False
+  LLM mode       : none
+  Edit mode      : direct
+  Re-profiling   : fast refresh (compile only) between rewrites; full before a deeper level and before Phase B
+  Pragmas        : DiscoPoP writes them in Phase B
+============================================================
+
+  Project        : /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/t0_11_classes_a/benchmarks/polybench/adi/discopop_capability/none/rep1/work  (2 unit(s): adi.c, polybench.c)
+
+  [ok] Captured reference output on 2 inputs (78 bytes, 17.0 ms baseline) for the correctness/performance gates.
+
+  [ok] Numerical noise floor 0 — 6 build variants agreed exactly; output is compared byte-for-byte.
+
+  Hotspots       : measured per-region runtimes are available — 25 region(s) measured, 65.1 ms total, ranking by predicted time saved at 48 threads
+
+  Baseline       : DiscoPoP proposes 9 applicable pattern(s) unaided; 9 of them produce a usable pragma
+                   → the run beats DiscoPoP by ending with more than 9
+
+  Initial candidates
+Region ID    Type           Saves    % run    Hot  Tier  Depth  Name
+--------------------------------------------------------------------------------------
+  1:92       loop         42.6 ms    66.8%    YES     1      0  lines 71–99
+  3:89       function     42.6 ms    66.8%    YES     2      0  kernel_adi
+  1:95       loop         16.6 ms    26.1%    YES     1      0  lines 73–78
+  1:98       loop         16.5 ms    25.8%    YES     1      0  lines 74–78
+  1:121      loop          9.7 ms    15.2%  MAYBE     1      0  lines 87–91
+  1:124      loop          9.5 ms    14.9%  MAYBE     1      0  lines 88–91
+  1:110      loop          8.8 ms    13.8%  MAYBE     1      0  lines 83–85
+  1:113      loop          8.6 ms    13.5%  MAYBE     1      0  lines 84–85
+  1:136      loop          7.5 ms    11.7%  MAYBE     1      0  lines 96–98
+  1:139      loop          7.3 ms    11.4%  MAYBE     1      0  lines 97–98
+
+============================================================
+  PHASE A — restructure  (the source stays pragma-free)
+============================================================
+
+┌─ [depth=0] loop 1:92 (lines 71–99)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] function 3:89 (lines 62–102)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:95 (lines 73–78)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:98 (lines 74–78)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:121 (lines 87–91)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:124 (lines 88–91)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:110 (lines 83–85)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:113 (lines 84–85)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:136 (lines 96–98)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:139 (lines 97–98)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+
+============================================================
+  PHASE B — annotate  (9 candidate pragma(s))
+============================================================
+
+  5 loop(s) are already parallel in the source; nothing is nested inside them.
+
+┌─ pattern #42  do_all @ lines 71–99  (W=140000)
+│  #pragma omp parallel for
+│  gate failed at 'tsan': Race detected: WARNING: ThreadSanitizer: data race (pid=2777877)   Write of size 4 at 0x7fffffffe7d4 by thread T2:     #0 kernel_adi.omp_outlined_debu
+└─ DROPPED
+
+┌─ pattern #33  do_all @ lines 73–78  (W=12475000)
+│  #pragma omp parallel for
+│  [Phase-B] Original backed up → adi.c.original
+│  [Phase-B] Applied to adi.c
+└─ APPLIED
+
+┌─ pattern #32  do_all @ lines 74–78  (W=20000)
+│  #pragma omp parallel for
+│  nested inside the already-parallelized region at lines 73–78
+└─ SKIPPED (enclosing loop is already parallel)
+
+┌─ pattern #38  do_all @ lines 87–91  (W=9980000)
+│  #pragma omp parallel for
+│  gate failed at 'tsan': Race detected: WARNING: ThreadSanitizer: data race (pid=2778032)   Read of size 8 at 0x7ffff4e2b820 by thread T1:     #0 kernel_adi.omp_outlined_debug
+└─ DROPPED
+
+┌─ pattern #37  do_all @ lines 88–91  (W=15000)
+│  #pragma omp parallel for
+│  [Phase-B] Applied to adi.c
+└─ APPLIED
+
+┌─ pattern #36  do_all @ lines 83–85  (W=4980000)
+│  #pragma omp parallel for
+│  [Phase-B] Applied to adi.c
+└─ APPLIED
+
+┌─ pattern #35  do_all @ lines 84–85  (W=4990)
+│  #pragma omp parallel for
+│  nested inside the already-parallelized region at lines 83–85
+└─ SKIPPED (enclosing loop is already parallel)
+
+┌─ pattern #41  do_all @ lines 96–98  (W=4980000)
+│  #pragma omp parallel for
+│  gate failed at 'tsan': Race detected: WARNING: ThreadSanitizer: data race (pid=2778297)   Read of size 8 at 0x7ffff4e2a880 by thread T22:     #0 kernel_adi.omp_outlined_debu
+└─ DROPPED
+
+┌─ pattern #40  do_all @ lines 97–98  (W=500)
+│  #pragma omp parallel for
+│  [Phase-B] Applied to adi.c
+└─ APPLIED
+
+============================================================
+  SETTLING — verify the finished source, drop what does not hold up
+============================================================
+  [ok] finished source verified — output matches the original
+
+
+============================================================
+  SUMMARY: 0 rewrite(s) kept  |  4 pragma(s) applied  |  1 skipped
+  DiscoPoP unaided: 9 usable pragma(s) in this profile's draw  →  this run: 4   [BELOW, informational]
+    ✓  loop 1:95  [Phase-B pragma]  depth=0
+    ✓  loop 1:124  [Phase-B pragma]  depth=0
+    ✓  loop 1:110  [Phase-B pragma]  depth=0
+    ✓  loop 1:139  [Phase-B pragma]  depth=0
+    ✗  3:89  [skipped]  depth=0
+
+  Results → .discopop/agent_patches/accepted.json
+============================================================
+

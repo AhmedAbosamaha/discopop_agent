@@ -1,0 +1,160 @@
+
+============================================================
+  DiscoPoP Agentic Controller
+============================================================
+  Source         : /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/t0_11_classes_c/benchmarks/polybench/reg_detect/discopop_capability/none/rep1/work/reg_detect.c
+  DiscoPoP dir   : .discopop
+  Model          : none
+  Budget         : 0 LLM retries/region (+2 free build fixes)
+  λ penalty      : 1.0
+  Min workload   : 0.0
+  Restruct. depth: 0 (Tier-2 allowed at depth 0–0)
+  Quality gate   : Tier-1 = all but speed, no escalation; Tier-2 = full
+  TSan           : barrier-aware (archer: /usr/lib/llvm-20/lib/libarcher.so)
+  Speedup gate   : OFF (--no-require-speedup)
+  Dry run        : False
+  LLM mode       : none
+  Edit mode      : direct
+  Re-profiling   : fast refresh (compile only) between rewrites; full before a deeper level and before Phase B
+  Pragmas        : DiscoPoP writes them in Phase B
+============================================================
+
+  Project        : /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/t0_11_classes_c/benchmarks/polybench/reg_detect/discopop_capability/none/rep1/work  (2 unit(s): reg_detect.c, polybench.c)
+
+  [ok] Captured reference output on 2 inputs (41 bytes, 0.0 ms baseline) for the correctness/performance gates.
+
+  [ok] Numerical noise floor 0 — output holds no non-integer number; the floor is 0 by construction, so the remaining build variants were skipped; output is compared byte-for-byte.
+
+  Hotspots       : measured per-region runtimes are available — 24 region(s) measured, 0.8 ms total, ranking by predicted time saved at 48 threads
+
+  Baseline       : DiscoPoP proposes 9 applicable pattern(s) unaided; 9 of them produce a usable pragma
+                   → the run beats DiscoPoP by ending with more than 9
+
+  Initial candidates
+Region ID    Type           Saves    % run    Hot  Tier  Depth  Name
+--------------------------------------------------------------------------------------
+  1:109      loop          0.8 ms    97.2%    YES     1      0  lines 71–95
+  3:106      function      0.8 ms    97.2%    YES     2      0  kernel_reg_detect
+  1:127      loop          0.4 ms    56.3%    YES     1      0  lines 78–87
+  1:130      loop          0.3 ms    43.0%    YES     1      0  lines 80–86
+  1:112      loop          0.3 ms    34.4%    YES     1      0  lines 73–76
+  1:115      loop          0.2 ms    31.0%    YES     1      0  lines 74–76
+  1:134      loop          0.2 ms    30.6%    YES     1      0  lines 83–84
+  1:118      loop          0.2 ms    20.1%  MAYBE     1      0  lines 75–76
+  1:148      loop          0.0 ms     4.6%  MAYBE     1      0  lines 92–94
+  1:151      loop          0.0 ms     1.9%  MAYBE     1      0  lines 93–94
+
+============================================================
+  PHASE A — restructure  (the source stays pragma-free)
+============================================================
+
+┌─ [depth=0] loop 1:109 (lines 71–95)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] function 3:106 (lines 61–98)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:127 (lines 78–87)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:130 (lines 80–86)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:112 (lines 73–76)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:115 (lines 74–76)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:134 (lines 83–84)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:118 (lines 75–76)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:148 (lines 92–94)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:151 (lines 93–94)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+
+============================================================
+  PHASE B — annotate  (9 candidate pragma(s))
+============================================================
+
+  5 loop(s) are already parallel in the source; nothing is nested inside them.
+
+┌─ pattern #47  do_all @ lines 71–95  (W=24)
+│  #pragma omp parallel for
+│  gate failed at 'tsan': Race detected: WARNING: ThreadSanitizer: data race (pid=2994514)   Write of size 4 at 0x7fffffffe7d4 by thread T7:     #0 kernel_reg_detect.omp_outlin
+└─ DROPPED
+
+┌─ pattern #43  do_all @ lines 78–87  (W=9)
+│  #pragma omp parallel for
+│  [Phase-B] Original backed up → reg_detect.c.original
+│  [Phase-B] Applied to reg_detect.c
+└─ APPLIED
+
+┌─ pattern #42  do_all @ lines 80–86  (W=6)
+│  #pragma omp parallel for
+│  nested inside the already-parallelized region at lines 78–87
+└─ SKIPPED (enclosing loop is already parallel)
+
+┌─ pattern #40  do_all @ lines 73–76  (W=3)
+│  #pragma omp parallel for
+│  [Phase-B] Applied to reg_detect.c
+└─ APPLIED
+
+┌─ pattern #39  do_all @ lines 74–76  (W=2)
+│  #pragma omp parallel for
+│  nested inside the already-parallelized region at lines 73–76
+└─ SKIPPED (enclosing loop is already parallel)
+
+┌─ pattern #41  do_all @ lines 83–84  (W=1)
+│  #pragma omp parallel for
+│  nested inside the already-parallelized region at lines 78–87
+└─ SKIPPED (enclosing loop is already parallel)
+
+┌─ pattern #38  do_all @ lines 75–76  (W=1)
+│  #pragma omp parallel for
+│  nested inside the already-parallelized region at lines 73–76
+└─ SKIPPED (enclosing loop is already parallel)
+
+┌─ pattern #46  do_all @ lines 92–94  (W=2)
+│  #pragma omp parallel for
+│  gate failed at 'tsan': Race detected: WARNING: ThreadSanitizer: data race (pid=2994786)   Read of size 4 at 0x72280000015c by thread T1:     #0 kernel_reg_detect.omp_outline
+└─ DROPPED
+
+┌─ pattern #45  do_all @ lines 93–94  (W=1)
+│  #pragma omp parallel for
+│  [Phase-B] Applied to reg_detect.c
+└─ APPLIED
+
+============================================================
+  SETTLING — verify the finished source, drop what does not hold up
+============================================================
+  [ok] finished source verified — output matches the original
+
+
+============================================================
+  SUMMARY: 0 rewrite(s) kept  |  3 pragma(s) applied  |  1 skipped
+  DiscoPoP unaided: 9 usable pragma(s) in this profile's draw  →  this run: 3   [BELOW, informational]
+    ✓  loop 1:127  [Phase-B pragma]  depth=0
+    ✓  loop 1:112  [Phase-B pragma]  depth=0
+    ✓  loop 1:151  [Phase-B pragma]  depth=0
+    ✗  3:106  [skipped]  depth=0
+
+  Results → .discopop/agent_patches/accepted.json
+============================================================
+

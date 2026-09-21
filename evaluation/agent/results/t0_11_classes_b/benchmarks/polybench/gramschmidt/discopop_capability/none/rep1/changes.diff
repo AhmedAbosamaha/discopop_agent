@@ -1,0 +1,10 @@
+--- original.c
++++ final.c
+@@ -92,6 +92,7 @@
+       R[k][k] = sqrt(nrm);
+       for (i = 0; i < _PB_NI; i++)
+         Q[i][k] = A[i][k] / R[k][k];
++      #pragma omp parallel for firstprivate(k,ni,nj) private(i) shared(R,Q,A) 
+       for (j = k + 1; j < _PB_NJ; j++)
+ 	{
+ 	  R[k][j] = 0;

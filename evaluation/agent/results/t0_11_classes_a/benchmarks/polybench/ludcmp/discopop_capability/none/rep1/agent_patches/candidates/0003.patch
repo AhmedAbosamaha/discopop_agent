@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/t0_11_classes_a/benchmarks/polybench/ludcmp/discopop_capability/none/rep1/work/ludcmp.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/t0_11_classes_a/benchmarks/polybench/ludcmp/discopop_capability/none/rep1/work/ludcmp.c
+@@ -77,6 +77,7 @@
+       for (j = i+1; j <= _PB_N; j++)
+         {
+ 	  w = A[j][i];
++	  #pragma omp parallel for firstprivate(i,j) shared(A) reduction(+:w) 
+ 	  for (k = 0; k < i; k++)
+ 	    w = w- A[j][k] * A[k][i];
+ 	  A[j][i] = w / A[i][i];

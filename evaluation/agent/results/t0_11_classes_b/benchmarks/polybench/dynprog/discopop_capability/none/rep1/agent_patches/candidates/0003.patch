@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/t0_11_classes_b/benchmarks/polybench/dynprog/discopop_capability/none/rep1/work/dynprog.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/t0_11_classes_b/benchmarks/polybench/dynprog/discopop_capability/none/rep1/work/dynprog.c
+@@ -69,6 +69,7 @@
+ 	  for (j = i + 1; j <= _PB_LENGTH - 1; j++)
+ 	    {
+ 	      sum_c[i][j][i] = 0;
++	      #pragma omp parallel for firstprivate(j,i) shared(sum_c,c) 
+ 	      for (k = i + 1; k <= j-1; k++)
+ 		sum_c[i][j][k] = sum_c[i][j][k - 1] + c[i][k] + c[k][j];
+ 	      c[i][j] = sum_c[i][j][j-1] + W[i][j];

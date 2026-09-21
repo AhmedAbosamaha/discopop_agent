@@ -1,0 +1,10 @@
+--- pathfinder.cpp
++++ pathfinder.cpp
+@@ -167,6 +167,7 @@
+ 
+   /* The original's print order exactly: the whole wall (from init), then `data` — its
+      first row, printed a second time — then the result row `dst`. */
++  #pragma omp parallel for 
+   for (int i = 0; i < rows; i++)
+     for (int j = 0; j < cols; j++)
+       pb_emit((double)wall[i][j]);

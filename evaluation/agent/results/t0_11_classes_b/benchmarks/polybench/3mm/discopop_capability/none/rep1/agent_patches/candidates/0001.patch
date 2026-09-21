@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/t0_11_classes_b/benchmarks/polybench/3mm/discopop_capability/none/rep1/work/3mm.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/t0_11_classes_b/benchmarks/polybench/3mm/discopop_capability/none/rep1/work/3mm.c
+@@ -85,6 +85,7 @@
+ 	  E[i][j] += A[i][k] * B[k][j];
+       }
+   /* F := C*D */
++  #pragma omp parallel for firstprivate(nj,nm,nl) private(k,j) shared(C,F,D) 
+   for (i = 0; i < _PB_NJ; i++)
+     for (j = 0; j < _PB_NL; j++)
+       {

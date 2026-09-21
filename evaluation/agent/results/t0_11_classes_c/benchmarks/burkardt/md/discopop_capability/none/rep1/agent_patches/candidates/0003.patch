@@ -1,0 +1,10 @@
+--- md.cpp
++++ md.cpp
+@@ -343,6 +343,7 @@
+   int i;
+ 
+   d = 0.0;
++  #pragma omp parallel for firstprivate(nd) shared(r1,dr,r2) reduction(+:d) 
+   for ( i = 0; i < nd; i++ )
+   {
+     dr[i] = r1[i] - r2[i];

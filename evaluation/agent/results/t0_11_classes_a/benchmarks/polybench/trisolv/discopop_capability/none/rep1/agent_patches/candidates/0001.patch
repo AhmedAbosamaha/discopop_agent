@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/t0_11_classes_a/benchmarks/polybench/trisolv/discopop_capability/none/rep1/work/trisolv.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/t0_11_classes_a/benchmarks/polybench/trisolv/discopop_capability/none/rep1/work/trisolv.c
+@@ -67,6 +67,7 @@
+   for (i = 0; i < _PB_N; i++)
+     {
+       x[i] = c[i];
++      #pragma omp parallel for firstprivate(i) shared(A,x) 
+       for (j = 0; j <= i - 1; j++)
+         x[i] = x[i] - A[i][j] * x[j];
+       x[i] = x[i] / A[i][i];

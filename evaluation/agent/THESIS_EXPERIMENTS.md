@@ -1738,6 +1738,45 @@ Added 2026-09-15 (see §6 rows of that date):
 
 ## 7. Run log
 
+### `t0_11_classes_a/b/c` — 2026-09-20/21, server, **T0.11: the class of every benchmark** (no model)
+
+- **Why.** E1's arms can only differ on benchmarks where DiscoPoP alone fails; §5k showed the old
+  core set could not test C1 at all. This measures, rather than assumes, what DiscoPoP plus the
+  gate does on every benchmark — and it doubles as the DiscoPoP-alone half of the main comparison
+  (D19), so E1 only has to run the agent side.
+- **Setup.** Arm `discopop_capability` (`--budget 0 --no-require-speedup`: the class question is
+  about CAPABILITY, and with the speed check on a kernel whose DiscoPoP pragma is correct but slow
+  — `lu`, 0.21× — would end `no-change` and be filed as needing restructuring, which is wrong: it
+  needs a better pragma). **Three separate runs, not three repeats**: a run profiles each benchmark
+  once and DiscoPoP's answer follows the draw. 166 trials, threads 6/12, repeats 5, 14:00–03:22.
+- **Result: R 26 · A 26 · D 4**, no benchmark undetermined.
+
+  | suite | R | A | D |
+  |---|---:|---:|---:|
+  | TSVC | 18 | 3 | 4 |
+  | PolyBench | 5 | 22 | — |
+  | applications (`md`, NPB `is`, `hotspot`, `pathfinder`) | 3 | 1 | — |
+
+- **The restructuring suite validates: 25 of 25 TSVC loops come out in the class they were
+  DESIGNED for.** Each package declares its intended `restructuring_class` and `class_table.py`
+  flags any disagreement; it printed none. The 18 restructuring loops defeat DiscoPoP on every
+  usable draw, the 3 controls are parallel on every draw, the 4 recurrences are declined.
+- **Three APPLICATIONS are class R** — `burkardt/md`, NPB `is`, Rodinia `hotspot` — so C1 can be
+  tested at application scale and not only on single loops. That was not guaranteed.
+- **A category the plan had not named: DiscoPoP succeeds AND harms.** Five class-A benchmarks are
+  ones DiscoPoP alone leaves SLOWER than sequential — `ludcmp` 0.15×, `lu` 0.21×, `reg_detect`
+  0.25×, `atax` 0.30×, `dynprog` 0.98×. They are not "needs restructuring" (a profile exists and a
+  verified parallel program is produced) and they are not a clean control either. They are where
+  the speed check should pay, and they are reported as their own row in E1.
+- **Profile errors: 12 of 166 draws (7 %), every one in TSVC (12 of 75, 16 %), none elsewhere** —
+  all the random explorer stall (L5), bounded at 20 min by the phase timeout, falling on different
+  loops in different draws. Excluded from the majority, never read as "DiscoPoP found nothing".
+- **Pre-flight status:** T0.1 (sizes), T0.10 (expert ceiling at the final sizes), T0.4 (timing
+  noise at campaign load) and T0.11 (classes) are done. What remains before E1 is one smoke trial
+  per arm with the logs read.
+- Archives `results/t0_11_classes_{a,b,c}/`, table `results/_analysis/t0_11_classes/`.
+
+
 ### `t0_4_timing_v2` — 2026-09-20, server, **T0.4 repeated under the load the campaign actually runs at**
 
 - **Why repeat it.** The September pass was taken at a host load of 15–430 and stopped before it

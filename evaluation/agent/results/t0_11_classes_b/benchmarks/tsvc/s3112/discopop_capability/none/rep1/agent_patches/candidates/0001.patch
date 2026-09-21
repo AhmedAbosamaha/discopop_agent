@@ -1,0 +1,10 @@
+--- s3112.c
++++ s3112.c
+@@ -136,6 +136,7 @@
+     real_t sum;
+     for (int nl = 0; nl < R; nl++) {
+         sum = (real_t)0.0;
++        #pragma omp parallel for lastprivate(sum) 
+         for (int i = 0; i < LEN_1D; i++) {
+             sum += a[i];
+             b[i] = sum;

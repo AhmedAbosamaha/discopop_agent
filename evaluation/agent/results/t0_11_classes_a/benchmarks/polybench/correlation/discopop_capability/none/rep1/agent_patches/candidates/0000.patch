@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/t0_11_classes_a/benchmarks/polybench/correlation/discopop_capability/none/rep1/work/correlation.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/t0_11_classes_a/benchmarks/polybench/correlation/discopop_capability/none/rep1/work/correlation.c
+@@ -103,6 +103,7 @@
+       }
+ 
+   /* Calculate the m * m correlation matrix. */
++  #pragma omp parallel for firstprivate(n,m) private(j2,i) shared(symmat,data) 
+   for (j1 = 0; j1 < _PB_M-1; j1++)
+     {
+       symmat[j1][j1] = 1.0;

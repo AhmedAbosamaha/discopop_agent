@@ -1,0 +1,10 @@
+--- original.c
++++ final.c
+@@ -765,6 +765,7 @@
+     for (j = 0; j < _PB_NJ; j++)
+       {
+ 	acc = 0;
++	#pragma omp parallel for firstprivate(i,alpha,j) shared(C,B) reduction(+:acc) 
+ 	for (k = 0; k < j - 1; k++)
+ 	  {
+ 	    C[k][j] += alpha * A[k][i] * B[i][j];

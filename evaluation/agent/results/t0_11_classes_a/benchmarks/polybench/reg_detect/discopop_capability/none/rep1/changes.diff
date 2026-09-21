@@ -1,0 +1,24 @@
+--- original.c
++++ final.c
+@@ -756,11 +756,13 @@
+ #pragma scop
+   for (t = 0; t < _PB_NITER; t++)
+     {
++      #pragma omp parallel for firstprivate(length,maxgrid) private(cnt,i) shared(sum_tang,diff) 
+       for (j = 0; j <= _PB_MAXGRID - 1; j++)
+ 	for (i = j; i <= _PB_MAXGRID - 1; i++)
+ 	  for (cnt = 0; cnt <= _PB_LENGTH - 1; cnt++)
+ 	    diff[j][i][cnt] = sum_tang[j][i];
+ 
++      #pragma omp parallel for firstprivate(length,maxgrid) private(cnt,i) shared(mean,sum_diff,diff) 
+       for (j = 0; j <= _PB_MAXGRID - 1; j++)
+         {
+ 	  for (i = j; i <= _PB_MAXGRID - 1; i++)
+@@ -776,6 +778,7 @@
+ 	path[0][i] = mean[0][i];
+ 
+       for (j = 1; j <= _PB_MAXGRID - 1; j++)
++	#pragma omp parallel for firstprivate(maxgrid,j) shared(mean,path) 
+ 	for (i = j; i <= _PB_MAXGRID - 1; i++)
+ 	  path[j][i] = path[j - 1][i - 1] + mean[j][i];
+     }

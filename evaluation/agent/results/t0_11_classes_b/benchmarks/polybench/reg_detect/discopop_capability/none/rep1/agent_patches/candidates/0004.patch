@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/t0_11_classes_b/benchmarks/polybench/reg_detect/discopop_capability/none/rep1/work/reg_detect.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/t0_11_classes_b/benchmarks/polybench/reg_detect/discopop_capability/none/rep1/work/reg_detect.c
+@@ -92,6 +92,7 @@
+ 	path[0][i] = mean[0][i];
+ 
+       for (j = 1; j <= _PB_MAXGRID - 1; j++)
++	#pragma omp parallel for firstprivate(maxgrid,j) shared(mean,path) 
+ 	for (i = j; i <= _PB_MAXGRID - 1; i++)
+ 	  path[j][i] = path[j - 1][i - 1] + mean[j][i];
+     }

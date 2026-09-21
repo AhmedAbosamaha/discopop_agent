@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/t0_11_classes_b/benchmarks/npb/is/discopop_capability/none/rep1/work/IS/is.cpp
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/t0_11_classes_b/benchmarks/npb/is/discopop_capability/none/rep1/work/IS/is.cpp
+@@ -630,6 +630,7 @@
+ 		/* own indexes to determine how many of each there are: their */
+ 		/* individual population */
+ 		m = (i > 0)? bucket_ptrs[i-1] : 0;
++ #pragma omp parallel for firstprivate(i) shared(key_buff_ptr2,key_buff_ptr) 
+ 		for ( k = m; k < bucket_ptrs[i]; k++ )
+ 			key_buff_ptr[key_buff_ptr2[k]]++; /* Now they have individual key population */
+ 		/* To obtain ranks of each key, successively add the individual key */

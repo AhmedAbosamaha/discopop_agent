@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/t0_11_classes_c/benchmarks/polybench/dynprog/discopop_capability/none/rep1/work/dynprog.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/t0_11_classes_c/benchmarks/polybench/dynprog/discopop_capability/none/rep1/work/dynprog.c
+@@ -58,6 +58,7 @@
+   DATA_TYPE out_l = 0;
+ 
+ #pragma scop
++  #pragma omp parallel for firstprivate(length) private(i,j) shared(c,W) reduction(+:out_l) 
+   for (iter = 0; iter < _PB_TSTEPS; iter++)
+     {
+       for (i = 0; i <= _PB_LENGTH - 1; i++)

@@ -1,0 +1,113 @@
+
+============================================================
+  DiscoPoP Agentic Controller
+============================================================
+  Source         : /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/t0_11_classes_a/benchmarks/polybench/fdtd-apml/discopop_capability/none/rep1/work/fdtd-apml.c
+  DiscoPoP dir   : .discopop
+  Model          : none
+  Budget         : 0 LLM retries/region (+2 free build fixes)
+  λ penalty      : 1.0
+  Min workload   : 0.0
+  Restruct. depth: 0 (Tier-2 allowed at depth 0–0)
+  Quality gate   : Tier-1 = all but speed, no escalation; Tier-2 = full
+  TSan           : barrier-aware (archer: /usr/lib/llvm-20/lib/libarcher.so)
+  Speedup gate   : OFF (--no-require-speedup)
+  Dry run        : False
+  LLM mode       : none
+  Edit mode      : direct
+  Re-profiling   : fast refresh (compile only) between rewrites; full before a deeper level and before Phase B
+  Pragmas        : DiscoPoP writes them in Phase B
+============================================================
+
+  Project        : /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/t0_11_classes_a/benchmarks/polybench/fdtd-apml/discopop_capability/none/rep1/work  (2 unit(s): fdtd-apml.c, polybench.c)
+
+  [ok] Captured reference output on 2 inputs (71 bytes, 3.3 ms baseline) for the correctness/performance gates.
+
+  [ok] Numerical noise floor 5.18e-13 of output scale (widest disagreement 5.18e-14 of output scale across 6 build variants, x10 margin).
+  [note] values may move that far without failing the correctness gate; labels, line structure and integers must still match exactly.
+
+  Hotspots       : measured per-region runtimes are available — 21 region(s) measured, 80.9 ms total, ranking by predicted time saved at 48 threads
+
+  Baseline       : DiscoPoP proposes 4 applicable pattern(s) unaided; 4 of them produce a usable pragma
+                   → the run beats DiscoPoP by ending with more than 4
+
+  Initial candidates
+Region ID    Type           Saves    % run    Hot  Tier  Depth  Name
+--------------------------------------------------------------------------------------
+  1:259      loop          5.7 ms     7.2%  MAYBE     1      0  lines 127–162
+  1:262      loop          5.7 ms     7.2%  MAYBE     1      0  lines 129–161
+  3:256      function      5.7 ms     7.2%  MAYBE     2      0  kernel_fdtd_apml
+  1:265      loop          2.9 ms     3.6%  MAYBE     1      0  lines 131–139
+  1:281      loop          2.5 ms     3.1%  MAYBE     1      0  lines 146–154
+
+============================================================
+  PHASE A — restructure  (the source stays pragma-free)
+============================================================
+
+┌─ [depth=0] loop 1:259 (lines 127–162)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:262 (lines 129–161)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] function 3:256 (lines 104–165)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:265 (lines 131–139)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:281 (lines 146–154)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+
+============================================================
+  PHASE B — annotate  (4 candidate pragma(s))
+============================================================
+
+  5 loop(s) are already parallel in the source; nothing is nested inside them.
+
+┌─ pattern #163  do_all @ lines 127–162  (W=35)
+│  #pragma omp parallel for
+│  [Tier-1] Repairing the generated pragma: czp, czm are declared inside the loop body, so cannot appear in a clause
+│  [Phase-B] Original backed up → fdtd-apml.c.original
+│  [Phase-B] Applied to fdtd-apml.c
+└─ APPLIED
+
+┌─ pattern #162  do_all @ lines 129–161  (W=32)
+│  #pragma omp parallel for
+│  [Tier-1] Repairing the generated pragma: czp, czm are declared inside the loop body, so cannot appear in a clause
+│  nested inside the already-parallelized region at lines 127–162
+└─ SKIPPED (enclosing loop is already parallel)
+
+┌─ pattern #160  do_all @ lines 131–139  (W=8)
+│  #pragma omp parallel for
+│  [Tier-1] Repairing the generated pragma: czp, czm are declared inside the loop body, so cannot appear in a clause
+│  nested inside the already-parallelized region at lines 127–162
+└─ SKIPPED (enclosing loop is already parallel)
+
+┌─ pattern #161  do_all @ lines 146–154  (W=8)
+│  #pragma omp parallel for
+│  [Tier-1] Repairing the generated pragma: czp, czm are declared inside the loop body, so cannot appear in a clause
+│  nested inside the already-parallelized region at lines 127–162
+└─ SKIPPED (enclosing loop is already parallel)
+
+============================================================
+  SETTLING — verify the finished source, drop what does not hold up
+============================================================
+  [ok] finished source verified — output matches the original
+
+
+============================================================
+  SUMMARY: 0 rewrite(s) kept  |  1 pragma(s) applied  |  1 skipped
+  DiscoPoP unaided: 4 usable pragma(s) in this profile's draw  →  this run: 1   [BELOW, informational]
+    ✓  loop 1:259  [Phase-B pragma]  depth=0
+    ✗  3:256  [skipped]  depth=0
+
+  Results → .discopop/agent_patches/accepted.json
+============================================================
+

@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/t0_11_classes_a/benchmarks/polybench/adi/discopop_capability/none/rep1/work/adi.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/t0_11_classes_a/benchmarks/polybench/adi/discopop_capability/none/rep1/work/adi.c
+@@ -85,6 +85,7 @@
+ 	for (i2 = 0; i2 < _PB_N-2; i2++)
+ 	  X[i1][_PB_N-i2-2] = (X[i1][_PB_N-2-i2] - X[i1][_PB_N-2-i2-1] * A[i1][_PB_N-i2-3]) / B[i1][_PB_N-3-i2];
+ 
++      #pragma omp parallel for firstprivate(n) private(i2) shared(X,A,B) 
+       for (i1 = 1; i1 < _PB_N; i1++)
+ 	for (i2 = 0; i2 < _PB_N; i2++) {
+ 	  X[i1][i2] = X[i1][i2] - X[i1-1][i2] * A[i1][i2] / B[i1-1][i2];

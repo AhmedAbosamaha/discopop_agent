@@ -1,0 +1,102 @@
+
+============================================================
+  DiscoPoP Agentic Controller
+============================================================
+  Source         : /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/t0_11_classes_c/benchmarks/polybench/syr2k/discopop_capability/none/rep1/work/syr2k.c
+  DiscoPoP dir   : .discopop
+  Model          : none
+  Budget         : 0 LLM retries/region (+2 free build fixes)
+  λ penalty      : 1.0
+  Min workload   : 0.0
+  Restruct. depth: 0 (Tier-2 allowed at depth 0–0)
+  Quality gate   : Tier-1 = all but speed, no escalation; Tier-2 = full
+  TSan           : barrier-aware (archer: /usr/lib/llvm-20/lib/libarcher.so)
+  Speedup gate   : OFF (--no-require-speedup)
+  Dry run        : False
+  LLM mode       : none
+  Edit mode      : direct
+  Re-profiling   : fast refresh (compile only) between rewrites; full before a deeper level and before Phase B
+  Pragmas        : DiscoPoP writes them in Phase B
+============================================================
+
+  Project        : /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/t0_11_classes_c/benchmarks/polybench/syr2k/discopop_capability/none/rep1/work  (2 unit(s): syr2k.c, polybench.c)
+
+  [ok] Captured reference output on 2 inputs (73 bytes, 1.8 ms baseline) for the correctness/performance gates.
+
+  [ok] Numerical noise floor 1.42e-15 of output scale (widest disagreement 1.42e-16 of output scale across 6 build variants, x10 margin — on input '7').
+  [note] values may move that far without failing the correctness gate; labels, line structure and integers must still match exactly.
+
+  Hotspots       : measured per-region runtimes are available — 21 region(s) measured, 14.1 ms total, ranking by predicted time saved at 48 threads
+
+  Baseline       : DiscoPoP proposes 3 applicable pattern(s) unaided; 3 of them produce a usable pragma
+                   → the run beats DiscoPoP by ending with more than 3
+
+  Initial candidates
+Region ID    Type           Saves    % run    Hot  Tier  Depth  Name
+--------------------------------------------------------------------------------------
+  1:110      loop         12.5 ms    90.8%    YES     1      0  lines 80–86
+  1:113      loop         12.5 ms    90.8%    YES     1      0  lines 81–86
+  3:97       function     12.6 ms    90.9%    YES     2      0  kernel_syr2k
+  1:116      loop         12.0 ms    87.0%    YES     1      0  lines 82–86
+
+============================================================
+  PHASE A — restructure  (the source stays pragma-free)
+============================================================
+
+┌─ [depth=0] loop 1:110 (lines 80–86)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:113 (lines 81–86)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] function 3:97 (lines 66–89)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:116 (lines 82–86)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+
+============================================================
+  PHASE B — annotate  (3 candidate pragma(s))
+============================================================
+
+  5 loop(s) are already parallel in the source; nothing is nested inside them.
+
+┌─ pattern #62  do_all @ lines 80–86  (W=98304)
+│  #pragma omp parallel for
+│  [Tier-1] Repairing the generated pragma: B, A are declared inside the loop body, so cannot appear in a clause
+│  [Phase-B] Original backed up → syr2k.c.original
+│  [Phase-B] Applied to syr2k.c
+└─ APPLIED
+
+┌─ pattern #61  do_all @ lines 81–86  (W=640)
+│  #pragma omp parallel for
+│  [Tier-1] Repairing the generated pragma: B, A are declared inside the loop body, so cannot appear in a clause
+│  nested inside the already-parallelized region at lines 80–86
+└─ SKIPPED (enclosing loop is already parallel)
+
+┌─ pattern #60  do_all @ lines 82–86  (W=65536)
+│  #pragma omp parallel for
+│  [Tier-1] Repairing the generated pragma: B, A are declared inside the loop body, so cannot appear in a clause
+│  nested inside the already-parallelized region at lines 80–86
+└─ SKIPPED (enclosing loop is already parallel)
+
+============================================================
+  SETTLING — verify the finished source, drop what does not hold up
+============================================================
+  [ok] finished source verified — output matches the original
+
+
+============================================================
+  SUMMARY: 0 rewrite(s) kept  |  1 pragma(s) applied  |  1 skipped
+  DiscoPoP unaided: 3 usable pragma(s) in this profile's draw  →  this run: 1   [BELOW, informational]
+    ✓  loop 1:110  [Phase-B pragma]  depth=0
+    ✗  3:97  [skipped]  depth=0
+
+  Results → .discopop/agent_patches/accepted.json
+============================================================
+

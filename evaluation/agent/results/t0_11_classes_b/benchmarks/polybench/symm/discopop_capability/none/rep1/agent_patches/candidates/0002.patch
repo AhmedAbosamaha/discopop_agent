@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/t0_11_classes_b/benchmarks/polybench/symm/discopop_capability/none/rep1/work/symm.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/t0_11_classes_b/benchmarks/polybench/symm/discopop_capability/none/rep1/work/symm.c
+@@ -79,6 +79,7 @@
+     for (j = 0; j < _PB_NJ; j++)
+       {
+ 	acc = 0;
++	#pragma omp parallel for firstprivate(i,alpha,j) shared(C,B) reduction(+:acc) 
+ 	for (k = 0; k < j - 1; k++)
+ 	  {
+ 	    C[k][j] += alpha * A[k][i] * B[i][j];

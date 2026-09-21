@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/t0_11_classes_b/benchmarks/polybench/seidel-2d/discopop_capability/none/rep1/work/seidel-2d.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/t0_11_classes_b/benchmarks/polybench/seidel-2d/discopop_capability/none/rep1/work/seidel-2d.c
+@@ -61,6 +61,7 @@
+ 
+ #pragma scop
+   for (t = 0; t <= _PB_TSTEPS - 1; t++)
++ #pragma omp parallel for private(j) shared(A) 
+     for (i = 1; i<= _PB_N - 2; i++)
+       for (j = 1; j <= _PB_N - 2; j++)
+ 	A[i][j] = (A[i-1][j-1] + A[i-1][j] + A[i-1][j+1]
