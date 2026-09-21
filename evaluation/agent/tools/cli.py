@@ -300,6 +300,33 @@ def verify_arm_settings(arm_names: List[str], arms: Dict[str, dict], agent_repo:
     return problems
 
 
+def silent_interactions(arm_names: List[str], arms: Dict[str, dict], benchmark: str) -> List[str]:
+    """Settings an arm passes that another of its settings makes INERT.
+
+    These do not error — the agent accepts them and they simply stop meaning anything — so
+    they are the ones that quietly change what an experiment measures. The prerequisites that
+    DO error (`--llm-recon` without `--fast-refresh`, `--pragma-arbitration` without
+    `--llm-pragmas`) are the agent's own job and are covered by its `arg-dependencies` check.
+    """
+    out: List[str] = []
+    for name in arm_names:
+        cfg = _effective_config(arms[name], benchmark)
+        if cfg.get("hotspots") is False:
+            share = cfg.get("--min-runtime-share")
+            if share not in (None, "0", "0.0"):
+                out.append(f"{name}: --min-runtime-share={share} is INERT — the share is a share "
+                           f"of MEASURED runtime, and --no-hotspots removes the measurement; "
+                           f"ranking falls back to the workload proxy and --min-workload, so this "
+                           f"arm also queues regions the filter would have dropped")
+        depth = cfg.get("--restructure-depth")
+        if depth not in (None, "0") and cfg.get("fast-refresh"):
+            out.append(f"{name}: --fast-refresh applies only at the LAST of {depth} levels; "
+                       f"deeper ones get a full re-profile either way")
+        if cfg.get("require-speedup") is False and cfg.get("timing_size") == "per_kernel":
+            out.append(f"{name}: a timing size is set but the speed check is off — nothing times at it")
+    return out
+
+
 def check_arm_compatibility(arm_names: List[str], arms: Dict[str, dict]) -> List[str]:
     """Differences between the arms of one run, as human-readable lines.
 
@@ -1278,6 +1305,13 @@ def cmd_run(a: argparse.Namespace) -> int:
             print(f"    {pr}")
         sys.exit("refusing to run: fix arms.json `settings` or the arm's flags")
     print(f"arm settings verified against the agent's own parser ({len(a.arms)} arm(s))")
+
+    inert = silent_interactions(list(a.arms), arms, wanted[0] if wanted else "")
+    if inert:
+        print("settings made INERT by another setting of the same arm:")
+        for line in inert:
+            print(f"    {line}")
+        print("    ^ not an error, but it must be stated wherever this arm's result is reported.")
 
     differences = check_arm_compatibility(list(a.arms), arms)
     if differences:

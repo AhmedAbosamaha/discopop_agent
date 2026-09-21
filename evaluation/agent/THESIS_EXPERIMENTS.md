@@ -1540,6 +1540,48 @@ trials, and the launcher logs — have been dealt with: the logs are now tracked
 of every server run), since they would otherwise be lost with the directory. The server's disk is
 at 99 % (32 GB free), so removing it is worth 19 GB — the author's call, not an automatic one.
 
+### 5q. Arguments that depend on each other (2026-09-21)
+
+The author: *"during testing some args were depending on each other and some of them were wired
+— this might corrupt the experiments … also be careful if any of the arguments need to run
+together or not."* Audited in full. Three kinds, handled three ways.
+
+**(a) One argument needs another — the agent REFUSES the combination.** Checked by the new
+feature check `arg-dependencies`, which asserts each is rejected:
+
+| combination | why it cannot work |
+|---|---|
+| `--llm-recon` without `--fast-refresh` | reconstruction exists to repair what the fast refresh could not translate; a full re-profile leaves no gap |
+| `--llm-deps` without `--fast-refresh` | same: every region has freshly measured dependences, so there is nothing to delete |
+| `--pragma-arbitration` without `--llm-pragmas` | it compares the pragma the MODEL wrote with DiscoPoP's; without model pragmas there is never a collision |
+| `--pragma-arbitration` without `--require-speedup` | it decides between the two by TIMING them |
+
+**(b) Two arguments contradict each other — refused.** `--llm-recon` with `--llm-deps`: one adds
+dependences for new code, the other deletes ones it judges spurious, so together the model argues
+with itself inside one profile.
+
+**(c) One argument makes another INERT — no error, and therefore the dangerous kind.** These were
+found by this audit and are now printed before every run ("settings made INERT by another setting
+of the same arm"):
+
+| combination | what silently stops applying |
+|---|---|
+| `--no-hotspots` with `--min-runtime-share` / `--min-impact` | both filters live in the measured-time branch; without measurements ranking falls back to the workload proxy and `--min-workload` |
+| `--restructure-depth > 0` with `--fast-refresh` | the refresh applies only at the LAST level; deeper levels get a full re-profile anyway |
+| `--no-require-speedup` with a per-kernel timing size | a timing size is set and nothing times at it |
+
+**`--pragma-arbitration` was the worst case and is now fixed properly.** It defaulted to `True`
+and was declared `True` by arms that could never run it — with `--llm-pragmas` off by default
+(D23), that was *every* arm. It now resolves to `False` whenever it cannot fire, so
+`--print-config` — which the harness checks every arm against (D24) — reports what the run will
+actually do rather than what was asked for.
+
+**One real consequence for a planned experiment.** Of all 20 arms, exactly one carries a silent
+interaction: E9's `full_no_hotspots`. Turning hotspots off necessarily makes `--min-runtime-share`
+inert, so that arm ranks by the proxy **and** queues regions the share filter would have dropped.
+That is a consequence of E9's own variable, not an independent difference — but E9 measures the
+two together, and its write-up must say so rather than claim an effect for ranking alone.
+
 ### 5n. Every argument of every arm is DECLARED and verified against the agent's own parser (2026-09-20)
 
 The author: *"for every experiment every agent argument should be clearly set to serve the purpose
@@ -1634,6 +1676,7 @@ must pass (§5k, RUNBOOK step 0/0a).
   thesis reports rather than works around; `docs/DISCOPOP_BUG_REPORTS.md` L4.
 | 2026-09-20 | server | **The server moved to the one-repository layout (§5o).** One checkout; `server.sh sync` is now a single `git fetch` + `merge --ff-only`, so the harness on the server cannot drift from the Mac's. Parity OK; packages regenerated there are identical to the Mac's file by file (295 files, 0 differences); a no-model smoke ran end to end. The old `~/new_benchmark_harness` (19 GB) is unused — its launcher logs are now tracked at `results/_launcher_logs/` so nothing is lost with it | D20; and the server had been running from a checkout that no longer received any of the day's changes |
 | 2026-09-20 | agent + harness | **D24 — every arm DECLARES every argument that carries its purpose, and the harness verifies it against the agent's own parser before a run starts (§5n).** New agent option `--print-config` (resolved configuration as JSON, credentials redacted); `settings` block on all 19 arms; any mismatch refuses the run, and an arm without a declaration is refused too | the author: "for every experiment every agent argument should be clearly set to serve the purpose of the experiment, making sure that nothing wired or inherited would break the intended argument selection" — after two changes on one day silently altered what four experiments and five arms meant |
+| 2026-09-21 | agent + harness | **D28 — the argument-dependency audit (§5q).** Three kinds: prerequisites and contradictions are REFUSED by the agent (feature check `arg-dependencies` asserts five of them); settings made INERT by another setting are printed before every run. `--pragma-arbitration` now resolves to False whenever it cannot fire, instead of being declared active by every arm under the new defaults. One planned experiment is affected: E9's arm makes `--min-runtime-share` inert, which its write-up must state | the author: "some args were depending on each other and some of them were wired — this might corrupt the experiments" |
 | 2026-09-21 | agent + plan | **D27 — `--fast-refresh` is no longer the default either.** A kept rewrite is followed by a FULL re-profile, so decisions rest on dependences DiscoPoP observed in the rewritten code; the fast refresh is an accuracy-for-time trade that E3 measures. Found on the way: `--llm-recon` only runs inside the fast-refresh branch, so E4's arms pin it explicitly and E4's baseline becomes `discopop_pragmas_fast`. The compatibility check caught two confounds this created (E8, E4) and a hole in itself — it never checked `llm-recon`/`llm-deps`, so it had reported "no differences" for E4 | the author: "fast refresh on should not be the default also" |
 | 2026-09-20 | agent + plan | **D23 — `--llm-pragmas` is no longer the default; pragma authorship is opt-in per experiment.** Off, the model restructures and DiscoPoP annotates, so a rewrite is kept only if the analysis finds parallelism in it — the division of labour the thesis argues for. Pinned explicitly in E10's three arms (reproducibility) and E3's two "model writes them" cells (new arm `llm_pragmas_fast`); `default` becomes E1's agent arm and the baseline cell of E3, E4, E8, E9. E2's arms now follow the new default, which is a deliberate change to a pre-registered experiment and is flagged as one | the author: "i do not like having --llm-pragmas as the default it should be added when needed for a specific experiment"; E10's `jacobi-2d` showed the cost of having it on by default |
 | 2026-09-20 | plan + harness | **D22 — the campaign's fixed configuration becomes the speed check ON at the kernel's timing size, for every arm including the baseline; and the change HAD broken four unrun experiments; found by checking, fixed, and guarded.** E3, E4's matrix cell, E8 and E9 each paired a variant against `full`, which was pinned to the old behaviour → new arm `default` is the baseline cell of every matrix experiment. Eight kernels with no timing size (incl. `bicg`, class R) would have become unrunnable → the speed check switches off for them and the fact is recorded (`speed_check_off`). Guard: `check_arm_compatibility()`, printed before every run — "each line must be this experiment's variable; anything else is a confound" | the author: "make sure that these changes would not harm other experiments, should check" |
