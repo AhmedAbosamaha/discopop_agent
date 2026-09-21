@@ -1746,6 +1746,39 @@ Added 2026-09-15 (see §6 rows of that date):
 
 ## 7. Run log
 
+### `e1_smoke` — 2026-09-21, server, **E1's pre-flight smoke** (2 class-R benchmarks × 2 arms × 1)
+
+- **Why.** The last step of the pre-flight (§5k): one trial per arm with the logs READ, to confirm
+  each arm's code path actually executes before E1 spends model calls.
+- **Result at first glance: all four trials `no-change`** — including the agent arm on
+  `floyd-warshall`, the one benchmark we know it can restructure. Read properly, the opposite of
+  a failure.
+- **What the log shows.** Phase A worked exactly as designed: DiscoPoP's two loops were deferred
+  to Phase B, the FUNCTION went to the model, the model rewrote it, the gate passed, and
+  DiscoPoP then found **three new Do-Alls in the rewritten code**. Then Phase B measured the
+  pragmas at the kernel's timing size and the program **crashed (SIGSEGV)**, so both pragmas were
+  dropped and Settle discarded the rewrite as an orphan — "exposed 3 region(s), none kept a
+  pragma".
+- **Why it crashed, and why that is the right answer.** The model wrote
+  `DATA_TYPE path_new[_PB_N][_PB_N]` — an N × N array **on the stack**. At the agent size
+  (N = 128) that is 131 KB and passes every check; at the timing size (N = 1024) it is **exactly
+  8 MB**, the default stack limit, and the program dies. At the verification size (N = 2000) it
+  would be 30 MB. This is the SAME bug the model shipped in E10, where `full` — with the speed
+  check off — accepted it and the harness caught it only at verification, scoring it `BROKEN`.
+  **Here the agent caught its own bug and withdrew.** It is direct evidence for D22: the speed
+  check at the kernel's measured size is not only about speed, it reaches sizes the correctness
+  gate never tries.
+- **Two things fixed as a result.** (i) Phase B now says *"the program CRASHED at the timing size
+  — the correctness gate runs at the agent size and never reached it"* and drops the candidate as
+  **unsafe at size**, instead of the misleading "measurement failed", which reads like a timing
+  problem. (ii) Recorded here, because `no-change` on its own cannot distinguish "the agent found
+  nothing" from "the agent found a restructuring, tested it, and correctly rejected its own work"
+  — and for the thesis those are different stories.
+- **Verdict: the pre-flight passes.** Both arms' code paths ran: the baseline made 0 model calls
+  and applied DiscoPoP's patterns; the agent arm made a call, restructured, re-profiled, exposed
+  new patterns and exercised Phase B, Settle and the revert path. E1 can run.
+
+
 ### `t0_11_classes_a/b/c` — 2026-09-20/21, server, **T0.11: the class of every benchmark** (no model)
 
 - **Why.** E1's arms can only differ on benchmarks where DiscoPoP alone fails; §5k showed the old

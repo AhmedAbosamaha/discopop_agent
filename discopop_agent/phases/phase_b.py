@@ -217,8 +217,21 @@ def _phase_b(
                 extra_flags=list(args.timing_cflags) or None,
             )
             if not ok_m:
-                print(f"│  measurement failed: {mdiag[:120]}")
-                print(f"└─ DROPPED\n")
+                # A CRASH during the timing run is not a failure to measure — it is the
+                # candidate failing at a size the correctness gate never tried. The gate runs
+                # at the agent size; the timing runs at the kernel's measured size, which is
+                # where a rewrite that puts an N x N array on the STACK finally overflows it
+                # (polybench/floyd-warshall: fine at N=128, 8 MB and dead at N=1024). Saying
+                # "measurement failed" hid that behind a timing word.
+                crashed = "non-zero exit (-" in mdiag or "signal" in mdiag.lower()
+                if crashed:
+                    print(f"│  the program CRASHED at the timing size — the correctness gate "
+                          f"runs at the agent size and never reached it")
+                    print(f"│  {mdiag[:110]}")
+                    print(f"└─ DROPPED (unsafe at size)\n")
+                else:
+                    print(f"│  measurement failed: {mdiag[:120]}")
+                    print(f"└─ DROPPED\n")
                 return "dropped"
             if marginal < threshold:
                 print(f"│  marginal {marginal:.2f}× — costs more than it saves")
