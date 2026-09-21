@@ -601,20 +601,31 @@ def phase_a(state: RunState) -> None:
                     reprofile_ok = _reprofil(
                         args.source_file, dp_dir, args.reprofil_args or None
                     )
-                    if should_remeasure_runtimes(reprofile_ok, args.hotspots,
-                                                 impact.available):
-                        ok_hs, hs_note = _measure_hotspots(args, dp_dir, force=True)
-                        fresh = load_hotspots(dp_dir, threads=impact.threads) \
-                            if ok_hs else None
-                        if fresh is not None and fresh.available:
-                            impact.adopt(fresh)
-                            remeasured = True
-                            print(f"│  [Tier-2] Re-measured runtimes: "
-                                  f"{len(impact.by_line)} region(s), "
-                                  f"{impact.total_runtime*1e3:.1f} ms total")
-                        else:
-                            print(f"│  [Tier-2] could not re-measure runtimes — "
-                                  f"new regions will rank on the workload proxy")
+
+                # After ANY full re-profile — the default path above, and the fallback
+                # when a fast refresh turns out unusable.  The fallback used to skip
+                # this: it is a full re-profile like the other, it merely sat in the
+                # other branch.  A refresh that SUCCEEDED fast is left alone here: it
+                # exists to avoid running the program, and whether it should pay for
+                # this one native-speed run is an open decision (record, Fix 86).
+                if not refreshed_fast and should_remeasure_runtimes(
+                        reprofile_ok, args.hotspots, impact.available):
+                    ok_hs, hs_note = _measure_hotspots(args, dp_dir, force=True)
+                    fresh = load_hotspots(dp_dir, threads=impact.threads) \
+                        if ok_hs else None
+                    if fresh is not None and fresh.available:
+                        impact.adopt(fresh)
+                        remeasured = True
+                        print(f"│  [Tier-2] Re-measured runtimes: "
+                              f"{len(impact.by_line)} region(s), "
+                              f"{impact.total_runtime*1e3:.1f} ms total")
+                    else:
+                        # Said as it is: with a share floor set an unmeasured region is
+                        # not ranked on the proxy, it is not queued at all.
+                        print(f"│  [Tier-2] could not re-measure runtimes ({hs_note[:60]}) — "
+                              f"regions this rewrite created have no measurement"
+                              + (" and, with --min-runtime-share set, will not be queued"
+                                 if args.min_runtime_share else ""))
 
                 if reprofile_ok and impact.available:
                     # Runtimes and covered spans are keyed by LINE, so a rewrite that

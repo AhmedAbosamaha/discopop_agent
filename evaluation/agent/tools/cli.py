@@ -256,7 +256,7 @@ def _last_switch_in(flags: List[str], name: str) -> Optional[bool]:
 
 
 def verify_arm_settings(arm_names: List[str], arms: Dict[str, dict], agent_repo: Path,
-                        benchmark: str) -> List[str]:
+                        benchmarks: "str | List[str]") -> List[str]:
     """Ask the agent what it parsed, and compare with what each arm DECLARED.
 
     An arm's `settings` block names every argument that carries its purpose. Building the
@@ -268,35 +268,59 @@ def verify_arm_settings(arm_names: List[str], arms: Dict[str, dict], agent_repo:
     agent's OWN parser, not against the harness's model of it: `--print-config` resolves the
     arguments and prints them, and every declared key must match.
 
+    An arm's flags depend on the BENCHMARK too: under per-kernel timing a kernel with no
+    timing size gets `--no-require-speedup` (`_timing_flags`). Checked against the run's first
+    benchmark only, as this was until 2026-09-21, the answer depended on the order of the list:
+    a timeable first benchmark hid that the untimeable ones run with the speed check off, and
+    an untimeable first benchmark REFUSED the whole run, every arm "declaring
+    require_speedup=True but parsed False" — E1's class R holds both kinds. So one
+    representative of each timing situation present is checked, and where the harness itself
+    switched the speed check off, what must hold is that consequence: `require_speedup` False,
+    and `pragma_arbitration` — which decides by timing — False with it (D28).
+
     Returns a list of human-readable problems; empty means every arm runs what it declares.
     """
     problems: List[str] = []
     py = str(agent_repo / "venv" / "bin" / "python")
+    wanted = [benchmarks] if isinstance(benchmarks, str) else list(benchmarks)
     for name in arm_names:
-        spec = arms[name]
-        declared = spec.get("settings")
-        if not declared:
-            problems.append(f"{name}: no `settings` block — every arm must declare the "
-                            f"arguments that carry its purpose (arms.json `settings_note`)")
-            continue
-        cmd = [py, "-m", "discopop_agent", "--discopop-dir", ".", "--source-file", "x.c",
-               *_common_flags(), *spec.get("flags", []), *_timing_flags(spec, benchmark),
-               "--print-config"]
-        proc = subprocess.run(cmd, capture_output=True, text=True,
-                              env={**os.environ, **_agent_env(agent_repo)}, timeout=120)
-        if proc.returncode != 0:
-            problems.append(f"{name}: the agent rejected this arm's arguments "
-                            f"({(proc.stderr or proc.stdout).strip().splitlines()[-1:] or ['?']})")
-            continue
-        try:
-            actual = json.loads(proc.stdout)
-        except ValueError:
-            problems.append(f"{name}: could not read the agent's resolved configuration")
-            continue
-        for key, want in declared.items():
-            got = actual.get(key, "<absent>")
-            if got != want:
-                problems.append(f"{name}: declares {key}={want!r} but the agent parsed {got!r}")
+        # One representative per timing situation: timeable, and not.
+        reps: Dict[bool, str] = {}
+        for b in wanted or [""]:
+            reps.setdefault("--no-require-speedup" in _timing_flags(arms[name], b), b)
+        for speed_off, benchmark in sorted(reps.items()):
+            problems += _verify_one_arm(name, arms[name], py, agent_repo, benchmark, speed_off)
+    return problems
+
+
+def _verify_one_arm(name: str, spec: dict, py: str, agent_repo: Path, benchmark: str,
+                    speed_off: bool) -> List[str]:
+    """`verify_arm_settings` for one arm on one benchmark; `speed_off` = the harness turned
+    the speed check off for this kernel, which overrides what the arm declares for it."""
+    where = f" [{benchmark}: no timing size, speed check off]" if speed_off else ""
+    declared = spec.get("settings")
+    if not declared:
+        return [f"{name}: no `settings` block — every arm must declare the arguments that "
+                f"carry its purpose (arms.json `settings_note`)"]
+    cmd = [py, "-m", "discopop_agent", "--discopop-dir", ".", "--source-file", "x.c",
+           *_common_flags(), *spec.get("flags", []), *_timing_flags(spec, benchmark),
+           "--print-config"]
+    proc = subprocess.run(cmd, capture_output=True, text=True,
+                          env={**os.environ, **_agent_env(agent_repo)}, timeout=120)
+    if proc.returncode != 0:
+        return [f"{name}{where}: the agent rejected this arm's arguments "
+                f"({(proc.stderr or proc.stdout).strip().splitlines()[-1:] or ['?']})"]
+    try:
+        actual = json.loads(proc.stdout)
+    except ValueError:
+        return [f"{name}{where}: could not read the agent's resolved configuration"]
+    problems: List[str] = []
+    for key, want in declared.items():
+        if speed_off and key in ("require_speedup", "pragma_arbitration"):
+            want = False
+        got = actual.get(key, "<absent>")
+        if got != want:
+            problems.append(f"{name}{where}: declares {key}={want!r} but the agent parsed {got!r}")
     return problems
 
 
@@ -1298,7 +1322,7 @@ def cmd_run(a: argparse.Namespace) -> int:
     # the agent's own parser before anything runs, so nothing inherited or mistyped can
     # silently change what an experiment measures.
     problems = verify_arm_settings(list(a.arms), arms, Path(a.agent_repo).resolve(),
-                                   wanted[0] if wanted else "")
+                                   list(wanted))
     if problems:
         print("arm settings do NOT match what the agent parses:")
         for pr in problems:

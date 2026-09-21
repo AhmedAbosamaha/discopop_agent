@@ -596,6 +596,12 @@ def parse_args() -> AgentArguments:
                 return v
             if isinstance(v, (list, tuple)):
                 return [_plain(x) for x in v]
+            if isinstance(v, (set, frozenset)):
+                # Sorted: a set has no order, and the harness compares this output with
+                # what an arm DECLARES.  It used to fall through to str(), so an empty
+                # set printed as the string 'set()' and both no-evidence arms of E2 were
+                # refused for declaring `evidence_sections: []`.
+                return sorted(_plain(x) for x in v)
             if dataclasses.is_dataclass(v) and not isinstance(v, type):
                 return {k: _plain(x) for k, x in dataclasses.asdict(v).items()}
             return str(v)

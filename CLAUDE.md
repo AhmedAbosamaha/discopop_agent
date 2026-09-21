@@ -41,7 +41,7 @@ This document contains critical information about working with this codebase. Fo
 
 ### Python — evaluation harness
 - the harness is a set of scripts, not a package; type check it with `venv/bin/python -m mypy --config-file=evaluation/mypy.ini evaluation/agent/tools/*.py evaluation/shared/*.py`
-- its own tests: `venv/bin/python evaluation/agent/tools/test_integrity.py` and `venv/bin/python evaluation/agent/tools/test_scaffold.py`
+- its own tests: `venv/bin/python evaluation/agent/tools/test_integrity.py` and `venv/bin/python evaluation/agent/tools/test_scaffold.py`; and `venv/bin/python evaluation/agent/tools/test_arms.py` (every arm in `arms.json` against the agent's own parser — run it after changing an agent default or an arm)
 
 ## Formatting
 ### Python

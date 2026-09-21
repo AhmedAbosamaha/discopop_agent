@@ -73,13 +73,22 @@ def _measure_hotspots(args: AgentArguments, dp_dir: Path,
             return False, str(e)
         return r.returncode == 0, (r.stderr or r.stdout or "")
 
-    existing = dp_dir / "hotspot_detection" / "Hotspots.json"
-    if existing.exists():
-        if not force:
-            return True, "reusing the measurements already in .discopop"
-        # A rewrite moved the lines these are keyed on, so they have to be
-        # re-measured rather than reused.
-        existing.unlink()
+    hs_dir = dp_dir / "hotspot_detection"
+    if (hs_dir / "Hotspots.json").exists() and not force:
+        return True, "reusing the measurements already in .discopop"
+    # About to instrument: the WHOLE directory goes, not just Hotspots.json.
+    # DiscoPoP's hotspot detection ACCUMULATES by design — every instrumented build
+    # APPENDS its region ids to private/cs_id.txt, every run adds a
+    # hotspot_result_<n>.txt, and the analyzer averages over the runs.  That is right
+    # for several inputs of ONE program and wrong after a rewrite, which makes it a
+    # different program: with only Hotspots.json removed (as this did until Fix 87)
+    # the analyzer reported the OLD program's region table — `main` at the line it
+    # had before the rewrite, every time halved by averaging with a run that never
+    # executed those ids, and NO entry for any region the rewrite created.  The
+    # caller then treats the result as being in the new file's coordinates and skips
+    # the line remap, so every region below the rewrite was mis-keyed as well.
+    if hs_dir.exists():
+        shutil.rmtree(hs_dir)
     return impact_mod.run_hotspot_detection(
         args.source_file, dp_dir, args.reprofil_args or None, _venv_env(), run_cmd
     )

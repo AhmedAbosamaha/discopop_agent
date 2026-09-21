@@ -1500,6 +1500,68 @@ def check_new_region_ranking(work: Path) -> Result:
                   f"({victim.region.region_id}), so runtimes are re-measured at every depth")
 
 
+def check_hotspot_remeasure(work: Path) -> Result:
+    """A forced re-measurement must describe the program AS IT NOW IS.  (Fix 87)
+
+    DiscoPoP's hotspot detection accumulates by design: every instrumented build
+    APPENDS its region ids to `hotspot_detection/private/cs_id.txt`, every run adds a
+    `hotspot_result_<n>.txt`, and the analyzer averages over the runs.  Right for
+    several inputs of one program; after a rewrite it is a different program.  The
+    agent used to delete only `Hotspots.json` before re-measuring, so the analyzer
+    reported the OLD region table: old line numbers, times halved by averaging with a
+    run that never executed those ids, and nothing for a region the rewrite created —
+    while the caller, believing the numbers were in the new file's coordinates,
+    skipped the line remap.  Measured on `tsvc/s211`: `main` stayed at line 147 (149
+    after the rewrite) and the loop the rewrite created at line 140 had no entry, so
+    Fix 86 alone changed nothing.
+
+    The check shifts every line of a measured program down by three and re-measures:
+    every measured line must move with it, and none may stay behind.
+    """
+    name = "hotspot re-measure"
+    from types import SimpleNamespace
+    from ..profiling.runner import _measure_hotspots
+
+    sub = work / "hs_remeasure"
+    sub.mkdir(parents=True, exist_ok=True)
+    src_name = "priority_mix.cpp"
+    shutil.copy(_CASES / src_name, sub / src_name)
+    dp = sub / ".discopop"
+    ok, err = _profile(sub, src_name, hotspots=False)
+    if not ok:
+        return Result(name, "skip", err)
+    args: Any = SimpleNamespace(source_file=str(sub / src_name), reprofil_args=None)
+    ok, note = _measure_hotspots(args, dp)
+    before = load_hotspots(dp, threads=8)
+    if not ok or not before.available:
+        return Result(name, "skip", f"no hotspot measurements produced ({note[:80]})")
+
+    shift = 3
+    (sub / src_name).write_text("// shifted\n" * shift + (sub / src_name).read_text())
+    ok, note = _measure_hotspots(args, dp, force=True)
+    after = load_hotspots(dp, threads=8)
+    if not ok or not after.available:
+        return Result(name, "fail", f"the forced re-measurement produced nothing ({note[:80]})")
+
+    old_lines = sorted(l for _f, l in before.by_line)
+    new_lines = sorted(l for _f, l in after.by_line)
+    stale = [l for l in new_lines if l in old_lines and l - shift not in old_lines]
+    moved = [l for l in old_lines if l + shift in new_lines]
+    if len(moved) < len(old_lines) or stale:
+        return Result(name, "fail",
+                      f"the re-measurement still describes the old program: measured lines "
+                      f"{old_lines} -> {new_lines} after a {shift}-line shift")
+    # Averaged with a run that never executed the old ids, every time came out halved.
+    ratio = after.total_runtime / before.total_runtime if before.total_runtime else 0.0
+    if ratio < 0.7:
+        return Result(name, "fail",
+                      f"total runtime fell to {ratio:.2f}x on an unchanged program — the "
+                      f"analyzer is still averaging the old run in")
+    return Result(name, "pass",
+                  f"{len(old_lines)} measured lines all moved by {shift}, none left behind; "
+                  f"total runtime {ratio:.2f}x of the first measurement")
+
+
 def check_covered_skip(work: Path) -> Result:
     """A region inside an already-accepted one must leave the queue.
 
@@ -2489,6 +2551,7 @@ _CHECKS: List[Tuple[str, Callable[[Path], Result]]] = [
     ("impact", check_impact_ranking),
     ("min-impact", check_min_impact),
     ("new-region-ranking", check_new_region_ranking),
+    ("hotspot-remeasure", check_hotspot_remeasure),
     ("covered-skip", check_covered_skip),
     ("budget-policy", check_budget_policy),
     ("project-mode", check_project_mode),
