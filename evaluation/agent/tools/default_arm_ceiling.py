@@ -46,30 +46,57 @@ def strip_pragmas(text: str) -> str:
 
 
 def run_one(loop: str, out: Path, repo: Path, timeout: int, speed: bool = True) -> Dict[str, object]:
-    # `s211` is a TSVC loop; `rodinia-3.1/hotspot` names any single-file package that has an
-    # expert reference under reference_solutions/<suite>/<kernel>.<ext>.
+    # `s211` is a TSVC loop; `rodinia-3.1/hotspot` names any package that has an expert
+    # reference: reference_solutions/<suite>/<kernel>.<ext> (one file — for a project it
+    # replaces the unit of that name) or reference_solutions/<suite>/<kernel>/ (several files,
+    # each replacing its namesake: LLNL's LULESH).
     bench = loop if "/" in loop else f"tsvc/{loop}"
-    meta = json.loads((AGENT_DIR / "prepared" / bench / "meta.json").read_text())
+    bench_dir = AGENT_DIR / "prepared" / bench
+    meta = json.loads((bench_dir / "meta.json").read_text())
+    proj = cli._project_of(bench_dir)
     ext = Path(meta["file"]).suffix
-    ref = AGENT_DIR / "reference_solutions" / bench.split("/")[0] / f"{bench.split('/')[1]}{ext}"
+    ref_root = AGENT_DIR / "reference_solutions" / bench.split("/")[0]
+    ref_dir, ref = ref_root / bench.split("/")[1], ref_root / f"{bench.split('/')[1]}{ext}"
     work = out / bench.replace("/", "_")
     shutil.rmtree(work, ignore_errors=True)
     work.mkdir(parents=True)
-    src = work / Path(meta["file"]).name
-    text = ref.read_text()
-    n_expert = sum(1 for l in text.splitlines() if PRAGMA.match(l))
-    src.write_text(strip_pragmas(text))
     env = {**os.environ, **cli._agent_env(repo)}
     py = str(repo / "venv" / "bin" / "python")
-    rec: Dict[str, object] = {"loop": loop, "expert_pragmas": n_expert}
     t0 = time.time()
-    prof = subprocess.run([py, "-c",
-                           "import sys; from pathlib import Path; from discopop_agent.profiling import _reprofil; "
-                           "sys.exit(0 if _reprofil(sys.argv[1], Path('.discopop'), None) else 1)", src.name],
-                          cwd=work, env=env, capture_output=True, text=True, timeout=timeout)
-    if prof.returncode != 0:
-        rec.update(result="PROFILE_ERROR", detail=(prof.stdout + prof.stderr)[-300:])
-        return rec
+    if proj is None:
+        src = work / Path(meta["file"]).name
+        text = ref.read_text()
+        n_expert = sum(1 for l in text.splitlines() if PRAGMA.match(l))
+        src.write_text(strip_pragmas(text))
+        rec: Dict[str, object] = {"loop": loop, "expert_pragmas": n_expert}
+        prof = subprocess.run([py, "-c",
+                               "import sys; from pathlib import Path; from discopop_agent.profiling import _reprofil; "
+                               "sys.exit(0 if _reprofil(sys.argv[1], Path('.discopop'), None) else 1)", src.name],
+                              cwd=work, env=env, capture_output=True, text=True, timeout=timeout)
+        if prof.returncode != 0:
+            rec.update(result="PROFILE_ERROR", detail=(prof.stdout + prof.stderr)[-300:])
+            return rec
+        target = ["--source-file", src.name]
+    else:
+        # A project: the package with the expert's files laid over it, their pragmas stripped,
+        # profiled exactly as the harness profiles a project (through the unity unit).
+        staged = out / "_staged" / bench.replace("/", "_")
+        shutil.rmtree(staged, ignore_errors=True)
+        cli._copy_tree(bench_dir, staged)
+        shutil.copy2(bench_dir / "meta.json", staged / "meta.json")   # _copy_tree takes the program only
+        given = ([f for f in sorted(ref_dir.rglob("*")) if f.is_file()] if ref_dir.is_dir() else [ref])
+        n_expert = 0
+        for f in given:
+            rel = f.relative_to(ref_dir) if ref_dir.is_dir() else Path(meta["file"]).name
+            text = f.read_text(errors="replace")
+            n_expert += sum(1 for l in text.splitlines() if PRAGMA.match(l))
+            (staged / rel).write_text(strip_pragmas(text) if f.suffix in (".c", ".cc", ".cpp") else text)
+        rec = {"loop": loop, "expert_pragmas": n_expert}
+        prof_rec = cli.profile_once(staged, Path(meta["file"]).name, work, repo, timeout)
+        if prof_rec.get("error"):
+            rec.update(result="PROFILE_ERROR", detail=str(prof_rec["error"])[-300:])
+            return rec
+        target = cli._project_agent_flags(proj)
     size = cli._timing_size(bench)
     # `speed=False`: the SAFETY ceiling only. Speed belongs on the campaign's server at the
     # kernel's timing size (T0.10 measured the expert versions there); on a laptop, or with
@@ -77,7 +104,7 @@ def run_one(loop: str, out: Path, repo: Path, timeout: int, speed: bool = True) 
     # whether the gate rejects CORRECT code.
     flags = [*cli._common_flags(), "--budget", "0",
              *([f"--timing-cflags=-D{size}_DATASET"] if size and speed else ["--no-require-speedup"])]
-    cmd = [py, "-m", "discopop_agent", "--source-file", src.name, "--discopop-dir", ".discopop",
+    cmd = [py, "-m", "discopop_agent", *target, "--discopop-dir", ".discopop",
            "--provider", "claude-agent-sdk", "--model", "none", *flags, "--check-input", "7",
            "--exclude-functions", ",".join(meta.get("exclude_functions") or [])]
     proc = subprocess.run(cmd, cwd=work, env=env, capture_output=True, text=True, timeout=timeout)
