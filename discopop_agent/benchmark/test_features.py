@@ -1556,6 +1556,15 @@ def check_prompt_truth(work: Path) -> Result:
         problems.extend(f"{what}: missing {x!r}" for x in present if x not in flat)
         problems.extend(f"{what}: still says {x!r}" for x in absent if x in flat)
 
+    # 0. The platform constraint is UNCONDITIONAL. It first went into the branch that only
+    # runs under a numeric tolerance, so the default configuration never saw it and the model
+    # wrote an 8 MB array on the stack twice (e1_smoke, e1_smoke2). Every mode, every gate.
+    for pragmas in (True, False):
+        for g, label in ((campaign, "campaign gate"), (strict, "strict gate")):
+            need(_system_prompt("direct", pragmas, False, g),
+                 ["HEAP-allocated", "stack is 8 MB"], [],
+                 f"memory constraint, llm_pragmas={pragmas}, {label}")
+
     # 1. The system prompt follows the gate — in both pragma modes.
     need(_system_prompt("direct", True, False, campaign),
          ["Speed is NOT judged", "2 different inputs", "guided schedules", "rounding",
