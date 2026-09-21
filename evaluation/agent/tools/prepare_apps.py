@@ -188,6 +188,9 @@ class Recipe:
     assemble_project: Optional[Callable[["Recipe"], Tuple[Dict[str, str], List[str]]]] = None
     project_units: List[str] = field(default_factory=list)
     project_include_dirs: List[str] = field(default_factory=list)
+    # Compile flags the packaged PROJECT needs on every build (LULESH: -DUSE_MPI=0). They go
+    # into meta.json's `project.cflags`, which the harness and the agent pass to every build.
+    project_cflags: List[str] = field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -1070,7 +1073,199 @@ HOTSPOT = Recipe(
 )
 
 
-RECIPES: Dict[str, Recipe] = {r.name: r for r in (MD, PATHFINDER, NW, IS, MG, LU, HOTSPOT)}
+# ---------------------------------------------------------------------------
+# LLNL LULESH 2.0 — the application-scale program (E6), serial path
+# ---------------------------------------------------------------------------
+# Source: benchmarks/LULESH/LULESH_SERIAL_PATH, which agent/tools/lulesh_serial_path.py derives
+# from LLNL's release by removing the preprocessor-dead OpenMP code and folding every
+# `if (numthreads > 1)` to its serial branch (validated there: the deterministic output lines
+# are identical to the original's). What THIS recipe adds is the harness contract, by the same
+# rules as the NPB recipes — the computation is never touched:
+#   * `main` becomes `lulesh_main`; the problem size (-s) and the iteration cap (-i) come from
+#     the dataset guard, and the command-line parser is not called (argv carries the seed only);
+#   * the timer goes where LULESH takes its own (`gettimeofday` around the time-step loop);
+#   * the Domain is handed to the driver instead of deleted, so the digest can read it;
+#   * LULESH's own report (with its elapsed time and FOM) goes to stderr, stdout is the digest.
+# The seeded input scales the deposited energy AND moves every node that lies on no boundary
+# plane by at most 0.1 % of a cell. The second part matters: the Sedov problem is symmetric in
+# x, y and z, so a rewrite that mixes two of the three up could otherwise leave every value
+# unchanged. Boundary planes keep their coordinates, so the symmetry conditions still hold.
+
+LULESH_DIR = BENCHMARKS / "LULESH" / "LULESH_SERIAL_PATH"
+_LULESH_OTHER_UNITS = ["lulesh-init.cc", "lulesh-util.cc", "lulesh-viz.cc", "lulesh-comm.cc"]
+_LULESH_SIZES = {          # -s (elements per edge), -i (iteration cap)
+    "MINI": ("5", "10"), "SMALL": ("8", "20"), "STANDARD": ("15", "50"),
+    "LARGE": ("30", "100"), "EXTRALARGE": ("45", "200"),
+}
+
+
+def _lulesh_deterministic(out: str) -> str:
+    """Iteration count, final origin energy and the three symmetry differences."""
+    vals = []
+    for label in ("Iteration count", "Final Origin Energy", "MaxAbsDiff", "TotalAbsDiff", "MaxRelDiff"):
+        m = re.search(re.escape(label) + r"\s*=\s*([-+0-9.eE]+)", out)
+        if not m:
+            return ""
+        vals.append(m.group(1))
+    return "\n".join(vals)
+
+
+def _lulesh_assemble_project(r: Recipe) -> Tuple[Dict[str, str], List[str]]:
+    body = r.source.read_text()
+
+    def once(old: str, new: str, what: str) -> None:
+        nonlocal body
+        if body.count(old) != 1:
+            raise SystemExit(f"lulesh: expected exactly one `{old.strip()}` ({what}), found {body.count(old)}")
+        body = body.replace(old, new, 1)
+
+    once('#include "lulesh.h"',
+         '#include "lulesh.h"\n#include "pb_harness.hpp"\n'
+         "/* packaging: the Domain outlives lulesh_main so that the driver can digest it, and the\n"
+         "   seeded input is applied right after the mesh is built (both defined at the end). */\n"
+         "static Domain* pb_lulesh_domain = 0;\n"
+         "static void pb_lulesh_perturb(Domain& domain, int argc, char** argv);\n", "include")
+    once("int main(int argc, char *argv[])", "int lulesh_main(int argc, char *argv[])", "main")
+    once("   opts.its = 9999999;", "   opts.its = PB_ITS;", "iteration cap")
+    once("   opts.nx  = 30;", "   opts.nx  = PB_NX;", "problem size")
+    once("   ParseCommandLineOptions(argc, argv, myRank, &opts);",
+         "   /* packaging: sizes come from the dataset guard; argv carries only the harness's seed */",
+         "command-line parser")
+    once("                       side, opts.numReg, opts.balance, opts.cost) ;\n",
+         "                       side, opts.numReg, opts.balance, opts.cost) ;\n"
+         "   pb_lulesh_perturb(*locDom, argc, argv);\n", "after the mesh is built")
+    once("   gettimeofday(&start, NULL) ;", "   pb_timer_start();\n   gettimeofday(&start, NULL) ;", "timer start")
+    once("   gettimeofday(&end, NULL) ;", "   gettimeofday(&end, NULL) ;\n   pb_timer_stop();", "timer stop")
+    once("   delete locDom; ", "   pb_lulesh_domain = locDom;   /* packaging: deleted by the driver, after the digest */",
+         "domain lifetime")
+    driver = r"""
+
+/* ---- packaged by agent/tools/prepare_apps.py: seeded input, driver and digest -----------
+   The program above runs unchanged. Its own report — with the elapsed time and the figure of
+   merit, which differ from run to run — goes to stderr; stdout carries the digest alone. */
+#include <unistd.h>
+
+static void pb_lulesh_perturb(Domain& domain, int argc, char** argv)
+{
+   if (argc < 2) return;
+   pb_seed(argv[1]);
+   /* a change of DATA, not of computation */
+   domain.e(0) *= (Real_t(1.0) + Real_t(0.05) * Real_t(pb_uniform()));
+   const Index_t edgeNodes = domain.sizeX() + 1;
+   const Real_t jitter = Real_t(1.0e-3) * Real_t(1.125) / Real_t(domain.sizeX());
+   for (Index_t plane = 1; plane < edgeNodes - 1; ++plane)
+      for (Index_t row = 1; row < edgeNodes - 1; ++row)
+         for (Index_t col = 1; col < edgeNodes - 1; ++col) {
+            const Index_t n = plane * edgeNodes * edgeNodes + row * edgeNodes + col;
+            domain.x(n) += jitter * Real_t(pb_uniform() - 0.5);
+            domain.y(n) += jitter * Real_t(pb_uniform() - 0.5);
+            domain.z(n) += jitter * Real_t(pb_uniform() - 0.5);
+         }
+}
+
+int main(int argc, char** argv)
+{
+   fflush(stdout);
+   int saved = dup(1);
+   dup2(2, 1);                       /* LULESH's own output -> stderr */
+   int rc = lulesh_main(argc, argv);
+   std::cout.flush();
+   fflush(stdout);
+   dup2(saved, 1);                   /* stdout back, for the digest */
+   close(saved);
+   Domain& domain = *pb_lulesh_domain;
+#ifdef PB_FULL_DUMP
+   /* exactly what the original prints that is deterministic: the iteration count, the final
+      origin energy and the three symmetry differences (VerifyAndWriteFinalOutput) */
+   const Index_t nx = domain.sizeX();
+   Real_t maxAbsDiff = Real_t(0.0), totalAbsDiff = Real_t(0.0), maxRelDiff = Real_t(0.0);
+   for (Index_t j = 0; j < nx; ++j)
+      for (Index_t k = j + 1; k < nx; ++k) {
+         Real_t absDiff = FABS(domain.e(j * nx + k) - domain.e(k * nx + j));
+         totalAbsDiff += absDiff;
+         if (maxAbsDiff < absDiff) maxAbsDiff = absDiff;
+         Real_t relDiff = absDiff / domain.e(k * nx + j);
+         if (maxRelDiff < relDiff) maxRelDiff = relDiff;
+      }
+   pb_emit((double)domain.cycle());
+   pb_emit((double)domain.e(0));
+   pb_emit((double)maxAbsDiff);
+   pb_emit((double)totalAbsDiff);
+   pb_emit((double)maxRelDiff);
+#else
+   /* the digest reads the whole state, not five numbers: every element's energy, pressure and
+      relative volume, every node's position and velocity */
+   pb_emit((double)domain.cycle());
+   for (Index_t i = 0; i < domain.numElem(); ++i) {
+      pb_emit((double)domain.e(i)); pb_emit((double)domain.p(i)); pb_emit((double)domain.v(i));
+   }
+   for (Index_t i = 0; i < domain.numNode(); ++i) {
+      pb_emit((double)domain.x(i));  pb_emit((double)domain.y(i));  pb_emit((double)domain.z(i));
+      pb_emit((double)domain.xd(i)); pb_emit((double)domain.yd(i)); pb_emit((double)domain.zd(i));
+   }
+#endif
+   pb_report();
+   delete pb_lulesh_domain;
+   return rc;
+}
+"""
+    files: Dict[str, str] = {
+        "lulesh.cc": body + driver,
+        "pb_sizes.h": ("/* Generated by agent/tools/prepare_apps.py: LULESH's -s (elements per edge) and -i\n"
+                       "   (iteration cap) as a dataset guard (-D<SIZE>_DATASET). */\n" + _guard(r.sizes)),
+        "pb_harness.hpp": _NPB_HARNESS_HPP.replace("#define PB_HARNESS_HPP\n",
+                                                   '#define PB_HARNESS_HPP\n#include "pb_sizes.h"\n', 1),
+        "pb_harness.cpp": ('#include "pb_harness.hpp"\n'
+                           + re.sub(r"^static (void|double) (pb_\w+\()", r"\1 \2", _PRELUDE, flags=re.M)),
+        "lulesh.h": (LULESH_DIR / "lulesh.h").read_text(),
+    }
+    for name in _LULESH_OTHER_UNITS:
+        files[name] = (LULESH_DIR / name).read_text()
+    removed = [
+        "main renamed to lulesh_main; its report (elapsed time, FOM, progress) goes to stderr",
+        "the command-line parser is not called: -s and -i come from the dataset guard",
+        "the Domain is deleted by the driver after the digest instead of at the end of lulesh_main",
+        "OpenMP: none left to remove — the source is the validated serial path "
+        "(benchmarks/LULESH/LULESH_SERIAL_PATH/SERIAL_PATH.json lists what that step removed)",
+    ]
+    return files, removed
+
+
+LULESH = Recipe(
+    name="lulesh", suite="llnl", category="hydrodynamics-proxy-application",
+    source=LULESH_DIR / "lulesh.cc", language="cpp",
+    sizes={size: {"PB_NX": nx, "PB_ITS": its} for size, (nx, its) in _LULESH_SIZES.items()},
+    original_args={size: ["-s", nx, "-i", its] for size, (nx, its) in _LULESH_SIZES.items()},
+    original_build=["-DUSE_MPI=0"],
+    deterministic=_lulesh_deterministic,
+    assemble=lambda r: (_ for _ in ()).throw(SystemExit("lulesh is packaged as a project only (--layout project)")),
+    # Out of scope for the agent: the packaging's own code, LULESH's I/O and option handling,
+    # and the one-time mesh and region SETUP (the constructor and what it calls) — like
+    # `init_array` in a kernel. `lulesh_main` stays in: it holds the time-step loop.
+    exclude_functions=["main", "pb_lulesh_perturb", "pb_emit", "pb_report", "pb_seed", "pb_uniform",
+                       "pb_timer_start", "pb_timer_stop",
+                       "ParseCommandLineOptions", "PrintCommandLineOptions", "ParseError", "StrToInt",
+                       "VerifyAndWriteFinalOutput", "DumpToVisit", "DumpDomainToVisit", "DumpMultiblockObjects",
+                       "InitMeshDecomp", "Domain", "BuildMesh", "SetupCommBuffers",
+                       "CreateRegionIndexSets", "SetupSymmetryPlanes", "SetupElementConnectivities",
+                       "SetupBoundaryConditions", "AllocateElemPersistent", "AllocateNodePersistent",
+                       "AllocateGradients", "DeallocateGradients", "AllocateStrains", "DeallocateStrains"],
+    note="Sedov blast on an unstructured hex mesh; the time-step loop is the timed region",
+    # LULESH prints `std::scientific << std::setprecision(6)`: seven significant digits. The
+    # validator rounds both sides to six, and re-rounding an already rounded number can land on
+    # the other side of a half (3.245955e+04 -> 32459.5, but the exact 32459.5524 -> 32459.6),
+    # so the dump prints in the original's own format and the two texts agree digit for digit.
+    dump_format="%.6e\\n",
+    original_sources=lambda rr: [str(LULESH_DIR / n) for n in _LULESH_OTHER_UNITS],
+    original_includes=lambda rr: [str(LULESH_DIR)],
+    assemble_project=_lulesh_assemble_project,
+    project_units=["lulesh.cc", "pb_harness.cpp", *_LULESH_OTHER_UNITS],
+    project_include_dirs=["."],
+    project_cflags=["-DUSE_MPI=0"],
+)
+
+
+RECIPES: Dict[str, Recipe] = {r.name: r for r in (MD, PATHFINDER, NW, IS, MG, LU, HOTSPOT, LULESH)}
 
 
 # ---------------------------------------------------------------------------
@@ -1147,7 +1342,8 @@ def validate(r: Recipe, packaged: Path, work: Path, cxx: str,
             continue
         if packaged.is_dir():
             inputs = ([str(packaged / u) for u in r.project_units]
-                      + [f"-I{packaged / d}" for d in r.project_include_dirs])
+                      + [f"-I{packaged / d}" for d in r.project_include_dirs]
+                      + list(r.project_cflags))
         else:
             inputs = [str(packaged)]
         err = _build([cxx, "-O2", f"-D{size}_DATASET", "-DPB_FULL_DUMP",
@@ -1258,7 +1454,8 @@ def main() -> int:
             main_unit = r.project_units[0]
             meta.update({"file": main_unit, "layout": "project",
                          "project": {"units": r.project_units,
-                                     "include_dirs": r.project_include_dirs}})
+                                     "include_dirs": r.project_include_dirs,
+                                     **({"cflags": r.project_cflags} if r.project_cflags else {})}})
             digest_of = "".join(files[k] for k in sorted(files)).encode()
             what = f"{len(files)} files, {main_unit}"
         else:
