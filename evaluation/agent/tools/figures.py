@@ -588,6 +588,77 @@ def fig_vs_discopop_alone(plt, trials: List[dict], out: Path) -> Tuple[List[Path
     return paths, caption
 
 
+# Verdicts against DiscoPoP alone, on the hues of the validated outcome palette (no new colour):
+# a hatch marks "the same kind of result, without the speed", as the outcome figure does.
+VERDICT_STYLE: Dict[str, Tuple[str, str]] = {
+    "gained": (GOOD, ""), "gained-not-faster": (GOOD, "////"),
+    "better": ("#2a78d6", ""), "equal": ("#2a78d6", "////"),
+    "neither": (AXIS, ""),
+    "worse": ("#eda100", ""), "lost": ("#eda100", "xxxx"),
+    "unsafe": (CRITICAL, ""),
+    "invalid": ("#4a3aa7", ""), "not-comparable": ("#4a3aa7", "////"), "no-baseline": ("#4a3aa7", "...."),
+}
+
+
+def fig_verdict_matrix(plt, trials: List[dict], out: Path) -> Tuple[List[Path], str]:
+    """Every agent trial's verdict against DiscoPoP alone, one row per benchmark, grouped by
+    MEASURED class — the picture the claim is read from: on class R DiscoPoP alone reaches
+    nothing, so every green square is a program only the agent reached."""
+    from matplotlib.patches import Patch, Rectangle
+
+    rows = vs_discopop_alone(trials)
+    if not rows or not any(r.get("class") for r in rows):
+        return [], ""
+    series: List[Tuple[str, str]] = []
+    for r in rows:
+        if (r["arm"], r["model"]) not in series:
+            series.append((r["arm"], r["model"]))
+    sm = series[0]
+    rows = [r for r in rows if (r["arm"], r["model"]) == sm]
+    order = {"R": 0, "A": 1, "D": 2, "": 3}
+    benches = sorted({str(r["benchmark"]) for r in rows},
+                     key=lambda b: (order.get(next(r.get("class") or "" for r in rows if r["benchmark"] == b), 3), b))
+    reps = max(sum(1 for r in rows if r["benchmark"] == b) for b in benches)
+    fig, ax = plt.subplots(figsize=(7.4, 0.9 + 0.27 * len(benches)))
+    labels: List[str] = []
+    prev = None
+    for yi, b in enumerate(benches):
+        rs = sorted((r for r in rows if r["benchmark"] == b), key=lambda r: r.get("repeat") or 0)
+        cls = rs[0].get("class") or "?"
+        if cls != prev and prev is not None:
+            ax.axhline(yi - 0.5, color=AXIS, linewidth=1)
+        prev = cls
+        labels.append(f"{cls} · {b}")
+        for xi, r in enumerate(rs):
+            colour, hatch = VERDICT_STYLE.get(str(r["verdict"]), (MUTED, ""))
+            ax.add_patch(Rectangle((xi + 0.06, yi - 0.4), 0.88, 0.8, facecolor=colour, hatch=hatch,
+                                   edgecolor=SURFACE, linewidth=0.8))
+        ratios = [r["agent_vs_dp_alone"] for r in rs if r["agent_vs_dp_alone"]]
+        dp = rs[0]["dp_alone_speedup_vs_seq"]
+        note = (f"DiscoPoP alone {dp:.2f}×" if dp else "DiscoPoP alone —") + (
+            f"   agent ÷ it: {statistics.median(ratios):.2f}×" if ratios else "")
+        ax.text(reps + 0.25, yi, note, va="center", fontsize=7.5, color=INK_2)
+    ax.set_xlim(0, reps + 5.2)
+    ax.set_ylim(len(benches) - 0.5, -0.5)
+    ax.set_yticks(range(len(benches)), labels, fontsize=8)
+    ax.set_xticks([i + 0.5 for i in range(reps)], [f"rep {i + 1}" for i in range(reps)], fontsize=8)
+    ax.tick_params(length=0)
+    for side in ("top", "right", "bottom", "left"):
+        ax.spines[side].set_visible(False)
+    used = [v for v, _ in VS_ORDER if any(r["verdict"] == v for r in rows)]
+    ax.legend([Patch(facecolor=VERDICT_STYLE[v][0], hatch=VERDICT_STYLE[v][1], edgecolor=SURFACE) for v in used],
+              used, fontsize=8, ncol=min(4, len(used)), loc="lower left", bbox_to_anchor=(0, 1.01), frameon=False)
+    caption = (f"THE MAIN COMPARISON, TRIAL BY TRIAL — arm `{sm[0]}`, {sm[1]}. One square per agent trial, "
+               "coloured by its verdict against DiscoPoP alone on the same benchmark and profile; rows grouped "
+               "by MEASURED class (R: DiscoPoP alone reaches no verified parallel program; A: it does; D: a true "
+               "recurrence, must decline). On class R every green square is a verified parallel program that "
+               "only the agent reached; hatched = reached, but not 1.1× faster (or too short to time). "
+               "Counts, rates with intervals and the paired test: main_comparison_stats.md.")
+    paths = _save(fig, out, "fig_verdict_matrix")
+    plt.close(fig)
+    return paths, caption
+
+
 def fig_evidence_model(plt, trials: List[dict], out: Path) -> Tuple[List[Path], str]:
     arms = ["full_b1", "no_evidence_b1"]
     ts = [t for t in trials if t.get("arm") in arms]
@@ -704,11 +775,18 @@ def build(trials: List[dict], out_dir: Path) -> List[Path]:
              "Data: `trials.csv` (one row per trial), `gate_failures.csv` (long format), "
              "`vs_discopop_alone.csv` / `.md` (the main comparison: every agent trial paired with "
              "DiscoPoP alone on the same benchmark).\n"]
-    for fn in (fig_vs_discopop_alone, fig_outcomes, fig_speedups, fig_gate, fig_evidence_model, fig_cost):
+    for fn in (fig_vs_discopop_alone, fig_verdict_matrix, fig_outcomes, fig_speedups, fig_gate, fig_evidence_model, fig_cost):
         paths, caption = fn(plt, trials, out_dir)
         if paths:
             written += paths
             index.append(f"## `{paths[0].name}`\n\n{caption}\n")
     (out_dir / "figures.md").write_text("\n".join(index))
     written.append(out_dir / "figures.md")
+    # The main comparison in numbers — the pre-registered statistics, per measured class.
+    if any(t.get("arm") == BASELINE_ARM for t in trials) and any(t.get("arm") != BASELINE_ARM for t in trials):
+        import main_comparison_stats as mcs
+        res = mcs.analyse(trials)
+        (out_dir / "main_comparison_stats.md").write_text(mcs.to_markdown(res) + "\n")
+        (out_dir / "main_comparison_stats.json").write_text(json.dumps(res, indent=2, default=str) + "\n")
+        written += [out_dir / "main_comparison_stats.md", out_dir / "main_comparison_stats.json"]
     return written
