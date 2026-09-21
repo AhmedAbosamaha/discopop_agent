@@ -119,6 +119,10 @@ def _print_banner(args: AgentArguments) -> None:
           + (f"; LLM reports deps for the code it writes "
              f"({getattr(args, 'llm_recon_mode', 'followup')})"
              if getattr(args, "llm_recon", False) else ""))
+    _et = getattr(args, "explorer_timeout", 0.0)
+    print(f"  Explorer       : "
+          + (f"one attempt may take {_et:.0f} s, then the draw is repeated (random stall, L5)"
+             if _et and _et > 0 else "no time limit on an attempt"))
     print(f"  Pragmas        : "
           + ("LLM writes them with the rewrite, gate decides (--llm-pragmas)"
              if args.llm_pragmas else "DiscoPoP writes them in Phase B"))

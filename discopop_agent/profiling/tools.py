@@ -77,9 +77,52 @@ def _explorer_cmd() -> str:
 EXPLORER_ATTEMPTS = 20
 
 
+# A stalled explorer is a DRAW, like a crashed one (L5): on one unchanged profile the explorer
+# sometimes finishes in seconds and sometimes spins for an hour in task detection — `s3112`
+# took 5.8 s on the draw after the one that was still running at 80 minutes, and the rewritten
+# `s211` stalled > 6 min on a Mac and finished in seconds on the next attempt.  Measured over
+# 166 profile draws of the campaign's benchmarks: median 3.5 s, slowest legitimate run 33 s
+# (Rodinia `hotspot`), 7 % of draws lost to a stall.  The limit is ~18x that slowest run, and
+# 6x NPB-C CG's 99 s; a program whose explorer legitimately needs longer passes
+# --explorer-timeout.  Until this existed the call had NO limit: a stall after a kept rewrite
+# hung the trial until the harness killed the whole agent at its 90-minute limit — and it
+# could only strike trials whose rewrite had been ACCEPTED, so the trials it removed were the
+# agent's successes.
+EXPLORER_STALL_S = 600.0
+EXPLORER_STALL_ATTEMPTS = 5
+
+
+def set_explorer_timeout(seconds: float) -> None:
+    """Set from --explorer-timeout at start-up; 0 or less means no limit."""
+    global EXPLORER_STALL_S
+    EXPLORER_STALL_S = float(seconds)
+
+
+def _explore_once(discopop_dir: Path, env: "dict[str, str]") -> "subprocess.CompletedProcess[str]":
+    """One explorer attempt in its OWN process group, so a stall can be killed whole — the
+    explorer shells out to the patch generator, which a plain kill would leave running."""
+    import os
+    import signal
+
+    cmd = [_explorer_cmd()]
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+                            cwd=discopop_dir.resolve(), env=env, start_new_session=True)
+    try:
+        out, err = proc.communicate(timeout=EXPLORER_STALL_S if EXPLORER_STALL_S > 0 else None)
+        return subprocess.CompletedProcess(cmd, proc.returncode, out, err)
+    except subprocess.TimeoutExpired:
+        try:
+            os.killpg(proc.pid, signal.SIGKILL)
+        except (ProcessLookupError, PermissionError):
+            proc.kill()
+        out, err = proc.communicate()
+        return subprocess.CompletedProcess(
+            cmd, -9, out or "", f"{err or ''}\nSTALLED: no result after {EXPLORER_STALL_S:.0f} s")
+
+
 def run_explorer(discopop_dir: Path, env: "dict[str, str] | None" = None
                  ) -> "subprocess.CompletedProcess[str]":
-    """Run discopop_explorer in `discopop_dir`, retrying a crash on the same profile.
+    """Run discopop_explorer in `discopop_dir`, retrying a crash OR a stall on the same profile.
 
     The explorer is not deterministic on a fixed profile: run repeatedly on ONE
     profile it reports different task patterns each time and, on some programs,
@@ -88,26 +131,28 @@ def run_explorer(discopop_dir: Path, env: "dict[str, str] | None" = None
     `pathfinder`: 15 crashes in 20 attempts on one profile, so 20 attempts
     leave a 0.75^20 ≈ 0.3 % chance of losing the step). Fixing PYTHONHASHSEED does not change
     that. So a crash is a draw, not a verdict on the code: treating it as one
-    reverted rewrites and discarded the dependence review for no reason. The
-    profile is never touched between attempts; only the explorer's own partial
-    output is cleared before a retry. Each retry is printed so a log shows it.
-    Returns the last attempt's result.
+    reverted rewrites and discarded the dependence review for no reason. A STALL is a draw
+    too (see EXPLORER_STALL_S above), limited separately: at most EXPLORER_STALL_ATTEMPTS
+    stalls, since each costs the full limit. The profile is never touched between attempts;
+    only the explorer's own partial output is cleared before a retry. Each retry is printed
+    so a log shows it. Returns the last attempt's result.
     """
     import shutil
 
-    r = subprocess.run([_explorer_cmd()], capture_output=True, text=True,
-                       cwd=discopop_dir.resolve(), env=env if env is not None else _venv_env())
-    attempt = 1
-    while r.returncode != 0 and attempt < EXPLORER_ATTEMPTS:
+    use_env = env if env is not None else _venv_env()
+    r = _explore_once(discopop_dir, use_env)
+    attempt, stalls = 1, int(r.returncode == -9)
+    while r.returncode != 0 and attempt < EXPLORER_ATTEMPTS and stalls < EXPLORER_STALL_ATTEMPTS:
         last = (r.stderr.strip().splitlines() or ["no output"])[-1][:120]
-        print(f"      [explorer] attempt {attempt} failed ({last}) — retrying on the same profile")
+        what = "stalled" if r.returncode == -9 else "failed"
+        print(f"      [explorer] attempt {attempt} {what} ({last}) — retrying on the same profile")
         shutil.rmtree(discopop_dir / "explorer", ignore_errors=True)
         attempt += 1
-        r = subprocess.run([_explorer_cmd()], capture_output=True, text=True,
-                           cwd=discopop_dir.resolve(), env=env if env is not None else _venv_env())
+        r = _explore_once(discopop_dir, use_env)
+        stalls += int(r.returncode == -9)
     if attempt > 1:
         outcome = "succeeded" if r.returncode == 0 else "failed every time"
-        print(f"      [explorer] {outcome} after {attempt} attempt(s)")
+        print(f"      [explorer] {outcome} after {attempt} attempt(s), {stalls} of them stalled")
     return r
 
 

@@ -81,6 +81,11 @@ DIGEST_REL_TOL = 1e-9
 FASTER_THRESHOLD = 1.1
 # Attempts of DiscoPoP's explorer on one profile before a benchmark is given up (profile_once).
 EXPLORER_ATTEMPTS = 20
+# One explorer attempt's limit and how many stalled draws are repeated — the agent's own
+# values (discopop_agent/profiling/tools.py), so the harness's profile and the agent's
+# re-profiles treat a stall alike.
+EXPLORER_STALL_S = 600
+EXPLORER_STALL_ATTEMPTS = 5
 
 # Same preference order as the agent's gate/toolchain.py, so the harness verifies
 # with the compiler the agent validated with.
@@ -755,35 +760,41 @@ def profile_once(bench_dir: Path, src_name: str, dest: Path, agent_repo: Path, t
     # already taken and stays untouched, so another attempt is only another draw of the
     # explorer's output; every failed attempt is recorded, and a benchmark is lost only
     # when all attempts fail.
-    # A TIMEOUT is not a draw. The retries above exist for a crash, which happens in the
-    # first seconds and costs nothing to repeat; an explorer still running at the limit is
-    # one that will not finish, and retrying it costs the limit again — 20 attempts at the
-    # 90-minute default is 30 hours for ONE benchmark. Measured on the TSVC loops: `s291`
-    # spent 5,403 s in a single attempt, `s3112` was still running after 80 minutes, while
-    # every other loop of the suite explored in 4 s. So a timeout stops the loop and is
-    # reported, like the other DiscoPoP cost limitations (NPB `lu`/`mg`, Rodinia `nw`,
-    # PolyBench `adi`).
+    # A STALL is a draw too — corrected 2026-09-21. The night the stall was found it looked
+    # like a property of two loops (`s291` 5,403 s, `s3112` still running at 80 minutes, 4 s
+    # for every other loop), so a timeout stopped the loop: 20 retries at the 90-minute phase
+    # limit is 30 hours for one benchmark. The next draws showed it is RANDOM (`s3112`: 5.8 s),
+    # and over 166 draws of the campaign's benchmarks the explorer needed a median of 3.5 s and
+    # at most 33 s while 7 % of the draws never finished — each of which cost a benchmark its
+    # whole run, all arms and repeats, because a run profiles once. So an attempt gets a SHORT
+    # limit (the agent's own, `profiling/tools.py`: ~18x the slowest legitimate run) and a
+    # stalled draw is repeated, at most EXPLORER_STALL_ATTEMPTS times: worst case 50 minutes,
+    # typical cost of a stall 10.
     failures: List[str] = []
     total = 0.0
-    timed_out = False
+    stalls = 0
+    stall_limit = min(timeout, EXPLORER_STALL_S) if EXPLORER_STALL_S > 0 else timeout
     for attempt in range(1, EXPLORER_ATTEMPTS + 1):
         shutil.rmtree(dest / ".discopop" / "explorer", ignore_errors=True)
-        rc, secs, tail = _run(["discopop_explorer"], dest / ".discopop", env, timeout,
+        rc, secs, tail = _run(["discopop_explorer"], dest / ".discopop", env, int(stall_limit),
                               log=dest / f"explore_{attempt}.log")
         total += secs
         if rc == 0:
             break
         failures.append(tail.strip().splitlines()[-1][:200] if tail.strip() else f"rc={rc}")
         if rc == -9:
-            timed_out = True
-            failures[-1] = f"timeout after {secs:.0f}s (no retry: a timeout is not a crash)"
-            break
+            stalls += 1
+            failures[-1] = f"stalled: no result after {secs:.0f}s (a random stall, L5; draw repeated)"
+            if stalls >= EXPLORER_STALL_ATTEMPTS:
+                break
+    timed_out = rc == -9
+    rec["explore_stalls"] = stalls
     rec["explore_s"] = round(total, 2)
     rec["explore_attempts"] = attempt
     rec["explore_timed_out"] = timed_out
     rec["explore_failures"] = failures
     if rc != 0:
-        rec["error"] = f"explore failed on all {EXPLORER_ATTEMPTS} attempts: {failures[-1]}"
+        rec["error"] = f"explore failed on all {attempt} attempts ({stalls} stalled): {failures[-1]}"
         return rec
     patterns = dest / ".discopop" / "explorer" / "patterns.json"
     if patterns.exists():
@@ -804,7 +815,16 @@ def _parse_agent_log(log: str) -> dict:
         # DiscoPoP's explorer crashing on an unchanged profile and being retried by the
         # agent (profiling/tools.py run_explorer); a draw, not a verdict, but counted.
         "explorer_retries": len(re.findall(r"\[explorer\] attempt \d+ failed", log)),
+        "explorer_stalls": len(re.findall(r"\[explorer\] attempt \d+ stalled", log)),
         "reverts": log.count("— reverting"),
+        # What each profile refresh after a rewrite actually WAS. `fallback` = a fast
+        # refresh that proved unusable and was replaced by a full re-profile: a trial of a
+        # fast-refresh arm with a fallback in it did not get the treatment its arm names, and
+        # E3's read-out has to be able to say how often that happened.
+        "refresh_fast": log.count("[refresh] kind=fast"),
+        "refresh_full": log.count("[refresh] kind=full"),
+        "refresh_fallback": log.count("[refresh] kind=fallback"),
+        "runtime_remeasurements": log.count("Re-measured runtimes:"),
         # Gate attribution. Phase A judges the model's rewrites ("Stage 'x' failed"),
         # Phase B judges DiscoPoP's pragmas ("gate failed at 'x'").
         "gate_failures_phase_a": dict(Counter(re.findall(r"Stage '([a-z_]+)' failed", log))),

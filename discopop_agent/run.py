@@ -72,6 +72,9 @@ def run(args: AgentArguments) -> None:
 
     viz.enable(args.verbose)
     _print_banner(args)
+    # One explorer attempt may stall at random (L5); limit it and repeat the draw.
+    from .profiling import tools as _profiling_tools
+    _profiling_tools.set_explorer_timeout(args.explorer_timeout)
 
     # A multi-file program: from here on every build is the whole project, with the
     # file under work as its focus.  None (the default) changes nothing.

@@ -203,6 +203,19 @@ regenerate it with the prepare tool. If the archived copy differs, delete
 ### The checklist for EVERY experiment (a new session starts here)
 
 **Before launching**
+0e. **An experiment's arms differ in EXACTLY its variable — machine-checked.** `arms.json` has an
+   `experiments` block: each experiment names its arms, its variable (resolved agent settings)
+   and what may differ only as a consequence. Run `venv/bin/python evaluation/agent/tools/test_arms.py`
+   after ANY change to an agent default, a common flag or an arm, and before every launch: it
+   resolves all arms through the agent's own parser on a timeable and an untimeable kernel and
+   fails on a confound, on a variable that does not vary, and on a stale declaration. It is what
+   found E2's pinned `--fast-refresh` (21 Sep) after the prose claim "verified" had missed it.
+   A new experiment gets its block BEFORE its first run.
+   **What actually happened is recorded per trial, not assumed from the arm:** `refresh_fast` /
+   `refresh_full` / `refresh_fallback` (a fast refresh that fell back to a full re-profile —
+   the trial did not get its arm's treatment; E3 reports the rate and analyses both ways),
+   `runtime_remeasurements`, `explorer_stalls` (a random explorer stall, killed at 600 s and
+   the draw repeated), `speed_check_off`. Read them in `trials.csv` before believing a contrast.
 0d. **Arguments that depend on other arguments (D28).** The agent REFUSES a combination that
    cannot work — `--llm-recon` and `--llm-deps` each need `--fast-refresh`; `--pragma-arbitration`
    needs both `--llm-pragmas` and `--require-speedup`; `--llm-recon` with `--llm-deps` is a

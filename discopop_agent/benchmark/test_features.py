@@ -1562,6 +1562,113 @@ def check_hotspot_remeasure(work: Path) -> Result:
                   f"total runtime {ratio:.2f}x of the first measurement")
 
 
+def check_explorer_stall(work: Path) -> Result:
+    """A stalled explorer attempt is killed — whole process group — and the draw repeated.
+
+    The explorer stalls at random on an unchanged profile (upstream report L5).  The agent's
+    call had no time limit, so a stall after a KEPT rewrite hung the trial until the harness
+    killed the agent at its 90-minute limit, and it could only hit trials whose rewrite had
+    been accepted.  Tested with a stand-in explorer that hangs on its first attempt — with a
+    child process of its own, as the real one has the patch generator — and succeeds on its
+    second.
+    """
+    name = "explorer stall"
+    import os
+    import stat
+    import time
+    from ..profiling import tools
+
+    sub = work / "explorer_stall"
+    (sub / ".discopop").mkdir(parents=True, exist_ok=True)
+    marker, childpid = sub / "second_attempt", sub / "child.pid"
+    fake = sub / "fake_explorer.sh"
+    fake.write_text(f"""#!/bin/sh
+if [ -f "{marker}" ]; then mkdir -p explorer; echo '{{}}' > explorer/patterns.json; exit 0; fi
+touch "{marker}"
+sleep 300 &
+echo $! > "{childpid}"
+wait
+""")
+    fake.chmod(fake.stat().st_mode | stat.S_IEXEC)
+    saved_cmd, saved_limit = tools._explorer_cmd, tools.EXPLORER_STALL_S
+    tools._explorer_cmd = lambda: str(fake)          # type: ignore[assignment]
+    tools.set_explorer_timeout(2.0)
+    try:
+        t0 = time.time()
+        r = tools.run_explorer(sub / ".discopop")
+        took = time.time() - t0
+    finally:
+        tools._explorer_cmd = saved_cmd              # type: ignore[assignment]
+        tools.set_explorer_timeout(saved_limit)
+    if r.returncode != 0:
+        return Result(name, "fail", f"the repeated draw did not succeed (rc={r.returncode})")
+    if took > 30:
+        return Result(name, "fail", f"took {took:.0f} s — the stalled attempt was not cut at its limit")
+    time.sleep(0.3)
+    try:
+        os.kill(int(childpid.read_text().strip()), 0)
+        return Result(name, "fail", "the stalled explorer's CHILD process survived the kill")
+    except (ProcessLookupError, ValueError, FileNotFoundError):
+        pass
+    return Result(name, "pass",
+                  f"stalled attempt killed with its child after 2 s, the next draw succeeded ({took:.1f} s)")
+
+
+_LOOP_COUNT_SRC = """#include <stdio.h>
+#define N 1000
+#define R 7
+static double a[N], b[N];
+int main(void) {
+  for (int i = 0; i < N; i++) { a[i] = i; b[i] = 2 * i; }
+  for (int r = 0; r < R; r++) {
+    for (int i = 1; i < N - 1; i++) { b[i] = b[i + 1] - a[i]; }
+    for (int i = 1; i < N - 1; i++) { a[i] = b[i - 1] + a[i]; }
+  }
+  double s = 0; for (int i = 0; i < N; i++) s += a[i] + b[i];
+  printf("%f\\n", s); return 0;
+}
+"""
+
+
+def check_loop_counts(work: Path) -> Result:
+    """The iteration counts the agent uses are the OBSERVED ones.  (Fix 88)
+
+    DiscoPoP's loop_counter_output.txt pairs its counts with the wrong loops (upstream B7;
+    82 % of 337 loop counts wrong over 41 profiles).  The agent read that file for the
+    workload proxy and for the "N iterations" it states in the prompt header, so a
+    48-iteration outer loop was presented to the model as running 1,536,000 times.  The
+    counts are now read from the `BGN loop` markers.  Ground truth here is by construction:
+    an outer loop of 7 around two sibling loops of 998.
+    """
+    name = "loop counts"
+    from ..plan.regions import _load_loop_counts
+
+    sub = work / "loop_counts"
+    sub.mkdir(parents=True, exist_ok=True)
+    (sub / "lc.c").write_text(_LOOP_COUNT_SRC)
+    ok, err = _profile(sub, "lc.c", hotspots=False, c_as_c=True)
+    if not ok:
+        return Result(name, "skip", err)
+    counts = _load_loop_counts(sub / ".discopop" / "profiler")
+    lines = (sub / "lc.c").read_text().splitlines()
+    at = {i + 1: l for i, l in enumerate(lines) if l.lstrip().startswith("for (")}
+    outer = next(n for n, l in at.items() if "r < R" in l)
+    siblings = [n for n, l in at.items() if "i < N - 1" in l]
+    got = {n: counts.get(f"1:{n}") for n in [outer] + siblings}
+    want = {outer: 7, siblings[0]: 7 * 998, siblings[1]: 7 * 998}
+    if got != want:
+        return Result(name, "fail", f"iteration counts {got}, expected {want}")
+    raw = {}
+    for l in (sub / ".discopop" / "profiler" / "loop_counter_output.txt").read_text().splitlines():
+        parts = l.split()
+        if len(parts) >= 3:
+            raw[int(parts[1])] = int(parts[2])
+    upstream = "still wrong upstream" if any(raw.get(n) != w for n, w in want.items()) else "upstream file agrees here"
+    return Result(name, "pass",
+                  f"outer loop 7, both sibling loops 6,986 — from the observed markers "
+                  f"(loop_counter_output.txt: {upstream}: { {n: raw.get(n) for n in want} })")
+
+
 def check_covered_skip(work: Path) -> Result:
     """A region inside an already-accepted one must leave the queue.
 
@@ -2552,6 +2659,8 @@ _CHECKS: List[Tuple[str, Callable[[Path], Result]]] = [
     ("min-impact", check_min_impact),
     ("new-region-ranking", check_new_region_ranking),
     ("hotspot-remeasure", check_hotspot_remeasure),
+    ("explorer-stall", check_explorer_stall),
+    ("loop-counts", check_loop_counts),
     ("covered-skip", check_covered_skip),
     ("budget-policy", check_budget_policy),
     ("project-mode", check_project_mode),

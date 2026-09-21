@@ -221,15 +221,44 @@ def find_enclosing_function(
 
 
 def _load_loop_counts(profiler_dir: Path) -> Dict[str, int]:
-    """Parse loop_counter_output.txt → {file_id:start_line: iteration_count}."""
+    """Total observed iterations per loop → {file_id:start_line: count}.
+
+    Read from the `BGN loop` markers of dynamic_dependencies.txt
+    (`<file>:<line> BGN loop <total> <entries> <avg> <max>`), which are keyed on the loop's
+    real source line.  NOT from loop_counter_output.txt, which this used until Fix 88: that
+    file pairs the counts with the WRONG loops (upstream report B7).  Measured over 41
+    profiles of the campaign's benchmarks, 277 of 337 loop counts in it (82 %) disagree with
+    the markers, in 38 of the 41 programs — a 48-iteration outer loop reported with its
+    inner loop's 1,536,000, the second of two sibling loops with 160 where it ran 1,535,904
+    times.  Both consumers were affected in every arm: the workload proxy (ranking without
+    hotspots, Phase B's order, every `W=` in a log) and the "N iterations" the prompt header
+    states to the model.  The counter file remains the fallback for a loop that has no
+    marker — after a fast refresh, code the rewrite created was never run.
+    """
     counts: Dict[str, int] = {}
     f = profiler_dir / "loop_counter_output.txt"
-    if not f.exists():
-        return counts
-    for line in f.read_text().splitlines():
-        parts = line.strip().split()
-        if len(parts) >= 3:
-            counts[f"{parts[0]}:{parts[1]}"] = int(parts[2])
+    if f.exists():
+        for line in f.read_text().splitlines():
+            parts = line.strip().split()
+            if len(parts) >= 3:
+                try:
+                    counts[f"{parts[0]}:{parts[1]}"] = int(parts[2])
+                except ValueError:
+                    continue
+    observed: Dict[str, int] = {}
+    dd = profiler_dir / "dynamic_dependencies.txt"
+    if dd.exists():
+        for line in dd.read_text(errors="replace").splitlines():
+            parts = line.split()
+            if len(parts) < 7 or parts[1] != "BGN" or parts[2] != "loop" or ":" not in parts[0]:
+                continue
+            try:
+                total = int(parts[3])
+            except ValueError:
+                continue
+            # One marker per loop in practice; several (one per call path) add up.
+            observed[parts[0]] = observed.get(parts[0], 0) + total
+    counts.update({k: v for k, v in observed.items() if v > 0})
     return counts
 
 

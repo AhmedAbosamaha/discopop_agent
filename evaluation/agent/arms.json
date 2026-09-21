@@ -9,7 +9,6 @@
   "arms": {
     "discopop_gate": {
       "ids": [
-        "B1",
         "E1"
       ],
       "description": "DiscoPoP's own suggestions through the agent's gate; no LLM call is ever made (--budget 0). THE BASELINE of the main comparison (D19), so it inherits the same fixed configuration as the agent arm and differs from it only in the model: since 2026-09-20 that includes the speed check at the kernel's timing size, which lets it reject a DiscoPoP pragma that makes the program slower. Runs before that date (e10_dp_alone) applied DiscoPoP's pragmas WITHOUT a speed check -- a weaker baseline; see THESIS_EXPERIMENTS 5l.",
@@ -28,8 +27,7 @@
     },
     "full": {
       "ids": [
-        "B5",
-        "E5"
+        "E10"
       ],
       "description": "The agent with the speed check OFF: the LLM restructures and writes pragmas, fast refresh, full evidence, everything of the gate except the timing. This was the campaign default until 2026-09-20; E10 showed it keeps correct-but-slower programs (lu 0.20x, hotspot 0.09x) and was the only arm with an unsafe acceptance, so it is now an EXPERIMENTAL arm, not the default. Kept unchanged so E10's trials stay comparable. Carries --llm-pragmas explicitly since 2026-09-20, when that stopped being the default: E10 ran with it on, and pinning it keeps this arm reproducible.",
       "flags": [
@@ -49,49 +47,43 @@
     },
     "full_b1": {
       "ids": [
-        "X1-full"
+        "E2"
       ],
-      "description": "Defaults with a single LLM attempt per region, so the gate's failure feedback cannot substitute for evidence.",
+      "description": "E2's (full evidence, budget 1) cell: the campaign default with a single LLM attempt per region, so the gate's failure feedback cannot substitute for evidence. Until 2026-09-21 it carried --fast-refresh, pinned there by D27's blanket 'keep what was implicit' \u2014 which left E2's 2x2 differing from its own baseline (`default`, full re-profile) in the refresh as well as in evidence and budget. Removed: the refresh is E3's variable, not E2's.",
       "flags": [
         "--budget",
-        "1",
-        "--fast-refresh"
+        "1"
       ],
       "settings": {
         "budget": 1,
         "llm_pragmas": false,
         "require_speedup": true,
         "evidence_sections": null,
-        "fast_refresh": true
+        "fast_refresh": false
       }
     },
     "no_evidence_b1": {
       "ids": [
-        "B4",
-        "X1-none"
+        "E2"
       ],
-      "description": "Single attempt, no DiscoPoP evidence in the prompt (source and task only). Paired with full_b1.",
+      "description": "E2's (no evidence, budget 1) cell: single attempt, no DiscoPoP evidence in the prompt (source and task only). Follows the campaign default in everything else (no --fast-refresh since 2026-09-21, see `full_b1`).",
       "flags": [
         "--budget",
         "1",
         "--evidence",
-        "none",
-        "--fast-refresh"
+        "none"
       ],
       "settings": {
         "budget": 1,
         "llm_pragmas": false,
         "require_speedup": true,
         "evidence_sections": [],
-        "fast_refresh": true
+        "fast_refresh": false
       }
     },
     "discopop_annotates": {
-      "ids": [
-        "E2",
-        "E3-matrix"
-      ],
-      "description": "LLM restructures but may not write pragmas; DiscoPoP's re-discovery decides and Phase B annotates. Full re-profile after every kept rewrite.",
+      "ids": [],
+      "description": "RETIRED 2026-09-21 \u2014 since D27 this resolves to exactly the same configuration as `default` (DiscoPoP annotates, full re-profile), so it is no experiment's arm any more; E3's cell is `default`. Kept only so the name still resolves.",
       "flags": [
         "--no-llm-pragmas",
         "--no-fast-refresh"
@@ -106,9 +98,8 @@
     },
     "discopop_pragmas_fast": {
       "ids": [
-        "E4",
-        "E4-direction",
-        "E4-mode"
+        "E3",
+        "E4"
       ],
       "description": "DiscoPoP annotates (--no-llm-pragmas) with the fast refresh ON. Two roles: E3's (DiscoPoP annotates, fast refresh) cell, and the BASELINE of E4 \u2014 every E4 cell needs the fast refresh, because reconstruction only runs inside that branch, so E4 cannot be paired against `default`, which does a full re-profile.",
       "flags": [
@@ -125,9 +116,9 @@
     },
     "llm_pragmas_full_reprofile": {
       "ids": [
-        "E4-matrix"
+        "E3"
       ],
-      "description": "Defaults (LLM writes pragmas, gate decides) but a full instrumented re-profile after every kept rewrite instead of a fast refresh.",
+      "description": "E3's (the model writes the pragmas, full re-profile) cell: the default plus --llm-pragmas. Fix 85's arbitration is active here (it needs --llm-pragmas and the speed check), as a consequence of the cell, not a second variable.",
       "flags": [
         "--llm-pragmas",
         "--no-fast-refresh"
@@ -143,7 +134,8 @@
     },
     "discopop_pragmas_recon": {
       "ids": [
-        "E4"
+        "E4",
+        "E4-mode"
       ],
       "description": "DiscoPoP decides keep/revert from the refreshed profile (--no-llm-pragmas), and the model reconstructs the dependences of the code it just wrote (--llm-recon). Reconstruction only changes a decision in this mode: when the model writes its own pragmas the gate decides and the refreshed profile only relocates the queue. Carries --fast-refresh explicitly since 2026-09-21: reconstruction runs only inside that branch, so without it this arm would silently measure nothing.",
       "flags": [
@@ -195,25 +187,24 @@
     },
     "no_evidence": {
       "ids": [
-        "E2-feedback"
+        "E2"
       ],
-      "description": "No DiscoPoP evidence in the prompt, full budget (3 attempts): the gate's failure feedback is the only information beyond the source. Paired with full, full_b1 and no_evidence_b1 for the evidence x feedback 2x2.",
+      "description": "E2's (no evidence, budget 3) cell: no DiscoPoP evidence in the prompt, full budget \u2014 the gate's failure feedback is the only information beyond the source. Paired with `default`, `full_b1` and `no_evidence_b1` for the evidence x feedback 2x2; like them it follows the campaign default in everything else (no --fast-refresh since 2026-09-21, see `full_b1`).",
       "flags": [
         "--evidence",
-        "none",
-        "--fast-refresh"
+        "none"
       ],
       "settings": {
         "budget": 3,
         "llm_pragmas": false,
         "require_speedup": true,
         "evidence_sections": [],
-        "fast_refresh": true
+        "fast_refresh": false
       }
     },
     "discopop_pragmas_llmdeps": {
       "ids": [
-        "E4-direction"
+        "E4"
       ],
       "description": "DiscoPoP decides from the refreshed profile, and the model may DELETE static dependences it judges spurious in code it just wrote (--llm-deps) \u2014 the unsound direction, kept to test the add-vs-delete principle against discopop_pragmas_recon. Carries --fast-refresh explicitly since 2026-09-21: reconstruction runs only inside that branch, so without it this arm would silently measure nothing.",
       "flags": [
@@ -270,7 +261,7 @@
       "ids": [
         "E10"
       ],
-      "description": "The campaign default since 2026-09-20 (D8): the speed check ON, timed at the kernel's measured timing size (agent/kernel_sizes.json, T0.1) via --timing-cflags; profiling and every correctness check stay at the agent size. E1's agent arm. The flags are now inherited from common_flags; they are repeated here so the arm reads the same as when E10 ran it. Carries --llm-pragmas explicitly since 2026-09-20, when that stopped being the default: E10 ran with it on, and pinning it keeps this arm reproducible.",
+      "description": "E10's winning arm, pinned to the configuration E10 ran (--llm-pragmas, --fast-refresh, speed check ON at the kernel's timing size) so the archived trials stay reproducible. NOT the campaign default and NOT E1's agent arm \u2014 that is `default` since D23/D27; what E10 established and the default keeps is the speed check at the right size (D8, D22).",
       "flags": [
         "--llm-pragmas",
         "--require-speedup",
@@ -310,10 +301,9 @@
     },
     "llm_recon": {
       "ids": [
-        "E6",
-        "RQ6"
+        "E6-candidate"
       ],
-      "description": "Defaults plus LLM dependence reconstruction for code it just wrote. Carries --fast-refresh explicitly since 2026-09-21: reconstruction runs only inside that branch, so without it this arm would silently measure nothing.",
+      "description": "Defaults plus LLM dependence reconstruction for code it just wrote. Carries --fast-refresh explicitly since 2026-09-21: reconstruction runs only inside that branch, so without it this arm would silently measure nothing. NOT part of a machine-checked experiment yet: E6's arm set is fixed at E6's own pre-flight.",
       "flags": [
         "--llm-recon",
         "--fast-refresh"
@@ -329,12 +319,12 @@
     "default": {
       "ids": [
         "E1",
-        "E3-matrix",
-        "E4-matrix",
+        "E2",
+        "E3",
         "E8",
         "E9"
       ],
-      "description": "The campaign default with nothing added: the agent as every later experiment inherits it \u2014 the model restructures and DiscoPoP annotates (--no-llm-pragmas), a FULL re-profile after every kept rewrite, speed check ON at the kernel's timing size, full evidence, budget 3. The BASELINE CELL of the matrix experiments (E3's (DiscoPoP annotates, fast refresh) cell, E4's, E8's depth 0, E9's measured ranking) and E1's agent arm. Until 2026-09-20 that cell was `full`, which is now pinned to the older configuration so E10 stays comparable.",
+      "description": "The campaign default with nothing added: the model restructures and DiscoPoP annotates (--no-llm-pragmas, D23), a FULL re-profile after every kept rewrite (--no-fast-refresh, D27), the speed check ON at the kernel's timing size (D22), full evidence, budget 3. E1's agent arm, and the baseline cell of E2 (full evidence, budget 3), E3 (DiscoPoP annotates, full re-profile), E8 (depth 0) and E9 (measured ranking).",
       "flags": [],
       "settings": {
         "budget": 3,
@@ -348,7 +338,7 @@
     },
     "llm_pragmas_fast": {
       "ids": [
-        "E3-matrix"
+        "E3"
       ],
       "description": "E3's (the LLM writes the pragmas, fast refresh) cell: the default plus --llm-pragmas. Until 2026-09-20 this was the default itself and had no name of its own; it needs one now that pragma authorship is opt-in.",
       "flags": [
@@ -387,5 +377,119 @@
   },
   "common_timing_size": "per_kernel",
   "common_flags_note": "Fixed configuration every arm inherits. Until 2026-09-20 this was --no-require-speedup (15 Sep: at SMALL sizes kernels run in milliseconds and the check measured noise). E10 settled it: the check ON at the kernel's TIMING size is the only configuration with no unsafe acceptance and no result below DiscoPoP alone, while OFF kept 5 slower programs and 1 BROKEN, and ON at the small size deleted DiscoPoP's own pragmas in 10 of 21 trials. What was wrong in September was the size, not the check. An arm that wants the old behaviour says so explicitly. --min-runtime-share 0.01 is unchanged (D1, from T0.5).",
-  "settings_note": "`settings` is what each arm DECLARES the agent must be configured with for the experiment it serves. Before a run the harness asks the agent what it actually parsed (`--print-config`) and refuses to start on any difference, so a changed default, an inherited flag or a typo cannot silently change what an arm means. Add a key here for every argument that carries the arm's purpose; leave out the ones it genuinely does not care about (paths, model, credentials)."
+  "settings_note": "`settings` is what each arm DECLARES the agent must be configured with for the experiment it serves. Before a run the harness asks the agent what it actually parsed (`--print-config`) and refuses to start on any difference, so a changed default, an inherited flag or a typo cannot silently change what an arm means. Add a key here for every argument that carries the arm's purpose; leave out the ones it genuinely does not care about (paths, model, credentials).",
+  "experiments_note": "Every experiment names its arms, the resolved agent settings that are its VARIABLE, and any setting that may differ only as a CONSEQUENCE of the variable. tools/test_arms.py resolves every arm through the agent's own parser and fails unless the arms of an experiment differ in exactly that: nothing else (a confound), and nothing less (a variable that does not vary is an experiment whose arms cannot differ). The per-arm `ids` are derived from this block.",
+  "experiments": {
+    "E1": {
+      "arms": [
+        "discopop_gate",
+        "default"
+      ],
+      "variable": [
+        "budget"
+      ],
+      "consequences": [],
+      "why": "THE MAIN COMPARISON (D19): DiscoPoP alone vs DiscoPoP + agent. Budget 0 means no model is ever called; everything else \u2014 gate, speed check, sizes, filter \u2014 is identical, so the difference is the agent."
+    },
+    "E2": {
+      "arms": [
+        "default",
+        "full_b1",
+        "no_evidence",
+        "no_evidence_b1"
+      ],
+      "variable": [
+        "evidence_sections",
+        "budget"
+      ],
+      "consequences": [],
+      "why": "Evidence x feedback 2x2 (H5, H5b). The evidence-source arms of D16 (`hotspot_only`, `compiler_remarks`) join when --evidence-file exists."
+    },
+    "E3": {
+      "arms": [
+        "default",
+        "discopop_pragmas_fast",
+        "llm_pragmas_full_reprofile",
+        "llm_pragmas_fast"
+      ],
+      "variable": [
+        "llm_pragmas",
+        "fast_refresh"
+      ],
+      "consequences": [
+        "pragma_arbitration"
+      ],
+      "why": "Pragma author x profile refresh 2x2 (H6). Arbitration follows --llm-pragmas (D28)."
+    },
+    "E4": {
+      "arms": [
+        "discopop_pragmas_fast",
+        "discopop_pragmas_recon",
+        "discopop_pragmas_llmdeps"
+      ],
+      "variable": [
+        "llm_recon",
+        "llm_deps"
+      ],
+      "consequences": [],
+      "why": "Closing the fast refresh's gap: adding dependences (recon) vs deleting them (llm-deps), against the plain fast refresh (H7, H7b). Every cell needs --fast-refresh, so the baseline is `discopop_pragmas_fast`, not `default`."
+    },
+    "E4-mode": {
+      "arms": [
+        "discopop_pragmas_recon",
+        "discopop_pragmas_recon_folded"
+      ],
+      "variable": [
+        "llm_recon_mode"
+      ],
+      "consequences": [],
+      "why": "Reconstruction as a follow-up call vs folded into the rewrite call."
+    },
+    "E8": {
+      "arms": [
+        "default",
+        "full_depth1",
+        "full_depth2"
+      ],
+      "variable": [
+        "restructure_depth"
+      ],
+      "consequences": [],
+      "why": "How deep to chain restructuring (H8)."
+    },
+    "E9": {
+      "arms": [
+        "default",
+        "full_no_hotspots"
+      ],
+      "variable": [
+        "hotspots"
+      ],
+      "consequences": [],
+      "why": "Measured ranking vs the static proxy (H9). --no-hotspots also makes --min-runtime-share inert (D28): the write-up states that the arm varies ranking AND the filter."
+    },
+    "E10": {
+      "arms": [
+        "full",
+        "speed_gate_large",
+        "speed_gate_small"
+      ],
+      "variable": [
+        "require_speedup",
+        "timing_cflags"
+      ],
+      "consequences": [
+        "pragma_arbitration"
+      ],
+      "why": "ARCHIVED (done 20 Sep): the speed check off / on at the kernel's timing size / on at the agent size. `timing_cflags` is set by the harness from each arm's `timing_size`."
+    },
+    "T0.11": {
+      "arms": [
+        "discopop_capability"
+      ],
+      "variable": [],
+      "consequences": [],
+      "why": "The class measurement: one arm, no comparison."
+    }
+  }
 }

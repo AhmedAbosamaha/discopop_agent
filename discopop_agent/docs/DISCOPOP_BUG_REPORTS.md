@@ -26,6 +26,8 @@ LLVM 19 (macOS) and LLVM 20 (Linux).
 | B4 | explorer, task-graph traversal order | open (consequence of B3, to re-measure after it) | the explorer's output differs between runs on one unchanged profile |
 | P1 | explorer, `TaskGraph.__assign_state_ids` | fixed (agent Fix 83) | performance: the state assignment re-answers the same (context, call path) pair exponentially often — hours on `mg`/`nw`, seconds once memoised |
 | B6 | `discopop_patch_generator` (called by the explorer) | open | hangs on some runs: 3 of 20 explorer runs on one unchanged profile of a 40-line program never return from the patch-generator subprocess |
+| B7 | profiler runtime, `loop_counter_output.txt` | worked around (agent Fix 88), open upstream | the per-loop iteration counts are paired with the WRONG loops: 277 of 337 counts (82 %) over 41 profiles disagree with the `BGN loop` markers of the same run |
+| N1 | hotspot detection (`hotspot_detection/private/`) | usage hazard, not a bug (agent Fix 87) | region ids and results ACCUMULATE across builds and runs by design; re-instrumenting a CHANGED program into the same directory reports the old program's lines, halved times, and nothing for new regions |
 | L1 | profiler | limitation | NPB-CPP `lu` (4,134 lines): the instrumenting compile exceeds two hours |
 | L2 | profiler + explorer | limitation | Rodinia `nw`: 531,606 call-path states; the explorer's state assignment needs ≈ 25 h |
 | L5 | explorer | limitation (a cheap reproducer of B4) | TSVC-2, ~30 lines per loop: the explorer normally finishes in **4 s**, but on a RANDOM ~2 loops of 25 per profile it does not finish at all — `s291` 5,403 s, `s3112` > 80 min on one draw and **5.8 s** on the next, `s322` and `s331` 4 s on one draw and stalled on the next. Every stall stops at the same point, a progress bar at `0/11`. Instrumentation and the profiled run take 0.2 s, so it is the explorer alone; `s291`'s profile holds **117 task patterns** for one loop nest — the signature of L3 (NPB `mg`) at a tiny scale, which may make these the smallest reproducers of it |
@@ -123,10 +125,59 @@ call path) pair is reached along many routes. Fix: memoise per state id (agent F
 NPB-C `CG`: > 20 min → < 1 s for this phase, identical Do-All/reduction sets. L2 and L3
 below were measured BEFORE this fix and are to be re-measured.
 
+## B7 — `loop_counter_output.txt` pairs iteration counts with the wrong loops
+
+The profiler writes two records of how often a loop ran: the `BGN loop` markers in
+`dynamic_dependencies.txt` (`<file>:<line> BGN loop <total> <entries> <avg> <max>`) and
+`loop_counter_output.txt` (`<file> <line> <total>`). They disagree, and the markers are right.
+
+Minimal reproducer (the agent's feature check `loop-counts`): an outer loop of 7 iterations
+around two sibling loops of 998.
+
+```c
+for (int r = 0; r < R; r++) {                                   /* line 7:  R = 7   */
+  for (int i = 1; i < N - 1; i++) { b[i] = b[i + 1] - a[i]; }   /* line 8:  7 x 998 */
+  for (int i = 1; i < N - 1; i++) { a[i] = b[i - 1] + a[i]; }   /* line 9:  7 x 998 */
+}
+```
+
+| loop | true total | `BGN loop` marker | `loop_counter_output.txt` |
+|---|---:|---:|---:|
+| line 7 (outer) | 7 | 7 | **6,986** |
+| line 8 | 6,986 | 6,986 | 6,986 |
+| line 9 | 6,986 | 6,986 | **1,000** (the count of the init loop at line 6) |
+
+The counts look shifted against the loop ids of `loop_meta.txt` — each loop receives the
+count of a neighbouring id — so the join between the runtime's counter array and the loop
+table is off; not traced into the runtime yet. Extent, over 41 profiles of the evaluation's
+benchmarks (PolyBench, TSVC-2, `md`, `is`, `hotspot`, `pathfinder`): **277 of 337 loop counts
+(82 %) differ from the marker of the same run, in 38 of 41 programs** — typically the outer
+repetition loop carries its inner loop's total (TSVC: 48 reported as 1,536,000).
+
+Consequence for any consumer of the file: workload estimates are wrong by orders of
+magnitude in both directions. In the agent it fed the ranking proxy used when no hotspot
+measurement exists, and the "N iterations" stated to the model in every prompt header.
+Workaround (agent Fix 88): read the totals from the `BGN loop` markers; the file is only the
+fallback for a loop without a marker.
+
+## N1 — hotspot detection accumulates across builds (usage hazard)
+
+`discopop_hotspot_cxx` APPENDS the region ids of every build to
+`hotspot_detection/private/cs_id.txt` (`temp.txt` holds the running id count: `19`, then
+`39`), every run of the instrumented binary writes another `hotspot_result_<n>.txt`, and
+`discopop_hotspot_analyzer` averages over the runs. For several inputs of ONE program that is
+the intended design. After the SOURCE changes it silently produces a wrong answer: the
+analyzer reports the first build's region table — the old line numbers (`main` at 147 where
+the edited file has it at 149), every average halved by a run that never executed those ids,
+and no entry for a region the edit created — without any warning. A tool that re-measures an
+edited program must delete `hotspot_detection/` first (agent Fix 87). A cheap upstream guard:
+store a hash of the source beside `cs_id.txt` and refuse, or reset, on a mismatch.
+
 ## B6 — the patch generator sometimes never returns
 
 `discopop_explorer` ends by running `discopop_patch_generator` as a subprocess
 (`discopop_explorer.py:327`). On the agent's `explorer-multi-backedge` program (40 lines,
 two loops with `continue`s), 3 of 20 explorer runs on one unchanged profile hang in that
 subprocess (stack: `subprocess.communicate`), with or without Fix 83. Not yet diagnosed;
-callers should give the explorer a timeout.
+callers should give the explorer a timeout — the agent and the harness do since 2026-09-21
+(`--explorer-timeout`, 600 s per attempt, a stalled draw repeated up to 5 times).

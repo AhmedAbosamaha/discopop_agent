@@ -602,13 +602,24 @@ def phase_a(state: RunState) -> None:
                         args.source_file, dp_dir, args.reprofil_args or None
                     )
 
-                # After ANY full re-profile — the default path above, and the fallback
-                # when a fast refresh turns out unusable.  The fallback used to skip
-                # this: it is a full re-profile like the other, it merely sat in the
-                # other branch.  A refresh that SUCCEEDED fast is left alone here: it
-                # exists to avoid running the program, and whether it should pay for
-                # this one native-speed run is an open decision (record, Fix 86).
-                if not refreshed_fast and should_remeasure_runtimes(
+                # What this refresh actually WAS — said in one parseable line and kept in
+                # the record.  A fast refresh that turns out unusable falls back to a full
+                # re-profile so that a correct rewrite is not lost to a hiccup in the cheap
+                # path; but an experiment whose variable IS the refresh (E3) must be able
+                # to see that a "fast" trial was not one.  0 of 108 archived fast refreshes
+                # fell back, which is a rate to report, not a reason to stay blind to it.
+                refresh_kind = ("failed" if not reprofile_ok else
+                                "fast" if refreshed_fast else
+                                "fallback" if use_fast else "full")
+                print(f"│  [refresh] kind={refresh_kind}")
+
+                # After EVERY successful refresh (D29) — the full re-profile, the fallback,
+                # and the fast refresh too.  The fast refresh exists to skip the
+                # INSTRUMENTED run; this is one native-speed run, and without it the fast
+                # arm alone could not rank the regions a rewrite created, so E3's arms
+                # would have differed in the refresh AND in whether Phase B sees the
+                # exposed loops at all (Fixes 86, 87).
+                if should_remeasure_runtimes(
                         reprofile_ok, args.hotspots, impact.available):
                     ok_hs, hs_note = _measure_hotspots(args, dp_dir, force=True)
                     fresh = load_hotspots(dp_dir, threads=impact.threads) \
@@ -843,6 +854,7 @@ def phase_a(state: RunState) -> None:
                           f"{len(discovered)} new at depth {depth + 1}")
                     record["reprofiled"] = True
                 record["exposed_pattern"] = outcome.pattern_label
+                record["refresh"] = refresh_kind
                 if impact.available:
                     if result.measured_speedup:
                         impact.observe_speedup(result.measured_speedup)

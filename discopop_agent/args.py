@@ -50,6 +50,9 @@ class AgentArguments:
     # 'followup' = a separate turn after the gate; 'folded' = appended
     # to the rewrite prompt.  See --llm-recon-mode.
     llm_recon_mode: str = "followup"
+    # Seconds one explorer attempt may take before it is killed and the draw repeated
+    # (profiling/tools.py, L5); 0 = no limit.
+    explorer_timeout: float = 600.0
     # Ablation control (--evidence): which evidence sections render.
     # None means all of them, which is the default behaviour.
     evidence_sections: Optional[Set[str]] = None
@@ -354,6 +357,14 @@ def parse_args() -> AgentArguments:
                          "aborts instead). Without a reference, a rewrite's output is "
                          "never checked, so patches can be accepted that were never "
                          "shown to preserve semantics."))
+    p.add_argument("--explorer-timeout", type=float, default=600.0,
+                   help=("Seconds ONE discopop_explorer attempt may run before it is killed "
+                         "and repeated on the same profile (default: 600; 0 = no limit). "
+                         "The explorer stalls at random (upstream report L5): over 166 profile "
+                         "draws of the campaign's benchmarks it needed a median of 3.5 s and at "
+                         "most 33 s, and 7 %% of the draws never finished. A stall is a draw, "
+                         "like a crash, so it is retried (at most 5 stalls). Raise it for a "
+                         "program whose explorer legitimately needs longer."))
     p.add_argument("--build-retries", type=int, default=2,
                    help=("Retries that do NOT consume budget when the LLM's rewrite "
                          "fails to apply or compile (default: 2). A build error is a "
@@ -571,6 +582,7 @@ def parse_args() -> AgentArguments:
         allow_unverified=a.allow_unverified,
         llm_recon=a.llm_recon,
         llm_recon_mode=a.llm_recon_mode,
+        explorer_timeout=a.explorer_timeout,
         evidence_sections=evidence_sections,
         apply_patches=a.apply_patches,
         min_measured_speedup=a.min_measured_speedup,
