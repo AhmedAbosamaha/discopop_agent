@@ -1541,6 +1541,58 @@ trials, and the launcher logs — have been dealt with: the logs are now tracked
 of every server run), since they would otherwise be lost with the directory. The server's disk is
 at 99 % (32 GB free), so removing it is worth 19 GB — the author's call, not an automatic one.
 
+### 5r. The campaign's scope is narrowed to three suites that can show the contribution (2026-09-21, D30)
+
+**The author's decision**, five hours into E1's class-R run, with 35 trials finished and every
+one of them `no-change`: *"pick only the ones that will show results, not just taking so long
+then nothing … only TSVC, LULESH and RepoOMP."* And, against the suggestion to keep one
+PolyBench run as a no-harm control: *"`hotspot`, `seidel-2d`, `md`, `npb/is` do not add much
+value, and PolyBench already-parallel does not show any benefit for the agent."*
+
+**The rule that makes this a selection and not cherry-picking** — every condition is decided
+WITHOUT calling a model, so no benchmark is chosen or dropped by what the agent achieved on it:
+
+1. DiscoPoP can profile it within the limit (D26);
+2. DiscoPoP alone reaches no verified parallel program (T0.11) — it needs restructuring;
+3. a VERIFIED, output-equivalent parallel version exists (T0.10);
+4. the no-model ceiling test shows the arm under test can KEEP that version (T0.13).
+
+| Suite | Role | By the rule |
+|---|---|---|
+| **TSVC-2**, 25 loops | the controlled suite with ground truth: E1's claim and every ablation (E2, E3, E4, E8) | 18 R (16 keepable under `default`, T0.13; `s331`, `s341` need a pragma DiscoPoP cannot write — E3's material), 3 A, 4 D; expert ceilings ≥ 1.45× at the gate's timing size; ≈ 10 min per agent trial |
+| **LULESH 2.0**, serial path | the real application (E6): sequential · DiscoPoP alone · DiscoPoP + agent · LLNL's expert OpenMP | one profile = 23 s instrument (28 GB), 4.5 s run, 16 s explore; source prepared and validated (§5k); to be packaged and pre-flighted |
+| **RepoOMP's NPB-C**, 8 kernels | against the closest published system on identical programs (E11) | EP, IS, CG profile in 20–99 s; BT, SP, LU, FT, MG to be probed; to be packaged and pre-flighted |
+
+**Out, with the reason each fails the rule:** `rodinia-3.1/hotspot` — condition 3: no
+output-equivalent parallel version exists; Rodinia's own OpenMP version gives a thread-count- and
+schedule-dependent result (shown 21 Sep, §6). `polybench/seidel-2d` — condition 3: a true
+Gauss–Seidel recurrence; by the class definitions it is a D, filed R only because its package
+declares no `restructuring_class`. `burkardt/md`, `npb/is` — condition 3 never verified,
+35 and 20 minutes per agent trial, and in all six finished agent trials every DiscoPoP pragma on
+the restructured code was rejected. **PolyBench's 25 class-A kernels** — they cannot show a
+benefit of the agent (DiscoPoP alone already parallelizes them); dropped by the author.
+PolyBench's four cheap class-R kernels (`bicg`, `doitgen`, `floyd-warshall`, `trisolv`) have no
+verified reference either and leave with the suite.
+
+**What is NOT hidden.** Everything E1's class-R run executes before and after this decision is
+archived and reported — the 26 benchmarks as registered, and the subset the rule admits — and
+the rule is recorded here BEFORE any TSVC result of E1 exists. The finished `md`, `hotspot`,
+`seidel-2d` and `is` trials are all `neither`, with 0 unsafe acceptances after ≈ 100 model
+calls, which is itself evidence for C2.
+
+**The no-harm question without PolyBench** ("does the agent break what DiscoPoP already does?"):
+TSVC's three class-A loops, LULESH's ≈ 40 loops that are parallel as written, the NPB-C kernels,
+and E10's archived PolyBench result (nothing below DiscoPoP alone with the speed check at the
+kernel's timing size). Stated as a limitation: the no-harm evidence is application-scale and
+small-n, not a 25-kernel sweep.
+
+**Consequences.** E1 = TSVC (R ×5, A, D ×3) + the archived non-TSVC trials; its classes-A/D
+follow-up runs shrink to TSVC's 3 + 4 loops. E2, E3, E4, E8 run on TSVC's class R only
+(E3 additionally reads `s331`/`s341`). E6 (LULESH) and E11 (RepoOMP) each get their own
+packaging and no-model pre-flight (sizes, DiscoPoP-alone class, feasibility) before any model
+call. E5 (profiling cost) and E7 (gate as classifier, offline) are unaffected. E9 (ranking) needs
+multi-region programs and moves to LULESH and the NPB-C kernels.
+
 ### 5q. Arguments that depend on each other (2026-09-21)
 
 The author: *"during testing some args were depending on each other and some of them were wired
@@ -1677,6 +1729,7 @@ must pass (§5k, RUNBOOK step 0/0a).
   thesis reports rather than works around; `docs/DISCOPOP_BUG_REPORTS.md` L4.
 | 2026-09-20 | server | **The server moved to the one-repository layout (§5o).** One checkout; `server.sh sync` is now a single `git fetch` + `merge --ff-only`, so the harness on the server cannot drift from the Mac's. Parity OK; packages regenerated there are identical to the Mac's file by file (295 files, 0 differences); a no-model smoke ran end to end. The old `~/new_benchmark_harness` (19 GB) is unused — its launcher logs are now tracked at `results/_launcher_logs/` so nothing is lost with it | D20; and the server had been running from a checkout that no longer received any of the day's changes |
 | 2026-09-20 | agent + harness | **D24 — every arm DECLARES every argument that carries its purpose, and the harness verifies it against the agent's own parser before a run starts (§5n).** New agent option `--print-config` (resolved configuration as JSON, credentials redacted); `settings` block on all 19 arms; any mismatch refuses the run, and an arm without a declaration is refused too | the author: "for every experiment every agent argument should be clearly set to serve the purpose of the experiment, making sure that nothing wired or inherited would break the intended argument selection" — after two changes on one day silently altered what four experiments and five arms meant |
+| 2026-09-21 | plan | **D30 — the campaign's scope is narrowed to TSVC-2, LULESH and RepoOMP's NPB-C (§5r).** A benchmark enters a restructuring experiment only if, decided WITHOUT a model, (1) DiscoPoP can profile it, (2) DiscoPoP alone reaches no verified parallel program, (3) a verified output-equivalent parallel version exists, (4) the no-model ceiling test shows the arm can keep that version. Out: `hotspot` (no equivalent parallel version exists), `seidel-2d` (a true recurrence, really class D), `md` and `npb/is` (never verified, 35 and 20 min per trial), PolyBench's class-A kernels (cannot show a benefit of the agent — the author's call against keeping one no-harm run) and its four unverified class-R kernels. Everything E1 has run stays archived and is reported beside the restricted set; the rule is recorded before any TSVC result of E1 exists. LULESH and NPB-C get packaging and a no-model pre-flight before any model call | the author, five hours into E1 with 35 of 35 finished trials `no-change`: "pick only the ones that will show results, not just taking so long then nothing" |
 | 2026-09-21 | finding (C2) | **The gate rejected the parallelization of Rodinia `hotspot` that Rodinia's own OpenMP version uses — and it was right.** E1's first agent trial ended `no-change` with all seven of DiscoPoP's pragmas rejected; the suspicious one was the chunk loop of `single_iteration` (`private(c,delta,r)`, equivalent to Rodinia's `private(chunk, r, c, delta)`), rejected at `correctness` because a checksum moved by 1.7 × 10⁻⁸ — 1,000× the program's measured rounding floor (1.67 × 10⁻¹¹), identical in two candidates, so deterministic and not a race TSan could see. Checked apart from the agent, on the original source with DiscoPoP's exact pragma: static schedule, 1–16 threads reproduce the sequential checksum `1692807788529.6304` bit for bit; **24 threads give `1692807817763.9468` — the very value the gate reported on the server** — 48 threads another, and `dynamic,1` / `guided` at 4 threads two more. Cause: the boundary branch is an `if / else if` chain over four corners and four edges with NO final `else`, so an interior cell of a boundary chunk is updated with the `delta` left over from the previous cell, and the first such cell of a bottom- or right-edge chunk with the `delta` of the PREVIOUS CHUNK. That is a loop-carried dependence through `delta`; `private(delta)` cuts it, and the result then depends on which chunk each thread starts with. The gate sees it because it checks all threads of the NUMA node and the schedule matrix, not one configuration. Consequences: (i) the answer to "will the gate reject everything?" is that its rejections have held up wherever they were checked; (ii) `hotspot` has no parallel version that is output-equivalent to its sequential one without first repairing that dependence, so `neither` is the expected verdict there and says nothing against the agent; (iii) an exhibit for C2 — a latent defect in a published benchmark's own OpenMP version, found by the gate | the author: "I have a concern that all code changes will be rejected" |
 | 2026-09-21 | harness | **E1's read-out exists before E1's data does.** `tools/main_comparison_stats.py` computes exactly what the plan pre-registered and nothing chosen after seeing results — Wilson 95 % intervals on rates, Wilcoxon signed-rank on per-benchmark medians (one-sided, paired by benchmark), Cliff's delta, a bootstrap interval on the median agent ÷ DiscoPoP-alone ratio (fixed seed), unsafe acceptances and every missing trial NAMED — per measured class, with untimeable kernels left out of every speed statistic and a block on what actually happened inside the trials (refresh kinds, fallbacks, explorer stalls, speed check off, host load). `plots` writes it beside the figures. New figure `fig_verdict_matrix`: one square per agent trial, rows grouped by class, on the hues of the validated outcome palette. Tried on `e1_smoke5` | written while E1 runs so that the analysis cannot be shaped by the numbers |
 | 2026-09-21 | agent + harness | **E2's missing instruments (D16) are built; E2 can be specified completely.** Agent: `--evidence-file` (another tool's remarks shown where DiscoPoP's digest goes, labelled static compiler output; an empty file is refused) and `--prompt-omit contract,gate,granularity,checklist` (the line saying who writes the pragmas is kept even without the contract: it is the pragma MODE, E3's variable). Harness: `tools/compiler_remarks.py` — clang-20's vectorizer and Polly remarks, kept only inside functions the agent may edit (`s211`: 9 kept, 104 about packaging code dropped; e.g. *"loop not vectorized: unsafe dependent memory operations in loop"*), generated once per benchmark per run under `<run>/evidence/`. `arms.json`: **E2-source** (none → compiler remarks → where-only → full DiscoPoP), **E2-C** (the six evidence groups, each left out and given alone; together they cover all 12 sections), **E2-D** (four prompt parts), all at budget 1; 38 arms, 12 experiments, every one machine-checked. Feature check `prompt-ablation`: each part removed alone in 3 edit modes × 2 pragma modes, nothing else with it | D16 had been specified on 19 Sep and never built |
