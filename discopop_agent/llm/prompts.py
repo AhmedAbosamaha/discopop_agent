@@ -293,7 +293,12 @@ def _contract_open(gate: GateFacts) -> str:
         "The program's results must stay the same: every label, count and integer "
         "exactly, floating-point values up to the rounding a reordered sum causes.  "
         "Everything else is yours: execution order, loop bounds, extra buffers, extra "
-        "passes.", "    ")
+        "passes.  One constraint on those buffers: anything whose size grows with the "
+        "problem must be HEAP-allocated (malloc/free, or the allocator this program "
+        "already uses), never declared as a local array.  The stack is 8 MB and the "
+        "program is verified at sizes far larger than the one you are shown: a local "
+        "`T buf[N][N]` is 131 KB at N=128 and 8 MB at N=1024, where it dies before "
+        "computing anything.  A one-dimensional `T buf[N]` is fine.", "    ")
     return _CONTRACT_OPEN[:start] + "  - " + bullet.lstrip() + "\n" + _CONTRACT_OPEN[end:]
 
 

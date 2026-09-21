@@ -1774,6 +1774,22 @@ Added 2026-09-15 (see §6 rows of that date):
   problem. (ii) Recorded here, because `no-change` on its own cannot distinguish "the agent found
   nothing" from "the agent found a restructuring, tested it, and correctly rejected its own work"
   — and for the thesis those are different stories.
+- **"Does every restructuring get reverted, then?"** (the author, on seeing the smoke). No —
+  checked over the whole archive rather than argued: **14 of 19 restructurings survived**
+  (3 were `SCAFFOLD_MODIFIED`, a different fault: the model edited the harness; 2 were `BROKEN`).
+  The stack overflow is one case, and the archive shows the line precisely: two OTHER
+  `floyd-warshall` rewrites declared stack arrays too — `pathk[_PB_N]` and `row_k[_PB_N]` — and
+  both are FASTER, because a ONE-dimensional array of N doubles is 16 KB at N = 2000 while the
+  two-dimensional one is 31 MB. The model is not generally allocating badly; it made one
+  dimensional mistake.
+- **What we changed, and why it is legitimate.** The prompt never told the model the target's
+  memory limits — it promised "extra buffers" were allowed and said nothing about where they
+  live. The contract now states the constraint: anything whose size grows with the problem must
+  be heap-allocated, the stack is 8 MB, the program is verified at sizes far larger than the one
+  shown, and `T buf[N][N]` is 131 KB at N = 128 and 8 MB at N = 1024. That is a fact about the
+  PLATFORM, like the thread count or the compiler — not a hint about the answer. Withholding it
+  would have measured the model's recall of C memory limits instead of its ability to restructure
+  for parallelism, which is not the research question. Pre-registered here, before E1.
 - **Verdict: the pre-flight passes.** Both arms' code paths ran: the baseline made 0 model calls
   and applied DiscoPoP's patterns; the agent arm made a call, restructured, re-profiled, exposed
   new patterns and exercised Phase B, Settle and the revert path. E1 can run.
