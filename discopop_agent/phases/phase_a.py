@@ -146,6 +146,25 @@ def covered_spans_after(start_line: int, end_line: int, pre_text: str, post_text
     return inside or [(new_start, new_end)]
 
 
+def _loops_already_patterned(region: Any, candidates: "List[Tuple[int, HotspotCandidate]]") -> List[str]:
+    """The region ids of the outermost loops inside `region` when EVERY one of them carries
+    an applicable DiscoPoP pattern (Tier 1); [] when the region holds no loop, or when at
+    least one of its outermost loops has no pattern — then there is something to expose.
+    Nested loops are not counted: a loop inside a patterned loop is that loop's business."""
+    inner = [c for _d, c in candidates
+             if c.region.region_type == "loop" and c.region.file_id == region.file_id
+             and region.start_line <= c.region.start_line and c.region.end_line <= region.end_line
+             and c.region.region_id != region.region_id]
+    outer = [c for c in inner
+             if not any(o is not c and o.region.start_line <= c.region.start_line
+                        and c.region.end_line <= o.region.end_line for o in inner)]
+    if not outer:
+        return []
+    if all(c.tier == 1 and c.pattern and c.pattern.get("applicable_pattern") for c in outer):
+        return [c.region.region_id for c in outer]
+    return []
+
+
 def phase_a(state: RunState) -> None:
     """Run the restructuring pass over the candidate queue."""
     args = state.args
@@ -219,6 +238,23 @@ def phase_a(state: RunState) -> None:
                   f"({candidate.pattern_type or 'pattern'}) — deferred to Phase B")
             print(f"└─ DEFERRED\n")
             deferred.append((rid, depth))
+            continue
+
+        # A region with no pattern of its own whose loops ALL have one — a function
+        # around a single do-all, typically — has nothing to expose: Phase B will
+        # annotate those loops, and asking the model to "restructure" the function
+        # anyway is how E1 lost `s000` (Fix 90).  Haiku copied `b` into a buffer on
+        # every repetition, the copy passed the correctness gate, DiscoPoP's pragma
+        # on the rewritten loop then measured 1.40x where it had measured 3.59x on
+        # the original, Settle found the whole file slower than the original and
+        # reverted everything — the agent delivered less than DiscoPoP alone.
+        # Decided on structure, not on measurements, so it holds with `--no-hotspots`:
+        # the outermost loops inside this region, as the queue knows them.
+        blocked_by = _loops_already_patterned(region, candidates)
+        if blocked_by:
+            print(f"│  [Phase-A] every loop in this region already has a DiscoPoP pattern "
+                  f"({', '.join(blocked_by)}) — nothing to expose, Phase B annotates them")
+            print(f"└─ COVERED\n")
             continue
 
         # ── Tier-2: LLM restructuring ─────────────────────────────────────────
