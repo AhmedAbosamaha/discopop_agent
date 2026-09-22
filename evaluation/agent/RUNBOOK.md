@@ -350,6 +350,20 @@ explorer run from that checkout, so the run's conditions would change between tr
 
 ## 6. Traps — every one of these cost hours to find
 
+- **A rewrite can be 3–30× slower than the original and pass every gate before Settle.**
+  Phase A judges a pragma-free rewrite on output; Phase B measures each pragma against the
+  state before it. Only Settle compares with the original. In E1 a `malloc` + `memcpy` per
+  repetition (TSVC) and a 30× slower `is` rewrite reached Phase B with their pragmas accepted;
+  the TSVC ones were dropped at Settle, the `is` ones ran the 90-minute limit out. When a
+  trial is slow or ends `no-change` after `Quality gate PASSED`, read the `Re-measured
+  runtimes: … total` lines and the SETTLING block before suspecting the host. D31 (a bound in
+  Phase A) is the author's open decision.
+- **Do not diagnose a speed verdict from the agent's log alone.** Settle's "slower than the
+  original: 4061 ms vs 1115 ms" looked like host interference; rebuilt from the archived
+  patches and judged by the harness, the program WAS 3× slower. Every candidate the agent
+  judged is in `agent_patches/candidates/` with its verdict in `candidates.jsonl`: rebuild it
+  (`patch -p0 -F0` in order) and run `verify-source` before calling a verdict wrong. On the
+  server that takes 10–15 min per kernel at EXTRALARGE.
 - **A package's dump may hold RESULTS only — never a diagnostic that subtracts equal numbers.**
   LULESH prints three symmetry differences; on the symmetric input they are rounding residue
   (2e-11 against energies of 3e+5) and a correct parallel version moves them by 25 %. The

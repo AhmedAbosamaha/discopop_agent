@@ -1832,6 +1832,11 @@ must pass (§5k, RUNBOOK step 0/0a).
   thesis reports rather than works around; `docs/DISCOPOP_BUG_REPORTS.md` L4.
 | 2026-09-20 | server | **The server moved to the one-repository layout (§5o).** One checkout; `server.sh sync` is now a single `git fetch` + `merge --ff-only`, so the harness on the server cannot drift from the Mac's. Parity OK; packages regenerated there are identical to the Mac's file by file (295 files, 0 differences); a no-model smoke ran end to end. The old `~/new_benchmark_harness` (19 GB) is unused — its launcher logs are now tracked at `results/_launcher_logs/` so nothing is lost with it | D20; and the server had been running from a checkout that no longer received any of the day's changes |
 | 2026-09-20 | agent + harness | **D24 — every arm DECLARES every argument that carries its purpose, and the harness verifies it against the agent's own parser before a run starts (§5n).** New agent option `--print-config` (resolved configuration as JSON, credentials redacted); `settings` block on all 19 arms; any mismatch refuses the run, and an arm without a declaration is refused too | the author: "for every experiment every agent argument should be clearly set to serve the purpose of the experiment, making sure that nothing wired or inherited would break the intended argument selection" — after two changes on one day silently altered what four experiments and five arms meant |
+| 2026-09-22 | result | **E1 class R is complete (§7 `e1_r_a`, `e1_r_b`): 260 trials, 0 unsafe.** TSVC primary set: the agent reaches a verified parallel program in 46 of 90 trials and is FASTER in 44; DiscoPoP alone in 0 of 90; 14 of 18 loops gained at least once, 5 loops 5 of 5; per-loop medians 1.08× (Wilcoxon p = 0.002, Cliff's δ +0.50); 6→12 threads scales in 29 of 44. H1 supported, H2 holds. Classes A and D run on the same commit (`e1_d` launched) | the campaign's first headline number, read against DiscoPoP alone as the rule requires |
+| 2026-09-22 | agent | **Fix 89 — Settle's speed verdict is paired.** It timed the finished program alone (best of 5, `-fopenmp`) against the reference captured at the START of the run (best of 3, no `-fopenmp`), minutes apart on a shared host. Now: the same interleaved original-vs-final measurement and threshold Phase B uses (`measure_marginal`), the threshold handed from Phase B through the gate cache. Feature check `settle-paired`: a faster file must pass against a reference 8× too small, a file with twice the work must fail. On the work branch: E1's remaining classes run on `00d4594f` | 15 of 90 TSVC trials ended with Settle reporting a finished program 1.1–8× slower than the run's opening reference; ten of them rebuilt and re-verified on the server (`results/settle_check`): all correct, all slower, 0.14–0.99× — the method was fragile, the verdicts stood |
+| 2026-09-22 | finding | **The rewrites that fail copy the array inside the repetition loop** (`memcpy`, or `malloc`/`free` per repetition); the ones that succeed need no buffer. Settle catches the cost — after the trial's budget is spent. `s331` and `s341`, which T0.13 called unwinnable for DiscoPoP's pragmas, were each won once by a restructuring DiscoPoP could annotate, and lost at Settle on the same cost | E1 §7; proposal D31 (a bound on a rewrite's sequential cost in Phase A's gate, as a contract check) is the author's decision |
+| 2026-09-22 | finding | **Two `npb/is` trials hit the 90-minute limit** inside Phase B after a kept rewrite made the program's regions 30× slower (3.3 s → 97 s at the agent size); every later step ran that program. Counted `invalid`; `is` is out of scope (D30) | E1 §7; the same cause as the row above, at application scale |
+| 2026-09-22 | harness | `main_comparison_stats.py --suite tsvc` (the primary set with the registered set's statistics); `thesis_material.py` spec `<arm>@<rep>` selects a repeat; exhibits `s291`, `s127`, `s254`, `s241` (rep 2), `s121`, `floyd` from E1 | the read-out needed them |
 | 2026-09-21 | finding + harness | **The LULESH package would have called EVERY correct parallel LULESH `BROKEN` — LLNL's own included. Found because the author asked whether a reference solution had been checked; fixed.** LLNL's OpenMP release (`benchmarks/LULESH/LULESH_LLNL_OMP/`, upstream `3e01c40`, 44 pragmas, with `PROVENANCE.txt`) was put into package form by the recipe's own edits (`prepare_apps.py --references` → `reference_solutions/llnl/lulesh/`) and judged by `verify-source`: `BROKEN`, dump error 0.25, while the digest agreed to 1.8e-16. Cause: under `PB_FULL_DUMP` the package emitted the five numbers the original prints, and three of them are LULESH's SYMMETRY differences — energies that are mathematically equal, subtracted. On the symmetric input they are rounding residue (2e-11 against energies of 3e+5), and adding in another order moves them by tens of percent: serial 2.18e-11, OpenMP 2.91e-11. They are diagnostics, not results. Now the five numbers are emitted under `PB_ORIGINAL_REPORT`, which only the packaging validator sets (new `Recipe.validate_macros`); the full dump is the whole final state, the very values the digest already read — every element's energy, pressure, volume, every node's position and velocity | Measured before relying on it: over 1,672 / 5,911 / 34,702 state values (MINI / SMALL / STANDARD), shipped and seeded input, LLNL's version against the serial path is bit-identical at 1 thread and within **5.6e-15** at 2 and 4 — six orders of magnitude inside the 1e-9 tolerance; LULESH's own cut-offs snap small values to exact zero, so there is no noise tail. The package still equals the original's report at three sizes. After the fix: LLNL's version `FASTER` 1.70× at STANDARD, `parallel-not-faster` at SMALL (8³ elements), Mac, 4 threads (`results/lulesh_ref_check`). The agent's own gate reads the digest and would have ACCEPTED such a program, so the harness would have scored the campaign's one application `unsafe` for both arms. Rule from now on: **T0.14, the reference acceptance check (§5s)** |
 | 2026-09-21 | finding | **LLNL restructured LULESH; Rodinia's and NPB's experts did not (§5r).** LLNL's OpenMP `lulesh.cc` differs from the serial path by 168 code lines beyond its 44 pragmas — 67 in `CalcFBHourglassForceForElems`, 44 in `IntegrateStressForElems` (per-element force buffers gathered per node), 10 in each constraint function (per-thread minima). Rodinia: 0–7 code lines in all 19 programs. RepoOMP's NPB-C: 0–18 | the author: "what about the rest of Rodinia; also see whether NAS is useful". It decides what each suite can show: LULESH the restructuring claim at application scale, NPB-C the external comparison (E11), no-harm and pragma authorship (E3) — and under `default` little benefit of the agent, written down before the runs |
 | 2026-09-21 | plan | **D30 corrected: `hotspot` DOES have a verified output-identical parallel version, and so does `floyd-warshall` (§5r).** Hand-written, no model: `hotspot`'s chunk loop split (boundary chunks in order, interior chunks parallel) — `FASTER`, dump byte-identical on both inputs, 1.52× at 4 Mac threads; `floyd-warshall` in its textbook form (write only on improvement) — `FASTER`, byte-identical, 3.61×. `md`'s expert version is two commented-out pragmas in Burkardt's own source: not a restructuring benchmark | the author: "before removing the benchmarks did you verify that they are with not much value?" — no, and the reason recorded for `hotspot` was wrong. Both re-enter only if T0.13 on the server keeps their reference, and only by the author's decision; D30's three suites stand until then |
@@ -2000,6 +2005,143 @@ Added 2026-09-15 (see §6 rows of that date):
   Speedup and fraction of expert speedup are reported descriptively.
 
 ## 7. Run log
+
+### `e1_r_a`, `e1_r_b` — 2026-09-21/22, server, **E1 class R: DiscoPoP alone vs DiscoPoP + agent, five repeats** (260 trials, Haiku)
+
+**Question (H1, H2).** On the benchmarks where DiscoPoP alone reaches no verified parallel
+program, does the agent — the same DiscoPoP, the same gate, plus a model that restructures —
+deliver correct speedups; and does anything wrong get through?
+
+**Setup.** Commit `00d4594f` (Fixes 86–88, D22/D23/D27/D29 defaults), two NUMA lanes, arms
+`discopop_gate` (budget 0) vs `default` (budget 3), Haiku 4.5, 5 repeats, verification at
+EXTRALARGE on 6 and 12 threads with 5 repeats, speed check at each kernel's timing size.
+Launched 21 Sep 15:10 UTC, lane B finished 22 Sep 04:35, lane A 22 Sep 15:50; host load
+2,200–7,600 throughout. Read-out: `agent/analysis/e1_class_r/` (`plots --runs e1_r_a,e1_r_b`,
+`main_comparison_stats.py --suite tsvc`).
+
+**The registered set (26 benchmarks, 130 paired trials), as it ran:** gained 47,
+gained-not-faster 9, neither 72, invalid 2 (the `npb/is` timeouts, below). Agent: verified
+parallel in 56 of 128 (44 %, Wilson 95 % CI 35–52 %), FASTER in 47 (37 %); DiscoPoP alone:
+0 of 130 (0 %, CI 0–3 %). **Unsafe acceptances: 0 in 258 trials with a verdict.**
+
+**The primary set (TSVC-2 class R, 18 loops, 90 paired trials; D30):**
+
+| | agent (`default`) | DiscoPoP alone (`discopop_gate`) |
+|---|---|---|
+| verified parallel program | **46 of 90** (51 %, CI 41–61 %) | 0 of 90 (0 %, CI 0–4 %) |
+| FASTER (≥ 1.1× over the sequential original) | **44 of 90** (49 %, CI 39–59 %) | 0 of 90 |
+| loops gained at least once | **14 of 18** | 0 |
+| loops gained 5 of 5 | 5 (`s127`, `s254`, `s291`, `s292`, `s293`) | 0 |
+| BROKEN | 0 | 0 |
+| speed, paired by loop, median of per-loop medians | **1.08×** the DiscoPoP-alone program (bootstrap CI 1.00–2.35×); Wilcoxon one-sided W = 45, **p = 0.002**, 9 non-zero pairs, all positive; Cliff's δ = +0.50 | — |
+
+The per-loop median is a conservative statistic: a loop gained in 2 of 5 trials has a median
+of 1.00×. Read per loop:
+
+| loop (TSVC category) | agent FASTER | speedup at 6 / 12 threads (median of the FASTER trials) | what the model did |
+|---|---|---|---|
+| `s127` induction variable, multiple increments | 5 / 5 | 3.81 / 4.26 | closed-form index |
+| `s254` carry-around variable | 5 / 5 | 3.31 / 3.80 | `b[i-1]` read instead of the carried scalar |
+| `s291` loop peeling, wrap-around 1 level | 5 / 5 | 3.23 / 3.76 | `(i == 0) ? LEN-1 : i-1` |
+| `s292` wrap-around 2 levels | 5 / 5 | 1.34 / 2.34 | same, two levels |
+| `s293` `a[i] = a[0]` cycle | 5 / 5 | 2.80 / 3.19 | hoisted `a[0]` |
+| `s255` carry-around, 2 levels | 4 / 5 | 1.33 / 2.29 | index arithmetic |
+| `s252`, `s212`, `s243` | 3 / 5 each | 3.48 / 4.15 · 1.35 / 1.39 · 1.23 / 1.24 | scalar expansion into a buffer; copy + node splitting |
+| `s1213` | 2 / 5 | 2.80 / 2.65 | copies of `a` and `b` |
+| `s112`, `s211`, `s241`, `s244` | 1 / 5 each | 1.49 / 1.76 · 1.10 / 1.07 · 2.08 / 2.23 · 3.42 / 4.39 | one good rewrite in five; see the finding below |
+| `s121`, `s281` | 0 / 5 | — | correct rewrites whose pragmas cost more than they save (below) |
+| `s331`, `s341` | 0 / 5 | — | as T0.13 predicted: DiscoPoP cannot write the pragma the loop needs — but ONE trial of each found a way round it and was then dropped on speed (below) |
+
+**H1 is supported** on the primary set (and on the registered set): the agent delivers verified
+speedups where DiscoPoP alone delivers none, with p = 0.002 on per-loop medians and an effect
+size of +0.50. **H2 holds so far:** 0 BROKEN in 258 trials, 269 model calls. **H4 (scaling):**
+of the 44 FASTER TSVC trials, 29 are faster at 12 threads than at 6 (> 1.1×), 13 flat, 2
+lower; medians 2.52× at 6 and 3.12× at 12 threads. The expert references (T0.10) reach ≥ 1.45×
+at the gate's timing size; the agent's 5-of-5 loops reach 2.3–4.3× at 12 threads at the
+verification size.
+
+**Cost.** Median 1 model call per trial — for the FASTER trials AND for the `no-change` ones
+(the budget of 3 is rarely spent: a rewrite that passes the gate but earns no pragma ends the
+trial at Settle, it does not retry); median 127 s of model time and 0.12 USD-equivalent per
+trial, 13.95 for the 90 TSVC agent trials. Profile refreshes after a kept rewrite: 102, all
+full (D27), 0 fallbacks (D29); runtimes re-measured 102 times (Fix 86/87). The explorer stall
+limit fired 26 times inside agents and 20 times in the harness's profile step — no benchmark
+was lost to a stall (D-limit of 21 Sep).
+
+**Deviations, recorded first.**
+
+1. **Two `npb/is default` trials hit the 90-minute limit** (`AGENT_TIMEOUT`, counted `invalid`,
+   the other three took 18, 20 and 84 min). Both were inside Phase B. Rep 3's log says where
+   the time went: after the third kept rewrite — of a region with score 0.1 — DiscoPoP's
+   re-measurement reports the program's regions at **97 s** where they had been 3.3 s; every
+   later step (noise calibration, the paired timing of each pragma at the timing size, TSan)
+   runs that program many times. **Phase A's gate does not bound a rewrite's cost**: a
+   pragma-free rewrite is judged on output alone, because a copy that only pays off with the
+   pragmas is the normal case; an unbounded one eats the trial. Proposed, not applied (D31,
+   author's call): the Phase A gate rejects a rewrite whose sequential time exceeds k× the
+   original's — the contract the model is given says "bounded extra work", so this is checking
+   the contract, not judging worth — with the ratio fed back as the retry's feedback.
+2. **15 of the 90 TSVC agent trials ended at Settle**, which dropped a program Phase B had
+   just measured at 1.02–1.84× per pragma and reported the finished file 1.1–8× slower than
+   the original. Settle's method was UNPAIRED — the finished program (best of 5, `-fopenmp`)
+   against the reference time captured at the start of the run (best of 3, no `-fopenmp`) —
+   so the suspicion was interference on the shared host. It was checked, not assumed: each of
+   the 15 programs was rebuilt from its archived patches and judged by the harness on the
+   server (`settle_check`, EXTRALARGE, 6 / 12 threads, 5 repeats). Ten of the fifteen were
+   rebuilt (`results/settle_check`); all ten are CORRECT (dump byte-identical on both inputs) and
+   all ten are SLOWER than the original — Settle was right every time it was checked:
+
+   | trial | Phase B marginals | Settle said | harness, 6 / 12 threads | the rewrite's cost |
+   |---|---|---|---|---|
+   | `s112` rep 3 | 1.05× | 3888 vs 483 ms | 0.14× / 0.14× | `malloc` + `memcpy` of `a` per repetition |
+   | `s121` rep 3 | 1.61× | 740 vs 511 ms | 0.73× / 0.79× | `memcpy` of `a` per repetition |
+   | `s1213` rep 4 | 1.84×, 1.41× | 3097 vs 1024 ms | 0.31× / 0.35× | `malloc` of two arrays + copy loops per repetition |
+   | `s211` rep 3 | 1.02×, 1.28× | 4054 vs 1398 ms | 0.35× / 0.35× | `malloc` + `memcpy` of `b` per repetition |
+   | `s212` rep 5 | 1.49× | 3005 vs 1082 ms | 0.37× / 0.35× | `malloc` + copy loop per repetition |
+   | `s241` rep 2 | 1.08×, 1.21× | 4061 vs 1115 ms | 0.30× / 0.29× | `malloc` + `memcpy` of `a` per repetition |
+   | `s241` rep 4 | 1.28×, 1.70× | 1204 vs 1112 ms | 0.88× / 0.90× | one `malloc`, `memcpy` per repetition |
+   | `s252` rep 5 | 1.43× | 757 vs 730 ms | 0.94× / 0.99× | product buffer, then a sequential recurrence over it |
+   | `s331` rep 1 | 1.42× | 455 vs 370 ms | 0.86× / 0.94× | candidate array, then a sequential max scan |
+   | `s341` rep 5 | 1.05× | 2474 vs 411 ms | 0.20× / 0.19× | sequential prefix count, then a parallel scatter |
+
+   The five not rebuilt (`s112` reps 1 and 5, `s211` reps 1 and 4, `s241` rep 3) have the same
+   shape — a copy per repetition — and the same Settle diagnostic. The Phase B marginals were
+   not wrong either: each measures a pragma against the state BEFORE it, i.e. against the
+   already-slow rewrite; only Settle compares with the original. The suspicion of interference
+   was mine and it was wrong; the method is still changed, because a comparison across minutes
+   on a host at load 2,000–7,600 cannot be defended even when it happens to be right.
+   **Fix 89** (work branch, E2 onwards): Settle's speed verdict is now the same interleaved
+   original-vs-final measurement and threshold Phase B uses; feature check `settle-paired`.
+   Recorded as a change of METHOD, not of verdicts: E1's classes A and D run on `00d4594f`
+   like class R.
+
+**Finding — the rewrites that fail are the ones that copy.** Every Settle-dropped program and
+every `s121`/`s281` trial has the same shape: a full-array `memcpy` (sequential, memory-bound)
+or a `malloc`/`free` of the whole array **inside the repetition loop**. The copy costs as much
+as the pragma saves; a `malloc` per repetition adds page faults on 256 MB and makes the
+program 3× slower than the original before any pragma. The expert references make the same
+copy ONCE, outside the repetitions, or as a parallel loop. The 5-of-5 loops are the ones whose
+rewrite needs no buffer (an index expression, a hoisted read). This is the model's
+rewrite quality, and the gate's job was to catch it — which it did, at the cost of the trial:
+material for E2 (does evidence change the rewrite?) and for the prompt (the contract already
+says "heap for size-dependent buffers"; it does not say "allocate once"). `s331` rep 1 and
+`s341` rep 5 show the flip side: Haiku found a restructuring DiscoPoP CAN annotate (a candidate
+array + sequential max; a prefix count + scatter) with marginals of 1.42× and 1.05× — the
+loops T0.13 called unwinnable are winnable — and lost them at Settle.
+
+**The non-TSVC benchmarks, as registered:** `floyd-warshall` 3 of 5 gained (5.1–10.3×, the
+conditional-write rewrite + DiscoPoP's i-loop pragma); `trisolv` 5 of 5 correct parallel
+programs on an untimeable kernel (`gained-not-faster`); `bicg` and `doitgen` 1 of 5 each;
+`md`, `is`, `hotspot`, `seidel-2d` 0 of 5 (with `is` 3 of 3 valid). DiscoPoP alone 0 of 40.
+
+**Exhibits:** `s291_peeled_5of5_faster`, `s127_induction_5of5_faster`,
+`s254_carry_around_5of5_faster`, `s241_copy_per_repetition_settle_dropped` (rep 2: the
+`malloc` + `memcpy` per repetition, 0.30× on the server), `s121_memcpy_pragmas_slower`,
+`floyd_e1_conditional_write_gained`.
+
+**Still owed for E1:** classes A (`s000`, `s313`, `vpvtv` ×1) and D (`s3112`, `s321`,
+`s322`, `s323` ×3) — class D launched 22 Sep 17:36 UTC on node 1 (`e1_d`), class A follows on
+node 0; the bare-LLM arm (E1-bare) on TSVC class R when the author says so.
 
 ### `lulesh_ref_check`, `ref_check_mac`, `e11_npbc_probe_mac` — 2026-09-21, Mac, **the expert references through the harness** (no model)
 
