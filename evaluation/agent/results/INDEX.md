@@ -4,6 +4,7 @@ Every row is a directory under `agent/results/` holding a run's complete results
 
 | Run | Kind | Created | Host | Status | Trials | Outcomes | Files | Size |
 |---|---|---|---|---|---:|---|---:|---:|
+| `bare_smoke_mac` | trials | 2026-09-22T22:14 | ahmeds-MacBook-Pro.local | finished | 1 | parallel-not-faster 1 | 31 | 0.3 MB |
 | `dp_alone_fix84_mac` | trials | 2026-09-19T20:06 | ahmeds-MacBook-Pro.local | finished | 1 | parallel-speed-not-measurable 1 | 37 | 0.1 MB |
 | `dp_alone_fix84_poly_mac` | trials | 2026-09-19T20:42 | ahmeds-MacBook-Pro.local | finished | 13 | FASTER 7, no-change 2, parallel-not-faster 1, parallel-speed-not-measurable 3 | 375 | 4.5 MB |
 | `dp_alone_look_mac` | trials | 2026-09-19T19:31 | ahmeds-MacBook-Pro.local | finished | 31 | FASTER 7, PROFILE_ERROR 1, no-change 8, parallel-not-faster 15 | 828 | 6.9 MB |

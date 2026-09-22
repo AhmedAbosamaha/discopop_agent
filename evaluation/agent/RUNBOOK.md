@@ -149,6 +149,15 @@ agent/tools/server.sh run --node 1 -- polybench/2mm polybench/jacobi-2d-imper \
     --arms discopop_gate,full --models claude-haiku-4-5-20251001 \
     --trials 5 --threads 1,2,4,8,12 --repeats 5 --run-id e1_core
 
+# E1-bare — the same model with no DiscoPoP and no gate, on TSVC class R (the 18 loops of
+# benchmark_classes.json); its `default` counterpart is E1's own trials. Two lanes, 9 loops each.
+agent/tools/server.sh run --node 0 -- tsvc/s112 tsvc/s121 tsvc/s1213 tsvc/s127 tsvc/s211 \
+    tsvc/s212 tsvc/s241 tsvc/s243 tsvc/s244 --arms bare_llm --models claude-haiku-4-5-20251001 \
+    --trials 5 --threads 6,12 --repeats 5 --run-id e1_bare_a
+agent/tools/server.sh run --node 1 -- tsvc/s252 tsvc/s254 tsvc/s255 tsvc/s281 tsvc/s291 \
+    tsvc/s292 tsvc/s293 tsvc/s331 tsvc/s341 --arms bare_llm --models claude-haiku-4-5-20251001 \
+    --trials 5 --threads 6,12 --repeats 5 --run-id e1_bare_b
+
 # E2 — evidence x model (one attempt per region, so feedback cannot substitute for evidence)
 ... --arms full_b1,no_evidence_b1 --models claude-haiku-4-5-20251001,claude-sonnet-5 --trials 5 --run-id e2
 

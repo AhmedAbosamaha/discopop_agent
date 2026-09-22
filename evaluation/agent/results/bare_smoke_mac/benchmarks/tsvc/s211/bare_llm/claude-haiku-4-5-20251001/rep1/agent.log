@@ -1,0 +1,13 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s211.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : init_array, pb_mix, pb_emit, pb_emit_array, pb_report, pb_seed, pb_uniform, pb_timer_start, pb_timer_stop, main
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] s211.c: edited, 3 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Now let me analyze the code and create a plan. ## Analysis The program runs a kernel `kernel_s211()` that has: - Outer loop: `for (int nl = 0; nl < R; nl++)` — **sequential** (depends on `pb_mix` between iterations) - Inner loop: `for (int i = 1; i < LEN_1D-1; i++)` with two statements: ``` a[i] = b[i - 1] + c[i] * d[i]; // reads b[i-1], writes a[i] b[i] = b[i + 1] - e[i] * d[i]; // reads b[i+1], 
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result
