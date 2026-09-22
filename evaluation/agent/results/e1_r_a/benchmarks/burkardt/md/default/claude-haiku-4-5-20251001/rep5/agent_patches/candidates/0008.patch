@@ -1,0 +1,35 @@
+--- md.cpp
++++ md.cpp
+@@ -141,27 +141,25 @@
+   compute ( np, nd, pos, vel, mass, force, &potential, &kinetic );
+   e0 = potential + kinetic;
+ 
+-  step_print = 0;
+-  step_print_index = 0;
+   step_print_num = 10;
+   pb_emit ( potential );
+   pb_emit ( kinetic );
+   pb_emit ( ( potential + kinetic - e0 ) / e0 );
+-  step_print_index = step_print_index + 1;
+-  step_print = ( step_print_index * step_num ) / step_print_num;
+ 
+   pb_timer_start ( );
+   for ( step = 1; step <= step_num; step++ )
+     {
+       compute ( np, nd, pos, vel, mass, force, &potential, &kinetic );
+-      if ( step == step_print )
++
++      /* Check if current step matches a print interval: step = (i * step_num) / step_print_num */
++      int print_index = ( step * step_print_num ) / step_num;
++      if ( print_index >= 1 && print_index <= step_print_num && ( print_index * step_num ) / step_print_num == step )
+         {
+           pb_emit ( potential );
+           pb_emit ( kinetic );
+           pb_emit ( ( potential + kinetic - e0 ) / e0 );
+-          step_print_index = step_print_index + 1;
+-          step_print = ( step_print_index * step_num ) / step_print_num;
+         }
++
+       update ( np, nd, pos, vel, force, acc, mass, dt );
+     }
+   pb_timer_stop ( );

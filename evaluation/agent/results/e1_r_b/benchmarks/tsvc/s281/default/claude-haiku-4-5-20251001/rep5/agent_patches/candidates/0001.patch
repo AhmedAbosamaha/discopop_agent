@@ -1,0 +1,10 @@
+--- s281.c
++++ s281.c
+@@ -142,6 +142,7 @@
+             b[i] = x;
+         }
+         /* Second pass: i from crossing threshold to LEN_1D */
++        #pragma omp parallel for private(x) 
+         for (int i = (LEN_1D + 1) / 2; i < LEN_1D; i++) {
+             x = a[LEN_1D-i-1] + b[i] * c[i];
+             a[i] = x-(real_t)1.0;

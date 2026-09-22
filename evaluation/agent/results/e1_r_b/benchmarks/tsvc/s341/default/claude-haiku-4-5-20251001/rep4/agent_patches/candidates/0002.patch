@@ -1,0 +1,10 @@
+--- s341.c
++++ s341.c
+@@ -141,6 +141,7 @@
+             offsets[i] = offsets[i-1] + (b[i-1] > (real_t)0. ? 1 : 0);
+         }
+         /* Step 2: Scatter — each i writes b[i] to its precomputed position a[offsets[i]] */
++        #pragma omp parallel for shared(offsets) 
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+                 a[offsets[i]] = b[i];

@@ -1,0 +1,10 @@
+--- s252.c
++++ s252.c
+@@ -143,6 +143,7 @@
+         }
+         /* Second pass: compute a as current product plus previous product (parallelizable) */
+         a[0] = prod[0];
++        #pragma omp parallel for shared(prod) 
+         for (int i = 1; i < LEN_1D; i++) {
+             a[i] = prod[i] + prod[i-1];
+         }

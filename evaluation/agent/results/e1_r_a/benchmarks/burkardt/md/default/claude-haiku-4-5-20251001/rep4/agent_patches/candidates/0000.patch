@@ -1,0 +1,72 @@
+--- md.cpp
++++ md.cpp
+@@ -250,21 +250,23 @@
+   pe = 0.0;
+   ke = 0.0;
+ 
+-//# pragma omp parallel \
+-  shared ( f, nd, np, pos, vel ) \
+-  private ( i, j, k, rij, d, d2 )
+-  
+-
+-//# pragma omp for reduction ( + : pe, ke )
++//
++//  Phase 1: Initialize forces.
++//
+   for ( k = 0; k < np; k++ )
+   {
+-//
+-//  Compute the potential energy and forces.
+-//
+     for ( i = 0; i < nd; i++ )
+     {
+       f[i+k*nd] = 0.0;
+     }
++  }
++
++//
++//  Phase 2: Compute the potential energy and forces.
++//
++  for ( k = 0; k < np; k++ )
++  {
++    double pe_k = 0.0;
+ 
+     for ( j = 0; j < np; j++ )
+     {
+@@ -283,7 +285,7 @@
+           d2 = PI2;
+         }
+ 
+-        pe = pe + 0.5 * pow ( sin ( d2 ), 2 );
++        pe_k = pe_k + 0.5 * pow ( sin ( d2 ), 2 );
+ 
+         for ( i = 0; i < nd; i++ )
+         {
+@@ -291,9 +293,15 @@
+         }
+       }
+     }
+-//
+-//  Compute the kinetic energy.
+-//
++
++    pe = pe + pe_k;
++  }
++
++//
++//  Phase 3: Compute the kinetic energy.
++//
++  for ( k = 0; k < np; k++ )
++  {
+     for ( i = 0; i < nd; i++ )
+     {
+       ke = ke + vel[i+k*nd] * vel[i+k*nd];
+@@ -301,7 +309,7 @@
+   }
+ 
+   ke = ke * 0.5 * mass;
+-  
++
+   *pot = pe;
+   *kin = ke;
+ 

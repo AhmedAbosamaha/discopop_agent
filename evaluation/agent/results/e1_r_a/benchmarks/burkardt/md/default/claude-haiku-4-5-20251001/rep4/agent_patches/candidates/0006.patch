@@ -1,0 +1,37 @@
+--- md.cpp
++++ md.cpp
+@@ -150,17 +150,23 @@
+   step_print_index = step_print_index + 1;
+   step_print = ( step_print_index * step_num ) / step_print_num;
+ 
++  /* Precompute which steps should produce output to eliminate loop-carried dependence on step_print */
++  bool *should_emit = new bool[step_num + 1];
++  for ( int i = 0; i <= step_num; i++ ) should_emit[i] = false;
++  for ( int i = 1; i <= step_print_num; i++ ) {
++    int emit_step = ( i * step_num ) / step_print_num;
++    if ( emit_step >= 1 && emit_step <= step_num ) should_emit[emit_step] = true;
++  }
++
+   pb_timer_start ( );
+   for ( step = 1; step <= step_num; step++ )
+     {
+       compute ( np, nd, pos, vel, mass, force, &potential, &kinetic );
+-      if ( step == step_print )
++      if ( should_emit[step] )
+         {
+           pb_emit ( potential );
+           pb_emit ( kinetic );
+           pb_emit ( ( potential + kinetic - e0 ) / e0 );
+-          step_print_index = step_print_index + 1;
+-          step_print = ( step_print_index * step_num ) / step_print_num;
+         }
+       update ( np, nd, pos, vel, force, acc, mass, dt );
+     }
+@@ -174,6 +180,7 @@
+ #endif
+   pb_report ( );
+ 
++  delete [] should_emit;
+   delete [] acc;
+   delete [] box;
+   delete [] force;

@@ -1,0 +1,92 @@
+--- original.cpp
++++ final.cpp
+@@ -305,13 +305,12 @@
+ 
+ 	if( CLASS != 'S' ) printf( "\n   iteration\n" );
+ 
+-	/* Start timer */             
++	/* Start timer */
+ 	pb_timer_start();
+ 	timer_start( T_BENCHMARKING );
+ 
+ 	/* This is the main iteration */
+ 	for(iteration=1; iteration<=MAX_ITERATIONS; iteration++){
+-		if(CLASS != 'S')printf("        %d\n", iteration);
+ 		rank( iteration );
+ 	}
+ 
+@@ -319,6 +318,13 @@
+ 	timer_stop( T_BENCHMARKING );
+ 	pb_timer_stop();
+ 	timecounter = timer_read( T_BENCHMARKING );
++
++	/* Print iteration numbers after timing */
++	if( CLASS != 'S' ) {
++		for(iteration=1; iteration<=MAX_ITERATIONS; iteration++){
++			printf("        %d\n", iteration);
++		}
++	}
+ 
+ 	/* This tests that keys are in sequence: sorting of last ranked key seq */
+ 	/* occurs here, but is an untimed operation */
+@@ -431,7 +437,7 @@
+ 	k2 = k1 + mq;
+ 	if ( k2 > NUM_KEYS ) k2 = NUM_KEYS;
+ 
+-	s = find_my_seed( myid, 
++	s = find_my_seed( myid,
+ 			num_procs,
+ 			(long)4*NUM_KEYS,
+ 			seed,
+@@ -439,13 +445,28 @@
+ 
+ 	k = MAX_KEY/4;
+ 
++	INT_TYPE num_elems = k2 - k1;
++	double *seed_array = (double*)malloc(sizeof(double) * num_elems);
++
++	double s_temp = s;
++	for(INT_TYPE j = 0; j < num_elems; j++){
++		seed_array[j] = s_temp;
++		randlc(&s_temp, an);
++		randlc(&s_temp, an);
++		randlc(&s_temp, an);
++		randlc(&s_temp, an);
++	}
++
+ 	for(i=k1; i<k2; i++){
+-		x = randlc(&s, an);
+-		x += randlc(&s, an);
+-		x += randlc(&s, an);
+-		x += randlc(&s, an);
++		double s_i = seed_array[i - k1];
++		x = randlc(&s_i, an);
++		x += randlc(&s_i, an);
++		x += randlc(&s_i, an);
++		x += randlc(&s_i, an);
+ 		key_array[i] = k*x;
+ 	}
++
++	free(seed_array);
+ }
+ 
+ /*****************************************************************/
+@@ -604,9 +625,15 @@
+ 	}
+ 
+ 	/* Sort into appropriate bucket */
+-	for( i=0; i<NUM_KEYS; i++ ){
+-		k = key_array[i];
+-		key_buff2[bucket_ptrs[k >> shift]++] = k;
++	/* Restructured to process one bucket at a time, eliminating loop-carried */
++	/* dependence on bucket_ptrs across iterations */
++	for( int b=0; b<NUM_BUCKETS; b++ ){
++		for( i=0; i<NUM_KEYS; i++ ){
++			k = key_array[i];
++			if( (k >> shift) == b ){
++				key_buff2[bucket_ptrs[b]++] = k;
++			}
++		}
+ 	}
+ 
+ 	/* The bucket pointers now point to the final accumulated sizes */

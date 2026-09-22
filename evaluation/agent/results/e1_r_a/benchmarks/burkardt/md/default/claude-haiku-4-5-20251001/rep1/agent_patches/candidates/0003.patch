@@ -1,0 +1,34 @@
+--- md.cpp
++++ md.cpp
+@@ -151,19 +151,28 @@
+   step_print = ( step_print_index * step_num ) / step_print_num;
+ 
+   pb_timer_start ( );
++  /* Precompute which steps require diagnostic output */
++  bool *step_should_print = new bool[step_num + 1];
++  for ( int i = 0; i <= step_num; i++ ) step_should_print[i] = false;
++  for ( int i = 1; i <= step_print_num; i++ )
++    {
++      int print_step = ( i * step_num ) / step_print_num;
++      if ( print_step >= 1 && print_step <= step_num )
++        step_should_print[print_step] = true;
++    }
++
+   for ( step = 1; step <= step_num; step++ )
+     {
+       compute ( np, nd, pos, vel, mass, force, &potential, &kinetic );
+-      if ( step == step_print )
++      if ( step_should_print[step] )
+         {
+           pb_emit ( potential );
+           pb_emit ( kinetic );
+           pb_emit ( ( potential + kinetic - e0 ) / e0 );
+-          step_print_index = step_print_index + 1;
+-          step_print = ( step_print_index * step_num ) / step_print_num;
+         }
+       update ( np, nd, pos, vel, force, acc, mass, dt );
+     }
++  delete [] step_should_print;
+   pb_timer_stop ( );
+ 
+ #ifndef PB_FULL_DUMP

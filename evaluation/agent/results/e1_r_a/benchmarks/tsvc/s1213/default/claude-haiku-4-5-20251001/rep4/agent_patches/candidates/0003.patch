@@ -1,0 +1,10 @@
+--- s1213.c
++++ s1213.c
+@@ -141,6 +141,7 @@
+             a_old[i] = a[i];
+             b_old[i] = b[i];
+         }
++        #pragma omp parallel for shared(b_old,a_old) 
+         for (int i = 1; i < LEN_1D-1; i++) {
+             if (i == 1) {
+                 a[i] = b_old[i-1]+c[i];

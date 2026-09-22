@@ -1,0 +1,10 @@
+--- s211.c
++++ s211.c
+@@ -140,6 +140,7 @@
+         for (int i = 1; i < LEN_1D-1; i++) {
+             temp_b[i] = b[i + 1] - e[i] * d[i];
+         }
++        #pragma omp parallel for shared(temp_b) 
+         for (int i = 1; i < LEN_1D-1; i++) {
+             b[i] = temp_b[i];
+         }

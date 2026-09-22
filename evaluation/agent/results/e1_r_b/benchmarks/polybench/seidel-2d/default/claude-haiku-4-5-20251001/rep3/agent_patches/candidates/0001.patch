@@ -1,0 +1,35 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_r_b/benchmarks/polybench/seidel-2d/default/claude-haiku-4-5-20251001/rep3/work/seidel-2d.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_r_b/benchmarks/polybench/seidel-2d/default/claude-haiku-4-5-20251001/rep3/work/seidel-2d.c
+@@ -59,14 +59,30 @@
+ {
+   int t, i, j;
+ 
++  /* Allocate temporary buffer for Jacobi iteration using runtime size n */
++  DATA_TYPE **B = (DATA_TYPE **)malloc(sizeof(DATA_TYPE *) * n);
++  for (i = 0; i < n; i++)
++    B[i] = (DATA_TYPE *)malloc(sizeof(DATA_TYPE) * n);
++
+ #pragma scop
+-  for (t = 0; t <= _PB_TSTEPS - 1; t++)
++  for (t = 0; t <= _PB_TSTEPS - 1; t++) {
++    /* Compute new values from A into B */
+     for (i = 1; i<= _PB_N - 2; i++)
+       for (j = 1; j <= _PB_N - 2; j++)
+-	A[i][j] = (A[i-1][j-1] + A[i-1][j] + A[i-1][j+1]
++	B[i][j] = (A[i-1][j-1] + A[i-1][j] + A[i-1][j+1]
+ 		   + A[i][j-1] + A[i][j] + A[i][j+1]
+ 		   + A[i+1][j-1] + A[i+1][j] + A[i+1][j+1])/9.0;
++
++    /* Copy B back to A */
++    for (i = 1; i<= _PB_N - 2; i++)
++      for (j = 1; j <= _PB_N - 2; j++)
++	A[i][j] = B[i][j];
++  }
+ #pragma endscop
++
++  for (i = 0; i < n; i++)
++    free(B[i]);
++  free(B);
+ 
+ }
+ 

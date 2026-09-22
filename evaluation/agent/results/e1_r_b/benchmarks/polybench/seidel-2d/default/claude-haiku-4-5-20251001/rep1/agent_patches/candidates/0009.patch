@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_r_b/benchmarks/polybench/seidel-2d/default/claude-haiku-4-5-20251001/rep1/work/seidel-2d.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_r_b/benchmarks/polybench/seidel-2d/default/claude-haiku-4-5-20251001/rep1/work/seidel-2d.c
+@@ -68,6 +68,7 @@
+ 	/* Snapshot both A[i-1] and A[i+1] to break loop-carried dependencies:
+ 	   Use stale A[i-1] and A[i+1] values (from before this i-iteration),
+ 	   permitting i-loop parallelism. Within the i, use newly-updated A[i][j-1]. */
++	#pragma omp parallel for firstprivate(n,i) shared(A) 
+ 	for (j = 0; j < _PB_N; j++)
+ 	  {
+ 	    A_above[j] = A[i-1][j];

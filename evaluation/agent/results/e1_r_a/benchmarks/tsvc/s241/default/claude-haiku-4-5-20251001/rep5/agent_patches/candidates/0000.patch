@@ -1,0 +1,25 @@
+--- s241.c
++++ s241.c
+@@ -133,13 +133,21 @@
+ 
+ static real_t kernel_s241(void)
+ {
++    real_t *b_old = (real_t*)malloc(LEN_1D * sizeof(real_t));
++    if (!b_old) return (real_t)0;
++
++    memcpy(b_old, b, LEN_1D * sizeof(real_t));
++
+     for (int nl = 0; nl < R; nl++) {
+         for (int i = 0; i < LEN_1D-1; i++) {
+-            a[i] = b[i] * c[i  ] * d[i];
++            a[i] = b_old[i] * c[i  ] * d[i];
+             b[i] = a[i] * a[i+1] * d[i];
+         }
+         pb_mix(nl);
++        memcpy(b_old, b, LEN_1D * sizeof(real_t));
+     }
++
++    free(b_old);
+     return (real_t)0;
+ }
+ 

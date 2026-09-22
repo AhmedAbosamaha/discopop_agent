@@ -1,0 +1,10 @@
+--- s243.c
++++ s243.c
+@@ -137,6 +137,7 @@
+ 
+     for (int nl = 0; nl < R; nl++) {
+         // First pass: compute intermediate a values and update b
++        #pragma omp parallel for shared(a_temp) 
+         for (int i = 0; i < LEN_1D-1; i++) {
+             a_temp[i] = b[i] + c[i  ] * d[i];
+             b[i] = a_temp[i] + d[i  ] * e[i];

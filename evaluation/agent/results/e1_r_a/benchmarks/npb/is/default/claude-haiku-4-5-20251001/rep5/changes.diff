@@ -1,0 +1,131 @@
+--- original.cpp
++++ final.cpp
+@@ -305,13 +305,12 @@
+ 
+ 	if( CLASS != 'S' ) printf( "\n   iteration\n" );
+ 
+-	/* Start timer */             
++	/* Start timer */
+ 	pb_timer_start();
+ 	timer_start( T_BENCHMARKING );
+ 
+ 	/* This is the main iteration */
+ 	for(iteration=1; iteration<=MAX_ITERATIONS; iteration++){
+-		if(CLASS != 'S')printf("        %d\n", iteration);
+ 		rank( iteration );
+ 	}
+ 
+@@ -427,24 +426,26 @@
+ 	num_procs = 1;
+ 
+ 	mq = (NUM_KEYS + num_procs - 1) / num_procs;
+-	k1 = mq * myid;
+-	k2 = k1 + mq;
+-	if ( k2 > NUM_KEYS ) k2 = NUM_KEYS;
+-
+-	s = find_my_seed( myid, 
+-			num_procs,
+-			(long)4*NUM_KEYS,
+-			seed,
+-			an );
+-
+ 	k = MAX_KEY/4;
+ 
+-	for(i=k1; i<k2; i++){
+-		x = randlc(&s, an);
+-		x += randlc(&s, an);
+-		x += randlc(&s, an);
+-		x += randlc(&s, an);
+-		key_array[i] = k*x;
++	for(myid=0; myid<num_procs; myid++){
++		k1 = mq * myid;
++		k2 = k1 + mq;
++		if ( k2 > NUM_KEYS ) k2 = NUM_KEYS;
++
++		s = find_my_seed( myid,
++				num_procs,
++				(long)4*NUM_KEYS,
++				seed,
++				an );
++
++		for(i=k1; i<k2; i++){
++			x = randlc(&s, an);
++			x += randlc(&s, an);
++			x += randlc(&s, an);
++			x += randlc(&s, an);
++			key_array[i] = k*x;
++		}
+ 	}
+ }
+ 
+@@ -581,13 +582,15 @@
+ #ifdef USE_BUCKETS
+ 	work_buff = bucket_size[myid];
+ 
+-	/* Initialize */
+-	for( i=0; i<NUM_BUCKETS; i++ )  
+-		work_buff[i] = 0;
+-
+ 	/* Determine the number of keys in each bucket */
+-	for( i=0; i<NUM_KEYS; i++ )
+-		work_buff[key_array[i] >> shift]++;
++	/* Reorganized into independent sub-passes: each bucket accumulates separately */
++	for( INT_TYPE b=0; b<NUM_BUCKETS; b++ ) {
++		work_buff[b] = 0;
++		for( i=0; i<NUM_KEYS; i++ ) {
++			if( (key_array[i] >> shift) == b )
++				work_buff[b]++;
++		}
++	}
+ 
+ 	/* Accumulative bucket sizes are the bucket pointers. */
+ 	/* These are global sizes accumulated upon to each bucket */
+@@ -604,10 +607,46 @@
+ 	}
+ 
+ 	/* Sort into appropriate bucket */
++	/* Count phase: determine how many keys go to each bucket */
++	INT_TYPE bucket_count[NUM_BUCKETS];
++	for( i=0; i<NUM_BUCKETS; i++ )
++		bucket_count[i] = 0;
++
+ 	for( i=0; i<NUM_KEYS; i++ ){
+ 		k = key_array[i];
+-		key_buff2[bucket_ptrs[k >> shift]++] = k;
+-	}
++		bucket_count[k >> shift]++;
++	}
++
++	/* Position phase: compute starting positions for each bucket */
++	INT_TYPE bucket_start[NUM_BUCKETS];
++	bucket_start[0] = bucket_ptrs[0];
++	for( i=1; i<NUM_BUCKETS; i++ ){
++		bucket_start[i] = bucket_start[i-1] + bucket_count[i-1];
++	}
++
++	/* Compute position for each key in a separate sequential pass */
++	INT_TYPE *key_position = (INT_TYPE*)malloc(sizeof(INT_TYPE)*NUM_KEYS);
++	INT_TYPE temp_bucket_pos[NUM_BUCKETS];
++	for( i=0; i<NUM_BUCKETS; i++ )
++		temp_bucket_pos[i] = bucket_start[i];
++
++	for( i=0; i<NUM_KEYS; i++ ){
++		k = key_array[i];
++		INT_TYPE bucket = k >> shift;
++		key_position[i] = temp_bucket_pos[bucket];
++		temp_bucket_pos[bucket]++;
++	}
++
++	/* Distribution phase: place keys into buffers (parallelizable, no loop-carried dependence) */
++	for( i=0; i<NUM_KEYS; i++ ){
++		key_buff2[key_position[i]] = key_array[i];
++	}
++
++	/* Update bucket_ptrs with final positions for subsequent code */
++	for( i=0; i<NUM_BUCKETS; i++ )
++		bucket_ptrs[i] = temp_bucket_pos[i];
++
++	free(key_position);
+ 
+ 	/* The bucket pointers now point to the final accumulated sizes */
+ 	if (myid < num_procs-1) {

@@ -1,0 +1,20 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_r_a/benchmarks/npb/is/default/claude-haiku-4-5-20251001/rep2/work/IS/is.cpp
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_r_a/benchmarks/npb/is/default/claude-haiku-4-5-20251001/rep2/work/IS/is.cpp
+@@ -616,9 +616,14 @@
+ 	}
+ 
+ 	/* Sort into appropriate bucket */
+-	for( i=0; i<NUM_KEYS; i++ ){
+-		k = key_array[i];
+-		key_buff2[bucket_ptrs[k >> shift]++] = k;
++	/* Process each bucket separately to expose parallelism */
++	for( int b=0; b<NUM_BUCKETS; b++ ){
++		for( i=0; i<NUM_KEYS; i++ ){
++			k = key_array[i];
++			if( (k >> shift) == b ){
++				key_buff2[bucket_ptrs[b]++] = k;
++			}
++		}
+ 	}
+ 
+ 	/* The bucket pointers now point to the final accumulated sizes */

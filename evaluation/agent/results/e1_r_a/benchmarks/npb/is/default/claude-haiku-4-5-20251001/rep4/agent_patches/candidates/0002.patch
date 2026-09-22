@@ -1,0 +1,46 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_r_a/benchmarks/npb/is/default/claude-haiku-4-5-20251001/rep4/work/IS/is.cpp
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_r_a/benchmarks/npb/is/default/claude-haiku-4-5-20251001/rep4/work/IS/is.cpp
+@@ -414,7 +414,7 @@
+ /*****************************************************************/
+ void create_seq(double seed,
+ 		double a){
+-	double x, s;
++	double x, s, s_base;
+ 	INT_TYPE i, k;
+ 
+ 	INT_TYPE k1, k2;
+@@ -430,7 +430,7 @@
+ 	k2 = k1 + mq;
+ 	if ( k2 > NUM_KEYS ) k2 = NUM_KEYS;
+ 
+-	s = find_my_seed( myid, 
++	s_base = find_my_seed( myid,
+ 			num_procs,
+ 			(long)4*NUM_KEYS,
+ 			seed,
+@@ -439,6 +439,25 @@
+ 	k = MAX_KEY/4;
+ 
+ 	for(i=k1; i<k2; i++){
++		/* Compute seed for this iteration using binary doubling to skip ahead
++		   in the random sequence. Each iteration gets independent seed, breaking
++		   the sequential dependence on s. */
++		INT_TYPE skip = 4 * (i - k1);
++		double t1 = s_base, t2 = an;
++		INT_TYPE kk = skip;
++		while(kk > 1){
++			INT_TYPE ik = kk / 2;
++			if(2 * ik == kk){
++				(void)randlc(&t2, t2);
++				kk = ik;
++			} else {
++				(void)randlc(&t1, t2);
++				kk = kk - 1;
++			}
++		}
++		if(kk == 1) (void)randlc(&t1, t2);
++		s = t1;
++
+ 		x = randlc(&s, an);
+ 		x += randlc(&s, an);
+ 		x += randlc(&s, an);

@@ -16,7 +16,7 @@ trial a case-study folder with
     python3 agent/tools/thesis_material.py --out agent/thesis_material \\
         pilot4:polybench/jacobi-2d-imper/full pilot3:polybench/floyd-warshall/full ...
 
-A spec is `<run>:<suite>/<kernel>/<arm>[:<label>]`; the first model and rep1 are taken.
+A spec is `<run>:<suite>/<kernel>/<arm>[@<rep>][:<label>]`; the first model is taken, rep1 unless given.
 Nothing is measured here — every number comes from the archived trial record.
 """
 from __future__ import annotations
@@ -210,8 +210,10 @@ def _side_by_side(trial: Path, t: dict, path: Path, context: int = 5) -> dict:
 def build(spec: str, out: Path) -> Path:
     run, rest = spec.split(":", 1)
     path, _, label = rest.partition(":")
+    # `<suite>/<kernel>/<arm>@3` names a repeat other than the first.
+    path, _, rep = path.partition("@")
     arm_dir = RESULTS / run / "benchmarks" / path
-    trials = sorted(arm_dir.glob("*/rep1"))
+    trials = sorted(arm_dir.glob(f"*/rep{rep or 1}"))
     if not trials:
         raise SystemExit(f"no trial under {arm_dir}")
     trial = trials[0]

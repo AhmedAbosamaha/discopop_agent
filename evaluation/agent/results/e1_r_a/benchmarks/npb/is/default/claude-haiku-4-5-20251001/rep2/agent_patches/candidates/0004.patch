@@ -1,0 +1,26 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_r_a/benchmarks/npb/is/default/claude-haiku-4-5-20251001/rep2/work/IS/is.cpp
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_r_a/benchmarks/npb/is/default/claude-haiku-4-5-20251001/rep2/work/IS/is.cpp
+@@ -594,12 +594,21 @@
+ 	work_buff = bucket_size[myid];
+ 
+ 	/* Initialize */
+-	for( i=0; i<NUM_BUCKETS; i++ )  
++	for( i=0; i<NUM_BUCKETS; i++ )
+ 		work_buff[i] = 0;
+ 
+ 	/* Determine the number of keys in each bucket */
++	/* Use a temporary local buffer to accumulate histogram counts */
++	INT_TYPE temp_work_buff[NUM_BUCKETS];
++	for( i=0; i<NUM_BUCKETS; i++ )
++		temp_work_buff[i] = 0;
++
+ 	for( i=0; i<NUM_KEYS; i++ )
+-		work_buff[key_array[i] >> shift]++;
++		temp_work_buff[key_array[i] >> shift]++;
++
++	/* Transfer histogram counts from temporary buffer to work_buff */
++	for( i=0; i<NUM_BUCKETS; i++ )
++		work_buff[i] = temp_work_buff[i];
+ 
+ 	/* Accumulative bucket sizes are the bucket pointers. */
+ 	/* These are global sizes accumulated upon to each bucket */

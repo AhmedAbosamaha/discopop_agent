@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_r_b/benchmarks/polybench/seidel-2d/default/claude-haiku-4-5-20251001/rep2/work/seidel-2d.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_r_b/benchmarks/polybench/seidel-2d/default/claude-haiku-4-5-20251001/rep2/work/seidel-2d.c
+@@ -62,6 +62,7 @@
+ 
+ #pragma scop
+   for (t = 0; t <= _PB_TSTEPS - 1; t++)
++    #pragma omp parallel for firstprivate(n) private(j) shared(A) 
+     for (i = 1; i<= _PB_N - 2; i++) {
+       tmp = (DATA_TYPE*)malloc(_PB_N * sizeof(DATA_TYPE));
+       for (j = 0; j < _PB_N; j++)

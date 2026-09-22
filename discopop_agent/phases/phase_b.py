@@ -29,6 +29,10 @@ from ..types import HotspotCandidate
 from .report import _record_candidate, _write_record
 from .verdicts import _MARGINAL_NOISE
 
+# The key under which Phase B leaves its measured keep-threshold in the gate cache for
+# Settle.  Every other key of that cache is a patch digest, so this cannot collide.
+SPEED_THRESHOLD_KEY = "__speed_threshold__"
+
 
 def _phase_b(
     args: AgentArguments, dp_dir: Path, output_dir: Path,
@@ -87,6 +91,9 @@ def _phase_b(
         else:
             print(f"  [warn] could not calibrate timing noise ({ndiag[:60]}); "
                   f"falling back to {threshold:.2f}\n")
+    # Settle re-asks the speed question about the finished file with the SAME paired
+    # measurement and the same threshold (Fix 89); this is how it learns the threshold.
+    gate_cache[SPEED_THRESHOLD_KEY] = threshold
 
     # Spans that already run in parallel: loops annotated by THIS pass, and loops
     # that were parallel on entry — a Phase A rewrite the model annotated itself.

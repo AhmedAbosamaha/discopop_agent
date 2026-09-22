@@ -1,0 +1,28 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_r_b/benchmarks/polybench/seidel-2d/default/claude-haiku-4-5-20251001/rep2/work/seidel-2d.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_r_b/benchmarks/polybench/seidel-2d/default/claude-haiku-4-5-20251001/rep2/work/seidel-2d.c
+@@ -58,14 +58,22 @@
+ 		      DATA_TYPE POLYBENCH_2D(A,N,N,n,n))
+ {
+   int t, i, j;
++  DATA_TYPE *tmp;
+ 
+ #pragma scop
+   for (t = 0; t <= _PB_TSTEPS - 1; t++)
+-    for (i = 1; i<= _PB_N - 2; i++)
+-      for (j = 1; j <= _PB_N - 2; j++)
++    for (i = 1; i<= _PB_N - 2; i++) {
++      tmp = (DATA_TYPE*)malloc(_PB_N * sizeof(DATA_TYPE));
++      for (j = 0; j < _PB_N; j++)
++	tmp[j] = A[i][j];
++      for (j = 1; j <= _PB_N - 2; j++) {
+ 	A[i][j] = (A[i-1][j-1] + A[i-1][j] + A[i-1][j+1]
+-		   + A[i][j-1] + A[i][j] + A[i][j+1]
++		   + tmp[j-1] + tmp[j] + tmp[j+1]
+ 		   + A[i+1][j-1] + A[i+1][j] + A[i+1][j+1])/9.0;
++	tmp[j] = A[i][j];
++      }
++      free(tmp);
++    }
+ #pragma endscop
+ 
+ }

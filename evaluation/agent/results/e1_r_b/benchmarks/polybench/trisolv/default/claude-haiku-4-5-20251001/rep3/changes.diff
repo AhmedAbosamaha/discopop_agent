@@ -1,0 +1,17 @@
+--- original.c
++++ final.c
+@@ -752,10 +752,11 @@
+ #pragma scop
+   for (i = 0; i < _PB_N; i++)
+     {
+-      x[i] = c[i];
++      DATA_TYPE sum = c[i];
++      #pragma omp parallel for firstprivate(i) shared(A,x) reduction(+:sum) 
+       for (j = 0; j <= i - 1; j++)
+-        x[i] = x[i] - A[i][j] * x[j];
+-      x[i] = x[i] / A[i][i];
++        sum = sum - A[i][j] * x[j];
++      x[i] = sum / A[i][i];
+     }
+ #pragma endscop
+ 

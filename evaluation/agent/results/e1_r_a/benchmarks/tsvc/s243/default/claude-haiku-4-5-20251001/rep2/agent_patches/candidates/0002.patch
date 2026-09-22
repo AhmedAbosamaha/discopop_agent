@@ -1,0 +1,10 @@
+--- s243.c
++++ s243.c
+@@ -143,6 +143,7 @@
+             b[i] = a_temp[i] + d[i  ] * e[i];
+         }
+         // Second pass: compute final a values using intermediate results
++        #pragma omp parallel for 
+         for (int i = 0; i < LEN_1D-1; i++) {
+             a[i] = b[i] + a[i+1] * d[i];
+         }

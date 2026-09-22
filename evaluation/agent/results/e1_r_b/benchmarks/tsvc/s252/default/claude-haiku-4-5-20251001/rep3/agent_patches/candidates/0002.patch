@@ -1,0 +1,10 @@
+--- s252.c
++++ s252.c
+@@ -137,6 +137,7 @@
+     real_t *prod = (real_t*)malloc((size_t)LEN_1D * sizeof(real_t));
+     for (int nl = 0; nl < R; nl++) {
+         /* First pass: compute products (parallelizable) */
++        #pragma omp parallel for shared(prod) 
+         for (int i = 0; i < LEN_1D; i++) {
+             prod[i] = b[i] * c[i];
+         }

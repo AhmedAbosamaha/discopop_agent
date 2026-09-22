@@ -1,0 +1,10 @@
+--- s211.c
++++ s211.c
+@@ -137,6 +137,7 @@
+     if (!temp_b) { fprintf(stderr, "out of memory\n"); return (real_t)0; }
+ 
+     for (int nl = 0; nl < R; nl++) {
++        #pragma omp parallel for shared(temp_b) 
+         for (int i = 1; i < LEN_1D-1; i++) {
+             temp_b[i] = b[i + 1] - e[i] * d[i];
+         }

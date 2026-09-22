@@ -1,0 +1,35 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_r_b/benchmarks/polybench/seidel-2d/default/claude-haiku-4-5-20251001/rep5/work/seidel-2d.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_r_b/benchmarks/polybench/seidel-2d/default/claude-haiku-4-5-20251001/rep5/work/seidel-2d.c
+@@ -59,14 +59,28 @@
+ {
+   int t, i, j;
+ 
++  /* Allocate per-row temporary buffer. */
++  DATA_TYPE *row_tmp = (DATA_TYPE*)malloc(n * sizeof(DATA_TYPE));
++
+ #pragma scop
+   for (t = 0; t <= _PB_TSTEPS - 1; t++)
+-    for (i = 1; i<= _PB_N - 2; i++)
++    for (i = 1; i<= _PB_N - 2; i++) {
++      /* Initialize row buffer with current row. */
++      for (j = 0; j < n; j++)
++	row_tmp[j] = A[i][j];
++      /* Compute new values, reading within-row values from row_tmp to preserve Gauss-Seidel updates. */
+       for (j = 1; j <= _PB_N - 2; j++)
+-	A[i][j] = (A[i-1][j-1] + A[i-1][j] + A[i-1][j+1]
+-		   + A[i][j-1] + A[i][j] + A[i][j+1]
+-		   + A[i+1][j-1] + A[i+1][j] + A[i+1][j+1])/9.0;
++	row_tmp[j] = (A[i-1][j-1] + A[i-1][j] + A[i-1][j+1]
++		      + row_tmp[j-1] + row_tmp[j] + row_tmp[j+1]
++		      + A[i+1][j-1] + A[i+1][j] + A[i+1][j+1])/9.0;
++      /* Copy updated row back to A. */
++      for (j = 1; j <= _PB_N - 2; j++)
++	A[i][j] = row_tmp[j];
++    }
+ #pragma endscop
++
++  /* Free temporary buffer. */
++  free(row_tmp);
+ 
+ }
+ 

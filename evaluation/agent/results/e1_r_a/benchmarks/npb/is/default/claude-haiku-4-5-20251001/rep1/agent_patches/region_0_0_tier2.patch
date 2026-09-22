@@ -1,0 +1,171 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_r_a/benchmarks/npb/is/default/claude-haiku-4-5-20251001/rep1/work/IS/is.cpp
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_r_a/benchmarks/npb/is/default/claude-haiku-4-5-20251001/rep1/work/IS/is.cpp
+@@ -143,7 +143,8 @@
+ /* Some global info */
+ /********************/
+ INT_TYPE* key_buff_ptr_global; /* used by full_verify to get copies of rank info */
+-int passed_verification;                                 
++int passed_verification;
++int iteration_verifications[MAX_ITERATIONS]; /* used to capture verification count per iteration */                                 
+ 
+ /************************************/
+ /* These are the three main arrays. */
+@@ -295,24 +296,32 @@
+ 	alloc_key_buff();
+ 	if(timer_on)timer_stop( T_INITIALIZATION );
+ 
++	/* Initialize iteration_verifications array */
++	for( i=0; i<MAX_ITERATIONS; i++ )
++		iteration_verifications[i] = 0;
++
+ 	/* Do one interation for free (i.e., untimed) to guarantee initialization of */
+ 	/* all data and code pages and respective tables */
+-	rank( 1 );  
++	rank( 1 );
+ 
+ 	/* Start verification counter */
+ 	passed_verification = 0;
+ 
+ 	if( CLASS != 'S' ) printf( "\n   iteration\n" );
+ 
+-	/* Start timer */             
++	/* Start timer */
+ 	pb_timer_start();
+ 	timer_start( T_BENCHMARKING );
+ 
+ 	/* This is the main iteration */
++	int loop_verifications = 0;
+ 	for(iteration=1; iteration<=MAX_ITERATIONS; iteration++){
+ 		if(CLASS != 'S')printf("        %d\n", iteration);
++		iteration_verifications[iteration - 1] = 0;
+ 		rank( iteration );
+-	}
++		loop_verifications += iteration_verifications[iteration - 1];
++	}
++	passed_verification = loop_verifications;
+ 
+ 	/* End of timing, obtain maximum time of all processors */
+ 	timer_stop( T_BENCHMARKING );
+@@ -663,7 +672,8 @@
+ 	/* This is the partial verify test section */
+ 	/* Observe that test_rank_array vals are */
+ 	/* shifted differently for different cases */
+-	for( i=0; i<TEST_ARRAY_SIZE; i++ ){                                             
++	int iteration_verify_count = 0;
++	for( i=0; i<TEST_ARRAY_SIZE; i++ ){
+ 		k = partial_verify_vals[i]; /* test vals were put here */
+ 		if( 0 < k  &&  k <= NUM_KEYS-1 )
+ 		{
+@@ -678,14 +688,14 @@
+ 						if( key_rank != test_rank_array[i]+iteration )
+ 							failed = 1;
+ 						else
+-							passed_verification++;
++							iteration_verify_count++;
+ 					}
+ 					else
+ 					{
+ 						if( key_rank != test_rank_array[i]-iteration )
+ 							failed = 1;
+ 						else
+-							passed_verification++;
++							iteration_verify_count++;
+ 					}
+ 					break;
+ 				case 'W':
+@@ -694,14 +704,14 @@
+ 						if( key_rank != test_rank_array[i]+(iteration-2) )
+ 							failed = 1;
+ 						else
+-							passed_verification++;
++							iteration_verify_count++;
+ 					}
+ 					else
+ 					{
+ 						if( key_rank != test_rank_array[i]-iteration )
+ 							failed = 1;
+ 						else
+-							passed_verification++;
++							iteration_verify_count++;
+ 					}
+ 					break;
+ 				case 'A':
+@@ -710,14 +720,14 @@
+ 						if( key_rank != test_rank_array[i]+(iteration-1) )
+ 							failed = 1;
+ 						else
+-							passed_verification++;
++							iteration_verify_count++;
+ 					}
+ 					else
+ 					{
+ 						if( key_rank != test_rank_array[i]-(iteration-1) )
+ 							failed = 1;
+ 						else
+-							passed_verification++;
++							iteration_verify_count++;
+ 					}
+ 					break;
+ 				case 'B':
+@@ -726,14 +736,14 @@
+ 						if( key_rank != test_rank_array[i]+iteration )
+ 							failed = 1;
+ 						else
+-							passed_verification++;
++							iteration_verify_count++;
+ 					}
+ 					else
+ 					{
+ 						if( key_rank != test_rank_array[i]-iteration )
+ 							failed = 1;
+ 						else
+-							passed_verification++;
++							iteration_verify_count++;
+ 					}
+ 					break;
+ 				case 'C':
+@@ -742,14 +752,14 @@
+ 						if( key_rank != test_rank_array[i]+iteration )
+ 							failed = 1;
+ 						else
+-							passed_verification++;
++							iteration_verify_count++;
+ 					}
+ 					else
+ 					{
+ 						if( key_rank != test_rank_array[i]-iteration )
+ 							failed = 1;
+ 						else
+-							passed_verification++;
++							iteration_verify_count++;
+ 					}
+ 					break;
+ 				case 'D':
+@@ -758,23 +768,24 @@
+ 						if( key_rank != test_rank_array[i]+iteration )
+ 							failed = 1;
+ 						else
+-							passed_verification++;
++							iteration_verify_count++;
+ 					}
+ 					else
+ 					{
+ 						if( key_rank != test_rank_array[i]-iteration )
+ 							failed = 1;
+ 						else
+-							passed_verification++;
++							iteration_verify_count++;
+ 					}
+ 					break;
+ 			}
+ 			if( failed == 1 )
+ 				printf( "Failed partial verification: "
+-						"iteration %d, test key %d\n", 
++						"iteration %d, test key %d\n",
+ 						iteration, (int)i );
+ 		}
+ 	}
++	iteration_verifications[iteration - 1] = iteration_verify_count;
+ 
+ 	/* Make copies of rank info for use by full_verify: these variables */
+ 	/* in rank are local; making them global slows down the code, probably */

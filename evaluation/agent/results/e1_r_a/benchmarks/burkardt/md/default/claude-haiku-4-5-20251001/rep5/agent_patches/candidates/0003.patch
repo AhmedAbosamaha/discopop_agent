@@ -1,0 +1,36 @@
+--- md.cpp
++++ md.cpp
+@@ -150,21 +150,30 @@
+   step_print_index = step_print_index + 1;
+   step_print = ( step_print_index * step_num ) / step_print_num;
+ 
++  // Pre-compute which steps need output to eliminate loop-carried dependence on step_print
++  bool *should_print = new bool[step_num + 1];
++  for ( int i = 0; i <= step_num; i++ ) should_print[i] = false;
++  for ( int i = 1; i <= step_print_num; i++ )
++    {
++      int ps = ( i * step_num ) / step_print_num;
++      if ( ps > 0 && ps <= step_num ) should_print[ps] = true;
++    }
++
+   pb_timer_start ( );
+   for ( step = 1; step <= step_num; step++ )
+     {
+       compute ( np, nd, pos, vel, mass, force, &potential, &kinetic );
+-      if ( step == step_print )
++      if ( should_print[step] )
+         {
+           pb_emit ( potential );
+           pb_emit ( kinetic );
+           pb_emit ( ( potential + kinetic - e0 ) / e0 );
+-          step_print_index = step_print_index + 1;
+-          step_print = ( step_print_index * step_num ) / step_print_num;
+         }
+       update ( np, nd, pos, vel, force, acc, mass, dt );
+     }
+   pb_timer_stop ( );
++
++  delete [] should_print;
+ 
+ #ifndef PB_FULL_DUMP
+   /* Digest only. The original never prints positions, so the full dump stays exactly the

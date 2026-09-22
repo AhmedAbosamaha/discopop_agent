@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_r_b/benchmarks/polybench/floyd-warshall/default/claude-haiku-4-5-20251001/rep2/work/floyd-warshall.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_r_b/benchmarks/polybench/floyd-warshall/default/claude-haiku-4-5-20251001/rep2/work/floyd-warshall.c
+@@ -72,6 +72,7 @@
+       // Copy updated values back to path
+       // All (i,j) pairs are independent: each writes to a unique path location
+       for(i = 0; i < _PB_N; i++)
++	#pragma omp parallel for firstprivate(n,i) shared(path,temp) 
+ 	for (j = 0; j < _PB_N; j++)
+ 	  path[i][j] = temp[i * n + j];
+     }

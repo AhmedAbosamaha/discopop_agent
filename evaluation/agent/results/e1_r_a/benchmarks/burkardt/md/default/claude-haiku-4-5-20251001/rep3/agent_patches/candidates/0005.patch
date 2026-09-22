@@ -1,0 +1,32 @@
+--- md.cpp
++++ md.cpp
+@@ -154,14 +154,26 @@
+   for ( step = 1; step <= step_num; step++ )
+     {
+       compute ( np, nd, pos, vel, mass, force, &potential, &kinetic );
+-      if ( step == step_print )
++
++      /* Determine if current step is a print step by checking against all 10 print points.
++         Each iteration independently computes this without carrying state from previous
++         iterations. Loop through all print indices without break to satisfy OpenMP constraints. */
++      int should_print_flag = 0;
++      for ( int print_idx = 1; print_idx <= step_print_num; print_idx++ )
++        {
++          if ( step == ( print_idx * step_num ) / step_print_num )
++            {
++              should_print_flag = 1;
++            }
++        }
++
++      if ( should_print_flag )
+         {
+           pb_emit ( potential );
+           pb_emit ( kinetic );
+           pb_emit ( ( potential + kinetic - e0 ) / e0 );
+-          step_print_index = step_print_index + 1;
+-          step_print = ( step_print_index * step_num ) / step_print_num;
+         }
++
+       update ( np, nd, pos, vel, force, acc, mass, dt );
+     }
+   pb_timer_stop ( );

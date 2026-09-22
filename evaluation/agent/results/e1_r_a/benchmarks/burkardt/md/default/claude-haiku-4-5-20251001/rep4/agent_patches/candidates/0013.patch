@@ -1,0 +1,10 @@
+--- md.cpp
++++ md.cpp
+@@ -293,6 +293,7 @@
+ 
+         pe = pe + 0.5 * pow ( sin ( d2 ), 2 );
+ 
++        #pragma omp parallel for firstprivate(rij,k,d2,d,nd) shared(f) 
+         for ( i = 0; i < nd; i++ )
+         {
+           f[i+k*nd] = f[i+k*nd] - rij[i] * sin ( 2.0 * d2 ) / d;

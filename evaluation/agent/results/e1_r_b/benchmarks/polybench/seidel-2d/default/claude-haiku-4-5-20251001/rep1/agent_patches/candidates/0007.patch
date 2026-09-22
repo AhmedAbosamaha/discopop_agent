@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_r_b/benchmarks/polybench/seidel-2d/default/claude-haiku-4-5-20251001/rep1/work/seidel-2d.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_r_b/benchmarks/polybench/seidel-2d/default/claude-haiku-4-5-20251001/rep1/work/seidel-2d.c
+@@ -63,6 +63,7 @@
+ 
+ #pragma scop
+   for (t = 0; t <= _PB_TSTEPS - 1; t++)
++ #pragma omp parallel for firstprivate(n) private(j) 
+     for (i = 1; i<= _PB_N - 2; i++)
+       {
+ 	/* Snapshot both A[i-1] and A[i+1] to break loop-carried dependencies:

@@ -1,0 +1,10 @@
+--- s291.c
++++ s291.c
+@@ -137,6 +137,7 @@
+         // Handle wrap-around: i=0 reads b[LEN_1D-1]
+         a[0] = (b[0] + b[LEN_1D-1]) * (real_t).5;
+         // Main loop: each i reads b[i-1], no loop-carry dependence
++        #pragma omp parallel for 
+         for (int i = 1; i < LEN_1D; i++) {
+             a[i] = (b[i] + b[i-1]) * (real_t).5;
+         }

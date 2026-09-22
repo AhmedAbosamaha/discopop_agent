@@ -1,0 +1,41 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_r_a/benchmarks/npb/is/default/claude-haiku-4-5-20251001/rep1/work/IS/is.cpp
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_r_a/benchmarks/npb/is/default/claude-haiku-4-5-20251001/rep1/work/IS/is.cpp
+@@ -423,31 +423,19 @@
+ /*****************************************************************/
+ void create_seq(double seed,
+ 		double a){
+-	double x, s;
++	double x;
+ 	INT_TYPE i, k;
+ 
+-	INT_TYPE k1, k2;
+ 	double an = a;
+-	int myid, num_procs;
+-	INT_TYPE mq;
+-
+-	myid = 0;
+-	num_procs = 1;
+-
+-	mq = (NUM_KEYS + num_procs - 1) / num_procs;
+-	k1 = mq * myid;
+-	k2 = k1 + mq;
+-	if ( k2 > NUM_KEYS ) k2 = NUM_KEYS;
+-
+-	s = find_my_seed( myid, 
+-			num_procs,
+-			(long)4*NUM_KEYS,
+-			seed,
+-			an );
+ 
+ 	k = MAX_KEY/4;
+ 
+-	for(i=k1; i<k2; i++){
++	for(i=0; i<NUM_KEYS; i++){
++		double s = find_my_seed( (int)i,
++				(int)NUM_KEYS,
++				4,
++				seed,
++				an );
+ 		x = randlc(&s, an);
+ 		x += randlc(&s, an);
+ 		x += randlc(&s, an);

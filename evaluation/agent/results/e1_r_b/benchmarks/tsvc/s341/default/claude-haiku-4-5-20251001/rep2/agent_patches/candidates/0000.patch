@@ -1,0 +1,34 @@
+--- s341.c
++++ s341.c
+@@ -133,15 +133,27 @@
+ 
+ static real_t kernel_s341(void)
+ {
+-    int j;
+     for (int nl = 0; nl < R; nl++) {
+-        j = -1;
++        int j = -1;
++        int *offset = (int*)malloc(LEN_1D * sizeof(int));
++
++        /* Compute offsets: where each positive element should go */
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++                offset[i] = ++j;
++            } else {
++                offset[i] = -1;
+             }
+         }
++
++        /* Scatter: write elements to their computed positions (Do-All) */
++        for (int i = 0; i < LEN_1D; i++) {
++            if (offset[i] >= 0) {
++                a[offset[i]] = b[i];
++            }
++        }
++
++        free(offset);
+         pb_mix(nl);
+     }
+     return (real_t)0;

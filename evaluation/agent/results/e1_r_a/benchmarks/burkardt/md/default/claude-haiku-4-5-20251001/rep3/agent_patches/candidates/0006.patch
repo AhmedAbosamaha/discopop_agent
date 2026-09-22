@@ -1,0 +1,32 @@
+--- md.cpp
++++ md.cpp
+@@ -154,14 +154,26 @@
+   for ( step = 1; step <= step_num; step++ )
+     {
+       compute ( np, nd, pos, vel, mass, force, &potential, &kinetic );
+-      if ( step == step_print )
++
++      /* Check if current step is a print step. Since step_print_num = 10 is constant,
++         unroll the check to avoid nested loops. Each iteration independently determines
++         whether to emit, with no loop-carried dependence on print state. */
++      if ( step == (1 * step_num) / step_print_num ||
++           step == (2 * step_num) / step_print_num ||
++           step == (3 * step_num) / step_print_num ||
++           step == (4 * step_num) / step_print_num ||
++           step == (5 * step_num) / step_print_num ||
++           step == (6 * step_num) / step_print_num ||
++           step == (7 * step_num) / step_print_num ||
++           step == (8 * step_num) / step_print_num ||
++           step == (9 * step_num) / step_print_num ||
++           step == (10 * step_num) / step_print_num )
+         {
+           pb_emit ( potential );
+           pb_emit ( kinetic );
+           pb_emit ( ( potential + kinetic - e0 ) / e0 );
+-          step_print_index = step_print_index + 1;
+-          step_print = ( step_print_index * step_num ) / step_print_num;
+         }
++
+       update ( np, nd, pos, vel, force, acc, mass, dt );
+     }
+   pb_timer_stop ( );

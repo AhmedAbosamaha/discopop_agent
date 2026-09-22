@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_r_a/benchmarks/polybench/doitgen/discopop_gate/claude-haiku-4-5-20251001/rep4/work/doitgen.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_r_a/benchmarks/polybench/doitgen/discopop_gate/claude-haiku-4-5-20251001/rep4/work/doitgen.c
+@@ -70,6 +70,7 @@
+     for (q = 0; q < _PB_NQ; q++)  {
+       for (p = 0; p < _PB_NP; p++)  {
+ 	sum[r][q][p] = 0;
++	#pragma omp parallel for firstprivate(p,r,q,np) shared(A,C4,sum) 
+ 	for (s = 0; s < _PB_NP; s++)
+ 	  sum[r][q][p] = sum[r][q][p] + A[r][q][s] * C4[s][p];
+       }

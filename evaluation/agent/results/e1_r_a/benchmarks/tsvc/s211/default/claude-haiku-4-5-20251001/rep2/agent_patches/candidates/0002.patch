@@ -1,0 +1,10 @@
+--- s211.c
++++ s211.c
+@@ -137,6 +137,7 @@
+         /* Split into two passes to remove loop-carried dependence on b:
+          * Pass 1: compute b from original b[i+1] values (all iterations independent)
+          * Pass 2: compute a from updated b[i-1] values (all iterations independent) */
++        #pragma omp parallel for 
+         for (int i = 1; i < LEN_1D-1; i++) {
+             b[i] = b[i + 1] - e[i] * d[i];
+         }

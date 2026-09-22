@@ -1,0 +1,118 @@
+
+============================================================
+  DiscoPoP Agentic Controller
+============================================================
+  Source         : /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_r_a/benchmarks/npb/is/discopop_gate/claude-haiku-4-5-20251001/rep4/work/IS/is.cpp
+  DiscoPoP dir   : .discopop
+  Model          : claude-haiku-4-5-20251001
+  Budget         : 0 LLM retries/region (+2 free build fixes)
+  λ penalty      : 1.0
+  Min workload   : 0.0
+  Restruct. depth: 0 (Tier-2 allowed at depth 0–0)
+  Quality gate   : Tier-1 = all but speed, no escalation; Tier-2 = full
+  TSan           : barrier-aware (archer: /usr/lib/llvm-20/lib/libarcher.so)
+  Speedup gate   : require ≥ 1.1× measured
+  Dry run        : False
+  LLM mode       : claude-haiku-4-5-20251001
+  Edit mode      : direct
+  Re-profiling   : full (instrument + run + explore) after every kept rewrite
+  Explorer       : one attempt may take 600 s, then the draw is repeated (random stall, L5)
+  Pragmas        : DiscoPoP writes them in Phase B
+============================================================
+
+  Project        : /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_r_a/benchmarks/npb/is/discopop_gate/claude-haiku-4-5-20251001/rep4/work  (6 unit(s): IS/is.cpp, pb_harness.cpp, common/c_print_results.cpp, common/c_randdp.cpp, common/c_timers.cpp, common/wtime.cpp)
+
+  [ok] Captured reference output on 2 inputs (43 bytes, 448.9 ms baseline) for the correctness/performance gates.
+
+  [ok] Numerical noise floor 0 — output holds no non-integer number; the floor is 0 by construction, so the remaining build variants were skipped; output is compared byte-for-byte.
+
+  Hotspots       : measured per-region runtimes are available — 35 region(s) measured, 3254.0 ms total, ranking by predicted time saved at 48 threads
+
+  Baseline       : DiscoPoP proposes 3 applicable pattern(s) unaided; 1 of them produce a usable pragma (2 rejected before it could run)
+                   → the run beats DiscoPoP by ending with more than 1
+
+  Initial candidates
+Region ID    Type           Saves    % run    Hot  Tier  Depth  Name
+--------------------------------------------------------------------------------------
+  0:0        function   3186.2 ms   100.0%    YES     2      0  _Z8npb_mainiPPc
+  1:97       loop       2867.2 ms    90.0%    YES     1      0  lines 441–447
+  2:85       function   2867.2 ms    90.0%    YES     2      0  _Z10create_seqdd
+  1:33       loop        256.7 ms     8.1%  MAYBE     1      0  lines 312–315
+  1:179      loop        126.2 ms     4.0%  MAYBE     2      0  lines 606–609
+  1:197      loop         89.4 ms     2.8%  MAYBE     2      0  lines 622–641
+  1:210      loop         80.3 ms     2.5%  MAYBE     1      0  lines 633–634
+  1:152      loop         66.5 ms     2.1%  MAYBE     2      0  lines 588–589
+
+============================================================
+  PHASE A — restructure  (the source stays pragma-free)
+============================================================
+
+┌─ [depth=0] function 0:0 (lines 230–371)  score=3.2
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:97 (lines 441–447)  score=2.9
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] function 2:85 (lines 415–448)  score=2.9
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:33 (lines 312–315)  score=0.3
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:179 (lines 606–609)  score=0.1
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:197 (lines 622–641)  score=0.1
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:210 (lines 633–634)  score=0.1
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:152 (lines 588–589)  score=0.1
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+
+============================================================
+  PHASE B — annotate  (3 candidate pragma(s))
+============================================================
+
+  Timing noise floor on this machine: 0.996 → keep anything at or above 0.986
+
+┌─ pattern #44  do_all @ lines 441–447  (W=50331648)
+│  #pragma omp parallel for
+│  [Tier-1] Repairing the generated pragma: x is declared inside the loop body, so cannot appear in a clause
+│  gate failed at 'tsan': Race detected: WARNING: ThreadSanitizer: data race (pid=3272114)   Read of size 8 at 0x7fffffffe6c8 by thread T16:     #0 randlc(double*, double) /tmp
+└─ DROPPED
+
+┌─ pattern #43  do_all @ lines 312–315  (W=30)
+│  #pragma omp parallel for
+│  gate failed at 'tsan': Race detected: WARNING: ThreadSanitizer: data race (pid=3272157)   Write of size 4 at 0x7ffff2600020 by thread T7:     #0 rank(int) /tmp/dp_agent_val_
+└─ DROPPED
+
+┌─ pattern #58  do_all @ lines 633–634  (W=92274688)
+│  #pragma omp parallel for
+│  [Tier-1] Repairing the generated pragma: m is declared inside the loop body, so cannot appear in a clause
+│  gate failed at 'tsan': Race detected: WARNING: ThreadSanitizer: data race (pid=3272200)   Write of size 4 at 0x7ffff240d1d0 by thread T2:     #0 rank(int) (.omp_outlined_deb
+└─ DROPPED
+
+
+============================================================
+  SUMMARY: 0 rewrite(s) kept  |  0 pragma(s) applied  |  5 skipped
+  DiscoPoP unaided: 1 usable pragma(s) in this profile's draw  →  this run: 0   [BELOW, informational]
+    ✗  0:0  [skipped]  depth=0
+    ✗  2:85  [skipped]  depth=0
+    ✗  1:179  [skipped]  depth=0
+    ✗  1:197  [skipped]  depth=0
+    ✗  1:152  [skipped]  depth=0
+
+  Results → .discopop/agent_patches/accepted.json
+============================================================
+

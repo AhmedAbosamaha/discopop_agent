@@ -1,0 +1,27 @@
+--- s1213.c
++++ s1213.c
+@@ -134,10 +134,22 @@
+ static real_t kernel_s1213(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        real_t *a_old = (real_t*)malloc((LEN_1D) * sizeof(real_t));
++        real_t *b_old = (real_t*)malloc((LEN_1D) * sizeof(real_t));
++        for (int i = 0; i < LEN_1D; i++) {
++            a_old[i] = a[i];
++            b_old[i] = b[i];
++        }
+         for (int i = 1; i < LEN_1D-1; i++) {
+-            a[i] = b[i-1]+c[i];
+-            b[i] = a[i+1]*d[i];
++            if (i == 1) {
++                a[i] = b_old[i-1]+c[i];
++            } else {
++                a[i] = a_old[i]*d[i-1]+c[i];
++            }
++            b[i] = a_old[i+1]*d[i];
+         }
++        free(a_old);
++        free(b_old);
+         pb_mix(nl);
+     }
+     return (real_t)0;

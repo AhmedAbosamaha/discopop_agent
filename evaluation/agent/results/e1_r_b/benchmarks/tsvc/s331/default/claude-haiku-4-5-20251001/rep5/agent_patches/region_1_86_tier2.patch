@@ -1,0 +1,34 @@
+--- s331.c
++++ s331.c
+@@ -116,6 +116,17 @@
+     for (int i = 0; i < LEN_1D - LEN_1D/7; i++) if ((i * 31) % 101 == 0) a[i] = -a[i];
+ }
+ 
++static int find_last_negative_index(void)
++{
++    int j = -1;
++    for (int i = 0; i < LEN_1D; i++) {
++        if (a[i] < (real_t)0.) {
++            j = i;
++        }
++    }
++    return j;
++}
++
+ static void pb_emit_array(const real_t* v)
+ {
+ #ifdef PB_FULL_DUMP
+@@ -136,12 +147,7 @@
+     int j;
+     real_t chksum;
+     for (int nl = 0; nl < R; nl++) {
+-        j = -1;
+-        for (int i = 0; i < LEN_1D; i++) {
+-            if (a[i] < (real_t)0.) {
+-                j = i;
+-            }
+-        }
++        j = find_last_negative_index();
+         chksum = (real_t) j;
+         pb_mix(nl);
+     }

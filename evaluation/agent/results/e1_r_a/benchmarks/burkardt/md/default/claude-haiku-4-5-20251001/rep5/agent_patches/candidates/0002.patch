@@ -1,0 +1,58 @@
+--- md.cpp
++++ md.cpp
+@@ -250,21 +250,14 @@
+   pe = 0.0;
+   ke = 0.0;
+ 
+-//# pragma omp parallel \
+-  shared ( f, nd, np, pos, vel ) \
+-  private ( i, j, k, rij, d, d2 )
+-  
+-
+-//# pragma omp for reduction ( + : pe, ke )
+   for ( k = 0; k < np; k++ )
+   {
+ //
+ //  Compute the potential energy and forces.
+ //
+-    for ( i = 0; i < nd; i++ )
+-    {
+-      f[i+k*nd] = 0.0;
+-    }
++    f[0+k*nd] = 0.0;
++    f[1+k*nd] = 0.0;
++    f[2+k*nd] = 0.0;
+ 
+     for ( j = 0; j < np; j++ )
+     {
+@@ -285,23 +278,21 @@
+ 
+         pe = pe + 0.5 * pow ( sin ( d2 ), 2 );
+ 
+-        for ( i = 0; i < nd; i++ )
+-        {
+-          f[i+k*nd] = f[i+k*nd] - rij[i] * sin ( 2.0 * d2 ) / d;
+-        }
++        f[0+k*nd] = f[0+k*nd] - rij[0] * sin ( 2.0 * d2 ) / d;
++        f[1+k*nd] = f[1+k*nd] - rij[1] * sin ( 2.0 * d2 ) / d;
++        f[2+k*nd] = f[2+k*nd] - rij[2] * sin ( 2.0 * d2 ) / d;
+       }
+     }
+ //
+ //  Compute the kinetic energy.
+ //
+-    for ( i = 0; i < nd; i++ )
+-    {
+-      ke = ke + vel[i+k*nd] * vel[i+k*nd];
+-    }
++    ke = ke + vel[0+k*nd] * vel[0+k*nd];
++    ke = ke + vel[1+k*nd] * vel[1+k*nd];
++    ke = ke + vel[2+k*nd] * vel[2+k*nd];
+   }
+ 
+   ke = ke * 0.5 * mass;
+-  
++
+   *pot = pe;
+   *kin = ke;
+ 

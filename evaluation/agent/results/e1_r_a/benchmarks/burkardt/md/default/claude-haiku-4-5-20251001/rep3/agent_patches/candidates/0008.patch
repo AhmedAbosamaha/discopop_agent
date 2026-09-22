@@ -1,0 +1,47 @@
+--- md.cpp
++++ md.cpp
+@@ -141,30 +141,36 @@
+   compute ( np, nd, pos, vel, mass, force, &potential, &kinetic );
+   e0 = potential + kinetic;
+ 
+-  step_print = 0;
+-  step_print_index = 0;
+   step_print_num = 10;
+   pb_emit ( potential );
+   pb_emit ( kinetic );
+   pb_emit ( ( potential + kinetic - e0 ) / e0 );
+-  step_print_index = step_print_index + 1;
+-  step_print = ( step_print_index * step_num ) / step_print_num;
++
++  /* Precompute which steps should print to eliminate loop-carried dependence on step_print_index. */
++  bool *print_step = new bool[MD_STEPS + 1];
++  for ( int s = 1; s <= MD_STEPS; s++ ) print_step[s] = false;
++  for ( int idx = 1; idx <= step_print_num; idx++ )
++    {
++      int step_val = ( idx * MD_STEPS ) / step_print_num;
++      if ( step_val >= 1 && step_val <= MD_STEPS )
++        print_step[step_val] = true;
++    }
+ 
+   pb_timer_start ( );
+-  for ( step = 1; step <= step_num; step++ )
++  for ( step = 1; step <= MD_STEPS; step++ )
+     {
+       compute ( np, nd, pos, vel, mass, force, &potential, &kinetic );
+-      if ( step == step_print )
++      if ( print_step[step] )
+         {
+           pb_emit ( potential );
+           pb_emit ( kinetic );
+           pb_emit ( ( potential + kinetic - e0 ) / e0 );
+-          step_print_index = step_print_index + 1;
+-          step_print = ( step_print_index * step_num ) / step_print_num;
+         }
+       update ( np, nd, pos, vel, force, acc, mass, dt );
+     }
+   pb_timer_stop ( );
++
++  delete [] print_step;
+ 
+ #ifndef PB_FULL_DUMP
+   /* Digest only. The original never prints positions, so the full dump stays exactly the

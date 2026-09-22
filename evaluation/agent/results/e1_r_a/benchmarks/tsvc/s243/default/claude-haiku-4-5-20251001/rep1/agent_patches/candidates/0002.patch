@@ -1,0 +1,10 @@
+--- s243.c
++++ s243.c
+@@ -150,6 +150,7 @@
+         }
+ 
+         // Second pass: compute final a using original a values (no loop-carried dependences)
++        #pragma omp parallel for shared(temp_a) 
+         for (int i = 0; i < LEN_1D-1; i++) {
+             a[i] = b[i] + temp_a[i+1] * d[i];
+         }

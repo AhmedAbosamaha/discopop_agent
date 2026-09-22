@@ -1,0 +1,161 @@
+--- md.cpp
++++ md.cpp
+@@ -250,50 +250,122 @@
+   pe = 0.0;
+   ke = 0.0;
+ 
+-//# pragma omp parallel \
+-  shared ( f, nd, np, pos, vel ) \
+-  private ( i, j, k, rij, d, d2 )
+-  
+-
+-//# pragma omp for reduction ( + : pe, ke )
+-  for ( k = 0; k < np; k++ )
+-  {
+-//
+-//  Compute the potential energy and forces.
+-//
+-    for ( i = 0; i < nd; i++ )
+-    {
+-      f[i+k*nd] = 0.0;
+-    }
+-
+-    for ( j = 0; j < np; j++ )
+-    {
+-      if ( k != j )
++//
++//  Allocate thread-local buffers with fixed size (up to 64 threads).
++//
++#define MAX_THREADS_ESTIMATE 64
++  double **f_thread_bufs = (double**)malloc(MAX_THREADS_ESTIMATE * sizeof(double*));
++  for ( int t = 0; t < MAX_THREADS_ESTIMATE; t++ )
++  {
++    f_thread_bufs[t] = (double*)malloc(nd * np * sizeof(double));
++    for ( int idx = 0; idx < nd * np; idx++ )
++    {
++      f_thread_bufs[t][idx] = 0.0;
++    }
++  }
++  double *pe_thread_bufs = (double*)malloc(MAX_THREADS_ESTIMATE * sizeof(double));
++  for ( int t = 0; t < MAX_THREADS_ESTIMATE; t++ )
++  {
++    pe_thread_bufs[t] = 0.0;
++  }
++  int actual_num_threads = 0;
++
++//
++//  Compute forces and potential energy.
++//  Merge k and j loops into single large parallel loop for better granularity.
++//  Use thread-local storage to identify threads without OpenMP library calls.
++//
++  static thread_local int thread_id = -1;
++  static int next_thread_id = 0;
++
++  #pragma omp parallel
++  {
++    // Assign unique thread IDs without calling omp_get_thread_num()
++    if ( thread_id == -1 )
++    {
++      #pragma omp critical
+       {
+-        d = dist ( nd, pos+k*nd, pos+j*nd, rij );
+-//
+-//  Attribute half of the potential energy to particle J.
+-//
+-        if ( d < PI2 )
++        thread_id = next_thread_id++;
++        if ( next_thread_id > actual_num_threads )
+         {
+-          d2 = d;
+-        }
+-        else
+-        {
+-          d2 = PI2;
+-        }
+-
+-        pe = pe + 0.5 * pow ( sin ( d2 ), 2 );
+-
+-        for ( i = 0; i < nd; i++ )
+-        {
+-          f[i+k*nd] = f[i+k*nd] - rij[i] * sin ( 2.0 * d2 ) / d;
++          actual_num_threads = next_thread_id;
+         }
+       }
+     }
++
++    int tid = thread_id;
++    double *my_f = f_thread_bufs[tid];
++    double &my_pe = pe_thread_bufs[tid];
++
++    #pragma omp for collapse(2)
++    for ( j = 0; j < np; j++ )
++    {
++      for ( k = 0; k < np; k++ )
++      {
++        if ( k != j )
++        {
++          d = dist ( nd, pos+k*nd, pos+j*nd, rij );
++//
++//  Attribute half of the potential energy to particle J.
++//
++          if ( d < PI2 )
++          {
++            d2 = d;
++          }
++          else
++          {
++            d2 = PI2;
++          }
++
++          my_pe = my_pe + 0.5 * pow ( sin ( d2 ), 2 );
++
++          for ( i = 0; i < nd; i++ )
++          {
++            my_f[i+k*nd] = my_f[i+k*nd] - rij[i] * sin ( 2.0 * d2 ) / d;
++          }
++        }
++      }
++    }
++  }
++
++//
++//  Merge thread-local force buffers into global force array.
++//
++  for ( k = 0; k < np; k++ )
++  {
++    for ( i = 0; i < nd; i++ )
++    {
++      f[i+k*nd] = 0.0;
++      for ( int t = 0; t < actual_num_threads; t++ )
++      {
++        f[i+k*nd] = f[i+k*nd] + f_thread_bufs[t][i+k*nd];
++      }
++    }
++  }
++
++//
++//  Merge thread-local potential energy buffers.
++//
++  for ( int t = 0; t < actual_num_threads; t++ )
++  {
++    pe = pe + pe_thread_bufs[t];
++  }
++
++//
++//  Free thread-local buffers.
++//
++  for ( int t = 0; t < MAX_THREADS_ESTIMATE; t++ )
++  {
++    free(f_thread_bufs[t]);
++  }
++  free(f_thread_bufs);
++  free(pe_thread_bufs);
++
+ //
+ //  Compute the kinetic energy.
+ //
++  for ( k = 0; k < np; k++ )
++  {
+     for ( i = 0; i < nd; i++ )
+     {
+       ke = ke + vel[i+k*nd] * vel[i+k*nd];

@@ -1,0 +1,70 @@
+--- md.cpp
++++ md.cpp
+@@ -246,24 +246,30 @@
+   double pe;
+   double PI2 = 3.141592653589793 / 2.0;
+   double rij[3];
++  double f_local[3];
++  double local_pe;
++  double local_ke;
+ 
+   pe = 0.0;
+   ke = 0.0;
+ 
+ //# pragma omp parallel \
+   shared ( f, nd, np, pos, vel ) \
+-  private ( i, j, k, rij, d, d2 )
+-  
++  private ( i, j, k, rij, d, d2, f_local, local_pe, local_ke )
++
+ 
+ //# pragma omp for reduction ( + : pe, ke )
+   for ( k = 0; k < np; k++ )
+   {
++    local_pe = 0.0;
++    local_ke = 0.0;
++
+ //
+ //  Compute the potential energy and forces.
+ //
+     for ( i = 0; i < nd; i++ )
+     {
+-      f[i+k*nd] = 0.0;
++      f_local[i] = 0.0;
+     }
+ 
+     for ( j = 0; j < np; j++ )
+@@ -283,21 +289,29 @@
+           d2 = PI2;
+         }
+ 
+-        pe = pe + 0.5 * pow ( sin ( d2 ), 2 );
++        local_pe = local_pe + 0.5 * pow ( sin ( d2 ), 2 );
+ 
+         for ( i = 0; i < nd; i++ )
+         {
+-          f[i+k*nd] = f[i+k*nd] - rij[i] * sin ( 2.0 * d2 ) / d;
++          f_local[i] = f_local[i] - rij[i] * sin ( 2.0 * d2 ) / d;
+         }
+       }
+     }
++
++    for ( i = 0; i < nd; i++ )
++    {
++      f[i+k*nd] = f_local[i];
++    }
+ //
+ //  Compute the kinetic energy.
+ //
+     for ( i = 0; i < nd; i++ )
+     {
+-      ke = ke + vel[i+k*nd] * vel[i+k*nd];
+-    }
++      local_ke = local_ke + vel[i+k*nd] * vel[i+k*nd];
++    }
++
++    pe = pe + local_pe;
++    ke = ke + local_ke;
+   }
+ 
+   ke = ke * 0.5 * mass;

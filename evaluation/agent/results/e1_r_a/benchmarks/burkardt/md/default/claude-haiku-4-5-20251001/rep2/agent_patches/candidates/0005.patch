@@ -1,0 +1,10 @@
+--- md.cpp
++++ md.cpp
+@@ -255,6 +255,7 @@
+   
+ 
+ //# pragma omp for reduction ( + : pe, ke )
++  #pragma omp parallel for firstprivate(nd,rij,np,PI2) private(d,j,i,d2) shared(vel,f,pos) reduction(+:ke,pe) 
+   for ( k = 0; k < np; k++ )
+   {
+ //

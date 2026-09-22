@@ -1,0 +1,156 @@
+
+============================================================
+  DiscoPoP Agentic Controller
+============================================================
+  Source         : /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_r_b/benchmarks/polybench/seidel-2d/default/claude-haiku-4-5-20251001/rep1/work/seidel-2d.c
+  DiscoPoP dir   : .discopop
+  Model          : claude-haiku-4-5-20251001
+  Budget         : 3 LLM retries/region (+2 free build fixes)
+  λ penalty      : 1.0
+  Min workload   : 0.0
+  Restruct. depth: 0 (Tier-2 allowed at depth 0–0)
+  Quality gate   : Tier-1 = all but speed, no escalation; Tier-2 = full
+  TSan           : barrier-aware (archer: /usr/lib/llvm-20/lib/libarcher.so)
+  Speedup gate   : require ≥ 1.1× measured
+  Dry run        : False
+  LLM mode       : claude-haiku-4-5-20251001
+  Edit mode      : direct
+  Re-profiling   : full (instrument + run + explore) after every kept rewrite
+  Explorer       : one attempt may take 600 s, then the draw is repeated (random stall, L5)
+  Pragmas        : DiscoPoP writes them in Phase B
+============================================================
+
+  Project        : /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_r_b/benchmarks/polybench/seidel-2d/default/claude-haiku-4-5-20251001/rep1/work  (2 unit(s): seidel-2d.c, polybench.c)
+
+  [ok] Captured reference output on 2 inputs (69 bytes, 491.9 ms baseline) for the correctness/performance gates.
+
+  [ok] Numerical noise floor 4.67e-19 of output scale (widest disagreement 4.67e-20 of output scale across 6 build variants, x10 margin — on input '7').
+  [note] values may move that far without failing the correctness gate; labels, line structure and integers must still match exactly.
+
+  Hotspots       : measured per-region runtimes are available — 17 region(s) measured, 40.0 ms total, ranking by predicted time saved at 48 threads
+
+  Baseline       : DiscoPoP proposes 0 applicable pattern(s) unaided; 0 of them produce a usable pragma
+                   → the run beats DiscoPoP by ending with more than 0
+
+  Initial candidates
+Region ID    Type           Saves    % run    Hot  Tier  Depth  Name
+--------------------------------------------------------------------------------------
+  1:64       loop         21.3 ms    54.4%    YES     2      0  lines 63–68
+  1:67       loop         21.3 ms    54.4%    YES     2      0  lines 64–68
+  3:61       function     21.3 ms    54.4%    YES     2      0  kernel_seidel_2d
+  1:70       loop         21.2 ms    53.9%    YES     2      0  lines 65–68
+
+============================================================
+  PHASE A — restructure  (the source stays pragma-free)
+============================================================
+
+┌─ [depth=0] loop 1:64 (lines 63–68)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Stage 'correctness' failed: Program output changed for input '7' — the patched program is NOT semantically equivalent to the original. This input differs from the one the profile was taken on: the rewrite is right for the profil
+│  [Tier-2] Assembling evidence (budget remaining: 1)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Stage 'correctness' failed: Program output changed for input '7' — the patched program is NOT semantically equivalent to the original. This input differs from the one the profile was taken on: the rewrite is right for the profil
+│  [Tier-2] Assembling evidence (budget remaining: 0)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Stage 'compile' failed (build fix — budget not charged, 1 left): /tmp/dp_agent_val_oq0ltqgp/_dp_proj_validate_binary/seidel-2d.c:63:3: error: call to undeclared function 'POLYBENCH_2D_ARRAY_ALLOC'; ISO C99 and later do not support implicit function declarations [-W
+│  [Tier-2] Assembling evidence (budget remaining: 0)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Stage 'correctness' failed: Program output changed for input '7' — the patched program is NOT semantically equivalent to the original. This input differs from the one the profile was taken on: the rewrite is right for the profil
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:67 (lines 64–68)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Stage 'correctness' failed: Program output changed for input '7' — the patched program is NOT semantically equivalent to the original. This input differs from the one the profile was taken on: the rewrite is right for the profil
+│  [Tier-2] Assembling evidence (budget remaining: 1)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Original backed up → seidel-2d.c.original
+│  [Tier-2] Applied to seidel-2d.c
+│  [Tier-2] Re-profiling to refresh data and discover new candidates...
+│  [refresh] kind=full
+│  [Tier-2] Re-measured runtimes: 18 region(s), 41.7 ms total
+│  [Phase-A] Asking DiscoPoP what it now finds in the rewritten lines...
+│  [Tier-2] 0 survivor(s) rebuilt, 5 new at depth 1
+│  [Tier-2] DiscoPoP now finds: do_all @ lines 71–75, do_all @ lines 77–80, do_all @ lines 66–81
+│  [Tier-2] Pragma validation deferred to depth 1 (still allowed to restructure)
+└─ ACCEPTED
+
+┌─ [depth=1] loop 1:67 (lines 65–81)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=1] loop 1:70 (lines 66–81)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=1] function 3:61 (lines 56–87)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Restructuring not allowed at depth 1 (--restructure-depth=0) → SKIP
+└─ SKIPPED
+
+┌─ [depth=1] loop 1:78 (lines 77–80)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=1] loop 1:73 (lines 71–75)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+
+============================================================
+  PHASE B — annotate  (4 candidate pragma(s))
+============================================================
+
+  Timing noise floor on this machine: 1.001 → keep anything at or above 0.990
+
+  5 loop(s) are already parallel in the source; nothing is nested inside them.
+
+┌─ pattern #21  do_all @ lines 65–81  (W=160)
+│  #pragma omp parallel for
+│  [Tier-1] Repairing the generated pragma: i, A are declared inside the loop body, so cannot appear in a clause
+│  gate failed at 'tsan': Race detected: WARNING: ThreadSanitizer: data race (pid=3243719)   Write of size 8 at 0x728000000000 by thread T3:     #0 kernel_seidel_2d.omp_outline
+└─ DROPPED
+
+┌─ pattern #20  do_all @ lines 66–81  (W=74700)
+│  #pragma omp parallel for
+│  [Tier-1] Repairing the generated pragma: A is declared inside the loop body, so cannot appear in a clause
+│  gate failed at 'tsan': Race detected: WARNING: ThreadSanitizer: data race (pid=3243754)   Write of size 8 at 0x728000000000 by thread T2:     #0 kernel_seidel_2d.omp_outline
+└─ DROPPED
+
+┌─ pattern #19  do_all @ lines 77–80  (W=7440120)
+│  #pragma omp parallel for
+│  TSan OMP-barrier false positive — re-verified on output
+│  gate failed at 'correctness': Program output changed for input '7' — the patched program is NOT semantically equivalent to the original. This input differs from the one the profile
+└─ DROPPED
+
+┌─ pattern #18  do_all @ lines 71–75  (W=9960000)
+│  #pragma omp parallel for
+│  marginal 0.17× — costs more than it saves
+└─ DROPPED (slower)
+
+============================================================
+  SETTLING — verify the finished source, drop what does not hold up
+============================================================
+  Dropped 1 change(s):
+    · rewrite of 1:67 — exposed 4 region(s), none kept a pragma
+
+
+============================================================
+  SUMMARY: 0 rewrite(s) kept  |  0 pragma(s) applied  |  2 skipped
+  DiscoPoP unaided: 0 usable pragma(s) in this profile's draw  →  this run: 0   [MATCHED, informational]
+    ✗  1:64  [skipped]  depth=0
+    ✗  3:61  [skipped]  depth=1
+
+  Results → .discopop/agent_patches/accepted.json
+============================================================
+

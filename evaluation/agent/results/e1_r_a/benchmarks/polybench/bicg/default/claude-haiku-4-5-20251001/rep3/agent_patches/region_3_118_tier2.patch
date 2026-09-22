@@ -1,0 +1,30 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_r_a/benchmarks/polybench/bicg/default/claude-haiku-4-5-20251001/rep3/work/bicg.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_r_a/benchmarks/polybench/bicg/default/claude-haiku-4-5-20251001/rep3/work/bicg.c
+@@ -71,19 +71,26 @@
+ 		 DATA_TYPE POLYBENCH_1D(r,NX,nx))
+ {
+   int i, j;
++  DATA_TYPE *s_temp;
+ 
+ #pragma scop
+   for (i = 0; i < _PB_NY; i++)
+     s[i] = 0;
++  s_temp = (DATA_TYPE *)malloc(_PB_NY * sizeof(DATA_TYPE));
+   for (i = 0; i < _PB_NX; i++)
+     {
+       q[i] = 0;
+       for (j = 0; j < _PB_NY; j++)
+ 	{
+-	  s[j] = s[j] + r[i] * A[i][j];
++	  s_temp[j] = r[i] * A[i][j];
+ 	  q[i] = q[i] + A[i][j] * p[j];
+ 	}
++      for (j = 0; j < _PB_NY; j++)
++	{
++	  s[j] = s[j] + s_temp[j];
++	}
+     }
++  free(s_temp);
+ #pragma endscop
+ 
+ }

@@ -1,0 +1,73 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_r_a/benchmarks/npb/is/default/claude-haiku-4-5-20251001/rep4/work/IS/is.cpp
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_r_a/benchmarks/npb/is/default/claude-haiku-4-5-20251001/rep4/work/IS/is.cpp
+@@ -251,34 +251,43 @@
+ 	if(timer_on)timer_start( T_TOTAL_EXECUTION );
+ 
+ 	/* Initialize the verification arrays if a valid class */
++	/* Select source arrays based on class (outside loop for clarity) */
++	INT_TYPE* src_index_array;
++	INT_TYPE* src_rank_array;
++	switch( CLASS )
++	{
++		case 'S':
++			src_index_array = S_test_index_array;
++			src_rank_array = S_test_rank_array;
++			break;
++		case 'A':
++			src_index_array = A_test_index_array;
++			src_rank_array = A_test_rank_array;
++			break;
++		case 'W':
++			src_index_array = W_test_index_array;
++			src_rank_array = W_test_rank_array;
++			break;
++		case 'B':
++			src_index_array = B_test_index_array;
++			src_rank_array = B_test_rank_array;
++			break;
++		case 'C':
++			src_index_array = C_test_index_array;
++			src_rank_array = C_test_rank_array;
++			break;
++		case 'D':
++			src_index_array = D_test_index_array;
++			src_rank_array = D_test_rank_array;
++			break;
++	}
++
++	/* Copy initialization arrays for the chosen class */
+ 	for( i=0; i<TEST_ARRAY_SIZE; i++ )
+-		switch( CLASS )
+-		{
+-			case 'S':
+-				test_index_array[i] = S_test_index_array[i];
+-				test_rank_array[i]  = S_test_rank_array[i];
+-				break;
+-			case 'A':
+-				test_index_array[i] = A_test_index_array[i];
+-				test_rank_array[i]  = A_test_rank_array[i];
+-				break;
+-			case 'W':
+-				test_index_array[i] = W_test_index_array[i];
+-				test_rank_array[i]  = W_test_rank_array[i];
+-				break;
+-			case 'B':
+-				test_index_array[i] = B_test_index_array[i];
+-				test_rank_array[i]  = B_test_rank_array[i];
+-				break;
+-			case 'C':
+-				test_index_array[i] = C_test_index_array[i];
+-				test_rank_array[i]  = C_test_rank_array[i];
+-				break;
+-			case 'D':
+-				test_index_array[i] = D_test_index_array[i];
+-				test_rank_array[i]  = D_test_rank_array[i];
+-				break;
+-		};        
++	{
++		test_index_array[i] = src_index_array[i];
++		test_rank_array[i]  = src_rank_array[i];
++	}
+ 
+ 	/* Printout initial NPB info */
+ 	printf("\n\n NAS Parallel Benchmarks 4.1 Serial C++ version - IS Benchmark\n\n");

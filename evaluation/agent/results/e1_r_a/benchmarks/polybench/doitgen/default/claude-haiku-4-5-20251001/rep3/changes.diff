@@ -1,0 +1,16 @@
+--- original.c
++++ final.c
+@@ -74,9 +74,12 @@
+ 	for (s = 0; s < _PB_NP; s++)
+ 	  sum[r][q][p] = sum[r][q][p] + A[r][q][s] * C4[s][p];
+       }
++    }
++ #pragma omp parallel for private(p,q) shared(sum,A) 
++  for (r = 0; r < _PB_NR; r++)
++    for (q = 0; q < _PB_NQ; q++)
+       for (p = 0; p < _PB_NR; p++)
+ 	A[r][q][p] = sum[r][q][p];
+-    }
+ #pragma endscop
+ 
+ }

@@ -1,0 +1,51 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_r_a/benchmarks/npb/is/default/claude-haiku-4-5-20251001/rep5/work/IS/is.cpp
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_r_a/benchmarks/npb/is/default/claude-haiku-4-5-20251001/rep5/work/IS/is.cpp
+@@ -656,24 +656,32 @@
+ 	/* each bucket, which can be done in parallel.  Because the distribution */
+ 	/* of the number of keys in the buckets is Gaussian, the use of */
+ 	/* a dynamic schedule should improve load balance, thus, performance */
+-	for( i=0; i< NUM_BUCKETS; i++ ) {
+-		/* Clear the work array section associated with each bucket */
++
++	/* Phase 1: Clear the work array */
++	for( k = 0; k < MAX_KEY; k++ )
++		key_buff_ptr[k] = 0;
++
++	/* Phase 2: Count key populations */
++	/* Ranking of all keys occurs in this section: */
++	/* In this section, the keys themselves are used as their */
++	/* own indexes to determine how many of each there are: their */
++	/* individual population */
++	for( k = 0; k < NUM_KEYS; k++ )
++		key_buff_ptr[key_buff_ptr2[k]]++; /* Now they have individual key population */
++
++	/* Phase 3: Add offset to first element of each bucket range */
++	/* To obtain ranks of each key, add m (total of lesser keys) to first key */
++	for( i = 0; i < NUM_BUCKETS; i++ ) {
++		k1 = i * num_bucket_keys;
++		m = (i > 0)? bucket_ptrs[i-1] : 0;
++		key_buff_ptr[k1] += m;
++	}
++
++	/* Phase 4: Within each bucket, compute prefix sum for ranks */
++	for( i = 0; i < NUM_BUCKETS; i++ ) {
+ 		k1 = i * num_bucket_keys;
+ 		k2 = k1 + num_bucket_keys;
+-		for ( k = k1; k < k2; k++ )
+-			key_buff_ptr[k] = 0;
+-		/* Ranking of all keys occurs in this section: */
+-		/* In this section, the keys themselves are used as their */
+-		/* own indexes to determine how many of each there are: their */
+-		/* individual population */
+-		m = (i > 0)? bucket_ptrs[i-1] : 0;
+-		for ( k = m; k < bucket_ptrs[i]; k++ )
+-			key_buff_ptr[key_buff_ptr2[k]]++; /* Now they have individual key population */
+-		/* To obtain ranks of each key, successively add the individual key */
+-		/* population, not forgetting to add m, the total of lesser keys, */
+-		/* to the first key population */
+-		key_buff_ptr[k1] += m;
+-		for ( k = k1+1; k < k2; k++ )
++		for ( k = k1 + 1; k < k2; k++ )
+ 			key_buff_ptr[k] += key_buff_ptr[k-1];
+ 	}
+ #else /*USE_BUCKETS*/

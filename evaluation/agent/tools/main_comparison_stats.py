@@ -178,11 +178,13 @@ def _pct(d: Dict[str, Any]) -> str:
 
 
 def to_markdown(res: Dict[str, Any]) -> str:
+    suite_note = (f" **Restricted to the `{res['suite']}` suite** — the primary set of D30; the registered set's "
+                  f"numbers stand beside it, never behind it." if res.get("suite") else "")
     out = ["# The main comparison in numbers", "",
            f"Runs: {', '.join(res['runs'])}. Agent arm: `{res['arm']}`; baseline: `{figures.BASELINE_ARM}` "
            "(DiscoPoP's own pragmas through the same gate, no model). Statistics as pre-registered: Wilson "
            "intervals on rates, Wilcoxon signed-rank on per-benchmark medians (one-sided), Cliff's delta, "
-           "bootstrap interval on the median ratio; unsafe acceptances are named, not tested.", ""]
+           "bootstrap interval on the median ratio; unsafe acceptances are named, not tested." + suite_note, ""]
     names = {"R": "Class R — DiscoPoP alone reaches nothing (THE CLAIM)",
              "A": "Class A — parallel as written (no-harm control)",
              "D": "Class D — true recurrences (must-decline control)", "unclassified": "Unclassified"}
@@ -231,6 +233,9 @@ def main() -> int:
     ap.add_argument("runs", nargs="+")
     ap.add_argument("--arm", default=None, help="agent arm to analyse (default: every non-baseline arm pooled)")
     ap.add_argument("--out", type=Path, default=None)
+    ap.add_argument("--suite", default=None,
+                    help="only benchmarks of this suite (`tsvc`): the PRIMARY set of D30, computed with the "
+                         "same statistics as the registered set, never instead of it")
     a = ap.parse_args()
     trials: List[dict] = []
     for run in a.runs:
@@ -241,8 +246,12 @@ def main() -> int:
         for p in sorted(root.glob("benchmarks/**/trial.json")):
             t = json.loads(p.read_text())
             t.setdefault("run_id", run)                 # a raw trial record does not name its run
+            if a.suite and not str(t.get("benchmark", "")).startswith(a.suite + "/"):
+                continue
             trials.append(t)
     res = analyse(trials, a.arm)
+    if a.suite:
+        res["suite"] = a.suite
     md = to_markdown(res)
     print(md)
     if a.out:

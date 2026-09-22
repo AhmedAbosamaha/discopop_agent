@@ -1,0 +1,105 @@
+
+============================================================
+  DiscoPoP Agentic Controller
+============================================================
+  Source         : /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_r_a/benchmarks/polybench/doitgen/discopop_gate/claude-haiku-4-5-20251001/rep1/work/doitgen.c
+  DiscoPoP dir   : .discopop
+  Model          : claude-haiku-4-5-20251001
+  Budget         : 0 LLM retries/region (+2 free build fixes)
+  λ penalty      : 1.0
+  Min workload   : 0.0
+  Restruct. depth: 0 (Tier-2 allowed at depth 0–0)
+  Quality gate   : Tier-1 = all but speed, no escalation; Tier-2 = full
+  TSan           : barrier-aware (archer: /usr/lib/llvm-20/lib/libarcher.so)
+  Speedup gate   : require ≥ 1.1× measured
+  Dry run        : False
+  LLM mode       : claude-haiku-4-5-20251001
+  Edit mode      : direct
+  Re-profiling   : full (instrument + run + explore) after every kept rewrite
+  Explorer       : one attempt may take 600 s, then the draw is repeated (random stall, L5)
+  Pragmas        : DiscoPoP writes them in Phase B
+============================================================
+
+  Project        : /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_r_a/benchmarks/polybench/doitgen/discopop_gate/claude-haiku-4-5-20251001/rep1/work  (2 unit(s): doitgen.c, polybench.c)
+
+  [ok] Captured reference output on 2 inputs (59 bytes, 4757.1 ms baseline) for the correctness/performance gates.
+
+  [ok] Numerical noise floor 0 — 6 build variants agreed exactly; output is compared byte-for-byte.
+
+  Hotspots       : measured per-region runtimes are available — 23 region(s) measured, 8.0 ms total, ranking by predicted time saved at 48 threads
+
+  Baseline       : DiscoPoP proposes 4 applicable pattern(s) unaided; 4 of them produce a usable pragma
+                   → the run beats DiscoPoP by ending with more than 4
+
+  Initial candidates
+Region ID    Type           Saves    % run    Hot  Tier  Depth  Name
+--------------------------------------------------------------------------------------
+  1:105      loop          5.2 ms    66.7%    YES     1      0  lines 69–78
+  1:108      loop          5.2 ms    66.7%    YES     1      0  lines 70–78
+  3:102      function      5.2 ms    66.8%    YES     2      0  kernel_doitgen
+  1:111      loop          5.1 ms    65.2%    YES     1      0  lines 71–75
+  1:115      loop          3.6 ms    46.3%    YES     1      0  lines 73–74
+
+============================================================
+  PHASE A — restructure  (the source stays pragma-free)
+============================================================
+
+┌─ [depth=0] loop 1:105 (lines 69–78)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:108 (lines 70–78)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] function 3:102 (lines 61–81)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:111 (lines 71–75)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:115 (lines 73–74)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+
+============================================================
+  PHASE B — annotate  (4 candidate pragma(s))
+============================================================
+
+  Timing noise floor on this machine: 1.000 → keep anything at or above 0.990
+
+  5 loop(s) are already parallel in the source; nothing is nested inside them.
+
+┌─ pattern #28  do_all @ lines 69–78  (W=288)
+│  #pragma omp parallel for
+│  gate failed at 'tsan': Race detected: WARNING: ThreadSanitizer: data race (pid=3384901)   Write of size 4 at 0x7fffffffe714 by thread T19:     #0 kernel_doitgen.omp_outlined
+└─ DROPPED
+
+┌─ pattern #27  do_all @ lines 70–78  (W=8192)
+│  #pragma omp parallel for
+│  gate failed at 'tsan': Race detected: WARNING: ThreadSanitizer: data race (pid=3384937)   Write of size 4 at 0x7fffffffe714 by thread T3:     #0 kernel_doitgen.omp_outlined_
+└─ DROPPED
+
+┌─ pattern #25  do_all @ lines 71–75  (W=131072)
+│  #pragma omp parallel for
+│  gate failed at 'tsan': Race detected: WARNING: ThreadSanitizer: data race (pid=3384972)   Write of size 4 at 0x7fffffffe714 by thread T10:     #0 kernel_doitgen.omp_outlined
+└─ DROPPED
+
+┌─ pattern #24  do_all @ lines 73–74  (W=1048576)
+│  #pragma omp parallel for
+│  TSan OMP-barrier false positive — re-verified on output
+│  gate failed at 'schedules': the program does not repeat itself: two runs at the SAME thread count (4) printed different output. That is a data race, independent of how small the 
+└─ DROPPED
+
+
+============================================================
+  SUMMARY: 0 rewrite(s) kept  |  0 pragma(s) applied  |  1 skipped
+  DiscoPoP unaided: 4 usable pragma(s) in this profile's draw  →  this run: 0   [BELOW, informational]
+    ✗  3:102  [skipped]  depth=0
+
+  Results → .discopop/agent_patches/accepted.json
+============================================================
+

@@ -1,0 +1,253 @@
+
+============================================================
+  DiscoPoP Agentic Controller
+============================================================
+  Source         : md.cpp
+  DiscoPoP dir   : .discopop
+  Model          : claude-haiku-4-5-20251001
+  Budget         : 3 LLM retries/region (+2 free build fixes)
+  λ penalty      : 1.0
+  Min workload   : 0.0
+  Restruct. depth: 0 (Tier-2 allowed at depth 0–0)
+  Quality gate   : Tier-1 = all but speed, no escalation; Tier-2 = full
+  TSan           : barrier-aware (archer: /usr/lib/llvm-20/lib/libarcher.so)
+  Speedup gate   : require ≥ 1.1× measured
+  Dry run        : False
+  LLM mode       : claude-haiku-4-5-20251001
+  Edit mode      : direct
+  Re-profiling   : full (instrument + run + explore) after every kept rewrite
+  Explorer       : one attempt may take 600 s, then the draw is repeated (random stall, L5)
+  Pragmas        : DiscoPoP writes them in Phase B
+============================================================
+
+  [ok] Captured reference output on 2 inputs (68 bytes, 1552.8 ms baseline) for the correctness/performance gates.
+
+  [ok] Numerical noise floor 0 — 6 build variants agreed exactly; output is compared byte-for-byte.
+
+  Hotspots       : measured per-region runtimes are available — 27 region(s) measured, 14807.8 ms total, ranking by predicted time saved at 48 threads
+
+  Baseline       : DiscoPoP proposes 4 applicable pattern(s) unaided; 4 of them produce a usable pragma
+                   → the run beats DiscoPoP by ending with more than 4
+
+  Initial candidates
+Region ID    Type           Saves    % run    Hot  Tier  Depth  Name
+--------------------------------------------------------------------------------------
+  1:121      loop       14495.2 ms   100.0%    YES     1      0  lines 259–301
+  1:129      loop       14487.1 ms    99.9%    YES     1      0  lines 269–293
+  1:117      function   14495.2 ms   100.0%    YES     2      0  _Z7computeiiPdS_dS_S_S_
+  1:39       loop       14211.9 ms    98.0%    YES     2      0  lines 154–166
+  0:0        function   14499.3 ms   100.0%    YES     2      0  main
+  1:192      function   4740.0 ms    32.7%    YES     2      0  _Z4distiPdS_S_
+  1:141      loop       2729.8 ms    18.8%  MAYBE     1      0  lines 288–291
+  1:196      loop       1597.8 ms    11.0%  MAYBE     1      0  lines 346–350
+
+============================================================
+  PHASE A — restructure  (the source stays pragma-free)
+============================================================
+
+┌─ [depth=0] loop 1:121 (lines 259–301)  score=14.5
+│  [Phase-A] DiscoPoP already has a pattern here (reduction) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:129 (lines 269–293)  score=14.5
+│  [Phase-A] DiscoPoP already has a pattern here (reduction) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] function 1:117 (lines 185–308)  score=14.5
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Stage 'correctness' failed: Program output changed under the parallel build at a fixed thread count — the patched program is NOT semantically equivalent to the original. output differs and no numerical slack is in effect first d
+│  [Tier-2] Assembling evidence (budget remaining: 1)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Stage 'performance' failed: No speedup from parallelization: measured 1.00× (same binary, median of interleaved pairs; best at 1 thread 1558.2 ms vs best at all threads 1546.8 ms), below the required 1.10×.
+│  [Tier-2] Assembling evidence (budget remaining: 0)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Stage 'performance' failed: No speedup from parallelization: measured 1.00× (same binary, median of interleaved pairs; best at 1 thread 1548.9 ms vs best at all threads 1545.7 ms), below the required 1.10×.
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:39 (lines 154–166)  score=14.2
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Original backed up → md.cpp.original
+│  [Tier-2] Applied to md.cpp
+│  [Tier-2] Re-profiling to refresh data and discover new candidates...
+│  [refresh] kind=full
+│  [Tier-2] Re-measured runtimes: 27 region(s), 14832.7 ms total
+│  [Phase-A] Asking DiscoPoP what it now finds in the rewritten lines...
+│  [Tier-2] DiscoPoP sees a pattern, but no pragma it generates for it can run — reverting (snapshot restore)
+└─ retry (budget remaining: 2)
+
+│  [Tier-2] Assembling evidence (budget remaining: 1)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Applied to md.cpp
+│  [Tier-2] Re-profiling to refresh data and discover new candidates...
+│  [refresh] kind=full
+│  [Tier-2] Re-measured runtimes: 27 region(s), 14777.4 ms total
+│  [Phase-A] Asking DiscoPoP what it now finds in the rewritten lines...
+│  [Tier-2] DiscoPoP sees a pattern, but no pragma it generates for it can run — reverting (snapshot restore)
+└─ retry (budget remaining: 1)
+
+│  [Tier-2] Assembling evidence (budget remaining: 0)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Applied to md.cpp
+│  [Tier-2] Re-profiling to refresh data and discover new candidates...
+│  [refresh] kind=full
+│  [Tier-2] Re-measured runtimes: 28 region(s), 14915.0 ms total
+│  [Phase-A] Asking DiscoPoP what it now finds in the rewritten lines...
+│  [Tier-2] DiscoPoP sees a pattern, but no pragma it generates for it can run — reverting (snapshot restore)
+└─ retry (budget remaining: 0)
+
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] function 0:0 (lines 118–182)  score=14.2
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Applied to md.cpp
+│  [Tier-2] Re-profiling to refresh data and discover new candidates...
+│  [refresh] kind=full
+│  [Tier-2] Re-measured runtimes: 27 region(s), 14847.2 ms total
+│  [Phase-A] Asking DiscoPoP what it now finds in the rewritten lines...
+│  [Tier-2] DiscoPoP sees a pattern, but no pragma it generates for it can run — reverting (snapshot restore)
+└─ retry (budget remaining: 2)
+
+│  [Tier-2] Assembling evidence (budget remaining: 1)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Applied to md.cpp
+│  [Tier-2] Re-profiling to refresh data and discover new candidates...
+│  [refresh] kind=full
+│  [Tier-2] Re-measured runtimes: 27 region(s), 14873.4 ms total
+│  [Phase-A] Asking DiscoPoP what it now finds in the rewritten lines...
+│  [Tier-2] DiscoPoP sees a pattern, but no pragma it generates for it can run — reverting (snapshot restore)
+└─ retry (budget remaining: 1)
+
+│  [Tier-2] Assembling evidence (budget remaining: 0)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Applied to md.cpp
+│  [Tier-2] Re-profiling to refresh data and discover new candidates...
+│  [refresh] kind=full
+│  [Tier-2] Re-measured runtimes: 28 region(s), 14859.0 ms total
+│  [Phase-A] Asking DiscoPoP what it now finds in the rewritten lines...
+│  [Tier-2] 3 survivor(s) rebuilt, 2 new at depth 1
+│  [Tier-2] DiscoPoP now finds: do_all @ lines 162–173
+│  [Tier-2] Pragma validation deferred to depth 1 (still allowed to restructure)
+└─ ACCEPTED
+
+┌─ [depth=0] function 1:208 (lines 318–361)  score=4.8
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Applied to md.cpp
+│  [Tier-2] Re-profiling to refresh data and discover new candidates...
+│  [refresh] kind=full
+│  [Tier-2] Re-measured runtimes: 28 region(s), 18150.7 ms total
+│  [Phase-A] Asking DiscoPoP what it now finds in the rewritten lines...
+│  [Tier-2] 3 survivor(s) rebuilt, 3 new at depth 1
+│  [Tier-2] DiscoPoP now finds: reduction @ lines 358–361, do_all @ lines 353–356
+│  [Tier-2] Pragma validation deferred to depth 1 (still allowed to restructure)
+└─ ACCEPTED
+
+┌─ [depth=0] loop 1:157 (lines 296–299)  score=2.8
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=1] loop 1:54 (lines 162–173)  score=17.4
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=1] function 0:0 (lines 118–190)  score=17.4
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Restructuring not allowed at depth 1 (--restructure-depth=0) → SKIP
+└─ SKIPPED
+
+┌─ [depth=1] function 1:208 (lines 318–364)  score=7.9
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Restructuring not allowed at depth 1 (--restructure-depth=0) → SKIP
+└─ SKIPPED
+
+┌─ [depth=1] loop 1:217 (lines 358–361)  score=1.6
+│  [Phase-A] DiscoPoP already has a pattern here (reduction) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=1] loop 1:211 (lines 353–356)  score=1.6
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+
+============================================================
+  PHASE B — annotate  (5 candidate pragma(s))
+============================================================
+
+  Timing noise floor on this machine: 0.996 → keep anything at or above 0.986
+
+┌─ pattern #38  reduction @ lines 267–309  (W=2142000)
+│  #pragma omp parallel for
+│  gate failed at 'correctness': Program output changed for input '7' — the patched program is NOT semantically equivalent to the original. This input differs from the one the profile
+└─ DROPPED
+
+   DiscoPoP reports another pattern for this loop (reduction) — trying it
+
+┌─ pattern #57  reduction @ lines 267–309  (W=2142000)
+│  #pragma omp parallel for
+│  gate failed at 'correctness': Program output changed under the parallel build at a fixed thread count — the patched program is NOT semantically equivalent to the original. output d
+└─ DROPPED
+
+┌─ pattern #26  do_all @ lines 162–173  (W=550)
+│  #pragma omp parallel for
+│  TSan OMP-barrier false positive — re-verified on output
+│  gate failed at 'schedules': the program does not repeat itself: two runs at the SAME thread count (4) printed different output. That is a data race, independent of how small the 
+└─ DROPPED
+
+┌─ pattern #35  do_all @ lines 296–299  (W=458541000)
+│  #pragma omp parallel for
+│  gate failed at 'tsan': TSan run timed out (300 s) — the sanitized build is too slow to check this workload for races
+└─ DROPPED
+
+┌─ pattern #42  reduction @ lines 358–361  (W=458541000)
+│  #pragma omp parallel for
+│  gate failed at 'tsan': TSan run timed out (300 s) — the sanitized build is too slow to check this workload for races
+└─ DROPPED
+
+┌─ pattern #41  do_all @ lines 353–356  (W=458541000)
+│  #pragma omp parallel for
+│  gate failed at 'tsan': TSan run timed out (300 s) — the sanitized build is too slow to check this workload for races
+└─ DROPPED
+
+============================================================
+  SETTLING — verify the finished source, drop what does not hold up
+============================================================
+  Dropped 2 change(s):
+    · rewrite of 0:0 — exposed 1 region(s), none kept a pragma
+    · rewrite of 1:208 — exposed 2 region(s), none kept a pragma
+
+
+============================================================
+  SUMMARY: 0 rewrite(s) kept  |  0 pragma(s) applied  |  4 skipped
+  DiscoPoP unaided: 4 usable pragma(s) in this profile's draw  →  this run: 0   [BELOW, informational]
+    ✗  1:117  [skipped]  depth=0
+    ✗  1:39  [skipped]  depth=0
+    ✗  0:0  [skipped]  depth=1
+    ✗  1:208  [skipped]  depth=1
+
+  Results → .discopop/agent_patches/accepted.json
+============================================================
+

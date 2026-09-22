@@ -1,0 +1,10 @@
+--- s1213.c
++++ s1213.c
+@@ -136,6 +136,7 @@
+     for (int nl = 0; nl < R; nl++) {
+         // Phase 1: Compute all new b values in parallel using old a values
+         // b[i] only depends on a[i+1] from previous sweep, not current sweep
++        #pragma omp parallel for 
+         for (int i = 1; i < LEN_1D-1; i++) {
+             b[i] = a[i+1]*d[i];
+         }

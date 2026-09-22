@@ -23,7 +23,7 @@ from .. import project as project_mod
 from ..args import AgentArguments
 from ..gate import validate
 from ..gate.tsan import _is_omp_barrier_false_positive
-from ..gate.timing import time_source
+from ..gate.timing import measure_marginal
 from ..llm import make_diff, normalize_code
 from .verdicts import _MARGINAL_NOISE
 from ..sources import _apply_change_log
@@ -33,7 +33,7 @@ from ..types import ValidationResult
 def _check_final_source(
     args: AgentArguments, originals: "Dict[str, str] | str", reference_output: "str | None",
     reference_outputs: "List[Tuple[List[str], str]] | None", binary_args: "List[str] | None",
-    reference_time: "float | None",
+    reference_time: "float | None", speed_threshold: float = _MARGINAL_NOISE,
 ) -> "tuple[bool, str]":
     """Is the file ON DISK sound, and is it better than what the user started with?
 
@@ -102,35 +102,36 @@ def _check_final_source(
                            f"{res.diagnostic[:160].replace(chr(10), ' ')}")
 
         if args.require_speedup and reference_time is not None:
-            ok_t, t_final, _out, tdiag = time_source(
-                final_text, target, Path(tmp), "final", binary_args, repeats=5,
+            # PAIRED, like every speed decision before it (Fix 89).  This used to
+            # time the finished program alone (best-of-5, -fopenmp) against the
+            # reference captured at the START of the run (best-of-3, no -fopenmp)
+            # and call the program slower when the two differed by more than the
+            # noise allowance.  Two states of the machine minutes apart on a
+            # shared host are not a comparison: in E1's class-R run 15 of 90 TSVC
+            # trials had a program Phase B had just measured at 1.02-1.84x per
+            # pragma, interleaved, and this check then reported it 1.1-8x SLOWER
+            # than a number taken before the model was even called, and threw the
+            # whole run away.  The same interleaved original-vs-final measurement
+            # Phase B uses, both sides -fopenmp builds of the same file, median of
+            # the per-pair ratios, and the same "not slower beyond the noise"
+            # threshold, cannot be fooled by drift.  `reference_time` is now only
+            # the switch that says the original could be timed at all.
+            ok_m, ratio, mdiag = measure_marginal(
+                original_text, final_text, target, binary_args, pairs=5,
                 extra_flags=list(args.timing_cflags) or None,
             )
-            if not ok_t:
-                return False, f"could not time the finished program: {tdiag[:120]}"
-            # NOT a bare `>`.  Two things make a bare comparison a coin flip
-            # here, and it decides whether a whole run survives:
-            #   * whole-program wall-time carries a few tenths of a percent of
-            #     noise even at best-of-5 (measured: an UNCHANGED file failed
-            #     this check in 4 of 8 trials, ratios 0.991-1.006);
-            #   * the two sides are not even the same build — reference_time
-            #     comes from a NON-fopenmp compile (capture_reference) while
-            #     t_final comes from an -fopenmp one (time_source), which is the
-            #     mismatch `_measure_speedup` documents avoiding.
-            # So the same tolerance the rest of the gate uses for "not slower"
-            # applies: a real regression has to clear the noise, not tie with it.
-            if t_final > reference_time / _MARGINAL_NOISE:
-                return False, (f"slower than the original: {t_final*1e3:.1f} ms vs "
-                               f"{reference_time*1e3:.1f} ms "
-                               f"(beyond the {1/_MARGINAL_NOISE - 1:.0%} noise allowance)")
-            return True, (f"output matches, {t_final*1e3:.1f} ms vs "
-                          f"{reference_time*1e3:.1f} ms original")
+            if not ok_m:
+                return False, f"could not time the finished program: {mdiag[:120]}"
+            if ratio < speed_threshold:
+                return False, (f"slower than the original: {ratio:.2f}x, paired "
+                               f"(kept at or above {speed_threshold:.3f})")
+            return True, f"output matches, {ratio:.2f}x the original, paired"
     return True, "output matches the original"
 def _settle(
     originals: "Dict[str, str] | str", change_log: List[Any], args: AgentArguments,
     output_dir: Path, reference_output: "str | None",
     reference_outputs: "List[Tuple[List[str], str]] | None", binary_args: "List[str] | None",
-    reference_time: "float | None",
+    reference_time: "float | None", speed_threshold: float = _MARGINAL_NOISE,
 ) -> "Tuple[List[Any], List[Any]]":
     """Reduce the run to a set of changes that is sound AND worth keeping.
 
@@ -188,7 +189,8 @@ def _settle(
         keep = landed
 
         ok, why = _check_final_source(args, originals, reference_output,
-                                      reference_outputs, binary_args, reference_time)
+                                      reference_outputs, binary_args, reference_time,
+                                      speed_threshold)
         if ok:
             if why != "source unchanged":
                 print(f"  [ok] finished source verified — {why}")

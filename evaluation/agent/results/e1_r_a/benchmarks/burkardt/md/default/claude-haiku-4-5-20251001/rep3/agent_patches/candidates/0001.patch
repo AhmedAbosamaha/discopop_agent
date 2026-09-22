@@ -1,0 +1,155 @@
+--- md.cpp
++++ md.cpp
+@@ -1,5 +1,6 @@
+ # include <cmath>
+ # include <cstdlib>
++#include <omp.h>
+ using namespace std;
+ 
+ /* ---- output: digest by default, exact values with -DPB_FULL_DUMP --------- */
+@@ -250,50 +251,113 @@
+   pe = 0.0;
+   ke = 0.0;
+ 
+-//# pragma omp parallel \
+-  shared ( f, nd, np, pos, vel ) \
+-  private ( i, j, k, rij, d, d2 )
+-  
+-
+-//# pragma omp for reduction ( + : pe, ke )
+-  for ( k = 0; k < np; k++ )
+-  {
+-//
+-//  Compute the potential energy and forces.
+-//
+-    for ( i = 0; i < nd; i++ )
+-    {
+-      f[i+k*nd] = 0.0;
+-    }
+-
++//
++//  Determine number of threads for thread-local buffering.
++//
++  int num_threads;
++  #pragma omp parallel
++  {
++    #pragma omp single
++    num_threads = omp_get_num_threads();
++  }
++
++//
++//  Allocate thread-local buffers for forces and potential energy.
++//
++  double **f_thread_bufs = (double**)malloc(num_threads * sizeof(double*));
++  for ( int t = 0; t < num_threads; t++ )
++  {
++    f_thread_bufs[t] = (double*)malloc(nd * np * sizeof(double));
++    for ( int idx = 0; idx < nd * np; idx++ )
++    {
++      f_thread_bufs[t][idx] = 0.0;
++    }
++  }
++  double *pe_thread_bufs = (double*)malloc(num_threads * sizeof(double));
++  for ( int t = 0; t < num_threads; t++ )
++  {
++    pe_thread_bufs[t] = 0.0;
++  }
++
++//
++//  Compute forces and potential energy.
++//  Merge k and j loops into single large parallel loop for better granularity.
++//
++  #pragma omp parallel
++  {
++    int tid = omp_get_thread_num();
++    double *my_f = f_thread_bufs[tid];
++    double &my_pe = pe_thread_bufs[tid];
++
++    #pragma omp for collapse(2)
+     for ( j = 0; j < np; j++ )
+     {
+-      if ( k != j )
++      for ( k = 0; k < np; k++ )
+       {
+-        d = dist ( nd, pos+k*nd, pos+j*nd, rij );
++        if ( k != j )
++        {
++          d = dist ( nd, pos+k*nd, pos+j*nd, rij );
+ //
+ //  Attribute half of the potential energy to particle J.
+ //
+-        if ( d < PI2 )
+-        {
+-          d2 = d;
+-        }
+-        else
+-        {
+-          d2 = PI2;
+-        }
+-
+-        pe = pe + 0.5 * pow ( sin ( d2 ), 2 );
+-
+-        for ( i = 0; i < nd; i++ )
+-        {
+-          f[i+k*nd] = f[i+k*nd] - rij[i] * sin ( 2.0 * d2 ) / d;
++          if ( d < PI2 )
++          {
++            d2 = d;
++          }
++          else
++          {
++            d2 = PI2;
++          }
++
++          my_pe = my_pe + 0.5 * pow ( sin ( d2 ), 2 );
++
++          for ( i = 0; i < nd; i++ )
++          {
++            my_f[i+k*nd] = my_f[i+k*nd] - rij[i] * sin ( 2.0 * d2 ) / d;
++          }
+         }
+       }
+     }
++  }
++
++//
++//  Merge thread-local force buffers into global force array.
++//
++  for ( k = 0; k < np; k++ )
++  {
++    for ( i = 0; i < nd; i++ )
++    {
++      f[i+k*nd] = 0.0;
++      for ( int t = 0; t < num_threads; t++ )
++      {
++        f[i+k*nd] = f[i+k*nd] + f_thread_bufs[t][i+k*nd];
++      }
++    }
++  }
++
++//
++//  Merge thread-local potential energy buffers.
++//
++  for ( int t = 0; t < num_threads; t++ )
++  {
++    pe = pe + pe_thread_bufs[t];
++  }
++
++//
++//  Free thread-local buffers.
++//
++  for ( int t = 0; t < num_threads; t++ )
++  {
++    free(f_thread_bufs[t]);
++  }
++  free(f_thread_bufs);
++  free(pe_thread_bufs);
++
+ //
+ //  Compute the kinetic energy.
+ //
++  for ( k = 0; k < np; k++ )
++  {
+     for ( i = 0; i < nd; i++ )
+     {
+       ke = ke + vel[i+k*nd] * vel[i+k*nd];

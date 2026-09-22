@@ -1,0 +1,31 @@
+--- original.c
++++ final.c
+@@ -72,19 +72,27 @@
+ 		 DATA_TYPE POLYBENCH_1D(r,NX,nx))
+ {
+   int i, j;
++  DATA_TYPE *s_temp;
+ 
+ #pragma scop
+   for (i = 0; i < _PB_NY; i++)
+     s[i] = 0;
++  s_temp = (DATA_TYPE *)malloc(_PB_NY * sizeof(DATA_TYPE));
+   for (i = 0; i < _PB_NX; i++)
+     {
+       q[i] = 0;
+       for (j = 0; j < _PB_NY; j++)
+ 	{
+-	  s[j] = s[j] + r[i] * A[i][j];
++	  s_temp[j] = r[i] * A[i][j];
+ 	  q[i] = q[i] + A[i][j] * p[j];
+ 	}
++      #pragma omp parallel for 
++      for (j = 0; j < _PB_NY; j++)
++	{
++	  s[j] = s[j] + s_temp[j];
++	}
+     }
++  free(s_temp);
+ #pragma endscop
+ 
+ }

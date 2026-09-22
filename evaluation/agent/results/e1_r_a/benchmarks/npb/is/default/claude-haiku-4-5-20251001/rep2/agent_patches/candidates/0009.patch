@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_r_a/benchmarks/npb/is/default/claude-haiku-4-5-20251001/rep2/work/IS/is.cpp
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_r_a/benchmarks/npb/is/default/claude-haiku-4-5-20251001/rep2/work/IS/is.cpp
+@@ -630,6 +630,7 @@
+ 	}
+ 
+ 	/* Phase 2: Place keys at pre-computed positions (parallel) */
++	#pragma omp parallel for lastprivate(key_buff_ptr2) shared(key_positions) 
+ 	for(i = 0; i < NUM_KEYS; i++){
+ 		key_buff2[key_positions[i]] = key_array[i];
+ 	}

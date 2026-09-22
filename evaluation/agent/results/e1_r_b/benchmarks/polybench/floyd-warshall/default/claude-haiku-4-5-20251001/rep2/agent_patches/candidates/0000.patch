@@ -1,0 +1,31 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_r_b/benchmarks/polybench/floyd-warshall/default/claude-haiku-4-5-20251001/rep2/work/floyd-warshall.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_r_b/benchmarks/polybench/floyd-warshall/default/claude-haiku-4-5-20251001/rep2/work/floyd-warshall.c
+@@ -57,17 +57,27 @@
+ 			   DATA_TYPE POLYBENCH_2D(path,N,N,n,n))
+ {
+   int i, j, k;
++  DATA_TYPE* temp = (DATA_TYPE*)malloc(n * n * sizeof(DATA_TYPE));
+ 
+ #pragma scop
+   for (k = 0; k < _PB_N; k++)
+     {
++      // Compute new path values using old path values
++      // All (i,j) pairs are independent: each writes to a unique temp location
+       for(i = 0; i < _PB_N; i++)
+ 	for (j = 0; j < _PB_N; j++)
+-	  path[i][j] = path[i][j] < path[i][k] + path[k][j] ?
++	  temp[i * n + j] = path[i][j] < path[i][k] + path[k][j] ?
+ 	    path[i][j] : path[i][k] + path[k][j];
++
++      // Copy updated values back to path
++      // All (i,j) pairs are independent: each writes to a unique path location
++      for(i = 0; i < _PB_N; i++)
++	for (j = 0; j < _PB_N; j++)
++	  path[i][j] = temp[i * n + j];
+     }
+ #pragma endscop
+ 
++  free(temp);
+ }
+ 
+ 

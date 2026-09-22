@@ -1,0 +1,10 @@
+--- s244.c
++++ s244.c
+@@ -147,6 +147,7 @@
+          * Only compute a[LEN_1D-1] in the final iteration to avoid
+          * redundant overwrites and break loop-carried dependence.
+          */
++        #pragma omp parallel for firstprivate(a_new) shared(b_new) 
+         for (int i = 0; i < LEN_1D-1; ++i) {
+             a_new[i] = b[i] + c[i] * d[i];
+             b_new[i] = c[i] + b[i];

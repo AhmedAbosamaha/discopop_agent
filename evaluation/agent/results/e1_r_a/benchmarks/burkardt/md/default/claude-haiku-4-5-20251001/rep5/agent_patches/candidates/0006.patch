@@ -1,0 +1,55 @@
+--- md.cpp
++++ md.cpp
+@@ -141,29 +141,45 @@
+   compute ( np, nd, pos, vel, mass, force, &potential, &kinetic );
+   e0 = potential + kinetic;
+ 
+-  step_print = 0;
+-  step_print_index = 0;
+   step_print_num = 10;
+   pb_emit ( potential );
+   pb_emit ( kinetic );
+   pb_emit ( ( potential + kinetic - e0 ) / e0 );
+-  step_print_index = step_print_index + 1;
+-  step_print = ( step_print_index * step_num ) / step_print_num;
++
++  /* Precompute which steps should print to remove loop-carried dependence */
++  int *print_steps = new int[step_print_num + 1];
++  for ( int i = 0; i <= step_print_num; i++ )
++    {
++      print_steps[i] = ( i * step_num ) / step_print_num;
++    }
+ 
+   pb_timer_start ( );
+   for ( step = 1; step <= step_num; step++ )
+     {
+       compute ( np, nd, pos, vel, mass, force, &potential, &kinetic );
+-      if ( step == step_print )
++
++      /* Check if current step is a precomputed print step */
++      int should_print = 0;
++      for ( int i = 1; i <= step_print_num; i++ )
++        {
++          if ( step == print_steps[i] )
++            {
++              should_print = 1;
++              break;
++            }
++        }
++
++      if ( should_print )
+         {
+           pb_emit ( potential );
+           pb_emit ( kinetic );
+           pb_emit ( ( potential + kinetic - e0 ) / e0 );
+-          step_print_index = step_print_index + 1;
+-          step_print = ( step_print_index * step_num ) / step_print_num;
+         }
++
+       update ( np, nd, pos, vel, force, acc, mass, dt );
+     }
++
++  delete [] print_steps;
+   pb_timer_stop ( );
+ 
+ #ifndef PB_FULL_DUMP

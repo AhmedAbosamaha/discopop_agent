@@ -1,0 +1,36 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_r_b/benchmarks/polybench/seidel-2d/default/claude-haiku-4-5-20251001/rep5/work/seidel-2d.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_r_b/benchmarks/polybench/seidel-2d/default/claude-haiku-4-5-20251001/rep5/work/seidel-2d.c
+@@ -59,14 +59,29 @@
+ {
+   int t, i, j;
+ 
++  /* Allocate temporary buffer for double buffering. */
++  DATA_TYPE **A_tmp = (DATA_TYPE**)malloc(n * sizeof(DATA_TYPE*));
++  DATA_TYPE *A_tmp_data = (DATA_TYPE*)malloc(n * n * sizeof(DATA_TYPE));
++  for (int ii = 0; ii < n; ii++)
++    A_tmp[ii] = A_tmp_data + ii * n;
++
+ #pragma scop
+-  for (t = 0; t <= _PB_TSTEPS - 1; t++)
++  for (t = 0; t <= _PB_TSTEPS - 1; t++) {
+     for (i = 1; i<= _PB_N - 2; i++)
+       for (j = 1; j <= _PB_N - 2; j++)
+-	A[i][j] = (A[i-1][j-1] + A[i-1][j] + A[i-1][j+1]
+-		   + A[i][j-1] + A[i][j] + A[i][j+1]
+-		   + A[i+1][j-1] + A[i+1][j] + A[i+1][j+1])/9.0;
++	A_tmp[i][j] = (A[i-1][j-1] + A[i-1][j] + A[i-1][j+1]
++		       + A[i][j-1] + A[i][j] + A[i][j+1]
++		       + A[i+1][j-1] + A[i+1][j] + A[i+1][j+1])/9.0;
++    /* Copy computed values back to A. */
++    for (i = 1; i<= _PB_N - 2; i++)
++      for (j = 1; j <= _PB_N - 2; j++)
++	A[i][j] = A_tmp[i][j];
++  }
+ #pragma endscop
++
++  /* Free temporary buffer. */
++  free(A_tmp_data);
++  free(A_tmp);
+ 
+ }
+ 

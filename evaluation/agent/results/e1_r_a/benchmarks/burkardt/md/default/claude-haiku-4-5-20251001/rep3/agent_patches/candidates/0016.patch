@@ -1,0 +1,10 @@
+--- md.cpp
++++ md.cpp
+@@ -343,6 +343,7 @@
+   int i;
+ 
+   // Compute displacement vector
++  #pragma omp parallel for firstprivate(nd) shared(dr,r1,r2) 
+   for ( i = 0; i < nd; i++ )
+   {
+     dr[i] = r1[i] - r2[i];

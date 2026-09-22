@@ -1,0 +1,24 @@
+--- md.cpp
++++ md.cpp
+@@ -250,12 +250,6 @@
+   pe = 0.0;
+   ke = 0.0;
+ 
+-//# pragma omp parallel \
+-  shared ( f, nd, np, pos, vel ) \
+-  private ( i, j, k, rij, d, d2 )
+-  
+-
+-//# pragma omp for reduction ( + : pe, ke )
+   for ( k = 0; k < np; k++ )
+   {
+ //
+@@ -301,7 +295,7 @@
+   }
+ 
+   ke = ke * 0.5 * mass;
+-  
++
+   *pot = pe;
+   *kin = ke;
+ 

@@ -1,0 +1,10 @@
+--- s291.c
++++ s291.c
+@@ -133,6 +133,7 @@
+ 
+ static real_t kernel_s291(void)
+ {
++    #pragma omp parallel for 
+     for (int nl = 0; nl < R; nl++) {
+         // Handle wrap-around: i=0 reads b[LEN_1D-1]
+         a[0] = (b[0] + b[LEN_1D-1]) * (real_t).5;

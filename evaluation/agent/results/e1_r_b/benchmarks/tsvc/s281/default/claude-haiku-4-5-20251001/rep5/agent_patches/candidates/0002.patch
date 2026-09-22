@@ -1,0 +1,10 @@
+--- s281.c
++++ s281.c
+@@ -136,6 +136,7 @@
+     real_t x;
+     for (int nl = 0; nl < R; nl++) {
+         /* First pass: i from 0 to crossing threshold */
++        #pragma omp parallel for private(x) 
+         for (int i = 0; i < (LEN_1D + 1) / 2; i++) {
+             x = a[LEN_1D-i-1] + b[i] * c[i];
+             a[i] = x-(real_t)1.0;

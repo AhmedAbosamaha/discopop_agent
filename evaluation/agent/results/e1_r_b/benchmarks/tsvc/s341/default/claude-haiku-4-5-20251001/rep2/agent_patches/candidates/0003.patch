@@ -1,0 +1,10 @@
+--- s341.c
++++ s341.c
+@@ -147,6 +147,7 @@
+         }
+ 
+         /* Scatter: write elements to their computed positions (Do-All) */
++        #pragma omp parallel for shared(offset) 
+         for (int i = 0; i < LEN_1D; i++) {
+             if (offset[i] >= 0) {
+                 a[offset[i]] = b[i];

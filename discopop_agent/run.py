@@ -56,6 +56,8 @@ from .gate import (capture_reference, check_pragma_compiles,
                    numerical_noise_floor)
 from .phases import (RunState, _phase_b, _print_banner, _print_candidates,
                      _settle, phase_a)
+from .phases.phase_b import SPEED_THRESHOLD_KEY
+from .phases.verdicts import _MARGINAL_NOISE
 from .plan import build_candidates, region_fingerprint
 from .plan import impact as impact_mod
 from .pragmas import _read_tier1_patch, check_pragma_clauses, derive_pragma_patch
@@ -325,6 +327,7 @@ def run(args: AgentArguments) -> None:
         survivors, notes = _settle(
             originals, change_log, args, output_dir, reference_output,
             reference_outputs, binary_args, reference_time,
+            speed_threshold=gate_cache.get(SPEED_THRESHOLD_KEY, _MARGINAL_NOISE),
         )
         if notes:
             print(f"  Dropped {len(notes)} change(s):")

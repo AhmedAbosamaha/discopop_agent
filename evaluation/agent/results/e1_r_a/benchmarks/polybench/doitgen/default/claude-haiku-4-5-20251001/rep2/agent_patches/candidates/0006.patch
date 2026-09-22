@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_r_a/benchmarks/polybench/doitgen/default/claude-haiku-4-5-20251001/rep2/work/doitgen.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_r_a/benchmarks/polybench/doitgen/default/claude-haiku-4-5-20251001/rep2/work/doitgen.c
+@@ -70,6 +70,7 @@
+     for (q = 0; q < _PB_NQ; q++)  {
+       for (p = 0; p < _PB_NP; p++)  {
+ 	DATA_TYPE temp_sum = 0;
++	#pragma omp parallel for 
+ 	for (s = 0; s < _PB_NP; s++)
+ 	  temp_sum = temp_sum + A[r][q][s] * C4[s][p];
+ 	sum[r][q][p] = temp_sum;

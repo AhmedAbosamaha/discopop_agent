@@ -1,0 +1,21 @@
+--- s121.c
++++ s121.c
+@@ -135,10 +135,17 @@
+ {
+     int j;
+     for (int nl = 0; nl < R; nl++) {
++        /* Copy original array to break loop-carried RAW on a[] reads */
++        real_t *a_orig = (real_t *)malloc(LEN_1D * sizeof(real_t));
++        memcpy(a_orig, a, LEN_1D * sizeof(real_t));
++
++        /* Inner loop now reads from unchanging a_orig, all iterations independent */
+         for (int i = 0; i < LEN_1D-1; i++) {
+             j = i + 1;
+-            a[i] = a[j] + b[i];
++            a[i] = a_orig[j] + b[i];
+         }
++
++        free(a_orig);
+         pb_mix(nl);
+     }
+     return (real_t)0;

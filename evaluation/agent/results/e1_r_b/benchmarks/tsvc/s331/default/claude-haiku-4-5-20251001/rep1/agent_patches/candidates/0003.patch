@@ -1,0 +1,10 @@
+--- s331.c
++++ s331.c
+@@ -139,6 +139,7 @@
+     if (!candidates) return -1;
+ 
+     for (int nl = 0; nl < R; nl++) {
++        #pragma omp parallel for shared(candidates) 
+         for (int i = 0; i < LEN_1D; i++) {
+             candidates[i] = (a[i] < (real_t)0.) ? i : -1;
+         }

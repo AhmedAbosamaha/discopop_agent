@@ -1,0 +1,10 @@
+--- s291.c
++++ s291.c
+@@ -136,6 +136,7 @@
+     int im1;
+     for (int nl = 0; nl < R; nl++) {
+         im1 = LEN_1D-1;
++        #pragma omp parallel for shared(im1) 
+         for (int i = 0; i < LEN_1D; i++) {
+             a[i] = (b[i] + b[im1]) * (real_t).5;
+             im1 = i;

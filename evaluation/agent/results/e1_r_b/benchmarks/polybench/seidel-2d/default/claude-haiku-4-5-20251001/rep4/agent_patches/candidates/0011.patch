@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_r_b/benchmarks/polybench/seidel-2d/default/claude-haiku-4-5-20251001/rep4/work/seidel-2d.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_r_b/benchmarks/polybench/seidel-2d/default/claude-haiku-4-5-20251001/rep4/work/seidel-2d.c
+@@ -60,6 +60,7 @@
+   int t, i, j, diag;
+ 
+ #pragma scop
++  #pragma omp parallel for firstprivate(n) private(i,j) shared(A) 
+   for (t = 0; t <= _PB_TSTEPS - 1; t++)
+     for (diag = 2; diag <= 2 * (_PB_N - 2); diag++)
+       for (i = 1; i <= _PB_N - 2; i++) {

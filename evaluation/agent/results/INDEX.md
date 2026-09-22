@@ -11,6 +11,8 @@ Every row is a directory under `agent/results/` holding a run's complete results
 | `e10` | trials | 2026-09-19T11:14 | rms14562 | finished | 54 | BROKEN 1, FASTER 21, no-change 27, parallel-not-faster 5 | 1201 | 5.6 MB |
 | `e10_dp_alone` | trials | 2026-09-20T00:05 | rms14562 | finished | 15 | FASTER 6, no-change 9 | 300 | 1.5 MB |
 | `e10_lu_fix84` | trials | 2026-09-20T00:05 | rms14562 | finished | 12 | FASTER 6, no-change 3, parallel-not-faster 3 | 266 | 1.4 MB |
+| `e1_r_a` | trials | 2026-09-21T15:10 | rms14562 | finished | 130 | AGENT_TIMEOUT 2, FASTER 17, no-change 107, parallel-not-faster 3, parallel-speed-not-measurable 1 | 1771 | 8.0 MB |
+| `e1_r_b` | trials | 2026-09-21T15:10 | rms14562 | finished | 130 | FASTER 30, no-change 95, parallel-speed-not-measurable 5 | 1677 | 7.2 MB |
 | `e1_smoke` | trials | 2026-09-21T05:12 | rms14562 | finished | 4 | no-change 4 | 86 | 0.5 MB |
 | `e1_smoke2` | trials | 2026-09-21T05:42 | rms14562 | finished | 1 | no-change 1 | 45 | 0.2 MB |
 | `e1_smoke3` | trials | 2026-09-21T05:52 | rms14562 | finished | 2 | no-change 2 | 64 | 0.3 MB |

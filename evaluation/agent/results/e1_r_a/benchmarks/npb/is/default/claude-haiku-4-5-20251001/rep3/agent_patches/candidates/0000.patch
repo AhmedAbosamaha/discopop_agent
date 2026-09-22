@@ -1,0 +1,31 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_r_a/benchmarks/npb/is/default/claude-haiku-4-5-20251001/rep3/work/IS/is.cpp
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_r_a/benchmarks/npb/is/default/claude-haiku-4-5-20251001/rep3/work/IS/is.cpp
+@@ -304,13 +304,12 @@
+ 
+ 	if( CLASS != 'S' ) printf( "\n   iteration\n" );
+ 
+-	/* Start timer */             
++	/* Start timer */
+ 	pb_timer_start();
+ 	timer_start( T_BENCHMARKING );
+ 
+ 	/* This is the main iteration */
+ 	for(iteration=1; iteration<=MAX_ITERATIONS; iteration++){
+-		if(CLASS != 'S')printf("        %d\n", iteration);
+ 		rank( iteration );
+ 	}
+ 
+@@ -318,6 +317,13 @@
+ 	timer_stop( T_BENCHMARKING );
+ 	pb_timer_stop();
+ 	timecounter = timer_read( T_BENCHMARKING );
++
++	/* Print iteration numbers after timing */
++	if( CLASS != 'S' ) {
++		for(iteration=1; iteration<=MAX_ITERATIONS; iteration++){
++			printf("        %d\n", iteration);
++		}
++	}
+ 
+ 	/* This tests that keys are in sequence: sorting of last ranked key seq */
+ 	/* occurs here, but is an untimed operation */

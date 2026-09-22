@@ -1,0 +1,44 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_r_a/benchmarks/npb/is/default/claude-haiku-4-5-20251001/rep3/work/IS/is.cpp
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_r_a/benchmarks/npb/is/default/claude-haiku-4-5-20251001/rep3/work/IS/is.cpp
+@@ -436,7 +436,7 @@
+ 	k2 = k1 + mq;
+ 	if ( k2 > NUM_KEYS ) k2 = NUM_KEYS;
+ 
+-	s = find_my_seed( myid, 
++	s = find_my_seed( myid,
+ 			num_procs,
+ 			(long)4*NUM_KEYS,
+ 			seed,
+@@ -444,13 +444,28 @@
+ 
+ 	k = MAX_KEY/4;
+ 
++	INT_TYPE num_elems = k2 - k1;
++	double *seed_array = (double*)malloc(sizeof(double) * num_elems);
++
++	double s_temp = s;
++	for(INT_TYPE j = 0; j < num_elems; j++){
++		seed_array[j] = s_temp;
++		randlc(&s_temp, an);
++		randlc(&s_temp, an);
++		randlc(&s_temp, an);
++		randlc(&s_temp, an);
++	}
++
+ 	for(i=k1; i<k2; i++){
+-		x = randlc(&s, an);
+-		x += randlc(&s, an);
+-		x += randlc(&s, an);
+-		x += randlc(&s, an);
++		double s_i = seed_array[i - k1];
++		x = randlc(&s_i, an);
++		x += randlc(&s_i, an);
++		x += randlc(&s_i, an);
++		x += randlc(&s_i, an);
+ 		key_array[i] = k*x;
+ 	}
++
++	free(seed_array);
+ }
+ 
+ /*****************************************************************/

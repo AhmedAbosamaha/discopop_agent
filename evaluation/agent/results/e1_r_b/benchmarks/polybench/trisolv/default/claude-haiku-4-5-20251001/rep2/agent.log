@@ -1,0 +1,108 @@
+
+============================================================
+  DiscoPoP Agentic Controller
+============================================================
+  Source         : /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_r_b/benchmarks/polybench/trisolv/default/claude-haiku-4-5-20251001/rep2/work/trisolv.c
+  DiscoPoP dir   : .discopop
+  Model          : claude-haiku-4-5-20251001
+  Budget         : 3 LLM retries/region (+2 free build fixes)
+  λ penalty      : 1.0
+  Min workload   : 0.0
+  Restruct. depth: 0 (Tier-2 allowed at depth 0–0)
+  Quality gate   : Tier-1 = all but speed, no escalation; Tier-2 = full
+  TSan           : barrier-aware (archer: /usr/lib/llvm-20/lib/libarcher.so)
+  Speedup gate   : OFF (--no-require-speedup)
+  Dry run        : False
+  LLM mode       : claude-haiku-4-5-20251001
+  Edit mode      : direct
+  Re-profiling   : full (instrument + run + explore) after every kept rewrite
+  Explorer       : one attempt may take 600 s, then the draw is repeated (random stall, L5)
+  Pragmas        : DiscoPoP writes them in Phase B
+============================================================
+
+  Project        : /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_r_b/benchmarks/polybench/trisolv/default/claude-haiku-4-5-20251001/rep2/work  (2 unit(s): trisolv.c, polybench.c)
+
+  [ok] Captured reference output on 2 inputs (39 bytes, 0.1 ms baseline) for the correctness/performance gates.
+
+  [ok] Numerical noise floor 1.73e-13 of output scale (widest disagreement 1.73e-14 of output scale across 6 build variants, x10 margin — on input '7').
+  [note] values may move that far without failing the correctness gate; labels, line structure and integers must still match exactly.
+
+  Hotspots       : measured per-region runtimes are available — 15 region(s) measured, 2.2 ms total, ranking by predicted time saved at 48 threads
+
+  Baseline       : DiscoPoP proposes 0 applicable pattern(s) unaided; 0 of them produce a usable pragma
+                   → the run beats DiscoPoP by ending with more than 0
+
+  Initial candidates
+Region ID    Type           Saves    % run    Hot  Tier  Depth  Name
+--------------------------------------------------------------------------------------
+  1:90       loop          0.5 ms    21.5%  MAYBE     2      0  lines 67–73
+  3:87       function      0.5 ms    21.5%  MAYBE     2      0  kernel_trisolv
+  1:94       loop          0.4 ms    20.8%  MAYBE     2      0  lines 70–71
+
+============================================================
+  PHASE A — restructure  (the source stays pragma-free)
+============================================================
+
+┌─ [depth=0] loop 1:90 (lines 67–73)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Original backed up → trisolv.c.original
+│  [Tier-2] Applied to trisolv.c
+│  [Tier-2] Re-profiling to refresh data and discover new candidates...
+│  [refresh] kind=full
+│  [Tier-2] Re-measured runtimes: 15 region(s), 2.0 ms total
+│  [Phase-A] Asking DiscoPoP what it now finds in the rewritten lines...
+│  [Tier-2] 0 survivor(s) rebuilt, 3 new at depth 1
+│  [Tier-2] DiscoPoP now finds: reduction @ lines 71–72, do_all @ lines 68–74
+│  [Tier-2] Pragma validation deferred to depth 1 (still allowed to restructure)
+└─ ACCEPTED
+
+┌─ [depth=1] loop 1:90 (lines 68–74)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=1] function 3:87 (lines 59–77)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Restructuring not allowed at depth 1 (--restructure-depth=0) → SKIP
+└─ SKIPPED
+
+┌─ [depth=1] loop 1:94 (lines 71–72)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (reduction) — deferred to Phase B
+└─ DEFERRED
+
+
+============================================================
+  PHASE B — annotate  (2 candidate pragma(s))
+============================================================
+
+  5 loop(s) are already parallel in the source; nothing is nested inside them.
+
+┌─ pattern #23  do_all @ lines 68–74  (W=3000)
+│  #pragma omp parallel for
+│  gate failed at 'tsan': Race detected: WARNING: ThreadSanitizer: data race (pid=3306033)   Write of size 8 at 0x7fffffffe710 by thread T4:     #0 kernel_trisolv.omp_outlined_
+└─ DROPPED
+
+┌─ pattern #22  reduction @ lines 71–72  (W=124750)
+│  #pragma omp parallel for
+│  [Phase-B] Applied to trisolv.c
+└─ APPLIED
+
+============================================================
+  SETTLING — verify the finished source, drop what does not hold up
+============================================================
+  [ok] finished source verified — output matches the original
+
+
+============================================================
+  SUMMARY: 1 rewrite(s) kept  |  1 pragma(s) applied  |  1 skipped
+  DiscoPoP unaided: 0 usable pragma(s) in this profile's draw  →  this run: 1   [BEAT, informational]
+    ✓  loop 1:90  [Tier-2]  depth=0
+    ✓  loop 1:94  [Phase-B pragma]  depth=0
+    ✗  3:87  [skipped]  depth=1
+
+  Results → .discopop/agent_patches/accepted.json
+============================================================
+

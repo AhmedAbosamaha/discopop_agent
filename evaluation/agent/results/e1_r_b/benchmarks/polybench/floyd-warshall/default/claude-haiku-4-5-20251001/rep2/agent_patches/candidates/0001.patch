@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_r_b/benchmarks/polybench/floyd-warshall/default/claude-haiku-4-5-20251001/rep2/work/floyd-warshall.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_r_b/benchmarks/polybench/floyd-warshall/default/claude-haiku-4-5-20251001/rep2/work/floyd-warshall.c
+@@ -60,6 +60,7 @@
+   DATA_TYPE* temp = (DATA_TYPE*)malloc(n * n * sizeof(DATA_TYPE));
+ 
+ #pragma scop
++  #pragma omp parallel for firstprivate(n) private(j,i) shared(path) 
+   for (k = 0; k < _PB_N; k++)
+     {
+       // Compute new path values using old path values

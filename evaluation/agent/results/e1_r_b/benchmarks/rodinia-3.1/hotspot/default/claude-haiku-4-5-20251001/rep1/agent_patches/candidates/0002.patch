@@ -1,0 +1,10 @@
+--- hotspot.cpp
++++ hotspot.cpp
+@@ -250,6 +250,7 @@
+ 	#endif
+ 
+         {
++ #pragma omp parallel for firstprivate(Rz_1,Cap_1,Rx_1,Ry_1,num_iterations,step,row,col) shared(power) 
+             for (int iter = 0; iter < (num_iterations + 1) / 2; iter++)
+             {
+                 #ifdef VERBOSE

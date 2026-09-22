@@ -1,0 +1,24 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_r_a/benchmarks/npb/is/default/claude-haiku-4-5-20251001/rep2/work/IS/is.cpp
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_r_a/benchmarks/npb/is/default/claude-haiku-4-5-20251001/rep2/work/IS/is.cpp
+@@ -304,15 +304,19 @@
+ 
+ 	if( CLASS != 'S' ) printf( "\n   iteration\n" );
+ 
+-	/* Start timer */             
++	/* Start timer */
+ 	pb_timer_start();
+ 	timer_start( T_BENCHMARKING );
+ 
+ 	/* This is the main iteration */
++	int total_verification = 0;
+ 	for(iteration=1; iteration<=MAX_ITERATIONS; iteration++){
+ 		if(CLASS != 'S')printf("        %d\n", iteration);
++		passed_verification = 0;
+ 		rank( iteration );
+-	}
++		total_verification += passed_verification;
++	}
++	passed_verification = total_verification;
+ 
+ 	/* End of timing, obtain maximum time of all processors */
+ 	timer_stop( T_BENCHMARKING );

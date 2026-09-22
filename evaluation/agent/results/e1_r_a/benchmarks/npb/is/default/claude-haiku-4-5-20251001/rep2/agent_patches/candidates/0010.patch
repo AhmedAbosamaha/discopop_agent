@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_r_a/benchmarks/npb/is/default/claude-haiku-4-5-20251001/rep2/work/IS/is.cpp
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_r_a/benchmarks/npb/is/default/claude-haiku-4-5-20251001/rep2/work/IS/is.cpp
+@@ -652,6 +652,7 @@
+ 	/* each bucket, which can be done in parallel.  Because the distribution */
+ 	/* of the number of keys in the buckets is Gaussian, the use of */
+ 	/* a dynamic schedule should improve load balance, thus, performance */
++	#pragma omp parallel for private(k,k1,k2) shared(key_buff_ptr,key_buff_ptr2) 
+ 	for( i=0; i< NUM_BUCKETS; i++ ) {
+ 		/* Clear the work array section associated with each bucket */
+ 		k1 = i * num_bucket_keys;

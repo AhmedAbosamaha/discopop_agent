@@ -1,0 +1,26 @@
+--- hotspot.cpp
++++ hotspot.cpp
+@@ -250,18 +250,16 @@
+ 	#endif
+ 
+         {
+-            FLOAT* r = result;
+-            FLOAT* t = temp;
++            FLOAT* buffers[2] = {temp, result};
+             for (int i = 0; i < num_iterations ; i++)
+             {
+                 #ifdef VERBOSE
+                 fprintf(stdout, "iteration %d\n", i++);
+                 #endif
+-                single_iteration(r, t, power, row, col, Cap_1, Rx_1, Ry_1, Rz_1, step);
+-                FLOAT* tmp = t;
+-                t = r;
+-                r = tmp;
+-            }	
++                int output_idx = (i % 2 == 0) ? 1 : 0;
++                int input_idx = 1 - output_idx;
++                single_iteration(buffers[output_idx], buffers[input_idx], power, row, col, Cap_1, Rx_1, Ry_1, Rz_1, step);
++            }
+         }
+ 	#ifdef VERBOSE
+ 	fprintf(stdout, "iteration %d\n", i++);

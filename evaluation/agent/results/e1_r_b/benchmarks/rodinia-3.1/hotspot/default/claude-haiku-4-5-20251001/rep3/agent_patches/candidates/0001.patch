@@ -1,0 +1,10 @@
+--- hotspot.cpp
++++ hotspot.cpp
+@@ -251,6 +251,7 @@
+ 
+         {
+             FLOAT* buf[2] = {temp, result};
++            #pragma omp parallel for firstprivate(step,num_iterations,row,col,Rx_1,Cap_1,Ry_1,Rz_1) shared(buf,power) 
+             for (int i = 0; i < num_iterations ; i++)
+             {
+                 #ifdef VERBOSE

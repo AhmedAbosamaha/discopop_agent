@@ -2491,6 +2491,74 @@ def check_noise_floor_inputs(work: Path) -> Result:
                                 f"a correct reduction passes the gate and Settle")
 
 
+_SETTLE_SPEED_SRC = r"""
+#include <stdio.h>
+static const int N = 120000;
+static const int WORK = 400;
+static double a[N], out[N];
+int main(void) {
+    for (int i = 0; i < N; i++) a[i] = 1.0 + (i % 97) * 0.01;
+    for (int i = 0; i < N; i++) {
+        double x = a[i];
+        for (int k = 0; k < WORK; k++) x = x * 0.9999993 + 1e-7 * (k & 7);
+        out[i] = x;
+    }
+    long long chk = 0;
+    for (int i = 0; i < N; i++) chk += (long long)(out[i] * 1000.0);
+    printf("checksum %lld\n", chk);
+    return 0;
+}
+"""
+
+
+def check_settle_paired(work: Path) -> Result:
+    """Settle's speed verdict is PAIRED: the machine's state when the run began is not a
+    baseline.  (Fix 89)
+
+    Settle used to time the finished program alone and compare it with the reference time
+    captured at the start of the run — minutes earlier, from a non-OpenMP build — and call
+    the program slower when the two differed by more than the noise allowance.  On the
+    campaign's shared host that threw away 15 of 90 class-R TSVC trials whose pragmas
+    Phase B had just measured, interleaved, at 1.02–1.84×: Settle reported them 1.1–8×
+    slower than a number taken before the model was even called.
+
+    The check hands Settle a reference time that is absurdly small — as if the host had
+    become eight times slower since the run began — with a finished file that really is
+    faster (a clean do-all under `parallel for`): it must pass.  A finished file that really
+    is slower (the same loop with its work doubled) must still be rejected.
+    """
+    name = "settle paired speed"
+    from types import SimpleNamespace
+    from ..gate import capture_reference
+    from ..phases.settle import _check_final_source
+    d = work / "settle_paired"
+    d.mkdir(parents=True, exist_ok=True)
+    src = d / "settle_speed.cpp"
+    src.write_text(_SETTLE_SPEED_SRC)
+    text = _SETTLE_SPEED_SRC
+    ref, t_ref, refs = capture_reference(str(src), None)
+    if ref is None or t_ref is None:
+        return Result(name, "skip", "could not capture the reference")
+    loop = "    for (int i = 0; i < N; i++) {\n        double x = a[i];"
+    assert text.count(loop) == 1
+    faster = text.replace(loop, "    #pragma omp parallel for\n" + loop, 1)
+    slower = text.replace("static const int WORK = 400;", "static const int WORK = 800;", 1)
+    args = SimpleNamespace(source_file=str(src), noise_floor=0.0, schedule_stress=True,
+                           stress_threads=(1, 2, 4), require_speedup=True, timing_cflags=())
+    stale = t_ref / 8.0                      # the reference, "taken on a machine 8× faster"
+    src.write_text(faster)
+    ok_f, why_f = _check_final_source(args, text, ref, refs, None, stale, 0.97)   # type: ignore[arg-type]
+    src.write_text(slower)
+    ok_s, why_s = _check_final_source(args, text, ref, refs, None, t_ref, 0.97)   # type: ignore[arg-type]
+    src.write_text(text)
+    if not ok_f:
+        return Result(name, "fail", f"a faster finished file was rejected against a stale reference: {why_f[:120]}")
+    if ok_s:
+        return Result(name, "fail", f"a finished file with twice the work was kept: {why_s[:120]}")
+    return Result(name, "pass", f"faster file kept against a reference 8× too small ({why_f[:60]}); "
+                                f"slower file rejected ({why_s[:60]})")
+
+
 _MULTI_BACKEDGE_SRC = r"""
 #include <stdio.h>
 #include <stdlib.h>
@@ -2827,6 +2895,7 @@ _CHECKS: List[Tuple[str, Callable[[Path], Result]]] = [
     ("pragma-sibling-loops", check_pragma_sibling_loops),
     ("pragma-arbitration", check_pragma_arbitration),
     ("arg-dependencies", check_arg_dependencies),
+    ("settle-paired", check_settle_paired),
 ]
 
 

@@ -1,0 +1,10 @@
+--- s341.c
++++ s341.c
+@@ -138,6 +138,7 @@
+         int *offset = (int*)malloc(LEN_1D * sizeof(int));
+ 
+         /* Compute offsets: where each positive element should go */
++        #pragma omp parallel for shared(offset) reduction(+:j) 
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+                 offset[i] = ++j;

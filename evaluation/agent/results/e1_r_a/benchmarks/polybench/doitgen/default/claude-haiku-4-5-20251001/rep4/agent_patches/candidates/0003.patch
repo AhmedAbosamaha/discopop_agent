@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_r_a/benchmarks/polybench/doitgen/default/claude-haiku-4-5-20251001/rep4/work/doitgen.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1_r_a/benchmarks/polybench/doitgen/default/claude-haiku-4-5-20251001/rep4/work/doitgen.c
+@@ -68,6 +68,7 @@
+ #pragma scop
+   for (r = 0; r < _PB_NR; r++) {
+     for (q = 0; q < _PB_NQ; q++)  {
++      #pragma omp parallel for firstprivate(np) shared(A,C4) 
+       for (p = 0; p < _PB_NP; p++)  {
+ 	sum[r][q][p] = 0;
+ 	for (s = 0; s < _PB_NP; s++)
