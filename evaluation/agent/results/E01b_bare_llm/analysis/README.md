@@ -63,8 +63,10 @@ numbers are therefore not comparable and are not set against each other.
 
 **On these 18 loops E1's gate rejected 23 wrong rewrites in 19 of the agent's trials (Phase A,
 correctness)** — on `s112` 3, `s1213` 4, `s211` 3, `s212` 2, `s241` 5, `s243` 2, `s244` 3,
-`s281` 1 — the same loops on which the model alone shipped its wrong programs
-(`E01_main_comparison/analysis/gate_failures.csv`). The Phase-B rejections of the `default` arm
+`s281` 1 — seven of the nine loops on which the model alone shipped its wrong programs
+(`E01_main_comparison/analysis/gate_failures.csv`); on the other two, `s252` and `s341`, the
+agent's model never produced a wrong rewrite for Phase A to reject, and on `s281` it did where
+the model alone did not. The Phase-B rejections of the `default` arm
 (59 TSan, 6 correctness / schedules) are of DiscoPoP's own racy pragmas, which `discopop_gate`
 meets too, and are not counted as the model's.
 

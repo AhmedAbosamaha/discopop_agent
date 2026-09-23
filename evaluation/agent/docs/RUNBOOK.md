@@ -299,7 +299,10 @@ the rest is on this list because a program cannot.
    `--suite tsvc --name <exp>_tsvc`; `agent/tools/main_comparison_stats.py <ids> [--suite tsvc]`.
    Copy the read-out into `agent/results/<EXPERIMENT>/analysis/` (and `analysis/tsvc/`) with a
    `README.md` naming the commands. `agent/analysis/` is scratch and git-ignored: a number that
-   is not in `agent/results/` does not exist. Read every BROKEN / invalid trial by name and
+   is not in `agent/results/` does not exist. **A read-out that combines arms** (E1-bare beside
+   E1's `default`): run `main_comparison_stats.py` once per `--arm` — without it the tool, and
+   the `main_comparison_stats.md` that `plots` writes, POOL every non-baseline arm into one
+   meaningless figure; do not copy the pooled file. Read every BROKEN / invalid trial by name and
    cause, and the diffs of the surprising trials — numbers alone have hidden every important
    finding so far.
 4. **Record** in `THESIS_EXPERIMENTS.md`: a §7 run-log entry per run group (what ran, when,
