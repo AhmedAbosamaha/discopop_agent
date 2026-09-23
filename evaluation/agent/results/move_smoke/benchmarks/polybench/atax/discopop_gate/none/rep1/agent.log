@@ -1,0 +1,99 @@
+
+============================================================
+  DiscoPoP Agentic Controller
+============================================================
+  Source         : /Users/ahmedsamir/discopop_agent/evaluation/agent/runs/move_smoke/benchmarks/polybench/atax/discopop_gate/none/rep1/work/atax.c
+  DiscoPoP dir   : .discopop
+  Model          : none
+  Budget         : 0 LLM retries/region (+2 free build fixes)
+  λ penalty      : 1.0
+  Min workload   : 0.0
+  Restruct. depth: 0 (Tier-2 allowed at depth 0–0)
+  Quality gate   : Tier-1 = all but speed, no escalation; Tier-2 = full
+  TSan           : barrier-aware (archer: /Users/ahmedsamir/.local/lib/libarcher.dylib)
+  Speedup gate   : OFF (--no-require-speedup)
+  Dry run        : False
+  LLM mode       : none
+  Edit mode      : direct
+  Re-profiling   : fast refresh (compile only) between rewrites; full before a deeper level and before Phase B
+  Pragmas        : LLM writes them with the rewrite, gate decides (--llm-pragmas)
+============================================================
+
+  Project        : /Users/ahmedsamir/discopop_agent/evaluation/agent/runs/move_smoke/benchmarks/polybench/atax/discopop_gate/none/rep1/work  (2 unit(s): atax.c, polybench.c)
+
+  [ok] Captured reference output on 2 inputs (71 bytes, 0.3 ms baseline) for the correctness/performance gates.
+
+  [ok] Numerical noise floor 1.40e-15 of output scale (widest disagreement 1.40e-16 of output scale across 6 build variants, x10 margin).
+  [note] values may move that far without failing the correctness gate; labels, line structure and integers must still match exactly.
+
+  Hotspots       : measured per-region runtimes are available — 18 region(s) measured, 3.7 ms total, ranking by predicted time saved at 8 threads
+
+  Baseline       : DiscoPoP proposes 3 applicable pattern(s) unaided; 3 of them produce a usable pragma
+                   → the run beats DiscoPoP by ending with more than 3
+
+  Initial candidates
+Region ID    Type           Saves    % run    Hot  Tier  Depth  Name
+--------------------------------------------------------------------------------------
+  1:111      loop          1.1 ms    35.1%    YES     1      0  lines 69–76
+  3:103      function      1.1 ms    35.2%    YES     2      0  kernel_atax
+  1:115      loop          0.6 ms    18.0%  MAYBE     1      0  lines 72–73
+  1:121      loop          0.5 ms    15.8%  MAYBE     1      0  lines 74–75
+
+============================================================
+  PHASE A — restructure  (the source stays pragma-free)
+============================================================
+
+┌─ [depth=0] loop 1:111 (lines 69–76)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] function 3:103 (lines 58–79)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:115 (lines 72–73)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:121 (lines 74–75)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+
+============================================================
+  PHASE B — annotate  (3 candidate pragma(s))
+============================================================
+
+  5 loop(s) are already parallel in the source; nothing is nested inside them.
+
+┌─ pattern #33  do_all @ lines 69–76  (W=3500)
+│  #pragma omp parallel for
+│  gate failed at 'tsan': Race detected: WARNING: ThreadSanitizer: data race (pid=42741)   Read of size 8 at 0x728000001000 by thread T1:     #0 kernel_atax.omp_outlined atax.c
+└─ DROPPED
+
+┌─ pattern #31  do_all @ lines 72–73  (W=250000)
+│  #pragma omp parallel for
+│  gate failed at 'tsan': Race detected: WARNING: ThreadSanitizer: data race (pid=42762)   Write of size 8 at 0x728000002000 by thread T7:     #0 kernel_atax.omp_outlined atax.
+└─ DROPPED
+
+┌─ pattern #32  do_all @ lines 74–75  (W=250000)
+│  #pragma omp parallel for
+│  [Phase-B] Original backed up → atax.c.original
+│  [Phase-B] Applied to atax.c
+└─ APPLIED
+
+============================================================
+  SETTLING — verify the finished source, drop what does not hold up
+============================================================
+  [ok] finished source verified — output matches the original
+
+
+============================================================
+  SUMMARY: 0 rewrite(s) kept  |  1 pragma(s) applied  |  1 skipped
+  DiscoPoP unaided: 3 usable pragma(s) in this profile's draw  →  this run: 1   [BELOW, informational]
+    ✓  loop 1:121  [Phase-B pragma]  depth=0
+    ✗  3:103  [skipped]  depth=0
+
+  Results → .discopop/agent_patches/accepted.json
+============================================================
+
