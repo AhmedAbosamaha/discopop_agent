@@ -1,0 +1,13 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s281.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : init_array, pb_mix, pb_emit, pb_emit_array, pb_report, pb_seed, pb_uniform, pb_timer_start, pb_timer_stop, main
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] s281.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: I'll read the program to understand its structure and identify parallelization opportunities.Looking at this code, I need to identify and parallelize the main computation kernel. ## Analysis The `kernel_s281()` function has: 1. **Outer loop** (nl = 0 to R-1): Sequential dependence through `pb_mix()` which modifies arrays based on `nl`. **Cannot parallelize.** 2. **Inner loop** (i = 0 to LEN_1D-1):
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

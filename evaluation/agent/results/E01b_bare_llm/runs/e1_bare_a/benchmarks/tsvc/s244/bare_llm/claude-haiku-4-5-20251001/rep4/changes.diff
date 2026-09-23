@@ -1,0 +1,25 @@
+--- original.c
++++ final.c
+@@ -134,11 +134,22 @@
+ static real_t kernel_s244(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        /* Phase 1: Compute a[i] and update b[i] in parallel.
++         * Each iteration i writes only to a[i] and b[i], so no conflicts. */
++        #pragma omp parallel for
+         for (int i = 0; i < LEN_1D-1; ++i) {
+             a[i] = b[i] + c[i] * d[i];
+             b[i] = c[i] + b[i];
++        }
++
++        /* Phase 2: Compute a[i+1] in parallel using updated b[i] from phase 1.
++         * Iteration i writes to a[i+1], iteration i+1 writes to a[i+2], etc.
++         * No write-write conflicts between parallel iterations. */
++        #pragma omp parallel for
++        for (int i = 0; i < LEN_1D-1; ++i) {
+             a[i+1] = b[i] + a[i+1] * d[i];
+         }
++
+         pb_mix(nl);
+     }
+     return (real_t)0;

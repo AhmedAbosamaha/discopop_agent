@@ -1841,6 +1841,8 @@ must pass (§5k, RUNBOOK step 0/0a).
   thesis reports rather than works around; `docs/DISCOPOP_BUG_REPORTS.md` L4.
 | 2026-09-20 | server | **The server moved to the one-repository layout (§5o).** One checkout; `server.sh sync` is now a single `git fetch` + `merge --ff-only`, so the harness on the server cannot drift from the Mac's. Parity OK; packages regenerated there are identical to the Mac's file by file (295 files, 0 differences); a no-model smoke ran end to end. The old `~/new_benchmark_harness` (19 GB) is unused — its launcher logs are now tracked at `results/logs/launcher/` so nothing is lost with it | D20; and the server had been running from a checkout that no longer received any of the day's changes |
 | 2026-09-20 | agent + harness | **D24 — every arm DECLARES every argument that carries its purpose, and the harness verifies it against the agent's own parser before a run starts (§5n).** New agent option `--print-config` (resolved configuration as JSON, credentials redacted); `settings` block on all 19 arms; any mismatch refuses the run, and an arm without a declaration is refused too | the author: "for every experiment every agent argument should be clearly set to serve the purpose of the experiment, making sure that nothing wired or inherited would break the intended argument selection" — after two changes on one day silently altered what four experiments and five arms meant |
+| 2026-09-23 | result | **E1-bare complete (§7 `e1_bare_a`, `e1_bare_b`): the same model alone ships a wrong program in 17 of 88 trials; the agent in 0 of 90.** TSVC class R, 18 loops × 5, Haiku 4.5, no DiscoPoP, no gate: verified parallel 71 of 88, FASTER 58 of 88 — MORE than the agent's 44 of 90 (the plan expected the opposite) — and BROKEN 17, `worse` 12. The gap in reach sits on `s281`, `s331`, `s121`, `s244`, each with a named cause (index splitting vs a copy; a max reduction DiscoPoP cannot write; a parallel vs a sequential copy; a dead store); E1's gate rejected 23 wrong rewrites on the same loops the model alone shipped its 17 on. What the pipeline adds over the model is trust, not reach; which of evidence, gate, feedback or pragma authorship costs the four loops is E2's and E3's question. Owed, no model: the gate's race stages over the model alone's 71 parallel programs (its FASTER are output-checked, not TSan-checked) | the author's go, 22 Sep; the read-out pre-registered in the E1-bare row of §5s |
+| 2026-09-23 | harness | **The two main-comparison figures show every arm of a combined read-out.** `fig_verdict_matrix` drew only the FIRST arm (E1-bare's squares were missing) — now one panel per arm and model on shared rows; `fig_vs_discopop_alone` cut the first panel's counts off with the second — now the panels are spaced for them. Both name a `bare_llm` arm's trials "model alone", never "agent", from `arms.json`'s `runner` (`figures._who`). A single-arm figure is drawn as before (E1's re-rendered, identical) | the E1-bare read-out combines `default` and `bare_llm` |
 | 2026-09-23 | archive | **`agent/results/` is reorganized by experiment, from a registry (`results/campaign.json`), and a check enforces completeness.** The author: "the results folder is messy, you do not get what is for what — same for the thesis material … I need a report per experiment … a clear rule or handover so things are not forgotten". 68 flat run folders become one folder per experiment or instrument (`E01_main_comparison/`, `E01b_bare_llm/`, `E10_speed_check/`, `E11_repoomp/`, `T0_instruments/T0.01_sizes/` … `T0.14_reference_acceptance/`, `audit_benchmark_suitability/`, `pilots/`, `harness_checks/`, `logs/`), each with a generated `REPORT.md` (question, status, result, what the folder holds, the runs, and this record's own entries for them), `analysis/` (was `results/_analysis/<name>`), `exhibits/` (was `agent/thesis_material/<name>`), `runs/`, `checks/`, `preflight/`, `superseded/`. Run ids are unchanged. `results/README.md` is the map, `INDEX.md` lists every run by experiment with purpose and status (valid, superseded, void), `EXHIBITS.md` every case study with the claim it supports. `tools/campaign.py check` fails on: a folder outside the layout, an unregistered or unarchived run, an archive that disagrees with its `ARCHIVE.json`, a run this record never names, a finished experiment without its report or read-out, an exhibit without the main comparison, uncommitted results, a fetched run never archived. Its first run found six archived runs this record named only implicitly or not at all, named here: `e1_smoke2` (E1 pre-flight smoke 2, the memory-limit prompt), `t0_11_classes_b` and `t0_11_classes_c` (T0.11 draws B and C, recorded as `t0_11_classes_a/b/c`), `integrity_smoke_local` (the no-corruption guarantees of §5j on the Mac), `local_obs1_md` (the observed run on `md`, part of `local_obs1`), `vs_polly` (the first Polly baseline through `verify-source`, one kernel, 16 Sep). Five hand-copied study folders got the provenance file every archive has (`campaign.py adopt`). `archive`, `plots`, the statistics and the exhibit tool find runs through the registry, and `plots` now falls back to the archive, so every figure can be regenerated from a fresh clone | the author's request; the RUNBOOK's definition of done now ends with `campaign.py check` passing |
 | 2026-09-23 | archive | **Three things the record cited lived only in git-ignored folders; now tracked.** E1's combined read-out (`agent/analysis/e1_all`, the source of every E1 number) → `results/E01_main_comparison/analysis/`; T0.1's TSVC measurements, cited as `results/T0_instruments/T0.01_sizes/runs/t0_1_tsvc` but never archived (the sizes derived from them were always tracked in `kernel_sizes.json`) → `results/T0_instruments/T0.01_sizes/runs/t0_1_tsvc/`; the one-repository smoke (`move_smoke`, cited by D20) → `results/harness_checks/runs/move_smoke/`. Checked in the other direction too: every archive, exhibit and reference has the same file count on disk as in git. Git never touches ignored files in a merge or a checkout, which also means the server's generated packages (`prepared/`) are NOT updated by a sync: the server has no LULESH package yet, so its pre-flight starts with `prepare_apps.py lulesh --validate` from the merged recipe | the author: "is the file in the git ignore left when merging?" |
 | 2026-09-23 | campaign | **The work branch is merged; E1-bare is running.** `e1-readout-e2-prep` fast-forwarded into `agentic_DiscoPop` at `cf0d5d96` after the merge gate: the agent's feature suite 40 of 40, harness type check and tests, `test_arms.py` (all arms, all experiments); `default` and `discopop_gate` resolve exactly as at E1's `00d4594f` except three new options that are inert when unset (`evidence_file`, `external_evidence`, `prompt_omit`) — and with them unset the prompts are byte-identical by construction (empty parts are filtered; the checklist is the same string, factored). Server synced, parity OK. E1-bare launched 04:59 UTC: `e1_bare_a` (node 0: `s112 s121 s1213 s127 s211 s212 s241 s243 s244`) and `e1_bare_b` (node 1: `s252 s254 s255 s281 s291 s292 s293 s331 s341`), `bare_llm` × 5, Haiku 4.5, `--threads 6,12 --repeats 5` as E1; the harness's verification code is unchanged since `00d4594f`, so the bare arm is judged exactly as E1's trials were. The server checkout stays at `cf0d5d96` until both lanes end | the author: "are we going to move back to our branch?" — yes, from here on all work is on `agentic_DiscoPop` |
@@ -2023,6 +2025,72 @@ Added 2026-09-15 (see §6 rows of that date):
   Speedup and fraction of expert speedup are reported descriptively.
 
 ## 7. Run log
+
+### `e1_bare_a`, `e1_bare_b` — 2026-09-23, server, **E1-bare: the same model alone, no DiscoPoP, no gate** (90 trials, Haiku)
+
+**Setup.** Commit `cf0d5d96`; arm `bare_llm` (`discopop_agent/bare_llm.py`: the program and the
+contract text, one call, no profile, no gate, no feedback); Haiku 4.5; TSVC class R, the 18 loops
+of E1's primary set × 5; verification exactly as E1 (per-kernel size, 6 / 12 threads, 5
+repeats, seeded input — the harness's verification code is unchanged since E1's `00d4594f`).
+`e1_bare_a` (node 0, `s112 s121 s1213 s127 s211 s212 s241 s243 s244`) 04:59–07:32 UTC,
+`e1_bare_b` (node 1, the other nine) 04:59–08:12 UTC; both `SWEEP: clean`. Its `default`
+counterpart and DiscoPoP-alone baseline are E1's own trials (`e1_r_a`, `e1_r_b`). Read-out:
+`results/E01b_bare_llm/analysis/` — the README there has the commands, the per-loop table and
+every BROKEN trial by cause.
+
+**Deviations, recorded first.** (1) The runner profiles every benchmark before its trials, so
+DiscoPoP profiled all 18 loops although this arm reads nothing from it; 7 of the 18 draws hit the
+random explorer stall (600 s each, draw repeated) — cost only. (2) Two trials have no verdict:
+`s243` rep 4 reordered the scaffold calls (`SCAFFOLD_MODIFIED`), `s244` rep 2 wrote `private(i)`
+for a loop-local `i` (does not compile); rates are over 88. (3) The arm ran two days after its
+counterpart, on the same host, sizes and thread counts (so the pairing rule counts the timings as
+comparable), at host load 3,027–7,392 (median 4,288). (4) The pre-registered read-out is the rates
+and the BROKEN named; the bare arm's paired speed statistic (2.41×, p = 0.0002) is over its
+CORRECT trials only (a wrong program is given no speed; `s211` has none left), while the agent's
+1.08× counts every `no-change` as 1.00× — the two are not comparable and are not compared.
+
+| TSVC class R, 18 loops × 5 | model alone (`bare_llm`) | DiscoPoP + agent (`default`, E1) | DiscoPoP alone |
+|---|---|---|---|
+| verified parallel program | **71 of 88** (81 %, CI 71–88 %) | 46 of 90 (51 %, CI 41–61 %) | 0 of 90 |
+| FASTER | **58 of 88** (66 %, CI 56–75 %) | 44 of 90 (49 %, CI 39–59 %) | 0 of 90 |
+| **BROKEN — a wrong program shipped** | **17** (19 %), in 9 of 18 loops | **0** | 0 |
+| correct but slower (`worse`) shipped | 12 | 0 (Settle dropped 15) | 0 |
+| loops FASTER at least once / in 5 of 5 | 16 / 8 | 14 / 5 | 0 / 0 |
+| model calls, cost | 90, 7.82 USD-eq. | 125, 13.95 USD-eq. | — |
+
+**C2 — what the gate prevents: 17 wrong programs and 12 slower ones in 88.** Every one of the
+17 is wrong on the output check alone, and eight are one shape: a loop distribution that ignores
+which value the original read (`s211` ×3, `s212`, `s241`, `s243`, `s244`, `s1213`); the rest are
+races (`s211` ×2, `s112` ×2, `s241`), a Gauss–Seidel turned Jacobi (`s1213`, the seidel-2d error
+of §2 in a TSVC loop), a snapshot taken before `pb_mix` changes the input (`s241`), a two-term sum
+turned into a prefix scan (`s252`) and a compaction whose order depends on thread timing (`s341`).
+E1's gate rejected **23 wrong rewrites in 19 agent trials on the same loops** (`s112` 3, `s1213`
+4, `s211` 3, `s212` 2, `s241` 5, `s243` 2, `s244` 3, `s281` 1). Without an oracle a user of the
+model alone cannot tell the 17 from the 58 — which is what the gate is.
+
+**Not what was expected: the model alone reaches MORE.** The plan read the bare arm's FASTER
+count as "what the evidence and the feedback add"; on TSVC class R they add nothing to reach —
+58 vs 44 FASTER, 16 vs 14 loops. The gap sits on four loops, each with a visible cause:
+`s281` 5 vs 0 (the model alone splits the index range at `LEN/2`; the agent's model copied the
+array per repetition and Settle dropped it), `s331` 5 vs 0 (a max reduction — the pragma DiscoPoP
+cannot write, T0.13; under D23 the agent's pragmas are DiscoPoP's), `s121` 3 vs 0 (both buffer
+`a`; the model alone copies with a parallel loop, the agent's rewrites used `memcpy`), `s244` 3 vs
+1 (the model alone removes a dead store). The agent is ahead where the model alone ships wrong
+programs: `s211` 1 vs 0 (5 BROKEN), `s112` 1 vs 0 (2 BROKEN), `s252` 3 vs 1. E1-bare changes
+everything at once — evidence, gate, feedback, who writes the pragma, the role text — so it cannot
+say which of them costs the four loops; E2 Part A (evidence none vs DiscoPoP, same pipeline) and
+E3 (the model writes the pragmas) separate them, and `s281`, `s121` are among E2-C/D's seven
+loops, `s331`, `s341` are E3's.
+
+**Not checked for the model alone: races that change no printed value.** Its 71 parallel
+programs passed the harness's verification (full dump on two inputs, digest at 6 and 12 threads,
+5 repeats each) but not TSan or schedule stress, which only the agent's gate runs. A no-model
+check — the gate's race stages over those 71 programs — would close this; proposed, not run.
+
+**What it changes.** H2 and C2 stand on a measured counterfactual: the same model, unguarded,
+ships a wrong program in one trial in five on this set. What the pipeline adds over the model is
+TRUST, not reach — the reach claim (C1) is against DiscoPoP alone and is unchanged. The four
+loops are recorded as a limitation of `default` and as the question E2/E3 answer.
 
 ### `e1_a`, `e1_d` — 2026-09-22, server, **E1 classes A (no-harm) and D (must-decline)** (36 trials, Haiku)
 

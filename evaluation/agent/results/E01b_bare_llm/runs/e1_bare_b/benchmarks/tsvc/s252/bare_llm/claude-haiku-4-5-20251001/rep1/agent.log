@@ -1,0 +1,13 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s252.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : init_array, pb_mix, pb_emit, pb_emit_array, pb_report, pb_seed, pb_uniform, pb_timer_start, pb_timer_stop, main
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] s252.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Looking at this code, I need to understand the core computation blocking parallelization. ## Analysis The `kernel_s252` function has: 1. **Outer loop** (nl=0 to R): runs R=48 times, modified by `pb_mix()` between iterations 2. **Inner loop** (i=0 to LEN_1D): processes the array with a scalar dependency on `t` The **blocking dependence** is the scalar `t` that carries forward from iteration i to i+
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

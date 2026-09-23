@@ -1,0 +1,13 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s281.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : init_array, pb_mix, pb_emit, pb_emit_array, pb_report, pb_seed, pb_uniform, pb_timer_start, pb_timer_stop, main
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] s281.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Now I'll analyze the code to understand what needs to be parallelized. ## Analysis The program computes a kernel in `kernel_s281()` with: - **Outer loop** (nl = 0 to R-1): Sequential due to `pb_mix()` creating true data dependencies between repetitions - **Inner loop** (i = 0 to LEN_1D-1): Has a **crossing threshold** data access pattern The key issue: iteration `i` reads from `a[LEN_1D-i-1]`, whi
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

@@ -1,0 +1,24 @@
+--- original.c
++++ final.c
+@@ -133,14 +133,16 @@
+ 
+ static real_t kernel_s127(void)
+ {
+-    int j;
+     for (int nl = 0; nl < R; nl++) {
+-        j = -1;
++        /* Parallelized inner loop: each iteration i writes to distinct indices a[2*i] and a[2*i+1],
++         * so there are no race conditions. The outer loop must remain sequential due to pb_mix
++         * creating dependencies between repetitions. */
++        #pragma omp parallel for
+         for (int i = 0; i < LEN_1D/2; i++) {
+-            j++;
++            /* j is computed locally per-iteration from i; no sequential induction variable */
++            int j = 2 * i;
+             a[j] = b[i] + c[i] * d[i];
+-            j++;
+-            a[j] = b[i] + d[i] * e[i];
++            a[j+1] = b[i] + d[i] * e[i];
+         }
+         pb_mix(nl);
+     }

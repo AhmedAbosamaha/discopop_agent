@@ -1,0 +1,15 @@
+--- original.c
++++ final.c
+@@ -137,6 +137,12 @@
+     real_t chksum;
+     for (int nl = 0; nl < R; nl++) {
+         j = -1;
++        /* Search for the last index where a[i] < 0.
++         * Each thread searches its partition and tracks the last negative index.
++         * reduction(max:j) combines results: the global last index is the maximum
++         * index found by any thread.
++         */
++        #pragma omp parallel for reduction(max:j)
+         for (int i = 0; i < LEN_1D; i++) {
+             if (a[i] < (real_t)0.) {
+                 j = i;

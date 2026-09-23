@@ -91,6 +91,20 @@ def _classes() -> Dict[str, str]:
     return {b: c for c, bs in spec.items() for b in bs}
 
 
+ARMS_FILE = Path(__file__).resolve().parents[1] / "config" / "arms.json"
+
+
+def _who(arm: str) -> str:
+    """How a figure names an arm's trials: `agent`, or `model alone` for an arm that runs the
+    bare-LLM baseline (no DiscoPoP, no gate, E1-bare) — calling those "DiscoPoP + agent"
+    would put the pipeline's name on programs it never saw."""
+    try:
+        runner = json.loads(ARMS_FILE.read_text())["arms"][arm].get("runner")
+    except (OSError, ValueError, KeyError, AttributeError):
+        runner = None
+    return "model alone" if runner == "bare_llm" else "agent"
+
+
 def best_speedup(t: dict) -> Optional[float]:
     par = (t.get("verify") or {}).get("par") or {}
     vals = [p.get("speedup") for p in par.values() if p.get("speedup")]
@@ -572,7 +586,9 @@ def fig_vs_discopop_alone(plt, trials: List[dict], out: Path) -> Tuple[List[Path
         layout.append(("class", CLASS_TITLES.get(c, c)))
         layout += [("bench", b) for b in sorted(by_class[c], key=_key)]
     n = len(layout)
-    fig, axes = plt.subplots(1, len(series), figsize=(5.6 * len(series) + 2.4, 0.9 + 0.36 * n),
+    # Each panel carries its FASTER counts as text to the right of its axis, so side-by-side
+    # panels need that width between them (the text of the first was cut off by the second).
+    fig, axes = plt.subplots(1, len(series), figsize=(5.6 * len(series) + 2.4 * len(series), 0.9 + 0.36 * n),
                              sharey=True, squeeze=False)
     xs_all = [x for kind, b in layout if kind == "bench" for x, _ in _dp(b) + [p for sm in series for p in _agent(b, sm)]]
     lo, hi = min(0.5, min(xs_all) * 0.8), max(4.0, max(xs_all) * 1.6)
@@ -598,7 +614,7 @@ def fig_vs_discopop_alone(plt, trials: List[dict], out: Path) -> Tuple[List[Path
             fa = sum(1 for _, o in ag if o == "FASTER")
             fd = sum(1 for _, o in dp if o == "FASTER")
             broken = sum(1 for _, o in ag if o == "BROKEN")
-            note = (f"agent {fa}/{len(ag)} · DiscoPoP alone {fd}/{len(dp)}"
+            note = (f"{_who(sm[0])} {fa}/{len(ag)} · DiscoPoP alone {fd}/{len(dp)}"
                     + (f" · {n_inv} invalid" if n_inv else "") + (f" · {broken} BROKEN" if broken else ""))
             ax.text(hi * 1.05, yi, note, va="center", fontsize=7.5, color=INK_2)
         ax.set_xlim(lo, hi)
@@ -613,12 +629,19 @@ def fig_vs_discopop_alone(plt, trials: List[dict], out: Path) -> Tuple[List[Path
     axes[0][0].set_ylim(n - 0.5, -0.8)
     handles = [plt.Line2D([], [], marker="o", linestyle="", color=SERIES[1], markersize=5),
                plt.Line2D([], [], marker="o", linestyle="", color=SERIES[0], markersize=5)]
+    arm_names = list(dict.fromkeys(a for a, _ in series))
+    lower = ("DiscoPoP + agent" if all(_who(a) == "agent" for a in arm_names)
+             else " / ".join(f"DiscoPoP + agent (`{a}`)" if _who(a) == "agent"
+                             else f"the model alone, no DiscoPoP, no gate (`{a}`)" for a in arm_names))
     axes[0][0].legend(handles, ["DiscoPoP alone (its pragmas through the gate, no model) — upper dots",
-                                "DiscoPoP + agent — lower dots"],
+                                f"{lower} — lower dots"],
                       fontsize=8, loc="lower left", bbox_to_anchor=(0, 1.0 + 0.5 / max(n, 1)), ncol=2)
-    fig.subplots_adjust(right=0.72 if len(series) == 1 else 0.85)
+    if len(series) == 1:
+        fig.subplots_adjust(right=0.72)
+    else:
+        fig.subplots_adjust(right=0.86, wspace=0.42)
     caption = ("THE MAIN COMPARISON, trial by trial — every repeat of DiscoPoP alone (upper dots) and of "
-               "DiscoPoP + agent (lower dots) on the same axis: speedup over the sequential original, which "
+               f"{lower} (lower dots) on the same axis: speedup over the sequential original, which "
                "is the reference both are timed against (a program left unchanged sits at 1×). Grouped by the "
                "measured class: R is the claim; in A the agent must not do worse than DiscoPoP alone; in D "
                "declining — 1× — is the correct answer. At the right: in how many repeats each reached a "
@@ -654,42 +677,53 @@ def fig_verdict_matrix(plt, trials: List[dict], out: Path) -> Tuple[List[Path], 
     for r in rows:
         if (r["arm"], r["model"]) not in series:
             series.append((r["arm"], r["model"]))
-    sm = series[0]
-    rows = [r for r in rows if (r["arm"], r["model"]) == sm]
+    # One panel per arm and model, on the same rows: a run that combines arms (E1-bare beside
+    # E1's `default`) used to show only the first, and the other arm's squares were missing.
     order = {"R": 0, "A": 1, "D": 2, "": 3}
     benches = sorted({str(r["benchmark"]) for r in rows},
                      key=lambda b: (order.get(next(r.get("class") or "" for r in rows if r["benchmark"] == b), 3), b))
-    reps = max(sum(1 for r in rows if r["benchmark"] == b) for b in benches)
-    fig, ax = plt.subplots(figsize=(7.4, 0.9 + 0.27 * len(benches)))
-    labels: List[str] = []
-    prev = None
-    for yi, b in enumerate(benches):
-        rs = sorted((r for r in rows if r["benchmark"] == b), key=lambda r: r.get("repeat") or 0)
-        cls = rs[0].get("class") or "?"
-        if cls != prev and prev is not None:
-            ax.axhline(yi - 0.5, color=AXIS, linewidth=1)
-        prev = cls
-        labels.append(f"{cls} · {b}")
-        for xi, r in enumerate(rs):
-            colour, hatch = VERDICT_STYLE.get(str(r["verdict"]), (MUTED, ""))
-            ax.add_patch(Rectangle((xi + 0.06, yi - 0.4), 0.88, 0.8, facecolor=colour, hatch=hatch,
-                                   edgecolor=SURFACE, linewidth=0.8))
-        ratios = [r["agent_vs_dp_alone"] for r in rs if r["agent_vs_dp_alone"]]
-        dp = rs[0]["dp_alone_speedup_vs_seq"]
-        note = (f"DiscoPoP alone {dp:.2f}×" if dp else "DiscoPoP alone —") + (
-            f"   agent ÷ it: {statistics.median(ratios):.2f}×" if ratios else "")
-        ax.text(reps + 0.25, yi, note, va="center", fontsize=7.5, color=INK_2)
-    ax.set_xlim(0, reps + 5.2)
-    ax.set_ylim(len(benches) - 0.5, -0.5)
-    ax.set_yticks(range(len(benches)), labels, fontsize=8)
-    ax.set_xticks([i + 0.5 for i in range(reps)], [f"rep {i + 1}" for i in range(reps)], fontsize=8)
-    ax.tick_params(length=0)
-    for side in ("top", "right", "bottom", "left"):
-        ax.spines[side].set_visible(False)
+    reps = max(sum(1 for r in rows if r["benchmark"] == b and (r["arm"], r["model"]) == sm)
+               for b in benches for sm in series)
+    fig, axes = plt.subplots(1, len(series), figsize=(7.4 * len(series), 0.9 + 0.27 * len(benches)),
+                             sharey=True, squeeze=False)
+    for ax, sm in zip(axes[0], series):
+        labels: List[str] = []
+        prev = None
+        for yi, b in enumerate(benches):
+            rs = sorted((r for r in rows if r["benchmark"] == b and (r["arm"], r["model"]) == sm),
+                        key=lambda r: r.get("repeat") or 0)
+            cls = next((r.get("class") or "?" for r in rows if r["benchmark"] == b), "?")
+            if cls != prev and prev is not None:
+                ax.axhline(yi - 0.5, color=AXIS, linewidth=1)
+            prev = cls
+            labels.append(f"{cls} · {b}")
+            for xi, r in enumerate(rs):
+                colour, hatch = VERDICT_STYLE.get(str(r["verdict"]), (MUTED, ""))
+                ax.add_patch(Rectangle((xi + 0.06, yi - 0.4), 0.88, 0.8, facecolor=colour, hatch=hatch,
+                                       edgecolor=SURFACE, linewidth=0.8))
+            ratios = [r["agent_vs_dp_alone"] for r in rs if r["agent_vs_dp_alone"]]
+            dp = next((r["dp_alone_speedup_vs_seq"] for r in rows if r["benchmark"] == b), None)
+            note = (f"DiscoPoP alone {dp:.2f}×" if dp else "DiscoPoP alone —") + (
+                f"   {_who(sm[0])} ÷ it: {statistics.median(ratios):.2f}×" if ratios else "")
+            ax.text(reps + 0.25, yi, note, va="center", fontsize=7.5, color=INK_2)
+        ax.set_xlim(0, reps + 5.2)
+        ax.set_ylim(len(benches) - 0.5, -0.5)
+        ax.set_yticks(range(len(benches)), labels, fontsize=8)
+        ax.set_xticks([i + 0.5 for i in range(reps)], [f"rep {i + 1}" for i in range(reps)], fontsize=8)
+        ax.tick_params(length=0)
+        for side in ("top", "right", "bottom", "left"):
+            ax.spines[side].set_visible(False)
+        if len(series) > 1:
+            ax.set_title(f"{sm[0]} · {sm[1]}", fontsize=9, color=INK_2, loc="left", pad=30)
     used = [v for v, _ in VS_ORDER if any(r["verdict"] == v for r in rows)]
-    ax.legend([Patch(facecolor=VERDICT_STYLE[v][0], hatch=VERDICT_STYLE[v][1], edgecolor=SURFACE) for v in used],
-              used, fontsize=8, ncol=min(4, len(used)), loc="lower left", bbox_to_anchor=(0, 1.01), frameon=False)
-    caption = (f"THE MAIN COMPARISON, TRIAL BY TRIAL — arm `{sm[0]}`, {sm[1]}. One square per agent trial, "
+    # Beside several panels the legend is one row, so it sits under the panel titles, not on them.
+    axes[0][0].legend([Patch(facecolor=VERDICT_STYLE[v][0], hatch=VERDICT_STYLE[v][1], edgecolor=SURFACE)
+                       for v in used], used, fontsize=8, ncol=len(used) if len(series) > 1 else min(4, len(used)),
+                      loc="lower left", bbox_to_anchor=(0, 1.01), frameon=False)
+    arms_txt = ", ".join(f"`{a}`" for a, _ in series)
+    models_txt = ", ".join(sorted({m for _, m in series}))
+    caption = (f"THE MAIN COMPARISON, TRIAL BY TRIAL — arm{'s' if len(series) > 1 else ''} {arms_txt}, "
+               f"{models_txt}{' (one panel each)' if len(series) > 1 else ''}. One square per agent trial, "
                "coloured by its verdict against DiscoPoP alone on the same benchmark and profile; rows grouped "
                "by MEASURED class (R: DiscoPoP alone reaches no verified parallel program; A: it does; D: a true "
                "recurrence, must decline). On class R every green square is a verified parallel program that "

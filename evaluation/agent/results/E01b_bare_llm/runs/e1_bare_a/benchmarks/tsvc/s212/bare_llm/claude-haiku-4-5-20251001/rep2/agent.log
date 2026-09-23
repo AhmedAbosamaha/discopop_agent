@@ -1,0 +1,13 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s212.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : init_array, pb_mix, pb_emit, pb_emit_array, pb_report, pb_seed, pb_uniform, pb_timer_start, pb_timer_stop, main
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] s212.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Looking at this code, I need to understand the kernel computation: ```c for (int nl = 0; nl < R; nl++) { for (int i = 0; i < LEN_1D-1; i++) { a[i] *= c[i]; b[i] += a[i + 1] * d[i]; } pb_mix(nl); } ``` **Problem:** The inner loop has a loop-carried dependency—iteration `i` reads `a[i+1]` before iteration `i+1` writes to it. This sequential dependency blocks direct parallelization. **Solution:** Bre
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

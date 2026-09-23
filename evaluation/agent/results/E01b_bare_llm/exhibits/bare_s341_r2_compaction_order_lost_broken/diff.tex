@@ -1,0 +1,51 @@
+\begin{lstlisting}[language=diff,basicstyle=\ttfamily\scriptsize,breaklines=true,caption={tsvc/s341 — BROKEN (e1_bare_b)}]
+--- original.c
++++ final.c
+@@ -133,15 +133,42 @@
+ 
+ static real_t kernel_s341(void)
+ {
+-    int j;
+     for (int nl = 0; nl < R; nl++) {
+-        j = -1;
++        /* Pass 1 (parallel): Count matching elements where b[i] > 0 */
++        int count = 0;
++        #pragma omp parallel for reduction(+:count)
++        for (int i = 0; i < LEN_1D; i++) {
++            if (b[i] > (real_t)0.) count++;
++        }
++
++        /* Allocate temporary buffer to hold matched elements */
++        real_t* temp = (real_t*)malloc(count * sizeof(real_t));
++
++        /* Pass 2 (parallel): Gather matching elements to temp buffer
++         * write_pos is shared and incremented atomically via critical section
++         * to assign each thread a unique write index. Data write happens outside
++         * critical section to allow true parallelism. */
++        int write_pos = 0;
++        #pragma omp parallel for shared(write_pos)
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++                int idx;
++                /* Critical section only protects index allocation, not data write */
++                #pragma omp critical
++                {
++                    idx = write_pos++;
++                }
++                temp[idx] = b[i];
+             }
+         }
++
++        /* Pass 3 (parallel): Copy compacted results back to array a */
++        #pragma omp parallel for
++        for (int i = 0; i < count; i++) {
++            a[i] = temp[i];
++        }
++
++        free(temp);
+         pb_mix(nl);
+     }
+     return (real_t)0;
+\end{lstlisting}

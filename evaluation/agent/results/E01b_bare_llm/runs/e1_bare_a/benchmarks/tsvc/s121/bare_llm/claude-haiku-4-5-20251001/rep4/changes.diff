@@ -1,0 +1,28 @@
+--- original.c
++++ final.c
+@@ -135,10 +135,24 @@
+ {
+     int j;
+     for (int nl = 0; nl < R; nl++) {
++        /* Create a snapshot copy of array a to avoid loop-carried write-after-read
++         * dependences when parallelizing the inner loop. All iterations will read
++         * from this invariant copy and write to disjoint elements of the original array. */
++        real_t *a_copy = (real_t*)malloc((size_t)(LEN_1D) * sizeof(real_t));
++        memcpy(a_copy, a, (size_t)(LEN_1D) * sizeof(real_t));
++
++        /* Parallel inner loop: each iteration i computes a[i] from the snapshot.
++         * - a_copy is shared (read-only snapshot of original a)
++         * - b is shared (read-only throughout)
++         * - a is shared but each iteration writes to a unique index a[i]
++         * - j is private to each iteration (computed as i+1) */
++        #pragma omp parallel for private(j)
+         for (int i = 0; i < LEN_1D-1; i++) {
+             j = i + 1;
+-            a[i] = a[j] + b[i];
++            a[i] = a_copy[j] + b[i];
+         }
++
++        free(a_copy);
+         pb_mix(nl);
+     }
+     return (real_t)0;

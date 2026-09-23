@@ -1,0 +1,38 @@
+--- original.c
++++ final.c
+@@ -133,14 +133,30 @@
+ 
+ static real_t kernel_s252(void)
+ {
+-    real_t t, s;
+     for (int nl = 0; nl < R; nl++) {
+-        t = (real_t) 0.;
++        // Allocate temporary array for scalar expansion of t
++        real_t* s_array = (real_t*)malloc(LEN_1D * sizeof(real_t));
++        if (!s_array) return (real_t)0;
++
++        // First phase: compute all s[i] = b[i] * c[i] in parallel
++        // Each thread computes an independent element of s_array
++        #pragma omp parallel for
+         for (int i = 0; i < LEN_1D; i++) {
+-            s = b[i] * c[i];
+-            a[i] = s + t;
+-            t = s;
++            s_array[i] = b[i] * c[i];
+         }
++
++        // Handle a[0] separately: a[0] = s[0] + t where t = 0 initially
++        a[0] = s_array[0];
++
++        // Second phase: compute all a[i] = s[i] + s[i-1] in parallel for i >= 1
++        // The shift in indices implements the loop-carried value of t from the previous iteration
++        // Each thread writes to a different index with no dependencies on other iterations
++        #pragma omp parallel for
++        for (int i = 1; i < LEN_1D; i++) {
++            a[i] = s_array[i] + s_array[i-1];
++        }
++
++        free(s_array);
+         pb_mix(nl);
+     }
+     return (real_t)0;

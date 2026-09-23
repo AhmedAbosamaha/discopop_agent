@@ -21,13 +21,13 @@ Status: done
 
 ## [E1-bare — the same model with no DiscoPoP and no gate](E01b_bare_llm/REPORT.md)
 
-Status: running
+Status: done
 
 | run | where | what it is | status | trials | outcomes |
 |---|---|---|---|---:|---|
 | `bare_smoke_mac` | [`E01b_bare_llm/preflight/bare_smoke_mac/`](E01b_bare_llm/preflight/bare_smoke_mac/) | the bare-LLM runner on one loop (s211), Mac | pre-flight | 1 | parallel-not-faster 1 |
-| `e1_bare_a` | not archived yet | TSVC class R, lane A (node 0): 9 loops × bare_llm × 5 | running |  |  |
-| `e1_bare_b` | not archived yet | TSVC class R, lane B (node 1): 9 loops × bare_llm × 5 | running |  |  |
+| `e1_bare_a` | [`E01b_bare_llm/runs/e1_bare_a/`](E01b_bare_llm/runs/e1_bare_a/) | TSVC class R, lane A (node 0): 9 loops × bare_llm × 5 | valid | 45 | BROKEN 15, FASTER 21, SCAFFOLD_MODIFIED 1, VERIFY_FAILED 1, parallel-not-faster 7 |
+| `e1_bare_b` | [`E01b_bare_llm/runs/e1_bare_b/`](E01b_bare_llm/runs/e1_bare_b/) | TSVC class R, lane B (node 1): 9 loops × bare_llm × 5 | valid | 45 | BROKEN 2, FASTER 37, parallel-not-faster 6 |
 
 ## [E10 — does the speed check keep unnecessary changes out?](E10_speed_check/REPORT.md)
 

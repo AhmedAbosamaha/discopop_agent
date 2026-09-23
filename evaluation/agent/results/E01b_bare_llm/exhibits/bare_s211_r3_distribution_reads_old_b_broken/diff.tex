@@ -1,0 +1,33 @@
+\begin{lstlisting}[language=diff,basicstyle=\ttfamily\scriptsize,breaklines=true,caption={tsvc/s211 — BROKEN (e1_bare_a)}]
+--- original.c
++++ final.c
+@@ -134,10 +134,28 @@
+ static real_t kernel_s211(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        /* Loop distribution: split the inner loop into two independent loops.
++         * Loop A computes a[i] using b values from the previous iteration.
++         * Loop B computes new b[i] values for the next iteration.
++         * No loop-carried dependences within each loop, so both can be parallelized.
++         */
++
++        /* Loop A: compute a[i] = b[i - 1] + c[i] * d[i] for all i
++         * Each iteration writes to a unique a[i], no loop-carried dependence.
++         */
++        #pragma omp parallel for
+         for (int i = 1; i < LEN_1D-1; i++) {
+             a[i] = b[i - 1] + c[i] * d[i];
++        }
++
++        /* Loop B: compute b[i] = b[i + 1] - e[i] * d[i] for all i
++         * Each iteration writes to a unique b[i], no loop-carried dependence.
++         */
++        #pragma omp parallel for
++        for (int i = 1; i < LEN_1D-1; i++) {
+             b[i] = b[i + 1] - e[i] * d[i];
+         }
++
+         pb_mix(nl);
+     }
+     return (real_t)0;
+\end{lstlisting}

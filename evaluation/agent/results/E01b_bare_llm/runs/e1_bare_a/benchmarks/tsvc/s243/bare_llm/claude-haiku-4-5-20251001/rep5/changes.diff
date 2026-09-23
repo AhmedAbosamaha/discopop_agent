@@ -1,0 +1,38 @@
+--- original.c
++++ final.c
+@@ -133,14 +133,34 @@
+ 
+ static real_t kernel_s243(void)
+ {
++    /* Allocate temporary array to save initial 'a' values for each repetition.
++     * This allows parallelization by breaking the false dependence where iteration i
++     * reads a[i+1] which is written by iteration i+1. */
++    real_t* a_saved = (real_t*)malloc(LEN_1D * sizeof(real_t));
++    if (!a_saved) return (real_t)0;
++
+     for (int nl = 0; nl < R; nl++) {
++        /* Save the current values of array a before computing the new iteration.
++         * This ensures iteration i reads a[i+1] from before iteration i+1 modified it. */
++        #pragma omp parallel for
++        for (int i = 0; i < LEN_1D; i++) {
++            a_saved[i] = a[i];
++        }
++
++        /* Compute new a and b values in parallel. Each iteration writes to distinct
++         * indices (a[i] and b[i]), and reads only from its own index or a_saved[i+1],
++         * avoiding any inter-iteration conflicts. */
++        #pragma omp parallel for
+         for (int i = 0; i < LEN_1D-1; i++) {
+             a[i] = b[i] + c[i  ] * d[i];
+             b[i] = a[i] + d[i  ] * e[i];
+-            a[i] = b[i] + a[i+1] * d[i];
++            a[i] = b[i] + a_saved[i+1] * d[i];
+         }
++
+         pb_mix(nl);
+     }
++
++    free(a_saved);
+     return (real_t)0;
+ }
+ 

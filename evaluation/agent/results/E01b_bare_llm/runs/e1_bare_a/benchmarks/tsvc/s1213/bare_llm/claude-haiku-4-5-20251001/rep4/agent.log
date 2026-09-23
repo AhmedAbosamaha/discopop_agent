@@ -1,0 +1,13 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s1213.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : init_array, pb_mix, pb_emit, pb_emit_array, pb_report, pb_seed, pb_uniform, pb_timer_start, pb_timer_stop, main
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] s1213.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Looking at this program, I need to analyze the kernel loop to find parallelization opportunities. ## Analysis The kernel is: ```c for (int nl = 0; nl < R; nl++) { for (int i = 1; i < LEN_1D-1; i++) { a[i] = b[i-1]+c[i]; b[i] = a[i+1]*d[i]; } pb_mix(nl); } ``` **The Challenge**: - The inner loop has a loop-carried dependency: iteration `i` writes `b[i]`, which iteration `i+1` reads as `b[i-1]` - Th
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

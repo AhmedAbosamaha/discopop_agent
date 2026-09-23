@@ -1,0 +1,27 @@
+--- original.c
++++ final.c
+@@ -134,10 +134,23 @@
+ static real_t kernel_s244(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        /* Inner loop parallelized: statements (1) and (2) are independent across
++         * iterations. Statement (3) computes a dead store for i < LEN_1D-2
++         * (overwritten by statement (1) of the next iteration), so we skip it
++         * except for the final iteration where a[LEN_1D-1] is not overwritten.
++         * This preserves the final output while enabling parallelization. */
++        #pragma omp parallel for
+         for (int i = 0; i < LEN_1D-1; ++i) {
++            /* Statement (1): compute a[i] using original b[i] and c[i] */
+             a[i] = b[i] + c[i] * d[i];
++            /* Statement (2): update b[i] in place */
+             b[i] = c[i] + b[i];
+-            a[i+1] = b[i] + a[i+1] * d[i];
++            /* Statement (3): compute a[i+1] using the updated b[i].
++             * This is a dead store for i < LEN_1D-2 (overwritten in next iteration),
++             * so only execute for the last iteration. */
++            if (i == LEN_1D-2) {
++                a[i+1] = b[i] + a[i+1] * d[i];
++            }
+         }
+         pb_mix(nl);
+     }

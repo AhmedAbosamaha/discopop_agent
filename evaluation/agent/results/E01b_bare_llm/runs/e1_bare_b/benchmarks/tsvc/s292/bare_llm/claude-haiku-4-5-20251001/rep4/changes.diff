@@ -1,0 +1,33 @@
+--- original.c
++++ final.c
+@@ -133,15 +133,23 @@
+ 
+ static real_t kernel_s292(void)
+ {
+-    int im1, im2;
+     for (int nl = 0; nl < R; nl++) {
+-        im1 = LEN_1D-1;
+-        im2 = LEN_1D-2;
+-        for (int i = 0; i < LEN_1D; i++) {
+-            a[i] = (b[i] + b[im1] + b[im2]) * (real_t).333;
+-            im2 = im1;
+-            im1 = i;
++        /* Peel off first iteration (i=0): wrap-around uses LEN_1D-1 and LEN_1D-2 */
++        a[0] = (b[0] + b[LEN_1D-1] + b[LEN_1D-2]) * (real_t).333;
++
++        /* Peel off second iteration (i=1): wrap-around uses LEN_1D-1 */
++        a[1] = (b[1] + b[0] + b[LEN_1D-1]) * (real_t).333;
++
++        /* Main loop (i >= 2): no wrap-around, a[i] = (b[i] + b[i-1] + b[i-2]) * .333
++         * Variables: i is loop var (declared in loop, implicitly private)
++         *            All accesses to b[] are reads (no conflicts across threads)
++         *            Each thread writes only to a[i] (no conflicts)
++         */
++        #pragma omp parallel for
++        for (int i = 2; i < LEN_1D; i++) {
++            a[i] = (b[i] + b[i-1] + b[i-2]) * (real_t).333;
+         }
++
+         pb_mix(nl);
+     }
+     return (real_t)0;

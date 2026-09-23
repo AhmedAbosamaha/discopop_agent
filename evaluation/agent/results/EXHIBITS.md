@@ -31,6 +31,53 @@
 - [`vpvtv_rewrite_halves_dp_speedup_worse`](E01_main_comparison/exhibits/vpvtv_rewrite_halves_dp_speedup_worse/) — No-harm control, worse: the model copies b and c for a loop DiscoPoP alone already parallelizes; still faster than the original, so it ships — at 2.37× where DiscoPoP alone gives 4.08×.  
   **worse** vs DiscoPoP alone (4.08× → 2.37×) · tsvc/vpvtv, `default`, e1_a rep 1 · pictures: `before_after.png`, `console.png`
 
+## [E1-bare — the same model with no DiscoPoP and no gate](E01b_bare_llm/REPORT.md)
+
+- [`bare_s112_r1_pragma_on_recurrence_broken`](E01b_bare_llm/exhibits/bare_s112_r1_pragma_on_recurrence_broken/) — A bare '#pragma omp parallel for' on s112's backward recurrence a[i+1] = a[i] + b[i]: a WAR race, 3.8× faster and wrong.  
+  **unsafe** vs DiscoPoP alone (1.00× → 1.00×) · tsvc/s112, `bare_llm`, e1_bare_a rep 1 · pictures: `before_after.png`, `console.png`
+- [`bare_s112_r3_pragma_on_recurrence_broken`](E01b_bare_llm/exhibits/bare_s112_r3_pragma_on_recurrence_broken/) — The same racy pragma on s112 in a second repeat.  
+  **unsafe** vs DiscoPoP alone (1.00× → 1.00×) · tsvc/s112, `bare_llm`, e1_bare_a rep 3 · pictures: `before_after.png`, `console.png`
+- [`bare_s112_r5_copy_per_repetition_worse`](E01b_bare_llm/exhibits/bare_s112_r5_copy_per_repetition_worse/) — A correct program shipped 7× SLOWER than the original (malloc + memcpy of a per repetition): without Settle, a slower program is delivered as parallelized.  
+  **worse** vs DiscoPoP alone (1.00× → 0.14×) · tsvc/s112, `bare_llm`, e1_bare_a rep 5 · pictures: `before_after.png`, `console.png`
+- [`bare_s1213_r2_snapshot_never_read_broken`](E01b_bare_llm/exhibits/bare_s1213_r2_snapshot_never_read_broken/) — The model alone fills a snapshot a_old to break s1213's anti-dependence — and then reads the live a[i+1]: the fix is written and not used.  
+  **unsafe** vs DiscoPoP alone (1.00× → 1.00×) · tsvc/s1213, `bare_llm`, e1_bare_a rep 2 · pictures: `before_after.png`, `console.png`
+- [`bare_s1213_r4_jacobi_for_gauss_seidel_broken`](E01b_bare_llm/exhibits/bare_s1213_r4_jacobi_for_gauss_seidel_broken/) — Double-buffering s1213 turns a Gauss–Seidel update into a Jacobi one — the seidel-2d error of the first smoke, in a TSVC loop.  
+  **unsafe** vs DiscoPoP alone (1.00× → 1.00×) · tsvc/s1213, `bare_llm`, e1_bare_a rep 4 · pictures: `before_after.png`, `console.png`
+- [`bare_s121_parallel_copy_faster`](E01b_bare_llm/exhibits/bare_s121_parallel_copy_faster/) — s121: the model alone buffers a like the agent did, but copies it with a PARALLEL loop — 1.6× where the agent's memcpy version ran at 0.73×.  
+  **gained** vs DiscoPoP alone (1.00× → 1.59×) · tsvc/s121, `bare_llm`, e1_bare_a rep 2 · pictures: `before_after.png`, `console.png`
+- [`bare_s211_r1_distribution_reads_old_b_broken`](E01b_bare_llm/exhibits/bare_s211_r1_distribution_reads_old_b_broken/) — The model alone splits s211 into two parallel loops in the wrong order: a[i] now reads the OLD b[i-1] — wrong at any thread count, shipped because nothing checks it.  
+  **unsafe** vs DiscoPoP alone (1.00× → 1.00×) · tsvc/s211, `bare_llm`, e1_bare_a rep 1 · pictures: `before_after.png`, `console.png`
+- [`bare_s211_r2_distribution_reads_old_b_broken`](E01b_bare_llm/exhibits/bare_s211_r2_distribution_reads_old_b_broken/) — The same wrong distribution of s211 in a second repeat (same code, other comments): the error is systematic, not a draw.  
+  **unsafe** vs DiscoPoP alone (1.00× → 1.00×) · tsvc/s211, `bare_llm`, e1_bare_a rep 2 · pictures: `before_after.png`, `console.png`
+- [`bare_s211_r3_distribution_reads_old_b_broken`](E01b_bare_llm/exhibits/bare_s211_r3_distribution_reads_old_b_broken/) — The same wrong distribution of s211 in a third repeat.  
+  **unsafe** vs DiscoPoP alone (1.00× → 1.00×) · tsvc/s211, `bare_llm`, e1_bare_a rep 3 · pictures: `before_after.png`, `console.png`
+- [`bare_s211_r4_distribution_war_race_broken`](E01b_bare_llm/exhibits/bare_s211_r4_distribution_war_race_broken/) — s211 distributed in the right order, but the loop b[i] = b[i+1] - … is still parallel over a WAR dependence: a race the output catches.  
+  **unsafe** vs DiscoPoP alone (1.00× → 1.00×) · tsvc/s211, `bare_llm`, e1_bare_a rep 4 · pictures: `before_after.png`, `console.png`
+- [`bare_s211_r5_distribution_war_race_broken`](E01b_bare_llm/exhibits/bare_s211_r5_distribution_war_race_broken/) — The same racy distribution of s211 in a second repeat — all five s211 trials of the model alone are wrong.  
+  **unsafe** vs DiscoPoP alone (1.00× → 1.00×) · tsvc/s211, `bare_llm`, e1_bare_a rep 5 · pictures: `before_after.png`, `console.png`
+- [`bare_s212_r5_distribution_reads_new_a_broken`](E01b_bare_llm/exhibits/bare_s212_r5_distribution_reads_new_a_broken/) — s212 distributed so that b[i] += a[i+1]*d[i] reads a[i+1] AFTER it was multiplied — the original read it before.  
+  **unsafe** vs DiscoPoP alone (1.00× → 1.00×) · tsvc/s212, `bare_llm`, e1_bare_a rep 5 · pictures: `before_after.png`, `console.png`
+- [`bare_s241_r1_race_kept_in_loop_broken`](E01b_bare_llm/exhibits/bare_s241_r1_race_kept_in_loop_broken/) — Reading a[i+1] into a local first does not remove the race: another thread may already have written it.  
+  **unsafe** vs DiscoPoP alone (1.00× → 1.00×) · tsvc/s241, `bare_llm`, e1_bare_a rep 1 · pictures: `before_after.png`, `console.png`
+- [`bare_s241_r2_distribution_reads_new_a_broken`](E01b_bare_llm/exhibits/bare_s241_r2_distribution_reads_new_a_broken/) — s241 distributed so that b[i] = a[i]*a[i+1]*d[i] reads the NEW a[i+1] where the original read the old one.  
+  **unsafe** vs DiscoPoP alone (1.00× → 1.00×) · tsvc/s241, `bare_llm`, e1_bare_a rep 2 · pictures: `before_after.png`, `console.png`
+- [`bare_s241_r3_snapshot_before_pb_mix_broken`](E01b_bare_llm/exhibits/bare_s241_r3_snapshot_before_pb_mix_broken/) — A snapshot of a taken before pb_mix changes the input: two stale elements per repetition, dump error 0.93 — a subtle error only a full-output check finds.  
+  **unsafe** vs DiscoPoP alone (1.00× → 1.00×) · tsvc/s241, `bare_llm`, e1_bare_a rep 3 · pictures: `before_after.png`, `console.png`
+- [`bare_s243_r3_distribution_reads_new_a_broken`](E01b_bare_llm/exhibits/bare_s243_r3_distribution_reads_new_a_broken/) — s243 split into three parallel loops; the third reads a[i+1] already overwritten by the first.  
+  **unsafe** vs DiscoPoP alone (1.00× → 1.00×) · tsvc/s243, `bare_llm`, e1_bare_a rep 3 · pictures: `before_after.png`, `console.png`
+- [`bare_s244_dead_store_removed_faster`](E01b_bare_llm/exhibits/bare_s244_dead_store_removed_faster/) — s244: the model alone sees that a[i+1] = … is overwritten by the next iteration except at the last, keeps only that one, and the loop becomes parallel — 3.6×.  
+  **gained** vs DiscoPoP alone (1.00× → 3.56×) · tsvc/s244, `bare_llm`, e1_bare_a rep 1 · pictures: `before_after.png`, `console.png`
+- [`bare_s244_r4_distribution_wrong_order_broken`](E01b_bare_llm/exhibits/bare_s244_r4_distribution_wrong_order_broken/) — s244 distributed in an order that lets the dead store a[i+1] = … survive where the original overwrites it.  
+  **unsafe** vs DiscoPoP alone (1.00× → 1.00×) · tsvc/s244, `bare_llm`, e1_bare_a rep 4 · pictures: `before_after.png`, `console.png`
+- [`bare_s252_r3_prefix_scan_wrong_algorithm_broken`](E01b_bare_llm/exhibits/bare_s252_r3_prefix_scan_wrong_algorithm_broken/) — The model alone replaces s252's two-term sum with a full prefix scan: a different algorithm, wrong and 0.1× slow.  
+  **unsafe** vs DiscoPoP alone (1.00× → 1.00×) · tsvc/s252, `bare_llm`, e1_bare_b rep 3 · pictures: `before_after.png`, `console.png`
+- [`bare_s281_index_split_5of5_faster`](E01b_bare_llm/exhibits/bare_s281_index_split_5of5_faster/) — Where the agent got 0 of 5, the model alone wins s281 in 5 of 5 by splitting the index range at LEN/2 — no copy, 3.0× at 12 threads.  
+  **gained** vs DiscoPoP alone (1.00× → 3.03×) · tsvc/s281, `bare_llm`, e1_bare_b rep 1 · pictures: `before_after.png`, `console.png`
+- [`bare_s331_max_reduction_5of5_faster`](E01b_bare_llm/exhibits/bare_s331_max_reduction_5of5_faster/) — s331 won 5 of 5 by the model alone with reduction(max: j) — the pragma DiscoPoP cannot write, so the agent (DiscoPoP writes its pragmas, D23) cannot reach it.  
+  **gained** vs DiscoPoP alone (1.00× → 5.29×) · tsvc/s331, `bare_llm`, e1_bare_b rep 1 · pictures: `before_after.png`, `console.png`
+- [`bare_s341_r2_compaction_order_lost_broken`](E01b_bare_llm/exhibits/bare_s341_r2_compaction_order_lost_broken/) — A compaction whose index comes from a critical counter: the packed order depends on thread timing, and the run then fails.  
+  **unsafe** vs DiscoPoP alone (1.00× → 1.00×) · tsvc/s341, `bare_llm`, e1_bare_b rep 2 · pictures: `before_after.png`, `console.png`
+
 ## [E10 — does the speed check keep unnecessary changes out?](E10_speed_check/REPORT.md)
 
 - [`2mm_annotated_faster`](E10_speed_check/exhibits/2mm_annotated_faster/) — Pragmas only on 2mm, 7.5× at 12 threads; DiscoPoP alone was timed on another setup, so no ratio.  

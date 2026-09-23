@@ -1,0 +1,23 @@
+--- original.c
++++ final.c
+@@ -137,11 +137,20 @@
+     real_t chksum;
+     for (int nl = 0; nl < R; nl++) {
+         j = -1;
++        /* Parallelize the search for the maximum index where a[i] < 0.
++         * Each thread scans its portion and maintains the max index found.
++         * The reduction(max:j) combines results from all threads.
++         * j starts at INT_MIN per OpenMP, so if no negative element is found,
++         * j will be INT_MIN (negative), which we post-process back to -1. */
++        #pragma omp parallel for reduction(max:j)
+         for (int i = 0; i < LEN_1D; i++) {
+             if (a[i] < (real_t)0.) {
+                 j = i;
+             }
+         }
++        /* Post-process: if j is still negative (INT_MIN from reduction identity),
++         * it means no negative element was found, so reset to -1. */
++        if (j < 0) j = -1;
+         chksum = (real_t) j;
+         pb_mix(nl);
+     }

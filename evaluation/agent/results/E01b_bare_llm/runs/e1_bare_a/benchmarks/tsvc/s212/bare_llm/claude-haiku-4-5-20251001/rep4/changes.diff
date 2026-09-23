@@ -1,0 +1,31 @@
+--- original.c
++++ final.c
+@@ -133,13 +133,27 @@
+ 
+ static real_t kernel_s212(void)
+ {
++    /* Allocate temporary buffer to hold original a[] values.
++     * This breaks the loop-carried dependence: each iteration i reads a[i+1]
++     * before iteration i+1 writes a[i+1], allowing parallelization. */
++    real_t *temp = (real_t*)malloc((size_t)LEN_1D * sizeof(real_t));
++    if (!temp) { fprintf(stderr, "out of memory\n"); return (real_t)0; }
++
+     for (int nl = 0; nl < R; nl++) {
++        /* Save the original a[] values for this repetition */
++        memcpy(temp, a, (size_t)LEN_1D * sizeof(real_t));
++
++        /* Parallelize the inner loop by reading from the snapshot.
++         * No loop-carried dependence since each iteration i reads temp[i+1]
++         * (a snapshot) and writes only to a[i] and b[i] (different indices per iteration). */
++        #pragma omp parallel for
+         for (int i = 0; i < LEN_1D-1; i++) {
+             a[i] *= c[i];
+-            b[i] += a[i + 1] * d[i];
++            b[i] += temp[i + 1] * d[i];
+         }
+         pb_mix(nl);
+     }
++    free(temp);
+     return (real_t)0;
+ }
+ 

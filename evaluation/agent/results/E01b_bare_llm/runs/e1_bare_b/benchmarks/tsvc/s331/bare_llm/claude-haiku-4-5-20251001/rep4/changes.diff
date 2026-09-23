@@ -1,0 +1,33 @@
+--- original.c
++++ final.c
+@@ -137,11 +137,27 @@
+     real_t chksum;
+     for (int nl = 0; nl < R; nl++) {
+         j = -1;
+-        for (int i = 0; i < LEN_1D; i++) {
+-            if (a[i] < (real_t)0.) {
+-                j = i;
++
++        /* Parallelize inner search loop: each thread finds the last (maximum) index
++         * in its range where a[i] < 0, then combine results via critical section.
++         * The outer loop is sequential due to pb_mix data dependence. */
++        #pragma omp parallel
++        {
++            int local_j = -1;  /* per-thread tracker of last negative index found */
++            #pragma omp for
++            for (int i = 0; i < LEN_1D; i++) {
++                if (a[i] < (real_t)0.) {
++                    local_j = i;
++                }
++            }
++            /* Implicit barrier after for loop ensures all threads complete scanning.
++             * Each thread then updates global j with its local maximum via critical section. */
++            #pragma omp critical
++            {
++                if (local_j > j) j = local_j;
+             }
+         }
++
+         chksum = (real_t) j;
+         pb_mix(nl);
+     }

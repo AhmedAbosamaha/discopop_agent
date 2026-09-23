@@ -1,0 +1,34 @@
+\begin{lstlisting}[language=diff,basicstyle=\ttfamily\scriptsize,breaklines=true,caption={tsvc/s211 — BROKEN (e1_bare_a)}]
+--- original.c
++++ final.c
+@@ -134,10 +134,29 @@
+ static real_t kernel_s211(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        /* Phase 1: Compute all a[i] values in parallel.
++         * Each iteration i reads b[i-1] (which is never written in this loop)
++         * and writes a[i]. No loop-carried dependencies.
++         * i: loop variable (shared/implicit)
++         * a, b, c, d: shared arrays (read-only for b,c,d; write-only for a)
++         */
++        #pragma omp parallel for
+         for (int i = 1; i < LEN_1D-1; i++) {
+             a[i] = b[i - 1] + c[i] * d[i];
++        }
++
++        /* Phase 2: Compute all b[i] values in parallel.
++         * Each iteration i reads b[i+1] (to the right) and writes b[i] (to the left).
++         * Iteration j>i reads from j+1 (> i), so it doesn't depend on iteration i's
++         * write to i. All reads occur at higher indices than all writes. Parallelizable.
++         * i: loop variable (shared/implicit)
++         * b, d, e: shared arrays (read-only for d,e; read/write for b)
++         */
++        #pragma omp parallel for
++        for (int i = 1; i < LEN_1D-1; i++) {
+             b[i] = b[i + 1] - e[i] * d[i];
+         }
++
+         pb_mix(nl);
+     }
+     return (real_t)0;
+\end{lstlisting}

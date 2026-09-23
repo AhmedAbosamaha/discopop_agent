@@ -1,0 +1,59 @@
+--- original.c
++++ final.c
+@@ -133,17 +133,51 @@
+ 
+ static real_t kernel_s341(void)
+ {
+-    int j;
++    /* Allocate temporary arrays for stream compaction:
++     * flag[i]: 1 if b[i] > 0, else 0 (per-iteration decision)
++     * offset[i]: exclusive prefix sum of flags; position where b[i] gets written in a
++     */
++    int* flag = (int*)malloc((size_t)LEN_1D * sizeof(int));
++    int* offset = (int*)malloc((size_t)LEN_1D * sizeof(int));
++    if (!flag || !offset) {
++        fprintf(stderr, "out of memory\n");
++        free(flag);
++        free(offset);
++        return (real_t)0;
++    }
++
+     for (int nl = 0; nl < R; nl++) {
+-        j = -1;
++        /* First pass: mark positive elements (parallel)
++         * Each iteration i writes to flag[i]; different threads handle different i => no race */
++        #pragma omp parallel for schedule(static)
+         for (int i = 0; i < LEN_1D; i++) {
+-            if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++            flag[i] = (b[i] > (real_t)0.) ? 1 : 0;
++        }
++
++        /* Second pass: compute exclusive prefix sum of flags (sequential, loop-carried)
++         * offset[i] = count of positive elements in b[0..i-1]
++         * This gives the write position for the i-th element in b */
++        offset[0] = 0;
++        for (int i = 1; i < LEN_1D; i++) {
++            offset[i] = offset[i-1] + flag[i-1];
++        }
++
++        /* Third pass: scatter positive values to computed offsets (parallel)
++         * Each thread reads flag[i] and offset[i], writes to a[offset[i]] at a unique position
++         * No race condition: if both flag[i1] and flag[i2] are true with i1 != i2,
++         * then offset[i1] != offset[i2], so threads write to different a[] positions */
++        #pragma omp parallel for schedule(static)
++        for (int i = 0; i < LEN_1D; i++) {
++            if (flag[i]) {
++                a[offset[i]] = b[i];
+             }
+         }
++
+         pb_mix(nl);
+     }
++
++    free(flag);
++    free(offset);
+     return (real_t)0;
+ }
+ 

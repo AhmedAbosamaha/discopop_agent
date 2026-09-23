@@ -1,0 +1,32 @@
+--- original.c
++++ final.c
+@@ -133,12 +133,26 @@
+ 
+ static real_t kernel_s121(void)
+ {
+-    int j;
+     for (int nl = 0; nl < R; nl++) {
++        /* Create a snapshot of array 'a' to eliminate loop dependence.
++         * Each iteration reads from a_copy (consistent across all threads),
++         * writes to a (distinct locations per iteration).
++         * This removes the RAW dependence where iteration i reads a[i+1]
++         * that iteration i+1 would write to. */
++        real_t *a_copy = (real_t *)malloc((size_t)LEN_1D * sizeof(real_t));
++        memcpy(a_copy, a, (size_t)LEN_1D * sizeof(real_t));
++
++        /* Parallel loop: each iteration i computes a[i] from a_copy[i+1] + b[i].
++         * No iteration-to-iteration dependence: iteration i reads a_copy[i+1] (not written by others),
++         * and writes to a[i] (read only by iteration i-1, which has already executed).
++         * j is declared inside loop body: automatically private per iteration. */
++        #pragma omp parallel for
+         for (int i = 0; i < LEN_1D-1; i++) {
+-            j = i + 1;
+-            a[i] = a[j] + b[i];
++            int j = i + 1;
++            a[i] = a_copy[j] + b[i];
+         }
++
++        free(a_copy);
+         pb_mix(nl);
+     }
+     return (real_t)0;

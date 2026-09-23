@@ -1,0 +1,44 @@
+\begin{lstlisting}[language=diff,basicstyle=\ttfamily\scriptsize,breaklines=true,caption={tsvc/s121 — FASTER (e1_bare_a)}]
+--- original.c
++++ final.c
+@@ -134,13 +134,38 @@
+ static real_t kernel_s121(void)
+ {
+     int j;
++    /* Allocate temporary buffer to hold old values of a.
++     * This breaks loop-carried dependence by letting all iterations
++     * read from a constant copy instead of writing-then-reading in sequence. */
++    real_t *a_old = (real_t*)malloc((size_t)LEN_1D * sizeof(real_t));
++    if (!a_old) {
++        fprintf(stderr, "out of memory in kernel_s121\n");
++        return (real_t)0;
++    }
++
+     for (int nl = 0; nl < R; nl++) {
++        /* Copy current a to a_old for this iteration.
++         * j is the loop variable (automatically private).
++         * Loop is parallelizable since each thread writes to a different element. */
++        #pragma omp parallel for
++        for (long i = 0; i < LEN_1D; i++) {
++            a_old[i] = a[i];
++        }
++
++        /* Main computation loop: read from a_old (constant), write to a (independent).
++         * j: private variable, each thread computes its own value (j = i+1).
++         * Loop is now parallelizable since iterations are independent:
++         * all read from the same a_old copy, write to different a[i] locations. */
++        #pragma omp parallel for private(j)
+         for (int i = 0; i < LEN_1D-1; i++) {
+             j = i + 1;
+-            a[i] = a[j] + b[i];
++            a[i] = a_old[j] + b[i];
+         }
++
+         pb_mix(nl);
+     }
++
++    free(a_old);
+     return (real_t)0;
+ }
+ 
+\end{lstlisting}

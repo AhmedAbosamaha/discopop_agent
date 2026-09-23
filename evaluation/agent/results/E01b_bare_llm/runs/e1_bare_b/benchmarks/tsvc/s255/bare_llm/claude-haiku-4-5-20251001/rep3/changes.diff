@@ -1,0 +1,27 @@
+--- original.c
++++ final.c
+@@ -133,14 +133,18 @@
+ 
+ static real_t kernel_s255(void)
+ {
+-    real_t x, y;
+     for (int nl = 0; nl < R; nl++) {
+-        x = b[LEN_1D-1];
+-        y = b[LEN_1D-2];
++        /* The inner loop carries scalar variables x and y that shift indices into b.
++         * Iteration i accesses b[i], b[i-1], and b[i-2] (with wraparound).
++         * Since each iteration writes to a different a[i] and only reads from b,
++         * iterations are independent. We compute the shifted indices explicitly.
++         */
++        #pragma omp parallel for
+         for (int i = 0; i < LEN_1D; i++) {
+-            a[i] = (b[i] + x + y) * (real_t).333;
+-            y = x;
+-            x = b[i];
++            /* Compute indices with wraparound for circular shift */
++            int idx_prev1 = (i - 1 + LEN_1D) % LEN_1D;  /* b[i-1] */
++            int idx_prev2 = (i - 2 + LEN_1D) % LEN_1D;  /* b[i-2] */
++            a[i] = (b[i] + b[idx_prev1] + b[idx_prev2]) * (real_t).333;
+         }
+         pb_mix(nl);
+     }

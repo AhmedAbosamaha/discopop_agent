@@ -1,0 +1,31 @@
+--- original.c
++++ final.c
+@@ -135,13 +135,24 @@
+ {
+     int im1, im2;
+     for (int nl = 0; nl < R; nl++) {
++        /* Loop peeling: handle i=0 and i=1 with wrap-around before parallelizing */
++
++        /* i=0: im1=LEN_1D-1, im2=LEN_1D-2 */
+         im1 = LEN_1D-1;
+         im2 = LEN_1D-2;
+-        for (int i = 0; i < LEN_1D; i++) {
+-            a[i] = (b[i] + b[im1] + b[im2]) * (real_t).333;
+-            im2 = im1;
+-            im1 = i;
++        a[0] = (b[0] + b[im1] + b[im2]) * (real_t).333;
++
++        /* i=1: im1=0, im2=LEN_1D-1 */
++        im1 = 0;
++        im2 = LEN_1D-1;
++        a[1] = (b[1] + b[im1] + b[im2]) * (real_t).333;
++
++        /* i>=2: no scalar loop-carried dependency, im1=i-1 and im2=i-2 can be computed directly */
++        #pragma omp parallel for
++        for (int i = 2; i < LEN_1D; i++) {
++            a[i] = (b[i] + b[i-1] + b[i-2]) * (real_t).333;
+         }
++
+         pb_mix(nl);
+     }
+     return (real_t)0;

@@ -1,0 +1,13 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s121.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : init_array, pb_mix, pb_emit, pb_emit_array, pb_report, pb_seed, pb_uniform, pb_timer_start, pb_timer_stop, main
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] s121.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: I'll start by reading the program to understand what needs to be parallelized.Now let me analyze the program and create a parallelization plan. ## Analysis The key computation is in `kernel_s121()`: ```c for (int nl = 0; nl < R; nl++) { for (int i = 0; i < LEN_1D-1; i++) { j = i + 1; a[i] = a[j] + b[i]; } pb_mix(nl); } ``` **Issues:** - Outer loop (nl): Sequential due to true dependence via `pb_mi
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

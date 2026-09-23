@@ -1,0 +1,25 @@
+--- original.c
++++ final.c
+@@ -134,10 +134,22 @@
+ static real_t kernel_s211(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        /* First statement: compute a[i] from b[i-1], c[i], d[i] in parallel.
++         * Each thread i writes to distinct a[i] and reads non-conflicting elements.
++         * No loop-carried dependence. */
++        #pragma omp parallel for
+         for (int i = 1; i < LEN_1D-1; i++) {
+             a[i] = b[i - 1] + c[i] * d[i];
++        }
++
++        /* Second statement: compute b[i] from b[i+1], e[i], d[i] in parallel.
++         * Each thread i writes to distinct b[i] and reads b[i+1] which it does not write.
++         * No loop-carried dependence. */
++        #pragma omp parallel for
++        for (int i = 1; i < LEN_1D-1; i++) {
+             b[i] = b[i + 1] - e[i] * d[i];
+         }
++
+         pb_mix(nl);
+     }
+     return (real_t)0;

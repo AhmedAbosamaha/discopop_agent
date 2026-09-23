@@ -1,0 +1,28 @@
+--- original.c
++++ final.c
+@@ -134,10 +134,24 @@
+ static real_t kernel_s1213(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        /* Phase 1: Compute all new b[i] values in parallel using old a[i+1].
++         * All iterations independent: each writes unique b[i], reads unique a[i+1].
++         * No loop-carried dependence. */
++        #pragma omp parallel for
++        for (int i = 1; i < LEN_1D-1; i++) {
++            b[i] = a[i+1]*d[i];
++        }
++
++        /* Phase 2: Compute all new a[i] values in parallel using updated b[i-1].
++         * All iterations independent: each writes unique a[i], reads unique b[i-1].
++         * b[i-1] was just computed in phase 1 by iteration i-1, so a[i] sees the
++         * updated value from same outer iteration, matching sequential semantics.
++         * No loop-carried dependence within phase 2. */
++        #pragma omp parallel for
+         for (int i = 1; i < LEN_1D-1; i++) {
+             a[i] = b[i-1]+c[i];
+-            b[i] = a[i+1]*d[i];
+         }
++
+         pb_mix(nl);
+     }
+     return (real_t)0;

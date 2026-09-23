@@ -1,0 +1,13 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s331.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : init_array, pb_mix, pb_emit, pb_emit_array, pb_report, pb_seed, pb_uniform, pb_timer_start, pb_timer_stop, main
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] s331.c: edited, 3 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Looking at this program, I need to understand the kernel computation: ```c for (int nl = 0; nl < R; nl++) { // R = 48 repetitions j = -1; for (int i = 0; i < LEN_1D; i++) { // Search inner loop if (a[i] < (real_t)0.) { j = i; // Find LAST index where a[i] < 0 } } chksum = (real_t) j; pb_mix(nl); // Modifies arrays, creates data dependence } ``` ## Plan **Sequential dependence (outer loop):** The o
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

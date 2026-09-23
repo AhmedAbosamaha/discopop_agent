@@ -1,0 +1,33 @@
+--- original.c
++++ final.c
+@@ -133,12 +133,29 @@
+ 
+ static real_t kernel_s112(void)
+ {
++    /* Allocate temporary buffer for a copy to eliminate anti-dependence.
++     * The inner loop reads a[i] before writing a[i+1], creating an anti-dependence
++     * that prevents parallelization. By reading from a_copy and writing to a,
++     * we eliminate this dependence and can parallelize the inner loop. */
++    real_t *a_copy = (real_t*)malloc((size_t)LEN_1D * sizeof(real_t));
++    if (!a_copy) { fprintf(stderr, "out of memory\n"); return (real_t)0; }
++
+     for (int nl = 0; nl < R; nl++) {
++        /* Copy array a to a_copy to break anti-dependence */
++        memcpy(a_copy, a, (size_t)LEN_1D * sizeof(real_t));
++
++        /* Parallelize inner loop: each iteration is now independent.
++         * Loop variable i is compared directly against loop-invariant bound (i >= 0).
++         * Shared: a, b, a_copy (a and b are only read, a_copy is only read).
++         * Private: i (loop variable, automatically private). */
++        #pragma omp parallel for
+         for (int i = LEN_1D - 2; i >= 0; i--) {
+-            a[i+1] = a[i] + b[i];
++            a[i+1] = a_copy[i] + b[i];
+         }
+         pb_mix(nl);
+     }
++
++    free(a_copy);
+     return (real_t)0;
+ }
+ 

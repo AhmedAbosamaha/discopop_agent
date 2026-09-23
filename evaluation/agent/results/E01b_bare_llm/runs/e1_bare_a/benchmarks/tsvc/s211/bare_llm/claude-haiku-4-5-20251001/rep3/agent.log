@@ -1,0 +1,13 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s211.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : init_array, pb_mix, pb_emit, pb_emit_array, pb_report, pb_seed, pb_uniform, pb_timer_start, pb_timer_stop, main
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] s211.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Looking at this TSVC benchmark kernel, I can see the parallelization opportunity immediately. ## Analysis and Plan **The kernel structure:** ```c for (int nl = 0; nl < R; nl++) { for (int i = 1; i < LEN_1D-1; i++) { a[i] = b[i - 1] + c[i] * d[i]; // Statement 1: writes a[i] b[i] = b[i + 1] - e[i] * d[i]; // Statement 2: writes b[i] } pb_mix(nl); // Modifies array elements between outer iterations 
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

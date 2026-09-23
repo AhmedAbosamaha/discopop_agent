@@ -1,0 +1,13 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s331.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : init_array, pb_mix, pb_emit, pb_emit_array, pb_report, pb_seed, pb_uniform, pb_timer_start, pb_timer_stop, main
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] s331.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Looking at this code, I need to parallelize the `kernel_s331` function which contains a loop that searches for the last index where `a[i] < 0`. ## Plan The function has: 1. An outer loop over `nl` (0 to R-1) that **cannot be parallelized** due to `pb_mix()` modifying shared state 2. An inner loop over `i` (0 to LEN_1D-1) that **can be parallelized** — it searches for the maximum index where `a[i] 
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

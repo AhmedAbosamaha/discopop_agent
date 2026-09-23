@@ -1,0 +1,32 @@
+--- original.c
++++ final.c
+@@ -134,11 +134,29 @@
+ static real_t kernel_s243(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        /* Phase 1: compute a[i] from b[i], c[i], d[i]
++         * No loop-carried dependencies; all iterations independent */
++        #pragma omp parallel for
+         for (int i = 0; i < LEN_1D-1; i++) {
+             a[i] = b[i] + c[i  ] * d[i];
++        }
++
++        /* Phase 2: compute b[i] from newly computed a[i], d[i], e[i]
++         * No loop-carried dependencies; all iterations independent */
++        #pragma omp parallel for
++        for (int i = 0; i < LEN_1D-1; i++) {
+             b[i] = a[i] + d[i  ] * e[i];
++        }
++
++        /* Phase 3: compute a[i] from newly computed b[i] and a[i+1] computed in phase 1
++         * No loop-carried dependencies; all iterations independent
++         * (a[i+1] was computed in phase 1 for i < LEN_1D-2;
++         *  a[LEN_1D-1] is untouched by the kernel) */
++        #pragma omp parallel for
++        for (int i = 0; i < LEN_1D-1; i++) {
+             a[i] = b[i] + a[i+1] * d[i];
+         }
++
+         pb_mix(nl);
+     }
+     return (real_t)0;

@@ -1,0 +1,25 @@
+\begin{lstlisting}[language=diff,basicstyle=\ttfamily\scriptsize,breaklines=true,caption={tsvc/s241 — BROKEN (e1_bare_a)}]
+--- original.c
++++ final.c
+@@ -134,10 +134,20 @@
+ static real_t kernel_s241(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        // Phase 1: compute all a[i] values in parallel
++        // Each iteration i writes a[i], reads b[i], c[i], d[i] — no loop-carried dependencies
++        #pragma omp parallel for
+         for (int i = 0; i < LEN_1D-1; i++) {
+             a[i] = b[i] * c[i  ] * d[i];
++        }
++
++        // Phase 2: compute all b[i] values in parallel using updated a values
++        // Each iteration i writes b[i], reads a[i], a[i+1], d[i] — no loop-carried dependencies
++        #pragma omp parallel for
++        for (int i = 0; i < LEN_1D-1; i++) {
+             b[i] = a[i] * a[i+1] * d[i];
+         }
++
+         pb_mix(nl);
+     }
+     return (real_t)0;
+\end{lstlisting}

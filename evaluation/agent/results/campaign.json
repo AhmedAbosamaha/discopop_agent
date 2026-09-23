@@ -15,9 +15,9 @@
    "folder": "E01b_bare_llm",
    "title": "E1-bare — the same model with no DiscoPoP and no gate",
    "kind": "experiment",
-   "status": "running",
+   "status": "done",
    "question": "What does the pipeline add over handing the program to the same model and asking it to parallelize it? The bare arm's BROKEN count is what the gate prevents; its FASTER count is what DiscoPoP's evidence and the gate's feedback add.",
-   "headline": ""
+   "headline": "TSVC class R, 18 loops × 5, the same model with no DiscoPoP and no gate: a verified parallel program in 71 of 88 trials and FASTER in 58 — more than the agent's 44 of 90 (DiscoPoP alone: 0 of 90) — but a WRONG program shipped in 17 (19 %, in 9 of 18 loops) and a slower one in 12, where the agent shipped 0 of either. Over the model, the pipeline adds trust, not reach; the reach gap sits on s281, s331, s121 and s244, each with a named cause, and is E2's and E3's question."
   },
   {
    "id": "E10",
@@ -253,13 +253,13 @@
    "group": "E1-bare",
    "section": "runs",
    "role": "TSVC class R, lane A (node 0): 9 loops × bare_llm × 5",
-   "status": "running"
+   "status": "valid"
   },
   "e1_bare_b": {
    "group": "E1-bare",
    "section": "runs",
    "role": "TSVC class R, lane B (node 1): 9 loops × bare_llm × 5",
-   "status": "running"
+   "status": "valid"
   },
   "e10": {
    "group": "E10",
@@ -704,6 +704,94 @@
   "trisolv_reduction_extracted": {
    "group": "pilots",
    "shows": "Pilot 4: the model extracts a reduction in trisolv; the kernel cannot be timed at any size, so correctness only."
+  },
+  "bare_s211_r1_distribution_reads_old_b_broken": {
+   "group": "E1-bare",
+   "shows": "The model alone splits s211 into two parallel loops in the wrong order: a[i] now reads the OLD b[i-1] — wrong at any thread count, shipped because nothing checks it."
+  },
+  "bare_s211_r2_distribution_reads_old_b_broken": {
+   "group": "E1-bare",
+   "shows": "The same wrong distribution of s211 in a second repeat (same code, other comments): the error is systematic, not a draw."
+  },
+  "bare_s211_r3_distribution_reads_old_b_broken": {
+   "group": "E1-bare",
+   "shows": "The same wrong distribution of s211 in a third repeat."
+  },
+  "bare_s211_r4_distribution_war_race_broken": {
+   "group": "E1-bare",
+   "shows": "s211 distributed in the right order, but the loop b[i] = b[i+1] - … is still parallel over a WAR dependence: a race the output catches."
+  },
+  "bare_s211_r5_distribution_war_race_broken": {
+   "group": "E1-bare",
+   "shows": "The same racy distribution of s211 in a second repeat — all five s211 trials of the model alone are wrong."
+  },
+  "bare_s212_r5_distribution_reads_new_a_broken": {
+   "group": "E1-bare",
+   "shows": "s212 distributed so that b[i] += a[i+1]*d[i] reads a[i+1] AFTER it was multiplied — the original read it before."
+  },
+  "bare_s241_r2_distribution_reads_new_a_broken": {
+   "group": "E1-bare",
+   "shows": "s241 distributed so that b[i] = a[i]*a[i+1]*d[i] reads the NEW a[i+1] where the original read the old one."
+  },
+  "bare_s243_r3_distribution_reads_new_a_broken": {
+   "group": "E1-bare",
+   "shows": "s243 split into three parallel loops; the third reads a[i+1] already overwritten by the first."
+  },
+  "bare_s244_r4_distribution_wrong_order_broken": {
+   "group": "E1-bare",
+   "shows": "s244 distributed in an order that lets the dead store a[i+1] = … survive where the original overwrites it."
+  },
+  "bare_s1213_r2_snapshot_never_read_broken": {
+   "group": "E1-bare",
+   "shows": "The model alone fills a snapshot a_old to break s1213's anti-dependence — and then reads the live a[i+1]: the fix is written and not used."
+  },
+  "bare_s112_r1_pragma_on_recurrence_broken": {
+   "group": "E1-bare",
+   "shows": "A bare '#pragma omp parallel for' on s112's backward recurrence a[i+1] = a[i] + b[i]: a WAR race, 3.8× faster and wrong."
+  },
+  "bare_s112_r3_pragma_on_recurrence_broken": {
+   "group": "E1-bare",
+   "shows": "The same racy pragma on s112 in a second repeat."
+  },
+  "bare_s241_r1_race_kept_in_loop_broken": {
+   "group": "E1-bare",
+   "shows": "Reading a[i+1] into a local first does not remove the race: another thread may already have written it."
+  },
+  "bare_s1213_r4_jacobi_for_gauss_seidel_broken": {
+   "group": "E1-bare",
+   "shows": "Double-buffering s1213 turns a Gauss–Seidel update into a Jacobi one — the seidel-2d error of the first smoke, in a TSVC loop."
+  },
+  "bare_s241_r3_snapshot_before_pb_mix_broken": {
+   "group": "E1-bare",
+   "shows": "A snapshot of a taken before pb_mix changes the input: two stale elements per repetition, dump error 0.93 — a subtle error only a full-output check finds."
+  },
+  "bare_s252_r3_prefix_scan_wrong_algorithm_broken": {
+   "group": "E1-bare",
+   "shows": "The model alone replaces s252's two-term sum with a full prefix scan: a different algorithm, wrong and 0.1× slow."
+  },
+  "bare_s341_r2_compaction_order_lost_broken": {
+   "group": "E1-bare",
+   "shows": "A compaction whose index comes from a critical counter: the packed order depends on thread timing, and the run then fails."
+  },
+  "bare_s281_index_split_5of5_faster": {
+   "group": "E1-bare",
+   "shows": "Where the agent got 0 of 5, the model alone wins s281 in 5 of 5 by splitting the index range at LEN/2 — no copy, 3.0× at 12 threads."
+  },
+  "bare_s331_max_reduction_5of5_faster": {
+   "group": "E1-bare",
+   "shows": "s331 won 5 of 5 by the model alone with reduction(max: j) — the pragma DiscoPoP cannot write, so the agent (DiscoPoP writes its pragmas, D23) cannot reach it."
+  },
+  "bare_s121_parallel_copy_faster": {
+   "group": "E1-bare",
+   "shows": "s121: the model alone buffers a like the agent did, but copies it with a PARALLEL loop — 1.6× where the agent's memcpy version ran at 0.73×."
+  },
+  "bare_s244_dead_store_removed_faster": {
+   "group": "E1-bare",
+   "shows": "s244: the model alone sees that a[i+1] = … is overwritten by the next iteration except at the last, keeps only that one, and the loop becomes parallel — 3.6×."
+  },
+  "bare_s112_r5_copy_per_repetition_worse": {
+   "group": "E1-bare",
+   "shows": "A correct program shipped 7× SLOWER than the original (malloc + memcpy of a per repetition): without Settle, a slower program is delivered as parallelized."
   }
  }
 }

@@ -1,0 +1,13 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s244.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : init_array, pb_mix, pb_emit, pb_emit_array, pb_report, pb_seed, pb_uniform, pb_timer_start, pb_timer_stop, main
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] s244.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Analysis and Plan Looking at the kernel code: ```c for (int nl = 0; nl < R; nl++) { for (int i = 0; i < LEN_1D-1; ++i) { a[i] = b[i] + c[i] * d[i]; // Read old b[i], write a[i] b[i] = c[i] + b[i]; // Modify b[i] in-place a[i+1] = b[i] + a[i+1] * d[i]; // Use new b[i], write a[i+1] } pb_mix(nl); } ``` **The issue**: Each iteration i writes to `a[i+1]`, and the next iteration i+1 also writes to `
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

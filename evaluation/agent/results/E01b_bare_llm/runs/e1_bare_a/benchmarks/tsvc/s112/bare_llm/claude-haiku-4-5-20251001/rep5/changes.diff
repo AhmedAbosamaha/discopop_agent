@@ -1,0 +1,25 @@
+--- original.c
++++ final.c
+@@ -134,9 +134,21 @@
+ static real_t kernel_s112(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        /* Copy array a to break anti-dependence: iteration i reads a[i],
++           iteration (i-1) writes a[i]. By reading from a_copy, all parallel
++           iterations see the same original values, eliminating the dependency. */
++        real_t* a_copy = (real_t*)malloc(LEN_1D * sizeof(real_t));
++        memcpy(a_copy, a, LEN_1D * sizeof(real_t));
++
++        /* Inner loop can be parallelized: each iteration i writes to a[i+1],
++           reading from a_copy[i] and b[i]. No two iterations write to the
++           same element, so there are no data races. */
++        #pragma omp parallel for
+         for (int i = LEN_1D - 2; i >= 0; i--) {
+-            a[i+1] = a[i] + b[i];
++            a[i+1] = a_copy[i] + b[i];
+         }
++
++        free(a_copy);
+         pb_mix(nl);
+     }
+     return (real_t)0;

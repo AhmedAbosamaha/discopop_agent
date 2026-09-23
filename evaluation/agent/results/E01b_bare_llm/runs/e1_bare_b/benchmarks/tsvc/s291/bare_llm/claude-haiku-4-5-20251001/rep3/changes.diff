@@ -1,0 +1,22 @@
+--- original.c
++++ final.c
+@@ -133,12 +133,14 @@
+ 
+ static real_t kernel_s291(void)
+ {
+-    int im1;
+     for (int nl = 0; nl < R; nl++) {
+-        im1 = LEN_1D-1;
+-        for (int i = 0; i < LEN_1D; i++) {
+-            a[i] = (b[i] + b[im1]) * (real_t).5;
+-            im1 = i;
++        // Peel first iteration: a[0] depends on wrap-around index b[LEN_1D-1]
++        a[0] = (b[0] + b[LEN_1D-1]) * (real_t).5;
++
++        // Parallelize remaining iterations: im1 is implicitly i-1, no loop-carried dependency
++        #pragma omp parallel for
++        for (int i = 1; i < LEN_1D; i++) {
++            a[i] = (b[i] + b[i-1]) * (real_t).5;
+         }
+         pb_mix(nl);
+     }

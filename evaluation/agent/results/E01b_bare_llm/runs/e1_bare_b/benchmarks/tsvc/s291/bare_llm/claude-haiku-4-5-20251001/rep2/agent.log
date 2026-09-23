@@ -1,0 +1,13 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s291.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : init_array, pb_mix, pb_emit, pb_emit_array, pb_report, pb_seed, pb_uniform, pb_timer_start, pb_timer_stop, main
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] s291.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Looking at this program, I need to understand the kernel's structure and identify the parallelization opportunity. ## Analysis The program has: - An outer loop (nl) that runs R=48 times - An inner loop (i) over LEN_1D elements - Key structure: `im1` is a carry-forward variable tracking the previous index **The bottleneck:** The inner loop has this pattern: ```c im1 = LEN_1D-1; for (int i = 0; i < 
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

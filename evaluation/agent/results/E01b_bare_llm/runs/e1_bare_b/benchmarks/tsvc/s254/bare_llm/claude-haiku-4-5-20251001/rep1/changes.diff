@@ -1,0 +1,25 @@
+--- original.c
++++ final.c
+@@ -133,12 +133,18 @@
+ 
+ static real_t kernel_s254(void)
+ {
+-    real_t x;
+     for (int nl = 0; nl < R; nl++) {
+-        x = b[LEN_1D-1];
++        /* Parallelize the inner loop by eliminating the carry-around variable.
++         * The carry-around loop: x = b[LEN_1D-1]; for(i): a[i]=(b[i]+x)*0.5; x=b[i]
++         * is equivalent to: a[i] = (b[i] + b[(i-1+LEN_1D)%LEN_1D]) * 0.5
++         * which has no loop-carried dependencies and can be parallelized.
++         *
++         * Each thread i writes only to a[i] and reads from b[i] and b[prev_i],
++         * so no race conditions or synchronization is needed. */
++        #pragma omp parallel for
+         for (int i = 0; i < LEN_1D; i++) {
+-            a[i] = (b[i] + x) * (real_t).5;
+-            x = b[i];
++            int prev_i = (i == 0) ? LEN_1D - 1 : i - 1;
++            a[i] = (b[i] + b[prev_i]) * (real_t).5;
+         }
+         pb_mix(nl);
+     }

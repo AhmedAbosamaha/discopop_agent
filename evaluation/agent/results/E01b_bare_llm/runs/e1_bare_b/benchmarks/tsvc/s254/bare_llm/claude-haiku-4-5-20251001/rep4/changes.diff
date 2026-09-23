@@ -1,0 +1,22 @@
+--- original.c
++++ final.c
+@@ -133,12 +133,15 @@
+ 
+ static real_t kernel_s254(void)
+ {
+-    real_t x;
+     for (int nl = 0; nl < R; nl++) {
+-        x = b[LEN_1D-1];
++        /* Parallelize inner loop: a[i] = (b[i] + b[i-1 mod LEN_1D]) * 0.5
++         * Each iteration i only reads b[i] and b[i-1], writes to a[i].
++         * Array b is read-only in this loop, so no race conditions.
++         * prev is private: declared inside parallel loop body. */
++        #pragma omp parallel for
+         for (int i = 0; i < LEN_1D; i++) {
+-            a[i] = (b[i] + x) * (real_t).5;
+-            x = b[i];
++            real_t prev = (i == 0) ? b[LEN_1D-1] : b[i-1];
++            a[i] = (b[i] + prev) * (real_t).5;
+         }
+         pb_mix(nl);
+     }
