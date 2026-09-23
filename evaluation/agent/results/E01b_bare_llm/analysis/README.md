@@ -31,6 +31,7 @@ E1's primary-set read-out (`E01_main_comparison/analysis/tsvc/`), checked by dif
 |---|---|---|---|
 | verified parallel program | **71 of 88** (81 %, CI 71–88 %) | 46 of 90 (51 %, CI 41–61 %) | 0 of 90 |
 | FASTER (≥ 1.1× over the sequential original) | **58 of 88** (66 %, CI 56–75 %) | 44 of 90 (49 %, CI 39–59 %) | 0 of 90 |
+| FASTER and race-free (the gate's TSan + schedule matrix, run afterwards, `checks/e1b_race_check/`) | **53 of 88** (4 races on `s293`, 1 not judgeable) | 44 of 90 (all passed the gate) | 0 of 90 |
 | **BROKEN — a wrong program shipped** | **17 of 88** (19 %), in 9 of 18 loops | **0** | 0 |
 | correct but slower (`worse`, ≤ 0.91×) shipped | 12 | 0 (Settle dropped 15 such programs) | 0 |
 | invalid (no verdict) | 2 (s243 rep 4 moved the timer calls; s244 rep 2 does not compile) | 0 | 0 |
@@ -44,16 +45,16 @@ over its CORRECT trials only — a wrong program is given no speed — and over 
 `s211` has no correct trial at all; the agent's 1.08× counts every `no-change` as 1.00×. The two
 numbers are therefore not comparable and are not set against each other.
 
-**Per loop** (FASTER of 5; the model alone's BROKEN in brackets):
+**Per loop** (FASTER of 5; the model alone's BROKEN in brackets). What happened on the agent's side is read from its archived patches and logs and, for the speed check, measured again (`../checks/e1b_marginal_replay/`):
 
 | loop | agent | model alone | what decides it |
 |---|---|---|---|
 | `s127` `s254` `s291` `s293` | 5 | 5 | the same rewrite (closed-form index, carried scalar replaced, peeled wrap-around) |
 | `s292` `s255` | 5, 4 | 5, 5 | the same; the model alone is faster on `s292` (3.91× vs 2.34× median) |
-| `s281` | **0** | **5** | the model alone SPLITS the index range at `LEN/2` (no copy); the agent's model copied the array per repetition and Settle dropped it (E1 §7) |
+| `s281` | **0** | **5** | BOTH models split the index range at `LEN/2` — the agent's in all 5 repeats. The agent lost it after the model: in reps 2–5 the gate's clause stage rejected DiscoPoP's correct `private(x)` on one half (a false reject), in rep 1 DiscoPoP reported a do-all on one half only; one half parallel is 0.63–0.97× the original (`checks/e1b_marginal_replay/`). *Corrected: the first version of this row said the agent's model copied the array* |
 | `s331` | **0** | **5** | a max reduction — `reduction(max: j)` in 4 trials, by hand with `critical` in 1: the pragma DiscoPoP cannot write (T0.13); the agent's pragmas are DiscoPoP's (D23) |
-| `s121` | 0 | 3 | both buffer `a`; in the model alone's 3 FASTER trials the copy is itself a parallel loop (1.3–1.6×), the agent's rewrites used `memcpy` (0.73×, E1 §7) |
-| `s244` | 1 | 3 (1) | all 3 FASTER trials of the model alone remove the dead store (`a[i+1]` is overwritten by the next iteration except at the last) |
+| `s121` | 0 | 3 | both buffer `a` with a loop. In the agent's reps 1, 2, 5 DiscoPoP reported a do-all on both loops, and Phase B's speed check dropped each one ALONE (0.6–1.0×); together they are 1.3–1.4× faster than the original (replay). Rep 3 used `memcpy` (Settle, 0.73×), rep 4 is a slow variant (0.13×). *Corrected: the first version said the agent's rewrites used `memcpy`* |
+| `s244` | 1 | 3 (1) | all 3 FASTER trials of the model alone remove the dead store (`a[i+1]` is overwritten by the next iteration except at the last). The agent's rep 1 had three safe do-alls dropped one by one, together 1.30× (replay); reps 2, 4: TSan rejected DiscoPoP's pragma; rep 3 slow (0.15×) |
 | `s212` `s243` `s1213` | 3, 3, 2 | 4 (1), 3 (1), 2 (2) | similar rates; the model alone's wrong ones are the distributions below |
 | `s252` | **3** | 1 (1) | the agent's scalar expansion vs the model alone's slower or wrong variants |
 | `s112` | **1** | 0 (2) | `s112` is a WAR recurrence: the agent's gate rejected 3 wrong rewrites, the model alone shipped 2 |
@@ -74,7 +75,7 @@ meets too, and are not counted as the model's.
 
 | cause | trials | what the program does |
 |---|---|---|
-| **loop distribution that reverses a dependence** | `s211` reps 1, 2, 3 · `s212` rep 5 · `s241` rep 2 · `s243` rep 3 · `s244` rep 4 · `s1213` rep 2 | the statements are split into two (three) parallel loops in an order where a later loop reads the NEW value of an element the original read OLD (`s212`: `b[i] += a[i+1]*d[i]` after all of `a` was already multiplied), or the reverse (`s211` reps 1–3: `a[i] = b[i-1]…` computed before `b` is updated — the same code in all three, differing only in comments; identical errors). `s1213` rep 2 declares and fills a snapshot `a_old` and then never reads it. Deterministic: wrong at any thread count |
+| **loop distribution that reverses a dependence** | `s211` reps 1, 2, 3 · `s212` rep 5 · `s241` rep 2 · `s243` rep 3 · `s244` rep 4 · `s1213` rep 2 | the statements are split into two (three) parallel loops in an order where a later loop reads the NEW value of an element the original read OLD (`s212`: `b[i] += a[i+1]*d[i]` after all of `a` was already multiplied), or the reverse (`s211` reps 1–3: `a[i] = b[i-1]…` computed before `b` is updated — the same code in all three, differing only in comments; identical errors). `s1213` rep 2 declares and fills a snapshot `a_old` and then never reads it. The order error is deterministic — wrong at any thread count; `s211` reps 1–3 and `s243` rep 3 also carry a WAR race in a later loop, which the gate's TSan flags first (`checks/e1b_race_check/`) |
 | **distribution in the right order, the remaining loop still races** | `s211` reps 4, 5 | `b` first, correctly — but `b[i] = b[i+1] - …` in parallel reads an element another thread may already have overwritten (WAR); dump error 0.04 |
 | **pragma on the unchanged recurrence** | `s112` reps 1, 3 | `#pragma omp parallel for` on `a[i+1] = a[i] + b[i]` running backwards (WAR); error 0.03 |
 | **a race kept inside the parallel loop** | `s241` rep 1 | reads `a[i+1]` into a local first — still racing with the thread that writes it |
@@ -89,10 +90,14 @@ The two invalid trials: `s243` rep 4 reordered the scaffold calls (the timer no 
 the computation; `SCAFFOLD_MODIFIED`, a correct program otherwise), `s244` rep 2 wrote
 `private(i)` for an `i` declared inside the `for` (does not compile).
 
-**What the harness does not check.** The 58 FASTER and 13 parallel-not-faster programs of the
-model alone passed the harness's verification — full value dump on two inputs, digest at 6 and 12
-threads over 5 repeats each — but not TSan or schedule stress, which only the agent's gate runs.
-A race that never changed a printed value is not excluded for them; for the agent's 46 it is.
+**Race-checked afterwards (`checks/e1b_race_check/`).** The harness runs no TSan and no schedule
+variation; the agent's gate does. Every model-alone program was therefore put through the gate's
+own race and output stages on the server (no model), with the agent's 46 parallel programs as the
+control — all 46 clean. Of the model alone's 58 FASTER programs **53 are clean**, 4 are races
+(`s293` reps 1–4: a pragma on `a[i] = a[0]`, benign in effect, a data race nonetheless) and 1
+cannot be judged by the gate (`s341` rep 5 calls the OpenMP runtime, which the gate's first compile
+does not link). Its 13 parallel-not-faster programs are clean; the gate stops all 17 BROKEN ones.
+Race-checked, the model alone is FASTER in 53 of 88 trials, the agent in 44 of 90.
 
 ## Process
 

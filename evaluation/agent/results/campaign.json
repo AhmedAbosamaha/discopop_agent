@@ -17,7 +17,7 @@
    "kind": "experiment",
    "status": "done",
    "question": "What does the pipeline add over handing the program to the same model and asking it to parallelize it? The bare arm's BROKEN count is what the gate prevents; its FASTER count is what DiscoPoP's evidence and the gate's feedback add.",
-   "headline": "TSVC class R, 18 loops × 5, the same model with no DiscoPoP and no gate: a verified parallel program in 71 of 88 trials and FASTER in 58 — more than the agent's 44 of 90 (DiscoPoP alone: 0 of 90) — but a WRONG program shipped in 17 (19 %, in 9 of 18 loops) and a slower one in 12, where the agent shipped 0 of either. Over the model, the pipeline adds trust, not reach; the reach gap sits on s281, s331, s121 and s244, each with a named cause, and is E2's and E3's question."
+   "headline": "TSVC class R, 18 loops × 5, the same model with no DiscoPoP and no gate: FASTER in 58 of 88 trials, 53 of them race-free by the gate's own TSan and schedule matrix (4 benign races on s293, 1 not judgeable) — more than the agent's 44 of 90 (DiscoPoP alone: 0 of 90) — but a WRONG program shipped in 17 (19 %, all 17 stopped by the gate when replayed) and a slower one in 12, where the agent shipped 0 of either. Over the model, the pipeline adds trust, not reach — and most of the reach it loses is lost after the model: Phase B's speed check judges pragmas one at a time and drops sets that only pay together (7 trials recoverable, D33 proposed), the gate's clause stage falsely rejects one half of s281's split (5), DiscoPoP cannot write s331's reduction(max); the rest are rewrites that are slow in themselves."
   },
   {
    "id": "E10",
@@ -589,13 +589,13 @@
    "group": "E1-bare",
    "section": "checks",
    "role": "the gate's race stages (TSan, schedule matrix) and output check over every bare_llm program, with the agent's 46 parallel TSVC programs from E1 as the positive control (tools/race_check.py, server, no model)",
-   "status": "running"
+   "status": "valid"
   },
   "e1b_marginal_replay": {
    "group": "E1-bare",
    "section": "checks",
    "role": "why the agent lost reach: Phase B's speed check replayed (tools/marginal_replay.py, the agent's own measure_marginal) on the 18 E1 trials whose safe DiscoPoP pragmas it dropped as slower, at 6, 12 and all threads, with 3 won trials as controls (server, no model)",
-   "status": "running"
+   "status": "valid"
   }
  },
  "analysis": {

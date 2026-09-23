@@ -28,6 +28,8 @@ Status: done
 | `bare_smoke_mac` | [`E01b_bare_llm/preflight/bare_smoke_mac/`](E01b_bare_llm/preflight/bare_smoke_mac/) | the bare-LLM runner on one loop (s211), Mac | pre-flight | 1 | parallel-not-faster 1 |
 | `e1_bare_a` | [`E01b_bare_llm/runs/e1_bare_a/`](E01b_bare_llm/runs/e1_bare_a/) | TSVC class R, lane A (node 0): 9 loops × bare_llm × 5 | valid | 45 | BROKEN 15, FASTER 21, SCAFFOLD_MODIFIED 1, VERIFY_FAILED 1, parallel-not-faster 7 |
 | `e1_bare_b` | [`E01b_bare_llm/runs/e1_bare_b/`](E01b_bare_llm/runs/e1_bare_b/) | TSVC class R, lane B (node 1): 9 loops × bare_llm × 5 | valid | 45 | BROKEN 2, FASTER 37, parallel-not-faster 6 |
+| `e1b_race_check` | [`E01b_bare_llm/checks/e1b_race_check/`](E01b_bare_llm/checks/e1b_race_check/) | the gate's race stages (TSan, schedule matrix) and output check over every bare_llm program, with the agent's 46 parallel TSVC programs from E1 as the positive control (tools/race_check.py, server, no model) | valid | 0 |  |
+| `e1b_marginal_replay` | [`E01b_bare_llm/checks/e1b_marginal_replay/`](E01b_bare_llm/checks/e1b_marginal_replay/) | why the agent lost reach: Phase B's speed check replayed (tools/marginal_replay.py, the agent's own measure_marginal) on the 18 E1 trials whose safe DiscoPoP pragmas it dropped as slower, at 6, 12 and all threads, with 3 won trials as controls (server, no model) | valid | 0 |  |
 
 ## [E10 — does the speed check keep unnecessary changes out?](E10_speed_check/REPORT.md)
 
