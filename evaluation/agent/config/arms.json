@@ -9,7 +9,8 @@
   "arms": {
     "discopop_gate": {
       "ids": [
-        "E1"
+        "E1",
+        "E2"
       ],
       "description": "DiscoPoP's own suggestions through the agent's gate; no LLM call is ever made (--budget 0). THE BASELINE of the main comparison (D19), so it inherits the same fixed configuration as the agent arm and differs from it only in the model: since 2026-09-20 that includes the speed check at the kernel's timing size, which lets it reject a DiscoPoP pragma that makes the program slower. Runs before that date (e10_dp_alone) applied DiscoPoP's pragmas WITHOUT a speed check -- a weaker baseline; see THESIS_EXPERIMENTS 5l.",
       "flags": [
@@ -687,10 +688,8 @@
       }
     },
     "ev_without_feedback_b1": {
-      "ids": [
-        "E2-C"
-      ],
-      "description": "E2 Part C: full evidence WITHOUT the `feedback` group (failure) \u2014 is the group necessary? Budget 1.",
+      "ids": [],
+      "description": "RETIRED 23 Sep (the author), never run: E2 Part C: full evidence WITHOUT the `feedback` group (failure) \u2014 is the group necessary? Budget 1. At budget 1 a region gets one attempt, so the `failure` section renders only the fixed line 'Why this region is here: DiscoPoP found no applicable parallelism pattern' (a build-fix retry aside) \u2014 this arm would differ from its neighbour by that one sentence. What the gate's feedback is worth is E2 Part B's question (budget 1 vs 3).",
       "flags": [
         "--budget",
         "1",
@@ -718,10 +717,8 @@
       }
     },
     "ev_only_feedback_b1": {
-      "ids": [
-        "E2-C"
-      ],
-      "description": "E2 Part C: ONLY the `feedback` group (failure) \u2014 is the group sufficient? Overlapping sections hide each other in a leave-one-out alone. Budget 1.",
+      "ids": [],
+      "description": "RETIRED 23 Sep (the author), never run: E2 Part C: ONLY the `feedback` group (failure) \u2014 is the group sufficient? Overlapping sections hide each other in a leave-one-out alone. Budget 1. At budget 1 a region gets one attempt, so the `failure` section renders only the fixed line 'Why this region is here: DiscoPoP found no applicable parallelism pattern' (a build-fix retry aside) \u2014 this arm would differ from its neighbour by that one sentence. What the gate's feedback is worth is E2 Part B's question (budget 1 vs 3).",
       "flags": [
         "--budget",
         "1",
@@ -854,6 +851,7 @@
     },
     "E2": {
       "arms": [
+        "discopop_gate",
         "default",
         "full_b1",
         "no_evidence",
@@ -864,7 +862,7 @@
         "budget"
       ],
       "consequences": [],
-      "why": "Evidence x feedback 2x2 (H5, H5b). The evidence-source arms of D16 (`hotspot_only`, `compiler_remarks`) join when --evidence-file exists. Runs on agent v2 (D32, D33, Fixes 91-92) with its OWN `default` arm, in the same run as its other arms (D34, the author, 23 Sep) \u2014 E1's `default` trials are agent v1 and are not E2's reference cell."
+      "why": "Evidence x feedback 2x2 (H5, H5b). The evidence-source arms of D16 (`hotspot_only`, `compiler_remarks`) join when --evidence-file exists. Runs on agent v2 (D32, D33, Fixes 91-92) with its OWN `default` arm, in the same run as its other arms (D34, the author, 23 Sep) \u2014 E1's `default` trials are agent v1 and are not E2's reference cell. `discopop_gate` is in the same runs (D19): D33 also changes Phase B at --budget 0, so DiscoPoP alone is re-measured on v2 rather than taken from E1 (v1)."
     },
     "E3": {
       "arms": [
@@ -975,19 +973,17 @@
         "ev_without_struct_b1",
         "ev_without_where_b1",
         "ev_without_howto_b1",
-        "ev_without_feedback_b1",
         "ev_only_deps_b1",
         "ev_only_sharing_b1",
         "ev_only_struct_b1",
         "ev_only_where_b1",
-        "ev_only_howto_b1",
-        "ev_only_feedback_b1"
+        "ev_only_howto_b1"
       ],
       "variable": [
         "evidence_sections"
       ],
       "consequences": [],
-      "why": "Which PART of DiscoPoP's evidence matters (D16 Part C): six groups, each left OUT of full evidence (necessary?) and given ALONE (sufficient?). Exploratory: effect sizes, not significance tests."
+      "why": "Which PART of DiscoPoP's evidence matters (D16 Part C): six groups, each left OUT of full evidence (necessary?) and given ALONE (sufficient?). Exploratory: effect sizes, not significance tests. N = 3 on the seven loops (the author, 23 Sep). The `feedback` group's two arms were dropped before any E2-C trial (the author, 23 Sep): at budget 1 the group holds one fixed sentence, and the feedback's worth is Part B's question \u2014 five groups, ten arms."
     },
     "E2-D": {
       "arms": [
@@ -1001,7 +997,7 @@
         "prompt_omit"
       ],
       "consequences": [],
-      "why": "Which part of the PROMPT matters (D16 Part D): leave one part out, evidence held at full. Read with gate rejections by stage \u2014 a prompt part may prevent wasted attempts rather than failures."
+      "why": "Which part of the PROMPT matters (D16 Part D): leave one part out, evidence held at full. Read with gate rejections by stage \u2014 a prompt part may prevent wasted attempts rather than failures. N = 3 on the seven loops (the author, 23 Sep)."
     },
     "E1-bare": {
       "arms": [

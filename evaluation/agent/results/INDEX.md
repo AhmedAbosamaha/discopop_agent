@@ -35,7 +35,7 @@ Status: done
 
 ## [E2 — evidence, feedback and model strength](E02_evidence_feedback_model/REPORT.md)
 
-Status: pre-flight
+Status: running
 
 | run | where | what it is | status | trials | outcomes |
 |---|---|---|---|---:|---|
@@ -43,6 +43,8 @@ Status: pre-flight
 | `e2_smoke_b` | [`E02_evidence_feedback_model/preflight/e2_smoke_b/`](E02_evidence_feedback_model/preflight/e2_smoke_b/) | pre-flight smoke on agent v2: tsvc/s281 x every E2/E2-source arm + discopop_gate, Haiku x1 — Fix 91's clause stage end to end, the evidence arms' code paths | pre-flight | 7 | FASTER 3, no-change 4 |
 | `e2_smoke_sonnet` | [`E02_evidence_feedback_model/preflight/e2_smoke_sonnet/`](E02_evidence_feedback_model/preflight/e2_smoke_sonnet/) | pre-flight smoke: claude-sonnet-5 through the harness for the first time on the server (tsvc/s121, s281 x full_b1 x1) — model id, calls and minutes per trial | pre-flight | 2 | FASTER 2 |
 | `e2_v2_paths` | [`E02_evidence_feedback_model/preflight/e2_v2_paths/`](E02_evidence_feedback_model/preflight/e2_v2_paths/) | agent v2's new Phase B paths run end to end, no model: E1's archived D33 and s281 rewrites (pragmas stripped, from e1b_v2_sources) through DiscoPoP -> Phase B -> Settle at --budget 0 (tools/default_arm_ceiling.py LOOP=FILE, server) | pre-flight | 0 |  |
+| `e2_ab_a` | not archived yet | E2 Parts A+B (Haiku): discopop_gate, default, full_b1, no_evidence, no_evidence_b1 x5 on TSVC class R s112 s121 s1213 s127 s211 s212 s241 s243 s244 (node 0) | running |  |  |
+| `e2_ab_b` | not archived yet | E2 Parts A+B (Haiku): discopop_gate, default, full_b1, no_evidence, no_evidence_b1 x5 on TSVC class R s252 s254 s255 s281 s291 s292 s293 s331 s341 (node 1) | running |  |  |
 
 ## [E10 — does the speed check keep unnecessary changes out?](E10_speed_check/REPORT.md)
 
