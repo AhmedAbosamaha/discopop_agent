@@ -172,6 +172,158 @@ def analyse(trials: List[dict], arm: Optional[str] = None) -> Dict[str, Any]:
     return result
 
 
+SLOWER = 1 / figures.WIN_RATIO            # a correct parallel program below this ships a slowdown
+
+
+RACE_STAGES = ("tsan", "schedules")        # what makes a program racy; any other failed stage = not judgeable
+
+
+def _best_speedup(t: dict) -> Optional[float]:
+    """The trial's best kernel speedup over the sequential original (trial.json keeps it per
+    thread count under verify.par; trials.csv's best_speedup is derived the same way)."""
+    if t.get("best_speedup"):
+        return float(t["best_speedup"])
+    par = (t.get("verify") or {}).get("par") or {}
+    sp = [float(v.get("speedup") or v.get("kernel_speedup") or 0) for v in par.values() if isinstance(v, dict)]
+    sp = [x for x in sp if x > 0]
+    return max(sp) if sp else None
+
+
+def _run_of(t: dict) -> str:
+    return str(t.get("run_id") or "")
+
+
+def load_races(paths: Sequence[Path]) -> Dict[Tuple[str, str, str, int], str]:
+    """race_check.py results: (run, benchmark, arm, repeat) -> 'clean' or the stage that failed."""
+    out: Dict[Tuple[str, str, str, int], str] = {}
+    for p in paths:
+        for line in Path(p).read_text().splitlines():
+            if not line.strip():
+                continue
+            r = json.loads(line)
+            parts = str(r.get("trial", "")).split("/")
+            run = parts[parts.index("runs") + 1] if "runs" in parts else ""
+            out[(run, str(r.get("benchmark")), str(r.get("arm")), int(r.get("repeat") or 0))] = str(r.get("verdict"))
+    return out
+
+
+def _wilcoxon(diffs: Sequence[float]) -> Dict[str, Any]:
+    """Two-sided and one-sided (agent ahead) Wilcoxon signed-rank on per-benchmark differences."""
+    nz = [d for d in diffs if abs(d) > 1e-12]
+    out: Dict[str, Any] = {"n_pairs": len(diffs), "n_nonzero": len(nz),
+                           "agent_ahead": sum(1 for d in nz if d > 0), "model_alone_ahead": sum(1 for d in nz if d < 0)}
+    if len(nz) < 6:
+        out["note"] = "fewer than 6 non-zero pairs: no test"
+        return out
+    try:
+        from scipy import stats                      # type: ignore[import-untyped]
+        out["p_two_sided"] = float(stats.wilcoxon(nz, alternative="two-sided", zero_method="wilcox").pvalue)
+        out["p_agent_ahead"] = float(stats.wilcoxon(nz, alternative="greater", zero_method="wilcox").pvalue)
+    except Exception as e:                           # noqa: BLE001 - reported, never hidden
+        out["note"] = f"test not run: {e}"
+    return out
+
+
+def three_way(trials: List[dict], agent_arm: str, bare_arm: str = "bare_llm",
+              races: Optional[Dict[Tuple[str, str, str, int], str]] = None) -> Dict[str, Any]:
+    """D35: DiscoPoP alone · DiscoPoP + agent · the model alone, each against the sequential
+    reference, then the agent against the model alone paired by benchmark.  A program the gate
+    kept passed its race stages already; the model alone's are race-free only where
+    race_check.py says 'clean' (without a race file its FASTER count is output-checked only)."""
+    races = races or {}
+    classes = figures._classes()
+    arms = {"DiscoPoP alone": figures.BASELINE_ARM, "DiscoPoP + agent": agent_arm, "model alone": bare_arm}
+    res: Dict[str, Any] = {"agent_arm": agent_arm, "bare_arm": bare_arm, "race_file": bool(races), "classes": {}}
+    for cls in ("R", "A", "D"):
+        ts = [t for t in trials if classes.get(str(t.get("benchmark")), "") == cls]
+        if not any(t.get("arm") == bare_arm for t in ts):
+            continue
+        benches = sorted({str(t.get("benchmark")) for t in ts if t.get("arm") == bare_arm})
+        block: Dict[str, Any] = {"benchmarks": len(benches), "arms": {}, "per_benchmark": {}}
+        per: Dict[str, Dict[str, Dict[str, int]]] = {b: {} for b in benches}
+        for label, arm in arms.items():
+            at = [t for t in ts if t.get("arm") == arm and str(t.get("benchmark")) in benches]
+            valid = [t for t in at if t.get("outcome") in figures.PARALLEL_OK + ("no-change", "BROKEN")]
+            par = [t for t in valid if t.get("outcome") in figures.PARALLEL_OK]
+            fast = [t for t in valid if t.get("outcome") == "FASTER"]
+
+            def race(t: dict) -> str:
+                if arm != bare_arm:
+                    return "clean"                    # kept by the gate: TSan and the schedule matrix passed
+                return races.get((_run_of(t), str(t.get("benchmark")), str(arm), int(t.get("repeat") or 0)), "unchecked")
+            clean_fast = [t for t in fast if race(t) == "clean"]
+            racy = [t for t in par if race(t) in RACE_STAGES]
+            unjudged = [t for t in par if race(t) not in RACE_STAGES + ("clean", "unchecked")]
+            slower = [t for t in par if (_best_speedup(t) or 1.0) < SLOWER]
+            broken = [t for t in valid if t.get("outcome") == "BROKEN"]
+            sp = [x for x in (_best_speedup(t) for t in fast) if x]
+            block["arms"][label] = {
+                "arm": arm, "trials": len(at), "with_verdict": len(valid),
+                "invalid": sorted({str(t.get("outcome")) for t in at if t not in valid}),
+                "invalid_n": len(at) - len(valid),
+                "parallel": {"k": len(par), "n": len(valid), "wilson95": wilson(len(par), len(valid))},
+                "faster": {"k": len(fast), "n": len(valid), "wilson95": wilson(len(fast), len(valid))},
+                "faster_race_free": {"k": len(clean_fast), "n": len(valid), "wilson95": wilson(len(clean_fast), len(valid))},
+                "faster_race_unchecked": sum(1 for t in fast if race(t) == "unchecked"),
+                "broken": len(broken), "slower_shipped": len(slower), "racy": len(racy),
+                "race_not_judgeable": len(unjudged),
+                "unusable": len({id(t) for t in broken + slower + racy}),
+                "broken_cases": [f"{t.get('benchmark')} rep{t.get('repeat')}" for t in broken],
+                "median_speedup_of_faster": statistics.median(sp) if sp else None,
+            }
+            for b in benches:
+                bt = [t for t in valid if str(t.get("benchmark")) == b]
+                per[b][label] = {"faster": sum(1 for t in bt if t.get("outcome") == "FASTER"),
+                                 "faster_race_free": sum(1 for t in bt if t.get("outcome") == "FASTER" and race(t) == "clean"),
+                                 "broken": sum(1 for t in bt if t.get("outcome") == "BROKEN"), "n": len(bt)}
+        block["per_benchmark"] = per
+        for key in ("faster", "faster_race_free"):
+            diffs = [per[b]["DiscoPoP + agent"][key] / max(1, per[b]["DiscoPoP + agent"]["n"])
+                     - per[b]["model alone"][key] / max(1, per[b]["model alone"]["n"])
+                     for b in benches if per[b].get("DiscoPoP + agent", {}).get("n") and per[b].get("model alone", {}).get("n")]
+            block[f"agent_vs_model_alone_{key}"] = _wilcoxon(diffs)
+        res["classes"][cls] = block
+    return res
+
+
+def three_way_markdown(tw: Dict[str, Any]) -> str:
+    out = ["## The three-way comparison (D35): DiscoPoP alone · DiscoPoP + agent · the model alone", "",
+           f"Agent arm `{tw['agent_arm']}`, model alone `{tw['bare_arm']}`, DiscoPoP alone `{figures.BASELINE_ARM}`; "
+           "the sequential original is the reference (1×). Rates over trials with a verdict. A program the gate kept "
+           "passed its race stages; the model alone's FASTER programs count as race-free only where `race_check.py` "
+           "found them clean" + ("" if tw["race_file"] else " — **no race file given: its race-free count is not established**") + ".", ""]
+    names = {"R": "Class R", "A": "Class A (no-harm control)", "D": "Class D (must-decline control)"}
+    for cls, b in tw["classes"].items():
+        out += [f"### {names.get(cls, cls)} — {b['benchmarks']} benchmarks", "",
+                "| vs the sequential original | " + " | ".join(b["arms"]) + " |",
+                "|---|" + "---:|" * len(b["arms"])]
+        rows = [("verified parallel program", lambda a: _pct(a["parallel"])),
+                ("FASTER (≥ 1.1×)", lambda a: _pct(a["faster"])),
+                ("FASTER and race-free", lambda a: _pct(a["faster_race_free"]) + (f" (+{a['faster_race_unchecked']} unchecked)" if a["faster_race_unchecked"] else "")),
+                ("**BROKEN** (wrong output shipped)", lambda a: f"**{a['broken']}**"),
+                ("correct but slower, shipped (< 0.91×)", lambda a: str(a["slower_shipped"])),
+                ("racy (race check: TSan or the schedule matrix)", lambda a: str(a["racy"]) + (f" (+{a['race_not_judgeable']} not judgeable)" if a["race_not_judgeable"] else "")),
+                ("**unusable programs** (wrong, slower or racy)", lambda a: f"**{a['unusable']}**"),
+                ("no verdict", lambda a: f"{a['invalid_n']}" + (f" ({', '.join(a['invalid'])})" if a["invalid"] else "")),
+                ("median speedup of the FASTER trials", lambda a: f"{a['median_speedup_of_faster']:.2f}×" if a["median_speedup_of_faster"] else "—")]
+        for name, f in rows:
+            out.append(f"| {name} | " + " | ".join(f(a) for a in b["arms"].values()) + " |")
+        out.append("")
+        for key, label in (("faster", "FASTER"), ("faster_race_free", "race-free FASTER")):
+            w = b[f"agent_vs_model_alone_{key}"]
+            out.append(f"- Agent vs model alone, {label} rate per benchmark (Wilcoxon signed-rank, paired): agent ahead on "
+                       f"{w['agent_ahead']}, model alone ahead on {w['model_alone_ahead']}, tied on {w['n_pairs'] - w['n_nonzero']}"
+                       + (f"; p (two-sided) = {w['p_two_sided']:.3g}, p (agent ahead) = {w['p_agent_ahead']:.3g}" if "p_two_sided" in w else f"; {w.get('note', '')}") + ".")
+        out.append("")
+        out += ["| benchmark | " + " | ".join(f"{k} FASTER / race-free / BROKEN" for k in b["arms"]) + " |",
+                "|---|" + "---:|" * len(b["arms"])]
+        for bench, d in b["per_benchmark"].items():
+            out.append(f"| `{bench}` | " + " | ".join(
+                f"{v['faster']} / {v['faster_race_free']} / {v['broken']} of {v['n']}" if v else "—" for v in (d.get(k) for k in b["arms"])) + " |")
+        out.append("")
+    return "\n".join(out)
+
+
 def _pct(d: Dict[str, Any]) -> str:
     lo, hi = d["wilson95"]
     return f"{d['k']} of {d['n']} ({100 * d['k'] / d['n']:.0f} %, 95 % CI {100 * lo:.0f}–{100 * hi:.0f} %)" if d["n"] else "—"
@@ -233,6 +385,11 @@ def main() -> int:
     ap.add_argument("runs", nargs="+")
     ap.add_argument("--arm", default=None, help="agent arm to analyse (default: every non-baseline arm pooled)")
     ap.add_argument("--out", type=Path, default=None)
+    ap.add_argument("--three-way", default=None, metavar="AGENT_ARM",
+                    help="D35: add DiscoPoP alone · this agent arm · the model alone (--bare) against sequential")
+    ap.add_argument("--bare", default="bare_llm", help="the model-alone arm for --three-way")
+    ap.add_argument("--races", type=Path, action="append", default=[],
+                    help="race_check.py results.jsonl for the model alone's programs (repeatable)")
     ap.add_argument("--suite", default=None,
                     help="only benchmarks of this suite (`tsvc`): the PRIMARY set of D30, computed with the "
                          "same statistics as the registered set, never instead of it")
@@ -254,6 +411,9 @@ def main() -> int:
     if a.suite:
         res["suite"] = a.suite
     md = to_markdown(res)
+    if a.three_way:
+        res["three_way"] = three_way(trials, a.three_way, a.bare, load_races(a.races))
+        md += "\n" + three_way_markdown(res["three_way"])
     print(md)
     if a.out:
         a.out.mkdir(parents=True, exist_ok=True)

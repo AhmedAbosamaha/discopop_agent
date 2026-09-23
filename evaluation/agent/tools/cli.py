@@ -245,12 +245,13 @@ def _effective_config(spec: dict, benchmark: str) -> Dict[str, Any]:
     for name in _FIXED_CONFIG_SWITCHES:
         cfg[name] = _last_switch_in(flags, name)
     for opt in ("--budget", "--evidence", "--restructure-depth", "--llm-recon-mode",
-                "--min-runtime-share", "--prompt-omit"):
+                "--min-runtime-share", "--prompt-omit", "--prompt"):
         vals = [flags[i + 1] for i, f in enumerate(flags[:-1]) if f == opt]
         cfg[opt] = vals[-1] if vals else None
     # Added per benchmark by _evidence_file_flags, not in `flags`: without it the launch
     # printout showed compiler_remarks_b1 and no_evidence_b1 as identical (e2_smoke, 23 Sep).
     cfg["--evidence-file"] = spec.get("evidence_file")
+    cfg["runner"] = spec.get("runner", "agent")
     return cfg
 
 
