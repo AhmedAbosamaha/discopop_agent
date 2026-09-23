@@ -93,9 +93,22 @@ def main() -> int:
         flags = [x.split("=", 1)[1] for x in cmd if x.startswith("--timing-cflags=")]
         cands = [json.loads(l) for l in (d / "agent_patches" / "candidates.jsonl").read_text().splitlines() if l.strip()]
         original = (d / "original.c").read_text()
+        # A Phase-A candidate can pass the gate and still be reverted ("DiscoPoP sees a
+        # pattern, but no pragma it generates for it can run — reverting"); candidates.jsonl
+        # does not say so, the log does, in the same order. Only the kept ones are the base.
+        phase_a_log = (d / "agent.log").read_text().split("PHASE B")[0]
+        verdicts: List[bool] = []
+        for line in phase_a_log.splitlines():
+            if "Quality gate PASSED" in line:
+                verdicts.append(True)
+            elif "reverting" in line and verdicts:
+                verdicts[-1] = False
+        passed_a = [c for c in cands if c["phase"] == "A" and c["passed"]]
+        if len(passed_a) != len(verdicts):
+            sys.exit(f"{spec}: {len(passed_a)} passing Phase-A candidates but {len(verdicts)} in the log")
         rewrite = original
-        for c in cands:
-            if c["phase"] == "A" and c["passed"]:
+        for c, kept in zip(passed_a, verdicts):
+            if kept:
                 rewrite = _apply(rewrite, d / "agent_patches" / c["patch"], name)
         pragmas = [c for c in cands if c["phase"] == "B" and c["passed"]]
         states: List[Dict[str, Any]] = []
