@@ -19,6 +19,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from .. import project as project_mod
 from ..args import AgentArguments
 from ..gate import _validate_cached, measure_marginal, noise_floor
+from ..llm import make_diff
 from ..plan import build_candidates, region_fingerprint
 from ..plan import impact as impact_mod
 from ..pragmas import (_already_annotated, _read_tier1_patch,
@@ -118,12 +119,17 @@ def _phase_b(
         print(f"  {len(applied_spans)} loop(s) are already parallel in the source; "
               f"nothing is nested inside them.\n")
 
+    # Pragmas that passed every safety stage but measured slower than the noise
+    # threshold ON THEIR OWN — judged together after the pass (D33).
+    deferred_safe: List[Dict[str, Any]] = []
+
     def annotate(cand: HotspotCandidate, ptype: Optional[str],
                  pattern: Optional[Dict[str, Any]]) -> str:
         """Try ONE of DiscoPoP's patterns for this loop.
 
         Returns "kept", "skipped" (nothing about this pattern — an alternative would
-        fare the same) or "dropped" (this pattern's pragma failed: try the next)."""
+        fare the same), "deferred" (safe but slower alone: judged jointly afterwards,
+        D33) or "dropped" (this pattern's pragma failed: try the next)."""
         project_mod.work_on(args, cand.source_file)
         rid = cand.region.region_id
         pid = pattern.get("pattern_id", "?") if pattern else "?"
@@ -241,9 +247,16 @@ def _phase_b(
                     print(f"└─ DROPPED\n")
                 return "dropped"
             if marginal < threshold:
-                print(f"│  marginal {marginal:.2f}× — costs more than it saves")
-                print(f"└─ DROPPED (slower)\n")
-                return "dropped"
+                # Safe, but slower ALONE.  Not dropped yet (D33): when a rewrite splits
+                # a loop into two or three, each pragma alone can lose while all of them
+                # together win — E1: 7 of the 18 trials this line used to end were 1.2-2.8x
+                # the original with the set (e1b_marginal_replay).  Judged below, jointly.
+                print(f"│  marginal {marginal:.2f}× alone — deferred: judged together with the "
+                      f"other pragmas that do not pay alone (D33)")
+                print(f"└─ DEFERRED (slower alone)\n")
+                deferred_safe.append({"cand": cand, "ptype": ptype, "pid": pid, "pragma": pragma,
+                                      "lines": lines, "res": res, "alone": marginal})
+                return "deferred"
             print(f"│  marginal {marginal:.2f}×")
             if impact is not None and impact.available:
                 impact.observe_speedup(marginal)
@@ -305,4 +318,140 @@ def _phase_b(
             if n + 1 < len(options):
                 print(f"   DiscoPoP reports another pattern for this loop "
                       f"({options[n + 1][0]}) — trying it\n")
+    if deferred_safe and args.require_speedup and not args.dry_run:
+        kept += _judge_jointly(args, dp_dir, output_dir, deferred_safe, applied_spans, threshold,
+                               reference_output, reference_outputs, binary_args, reference_time,
+                               gate_cache, change_log, impact)
+    return kept
+
+
+def _judge_jointly(
+    args: AgentArguments, dp_dir: Path, output_dir: Path, deferred: List[Dict[str, Any]],
+    applied_spans: List[Tuple[Optional[int], int, int]], threshold: float,
+    reference_output: "str | None", reference_outputs: "List[Tuple[List[str], str]] | None",
+    binary_args: "List[str] | None", reference_time: "float | None",
+    gate_cache: Dict[str, Any], change_log: List[Any],
+    impact: "impact_mod.ImpactModel | None",
+) -> List[Dict[str, Any]]:
+    """D33 — the pragmas that were safe but did not pay ALONE, judged as a set.
+
+    Phase B measures each pragma against the state before it, so a pragma that pays
+    only together with another — the two or three loops a rewrite split one loop into —
+    loses every single comparison and the set that wins is never built (E1: 7 of 18
+    such trials, `e1b_marginal_replay`).  Here, per file: apply the deferred pragmas
+    together (outermost first — one nested in another is left out, as in the pass
+    above), re-check the SET for safety (TSan, schedules, output), time it against the
+    state before it with the same paired measurement and threshold, and, if it pays,
+    remove members one at a time while removing one does not make it slower (backward
+    elimination: a member that adds nothing is not shipped).  What is kept lands as ONE
+    change-log entry, so Settle keeps or drops the set as a unit.
+    """
+    kept: List[Dict[str, Any]] = []
+    print(f"┌─ D33 — {len(deferred)} safe pragma(s) did not pay alone; measuring them together")
+    by_file: Dict[str, List[Dict[str, Any]]] = {}
+    for d in deferred:
+        by_file.setdefault(d["cand"].source_file, []).append(d)
+    for source_file, group in by_file.items():
+        project_mod.work_on(args, source_file)
+        path = Path(args.source_file)
+        before = path.read_text()
+        members: List[Dict[str, Any]] = []
+        spans: List[Tuple[int, int]] = []
+        for d in group:
+            r = d["cand"].region
+            if any((f is None or f == r.file_id) and a <= r.start_line and r.end_line <= b
+                   for f, a, b in applied_spans) or \
+               any(a <= r.start_line and r.end_line <= b for a, b in spans):
+                continue                     # nested in a parallel loop: nothing to add
+            members.append(d)
+            spans.append((r.start_line, r.end_line))
+        if len(members) < 2:
+            print(f"│  {Path(source_file).name}: fewer than two to combine — dropped as measured alone")
+            continue
+
+        def build(subset: List[Dict[str, Any]]) -> "str | None":
+            """The file with exactly these pragmas added, each re-derived against the
+            text the previous ones left (they move every line below them)."""
+            try:
+                for d in subset:
+                    diff = _repair_pragma_clauses(derive_pragma_patch(
+                        _read_tier1_patch(dp_dir / "patch_generator" / str(d["pid"])),
+                        args.source_file), args.source_file)
+                    after = _apply_in_memory(diff, args.source_file) if diff else None
+                    if after is None:
+                        return None
+                    path.write_text(after)
+                return path.read_text()
+            finally:
+                path.write_text(before)      # the file itself only changes when the set is kept
+
+        joint = build(members)
+        if joint is None:
+            print(f"│  {path.name}: the set could not be staged — dropped as measured alone")
+            continue
+        joint_diff = make_diff(before, joint, args.source_file)
+        res, _cached, _fp = _validate_cached(
+            gate_cache, joint_diff, args, reference_output, binary_args, reference_time,
+            reference_outputs=reference_outputs, mode="safety")
+        _record_candidate(output_dir, {
+            "phase": "B", "region_id": "joint:" + ",".join(str(d["cand"].region.region_id) for d in members),
+            "passed": res.passed, "stage": res.stage if not res.passed else "joint",
+            "diagnostic": (res.diagnostic or "")[:2000], "pattern_type": "joint",
+            "members": [str(d["cand"].region.region_id) for d in members],
+        }, joint_diff, args.dry_run)
+        if not res.passed:
+            print(f"│  {path.name}: together they fail at '{res.stage}' — all dropped")
+            continue
+        ok_m, ratio, mdiag = measure_marginal(before, joint, args.source_file, binary_args,
+                                              extra_flags=list(args.timing_cflags) or None)
+        if not ok_m or ratio < threshold:
+            why = f"{ratio:.2f}×" if ok_m else f"not measurable ({mdiag[:60]})"
+            print(f"│  {path.name}: {len(members)} together {why} — still costs more than it saves; all dropped")
+            continue
+        print(f"│  {path.name}: {len(members)} together {ratio:.2f}× — the set pays")
+        # Backward elimination: a member whose removal does not slow the set down is dead weight.
+        for d in list(reversed(members)):
+            if len(members) < 2:
+                break
+            rest = [m for m in members if m is not d]
+            without = build(rest)
+            if without is None:
+                continue
+            ok_r, r_rm, _ = measure_marginal(joint, without, args.source_file, binary_args,
+                                             extra_flags=list(args.timing_cflags) or None)
+            if ok_r and r_rm >= threshold:
+                print(f"│    without {d['lines']}: {r_rm:.2f}× the set — adds nothing, left out")
+                members, joint = rest, without
+            else:
+                print(f"│    without {d['lines']}: " + (f"{r_rm:.2f}× the set" if ok_r else "not measurable")
+                      + " — needed")
+        joint_diff = make_diff(before, joint, args.source_file)
+        fps = [region_fingerprint(args.source_file, d["cand"].region.start_line,
+                                  d["cand"].region.end_line, d["cand"].region.name) for d in members]
+        if args.apply_patches and not _apply_to_source(joint_diff, args.source_file,
+                                                       output_dir, "Phase-B"):
+            print(f"│  {path.name}: the set would not apply — dropped")
+            continue
+        if impact is not None and impact.available:
+            impact.observe_speedup(ratio)
+        group_id = "joint:" + ",".join(str(d["cand"].region.region_id) for d in members)
+        for d, fp in zip(members, fps):
+            r = d["cand"].region
+            if impact is not None and impact.available:
+                impact.mark_covered(r.file_id, r.start_line, r.end_line)
+            applied_spans.append((r.file_id, r.start_line, r.end_line))
+            record = {"region_id": r.region_id, "region_type": r.region_type, "phase": "B",
+                      "pattern_id": d["pid"], "pattern_type": d["ptype"], "pragma": d["pragma"],
+                      "lines": d["lines"], "marginal_speedup": d["alone"], "joint_speedup": ratio,
+                      "phase_b_mode": "joint", "joint_group": group_id,
+                      "applied_to_source": bool(args.apply_patches), "evidence": dict(res.evidence)}
+            kept.append(record)
+            _write_record(output_dir, record, args.dry_run)
+        if args.apply_patches:
+            change_log.append({"kind": "pragma", "region_id": group_id, "diff": joint_diff,
+                               "fingerprint": fps[0], "fingerprints": fps,
+                               "region_ids": [d["cand"].region.region_id for d in members],
+                               "file": str(Path(args.source_file).resolve())})
+        print(f"│  {path.name}: {len(members)} pragma(s) APPLIED together")
+    print(f"└─ D33 done\n")
     return kept

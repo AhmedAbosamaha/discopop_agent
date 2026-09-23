@@ -1563,3 +1563,27 @@ Seen on PolyBench `jacobi-2d` (E10, 6 of 6 trials): DiscoPoP claims the two sten
 Arbitration needs a measurement, so it runs only where the run already measures (`--require-speedup`, the campaign default since 2026-09-20). With the check off the collision is left alone.
 
 **Verified:** feature check `pragma-arbitration` reproduces the `jacobi-2d` collision and checks all five outcomes without a model or a compiler — DiscoPoP's pragma taken when faster, the model's kept inside the noise band, the model's kept when DiscoPoP's alternative fails the gate (and the reason recorded), an identical pragma not treated as a collision, and a loop left to Phase B not treated as one. `prompt-truth` and `evidence-enrich` pass with the new wording; mypy 0.
+
+## Fixes 86–90 — recorded in the experiment record
+
+Fixes 86–89 (the exposed loops filtered out before Phase B; the hotspot re-measurement that described the old program; DiscoPoP's mispaired loop counts; Settle's unpaired speed verdict) and Fix 90 (reverted before it ever ran) are documented where they were found, in `evaluation/agent/docs/THESIS_EXPERIMENTS.md` §6, each with its feature check (`new-region-ranking`, `hotspot-remeasure`, `loop-counts`, `settle-paired`).
+
+## Fix 91 — The clause stage refused a correct `private(x)`: a later loop that WRITES the name first reads nothing stale
+
+**Files:** `pragmas/scope.py` (`_read_after` skips a later loop whose body writes the name before any read; new `_body_writes_first`), `benchmark/test_features.py` (`clause`)
+
+**Problem.** `private(x)` / `firstprivate(x)` discard the loop's writes to `x`, so the clause stage rejects them when code after the loop READS `x`. It counted any later mention that is not a plain assignment as a read. E1, `tsvc/s281` reps 2–5: the model split the loop at `LEN/2`, DiscoPoP reported a do-all on both halves with `private(x)`, and the pragma on the first half was refused because the second half mentions `x` — as `x = …` first, then `a[i] = x - 1.0`. The later read sees the value written in its own iteration, never the one the parallel loop discards. With one half parallel the program was 0.63–0.97× the original, so the agent lost `s281` in all five repeats although its model wrote the right rewrite every time (found by E1-bare, `e1b_marginal_replay`).
+
+**Fix.** The same reasoning `init_kill` already applies to `for (j = 0; …)`, one step further in: a later loop whose body's FIRST mention of the name is an unconditional, top-level `name = expr;` with the name absent from `expr` is skipped. Conservative: a write under an `if`, a read before the write, or a read after the later loop (it may run zero times) still count.
+
+**Verified:** feature check `clause` — the `s281` shape accepted; a write only under an `if`, a read before the write and a read after the later loop still rejected; the check fails on the old code. Replay of every archived clause-stage rejection (`evaluation/agent/tools/clause_replay.py`, 25 found, 11 reconstructible): **exactly 4 verdicts change, all `s281` reps 2–5**; the old code flips none of them. mypy 0.
+
+## Fix 92 — A program that calls the OpenMP runtime is judged by the gate, not refused at compile
+
+**Files:** `gate/toolchain.py` (`uses_omp_runtime`, `omp_build_flags`), `gate/patching.py` (`_compile`), `gate/validate.py` (the check build), `gate/timing.py` (`capture_reference`), `gate/equivalence.py` (the numerical noise floor's builds), `benchmark/test_features.py` (`omp-runtime`)
+
+**Problem.** The gate's plain compile — and the reference build, the noise-floor builds and a pragma-free candidate's check build — are made without OpenMP. A program that calls `omp_get_thread_num()` cannot even link that way, so it failed at `compile` whatever it computed. Found by E1-bare's race check: `tsvc/s341` rep 5 of the model alone, harness-verified FASTER, came back from the gate as a `compile` failure.
+
+**Fix.** Those builds add the OpenMP flags when, and only when, the source calls the runtime (`omp_…(`) or includes `<omp.h>`; every other program is still compiled plain.
+
+**Verified:** feature check `omp-runtime` — a per-thread-partial-sum program calling `omp_get_thread_num`/`omp_get_max_threads` passes the gate; the same program with every thread adding into one slot fails at `tsan`; the check fails on the old code. Replay: `s341` rep 5 now receives a verdict — clean, carried by TSan (the schedule matrix saw its output move under `guided`: it relies on two `omp for` loops giving each thread the same iterations, which OpenMP guarantees only with an explicit `schedule(static)`). mypy 0.

@@ -41,7 +41,7 @@ from .patching import _apply, _compile, _compile_variant
 from .schedules import (DEFAULT_REPEATS, DEFAULT_SCHEDULES, DEFAULT_THREADS,
                         stress_schedules, with_runtime_schedule)
 from .timing import _measure_speedup, _run_timed
-from .toolchain import _find_clangpp
+from .toolchain import _find_clangpp, uses_omp_runtime
 from .tsan import _is_omp_barrier_false_positive, _tsan
 
 
@@ -210,7 +210,8 @@ def validate(
             if check_bin is not None:
                 return True, ""
             ok_b, diag_b, binary = _compile_variant(
-                patched, clangpp, work_dir, "check_par", openmp=has_pragma
+                patched, clangpp, work_dir, "check_par",
+                openmp=has_pragma or uses_omp_runtime(patched.read_text())
             )
             check_bin = binary
             return (ok_b and binary is not None), diag_b

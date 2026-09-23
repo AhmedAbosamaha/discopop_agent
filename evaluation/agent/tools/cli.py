@@ -857,6 +857,20 @@ def _parse_agent_log(log: str) -> dict:
         "refresh_full": log.count("[refresh] kind=full"),
         "refresh_fallback": log.count("[refresh] kind=fallback"),
         "runtime_remeasurements": log.count("Re-measured runtimes:"),
+        # D33: pragmas that were safe but slower ALONE, deferred to a joint judgement, and
+        # the sets that judgement kept (one per file). A trial whose win came from a set is
+        # a D33 result — E1 had none, the agent could not build one.
+        "phase_b_deferred": log.count("└─ DEFERRED"),
+        "phase_b_joint_kept": log.count("pragma(s) APPLIED together"),
+        # D32: what the floor (DiscoPoP's own program) decided. `original` — DiscoPoP alone
+        # keeps nothing, so the floor is the original (every class-R loop of E1); `same` — the
+        # finished program is DiscoPoP's own; `agent` — the agent's program kept, not slower
+        # than the floor; `discopop` — the agent's program was slower and DiscoPoP's shipped.
+        # None: no floor was built (the DiscoPoP-alone arm itself, or a run before D32).
+        "dp_floor": ("discopop" if "[floor] shipped DiscoPoP's own program" in log
+                     else "agent" if "[floor] kept the agent's program" in log
+                     else "same" if "[floor] the finished program is DiscoPoP's own" in log
+                     else "original" if "[floor] DiscoPoP alone keeps nothing" in log else None),
         # Gate attribution. Phase A judges the model's rewrites ("Stage 'x' failed"),
         # Phase B judges DiscoPoP's pragmas ("gate failed at 'x'").
         "gate_failures_phase_a": dict(Counter(re.findall(r"Stage '([a-z_]+)' failed", log))),

@@ -9,6 +9,7 @@ barriers and reports every pair of parallel regions as a race.
 from __future__ import annotations
 
 import os
+import re
 import shutil
 from pathlib import Path
 from typing import Dict, List, Optional, Union
@@ -101,6 +102,27 @@ def compiler_for(source: Union[str, Path], clangpp: str) -> str:
     if not is_c_source(source):
         return clangpp
     return _find_clang() or "clang"
+
+
+_OMP_RUNTIME_RE = re.compile(r"\bomp_[a-z_]+\s*\(|#\s*include\s*[<\"]omp\.h[>\"]")
+
+
+def uses_omp_runtime(text: str) -> bool:
+    """Does this source call the OpenMP runtime (`omp_get_thread_num()`, ...) or include
+    <omp.h>?  Such a program cannot even LINK without OpenMP, so the builds that are
+    otherwise made without it — the gate's plain compile, the reference and the check
+    build of a pragma-free candidate — need the OpenMP flags for it, and only for it
+    (Fix 92).  Found by E1-bare's race check: `s341` rep 5 of the model alone calls
+    `omp_get_thread_num` and failed the gate at `compile` whatever it computed."""
+    return bool(_OMP_RUNTIME_RE.search(text))
+
+
+def omp_build_flags() -> List[str]:
+    """`-fopenmp` plus, where the runtime lives outside the compiler (Homebrew's libomp
+    on macOS), its headers and library."""
+    return ["-fopenmp"] + (
+        [f"-I{Path(_LIBOMP_DIR).parent / 'include'}", f"-L{_LIBOMP_DIR}", f"-Wl,-rpath,{_LIBOMP_DIR}"]
+        if Path(_LIBOMP_DIR).exists() else [])
 
 
 def link_flags_for(source: Union[str, Path]) -> List[str]:

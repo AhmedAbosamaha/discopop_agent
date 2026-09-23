@@ -166,8 +166,9 @@ def _settle(
         originals = {str(Path(args.source_file).resolve()): originals}
 
     while True:
-        applied_prints = {c["fingerprint"] for c in keep
-                          if c["kind"] == "pragma" and c.get("fingerprint")}
+        # A D33 set is one entry covering several regions: each of its fingerprints counts.
+        applied_prints = {fp for c in keep if c["kind"] == "pragma"
+                          for fp in (c.get("fingerprints") or [c.get("fingerprint")]) if fp}
         pruned: List[Any] = []
         for ch in keep:
             if ch["kind"] == "pragma":

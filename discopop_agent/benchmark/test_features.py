@@ -467,6 +467,31 @@ def check_clauses(work: Path) -> Result:
     if "private(k) shared(a) reduction(+:acc)" not in repaired or "firstprivate" in repaired:
         return Result("clause checks", "fail",
                       f"clause repair produced {repaired!r}, want private(k) shared(a) reduction(+:acc)")
+    # Fix 91 — a later loop that WRITES the name before reading it does not read the
+    # stale value.  `s281` (E1): the loop split at n/2, DiscoPoP's `private(x)` on the
+    # first half was refused because the second half mentions `x`.  The three
+    # neighbours must still be refused: a write under an `if`, a read before the
+    # write, and a read after the later loop (which may run zero times).
+    split = ("void f(int n, double *a, double *b, double *c) {\n  double x;\n"
+             "  for (int i = 0; i < n / 2; i++) {\n    x = a[n-i-1] + b[i] * c[i];\n"
+             "    a[i] = x - 1.0;\n    b[i] = x;\n  }\n"
+             "  for (int i = n / 2; i < n; i++) {\n%s    a[i] = x - 1.0;\n    b[i] = x;\n  }\n%s}\n")
+    first = "  for (int i = 0; i < n / 2; i++) {\n"
+    for label, second, tail, want in [
+        ("a later loop that writes the scalar first (s281)", "    x = a[n-i-1] + b[i] * c[i];\n", "", False),
+        ("a later loop that writes it only under an if", "    if (b[i] > 0) x = a[n-i-1];\n", "", True),
+        ("a later loop that reads it before writing", "    b[i] += x;\n    x = a[n-i-1];\n", "", True),
+        ("a read after the later loop", "    x = a[n-i-1] + b[i] * c[i];\n", "  a[0] = x;\n", True),
+    ]:
+        text = split % (second, tail)
+        sfile = scope_dir / "split.c"
+        sfile.write_text(text)
+        got = check_pragma_clauses(make_diff(text, text.replace(
+            first, "  #pragma omp parallel for private(x)\n" + first, 1), str(sfile)), str(sfile))
+        if bool(got) != want:
+            return Result("clause checks", "fail",
+                          f"{label}: expected {'rejection' if want else 'acceptance'}, "
+                          f"got {got or 'acceptance'}")
     return Result("clause checks", "pass",
                   f"{len(cases)}/{len(cases)} verdicts correct; "
                   f"{checked} scope cases (distance and one-line bodies) correct")
@@ -1285,6 +1310,56 @@ def check_omp_include(work: Path) -> Result:
     if failed:
         return Result(name, "fail", "; ".join(failed))
     return Result(name, "pass", "C and C++ programs including <omp.h> build with -fopenmp and run")
+
+
+def check_omp_runtime(work: Path) -> Result:
+    """A candidate that CALLS the OpenMP runtime is judged by the gate, not refused at compile.
+
+    The gate's plain compile linked without OpenMP, so `omp_get_thread_num()` failed there
+    whatever the program computed — `s341` rep 5 of E1-bare's model alone, harness-verified
+    FASTER, came back from the gate as a `compile` failure (Fix 92). The same candidate must
+    now reach the race and output stages and pass them; a racy one must still fail there."""
+    from ..gate import validate
+    from ..gate.timing import capture_reference
+    from ..gate.toolchain import _find_clangpp
+    from ..llm import make_diff
+
+    name = "omp runtime"
+    if _find_clangpp() is None:
+        return Result(name, "skip", "no supported clang")
+    d = work / "omp_runtime"
+    d.mkdir(parents=True, exist_ok=True)
+    src = d / "sum.c"
+    orig = ("#include <stdio.h>\nint main(void) {\n    static double a[4000];\n"
+            "    for (int i = 0; i < 4000; i++) a[i] = i;\n    double s = 0;\n"
+            "    for (int i = 0; i < 4000; i++) s += a[i];\n"
+            "    printf(\"%.1f\\n\", s);\n    return 0;\n}\n")
+    src.write_text(orig)
+    ref_out, _t, ref_pairs = capture_reference(str(src))
+    if ref_out is None:
+        return Result(name, "fail", "the original did not build")
+    per_thread = ("#include <stdio.h>\n#include <omp.h>\nint main(void) {\n    static double a[4000];\n"
+                  "    for (int i = 0; i < 4000; i++) a[i] = i;\n    double part[512] = {0};\n"
+                  "    int T = omp_get_max_threads();\n    #pragma omp parallel\n    {\n"
+                  "        int t = omp_get_thread_num();\n        double loc = 0;\n"
+                  "        #pragma omp for\n        for (int i = 0; i < 4000; i++) loc += a[i];\n"
+                  "        part%s += loc;\n    }\n    double s = 0;\n"
+                  "    for (int t = 0; t < T; t++) s += part[t];\n"
+                  "    printf(\"%%.1f\\n\", s);\n    return 0;\n}\n")
+    verdicts = {}
+    for label, text in (("per-thread partial sums", per_thread % "[t]"),
+                        ("every thread adds into part[0]", per_thread % "[0]")):
+        res = validate(make_diff(orig, text, str(src)), str(src), reference_output=ref_out,
+                       reference_outputs=ref_pairs, mode="safety")
+        verdicts[label] = (res.passed, res.stage)
+    good, racy = verdicts["per-thread partial sums"], verdicts["every thread adds into part[0]"]
+    if not good[0]:
+        return Result(name, "fail", f"a correct program calling the runtime failed at '{good[1]}'")
+    if racy[0] or racy[1] in ("compile", "apply"):
+        return Result(name, "fail", f"a racy program calling the runtime was not caught by a race or "
+                                    f"output stage (verdict {racy})")
+    return Result(name, "pass", f"a correct runtime-calling program passes the gate; a racy one fails at "
+                                f"'{racy[1]}'")
 
 
 _TIMING_LOOP = "    for (int i = 0; i < N; i++) a[i] = i;\n"
@@ -2559,6 +2634,178 @@ def check_settle_paired(work: Path) -> Result:
                                 f"slower file rejected ({why_s[:60]})")
 
 
+def check_phase_b_joint(work: Path) -> Result:
+    """D33 — pragmas that do not pay ALONE are judged as a set, and the set lands as one unit.
+
+    E1 (`e1b_marginal_replay`): when a rewrite splits a loop into two, each of DiscoPoP's two
+    pragmas measured alone lost (0.6–1.0×) while both together were 2.5–4× the rewrite, and
+    Phase B — which measures one pragma at a time — dropped both, in 7 of 18 trials. Speed is
+    stood in (scripted by how many pragmas each side carries) and so is the safety gate: the
+    check is about the decision, not about a machine. Four cases: the pair pays → both kept
+    as ONE change-log entry carrying both regions; the pair does not pay → the file is left as
+    it was; a member that adds nothing → left out by the backward elimination; a single
+    deferred pragma → dropped exactly as before D33.
+    """
+    name = "phase-b joint"
+    from types import SimpleNamespace
+    from ..llm import make_diff
+    from ..phases import phase_b as pb
+    from ..types import ValidationResult
+    d = work / "phase_b_joint"
+    d.mkdir(parents=True, exist_ok=True)
+    src = d / "split.c"
+    text = ("void f(int n, double *a, double *b, double *t) {\n"
+            "  for (int i = 0; i < n - 1; i++) {\n    t[i] = a[i + 1] + b[i];\n  }\n"
+            "  for (int i = 0; i < n - 1; i++) {\n    a[i] = t[i];\n  }\n}\n")
+    heads = ["  for (int i = 0; i < n - 1; i++) {\n    t[i]", "  for (int i = 0; i < n - 1; i++) {\n    a[i]"]
+    dp = d / ".discopop"
+    for pid, h in ((1, heads[0]), (2, heads[1])):
+        pdir = dp / "patch_generator" / str(pid)
+        pdir.mkdir(parents=True, exist_ok=True)
+        (pdir / "p.patch").write_text(make_diff(text, text.replace(h, "  #pragma omp parallel for\n" + h, 1),
+                                                str(src)))
+
+    def deferred(which: List[int]) -> List[Dict[str, Any]]:
+        spans = {1: (2, 4), 2: (5, 7)}
+        return [{"cand": SimpleNamespace(source_file=str(src), region=SimpleNamespace(
+                    file_id=1, start_line=spans[p][0], end_line=spans[p][1], region_id=f"1:{p}",
+                    region_type="loop", name=f"loop{p}"), workload_estimate=1000.0),
+                 "ptype": "do_all", "pid": p, "pragma": "#pragma omp parallel for",
+                 "lines": f"{spans[p][0]}–{spans[p][1]}",
+                 "res": ValidationResult(passed=True, stage="accepted"), "alone": 0.8} for p in which]
+
+    def run(which: List[int], pair: float, without_second: float) -> Tuple[str, List[Any], List[Any]]:
+        def fake_measure(before: str, after: str, *a: Any, **k: Any) -> Tuple[bool, float, str]:
+            nb, na = before.count("#pragma omp"), after.count("#pragma omp")
+            if na - nb == 2:
+                return True, pair, ""
+            if na - nb == 1:
+                return True, 0.8, ""
+            if na < nb:                      # a member removed from the set
+                second_gone = "  #pragma omp parallel for\n" + heads[1] not in after
+                return True, (without_second if second_gone else 0.4), ""
+            return True, 1.0, ""
+
+        def fake_gate(*a: Any, **k: Any) -> Tuple[ValidationResult, bool, bool]:
+            return ValidationResult(passed=True, stage="accepted"), False, False
+
+        src.write_text(text)
+        saved = (getattr(pb, "measure_marginal"), getattr(pb, "_validate_cached"))
+        setattr(pb, "measure_marginal", fake_measure)
+        setattr(pb, "_validate_cached", fake_gate)
+        change_log: List[Any] = []
+        args = SimpleNamespace(source_file=str(src), project=None, timing_cflags=(), apply_patches=True,
+                               dry_run=False)
+        try:
+            kept = getattr(pb, "_judge_jointly")(args, dp, d / "out", deferred(which), [], 0.99,
+                                                 None, None, None, None, {}, change_log, None)
+        finally:
+            setattr(pb, "measure_marginal", saved[0])
+            setattr(pb, "_validate_cached", saved[1])
+        return src.read_text(), kept, change_log
+
+    (d / "out").mkdir(exist_ok=True)
+    body, kept, log = run([1, 2], 2.0, 0.4)
+    if body.count("#pragma omp") != 2 or len(kept) != 2 or len(log) != 1 \
+            or len(log[0].get("fingerprints", [])) != 2 or log[0].get("region_ids") != ["1:1", "1:2"]:
+        return Result(name, "fail", f"a pair that pays together: {body.count('#pragma omp')} pragma(s) in the "
+                                    f"file, {len(kept)} record(s), {len(log)} change-log entr(y/ies) — want 2, 2, 1")
+    body, kept, log = run([1, 2], 0.9, 0.4)
+    if body != text or kept or log:
+        return Result(name, "fail", "a pair that does not pay together changed the file")
+    body, kept, log = run([1, 2], 2.0, 1.0)
+    if body.count("#pragma omp") != 1 or len(kept) != 1 or log[0].get("region_ids") != ["1:1"]:
+        return Result(name, "fail", "a member that adds nothing was not left out of the set")
+    body, kept, log = run([1], 2.0, 0.4)
+    if body != text or kept or log:
+        return Result(name, "fail", "a single deferred pragma was kept (it must be dropped as before D33)")
+    src.write_text(text)
+    return Result(name, "pass", "pair paying together kept as one unit; pair not paying left out; dead-weight "
+                                "member eliminated; a lone deferred pragma dropped as before")
+
+
+def check_dp_floor(work: Path) -> Result:
+    """D32 — the agent's program may not end below DiscoPoP's own.
+
+    E1 class A: on `vpvtv` the finished program ran at 2.37× where DiscoPoP alone reached
+    4.08× (worse); on `s000` the rewrite ended slower than the original, Settle reverted
+    everything and DiscoPoP's own 4.03× pragma went with it (lost). Phase B, Settle and the
+    timing are stood in: the check is about the floor's bookkeeping and its decision. The
+    floor is built and the ORIGINAL put back for the agent; with nothing kept by DiscoPoP
+    there is no floor; a slower agent program is replaced by the floor (its records too); a
+    faster one is kept; an identical one is not even timed; and the `s000` shape — the agent
+    back at the original while DiscoPoP's pragma pays — ships DiscoPoP's program.
+    """
+    name = "dp floor"
+    from types import SimpleNamespace
+    from ..phases import floor as fl
+    d = work / "dp_floor"
+    d.mkdir(parents=True, exist_ok=True)
+    src = d / "k.c"
+    orig = "void k(int n, double *a) {\n  for (int i = 0; i < n; i++) a[i] *= 2;\n}\n"
+    dp_prog = orig.replace("  for", "  #pragma omp parallel for\n  for", 1)
+    agent_prog = orig.replace("a[i] *= 2;", "a[i] = a[i] + a[i];", 1)
+    key = str(src.resolve())
+    args = SimpleNamespace(source_file=str(src), project=None, timing_cflags=())
+    gate_cache: Dict[str, Any] = {"__speed_threshold__": 0.99}
+    saved = {n: getattr(fl, n) for n in ("_phase_b", "_settle", "measure_marginal")}
+    timed: List[Tuple[str, str]] = []
+
+    def fake_phase_b(*a: Any, **k: Any) -> List[Dict[str, Any]]:
+        change_log = a[8]
+        if keep_dp:
+            src.write_text(dp_prog)
+            change_log.append({"kind": "pragma", "region_id": "1:2", "diff": "", "fingerprint": "f"})
+            return [{"phase": "B", "region_id": "1:2", "pragma": "#pragma omp parallel for"}]
+        return []
+
+    def fake_settle(originals: Any, log: Any, *a: Any, **k: Any) -> Tuple[List[Any], List[Any]]:
+        return list(log), []
+
+    def fake_measure(before: str, after: str, *a: Any, **k: Any) -> Tuple[bool, float, str]:
+        timed.append((before, after))
+        return True, ratio, ""
+
+    try:
+        setattr(fl, "_phase_b", fake_phase_b)
+        setattr(fl, "_settle", fake_settle)
+        setattr(fl, "measure_marginal", fake_measure)
+        keep_dp = True
+        src.write_text(orig)
+        texts, acc = fl.build_floor(args, d, d, {key: orig}, "", None, None, None,  # type: ignore[arg-type]
+                                    gate_cache, None)
+        if texts is None or texts[key] != dp_prog or src.read_text() != orig or len(acc) != 1:
+            return Result(name, "fail", "the floor was not captured, or the original was not put back")
+        keep_dp = False
+        src.write_text(orig)
+        none_texts, _ = fl.build_floor(args, d, d, {key: orig}, "", None, None, None,  # type: ignore[arg-type]
+                                       gate_cache, None)
+        if none_texts is not None:
+            return Result(name, "fail", "DiscoPoP kept nothing, yet a floor was set")
+        floor_acc = [{"phase": "B", "region_id": "1:2"}]
+        agent_acc = [{"phase": "A", "region_id": "1:1", "tier": 2}]
+        cases = [("agent slower than the floor", agent_prog, 0.6, dp_prog, floor_acc),
+                 ("agent faster than the floor", agent_prog, 1.3, agent_prog, agent_acc),
+                 ("agent program IS the floor", dp_prog, 0.1, dp_prog, agent_acc),
+                 ("s000: agent back at the original", orig, 0.25, dp_prog, floor_acc)]
+        for label, final, ratio, want_disk, want_acc in cases:
+            src.write_text(final)
+            timed.clear()
+            got = fl.apply_floor(args, {key: orig}, {key: dp_prog}, floor_acc, agent_acc,  # type: ignore[arg-type]
+                                 None, gate_cache, d)
+            if src.read_text() != want_disk or got != want_acc:
+                return Result(name, "fail", f"{label}: wrong program or records shipped")
+            if label == "agent program IS the floor" and timed:
+                return Result(name, "fail", "an agent program identical to the floor was timed")
+    finally:
+        for n, f in saved.items():
+            setattr(fl, n, f)
+        src.write_text(orig)
+    return Result(name, "pass", "floor built and original restored; none when DiscoPoP keeps nothing; slower "
+                                "agent program replaced by the floor, faster kept, identical not timed, s000 "
+                                "shape ships DiscoPoP's")
+
+
 _MULTI_BACKEDGE_SRC = r"""
 #include <stdio.h>
 #include <stdlib.h>
@@ -2889,6 +3136,7 @@ _CHECKS: List[Tuple[str, Callable[[Path], Result]]] = [
     ("dep-lines", check_dep_line_resolution),
     ("timing-size", check_timing_size),
     ("omp-include", check_omp_include),
+    ("omp-runtime", check_omp_runtime),
     ("exclude-cxx", check_exclude_cxx),
     ("explorer-multi-backedge", check_explorer_multi_backedge),
     ("profiler-else-loop", check_profiler_else_loop),
@@ -2896,6 +3144,8 @@ _CHECKS: List[Tuple[str, Callable[[Path], Result]]] = [
     ("pragma-arbitration", check_pragma_arbitration),
     ("arg-dependencies", check_arg_dependencies),
     ("settle-paired", check_settle_paired),
+    ("phase-b-joint", check_phase_b_joint),
+    ("dp-floor", check_dp_floor),
 ]
 
 

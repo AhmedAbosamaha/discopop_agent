@@ -28,7 +28,7 @@ import tempfile
 from pathlib import Path
 from typing import List, Optional, Tuple
 
-from .toolchain import _find_clangpp
+from .toolchain import _find_clangpp, uses_omp_runtime
 from .patching import _compile_variant
 
 
@@ -170,7 +170,8 @@ def capture_reference(
         work_dir = Path(tmp)
         dst = work_dir / Path(source_file).name
         shutil.copy2(source_file, dst)
-        ok, _, binary = _compile_variant(dst, clangpp, work_dir, "ref_binary", openmp=False)
+        ok, _, binary = _compile_variant(dst, clangpp, work_dir, "ref_binary",
+                                         openmp=uses_omp_runtime(dst.read_text()))
         if not ok or binary is None:
             return None, None, None
         ok, stdout, best_t, _ = _run_timed(binary, work_dir, binary_args, repeats=3)
@@ -178,7 +179,8 @@ def capture_reference(
             return None, None, None
         if timing_flags:
             ok_t, tdiag, tbin = _compile_variant(dst, clangpp, work_dir, "ref_timing",
-                                                 openmp=False, extra_flags=list(timing_flags))
+                                                 openmp=uses_omp_runtime(dst.read_text()),
+                                                 extra_flags=list(timing_flags))
             if ok_t and tbin is not None:
                 ok_t, _tout, best_t, tdiag = _run_timed(tbin, work_dir, binary_args, repeats=3)
             if not ok_t:

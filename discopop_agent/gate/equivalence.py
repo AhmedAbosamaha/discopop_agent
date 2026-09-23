@@ -296,7 +296,7 @@ def numerical_noise_floor(
     """
     from .patching import _compile_variant     # local: avoids an import cycle
     from .timing import _run_timed
-    from .toolchain import _find_clangpp
+    from .toolchain import _find_clangpp, uses_omp_runtime
 
     import shutil
     import tempfile
@@ -322,7 +322,7 @@ def numerical_noise_floor(
         shutil.copy2(source_file, dst)
         for name, opt, extra in _CALIBRATION_VARIANTS:
             ok, _diag, binary = _compile_variant(
-                dst, clangpp, work, f"floor_{name}", openmp=False,
+                dst, clangpp, work, f"floor_{name}", openmp=uses_omp_runtime(dst.read_text()),
                 optimize=opt, extra_flags=extra,
             )
             if not ok or binary is None:

@@ -71,6 +71,34 @@ def _declared_in(lines: List[str], name: str) -> bool:
     return any(decl.search(ln) for ln in lines)
 
 
+_LOOP_HEAD = re.compile(r"^\s*(?:for|while)\s*\(")
+
+
+def _body_writes_first(lines: List[str], span: "tuple[int, int]", word: "re.Pattern[str]",
+                       assign_only: "re.Pattern[str]") -> bool:
+    """Does the loop at `span` write the name before its body reads it, on every iteration?
+
+    Conservative: only when the FIRST line of the body that mentions the name is a
+    plain assignment to it (`name = expr;`, the name absent from `expr`) at the body's
+    own top level — the indentation of the body's first statement, so the write is
+    not under an `if` and runs on every iteration before anything else can see the
+    name.  Anything subtler counts as a read, which costs at most a rejected pragma.
+    """
+    start, end = span
+    body = lines[start + 1:end + 1]
+    top = next((len(ln) - len(ln.lstrip()) for ln in body
+                if ln.strip() and ln.strip() not in ("{", "}")), None)
+    if top is None:
+        return False                 # a one-line loop: the body sits in the header
+    for ln in body:
+        if not word.search(ln) or ln.lstrip().startswith("#"):
+            continue
+        if assign_only.match(ln) and len(ln) - len(ln.lstrip()) == top:
+            return not word.search(ln.split("=", 1)[1])
+        return False
+    return False
+
+
 def _read_after(lines: List[str], name: str, after_idx: int,
                 stop_indent: "int | None" = None) -> bool:
     """Is `name` READ somewhere after line `after_idx`, before it is redeclared?
@@ -108,6 +136,18 @@ def _read_after(lines: List[str], name: str, after_idx: int,
             stripped = ln.strip()
             if stripped.startswith("}") and (len(ln) - len(ln.lstrip())) <= stop_indent:
                 return False          # left the block the name is declared in
+        # A later loop whose body WRITES the name before anything in it reads it
+        # (Fix 91).  The same reasoning as `init_kill`, one step further in: every
+        # use inside that body sees the value the body itself just wrote, never the
+        # one the parallel loop left behind.  `s281` (E1, reps 2-5): the agent split
+        # the loop at LEN/2, DiscoPoP's `private(x)` on the first half was refused
+        # because the second half mentions `x` — as `x = ...` first, then reads.
+        # Uses AFTER the skipped loop are still examined (it may run zero times).
+        if not word.search(ln) and _LOOP_HEAD.match(ln):
+            span = _loop_span(lines, i)
+            if span is not None and span[1] > i and _body_writes_first(lines, span, word, assign_only):
+                i = span[1] + 1
+                continue
         if not word.search(ln):
             i += 1
             continue

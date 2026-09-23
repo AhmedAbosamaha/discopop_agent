@@ -16,7 +16,8 @@ from pathlib import Path
 from typing import Callable, List, Optional, Tuple
 
 from .. import project as project_mod
-from .toolchain import _LIBOMP_DIR, _macos_sysroot_flag, compiler_for, link_flags_for
+from .toolchain import (_LIBOMP_DIR, _macos_sysroot_flag, compiler_for, link_flags_for,
+                        omp_build_flags, uses_omp_runtime)
 
 
 _HUNK_RE = re.compile(r"^(@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@)(.*)")
@@ -221,7 +222,10 @@ def _apply(diff: str, source_file: str, work_dir: Path) -> Tuple[bool, str, Opti
 def _compile(source: Path, clangpp: str, work_dir: Path) -> Tuple[bool, str]:
     binary = work_dir / "validate_binary"
     extra = link_flags_for(source) + _macos_sysroot_flag()
-    result = run_build(source, clangpp, binary, ["-g", "-O1"] + extra, work_dir)
+    # A program that calls the OpenMP runtime cannot link without it (Fix 92); every
+    # other program is still compiled plain, which is what this stage is for.
+    omp = omp_build_flags() if uses_omp_runtime(source.read_text()) else []
+    result = run_build(source, clangpp, binary, ["-g", "-O1"] + omp + extra, work_dir)
     if result.returncode != 0:
         return False, result.stderr[-2000:]
     return True, ""

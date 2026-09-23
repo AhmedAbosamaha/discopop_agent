@@ -47,7 +47,7 @@ import json
 import os
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Set, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from . import project as project_mod
 from . import viz
@@ -56,6 +56,7 @@ from .gate import (capture_reference, check_pragma_compiles,
                    numerical_noise_floor)
 from .phases import (RunState, _phase_b, _print_banner, _print_candidates,
                      _settle, phase_a)
+from .phases.floor import apply_floor, build_floor
 from .phases.phase_b import SPEED_THRESHOLD_KEY
 from .phases.verdicts import _MARGINAL_NOISE
 from .plan import build_candidates, region_fingerprint
@@ -278,6 +279,20 @@ def run(args: AgentArguments) -> None:
     print("  Initial candidates")
     _print_candidates(candidates)
 
+    # ── The floor: DiscoPoP's own program, which the agent's may not fall below (D32) ──
+    # Built from the ORIGINAL profile, before Phase A changes anything; the arm that IS
+    # DiscoPoP alone (--budget 0) is its own floor and skips it.
+    floor_texts: Optional[Dict[str, str]] = None
+    floor_accepted: List[Dict[str, Any]] = []
+    if (args.budget > 0 and args.require_speedup and args.apply_patches and not args.dry_run
+            and reference_output is not None):
+        print(f"{'='*60}")
+        print(f"  FLOOR — DiscoPoP's own program, as the DiscoPoP-alone arm delivers it (D32)")
+        print(f"{'='*60}")
+        floor_texts, floor_accepted = build_floor(
+            args, dp_dir, output_dir, originals, reference_output, reference_outputs,
+            binary_args, reference_time, gate_cache, impact)
+
     print(f"{'='*60}")
     print(f"  PHASE A — restructure  (the source stays pragma-free)")
     print(f"{'='*60}\n")
@@ -337,7 +352,8 @@ def run(args: AgentArguments) -> None:
 
         # accepted.json must describe the file on disk, not everything that was
         # ever provisionally accepted.
-        kept_pragma_ids = {c["region_id"] for c in survivors if c["kind"] == "pragma"}
+        kept_pragma_ids = {rid for c in survivors if c["kind"] == "pragma"
+                           for rid in (c.get("region_ids") or [c["region_id"]])}
         kept_rewrite_ids = {c["region_id"] for c in survivors if c["kind"] == "rewrite"}
         accepted = [
             r for r in accepted
@@ -346,6 +362,11 @@ def run(args: AgentArguments) -> None:
         ]
         f = output_dir / "accepted.json"
         f.write_text(json.dumps(accepted, indent=2))
+
+    # ── The floor decides last: the agent's program, or DiscoPoP's own if faster (D32) ──
+    if floor_texts is not None:
+        accepted = apply_floor(args, originals, floor_texts, floor_accepted, accepted,
+                               binary_args, gate_cache, output_dir)
 
     # ── Summary ──────────────────────────────────────────────────────────────
     # De-duplicate skipped IDs and drop any that were ultimately accepted in
