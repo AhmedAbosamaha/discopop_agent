@@ -523,66 +523,107 @@ def fig_speedups(plt, trials: List[dict], out: Path) -> Tuple[List[Path], str]:
     return paths, caption
 
 
+CLASS_TITLES = {"R": "R · DiscoPoP alone finds nothing — the claim",
+                "A": "A · parallel as written — the no-harm control",
+                "D": "D · a true recurrence — must decline", "": "unclassified"}
+
+
 def fig_vs_discopop_alone(plt, trials: List[dict], out: Path) -> Tuple[List[Path], str]:
-    """The main comparison as a dumbbell per benchmark: DiscoPoP alone -> DiscoPoP + agent."""
-    rows = [r for r in vs_discopop_alone(trials)
-            if r["verdict"] not in ("no-baseline", "invalid", "not-comparable") and r["timing_comparable"]]
+    """The main comparison, TRIAL BY TRIAL: for every benchmark each repeat of DiscoPoP alone
+    (upper row) and of DiscoPoP + agent (lower row) as its own dot on one speedup axis, grouped by
+    the measured class, with how many repeats of each reached a FASTER program at the right.
+
+    It used to draw one dot per benchmark at the MEDIAN of its repeats, across all classes. That
+    hid most of the result: a loop the agent won in two of five trials sat at 1.00×, and the
+    must-decline controls — where 1.00× is the right answer — read as failures (author, 23 Sep)."""
+    rows = [r for r in vs_discopop_alone(trials) if r["verdict"] not in ("no-baseline", "not-comparable")
+            and r["timing_comparable"] is not False]
     if not rows:
         return [], ""
     series: List[Tuple[str, str]] = []
     for r in rows:
         if (r["arm"], r["model"]) not in series:
             series.append((r["arm"], r["model"]))
-    benches: List[str] = []
+    base: Dict[str, List[dict]] = {}
+    for t in trials:
+        if t.get("arm") == BASELINE_ARM and t.get("kind") != "baseline":
+            base.setdefault(str(t.get("benchmark")), []).append(t)
+    order = {"R": 0, "A": 1, "D": 2, "": 3}
+    by_class: Dict[str, List[str]] = {}
     for r in rows:
-        if r["benchmark"] not in benches:
-            benches.append(r["benchmark"])
+        by_class.setdefault(r.get("class") or "", [])
+        if r["benchmark"] not in by_class[r.get("class") or ""]:
+            by_class[r.get("class") or ""].append(r["benchmark"])
 
-    def _agent(b: str, sm: Tuple[str, str]) -> Optional[float]:
-        v = [r["agent_speedup_vs_seq"] for r in rows
-             if r["benchmark"] == b and (r["arm"], r["model"]) == sm and r["agent_speedup_vs_seq"]]
-        return statistics.median(v) if v else None
+    def _agent(b: str, sm: Tuple[str, str]) -> List[Tuple[float, str]]:
+        return [(r["agent_speedup_vs_seq"] or 1.0, str(r["agent_outcome"])) for r in rows
+                if r["benchmark"] == b and (r["arm"], r["model"]) == sm and r["verdict"] != "invalid"]
 
-    def _dp(b: str) -> Optional[float]:
-        return next((r["dp_alone_speedup_vs_seq"] for r in rows if r["benchmark"] == b), None)
+    def _dp(b: str) -> List[Tuple[float, str]]:
+        return [(_program_speedup_vs_seq(t) or 1.0, str(t.get("outcome"))) for t in base.get(b, [])]
 
-    benches.sort(key=lambda b: -((_agent(b, series[0]) or 0) / (_dp(b) or 1)))
-    fig, axes = plt.subplots(1, len(series), figsize=(4.4 * len(series) + 1.0, 0.7 + 0.3 * len(benches)),
+    def _key(b: str) -> Tuple[float, float]:
+        a = _agent(b, series[0])
+        fast = sum(1 for x, o in a if o == "FASTER") / max(len(a), 1)
+        return (-fast, -(statistics.median([x for x, _ in a]) if a else 0))
+
+    layout: List[Tuple[str, str]] = []          # ("class", title) or ("bench", name)
+    for c in sorted(by_class, key=lambda c: order.get(c, 9)):
+        layout.append(("class", CLASS_TITLES.get(c, c)))
+        layout += [("bench", b) for b in sorted(by_class[c], key=_key)]
+    n = len(layout)
+    fig, axes = plt.subplots(1, len(series), figsize=(5.6 * len(series) + 2.4, 0.9 + 0.36 * n),
                              sharey=True, squeeze=False)
-    xs_all = [x for b in benches for x in ([_dp(b)] + [_agent(b, sm) for sm in series]) if x]
-    lo, hi = min(0.5, min(xs_all) * 0.8), max(4.0, max(xs_all) * 2.2)
+    xs_all = [x for kind, b in layout if kind == "bench" for x, _ in _dp(b) + [p for sm in series for p in _agent(b, sm)]]
+    lo, hi = min(0.5, min(xs_all) * 0.8), max(4.0, max(xs_all) * 1.6)
+    jitter = [0.0, -0.07, 0.07, -0.035, 0.035, -0.1, 0.1]
     for ax, sm in zip(axes[0], series):
         ax.set_xscale("log", base=2)
         ax.axvline(1.0, color=AXIS, linewidth=1)
-        for yi, b in enumerate(benches):
-            d, a = _dp(b), _agent(b, sm)
-            unsafe = any(r["verdict"] == "unsafe" for r in rows
-                         if r["benchmark"] == b and (r["arm"], r["model"]) == sm)
-            if d and a:
-                ax.plot([d, a], [yi, yi], color=AXIS, linewidth=2, zorder=2, solid_capstyle="round")
-            if d:
-                ax.scatter([d], [yi], s=40, color=SERIES[1], edgecolor=SURFACE, linewidth=1.2, zorder=3)
-            if a:
-                ax.scatter([a], [yi], s=40, color=SERIES[0], edgecolor=SURFACE, linewidth=1.2, zorder=4)
-            note = (f"{a / d:.2f}×" if d and a else "—") + ("  (a BROKEN repeat)" if unsafe else "")
-            ax.text(max(x for x in (d, a, 1.0) if x) * 1.18, yi, note, va="center", fontsize=8, color=INK_2)
+        for yi, (kind, b) in enumerate(layout):
+            if kind == "class":
+                ax.text(lo * 1.03, yi, b, va="center", ha="left", fontsize=8.5, color=INK, weight="bold")
+                if yi:
+                    ax.axhline(yi - 0.5, color=AXIS, linewidth=0.8)
+                continue
+            dp, ag = _dp(b), _agent(b, sm)
+            for k, (x, o) in enumerate(dp):
+                ax.scatter([x], [yi - 0.18 + jitter[k % len(jitter)]], s=16, color=SERIES[1],
+                           edgecolor=SURFACE, linewidth=0.6, zorder=3)
+            for k, (x, o) in enumerate(ag):
+                ax.scatter([x], [yi + 0.18 + jitter[k % len(jitter)]], s=16,
+                           color=CRITICAL if o == "BROKEN" else SERIES[0], edgecolor=SURFACE, linewidth=0.6, zorder=4)
+            n_inv = sum(1 for r in rows if r["benchmark"] == b and (r["arm"], r["model"]) == sm
+                        and r["verdict"] == "invalid")
+            fa = sum(1 for _, o in ag if o == "FASTER")
+            fd = sum(1 for _, o in dp if o == "FASTER")
+            broken = sum(1 for _, o in ag if o == "BROKEN")
+            note = (f"agent {fa}/{len(ag)} · DiscoPoP alone {fd}/{len(dp)}"
+                    + (f" · {n_inv} invalid" if n_inv else "") + (f" · {broken} BROKEN" if broken else ""))
+            ax.text(hi * 1.05, yi, note, va="center", fontsize=7.5, color=INK_2)
         ax.set_xlim(lo, hi)
         ticks = [t for t in (0.125, 0.25, 0.5, 1, 2, 4, 8, 16, 32, 64) if lo <= t <= hi]
         ax.set_xticks(ticks, [f"{t:g}×" for t in ticks])
         ax.xaxis.grid(True, color=GRID, linewidth=0.8)
         ax.set_axisbelow(True)
-        ax.set_xlabel("speedup over the sequential original (reference, log scale)")
-        ax.set_title(f"{sm[0]} · {sm[1]}", fontsize=9, color=INK_2)
-    axes[0][0].set_yticks(range(len(benches)), benches)
-    axes[0][0].invert_yaxis()
-    handles = [plt.Line2D([], [], marker="o", linestyle="", color=SERIES[1], markersize=6),
-               plt.Line2D([], [], marker="o", linestyle="", color=SERIES[0], markersize=6)]
-    axes[0][0].legend(handles, ["DiscoPoP alone (its pragmas through the gate, no model)", "DiscoPoP + agent"],
-                      fontsize=8, loc="lower left", bbox_to_anchor=(0, 1.08), ncol=2)
-    caption = ("THE MAIN COMPARISON — DiscoPoP alone against DiscoPoP + agent, per benchmark. Both programs are "
-               "timed against the same sequential original (the reference axis; a program left unchanged sits "
-               "at 1×); the number at the right is agent ÷ DiscoPoP alone, medians over repeats. Rows sorted by "
-               "that ratio. Verdict counts and every pair: vs_discopop_alone.md / .csv.")
+        ax.set_xlabel("each repeat's speedup over the sequential original (log scale)")
+        ax.set_title(f"{sm[0]} · {sm[1]}      faster repeats →", fontsize=9, color=INK_2, loc="right")
+    axes[0][0].set_yticks([i for i, (k, _) in enumerate(layout) if k == "bench"],
+                          [b for k, b in layout if k == "bench"])
+    axes[0][0].set_ylim(n - 0.5, -0.8)
+    handles = [plt.Line2D([], [], marker="o", linestyle="", color=SERIES[1], markersize=5),
+               plt.Line2D([], [], marker="o", linestyle="", color=SERIES[0], markersize=5)]
+    axes[0][0].legend(handles, ["DiscoPoP alone (its pragmas through the gate, no model) — upper dots",
+                                "DiscoPoP + agent — lower dots"],
+                      fontsize=8, loc="lower left", bbox_to_anchor=(0, 1.0 + 0.5 / max(n, 1)), ncol=2)
+    fig.subplots_adjust(right=0.72 if len(series) == 1 else 0.85)
+    caption = ("THE MAIN COMPARISON, trial by trial — every repeat of DiscoPoP alone (upper dots) and of "
+               "DiscoPoP + agent (lower dots) on the same axis: speedup over the sequential original, which "
+               "is the reference both are timed against (a program left unchanged sits at 1×). Grouped by the "
+               "measured class: R is the claim; in A the agent must not do worse than DiscoPoP alone; in D "
+               "declining — 1× — is the correct answer. At the right: in how many repeats each reached a "
+               "FASTER program (≥ 1.1×). Verdicts per trial: vs_discopop_alone.md; statistics: "
+               "main_comparison_stats.md.")
     paths = _save(fig, out, "fig_vs_discopop_alone")
     plt.close(fig)
     return paths, caption

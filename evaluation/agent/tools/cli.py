@@ -1586,7 +1586,11 @@ def cmd_plots(a: argparse.Namespace) -> int:
         sys.exit("no runs")
     out = store.run_dir(ids[0]) / "figures" if len(ids) == 1 and not a.name \
         else AGENT_DIR / "analysis" / (a.name or "_".join(ids))
-    _build_figures(_trials_for_runs(store, ids), out)
+    trials = _trials_for_runs(store, ids)
+    if a.suite:
+        # the primary set of D30 (`tsvc`), drawn beside the registered set — never instead of it
+        trials = [t for t in trials if str(t.get("benchmark", "")).startswith(a.suite + "/")]
+    _build_figures(trials, out)
     return 0
 
 
@@ -1957,6 +1961,7 @@ def main() -> None:
     sp = sub.add_parser("plots", help="trials.csv, gate_failures.csv and thesis figures")
     sp.add_argument("--runs", default=None, help="run id, or comma-separated ids to combine (default: latest)")
     sp.add_argument("--name", default=None, help="output folder under agent/analysis/ when combining")
+    sp.add_argument("--suite", default=None, help="only benchmarks of this suite (e.g. tsvc)")
     sp.set_defaults(func=cmd_plots)
 
     sp = sub.add_parser("rescore", help="re-apply the scaffolding check and outcome rules to a finished run")

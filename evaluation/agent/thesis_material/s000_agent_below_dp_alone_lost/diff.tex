@@ -1,0 +1,22 @@
+\begin{lstlisting}[language=diff,basicstyle=\ttfamily\scriptsize,breaklines=true,caption={tsvc/s000 — no-change (e1_a) — shown: the program the agent built, then dropped (never shipped)}]
+--- original/s000.c
++++ shown/s000.c
+@@ -133,12 +133,16 @@
+ 
+ static real_t kernel_s000(void)
+ {
++    real_t *b_snapshot = (real_t*)malloc((size_t)LEN_1D * sizeof(real_t));
+     for (int nl = 0; nl < R; nl++) {
++        memcpy(b_snapshot, b, (size_t)LEN_1D * sizeof(real_t));
++        #pragma omp parallel for shared(b_snapshot) 
+         for (int i = 0; i < LEN_1D; i++) {
+-            a[i] = b[i] + 1;
++            a[i] = b_snapshot[i] + 1;
+         }
+         pb_mix(nl);
+     }
++    free(b_snapshot);
+     return (real_t)0;
+ }
+ 
+\end{lstlisting}

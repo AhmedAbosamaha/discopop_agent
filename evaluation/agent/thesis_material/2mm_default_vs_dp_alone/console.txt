@@ -1,30 +1,54 @@
-  Quality gate   : Tier-1 = all but speed, no escalation; Tier-2 = full
-  Re-profiling   : full (instrument + run + explore) after every kept rewrite
-  Pragmas        : DiscoPoP writes them in Phase B
-                   → the run beats DiscoPoP by ending with more than 6
+  Initial candidates
 Region ID    Type           Saves    % run    Hot  Tier  Depth  Name
+  3:143      function     13.5 ms    90.9%    YES     2      0  kernel_2mm
+  1:146      loop          6.9 ms    46.1%    YES     1      0  lines 84–90
+  1:149      loop          6.8 ms    46.0%    YES     1      0  lines 85–90
+  1:163      loop          6.7 ms    44.8%    YES     1      0  lines 91–97
+  1:166      loop          6.7 ms    44.8%    YES     1      0  lines 92–97
+  1:153      loop          6.3 ms    42.2%    YES     1      0  lines 88–89
+  1:170      loop          6.2 ms    41.4%    YES     1      0  lines 95–96
+  PHASE A — restructure  (the source stays pragma-free)
+┌─ [depth=0] function 3:143 (lines 71–100)  score=0.0
 │  [Tier-1] No applicable pattern → Tier-2 (LLM)
-│  [Tier-2] Assembling evidence (budget remaining: 2)
 │  [Tier-2] Calling claude-haiku-4-5-20251001...
-│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
 │  [Tier-2] Quality gate PASSED
-│  [Tier-2] Original backed up → 2mm.c.original
 │  [Tier-2] Applied to 2mm.c
-│  [Tier-2] Re-profiling to refresh data and discover new candidates...
 │  [Tier-2] Re-measured runtimes: 25 region(s), 15.6 ms total
-│  [Tier-2] 4 survivor(s) rebuilt, 2 new at depth 1
 │  [Tier-2] DiscoPoP now finds: do_all @ lines 95–96, do_all @ lines 89–90, do_all @ lines 92–97
-│  [Tier-2] Pragma validation deferred to depth 1 (still allowed to restructure)
+└─ ACCEPTED
+┌─ [depth=0] loop 1:149 (lines 86–91)  score=0.0
 │  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+┌─ [depth=0] loop 1:161 (lines 92–97)  score=0.0
 │  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+┌─ [depth=0] loop 1:153 (lines 89–90)  score=0.0
 │  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+┌─ [depth=0] loop 1:165 (lines 95–96)  score=0.0
 │  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+┌─ [depth=1] loop 1:146 (lines 84–98)  score=0.0
 │  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+┌─ [depth=1] function 3:143 (lines 71–101)  score=0.0
 │  [Tier-1] No applicable pattern → Tier-2 (LLM)
 │  [Tier-2] Restructuring not allowed at depth 1 (--restructure-depth=0) → SKIP
-  Timing noise floor on this machine: 0.989 → keep anything at or above 0.979
+└─ SKIPPED
+  PHASE B — annotate  (5 candidate pragma(s))
+┌─ pattern #38  do_all @ lines 84–98  (W=1792)
+│  marginal 12.04×
+│  [Phase-B] Applied to 2mm.c
+└─ APPLIED
+┌─ pattern #37  do_all @ lines 92–97  (W=81920)
+└─ SKIPPED (enclosing loop is already parallel)
+┌─ pattern #35  do_all @ lines 86–91  (W=81920)
+└─ SKIPPED (enclosing loop is already parallel)
+┌─ pattern #36  do_all @ lines 95–96  (W=2097152)
+└─ SKIPPED (enclosing loop is already parallel)
+┌─ pattern #34  do_all @ lines 89–90  (W=2097152)
+└─ SKIPPED (enclosing loop is already parallel)
+  SETTLING — verify the finished source, drop what does not hold up
+  [ok] finished source verified — output matches, 505.1 ms vs 6745.7 ms original
   SUMMARY: 1 rewrite(s) kept  |  1 pragma(s) applied  |  0 skipped
-  DiscoPoP unaided: 6 usable pragma(s) in this profile's draw  →  this run: 1   [BELOW, informational]
-    ✓  function 3:143  [Tier-2]  depth=0
     ✓  loop 1:146  [Phase-B pragma]  depth=0  marginal 12.04×
-  Results → .discopop/agent_patches/accepted.json

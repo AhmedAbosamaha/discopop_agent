@@ -1,0 +1,12 @@
+\begin{lstlisting}[language=diff,basicstyle=\ttfamily\scriptsize,breaklines=true,caption={polybench/floyd-warshall — attempt 2 of 3, rejected by the gate at 'tsan': Race detected: / WARNING: ThreadSanitizer: data race (pid=3289105)}]
+--- original/floyd-warshall.c
++++ rejected/floyd-warshall.c
+@@ -59,6 +59,7 @@
+   int i, j, k;
+ 
+ #pragma scop
++  #pragma omp parallel for firstprivate(n,path) private(j,i) 
+   for (k = 0; k < _PB_N; k++)
+     {
+       for(i = 0; i < _PB_N; i++)
+\end{lstlisting}

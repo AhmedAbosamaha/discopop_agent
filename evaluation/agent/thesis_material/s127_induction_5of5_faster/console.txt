@@ -1,29 +1,39 @@
-  Quality gate   : Tier-1 = all but speed, no escalation; Tier-2 = full
-  Re-profiling   : full (instrument + run + explore) after every kept rewrite
-  Pragmas        : DiscoPoP writes them in Phase B
-                   → the run beats DiscoPoP by ending with more than 1
+  Initial candidates
 Region ID    Type           Saves    % run    Hot  Tier  Depth  Name
+  1:81       loop          1.6 ms    55.9%    YES     1      0  lines 137–146
+  1:79       function      1.6 ms    55.9%    YES     2      0  kernel_s127
+  1:85       loop          1.6 ms    55.7%    YES     2      0  lines 139–144
+  PHASE A — restructure  (the source stays pragma-free)
+┌─ [depth=0] loop 1:81 (lines 137–146)  score=0.0
 │  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+┌─ [depth=0] function 1:79 (lines 134–147)  score=0.0
 │  [Tier-1] No applicable pattern → Tier-2 (LLM)
-│  [Tier-2] Assembling evidence (budget remaining: 2)
 │  [Tier-2] Calling claude-haiku-4-5-20251001...
-│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
 │  [Tier-2] Quality gate PASSED
-│  [Tier-2] Original backed up → s127.c.original
 │  [Tier-2] Applied to s127.c
-│  [Tier-2] Re-profiling to refresh data and discover new candidates...
 │  [Tier-2] Re-measured runtimes: 16 region(s), 2.9 ms total
-│  [Tier-2] 0 survivor(s) rebuilt, 3 new at depth 1
 │  [Tier-2] DiscoPoP now finds: do_all @ lines 137–140, do_all @ lines 136–142
-│  [Tier-2] Pragma validation deferred to depth 1 (still allowed to restructure)
+└─ ACCEPTED
+┌─ [depth=1] loop 1:81 (lines 136–142)  score=0.0
 │  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+┌─ [depth=1] function 1:79 (lines 134–143)  score=0.0
 │  [Tier-1] No applicable pattern → Tier-2 (LLM)
 │  [Tier-2] Restructuring not allowed at depth 1 (--restructure-depth=0) → SKIP
+└─ SKIPPED
+┌─ [depth=1] loop 1:84 (lines 137–140)  score=0.0
 │  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
-  Timing noise floor on this machine: 0.985 → keep anything at or above 0.975
+└─ DEFERRED
+  PHASE B — annotate  (2 candidate pragma(s))
+┌─ pattern #122  do_all @ lines 136–142  (W=288)
 │  gate failed at 'tsan': Race detected: WARNING: ThreadSanitizer: data race (pid=3470197)   Write of size 8 at 0x7ffff7c20000 by thread T19:     #0 kernel_s127.omp_outlined_de
+└─ DROPPED
+┌─ pattern #121  do_all @ lines 137–140  (W=2304000)
+│  marginal 4.19×
+│  [Phase-B] Applied to s127.c
+└─ APPLIED
+  SETTLING — verify the finished source, drop what does not hold up
+  [ok] finished source verified — output matches, 162.3 ms vs 731.7 ms original
   SUMMARY: 1 rewrite(s) kept  |  1 pragma(s) applied  |  0 skipped
-  DiscoPoP unaided: 1 usable pragma(s) in this profile's draw  →  this run: 1   [MATCHED, informational]
-    ✓  function 1:79  [Tier-2]  depth=0
     ✓  loop 1:84  [Phase-B pragma]  depth=0  marginal 4.19×
-  Results → .discopop/agent_patches/accepted.json

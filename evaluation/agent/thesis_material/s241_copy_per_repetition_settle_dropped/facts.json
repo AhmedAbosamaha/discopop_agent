@@ -4,7 +4,22 @@
   "benchmark": "tsvc/s241",
   "arm": "default",
   "model": "claude-haiku-4-5-20251001",
+  "repeat": 2,
   "outcome": "no-change",
+  "vs_discopop_alone": {
+    "verdict": "neither",
+    "class": "R",
+    "dp_alone_trials": 5,
+    "dp_alone_outcomes": "no-change,no-change,no-change,no-change,no-change",
+    "dp_alone_speedup_vs_seq": 1.0,
+    "agent_outcome": "no-change",
+    "agent_speedup_vs_seq": 1.0,
+    "agent_vs_dp_alone": 1.0,
+    "timing_comparable": true,
+    "baseline_runs": [
+      "e1_r_a"
+    ]
+  },
   "llm_calls": 1,
   "agent_s": 737.9,
   "verify_size": "EXTRALARGE",
@@ -21,5 +36,35 @@
   "rewrites_kept": 0,
   "scaffold_ok": true,
   "package_integrity_ok": true,
-  "change": {}
+  "change": {},
+  "shown": {
+    "what": "the program the agent built, then dropped (never shipped)",
+    "rebuilt_from": "agent_patches: kept rewrites + gate-passed pragmas",
+    "patches_not_applicable": [],
+    "what_happened": [
+      "pattern #122  do_all @ lines 140\u2013142  (W=511984): APPLIED (marginal 1.08\u00d7)",
+      "pattern #123  do_all @ lines 144\u2013146  (W=511984): APPLIED (marginal 1.21\u00d7)",
+      "[repair] slower than the original: 4061.1 ms vs 1114.9 ms (beyond the 3% noise allowance)",
+      "[repair] slower than the original: 4798.7 ms vs 1114.9 ms (beyond the 3% noise allowance)",
+      "Dropped 3 change(s):",
+      "\u00b7 pragma for 1:91 \u2014 dropped because slower than the original: 4061.1 ms vs 1114.9 ms (beyond the 3% noise allowance)",
+      "\u00b7 pragma for 1:86 \u2014 dropped because slower than the original: 4798.7 ms vs 1114.9 ms (beyond the 3% noise allowance)",
+      "\u00b7 rewrite of 1:81 \u2014 exposed 2 region(s), none kept a pragma"
+    ],
+    "change": {
+      "file": "s241.c",
+      "change_kind": "restructuring",
+      "code_lines_added": 6,
+      "code_lines_removed": 1,
+      "lines_before": 176,
+      "lines_after": 186,
+      "lines_removed": 1,
+      "lines_added": 11,
+      "pragmas_added": 2,
+      "candidates_judged": 3,
+      "candidates_kept": 3,
+      "rejected_at": [],
+      "deepest_restructuring_level_kept": 0
+    }
+  }
 }

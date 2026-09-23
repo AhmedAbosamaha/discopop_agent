@@ -1,64 +1,33 @@
-  Quality gate   : Tier-1 = all but speed, no escalation; Tier-2 = full
-  Speedup gate   : OFF (--no-require-speedup)
-  Re-profiling   : fast refresh (compile only) between rewrites; full before a deeper level and before Phase B
-                   → the run beats DiscoPoP by ending with more than 0
+  Initial candidates
 Region ID    Type           Saves    % run    Hot  Tier  Depth  Name
+  1:64       loop         22.1 ms    54.1%    YES     2      0  lines 63–68
+  1:67       loop         22.1 ms    54.1%    YES     2      0  lines 64–68
+  3:61       function     22.1 ms    54.1%    YES     2      0  kernel_seidel_2d
+  1:70       loop         21.9 ms    53.7%    YES     2      0  lines 65–68
+  PHASE A — restructure  (the source stays pragma-free)
+┌─ [depth=0] loop 1:64 (lines 63–68)  score=0.0
 │  [Tier-1] No applicable pattern → Tier-2 (LLM)
-│  [Tier-2] Assembling evidence (budget remaining: 2)
 │  [Tier-2] Calling claude-haiku-4-5-20251001...
-│  [Tier-2] Diff received with 4 pragma(s) — running quality gate (apply/compile/openmp/TSan/output)
-│  [Tier-2] Stage 'correctness' failed: Program output changed for input '7' — the patched program is NOT semantically equivalent to the original. This input differs from the one the profile was taken on: the rewrite is right for the profil
-│  [Tier-2] Assembling evidence (budget remaining: 1)
 │  [Tier-2] Calling claude-haiku-4-5-20251001...
-│  [Tier-2] Diff received with 2 pragma(s) — running quality gate (apply/compile/openmp/TSan/output)
-│  [Tier-2] Stage 'tsan' failed: Race detected: WARNING: ThreadSanitizer: data race (pid=2159039)   Write of size 4 at 0x7fffffffe6fc by thread T8:     #0 kernel_seidel_2d.omp_outlined_debug__ /tmp/dp_agent_val_kmjemptz/_dp_proj_tsan
-│  [Tier-2] Assembling evidence (budget remaining: 0)
 │  [Tier-2] Calling claude-haiku-4-5-20251001...
-│  [Tier-2] Diff received with 2 pragma(s) — running quality gate (apply/compile/openmp/TSan/output)
-│  [Tier-2] Stage 'correctness' failed: Program output changed for input '7' — the patched program is NOT semantically equivalent to the original. This input differs from the one the profile was taken on: the rewrite is right for the profil
+└─ SKIPPED (budget exhausted)
+┌─ [depth=0] loop 1:67 (lines 64–68)  score=0.0
 │  [Tier-1] No applicable pattern → Tier-2 (LLM)
-│  [Tier-2] Assembling evidence (budget remaining: 2)
 │  [Tier-2] Calling claude-haiku-4-5-20251001...
-│  [Tier-2] Diff received with 2 pragma(s) — running quality gate (apply/compile/openmp/TSan/output)
-│  [Tier-2] Stage 'correctness' failed: Program output changed for input '7' — the patched program is NOT semantically equivalent to the original. This input differs from the one the profile was taken on: the rewrite is right for the profil
-│  [Tier-2] Assembling evidence (budget remaining: 1)
 │  [Tier-2] Calling claude-haiku-4-5-20251001...
-│  [Tier-2] Diff received with 2 pragma(s) — running quality gate (apply/compile/openmp/TSan/output)
-│  [Tier-2] Stage 'correctness' failed: Program output changed for input '7' — the patched program is NOT semantically equivalent to the original. This input differs from the one the profile was taken on: the rewrite is right for the profil
-│  [Tier-2] Assembling evidence (budget remaining: 0)
 │  [Tier-2] Calling claude-haiku-4-5-20251001...
-│  [Tier-2] Diff received with 2 pragma(s) — running quality gate (apply/compile/openmp/TSan/output)
-│  [Tier-2] Stage 'tsan' failed: Race detected: WARNING: ThreadSanitizer: data race (pid=2162825)   Read of size 8 at 0x7ffff4f98fe8 by thread T18:     #0 kernel_seidel_2d.omp_outlined_debug__ /tmp/dp_agent_val_i944g62v/_dp_proj_tsan
+└─ SKIPPED (budget exhausted)
+┌─ [depth=0] function 3:61 (lines 56–71)  score=0.0
 │  [Tier-1] No applicable pattern → Tier-2 (LLM)
-│  [Tier-2] Assembling evidence (budget remaining: 2)
 │  [Tier-2] Calling claude-haiku-4-5-20251001...
-│  [Tier-2] Diff received with 2 pragma(s) — running quality gate (apply/compile/openmp/TSan/output)
-│  [Tier-2] Stage 'tsan' failed: Race detected: WARNING: ThreadSanitizer: data race (pid=2163251)   Read of size 8 at 0x7ffff4f1f6a0 by thread T12:     #0 kernel_seidel_2d.omp_outlined_debug__ /tmp/dp_agent_val_ggfi_ew4/_dp_proj_tsan
-│  [Tier-2] Assembling evidence (budget remaining: 1)
 │  [Tier-2] Calling claude-haiku-4-5-20251001...
-│  [Tier-2] Diff received with 2 pragma(s) — running quality gate (apply/compile/openmp/TSan/output)
-│  [Tier-2] Stage 'correctness' failed: Program output changed for input '7' — the patched program is NOT semantically equivalent to the original. This input differs from the one the profile was taken on: the rewrite is right for the profil
-│  [Tier-2] Assembling evidence (budget remaining: 0)
 │  [Tier-2] Calling claude-haiku-4-5-20251001...
-│  [Tier-2] Diff received with 4 pragma(s) — running quality gate (apply/compile/openmp/TSan/output)
-│  [Tier-2] Stage 'tsan' failed: Race detected: WARNING: ThreadSanitizer: data race (pid=2164718)   Write of size 4 at 0x7fffffffe724 by thread T4:     #0 kernel_seidel_2d.omp_outlined_debug__ /tmp/dp_agent_val_0n8qu9we/_dp_proj_tsan
+└─ SKIPPED (budget exhausted)
+┌─ [depth=0] loop 1:70 (lines 65–68)  score=0.0
 │  [Tier-1] No applicable pattern → Tier-2 (LLM)
-│  [Tier-2] Assembling evidence (budget remaining: 2)
 │  [Tier-2] Calling claude-haiku-4-5-20251001...
-│  [Tier-2] Diff received with 2 pragma(s) — running quality gate (apply/compile/openmp/TSan/output)
-│  [Tier-2] Stage 'correctness' failed: Program output changed for input '7' — the patched program is NOT semantically equivalent to the original. This input differs from the one the profile was taken on: the rewrite is right for the profil
-│  [Tier-2] Assembling evidence (budget remaining: 1)
 │  [Tier-2] Calling claude-haiku-4-5-20251001...
-│  [Tier-2] Diff received with 2 pragma(s) — running quality gate (apply/compile/openmp/TSan/output)
-│  [Tier-2] Stage 'correctness' failed: Program output changed for input '7' — the patched program is NOT semantically equivalent to the original. This input differs from the one the profile was taken on: the rewrite is right for the profil
-│  [Tier-2] Assembling evidence (budget remaining: 0)
 │  [Tier-2] Calling claude-haiku-4-5-20251001...
-│  [Tier-2] Diff received with 2 pragma(s) — running quality gate (apply/compile/openmp/TSan/output)
-│  [Tier-2] Stage 'correctness' failed: Program output changed for input '7' — the patched program is NOT semantically equivalent to the original. This input differs from the one the profile was taken on: the rewrite is right for the profil
+└─ SKIPPED (budget exhausted)
+  PHASE B — annotate  (0 candidate pragma(s))
   SUMMARY: 0 rewrite(s) kept  |  0 pragma(s) applied  |  4 skipped
-  DiscoPoP unaided: 0 usable pragma(s) in this profile's draw  →  this run: 0   [MATCHED, informational]
-    ✗  1:64  [skipped]  depth=0
-    ✗  1:67  [skipped]  depth=0
-    ✗  3:61  [skipped]  depth=0
-    ✗  1:70  [skipped]  depth=0
-  Results → .discopop/agent_patches/accepted.json

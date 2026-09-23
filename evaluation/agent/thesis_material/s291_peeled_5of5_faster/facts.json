@@ -4,7 +4,22 @@
   "benchmark": "tsvc/s291",
   "arm": "default",
   "model": "claude-haiku-4-5-20251001",
+  "repeat": 1,
   "outcome": "FASTER",
+  "vs_discopop_alone": {
+    "verdict": "gained",
+    "class": "R",
+    "dp_alone_trials": 5,
+    "dp_alone_outcomes": "no-change,no-change,no-change,no-change,no-change",
+    "dp_alone_speedup_vs_seq": 1.0,
+    "agent_outcome": "FASTER",
+    "agent_speedup_vs_seq": 3.938,
+    "agent_vs_dp_alone": 3.938,
+    "timing_comparable": true,
+    "baseline_runs": [
+      "e1_r_b"
+    ]
+  },
   "llm_calls": 1,
   "agent_s": 162.5,
   "verify_size": "EXTRALARGE",
@@ -37,5 +52,23 @@
       "tsan"
     ],
     "deepest_restructuring_level_kept": 0
+  },
+  "shown": {
+    "what": "the final program",
+    "rejected_attempt": {
+      "attempt": 2,
+      "of": 3,
+      "stage": "tsan",
+      "diagnostic": [
+        "Race detected:",
+        "WARNING: ThreadSanitizer: data race (pid=3367415)",
+        "  Write of size 8 at 0x7ffff7c20000 by thread T16:"
+      ],
+      "rejected_at": {
+        "correctness": 0,
+        "tsan": 1,
+        "schedules": 0
+      }
+    }
   }
 }

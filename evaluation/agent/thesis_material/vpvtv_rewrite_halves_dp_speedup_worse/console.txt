@@ -1,30 +1,34 @@
-  Quality gate   : Tier-1 = all but speed, no escalation; Tier-2 = full
-  Re-profiling   : full (instrument + run + explore) after every kept rewrite
-  Pragmas        : DiscoPoP writes them in Phase B
-                   → the run beats DiscoPoP by ending with more than 1
+  Initial candidates
 Region ID    Type           Saves    % run    Hot  Tier  Depth  Name
+  1:81       loop          1.5 ms    51.0%    YES     2      0  lines 136–141
+  1:79       function      1.5 ms    51.0%    YES     2      0  kernel_vpvtv
+  1:84       loop          1.5 ms    50.9%    YES     1      0  lines 137–139
+  PHASE A — restructure  (the source stays pragma-free)
+┌─ [depth=0] loop 1:81 (lines 136–141)  score=0.0
 │  [Tier-1] No applicable pattern → Tier-2 (LLM)
-│  [Tier-2] Assembling evidence (budget remaining: 2)
 │  [Tier-2] Calling claude-haiku-4-5-20251001...
-│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
 │  [Tier-2] Quality gate PASSED
-│  [Tier-2] Original backed up → vpvtv.c.original
 │  [Tier-2] Applied to vpvtv.c
-│  [Tier-2] Re-profiling to refresh data and discover new candidates...
 │  [Tier-2] Re-measured runtimes: 16 region(s), 3.2 ms total
-│  [Tier-2] 0 survivor(s) rebuilt, 3 new at depth 1
 │  [Tier-2] DiscoPoP now finds: do_all @ lines 142–144
-│  [Tier-2] Pragma validation deferred to depth 1 (still allowed to restructure)
+└─ ACCEPTED
+┌─ [depth=1] loop 1:84 (lines 141–151)  score=0.0
 │  [Tier-1] No applicable pattern → Tier-2 (LLM)
 │  [Tier-2] Restructuring not allowed at depth 1 (--restructure-depth=0) → SKIP
+└─ SKIPPED
+┌─ [depth=1] function 1:79 (lines 134–155)  score=0.0
 │  [Tier-1] No applicable pattern → Tier-2 (LLM)
 │  [Tier-2] Restructuring not allowed at depth 1 (--restructure-depth=0) → SKIP
+└─ SKIPPED
+┌─ [depth=1] loop 1:87 (lines 142–144)  score=0.0
 │  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
-  Timing noise floor on this machine: 0.996 → keep anything at or above 0.986
+└─ DEFERRED
+  PHASE B — annotate  (1 candidate pragma(s))
+┌─ pattern #122  do_all @ lines 142–144  (W=3072000)
+│  marginal 2.65×
+│  [Phase-B] Applied to vpvtv.c
+└─ APPLIED
+  SETTLING — verify the finished source, drop what does not hold up
+  [ok] finished source verified — output matches, 336.0 ms vs 744.3 ms original
   SUMMARY: 1 rewrite(s) kept  |  1 pragma(s) applied  |  2 skipped
-  DiscoPoP unaided: 1 usable pragma(s) in this profile's draw  →  this run: 1   [MATCHED, informational]
-    ✓  loop 1:81  [Tier-2]  depth=0
     ✓  loop 1:87  [Phase-B pragma]  depth=0  marginal 2.65×
-    ✗  1:84  [skipped]  depth=1
-    ✗  1:79  [skipped]  depth=1
-  Results → .discopop/agent_patches/accepted.json

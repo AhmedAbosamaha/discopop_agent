@@ -4,7 +4,20 @@
   "benchmark": "polybench/lu",
   "arm": "full",
   "model": "claude-haiku-4-5-20251001",
+  "repeat": 1,
   "outcome": "parallel-not-faster",
+  "vs_discopop_alone": {
+    "verdict": "no-baseline",
+    "class": "A",
+    "dp_alone_trials": 0,
+    "dp_alone_outcomes": "",
+    "dp_alone_speedup_vs_seq": null,
+    "agent_outcome": "parallel-not-faster",
+    "agent_speedup_vs_seq": 0.205,
+    "agent_vs_dp_alone": null,
+    "timing_comparable": null,
+    "baseline_runs": []
+  },
   "llm_calls": 1,
   "agent_s": 167.5,
   "verify_size": "LARGE",
@@ -37,5 +50,23 @@
       "correctness"
     ],
     "deepest_restructuring_level_kept": 0
+  },
+  "shown": {
+    "what": "the final program",
+    "rejected_attempt": {
+      "attempt": 2,
+      "of": 2,
+      "stage": "correctness",
+      "diagnostic": [
+        "Program output changed for input '7' \u2014 the patched program is NOT semantically equivalent to the original.",
+        "This input differs from the one the profile was taken on: the rewrite is right for the profiled size but wrong here, which usually means a loop bound, an initial value, or a boundary case was carried over from the old schedule instead of re-derived.",
+        "output differs and no numerical slack is in effect"
+      ],
+      "rejected_at": {
+        "correctness": 1,
+        "tsan": 0,
+        "schedules": 0
+      }
+    }
   }
 }

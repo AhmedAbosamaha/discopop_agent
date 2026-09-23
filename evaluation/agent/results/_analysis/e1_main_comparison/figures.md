@@ -5,7 +5,7 @@ Data: `trials.csv` (one row per trial), `gate_failures.csv` (long format), `vs_d
 
 ## `fig_vs_discopop_alone.pdf`
 
-THE MAIN COMPARISON — DiscoPoP alone against DiscoPoP + agent, per benchmark. Both programs are timed against the same sequential original (the reference axis; a program left unchanged sits at 1×); the number at the right is agent ÷ DiscoPoP alone, medians over repeats. Rows sorted by that ratio. Verdict counts and every pair: vs_discopop_alone.md / .csv.
+THE MAIN COMPARISON, trial by trial — every repeat of DiscoPoP alone (upper dots) and of DiscoPoP + agent (lower dots) on the same axis: speedup over the sequential original, which is the reference both are timed against (a program left unchanged sits at 1×). Grouped by the measured class: R is the claim; in A the agent must not do worse than DiscoPoP alone; in D declining — 1× — is the correct answer. At the right: in how many repeats each reached a FASTER program (≥ 1.1×). Verdicts per trial: vs_discopop_alone.md; statistics: main_comparison_stats.md.
 
 ## `fig_verdict_matrix.pdf`
 

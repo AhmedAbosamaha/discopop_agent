@@ -1,25 +1,18 @@
-  Quality gate   : Tier-1 = all but speed, no escalation; Tier-2 = full
-  Re-profiling   : fast refresh (compile only) between rewrites; full before a deeper level and before Phase B
-  Baseline       : DiscoPoP proposes 1 applicable pattern(s) unaided; 0 of them produce a usable pragma (1 rejected before it could run)
-                   → the run beats DiscoPoP by ending with more than 0
+  Initial candidates
 Region ID    Type           Saves    % run    Hot  Tier  Depth  Name
+  1:63       loop          1.5 ms    56.0%    YES     2      0  lines 62–69
+  3:60       function      1.5 ms    56.0%    YES     2      0  kernel_lu
+  1:71       loop          1.4 ms    55.2%    YES     2      0  lines 66–68
+  1:74       loop          1.2 ms    46.0%    YES     1      0  lines 67–68
+  PHASE A — restructure  (the source stays pragma-free)
+┌─ [depth=0] loop 1:63 (lines 62–69)  score=0.0
 │  [Tier-1] No applicable pattern → Tier-2 (LLM)
-│  [Tier-2] Assembling evidence (budget remaining: 2)
 │  [Tier-2] Calling claude-haiku-4-5-20251001...
-│  [Tier-2] Diff received with 2 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
-│  [Tier-2] Stage 'performance' failed: No speedup from parallelization: measured 0.03× (same binary, median of interleaved pairs; best at 1 thread 1167.2 ms vs best at all threads 38156.6 ms), below the required 1.10×.
-│  [Tier-2] Assembling evidence (budget remaining: 1)
 │  [Tier-2] Calling claude-haiku-4-5-20251001...
-│  [Tier-2] Diff received with 1 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
 │  [Tier-2] Quality gate PASSED
-│  [Tier-2] Original backed up → lu.c.original
 │  [Tier-2] Applied to lu.c
-│  [Tier-2] Fast refresh (compile only, no instrumented run)...
-│  [Tier-2] 0 survivor(s) rebuilt, 0 new at depth 1
-│  [Tier-2] Kept on its own pragmas: 1 annotated loop(s), gate passed end to end
-│  [Tier-2] Restructuring pays off (measured 8.79×)
-  One full re-profile before Phase B — it annotates from measured dependences, not carried-forward ones.
+└─ ACCEPTED
+  PHASE B — annotate  (0 candidate pragma(s))
+  SETTLING — verify the finished source, drop what does not hold up
+  [ok] finished source verified — output matches, 502.6 ms vs 1060.6 ms original
   SUMMARY: 1 rewrite(s) kept  |  1 pragma(s) applied (0 DiscoPoP + 1 LLM)  |  0 skipped
-  DiscoPoP unaided: 0 usable pragma(s) in this profile's draw  →  this run: 1   [BEAT, informational]
-    ✓  loop 1:63  [Tier-2]  depth=0  1 own pragma(s), 8.79×
-  Results → .discopop/agent_patches/accepted.json

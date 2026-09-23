@@ -1,0 +1,47 @@
+\begin{lstlisting}[language=diff,basicstyle=\ttfamily\scriptsize,breaklines=true,caption={polybench/seidel-2d — attempt 1 of 12, rejected by the gate at 'correctness': Program output changed for input '7' — the patched program is NOT semantically equivalent to the original. / This input differs from the one the profile was tak}]
+--- original/seidel-2d.c
++++ rejected/seidel-2d.c
+@@ -60,12 +60,39 @@
+   int t, i, j;
+ 
+ #pragma scop
+-  for (t = 0; t <= _PB_TSTEPS - 1; t++)
+-    for (i = 1; i<= _PB_N - 2; i++)
+-      for (j = 1; j <= _PB_N - 2; j++)
++  for (t = 0; t <= _PB_TSTEPS - 1; t++) {
++    // Pass 0: cells where both i and j are odd
++    #pragma omp parallel for collapse(2)
++    for (i = 1; i <= _PB_N - 2; i += 2)
++      for (j = 1; j <= _PB_N - 2; j += 2)
+ 	A[i][j] = (A[i-1][j-1] + A[i-1][j] + A[i-1][j+1]
+ 		   + A[i][j-1] + A[i][j] + A[i][j+1]
+ 		   + A[i+1][j-1] + A[i+1][j] + A[i+1][j+1])/9.0;
++
++    // Pass 1: cells where i is odd and j is even
++    #pragma omp parallel for collapse(2)
++    for (i = 1; i <= _PB_N - 2; i += 2)
++      for (j = 2; j <= _PB_N - 2; j += 2)
++	A[i][j] = (A[i-1][j-1] + A[i-1][j] + A[i-1][j+1]
++		   + A[i][j-1] + A[i][j] + A[i][j+1]
++		   + A[i+1][j-1] + A[i+1][j] + A[i+1][j+1])/9.0;
++
++    // Pass 2: cells where i is even and j is odd
++    #pragma omp parallel for collapse(2)
++    for (i = 2; i <= _PB_N - 2; i += 2)
++      for (j = 1; j <= _PB_N - 2; j += 2)
++	A[i][j] = (A[i-1][j-1] + A[i-1][j] + A[i-1][j+1]
++		   + A[i][j-1] + A[i][j] + A[i][j+1]
++		   + A[i+1][j-1] + A[i+1][j] + A[i+1][j+1])/9.0;
++
++    // Pass 3: cells where both i and j are even
++    #pragma omp parallel for collapse(2)
++    for (i = 2; i <= _PB_N - 2; i += 2)
++      for (j = 2; j <= _PB_N - 2; j += 2)
++	A[i][j] = (A[i-1][j-1] + A[i-1][j] + A[i-1][j+1]
++		   + A[i][j-1] + A[i][j] + A[i][j+1]
++		   + A[i+1][j-1] + A[i+1][j] + A[i+1][j+1])/9.0;
++  }
+ #pragma endscop
+ 
+ }
+\end{lstlisting}

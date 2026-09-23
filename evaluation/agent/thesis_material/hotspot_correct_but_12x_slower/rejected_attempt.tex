@@ -1,0 +1,29 @@
+\begin{lstlisting}[language=diff,basicstyle=\ttfamily\scriptsize,breaklines=true,caption={rodinia-3.1/hotspot — attempt 1 of 3, rejected by the gate at 'tsan': Race detected: / WARNING: ThreadSanitizer: data race (pid=2345434)}]
+--- original/hotspot.cpp
++++ rejected/hotspot.cpp
+@@ -250,18 +250,17 @@
+ 	#endif
+ 
+         {
+-            FLOAT* r = result;
+-            FLOAT* t = temp;
++            #pragma omp parallel for
+             for (int i = 0; i < num_iterations ; i++)
+             {
+                 #ifdef VERBOSE
+-                fprintf(stdout, "iteration %d\n", i++);
++                #pragma omp critical
++                fprintf(stdout, "iteration %d\n", i);
+                 #endif
++                FLOAT* r = (i % 2 == 0) ? result : temp;
++                FLOAT* t = (i % 2 == 0) ? temp : result;
+                 single_iteration(r, t, power, row, col, Cap_1, Rx_1, Ry_1, Rz_1, step);
+-                FLOAT* tmp = t;
+-                t = r;
+-                r = tmp;
+-            }	
++            }
+         }
+ 	#ifdef VERBOSE
+ 	fprintf(stdout, "iteration %d\n", i++);
+\end{lstlisting}
