@@ -1,0 +1,25 @@
+--- s281.c
++++ s281.c
+@@ -134,9 +134,20 @@
+ static real_t kernel_s281(void)
+ {
+     real_t x;
++    int half = LEN_1D / 2;
+     for (int nl = 0; nl < R; nl++) {
+-        for (int i = 0; i < LEN_1D; i++) {
+-            x = a[LEN_1D-i-1] + b[i] * c[i];
++        for (int k = 0; k < half; k++) {
++            int m = LEN_1D - k - 1;
++            real_t xk = a[m] + b[k] * c[k];
++            a[k] = xk-(real_t)1.0;
++            b[k] = xk;
++            real_t xm = a[k] + b[m] * c[m];
++            a[m] = xm-(real_t)1.0;
++            b[m] = xm;
++        }
++        if ((LEN_1D & 1) != 0) {
++            int i = half;
++            x = a[i] + b[i] * c[i];
+             a[i] = x-(real_t)1.0;
+             b[i] = x;
+         }

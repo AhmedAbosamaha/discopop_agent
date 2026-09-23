@@ -1,0 +1,10 @@
+--- s281.c
++++ s281.c
+@@ -136,6 +136,7 @@
+     real_t x;
+     int half = LEN_1D / 2;
+     for (int nl = 0; nl < R; nl++) {
++        #pragma omp parallel for firstprivate(half) 
+         for (int k = 0; k < half; k++) {
+             int m = LEN_1D - k - 1;
+             real_t xk = a[m] + b[k] * c[k];

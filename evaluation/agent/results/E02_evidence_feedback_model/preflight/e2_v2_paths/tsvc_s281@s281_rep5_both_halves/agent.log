@@ -1,0 +1,106 @@
+
+============================================================
+  DiscoPoP Agentic Controller
+============================================================
+  Source         : s281.c
+  DiscoPoP dir   : .discopop
+  Model          : none
+  Budget         : 0 LLM retries/region (+2 free build fixes)
+  λ penalty      : 1.0
+  Min workload   : 0.0
+  Restruct. depth: 0 (Tier-2 allowed at depth 0–0)
+  Quality gate   : Tier-1 = all but speed, no escalation; Tier-2 = full
+  TSan           : barrier-aware (archer: /usr/lib/llvm-20/lib/libarcher.so)
+  Speedup gate   : require ≥ 1.1× measured
+  Dry run        : False
+  LLM mode       : none
+  Edit mode      : direct
+  Re-profiling   : full (instrument + run + explore) after every kept rewrite
+  Explorer       : one attempt may take 600 s, then the draw is repeated (random stall, L5)
+  Pragmas        : DiscoPoP writes them in Phase B
+============================================================
+
+  [ok] Captured reference output on 2 inputs (77 bytes, 1031.5 ms baseline) for the correctness/performance gates.
+
+  [ok] Numerical noise floor 0 — 6 build variants agreed exactly; output is compared byte-for-byte.
+
+  Hotspots       : measured per-region runtimes are available — 17 region(s) measured, 5.1 ms total, ranking by predicted time saved at 48 threads
+
+  Baseline       : DiscoPoP proposes 3 applicable pattern(s) unaided; 3 of them produce a usable pragma
+                   → the run beats DiscoPoP by ending with more than 3
+
+  Initial candidates
+Region ID    Type           Saves    % run    Hot  Tier  Depth  Name
+--------------------------------------------------------------------------------------
+  1:81       loop          3.6 ms    72.7%    YES     1      0  lines 137–151
+  1:79       function      3.6 ms    72.7%    YES     2      0  kernel_s281
+  1:91       loop          1.9 ms    37.4%    YES     1      0  lines 145–149
+  1:84       loop          1.8 ms    35.2%    YES     1      0  lines 139–143
+
+============================================================
+  PHASE A — restructure  (the source stays pragma-free)
+============================================================
+
+┌─ [depth=0] loop 1:81 (lines 137–151)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] function 1:79 (lines 134–152)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:91 (lines 145–149)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:84 (lines 139–143)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+
+============================================================
+  PHASE B — annotate  (3 candidate pragma(s))
+============================================================
+
+  Timing noise floor on this machine: 1.001 → keep anything at or above 0.990
+
+┌─ pattern #123  do_all @ lines 137–151  (W=672)
+│  #pragma omp parallel for
+│  gate failed at 'tsan': Race detected: WARNING: ThreadSanitizer: data race (pid=80858)   Write of size 8 at 0x7f9a954f0000 by thread T2:     #0 kernel_s281.omp_outlined_debug
+└─ DROPPED
+
+┌─ pattern #122  do_all @ lines 145–149  (W=3072000)
+│  #pragma omp parallel for
+│  marginal 0.65× alone — deferred: judged together with the other pragmas that do not pay alone (D33)
+└─ DEFERRED (slower alone)
+
+┌─ pattern #121  do_all @ lines 139–143  (W=3072000)
+│  #pragma omp parallel for
+│  marginal 0.58× alone — deferred: judged together with the other pragmas that do not pay alone (D33)
+└─ DEFERRED (slower alone)
+
+┌─ D33 — 2 safe pragma(s) did not pay alone; measuring them together
+│  s281.c: 2 together 2.89× — the set pays
+│    without 139–143: 0.20× the set — needed
+│    without 145–149: 0.22× the set — needed
+│  [Phase-B] Original backed up → s281.c.original
+│  [Phase-B] Applied to s281.c
+│  s281.c: 2 pragma(s) APPLIED together
+└─ D33 done
+
+============================================================
+  SETTLING — verify the finished source, drop what does not hold up
+============================================================
+  [ok] finished source verified — output matches, 3.10x the original, paired
+
+
+============================================================
+  SUMMARY: 0 rewrite(s) kept  |  2 pragma(s) applied  |  1 skipped
+  DiscoPoP unaided: 3 usable pragma(s) in this profile's draw  →  this run: 2   [BELOW, informational]
+    ✓  loop 1:91  [Phase-B pragma]  depth=0  marginal 0.65×
+    ✓  loop 1:84  [Phase-B pragma]  depth=0  marginal 0.58×
+    ✗  1:79  [skipped]  depth=0
+
+  Results → .discopop/agent_patches/accepted.json
+============================================================
+

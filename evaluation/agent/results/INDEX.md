@@ -33,6 +33,17 @@ Status: done
 | `e1b_v2_verify` | [`E01b_bare_llm/checks/e1b_v2_verify/`](E01b_bare_llm/checks/e1b_v2_verify/) | E1 under agent v2 by replay, harness-verified: the 7 trials D33 recovers (rewrite + all safe DiscoPoP pragmas), the 4 s281 trials the clause fix recovers (both halves), and 2 controls (s127 rep 1 kept in E1; s121 rep 4, a slow rewrite) through verify-source (server, no model) | valid | 13 | FASTER 12, parallel-not-faster 1 |
 | `e1b_v2_race_check` | [`E01b_bare_llm/checks/e1b_v2_race_check/`](E01b_bare_llm/checks/e1b_v2_race_check/) | the gate's safety stages (TSan, schedule matrix, output) over the 13 programs of e1b_v2_verify — verify-source checks output and repeatability, not races (tools/race_check.py, server, no model) | valid | 0 |  |
 
+## [E2 — evidence, feedback and model strength](E02_evidence_feedback_model/REPORT.md)
+
+Status: pre-flight
+
+| run | where | what it is | status | trials | outcomes |
+|---|---|---|---|---:|---|
+| `e2_smoke_a` | [`E02_evidence_feedback_model/preflight/e2_smoke_a/`](E02_evidence_feedback_model/preflight/e2_smoke_a/) | pre-flight smoke on agent v2: tsvc/s121 x every E2/E2-source arm + discopop_gate, Haiku x1 — D33's joint pragma set end to end, the evidence arms' code paths | pre-flight | 7 | no-change 7 |
+| `e2_smoke_b` | [`E02_evidence_feedback_model/preflight/e2_smoke_b/`](E02_evidence_feedback_model/preflight/e2_smoke_b/) | pre-flight smoke on agent v2: tsvc/s281 x every E2/E2-source arm + discopop_gate, Haiku x1 — Fix 91's clause stage end to end, the evidence arms' code paths | pre-flight | 7 | FASTER 3, no-change 4 |
+| `e2_smoke_sonnet` | [`E02_evidence_feedback_model/preflight/e2_smoke_sonnet/`](E02_evidence_feedback_model/preflight/e2_smoke_sonnet/) | pre-flight smoke: claude-sonnet-5 through the harness for the first time on the server (tsvc/s121, s281 x full_b1 x1) — model id, calls and minutes per trial | pre-flight | 2 | FASTER 2 |
+| `e2_v2_paths` | [`E02_evidence_feedback_model/preflight/e2_v2_paths/`](E02_evidence_feedback_model/preflight/e2_v2_paths/) | agent v2's new Phase B paths run end to end, no model: E1's archived D33 and s281 rewrites (pragmas stripped, from e1b_v2_sources) through DiscoPoP -> Phase B -> Settle at --budget 0 (tools/default_arm_ceiling.py LOOP=FILE, server) | pre-flight | 0 |  |
+
 ## [E10 — does the speed check keep unnecessary changes out?](E10_speed_check/REPORT.md)
 
 Status: done

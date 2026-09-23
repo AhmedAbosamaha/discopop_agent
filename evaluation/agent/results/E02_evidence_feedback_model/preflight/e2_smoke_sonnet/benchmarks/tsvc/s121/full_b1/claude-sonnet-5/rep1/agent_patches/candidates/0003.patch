@@ -1,0 +1,14 @@
+--- s121.c
++++ s121.c
+@@ -143,9 +143,11 @@
+          * from a[] directly reproduces the same result while making
+          * each iteration independent (disjoint writes, no reads of
+          * values produced earlier in the same sweep). */
++        #pragma omp parallel for shared(a_old) 
+         for (int k = 0; k < LEN_1D; k++) {
+             a_old[k] = a[k];
+         }
++        #pragma omp parallel for private(j) shared(a_old) 
+         for (int i = 0; i < LEN_1D-1; i++) {
+             j = i + 1;
+             a[i] = a_old[j] + b[i];

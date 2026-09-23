@@ -1,0 +1,118 @@
+
+============================================================
+  DiscoPoP Agentic Controller
+============================================================
+  Source         : s244.c
+  DiscoPoP dir   : .discopop
+  Model          : none
+  Budget         : 0 LLM retries/region (+2 free build fixes)
+  λ penalty      : 1.0
+  Min workload   : 0.0
+  Restruct. depth: 0 (Tier-2 allowed at depth 0–0)
+  Quality gate   : Tier-1 = all but speed, no escalation; Tier-2 = full
+  TSan           : barrier-aware (archer: /usr/lib/llvm-20/lib/libarcher.so)
+  Speedup gate   : require ≥ 1.1× measured
+  Dry run        : False
+  LLM mode       : none
+  Edit mode      : direct
+  Re-profiling   : full (instrument + run + explore) after every kept rewrite
+  Explorer       : one attempt may take 600 s, then the draw is repeated (random stall, L5)
+  Pragmas        : DiscoPoP writes them in Phase B
+============================================================
+
+  [ok] Captured reference output on 2 inputs (69 bytes, 3118.9 ms baseline) for the correctness/performance gates.
+
+  [ok] Numerical noise floor 0 — 6 build variants agreed exactly; output is compared byte-for-byte.
+
+  Hotspots       : measured per-region runtimes are available — 18 region(s) measured, 8.1 ms total, ranking by predicted time saved at 48 threads
+
+  Baseline       : DiscoPoP proposes 4 applicable pattern(s) unaided; 4 of them produce a usable pragma
+                   → the run beats DiscoPoP by ending with more than 4
+
+  Initial candidates
+Region ID    Type           Saves    % run    Hot  Tier  Depth  Name
+--------------------------------------------------------------------------------------
+  1:83       loop          6.6 ms    82.2%    YES     1      0  lines 139–165
+  1:79       function      6.6 ms    82.5%    YES     2      0  kernel_s244
+  1:91       loop          3.1 ms    39.0%    YES     1      0  lines 150–156
+  1:101      loop          1.7 ms    21.6%    YES     1      0  lines 159–162
+  1:86       loop          1.7 ms    21.5%    YES     1      0  lines 141–144
+
+============================================================
+  PHASE A — restructure  (the source stays pragma-free)
+============================================================
+
+┌─ [depth=0] loop 1:83 (lines 139–165)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] function 1:79 (lines 134–170)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:91 (lines 150–156)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:101 (lines 159–162)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:86 (lines 141–144)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+
+============================================================
+  PHASE B — annotate  (4 candidate pragma(s))
+============================================================
+
+  Timing noise floor on this machine: 0.995 → keep anything at or above 0.985
+
+┌─ pattern #125  do_all @ lines 139–165  (W=1248)
+│  #pragma omp parallel for
+│  gate failed at 'tsan': Race detected: WARNING: ThreadSanitizer: data race (pid=62746)   Write of size 8 at 0x7ffff6381000 by thread T16:     #0 kernel_s244.omp_outlined_debu
+└─ DROPPED
+
+┌─ pattern #123  do_all @ lines 150–156  (W=9215712)
+│  #pragma omp parallel for
+│  marginal 0.63× alone — deferred: judged together with the other pragmas that do not pay alone (D33)
+└─ DEFERRED (slower alone)
+
+┌─ pattern #124  do_all @ lines 159–162  (W=4608000)
+│  #pragma omp parallel for
+│  marginal 0.55× alone — deferred: judged together with the other pragmas that do not pay alone (D33)
+└─ DEFERRED (slower alone)
+
+┌─ pattern #122  do_all @ lines 141–144  (W=4608000)
+│  #pragma omp parallel for
+│  marginal 0.53× alone — deferred: judged together with the other pragmas that do not pay alone (D33)
+└─ DEFERRED (slower alone)
+
+┌─ D33 — 3 safe pragma(s) did not pay alone; measuring them together
+│  s244.c: 3 together 3.67× — the set pays
+│    without 141–144: 0.28× the set — needed
+│    without 159–162: 0.26× the set — needed
+│    without 150–156: 0.39× the set — needed
+│  [Phase-B] Original backed up → s244.c.original
+│  [Phase-B] Applied to s244.c
+│  s244.c: 3 pragma(s) APPLIED together
+└─ D33 done
+
+============================================================
+  SETTLING — verify the finished source, drop what does not hold up
+============================================================
+  [ok] finished source verified — output matches, 4.04x the original, paired
+
+
+============================================================
+  SUMMARY: 0 rewrite(s) kept  |  3 pragma(s) applied  |  1 skipped
+  DiscoPoP unaided: 4 usable pragma(s) in this profile's draw  →  this run: 3   [BELOW, informational]
+    ✓  loop 1:91  [Phase-B pragma]  depth=0  marginal 0.63×
+    ✓  loop 1:101  [Phase-B pragma]  depth=0  marginal 0.55×
+    ✓  loop 1:86  [Phase-B pragma]  depth=0  marginal 0.53×
+    ✗  1:79  [skipped]  depth=0
+
+  Results → .discopop/agent_patches/accepted.json
+============================================================
+
