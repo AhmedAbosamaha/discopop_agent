@@ -10,7 +10,7 @@ What does the pipeline add over handing the program to the same model and asking
 
 ## Result in one paragraph
 
-TSVC class R, 18 loops × 5, the same model with no DiscoPoP and no gate: FASTER in 58 of 88 trials, 53 of them race-free by the gate's own TSan and schedule matrix (4 benign races on s293, 1 not judgeable) — more than the agent's 44 of 90 (DiscoPoP alone: 0 of 90) — but a WRONG program shipped in 17 (19 %, all 17 stopped by the gate when replayed) and a slower one in 12, where the agent shipped 0 of either. Over the model, the pipeline adds trust, not reach — and most of the reach it loses is lost after the model: Phase B's speed check judges pragmas one at a time and drops sets that only pay together (7 trials recoverable, D33 proposed), the gate's clause stage falsely rejects one half of s281's split (5), DiscoPoP cannot write s331's reduction(max); the rest are rewrites that are slow in themselves.
+TSVC class R, 18 loops × 5, the same model with no DiscoPoP and no gate: FASTER in 58 of 88 trials, 53 of them race-free by the gate's own TSan and schedule matrix (4 benign races on s293, 1 not judgeable) — more than the agent's 44 of 90 (DiscoPoP alone: 0 of 90) — but a WRONG program shipped in 17 (19 %, all 17 stopped by the gate when replayed) and a slower one in 12, where the agent shipped 0 of either. Over the model, the pipeline adds trust, not reach — and most of the reach it loses is lost after the model: Phase B's speed check judges pragmas one at a time and drops sets that only pay together (7 trials recoverable, D33 proposed), the gate's clause stage falsely rejects one half of s281's split (5), DiscoPoP cannot write s331's reduction(max); the rest are rewrites that are slow in themselves. Agent v2 (D32, D33, Fixes 91–92, built the same evening) replayed on E1's archived trials and verified by the harness: FASTER in 55 of 90, 0 unsafe — no longer behind the model alone's 53.
 
 ## Figures
 
@@ -22,7 +22,7 @@ TSVC class R, 18 loops × 5, the same model with no DiscoPoP and no gate: FASTER
 - [`analysis/`](analysis/) — the read-out: [`README.md`](analysis/README.md), [`figures.md`](analysis/figures.md), [`main_comparison_stats.md`](analysis/main_comparison_stats.md), [`vs_discopop_alone.md`](analysis/vs_discopop_alone.md)
 - [`exhibits/`](exhibits/) — 22 case studies, below
 - [`runs/`](runs/) — 2 archived run(s): the evidence
-- [`checks/`](checks/) — 2 verification(s) made during the read-out
+- [`checks/`](checks/) — 4 verification(s) made during the read-out
 - [`preflight/`](preflight/) — 1 smoke run(s) before the launch
 
 ## Runs
@@ -34,6 +34,7 @@ TSVC class R, 18 loops × 5, the same model with no DiscoPoP and no gate: FASTER
 | `e1_bare_b` | [`runs/e1_bare_b/`](runs/e1_bare_b/) | TSVC class R, lane B (node 1): 9 loops × bare_llm × 5 | valid | 45 | BROKEN 2, FASTER 37, parallel-not-faster 6 |
 | `e1b_race_check` | [`checks/e1b_race_check/`](checks/e1b_race_check/) | the gate's race stages (TSan, schedule matrix) and output check over every bare_llm program, with the agent's 46 parallel TSVC programs from E1 as the positive control (tools/race_check.py, server, no model) | valid | 0 |  |
 | `e1b_marginal_replay` | [`checks/e1b_marginal_replay/`](checks/e1b_marginal_replay/) | why the agent lost reach: Phase B's speed check replayed (tools/marginal_replay.py, the agent's own measure_marginal) on the 18 E1 trials whose safe DiscoPoP pragmas it dropped as slower, at 6, 12 and all threads, with 3 won trials as controls (server, no model) | valid | 0 |  |
+| `e1b_v2_verify` | [`checks/e1b_v2_verify/`](checks/e1b_v2_verify/) | E1 under agent v2 by replay, harness-verified: the 7 trials D33 recovers (rewrite + all safe DiscoPoP pragmas), the 4 s281 trials the clause fix recovers (both halves), and 2 controls (s127 rep 1 kept in E1; s121 rep 4, a slow rewrite) through verify-source (server, no model) | valid | 13 | FASTER 12, parallel-not-faster 1 |
 
 ## Exhibits
 
@@ -196,11 +197,33 @@ Phase B 6). On the agent's own measurement the seven would put it at 51 FASTER o
 the combined programs were timed, not verified by the harness). **D33, proposed** (§6): Phase B
 measures a rewrite's safe pragmas together before dropping any.
 
+**The same evening — agent v2, and E1 replayed under it (D34; no model).** The author approved
+D32 and D33 and the two gate fixes, and a rule for changing the agent between experiments (D34:
+each change from a recorded finding, replayed before merging, the version stamped per run, the
+sequence told in the thesis — and earlier experiments are not rerun: the changed stage is replayed
+on their archived candidates). Built at `ad57f134` as Fixes 91–94. The programs E1 would have ended
+with under v2 were rebuilt from the archived patches (`checks/e1b_v2_sources/`) and verified by the
+harness like any trial (`e1b_v2_verify`, `verify-source`, E1's settings):
+
+| what v2 changes | trials | harness verdict under v2 | E1 (v1) |
+|---|---|---|---|
+| D33 — the rewrite with all its safe pragmas | `s1213` r1, r3 · `s121` r1, r2, r5 · `s244` r1 · `s112` r4 | **7 FASTER**, 1.49–3.00× (12 threads) | no-change |
+| Fix 91 — both halves of `s281`'s split annotated | `s281` r2–r5 | **4 FASTER**, 2.55–3.25× | no-change |
+| control: kept in E1 | `s127` r1 | FASTER 4.48× | FASTER |
+| control: a slow rewrite | `s121` r4 | parallel-not-faster 0.14× | no-change |
+
+All outputs identical to the original on both inputs. **E1 under v2: TSVC class R FASTER in 55 of
+90 trials** (v1: 44), 0 unsafe; no other trial changes (§6). Race-checked, the model alone is FASTER
+in 53 of 88 — **with v2 the pipeline no longer trails the model in reach, and it still ships no wrong
+program**. D32 leaves class R as it was and turns class A's `worse` and `lost` into `equal`. These are
+rates from a replay; the paired statistics come from E2's own `default` arm on v2.
+
 ## Change-log rows that name these runs (§6)
 
 | Date | Repo | Change | Why |
 |---|---|---|---|
-| 2026-09-23 | plan | **D33 proposed — Phase B measures a rewrite's safe pragmas TOGETHER before dropping any.** Today Phase B times each pragma alone against the state before it and drops it if it does not pay; when a rewrite splits a loop into two or three, each pragma alone can lose while all of them win. Proposed: measure the set of safety-passing pragmas together against the state before them, then remove one at a time only while the set still pays (backward elimination). Replayed on E1 (`e1b_marginal_replay`) it recovers 7 of the 18 trials the check dropped (the agent: 51 FASTER of 90 instead of 44, on the agent's own measurement) and changes none of the 11 correct drops. The agent is frozen until E11 (the author, 22 Sep); **the author decides** whether D33 enters before E2 — then E2's `default` differs from E1's and is compared within E2 only — or after E11 | the author asked why the model alone reaches more; the replay answered it |
+| 2026-09-23 | result | **E1 under agent v2, by replay, verified by the harness (`e1b_v2_verify`): TSVC class R FASTER in 55 of 90 trials** (v1: 44; the model alone, race-checked: 53 of 88), 0 unsafe. The 13 programs E1 would have ended with under v2 — the 7 D33 recovers (the rewrite with all its safe DiscoPoP pragmas), the 4 `s281` repeats Fix 91 recovers (both halves annotated), and 2 controls — rebuilt from the archived patches without a model (`checks/e1b_v2_sources/`) and put through `verify-source` with E1's settings: **11 of 11 recovered programs FASTER, 1.49–3.25×**, output identical to the original on both inputs, stable at fixed threads; control `s127` rep 1 FASTER 4.48× (E1: FASTER), control `s121` rep 4 parallel-not-faster 0.14× (a slow rewrite, correctly not recovered). No other E1 trial changes: every other D33-deferred pragma was alone in its trial (dropped as before), Fix 91 flips only `s281` reps 2–5, Fix 92 touches no agent trial, and D32 changes nothing on class R (DiscoPoP alone keeps nothing in 90 of 90); on class A it makes `vpvtv` and `s000` `equal` (DiscoPoP's archived program shipped), `s313` stays `better`. Rates only: the paired statistics are recomputed on E2's own `default` arm, which runs on v2 | D34's comparison rule — E1 is not rerun |
+| 2026-09-23 | plan | **D33 proposed — Phase B measures a rewrite's safe pragmas TOGETHER before dropping any.** *(Approved by the author and built the same day as Fix 93 — rows above.)* Today Phase B times each pragma alone against the state before it and drops it if it does not pay; when a rewrite splits a loop into two or three, each pragma alone can lose while all of them win. Proposed: measure the set of safety-passing pragmas together against the state before them, then remove one at a time only while the set still pays (backward elimination). Replayed on E1 (`e1b_marginal_replay`) it recovers 7 of the 18 trials the check dropped (the agent: 51 FASTER of 90 instead of 44, on the agent's own measurement) and changes none of the 11 correct drops. The agent is frozen until E11 (the author, 22 Sep); **the author decides** whether D33 enters before E2 — then E2's `default` differs from E1's and is compared within E2 only — or after E11 | the author asked why the model alone reaches more; the replay answered it |
 | 2026-09-23 | finding (gate, E7) | **The gate's clause stage rejects a correct `private(x)`** — `s281`, E1 reps 2–5: DiscoPoP's pragma on the first half of the agent's `LEN/2` split was refused because "the loop writes `x` and later code reads it"; the only later reads are in the second loop, each after a write in the same iteration, and nothing reads `x` after the loops. With one half parallel the program is 0.63–0.97× the original, so the agent lost `s281` in all five repeats although its model wrote the right rewrite every time (the model alone, writing the same clause, is TSan-clean and 3.0×). A labelled false reject for E7; not fixed (agent frozen) | `e1b_marginal_replay` |
 | 2026-09-23 | correction | **`e1_r_a`/`e1_r_b` (§7) said "the Phase B marginals were not wrong either" and that "every `s121`/`s281` trial" copies the array.** Both hold only in part. Each marginal is right for the pragma measured ALONE, but in 7 trials the set of pragmas pays where no single one does (`e1b_marginal_replay`); and `s281`'s rewrites are copy-free index splits, `s121`'s reps 1, 2, 5 loop copies — only `s121` rep 3 used `memcpy`. The entry stays as written; this row and the E1-bare §7 entry correct it | measured the same afternoon |
 | 2026-09-23 | result | **Race check of the model alone (`e1b_race_check`): 53 of its 58 FASTER programs are race-free; the gate would have stopped all 17 of its wrong ones.** Every `bare_llm` program through the agent's own `validate(mode="safety")` on the server (clang-20 with archer), the agent's 46 parallel TSVC programs as control — 46 of 46 clean. Not clean: `s293` reps 1–4 (a pragma on `a[i] = a[0]`: a data race, benign in effect) and `s341` rep 5, which the gate cannot judge (it calls the OpenMP runtime; the gate's first compile does not link it — a blind spot, E7). BROKEN caught by TSan 9, output 7, schedule matrix 1. Race-checked, the model alone is FASTER in 53 of 88 (60 %), the agent in 44 of 90 (49 %) | the author: "run the race check on the bare programs" |

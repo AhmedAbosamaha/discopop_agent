@@ -212,6 +212,17 @@ regenerate it with the prepare tool. If the archived copy differs, delete
 
 ### The checklist for EVERY experiment (a new session starts here)
 
+**Changing the agent between experiments (D34, the author, 23 Sep).** Allowed, and every change is
+documented: (a) it comes from a recorded finding; (b) it is replayed on archived trials before it is
+merged (the Fix-90 lesson); (c) every run stamps the agent version it used (`manifest.json` →
+`invocation.agent_git.head`, `dirty_sha256`); (d) the thesis tells the sequence — found, measured,
+fixed. **Earlier experiments are not rerun:** each experiment runs once on its stamped agent and its
+arms are compared inside it; a later change is evaluated on earlier experiments by replaying the
+CHANGED stage on their archived candidates (deterministic, no model — `marginal_replay.py`,
+`clause_replay.py`, `race_check.py`, then `verify-source` on the rebuilt programs), and only what that
+cannot answer is rerun. The model's own answers are never replayed. Agent v2 (Fixes 91–94, `ad57f134`)
+was introduced this way; E1 under v2 is `results/E01b_bare_llm/checks/e1b_v2_verify`.
+
 **Before launching**
 0e. **An experiment's arms differ in EXACTLY its variable — machine-checked.** `arms.json` has an
    `experiments` block: each experiment names its arms, its variable (resolved agent settings)

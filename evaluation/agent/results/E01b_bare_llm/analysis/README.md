@@ -107,3 +107,12 @@ arm reads nothing from it (the runner profiles every benchmark before its trials
 trial. The `main_comparison_stats.md` process lines sum the stall count over every TRIAL record of
 all four runs (each record repeats its loop's profile: 35 = 7 × 5 for E1-bare) and give one host
 load range for all four runs; E1-bare alone ran at host load 3,027–7,392 (median 4,288).
+
+## What was done about it — agent v2 (23 Sep evening)
+
+The author approved D32 and D33 and the two gate fixes (Fixes 91–94, `ad57f134`). E1 was not rerun
+(D34): the programs it would have ended with under v2 were rebuilt from the archived patches and
+verified by the harness (`../checks/e1b_v2_sources/`, `../checks/e1b_v2_verify/`) — the 7 D33 trials
+FASTER 1.49–3.00×, the 4 `s281` trials FASTER 2.55–3.25×, both controls as in E1. **E1 under v2: FASTER
+in 55 of 90, 0 unsafe**, against the model alone's 53 of 88 race-checked.
+
