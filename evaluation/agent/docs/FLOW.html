@@ -138,13 +138,11 @@ flowchart TD
     A -->|"kept rewrite could not be re-profiled"| NB
     B --> ST["SETTLE<br/>rebuild from the change log,<br/>re-judge the finished files"]:::step
     NB --> ST
-    ST --> FD{"a floor, and the agent's program<br/>slower than it, paired? (D32)"}:::dec
-    FD -->|"yes"| FS["ship DiscoPoP's own program"]:::hold
+    ST --> FD["FLOOR DECISION (D32, diagram 9):<br/>the agent's program, or DiscoPoP's own<br/>if the agent's is slower"]:::step
   end
   S -->|"original cannot be built or run"| AE["AGENT_ERROR"]:::bad
   A -->|"credential rejected or endpoint down"| AE
-  FD -->|"no, or no floor"| OUT["final source, accepted.json,<br/>candidates.jsonl, usage log"]:::ok
-  FS --> OUT
+  FD --> OUT["final source, accepted.json,<br/>candidates.jsonl, usage log"]:::ok
   PL -->|"no region at all"| OUT
   OUT --> V["Independent verification<br/>by the harness"]:::step --> O["one outcome per trial"]:::ok
 </script>
