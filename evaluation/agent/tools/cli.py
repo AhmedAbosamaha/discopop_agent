@@ -87,6 +87,14 @@ EXPLORER_ATTEMPTS = 20
 # re-profiles treat a stall alike.
 EXPLORER_STALL_S = 600
 EXPLORER_STALL_ATTEMPTS = 5
+# The agent's own limit inside a trial, per benchmark (the author, 23 Sep): 10x this benchmark's
+# own successful explorer run, never under 60 s. A stall costs the whole limit before the draw
+# is repeated, and in E1 26 stalls x 600 s were a third of all trial time (record §6, 23 Sep);
+# a legitimate run of a campaign benchmark took at most 33 s over 166 draws, and a large
+# program measures its own (LULESH at -s 5: 16 s -> 160 s). The harness's FIRST explorer run
+# of a benchmark has nothing to scale from and keeps EXPLORER_STALL_S.
+AGENT_EXPLORER_FLOOR_S = 60
+AGENT_EXPLORER_FACTOR = 10
 
 # Same preference order as the agent's gate/toolchain.py, so the harness verifies
 # with the compiler the agent validated with.
@@ -826,6 +834,7 @@ def profile_once(bench_dir: Path, src_name: str, dest: Path, agent_repo: Path, t
     timed_out = rc == -9
     rec["explore_stalls"] = stalls
     rec["explore_s"] = round(total, 2)
+    rec["explore_success_s"] = round(secs, 2) if rc == 0 else None   # the draw that finished
     rec["explore_attempts"] = attempt
     rec["explore_timed_out"] = timed_out
     rec["explore_failures"] = failures
@@ -1119,6 +1128,22 @@ def classify(t: dict) -> str:
     return "FASTER" if best >= FASTER_THRESHOLD else "parallel-not-faster"
 
 
+def _agent_explorer_limit(profile_dir: Path) -> int:
+    """The agent's explorer limit for this benchmark: AGENT_EXPLORER_FACTOR x its own measured
+    explorer run, at least AGENT_EXPLORER_FLOOR_S; EXPLORER_STALL_S when nothing was measured.
+    Profiles taken before the field existed: the total minus the stalled draws' limits."""
+    try:
+        prof = json.loads((profile_dir / "profile.json").read_text())
+    except (OSError, ValueError):
+        return EXPLORER_STALL_S
+    t = prof.get("explore_success_s")
+    if t is None and prof.get("explore_s") is not None and not prof.get("explore_timed_out"):
+        t = float(prof["explore_s"]) - EXPLORER_STALL_S * int(prof.get("explore_stalls") or 0)
+    if not t or t <= 0:
+        return EXPLORER_STALL_S
+    return int(max(AGENT_EXPLORER_FLOOR_S, math.ceil(AGENT_EXPLORER_FACTOR * float(t))))
+
+
 def run_trial(bench: str, bench_dir: Path, profile_dir: Path, trial: Path, arm: str,
               arm_flags: List[str], model: str, a: argparse.Namespace, cc: str, cxx: str) -> dict:
     src_name = _source_name(bench_dir)
@@ -1181,6 +1206,7 @@ def run_trial(bench: str, bench_dir: Path, profile_dir: Path, trial: Path, arm: 
                *(["--exclude-functions", ",".join(_excluded_functions(bench_dir))]
                  if _excluded_functions(bench_dir) else []),
                *(["--min-runtime-share", str(a.min_runtime_share)] if a.min_runtime_share else []),
+               "--explorer-timeout", str(_agent_explorer_limit(profile_dir)),
                *a.agent_arg]
     rec["agent_cmd"] = cmd
     print(f"    agent: {' '.join(cmd[3:])}", flush=True)

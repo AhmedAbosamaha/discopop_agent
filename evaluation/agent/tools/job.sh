@@ -235,7 +235,26 @@ job() {
     fi
     echo "== auth ok"
     if command -v numactl > /dev/null; then
-        numactl --cpunodebind="$node" --membind="$node" "$PY" agent/benchmark run "$@"
+        # "N" = the whole NUMA node N; "N.H" = half H (0 or 1) of node N's cores, with node N's
+        # memory — four lanes of 12 cores instead of two of 24 (the author, 23 Sep; checked by
+        # T0.4 at four lanes before the first experiment used them).
+        case "$node" in
+            *.*)
+                local nn="${node%.*}" half="${node#*.}" cpus n k
+                cpus=$(numactl -H | awk -v n="$nn" '$1=="node" && $2==n && $3=="cpus:" {for (i=4;i<=NF;i++) print $i}')
+                n=$(printf '%s
+' "$cpus" | grep -c .)
+                k=$((n / 2))
+                if [ "$half" = 0 ]; then cpus=$(printf '%s
+' "$cpus" | head -n "$k"); else cpus=$(printf '%s
+' "$cpus" | tail -n "$((n - k))"); fi
+                cpus=$(printf '%s
+' "$cpus" | paste -sd, -)
+                echo "== lane: node $nn, cores $cpus"
+                numactl --physcpubind="$cpus" --membind="$nn" "$PY" agent/benchmark run "$@" ;;
+            *)
+                numactl --cpunodebind="$node" --membind="$node" "$PY" agent/benchmark run "$@" ;;
+        esac
     else
         echo "== WARNING: numactl missing, running unpinned"
         "$PY" agent/benchmark run "$@"

@@ -308,7 +308,10 @@ was introduced this way; E1 under v2 is `results/E01b_bare_llm/checks/e1b_v2_ver
 3. **Tell the author before launching a real experiment** (pilots and no-model studies do not
    need it). Model runs spend the author's subscription.
 4. Launch: `agent/tools/server.sh run --node N -- <benchmarks> --arms ... --models <FULL id>
-   --trials R --threads 6,12 --repeats 5 --run-id <id>`. One experiment per NUMA node at most.
+   --trials R --threads 6,12 --repeats 5 --run-id <id>`. One job per lane: `--node N` is a whole NUMA
+   node (24 cores); `--node N.H` is half H of it (12 cores, node N's memory) — four lanes, used once T0.4 at
+   four lanes (`t0_4_four_lanes`) shows the timing still resolves 1.1× (the author, 23 Sep). The agent's explorer
+   limit is set per benchmark by the harness (max 60 s, 10 × its own explorer run).
 
 **While it runs** — `server.sh status`; outcomes appear as `→ OUTCOME` lines in
 `agent/runs/_launcher/<stamp>.log`. `aborted_package_corrupted` or a `SWEEP: TOKEN FOUND`

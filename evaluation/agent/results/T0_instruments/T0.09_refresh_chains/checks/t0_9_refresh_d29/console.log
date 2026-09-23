@@ -1,0 +1,130 @@
+
+  Fast refresh vs full profiling — working in /var/folders/cq/rp6ywwsd4hx7y0r51kcbdn4w0000gn/T/dp_refresh_depth_ctoh47qg
+
+  Self-check: are two full profiles of the same source comparable?
+     ok — 63 edges, 4 patterns, 0 edge(s) and 0 pattern(s) differ between two runs of the SAME code
+
+  ── stencil_war ──
+     depth 0  full       full profile   14.9s
+     depth 0  fast-step  full profile   16.2s
+     depth 0  fast-chain full profile   15.0s
+     depth 1  full       full profile   22.3s
+     depth 1  fast-step  refresh         6.3s  (3.6x faster)
+     depth 1  fast-chain refresh         5.9s  (3.8x faster)
+     depth 2  full       full profile   24.1s
+     depth 2  fast-step  refresh        15.8s  (1.5x faster)
+     depth 2  fast-chain refresh         6.3s  (3.8x faster)
+     depth 3  full       full profile   26.2s
+     depth 3  fast-step  refresh         6.8s  (3.9x faster)
+     depth 3  fast-chain refresh         6.3s  (4.1x faster)
+
+  ── array_accumulator ──
+     depth 0  full       full profile   13.8s
+     depth 0  fast-step  full profile   15.3s
+     depth 0  fast-chain full profile   14.6s
+     depth 1  full       full profile   17.1s
+     depth 1  fast-step  refresh         5.7s  (3.0x faster)
+     depth 1  fast-chain refresh         5.1s  (3.4x faster)
+     depth 2  full       full profile   18.0s
+     depth 2  fast-step  refresh         5.9s  (3.0x faster)
+     depth 2  fast-chain refresh         6.2s  (2.9x faster)
+     depth 3  full       full profile   19.7s
+     depth 3  fast-step  refresh         7.7s  (2.6x faster)
+     depth 3  fast-chain refresh         7.5s  (2.6x faster)
+
+  ── prefix_sum ──
+     depth 0  full       full profile   15.2s
+     depth 0  fast-step  full profile   15.4s
+     depth 0  fast-chain full profile   16.7s
+     depth 1  full       full profile   17.2s
+     depth 1  fast-step  refresh         6.4s  (2.7x faster)
+     depth 1  fast-chain refresh         6.0s  (2.9x faster)
+     depth 2  full       full profile   15.3s
+     depth 2  fast-step  refresh         6.4s  (2.4x faster)
+     depth 2  fast-chain refresh         9.2s  (1.7x faster)
+     depth 3  full       full profile   15.8s
+     depth 3  fast-step  refresh         7.1s  (2.2x faster)
+     depth 3  fast-chain refresh         6.2s  (2.5x faster)
+
+  ── results ──
+
+  case               depth  arm        verdict    detail
+  ------------------------------------------------------
+  stencil_war            1  fast-step  [ DIFF ] 1 UNSAFE (suggested only after refresh: [('do_all', '1:19', '1:19')]) [full 22.3s vs 6.3s]
+                                                deps: 64 vs 135 measured, 79 missing, 8 extra
+                                                trip counts: 4 vs 5, 1 missing, 1 stale
+                                                43/65 observed dependences carried forward (22 in rewritten code, 0 no longer present; 36 without callpath state), 5/5 loop trip counts
+  stencil_war            1  fast-chain [ DIFF ] 1 UNSAFE (suggested only after refresh: [('do_all', '1:19', '1:19')]) [full 22.3s vs 5.9s]
+                                                deps: 64 vs 135 measured, 79 missing, 8 extra
+                                                trip counts: 4 vs 5, 1 missing, 1 stale
+                                                43/65 observed dependences carried forward (22 in rewritten code, 0 no longer present; 36 without callpath state), 5/5 loop trip counts
+  stencil_war            2  fast-step  [  ok  ] identical conclusions (5 patterns, 5 applicable) [full 24.1s vs 15.8s]
+                                                deps: 135 vs 135 measured, 0 missing, 0 extra
+                                                trip counts: 5 vs 5, 0 missing, 0 stale
+                                                82/82 observed dependences carried forward (0 in rewritten code, 0 no longer present; 42 without callpath state), 6/6 loop trip counts
+  stencil_war            2  fast-chain [ DIFF ] 1 UNSAFE (suggested only after refresh: [('do_all', '1:19', '1:19')]) [full 24.1s vs 6.3s]
+                                                deps: 64 vs 135 measured, 79 missing, 8 extra
+                                                trip counts: 4 vs 5, 1 missing, 1 stale
+                                                43/43 observed dependences carried forward (0 in rewritten code, 0 no longer present; 34 without callpath state), 5/5 loop trip counts
+  stencil_war            3  fast-step  [ DIFF ] 1 UNSAFE (suggested only after refresh: [('do_all', '1:24', '1:24')]) [full 26.2s vs 6.8s]
+                                                deps: 64 vs 133 measured, 84 missing, 15 extra
+                                                trip counts: 4 vs 5, 1 missing, 1 stale
+                                                45/82 observed dependences carried forward (37 in rewritten code, 0 no longer present; 42 without callpath state), 5/6 loop trip counts
+  stencil_war            3  fast-chain [ DIFF ] 1 UNSAFE (suggested only after refresh: [('do_all', '1:24', '1:24')]) [full 26.2s vs 6.3s]
+                                                deps: 41 vs 133 measured, 95 missing, 3 extra
+                                                trip counts: 3 vs 5, 2 missing, 1 stale
+                                                27/43 observed dependences carried forward (16 in rewritten code, 0 no longer present; 34 without callpath state), 4/5 loop trip counts
+  array_accumulator      1  fast-step  [ DIFF ] 1 UNSAFE (suggested only after refresh: [('do_all', '1:18', '1:18')]); 1 lost (suggested only by the full profile: [('reduction', '1:18', '1:18')]) [full 17.1s vs 5.7s]
+                                                deps: 45 vs 56 measured, 17 missing, 6 extra
+                                                trip counts: 2 vs 2, 0 missing, 0 stale
+                                                31/39 observed dependences carried forward (8 in rewritten code, 0 no longer present; 23 without callpath state), 3/3 loop trip counts
+  array_accumulator      1  fast-chain [ DIFF ] 1 UNSAFE (suggested only after refresh: [('do_all', '1:18', '1:18')]); 1 lost (suggested only by the full profile: [('reduction', '1:18', '1:18')]) [full 17.1s vs 5.1s]
+                                                deps: 45 vs 56 measured, 17 missing, 6 extra
+                                                trip counts: 2 vs 2, 0 missing, 0 stale
+                                                31/39 observed dependences carried forward (8 in rewritten code, 0 no longer present; 23 without callpath state), 3/3 loop trip counts
+  array_accumulator      2  fast-step  [  ok  ] identical conclusions (4 patterns, 4 applicable) [full 18.0s vs 5.9s]
+                                                deps: 49 vs 65 measured, 27 missing, 11 extra
+                                                trip counts: 2 vs 3, 1 missing, 2 stale
+                                                35/38 observed dependences carried forward (3 in rewritten code, 0 no longer present; 27 without callpath state), 3/3 loop trip counts
+  array_accumulator      2  fast-chain [  ok  ] identical conclusions (4 patterns, 4 applicable) [full 18.0s vs 6.2s]
+                                                deps: 45 vs 65 measured, 29 missing, 9 extra
+                                                trip counts: 2 vs 3, 1 missing, 2 stale
+                                                31/31 observed dependences carried forward (0 in rewritten code, 0 no longer present; 22 without callpath state), 3/3 loop trip counts
+  array_accumulator      3  fast-step  [  ok  ] identical conclusions (4 patterns, 4 applicable) [full 19.7s vs 7.7s]
+                                                deps: 65 vs 65 measured, 0 missing, 0 extra
+                                                trip counts: 3 vs 3, 0 missing, 0 stale
+                                                45/45 observed dependences carried forward (0 in rewritten code, 0 no longer present; 31 without callpath state), 4/4 loop trip counts
+  array_accumulator      3  fast-chain [  ok  ] identical conclusions (4 patterns, 4 applicable) [full 19.7s vs 7.5s]
+                                                deps: 45 vs 65 measured, 29 missing, 9 extra
+                                                trip counts: 2 vs 3, 1 missing, 2 stale
+                                                31/31 observed dependences carried forward (0 in rewritten code, 0 no longer present; 22 without callpath state), 3/3 loop trip counts
+  prefix_sum             1  fast-step  [  ok  ] identical conclusions (4 patterns, 4 applicable) [full 17.2s vs 6.4s]
+                                                deps: 56 vs 86 measured, 40 missing, 10 extra
+                                                trip counts: 3 vs 4, 1 missing, 1 stale
+                                                41/48 observed dependences carried forward (5 in rewritten code, 2 no longer present; 36 without callpath state), 4/4 loop trip counts
+  prefix_sum             1  fast-chain [  ok  ] identical conclusions (4 patterns, 4 applicable) [full 17.2s vs 6.0s]
+                                                deps: 56 vs 86 measured, 40 missing, 10 extra
+                                                trip counts: 3 vs 4, 1 missing, 1 stale
+                                                41/48 observed dependences carried forward (5 in rewritten code, 2 no longer present; 36 without callpath state), 4/4 loop trip counts
+  prefix_sum             2  fast-step  [  ok  ] identical conclusions (4 patterns, 4 applicable) [full 15.3s vs 6.4s]
+                                                deps: 57 vs 84 measured, 36 missing, 9 extra
+                                                trip counts: 3 vs 4, 1 missing, 1 stale
+                                                40/60 observed dependences carried forward (20 in rewritten code, 0 no longer present; 42 without callpath state), 4/5 loop trip counts
+  prefix_sum             2  fast-chain [  ok  ] identical conclusions (4 patterns, 4 applicable) [full 15.3s vs 9.2s]
+                                                deps: 39 vs 84 measured, 55 missing, 10 extra
+                                                trip counts: 2 vs 4, 2 missing, 1 stale
+                                                29/41 observed dependences carried forward (12 in rewritten code, 0 no longer present; 29 without callpath state), 3/4 loop trip counts
+  prefix_sum             3  fast-step  [  ok  ] identical conclusions (4 patterns, 4 applicable) [full 15.8s vs 7.1s]
+                                                deps: 84 vs 84 measured, 0 missing, 0 extra
+                                                trip counts: 4 vs 4, 0 missing, 0 stale
+                                                60/60 observed dependences carried forward (0 in rewritten code, 0 no longer present; 42 without callpath state), 5/5 loop trip counts
+  prefix_sum             3  fast-chain [  ok  ] identical conclusions (4 patterns, 4 applicable) [full 15.8s vs 6.2s]
+                                                deps: 39 vs 84 measured, 55 missing, 10 extra
+                                                trip counts: 2 vs 4, 2 missing, 1 stale
+                                                29/29 observed dependences carried forward (0 in rewritten code, 0 no longer present; 20 without callpath state), 3/3 loop trip counts
+
+  11 matched, 7 diverged, 0 errored
+  7 comparison(s) produced a suggestion the measured profile does NOT support — these are the ones that matter
+  13 comparison(s) carried a loop trip count that is missing or no longer the measured value — see the trip-count rows
+  full result written to evaluation/agent/results/T0_instruments/T0.09_refresh_chains/checks/t0_9_refresh_d29/refresh_depth.json
+venv/bin/python -m discopop_agent.benchmark.refresh_depth --json   475.73s user 104.34s system 122% cpu 7:52.74 total

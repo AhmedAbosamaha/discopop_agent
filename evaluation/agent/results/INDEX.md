@@ -33,6 +33,7 @@ Status: done
 | `e1b_v2_verify` | [`E01b_bare_llm/checks/e1b_v2_verify/`](E01b_bare_llm/checks/e1b_v2_verify/) | E1 under agent v2 by replay, harness-verified: the 7 trials D33 recovers (rewrite + all safe DiscoPoP pragmas), the 4 s281 trials the clause fix recovers (both halves), and 2 controls (s127 rep 1 kept in E1; s121 rep 4, a slow rewrite) through verify-source (server, no model) | valid | 13 | FASTER 12, parallel-not-faster 1 |
 | `e1b_v2_race_check` | [`E01b_bare_llm/checks/e1b_v2_race_check/`](E01b_bare_llm/checks/e1b_v2_race_check/) | the gate's safety stages (TSan, schedule matrix, output) over the 13 programs of e1b_v2_verify — verify-source checks output and repeatability, not races (tools/race_check.py, server, no model) | valid | 0 |  |
 | `d36_hint_check` | not archived yet | the author's single-example check of D36: the model alone on the CLEAN (v3) packages of s331, s281, s241 x3 — bare_llm_contract (E1-bare's exact prompt: isolates the hint) and bare_llm (minimal prompt, D37); compare with E1-bare's rows | running |  |  |
+| `clause_replay_fix91` | [`E01b_bare_llm/checks/clause_replay_fix91/`](E01b_bare_llm/checks/clause_replay_fix91/) | every archived clause-stage rejection (25) judged by the current clause rules, no model: 8 flip (s281 reps 2-5 in E1; 4 in pre-campaign runs), 3 stay, 14 not reconstructible (incl. E10's); re-run and archived 23 Sep, the Fix-91 replay's output had not been | valid | 0 |  |
 
 ## [E2 — evidence, feedback and model strength](E02_evidence_feedback_model/REPORT.md)
 
@@ -143,6 +144,14 @@ Status: done
 | `t0_8_packaging` | [`T0_instruments/T0.08_packaging_equivalence/superseded/t0_8_packaging/`](T0_instruments/T0.08_packaging_equivalence/superseded/t0_8_packaging/) | project layout vs merged file, server | superseded by t0_8_packaging_fix | 0 |  |
 | `t0_8_packaging_fix` | [`T0_instruments/T0.08_packaging_equivalence/runs/t0_8_packaging_fix/`](T0_instruments/T0.08_packaging_equivalence/runs/t0_8_packaging_fix/) | on the fixed DiscoPoP | valid | 0 |  |
 | `t0_8_packaging_mac` | [`T0_instruments/T0.08_packaging_equivalence/runs/t0_8_packaging_mac/`](T0_instruments/T0.08_packaging_equivalence/runs/t0_8_packaging_mac/) | 29 kernels, Mac | valid | 0 |  |
+
+## [T0.9 — fast refresh vs full profile over chains of rewrites](T0_instruments/T0.09_refresh_chains/REPORT.md)
+
+Status: done
+
+| run | where | what it is | status | trials | outcomes |
+|---|---|---|---|---:|---|
+| `t0_9_refresh_d29` | [`T0_instruments/T0.09_refresh_chains/checks/t0_9_refresh_d29/`](T0_instruments/T0.09_refresh_chains/checks/t0_9_refresh_d29/) | T0.9 re-run after D29 (owed before E3), Mac, no model: 11 of 18 identical, 7 unsupported suggestions; server repeat on LLVM 20 to follow | valid | 0 |  |
 
 ## [T0.10 — expert references](T0_instruments/T0.10_expert_references/REPORT.md)
 
