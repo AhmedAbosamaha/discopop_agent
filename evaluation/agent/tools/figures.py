@@ -58,7 +58,7 @@ OUTCOME_ORDER: List[Tuple[str, str]] = [
 OUTCOME_HATCH = {"parallel-speed-not-measurable": "////", "SCAFFOLD_MODIFIED": "xxxx"}
 NO_VERDICT = {"VERIFY_FAILED", "AGENT_ERROR", "AGENT_TIMEOUT", "PROFILE_ERROR"}
 
-GROUPS_FILE = Path(__file__).resolve().parents[1] / "kernel_groups.json"
+GROUPS_FILE = Path(__file__).resolve().parents[1] / "config" / "kernel_groups.json"
 
 
 # ---------------------------------------------------------------------------
@@ -73,7 +73,7 @@ def _groups() -> Dict[str, str]:
     return {k: g for g, ks in spec.items() for k in ks}
 
 
-CLASSES_FILE = Path(__file__).resolve().parents[1] / "benchmark_classes.json"
+CLASSES_FILE = Path(__file__).resolve().parents[1] / "config" / "benchmark_classes.json"
 
 
 def _classes() -> Dict[str, str]:

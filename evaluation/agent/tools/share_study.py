@@ -44,7 +44,7 @@ from scaffold import _strip_comments  # noqa: E402  (same comment handling as th
 
 AGENT_DIR = Path(__file__).resolve().parent.parent
 PREPARED = AGENT_DIR / "prepared"
-SIZES_FILE = AGENT_DIR / "kernel_sizes.json"
+SIZES_FILE = AGENT_DIR / "config" / "kernel_sizes.json"
 THRESHOLDS = [0.005, 0.01, 0.02, 0.05, 0.10]
 
 

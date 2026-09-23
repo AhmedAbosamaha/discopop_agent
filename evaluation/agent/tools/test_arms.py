@@ -98,7 +98,7 @@ def check_experiments(doc: dict, repo: Path, benchmark: str) -> int:
 
 def check_classes() -> int:
     """benchmark_classes.json — E1's input — names real, prepared, sized benchmarks, once each."""
-    doc = json.loads((HERE.parent / "benchmark_classes.json").read_text())
+    doc = json.loads((HERE.parent / "config" / "benchmark_classes.json").read_text())
     failures = 0
     seen: dict = {}
     for cls, benches in doc["classes"].items():
@@ -126,7 +126,7 @@ def check_classes() -> int:
 
 
 def main() -> int:
-    doc = json.loads((HERE.parent / "arms.json").read_text())
+    doc = json.loads((HERE.parent / "config" / "arms.json").read_text())
     arms = doc["arms"]
     repo = cli._agent_repo() if hasattr(cli, "_agent_repo") else HERE.parent.parent.parent
     sizes = json.loads(cli.KERNEL_SIZES_FILE.read_text())

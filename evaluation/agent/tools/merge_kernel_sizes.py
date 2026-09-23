@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Merge a T0.1 run's `chosen.json` into the committed `agent/kernel_sizes.json`.
+"""Merge a T0.1 run's `chosen.json` into the committed `agent/config/kernel_sizes.json`.
 
 `kernel_sizes.json` is what the runner reads (`_verify_size`, `_timing_size`): per benchmark
 the verification size (serial kernel ≥ 1 s), the timing size (≥ 0.25 s) and the longest
@@ -16,7 +16,7 @@ import sys
 from pathlib import Path
 
 AGENT_DIR = Path(__file__).resolve().parents[1]
-TABLE = AGENT_DIR / "kernel_sizes.json"
+TABLE = AGENT_DIR / "config" / "kernel_sizes.json"
 
 
 def main() -> int:

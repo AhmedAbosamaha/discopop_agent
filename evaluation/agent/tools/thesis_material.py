@@ -43,6 +43,7 @@ from typing import Dict, List, Optional, Set, Tuple
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
+import campaign  # noqa: E402  — where a run's archive and an exhibit's folder are
 import figures  # noqa: E402  — the same pairing and verdicts as the statistics
 
 AGENT_DIR = HERE.parent
@@ -56,7 +57,7 @@ STORY = re.compile(r"┌─|└─|Calling|Quality gate PASSED|gate failed|Disco
                    r"already has a pattern|PHASE [AB]|SETTLING|Restructuring not allowed")
 ANSI = re.compile(r"\x1b\[[0-9;]*m")
 # The DiscoPoP-alone baseline of a run that did not carry its own: E10 measured it in a separate
-# run (agent/results/_analysis/e10_main_comparison/README.md), and its exhibits are paired with it.
+# run (agent/results/E10_speed_check/analysis/README.md), and its exhibits are paired with it.
 DEFAULT_BASELINES = {"e10": ["e10_dp_alone"]}
 RUNTIME_STAGES = ("correctness", "tsan", "schedules")
 
@@ -296,7 +297,8 @@ def _main_comparison(run: str, t: dict, baseline_runs: List[str]) -> dict:
     bench = str(t["benchmark"])
     trials: List[dict] = []
     for r in [run, *baseline_runs]:
-        for p in sorted((RESULTS / r / "benchmarks" / bench).glob("*/*/rep*/trial.json")):
+        root = campaign.find_run(r)
+        for p in sorted((root / "benchmarks" / bench).glob("*/*/rep*/trial.json")) if root else []:
             x = json.loads(p.read_text())
             x.setdefault("run_id", r)
             if r != run and x.get("arm") != figures.BASELINE_ARM:
@@ -449,7 +451,10 @@ def build_spec(spec: str, out: Path, baseline_runs: Optional[List[str]] = None) 
     path, _, label = rest.partition(":")
     # `<suite>/<kernel>/<arm>@3` names a repeat other than the first.
     path, _, rep = path.partition("@")
-    arm_dir = RESULTS / run / "benchmarks" / path
+    root = campaign.find_run(run)
+    if root is None:
+        raise SystemExit(f"run {run} is not in the archive")
+    arm_dir = root / "benchmarks" / path
     trials = sorted(arm_dir.glob(f"*/rep{rep or 1}"))
     if not trials:
         raise SystemExit(f"no trial under {arm_dir}")
@@ -458,63 +463,35 @@ def build_spec(spec: str, out: Path, baseline_runs: Optional[List[str]] = None) 
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--out", default=str(AGENT_DIR / "thesis_material"))
+    ap.add_argument("--out", default=None,
+                    help="default: the exhibits/ folder of the run's experiment (results/campaign.json)")
     ap.add_argument("--baseline-runs", default=None,
                     help="comma-separated runs holding the DiscoPoP-alone trials when the exhibit's own run has none")
     ap.add_argument("--rebuild", action="store_true", help="rebuild every exhibit in --out from its facts.json")
     ap.add_argument("specs", nargs="*")
     a = ap.parse_args()
-    out = Path(a.out)
     baselines = [r for r in a.baseline_runs.split(",") if r] if a.baseline_runs else None
+    reg = campaign.load()
     for spec in a.specs:
+        run = spec.split(":", 1)[0]
+        group = (reg.get("runs", {}).get(run) or {}).get("group")
+        if a.out:
+            out = Path(a.out)
+        elif group:
+            out = campaign.group_dir(group, reg) / "exhibits"
+        else:
+            raise SystemExit(f"run {run} is not registered in results/campaign.json — register it (and the exhibit) first")
         d = build_spec(spec, out, baselines)
-        print(f"{spec} -> {d}")
+        print(f"{spec} -> {d.relative_to(AGENT_DIR)}   (register `{d.name}` with its claim in results/campaign.json)")
     if a.rebuild:
-        for fp in sorted(out.glob("*/facts.json")):
-            f = json.loads(fp.read_text())
+        for d in campaign.exhibit_dirs():
+            f = json.loads((d / "facts.json").read_text())
             kept = (f.get("vs_discopop_alone") or {}).get("baseline_runs")
             runs = [r for r in (kept or []) if r != f["run"]] or None
-            d = build(f["run"], RESULTS / f["trial"], fp.parent.name, out, runs)
-            print(f"rebuilt {d.name}")
-    index = ["# Thesis material — case studies", "",
-             "Built by `agent/tools/thesis_material.py` from the archived runs; every number is in "
-             "`facts.json`. Grouped by what the agent actually DID, because that is the question a "
-             "reader asks first and a line count does not answer it: a pragma is not a "
-             "restructuring, and neither is a comment the model wrote to explain itself.", "",
-             "Every line leads with the verdict against **DiscoPoP alone** — the campaign's main "
-             "comparison, computed as the statistics compute it — then the program speedups over the "
-             "sequential original (DiscoPoP alone → agent). Where the shipped program is the original, "
-             "the exhibit shows what the agent did instead, and says so.", ""]
-    groups: Dict[str, List[str]] = {"restructuring": [], "annotation": [], "unchanged": []}
-    for d in sorted(p for p in out.iterdir() if p.is_dir()):
-        fp = d / "facts.json"
-        if not fp.exists():
-            continue
-        f = json.loads(fp.read_text())
-        c = f.get("change") or {}
-        kind = c.get("change_kind", "unchanged")
-        detail = (f"code +{c.get('code_lines_added', 0)}/−{c.get('code_lines_removed', 0)}, "
-                  f"{c.get('pragmas_added', 0)} pragma(s)" if kind == "restructuring"
-                  else f"{c.get('pragmas_added', 0)} pragma(s), no code changed" if kind == "annotation"
-                  else "nothing changed")
-        mc = f.get("vs_discopop_alone") or {}
-        def _x(v: object) -> str:
-            return f"{v:.2f}×" if isinstance(v, (int, float)) else "1.00×" if v is None else str(v)
-        vs = ("no DiscoPoP-alone trial to pair with" if mc.get("verdict") in (None, "—", "no-baseline")
-              else f"vs DiscoPoP alone: **{mc['verdict']}** ({_x(mc.get('dp_alone_speedup_vs_seq'))} → "
-                   f"{_x(mc.get('agent_speedup_vs_seq'))})")
-        sh = f.get("shown") or {}
-        what = "" if sh.get("what") in (None, "the final program") else f" · shows: {sh['what']}"
-        groups.setdefault(kind, []).append(
-            f"- **{d.name}** — {f['benchmark']}, `{f['arm']}` ({f['run']}, rep {f.get('repeat', 1)}) · {vs} · "
-            f"{f['outcome']}, {detail}{what} · {f['llm_calls']} call(s), {f['agent_s']} s")
-    titles = {"restructuring": "## The agent changed the code",
-              "annotation": "## The agent only added pragmas",
-              "unchanged": "## The agent changed nothing (declined)"}
-    for kind in ("restructuring", "annotation", "unchanged"):
-        if groups.get(kind):
-            index += [titles[kind], ""] + groups[kind] + [""]
-    (out / "INDEX.md").write_text("\n".join(index) + "\n")
+            build(f["run"], campaign.trial_path(f["run"], f["trial"], reg), d.name, d.parent, runs)
+            print(f"rebuilt {d.relative_to(AGENT_DIR)}")
+    for p in campaign.write_indexes(reg):
+        print(f"index: {p.relative_to(AGENT_DIR)}")
     return 0
 
 

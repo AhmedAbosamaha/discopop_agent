@@ -1,0 +1,709 @@
+{
+ "_about": "The campaign's registry: every run, read-out and exhibit, which experiment it belongs to, what it is for and whether it is still valid. agent/results/ is laid out from it (one folder per experiment), the indexes and reports are generated from it, and tools/campaign.py check fails when something is missing. Register a run BEFORE launching it (RUNBOOK, definition of done).",
+ "groups": [
+  {
+   "id": "E1",
+   "folder": "E01_main_comparison",
+   "title": "E1 — the main comparison: DiscoPoP alone vs DiscoPoP + agent",
+   "kind": "experiment",
+   "status": "done",
+   "question": "Where DiscoPoP alone reaches no verified parallel program (class R), does the agent — the same DiscoPoP and gate plus a model that restructures — deliver correct speedups? Does it do no harm where DiscoPoP already succeeds (class A), and decline true recurrences (class D)? Does anything wrong get through? (H1, H2, H4)",
+   "headline": "TSVC class R: the agent reaches a verified parallel program in 46 of 90 trials and is FASTER in 44; DiscoPoP alone in 0 of 90 (Wilcoxon p = 0.002, Cliff's δ +0.50). 0 unsafe in 288 trials with a verdict. Class D: 12 of 12 correctly declined. Class A: 1 better, 1 worse, 1 lost — the reason for proposal D32."
+  },
+  {
+   "id": "E1-bare",
+   "folder": "E01b_bare_llm",
+   "title": "E1-bare — the same model with no DiscoPoP and no gate",
+   "kind": "experiment",
+   "status": "running",
+   "question": "What does the pipeline add over handing the program to the same model and asking it to parallelize it? The bare arm's BROKEN count is what the gate prevents; its FASTER count is what DiscoPoP's evidence and the gate's feedback add.",
+   "headline": ""
+  },
+  {
+   "id": "E10",
+   "folder": "E10_speed_check",
+   "title": "E10 — does the speed check keep unnecessary changes out?",
+   "kind": "experiment",
+   "status": "done",
+   "question": "With the speed check timed at a size where speed is measurable, are correct-but-not-faster changes kept out without lowering the delivered speedup? (H10, H10b) Decided D22.",
+   "headline": "The speed check ON at the kernel's timing size is the only configuration with no unsafe acceptance and nothing below DiscoPoP alone (D22)."
+  },
+  {
+   "id": "E11",
+   "folder": "E11_repoomp",
+   "title": "E11 — against RepoOMP on its NPB-C kernels",
+   "kind": "experiment",
+   "status": "pre-flight",
+   "question": "On identical programs and verification, are the agent's results verified correct at least as often as RepoOMP's released outputs? (H11)",
+   "headline": ""
+  },
+  {
+   "id": "T0.1",
+   "folder": "T0_instruments/T0.01_sizes",
+   "title": "T0.1 — size calibration",
+   "kind": "instrument",
+   "status": "done",
+   "question": "At which size is each benchmark's serial computation long enough to verify (≥ 1 s) and to time (≥ 0.25 s)?",
+   "headline": ""
+  },
+  {
+   "id": "T0.2",
+   "folder": "T0_instruments/T0.02_profile_stability",
+   "title": "T0.2 — DiscoPoP profile stability",
+   "kind": "instrument",
+   "status": "done",
+   "question": "Is DiscoPoP's profile the same every time?",
+   "headline": ""
+  },
+  {
+   "id": "T0.3",
+   "folder": "T0_instruments/T0.03_oracle",
+   "title": "T0.3 — can the correctness oracle see a wrong program?",
+   "kind": "instrument",
+   "status": "done",
+   "question": "Replaying every candidate the gate ever judged through the harness verification.",
+   "headline": ""
+  },
+  {
+   "id": "T0.4",
+   "folder": "T0_instruments/T0.04_timing_noise",
+   "title": "T0.4 — timing noise on a shared host",
+   "kind": "instrument",
+   "status": "done",
+   "question": "What speedup can the loaded server resolve, and do concurrent lanes interfere?",
+   "headline": ""
+  },
+  {
+   "id": "T0.5",
+   "folder": "T0_instruments/T0.05_runtime_shares",
+   "title": "T0.5 — runtime share per region",
+   "kind": "instrument",
+   "status": "done",
+   "question": "Where does each benchmark's time go, and what does a runtime-share floor cost?",
+   "headline": ""
+  },
+  {
+   "id": "T0.6",
+   "folder": "T0_instruments/T0.06_patterns_in_main",
+   "title": "T0.6 — DiscoPoP's patterns inside main",
+   "kind": "instrument",
+   "status": "done",
+   "question": "Does DiscoPoP on its own propose pragmas inside main (decision D4)?",
+   "headline": ""
+  },
+  {
+   "id": "T0.7",
+   "folder": "T0_instruments/T0.07_explorer_determinism",
+   "title": "T0.7 — DiscoPoP's explorer on one profile",
+   "kind": "instrument",
+   "status": "done",
+   "question": "Is DiscoPoP's explorer deterministic on a fixed profile?",
+   "headline": ""
+  },
+  {
+   "id": "T0.8",
+   "folder": "T0_instruments/T0.08_packaging_equivalence",
+   "title": "T0.8 — packaging equivalence (D6)",
+   "kind": "instrument",
+   "status": "done",
+   "question": "Does DiscoPoP see the same program in the project layout as in the merged file?",
+   "headline": ""
+  },
+  {
+   "id": "T0.10",
+   "folder": "T0_instruments/T0.10_expert_references",
+   "title": "T0.10 — expert references",
+   "kind": "instrument",
+   "status": "done",
+   "question": "Is there, for every restructuring benchmark, an expert version that is correct AND faster?",
+   "headline": ""
+  },
+  {
+   "id": "T0.11",
+   "folder": "T0_instruments/T0.11_measured_classes",
+   "title": "T0.11 — the measured class of every benchmark",
+   "kind": "instrument",
+   "status": "done",
+   "question": "Does DiscoPoP alone reach a verified parallel program (class A), never (R), or never on a true recurrence (D)?",
+   "headline": ""
+  },
+  {
+   "id": "T0.13",
+   "folder": "T0_instruments/T0.13_default_arm_ceiling",
+   "title": "T0.13 — the default arm's ceiling",
+   "kind": "instrument",
+   "status": "done",
+   "question": "Can the pipeline KEEP a perfect rewrite: the expert restructuring with its pragmas stripped, no model?",
+   "headline": ""
+  },
+  {
+   "id": "T0.14",
+   "folder": "T0_instruments/T0.14_reference_acceptance",
+   "title": "T0.14 — reference acceptance",
+   "kind": "instrument",
+   "status": "done",
+   "question": "Does each package accept its own expert version? A BROKEN there is a defect of the package.",
+   "headline": ""
+  },
+  {
+   "id": "audit",
+   "folder": "audit_benchmark_suitability",
+   "title": "Benchmark suitability audit (§5k, D18)",
+   "kind": "audit",
+   "status": "done",
+   "question": "DiscoPoP + gate alone on every benchmark, no model: which benchmarks can show the contribution at all?",
+   "headline": ""
+  },
+  {
+   "id": "pilots",
+   "folder": "pilots",
+   "title": "Pilots (before the campaign's design was fixed)",
+   "kind": "history",
+   "status": "done",
+   "question": "The first agent runs; they decided D9 (the E1 model) and exposed the defects fixed before E1.",
+   "headline": ""
+  },
+  {
+   "id": "checks",
+   "folder": "harness_checks",
+   "title": "Harness and pipeline checks (not experiments)",
+   "kind": "history",
+   "status": "done",
+   "question": "Smokes and observed runs that tested the harness, the packaging and the agent end to end.",
+   "headline": ""
+  },
+  {
+   "id": "logs",
+   "folder": "logs",
+   "title": "Logs",
+   "kind": "logs",
+   "status": "done",
+   "question": "Launcher logs and diagnostic logs kept for reference.",
+   "headline": ""
+  }
+ ],
+ "runs": {
+  "e1_r_a": {
+   "group": "E1",
+   "section": "runs",
+   "role": "class R, lane A (NUMA node 0): md, is, bicg, doitgen + 9 TSVC loops × 2 arms × 5",
+   "status": "valid"
+  },
+  "e1_r_b": {
+   "group": "E1",
+   "section": "runs",
+   "role": "class R, lane B (node 1): hotspot, seidel-2d, floyd-warshall, trisolv + 9 TSVC loops × 2 arms × 5",
+   "status": "valid"
+  },
+  "e1_a": {
+   "group": "E1",
+   "section": "runs",
+   "role": "class A, the no-harm control: s000, s313, vpvtv × 2 arms × 1",
+   "status": "valid"
+  },
+  "e1_d": {
+   "group": "E1",
+   "section": "runs",
+   "role": "class D, the must-decline control: s3112, s321, s322, s323 × 2 arms × 3",
+   "status": "valid"
+  },
+  "settle_check": {
+   "group": "E1",
+   "section": "checks",
+   "role": "the ten programs Settle dropped, rebuilt from their patches and re-verified on the server: all correct, all slower",
+   "status": "valid"
+  },
+  "e1_smoke": {
+   "group": "E1",
+   "section": "preflight",
+   "role": "pre-flight smoke 1: found stack arrays over the 8 MB limit",
+   "status": "pre-flight"
+  },
+  "e1_smoke2": {
+   "group": "E1",
+   "section": "preflight",
+   "role": "pre-flight smoke 2: the memory constraint in the prompt",
+   "status": "pre-flight"
+  },
+  "e1_smoke3": {
+   "group": "E1",
+   "section": "preflight",
+   "role": "pre-flight smoke 3: found Fix 86 (exposed loops filtered out before Phase B)",
+   "status": "pre-flight"
+  },
+  "e1_smoke4": {
+   "group": "E1",
+   "section": "preflight",
+   "role": "pre-flight smoke 4: found Fix 87 (the re-measurement described the old program)",
+   "status": "pre-flight"
+  },
+  "e1_smoke5": {
+   "group": "E1",
+   "section": "preflight",
+   "role": "pre-flight smoke 5: the one that passed, one benchmark of every kind",
+   "status": "pre-flight"
+  },
+  "bare_smoke_mac": {
+   "group": "E1-bare",
+   "section": "preflight",
+   "role": "the bare-LLM runner on one loop (s211), Mac",
+   "status": "pre-flight"
+  },
+  "e1_bare_a": {
+   "group": "E1-bare",
+   "section": "runs",
+   "role": "TSVC class R, lane A (node 0): 9 loops × bare_llm × 5",
+   "status": "running"
+  },
+  "e1_bare_b": {
+   "group": "E1-bare",
+   "section": "runs",
+   "role": "TSVC class R, lane B (node 1): 9 loops × bare_llm × 5",
+   "status": "running"
+  },
+  "e10": {
+   "group": "E10",
+   "section": "runs",
+   "role": "the speed check: full · speed_gate_large · speed_gate_small × 6 kernels × 3",
+   "status": "valid"
+  },
+  "e10_dp_alone": {
+   "group": "E10",
+   "section": "runs",
+   "role": "DiscoPoP alone on five of E10's kernels (the main comparison, D19)",
+   "status": "valid"
+  },
+  "e10_lu_fix84": {
+   "group": "E10",
+   "section": "runs",
+   "role": "lu, all four arms, after Fix 84",
+   "status": "valid"
+  },
+  "e11_npbc_probe_mac": {
+   "group": "E11",
+   "section": "preflight",
+   "role": "NPB-C feasibility probe on the Mac: EP, IS, CG profiled; FT stopped (the Mac swapped)",
+   "status": "pre-flight"
+  },
+  "t0_1_sizes": {
+   "group": "T0.1",
+   "section": "superseded",
+   "role": "all packaged benchmarks × every size",
+   "status": "superseded by t0_1_sizes_v2"
+  },
+  "t0_1_sizes_v2": {
+   "group": "T0.1",
+   "section": "runs",
+   "role": "the original-format packages × every size",
+   "status": "valid"
+  },
+  "t0_1_apps": {
+   "group": "T0.1",
+   "section": "runs",
+   "role": "the applications (md, is, hotspot, …)",
+   "status": "valid"
+  },
+  "t0_1_tsvc": {
+   "group": "T0.1",
+   "section": "runs",
+   "role": "the 25 TSVC loops → kernel_sizes.json",
+   "status": "valid"
+  },
+  "t0_2_stability": {
+   "group": "T0.2",
+   "section": "superseded",
+   "role": "6 kernels × 10 profiles",
+   "status": "superseded by t0_2_stability_v2_fix"
+  },
+  "t0_2_stability_v2": {
+   "group": "T0.2",
+   "section": "superseded",
+   "role": "the D6 re-run",
+   "status": "superseded by t0_2_stability_v2_fix"
+  },
+  "t0_2_stability_v2_fix": {
+   "group": "T0.2",
+   "section": "runs",
+   "role": "on the fixed DiscoPoP (Fixes 80–82)",
+   "status": "valid"
+  },
+  "t0_3_oracle_mac": {
+   "group": "T0.3",
+   "section": "runs",
+   "role": "82 archived candidates replayed (Mac)",
+   "status": "valid"
+  },
+  "t0_4_timing": {
+   "group": "T0.4",
+   "section": "superseded",
+   "role": "first measurement, stopped at hotspot's Polly build",
+   "status": "superseded by t0_4_timing_v2"
+  },
+  "t0_4_timing_v2": {
+   "group": "T0.4",
+   "section": "runs",
+   "role": "under the load the campaign runs at",
+   "status": "valid"
+  },
+  "t0_5_shares_mac": {
+   "group": "T0.5",
+   "section": "runs",
+   "role": "runtime shares, Mac",
+   "status": "valid"
+  },
+  "t0_5_shares": {
+   "group": "T0.5",
+   "section": "runs",
+   "role": "runtime shares, server (D6 re-run)",
+   "status": "valid"
+  },
+  "t0_6_dp_main": {
+   "group": "T0.6",
+   "section": "superseded",
+   "role": "3 of 37 kernels, stopped",
+   "status": "superseded by t0_6_dp_main_v2_fix"
+  },
+  "t0_6_dp_main_v2": {
+   "group": "T0.6",
+   "section": "superseded",
+   "role": "the D6 re-run",
+   "status": "superseded by t0_6_dp_main_v2_fix"
+  },
+  "t0_6_dp_main_v2_fix": {
+   "group": "T0.6",
+   "section": "runs",
+   "role": "on the fixed DiscoPoP",
+   "status": "valid"
+  },
+  "t0_7_explorer": {
+   "group": "T0.7",
+   "section": "superseded",
+   "role": "2mm, pathfinder, NPB is",
+   "status": "superseded by t0_7_explorer_fix"
+  },
+  "t0_7_explorer_fix": {
+   "group": "T0.7",
+   "section": "runs",
+   "role": "on the fixed DiscoPoP",
+   "status": "valid"
+  },
+  "t0_8_packaging": {
+   "group": "T0.8",
+   "section": "superseded",
+   "role": "project layout vs merged file, server",
+   "status": "superseded by t0_8_packaging_fix"
+  },
+  "t0_8_packaging_fix": {
+   "group": "T0.8",
+   "section": "runs",
+   "role": "on the fixed DiscoPoP",
+   "status": "valid"
+  },
+  "t0_8_packaging_mac": {
+   "group": "T0.8",
+   "section": "runs",
+   "role": "29 kernels, Mac",
+   "status": "valid"
+  },
+  "t0_10_tsvc_ceiling": {
+   "group": "T0.10",
+   "section": "superseded",
+   "role": "TSVC expert references, first sizes",
+   "status": "superseded by t0_10_tsvc_ceiling_v2"
+  },
+  "t0_10_tsvc_ceiling_v2": {
+   "group": "T0.10",
+   "section": "runs",
+   "role": "TSVC expert references at T0.1's sizes: 1.87×–6.40×",
+   "status": "valid"
+  },
+  "ref_check_mac": {
+   "group": "T0.10",
+   "section": "runs",
+   "role": "hotspot (chunk split) and floyd-warshall (textbook) references, Mac",
+   "status": "valid"
+  },
+  "t0_11_classes_a": {
+   "group": "T0.11",
+   "section": "runs",
+   "role": "draw A",
+   "status": "valid"
+  },
+  "t0_11_classes_b": {
+   "group": "T0.11",
+   "section": "runs",
+   "role": "draw B",
+   "status": "valid"
+  },
+  "t0_11_classes_c": {
+   "group": "T0.11",
+   "section": "runs",
+   "role": "draw C",
+   "status": "valid"
+  },
+  "t0_13_ceiling_floyd_mac": {
+   "group": "T0.13",
+   "section": "runs",
+   "role": "floyd-warshall's textbook reference, Mac, safety only",
+   "status": "valid"
+  },
+  "lulesh_ref_check": {
+   "group": "T0.14",
+   "section": "runs",
+   "role": "LLNL's OpenMP LULESH through the package, after the dump fix",
+   "status": "valid"
+  },
+  "t0_5_proj_smoke": {
+   "group": "T0.5",
+   "section": "preflight",
+   "role": "the tool on the project layout",
+   "status": "pre-flight"
+  },
+  "t0_6_proj_smoke": {
+   "group": "T0.6",
+   "section": "preflight",
+   "role": "the tool on the project layout",
+   "status": "pre-flight"
+  },
+  "dp_alone_look_mac": {
+   "group": "audit",
+   "section": "runs",
+   "role": "every benchmark, DiscoPoP + gate alone",
+   "status": "valid"
+  },
+  "dp_alone_tsvc_mac": {
+   "group": "audit",
+   "section": "runs",
+   "role": "the 25 TSVC loops",
+   "status": "valid"
+  },
+  "dp_alone_fix84_mac": {
+   "group": "audit",
+   "section": "runs",
+   "role": "after Fix 84, one kernel",
+   "status": "valid"
+  },
+  "dp_alone_fix84_poly_mac": {
+   "group": "audit",
+   "section": "runs",
+   "role": "after Fix 84, PolyBench",
+   "status": "valid"
+  },
+  "pilot_seidel": {
+   "group": "pilots",
+   "section": "runs",
+   "role": "seidel-2d pilot",
+   "status": "void: no model call succeeded"
+  },
+  "pilot2": {
+   "group": "pilots",
+   "section": "runs",
+   "role": "the first agent trial with working model calls (SCAFFOLD_MODIFIED)",
+   "status": "historical"
+  },
+  "pilot3": {
+   "group": "pilots",
+   "section": "superseded",
+   "role": "first pilot on the original-format packages, stopped after 4 of 9",
+   "status": "superseded by pilot4"
+  },
+  "pilot4": {
+   "group": "pilots",
+   "section": "runs",
+   "role": "the pilot on the fixed DiscoPoP; decided D9 (Haiku for E1)",
+   "status": "valid"
+  },
+  "smoke_local_seidel2d_c": {
+   "group": "checks",
+   "section": "runs",
+   "role": "pipeline test, Mac",
+   "status": "historical"
+  },
+  "smoke_local_seidel2d_c_seeded": {
+   "group": "checks",
+   "section": "runs",
+   "role": "after the perturbed-input fix",
+   "status": "historical"
+  },
+  "integrity_smoke_local": {
+   "group": "checks",
+   "section": "runs",
+   "role": "the no-corruption guarantees (§5j)",
+   "status": "historical"
+  },
+  "pkg_smoke_local": {
+   "group": "checks",
+   "section": "runs",
+   "role": "original-format packages through the harness",
+   "status": "historical"
+  },
+  "proj_smoke_local": {
+   "group": "checks",
+   "section": "runs",
+   "role": "project layout: DiscoPoP's pragma in a unit without main",
+   "status": "historical"
+  },
+  "move_smoke": {
+   "group": "checks",
+   "section": "runs",
+   "role": "after the move to one repository (D20)",
+   "status": "historical"
+  },
+  "local_obs1": {
+   "group": "checks",
+   "section": "runs",
+   "role": "observed full run (partial)",
+   "status": "historical"
+  },
+  "local_obs1_md": {
+   "group": "checks",
+   "section": "runs",
+   "role": "observed run on md",
+   "status": "historical"
+  },
+  "e2e_review_2026-09-18": {
+   "group": "checks",
+   "section": "runs",
+   "role": "the whole agent under the arms' argument sets",
+   "status": "historical"
+  },
+  "vs_polly": {
+   "group": "checks",
+   "section": "runs",
+   "role": "first Polly baseline through verify-source",
+   "status": "historical"
+  },
+  "_launcher_logs": {
+   "group": "logs",
+   "section": "launcher",
+   "role": "the server launcher's logs, one per job",
+   "status": "reference"
+  },
+  "_diagnostic_logs": {
+   "group": "logs",
+   "section": "diagnostic",
+   "role": "diagnostic logs from bug hunts",
+   "status": "reference"
+  }
+ },
+ "analysis": {
+  "_analysis/e1_main_comparison": {
+   "group": "E1",
+   "into": "analysis"
+  },
+  "_analysis/e10_main_comparison": {
+   "group": "E10",
+   "into": "analysis"
+  },
+  "_analysis/t0_11_classes": {
+   "group": "T0.11",
+   "into": "analysis"
+  },
+  "_analysis/t0_13_default_arm_ceiling": {
+   "group": "T0.13",
+   "into": "analysis"
+  },
+  "_analysis/seq_cost_expert_mac": {
+   "group": "E1",
+   "into": "checks/seq_cost_expert_mac"
+  }
+ },
+ "exhibits": {
+  "s291_peeled_5of5_faster": {
+   "group": "E1",
+   "shows": "A loop DiscoPoP alone cannot parallelize (a wrap-around variable), won in all 5 repeats: the model replaces the carried index by an expression, DiscoPoP's do-all then holds."
+  },
+  "s127_induction_5of5_faster": {
+   "group": "E1",
+   "shows": "An induction variable with two increments, won in all 5 repeats: the model gives the index its closed form."
+  },
+  "s254_carry_around_5of5_faster": {
+   "group": "E1",
+   "shows": "A carry-around scalar, won in all 5 repeats: the model reads b[i-1] instead of the carried variable."
+  },
+  "floyd_e1_conditional_write_gained": {
+   "group": "E1",
+   "shows": "floyd-warshall: the model writes only on improvement, which frees the rows for a fixed k; DiscoPoP alone 0 of 5, agent 3 of 5 at 5–10×."
+  },
+  "s241_copy_per_repetition_settle_dropped": {
+   "group": "E1",
+   "shows": "Why most losses happen: a correct rewrite that allocates and copies the whole array on every repetition; its pragmas pay 1.08×/1.21×, the finished program is 3.6× slower than the original, Settle drops it."
+  },
+  "s121_memcpy_pragmas_slower": {
+   "group": "E1",
+   "shows": "A correct rewrite whose copy costs more than the pragmas save (0.71×/0.73×): Phase B drops both pragmas, Settle the orphaned rewrite."
+  },
+  "s000_agent_below_dp_alone_lost": {
+   "group": "E1",
+   "shows": "No-harm control, lost: DiscoPoP alone parallelizes the loop (4.03×); the model rewrites the enclosing function with a copy per repetition and Settle's revert takes DiscoPoP's pragma with it."
+  },
+  "vpvtv_rewrite_halves_dp_speedup_worse": {
+   "group": "E1",
+   "shows": "No-harm control, worse: the model copies b and c for a loop DiscoPoP alone already parallelizes; still faster than the original, so it ships — at 2.37× where DiscoPoP alone gives 4.08×."
+  },
+  "s313_local_accumulator_better": {
+   "group": "E1",
+   "shows": "No-harm control, better: a loop-local accumulator lets DiscoPoP find the reduction — 6.36× against DiscoPoP alone's 5.55×."
+  },
+  "s322_recurrence_declined_rewrites_caught": {
+   "group": "E1",
+   "shows": "Must-decline control: a true recurrence; 8 of the model's rewrites computed wrong values and were rejected at the correctness check. Nothing wrong shipped."
+  },
+  "2mm_default_vs_dp_alone": {
+   "group": "E1",
+   "shows": "Pre-flight (e1_smoke5): on code DiscoPoP already parallelizes, the model fuses two loops — better than DiscoPoP alone."
+  },
+  "s211_distributed_dp_annotates_exposed_loop": {
+   "group": "E1",
+   "shows": "Pre-flight (e1_smoke5): the restructuring path end to end — the model distributes the loop, DiscoPoP annotates the exposed parallel half, TSan rejects the racy one."
+  },
+  "s321_recurrence_declined_9_attempts": {
+   "group": "E1",
+   "shows": "Pre-flight (e1_smoke5): a recurrence declined after 9 attempts, every one rejected by the gate."
+  },
+  "floyd_restructured_peeling": {
+   "group": "E10",
+   "shows": "With the speed check on: a restructuring of floyd-warshall kept at 9.6× (12 threads); DiscoPoP alone reaches nothing."
+  },
+  "floyd_stack_array_broken": {
+   "group": "E10",
+   "shows": "E10's one unsafe result: a stack array sized by the problem — correct at the dump size, it crashes at the verification size with 6 threads. The contract now states the memory limit."
+  },
+  "hotspot_correct_but_12x_slower": {
+   "group": "E10",
+   "shows": "Speed check off: a correct parallel hotspot that is not faster (0.97×/0.95×) — the kind of change the speed check exists to keep out."
+  },
+  "lu_inner_pragma_correct_but_5x_slower": {
+   "group": "E10",
+   "shows": "Speed check off: correct pragmas on lu's inner loop, 5× slower (0.21×/0.16×)."
+  },
+  "lu_with_speed_check_faster": {
+   "group": "E10",
+   "shows": "Speed check on, at the timing size: one pragma kept on lu, 2.4× at 12 threads."
+  },
+  "lu_annotated_after_fix84": {
+   "group": "E10",
+   "shows": "After Fix 84: pragmas on lu, 2.72× where DiscoPoP alone gives 0.21×."
+  },
+  "2mm_annotated_faster": {
+   "group": "E10",
+   "shows": "Pragmas only on 2mm, 7.5× at 12 threads; DiscoPoP alone was timed on another setup, so no ratio."
+  },
+  "seidel2d_correctly_declined": {
+   "group": "E10",
+   "shows": "A true recurrence declined: 12 attempts, 8 rejected for wrong output and 4 for races."
+  },
+  "floyd_restructured_faster": {
+   "group": "pilots",
+   "shows": "Pilot 4: the first kept restructuring of floyd-warshall, 2.9× at 12 threads."
+  },
+  "jacobi2d_annotated_faster": {
+   "group": "pilots",
+   "shows": "Pilot 4: pragmas only on jacobi-2d, 5.8× at 12 threads."
+  },
+  "trisolv_reduction_extracted": {
+   "group": "pilots",
+   "shows": "Pilot 4: the model extracts a reduction in trisolv; the kernel cannot be timed at any size, so correctness only."
+  }
+ }
+}

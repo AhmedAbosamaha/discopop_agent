@@ -1,0 +1,74 @@
+{
+  "run": "e1_r_b",
+  "trial": "E01_main_comparison/runs/e1_r_b/benchmarks/tsvc/s291/default/claude-haiku-4-5-20251001/rep1",
+  "benchmark": "tsvc/s291",
+  "arm": "default",
+  "model": "claude-haiku-4-5-20251001",
+  "repeat": 1,
+  "outcome": "FASTER",
+  "vs_discopop_alone": {
+    "verdict": "gained",
+    "class": "R",
+    "dp_alone_trials": 5,
+    "dp_alone_outcomes": "no-change,no-change,no-change,no-change,no-change",
+    "dp_alone_speedup_vs_seq": 1.0,
+    "agent_outcome": "FASTER",
+    "agent_speedup_vs_seq": 3.938,
+    "agent_vs_dp_alone": 3.938,
+    "timing_comparable": true,
+    "baseline_runs": [
+      "e1_r_b"
+    ]
+  },
+  "llm_calls": 1,
+  "agent_s": 162.5,
+  "verify_size": "EXTRALARGE",
+  "verify_status": "ok",
+  "seq_kernel_s": 3.069543,
+  "kernel_speedup_by_threads": {
+    "6": 3.304,
+    "12": 3.938
+  },
+  "dump_max_rel_err": 0.0,
+  "dump_seeded_max_rel_err": 0.0,
+  "pragmas_discopop": 1,
+  "pragmas_llm": 0,
+  "rewrites_kept": 1,
+  "scaffold_ok": true,
+  "package_integrity_ok": true,
+  "change": {
+    "file": "s291.c",
+    "change_kind": "restructuring",
+    "code_lines_added": 1,
+    "code_lines_removed": 4,
+    "lines_before": 178,
+    "lines_after": 176,
+    "lines_removed": 4,
+    "lines_added": 2,
+    "pragmas_added": 1,
+    "candidates_judged": 3,
+    "candidates_kept": 2,
+    "rejected_at": [
+      "tsan"
+    ],
+    "deepest_restructuring_level_kept": 0
+  },
+  "shown": {
+    "what": "the final program",
+    "rejected_attempt": {
+      "attempt": 2,
+      "of": 3,
+      "stage": "tsan",
+      "diagnostic": [
+        "Race detected:",
+        "WARNING: ThreadSanitizer: data race (pid=3367415)",
+        "  Write of size 8 at 0x7ffff7c20000 by thread T16:"
+      ],
+      "rejected_at": {
+        "correctness": 0,
+        "tsan": 1,
+        "schedules": 0
+      }
+    }
+  }
+}

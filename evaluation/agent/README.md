@@ -1,7 +1,9 @@
 # Agent experiment harness — how to run it
 
-Runs configurations of the DiscoPoP agent over PolyBench kernels and judges the results
-independently. Design decisions and the change log are in `THESIS_EXPERIMENTS.md`.
+Runs configurations of the DiscoPoP agent over the benchmarks and judges the results
+independently. **What is where** in this folder: `../README.md` (the map). Results: `results/README.md`.
+The rule for every experiment (register → run → read out → record → exhibits → report →
+`tools/campaign.py check` OK): `docs/RUNBOOK.md`. Decisions and the change log: `docs/THESIS_EXPERIMENTS.md`.
 
 ## Prerequisites
 
@@ -36,7 +38,7 @@ language.
 ## 2. See what can be run
 
 ```bash
-agent/benchmark list-arms          # the agent configurations, from agent/arms.json
+agent/benchmark list-arms          # the agent configurations, from agent/config/arms.json
 ```
 
 ## 3. Run
@@ -49,7 +51,7 @@ agent/benchmark run polybench/seidel-2d --arms full --models haiku
 agent/benchmark run polybench/2mm polybench/seidel-2d \
     --arms full_b1,no_evidence_b1 --models haiku,sonnet --trials 3 \
     --threads 2,4,8
-# verification uses each kernel's measured size from agent/kernel_sizes.json (T0.1);
+# verification uses each kernel's measured size from agent/config/kernel_sizes.json (T0.1);
 # --verify-size STANDARD would force one size for all
 ```
 

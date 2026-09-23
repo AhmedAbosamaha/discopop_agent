@@ -10,7 +10,7 @@
 #   job.sh status [LINES]         running jobs and the tail of the latest launcher log
 #   job.sh sweep                  look for credentials left on disk (needs no token)
 #
-# Credential policy: agent/THESIS_EXPERIMENTS.md §4.
+# Credential policy: agent/docs/THESIS_EXPERIMENTS.md §4.
 set -uo pipefail
 
 SELF="${BASH_SOURCE[0]}"

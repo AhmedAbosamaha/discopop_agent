@@ -2,7 +2,7 @@
 """Package the application benchmarks as single self-contained files, like the kernels.
 
 `prepare_polybench.py` does this for the kernels; this is the same contract for the
-applications (agent/THESIS_EXPERIMENTS.md §2 and §1a), and it exists because the
+applications (agent/docs/THESIS_EXPERIMENTS.md §2 and §1a), and it exists because the
 applications as shipped break three rules the harness depends on:
 
 * **Size comes from argv.** The harness runs a benchmark with no arguments except the

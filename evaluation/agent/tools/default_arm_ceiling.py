@@ -135,7 +135,7 @@ def main() -> int:
     ap.add_argument("--no-speed", action="store_true",
                     help="safety ceiling only: run the gate without its speed check")
     a = ap.parse_args()
-    classes = json.loads((AGENT_DIR / "benchmark_classes.json").read_text())["classes"]
+    classes = json.loads((AGENT_DIR / "config" / "benchmark_classes.json").read_text())["classes"]
     cls = {(b.split("/")[1] if b.startswith("tsvc/") else b): c for c, bs in classes.items() for b in bs}
     loops = a.loops or sorted(p.stem for p in (AGENT_DIR / "reference_solutions" / "tsvc").glob("*.c"))
     a.out.mkdir(parents=True, exist_ok=True)

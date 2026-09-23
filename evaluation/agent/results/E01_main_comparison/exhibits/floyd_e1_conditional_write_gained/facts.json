@@ -1,0 +1,74 @@
+{
+  "run": "e1_r_b",
+  "trial": "E01_main_comparison/runs/e1_r_b/benchmarks/polybench/floyd-warshall/default/claude-haiku-4-5-20251001/rep1",
+  "benchmark": "polybench/floyd-warshall",
+  "arm": "default",
+  "model": "claude-haiku-4-5-20251001",
+  "repeat": 1,
+  "outcome": "FASTER",
+  "vs_discopop_alone": {
+    "verdict": "gained",
+    "class": "R",
+    "dp_alone_trials": 5,
+    "dp_alone_outcomes": "no-change,no-change,no-change,no-change,no-change",
+    "dp_alone_speedup_vs_seq": 1.0,
+    "agent_outcome": "FASTER",
+    "agent_speedup_vs_seq": 5.933,
+    "agent_vs_dp_alone": 5.933,
+    "timing_comparable": true,
+    "baseline_runs": [
+      "e1_r_b"
+    ]
+  },
+  "llm_calls": 1,
+  "agent_s": 189.8,
+  "verify_size": "LARGE",
+  "verify_status": "ok",
+  "seq_kernel_s": 3.314402,
+  "kernel_speedup_by_threads": {
+    "6": 5.281,
+    "12": 5.933
+  },
+  "dump_max_rel_err": 0.0,
+  "dump_seeded_max_rel_err": 0.0,
+  "pragmas_discopop": 1,
+  "pragmas_llm": 0,
+  "rewrites_kept": 1,
+  "scaffold_ok": true,
+  "package_integrity_ok": true,
+  "change": {
+    "file": "floyd-warshall.c",
+    "change_kind": "restructuring",
+    "code_lines_added": 5,
+    "code_lines_removed": 2,
+    "lines_before": 114,
+    "lines_after": 118,
+    "lines_removed": 2,
+    "lines_added": 6,
+    "pragmas_added": 1,
+    "candidates_judged": 3,
+    "candidates_kept": 2,
+    "rejected_at": [
+      "tsan"
+    ],
+    "deepest_restructuring_level_kept": 0
+  },
+  "shown": {
+    "what": "the final program",
+    "rejected_attempt": {
+      "attempt": 2,
+      "of": 3,
+      "stage": "tsan",
+      "diagnostic": [
+        "Race detected:",
+        "WARNING: ThreadSanitizer: data race (pid=3289105)",
+        "  Read of size 8 at 0x72d000003008 by thread T2:"
+      ],
+      "rejected_at": {
+        "correctness": 0,
+        "tsan": 1,
+        "schedules": 0
+      }
+    }
+  }
+}

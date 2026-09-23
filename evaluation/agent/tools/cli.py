@@ -2,7 +2,7 @@
 """Agent experiment harness — runs DiscoPoP-agent configurations over prepared benchmarks.
 
 The other harnesses in this repository compare DiscoPoP *versions*. This one compares
-*configurations of the agent* ("arms", defined in ``agent/arms.json``) and models, on
+*configurations of the agent* ("arms", defined in ``agent/config/arms.json``) and models, on
 single-file benchmarks produced by ``agent/tools/prepare_polybench.py`` (C or C++; the
 language is taken from each benchmark's ``meta.json``).
 
@@ -61,9 +61,9 @@ import scaffold
 AGENT_DIR = Path(__file__).resolve().parents[1]
 HARNESS_ROOT = AGENT_DIR.parent
 PREPARED = AGENT_DIR / "prepared"
-ARMS_FILE = AGENT_DIR / "arms.json"
+ARMS_FILE = AGENT_DIR / "config" / "arms.json"
 # Per-kernel sizes fixed by the T0.1 study (agent/tools/size_table.py → chosen.json, committed here).
-KERNEL_SIZES_FILE = AGENT_DIR / "kernel_sizes.json"
+KERNEL_SIZES_FILE = AGENT_DIR / "config" / "kernel_sizes.json"
 def _default_agent_repo() -> Path:
     """The agent repository. Since 2026-09-20 `evaluation/` (this harness) lives INSIDE it;
     before that the two were sibling checkouts (`new_benchmark_harness`, `discopop_agent`)."""
@@ -1545,11 +1545,25 @@ def _save_trial(trial: Path, rec: dict, rep: int) -> None:
           f"{rec.get('llm_calls', 0)} LLM calls)", flush=True)
 
 
+def _run_root(store: RunStore, rid: str) -> Path:
+    """The working copy in runs/ when it is here, the tracked archive otherwise — so every figure
+    can be regenerated from a fresh clone."""
+    if store.run_dir(rid).exists():
+        return store.run_dir(rid)
+    import campaign
+    return campaign.find_run(rid) or store.run_dir(rid)
+
+
 def _trials_for_runs(store: RunStore, run_ids: List[str]) -> List[dict]:
     trials = []
     for rid in run_ids:
-        host = ((store.read_manifest(rid) or {}).get("invocation") or {}).get("host")
-        for t in _collect(store.run_dir(rid)):
+        root = _run_root(store, rid)
+        try:
+            manifest = json.loads((root / "manifest.json").read_text())
+        except (OSError, ValueError):
+            manifest = {}
+        host = (manifest.get("invocation") or {}).get("host")
+        for t in _collect(root):
             t["run_id"] = rid
             t.setdefault("host", host)          # trials recorded before 2026-09-19 carry no host
             trials.append(t)
@@ -1572,9 +1586,9 @@ def _resolve_runs(store: RunStore, spec: Optional[str]) -> List[str]:
         latest = store.latest_run_id()
         return [latest] if latest else []
     ids = [s for s in spec.split(",") if s]
-    missing = [i for i in ids if not store.run_dir(i).exists()]
+    missing = [i for i in ids if not _run_root(store, i).exists()]
     if missing:
-        sys.exit(f"no such run(s): {', '.join(missing)}")
+        sys.exit(f"no such run(s) in runs/ or the archive: {', '.join(missing)}")
     return ids
 
 
@@ -1679,28 +1693,9 @@ def archive_run(run_dir: Path, dest: Path, max_file_mb: float = 25.0) -> dict:
 
 
 def _archive_index() -> Path:
-    """results/INDEX.md — one row per archived run, the thesis's table of contents."""
-    rows = ["# Archived runs", "",
-            "Every row is a directory under `agent/results/` holding a run's complete results "
-            "(`ARCHIVE.json` lists every file with its sha256). Written by "
-            "`agent/benchmark archive`; see `README.md` here for the layout and "
-            "`agent/THESIS_EXPERIMENTS.md` for what each run is.", "",
-            "| Run | Kind | Created | Host | Status | Trials | Outcomes | Files | Size |",
-            "|---|---|---|---|---|---:|---|---:|---:|"]
-    for d in sorted(RESULTS.iterdir()):
-        a = d / "ARCHIVE.json"
-        if not d.is_dir() or not a.exists():
-            continue
-        r = json.loads(a.read_text())
-        outcomes = ", ".join(f"{k} {v}" for k, v in (r.get("outcomes") or {}).items()) or "—"
-        kind = r.get("study") or r.get("kind") or "—"
-        rows.append(f"| `{r['run_id']}` | {kind} | {(r.get('created') or '')[:16]} | "
-                    f"{r.get('run_host') or '—'} | "
-                    f"{r.get('run_status') or '—'} | {r.get('trials', 0)} | {outcomes} | "
-                    f"{len(r.get('files', []))} | {r.get('bytes', 0) / 1e6:.1f} MB |")
-    out = RESULTS / "INDEX.md"
-    out.write_text("\n".join(rows) + "\n")
-    return out
+    """results/INDEX.md and EXHIBITS.md — by experiment, from the registry (tools/campaign.py)."""
+    import campaign
+    return campaign.write_indexes()[0]
 
 
 def cmd_archive(a: argparse.Namespace) -> int:
@@ -1717,15 +1712,22 @@ def cmd_archive(a: argparse.Namespace) -> int:
     if missing:
         sys.exit(f"no such run(s) under {store.runs_dir}: {', '.join(missing)}")
     RESULTS.mkdir(exist_ok=True)
+    import campaign
+    reg = campaign.load()
     for rid in ids:
         if not any(p.is_file() and _archive_keep(p.relative_to(store.run_dir(rid)))
                    for p in store.run_dir(rid).rglob("*")):
             print(f"skipped {rid}: nothing to archive")
             continue
-        r = archive_run(store.run_dir(rid), RESULTS / rid, a.max_file_mb)
+        # Into its experiment's folder (results/campaign.json); an unregistered run lands in
+        # results/_unregistered/ and `campaign.py check` fails until it is registered.
+        dest = campaign.run_home(rid, reg)
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        r = archive_run(store.run_dir(rid), dest, a.max_file_mb)
         note = f", {len(r['skipped'])} file(s) over {a.max_file_mb} MB skipped" if r["skipped"] else ""
         print(f"archived {rid}: {len(r['files'])} files, {r['bytes'] / 1e6:.1f} MB, "
-              f"{r['trials']} trial(s){note} → results/{rid}/")
+              f"{r['trials']} trial(s){note} → {dest.relative_to(AGENT_DIR)}/"
+              + ("   ← NOT REGISTERED: add it to results/campaign.json" if rid not in reg.get("runs", {}) else ""))
     print(f"index: {_archive_index()}")
     return 0
 
@@ -1918,7 +1920,7 @@ def main() -> None:
     sp.add_argument("--cxx", default=None)
     sp.add_argument("--verify-size", default="per_kernel",
                     help="PolyBench dataset for verification, or per_kernel (default): each "
-                         "kernel's size from agent/kernel_sizes.json (T0.1)")
+                         "kernel's size from agent/config/kernel_sizes.json (T0.1)")
     sp.add_argument("--threads", type=lambda s: [int(x) for x in s.split(",")],
                     default=[min(8, os.cpu_count() or 1)])
     sp.add_argument("--repeats", type=int, default=3, help="timed repeats per build in verify")

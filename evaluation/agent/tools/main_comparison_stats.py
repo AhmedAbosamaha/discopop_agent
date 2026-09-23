@@ -240,7 +240,8 @@ def main() -> int:
     trials: List[dict] = []
     for run in a.runs:
         # The working copy of a run if it is here, its tracked archive otherwise.
-        root = next((d for d in (HERE.parent / "runs" / run, HERE.parent / "results" / run) if d.exists()), None)
+        import campaign
+        root = next((d for d in (HERE.parent / "runs" / run, campaign.find_run(run)) if d and d.exists()), None)
         if root is None:
             sys.exit(f"run {run} not found under runs/ or results/")
         for p in sorted(root.glob("benchmarks/**/trial.json")):

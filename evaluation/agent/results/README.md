@@ -1,17 +1,57 @@
-# `agent/results/` — the thesis's record of every run
+# `agent/results/` — every result of the campaign, one folder per experiment
 
-This directory is **tracked in git**. Every experiment and instrument study the harness
-runs — on the server or on the Mac — is copied here by `agent/benchmark archive` and
-committed, so the numbers, tables, figures and every program the agent produced are in the
-repository's history and can be cited, re-plotted and re-checked without the machine that
-produced them. `INDEX.md` (generated) lists the runs; `THESIS_EXPERIMENTS.md` (one level
-up) says what each run is for and what it found.
+**Start here.** Each folder below is one experiment or instrument. Inside each, `REPORT.md` is the
+report: the question, the status, the result in one paragraph, the figures, what the folder
+holds, every run with its purpose and status, the case studies, and the experiment record's own
+entries for it. Everything here is tracked in git.
+
+| Folder | What it is | Status |
+|---|---|---|
+| [`E01_main_comparison/`](E01_main_comparison/REPORT.md) | **E1 — the main comparison: DiscoPoP alone vs DiscoPoP + agent** (the thesis's headline) | done |
+| [`E01b_bare_llm/`](E01b_bare_llm/REPORT.md) | E1-bare — the same model with no DiscoPoP and no gate | running |
+| [`E10_speed_check/`](E10_speed_check/REPORT.md) | E10 — does the speed check keep unnecessary changes out? | done |
+| [`E11_repoomp/`](E11_repoomp/REPORT.md) | E11 — against RepoOMP on its NPB-C kernels | pre-flight |
+| [`T0_instruments/`](T0_instruments/) | T0.1–T0.14 — the studies that prove the instruments before any experiment is read | done |
+| [`audit_benchmark_suitability/`](audit_benchmark_suitability/REPORT.md) | DiscoPoP alone on every benchmark: which can show the contribution at all (§5k) | done |
+| [`pilots/`](pilots/REPORT.md) | the first agent runs, before the design was fixed | history |
+| [`harness_checks/`](harness_checks/REPORT.md) | smokes and observed runs that tested the harness and the agent (not experiments) | history |
+| [`logs/`](logs/) | launcher and diagnostic logs | reference |
+
+Two lists span all folders: [`INDEX.md`](INDEX.md) — every run, by experiment, with its purpose
+and status (valid · superseded · void · running); [`EXHIBITS.md`](EXHIBITS.md) — every case study,
+by experiment, with the claim it supports and its verdict against DiscoPoP alone.
+
+**Inside an experiment folder**
+
+```
+<EXPERIMENT>/
+  REPORT.md       the report — generated, do not edit (see below)
+  analysis/       the read-out: statistics (main_comparison_stats.md), every paired verdict
+                  (vs_discopop_alone.md/.csv), trials.csv, figures (fig_*.png/.pdf);
+                  analysis/tsvc/ = the same for the primary set (D30)
+  exhibits/       case studies: one folder per trial worth showing (before_after.png, diff.tex,
+                  console.png, attempts.md, facts.json; rejected_attempt.png where the gate
+                  caught a wrong rewrite)
+  runs/           the archived runs — the evidence
+  checks/         verifications made during the read-out (e.g. programs re-verified on the server)
+  preflight/      smoke runs before the launch
+  superseded/     runs a later run replaced (kept, never cited as a result)
+```
+
+**How it stays complete.** `campaign.json` is the registry: every run, read-out and exhibit, the
+experiment it belongs to, what it is for, whether it is still valid. `agent/benchmark archive`
+puts a run where the registry says; `agent/tools/campaign.py reports` writes the reports and the
+two lists; `agent/tools/campaign.py check` fails when anything is missing — an unregistered or
+unarchived run, a run the record never names, an experiment without its report or read-out, an
+exhibit without its verdict against DiscoPoP alone, uncommitted results. The RUNBOOK's definition
+of done ends with that check printing `OK`. Run ids never change; only the folder they sit in
+follows the registry.
 
 The raw runs stay under `agent/runs/` (ignored by git): the same files plus the DiscoPoP
 profile trees (`profiles/**/.discopop/`, several MB per benchmark, regenerable, and
 digested in `profile.json`), the trials' scratch copies (`work/`) and binaries. Those three
 are the only things an archive drops; `ARCHIVE.json` in every run lists what it kept, with
-each file's size and sha256, and where the run came from.
+each file's size and sha256, and where the run came from. `agent/analysis/` is scratch.
 
 ## Layout of an archived trial run
 
@@ -55,21 +95,25 @@ study's name and host, and the CSV it produced (`sizes.csv`, `profiles.csv`, `re
 
 | Thesis material | File |
 |---|---|
-| any table of outcomes, speedups, pragmas, cost, tokens | `figures/trials.csv` (combined over runs with `agent/benchmark plots --runs a,b --name X` → `agent/analysis/X/`, archive that too) |
-| gate stage failure counts (E2/E3 read-outs) | `figures/gate_failures.csv` |
-| outcome and speedup figures | `figures/fig_outcomes`, `fig_speedups`, `fig_evidence_model`, `fig_gate_stages`, `fig_cost` |
-| a specific rewrite (for a listing or a case study) | `benchmarks/.../changes.diff`, `final.*`, `agent_patches/` |
+| an experiment's result, its statistics and its figures | `<EXPERIMENT>/analysis/` — `main_comparison_stats.md`, `vs_discopop_alone.md`, `fig_*.pdf`; `analysis/tsvc/` for the primary set |
+| any table of outcomes, speedups, pragmas, cost, tokens | `<EXPERIMENT>/analysis/trials.csv` (combined over the experiment's runs); one run alone: `runs/<run>/figures/trials.csv` |
+| gate stage failure counts | `analysis/gate_failures.csv` |
+| a case study (listing, before/after, console) | `<EXPERIMENT>/exhibits/<name>/` — `diff.tex`, `before_after.pdf`, `console.png`, `facts.json` |
+| a specific rewrite | `runs/<run>/benchmarks/.../changes.diff`, `final.*`, `agent_patches/` |
 | why a candidate was rejected | `agent.log` (gate verdicts) and `agent_patches/candidates.jsonl` |
 | what DiscoPoP saw | `profiles/.../profile.json` (counts); the tree itself only in `agent/runs/` |
 | that a trial ran on an unmodified program | `trial.json` → `package_integrity.before/after` |
-| verification sizes, profile stability, runtime shares, patterns in `main`, packaging equivalence | the `t0_*` runs |
+| verification sizes, profile stability, runtime shares, patterns in `main`, packaging equivalence, classes, ceilings | `T0_instruments/T0.xx_*/` |
 
 ## Procedure (also in RUNBOOK.md)
 
 After every experiment on the server:
 
 ```
-agent/tools/server.sh fetch <run_id>     # copies the run back and archives it here
+# BEFORE launching: register the run ids in results/campaign.json (group, section, role, status "running")
+agent/tools/server.sh fetch <run_id>     # copies the run back and archives it into its experiment folder
+agent/tools/campaign.py reports          # REPORT.md per experiment, INDEX.md, EXHIBITS.md
+agent/tools/campaign.py check            # must print OK — the RUNBOOK's definition of done
 git add agent/results && git commit -m "results: <run_id> (<experiment>)" && git push
 ```
 
