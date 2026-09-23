@@ -1,0 +1,10 @@
+--- s252.c
++++ s252.c
+@@ -135,6 +135,7 @@
+ {
+     real_t *s_array = (real_t *)malloc(LEN_1D * sizeof(real_t));
+ 
++    #pragma omp parallel for shared(s_array) 
+     for (int nl = 0; nl < R; nl++) {
+         // Compute all s values (Do-All): no loop-carried dependence
+         for (int i = 0; i < LEN_1D; i++) {

@@ -1,0 +1,10 @@
+--- s252.c
++++ s252.c
+@@ -137,6 +137,7 @@
+ 
+     for (int nl = 0; nl < R; nl++) {
+         // Compute all s values (Do-All): no loop-carried dependence
++        #pragma omp parallel for shared(s_array) 
+         for (int i = 0; i < LEN_1D; i++) {
+             s_array[i] = b[i] * c[i];
+         }

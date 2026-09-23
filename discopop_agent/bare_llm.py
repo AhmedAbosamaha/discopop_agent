@@ -45,12 +45,37 @@ _ROLE_BARE = (
     "anything you are unsure of and leave the files compiling.\n\n")
 
 
-def _system() -> str:
-    """The baseline's own role, then the text it genuinely shares with the agent: THE CONTRACT
-    as the agent states it when the model writes the pragmas, the OpenMP loop rules and the
-    pragma forms.  NOT shared, because they would be false here: the agent's role ("a stage of
-    DiscoPoP"), its account of what was profiled, and its description of a gate."""
+# D37 (the author, 23 Sep): the model alone gets nothing of ours that helps it parallelize —
+# only how its tools work, the goal any user would state (faster, same output) and which
+# functions measure the program (a rewrite of those would void the measurement, not help it).
+# Until then (`--prompt contract`, E1-bare's runs) it also received the agent's contract, the
+# OpenMP loop rules, the pragma forms and a task line naming transformations ("splitting a
+# loop, adding a buffer, reordering statements") — about 560 words of guidance from us.
+_ROLE_MINIMAL = (
+    "You are an expert in parallel programming with OpenMP.  You have Read / Edit / Write on a\n"
+    "private working copy of the program's files; only their final content is used.\n")
+
+
+def _system(prompt: str = "minimal") -> str:
+    """`minimal` (D37, the default): the role and the tools, nothing else.  `contract` (E1-bare,
+    kept to reproduce it): the baseline's own role, then the text it shared with the agent —
+    THE CONTRACT as the agent states it when the model writes the pragmas, the OpenMP loop rules
+    and the pragma forms."""
+    if prompt == "minimal":
+        return _ROLE_MINIMAL
     return _ROLE_BARE + _contract(GateFacts(), _CONTRACT_PRAGMA) + _OMP_RULES + _PRAGMA_FORMS
+
+
+def _request_minimal(files: List[str], excluded: List[str]) -> str:
+    keep = (f"Do not change these functions — they set up, time and print the program, and the "
+            f"measurement depends on them: {', '.join(excluded)}.\n" if excluded else "")
+    return ("## The program\n"
+            + "".join(f"  - {f}\n" for f in files)
+            + "\nThese files are in your working directory.\n\n"
+            "### Task\n"
+            "Parallelize this program with OpenMP so that it runs faster on a multi-core machine.\n"
+            "Its output must stay exactly the same.\n"
+            + keep)
 
 
 def _request(files: List[str], excluded: List[str]) -> str:
@@ -83,6 +108,8 @@ def main() -> int:
     p.add_argument("--project-ldflags", default="")
     p.add_argument("--model", required=True)
     p.add_argument("--exclude-functions", default="")
+    p.add_argument("--prompt", choices=("minimal", "contract"), default="minimal",
+                   help="minimal (D37): role, tools, goal, the measuring functions; contract: E1-bare's prompt")
     a = p.parse_args()
 
     root = Path(a.project_dir or ".").resolve()
@@ -95,9 +122,11 @@ def main() -> int:
     print("\n" + "=" * 60 + "\n  Bare-LLM baseline — no DiscoPoP, no gate, one attempt\n" + "=" * 60)
     print(f"  Files          : {', '.join(units)}")
     print(f"  Model          : {a.model}")
-    print(f"  Not editable   : {', '.join(excluded) or '—'}\n")
+    print(f"  Not editable   : {', '.join(excluded) or '—'}")
+    print(f"  Prompt         : {a.prompt}\n")
 
-    system = _system()
+    system = _system(a.prompt)
+    request = (_request_minimal if a.prompt == "minimal" else _request)(units, excluded)
     with tempfile.TemporaryDirectory(prefix="dp_bare_") as tmp:
         ws = Path(tmp)
         # A private copy of the whole program (headers included, so the model can read them);
@@ -113,7 +142,7 @@ def main() -> int:
         print(f"│  [bare] Calling {a.model}...")
         try:
             reply = _complete_claude_agent_sdk(a.model, system,
-                                               [{"role": "user", "content": _request(units, excluded)}],
+                                               [{"role": "user", "content": request}],
                                                key, workspace=ws, stateless=True)
         except Exception as e:                       # noqa: BLE001 - one attempt: say why it failed
             print(f"│  [bare] LLM call failed: {str(e)[:300]}")

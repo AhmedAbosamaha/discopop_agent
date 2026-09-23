@@ -1,0 +1,10 @@
+--- s252.c
++++ s252.c
+@@ -139,6 +139,7 @@
+     s = (real_t*)malloc(LEN_1D * sizeof(real_t));
+     if (!s) return (real_t)0;
+ 
++    #pragma omp parallel for private(t) shared(s) 
+     for (int nl = 0; nl < R; nl++) {
+         /* First pass: compute all products (parallel candidate) */
+         for (int i = 0; i < LEN_1D; i++) {

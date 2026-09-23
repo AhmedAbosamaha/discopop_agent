@@ -32,10 +32,11 @@ Status: done
 | `e1b_marginal_replay` | [`E01b_bare_llm/checks/e1b_marginal_replay/`](E01b_bare_llm/checks/e1b_marginal_replay/) | why the agent lost reach: Phase B's speed check replayed (tools/marginal_replay.py, the agent's own measure_marginal) on the 18 E1 trials whose safe DiscoPoP pragmas it dropped as slower, at 6, 12 and all threads, with 3 won trials as controls (server, no model) | valid | 0 |  |
 | `e1b_v2_verify` | [`E01b_bare_llm/checks/e1b_v2_verify/`](E01b_bare_llm/checks/e1b_v2_verify/) | E1 under agent v2 by replay, harness-verified: the 7 trials D33 recovers (rewrite + all safe DiscoPoP pragmas), the 4 s281 trials the clause fix recovers (both halves), and 2 controls (s127 rep 1 kept in E1; s121 rep 4, a slow rewrite) through verify-source (server, no model) | valid | 13 | FASTER 12, parallel-not-faster 1 |
 | `e1b_v2_race_check` | [`E01b_bare_llm/checks/e1b_v2_race_check/`](E01b_bare_llm/checks/e1b_v2_race_check/) | the gate's safety stages (TSan, schedule matrix, output) over the 13 programs of e1b_v2_verify — verify-source checks output and repeatability, not races (tools/race_check.py, server, no model) | valid | 0 |  |
+| `d36_hint_check` | not archived yet | the author's single-example check of D36: the model alone on the CLEAN (v3) packages of s331, s281, s241 x3 — bare_llm_contract (E1-bare's exact prompt: isolates the hint) and bare_llm (minimal prompt, D37); compare with E1-bare's rows | running |  |  |
 
 ## [E2 — evidence, feedback and model strength](E02_evidence_feedback_model/REPORT.md)
 
-Status: running
+Status: pre-flight
 
 | run | where | what it is | status | trials | outcomes |
 |---|---|---|---|---:|---|
@@ -43,8 +44,9 @@ Status: running
 | `e2_smoke_b` | [`E02_evidence_feedback_model/preflight/e2_smoke_b/`](E02_evidence_feedback_model/preflight/e2_smoke_b/) | pre-flight smoke on agent v2: tsvc/s281 x every E2/E2-source arm + discopop_gate, Haiku x1 — Fix 91's clause stage end to end, the evidence arms' code paths | pre-flight | 7 | FASTER 3, no-change 4 |
 | `e2_smoke_sonnet` | [`E02_evidence_feedback_model/preflight/e2_smoke_sonnet/`](E02_evidence_feedback_model/preflight/e2_smoke_sonnet/) | pre-flight smoke: claude-sonnet-5 through the harness for the first time on the server (tsvc/s121, s281 x full_b1 x1) — model id, calls and minutes per trial | pre-flight | 2 | FASTER 2 |
 | `e2_v2_paths` | [`E02_evidence_feedback_model/preflight/e2_v2_paths/`](E02_evidence_feedback_model/preflight/e2_v2_paths/) | agent v2's new Phase B paths run end to end, no model: E1's archived D33 and s281 rewrites (pragmas stripped, from e1b_v2_sources) through DiscoPoP -> Phase B -> Settle at --budget 0 (tools/default_arm_ceiling.py LOOP=FILE, server) | pre-flight | 0 |  |
-| `e2_ab_a` | not archived yet | E2 Parts A+B (Haiku): discopop_gate, default, full_b1, no_evidence, no_evidence_b1 x5 on TSVC class R s112 s121 s1213 s127 s211 s212 s241 s243 s244 (node 0) | running |  |  |
-| `e2_ab_b` | not archived yet | E2 Parts A+B (Haiku): discopop_gate, default, full_b1, no_evidence, no_evidence_b1 x5 on TSVC class R s252 s254 s255 s281 s291 s292 s293 s331 s341 (node 1) | running |  |  |
+| `e2_ab_a` | [`E02_evidence_feedback_model/superseded/e2_ab_a/`](E02_evidence_feedback_model/superseded/e2_ab_a/) | E2 Parts A+B (Haiku): discopop_gate, default, full_b1, no_evidence, no_evidence_b1 x5 on TSVC class R s112 s121 s1213 s127 s211 s212 s241 s243 s244 (node 0) — STOPPED after 34/29 trials: hint in source (D36) | stopped 23 Sep: TSVC packages named the solving transformation in the source header (D36) — superseded by the clean redo | 34 | FASTER 7, no-change 27 |
+| `e2_ab_b` | [`E02_evidence_feedback_model/superseded/e2_ab_b/`](E02_evidence_feedback_model/superseded/e2_ab_b/) | E2 Parts A+B (Haiku): discopop_gate, default, full_b1, no_evidence, no_evidence_b1 x5 on TSVC class R s252 s254 s255 s281 s291 s292 s293 s331 s341 (node 1) — STOPPED after 34/29 trials: hint in source (D36) | stopped 23 Sep: TSVC packages named the solving transformation in the source header (D36) — superseded by the clean redo | 30 | FASTER 11, no-change 18, parallel-not-faster 1 |
+| `e2c_smoke` | not archived yet | clean pre-flight (v3 packages, D36; Fixes 95-96): tsvc/s121, s281 x every E2/E2-source arm + discopop_gate + bare_llm (minimal prompt), Haiku x1 | running |  |  |
 
 ## [E10 — does the speed check keep unnecessary changes out?](E10_speed_check/REPORT.md)
 

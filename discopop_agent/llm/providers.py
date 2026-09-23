@@ -155,6 +155,40 @@ def _record_usage(provider: str, model: str, usage: Any, cost_usd: Optional[floa
         pass
 
 
+# Tools the model never gets in direct mode: a shell, the web, sub-agents, search.  Only
+# Read / Edit / Write are listed in allowed_tools, but listing a tool WHOLE there
+# auto-approves it for ANY path (claude_agent_sdk.types: "an allowed_tools entry that allows a
+# whole tool auto-approves it before the callback is consulted") — so until 23 Sep the
+# "confined to that directory" below was a statement, not a guarantee.  It is now enforced by
+# `confine_to` (a PreToolUse hook, which runs for every call, auto-approved or not).
+BLOCKED_TOOLS = ["Bash", "BashOutput", "KillShell", "WebFetch", "WebSearch", "Task", "Agent",
+                 "Glob", "Grep", "LS", "NotebookEdit", "TodoWrite", "Skill", "SlashCommand"]
+FILE_TOOLS = "Read|Edit|Write|MultiEdit|NotebookEdit|Glob|Grep|LS"
+
+
+def confine_to(workspace: Path) -> Any:
+    """A PreToolUse hook that denies a file tool whose path resolves outside `workspace`
+    (absolute paths, `..`, and symlinks included).  The model's workspace holds a copy of the
+    sources and nothing else: no package metadata, no reference solution, no profile."""
+    root = Path(workspace).resolve()
+
+    async def hook(inp: Any, tool_use_id: Optional[str], context: Any) -> Dict[str, Any]:
+        tool_input = (inp or {}).get("tool_input") or {}
+        given = (tool_input.get("file_path") or tool_input.get("path")
+                 or tool_input.get("notebook_path"))
+        if not given:
+            return {}
+        target = Path(str(given))
+        target = (target if target.is_absolute() else root / target).resolve()
+        if target == root or root in target.parents:
+            return {}
+        return {"hookSpecificOutput": {
+            "hookEventName": "PreToolUse", "permissionDecision": "deny",
+            "permissionDecisionReason": (f"{given} is outside your working directory; only the "
+                                         f"files in it can be read or edited.")}}
+    return hook
+
+
 def _complete_claude_agent_sdk(
     model: str,
     system: str,
@@ -191,6 +225,7 @@ def _complete_claude_agent_sdk(
         from claude_agent_sdk import (  # type: ignore[import-not-found]
             AssistantMessage,
             ClaudeAgentOptions,
+            HookMatcher,
             ResultMessage,
             TextBlock,
             query,
@@ -212,6 +247,9 @@ def _complete_claude_agent_sdk(
             # want exactly one response and nothing else.
             max_turns=24 if workspace else 1,
             allowed_tools=["Read", "Edit", "Write"] if workspace else [],
+            disallowed_tools=BLOCKED_TOOLS if workspace else [],
+            hooks=({"PreToolUse": [HookMatcher(matcher=FILE_TOOLS, hooks=[confine_to(workspace)])]}
+                   if workspace else None),
             cwd=str(workspace) if workspace else None,
             permission_mode="acceptEdits" if workspace else "dontAsk",
             # Without this, the CLI auto-loads this project's own CLAUDE.md and

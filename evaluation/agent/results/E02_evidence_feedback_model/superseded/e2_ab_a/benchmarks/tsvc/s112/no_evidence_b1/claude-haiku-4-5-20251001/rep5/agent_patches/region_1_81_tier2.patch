@@ -1,0 +1,19 @@
+--- s112.c
++++ s112.c
+@@ -134,9 +134,14 @@
+ static real_t kernel_s112(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
+-        for (int i = LEN_1D - 2; i >= 0; i--) {
+-            a[i+1] = a[i] + b[i];
++        real_t *a_temp = (real_t *)malloc((LEN_1D - 1) * sizeof(real_t));
++        for (int i = 0; i < LEN_1D - 1; i++) {
++            a_temp[i] = a[i];
+         }
++        for (int i = 0; i < LEN_1D - 1; i++) {
++            a[i+1] = a_temp[i] + b[i];
++        }
++        free(a_temp);
+         pb_mix(nl);
+     }
+     return (real_t)0;

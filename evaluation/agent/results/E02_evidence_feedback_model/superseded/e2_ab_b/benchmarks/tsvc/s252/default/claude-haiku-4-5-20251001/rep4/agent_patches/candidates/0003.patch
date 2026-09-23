@@ -1,0 +1,10 @@
+--- s252.c
++++ s252.c
+@@ -138,6 +138,7 @@
+ 
+     for (int nl = 0; nl < R; nl++) {
+         // Phase 1: compute base values (b[i] * c[i]) — parallel Do-All
++        #pragma omp parallel for shared(base) 
+         for (int i = 0; i < LEN_1D; i++) {
+             base[i] = b[i] * c[i];
+         }

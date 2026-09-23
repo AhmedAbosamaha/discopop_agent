@@ -260,6 +260,14 @@ was introduced this way; E1 under v2 is `results/E01b_bare_llm/checks/e1b_v2_ver
    exactly the experiment's variable and nothing else. The agent's default is
    `--no-llm-pragmas` (D23): the model restructures, DiscoPoP annotates. An experiment that
    wants the model to write the pragmas says so in its arm.
+0f. **No answer in what the model reads (D36), and nothing but its workspace within reach (Fix 95).** Until 23 Sep every
+   TSVC source opened with its solving transformation (`class: restructure   transformation: …`), read by the model in
+   every arm. `tools/test_integrity.py` §1b now fails on any class/transformation label in an experiment package
+   source and on transformation vocabulary in a TSVC source; a packager keeps such labels in `meta.json` only, which
+   never enters the workspace. The model's file tools are confined to its workspace by a PreToolUse hook (feature
+   check `workspace-confined`); shell, web and search tools are blocked. **The model alone runs with the minimal
+   prompt (D37, `bare_llm`)**: role, tools, the goal, the functions that measure the program — nothing of ours that
+   helps; `bare_llm_contract` reproduces E1-bare's prompt.
 0a. **The main comparison is THREE-WAY: DiscoPoP alone · DiscoPoP + agent · the model alone (D19 +
    D35, the author's rules); the sequential original is the reference column, never the result.** Every
    model-driven run includes `discopop_gate` on the same benchmarks (`--arms discopop_gate,<arms>`), and

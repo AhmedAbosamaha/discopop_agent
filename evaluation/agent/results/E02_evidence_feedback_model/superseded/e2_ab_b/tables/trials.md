@@ -1,0 +1,32 @@
+| Benchmark | Arm | Model | Rep | Outcome | Best speedup | Pragmas (DP+LLM) | Rewrites | Baseline | LLM calls | Agent s |
+|---|---|---|---:|---|---:|---|---:|---:|---:|---:|
+| tsvc/s252 | default | claude-haiku-4-5-20251001 | 1 | FASTER | 4.07x | 1+0 | 1 | 1 | 1 | 194.3 |
+| tsvc/s252 | default | claude-haiku-4-5-20251001 | 2 | FASTER | 3.50x | 1+0 | 1 | 1 | 1 | 188.8 |
+| tsvc/s252 | default | claude-haiku-4-5-20251001 | 3 | FASTER | 2.15x | 2+0 | 1 | 1 | 1 | 208.5 |
+| tsvc/s252 | default | claude-haiku-4-5-20251001 | 4 | no-change | 0.99x | 0+0 | 0 | 1 | 1 | 259.8 |
+| tsvc/s252 | default | claude-haiku-4-5-20251001 | 5 | FASTER | 4.09x | 1+0 | 1 | 1 | 1 | 167.0 |
+| tsvc/s252 | discopop_gate | claude-haiku-4-5-20251001 | 1 | no-change | 1.02x | 0+0 | 0 | 1 | 0 | 39.6 |
+| tsvc/s252 | discopop_gate | claude-haiku-4-5-20251001 | 2 | no-change | 1.01x | 0+0 | 0 | 1 | 0 | 40.0 |
+| tsvc/s252 | discopop_gate | claude-haiku-4-5-20251001 | 3 | no-change | 1.00x | 0+0 | 0 | 1 | 0 | 40.1 |
+| tsvc/s252 | discopop_gate | claude-haiku-4-5-20251001 | 4 | no-change | 1.01x | 0+0 | 0 | 1 | 0 | 39.9 |
+| tsvc/s252 | discopop_gate | claude-haiku-4-5-20251001 | 5 | no-change | 1.00x | 0+0 | 0 | 1 | 0 | 39.6 |
+| tsvc/s252 | full_b1 | claude-haiku-4-5-20251001 | 1 | FASTER | 4.24x | 1+0 | 1 | 1 | 1 | 173.8 |
+| tsvc/s252 | full_b1 | claude-haiku-4-5-20251001 | 2 | no-change | 1.00x | 0+0 | 0 | 1 | 2 | 994.0 |
+| tsvc/s252 | full_b1 | claude-haiku-4-5-20251001 | 3 | FASTER | 4.63x | 1+0 | 1 | 1 | 1 | 179.1 |
+| tsvc/s252 | full_b1 | claude-haiku-4-5-20251001 | 4 | FASTER | 4.05x | 1+0 | 1 | 1 | 1 | 142.7 |
+| tsvc/s252 | full_b1 | claude-haiku-4-5-20251001 | 5 | FASTER | 4.07x | 1+0 | 1 | 1 | 1 | 203.2 |
+| tsvc/s252 | no_evidence | claude-haiku-4-5-20251001 | 1 | FASTER | 3.79x | 1+0 | 1 | 1 | 1 | 152.6 |
+| tsvc/s252 | no_evidence | claude-haiku-4-5-20251001 | 2 | no-change | 1.00x | 0+0 | 0 | 1 | 1 | 240.8 |
+| tsvc/s252 | no_evidence | claude-haiku-4-5-20251001 | 3 | no-change | 1.02x | 0+0 | 0 | 1 | 1 | 926.8 |
+| tsvc/s252 | no_evidence | claude-haiku-4-5-20251001 | 4 | FASTER | 2.11x | 2+0 | 1 | 1 | 1 | 791.7 |
+| tsvc/s252 | no_evidence | claude-haiku-4-5-20251001 | 5 | no-change | 0.99x | 0+0 | 0 | 1 | 1 | 180.9 |
+| tsvc/s252 | no_evidence_b1 | claude-haiku-4-5-20251001 | 1 | parallel-not-faster | 1.03x | 1+0 | 1 | 1 | 1 | 799.4 |
+| tsvc/s252 | no_evidence_b1 | claude-haiku-4-5-20251001 | 2 | no-change | 1.00x | 0+0 | 0 | 1 | 1 | 202.2 |
+| tsvc/s252 | no_evidence_b1 | claude-haiku-4-5-20251001 | 3 | no-change | 0.98x | 0+0 | 0 | 1 | 1 | 160.3 |
+| tsvc/s252 | no_evidence_b1 | claude-haiku-4-5-20251001 | 4 | no-change | 1.01x | 0+0 | 0 | 1 | 1 | 776.0 |
+| tsvc/s252 | no_evidence_b1 | claude-haiku-4-5-20251001 | 5 | FASTER | 4.12x | 1+0 | 1 | 1 | 1 | 140.9 |
+| tsvc/s254 | discopop_gate | claude-haiku-4-5-20251001 | 1 | no-change | 0.99x | 0+0 | 0 | 2 | 0 | 32.1 |
+| tsvc/s254 | discopop_gate | claude-haiku-4-5-20251001 | 2 | no-change | 1.04x | 0+0 | 0 | 2 | 0 | 32.8 |
+| tsvc/s254 | discopop_gate | claude-haiku-4-5-20251001 | 3 | no-change | 1.01x | 0+0 | 0 | 2 | 0 | 32.4 |
+| tsvc/s254 | discopop_gate | claude-haiku-4-5-20251001 | 4 | no-change | 1.02x | 0+0 | 0 | 2 | 0 | 32.2 |
+| tsvc/s254 | discopop_gate | claude-haiku-4-5-20251001 | 5 | no-change | 1.01x | 0+0 | 0 | 2 | 0 | 32.3 |

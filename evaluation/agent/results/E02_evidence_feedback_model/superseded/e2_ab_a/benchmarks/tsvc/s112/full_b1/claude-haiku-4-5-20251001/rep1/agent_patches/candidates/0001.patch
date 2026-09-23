@@ -1,0 +1,10 @@
+--- s112.c
++++ s112.c
+@@ -142,6 +142,7 @@
+         }
+ 
+         /* Read from a_tmp (constant per iteration), write to a; no loop-carried dependence */
++        #pragma omp parallel for shared(a_tmp) 
+         for (int i = LEN_1D - 2; i >= 0; i--) {
+             a[i+1] = a_tmp[i] + b[i];
+         }

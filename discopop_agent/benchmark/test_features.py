@@ -1843,38 +1843,92 @@ def check_bare_llm(work: Path) -> Result:
 
     saved, saved_argv = getattr(bare_llm, "_complete_claude_agent_sdk"), sys.argv
     setattr(bare_llm, "_complete_claude_agent_sdk", fake)
-    sys.argv = ["bare_llm", "--project-dir", str(sub), "--project-units", "k.c", "--model", "m",
-                "--exclude-functions", "main"]
-    out = io.StringIO()
+    problems: List[str] = []
+    prompts: Dict[str, Any] = {}
     try:
-        with contextlib.redirect_stdout(out):
-            rc = bare_llm.main()
+        for mode in ("minimal", "contract"):
+            src.write_text(src.read_text().replace("#pragma omp parallel for\n", ""))
+            seen.clear()
+            sys.argv = ["bare_llm", "--project-dir", str(sub), "--project-units", "k.c", "--model", "m",
+                        "--exclude-functions", "main", "--prompt", mode]
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                rc = bare_llm.main()
+            prompts[mode] = (" ".join(seen.get("system", "").split()), " ".join(seen.get("request", "").split()))
+            if rc != 0 or "#pragma omp parallel for" not in src.read_text():
+                problems.append(f"{mode}: the model's edit was not copied back")
+            if "k.h" not in seen.get("files", []):
+                problems.append(f"{mode}: the header was not in the model's working copy")
+            if "] Calling m" not in out.getvalue():
+                problems.append(f"{mode}: the call is not logged in the form the harness counts")
+            if not seen.get("stateless"):
+                problems.append(f"{mode}: the call is not stateless")
+            for leak in ("HOW YOUR REWRITE IS CHECKED", "DiscoPoP", "ThreadSanitizer", "re-profiled"):
+                if leak in prompts[mode][0] or leak in prompts[mode][1]:
+                    problems.append(f"{mode}: the bare arm's prompt mentions {leak!r}")
     finally:
         setattr(bare_llm, "_complete_claude_agent_sdk", saved)
         sys.argv = saved_argv
-    problems: List[str] = []
-    flat_sys, flat_req = " ".join(seen.get("system", "").split()), " ".join(seen.get("request", "").split())
-    if rc != 0 or "#pragma omp parallel for" not in src.read_text():
-        problems.append("the model's edit was not copied back")
-    if "k.h" not in seen.get("files", []):
-        problems.append("the header was not in the model's working copy")
-    if "] Calling m" not in out.getvalue():
-        problems.append("the call is not logged in the form the harness counts")
+    m_sys, m_req = prompts.get("minimal", ("", ""))
+    # D37: nothing of ours that helps — no contract, no rules, no transformation named
+    for helper in ("THE CONTRACT", "HEAP-allocated", "reduction(", "private(", "firstprivate", "WHAT OPENMP REQUIRES",
+                   "splitting", "buffer", "reordering", "one attempt"):
+        if helper.lower() in (m_sys + " " + m_req).lower():
+            problems.append(f"minimal: the prompt gives help ({helper!r})")
+    if "main" not in m_req or "exactly the same" not in m_req:
+        problems.append("minimal: the request lacks the goal or the measuring functions")
+    c_sys, c_req = prompts.get("contract", ("", ""))
     for phrase in ("THE CONTRACT", "HEAP-allocated"):
-        if phrase not in flat_sys:
-            problems.append(f"the contract lost {phrase!r}")
-    for leak in ("HOW YOUR REWRITE IS CHECKED", "DiscoPoP", "ThreadSanitizer", "re-profiled"):
-        if leak in flat_sys or leak in flat_req:
-            problems.append(f"the bare arm's prompt mentions {leak!r}")
-    if "main" not in flat_req or "one attempt" not in flat_req:
-        problems.append("the request does not name the excluded functions or the single attempt")
-    if not seen.get("stateless"):
-        problems.append("the call is not stateless")
+        if phrase not in c_sys:
+            problems.append(f"contract: lost {phrase!r} (E1-bare must stay reproducible)")
+    if "one attempt" not in c_req:
+        problems.append("contract: the request lost the single attempt")
     if problems:
         return Result(name, "fail", "; ".join(problems))
     return Result(name, "pass",
-                  "same contract, no gate described, no DiscoPoP word anywhere, excluded functions named, "
-                  "headers readable, the edit kept unchecked")
+                  f"minimal ({len((m_sys + ' ' + m_req).split())} words): role, tools, goal and the measuring "
+                  "functions only; contract (E1-bare) reproducible; no DiscoPoP word, the edit kept unchecked")
+
+
+def check_workspace_confined(work: Path) -> Result:
+    """The model's file tools reach its workspace and nothing else (23 Sep).  Listing Read /
+    Edit / Write whole in allowed_tools auto-approves them for ANY path, so the confinement is a
+    PreToolUse hook: absolute paths outside, `..`, and a symlink leading out are denied; files
+    inside are allowed.  Shell, web and search tools are blocked outright."""
+    name = "workspace confined"
+    import asyncio
+    from ..llm.providers import BLOCKED_TOOLS, confine_to
+    ws = work / "ws_confine"
+    outside = work / "outside_secret"
+    ws.mkdir(parents=True, exist_ok=True)
+    outside.mkdir(parents=True, exist_ok=True)
+    (ws / "k.c").write_text("int main(void){return 0;}\n")
+    (outside / "answer.c").write_text("/* the solution */\n")
+    link = ws / "escape"
+    if not link.exists():
+        link.symlink_to(outside)
+    hook = confine_to(ws)
+    ref = Path(__file__).resolve().parents[2] / "evaluation" / "agent" / "reference_solutions" / "tsvc" / "s211.c"
+    cases = [("Read", {"file_path": "k.c"}, True), ("Read", {"file_path": str(ws / "k.c")}, True),
+             ("Edit", {"file_path": str(ws / "k.c")}, True),
+             ("Read", {"file_path": str(outside / "answer.c")}, False),
+             ("Read", {"file_path": "../outside_secret/answer.c"}, False),
+             ("Read", {"file_path": "escape/answer.c"}, False),
+             ("Read", {"file_path": str(ref)}, False), ("Write", {"file_path": "/tmp/x.c"}, False),
+             ("Glob", {"pattern": "*.c", "path": str(outside)}, False)]
+    problems: List[str] = []
+    for tool, tin, allowed in cases:
+        out = asyncio.run(hook({"tool_name": tool, "tool_input": tin}, None, {"signal": None}))
+        denied = (out.get("hookSpecificOutput") or {}).get("permissionDecision") == "deny"
+        if denied == allowed:
+            problems.append(f"{tool} {tin}: {'denied' if denied else 'allowed'}")
+    for t in ("Bash", "WebFetch", "WebSearch", "Task", "Grep", "Glob"):
+        if t not in BLOCKED_TOOLS:
+            problems.append(f"{t} is not blocked")
+    if problems:
+        return Result(name, "fail", "; ".join(problems))
+    return Result(name, "pass", f"{len(cases)} paths judged right (outside, `..`, symlink, reference "
+                  "solutions denied; the workspace allowed); shell, web and search blocked")
 
 
 def check_covered_skip(work: Path) -> Result:
@@ -3116,6 +3170,7 @@ _CHECKS: List[Tuple[str, Callable[[Path], Result]]] = [
     ("prompt-truth", check_prompt_truth),
     ("prompt-ablation", check_prompt_ablation),
     ("bare-llm", check_bare_llm),
+    ("workspace-confined", check_workspace_confined),
     ("evidence-enrich", check_evidence_enrichment),
     ("dep-standing", check_dependence_standing),
     ("schedule-runtime", check_schedule_runtime),

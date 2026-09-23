@@ -1,0 +1,34 @@
+--- s252.c
++++ s252.c
+@@ -133,16 +133,27 @@
+ 
+ static real_t kernel_s252(void)
+ {
+-    real_t t, s;
++    real_t t;
++    real_t *s;
++
++    s = (real_t*)malloc(LEN_1D * sizeof(real_t));
++    if (!s) return (real_t)0;
++
+     for (int nl = 0; nl < R; nl++) {
++        /* First pass: compute all products (parallel candidate) */
++        for (int i = 0; i < LEN_1D; i++) {
++            s[i] = b[i] * c[i];
++        }
++
++        /* Second pass: accumulate prefix sum */
+         t = (real_t) 0.;
+         for (int i = 0; i < LEN_1D; i++) {
+-            s = b[i] * c[i];
+-            a[i] = s + t;
+-            t = s;
++            a[i] = s[i] + t;
++            t = s[i];
+         }
+         pb_mix(nl);
+     }
++    free(s);
+     return (real_t)0;
+ }
+ 

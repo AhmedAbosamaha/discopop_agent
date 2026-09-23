@@ -1,0 +1,10 @@
+--- s252.c
++++ s252.c
+@@ -144,6 +144,7 @@
+ 
+         // Phase 2: compute a values using shifted base — parallel Do-All
+         a[0] = base[0];
++        #pragma omp parallel for shared(base) 
+         for (int i = 1; i < LEN_1D; i++) {
+             a[i] = base[i] + base[i-1];
+         }

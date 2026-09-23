@@ -1,0 +1,60 @@
+
+============================================================
+  DiscoPoP Agentic Controller
+============================================================
+  Source         : s254.c
+  DiscoPoP dir   : .discopop
+  Model          : claude-haiku-4-5-20251001
+  Budget         : 3 LLM retries/region (+2 free build fixes)
+  λ penalty      : 1.0
+  Min workload   : 0.0
+  Restruct. depth: 0 (Tier-2 allowed at depth 0–0)
+  Quality gate   : Tier-1 = all but speed, no escalation; Tier-2 = full
+  TSan           : barrier-aware (archer: /usr/lib/llvm-20/lib/libarcher.so)
+  Speedup gate   : require ≥ 1.1× measured
+  Dry run        : False
+  LLM mode       : claude-haiku-4-5-20251001
+  Edit mode      : direct
+  Re-profiling   : full (instrument + run + explore) after every kept rewrite
+  Explorer       : one attempt may take 600 s, then the draw is repeated (random stall, L5)
+  Pragmas        : DiscoPoP writes them in Phase B
+============================================================
+
+  [ok] Captured reference output on 2 inputs (69 bytes, 482.3 ms baseline) for the correctness/performance gates.
+
+  [ok] Numerical noise floor 0 — 6 build variants agreed exactly; output is compared byte-for-byte.
+
+  Hotspots       : measured per-region runtimes are available — 16 region(s) measured, 3.7 ms total, ranking by predicted time saved at 48 threads
+
+  Baseline       : DiscoPoP proposes 2 applicable pattern(s) unaided; 2 of them produce a usable pragma
+                   → the run beats DiscoPoP by ending with more than 2
+
+  Initial candidates
+Region ID    Type           Saves    % run    Hot  Tier  Depth  Name
+--------------------------------------------------------------------------------------
+  1:81       loop          2.3 ms    62.4%    YES     1      0  lines 137–144
+  1:79       function      2.3 ms    62.4%    YES     2      0  kernel_s254
+  1:85       loop          2.3 ms    62.2%    YES     1      0  lines 139–142
+
+============================================================
+  FLOOR — DiscoPoP's own program, as the DiscoPoP-alone arm delivers it (D32)
+============================================================
+  [floor] DiscoPoP alone keeps nothing — the floor is the original program (D32)
+
+============================================================
+  PHASE A — restructure  (the source stays pragma-free)
+============================================================
+
+┌─ [depth=0] loop 1:81 (lines 137–144)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] function 1:79 (lines 134–145)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Original backed up → s254.c.original
+│  [Tier-2] Applied to s254.c
+│  [Tier-2] Re-profiling to refresh data and discover new candidates...

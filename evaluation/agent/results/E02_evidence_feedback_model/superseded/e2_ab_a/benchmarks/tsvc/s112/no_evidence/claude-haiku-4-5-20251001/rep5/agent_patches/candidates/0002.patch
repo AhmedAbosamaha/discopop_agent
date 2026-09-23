@@ -1,0 +1,10 @@
+--- s112.c
++++ s112.c
+@@ -135,6 +135,7 @@
+ {
+     for (int nl = 0; nl < R; nl++) {
+         real_t *a_copy = (real_t *)malloc(LEN_1D * sizeof(real_t));
++        #pragma omp parallel for shared(a_copy) 
+         for (int i = 0; i < LEN_1D; i++) {
+             a_copy[i] = a[i];
+         }

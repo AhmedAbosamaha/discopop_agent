@@ -46,6 +46,45 @@ for meta_p in sorted(PREPARED.rglob("meta.json")):
 expect(f"{n} packages match their packager's digest", n > 0)
 
 
+# ---- 1b. no answer in what the model reads (record §1a, D36) ---------------------------
+# Until TSVC generator v3 (23 Sep) every TSVC source opened with TSVC's category comment and
+# this harness's `class:` / `transformation:` labels — the solving transformation, read by the
+# model in every arm of E1, E1-bare and E2. A package's SOURCES are what the model's workspace
+# holds; meta.json is not. Calibration packages describe their task by design and never enter
+# an experiment (prepare_calib.py), so they are left out.
+print("1b. no solution vocabulary in package sources")
+import re  # noqa: E402
+
+LABELS = re.compile(r"transformation\s*:|class\s*:\s*(restructure|annotate|decline)", re.I)
+TSVC_WORDS = ["statement reordering", "loop distribution", "node splitting", "scalar expansion",
+              "loop peeling", "peeling", "index-set", "induction variable", "loop reversal",
+              "carry-around", "wrap-around", "crossing threshold", "compaction", "prefix sum",
+              "recurrence", "max-index", "search loop", "packing", "reduction"]
+SOURCE_EXT = {".c", ".cc", ".cpp", ".cxx", ".h", ".hh", ".hpp"}
+checked, leaks = 0, []
+for meta_p in sorted(PREPARED.rglob("meta.json")):
+    pkg = meta_p.parent
+    if pkg.relative_to(PREPARED).parts[0] == "calib":
+        continue
+    meta = json.loads(meta_p.read_text())
+    words = list(TSVC_WORDS) if meta.get("suite") == "tsvc" else []
+    for key in ("transformation", "why", "category"):
+        v = str(meta.get(key) or "").strip()
+        if meta.get("suite") == "tsvc" and len(v) > 12:
+            words.append(v)
+    for f in sorted(p for p in pkg.rglob("*") if p.suffix in SOURCE_EXT):
+        text = f.read_text(errors="replace")
+        checked += 1
+        if LABELS.search(text):
+            leaks.append(f"{f.relative_to(PREPARED)}: a class/transformation label")
+        low = text.lower()
+        hit = next((w for w in words if w.lower() in low), None)
+        if hit:
+            leaks.append(f"{f.relative_to(PREPARED)}: '{hit}'")
+expect(f"{checked} package sources carry no solution vocabulary", checked > 0 and not leaks,
+       "; ".join(leaks[:4]) + (f" (+{len(leaks) - 4} more)" if len(leaks) > 4 else ""))
+
+
 # ---- 2–4. the guard through the real run loop, profiler and agent stubbed -------------
 def fake_profile_once(bench_dir, src_name, dest, agent_repo, timeout):
     """Stand-in for DiscoPoP: archive the sources exactly as profile_once does, plus a

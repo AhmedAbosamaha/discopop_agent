@@ -1,0 +1,10 @@
+--- s252.c
++++ s252.c
+@@ -137,6 +137,7 @@
+     if (!s) { fprintf(stderr, "out of memory\n"); exit(1); }
+ 
+     for (int nl = 0; nl < R; nl++) {
++        #pragma omp parallel for shared(s) 
+         for (int i = 0; i < LEN_1D; i++) {
+             s[i] = b[i] * c[i];
+         }

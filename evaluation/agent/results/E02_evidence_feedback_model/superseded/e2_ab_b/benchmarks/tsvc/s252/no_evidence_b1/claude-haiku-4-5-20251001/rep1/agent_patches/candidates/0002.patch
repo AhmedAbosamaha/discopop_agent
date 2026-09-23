@@ -1,0 +1,10 @@
+--- s252.c
++++ s252.c
+@@ -145,6 +145,7 @@
+ 
+         // Phase 2: accumulate using products (sequential due to t dependency)
+         t = (real_t) 0.;
++        #pragma omp parallel for shared(t,s_arr) 
+         for (int i = 0; i < LEN_1D; i++) {
+             a[i] = s_arr[i] + t;
+             t = s_arr[i];

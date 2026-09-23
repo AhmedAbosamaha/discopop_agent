@@ -1165,9 +1165,10 @@ def run_trial(bench: str, bench_dir: Path, profile_dir: Path, trial: Path, arm: 
         # client, given the program and asked to parallelize it — no DiscoPoP, no gate, one
         # attempt. It takes none of the agent's arguments, so none are passed: common flags,
         # timing flags and --check-input all configure a pipeline this arm does not have.
+        # Only the runner arm's OWN flags (e.g. `--prompt contract`, D37), never the common ones.
         cmd = [str(Path(a.agent_repo) / "venv" / "bin" / "python"), "-m", "discopop_agent.bare_llm",
                *(["--source-file", src_name] if proj is None else _project_agent_flags(proj)),
-               "--model", model,
+               "--model", model, *_load_arms().get(arm, {}).get("flags", []),
                *(["--exclude-functions", ",".join(_excluded_functions(bench_dir))]
                  if _excluded_functions(bench_dir) else [])]
     else:

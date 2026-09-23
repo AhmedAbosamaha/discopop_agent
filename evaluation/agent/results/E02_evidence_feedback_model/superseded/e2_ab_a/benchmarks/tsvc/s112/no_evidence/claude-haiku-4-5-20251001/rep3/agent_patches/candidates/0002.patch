@@ -1,0 +1,10 @@
+--- s112.c
++++ s112.c
+@@ -141,6 +141,7 @@
+ 
+     for (int nl = 0; nl < R; nl++) {
+         memcpy(temp, a, LEN_1D * sizeof(real_t));
++        #pragma omp parallel for shared(temp) 
+         for (int i = 0; i < LEN_1D - 1; i++) {
+             a[i+1] = temp[i] + b[i];
+         }

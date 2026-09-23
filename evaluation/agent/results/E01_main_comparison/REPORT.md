@@ -10,7 +10,7 @@ Where DiscoPoP alone reaches no verified parallel program (class R), does the ag
 
 ## Result in one paragraph
 
-TSVC class R: the agent reaches a verified parallel program in 46 of 90 trials and is FASTER in 44; DiscoPoP alone in 0 of 90 (Wilcoxon p = 0.002, Cliff's δ +0.50). 0 unsafe in 288 trials with a verdict. Class D: 12 of 12 correctly declined. Class A: 1 better, 1 worse, 1 lost — the reason for proposal D32.
+TSVC class R: the agent reaches a verified parallel program in 46 of 90 trials and is FASTER in 44; DiscoPoP alone in 0 of 90 (Wilcoxon p = 0.002, Cliff's δ +0.50). 0 unsafe in 288 trials with a verdict. Class D: 12 of 12 correctly declined. Class A: 1 better, 1 worse, 1 lost — the reason for proposal D32. [D36, 23 Sep: the TSVC sources named the solving transformation in their header — these TSVC agent numbers are 'with the hint'; the clean three-way redo is e2_ab_clean_a/b + e1_a_clean/e1_d_clean.]
 
 ## Figures
 
