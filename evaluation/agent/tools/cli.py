@@ -245,9 +245,12 @@ def _effective_config(spec: dict, benchmark: str) -> Dict[str, Any]:
     for name in _FIXED_CONFIG_SWITCHES:
         cfg[name] = _last_switch_in(flags, name)
     for opt in ("--budget", "--evidence", "--restructure-depth", "--llm-recon-mode",
-                "--min-runtime-share"):
+                "--min-runtime-share", "--prompt-omit"):
         vals = [flags[i + 1] for i, f in enumerate(flags[:-1]) if f == opt]
         cfg[opt] = vals[-1] if vals else None
+    # Added per benchmark by _evidence_file_flags, not in `flags`: without it the launch
+    # printout showed compiler_remarks_b1 and no_evidence_b1 as identical (e2_smoke, 23 Sep).
+    cfg["--evidence-file"] = spec.get("evidence_file")
     return cfg
 
 
@@ -860,7 +863,10 @@ def _parse_agent_log(log: str) -> dict:
         # D33: pragmas that were safe but slower ALONE, deferred to a joint judgement, and
         # the sets that judgement kept (one per file). A trial whose win came from a set is
         # a D33 result — E1 had none, the agent could not build one.
-        "phase_b_deferred": log.count("└─ DEFERRED"),
+        # Only Phase B's marker: Phase A prints a bare "└─ DEFERRED" for a region DiscoPoP
+        # already has a pattern for (deferred to Phase B), which counted as D33 until the
+        # E2 smoke of 23 Sep showed 2 on a trial with no D33 deferral at all.
+        "phase_b_deferred": log.count("└─ DEFERRED (slower alone)"),
         "phase_b_joint_kept": log.count("pragma(s) APPLIED together"),
         # D32: what the floor (DiscoPoP's own program) decided. `original` — DiscoPoP alone
         # keeps nothing, so the floor is the original (every class-R loop of E1); `same` — the
@@ -1784,6 +1790,19 @@ def cmd_rescore(a: argparse.Namespace) -> int:
                 continue
             orig_text, final_text = orig.read_text(), final.read_text()
         t["scaffold"] = scaffold.check(orig_text, final_text)
+        # The facts read from the agent's log, re-read with the current parser: a counter
+        # fixed after a run (phase_b_deferred, 23 Sep) must reach that run's records too.
+        log_file = p.parent / "agent.log"
+        if log_file.exists():
+            facts = _parse_agent_log(log_file.read_text(errors="replace"))
+            # only facts the trial already records: a run older than a field keeps its shape
+            old = {k: t[k] for k, v in facts.items() if k in t and t[k] != v}
+            if old:
+                print(f"  {t.get('benchmark')} · {t.get('arm')} · rep{t.get('repeat')}: log facts "
+                      + ", ".join(f"{k} {old[k]} -> {facts[k]}" for k in sorted(old)))
+                t.setdefault("log_facts_history", []).append(
+                    {"old": old, "replaced_at": time.strftime("%Y-%m-%dT%H:%M:%S"), "reason": "rescore"})
+                t.update(facts)
         new = classify(t)
         if new != t.get("outcome"):
             changed += 1

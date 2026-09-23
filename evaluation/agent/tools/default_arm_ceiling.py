@@ -17,6 +17,11 @@ reason (no pattern found / which gate stage rejected) says whether the fault is 
 analysis, the gate, or the speed at this machine.
 
     agent/tools/default_arm_ceiling.py [LOOP...] --out DIR [--agent-repo PATH]
+
+A LOOP may be given as `LOOP=FILE` to hand over another restructuring than the expert's — e.g. a
+rewrite a model wrote in an archived trial (pragmas stripped the same way). Single-file
+benchmarks only. Used to run agent v2's new Phase B paths end to end on E1's rewrites (E2
+pre-flight, 23 Sep), where a smoke's model draw may never produce one.
 """
 from __future__ import annotations
 
@@ -30,7 +35,7 @@ import subprocess
 import sys
 import time
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 HERE = Path(__file__).resolve().parent
 AGENT_DIR = HERE.parent
@@ -45,7 +50,8 @@ def strip_pragmas(text: str) -> str:
     return "\n".join(l for l in text.splitlines() if not PRAGMA.match(l)) + "\n"
 
 
-def run_one(loop: str, out: Path, repo: Path, timeout: int, speed: bool = True) -> Dict[str, object]:
+def run_one(loop: str, out: Path, repo: Path, timeout: int, speed: bool = True,
+            source: Optional[Path] = None) -> Dict[str, object]:
     # `s211` is a TSVC loop; `rodinia-3.1/hotspot` names any package that has an expert
     # reference: reference_solutions/<suite>/<kernel>.<ext> (one file — for a project it
     # replaces the unit of that name) or reference_solutions/<suite>/<kernel>/ (several files,
@@ -57,7 +63,11 @@ def run_one(loop: str, out: Path, repo: Path, timeout: int, speed: bool = True) 
     ext = Path(meta["file"]).suffix
     ref_root = AGENT_DIR / "reference_solutions" / bench.split("/")[0]
     ref_dir, ref = ref_root / bench.split("/")[1], ref_root / f"{bench.split('/')[1]}{ext}"
-    work = out / bench.replace("/", "_")
+    if source is not None:
+        if proj is not None:
+            sys.exit(f"{bench}: LOOP=FILE takes a single-file benchmark only")
+        ref = source
+    work = out / (bench.replace("/", "_") + (f"@{source.stem}" if source is not None else ""))
     shutil.rmtree(work, ignore_errors=True)
     work.mkdir(parents=True)
     env = {**os.environ, **cli._agent_env(repo)}
@@ -140,9 +150,13 @@ def main() -> int:
     loops = a.loops or sorted(p.stem for p in (AGENT_DIR / "reference_solutions" / "tsvc").glob("*.c"))
     a.out.mkdir(parents=True, exist_ok=True)
     rows: List[Dict[str, object]] = []
-    for loop in loops:
+    for spec in loops:
+        loop, _, given = spec.partition("=")
         try:
-            rec = run_one(loop, a.out, a.agent_repo.resolve(), a.timeout, speed=not a.no_speed)
+            rec = run_one(loop, a.out, a.agent_repo.resolve(), a.timeout, speed=not a.no_speed,
+                          source=Path(given).resolve() if given else None)
+            if given:
+                rec["source"] = given
         except subprocess.TimeoutExpired:
             rec = {"loop": loop, "result": "TIMEOUT"}
         rec["class"] = cls.get(loop, "?")
@@ -150,7 +164,7 @@ def main() -> int:
         print(f"{loop:7s} class {rec['class']}  {rec.get('result'):13s} candidates={rec.get('candidates')} "
               f"applied={rec.get('applied')} rejected_by={rec.get('rejected_by')} slower={rec.get('dropped_slower')} "
               f"marginals={rec.get('marginals')} ({rec.get('seconds')} s)", flush=True)
-        keys = ["loop", "class", "result", "expert_pragmas", "candidates", "applied", "rejected_by",
+        keys = ["loop", "source", "class", "result", "expert_pragmas", "candidates", "applied", "rejected_by",
                 "dropped_slower", "marginals", "settle_ok", "seconds", "detail"]
         with (a.out / "ceiling.csv").open("w", newline="") as f:
             w = csv.DictWriter(f, fieldnames=keys, extrasaction="ignore")
