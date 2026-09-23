@@ -260,11 +260,19 @@ was introduced this way; E1 under v2 is `results/E01b_bare_llm/checks/e1b_v2_ver
    exactly the experiment's variable and nothing else. The agent's default is
    `--no-llm-pragmas` (D23): the model restructures, DiscoPoP annotates. An experiment that
    wants the model to write the pragmas says so in its arm.
-0a. **The main comparison is DiscoPoP alone vs DiscoPoP + agent (D19, the author's rule).** Every
-   model-driven run includes `discopop_gate` on the same benchmarks (`--arms discopop_gate,<arms>`);
-   the read-out starts from `overview.md`'s first table / `vs_discopop_alone.md` (gained · better ·
-   equal · worse · lost · neither · unsafe); speedups over the sequential original are the reference
-   column, never the result. A run whose overview says MISSING is not reported.
+0a. **The main comparison is THREE-WAY: DiscoPoP alone · DiscoPoP + agent · the model alone (D19 +
+   D35, the author's rules); the sequential original is the reference column, never the result.** Every
+   model-driven run includes `discopop_gate` on the same benchmarks (`--arms discopop_gate,<arms>`), and
+   every experiment has a model-alone reference (`bare_llm`) on the same benchmarks with the same
+   model: TSVC class R with Haiku is E1-bare's 90 trials (the bare arm never runs the agent, so an agent
+   change does not touch it); a new model (Sonnet) or a new benchmark set (LULESH, NPB-C, a harder tier)
+   needs its own `bare_llm` run, registered with the experiment. The read-out: (1) the three arms against
+   the sequential reference — verified parallel, FASTER, race-free FASTER (`race_check.py` over the bare
+   arm's parallel programs is a standard step), BROKEN, slower-shipped; (2) agent vs DiscoPoP alone —
+   `vs_discopop_alone.md` (gained · better · equal · worse · lost · neither · unsafe); (3) agent vs model
+   alone — per-benchmark FASTER counts paired (Wilcoxon), unusable programs counted. The model alone's
+   speed is over its correct trials only and is never set against the agent's all-trials median. A run
+   whose overview says MISSING is not reported.
 0. **Suitability pre-flight (D18, thesis record §5k) — no model.** The experiment's benchmarks
    must be able to tell its arms apart: class measured (`discopop_gate` × 3 profiles: R =
    DiscoPoP alone fails and a verified reference exists, A = DiscoPoP alone succeeds, D = true
