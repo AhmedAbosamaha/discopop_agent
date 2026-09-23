@@ -829,7 +829,7 @@
         "E1-bare",
         "E2"
       ],
-      "description": "The model alone (D35: one of the three arms of every main comparison). The SAME model through the same client call, handed the program and asked to parallelize it: no DiscoPoP (no profile read, nothing ranked, no evidence), no gate (nothing compiled, run, raced or timed), one attempt, no feedback. Since D37 (23 Sep) with the MINIMAL prompt \u2014 role, tools, 'parallelize with OpenMP so that it runs faster; output exactly the same', and the functions that measure the program; nothing of the agent's guidance. Whatever it leaves in the file is judged by the harness like any other trial, and its parallel programs are race-checked afterwards (race_check.py), so BROKEN and racy programs are expected and counted. A separate runner (discopop_agent/bare_llm.py), deliberately NOT the agent with switches off. E1-bare (e1_bare_a/b) ran with the contract prompt \u2014 arm `bare_llm_contract`.",
+      "description": "The model alone (D35: one of the three arms of every main comparison). The SAME model through the same client call, handed the program and asked to parallelize it: no DiscoPoP (no profile read, nothing ranked, no evidence), no gate (nothing compiled, run, raced or timed), one attempt, no feedback. Since 23 Sep (the author, D37 as revised the same evening) with the MIRROR prompt: the agent's own instructions in the mode where the model writes the pragmas \u2014 its contract, OpenMP rules, pragma forms, the list of how the finished program is judged, plan and checklist, verbatim \u2014 minus DiscoPoP (role, what it profiled, the region, its evidence), minus the gate during the run and minus feedback: one attempt. Whatever it leaves in the file is judged by the harness like any other trial, and its parallel programs are race-checked afterwards (race_check.py), so BROKEN and racy programs are expected and counted. A separate runner (discopop_agent/bare_llm.py), deliberately NOT the agent with switches off. E1-bare (e1_bare_a/b) ran with the contract prompt \u2014 arm `bare_llm_contract`.",
       "runner": "bare_llm",
       "flags": []
     },
@@ -840,6 +840,15 @@
       "flags": [
         "--prompt",
         "contract"
+      ]
+    },
+    "bare_llm_minimal": {
+      "ids": [],
+      "description": "The model alone with the MINIMAL prompt (role, tools, 'parallelize with OpenMP so that it runs faster; output exactly the same', the measuring functions; 87 words) \u2014 D37 as first decided; `d36_hint_check`'s `bare_llm` arm ran this prompt (commit 1be54f01). Kept to measure what our instructions are worth.",
+      "runner": "bare_llm",
+      "flags": [
+        "--prompt",
+        "minimal"
       ]
     }
   },

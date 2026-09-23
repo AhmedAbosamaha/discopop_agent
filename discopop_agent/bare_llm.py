@@ -33,7 +33,9 @@ import tempfile
 from pathlib import Path
 from typing import List
 
-from .llm.prompts import _CONTRACT_PRAGMA, _OMP_RULES, _PRAGMA_FORMS, _contract
+from .llm.prompts import (_ASK_ANNOTATE, _CONTRACT_PRAGMA, _OMP_RULES, _PLAN_SPEC, _PRAGMA_FORMS,
+                          _RULE, _contract, _granularity, _how_compared, _step)
+from .llm.request import _goal, _task_checklist
 from .llm.providers import _complete_claude_agent_sdk
 from .types import GateFacts
 
@@ -56,11 +58,97 @@ _ROLE_MINIMAL = (
     "private working copy of the program's files; only their final content is used.\n")
 
 
-def _system(prompt: str = "minimal") -> str:
-    """`minimal` (D37, the default): the role and the tools, nothing else.  `contract` (E1-bare,
-    kept to reproduce it): the baseline's own role, then the text it shared with the agent —
-    THE CONTRACT as the agent states it when the model writes the pragmas, the OpenMP loop rules
-    and the pragma forms."""
+# THE MIRROR (the author, 23 Sep, revising D37 the same evening): the model alone gets the
+# agent's own instructions — built here from the agent's own prompt code, so every shared
+# passage is its exact text — in the mode where the model writes the pragmas (the model alone
+# has nobody else to write them), minus exactly three things: DiscoPoP (the role naming it, what
+# it profiled and hands over, which region to work on, its evidence), the gate DURING the run
+# (the same checks are described, as what judges the finished program), and feedback / retries
+# (one attempt).  A sentence of the agent's that names one of those is rewritten; nothing is
+# added that the agent's model does not get.
+MIRROR_GATE = GateFacts(require_speedup=True, n_inputs=2, numeric=False, stress=True)
+_ROLE_MIRROR = ("You are an expert in parallel programming with OpenMP, asked to parallelize a C/C++\n"
+                "program.\n\n")
+
+
+def _judged_mirror(gate: GateFacts) -> str:
+    """The agent's "HOW YOUR REWRITE IS CHECKED" (prompts._checked_annotate), as what judges the
+    FINISHED program: the harness's verification and, afterwards, the gate's race stages.  The
+    static clause pre-check is the gate's alone and is not applied to the model alone's program."""
+    steps = [
+        "it must compile, plain and again with -fopenmp",
+        "ThreadSanitizer runs the parallel build: any real race fails it",
+        "the parallel build is run repeatedly at one thread count, then at\n"
+        "     other thread counts and under static, dynamic and guided schedules:\n"
+        "     every run has to agree with the others",
+        _how_compared(gate).replace("not only the one that was profiled", "not only the one you can see"),
+        "it is timed at several thread counts against the original sequential\n"
+        "     program, and has to be faster",
+    ]
+    body = "\n".join(f"  {i}. {t}" for i, t in enumerate(steps, 1))
+    gran = _granularity(gate, len(steps), "annotate").replace(
+        "  The evidence marks\nwhich loops qualify; annotate the outermost one that does",
+        "  Annotate the\noutermost loop that has enough of them")
+    return (_RULE + "HOW YOUR REWRITE IS JUDGED\n" + _RULE
+            + "Nothing checks your work while you do it, and you get one attempt.  When you are\n"
+            "done, the program as you leave it is judged:\n"
+            + f"{body}\n\n"
+            f"Steps 2-{len(steps)} run your loops with iterations overlapping in arbitrary order.  A\n"
+            "loop you marked parallel has to give the same result whatever order its\n"
+            "iterations run in — reproducing the output in serial proves nothing about\n"
+            "that.  This list is the whole judgement, and a pragma you did not write is a\n"
+            "loop that was never parallelized.\n\n" + gran)
+
+
+def _system_mirror() -> str:
+    gate = MIRROR_GATE
+    ask = (_ASK_ANNOTATE
+           .replace("DiscoPoP profiled one region and could not extract safe parallelism from\n"
+                    "it.  Rewrite that region's sequential source so the parallelism becomes\n"
+                    "explicit,", "This program runs sequentially.  Rewrite its sequential source so the\n"
+                    "parallelism becomes explicit,")
+           .replace("{SPEED_GOAL}", ", and is measurably faster than the original sequential program")
+           .replace("Nothing downstream adds\na pragma to the code you rewrite", "Nothing adds a\npragma to the code you rewrite"))
+    given = (_RULE + "WHAT WE GIVE YOU\n" + _RULE
+             + "The program's source files, and nothing else.\n\n")
+    out = ("\n>>> OUTPUT: edit the files yourself. <<<\n"
+           "You have Read / Edit / Write on a private working copy of the program's files;\n"
+           "their names are in the request.  Read them, write the short plan in your reply,\n"
+           "then apply the rewrite with Edit.  Only the files' final content is used —\n"
+           "pasting code into the reply does nothing.\n" + _PLAN_SPEC + "\n"
+           "Leave the functions the request names as measuring the program untouched, and\n"
+           "leave the files compiling — you have no compiler here, so re-read anything you\n"
+           "are unsure of.\n")
+    return (_ROLE_MIRROR + ask + given + _contract(gate, _CONTRACT_PRAGMA) + _judged_mirror(gate)
+            + _OMP_RULES + _PRAGMA_FORMS + out)
+
+
+def _request_mirror(files: List[str], excluded: List[str]) -> str:
+    gate = MIRROR_GATE
+    goal = (_goal(True, gate)
+            .replace("runs faster than the same build on one thread", "runs faster than the original sequential program")
+            .replace("  Nothing re-profiles your rewrite, and nothing adds a pragma for you.",
+                     "  Nothing adds a pragma for you."))
+    keep = (f"Do not change these functions — they set up, time and print the program, and the "
+            f"measurement depends on them: {', '.join(excluded)}.\n" if excluded else "")
+    return ("## The program\n"
+            + "".join(f"  - {f}\n" for f in files)
+            + "\nThese files are in your working directory.  Read them.\n\n"
+            "### Task\n"
+            f"This program's computation is to be {goal}\n" + keep + "\n"
+            "Worth settling before you write:\n" + _task_checklist(gate, set()) + "\n"
+            ">>> Read the files, give the short plan, then APPLY the rewrite with the Edit tool. "
+            "Do not print a diff or the rewritten code — the files' content is what is used. "
+            "Keep the functions' names and signatures.")
+
+
+def _system(prompt: str = "mirror") -> str:
+    """`mirror` (the default since 23 Sep evening): the agent's own instructions minus DiscoPoP,
+    the gate during the run and feedback.  `minimal` (D37 as first decided, `d36_hint_check`'s
+    `bare_llm` arm): role and tools only.  `contract` (E1-bare, kept to reproduce it): the
+    baseline's own role, then THE CONTRACT, the OpenMP loop rules and the pragma forms."""
+    if prompt == "mirror":
+        return _system_mirror()
     if prompt == "minimal":
         return _ROLE_MINIMAL
     return _ROLE_BARE + _contract(GateFacts(), _CONTRACT_PRAGMA) + _OMP_RULES + _PRAGMA_FORMS
@@ -108,8 +196,9 @@ def main() -> int:
     p.add_argument("--project-ldflags", default="")
     p.add_argument("--model", required=True)
     p.add_argument("--exclude-functions", default="")
-    p.add_argument("--prompt", choices=("minimal", "contract"), default="minimal",
-                   help="minimal (D37): role, tools, goal, the measuring functions; contract: E1-bare's prompt")
+    p.add_argument("--prompt", choices=("mirror", "minimal", "contract"), default="mirror",
+                   help="mirror: the agent's instructions minus DiscoPoP, gate and feedback (default); "
+                        "minimal: role, tools, goal; contract: E1-bare's prompt")
     a = p.parse_args()
 
     root = Path(a.project_dir or ".").resolve()
@@ -126,7 +215,7 @@ def main() -> int:
     print(f"  Prompt         : {a.prompt}\n")
 
     system = _system(a.prompt)
-    request = (_request_minimal if a.prompt == "minimal" else _request)(units, excluded)
+    request = {"mirror": _request_mirror, "minimal": _request_minimal, "contract": _request}[a.prompt](units, excluded)
     with tempfile.TemporaryDirectory(prefix="dp_bare_") as tmp:
         ws = Path(tmp)
         # A private copy of the whole program (headers included, so the model can read them);

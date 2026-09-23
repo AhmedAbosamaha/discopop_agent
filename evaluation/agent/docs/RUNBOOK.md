@@ -265,9 +265,10 @@ was introduced this way; E1 under v2 is `results/E01b_bare_llm/checks/e1b_v2_ver
    every arm. `tools/test_integrity.py` §1b now fails on any class/transformation label in an experiment package
    source and on transformation vocabulary in a TSVC source; a packager keeps such labels in `meta.json` only, which
    never enters the workspace. The model's file tools are confined to its workspace by a PreToolUse hook (feature
-   check `workspace-confined`); shell, web and search tools are blocked. **The model alone runs with the minimal
-   prompt (D37, `bare_llm`)**: role, tools, the goal, the functions that measure the program — nothing of ours that
-   helps; `bare_llm_contract` reproduces E1-bare's prompt.
+   check `workspace-confined`); shell, web and search tools are blocked. **The model alone (`bare_llm`) runs with
+   the MIRROR prompt (D37 revised)**: the agent's own instructions minus DiscoPoP, minus the gate during the run,
+   minus feedback — one attempt, judged afterwards exactly as the agent's final program; `bare_llm_minimal` and
+   `bare_llm_contract` reproduce the two earlier prompts.
 0a. **The main comparison is THREE-WAY: DiscoPoP alone · DiscoPoP + agent · the model alone (D19 +
    D35, the author's rules); the sequential original is the reference column, never the result.** Every
    model-driven run includes `discopop_gate` on the same benchmarks (`--arms discopop_gate,<arms>`), and

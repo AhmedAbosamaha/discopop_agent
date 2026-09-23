@@ -1846,7 +1846,7 @@ def check_bare_llm(work: Path) -> Result:
     problems: List[str] = []
     prompts: Dict[str, Any] = {}
     try:
-        for mode in ("minimal", "contract"):
+        for mode in ("mirror", "minimal", "contract"):
             src.write_text(src.read_text().replace("#pragma omp parallel for\n", ""))
             seen.clear()
             sys.argv = ["bare_llm", "--project-dir", str(sub), "--project-units", "k.c", "--model", "m",
@@ -1863,7 +1863,9 @@ def check_bare_llm(work: Path) -> Result:
                 problems.append(f"{mode}: the call is not logged in the form the harness counts")
             if not seen.get("stateless"):
                 problems.append(f"{mode}: the call is not stateless")
-            for leak in ("HOW YOUR REWRITE IS CHECKED", "DiscoPoP", "ThreadSanitizer", "re-profiled"):
+            # the mirror names ThreadSanitizer as part of how the FINISHED program is judged
+            leaks = ("HOW YOUR REWRITE IS CHECKED", "DiscoPoP", "re-profiled") + (() if mode == "mirror" else ("ThreadSanitizer",))
+            for leak in leaks:
                 if leak in prompts[mode][0] or leak in prompts[mode][1]:
                     problems.append(f"{mode}: the bare arm's prompt mentions {leak!r}")
     finally:
@@ -1877,6 +1879,27 @@ def check_bare_llm(work: Path) -> Result:
             problems.append(f"minimal: the prompt gives help ({helper!r})")
     if "main" not in m_req or "exactly the same" not in m_req:
         problems.append("minimal: the request lacks the goal or the measuring functions")
+    # mirror (the default): the agent's own words where it shares them, nothing of DiscoPoP's
+    from ..llm.prompts import (_CONTRACT_PRAGMA, _OMP_RULES, _PLAN_SPEC, _PRAGMA_FORMS, _contract,
+                               _system_prompt)
+    agent_sys = " ".join(_system_prompt("direct", True, False, bare_llm.MIRROR_GATE).split())
+    r_sys, r_req = prompts.get("mirror", ("", ""))
+    for label, text in (("the contract", _contract(bare_llm.MIRROR_GATE, _CONTRACT_PRAGMA)),
+                        ("the OpenMP rules", _OMP_RULES), ("the pragma forms", _PRAGMA_FORMS),
+                        ("the plan request", _PLAN_SPEC)):
+        flat = " ".join(text.split())
+        if flat not in agent_sys or flat not in r_sys:
+            problems.append(f"mirror: {label} is not the agent's exact text")
+    for q in ("Which dependence is actually blocking this", "Re-derive any bound the old execution order made safe",
+              "ANNOTATED BY YOU", "one attempt"):
+        if q not in r_sys + " " + r_req:
+            problems.append(f"mirror: lacks {q!r}")
+    for leak in ("DiscoPoP", "profil", "evidence", "Target region", "splitting a loop", "adding a buffer",
+                 "reordering statements", "RAW", "re-profile"):
+        if leak.lower() in (r_sys + " " + r_req).lower():
+            problems.append(f"mirror: carries {leak!r}")
+    if "main" not in r_req:
+        problems.append("mirror: the measuring functions are not named")
     c_sys, c_req = prompts.get("contract", ("", ""))
     for phrase in ("THE CONTRACT", "HEAP-allocated"):
         if phrase not in c_sys:
@@ -1886,8 +1909,9 @@ def check_bare_llm(work: Path) -> Result:
     if problems:
         return Result(name, "fail", "; ".join(problems))
     return Result(name, "pass",
-                  f"minimal ({len((m_sys + ' ' + m_req).split())} words): role, tools, goal and the measuring "
-                  "functions only; contract (E1-bare) reproducible; no DiscoPoP word, the edit kept unchecked")
+                  f"mirror ({len((r_sys + ' ' + r_req).split())} words): the agent's contract, OpenMP rules, pragma "
+                  "forms, plan and checklist verbatim, no DiscoPoP / evidence / region / gate-during-the-run; minimal "
+                  f"({len((m_sys + ' ' + m_req).split())} words) and contract (E1-bare) reproducible; the edit kept unchecked")
 
 
 def check_workspace_confined(work: Path) -> Result:
