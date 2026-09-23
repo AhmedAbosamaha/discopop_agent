@@ -837,14 +837,19 @@ python3 -m venv venv
 venv/bin/pip install . ./profiler ./library
 ```
 
-### Step-by-step (example4/bubble_sort.cpp)
+### Step-by-step (bubble sort)
+
+The program is the agent's own test case `discopop_agent/benchmark/cases/bubble_sort.cpp` (the
+former `example4/` folder was removed on 2026-09-23), worked on as a copy outside the repository.
 
 ```bash
-# 3. Clean previous run
-rm -rf example4/a.out example4/.discopop
+# 3. A clean working copy
+REPO=$(pwd); WORK=/tmp/dp_walkthrough
+rm -rf "$WORK" && mkdir -p "$WORK"
+cp discopop_agent/benchmark/cases/bubble_sort.cpp "$WORK"/
 
 # 4. Static analysis + instrumentation
-cd example4
+cd "$WORK"
 discopop_cxx bubble_sort.cpp -o a.out
 
 # 5. Profiling run (collects dynamic dependencies)
@@ -852,17 +857,25 @@ discopop_cxx bubble_sort.cpp -o a.out
 
 # 6. Pattern analysis
 cd .discopop && discopop_explorer
-cd ../..
+cd "$REPO"
 
 # 7. Run the agent (set LLM_API_KEY, or use --provider openai-compat)
 python -m discopop_agent \
-    --source-file  example4/bubble_sort.cpp \
-    --discopop-dir example4/.discopop \
+    --source-file  "$WORK"/bubble_sort.cpp \
+    --discopop-dir "$WORK"/.discopop \
     --model claude-opus-4-8 \
-    --min-workload 0
+    --min-workload 0 \
+    --no-require-speedup
 ```
 
+> `--no-require-speedup`: a sort is memory-bound and this one is short, so the speed check
+> could only judge noise (the test case says so in its header). Leave it out to see the check
+> reject pragmas that are correct but not measurably faster.
+
 ### Expected output
+
+(Recorded on the former `example4/bubble_sort.cpp` with an early version of the agent; region
+ids, line numbers and messages differ on the test case and in the current agent.)
 
 ```
 ┌─ loop 1:6 (lines 23–29)  score=14.5
@@ -892,11 +905,12 @@ SUMMARY: 2 accepted | 1 skipped
 export LLM_API_KEY=sk-ant-...
 
 python -m discopop_agent \
-    --source-file  example4/bubble_sort.cpp \
-    --discopop-dir example4/.discopop \
+    --source-file  "$WORK"/bubble_sort.cpp \
+    --discopop-dir "$WORK"/.discopop \
     --model        claude-opus-4-8 \
     --budget       3 \
-    --min-workload  0
+    --min-workload  0 \
+    --no-require-speedup
 ```
 
 Or place the key in a `.env` file in the project root:

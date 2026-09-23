@@ -174,26 +174,34 @@ LLM_API_KEY=sk-ant-...
 
 ---
 
-## 7. Run a Full Example (example4 — Bubble Sort)
+## 7. Run a Full Example (Bubble Sort)
 
-This is the canonical demo that exercises the full Tier-1 → Tier-2 → re-profile pipeline.
+This is the canonical demo that exercises the full pipeline: in a bubble sort a swap at `j` is
+compared again at `j+1` in the same sweep, so DiscoPoP finds no parallel loop that holds, and the
+model has to restructure the sweep (odd-even transposition) before DiscoPoP's pragmas can apply.
+The program is the agent's own test case `discopop_agent/benchmark/cases/bubble_sort.cpp` (the
+former `example4/` folder was removed on 2026-09-23). Work on a copy outside the repository, so
+no profile or binary lands in it.
 
-### Step 1 — Clean any previous run
+### Step 1 — A clean working copy
 
 ```bash
-rm -rf example4/.discopop example4/a.out
+REPO=$(pwd)                        # the repository root
+WORK=/tmp/dp_walkthrough
+rm -rf "$WORK" && mkdir -p "$WORK"
+cp discopop_agent/benchmark/cases/bubble_sort.cpp "$WORK"/
 ```
 
 ### Step 2 — Instrument the source
 
 ```bash
-cd example4
-../venv/bin/discopop_cxx bubble_sort.cpp -o a.out
+cd "$WORK"
+"$REPO"/venv/bin/discopop_cxx bubble_sort.cpp -o a.out
 ```
 
 > On macOS you may need to add explicit libc++ flags if Fix 2 was not applied:
 > ```bash
-> ../venv/bin/discopop_cxx bubble_sort.cpp -o a.out \
+> "$REPO"/venv/bin/discopop_cxx bubble_sort.cpp -o a.out \
 >     -L/usr/local/Cellar/llvm@19/19.1.7/lib/c++ \
 >     -Wl,-rpath,/usr/local/Cellar/llvm@19/19.1.7/lib/c++
 > ```
@@ -208,8 +216,8 @@ cd example4
 
 ```bash
 cd .discopop
-../../venv/bin/discopop_explorer
-cd ../..
+"$REPO"/venv/bin/discopop_explorer
+cd "$REPO"
 ```
 
 ### Step 5 — Run the agent
@@ -217,12 +225,17 @@ cd ../..
 With Anthropic (set `LLM_API_KEY` or pass `--api-key`):
 ```bash
 python -m discopop_agent \
-    --discopop-dir example4/.discopop \
-    --source-file   example4/bubble_sort.cpp \
+    --discopop-dir "$WORK"/.discopop \
+    --source-file   "$WORK"/bubble_sort.cpp \
     --model        claude-opus-4-8 \
     --budget       3 \
-    --min-workload  0
+    --min-workload  0 \
+    --no-require-speedup
 ```
+
+> `--no-require-speedup`: a sort is memory-bound and this one is short, so the speed check
+> could only judge noise (the test case says so in its header). Leave it out to see the check
+> reject pragmas that are correct but not measurably faster.
 
 Or with the Claude Agent SDK, billed against your Claude Code subscription
 (run `claude login` once first — see step 5).  This is the only provider that
@@ -230,8 +243,9 @@ supports `--edit-mode direct`, where the model edits a private copy of the file
 with its own tools instead of writing out a diff:
 ```bash
 python -m discopop_agent \
-    --discopop-dir example4/.discopop \
-    --source-file   example4/bubble_sort.cpp \
+    --discopop-dir "$WORK"/.discopop \
+    --source-file   "$WORK"/bubble_sort.cpp \
+    --no-require-speedup \
     --provider  claude-agent-sdk \
     --model     haiku \
     --edit-mode direct \
@@ -246,8 +260,9 @@ Or with a self-hosted OpenAI-compatible endpoint (e.g. a vLLM server; tunnel it
 to localhost first — see `--provider`/`--api-base`):
 ```bash
 python -m discopop_agent \
-    --discopop-dir example4/.discopop \
-    --source-file   example4/bubble_sort.cpp \
+    --discopop-dir "$WORK"/.discopop \
+    --source-file   "$WORK"/bubble_sort.cpp \
+    --no-require-speedup \
     --provider openai-compat \
     --api-base http://localhost:18000/v1 \
     --model    Qwen/Qwen3-Coder-30B-A3B-Instruct \
