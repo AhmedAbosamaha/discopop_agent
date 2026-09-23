@@ -1,0 +1,15 @@
+--- s323.c
++++ s323.c
+@@ -135,8 +135,11 @@
+ {
+     for (int nl = 0; nl < R; nl++) {
+         for (int i = 1; i < LEN_1D; i++) {
++            real_t contrib = c[i] * d[i] + c[i] * e[i];
++            b[i] = b[i-1] + contrib;
++        }
++        for (int i = 1; i < LEN_1D; i++) {
+             a[i] = b[i-1] + c[i] * d[i];
+-            b[i] = a[i] + c[i] * e[i];
+         }
+         pb_mix(nl);
+     }

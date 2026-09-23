@@ -1,0 +1,10 @@
+--- vpvtv.c
++++ vpvtv.c
+@@ -139,6 +139,7 @@
+     memcpy(c_fixed, c, (size_t)LEN_1D * sizeof(real_t));
+ 
+     for (int nl = 0; nl < R; nl++) {
++        #pragma omp parallel for shared(c_fixed,b_fixed) 
+         for (int i = 0; i < LEN_1D; i++) {
+             a[i] += b_fixed[i] * c_fixed[i];
+         }

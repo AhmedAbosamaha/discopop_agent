@@ -367,6 +367,13 @@ explorer run from that checkout, so the run's conditions would change between tr
   trial is slow or ends `no-change` after `Quality gate PASSED`, read the `Re-measured
   runtimes: … total` lines and the SETTLING block before suspecting the host. D31 (a bound in
   Phase A) is the author's open decision.
+- **Replay any change to what reaches the model on archived trials BEFORE merging it.** Fix 90
+  ("skip a region whose loops all carry a DiscoPoP pattern") looked obviously right for class A
+  and, replayed on E1's own logs, would have blocked the model on 11 of 18 class-R loops —
+  including every 5-of-5 winner — because in class R DiscoPoP reports patterns the gate then
+  rejects. A rule on DiscoPoP's patterns cannot tell a false positive from a true one; only the
+  gate can. Every trial's `agent.log` has the initial candidate table (tier per region) and the
+  region each model call was made on: that is enough to replay a routing rule without a model.
 - **Do not diagnose a speed verdict from the agent's log alone.** Settle's "slower than the
   original: 4061 ms vs 1115 ms" looked like host interference; rebuilt from the archived
   patches and judged by the harness, the program WAS 3× slower. Every candidate the agent

@@ -1,0 +1,24 @@
+--- s321.c
++++ s321.c
+@@ -134,8 +134,19 @@
+ static real_t kernel_s321(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
+-        for (int i = 1; i < LEN_1D; i++) {
+-            a[i] += a[i-1] * b[i];
++        int changed = 1;
++        while (changed) {
++            changed = 0;
++            for (int i = 1; i < LEN_1D; i += 2) {
++                real_t old_val = a[i];
++                a[i] += a[i-1] * b[i];
++                if (a[i] != old_val) changed = 1;
++            }
++            for (int i = 2; i < LEN_1D; i += 2) {
++                real_t old_val = a[i];
++                a[i] += a[i-1] * b[i];
++                if (a[i] != old_val) changed = 1;
++            }
+         }
+         pb_mix(nl);
+     }

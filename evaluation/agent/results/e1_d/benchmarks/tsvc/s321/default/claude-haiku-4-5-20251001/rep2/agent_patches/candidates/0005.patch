@@ -1,0 +1,10 @@
+--- s321.c
++++ s321.c
+@@ -138,6 +138,7 @@
+         for (int i = 0; i < LEN_1D; i++) {
+             temp[i] = a[i];
+         }
++        #pragma omp parallel for shared(temp) 
+         for (int i = 1; i < LEN_1D; i++) {
+             temp[i] += temp[i-1] * b[i];
+         }

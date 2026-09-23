@@ -1,0 +1,25 @@
+--- s323.c
++++ s323.c
+@@ -133,9 +133,21 @@
+ 
+ static real_t kernel_s323(void)
+ {
+-    for (int nl = 0; nl < R; nl++) {
++    // First two iterations: full original order to deeply seed b propagation
++    for (int nl = 0; nl < 2 && nl < R; nl++) {
+         for (int i = 1; i < LEN_1D; i++) {
+             a[i] = b[i-1] + c[i] * d[i];
++            b[i] = a[i] + c[i] * e[i];
++        }
++        pb_mix(nl);
++    }
++
++    // Remaining iterations: two-pass (separates loop-carried dependence)
++    for (int nl = 2; nl < R; nl++) {
++        for (int i = 1; i < LEN_1D; i++) {
++            a[i] = b[i-1] + c[i] * d[i];
++        }
++        for (int i = 1; i < LEN_1D; i++) {
+             b[i] = a[i] + c[i] * e[i];
+         }
+         pb_mix(nl);

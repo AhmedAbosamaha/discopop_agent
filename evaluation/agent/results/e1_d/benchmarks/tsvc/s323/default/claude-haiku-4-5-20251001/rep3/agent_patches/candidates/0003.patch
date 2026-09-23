@@ -1,0 +1,10 @@
+--- s323.c
++++ s323.c
+@@ -142,6 +142,7 @@
+         /* Parallelizable pass: recompute a[] using now-correct b[] values.
+          * No loop-carried dependence: each iteration reads disjoint b[i-1] and writes a[i] only.
+          * This exposes Do-All pattern: iterations 1..LEN_1D-1 are independent. */
++        #pragma omp parallel for 
+         for (int i = 1; i < LEN_1D; i++) {
+             a[i] = b[i-1] + c[i] * d[i];
+         }

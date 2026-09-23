@@ -1,0 +1,10 @@
+--- s323.c
++++ s323.c
+@@ -133,6 +133,7 @@
+ 
+ static real_t kernel_s323(void)
+ {
++    #pragma omp parallel for 
+     for (int nl = 0; nl < R; nl++) {
+         /* Sequential pass: compute a and b with their loop-carried dependence on b */
+         for (int i = 1; i < LEN_1D; i++) {

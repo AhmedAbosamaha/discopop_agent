@@ -1,0 +1,22 @@
+--- s321.c
++++ s321.c
+@@ -134,9 +134,18 @@
+ static real_t kernel_s321(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        real_t *temp = (real_t*)malloc(LEN_1D * sizeof(real_t));
++        if (!temp) return (real_t)0;
++
++        for (int i = 0; i < LEN_1D; i++) {
++            temp[i] = a[i];
++        }
++
+         for (int i = 1; i < LEN_1D; i++) {
+-            a[i] += a[i-1] * b[i];
++            a[i] = temp[i] + temp[i-1] * b[i];
+         }
++
++        free(temp);
+         pb_mix(nl);
+     }
+     return (real_t)0;

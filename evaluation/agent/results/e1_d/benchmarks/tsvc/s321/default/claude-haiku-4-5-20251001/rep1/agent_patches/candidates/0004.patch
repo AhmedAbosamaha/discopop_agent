@@ -1,0 +1,38 @@
+--- s321.c
++++ s321.c
+@@ -133,12 +133,33 @@
+ 
+ static real_t kernel_s321(void)
+ {
++    real_t *a_prev = (real_t*)malloc(LEN_1D * sizeof(real_t));
++    if (!a_prev) return (real_t)0;
++
+     for (int nl = 0; nl < R; nl++) {
+-        for (int i = 1; i < LEN_1D; i++) {
+-            a[i] += a[i-1] * b[i];
++        /* Odd-even transposition: split recurrence a[i] += a[i-1] * b[i]
++         * into ordered disjoint sub-passes (evens, then odds per pass).
++         * Each iteration of the outer loop processes both even and odd indices,
++         * reading from the state at the start of that iteration (a_prev).
++         * This allows each sub-pass to be parallelized and information to
++         * propagate through the array. */
++        for (int pass = 0; pass < LEN_1D; pass++) {
++            memcpy(a_prev, a, LEN_1D * sizeof(real_t));
++
++            /* Even sub-pass: a[2], a[4], a[6], ... are independent */
++            for (int i = 2; i < LEN_1D; i += 2) {
++                a[i] = a_prev[i] + a_prev[i-1] * b[i];
++            }
++
++            /* Odd sub-pass: a[1], a[3], a[5], ... are independent */
++            for (int i = 1; i < LEN_1D; i += 2) {
++                a[i] = a_prev[i] + a_prev[i-1] * b[i];
++            }
+         }
+         pb_mix(nl);
+     }
++
++    free(a_prev);
+     return (real_t)0;
+ }
+ 

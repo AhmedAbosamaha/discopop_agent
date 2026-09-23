@@ -14,7 +14,9 @@ Built by `agent/tools/thesis_material.py` from the archived runs; every number i
 - **s211_distributed_dp_annotates_exposed_loop** — tsvc/s211, `default`: **parallel-not-faster**, code +3/−1, 1 pragma(s), kernel speedup {'6': 1.064, '12': 1.039}, 2 call(s), 387.5 s
 - **s254_carry_around_5of5_faster** — tsvc/s254, `default`: **FASTER**, code +4/−4, 1 pragma(s), kernel speedup {'6': 3.354, '12': 3.83}, 1 call(s), 117.1 s
 - **s291_peeled_5of5_faster** — tsvc/s291, `default`: **FASTER**, code +1/−4, 1 pragma(s), kernel speedup {'6': 3.304, '12': 3.938}, 1 call(s), 162.5 s
+- **s313_local_accumulator_better** — tsvc/s313, `default`: **FASTER**, code +4/−3, 1 pragma(s), kernel speedup {'6': 5.305, '12': 6.356}, 1 call(s), 166.6 s
 - **trisolv_reduction_extracted** — polybench/trisolv, `full`: **parallel-speed-not-measurable**, code +3/−1, 1 pragma(s), kernel speedup {'6': 0.442, '12': 0.158}, 1 call(s), 88.0 s
+- **vpvtv_rewrite_halves_dp_speedup_worse** — tsvc/vpvtv, `default`: **FASTER**, code +11/−1, 1 pragma(s), kernel speedup {'6': 2.151, '12': 2.367}, 1 call(s), 278.9 s
 
 ## The agent only added pragmas
 
@@ -26,8 +28,10 @@ Built by `agent/tools/thesis_material.py` from the archived runs; every number i
 
 ## The agent changed nothing (declined)
 
+- **s000_agent_below_dp_alone_lost** — tsvc/s000, `default`: **no-change**, nothing changed, kernel speedup {'6': 0.993, '12': 1.001}, 1 call(s), 927.5 s
 - **s121_memcpy_pragmas_slower** — tsvc/s121, `default`: **no-change**, nothing changed, kernel speedup {'6': 1.022, '12': 1.008}, 1 call(s), 174.5 s
 - **s241_copy_per_repetition_settle_dropped** — tsvc/s241, `default`: **no-change**, nothing changed, kernel speedup {'6': 0.996, '12': 0.998}, 1 call(s), 737.9 s
 - **s321_recurrence_declined_9_attempts** — tsvc/s321, `default`: **no-change**, nothing changed, kernel speedup {'6': 1.003, '12': 0.998}, 9 call(s), 1216.6 s
+- **s322_recurrence_declined_rewrites_caught** — tsvc/s322, `default`: **no-change**, nothing changed, kernel speedup {'6': 1.001, '12': 1.0}, 9 call(s), 1446.5 s
 - **seidel2d_correctly_declined** — polybench/seidel-2d, `full`: **no-change**, nothing changed, kernel speedup {'6': 0.981, '12': 1.0}, 12 call(s), 1661.2 s
 

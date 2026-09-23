@@ -1,0 +1,10 @@
+--- s3112.c
++++ s3112.c
+@@ -140,6 +140,7 @@
+             b[i] = a[i];
+         }
+         // Phase 2: accumulate in place to compute prefix sums (sequential)
++        #pragma omp parallel for 
+         for (int i = 1; i < LEN_1D; i++) {
+             b[i] += b[i-1];
+         }

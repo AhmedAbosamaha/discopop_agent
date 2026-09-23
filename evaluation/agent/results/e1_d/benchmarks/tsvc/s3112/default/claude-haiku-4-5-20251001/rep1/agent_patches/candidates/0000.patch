@@ -1,0 +1,22 @@
+--- s3112.c
++++ s3112.c
+@@ -135,11 +135,16 @@
+ {
+     real_t sum;
+     for (int nl = 0; nl < R; nl++) {
+-        sum = (real_t)0.0;
++        // Phase 1: copy a to b (parallel Do-All, each iteration independent)
+         for (int i = 0; i < LEN_1D; i++) {
+-            sum += a[i];
+-            b[i] = sum;
++            b[i] = a[i];
+         }
++        // Phase 2: accumulate in place to compute prefix sums (sequential)
++        for (int i = 1; i < LEN_1D; i++) {
++            b[i] += b[i-1];
++        }
++        // Extract final sum from last element
++        sum = (LEN_1D > 0) ? b[LEN_1D-1] : (real_t)0.0;
+         pb_mix(nl);
+     }
+     return sum;

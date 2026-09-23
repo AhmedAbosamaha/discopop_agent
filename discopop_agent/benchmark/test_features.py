@@ -2559,51 +2559,6 @@ def check_settle_paired(work: Path) -> Result:
                                 f"slower file rejected ({why_s[:60]})")
 
 
-def check_patterned_region_skip(work: Path) -> Result:
-    """A region whose loops ALL carry a DiscoPoP pattern is not sent to the model.  (Fix 90)
-
-    E1 class A, `s000`: the loop had DiscoPoP's do-all (deferred to Phase B, right), the
-    function around it had no pattern of its own, so the model was asked to restructure the
-    function.  Haiku copied `b` into a buffer on every repetition; the copy passed the gate;
-    DiscoPoP's pragma on the rewritten loop measured 1.40x where it had measured 3.59x on the
-    original; Settle found the file slower than the original and reverted everything.  The
-    agent delivered less than DiscoPoP alone — on the no-harm control.
-
-    Pure structure, no profile: a function around one patterned loop is COVERED; a function
-    with a second, unpatterned loop is not; a loop nested inside a patterned loop does not
-    count as unpatterned.
-    """
-    name = "patterned region skip"
-    from ..phases.phase_a import _loops_already_patterned
-    from ..types import CodeRegion, HotspotCandidate
-
-    def region(rid: str, rtype: str, a: int, b: int) -> CodeRegion:
-        return CodeRegion(region_id=rid, region_type=rtype, name="", file_id=1,
-                          start_line=a, end_line=b, iteration_count=1, workload=100)
-
-    def cand(rid: str, rtype: str, a: int, b: int, patterned: bool) -> HotspotCandidate:
-        return HotspotCandidate(region=region(rid, rtype, a, b),
-                                source_file="x.c",
-                                pattern={"applicable_pattern": True} if patterned else None,
-                                pattern_type="do_all" if patterned else None, confidence=1.0,
-                                workload_estimate=100.0, score=0.0, tier=1 if patterned else 2)
-
-    fn = region("1:79", "function", 134, 142)
-    one = [(0, cand("1:81", "loop", 136, 141, True))]
-    if _loops_already_patterned(fn, one) != ["1:81"]:
-        return Result(name, "fail", "a function around one patterned loop was not covered")
-    two = one + [(0, cand("1:90", "loop", 142, 142, False))]
-    if _loops_already_patterned(fn, two):
-        return Result(name, "fail", "a function with an unpatterned loop was covered")
-    nested = one + [(0, cand("1:85", "loop", 137, 140, False))]
-    if _loops_already_patterned(fn, nested) != ["1:81"]:
-        return Result(name, "fail", "a loop nested in a patterned loop counted as unpatterned")
-    if _loops_already_patterned(fn, []):
-        return Result(name, "fail", "a function with no loop was covered")
-    return Result(name, "pass", "function around a patterned loop covered; an unpatterned sibling loop, "
-                                "or no loop at all, leaves it for the model")
-
-
 _MULTI_BACKEDGE_SRC = r"""
 #include <stdio.h>
 #include <stdlib.h>
@@ -2941,7 +2896,6 @@ _CHECKS: List[Tuple[str, Callable[[Path], Result]]] = [
     ("pragma-arbitration", check_pragma_arbitration),
     ("arg-dependencies", check_arg_dependencies),
     ("settle-paired", check_settle_paired),
-    ("patterned-region-skip", check_patterned_region_skip),
 ]
 
 

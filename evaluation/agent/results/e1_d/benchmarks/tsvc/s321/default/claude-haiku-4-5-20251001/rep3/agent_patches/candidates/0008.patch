@@ -1,0 +1,26 @@
+--- s321.c
++++ s321.c
+@@ -133,9 +133,21 @@
+ 
+ static real_t kernel_s321(void)
+ {
++    /* Number of passes needed: each pass allows dependencies to cascade
++       by one position, so log2(LEN_1D) passes propagates all contributions.
++       Computed at compile time via bit shift. */
++    int num_passes = 0;
++    long temp = (long)LEN_1D;
++    while (temp > 1) { num_passes++; temp >>= 1; }
++
+     for (int nl = 0; nl < R; nl++) {
+-        for (int i = 1; i < LEN_1D; i++) {
+-            a[i] += a[i-1] * b[i];
++        for (int pass = 0; pass < num_passes; pass++) {
++            for (int i = 1; i < LEN_1D; i += 2) {
++                a[i] += a[i-1] * b[i];
++            }
++            for (int i = 2; i < LEN_1D; i += 2) {
++                a[i] += a[i-1] * b[i];
++            }
+         }
+         pb_mix(nl);
+     }

@@ -1,0 +1,30 @@
+--- s321.c
++++ s321.c
+@@ -134,8 +134,25 @@
+ static real_t kernel_s321(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
+-        for (int i = 1; i < LEN_1D; i++) {
+-            a[i] += a[i-1] * b[i];
++        /* Even-odd decomposition with convergence: iterate the two-pass pattern until
++         * all updates propagate through the array. Each pass is parallelizable:
++         * - Odd pass: updates at i=1,3,5,... depend only on even-indexed elements
++         * - Even pass: updates at i=2,4,6,... depend only on odd-indexed elements
++         * With k passes, the update wavefront reaches position k, so for full convergence
++         * we need ~2*LEN_1D passes (but we reuse the same buffer in-place).
++         */
++        for (int pass = 0; pass < 2 * LEN_1D; pass++) {
++            if (pass % 2 == 0) {
++                /* Even pass: i=2,4,6,... */
++                for (int i = 2; i < LEN_1D; i += 2) {
++                    a[i] += a[i-1] * b[i];
++                }
++            } else {
++                /* Odd pass: i=1,3,5,... */
++                for (int i = 1; i < LEN_1D; i += 2) {
++                    a[i] += a[i-1] * b[i];
++                }
++            }
+         }
+         pb_mix(nl);
+     }

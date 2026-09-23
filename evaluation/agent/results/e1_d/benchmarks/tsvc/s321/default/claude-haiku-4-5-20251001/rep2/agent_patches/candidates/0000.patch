@@ -1,0 +1,20 @@
+--- s321.c
++++ s321.c
+@@ -134,7 +134,16 @@
+ static real_t kernel_s321(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
+-        for (int i = 1; i < LEN_1D; i++) {
++        /* Even-odd decomposition: split the sequential scan into two passes where
++         * each pass contains independent iterations:
++         * Pass 1 (odd indices): a[1],a[3],a[5],... each depends on preceding even elements
++         * Pass 2 (even indices): a[2],a[4],a[6],... each depends on preceding odd elements
++         * All iterations within each pass are independent and parallelizable.
++         */
++        for (int i = 1; i < LEN_1D; i += 2) {
++            a[i] += a[i-1] * b[i];
++        }
++        for (int i = 2; i < LEN_1D; i += 2) {
+             a[i] += a[i-1] * b[i];
+         }
+         pb_mix(nl);
