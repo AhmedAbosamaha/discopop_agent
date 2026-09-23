@@ -53,7 +53,12 @@ def _apply(text: str, patch: Path, name: str) -> str:
     with tempfile.TemporaryDirectory(prefix="replay_") as tmp:
         f = Path(tmp) / name
         f.write_text(text)
-        r = subprocess.run(["patch", "-s", "--forward", str(f), str(patch)], capture_output=True, text=True)
+        # Some archived patches end without a newline, which `patch` refuses ("unexpectedly
+        # ends in middle of line"); the agent's own _apply writes them back with one.
+        p = Path(tmp) / "change.patch"
+        body = patch.read_text()
+        p.write_text(body if body.endswith("\n") else body + "\n")
+        r = subprocess.run(["patch", "-s", "--forward", str(f), str(p)], capture_output=True, text=True)
         if r.returncode != 0:
             raise RuntimeError(f"{patch.name} does not apply: {r.stdout}{r.stderr}")
         return f.read_text()
