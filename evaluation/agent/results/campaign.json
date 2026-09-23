@@ -20,6 +20,15 @@
    "headline": "TSVC class R, 18 loops × 5, the same model with no DiscoPoP and no gate: FASTER in 58 of 88 trials, 53 of them race-free by the gate's own TSan and schedule matrix (4 benign races on s293, 1 not judgeable) — more than the agent's 44 of 90 (DiscoPoP alone: 0 of 90) — but a WRONG program shipped in 17 (19 %, all 17 stopped by the gate when replayed) and a slower one in 12, where the agent shipped 0 of either. Over the model, the pipeline adds trust, not reach — and most of the reach it loses is lost after the model: Phase B's speed check judges pragmas one at a time and drops sets that only pay together (7 trials recoverable, D33 proposed), the gate's clause stage falsely rejects one half of s281's split (5), DiscoPoP cannot write s331's reduction(max); the rest are rewrites that are slow in themselves. Agent v2 (D32, D33, Fixes 91–92, built the same evening) replayed on E1's archived trials and verified by the harness: FASTER in 55 of 90, 0 unsafe — no longer behind the model alone's 53."
   },
   {
+   "id": "E2",
+   "folder": "E02_evidence_feedback_model",
+   "title": "E2 — evidence, feedback and model strength",
+   "kind": "experiment",
+   "status": "pre-flight",
+   "question": "On TSVC class R, does DiscoPoP's evidence raise the model's success rate (H5), more for Haiku than for Sonnet? Does the gate's failure feedback partly substitute for it (H5b)? Where must the evidence come from (none, compiler remarks, where the time goes, DiscoPoP), which part of it matters, and which part of the prompt? Runs on agent v2 with its own default arm (D34).",
+   "headline": ""
+  },
+  {
    "id": "E10",
    "folder": "E10_speed_check",
    "title": "E10 — does the speed check keep unnecessary changes out?",
@@ -608,6 +617,24 @@
    "section": "checks",
    "role": "the gate's safety stages (TSan, schedule matrix, output) over the 13 programs of e1b_v2_verify — verify-source checks output and repeatability, not races (tools/race_check.py, server, no model)",
    "status": "valid"
+  },
+  "e2_smoke_a": {
+   "group": "E2",
+   "section": "preflight",
+   "role": "pre-flight smoke on agent v2: tsvc/s121 x every E2/E2-source arm + discopop_gate, Haiku x1 — D33's joint pragma set end to end, the evidence arms' code paths",
+   "status": "running"
+  },
+  "e2_smoke_b": {
+   "group": "E2",
+   "section": "preflight",
+   "role": "pre-flight smoke on agent v2: tsvc/s281 x every E2/E2-source arm + discopop_gate, Haiku x1 — Fix 91's clause stage end to end, the evidence arms' code paths",
+   "status": "running"
+  },
+  "e2_smoke_sonnet": {
+   "group": "E2",
+   "section": "preflight",
+   "role": "pre-flight smoke: claude-sonnet-5 through the harness for the first time on the server (tsvc/s121, s281 x full_b1 x1) — model id, calls and minutes per trial",
+   "status": "running"
   }
  },
  "analysis": {
