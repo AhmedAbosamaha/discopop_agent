@@ -21,6 +21,7 @@ At which size is each benchmark's serial computation long enough to verify (≥ 
 | `t0_1_sizes_v2` | [`runs/t0_1_sizes_v2/`](runs/t0_1_sizes_v2/) | the original-format packages × every size | valid | 0 |  |
 | `t0_1_apps` | [`runs/t0_1_apps/`](runs/t0_1_apps/) | the applications (md, is, hotspot, …) | valid | 0 |  |
 | `t0_1_tsvc` | [`runs/t0_1_tsvc/`](runs/t0_1_tsvc/) | the 25 TSVC loops → kernel_sizes.json | valid | 0 |  |
+| `t0_1_probe_sizes` | not archived yet | T0.1 sizes for the 8 TSVC indirect-addressing probe loops (decision 8), no model | running |  |  |
 
 ## The instrument, as the record defines it (§5e)
 

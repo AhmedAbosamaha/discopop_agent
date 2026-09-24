@@ -273,15 +273,27 @@ def three_way(trials: List[dict], agent_arm: str, bare_arm: str = "bare_llm",
             }
             for b in benches:
                 bt = [t for t in valid if str(t.get("benchmark")) == b]
+                bad = {id(t) for t in bt if t.get("outcome") == "BROKEN"
+                       or (t.get("outcome") in figures.PARALLEL_OK
+                           and ((_best_speedup(t) or 1.0) < SLOWER or race(t) in RACE_STAGES))}
                 per[b][label] = {"faster": sum(1 for t in bt if t.get("outcome") == "FASTER"),
                                  "faster_race_free": sum(1 for t in bt if t.get("outcome") == "FASTER" and race(t) == "clean"),
-                                 "broken": sum(1 for t in bt if t.get("outcome") == "BROKEN"), "n": len(bt)}
+                                 "broken": sum(1 for t in bt if t.get("outcome") == "BROKEN"),
+                                 "unusable": len(bad), "n": len(bt)}
         block["per_benchmark"] = per
         for key in ("faster", "faster_race_free"):
             diffs = [per[b]["DiscoPoP + agent"][key] / max(1, per[b]["DiscoPoP + agent"]["n"])
                      - per[b]["model alone"][key] / max(1, per[b]["model alone"]["n"])
                      for b in benches if per[b].get("DiscoPoP + agent", {}).get("n") and per[b].get("model alone", {}).get("n")]
             block[f"agent_vs_model_alone_{key}"] = _wilcoxon(diffs)
+        # H13 (the author, 24 Sep): an unusable program the model-only arm ships — wrong, racy or
+        # slower than the original — is a RESULT, the pipeline's trust advantage, not a lost trial.
+        # Paired per benchmark: the model-only arm's unusable rate minus the agent's ("agent ahead"
+        # = the agent ships fewer).
+        block["agent_vs_model_alone_unusable"] = _wilcoxon(
+            [per[b]["model alone"]["unusable"] / max(1, per[b]["model alone"]["n"])
+             - per[b]["DiscoPoP + agent"]["unusable"] / max(1, per[b]["DiscoPoP + agent"]["n"])
+             for b in benches if per[b].get("DiscoPoP + agent", {}).get("n") and per[b].get("model alone", {}).get("n")])
         res["classes"][cls] = block
     return res
 
@@ -309,17 +321,24 @@ def three_way_markdown(tw: Dict[str, Any]) -> str:
         for name, f in rows:
             out.append(f"| {name} | " + " | ".join(f(a) for a in b["arms"].values()) + " |")
         out.append("")
+        w = b["agent_vs_model_alone_unusable"]
+        out.append(f"- **H13 — unusable programs shipped (wrong, racy or slower), rate per benchmark, paired:** the agent ships "
+                   f"fewer on {w['agent_ahead']}, the model-only arm fewer on {w['model_alone_ahead']}, tied on "
+                   f"{w['n_pairs'] - w['n_nonzero']}"
+                   + (f"; p (two-sided) = {w['p_two_sided']:.3g}, p (agent fewer) = {w['p_agent_ahead']:.3g}" if "p_two_sided" in w else f"; {w.get('note', '')}")
+                   + ". Every such program is listed below by benchmark; each is a result, not a discarded trial.")
         for key, label in (("faster", "FASTER"), ("faster_race_free", "race-free FASTER")):
             w = b[f"agent_vs_model_alone_{key}"]
             out.append(f"- Agent vs model alone, {label} rate per benchmark (Wilcoxon signed-rank, paired): agent ahead on "
                        f"{w['agent_ahead']}, model alone ahead on {w['model_alone_ahead']}, tied on {w['n_pairs'] - w['n_nonzero']}"
                        + (f"; p (two-sided) = {w['p_two_sided']:.3g}, p (agent ahead) = {w['p_agent_ahead']:.3g}" if "p_two_sided" in w else f"; {w.get('note', '')}") + ".")
         out.append("")
-        out += ["| benchmark | " + " | ".join(f"{k} FASTER / race-free / BROKEN" for k in b["arms"]) + " |",
+        out += ["| benchmark | " + " | ".join(f"{k} FASTER / race-free / BROKEN / unusable" for k in b["arms"]) + " |",
                 "|---|" + "---:|" * len(b["arms"])]
         for bench, d in b["per_benchmark"].items():
             out.append(f"| `{bench}` | " + " | ".join(
-                f"{v['faster']} / {v['faster_race_free']} / {v['broken']} of {v['n']}" if v else "—" for v in (d.get(k) for k in b["arms"])) + " |")
+                f"{v['faster']} / {v['faster_race_free']} / {v['broken']} / {v['unusable']} of {v['n']}" if v else "—"
+                for v in (d.get(k) for k in b["arms"])) + " |")
         out.append("")
     return "\n".join(out)
 

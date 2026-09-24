@@ -61,6 +61,7 @@ Status: pre-flight
 | `e2_ab_a` | [`E02_evidence_feedback_model/superseded/e2_ab_a/`](E02_evidence_feedback_model/superseded/e2_ab_a/) | E2 Parts A+B (Haiku): discopop_gate, default, full_b1, no_evidence, no_evidence_b1 x5 on TSVC class R s112 s121 s1213 s127 s211 s212 s241 s243 s244 (node 0) — STOPPED after 34/29 trials: hint in source (D36) | stopped 23 Sep: TSVC packages named the solving transformation in the source header (D36) — superseded by the clean redo | 34 | FASTER 7, no-change 27 |
 | `e2_ab_b` | [`E02_evidence_feedback_model/superseded/e2_ab_b/`](E02_evidence_feedback_model/superseded/e2_ab_b/) | E2 Parts A+B (Haiku): discopop_gate, default, full_b1, no_evidence, no_evidence_b1 x5 on TSVC class R s252 s254 s255 s281 s291 s292 s293 s331 s341 (node 1) — STOPPED after 34/29 trials: hint in source (D36) | stopped 23 Sep: TSVC packages named the solving transformation in the source header (D36) — superseded by the clean redo | 30 | FASTER 11, no-change 18, parallel-not-faster 1 |
 | `e2c_smoke` | [`E02_evidence_feedback_model/preflight/e2c_smoke/`](E02_evidence_feedback_model/preflight/e2c_smoke/) | clean pre-flight (v3 packages, D36; Fixes 95-96): tsvc/s121, s281 x every E2/E2-source arm + discopop_gate + bare_llm (minimal prompt), Haiku x1 | pre-flight | 16 | BROKEN 2, FASTER 5, no-change 9 |
+| `d38_twin_smoke` | [`E02_evidence_feedback_model/preflight/d38_twin_smoke/`](E02_evidence_feedback_model/preflight/d38_twin_smoke/) | D38 twin runner smoke (Mac, verified at SMALL, 2 threads, 1 repeat — wiring only, no speed claim): tsvc/s121 x twin_dp (DiscoPoP unchecked, no model) -> BROKEN: this profile's draw had DiscoPoP claim a Do-All on s121's anti-dependence, inserted unchecked; twin_full (full_b1's twin, one Haiku call) -> the model's buffer rewrite + 2 DiscoPoP pragmas inserted unchecked, output exact, parallel-not-faster | pre-flight | 2 | BROKEN 1, parallel-not-faster 1 |
 
 ## [E10 — does the speed check keep unnecessary changes out?](E10_speed_check/REPORT.md)
 
@@ -90,6 +91,7 @@ Status: done
 | `t0_1_sizes_v2` | [`T0_instruments/T0.01_sizes/runs/t0_1_sizes_v2/`](T0_instruments/T0.01_sizes/runs/t0_1_sizes_v2/) | the original-format packages × every size | valid | 0 |  |
 | `t0_1_apps` | [`T0_instruments/T0.01_sizes/runs/t0_1_apps/`](T0_instruments/T0.01_sizes/runs/t0_1_apps/) | the applications (md, is, hotspot, …) | valid | 0 |  |
 | `t0_1_tsvc` | [`T0_instruments/T0.01_sizes/runs/t0_1_tsvc/`](T0_instruments/T0.01_sizes/runs/t0_1_tsvc/) | the 25 TSVC loops → kernel_sizes.json | valid | 0 |  |
+| `t0_1_probe_sizes` | not archived yet | T0.1 sizes for the 8 TSVC indirect-addressing probe loops (decision 8), no model | running |  |  |
 
 ## [T0.2 — DiscoPoP profile stability](T0_instruments/T0.02_profile_stability/REPORT.md)
 
@@ -186,6 +188,9 @@ Status: done
 | `t0_11_classes_a` | [`T0_instruments/T0.11_measured_classes/runs/t0_11_classes_a/`](T0_instruments/T0.11_measured_classes/runs/t0_11_classes_a/) | draw A | valid | 56 | FASTER 16, PROFILE_ERROR 2, no-change 29, parallel-not-faster 3, parallel-speed-not-measurable 6 |
 | `t0_11_classes_b` | [`T0_instruments/T0.11_measured_classes/runs/t0_11_classes_b/`](T0_instruments/T0.11_measured_classes/runs/t0_11_classes_b/) | draw B | valid | 55 | FASTER 14, PROFILE_ERROR 5, no-change 26, parallel-not-faster 3, parallel-speed-not-measurable 7 |
 | `t0_11_classes_c` | [`T0_instruments/T0.11_measured_classes/runs/t0_11_classes_c/`](T0_instruments/T0.11_measured_classes/runs/t0_11_classes_c/) | draw C | valid | 55 | FASTER 14, PROFILE_ERROR 5, no-change 26, parallel-not-faster 3, parallel-speed-not-measurable 7 |
+| `t0_11_probe_a` | not archived yet | T0.11 draw a on the 8 TSVC indirect-addressing probe loops: discopop_capability, no model | running |  |  |
+| `t0_11_probe_b` | not archived yet | T0.11 draw b on the 8 TSVC indirect-addressing probe loops: discopop_capability, no model | running |  |  |
+| `t0_11_probe_c` | not archived yet | T0.11 draw c on the 8 TSVC indirect-addressing probe loops: discopop_capability, no model | running |  |  |
 
 ## [T0.13 — the default arm's ceiling](T0_instruments/T0.13_default_arm_ceiling/REPORT.md)
 

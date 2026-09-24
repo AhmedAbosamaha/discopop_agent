@@ -281,7 +281,9 @@ was introduced this way; E1 under v2 is `results/E01b_bare_llm/checks/e1b_v2_ver
    the sequential reference — verified parallel, FASTER, race-free FASTER (`race_check.py` over the bare
    arm's parallel programs is a standard step), BROKEN, slower-shipped; (2) agent vs DiscoPoP alone —
    `vs_discopop_alone.md` (gained · better · equal · worse · lost · neither · unsafe); (3) agent vs model
-   alone — per-benchmark FASTER counts paired (Wilcoxon), unusable programs counted. The model alone's
+   alone — per-benchmark FASTER counts paired (Wilcoxon), and **unusable programs (BROKEN, racy, slower)
+   paired per benchmark as H13 — every one a model-only arm ships is a RESULT (the pipeline's trust
+   advantage), listed by case, never dropped** (`main_comparison_stats.py --three-way … --bare <arm>`). The model alone's
    speed is over its correct trials only and is never set against the agent's all-trials median. A run
    whose overview says MISSING is not reported.
 0b. **Every experiment with a model-only meaning carries its MATCHED TWINS (D38), in the same run as

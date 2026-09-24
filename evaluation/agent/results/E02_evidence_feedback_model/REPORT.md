@@ -10,7 +10,7 @@ On TSVC class R, does DiscoPoP's evidence raise the model's success rate (H5), m
 
 ## What is in this folder
 
-- [`preflight/`](preflight/) — 5 smoke run(s) before the launch
+- [`preflight/`](preflight/) — 6 smoke run(s) before the launch
 - [`superseded/`](superseded/) — 2 run(s) a later one replaced
 
 ## Runs
@@ -24,8 +24,16 @@ On TSVC class R, does DiscoPoP's evidence raise the model's success rate (H5), m
 | `e2_ab_a` | [`superseded/e2_ab_a/`](superseded/e2_ab_a/) | E2 Parts A+B (Haiku): discopop_gate, default, full_b1, no_evidence, no_evidence_b1 x5 on TSVC class R s112 s121 s1213 s127 s211 s212 s241 s243 s244 (node 0) — STOPPED after 34/29 trials: hint in source (D36) | stopped 23 Sep: TSVC packages named the solving transformation in the source header (D36) — superseded by the clean redo | 34 | FASTER 7, no-change 27 |
 | `e2_ab_b` | [`superseded/e2_ab_b/`](superseded/e2_ab_b/) | E2 Parts A+B (Haiku): discopop_gate, default, full_b1, no_evidence, no_evidence_b1 x5 on TSVC class R s252 s254 s255 s281 s291 s292 s293 s331 s341 (node 1) — STOPPED after 34/29 trials: hint in source (D36) | stopped 23 Sep: TSVC packages named the solving transformation in the source header (D36) — superseded by the clean redo | 30 | FASTER 11, no-change 18, parallel-not-faster 1 |
 | `e2c_smoke` | [`preflight/e2c_smoke/`](preflight/e2c_smoke/) | clean pre-flight (v3 packages, D36; Fixes 95-96): tsvc/s121, s281 x every E2/E2-source arm + discopop_gate + bare_llm (minimal prompt), Haiku x1 | pre-flight | 16 | BROKEN 2, FASTER 5, no-change 9 |
+| `d38_twin_smoke` | [`preflight/d38_twin_smoke/`](preflight/d38_twin_smoke/) | D38 twin runner smoke (Mac, verified at SMALL, 2 threads, 1 repeat — wiring only, no speed claim): tsvc/s121 x twin_dp (DiscoPoP unchecked, no model) -> BROKEN: this profile's draw had DiscoPoP claim a Do-All on s121's anti-dependence, inserted unchecked; twin_full (full_b1's twin, one Haiku call) -> the model's buffer rewrite + 2 DiscoPoP pragmas inserted unchecked, output exact, parallel-not-faster | pre-flight | 2 | BROKEN 1, parallel-not-faster 1 |
 
 ## From the experiment record (§7 run log)
+
+### `d38_twin_smoke` — 2026-09-24, Mac, **the twin runner (D38) through the real harness, SDK and confinement** (2 trials, 1 Haiku call)
+
+- **Setup.** Commit `236384e4` + uncommitted harness lines of the same work (the agent itself identical to E1c's `33673d7d`). `tsvc/s121` × `twin_dp` (the twin of `discopop_gate`: `--budget 0`, no model) and `twin_full` (the twin of `full_b1`), ×1, verified at SMALL with 2 threads and 1 repeat — **wiring only, no speed claim**: the Mac was 4 GB into swap, and a first attempt at the per-kernel size (EXTRALARGE) was stopped after its verification ran at 16 % CPU for many minutes.
+- **`twin_dp` → BROKEN.** This run's profile draw had DiscoPoP report `s121`'s loop (`a[i] = a[i+1] + b[i]`, an anti-dependence) as a Do-All — the stopped first attempt's draw had reported nothing applicable (DiscoPoP's draw variation, T0.2/T0.7). The twin inserted `#pragma omp parallel for private(j)` unchecked; the parallel program's output differs (max relative error 2.4 %). The agent's `discopop_gate` arm puts the same pragma through the gate, which rejects it. **This is the D38 prediction on its first trial:** DiscoPoP without the gate ships its false positives — recorded as a result (H13).
+- **`twin_full` → parallel, output exact (not faster at SMALL on the Mac).** One call on the region the agent asks about first (loop 1:81, lines 134–140), with the agent's own request; the model wrote the loop through a heap buffer (`a_temp[i] = a[i+1] + b[i]`, then a copy loop); kept unchecked; re-profiled (4 new regions at depth 1, skipped at `--restructure-depth 0`); DiscoPoP reported both new loops as Do-All and the twin inserted both pragmas unchecked. 172 s, 0.155 USD-eq, 127 s of it the model. Every twin field parsed (`twin_asked` 1, `twin_edited` 1, `twin_dp_inserted` 2, `llm_calls` 1); `agent_patches/twin_model_program.c` holds the program before DiscoPoP's pragmas.
+- **Reading.** The runner works end to end: the arms' settings verified through the twin's own entry point, the launch printout lists `twin_of`, the model is confined to its workspace, and the harness judges the result like any trial. Archived at `results/E02_evidence_feedback_model/preflight/d38_twin_smoke/`.
 
 ### `e2c_smoke`, `d36_hint_check` — 2026-09-23, server, **the clean pre-flight (v3 packages) and the author's single-example check of the hint** (34 trials, Haiku)
 
