@@ -68,8 +68,13 @@ SIZES = {"MINI": "2000", "SMALL": "32000", "STANDARD": "4000000", "LARGE": "3200
 
 class Loop:
     def __init__(self, name: str, expected: str, transformation: str, why: str,
-                 expert: Optional[str] = None, init_extra: str = "", reps: int = 48) -> None:
+                 expert: Optional[str] = None, init_extra: str = "", reps: int = 48,
+                 pre: str = "", globals_: str = "") -> None:
         self.name, self.expected, self.transformation, self.why = name, expected, transformation, why
+        # `pre`: the argument declarations TSVC passes through `func_args` (set in its main), which
+        # the extracted body does not contain; `globals_`: file-scope code the loop needs (TSVC's
+        # `f`, the index array).  Neither may say anything about how to parallelize (D36).
+        self.pre, self.globals_ = pre, globals_
         self.expert, self.init_extra, self.reps = expert, init_extra, reps
 
 
@@ -359,6 +364,28 @@ LOOPS: List[Loop] = [
     }
     return dot;"""),
 ]
+# T0.11 probe (the author's decision 8, 24 Sep): TSVC's indirect-addressing loops, whose iterations
+# conflict or not depending on the VALUES of an index array — which DiscoPoP observes at run time and a
+# reader can only derive from the initialization.  Class unknown until measured (no model); s4116 is left
+# out, it needs TSVC's 2-D arrays, which this packaging does not build.
+_IP_GLOBAL = "static int *pb_ip;   /* TSVC's index array (common.c), set in init_array */"
+_IP_INIT = ("    pb_ip = (int *)malloc((size_t)LEN_1D * sizeof(int));\n"
+            "    for (int i = 0; i < LEN_1D; i += 5) {\n"
+            "        pb_ip[i] = i + 4; pb_ip[i + 1] = i + 2; pb_ip[i + 2] = i; pb_ip[i + 3] = i + 3; pb_ip[i + 4] = i + 1;\n"
+            "    }")
+_IP = "    int * __restrict__ ip = pb_ip;"
+_PROBE = ("probe", "to be measured (T0.11): indirect addressing",
+          "whether iterations conflict depends on the values in the index array")
+LOOPS += [
+    Loop("s4112", *_PROBE, init_extra=_IP_INIT, globals_=_IP_GLOBAL, pre=_IP + "\n    real_t s = (real_t)1.0;"),
+    Loop("s4113", *_PROBE, init_extra=_IP_INIT, globals_=_IP_GLOBAL, pre=_IP),
+    Loop("s4114", *_PROBE, init_extra=_IP_INIT, globals_=_IP_GLOBAL, pre=_IP + "\n    int n1 = 1;"),
+    Loop("s4115", *_PROBE, init_extra=_IP_INIT, globals_=_IP_GLOBAL, pre=_IP),
+    Loop("s4117", *_PROBE),
+    Loop("s4121", *_PROBE, globals_="static real_t f(real_t a, real_t b)\n{\n    return a*b;\n}"),
+    Loop("s491", *_PROBE, init_extra=_IP_INIT, globals_=_IP_GLOBAL, pre=_IP),
+    Loop("s353", *_PROBE, init_extra=_IP_INIT, globals_=_IP_GLOBAL, pre=_IP),
+]
 BY_NAME = {l.name: l for l in LOOPS}
 
 # What the model reads. It names WHERE the loop comes from and nothing about how to solve it:
@@ -500,6 +527,7 @@ def render(loop: Loop, expert: bool = False) -> str:
                   f"static real_t kernel_{loop.name}(void)\n{{\n{loop.expert}\n}}\n")
     else:
         kernel = (f"static real_t kernel_{loop.name}(void)\n{{\n"
+                  + (loop.pre + "\n" if loop.pre else "")
                   + (decls + "\n" if decls else "")
                   + "    for (int nl = 0; nl < R; nl++) {\n" + rep + "\n        pb_mix(nl);\n    }\n"
                   + f"    return {ret};\n}}\n")
@@ -508,7 +536,9 @@ def render(loop: Loop, expert: bool = False) -> str:
                       "provenance": f"sha256 {sha}", "omp_include": "#include <omp.h>" if needs_omp else ""}
             + SIZE_BLOCK % {"reps": loop.reps} + SCAFFOLD
             + DATA % {"init_extra": loop.init_extra,
-                      "tmp_decl": "static real_t *pb_tmp;   /* the reference's scratch vector */" if needs_tmp else ""}
+                      "tmp_decl": "\n".join(x for x in (
+                          "static real_t *pb_tmp;   /* the reference's scratch vector */" if needs_tmp else "",
+                          loop.globals_) if x)}
             + "\n" + kernel
             + MAIN % {"name": loop.name,
                       "tmp_alloc": "  pb_tmp = (real_t*)malloc((size_t)LEN_1D * sizeof(real_t));\n" if needs_tmp else ""})
