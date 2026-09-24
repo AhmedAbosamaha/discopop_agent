@@ -20,6 +20,15 @@
    "headline": "TSVC class R, 18 loops × 5, the same model with no DiscoPoP and no gate: FASTER in 58 of 88 trials, 53 of them race-free by the gate's own TSan and schedule matrix (4 benign races on s293, 1 not judgeable) — more than the agent's 44 of 90 (DiscoPoP alone: 0 of 90) — but a WRONG program shipped in 17 (19 %, all 17 stopped by the gate when replayed) and a slower one in 12, where the agent shipped 0 of either. Over the model, the pipeline adds trust, not reach — and most of the reach it loses is lost after the model: Phase B's speed check judges pragmas one at a time and drops sets that only pay together (7 trials recoverable, D33 proposed), the gate's clause stage falsely rejects one half of s281's split (5), DiscoPoP cannot write s331's reduction(max); the rest are rewrites that are slow in themselves. Agent v2 (D32, D33, Fixes 91–92, built the same evening) replayed on E1's archived trials and verified by the harness: FASTER in 55 of 90, 0 unsafe — no longer behind the model alone's 53. [D36: 'with the hint in the source' and the contract prompt (D37) — superseded by the clean model-alone arm in e2_ab_clean_a/b; d36_hint_check measures the hint.]"
   },
   {
+   "id": "E1c",
+   "folder": "E01c_clean_three_way",
+   "title": "E1 clean — the three-way main comparison on clean packages (D35, D36)",
+   "kind": "experiment",
+   "status": "running",
+   "question": "On TSVC class R, with no hint in the source (D36), the model confined to its workspace (Fix 95) and agent v2: DiscoPoP alone vs DiscoPoP + agent (`default`) vs the model alone (`bare_llm`, the mirror prompt, D37) — which delivers correct, race-free, faster programs, and which ships wrong or slower ones? Plus the no-harm (class A) and must-decline (class D) controls.",
+   "headline": ""
+  },
+  {
    "id": "E2",
    "folder": "E02_evidence_feedback_model",
    "title": "E2 — evidence, feedback and model strength",
@@ -690,7 +699,43 @@
   "t0_4_four_lanes": {
    "group": "T0.4",
    "section": "runs",
-   "role": "T0.4 at FOUR lanes of 12 cores (the author's time lever, 23 Sep): does the 1.1x threshold still resolve with the median of 5 when four lanes run at once, serial and parallel builds, tsvc/s211, tsvc/s254, polybench/2mm, 10 repeats",
+   "role": "T0.4 at FOUR lanes of 12 cores (the author's time lever, 23 Sep): does the 1.1x threshold still resolve with the median of 5 when four lanes run at once, serial and parallel builds, tsvc/s211, tsvc/s254, polybench/2mm, 10 repeats — holds for TSVC (median-of-5 resolvable <= 1.016x), not for 2mm serial (1.123x): four lanes for TSVC, two for PolyBench/applications",
+   "status": "valid"
+  },
+  "e1c_r_1": {
+   "group": "E1c",
+   "section": "runs",
+   "role": "E1 clean, class R: s112 s121 s1213 s127 s211 x discopop_gate, default, bare_llm (mirror) x5, Haiku, lane 0.0",
+   "status": "running"
+  },
+  "e1c_r_2": {
+   "group": "E1c",
+   "section": "runs",
+   "role": "E1 clean, class R: s212 s241 s243 s244 s252 x discopop_gate, default, bare_llm (mirror) x5, Haiku, lane 0.1",
+   "status": "running"
+  },
+  "e1c_r_3": {
+   "group": "E1c",
+   "section": "runs",
+   "role": "E1 clean, class R: s254 s255 s281 s291 x discopop_gate, default, bare_llm (mirror) x5, Haiku, lane 1.0",
+   "status": "running"
+  },
+  "e1c_r_4": {
+   "group": "E1c",
+   "section": "runs",
+   "role": "E1 clean, class R: s292 s293 s331 s341 x discopop_gate, default, bare_llm (mirror) x5, Haiku, lane 1.1",
+   "status": "running"
+  },
+  "e1c_a": {
+   "group": "E1c",
+   "section": "runs",
+   "role": "E1 clean, class A (no-harm): s000, vpvtv, s313 x discopop_gate, default, bare_llm x1",
+   "status": "running"
+  },
+  "e1c_d": {
+   "group": "E1c",
+   "section": "runs",
+   "role": "E1 clean, class D (must-decline): s321, s322, s323, s3112 x discopop_gate, default, bare_llm x3 — the model alone on true recurrences (the author's decision 3)",
    "status": "running"
   }
  },

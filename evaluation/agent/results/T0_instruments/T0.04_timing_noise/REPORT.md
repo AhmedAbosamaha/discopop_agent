@@ -10,7 +10,7 @@ What speedup can the loaded server resolve, and do concurrent lanes interfere?
 
 ## What is in this folder
 
-- [`runs/`](runs/) — 1 archived run(s): the evidence
+- [`runs/`](runs/) — 2 archived run(s): the evidence
 - [`superseded/`](superseded/) — 1 run(s) a later one replaced
 
 ## Runs
@@ -19,6 +19,7 @@ What speedup can the loaded server resolve, and do concurrent lanes interfere?
 |---|---|---|---|---:|---|
 | `t0_4_timing` | [`superseded/t0_4_timing/`](superseded/t0_4_timing/) | first measurement, stopped at hotspot's Polly build | superseded by t0_4_timing_v2 | 0 |  |
 | `t0_4_timing_v2` | [`runs/t0_4_timing_v2/`](runs/t0_4_timing_v2/) | under the load the campaign runs at | valid | 0 |  |
+| `t0_4_four_lanes` | [`runs/t0_4_four_lanes/`](runs/t0_4_four_lanes/) | T0.4 at FOUR lanes of 12 cores (the author's time lever, 23 Sep): does the 1.1x threshold still resolve with the median of 5 when four lanes run at once, serial and parallel builds, tsvc/s211, tsvc/s254, polybench/2mm, 10 repeats — holds for TSVC (median-of-5 resolvable <= 1.016x), not for 2mm serial (1.123x): four lanes for TSVC, two for PolyBench/applications | valid | 0 |  |
 
 ## The instrument, as the record defines it (§5e)
 
@@ -90,4 +91,11 @@ execution** (the stencil parallelised at the wrong level) — the run was stoppe
 hotspot's serial conditions, and `jacobi-2d-imper` was not reached. To repeat for the
 remaining benchmarks with `--serial-only` once the tool has that switch; the numbers above
 answer the question the plan asked.
+
+## Change-log rows that name these runs (§6)
+
+| Date | Repo | Change | Why |
+|---|---|---|---|
+| 2026-09-24 | result | **T0.4 at four lanes (`t0_4_four_lanes`, server, no model, host load ≈ 2): four lanes hold for TSVC, not for memory-bound serial runs.** Median-of-5 resolvable ratio with four 12-core lanes running at once: `tsvc/s211` 1.016× serial / 1.008× parallel, `tsvc/s254` 1.013× / 1.011× — well inside the 1.1× threshold; `polybench/2mm` serial **1.123×** (CV 13.8 %: four lanes share each node's memory bandwidth), parallel 1.020×. **Decision, within the author's condition:** four lanes for TSVC-based runs (E1-clean, E2, E3, E4, E8), two lanes stay for PolyBench and the applications until a check on them says otherwise. The host was quiet, so this is the lanes' interference with EACH OTHER; T0.4 v2 remains the measurement under other users' load | the author's lever (b): "it needs a 30-minute no-model timing check first" |
+| 2026-09-23 | harness | **The author approved both time levers ("we could do these 2").** (a) **The agent's explorer limit per benchmark:** the harness passes `--explorer-timeout` = max(60 s, 10 × this benchmark's own successful explorer run, recorded as `explore_success_s` in `profile.json`); TSVC → 60 s (its runs take ≈ 4 s; the longest legitimate run of any campaign benchmark over 166 draws took 33 s), a large program scales (LULESH at `-s 5`: 16 s → 160 s), nothing measured → 600 s as before. A stalled draw is repeated either way, so no verdict changes; the harness's own first explorer run of a benchmark keeps 600 s (nothing to scale from). In E1 it would have cut ≈ 3.9 of 13.2 h. (b) **Four lanes of 12 cores instead of two of 24:** `server.sh run --node N.H` pins a job to half H of node N's cores with node N's memory (`--node N` still takes the whole node). Used only after T0.4 is repeated at four lanes under campaign load (`t0_4_four_lanes`, no model) and shows the 1.1× threshold still resolvable with the median of 5; the agent's own timing then uses 12 threads instead of 24, whose effect on Phase B's verdicts was measured nil (`e1b_marginal_replay`: the thread-count hypothesis refuted). Neither changes an experiment's arms; both are stamped per trial (`agent_cmd`, the launcher log's `== lane:` line) | the author, 23 Sep |
 

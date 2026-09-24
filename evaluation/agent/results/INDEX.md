@@ -35,6 +35,19 @@ Status: done
 | `d36_hint_check` | [`E01b_bare_llm/checks/d36_hint_check/`](E01b_bare_llm/checks/d36_hint_check/) | the author's single-example check of D36: the model alone on the CLEAN (v3) packages of s331, s281, s241 x3 — bare_llm_contract (E1-bare's exact prompt: isolates the hint) and bare_llm (minimal prompt, D37); compare with E1-bare's rows — result: the comment's effect is not one-directional at N=3 (s331, s281 down without it; s241 up) | valid | 18 | BROKEN 3, FASTER 8, no-change 1, parallel-not-faster 6 |
 | `clause_replay_fix91` | [`E01b_bare_llm/checks/clause_replay_fix91/`](E01b_bare_llm/checks/clause_replay_fix91/) | every archived clause-stage rejection (25) judged by the current clause rules, no model: 8 flip (s281 reps 2-5 in E1; 4 in pre-campaign runs), 3 stay, 14 not reconstructible (incl. E10's); re-run and archived 23 Sep, the Fix-91 replay's output had not been | valid | 0 |  |
 
+## [E1 clean — the three-way main comparison on clean packages (D35, D36)](E01c_clean_three_way/)
+
+Status: running
+
+| run | where | what it is | status | trials | outcomes |
+|---|---|---|---|---:|---|
+| `e1c_r_1` | not archived yet | E1 clean, class R: s112 s121 s1213 s127 s211 x discopop_gate, default, bare_llm (mirror) x5, Haiku, lane 0.0 | running |  |  |
+| `e1c_r_2` | not archived yet | E1 clean, class R: s212 s241 s243 s244 s252 x discopop_gate, default, bare_llm (mirror) x5, Haiku, lane 0.1 | running |  |  |
+| `e1c_r_3` | not archived yet | E1 clean, class R: s254 s255 s281 s291 x discopop_gate, default, bare_llm (mirror) x5, Haiku, lane 1.0 | running |  |  |
+| `e1c_r_4` | not archived yet | E1 clean, class R: s292 s293 s331 s341 x discopop_gate, default, bare_llm (mirror) x5, Haiku, lane 1.1 | running |  |  |
+| `e1c_a` | not archived yet | E1 clean, class A (no-harm): s000, vpvtv, s313 x discopop_gate, default, bare_llm x1 | running |  |  |
+| `e1c_d` | not archived yet | E1 clean, class D (must-decline): s321, s322, s323, s3112 x discopop_gate, default, bare_llm x3 — the model alone on true recurrences (the author's decision 3) | running |  |  |
+
 ## [E2 — evidence, feedback and model strength](E02_evidence_feedback_model/REPORT.md)
 
 Status: pre-flight
@@ -104,6 +117,7 @@ Status: done
 |---|---|---|---|---:|---|
 | `t0_4_timing` | [`T0_instruments/T0.04_timing_noise/superseded/t0_4_timing/`](T0_instruments/T0.04_timing_noise/superseded/t0_4_timing/) | first measurement, stopped at hotspot's Polly build | superseded by t0_4_timing_v2 | 0 |  |
 | `t0_4_timing_v2` | [`T0_instruments/T0.04_timing_noise/runs/t0_4_timing_v2/`](T0_instruments/T0.04_timing_noise/runs/t0_4_timing_v2/) | under the load the campaign runs at | valid | 0 |  |
+| `t0_4_four_lanes` | [`T0_instruments/T0.04_timing_noise/runs/t0_4_four_lanes/`](T0_instruments/T0.04_timing_noise/runs/t0_4_four_lanes/) | T0.4 at FOUR lanes of 12 cores (the author's time lever, 23 Sep): does the 1.1x threshold still resolve with the median of 5 when four lanes run at once, serial and parallel builds, tsvc/s211, tsvc/s254, polybench/2mm, 10 repeats — holds for TSVC (median-of-5 resolvable <= 1.016x), not for 2mm serial (1.123x): four lanes for TSVC, two for PolyBench/applications | valid | 0 |  |
 
 ## [T0.5 — runtime share per region](T0_instruments/T0.05_runtime_shares/REPORT.md)
 
