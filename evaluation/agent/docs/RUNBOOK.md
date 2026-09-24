@@ -158,10 +158,13 @@ agent/tools/server.sh run --node 1 -- tsvc/s252 tsvc/s254 tsvc/s255 tsvc/s281 ts
     tsvc/s292 tsvc/s293 tsvc/s331 tsvc/s341 --arms bare_llm --models claude-haiku-4-5-20251001 \
     --trials 5 --threads 6,12 --repeats 5 --run-id e1_bare_b
 
-# E2 — evidence x model (one attempt per region, so feedback cannot substitute for evidence), with
-# its twins (D38) and the three-way arms in the same run
-... --arms discopop_gate,twin_dp,default,full_b1,no_evidence,no_evidence_b1,twin_full,twin_no_evidence,bare_llm \
-    --models claude-haiku-4-5-20251001 --trials 5 --run-id e2_...
+# E2 — evidence x model (one attempt per region, so feedback cannot substitute for evidence). Its
+# `default`, `bare_llm` and `discopop_gate` cells are E1c's (same loops, same agent commit — D38 row);
+# its own runs add the evidence arms, their twins (D38, in the SAME runs, so twin and agent read the
+# same profile) and `twin_dp` (DiscoPoP unchecked, no model — compared with E1c's `discopop_gate`
+# per benchmark over independent profile draws). Four lanes, the E1c split.
+... --arms full_b1,no_evidence,no_evidence_b1,twin_full,twin_no_evidence,twin_dp \
+    --models claude-haiku-4-5-20251001 --trials 5 --threads 6,12 --repeats 5 --run-id e2_ab_...
 
 # E10 — the speed check (needs a timing size per kernel, see §6)
 ... --arms full,speed_gate_large,speed_gate_small --models claude-haiku-4-5-20251001 --trials 3 --run-id e10
