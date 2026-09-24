@@ -1,0 +1,32 @@
+--- original.c
++++ final.c
+@@ -130,13 +130,26 @@
+ 
+ static real_t kernel_s281(void)
+ {
+-    real_t x;
+     for (int nl = 0; nl < R; nl++) {
+-        for (int i = 0; i < LEN_1D; i++) {
+-            x = a[LEN_1D-i-1] + b[i] * c[i];
++        /* First phase: iterations 0 to (LEN_1D+1)/2-1 can run in parallel.
++         * No inter-iteration dependencies within this phase. */
++        #pragma omp parallel for
++        for (int i = 0; i < (LEN_1D + 1) / 2; i++) {
++            real_t x = a[LEN_1D-i-1] + b[i] * c[i];
+             a[i] = x-(real_t)1.0;
+             b[i] = x;
+         }
++
++        /* Second phase: iterations (LEN_1D+1)/2 to LEN_1D-1 can run in parallel.
++         * This phase depends on phase 1 being complete. Implicit barrier at end of
++         * first #pragma omp parallel for ensures this. */
++        #pragma omp parallel for
++        for (int i = (LEN_1D + 1) / 2; i < LEN_1D; i++) {
++            real_t x = a[LEN_1D-i-1] + b[i] * c[i];
++            a[i] = x-(real_t)1.0;
++            b[i] = x;
++        }
++
+         pb_mix(nl);
+     }
+     return (real_t)0;

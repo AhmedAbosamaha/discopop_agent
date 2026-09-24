@@ -1,0 +1,43 @@
+--- original.c
++++ final.c
+@@ -10,6 +10,7 @@
+ #include <string.h>
+ #include <math.h>
+ #include <time.h>
++#include <omp.h>
+ 
+ typedef double real_t;
+ 
+@@ -130,13 +131,29 @@
+ 
+ static real_t kernel_s281(void)
+ {
+-    real_t x;
+     for (int nl = 0; nl < R; nl++) {
+-        for (int i = 0; i < LEN_1D; i++) {
+-            x = a[LEN_1D-i-1] + b[i] * c[i];
++        /* Phase 1: Parallelize the first half of the inner loop.
++         * These iterations only read from the initial array state,
++         * so they have no dependencies on each other. */
++        #pragma omp parallel for
++        for (int i = 0; i < LEN_1D / 2; i++) {
++            real_t x = a[LEN_1D-i-1] + b[i] * c[i];
+             a[i] = x-(real_t)1.0;
+             b[i] = x;
+         }
++        /* Implicit barrier after parallel for */
++
++        /* Phase 2: Parallelize the second half of the inner loop.
++         * Each iteration depends on exactly one iteration from Phase 1,
++         * but iterations within this phase are independent of each other. */
++        #pragma omp parallel for
++        for (int i = LEN_1D / 2; i < LEN_1D; i++) {
++            real_t x = a[LEN_1D-i-1] + b[i] * c[i];
++            a[i] = x-(real_t)1.0;
++            b[i] = x;
++        }
++        /* Implicit barrier after parallel for */
++
+         pb_mix(nl);
+     }
+     return (real_t)0;

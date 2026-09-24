@@ -1,0 +1,25 @@
+--- original.c
++++ final.c
+@@ -130,10 +130,19 @@
+ 
+ static real_t kernel_s281(void)
+ {
+-    real_t x;
+     for (int nl = 0; nl < R; nl++) {
+-        for (int i = 0; i < LEN_1D; i++) {
+-            x = a[LEN_1D-i-1] + b[i] * c[i];
++        /* Phase 1: First half can be parallelized (reads unmodified data) */
++        #pragma omp parallel for
++        for (int i = 0; i < (LEN_1D + 1) / 2; i++) {
++            real_t x = a[LEN_1D-i-1] + b[i] * c[i];
++            a[i] = x-(real_t)1.0;
++            b[i] = x;
++        }
++
++        /* Phase 2: Second half can be parallelized (now depends on phase 1 via barrier) */
++        #pragma omp parallel for
++        for (int i = (LEN_1D + 1) / 2; i < LEN_1D; i++) {
++            real_t x = a[LEN_1D-i-1] + b[i] * c[i];
+             a[i] = x-(real_t)1.0;
+             b[i] = x;
+         }

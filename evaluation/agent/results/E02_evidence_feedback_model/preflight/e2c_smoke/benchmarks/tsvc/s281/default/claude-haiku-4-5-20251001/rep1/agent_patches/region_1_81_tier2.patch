@@ -1,0 +1,20 @@
+--- s281.c
++++ s281.c
+@@ -132,7 +132,16 @@
+ {
+     real_t x;
+     for (int nl = 0; nl < R; nl++) {
+-        for (int i = 0; i < LEN_1D; i++) {
++        /* Part 1: i in [0, LEN_1D/2) reads only original a[LEN_1D-1-i]
++           (not yet written by any iteration). No loop-carried dependence. */
++        for (int i = 0; i < (LEN_1D + 1) / 2; i++) {
++            x = a[LEN_1D-i-1] + b[i] * c[i];
++            a[i] = x-(real_t)1.0;
++            b[i] = x;
++        }
++        /* Part 2: i in [LEN_1D/2, LEN_1D) reads a[LEN_1D-1-i] updated
++           in Part 1, but no loop-carried dependence within Part 2 itself. */
++        for (int i = (LEN_1D + 1) / 2; i < LEN_1D; i++) {
+             x = a[LEN_1D-i-1] + b[i] * c[i];
+             a[i] = x-(real_t)1.0;
+             b[i] = x;

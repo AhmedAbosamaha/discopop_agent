@@ -1,0 +1,14 @@
+--- s121.c
++++ s121.c
+@@ -135,9 +135,11 @@
+     if (!temp) return (real_t)0;
+ 
+     for (int nl = 0; nl < R; nl++) {
++        #pragma omp parallel for shared(temp) 
+         for (int i = 0; i < LEN_1D-1; i++) {
+             temp[i] = a[i+1] + b[i];
+         }
++        #pragma omp parallel for shared(temp) 
+         for (int i = 0; i < LEN_1D-1; i++) {
+             a[i] = temp[i];
+         }

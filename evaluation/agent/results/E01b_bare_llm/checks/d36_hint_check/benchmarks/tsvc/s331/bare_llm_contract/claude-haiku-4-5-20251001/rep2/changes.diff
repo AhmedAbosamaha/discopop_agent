@@ -1,0 +1,25 @@
+--- original.c
++++ final.c
+@@ -134,11 +134,21 @@
+     real_t chksum;
+     for (int nl = 0; nl < R; nl++) {
+         j = -1;
++        /* Find the last index where a[i] < 0 using parallel max reduction.
++         * Each thread gets a private j initialized by the reduction clause,
++         * finds matching indices, and updates j = max(j, i).
++         * After the region, j is combined across threads using max.
++         */
++        #pragma omp parallel for reduction(max:j)
+         for (int i = 0; i < LEN_1D; i++) {
+             if (a[i] < (real_t)0.) {
+-                j = i;
++                j = i > j ? i : j;
+             }
+         }
++        /* The reduction clause initializes j to a very negative value
++         * (INT_MIN equivalent), not -1. After the loop, if no match was found,
++         * j remains negative. Reset it to -1 in that case. */
++        if (j < 0) j = -1;
+         chksum = (real_t) j;
+         pb_mix(nl);
+     }

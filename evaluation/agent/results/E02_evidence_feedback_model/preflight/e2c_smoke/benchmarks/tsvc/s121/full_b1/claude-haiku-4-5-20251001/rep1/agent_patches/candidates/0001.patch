@@ -1,0 +1,10 @@
+--- s121.c
++++ s121.c
+@@ -135,6 +135,7 @@
+     if (!a_new) { fprintf(stderr, "out of memory\n"); return (real_t)0; }
+ 
+     for (int nl = 0; nl < R; nl++) {
++        #pragma omp parallel for private(j) shared(a_new) 
+         for (int i = 0; i < LEN_1D-1; i++) {
+             j = i + 1;
+             a_new[i] = a[j] + b[i];

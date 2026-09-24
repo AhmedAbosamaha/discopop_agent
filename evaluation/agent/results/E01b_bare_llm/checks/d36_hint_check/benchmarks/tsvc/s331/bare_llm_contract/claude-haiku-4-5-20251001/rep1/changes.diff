@@ -1,0 +1,13 @@
+--- original.c
++++ final.c
+@@ -134,6 +134,10 @@
+     real_t chksum;
+     for (int nl = 0; nl < R; nl++) {
+         j = -1;
++        /* Parallelize the inner loop: each thread scans its range to find negative elements.
++           reduction(max:j) ensures we get the highest index where a[i] < 0.
++           Private copies start at INT_MIN; final j = max(-1, max_found_by_any_thread) */
++        #pragma omp parallel for reduction(max:j)
+         for (int i = 0; i < LEN_1D; i++) {
+             if (a[i] < (real_t)0.) {
+                 j = i;

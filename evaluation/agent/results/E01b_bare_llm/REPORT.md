@@ -22,7 +22,7 @@ TSVC class R, 18 loops × 5, the same model with no DiscoPoP and no gate: FASTER
 - [`analysis/`](analysis/) — the read-out: [`README.md`](analysis/README.md), [`figures.md`](analysis/figures.md), [`main_comparison_stats.md`](analysis/main_comparison_stats.md), [`vs_discopop_alone.md`](analysis/vs_discopop_alone.md)
 - [`exhibits/`](exhibits/) — 22 case studies, below
 - [`runs/`](runs/) — 2 archived run(s): the evidence
-- [`checks/`](checks/) — 6 verification(s) made during the read-out
+- [`checks/`](checks/) — 7 verification(s) made during the read-out
 - [`preflight/`](preflight/) — 1 smoke run(s) before the launch
 
 ## Runs
@@ -36,7 +36,7 @@ TSVC class R, 18 loops × 5, the same model with no DiscoPoP and no gate: FASTER
 | `e1b_marginal_replay` | [`checks/e1b_marginal_replay/`](checks/e1b_marginal_replay/) | why the agent lost reach: Phase B's speed check replayed (tools/marginal_replay.py, the agent's own measure_marginal) on the 18 E1 trials whose safe DiscoPoP pragmas it dropped as slower, at 6, 12 and all threads, with 3 won trials as controls (server, no model) | valid | 0 |  |
 | `e1b_v2_verify` | [`checks/e1b_v2_verify/`](checks/e1b_v2_verify/) | E1 under agent v2 by replay, harness-verified: the 7 trials D33 recovers (rewrite + all safe DiscoPoP pragmas), the 4 s281 trials the clause fix recovers (both halves), and 2 controls (s127 rep 1 kept in E1; s121 rep 4, a slow rewrite) through verify-source (server, no model) | valid | 13 | FASTER 12, parallel-not-faster 1 |
 | `e1b_v2_race_check` | [`checks/e1b_v2_race_check/`](checks/e1b_v2_race_check/) | the gate's safety stages (TSan, schedule matrix, output) over the 13 programs of e1b_v2_verify — verify-source checks output and repeatability, not races (tools/race_check.py, server, no model) | valid | 0 |  |
-| `d36_hint_check` | not archived yet | the author's single-example check of D36: the model alone on the CLEAN (v3) packages of s331, s281, s241 x3 — bare_llm_contract (E1-bare's exact prompt: isolates the hint) and bare_llm (minimal prompt, D37); compare with E1-bare's rows | running |  |  |
+| `d36_hint_check` | [`checks/d36_hint_check/`](checks/d36_hint_check/) | the author's single-example check of D36: the model alone on the CLEAN (v3) packages of s331, s281, s241 x3 — bare_llm_contract (E1-bare's exact prompt: isolates the hint) and bare_llm (minimal prompt, D37); compare with E1-bare's rows — result: the comment's effect is not one-directional at N=3 (s331, s281 down without it; s241 up) | valid | 18 | BROKEN 3, FASTER 8, no-change 1, parallel-not-faster 6 |
 | `clause_replay_fix91` | [`checks/clause_replay_fix91/`](checks/clause_replay_fix91/) | every archived clause-stage rejection (25) judged by the current clause rules, no model: 8 flip (s281 reps 2-5 in E1; 4 in pre-campaign runs), 3 stay, 14 not reconstructible (incl. E10's); re-run and archived 23 Sep, the Fix-91 replay's output had not been | valid | 0 |  |
 
 ## Exhibits
@@ -87,6 +87,20 @@ TSVC class R, 18 loops × 5, the same model with no DiscoPoP and no gate: FASTER
   **unsafe** vs DiscoPoP alone (1.00× → 1.00×) · tsvc/s341, `bare_llm`, e1_bare_b rep 2 · pictures: `before_after.png`, `console.png`
 
 ## From the experiment record (§7 run log)
+
+### `e2c_smoke`, `d36_hint_check` — 2026-09-23, server, **the clean pre-flight (v3 packages) and the author's single-example check of the hint** (34 trials, Haiku)
+
+- **Setup.** Commit `1be54f01` (packages v3 without the header hint, D36; Fix 95; the model alone with the MINIMAL prompt — the mirror prompt came later that evening, `fc98efb7`). `e2c_smoke`: `tsvc/s121`, `s281` × every E2 and E2-source arm + `discopop_gate` + `bare_llm`, ×1, node 0. `d36_hint_check`: `s331`, `s281`, `s241` × `bare_llm_contract` (E1-bare's exact prompt) and `bare_llm` (minimal) ×3, node 1. Host load ≈ 5,000; both sweeps clean.
+- **`e2c_smoke` — every arm ran its own path.** Agent: `s121` FASTER in `full_b1`, `no_evidence_b1`, `hotspot_only_b1`, no-change in `default`, `no_evidence`, `compiler_remarks_b1`; `s281` FASTER in `full_b1`, `no_evidence`, no-change in the other four. **All five FASTER came through D33** (`phase_b_joint_kept` 1, two pragmas deferred as slower alone). DiscoPoP alone: no-change on both, floor skipped; every agent arm `dp_floor = original` (class R). The model alone (minimal prompt): BROKEN on both. **The two slowest trials (750 s, 861 s) each lost 600 s to one explorer stall** — what the per-benchmark explorer limit (60 s on TSVC) removes.
+- **`d36_hint_check` — does the comment in the header matter?** Same model, same loops; E1-bare had the old prompt AND the comment:
+
+  | loop | E1-bare: old prompt, WITH the comment | old prompt, WITHOUT it | minimal prompt, without it |
+  |---|---|---|---|
+  | `s331` | 5/5 FASTER | 2/3 FASTER (+1 parallel, not faster) | 1/3 FASTER (+2 not faster) |
+  | `s281` | 5/5 FASTER | 0/3 — **2 BROKEN**, 1 no-change | **3/3 FASTER** |
+  | `s241` | 1/5 FASTER, **3 BROKEN** | 2/3 FASTER, 0 BROKEN | 0/3, 1 BROKEN |
+
+  **Reading: the comment was not harmless, and its effect is not one-directional.** Removing it lowered the old prompt's wins on `s331` and `s281` and raised them on `s241` (where "node splitting (preload the old a[i+1])" went with three wrong programs in E1-bare); on `s281` the minimal prompt without it won 3 of 3 where the old prompt without it won none. At three trials a loop the model's own variance is as large as any of these differences, so no size or direction is claimed — only that E1-bare's per-loop numbers cannot stand as clean. *Correction (same night): in the conversation this check was first summarised, on its first seven trials, as "the comment was doing a lot of the work"; the full 18 do not support that.* The clean redo (18 loops × 5, the model alone on the mirror prompt) is where the model alone is measured.
 
 ### `e1_bare_a`, `e1_bare_b` — 2026-09-23, server, **E1-bare: the same model alone, no DiscoPoP, no gate** (90 trials, Haiku)
 

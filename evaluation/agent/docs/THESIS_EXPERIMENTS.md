@@ -2048,6 +2048,20 @@ Added 2026-09-15 (see §6 rows of that date):
 
 ## 7. Run log
 
+### `e2c_smoke`, `d36_hint_check` — 2026-09-23, server, **the clean pre-flight (v3 packages) and the author's single-example check of the hint** (34 trials, Haiku)
+
+- **Setup.** Commit `1be54f01` (packages v3 without the header hint, D36; Fix 95; the model alone with the MINIMAL prompt — the mirror prompt came later that evening, `fc98efb7`). `e2c_smoke`: `tsvc/s121`, `s281` × every E2 and E2-source arm + `discopop_gate` + `bare_llm`, ×1, node 0. `d36_hint_check`: `s331`, `s281`, `s241` × `bare_llm_contract` (E1-bare's exact prompt) and `bare_llm` (minimal) ×3, node 1. Host load ≈ 5,000; both sweeps clean.
+- **`e2c_smoke` — every arm ran its own path.** Agent: `s121` FASTER in `full_b1`, `no_evidence_b1`, `hotspot_only_b1`, no-change in `default`, `no_evidence`, `compiler_remarks_b1`; `s281` FASTER in `full_b1`, `no_evidence`, no-change in the other four. **All five FASTER came through D33** (`phase_b_joint_kept` 1, two pragmas deferred as slower alone). DiscoPoP alone: no-change on both, floor skipped; every agent arm `dp_floor = original` (class R). The model alone (minimal prompt): BROKEN on both. **The two slowest trials (750 s, 861 s) each lost 600 s to one explorer stall** — what the per-benchmark explorer limit (60 s on TSVC) removes.
+- **`d36_hint_check` — does the comment in the header matter?** Same model, same loops; E1-bare had the old prompt AND the comment:
+
+  | loop | E1-bare: old prompt, WITH the comment | old prompt, WITHOUT it | minimal prompt, without it |
+  |---|---|---|---|
+  | `s331` | 5/5 FASTER | 2/3 FASTER (+1 parallel, not faster) | 1/3 FASTER (+2 not faster) |
+  | `s281` | 5/5 FASTER | 0/3 — **2 BROKEN**, 1 no-change | **3/3 FASTER** |
+  | `s241` | 1/5 FASTER, **3 BROKEN** | 2/3 FASTER, 0 BROKEN | 0/3, 1 BROKEN |
+
+  **Reading: the comment was not harmless, and its effect is not one-directional.** Removing it lowered the old prompt's wins on `s331` and `s281` and raised them on `s241` (where "node splitting (preload the old a[i+1])" went with three wrong programs in E1-bare); on `s281` the minimal prompt without it won 3 of 3 where the old prompt without it won none. At three trials a loop the model's own variance is as large as any of these differences, so no size or direction is claimed — only that E1-bare's per-loop numbers cannot stand as clean. *Correction (same night): in the conversation this check was first summarised, on its first seven trials, as "the comment was doing a lot of the work"; the full 18 do not support that.* The clean redo (18 loops × 5, the model alone on the mirror prompt) is where the model alone is measured.
+
 ### `e2_smoke_a`, `e2_smoke_b`, `e2_smoke_sonnet`, `e2_v2_paths` — 2026-09-23, server, **E2's pre-flight on agent v2: every arm runs, and v2's two new Phase B paths work end to end** (14 model trials + 2 DiscoPoP alone, 13 programs without a model)
 
 - **Setup.** Haiku smokes at `b51fc735` (`e2_smoke_a` = `tsvc/s121` on NUMA node 0, `e2_smoke_b` = `tsvc/s281` on node 1): `discopop_gate`, `default`, `full_b1`, `no_evidence`, `no_evidence_b1`, `compiler_remarks_b1`, `hotspot_only_b1` × 1, threads 6/12, 5 repeats, host load 4,900–5,700 from other users. Then at `8ac62000` (after the harness fixes below): `e2_smoke_sonnet` (`s121`, `s281` × `full_b1` × `claude-sonnet-5`, node 0) and `e2_v2_paths` (node 1, no model). Arm check passed; auth ok; both credential sweeps clean.
