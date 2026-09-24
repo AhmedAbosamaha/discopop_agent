@@ -850,6 +850,91 @@
         "--prompt",
         "minimal"
       ]
+    },
+    "twin_dp": {
+      "ids": [
+        "E1",
+        "E2"
+      ],
+      "description": "A matched model-only twin (D38): the agent arm `discopop_gate` minus the gate. Runs discopop_agent/twin.py with discopop_gate's own arguments (inherited: flags, settings, timing size, evidence file), so its model gets the agent's own first request for each region the agent would ask about \u2014 same region, same DiscoPoP evidence, same system prompt except that the gate's checks are described as what judges the FINISHED program and the feedback clause is gone. One attempt per region, no feedback; what the model leaves stays; after an edit the program is re-profiled (as after a kept rewrite) and at the end DiscoPoP inserts every applicable pragma with NOTHING checked (no clause check, TSan, schedules, speed, D33, Settle or floor). Judged afterwards like any trial; race_check.py on its programs is mandatory. `twin_model_program.*` in agent_patches/ is the program before DiscoPoP's unchecked pragmas. With --budget 0 no model is called: DiscoPoP's own program with nothing checked \u2014 the corner the gate's value on DiscoPoP alone is read from. No model cost.",
+      "runner": "twin",
+      "twin_of": "discopop_gate"
+    },
+    "twin_default": {
+      "ids": [
+        "E3",
+        "E8",
+        "E9"
+      ],
+      "description": "A matched model-only twin (D38): the agent arm `default` minus the gate. Runs discopop_agent/twin.py with default's own arguments (inherited: flags, settings, timing size, evidence file), so its model gets the agent's own first request for each region the agent would ask about \u2014 same region, same DiscoPoP evidence, same system prompt except that the gate's checks are described as what judges the FINISHED program and the feedback clause is gone. One attempt per region, no feedback; what the model leaves stays; after an edit the program is re-profiled (as after a kept rewrite) and at the end DiscoPoP inserts every applicable pragma with NOTHING checked (no clause check, TSan, schedules, speed, D33, Settle or floor). Judged afterwards like any trial; race_check.py on its programs is mandatory. `twin_model_program.*` in agent_patches/ is the program before DiscoPoP's unchecked pragmas. The reference twin of E3/E8/E9. Behaves exactly as `twin_full` (a twin makes one attempt per region, so --budget 1 vs 3 is inert); E3/E8/E9 may reuse E2's `twin_full` trials on the same loops, as E3 reuses E2's `default`.",
+      "runner": "twin",
+      "twin_of": "default"
+    },
+    "twin_full": {
+      "ids": [
+        "E2",
+        "E2-source"
+      ],
+      "description": "A matched model-only twin (D38): the agent arm `full_b1` minus the gate. Runs discopop_agent/twin.py with full_b1's own arguments (inherited: flags, settings, timing size, evidence file), so its model gets the agent's own first request for each region the agent would ask about \u2014 same region, same DiscoPoP evidence, same system prompt except that the gate's checks are described as what judges the FINISHED program and the feedback clause is gone. One attempt per region, no feedback; what the model leaves stays; after an edit the program is re-profiled (as after a kept rewrite) and at the end DiscoPoP inserts every applicable pragma with NOTHING checked (no clause check, TSan, schedules, speed, D33, Settle or floor). Judged afterwards like any trial; race_check.py on its programs is mandatory. `twin_model_program.*` in agent_patches/ is the program before DiscoPoP's unchecked pragmas. E2's twin with DiscoPoP's full evidence.",
+      "runner": "twin",
+      "twin_of": "full_b1"
+    },
+    "twin_no_evidence": {
+      "ids": [
+        "E2",
+        "E2-source"
+      ],
+      "description": "A matched model-only twin (D38): the agent arm `no_evidence_b1` minus the gate. Runs discopop_agent/twin.py with no_evidence_b1's own arguments (inherited: flags, settings, timing size, evidence file), so its model gets the agent's own first request for each region the agent would ask about \u2014 same region, same DiscoPoP evidence, same system prompt except that the gate's checks are described as what judges the FINISHED program and the feedback clause is gone. One attempt per region, no feedback; what the model leaves stays; after an edit the program is re-profiled (as after a kept rewrite) and at the end DiscoPoP inserts every applicable pragma with NOTHING checked (no clause check, TSan, schedules, speed, D33, Settle or floor). Judged afterwards like any trial; race_check.py on its programs is mandatory. `twin_model_program.*` in agent_patches/ is the program before DiscoPoP's unchecked pragmas. E2's twin with the region but no evidence (the target region is held constant across the evidence contrast, as in the agent's arms); `bare_llm` is the same model with no region.",
+      "runner": "twin",
+      "twin_of": "no_evidence_b1"
+    },
+    "twin_compiler_remarks": {
+      "ids": [
+        "E2-source"
+      ],
+      "description": "A matched model-only twin (D38): the agent arm `compiler_remarks_b1` minus the gate. Runs discopop_agent/twin.py with compiler_remarks_b1's own arguments (inherited: flags, settings, timing size, evidence file), so its model gets the agent's own first request for each region the agent would ask about \u2014 same region, same DiscoPoP evidence, same system prompt except that the gate's checks are described as what judges the FINISHED program and the feedback clause is gone. One attempt per region, no feedback; what the model leaves stays; after an edit the program is re-profiled (as after a kept rewrite) and at the end DiscoPoP inserts every applicable pragma with NOTHING checked (no clause check, TSan, schedules, speed, D33, Settle or floor). Judged afterwards like any trial; race_check.py on its programs is mandatory. `twin_model_program.*` in agent_patches/ is the program before DiscoPoP's unchecked pragmas. The compiler's remarks instead of DiscoPoP's evidence.",
+      "runner": "twin",
+      "twin_of": "compiler_remarks_b1"
+    },
+    "twin_hotspot_only": {
+      "ids": [
+        "E2-source"
+      ],
+      "description": "A matched model-only twin (D38): the agent arm `hotspot_only_b1` minus the gate. Runs discopop_agent/twin.py with hotspot_only_b1's own arguments (inherited: flags, settings, timing size, evidence file), so its model gets the agent's own first request for each region the agent would ask about \u2014 same region, same DiscoPoP evidence, same system prompt except that the gate's checks are described as what judges the FINISHED program and the feedback clause is gone. One attempt per region, no feedback; what the model leaves stays; after an edit the program is re-profiled (as after a kept rewrite) and at the end DiscoPoP inserts every applicable pragma with NOTHING checked (no clause check, TSan, schedules, speed, D33, Settle or floor). Judged afterwards like any trial; race_check.py on its programs is mandatory. `twin_model_program.*` in agent_patches/ is the program before DiscoPoP's unchecked pragmas. Only where the time goes.",
+      "runner": "twin",
+      "twin_of": "hotspot_only_b1"
+    },
+    "twin_llm_pragmas": {
+      "ids": [
+        "E3"
+      ],
+      "description": "A matched model-only twin (D38): the agent arm `llm_pragmas_full_reprofile` minus the gate. Runs discopop_agent/twin.py with llm_pragmas_full_reprofile's own arguments (inherited: flags, settings, timing size, evidence file), so its model gets the agent's own first request for each region the agent would ask about \u2014 same region, same DiscoPoP evidence, same system prompt except that the gate's checks are described as what judges the FINISHED program and the feedback clause is gone. One attempt per region, no feedback; what the model leaves stays; after an edit the program is re-profiled (as after a kept rewrite) and at the end DiscoPoP inserts every applicable pragma with NOTHING checked (no clause check, TSan, schedules, speed, D33, Settle or floor). Judged afterwards like any trial; race_check.py on its programs is mandatory. `twin_model_program.*` in agent_patches/ is the program before DiscoPoP's unchecked pragmas. The model writes the pragmas in its rewrite; DiscoPoP's own pragmas for the loops it can parallelize still go in at the end, unchecked, as the agent's Phase B would put them in through the gate. The fast-refresh cells of E3 get no twin: the refresh is a pipeline cost lever with no model-only meaning (the twin always re-profiles fully).",
+      "runner": "twin",
+      "twin_of": "llm_pragmas_full_reprofile"
+    },
+    "twin_depth1": {
+      "ids": [
+        "E8"
+      ],
+      "description": "A matched model-only twin (D38): the agent arm `full_depth1` minus the gate. Runs discopop_agent/twin.py with full_depth1's own arguments (inherited: flags, settings, timing size, evidence file), so its model gets the agent's own first request for each region the agent would ask about \u2014 same region, same DiscoPoP evidence, same system prompt except that the gate's checks are described as what judges the FINISHED program and the feedback clause is gone. One attempt per region, no feedback; what the model leaves stays; after an edit the program is re-profiled (as after a kept rewrite) and at the end DiscoPoP inserts every applicable pragma with NOTHING checked (no clause check, TSan, schedules, speed, D33, Settle or floor). Judged afterwards like any trial; race_check.py on its programs is mandatory. `twin_model_program.*` in agent_patches/ is the program before DiscoPoP's unchecked pragmas. Regions a rewrite creates are asked about once more (depth 1). Confound, stated before any run: a deeper twin can make more model calls than a shallower one, as the agent can.",
+      "runner": "twin",
+      "twin_of": "full_depth1"
+    },
+    "twin_depth2": {
+      "ids": [
+        "E8"
+      ],
+      "description": "A matched model-only twin (D38): the agent arm `full_depth2` minus the gate. Runs discopop_agent/twin.py with full_depth2's own arguments (inherited: flags, settings, timing size, evidence file), so its model gets the agent's own first request for each region the agent would ask about \u2014 same region, same DiscoPoP evidence, same system prompt except that the gate's checks are described as what judges the FINISHED program and the feedback clause is gone. One attempt per region, no feedback; what the model leaves stays; after an edit the program is re-profiled (as after a kept rewrite) and at the end DiscoPoP inserts every applicable pragma with NOTHING checked (no clause check, TSan, schedules, speed, D33, Settle or floor). Judged afterwards like any trial; race_check.py on its programs is mandatory. `twin_model_program.*` in agent_patches/ is the program before DiscoPoP's unchecked pragmas. Two further levels.",
+      "runner": "twin",
+      "twin_of": "full_depth2"
+    },
+    "twin_no_hotspots": {
+      "ids": [
+        "E9"
+      ],
+      "description": "A matched model-only twin (D38): the agent arm `full_no_hotspots` minus the gate. Runs discopop_agent/twin.py with full_no_hotspots's own arguments (inherited: flags, settings, timing size, evidence file), so its model gets the agent's own first request for each region the agent would ask about \u2014 same region, same DiscoPoP evidence, same system prompt except that the gate's checks are described as what judges the FINISHED program and the feedback clause is gone. One attempt per region, no feedback; what the model leaves stays; after an edit the program is re-profiled (as after a kept rewrite) and at the end DiscoPoP inserts every applicable pragma with NOTHING checked (no clause check, TSan, schedules, speed, D33, Settle or floor). Judged afterwards like any trial; race_check.py on its programs is mandatory. `twin_model_program.*` in agent_patches/ is the program before DiscoPoP's unchecked pragmas. Regions ranked by DiscoPoP's static workload proxy, so the twin is asked about the region the unmeasured agent would be. As for the agent arm, --min-runtime-share is inert.",
+      "runner": "twin",
+      "twin_of": "full_no_hotspots"
     }
   },
   "common_timing_size": "per_kernel",
@@ -1029,6 +1114,98 @@
       "consequences": [],
       "check": "runner",
       "why": "The whole pipeline (DiscoPoP's evidence, ranking, the gate, feedback, DiscoPoP's pragmas) against the same model asked directly. `bare_llm` has its own runner and takes no agent arguments, so the arms cannot be compared setting by setting: the test only checks that the runner arm exists and the other one is the campaign default. Since D35 (23 Sep) the model alone is part of the MAIN comparison of every experiment: E1-bare's 90 Haiku trials are the model-alone reference of every TSVC class-R experiment run with Haiku (E2, E3, E4, E8) \u2014 the bare arm never runs the agent, so agent versions do not change it; a new model or benchmark set gets its own `bare_llm` run."
+    },
+    "D38-twins": {
+      "arms": [
+        "twin_compiler_remarks",
+        "twin_default",
+        "twin_depth1",
+        "twin_depth2",
+        "twin_dp",
+        "twin_full",
+        "twin_hotspot_only",
+        "twin_llm_pragmas",
+        "twin_no_evidence",
+        "twin_no_hotspots",
+        "compiler_remarks_b1",
+        "default",
+        "discopop_gate",
+        "full_b1",
+        "full_depth1",
+        "full_depth2",
+        "full_no_hotspots",
+        "hotspot_only_b1",
+        "llm_pragmas_full_reprofile",
+        "no_evidence_b1"
+      ],
+      "variable": [
+        "runner"
+      ],
+      "consequences": [],
+      "check": "twin",
+      "why": "D38: every twin resolves, through its own entry point, to EXACTLY the configuration of the agent arm it is the twin of \u2014 the agent's parser, the agent's flags, nothing added. Its only difference is the runner: no gate."
+    },
+    "E2-twins": {
+      "arms": [
+        "twin_no_evidence",
+        "twin_full"
+      ],
+      "variable": [
+        "evidence_sections"
+      ],
+      "consequences": [],
+      "why": "E2's evidence contrast without the gate. The pre-registered headline is the pipeline x evidence INTERACTION: (full_b1 - no_evidence_b1) against (twin_full - twin_no_evidence), on the same loops and repeats, with bare_llm (no region) and twin_dp (DiscoPoP unchecked) beside them."
+    },
+    "E2-source-twins": {
+      "arms": [
+        "twin_no_evidence",
+        "twin_compiler_remarks",
+        "twin_hotspot_only",
+        "twin_full"
+      ],
+      "variable": [
+        "evidence_sections",
+        "external_evidence",
+        "evidence_file"
+      ],
+      "consequences": [],
+      "why": "E2-source's evidence sources without the gate."
+    },
+    "E3-twins": {
+      "arms": [
+        "twin_default",
+        "twin_llm_pragmas"
+      ],
+      "variable": [
+        "llm_pragmas"
+      ],
+      "consequences": [
+        "pragma_arbitration"
+      ],
+      "why": "Who writes the pragmas, without the gate (H6's pragma-author half). Arbitration follows --llm-pragmas and is inert in a twin (it decides by timing)."
+    },
+    "E8-twins": {
+      "arms": [
+        "twin_default",
+        "twin_depth1",
+        "twin_depth2"
+      ],
+      "variable": [
+        "restructure_depth"
+      ],
+      "consequences": [],
+      "why": "Depth without the gate: a region a rewrite creates is asked about again, with nothing checking the rewrite that created it."
+    },
+    "E9-twins": {
+      "arms": [
+        "twin_default",
+        "twin_no_hotspots"
+      ],
+      "variable": [
+        "hotspots"
+      ],
+      "consequences": [],
+      "why": "Measured ranking vs the static proxy, without the gate: which region the model is handed."
     }
   }
 }

@@ -158,8 +158,10 @@ agent/tools/server.sh run --node 1 -- tsvc/s252 tsvc/s254 tsvc/s255 tsvc/s281 ts
     tsvc/s292 tsvc/s293 tsvc/s331 tsvc/s341 --arms bare_llm --models claude-haiku-4-5-20251001 \
     --trials 5 --threads 6,12 --repeats 5 --run-id e1_bare_b
 
-# E2 — evidence x model (one attempt per region, so feedback cannot substitute for evidence)
-... --arms full_b1,no_evidence_b1 --models claude-haiku-4-5-20251001,claude-sonnet-5 --trials 5 --run-id e2
+# E2 — evidence x model (one attempt per region, so feedback cannot substitute for evidence), with
+# its twins (D38) and the three-way arms in the same run
+... --arms discopop_gate,twin_dp,default,full_b1,no_evidence,no_evidence_b1,twin_full,twin_no_evidence,bare_llm \
+    --models claude-haiku-4-5-20251001 --trials 5 --run-id e2_...
 
 # E10 — the speed check (needs a timing size per kernel, see §6)
 ... --arms full,speed_gate_large,speed_gate_small --models claude-haiku-4-5-20251001 --trials 3 --run-id e10
@@ -282,6 +284,17 @@ was introduced this way; E1 under v2 is `results/E01b_bare_llm/checks/e1b_v2_ver
    alone — per-benchmark FASTER counts paired (Wilcoxon), unusable programs counted. The model alone's
    speed is over its correct trials only and is never set against the agent's all-trials median. A run
    whose overview says MISSING is not reported.
+0b. **Every experiment with a model-only meaning carries its MATCHED TWINS (D38), in the same run as
+   the agent arms they are twins of.** A twin (`"runner": "twin"`, `discopop_agent/twin.py`) is its
+   agent arm minus the gate: the same arguments, region, evidence and request, one attempt per region,
+   no feedback, DiscoPoP's pragmas inserted at the end with nothing checked. Which twins go with which
+   experiment is in arms.json (`E2-twins`, `E2-source-twins`, `E3-twins`, `E8-twins`, `E9-twins`;
+   `twin_dp` beside `discopop_gate` wherever it runs — no model cost). `race_check.py` over EVERY twin
+   arm's programs is part of the read-out, as for `bare_llm`; `twin_model_program.*` in each trial's
+   `agent_patches/` is the program before DiscoPoP's unchecked pragmas. The read-out's headline is the
+   pipeline × factor interaction (agent difference vs twin difference, paired per benchmark), pre-
+   registered in the plan before the run; the model + gate FILTER (the twins' programs through the gate's
+   race stages and the harness verification) is computed afterwards at no model cost.
 0. **Suitability pre-flight (D18, thesis record §5k) — no model.** The experiment's benchmarks
    must be able to tell its arms apart: class measured (`discopop_gate` × 3 profiles: R =
    DiscoPoP alone fails and a verified reference exists, A = DiscoPoP alone succeeds, D = true

@@ -190,7 +190,28 @@ def _agent_env(agent_repo: Path) -> Dict[str, str]:
 
 
 def _load_arms() -> Dict[str, dict]:
-    return json.loads(ARMS_FILE.read_text())["arms"]
+    return resolve_twins(json.loads(ARMS_FILE.read_text())["arms"])
+
+
+# What a twin (D38) takes from the agent arm it is the twin of: everything that says what the
+# agent is given and how it is configured, so the twin's model is handed exactly the agent's
+# DiscoPoP information. Its own `runner`, `description`, `why` and `ids` stay its own.
+TWIN_INHERITS = ("flags", "settings", "timing_size", "evidence_file")
+
+
+def resolve_twins(arms: Dict[str, dict]) -> Dict[str, dict]:
+    """Fill each `"runner": "twin"` arm from its `twin_of`. Every check made on an agent arm —
+    the settings verified against the parser, the confound printout, the flags a trial runs
+    with — then applies to its twin unchanged, and a twin cannot drift from its agent arm."""
+    out = dict(arms)
+    for name, spec in arms.items():
+        if spec.get("runner") != "twin":
+            continue
+        of = spec.get("twin_of")
+        if of not in arms or arms[of].get("runner"):
+            sys.exit(f"arms.json: twin {name!r} names twin_of={of!r}, which is not an agent arm")
+        out[name] = {**spec, **{k: arms[of][k] for k in TWIN_INHERITS if k in arms[of]}}
+    return out
 
 
 def _common_flags() -> List[str]:
@@ -260,6 +281,7 @@ def _effective_config(spec: dict, benchmark: str) -> Dict[str, Any]:
     # printout showed compiler_remarks_b1 and no_evidence_b1 as identical (e2_smoke, 23 Sep).
     cfg["--evidence-file"] = spec.get("evidence_file")
     cfg["runner"] = spec.get("runner", "agent")
+    cfg["twin_of"] = spec.get("twin_of")
     return cfg
 
 
@@ -316,13 +338,16 @@ def _verify_one_arm(name: str, spec: dict, py: str, agent_repo: Path, benchmark:
     """`verify_arm_settings` for one arm on one benchmark; `speed_off` = the harness turned
     the speed check off for this kernel, which overrides what the arm declares for it."""
     where = f" [{benchmark}: no timing size, speed check off]" if speed_off else ""
-    if spec.get("runner"):
+    if spec.get("runner") and spec["runner"] != "twin":
         return []            # not the agent: no agent arguments exist to be declared or parsed
+    # A twin (D38) parses the agent arm's arguments with the agent's own parser; its inherited
+    # declaration is checked against what the TWIN parsed.
+    module = "discopop_agent.twin" if spec.get("runner") == "twin" else "discopop_agent"
     declared = spec.get("settings")
     if not declared:
         return [f"{name}: no `settings` block — every arm must declare the arguments that "
                 f"carry its purpose (arms.json `settings_note`)"]
-    cmd = [py, "-m", "discopop_agent", "--discopop-dir", ".", "--source-file", "x.c",
+    cmd = [py, "-m", module, "--discopop-dir", ".", "--source-file", "x.c",
            *_common_flags(), *spec.get("flags", []), *_timing_flags(spec, benchmark),
            *_evidence_file_flags(spec, benchmark, None, "", ""), "--print-config"]
     proc = subprocess.run(cmd, capture_output=True, text=True,
@@ -909,6 +934,14 @@ def _parse_agent_log(log: str) -> dict:
     m = re.search(r"\[(BEAT|MATCHED|BELOW)\]", log)
     if m:
         rec["agent_verdict"] = m.group(1)
+    # A twin (D38): how many regions its model was asked about, how many it edited, and how
+    # many DiscoPoP pragmas went in afterwards with nothing checked — the model's share and
+    # DiscoPoP's unchecked share of the result, told apart.
+    m = re.search(r"SUMMARY: (\d+) region\(s\) asked\s+\|\s+(\d+) edited\s+\|\s+(\d+) DiscoPoP "
+                  r"pragma\(s\) inserted unchecked", log)
+    if m:
+        rec["twin_asked"], rec["twin_edited"], rec["twin_dp_inserted"] = map(int, m.groups())
+        rec["twin_reprofile_failed"] = "the re-profile failed" in log
     return rec
 
 
@@ -1198,7 +1231,12 @@ def run_trial(bench: str, bench_dir: Path, profile_dir: Path, trial: Path, arm: 
                *(["--exclude-functions", ",".join(_excluded_functions(bench_dir))]
                  if _excluded_functions(bench_dir) else [])]
     else:
-        cmd = [str(Path(a.agent_repo) / "venv" / "bin" / "python"), "-m", "discopop_agent",
+        # The agent — or its twin (D38), which takes the agent arm's arguments unchanged (they
+        # are inherited in `resolve_twins`) and runs the agent's own code up to each model call,
+        # with no gate after it.
+        twin = _load_arms().get(arm, {}).get("runner") == "twin"
+        cmd = [str(Path(a.agent_repo) / "venv" / "bin" / "python"), "-m",
+               "discopop_agent.twin" if twin else "discopop_agent",
                *(["--source-file", src_name] if proj is None else _project_agent_flags(proj)),
                "--discopop-dir", ".discopop",
                "--provider", a.provider, "--model", model, "--edit-mode", a.edit_mode,

@@ -102,7 +102,8 @@ def _who(arm: str) -> str:
         runner = json.loads(ARMS_FILE.read_text())["arms"][arm].get("runner")
     except (OSError, ValueError, KeyError, AttributeError):
         runner = None
-    return "model alone" if runner == "bare_llm" else "agent"
+    return ("model alone" if runner == "bare_llm"
+            else "model + DiscoPoP, no gate" if runner == "twin" else "agent")
 
 
 def best_speedup(t: dict) -> Optional[float]:

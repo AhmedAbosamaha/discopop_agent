@@ -38,7 +38,8 @@ def _resolved(name: str, spec: dict, repo: Path, benchmark: str) -> dict:
     """The agent's FULL resolved configuration for this arm on this benchmark."""
     import os
     import subprocess
-    cmd = [str(repo / "venv" / "bin" / "python"), "-m", "discopop_agent", "--discopop-dir", ".",
+    module = "discopop_agent.twin" if spec.get("runner") == "twin" else "discopop_agent"
+    cmd = [str(repo / "venv" / "bin" / "python"), "-m", module, "--discopop-dir", ".",
            "--source-file", "x.c", *cli._common_flags(), *spec.get("flags", []),
            *cli._timing_flags(spec, benchmark),
            *cli._evidence_file_flags(spec, benchmark, None, "", ""), "--print-config"]
@@ -73,6 +74,21 @@ def check_experiments(doc: dict, repo: Path, benchmark: str) -> int:
             ok = len(runners) == 1 and agents == ["default"]
             print(f"  [{'pass' if ok else 'FAIL'}] {exp}: runner arm {runners} beside {agents} "
                   f"(a separate runner takes no agent arguments; nothing to resolve)")
+            failures += 0 if ok else 1
+            continue
+        if spec.get("check") == "twin":
+            # D38: each twin, resolved through ITS entry point, equals the agent arm it is the
+            # twin of, resolved through the agent's — every key, nothing added or dropped.
+            twins = [n for n in names if arms[n].get("runner") == "twin"]
+            bad = [n for n in twins if arms[n].get("twin_of") not in names]
+            diffs = []
+            for n in twins:
+                t, g = _resolved(n, arms[n], repo, benchmark), _resolved(arms[n]["twin_of"], arms[arms[n]["twin_of"]], repo, benchmark)
+                diffs += [f"{n} vs {arms[n]['twin_of']}: {k}" for k in sorted(set(t) | set(g)) if t.get(k) != g.get(k)]
+            ok = bool(twins) and not bad and not diffs
+            print(f"  [{'pass' if ok else 'FAIL'}] {exp}: {len(twins)} twin(s) resolve exactly to their agent arms")
+            for line in [f"{n}: its twin_of is not in the block" for n in bad] + diffs:
+                print(f"         {line}")
             failures += 0 if ok else 1
             continue
         cfg = {n: _resolved(n, arms[n], repo, benchmark) for n in names}
@@ -127,6 +143,7 @@ def check_classes() -> int:
 
 def main() -> int:
     doc = json.loads((HERE.parent / "config" / "arms.json").read_text())
+    doc["arms"] = cli.resolve_twins(doc["arms"])      # a twin carries its agent arm's flags (D38)
     arms = doc["arms"]
     repo = cli._agent_repo() if hasattr(cli, "_agent_repo") else HERE.parent.parent.parent
     sizes = json.loads(cli.KERNEL_SIZES_FILE.read_text())

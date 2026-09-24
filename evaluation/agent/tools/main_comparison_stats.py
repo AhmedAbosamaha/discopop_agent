@@ -324,6 +324,107 @@ def three_way_markdown(tw: Dict[str, Any]) -> str:
     return "\n".join(out)
 
 
+def _model_only(arm: str) -> bool:
+    """An arm whose programs no gate saw — the model alone (`bare_llm`) or a twin (D38): its
+    FASTER programs are race-free only where race_check.py found them clean."""
+    try:
+        spec = json.loads(figures.ARMS_FILE.read_text())["arms"].get(arm, {})
+    except (OSError, ValueError, KeyError):
+        return False
+    return spec.get("runner") in ("bare_llm", "twin")
+
+
+def interaction(trials: List[dict], agent_hi: str, agent_lo: str, twin_hi: str, twin_lo: str,
+                races: Optional[Dict[Tuple[str, str, str, int], str]] = None) -> Dict[str, Any]:
+    """H12 (D38, pre-registered 24 Sep): does a factor act THROUGH the pipeline?  Per benchmark,
+    the factor's effect on the race-free FASTER rate inside the agent (agent_hi - agent_lo)
+    minus its effect on the matched twins (twin_hi - twin_lo); Wilcoxon signed-rank over the
+    benchmarks (two-sided, and one-sided 'larger inside the pipeline'), Cliff's delta between
+    the two sets of per-benchmark effects.  A model-only arm's program counts as race-free only
+    where race_check.py says 'clean': without its race file the test is refused, not run on
+    output-checked counts."""
+    races = races or {}
+    arms = {"agent_hi": agent_hi, "agent_lo": agent_lo, "twin_hi": twin_hi, "twin_lo": twin_lo}
+    unchecked = [a for a in (twin_hi, twin_lo, agent_hi, agent_lo)
+                 if _model_only(a) and not any(k[2] == a for k in races)]
+    res: Dict[str, Any] = {"arms": arms, "races_missing_for": unchecked, "classes": {}}
+    classes = figures._classes()
+    for cls in ("R", "A", "D", ""):
+        ts = [t for t in trials if (classes.get(str(t.get("benchmark")), "") or "") == cls]
+        benches = sorted({str(t.get("benchmark")) for t in ts
+                          if all(any(u.get("arm") == a and str(u.get("benchmark")) == str(t.get("benchmark")) for u in ts)
+                                 for a in arms.values())})
+        if not benches:
+            continue
+
+        def rate(arm: str, bench: str, key: str) -> Optional[float]:
+            at = [t for t in ts if t.get("arm") == arm and str(t.get("benchmark")) == bench
+                  and t.get("outcome") in figures.PARALLEL_OK + ("no-change", "BROKEN")]
+            if not at:
+                return None
+            def ok(t: dict) -> bool:
+                if t.get("outcome") != "FASTER":
+                    return False
+                if key == "faster" or not _model_only(arm):
+                    return True                      # kept by the gate: its race stages passed
+                return races.get((_run_of(t), bench, arm, int(t.get("repeat") or 0))) == "clean"
+            return sum(1 for t in at if ok(t)) / len(at)
+
+        block: Dict[str, Any] = {"benchmarks": len(benches)}
+        for key in ("faster_race_free", "faster"):
+            per: Dict[str, Dict[str, float]] = {}
+            for b in benches:
+                r = {n: rate(a, b, key) for n, a in arms.items()}
+                if any(v is None for v in r.values()):
+                    continue
+                ra = {n: float(v) for n, v in r.items() if v is not None}
+                per[b] = {"agent_effect": ra["agent_hi"] - ra["agent_lo"],
+                          "twin_effect": ra["twin_hi"] - ra["twin_lo"], **ra}
+                per[b]["interaction"] = per[b]["agent_effect"] - per[b]["twin_effect"]
+            w = _wilcoxon([v["interaction"] for v in per.values()])
+            block[key] = {
+                "per_benchmark": per, "wilcoxon": w,
+                "cliffs_delta": cliffs_delta([v["agent_effect"] for v in per.values()],
+                                             [v["twin_effect"] for v in per.values()]),
+                "mean_agent_effect": statistics.mean(v["agent_effect"] for v in per.values()) if per else None,
+                "mean_twin_effect": statistics.mean(v["twin_effect"] for v in per.values()) if per else None,
+            }
+        res["classes"][cls or "unclassified"] = block
+    return res
+
+
+def interaction_markdown(ix: Dict[str, Any]) -> str:
+    a = ix["arms"]
+    out = [f"## H12 — does the factor act through the pipeline? (D38)", "",
+           f"Inside the agent: `{a['agent_hi']}` − `{a['agent_lo']}`; on the matched twins (no gate): "
+           f"`{a['twin_hi']}` − `{a['twin_lo']}`. Per benchmark, the effect on the rate, then the difference of "
+           "the two effects; Wilcoxon signed-rank over benchmarks, Cliff's δ between the two sets of effects. "
+           "Race-free counts a model-only program only where `race_check.py` found it clean."]
+    if ix["races_missing_for"]:
+        out += ["", f"**No race file for {', '.join(ix['races_missing_for'])}: the race-free rows are NOT established "
+                "— run race_check.py over those arms first.**"]
+    for cls, b in ix["classes"].items():
+        out += ["", f"### Class {cls} — {b['benchmarks']} benchmarks", ""]
+        for key, label in (("faster_race_free", "race-free FASTER (the pre-registered measure)"), ("faster", "FASTER")):
+            d = b[key]
+            w = d["wilcoxon"]
+            me, mt = d["mean_agent_effect"], d["mean_twin_effect"]
+            out.append(f"- {label}: mean effect inside the agent {me:+.2f}, on the twins {mt:+.2f}; larger inside the "
+                       f"pipeline on {w['agent_ahead']} benchmarks, on the twins on {w['model_alone_ahead']}, tied on "
+                       f"{w['n_pairs'] - w['n_nonzero']}"
+                       + (f"; p (two-sided) = {w['p_two_sided']:.3g}, p (larger inside) = {w['p_agent_ahead']:.3g}"
+                          if "p_two_sided" in w else f"; {w.get('note', '')}")
+                       + (f"; Cliff's δ = {d['cliffs_delta']:+.2f}" if d["cliffs_delta"] is not None else "") + "."
+                       if me is not None and mt is not None else f"- {label}: no benchmark has all four arms.")
+        per = b["faster_race_free"]["per_benchmark"]
+        out += ["", "| benchmark | agent hi | agent lo | twin hi | twin lo | agent effect | twin effect | interaction |",
+                "|---|---:|---:|---:|---:|---:|---:|---:|"]
+        for bench, v in per.items():
+            out.append(f"| `{bench}` | {v['agent_hi']:.2f} | {v['agent_lo']:.2f} | {v['twin_hi']:.2f} | {v['twin_lo']:.2f} | "
+                       f"{v['agent_effect']:+.2f} | {v['twin_effect']:+.2f} | {v['interaction']:+.2f} |")
+    return "\n".join(out)
+
+
 def _pct(d: Dict[str, Any]) -> str:
     lo, hi = d["wilson95"]
     return f"{d['k']} of {d['n']} ({100 * d['k'] / d['n']:.0f} %, 95 % CI {100 * lo:.0f}–{100 * hi:.0f} %)" if d["n"] else "—"
@@ -390,6 +491,9 @@ def main() -> int:
     ap.add_argument("--bare", default="bare_llm", help="the model-alone arm for --three-way")
     ap.add_argument("--races", type=Path, action="append", default=[],
                     help="race_check.py results.jsonl for the model alone's programs (repeatable)")
+    ap.add_argument("--interaction", default=None, metavar="AGENT_HI,AGENT_LO,TWIN_HI,TWIN_LO",
+                    help="H12 (D38): the factor's effect inside the agent against its effect on the twins, "
+                         "e.g. full_b1,no_evidence_b1,twin_full,twin_no_evidence (--races for the twins)")
     ap.add_argument("--suite", default=None,
                     help="only benchmarks of this suite (`tsvc`): the PRIMARY set of D30, computed with the "
                          "same statistics as the registered set, never instead of it")
@@ -414,6 +518,12 @@ def main() -> int:
     if a.three_way:
         res["three_way"] = three_way(trials, a.three_way, a.bare, load_races(a.races))
         md += "\n" + three_way_markdown(res["three_way"])
+    if a.interaction:
+        hi_lo = a.interaction.split(",")
+        if len(hi_lo) != 4:
+            sys.exit("--interaction takes four arms: AGENT_HI,AGENT_LO,TWIN_HI,TWIN_LO")
+        res["interaction"] = interaction(trials, hi_lo[0], hi_lo[1], hi_lo[2], hi_lo[3], load_races(a.races))
+        md += "\n" + interaction_markdown(res["interaction"])
     print(md)
     if a.out:
         a.out.mkdir(parents=True, exist_ok=True)

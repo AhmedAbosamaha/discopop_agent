@@ -43,7 +43,7 @@ import sys
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
 from ..profiling.fast_refresh import (line_map, remap_dependencies,
                                       remap_reduction, verify_translation)
@@ -1955,6 +1955,228 @@ def check_workspace_confined(work: Path) -> Result:
                   "solutions denied; the workspace allowed); shell, web and search blocked")
 
 
+def _section(text: str, title: str) -> str:
+    """One `_RULE`-headed block of a system prompt, flattened; '' if absent."""
+    from ..llm.prompts import _RULE
+    head = _RULE + title + "\n" + _RULE
+    if head not in text:
+        return ""
+    body = text.split(head, 1)[1]
+    nxt = body.find(_RULE)
+    return " ".join((head + (body if nxt < 0 else body[:nxt])).split())
+
+
+def check_twin_prompt(work: Path) -> Result:
+    """D38 — the twin's prompt is the agent's, less exactly the gate during the run and feedback.
+
+    For both pragma modes, full and no evidence, and with the speed check on and off: the
+    agent's system prompt with (a) its "HOW YOUR REWRITE IS CHECKED" block swapped for the
+    twin's "HOW YOUR REWRITE IS JUDGED", (b) the clause promising feedback after a failed
+    attempt removed, (c) the sentence about edits from an earlier turn removed and (d) the
+    one-thread speed goal read as the original sequential program, must equal the twin's —
+    nothing else may differ.  The request is the agent's own, with (d) only."""
+    import dataclasses
+    from .. import twin
+    from ..llm.prompts import _system_prompt
+    from ..llm.request import _build_direct_prompt
+    from ..types import GateFacts
+    name = "twin prompt"
+    ev = _fw_evidence()
+    ws = Path("/tmp/ws/fw.c")
+    base = GateFacts(require_speedup=True, n_inputs=2, numeric=False, stress=True)
+    flat = lambda t: " ".join(t.split())                                      # noqa: E731
+    problems: List[str] = []
+    n = 0
+    for pragmas in (False, True):
+        includes: List[Optional[Set[str]]] = [None, set()]
+        for include in includes:
+            for g in (base, dataclasses.replace(base, require_speedup=False),
+                      dataclasses.replace(base, numeric=True, stress=False)):
+                n += 1
+                tag = f"{'model' if pragmas else 'DiscoPoP'} pragmas/{'full' if include is None else 'none'}/" \
+                      f"{'speed' if g.require_speedup else 'no speed'}{'/numeric' if g.numeric else ''}"
+                agent = _system_prompt("direct", pragmas, False, g, include)
+                mine = twin._system(g, include, pragmas)
+                checked = _section(agent, "HOW YOUR REWRITE IS CHECKED")
+                judged = _section(mine, "HOW YOUR REWRITE IS JUDGED")
+                if not checked or not judged:
+                    problems.append(f"{tag}: a gate block is missing")
+                    continue
+                expect = (flat(agent).replace(checked, judged)
+                          .replace(" — and, " + twin.FEEDBACK_CLAUSE + ".", ".")
+                          .replace(" and, " + twin.FEEDBACK_CLAUSE + ".", ".")
+                          .replace(flat(twin.EARLIER_TURN), "").replace("  ", " ")
+                          .replace(*twin.SPEED_GOAL_ANNOTATE))
+                if flat(expect) != flat(mine):
+                    a, b = flat(expect), flat(mine)
+                    k = next((i for i in range(min(len(a), len(b))) if a[i] != b[i]), min(len(a), len(b)))
+                    problems.append(f"{tag}: differs beyond the gate at …{b[max(0, k - 40):k + 40]!r}")
+                for must in ("Nothing checks your work while you do it", "one attempt", "ThreadSanitizer"):
+                    if must not in judged:
+                        problems.append(f"{tag}: the judged block lacks {must!r}")
+                for gone in ("after a failed attempt", "earlier turn", "read statically",
+                             "or the rewrite is reverted", "pinned to one thread", "held to one thread"):
+                    if gone in flat(mine):
+                        problems.append(f"{tag}: the twin still says {gone!r}")
+                if g.require_speedup != ("original sequential" in judged):
+                    problems.append(f"{tag}: the timing step does not follow the speed check")
+                if not pragmas and "DiscoPoP re-profiles the program as you leave it" not in judged:
+                    problems.append(f"{tag}: the twin is not told DiscoPoP annotates afterwards")
+                req = _build_direct_prompt(ev, ws, include, pragmas, g)
+                mine_req = twin._request(req)
+                want = req.replace(*twin.SPEED_ONE_THREAD)
+                if mine_req != want or (pragmas and g.require_speedup and mine_req == req):
+                    problems.append(f"{tag}: the request is not the agent's")
+    if problems:
+        return Result(name, "fail", "; ".join(problems[:3]) + (f" (+{len(problems) - 3} more)" if len(problems) > 3 else ""))
+    return Result(name, "pass", f"{n} configurations: the agent's system prompt and request, less only the "
+                  "gate during the run, the feedback clause and the earlier-turn sentence")
+
+
+_TWIN_SRC = """#include <stdio.h>
+#define N 20000
+static double a[N], b[N], c[N];
+void rec(void) {
+  double run = 0.0;
+  for (int i = 0; i < N; i++) {
+    run = run * 0.5 + a[i];
+    b[i] = run;
+  }
+}
+void scale(void) {
+  for (int i = 0; i < N; i++)
+    c[i] = a[i] * 2.0 + 1.0;
+}
+int main(void) {
+  for (int i = 0; i < N; i++) a[i] = (i % 13) * 0.5;
+  for (int r = 0; r < 20; r++) { rec(); scale(); }
+  double s = 0;
+  for (int i = 0; i < N; i++) s += b[i] + c[i];
+  printf("%.3f\\n", s);
+  return 0;
+}
+"""
+
+
+def check_twin_run(work: Path) -> Result:
+    """D38 — a twin asks what the agent asks, keeps what the model leaves, re-profiles, and
+    lets DiscoPoP annotate with nothing checked.
+
+    A recurrence (`rec`, which DiscoPoP cannot parallelize) beside a clean Do-All (`scale`).
+    The agent is run with the arm's arguments up to its first model call, and stopped there;
+    the twin is run with the same arguments.  Its first request must be the agent's (the
+    working-copy path aside); the stand-in model rewrites the recurrence into an independent
+    loop; the twin must keep that edit unchecked, re-profile, and insert DiscoPoP's pragma for
+    BOTH loops without any gate — and save the program as the model left it.  With
+    `--budget 0` (the twin of DiscoPoP alone) no model is called and DiscoPoP's pragma for
+    `scale` goes in unchecked."""
+    name = "twin run"
+    import contextlib
+    import io
+    if not Path(_venv_bin("discopop_cxx")).exists():
+        return Result(name, "skip", "DiscoPoP is not installed in this venv")
+    import importlib
+    from .. import twin
+    from ..args import parse_args
+    from ..llm.request import _build_direct_prompt
+    # the modules, not the functions the packages re-export under the same names
+    agent_run: Any = importlib.import_module("discopop_agent.run")
+    phase_a: Any = importlib.import_module("discopop_agent.phases.phase_a")
+    twin_mod: Any = twin
+    d = work / "twin_run"
+    shutil.rmtree(d, ignore_errors=True)
+    d.mkdir(parents=True)
+    (d / "k.cpp").write_text(_TWIN_SRC)
+    ok, err = _profile(d, "k.cpp")
+    if not ok:
+        return Result(name, "fail", f"profile: {err}")
+    base_argv = ["x", "--discopop-dir", str(d / ".discopop"), "--source-file", str(d / "k.cpp"),
+                 "--provider", "claude-agent-sdk", "--model", "m", "--edit-mode", "direct",
+                 "--exclude-functions", "main", "--no-require-speedup", "--budget", "1"]
+    seen: Dict[str, Any] = {}
+
+    class Stop(BaseException):
+        pass
+
+    def agent_call(evidence: Any, model: str, **kw: Any) -> Any:
+        seen["agent"] = _build_direct_prompt(evidence, Path("/WS/k.cpp"), kw.get("evidence_sections"),
+                                             kw.get("llm_pragmas", False), kw["gate"])
+        raise Stop()
+
+    calls: List[str] = []
+
+    def model(provider: str, client: Any, model_name: str, current: List[Any], system: str,
+              session_key: str = "", workspace: Optional[Path] = None, stateless: bool = False) -> str:
+        f = Path(str(workspace)) / "k.cpp"
+        calls.append(current[-1]["content"].replace(str(f), "/WS/k.cpp"))
+        seen["system"], seen["stateless"] = system, stateless
+        f.write_text(f.read_text().replace("run = run * 0.5 + a[i];\n    b[i] = run;", "b[i] = a[i] * 0.5 + a[i];"))
+        return "Plan: b no longer depends on the previous iteration."
+
+    saved_argv = sys.argv
+    saved_call, saved_complete = phase_a.call_llm, twin_mod._complete
+    problems: List[str] = []
+    log = io.StringIO()
+    try:
+        phase_a.call_llm = agent_call
+        sys.argv = base_argv
+        try:
+            with contextlib.redirect_stdout(io.StringIO()):
+                agent_run.run(parse_args())
+        except Stop:
+            pass
+        twin_mod._complete = model
+        with contextlib.redirect_stdout(log):
+            rc = twin.run(parse_args())
+        final = (d / "k.cpp").read_text()
+        before = d / ".discopop" / "agent_patches" / "twin_model_program.cpp"
+        if rc != 0:
+            problems.append(f"the twin exited {rc}")
+        if "agent" not in seen:
+            problems.append("the agent never reached a model call")
+        elif not calls or " ".join(calls[0].split()) != " ".join(seen["agent"].split()):
+            problems.append("the twin's first request is not the agent's")
+        elif "run = run * 0.5" not in calls[0]:
+            problems.append("the model was not asked about the recurrence")
+        if not seen.get("stateless"):
+            problems.append("the call is not stateless (one attempt)")
+        if "a[i] * 0.5 + a[i]" not in final:
+            problems.append("the model's edit was not kept")
+        if final.count("#pragma omp parallel for") < 2:
+            problems.append(f"DiscoPoP inserted {final.count('#pragma omp parallel for')} pragma(s), not 2 "
+                            "(the rewritten loop and scale)")
+        if not before.exists() or "#pragma omp" in before.read_text() \
+                or "a[i] * 0.5 + a[i]" not in before.read_text():
+            problems.append("the program as the model left it was not saved before annotation")
+        text = log.getvalue()
+        for gate_word in ("Quality gate", "ThreadSanitizer", "Stage '", "SETTLING", "marginal", "[floor]"):
+            if gate_word in text:
+                problems.append(f"the twin ran a gate step ({gate_word!r})")
+        if "] Calling m" not in text or "INSERTED (unchecked)" not in text or "Re-profiling" not in text:
+            problems.append("the log lacks the call, the re-profile or the unchecked insertion")
+        # DiscoPoP alone, unchecked: the twin of --budget 0
+        (d / "k.cpp").write_text(_TWIN_SRC)
+        ok, err = _profile(d, "k.cpp")
+        n_before = len(calls)
+        sys.argv = base_argv[:-1] + ["0"]
+        with contextlib.redirect_stdout(io.StringIO()):
+            twin.run(parse_args())
+        final0 = (d / "k.cpp").read_text()
+        if len(calls) != n_before:
+            problems.append("--budget 0 called the model")
+        if final0.count("#pragma omp parallel for") != 1 or "run = run * 0.5" not in final0:
+            problems.append(f"--budget 0: expected DiscoPoP's one pragma on scale, got "
+                            f"{final0.count('#pragma omp parallel for')}")
+    finally:
+        phase_a.call_llm = saved_call
+        twin_mod._complete = saved_complete
+        sys.argv = saved_argv
+    if problems:
+        return Result(name, "fail", "; ".join(problems))
+    return Result(name, "pass", f"{len(calls)} call(s); the first request is the agent's; the edit kept unchecked, "
+                  "re-profiled, DiscoPoP's pragmas inserted with no gate step; budget 0 = DiscoPoP alone unchecked")
+
+
 def check_covered_skip(work: Path) -> Result:
     """A region inside an already-accepted one must leave the queue.
 
@@ -3195,6 +3417,8 @@ _CHECKS: List[Tuple[str, Callable[[Path], Result]]] = [
     ("prompt-ablation", check_prompt_ablation),
     ("bare-llm", check_bare_llm),
     ("workspace-confined", check_workspace_confined),
+    ("twin-prompt", check_twin_prompt),
+    ("twin-run", check_twin_run),
     ("evidence-enrich", check_evidence_enrichment),
     ("dep-standing", check_dependence_standing),
     ("schedule-runtime", check_schedule_runtime),
