@@ -2053,6 +2053,30 @@ Added 2026-09-15 (see §6 rows of that date):
 
 ## 7. Run log
 
+### `e1c_r_1`–`e1c_r_4`, `e1c_race_check` — 2026-09-24/25, server, **E1 clean: the three-way main comparison on TSVC class R** (270 trials, Haiku; 90 race checks, no model)
+
+- **Setup.** Commit `33673d7d` (agent v2: D32, D33, Fixes 91–92; packages v3 without the header hint, D36; the model confined to its workspace, Fix 95; the model alone with the MIRROR prompt, D37; per-benchmark explorer limit). The 18 class-R loops × `discopop_gate`, `default`, `bare_llm` × 5, threads 6,12, repeats 5, check seed 7, on four 12-core lanes (`--node N.H`, split 5/5/4/4 loops), 24 Sep 18:33 → 25 Sep ≈ 04:50 UTC; every lane's credential sweep clean. `e1c_race_check`: `race_check.py` (the gate's TSan with archer and the schedule matrix) over all 90 `bare_llm` trials on the server, 25 Sep. Read-out `results/E01c_clean_three_way/analysis/main_comparison_stats.md` (`--arm default --three-way default --races …`).
+- **The three arms against the sequential original (class R, 90 trials each):**
+
+  | | DiscoPoP alone | DiscoPoP + agent | the model alone |
+  |---|---:|---:|---:|
+  | verified parallel program | 0 | 55 (61 %) | 64 (71 %) |
+  | FASTER (≥ 1.1×) | 0 | **51 (57 %, CI 46–66)** | 44 (49 %, CI 39–59) |
+  | FASTER and race-free | 0 | **51** | **39 (43 %, CI 34–54)** |
+  | BROKEN (wrong output) | 0 | **0** | **16** |
+  | correct but slower (< 0.91×) | 0 | 0 | 17 |
+  | racy (TSan) | 0 | 0 | 5 (all `s293`: every thread reads `a[0]` while iteration 0 writes the same value — right answer, still a data race the gate rejects) |
+  | does not compile | 0 | 0 | 8 |
+  | **unusable programs** | **0** | **0** | **46 (51 %)** |
+  | median speedup of the FASTER trials | — | 2.67× | 2.84× |
+
+- **H13 (trust), its first test: supported.** Per loop, the agent ships fewer unusable programs on 14, the model alone on 0, 4 tied; paired Wilcoxon one-sided p = 0.0004. The model alone's 46 unusable programs, every one a result: BROKEN on `s112`, `s121` ×3, `s1213` ×3, `s211` ×3, `s241` ×2, `s244`, `s281` ×2, `s341`; not compiling on `s1213` ×2, `s211`, `s252`, `s254`, `s255`, `s281`, `s331`; slower on `s112` ×4, `s121` ×2, `s241`, `s243` ×4, …; racy `s293` ×5 (full list in the read-out).
+- **Reach: the agent is now ahead, not significantly.** Race-free FASTER per loop: agent ahead on 10, the model alone on 4 (`s212` 5 v 3, `s244` 4 v 0, `s331` 2 v 0, `s281` 2 v 1), 4 tied; p (agent ahead) = 0.13, two-sided 0.26. FASTER alone: 9 v 4, p = 0.23. Where only the agent succeeds: `s121`, `s1213`, `s241`, `s243` (the model alone ships only unusable programs there), `s211` 3 v 1. Neither arm: `s112`, `s341` (the agent declines; the model alone ships 10 unusable programs).
+- **Agent vs DiscoPoP alone (D19): gained 51, gained-not-faster 4, neither 35, unsafe 0.** Speed paired by loop: median 1.17× (bootstrap CI 1.00–2.75×), Wilcoxon one-sided p = 0.0002 over 12 non-zero pairs, Cliff's δ +0.67. H1 holds on the clean packages with agent v2. The floor (D32) found DiscoPoP alone keeping nothing in 90 of 90 (`dp_floor = original`, as expected on class R).
+- **Process.** Agent: 126 model calls (0 failed), 92 full re-profiles, 22 explorer stalls (at the 60 s limit, redrawn), mean 372 s per trial (median 267) + 65 s verification, 16.1 USD-eq; D33 kept a joint set in 1 trial, none of the 51 FASTER came through it. The model alone: 90 calls, mean 101 s + 92 s verification, 8.1 USD-eq. DiscoPoP alone: 41 s + 75 s.
+- **Against the hinted runs (E1, E1-bare), descriptively:** the agent 44 → 51 FASTER (v1 → v2 and hint removed); the model alone 58 → 44 FASTER and 53 → 39 race-free, unusable 35 → 46 (8 not compiling where E1-bare had 1). Two things changed for the model alone at once — the hint left the source (D36) and the prompt became the mirror (D37) — so the drop is not attributed to either; `d36_hint_check` (N = 3) found the hint's effect not one-directional.
+- **Reading.** On clean packages the pipeline delivers more correct, race-free speedups than the same model alone (51 v 39, not significant per loop at 18 loops × 5) and ships no unusable program where the model alone ships 46 of 90 — the trust result is significant, the reach result is not. The classes A and D controls (`e1c_a`, `e1c_d`) complete E1c.
+
 ### `d38_twin_smoke` — 2026-09-24, Mac, **the twin runner (D38) through the real harness, SDK and confinement** (2 trials, 1 Haiku call)
 
 - **Setup.** Commit `236384e4` + uncommitted harness lines of the same work (the agent itself identical to E1c's `33673d7d`). `tsvc/s121` × `twin_dp` (the twin of `discopop_gate`: `--budget 0`, no model) and `twin_full` (the twin of `full_b1`), ×1, verified at SMALL with 2 threads and 1 repeat — **wiring only, no speed claim**: the Mac was 4 GB into swap, and a first attempt at the per-kernel size (EXTRALARGE) was stopped after its verification ran at 16 % CPU for many minutes.

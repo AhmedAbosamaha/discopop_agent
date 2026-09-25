@@ -35,18 +35,19 @@ Status: done
 | `d36_hint_check` | [`E01b_bare_llm/checks/d36_hint_check/`](E01b_bare_llm/checks/d36_hint_check/) | the author's single-example check of D36: the model alone on the CLEAN (v3) packages of s331, s281, s241 x3 — bare_llm_contract (E1-bare's exact prompt: isolates the hint) and bare_llm (minimal prompt, D37); compare with E1-bare's rows — result: the comment's effect is not one-directional at N=3 (s331, s281 down without it; s241 up) | valid | 18 | BROKEN 3, FASTER 8, no-change 1, parallel-not-faster 6 |
 | `clause_replay_fix91` | [`E01b_bare_llm/checks/clause_replay_fix91/`](E01b_bare_llm/checks/clause_replay_fix91/) | every archived clause-stage rejection (25) judged by the current clause rules, no model: 8 flip (s281 reps 2-5 in E1; 4 in pre-campaign runs), 3 stay, 14 not reconstructible (incl. E10's); re-run and archived 23 Sep, the Fix-91 replay's output had not been | valid | 0 |  |
 
-## [E1 clean — the three-way main comparison on clean packages (D35, D36)](E01c_clean_three_way/)
+## [E1 clean — the three-way main comparison on clean packages (D35, D36)](E01c_clean_three_way/REPORT.md)
 
 Status: running
 
 | run | where | what it is | status | trials | outcomes |
 |---|---|---|---|---:|---|
-| `e1c_r_1` | [`E01c_clean_three_way/runs/e1c_r_1/`](E01c_clean_three_way/runs/e1c_r_1/) | E1 clean, class R: s112 s121 s1213 s127 s211 x discopop_gate, default, bare_llm (mirror) x5, Haiku, lane 0.0 | running | 75 | BROKEN 10, FASTER 17, VERIFY_FAILED 3, no-change 39, parallel-not-faster 6 |
-| `e1c_r_2` | [`E01c_clean_three_way/runs/e1c_r_2/`](E01c_clean_three_way/runs/e1c_r_2/) | E1 clean, class R: s212 s241 s243 s244 s252 x discopop_gate, default, bare_llm (mirror) x5, Haiku, lane 0.1 | running | 75 | BROKEN 3, FASTER 25, VERIFY_FAILED 1, no-change 37, parallel-not-faster 9 |
-| `e1c_r_3` | [`E01c_clean_three_way/runs/e1c_r_3/`](E01c_clean_three_way/runs/e1c_r_3/) | E1 clean, class R: s254 s255 s281 s291 x discopop_gate, default, bare_llm (mirror) x5, Haiku, lane 1.0 | running | 60 | BROKEN 2, FASTER 31, VERIFY_FAILED 3, no-change 21, parallel-not-faster 3 |
-| `e1c_r_4` | [`E01c_clean_three_way/runs/e1c_r_4/`](E01c_clean_three_way/runs/e1c_r_4/) | E1 clean, class R: s292 s293 s331 s341 x discopop_gate, default, bare_llm (mirror) x5, Haiku, lane 1.1 | running | 60 | BROKEN 1, FASTER 22, VERIFY_FAILED 1, no-change 30, parallel-not-faster 6 |
-| `e1c_a` | not archived yet | E1 clean, class A (no-harm): s000, vpvtv, s313 x discopop_gate, default, bare_llm x1 | running |  |  |
-| `e1c_d` | not archived yet | E1 clean, class D (must-decline): s321, s322, s323, s3112 x discopop_gate, default, bare_llm x3 — the model alone on true recurrences (the author's decision 3) | running |  |  |
+| `e1c_r_1` | [`E01c_clean_three_way/runs/e1c_r_1/`](E01c_clean_three_way/runs/e1c_r_1/) | E1 clean, class R: s112 s121 s1213 s127 s211 x discopop_gate, default, bare_llm (mirror) x5, Haiku, lane 0.0 | valid | 75 | BROKEN 10, FASTER 17, VERIFY_FAILED 3, no-change 39, parallel-not-faster 6 |
+| `e1c_r_2` | [`E01c_clean_three_way/runs/e1c_r_2/`](E01c_clean_three_way/runs/e1c_r_2/) | E1 clean, class R: s212 s241 s243 s244 s252 x discopop_gate, default, bare_llm (mirror) x5, Haiku, lane 0.1 | valid | 75 | BROKEN 3, FASTER 25, VERIFY_FAILED 1, no-change 37, parallel-not-faster 9 |
+| `e1c_r_3` | [`E01c_clean_three_way/runs/e1c_r_3/`](E01c_clean_three_way/runs/e1c_r_3/) | E1 clean, class R: s254 s255 s281 s291 x discopop_gate, default, bare_llm (mirror) x5, Haiku, lane 1.0 | valid | 60 | BROKEN 2, FASTER 31, VERIFY_FAILED 3, no-change 21, parallel-not-faster 3 |
+| `e1c_r_4` | [`E01c_clean_three_way/runs/e1c_r_4/`](E01c_clean_three_way/runs/e1c_r_4/) | E1 clean, class R: s292 s293 s331 s341 x discopop_gate, default, bare_llm (mirror) x5, Haiku, lane 1.1 | valid | 60 | BROKEN 1, FASTER 22, VERIFY_FAILED 1, no-change 30, parallel-not-faster 6 |
+| `e1c_a` | not archived yet | E1 clean, class A (no-harm): s000, vpvtv, s313 x discopop_gate, default, bare_llm x1 | registered |  |  |
+| `e1c_d` | not archived yet | E1 clean, class D (must-decline): s321, s322, s323, s3112 x discopop_gate, default, bare_llm x3 — the model alone on true recurrences (the author's decision 3) | registered |  |  |
+| `e1c_race_check` | [`E01c_clean_three_way/checks/e1c_race_check/`](E01c_clean_three_way/checks/e1c_race_check/) | race_check.py (the gate's TSan + schedule matrix, archer, server, no model) over every trial of the model alone (bare_llm, mirror prompt) in e1c_r_1..4 — what makes its FASTER count race-free (D35 read-out, H13) | valid |  |  |
 
 ## [E2 — evidence, feedback and model strength](E02_evidence_feedback_model/REPORT.md)
 
@@ -91,7 +92,7 @@ Status: done
 | `t0_1_sizes_v2` | [`T0_instruments/T0.01_sizes/runs/t0_1_sizes_v2/`](T0_instruments/T0.01_sizes/runs/t0_1_sizes_v2/) | the original-format packages × every size | valid | 0 |  |
 | `t0_1_apps` | [`T0_instruments/T0.01_sizes/runs/t0_1_apps/`](T0_instruments/T0.01_sizes/runs/t0_1_apps/) | the applications (md, is, hotspot, …) | valid | 0 |  |
 | `t0_1_tsvc` | [`T0_instruments/T0.01_sizes/runs/t0_1_tsvc/`](T0_instruments/T0.01_sizes/runs/t0_1_tsvc/) | the 25 TSVC loops → kernel_sizes.json | valid | 0 |  |
-| `t0_1_probe_sizes` | not archived yet | T0.1 sizes for the 8 TSVC indirect-addressing probe loops (decision 8), no model | running |  |  |
+| `t0_1_probe_sizes` | not archived yet | T0.1 sizes for the 8 TSVC indirect-addressing probe loops (decision 8), no model | registered |  |  |
 
 ## [T0.2 — DiscoPoP profile stability](T0_instruments/T0.02_profile_stability/REPORT.md)
 
@@ -188,9 +189,9 @@ Status: done
 | `t0_11_classes_a` | [`T0_instruments/T0.11_measured_classes/runs/t0_11_classes_a/`](T0_instruments/T0.11_measured_classes/runs/t0_11_classes_a/) | draw A | valid | 56 | FASTER 16, PROFILE_ERROR 2, no-change 29, parallel-not-faster 3, parallel-speed-not-measurable 6 |
 | `t0_11_classes_b` | [`T0_instruments/T0.11_measured_classes/runs/t0_11_classes_b/`](T0_instruments/T0.11_measured_classes/runs/t0_11_classes_b/) | draw B | valid | 55 | FASTER 14, PROFILE_ERROR 5, no-change 26, parallel-not-faster 3, parallel-speed-not-measurable 7 |
 | `t0_11_classes_c` | [`T0_instruments/T0.11_measured_classes/runs/t0_11_classes_c/`](T0_instruments/T0.11_measured_classes/runs/t0_11_classes_c/) | draw C | valid | 55 | FASTER 14, PROFILE_ERROR 5, no-change 26, parallel-not-faster 3, parallel-speed-not-measurable 7 |
-| `t0_11_probe_a` | not archived yet | T0.11 draw a on the 8 TSVC indirect-addressing probe loops: discopop_capability, no model | running |  |  |
-| `t0_11_probe_b` | not archived yet | T0.11 draw b on the 8 TSVC indirect-addressing probe loops: discopop_capability, no model | running |  |  |
-| `t0_11_probe_c` | not archived yet | T0.11 draw c on the 8 TSVC indirect-addressing probe loops: discopop_capability, no model | running |  |  |
+| `t0_11_probe_a` | not archived yet | T0.11 draw a on the 8 TSVC indirect-addressing probe loops: discopop_capability, no model | registered |  |  |
+| `t0_11_probe_b` | not archived yet | T0.11 draw b on the 8 TSVC indirect-addressing probe loops: discopop_capability, no model | registered |  |  |
+| `t0_11_probe_c` | not archived yet | T0.11 draw c on the 8 TSVC indirect-addressing probe loops: discopop_capability, no model | registered |  |  |
 
 ## [T0.13 — the default arm's ceiling](T0_instruments/T0.13_default_arm_ceiling/REPORT.md)
 
