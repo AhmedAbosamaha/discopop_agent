@@ -25,6 +25,9 @@ sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(REPO))
 import campaign  # noqa: E402
 from marginal_replay import _apply  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import harness_include  # noqa: E402
+harness_include.install()   # every build finds prepared/_harness (D39)
 
 
 def _kept_flags(log: str) -> List[bool]:

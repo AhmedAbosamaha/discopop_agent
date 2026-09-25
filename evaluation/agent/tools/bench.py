@@ -23,6 +23,10 @@ import json
 import shutil
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import harness_include  # noqa: E402
+harness_include.install()   # every build finds prepared/_harness (D39)
 
 SOURCE_SUFFIXES = (".c", ".cpp", ".cc", ".cxx", ".h", ".hpp", ".hh", ".inc")
 UNITY_NAME = "dp_harness_unity"

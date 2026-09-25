@@ -61,6 +61,9 @@ class AgentArguments:
     external_evidence: str = ""
     evidence_file: Optional[str] = None
     prompt_omit: Tuple[str, ...] = ()
+    # Fix 97 (D39): lines of the benchmark's file that belong to the measurement harness.
+    protected_lines: Tuple[str, ...] = ()
+    protected_note: str = ""
     numeric_tolerance: bool = True   # measure the program's numerical noise floor
     schedule_stress: bool = True     # vary threads/schedule instead of one run
     stress_threads: Tuple[int, ...] = (1, 2, 4)  # thread counts the matrix covers
@@ -362,6 +365,13 @@ def parse_args() -> AgentArguments:
                          "instrument: with `--evidence none` it answers whether DiscoPoP's "
                          "measured evidence helps, or whether any hint would (none -> static "
                          "tool -> dynamic DiscoPoP). At most 6,000 characters are used."))
+    p.add_argument("--protected-line", action="append", default=[], metavar="LINE",
+                   help=("A line of the benchmark's file that belongs to the measurement harness "
+                         "(repeatable; packaging v4, D39). Every model is told to leave it as it "
+                         "is, and the gate refuses a candidate that changes, moves, drops or "
+                         "duplicates it — as stage `harness`, whose retry is not charged."))
+    p.add_argument("--protected-note", default="", metavar="TEXT",
+                   help="What the models are told about the protected lines, after listing them.")
     p.add_argument("--prompt-omit", default="", metavar="PARTS",
                    help=("Comma list of prompt parts to LEAVE OUT, to measure what each "
                          "contributes (E2 Part D): contract, gate (how the rewrite is "
@@ -621,6 +631,8 @@ def parse_args() -> AgentArguments:
         external_evidence=external_evidence,
         evidence_file=a.evidence_file,
         prompt_omit=prompt_omit,
+        protected_lines=tuple(x.strip() for x in a.protected_line if x.strip()),
+        protected_note=a.protected_note.strip(),
         apply_patches=a.apply_patches,
         min_measured_speedup=a.min_measured_speedup,
         check_inputs=[shlex.split(x) for x in a.check_input],

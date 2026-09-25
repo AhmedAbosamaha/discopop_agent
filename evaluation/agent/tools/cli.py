@@ -56,6 +56,8 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from run_store import RunStore
+import harness_include  # noqa: E402
+HARNESS_INCLUDE = harness_include.install()   # every build finds prepared/_harness (D39)
 import scaffold
 
 AGENT_DIR = Path(__file__).resolve().parents[1]
@@ -613,6 +615,20 @@ def check_package(bench: str, bench_dir: Path, profile_dir: Optional[Path] = Non
         raise PackageCorrupted(f"{bench}: the prepared package under {bench_dir} no longer matches "
                                f"what the packager wrote ({got[:12]} != {want[:12]}); regenerate it "
                                f"with the prepare tool — never run on a modified package")
+    # Packaging v4 (D39): the measurement harness is part of every build but lives OUTSIDE the
+    # package, so it is checked as its own file, before and after every trial like the rest.
+    if meta.get("harness"):
+        hdr = HARNESS_INCLUDE / meta["harness"]
+        try:
+            hgot = hashlib.sha256(hdr.read_bytes()).hexdigest()
+        except OSError as e:
+            raise PackageCorrupted(f"{bench}: the measurement harness {hdr} cannot be read ({e}); "
+                                   f"regenerate the package with the prepare tool")
+        rec["harness_sha256"] = hgot
+        if hgot != meta.get("harness_sha256"):
+            raise PackageCorrupted(f"{bench}: the measurement harness {hdr} no longer matches what "
+                                   f"the packager wrote ({hgot[:12]} != {str(meta.get('harness_sha256'))[:12]}); "
+                                   f"regenerate it — never run on a modified harness")
     if profile_dir is not None and profile_dir.exists():
         try:
             copy = _package_digest(profile_dir, meta)
@@ -642,6 +658,19 @@ def check_package(bench: str, bench_dir: Path, profile_dir: Optional[Path] = Non
                                        f"that directory to re-profile from the package")
     rec["ok"] = True
     return rec
+
+
+def _protected_flags(bench_dir: Path) -> List[str]:
+    """`--protected-line` / `--protected-note` from the package (v4, D39): the lines the
+    benchmark's file shares with the harness, and what every arm is told about them. The same
+    flags go to the agent, its twins and the model alone; an older package passes none."""
+    meta = json.loads((bench_dir / "meta.json").read_text())
+    out: List[str] = []
+    for line in meta.get("protected") or []:
+        out += ["--protected-line", line]
+    if meta.get("protected") and meta.get("protected_note"):
+        out += ["--protected-note", meta["protected_note"]]
+    return out
 
 
 def _excluded_functions(bench_dir: Path) -> List[str]:
@@ -1229,7 +1258,8 @@ def run_trial(bench: str, bench_dir: Path, profile_dir: Path, trial: Path, arm: 
                *(["--source-file", src_name] if proj is None else _project_agent_flags(proj)),
                "--model", model, *_load_arms().get(arm, {}).get("flags", []),
                *(["--exclude-functions", ",".join(_excluded_functions(bench_dir))]
-                 if _excluded_functions(bench_dir) else [])]
+                 if _excluded_functions(bench_dir) else []),
+               *_protected_flags(bench_dir)]
     else:
         # The agent — or its twin (D38), which takes the agent arm's arguments unchanged (they
         # are inherited in `resolve_twins`) and runs the agent's own code up to each model call,
@@ -1244,6 +1274,7 @@ def run_trial(bench: str, bench_dir: Path, profile_dir: Path, trial: Path, arm: 
                *(["--exclude-functions", ",".join(_excluded_functions(bench_dir))]
                  if _excluded_functions(bench_dir) else []),
                *(["--min-runtime-share", str(a.min_runtime_share)] if a.min_runtime_share else []),
+               *_protected_flags(bench_dir),
                "--explorer-timeout", str(_agent_explorer_limit(profile_dir)),
                *a.agent_arg]
     rec["agent_cmd"] = cmd
@@ -1278,7 +1309,11 @@ def run_trial(bench: str, bench_dir: Path, profile_dir: Path, trial: Path, arm: 
                                 or (trial / "final" / r).read_text(errors="replace")
                                 != (trial / "original" / r).read_text(errors="replace")]
     rec["source_changed"] = final_text != original_text
-    rec["scaffold"] = scaffold.check(original_text, final_text)
+    _meta = json.loads((bench_dir / "meta.json").read_text())
+    if _meta.get("protected"):            # packaging v4 (D39): kept with the trial for re-scoring
+        rec["protected"] = list(_meta["protected"])
+        rec["harness_sha256"] = _meta.get("harness_sha256")
+    rec["scaffold"] = scaffold.check(original_text, final_text, rec.get("protected") or ())
     # Pragmas the run ADDED.  In a project the count must not include pragmas the original
     # carries in code that is never compiled (polybench.c holds nine inside its PAPI
     # block), or "changed-not-parallel" could never be reached.
@@ -1855,7 +1890,7 @@ def cmd_rescore(a: argparse.Namespace) -> int:
                 print(f"  {p.parent}: no original/final source kept — skipped")
                 continue
             orig_text, final_text = orig.read_text(), final.read_text()
-        t["scaffold"] = scaffold.check(orig_text, final_text)
+        t["scaffold"] = scaffold.check(orig_text, final_text, t.get("protected") or ())
         # The facts read from the agent's log, re-read with the current parser: a counter
         # fixed after a run (phase_b_deferred, 23 Sep) must reach that run's records too.
         log_file = p.parent / "agent.log"

@@ -68,6 +68,10 @@ class GateFacts:
     # own), shown where DiscoPoP's digest goes — so "DiscoPoP's evidence helps" can be told
     # apart from "any hint helps".
     external_evidence: str = ""
+    # Fix 97 (D39): the lines the benchmark shares with its measurement harness, and what every
+    # arm is told about them — the same words for the agent, its twins and the model alone.
+    protected: Tuple[str, ...] = ()
+    protected_note: str = ""
 
 
 @dataclass

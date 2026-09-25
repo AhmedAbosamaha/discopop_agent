@@ -35,6 +35,9 @@ from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import harness_include  # noqa: E402
+harness_include.install()   # every build finds prepared/_harness (D39)
 
 AGENT_DIR = Path(__file__).resolve().parent.parent
 EXPLORER_ATTEMPTS = 20   # as the harness (cli.py)

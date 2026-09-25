@@ -31,6 +31,9 @@ import tempfile
 import time
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import harness_include  # noqa: E402
+harness_include.install()   # every build finds prepared/_harness (D39)
 
 REGION_RE = re.compile(r"^DP_TIMED_REGION_SECONDS\s+([0-9.eE+-]+)", re.M)
 TOL = 1e-9

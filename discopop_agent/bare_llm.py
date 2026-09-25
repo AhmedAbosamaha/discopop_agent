@@ -31,11 +31,11 @@ import shutil
 import sys
 import tempfile
 from pathlib import Path
-from typing import List
+from typing import List, Tuple
 
 from .llm.prompts import (_ASK_ANNOTATE, _CONTRACT_PRAGMA, _OMP_RULES, _PLAN_SPEC, _PRAGMA_FORMS,
                           _RULE, _contract, _granularity, _how_compared, _step)
-from .llm.request import _goal, _task_checklist
+from .llm.request import _goal, _protected_block, _task_checklist
 from .llm.providers import _complete_claude_agent_sdk
 from .types import GateFacts
 
@@ -123,14 +123,20 @@ def _system_mirror() -> str:
             + _OMP_RULES + _PRAGMA_FORMS + out)
 
 
-def _request_mirror(files: List[str], excluded: List[str]) -> str:
+def _request_mirror(files: List[str], excluded: List[str], protected: Tuple[str, ...] = (),
+                    protected_note: str = "") -> str:
     gate = MIRROR_GATE
     goal = (_goal(True, gate)
             .replace("runs faster than the same build on one thread", "runs faster than the original sequential program")
             .replace("  Nothing re-profiles your rewrite, and nothing adds a pragma for you.",
                      "  Nothing adds a pragma for you."))
-    keep = (f"Do not change these functions — they set up, time and print the program, and the "
-            f"measurement depends on them: {', '.join(excluded)}.\n" if excluded else "")
+    # Packaging v4 (D39): the harness is outside the file; the lines the file shares with it are
+    # described in EXACTLY the agent's words (Fix 97) — the old sentence naming the measuring
+    # functions was the model alone's only (the asymmetry found in E1c class A), and stays for
+    # packages that still carry the harness in the file (v3).
+    keep = (_protected_block(GateFacts(protected=protected, protected_note=protected_note)) if protected
+            else f"Do not change these functions — they set up, time and print the program, and the "
+                 f"measurement depends on them: {', '.join(excluded)}.\n" if excluded else "")
     return ("## The program\n"
             + "".join(f"  - {f}\n" for f in files)
             + "\nThese files are in your working directory.  Read them.\n\n"
@@ -196,6 +202,9 @@ def main() -> int:
     p.add_argument("--project-ldflags", default="")
     p.add_argument("--model", required=True)
     p.add_argument("--exclude-functions", default="")
+    p.add_argument("--protected-line", action="append", default=[],
+                   help="a line of the file that belongs to the measurement harness (D39), repeatable")
+    p.add_argument("--protected-note", default="")
     p.add_argument("--prompt", choices=("mirror", "minimal", "contract"), default="mirror",
                    help="mirror: the agent's instructions minus DiscoPoP, gate and feedback (default); "
                         "minimal: role, tools, goal; contract: E1-bare's prompt")
@@ -215,7 +224,9 @@ def main() -> int:
     print(f"  Prompt         : {a.prompt}\n")
 
     system = _system(a.prompt)
-    request = {"mirror": _request_mirror, "minimal": _request_minimal, "contract": _request}[a.prompt](units, excluded)
+    protected = tuple(x.strip() for x in a.protected_line if x.strip())
+    request = (_request_mirror(units, excluded, protected, a.protected_note.strip()) if a.prompt == "mirror"
+               else {"minimal": _request_minimal, "contract": _request}[a.prompt](units, excluded))
     with tempfile.TemporaryDirectory(prefix="dp_bare_") as tmp:
         ws = Path(tmp)
         # A private copy of the whole program (headers included, so the model can read them);

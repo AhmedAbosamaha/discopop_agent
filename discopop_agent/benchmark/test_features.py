@@ -2177,6 +2177,103 @@ def check_twin_run(work: Path) -> Result:
                   "re-profiled, DiscoPoP's pragmas inserted with no gate step; budget 0 = DiscoPoP alone unchecked")
 
 
+_HARNESS_SRC = """#include "tsvc/s000.h"
+
+static void pb_mix(int nl)
+{
+  long k = ((long)nl * 7919L + 13L) % LEN_1D;
+  a[k] += (real_t)0.25;
+}
+
+static real_t kernel_s000(void)
+{
+    for (int nl = 0; nl < R; nl++) {
+        for (int i = 0; i < LEN_1D; i++) {
+            a[i] = b[i] + 1;
+        }
+        pb_mix(nl);
+    }
+    return (real_t)0;
+}
+
+PB_MAIN(kernel_s000)
+"""
+_HARNESS_PROTECTED = ('#include "tsvc/s000.h"', "static void pb_mix(int nl)",
+                      "long k = ((long)nl * 7919L + 13L) % LEN_1D;", "a[k] += (real_t)0.25;",
+                      "pb_mix(nl);", "PB_MAIN(kernel_s000)")
+
+
+def check_harness_lines(work: Path) -> Result:
+    """Fix 97 (D39): the lines a benchmark shares with its measurement harness.
+
+    The gate's `harness` stage refuses a candidate that changes, drops, moves or duplicates one
+    of them — the E1c `s313` case, where the model inlined `pb_mix` into the kernel — and lets
+    every other change through (a pragma, a restructured loop, re-indentation). Every arm is
+    told about them in the same words: the block appears verbatim in the agent's three request
+    forms, in its twin's request and in the model alone's."""
+    name = "harness lines"
+    from .. import bare_llm, twin
+    from ..gate.harness_lines import check_protected
+    from ..llm.request import _build_direct_prompt, _build_function_prompt, _build_prompt, _protected_block
+    from ..types import GateFacts
+    d = work / "harness_lines"
+    d.mkdir(parents=True, exist_ok=True)
+    src = d / "s000.c"
+    src.write_text(_HARNESS_SRC)
+    P = _HARNESS_PROTECTED
+
+    def diff_to(new: str) -> str:
+        return make_diff(_HARNESS_SRC, new, str(src))
+
+    good = {
+        "a pragma on the loop": _HARNESS_SRC.replace("        for (int i = 0;", "        #pragma omp parallel for\n        for (int i = 0;"),
+        "a restructured body": _HARNESS_SRC.replace("a[i] = b[i] + 1;", "a[i] = 1 + b[i];"),
+        "re-indented harness lines": _HARNESS_SRC.replace("        pb_mix(nl);", "            pb_mix(nl);"),
+    }
+    bad = {
+        "pb_mix inlined (the s313 case)": _HARNESS_SRC.replace("        pb_mix(nl);", "        a[((long)nl * 7919L + 13L) % LEN_1D] += (real_t)0.25;"),
+        "pb_mix's body edited": _HARNESS_SRC.replace("a[k] += (real_t)0.25;", "a[k] += (real_t)0.5;"),
+        "pb_mix called twice": _HARNESS_SRC.replace("        pb_mix(nl);", "        pb_mix(nl);\n        pb_mix(nl);"),
+        "pb_mix moved before the loop": _HARNESS_SRC.replace("        pb_mix(nl);\n", "").replace(
+            "    for (int nl = 0; nl < R; nl++) {\n", "    for (int nl = 0; nl < R; nl++) {\n        pb_mix(nl);\n"),
+        "the include removed": _HARNESS_SRC.replace('#include "tsvc/s000.h"\n', ""),
+    }
+    problems: List[str] = []
+    for label, text in good.items():
+        why = check_protected(diff_to(text), str(src), P)
+        if why:
+            problems.append(f"refused {label}: {why[:80]}")
+    for label, text in bad.items():
+        if not check_protected(diff_to(text), str(src), P):
+            problems.append(f"let through {label}")
+    if check_protected(diff_to(bad["pb_mix inlined (the s313 case)"]), str(src), ()):
+        problems.append("a package without protected lines is checked anyway")
+
+    note = "`pb_mix(nl)` changes a few input values between two repetitions."
+    g = GateFacts(require_speedup=True, n_inputs=2, numeric=False, stress=True, protected=P, protected_note=note)
+    block = _protected_block(g)
+    ev = _fw_evidence()
+    reqs = {"direct": _build_direct_prompt(ev, Path("/tmp/ws/fw.c"), None, False, g),
+            "function": _build_function_prompt(ev, None, False, g),
+            "diff": _build_prompt(ev, None, False, g),
+            "twin": twin._request(_build_direct_prompt(ev, Path("/tmp/ws/fw.c"), None, True, g)),
+            "model alone": bare_llm._request_mirror(["s000.c"], ["main", "pb_mix"], P, note)}
+    for who, text in reqs.items():
+        if block not in text:
+            problems.append(f"{who}: the block is not there verbatim")
+    if "Do not change these functions" in reqs["model alone"]:
+        problems.append("model alone: still told what the agent is not (the old sentence)")
+    if "Do not change these functions" not in bare_llm._request_mirror(["s000.c"], ["main", "pb_mix"]):
+        problems.append("model alone on a v3 package: the old sentence is gone (E1c must stay reproducible)")
+    if _protected_block(GateFacts()) != "":
+        problems.append("a package without protected lines gets a block")
+    if problems:
+        return Result(name, "fail", "; ".join(problems))
+    return Result(name, "pass", f"{len(good)} legitimate changes through, {len(bad)} harness edits refused "
+                  "(inlined, edited, duplicated, moved, include dropped); the same block in the agent's 3 request "
+                  "forms, the twin's and the model alone's; v3 packages unchanged")
+
+
 def check_covered_skip(work: Path) -> Result:
     """A region inside an already-accepted one must leave the queue.
 
@@ -3419,6 +3516,7 @@ _CHECKS: List[Tuple[str, Callable[[Path], Result]]] = [
     ("workspace-confined", check_workspace_confined),
     ("twin-prompt", check_twin_prompt),
     ("twin-run", check_twin_run),
+    ("harness-lines", check_harness_lines),
     ("evidence-enrich", check_evidence_enrichment),
     ("dep-standing", check_dependence_standing),
     ("schedule-runtime", check_schedule_runtime),

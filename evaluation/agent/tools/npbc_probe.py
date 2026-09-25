@@ -25,6 +25,9 @@ import sys
 import time
 from pathlib import Path
 from typing import Dict, List, Tuple
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import harness_include  # noqa: E402
+harness_include.install()   # every build finds prepared/_harness (D39)
 
 HARNESS = Path(__file__).resolve().parents[2]
 NPB = HARNESS / "benchmarks" / "RepoOMP" / "benchmark" / "NPB3.0-omp-C"

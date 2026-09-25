@@ -50,6 +50,7 @@ from ..profiling import fast_refresh
 from ..profiling.tools import _explorer_cmd, _venv_env, run_explorer
 from ..sources import (_apply_to_source, _function_edit_to_diff,
                        _restore_profile, _snapshot_profile)
+from ..gate.harness_lines import check_protected
 from ..types import GateFacts, HotspotCandidate, ValidationResult
 from .report import _REGION_LABEL, _record_candidate, _write_record
 from .verdicts import (_OUTCOME_LABEL, RewriteOutcome, _rewrite_feedback,
@@ -300,7 +301,9 @@ def phase_a(state: RunState) -> None:
                         numeric=args.noise_floor > 0.0,
                         stress=args.schedule_stress,
                         omit=tuple(getattr(args, "prompt_omit", ()) or ()),
-                        external_evidence=getattr(args, "external_evidence", "") or ""),
+                        external_evidence=getattr(args, "external_evidence", "") or "",
+                        protected=tuple(getattr(args, "protected_lines", ()) or ()),
+                        protected_note=getattr(args, "protected_note", "") or ""),
                 )
             except LLMConnectionError as e:
                 # Fatal for the whole run: every region needs the endpoint.
@@ -386,7 +389,14 @@ def phase_a(state: RunState) -> None:
             # the loop's results away.
             result = None
             barrier_fp = False
-            if self_annotated:
+            # Fix 97 (D39): the lines the file shares with the measurement harness, checked
+            # before anything is built — a change there alters what is measured, not what is
+            # computed, and its retry is not charged (see the refund below).
+            harness_problem = check_protected(diff, args.source_file,
+                                              getattr(args, "protected_lines", ()) or ())
+            if harness_problem:
+                result = ValidationResult(passed=False, stage="harness", diagnostic=harness_problem)
+            if result is None and self_annotated:
                 problem = check_llm_pragmas(diff, args.source_file)
                 if problem:
                     result = ValidationResult(passed=False, stage="clause",
@@ -940,12 +950,16 @@ def phase_a(state: RunState) -> None:
                             "code of that loop is unchanged. Annotating it cannot be right: "
                             "remove that dependence by restructuring, or put the pragma on a "
                             "loop that does not carry it.",
+                    "harness": "The change touched lines that belong to the program's "
+                            "measurement (listed in the task). They decide what is measured, not "
+                            "what is computed, so they must stay exactly as they are and where "
+                            "they are; nothing was built or run.",
                 }
                 guidance = _STAGE_GUIDANCE.get(result.stage, "")
                 refunded = ""
-                if result.stage in ("apply", "compile", "openmp_compile") and build_retries > 0:
+                if result.stage in ("apply", "compile", "openmp_compile", "harness") and build_retries > 0:
                     build_retries -= 1
-                    budget += 1     # a build error must not cost a real attempt
+                    budget += 1     # a build error — or a touched harness line — must not cost a real attempt
                     refunded = f" (build fix — budget not charged, {build_retries} left)"
                 print(f"│  [Tier-2] Stage '{result.stage}' failed{refunded}: "
                       f"{result.diagnostic[:200].replace(chr(10), ' ')}")
@@ -969,6 +983,11 @@ def phase_a(state: RunState) -> None:
                     retry_instr = (
                         "Keep your transformation approach and fix ONLY the reported "
                         "error — do not change strategy over a build problem."
+                    )
+                elif result.stage == "harness":
+                    retry_instr = (
+                        "Your parallelization is not what failed. Make the same change again, "
+                        "leaving the measurement lines exactly as they were."
                     )
                 elif result.stage == "clause":
                     retry_instr = (

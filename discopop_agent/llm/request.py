@@ -56,6 +56,18 @@ def _external_evidence(gate: GateFacts) -> str:
             "DiscoPoP.)\n```\n" + text + "\n```\n")
 
 
+def _protected_block(gate: GateFacts) -> str:
+    """Fix 97 (D39): the lines of the file that belong to the measurement harness — rendered
+    the same for every arm (the agent here, its twins through this request, the model alone
+    through bare_llm, which imports this function)."""
+    if not gate.protected:
+        return ""
+    return ("These lines belong to the program's measurement, not to the code under study; leave "
+            "each exactly as it is and where it is:\n"
+            + "".join(f"    {l}\n" for l in gate.protected)
+            + (gate.protected_note + "\n" if gate.protected_note else ""))
+
+
 def _checklist_block(gate: GateFacts, include: Optional[Set[str]]) -> str:
     """The checklist under its heading — or nothing, under `--prompt-omit checklist`."""
     if "checklist" in gate.omit:
@@ -131,6 +143,7 @@ def _build_prompt(evidence: EvidencePackage,
         f"The {region_label} at lines "
         f"{evidence.start_line}–{evidence.end_line} in {evidence.source_file} "
         f"is to be {_goal(llm_pragmas, gate)}\n"
+        f"{_protected_block(gate)}"
         f"\n"
         f"{_checklist_block(gate, include)}\n"
         f"IMPORTANT: diff context lines (lines beginning with a single space) must match "
@@ -176,6 +189,7 @@ def _build_function_prompt(evidence: EvidencePackage,
         "### Task\n"
         f"The {region_label} (lines {evidence.start_line}–"
         f"{evidence.end_line}) inside `{fname}` is to be {_goal(llm_pragmas, gate)}\n"
+        f"{_protected_block(gate)}"
         "\n"
         f"{_checklist_block(gate, include)}"
         "\n"
@@ -234,6 +248,7 @@ def _build_direct_prompt(evidence: EvidencePackage, ws_file: Path,
         f"Edit `{ws_file}`: the {region_label} (lines "
         f"{evidence.start_line}–{evidence.end_line}) inside `{fname}` is to be "
         f"{_goal(llm_pragmas, gate)}\n"
+        f"{_protected_block(gate)}"
         "\n"
         f"{_checklist_block(gate, include)}"
         "\n"

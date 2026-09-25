@@ -37,7 +37,7 @@ from __future__ import annotations
 
 import difflib
 import re
-from typing import Dict, List, Tuple
+from typing import Dict, List, Sequence, Tuple
 
 # `\b` before the prefix keeps PolyBench's own `_PB_NI` bound macros out.
 TOKEN = re.compile(r"\b(?:pb|PB)_[A-Za-z0-9_]+\b")
@@ -171,16 +171,48 @@ def _top_block(lines: List[str], k: int) -> Tuple[int, int]:
     return start_of_block, len(lines) - 1
 
 
-def check(original: str, final: str) -> Dict[str, object]:
+def _block_enders(text: str, protected: Sequence[str]) -> List[str]:
+    """Protected lines that end their block (next non-blank line is a closing brace) — the same
+    rule as the agent's gate (`gate/harness_lines.py`)."""
+    wanted = set(protected)
+    lines = [ln.strip() for ln in text.splitlines()]
+    return [ln for i, ln in enumerate(lines)
+            if ln in wanted and next((x for x in lines[i + 1:] if x), "").startswith("}")]
+
+
+def _protected_seq(text: str, protected: Sequence[str]) -> List[str]:
+    wanted = set(protected)
+    return [ln.strip() for ln in text.splitlines() if ln.strip() in wanted]
+
+
+def check(original: str, final: str, protected: Sequence[str] = ()) -> Dict[str, object]:
     """Compare the scaffolding of two versions of one packaged source.
+
+    ``protected`` (packaging v4, D39): the lines the package's meta.json lists as shared with
+    the measurement harness, which now lives outside the file — the ``#include`` among them,
+    which uses no ``pb_`` name and so is invisible to the three checks below. Each must still
+    be there, unchanged, in the same order (the agent's gate applies the same rule, Fix 97).
 
     Returns ``{"ok": bool, "problems": [str, ...], "applies": bool}``. ``applies`` is
     False for a source with no scaffolding at all (nothing to protect)."""
     d0, u0, w0, l0, in0 = _analyse(original)
     d1, u1, w1, l1, in1 = _analyse(final)
-    if not d0 and not u0:
-        return {"ok": True, "problems": [], "applies": False}
     problems: List[str] = []
+    if protected:
+        p0, p1 = _protected_seq(original, protected), _protected_seq(final, protected)
+        if p0 != p1:
+            gone = [x for x in dict.fromkeys(p0) if p1.count(x) < p0.count(x)]
+            extra = [x for x in dict.fromkeys(p1) if p1.count(x) > p0.count(x)]
+            problems += [f"protected line removed or edited: {x[:100]}" for x in gone]
+            problems += [f"protected line added: {x[:100]}" for x in extra]
+            if not gone and not extra:
+                problems.append("protected lines were reordered")
+        else:
+            e0, e1 = _block_enders(original, protected), _block_enders(final, protected)
+            problems += [f"protected line moved (no longer ends its block): {x[:100]}"
+                         for x in dict.fromkeys(e0) if e1.count(x) < e0.count(x)]
+    if not d0 and not u0:
+        return {"ok": not problems, "problems": problems, "applies": bool(protected)}
 
     names0 = [n for n, _ in d0]
     if names0 != [n for n, _ in d1]:

@@ -178,7 +178,9 @@ def _gate_facts(args: AgentArguments) -> GateFacts:
                      n_inputs=1 + len(args.check_inputs or []),
                      numeric=args.noise_floor > 0.0, stress=args.schedule_stress,
                      omit=tuple(args.prompt_omit or ()),
-                     external_evidence=args.external_evidence or "")
+                     external_evidence=args.external_evidence or "",
+                     protected=tuple(args.protected_lines or ()),
+                     protected_note=args.protected_note or "")
 
 
 def _impact(args: AgentArguments, dp_dir: Path, force: bool = False) -> "impact_mod.ImpactModel":

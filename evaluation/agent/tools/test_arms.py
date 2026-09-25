@@ -31,7 +31,9 @@ import cli  # noqa: E402
 
 # Settings that say WHERE a run happens, not WHAT it does; never an experiment's variable.
 PLUMBING = {"source_file", "discopop_dir", "api_key", "api_base", "output_dir", "project", "verbose",
-            "exclude_functions", "check_inputs", "reprofil_args", "dry_run", "profile_only", "model"}
+            "exclude_functions", "check_inputs", "reprofil_args", "dry_run", "profile_only", "model",
+            # per benchmark, from the package (packaging v4, D39) — the same for every arm
+            "protected_lines", "protected_note"}
 
 
 def _resolved(name: str, spec: dict, repo: Path, benchmark: str) -> dict:

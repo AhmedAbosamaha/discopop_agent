@@ -24,6 +24,9 @@ import subprocess
 import sys
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import harness_include  # noqa: E402
+harness_include.install()   # every build finds prepared/_harness (D39)
 
 AGENT_DIR = Path(__file__).resolve().parents[1]
 PREPARED = AGENT_DIR / "prepared"
