@@ -10,7 +10,7 @@ At which size is each benchmark's serial computation long enough to verify (≥ 
 
 ## What is in this folder
 
-- [`runs/`](runs/) — 3 archived run(s): the evidence
+- [`runs/`](runs/) — 4 archived run(s): the evidence
 - [`superseded/`](superseded/) — 1 run(s) a later one replaced
 
 ## Runs
@@ -21,7 +21,7 @@ At which size is each benchmark's serial computation long enough to verify (≥ 
 | `t0_1_sizes_v2` | [`runs/t0_1_sizes_v2/`](runs/t0_1_sizes_v2/) | the original-format packages × every size | valid | 0 |  |
 | `t0_1_apps` | [`runs/t0_1_apps/`](runs/t0_1_apps/) | the applications (md, is, hotspot, …) | valid | 0 |  |
 | `t0_1_tsvc` | [`runs/t0_1_tsvc/`](runs/t0_1_tsvc/) | the 25 TSVC loops → kernel_sizes.json | valid | 0 |  |
-| `t0_1_probe_sizes` | not archived yet | T0.1 sizes for the 8 TSVC indirect-addressing probe loops (decision 8), no model | running |  |  |
+| `t0_1_probe_sizes` | [`runs/t0_1_probe_sizes/`](runs/t0_1_probe_sizes/) | T0.1 sizes for the 8 TSVC indirect-addressing probe loops (decision 8), no model | valid | 0 |  |
 
 ## The instrument, as the record defines it (§5e)
 
@@ -30,6 +30,11 @@ At which size is each benchmark's serial computation long enough to verify (≥ 
 | T0.1 | At which size is each benchmark's serial computation long enough to time? | `size_table.py` | Serial `-O3` build per dataset size, pinned to one NUMA node, 3 runs, median of the timed region (`DP_TIMED_REGION_SECONDS`). Verification size = smallest reaching 1 s; timing size = smallest reaching 0.25 s | `sizes.csv`, `chosen.json` → `kernel_sizes.json` | done (§7 `t0_1_sizes`, `t0_1_apps`) |
 
 ## From the experiment record (§7 run log)
+
+### `t0_1_probe_sizes` — 2026-09-25, server, **T0.1 for the eight T0.11 probe loops** (no model)
+
+- **Setup.** `size_table.py` on the eight indirect-addressing loops packaged for T0.11 (the author's decision 8: `s4112`, `s4113`, `s4114`, `s4115`, `s4117`, `s4121`, `s491`, `s353`), the same method as `t0_1_tsvc`: serial `-O3` build per dataset size, 3 runs, median of the timed region; lane 1.0 (cores 24–35) on its own — `e1c_a` had left it at 14:33, `e1c_d` held cores 36–47 and E2's node-0 lanes cores 0–23 (host load 15 at start, from those lanes). 15:00–15:03 UTC. Archived under `results/T0_instruments/T0.01_sizes/runs/t0_1_probe_sizes/`.
+- **Result.** Timing size LARGE for all eight (STANDARD runs 0.07–0.13 s, under the 0.25 s target); verification size EXTRALARGE for six (4.1–5.6 s) and LARGE for `s4114` (1.24 s) and `s491` (1.20 s). Merged into `agent/config/kernel_sizes.json` (now 67 entries; the merge is noted in its `note`). The T0.11 draws `t0_11_probe_a/b/c` can now run at the campaign's sizes.
 
 ### `t0_1_sizes_v2` — 2026-09-18, server, T0.1 on the original-format packages (no model)
 

@@ -98,7 +98,7 @@ Status: done
 | `t0_1_sizes_v2` | [`T0_instruments/T0.01_sizes/runs/t0_1_sizes_v2/`](T0_instruments/T0.01_sizes/runs/t0_1_sizes_v2/) | the original-format packages × every size | valid | 0 |  |
 | `t0_1_apps` | [`T0_instruments/T0.01_sizes/runs/t0_1_apps/`](T0_instruments/T0.01_sizes/runs/t0_1_apps/) | the applications (md, is, hotspot, …) | valid | 0 |  |
 | `t0_1_tsvc` | [`T0_instruments/T0.01_sizes/runs/t0_1_tsvc/`](T0_instruments/T0.01_sizes/runs/t0_1_tsvc/) | the 25 TSVC loops → kernel_sizes.json | valid | 0 |  |
-| `t0_1_probe_sizes` | not archived yet | T0.1 sizes for the 8 TSVC indirect-addressing probe loops (decision 8), no model | running |  |  |
+| `t0_1_probe_sizes` | [`T0_instruments/T0.01_sizes/runs/t0_1_probe_sizes/`](T0_instruments/T0.01_sizes/runs/t0_1_probe_sizes/) | T0.1 sizes for the 8 TSVC indirect-addressing probe loops (decision 8), no model | valid | 0 |  |
 
 ## [T0.2 — DiscoPoP profile stability](T0_instruments/T0.02_profile_stability/REPORT.md)
 

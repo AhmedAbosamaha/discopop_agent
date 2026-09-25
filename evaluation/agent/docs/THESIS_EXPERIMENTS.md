@@ -2056,6 +2056,11 @@ Added 2026-09-15 (see §6 rows of that date):
 
 ## 7. Run log
 
+### `t0_1_probe_sizes` — 2026-09-25, server, **T0.1 for the eight T0.11 probe loops** (no model)
+
+- **Setup.** `size_table.py` on the eight indirect-addressing loops packaged for T0.11 (the author's decision 8: `s4112`, `s4113`, `s4114`, `s4115`, `s4117`, `s4121`, `s491`, `s353`), the same method as `t0_1_tsvc`: serial `-O3` build per dataset size, 3 runs, median of the timed region; lane 1.0 (cores 24–35) on its own — `e1c_a` had left it at 14:33, `e1c_d` held cores 36–47 and E2's node-0 lanes cores 0–23 (host load 15 at start, from those lanes). 15:00–15:03 UTC. Archived under `results/T0_instruments/T0.01_sizes/runs/t0_1_probe_sizes/`.
+- **Result.** Timing size LARGE for all eight (STANDARD runs 0.07–0.13 s, under the 0.25 s target); verification size EXTRALARGE for six (4.1–5.6 s) and LARGE for `s4114` (1.24 s) and `s491` (1.20 s). Merged into `agent/config/kernel_sizes.json` (now 67 entries; the merge is noted in its `note`). The T0.11 draws `t0_11_probe_a/b/c` can now run at the campaign's sizes.
+
 ### `e2c_ab_1`, `e2c_ab_2`, `e2c_ab_3`, `e2c_ab_4`, `e2c_race_check`; `e1c_a`, `e1c_d`, `e1c_ad_race_check` — 2026-09-25, server, **E2 Parts A+B (Haiku) with the D38 twins, and E1c's controls** (540 + 45 trials; 315 race checks, no model)
 
 - **Setup.** E2: commit `3f296eac` (agent code of E1c, `33673d7d`, plus the twin entry point); the 18 class-R loops × `full_b1`, `no_evidence`, `no_evidence_b1` and their twins `twin_full`, `twin_no_evidence`, plus `twin_dp` (DiscoPoP's pragmas unchecked, no model) × 5, four 12-core lanes (E1c's split), 25 Sep 05:15 → ≈ 20:00 UTC; `default`, `bare_llm`, `discopop_gate` are E1c's cells (same loops, same agent code). Controls: `e1c_a` (classes A: s000, vpvtv, s313 × the three E1c arms × 1) and `e1c_d` (class D: s321, s322, s323, s3112 × 3), same commit, lanes 1.0/1.1 after E2's node-1 lanes. The server checkout was synced once during E2's lanes 0.x, for two HTML documents and a registry line only (no file a trial reads). Race checks (`race_check.py`, the gate's TSan with archer and the schedule matrix, no model) over every program no gate saw: E2's three twin arms, the model alone in the controls. Read-outs in `results/E02_evidence_feedback_model/analysis/` and `results/E01c_clean_three_way/analysis/`.
