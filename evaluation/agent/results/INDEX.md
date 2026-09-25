@@ -195,9 +195,9 @@ Status: done
 | `t0_11_classes_a` | [`T0_instruments/T0.11_measured_classes/runs/t0_11_classes_a/`](T0_instruments/T0.11_measured_classes/runs/t0_11_classes_a/) | draw A | valid | 56 | FASTER 16, PROFILE_ERROR 2, no-change 29, parallel-not-faster 3, parallel-speed-not-measurable 6 |
 | `t0_11_classes_b` | [`T0_instruments/T0.11_measured_classes/runs/t0_11_classes_b/`](T0_instruments/T0.11_measured_classes/runs/t0_11_classes_b/) | draw B | valid | 55 | FASTER 14, PROFILE_ERROR 5, no-change 26, parallel-not-faster 3, parallel-speed-not-measurable 7 |
 | `t0_11_classes_c` | [`T0_instruments/T0.11_measured_classes/runs/t0_11_classes_c/`](T0_instruments/T0.11_measured_classes/runs/t0_11_classes_c/) | draw C | valid | 55 | FASTER 14, PROFILE_ERROR 5, no-change 26, parallel-not-faster 3, parallel-speed-not-measurable 7 |
-| `t0_11_probe_a` | not archived yet | T0.11 draw a on the 8 TSVC indirect-addressing probe loops: discopop_capability, no model | registered |  |  |
-| `t0_11_probe_b` | not archived yet | T0.11 draw b on the 8 TSVC indirect-addressing probe loops: discopop_capability, no model | registered |  |  |
-| `t0_11_probe_c` | not archived yet | T0.11 draw c on the 8 TSVC indirect-addressing probe loops: discopop_capability, no model | registered |  |  |
+| `t0_11_probe_a` | not archived yet | T0.11 draw a on the 8 TSVC indirect-addressing probe loops: discopop_capability, no model | running |  |  |
+| `t0_11_probe_b` | not archived yet | T0.11 draw b on the 8 TSVC indirect-addressing probe loops: discopop_capability, no model | running |  |  |
+| `t0_11_probe_c` | not archived yet | T0.11 draw c on the 8 TSVC indirect-addressing probe loops: discopop_capability, no model | running |  |  |
 
 ## [T0.13 — the default arm's ceiling](T0_instruments/T0.13_default_arm_ceiling/REPORT.md)
 
