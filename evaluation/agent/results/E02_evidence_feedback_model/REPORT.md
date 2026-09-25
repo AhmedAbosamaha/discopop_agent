@@ -14,7 +14,7 @@ E2 A+B (Haiku, TSVC class R, 18 × 5, with D38 twins): DiscoPoP's evidence adds 
 
 ## What is in this folder
 
-- [`analysis/`](analysis/) — the read-out: [`h12_interaction.md`](analysis/h12_interaction.md), [`h5b_evidence_x_budget.md`](analysis/h5b_evidence_x_budget.md), [`three_way_full_b1_vs_bare_llm.md`](analysis/three_way_full_b1_vs_bare_llm.md), [`three_way_full_b1_vs_twin_full.md`](analysis/three_way_full_b1_vs_twin_full.md), [`three_way_no_evidence_b1_vs_bare_llm.md`](analysis/three_way_no_evidence_b1_vs_bare_llm.md), [`three_way_no_evidence_b1_vs_twin_no_evidence.md`](analysis/three_way_no_evidence_b1_vs_twin_no_evidence.md), [`three_way_no_evidence_vs_bare_llm.md`](analysis/three_way_no_evidence_vs_bare_llm.md)
+- [`analysis/`](analysis/) — the read-out: [`h12_interaction.md`](analysis/h12_interaction.md), [`h5b_evidence_x_budget.md`](analysis/h5b_evidence_x_budget.md), [`three_way_full_b1_vs_bare_llm.md`](analysis/three_way_full_b1_vs_bare_llm.md), [`three_way_full_b1_vs_twin_full.md`](analysis/three_way_full_b1_vs_twin_full.md), [`three_way_no_evidence_b1_vs_bare_llm.md`](analysis/three_way_no_evidence_b1_vs_bare_llm.md), [`three_way_no_evidence_b1_vs_twin_no_evidence.md`](analysis/three_way_no_evidence_b1_vs_twin_no_evidence.md), [`three_way_no_evidence_vs_bare_llm.md`](analysis/three_way_no_evidence_vs_bare_llm.md), [`why_trials_fail.md`](analysis/why_trials_fail.md)
 - [`runs/`](runs/) — 4 archived run(s): the evidence
 - [`checks/`](checks/) — 1 verification(s) made during the read-out
 - [`preflight/`](preflight/) — 6 smoke run(s) before the launch
