@@ -72,14 +72,14 @@ Status: running
 
 ## [Agent v3 pilot (D40) — the speed verdict inside the model's budget](V3_pilot_d40/REPORT.md)
 
-Status: registered
+Status: running
 
 | run | where | what it is | status | trials | outcomes |
 |---|---|---|---|---:|---|
-| `v3_pilot_1` | not archived yet | D40 pilot, lane 0.0: s112 s121 s1213 x default, no_evidence (agent v3), Haiku x3, threads 6,12, repeats 5 | registered |  |  |
-| `v3_pilot_2` | not archived yet | D40 pilot, lane 0.1: s211 s212 s241 x default, no_evidence (agent v3), Haiku x3, threads 6,12, repeats 5 | registered |  |  |
-| `v3_pilot_3` | not archived yet | D40 pilot, lane 1.0: s243 s244 x default, no_evidence (agent v3), Haiku x3, threads 6,12, repeats 5 | registered |  |  |
-| `v3_pilot_4` | not archived yet | D40 pilot, lane 1.1: s252 s281 x default, no_evidence (agent v3), Haiku x3, threads 6,12, repeats 5 | registered |  |  |
+| `v3_pilot_1` | not archived yet | D40 pilot, lane 0.0: s112 s121 s1213 x default, no_evidence (agent v3), Haiku x3, threads 6,12, repeats 5 | running |  |  |
+| `v3_pilot_2` | not archived yet | D40 pilot, lane 0.1: s211 s212 s241 x default, no_evidence (agent v3), Haiku x3, threads 6,12, repeats 5 | running |  |  |
+| `v3_pilot_3` | not archived yet | D40 pilot, lane 1.0: s243 s244 x default, no_evidence (agent v3), Haiku x3, threads 6,12, repeats 5 | running |  |  |
+| `v3_pilot_4` | not archived yet | D40 pilot, lane 1.1: s252 s281 x default, no_evidence (agent v3), Haiku x3, threads 6,12, repeats 5 | running |  |  |
 
 ## [E10 — does the speed check keep unnecessary changes out?](E10_speed_check/REPORT.md)
 
