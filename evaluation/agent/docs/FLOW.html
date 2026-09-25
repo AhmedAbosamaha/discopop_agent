@@ -95,7 +95,7 @@ footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--rule);font-fa
   <p class="kicker">Agentic DiscoPoP · control flow</p>
   <h1>From the first DiscoPoP run to the judged result</h1>
   <p class="lede">Every path the agent and the experiment harness can take, drawn from the code as it stands: each decision, each way a step can fail, what happens next, and what is written down. Twelve diagrams, one per stage and one for the arms the agent is compared with; every exit of every diagram is listed under it.</p>
-  <div class="meta"><span><b>Agent</b> branch agentic_DiscoPop, after the September review</span><span><b>Harness</b> the same repository, <code>evaluation/</code> (D20)</span><span><b>Drawn</b> 18 Sep 2026</span><span><b>Revised</b> 21 Sep 2026 — the three campaign defaults that changed (D22, D23, D27), pragma arbitration (Fix 85), the runtime re-measurement after every kept rewrite and what it took to make it honest (Fixes 86, 87, D29), the explorer's stall limit, where a loop's iteration count really comes from (Fix 88), what the default arm can keep at best (T0.13), two lessons about the harness's verdict (the expert <code>hotspot</code> pragma the gate rightly rejected; T0.14), and — from E1 — Settle's speed verdict made paired (Fix 89) and where a rewrite's cost is judged. <b>23 Sep 2026 — agent v2:</b> a floor at DiscoPoP's own program (D32, Fix 94), Phase B judging the pragmas that do not pay alone as a set (D33, Fix 93), the clause stage's later-write rule (Fix 91), programs that call the OpenMP runtime (Fix 92). <b>23 Sep, late:</b> the agent's explorer limit set per benchmark (max 60 s, 10 × its own explorer run), and the model's file tools confined to its working copy with shell, web and search blocked (Fix 95). <b>24–25 Sep — the arms the agent is compared with (diagram 11):</b> the model alone with the agent's own instructions minus DiscoPoP, the gate and feedback (D37), and every agent arm's matched twin — the same model with the same DiscoPoP information but no gate (D38); in the verdict, a program that does not compile now counts as an unusable program (H13) and a final program that crashes is BROKEN, as the code has it; a program that changed its own measuring code has no valid measurement — its own row, never counted (the author, 25 Sep). <b>25 Sep, night:</b> the gate's <code>harness</code> stage (Fix 97, for a package that lists its harness lines; D39 keeps today's packages as they are), and one counting rule for every rate of the read-out: a rewrite with no pragma is a program with a verdict, unusable when it is slower than the original; a harness edit stays out even when it does not build</span></div>
+  <div class="meta"><span><b>Agent</b> branch agentic_DiscoPop, after the September review</span><span><b>Harness</b> the same repository, <code>evaluation/</code> (D20)</span><span><b>Drawn</b> 18 Sep 2026</span><span><b>Revised</b> 21 Sep 2026 — the three campaign defaults that changed (D22, D23, D27), pragma arbitration (Fix 85), the runtime re-measurement after every kept rewrite and what it took to make it honest (Fixes 86, 87, D29), the explorer's stall limit, where a loop's iteration count really comes from (Fix 88), what the default arm can keep at best (T0.13), two lessons about the harness's verdict (the expert <code>hotspot</code> pragma the gate rightly rejected; T0.14), and — from E1 — Settle's speed verdict made paired (Fix 89) and where a rewrite's cost is judged. <b>23 Sep 2026 — agent v2:</b> a floor at DiscoPoP's own program (D32, Fix 94), Phase B judging the pragmas that do not pay alone as a set (D33, Fix 93), the clause stage's later-write rule (Fix 91), programs that call the OpenMP runtime (Fix 92). <b>23 Sep, late:</b> the agent's explorer limit set per benchmark (max 60 s, 10 × its own explorer run), and the model's file tools confined to its working copy with shell, web and search blocked (Fix 95). <b>26 Sep — agent v3 (D40):</b> a kept rewrite is judged the way it will ship while the model can still act — DiscoPoP's pragmas for it through the safety gate, then the program with them timed against the program before the rewrite (paired, Settle's threshold); staged as text, so the file stays pragma-free; a failure is reverted and fed back (diagrams 4, 5, 7); Fix 99 (Phase A's exposure check repairs clauses like Phase B); every request logged. <b>And an audit of every diagram against the code (26 Sep)</b> corrected: which gate stages a default-mode rewrite can fail (4, 6), where the speed check runs (6), that nothing after Phase A reaches the model (4, 8, 9), what the prompt said about speed (5), the barrier re-judge and the 7-run schedule matrix (6), what self_annotated means (7), the explorer counts (1, 10), the floor's conditions (0, 9), the ranking tie-break and the loop-counter fallback (3), re-profile failure (7), start-up failures (2), provider retries (5). <b>24–25 Sep — the arms the agent is compared with (diagram 11):</b> the model alone with the agent's own instructions minus DiscoPoP, the gate and feedback (D37), and every agent arm's matched twin — the same model with the same DiscoPoP information but no gate (D38); in the verdict, a program that does not compile now counts as an unusable program (H13) and a final program that crashes is BROKEN, as the code has it; a program that changed its own measuring code has no valid measurement — its own row, never counted (the author, 25 Sep). <b>25 Sep, night:</b> the gate's <code>harness</code> stage (Fix 97, for a package that lists its harness lines; D39 keeps today's packages as they are), and one counting rule for every rate of the read-out: a rewrite with no pragma is a program with a verdict, unusable when it is slower than the original; a harness edit stays out even when it does not build</span></div>
 </header>
 
 <nav aria-label="Diagrams">
@@ -128,7 +128,7 @@ flowchart TD
   T --> S
   subgraph AG["one agent run"]
     S["Start-up<br/>reference, tolerance, runtimes"]:::step --> PL["Planning<br/>regions to a ranked queue"]:::step
-    PL --> FL["FLOOR (D32): DiscoPoP's own program —<br/>Phase B + Settle on the original, then<br/>the original restored; not for --budget 0"]:::step
+    PL --> FL["FLOOR (D32): DiscoPoP's own program —<br/>Phase B + Settle on the original, then<br/>the original restored; only with --budget above 0,<br/>--require-speedup, --apply-patches, a reference<br/>and no dry run"]:::step
     FL --> A["PHASE A  restructure<br/>model rewrites, gate judges"]:::model
     A --> Q{"profile holds<br/>carried-forward data?"}:::dec
     Q -->|"yes"| RP["one full re-profile"]:::step
@@ -156,7 +156,7 @@ flowchart TD
   <div class="tablewrap"><table>
     <tr><th>Exit</th><th>When</th><th>Recorded as</th></tr>
     <tr><td>PROFILE_ERROR</td><td>instrumenting compile fails or times out (process group killed), instrumented run fails, or the explorer fails 20 times</td><td><span class="tag t-bad">not run</span> benchmark listed with the reason; <code>profile_explore_attempts</code></td></tr>
-    <tr><td>profile ready</td><td>explorer succeeded on attempt k ≤ 20</td><td><code>explorer_retries = k − 1</code> on every trial of the benchmark</td></tr>
+    <tr><td>profile ready</td><td>explorer succeeded on attempt k ≤ 20</td><td><code>profile.explore_attempts = k</code> on every trial of the benchmark (the trial's <code>explorer_retries</code> and <code>explorer_stalls</code> count the AGENT's own re-profiles)</td></tr>
   </table></div>
 </section>
 <script type="text/plain" class="src" data-d="d1">
@@ -207,9 +207,9 @@ flowchart TD
   RQ -->|"no, --allow-unverified on"| W1["correctness gate OFF for this run"]:::hold --> HS
   RQ -->|"yes; inputs the original<br/>cannot run are dropped"| TF{"--require-speedup<br/>with --timing-cflags?"}:::dec
   TF -->|"yes"| TB["timing build of the original<br/>gives the baseline time"]:::step
-  TB -->|"fails"| F1
+  TB -->|"fails, without --allow-unverified"| F1
   TB --> NF
-  TF -->|"no"| NF["numerical noise floor:<br/>six legal build variants per input,<br/>largest deviation x 10,<br/>maximum over all inputs"]:::step
+  TF -->|"no"| NF["numerical noise floor (unless<br/>--no-numeric-tolerance or a dry run):<br/>six legal build variants per input,<br/>largest deviation x 10, maximum over all inputs"]:::step
   NF --> NQ{"does the output hold<br/>a non-integer number?"}:::dec
   NQ -->|"no"| N0["floor 0: compared byte for byte"]:::step --> HS
   NQ -->|"yes"| N1["floor above 0 where variants differ:<br/>numeric comparison, structure exact"]:::step --> HS
@@ -225,8 +225,8 @@ flowchart TD
 <!-- ============================================================ 3 -->
 <section id="d3">
   <div class="sec"><span class="n">3</span><h2>Planning: which regions are worth an attempt, and in what order</h2></div>
-  <p>Every function, loop and basic block DiscoPoP recorded is a region. A region is ranked by the time parallelising it would save, ΔT = T · f · (1 − 1/(P·e)), where <em>f</em> is the share of runtime still <em>sequential</em> in it. With P and e fixed this orders regions by f; ties go to the outermost region.</p>
-  <p><strong>Where a loop's iteration count comes from (Fix 88, 21 Sep).</strong> Not from DiscoPoP's <code>loop_counter_output.txt</code>: that file pairs counts with the wrong loops — 82 % of 337 loops over 41 archived profiles; an outer loop of 7 around two sibling loops of 998 is reported as 6986 / 6986 / 1000. The agent sums the <code>BGN loop</code> markers of <code>dynamic_dependencies.txt</code>, which is what DiscoPoP's own explorer reads, so the DiscoPoP-alone baseline was never affected. The wrong counts had fed the workload proxy and the "N iterations" in every prompt header (a recorded limitation of <code>pilot4</code> and E10).</p>
+  <p>Every function, loop and basic block DiscoPoP recorded is a region. A region is ranked by the time parallelising it would save, ΔT = T · f · (1 − 1/(P·e)), where <em>f</em> is the share of runtime still <em>sequential</em> in it. With P and e fixed this orders regions by f; ties go to the outermost region — except that a loop beats the function containing it when it carries at least 90 % of the function's measured time (so <code>main</code> does not head every queue).</p>
+  <p><strong>Where a loop's iteration count comes from (Fix 88, 21 Sep).</strong> Not from DiscoPoP's <code>loop_counter_output.txt</code>: that file pairs counts with the wrong loops — 82 % of 337 loops over 41 archived profiles; an outer loop of 7 around two sibling loops of 998 is reported as 6986 / 6986 / 1000. The agent sums the <code>BGN loop</code> markers of <code>dynamic_dependencies.txt</code>, which is what DiscoPoP's own explorer reads, so the DiscoPoP-alone baseline was never affected; the counter file remains the fallback for a loop without a marker (code a fast refresh never ran). The wrong counts had fed the workload proxy and the "N iterations" in every prompt header (a recorded limitation of <code>pilot4</code> and E10).</p>
   <figure><div class="chart" data-d="d3"></div>
   <figcaption>Tier 1 = DiscoPoP already has an applicable pattern (Phase B will annotate it). Tier 2 = it has none, so the model is asked. A loop can carry several patterns: applicable first, then reduction, do_all, others; the rest are kept as alternates.</figcaption></figure>
   <div class="tablewrap"><table>
@@ -266,7 +266,7 @@ flowchart TD
   U1 -->|"no"| U2{"workload under --min-workload?"}:::dec
   U2 -->|"yes"| X
   U2 -->|"no"| SP["score = workload proxy"]:::step
-  SC --> Q["queue: highest saving first,<br/>ties to the outermost region,<br/>every entry at depth 0"]:::ok
+  SC --> Q["queue: highest saving first; a loop before its function<br/>when it carries ≥ 90 % of the function's time, else<br/>ties to the outermost region; every entry at depth 0"]:::ok
   SP --> Q
   Q --> BL["baseline count: DiscoPoP's applicable patterns<br/>whose pragma passes the clause check and compiles"]:::step
 </script>
@@ -282,7 +282,7 @@ flowchart TD
     <tr><td>COVERED</td><td>the region lies inside a construct that already runs in parallel in the file as it now stands</td><td><span class="tag t-hold">no call</span> not counted as skipped</td></tr>
     <tr><td>DEFERRED</td><td>Tier 1 with an applicable pattern</td><td><span class="tag t-acc">Phase B</span> <code>deferred</code></td></tr>
     <tr><td>SKIPPED</td><td>depth above <code>--restructure-depth</code>; dry run; no budget under the share policy; budget exhausted; the validated patch could not be written to the real file</td><td><span class="tag t-hold">skipped</span> with its depth</td></tr>
-    <tr><td>ACCEPTED</td><td>gate passed and the rewrite was kept (diagram 7)</td><td><span class="tag t-ok">kept</span> patch file, record, change log</td></tr>
+    <tr><td>ACCEPTED</td><td>gate passed and the rewrite was kept (diagram 7). The region's remaining attempts are not used, and nothing found later — a pragma Phase B drops, a finished file Settle rejects — reaches the model; since D40 the rewrite's own pragmas and speed are judged before this point, while it still can act</td><td><span class="tag t-ok">kept</span> patch file, record, change log</td></tr>
     <tr><td>run aborted</td><td>credential rejected or endpoint unreachable — fatal for every region, so the run stops</td><td><span class="tag t-bad">AGENT_ERROR</span> exit 1</td></tr>
   </table></div>
 </section>
@@ -304,18 +304,20 @@ flowchart TD
   LLM -->|"credential or endpoint failure"| AB["abort the run, exit 1"]:::bad
   LLM -->|"call failed after its own retries"| FA["counted as a failed attempt"]:::hold --> MORE
   LLM -->|"unchanged, or no usable answer"| FB0["feedback: that is not an answer"]:::hold --> MORE
-  LLM -->|"a diff"| CL{"diff carries pragmas<br/>under --llm-pragmas?"}:::dec
+  LLM -->|"a diff"| HL{"a protected harness line touched?<br/>(Fix 97 — packages that list them)"}:::dec
+  HL -->|"yes"| RF
+  HL -->|"no"| CL{"diff carries pragmas<br/>under --llm-pragmas?"}:::dec
   CL -->|"yes"| CC{"clause check passes?"}:::dec
   CL -->|"no"| G
   CC -->|"no"| FB1["feedback: fix only the clause"]:::bad --> MORE
   CC -->|"yes"| G["quality gate, diagram 6<br/>cached per patch and source text"]:::step
-  G -->|"apply, compile, openmp_compile"| RF{"free build retries left?"}:::dec
+  G -->|"apply, compile, openmp_compile"| RF{"free build retries left?<br/>(shared with the harness stage)"}:::dec
   RF -->|"yes"| RF1["attempt not charged,<br/>feedback: fix only the error"]:::hold --> MORE
   RF -->|"no"| FB2["stage-specific feedback"]:::bad --> MORE
-  G -->|"tsan, dependences, schedules,<br/>correctness, performance"| FB2
+  G -->|"correctness (any rewrite); tsan, dependences,<br/>schedules, performance only for a diff<br/>with pragmas (--llm-pragmas)"| FB2
   G -->|"passed"| KEEP["after a pass, diagram 7"]:::ok
-  KEEP -->|"reverted: nothing DiscoPoP can use"| FB3["feedback: DiscoPoP's verdict on the rewrite"]:::bad --> MORE
-  KEEP -->|"kept"| ACC["ACCEPTED"]:::ok
+  KEEP -->|"reverted: nothing DiscoPoP can use, or (D40)<br/>its pragma breaks / the program is not faster"| FB3["feedback: the verdict on the rewrite,<br/>with the measured ratio (D40)"]:::bad --> MORE
+  KEEP -->|"kept"| ACC["ACCEPTED — the region's<br/>remaining attempts are not used"]:::ok
   MORE{"attempts left?"}:::dec
   MORE -->|"yes"| EV
   MORE -->|"no"| SK
@@ -324,7 +326,7 @@ flowchart TD
 <!-- ============================================================ 5 -->
 <section id="d5">
   <div class="sec"><span class="n">5</span><h2>One model call</h2></div>
-  <p>The system prompt is generated from the gate that is really configured (is speed judged, how many inputs, exact or numeric comparison, is the schedule matrix on) and from the evidence sections that are really sent, so it describes what will happen. It is identical for every call of a run, which keeps the provider's prompt cache warm. Format problems are re-prompted without charging the region's budget.</p>
+  <p>The system prompt is generated from the gate that is really configured (is speed judged, how many inputs, exact or numeric comparison, is the schedule matrix on) and from the evidence sections that are really sent, so the configured facts are right. What it said about SPEED was not, until D40 (26 Sep): with DiscoPoP writing the pragmas it named “speed against the same build on one thread” — Phase B's per-pragma check — and never that the program must beat the ORIGINAL, which is what decides (Settle, the harness); with <code>--llm-pragmas</code> it named only the one-thread half of the gate's two conditions. Since D40 (<code>--judge-as-shipped</code>) it states the deciding comparison in the words the twins and the model alone read, and a slow rewrite is reverted with the measured ratio. Its promise of feedback “after a failed attempt” holds for Phase A's checks and D40's; what Phase B and Settle find is not fed back. It is identical for every call of a run, which keeps the provider's prompt cache warm. Format problems are re-prompted without charging the region's budget.</p>
   <figure><div class="chart" data-d="d5"></div>
   <figcaption>Evidence sections (<code>--evidence</code>): deps, reductions, classification, extra_vars, array_note, loop_nest, calls, blockers, accesses, inner_patterns, runtime_share, failure. With <code>none</code> the request is the source and the task and nothing DiscoPoP measured.</figcaption></figure>
 </section>
@@ -342,7 +344,7 @@ flowchart TD
   FN --> ERR
   DF --> ERR
   ERR -->|"authentication or connection"| FATAL["LLMConnectionError: the run aborts"]:::bad
-  ERR -->|"other, after 3 tries with backoff"| FAIL["failed attempt"]:::hold
+  ERR -->|"other, after its retries<br/>(claude-agent-sdk: 3, with backoff)"| FAIL["failed attempt"]:::hold
   ERR -->|"none"| VAL{"answer usable?<br/>direct: file changed beyond comments<br/>function: one code block<br/>diff: valid hunks"}:::dec
   VAL -->|"no, format retries left, up to 2"| RP["re-prompt, not charged"]:::hold --> MODE
   VAL -->|"no, none left"| NONE["no answer; direct mode: unchanged"]:::hold
@@ -354,7 +356,7 @@ flowchart TD
   <div class="sec"><span class="n">6</span><h2>The quality gate</h2></div>
   <p>Two tracks. A rewrite with no pragma is a sequential-to-sequential change and is judged on a sequential build. A patch that carries a pragma is judged on concurrency evidence — the sanitizer, then the schedule matrix — with the output comparison as the end-to-end check. No single stage concludes "correct"; the verdict is their conjunction, and the evidence of each is recorded. For a project every build below is the whole staged program with the candidate in place of the one file under test.</p>
   <figure><div class="chart" data-d="d6"></div>
-  <figcaption><code>mode=safety</code> (Phase B, Settle) is everything except the timing. <strong>The gate has been right against an expert (21 Sep):</strong> it rejected the parallelization of Rodinia <code>hotspot</code> that Rodinia's own OpenMP version uses — that pragma carries a stale <code>delta</code> across boundary chunks, and the result depends on thread count and schedule (visible at 24 threads under a dynamic schedule, invisible at 4). A correct version exists and needs a restructuring: the chunk loop split, boundary chunks in order, interior chunks parallel — byte-identical through the harness. <strong>Since D22 the campaign runs the speed check ON in every arm — including the DiscoPoP-alone baseline — timed at the kernel's own measured timing size</strong> (<code>--require-speedup</code>, <code>common_timing_size: per_kernel</code>). It used to be off everywhere, because at the AGENT size kernels run in 0.06–15 ms and the check judged noise; E10 showed the fault was the size, not the check. The harness still judges speed independently afterwards, at the verification size.</figcaption></figure>
+  <figcaption><code>mode=safety</code> (Phase B, Settle) is everything except the timing. <strong>The gate has been right against an expert (21 Sep):</strong> it rejected the parallelization of Rodinia <code>hotspot</code> that Rodinia's own OpenMP version uses — that pragma carries a stale <code>delta</code> across boundary chunks, and the result depends on thread count and schedule (visible at 24 threads under a dynamic schedule, invisible at 4). A correct version exists and needs a restructuring: the chunk loop split, boundary chunks in order, interior chunks parallel — byte-identical through the harness. <strong>Since D22 the campaign runs the speed check ON in every arm — including the DiscoPoP-alone baseline — timed at the kernel's own measured timing size</strong> (with DiscoPoP writing the pragmas that means D40's judgement in Phase A, Phase B's marginal measurement, D33, Settle and the floor — the gate's own performance stage runs only on a diff that carries pragmas) (<code>--require-speedup</code>, <code>common_timing_size: per_kernel</code>). It used to be off everywhere, because at the AGENT size kernels run in 0.06–15 ms and the check judged noise; E10 showed the fault was the size, not the check. The harness still judges speed independently afterwards, at the verification size.</figcaption></figure>
   <div class="tablewrap"><table>
     <tr><th>Fails at</th><th>Meaning</th></tr>
     <tr><td>harness</td><td>only for a package that lists the lines it shares with its measurement harness (Fix 97; none of the packages in use, which keep the harness in the file — D39): a candidate that changes, drops, duplicates, reorders or moves one of them is refused before anything is built; its retry is not charged, since the parallelization is not what failed</td></tr>
@@ -362,11 +364,11 @@ flowchart TD
     <tr><td>apply</td><td>the diff does not apply to a copy of the file (hunk headers are recounted first)</td></tr>
     <tr><td>compile</td><td>the patched program does not build. A program that calls the OpenMP runtime (<code>omp_get_thread_num()</code>, <code>&lt;omp.h&gt;</code>) is built with OpenMP here and in every other build made without it (Fix 92) — it used to fail this stage whatever it computed</td></tr>
     <tr><td>openmp_compile</td><td>with <code>-fopenmp</code> the annotated loop is not in OpenMP-canonical form</td></tr>
-    <tr><td>tsan</td><td>ThreadSanitizer reports a race (with libarcher it sees OpenMP's barriers; without it, a race between two barrier-separated regions is re-judged with the race check off — never when the code uses <code>nowait</code> or tasks)</td></tr>
+    <tr><td>tsan</td><td>ThreadSanitizer reports a race (with libarcher it sees OpenMP's barriers). A report in one of three OpenMP-barrier shapes — a reduction gathered inside libomp's barrier, two DIFFERENT parallel regions, a worker against the main thread after the barrier — is re-judged on output with the race check off, archer or not; the second shape never when the code uses <code>nowait</code> or tasks</td></tr>
     <tr><td>dependences</td><td>a pure annotation on a loop for which DiscoPoP <em>observed</em> a loop-carried dependence. A rewrite is never judged by the profile of the code it replaced</td></tr>
     <tr><td>schedules</td><td>the parallel build does not repeat itself, or disagrees across thread counts and schedules beyond the measured floor</td></tr>
     <tr><td>correctness</td><td>output differs from the original on some input (exact, or numeric within the floor; structure, labels and integers always exact)</td></tr>
-    <tr><td>performance</td><td>only with <code>--require-speedup</code>: slower than itself on one thread, or slower than the original</td></tr>
+    <tr><td>performance</td><td>only in Phase A, only for a diff that carries pragmas (<code>--llm-pragmas</code>), only with <code>--require-speedup</code>: the same binary at all threads not ≥ <code>--min-measured-speedup</code>× itself on one thread, or slower than the original's start-up time (unpaired). With DiscoPoP writing the pragmas this stage never runs: speed is judged by D40 in Phase A (paired, against the program before the rewrite), Phase B's marginal measurement, D33, Settle and the floor</td></tr>
   </table></div>
 </section>
 <script type="text/plain" class="src" data-d="d6">
@@ -383,7 +385,7 @@ flowchart TD
   TB -->|"fails"| F_OC["FAIL openmp_compile"]:::bad
   TB --> TR["run under ThreadSanitizer, all threads"]:::step
   TR -->|"timeout 300 s, or crash"| F_TS["FAIL tsan"]:::bad
-  TR -->|"race reported"| BH{"two regions separated by a barrier,<br/>no archer, no nowait or tasks?"}:::dec
+  TR -->|"race reported"| BH{"an OpenMP-barrier report shape? reduction gather;<br/>two distinct regions, no nowait or tasks;<br/>worker vs main thread after the barrier"}:::dec
   BH -->|"no"| F_TS
   BH -->|"yes"| TS2["re-judge with the race check off"]:::hold --> DEP
   TR -->|"clean"| DEP{"pure annotation,<br/>or a rewrite?"}:::dec
@@ -394,7 +396,7 @@ flowchart TD
   STR{"--schedule-stress?"}:::dec
   STR -->|"off"| CORR
   STR -->|"on"| SB["parallel build -O2 -fopenmp, plus a stress build<br/>declaring schedule runtime on every loop<br/>that names no schedule of its own"]:::step
-  SB --> MX["repeat at a fixed thread count, then<br/>threads 1, 2, 4 under static, dynamic 1, guided"]:::step
+  SB --> MX["3 repeats at 4 threads, static (the race test);<br/>then 1 and 2 threads static, and 4 threads<br/>dynamic,1 and guided — 7 runs"]:::step
   MX -->|"unrepeatable, structural change,<br/>or a failed run"| F_SC["FAIL schedules"]:::bad
   MX -->|"values differ beyond the floor"| SOFT{"did the sanitizer run<br/>and find nothing?"}:::dec
   SOFT -->|"no"| F_SC
@@ -419,9 +421,11 @@ flowchart TD
   <figcaption>Fast refresh: recompile only, then translate the previous run's observed dependences onto the new instruction numbering by sequence alignment with an independent position cross-check; whatever cannot be placed with certainty is dropped. In a project only the rewritten file's positions move.</figcaption></figure>
   <div class="tablewrap"><table>
     <tr><th>Outcome</th><th>When</th><th>Effect</th></tr>
-    <tr><td>self_annotated</td><td>the diff carries its own pragmas</td><td><span class="tag t-ok">kept</span> the parallel constructs are marked covered with their measured share</td></tr>
+    <tr><td>self_annotated</td><td>the diff carries pragmas AND <code>--llm-pragmas</code> is on (a pragma the model writes anyway in the default mode is gated on the parallel track, then treated as a pragma-free rewrite)</td><td><span class="tag t-ok">kept</span> the parallel constructs are marked covered with their measured share</td></tr>
     <tr><td>… re-profile failed</td><td>self-annotated, but no profile could be produced</td><td><span class="tag t-ok">kept</span> profile restored from the snapshot, Phase B skipped, remaining regions counted as skipped</td></tr>
-    <tr><td>exposed</td><td>DiscoPoP now reports a pattern in the changed lines and one of its pragmas passes the clause check and compiles</td><td><span class="tag t-ok">kept</span> Phase B validates it</td></tr>
+    <tr><td>exposed</td><td>DiscoPoP now reports a pattern in the changed lines and one of its pragmas passes the clause check (repaired as Phase B repairs it, Fix 99) and compiles</td><td><span class="tag t-ok">kept</span> Phase B validates it — since D40 only with <code>--no-judge-as-shipped</code>, without <code>--require-speedup</code>, when a deeper level follows, or when D40 could not stage or time it</td></tr>
+    <tr><td>ok (D40)</td><td>DiscoPoP's pragmas for the exposed loops pass the safety gate, and the program with them is not slower than before the rewrite (Settle's paired measurement and threshold)</td><td><span class="tag t-ok">kept</span> pragma-free; Phase B applies the pragmas (its gate verdicts are cached)</td></tr>
+    <tr><td>pattern_broken<br>not_faster (D40)</td><td>no exposed pragma passes the safety gate / the program with them is slower than before the rewrite</td><td><span class="tag t-bad">reverted</span> as below; feedback: DiscoPoP's pragma breaks on your code / the measured ratio and what the rewrite added (loops, allocations, copies); charged to the budget</td></tr>
     <tr><td>no_pattern<br>no_usable_pragma<br>reprofile_failed</td><td>pragma-free rewrite that achieved nothing DiscoPoP can use</td><td><span class="tag t-bad">reverted</span> source, profile and runtime measurements restored; feedback built from DiscoPoP's blockers <em>for the rewrite</em></td></tr>
   </table></div>
 </section>
@@ -439,7 +443,7 @@ flowchart TD
   XT -->|"recon"| RC["model states the dependences of the code it wrote,<br/>folded into the rewrite call or as a follow-up turn;<br/>claims are ADDED to the profile"]:::model --> HSR
   XT -->|"deps"| LD["model may discharge STATIC blockers in new code"]:::model --> HSR
   XT -->|"neither"| HSR
-  FULL -->|"instrumented run fails, no dependence file,<br/>or explorer fails 20 times"| RPF["re-profile failed"]:::bad
+  FULL -->|"instrumentation or instrumented run fails,<br/>no or empty dependence file, explorer fails<br/>20 times or stalls 5 times"| RPF["re-profile failed"]:::bad
   HSR --> RM["move covered spans onto the new line numbers —<br/>and the measurements too, unless they were<br/>just re-measured and are already in them"]:::step
   RM --> CVR{"self-annotated?"}:::dec
   CVR -->|"yes"| MK["mark the PARALLEL CONSTRUCTS covered,<br/>each with its measured share"]:::step --> QB
@@ -451,16 +455,21 @@ flowchart TD
   ARB -->|"yes"| ARB2["Fix 85: build DiscoPoP's pragma as an alternative,<br/>put it through the SAME gate, time the two,<br/>keep the faster; the loser is recorded either way"]:::step --> KEEP
   WHO -->|"the model, re-profile failed"| ST["restore the snapshot profile, mark it stale,<br/>remaining queue emptied and counted"]:::hold --> KEEP
   WHO -->|"DiscoPoP, re-profile failed"| REV
-  WHO -->|"DiscoPoP"| VR{"applicable pattern in the changed lines<br/>of the changed file, with a pragma that<br/>passes the clause check and compiles?"}:::dec
-  VR -->|"yes: exposed"| KEEP
-  VR -->|"no"| REV["REVERT: source, profile and measurements restored<br/>from the snapshot; feedback to the model"]:::bad
+  WHO -->|"DiscoPoP"| VR{"applicable pattern in the changed lines<br/>of the changed file, with a pragma that<br/>passes the clause check (clauses repaired<br/>as in Phase B, Fix 99) and compiles?"}:::dec
+  VR -->|"yes: exposed"| JD{"D40: --judge-as-shipped and --require-speedup,<br/>and no deeper level follows?"}:::dec
+  JD -->|"no (v2)"| KEEP
+  JD -->|"yes"| JS["DiscoPoP's pragmas for the exposed loops, outermost first,<br/>through the safety gate; the safe ones staged together AS TEXT<br/>(the file stays pragma-free) and gated as a set; the program<br/>with them TIMED against the program before the rewrite<br/>(Settle's paired method and threshold)"]:::step
+  JS -->|"safe and not slower"| KEEP
+  JS -->|"could not be staged or timed"| KEEP
+  JS -->|"no pragma safe: pattern_broken;<br/>slower: not_faster"| REV
+  VR -->|"no"| REV["REVERT: source, profile, measurements and<br/>covered spans restored from the snapshot;<br/>feedback to the model (D40: with the ratio)"]:::bad
   KEEP --> REC["change log entry with file, diff, exposed regions;<br/>accepted record with the gate's evidence;<br/>profile flagged fast or measured"]:::ok
 </script>
 
 <!-- ============================================================ 8 -->
 <section id="d8">
   <div class="sec"><span class="n">8</span><h2>Phase B: DiscoPoP's pragmas, once, from a measured profile</h2></div>
-  <p>Phase A leaves DiscoPoP's pragmas out of the source so that line numbers and the profile stay valid while code is still moving. Phase B then applies every pragma that survives, largest predicted saving first, each one re-derived against the file as it stands.</p>
+  <p>Phase A leaves DiscoPoP's pragmas out of the source so that line numbers and the profile stay valid while code is still moving. Phase B then applies every pragma that survives, largest predicted saving first, each one re-derived against the file as it stands. Nothing found here reaches the model — its attempts are over; since D40 a kept rewrite's own pragmas were already judged, in Phase A, while it could still act (their gate verdicts are cached, so Phase B does not pay again).</p>
   <p><strong>Since D33 (Fix 93, 23 Sep) a pragma that is safe but slower ALONE is deferred, not dropped.</strong> Each pragma is timed against the state before it; when a rewrite splits one loop into two or three, each alone can lose (0.6–1.1×) while all together win (2.5–4×) — one parallel loop next to a sequential one does not pay. In E1 that dropped the winning set in 7 of 18 such trials (replayed: FASTER 1.49–3.00× under the harness). The deferred pragmas of each file are now applied together, re-checked for safety as a set, timed against the state before them, and — if the set pays — members are removed one at a time while removing one does not slow it down. What is kept is ONE change-log entry, so Settle keeps or drops the set as a unit. A lone deferred pragma is dropped as before; a pragma that pays alone takes exactly the old path.</p>
   <figure><div class="chart" data-d="d8"></div></figure>
   <div class="tablewrap"><table>
@@ -521,7 +530,7 @@ flowchart TD
 <!-- ============================================================ 9 -->
 <section id="d9">
   <div class="sec"><span class="n">9</span><h2>Settle: the only step that judges the finished files</h2></div>
-  <p><strong>Speed, since Fix 89 (22 Sep):</strong> the finished file is timed <em>against the original, interleaved</em> — the same measurement and threshold Phase B applies to each pragma — instead of alone against the reference time captured when the run began. On E1's shared host that opening reference was minutes old by the time Settle ran; the 15 programs Settle dropped this way in E1 were rebuilt and re-judged by the harness and were indeed slower, so the change is one of method. <strong>Where a rewrite's cost is judged:</strong> nowhere before this step. Phase A accepts a pragma-free rewrite on output alone, because a buffer that only pays off with the pragmas is the normal case; Phase B measures each pragma against the state before it, not against the original. So a rewrite that copies the whole array on every repetition (E1: <code>memcpy</code>, or <code>malloc</code>/<code>free</code> per repetition) reaches Settle with its pragmas accepted and is dropped here — correctly, after the trial's budget is spent. A bound on the rewrite's sequential cost in Phase A was proposed (D31) and withdrawn on a measurement: the expert restructurings themselves run 1.0–2.3× slower sequentially, so no such bound separates a bad rewrite from a good one. What would recover the trial is a retry after Settle's verdict, with it as feedback (D31-b, proposed). <strong>From class A:</strong> Settle compares the finished program with the ORIGINAL, never with DiscoPoP's own program — so on code DiscoPoP already parallelizes, a slower parallel program survives (<code>vpvtv</code>, 0.58× of DiscoPoP alone), and a repair that ends below the original falls back to the original rather than to DiscoPoP's pragma (<code>s000</code>, lost). A structural fix (skip regions whose loops carry DiscoPoP patterns, Fix 90) was reverted before it ran: in class R those patterns are false positives the gate rejects, and the rule would have blocked 11 of 18 class-R loops. <strong>Since D32 (Fix 94, 23 Sep) there is a floor:</strong> before Phase A the agent builds DiscoPoP's own gated program — Phase B and Settle on the original, exactly what the DiscoPoP-alone arm delivers (its console in <code>floor/floor.log</code>) — and after this step the agent's finished program is timed against it, paired; if it is slower, DiscoPoP's program is shipped. On E1's class A that turns <code>vpvtv</code> (worse) and <code>s000</code> (lost) into equal; on class R DiscoPoP alone keeps nothing, the floor is the original and nothing changes. The DiscoPoP-alone arm itself (<code>--budget 0</code>) is its own floor and skips it.</p>
+  <p><strong>Speed, since Fix 89 (22 Sep):</strong> the finished file is timed <em>against the original, interleaved</em> — the same measurement and threshold Phase B applies to each pragma — instead of alone against the reference time captured when the run began. On E1's shared host that opening reference was minutes old by the time Settle ran; the 15 programs Settle dropped this way in E1 were rebuilt and re-judged by the harness and were indeed slower, so the change is one of method. <strong>Where a rewrite's cost is judged:</strong> nowhere before this step. Phase A accepts a pragma-free rewrite on output alone, because a buffer that only pays off with the pragmas is the normal case; Phase B measures each pragma against the state before it, not against the original. So a rewrite that copies the whole array on every repetition (E1: <code>memcpy</code>, or <code>malloc</code>/<code>free</code> per repetition) reaches Settle with its pragmas accepted and is dropped here — correctly, after the trial's budget is spent. Since D40 (agent v3) such a rewrite is judged in Phase A instead — reverted with its measured ratio while the region's budget can pay for another attempt; Settle stays the final check on the finished file, and nothing it finds is fed back. A bound on the rewrite's sequential cost in Phase A was proposed (D31) and withdrawn on a measurement: the expert restructurings themselves run 1.0–2.3× slower sequentially, so no such bound separates a bad rewrite from a good one. What would recover the trial is a retry after Settle's verdict, with it as feedback (D31-b, proposed). <strong>From class A:</strong> Settle compares the finished program with the ORIGINAL, never with DiscoPoP's own program — so on code DiscoPoP already parallelizes, a slower parallel program survives (<code>vpvtv</code>, 0.58× of DiscoPoP alone), and a repair that ends below the original falls back to the original rather than to DiscoPoP's pragma (<code>s000</code>, lost). A structural fix (skip regions whose loops carry DiscoPoP patterns, Fix 90) was reverted before it ran: in class R those patterns are false positives the gate rejects, and the rule would have blocked 11 of 18 class-R loops. <strong>Since D32 (Fix 94, 23 Sep) there is a floor:</strong> before Phase A the agent builds DiscoPoP's own gated program — Phase B and Settle on the original, exactly what the DiscoPoP-alone arm delivers (its console in <code>floor/floor.log</code>) — and after this step the agent's finished program is timed against it, paired; if it is slower, DiscoPoP's program is shipped. On E1's class A that turns <code>vpvtv</code> (worse) and <code>s000</code> (lost) into equal; on class R DiscoPoP alone keeps nothing, the floor is the original and nothing changes. The DiscoPoP-alone arm itself (<code>--budget 0</code>) is its own floor and skips it.</p>
   <p>Every gate before this judged one candidate patch on a temporary copy. What ends up on disk is a reconstruction — the surviving changes re-applied onto the originals — and it has to earn its own verdict, with the same tolerance and stress settings the earlier gates used.</p>
   <figure><div class="chart" data-d="d9"></div>
   <figcaption>Nothing is ever un-applied: a change that stood on a dropped one simply fails to re-apply (exact matching, no fuzz), which is the signal that it goes too.</figcaption></figure>
@@ -552,7 +561,7 @@ flowchart TD
   RV --> FLD
   OKU --> FLD
   FLD -->|"no"| AJ["accepted.json rewritten to describe the files on disk"]:::ok
-  FLD -->|"yes"| FLT{"agent's program slower than<br/>DiscoPoP's own, paired?"}:::dec
+  FLD -->|"yes"| FLT{"agent's program slower than<br/>DiscoPoP's own, paired —<br/>or not measurable against it?"}:::dec
   FLT -->|"no"| AJ
   FLT -->|"yes"| FLS["ship DiscoPoP's program and its records"]:::hold --> AJ
 </script>
@@ -568,7 +577,8 @@ flowchart TD
   <div class="tablewrap"><table>
     <tr><th>Also recorded per trial</th><th>Why</th></tr>
     <tr><td>llm_call_failures</td><td>a run whose calls all failed must never read as "the model changed nothing" (the voided pilot)</td></tr>
-    <tr><td>explorer_retries</td><td>DiscoPoP's crash rate is a result in itself (T0.7)</td></tr>
+    <tr><td>explorer_retries, explorer_stalls</td><td>the AGENT's own re-profiles: DiscoPoP's crash and stall rate is a result in itself (T0.7); the harness's draw is <code>profile.explore_attempts</code></td></tr>
+    <tr><td>d40_verdicts, gate_failures_d40</td><td>agent v3: each kept rewrite's D40 verdict (ok / not_faster / pattern_broken / exposed) and the stage a staged pragma failed at</td></tr>
     <tr><td>tokens, cost, turns, duration</td><td>cost per accepted parallelisation is part of the evaluation</td></tr>
     <tr><td>kernel_program_disagree</td><td>work moved out of the timed region would show up as a kernel gain the whole program does not share</td></tr>
     <tr><td>candidates.jsonl</td><td>every gate verdict with its stage, diagnostic and evidence — accepted and rejected alike</td></tr>
