@@ -1,0 +1,10 @@
+--- s341.c
++++ s341.c
+@@ -135,6 +135,7 @@
+         int* indices = (int*)malloc(LEN_1D * sizeof(int));
+ 
+         // Phase 1: Identify positive elements and store them in temp
++        #pragma omp parallel for shared(indices,temp) 
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+                 temp[i] = b[i];

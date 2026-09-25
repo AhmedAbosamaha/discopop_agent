@@ -1,0 +1,10 @@
+--- s255.c
++++ s255.c
+@@ -141,6 +141,7 @@
+ 
+         /* Compute a values using precomputed x_vals and derived y values.
+          * This loop has no loop-carried dependency and can be parallelized. */
++        #pragma omp parallel for shared(x_vals) 
+         for (int i = 0; i < LEN_1D; i++) {
+             real_t y = (i == 0) ? b[LEN_1D-2] : x_vals[i-1];
+             a[i] = (b[i] + x_vals[i] + y) * (real_t).333;

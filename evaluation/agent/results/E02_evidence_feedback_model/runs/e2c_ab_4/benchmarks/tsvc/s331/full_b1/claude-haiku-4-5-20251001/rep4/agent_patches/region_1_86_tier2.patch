@@ -1,0 +1,27 @@
+--- s331.c
++++ s331.c
+@@ -132,16 +132,23 @@
+ {
+     int j;
+     real_t chksum;
++
++    // Save the initial state of array a to break the loop-carried dependence
++    real_t *a_saved = (real_t *)malloc(LEN_1D * sizeof(real_t));
++    memcpy(a_saved, a, LEN_1D * sizeof(real_t));
++
+     for (int nl = 0; nl < R; nl++) {
+         j = -1;
+         for (int i = 0; i < LEN_1D; i++) {
+-            if (a[i] < (real_t)0.) {
++            if (a_saved[i] < (real_t)0.) {
+                 j = i;
+             }
+         }
+         chksum = (real_t) j;
+         pb_mix(nl);
+     }
++
++    free(a_saved);
+     return j+1;
+ }
+ 

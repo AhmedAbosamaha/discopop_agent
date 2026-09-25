@@ -1,0 +1,19 @@
+--- s252.c
++++ s252.c
+@@ -130,13 +130,10 @@
+ 
+ static real_t kernel_s252(void)
+ {
+-    real_t t, s;
+     for (int nl = 0; nl < R; nl++) {
+-        t = (real_t) 0.;
+-        for (int i = 0; i < LEN_1D; i++) {
+-            s = b[i] * c[i];
+-            a[i] = s + t;
+-            t = s;
++        a[0] = b[0] * c[0];
++        for (int i = 1; i < LEN_1D; i++) {
++            a[i] = b[i] * c[i] + b[i-1] * c[i-1];
+         }
+         pb_mix(nl);
+     }

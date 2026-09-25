@@ -1,0 +1,10 @@
+--- s212.c
++++ s212.c
+@@ -139,6 +139,7 @@
+         }
+ 
+         // Inner loop: now each iteration is independent (Do-All pattern)
++        #pragma omp parallel for shared(a_backup) 
+         for (int i = 0; i < LEN_1D-1; i++) {
+             a[i] *= c[i];
+             b[i] += a_backup[i + 1] * d[i];

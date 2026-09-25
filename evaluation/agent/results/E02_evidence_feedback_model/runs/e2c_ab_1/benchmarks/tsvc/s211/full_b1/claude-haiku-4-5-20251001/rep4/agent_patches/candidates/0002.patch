@@ -1,0 +1,10 @@
+--- s211.c
++++ s211.c
+@@ -132,6 +132,7 @@
+ {
+     real_t *b_orig = (real_t *)malloc(LEN_1D * sizeof(real_t));
+ 
++    #pragma omp parallel for shared(b_orig) 
+     for (int nl = 0; nl < R; nl++) {
+         memcpy(b_orig, b, LEN_1D * sizeof(real_t));
+ 

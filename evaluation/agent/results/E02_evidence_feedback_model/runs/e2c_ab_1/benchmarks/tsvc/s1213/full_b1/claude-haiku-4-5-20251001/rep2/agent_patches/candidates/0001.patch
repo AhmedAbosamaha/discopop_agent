@@ -1,0 +1,10 @@
+--- s1213.c
++++ s1213.c
+@@ -136,6 +136,7 @@
+             b[i] = a[i+1]*d[i];
+         }
+         // Pass 2: Update a in forward order (iterations independent)
++        #pragma omp parallel for 
+         for (int i = 1; i < LEN_1D-1; i++) {
+             a[i] = b[i-1]+c[i];
+         }

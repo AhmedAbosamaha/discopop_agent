@@ -1,0 +1,10 @@
+--- s331.c
++++ s331.c
+@@ -135,6 +135,7 @@
+     int *results = (int*)malloc(LEN_1D * sizeof(int));
+ 
+     for (int nl = 0; nl < R; nl++) {
++        #pragma omp parallel for shared(results) 
+         for (int i = 0; i < LEN_1D; i++) {
+             results[i] = a[i] < (real_t)0. ? i : -1;
+         }

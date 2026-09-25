@@ -1,0 +1,10 @@
+--- s252.c
++++ s252.c
+@@ -133,6 +133,7 @@
+     real_t t, s;
+     real_t *s_temp = (real_t *)malloc(LEN_1D * sizeof(real_t));
+ 
++    #pragma omp parallel for shared(s_temp) 
+     for (int nl = 0; nl < R; nl++) {
+         // Pass 1: Compute s values (s_temp[i] = b[i] * c[i])
+         for (int i = 0; i < LEN_1D; i++) {

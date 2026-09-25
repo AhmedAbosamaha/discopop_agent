@@ -1,0 +1,10 @@
+--- s212.c
++++ s212.c
+@@ -143,6 +143,7 @@
+             a[i] *= c[i];
+         }
+         // Update b[] using saved snapshot (do-all: each iteration writes different b[i])
++        #pragma omp parallel for shared(a_save) 
+         for (int i = 0; i < LEN_1D-1; i++) {
+             b[i] += a_save[i + 1] * d[i];
+         }

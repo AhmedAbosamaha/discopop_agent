@@ -1,0 +1,10 @@
+--- s255.c
++++ s255.c
+@@ -135,6 +135,7 @@
+         /* Compute x values at each iteration (sequential, loop-carried).
+          * x_vals[i] will hold the value of x at the start of iteration i. */
+         x_vals[0] = b[LEN_1D-1];
++        #pragma omp parallel for shared(x_vals) 
+         for (int i = 1; i < LEN_1D; i++) {
+             x_vals[i] = b[i-1];
+         }

@@ -1,0 +1,48 @@
+
+============================================================
+  Model-only twin (D38) — DiscoPoP's information, no gate, one attempt
+============================================================
+  Source         : s281.c
+  Model          : claude-haiku-4-5-20251001
+  Pragmas by     : DiscoPoP
+  Evidence       : none
+  Depth          : 0
+
+┌─ [depth=0] loop 1:81 (lines 134–141)
+│  [twin] Calling claude-haiku-4-5-20251001...
+│  [twin] the model's plan: **Plan:** The inner loop has a loop-carried dependence through array `a`: iteration i reads `a[LEN_1D-i-1]` and writes `a[i]`. This creates a dependency between iteration i and iteration (LEN_1D-1-i), since iteration (LEN_1D-1-i) writes to a[LEN_1D-1-i], which iteration i later reads when `LEN_1D-i-1 = LEN_1D-1-i`. To expose parallelism, I'll introduce a temporary buffer `a_new[]` for the writes. 
+│  [twin] edited, 0 OpenMP pragma(s) in the file — kept unchecked
+│  [twin] Re-profiling (as the agent does after a kept rewrite)...
+│  [twin] 4 new region(s) at depth 1
+└─ EDITED
+
+┌─ [depth=1] loop 1:83 (lines 137–147)
+└─ SKIPPED (depth 1 > --restructure-depth 0)
+
+┌─ [depth=1] function 1:79 (lines 131–149)
+└─ SKIPPED (depth 1 > --restructure-depth 0)
+
+┌─ [depth=1] loop 1:86 (lines 138–142)
+└─ DISCOPOP'S (annotated at the end)
+
+┌─ [depth=1] loop 1:93 (lines 143–145)
+└─ DISCOPOP'S (annotated at the end)
+
+
+============================================================
+  DiscoPoP annotates — 2 applicable pattern(s), NOTHING CHECKED
+============================================================
+
+┌─ do_all @ lines 138–142  (W=6144000)
+│  #pragma omp parallel for
+│  [twin] Original backed up → s281.c.original
+│  [twin] Applied to s281.c
+└─ INSERTED (unchecked)
+
+┌─ do_all @ lines 143–145  (W=3072000)
+│  #pragma omp parallel for
+│  [twin] Applied to s281.c
+└─ INSERTED (unchecked)
+
+
+  SUMMARY: 1 region(s) asked  |  1 edited  |  2 DiscoPoP pragma(s) inserted unchecked  |  nothing was checked here — the harness judges the result

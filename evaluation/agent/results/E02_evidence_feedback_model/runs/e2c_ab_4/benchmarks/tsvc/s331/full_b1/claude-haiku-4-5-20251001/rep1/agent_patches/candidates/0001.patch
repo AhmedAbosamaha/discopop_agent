@@ -1,0 +1,10 @@
+--- s331.c
++++ s331.c
+@@ -135,6 +135,7 @@
+     real_t *a_prev = (real_t *)malloc(LEN_1D * sizeof(real_t));
+     memcpy(a_prev, a, LEN_1D * sizeof(real_t));
+ 
++    #pragma omp parallel for private(chksum) lastprivate(j) shared(a_prev) 
+     for (int nl = 0; nl < R; nl++) {
+         j = -1;
+         for (int i = 0; i < LEN_1D; i++) {

@@ -1,0 +1,28 @@
+--- s323.c
++++ s323.c
+@@ -131,10 +131,24 @@
+ static real_t kernel_s323(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
+-        for (int i = 1; i < LEN_1D; i++) {
++        /* Sequential prologue: compute iterations 1 and 2 to establish b[1], b[2] */
++        for (int i = 1; i <= 2 && i < LEN_1D; i++) {
+             a[i] = b[i-1] + c[i] * d[i];
+             b[i] = a[i] + c[i] * e[i];
+         }
++
++        /* Odd iterations: 3, 5, 7, ... read b[2], b[4], b[6], ... */
++        for (int i = 3; i < LEN_1D; i += 2) {
++            a[i] = b[i-1] + c[i] * d[i];
++            b[i] = a[i] + c[i] * e[i];
++        }
++
++        /* Even iterations: 4, 6, 8, ... read b[3], b[5], b[7], ... */
++        for (int i = 4; i < LEN_1D; i += 2) {
++            a[i] = b[i-1] + c[i] * d[i];
++            b[i] = a[i] + c[i] * e[i];
++        }
++
+         pb_mix(nl);
+     }
+     return (real_t)0;

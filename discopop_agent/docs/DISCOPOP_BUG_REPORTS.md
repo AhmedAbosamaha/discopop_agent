@@ -36,6 +36,35 @@ LLVM 19 (macOS) and LLVM 20 (Linux).
 
 ---
 
+## B8 — a true recurrence reported as Do-All when the program spans two files (explorer, call-path states)
+
+**Found** 25 Sep 2026 (T0.15, `evaluation/agent/tools/harness_equivalence.py`), while moving a benchmark's
+measurement code into a second file. **Status:** open — not yet fixed; the campaign keeps its benchmarks
+in one file until it is (D39).
+
+**Reproducer:** TSVC `s211` (`a[i] = b[i-1] + c[i]*d[i]; b[i] = b[i+1] - e[i]*d[i];` inside a repetition
+loop). Profiled as ONE file: no pattern on either loop (5 of 5 explorer draws on macOS/LLVM 19, 3 of 3 on
+Linux/LLVM 20); `explorer/doall_prevented.json` holds the dynamic RAW on `b` that blocks both. The SAME
+code with the helper functions moved into a second file (`#include`d, one translation unit, every
+function inside the project root, so all instrumented): Do-All on the inner loop AND on the repetition
+loop in every draw; `doall_prevented.json` is empty.
+
+**What is not the cause:** the profiler — `dynamic_dependencies.txt` holds the same 9 RAW records on `b`
+from the `b[i]` write into the `b[i-1]` read in both layouts (same instruction pairs, different call-path
+state numbers); file ids are consistent across `FileMapping.txt`, `instructionID_to_lineID_mapping.txt`,
+`Data.xml` and the loop markers; the allocation site (moved into instrumented code, same result).
+
+**Where:** `new_do_all_detector.identify_simple_doall_and_reduction` blocks a loop only for a dependence
+between nodes of two DIFFERENT iteration contexts of that loop, and the iteration contexts come from the
+task graph's assignment of call-path states (`TaskGraph.__assign_state_ids`, `__duplicate_loop_iterations`).
+With a second file the recurrence's states are evidently not placed in the loop's iteration contexts — the
+same family as B5 (a loop state matched against loops of another function).
+
+**Narrowing it:** the agent's own feature check `project-mode` profiles a two-FILE program through a unity
+unit (`#include "kern.c"` after the other units) and there the recurrences ARE blocked. The s211 case that
+fails includes the second file as a header whose functions are defined BEFORE the loop's function — the
+order of function definitions across files is the first thing to test.
+
 ## B1 — clauses lost for files included through a relative path
 
 **Symptom.** A Do-All in a file that clang records as `./src/kern.c` (a unit `#include`d

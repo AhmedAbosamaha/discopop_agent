@@ -1,0 +1,10 @@
+--- s331.c
++++ s331.c
+@@ -136,6 +136,7 @@
+         char *is_negative = (char *)malloc(LEN_1D * sizeof(char));
+ 
+         // Phase 1: Mark negative elements (Do-All loop - parallelizable)
++        #pragma omp parallel for shared(is_negative) 
+         for (int i = 0; i < LEN_1D; i++) {
+             is_negative[i] = (a[i] < (real_t)0.) ? 1 : 0;
+         }

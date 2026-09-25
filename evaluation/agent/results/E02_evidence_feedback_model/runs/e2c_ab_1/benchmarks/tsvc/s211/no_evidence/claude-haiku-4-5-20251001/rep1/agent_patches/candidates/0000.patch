@@ -1,0 +1,41 @@
+--- s211.c
++++ s211.c
+@@ -89,7 +89,7 @@
+ }
+ 
+ /* ---- data: TSVC's five vectors ------------------------------------------------ */
+-static real_t *a, *b, *c, *d, *e;
++static real_t *a, *b, *c, *d, *e, *b_new;
+ 
+ /* Between two repetitions a few INPUT elements change, so no repetition can be skipped,
+  * merged with another or run out of order: the repetition loop is sequential by a true
+@@ -133,7 +133,10 @@
+     for (int nl = 0; nl < R; nl++) {
+         for (int i = 1; i < LEN_1D-1; i++) {
+             a[i] = b[i - 1] + c[i] * d[i];
+-            b[i] = b[i + 1] - e[i] * d[i];
++            b_new[i] = b[i + 1] - e[i] * d[i];
++        }
++        for (int i = 1; i < LEN_1D-1; i++) {
++            b[i] = b_new[i];
+         }
+         pb_mix(nl);
+     }
+@@ -147,7 +150,8 @@
+   c = (real_t*)malloc((size_t)LEN_1D * sizeof(real_t));
+   d = (real_t*)malloc((size_t)LEN_1D * sizeof(real_t));
+   e = (real_t*)malloc((size_t)LEN_1D * sizeof(real_t));
+-  if (!a || !b || !c || !d || !e) { fprintf(stderr, "out of memory\n"); return 1; }
++  b_new = (real_t*)malloc((size_t)LEN_1D * sizeof(real_t));
++  if (!a || !b || !c || !d || !e || !b_new) { fprintf(stderr, "out of memory\n"); return 1; }
+   init_array();
+   /* Optional perturbed input, see PB_PERTURB: magnitudes and signs of the data are kept. */
+   if (argc > 1) {
+@@ -168,6 +172,6 @@
+   pb_emit(result);
+   pb_emit_array(a); pb_emit_array(b); pb_emit_array(c); pb_emit_array(d); pb_emit_array(e);
+   pb_report();
+-  free(a); free(b); free(c); free(d); free(e);
++  free(a); free(b); free(c); free(d); free(e); free(b_new);
+   return 0;
+ }

@@ -1,0 +1,17 @@
+--- s244.c
++++ s244.c
+@@ -131,7 +131,13 @@
+ static real_t kernel_s244(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
+-        for (int i = 0; i < LEN_1D-1; ++i) {
++        for (int i = 0; i < LEN_1D-2; ++i) {
++            a[i] = b[i] + c[i] * d[i];
++            b[i] = c[i] + b[i];
++        }
++        // Final iteration: compute a[LEN_1D-1]
++        if (LEN_1D > 1) {
++            int i = LEN_1D-2;
+             a[i] = b[i] + c[i] * d[i];
+             b[i] = c[i] + b[i];
+             a[i+1] = b[i] + a[i+1] * d[i];

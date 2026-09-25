@@ -1,0 +1,44 @@
+--- s341.c
++++ s341.c
+@@ -130,15 +130,37 @@
+ 
+ static real_t kernel_s341(void)
+ {
+-    int j;
+     for (int nl = 0; nl < R; nl++) {
+-        j = -1;
++        real_t* temp = (real_t*)malloc(LEN_1D * sizeof(real_t));
++        int* indices = (int*)malloc(LEN_1D * sizeof(int));
++
++        // Phase 1: Identify positive elements and store them in temp
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++                temp[i] = b[i];
++                indices[i] = 1;
++            } else {
++                indices[i] = 0;
+             }
+         }
++
++        // Phase 2: Compute prefix sum to determine output indices
++        int prefix = 0;
++        for (int i = 0; i < LEN_1D; i++) {
++            int mark = indices[i];
++            indices[i] = prefix;
++            prefix += mark;
++        }
++
++        // Phase 3: Gather positive elements to their final positions
++        for (int i = 0; i < LEN_1D; i++) {
++            if (b[i] > (real_t)0.) {
++                a[indices[i]] = temp[i];
++            }
++        }
++
++        free(temp);
++        free(indices);
+         pb_mix(nl);
+     }
+     return (real_t)0;

@@ -1,0 +1,10 @@
+--- s331.c
++++ s331.c
+@@ -144,6 +144,7 @@
+ 
+         /* Phase 2: Find the maximum index (Reduction pattern) */
+         j = -1;
++        #pragma omp parallel for lastprivate(j) shared(neg_indices) 
+         for (int i = 0; i < LEN_1D; i++) {
+             j = (neg_indices[i] > j) ? neg_indices[i] : j;
+         }

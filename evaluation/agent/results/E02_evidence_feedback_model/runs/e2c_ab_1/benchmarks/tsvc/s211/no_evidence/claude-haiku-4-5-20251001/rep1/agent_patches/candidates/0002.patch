@@ -1,0 +1,10 @@
+--- s211.c
++++ s211.c
+@@ -131,6 +131,7 @@
+ static real_t kernel_s211(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        #pragma omp parallel for 
+         for (int i = 1; i < LEN_1D-1; i++) {
+             b_new[i] = b[i + 1] - e[i] * d[i];
+         }

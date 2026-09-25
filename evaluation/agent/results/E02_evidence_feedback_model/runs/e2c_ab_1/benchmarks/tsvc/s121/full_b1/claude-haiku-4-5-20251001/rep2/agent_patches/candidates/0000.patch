@@ -1,0 +1,19 @@
+--- s121.c
++++ s121.c
+@@ -132,10 +132,15 @@
+ {
+     int j;
+     for (int nl = 0; nl < R; nl++) {
++        real_t *a_temp = (real_t *)malloc(sizeof(real_t) * LEN_1D);
++        memcpy(a_temp, a, sizeof(real_t) * LEN_1D);
++
+         for (int i = 0; i < LEN_1D-1; i++) {
+             j = i + 1;
+-            a[i] = a[j] + b[i];
++            a[i] = a_temp[j] + b[i];
+         }
++
++        free(a_temp);
+         pb_mix(nl);
+     }
+     return (real_t)0;

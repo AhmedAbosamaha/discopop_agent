@@ -1,0 +1,10 @@
+--- s341.c
++++ s341.c
+@@ -144,6 +144,7 @@
+         }
+ 
+         // Pass 2: copy compacted values from temp to a (parallelizable)
++        #pragma omp parallel for firstprivate(count) shared(temp) 
+         for (int i = 0; i < count; i++) {
+             a[i] = temp[i];
+         }

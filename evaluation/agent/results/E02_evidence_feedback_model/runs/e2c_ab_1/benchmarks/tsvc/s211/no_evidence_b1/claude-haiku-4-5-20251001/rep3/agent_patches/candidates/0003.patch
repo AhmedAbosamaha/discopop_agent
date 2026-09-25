@@ -1,0 +1,10 @@
+--- s211.c
++++ s211.c
+@@ -148,6 +148,7 @@
+         }
+ 
+         /* Pass 3: Copy computed b values back to original array (Do-All loop) */
++        #pragma omp parallel for shared(b_temp) 
+         for (int i = 1; i < LEN_1D-1; i++) {
+             b[i] = b_temp[i];
+         }

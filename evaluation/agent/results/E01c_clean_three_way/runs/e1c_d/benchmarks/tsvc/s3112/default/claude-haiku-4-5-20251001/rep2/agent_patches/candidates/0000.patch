@@ -1,0 +1,25 @@
+--- s3112.c
++++ s3112.c
+@@ -133,10 +133,21 @@
+     real_t sum;
+     for (int nl = 0; nl < R; nl++) {
+         sum = (real_t)0.0;
+-        for (int i = 0; i < LEN_1D; i++) {
++
++        int split = LEN_1D / 2;
++
++        // First sub-pass: process first half
++        for (int i = 0; i < split; i++) {
+             sum += a[i];
+             b[i] = sum;
+         }
++
++        // Second sub-pass: process second half starting from first half's sum
++        for (int i = split; i < LEN_1D; i++) {
++            sum += a[i];
++            b[i] = sum;
++        }
++
+         pb_mix(nl);
+     }
+     return sum;

@@ -1,0 +1,10 @@
+--- s252.c
++++ s252.c
+@@ -133,6 +133,7 @@
+     real_t *temp = (real_t*)malloc(LEN_1D * sizeof(real_t));
+     if (!temp) { fprintf(stderr, "malloc failed\n"); return 0; }
+ 
++    #pragma omp parallel for shared(temp) 
+     for (int nl = 0; nl < R; nl++) {
+         /* Phase 1: compute all products independently (Do-All) */
+         for (int i = 0; i < LEN_1D; i++) {

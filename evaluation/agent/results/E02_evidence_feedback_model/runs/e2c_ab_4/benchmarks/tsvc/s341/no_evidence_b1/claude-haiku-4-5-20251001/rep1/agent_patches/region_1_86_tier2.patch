@@ -1,0 +1,34 @@
+--- s341.c
++++ s341.c
+@@ -130,15 +130,27 @@
+ 
+ static real_t kernel_s341(void)
+ {
+-    int j;
+     for (int nl = 0; nl < R; nl++) {
+-        j = -1;
++        /* Phase 1: Compute target position for each element (prefix sum on predicate) */
++        int *positions = (int*)malloc(LEN_1D * sizeof(int));
++        int count = 0;
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++                positions[i] = count;
++                count++;
++            } else {
++                positions[i] = -1;
+             }
+         }
++
++        /* Phase 2: Write positive elements to their computed positions (Do-All loop) */
++        for (int i = 0; i < LEN_1D; i++) {
++            if (b[i] > (real_t)0.) {
++                a[positions[i]] = b[i];
++            }
++        }
++
++        free(positions);
+         pb_mix(nl);
+     }
+     return (real_t)0;

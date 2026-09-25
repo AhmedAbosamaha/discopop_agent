@@ -1,0 +1,10 @@
+--- s252.c
++++ s252.c
+@@ -135,6 +135,7 @@
+ 
+     for (int nl = 0; nl < R; nl++) {
+         /* Phase 1: compute all products independently (Do-All) */
++        #pragma omp parallel for shared(temp) 
+         for (int i = 0; i < LEN_1D; i++) {
+             temp[i] = b[i] * c[i];
+         }

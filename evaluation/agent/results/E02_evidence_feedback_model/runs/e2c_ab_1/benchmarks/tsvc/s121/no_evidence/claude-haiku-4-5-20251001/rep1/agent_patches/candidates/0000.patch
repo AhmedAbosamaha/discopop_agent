@@ -1,0 +1,26 @@
+--- s121.c
++++ s121.c
+@@ -131,13 +131,21 @@
+ static real_t kernel_s121(void)
+ {
+     int j;
++    real_t *temp = (real_t*)malloc((size_t)LEN_1D * sizeof(real_t));
++    if (!temp) { fprintf(stderr, "out of memory\n"); exit(1); }
++
+     for (int nl = 0; nl < R; nl++) {
++        // Phase 1: compute into temporary buffer (no loop-carried dependencies)
+         for (int i = 0; i < LEN_1D-1; i++) {
+-            j = i + 1;
+-            a[i] = a[j] + b[i];
++            temp[i] = a[i+1] + b[i];
++        }
++        // Phase 2: copy back to original array
++        for (int i = 0; i < LEN_1D-1; i++) {
++            a[i] = temp[i];
+         }
+         pb_mix(nl);
+     }
++    free(temp);
+     return (real_t)0;
+ }
+ 

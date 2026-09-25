@@ -1,0 +1,30 @@
+--- original.c
++++ final.c
+@@ -130,14 +130,22 @@
+ 
+ static real_t kernel_s252(void)
+ {
+-    real_t t, s;
++    #pragma omp parallel for 
+     for (int nl = 0; nl < R; nl++) {
+-        t = (real_t) 0.;
++        /* Pass 1: compute products into temporary buffer (parallelizable) */
++        real_t *s = (real_t *)malloc(LEN_1D * sizeof(real_t));
+         for (int i = 0; i < LEN_1D; i++) {
+-            s = b[i] * c[i];
+-            a[i] = s + t;
+-            t = s;
++            s[i] = b[i] * c[i];
+         }
++
++        /* Pass 2: compute sums a[i] = s[i] + s[i-1] (parallelizable, no loop-carried dependence) */
++        if (LEN_1D > 0) {
++            a[0] = s[0];
++            for (int i = 1; i < LEN_1D; i++) {
++                a[i] = s[i] + s[i-1];
++            }
++        }
++        free(s);
+         pb_mix(nl);
+     }
+     return (real_t)0;

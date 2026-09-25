@@ -1,0 +1,44 @@
+--- original.c
++++ final.c
+@@ -131,14 +131,38 @@
+ static real_t kernel_s3112(void)
+ {
+     real_t sum;
++    real_t *b_temp = (real_t*)malloc((size_t)LEN_1D * sizeof(real_t));
++
+     for (int nl = 0; nl < R; nl++) {
+-        sum = (real_t)0.0;
++        // Initialize b with a (first step of prefix sum)
++        #pragma omp parallel for shared(a, b)
+         for (int i = 0; i < LEN_1D; i++) {
+-            sum += a[i];
+-            b[i] = sum;
++            b[i] = a[i];
+         }
++
++        // Parallel prefix sum using Kogge-Stone algorithm
++        // Each iteration of outer loop: parallel computation of b[i] = b[i] + b[i-d]
++        for (int d = 1; d < LEN_1D; d *= 2) {
++            // Read phase: each i computes new value from b[i] and b[i-d]
++            #pragma omp parallel for shared(b, b_temp)
++            for (int i = 0; i < LEN_1D; i++) {
++                b_temp[i] = b[i];
++                if (i >= d) {
++                    b_temp[i] += b[i-d];
++                }
++            }
++            // Write phase: copy back to b for next distance level
++            #pragma omp parallel for shared(b, b_temp)
++            for (int i = 0; i < LEN_1D; i++) {
++                b[i] = b_temp[i];
++            }
++        }
++
++        sum = b[LEN_1D - 1];
+         pb_mix(nl);
+     }
++
++    free(b_temp);
+     return sum;
+ }
+ 

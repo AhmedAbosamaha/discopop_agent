@@ -1,0 +1,10 @@
+--- s243.c
++++ s243.c
+@@ -141,6 +141,7 @@
+         memcpy(a_temp, a, LEN_1D * sizeof(real_t));
+ 
+         /* First pass: compute new a and b from original values */
++        #pragma omp parallel for 
+         for (int i = 0; i < LEN_1D-1; i++) {
+             a[i] = b[i] + c[i  ] * d[i];
+             b[i] = a[i] + d[i  ] * e[i];

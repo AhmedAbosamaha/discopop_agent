@@ -1,0 +1,10 @@
+--- s341.c
++++ s341.c
+@@ -140,6 +140,7 @@
+         }
+ 
+         /* Second pass: write each positive element at its pre-computed position */
++        #pragma omp parallel for shared(count) 
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+                 a[count[i]] = b[i];

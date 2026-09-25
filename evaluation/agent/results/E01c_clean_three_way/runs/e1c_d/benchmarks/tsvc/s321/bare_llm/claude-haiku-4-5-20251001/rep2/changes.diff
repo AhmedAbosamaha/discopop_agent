@@ -1,0 +1,44 @@
+--- original.c
++++ final.c
+@@ -131,9 +131,39 @@
+ static real_t kernel_s321(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
+-        for (int i = 1; i < LEN_1D; i++) {
+-            a[i] += a[i-1] * b[i];
++        real_t *a_curr = (real_t*)malloc(LEN_1D * sizeof(real_t));
++        real_t *a_next = (real_t*)malloc(LEN_1D * sizeof(real_t));
++
++        memcpy(a_curr, a, LEN_1D * sizeof(real_t));
++
++        // Parallel prefix computation for recurrence: a[i] += a[i-1] * b[i]
++        // Uses a phase-based algorithm where in level k, each element reads from distance 2^k
++        for (int level = 0; level < 20; level++) {
++            int offset = 1 << level;  // 2^level
++            if (offset >= LEN_1D) break;
++
++            memcpy(a_next, a_curr, LEN_1D * sizeof(real_t));
++
++            // Compute contributions from elements at distance 2^level, in parallel
++            #pragma omp parallel for
++            for (int i = offset; i < LEN_1D; i++) {
++                real_t b_prod = 1.0;
++                for (int j = i - offset + 1; j <= i; j++) {
++                    b_prod *= b[j];
++                }
++                a_next[i] += a_curr[i-offset] * b_prod;
++            }
++
++            real_t *tmp = a_curr;
++            a_curr = a_next;
++            a_next = tmp;
+         }
++
++        // Copy result back to a
++        memcpy(a, a_curr, LEN_1D * sizeof(real_t));
++
++        free(a_curr);
++        free(a_next);
+         pb_mix(nl);
+     }
+     return (real_t)0;

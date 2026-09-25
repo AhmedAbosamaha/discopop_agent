@@ -1,0 +1,10 @@
+--- s1213.c
++++ s1213.c
+@@ -138,6 +138,7 @@
+     real_t *a_old = (real_t*)malloc((size_t)LEN_1D * sizeof(real_t));
+     if (!a_old) { fprintf(stderr, "out of memory\n"); return (real_t)0; }
+ 
++    #pragma omp parallel for shared(a_old) 
+     for (int nl = 0; nl < R; nl++) {
+         /* Save 'a' at start of this nl-iteration */
+         memcpy(a_old, a, (size_t)LEN_1D * sizeof(real_t));

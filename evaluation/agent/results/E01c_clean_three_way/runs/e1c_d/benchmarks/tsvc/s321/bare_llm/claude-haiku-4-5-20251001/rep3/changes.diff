@@ -1,0 +1,20 @@
+--- original.c
++++ final.c
+@@ -104,6 +104,7 @@
+ 
+ static void init_array(void)
+ {
++  #pragma omp parallel for shared(a, b, c, d, e)
+   for (int i = 0; i < LEN_1D; i++) {
+     a[i] = (real_t)0.75 + (real_t)((i * 37L) % 1000) * (real_t)0.0005;
+     b[i] = (real_t)0.75 + (real_t)((i * 53L) % 997) * (real_t)0.0005;
+@@ -111,7 +112,8 @@
+     d[i] = (real_t)0.75 + (real_t)((i * 89L) % 983) * (real_t)0.0005;
+     e[i] = (real_t)0.75 + (real_t)((i * 97L) % 977) * (real_t)0.0005;
+   }
+-    for (int i = 0; i < LEN_1D; i++) b[i] *= (real_t)0.5;
++  #pragma omp parallel for shared(b)
++  for (int i = 0; i < LEN_1D; i++) b[i] *= (real_t)0.5;
+ }
+ 
+ static void pb_emit_array(const real_t* v)

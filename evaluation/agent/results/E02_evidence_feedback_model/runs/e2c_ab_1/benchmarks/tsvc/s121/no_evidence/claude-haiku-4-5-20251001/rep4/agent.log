@@ -1,0 +1,119 @@
+
+============================================================
+  DiscoPoP Agentic Controller
+============================================================
+  Source         : s121.c
+  DiscoPoP dir   : .discopop
+  Model          : claude-haiku-4-5-20251001
+  Budget         : 3 LLM retries/region (+2 free build fixes)
+  λ penalty      : 1.0
+  Min workload   : 0.0
+  Restruct. depth: 0 (Tier-2 allowed at depth 0–0)
+  Quality gate   : Tier-1 = all but speed, no escalation; Tier-2 = full
+  TSan           : barrier-aware (archer: /usr/lib/llvm-20/lib/libarcher.so)
+  Speedup gate   : require ≥ 1.1× measured
+  Dry run        : False
+  LLM mode       : claude-haiku-4-5-20251001
+  Edit mode      : direct
+  Re-profiling   : full (instrument + run + explore) after every kept rewrite
+  Explorer       : one attempt may take 60 s, then the draw is repeated (random stall, L5)
+  Pragmas        : DiscoPoP writes them in Phase B
+============================================================
+
+  [ok] Captured reference output on 2 inputs (69 bytes, 478.5 ms baseline) for the correctness/performance gates.
+
+  [ok] Numerical noise floor 0 — 6 build variants agreed exactly; output is compared byte-for-byte.
+
+  Hotspots       : measured per-region runtimes are available — 16 region(s) measured, 2.8 ms total, ranking by predicted time saved at 48 threads
+
+  Baseline       : DiscoPoP proposes 1 applicable pattern(s) unaided; 1 of them produce a usable pragma
+                   → the run beats DiscoPoP by ending with more than 1
+
+  Initial candidates
+Region ID    Type           Saves    % run    Hot  Tier  Depth  Name
+--------------------------------------------------------------------------------------
+  1:81       loop          1.5 ms    55.2%    YES     2      0  lines 134–140
+  1:79       function      1.5 ms    55.2%    YES     2      0  kernel_s121
+  1:84       loop          1.5 ms    55.0%    YES     1      0  lines 135–138
+
+============================================================
+  FLOOR — DiscoPoP's own program, as the DiscoPoP-alone arm delivers it (D32)
+============================================================
+  [floor] DiscoPoP alone keeps nothing — the floor is the original program (D32)
+
+============================================================
+  PHASE A — restructure  (the source stays pragma-free)
+============================================================
+
+┌─ [depth=0] loop 1:81 (lines 134–140)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Original backed up → s121.c.original
+│  [Tier-2] Applied to s121.c
+│  [Tier-2] Re-profiling to refresh data and discover new candidates...
+│  [refresh] kind=full
+│  [Tier-2] Re-measured runtimes: 17 region(s), 3.5 ms total
+│  [Phase-A] Asking DiscoPoP what it now finds in the rewritten lines...
+│  [Tier-2] 0 survivor(s) rebuilt, 4 new at depth 1
+│  [Tier-2] DiscoPoP now finds: do_all @ lines 142–144, do_all @ lines 147–149
+│  [Tier-2] Pragma validation deferred to depth 1 (still allowed to restructure)
+└─ ACCEPTED
+
+┌─ [depth=1] loop 1:83 (lines 140–152)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Restructuring not allowed at depth 1 (--restructure-depth=0) → SKIP
+└─ SKIPPED
+
+┌─ [depth=1] function 1:79 (lines 131–156)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Restructuring not allowed at depth 1 (--restructure-depth=0) → SKIP
+└─ SKIPPED
+
+┌─ [depth=1] loop 1:86 (lines 142–144)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=1] loop 1:91 (lines 147–149)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+
+============================================================
+  PHASE B — annotate  (2 candidate pragma(s))
+============================================================
+
+  Timing noise floor on this machine: 0.993 → keep anything at or above 0.983
+
+┌─ pattern #122  do_all @ lines 142–144  (W=3071904)
+│  #pragma omp parallel for
+│  marginal 1.17×
+│  [Phase-B] Applied to s121.c
+└─ APPLIED
+
+┌─ pattern #123  do_all @ lines 147–149  (W=3071904)
+│  #pragma omp parallel for
+│  marginal 2.80×
+│  [Phase-B] Applied to s121.c
+└─ APPLIED
+
+============================================================
+  SETTLING — verify the finished source, drop what does not hold up
+============================================================
+  [ok] finished source verified — output matches, 1.49x the original, paired
+
+
+============================================================
+  SUMMARY: 1 rewrite(s) kept  |  2 pragma(s) applied  |  2 skipped
+  DiscoPoP unaided: 1 usable pragma(s) in this profile's draw  →  this run: 2   [BEAT, informational]
+    ✓  loop 1:81  [Tier-2]  depth=0
+    ✓  loop 1:86  [Phase-B pragma]  depth=0  marginal 1.17×
+    ✓  loop 1:91  [Phase-B pragma]  depth=0  marginal 2.80×
+    ✗  1:83  [skipped]  depth=1
+    ✗  1:79  [skipped]  depth=1
+
+  Results → .discopop/agent_patches/accepted.json
+============================================================
+

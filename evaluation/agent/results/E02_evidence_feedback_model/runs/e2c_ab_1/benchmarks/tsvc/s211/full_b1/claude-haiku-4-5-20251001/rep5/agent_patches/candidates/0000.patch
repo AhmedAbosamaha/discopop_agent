@@ -1,0 +1,28 @@
+--- s211.c
++++ s211.c
+@@ -131,10 +131,24 @@
+ static real_t kernel_s211(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        real_t *b_new = (real_t*)malloc((size_t)LEN_1D * sizeof(real_t));
++
++        /* Compute new b values without loop-carried dependence */
++        for (int i = 1; i < LEN_1D-1; i++) {
++            b_new[i] = b[i + 1] - e[i] * d[i];
++        }
++
++        /* Update b array */
++        for (int i = 1; i < LEN_1D-1; i++) {
++            b[i] = b_new[i];
++        }
++
++        /* Compute a values using updated b */
+         for (int i = 1; i < LEN_1D-1; i++) {
+             a[i] = b[i - 1] + c[i] * d[i];
+-            b[i] = b[i + 1] - e[i] * d[i];
+         }
++
++        free(b_new);
+         pb_mix(nl);
+     }
+     return (real_t)0;

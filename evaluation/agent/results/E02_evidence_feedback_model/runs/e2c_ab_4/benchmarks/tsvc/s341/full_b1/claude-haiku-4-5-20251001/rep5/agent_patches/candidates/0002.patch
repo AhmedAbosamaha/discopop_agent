@@ -1,0 +1,10 @@
+--- s341.c
++++ s341.c
+@@ -145,6 +145,7 @@
+         }
+ 
+         // Second pass: write positive elements to a using pre-computed positions
++        #pragma omp parallel for firstprivate(count) shared(indices) 
+         for (int k = 0; k < count; k++) {
+             a[k] = b[indices[k]];
+         }

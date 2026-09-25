@@ -1,0 +1,10 @@
+--- s255.c
++++ s255.c
+@@ -131,6 +131,7 @@
+ static real_t kernel_s255(void)
+ {
+     real_t *x_vals = (real_t*)malloc(LEN_1D * sizeof(real_t));
++    #pragma omp parallel for shared(x_vals) 
+     for (int nl = 0; nl < R; nl++) {
+         /* Compute x values at each iteration (sequential, loop-carried).
+          * x_vals[i] will hold the value of x at the start of iteration i. */

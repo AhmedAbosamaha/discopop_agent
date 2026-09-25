@@ -1,0 +1,10 @@
+--- s254.c
++++ s254.c
+@@ -136,6 +136,7 @@
+         for (int i = 1; i < LEN_1D; i++) {
+             x_vals[i] = b[i-1];
+         }
++        #pragma omp parallel for shared(x_vals) 
+         for (int i = 0; i < LEN_1D; i++) {
+             a[i] = (b[i] + x_vals[i]) * (real_t).5;
+         }

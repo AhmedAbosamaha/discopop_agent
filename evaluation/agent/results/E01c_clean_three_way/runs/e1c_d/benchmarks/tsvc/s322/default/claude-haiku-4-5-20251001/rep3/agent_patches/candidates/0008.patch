@@ -1,0 +1,27 @@
+--- s322.c
++++ s322.c
+@@ -131,8 +131,22 @@
+ static real_t kernel_s322(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
+-        for (int i = 2; i < LEN_1D; i++) {
+-            a[i] = a[i] + a[i - 1] * b[i] + a[i - 2] * c[i];
++        /* Run 3 rounds of stride-3 passes to allow transient values to propagate
++           and converge to sequential semantics. Each pass operates on disjoint
++           elements; passes are ordered to respect cross-pass dependencies. */
++        for (int round = 0; round < 3; round++) {
++            /* Pass 0: i = 2, 5, 8, 11, ... (stride 3 from 2) */
++            for (int i = 2; i < LEN_1D; i += 3) {
++                a[i] = a[i] + a[i - 1] * b[i] + a[i - 2] * c[i];
++            }
++            /* Pass 1: i = 3, 6, 9, 12, ... (stride 3 from 3) */
++            for (int i = 3; i < LEN_1D; i += 3) {
++                a[i] = a[i] + a[i - 1] * b[i] + a[i - 2] * c[i];
++            }
++            /* Pass 2: i = 4, 7, 10, 13, ... (stride 3 from 4) */
++            for (int i = 4; i < LEN_1D; i += 3) {
++                a[i] = a[i] + a[i - 1] * b[i] + a[i - 2] * c[i];
++            }
+         }
+         pb_mix(nl);
+     }

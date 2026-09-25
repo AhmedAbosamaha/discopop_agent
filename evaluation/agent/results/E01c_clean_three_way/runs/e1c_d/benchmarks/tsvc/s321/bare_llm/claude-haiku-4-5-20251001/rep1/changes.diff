@@ -1,0 +1,10 @@
+--- original.c
++++ final.c
+@@ -130,6 +130,7 @@
+ 
+ static real_t kernel_s321(void)
+ {
++    #pragma omp parallel for shared(a, b, c, d, e)
+     for (int nl = 0; nl < R; nl++) {
+         for (int i = 1; i < LEN_1D; i++) {
+             a[i] += a[i-1] * b[i];

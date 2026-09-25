@@ -1,0 +1,10 @@
+--- s341.c
++++ s341.c
+@@ -145,6 +145,7 @@
+         }
+ 
+         // Second pass: write filtered values using precomputed indices
++        #pragma omp parallel for shared(prefix) 
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+                 a[prefix[i]] = b[i];

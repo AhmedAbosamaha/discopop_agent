@@ -1,0 +1,10 @@
+--- s211.c
++++ s211.c
+@@ -143,6 +143,7 @@
+         }
+ 
+         /* Pass 2: Compute all a[i] values using newly computed b values (Do-All loop) */
++        #pragma omp parallel for shared(b_temp) 
+         for (int i = 1; i < LEN_1D-1; i++) {
+             a[i] = b_temp[i - 1] + c[i] * d[i];
+         }

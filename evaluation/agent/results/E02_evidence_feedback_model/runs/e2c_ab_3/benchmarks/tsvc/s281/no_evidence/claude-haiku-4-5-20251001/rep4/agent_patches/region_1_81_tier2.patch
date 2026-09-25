@@ -1,0 +1,25 @@
+--- s281.c
++++ s281.c
+@@ -132,7 +132,21 @@
+ {
+     real_t x;
+     for (int nl = 0; nl < R; nl++) {
+-        for (int i = 0; i < LEN_1D; i++) {
++        /* Split loop into two phases to expose parallelism.
++           Iterations 0 to (LEN_1D-1)/2 are independent: each iteration i reads a[LEN_1D-i-1]
++           and writes a[i], where LEN_1D-i-1 > i. No earlier iteration writes a[LEN_1D-i-1].
++           Iterations (LEN_1D+1)/2 to LEN_1D-1 depend on earlier iterations: iteration i reads
++           a[LEN_1D-i-1] which was written by iteration LEN_1D-1-i from the first phase.
++           Parallelizing only the first phase exposes the independent do-all pattern. */
++
++        /* Parallelizable phase: iterations 0 to (LEN_1D-1)/2 */
++        for (int i = 0; i < (LEN_1D + 1) / 2; i++) {
++            x = a[LEN_1D-i-1] + b[i] * c[i];
++            a[i] = x-(real_t)1.0;
++            b[i] = x;
++        }
++        /* Sequential phase: iterations (LEN_1D+1)/2 to LEN_1D-1, reading values from first phase */
++        for (int i = (LEN_1D + 1) / 2; i < LEN_1D; i++) {
+             x = a[LEN_1D-i-1] + b[i] * c[i];
+             a[i] = x-(real_t)1.0;
+             b[i] = x;

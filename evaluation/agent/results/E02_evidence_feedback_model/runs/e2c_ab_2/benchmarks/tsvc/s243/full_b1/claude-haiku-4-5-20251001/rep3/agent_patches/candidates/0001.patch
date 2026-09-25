@@ -1,0 +1,10 @@
+--- s243.c
++++ s243.c
+@@ -139,6 +139,7 @@
+         }
+ 
+         /* Split inner loop into two passes over disjoint elements to expose Do-All parallelism */
++ #pragma omp parallel for shared(a_orig) 
+         for (int pass = 0; pass < 2; pass++) {
+             for (int i = pass; i < LEN_1D-1; i += 2) {
+                 a[i] = b[i] + c[i  ] * d[i];

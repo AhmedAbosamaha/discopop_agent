@@ -1,0 +1,10 @@
+--- s331.c
++++ s331.c
+@@ -132,6 +132,7 @@
+ {
+     int j;
+     real_t chksum;
++    #pragma omp parallel for private(chksum) lastprivate(j) 
+     for (int nl = 0; nl < R; nl++) {
+         char *is_negative = (char *)malloc(LEN_1D * sizeof(char));
+ 

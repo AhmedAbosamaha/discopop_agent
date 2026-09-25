@@ -1,0 +1,16 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2c_ab_1/benchmarks/tsvc/s112/full_b1/claude-haiku-4-5-20251001/rep3/work/s112.c	2026-09-25 05:39:45.326912098 +0000
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2c_ab_1/benchmarks/tsvc/s112/full_b1/claude-haiku-4-5-20251001/rep3/work/s112.c.discopop_patch_generator.temp	2026-09-25 05:39:48.347928878 +0000
+@@ -133,7 +133,13 @@
+     for (int i = LEN_1D - 2; i >= 0; i--) {
+         a[i+1] = a[i] + b[i];
+     }
++    #pragma omp parallel
++    #pragma omp single
++    {
++    #pragma omp task
+     pb_mix(nl);
++#pragma omp task
++}
+ }
+ 
+ static real_t kernel_s112(void)

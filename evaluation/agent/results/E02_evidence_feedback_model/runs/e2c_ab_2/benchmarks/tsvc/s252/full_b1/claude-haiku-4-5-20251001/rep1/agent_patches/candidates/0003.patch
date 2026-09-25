@@ -1,0 +1,10 @@
+--- s252.c
++++ s252.c
+@@ -135,6 +135,7 @@
+         // Precompute the values that will be read as "t" in each iteration
+         real_t *prev_s = (real_t *)malloc(LEN_1D * sizeof(real_t));
+         prev_s[0] = 0;  // Initial value of t
++        #pragma omp parallel for shared(prev_s) 
+         for (int i = 1; i < LEN_1D; i++) {
+             prev_s[i] = b[i-1] * c[i-1];
+         }

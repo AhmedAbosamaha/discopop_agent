@@ -1,0 +1,30 @@
+--- s321.c
++++ s321.c
+@@ -131,9 +131,25 @@
+ static real_t kernel_s321(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
+-        for (int i = 1; i < LEN_1D; i++) {
+-            a[i] += a[i-1] * b[i];
++        real_t *a_orig = (real_t*)malloc((size_t)LEN_1D * sizeof(real_t));
++        memcpy(a_orig, a, (size_t)LEN_1D * sizeof(real_t));
++
++        // Alternating odd-even passes until convergence (recompute, not accumulate)
++        for (int pass = 0; pass < 16; pass++) {
++            if (pass % 2 == 0) {
++                // Odd indices: i=1,3,5,... read only even indices, no loop-carried dep
++                for (int i = 1; i < LEN_1D; i += 2) {
++                    a[i] = a_orig[i] + a[i-1] * b[i];
++                }
++            } else {
++                // Even indices: i=2,4,6,... read only odd indices, no loop-carried dep
++                for (int i = 2; i < LEN_1D; i += 2) {
++                    a[i] = a_orig[i] + a[i-1] * b[i];
++                }
++            }
+         }
++
++        free(a_orig);
+         pb_mix(nl);
+     }
+     return (real_t)0;

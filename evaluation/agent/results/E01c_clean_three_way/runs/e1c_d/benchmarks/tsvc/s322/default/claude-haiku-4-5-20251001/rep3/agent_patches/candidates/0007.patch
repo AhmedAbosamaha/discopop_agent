@@ -1,0 +1,20 @@
+--- s322.c
++++ s322.c
+@@ -131,7 +131,16 @@
+ static real_t kernel_s322(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
+-        for (int i = 2; i < LEN_1D; i++) {
++        /* Pass 0: elements at i = 2, 5, 8, 11, ... (every 3rd from 2) */
++        for (int i = 2; i < LEN_1D; i += 3) {
++            a[i] = a[i] + a[i - 1] * b[i] + a[i - 2] * c[i];
++        }
++        /* Pass 1: elements at i = 3, 6, 9, 12, ... (every 3rd from 3) */
++        for (int i = 3; i < LEN_1D; i += 3) {
++            a[i] = a[i] + a[i - 1] * b[i] + a[i - 2] * c[i];
++        }
++        /* Pass 2: elements at i = 4, 7, 10, 13, ... (every 3rd from 4) */
++        for (int i = 4; i < LEN_1D; i += 3) {
+             a[i] = a[i] + a[i - 1] * b[i] + a[i - 2] * c[i];
+         }
+         pb_mix(nl);

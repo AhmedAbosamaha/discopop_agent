@@ -1,0 +1,10 @@
+--- s211.c
++++ s211.c
+@@ -147,6 +147,7 @@
+         }
+ 
+         // Phase 2: compute new a values using b_new array
++        #pragma omp parallel for shared(b_new,a_new) 
+         for (int i = 1; i < LEN_1D-1; i++) {
+             a_new[i] = b_new[i - 1] + c[i] * d[i];
+         }

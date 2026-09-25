@@ -1,0 +1,19 @@
+--- s127.c
++++ s127.c
+@@ -130,14 +130,11 @@
+ 
+ static real_t kernel_s127(void)
+ {
+-    int j;
+     for (int nl = 0; nl < R; nl++) {
+-        j = -1;
+         for (int i = 0; i < LEN_1D/2; i++) {
+-            j++;
++            int j = 2 * i;
+             a[j] = b[i] + c[i] * d[i];
+-            j++;
+-            a[j] = b[i] + d[i] * e[i];
++            a[j+1] = b[i] + d[i] * e[i];
+         }
+         pb_mix(nl);
+     }

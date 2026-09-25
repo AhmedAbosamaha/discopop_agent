@@ -1,0 +1,10 @@
+--- s241.c
++++ s241.c
+@@ -136,6 +136,7 @@
+         memcpy(a_orig, a, LEN_1D * sizeof(real_t));
+ 
+         // Phase 1: Compute all a[i] values (do-all loop, no dependencies)
++        #pragma omp parallel for 
+         for (int i = 0; i < LEN_1D-1; i++) {
+             a[i] = b[i] * c[i  ] * d[i];
+         }

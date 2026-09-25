@@ -1,0 +1,10 @@
+--- s112.c
++++ s112.c
+@@ -135,6 +135,7 @@
+ 
+     for (int nl = 0; nl < R; nl++) {
+         // Compute shifted values in parallel (decoupled from reads)
++        #pragma omp parallel for shared(temp) 
+         for (int i = 0; i < LEN_1D - 1; i++) {
+             temp[i+1] = a[i] + b[i];
+         }

@@ -1,0 +1,10 @@
+--- s281.c
++++ s281.c
+@@ -149,6 +149,7 @@
+         /* Phase 1: process iterations 0 to LEN_1D/2-1.
+          * Each iteration reads from a[LEN_1D-1-i] in the second half (unchanged)
+          * and writes to a[i] in the first half. No internal loop-carried deps. */
++        #pragma omp parallel for firstprivate(temp_a) private(x) shared(temp_b) 
+         for (int i = 0; i < LEN_1D/2; i++) {
+             x = temp_a[LEN_1D-i-1] + temp_b[i] * c[i];
+             temp_a[i] = x-(real_t)1.0;

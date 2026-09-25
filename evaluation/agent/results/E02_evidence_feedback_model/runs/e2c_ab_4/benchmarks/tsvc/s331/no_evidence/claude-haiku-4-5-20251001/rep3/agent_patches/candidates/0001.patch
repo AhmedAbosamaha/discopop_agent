@@ -1,0 +1,21 @@
+--- s331.c
++++ s331.c
+@@ -134,11 +134,16 @@
+     real_t chksum;
+     for (int nl = 0; nl < R; nl++) {
+         j = -1;
++        int *neg_flags = (int *)malloc(LEN_1D * sizeof(int));
+         for (int i = 0; i < LEN_1D; i++) {
+-            if (a[i] < (real_t)0.) {
+-                j = i;
++            neg_flags[i] = (a[i] < (real_t)0.) ? i : -1;
++        }
++        for (int i = 0; i < LEN_1D; i++) {
++            if (neg_flags[i] >= 0) {
++                j = neg_flags[i];
+             }
+         }
++        free(neg_flags);
+         chksum = (real_t) j;
+         pb_mix(nl);
+     }

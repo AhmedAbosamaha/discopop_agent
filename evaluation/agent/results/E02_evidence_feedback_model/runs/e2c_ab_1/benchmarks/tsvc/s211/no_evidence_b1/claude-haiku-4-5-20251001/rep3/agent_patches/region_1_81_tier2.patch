@@ -1,0 +1,33 @@
+--- s211.c
++++ s211.c
+@@ -131,10 +131,28 @@
+ static real_t kernel_s211(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        real_t *b_temp = (real_t*)malloc((size_t)LEN_1D * sizeof(real_t));
++        if (!b_temp) return (real_t)0;
++
++        /* Copy original b values to preserve b[0] and other unchanged elements */
++        memcpy(b_temp, b, (size_t)LEN_1D * sizeof(real_t));
++
++        /* Pass 1: Compute all new b[i] values in parallel (Do-All loop) */
+         for (int i = 1; i < LEN_1D-1; i++) {
+-            a[i] = b[i - 1] + c[i] * d[i];
+-            b[i] = b[i + 1] - e[i] * d[i];
++            b_temp[i] = b[i + 1] - e[i] * d[i];
+         }
++
++        /* Pass 2: Compute all a[i] values using newly computed b values (Do-All loop) */
++        for (int i = 1; i < LEN_1D-1; i++) {
++            a[i] = b_temp[i - 1] + c[i] * d[i];
++        }
++
++        /* Pass 3: Copy computed b values back to original array (Do-All loop) */
++        for (int i = 1; i < LEN_1D-1; i++) {
++            b[i] = b_temp[i];
++        }
++
++        free(b_temp);
+         pb_mix(nl);
+     }
+     return (real_t)0;

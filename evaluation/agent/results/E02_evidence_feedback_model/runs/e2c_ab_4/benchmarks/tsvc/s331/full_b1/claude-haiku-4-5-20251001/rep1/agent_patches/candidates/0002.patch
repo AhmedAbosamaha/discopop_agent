@@ -1,0 +1,10 @@
+--- s331.c
++++ s331.c
+@@ -137,6 +137,7 @@
+ 
+     for (int nl = 0; nl < R; nl++) {
+         j = -1;
++        #pragma omp parallel for lastprivate(j) shared(a_prev) 
+         for (int i = 0; i < LEN_1D; i++) {
+             if (a_prev[i] < (real_t)0.) {
+                 j = i;

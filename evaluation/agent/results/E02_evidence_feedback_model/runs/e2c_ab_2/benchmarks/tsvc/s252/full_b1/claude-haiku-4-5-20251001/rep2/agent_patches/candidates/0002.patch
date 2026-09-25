@@ -1,0 +1,10 @@
+--- s252.c
++++ s252.c
+@@ -135,6 +135,7 @@
+         if (!temp) { fprintf(stderr, "out of memory\n"); return (real_t)-1; }
+ 
+         /* Phase 1: Compute products in parallel */
++        #pragma omp parallel for shared(temp) 
+         for (int i = 0; i < LEN_1D; i++) {
+             temp[i] = b[i] * c[i];
+         }

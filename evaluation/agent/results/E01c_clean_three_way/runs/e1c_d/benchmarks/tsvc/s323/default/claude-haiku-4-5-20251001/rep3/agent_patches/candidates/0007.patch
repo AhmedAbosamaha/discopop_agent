@@ -1,0 +1,10 @@
+--- s323.c
++++ s323.c
+@@ -137,6 +137,7 @@
+         for (int i = 1; i < LEN_1D; i++) {
+             partial_sum[i] = (partial_sum[i-1] + c[i] * d[i]) + c[i] * e[i];
+         }
++        #pragma omp parallel for firstprivate(b0_value) shared(partial_sum) 
+         for (int i = 1; i < LEN_1D; i++) {
+             a[i] = (b0_value + partial_sum[i-1]) + c[i] * d[i];
+             b[i] = b0_value + partial_sum[i];

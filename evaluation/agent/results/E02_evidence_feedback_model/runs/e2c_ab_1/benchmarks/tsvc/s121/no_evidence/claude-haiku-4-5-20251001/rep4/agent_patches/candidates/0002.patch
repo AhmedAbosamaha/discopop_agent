@@ -1,0 +1,10 @@
+--- s121.c
++++ s121.c
+@@ -145,6 +145,7 @@
+         }
+ 
+         // Phase 2: Write computed values back to a (Do-All loop, no dependence)
++        #pragma omp parallel for shared(temp) 
+         for (int i = 0; i < LEN_1D-1; i++) {
+             a[i] = temp[i];
+         }

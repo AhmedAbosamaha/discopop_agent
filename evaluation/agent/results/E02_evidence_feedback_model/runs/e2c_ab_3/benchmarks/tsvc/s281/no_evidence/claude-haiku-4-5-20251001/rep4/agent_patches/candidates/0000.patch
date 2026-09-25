@@ -1,0 +1,29 @@
+--- s281.c
++++ s281.c
+@@ -131,14 +131,25 @@
+ static real_t kernel_s281(void)
+ {
+     real_t x;
++    real_t *a_orig = (real_t*)malloc(LEN_1D * sizeof(real_t));
++    if (!a_orig) {
++        return (real_t)0;
++    }
++
+     for (int nl = 0; nl < R; nl++) {
++        /* Copy original values of a to enable loop parallelization.
++           Each iteration reads from a_orig (invariant) instead of a (being modified),
++           breaking the cyclic dependence pattern. */
++        memcpy(a_orig, a, LEN_1D * sizeof(real_t));
++
+         for (int i = 0; i < LEN_1D; i++) {
+-            x = a[LEN_1D-i-1] + b[i] * c[i];
++            x = a_orig[LEN_1D-i-1] + b[i] * c[i];
+             a[i] = x-(real_t)1.0;
+             b[i] = x;
+         }
+         pb_mix(nl);
+     }
++    free(a_orig);
+     return (real_t)0;
+ }
+ 

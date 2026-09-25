@@ -1,0 +1,10 @@
+--- s241.c
++++ s241.c
+@@ -137,6 +137,7 @@
+             a_old[i] = a[i];
+         }
+ 
++        #pragma omp parallel for shared(a_old) 
+         for (int i = 0; i < LEN_1D-1; i++) {
+             a[i] = b[i] * c[i  ] * d[i];
+             b[i] = a[i] * a_old[i+1] * d[i];

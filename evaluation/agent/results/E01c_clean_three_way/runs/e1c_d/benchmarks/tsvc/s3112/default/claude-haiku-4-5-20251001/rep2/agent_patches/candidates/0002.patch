@@ -1,0 +1,10 @@
+--- s3112.c
++++ s3112.c
+@@ -137,6 +137,7 @@
+         int split = LEN_1D / 2;
+ 
+         // First sub-pass: process first half
++        #pragma omp parallel for firstprivate(split) lastprivate(sum) 
+         for (int i = 0; i < split; i++) {
+             sum += a[i];
+             b[i] = sum;

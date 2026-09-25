@@ -1,0 +1,19 @@
+--- s322.c
++++ s322.c
+@@ -131,7 +131,15 @@
+ static real_t kernel_s322(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
+-        for (int i = 2; i < LEN_1D; i++) {
++        // Split the inner loop into 3 passes with stride 3 to expose parallelism.
++        // Within each pass, no iteration depends on another (stride >= 3 with max depth of 2).
++        for (int i = 2; i < LEN_1D; i += 3) {
++            a[i] = a[i] + a[i - 1] * b[i] + a[i - 2] * c[i];
++        }
++        for (int i = 3; i < LEN_1D; i += 3) {
++            a[i] = a[i] + a[i - 1] * b[i] + a[i - 2] * c[i];
++        }
++        for (int i = 4; i < LEN_1D; i += 3) {
+             a[i] = a[i] + a[i - 1] * b[i] + a[i - 2] * c[i];
+         }
+         pb_mix(nl);

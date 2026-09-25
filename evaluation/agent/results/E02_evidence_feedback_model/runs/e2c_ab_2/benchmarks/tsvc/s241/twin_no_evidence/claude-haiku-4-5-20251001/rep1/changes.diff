@@ -1,0 +1,26 @@
+--- original.c
++++ final.c
+@@ -131,10 +131,22 @@
+ static real_t kernel_s241(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        real_t *a_save = (real_t*)malloc((size_t)LEN_1D * sizeof(real_t));
++        #pragma omp parallel for shared(a_save) 
++        for (int i = 0; i < LEN_1D; i++) {
++            a_save[i] = a[i];
++        }
++
++        #pragma omp parallel for 
+         for (int i = 0; i < LEN_1D-1; i++) {
+             a[i] = b[i] * c[i  ] * d[i];
+-            b[i] = a[i] * a[i+1] * d[i];
+         }
++        #pragma omp parallel for shared(a_save) 
++        for (int i = 0; i < LEN_1D-1; i++) {
++            b[i] = a[i] * a_save[i+1] * d[i];
++        }
++
++        free(a_save);
+         pb_mix(nl);
+     }
+     return (real_t)0;

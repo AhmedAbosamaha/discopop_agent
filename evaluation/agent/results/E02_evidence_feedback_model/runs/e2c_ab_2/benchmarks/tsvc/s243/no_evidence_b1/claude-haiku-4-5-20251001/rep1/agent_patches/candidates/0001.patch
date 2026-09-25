@@ -1,0 +1,10 @@
+--- s243.c
++++ s243.c
+@@ -135,6 +135,7 @@
+     if (!a_out || !b_out) { fprintf(stderr, "out of memory\n"); return (real_t)0; }
+ 
+     for (int nl = 0; nl < R; nl++) {
++        #pragma omp parallel for shared(b_out,a_out) 
+         for (int i = 0; i < LEN_1D-1; i++) {
+             real_t a_temp = b[i] + c[i  ] * d[i];
+             real_t b_temp = a_temp + d[i  ] * e[i];

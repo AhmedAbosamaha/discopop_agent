@@ -1,0 +1,10 @@
+--- s243.c
++++ s243.c
+@@ -148,6 +148,7 @@
+         }
+ 
+         /* Second pass: update a using new b and saved old a values */
++        #pragma omp parallel for shared(a_temp) 
+         for (int i = 0; i < LEN_1D-1; i++) {
+             a[i] = b[i] + a_temp[i+1] * d[i];
+         }

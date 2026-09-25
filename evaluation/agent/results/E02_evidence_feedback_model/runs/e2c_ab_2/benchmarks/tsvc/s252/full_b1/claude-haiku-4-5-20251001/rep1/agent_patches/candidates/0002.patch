@@ -1,0 +1,10 @@
+--- s252.c
++++ s252.c
+@@ -140,6 +140,7 @@
+         }
+ 
+         // Compute a values using precomputed prev_s values (now parallel)
++        #pragma omp parallel for shared(prev_s) 
+         for (int i = 0; i < LEN_1D; i++) {
+             a[i] = b[i] * c[i] + prev_s[i];
+         }

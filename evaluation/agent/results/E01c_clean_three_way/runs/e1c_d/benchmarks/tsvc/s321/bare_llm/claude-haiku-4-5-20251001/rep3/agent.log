@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s321.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : init_array, pb_mix, pb_emit, pb_emit_array, pb_report, pb_seed, pb_uniform, pb_timer_start, pb_timer_stop, main
+  Prompt         : mirror
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] s321.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Looking at the code, let me analyze the parallelization opportunities: ## Plan The kernel (`kernel_s321`) contains a loop-carried dependence that blocks parallelization: ```c for (int i = 1; i < LEN_1D; i++) { a[i] += a[i-1] * b[i]; // a[i] depends on a[i-1] } ``` Each iteration depends on the previous iteration's value of `a[i-1]`, creating a recurrence that cannot be parallelized without changin
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

@@ -1,0 +1,10 @@
+--- s121.c
++++ s121.c
+@@ -135,6 +135,7 @@
+         real_t *a_temp = (real_t *)malloc(sizeof(real_t) * LEN_1D);
+         memcpy(a_temp, a, sizeof(real_t) * LEN_1D);
+ 
++        #pragma omp parallel for private(j) shared(a_temp) 
+         for (int i = 0; i < LEN_1D-1; i++) {
+             j = i + 1;
+             a[i] = a_temp[j] + b[i];

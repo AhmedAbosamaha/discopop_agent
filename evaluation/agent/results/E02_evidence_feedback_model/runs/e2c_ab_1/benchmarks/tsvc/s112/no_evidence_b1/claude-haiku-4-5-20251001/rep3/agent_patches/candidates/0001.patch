@@ -1,0 +1,10 @@
+--- s112.c
++++ s112.c
+@@ -130,6 +130,7 @@
+ 
+ static real_t kernel_s112(void)
+ {
++    #pragma omp parallel for 
+     for (int nl = 0; nl < R; nl++) {
+         // Copy original a values to enable parallel iteration
+         real_t* a_orig = (real_t*)malloc((size_t)LEN_1D * sizeof(real_t));

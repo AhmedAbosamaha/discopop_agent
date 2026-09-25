@@ -1,0 +1,10 @@
+--- s331.c
++++ s331.c
+@@ -135,6 +135,7 @@
+     int* neg_indices = (int*)malloc(sizeof(int) * LEN_1D);
+     if (!neg_indices) return -1;
+ 
++    #pragma omp parallel for private(chksum) lastprivate(j) shared(neg_indices) 
+     for (int nl = 0; nl < R; nl++) {
+         /* Phase 1: Mark indices where a[i] < 0 (Do-All pattern) */
+         for (int i = 0; i < LEN_1D; i++) {

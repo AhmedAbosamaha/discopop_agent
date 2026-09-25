@@ -1,0 +1,10 @@
+--- s112.c
++++ s112.c
+@@ -144,6 +144,7 @@
+             a_snapshot[i] = a[i];
+             b_snapshot[i] = b[i];
+         }
++        #pragma omp parallel for shared(a_snapshot,b_snapshot) 
+         for (int i = LEN_1D - 2; i >= 0; i--) {
+             a[i+1] = a_snapshot[i] + b_snapshot[i];
+         }

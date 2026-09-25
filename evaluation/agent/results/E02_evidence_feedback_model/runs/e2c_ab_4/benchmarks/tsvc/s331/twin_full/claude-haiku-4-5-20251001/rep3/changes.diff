@@ -1,0 +1,40 @@
+--- original.c
++++ final.c
+@@ -132,17 +132,34 @@
+ {
+     int j;
+     real_t chksum;
++    real_t *a_snapshots[R];
++    int j_all[R];
++
++    #pragma omp parallel for shared(a_snapshots) 
++    for (int nl = 0; nl < R; nl++) {
++        a_snapshots[nl] = (real_t*)malloc(LEN_1D * sizeof(real_t));
++        memcpy(a_snapshots[nl], a, LEN_1D * sizeof(real_t));
++        pb_mix(nl);
++    }
++
++    #pragma omp parallel for private(chksum,j) lastprivate(j_all) shared(a_snapshots) 
+     for (int nl = 0; nl < R; nl++) {
+         j = -1;
+         for (int i = 0; i < LEN_1D; i++) {
+-            if (a[i] < (real_t)0.) {
++            if (a_snapshots[nl][i] < (real_t)0.) {
+                 j = i;
+             }
+         }
+         chksum = (real_t) j;
+-        pb_mix(nl);
++        j_all[nl] = j;
+     }
+-    return j+1;
++
++    #pragma omp parallel for 
++    for (int nl = 0; nl < R; nl++) {
++        free(a_snapshots[nl]);
++    }
++
++    return j_all[R-1]+1;
+ }
+ 
+ int main(int argc, char** argv)

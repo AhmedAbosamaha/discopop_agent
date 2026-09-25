@@ -1,0 +1,10 @@
+--- s121.c
++++ s121.c
+@@ -131,6 +131,7 @@
+ static real_t kernel_s121(void)
+ {
+     int j;
++    #pragma omp parallel for private(j) 
+     for (int nl = 0; nl < R; nl++) {
+         real_t *a_temp = (real_t *)malloc(sizeof(real_t) * LEN_1D);
+         memcpy(a_temp, a, sizeof(real_t) * LEN_1D);

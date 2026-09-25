@@ -1,0 +1,32 @@
+--- s211.c
++++ s211.c
+@@ -130,13 +130,28 @@
+ 
+ static real_t kernel_s211(void)
+ {
++    real_t *new_b = (real_t*)malloc((size_t)LEN_1D * sizeof(real_t));
++
+     for (int nl = 0; nl < R; nl++) {
++        // Compute new b values in temporary buffer
++        for (int i = 1; i < LEN_1D-1; i++) {
++            new_b[i] = b[i + 1] - e[i] * d[i];
++        }
++
++        // Copy new values back to b
++        for (int i = 1; i < LEN_1D-1; i++) {
++            b[i] = new_b[i];
++        }
++
++        // Compute a using updated b values
+         for (int i = 1; i < LEN_1D-1; i++) {
+             a[i] = b[i - 1] + c[i] * d[i];
+-            b[i] = b[i + 1] - e[i] * d[i];
+         }
++
+         pb_mix(nl);
+     }
++
++    free(new_b);
+     return (real_t)0;
+ }
+ 

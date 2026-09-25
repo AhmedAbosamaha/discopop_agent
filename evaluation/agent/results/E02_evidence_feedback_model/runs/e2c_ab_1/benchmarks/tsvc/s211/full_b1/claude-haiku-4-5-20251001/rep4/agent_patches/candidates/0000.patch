@@ -1,0 +1,19 @@
+--- s211.c
++++ s211.c
+@@ -131,7 +131,15 @@
+ static real_t kernel_s211(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
+-        for (int i = 1; i < LEN_1D-1; i++) {
++        /* Process even indices: i = 2, 4, 6, ... */
++        /* All independent: reads b[1], b[3], b[5], ...; writes b[2], b[4], b[6], ... */
++        for (int i = 2; i < LEN_1D-1; i += 2) {
++            a[i] = b[i - 1] + c[i] * d[i];
++            b[i] = b[i + 1] - e[i] * d[i];
++        }
++        /* Process odd indices: i = 1, 3, 5, ... */
++        /* All independent: reads b[0], b[2], b[4], ...; writes b[1], b[3], b[5], ... */
++        for (int i = 1; i < LEN_1D-1; i += 2) {
+             a[i] = b[i - 1] + c[i] * d[i];
+             b[i] = b[i + 1] - e[i] * d[i];
+         }

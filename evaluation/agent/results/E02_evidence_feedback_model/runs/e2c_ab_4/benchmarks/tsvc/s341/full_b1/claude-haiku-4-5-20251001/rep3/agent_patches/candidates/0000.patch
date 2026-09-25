@@ -1,0 +1,29 @@
+--- s341.c
++++ s341.c
+@@ -132,13 +132,25 @@
+ {
+     int j;
+     for (int nl = 0; nl < R; nl++) {
++        // Allocate temporary buffer for filtered elements
++        real_t* temp = (real_t*)malloc(LEN_1D * sizeof(real_t));
++
++        // First pass: filter elements from b into temp using sequential counter j
+         j = -1;
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+                 j++;
+-                a[j] = b[i];
++                temp[j] = b[i];
+             }
+         }
++
++        // Second pass: copy filtered elements from temp to a
++        // This loop has no loop-carried dependencies and can be parallelized
++        for (int k = 0; k <= j; k++) {
++            a[k] = temp[k];
++        }
++
++        free(temp);
+         pb_mix(nl);
+     }
+     return (real_t)0;

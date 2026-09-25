@@ -1,0 +1,21 @@
+--- original.c
++++ final.c
+@@ -131,11 +131,17 @@
+ static real_t kernel_s121(void)
+ {
+     int j;
++    #pragma omp parallel for private(j) 
+     for (int nl = 0; nl < R; nl++) {
++        real_t *a_temp = (real_t *)malloc(LEN_1D * sizeof(real_t));
++        memcpy(a_temp, a, LEN_1D * sizeof(real_t));
++
+         for (int i = 0; i < LEN_1D-1; i++) {
+             j = i + 1;
+-            a[i] = a[j] + b[i];
++            a[i] = a_temp[j] + b[i];
+         }
++
++        free(a_temp);
+         pb_mix(nl);
+     }
+     return (real_t)0;

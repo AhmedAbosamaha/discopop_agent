@@ -1,0 +1,30 @@
+--- original.c
++++ final.c
+@@ -130,13 +130,25 @@
+ 
+ static real_t kernel_s241(void)
+ {
++    real_t *a_tmp = (real_t *)malloc(LEN_1D * sizeof(real_t));
++    real_t *b_tmp = (real_t *)malloc(LEN_1D * sizeof(real_t));
++
++    #pragma omp parallel for shared(a_tmp,b_tmp) 
+     for (int nl = 0; nl < R; nl++) {
++        // Save current values for reading in the loop
++        memcpy(a_tmp, a, LEN_1D * sizeof(real_t));
++        memcpy(b_tmp, b, LEN_1D * sizeof(real_t));
++
++        // Compute new values using the saved buffers
+         for (int i = 0; i < LEN_1D-1; i++) {
+-            a[i] = b[i] * c[i  ] * d[i];
+-            b[i] = a[i] * a[i+1] * d[i];
++            a[i] = b_tmp[i] * c[i  ] * d[i];
++            b[i] = a_tmp[i] * a_tmp[i+1] * d[i];
+         }
+         pb_mix(nl);
+     }
++
++    free(a_tmp);
++    free(b_tmp);
+     return (real_t)0;
+ }
+ 

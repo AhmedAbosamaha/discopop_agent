@@ -1,0 +1,10 @@
+--- s341.c
++++ s341.c
+@@ -146,6 +146,7 @@
+ 
+         // Second pass: copy filtered elements from temp to a
+         // This loop has no loop-carried dependencies and can be parallelized
++        #pragma omp parallel for firstprivate(j) shared(temp) 
+         for (int k = 0; k <= j; k++) {
+             a[k] = temp[k];
+         }

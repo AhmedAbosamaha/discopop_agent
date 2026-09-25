@@ -1,0 +1,10 @@
+--- s211.c
++++ s211.c
+@@ -136,6 +136,7 @@
+     for (int nl = 0; nl < R; nl++) {
+         // Phase 1: Compute new b values using old b values
+         // Each iteration is independent, can be parallelized
++        #pragma omp parallel for shared(b_temp) 
+         for (int i = 1; i < LEN_1D-1; i++) {
+             b_temp[i] = b[i + 1] - e[i] * d[i];
+         }

@@ -433,6 +433,13 @@ explorer run from that checkout, so the run's conditions would change between tr
 
 ## 6. Traps — every one of these cost hours to find
 
+* **The measurement harness stays in the benchmark's file (D39, 25 Sep).** `prepare_tsvc.py --layout v4`
+  (the harness in a header outside the package, found through CPATH) is built and kept, but NOT for
+  experiments: with a program spanning two files DiscoPoP's explorer reports a true recurrence
+  (`s211`) as Do-All in every draw (bug report B8). Regenerate packages only with the default layout;
+  it reproduces the packages in use byte for byte. A harness edit by any arm is its own row, never
+  a failure (H13); the agent's gate refuses it for packages that list protected lines (Fix 97).
+
 - **A rewrite can be 3–30× slower than the original and pass every gate before Settle.**
   Phase A judges a pragma-free rewrite on output; Phase B measures each pragma against the
   state before it. Only Settle compares with the original. In E1 a `malloc` + `memcpy` per

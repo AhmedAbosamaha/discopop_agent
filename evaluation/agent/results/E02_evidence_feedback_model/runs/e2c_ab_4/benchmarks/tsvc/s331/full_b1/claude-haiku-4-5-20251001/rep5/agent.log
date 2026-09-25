@@ -1,0 +1,120 @@
+
+============================================================
+  DiscoPoP Agentic Controller
+============================================================
+  Source         : s331.c
+  DiscoPoP dir   : .discopop
+  Model          : claude-haiku-4-5-20251001
+  Budget         : 1 LLM retries/region (+2 free build fixes)
+  λ penalty      : 1.0
+  Min workload   : 0.0
+  Restruct. depth: 0 (Tier-2 allowed at depth 0–0)
+  Quality gate   : Tier-1 = all but speed, no escalation; Tier-2 = full
+  TSan           : barrier-aware (archer: /usr/lib/llvm-20/lib/libarcher.so)
+  Speedup gate   : require ≥ 1.1× measured
+  Dry run        : False
+  LLM mode       : claude-haiku-4-5-20251001
+  Edit mode      : direct
+  Re-profiling   : full (instrument + run + explore) after every kept rewrite
+  Explorer       : one attempt may take 60 s, then the draw is repeated (random stall, L5)
+  Pragmas        : DiscoPoP writes them in Phase B
+============================================================
+
+  [ok] Captured reference output on 2 inputs (69 bytes, 369.5 ms baseline) for the correctness/performance gates.
+
+  [ok] Numerical noise floor 0 — 6 build variants agreed exactly; output is compared byte-for-byte.
+
+  Hotspots       : measured per-region runtimes are available — 17 region(s) measured, 2.3 ms total, ranking by predicted time saved at 48 threads
+
+  Baseline       : DiscoPoP proposes 2 applicable pattern(s) unaided; 2 of them produce a usable pragma
+                   → the run beats DiscoPoP by ending with more than 2
+
+  Initial candidates
+Region ID    Type           Saves    % run    Hot  Tier  Depth  Name
+--------------------------------------------------------------------------------------
+  1:88       loop          0.9 ms    42.7%    YES     1      0  lines 135–144
+  1:86       function      0.9 ms    42.7%    YES     2      0  kernel_s331
+  1:92       loop          0.9 ms    42.1%    YES     1      0  lines 137–141
+
+============================================================
+  FLOOR — DiscoPoP's own program, as the DiscoPoP-alone arm delivers it (D32)
+============================================================
+  [floor] DiscoPoP alone keeps nothing — the floor is the original program (D32)
+
+============================================================
+  PHASE A — restructure  (the source stays pragma-free)
+============================================================
+
+┌─ [depth=0] loop 1:88 (lines 135–144)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] function 1:86 (lines 131–145)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Assembling evidence (budget remaining: 0)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Stage 'compile' failed (build fix — budget not charged, 1 left): /tmp/dp_agent_val_onbxsi4g/s331.c:137:22: error: expected expression /tmp/dp_agent_val_onbxsi4g/s331.c:144:13: error: use of undeclared identifier 'matches'   144 |             matches[i] = (a[i] < (r
+│  [Tier-2] Assembling evidence (budget remaining: 0)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Original backed up → s331.c.original
+│  [Tier-2] Applied to s331.c
+│  [Tier-2] Re-profiling to refresh data and discover new candidates...
+      [explorer] attempt 1 stalled (STALLED: no result after 60 s) — retrying on the same profile
+      [explorer] attempt 2 stalled (STALLED: no result after 60 s) — retrying on the same profile
+      [explorer] attempt 3 stalled (STALLED: no result after 60 s) — retrying on the same profile
+      [explorer] attempt 4 stalled (STALLED: no result after 60 s) — retrying on the same profile
+      [explorer] failed every time after 5 attempt(s), 5 of them stalled
+      [re-profile] explorer failed:
+agent/explorer/discopop_explorer/classes/TaskGraph/TaskGraph.py:1535: UserWarning: Not yet implemented!
+  warnings.warn("Not yet implemented!")
+
+  0%|          | 0/1821 [00:00<?, ?it/s]
+100%|██████████| 1821/1821 [00:00<00:00, 589338.55it/s]
+
+  0%|          | 0/11 [00:00<?, ?it/s]
+100%|██████████| 11/11 [00:00<00:00, 2709.02it/s]
+
+  0%|          | 0/1821 [00:00<?, ?it/s]
+100%|██████████| 1821/1821 [00:00<00:00, 2069311.19it/s]
+
+  0%|          | 0/11 [00:00<?, ?it/s]
+STALLED: no result after 60 s
+│  [refresh] kind=failed
+│  [Tier-2] the rewrite broke DiscoPoP's profiling run — reverting (snapshot restore)
+└─ retry (budget remaining: 0)
+
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:92 (lines 137–141)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+
+============================================================
+  PHASE B — annotate  (2 candidate pragma(s))
+============================================================
+
+  Timing noise floor on this machine: 0.989 → keep anything at or above 0.979
+
+┌─ pattern #141  do_all @ lines 135–144  (W=432)
+│  #pragma omp parallel for
+│  gate failed at 'tsan': Race detected: WARNING: ThreadSanitizer: data race (pid=939022)   Write of size 8 at 0x7ffff7c20068 by main thread:     #0 pb_mix /tmp/dp_agent_val_as
+└─ DROPPED
+
+┌─ pattern #140  do_all @ lines 137–141  (W=6144000)
+│  #pragma omp parallel for
+│  gate failed at 'correctness': Program output changed — the patched program is NOT semantically equivalent to the original. output differs and no numerical slack is in effect first 
+└─ DROPPED
+
+
+============================================================
+  SUMMARY: 0 rewrite(s) kept  |  0 pragma(s) applied  |  1 skipped
+  DiscoPoP unaided: 2 usable pragma(s) in this profile's draw  →  this run: 0   [BELOW, informational]
+    ✗  1:86  [skipped]  depth=0
+
+  Results → .discopop/agent_patches/accepted.json
+============================================================
+

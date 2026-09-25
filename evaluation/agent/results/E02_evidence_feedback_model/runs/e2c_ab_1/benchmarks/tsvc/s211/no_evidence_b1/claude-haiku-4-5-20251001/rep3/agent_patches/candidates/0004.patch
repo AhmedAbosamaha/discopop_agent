@@ -1,0 +1,22 @@
+--- s211.c
++++ s211.c
+@@ -138,16 +138,19 @@
+         memcpy(b_temp, b, (size_t)LEN_1D * sizeof(real_t));
+ 
+         /* Pass 1: Compute all new b[i] values in parallel (Do-All loop) */
++        #pragma omp parallel for shared(b_temp) 
+         for (int i = 1; i < LEN_1D-1; i++) {
+             b_temp[i] = b[i + 1] - e[i] * d[i];
+         }
+ 
+         /* Pass 2: Compute all a[i] values using newly computed b values (Do-All loop) */
++        #pragma omp parallel for shared(b_temp) 
+         for (int i = 1; i < LEN_1D-1; i++) {
+             a[i] = b_temp[i - 1] + c[i] * d[i];
+         }
+ 
+         /* Pass 3: Copy computed b values back to original array (Do-All loop) */
++        #pragma omp parallel for shared(b_temp) 
+         for (int i = 1; i < LEN_1D-1; i++) {
+             b[i] = b_temp[i];
+         }

@@ -1,0 +1,134 @@
+
+============================================================
+  DiscoPoP Agentic Controller
+============================================================
+  Source         : s211.c
+  DiscoPoP dir   : .discopop
+  Model          : claude-haiku-4-5-20251001
+  Budget         : 3 LLM retries/region (+2 free build fixes)
+  λ penalty      : 1.0
+  Min workload   : 0.0
+  Restruct. depth: 0 (Tier-2 allowed at depth 0–0)
+  Quality gate   : Tier-1 = all but speed, no escalation; Tier-2 = full
+  TSan           : barrier-aware (archer: /usr/lib/llvm-20/lib/libarcher.so)
+  Speedup gate   : require ≥ 1.1× measured
+  Dry run        : False
+  LLM mode       : claude-haiku-4-5-20251001
+  Edit mode      : direct
+  Re-profiling   : full (instrument + run + explore) after every kept rewrite
+  Explorer       : one attempt may take 60 s, then the draw is repeated (random stall, L5)
+  Pragmas        : DiscoPoP writes them in Phase B
+============================================================
+
+  [ok] Captured reference output on 2 inputs (71 bytes, 1406.6 ms baseline) for the correctness/performance gates.
+
+  [ok] Numerical noise floor 0 — 6 build variants agreed exactly; output is compared byte-for-byte.
+
+  Hotspots       : measured per-region runtimes are available — 16 region(s) measured, 5.3 ms total, ranking by predicted time saved at 48 threads
+
+  Baseline       : DiscoPoP proposes 0 applicable pattern(s) unaided; 0 of them produce a usable pragma
+                   → the run beats DiscoPoP by ending with more than 0
+
+  Initial candidates
+Region ID    Type           Saves    % run    Hot  Tier  Depth  Name
+--------------------------------------------------------------------------------------
+  1:81       loop          3.1 ms    60.0%    YES     2      0  lines 133–139
+  1:79       function      3.1 ms    60.0%    YES     2      0  kernel_s211
+  1:84       loop          3.1 ms    59.9%    YES     2      0  lines 134–137
+
+============================================================
+  FLOOR — DiscoPoP's own program, as the DiscoPoP-alone arm delivers it (D32)
+============================================================
+  [floor] DiscoPoP alone keeps nothing — the floor is the original program (D32)
+
+============================================================
+  PHASE A — restructure  (the source stays pragma-free)
+============================================================
+
+┌─ [depth=0] loop 1:81 (lines 133–139)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Stage 'correctness' failed: Program output changed — the patched program is NOT semantically equivalent to the original. output differs and no numerical slack is in effect first difference at line 2:   expected: pb_sum -184016.8
+│  [Tier-2] Assembling evidence (budget remaining: 1)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Original backed up → s211.c.original
+│  [Tier-2] Applied to s211.c
+│  [Tier-2] Re-profiling to refresh data and discover new candidates...
+│  [refresh] kind=full
+│  [Tier-2] Re-measured runtimes: 18 region(s), 5.6 ms total
+│  [Phase-A] Asking DiscoPoP what it now finds in the rewritten lines...
+│  [Tier-2] 0 survivor(s) rebuilt, 5 new at depth 1
+│  [Tier-2] DiscoPoP now finds: do_all @ lines 137–139, do_all @ lines 147–149, do_all @ lines 142–144
+│  [Tier-2] Pragma validation deferred to depth 1 (still allowed to restructure)
+└─ ACCEPTED
+
+┌─ [depth=1] loop 1:82 (lines 135–152)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Restructuring not allowed at depth 1 (--restructure-depth=0) → SKIP
+└─ SKIPPED
+
+┌─ [depth=1] function 1:79 (lines 131–155)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Restructuring not allowed at depth 1 (--restructure-depth=0) → SKIP
+└─ SKIPPED
+
+┌─ [depth=1] loop 1:85 (lines 137–139)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=1] loop 1:96 (lines 147–149)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=1] loop 1:91 (lines 142–144)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+
+============================================================
+  PHASE B — annotate  (3 candidate pragma(s))
+============================================================
+
+  Timing noise floor on this machine: 0.994 → keep anything at or above 0.984
+
+┌─ pattern #122  do_all @ lines 137–139  (W=3071808)
+│  #pragma omp parallel for
+│  marginal 1.07×
+│  [Phase-B] Applied to s211.c
+└─ APPLIED
+
+┌─ pattern #124  do_all @ lines 147–149  (W=3071808)
+│  #pragma omp parallel for
+│  marginal 1.77×
+│  [Phase-B] Applied to s211.c
+└─ APPLIED
+
+┌─ pattern #123  do_all @ lines 142–144  (W=3071808)
+│  #pragma omp parallel for
+│  marginal 1.92×
+│  [Phase-B] Applied to s211.c
+└─ APPLIED
+
+============================================================
+  SETTLING — verify the finished source, drop what does not hold up
+============================================================
+  [ok] finished source verified — output matches, 2.09x the original, paired
+
+
+============================================================
+  SUMMARY: 1 rewrite(s) kept  |  3 pragma(s) applied  |  2 skipped
+  DiscoPoP unaided: 0 usable pragma(s) in this profile's draw  →  this run: 3   [BEAT, informational]
+    ✓  loop 1:81  [Tier-2]  depth=0
+    ✓  loop 1:85  [Phase-B pragma]  depth=0  marginal 1.07×
+    ✓  loop 1:96  [Phase-B pragma]  depth=0  marginal 1.77×
+    ✓  loop 1:91  [Phase-B pragma]  depth=0  marginal 1.92×
+    ✗  1:82  [skipped]  depth=1
+    ✗  1:79  [skipped]  depth=1
+
+  Results → .discopop/agent_patches/accepted.json
+============================================================
+

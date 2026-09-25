@@ -1,0 +1,10 @@
+--- s341.c
++++ s341.c
+@@ -146,6 +146,7 @@
+         int count = j;
+ 
+         /* Second pass: assign positive elements to a (no loop-carried dependence) */
++        #pragma omp parallel for firstprivate(count) shared(indices) 
+         for (int j = 0; j < count; j++) {
+             a[j] = b[indices[j]];
+         }

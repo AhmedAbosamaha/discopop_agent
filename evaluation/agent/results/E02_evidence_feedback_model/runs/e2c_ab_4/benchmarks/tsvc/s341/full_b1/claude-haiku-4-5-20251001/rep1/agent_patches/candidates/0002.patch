@@ -1,0 +1,10 @@
+--- s341.c
++++ s341.c
+@@ -146,6 +146,7 @@
+         }
+ 
+         // Phase 2: Write to a using precomputed positions
++        #pragma omp parallel for shared(pos) 
+         for (int i = 0; i < LEN_1D; i++) {
+             if (pos[i] >= 0) {
+                 a[pos[i]] = b[i];

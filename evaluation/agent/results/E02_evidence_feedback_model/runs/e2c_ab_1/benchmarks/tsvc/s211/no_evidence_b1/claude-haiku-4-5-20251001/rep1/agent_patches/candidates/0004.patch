@@ -1,0 +1,10 @@
+--- s211.c
++++ s211.c
+@@ -141,6 +141,7 @@
+             b_temp[i] = b[i + 1] - e[i] * d[i];
+         }
+         // Phase 2: Copy new b values back to b
++        #pragma omp parallel for shared(b_temp) 
+         for (int i = 1; i < LEN_1D-1; i++) {
+             b[i] = b_temp[i];
+         }

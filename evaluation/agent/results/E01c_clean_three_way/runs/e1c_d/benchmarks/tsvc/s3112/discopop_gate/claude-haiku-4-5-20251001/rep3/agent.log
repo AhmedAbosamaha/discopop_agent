@@ -1,0 +1,80 @@
+
+============================================================
+  DiscoPoP Agentic Controller
+============================================================
+  Source         : s3112.c
+  DiscoPoP dir   : .discopop
+  Model          : claude-haiku-4-5-20251001
+  Budget         : 0 LLM retries/region (+2 free build fixes)
+  λ penalty      : 1.0
+  Min workload   : 0.0
+  Restruct. depth: 0 (Tier-2 allowed at depth 0–0)
+  Quality gate   : Tier-1 = all but speed, no escalation; Tier-2 = full
+  TSan           : barrier-aware (archer: /usr/lib/llvm-20/lib/libarcher.so)
+  Speedup gate   : require ≥ 1.1× measured
+  Dry run        : False
+  LLM mode       : claude-haiku-4-5-20251001
+  Edit mode      : direct
+  Re-profiling   : full (instrument + run + explore) after every kept rewrite
+  Explorer       : one attempt may take 60 s, then the draw is repeated (random stall, L5)
+  Pragmas        : DiscoPoP writes them in Phase B
+============================================================
+
+  [ok] Captured reference output on 2 inputs (69 bytes, 721.1 ms baseline) for the correctness/performance gates.
+
+  [ok] Numerical noise floor 0 — 6 build variants agreed exactly; output is compared byte-for-byte.
+
+  Hotspots       : measured per-region runtimes are available — 16 region(s) measured, 5.6 ms total, ranking by predicted time saved at 48 threads
+
+  Baseline       : DiscoPoP proposes 2 applicable pattern(s) unaided; 2 of them produce a usable pragma
+                   → the run beats DiscoPoP by ending with more than 2
+
+  Initial candidates
+Region ID    Type           Saves    % run    Hot  Tier  Depth  Name
+--------------------------------------------------------------------------------------
+  1:81       loop          4.3 ms    78.1%    YES     1      0  lines 134–141
+  1:79       function      4.3 ms    78.1%    YES     2      0  kernel_s3112
+  1:85       loop          4.3 ms    78.0%    YES     1      0  lines 136–139
+
+============================================================
+  PHASE A — restructure  (the source stays pragma-free)
+============================================================
+
+┌─ [depth=0] loop 1:81 (lines 134–141)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] function 1:79 (lines 131–142)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:85 (lines 136–139)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+
+============================================================
+  PHASE B — annotate  (2 candidate pragma(s))
+============================================================
+
+  Timing noise floor on this machine: 0.995 → keep anything at or above 0.985
+
+┌─ pattern #122  do_all @ lines 134–141  (W=336)
+│  #pragma omp parallel for
+│  gate failed at 'tsan': Race detected: WARNING: ThreadSanitizer: data race (pid=1542830)   Write of size 8 at 0x7ffff6633000 by thread T8:     #0 kernel_s3112.omp_outlined_de
+└─ DROPPED
+
+┌─ pattern #121  do_all @ lines 136–139  (W=4608000)
+│  #pragma omp parallel for
+│  gate failed at 'correctness': Program output changed — the patched program is NOT semantically equivalent to the original. output differs and no numerical slack is in effect first 
+└─ DROPPED
+
+
+============================================================
+  SUMMARY: 0 rewrite(s) kept  |  0 pragma(s) applied  |  1 skipped
+  DiscoPoP unaided: 2 usable pragma(s) in this profile's draw  →  this run: 0   [BELOW, informational]
+    ✗  1:79  [skipped]  depth=0
+
+  Results → .discopop/agent_patches/accepted.json
+============================================================
+

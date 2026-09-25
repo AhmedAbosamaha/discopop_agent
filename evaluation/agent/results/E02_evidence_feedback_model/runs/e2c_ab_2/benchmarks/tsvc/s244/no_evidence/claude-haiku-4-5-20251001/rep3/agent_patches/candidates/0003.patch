@@ -1,0 +1,10 @@
+--- s244.c
++++ s244.c
+@@ -137,6 +137,7 @@
+         memcpy(b_old, b, (size_t)LEN_1D * sizeof(real_t));
+         memcpy(a_new, a, (size_t)LEN_1D * sizeof(real_t));
+ 
++        #pragma omp parallel for shared(a_new,b_old) 
+         for (int i = 0; i < LEN_1D-1; ++i) {
+             a_new[i] = b_old[i] + c[i] * d[i];
+             b[i] = c[i] + b_old[i];

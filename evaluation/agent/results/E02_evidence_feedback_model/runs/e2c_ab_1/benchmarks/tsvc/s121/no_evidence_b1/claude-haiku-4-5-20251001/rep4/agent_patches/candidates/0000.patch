@@ -1,0 +1,22 @@
+--- s121.c
++++ s121.c
+@@ -132,10 +132,18 @@
+ {
+     int j;
+     for (int nl = 0; nl < R; nl++) {
++        // Copy a[] to break the read-after-write dependence chain
++        real_t *a_copy = (real_t *)malloc(LEN_1D * sizeof(real_t));
++        for (int i = 0; i < LEN_1D; i++) {
++            a_copy[i] = a[i];
++        }
++
+         for (int i = 0; i < LEN_1D-1; i++) {
+             j = i + 1;
+-            a[i] = a[j] + b[i];
++            a[i] = a_copy[j] + b[i];
+         }
++
++        free(a_copy);
+         pb_mix(nl);
+     }
+     return (real_t)0;

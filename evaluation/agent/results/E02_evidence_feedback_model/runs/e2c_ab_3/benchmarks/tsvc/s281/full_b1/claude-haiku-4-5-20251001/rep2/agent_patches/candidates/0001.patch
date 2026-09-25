@@ -1,0 +1,10 @@
+--- s281.c
++++ s281.c
+@@ -141,6 +141,7 @@
+ 
+     for (int nl = 0; nl < R; nl++) {
+         /* Copy current state to temporary arrays */
++        #pragma omp parallel for shared(temp_b,temp_a) 
+         for (int i = 0; i < LEN_1D; i++) {
+             temp_a[i] = a[i];
+             temp_b[i] = b[i];

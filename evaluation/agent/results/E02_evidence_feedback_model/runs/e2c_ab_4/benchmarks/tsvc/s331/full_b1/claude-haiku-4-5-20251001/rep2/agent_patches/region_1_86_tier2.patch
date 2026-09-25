@@ -1,0 +1,18 @@
+--- s331.c
++++ s331.c
+@@ -133,12 +133,13 @@
+     int j;
+     real_t chksum;
+     for (int nl = 0; nl < R; nl++) {
+-        j = -1;
++        int local_j = -1;
+         for (int i = 0; i < LEN_1D; i++) {
+             if (a[i] < (real_t)0.) {
+-                j = i;
++                local_j = i;
+             }
+         }
++        j = local_j;
+         chksum = (real_t) j;
+         pb_mix(nl);
+     }

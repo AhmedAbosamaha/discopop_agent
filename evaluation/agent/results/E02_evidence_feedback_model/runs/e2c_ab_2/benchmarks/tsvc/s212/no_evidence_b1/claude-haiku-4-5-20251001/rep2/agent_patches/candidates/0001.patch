@@ -1,0 +1,10 @@
+--- s212.c
++++ s212.c
+@@ -137,6 +137,7 @@
+         for (int i = 0; i < LEN_1D; i++) {
+             a_copy[i] = a[i];
+         }
++        #pragma omp parallel for shared(a_copy) 
+         for (int i = 0; i < LEN_1D-1; i++) {
+             a[i] = a_copy[i] * c[i];
+             b[i] += a_copy[i + 1] * d[i];

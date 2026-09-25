@@ -1,0 +1,15 @@
+--- s323.c
++++ s323.c
+@@ -131,7 +131,11 @@
+ static real_t kernel_s323(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
+-        for (int i = 1; i < LEN_1D; i++) {
++        for (int i = 1; i < LEN_1D; i += 2) {
++            a[i] = b[i-1] + c[i] * d[i];
++            b[i] = a[i] + c[i] * e[i];
++        }
++        for (int i = 2; i < LEN_1D; i += 2) {
+             a[i] = b[i-1] + c[i] * d[i];
+             b[i] = a[i] + c[i] * e[i];
+         }

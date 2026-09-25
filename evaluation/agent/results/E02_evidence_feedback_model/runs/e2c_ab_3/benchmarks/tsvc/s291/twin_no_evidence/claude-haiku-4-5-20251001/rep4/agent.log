@@ -1,0 +1,46 @@
+
+============================================================
+  Model-only twin (D38) — DiscoPoP's information, no gate, one attempt
+============================================================
+  Source         : s291.c
+  Model          : claude-haiku-4-5-20251001
+  Pragmas by     : DiscoPoP
+  Evidence       : none
+  Depth          : 0
+
+┌─ [depth=0] loop 1:81 (lines 134–141)
+└─ DISCOPOP'S (annotated at the end)
+
+┌─ [depth=0] function 1:79 (lines 131–142)
+│  [twin] Calling claude-haiku-4-5-20251001...
+│  [twin] the model's plan: ## Analysis **The blocking dependence:** `im1` is a loop-carried scalar that creates a strict dependence chain. In iteration `i`, we use the value set in iteration `i-1`: `im1` starts at `LEN_1D-1`, then for each iteration becomes the previous iteration's `i`. This means `a[i]` depends on the completion of iteration `i-1`. **The actual computation:** Tracing the values, iteration `i` computes: - `
+│  [twin] edited, 0 OpenMP pragma(s) in the file — kept unchecked
+│  [twin] Re-profiling (as the agent does after a kept rewrite)...
+│  [twin] 3 new region(s) at depth 1
+└─ EDITED
+
+┌─ [depth=1] loop 1:81 (lines 133–139)
+└─ DISCOPOP'S (annotated at the end)
+
+┌─ [depth=1] function 1:79 (lines 131–140)
+└─ SKIPPED (depth 1 > --restructure-depth 0)
+
+┌─ [depth=1] loop 1:84 (lines 134–137)
+└─ DISCOPOP'S (annotated at the end)
+
+
+============================================================
+  DiscoPoP annotates — 2 applicable pattern(s), NOTHING CHECKED
+============================================================
+
+┌─ do_all @ lines 133–139  (W=288)
+│  #pragma omp parallel for
+│  [twin] Original backed up → s291.c.original
+│  [twin] Applied to s291.c
+└─ INSERTED (unchecked)
+
+┌─ do_all @ lines 134–137  (W=4608000)
+└─ SKIPPED (nested in a loop that is already parallel)
+
+
+  SUMMARY: 1 region(s) asked  |  1 edited  |  1 DiscoPoP pragma(s) inserted unchecked  |  nothing was checked here — the harness judges the result

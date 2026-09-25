@@ -1,0 +1,10 @@
+--- s212.c
++++ s212.c
+@@ -134,6 +134,7 @@
+         // Create backup of array a to break the loop-carried dependence
+         real_t *a_backup = (real_t *)malloc((size_t)LEN_1D * sizeof(real_t));
+         if (!a_backup) return (real_t)0;
++        #pragma omp parallel for shared(a_backup) 
+         for (int k = 0; k < LEN_1D; k++) {
+             a_backup[k] = a[k];
+         }

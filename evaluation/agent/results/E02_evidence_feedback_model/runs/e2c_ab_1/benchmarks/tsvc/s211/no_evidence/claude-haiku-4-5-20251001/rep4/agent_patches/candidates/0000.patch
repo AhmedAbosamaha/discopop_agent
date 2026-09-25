@@ -1,0 +1,41 @@
+--- s211.c
++++ s211.c
+@@ -130,13 +130,36 @@
+ 
+ static real_t kernel_s211(void)
+ {
++    real_t *b_new = (real_t*)malloc((size_t)LEN_1D * sizeof(real_t));
++    real_t *a_new = (real_t*)malloc((size_t)LEN_1D * sizeof(real_t));
++    if (!b_new || !a_new) {
++        if (b_new) free(b_new);
++        if (a_new) free(a_new);
++        return (real_t)0;
++    }
++
+     for (int nl = 0; nl < R; nl++) {
++        // Phase 1: compute new b values using original b array
++        b_new[0] = b[0];
+         for (int i = 1; i < LEN_1D-1; i++) {
+-            a[i] = b[i - 1] + c[i] * d[i];
+-            b[i] = b[i + 1] - e[i] * d[i];
++            b_new[i] = b[i + 1] - e[i] * d[i];
++        }
++
++        // Phase 2: compute new a values using b_new array
++        for (int i = 1; i < LEN_1D-1; i++) {
++            a_new[i] = b_new[i - 1] + c[i] * d[i];
++        }
++
++        // Phase 3: update a and b arrays
++        for (int i = 1; i < LEN_1D-1; i++) {
++            a[i] = a_new[i];
++            b[i] = b_new[i];
+         }
+         pb_mix(nl);
+     }
++
++    free(b_new);
++    free(a_new);
+     return (real_t)0;
+ }
+ 

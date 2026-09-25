@@ -1,0 +1,10 @@
+--- s341.c
++++ s341.c
+@@ -133,6 +133,7 @@
+     int *prefix = (int*)malloc((LEN_1D + 1) * sizeof(int));
+     if (!prefix) return (real_t)0;
+ 
++    #pragma omp parallel for shared(prefix) 
+     for (int nl = 0; nl < R; nl++) {
+         // First pass: compute prefix sum (count of positive values before each position)
+         prefix[0] = 0;

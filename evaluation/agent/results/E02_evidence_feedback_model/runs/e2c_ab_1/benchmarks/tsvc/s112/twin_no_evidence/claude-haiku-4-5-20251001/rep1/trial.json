@@ -1,0 +1,170 @@
+{
+  "benchmark": "tsvc/s112",
+  "kernel": "s112",
+  "source": "s112.c",
+  "arm": "twin_no_evidence",
+  "model": "claude-haiku-4-5-20251001",
+  "arm_flags": [
+    "--require-speedup",
+    "--min-runtime-share",
+    "0.01",
+    "--budget",
+    "1",
+    "--evidence",
+    "none",
+    "--timing-cflags=-DLARGE_DATASET"
+  ],
+  "started_at": "2026-09-25T07:23:44",
+  "host": "rms14562",
+  "host_load_start": [
+    7.36376953125,
+    7.099609375,
+    7.6796875
+  ],
+  "agent_cmd": [
+    "/home/ahmedabosamaha/discopop_agent/venv/bin/python",
+    "-m",
+    "discopop_agent.twin",
+    "--source-file",
+    "s112.c",
+    "--discopop-dir",
+    ".discopop",
+    "--provider",
+    "claude-agent-sdk",
+    "--model",
+    "claude-haiku-4-5-20251001",
+    "--edit-mode",
+    "direct",
+    "--require-speedup",
+    "--min-runtime-share",
+    "0.01",
+    "--budget",
+    "1",
+    "--evidence",
+    "none",
+    "--timing-cflags=-DLARGE_DATASET",
+    "--check-input",
+    "7",
+    "--exclude-functions",
+    "init_array,pb_mix,pb_emit,pb_emit_array,pb_report,pb_seed,pb_uniform,pb_timer_start,pb_timer_stop,main",
+    "--explorer-timeout",
+    "60"
+  ],
+  "agent_s": 84.0,
+  "agent_rc": 0,
+  "llm_calls": 1,
+  "llm_call_failures": 0,
+  "explorer_retries": 0,
+  "explorer_stalls": 0,
+  "reverts": 0,
+  "refresh_fast": 0,
+  "refresh_full": 0,
+  "refresh_fallback": 0,
+  "runtime_remeasurements": 0,
+  "phase_b_deferred": 0,
+  "phase_b_joint_kept": 0,
+  "dp_floor": null,
+  "gate_failures_phase_a": {},
+  "gate_failures_phase_b": {},
+  "gate_passes_phase_a": 0,
+  "region_verdicts": {
+    "EDITED": 1,
+    "DISCOPOP": 2,
+    "SKIPPED": 2,
+    "INSERTED": 1
+  },
+  "settle_dropped": 0,
+  "twin_asked": 1,
+  "twin_edited": 1,
+  "twin_dp_inserted": 1,
+  "twin_reprofile_failed": false,
+  "llm_usage": {
+    "calls_recorded": 1,
+    "input_tokens": 26,
+    "output_tokens": 11809,
+    "cache_read_input_tokens": 38943,
+    "cache_creation_input_tokens": 15436,
+    "cost_usd": 0.0949,
+    "model_seconds": 76.9
+  },
+  "source_changed": true,
+  "scaffold": {
+    "ok": true,
+    "problems": [],
+    "applies": true
+  },
+  "pragmas_added": 1,
+  "pragmas_in_final": 1,
+  "candidates_recorded": 0,
+  "verify": {
+    "verify_size": "EXTRALARGE",
+    "threads": [
+      6,
+      12
+    ],
+    "repeats": 5,
+    "compiler": "/usr/bin/clang-20",
+    "final_flags": [],
+    "build_errors": {
+      "final_dump": "/home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2c_ab_1/benchmarks/tsvc/s112/twin_no_evidence/claude-haiku-4-5-20251001/rep1/final.c:136:60: error: cannot return from OpenMP region\n  136 |         if (!a_save) { fprintf(stderr, \"out of memory\\n\"); return (real_t)0; }\n      |                                                            ^\n1 error generated.\n",
+      "final_par": "/home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2c_ab_1/benchmarks/tsvc/s112/twin_no_evidence/claude-haiku-4-5-20251001/rep1/final.c:136:60: error: cannot return from OpenMP region\n  136 |         if (!a_save) { fprintf(stderr, \"out of memory\\n\"); return (real_t)0; }\n      |                                                            ^\n1 error generated.\n"
+    },
+    "dump_exact": null,
+    "dump_max_rel_err": null,
+    "status": "verify_build_failed",
+    "speed_measurable": true
+  },
+  "verify_s": 0.3,
+  "status": "done",
+  "outcome": "VERIFY_FAILED",
+  "finished_at": "2026-09-25T07:25:09",
+  "host_load_end": [
+    7.53125,
+    7.232421875,
+    7.68017578125
+  ],
+  "profile": {
+    "wrapper": "discopop_cc",
+    "instrument_s": 0.16,
+    "profiled_run_s": 0.21,
+    "explore_stalls": 0,
+    "explore_s": 3.42,
+    "explore_success_s": 3.42,
+    "explore_attempts": 1,
+    "explore_timed_out": false,
+    "explore_failures": [],
+    "patterns": {
+      "optimizer_output": 0,
+      "merged_pattern": 0,
+      "task": 117,
+      "do_all": 6,
+      "reduction": 0
+    },
+    "profile_sha256": "b045b32e11284f0f783bbea104f3c228b10237c1d835f247bca0b52131d68fd5"
+  },
+  "package_integrity": {
+    "before": {
+      "checked": "before trial",
+      "at": "2026-09-25T07:23:44",
+      "prepared_sha256": "5c5ea782f12650f4b1ce15156cc4333d47770417fd9c918ad001b0406893a00b",
+      "packager_sha256": "5c5ea782f12650f4b1ce15156cc4333d47770417fd9c918ad001b0406893a00b",
+      "archived_sha256": "5c5ea782f12650f4b1ce15156cc4333d47770417fd9c918ad001b0406893a00b",
+      "profile_sha256": "b045b32e11284f0f783bbea104f3c228b10237c1d835f247bca0b52131d68fd5",
+      "ok": true
+    },
+    "after": {
+      "checked": "after trial",
+      "at": "2026-09-25T07:25:09",
+      "prepared_sha256": "5c5ea782f12650f4b1ce15156cc4333d47770417fd9c918ad001b0406893a00b",
+      "packager_sha256": "5c5ea782f12650f4b1ce15156cc4333d47770417fd9c918ad001b0406893a00b",
+      "archived_sha256": "5c5ea782f12650f4b1ce15156cc4333d47770417fd9c918ad001b0406893a00b",
+      "profile_sha256": "b045b32e11284f0f783bbea104f3c228b10237c1d835f247bca0b52131d68fd5",
+      "ok": true
+    }
+  },
+  "speed_check_off": false,
+  "timing_flags": [
+    "--timing-cflags=-DLARGE_DATASET"
+  ],
+  "repeat": 1
+}

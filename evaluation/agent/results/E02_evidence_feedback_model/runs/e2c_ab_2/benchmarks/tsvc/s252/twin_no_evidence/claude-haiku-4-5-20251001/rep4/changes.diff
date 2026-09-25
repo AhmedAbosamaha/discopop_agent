@@ -1,0 +1,26 @@
+--- original.c
++++ final.c
+@@ -131,13 +131,20 @@
+ static real_t kernel_s252(void)
+ {
+     real_t t, s;
++    #pragma omp parallel for private(t) 
+     for (int nl = 0; nl < R; nl++) {
++        // Phase 1: compute all s values (Do-All, no dependences)
++        real_t *s_vals = (real_t*)malloc(LEN_1D * sizeof(real_t));
++        for (int i = 0; i < LEN_1D; i++) {
++            s_vals[i] = b[i] * c[i];
++        }
++        // Phase 2: compute a values using stored s values
+         t = (real_t) 0.;
+         for (int i = 0; i < LEN_1D; i++) {
+-            s = b[i] * c[i];
+-            a[i] = s + t;
+-            t = s;
++            a[i] = s_vals[i] + t;
++            t = s_vals[i];
+         }
++        free(s_vals);
+         pb_mix(nl);
+     }
+     return (real_t)0;

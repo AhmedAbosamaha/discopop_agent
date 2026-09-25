@@ -1,0 +1,10 @@
+--- s121.c
++++ s121.c
+@@ -139,6 +139,7 @@
+ 
+     for (int nl = 0; nl < R; nl++) {
+         // Phase 1: Read all original values into temp array (Do-All loop, no dependence)
++        #pragma omp parallel for shared(temp) 
+         for (int i = 0; i < LEN_1D-1; i++) {
+             temp[i] = a[i+1] + b[i];
+         }
