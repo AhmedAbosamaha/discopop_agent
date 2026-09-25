@@ -1,0 +1,30 @@
+--- original.c
++++ final.c
+@@ -131,10 +131,26 @@
+ static real_t kernel_s211(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        /* Phase 1: Compute all new b values in parallel.
++         * Each iteration i reads b[i+1] (original/immutable in parallel execution)
++         * and computes b[i]. No iteration reads b[i] within this phase, so
++         * iterations are independent (no loop-carried flow dependence).
++         * Variables: i (private, loop var); a,b,c,d,e (shared); no updates needed. */
++        #pragma omp parallel for
++        for (int i = 1; i < LEN_1D-1; i++) {
++            b[i] = b[i + 1] - e[i] * d[i];
++        }
++
++        /* Phase 2: Compute all a values in parallel using updated b from Phase 1.
++         * Each iteration i reads b[i-1] (updated in Phase 1) and loop-invariant c[i], d[i]
++         * and computes a[i]. No iteration reads a[i] within this phase, so
++         * iterations are independent (no loop-carried flow dependence).
++         * Variables: i (private, loop var); a,b,c,d,e (shared); no updates needed. */
++        #pragma omp parallel for
+         for (int i = 1; i < LEN_1D-1; i++) {
+             a[i] = b[i - 1] + c[i] * d[i];
+-            b[i] = b[i + 1] - e[i] * d[i];
+         }
++
+         pb_mix(nl);
+     }
+     return (real_t)0;

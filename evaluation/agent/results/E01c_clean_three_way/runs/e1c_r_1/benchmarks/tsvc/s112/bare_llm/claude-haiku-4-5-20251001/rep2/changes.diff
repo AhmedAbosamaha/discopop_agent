@@ -1,0 +1,32 @@
+--- original.c
++++ final.c
+@@ -130,12 +130,27 @@
+ 
+ static real_t kernel_s112(void)
+ {
++    real_t *a_new = (real_t*)malloc((size_t)LEN_1D * sizeof(real_t));
++    if (!a_new) return (real_t)0;
++
+     for (int nl = 0; nl < R; nl++) {
+-        for (int i = LEN_1D - 2; i >= 0; i--) {
+-            a[i+1] = a[i] + b[i];
++        /* Parallel loop: compute a_new[i+1] = a[i] + b[i] for all i independently.
++         * No antidependence: all iterations read from original a and b,
++         * write to distinct locations in a_new. */
++        #pragma omp parallel for shared(a, b, a_new)
++        for (int i = 0; i < LEN_1D - 1; i++) {
++            a_new[i+1] = a[i] + b[i];
+         }
++
++        /* Copy results back to a (sequential, minimal work). */
++        for (int i = 1; i < LEN_1D; i++) {
++            a[i] = a_new[i];
++        }
++
+         pb_mix(nl);
+     }
++
++    free(a_new);
+     return (real_t)0;
+ }
+ 

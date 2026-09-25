@@ -1,0 +1,23 @@
+--- original.c
++++ final.c
+@@ -132,7 +132,19 @@
+ {
+     real_t x;
+     for (int nl = 0; nl < R; nl++) {
+-        for (int i = 0; i < LEN_1D; i++) {
++        // First half: iterations 0 to LEN_1D/2-1 are independent
++        // (each iteration reads from second half, which hasn't been modified yet)
++        #pragma omp parallel for private(x) shared(a, b, c)
++        for (int i = 0; i < LEN_1D/2; i++) {
++            x = a[LEN_1D-i-1] + b[i] * c[i];
++            a[i] = x-(real_t)1.0;
++            b[i] = x;
++        }
++
++        // Second half: iterations LEN_1D/2 to LEN_1D-1 are independent
++        // (each iteration reads from first half, which is now complete)
++        #pragma omp parallel for private(x) shared(a, b, c)
++        for (int i = LEN_1D/2; i < LEN_1D; i++) {
+             x = a[LEN_1D-i-1] + b[i] * c[i];
+             a[i] = x-(real_t)1.0;
+             b[i] = x;

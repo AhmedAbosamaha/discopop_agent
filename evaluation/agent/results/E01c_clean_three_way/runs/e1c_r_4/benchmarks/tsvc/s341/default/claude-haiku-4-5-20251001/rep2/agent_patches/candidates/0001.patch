@@ -1,0 +1,10 @@
+--- s341.c
++++ s341.c
+@@ -131,6 +131,7 @@
+ static real_t kernel_s341(void)
+ {
+     int j;
++    #pragma omp parallel for 
+     for (int nl = 0; nl < R; nl++) {
+         // Compute prefix sums of positive indicators: prefix[i] = count of b[0..i-1] > 0
+         int *prefix = (int *)malloc((LEN_1D + 1) * sizeof(int));

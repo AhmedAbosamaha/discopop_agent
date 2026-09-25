@@ -1,0 +1,22 @@
+--- s211.c
++++ s211.c
+@@ -131,9 +131,18 @@
+ static real_t kernel_s211(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        /* Phase 1: update b[i] = b[i+1] - e[i]*d[i] for all i.
++         * Each b[i] depends only on b[i+1] (never read before update),
++         * so all iterations are independent — Do-All parallelizable. */
++        for (int i = 1; i < LEN_1D-1; i++) {
++            b[i] = b[i + 1] - e[i] * d[i];
++        }
++        /* Phase 2: compute a[i] = b[i-1] + c[i]*d[i] for all i.
++         * Now b has been fully updated, and each a[i] reads only b[i-1]
++         * (never written again in phase 2), so all iterations are
++         * independent — Do-All parallelizable. */
+         for (int i = 1; i < LEN_1D-1; i++) {
+             a[i] = b[i - 1] + c[i] * d[i];
+-            b[i] = b[i + 1] - e[i] * d[i];
+         }
+         pb_mix(nl);
+     }

@@ -1,0 +1,10 @@
+--- s241.c
++++ s241.c
+@@ -140,6 +140,7 @@
+             a_tmp[i] = b[i] * c[i] * d[i];
+         }
+         // Phase 2: Compute new b values using old a[i+1] and new a[i]
++        #pragma omp parallel for shared(a_tmp) 
+         for (int i = 0; i < LEN_1D-1; i++) {
+             b[i] = a_tmp[i] * a[i+1] * d[i];
+         }

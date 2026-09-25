@@ -1,0 +1,10 @@
+--- s252.c
++++ s252.c
+@@ -131,6 +131,7 @@
+ static real_t kernel_s252(void)
+ {
+     real_t prod[LEN_1D];
++    #pragma omp parallel for private(prod) 
+     for (int nl = 0; nl < R; nl++) {
+         /* Phase 1: compute products (parallel Do-All) */
+         for (int i = 0; i < LEN_1D; i++) {

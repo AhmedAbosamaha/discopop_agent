@@ -1,0 +1,10 @@
+--- s281.c
++++ s281.c
+@@ -142,6 +142,7 @@
+             b[i] = x;
+         }
+         /* Pass 2: i from mid to LEN_1D-1; reads a[mid-1..0] (updated by pass 1), writes a[mid..LEN_1D-1] (disjoint) */
++        #pragma omp parallel for firstprivate(mid) private(x) 
+         for (int i = mid; i < LEN_1D; i++) {
+             x = a[LEN_1D-i-1] + b[i] * c[i];
+             a[i] = x-(real_t)1.0;

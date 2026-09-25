@@ -1,0 +1,29 @@
+--- original.c
++++ final.c
+@@ -131,10 +131,25 @@
+ static real_t kernel_s241(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        /* Create a snapshot of array a at loop start to eliminate anti-dependence:
++           iteration i reads a[i+1], which iteration i+1 writes. Without snapshot,
++           parallel execution order would affect which version of a[i+1] is read,
++           giving order-dependent results. With snapshot, all iterations read the
++           same consistent state. */
++        real_t *a_snapshot = (real_t*)malloc((size_t)LEN_1D * sizeof(real_t));
++        memcpy(a_snapshot, a, (size_t)LEN_1D * sizeof(real_t));
++
++        /* Parallelize inner loop: each iteration i independently computes a[i] and b[i]
++           from distinct array indices. All iterations read from a_snapshot (shared,
++           read-only snapshot of a), b, c, d (shared), and write to a, b (shared at
++           distinct indices). Loop variable i is private by default. */
++        #pragma omp parallel for shared(a, b, c, d, a_snapshot)
+         for (int i = 0; i < LEN_1D-1; i++) {
+             a[i] = b[i] * c[i  ] * d[i];
+-            b[i] = a[i] * a[i+1] * d[i];
++            b[i] = a[i] * a_snapshot[i+1] * d[i];
+         }
++
++        free(a_snapshot);
+         pb_mix(nl);
+     }
+     return (real_t)0;

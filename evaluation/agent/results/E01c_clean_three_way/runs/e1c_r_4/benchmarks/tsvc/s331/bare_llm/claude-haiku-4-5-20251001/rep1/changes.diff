@@ -1,0 +1,31 @@
+--- original.c
++++ final.c
+@@ -134,9 +134,25 @@
+     real_t chksum;
+     for (int nl = 0; nl < R; nl++) {
+         j = -1;
+-        for (int i = 0; i < LEN_1D; i++) {
+-            if (a[i] < (real_t)0.) {
+-                j = i;
++        /* Parallel inner loop: find the maximum index where a[i] < 0
++         * i: private loop variable
++         * j: shared, updated via critical section with thread-local maximum
++         * local_j: private per-thread variable to reduce critical section overhead
++         * a[i]: shared read-only access
++         */
++        #pragma omp parallel
++        {
++            int local_j = -1;
++            #pragma omp for
++            for (int i = 0; i < LEN_1D; i++) {
++                if (a[i] < (real_t)0.) {
++                    local_j = i;
++                }
++            }
++            /* Combine thread-local results to find global maximum */
++            #pragma omp critical
++            {
++                if (local_j > j) j = local_j;
+             }
+         }
+         chksum = (real_t) j;

@@ -1,0 +1,10 @@
+--- s211.c
++++ s211.c
+@@ -139,6 +139,7 @@
+         for (int i = 0; i < LEN_1D; i++) {
+             b_lookahead[i] = b[i];
+         }
++        #pragma omp parallel for shared(b_lookahead) 
+         for (int i = 1; i < LEN_1D-1; i++) {
+             a[i] = b[i - 1] + c[i] * d[i];
+             b[i] = b_lookahead[i + 1] - e[i] * d[i];

@@ -1,0 +1,10 @@
+--- s211.c
++++ s211.c
+@@ -139,6 +139,7 @@
+             b_new[i] = b[i + 1] - e[i] * d[i];
+         }
+         // Update b with new values
++        #pragma omp parallel for shared(b_new) 
+         for (int i = 1; i < LEN_1D-1; i++) {
+             b[i] = b_new[i];
+         }

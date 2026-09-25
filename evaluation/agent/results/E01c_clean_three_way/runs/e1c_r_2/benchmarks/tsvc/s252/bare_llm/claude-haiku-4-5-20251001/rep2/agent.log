@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s252.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : init_array, pb_mix, pb_emit, pb_emit_array, pb_report, pb_seed, pb_uniform, pb_timer_start, pb_timer_stop, main
+  Prompt         : mirror
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] s252.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Looking at the program, I need to understand the kernel computation: **Analysis of the blocking dependence:** The `kernel_s252()` function has a sequential loop with a carry dependence through variable `t`: ```c t = 0; for i in 0..LEN_1D: s = b[i] * c[i] a[i] = s + t t = s ``` Tracing the computation: - a[0] = b[0]*c[0] + 0 - a[1] = b[1]*c[1] + b[0]*c[0] (t from previous iteration) - a[i] = b[i]*c
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

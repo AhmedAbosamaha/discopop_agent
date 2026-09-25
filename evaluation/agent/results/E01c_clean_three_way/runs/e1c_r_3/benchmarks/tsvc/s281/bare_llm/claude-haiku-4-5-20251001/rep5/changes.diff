@@ -1,0 +1,39 @@
+--- original.c
++++ final.c
+@@ -132,11 +132,35 @@
+ {
+     real_t x;
+     for (int nl = 0; nl < R; nl++) {
+-        for (int i = 0; i < LEN_1D; i++) {
++        /* Parallelize over pairs (i, LEN_1D-1-i).
++         * Within each pair, iteration i runs before j=LEN_1D-1-i, preserving the dependence.
++         * Between pairs, iterations are independent (disjoint array elements).
++         * This gives the same result as the sequential loop while allowing parallel execution.
++         */
++        #pragma omp parallel for private(x) shared(a, b, c)
++        for (int pair = 0; pair < LEN_1D / 2; pair++) {
++            int i = pair;
++            int j = LEN_1D - 1 - i;
++
++            /* Process iteration i */
++            x = a[LEN_1D-i-1] + b[i] * c[i];
++            a[i] = x-(real_t)1.0;
++            b[i] = x;
++
++            /* Process iteration j (which depends on i's write to a[i]) */
++            x = a[LEN_1D-j-1] + b[j] * c[j];
++            a[j] = x-(real_t)1.0;
++            b[j] = x;
++        }
++
++        /* Handle middle element if LEN_1D is odd */
++        if (LEN_1D % 2 == 1) {
++            int i = LEN_1D / 2;
+             x = a[LEN_1D-i-1] + b[i] * c[i];
+             a[i] = x-(real_t)1.0;
+             b[i] = x;
+         }
++
+         pb_mix(nl);
+     }
+     return (real_t)0;

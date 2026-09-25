@@ -1,0 +1,37 @@
+--- original.c
++++ final.c
+@@ -131,11 +131,33 @@
+ static real_t kernel_s244(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        /* Save original values of a to break anti-dependence on a[i+1] */
++        real_t *a_orig = (real_t*)malloc((size_t)LEN_1D * sizeof(real_t));
++        memcpy(a_orig, a, (size_t)LEN_1D * sizeof(real_t));
++
++        /* Pass 1: Compute a[i] and b[i] for all i (no loop-carried dependencies).
++         * Each iteration i writes to unique locations a[i] and b[i].
++         * i is the loop variable (private).
++         * a, b, c, d are shared global arrays.
++         */
++        #pragma omp parallel for
+         for (int i = 0; i < LEN_1D-1; ++i) {
+             a[i] = b[i] + c[i] * d[i];
+             b[i] = c[i] + b[i];
+-            a[i+1] = b[i] + a[i+1] * d[i];
+         }
++
++        /* Pass 2: Compute a[i+1] for all i using saved original a values.
++         * This breaks the anti-dependence: we read from a_orig (unchanged),
++         * and each iteration i writes to a unique a[i+1], so no races.
++         * i is the loop variable (private).
++         * a, b, a_orig, d are shared.
++         */
++        #pragma omp parallel for
++        for (int i = 0; i < LEN_1D-1; ++i) {
++            a[i+1] = b[i] + a_orig[i+1] * d[i];
++        }
++
++        free(a_orig);
+         pb_mix(nl);
+     }
+     return (real_t)0;

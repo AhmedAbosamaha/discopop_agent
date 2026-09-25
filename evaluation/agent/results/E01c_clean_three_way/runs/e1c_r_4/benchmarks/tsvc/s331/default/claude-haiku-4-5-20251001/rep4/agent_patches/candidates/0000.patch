@@ -1,0 +1,26 @@
+--- s331.c
++++ s331.c
+@@ -130,19 +130,20 @@
+ 
+ static real_t kernel_s331(void)
+ {
+-    int j;
++    int j_array[R];
+     real_t chksum;
+     for (int nl = 0; nl < R; nl++) {
+-        j = -1;
++        int j = -1;
+         for (int i = 0; i < LEN_1D; i++) {
+             if (a[i] < (real_t)0.) {
+                 j = i;
+             }
+         }
++        j_array[nl] = j;
+         chksum = (real_t) j;
+         pb_mix(nl);
+     }
+-    return j+1;
++    return j_array[R-1]+1;
+ }
+ 
+ int main(int argc, char** argv)

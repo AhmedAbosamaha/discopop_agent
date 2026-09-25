@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s121.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : init_array, pb_mix, pb_emit, pb_emit_array, pb_report, pb_seed, pb_uniform, pb_timer_start, pb_timer_stop, main
+  Prompt         : mirror
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] s121.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Analysis Let me examine the blocking dependences in this program: **The kernel_s121 function:** - **Outer loop** (nl = 0 to R-1): runs only R=48 times, then calls `pb_mix(nl)` which modifies the arrays (true dependence between repetitions) - **Inner loop** (i = 0 to LEN_1D-2): reads `a[i+1]` and `b[i]`, writes to `a[i]` **Dependence analysis for the inner loop:** - Iteration i: writes a[i], rea
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

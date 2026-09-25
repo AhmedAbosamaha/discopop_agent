@@ -1,0 +1,41 @@
+--- original.c
++++ final.c
+@@ -130,15 +130,34 @@
+ 
+ static real_t kernel_s341(void)
+ {
+-    int j;
+     for (int nl = 0; nl < R; nl++) {
+-        j = -1;
++        int j = -1;
++
++        /* Pass 1 (sequential): Compute target offset for each element.
++         * j is the prefix sum counter for positive elements.
++         * offset[i] stores the target position for b[i] in array a.
++         * This breaks the blocking dependence on j by pre-computing all positions.
++         */
++        int* offset = (int*)malloc(LEN_1D * sizeof(int));
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++                offset[i] = ++j;
+             }
+         }
++
++        /* Pass 2 (parallel): Write positive elements to target positions.
++         * No data dependence: each iteration i writes to a[offset[i]] independently.
++         * shared(offset, a, b): offset is read-only, a is write-only per position,
++         * b is read-only. Private i is the loop variable.
++         */
++        #pragma omp parallel for schedule(static) shared(offset, a, b)
++        for (int i = 0; i < LEN_1D; i++) {
++            if (b[i] > (real_t)0.) {
++                a[offset[i]] = b[i];
++            }
++        }
++
++        free(offset);
+         pb_mix(nl);
+     }
+     return (real_t)0;

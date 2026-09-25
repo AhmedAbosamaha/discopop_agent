@@ -1,0 +1,10 @@
+--- s244.c
++++ s244.c
+@@ -145,6 +145,7 @@
+         }
+         pb_mix(nl);
+         // Update the read buffer to reflect the evolved state after pb_mix
++        #pragma omp parallel for shared(a_read) 
+         for (int i = 0; i < LEN_1D; ++i) {
+             a_read[i] = a[i];
+         }

@@ -1,0 +1,10 @@
+--- s255.c
++++ s255.c
+@@ -131,6 +131,7 @@
+ static real_t kernel_s255(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        #pragma omp parallel for 
+         for (int i = 0; i < LEN_1D; i++) {
+             real_t x = (i > 0) ? b[i-1] : b[LEN_1D-1];
+             real_t y = (i > 1) ? b[i-2] : ((i == 1) ? b[LEN_1D-1] : b[LEN_1D-2]);

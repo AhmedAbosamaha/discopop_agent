@@ -1,0 +1,18 @@
+--- original.c
++++ final.c
+@@ -130,12 +130,11 @@
+ 
+ static real_t kernel_s254(void)
+ {
+-    real_t x;
+     for (int nl = 0; nl < R; nl++) {
+-        x = b[LEN_1D-1];
++        #pragma omp parallel for 
+         for (int i = 0; i < LEN_1D; i++) {
+-            a[i] = (b[i] + x) * (real_t).5;
+-            x = b[i];
++            real_t prev_b = (i == 0) ? b[LEN_1D-1] : b[i-1];
++            a[i] = (b[i] + prev_b) * (real_t).5;
+         }
+         pb_mix(nl);
+     }

@@ -1,0 +1,10 @@
+--- s211.c
++++ s211.c
+@@ -143,6 +143,7 @@
+             b[i] = b_new[i];
+         }
+         // Phase 2: Compute all a values in parallel (from updated b)
++        #pragma omp parallel for 
+         for (int i = 1; i < LEN_1D-1; i++) {
+             a[i] = b[i - 1] + c[i] * d[i];
+         }

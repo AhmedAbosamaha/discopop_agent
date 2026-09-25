@@ -1,0 +1,41 @@
+--- original.c
++++ final.c
+@@ -130,15 +130,34 @@
+ 
+ static real_t kernel_s341(void)
+ {
+-    int j;
+     for (int nl = 0; nl < R; nl++) {
+-        j = -1;
++        int* indicator = (int*)malloc(LEN_1D * sizeof(int));
++
++        // Phase 1 (parallel): Mark which elements of b are positive.
++        // indicator[i]: shared array written in parallel (each i writes one position).
++        #pragma omp parallel for
++        for (int i = 0; i < LEN_1D; i++) {
++            indicator[i] = (b[i] > (real_t)0.) ? 1 : 0;
++        }
++
++        // Phase 2 (sequential): Compute prefix sum to determine output positions.
++        // After this, indicator[i] holds the count of positive elements in b[0..i].
++        for (int i = 1; i < LEN_1D; i++) {
++            indicator[i] += indicator[i-1];
++        }
++
++        // Phase 3 (parallel): Write each positive element b[i] to position a[indicator[i]-1].
++        // a: shared array, written in parallel to non-overlapping positions.
++        // indicator: shared array, read in parallel (each read is independent).
++        // b: shared array, read in parallel (each read is independent).
++        #pragma omp parallel for
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++                a[indicator[i] - 1] = b[i];
+             }
+         }
++
++        free(indicator);
+         pb_mix(nl);
+     }
+     return (real_t)0;

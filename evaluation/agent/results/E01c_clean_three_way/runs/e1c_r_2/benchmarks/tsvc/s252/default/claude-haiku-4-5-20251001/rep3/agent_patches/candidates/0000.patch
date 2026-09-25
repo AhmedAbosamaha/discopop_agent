@@ -1,0 +1,19 @@
+--- s252.c
++++ s252.c
+@@ -132,11 +132,13 @@
+ {
+     real_t t, s;
+     for (int nl = 0; nl < R; nl++) {
+-        t = (real_t) 0.;
+         for (int i = 0; i < LEN_1D; i++) {
+             s = b[i] * c[i];
+-            a[i] = s + t;
+-            t = s;
++            if (i == 0) {
++                a[i] = s;
++            } else {
++                a[i] = s + b[i-1] * c[i-1];
++            }
+         }
+         pb_mix(nl);
+     }

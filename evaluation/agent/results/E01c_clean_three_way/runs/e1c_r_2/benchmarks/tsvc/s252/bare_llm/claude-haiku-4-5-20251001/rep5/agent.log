@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s252.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : init_array, pb_mix, pb_emit, pb_emit_array, pb_report, pb_seed, pb_uniform, pb_timer_start, pb_timer_stop, main
+  Prompt         : mirror
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] s252.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Now I'll analyze the program to understand the blocking dependence and plan the parallelization. ## Analysis Looking at `kernel_s252()`: ```c for (int nl = 0; nl < R; nl++) { t = (real_t) 0.; for (int i = 0; i < LEN_1D; i++) { s = b[i] * c[i]; a[i] = s + t; // t depends on previous iteration t = s; // carry value to next iteration } pb_mix(nl); } ``` **Blocking Dependence**: Loop-carry dependence 
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

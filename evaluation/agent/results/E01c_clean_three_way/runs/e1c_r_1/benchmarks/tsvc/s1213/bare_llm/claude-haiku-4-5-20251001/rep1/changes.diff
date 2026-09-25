@@ -1,0 +1,42 @@
+--- original.c
++++ final.c
+@@ -91,6 +91,10 @@
+ /* ---- data: TSVC's five vectors ------------------------------------------------ */
+ static real_t *a, *b, *c, *d, *e;
+ 
++/* ---- temporary arrays for parallelization ------ */
++static real_t *temp_a = NULL;
++static real_t *temp_b = NULL;
++
+ /* Between two repetitions a few INPUT elements change, so no repetition can be skipped,
+  * merged with another or run out of order: the repetition loop is sequential by a true
+  * dependence, and the loop under study is the one inside it. */
+@@ -130,10 +134,26 @@
+ 
+ static real_t kernel_s1213(void)
+ {
++    if (!temp_a) {
++        temp_a = (real_t*)malloc((size_t)LEN_1D * sizeof(real_t));
++        temp_b = (real_t*)malloc((size_t)LEN_1D * sizeof(real_t));
++    }
++
+     for (int nl = 0; nl < R; nl++) {
++        /* Copy a and b to temporary arrays (parallelized snapshot of input state) */
++        #pragma omp parallel for private(i) shared(a, b, temp_a, temp_b)
++        for (int i = 0; i < LEN_1D; i++) {
++            temp_a[i] = a[i];
++            temp_b[i] = b[i];
++        }
++
++        /* Main loop: reads from temp arrays, writes to a and b.
++           All iterations are now independent because they read from a consistent snapshot
++           at loop entry, eliminating loop-carried dependences on a[i+1] and b[i-1] */
++        #pragma omp parallel for private(i) shared(a, b, c, d, temp_a, temp_b)
+         for (int i = 1; i < LEN_1D-1; i++) {
+-            a[i] = b[i-1]+c[i];
+-            b[i] = a[i+1]*d[i];
++            a[i] = temp_b[i-1]+c[i];
++            b[i] = temp_a[i+1]*d[i];
+         }
+         pb_mix(nl);
+     }

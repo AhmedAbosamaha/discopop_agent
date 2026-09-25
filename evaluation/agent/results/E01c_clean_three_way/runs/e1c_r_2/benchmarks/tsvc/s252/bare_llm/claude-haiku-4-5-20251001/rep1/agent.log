@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s252.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : init_array, pb_mix, pb_emit, pb_emit_array, pb_report, pb_seed, pb_uniform, pb_timer_start, pb_timer_stop, main
+  Prompt         : mirror
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] s252.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Looking at this code, I need to understand the computation in `kernel_s252()`: ```c t = (real_t) 0.; for (int i = 0; i < LEN_1D; i++) { s = b[i] * c[i]; a[i] = s + t; t = s; } ``` **The blocking dependence:** The scalar `t` carries `b[i-1]*c[i-1]` from iteration i-1 to iteration i. This creates a complete loop-carried chain: - a[0] depends on t_init - a[1] depends on t from a[0]'s computation - a[
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

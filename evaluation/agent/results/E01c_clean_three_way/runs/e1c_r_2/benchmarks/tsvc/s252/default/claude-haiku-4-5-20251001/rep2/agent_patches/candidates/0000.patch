@@ -1,0 +1,25 @@
+--- s252.c
++++ s252.c
+@@ -130,13 +130,17 @@
+ 
+ static real_t kernel_s252(void)
+ {
+-    real_t t, s;
++    real_t prod[LEN_1D];
+     for (int nl = 0; nl < R; nl++) {
+-        t = (real_t) 0.;
++        /* Phase 1: compute products (parallel Do-All) */
+         for (int i = 0; i < LEN_1D; i++) {
+-            s = b[i] * c[i];
+-            a[i] = s + t;
+-            t = s;
++            prod[i] = b[i] * c[i];
++        }
++
++        /* Phase 2: compute shifted sums (parallel Do-All) */
++        a[0] = prod[0];
++        for (int i = 1; i < LEN_1D; i++) {
++            a[i] = prod[i] + prod[i-1];
+         }
+         pb_mix(nl);
+     }

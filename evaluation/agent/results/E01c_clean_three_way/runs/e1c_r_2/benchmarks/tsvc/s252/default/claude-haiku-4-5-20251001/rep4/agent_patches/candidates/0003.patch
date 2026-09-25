@@ -1,0 +1,10 @@
+--- s252.c
++++ s252.c
+@@ -141,6 +141,7 @@
+         }
+         /* Second pass: compute a[i] = s_arr[i] + s_arr[i-1] */
+         a[0] = s_arr[0];
++        #pragma omp parallel for shared(s_arr) 
+         for (int i = 1; i < LEN_1D; i++) {
+             a[i] = s_arr[i] + s_arr[i - 1];
+         }

@@ -1,0 +1,142 @@
+{
+  "benchmark": "tsvc/s281",
+  "kernel": "s281",
+  "source": "s281.c",
+  "arm": "bare_llm",
+  "model": "claude-haiku-4-5-20251001",
+  "arm_flags": [
+    "--require-speedup",
+    "--min-runtime-share",
+    "0.01",
+    "--timing-cflags=-DLARGE_DATASET"
+  ],
+  "started_at": "2026-09-24T20:48:21",
+  "host": "rms14562",
+  "host_load_start": [
+    12.1650390625,
+    11.27587890625,
+    9.4169921875
+  ],
+  "agent_cmd": [
+    "/home/ahmedabosamaha/discopop_agent/venv/bin/python",
+    "-m",
+    "discopop_agent.bare_llm",
+    "--source-file",
+    "s281.c",
+    "--model",
+    "claude-haiku-4-5-20251001",
+    "--exclude-functions",
+    "init_array,pb_mix,pb_emit,pb_emit_array,pb_report,pb_seed,pb_uniform,pb_timer_start,pb_timer_stop,main"
+  ],
+  "agent_s": 95.1,
+  "agent_rc": 0,
+  "llm_calls": 1,
+  "llm_call_failures": 0,
+  "explorer_retries": 0,
+  "explorer_stalls": 0,
+  "reverts": 0,
+  "refresh_fast": 0,
+  "refresh_full": 0,
+  "refresh_fallback": 0,
+  "runtime_remeasurements": 0,
+  "phase_b_deferred": 0,
+  "phase_b_joint_kept": 0,
+  "dp_floor": null,
+  "gate_failures_phase_a": {},
+  "gate_failures_phase_b": {},
+  "gate_passes_phase_a": 0,
+  "region_verdicts": {},
+  "settle_dropped": 0,
+  "llm_usage": {
+    "calls_recorded": 1,
+    "input_tokens": 42,
+    "output_tokens": 10018,
+    "cache_read_input_tokens": 78145,
+    "cache_creation_input_tokens": 12927,
+    "cost_usd": 0.0847,
+    "model_seconds": 93.7
+  },
+  "source_changed": true,
+  "scaffold": {
+    "ok": true,
+    "problems": [],
+    "applies": true
+  },
+  "pragmas_added": 1,
+  "pragmas_in_final": 1,
+  "candidates_recorded": 0,
+  "verify": {
+    "verify_size": "LARGE",
+    "threads": [
+      6,
+      12
+    ],
+    "repeats": 5,
+    "compiler": "/usr/bin/clang-20",
+    "final_flags": [],
+    "build_errors": {
+      "final_dump": "/home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1c_r_3/benchmarks/tsvc/s281/bare_llm/claude-haiku-4-5-20251001/rep4/final.c:144:42: error: use of undeclared identifier 'x'\n  144 |         #pragma omp parallel for private(x) shared(a, b, c, a_temp, b_temp)\n      |                                          ^\n1 error generated.\n",
+      "final_par": "/home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1c_r_3/benchmarks/tsvc/s281/bare_llm/claude-haiku-4-5-20251001/rep4/final.c:144:42: error: use of undeclared identifier 'x'\n  144 |         #pragma omp parallel for private(x) shared(a, b, c, a_temp, b_temp)\n      |                                          ^\n1 error generated.\n"
+    },
+    "dump_exact": null,
+    "dump_max_rel_err": null,
+    "status": "verify_build_failed",
+    "speed_measurable": true
+  },
+  "verify_s": 0.3,
+  "status": "done",
+  "outcome": "VERIFY_FAILED",
+  "finished_at": "2026-09-24T20:49:56",
+  "host_load_end": [
+    8.21728515625,
+    10.09765625,
+    9.18017578125
+  ],
+  "profile": {
+    "wrapper": "discopop_cc",
+    "instrument_s": 0.21,
+    "profiled_run_s": 0.36,
+    "explore_stalls": 2,
+    "explore_s": 1203.75,
+    "explore_success_s": 3.52,
+    "explore_attempts": 3,
+    "explore_timed_out": false,
+    "explore_failures": [
+      "stalled: no result after 600s (a random stall, L5; draw repeated)",
+      "stalled: no result after 600s (a random stall, L5; draw repeated)"
+    ],
+    "patterns": {
+      "optimizer_output": 0,
+      "merged_pattern": 0,
+      "task": 117,
+      "do_all": 5,
+      "reduction": 0
+    },
+    "profile_sha256": "4c6217db223a25e27337f4ba95ecf4bed2fcb4924671316a8ce96a2ac4497e8c"
+  },
+  "package_integrity": {
+    "before": {
+      "checked": "before trial",
+      "at": "2026-09-24T20:48:21",
+      "prepared_sha256": "00c7a84393098080e0997d996b7feb7417b9d9b9c6189b708870f89cd8d01d88",
+      "packager_sha256": "00c7a84393098080e0997d996b7feb7417b9d9b9c6189b708870f89cd8d01d88",
+      "archived_sha256": "00c7a84393098080e0997d996b7feb7417b9d9b9c6189b708870f89cd8d01d88",
+      "profile_sha256": "4c6217db223a25e27337f4ba95ecf4bed2fcb4924671316a8ce96a2ac4497e8c",
+      "ok": true
+    },
+    "after": {
+      "checked": "after trial",
+      "at": "2026-09-24T20:49:56",
+      "prepared_sha256": "00c7a84393098080e0997d996b7feb7417b9d9b9c6189b708870f89cd8d01d88",
+      "packager_sha256": "00c7a84393098080e0997d996b7feb7417b9d9b9c6189b708870f89cd8d01d88",
+      "archived_sha256": "00c7a84393098080e0997d996b7feb7417b9d9b9c6189b708870f89cd8d01d88",
+      "profile_sha256": "4c6217db223a25e27337f4ba95ecf4bed2fcb4924671316a8ce96a2ac4497e8c",
+      "ok": true
+    }
+  },
+  "speed_check_off": false,
+  "timing_flags": [
+    "--timing-cflags=-DLARGE_DATASET"
+  ],
+  "repeat": 4
+}

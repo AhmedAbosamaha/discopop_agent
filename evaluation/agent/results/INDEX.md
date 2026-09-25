@@ -41,10 +41,10 @@ Status: running
 
 | run | where | what it is | status | trials | outcomes |
 |---|---|---|---|---:|---|
-| `e1c_r_1` | not archived yet | E1 clean, class R: s112 s121 s1213 s127 s211 x discopop_gate, default, bare_llm (mirror) x5, Haiku, lane 0.0 | running |  |  |
-| `e1c_r_2` | not archived yet | E1 clean, class R: s212 s241 s243 s244 s252 x discopop_gate, default, bare_llm (mirror) x5, Haiku, lane 0.1 | running |  |  |
-| `e1c_r_3` | not archived yet | E1 clean, class R: s254 s255 s281 s291 x discopop_gate, default, bare_llm (mirror) x5, Haiku, lane 1.0 | running |  |  |
-| `e1c_r_4` | not archived yet | E1 clean, class R: s292 s293 s331 s341 x discopop_gate, default, bare_llm (mirror) x5, Haiku, lane 1.1 | running |  |  |
+| `e1c_r_1` | [`E01c_clean_three_way/runs/e1c_r_1/`](E01c_clean_three_way/runs/e1c_r_1/) | E1 clean, class R: s112 s121 s1213 s127 s211 x discopop_gate, default, bare_llm (mirror) x5, Haiku, lane 0.0 | running | 75 | BROKEN 10, FASTER 17, VERIFY_FAILED 3, no-change 39, parallel-not-faster 6 |
+| `e1c_r_2` | [`E01c_clean_three_way/runs/e1c_r_2/`](E01c_clean_three_way/runs/e1c_r_2/) | E1 clean, class R: s212 s241 s243 s244 s252 x discopop_gate, default, bare_llm (mirror) x5, Haiku, lane 0.1 | running | 75 | BROKEN 3, FASTER 25, VERIFY_FAILED 1, no-change 37, parallel-not-faster 9 |
+| `e1c_r_3` | [`E01c_clean_three_way/runs/e1c_r_3/`](E01c_clean_three_way/runs/e1c_r_3/) | E1 clean, class R: s254 s255 s281 s291 x discopop_gate, default, bare_llm (mirror) x5, Haiku, lane 1.0 | running | 60 | BROKEN 2, FASTER 31, VERIFY_FAILED 3, no-change 21, parallel-not-faster 3 |
+| `e1c_r_4` | [`E01c_clean_three_way/runs/e1c_r_4/`](E01c_clean_three_way/runs/e1c_r_4/) | E1 clean, class R: s292 s293 s331 s341 x discopop_gate, default, bare_llm (mirror) x5, Haiku, lane 1.1 | running | 60 | BROKEN 1, FASTER 22, VERIFY_FAILED 1, no-change 30, parallel-not-faster 6 |
 | `e1c_a` | not archived yet | E1 clean, class A (no-harm): s000, vpvtv, s313 x discopop_gate, default, bare_llm x1 | running |  |  |
 | `e1c_d` | not archived yet | E1 clean, class D (must-decline): s321, s322, s323, s3112 x discopop_gate, default, bare_llm x3 — the model alone on true recurrences (the author's decision 3) | running |  |  |
 

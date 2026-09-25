@@ -1,0 +1,51 @@
+--- original.c
++++ final.c
+@@ -130,13 +130,46 @@
+ 
+ static real_t kernel_s1213(void)
+ {
++    /* Allocate temporary buffers to break loop-carried dependencies.
++     * a_temp and b_temp hold the array states at the START of each nl iteration.
++     * The parallel loop reads from these invariant arrays and writes to a, b.
++     * This eliminates the loop-carried dependence on b[i-1] between iterations. */
++    real_t *a_temp = (real_t*)malloc((size_t)LEN_1D * sizeof(real_t));
++    real_t *b_temp = (real_t*)malloc((size_t)LEN_1D * sizeof(real_t));
++    if (!a_temp || !b_temp) {
++        free(a_temp);
++        free(b_temp);
++        return (real_t)0;
++    }
++
++    /* Initialize temps with the initial array values */
++    memcpy(a_temp, a, (size_t)LEN_1D * sizeof(real_t));
++    memcpy(b_temp, b, (size_t)LEN_1D * sizeof(real_t));
++
+     for (int nl = 0; nl < R; nl++) {
++        /* Parallel loop: each iteration reads from invariant a_temp, b_temp
++         * and writes to a[i], b[i]. No iteration reads from a[j] or b[j]
++         * written by another iteration, so no loop-carried dependence exists.
++         *
++         * Sharing: a_temp, b_temp, c, d are read-only (shared);
++         * i is loop variable (private by default in parallel for);
++         * a, b are written with disjoint indices per iteration (private writes). */
++        #pragma omp parallel for
+         for (int i = 1; i < LEN_1D-1; i++) {
+-            a[i] = b[i-1]+c[i];
+-            b[i] = a[i+1]*d[i];
++            a[i] = b_temp[i-1] + c[i];
++            b[i] = a_temp[i+1] * d[i];
+         }
++
++        /* Apply perturbations */
+         pb_mix(nl);
++
++        /* Update temps to reflect the modified arrays for the next nl iteration */
++        memcpy(a_temp, a, (size_t)LEN_1D * sizeof(real_t));
++        memcpy(b_temp, b, (size_t)LEN_1D * sizeof(real_t));
+     }
++
++    free(a_temp);
++    free(b_temp);
+     return (real_t)0;
+ }
+ 

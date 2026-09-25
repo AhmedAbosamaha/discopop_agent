@@ -1,0 +1,27 @@
+--- s331.c
++++ s331.c
+@@ -130,18 +130,20 @@
+ 
+ static real_t kernel_s331(void)
+ {
+-    int j;
++    int *j_array = (int *)malloc(R * sizeof(int));
+     real_t chksum;
+     for (int nl = 0; nl < R; nl++) {
+-        j = -1;
++        j_array[nl] = -1;
+         for (int i = 0; i < LEN_1D; i++) {
+             if (a[i] < (real_t)0.) {
+-                j = i;
++                j_array[nl] = i;
+             }
+         }
+-        chksum = (real_t) j;
++        chksum = (real_t) j_array[nl];
+         pb_mix(nl);
+     }
++    int j = j_array[R-1];
++    free(j_array);
+     return j+1;
+ }
+ 

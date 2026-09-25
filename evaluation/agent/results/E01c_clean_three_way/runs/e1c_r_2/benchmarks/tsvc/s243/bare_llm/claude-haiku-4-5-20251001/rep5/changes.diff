@@ -1,0 +1,24 @@
+--- original.c
++++ final.c
+@@ -131,11 +131,20 @@
+ static real_t kernel_s243(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        // Snapshot array 'a' to break loop-carried dependence on a[i+1]
++        real_t* a_save = (real_t*)malloc(LEN_1D * sizeof(real_t));
++        memcpy(a_save, a, LEN_1D * sizeof(real_t));
++
++        // Parallelize inner loop: each iteration i reads from distinct a_save[i+1]
++        // and writes to distinct a[i] and b[i] with no inter-iteration conflicts
++        #pragma omp parallel for shared(a, b, c, d, e, a_save)
+         for (int i = 0; i < LEN_1D-1; i++) {
+             a[i] = b[i] + c[i  ] * d[i];
+             b[i] = a[i] + d[i  ] * e[i];
+-            a[i] = b[i] + a[i+1] * d[i];
++            a[i] = b[i] + a_save[i+1] * d[i];
+         }
++
++        free(a_save);
+         pb_mix(nl);
+     }
+     return (real_t)0;

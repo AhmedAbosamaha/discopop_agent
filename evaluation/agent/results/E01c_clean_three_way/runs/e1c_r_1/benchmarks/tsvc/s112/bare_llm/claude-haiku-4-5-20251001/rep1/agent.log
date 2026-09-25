@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s112.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : init_array, pb_mix, pb_emit, pb_emit_array, pb_report, pb_seed, pb_uniform, pb_timer_start, pb_timer_stop, main
+  Prompt         : mirror
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] s112.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: I'll read the program first to understand its structure and identify the parallelization opportunities.Now let me analyze the program to understand the blocking dependence and the parallelization strategy. ## Analysis Looking at `kernel_s112()`: ```c for (int nl = 0; nl < R; nl++) { for (int i = LEN_1D - 2; i >= 0; i--) { a[i+1] = a[i] + b[i]; } pb_mix(nl); } ``` **Outer loop:** Sequential due to 
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

@@ -1,0 +1,10 @@
+--- s211.c
++++ s211.c
+@@ -134,6 +134,7 @@
+         /* Phase 1: update b[i] = b[i+1] - e[i]*d[i] for all i.
+          * Each b[i] depends only on b[i+1] (never read before update),
+          * so all iterations are independent — Do-All parallelizable. */
++        #pragma omp parallel for 
+         for (int i = 1; i < LEN_1D-1; i++) {
+             b[i] = b[i + 1] - e[i] * d[i];
+         }

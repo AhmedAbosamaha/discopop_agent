@@ -1,0 +1,10 @@
+--- s331.c
++++ s331.c
+@@ -132,6 +132,7 @@
+ {
+     int j_array[R];
+     real_t chksum;
++    #pragma omp parallel for private(chksum) lastprivate(j_array) 
+     for (int nl = 0; nl < R; nl++) {
+         int j = -1;
+         for (int i = 0; i < LEN_1D; i++) {

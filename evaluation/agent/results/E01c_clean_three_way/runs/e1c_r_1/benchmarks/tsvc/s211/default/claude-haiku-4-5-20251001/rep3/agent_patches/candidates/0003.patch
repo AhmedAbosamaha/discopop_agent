@@ -1,0 +1,10 @@
+--- s211.c
++++ s211.c
+@@ -141,6 +141,7 @@
+          * Now b has been fully updated, and each a[i] reads only b[i-1]
+          * (never written again in phase 2), so all iterations are
+          * independent — Do-All parallelizable. */
++        #pragma omp parallel for 
+         for (int i = 1; i < LEN_1D-1; i++) {
+             a[i] = b[i - 1] + c[i] * d[i];
+         }

@@ -1,0 +1,31 @@
+--- original.c
++++ final.c
+@@ -131,10 +131,28 @@
+ static real_t kernel_s1213(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        /* Phase 1: Compute all a[i] values in parallel.
++         * Each iteration i reads b[i-1], c[i] and writes a[i].
++         * No loop-carried dependencies: b is not modified in this loop.
++         * Shared: b, c (read-only); a (write-only, disjoint iterations).
++         * Private: i (loop variable).
++         */
++        #pragma omp parallel for schedule(auto) shared(a, b, c) private(i)
+         for (int i = 1; i < LEN_1D-1; i++) {
+             a[i] = b[i-1]+c[i];
++        }
++
++        /* Phase 2: Compute all b[i] values in parallel.
++         * Each iteration i reads a[i+1], d[i] and writes b[i].
++         * No loop-carried dependencies: a is fully computed and constant in this loop.
++         * Shared: a (read-only after phase 1), d (read-only); b (write-only, disjoint iterations).
++         * Private: i (loop variable).
++         */
++        #pragma omp parallel for schedule(auto) shared(a, d, b) private(i)
++        for (int i = 1; i < LEN_1D-1; i++) {
+             b[i] = a[i+1]*d[i];
+         }
++
+         pb_mix(nl);
+     }
+     return (real_t)0;

@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s112.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : init_array, pb_mix, pb_emit, pb_emit_array, pb_report, pb_seed, pb_uniform, pb_timer_start, pb_timer_stop, main
+  Prompt         : mirror
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] s112.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: I'll help you parallelize this program. Let me start by reading the source file.Now let me analyze the code to identify the blocking dependence. ## Analysis The critical kernel is `kernel_s112()` (lines 131-140): - Outer loop: repetitions `nl` from 0 to R-1 (R=48) - Inner loop: `i` from LEN_1D-2 down to 0 - Computation: `a[i+1] = a[i] + b[i]` - After each inner loop: `pb_mix(nl)` modifies arrays *
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

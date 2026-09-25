@@ -1,0 +1,10 @@
+--- s341.c
++++ s341.c
+@@ -144,6 +144,7 @@
+         }
+ 
+         /* Second pass: write positive elements to compacted region */
++        #pragma omp parallel for shared(count_array) 
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+                 a[count_array[i] - 1] = b[i];

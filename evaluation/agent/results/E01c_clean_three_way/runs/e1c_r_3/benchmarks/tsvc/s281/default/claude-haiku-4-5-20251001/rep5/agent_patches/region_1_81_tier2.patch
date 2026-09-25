@@ -1,0 +1,22 @@
+--- s281.c
++++ s281.c
+@@ -132,7 +132,18 @@
+ {
+     real_t x;
+     for (int nl = 0; nl < R; nl++) {
+-        for (int i = 0; i < LEN_1D; i++) {
++        // Pass 1: process first half of elements
++        // Each iteration i reads from a[LEN_1D-i-1] (second half) and writes to a[i] (first half)
++        // No loop-carried dependence: later iterations in pass 1 do not read what earlier iterations write
++        for (int i = 0; i < LEN_1D/2; i++) {
++            x = a[LEN_1D-i-1] + b[i] * c[i];
++            a[i] = x-(real_t)1.0;
++            b[i] = x;
++        }
++        // Pass 2: process second half of elements
++        // Each iteration i reads from a[LEN_1D-i-1] (first half, now updated by pass 1) and writes to a[i] (second half)
++        // No loop-carried dependence: later iterations in pass 2 do not read what earlier iterations write
++        for (int i = LEN_1D/2; i < LEN_1D; i++) {
+             x = a[LEN_1D-i-1] + b[i] * c[i];
+             a[i] = x-(real_t)1.0;
+             b[i] = x;

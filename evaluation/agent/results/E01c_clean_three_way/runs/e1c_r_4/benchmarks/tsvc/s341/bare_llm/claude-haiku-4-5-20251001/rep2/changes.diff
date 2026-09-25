@@ -1,0 +1,39 @@
+--- original.c
++++ final.c
+@@ -132,13 +132,33 @@
+ {
+     int j;
+     for (int nl = 0; nl < R; nl++) {
+-        j = -1;
++        // Allocate marking array: mark[i] = 1 if b[i] > 0, else 0
++        int* mark = (int*)malloc(LEN_1D * sizeof(int));
++
++        // Parallel marking phase: identify positive elements
++        #pragma omp parallel for
++        for (int i = 0; i < LEN_1D; i++) {
++            mark[i] = (b[i] > (real_t)0.) ? 1 : 0;
++        }
++
++        // Sequential prefix sum: mark[i] = count of positive elements up to and including i
++        // This computes the target position for each element independently of iteration order
++        for (int i = 1; i < LEN_1D; i++) {
++            mark[i] += mark[i-1];
++        }
++
++        // Parallel write phase: each iteration writes to a unique position determined by prefix sum
++        #pragma omp parallel for
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++                int pos = mark[i] - 1;  // pos is unique for each positive element
++                a[pos] = b[i];
+             }
+         }
++
++        // Update j to track the last position written (count - 1)
++        j = mark[LEN_1D - 1] - 1;
++        free(mark);
+         pb_mix(nl);
+     }
+     return (real_t)0;

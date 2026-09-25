@@ -1,0 +1,10 @@
+--- s212.c
++++ s212.c
+@@ -142,6 +142,7 @@
+             a_copy[i] = a[i];
+         }
+         // Compute using the read-only snapshot; reads decouple from writes
++        #pragma omp parallel for shared(a_copy) 
+         for (int i = 0; i < LEN_1D-1; i++) {
+             a[i] = a_copy[i] * c[i];
+             b[i] += a_copy[i + 1] * d[i];

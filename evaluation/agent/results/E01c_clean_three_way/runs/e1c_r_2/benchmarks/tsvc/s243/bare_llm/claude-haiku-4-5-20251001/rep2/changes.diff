@@ -1,0 +1,25 @@
+--- original.c
++++ final.c
+@@ -131,11 +131,21 @@
+ static real_t kernel_s243(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        /* Snapshot array 'a' to break loop-carried dependence through a[i+1].
++           At each iteration i, we read a[i+1]; at iteration i+1, we write a[i+1].
++           The snapshot allows us to read the initial value while other iterations
++           independently write their own a[i] elements. */
++        real_t *a_snapshot = (real_t*)malloc((size_t)LEN_1D * sizeof(real_t));
++        memcpy(a_snapshot, a, (size_t)LEN_1D * sizeof(real_t));
++
++        #pragma omp parallel for shared(a, b, c, d, e, a_snapshot)
+         for (int i = 0; i < LEN_1D-1; i++) {
+             a[i] = b[i] + c[i  ] * d[i];
+             b[i] = a[i] + d[i  ] * e[i];
+-            a[i] = b[i] + a[i+1] * d[i];
++            a[i] = b[i] + a_snapshot[i+1] * d[i];
+         }
++
++        free(a_snapshot);
+         pb_mix(nl);
+     }
+     return (real_t)0;

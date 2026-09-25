@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s252.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : init_array, pb_mix, pb_emit, pb_emit_array, pb_report, pb_seed, pb_uniform, pb_timer_start, pb_timer_stop, main
+  Prompt         : mirror
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] s252.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Looking at the code, I need to identify the blocking dependence in `kernel_s252`. ## Plan The inner loop carries a forward recurrence on the variable `t`: ```c s = b[i] * c[i]; a[i] = s + t; t = s; // carries forward to next iteration ``` Each iteration i writes `t = b[i]*c[i]` that the next iteration reads, creating a loop-carried dependency that prevents parallelization. **Analysis of what a[i] 
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

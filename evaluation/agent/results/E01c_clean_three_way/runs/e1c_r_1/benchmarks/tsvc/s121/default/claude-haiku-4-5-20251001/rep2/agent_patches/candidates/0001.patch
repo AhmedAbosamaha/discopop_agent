@@ -1,0 +1,10 @@
+--- s121.c
++++ s121.c
+@@ -138,6 +138,7 @@
+             a_prev[i] = a[i];
+         }
+         /* Compute new values reading from the backup, writing to original */
++        #pragma omp parallel for private(j) shared(a_prev) 
+         for (int i = 0; i < LEN_1D-1; i++) {
+             j = i + 1;
+             a[i] = a_prev[j] + b[i];

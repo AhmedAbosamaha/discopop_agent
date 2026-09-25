@@ -1,0 +1,21 @@
+--- s1213.c
++++ s1213.c
+@@ -131,10 +131,17 @@
+ static real_t kernel_s1213(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        real_t *a_init = (real_t*)malloc((size_t)LEN_1D * sizeof(real_t));
++        memcpy(a_init, a, (size_t)LEN_1D * sizeof(real_t));
++
++        for (int i = 1; i < LEN_1D-1; i++) {
++            b[i] = a_init[i+1]*d[i];
++        }
+         for (int i = 1; i < LEN_1D-1; i++) {
+             a[i] = b[i-1]+c[i];
+-            b[i] = a[i+1]*d[i];
+         }
++
++        free(a_init);
+         pb_mix(nl);
+     }
+     return (real_t)0;

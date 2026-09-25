@@ -1,0 +1,39 @@
+--- original.c
++++ final.c
+@@ -132,11 +132,35 @@
+ {
+     real_t x;
+     for (int nl = 0; nl < R; nl++) {
++        /* Allocate temporary storage for original values of a and b */
++        real_t *a_old = (real_t*)malloc(LEN_1D * sizeof(real_t));
++        real_t *b_old = (real_t*)malloc(LEN_1D * sizeof(real_t));
++        if (!a_old || !b_old) { fprintf(stderr, "out of memory\n"); exit(1); }
++
++        /* Copy current values of a and b to temporary arrays (parallelizable: no dependencies) */
++        #pragma omp parallel for
+         for (int i = 0; i < LEN_1D; i++) {
+-            x = a[LEN_1D-i-1] + b[i] * c[i];
++            a_old[i] = a[i];
++            b_old[i] = b[i];
++        }
++
++        /* Main computation loop: all iterations are now independent.
++           Each iteration i:
++           - reads from a_old[LEN_1D-i-1], b_old[i], c[i] (immutable during loop)
++           - writes to a[i], b[i] (distinct indices per iteration)
++           private(x): x is per-iteration scratch variable
++         */
++        #pragma omp parallel for private(x)
++        for (int i = 0; i < LEN_1D; i++) {
++            x = a_old[LEN_1D-i-1] + b_old[i] * c[i];
+             a[i] = x-(real_t)1.0;
+             b[i] = x;
+         }
++
++        /* Free temporary storage */
++        free(a_old);
++        free(b_old);
++
+         pb_mix(nl);
+     }
+     return (real_t)0;
