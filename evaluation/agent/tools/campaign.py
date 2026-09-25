@@ -331,7 +331,8 @@ def check() -> List[str]:
             continue
         d = find_run(rid, reg)
         if d is None:
-            if r["status"] != "running":
+            # registered before launch (RUNBOOK) or running: not archived YET is not a problem
+            if r["status"] not in ("running", "registered"):
                 P.append(f"run {rid}: not archived (status {r['status']})")
             continue
         if d != run_home(rid, reg):

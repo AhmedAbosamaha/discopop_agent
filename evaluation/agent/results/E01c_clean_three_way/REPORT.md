@@ -28,11 +28,11 @@ TSVC class R, clean packages, agent v2, the model alone with the mirror prompt, 
 | `e1c_r_4` | [`runs/e1c_r_4/`](runs/e1c_r_4/) | E1 clean, class R: s292 s293 s331 s341 x discopop_gate, default, bare_llm (mirror) x5, Haiku, lane 1.1 | valid | 60 | BROKEN 1, FASTER 22, VERIFY_FAILED 1, no-change 30, parallel-not-faster 6 |
 | `e1c_a` | not archived yet | E1 clean, class A (no-harm): s000, vpvtv, s313 x discopop_gate, default, bare_llm x1 | registered |  |  |
 | `e1c_d` | not archived yet | E1 clean, class D (must-decline): s321, s322, s323, s3112 x discopop_gate, default, bare_llm x3 — the model alone on true recurrences (the author's decision 3) | registered |  |  |
-| `e1c_race_check` | [`checks/e1c_race_check/`](checks/e1c_race_check/) | race_check.py (the gate's TSan + schedule matrix, archer, server, no model) over every trial of the model alone (bare_llm, mirror prompt) in e1c_r_1..4 — what makes its FASTER count race-free (D35 read-out, H13) | valid |  |  |
+| `e1c_race_check` | [`checks/e1c_race_check/`](checks/e1c_race_check/) | race_check.py (the gate's TSan + schedule matrix, archer, server, no model) over every trial of the model alone (bare_llm, mirror prompt) in e1c_r_1..4 — what makes its FASTER count race-free (D35 read-out, H13) | valid | 0 |  |
 
 ## From the experiment record (§7 run log)
 
-### `e1c_r_1`–`e1c_r_4`, `e1c_race_check` — 2026-09-24/25, server, **E1 clean: the three-way main comparison on TSVC class R** (270 trials, Haiku; 90 race checks, no model)
+### `e1c_r_1`, `e1c_r_2`, `e1c_r_3`, `e1c_r_4`, `e1c_race_check` — 2026-09-24/25, server, **E1 clean: the three-way main comparison on TSVC class R** (270 trials, Haiku; 90 race checks, no model)
 
 - **Setup.** Commit `33673d7d` (agent v2: D32, D33, Fixes 91–92; packages v3 without the header hint, D36; the model confined to its workspace, Fix 95; the model alone with the MIRROR prompt, D37; per-benchmark explorer limit). The 18 class-R loops × `discopop_gate`, `default`, `bare_llm` × 5, threads 6,12, repeats 5, check seed 7, on four 12-core lanes (`--node N.H`, split 5/5/4/4 loops), 24 Sep 18:33 → 25 Sep ≈ 04:50 UTC; every lane's credential sweep clean. `e1c_race_check`: `race_check.py` (the gate's TSan with archer and the schedule matrix) over all 90 `bare_llm` trials on the server, 25 Sep. Read-out `results/E01c_clean_three_way/analysis/main_comparison_stats.md` (`--arm default --three-way default --races …`).
 - **The three arms against the sequential original (class R, 90 trials each):**

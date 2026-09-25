@@ -2053,7 +2053,7 @@ Added 2026-09-15 (see §6 rows of that date):
 
 ## 7. Run log
 
-### `e1c_r_1`–`e1c_r_4`, `e1c_race_check` — 2026-09-24/25, server, **E1 clean: the three-way main comparison on TSVC class R** (270 trials, Haiku; 90 race checks, no model)
+### `e1c_r_1`, `e1c_r_2`, `e1c_r_3`, `e1c_r_4`, `e1c_race_check` — 2026-09-24/25, server, **E1 clean: the three-way main comparison on TSVC class R** (270 trials, Haiku; 90 race checks, no model)
 
 - **Setup.** Commit `33673d7d` (agent v2: D32, D33, Fixes 91–92; packages v3 without the header hint, D36; the model confined to its workspace, Fix 95; the model alone with the MIRROR prompt, D37; per-benchmark explorer limit). The 18 class-R loops × `discopop_gate`, `default`, `bare_llm` × 5, threads 6,12, repeats 5, check seed 7, on four 12-core lanes (`--node N.H`, split 5/5/4/4 loops), 24 Sep 18:33 → 25 Sep ≈ 04:50 UTC; every lane's credential sweep clean. `e1c_race_check`: `race_check.py` (the gate's TSan with archer and the schedule matrix) over all 90 `bare_llm` trials on the server, 25 Sep. Read-out `results/E01c_clean_three_way/analysis/main_comparison_stats.md` (`--arm default --three-way default --races …`).
 - **The three arms against the sequential original (class R, 90 trials each):**

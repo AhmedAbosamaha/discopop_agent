@@ -47,7 +47,7 @@ Status: running
 | `e1c_r_4` | [`E01c_clean_three_way/runs/e1c_r_4/`](E01c_clean_three_way/runs/e1c_r_4/) | E1 clean, class R: s292 s293 s331 s341 x discopop_gate, default, bare_llm (mirror) x5, Haiku, lane 1.1 | valid | 60 | BROKEN 1, FASTER 22, VERIFY_FAILED 1, no-change 30, parallel-not-faster 6 |
 | `e1c_a` | not archived yet | E1 clean, class A (no-harm): s000, vpvtv, s313 x discopop_gate, default, bare_llm x1 | registered |  |  |
 | `e1c_d` | not archived yet | E1 clean, class D (must-decline): s321, s322, s323, s3112 x discopop_gate, default, bare_llm x3 — the model alone on true recurrences (the author's decision 3) | registered |  |  |
-| `e1c_race_check` | [`E01c_clean_three_way/checks/e1c_race_check/`](E01c_clean_three_way/checks/e1c_race_check/) | race_check.py (the gate's TSan + schedule matrix, archer, server, no model) over every trial of the model alone (bare_llm, mirror prompt) in e1c_r_1..4 — what makes its FASTER count race-free (D35 read-out, H13) | valid |  |  |
+| `e1c_race_check` | [`E01c_clean_three_way/checks/e1c_race_check/`](E01c_clean_three_way/checks/e1c_race_check/) | race_check.py (the gate's TSan + schedule matrix, archer, server, no model) over every trial of the model alone (bare_llm, mirror prompt) in e1c_r_1..4 — what makes its FASTER count race-free (D35 read-out, H13) | valid | 0 |  |
 
 ## [E2 — evidence, feedback and model strength](E02_evidence_feedback_model/REPORT.md)
 
