@@ -8,7 +8,10 @@ entries for it. Everything here is tracked in git.
 | Folder | What it is | Status |
 |---|---|---|
 | [`E01_main_comparison/`](E01_main_comparison/REPORT.md) | **E1 — the main comparison: DiscoPoP alone vs DiscoPoP + agent** (the thesis's headline) | done |
-| [`E01b_bare_llm/`](E01b_bare_llm/REPORT.md) | E1-bare — the same model with no DiscoPoP and no gate | running |
+| [`E01b_bare_llm/`](E01b_bare_llm/REPORT.md) | E1-bare — the same model with no DiscoPoP and no gate | done 23 Sep; superseded by E1c's model-alone arm (D36) |
+| [`E01c_clean_three_way/`](E01c_clean_three_way/REPORT.md) | E1c — the clean three-way E1: DiscoPoP alone · the agent · the model alone | done 25 Sep |
+| [`E02_evidence_feedback_model/`](E02_evidence_feedback_model/REPORT.md) | E2 — evidence, feedback and model strength | A+B done 25 Sep; the rest waits for the V3 pilot |
+| [`V3_pilot_d40/`](V3_pilot_d40/REPORT.md) | The agent v3 pilot (D40) — the speed verdict inside the model's budget | running 26 Sep |
 | [`E10_speed_check/`](E10_speed_check/REPORT.md) | E10 — does the speed check keep unnecessary changes out? | done |
 | [`E11_repoomp/`](E11_repoomp/REPORT.md) | E11 — against RepoOMP on its NPB-C kernels | pre-flight |
 | [`T0_instruments/`](T0_instruments/) | T0.1–T0.14 — the studies that prove the instruments before any experiment is read | done |
