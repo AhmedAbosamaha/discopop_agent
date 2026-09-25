@@ -37,7 +37,7 @@ Status: done
 
 ## [E1 clean — the three-way main comparison on clean packages (D35, D36)](E01c_clean_three_way/REPORT.md)
 
-Status: running
+Status: done
 
 | run | where | what it is | status | trials | outcomes |
 |---|---|---|---|---:|---|
@@ -48,6 +48,7 @@ Status: running
 | `e1c_a` | [`E01c_clean_three_way/runs/e1c_a/`](E01c_clean_three_way/runs/e1c_a/) | E1 clean, class A (no-harm): s000, vpvtv, s313 x discopop_gate, default, bare_llm x1 | valid | 9 | FASTER 7, SCAFFOLD_MODIFIED 1, VERIFY_FAILED 1 |
 | `e1c_d` | [`E01c_clean_three_way/runs/e1c_d/`](E01c_clean_three_way/runs/e1c_d/) | E1 clean, class D (must-decline): s321, s322, s323, s3112 x discopop_gate, default, bare_llm x3 — the model alone on true recurrences (the author's decision 3) | valid | 36 | BROKEN 6, VERIFY_FAILED 2, no-change 25, parallel-not-faster 3 |
 | `e1c_race_check` | [`E01c_clean_three_way/checks/e1c_race_check/`](E01c_clean_three_way/checks/e1c_race_check/) | race_check.py (the gate's TSan + schedule matrix, archer, server, no model) over every trial of the model alone (bare_llm, mirror prompt) in e1c_r_1..4 — what makes its FASTER count race-free (D35 read-out, H13) | valid | 0 |  |
+| `e1c_ad_race_check` | [`E01c_clean_three_way/checks/e1c_ad_race_check/`](E01c_clean_three_way/checks/e1c_ad_race_check/) | race_check.py over the model alone (bare_llm) in E1c's controls, classes A (e1c_a) and D (e1c_d) | valid | 0 |  |
 
 ## [E2 — evidence, feedback and model strength](E02_evidence_feedback_model/REPORT.md)
 
@@ -67,6 +68,7 @@ Status: running
 | `e2c_ab_2` | [`E02_evidence_feedback_model/runs/e2c_ab_2/`](E02_evidence_feedback_model/runs/e2c_ab_2/) | E2 Parts A+B clean (lane 0.1): s212 s241 s243 s244 s252 x full_b1, no_evidence, no_evidence_b1 + their D38 twins twin_full, twin_no_evidence + twin_dp (DiscoPoP unchecked), Haiku x5, threads 6,12, repeats 5; default, bare_llm, discopop_gate from E1c (same commit 33673d7d agent code) | valid | 150 | BROKEN 44, FASTER 41, changed-not-parallel 2, no-change 44, parallel-not-faster 19 |
 | `e2c_ab_3` | [`E02_evidence_feedback_model/runs/e2c_ab_3/`](E02_evidence_feedback_model/runs/e2c_ab_3/) | E2 Parts A+B clean (lane 1.0): s254 s255 s281 s291 x full_b1, no_evidence, no_evidence_b1 + their D38 twins twin_full, twin_no_evidence + twin_dp (DiscoPoP unchecked), Haiku x5, threads 6,12, repeats 5; default, bare_llm, discopop_gate from E1c (same commit 33673d7d agent code) | valid | 120 | BROKEN 51, FASTER 54, no-change 7, parallel-not-faster 8 |
 | `e2c_ab_4` | [`E02_evidence_feedback_model/runs/e2c_ab_4/`](E02_evidence_feedback_model/runs/e2c_ab_4/) | E2 Parts A+B clean (lane 1.1): s292 s293 s331 s341 x full_b1, no_evidence, no_evidence_b1 + their D38 twins twin_full, twin_no_evidence + twin_dp (DiscoPoP unchecked), Haiku x5, threads 6,12, repeats 5; default, bare_llm, discopop_gate from E1c (same commit 33673d7d agent code) | valid | 120 | BROKEN 57, FASTER 31, SCAFFOLD_MODIFIED 1, changed-not-parallel 1, no-change 30 |
+| `e2c_race_check` | [`E02_evidence_feedback_model/checks/e2c_race_check/`](E02_evidence_feedback_model/checks/e2c_race_check/) | race_check.py (the gate's TSan + schedule matrix, archer, server, no model) over every trial of the three arms no gate saw in E2 A+B — twin_full, twin_no_evidence, twin_dp (e2c_ab_1..4) — mandatory for D38/H12/H13 | valid | 0 |  |
 
 ## [E10 — does the speed check keep unnecessary changes out?](E10_speed_check/REPORT.md)
 

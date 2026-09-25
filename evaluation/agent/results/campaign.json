@@ -24,9 +24,9 @@
    "folder": "E01c_clean_three_way",
    "title": "E1 clean — the three-way main comparison on clean packages (D35, D36)",
    "kind": "experiment",
-   "status": "running",
+   "status": "done",
    "question": "On TSVC class R, with no hint in the source (D36), the model confined to its workspace (Fix 95) and agent v2: DiscoPoP alone vs DiscoPoP + agent (`default`) vs the model alone (`bare_llm`, the mirror prompt, D37) — which delivers correct, race-free, faster programs, and which ships wrong or slower ones? Plus the no-harm (class A) and must-decline (class D) controls.",
-   "headline": "TSVC class R, clean packages, agent v2, the model alone with the mirror prompt, 18 loops × 5: DiscoPoP alone reaches nothing (0 of 90); the agent is FASTER in 51 of 90, all race-free, and ships 0 unusable programs; the model alone is FASTER in 44, race-free in 39, and ships 46 unusable programs of 90 (16 BROKEN, 17 slower, 8 not compiling, 5 racy). H13 supported (agent fewer unusable on 14 loops, 0 the other way, p = 0.0004); reach: agent ahead on 10 loops, the model alone on 4, not significant (p = 0.13). Agent vs DiscoPoP alone: gained 51, unsafe 0, p = 0.0002. Controls (classes A, D) pending."
+   "headline": "TSVC class R, clean packages, agent v2, the model alone with the mirror prompt, 18 loops × 5: DiscoPoP alone reaches nothing (0 of 90); the agent is FASTER in 51 of 90, all race-free, and ships 0 unusable programs; the model alone is FASTER in 44, race-free in 39, and ships 46 unusable programs of 90 (16 BROKEN, 17 slower, 8 not compiling, 5 racy). H13 supported (agent fewer unusable on 14 loops, 0 the other way, p = 0.0004); reach: agent ahead on 10 loops, the model alone on 4, not significant (p = 0.13). Agent vs DiscoPoP alone: gained 51, unsafe 0, p = 0.0002. Controls: class A — agent equal to DiscoPoP alone (3.63× v 3.67×), model alone 1 of 3 not compiling; class D — agent declined 12 of 12, model alone 9 of 12 unusable (6 BROKEN)."
   },
   {
    "id": "E2",
@@ -35,7 +35,7 @@
    "kind": "experiment",
    "status": "running",
    "question": "On TSVC class R, does DiscoPoP's evidence raise the model's success rate (H5), more for Haiku than for Sonnet? Does the gate's failure feedback partly substitute for it (H5b)? Where must the evidence come from (none, compiler remarks, where the time goes, DiscoPoP), which part of it matters, and which part of the prompt? Runs on agent v2 with its own default arm (D34).",
-   "headline": ""
+   "headline": "E2 A+B (Haiku, TSVC class R, 18 × 5, with D38 twins): DiscoPoP's evidence adds nothing — H12, H5b, H5d not supported (evidence effect −0.03 inside the pipeline, −0.02 on the twins); the best arm is the agent without evidence at 3 attempts (55 of 90 race-free FASTER). H13 supported everywhere: every agent arm 0 unusable programs, its twins 70–73 of 90, the model alone 46; DiscoPoP's own pragmas unchecked (twin_dp) wrong in 70 of 90. Sonnet cells, evidence-source arms, Parts C/D to run."
   },
   {
    "id": "E10",
@@ -802,13 +802,13 @@
    "group": "E2",
    "section": "checks",
    "role": "race_check.py (the gate's TSan + schedule matrix, archer, server, no model) over every trial of the three arms no gate saw in E2 A+B — twin_full, twin_no_evidence, twin_dp (e2c_ab_1..4) — mandatory for D38/H12/H13",
-   "status": "running"
+   "status": "valid"
   },
   "e1c_ad_race_check": {
    "group": "E1c",
    "section": "checks",
    "role": "race_check.py over the model alone (bare_llm) in E1c's controls, classes A (e1c_a) and D (e1c_d)",
-   "status": "running"
+   "status": "valid"
   }
  },
  "analysis": {

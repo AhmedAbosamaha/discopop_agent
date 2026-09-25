@@ -8,9 +8,15 @@
 
 On TSVC class R, does DiscoPoP's evidence raise the model's success rate (H5), more for Haiku than for Sonnet? Does the gate's failure feedback partly substitute for it (H5b)? Where must the evidence come from (none, compiler remarks, where the time goes, DiscoPoP), which part of it matters, and which part of the prompt? Runs on agent v2 with its own default arm (D34).
 
+## Result in one paragraph
+
+E2 A+B (Haiku, TSVC class R, 18 × 5, with D38 twins): DiscoPoP's evidence adds nothing — H12, H5b, H5d not supported (evidence effect −0.03 inside the pipeline, −0.02 on the twins); the best arm is the agent without evidence at 3 attempts (55 of 90 race-free FASTER). H13 supported everywhere: every agent arm 0 unusable programs, its twins 70–73 of 90, the model alone 46; DiscoPoP's own pragmas unchecked (twin_dp) wrong in 70 of 90. Sonnet cells, evidence-source arms, Parts C/D to run.
+
 ## What is in this folder
 
+- [`analysis/`](analysis/) — the read-out: [`h12_interaction.md`](analysis/h12_interaction.md), [`h5b_evidence_x_budget.md`](analysis/h5b_evidence_x_budget.md), [`three_way_default%20bare_llm_vs_.md`](analysis/three_way_default%20bare_llm_vs_.md), [`three_way_full_b1%20bare_llm_vs_.md`](analysis/three_way_full_b1%20bare_llm_vs_.md), [`three_way_full_b1%20twin_full_vs_.md`](analysis/three_way_full_b1%20twin_full_vs_.md), [`three_way_full_b1_vs_bare_llm.md`](analysis/three_way_full_b1_vs_bare_llm.md), [`three_way_full_b1_vs_twin_full.md`](analysis/three_way_full_b1_vs_twin_full.md), [`three_way_no_evidence_b1%20bare_llm_vs_.md`](analysis/three_way_no_evidence_b1%20bare_llm_vs_.md), [`three_way_no_evidence_b1%20twin_no_evidence_vs_.md`](analysis/three_way_no_evidence_b1%20twin_no_evidence_vs_.md), [`three_way_no_evidence_b1_vs_bare_llm.md`](analysis/three_way_no_evidence_b1_vs_bare_llm.md), [`three_way_no_evidence_b1_vs_twin_no_evidence.md`](analysis/three_way_no_evidence_b1_vs_twin_no_evidence.md), [`three_way_no_evidence_vs_bare_llm.md`](analysis/three_way_no_evidence_vs_bare_llm.md)
 - [`runs/`](runs/) — 4 archived run(s): the evidence
+- [`checks/`](checks/) — 1 verification(s) made during the read-out
 - [`preflight/`](preflight/) — 6 smoke run(s) before the launch
 - [`superseded/`](superseded/) — 2 run(s) a later one replaced
 
@@ -30,8 +36,33 @@ On TSVC class R, does DiscoPoP's evidence raise the model's success rate (H5), m
 | `e2c_ab_2` | [`runs/e2c_ab_2/`](runs/e2c_ab_2/) | E2 Parts A+B clean (lane 0.1): s212 s241 s243 s244 s252 x full_b1, no_evidence, no_evidence_b1 + their D38 twins twin_full, twin_no_evidence + twin_dp (DiscoPoP unchecked), Haiku x5, threads 6,12, repeats 5; default, bare_llm, discopop_gate from E1c (same commit 33673d7d agent code) | valid | 150 | BROKEN 44, FASTER 41, changed-not-parallel 2, no-change 44, parallel-not-faster 19 |
 | `e2c_ab_3` | [`runs/e2c_ab_3/`](runs/e2c_ab_3/) | E2 Parts A+B clean (lane 1.0): s254 s255 s281 s291 x full_b1, no_evidence, no_evidence_b1 + their D38 twins twin_full, twin_no_evidence + twin_dp (DiscoPoP unchecked), Haiku x5, threads 6,12, repeats 5; default, bare_llm, discopop_gate from E1c (same commit 33673d7d agent code) | valid | 120 | BROKEN 51, FASTER 54, no-change 7, parallel-not-faster 8 |
 | `e2c_ab_4` | [`runs/e2c_ab_4/`](runs/e2c_ab_4/) | E2 Parts A+B clean (lane 1.1): s292 s293 s331 s341 x full_b1, no_evidence, no_evidence_b1 + their D38 twins twin_full, twin_no_evidence + twin_dp (DiscoPoP unchecked), Haiku x5, threads 6,12, repeats 5; default, bare_llm, discopop_gate from E1c (same commit 33673d7d agent code) | valid | 120 | BROKEN 57, FASTER 31, SCAFFOLD_MODIFIED 1, changed-not-parallel 1, no-change 30 |
+| `e2c_race_check` | [`checks/e2c_race_check/`](checks/e2c_race_check/) | race_check.py (the gate's TSan + schedule matrix, archer, server, no model) over every trial of the three arms no gate saw in E2 A+B — twin_full, twin_no_evidence, twin_dp (e2c_ab_1..4) — mandatory for D38/H12/H13 | valid | 0 |  |
 
 ## From the experiment record (§7 run log)
+
+### `e2c_ab_1`, `e2c_ab_2`, `e2c_ab_3`, `e2c_ab_4`, `e2c_race_check`; `e1c_a`, `e1c_d`, `e1c_ad_race_check` — 2026-09-25, server, **E2 Parts A+B (Haiku) with the D38 twins, and E1c's controls** (540 + 45 trials; 315 race checks, no model)
+
+- **Setup.** E2: commit `3f296eac` (agent code of E1c, `33673d7d`, plus the twin entry point); the 18 class-R loops × `full_b1`, `no_evidence`, `no_evidence_b1` and their twins `twin_full`, `twin_no_evidence`, plus `twin_dp` (DiscoPoP's pragmas unchecked, no model) × 5, four 12-core lanes (E1c's split), 25 Sep 05:15 → ≈ 20:00 UTC; `default`, `bare_llm`, `discopop_gate` are E1c's cells (same loops, same agent code). Controls: `e1c_a` (classes A: s000, vpvtv, s313 × the three E1c arms × 1) and `e1c_d` (class D: s321, s322, s323, s3112 × 3), same commit, lanes 1.0/1.1 after E2's node-1 lanes. The server checkout was synced once during E2's lanes 0.x, for two HTML documents and a registry line only (no file a trial reads). Race checks (`race_check.py`, the gate's TSan with archer and the schedule matrix, no model) over every program no gate saw: E2's three twin arms, the model alone in the controls. Read-outs in `results/E02_evidence_feedback_model/analysis/` and `results/E01c_clean_three_way/analysis/`.
+- **E2 — every arm against the sequential original (class R, 90 trials each):**
+
+  | arm | race-free FASTER | unusable programs |
+  |---|---:|---:|
+  | DiscoPoP alone (E1c) | 0 | 0 |
+  | agent: evidence, 3 attempts (`default`, E1c) | 51 | **0** |
+  | agent: evidence, 1 attempt (`full_b1`) | 48 | **0** |
+  | agent: no evidence, 3 attempts (`no_evidence`) | **55** | **0** |
+  | agent: no evidence, 1 attempt (`no_evidence_b1`) | 51 | **0** |
+  | twin of `full_b1` (no gate) | 15 of 88 | 73 (66 BROKEN) |
+  | twin of `no_evidence_b1` (no gate) | 17 of 89 | 70 (64 BROKEN) |
+  | `twin_dp`: DiscoPoP's pragmas, nothing checked | 0 | 70 BROKEN, 20 no change |
+  | the model alone (E1c) | 39 | 46 |
+
+- **H12 (headline) — not supported.** DiscoPoP's evidence does not raise the race-free FASTER rate inside the pipeline (`full_b1` − `no_evidence_b1`: mean −0.03 per loop) nor on the twins (−0.02); larger inside on 3 loops, on the twins on 7, 8 tied; one-sided Wilcoxon p = 0.71, Cliff's δ −0.02.
+- **H5b — not supported.** Two more attempts help about equally without evidence (+0.04) and with it (+0.03); p = 0.58.
+- **H5d — not supported.** On the 8 loops where the clean model alone shipped a wrong program (s112, s121, s1213, s211, s241, s244, s281, s341) the evidence effect is −0.08, on the others 0.00 (Mann–Whitney one-sided p = 0.54). One loop stands out: on `s244` evidence LOWERS the one-attempt agent's success by 0.8 — worth a case study.
+- **H13 — supported in every pairing.** The agent ships fewer unusable programs than its twin on 18 of 18 loops (evidence: p = 0.0001; no evidence: p = 0.0001) and than the model alone on 14, 0 the other way (p = 0.0009). **The gate's value, measured three ways:** agent vs its twin in race-free FASTER, 12 loops v 4 (one-sided p = 0.013) and 10 v 3 (p = 0.003); `twin_dp` — DiscoPoP's own pragmas without the gate — wrong in 70 of 90 trials (the D38 prediction); every twin's BROKEN programs are mostly DiscoPoP's unchecked pragmas (twin_full 55 of its 66 BROKEN fail TSan). Agent vs model alone in race-free FASTER: `no_evidence` 55 v 39, ahead on 10 loops v 4, one-sided p = 0.044; the other arms p = 0.08–0.14.
+- **Reading.** On TSVC class R with Haiku, DiscoPoP's measured evidence adds nothing to the model's reach, inside the pipeline or without it — H5b, H5d and H12 all fail, and the best arm is the agent WITHOUT evidence at three attempts (55 of 90). What the pipeline adds is the gate: every agent arm ships no unusable program, where the same model without the gate ships 46–73 of 90, and DiscoPoP's own suggestions, unchecked, are wrong in 78 % of trials. The harder tier (E2-app, LULESH / NPB-C, D-decision 7) is where evidence may still matter — the dependences there are not visible in the code the model reads.
+- **E1c's controls.** Class A (no harm): DiscoPoP alone 3 of 3 FASTER (3.67×), the agent 2 of 2 (3.63×; its third trial is the `s313` harness edit, to be repeated), the model alone 2 of 3 (4.24×; `vpvtv` does not compile). Class D (must decline): the agent declined all 12; DiscoPoP alone 0 parallel; **the model alone shipped 9 unusable programs of 12** (6 BROKEN, 2 not compiling, 1 slower). Race check of the model alone: 2 of its 3 FASTER clean; 2 programs not judgeable.
 
 ### `d38_twin_smoke` — 2026-09-24, Mac, **the twin runner (D38) through the real harness, SDK and confinement** (2 trials, 1 Haiku call)
 
