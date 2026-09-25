@@ -1,0 +1,19 @@
+--- vpvtv.c
++++ vpvtv.c
+@@ -130,11 +130,15 @@
+ 
+ static real_t kernel_vpvtv(void)
+ {
++    real_t delta[LEN_1D] = {0};
+     for (int nl = 0; nl < R; nl++) {
+         for (int i = 0; i < LEN_1D; i++) {
+-            a[i] += b[i] * c[i];
++            delta[i] += b[i] * c[i];
+         }
+         pb_mix(nl);
++    }
++    for (int i = 0; i < LEN_1D; i++) {
++        a[i] += delta[i];
+     }
+     return (real_t)0;
+ }

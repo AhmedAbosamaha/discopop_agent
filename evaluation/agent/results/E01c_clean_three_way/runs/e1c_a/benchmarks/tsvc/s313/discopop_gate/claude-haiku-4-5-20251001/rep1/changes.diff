@@ -1,0 +1,10 @@
+--- original.c
++++ final.c
+@@ -133,6 +133,7 @@
+     real_t dot;
+     for (int nl = 0; nl < R; nl++) {
+         dot = (real_t)0.;
++        #pragma omp parallel for reduction(+:dot) 
+         for (int i = 0; i < LEN_1D; i++) {
+             dot += a[i] * b[i];
+         }

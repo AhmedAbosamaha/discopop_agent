@@ -1,0 +1,139 @@
+{
+  "benchmark": "tsvc/vpvtv",
+  "kernel": "vpvtv",
+  "source": "vpvtv.c",
+  "arm": "bare_llm",
+  "model": "claude-haiku-4-5-20251001",
+  "arm_flags": [
+    "--require-speedup",
+    "--min-runtime-share",
+    "0.01",
+    "--timing-cflags=-DLARGE_DATASET"
+  ],
+  "started_at": "2026-09-25T14:10:41",
+  "host": "rms14562",
+  "host_load_start": [
+    6.1796875,
+    6.0439453125,
+    6.1650390625
+  ],
+  "agent_cmd": [
+    "/home/ahmedabosamaha/discopop_agent/venv/bin/python",
+    "-m",
+    "discopop_agent.bare_llm",
+    "--source-file",
+    "vpvtv.c",
+    "--model",
+    "claude-haiku-4-5-20251001",
+    "--exclude-functions",
+    "init_array,pb_mix,pb_emit,pb_emit_array,pb_report,pb_seed,pb_uniform,pb_timer_start,pb_timer_stop,main"
+  ],
+  "agent_s": 22.0,
+  "agent_rc": 0,
+  "llm_calls": 1,
+  "llm_call_failures": 0,
+  "explorer_retries": 0,
+  "explorer_stalls": 0,
+  "reverts": 0,
+  "refresh_fast": 0,
+  "refresh_full": 0,
+  "refresh_fallback": 0,
+  "runtime_remeasurements": 0,
+  "phase_b_deferred": 0,
+  "phase_b_joint_kept": 0,
+  "dp_floor": null,
+  "gate_failures_phase_a": {},
+  "gate_failures_phase_b": {},
+  "gate_passes_phase_a": 0,
+  "region_verdicts": {},
+  "settle_dropped": 0,
+  "llm_usage": {
+    "calls_recorded": 1,
+    "input_tokens": 34,
+    "output_tokens": 1828,
+    "cache_read_input_tokens": 52064,
+    "cache_creation_input_tokens": 5773,
+    "cost_usd": 0.0269,
+    "model_seconds": 20.7
+  },
+  "source_changed": true,
+  "scaffold": {
+    "ok": true,
+    "problems": [],
+    "applies": true
+  },
+  "pragmas_added": 1,
+  "pragmas_in_final": 1,
+  "candidates_recorded": 0,
+  "verify": {
+    "verify_size": "EXTRALARGE",
+    "threads": [
+      6,
+      12
+    ],
+    "repeats": 5,
+    "compiler": "/usr/bin/clang-20",
+    "final_flags": [],
+    "build_errors": {
+      "final_dump": ": error: expected variable name\n  134 | #pragma omp parallel for shared(a, b, c, LEN_1D)\n      |                                          ^~~~~~\n/home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1c_a/benchmarks/tsvc/vpvtv/bare_llm/claude-haiku-4-5-20251001/rep1/final.c:24:17: note: expanded from macro 'LEN_1D'\n   24 | # define LEN_1D 32000\n      |                 ^~~~~\n1 error generated.\n",
+      "final_par": " expected variable name\n  134 | #pragma omp parallel for shared(a, b, c, LEN_1D)\n      |                                          ^~~~~~\n/home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1c_a/benchmarks/tsvc/vpvtv/bare_llm/claude-haiku-4-5-20251001/rep1/final.c:33:17: note: expanded from macro 'LEN_1D'\n   33 | # define LEN_1D 192000000\n      |                 ^~~~~~~~~\n1 error generated.\n"
+    },
+    "dump_exact": null,
+    "dump_max_rel_err": null,
+    "status": "verify_build_failed",
+    "speed_measurable": true
+  },
+  "verify_s": 0.3,
+  "status": "done",
+  "outcome": "VERIFY_FAILED",
+  "finished_at": "2026-09-25T14:11:03",
+  "host_load_end": [
+    5.7451171875,
+    5.94580078125,
+    6.12939453125
+  ],
+  "profile": {
+    "wrapper": "discopop_cc",
+    "instrument_s": 0.21,
+    "profiled_run_s": 0.21,
+    "explore_stalls": 0,
+    "explore_s": 3.37,
+    "explore_success_s": 3.37,
+    "explore_attempts": 1,
+    "explore_timed_out": false,
+    "explore_failures": [],
+    "patterns": {
+      "optimizer_output": 0,
+      "merged_pattern": 0,
+      "task": 117,
+      "do_all": 6,
+      "reduction": 0
+    },
+    "profile_sha256": "3d1a1985a60578891f4c0a32401e3b1ed46cf45b81e03a7a32ca3bfdf14987df"
+  },
+  "package_integrity": {
+    "before": {
+      "checked": "before trial",
+      "at": "2026-09-25T14:10:41",
+      "prepared_sha256": "6263559ed0046eb50760958537f29fab0a42303bec5640a92080435d7438bdbc",
+      "packager_sha256": "6263559ed0046eb50760958537f29fab0a42303bec5640a92080435d7438bdbc",
+      "archived_sha256": "6263559ed0046eb50760958537f29fab0a42303bec5640a92080435d7438bdbc",
+      "profile_sha256": "3d1a1985a60578891f4c0a32401e3b1ed46cf45b81e03a7a32ca3bfdf14987df",
+      "ok": true
+    },
+    "after": {
+      "checked": "after trial",
+      "at": "2026-09-25T14:11:03",
+      "prepared_sha256": "6263559ed0046eb50760958537f29fab0a42303bec5640a92080435d7438bdbc",
+      "packager_sha256": "6263559ed0046eb50760958537f29fab0a42303bec5640a92080435d7438bdbc",
+      "archived_sha256": "6263559ed0046eb50760958537f29fab0a42303bec5640a92080435d7438bdbc",
+      "profile_sha256": "3d1a1985a60578891f4c0a32401e3b1ed46cf45b81e03a7a32ca3bfdf14987df",
+      "ok": true
+    }
+  },
+  "speed_check_off": false,
+  "timing_flags": [
+    "--timing-cflags=-DLARGE_DATASET"
+  ],
+  "repeat": 1
+}

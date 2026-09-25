@@ -1,0 +1,10 @@
+--- s000.c
++++ s000.c
+@@ -131,6 +131,7 @@
+ static real_t kernel_s000(void)
+ {
+     real_t *b_work = (real_t*)malloc((size_t)LEN_1D * sizeof(real_t));
++    #pragma omp parallel for shared(b_work) 
+     for (int nl = 0; nl < R; nl++) {
+         memcpy(b_work, b, (size_t)LEN_1D * sizeof(real_t));
+         for (int i = 0; i < LEN_1D; i++) {

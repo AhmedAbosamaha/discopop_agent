@@ -15,7 +15,7 @@ TSVC class R, clean packages, agent v2, the model alone with the mirror prompt, 
 ## What is in this folder
 
 - [`analysis/`](analysis/) — the read-out: [`main_comparison_stats.md`](analysis/main_comparison_stats.md)
-- [`runs/`](runs/) — 4 archived run(s): the evidence
+- [`runs/`](runs/) — 5 archived run(s): the evidence
 - [`checks/`](checks/) — 1 verification(s) made during the read-out
 
 ## Runs
@@ -26,8 +26,8 @@ TSVC class R, clean packages, agent v2, the model alone with the mirror prompt, 
 | `e1c_r_2` | [`runs/e1c_r_2/`](runs/e1c_r_2/) | E1 clean, class R: s212 s241 s243 s244 s252 x discopop_gate, default, bare_llm (mirror) x5, Haiku, lane 0.1 | valid | 75 | BROKEN 3, FASTER 25, VERIFY_FAILED 1, no-change 37, parallel-not-faster 9 |
 | `e1c_r_3` | [`runs/e1c_r_3/`](runs/e1c_r_3/) | E1 clean, class R: s254 s255 s281 s291 x discopop_gate, default, bare_llm (mirror) x5, Haiku, lane 1.0 | valid | 60 | BROKEN 2, FASTER 31, VERIFY_FAILED 3, no-change 21, parallel-not-faster 3 |
 | `e1c_r_4` | [`runs/e1c_r_4/`](runs/e1c_r_4/) | E1 clean, class R: s292 s293 s331 s341 x discopop_gate, default, bare_llm (mirror) x5, Haiku, lane 1.1 | valid | 60 | BROKEN 1, FASTER 22, VERIFY_FAILED 1, no-change 30, parallel-not-faster 6 |
-| `e1c_a` | not archived yet | E1 clean, class A (no-harm): s000, vpvtv, s313 x discopop_gate, default, bare_llm x1 | registered |  |  |
-| `e1c_d` | not archived yet | E1 clean, class D (must-decline): s321, s322, s323, s3112 x discopop_gate, default, bare_llm x3 — the model alone on true recurrences (the author's decision 3) | registered |  |  |
+| `e1c_a` | [`runs/e1c_a/`](runs/e1c_a/) | E1 clean, class A (no-harm): s000, vpvtv, s313 x discopop_gate, default, bare_llm x1 | valid | 9 | FASTER 7, SCAFFOLD_MODIFIED 1, VERIFY_FAILED 1 |
+| `e1c_d` | not archived yet | E1 clean, class D (must-decline): s321, s322, s323, s3112 x discopop_gate, default, bare_llm x3 — the model alone on true recurrences (the author's decision 3) | running |  |  |
 | `e1c_race_check` | [`checks/e1c_race_check/`](checks/e1c_race_check/) | race_check.py (the gate's TSan + schedule matrix, archer, server, no model) over every trial of the model alone (bare_llm, mirror prompt) in e1c_r_1..4 — what makes its FASTER count race-free (D35 read-out, H13) | valid | 0 |  |
 
 ## From the experiment record (§7 run log)
@@ -60,5 +60,6 @@ TSVC class R, clean packages, agent v2, the model alone with the mirror prompt, 
 
 | Date | Repo | Change | Why |
 |---|---|---|---|
+| 2026-09-25 | finding | **The agent's model is never told which functions measure the program; the model alone's is (found by E1c class A).** In `e1c_a` the agent's `s313` program inlined the harness's `pb_mix(nl)` call into the kernel ("to make array dependencies explicit to profiler") — output identical, so the gate kept it, and the harness scored it SCAFFOLD_MODIFIED, an unusable program under H13. The mirror prompt of the model alone names the measuring functions ("Do not change these functions — they set up, time and print the program: …", from the package's `exclude_functions`); the agent's request does not — `--exclude-functions` only keeps the agent from ASKING about regions inside them, and the contract forbids touching I/O, not the timer or the perturbation — and the twins use the agent's request, so they lack it too. **An asymmetry in the model alone's favour**, rare so far: 1 agent trial on the clean packages (`e1c_a` `s313`), 3 in the pilots (`pilot2`, `local_obs1` `seidel-2d`, `pilot4` `md`), against 1 of the model alone (`e1_bare_a` `s243`). Stated as a threat for every read-out that includes H13; the comparison agent vs twin (H12) is not affected (neither is told). **Proposed, not built (the agent is frozen while E2 runs, D34):** the agent's request names the measuring functions exactly as the mirror prompt does, and the gate rejects a candidate that changes them (the harness's `scaffold.check`, run inside the gate). The author decides | E1c class A, 25 Sep |
 | 2026-09-24 | plan | **The clean redo is split so the author's question is answered first: E1-clean (group E1c) runs before E2's other arms.** The author: "I want to see the results of the latest version of the agent against the model alone on E1." No such comparison exists yet — both arms of E1 and E1-bare saw the hint (D36). E1c = TSVC class R, 18 loops × `discopop_gate`, `default`, `bare_llm` (the mirror prompt, D37) × 5, Haiku, on four lanes (`e1c_r_1`–`4`), then the controls: class A × 1 and class D × 3 × the same three arms (`e1c_a`, `e1c_d`; the model alone on true recurrences, decision 3). E2 A+B then adds `full_b1`, `no_evidence`, `no_evidence_b1` on the same agent commit and reads its `default` and model-alone cells from E1c — so the agent must not change between the two | the author, 24 Sep |
 

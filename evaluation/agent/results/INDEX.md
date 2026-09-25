@@ -45,13 +45,13 @@ Status: running
 | `e1c_r_2` | [`E01c_clean_three_way/runs/e1c_r_2/`](E01c_clean_three_way/runs/e1c_r_2/) | E1 clean, class R: s212 s241 s243 s244 s252 x discopop_gate, default, bare_llm (mirror) x5, Haiku, lane 0.1 | valid | 75 | BROKEN 3, FASTER 25, VERIFY_FAILED 1, no-change 37, parallel-not-faster 9 |
 | `e1c_r_3` | [`E01c_clean_three_way/runs/e1c_r_3/`](E01c_clean_three_way/runs/e1c_r_3/) | E1 clean, class R: s254 s255 s281 s291 x discopop_gate, default, bare_llm (mirror) x5, Haiku, lane 1.0 | valid | 60 | BROKEN 2, FASTER 31, VERIFY_FAILED 3, no-change 21, parallel-not-faster 3 |
 | `e1c_r_4` | [`E01c_clean_three_way/runs/e1c_r_4/`](E01c_clean_three_way/runs/e1c_r_4/) | E1 clean, class R: s292 s293 s331 s341 x discopop_gate, default, bare_llm (mirror) x5, Haiku, lane 1.1 | valid | 60 | BROKEN 1, FASTER 22, VERIFY_FAILED 1, no-change 30, parallel-not-faster 6 |
-| `e1c_a` | not archived yet | E1 clean, class A (no-harm): s000, vpvtv, s313 x discopop_gate, default, bare_llm x1 | registered |  |  |
-| `e1c_d` | not archived yet | E1 clean, class D (must-decline): s321, s322, s323, s3112 x discopop_gate, default, bare_llm x3 — the model alone on true recurrences (the author's decision 3) | registered |  |  |
+| `e1c_a` | [`E01c_clean_three_way/runs/e1c_a/`](E01c_clean_three_way/runs/e1c_a/) | E1 clean, class A (no-harm): s000, vpvtv, s313 x discopop_gate, default, bare_llm x1 | valid | 9 | FASTER 7, SCAFFOLD_MODIFIED 1, VERIFY_FAILED 1 |
+| `e1c_d` | not archived yet | E1 clean, class D (must-decline): s321, s322, s323, s3112 x discopop_gate, default, bare_llm x3 — the model alone on true recurrences (the author's decision 3) | running |  |  |
 | `e1c_race_check` | [`E01c_clean_three_way/checks/e1c_race_check/`](E01c_clean_three_way/checks/e1c_race_check/) | race_check.py (the gate's TSan + schedule matrix, archer, server, no model) over every trial of the model alone (bare_llm, mirror prompt) in e1c_r_1..4 — what makes its FASTER count race-free (D35 read-out, H13) | valid | 0 |  |
 
 ## [E2 — evidence, feedback and model strength](E02_evidence_feedback_model/REPORT.md)
 
-Status: pre-flight
+Status: running
 
 | run | where | what it is | status | trials | outcomes |
 |---|---|---|---|---:|---|
@@ -63,6 +63,10 @@ Status: pre-flight
 | `e2_ab_b` | [`E02_evidence_feedback_model/superseded/e2_ab_b/`](E02_evidence_feedback_model/superseded/e2_ab_b/) | E2 Parts A+B (Haiku): discopop_gate, default, full_b1, no_evidence, no_evidence_b1 x5 on TSVC class R s252 s254 s255 s281 s291 s292 s293 s331 s341 (node 1) — STOPPED after 34/29 trials: hint in source (D36) | stopped 23 Sep: TSVC packages named the solving transformation in the source header (D36) — superseded by the clean redo | 30 | FASTER 11, no-change 18, parallel-not-faster 1 |
 | `e2c_smoke` | [`E02_evidence_feedback_model/preflight/e2c_smoke/`](E02_evidence_feedback_model/preflight/e2c_smoke/) | clean pre-flight (v3 packages, D36; Fixes 95-96): tsvc/s121, s281 x every E2/E2-source arm + discopop_gate + bare_llm (minimal prompt), Haiku x1 | pre-flight | 16 | BROKEN 2, FASTER 5, no-change 9 |
 | `d38_twin_smoke` | [`E02_evidence_feedback_model/preflight/d38_twin_smoke/`](E02_evidence_feedback_model/preflight/d38_twin_smoke/) | D38 twin runner smoke (Mac, verified at SMALL, 2 threads, 1 repeat — wiring only, no speed claim): tsvc/s121 x twin_dp (DiscoPoP unchecked, no model) -> BROKEN: this profile's draw had DiscoPoP claim a Do-All on s121's anti-dependence, inserted unchecked; twin_full (full_b1's twin, one Haiku call) -> the model's buffer rewrite + 2 DiscoPoP pragmas inserted unchecked, output exact, parallel-not-faster | pre-flight | 2 | BROKEN 1, parallel-not-faster 1 |
+| `e2c_ab_1` | not archived yet | E2 Parts A+B clean (lane 0.0): s112 s121 s1213 s127 s211 x full_b1, no_evidence, no_evidence_b1 + their D38 twins twin_full, twin_no_evidence + twin_dp (DiscoPoP unchecked), Haiku x5, threads 6,12, repeats 5; default, bare_llm, discopop_gate from E1c (same commit 33673d7d agent code) | running |  |  |
+| `e2c_ab_2` | not archived yet | E2 Parts A+B clean (lane 0.1): s212 s241 s243 s244 s252 x full_b1, no_evidence, no_evidence_b1 + their D38 twins twin_full, twin_no_evidence + twin_dp (DiscoPoP unchecked), Haiku x5, threads 6,12, repeats 5; default, bare_llm, discopop_gate from E1c (same commit 33673d7d agent code) | running |  |  |
+| `e2c_ab_3` | not archived yet | E2 Parts A+B clean (lane 1.0): s254 s255 s281 s291 x full_b1, no_evidence, no_evidence_b1 + their D38 twins twin_full, twin_no_evidence + twin_dp (DiscoPoP unchecked), Haiku x5, threads 6,12, repeats 5; default, bare_llm, discopop_gate from E1c (same commit 33673d7d agent code) | running |  |  |
+| `e2c_ab_4` | not archived yet | E2 Parts A+B clean (lane 1.1): s292 s293 s331 s341 x full_b1, no_evidence, no_evidence_b1 + their D38 twins twin_full, twin_no_evidence + twin_dp (DiscoPoP unchecked), Haiku x5, threads 6,12, repeats 5; default, bare_llm, discopop_gate from E1c (same commit 33673d7d agent code) | running |  |  |
 
 ## [E10 — does the speed check keep unnecessary changes out?](E10_speed_check/REPORT.md)
 
@@ -92,7 +96,7 @@ Status: done
 | `t0_1_sizes_v2` | [`T0_instruments/T0.01_sizes/runs/t0_1_sizes_v2/`](T0_instruments/T0.01_sizes/runs/t0_1_sizes_v2/) | the original-format packages × every size | valid | 0 |  |
 | `t0_1_apps` | [`T0_instruments/T0.01_sizes/runs/t0_1_apps/`](T0_instruments/T0.01_sizes/runs/t0_1_apps/) | the applications (md, is, hotspot, …) | valid | 0 |  |
 | `t0_1_tsvc` | [`T0_instruments/T0.01_sizes/runs/t0_1_tsvc/`](T0_instruments/T0.01_sizes/runs/t0_1_tsvc/) | the 25 TSVC loops → kernel_sizes.json | valid | 0 |  |
-| `t0_1_probe_sizes` | not archived yet | T0.1 sizes for the 8 TSVC indirect-addressing probe loops (decision 8), no model | registered |  |  |
+| `t0_1_probe_sizes` | not archived yet | T0.1 sizes for the 8 TSVC indirect-addressing probe loops (decision 8), no model | running |  |  |
 
 ## [T0.2 — DiscoPoP profile stability](T0_instruments/T0.02_profile_stability/REPORT.md)
 
