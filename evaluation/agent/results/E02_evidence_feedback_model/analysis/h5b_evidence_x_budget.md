@@ -19,16 +19,16 @@ Runs: e1c_r_1, e1c_r_2, e1c_r_3, e1c_r_4, e2c_ab_1, e2c_ab_2, e2c_ab_3, e2c_ab_4
 - Agent trials with the speed check off (untimeable kernel): 0.
 - Host load (1-min) at trial start: 2–19.
 
-## H12 — does the factor act through the pipeline? (D38)
+## H5b — do extra attempts help more without evidence?
 
-Inside the agent: `no_evidence` − `no_evidence_b1`; on the matched twins (no gate): `default` − `full_b1`. Per benchmark, the effect on the rate, then the difference of the two effects; Wilcoxon signed-rank over benchmarks, Cliff's δ between the two sets of effects. Race-free counts a model-only program only where `race_check.py` found it clean.
+Without evidence: `no_evidence` − `no_evidence_b1`; with evidence: `default` − `full_b1`. Per benchmark, the effect on the rate, then the difference of the two effects; Wilcoxon signed-rank over benchmarks, Cliff's δ between the two sets of effects. Rates over trials with a verdict (parallel, unchanged, changed but not parallel, wrong, not building; a harness edit is left out). Race-free counts a model-only program only where `race_check.py` found it clean.
 
 ### Class R — 18 benchmarks
 
-- race-free FASTER (the pre-registered measure): mean effect inside the agent +0.04, on the twins +0.03; larger inside the pipeline on 5 benchmarks, on the twins on 5, tied on 8; p (two-sided) = 0.922, p (larger inside) = 0.578; Cliff's δ = +0.06.
-- FASTER: mean effect inside the agent +0.04, on the twins +0.03; larger inside the pipeline on 5 benchmarks, on the twins on 5, tied on 8; p (two-sided) = 0.922, p (larger inside) = 0.578; Cliff's δ = +0.06.
+- race-free FASTER (the pre-registered measure): mean effect without evidence +0.04, with evidence +0.03; larger without evidence on 5 benchmarks, with evidence on 5, tied on 8; p (two-sided) = 0.922, p (larger without evidence) = 0.578; Cliff's δ = +0.06.
+- FASTER: mean effect without evidence +0.04, with evidence +0.03; larger without evidence on 5 benchmarks, with evidence on 5, tied on 8; p (two-sided) = 0.922, p (larger without evidence) = 0.578; Cliff's δ = +0.06.
 
-| benchmark | agent hi | agent lo | twin hi | twin lo | agent effect | twin effect | interaction |
+| benchmark | `no_evidence` | `no_evidence_b1` | `default` | `full_b1` | effect without evidence | effect with evidence | difference |
 |---|---:|---:|---:|---:|---:|---:|---:|
 | `tsvc/s112` | 0.60 | 0.40 | 0.00 | 0.20 | +0.20 | -0.20 | +0.40 |
 | `tsvc/s121` | 0.60 | 0.40 | 0.40 | 0.40 | +0.20 | +0.00 | +0.20 |

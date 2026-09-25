@@ -21,23 +21,23 @@ Runs: e1c_r_1, e1c_r_2, e1c_r_3, e1c_r_4, e2c_ab_1, e2c_ab_2, e2c_ab_3, e2c_ab_4
 
 ## H12 — does the factor act through the pipeline? (D38)
 
-Inside the agent: `full_b1` − `no_evidence_b1`; on the matched twins (no gate): `twin_full` − `twin_no_evidence`. Per benchmark, the effect on the rate, then the difference of the two effects; Wilcoxon signed-rank over benchmarks, Cliff's δ between the two sets of effects. Race-free counts a model-only program only where `race_check.py` found it clean.
+Inside the agent: `full_b1` − `no_evidence_b1`; on the matched twins (no gate): `twin_full` − `twin_no_evidence`. Per benchmark, the effect on the rate, then the difference of the two effects; Wilcoxon signed-rank over benchmarks, Cliff's δ between the two sets of effects. Rates over trials with a verdict (parallel, unchanged, changed but not parallel, wrong, not building; a harness edit is left out). Race-free counts a model-only program only where `race_check.py` found it clean.
 
 ### Class R — 18 benchmarks
 
-- race-free FASTER (the pre-registered measure): mean effect inside the agent -0.03, on the twins -0.02; larger inside the pipeline on 3 benchmarks, on the twins on 7, tied on 8; p (two-sided) = 0.605, p (larger inside) = 0.711; Cliff's δ = -0.02.
-- FASTER: mean effect inside the agent -0.03, on the twins -0.02; larger inside the pipeline on 3 benchmarks, on the twins on 7, tied on 8; p (two-sided) = 0.605, p (larger inside) = 0.711; Cliff's δ = -0.02.
+- race-free FASTER (the pre-registered measure): mean effect inside the agent -0.03, on the matched twins (no gate) -0.02; larger inside the agent on 3 benchmarks, on the matched twins (no gate) on 6, tied on 9; p (two-sided) = 0.625, p (larger inside the agent) = 0.701; Cliff's δ = -0.02.
+- FASTER: mean effect inside the agent -0.03, on the matched twins (no gate) -0.02; larger inside the agent on 3 benchmarks, on the matched twins (no gate) on 6, tied on 9; p (two-sided) = 0.625, p (larger inside the agent) = 0.701; Cliff's δ = -0.02.
 
-| benchmark | agent hi | agent lo | twin hi | twin lo | agent effect | twin effect | interaction |
+| benchmark | `full_b1` | `no_evidence_b1` | `twin_full` | `twin_no_evidence` | effect inside the agent | effect on the matched twins (no gate) | difference |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| `tsvc/s112` | 0.20 | 0.40 | 0.40 | 0.50 | -0.20 | -0.10 | -0.10 |
+| `tsvc/s112` | 0.20 | 0.40 | 0.40 | 0.40 | -0.20 | +0.00 | -0.20 |
 | `tsvc/s121` | 0.40 | 0.40 | 0.80 | 0.40 | +0.00 | +0.40 | -0.40 |
 | `tsvc/s1213` | 0.80 | 0.60 | 0.40 | 0.80 | +0.20 | -0.40 | +0.60 |
 | `tsvc/s127` | 1.00 | 1.00 | 0.00 | 0.00 | +0.00 | +0.00 | +0.00 |
 | `tsvc/s211` | 0.20 | 0.40 | 0.00 | 0.00 | -0.20 | +0.00 | -0.20 |
 | `tsvc/s212` | 0.60 | 0.40 | 0.40 | 0.40 | +0.20 | +0.00 | +0.20 |
 | `tsvc/s241` | 0.20 | 0.00 | 0.00 | 0.20 | +0.20 | -0.20 | +0.40 |
-| `tsvc/s243` | 0.20 | 0.20 | 0.50 | 0.40 | +0.00 | +0.10 | -0.10 |
+| `tsvc/s243` | 0.20 | 0.20 | 0.40 | 0.40 | +0.00 | +0.00 | +0.00 |
 | `tsvc/s244` | 0.00 | 0.80 | 0.00 | 0.60 | -0.80 | -0.60 | -0.20 |
 | `tsvc/s252` | 0.40 | 0.60 | 0.00 | 0.00 | -0.20 | +0.00 | -0.20 |
 | `tsvc/s254` | 1.00 | 1.00 | 0.00 | 0.00 | +0.00 | +0.00 | +0.00 |

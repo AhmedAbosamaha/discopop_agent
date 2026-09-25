@@ -172,7 +172,7 @@ def analyse(trials: List[dict], arm: Optional[str] = None) -> Dict[str, Any]:
     return result
 
 
-SLOWER = 1 / figures.WIN_RATIO            # a correct parallel program below this ships a slowdown
+SLOWER = 1 / figures.WIN_RATIO            # a correct changed program below this ships a slowdown
 
 
 RACE_STAGES = ("tsan", "schedules")        # what makes a program racy; any other failed stage = not judgeable
@@ -243,6 +243,25 @@ def _tampered(t: dict) -> bool:
     return t.get("outcome") == "SCAFFOLD_MODIFIED"
 
 
+def _with_verdict(t: dict) -> bool:
+    """The trial delivered a program that was judged: parallel (timed or not), left unchanged,
+    changed but not parallel, wrong, or not building.  Every rate counts over these.  Left out:
+    a harness edit, even one that does not build (its own row), and a trial that ended before
+    any program was judged (agent, profile or verification error)."""
+    if _tampered(t):
+        return False
+    return (t.get("outcome") in figures.PARALLEL_OK + ("no-change", "changed-not-parallel", "BROKEN")
+            or _did_not_compile(t))
+
+
+def _ships_slowdown(t: dict) -> bool:
+    """A correct program that changed the code and runs slower than the original (below 1/1.1),
+    parallel or not: nobody would keep it (H13).  A rewrite with no pragma is timed like any
+    other program (E2's twin `s244`: 0.63×)."""
+    return (t.get("outcome") in figures.PARALLEL_OK + ("changed-not-parallel",)
+            and (_best_speedup(t) or 1.0) < SLOWER)
+
+
 def three_way(trials: List[dict], agent_arm: str, bare_arm: str = "bare_llm",
               races: Optional[Dict[Tuple[str, str, str, int], str]] = None) -> Dict[str, Any]:
     """D35: DiscoPoP alone · DiscoPoP + agent · the model alone, each against the sequential
@@ -266,8 +285,7 @@ def three_way(trials: List[dict], agent_arm: str, bare_arm: str = "bare_llm",
             # a program that does not build (H13, the author 24 Sep: "record that as a result").
             # A program that touched the harness has no valid measurement: its own row, out of
             # the denominator, never unusable (the author: only failures in the code under test).
-            valid = [t for t in at if t.get("outcome") in figures.PARALLEL_OK + ("no-change", "BROKEN")
-                     or _did_not_compile(t)]
+            valid = [t for t in at if _with_verdict(t)]
             par = [t for t in valid if t.get("outcome") in figures.PARALLEL_OK]
             fast = [t for t in valid if t.get("outcome") == "FASTER"]
 
@@ -278,7 +296,7 @@ def three_way(trials: List[dict], agent_arm: str, bare_arm: str = "bare_llm",
             clean_fast = [t for t in fast if race(t) == "clean"]
             racy = [t for t in par if race(t) in RACE_STAGES]
             unjudged = [t for t in par if race(t) not in RACE_STAGES + ("clean", "unchecked")]
-            slower = [t for t in par if (_best_speedup(t) or 1.0) < SLOWER]
+            slower = [t for t in valid if _ships_slowdown(t)]
             broken = [t for t in valid if t.get("outcome") == "BROKEN"]
             no_build = [t for t in valid if _did_not_compile(t)]
             tampered = [t for t in at if _tampered(t)]
@@ -305,9 +323,8 @@ def three_way(trials: List[dict], agent_arm: str, bare_arm: str = "bare_llm",
             }
             for b in benches:
                 bt = [t for t in valid if str(t.get("benchmark")) == b]
-                bad = {id(t) for t in bt if t.get("outcome") == "BROKEN" or _did_not_compile(t)
-                       or (t.get("outcome") in figures.PARALLEL_OK
-                           and ((_best_speedup(t) or 1.0) < SLOWER or race(t) in RACE_STAGES))}
+                bad = {id(t) for t in bt if t.get("outcome") == "BROKEN" or _did_not_compile(t) or _ships_slowdown(t)
+                       or (t.get("outcome") in figures.PARALLEL_OK and race(t) in RACE_STAGES)}
                 per[b][label] = {"faster": sum(1 for t in bt if t.get("outcome") == "FASTER"),
                                  "faster_race_free": sum(1 for t in bt if t.get("outcome") == "FASTER" and race(t) == "clean"),
                                  "broken": sum(1 for t in bt if t.get("outcome") == "BROKEN"),
@@ -345,7 +362,7 @@ def three_way_markdown(tw: Dict[str, Any]) -> str:
                 ("FASTER (≥ 1.1×)", lambda a: _pct(a["faster"])),
                 ("FASTER and race-free", lambda a: _pct(a["faster_race_free"]) + (f" (+{a['faster_race_unchecked']} unchecked)" if a["faster_race_unchecked"] else "")),
                 ("**BROKEN** (wrong output shipped)", lambda a: f"**{a['broken']}**"),
-                ("correct but slower, shipped (< 0.91×)", lambda a: str(a["slower_shipped"])),
+                ("correct but slower, shipped (< 0.91×, parallel or not)", lambda a: str(a["slower_shipped"])),
                 ("racy (race check: TSan or the schedule matrix)", lambda a: str(a["racy"]) + (f" (+{a['race_not_judgeable']} not judgeable)" if a["race_not_judgeable"] else "")),
                 ("shipped a program that does not compile", lambda a: str(a["did_not_compile"])),
                 ("**unusable programs** (any of the four above)", lambda a: f"**{a['unusable']}**"),
@@ -414,8 +431,7 @@ def interaction(trials: List[dict], agent_hi: str, agent_lo: str, twin_hi: str, 
             continue
 
         def rate(arm: str, bench: str, key: str) -> Optional[float]:
-            at = [t for t in ts if t.get("arm") == arm and str(t.get("benchmark")) == bench
-                  and t.get("outcome") in figures.PARALLEL_OK + ("no-change", "BROKEN")]
+            at = [t for t in ts if t.get("arm") == arm and str(t.get("benchmark")) == bench and _with_verdict(t)]
             if not at:
                 return None
             def ok(t: dict) -> bool:
@@ -449,13 +465,21 @@ def interaction(trials: List[dict], agent_hi: str, agent_lo: str, twin_hi: str, 
     return res
 
 
-def interaction_markdown(ix: Dict[str, Any]) -> str:
+H12_LABELS = ("H12 — does the factor act through the pipeline? (D38)", "inside the agent", "on the matched twins (no gate)")
+
+
+def interaction_markdown(ix: Dict[str, Any], labels: Tuple[str, str, str] = H12_LABELS) -> str:
+    """`labels` = (title, where the first pair acts, where the second acts): H12 by default; the same
+    difference of differences answers other registered interactions (H5b: budget without evidence
+    against budget with it) and must then not call its second pair "twins"."""
     a = ix["arms"]
-    out = [f"## H12 — does the factor act through the pipeline? (D38)", "",
-           f"Inside the agent: `{a['agent_hi']}` − `{a['agent_lo']}`; on the matched twins (no gate): "
+    title, first, second = labels
+    out = [f"## {title}", "",
+           f"{first[:1].upper() + first[1:]}: `{a['agent_hi']}` − `{a['agent_lo']}`; {second}: "
            f"`{a['twin_hi']}` − `{a['twin_lo']}`. Per benchmark, the effect on the rate, then the difference of "
            "the two effects; Wilcoxon signed-rank over benchmarks, Cliff's δ between the two sets of effects. "
-           "Race-free counts a model-only program only where `race_check.py` found it clean."]
+           "Rates over trials with a verdict (parallel, unchanged, changed but not parallel, wrong, not building; "
+           "a harness edit is left out). Race-free counts a model-only program only where `race_check.py` found it clean."]
     if ix["races_missing_for"]:
         out += ["", f"**No race file for {', '.join(ix['races_missing_for'])}: the race-free rows are NOT established "
                 "— run race_check.py over those arms first.**"]
@@ -465,15 +489,16 @@ def interaction_markdown(ix: Dict[str, Any]) -> str:
             d = b[key]
             w = d["wilcoxon"]
             me, mt = d["mean_agent_effect"], d["mean_twin_effect"]
-            out.append(f"- {label}: mean effect inside the agent {me:+.2f}, on the twins {mt:+.2f}; larger inside the "
-                       f"pipeline on {w['agent_ahead']} benchmarks, on the twins on {w['model_alone_ahead']}, tied on "
+            out.append(f"- {label}: mean effect {first} {me:+.2f}, {second} {mt:+.2f}; larger {first} "
+                       f"on {w['agent_ahead']} benchmarks, {second} on {w['model_alone_ahead']}, tied on "
                        f"{w['n_pairs'] - w['n_nonzero']}"
-                       + (f"; p (two-sided) = {w['p_two_sided']:.3g}, p (larger inside) = {w['p_agent_ahead']:.3g}"
+                       + (f"; p (two-sided) = {w['p_two_sided']:.3g}, p (larger {first}) = {w['p_agent_ahead']:.3g}"
                           if "p_two_sided" in w else f"; {w.get('note', '')}")
                        + (f"; Cliff's δ = {d['cliffs_delta']:+.2f}" if d["cliffs_delta"] is not None else "") + "."
                        if me is not None and mt is not None else f"- {label}: no benchmark has all four arms.")
         per = b["faster_race_free"]["per_benchmark"]
-        out += ["", "| benchmark | agent hi | agent lo | twin hi | twin lo | agent effect | twin effect | interaction |",
+        out += ["", f"| benchmark | `{a['agent_hi']}` | `{a['agent_lo']}` | `{a['twin_hi']}` | `{a['twin_lo']}` | "
+                f"effect {first} | effect {second} | difference |",
                 "|---|---:|---:|---:|---:|---:|---:|---:|"]
         for bench, v in per.items():
             out.append(f"| `{bench}` | {v['agent_hi']:.2f} | {v['agent_lo']:.2f} | {v['twin_hi']:.2f} | {v['twin_lo']:.2f} | "
@@ -550,6 +575,9 @@ def main() -> int:
     ap.add_argument("--interaction", default=None, metavar="AGENT_HI,AGENT_LO,TWIN_HI,TWIN_LO",
                     help="H12 (D38): the factor's effect inside the agent against its effect on the twins, "
                          "e.g. full_b1,no_evidence_b1,twin_full,twin_no_evidence (--races for the twins)")
+    ap.add_argument("--interaction-labels", default=None, metavar="TITLE;FIRST;SECOND",
+                    help="headings when --interaction answers something other than H12, e.g. H5b: "
+                         "'H5b — do extra attempts help more without evidence?;without evidence;with evidence'")
     ap.add_argument("--suite", default=None,
                     help="only benchmarks of this suite (`tsvc`): the PRIMARY set of D30, computed with the "
                          "same statistics as the registered set, never instead of it")
@@ -579,7 +607,14 @@ def main() -> int:
         if len(hi_lo) != 4:
             sys.exit("--interaction takes four arms: AGENT_HI,AGENT_LO,TWIN_HI,TWIN_LO")
         res["interaction"] = interaction(trials, hi_lo[0], hi_lo[1], hi_lo[2], hi_lo[3], load_races(a.races))
-        md += "\n" + interaction_markdown(res["interaction"])
+        labels = H12_LABELS
+        if a.interaction_labels:
+            parts = a.interaction_labels.split(";")
+            if len(parts) != 3:
+                sys.exit("--interaction-labels takes TITLE;FIRST;SECOND")
+            labels = (parts[0].strip(), parts[1].strip(), parts[2].strip())
+        res["interaction"]["labels"] = list(labels)
+        md += "\n" + interaction_markdown(res["interaction"], labels)
     print(md)
     if a.out:
         a.out.mkdir(parents=True, exist_ok=True)

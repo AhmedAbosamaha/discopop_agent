@@ -50,7 +50,7 @@ Agent arm `default`, model alone `bare_llm`, DiscoPoP alone `discopop_gate`; the
 | FASTER (≥ 1.1×) | 0 of 90 (0 %, 95 % CI 0–4 %) | 51 of 90 (57 %, 95 % CI 46–66 %) | 44 of 90 (49 %, 95 % CI 39–59 %) |
 | FASTER and race-free | 0 of 90 (0 %, 95 % CI 0–4 %) | 51 of 90 (57 %, 95 % CI 46–66 %) | 39 of 90 (43 %, 95 % CI 34–54 %) |
 | **BROKEN** (wrong output shipped) | **0** | **0** | **16** |
-| correct but slower, shipped (< 0.91×) | 0 | 0 | 17 |
+| correct but slower, shipped (< 0.91×, parallel or not) | 0 | 0 | 17 |
 | racy (race check: TSan or the schedule matrix) | 0 | 0 | 5 |
 | shipped a program that does not compile | 0 | 0 | 8 |
 | **unusable programs** (any of the four above) | **0** | **0** | **46** |
@@ -92,7 +92,7 @@ Agent arm `default`, model alone `bare_llm`, DiscoPoP alone `discopop_gate`; the
 | FASTER (≥ 1.1×) | 3 of 3 (100 %, 95 % CI 44–100 %) | 2 of 2 (100 %, 95 % CI 34–100 %) | 2 of 3 (67 %, 95 % CI 21–94 %) |
 | FASTER and race-free | 3 of 3 (100 %, 95 % CI 44–100 %) | 2 of 2 (100 %, 95 % CI 34–100 %) | 2 of 3 (67 %, 95 % CI 21–94 %) |
 | **BROKEN** (wrong output shipped) | **0** | **0** | **0** |
-| correct but slower, shipped (< 0.91×) | 0 | 0 | 0 |
+| correct but slower, shipped (< 0.91×, parallel or not) | 0 | 0 | 0 |
 | racy (race check: TSan or the schedule matrix) | 0 | 0 | 0 |
 | shipped a program that does not compile | 0 | 0 | 1 |
 | **unusable programs** (any of the four above) | **0** | **0** | **1** |
@@ -119,7 +119,7 @@ Agent arm `default`, model alone `bare_llm`, DiscoPoP alone `discopop_gate`; the
 | FASTER (≥ 1.1×) | 0 of 12 (0 %, 95 % CI 0–24 %) | 0 of 12 (0 %, 95 % CI 0–24 %) | 0 of 12 (0 %, 95 % CI 0–24 %) |
 | FASTER and race-free | 0 of 12 (0 %, 95 % CI 0–24 %) | 0 of 12 (0 %, 95 % CI 0–24 %) | 0 of 12 (0 %, 95 % CI 0–24 %) |
 | **BROKEN** (wrong output shipped) | **0** | **0** | **6** |
-| correct but slower, shipped (< 0.91×) | 0 | 0 | 1 |
+| correct but slower, shipped (< 0.91×, parallel or not) | 0 | 0 | 1 |
 | racy (race check: TSan or the schedule matrix) | 0 | 0 | 0 (+2 not judgeable) |
 | shipped a program that does not compile | 0 | 0 | 2 |
 | **unusable programs** (any of the four above) | **0** | **0** | **9** |

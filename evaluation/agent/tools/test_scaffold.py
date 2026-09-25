@@ -76,5 +76,40 @@ for app in ["burkardt/md", "rodinia-3.1/pathfinder", "npb/mg", "npb/lu", "npb/is
         expect(f"{app} pragma in computation window", S.check(t, t[:a] + win[:m.start()] + "\n" + m.group(1) + "#pragma omp parallel for" + win[m.start():] + t[b:]), True)
     stop = m_stop.group(0)
     expect(f"{app} timer stop moved to window start", S.check(t, t[:a] + stop + win + "\n  (void)0;" + t[b + len(stop):]), False)
+
+# How a trial counts in the statistics (main_comparison_stats.py; record §6, 25 Sep). A harness
+# edit is its own row and never unusable, even when its program does not build (E2's twin_full
+# s331 rep 4 was counted "did not compile"); a rewrite with no pragma has a verdict, and is
+# unusable when it runs slower than the original (E2's twin_full s244 rep 1, 0.63×).
+print("\ncounting")
+import main_comparison_stats as M  # noqa: E402
+def holds(label, cond):
+    global fails
+    fails += not cond
+    print(f"  [{'pass' if cond else 'FAIL'}] {label}")
+NOBUILD = {"status": "verify_build_failed", "build_errors": {"final_dump": "e", "final_par": "e"}}
+def trial(outcome, speedup=None, verify=None, rep=1, arm="twin_full"):
+    v = dict(verify or {"status": "ok"})
+    if speedup is not None:
+        v["par"] = {"6": {"speedup": speedup}}
+    return {"arm": arm, "benchmark": "tsvc/s244", "repeat": rep, "outcome": outcome, "verify": v}
+holds("harness edit that does not build: no verdict", not M._with_verdict(trial("SCAFFOLD_MODIFIED", verify=NOBUILD)))
+holds("harness edit that builds: no verdict", not M._with_verdict(trial("SCAFFOLD_MODIFIED", 1.5)))
+holds("changed, not parallel: a verdict", M._with_verdict(trial("changed-not-parallel", 1.04)))
+holds("changed, not parallel, 1.04x: no slowdown", not M._ships_slowdown(trial("changed-not-parallel", 1.04)))
+holds("changed, not parallel, 0.63x: a slowdown", M._ships_slowdown(trial("changed-not-parallel", 0.63)))
+holds("parallel, 0.8x: a slowdown", M._ships_slowdown(trial("parallel-not-faster", 0.8)))
+holds("FASTER: no slowdown", not M._ships_slowdown(trial("FASTER", 2.0)))
+holds("unchanged: a verdict, no slowdown", M._with_verdict(trial("no-change")) and not M._ships_slowdown(trial("no-change")))
+holds("final program does not build: a verdict", M._with_verdict(trial("VERIFY_FAILED", verify=NOBUILD)))
+holds("original does not build: no verdict", not M._with_verdict(
+    trial("VERIFY_FAILED", verify={"status": "verify_build_failed", "build_errors": {"orig_dump": "e"}})))
+holds("agent error: no verdict", not M._with_verdict(trial("AGENT_ERROR")))
+tw = M.three_way([trial("FASTER", 2.0, rep=1), trial("SCAFFOLD_MODIFIED", verify=NOBUILD, rep=2),
+                  trial("changed-not-parallel", 0.63, rep=3), trial("no-change", arm="default"),
+                  trial("no-change", arm="discopop_gate")], "default", "twin_full")
+got = tw["classes"]["R"]["arms"]["model alone"] if "R" in tw["classes"] else {}
+holds("three-way: 2 with a verdict, 1 harness edit, 1 unusable (the slow rewrite), 0 not compiling",
+      (got.get("with_verdict"), got.get("tampered"), got.get("unusable"), got.get("did_not_compile")) == (2, 1, 1, 0))
 print("\nFAILURES:", fails)
 sys.exit(1 if fails else 0)

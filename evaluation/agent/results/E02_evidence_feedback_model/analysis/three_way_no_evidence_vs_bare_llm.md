@@ -31,7 +31,7 @@ Agent arm `no_evidence`, model alone `bare_llm`, DiscoPoP alone `discopop_gate`;
 | FASTER (≥ 1.1×) | 0 of 90 (0 %, 95 % CI 0–4 %) | 55 of 90 (61 %, 95 % CI 51–71 %) | 44 of 90 (49 %, 95 % CI 39–59 %) |
 | FASTER and race-free | 0 of 90 (0 %, 95 % CI 0–4 %) | 55 of 90 (61 %, 95 % CI 51–71 %) | 39 of 90 (43 %, 95 % CI 34–54 %) |
 | **BROKEN** (wrong output shipped) | **0** | **0** | **16** |
-| correct but slower, shipped (< 0.91×) | 0 | 0 | 17 |
+| correct but slower, shipped (< 0.91×, parallel or not) | 0 | 0 | 17 |
 | racy (race check: TSan or the schedule matrix) | 0 | 0 | 5 |
 | shipped a program that does not compile | 0 | 0 | 8 |
 | **unusable programs** (any of the four above) | **0** | **0** | **46** |
