@@ -54,6 +54,7 @@ from . import viz
 from .args import AgentArguments
 from .gate import (capture_reference, check_pragma_compiles,
                    numerical_noise_floor)
+from .llm.client import set_request_log
 from .phases import (RunState, _phase_b, _print_banner, _print_candidates,
                      _settle, phase_a)
 from .phases.floor import apply_floor, build_floor
@@ -61,7 +62,8 @@ from .phases.phase_b import SPEED_THRESHOLD_KEY
 from .phases.verdicts import _MARGINAL_NOISE
 from .plan import build_candidates, region_fingerprint
 from .plan import impact as impact_mod
-from .pragmas import _read_tier1_patch, check_pragma_clauses, derive_pragma_patch
+from .pragmas import (_read_tier1_patch, _repair_pragma_clauses, check_pragma_clauses,
+                      derive_pragma_patch)
 from .profiling import _measure_hotspots, _reprofil
 from .types import HotspotCandidate
 
@@ -72,6 +74,9 @@ def run(args: AgentArguments) -> None:
     # A dry run promises no file changes, so don't even create the output dir.
     if not args.dry_run:
         output_dir.mkdir(parents=True, exist_ok=True)
+        # D40: every request the model is sent, kept beside the candidates (the harness archives
+        # agent_patches/ whole).  Nothing recorded what a trial's model read before.
+        set_request_log(output_dir / "requests")
 
     viz.enable(args.verbose)
     _print_banner(args)
@@ -254,10 +259,12 @@ def run(args: AgentArguments) -> None:
     for c in claimed:
         project_mod.work_on(args, c.source_file)
         cpid = c.pattern.get("pattern_id", "?") if c.pattern else "?"
-        d = derive_pragma_patch(
+        # With Phase B's clause repair, so the baseline counts what Phase B can apply (chart
+        # audit of 26 Sep, finding 5).  Informational only: the harness never reads it.
+        d = _repair_pragma_clauses(derive_pragma_patch(
             _read_tier1_patch(dp_dir / "patch_generator" / str(cpid)),
             args.source_file,
-        )
+        ), args.source_file)
         if not d or check_pragma_clauses(d, args.source_file):
             continue
         ok_c, _diag = check_pragma_compiles(d, args.source_file)

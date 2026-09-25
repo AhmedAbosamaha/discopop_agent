@@ -31,6 +31,7 @@ class AgentArguments:
     min_impact: float           # skip regions predicted to save less than this (seconds)
     restructure_depth: int      # max discovery depth at which Tier-2 (LLM) is applied
     require_speedup: bool       # gate pragma patches on measured wall-clock speedup
+    judge_as_shipped: bool      # D40: a rewrite's pragmas judged in Phase A, safety then paired speed
     build_retries: int          # apply/compile retries that do not consume budget
     apply_patches: bool         # write accepted Tier-1 pragmas into the source file
     min_measured_speedup: float # minimum measured parallel speedup to accept
@@ -334,6 +335,19 @@ def parse_args() -> AgentArguments:
                        "parallelizations, e.g. when profiling a workload too small "
                        "to amortise thread overhead."
                    ))
+    p.add_argument("--judge-as-shipped", action=argparse.BooleanOptionalAction, default=True,
+                   help=(
+                       "D40 (agent v3, default on): when DiscoPoP writes the pragmas, judge a "
+                       "kept rewrite the way it will ship while the model can still act on the "
+                       "verdict — DiscoPoP's pragmas for the loops it exposed go through the "
+                       "safety gate, then the rewrite with them is timed against the program "
+                       "before it (paired, Settle's threshold); a failure reverts the rewrite and "
+                       "is fed back, charged to the region's budget.  The pragmas are staged as "
+                       "text; the source stays pragma-free until Phase B.  Also states the speed "
+                       "criterion as the original program in the prompt.  Needs "
+                       "--require-speedup; only when no deeper restructuring level follows.  "
+                       "--no-judge-as-shipped reproduces agent v2."
+                   ))
     p.add_argument("--apply-patches", action=argparse.BooleanOptionalAction, default=True,
                    help=("Write accepted Tier-1 pragmas into the source file (default: on; "
                          "the original is backed up to <output-dir>/<name>.original). "
@@ -622,6 +636,7 @@ def parse_args() -> AgentArguments:
         timing_cflags=tuple(shlex.split(a.timing_cflags)),
         restructure_depth=a.restructure_depth,
         require_speedup=a.require_speedup,
+        judge_as_shipped=a.judge_as_shipped,
         build_retries=a.build_retries,
         allow_unverified=a.allow_unverified,
         llm_recon=a.llm_recon,

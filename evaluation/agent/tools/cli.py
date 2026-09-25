@@ -946,6 +946,10 @@ def _parse_agent_log(log: str) -> dict:
         "gate_failures_phase_a": dict(Counter(re.findall(r"Stage '([a-z_]+)' failed", log))),
         "gate_failures_phase_b": dict(Counter(re.findall(r"gate failed at '([a-z_]+)'", log))),
         "gate_passes_phase_a": log.count("Quality gate PASSED"),
+        # D40 (agent v3): DiscoPoP's pragmas for a kept rewrite judged in Phase A — the stage a
+        # pragma failed at, and each rewrite's verdict (ok / not_faster / pattern_broken / exposed).
+        "gate_failures_d40": dict(Counter(re.findall(r"D40: .* fails at '([a-z_]+)'", log))),
+        "d40_verdicts": dict(Counter(re.findall(r"D40 verdict: ([a-z_]+)", log))),
         "region_verdicts": dict(Counter(re.findall(r"└─ ([A-Z]+)", log))),
         "settle_dropped": len(re.findall(r"^\s+· ", log.split("SETTLING", 1)[1], re.M))
         if "SETTLING" in log else 0,

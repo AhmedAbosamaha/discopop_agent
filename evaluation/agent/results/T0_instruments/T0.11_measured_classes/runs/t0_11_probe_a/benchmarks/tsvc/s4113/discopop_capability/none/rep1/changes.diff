@@ -1,0 +1,10 @@
+--- original.c
++++ final.c
+@@ -135,6 +135,7 @@
+ {
+     int * __restrict__ ip = pb_ip;
+     for (int nl = 0; nl < R; nl++) {
++        #pragma omp parallel for shared(ip) 
+         for (int i = 0; i < LEN_1D; i++) {
+             a[ip[i]] = b[ip[i]] + c[i];
+         }

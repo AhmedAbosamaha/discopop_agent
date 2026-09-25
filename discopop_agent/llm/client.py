@@ -12,11 +12,50 @@ callers should not have to think about:
 """
 from __future__ import annotations
 
+import hashlib
+import json
+import time
 from pathlib import Path
 from typing import Any, List, Optional, Set
 
 from .. import viz
 from ..types import EvidencePackage, GateFacts
+
+# D40: where every request is recorded.  Until then no prompt was kept at all — the log said
+# "Assembling evidence" and nothing else — so what a trial's model actually read could only be
+# rebuilt from the profile the run kept on the server.
+_REQUEST_LOG: Optional[Path] = None
+
+
+def set_request_log(directory: "Path | None") -> None:
+    """Record every model call under `directory`: each distinct system prompt once
+    (system_<sha>.txt), then one JSON line per call in requests.jsonl — the region, the
+    attempt, what was sent this turn and the reply.  None stops recording."""
+    global _REQUEST_LOG
+    _REQUEST_LOG = Path(directory) if directory else None
+    if _REQUEST_LOG is not None:
+        _REQUEST_LOG.mkdir(parents=True, exist_ok=True)
+
+
+def log_request(region: str, attempt: int, system: str, sent: str, reply: str,
+                n_messages: int) -> None:
+    """One call, as the model saw it.  `sent` is the newest user message: the only one the
+    claude-agent-sdk session transmits (it keeps the earlier turns itself); the stateless
+    providers resend the whole history, which is these lines in order.  A failure to write
+    never fails the run."""
+    if _REQUEST_LOG is None:
+        return
+    try:
+        sha = hashlib.sha256(system.encode()).hexdigest()[:16]
+        sys_file = _REQUEST_LOG / f"system_{sha}.txt"
+        if not sys_file.exists():
+            sys_file.write_text(system)
+        with open(_REQUEST_LOG / "requests.jsonl", "a") as fh:
+            fh.write(json.dumps({"t": round(time.time(), 3), "region": region, "attempt": attempt,
+                                 "system": sha, "messages": n_messages, "sent": sent,
+                                 "reply": reply}) + "\n")
+    except OSError:
+        pass
 from .diffs import _extract_code, _extract_diff, _is_valid_diff
 from .prompts import _system_prompt
 from .request import (_build_direct_prompt, _build_function_prompt,
@@ -133,6 +172,8 @@ def call_llm(
         text = _complete(provider, client, model, current, system,
                          session_key=session_key,
                          workspace=workspace_file.parent if workspace_file else None)
+        last_user = next((str(m["content"]) for m in reversed(current) if m["role"] == "user"), "")
+        log_request(str(session_key), attempt, system, last_user, text, len(current))
 
         if verbose:
             viz.llm_response(text, kind=kind)

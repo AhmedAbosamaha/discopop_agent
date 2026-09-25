@@ -1,0 +1,10 @@
+--- s4112.c
++++ s4112.c
+@@ -136,6 +136,7 @@
+     int * __restrict__ ip = pb_ip;
+     real_t s = (real_t)1.0;
+     for (int nl = 0; nl < R; nl++) {
++        #pragma omp parallel for firstprivate(s) shared(ip) 
+         for (int i = 0; i < LEN_1D; i++) {
+             a[i] += b[ip[i]] * s;
+         }

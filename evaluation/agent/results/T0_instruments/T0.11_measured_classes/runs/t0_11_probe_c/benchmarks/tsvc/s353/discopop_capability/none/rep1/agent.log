@@ -1,0 +1,81 @@
+
+============================================================
+  DiscoPoP Agentic Controller
+============================================================
+  Source         : s353.c
+  DiscoPoP dir   : .discopop
+  Model          : none
+  Budget         : 0 LLM retries/region (+2 free build fixes)
+  λ penalty      : 1.0
+  Min workload   : 0.0
+  Restruct. depth: 0 (Tier-2 allowed at depth 0–0)
+  Quality gate   : Tier-1 = all but speed, no escalation; Tier-2 = full
+  TSan           : barrier-aware (archer: /usr/lib/llvm-20/lib/libarcher.so)
+  Speedup gate   : OFF (--no-require-speedup)
+  Dry run        : False
+  LLM mode       : none
+  Edit mode      : direct
+  Re-profiling   : full (instrument + run + explore) after every kept rewrite
+  Explorer       : one attempt may take 60 s, then the draw is repeated (random stall, L5)
+  Pragmas        : DiscoPoP writes them in Phase B
+============================================================
+
+  [ok] Captured reference output on 2 inputs (69 bytes, 0.4 ms baseline) for the correctness/performance gates.
+
+  [ok] Numerical noise floor 0 — 6 build variants agreed exactly; output is compared byte-for-byte.
+
+  Hotspots       : measured per-region runtimes are available — 17 region(s) measured, 2.4 ms total, ranking by predicted time saved at 48 threads
+
+  Baseline       : DiscoPoP proposes 1 applicable pattern(s) unaided; 1 of them produce a usable pragma
+                   → the run beats DiscoPoP by ending with more than 1
+
+  Initial candidates
+Region ID    Type           Saves    % run    Hot  Tier  Depth  Name
+--------------------------------------------------------------------------------------
+  1:92       loop          1.2 ms    48.7%    YES     2      0  lines 138–147
+  1:89       function      1.2 ms    48.7%    YES     2      0  kernel_s353
+  1:95       loop          1.1 ms    48.4%    YES     1      0  lines 139–145
+
+============================================================
+  PHASE A — restructure  (the source stays pragma-free)
+============================================================
+
+┌─ [depth=0] loop 1:92 (lines 138–147)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] function 1:89 (lines 134–148)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:95 (lines 139–145)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+
+============================================================
+  PHASE B — annotate  (1 candidate pragma(s))
+============================================================
+
+┌─ pattern #123  do_all @ lines 139–145  (W=1843200)
+│  #pragma omp parallel for
+│  [Phase-B] Original backed up → s353.c.original
+│  [Phase-B] Applied to s353.c
+└─ APPLIED
+
+============================================================
+  SETTLING — verify the finished source, drop what does not hold up
+============================================================
+  [ok] finished source verified — output matches the original
+
+
+============================================================
+  SUMMARY: 0 rewrite(s) kept  |  1 pragma(s) applied  |  2 skipped
+  DiscoPoP unaided: 1 usable pragma(s) in this profile's draw  →  this run: 1   [MATCHED, informational]
+    ✓  loop 1:95  [Phase-B pragma]  depth=0
+    ✗  1:92  [skipped]  depth=0
+    ✗  1:89  [skipped]  depth=0
+
+  Results → .discopop/agent_patches/accepted.json
+============================================================
+

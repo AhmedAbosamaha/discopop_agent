@@ -1,0 +1,10 @@
+--- s4115.c
++++ s4115.c
+@@ -135,6 +135,7 @@
+ {
+     int * __restrict__ ip = pb_ip;
+     real_t sum;
++    #pragma omp parallel for lastprivate(sum) shared(ip) 
+     for (int nl = 0; nl < R; nl++) {
+         sum = 0.;
+         for (int i = 0; i < LEN_1D; i++) {

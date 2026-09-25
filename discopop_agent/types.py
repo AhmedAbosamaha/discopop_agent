@@ -72,6 +72,12 @@ class GateFacts:
     # arm is told about them — the same words for the agent, its twins and the model alone.
     protected: Tuple[str, ...] = ()
     protected_note: str = ""
+    # D40 (agent v3): the speed criterion is stated as what decides — the program before the
+    # rewrite, and in the end the original — instead of "the same build on one thread", which
+    # only Phase B's per-pragma check resembles.  The words are the ones the twins and the model
+    # alone already read.  False (the default, and every GateFacts the twin and bare_llm build)
+    # reproduces agent v2's texts byte for byte.
+    judge_as_shipped: bool = False
 
 
 @dataclass

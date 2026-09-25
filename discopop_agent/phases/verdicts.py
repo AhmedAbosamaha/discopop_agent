@@ -15,16 +15,26 @@ rewrite rather than for the original.
 """
 from __future__ import annotations
 
+import difflib
+import re
+import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from ..args import AgentArguments
 from ..evidence import load_prevented_deps
 from ..gate import _validate_cached, check_pragma_compiles
 from ..llm import fmt_blockers
+from ..llm.diffs import make_diff
 from ..plan import region_fingerprint
-from ..pragmas import check_pragma_clauses, derive_pragma_patch, _read_tier1_patch
+from ..pragmas import (_read_tier1_patch, _repair_pragma_clauses, check_pragma_clauses,
+                       derive_pragma_patch)
+from ..sources import _apply_in_memory
+
+# The measured "not slower" threshold, kept in the gate cache: Phase B measures it (and the
+# floor's Phase B before Phase A), Settle reads it, and D40 measures it if nothing has yet.
+SPEED_THRESHOLD_KEY = "__speed_threshold__"
 
 
 @dataclass
@@ -76,14 +86,7 @@ def _verify_rewrite(
     the decision is "did anything pay off", so validating the rest only burns
     time on a question already answered.
     """
-    exposed = [
-        c for c in fresh
-        if c.tier == 1 and c.pattern and c.pattern.get("applicable_pattern")
-        # "in the lines that changed" means in the FILE that changed, too.
-        and Path(c.source_file).resolve() == Path(args.source_file).resolve()
-        and (touched is None
-             or not (c.region.end_line < touched[0] or c.region.start_line > touched[1]))
-    ]
+    exposed = exposed_in(fresh, touched, args.source_file)
     if not exposed:
         return RewriteOutcome("no_pattern")
 
@@ -104,11 +107,11 @@ def _verify_rewrite(
         # LLM call and a re-profile on something that can never pay off, so
         # check the cheap half now: the clauses, and one -fopenmp build.
         for c in exposed:
-            cpid = c.pattern.get("pattern_id", "?") if c.pattern else "?"
-            patch = derive_pragma_patch(
-                _read_tier1_patch(dp_dir / "patch_generator" / str(cpid)),
-                args.source_file,
-            )
+            # With Phase B's clause repair: without it a generated clause that names a
+            # loop-local variable fails the -fopenmp build here, and the rewrite was
+            # reverted as `no_usable_pragma` although Phase B would have repaired and
+            # applied the pragma (the chart audit of 26 Sep, finding 5).
+            patch = pragma_patch(c, dp_dir, args.source_file)
             if not patch or check_pragma_clauses(patch, args.source_file):
                 continue
             ok_c, _diag = check_pragma_compiles(patch, args.source_file)
@@ -144,12 +147,158 @@ def _verify_rewrite(
         elif worst.status != "no_speedup":
             worst = RewriteOutcome("pattern_broken", None, label, res.diagnostic)
     return worst
+
+
+def exposed_in(fresh: List[Any], touched: "tuple[int, int] | None", source_file: str) -> List[Any]:
+    """The loops DiscoPoP now reports as parallel IN THE LINES THAT CHANGED — and in the
+    file that changed."""
+    return [
+        c for c in fresh
+        if c.tier == 1 and c.pattern and c.pattern.get("applicable_pattern")
+        and Path(c.source_file).resolve() == Path(source_file).resolve()
+        and (touched is None
+             or not (c.region.end_line < touched[0] or c.region.start_line > touched[1]))
+    ]
+
+
+def pragma_patch(c: Any, dp_dir: Path, source_file: str) -> "str | None":
+    """DiscoPoP's pragma for candidate `c`, re-derived against `source_file` as it stands and
+    with loop-local names repaired out of its clauses — exactly as Phase B derives it, so the
+    gate cache serves one verdict to both."""
+    pid = c.pattern.get("pattern_id", "?") if c.pattern else "?"
+    return _repair_pragma_clauses(
+        derive_pragma_patch(_read_tier1_patch(dp_dir / "patch_generator" / str(pid)), source_file),
+        source_file)
+
+
+def stage_pragmas(text: str, members: List[Any], dp_dir: Path, source_file: str) -> "str | None":
+    """`text` with DiscoPoP's pragma for every member added — as TEXT.  The real file is never
+    written: each pragma is re-derived by its loop header (as Phase B does) against a scratch
+    copy holding what the previous ones left, since every inserted pragma moves the lines below
+    it.  None when one of them cannot be staged."""
+    with tempfile.TemporaryDirectory(prefix="dp_agent_d40_") as tmp:
+        scratch = Path(tmp) / Path(source_file).name
+        scratch.write_text(text)
+        for c in members:
+            diff = pragma_patch(c, dp_dir, str(scratch))
+            staged = _apply_in_memory(diff, str(scratch)) if diff else None
+            if staged is None:
+                return None
+            scratch.write_text(staged)
+        return scratch.read_text()
+
+
+_LOOP_RE = re.compile(r"^\s*(for|while)\s*\(")
+_ALLOC_RE = re.compile(r"\b(malloc|calloc|realloc|aligned_alloc|posix_memalign)\s*\(|\bnew\s+\w")
+_COPY_RE = re.compile(r"\b(memcpy|memmove|std::copy)\b")
+
+
+def rewrite_additions(before: str, after: str) -> str:
+    """What a rewrite added, in words the model can act on — loops, allocations, bulk copies,
+    counted from the diff as added minus removed."""
+    plus: List[str] = []
+    minus: List[str] = []
+    for ln in difflib.unified_diff(before.splitlines(), after.splitlines(), lineterm="", n=0):
+        if ln.startswith("+") and not ln.startswith("+++"):
+            plus.append(ln[1:])
+        elif ln.startswith("-") and not ln.startswith("---"):
+            minus.append(ln[1:])
+
+    def net(rx: "re.Pattern[str]") -> int:
+        return sum(1 for s in plus if rx.search(s)) - sum(1 for s in minus if rx.search(s))
+    loops, allocs, copies = net(_LOOP_RE), net(_ALLOC_RE), net(_COPY_RE)
+    parts = []
+    if loops > 0:
+        parts.append(f"{loops} more loop{'s' if loops > 1 else ''} than the code it replaced")
+    if allocs > 0:
+        parts.append(f"{allocs} allocation{'s' if allocs > 1 else ''}")
+    if copies > 0:
+        parts.append(f"{copies} bulk cop{'ies' if copies > 1 else 'y'} (memcpy/memmove)")
+    return ", ".join(parts) if parts else "no extra loop, allocation or bulk copy that the diff shows"
+
+
+def judge_as_shipped(
+    exposed: List[Any], before: str, dp_dir: Path, source_file: str, *,
+    threshold: float,
+    validate: Callable[[str, Any], Tuple[bool, str]],
+    measure: Callable[[str, str], Tuple[bool, float, str]],
+) -> RewriteOutcome:
+    """D40 — judge a kept rewrite the way it will ship, while the model can still act on it.
+
+    Phase A used to ask only whether DiscoPoP now finds a pattern in the rewritten lines; the
+    pragma's safety and the program's speed were Phase B's and Settle's questions, answered after
+    the region's attempts were over — so a correct rewrite that ran slower than the original was
+    dropped at the end and the model never heard why (E1c/E2: 21–29 trials per arm, Settle's
+    ratio a median 0.53x).  Until 22 Aug (`3657447b`) this was asked here, pragma by pragma
+    against a reference time taken at start-up; the two-phase rebuild moved every pragma
+    insertion to Phase B, so that an inserted pragma stops shifting the lines Phase A reads, and
+    the question went with it.
+
+    Asked again, and still without writing a pragma into the file: DiscoPoP's pragma for each
+    exposed loop, outermost first (a loop inside one judged safe gets none, as in Phase B),
+    through the safety gate (`validate`; mode safety, cached — Phase B does not pay again); the
+    safe ones staged together as TEXT and, as a set, through the gate again; then the rewrite with
+    them timed against `before` with Settle's paired measurement and threshold (`measure`).  So
+    a rewrite kept here is one Settle keeps, and one reverted here is one Settle would have
+    dropped — reverted now, while the region's budget can pay for another attempt.
+
+    `before` is the text before THIS rewrite (earlier kept rewrites in it, pragma-free like this
+    one), so the ratio is this region's contribution alone.  A timing that fails without a crash
+    leaves the verdict to Phase B and Settle, as before ("exposed")."""
+    label = ", ".join(f"{c.pattern_type or 'pattern'} @ lines {c.region.start_line}–{c.region.end_line}"
+                      for c in exposed[:3])
+    prints = [region_fingerprint(c.source_file, c.region.start_line, c.region.end_line, c.region.name)
+              for c in exposed]
+    after = Path(source_file).read_text()
+    members: List[Any] = []
+    spans: List[Tuple[int, int]] = []
+    first_fail = ""
+    for c in sorted(exposed, key=lambda c: (c.region.start_line, c.region.start_line - c.region.end_line)):
+        r = c.region
+        if any(a <= r.start_line and r.end_line <= b for a, b in spans):
+            continue                              # inside a loop already judged safe: one pragma per nest
+        diff = pragma_patch(c, dp_dir, source_file)
+        if not diff:
+            continue
+        problem = check_pragma_clauses(diff, source_file)
+        ok, why = (False, f"clause: {problem}") if problem else validate(diff, c)
+        if not ok:
+            first_fail = first_fail or why
+            continue
+        members.append(c)
+        spans.append((r.start_line, r.end_line))
+    if not members:
+        return RewriteOutcome("pattern_broken", pattern_label=label, exposed_prints=prints,
+                              diagnostic=first_fail or "no pragma DiscoPoP generates for these lines passes")
+    staged = stage_pragmas(after, members, dp_dir, source_file)
+    if staged is not None and len(members) > 1:
+        ok, _why = validate(make_diff(after, staged, source_file), None)
+        if not ok:
+            # Together they fail where each alone passed: judge the outermost one alone.
+            members = members[:1]
+            staged = stage_pragmas(after, members, dp_dir, source_file)
+    if staged is None:
+        return RewriteOutcome("exposed", pattern_label=label, exposed_prints=prints)
+    ok_m, ratio, mdiag = measure(before, staged)
+    if not ok_m:
+        if "non-zero exit (-" in mdiag or "signal" in mdiag.lower():
+            return RewriteOutcome("pattern_broken", pattern_label=label, exposed_prints=prints,
+                                  diagnostic="the program with DiscoPoP's pragmas CRASHED at the timing "
+                                             "size, which the correctness checks never reach: " + mdiag[:300])
+        return RewriteOutcome("exposed", pattern_label=label, exposed_prints=prints)
+    if ratio < threshold:
+        return RewriteOutcome("not_faster", speedup=ratio, pattern_label=label, exposed_prints=prints,
+                              diagnostic=rewrite_additions(before, after))
+    return RewriteOutcome("ok", speedup=ratio, pattern_label=label, exposed_prints=prints)
+
+
 _OUTCOME_LABEL = {
     "no_pattern": "DiscoPoP still finds no parallelism in the rewritten lines",
     "pattern_broken": "DiscoPoP found a pattern, but its pragma fails validation",
     "no_speedup": "DiscoPoP parallelized it, but it is not faster",
     "reprofile_failed": "the rewrite broke DiscoPoP's profiling run",
     "no_usable_pragma": "DiscoPoP sees a pattern, but no pragma it generates for it can run",
+    "not_faster": "DiscoPoP parallelized it, but the program is not faster than before the rewrite",
 }
 # Fallback only.  The real threshold is measured per run by noise_floor() — an
 # unchanged program does not measure 1.000, and how far off it lands depends on
@@ -158,7 +307,7 @@ _OUTCOME_LABEL = {
 _MARGINAL_NOISE = 0.97
 def _rewrite_feedback(
     outcome: RewriteOutcome, dp_dir: Path, file_id: int,
-    touched: "tuple[int, int] | None",
+    touched: "tuple[int, int] | None", deps_shown: bool = True,
 ) -> str:
     """Turn a failed post-restructuring verdict into the message the LLM sees.
 
@@ -230,6 +379,29 @@ def _rewrite_feedback(
             f"Rewrite the loop so its bounds are plain expressions of the loop "
             f"variable and loop-invariant values.\n\n"
             f"{outcome.diagnostic}"
+        )
+
+    if outcome.status == "not_faster":
+        # D40.  The cause measured in E1c/E2 was what the rewrite ADDED — a copy of an array on
+        # every repetition, a second pass, an allocation — not the dependence and not, mostly,
+        # granularity, so that is what this names first.  DiscoPoP's dependences are pointed to
+        # only in arms that showed them.
+        return (
+            f"Your rewrite is correct, DiscoPoP parallelized it ({outcome.pattern_label}), and its "
+            f"pragmas passed every safety check. But with those pragmas the program runs at "
+            f"{(outcome.speedup or 0.0):.2f}x the speed of the program as it stood before your "
+            f"rewrite (the two timed interleaved, at the timing size). It has to be FASTER than "
+            f"before, not only parallel, so the rewrite has been reverted.\n\n"
+            f"The dependence is gone — do not look for one again. Look at what your rewrite "
+            f"ADDED: {outcome.diagnostic}. Every extra pass over an array, every copy and every "
+            f"allocation inside the repeated loop is paid on every repetition, and here it costs "
+            f"more than the parallel loops save. Copy only what a loop-carried dependence forces "
+            f"(an array no iteration writes needs no copy"
+            + ("; DiscoPoP's dependences above name the arrays that carry one" if deps_shown else "")
+            + "), keep the passes over memory as close to the original's as you can, and allocate "
+            "outside the repeated loop. If your rewrite adds nothing of that kind, the parallel "
+            "loop has too little work per activation to cover thread startup: make the loop with "
+            "the most work per activation the parallel one."
         )
 
     if outcome.status == "no_speedup":

@@ -1,0 +1,10 @@
+--- s4114.c
++++ s4114.c
+@@ -137,6 +137,7 @@
+     int n1 = 1;
+     int k;
+     for (int nl = 0; nl < R; nl++) {
++        #pragma omp parallel for firstprivate(n1) private(k) shared(ip) 
+         for (int i = n1-1; i < LEN_1D; i++) {
+             k = ip[i];
+             a[i] = b[i] + c[LEN_1D-k+1-2] * d[i];

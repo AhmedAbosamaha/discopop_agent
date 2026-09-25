@@ -10,7 +10,7 @@ On TSVC class R, does DiscoPoP's evidence raise the model's success rate (H5), m
 
 ## Result in one paragraph
 
-E2 A+B (Haiku, TSVC class R, 18 × 5, with D38 twins): DiscoPoP's evidence adds nothing — H12, H5b, H5d not supported (evidence effect −0.03 inside the pipeline, −0.02 on the twins); the best arm is the agent without evidence at 3 attempts (55 of 90 race-free FASTER). H13 supported everywhere: every agent arm 0 unusable programs, its twins 70–73 of 90, the model alone 46; DiscoPoP's own pragmas unchecked (twin_dp) wrong in 70 of 90. Sonnet cells, evidence-source arms, Parts C/D to run.
+E2 A+B (Haiku, TSVC class R, 18 × 5, with D38 twins): DiscoPoP's evidence adds nothing — H12, H5b, H5d not supported (evidence effect −0.03 inside the pipeline, −0.02 on the twins); the best arm is the agent without evidence at 3 attempts (55 of 90 race-free FASTER). H13 supported everywhere: every agent arm 0 unusable programs, its twins 71 of 90 and 73 of 89, the model alone 46; DiscoPoP's own pragmas unchecked (twin_dp) wrong in 70 of 90. Sonnet cells, evidence-source arms, Parts C/D to run.
 
 ## What is in this folder
 

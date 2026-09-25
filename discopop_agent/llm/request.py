@@ -29,7 +29,9 @@ def _goal(llm_pragmas: bool, gate: GateFacts) -> str:
             checks.append("gives the same result at every thread count and schedule")
         checks.append("reproduces the original program's results")
         if gate.require_speedup:
-            checks.append("runs faster than the same build on one thread")
+            # D40: the words the twins and the model alone read (twin.SPEED_ONE_THREAD).
+            checks.append("runs faster than the original sequential program" if gate.judge_as_shipped
+                          else "runs faster than the same build on one thread")
         return ("restructured so that its iterations are independent, and ANNOTATED BY "
                 "YOU: every loop you make parallel carries its own `#pragma omp` with "
                 "explicit data-sharing clauses.  The result has to be code that "

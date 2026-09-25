@@ -211,7 +211,12 @@ def _checked(gate: GateFacts) -> str:
                       "     guided schedules")
     judged.append("output")
     if gate.require_speedup:
-        judged.append("speed against the same build on one thread")
+        # D40: what decides is the program before the rewrite (and, at the end, the original) —
+        # "the same build on one thread" described only Phase B's per-pragma check.
+        judged.append("speed: it is timed against the program as it stood before your\n"
+                      "     rewrite and has to be faster, or the rewrite is reverted and you\n"
+                      "     are told the measured ratio" if gate.judge_as_shipped
+                      else "speed against the same build on one thread")
     steps = [
         "it must compile",
         "it is run sequentially, and " + _how_compared(gate),
@@ -254,7 +259,12 @@ def _checked_annotate(gate: GateFacts) -> str:
             "     every run has to agree with the others")
     steps.append(_how_compared(gate))
     if gate.require_speedup:
-        steps.append("that same build is timed against itself pinned to one thread, and\n"
+        # The gate checks both (validate.py: one thread vs all, and not slower than the
+        # original); v2's text named only the first.
+        steps.append("that same build is timed against itself pinned to one thread and\n"
+                     "     against the original sequential program, and has to be faster\n"
+                     "     than both" if gate.judge_as_shipped else
+                     "that same build is timed against itself pinned to one thread, and\n"
                      "     has to be faster")
     body = "\n".join(f"  {i}. {t}" for i, t in enumerate(steps, 1))
     return (_RULE + "HOW YOUR REWRITE IS CHECKED\n" + _RULE + f"{body}\n\n"
@@ -326,8 +336,9 @@ def _system_core(gate: GateFacts, include: Optional[Set[str]]) -> str:
 
 
 def _system_core_annotate(gate: GateFacts, include: Optional[Set[str]]) -> str:
-    goal = (", and is measurably faster than the same build held to one thread"
-            if gate.require_speedup else "")
+    goal = ("" if not gate.require_speedup
+            else ", and is measurably faster than the original sequential program" if gate.judge_as_shipped
+            else ", and is measurably faster than the same build held to one thread")
     return (_ROLE_ANNOTATE + _ASK_ANNOTATE.replace("{SPEED_GOAL}", goal) + _given(include)
             + _contract(gate, _CONTRACT_PRAGMA)
             + ("" if "gate" in gate.omit else _checked_annotate(gate)) + _OMP_RULES + _PRAGMA_FORMS)

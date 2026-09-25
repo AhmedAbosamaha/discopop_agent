@@ -29,10 +29,10 @@ from ..sources import _apply_in_memory, _apply_to_source
 from ..types import HotspotCandidate
 from .report import _record_candidate, _write_record
 from .verdicts import _MARGINAL_NOISE
-
-# The key under which Phase B leaves its measured keep-threshold in the gate cache for
-# Settle.  Every other key of that cache is a patch digest, so this cannot collide.
-SPEED_THRESHOLD_KEY = "__speed_threshold__"
+# The key under which Phase B leaves its measured keep-threshold in the gate cache for Settle.
+# Every other key of that cache is a patch digest, so it cannot collide.  Defined in verdicts.py
+# since D40, whose Phase A check reads the same threshold; re-exported here for its importers.
+from .verdicts import SPEED_THRESHOLD_KEY as SPEED_THRESHOLD_KEY
 
 
 def _phase_b(

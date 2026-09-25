@@ -70,6 +70,17 @@ Status: running
 | `e2c_ab_4` | [`E02_evidence_feedback_model/runs/e2c_ab_4/`](E02_evidence_feedback_model/runs/e2c_ab_4/) | E2 Parts A+B clean (lane 1.1): s292 s293 s331 s341 x full_b1, no_evidence, no_evidence_b1 + their D38 twins twin_full, twin_no_evidence + twin_dp (DiscoPoP unchecked), Haiku x5, threads 6,12, repeats 5; default, bare_llm, discopop_gate from E1c (same commit 33673d7d agent code) | valid | 120 | BROKEN 57, FASTER 31, SCAFFOLD_MODIFIED 1, changed-not-parallel 1, no-change 30 |
 | `e2c_race_check` | [`E02_evidence_feedback_model/checks/e2c_race_check/`](E02_evidence_feedback_model/checks/e2c_race_check/) | race_check.py (the gate's TSan + schedule matrix, archer, server, no model) over every trial of the three arms no gate saw in E2 A+B — twin_full, twin_no_evidence, twin_dp (e2c_ab_1..4) — mandatory for D38/H12/H13 | valid | 0 |  |
 
+## [Agent v3 pilot (D40) — the speed verdict inside the model's budget](V3_pilot_d40/REPORT.md)
+
+Status: registered
+
+| run | where | what it is | status | trials | outcomes |
+|---|---|---|---|---:|---|
+| `v3_pilot_1` | not archived yet | D40 pilot, lane 0.0: s112 s121 s1213 x default, no_evidence (agent v3), Haiku x3, threads 6,12, repeats 5 | registered |  |  |
+| `v3_pilot_2` | not archived yet | D40 pilot, lane 0.1: s211 s212 s241 x default, no_evidence (agent v3), Haiku x3, threads 6,12, repeats 5 | registered |  |  |
+| `v3_pilot_3` | not archived yet | D40 pilot, lane 1.0: s243 s244 x default, no_evidence (agent v3), Haiku x3, threads 6,12, repeats 5 | registered |  |  |
+| `v3_pilot_4` | not archived yet | D40 pilot, lane 1.1: s252 s281 x default, no_evidence (agent v3), Haiku x3, threads 6,12, repeats 5 | registered |  |  |
+
 ## [E10 — does the speed check keep unnecessary changes out?](E10_speed_check/REPORT.md)
 
 Status: done
@@ -195,9 +206,9 @@ Status: done
 | `t0_11_classes_a` | [`T0_instruments/T0.11_measured_classes/runs/t0_11_classes_a/`](T0_instruments/T0.11_measured_classes/runs/t0_11_classes_a/) | draw A | valid | 56 | FASTER 16, PROFILE_ERROR 2, no-change 29, parallel-not-faster 3, parallel-speed-not-measurable 6 |
 | `t0_11_classes_b` | [`T0_instruments/T0.11_measured_classes/runs/t0_11_classes_b/`](T0_instruments/T0.11_measured_classes/runs/t0_11_classes_b/) | draw B | valid | 55 | FASTER 14, PROFILE_ERROR 5, no-change 26, parallel-not-faster 3, parallel-speed-not-measurable 7 |
 | `t0_11_classes_c` | [`T0_instruments/T0.11_measured_classes/runs/t0_11_classes_c/`](T0_instruments/T0.11_measured_classes/runs/t0_11_classes_c/) | draw C | valid | 55 | FASTER 14, PROFILE_ERROR 5, no-change 26, parallel-not-faster 3, parallel-speed-not-measurable 7 |
-| `t0_11_probe_a` | not archived yet | T0.11 draw a on the 8 TSVC indirect-addressing probe loops: discopop_capability, no model | running |  |  |
-| `t0_11_probe_b` | not archived yet | T0.11 draw b on the 8 TSVC indirect-addressing probe loops: discopop_capability, no model | running |  |  |
-| `t0_11_probe_c` | not archived yet | T0.11 draw c on the 8 TSVC indirect-addressing probe loops: discopop_capability, no model | running |  |  |
+| `t0_11_probe_a` | [`T0_instruments/T0.11_measured_classes/runs/t0_11_probe_a/`](T0_instruments/T0.11_measured_classes/runs/t0_11_probe_a/) | T0.11 draw a on the 8 TSVC indirect-addressing probe loops: discopop_capability, no model | valid | 8 | FASTER 8 |
+| `t0_11_probe_b` | [`T0_instruments/T0.11_measured_classes/runs/t0_11_probe_b/`](T0_instruments/T0.11_measured_classes/runs/t0_11_probe_b/) | T0.11 draw b on the 8 TSVC indirect-addressing probe loops: discopop_capability, no model | valid | 8 | FASTER 8 |
+| `t0_11_probe_c` | [`T0_instruments/T0.11_measured_classes/runs/t0_11_probe_c/`](T0_instruments/T0.11_measured_classes/runs/t0_11_probe_c/) | T0.11 draw c on the 8 TSVC indirect-addressing probe loops: discopop_capability, no model | valid | 8 | FASTER 8 |
 
 ## [T0.13 — the default arm's ceiling](T0_instruments/T0.13_default_arm_ceiling/REPORT.md)
 

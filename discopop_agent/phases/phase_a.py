@@ -36,7 +36,7 @@ from .. import project as project_mod
 from .. import viz
 from ..args import AgentArguments
 from ..evidence import assemble
-from ..gate import _validate_cached, fix_hunk_headers, measure_marginal
+from ..gate import _validate_cached, fix_hunk_headers, measure_marginal, noise_floor
 from ..llm import LLMConnectionError, call_llm
 from ..llm.diffs import make_diff
 from ..llm.dep_review import _llm_dep_review
@@ -53,8 +53,8 @@ from ..sources import (_apply_to_source, _function_edit_to_diff,
 from ..gate.harness_lines import check_protected
 from ..types import GateFacts, HotspotCandidate, ValidationResult
 from .report import _REGION_LABEL, _record_candidate, _write_record
-from .verdicts import (_OUTCOME_LABEL, RewriteOutcome, _rewrite_feedback,
-                       _verify_rewrite)
+from .verdicts import (_MARGINAL_NOISE, _OUTCOME_LABEL, SPEED_THRESHOLD_KEY, RewriteOutcome,
+                       _rewrite_feedback, _verify_rewrite, exposed_in, judge_as_shipped)
 
 
 @dataclass
@@ -145,6 +145,23 @@ def covered_spans_after(start_line: int, end_line: int, pre_text: str, post_text
     inside = [(a, b) for a, b in existing_parallel_spans(post_text)
               if new_start <= a and b <= new_end + 1]
     return inside or [(new_start, new_end)]
+
+
+def speed_threshold(args: AgentArguments, gate_cache: Dict[str, Any],
+                    binary_args: Optional[List[str]]) -> float:
+    """Settle's keep-threshold — the timing noise measured on this machine — for D40's check.
+
+    Phase B measures it, and the floor's Phase B usually has before Phase A starts; but not when
+    DiscoPoP alone proposes nothing for the original, which is exactly class R.  Then it is
+    measured here, once, the way Phase B does it, and left in the cache for everything after."""
+    if SPEED_THRESHOLD_KEY not in gate_cache:
+        ok_n, floor, ndiag = noise_floor(Path(args.source_file).read_text(), args.source_file,
+                                         binary_args, extra_flags=list(args.timing_cflags) or None)
+        gate_cache[SPEED_THRESHOLD_KEY] = min(floor - 0.01, 0.99) if ok_n else _MARGINAL_NOISE
+        print(f"│  [Phase-A] timing noise on this machine: "
+              + (f"{floor:.3f}" if ok_n else f"not measurable ({ndiag[:50]})")
+              + f" → keep at or above {gate_cache[SPEED_THRESHOLD_KEY]:.3f}")
+    return float(gate_cache[SPEED_THRESHOLD_KEY])
 
 
 def phase_a(state: RunState) -> None:
@@ -303,7 +320,8 @@ def phase_a(state: RunState) -> None:
                         omit=tuple(getattr(args, "prompt_omit", ()) or ()),
                         external_evidence=getattr(args, "external_evidence", "") or "",
                         protected=tuple(getattr(args, "protected_lines", ()) or ()),
-                        protected_note=getattr(args, "protected_note", "") or ""),
+                        protected_note=getattr(args, "protected_note", "") or "",
+                        judge_as_shipped=bool(getattr(args, "judge_as_shipped", False))),
                 )
             except LLMConnectionError as e:
                 # Fatal for the whole run: every region needs the endpoint.
@@ -767,6 +785,56 @@ def phase_a(state: RunState) -> None:
                         validate_patterns=False, gate_cache=gate_cache,
                         reference_outputs=reference_outputs,
                     )
+                    # ── D40 — judged as it will ship, while the model can still act ──────
+                    # Phase B and Settle would judge DiscoPoP's pragmas for these loops, and
+                    # the program with them against the original, after this region's attempts
+                    # are over.  Asked here instead (verdicts.judge_as_shipped), with the file
+                    # left pragma-free: the pragmas are staged as text and timed in a temporary
+                    # directory, so no line number anything reads moves.  A failure takes the
+                    # revert below — source, profile snapshot, runtimes and covered spans restored;
+                    # the queue and the change log are only touched at COMMIT.  Not when a deeper
+                    # level may still restructure the exposed loops (the old `terminal` rule).
+                    if (outcome.status == "exposed" and not deeper_coming and args.require_speedup
+                            and getattr(args, "judge_as_shipped", False) and pre_patch_src is not None
+                            and not args.dry_run):
+                        print(f"│  [Phase-A] D40 — judging it as it will ship: DiscoPoP's pragmas for "
+                              f"the exposed loops through the safety gate, then the program with them "
+                              f"against the program before the rewrite (paired)")
+
+                        def _safe(d40_diff: str, c: Any) -> "tuple[bool, str]":
+                            res_s, _cs, _bs = _validate_cached(
+                                gate_cache, d40_diff, args, reference_output, binary_args,
+                                reference_time, reference_outputs=reference_outputs, mode="safety",
+                                dep_region=((c.region.file_id, c.region.start_line, c.region.end_line)
+                                            if c is not None else None))
+                            where = (f"pragma for lines {c.region.start_line}–{c.region.end_line}"
+                                     if c is not None else "the pragmas together")
+                            _record_candidate(output_dir, {
+                                "phase": "A-D40", "region_id": rid, "depth": depth,
+                                "exposed_region": c.region.region_id if c is not None else "set",
+                                "passed": res_s.passed, "stage": res_s.stage,
+                                "diagnostic": (res_s.diagnostic or "")[:2000],
+                            }, d40_diff, args.dry_run)
+                            if res_s.passed:
+                                print(f"│  [Phase-A] D40: {where} passes the safety gate")
+                                return True, ""
+                            print(f"│  [Phase-A] D40: {where} fails at '{res_s.stage}'")
+                            return False, f"{res_s.stage}: {res_s.diagnostic or ''}"[:1500]
+
+                        def _time(before_text: str, after_text: str) -> "tuple[bool, float, str]":
+                            return measure_marginal(before_text, after_text, args.source_file,
+                                                    binary_args,
+                                                    extra_flags=list(args.timing_cflags) or None)
+
+                        outcome = judge_as_shipped(
+                            exposed_in(fresh_all, _touched_span(clean_diff), args.source_file),
+                            pre_patch_src, dp_dir, args.source_file,
+                            threshold=speed_threshold(args, gate_cache, binary_args),
+                            validate=_safe, measure=_time)
+                        ratio_txt = f" {outcome.speedup:.2f}×" if outcome.speedup is not None else ""
+                        print(f"│  [Phase-A] D40 verdict: {outcome.status}{ratio_txt}"
+                              + (" — Phase B and Settle decide, as before"
+                                 if outcome.status == "exposed" else ""))
 
                 if outcome.status not in ("ok", "exposed", "self_annotated"):
                     # REVERT — the restructuring did not achieve its purpose.
@@ -779,7 +847,9 @@ def phase_a(state: RunState) -> None:
                     impact.restore(impact_before)
                     patch_file.unlink(missing_ok=True)
                     msg = _rewrite_feedback(
-                        outcome, dp_dir, region.file_id, _touched_span(clean_diff)
+                        outcome, dp_dir, region.file_id, _touched_span(clean_diff),
+                        deps_shown=(args.evidence_sections is None
+                                    or "deps" in args.evidence_sections),
                     )
                     print(f"│  [Tier-2] {_OUTCOME_LABEL[outcome.status]} — reverting "
                           f"(snapshot restore)")
@@ -889,7 +959,7 @@ def phase_a(state: RunState) -> None:
                 if exposed_speedup is not None:
                     record["exposed_speedup"] = exposed_speedup
                     print(f"│  [Tier-2] Restructuring pays off "
-                          f"({'measured' if self_annotated else 'best exposed loop'} "
+                          f"({'measured' if self_annotated else 'with its pragmas, against the program before it'} "
                           f"{exposed_speedup:.2f}×)")
                 elif outcome.status == "exposed":
                     print(f"│  [Tier-2] Pragma validation deferred to depth "

@@ -35,7 +35,17 @@
    "kind": "experiment",
    "status": "running",
    "question": "On TSVC class R, does DiscoPoP's evidence raise the model's success rate (H5), more for Haiku than for Sonnet? Does the gate's failure feedback partly substitute for it (H5b)? Where must the evidence come from (none, compiler remarks, where the time goes, DiscoPoP), which part of it matters, and which part of the prompt? Runs on agent v2 with its own default arm (D34).",
-   "headline": "E2 A+B (Haiku, TSVC class R, 18 × 5, with D38 twins): DiscoPoP's evidence adds nothing — H12, H5b, H5d not supported (evidence effect −0.03 inside the pipeline, −0.02 on the twins); the best arm is the agent without evidence at 3 attempts (55 of 90 race-free FASTER). H13 supported everywhere: every agent arm 0 unusable programs, its twins 70–73 of 90, the model alone 46; DiscoPoP's own pragmas unchecked (twin_dp) wrong in 70 of 90. Sonnet cells, evidence-source arms, Parts C/D to run."
+   "headline": "E2 A+B (Haiku, TSVC class R, 18 × 5, with D38 twins): DiscoPoP's evidence adds nothing — H12, H5b, H5d not supported (evidence effect −0.03 inside the pipeline, −0.02 on the twins); the best arm is the agent without evidence at 3 attempts (55 of 90 race-free FASTER). H13 supported everywhere: every agent arm 0 unusable programs, its twins 71 of 90 and 73 of 89, the model alone 46; DiscoPoP's own pragmas unchecked (twin_dp) wrong in 70 of 90. Sonnet cells, evidence-source arms, Parts C/D to run."
+  },
+  {
+   "id": "V3-pilot",
+   "folder": "V3_pilot_d40",
+   "kind": "experiment",
+   "status": "registered",
+   "title": "Agent v3 pilot (D40) — the speed verdict inside the model's budget",
+   "question": "Does D40 — a kept rewrite's pragmas judged in Phase A (safety, then timed against the program before it) with the failure fed back while the region's budget lasts, and the prompt stating the deciding comparison — raise the race-free FASTER rate on the ten class-R loops where v2's results varied? And, with it, does DiscoPoP's evidence start to matter (default vs no_evidence)? Decides whether E1c's and E2's agent arms are rerun under v3.",
+   "headline": "",
+   "preregistered": "Written before any trial (26 Sep). Loops: s112, s121, s1213, s211, s212, s241, s243, s244, s252, s281. Arms default and no_evidence (budget 3), Haiku, x3 each: 60 trials, agent v3 (--judge-as-shipped). Baseline, v2 on the same loops: default 21 of 50 race-free FASTER (E1c), no_evidence 25 of 50 (E2). Expectation: both v3 arms above their v2 baseline, because the trials v2 lost here were correct rewrites lost on speed after the model's turn (why_trials_fail.md). Read-out: rate per arm vs its baseline (descriptive — a pilot), D40 verdicts (ok / not_faster / pattern_broken), model calls per trial, and whether no_evidence still leads default."
   },
   {
    "id": "E10",
@@ -748,19 +758,19 @@
    "group": "T0.11",
    "section": "runs",
    "role": "T0.11 draw a on the 8 TSVC indirect-addressing probe loops: discopop_capability, no model",
-   "status": "running"
+   "status": "valid"
   },
   "t0_11_probe_b": {
    "group": "T0.11",
    "section": "runs",
    "role": "T0.11 draw b on the 8 TSVC indirect-addressing probe loops: discopop_capability, no model",
-   "status": "running"
+   "status": "valid"
   },
   "t0_11_probe_c": {
    "group": "T0.11",
    "section": "runs",
    "role": "T0.11 draw c on the 8 TSVC indirect-addressing probe loops: discopop_capability, no model",
-   "status": "running"
+   "status": "valid"
   },
   "d38_twin_smoke": {
    "group": "E2",
@@ -809,6 +819,30 @@
    "section": "checks",
    "role": "race_check.py over the model alone (bare_llm) in E1c's controls, classes A (e1c_a) and D (e1c_d)",
    "status": "valid"
+  },
+  "v3_pilot_1": {
+   "group": "V3-pilot",
+   "section": "runs",
+   "status": "registered",
+   "role": "D40 pilot, lane 0.0: s112 s121 s1213 x default, no_evidence (agent v3), Haiku x3, threads 6,12, repeats 5"
+  },
+  "v3_pilot_2": {
+   "group": "V3-pilot",
+   "section": "runs",
+   "status": "registered",
+   "role": "D40 pilot, lane 0.1: s211 s212 s241 x default, no_evidence (agent v3), Haiku x3, threads 6,12, repeats 5"
+  },
+  "v3_pilot_3": {
+   "group": "V3-pilot",
+   "section": "runs",
+   "status": "registered",
+   "role": "D40 pilot, lane 1.0: s243 s244 x default, no_evidence (agent v3), Haiku x3, threads 6,12, repeats 5"
+  },
+  "v3_pilot_4": {
+   "group": "V3-pilot",
+   "section": "runs",
+   "status": "registered",
+   "role": "D40 pilot, lane 1.1: s252 s281 x default, no_evidence (agent v3), Haiku x3, threads 6,12, repeats 5"
   }
  },
  "analysis": {

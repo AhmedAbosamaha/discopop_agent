@@ -11,7 +11,7 @@ Does DiscoPoP alone reach a verified parallel program (class A), never (R), or n
 ## What is in this folder
 
 - [`analysis/`](analysis/) — the read-out: [`README.md`](analysis/README.md)
-- [`runs/`](runs/) — 3 archived run(s): the evidence
+- [`runs/`](runs/) — 6 archived run(s): the evidence
 
 ## Runs
 
@@ -20,9 +20,9 @@ Does DiscoPoP alone reach a verified parallel program (class A), never (R), or n
 | `t0_11_classes_a` | [`runs/t0_11_classes_a/`](runs/t0_11_classes_a/) | draw A | valid | 56 | FASTER 16, PROFILE_ERROR 2, no-change 29, parallel-not-faster 3, parallel-speed-not-measurable 6 |
 | `t0_11_classes_b` | [`runs/t0_11_classes_b/`](runs/t0_11_classes_b/) | draw B | valid | 55 | FASTER 14, PROFILE_ERROR 5, no-change 26, parallel-not-faster 3, parallel-speed-not-measurable 7 |
 | `t0_11_classes_c` | [`runs/t0_11_classes_c/`](runs/t0_11_classes_c/) | draw C | valid | 55 | FASTER 14, PROFILE_ERROR 5, no-change 26, parallel-not-faster 3, parallel-speed-not-measurable 7 |
-| `t0_11_probe_a` | not archived yet | T0.11 draw a on the 8 TSVC indirect-addressing probe loops: discopop_capability, no model | running |  |  |
-| `t0_11_probe_b` | not archived yet | T0.11 draw b on the 8 TSVC indirect-addressing probe loops: discopop_capability, no model | running |  |  |
-| `t0_11_probe_c` | not archived yet | T0.11 draw c on the 8 TSVC indirect-addressing probe loops: discopop_capability, no model | running |  |  |
+| `t0_11_probe_a` | [`runs/t0_11_probe_a/`](runs/t0_11_probe_a/) | T0.11 draw a on the 8 TSVC indirect-addressing probe loops: discopop_capability, no model | valid | 8 | FASTER 8 |
+| `t0_11_probe_b` | [`runs/t0_11_probe_b/`](runs/t0_11_probe_b/) | T0.11 draw b on the 8 TSVC indirect-addressing probe loops: discopop_capability, no model | valid | 8 | FASTER 8 |
+| `t0_11_probe_c` | [`runs/t0_11_probe_c/`](runs/t0_11_probe_c/) | T0.11 draw c on the 8 TSVC indirect-addressing probe loops: discopop_capability, no model | valid | 8 | FASTER 8 |
 
 ## The instrument, as the record defines it (§5e)
 
@@ -31,6 +31,13 @@ Does DiscoPoP alone reach a verified parallel program (class A), never (R), or n
 | T0.11 | Which class is each benchmark in — does DiscoPoP alone reach a verified parallel program? | arm `discopop_capability`, three independent profiles | the pipeline with no model, three draws; R = no draw reaches a verified parallel program (needs restructuring), A = the majority do (parallel as written), D = R by measurement AND a true recurrence by design (the reference solution is the sequential program) | `benchmark_classes.json` | done for the registered set (§7 `t0_11_classes_a/b/c`): R 26, A 25, D 4; LULESH and NPB-C owed |
 
 ## From the experiment record (§7 run log)
+
+### `t0_11_probe_a`, `t0_11_probe_b`, `t0_11_probe_c` — 2026-09-25, server, **T0.11 on TSVC's eight indirect-addressing loops** (no model)
+
+- **Why.** The author's decision 8: loops whose iterations conflict or not depending on the VALUES of TSVC's index array `ip` (a permutation within blocks of five) — DiscoPoP observes those values; a model can only derive them from the initialization it may read. Pre-registered expectation (record §6, 24 Sep): DiscoPoP alone parallelizes most of them (class A) — a place where DiscoPoP knows what the model can only guess, not a class-R tier.
+- **Setup.** Arm `discopop_capability` (`--budget 0 --no-require-speedup`, no model) on `s4112`, `s4113`, `s4114`, `s4115`, `s4117`, `s4121`, `s491`, `s353`; three separate runs (three profile draws), threads 6/12, repeats 5, lanes 0.0/0.1/1.0, agent `fe373504`, 21:03 → 22:24 UTC; sizes from `t0_1_probe_sizes`.
+- **Result: class A, all eight, every draw** — 24 of 24 trials FASTER: DiscoPoP's pragma, through the gate, verified by the harness. Added to `config/benchmark_classes.json` (class A now 33).
+- **Reading.** Where whether a loop is parallel depends on data the loop's text does not show, DiscoPoP's run-time view decided every case correctly. For the evidence question (E2, the author 25 Sep) this is the first measurement on dependences that are not in plain sight: the open question is whether the model ALONE gets these loops right — the cheap test proposed on 25 Sep (the model alone × the eight loops), not yet run.
 
 ### `t0_11_classes_a/b/c` — 2026-09-20/21, server, **T0.11: the class of every benchmark** (no model)
 

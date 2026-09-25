@@ -305,44 +305,37 @@ Compiles with TSan and OpenMP enabled, then runs the binary. A `WARNING: ThreadS
 
 **Purpose:** Tie all four layers together into the main per-candidate processing loop.
 
-**Full decision flowchart per candidate:**
+**Decision flow per candidate** (agent v3; the audited, diagram-by-diagram version with every exit
+is the published pipeline chart, `evaluation/agent/docs/FLOW.html`).  Since the two-phase rebuild
+(22 Aug) the source stays PRAGMA-FREE during Phase A: a pragma inserted mid-run would shift the line
+numbers the next region's evidence is read at.  DiscoPoP's pragmas go in once, in Phase B.
 
 ```
-┌─ Tier-1: applicable_pattern in patterns.json?
-│
-├── YES
-│    └─ W ≥ min_workload?
-│         NO  → SKIP
-│         YES → Read DiscoPoP patch from patch_generator/
-│               Is the loop I/O-only? → skip TSan
-│               Run TSan on DiscoPoP's patch
-│               PASSED → ACCEPT (write record, no LLM call)
-│               FAILED → update failure_reason, fall through to Tier-2
-│
-└── NO → Tier-2
-          dry_run? → SKIP
-          snapshot source + profile (so any attempt can be undone)
-          while budget > 0:
-            assemble evidence (L2) with current failure_reason
-            call LLM (L3) continuing conversation (tier2_messages)
-            edit valid? NO  → update failure_reason, continue
-            run quality gate (L4): apply → compile → TSan → correctness
-            FAILED → append diagnostic as user turn, continue
-                     (build errors refund the budget slot, up to --build-retries)
-            PASSED → apply patch in-place, back up original, RE-PROFILE
-                     │
-                     └─ VERIFY: what does DiscoPoP now say about the
-                        lines that changed?  (always — this is the point)
-                          no_pattern     → REVERT + send DiscoPoP's fresh
-                                           blockers for the rewrite, retry
-                          pattern_broken → REVERT + "you exposed it, but the
-                                           pragma still races/miscomputes", retry
-                          no_speedup     → REVERT + "correct but not faster,
-                                           this is granularity", retry
-                          exposed        → ACCEPT (a deeper Tier-2 pass is
-                                           still allowed to improve it)
-                          ok             → ACCEPT (pragma validated + faster)
-          budget exhausted → SKIP
+PHASE A — per queued region (index-walked; a kept rewrite appends the regions it creates)
+├─ already inside a parallel construct?        → COVERED
+├─ DiscoPoP has an applicable pattern (Tier 1)? → DEFERRED to Phase B (no model call)
+└─ else (Tier 2), while the region's budget lasts:
+     call the model (evidence + the previous attempt's feedback)
+     gate: harness lines → apply → compile → sequential output on every input
+       (a pragma-bearing diff under --llm-pragmas also: -fopenmp, TSan, schedules, timing)
+       FAILED → feedback naming the stage; build errors refunded up to --build-retries
+     PASSED → write the rewrite, re-profile, re-measure runtimes
+       └─ does DiscoPoP now find a usable pattern IN THE CHANGED LINES?
+            no_pattern / no_usable_pragma / reprofile_failed → REVERT + feedback, retry
+            exposed, and no deeper level follows, --require-speedup, --judge-as-shipped (D40):
+              DiscoPoP's pragmas for those loops → safety gate (outermost first, one per nest);
+              the safe ones staged together AS TEXT → gate as a set → the program with them timed
+              against the program before the rewrite (Settle's paired method and threshold)
+                pattern_broken → REVERT + "DiscoPoP's pragma on your code breaks", retry
+                not_faster     → REVERT + the ratio and what the rewrite added, retry
+                ok             → COMMIT (the file stays pragma-free)
+            exposed otherwise (v2, --no-judge-as-shipped, or a deeper level follows) → COMMIT
+     budget exhausted → SKIPPED
+PHASE B — DiscoPoP's pragmas from the final profile, each re-derived against the current file,
+          safety gate, marginal timing; the ones that pay only together judged as a set (D33)
+SETTLE  — rebuild from the change log, re-gate the finished file, time it against the original;
+          drop newest-first until it holds (the model is not asked again)
+FLOOR   — ship DiscoPoP's own program if the agent's is slower (D32)
 ```
 
 **Passing the quality gate is not acceptance.** The gate only proves a rewrite is
@@ -359,8 +352,8 @@ on a question already answered.
 
 **Gate results are cached within a run** (`_validate_cached`). The verification
 step measures an exposed pattern to decide whether to *keep* a restructuring,
-and the depth+1 Tier-1 pass would otherwise measure the same pattern again to
-decide whether to *apply* it. The cache key is `(patch, current source bytes,
+and Phase B would otherwise judge the same pragma again to decide whether
+to *apply* it (D40's Phase A check and Phase B derive it identically). The cache key is `(patch, current source bytes,
 skip_race_check)` — hashing the source is what makes reuse safe, since a patch
 measured before another region's pragma was applied says nothing about the file
 afterwards. On a hit the log says so explicitly rather than implying the gate
@@ -510,14 +503,17 @@ python -m discopop_agent \
     --edit-mode          {diff,function,direct}  default: follows --provider
                                             ('direct' for claude-agent-sdk, 'diff' otherwise;
                                              'direct' requires --provider claude-agent-sdk)
-    --llm-pragmas / --no-llm-pragmas       default: ON (LLM writes the pragmas itself)
+    --llm-pragmas / --no-llm-pragmas       default: OFF since D23 (DiscoPoP writes them, in Phase B)
     --restructure-depth  <int>             default: 0
     --require-speedup / --no-require-speedup   default: ON
+    --judge-as-shipped / --no-judge-as-shipped default: ON since D40 (agent v3: a kept rewrite's
+                                            pragmas judged in Phase A — safety, then timed against
+                                            the program before it; OFF reproduces v2)
     --min-measured-speedup <float>         default: 1.1
     --build-retries      <int>             default: 2 (apply/compile retries, free)
     --check-input        <args>            repeatable: extra inputs correctness must match
     --apply-patches / --no-apply-patches       default: ON (write Tier-1 pragmas to source)
-    --fast-refresh / --no-fast-refresh         default: ON (skip the instrumented run)
+    --fast-refresh / --no-fast-refresh         default: OFF since D27 (full re-profile after every kept rewrite)
     --llm-deps / --no-llm-deps                 default: OFF (comparison only)
     --llm-recon / --no-llm-recon               default: OFF (model reports its own deps)
     --llm-recon-mode  {followup,folded}        default: followup
@@ -572,7 +568,7 @@ So `--provider anthropic` on its own is a working invocation, not a broken one.
 - If the model leaves the file unchanged (or only touches comments/whitespace), it is re-prompted for free twice; a still-unchanged file is reported to the controller as "no change" and costs one budget slot, with the same "returning the input is not a valid answer" feedback used by `function` mode.
 - Because the model can read the whole file, this is the only mode where it can consult code outside the region it is rewriting.
 
-**`--llm-pragmas`:** **On by default.** When set, the LLM writes the OpenMP pragmas **in the same edit as the restructuring**, and the agent judges that edit on its own merits instead of asking DiscoPoP to re-discover the parallelism.
+**`--llm-pragmas`:** **Off by default since D23** (20 Sep 2026; it was on before). When set, the LLM writes the OpenMP pragmas **in the same edit as the restructuring**, and the agent judges that edit on its own merits instead of asking DiscoPoP to re-discover the parallelism.
 
 What changes:
 

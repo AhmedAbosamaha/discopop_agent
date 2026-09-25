@@ -673,7 +673,7 @@ def check_fast_refresh_equivalence(work: Path) -> Result:
         api_base=None, lambda_penalty=1.0, min_workload=0.0, output_dir=str(out),
         dry_run=False, edit_mode="direct", llm_pragmas=True, pragma_arbitration=True, fast_refresh=True,
         llm_deps=False, hotspots=False, min_impact=0.0, restructure_depth=0,
-        require_speedup=False, build_retries=2, apply_patches=True,
+        require_speedup=False, judge_as_shipped=False, build_retries=2, apply_patches=True,
         min_measured_speedup=1.1, check_inputs=[], reprofil_args=[], verbose=False)
     ok, note = _reprofil_fast(args.source_file, Path(args.discopop_dir),
                               (fast / "old.cpp").read_text(),
@@ -781,6 +781,7 @@ def check_dep_review(work: Path) -> Result:
             lambda_penalty=1.0, min_workload=0.0, output_dir=str(out), dry_run=False,
             edit_mode="direct", llm_pragmas=True, pragma_arbitration=True, fast_refresh=True, llm_deps=True,
             hotspots=False, min_impact=0.0, restructure_depth=0, require_speedup=False,
+            judge_as_shipped=False,
             build_retries=2, apply_patches=True, min_measured_speedup=1.1,
             check_inputs=[], reprofil_args=[], verbose=False)
         note = dr._llm_dep_review(args, d / ".discopop", old_text, new_text, out, 1)
@@ -2027,6 +2028,19 @@ def check_twin_prompt(work: Path) -> Result:
                 want = req.replace(*twin.SPEED_ONE_THREAD)
                 if mine_req != want or (pragmas and g.require_speedup and mine_req == req):
                     problems.append(f"{tag}: the request is not the agent's")
+                # D40 (agent v3): the agent now reads the twin's speed words itself, so with
+                # judge_as_shipped the twin's texts are the agent's with only (a)-(c) — (d) is gone.
+                v3 = dataclasses.replace(g, judge_as_shipped=True)
+                agent3 = _system_prompt("direct", pragmas, False, v3, include)
+                checked3 = _section(agent3, "HOW YOUR REWRITE IS CHECKED")
+                expect3 = (flat(agent3).replace(checked3, judged)
+                           .replace(" — and, " + twin.FEEDBACK_CLAUSE + ".", ".")
+                           .replace(" and, " + twin.FEEDBACK_CLAUSE + ".", ".")
+                           .replace(flat(twin.EARLIER_TURN), "").replace("  ", " "))
+                if checked3 and flat(expect3) != flat(mine):
+                    problems.append(f"{tag}: with judge_as_shipped the twin differs from the agent beyond the gate")
+                if mine_req != _build_direct_prompt(ev, ws, include, pragmas, v3):
+                    problems.append(f"{tag}: with judge_as_shipped the twin's request is not the agent's word for word")
     if problems:
         return Result(name, "fail", "; ".join(problems[:3]) + (f" (+{len(problems) - 3} more)" if len(problems) > 3 else ""))
     return Result(name, "pass", f"{n} configurations: the agent's system prompt and request, less only the "
@@ -3499,6 +3513,354 @@ def check_arg_dependencies(work: Path) -> Result:
                                 "what actually happens (False without --llm-pragmas)")
 
 
+def check_shipped_prompt(work: Path) -> Result:
+    """D40 — with judge_as_shipped the agent's model reads what decides a trial, in the words the
+    twins and the model alone read; without it every text is v2's.
+
+    DiscoPoP writing the pragmas: step 4 says the build is timed against the program before the
+    rewrite and that a loss reverts it with the ratio — no longer "the same build on one thread",
+    which only Phase B's per-pragma check resembles.  The model writing them: the goal and the
+    request name the original sequential program, and the timing step both comparisons the gate
+    makes.  Every line that differs from v2 is a line about timing; with the speed check off
+    nothing differs."""
+    import dataclasses
+    import difflib
+    from .. import twin
+    from ..llm.prompts import _system_prompt
+    from ..llm.request import _build_direct_prompt
+    from ..types import GateFacts
+    name = "shipped prompt"
+    ev = _fw_evidence()
+    ws = Path("/tmp/ws/fw.c")
+    problems: List[str] = []
+    for speed in (True, False):
+        v2 = GateFacts(require_speedup=speed, n_inputs=2, numeric=False, stress=True)
+        v3 = dataclasses.replace(v2, judge_as_shipped=True)
+        for pragmas in (False, True):
+            includes: List[Optional[Set[str]]] = [None, set()]
+            for include in includes:
+                tag = (f"{'model' if pragmas else 'DiscoPoP'} pragmas/{'full' if include is None else 'none'}/"
+                       f"{'speed' if speed else 'no speed'}")
+                old, new = (_system_prompt("direct", pragmas, False, g, include) for g in (v2, v3))
+                old_req, new_req = (_build_direct_prompt(ev, ws, include, pragmas, g) for g in (v2, v3))
+                if not speed:
+                    if (old, old_req) != (new, new_req):
+                        problems.append(f"{tag}: the flag changes a text with the speed check off")
+                    continue
+                changed = [ln for ln in difflib.unified_diff((old + old_req).splitlines(),
+                                                             (new + new_req).splitlines(), lineterm="", n=0)
+                           if ln[:1] in "+-" and ln[:3] not in ("+++", "---")]
+                off_topic = [ln for ln in changed if not re.search(
+                    r"faster|timed|one thread|ratio|rewrite and has to|than both|reverted and you", ln)]
+                if off_topic:
+                    problems.append(f"{tag}: a line not about timing changed: {off_topic[0][:70]!r}")
+                if not pragmas:
+                    if "speed against the same build on one thread" in new:
+                        problems.append(f"{tag}: still names the one-thread comparison")
+                    if "as it stood before your" not in new or "reverted and you" not in new:
+                        problems.append(f"{tag}: does not state the before-the-rewrite criterion and the revert")
+                else:
+                    if "measurably faster than the original sequential program" not in new \
+                            or "against the original sequential program, and has to be faster" not in new:
+                        problems.append(f"{tag}: the goal or the timing step does not name the original")
+                    if new_req != twin._request(old_req):
+                        problems.append(f"{tag}: the request is not the twin's words")
+    if problems:
+        return Result(name, "fail", "; ".join(problems[:3]))
+    return Result(name, "pass", "v3 states the deciding comparison in the twins' words; only timing lines "
+                  "differ from v2, and nothing differs with the speed check off")
+
+
+_SHIP_SRC = """#include <stdlib.h>
+void k(double *a, double *b, int n) {
+  double *t = (double *)malloc(sizeof(double) * n);
+  for (int i = 0; i < n; i++)
+    t[i] = b[i] * 2.0;
+  for (int j = 0; j < n; j++) {
+    for (int m = 0; m < 4; m++)
+      a[j] += t[j] + m;
+  }
+  free(t);
+}
+"""
+
+
+def _ship_candidates(work: Path) -> "Tuple[Path, Path, List[Any]]":
+    """A two-loop rewrite (a copy loop, then a nest) with DiscoPoP-style pragma patches on disk for
+    the copy loop, the nest and the loop nested in it — the shape judge_as_shipped gets."""
+    from types import SimpleNamespace
+    from ..llm.diffs import make_diff
+    d = work / "shipped"
+    shutil.rmtree(d, ignore_errors=True)
+    (d / ".discopop" / "patch_generator").mkdir(parents=True)
+    src = d / "k.c"
+    src.write_text(_SHIP_SRC)
+    lines = _SHIP_SRC.splitlines()
+    cands = []
+    for pid, (head, end) in enumerate(((4, 5), (6, 9), (7, 8)), start=1):
+        with_pragma = lines[:head - 1] + ["#pragma omp parallel for"] + lines[head - 1:]
+        pdir = d / ".discopop" / "patch_generator" / str(pid)
+        pdir.mkdir()
+        (pdir / "1.patch").write_text(make_diff(_SHIP_SRC, "\n".join(with_pragma) + "\n", str(src)))
+        cands.append(SimpleNamespace(
+            region=SimpleNamespace(start_line=head, end_line=end, file_id=1, name="k", region_id=f"1:{pid}"),
+            pattern={"pattern_id": pid, "applicable_pattern": True}, pattern_type="do_all",
+            source_file=str(src), tier=1, workload_estimate=100.0))
+    return d, src, cands
+
+
+def check_shipped_judge(work: Path) -> Result:
+    """D40 — judge_as_shipped: DiscoPoP's pragmas for the exposed loops through the safety gate,
+    outermost first (a loop inside one judged safe gets none), staged together as TEXT, then the
+    program with them timed against the program before the rewrite.  The real file is never
+    written (its hash is taken before and after every case).
+
+    Cases: safe and faster → ok, both outer loops staged, the nested one not; safe and slower →
+    not_faster, naming what the rewrite added (a loop, an allocation); nothing safe → pattern_broken
+    with the first failure; the SET unsafe where each alone passed → the outermost judged alone;
+    a crash at the timing size → pattern_broken; a timing that fails otherwise → exposed (Phase B
+    and Settle decide, as in v2)."""
+    import hashlib
+    from ..phases.verdicts import judge_as_shipped
+    name = "shipped judge"
+    d, src, cands = _ship_candidates(work)
+    dp = d / ".discopop"
+    before = _SHIP_SRC.replace("  for (int i = 0; i < n; i++)\n    t[i] = b[i] * 2.0;\n", "") \
+                      .replace("  double *t = (double *)malloc(sizeof(double) * n);\n", "")
+    digest = lambda: hashlib.sha256(src.read_bytes()).hexdigest()       # noqa: E731
+    start = digest()
+    problems: List[str] = []
+    seen: Dict[str, Any] = {}
+
+    def safe(diff: str, c: Any) -> "Tuple[bool, str]":
+        seen.setdefault("validated", []).append(c.region.region_id if c is not None else "set")
+        return True, ""
+
+    def timing(ratio: float, ok: bool = True, diag: str = "") -> Callable[[str, str], "Tuple[bool, float, str]"]:
+        def m(b: str, a: str) -> "Tuple[bool, float, str]":
+            seen["staged"], seen["before"] = a, b
+            return ok, ratio, diag
+        return m
+    r = judge_as_shipped(cands, before, dp, str(src), threshold=0.98, validate=safe, measure=timing(1.5))
+    staged = seen.get("staged", "")
+    if r.status != "ok" or r.speedup != 1.5:
+        problems.append(f"safe and faster gave {r.status}")
+    if staged.count("#pragma omp parallel for") != 2 or "#pragma omp parallel for\n    for (int m" in staged:
+        problems.append(f"expected pragmas on the two outer loops only, staged {staged.count('#pragma omp')}")
+    if "1:3" in seen.get("validated", []):
+        problems.append("the loop nested in one judged safe was sent to the gate")
+    if seen.get("before") != before:
+        problems.append("not timed against the program before the rewrite")
+    r = judge_as_shipped(cands, before, dp, str(src), threshold=0.98, validate=safe, measure=timing(0.5))
+    if r.status != "not_faster" or "loop" not in r.diagnostic or "allocation" not in r.diagnostic:
+        problems.append(f"safe and slower gave {r.status} / {r.diagnostic!r}")
+    r = judge_as_shipped(cands, before, dp, str(src), threshold=0.98,
+                         validate=lambda diff, c: (False, "tsan: race on t"), measure=timing(1.5))
+    if r.status != "pattern_broken" or "race" not in r.diagnostic:
+        problems.append(f"nothing safe gave {r.status}")
+    seen.clear()
+    r = judge_as_shipped(cands, before, dp, str(src), threshold=0.98,
+                         validate=lambda diff, c: (c is not None, "" if c is not None else "tsan: together"),
+                         measure=timing(1.5))
+    if r.status != "ok" or seen.get("staged", "").count("#pragma omp parallel for") != 1:
+        problems.append("an unsafe SET did not fall back to the outermost pragma alone")
+    r = judge_as_shipped(cands, before, dp, str(src), threshold=0.98, validate=safe,
+                         measure=timing(0.0, ok=False, diag="non-zero exit (-11): signal"))
+    if r.status != "pattern_broken":
+        problems.append(f"a crash at the timing size gave {r.status}")
+    r = judge_as_shipped(cands, before, dp, str(src), threshold=0.98, validate=safe,
+                         measure=timing(0.0, ok=False, diag="no valid timing samples"))
+    if r.status != "exposed":
+        problems.append(f"an unmeasurable timing gave {r.status}, not the v2 verdict")
+    if digest() != start:
+        problems.append("the real file was written")
+    if problems:
+        return Result(name, "fail", "; ".join(problems[:3]))
+    return Result(name, "pass", "ok / not_faster (naming the added loop and allocation) / pattern_broken / "
+                  "set fallback / crash / unmeasurable; outermost-first; the real file never written")
+
+
+def check_request_log(work: Path) -> Result:
+    """D40 — every request the model is sent is kept: the system prompt once per distinct text,
+    then one JSON line per call with the region, the attempt, what was sent and the reply.  Here a
+    stand-in model answers in the wrong format, so the call is re-prompted twice: three lines."""
+    import json as _json
+    from ..llm import client
+    name = "request log"
+    d = work / "requests"
+    shutil.rmtree(d, ignore_errors=True)
+    saved = (getattr(client, "_complete"), getattr(client, "_make_client"))
+    try:
+        client.set_request_log(d)
+        setattr(client, "_make_client", lambda *a, **k: None)
+        setattr(client, "_complete", lambda *a, **k: "no diff here")
+        out, _msgs, _reply = client.call_llm(_fw_evidence(), "m", provider="anthropic", edit_mode="diff")
+    finally:
+        setattr(client, "_complete", saved[0])
+        setattr(client, "_make_client", saved[1])
+        client.set_request_log(None)
+    rows = [_json.loads(x) for x in (d / "requests.jsonl").read_text().splitlines()] \
+        if (d / "requests.jsonl").exists() else []
+    systems = list(d.glob("system_*.txt"))
+    problems = []
+    if out is not None:
+        problems.append("a reply without a diff was accepted")
+    if [r.get("attempt") for r in rows] != [0, 1, 2]:
+        problems.append(f"expected attempts 0,1,2, logged {[r.get('attempt') for r in rows]}")
+    if len(systems) != 1 or any(r.get("system") not in systems[0].name for r in rows):
+        problems.append("the system prompt is not kept once, by its digest")
+    if rows and ("Floyd" not in rows[0]["sent"] and "floyd" not in rows[0]["sent"].lower()):
+        problems.append("the first line does not hold the first request")
+    if len(rows) > 1 and "unified diff" not in rows[1]["sent"]:
+        problems.append("the re-prompt is not what the second line holds")
+    if problems:
+        return Result(name, "fail", "; ".join(problems))
+    return Result(name, "pass", "system prompt once by digest; one line per call with what was sent and the reply")
+
+
+def check_exposed_repair(work: Path) -> Result:
+    """Chart audit of 26 Sep, finding 5 — Phase A asks whether DiscoPoP's pragma for the exposed
+    loop can run, and asked it WITHOUT the clause repair Phase B applies: a generated
+    `private(tmp)` for a variable the loop body declares fails the -fopenmp build ("use of
+    undeclared identifier"), so the rewrite was reverted as `no_usable_pragma` although Phase B
+    would have repaired and applied the pragma.  With the repair it is `exposed`."""
+    from types import SimpleNamespace
+    from ..gate import check_pragma_compiles
+    from ..llm.diffs import make_diff
+    from ..phases.verdicts import _verify_rewrite
+    from ..pragmas import _read_tier1_patch, derive_pragma_patch
+    name = "exposed repair"
+    d = work / "exposed_repair"
+    shutil.rmtree(d, ignore_errors=True)
+    (d / ".discopop" / "patch_generator" / "7").mkdir(parents=True)
+    body = ("void k(double *a, int n) {\n  for (int i = 0; i < n; i++) {\n    double tmp = a[i] * 2.0;\n"
+            "    a[i] = tmp + 1.0;\n  }\n}\nint main(void) { double a[8] = {0}; k(a, 8); return 0; }\n")
+    src = d / "k.c"
+    src.write_text(body)
+    lines = body.splitlines()
+    patched = "\n".join(lines[:1] + ["#pragma omp parallel for private(tmp)"] + lines[1:]) + "\n"
+    (d / ".discopop" / "patch_generator" / "7" / "1.patch").write_text(make_diff(body, patched, str(src)))
+    cand = SimpleNamespace(region=SimpleNamespace(start_line=2, end_line=5, file_id=1, name="k", region_id="1:7"),
+                           pattern={"pattern_id": 7, "applicable_pattern": True}, pattern_type="do_all",
+                           source_file=str(src), tier=1, workload_estimate=100.0)
+    raw = derive_pragma_patch(_read_tier1_patch(d / ".discopop" / "patch_generator" / "7"), str(src))
+    raw_ok, _diag = check_pragma_compiles(raw or "", str(src))
+    args = SimpleNamespace(source_file=str(src))
+    out = _verify_rewrite([cand], (1, 6), d / ".discopop", args, None, None, None,  # type: ignore[arg-type]
+                          validate_patterns=False, gate_cache={})
+    if raw_ok:
+        return Result(name, "skip", "the unrepaired pragma compiles here — the case does not arise")
+    if out.status != "exposed":
+        return Result(name, "fail", f"{out.status}: the repaired pragma was not accepted")
+    return Result(name, "pass", "private(tmp) on a body-declared name fails unrepaired, is repaired, rewrite exposed")
+
+
+_SHIPPED_RUN_SRC = """#include <stdio.h>
+#define N 200000
+static double a[N], b[N];
+void back(void) {
+  for (int i = N - 2; i >= 0; i--)
+    a[i + 1] = a[i] + b[i];
+}
+int main(void) {
+  for (int i = 0; i < N; i++) { a[i] = (i % 7) * 0.5; b[i] = (i % 5) * 0.25; }
+  for (int r = 0; r < 10; r++) back();
+  double s = 0;
+  for (int i = 0; i < N; i++) s += a[i];
+  printf("%.6f\\n", s);
+  return 0;
+}
+"""
+_SHIPPED_SLOW = _SHIPPED_RUN_SRC.replace(
+    "void back(void) {\n  for (int i = N - 2; i >= 0; i--)\n    a[i + 1] = a[i] + b[i];\n}",
+    "static double t[N];\nvoid back(void) {\n  for (int k = 0; k < 8; k++)\n    for (int i = 0; i < N; i++)\n"
+    "      t[i] = a[i];\n  for (int i = N - 2; i >= 0; i--)\n    a[i + 1] = t[i] + b[i];\n}")
+_SHIPPED_LEAN = _SHIPPED_RUN_SRC.replace(
+    "void back(void) {\n  for (int i = N - 2; i >= 0; i--)\n    a[i + 1] = a[i] + b[i];\n}",
+    "static double t[N];\nvoid back(void) {\n  for (int i = 0; i < N; i++)\n    t[i] = a[i];\n"
+    "  for (int i = N - 2; i >= 0; i--)\n    a[i + 1] = t[i] + b[i];\n}")
+
+
+def check_shipped_run(work: Path) -> Result:
+    """D40 end to end, with DiscoPoP and the real gate; the model and the clock are stand-ins.
+
+    A backward loop with an anti-dependence (`a[i+1] = a[i] + b[i]`).  The model's first rewrite is
+    correct and exposes Do-Alls, but copies the array eight times per call; the clock says 0.4x.
+    D40 must judge DiscoPoP's pragmas safe, time the rewrite WITH them against the program before
+    it — while the file on disk carries no pragma — revert it, and tell the model the ratio and what
+    it added; the source must be back byte for byte, and the second attempt (one copy; the clock
+    says 1.6x) is kept.  The same run with --no-judge-as-shipped keeps the first rewrite, as v2 did."""
+    import contextlib
+    import importlib
+    import io
+    if not Path(_venv_bin("discopop_cxx")).exists():
+        return Result("shipped run", "skip", "DiscoPoP is not installed in this venv")
+    from ..args import parse_args
+    from ..llm.diffs import make_diff
+    agent_run: Any = importlib.import_module("discopop_agent.run")
+    phase_a: Any = importlib.import_module("discopop_agent.phases.phase_a")
+    name = "shipped run"
+    d = work / "shipped_run"
+    problems: List[str] = []
+    for judged in (True, False):
+        shutil.rmtree(d, ignore_errors=True)
+        d.mkdir(parents=True)
+        src = d / "k.c"
+        src.write_text(_SHIPPED_RUN_SRC)
+        ok, err = _profile(d, "k.c")
+        if not ok:
+            return Result(name, "fail", f"profile: {err}")
+        calls: List[str] = []
+        timed: List[Dict[str, Any]] = []
+
+        def model(evidence: Any, model_name: str, **kw: Any) -> Any:
+            msgs = kw.get("messages")
+            calls.append(msgs[-1]["content"] if msgs else "(first request)")
+            new = _SHIPPED_SLOW if len(calls) == 1 else _SHIPPED_LEAN
+            history = (msgs or [{"role": "user", "content": "request"}]) + [{"role": "assistant", "content": "plan"}]
+            return make_diff(src.read_text(), new, str(src)), history, "plan"
+
+        def clock(before: str, after: str, source_file: str, binary_args: Any = None,
+                  pairs: int = 5, extra_flags: Any = None) -> "Tuple[bool, float, str]":
+            timed.append({"disk_pragma": "#pragma omp" in src.read_text(),
+                          "staged_pragma": "#pragma omp" in after, "before_original": before == _SHIPPED_RUN_SRC})
+            return True, (0.4 if len(timed) == 1 else 1.6), ""
+
+        argv = ["x", "--discopop-dir", str(d / ".discopop"), "--source-file", str(src),
+                "--provider", "claude-agent-sdk", "--model", "m", "--edit-mode", "direct",
+                "--exclude-functions", "main", "--budget", "2"] + ([] if judged else ["--no-judge-as-shipped"])
+        saved = (phase_a.call_llm, phase_a.measure_marginal, sys.argv)
+        log = io.StringIO()
+        try:
+            phase_a.call_llm, phase_a.measure_marginal, sys.argv = model, clock, argv
+            with contextlib.redirect_stdout(log):
+                agent_run.run(parse_args())
+        finally:
+            phase_a.call_llm, phase_a.measure_marginal, sys.argv = saved
+        text = log.getvalue()
+        if judged:
+            if len(calls) != 2:
+                problems.append(f"judged: {len(calls)} model call(s), expected 2 (revert, then a retry)")
+            if "D40 verdict: not_faster 0.40×" not in text or "D40 verdict: ok 1.60×" not in text:
+                problems.append("judged: the log lacks the not_faster then ok verdicts")
+            if not timed or any(t["disk_pragma"] or not t["staged_pragma"] or not t["before_original"] for t in timed):
+                problems.append(f"judged: timed with a pragma on disk, none staged, or not against the program "
+                                f"before the rewrite: {timed}")
+            fb = calls[1] if len(calls) > 1 else ""
+            if "0.40x" not in fb or "more loop" not in fb or "reverted" not in fb:
+                problems.append(f"judged: the feedback lacks the ratio or what the rewrite added: {fb[:120]!r}")
+            if "fails at '" in text:
+                problems.append("judged: DiscoPoP's pragmas for the rewrite failed the safety gate")
+        else:
+            if len(calls) != 1 or timed or "D40" in text:
+                problems.append(f"--no-judge-as-shipped: {len(calls)} call(s), {len(timed)} D40 timing(s) — v2 "
+                                "keeps the first exposed rewrite without judging it")
+    if problems:
+        return Result(name, "fail", "; ".join(problems[:3]))
+    return Result(name, "pass", "the slow rewrite reverted with its ratio and what it added (pragmas staged, none on "
+                  "disk), the retry kept; --no-judge-as-shipped keeps the first rewrite as v2 did")
+
+
 _CHECKS: List[Tuple[str, Callable[[Path], Result]]] = [
     ("impact", check_impact_ranking),
     ("min-impact", check_min_impact),
@@ -3547,6 +3909,11 @@ _CHECKS: List[Tuple[str, Callable[[Path], Result]]] = [
     ("settle-paired", check_settle_paired),
     ("phase-b-joint", check_phase_b_joint),
     ("dp-floor", check_dp_floor),
+    ("shipped-prompt", check_shipped_prompt),
+    ("shipped-judge", check_shipped_judge),
+    ("request-log", check_request_log),
+    ("exposed-repair", check_exposed_repair),
+    ("shipped-run", check_shipped_run),
 ]
 
 
