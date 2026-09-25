@@ -94,15 +94,15 @@ footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--rule);font-fa
 <header>
   <p class="kicker">Agentic DiscoPoP · control flow</p>
   <h1>From the first DiscoPoP run to the judged result</h1>
-  <p class="lede">Every path the agent and the experiment harness can take, drawn from the code as it stands: each decision, each way a step can fail, what happens next, and what is written down. Eleven diagrams, one per stage; every exit of every diagram is listed under it.</p>
-  <div class="meta"><span><b>Agent</b> branch agentic_DiscoPop, after the September review</span><span><b>Harness</b> the same repository, <code>evaluation/</code> (D20)</span><span><b>Drawn</b> 18 Sep 2026</span><span><b>Revised</b> 21 Sep 2026 — the three campaign defaults that changed (D22, D23, D27), pragma arbitration (Fix 85), the runtime re-measurement after every kept rewrite and what it took to make it honest (Fixes 86, 87, D29), the explorer's stall limit, where a loop's iteration count really comes from (Fix 88), what the default arm can keep at best (T0.13), two lessons about the harness's verdict (the expert <code>hotspot</code> pragma the gate rightly rejected; T0.14), and — from E1 — Settle's speed verdict made paired (Fix 89) and where a rewrite's cost is judged. <b>23 Sep 2026 — agent v2:</b> a floor at DiscoPoP's own program (D32, Fix 94), Phase B judging the pragmas that do not pay alone as a set (D33, Fix 93), the clause stage's later-write rule (Fix 91), programs that call the OpenMP runtime (Fix 92). <b>23 Sep, late:</b> the agent's explorer limit set per benchmark (max 60 s, 10 × its own explorer run), and the model's file tools confined to its working copy with shell, web and search blocked (Fix 95)</span></div>
+  <p class="lede">Every path the agent and the experiment harness can take, drawn from the code as it stands: each decision, each way a step can fail, what happens next, and what is written down. Twelve diagrams, one per stage and one for the arms the agent is compared with; every exit of every diagram is listed under it.</p>
+  <div class="meta"><span><b>Agent</b> branch agentic_DiscoPop, after the September review</span><span><b>Harness</b> the same repository, <code>evaluation/</code> (D20)</span><span><b>Drawn</b> 18 Sep 2026</span><span><b>Revised</b> 21 Sep 2026 — the three campaign defaults that changed (D22, D23, D27), pragma arbitration (Fix 85), the runtime re-measurement after every kept rewrite and what it took to make it honest (Fixes 86, 87, D29), the explorer's stall limit, where a loop's iteration count really comes from (Fix 88), what the default arm can keep at best (T0.13), two lessons about the harness's verdict (the expert <code>hotspot</code> pragma the gate rightly rejected; T0.14), and — from E1 — Settle's speed verdict made paired (Fix 89) and where a rewrite's cost is judged. <b>23 Sep 2026 — agent v2:</b> a floor at DiscoPoP's own program (D32, Fix 94), Phase B judging the pragmas that do not pay alone as a set (D33, Fix 93), the clause stage's later-write rule (Fix 91), programs that call the OpenMP runtime (Fix 92). <b>23 Sep, late:</b> the agent's explorer limit set per benchmark (max 60 s, 10 × its own explorer run), and the model's file tools confined to its working copy with shell, web and search blocked (Fix 95). <b>24–25 Sep — the arms the agent is compared with (diagram 11):</b> the model alone with the agent's own instructions minus DiscoPoP, the gate and feedback (D37), and every agent arm's matched twin — the same model with the same DiscoPoP information but no gate (D38); in the verdict, a program that does not compile or that changed its own measuring code now counts as an unusable program (H13), and a final program that crashes is BROKEN, as the code has it</span></div>
 </header>
 
 <nav aria-label="Diagrams">
   <a href="#d0">0 Whole pipeline</a><a href="#d1">1 Harness: profile</a><a href="#d2">2 Start-up</a>
   <a href="#d3">3 Planning</a><a href="#d4">4 Phase A: one region</a><a href="#d5">5 Model call</a>
   <a href="#d6">6 The gate</a><a href="#d7">7 After a pass</a><a href="#d8">8 Phase B</a>
-  <a href="#d9">9 Settle</a><a href="#d10">10 Harness: verdict</a>
+  <a href="#d9">9 Settle</a><a href="#d10">10 Harness: verdict</a><a href="#d11">11 The comparison arms</a>
 </nav>
 
 <section>
@@ -562,6 +562,7 @@ flowchart TD
   <p>The harness builds the original and the final source itself, at the per-kernel verification size (T0.1), runs them at several thread counts with repeats, and compares digests and a full dump of the results on the default and on a perturbed input. The order of the checks below is the order in the code: an instrument that was tampered with is caught before any number is believed.</p>
   <figure><div class="chart" data-d="d10"></div>
   <figcaption>FASTER means correct and at least 1.1× at some thread count. Correctness tolerance: relative error 1e-9 on digests and dumps. Trials whose kernel cannot reach a measurable serial time are judged on correctness only and left out of the speed statistics.</figcaption></figure>
+  <p><strong>Unusable programs are results, not lost trials (H13, the author, 24 Sep).</strong> The per-trial outcome is unchanged; the read-out (<code>main_comparison_stats.py --three-way</code>) counts, for every arm alike, a program that is BROKEN, racy (the gate's race stages run afterwards on every program no gate saw, <code>race_check.py</code>), correct but slower than the original, <em>does not compile</em> (the harness built the original and failed only on the final program), or <em>changed its own measuring code</em> — and tests, loop by loop, whether the agent ships fewer of them than the model alone and than its twin. Until 24 Sep the last two fell under "no verdict" and left the denominator. E1c, the first test: the agent 0 of 90, the model alone 46 of 90 (p = 0.0004).</p>
   <p><strong>What the verdict can and cannot be trusted with (21 Sep).</strong> (1) <em>The dump must hold results only.</em> The LULESH package emitted LULESH's three symmetry differences — mathematically equal energies, subtracted: rounding residue that a correct parallel version moves by 25 % — and the harness called LLNL's own OpenMP release <code>BROKEN</code> while every energy agreed to 2e-16. The agent's gate reads the digest and would have accepted the same program, so the trial would have been scored <code>unsafe</code>. Fixed; and from now on every package must accept its own expert version before it is used (<strong>T0.14</strong>). (2) <em>The ceiling of the default arm is measured, not assumed</em> (<strong>T0.13</strong>): the expert restructuring with its pragmas stripped, <code>--budget 0</code> — DiscoPoP's pragmas on it are kept on 16 of 18 class-R TSVC loops; the other two need a pragma DiscoPoP cannot write. (3) <em>A correctness verdict at four threads is provisional</em>: the expert <code>hotspot</code> pragma passes every check on a laptop.</p>
   <div class="tablewrap"><table>
     <tr><th>Also recorded per trial</th><th>Why</th></tr>
@@ -581,9 +582,11 @@ flowchart TD
   A -->|"time limit, process group killed"| O2["AGENT_TIMEOUT"]:::bad
   A -->|"non-zero exit: credential,<br/>endpoint, fatal start-up"| O3["AGENT_ERROR"]:::bad
   A -->|"exit 0"| SC{"packaging code untouched?<br/>pb_ definitions, ordered uses,<br/>timed region boundaries"}:::dec
-  SC -->|"no"| O4["SCAFFOLD_MODIFIED<br/>never counted as a result"]:::bad
+  SC -->|"no"| O4["SCAFFOLD_MODIFIED<br/>no speed or correctness verdict;<br/>in the read-out an UNUSABLE program (H13)"]:::bad
   SC -->|"yes"| VB["build original and final at the verification size,<br/>run sequential and at each thread count, with repeats"]:::step
-  VB -->|"build or run fails"| O5["VERIFY_FAILED"]:::bad
+  VB -->|"only the FINAL program fails to build"| O5b["VERIFY_FAILED<br/>in the read-out an UNUSABLE program (H13):<br/>it shipped code that does not compile"]:::bad
+  VB -->|"the original fails, or no digest"| O5["VERIFY_FAILED<br/>no verdict"]:::bad
+  VB -->|"the final program crashes<br/>where the original runs"| O6
   VB --> CR{"digests and dumps within 1e-9 on both inputs,<br/>and stable at a fixed thread count?"}:::dec
   CR -->|"no"| O6["BROKEN"]:::bad
   CR -->|"yes"| CH{"source changed?"}:::dec
@@ -597,7 +600,50 @@ flowchart TD
   SP -->|"no"| O11["parallel-not-faster"]:::hold
 </script>
 
-<footer>Sources: <code>discopop_agent/run.py</code>, <code>plan/scoring.py</code>, <code>phases/phase_a.py</code>, <code>llm/client.py</code>, <code>gate/validate.py</code>, <code>profiling/runner.py</code>, <code>phases/phase_b.py</code>, <code>phases/settle.py</code>, <code>phases/floor.py</code>; harness <code>evaluation/agent/tools/cli.py</code> (one repository since D20). Findings behind the branches: <code>docs/REVIEW_2026-09.md</code>, <code>docs/FIXES.md</code>, <code>docs/MULTIFILE.md</code>, and the change log in <code>evaluation/agent/docs/THESIS_EXPERIMENTS.md</code> §6.</footer>
+<!-- ============================================================ 11 -->
+<section id="d11">
+  <div class="sec"><span class="n">11</span><h2>The comparison arms: what each one runs</h2></div>
+  <p>The main comparison is three-way (D35): DiscoPoP alone, DiscoPoP + the agent, and the same model alone, with the sequential program as the reference. Since D38 every agent arm that has a model-only meaning also has a <strong>matched twin</strong>: the agent arm minus the gate. Diagrams 2–9 are the agent; this one shows what the other arms keep of it and what they leave out. All of them are judged afterwards by the same harness (diagram 10), and every program no gate saw is race-checked afterwards with the gate's own stages.</p>
+  <figure><div class="chart" data-d="d11"></div>
+  <figcaption>A twin runs <code>discopop_agent/twin.py</code> with its agent arm's own arguments (inherited in <code>cli.resolve_twins</code>): the agent's start-up, ranked queue and skips, then the agent's own request for every region the agent would ask about — its system prompt is the agent's with four texts changed and nothing else (feature check <code>twin-prompt</code>). The model alone runs <code>discopop_agent/bare_llm.py</code> with the mirror prompt: the agent's instructions minus DiscoPoP's role and evidence, minus the region, minus the gate during the run and feedback.</figcaption></figure>
+  <div class="tablewrap"><table>
+    <tr><th>Stage</th><th>DiscoPoP alone</th><th>agent</th><th>twin</th><th>DiscoPoP unchecked</th><th>model alone</th></tr>
+    <tr><td>arm</td><td><code>discopop_gate</code></td><td><code>default</code>, <code>full_b1</code>, …</td><td><code>twin_full</code>, <code>twin_no_evidence</code>, …</td><td><code>twin_dp</code></td><td><code>bare_llm</code></td></tr>
+    <tr><td>DiscoPoP profile, ranked queue</td><td>Phase B's candidates</td><td>yes</td><td>yes, the agent's code</td><td>Phase B's candidates</td><td>no</td></tr>
+    <tr><td>DiscoPoP's evidence in the request</td><td>—</td><td>as the arm sets it</td><td>the same</td><td>—</td><td>no</td></tr>
+    <tr><td>model calls</td><td>0</td><td>up to <code>--budget</code> per region, with the gate's feedback</td><td>one per region the agent would ask, no feedback</td><td>0</td><td>one, for the whole program</td></tr>
+    <tr><td>who writes the pragmas</td><td>DiscoPoP</td><td>DiscoPoP (the model too under <code>--llm-pragmas</code>)</td><td>as its agent arm</td><td>DiscoPoP</td><td>the model</td></tr>
+    <tr><td>after an edit</td><td>—</td><td>re-profile after a KEPT rewrite; reverted if DiscoPoP cannot use it</td><td>re-profile after EVERY edit; nothing reverted</td><td>—</td><td>—</td></tr>
+    <tr><td>the gate (clause, TSan, schedules, outputs, speed)</td><td>yes</td><td>yes</td><td><span class="tag t-bad">no</span></td><td><span class="tag t-bad">no</span></td><td><span class="tag t-bad">no</span></td></tr>
+    <tr><td>Settle · floor (D32)</td><td>Settle</td><td>both</td><td>no</td><td>no</td><td>no</td></tr>
+    <tr><td>judged by the harness</td><td>yes</td><td>yes</td><td>yes</td><td>yes</td><td>yes</td></tr>
+    <tr><td>race check afterwards</td><td>gated already</td><td>gated already</td><td><span class="tag t-acc">mandatory</span></td><td><span class="tag t-acc">mandatory</span></td><td><span class="tag t-acc">mandatory</span></td></tr>
+  </table></div>
+  <p><strong>What the comparisons read.</strong> Agent against DiscoPoP alone: what the model adds on top of DiscoPoP (D19). Agent against the model alone: what DiscoPoP and the gate add on top of the model (D35). Agent against its twin: what the gate and its feedback add given the same DiscoPoP information; and a factor's effect inside the agent against its effect on the twins — does it act <em>through</em> the pipeline (H12, the headline of each experiment). The model-only arms' unusable programs are counted, never dropped (H13). <strong>Known difference:</strong> each trial measures its own hotspots, so where two regions' measured times are close, an agent trial and a twin trial may start at different regions; each log names the region asked first.</p>
+</section>
+<script type="text/plain" class="src" data-d="d11">
+flowchart TD
+  P["one DiscoPoP profile per benchmark,<br/>copied into every trial"]:::step
+  SRC["the source files only"]:::step
+  P --> DG["DiscoPoP alone (discopop_gate)<br/>--budget 0: Phase B + Settle,<br/>DiscoPoP's pragmas through the gate"]:::step
+  P --> AG["the agent (default, full_b1, ...)<br/>diagrams 2-9: model, gate, feedback,<br/>Phase B, Settle, floor"]:::model
+  P --> TW["its twin (twin_*, D38): the agent's start-up,<br/>queue, region, evidence and request;<br/>one attempt per region, no feedback"]:::model
+  TW --> TE["edit kept unchecked, re-profiled;<br/>DiscoPoP inserts every applicable<br/>pragma, NOTHING checked"]:::hold
+  P --> TD["DiscoPoP unchecked (twin_dp):<br/>every applicable pragma inserted,<br/>nothing checked"]:::hold
+  SRC --> BL["the model alone (bare_llm, D37):<br/>the agent's instructions minus DiscoPoP,<br/>the gate and feedback; one call"]:::model
+  DG --> V["the harness's verdict, diagram 10"]:::step
+  AG --> V
+  TE --> V
+  TD --> V
+  BL --> V
+  TE --> RC["race_check.py: the gate's TSan and<br/>schedule matrix, afterwards"]:::step
+  TD --> RC
+  BL --> RC
+  V --> H["read-out: three-way (D35),<br/>pipeline x factor (H12),<br/>unusable programs (H13)"]:::ok
+  RC --> H
+</script>
+
+<footer>Sources: <code>discopop_agent/run.py</code>, <code>plan/scoring.py</code>, <code>phases/phase_a.py</code>, <code>llm/client.py</code>, <code>gate/validate.py</code>, <code>profiling/runner.py</code>, <code>phases/phase_b.py</code>, <code>phases/settle.py</code>, <code>phases/floor.py</code>; the comparison arms <code>discopop_agent/twin.py</code> (D38) and <code>discopop_agent/bare_llm.py</code> (D37); harness <code>evaluation/agent/tools/cli.py</code> (one repository since D20). Findings behind the branches: <code>docs/REVIEW_2026-09.md</code>, <code>docs/FIXES.md</code>, <code>docs/MULTIFILE.md</code>, and the change log in <code>evaluation/agent/docs/THESIS_EXPERIMENTS.md</code> §6.</footer>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.9.1/mermaid.min.js"></script>
