@@ -237,8 +237,9 @@ def _did_not_compile(t: dict) -> bool:
 
 
 def _tampered(t: dict) -> bool:
-    """The program changed the code that measures it (timer, perturbed input, digest), which
-    every arm is told to leave alone: its speed and output verdicts measure nothing (H13)."""
+    """The program changed the harness code that measures it (timer, perturbed input, digest).
+    Its speed and output verdicts measure nothing, and it is NOT a failure of the code under
+    test (the author, 24 Sep): reported in its own row, left out of every rate and of H13."""
     return t.get("outcome") == "SCAFFOLD_MODIFIED"
 
 
@@ -261,12 +262,12 @@ def three_way(trials: List[dict], agent_arm: str, bare_arm: str = "bare_llm",
         per: Dict[str, Dict[str, Dict[str, int]]] = {b: {} for b in benches}
         for label, arm in arms.items():
             at = [t for t in ts if t.get("arm") == arm and str(t.get("benchmark")) in benches]
-            # With a verdict: every outcome that judges the delivered program — including a program
-            # that does not build or that rewrote its own measurement (H13, the author 24 Sep:
-            # "record that as a result"). Until then those two fell under "no verdict" and left the
-            # denominator (E1-bare's "of 88" = 90 minus exactly these two).
+            # With a verdict: every outcome that judges the delivered code under test — including
+            # a program that does not build (H13, the author 24 Sep: "record that as a result").
+            # A program that touched the harness has no valid measurement: its own row, out of
+            # the denominator, never unusable (the author: only failures in the code under test).
             valid = [t for t in at if t.get("outcome") in figures.PARALLEL_OK + ("no-change", "BROKEN")
-                     or _did_not_compile(t) or _tampered(t)]
+                     or _did_not_compile(t)]
             par = [t for t in valid if t.get("outcome") in figures.PARALLEL_OK]
             fast = [t for t in valid if t.get("outcome") == "FASTER"]
 
@@ -280,7 +281,7 @@ def three_way(trials: List[dict], agent_arm: str, bare_arm: str = "bare_llm",
             slower = [t for t in par if (_best_speedup(t) or 1.0) < SLOWER]
             broken = [t for t in valid if t.get("outcome") == "BROKEN"]
             no_build = [t for t in valid if _did_not_compile(t)]
-            tampered = [t for t in valid if _tampered(t)]
+            tampered = [t for t in at if _tampered(t)]
             sp = [x for x in (_best_speedup(t) for t in fast) if x]
             block["arms"][label] = {
                 "arm": arm, "trials": len(at), "with_verdict": len(valid),
@@ -293,18 +294,18 @@ def three_way(trials: List[dict], agent_arm: str, bare_arm: str = "bare_llm",
                 "broken": len(broken), "slower_shipped": len(slower), "racy": len(racy),
                 "race_not_judgeable": len(unjudged),
                 "did_not_compile": len(no_build), "tampered": len(tampered),
-                "unusable": len({id(t) for t in broken + slower + racy + no_build + tampered}),
+                "unusable": len({id(t) for t in broken + slower + racy + no_build}),
                 "unusable_cases": [f"{t.get('benchmark')} rep{t.get('repeat')}: "
                                    + ("BROKEN" if t in broken else "did not compile" if t in no_build
-                                      else "changed its measuring code" if t in tampered
                                       else "racy" if t in racy else "slower")
-                                   for t in valid if t in broken + slower + racy + no_build + tampered],
+                                   for t in valid if t in broken + slower + racy + no_build],
+                "tampered_cases": [f"{t.get('benchmark')} rep{t.get('repeat')}" for t in tampered],
                 "broken_cases": [f"{t.get('benchmark')} rep{t.get('repeat')}" for t in broken],
                 "median_speedup_of_faster": statistics.median(sp) if sp else None,
             }
             for b in benches:
                 bt = [t for t in valid if str(t.get("benchmark")) == b]
-                bad = {id(t) for t in bt if t.get("outcome") == "BROKEN" or _did_not_compile(t) or _tampered(t)
+                bad = {id(t) for t in bt if t.get("outcome") == "BROKEN" or _did_not_compile(t)
                        or (t.get("outcome") in figures.PARALLEL_OK
                            and ((_best_speedup(t) or 1.0) < SLOWER or race(t) in RACE_STAGES))}
                 per[b][label] = {"faster": sum(1 for t in bt if t.get("outcome") == "FASTER"),
@@ -347,8 +348,8 @@ def three_way_markdown(tw: Dict[str, Any]) -> str:
                 ("correct but slower, shipped (< 0.91×)", lambda a: str(a["slower_shipped"])),
                 ("racy (race check: TSan or the schedule matrix)", lambda a: str(a["racy"]) + (f" (+{a['race_not_judgeable']} not judgeable)" if a["race_not_judgeable"] else "")),
                 ("shipped a program that does not compile", lambda a: str(a["did_not_compile"])),
-                ("changed the code that measures it (told not to)", lambda a: str(a["tampered"])),
-                ("**unusable programs** (any of the five above)", lambda a: f"**{a['unusable']}**"),
+                ("**unusable programs** (any of the four above)", lambda a: f"**{a['unusable']}**"),
+                ("touched the harness — no valid measurement, not counted above", lambda a: str(a["tampered"])),
                 ("no verdict", lambda a: f"{a['invalid_n']}" + (f" ({', '.join(a['invalid'])})" if a["invalid"] else "")),
                 ("median speedup of the FASTER trials", lambda a: f"{a['median_speedup_of_faster']:.2f}×" if a["median_speedup_of_faster"] else "—")]
         for name, f in rows:
@@ -358,7 +359,7 @@ def three_way_markdown(tw: Dict[str, Any]) -> str:
             if a["unusable_cases"]:
                 out.append(f"- Unusable programs shipped by {label} ({a['unusable']}): " + "; ".join(a["unusable_cases"]) + ".")
         w = b["agent_vs_model_alone_unusable"]
-        out.append(f"- **H13 — unusable programs shipped (wrong, racy, slower, not compiling, or measurement changed), rate per benchmark, paired:** the agent ships "
+        out.append(f"- **H13 — unusable programs shipped (wrong, racy, slower or not compiling — failures of the code under test), rate per benchmark, paired:** the agent ships "
                    f"fewer on {w['agent_ahead']}, the model-only arm fewer on {w['model_alone_ahead']}, tied on "
                    f"{w['n_pairs'] - w['n_nonzero']}"
                    + (f"; p (two-sided) = {w['p_two_sided']:.3g}, p (agent fewer) = {w['p_agent_ahead']:.3g}" if "p_two_sided" in w else f"; {w.get('note', '')}")
