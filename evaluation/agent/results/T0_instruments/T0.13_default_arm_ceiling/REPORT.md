@@ -23,7 +23,7 @@ Can the pipeline KEEP a perfect rewrite: the expert restructuring with its pragm
 
 | ID | Question | Tool | How it measures | Output | Status |
 |---|---|---|---|---|---|
-| T0.13 | Can the arm under test KEEP a perfect rewrite? | `default_arm_ceiling.py` | the expert restructuring with its pragmas stripped, `--budget 0`: DiscoPoP profiles it, Phase B pushes its pragmas through the campaign's gate, Settle verifies | `ceiling.csv` | TSVC, Mac, 21 Sep: kept on 18 of 21, class R 16 of 18 (`s331`, `s341` need a pragma DiscoPoP cannot write). Server repeat, `hotspot`, `floyd-warshall`, LULESH owed (§5s) |
+| T0.13 | Can the arm under test KEEP a perfect rewrite? | `default_arm_ceiling.py` | the expert restructuring with its pragmas stripped, `--budget 0`: DiscoPoP profiles it, Phase B pushes its pragmas through the campaign's gate, Settle verifies | `ceiling.csv` | TSVC, Mac, 21 Sep: kept on 18 of 21, class R 16 of 18 (`s331`, `s341` need a pragma DiscoPoP cannot write — for `s341` an inference: its run was a PROFILE_ERROR, corrected 26 Sep, §6). Server repeat, `hotspot`, `floyd-warshall`, LULESH owed (§5s) |
 
 ## From the experiment record (§7 run log)
 
