@@ -4318,6 +4318,66 @@ def check_b9_callee_in_loop(work: Path) -> Result:
                   "carrying a dependence through mix and emit are not Do-All, the loop calling the pure sq still is")
 
 
+_B4_PROGRAM = """#include <stdio.h>
+#define N 2000
+static double a[N], b[N];
+static void kernel(int reps)
+{
+    for (int nl = 0; nl < reps; nl++) {
+        for (int i = N - 2; i >= 0; i--) {
+            a[i + 1] = a[i] + b[i];
+        }
+    }
+}
+int main(void)
+{
+    for (int i = 0; i < N; i++) { a[i] = 0.5 + i % 7; b[i] = 1.0e-3 * (i % 5); }
+    kernel(6);
+    printf("%.6f %.6f\\n", a[1], a[N - 1]);
+    return 0;
+}
+"""
+
+
+def check_b4_nested_duplication(work: Path) -> Result:
+    """DiscoPoP bug B4, fixed 26 Sep in the explorer: the task graph duplicates each loop's iteration
+    once, and an enclosing loop's copy took the loops inside it as they were at that moment — an
+    inner loop not yet duplicated stayed one iteration there, so only its first iteration's call-path
+    states found a place, and the recurrence carried between its later iterations was lost. Which
+    loop came first followed a set's order: TSVC s112's inner recurrence was Do-All in 7 of 8 runs
+    on one profile. Here the same shape; the explorer runs three times on one profile and the inner
+    recurrence must be blocked every time, with no "Applied fix" warning (the uncopied inner loop's
+    missing iteration ids)."""
+    if not Path(_venv_bin("discopop_cxx")).exists():
+        return Result("b4 nested duplication", "skip", "DiscoPoP is not installed in this venv")
+    name = "b4 nested duplication"
+    d = work / "b4_nested_duplication"
+    shutil.rmtree(d, ignore_errors=True)
+    d.mkdir(parents=True)
+    (d / "k.c").write_text(_B4_PROGRAM)
+    ok, err = _profile(d, "k.c", hotspots=False)
+    if not ok:
+        return Result(name, "fail", f"profile: {err}")
+    inner = next(i + 1 for i, l in enumerate(_B4_PROGRAM.splitlines()) if l.strip().startswith("for (int i = N - 2"))
+    problems: List[str] = []
+    for run in range(1, 4):
+        shutil.rmtree(d / ".discopop" / "explorer", ignore_errors=True)
+        ok, err = _run([_venv_bin("discopop_explorer")], d / ".discopop")
+        if not ok:
+            return Result(name, "fail", f"explorer run {run}: {err[-200:]}")
+        pats = json.loads((d / ".discopop" / "explorer" / "patterns.json").read_text()).get("patterns", {})
+        doall = {int(str(x.get("start_line", "0:0")).split(":")[1]) for x in pats.get("do_all", [])
+                 if str(x.get("applicable_pattern")) == "True"}
+        if inner in doall:
+            problems.append(f"run {run}: the recurrence at k.c:{inner} is reported Do-All")
+        if "set previously unspecified loopstate iteration id" in err:
+            problems.append(f"run {run}: an inner loop was copied without its iterations")
+    if problems:
+        return Result(name, "fail", "; ".join(problems))
+    return Result(name, "pass", "inner loops are duplicated before the loops that enclose them: the recurrence is "
+                  "blocked in 3 of 3 explorer runs on one profile")
+
+
 _CHECKS: List[Tuple[str, Callable[[Path], Result]]] = [
     ("impact", check_impact_ranking),
     ("min-impact", check_min_impact),
@@ -4376,6 +4436,7 @@ _CHECKS: List[Tuple[str, Callable[[Path], Result]]] = [
     ("requeue", check_requeue),
     ("b8-outside-root", check_b8_outside_root),
     ("b9-callee-in-loop", check_b9_callee_in_loop),
+    ("b4-nested-duplication", check_b4_nested_duplication),
 ]
 
 

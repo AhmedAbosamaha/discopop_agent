@@ -760,8 +760,9 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         body: Set[NodeID] = set()
         try:
             cu = self.pet.node_at(header_cu_id)
-            loops = [s for s, t, d in in_edges(self.pet, cu.id, EdgeType.CHILD)
-                     if isinstance(self.pet.node_at(s), LoopNode)]
+            loops = [
+                s for s, t, d in in_edges(self.pet, cu.id, EdgeType.CHILD) if isinstance(self.pet.node_at(s), LoopNode)
+            ]
             if loops:
                 body = {n.id for n in subtree_of_type(self.pet, self.pet.node_at(loops[0]), CUNode)}
         except Exception:  # an unknown id, or a marker node without a PET node: not a loop header
@@ -848,8 +849,11 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                 if entry_node is not None and entry_node.pet_node_id is not None:
                     body_cus = self.__loop_body_cu_ids(entry_node.pet_node_id)
                     for pred in self.get_predecessors(entry_node):
-                        if pred not in iteration_exit_points and pred is not entry_node \
-                                and pred.pet_node_id in body_cus:
+                        if (
+                            pred not in iteration_exit_points
+                            and pred is not entry_node
+                            and pred.pet_node_id in body_cus
+                        ):
                             iteration_exit_points.append(pred)
 
                 #                print("Found entry node: ", entry_node.get_label() if entry_node is not None else "NONE")
@@ -1086,6 +1090,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
             logger.info("--> " + function_node.get_label())
             added_copies: Set[TGNode] = set()  # do not allow the re-copying of copies
             already_considered: Set[TGNode] = set()  # do not allo the re-copying of nodes
+            outer_first_fallback = False  # B4: see below
             modification_found = True
             # plotting progress
             if plot_progress:
@@ -1151,6 +1156,26 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                     if not already_duplicated:
                         filtered_end_iteration_nodes.append(ein)
 
+                # Duplicate inner loops before the loops that enclose them (B4,
+                # docs/DISCOPOP_BUG_REPORTS.md). Copying an enclosing iteration copies the loops
+                # inside it as they are at that moment: an inner loop not yet duplicated is copied
+                # as ONE iteration without iteration ids (set to [0] later, "Applied fix: ...") and
+                # is never duplicated afterwards, since copies are not re-copied. In the enclosing
+                # loop's copy the inner loop then matches only its first iteration's call-path
+                # states; the states of its later iterations are attached nowhere, the dependences
+                # carried between them are lost, and a true recurrence is reported Do-All. Which
+                # loop came first followed the iteration order of a set of nodes, so the verdict
+                # changed from run to run on one profile (TSVC s112: Do-All in 7 of 8 runs).
+                pairable: Set[TGStartIterationNode] = set()
+                for sin in filtered_start_iteration_nodes:
+                    for ein in filtered_end_iteration_nodes:
+                        if sin.parent_loop_pet_node_id == ein.parent_loop_pet_node_id and nx.has_path(
+                            self.graph, sin, ein
+                        ):
+                            pairable.add(sin)
+                            break
+                deferred = False
+
                 # find corresponding end iteration node for each start
                 for sin in filtered_start_iteration_nodes:
                     #                    print("SIN: ", sin.get_label())
@@ -1163,6 +1188,14 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                         # get iteration nodes
                         iteration_nodes = self.__get_iteration_nodes(sin, ein)
                         if len(iteration_nodes) == 0:
+                            continue
+
+                        # an iteration that still holds a loop not yet duplicated waits for a later pass
+                        if not outer_first_fallback and any(
+                            other is not sin and other in iteration_nodes and other not in already_considered
+                            for other in pairable
+                        ):
+                            deferred = True
                             continue
 
                         # copy the iteration nodes and connect them to the original iteration
@@ -1191,6 +1224,12 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                         for iteration_node in iteration_nodes:
                             already_considered.add(iteration_node)
                         modification_found = True
+
+                if deferred and not modification_found:
+                    # every remaining loop waits for another (not expected: the loops of a function
+                    # nest as a tree): duplicate in the original order rather than not at all
+                    outer_first_fallback = True
+                    modification_found = True
 
     def __assign_contexts(self) -> None:  # TODO: make the used graph parametric
         logger.info("Assigning contexts...")
@@ -2517,7 +2556,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
             memo_key = (id(ctx), callstate)
             if memo_key in assignment_memo:
                 return assignment_memo[memo_key]
-            assignment_memo[memo_key] = False      # a pair still being answered counts as a miss
+            assignment_memo[memo_key] = False  # a pair still being answered counts as a miss
             result = recursive_assignment_uncached(state_id, callstate, ctx)
             assignment_memo[memo_key] = result
             return result
@@ -2676,7 +2715,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
             #            print("Clean CallState: ", callstate)
             entry_points: List[Context] = [c for c in self.contexts if isinstance(c, FunctionContext)]
             callstate_tuple: Tuple[str, ...] = tuple(callstate)
-            assignment_memo.clear()                 # answers hold for ONE state id only
+            assignment_memo.clear()  # answers hold for ONE state id only
             could_be_assigned: bool = False
             for entry_point in entry_points:
                 could_be_assigned = could_be_assigned or recursive_assignment(

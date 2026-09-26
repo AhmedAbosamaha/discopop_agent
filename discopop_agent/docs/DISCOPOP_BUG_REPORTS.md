@@ -23,7 +23,7 @@ LLVM 19 (macOS) and LLVM 20 (Linux).
 | B2 | explorer, `TaskGraph.__break_cycles` | fixed (agent Fix 80) | a loop with several back edges (`continue`) crashes the task-graph builder |
 | B3 | profiler, `utils/CFA.cpp` + `instrumentLoopExit` | fixed (agent Fix 81) | a loop that is the last statement of an `else` block gets no loop markers → explorer `IndexError` at random, and silently wrong loop-state matching |
 | B5 | explorer, `TaskGraph.recursive_assignment` | fixed (agent Fix 82) | a loop state of one function is matched against loops of another → `IndexError` (NPB `mg`, every attempt) or a silent wrong match |
-| B4 | explorer, task-graph construction order | open — re-measured 26 Sep after B3: still present, mechanism narrowed (below); fixing it is the author's decision | the explorer's output differs between runs on one unchanged profile — on TSVC s112 it misses the textbook recurrence in 6–7 of 8 draws |
+| B4 | explorer, `TaskGraph.__duplicate_loop_iterations` | fixed 26 Sep (root cause found: nested loops duplicated in set order) | the explorer's output differs between runs on one unchanged profile — on TSVC s112 it reported the textbook recurrence Do-All in 7 of 8 runs; after the fix the Do-All sets of all 33 TSVC packages repeat run to run |
 | P1 | explorer, `TaskGraph.__assign_state_ids` | fixed (agent Fix 83) | performance: the state assignment re-answers the same (context, call path) pair exponentially often — hours on `mg`/`nw`, seconds once memoised |
 | B6 | `discopop_patch_generator` (called by the explorer) | open | hangs on some runs: 3 of 20 explorer runs on one unchanged profile of a 40-line program never return from the patch-generator subprocess |
 | B7 | profiler runtime, `dp_loop_output.cpp` → `loop_counter_output.txt` | root cause found, patch written, worked around (agent Fix 88); present in upstream `new_explorer` `28ac4d47` | the per-loop iteration counts are paired with the WRONG loops: 277 of 337 counts (82 %) over 41 profiles disagree with the `BGN loop` markers of the same run |
@@ -302,6 +302,9 @@ a function whose last statement inside an `else { … }` is a loop nest.
 
 ## B4 — explorer output differs between runs on one profile
 
+**Status:** FIXED 26 Sep 2026 in the explorer (`TaskGraph.__duplicate_loop_iterations`), before E2-B1 by the
+author's decision ("yes fix b4 go ahead"; D14). E1c-v3.1 ran on the pre-fix explorer and is reported as such.
+
 Measured (harness T0.7, 60 runs per program): 2mm — the `shared()` clause of some Do-Alls
 present or empty, 50 distinct task-pattern sets; `pathfinder` — 10 or 11 Do-Alls; NPB `is`
 — 14 task sets. To be re-measured once B3 is fixed, since B3 makes the state matching
@@ -313,16 +316,51 @@ every explorer run on a pristine copy of `.discopop`, 8 runs each: the inner loo
 Do-All in **7 of 8** runs of the pre-fix explorer and **6 of 8** with B9 fixed. The outcome follows one
 thing exactly: whether four of the kernel's call-path states — `_ZL11kernel_s112v_loopstate01`, `…02`,
 `…21`, `…22` (inner iterations 1 and 2 inside outer iterations 0 and 2) — are attached to a context. Every
-run that attaches them (10 → 14 attached states before the fix, 13 → 17 after) blocks the loop on the RAW
+run that attaches them (10 → 14 attached states on the pre-B9 explorer, 13 → 17 with B9 fixed) blocks the loop on the RAW
 on `a`; every run that does not reports it Do-All. The same on s121, s212, s243 and s244, each with a
 true dependence in the kernel's inner loop: Do-All in 7 to 12 of 15 runs per explorer version (B9's
 verification). Not a cycle in the state walk (an instrumented copy
-counted 0 re-entries of a pair still being answered). `Context.contained_contexts` is a Python `set` of
-context objects, so its iteration order follows object addresses and changes from run to run; the task
-graph built from it — which iteration contexts exist and where the inner loop's copies sit — is the
-suspect. Consequence for the campaign: DiscoPoP's verdict on a loop is itself a draw (T0.15's "draw
+counted 0 re-entries of a pair still being answered). The order that decides it is that of a set of task-graph nodes, which
+follows object addresses and changes from run to run (root cause below). Consequence for the campaign: DiscoPoP's verdict on a loop is itself a draw (T0.15's "draw
 noise" mixed this with profile noise). The gate catches the false Do-All; the verdict decides where the
 agent routes a region.
+
+**Root cause.** The task graph gives every loop two iteration copies — the original (iteration ids `[1]`)
+and a copy (`[0, 2]`) — so that call-path states of the first, a middle and a later iteration each find a
+place. `__duplicate_loop_iterations` does this per function, pass by pass, over the loops' start nodes in
+the order of `nx.descendants` (a set). Copying an enclosing loop's iteration copies the loops inside it as
+they are at that moment, and copies are never copied again. When the enclosing loop came first, the inner
+loop inside the enclosing loop's copy stayed ONE iteration without iteration ids; the context builder then
+set them to `[0]` with the warning "Applied fix: set previously unspecified loopstate iteration id … to
+[0]". In the enclosing loop's copy, which stands for its first and its later iterations, the inner loop
+could then only take the states of its own first iteration: `_loopstate01`, `…02`, `…21`, `…22` were
+attached nowhere, the dependences carried between later inner iterations were lost, and the recurrence was
+reported Do-All. The warning is the signature: over 87 runs of three packages it appeared in exactly the
+58 that reported the false Do-All and in none of the 29 that blocked it.
+
+**Fix.** Inner loops are duplicated before the loops that enclose them: in each pass, an iteration that
+still holds a loop not yet duplicated waits for a later pass (with a fallback to the old order should
+every remaining loop wait, which a tree of loops cannot produce).
+
+**Verified (26 Sep, Mac, LLVM 19; the B9-fixed explorer as the baseline, each run on a pristine copy of the
+same profile):** s112's recurrence blocked in 8 of 8 runs (before: Do-All in 6 of 8), the same 17 states
+attached in every run, no warning. All 33 TSVC v3 packages, two runs each: identical Do-All sets (with
+clauses) and task counts in 33 of 33, no warning in any of the 66 runs; against one run of the
+B9-only explorer, three Do-Alls fewer — s121 (135), s241 (134), s243 (134), each a true dependence, each
+in a run that showed the warning — and none gained, no clause changed; the loops that are parallel stay
+Do-All (s000, vpvtv, s4112–s491). Explorer time unchanged (median 17 s against 16 s); stalls 8 of 66 runs
+against 2 of 33 (L5, retried; to watch in E2-B1's pre-flight). The agent's feature check
+`b4-nested-duplication` (one profile, three explorer runs) fails on the B9-only explorer and passes after.
+The whole feature suite 58 of 58; the explorer's end-to-end unit tests 31 of 31 with no error (the one
+import error seen before came from `mcp_server` not being installed in the venv — CI installs it; now
+installed); mypy clean on every package; `black -l 120 --check explorer` clean, as CI checks it.
+
+**What is not the cause:** the call-path state walk (an instrumented copy counted 0 re-entries of a pair
+still being answered), the profile (one unchanged profile throughout), Python's string hashing (a fixed
+`PYTHONHASHSEED` does not make a run repeatable — node sets are ordered by object address).
+
+**Reproducer:** the agent's `b4-nested-duplication` program — a repetition loop around
+`for (i = N - 2; i >= 0; i--) a[i + 1] = a[i] + b[i];` (TSVC s112's shape).
 
 ## B5 — a loop state is matched against loops of another function
 

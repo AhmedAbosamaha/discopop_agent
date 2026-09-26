@@ -9,7 +9,7 @@ import json
 import logging
 import os
 import threading
-from typing import Dict, List, Optional, Set, Tuple, cast
+from typing import Any, Dict, List, Optional, Set, Tuple, cast
 
 from tqdm import tqdm  # type: ignore
 
@@ -117,10 +117,11 @@ def identify_simple_doall_and_reduction(
     # discopop_agent integration: record WHY each loop is not Do-All (the specific
     # blocking dependency), persisted to explorer/doall_prevented.json so the agent
     # can tell the LLM exactly which dependency to break.  Purely additive.
-    prevented_records: List[dict] = []
+    prevented_records: List[Dict[str, Any]] = []
 
-    def _blocker_record(loop_node: TGNode, dep: Dependency) -> dict:
-        scope = loop_node.created_context.get_code_scope(tg.pet)  # List[LineID] "fid:line"
+    def _blocker_record(loop_node: TGNode, dep: Dependency) -> Dict[str, Any]:
+        loop_ctx = loop_node.created_context
+        scope = loop_ctx.get_code_scope(tg.pet) if loop_ctx is not None else []  # List[LineID] "fid:line"
         loop_file: Optional[int] = None
         loop_lines: List[int] = []
         for lid in scope:
