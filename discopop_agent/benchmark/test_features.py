@@ -3855,7 +3855,7 @@ def check_shipped_run(work: Path) -> Result:
     name = "shipped run"
     d = work / "shipped_run"
     problems: List[str] = []
-    for judged in (True, False, "depth1", "no_d41"):
+    for judged in (True, False, "depth1", "no_d41", "nospeed"):
         shutil.rmtree(d, ignore_errors=True)
         d.mkdir(parents=True)
         src = d / "k.c"
@@ -3884,7 +3884,8 @@ def check_shipped_run(work: Path) -> Result:
                 "--exclude-functions", "main", "--budget", "2"] + (
                     ["--no-judge-as-shipped"] if judged is False else
                     ["--restructure-depth", "1"] if judged == "depth1" else
-                    ["--no-phase-b-reuse-d40"] if judged == "no_d41" else [])
+                    ["--no-phase-b-reuse-d40"] if judged == "no_d41" else
+                    ["--no-require-speedup"] if judged == "nospeed" else [])
         saved = (phase_a.call_llm, phase_a.measure_marginal, sys.argv)
         log = io.StringIO()
         try:
@@ -3894,7 +3895,13 @@ def check_shipped_run(work: Path) -> Result:
         finally:
             phase_a.call_llm, phase_a.measure_marginal, sys.argv = saved
         text = log.getvalue()
-        if judged == "depth1":
+        if judged == "nospeed":
+            # The author (26 Sep): D40's SAFETY half with the speed check off too (E2-B1); nothing timed,
+            # so the slow rewrite is kept after one call.
+            if "D40 verdict: safe" not in text or timed or len(calls) != 1:
+                problems.append(f"--no-require-speedup: {len(calls)} call(s), {len(timed)} timing(s), "
+                                "no 'D40 verdict: safe' — the safety half must run, the speed half not")
+        elif judged == "depth1":
             # D40.1 (a): depth 1 follows the first rewrite, so D40 judges only its SAFETY — the
             # slow rewrite is kept (speed waits for the last level), nothing is timed for it.
             first = text.split("D40 verdict:", 1)[1][:40] if "D40 verdict:" in text else ""

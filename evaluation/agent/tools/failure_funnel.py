@@ -151,7 +151,7 @@ def analyse(runs: List[str], arms: List[str], cls: str, loops: Sequence[str] = (
         f"`{a}` mean {statistics.mean(all_calls[a]):.2f}" for a in arms if all_calls[a]) + "."]
     if any(d40[a] for a in arms):
         rows = ["trials run under v3", "trials with a verdict", "ok", "not_faster", "pattern_broken", "exposed",
-                "safe_deferred"]
+                "safe_deferred", "safe"]
         out += ["", "## D40 (agent v3): the verdicts on kept rewrites, judged as shipped", "",
                 "A trial can hold several verdicts (one per rewrite judged); `exposed` = the timing could not be "
                 "measured, so the rewrite went on to Phase B unjudged; `safe_deferred` (v3.1, D40.1) = its "

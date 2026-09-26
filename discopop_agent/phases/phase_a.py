@@ -837,14 +837,20 @@ def phase_a(state: RunState) -> None:
                     # depth, but when a deeper level follows only the SAFETY half — an exposed loop
                     # is never restructured again, so its pragma's safety cannot change, while its
                     # speed may still (a later rewrite of another region) and waits for the last level.
-                    if (outcome.status == "exposed" and args.require_speedup
+                    # The author (26 Sep): the SAFETY half whenever --judge-as-shipped is on, the speed
+                    # check on or off — it is a correctness judgement (E2-B1 runs speed off); the speed
+                    # half needs --require-speedup and the last level.
+                    judge_speed = bool(args.require_speedup) and not deeper_coming
+                    if (outcome.status == "exposed"
                             and getattr(args, "judge_as_shipped", False) and pre_patch_src is not None
                             and not args.dry_run):
                         print(f"│  [Phase-A] D40 — judging it as it will ship: DiscoPoP's pragmas for "
                               f"the exposed loops through the safety gate"
-                              + (f"; depth {depth + 1} follows, so the speed half waits for the last level"
-                                 if deeper_coming else
-                                 ", then the program with them against the program before the rewrite (paired)"))
+                              + (", then the program with them against the program before the rewrite (paired)"
+                                 if judge_speed else
+                                 f"; depth {depth + 1} follows, so the speed half waits for the last level"
+                                 if args.require_speedup else
+                                 "; the speed check is off, so the safety half only"))
                         d40_started = time.monotonic()
 
                         def _safe(d40_diff: str, c: Any) -> "tuple[bool, str]":
@@ -875,13 +881,17 @@ def phase_a(state: RunState) -> None:
                         outcome = judge_as_shipped(
                             exposed_in(fresh_all, _touched_span(clean_diff), args.source_file),
                             pre_patch_src, dp_dir, args.source_file,
-                            threshold=(0.0 if deeper_coming else speed_threshold(args, gate_cache, binary_args)),
-                            validate=_safe, measure=None if deeper_coming else _time)
+                            threshold=(speed_threshold(args, gate_cache, binary_args) if judge_speed else 0.0),
+                            validate=_safe, measure=_time if judge_speed else None)
+                        if outcome.status == "safe_deferred" and not args.require_speedup:
+                            outcome.status = "safe"          # no speed question at all: nothing is deferred
                         ratio_txt = f" {outcome.speedup:.2f}×" if outcome.speedup is not None else ""
                         print(f"│  [Phase-A] D40 verdict: {outcome.status}{ratio_txt}"
                               + (" — Phase B and Settle decide, as before" if outcome.status == "exposed"
                                  else " — its pragmas are safe; speed is judged at the last level"
-                                 if outcome.status == "safe_deferred" else ""))
+                                 if outcome.status == "safe_deferred"
+                                 else " — its pragmas are safe (the speed check is off)"
+                                 if outcome.status == "safe" else ""))
                         # D40's own cost, apart from the rest of the agent's time (E5; D40.1).
                         print(f"│  [Phase-A] D40 time: {time.monotonic() - d40_started:.1f} s")
                         if outcome.status == "ok" and outcome.judged_spans:
@@ -890,7 +900,7 @@ def phase_a(state: RunState) -> None:
                                 "region": rid, "on": outcome.judged_on, "spans": outcome.judged_spans,
                                 "staged": outcome.judged_text, "ratio": outcome.speedup})
 
-                if outcome.status not in ("ok", "exposed", "safe_deferred", "self_annotated"):
+                if outcome.status not in ("ok", "exposed", "safe_deferred", "safe", "self_annotated"):
                     # REVERT — the restructuring did not achieve its purpose.
                     # Restore source + the pre-patch profile from the snapshot
                     # (file copy) instead of re-profiling — far cheaper.
@@ -1015,7 +1025,7 @@ def phase_a(state: RunState) -> None:
                     print(f"│  [Tier-2] Restructuring pays off "
                           f"({'measured' if self_annotated else 'with its pragmas, against the program before it'} "
                           f"{exposed_speedup:.2f}×)")
-                elif outcome.status in ("exposed", "safe_deferred"):
+                elif outcome.status in ("exposed", "safe_deferred", "safe"):
                     # An exposed loop is Tier 1 from here on and is never restructured again, so
                     # "deferred to depth N+1" was wrong at every depth: its pragma is Phase B's
                     # (D40.1).  What a deeper level may still do is restructure OTHER regions.

@@ -46,6 +46,8 @@ class RewriteOutcome:
                          Phase B (D40 off, or it could not stage or time it)
       "safe_deferred"  — D40.1: its pragmas passed D40's safety half; a deeper level
                          follows, so speed is judged at the last level
+      "safe"           — its pragmas passed D40's safety half with the speed check off
+                         (the author, 26 Sep: the safety half whenever --judge-as-shipped)
       "self_annotated" — --llm-pragmas: the rewrite carries its own pragmas and
                          has already passed the full gate, so DiscoPoP's opinion
                          of it is not what decides
