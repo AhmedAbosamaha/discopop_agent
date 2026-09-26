@@ -305,7 +305,7 @@ Compiles with TSan and OpenMP enabled, then runs the binary. A `WARNING: ThreadS
 
 **Purpose:** Tie all four layers together into the main per-candidate processing loop.
 
-**Decision flow per candidate** (agent v3; the audited, diagram-by-diagram version with every exit
+**Decision flow per candidate** (agent v3.1; the audited, diagram-by-diagram version with every exit
 is the published pipeline chart, `evaluation/agent/docs/FLOW.html`).  Since the two-phase rebuild
 (22 Aug) the source stays PRAGMA-FREE during Phase A: a pragma inserted mid-run would shift the line
 numbers the next region's evidence is read at.  DiscoPoP's pragmas go in once, in Phase B.
@@ -313,26 +313,37 @@ numbers the next region's evidence is read at.  DiscoPoP's pragmas go in once, i
 ```
 PHASE A — per queued region (index-walked; a kept rewrite appends the regions it creates)
 ├─ already inside a parallel construct?        → COVERED
-├─ DiscoPoP has an applicable pattern (Tier 1)? → DEFERRED to Phase B (no model call)
+├─ DiscoPoP has an applicable pattern (Tier 1)?
+│    --requeue-rejected (v3.1, Fix 101): each pattern's pragma → safety gate (cached for Phase B)
+│      one passes → DEFERRED to Phase B (no model call)
+│      none passes (a false pattern) → treated as Tier 2 below, the model told why
+│    --no-requeue-rejected (v3) → DEFERRED to Phase B
 └─ else (Tier 2), while the region's budget lasts:
      call the model (evidence + the previous attempt's feedback)
      gate: harness lines → apply → compile → sequential output on every input
-       (a pragma-bearing diff under --llm-pragmas also: -fopenmp, TSan, schedules, timing)
+       (a pragma-bearing diff under --llm-pragmas also: -fopenmp, TSan, schedules, timing —
+        not slower than the program before it, paired, since D40.1 / Fix 100)
        FAILED → feedback naming the stage; build errors refunded up to --build-retries
      PASSED → write the rewrite, re-profile, re-measure runtimes
        └─ does DiscoPoP now find a usable pattern IN THE CHANGED LINES?
             no_pattern / no_usable_pragma / reprofile_failed → REVERT + feedback, retry
-            exposed, and no deeper level follows, --require-speedup, --judge-as-shipped (D40):
+            logged: "exposure verdict: <status>" (DiscoPoP's own verdict, before D40; Fix 100)
+            exposed, --require-speedup, --judge-as-shipped (D40):
               DiscoPoP's pragmas for those loops → safety gate (outermost first, one per nest);
-              the safe ones staged together AS TEXT → gate as a set → the program with them timed
-              against the program before the rewrite (Settle's paired method and threshold)
+              the safe ones staged together AS TEXT → gate as a set;
+              a deeper level follows (D40.1) → safe_deferred → COMMIT (speed judged at the last level)
+              else the program with them timed against the program before the rewrite
+              (Settle's paired method and threshold)
                 pattern_broken → REVERT + "DiscoPoP's pragma on your code breaks", retry
                 not_faster     → REVERT + the ratio and what the rewrite added, retry
-                ok             → COMMIT (the file stays pragma-free)
-            exposed otherwise (v2, --no-judge-as-shipped, or a deeper level follows) → COMMIT
+                ok             → COMMIT (the file stays pragma-free; the judged set kept for D41)
+            exposed otherwise (v2, --no-judge-as-shipped, or D40 could not stage/time) → COMMIT
      budget exhausted → SKIPPED
-PHASE B — DiscoPoP's pragmas from the final profile, each re-derived against the current file,
-          safety gate, marginal timing; the ones that pay only together judged as a set (D33)
+PHASE B — D41 (v3.1, Fix 102): the file is what D40 staged its last "ok" set on and the pragmas
+          re-derive to it → that set applied first, as one unit, no second timing; the run's
+          noise threshold reused.  Then DiscoPoP's pragmas from the final profile, each re-derived
+          against the current file, safety gate, marginal timing; the ones that pay only together
+          judged as a set (D33)
 SETTLE  — rebuild from the change log, re-gate the finished file, time it against the original;
           drop newest-first until it holds (the model is not asked again)
 FLOOR   — ship DiscoPoP's own program if the agent's is slower (D32)
@@ -509,6 +520,12 @@ python -m discopop_agent \
     --judge-as-shipped / --no-judge-as-shipped default: ON since D40 (agent v3: a kept rewrite's
                                             pragmas judged in Phase A — safety, then timed against
                                             the program before it; OFF reproduces v2)
+    --requeue-rejected / --no-requeue-rejected default: ON since v3.1 (Fix 101: a Tier-1 region whose
+                                            DiscoPoP pragma fails the safety gate goes to the model;
+                                            OFF reproduces v3)
+    --phase-b-reuse-d40 / --no-phase-b-reuse-d40 default: ON since v3.1 (D41, Fix 102: Phase B applies
+                                            the set D40 judged as one unit; reuses the noise
+                                            threshold; OFF reproduces v3)
     --min-measured-speedup <float>         default: 1.1
     --build-retries      <int>             default: 2 (apply/compile retries, free)
     --check-input        <args>            repeatable: extra inputs correctness must match
