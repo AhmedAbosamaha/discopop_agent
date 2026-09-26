@@ -223,19 +223,47 @@ def _md_deterministic(out: str) -> str:
     )
 
 
+def _strip_commented_pragmas(text: str) -> Tuple[str, int]:
+    """Remove every commented-out OpenMP pragma, continuation lines included.
+
+    A `//` comment that ends in a backslash continues onto the next line (lines are spliced
+    before comments are removed), so Burkardt's `//# pragma omp parallel \` swallows the
+    `shared ( … ) \` and `private ( … )` lines after it: they are the answer too (§1a). Until
+    26 Sep this function only SAID it removed them (record §6, 26 Sep: md's archived model
+    trials read the expert's pragmas)."""
+    out: List[str] = []
+    n = 0
+    lines = text.split("\n")
+    i = 0
+    while i < len(lines):
+        if re.match(r"\s*//\s*#\s*pragma\s+omp\b", lines[i]):
+            n += 1
+            while lines[i].rstrip().endswith("\\") and i + 1 < len(lines):
+                i += 1
+            i += 1
+            continue
+        out.append(lines[i])
+        i += 1
+    return "\n".join(out), n
+
+
 def _md_assemble(r: Recipe) -> Tuple[str, List[str]]:
     src = r.source
     # The computation, copied exactly as shipped: compute, dist, initialize, r8_uniform_01,
     # update. `timestamp` (wall-clock printing) and the original `main` are left behind.
     verbatim = "".join(_lines(src, a, b) for a, b in
                        ((207, 331), (334, 378), (381, 450), (453, 519), (569, 643)))
+    verbatim, n_pragmas = _strip_commented_pragmas(verbatim)
+    if re.search(r"pragma\s+omp|omp_get|shared\s*\(|private\s*\(", verbatim):
+        raise SystemExit("md: OpenMP text left in the computation after stripping (§1a)")
     removed = [
-        "4 commented-out OpenMP pragmas (§1a: the model would read the answer)",
+        f"{n_pragmas} commented-out OpenMP pragmas with their continuation lines "
+        "(§1a: the model would read the answer)",
         "omp.h, omp_get_num_procs/omp_get_max_threads banner, omp_get_wtime timing",
         "timestamp() wall-clock lines and the cout banner",
         "the original main(), replaced by a fixed-size, seeded driver",
     ]
-    if "# pragma omp" not in src.read_text():
+    if n_pragmas == 0:
         removed[0] = "no commented-out pragmas found in this copy"
     forward = """
 void compute ( int np, int nd, double pos[], double vel[], double mass, double f[],

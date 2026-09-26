@@ -713,7 +713,6 @@ void CalcFBHourglassForceForElems( Domain &domain,
 
 
    for(Index_t i2=0;i2<numElem;++i2){
-      Real_t *fx_local, *fy_local, *fz_local ;
       Real_t hgfx[8], hgfy[8], hgfz[8] ;
 
       Real_t coefficient;
@@ -828,8 +827,6 @@ void CalcFBHourglassForceForElems( Domain &domain,
                       hourgam,
                       coefficient, hgfx, hgfy, hgfz);
 
-      // With the threaded version, we write into local arrays per elem
-      // so we don't have to worry about race conditions
       domain.fx(n0si2) += hgfx[0];
       domain.fy(n0si2) += hgfy[0];
       domain.fz(n0si2) += hgfz[0];

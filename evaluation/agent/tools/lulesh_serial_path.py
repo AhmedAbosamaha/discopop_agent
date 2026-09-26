@@ -57,6 +57,7 @@ OMP_SYMBOL = "_ALWAYS_FALSE_CHECK_FOR_OPENMP"
 MPI_SYMBOL = "_ALWAYS_FALSE_CHECK_FOR_MPI"
 # Anything left that names the threaded design. `thread` alone would hit MPI comments.
 LEAKS = re.compile(r"numthreads|omp_get|_OPENMP|nodeElemCornerList|nodeElemStart|nodeElemCount|"
+                   r"threaded|race condition|\*f[xyz]_local|"
                    r"ThreadSupport|fx_elem|fy_elem|fz_elem|thread writing", re.I)
 # NOT removed, and reported: the two time-constraint kernels are written, also on the serial
 # path, as "one minimum per thread, then merge" with `threads = 1` — arrays of length one, a
@@ -185,6 +186,14 @@ def make_serial(src: Path, out: Path) -> Dict[str, List[str]]:
             text = _remove_unused_decl(text, r"^[ \t]*Index_t numElem8 = numElem \* 8 ;[ \t]*\n", "numElem8",
                                        "`numElem8` where only the per-element force arrays used it", removed)
             text = _remove(text, r"^[ \t]*Real_t \*f[xyz]_elem;[ \t]*\n", "per-element force array pointers", removed)
+            # Found 26 Sep (benchmark review, record §6): the comment in front of the hourglass
+            # scatter names the threaded design and why it is race-free, and the per-element
+            # pointers it wrote through are dead once the threaded branch is folded away.
+            text = _remove(text, r"^[ \t]*// With the threaded version, we write into local arrays per elem\n"
+                                 r"[ \t]*// so we don't have to worry about race conditions\n",
+                           "the comment naming the threaded design (\"… race conditions\")", removed, 1)
+            text = _remove_unused_decl(text, r"^[ \t]*Real_t \*fx_local, \*fy_local, \*fz_local ;[ \t]*\n", "fx_local",
+                                       "the per-element force pointers only the threaded branch used", removed)
         if name == "lulesh-init.cc":
             text = _remove_function(text, r"^/{20,}\nvoid\nDomain::SetupThreadSupportStructures\(\)\n",
                                     "Domain::SetupThreadSupportStructures()", removed)

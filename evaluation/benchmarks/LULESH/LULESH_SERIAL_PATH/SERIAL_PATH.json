@@ -1,14 +1,16 @@
 {
   "benchmark": "LULESH 2.0, serial code path only",
   "source": "benchmarks/LULESH/LULESH_SEQ",
-  "generated": "2026-09-19T20:47:30",
+  "generated": "2026-09-26T14:00:08",
   "removed": {
     "lulesh.cc": [
       "preprocessor-dead code under #if _ALWAYS_FALSE_CHECK_FOR_OPENMP",
       "`if (numthreads > 1)` branch \u00d76 (serial `else` kept where there was one)",
       "`Index_t numthreads = 1;` \u00d72",
       "`numElem8` where only the per-element force arrays used it \u00d72",
-      "per-element force array pointers \u00d76"
+      "per-element force array pointers \u00d76",
+      "the comment naming the threaded design (\"\u2026 race conditions\") \u00d71",
+      "the per-element force pointers only the threaded branch used \u00d71"
     ],
     "lulesh-init.cc": [
       "preprocessor-dead code under #if _ALWAYS_FALSE_CHECK_FOR_OPENMP",
@@ -27,30 +29,30 @@
   },
   "leftover_mentions_of_the_threaded_design": [],
   "kept_serial_per_thread_minimum": [
-    "lulesh.cc:2293: Index_t threads = 1;",
-    "lulesh.cc:2294: Index_t courant_elem_per_thread[1];",
-    "lulesh.cc:2295: Real_t  dtcourant_per_thread[1];",
-    "lulesh.cc:2302: Index_t thread_num = 0;",
-    "lulesh.cc:2325: dtcourant_per_thread[thread_num]    = dtcourant_tmp ;",
-    "lulesh.cc:2326: courant_elem_per_thread[thread_num] = courant_elem ;",
-    "lulesh.cc:2329: for (Index_t i = 1; i < threads; ++i) {",
-    "lulesh.cc:2330: if (dtcourant_per_thread[i] < dtcourant_per_thread[0] ) {",
-    "lulesh.cc:2331: dtcourant_per_thread[0]    = dtcourant_per_thread[i];",
-    "lulesh.cc:2332: courant_elem_per_thread[0] = courant_elem_per_thread[i];",
-    "lulesh.cc:2336: if (courant_elem_per_thread[0] != -1) {",
-    "lulesh.cc:2337: dtcourant = dtcourant_per_thread[0] ;",
-    "lulesh.cc:2350: Index_t threads = 1;",
-    "lulesh.cc:2351: Index_t hydro_elem_per_thread[1];",
-    "lulesh.cc:2352: Real_t  dthydro_per_thread[1];",
-    "lulesh.cc:2358: Index_t thread_num = 0;",
-    "lulesh.cc:2373: dthydro_per_thread[thread_num]    = dthydro_tmp ;",
-    "lulesh.cc:2374: hydro_elem_per_thread[thread_num] = hydro_elem ;",
-    "lulesh.cc:2377: for (Index_t i = 1; i < threads; ++i) {",
-    "lulesh.cc:2378: if(dthydro_per_thread[i] < dthydro_per_thread[0]) {",
-    "lulesh.cc:2379: dthydro_per_thread[0]    = dthydro_per_thread[i];",
-    "lulesh.cc:2380: hydro_elem_per_thread[0] =  hydro_elem_per_thread[i];",
-    "lulesh.cc:2384: if (hydro_elem_per_thread[0] != -1) {",
-    "lulesh.cc:2385: dthydro =  dthydro_per_thread[0] ;",
+    "lulesh.cc:2290: Index_t threads = 1;",
+    "lulesh.cc:2291: Index_t courant_elem_per_thread[1];",
+    "lulesh.cc:2292: Real_t  dtcourant_per_thread[1];",
+    "lulesh.cc:2299: Index_t thread_num = 0;",
+    "lulesh.cc:2322: dtcourant_per_thread[thread_num]    = dtcourant_tmp ;",
+    "lulesh.cc:2323: courant_elem_per_thread[thread_num] = courant_elem ;",
+    "lulesh.cc:2326: for (Index_t i = 1; i < threads; ++i) {",
+    "lulesh.cc:2327: if (dtcourant_per_thread[i] < dtcourant_per_thread[0] ) {",
+    "lulesh.cc:2328: dtcourant_per_thread[0]    = dtcourant_per_thread[i];",
+    "lulesh.cc:2329: courant_elem_per_thread[0] = courant_elem_per_thread[i];",
+    "lulesh.cc:2333: if (courant_elem_per_thread[0] != -1) {",
+    "lulesh.cc:2334: dtcourant = dtcourant_per_thread[0] ;",
+    "lulesh.cc:2347: Index_t threads = 1;",
+    "lulesh.cc:2348: Index_t hydro_elem_per_thread[1];",
+    "lulesh.cc:2349: Real_t  dthydro_per_thread[1];",
+    "lulesh.cc:2355: Index_t thread_num = 0;",
+    "lulesh.cc:2370: dthydro_per_thread[thread_num]    = dthydro_tmp ;",
+    "lulesh.cc:2371: hydro_elem_per_thread[thread_num] = hydro_elem ;",
+    "lulesh.cc:2374: for (Index_t i = 1; i < threads; ++i) {",
+    "lulesh.cc:2375: if(dthydro_per_thread[i] < dthydro_per_thread[0]) {",
+    "lulesh.cc:2376: dthydro_per_thread[0]    = dthydro_per_thread[i];",
+    "lulesh.cc:2377: hydro_elem_per_thread[0] =  hydro_elem_per_thread[i];",
+    "lulesh.cc:2381: if (hydro_elem_per_thread[0] != -1) {",
+    "lulesh.cc:2382: dthydro =  dthydro_per_thread[0] ;",
     "lulesh-comm.cc:17: buffers.  Ideally, you would like a lot of threads to",
     "lulesh-comm.cc:41: within the message so that threads can pack and unpack each"
   ],
@@ -58,7 +60,7 @@
     "lulesh_tuple.h (included by nothing; carries the corner-list accessors)"
   ],
   "sha256": {
-    "lulesh.cc": "2df63fea8d4cb721c621589264a05f42a7b75f5a22f16885b2afed4265714746",
+    "lulesh.cc": "7246f2dfd05e3321987336f38976b72c1d4daf4001ce86767f66630fffa9dc25",
     "lulesh-comm.cc": "c15aa86c3512844f1a8159a9dd7d4f9bc8399e7f612f95b4b0478ca9392f9912",
     "lulesh-init.cc": "edca752430fa1be192c6900899a8f6ba506fc9e6ab2c6d6e930bedcec45bcf12",
     "lulesh-util.cc": "4b83b29a0020bf3b24591cd548d40e70fe756e2e80253ce11c24b8894a6d08a4",
@@ -67,7 +69,7 @@
   },
   "lines": {
     "before": 6632,
-    "after": 6389
+    "after": 6386
   },
   "validation": {
     "sizes": [
@@ -89,6 +91,6 @@
       "[-s 12 -i 30] TotalAbsDiff = 9.591890e-12",
       "[-s 12 -i 30] MaxRelDiff   = 6.551174e-14"
     ],
-    "compiler": "/usr/local/opt/llvm@19/bin/clang++"
+    "compiler": "/usr/bin/clang++"
   }
 }

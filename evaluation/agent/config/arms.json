@@ -940,7 +940,7 @@
   "common_timing_size": "per_kernel",
   "common_flags_note": "Fixed configuration every arm inherits. Until 2026-09-20 this was --no-require-speedup (15 Sep: at SMALL sizes kernels run in milliseconds and the check measured noise). E10 settled it: the check ON at the kernel's TIMING size is the only configuration with no unsafe acceptance and no result below DiscoPoP alone, while OFF kept 5 slower programs and 1 BROKEN, and ON at the small size deleted DiscoPoP's own pragmas in 10 of 21 trials. What was wrong in September was the size, not the check. An arm that wants the old behaviour says so explicitly. --min-runtime-share 0.01 is unchanged (D1, from T0.5).",
   "settings_note": "`settings` is what each arm DECLARES the agent must be configured with for the experiment it serves. Before a run the harness asks the agent what it actually parsed (`--print-config`) and refuses to start on any difference, so a changed default, an inherited flag or a typo cannot silently change what an arm means. Add a key here for every argument that carries the arm's purpose; leave out the ones it genuinely does not care about (paths, model, credentials).",
-  "experiments_note": "Every experiment names its arms, the resolved agent settings that are its VARIABLE, and any setting that may differ only as a CONSEQUENCE of the variable. tools/test_arms.py resolves every arm through the agent's own parser and fails unless the arms of an experiment differ in exactly that: nothing else (a confound), and nothing less (a variable that does not vary is an experiment whose arms cannot differ). The per-arm `ids` are derived from this block.",
+  "experiments_note": "Every experiment names its arms, the resolved agent settings that are its VARIABLE, and any setting that may differ only as a CONSEQUENCE of the variable. tools/test_arms.py resolves every arm through the agent's own parser and fails unless the arms of an experiment differ in exactly that: nothing else (a confound), and nothing less (a variable that does not vary is an experiment whose arms cannot differ). The per-arm `ids` are derived from this block. E5 and E7 run no agent arm \u2014 E5 measures DiscoPoP's profiling cost as the size grows, E7 replays archived candidates through the gate with stages switched off \u2014 so they have no entry here (26 Sep).",
   "experiments": {
     "E1": {
       "arms": [
@@ -1206,6 +1206,65 @@
       ],
       "consequences": [],
       "why": "Measured ranking vs the static proxy, without the gate: which region the model is handed."
+    },
+    "E6": {
+      "arms": [
+        "discopop_gate",
+        "default"
+      ],
+      "variable": [
+        "budget"
+      ],
+      "consequences": [],
+      "why": "LULESH (fixed, E6): DiscoPoP alone vs DiscoPoP + agent, as E1. Registered 26 Sep after the benchmark review found E6's arm set was never machine-checked."
+    },
+    "E6-bare": {
+      "arms": [
+        "default",
+        "bare_llm"
+      ],
+      "variable": [
+        "runner"
+      ],
+      "consequences": [],
+      "check": "runner",
+      "why": "LULESH: the model alone beside the agent (D35 \u2014 every experiment's main comparison is three-way); its own runner, so only its existence is checked. Edit-scope asymmetry to report: bare_llm copies back every unit, the agent edits only lulesh.cc."
+    },
+    "E11": {
+      "arms": [
+        "discopop_gate",
+        "default"
+      ],
+      "variable": [
+        "budget"
+      ],
+      "consequences": [],
+      "why": "RepoOMP's eight NPB-C kernels (fixed by the comparison, E11): DiscoPoP alone vs DiscoPoP + agent; RepoOMP's released outputs and the <k>_ori.c experts are verified by the harness, not run as arms."
+    },
+    "E11-pragmas": {
+      "arms": [
+        "default",
+        "llm_pragmas_full_reprofile"
+      ],
+      "variable": [
+        "llm_pragmas"
+      ],
+      "consequences": [
+        "pragma_arbitration"
+      ],
+      "why": "E11: who writes the pragma at application scale (the model with its rewrite vs DiscoPoP), as E3's matching cell. Arbitration follows --llm-pragmas (D28)."
+    },
+    "E11-bare": {
+      "arms": [
+        "default",
+        "bare_llm"
+      ],
+      "variable": [
+        "runner"
+      ],
+      "consequences": [],
+      "check": "runner",
+      "why": "E11: the model alone beside the agent (D35); its own runner, so only its existence is checked."
     }
   }
 }
