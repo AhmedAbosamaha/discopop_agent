@@ -56,12 +56,12 @@ Status: running
 
 | run | where | what it is | status | trials | outcomes |
 |---|---|---|---|---:|---|
-| `e1c31_r_1` | not archived yet | E1c rerun on agent v3.1 (lane 0.0): s112 s121 s1213 s127 s211 x default, Haiku x5, threads 6,12, repeats 5 | running |  |  |
-| `e1c31_r_2` | not archived yet | E1c rerun on agent v3.1 (lane 0.1): s212 s241 s243 s244 s252 x default, Haiku x5, threads 6,12, repeats 5 | running |  |  |
-| `e1c31_r_3` | not archived yet | E1c rerun on agent v3.1 (lane 1.0): s254 s255 s281 s291 x default, Haiku x5, threads 6,12, repeats 5 | running |  |  |
-| `e1c31_r_4` | not archived yet | E1c rerun on agent v3.1 (lane 1.1): s292 s293 s331 s341 x default, Haiku x5, threads 6,12, repeats 5 | running |  |  |
-| `e1c31_a` | not archived yet | E1c rerun on agent v3.1, class A (no-harm): s000 vpvtv s313 x default x1 (s313's harness-edit trial is repeated here) | running |  |  |
-| `e1c31_d` | not archived yet | E1c rerun on agent v3.1, class D (must-decline): s321 s322 s323 s3112 x default x3 | running |  |  |
+| `e1c31_r_1` | not archived yet | E1c rerun on agent v3.1 (lane 0.0): s112 s121 s1213 s127 s211 x default, Haiku x5, threads 6,12, repeats 5 — agent v3.1 at commit 5935bded | running |  |  |
+| `e1c31_r_2` | not archived yet | E1c rerun on agent v3.1 (lane 0.1): s212 s241 s243 s244 s252 x default, Haiku x5, threads 6,12, repeats 5 — agent v3.1 at commit 5935bded | running |  |  |
+| `e1c31_r_3` | not archived yet | E1c rerun on agent v3.1 (lane 1.0): s254 s255 s281 s291 x default, Haiku x5, threads 6,12, repeats 5 — agent v3.1 at commit 5935bded | running |  |  |
+| `e1c31_r_4` | not archived yet | E1c rerun on agent v3.1 (lane 1.1): s292 s293 s331 s341 x default, Haiku x5, threads 6,12, repeats 5 — agent v3.1 at commit 5935bded | running |  |  |
+| `e1c31_a` | not archived yet | E1c rerun on agent v3.1, class A (no-harm): s000 vpvtv s313 x default x1 (s313's harness-edit trial is repeated here) — agent v3.1 at commit 5935bded | running |  |  |
+| `e1c31_d` | not archived yet | E1c rerun on agent v3.1, class D (must-decline): s321 s322 s323 s3112 x default x3 — agent v3.1 at commit 5935bded | running |  |  |
 
 ## [E2 — evidence, feedback and model strength](E02_evidence_feedback_model/REPORT.md)
 
