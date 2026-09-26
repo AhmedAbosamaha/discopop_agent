@@ -27,6 +27,7 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -785,6 +786,9 @@ def phase_a(state: RunState) -> None:
                         validate_patterns=False, gate_cache=gate_cache,
                         reference_outputs=reference_outputs,
                     )
+                    # DiscoPoP's own verdict on the rewrite, before D40 judges it — E4's measure,
+                    # which a D40 revert would otherwise hide (D40.1; parsed into the trial record).
+                    print(f"│  [Phase-A] exposure verdict: {outcome.status}")
                     # ── D40 — judged as it will ship, while the model can still act ──────
                     # Phase B and Settle would judge DiscoPoP's pragmas for these loops, and
                     # the program with them against the original, after this region's attempts
@@ -800,6 +804,7 @@ def phase_a(state: RunState) -> None:
                         print(f"│  [Phase-A] D40 — judging it as it will ship: DiscoPoP's pragmas for "
                               f"the exposed loops through the safety gate, then the program with them "
                               f"against the program before the rewrite (paired)")
+                        d40_started = time.monotonic()
 
                         def _safe(d40_diff: str, c: Any) -> "tuple[bool, str]":
                             res_s, _cs, _bs = _validate_cached(
@@ -835,6 +840,8 @@ def phase_a(state: RunState) -> None:
                         print(f"│  [Phase-A] D40 verdict: {outcome.status}{ratio_txt}"
                               + (" — Phase B and Settle decide, as before"
                                  if outcome.status == "exposed" else ""))
+                        # D40's own cost, apart from the rest of the agent's time (E5; D40.1).
+                        print(f"│  [Phase-A] D40 time: {time.monotonic() - d40_started:.1f} s")
 
                 if outcome.status not in ("ok", "exposed", "self_annotated"):
                     # REVERT — the restructuring did not achieve its purpose.
@@ -962,8 +969,11 @@ def phase_a(state: RunState) -> None:
                           f"({'measured' if self_annotated else 'with its pragmas, against the program before it'} "
                           f"{exposed_speedup:.2f}×)")
                 elif outcome.status == "exposed":
-                    print(f"│  [Tier-2] Pragma validation deferred to depth "
-                          f"{depth + 1} (still allowed to restructure)")
+                    # An exposed loop is Tier 1 from here on and is never restructured again, so
+                    # "deferred to depth N+1" was wrong at every depth: its pragma is Phase B's
+                    # (D40.1).  What a deeper level may still do is restructure OTHER regions.
+                    print(f"│  [Tier-2] DiscoPoP's pragma for it is applied and judged in Phase B"
+                          + (f"; depth {depth + 1} may still restructure other regions" if deeper_coming else ""))
 
                 accepted.append(record)
                 _write_record(output_dir, record, args.dry_run)

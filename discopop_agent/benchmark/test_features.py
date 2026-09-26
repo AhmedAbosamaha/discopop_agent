@@ -3851,10 +3851,17 @@ def check_shipped_run(work: Path) -> Result:
                 problems.append(f"judged: the feedback lacks the ratio or what the rewrite added: {fb[:120]!r}")
             if "fails at '" in text:
                 problems.append("judged: DiscoPoP's pragmas for the rewrite failed the safety gate")
+            # D40.1: DiscoPoP's own verdict and D40's time are logged for every judged rewrite.
+            if text.count("exposure verdict: exposed") != 2 or len(re.findall(r"D40 time: [0-9.]+ s", text)) != 2:
+                problems.append("judged: the log lacks an exposure verdict or a D40 time for each of the two rewrites")
         else:
             if len(calls) != 1 or timed or "D40" in text:
                 problems.append(f"--no-judge-as-shipped: {len(calls)} call(s), {len(timed)} D40 timing(s) — v2 "
                                 "keeps the first exposed rewrite without judging it")
+            if "exposure verdict: exposed" not in text or "deferred to depth" in text \
+                    or "applied and judged in Phase B" not in text:
+                problems.append("--no-judge-as-shipped: no exposure verdict, or the old 'deferred to depth N+1' "
+                                "message instead of Phase B's")
     if problems:
         return Result(name, "fail", "; ".join(problems[:3]))
     return Result(name, "pass", "the slow rewrite reverted with its ratio and what it added (pragmas staged, none on "
