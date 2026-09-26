@@ -171,6 +171,35 @@ def pragma_patch(c: Any, dp_dir: Path, source_file: str) -> "str | None":
         source_file)
 
 
+def tier1_verdict(cand: Any, dp_dir: Path, source_file: str,
+                  validate: Callable[[str], Tuple[bool, str, str]]) -> Tuple[bool, str, str]:
+    """Agent v3.1, the re-queue: does ANY of DiscoPoP's patterns for this Tier-1 region give a
+    pragma that passes the safety gate?  Tried in Phase B's order — the best pattern, then the
+    alternates — each re-derived and clause-repaired exactly as Phase B does, so the gate cache
+    hands Phase B the same verdicts.  Returns (safe, stage, diagnostic) — the stage and
+    diagnostic of the FIRST failure when none is safe.  Found on `hotspot` (E1, record §6,
+    26 Sep): DiscoPoP's Do-All for the chunk loop that holds 95 % of the run failed Phase B's
+    correctness check, and with no path back the region was never offered to the model."""
+    first: Tuple[str, str] = ("", "")
+    for _ptype, pattern in [(cand.pattern_type, cand.pattern)] + list(cand.alternates):
+        pid = (pattern or {}).get("pattern_id", "?")
+        diff = _repair_pragma_clauses(
+            derive_pragma_patch(_read_tier1_patch(dp_dir / "patch_generator" / str(pid)), source_file),
+            source_file)
+        if not diff:
+            first = first if first[0] else ("no_patch", f"DiscoPoP generated no pragma for pattern #{pid}")
+            continue
+        problem = check_pragma_clauses(diff, source_file)
+        if problem:
+            first = first if first[0] else ("clause", problem)
+            continue
+        ok, stage, why = validate(diff)
+        if ok:
+            return True, "", ""
+        first = first if first[0] else (stage, why)
+    return False, first[0] or "no_patch", first[1]
+
+
 def stage_pragmas(text: str, members: List[Any], dp_dir: Path, source_file: str) -> "str | None":
     """`text` with DiscoPoP's pragma for every member added — as TEXT.  The real file is never
     written: each pragma is re-derived by its loop header (as Phase B does) against a scratch

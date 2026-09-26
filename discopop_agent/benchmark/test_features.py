@@ -673,7 +673,7 @@ def check_fast_refresh_equivalence(work: Path) -> Result:
         api_base=None, lambda_penalty=1.0, min_workload=0.0, output_dir=str(out),
         dry_run=False, edit_mode="direct", llm_pragmas=True, pragma_arbitration=True, fast_refresh=True,
         llm_deps=False, hotspots=False, min_impact=0.0, restructure_depth=0,
-        require_speedup=False, judge_as_shipped=False, build_retries=2, apply_patches=True,
+        require_speedup=False, judge_as_shipped=False, requeue_rejected=False, build_retries=2, apply_patches=True,
         min_measured_speedup=1.1, check_inputs=[], reprofil_args=[], verbose=False)
     ok, note = _reprofil_fast(args.source_file, Path(args.discopop_dir),
                               (fast / "old.cpp").read_text(),
@@ -781,7 +781,7 @@ def check_dep_review(work: Path) -> Result:
             lambda_penalty=1.0, min_workload=0.0, output_dir=str(out), dry_run=False,
             edit_mode="direct", llm_pragmas=True, pragma_arbitration=True, fast_refresh=True, llm_deps=True,
             hotspots=False, min_impact=0.0, restructure_depth=0, require_speedup=False,
-            judge_as_shipped=False,
+            judge_as_shipped=False, requeue_rejected=False,
             build_retries=2, apply_patches=True, min_measured_speedup=1.1,
             check_inputs=[], reprofil_args=[], verbose=False)
         note = dr._llm_dep_review(args, d / ".discopop", old_text, new_text, out, 1)
@@ -4022,6 +4022,111 @@ def check_paired_perf(work: Path) -> Result:
                   "timed paired against the text the patch applies to; v2 still uses the start-up time")
 
 
+_REQUEUE_SRC = """#include <stdio.h>
+#define N 20000
+static double a[N], b[N];
+
+void kernel(int r)
+{
+    for (int i = 0; i < N; i++)
+        a[i] = b[i] * 2.0 + r;
+}
+
+int main(void)
+{
+    for (int i = 0; i < N; i++) b[i] = i * 0.5;
+    for (int r = 0; r < 20; r++) kernel(r);
+    double s = 0.0;
+    for (int i = 0; i < N; i++) s += a[i];
+    printf("%.3f\\n", s);
+    return 0;
+}
+"""
+
+
+def check_requeue(work: Path) -> Result:
+    """Agent v3.1, the re-queue, end to end with DiscoPoP; the gate's verdict and the model are
+    stand-ins.  `kernel`'s loop is a genuine Do-All, so DiscoPoP reports it Tier 1.  When the
+    safety gate refuses DiscoPoP's pragma for it (the stand-in says 'correctness', as the real gate
+    said for hotspot's false Do-All in E1), the region must go to the model, whose request says
+    why; when the gate accepts it, it is deferred to Phase B as before; and --no-requeue-rejected
+    defers it without asking the gate (agent v3)."""
+    import contextlib
+    import importlib
+    import io
+    from types import SimpleNamespace
+    if not Path(_venv_bin("discopop_cxx")).exists():
+        return Result("requeue", "skip", "DiscoPoP is not installed in this venv")
+    from ..args import parse_args
+    agent_run: Any = importlib.import_module("discopop_agent.run")
+    phase_a: Any = importlib.import_module("discopop_agent.phases.phase_a")
+    name = "requeue"
+    d = work / "requeue"
+    problems: List[str] = []
+    for case in ("refused", "accepted", "off"):
+        shutil.rmtree(d, ignore_errors=True)
+        d.mkdir(parents=True)
+        src = d / "k.c"
+        src.write_text(_REQUEUE_SRC)
+        ok, err = _profile(d, "k.c")
+        if not ok:
+            return Result(name, "fail", f"profile: {err}")
+        requests: List[str] = []
+        asked: List[str] = []
+
+        def model(evidence: Any, model_name: str, **kw: Any) -> Any:
+            msgs = kw.get("messages")
+            requests.append(msgs[-1]["content"] if msgs else str(kw.get("user_prompt") or evidence))
+            return "", (msgs or []) + [{"role": "assistant", "content": "plan"}], "plan"
+
+        real = phase_a._validate_cached
+
+        def gate(cache: Any, diff: str, args: Any, *a: Any, **k: Any) -> Any:
+            if k.get("mode") == "safety" and diff.count("+") and "pragma omp" in diff:
+                asked.append(diff)
+                if case == "refused":
+                    return (SimpleNamespace(passed=False, stage="correctness", evidence={},
+                                            diagnostic="Program output changed — value 3 moved"), False, False)
+                return SimpleNamespace(passed=True, stage="accepted", diagnostic="", evidence={}), False, False
+            return real(cache, diff, args, *a, **k)
+
+        argv = ["x", "--discopop-dir", str(d / ".discopop"), "--source-file", str(src),
+                "--provider", "claude-agent-sdk", "--model", "m", "--edit-mode", "direct",
+                "--exclude-functions", "main", "--budget", "1", "--no-require-speedup"] + (
+                    ["--no-requeue-rejected"] if case == "off" else [])
+        saved = (phase_a.call_llm, phase_a._validate_cached, sys.argv)
+        log = io.StringIO()
+        try:
+            phase_a.call_llm, phase_a._validate_cached, sys.argv = model, gate, argv
+            with contextlib.redirect_stdout(log):
+                agent_run.run(parse_args())
+        except SystemExit:
+            pass
+        finally:
+            phase_a.call_llm, phase_a._validate_cached, sys.argv = saved
+        text = log.getvalue()
+        phase_a_text = text.split("PHASE B", 1)[0]
+        if case == "refused":
+            if "requeued for the model" not in phase_a_text or not requests:
+                problems.append(f"refused: the region was not requeued ({len(requests)} model call(s))")
+            elif "fails the check at 'correctness'" not in requests[0] or "DiscoPoP reports this region parallel" not in requests[0]:
+                problems.append(f"refused: the request does not say why the region is here: {requests[0][-300:]!r}")
+        else:
+            # The loop's region only: `kernel` itself (a function DiscoPoP finds nothing in) is
+            # Tier 2 in every case and gets its own call.
+            loop_asked = [r for r in requests if "DiscoPoP reports this region parallel" in r]
+            if loop_asked or "requeued" in phase_a_text or "deferred to Phase B" not in phase_a_text:
+                problems.append(f"{case}: the Do-All loop was requeued or not deferred to Phase B")
+            if case == "accepted" and not asked:
+                problems.append("accepted: the gate was never asked about DiscoPoP's pragma")
+            if case == "off" and asked:
+                problems.append("--no-requeue-rejected: the Tier-1 pre-check ran (v3 has none)")
+    if problems:
+        return Result(name, "fail", "; ".join(problems[:3]))
+    return Result(name, "pass", "a Tier-1 region whose DiscoPoP pragma the gate refuses goes to the model, told why; "
+                  "a safe one is deferred to Phase B; --no-requeue-rejected defers without the pre-check (v3)")
+
+
 _CHECKS: List[Tuple[str, Callable[[Path], Result]]] = [
     ("impact", check_impact_ranking),
     ("min-impact", check_min_impact),
@@ -4077,6 +4182,7 @@ _CHECKS: List[Tuple[str, Callable[[Path], Result]]] = [
     ("exposed-repair", check_exposed_repair),
     ("shipped-run", check_shipped_run),
     ("paired-perf", check_paired_perf),
+    ("requeue", check_requeue),
 ]
 
 

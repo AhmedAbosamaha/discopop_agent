@@ -954,6 +954,8 @@ def _parse_agent_log(log: str) -> dict:
         # it (E4's measure), and D40's wall time apart from the agent's (E5).
         "exposure_verdicts": dict(Counter(re.findall(r"exposure verdict: ([a-z_]+)", log))),
         "d40_seconds": round(sum(float(x) for x in re.findall(r"D40 time: ([0-9.]+) s", log)), 1),
+        # v3.1: Tier-1 regions whose DiscoPoP pragma failed the safety gate and went to the model.
+        "requeued_regions": log.count("requeued for the model"),
         "region_verdicts": dict(Counter(re.findall(r"└─ ([A-Z]+)", log))),
         "settle_dropped": len(re.findall(r"^\s+· ", log.split("SETTLING", 1)[1], re.M))
         if "SETTLING" in log else 0,

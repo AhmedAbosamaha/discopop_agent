@@ -120,7 +120,8 @@ def _evidence_sections(ev: EvidencePackage, deps_header: str,
     if want("failure") and ev.tier1_failure_reason:
         # On a first attempt nothing has gone wrong yet: the text only says why the
         # region reached the model at all.
-        first = ev.tier1_failure_reason.startswith("DiscoPoP found no applicable")
+        first = ev.tier1_failure_reason.startswith(("DiscoPoP found no applicable",
+                                                     "DiscoPoP reports this region parallel"))
         parts.append(f"### {'Why this region is here' if first else 'What went wrong'}\n"
                      f"{ev.tier1_failure_reason}\n")
     return parts

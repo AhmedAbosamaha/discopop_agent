@@ -54,7 +54,7 @@ from ..sources import (_apply_to_source, _function_edit_to_diff,
 from ..gate.harness_lines import check_protected
 from ..types import GateFacts, HotspotCandidate, ValidationResult
 from .report import _REGION_LABEL, _record_candidate, _write_record
-from .verdicts import (_MARGINAL_NOISE, _OUTCOME_LABEL, SPEED_THRESHOLD_KEY, RewriteOutcome,
+from .verdicts import (_MARGINAL_NOISE, _OUTCOME_LABEL, SPEED_THRESHOLD_KEY, RewriteOutcome, tier1_verdict,
                        _rewrite_feedback, _verify_rewrite, exposed_in, judge_as_shipped)
 
 
@@ -234,11 +234,42 @@ def phase_a(state: RunState) -> None:
             # is exactly what used to invalidate the profile every later
             # decision depends on.  Phase B collects it from the final profile
             # and applies it there, once, with nothing left to shift underneath.
-            print(f"│  [Phase-A] DiscoPoP already has a pattern here "
-                  f"({candidate.pattern_type or 'pattern'}) — deferred to Phase B")
-            print(f"└─ DEFERRED\n")
-            deferred.append((rid, depth))
-            continue
+            requeue = None
+            if (getattr(args, "requeue_rejected", False) and tier2_allowed and not args.dry_run
+                    and args.budget > 0 and reference_output is not None):
+                # v3.1, the re-queue: is DiscoPoP's pattern here real?  Its pragma through the
+                # safety gate now (cached for Phase B); if no pattern it offers passes, the region
+                # would stay sequential with nobody told why — so the model gets it instead.
+                def _t1_safe(t1_diff: str) -> "tuple[bool, str, str]":
+                    res_t, _ct, _bt = _validate_cached(
+                        gate_cache, t1_diff, args, reference_output, binary_args, reference_time,
+                        reference_outputs=reference_outputs, mode="safety",
+                        dep_region=(region.file_id, region.start_line, region.end_line))
+                    _record_candidate(output_dir, {
+                        "phase": "A-tier1", "region_id": rid, "depth": depth,
+                        "passed": res_t.passed, "stage": res_t.stage,
+                        "diagnostic": (res_t.diagnostic or "")[:2000],
+                    }, t1_diff, args.dry_run)
+                    return res_t.passed, res_t.stage or "", (res_t.diagnostic or "")
+                safe_t1, t1_stage, t1_diag = tier1_verdict(candidate, dp_dir, args.source_file, _t1_safe)
+                if not safe_t1:
+                    requeue = (t1_stage, t1_diag)
+            if requeue is None:
+                print(f"│  [Phase-A] DiscoPoP already has a pattern here "
+                      f"({candidate.pattern_type or 'pattern'}) — deferred to Phase B")
+                print(f"└─ DEFERRED\n")
+                deferred.append((rid, depth))
+                continue
+            print(f"│  [Phase-A] DiscoPoP reports this region parallel "
+                  f"({candidate.pattern_type or 'pattern'}), but its pragma fails the gate at "
+                  f"'{requeue[0]}' — requeued for the model")
+            failure_reason = (
+                f"DiscoPoP reports this region parallel (an applicable "
+                f"{candidate.pattern_type or 'parallel'} pattern) and observed no dependence that "
+                f"prevents it, but its own pragma for it fails the check at '{requeue[0]}': "
+                + " ".join(requeue[1].split())[:700]
+                + "  So a dependence DiscoPoP did not observe is carried here, and the region stays "
+                  "sequential unless it is restructured.")
 
         # ── Tier-2: LLM restructuring ─────────────────────────────────────────
         if candidate.tier != 1:

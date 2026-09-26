@@ -32,6 +32,7 @@ class AgentArguments:
     restructure_depth: int      # max discovery depth at which Tier-2 (LLM) is applied
     require_speedup: bool       # gate pragma patches on measured wall-clock speedup
     judge_as_shipped: bool      # D40: a rewrite's pragmas judged in Phase A, safety then paired speed
+    requeue_rejected: bool      # v3.1: a Tier-1 region whose DiscoPoP pragma fails the safety gate goes to the model
     build_retries: int          # apply/compile retries that do not consume budget
     apply_patches: bool         # write accepted Tier-1 pragmas into the source file
     min_measured_speedup: float # minimum measured parallel speedup to accept
@@ -348,6 +349,18 @@ def parse_args() -> AgentArguments:
                        "--require-speedup; only when no deeper restructuring level follows.  "
                        "--no-judge-as-shipped reproduces agent v2."
                    ))
+    p.add_argument("--requeue-rejected", action=argparse.BooleanOptionalAction, default=True,
+                   help=(
+                       "Agent v3.1 (the author, 26 Sep; default on): a region DiscoPoP reports "
+                       "parallel (Tier 1) is checked in Phase A — DiscoPoP's pragma for it, each "
+                       "pattern it offers in Phase B's order, through the SAFETY gate (cached, so "
+                       "Phase B does not pay again).  If none passes, DiscoPoP's pattern is false "
+                       "there and the region would otherwise stay sequential: it goes to the model "
+                       "as a Tier-2 region, told which stage refused DiscoPoP's pragma.  Safety only "
+                       "— a safe pragma that is not faster is not a false pattern.  The model-only "
+                       "twins cannot do this (they have no gate).  --no-requeue-rejected "
+                       "reproduces agent v3."
+                   ))
     p.add_argument("--apply-patches", action=argparse.BooleanOptionalAction, default=True,
                    help=("Write accepted Tier-1 pragmas into the source file (default: on; "
                          "the original is backed up to <output-dir>/<name>.original). "
@@ -637,6 +650,7 @@ def parse_args() -> AgentArguments:
         restructure_depth=a.restructure_depth,
         require_speedup=a.require_speedup,
         judge_as_shipped=a.judge_as_shipped,
+        requeue_rejected=a.requeue_rejected,
         build_retries=a.build_retries,
         allow_unverified=a.allow_unverified,
         llm_recon=a.llm_recon,
