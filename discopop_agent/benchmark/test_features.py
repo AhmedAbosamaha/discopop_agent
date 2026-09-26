@@ -3672,12 +3672,22 @@ def check_shipped_judge(work: Path) -> Result:
                          measure=timing(0.0, ok=False, diag="no valid timing samples"))
     if r.status != "exposed":
         problems.append(f"an unmeasurable timing gave {r.status}, not the v2 verdict")
+    # D40.1 (a): a deeper level follows — the safety half only, nothing timed.
+    seen.clear()
+    r = judge_as_shipped(cands, before, dp, str(src), threshold=0.0, validate=safe, measure=None)
+    if r.status != "safe_deferred" or "staged" in seen:
+        problems.append(f"safety only (a deeper level follows) gave {r.status}, or timed it")
+    r = judge_as_shipped(cands, before, dp, str(src), threshold=0.0,
+                         validate=lambda diff, c: (False, "tsan: race on t"), measure=None)
+    if r.status != "pattern_broken":
+        problems.append(f"safety only, nothing safe, gave {r.status}")
     if digest() != start:
         problems.append("the real file was written")
     if problems:
         return Result(name, "fail", "; ".join(problems[:3]))
     return Result(name, "pass", "ok / not_faster (naming the added loop and allocation) / pattern_broken / "
-                  "set fallback / crash / unmeasurable; outermost-first; the real file never written")
+                  "set fallback / crash / unmeasurable / safety only at a depth (safe_deferred, "
+                  "pattern_broken); outermost-first; the real file never written")
 
 
 def check_request_log(work: Path) -> Result:
@@ -3802,7 +3812,7 @@ def check_shipped_run(work: Path) -> Result:
     name = "shipped run"
     d = work / "shipped_run"
     problems: List[str] = []
-    for judged in (True, False):
+    for judged in (True, False, "depth1"):
         shutil.rmtree(d, ignore_errors=True)
         d.mkdir(parents=True)
         src = d / "k.c"
@@ -3828,7 +3838,9 @@ def check_shipped_run(work: Path) -> Result:
 
         argv = ["x", "--discopop-dir", str(d / ".discopop"), "--source-file", str(src),
                 "--provider", "claude-agent-sdk", "--model", "m", "--edit-mode", "direct",
-                "--exclude-functions", "main", "--budget", "2"] + ([] if judged else ["--no-judge-as-shipped"])
+                "--exclude-functions", "main", "--budget", "2"] + (
+                    ["--no-judge-as-shipped"] if judged is False else
+                    ["--restructure-depth", "1"] if judged == "depth1" else [])
         saved = (phase_a.call_llm, phase_a.measure_marginal, sys.argv)
         log = io.StringIO()
         try:
@@ -3838,7 +3850,16 @@ def check_shipped_run(work: Path) -> Result:
         finally:
             phase_a.call_llm, phase_a.measure_marginal, sys.argv = saved
         text = log.getvalue()
-        if judged:
+        if judged == "depth1":
+            # D40.1 (a): depth 1 follows the first rewrite, so D40 judges only its SAFETY — the
+            # slow rewrite is kept (speed waits for the last level), nothing is timed for it.
+            first = text.split("D40 verdict:", 1)[1][:40] if "D40 verdict:" in text else ""
+            if not first.strip().startswith("safe_deferred"):
+                problems.append(f"depth 1: the first rewrite's D40 verdict is {first.strip()[:30]!r}, "
+                                "not safe_deferred")
+            if "depth 1 follows, so the speed half waits" not in text:
+                problems.append("depth 1: the log does not say the speed half waits for the last level")
+        elif judged:
             if len(calls) != 2:
                 problems.append(f"judged: {len(calls)} model call(s), expected 2 (revert, then a retry)")
             if "D40 verdict: not_faster 0.40×" not in text or "D40 verdict: ok 1.60×" not in text:
@@ -3865,7 +3886,8 @@ def check_shipped_run(work: Path) -> Result:
     if problems:
         return Result(name, "fail", "; ".join(problems[:3]))
     return Result(name, "pass", "the slow rewrite reverted with its ratio and what it added (pragmas staged, none on "
-                  "disk), the retry kept; --no-judge-as-shipped keeps the first rewrite as v2 did")
+                  "disk), the retry kept; at --restructure-depth 1 judged for safety only (safe_deferred); "
+                  "--no-judge-as-shipped keeps the first rewrite as v2 did")
 
 
 def check_paired_perf(work: Path) -> Result:

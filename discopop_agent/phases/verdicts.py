@@ -42,8 +42,10 @@ class RewriteOutcome:
     status:
       "ok"             — DiscoPoP found a pattern in the rewritten code and its
                          pragma passed the gate (and was fast enough, if required)
-      "exposed"        — a pattern was found; validating it is deferred to the
-                         next depth, which is allowed to restructure it further
+      "exposed"        — a pattern was found; its pragma is applied and judged in
+                         Phase B (D40 off, or it could not stage or time it)
+      "safe_deferred"  — D40.1: its pragmas passed D40's safety half; a deeper level
+                         follows, so speed is judged at the last level
       "self_annotated" — --llm-pragmas: the rewrite carries its own pragmas and
                          has already passed the full gate, so DiscoPoP's opinion
                          of it is not what decides
@@ -219,7 +221,7 @@ def judge_as_shipped(
     exposed: List[Any], before: str, dp_dir: Path, source_file: str, *,
     threshold: float,
     validate: Callable[[str, Any], Tuple[bool, str]],
-    measure: Callable[[str, str], Tuple[bool, float, str]],
+    measure: "Callable[[str, str], Tuple[bool, float, str]] | None",
 ) -> RewriteOutcome:
     """D40 — judge a kept rewrite the way it will ship, while the model can still act on it.
 
@@ -242,7 +244,13 @@ def judge_as_shipped(
 
     `before` is the text before THIS rewrite (earlier kept rewrites in it, pragma-free like this
     one), so the ratio is this region's contribution alone.  A timing that fails without a crash
-    leaves the verdict to Phase B and Settle, as before ("exposed")."""
+    leaves the verdict to Phase B and Settle, as before ("exposed").
+
+    `measure=None` (D40.1, agent v3.1): the SAFETY half only — at a restructuring depth a deeper
+    level follows, and a later rewrite of another region may be what makes this one pay, so the
+    speed question waits for the last level (Phase B, D33, Settle).  Safety does not wait: an
+    exposed loop is Tier 1 from then on and never restructured again, so a pragma that breaks
+    here breaks for good.  Safe → "safe_deferred"; nothing safe → "pattern_broken"."""
     label = ", ".join(f"{c.pattern_type or 'pattern'} @ lines {c.region.start_line}–{c.region.end_line}"
                       for c in exposed[:3])
     prints = [region_fingerprint(c.source_file, c.region.start_line, c.region.end_line, c.region.name)
@@ -277,6 +285,8 @@ def judge_as_shipped(
             staged = stage_pragmas(after, members, dp_dir, source_file)
     if staged is None:
         return RewriteOutcome("exposed", pattern_label=label, exposed_prints=prints)
+    if measure is None:
+        return RewriteOutcome("safe_deferred", pattern_label=label, exposed_prints=prints)
     ok_m, ratio, mdiag = measure(before, staged)
     if not ok_m:
         if "non-zero exit (-" in mdiag or "signal" in mdiag.lower():

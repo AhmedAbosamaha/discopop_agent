@@ -150,10 +150,13 @@ def analyse(runs: List[str], arms: List[str], cls: str, loops: Sequence[str] = (
     out += ["", "Model calls per trial, every trial: " + "; ".join(
         f"`{a}` mean {statistics.mean(all_calls[a]):.2f}" for a in arms if all_calls[a]) + "."]
     if any(d40[a] for a in arms):
-        rows = ["trials run under v3", "trials with a verdict", "ok", "not_faster", "pattern_broken", "exposed"]
+        rows = ["trials run under v3", "trials with a verdict", "ok", "not_faster", "pattern_broken", "exposed",
+                "safe_deferred"]
         out += ["", "## D40 (agent v3): the verdicts on kept rewrites, judged as shipped", "",
                 "A trial can hold several verdicts (one per rewrite judged); `exposed` = the timing could not be "
-                "measured, so the rewrite went on to Phase B unjudged.", "", head, rule]
+                "measured, so the rewrite went on to Phase B unjudged; `safe_deferred` (v3.1, D40.1) = its "
+                "pragmas passed the safety half at a depth a deeper level follows, speed judged at the last.",
+                "", head, rule]
         out += [f"| {r} | " + " | ".join(str(d40[a][r]) for a in arms) + " |" for r in rows]
     out += ["", "Model calls made by the trials that did not end FASTER: " + "; ".join(
         f"`{a}` " + ", ".join(f"{k} call(s): {v}" for k, v in sorted(calls[a].items())) for a in arms) + ".",
