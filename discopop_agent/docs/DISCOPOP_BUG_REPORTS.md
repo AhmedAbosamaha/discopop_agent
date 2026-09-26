@@ -36,6 +36,29 @@ LLVM 19 (macOS) and LLVM 20 (Linux).
 
 ---
 
+## B9 — a loop reported Do-All although a function it calls carries a dependence into its next iteration (explorer)
+
+**Found** 26 Sep 2026 (T0.15 repeated on the fixed profiler; E1c's logs). **Status:** open — diagnosed, not
+fixed; the fix changes routing in every arm, so its timing is the author's decision.
+
+**Symptom.** Every TSVC package's repetition loop calls `pb_mix(nl)`, which changes a few input elements
+between repetitions, so repetition `nl+1` reads what `pb_mix` wrote in repetition `nl` — a true dependence
+that makes the loop sequential. DiscoPoP reports that loop Do-All on 9 of the 18 class-R loops of E1c (s127,
+s252, s254, s255, s291, s292, s293, s331, s341; one profile per run, all trials), in both packaging layouts.
+The gate rejects the pragma at `correctness` every time, so no arm ever shipped it: DiscoPoP alone, the
+agent's Phase B and T0.11's classes are unaffected. With agent v3.1's re-queue the rejected region goes to
+the model (E1c-v3.1).
+
+**Where.** Not the profiler: in s254's profile `dynamic_dependencies.txt` holds the RAW from `pb_mix`'s write
+of `b[k]` (line 100) to the kernel's read of `b[i]` (lines 137, 138; 13 + 4 records) and from the write of
+`b[LEN_1D-1]` (102) to `x = b[LEN_1D-1]` (135). The explorer's Do-All check (`new_do_all_detector`) blocks a
+loop only for a dependence between nodes of two different iteration contexts of that loop; the callee's
+accesses are evidently not placed inside the calling loop's iteration contexts, so the dependence crosses no
+iteration — the B5/B8 family (placement of a call's accesses in the task graph).
+
+**Reproducer.** Any TSVC v3 package from the list, e.g. `prepared/tsvc/s254`: DiscoPoP reports the loop at
+line 134 (`for (int nl …)`) Do-All.
+
 ## B8 — a true recurrence reported as Do-All when the program spans two files (explorer, call-path states)
 
 **Found** 25 Sep 2026 (T0.15, `evaluation/agent/tools/harness_equivalence.py`), while moving a benchmark's
