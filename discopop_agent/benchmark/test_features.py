@@ -673,7 +673,7 @@ def check_fast_refresh_equivalence(work: Path) -> Result:
         api_base=None, lambda_penalty=1.0, min_workload=0.0, output_dir=str(out),
         dry_run=False, edit_mode="direct", llm_pragmas=True, pragma_arbitration=True, fast_refresh=True,
         llm_deps=False, hotspots=False, min_impact=0.0, restructure_depth=0,
-        require_speedup=False, judge_as_shipped=False, requeue_rejected=False, build_retries=2, apply_patches=True,
+        require_speedup=False, judge_as_shipped=False, requeue_rejected=False, phase_b_reuse_d40=False, build_retries=2, apply_patches=True,
         min_measured_speedup=1.1, check_inputs=[], reprofil_args=[], verbose=False)
     ok, note = _reprofil_fast(args.source_file, Path(args.discopop_dir),
                               (fast / "old.cpp").read_text(),
@@ -781,7 +781,7 @@ def check_dep_review(work: Path) -> Result:
             lambda_penalty=1.0, min_workload=0.0, output_dir=str(out), dry_run=False,
             edit_mode="direct", llm_pragmas=True, pragma_arbitration=True, fast_refresh=True, llm_deps=True,
             hotspots=False, min_impact=0.0, restructure_depth=0, require_speedup=False,
-            judge_as_shipped=False, requeue_rejected=False,
+            judge_as_shipped=False, requeue_rejected=False, phase_b_reuse_d40=False,
             build_retries=2, apply_patches=True, min_measured_speedup=1.1,
             check_inputs=[], reprofil_args=[], verbose=False)
         note = dr._llm_dep_review(args, d / ".discopop", old_text, new_text, out, 1)
@@ -3855,7 +3855,7 @@ def check_shipped_run(work: Path) -> Result:
     name = "shipped run"
     d = work / "shipped_run"
     problems: List[str] = []
-    for judged in (True, False, "depth1"):
+    for judged in (True, False, "depth1", "no_d41"):
         shutil.rmtree(d, ignore_errors=True)
         d.mkdir(parents=True)
         src = d / "k.c"
@@ -3883,7 +3883,8 @@ def check_shipped_run(work: Path) -> Result:
                 "--provider", "claude-agent-sdk", "--model", "m", "--edit-mode", "direct",
                 "--exclude-functions", "main", "--budget", "2"] + (
                     ["--no-judge-as-shipped"] if judged is False else
-                    ["--restructure-depth", "1"] if judged == "depth1" else [])
+                    ["--restructure-depth", "1"] if judged == "depth1" else
+                    ["--no-phase-b-reuse-d40"] if judged == "no_d41" else [])
         saved = (phase_a.call_llm, phase_a.measure_marginal, sys.argv)
         log = io.StringIO()
         try:
@@ -3902,7 +3903,19 @@ def check_shipped_run(work: Path) -> Result:
                                 "not safe_deferred")
             if "depth 1 follows, so the speed half waits" not in text:
                 problems.append("depth 1: the log does not say the speed half waits for the last level")
+        elif judged == "no_d41":
+            # D41 off (agent v3): Phase B times the kept rewrite's pragma again, one by one.
+            phase_b = text.split("PHASE B", 1)[1] if "PHASE B" in text else ""
+            if "D41" in phase_b or "marginal" not in phase_b:
+                problems.append("--no-phase-b-reuse-d40: Phase B did not judge the pragma by itself")
         elif judged:
+            phase_b = text.split("PHASE B", 1)[1] if "PHASE B" in text else ""
+            # D41: the kept rewrite's set is applied as D40 judged it — no second timing — and the
+            # noise threshold D40 measured is reused.
+            if "APPLIED as D40 judged it" not in phase_b or "marginal" in phase_b.split("APPLIED as D40", 1)[0]:
+                problems.append("judged: Phase B did not apply D40's set as one unit (D41)")
+            if "reusing the run's threshold" not in phase_b:
+                problems.append("judged: Phase B measured the noise threshold again (D41)")
             if len(calls) != 2:
                 problems.append(f"judged: {len(calls)} model call(s), expected 2 (revert, then a retry)")
             if "D40 verdict: not_faster 0.40×" not in text or "D40 verdict: ok 1.60×" not in text:
@@ -3929,8 +3942,9 @@ def check_shipped_run(work: Path) -> Result:
     if problems:
         return Result(name, "fail", "; ".join(problems[:3]))
     return Result(name, "pass", "the slow rewrite reverted with its ratio and what it added (pragmas staged, none on "
-                  "disk), the retry kept; at --restructure-depth 1 judged for safety only (safe_deferred); "
-                  "--no-judge-as-shipped keeps the first rewrite as v2 did")
+                  "disk), the retry kept and its set applied by Phase B as judged (D41, threshold reused); at "
+                  "--restructure-depth 1 judged for safety only (safe_deferred); --no-phase-b-reuse-d40 times it "
+                  "again; --no-judge-as-shipped keeps the first rewrite as v2 did")
 
 
 def check_paired_perf(work: Path) -> Result:

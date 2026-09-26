@@ -62,6 +62,18 @@ class RewriteOutcome:
     # matched on identity, not on line numbers, which drift as later changes
     # land above them.
     exposed_prints: List[str] = field(default_factory=list)
+    # D41: what an "ok" verdict judged — the pragma-free text it staged on, the members' spans
+    # (file id, first line, last line; outermost first, as staged) and the staged text — so
+    # Phase B can apply exactly that set as one unit when nothing has changed since.
+    judged_on: str = ""
+    judged_spans: List[Tuple[int, int, int]] = field(default_factory=list)
+    judged_text: str = ""
+
+
+# The sets D40 judged "ok", kept in the gate cache for Phase B (D41).
+D40_SETS_KEY = "__d40_sets__"
+
+
 def _verify_rewrite(
     fresh: List[Any],
     touched: "tuple[int, int] | None",
@@ -326,7 +338,9 @@ def judge_as_shipped(
     if ratio < threshold:
         return RewriteOutcome("not_faster", speedup=ratio, pattern_label=label, exposed_prints=prints,
                               diagnostic=rewrite_additions(before, after))
-    return RewriteOutcome("ok", speedup=ratio, pattern_label=label, exposed_prints=prints)
+    return RewriteOutcome("ok", speedup=ratio, pattern_label=label, exposed_prints=prints,
+                          judged_on=after, judged_text=staged,
+                          judged_spans=[(c.region.file_id, c.region.start_line, c.region.end_line) for c in members])
 
 
 _OUTCOME_LABEL = {

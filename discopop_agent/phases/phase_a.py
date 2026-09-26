@@ -54,7 +54,7 @@ from ..sources import (_apply_to_source, _function_edit_to_diff,
 from ..gate.harness_lines import check_protected
 from ..types import GateFacts, HotspotCandidate, ValidationResult
 from .report import _REGION_LABEL, _record_candidate, _write_record
-from .verdicts import (_MARGINAL_NOISE, _OUTCOME_LABEL, SPEED_THRESHOLD_KEY, RewriteOutcome, tier1_verdict,
+from .verdicts import (_MARGINAL_NOISE, _OUTCOME_LABEL, D40_SETS_KEY, SPEED_THRESHOLD_KEY, RewriteOutcome, tier1_verdict,
                        _rewrite_feedback, _verify_rewrite, exposed_in, judge_as_shipped)
 
 
@@ -884,6 +884,11 @@ def phase_a(state: RunState) -> None:
                                  if outcome.status == "safe_deferred" else ""))
                         # D40's own cost, apart from the rest of the agent's time (E5; D40.1).
                         print(f"│  [Phase-A] D40 time: {time.monotonic() - d40_started:.1f} s")
+                        if outcome.status == "ok" and outcome.judged_spans:
+                            # D41: Phase B applies exactly this set when nothing changed since.
+                            gate_cache.setdefault(D40_SETS_KEY, []).append({
+                                "region": rid, "on": outcome.judged_on, "spans": outcome.judged_spans,
+                                "staged": outcome.judged_text, "ratio": outcome.speedup})
 
                 if outcome.status not in ("ok", "exposed", "safe_deferred", "self_annotated"):
                     # REVERT — the restructuring did not achieve its purpose.

@@ -33,6 +33,7 @@ class AgentArguments:
     require_speedup: bool       # gate pragma patches on measured wall-clock speedup
     judge_as_shipped: bool      # D40: a rewrite's pragmas judged in Phase A, safety then paired speed
     requeue_rejected: bool      # v3.1: a Tier-1 region whose DiscoPoP pragma fails the safety gate goes to the model
+    phase_b_reuse_d40: bool     # D41: Phase B applies a D40-judged set as one unit; reuses the run's noise threshold
     build_retries: int          # apply/compile retries that do not consume budget
     apply_patches: bool         # write accepted Tier-1 pragmas into the source file
     min_measured_speedup: float # minimum measured parallel speedup to accept
@@ -361,6 +362,16 @@ def parse_args() -> AgentArguments:
                        "twins cannot do this (they have no gate).  --no-requeue-rejected "
                        "reproduces agent v3."
                    ))
+    p.add_argument("--phase-b-reuse-d40", action=argparse.BooleanOptionalAction, default=True,
+                   help=(
+                       "D41 (agent v3.1, default on): when D40 judged a kept rewrite's pragmas "
+                       "'ok' as a set and the file entering Phase B is byte-identical to what D40 "
+                       "staged them on (and they re-derive to the same text), Phase B applies that "
+                       "set as ONE unit, first, instead of timing its pragmas one by one again; "
+                       "and Phase B reuses the run's measured noise threshold instead of measuring "
+                       "it a second time (so Settle inherits the first measurement).  Settle and the "
+                       "harness are unchanged.  --no-phase-b-reuse-d40 reproduces agent v3."
+                   ))
     p.add_argument("--apply-patches", action=argparse.BooleanOptionalAction, default=True,
                    help=("Write accepted Tier-1 pragmas into the source file (default: on; "
                          "the original is backed up to <output-dir>/<name>.original). "
@@ -651,6 +662,7 @@ def parse_args() -> AgentArguments:
         require_speedup=a.require_speedup,
         judge_as_shipped=a.judge_as_shipped,
         requeue_rejected=a.requeue_rejected,
+        phase_b_reuse_d40=a.phase_b_reuse_d40,
         build_retries=a.build_retries,
         allow_unverified=a.allow_unverified,
         llm_recon=a.llm_recon,

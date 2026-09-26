@@ -28,7 +28,7 @@ from ..pragmas import (_already_annotated, _read_tier1_patch,
 from ..sources import _apply_in_memory, _apply_to_source
 from ..types import HotspotCandidate
 from .report import _record_candidate, _write_record
-from .verdicts import _MARGINAL_NOISE
+from .verdicts import D40_SETS_KEY, _MARGINAL_NOISE, stage_pragmas
 # The key under which Phase B leaves its measured keep-threshold in the gate cache for Settle.
 # Every other key of that cache is a patch digest, so it cannot collide.  Defined in verdicts.py
 # since D40, whose Phase A check reads the same threshold; re-exported here for its importers.
@@ -80,7 +80,13 @@ def _phase_b(
     # What counts as "not slower" is whatever this machine's jitter can already
     # produce for an unchanged file.  One compile, then alternating runs.
     threshold = _MARGINAL_NOISE
-    if args.require_speedup and not args.dry_run:
+    reuse = bool(getattr(args, "phase_b_reuse_d40", False))
+    if args.require_speedup and not args.dry_run and reuse and SPEED_THRESHOLD_KEY in gate_cache:
+        # D41: the run already measured this machine's noise (the floor's Phase B, or D40) —
+        # the same question on the same machine; measuring it again only moves Settle's line.
+        threshold = float(gate_cache[SPEED_THRESHOLD_KEY])
+        print(f"  Timing noise: reusing the run's threshold → keep anything at or above {threshold:.3f}\n")
+    elif args.require_speedup and not args.dry_run:
         ok_n, floor, ndiag = noise_floor(
             Path(args.source_file).read_text(), args.source_file, binary_args,
             extra_flags=list(args.timing_cflags) or None,
@@ -307,6 +313,12 @@ def _phase_b(
         print(f"└─ APPLIED\n")
         return "kept"
 
+    if reuse and args.require_speedup and not args.dry_run and args.project is None:
+        kept += _apply_d40_set(args, dp_dir, output_dir, todo, applied_spans, gate_cache, change_log,
+                               reference_output, reference_outputs, binary_args, reference_time, impact)
+        applied_now = {(f, a, b) for f, a, b in applied_spans}
+        todo = [c for c in todo if (c.region.file_id, c.region.start_line, c.region.end_line) not in applied_now]
+
     for cand in todo:
         # DiscoPoP can report more than one applicable pattern for a loop (a Do-All
         # and a Reduction on the same line).  They differ in their clauses, so when
@@ -322,6 +334,81 @@ def _phase_b(
         kept += _judge_jointly(args, dp_dir, output_dir, deferred_safe, applied_spans, threshold,
                                reference_output, reference_outputs, binary_args, reference_time,
                                gate_cache, change_log, impact)
+    return kept
+
+
+def _apply_d40_set(
+    args: AgentArguments, dp_dir: Path, output_dir: Path, todo: List[Any],
+    applied_spans: List[Tuple[Optional[int], int, int]], gate_cache: Dict[str, Any],
+    change_log: List[Any], reference_output: "str | None",
+    reference_outputs: "List[Tuple[List[str], str]] | None", binary_args: "List[str] | None",
+    reference_time: "float | None", impact: "impact_mod.ImpactModel | None",
+) -> List[Dict[str, Any]]:
+    """D41 — apply, as ONE unit and first, the pragma set D40 already judged for the last kept
+    rewrite, when nothing has changed since.
+
+    D40 timed exactly these pragmas together against the program before the rewrite and kept
+    the rewrite for it; timing them again one by one here asks a question already answered, and
+    can split the set D33 would then have to re-assemble.  Only when the file entering Phase B is
+    byte-identical to the text D40 staged on, every member is still a candidate here, and the
+    pragmas re-derive to the very text D40 staged — else nothing, and Phase B judges as before.
+    The set's safety verdict is the gate's (cached from D40 when it was one diff)."""
+    sets = gate_cache.get(D40_SETS_KEY) or []
+    cur = Path(args.source_file).read_text()
+    match = next((st for st in reversed(sets) if st.get("on") == cur), None)
+    if match is None:
+        return []
+    spans = [tuple(x) for x in match["spans"]]
+    by_span = {(c.region.file_id, c.region.start_line, c.region.end_line): c for c in todo}
+    members = [by_span.get(sp) for sp in spans]
+    print(f"┌─ D41: the file is the one D40 judged for {match['region']} "
+          f"({len(spans)} pragma(s), {float(match['ratio'] or 0):.2f}× together)")
+    if any(m is None for m in members):
+        print(f"└─ not every member is a candidate in the final profile — judged pragma by pragma\n")
+        return []
+    staged = stage_pragmas(cur, [m for m in members if m is not None], dp_dir, args.source_file)
+    if staged is None or staged != match["staged"]:
+        print(f"└─ the pragmas no longer re-derive to what D40 staged — judged pragma by pragma\n")
+        return []
+    joint_diff = make_diff(cur, staged, args.source_file)
+    res, from_cache, _fp = _validate_cached(
+        gate_cache, joint_diff, args, reference_output, binary_args, reference_time,
+        reference_outputs=reference_outputs, mode="safety")
+    group_id = "d40:" + ",".join(str(m.region.region_id) for m in members if m is not None)
+    _record_candidate(output_dir, {
+        "phase": "B", "region_id": group_id, "passed": res.passed,
+        "stage": res.stage if not res.passed else "d40_set", "diagnostic": (res.diagnostic or "")[:2000],
+        "pattern_type": "d40_set", "from_cache": from_cache,
+    }, joint_diff, args.dry_run)
+    if not res.passed:
+        print(f"└─ the set fails the gate at '{res.stage}' now — judged pragma by pragma\n")
+        return []
+    fps = [region_fingerprint(args.source_file, m.region.start_line, m.region.end_line, m.region.name)
+           for m in members if m is not None]
+    if args.apply_patches and not _apply_to_source(joint_diff, args.source_file, output_dir, "Phase-B"):
+        print(f"└─ the set would not apply — judged pragma by pragma\n")
+        return []
+    kept: List[Dict[str, Any]] = []
+    for m, fp in zip(members, fps):
+        assert m is not None
+        r = m.region
+        if impact is not None and impact.available:
+            impact.mark_covered(r.file_id, r.start_line, r.end_line)
+        applied_spans.append((r.file_id, r.start_line, r.end_line))
+        record = {"region_id": r.region_id, "region_type": r.region_type, "phase": "B",
+                  "pattern_id": (m.pattern or {}).get("pattern_id", "?"), "pattern_type": m.pattern_type,
+                  "pragma": (m.pattern or {}).get("pragma", ""), "lines": f"{r.start_line}–{r.end_line}",
+                  "marginal_speedup": None, "joint_speedup": match["ratio"], "phase_b_mode": "d40_set",
+                  "joint_group": group_id, "applied_to_source": bool(args.apply_patches),
+                  "evidence": dict(res.evidence)}
+        kept.append(record)
+        _write_record(output_dir, record, args.dry_run)
+    if args.apply_patches:
+        change_log.append({"kind": "pragma", "region_id": group_id, "diff": joint_diff,
+                           "fingerprint": fps[0], "fingerprints": fps,
+                           "region_ids": [m.region.region_id for m in members if m is not None],
+                           "file": str(Path(args.source_file).resolve())})
+    print(f"└─ APPLIED as D40 judged it — {len(kept)} pragma(s), no second timing (D41)\n")
     return kept
 
 
