@@ -67,6 +67,13 @@ copy, `CXX_wrapper.sh`), and v4's harness headers live in `prepared/_harness/`, 
 harness's functions were compiled into the unit but never instrumented. Any program that calls a function
 defined outside the project root (a header-only library in an include directory, say) was exposed.
 
+**Verified (26 Sep, Mac, LLVM 19).** Profiler tests 184 of 184. s211 in packaging v4: Do-All on both kernel
+loops before, none after. One-file programs unchanged: s211, s000, s1213, s331 and s4113 (packaging v3),
+profiled with the pre-fix build (a separate venv built from the commit before the fix) and with the fixed
+one — every dependence (run-specific stack ids and order normalised), every call-path state, every
+transition and `Data.xml` identical. The agent's feature suite 56 of 56 on the fixed build, with a
+regression check (`b8-outside-root`) that fails on the pre-fix profile and passes after.
+
 **Reproducer:** TSVC `s211` (`a[i] = b[i-1] + c[i]*d[i]; b[i] = b[i+1] - e[i]*d[i];` inside a repetition
 loop). Profiled as ONE file: no pattern on either loop (5 of 5 explorer draws on macOS/LLVM 19, 3 of 3 on
 Linux/LLVM 20); `explorer/doall_prevented.json` holds the dynamic RAW on `b` that blocks both. The SAME
