@@ -428,6 +428,12 @@ def phase_a(state: RunState) -> None:
                 # rewrite — which only started to matter once the rewrite could
                 # carry pragmas of its own, and TSan on this platform reports a
                 # race between any two parallel regions.
+                if ("pragma omp" in diff and args.require_speedup and not args.dry_run
+                        and getattr(args, "judge_as_shipped", False)):
+                    # D40.1: the gate's performance stage pairs against the run's noise
+                    # threshold, which class R's floor never measured (DiscoPoP alone has no
+                    # pragma for it) — measured here first, once.
+                    speed_threshold(args, gate_cache, binary_args)
                 result, _cached, barrier_fp = _validate_cached(
                     gate_cache, diff, args, reference_output, binary_args,
                     reference_time, reference_outputs=reference_outputs,

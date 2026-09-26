@@ -32,9 +32,7 @@ from ..pragmas import (_read_tier1_patch, _repair_pragma_clauses, check_pragma_c
                        derive_pragma_patch)
 from ..sources import _apply_in_memory
 
-# The measured "not slower" threshold, kept in the gate cache: Phase B measures it (and the
-# floor's Phase B before Phase A), Settle reads it, and D40 measures it if nothing has yet.
-SPEED_THRESHOLD_KEY = "__speed_threshold__"
+from ..gate.timing import SPEED_THRESHOLD_KEY as SPEED_THRESHOLD_KEY   # defined with the timing code
 
 
 @dataclass

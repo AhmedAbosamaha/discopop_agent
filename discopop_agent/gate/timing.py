@@ -31,6 +31,11 @@ from typing import List, Optional, Tuple
 from .toolchain import _find_clangpp, uses_omp_runtime
 from .patching import _compile_variant
 
+# The measured "not slower" threshold, kept in the gate cache: Phase B measures it (and the
+# floor's Phase B before Phase A), Settle reads it, D40 measures it if nothing has yet, and since
+# D40.1 the gate's own performance stage pairs against it.
+SPEED_THRESHOLD_KEY = "__speed_threshold__"
+
 
 _REGION_RE = re.compile(r"^DP_TIMED_REGION_SECONDS\s+([0-9.eE+-]+)\s*$", re.M)
 

@@ -3868,6 +3868,95 @@ def check_shipped_run(work: Path) -> Result:
                   "disk), the retry kept; --no-judge-as-shipped keeps the first rewrite as v2 did")
 
 
+def check_paired_perf(work: Path) -> Result:
+    """D40.1 (b): the gate's "not slower" test is paired under v3, as D40's.
+
+    With the model writing the pragmas (`--llm-pragmas`), the gate compared the parallel run with
+    the ORIGINAL's time taken at start-up — one run against another, minutes apart: the unpaired
+    method Fix 89 removed from Settle — while DiscoPoP's pragmas are judged by D40, paired.  So E3's
+    two pragma modes differed in the timing METHOD as well as the author.  Under v3 the gate now
+    times the patched program against the text the patch applies to (the program before this
+    rewrite), interleaved and paired, at the run's noise threshold; v2 (--no-judge-as-shipped)
+    keeps the reference time.  The clock is a stand-in: the question is which comparison decides."""
+    from types import SimpleNamespace
+    from ..gate import validate as gate_validate
+    from ..gate.timing import SPEED_THRESHOLD_KEY, capture_reference
+    from ..gate.toolchain import _find_clangpp
+    from ..llm import make_diff
+    import importlib
+    vmod: Any = importlib.import_module("discopop_agent.gate.validate")
+
+    name = "paired perf"
+    if _find_clangpp() is None:
+        return Result(name, "skip", "no supported clang")
+    d = work / "paired_perf"
+    d.mkdir(parents=True, exist_ok=True)
+    src = d / "k.c"
+    orig = ("#include <stdio.h>\nint main(void) {\n    static double a[20000];\n"
+            "    for (int i = 0; i < 20000; i++) a[i] = i * 0.5;\n    double s = 0;\n"
+            "    for (int i = 0; i < 20000; i++) s += a[i];\n    printf(\"%.1f\\n\", s);\n    return 0;\n}\n")
+    src.write_text(orig)
+    ref_out, _t, ref_pairs = capture_reference(str(src))
+    if ref_out is None:
+        return Result(name, "fail", "the original did not build")
+    par = orig.replace("    for (int i = 0; i < 20000; i++) a[i] = i * 0.5;",
+                       "    #pragma omp parallel for\n    for (int i = 0; i < 20000; i++) a[i] = i * 0.5;")
+    diff = make_diff(orig, par, str(src))
+    seen: List[Dict[str, Any]] = []
+
+    def clock(before: str, after: str, source_file: str, binary_args: Any = None,
+              pairs: int = 5, extra_flags: Any = None) -> "Tuple[bool, float, str]":
+        seen.append({"before_is_file": before == Path(source_file).read_text(), "after_has_pragma": "#pragma omp" in after})
+        return True, ratio_now[0], ""
+
+    def scaling(*a: Any, **k: Any) -> Any:
+        return True, 2.0, 0.010, 0.005, ""             # 2x on the same binary: the scaling half passes
+
+    ratio_now = [0.8]
+    saved = (vmod.measure_marginal, vmod._measure_speedup)
+    problems: List[str] = []
+    try:
+        vmod.measure_marginal, vmod._measure_speedup = clock, scaling
+        kw: Dict[str, Any] = dict(reference_output=ref_out, reference_outputs=ref_pairs, require_speedup=True)
+        slow = gate_validate(diff, str(src), paired_threshold=0.97, **kw)
+        ratio_now[0] = 1.3
+        fast = gate_validate(diff, str(src), paired_threshold=0.97, **kw)
+        # v2: no threshold -> the start-up reference time decides (0.5 ms < the 5 ms parallel run)
+        v2 = gate_validate(diff, str(src), reference_time=0.0005, **kw)
+        # _validate_cached hands the threshold over only under v3, with the speed check on
+        caught: List[Any] = []
+
+        def spy(*a: Any, **k: Any) -> Any:
+            caught.append(k.get("paired_threshold"))
+            return SimpleNamespace(passed=True, stage="accepted", diagnostic="", evidence={})
+        saved_v = vmod.validate
+        vmod.validate = spy
+        try:
+            for judged in (True, False):
+                args = SimpleNamespace(source_file=str(src), require_speedup=True, judge_as_shipped=judged,
+                                       min_measured_speedup=1.0)
+                vmod._validate_cached({SPEED_THRESHOLD_KEY: 0.95}, diff + ("\n" if judged else "\n\n"),
+                                      args, ref_out, None, None)
+        finally:
+            vmod.validate = saved_v
+    finally:
+        vmod.measure_marginal, vmod._measure_speedup = saved
+    if slow.passed or slow.stage != "performance" or "paired" not in (slow.diagnostic or ""):
+        problems.append(f"a program at 0.80x of the one before it was not refused, paired: {slow.stage} {slow.diagnostic[:80]!r}")
+    if not fast.passed:
+        problems.append(f"a program at 1.30x was refused: {fast.stage} {fast.diagnostic[:80]!r}")
+    if not seen or not all(x["before_is_file"] and x["after_has_pragma"] for x in seen):
+        problems.append(f"not timed against the text the patch applies to: {seen}")
+    if v2.passed or "ORIGINAL" not in (v2.diagnostic or ""):
+        problems.append(f"v2 no longer judges against the start-up reference: {v2.stage} {v2.diagnostic[:80]!r}")
+    if caught != [0.95, None]:
+        problems.append(f"_validate_cached passed {caught}, expected [0.95, None] (v3 then v2)")
+    if problems:
+        return Result(name, "fail", "; ".join(problems[:3]))
+    return Result(name, "pass", "v3's gate refuses 0.80x and keeps 1.30x of the program before the rewrite, "
+                  "timed paired against the text the patch applies to; v2 still uses the start-up time")
+
+
 _CHECKS: List[Tuple[str, Callable[[Path], Result]]] = [
     ("impact", check_impact_ranking),
     ("min-impact", check_min_impact),
@@ -3921,6 +4010,7 @@ _CHECKS: List[Tuple[str, Callable[[Path], Result]]] = [
     ("request-log", check_request_log),
     ("exposed-repair", check_exposed_repair),
     ("shipped-run", check_shipped_run),
+    ("paired-perf", check_paired_perf),
 ]
 
 

@@ -40,7 +40,7 @@ from .equivalence import compare_outputs
 from .patching import _apply, _compile, _compile_variant
 from .schedules import (DEFAULT_REPEATS, DEFAULT_SCHEDULES, DEFAULT_THREADS,
                         stress_schedules, with_runtime_schedule)
-from .timing import _measure_speedup, _run_timed
+from .timing import SPEED_THRESHOLD_KEY, _measure_speedup, _run_timed, measure_marginal
 from .toolchain import _find_clangpp, uses_omp_runtime
 from .tsan import _is_omp_barrier_false_positive, _tsan
 
@@ -85,6 +85,7 @@ def validate(
     discopop_dir: Optional[str] = None,
     dep_region: Optional[Tuple[int, int, int]] = None,
     timing_flags: Optional[List[str]] = None,
+    paired_threshold: Optional[float] = None,
 ) -> ValidationResult:
     """Run the quality-gate stages. Return the first failure or success.
 
@@ -107,9 +108,13 @@ def validate(
 
     - performance (when `require_speedup` and the diff adds a `#pragma omp`):
       interleaved A/B on ONE binary, OMP_NUM_THREADS=1 against unrestricted;
-      the median ratio must reach `min_speedup`× AND — when `reference_time` is
-      given — the parallel run must not be slower than the ORIGINAL program
-      (guards against a rewrite whose own single-threaded build is
+      the median ratio must reach `min_speedup`× AND the program must not be slower than
+      before.  With `paired_threshold` (D40.1, agent v3.1) that second half is D40's
+      measurement: the patched program against the text the patch applies to — the program
+      before this rewrite — interleaved and paired, kept at or above the run's noise threshold.
+      Without it (v2), the parallel run against `reference_time`, the ORIGINAL's time taken at
+      start-up — one run against another minutes apart, the unpaired method Fix 89 removed
+      from Settle (guards against a rewrite whose own single-threaded build is
       overhead-slowed making the ratio look flattering).
     """
     if mode not in ("safety", "full"):
@@ -394,7 +399,33 @@ def validate(
                     measured_speedup=measured,
                     skipped_stages=skipped_stages,
                 )
-            if reference_time is not None and par_t > reference_time:
+            if paired_threshold is not None:
+                ok_p, ratio, p_diag = measure_marginal(
+                    Path(source_file).read_text(), patched.read_text(), source_file, binary_args,
+                    extra_flags=list(timing_flags) if timing_flags else None)
+                if not ok_p:
+                    crashed = "non-zero exit (-" in p_diag or "signal" in p_diag.lower()
+                    return ValidationResult(
+                        passed=False, stage="performance",
+                        diagnostic=("the program CRASHED at the timing size, which the correctness "
+                                    "checks never reach: " if crashed else
+                                    "the paired timing against the program before this rewrite failed: ")
+                        + p_diag[:400],
+                        measured_speedup=measured, skipped_stages=skipped_stages)
+                if ratio < paired_threshold:
+                    return ValidationResult(
+                        passed=False, stage="performance",
+                        diagnostic=(
+                            f"Net regression: the program with this rewrite runs at {ratio:.2f}x "
+                            f"the speed of the program before it (the two timed in turn, paired; "
+                            f"kept at or above {paired_threshold:.2f}x). The {measured:.2f}x scaling "
+                            f"is real but starts from a slower baseline, so the user ends up with "
+                            f"a slower program."
+                        ),
+                        measured_speedup=measured,
+                        skipped_stages=skipped_stages,
+                    )
+            elif reference_time is not None and par_t > reference_time:
                 return ValidationResult(
                     passed=False, stage="performance",
                     diagnostic=(
@@ -494,6 +525,11 @@ def _validate_cached(
             stress=getattr(args, "schedule_stress", True),
             stress_threads=tuple(getattr(args, "stress_threads", None) or ())
             or None,
+            # D40.1: v3's gate judges "not slower" as D40 does, paired against the program
+            # before the rewrite; v2 (--no-judge-as-shipped) keeps the start-up reference time.
+            paired_threshold=(float(cache[SPEED_THRESHOLD_KEY])
+                              if getattr(args, "judge_as_shipped", False) and args.require_speedup
+                              and SPEED_THRESHOLD_KEY in cache else None),
         )
 
     res = _run(False)
