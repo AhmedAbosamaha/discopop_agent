@@ -50,6 +50,19 @@ Status: done
 | `e1c_race_check` | [`E01c_clean_three_way/checks/e1c_race_check/`](E01c_clean_three_way/checks/e1c_race_check/) | race_check.py (the gate's TSan + schedule matrix, archer, server, no model) over every trial of the model alone (bare_llm, mirror prompt) in e1c_r_1..4 — what makes its FASTER count race-free (D35 read-out, H13) | valid | 0 |  |
 | `e1c_ad_race_check` | [`E01c_clean_three_way/checks/e1c_ad_race_check/`](E01c_clean_three_way/checks/e1c_ad_race_check/) | race_check.py over the model alone (bare_llm) in E1c's controls, classes A (e1c_a) and D (e1c_d) | valid | 0 |  |
 
+## [E1c's agent arm rerun on agent v3.1 — the three-way main comparison on the final agent](E01c_v31_rerun/)
+
+Status: running
+
+| run | where | what it is | status | trials | outcomes |
+|---|---|---|---|---:|---|
+| `e1c31_r_1` | not archived yet | E1c rerun on agent v3.1 (lane 0.0): s112 s121 s1213 s127 s211 x default, Haiku x5, threads 6,12, repeats 5 | running |  |  |
+| `e1c31_r_2` | not archived yet | E1c rerun on agent v3.1 (lane 0.1): s212 s241 s243 s244 s252 x default, Haiku x5, threads 6,12, repeats 5 | running |  |  |
+| `e1c31_r_3` | not archived yet | E1c rerun on agent v3.1 (lane 1.0): s254 s255 s281 s291 x default, Haiku x5, threads 6,12, repeats 5 | running |  |  |
+| `e1c31_r_4` | not archived yet | E1c rerun on agent v3.1 (lane 1.1): s292 s293 s331 s341 x default, Haiku x5, threads 6,12, repeats 5 | running |  |  |
+| `e1c31_a` | not archived yet | E1c rerun on agent v3.1, class A (no-harm): s000 vpvtv s313 x default x1 (s313's harness-edit trial is repeated here) | running |  |  |
+| `e1c31_d` | not archived yet | E1c rerun on agent v3.1, class D (must-decline): s321 s322 s323 s3112 x default x3 | running |  |  |
+
 ## [E2 — evidence, feedback and model strength](E02_evidence_feedback_model/REPORT.md)
 
 Status: running
