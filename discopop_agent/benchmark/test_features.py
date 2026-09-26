@@ -4141,6 +4141,89 @@ def check_requeue(work: Path) -> Result:
                   "a safe one is deferred to Phase B; --no-requeue-rejected defers without the pre-check (v3)")
 
 
+_B8_HEADER = """#include <stdio.h>
+#define N 4000
+static double a[N], b[N], c[N], d[N], e[N];
+static int setup(void)
+{
+    for (int i = 0; i < N; i++) { a[i] = 0.5 + i % 7; b[i] = 1.0 + i % 5; c[i] = 0.25; d[i] = 0.5; e[i] = 0.75; }
+    return 0;
+}
+static void report(void)
+{
+    double s = 0.0;
+    for (int i = 0; i < N; i++) s += a[i] + b[i];
+    printf("%.6f\\n", s);
+}
+"""
+_B8_KERNEL = """#include "b8/h.h"
+static void kernel(int reps)
+{
+    for (int nl = 0; nl < reps; nl++) {
+        for (int i = 1; i < N - 1; i++) {
+            a[i] = b[i - 1] + c[i] * d[i];
+            b[i] = b[i + 1] - e[i] * d[i];
+        }
+    }
+}
+int main(void) { if (setup()) return 1; kernel(3); report(); return 0; }
+"""
+
+
+def check_b8_outside_root(work: Path) -> Result:
+    """DiscoPoP bug B8, fixed 26 Sep in the profiler: a call into a function defined in the translation
+    unit but OUTSIDE the project root (not instrumented) used to enter the callee's call state for good —
+    no instrumented exit left it — so every later access, the kernel's included, carried the callee's call
+    path; the explorer then placed none of the kernel's dependences in its loop and reported TSVC s211's
+    recurrence as Do-All.  Here `setup` lives in a header in a directory beside the work directory
+    (reached through CPATH, as packaging v4's harness): the kernel's dependence on `b` must be recorded
+    under the kernel's call path, and neither kernel loop may be Do-All."""
+    if not Path(_venv_bin("discopop_cxx")).exists():
+        return Result("b8 outside root", "skip", "DiscoPoP is not installed in this venv")
+    name = "b8 outside root"
+    base = work / "b8_outside_root"
+    shutil.rmtree(base, ignore_errors=True)
+    inc = base / "include" / "b8"
+    d = base / "pkg"
+    inc.mkdir(parents=True)
+    d.mkdir(parents=True)
+    (inc / "h.h").write_text(_B8_HEADER)
+    (d / "k.c").write_text(_B8_KERNEL)
+    saved = os.environ.get("CPATH")
+    os.environ["CPATH"] = str(base / "include")
+    try:
+        ok, err = _profile(d, "k.c", hotspots=False)
+    finally:
+        if saved is None:
+            os.environ.pop("CPATH", None)
+        else:
+            os.environ["CPATH"] = saved
+    if not ok:
+        return Result(name, "fail", f"profile: {err}")
+    prof = d / ".discopop" / "profiler"
+    states = {}
+    for line in (prof / "stateID_to_callpath_mapping.txt").read_text().splitlines():
+        parts = line.split()
+        if len(parts) >= 2 and not line.startswith("#"):
+            states[parts[0]] = parts[1]
+    b_states = set(re.findall(r"@(\d+)\|GEPRESULT_[^ ]*\bb\b|RAW \d+@(\d+)\|GEPRESULT__ZL1b",
+                              (prof / "dynamic_dependencies.txt").read_text()))
+    paths = {states.get(x or y, "?") for x, y in b_states}
+    problems: List[str] = []
+    if not paths or any("setup" in p_ for p_ in paths) or not any("kernel" in p_ for p_ in paths):
+        problems.append(f"the kernel's dependences on b are recorded under {sorted(paths)[:3]}")
+    pats = json.loads((d / ".discopop" / "explorer" / "patterns.json").read_text()).get("patterns", {})
+    kernel_lines = {i + 1 for i, l in enumerate(_B8_KERNEL.splitlines()) if l.strip().startswith("for (int")}
+    doall = {int(str(x.get("start_line", "0:0")).split(":")[1]) for x in pats.get("do_all", [])
+             if str(x.get("applicable_pattern")) == "True"}
+    if kernel_lines & doall:
+        problems.append(f"the recurrence's loops at k.c {sorted(kernel_lines & doall)} are reported Do-All")
+    if problems:
+        return Result(name, "fail", "; ".join(problems))
+    return Result(name, "pass", "a function outside the project root no longer captures the call state: the kernel's "
+                  "dependence on b carries the kernel's call path, and the recurrence is not Do-All")
+
+
 _CHECKS: List[Tuple[str, Callable[[Path], Result]]] = [
     ("impact", check_impact_ranking),
     ("min-impact", check_min_impact),
@@ -4197,6 +4280,7 @@ _CHECKS: List[Tuple[str, Callable[[Path], Result]]] = [
     ("shipped-run", check_shipped_run),
     ("paired-perf", check_paired_perf),
     ("requeue", check_requeue),
+    ("b8-outside-root", check_b8_outside_root),
 ]
 
 

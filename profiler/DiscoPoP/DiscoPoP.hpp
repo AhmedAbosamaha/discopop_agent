@@ -238,6 +238,9 @@ public:
   bool runOnModule(Module &M, ModuleAnalysisManager &MAM);
 
   bool runOnFunction(Function &F, ModuleAnalysisManager &MAM);
+  // Whether runOnFunction instruments F (B8): a call into a function it does not instrument
+  // must not enter the callee's call state, since no instrumented exit will ever leave it.
+  bool isInstrumentedFunction(Function &F);
 
   void runOnBasicBlock(BasicBlock &BB);
 

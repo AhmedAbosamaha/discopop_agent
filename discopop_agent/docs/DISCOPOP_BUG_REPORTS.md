@@ -39,8 +39,33 @@ LLVM 19 (macOS) and LLVM 20 (Linux).
 ## B8 — a true recurrence reported as Do-All when the program spans two files (explorer, call-path states)
 
 **Found** 25 Sep 2026 (T0.15, `evaluation/agent/tools/harness_equivalence.py`), while moving a benchmark's
-measurement code into a second file. **Status:** open — not yet fixed; the campaign keeps its benchmarks
-in one file until it is (D39).
+measurement code into a second file. **Status:** FIXED 26 Sep 2026 in the profiler (root cause below); the
+explorer analysis in the original note was a symptom.
+
+**Root cause (26 Sep, profiler — the call-path state machine).** `main` calls a harness function
+(`pb_setup`) defined in the same translation unit but in a header OUTSIDE `DP_PROJECT_ROOT_DIR`, so
+`runOnFunction` does not instrument it. The call site IS instrumented (`__dp_call`), and the pass passed
+`isLibraryFunction = F->isDeclaration()` — false for a definition — so the runtime entered the callee's
+call state (`update_callstate_from_call`). The callee has no instrumented exit, so that state was never
+left: every later access — the kernel's included — was recorded under `main-->call-->pb_setup`
+(`stateID_to_callpath_mapping.txt`, state 37 on the `b` recurrence of s211), the runtime printed "No
+transition found … State might be incorrect from here on!", and the explorer, matching call paths
+function by function (`TaskGraph.__assign_state_ids`), could place none of those dependences inside the
+kernel's loop contexts: the loop's iteration contexts carried only the loop counters' dependences, so it
+was reported Do-All. Reproduced 26 Sep with s211 in packaging v4 (harness header via CPATH outside the
+package): both kernel loops Do-All in every draw; the same code in v3: neither.
+
+**Fix.** One decision for "does this pass instrument F?" (`DiscoPoP::isInstrumentedFunction`: a
+definition inside the project root, not one of the helper names, with a file id), used by
+`runOnFunction` and at every call site: `isLibraryFunction = F->isDeclaration() ||
+!isInstrumentedFunction(*F)` (`llvm_hooks/runOnBasicBlock.cpp`). A call into a function this pass does not
+instrument no longer enters its call state — exactly as for a library function.
+
+**Why the first note missed it.** It said every function lay inside the project root and was instrumented.
+It did not: `DP_PROJECT_ROOT_DIR` defaults to the directory `discopop_cxx` runs in (the trial's working
+copy, `CXX_wrapper.sh`), and v4's harness headers live in `prepared/_harness/`, outside it — so the
+harness's functions were compiled into the unit but never instrumented. Any program that calls a function
+defined outside the project root (a header-only library in an include directory, say) was exposed.
 
 **Reproducer:** TSVC `s211` (`a[i] = b[i-1] + c[i]*d[i]; b[i] = b[i+1] - e[i]*d[i];` inside a repetition
 loop). Profiled as ONE file: no pattern on either loop (5 of 5 explorer draws on macOS/LLVM 19, 3 of 3 on
@@ -54,7 +79,7 @@ from the `b[i]` write into the `b[i-1]` read in both layouts (same instruction p
 state numbers); file ids are consistent across `FileMapping.txt`, `instructionID_to_lineID_mapping.txt`,
 `Data.xml` and the loop markers; the allocation site (moved into instrumented code, same result).
 
-**Where:** `new_do_all_detector.identify_simple_doall_and_reduction` blocks a loop only for a dependence
+**Where (the original analysis — the symptom, not the cause):** `new_do_all_detector.identify_simple_doall_and_reduction` blocks a loop only for a dependence
 between nodes of two DIFFERENT iteration contexts of that loop, and the iteration contexts come from the
 task graph's assignment of call-path states (`TaskGraph.__assign_state_ids`, `__duplicate_loop_iterations`).
 With a second file the recurrence's states are evidently not placed in the loop's iteration contexts — the

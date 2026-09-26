@@ -12,14 +12,18 @@
 
 #include "../DiscoPoP.hpp"
 
-bool DiscoPoP::runOnFunction(Function &F, ModuleAnalysisManager &MAM) {
-  if (DP_DEBUG) {
-    errs() << "pass DiscoPoP: run pass on function " << F.getName().str() << "\n";
+// The one decision of which functions this pass instruments.  runOnFunction applies it, and
+// runOnBasicBlock asks it about the callee of every call it instruments (B8): a callee this pass
+// does not instrument has no instrumented exit, so a call-state transition into it is never
+// undone and every later access is recorded under the callee's call path.  Found with a
+// function defined in the translation unit but in a header outside DP_PROJECT_ROOT_DIR; only
+// declarations were treated as library functions before.
+bool DiscoPoP::isInstrumentedFunction(Function &F) {
+  if (F.isDeclaration()) {
+    return false;
   }
-
   // avoid instrumenting functions which are defined outside the scope of the
   // project
-
   std::string dp_project_dir(getenv("DP_PROJECT_ROOT_DIR"));
 
   SmallVector<std::pair<unsigned, MDNode *>, 4> MDs;
@@ -68,6 +72,22 @@ bool DiscoPoP::runOnFunction(Function &F, ModuleAnalysisManager &MAM) {
     return false;
   }
   if (funcName.find("pthread_") != string::npos) {
+    return false;
+  }
+
+  // only instrument functions belonging to project source files
+  int32_t fid = 0;
+  determineFileID(F, fid);
+  return fid != 0;
+}
+
+bool DiscoPoP::runOnFunction(Function &F, ModuleAnalysisManager &MAM) {
+  if (DP_DEBUG) {
+    errs() << "pass DiscoPoP: run pass on function " << F.getName().str() << "\n";
+  }
+
+  // the same decision the call sites use (B8): see isInstrumentedFunction
+  if (!isInstrumentedFunction(F)) {
     return false;
   }
 

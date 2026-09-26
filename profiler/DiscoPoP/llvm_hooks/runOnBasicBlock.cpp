@@ -240,7 +240,11 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
         IRBuilder<> IRBCall(&*BI);
         int8_t F_is_library_function = 0;
         if(F){
-          F_is_library_function = (int8_t) F->isDeclaration();
+          // B8: a callee this pass does not instrument (a declaration, or a definition outside
+          // DP_PROJECT_ROOT_DIR) has no instrumented exit, so the call must not enter its call
+          // state — it would never be left, and every later access would carry the callee's
+          // call path.
+          F_is_library_function = (int8_t) (F->isDeclaration() || !isInstrumentedFunction(*F));
         }
         IRBCall.CreateCall(DpCallOrInvoke, {ConstantInt::get(Int32, llvm_ir_instruction_id), ConstantInt::get(Int8, F_is_library_function)});
         if (DP_DEBUG) {
