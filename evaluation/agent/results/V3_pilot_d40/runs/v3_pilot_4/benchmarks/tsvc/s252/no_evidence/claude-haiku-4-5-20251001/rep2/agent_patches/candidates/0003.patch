@@ -1,0 +1,10 @@
+--- s252.c
++++ s252.c
+@@ -141,6 +141,7 @@
+ 
+         // Accumulate into a[i] = s[i] + s[i-1] (sequential scan)
+         a[0] = s[0];
++        #pragma omp parallel for shared(s) 
+         for (int i = 1; i < LEN_1D; i++) {
+             a[i] = s[i] + s[i-1];
+         }

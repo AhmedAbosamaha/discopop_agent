@@ -1,0 +1,10 @@
+--- s252.c
++++ s252.c
+@@ -140,6 +140,7 @@
+             temp[i] = b[i] * c[i];
+         }
+         t = (real_t) 0.;
++        #pragma omp parallel for shared(t) 
+         for (int i = 0; i < LEN_1D; i++) {
+             a[i] = temp[i] + t;
+             t = temp[i];

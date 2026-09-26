@@ -1,0 +1,10 @@
+--- s252.c
++++ s252.c
+@@ -133,6 +133,7 @@
+     real_t t, s;
+     for (int nl = 0; nl < R; nl++) {
+         t = (real_t) 0.;
++        #pragma omp parallel for private(s) 
+         for (int i = 0; i < LEN_1D; i++) {
+             s = b[i] * c[i];
+             a[i] = s + ((i == 0) ? (real_t)0. : b[i-1] * c[i-1]);

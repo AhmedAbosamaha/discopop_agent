@@ -1,0 +1,35 @@
+--- original.c
++++ final.c
+@@ -130,16 +130,27 @@
+ 
+ static real_t kernel_s252(void)
+ {
+-    real_t t, s;
++    real_t *s = (real_t*)malloc(LEN_1D * sizeof(real_t));
++    if (!s) return (real_t)0;
++
+     for (int nl = 0; nl < R; nl++) {
+-        t = (real_t) 0.;
++        // Compute intermediate values s[i] = b[i] * c[i] (no loop-carried dependence)
++        #pragma omp parallel for shared(s) 
+         for (int i = 0; i < LEN_1D; i++) {
+-            s = b[i] * c[i];
+-            a[i] = s + t;
+-            t = s;
++            s[i] = b[i] * c[i];
+         }
++
++        // Accumulate into a[i] = s[i] + s[i-1] (sequential scan)
++        a[0] = s[0];
++        #pragma omp parallel for shared(s) 
++        for (int i = 1; i < LEN_1D; i++) {
++            a[i] = s[i] + s[i-1];
++        }
++
+         pb_mix(nl);
+     }
++
++    free(s);
+     return (real_t)0;
+ }
+ 

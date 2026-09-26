@@ -1,0 +1,23 @@
+--- s281.c
++++ s281.c
+@@ -132,11 +132,19 @@
+ {
+     real_t x;
+     for (int nl = 0; nl < R; nl++) {
+-        for (int i = 0; i < LEN_1D; i++) {
++        real_t *a_snap = (real_t*)malloc((size_t)LEN_1D * sizeof(real_t));
++        memcpy(a_snap, a, (size_t)LEN_1D * sizeof(real_t));
++        for (int i = 0; i < (LEN_1D+1)/2; i++) {
++            x = a_snap[LEN_1D-i-1] + b[i] * c[i];
++            a[i] = x-(real_t)1.0;
++            b[i] = x;
++        }
++        for (int i = (LEN_1D+1)/2; i < LEN_1D; i++) {
+             x = a[LEN_1D-i-1] + b[i] * c[i];
+             a[i] = x-(real_t)1.0;
+             b[i] = x;
+         }
++        free(a_snap);
+         pb_mix(nl);
+     }
+     return (real_t)0;

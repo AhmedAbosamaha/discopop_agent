@@ -1,0 +1,10 @@
+--- s252.c
++++ s252.c
+@@ -144,6 +144,7 @@
+ 
+         /* Compute a values using buffered s values */
+         t = (real_t) 0.;
++        #pragma omp parallel for shared(t,s_vals) 
+         for (int i = 0; i < LEN_1D; i++) {
+             a[i] = s_vals[i] + t;
+             t = s_vals[i];
