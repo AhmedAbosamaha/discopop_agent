@@ -1,0 +1,22 @@
+--- s212.c
++++ s212.c
+@@ -135,16 +135,19 @@
+ 
+     for (int nl = 0; nl < R; nl++) {
+         // Phase 1: Save original values of a before modification
++        #pragma omp parallel for shared(a_orig) 
+         for (int i = 0; i < LEN_1D; i++) {
+             a_orig[i] = a[i];
+         }
+ 
+         // Phase 2: Multiply phase (independent across iterations)
++        #pragma omp parallel for 
+         for (int i = 0; i < LEN_1D-1; i++) {
+             a[i] *= c[i];
+         }
+ 
+         // Phase 3: Add phase using original values (independent across iterations)
++        #pragma omp parallel for shared(a_orig) 
+         for (int i = 0; i < LEN_1D-1; i++) {
+             b[i] += a_orig[i + 1] * d[i];
+         }

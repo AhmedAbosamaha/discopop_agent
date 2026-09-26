@@ -1,0 +1,10 @@
+--- s112.c
++++ s112.c
+@@ -138,6 +138,7 @@
+         for (int i = LEN_1D - 2; i >= 0; i--) {
+             temp[i+1] = a[i] + b[i];
+         }
++        #pragma omp parallel for shared(temp) 
+         for (int i = 1; i < LEN_1D; i++) {
+             a[i] = temp[i];
+         }

@@ -1,0 +1,10 @@
+--- s244.c
++++ s244.c
+@@ -138,6 +138,7 @@
+         }
+ 
+         /* Compute using saved initial a[i+1] values, removing RAW dependence */
++        #pragma omp parallel for shared(a_init) 
+         for (int i = 0; i < LEN_1D-1; ++i) {
+             a[i] = b[i] + c[i] * d[i];
+             b[i] = c[i] + b[i];

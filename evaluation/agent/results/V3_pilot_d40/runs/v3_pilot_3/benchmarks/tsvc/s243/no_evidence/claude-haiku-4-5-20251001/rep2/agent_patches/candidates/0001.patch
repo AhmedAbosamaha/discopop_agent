@@ -1,0 +1,10 @@
+--- s243.c
++++ s243.c
+@@ -135,6 +135,7 @@
+ 
+     for (int nl = 0; nl < R; nl++) {
+         // Save original a values before the inner loop to break cross-iteration dependence
++        #pragma omp parallel for shared(a_orig) 
+         for (int j = 0; j < LEN_1D; j++) {
+             a_orig[j] = a[j];
+         }

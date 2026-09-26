@@ -2063,6 +2063,22 @@ Added 2026-09-15 (see §6 rows of that date):
 
 ## 7. Run log
 
+### `v3_pilot_1`, `v3_pilot_2`, `v3_pilot_3`, `v3_pilot_4` — 2026-09-25/26, server, **the V3 pilot: agent v3 (D40) on the ten class-R loops where v2 varied** (60 Haiku trials)
+
+- **Setup.** Agent `701bf895` (v3, `--judge-as-shipped`); `s112`, `s121`, `s1213`, `s211`, `s212`, `s241`, `s243`, `s244`, `s252`, `s281` × `default`, `no_evidence` × Haiku × 3; threads 6/12, repeats 5; lanes 0.0/0.1/1.0/1.1. 25 Sep 22:42 UTC → paused ≈ 23:50 UTC at the author's request (usage limit; 41 of 60 finished, the in-flight trials lost) → resumed 26 Sep 05:33 UTC under the same run ids at `3c0ea170` (agent and harness code byte-identical to `701bf895`; the harness skips finished trials; the three interrupted trial folders moved to the server's `runs/_interrupted_2026-09-26/` and rerun from scratch) → 07:50 UTC. Pre-registered baseline (record §6, 26 Sep): v2 on the same loops, `default` 21 of 50 (E1c), `no_evidence` 25 of 50 (E2), recomputed from the archive before the read-out.
+- **Result — both v3 arms above their v2 baseline, as expected** (descriptive, a pilot; FASTER counts as race-free for agent arms, which passed TSan):
+
+  | arm | v2 (baseline) | v3 (pilot) | model calls per trial v2 → v3 | output tokens per trial (mean) v2 → v3 |
+  |---|---:|---:|---:|---:|
+  | `default` | 21/50 = 42 % (Wilson 29–56 %) | **22/30 = 73 %** (56–86 %) | 1.70 → 2.73 | 32.9k → 45.4k |
+  | `no_evidence` | 25/50 = 50 % (37–63 %) | **26/30 = 87 %** (70–95 %) | 1.20 → 2.20 | 13.8k → 27.2k |
+
+  No BROKEN or unusable program in either version. Median agent time per trial 8.3 → 8.7 min (`default`), 5.1 → 8.4 min (`no_evidence`).
+- **Mechanism (`tools/failure_funnel.py`, `analysis/why_trials_fail_v3.md` vs `why_trials_fail_v2_baseline.md`).** v2 lost 28 of its 100 trials to Settle (the finished program slower than the original, median 0.69×) and 14 more to Phase B dropping every pragma; v3 lost 1 to Settle and none to Phase B. D40 returned 17 (`default`) and 15 (`no_evidence`) `not_faster` and 7 / 2 `pattern_broken` verdicts inside the model's budget, and the retries recovered most of them: the unused budget of E2 (why_trials_fail.md, 25 Sep) is now used. What still stops trials: 3 `default` trials ended on a D40 revert (s243 ×1, s244 ×2); 8 trials (5 / 3) shipped a parallel program the harness measured below 1.1× — D40 keeps at Settle's noise threshold (≈ 0.99×), the harness calls FASTER at 1.1×.
+- **Evidence (the pilot's second question).** `no_evidence` still leads `default` (26 vs 22), and `default`'s rewrites broke DiscoPoP's pattern more often (7 vs 2 `pattern_broken`); per loop the arms differ most on `s243` (0/3 vs 3/3). On TSVC, v3 does not make the evidence help — consistent with the diagnosis that the deciding dependences there are in the loop text.
+- **Caveats.** 3 trials per cell against 5 in the baseline; the baseline ran on other days under v2 (same machine, same lanes, same sizes); per-loop numbers at N = 3 are not interpretable one by one.
+- **What it decides.** The registered rule (§6, 26 Sep): v3 better → E1c's `default` (+ the A/D controls) and E2's agent arms rerun under v3. Per D34 as amended, the author decides arm by arm; open with it: D40.1/D41 (approved, not built — D41 changes Phase B in `default`) before or after the reruns, and the benchmark review's argument against rerunning E2 A+B (its E2-B1 is where RQ4 can move). v3 costs about 1.4× (`default`) to 2× (`no_evidence`) the model tokens per trial of v2.
+
 ### `t0_11_probe_a`, `t0_11_probe_b`, `t0_11_probe_c` — 2026-09-25, server, **T0.11 on TSVC's eight indirect-addressing loops** (no model)
 
 - **Why.** The author's decision 8: loops whose iterations conflict or not depending on the VALUES of TSVC's index array `ip` (a permutation within blocks of five) — DiscoPoP observes those values; a model can only derive them from the initialization it may read. Pre-registered expectation (record §6, 24 Sep): DiscoPoP alone parallelizes most of them (class A) — a place where DiscoPoP knows what the model can only guess, not a class-R tier.

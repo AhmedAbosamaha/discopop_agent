@@ -1,0 +1,10 @@
+--- s112.c
++++ s112.c
+@@ -137,6 +137,7 @@
+         for (int i = 0; i < LEN_1D - 1; i++) {
+             shifted[i] = a[i] + b[i];
+         }
++        #pragma omp parallel for shared(shifted) 
+         for (int i = 0; i < LEN_1D - 1; i++) {
+             a[i+1] = shifted[i];
+         }

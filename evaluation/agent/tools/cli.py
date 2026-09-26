@@ -1718,14 +1718,23 @@ def _resolve_runs(store: RunStore, spec: Optional[str]) -> List[str]:
 
 
 def cmd_plots(a: argparse.Namespace) -> int:
-    """Figures + CSV for one run (into the run) or several runs combined (into agent/analysis/<name>)."""
+    """Figures + CSV for one run (into the run) or several runs combined (into agent/analysis/<name>).
+
+    A run may be named with only some of its arms, `RUN:ARM+ARM` — to borrow another
+    experiment's baselines (E1c's `discopop_gate`, `bare_llm`) without its agent trials."""
     store = RunStore(AGENT_DIR, "agent")
-    ids = _resolve_runs(store, a.runs)
+    specs = [x.partition(":") for x in (a.runs or "").split(",") if x]
+    ids = _resolve_runs(store, ",".join(r for r, _, _ in specs) or None)
     if not ids:
         sys.exit("no runs")
     out = store.run_dir(ids[0]) / "figures" if len(ids) == 1 and not a.name \
         else AGENT_DIR / "analysis" / (a.name or "_".join(ids))
-    trials = _trials_for_runs(store, ids)
+    only = {r: set(arms.split("+")) for r, _, arms in specs if arms}
+    trials = [t for rid in ids for t in _trials_for_runs(store, [rid])
+              if rid not in only or t.get("arm") in only[rid]]
+    if a.benchmarks:
+        wanted = set(a.benchmarks.split(","))
+        trials = [t for t in trials if str(t.get("benchmark", "")).split("/")[-1] in wanted]
     if a.suite:
         # the primary set of D30 (`tsvc`), drawn beside the registered set — never instead of it
         trials = [t for t in trials if str(t.get("benchmark", "")).startswith(a.suite + "/")]
@@ -2102,6 +2111,7 @@ def main() -> None:
     sp.add_argument("--runs", default=None, help="run id, or comma-separated ids to combine (default: latest)")
     sp.add_argument("--name", default=None, help="output folder under agent/analysis/ when combining")
     sp.add_argument("--suite", default=None, help="only benchmarks of this suite (e.g. tsvc)")
+    sp.add_argument("--benchmarks", default=None, help="only these benchmarks, e.g. s112,s121 (short names)")
     sp.set_defaults(func=cmd_plots)
 
     sp = sub.add_parser("rescore", help="re-apply the scaffolding check and outcome rules to a finished run")

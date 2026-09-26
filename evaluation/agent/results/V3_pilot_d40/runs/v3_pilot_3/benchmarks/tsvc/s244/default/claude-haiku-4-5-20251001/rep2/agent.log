@@ -1,0 +1,187 @@
+
+============================================================
+  DiscoPoP Agentic Controller
+============================================================
+  Source         : s244.c
+  DiscoPoP dir   : .discopop
+  Model          : claude-haiku-4-5-20251001
+  Budget         : 3 LLM retries/region (+2 free build fixes)
+  λ penalty      : 1.0
+  Min workload   : 0.0
+  Restruct. depth: 0 (Tier-2 allowed at depth 0–0)
+  Quality gate   : Tier-1 = all but speed, no escalation; Tier-2 = full
+  TSan           : barrier-aware (archer: /usr/lib/llvm-20/lib/libarcher.so)
+  Speedup gate   : require ≥ 1.1× measured
+  Dry run        : False
+  LLM mode       : claude-haiku-4-5-20251001
+  Edit mode      : direct
+  Re-profiling   : full (instrument + run + explore) after every kept rewrite
+  Explorer       : one attempt may take 60 s, then the draw is repeated (random stall, L5)
+  Pragmas        : DiscoPoP writes them in Phase B
+============================================================
+
+  [ok] Captured reference output on 2 inputs (69 bytes, 1183.7 ms baseline) for the correctness/performance gates.
+
+  [ok] Numerical noise floor 0 — 6 build variants agreed exactly; output is compared byte-for-byte.
+
+  Hotspots       : measured per-region runtimes are available — 16 region(s) measured, 5.3 ms total, ranking by predicted time saved at 48 threads
+
+  Baseline       : DiscoPoP proposes 0 applicable pattern(s) unaided; 0 of them produce a usable pragma
+                   → the run beats DiscoPoP by ending with more than 0
+
+  Initial candidates
+Region ID    Type           Saves    % run    Hot  Tier  Depth  Name
+--------------------------------------------------------------------------------------
+  1:81       loop          4.0 ms    76.7%    YES     2      0  lines 133–140
+  1:84       loop          4.0 ms    76.6%    YES     2      0  lines 134–138
+  1:79       function      4.0 ms    76.7%    YES     2      0  kernel_s244
+
+============================================================
+  FLOOR — DiscoPoP's own program, as the DiscoPoP-alone arm delivers it (D32)
+============================================================
+  [floor] DiscoPoP alone keeps nothing — the floor is the original program (D32)
+
+============================================================
+  PHASE A — restructure  (the source stays pragma-free)
+============================================================
+
+┌─ [depth=0] loop 1:81 (lines 133–140)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Stage 'correctness' failed: Program output changed — the patched program is NOT semantically equivalent to the original. output differs and no numerical slack is in effect first difference at line 2:   expected: pb_sum 210729.14
+│  [Tier-2] Assembling evidence (budget remaining: 1)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Original backed up → s244.c.original
+│  [Tier-2] Applied to s244.c
+│  [Tier-2] Re-profiling to refresh data and discover new candidates...
+      [explorer] attempt 1 stalled (STALLED: no result after 60 s) — retrying on the same profile
+      [explorer] attempt 2 stalled (STALLED: no result after 60 s) — retrying on the same profile
+      [explorer] succeeded after 3 attempt(s), 2 of them stalled
+│  [refresh] kind=full
+│  [Tier-2] Re-measured runtimes: 20 region(s), 10.3 ms total
+│  [Phase-A] Asking DiscoPoP what it now finds in the rewritten lines...
+│  [Phase-A] D40 — judging it as it will ship: DiscoPoP's pragmas for the exposed loops through the safety gate, then the program with them against the program before the rewrite (paired)
+│  [Phase-A] timing noise on this machine: 0.999 → keep at or above 0.989
+│  [Phase-A] D40: pragma for lines 137–139 passes the safety gate
+│  [Phase-A] D40: pragma for lines 140–142 passes the safety gate
+│  [Phase-A] D40: pragma for lines 145–147 passes the safety gate
+│  [Phase-A] D40: pragma for lines 149–151 passes the safety gate
+│  [Phase-A] D40: pragma for lines 153–155 passes the safety gate
+│  [Phase-A] D40: the pragmas together passes the safety gate
+│  [Phase-A] D40 verdict: not_faster 0.41×
+│  [Tier-2] DiscoPoP parallelized it, but the program is not faster than before the rewrite — reverting (snapshot restore)
+└─ retry (budget remaining: 1)
+
+│  [Tier-2] Assembling evidence (budget remaining: 0)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Stage 'correctness' failed: Program output changed — the patched program is NOT semantically equivalent to the original. output differs and no numerical slack is in effect first difference at line 2:   expected: pb_sum 210729.14
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:84 (lines 134–138)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Applied to s244.c
+│  [Tier-2] Re-profiling to refresh data and discover new candidates...
+│  [refresh] kind=full
+│  [Tier-2] Re-measured runtimes: 17 region(s), 6.2 ms total
+│  [Phase-A] Asking DiscoPoP what it now finds in the rewritten lines...
+│  [Phase-A] D40 — judging it as it will ship: DiscoPoP's pragmas for the exposed loops through the safety gate, then the program with them against the program before the rewrite (paired)
+│  [Phase-A] D40: pragma for lines 136–138 passes the safety gate
+│  [Phase-A] D40: pragma for lines 139–143 fails at 'tsan'
+│  [Phase-A] D40 verdict: not_faster 0.50×
+│  [Tier-2] DiscoPoP parallelized it, but the program is not faster than before the rewrite — reverting (snapshot restore)
+└─ retry (budget remaining: 2)
+
+│  [Tier-2] Assembling evidence (budget remaining: 1)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Applied to s244.c
+│  [Tier-2] Re-profiling to refresh data and discover new candidates...
+│  [refresh] kind=full
+│  [Tier-2] Re-measured runtimes: 16 region(s), 5.5 ms total
+│  [Phase-A] Asking DiscoPoP what it now finds in the rewritten lines...
+│  [Phase-A] D40 — judging it as it will ship: DiscoPoP's pragmas for the exposed loops through the safety gate, then the program with them against the program before the rewrite (paired)
+│  [Phase-A] D40: pragma for lines 134–139 fails at 'tsan'
+│  [Phase-A] D40 verdict: pattern_broken
+│  [Tier-2] DiscoPoP found a pattern, but its pragma fails validation — reverting (snapshot restore)
+└─ retry (budget remaining: 1)
+
+│  [Tier-2] Assembling evidence (budget remaining: 0)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Applied to s244.c
+│  [Tier-2] Re-profiling to refresh data and discover new candidates...
+│  [refresh] kind=full
+│  [Tier-2] Re-measured runtimes: 16 region(s), 5.6 ms total
+│  [Phase-A] Asking DiscoPoP what it now finds in the rewritten lines...
+│  [Tier-2] DiscoPoP still finds no parallelism in the rewritten lines — reverting (snapshot restore)
+└─ retry (budget remaining: 0)
+
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] function 1:79 (lines 131–141)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Stage 'correctness' failed: Program output changed — the patched program is NOT semantically equivalent to the original. output differs and no numerical slack is in effect first difference at line 2:   expected: pb_sum 210729.14
+│  [Tier-2] Assembling evidence (budget remaining: 1)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Applied to s244.c
+│  [Tier-2] Re-profiling to refresh data and discover new candidates...
+│  [refresh] kind=full
+│  [Tier-2] Re-measured runtimes: 17 region(s), 6.4 ms total
+│  [Phase-A] Asking DiscoPoP what it now finds in the rewritten lines...
+│  [Phase-A] D40 — judging it as it will ship: DiscoPoP's pragmas for the exposed loops through the safety gate, then the program with them against the program before the rewrite (paired)
+│  [Phase-A] D40: pragma for lines 138–140 passes the safety gate
+│  [Phase-A] D40: pragma for lines 143–147 fails at 'tsan'
+│  [Phase-A] D40 verdict: not_faster 0.50×
+│  [Tier-2] DiscoPoP parallelized it, but the program is not faster than before the rewrite — reverting (snapshot restore)
+└─ retry (budget remaining: 1)
+
+│  [Tier-2] Assembling evidence (budget remaining: 0)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Applied to s244.c
+│  [Tier-2] Re-profiling to refresh data and discover new candidates...
+      [explorer] attempt 1 stalled (STALLED: no result after 60 s) — retrying on the same profile
+      [explorer] succeeded after 2 attempt(s), 1 of them stalled
+│  [refresh] kind=full
+│  [Tier-2] Re-measured runtimes: 16 region(s), 8.4 ms total
+│  [Phase-A] Asking DiscoPoP what it now finds in the rewritten lines...
+│  [Tier-2] DiscoPoP still finds no parallelism in the rewritten lines — reverting (snapshot restore)
+└─ retry (budget remaining: 0)
+
+└─ SKIPPED (budget exhausted)
+
+
+============================================================
+  PHASE B — annotate  (0 candidate pragma(s))
+============================================================
+
+  DiscoPoP proposes no applicable pattern for the final source.
+
+
+============================================================
+  SUMMARY: 0 rewrite(s) kept  |  0 pragma(s) applied  |  3 skipped
+  DiscoPoP unaided: 0 usable pragma(s) in this profile's draw  →  this run: 0   [MATCHED, informational]
+    ✗  1:81  [skipped]  depth=0
+    ✗  1:84  [skipped]  depth=0
+    ✗  1:79  [skipped]  depth=0
+
+  Results → .discopop/agent_patches/accepted.json
+============================================================
+

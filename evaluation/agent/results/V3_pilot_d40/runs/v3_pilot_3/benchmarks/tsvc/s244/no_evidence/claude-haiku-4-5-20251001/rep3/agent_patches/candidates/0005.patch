@@ -1,0 +1,10 @@
+--- s244.c
++++ s244.c
+@@ -133,6 +133,7 @@
+     real_t *a_old = (real_t*)malloc(LEN_1D * sizeof(real_t));
+     real_t *b_old = (real_t*)malloc(LEN_1D * sizeof(real_t));
+     real_t *a_extra = (real_t*)malloc(LEN_1D * sizeof(real_t));
++    #pragma omp parallel for shared(a_extra,a_old,b_old) 
+     for (int nl = 0; nl < R; nl++) {
+         memcpy(a_old, a, LEN_1D * sizeof(real_t));
+         memcpy(b_old, b, LEN_1D * sizeof(real_t));

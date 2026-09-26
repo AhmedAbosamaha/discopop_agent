@@ -1,0 +1,10 @@
+--- s211.c
++++ s211.c
+@@ -135,6 +135,7 @@
+         memcpy(b_snapshot, b, (size_t)LEN_1D * sizeof(real_t));
+ 
+         a[1] = b_snapshot[0] + c[1] * d[1];
++        #pragma omp parallel for shared(b_snapshot) 
+         for (int i = 1; i < LEN_1D-2; i++) {
+             b[i] = b_snapshot[i + 1] - e[i] * d[i];
+             a[i+1] = b[i] + c[i+1] * d[i+1];

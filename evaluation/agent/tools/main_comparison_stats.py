@@ -564,7 +564,9 @@ def to_markdown(res: Dict[str, Any]) -> str:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("runs", nargs="+")
+    ap.add_argument("runs", nargs="+", help="run ids; RUN:ARM+ARM keeps only those arms of a run "
+                    "(another experiment's baselines without its agent trials)")
+    ap.add_argument("--benchmarks", default=None, help="only these benchmarks, e.g. s112,s121 (short names)")
     ap.add_argument("--arm", default=None, help="agent arm to analyse (default: every non-baseline arm pooled)")
     ap.add_argument("--out", type=Path, default=None)
     ap.add_argument("--three-way", default=None, metavar="AGENT_ARM",
@@ -583,7 +585,10 @@ def main() -> int:
                          "same statistics as the registered set, never instead of it")
     a = ap.parse_args()
     trials: List[dict] = []
-    for run in a.runs:
+    wanted = set(a.benchmarks.split(",")) if a.benchmarks else None
+    for spec in a.runs:
+        run, _, arms = spec.partition(":")
+        keep = set(arms.split("+")) if arms else None
         # The working copy of a run if it is here, its tracked archive otherwise.
         import campaign
         root = next((d for d in (HERE.parent / "runs" / run, campaign.find_run(run)) if d and d.exists()), None)
@@ -592,6 +597,10 @@ def main() -> int:
         for p in sorted(root.glob("benchmarks/**/trial.json")):
             t = json.loads(p.read_text())
             t.setdefault("run_id", run)                 # a raw trial record does not name its run
+            if keep is not None and t.get("arm") not in keep:
+                continue
+            if wanted is not None and str(t.get("benchmark", "")).split("/")[-1] not in wanted:
+                continue
             if a.suite and not str(t.get("benchmark", "")).startswith(a.suite + "/"):
                 continue
             trials.append(t)

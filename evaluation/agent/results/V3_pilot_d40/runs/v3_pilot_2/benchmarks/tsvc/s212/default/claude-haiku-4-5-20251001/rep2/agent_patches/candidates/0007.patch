@@ -1,0 +1,10 @@
+--- s212.c
++++ s212.c
+@@ -135,6 +135,7 @@
+ 
+     for (int nl = 0; nl < R; nl++) {
+         // Capture current values of a before modification
++        #pragma omp parallel for shared(a_read) 
+         for (int i = 1; i < LEN_1D; i++) {
+             a_read[i] = a[i];
+         }

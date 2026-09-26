@@ -1,0 +1,23 @@
+--- s241.c
++++ s241.c
+@@ -134,17 +134,20 @@
+     if (!a_old) return (real_t)0;
+ 
+     // Initialize a_old to the initial values of a
++    #pragma omp parallel for shared(a_old) 
+     for (int i = 0; i < LEN_1D; i++) {
+         a_old[i] = a[i];
+     }
+ 
+     for (int nl = 0; nl < R; nl++) {
++        #pragma omp parallel for shared(a_old) 
+         for (int i = 0; i < LEN_1D-1; i++) {
+             a[i] = b[i] * c[i  ] * d[i];
+             b[i] = a[i] * a_old[i+1] * d[i];
+         }
+         pb_mix(nl);
+         // Update a_old for the next iteration
++        #pragma omp parallel for shared(a_old) 
+         for (int i = 0; i < LEN_1D-1; i++) {
+             a_old[i] = a[i];
+         }

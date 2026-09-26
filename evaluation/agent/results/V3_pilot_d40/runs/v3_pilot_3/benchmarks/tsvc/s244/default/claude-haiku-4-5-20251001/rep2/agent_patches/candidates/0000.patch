@@ -1,0 +1,19 @@
+--- s244.c
++++ s244.c
+@@ -131,9 +131,16 @@
+ static real_t kernel_s244(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        // Pass 1: compute a[i]
+         for (int i = 0; i < LEN_1D-1; ++i) {
+             a[i] = b[i] + c[i] * d[i];
++        }
++        // Pass 2: update b[i]
++        for (int i = 0; i < LEN_1D-1; ++i) {
+             b[i] = c[i] + b[i];
++        }
++        // Pass 3: compute a[i+1] using updated b[i]
++        for (int i = 0; i < LEN_1D-1; ++i) {
+             a[i+1] = b[i] + a[i+1] * d[i];
+         }
+         pb_mix(nl);

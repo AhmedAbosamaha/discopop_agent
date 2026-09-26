@@ -1,0 +1,10 @@
+--- s121.c
++++ s121.c
+@@ -133,6 +133,7 @@
+ {
+     for (int nl = 0; nl < R; nl++) {
+         /* Copy right-shifted values into temporary buffer to break loop-carried dependence. */
++        #pragma omp parallel for 
+         for (int i = 0; i < LEN_1D-1; i++) {
+             temp_buf[i] = a[i+1];
+         }

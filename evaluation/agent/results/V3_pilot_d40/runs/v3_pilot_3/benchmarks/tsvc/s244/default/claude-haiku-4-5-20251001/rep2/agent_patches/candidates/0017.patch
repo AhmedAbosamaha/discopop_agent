@@ -1,0 +1,10 @@
+--- s244.c
++++ s244.c
+@@ -135,6 +135,7 @@
+ 
+     for (int nl = 0; nl < R; nl++) {
+         /* Save current a values; each iteration will read these, not other iterations' writes */
++        #pragma omp parallel for shared(a_snapshot) 
+         for (int i = 0; i < LEN_1D; i++) {
+             a_snapshot[i] = a[i];
+         }

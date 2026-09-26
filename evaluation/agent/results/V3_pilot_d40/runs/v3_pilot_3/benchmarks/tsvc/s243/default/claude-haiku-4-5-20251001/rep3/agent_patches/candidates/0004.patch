@@ -1,0 +1,10 @@
+--- s243.c
++++ s243.c
+@@ -135,6 +135,7 @@
+     for (int nl = 0; nl < R; nl++) {
+         memcpy(b_local, b, (size_t)LEN_1D * sizeof(real_t));
+         memcpy(a_snapshot, a, (size_t)LEN_1D * sizeof(real_t));
++        #pragma omp parallel for shared(b_local,a_snapshot) 
+         for (int i = 0; i < LEN_1D-1; i++) {
+             real_t a_temp = b_local[i] + c[i  ] * d[i];
+             real_t b_temp = a_temp + d[i  ] * e[i];

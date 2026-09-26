@@ -1,0 +1,17 @@
+--- s112.c
++++ s112.c
+@@ -131,8 +131,12 @@
+ static real_t kernel_s112(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
+-        for (int i = LEN_1D - 2; i >= 0; i--) {
+-            a[i+1] = a[i] + b[i];
++        real_t shifted[LEN_1D - 1];
++        for (int i = 0; i < LEN_1D - 1; i++) {
++            shifted[i] = a[i] + b[i];
++        }
++        for (int i = 0; i < LEN_1D - 1; i++) {
++            a[i+1] = shifted[i];
+         }
+         pb_mix(nl);
+     }

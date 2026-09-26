@@ -1,0 +1,70 @@
+[
+  {
+    "region_id": "1:79",
+    "region_type": "function",
+    "tier": 2,
+    "patch_file": ".discopop/agent_patches/region_1_79_tier2.patch",
+    "reprofiled": true,
+    "discovery_depth": 0,
+    "evidence": {
+      "comparison": "exact"
+    },
+    "exposed_pattern": "do_all @ lines 140\u2013142, do_all @ lines 143\u2013145",
+    "refresh": "full",
+    "exposed_speedup": 1.36374845292629
+  },
+  {
+    "region_id": "1:86",
+    "region_type": "loop",
+    "phase": "B",
+    "pattern_id": 121,
+    "pattern_type": "do_all",
+    "pragma": "#pragma omp parallel for",
+    "lines": "140\u2013142",
+    "marginal_speedup": 1.1888728663495505,
+    "applied_to_source": true,
+    "evidence": {
+      "comparison": "exact",
+      "dependences": "no-blocker",
+      "dependences_detail": "the profiler covered lines 140-142 (10 RAW, 5 WAR, 0 WAW observed) and the Do-All detector recorded no blocker. Not proof the pragma is safe \u2014 the detector rules out what it can prove \u2014 so this neither passes nor fails the patch on its own",
+      "schedule_runtime_loops": 1,
+      "schedules": [
+        "T4/static#1",
+        "T4/static#2",
+        "T4/static#3",
+        "T1/static",
+        "T2/static",
+        "T4/dynamic,1",
+        "T4/guided"
+      ],
+      "reordered": false
+    }
+  },
+  {
+    "region_id": "1:91",
+    "region_type": "loop",
+    "phase": "B",
+    "pattern_id": 122,
+    "pattern_type": "do_all",
+    "pragma": "#pragma omp parallel for",
+    "lines": "143\u2013145",
+    "marginal_speedup": 2.4286003781707715,
+    "applied_to_source": true,
+    "evidence": {
+      "comparison": "exact",
+      "dependences": "no-blocker",
+      "dependences_detail": "the profiler covered lines 143-145 (10 RAW, 6 WAR, 0 WAW observed) and the Do-All detector recorded no blocker. Not proof the pragma is safe \u2014 the detector rules out what it can prove \u2014 so this neither passes nor fails the patch on its own",
+      "schedule_runtime_loops": 2,
+      "schedules": [
+        "T4/static#1",
+        "T4/static#2",
+        "T4/static#3",
+        "T1/static",
+        "T2/static",
+        "T4/dynamic,1",
+        "T4/guided"
+      ],
+      "reordered": false
+    }
+  }
+]

@@ -1,0 +1,10 @@
+--- s121.c
++++ s121.c
+@@ -138,6 +138,7 @@
+         }
+         /* Main computation: each iteration reads independent elements from temp_buf and b,
+          * writes to independent elements of a. No loop-carried dependencies. */
++        #pragma omp parallel for 
+         for (int i = 0; i < LEN_1D-1; i++) {
+             a[i] = temp_buf[i] + b[i];
+         }

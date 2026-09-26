@@ -1,0 +1,10 @@
+--- s211.c
++++ s211.c
+@@ -140,6 +140,7 @@
+         /* Second pass: compute all a[i] using newly-computed b[i-1] values.
+            Each iteration writes a[i] and reads b[i-1] from the updated state—no
+            loop-carried dependence, pure Do-All. */
++        #pragma omp parallel for 
+         for (int i = 1; i < LEN_1D-1; i++) {
+             a[i] = b[i - 1] + c[i] * d[i];
+         }

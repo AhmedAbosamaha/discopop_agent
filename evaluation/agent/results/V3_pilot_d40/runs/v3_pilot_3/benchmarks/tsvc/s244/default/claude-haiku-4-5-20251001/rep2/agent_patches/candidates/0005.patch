@@ -1,0 +1,10 @@
+--- s244.c
++++ s244.c
+@@ -146,6 +146,7 @@
+             b[i] = c[i] + b[i];
+         }
+         // Pass 3: compute a[i+1] using updated b[i] and initial a[i+1]
++        #pragma omp parallel for shared(a_saved) 
+         for (int i = 0; i < LEN_1D-1; ++i) {
+             a[i+1] = b[i] + a_saved[i+1] * d[i];
+         }

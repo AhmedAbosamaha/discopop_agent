@@ -1,0 +1,36 @@
+--- s244.c
++++ s244.c
+@@ -131,11 +131,31 @@
+ static real_t kernel_s244(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        // Save initial values of b and a before any updates
++        real_t* b_saved = (real_t*)malloc((LEN_1D) * sizeof(real_t));
++        real_t* a_saved = (real_t*)malloc((LEN_1D) * sizeof(real_t));
+         for (int i = 0; i < LEN_1D-1; ++i) {
+-            a[i] = b[i] + c[i] * d[i];
++            b_saved[i] = b[i];
++        }
++        for (int i = 1; i < LEN_1D; ++i) {
++            a_saved[i] = a[i];
++        }
++
++        // Pass 2: update b[i]
++        for (int i = 0; i < LEN_1D-1; ++i) {
+             b[i] = c[i] + b[i];
+-            a[i+1] = b[i] + a[i+1] * d[i];
+         }
++        // Pass 3: compute a[i+1] using updated b[i] and initial a[i+1]
++        for (int i = 0; i < LEN_1D-1; ++i) {
++            a[i+1] = b[i] + a_saved[i+1] * d[i];
++        }
++        // Pass 1: compute a[i] using initial b[i]
++        for (int i = 0; i < LEN_1D-1; ++i) {
++            a[i] = b_saved[i] + c[i] * d[i];
++        }
++
++        free(b_saved);
++        free(a_saved);
+         pb_mix(nl);
+     }
+     return (real_t)0;

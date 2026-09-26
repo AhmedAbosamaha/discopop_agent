@@ -181,6 +181,7 @@ def main() -> int:
     md = analyse(a.runs, [x for x in a.arms.split(",") if x], a.cls, [x for x in a.loops.split(",") if x])
     print(md)
     if a.out:
+        a.out.parent.mkdir(parents=True, exist_ok=True)
         a.out.write_text(md)
     return 0
 

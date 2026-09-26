@@ -1,0 +1,49 @@
+--- original.c
++++ final.c
+@@ -90,6 +90,7 @@
+ 
+ /* ---- data: TSVC's five vectors ------------------------------------------------ */
+ static real_t *a, *b, *c, *d, *e;
++static real_t *temp_buf;
+ 
+ /* Between two repetitions a few INPUT elements change, so no repetition can be skipped,
+  * merged with another or run out of order: the repetition loop is sequential by a true
+@@ -130,11 +131,17 @@
+ 
+ static real_t kernel_s121(void)
+ {
+-    int j;
+     for (int nl = 0; nl < R; nl++) {
++        /* Copy right-shifted values into temporary buffer to break loop-carried dependence. */
++        #pragma omp parallel for 
+         for (int i = 0; i < LEN_1D-1; i++) {
+-            j = i + 1;
+-            a[i] = a[j] + b[i];
++            temp_buf[i] = a[i+1];
++        }
++        /* Main computation: each iteration reads independent elements from temp_buf and b,
++         * writes to independent elements of a. No loop-carried dependencies. */
++        #pragma omp parallel for 
++        for (int i = 0; i < LEN_1D-1; i++) {
++            a[i] = temp_buf[i] + b[i];
+         }
+         pb_mix(nl);
+     }
+@@ -148,7 +155,8 @@
+   c = (real_t*)malloc((size_t)LEN_1D * sizeof(real_t));
+   d = (real_t*)malloc((size_t)LEN_1D * sizeof(real_t));
+   e = (real_t*)malloc((size_t)LEN_1D * sizeof(real_t));
+-  if (!a || !b || !c || !d || !e) { fprintf(stderr, "out of memory\n"); return 1; }
++  temp_buf = (real_t*)malloc((size_t)LEN_1D * sizeof(real_t));
++  if (!a || !b || !c || !d || !e || !temp_buf) { fprintf(stderr, "out of memory\n"); return 1; }
+   init_array();
+   /* Optional perturbed input, see PB_PERTURB: magnitudes and signs of the data are kept. */
+   if (argc > 1) {
+@@ -169,6 +177,6 @@
+   pb_emit(result);
+   pb_emit_array(a); pb_emit_array(b); pb_emit_array(c); pb_emit_array(d); pb_emit_array(e);
+   pb_report();
+-  free(a); free(b); free(c); free(d); free(e);
++  free(a); free(b); free(c); free(d); free(e); free(temp_buf);
+   return 0;
+ }

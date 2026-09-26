@@ -1,0 +1,22 @@
+--- s212.c
++++ s212.c
+@@ -135,16 +135,19 @@
+ 
+     for (int nl = 0; nl < R; nl++) {
+         // Capture current values of a before modification
++        #pragma omp parallel for shared(a_read) 
+         for (int i = 1; i < LEN_1D; i++) {
+             a_read[i] = a[i];
+         }
+ 
+         // Phase 1: multiply a by c
++        #pragma omp parallel for 
+         for (int i = 0; i < LEN_1D-1; i++) {
+             a[i] *= c[i];
+         }
+ 
+         // Phase 2: read from captured a_read, write to b
++        #pragma omp parallel for shared(a_read) 
+         for (int i = 0; i < LEN_1D-1; i++) {
+             b[i] += a_read[i + 1] * d[i];
+         }

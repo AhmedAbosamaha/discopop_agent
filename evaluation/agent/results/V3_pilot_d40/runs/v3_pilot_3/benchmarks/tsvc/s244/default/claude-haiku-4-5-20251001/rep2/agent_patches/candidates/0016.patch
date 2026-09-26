@@ -1,0 +1,30 @@
+--- s244.c
++++ s244.c
+@@ -130,14 +130,26 @@
+ 
+ static real_t kernel_s244(void)
+ {
++    real_t *a_snapshot = (real_t*)malloc((size_t)LEN_1D * sizeof(real_t));
++    if (!a_snapshot) return (real_t)0;
++
+     for (int nl = 0; nl < R; nl++) {
++        /* Save current a values; each iteration will read these, not other iterations' writes */
++        for (int i = 0; i < LEN_1D; i++) {
++            a_snapshot[i] = a[i];
++        }
++
++        /* Process all iterations in order; RAW dependence removed by reading from snapshot */
+         for (int i = 0; i < LEN_1D-1; ++i) {
+             a[i] = b[i] + c[i] * d[i];
+             b[i] = c[i] + b[i];
+-            a[i+1] = b[i] + a[i+1] * d[i];
++            a[i+1] = b[i] + a_snapshot[i+1] * d[i];
+         }
++
+         pb_mix(nl);
+     }
++
++    free(a_snapshot);
+     return (real_t)0;
+ }
+ 

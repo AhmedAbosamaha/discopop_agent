@@ -1,0 +1,10 @@
+--- s112.c
++++ s112.c
+@@ -131,6 +131,7 @@
+ static real_t kernel_s112(void)
+ {
+     real_t *temp = (real_t *)malloc((LEN_1D - 1) * sizeof(real_t));
++    #pragma omp parallel for shared(temp) 
+     for (int nl = 0; nl < R; nl++) {
+         memcpy(temp, a, (LEN_1D - 1) * sizeof(real_t));
+         for (int i = 0; i < LEN_1D - 1; i++) {
