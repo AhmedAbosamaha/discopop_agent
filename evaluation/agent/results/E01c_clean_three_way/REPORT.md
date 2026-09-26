@@ -50,7 +50,7 @@ TSVC class R, clean packages, agent v2, the model alone with the mirror prompt, 
   | agent: evidence, 1 attempt (`full_b1`) | 48 | **0** |
   | agent: no evidence, 3 attempts (`no_evidence`) | **55** | **0** |
   | agent: no evidence, 1 attempt (`no_evidence_b1`) | 51 | **0** |
-  | twin of `full_b1` (no gate) | 15 of 89 | 73 (66 BROKEN) |
+  | twin of `full_b1` (no gate) | 15 of 90 | 74 (67 BROKEN) — its harness-edit trial repeated 26 Sep (`e2c_twin_redo`: BROKEN) |
   | twin of `no_evidence_b1` (no gate) | 17 of 90 | 71 (64 BROKEN) |
   | `twin_dp`: DiscoPoP's pragmas, nothing checked | 0 | 70 BROKEN, 20 no change |
   | the model alone (E1c) | 39 | 46 |

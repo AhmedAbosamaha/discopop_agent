@@ -1,6 +1,6 @@
 # The main comparison in numbers
 
-Runs: e1c_r_1, e1c_r_2, e1c_r_3, e1c_r_4, e2c_ab_1, e2c_ab_2, e2c_ab_3, e2c_ab_4. Agent arm: `full_b1`; baseline: `discopop_gate` (DiscoPoP's own pragmas through the same gate, no model). Statistics as pre-registered: Wilson intervals on rates, Wilcoxon signed-rank on per-benchmark medians (one-sided), Cliff's delta, bootstrap interval on the median ratio; unsafe acceptances are named, not tested.
+Runs: e1c_r_1, e1c_r_2, e1c_r_3, e1c_r_4, e2c_ab_1, e2c_ab_2, e2c_ab_3, e2c_ab_4, e2c_twin_redo. Agent arm: `full_b1`; baseline: `discopop_gate` (DiscoPoP's own pragmas through the same gate, no model). Statistics as pre-registered: Wilson intervals on rates, Wilcoxon signed-rank on per-benchmark medians (one-sided), Cliff's delta, bootstrap interval on the median ratio; unsafe acceptances are named, not tested.
 
 ## Class R — DiscoPoP alone reaches nothing (THE CLAIM)
 
@@ -15,7 +15,7 @@ Runs: e1c_r_1, e1c_r_2, e1c_r_3, e1c_r_4, e2c_ab_1, e2c_ab_2, e2c_ab_3, e2c_ab_4
 
 - 90 agent trials, 114 model calls (0 failed).
 - Profile refreshes after a kept rewrite: 89 full, 0 fast, **0 fast→full fallback(s)**; runtimes re-measured 89 time(s).
-- Explorer stalls (killed at the limit, draw repeated): 134 inside agents, 180 in the harness's profile step.
+- Explorer stalls (killed at the limit, draw repeated): 134 inside agents, 181 in the harness's profile step.
 - Agent trials with the speed check off (untimeable kernel): 0.
 - Host load (1-min) at trial start: 2–19.
 

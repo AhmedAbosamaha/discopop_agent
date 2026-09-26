@@ -10,12 +10,12 @@ On TSVC class R, does DiscoPoP's evidence raise the model's success rate (H5), m
 
 ## Result in one paragraph
 
-E2 A+B (Haiku, TSVC class R, 18 × 5, with D38 twins): DiscoPoP's evidence adds nothing — H12, H5b, H5d not supported (evidence effect −0.03 inside the pipeline, −0.02 on the twins); the best arm is the agent without evidence at 3 attempts (55 of 90 race-free FASTER). H13 supported everywhere: every agent arm 0 unusable programs, its twins 71 of 90 and 73 of 89, the model alone 46; DiscoPoP's own pragmas unchecked (twin_dp) wrong in 70 of 90. Sonnet cells, evidence-source arms, Parts C/D to run.
+E2 A+B (Haiku, TSVC class R, 18 × 5, with D38 twins): DiscoPoP's evidence adds nothing — H12, H5b, H5d not supported (evidence effect −0.03 inside the pipeline, −0.02 on the twins); the best arm is the agent without evidence at 3 attempts (55 of 90 race-free FASTER). H13 supported everywhere: every agent arm 0 unusable programs, its twins 71 of 90 and 74 of 90 (the harness-edit trial repeated 26 Sep), the model alone 46; DiscoPoP's own pragmas unchecked (twin_dp) wrong in 70 of 90. Sonnet cells, evidence-source arms, Parts C/D to run.
 
 ## What is in this folder
 
 - [`analysis/`](analysis/) — the read-out: [`h12_interaction.md`](analysis/h12_interaction.md), [`h5b_evidence_x_budget.md`](analysis/h5b_evidence_x_budget.md), [`three_way_full_b1_vs_bare_llm.md`](analysis/three_way_full_b1_vs_bare_llm.md), [`three_way_full_b1_vs_twin_full.md`](analysis/three_way_full_b1_vs_twin_full.md), [`three_way_no_evidence_b1_vs_bare_llm.md`](analysis/three_way_no_evidence_b1_vs_bare_llm.md), [`three_way_no_evidence_b1_vs_twin_no_evidence.md`](analysis/three_way_no_evidence_b1_vs_twin_no_evidence.md), [`three_way_no_evidence_vs_bare_llm.md`](analysis/three_way_no_evidence_vs_bare_llm.md), [`why_trials_fail.md`](analysis/why_trials_fail.md)
-- [`runs/`](runs/) — 4 archived run(s): the evidence
+- [`runs/`](runs/) — 5 archived run(s): the evidence
 - [`checks/`](checks/) — 1 verification(s) made during the read-out
 - [`preflight/`](preflight/) — 6 smoke run(s) before the launch
 - [`superseded/`](superseded/) — 2 run(s) a later one replaced
@@ -37,9 +37,14 @@ E2 A+B (Haiku, TSVC class R, 18 × 5, with D38 twins): DiscoPoP's evidence adds 
 | `e2c_ab_3` | [`runs/e2c_ab_3/`](runs/e2c_ab_3/) | E2 Parts A+B clean (lane 1.0): s254 s255 s281 s291 x full_b1, no_evidence, no_evidence_b1 + their D38 twins twin_full, twin_no_evidence + twin_dp (DiscoPoP unchecked), Haiku x5, threads 6,12, repeats 5; default, bare_llm, discopop_gate from E1c (same commit 33673d7d agent code) | valid | 120 | BROKEN 51, FASTER 54, no-change 7, parallel-not-faster 8 |
 | `e2c_ab_4` | [`runs/e2c_ab_4/`](runs/e2c_ab_4/) | E2 Parts A+B clean (lane 1.1): s292 s293 s331 s341 x full_b1, no_evidence, no_evidence_b1 + their D38 twins twin_full, twin_no_evidence + twin_dp (DiscoPoP unchecked), Haiku x5, threads 6,12, repeats 5; default, bare_llm, discopop_gate from E1c (same commit 33673d7d agent code) | valid | 120 | BROKEN 57, FASTER 31, SCAFFOLD_MODIFIED 1, changed-not-parallel 1, no-change 30 |
 | `e2c_race_check` | [`checks/e2c_race_check/`](checks/e2c_race_check/) | race_check.py (the gate's TSan + schedule matrix, archer, server, no model) over every trial of the three arms no gate saw in E2 A+B — twin_full, twin_no_evidence, twin_dp (e2c_ab_1..4) — mandatory for D38/H12/H13 | valid | 0 |  |
-| `e2c_twin_redo` | not archived yet | E2 A+B: the twin's harness-edit trial repeated (e2c_ab_4 s331 twin_full rep4 was SCAFFOLD_MODIFIED) — s331 x twin_full x Haiku x1, threads 6,12, repeats 5, lane 0.0; agent code v3 (701bf895), twin path and texts unchanged since E2 (the author, 26 Sep) | running |  |  |
+| `e2c_twin_redo` | [`runs/e2c_twin_redo/`](runs/e2c_twin_redo/) | E2 A+B: the twin's harness-edit trial repeated (e2c_ab_4 s331 twin_full rep4 was SCAFFOLD_MODIFIED) — s331 x twin_full x Haiku x1, threads 6,12, repeats 5, lane 0.0; agent code v3 (701bf895), twin path and texts unchanged since E2 (the author, 26 Sep) | valid | 1 | BROKEN 1 |
 
 ## From the experiment record (§7 run log)
+
+### `e2c_twin_redo` — 2026-09-26, server, **E2 A+B: the twin's harness-edit trial repeated** (1 Haiku trial)
+
+- **Setup.** `s331` × `twin_full` × Haiku × 1, lane 0.0, threads 6/12, repeats 5; agent code v3 (`701bf895`; the twin's code and texts are unchanged since E2); the author's decision (§6, 26 Sep). It replaces `e2c_ab_4` `s331` `twin_full` rep4, a harness edit (its own row, never counted).
+- **Result.** BROKEN — the twin's program changed the output, as three of the other four `s331` `twin_full` trials. With it the twin of `full_b1` has 90 trials: 15 race-free FASTER, **74 unusable (67 BROKEN)**; H12 unchanged (p larger inside the agent 0.705, was 0.701); H13 unchanged (the agent fewer unusable on 18 of 18 loops). E2's read-out files regenerated with the run added (`analysis/h12_interaction.md`, `h5b_…`, `three_way_*`).
 
 ### `e2c_ab_1`, `e2c_ab_2`, `e2c_ab_3`, `e2c_ab_4`, `e2c_race_check`; `e1c_a`, `e1c_d`, `e1c_ad_race_check` — 2026-09-25, server, **E2 Parts A+B (Haiku) with the D38 twins, and E1c's controls** (540 + 45 trials; 315 race checks, no model)
 
@@ -53,7 +58,7 @@ E2 A+B (Haiku, TSVC class R, 18 × 5, with D38 twins): DiscoPoP's evidence adds 
   | agent: evidence, 1 attempt (`full_b1`) | 48 | **0** |
   | agent: no evidence, 3 attempts (`no_evidence`) | **55** | **0** |
   | agent: no evidence, 1 attempt (`no_evidence_b1`) | 51 | **0** |
-  | twin of `full_b1` (no gate) | 15 of 89 | 73 (66 BROKEN) |
+  | twin of `full_b1` (no gate) | 15 of 90 | 74 (67 BROKEN) — its harness-edit trial repeated 26 Sep (`e2c_twin_redo`: BROKEN) |
   | twin of `no_evidence_b1` (no gate) | 17 of 90 | 71 (64 BROKEN) |
   | `twin_dp`: DiscoPoP's pragmas, nothing checked | 0 | 70 BROKEN, 20 no change |
   | the model alone (E1c) | 39 | 46 |

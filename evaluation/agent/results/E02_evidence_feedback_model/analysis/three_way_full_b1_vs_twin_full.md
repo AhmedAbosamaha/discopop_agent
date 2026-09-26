@@ -1,6 +1,6 @@
 # The main comparison in numbers
 
-Runs: e1c_r_1, e1c_r_2, e1c_r_3, e1c_r_4, e2c_ab_1, e2c_ab_2, e2c_ab_3, e2c_ab_4. Agent arm: `full_b1`; baseline: `discopop_gate` (DiscoPoP's own pragmas through the same gate, no model). Statistics as pre-registered: Wilson intervals on rates, Wilcoxon signed-rank on per-benchmark medians (one-sided), Cliff's delta, bootstrap interval on the median ratio; unsafe acceptances are named, not tested.
+Runs: e1c_r_1, e1c_r_2, e1c_r_3, e1c_r_4, e2c_ab_1, e2c_ab_2, e2c_ab_3, e2c_ab_4, e2c_twin_redo. Agent arm: `full_b1`; baseline: `discopop_gate` (DiscoPoP's own pragmas through the same gate, no model). Statistics as pre-registered: Wilson intervals on rates, Wilcoxon signed-rank on per-benchmark medians (one-sided), Cliff's delta, bootstrap interval on the median ratio; unsafe acceptances are named, not tested.
 
 ## Class R — DiscoPoP alone reaches nothing (THE CLAIM)
 
@@ -15,7 +15,7 @@ Runs: e1c_r_1, e1c_r_2, e1c_r_3, e1c_r_4, e2c_ab_1, e2c_ab_2, e2c_ab_3, e2c_ab_4
 
 - 90 agent trials, 114 model calls (0 failed).
 - Profile refreshes after a kept rewrite: 89 full, 0 fast, **0 fast→full fallback(s)**; runtimes re-measured 89 time(s).
-- Explorer stalls (killed at the limit, draw repeated): 134 inside agents, 180 in the harness's profile step.
+- Explorer stalls (killed at the limit, draw repeated): 134 inside agents, 181 in the harness's profile step.
 - Agent trials with the speed check off (untimeable kernel): 0.
 - Host load (1-min) at trial start: 2–19.
 
@@ -27,22 +27,22 @@ Agent arm `full_b1`, model alone `twin_full`, DiscoPoP alone `discopop_gate`; th
 
 | vs the sequential original | DiscoPoP alone | DiscoPoP + agent | model alone |
 |---|---:|---:|---:|
-| verified parallel program | 0 of 90 (0 %, 95 % CI 0–4 %) | 51 of 90 (57 %, 95 % CI 46–66 %) | 21 of 89 (24 %, 95 % CI 16–33 %) |
-| FASTER (≥ 1.1×) | 0 of 90 (0 %, 95 % CI 0–4 %) | 48 of 90 (53 %, 95 % CI 43–63 %) | 15 of 89 (17 %, 95 % CI 10–26 %) |
-| FASTER and race-free | 0 of 90 (0 %, 95 % CI 0–4 %) | 48 of 90 (53 %, 95 % CI 43–63 %) | 15 of 89 (17 %, 95 % CI 10–26 %) |
-| **BROKEN** (wrong output shipped) | **0** | **0** | **66** |
+| verified parallel program | 0 of 90 (0 %, 95 % CI 0–4 %) | 51 of 90 (57 %, 95 % CI 46–66 %) | 21 of 90 (23 %, 95 % CI 16–33 %) |
+| FASTER (≥ 1.1×) | 0 of 90 (0 %, 95 % CI 0–4 %) | 48 of 90 (53 %, 95 % CI 43–63 %) | 15 of 90 (17 %, 95 % CI 10–26 %) |
+| FASTER and race-free | 0 of 90 (0 %, 95 % CI 0–4 %) | 48 of 90 (53 %, 95 % CI 43–63 %) | 15 of 90 (17 %, 95 % CI 10–26 %) |
+| **BROKEN** (wrong output shipped) | **0** | **0** | **67** |
 | correct but slower, shipped (< 0.91×, parallel or not) | 0 | 0 | 7 |
 | racy (race check: TSan or the schedule matrix) | 0 | 0 | 0 |
 | shipped a program that does not compile | 0 | 0 | 0 |
-| **unusable programs** (any of the four above) | **0** | **0** | **73** |
+| **unusable programs** (any of the four above) | **0** | **0** | **74** |
 | touched the harness — no valid measurement, not counted above | 0 | 0 | 1 |
 | no verdict | 0 | 0 | 1 (SCAFFOLD_MODIFIED) |
 | median speedup of the FASTER trials | — | 2.95× | 1.64× |
 
-- Unusable programs shipped by model alone (73): tsvc/s112 rep2: BROKEN; tsvc/s112 rep3: BROKEN; tsvc/s112 rep4: BROKEN; tsvc/s121 rep1: BROKEN; tsvc/s1213 rep1: BROKEN; tsvc/s1213 rep3: BROKEN; tsvc/s1213 rep5: BROKEN; tsvc/s127 rep1: BROKEN; tsvc/s127 rep2: BROKEN; tsvc/s127 rep3: BROKEN; tsvc/s127 rep4: BROKEN; tsvc/s127 rep5: BROKEN; tsvc/s211 rep1: BROKEN; tsvc/s211 rep2: BROKEN; tsvc/s211 rep3: BROKEN; tsvc/s211 rep4: BROKEN; tsvc/s211 rep5: BROKEN; tsvc/s212 rep2: slower; tsvc/s212 rep3: slower; tsvc/s212 rep4: slower; tsvc/s241 rep1: slower; tsvc/s241 rep2: BROKEN; tsvc/s241 rep3: BROKEN; tsvc/s241 rep4: BROKEN; tsvc/s241 rep5: slower; tsvc/s243 rep2: slower; tsvc/s243 rep5: BROKEN; tsvc/s244 rep1: slower; tsvc/s244 rep2: BROKEN; tsvc/s244 rep3: BROKEN; tsvc/s244 rep4: BROKEN; tsvc/s244 rep5: BROKEN; tsvc/s252 rep1: BROKEN; tsvc/s252 rep2: BROKEN; tsvc/s252 rep3: BROKEN; tsvc/s252 rep4: BROKEN; tsvc/s252 rep5: BROKEN; tsvc/s254 rep1: BROKEN; tsvc/s254 rep2: BROKEN; tsvc/s254 rep3: BROKEN; tsvc/s254 rep4: BROKEN; tsvc/s254 rep5: BROKEN; tsvc/s255 rep1: BROKEN; tsvc/s255 rep2: BROKEN; tsvc/s255 rep3: BROKEN; tsvc/s255 rep4: BROKEN; tsvc/s255 rep5: BROKEN; tsvc/s281 rep2: BROKEN; tsvc/s281 rep3: BROKEN; tsvc/s281 rep5: BROKEN; tsvc/s291 rep1: BROKEN; tsvc/s291 rep2: BROKEN; tsvc/s291 rep3: BROKEN; tsvc/s291 rep4: BROKEN; tsvc/s291 rep5: BROKEN; tsvc/s292 rep1: BROKEN; tsvc/s292 rep2: BROKEN; tsvc/s292 rep3: BROKEN; tsvc/s292 rep4: BROKEN; tsvc/s292 rep5: BROKEN; tsvc/s293 rep1: BROKEN; tsvc/s293 rep2: BROKEN; tsvc/s293 rep3: BROKEN; tsvc/s293 rep4: BROKEN; tsvc/s293 rep5: BROKEN; tsvc/s331 rep1: BROKEN; tsvc/s331 rep2: BROKEN; tsvc/s331 rep3: BROKEN; tsvc/s341 rep1: BROKEN; tsvc/s341 rep2: BROKEN; tsvc/s341 rep3: BROKEN; tsvc/s341 rep4: BROKEN; tsvc/s341 rep5: BROKEN.
+- Unusable programs shipped by model alone (74): tsvc/s112 rep2: BROKEN; tsvc/s112 rep3: BROKEN; tsvc/s112 rep4: BROKEN; tsvc/s121 rep1: BROKEN; tsvc/s1213 rep1: BROKEN; tsvc/s1213 rep3: BROKEN; tsvc/s1213 rep5: BROKEN; tsvc/s127 rep1: BROKEN; tsvc/s127 rep2: BROKEN; tsvc/s127 rep3: BROKEN; tsvc/s127 rep4: BROKEN; tsvc/s127 rep5: BROKEN; tsvc/s211 rep1: BROKEN; tsvc/s211 rep2: BROKEN; tsvc/s211 rep3: BROKEN; tsvc/s211 rep4: BROKEN; tsvc/s211 rep5: BROKEN; tsvc/s212 rep2: slower; tsvc/s212 rep3: slower; tsvc/s212 rep4: slower; tsvc/s241 rep1: slower; tsvc/s241 rep2: BROKEN; tsvc/s241 rep3: BROKEN; tsvc/s241 rep4: BROKEN; tsvc/s241 rep5: slower; tsvc/s243 rep2: slower; tsvc/s243 rep5: BROKEN; tsvc/s244 rep1: slower; tsvc/s244 rep2: BROKEN; tsvc/s244 rep3: BROKEN; tsvc/s244 rep4: BROKEN; tsvc/s244 rep5: BROKEN; tsvc/s252 rep1: BROKEN; tsvc/s252 rep2: BROKEN; tsvc/s252 rep3: BROKEN; tsvc/s252 rep4: BROKEN; tsvc/s252 rep5: BROKEN; tsvc/s254 rep1: BROKEN; tsvc/s254 rep2: BROKEN; tsvc/s254 rep3: BROKEN; tsvc/s254 rep4: BROKEN; tsvc/s254 rep5: BROKEN; tsvc/s255 rep1: BROKEN; tsvc/s255 rep2: BROKEN; tsvc/s255 rep3: BROKEN; tsvc/s255 rep4: BROKEN; tsvc/s255 rep5: BROKEN; tsvc/s281 rep2: BROKEN; tsvc/s281 rep3: BROKEN; tsvc/s281 rep5: BROKEN; tsvc/s291 rep1: BROKEN; tsvc/s291 rep2: BROKEN; tsvc/s291 rep3: BROKEN; tsvc/s291 rep4: BROKEN; tsvc/s291 rep5: BROKEN; tsvc/s292 rep1: BROKEN; tsvc/s292 rep2: BROKEN; tsvc/s292 rep3: BROKEN; tsvc/s292 rep4: BROKEN; tsvc/s292 rep5: BROKEN; tsvc/s293 rep1: BROKEN; tsvc/s293 rep2: BROKEN; tsvc/s293 rep3: BROKEN; tsvc/s293 rep4: BROKEN; tsvc/s293 rep5: BROKEN; tsvc/s331 rep1: BROKEN; tsvc/s331 rep2: BROKEN; tsvc/s331 rep3: BROKEN; tsvc/s341 rep1: BROKEN; tsvc/s341 rep2: BROKEN; tsvc/s341 rep3: BROKEN; tsvc/s341 rep4: BROKEN; tsvc/s341 rep5: BROKEN; tsvc/s331 rep1: BROKEN.
 - **H13 — unusable programs shipped (wrong, racy, slower or not compiling — failures of the code under test), rate per benchmark, paired:** the agent ships fewer on 18, the model-only arm fewer on 0, tied on 0; p (two-sided) = 0.000128, p (agent fewer) = 6.42e-05. Each is a result, not a discarded trial.
-- Agent vs model alone, FASTER rate per benchmark (Wilcoxon signed-rank, paired): agent ahead on 12, model alone ahead on 4, tied on 2; p (two-sided) = 0.0249, p (agent ahead) = 0.0125.
-- Agent vs model alone, race-free FASTER rate per benchmark (Wilcoxon signed-rank, paired): agent ahead on 12, model alone ahead on 4, tied on 2; p (two-sided) = 0.0249, p (agent ahead) = 0.0125.
+- Agent vs model alone, FASTER rate per benchmark (Wilcoxon signed-rank, paired): agent ahead on 12, model alone ahead on 4, tied on 2; p (two-sided) = 0.0215, p (agent ahead) = 0.0108.
+- Agent vs model alone, race-free FASTER rate per benchmark (Wilcoxon signed-rank, paired): agent ahead on 12, model alone ahead on 4, tied on 2; p (two-sided) = 0.0215, p (agent ahead) = 0.0108.
 
 | benchmark | DiscoPoP alone FASTER / race-free / BROKEN / unusable | DiscoPoP + agent FASTER / race-free / BROKEN / unusable | model alone FASTER / race-free / BROKEN / unusable |
 |---|---:|---:|---:|
@@ -62,6 +62,6 @@ Agent arm `full_b1`, model alone `twin_full`, DiscoPoP alone `discopop_gate`; th
 | `tsvc/s291` | 0 / 0 / 0 / 0 of 5 | 5 / 5 / 0 / 0 of 5 | 0 / 0 / 5 / 5 of 5 |
 | `tsvc/s292` | 0 / 0 / 0 / 0 of 5 | 5 / 5 / 0 / 0 of 5 | 0 / 0 / 5 / 5 of 5 |
 | `tsvc/s293` | 0 / 0 / 0 / 0 of 5 | 5 / 5 / 0 / 0 of 5 | 0 / 0 / 5 / 5 of 5 |
-| `tsvc/s331` | 0 / 0 / 0 / 0 of 5 | 0 / 0 / 0 / 0 of 5 | 1 / 1 / 3 / 3 of 4 |
+| `tsvc/s331` | 0 / 0 / 0 / 0 of 5 | 0 / 0 / 0 / 0 of 5 | 1 / 1 / 4 / 4 of 5 |
 | `tsvc/s341` | 0 / 0 / 0 / 0 of 5 | 0 / 0 / 0 / 0 of 5 | 0 / 0 / 5 / 5 of 5 |
 

@@ -2065,6 +2065,11 @@ Added 2026-09-15 (see §6 rows of that date):
 
 ## 7. Run log
 
+### `e2c_twin_redo` — 2026-09-26, server, **E2 A+B: the twin's harness-edit trial repeated** (1 Haiku trial)
+
+- **Setup.** `s331` × `twin_full` × Haiku × 1, lane 0.0, threads 6/12, repeats 5; agent code v3 (`701bf895`; the twin's code and texts are unchanged since E2); the author's decision (§6, 26 Sep). It replaces `e2c_ab_4` `s331` `twin_full` rep4, a harness edit (its own row, never counted).
+- **Result.** BROKEN — the twin's program changed the output, as three of the other four `s331` `twin_full` trials. With it the twin of `full_b1` has 90 trials: 15 race-free FASTER, **74 unusable (67 BROKEN)**; H12 unchanged (p larger inside the agent 0.705, was 0.701); H13 unchanged (the agent fewer unusable on 18 of 18 loops). E2's read-out files regenerated with the run added (`analysis/h12_interaction.md`, `h5b_…`, `three_way_*`).
+
 ### `v3_pilot_1`, `v3_pilot_2`, `v3_pilot_3`, `v3_pilot_4` — 2026-09-25/26, server, **the V3 pilot: agent v3 (D40) on the ten class-R loops where v2 varied** (60 Haiku trials)
 
 - **Setup.** Agent `701bf895` (v3, `--judge-as-shipped`); `s112`, `s121`, `s1213`, `s211`, `s212`, `s241`, `s243`, `s244`, `s252`, `s281` × `default`, `no_evidence` × Haiku × 3; threads 6/12, repeats 5; lanes 0.0/0.1/1.0/1.1. 25 Sep 22:42 UTC → paused ≈ 23:50 UTC at the author's request (usage limit; 41 of 60 finished, the in-flight trials lost) → resumed 26 Sep 05:33 UTC under the same run ids at `3c0ea170` (agent and harness code byte-identical to `701bf895`; the harness skips finished trials; the three interrupted trial folders moved to the server's `runs/_interrupted_2026-09-26/` and rerun from scratch) → 07:50 UTC. Pre-registered baseline (record §6, 26 Sep): v2 on the same loops, `default` 21 of 50 (E1c), `no_evidence` 25 of 50 (E2), recomputed from the archive before the read-out.
@@ -2106,7 +2111,7 @@ Added 2026-09-15 (see §6 rows of that date):
   | agent: evidence, 1 attempt (`full_b1`) | 48 | **0** |
   | agent: no evidence, 3 attempts (`no_evidence`) | **55** | **0** |
   | agent: no evidence, 1 attempt (`no_evidence_b1`) | 51 | **0** |
-  | twin of `full_b1` (no gate) | 15 of 89 | 73 (66 BROKEN) |
+  | twin of `full_b1` (no gate) | 15 of 90 | 74 (67 BROKEN) — its harness-edit trial repeated 26 Sep (`e2c_twin_redo`: BROKEN) |
   | twin of `no_evidence_b1` (no gate) | 17 of 90 | 71 (64 BROKEN) |
   | `twin_dp`: DiscoPoP's pragmas, nothing checked | 0 | 70 BROKEN, 20 no change |
   | the model alone (E1c) | 39 | 46 |
