@@ -4231,6 +4231,93 @@ def check_b8_outside_root(work: Path) -> Result:
                   "dependence on b carries the kernel's call path, and the recurrence is not Do-All")
 
 
+_B9_PROGRAM = """#include <stdio.h>
+#define N 2000
+static double a[N], b[N];
+static unsigned long cnt = 0;
+static double acc = 0.0;
+static void mix(int nl)
+{
+    long k = ((long)nl * 7919L + 13L) % N;
+    a[k] += 0.25; b[k] += 0.25;
+}
+static void emit(double v)
+{
+    cnt++;
+    acc += v * (double)(cnt % 7 + 1);
+}
+static double sq(double v)
+{
+    double t = v * v;
+    return t * 0.5;
+}
+static void kernel(int reps)
+{
+    for (int nl = 0; nl < reps; nl++) {
+        for (int i = 0; i < N; i++) {
+            a[i] = b[i] * 0.5 + 1.0;
+        }
+        mix(nl);
+    }
+    for (int i = 0; i < N; i++) {
+        emit(a[i]);
+    }
+    for (int i = 0; i < N; i++) {
+        a[i] = sq(b[i]);
+    }
+}
+int main(void)
+{
+    for (int i = 0; i < N; i++) { a[i] = 0.5 + i % 7; b[i] = 1.0 + i % 5; }
+    kernel(6);
+    printf("%lu %.6f %.6f\\n", cnt, acc, a[0] + a[N - 1]);
+    return 0;
+}
+"""
+
+
+def check_b9_callee_in_loop(work: Path) -> Result:
+    """DiscoPoP bug B9, fixed 26 Sep in the explorer: the accesses a function makes when it is called
+    inside a loop iteration were attached to no task-graph context (its call-path state
+    `f_loopstate…-->call_N-->callee` kept the matched loop state in front of the call, so the call
+    never matched), and a loop carrying a dependence through the callee was reported Do-All — every
+    TSVC package's repetition loop, whose `pb_mix(nl)` changes what the next repetition reads.  Here:
+    the repetition loop calling `mix` and the loop calling the counter `emit` must NOT be Do-All; the
+    loop calling the pure `sq` (only its own locals, fresh per call) must stay Do-All."""
+    if not Path(_venv_bin("discopop_cxx")).exists():
+        return Result("b9 callee in loop", "skip", "DiscoPoP is not installed in this venv")
+    name = "b9 callee in loop"
+    d = work / "b9_callee_in_loop"
+    shutil.rmtree(d, ignore_errors=True)
+    d.mkdir(parents=True)
+    (d / "k.c").write_text(_B9_PROGRAM)
+    ok, err = _profile(d, "k.c", hotspots=False)
+    if not ok:
+        return Result(name, "fail", f"profile: {err}")
+    lines = _B9_PROGRAM.splitlines()
+    loop_at = {}
+    for i, l in enumerate(lines):
+        if l.strip().startswith("for (int nl"):
+            loop_at["repetition (mix)"] = i + 1
+        elif l.strip().startswith("for (int i") and i + 1 < len(lines):
+            body = lines[i + 1].strip()
+            if body.startswith("emit("):
+                loop_at["counter (emit)"] = i + 1
+            elif body.startswith("a[i] = sq("):
+                loop_at["pure (sq)"] = i + 1
+    pats = json.loads((d / ".discopop" / "explorer" / "patterns.json").read_text()).get("patterns", {})
+    doall = {int(str(x.get("start_line", "0:0")).split(":")[1]) for x in pats.get("do_all", [])
+             if str(x.get("applicable_pattern")) == "True"}
+    problems = [f"the {k} loop at k.c:{loop_at[k]} is reported Do-All"
+                for k in ("repetition (mix)", "counter (emit)") if loop_at[k] in doall]
+    if loop_at["pure (sq)"] not in doall:
+        problems.append(f"the pure (sq) loop at k.c:{loop_at['pure (sq)']} is no longer Do-All")
+    if problems:
+        return Result(name, "fail", "; ".join(problems))
+    return Result(name, "pass", "a callee's accesses inside a loop iteration are placed in that iteration: the loops "
+                  "carrying a dependence through mix and emit are not Do-All, the loop calling the pure sq still is")
+
+
 _CHECKS: List[Tuple[str, Callable[[Path], Result]]] = [
     ("impact", check_impact_ranking),
     ("min-impact", check_min_impact),
@@ -4288,6 +4375,7 @@ _CHECKS: List[Tuple[str, Callable[[Path], Result]]] = [
     ("paired-perf", check_paired_perf),
     ("requeue", check_requeue),
     ("b8-outside-root", check_b8_outside_root),
+    ("b9-callee-in-loop", check_b9_callee_in_loop),
 ]
 
 

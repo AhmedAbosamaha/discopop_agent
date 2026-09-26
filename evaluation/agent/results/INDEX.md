@@ -60,8 +60,8 @@ Status: running
 | `e1c31_r_2` | not archived yet | E1c rerun on agent v3.1 (lane 0.1): s212 s241 s243 s244 s252 x default, Haiku x5, threads 6,12, repeats 5 — agent v3.1 at commit 5935bded | running |  |  |
 | `e1c31_r_3` | not archived yet | E1c rerun on agent v3.1 (lane 1.0): s254 s255 s281 s291 x default, Haiku x5, threads 6,12, repeats 5 — agent v3.1 at commit 5935bded | running |  |  |
 | `e1c31_r_4` | not archived yet | E1c rerun on agent v3.1 (lane 1.1): s292 s293 s331 s341 x default, Haiku x5, threads 6,12, repeats 5 — agent v3.1 at commit 5935bded | running |  |  |
-| `e1c31_a` | not archived yet | E1c rerun on agent v3.1, class A (no-harm): s000 vpvtv s313 x default x1 (s313's harness-edit trial is repeated here) — agent v3.1 at commit 5935bded | running |  |  |
-| `e1c31_d` | not archived yet | E1c rerun on agent v3.1, class D (must-decline): s321 s322 s323 s3112 x default x3 — agent v3.1 at commit 5935bded | running |  |  |
+| `e1c31_a` | not archived yet | E1c rerun on agent v3.1, class A (no-harm): s000 vpvtv s313 x default x1 (s313's harness-edit trial is repeated here) — agent v3.1 at commit 5935bded; launched 26 Sep on lane 0.0 while lane 0.1 of the R runs finished, from a Mac worktree at 5935bded (PARITY OK against the server): the Mac repository is ahead (records, B8's profiler source, B9's explorer fix, a feature check) and the server is deliberately NOT synced, so A and D run the same code and the same pre-B8/B9 DiscoPoP as the R runs | running |  |  |
+| `e1c31_d` | not archived yet | E1c rerun on agent v3.1, class D (must-decline): s321 s322 s323 s3112 x default x3 — agent v3.1 at commit 5935bded; launched 26 Sep on lane 1.0, same conditions as e1c31_a (Mac worktree at 5935bded, PARITY OK, server not synced: the R runs' code and DiscoPoP) | running |  |  |
 
 ## [E2 — evidence, feedback and model strength](E02_evidence_feedback_model/REPORT.md)
 

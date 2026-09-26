@@ -2573,14 +2573,19 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                             ]
                         )
                         callstate = (new_head,) + callstate[1:]
-                        # check if search along this path is finished
+                        # A loop state with no open iteration digit left is fully matched: drop it.
+                        # Last in the path, this triggers setting the state id. Followed by a call
+                        # ("..._loopstate03-->call_125-->_ZL3mixi"), the matching must continue
+                        # with the call: only a "call_" head matches an InlinedFunctionContext, so
+                        # a processed head left in front of it never matched, and every access a
+                        # callee makes inside a loop iteration was attached to no context. Its
+                        # dependences were lost, and a loop carrying one through the callee was
+                        # reported Do-All (B9, docs/DISCOPOP_BUG_REPORTS.md).
                         if (
-                            len(callstate) == 1
-                            and "0" not in callstate[0].split("_loopstate")[1]
+                            "0" not in callstate[0].split("_loopstate")[1]
                             and "1" not in callstate[0].split("_loopstate")[1]
                             and "2" not in callstate[0].split("_loopstate")[1]
                         ):
-                            # trigger setting of state id
                             callstate = callstate[1:]
                     else:
                         # missed loop state. continue search with successors
