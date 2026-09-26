@@ -66,7 +66,14 @@ _ROLE_MINIMAL = (
 # (the same checks are described, as what judges the finished program), and feedback / retries
 # (one attempt).  A sentence of the agent's that names one of those is rewritten; nothing is
 # added that the agent's model does not get.
-MIRROR_GATE = GateFacts(require_speedup=True, n_inputs=2, numeric=False, stress=True)
+def mirror_gate(speed: bool = True) -> GateFacts:
+    """The gate the mirror describes.  `speed=False` (`--no-require-speedup`, E2-B1, the author
+    26 Sep): the agent's arms there run with the speed check off, so the model alone is told
+    the same goal — a correct parallel version — in the agent's own speed-off words."""
+    return GateFacts(require_speedup=speed, n_inputs=2, numeric=False, stress=True)
+
+
+MIRROR_GATE = mirror_gate(True)
 _ROLE_MIRROR = ("You are an expert in parallel programming with OpenMP, asked to parallelize a C/C++\n"
                 "program.\n\n")
 
@@ -82,9 +89,8 @@ def _judged_mirror(gate: GateFacts) -> str:
         "     other thread counts and under static, dynamic and guided schedules:\n"
         "     every run has to agree with the others",
         _how_compared(gate).replace("not only the one that was profiled", "not only the one you can see"),
-        "it is timed at several thread counts against the original sequential\n"
-        "     program, and has to be faster",
-    ]
+    ] + (["it is timed at several thread counts against the original sequential\n"
+          "     program, and has to be faster"] if gate.require_speedup else [])
     body = "\n".join(f"  {i}. {t}" for i, t in enumerate(steps, 1))
     gran = _granularity(gate, len(steps), "annotate").replace(
         "  The evidence marks\nwhich loops qualify; annotate the outermost one that does",
@@ -100,14 +106,14 @@ def _judged_mirror(gate: GateFacts) -> str:
             "loop that was never parallelized.\n\n" + gran)
 
 
-def _system_mirror() -> str:
-    gate = MIRROR_GATE
+def _system_mirror(gate: GateFacts = MIRROR_GATE) -> str:
     ask = (_ASK_ANNOTATE
            .replace("DiscoPoP profiled one region and could not extract safe parallelism from\n"
                     "it.  Rewrite that region's sequential source so the parallelism becomes\n"
                     "explicit,", "This program runs sequentially.  Rewrite its sequential source so the\n"
                     "parallelism becomes explicit,")
-           .replace("{SPEED_GOAL}", ", and is measurably faster than the original sequential program")
+           .replace("{SPEED_GOAL}", ", and is measurably faster than the original sequential program"
+                    if gate.require_speedup else "")
            .replace("Nothing downstream adds\na pragma to the code you rewrite", "Nothing adds a\npragma to the code you rewrite"))
     given = (_RULE + "WHAT WE GIVE YOU\n" + _RULE
              + "The program's source files, and nothing else.\n\n")
@@ -124,8 +130,7 @@ def _system_mirror() -> str:
 
 
 def _request_mirror(files: List[str], excluded: List[str], protected: Tuple[str, ...] = (),
-                    protected_note: str = "") -> str:
-    gate = MIRROR_GATE
+                    protected_note: str = "", gate: GateFacts = MIRROR_GATE) -> str:
     goal = (_goal(True, gate)
             .replace("runs faster than the same build on one thread", "runs faster than the original sequential program")
             .replace("  Nothing re-profiles your rewrite, and nothing adds a pragma for you.",
@@ -148,13 +153,13 @@ def _request_mirror(files: List[str], excluded: List[str], protected: Tuple[str,
             "Keep the functions' names and signatures.")
 
 
-def _system(prompt: str = "mirror") -> str:
+def _system(prompt: str = "mirror", gate: GateFacts = MIRROR_GATE) -> str:
     """`mirror` (the default since 23 Sep evening): the agent's own instructions minus DiscoPoP,
     the gate during the run and feedback.  `minimal` (D37 as first decided, `d36_hint_check`'s
     `bare_llm` arm): role and tools only.  `contract` (E1-bare, kept to reproduce it): the
     baseline's own role, then THE CONTRACT, the OpenMP loop rules and the pragma forms."""
     if prompt == "mirror":
-        return _system_mirror()
+        return _system_mirror(gate)
     if prompt == "minimal":
         return _ROLE_MINIMAL
     return _ROLE_BARE + _contract(GateFacts(), _CONTRACT_PRAGMA) + _OMP_RULES + _PRAGMA_FORMS
@@ -208,6 +213,9 @@ def main() -> int:
     p.add_argument("--prompt", choices=("mirror", "minimal", "contract"), default="mirror",
                    help="mirror: the agent's instructions minus DiscoPoP, gate and feedback (default); "
                         "minimal: role, tools, goal; contract: E1-bare's prompt")
+    p.add_argument("--no-require-speedup", action="store_true",
+                   help="mirror only: describe the gate with the speed check off, in the agent's own "
+                        "speed-off words (E2-B1: RQ4 asks for a CORRECT parallel version)")
     a = p.parse_args()
 
     root = Path(a.project_dir or ".").resolve()
@@ -221,11 +229,14 @@ def main() -> int:
     print(f"  Files          : {', '.join(units)}")
     print(f"  Model          : {a.model}")
     print(f"  Not editable   : {', '.join(excluded) or '—'}")
-    print(f"  Prompt         : {a.prompt}\n")
+    print(f"  Prompt         : {a.prompt}" + ("  (speed check off)" if a.no_require_speedup else "") + "\n")
 
-    system = _system(a.prompt)
+    if a.no_require_speedup and a.prompt != "mirror":
+        p.error("--no-require-speedup describes the mirror's gate; the other prompts carry no gate")
+    gate = mirror_gate(not a.no_require_speedup)
+    system = _system(a.prompt, gate)
     protected = tuple(x.strip() for x in a.protected_line if x.strip())
-    request = (_request_mirror(units, excluded, protected, a.protected_note.strip()) if a.prompt == "mirror"
+    request = (_request_mirror(units, excluded, protected, a.protected_note.strip(), gate) if a.prompt == "mirror"
                else {"minimal": _request_minimal, "contract": _request}[a.prompt](units, excluded))
     with tempfile.TemporaryDirectory(prefix="dp_bare_") as tmp:
         ws = Path(tmp)

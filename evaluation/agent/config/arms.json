@@ -361,9 +361,10 @@
     },
     "discopop_capability": {
       "ids": [
+        "E2-B1",
         "T0.11"
       ],
-      "description": "T0.11 ONLY, never an experiment arm: DiscoPoP's own suggestions through the gate with the speed check OFF. The class of a benchmark is a question about CAPABILITY \u2014 can DiscoPoP plus the gate reach a verified-correct parallel program at all? \u2014 and the speed check answers a different one. With it on, a kernel whose DiscoPoP pragma is correct but slow (polybench/lu: 0.21x) ends `no-change` and would be filed as 'needs restructuring', which is wrong: it needs a BETTER PRAGMA, not a rewrite. Whether the program is faster is recorded anyway, because the harness's own verification always times it. It is also much cheaper \u2014 the speed check times every candidate pragma, which cost 8.2 min per trial.",
+      "description": "T0.11, and since 26 Sep E2-B1's DiscoPoP alone (the speed check is off in every arm there): DiscoPoP's own suggestions through the gate with the speed check OFF. The class of a benchmark is a question about CAPABILITY \u2014 can DiscoPoP plus the gate reach a verified-correct parallel program at all? \u2014 and the speed check answers a different one. With it on, a kernel whose DiscoPoP pragma is correct but slow (polybench/lu: 0.21x) ends `no-change` and would be filed as 'needs restructuring', which is wrong: it needs a BETTER PRAGMA, not a rewrite. Whether the program is faster is recorded anyway, because the harness's own verification always times it. It is also much cheaper \u2014 the speed check times every candidate pragma, which cost 8.2 min per trial.",
       "flags": [
         "--budget",
         "0",
@@ -935,6 +936,72 @@
       "description": "A matched model-only twin (D38): the agent arm `full_no_hotspots` minus the gate. Runs discopop_agent/twin.py with full_no_hotspots's own arguments (inherited: flags, settings, timing size, evidence file), so its model gets the agent's own first request for each region the agent would ask about \u2014 same region, same DiscoPoP evidence, same system prompt except that the gate's checks are described as what judges the FINISHED program and the feedback clause is gone. One attempt per region, no feedback; what the model leaves stays; after an edit the program is re-profiled (as after a kept rewrite) and at the end DiscoPoP inserts every applicable pragma with NOTHING checked (no clause check, TSan, schedules, speed, D33, Settle or floor). Judged afterwards like any trial; race_check.py on its programs is mandatory. `twin_model_program.*` in agent_patches/ is the program before DiscoPoP's unchecked pragmas. Regions ranked by DiscoPoP's static workload proxy, so the twin is asked about the region the unmeasured agent would be. As for the agent arm, --min-runtime-share is inert.",
       "runner": "twin",
       "twin_of": "full_no_hotspots"
+    },
+    "full_b1_nospeed": {
+      "ids": [
+        "E2-B1"
+      ],
+      "description": "E2-B1's (full evidence, budget 1) cell with the speed check off: `full_b1` less --require-speedup. E2-B1 (the author, 26 Sep): RQ4 asks whether the model finds CORRECT parallelism when the deciding fact is hidden, so the speed check is OFF in every arm \u2014 the agent, its twins, the model alone and DiscoPoP alone \u2014 and the primary outcome is a verified parallel program (FASTER reported beside it).",
+      "flags": [
+        "--budget",
+        "1",
+        "--no-require-speedup"
+      ],
+      "timing_size": "agent",
+      "settings": {
+        "budget": 1,
+        "llm_pragmas": false,
+        "require_speedup": false,
+        "evidence_sections": null,
+        "fast_refresh": false
+      }
+    },
+    "no_evidence_b1_nospeed": {
+      "ids": [
+        "E2-B1"
+      ],
+      "description": "E2-B1's (no evidence, budget 1) cell with the speed check off: `no_evidence_b1` less --require-speedup. E2-B1 (the author, 26 Sep): RQ4 asks whether the model finds CORRECT parallelism when the deciding fact is hidden, so the speed check is OFF in every arm \u2014 the agent, its twins, the model alone and DiscoPoP alone \u2014 and the primary outcome is a verified parallel program (FASTER reported beside it).",
+      "flags": [
+        "--budget",
+        "1",
+        "--evidence",
+        "none",
+        "--no-require-speedup"
+      ],
+      "timing_size": "agent",
+      "settings": {
+        "budget": 1,
+        "llm_pragmas": false,
+        "require_speedup": false,
+        "evidence_sections": [],
+        "fast_refresh": false
+      }
+    },
+    "twin_full_nospeed": {
+      "ids": [
+        "E2-B1"
+      ],
+      "description": "A matched model-only twin (D38) of `full_b1_nospeed`: the agent arm minus the gate (and minus the gate-driven re-queue, which the twin cannot have), with its arguments inherited.",
+      "runner": "twin",
+      "twin_of": "full_b1_nospeed"
+    },
+    "twin_no_evidence_nospeed": {
+      "ids": [
+        "E2-B1"
+      ],
+      "description": "A matched model-only twin (D38) of `no_evidence_b1_nospeed`, as `twin_full_nospeed`.",
+      "runner": "twin",
+      "twin_of": "no_evidence_b1_nospeed"
+    },
+    "bare_llm_nospeed": {
+      "ids": [
+        "E2-B1"
+      ],
+      "description": "The model alone (D37 mirror) told the speed-off goal in the agent's own speed-off words (`--no-require-speedup`, feature check bare-speed-off). E2-B1 (the author, 26 Sep): RQ4 asks whether the model finds CORRECT parallelism when the deciding fact is hidden, so the speed check is OFF in every arm \u2014 the agent, its twins, the model alone and DiscoPoP alone \u2014 and the primary outcome is a verified parallel program (FASTER reported beside it).",
+      "runner": "bare_llm",
+      "flags": [
+        "--no-require-speedup"
+      ]
     }
   },
   "common_timing_size": "per_kernel",
@@ -1265,6 +1332,55 @@
       "consequences": [],
       "check": "runner",
       "why": "E11: the model alone beside the agent (D35); its own runner, so only its existence is checked."
+    },
+    "E2-B1": {
+      "arms": [
+        "discopop_capability",
+        "no_evidence_b1_nospeed",
+        "full_b1_nospeed"
+      ],
+      "variable": [
+        "evidence_sections",
+        "budget"
+      ],
+      "consequences": [],
+      "why": "E2-B1 (pre-registered before its first trial): the evidence contrast on loops whose deciding fact is not in the loop text, speed check off in every arm, DiscoPoP alone beside it. E2-B1 (the author, 26 Sep): RQ4 asks whether the model finds CORRECT parallelism when the deciding fact is hidden, so the speed check is OFF in every arm \u2014 the agent, its twins, the model alone and DiscoPoP alone \u2014 and the primary outcome is a verified parallel program (FASTER reported beside it)."
+    },
+    "E2-B1-twins": {
+      "arms": [
+        "twin_no_evidence_nospeed",
+        "twin_full_nospeed"
+      ],
+      "variable": [
+        "evidence_sections"
+      ],
+      "consequences": [],
+      "why": "E2-B1's evidence contrast without the gate (H12's interaction)."
+    },
+    "E2-B1-twin-match": {
+      "arms": [
+        "full_b1_nospeed",
+        "no_evidence_b1_nospeed",
+        "twin_full_nospeed",
+        "twin_no_evidence_nospeed"
+      ],
+      "variable": [],
+      "consequences": [],
+      "check": "twin",
+      "why": "Each E2-B1 twin resolves exactly to its agent arm (D38)."
+    },
+    "E2-B1-bare": {
+      "arms": [
+        "full_b1_nospeed",
+        "bare_llm_nospeed"
+      ],
+      "variable": [
+        "runner"
+      ],
+      "consequences": [],
+      "check": "runner",
+      "agent": "full_b1_nospeed",
+      "why": "E2-B1: the model alone beside the agent, both with the speed check off (the runner check compares their speed goals)."
     }
   }
 }

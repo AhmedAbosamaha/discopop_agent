@@ -73,9 +73,20 @@ def check_experiments(doc: dict, repo: Path, benchmark: str) -> int:
         if spec.get("check") == "runner":
             runners = [n for n in names if arms[n].get("runner")]
             agents = [n for n in names if not arms[n].get("runner")]
-            ok = len(runners) == 1 and agents == ["default"]
+            agent = spec.get("agent", "default")
+            ok = len(runners) == 1 and agents == [agent]
+            note = ""
+            if ok and arms[runners[0]].get("runner") == "bare_llm":
+                # E2-B1 (26 Sep): the model alone is told the goal of the gate it is compared
+                # with — a speed-off agent arm needs the speed-off mirror, and the reverse.
+                bare_speed = "--no-require-speedup" not in arms[runners[0]].get("flags", [])
+                agent_speed = bool(_resolved(agent, arms[agent], repo, benchmark).get("require_speedup"))
+                if bare_speed != agent_speed:
+                    ok, note = False, (f" — the model alone is told the speed check is "
+                                       f"{'on' if bare_speed else 'off'}, `{agent}` runs it "
+                                       f"{'on' if agent_speed else 'off'}")
             print(f"  [{'pass' if ok else 'FAIL'}] {exp}: runner arm {runners} beside {agents} "
-                  f"(a separate runner takes no agent arguments; nothing to resolve)")
+                  f"(a separate runner takes no agent arguments; speed goals compared){note}")
             failures += 0 if ok else 1
             continue
         if spec.get("check") == "twin":

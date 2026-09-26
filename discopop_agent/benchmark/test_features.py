@@ -1915,6 +1915,49 @@ def check_bare_llm(work: Path) -> Result:
                   f"({len((m_sys + ' ' + m_req).split())} words) and contract (E1-bare) reproducible; the edit kept unchecked")
 
 
+def check_bare_speed_off(work: Path) -> Result:
+    """E2-B1 (the author, 26 Sep): the speed check OFF in every arm, the model alone included.
+
+    The mirror's gate was fixed with the speed check on, so a speed-off agent arm and the model
+    alone would have been told different goals.  `--no-require-speedup` builds the mirror from a
+    speed-off gate: no speed goal, no timing step in how the program is judged, and every shared
+    passage the agent's own speed-off text.  The default (speed on) must stay byte for byte what
+    E1c's and E2's model alone read — checked against its words here, and against git when built."""
+    from .. import bare_llm
+    from ..llm.prompts import _CONTRACT_PRAGMA, _OMP_RULES, _PRAGMA_FORMS, _contract, _system_prompt
+    from ..llm.request import _task_checklist
+    name = "bare speed off"
+    files, excl = ["s000.c"], ["main", "pb_mix"]
+    on, off = bare_llm.mirror_gate(True), bare_llm.mirror_gate(False)
+    s_on, r_on = bare_llm._system("mirror", on), bare_llm._request_mirror(files, excl, gate=on)
+    s_off, r_off = bare_llm._system("mirror", off), bare_llm._request_mirror(files, excl, gate=off)
+    problems: List[str] = []
+    if (s_on, r_on) != (bare_llm._system("mirror"), bare_llm._request_mirror(files, excl)):
+        problems.append("the default mirror is no longer the speed-on mirror")
+    for q in ("measurably faster than the original sequential program", "has to be faster"):
+        if q not in s_on + r_on:
+            problems.append(f"speed on: lost {q!r}")
+        if q in s_off + r_off:
+            problems.append(f"speed off: still says {q!r}")
+    stray = [m for m in re.findall(r"[^.\n]*faster[^.\n]*", s_off + r_off) if "faster serial algorithm" not in m]
+    if stray:
+        problems.append(f"speed off: a speed goal left: {stray[0].strip()[:70]!r}")
+    agent_off = " ".join(_system_prompt("direct", True, False, off).split())
+    flat_off = " ".join(s_off.split())
+    for label, text in (("the contract", _contract(off, _CONTRACT_PRAGMA)), ("the OpenMP rules", _OMP_RULES),
+                        ("the pragma forms", _PRAGMA_FORMS)):
+        flat = " ".join(text.split())
+        if flat not in agent_off or flat not in flat_off:
+            problems.append(f"speed off: {label} is not the agent's speed-off text")
+    if " ".join(_task_checklist(off, set()).split()) not in " ".join(r_off.split()):
+        problems.append("speed off: the checklist is not the agent's speed-off checklist")
+    if problems:
+        return Result(name, "fail", "; ".join(problems[:3]))
+    return Result(name, "pass", f"speed off: no speed goal or timing step ({len((s_off + r_off).split())} words), "
+                  "contract, OpenMP rules, pragma forms and checklist the agent's own speed-off text; "
+                  "speed on unchanged")
+
+
 def check_workspace_confined(work: Path) -> Result:
     """The model's file tools reach its workspace and nothing else (23 Sep).  Listing Read /
     Edit / Write whole in allowed_tools auto-approves them for ANY path, so the confinement is a
@@ -3993,6 +4036,7 @@ _CHECKS: List[Tuple[str, Callable[[Path], Result]]] = [
     ("prompt-truth", check_prompt_truth),
     ("prompt-ablation", check_prompt_ablation),
     ("bare-llm", check_bare_llm),
+    ("bare-speed-off", check_bare_speed_off),
     ("workspace-confined", check_workspace_confined),
     ("twin-prompt", check_twin_prompt),
     ("twin-run", check_twin_run),
