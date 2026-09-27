@@ -34,7 +34,7 @@ LLVM 19 (macOS) and LLVM 20 (Linux).
 | L4 | profiler | limitation | PolyBench `adi` (~130 lines): the instrumenting compile takes **2,387 s (40 min)** per profile, ~40x the next slowest PolyBench kernel. The profile is usable (19 Do-Alls, gate-verified parallel), so this is a cost limitation, not a failure |
 | B8 | profiler, `llvm_hooks/runOnBasicBlock.cpp` (call-path states) | fixed 26 Sep (f6b41f57) | a call into a function the pass does not instrument (defined outside the project root) enters its call state for good → every later dependence carries the wrong call path → a true recurrence reported Do-All |
 | B9 | explorer, `TaskGraph.__assign_state_ids` | fixed 26 Sep | the accesses of a function called inside a loop iteration are attached to no context → a loop carrying a dependence through a callee is reported Do-All (every TSVC package's repetition loop) |
-| B10 | explorer (Do-All detector / reduction detection) | open, confirmed with a 30-line reproducer | a scalar carried across iterations (`x = b[i]` read next iteration; `s += …`) → the patch generator emits `parallel for shared(x)` and a plain `parallel for` on the sum — both races |
+| B10 | explorer (Do-All detector / reduction detection) | open — confirmed; systematic on the server; the verdict follows the profile's state NUMBERING (27 Sep) | a scalar carried across iterations (`x = b[i]` read next iteration; `s += …`) → the patch generator emits `parallel for shared(x)` and a plain `parallel for` on the sum — both races |
 | B11 | explorer, `TaskGraph.__assign_state_ids` | candidate | in TSVC v3's `main`, no access made under the five `pb_emit_array` calls is attached to any context (before and after B9's fix); harness code only |
 | B12 | profiler, `scripts/CC_wrapper.sh`, `CXX_wrapper.sh` | fixed 27 Sep | the compiler wrappers exit 0 when the instrumented compile or link fails — the AST dump after it sets the exit status; the failure surfaces one step later as a missing `a.out` |
 | L3 | explorer | limitation | NPB-CPP `mg`: with P1's fix the state assignment is fast, but the run then stays in task-pattern detection (`new_task_detector`) — a first run was read at 4 h 19 min, the same run was stopped unfinished after **11 h 24 min** at 100 % CPU on the server (19–20 Sep); the Do-All detector is not reached. Not usable per trial |
@@ -168,6 +168,21 @@ mechanism: no call is involved. The same-shaped inner loop of s254 (line 136, `x
 iteration) IS blocked on the RAW on `x` (2 of 2) — the contrast between the two programs is the lead.
 Scalar records carry no call-path state (`NOM RAW 117|x`, no `@state`), so how they reach the iteration
 contexts is the first thing to read. The gate catches both loops at `correctness`; no arm ships them.
+
+**27 Sep — systematic on the server, and a deterministic reproducer.** The agent's `dependence review` feature
+check profiles `prefix_sum.cpp` (`running += …; out[i] = running;`): on the Mac about one profile in six gave
+0 blockers, on the server (Linux, LLVM 20) 3 of 3 — DiscoPoP reports the running-total loop Do-All with
+`shared(running)`, although the profile holds the carried RAW (`82 RAW 84|running`). With B4 fixed the explorer is
+repeatable, which separated the causes: the Mac's explorer on the SERVER's profile gives the same false Do-All
+(2 of 2), on the Mac's own profile it blocks the loop on `running` (2 of 2) — so it is the profile, not the platform.
+The two profiles are identical in `Data.xml`, the static dependences, the loop and instruction tables and, up to the
+order of records within a line, the dynamic dependences (reversing that order changes nothing); what differs is the
+NUMBERING of the call-path states (`stateID_to_callpath_mapping.txt`: the same 74 paths, numbered in another order;
+`initial_stateID` 16 on the Mac, 12 on the server). The explorer's verdict on a scalar recurrence therefore depends
+on how the profiler happened to number the states — the next thing to read is where state order enters
+`__assign_state_ids` and the Do-All check for records that carry no state. Reproduce: profile
+`discopop_agent/benchmark/cases/prefix_sum.cpp` on the server, or keep one such profile and run the explorer on it
+anywhere. Fixing B10 before E2-B1 is the author's decision (the same questions as B9 and B4).
 
 ## B11 — candidate: no access under TSVC v3's `pb_emit_array` calls is attached (explorer)
 
