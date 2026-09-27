@@ -109,6 +109,9 @@ export DP_PROJECT_ROOT_DIR
 # ---------------------------------------------------------------------------
 
 ${LLVM_CLANGPP} "$@" "${SYSROOT_FLAGS[@]}" "${LIBCXX_FLAGS[@]}" -g -O0 -fno-discard-value-names -Xclang -load -Xclang ${DISCOPOP_PLUGIN} -Xclang -fpass-plugin=${DISCOPOP_PLUGIN} -fPIC -Xlinker -L${PARENT_PATH} -Xlinker -lDiscoPoP_RT "${PTHREAD_XLINKER_FLAGS[@]}" -Xlinker -v
+# the build's status is the wrapper's status: the AST dump below must not overwrite it — a
+# failed compile or link used to exit 0, and callers only found out when a.out was missing (B12)
+build_rc=$?
 
 # dump ast for later use during pattern detection
 if [ -n "$DOT_DISCOPOP" ]; then
@@ -118,3 +121,4 @@ else
 fi
 ${LLVM_CLANGPP} "$@" "${SYSROOT_FLAGS[@]}" -fsyntax-only -Xclang -ast-dump=json >> "$TMP_DOT_DISCOPOP/profiler/ast_dump.json"
 # WARNING: OUTPUT IS A .ll FILE, ENDING IS .o
+exit $build_rc

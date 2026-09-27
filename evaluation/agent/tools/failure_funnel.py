@@ -114,6 +114,12 @@ def analyse(runs: List[str], arms: List[str], cls: str, loops: Sequence[str] = (
         rv = t.get("region_verdicts") or {}
         phase_b = log.split("PHASE B", 1)[1] if "PHASE B" in log else ""
         safe_b = len(re.findall(r"marginal [0-9.]+", phase_b)) + len(re.findall(r"deferred", phase_b, re.I))
+        # v3.1, D41: Phase B applies the set D40 judged in one step and logs no per-pragma
+        # timing; a D40 verdict past the safety half (ok, not_faster, safe, safe_deferred)
+        # also says a safe pragma existed before any speed check
+        safe_b += len(re.findall(r"as D40 judged it", phase_b))
+        safe_b += sum(int(k) for v, k in (t.get("d40_verdicts") or {}).items()
+                      if v in ("ok", "not_faster", "safe", "safe_deferred"))
         reached = [bool(t.get("llm_calls")), bool(t.get("gate_passes_phase_a")), bool(rv.get("ACCEPTED")),
                    bool(rv.get("ACCEPTED")) and safe_b > 0, bool(t.get("pragmas_in_final")),
                    t.get("outcome") == "FASTER"]

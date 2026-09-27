@@ -52,7 +52,7 @@ Status: done
 
 ## [E1c's agent arm rerun on agent v3.1 — the three-way main comparison on the final agent](E01c_v31_rerun/REPORT.md)
 
-Status: running
+Status: done
 
 | run | where | what it is | status | trials | outcomes |
 |---|---|---|---|---:|---|

@@ -85,6 +85,26 @@ def _run(cmd: List[str], cwd: Path, timeout: int = 900) -> Tuple[bool, str]:
     return r.returncode == 0, (r.stderr or r.stdout or "")
 
 
+def _explore(discopop_dir: Path, limit: int = 180, stalls: int = 3) -> Tuple[bool, str]:
+    """The explorer on one profile, a STALL retried on the same profile — a stall is a draw, not a
+    verdict (L5; the agent treats it the same way, profiling/tools.run_explorer). One attempt runs
+    in its own process group, so a stalled explorer is killed with the patch generator it started;
+    only the explorer's own output is cleared before a retry. A crash is returned as it is."""
+    import signal
+    for _ in range(stalls):
+        p = subprocess.Popen([_venv_bin("discopop_explorer")], cwd=discopop_dir, env=_env(), text=True,
+                             stdout=subprocess.PIPE, stderr=subprocess.PIPE, start_new_session=True)
+        try:
+            out, err = p.communicate(timeout=limit)
+        except subprocess.TimeoutExpired:
+            os.killpg(p.pid, signal.SIGKILL)
+            p.communicate()
+            shutil.rmtree(discopop_dir / "explorer", ignore_errors=True)
+            continue
+        return p.returncode == 0, (err or out or "")
+    return False, f"the explorer stalled {stalls} times at {limit} s on one profile"
+
+
 def _profile(work: Path, src_name: str, hotspots: bool = True,
              c_as_c: bool = False) -> Tuple[bool, str]:
     """Dependence profile, and optionally the hotspot measurement beside it.
@@ -97,13 +117,16 @@ def _profile(work: Path, src_name: str, hotspots: bool = True,
     """
     shutil.rmtree(work / ".discopop" / "profiler", ignore_errors=True)
     wrapper = "discopop_cc" if c_as_c and src_name.endswith(".c") else "discopop_cxx"
-    ok, err = _run([_venv_bin(wrapper), src_name, "-o", "a.out"], work)
+    # a C link does not pull in libm, and DiscoPoP's runtime needs it (ceil): on Linux the
+    # instrumented build fails without it (the harness links C the same way, tools/cli.py)
+    libm = ["-lm"] if wrapper == "discopop_cc" else []
+    ok, err = _run([_venv_bin(wrapper), src_name, "-o", "a.out"] + libm, work)
     if not ok:
         return False, f"{wrapper}: {err[-200:]}"
     ok, err = _run(["./a.out"], work)
     if not ok:
         return False, f"profiled run: {err[-200:]}"
-    ok, err = _run([_venv_bin("discopop_explorer")], work / ".discopop")
+    ok, err = _explore(work / ".discopop")
     if not ok:
         return False, f"explorer: {err[-200:]}"
     if hotspots:
@@ -2736,9 +2759,9 @@ def check_project_mode(work: Path) -> Result:
     # 1. DiscoPoP's own way, unit by unit — recorded, because it is WHY the unity unit exists.
     per_unit = work / "proj_per_unit"
     shutil.copytree(root, per_unit)
-    ok, err = _run([_venv_bin("discopop_cc"), "src/kern.c", "src/main.c", "-Iinclude", "-o", "a.out"], per_unit)
+    ok, err = _run([_venv_bin("discopop_cc"), "src/kern.c", "src/main.c", "-Iinclude", "-o", "a.out", "-lm"], per_unit)
     note = "per-unit profile not available"
-    if ok and _run(["./a.out"], per_unit)[0] and _run([_venv_bin("discopop_explorer")], per_unit / ".discopop")[0]:
+    if ok and _run(["./a.out"], per_unit)[0] and _explore(per_unit / ".discopop")[0]:
         wrong = sorted(l for (f, l), okp in loops(per_unit / ".discopop").items() if f == "kern.c" and okp and l in (8, 14))
         note = (f"DiscoPoP unit by unit calls the recurrence(s) at kern.c:{wrong} Do-All" if wrong
                 else "DiscoPoP unit by unit no longer mis-reports the recurrences (unity unit may be unnecessary)")
@@ -3377,10 +3400,13 @@ def check_profiler_else_loop(work: Path) -> Result:
     widths = {len(m) for m in re.findall(r"\bfill_loopstate(\d+)", mapping.read_text())}
     if widths != {6}:
         return Result(name, "fail", f"`fill` has 6 loops, its loop states have {sorted(widths)} positions")
+    if not ok and not err.startswith("explorer"):
+        # the build or the profiled run failed, not the explorer: say so (it used to be counted as a crash)
+        return Result(name, "fail", f"profile: {err[:160]}")
     crashes = 0 if ok else 1
     for _ in range(4):
         shutil.rmtree(d / ".discopop" / "explorer", ignore_errors=True)
-        good, _e = _run([_venv_bin("discopop_explorer")], d / ".discopop")
+        good, _e = _explore(d / ".discopop")
         crashes += not good
     if crashes:
         return Result(name, "fail", f"the explorer crashed in {crashes} of 5 runs on one profile")
@@ -4362,7 +4388,7 @@ def check_b4_nested_duplication(work: Path) -> Result:
     problems: List[str] = []
     for run in range(1, 4):
         shutil.rmtree(d / ".discopop" / "explorer", ignore_errors=True)
-        ok, err = _run([_venv_bin("discopop_explorer")], d / ".discopop")
+        ok, err = _explore(d / ".discopop")
         if not ok:
             return Result(name, "fail", f"explorer run {run}: {err[-200:]}")
         pats = json.loads((d / ".discopop" / "explorer" / "patterns.json").read_text()).get("patterns", {})

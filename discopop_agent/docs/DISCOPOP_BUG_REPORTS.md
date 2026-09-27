@@ -36,6 +36,7 @@ LLVM 19 (macOS) and LLVM 20 (Linux).
 | B9 | explorer, `TaskGraph.__assign_state_ids` | fixed 26 Sep | the accesses of a function called inside a loop iteration are attached to no context → a loop carrying a dependence through a callee is reported Do-All (every TSVC package's repetition loop) |
 | B10 | explorer (Do-All detector / reduction detection) | open, confirmed with a 30-line reproducer | a scalar carried across iterations (`x = b[i]` read next iteration; `s += …`) → the patch generator emits `parallel for shared(x)` and a plain `parallel for` on the sum — both races |
 | B11 | explorer, `TaskGraph.__assign_state_ids` | candidate | in TSVC v3's `main`, no access made under the five `pb_emit_array` calls is attached to any context (before and after B9's fix); harness code only |
+| B12 | profiler, `scripts/CC_wrapper.sh`, `CXX_wrapper.sh` | fixed 27 Sep | the compiler wrappers exit 0 when the instrumented compile or link fails — the AST dump after it sets the exit status; the failure surfaces one step later as a missing `a.out` |
 | L3 | explorer | limitation | NPB-CPP `mg`: with P1's fix the state assignment is fast, but the run then stays in task-pattern detection (`new_task_detector`) — a first run was read at 4 h 19 min, the same run was stopped unfinished after **11 h 24 min** at 100 % CPU on the server (19–20 Sep); the Do-All detector is not reached. Not usable per trial |
 
 ---
@@ -178,6 +179,25 @@ stay Do-All. A 25-line program with the same shape (a direct call to the callee,
 function holding four such loops) does NOT reproduce it: B9's fix blocks all four loops there. Harness code
 only — the evidence given to the models excludes it and packaging v4 moves it out of the file — so it
 blocks nothing; mechanism not investigated.
+
+## B12 — the compiler wrappers report success when the instrumented build fails (profiler scripts)
+
+**Found** 27 Sep 2026, running the agent's feature suite on the server (Linux, LLVM 20) for the first time. **Status:**
+FIXED 27 Sep 2026.
+
+**Symptom.** `discopop_cc fill.c -o a.out` prints a linker error — on Linux a C link does not pull in `libm`,
+and DiscoPoP's runtime (`libDiscoPoP_RT.a`, `runtimeFunctions.cpp`) calls `ceil` — and exits **0**. The caller
+learns of it only at the next step (`./a.out: No such file or directory`); the static analysis (`Data.xml`,
+call-path states) exists, so a tool that looks at those files sees a profile. Four of the agent's feature checks
+failed or skipped on the server for this reason; one of them reported it as an explorer crash.
+
+**Cause.** `CC_wrapper.sh` and `CXX_wrapper.sh` run the instrumented build and then an AST dump
+(`-fsyntax-only -Xclang -ast-dump=json`); the script's exit status is the AST dump's.
+
+**Fix.** Keep the build's status and exit with it after the AST dump. The Python entry points (`discopop_cc`,
+`discopop_cxx`) already return the wrapper's status. On the agent's side the feature suite now links C with
+`-lm`, as the harness always did (`tools/cli.py`); the experiment runs were never affected — every C benchmark
+is linked with `-lm` — and a failed build was caught one step later either way.
 
 ## B8 — a true recurrence reported as Do-All when the program spans two files (explorer, call-path states)
 
