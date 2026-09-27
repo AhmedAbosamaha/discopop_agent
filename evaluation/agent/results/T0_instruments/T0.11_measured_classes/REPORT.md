@@ -23,6 +23,9 @@ Does DiscoPoP alone reach a verified parallel program (class A), never (R), or n
 | `t0_11_probe_a` | [`runs/t0_11_probe_a/`](runs/t0_11_probe_a/) | T0.11 draw a on the 8 TSVC indirect-addressing probe loops: discopop_capability, no model | valid | 8 | FASTER 8 |
 | `t0_11_probe_b` | [`runs/t0_11_probe_b/`](runs/t0_11_probe_b/) | T0.11 draw b on the 8 TSVC indirect-addressing probe loops: discopop_capability, no model | valid | 8 | FASTER 8 |
 | `t0_11_probe_c` | [`runs/t0_11_probe_c/`](runs/t0_11_probe_c/) | T0.11 draw c on the 8 TSVC indirect-addressing probe loops: discopop_capability, no model | valid | 8 | FASTER 8 |
+| `t0_11_b1_a` | not archived yet | T0.11 draw a on E2-B1's 11 v4 packages (tsvc_b1 × 10 (s151, s161, s131, s424, s152, s171, s481, s277, vas, s482) and rodinia_b1/bfs): discopop_capability (budget 0, no model), threads 6/12, repeats 5, sizes from t0_1_b1_sizes; fixed DiscoPoP (B4, B8, B9, B10, B12); its agent logs also feed routing_check.py | registered |  |  |
+| `t0_11_b1_b` | not archived yet | T0.11 draw b on E2-B1's 11 v4 packages (tsvc_b1 × 10 (s151, s161, s131, s424, s152, s171, s481, s277, vas, s482) and rodinia_b1/bfs): discopop_capability (budget 0, no model), threads 6/12, repeats 5, sizes from t0_1_b1_sizes; fixed DiscoPoP (B4, B8, B9, B10, B12); its agent logs also feed routing_check.py | registered |  |  |
+| `t0_11_b1_c` | not archived yet | T0.11 draw c on E2-B1's 11 v4 packages (tsvc_b1 × 10 (s151, s161, s131, s424, s152, s171, s481, s277, vas, s482) and rodinia_b1/bfs): discopop_capability (budget 0, no model), threads 6/12, repeats 5, sizes from t0_1_b1_sizes; fixed DiscoPoP (B4, B8, B9, B10, B12); its agent logs also feed routing_check.py | registered |  |  |
 
 ## The instrument, as the record defines it (§5e)
 
