@@ -39,6 +39,7 @@ LLVM 19 (macOS) and LLVM 20 (Linux).
 | B12 | profiler, `scripts/CC_wrapper.sh`, `CXX_wrapper.sh` | fixed 27 Sep | the compiler wrappers exit 0 when the instrumented compile or link fails — the AST dump after it sets the exit status; the failure surfaces one step later as a missing `a.out` |
 | B13 | explorer, `TaskGraph.__insert_data_dependencies_from_files` + Do-All detector | fixed 27 Sep | a loop whose only cross-iteration dependence is a WRITE-AFTER-WRITE on an array element (a scatter `x[idx[i]] = …` whose indices repeat) is reported Do-All: the task graph dropped every WAW as "no data flow"; its pragma races (Rodinia bfs's frontier loop in E2-B1) |
 | B14 | profiler, call-path states | candidate | the second of two sibling loops that call a function is never recorded in the call-path states; its writes resolve to both iteration copies, so a dependence carried by the outer loop can block the inner loop (upstream e2e test `case_5`, RAW variant) |
+| B15 | explorer, `TaskGraph.__assign_loopstate_positions_within_functions` / task-graph loops | candidate — reproduced, root cause found | a `do … while` loop gets no loop context in the task graph, so the loop-state digit positions of every loop in the function after it are off by one: no call-path state under the `do … while` matches, every dependence recorded there is lost, and a textbook recurrence nested in it is reported Do-All (Rodinia bfs: all 1,500 dynamic dependences of the kernel lost) |
 | L3 | explorer | limitation | NPB-CPP `mg`: with P1's fix the state assignment is fast, but the run then stays in task-pattern detection (`new_task_detector`) — a first run was read at 4 h 19 min, the same run was stopped unfinished after **11 h 24 min** at 100 % CPU on the server (19–20 Sep); the Do-All detector is not reached. Not usable per trial |
 
 ---
@@ -266,6 +267,27 @@ data-sharing classification even has branches for WAW edges; they were unreachab
   fixed one: Do-All loops, their clauses and the reductions identical on all 33. TSVC's scatters (`vas`,
   `s491`, `s4113`) go through permutations, so no WAW is recorded and nothing changes; T0.15's
   equivalence and E1c-v3.1's DiscoPoP verdicts are untouched.
+
+## B15 — candidate: loops nested in a `do … while` lose every dependence (explorer)
+
+**Found** 27 Sep 2026 while verifying B13 on Rodinia bfs: with B13 fixed, the explorer still reported bfs's
+frontier loop Do-All. Traced: EVERY dynamic dependence of bfs's kernel — RAW, WAR, WAW, INIT, over 1,500
+records — resolves to no task-graph context (`__get_work_contexts_by_location_and_state_id` returns
+nothing); only 12 of the kernel's call-path states are attached to any context, none inside the level
+loop. The Do-All verdicts on bfs's loops therefore rest on no measured dependence at all.
+
+**Reproduced** on a 20-line C program (Mac): `do { for (t = 1; t < N; t++) { for (e = …) a[t] = a[t-1] + 1.0; }
+for (t …) if (a[t] < 0) stop = 1; k++; } while (k < 3 && stop == 0);` — the textbook recurrence at the
+first `for` is reported Do-All and 5 states are attached; the same code under `for (lv = 0; lv < 3; lv++)`
+blocks it (RAW `a`), 23 states attached.
+
+**Root cause.** The profiler numbers the loops of a function by source position and writes one digit per
+loop in every call-path state (`main_loopstate30333`: five loops, the `do … while` second). The task graph
+creates no loop (no `TGStartLoopNode`, no `LoopParentContext`) for the `do … while` — DiscoPoP's PET has
+it (a loop node starting at the `do` line) — and `__assign_loopstate_positions_within_functions`
+numbers only the loops the task graph has: the `for` loops after the `do` get positions one lower than
+the profiler's digits. Every state under the `do … while` then carries an open digit no context can
+consume, and no state matches.
 
 ## B14 — candidate: the call-path states lose the second of two sibling loops that call a function (profiler)
 
