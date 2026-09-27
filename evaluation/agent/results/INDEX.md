@@ -86,12 +86,17 @@ Status: running
 
 ## [E2-B1 — evidence on hidden facts: does DiscoPoP's measured evidence help where the deciding fact is not in the loop's text?](E02b1_hidden_facts/REPORT.md)
 
-Status: pre-flight
+Status: running
 
 | run | where | what it is | status | trials | outcomes |
 |---|---|---|---|---:|---|
 | `naive_b1` | [`E02b1_hidden_facts/preflight/naive_b1/`](E02b1_hidden_facts/preflight/naive_b1/) | E2-B1 measured condition 3 (H13/C2 property): naive_pragma.py — `#pragma omp parallel for` on the declared hot loop of each of the 11 packages (tsvc_b1 × 10 (s151, s161, s131, s424, s152, s171, s481, s277, vas, s482) and rodinia_b1/bfs) through the agent's safety gate with TSan (archer) and the schedule matrix; lane 1.1, server, no model | valid | 0 |  |
 | `naive_b1_s258` | [`E02b1_hidden_facts/preflight/naive_b1_s258/`](E02b1_hidden_facts/preflight/naive_b1_s258/) | E2-B1 measured condition 3 for tsvc_b1/s258: naive_pragma.py on its declared hot loop, as naive_b1 (the H13/C2 property is waived for (b); recorded), server, no model | valid | 0 |  |
+| `e2b1_smoke` | not archived yet | E2-B1 smoke: tsvc_b1/s151 and rodinia_b1/bfs × the five model arms × 1 trial, Haiku — the first model trials on packaging v4's E2-B1 packages (tsvc_b1, rodinia_b1); not counted | registered |  |  |
+| `e2b1_a_1` | not archived yet | E2-B1 main run: tsvc_b1/s151 tsvc_b1/s161 × full_b1_nospeed, no_evidence_b1_nospeed, twin_full_nospeed, twin_no_evidence_nospeed, bare_llm_nospeed × 10 trials, Haiku, threads 6/12, repeats 5, lane 0.0 | registered |  |  |
+| `e2b1_a_2` | not archived yet | E2-B1 main run: rodinia_b1/bfs × full_b1_nospeed, no_evidence_b1_nospeed, twin_full_nospeed, twin_no_evidence_nospeed, bare_llm_nospeed × 10 trials, Haiku, threads 6/12, repeats 5, lane 0.1 | registered |  |  |
+| `e2b1_a_3` | not archived yet | E2-B1 main run: tsvc_b1/s131 tsvc_b1/s424 × full_b1_nospeed, no_evidence_b1_nospeed, twin_full_nospeed, twin_no_evidence_nospeed, bare_llm_nospeed × 10 trials, Haiku, threads 6/12, repeats 5, lane 1.0 | registered |  |  |
+| `e2b1_b_1` | not archived yet | E2-B1 main run: tsvc_b1/s152 tsvc_b1/s171 tsvc_b1/s481 tsvc_b1/s277 tsvc_b1/vas × full_b1_nospeed, no_evidence_b1_nospeed, twin_full_nospeed, twin_no_evidence_nospeed, bare_llm_nospeed × 5 trials, Haiku, threads 6/12, repeats 5, lane 1.1 | registered |  |  |
 
 ## [Agent v3 pilot (D40) — the speed verdict inside the model's budget](V3_pilot_d40/REPORT.md)
 
