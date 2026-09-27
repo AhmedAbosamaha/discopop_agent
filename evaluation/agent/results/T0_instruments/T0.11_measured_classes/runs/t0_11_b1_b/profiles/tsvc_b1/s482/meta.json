@@ -1,0 +1,42 @@
+{
+  "suite": "tsvc_b1",
+  "kernel": "s482",
+  "source": "benchmarks/TSVC_2/src/tsvc.c",
+  "category": "non-local goto's / other loop exit with code before exit",
+  "file": "s482.c",
+  "language": "c",
+  "layout": "single",
+  "restructuring_class": "hidden independence (E2-B1 b)",
+  "transformation": "none: the early exit never fires on TSVC's data (c is never above b)",
+  "why": "c <= b everywhere (TSVC: b = c = 1/(i+1)), so every iteration runs and updates its own a[i]",
+  "reference_solution": null,
+  "exclude_functions": [
+    "main",
+    "pb_mix"
+  ],
+  "harness": "tsvc_b1/s482.h",
+  "harness_sha256": "784fb0d8ed54c279ecee1fff60f4138ed0fe35b0489e8301e65c63e4e79e575c",
+  "protected": [
+    "#include \"tsvc_b1/s482.h\"",
+    "static void pb_mix(int nl)",
+    "long k = ((long)nl * 7919L + 13L) % LEN_1D;",
+    "a[k] += (real_t)0.25; b[k] += (real_t)0.25; c[k] += (real_t)0.125;",
+    "d[k] += (real_t)0.125; e[k] += (real_t)0.25;",
+    "a[0] += (real_t)0.125; b[LEN_1D-1] += (real_t)0.125;",
+    "pb_mix(nl);",
+    "PB_MAIN(kernel_s482)"
+  ],
+  "protected_note": "`pb_mix(nl)` changes a few input values between two repetitions of the `nl` loop, so the repetitions depend on each other and must run in order; the loop under study is the one inside it.",
+  "hot_loop": {
+    "entry": "kernel_s482",
+    "function": "kernel_s482",
+    "line": 19,
+    "writes": [
+      "a"
+    ]
+  },
+  "agent_dataset": "SMALL",
+  "generator_version": 4,
+  "inputs_sha256": "456dd573b84b30e6f32c943bb559d80374eec67177de48223e95124a8c3fc627",
+  "output_sha256": "27fa618af9620e6eb7d88c7960e3b527e9cfeae96dc1a597a517c06ad353ba73"
+}

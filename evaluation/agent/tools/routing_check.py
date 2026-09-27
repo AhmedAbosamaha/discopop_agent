@@ -25,7 +25,13 @@ Rodinia bfs needs the declaration: it has no `nl` loop, and its level loop (`do 
 everything.
 
   reaches the model   the hot loop is Tier 2 at depth 0 in the table, or its Phase-A block says a
-                      re-queue sent it to the model
+                      re-queue sent it to the model, or — in a draw with budget 0, where the re-queue
+                      is never tried (phase_a.py: it needs a budget) — the hot loop is Tier 1, DEFERRED,
+                      and EVERY Phase-B pattern on its lines was dropped at a SAFETY stage (anything but
+                      `performance`): exactly the verdict the re-queue computes (the same patterns, the
+                      same gate in safety mode), so with a budget the region goes to the model. Shown as
+                      `via` = tier 2 / re-queue / re-queue implied (Rodinia bfs: its frontier loop is
+                      reported Do-All, the pragma races)
   DiscoPoP applied    a Phase-B pattern on the hot loop's lines ended APPLIED
 
     agent/tools/routing_check.py t0_11_b1_a t0_11_b1_b t0_11_b1_c [--benchmarks s151,s161] [--out FILE]
@@ -144,8 +150,16 @@ def judge(log_text: str, source: str, line: Optional[int] = None) -> Dict[str, A
     requeued = first is not None and any("re-queue" in l.lower() or "requeue" in l.lower() or "→ tier-2" in l.lower()
                                          for l in first["lines"])
     out["phase_a"] = first.get("outcome") if first else "not in Phase A"
-    out["reaches_model"] = (hot["tier"] == 2 and hot["depth"] == 0) or (hot["tier"] == 1 and requeued)
     span = hot["span"]
+    on_hot = [blk for blk in phase_b if blk["kind"] == "B" and blk["span"] == span]
+    stages = [re.search(r"gate failed at '([a-z_]+)'", " ".join(blk["lines"])) for blk in on_hot]
+    implied = (hot["tier"] == 1 and out["phase_a"] == "DEFERRED" and bool(on_hot)
+               and all(str(blk.get("outcome", "")).startswith("DROPPED") for blk in on_hot)
+               and all(m is not None and m.group(1) != "performance" for m in stages))
+    out["reaches_model"] = (hot["tier"] == 2 and hot["depth"] == 0) or (hot["tier"] == 1 and (requeued or implied))
+    out["via"] = ("tier 2" if hot["tier"] == 2 and hot["depth"] == 0 else "re-queue" if requeued
+                  else "re-queue implied (" + ", ".join(sorted({m.group(1) for m in stages if m})) + ")" if implied
+                  else None)
     for blk in phase_b:
         outcome = str(blk.get("outcome", ""))
         if not outcome.startswith("APPLIED"):
@@ -183,13 +197,14 @@ def main() -> int:
             verdict = judge(log.read_text(errors="replace"), src.read_text() if src else "",
                             declared_line(rd, bench))
             per.setdefault(bench, []).append((f"{run_id}/{trial.name}", verdict))
-    lines = ["| benchmark | draw | hot loop | tier | share | Phase A | reaches the model | DiscoPoP applied |",
-             "|---|---|---|---:|---:|---|---|---|"]
+    lines = ["| benchmark | draw | hot loop | tier | share | Phase A | reaches the model | via | DiscoPoP applied |",
+             "|---|---|---|---:|---:|---|---|---|---|"]
     summary = ["", "| benchmark | draws | reaches the model | DiscoPoP applied |", "|---|---:|---:|---:|"]
     for bench in sorted(per):
         for draw, v in per[bench]:
             lines.append(f"| `{bench}` | {draw} | {v.get('hot')} {v.get('span', '')} | {v.get('tier')} | {v.get('share')} "
-                         f"| {v.get('phase_a')} | {'yes' if v['reaches_model'] else 'no'} | {'yes' if v['dp_applied'] else 'no'} |")
+                         f"| {v.get('phase_a')} | {'yes' if v['reaches_model'] else 'no'} | {v.get('via') or '—'} "
+                         f"| {'yes' if v['dp_applied'] else 'no'} |")
         n = len(per[bench])
         summary.append(f"| `{bench}` | {n} | {sum(bool(v['reaches_model']) for _, v in per[bench])} of {n} "
                        f"| {sum(bool(v['dp_applied']) for _, v in per[bench])} of {n} |")

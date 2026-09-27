@@ -1,0 +1,42 @@
+{
+  "suite": "tsvc_b1",
+  "kernel": "s171",
+  "source": "benchmarks/TSVC_2/src/tsvc.c",
+  "category": "symbolics / symbolic dependence tests",
+  "file": "s171.c",
+  "language": "c",
+  "layout": "single",
+  "restructuring_class": "hidden independence (E2-B1 b)",
+  "transformation": "none: the stride inc is set outside the function (TSVC's main passes 1)",
+  "why": "with inc = 1 each iteration updates its own a[i]; with inc = 0 all would update a[0]",
+  "reference_solution": null,
+  "exclude_functions": [
+    "main",
+    "pb_mix"
+  ],
+  "harness": "tsvc_b1/s171.h",
+  "harness_sha256": "cd20c90561630dc1fc1e158cd9e75f46e48d6b45744ecaff95cf6cd0a8d9bae2",
+  "protected": [
+    "#include \"tsvc_b1/s171.h\"",
+    "static void pb_mix(int nl)",
+    "long k = ((long)nl * 7919L + 13L) % LEN_1D;",
+    "a[k] += (real_t)0.25; b[k] += (real_t)0.25; c[k] += (real_t)0.125;",
+    "d[k] += (real_t)0.125; e[k] += (real_t)0.25;",
+    "a[0] += (real_t)0.125; b[LEN_1D-1] += (real_t)0.125;",
+    "pb_mix(nl);",
+    "PB_MAIN(kernel_s171)"
+  ],
+  "protected_note": "`pb_mix(nl)` changes a few input values between two repetitions of the `nl` loop, so the repetitions depend on each other and must run in order; the loop under study is the one inside it.",
+  "hot_loop": {
+    "entry": "kernel_s171",
+    "function": "kernel_s171",
+    "line": 19,
+    "writes": [
+      "a"
+    ]
+  },
+  "agent_dataset": "SMALL",
+  "generator_version": 4,
+  "inputs_sha256": "456dd573b84b30e6f32c943bb559d80374eec67177de48223e95124a8c3fc627",
+  "output_sha256": "9330de17fa9f5150bf2c0b3c2c04a266aaad5fdd04a25457b2980ffd296e6b6a"
+}
