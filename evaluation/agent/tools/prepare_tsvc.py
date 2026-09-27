@@ -700,6 +700,19 @@ PROTECTED_NOTE = ("`pb_mix(nl)` changes a few input values between two repetitio
                   "inside it.")
 
 
+# E2-B1 only (the author, 28 Sep; record §6): v4 hides the harness header, and with it the size table the v3
+# file showed every model — in E2-B1's first smoke trial the agent's model sized a stack copy by LEN_1D, which
+# passed its gate at SMALL and crashed at the verification size. The fact is restored in the words every arm
+# already receives about the harness (the protected note): what LEN_1D is, never how to use it.
+B1_SIZE_NOTE = (" `LEN_1D`, the length of the arrays, is set in the included header: " + SIZES["SMALL"]
+                + " in the default build, and up to " + SIZES["EXTRALARGE"] + " in the builds that verify the result.")
+
+
+def protected_note(loop: "Loop") -> str:
+    """What every arm is told about the harness lines (meta.json `protected_note`); E2-B1's suite adds the size."""
+    return PROTECTED_NOTE + (B1_SIZE_NOTE if loop.suite == "tsvc_b1" else "")
+
+
 def _is_harness_global(g: str) -> bool:
     """File-scope code that is the harness's, as opposed to TSVC's own code the loop calls
     (s4121's `f`, s151's `s151s`), which stays with the loop. The line is the one TSVC draws:
@@ -1059,7 +1072,7 @@ def main() -> int:
                 "harness": f"{loop.suite}/{loop.name}.h",
                 "harness_sha256": hashlib.sha256(hdr.read_bytes()).hexdigest(),
                 "protected": protected_lines(loop),
-                "protected_note": PROTECTED_NOTE,
+                "protected_note": protected_note(loop),
                 # E2-B1 only: the loop the primary outcome's coverage check looks for (hot_loop above)
                 **({"hot_loop": hot} if hot else {}),
             } if v4 else {

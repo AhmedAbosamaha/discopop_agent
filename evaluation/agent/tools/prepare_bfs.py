@@ -90,7 +90,10 @@ TRAVERSAL = (116, 170)
 # What every arm is told about the lines the file shares with the harness (llm/request.py renders it
 # for the agent, its twins and the model alone). Nothing about the graph: its shape is the hidden fact.
 PROTECTED_NOTE = ("`PB_MAIN(kernel_bfs)` expands to `main`: it sets up the data the included header declares, "
-                  "times one call of `kernel_bfs` and prints its result.")
+                  "times one call of `kernel_bfs` and prints its result."
+                  # the size, as prepare_tsvc's B1_SIZE_NOTE (the author, 28 Sep): v4 hides the header's size table
+                  f" `no_of_nodes`, the number of graph nodes, is set in the included header: {SIZES['SMALL']} in "
+                  f"the default build, and up to {SIZES['EXTRALARGE']} in the builds that verify the result.")
 
 # The deciding fact, in meta.json only (never in a source the model reads; test_integrity 1b checks it).
 TRANSFORMATION = "whether two iterations of the frontier loop store to the same element depends on the edge list"
