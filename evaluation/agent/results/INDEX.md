@@ -84,13 +84,13 @@ Status: running
 | `e2c_race_check` | [`E02_evidence_feedback_model/checks/e2c_race_check/`](E02_evidence_feedback_model/checks/e2c_race_check/) | race_check.py (the gate's TSan + schedule matrix, archer, server, no model) over every trial of the three arms no gate saw in E2 A+B — twin_full, twin_no_evidence, twin_dp (e2c_ab_1..4) — mandatory for D38/H12/H13 | valid | 0 |  |
 | `e2c_twin_redo` | [`E02_evidence_feedback_model/runs/e2c_twin_redo/`](E02_evidence_feedback_model/runs/e2c_twin_redo/) | E2 A+B: the twin's harness-edit trial repeated (e2c_ab_4 s331 twin_full rep4 was SCAFFOLD_MODIFIED) — s331 x twin_full x Haiku x1, threads 6,12, repeats 5, lane 0.0; agent code v3 (701bf895), twin path and texts unchanged since E2 (the author, 26 Sep) | valid | 1 | BROKEN 1 |
 
-## [E2-B1 — evidence on hidden facts: does DiscoPoP's measured evidence help where the deciding fact is not in the loop's text?](E02b1_hidden_facts/)
+## [E2-B1 — evidence on hidden facts: does DiscoPoP's measured evidence help where the deciding fact is not in the loop's text?](E02b1_hidden_facts/REPORT.md)
 
 Status: pre-flight
 
 | run | where | what it is | status | trials | outcomes |
 |---|---|---|---|---:|---|
-| `naive_b1` | not archived yet | E2-B1 measured condition 3 (H13/C2 property): naive_pragma.py — `#pragma omp parallel for` on the declared hot loop of each of the 11 packages (tsvc_b1 × 10 (s151, s161, s131, s424, s152, s171, s481, s277, vas, s482) and rodinia_b1/bfs) through the agent's safety gate with TSan (archer) and the schedule matrix; lane 1.1, server, no model | registered |  |  |
+| `naive_b1` | [`E02b1_hidden_facts/preflight/naive_b1/`](E02b1_hidden_facts/preflight/naive_b1/) | E2-B1 measured condition 3 (H13/C2 property): naive_pragma.py — `#pragma omp parallel for` on the declared hot loop of each of the 11 packages (tsvc_b1 × 10 (s151, s161, s131, s424, s152, s171, s481, s277, vas, s482) and rodinia_b1/bfs) through the agent's safety gate with TSan (archer) and the schedule matrix; lane 1.1, server, no model | valid | 0 |  |
 
 ## [Agent v3 pilot (D40) — the speed verdict inside the model's budget](V3_pilot_d40/REPORT.md)
 
@@ -132,7 +132,7 @@ Status: done
 | `t0_1_apps` | [`T0_instruments/T0.01_sizes/runs/t0_1_apps/`](T0_instruments/T0.01_sizes/runs/t0_1_apps/) | the applications (md, is, hotspot, …) | valid | 0 |  |
 | `t0_1_tsvc` | [`T0_instruments/T0.01_sizes/runs/t0_1_tsvc/`](T0_instruments/T0.01_sizes/runs/t0_1_tsvc/) | the 25 TSVC loops → kernel_sizes.json | valid | 0 |  |
 | `t0_1_probe_sizes` | [`T0_instruments/T0.01_sizes/runs/t0_1_probe_sizes/`](T0_instruments/T0.01_sizes/runs/t0_1_probe_sizes/) | T0.1 sizes for the 8 TSVC indirect-addressing probe loops (decision 8), no model | valid | 0 |  |
-| `t0_1_b1_sizes` | not archived yet | T0.1 sizes for E2-B1's 11 v4 packages (tsvc_b1 × 10 (s151, s161, s131, s424, s152, s171, s481, s277, vas, s482) and rodinia_b1/bfs): size_table.py, serial -O3 per dataset size, 3 runs, lane 1.0, server, no model → kernel_sizes.json | registered |  |  |
+| `t0_1_b1_sizes` | [`T0_instruments/T0.01_sizes/runs/t0_1_b1_sizes/`](T0_instruments/T0.01_sizes/runs/t0_1_b1_sizes/) | T0.1 sizes for E2-B1's 11 v4 packages (tsvc_b1 × 10 (s151, s161, s131, s424, s152, s171, s481, s277, vas, s482) and rodinia_b1/bfs): size_table.py, serial -O3 per dataset size, 3 runs, lane 1.0, server, no model → kernel_sizes.json | valid | 0 |  |
 
 ## [T0.2 — DiscoPoP profile stability](T0_instruments/T0.02_profile_stability/REPORT.md)
 

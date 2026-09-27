@@ -10,7 +10,7 @@ At which size is each benchmark's serial computation long enough to verify (≥ 
 
 ## What is in this folder
 
-- [`runs/`](runs/) — 4 archived run(s): the evidence
+- [`runs/`](runs/) — 5 archived run(s): the evidence
 - [`superseded/`](superseded/) — 1 run(s) a later one replaced
 
 ## Runs
@@ -22,7 +22,7 @@ At which size is each benchmark's serial computation long enough to verify (≥ 
 | `t0_1_apps` | [`runs/t0_1_apps/`](runs/t0_1_apps/) | the applications (md, is, hotspot, …) | valid | 0 |  |
 | `t0_1_tsvc` | [`runs/t0_1_tsvc/`](runs/t0_1_tsvc/) | the 25 TSVC loops → kernel_sizes.json | valid | 0 |  |
 | `t0_1_probe_sizes` | [`runs/t0_1_probe_sizes/`](runs/t0_1_probe_sizes/) | T0.1 sizes for the 8 TSVC indirect-addressing probe loops (decision 8), no model | valid | 0 |  |
-| `t0_1_b1_sizes` | not archived yet | T0.1 sizes for E2-B1's 11 v4 packages (tsvc_b1 × 10 (s151, s161, s131, s424, s152, s171, s481, s277, vas, s482) and rodinia_b1/bfs): size_table.py, serial -O3 per dataset size, 3 runs, lane 1.0, server, no model → kernel_sizes.json | registered |  |  |
+| `t0_1_b1_sizes` | [`runs/t0_1_b1_sizes/`](runs/t0_1_b1_sizes/) | T0.1 sizes for E2-B1's 11 v4 packages (tsvc_b1 × 10 (s151, s161, s131, s424, s152, s171, s481, s277, vas, s482) and rodinia_b1/bfs): size_table.py, serial -O3 per dataset size, 3 runs, lane 1.0, server, no model → kernel_sizes.json | valid | 0 |  |
 
 ## The instrument, as the record defines it (§5e)
 
@@ -31,6 +31,11 @@ At which size is each benchmark's serial computation long enough to verify (≥ 
 | T0.1 | At which size is each benchmark's serial computation long enough to time? | `size_table.py` | Serial `-O3` build per dataset size, pinned to one NUMA node, 3 runs, median of the timed region (`DP_TIMED_REGION_SECONDS`). Verification size = smallest reaching 1 s; timing size = smallest reaching 0.25 s | `sizes.csv`, `chosen.json` → `kernel_sizes.json` | done (§7 `t0_1_sizes`, `t0_1_apps`) |
 
 ## From the experiment record (§7 run log)
+
+### `t0_1_b1_sizes` — 2026-09-27, server, **T0.1 for E2-B1's 11 v4 packages** (no model)
+
+- **Setup.** `size_table.py` on `tsvc_b1` × 10 and `rodinia_b1/bfs`, the method of `t0_1_tsvc`: serial `-O3` build per dataset size (the harness header through CPATH), 3 runs, median of the timed region; lane 1.0 (cores 24–35), host load ≈ 5 from other users, 16:22–16:55 UTC. A smoke of the tool on three v4 packages at MINI preceded it (not a registered run; nothing kept). Archived under `results/T0_instruments/T0.01_sizes/runs/t0_1_b1_sizes/`.
+- **Result.** Timing size LARGE for all 11. Verification size LARGE for s161 (1.33 s), s152 (1.24 s) and s481 (1.03 s); EXTRALARGE for the other eight (2.9–4.9 s; bfs 4.18 s on its 48 M-node graph). Merged into `agent/config/kernel_sizes.json` (11 added, none changed; the merge noted in its `note`). The T0.11 draws `t0_11_b1_a/b/c` can run at the campaign's sizes.
 
 ### `t0_1_probe_sizes` — 2026-09-25, server, **T0.1 for the eight T0.11 probe loops** (no model)
 
