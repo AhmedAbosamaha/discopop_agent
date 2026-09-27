@@ -85,7 +85,7 @@ package's meta.json declares (`hot_loop`, record §6, 27 Sep).
 | item | status |
 |---|---|
 | `prepare_tsvc.py --suite tsvc_b1` (v4 only): s151, s161, s131, s424 (a); s152, s171, s481, s277, vas, s482 (b) | done, validated on the Mac (27 Sep) |
-| s258 (b) | packaged 27 Sep with the recorded deviation (the author: LEN_2D = LEN_1D, `aa` one row in the header); validated on the Mac |
+| s258 (b) | packaged 27 Sep with the recorded deviation (the author); T0.11 class R 3 of 3 (a static RAW on the conditionally written `s`) — left by the rule, like s482 |
 | Rodinia bfs packager, synthetic graph (`prepare_bfs.py`, `prepared/rodinia_b1`) | done, validated on the Mac against Rodinia's bfs.cpp |
 | golden-render check (test_integrity 1c), `hot_loop` in meta included | done: 44 of 44 |
 | `routing_check.py` (hot loop from meta) | done; checked on archived draws |
@@ -114,8 +114,9 @@ For the author to decide, before any model trial:
      - the server synced first.
    - **Or:** bfs leaves by the rule and kmeans enters. That needs a new packager and its own pre-flight,
      and kmeans may meet the same defect: its hidden fact is also an index-set conflict.
-2. **Trials:** (a) 5 units × 10 × 5 model arms = 250; (b) 6 units × 5 × 5 = 150. That is 400 Haiku trials,
-   about 8–10 h on four lanes (E2 A+B ran 4.7 min per trial per lane; bfs is heavier).
+2. **Trials:** (a) 5 units × 10 × 5 model arms = 250; (b) 5 units × 5 × 5 = 125 (s482 and s258 left,
+   class R). That is 375 Haiku trials, about 8 h on four lanes (E2 A+B ran 4.7 min per trial per lane;
+   bfs is heavier).
    - The model arms: `full_b1_nospeed`, `no_evidence_b1_nospeed`, their twins, `bare_llm_nospeed`.
    - DiscoPoP alone comes from the T0.11 draws.
    - Qwen runs later.

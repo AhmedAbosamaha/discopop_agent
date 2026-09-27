@@ -41,7 +41,7 @@ repetition loop is sequential by a true dependence. The hot loop sits inside it.
 | vas | `int * __restrict__ ip = pb_ip;` (TSVC's own declaration), `a[ip[i]] = b[i]` | `pb_ip` is a permutation, built in the header | no two iterations write the same element |
 | s482 | `a[i] += b[i] * c[i]; if (c[i] > b[i]) break;` | c = b/2, set in the header, so the exit never fires | every iteration runs and updates its own `a[i]`. The screen predicts class R (a loop with a `break`), so it is expected to fail its measured condition (class A in T0.11). If it fails, the unit leaves with the reason and the next member of its group in source order enters |
 
-**s258** was packaged after the author's ruling (27 Sep; the deviation in record §6), read the same way.
+**s258** was packaged after the author's ruling (27 Sep; the deviation in record §6), read the same way. Measured afterwards, s258 and s482 both came out class R and left by the substitution rule (record §6).
 
 ## Checks this reading asks of the measurements
 

@@ -1,0 +1,43 @@
+{
+  "suite": "tsvc_b1",
+  "kernel": "s258",
+  "source": "benchmarks/TSVC_2/src/tsvc.c",
+  "category": "scalar and array expansion / wrap-around scalar under an if",
+  "file": "s258.c",
+  "language": "c",
+  "layout": "single",
+  "restructuring_class": "hidden independence (E2-B1 b)",
+  "transformation": "none: with TSVC's data the guard holds in every iteration, so s is never carried",
+  "why": "a > 0 everywhere (TSVC: a = any,frac), so s is set before every use and each iteration is independent",
+  "reference_solution": null,
+  "exclude_functions": [
+    "main",
+    "pb_mix"
+  ],
+  "harness": "tsvc_b1/s258.h",
+  "harness_sha256": "d1105e50b89a36b5b58e39cfcefe77b2aa30fbffeb8a0e7283c93f0a8e2c110d",
+  "protected": [
+    "#include \"tsvc_b1/s258.h\"",
+    "static void pb_mix(int nl)",
+    "long k = ((long)nl * 7919L + 13L) % LEN_1D;",
+    "a[k] += (real_t)0.25; b[k] += (real_t)0.25; c[k] += (real_t)0.125;",
+    "d[k] += (real_t)0.125; e[k] += (real_t)0.25;",
+    "a[0] += (real_t)0.125; b[LEN_1D-1] += (real_t)0.125;",
+    "pb_mix(nl);",
+    "PB_MAIN(kernel_s258)"
+  ],
+  "protected_note": "`pb_mix(nl)` changes a few input values between two repetitions of the `nl` loop, so the repetitions depend on each other and must run in order; the loop under study is the one inside it.",
+  "hot_loop": {
+    "entry": "kernel_s258",
+    "function": "kernel_s258",
+    "line": 21,
+    "writes": [
+      "b",
+      "e"
+    ]
+  },
+  "agent_dataset": "SMALL",
+  "generator_version": 4,
+  "inputs_sha256": "456dd573b84b30e6f32c943bb559d80374eec67177de48223e95124a8c3fc627",
+  "output_sha256": "c171583a8af30f60b533a8458e0fbd50b4622335ae0dda8c7e5c8c43432e940b"
+}
