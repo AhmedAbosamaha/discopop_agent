@@ -73,13 +73,17 @@ SIZES = {"MINI": "2000", "SMALL": "32000", "STANDARD": "4000000", "LARGE": "3200
 class Loop:
     def __init__(self, name: str, expected: str, transformation: str, why: str,
                  expert: Optional[str] = None, init_extra: str = "", reps: int = 48,
-                 pre: str = "", globals_: str = "") -> None:
+                 pre: str = "", globals_: str = "", suite: str = "tsvc") -> None:
         self.name, self.expected, self.transformation, self.why = name, expected, transformation, why
         # `pre`: the argument declarations TSVC passes through `func_args` (set in its main), which
         # the extracted body does not contain; `globals_`: file-scope code the loop needs (TSVC's
         # `f`, the index array).  Neither may say anything about how to parallelize (D36).
         self.pre, self.globals_ = pre, globals_
         self.expert, self.init_extra, self.reps = expert, init_extra, reps
+        # the suite the package belongs to (its directory under prepared/, its header's directory
+        # under prepared/_harness/, meta.json's `suite`): `tsvc` for every loop of E1-E2, `tsvc_b1` for
+        # E2-B1's (packaging v4 only, D39 reversed for E2-B1 alone)
+        self.suite = suite
 
 
 # --------------------------------------------------------------------------------------
@@ -390,6 +394,41 @@ LOOPS += [
     Loop("s491", *_PROBE, init_extra=_IP_INIT, globals_=_IP_GLOBAL, pre=_IP),
     Loop("s353", *_PROBE, init_extra=_IP_INIT, globals_=_IP_GLOBAL, pre=_IP),
 ]
+
+
+def _tsvc_callee(name: str) -> str:
+    """A helper TSVC's loop calls (`s151s`), verbatim from tsvc.c with its comments removed — a
+    comment in TSVC's source can name what the loop tests (D36)."""
+    text = TSVC.read_text()
+    m = re.search(r"^void %s\(.*?\n\{\n.*?^\}\n" % re.escape(name), text, re.S | re.M)
+    if not m:
+        raise ValueError(f"{name}: not found in {TSVC}")
+    lines = [re.sub(r"\s*//.*$", "", l) for l in m.group(0).splitlines()]
+    return "\n".join(l for l in lines if l.strip())
+
+
+# E2-B1 (the evidence experiment on hidden facts; the author, 26 Sep): loops whose deciding fact — whether
+# the loop may run in parallel — is NOT in the loop's own statements. Packaging v4 only, in their own suite
+# (`prepared/tsvc_b1`), so that a fact set in the harness is truly out of the model's file while DiscoPoP
+# still measures the dependence it causes. Chosen from the screen (docs/screening/) by the selection rule
+# recorded before the screen; every unit still has to pass its measured conditions before any trial
+# (record §6, 26-27 Sep). Tier 1: the fact sits outside the loop's function.
+_B1A = "hidden dependence (E2-B1 a)"
+B1_LOOPS: List[Loop] = [
+    # tier 1 (a): the distance is the caller's argument — `s151s(a, b, 1)`: a[i] = a[i + 1] + b[i]
+    Loop("s151", _B1A, "the distance m of the callee's loop is the caller's argument",
+         "with m = 1 each iteration reads the element the next one overwrites",
+         globals_=_tsvc_callee("s151s"), suite="tsvc_b1"),
+    # tier 1 (a): which branch runs is decided by b's sign pattern in TSVC's initial data (common.c:
+    # b = +1 at even, -1 at odd indices), set in the harness: an odd iteration writes c[i+1], which the
+    # next (even) iteration reads. The packaging's own values are all positive and lose it, so the
+    # pattern is reproduced on its magnitudes (pb_mix adds at most 0.25 once per element and the
+    # perturbation scales by 0.8-1.2: no sign changes).
+    Loop("s161", _B1A, "whether a later iteration reads what an earlier one wrote depends on b's signs",
+         "b alternates in sign, so an odd iteration writes c[i+1] and the next one reads it",
+         init_extra="    for (int i = 1; i < LEN_1D; i += 2) b[i] = -b[i];", suite="tsvc_b1"),
+]
+SUITES: Dict[str, List[Loop]] = {"tsvc": LOOPS, "tsvc_b1": B1_LOOPS}
 BY_NAME = {l.name: l for l in LOOPS}
 
 # ---- packaging v4 (D39, 25 Sep): the model's file holds only the loop ------------------------
@@ -433,7 +472,7 @@ PB_MIX_LINES = [l.strip() for l in PB_MIX.splitlines()
 
 KERNEL_HEAD = """/* TSVC-2 loop %(name)s, from TSVC-2 src/tsvc.c (%(provenance)s; University of Illinois licence,
  * see benchmarks/TSVC_2/license.txt). */
-#include "tsvc/%(name)s.h"
+#include "%(suite)s/%(name)s.h"
 """
 
 HARNESS_HEAD = """/* Measurement harness for TSVC-2 loop %(name)s: data, sizes, initial values, perturbed input,
@@ -605,10 +644,10 @@ def render(loop: Loop, expert: bool = False) -> str:
         pre = ("#define PB_EXPERT_TMP\n" if needs_tmp else "") + ("#include <omp.h>\n" if needs_omp else "")
         head = (f"/* EXPERT REFERENCE for TSVC-2 {loop.name} ({loop.transformation}). Not part of the\n"
                 f" * package: it shows the task is solvable and gives the speedup ceiling. */\n"
-                + pre + f'#include "tsvc/{loop.name}.h"\n' + PB_MIX)
+                + pre + f'#include "{loop.suite}/{loop.name}.h"\n' + PB_MIX)
         kernel = f"static real_t kernel_{loop.name}(void)\n{{\n{loop.expert}\n}}\n"
     else:
-        head = KERNEL_HEAD % {"name": loop.name, "provenance": f"sha256 {sha}"} + PB_MIX
+        head = KERNEL_HEAD % {"name": loop.name, "suite": loop.suite, "provenance": f"sha256 {sha}"} + PB_MIX
         kernel = (f"static real_t kernel_{loop.name}(void)\n{{\n"
                   + (loop.pre + "\n" if loop.pre else "")
                   + (decls + "\n" if decls else "")
@@ -622,7 +661,7 @@ def protected_lines(loop: Loop) -> List[str]:
     """The lines of the benchmark's file the harness depends on, whitespace-stripped: the
     include, the per-repetition call, `main`, and any line binding a harness array (the
     probes' `ip`). Driven from here into meta.json, the gate and every arm's prompt."""
-    lines = [f'#include "tsvc/{loop.name}.h"'] + PB_MIX_LINES
+    lines = [f'#include "{loop.suite}/{loop.name}.h"'] + PB_MIX_LINES
     lines += [l.strip() for l in loop.pre.splitlines() if "pb_" in l]
     lines += ["pb_mix(nl);", f"PB_MAIN(kernel_{loop.name})"]
     return lines
@@ -835,11 +874,19 @@ def main() -> int:
     ap.add_argument("--references-out", type=Path, default=REFERENCES,
                     help="where the expert references go (default: the tracked agent/reference_solutions/tsvc)")
     ap.add_argument("--layout", choices=("v3", "v4"), default="v3",
-                    help="v3 (default): the one-file layout of every run so far; v4 (D39): the measurement "
-                         "in a header outside the package — BLOCKED until T0.15 shows DiscoPoP's view of every "
-                         "loop is unchanged (it is not yet: s211, 25 Sep)")
+                    help="v3 (default): the one-file layout of E1 and E2; v4 (D39): the measurement in a "
+                         "header outside the package — E2-B1 only (the author, 26 Sep; possible since B8's fix)")
+    ap.add_argument("--suite", choices=sorted(SUITES), default="tsvc",
+                    help="which loops: `tsvc` (E1-E2, v3 or v4) or `tsvc_b1` (E2-B1's units, v4 only)")
     ap.add_argument("--validate", action="store_true")
     a = ap.parse_args()
+    if a.suite != "tsvc" and a.layout != "v4":
+        ap.error(f"--suite {a.suite} is packaged in layout v4 only")
+    loops = SUITES[a.suite]
+    by_name = {l.name: l for l in loops}
+    unknown = [n for n in a.names if n not in by_name]
+    if unknown:
+        ap.error(f"not in suite {a.suite}: {', '.join(unknown)}")
     harness_root = (a.harness_out or a.out.parent / "_harness").resolve()
     refs: Path = a.references_out
     # The validation builds must find the headers exactly as every other build does.
@@ -847,15 +894,15 @@ def main() -> int:
     failed = 0
     refs.mkdir(parents=True, exist_ok=True)
     if a.layout == "v4":
-        (harness_root / "tsvc").mkdir(parents=True, exist_ok=True)
-    for loop in [BY_NAME[n] for n in a.names] if a.names else LOOPS:
+        (harness_root / a.suite).mkdir(parents=True, exist_ok=True)
+    for loop in [by_name[n] for n in a.names] if a.names else loops:
         d = a.out / loop.name
         shutil.rmtree(d, ignore_errors=True)
         d.mkdir(parents=True)
         src = d / f"{loop.name}.c"
         v4 = a.layout == "v4"
         src.write_text(render(loop) if v4 else render_v3(loop))
-        hdr = harness_root / "tsvc" / f"{loop.name}.h"
+        hdr = harness_root / loop.suite / f"{loop.name}.h"
         if v4:
             hdr.write_text(render_harness(loop))
         ref: Optional[Path] = None
@@ -864,7 +911,7 @@ def main() -> int:
             ref.write_text(render(loop, expert=True) if v4 else render_v3(loop, expert=True))
         category = _tsvc_function(loop.name)[0]
         (d / "meta.json").write_text(json.dumps({
-            "suite": "tsvc", "kernel": loop.name, "source": "benchmarks/TSVC_2/src/tsvc.c",
+            "suite": loop.suite, "kernel": loop.name, "source": "benchmarks/TSVC_2/src/tsvc.c",
             "category": category, "file": src.name, "language": "c", "layout": "single",
             "restructuring_class": loop.expected, "transformation": loop.transformation, "why": loop.why,
             "reference_solution": (str(ref.relative_to(HARNESS_ROOT)) if ref.is_relative_to(HARNESS_ROOT)
@@ -873,7 +920,7 @@ def main() -> int:
                 # v4: the harness's code is not in the package: `main` (PB_MAIN) and `pb_mix`
                 # are the only functions of the file that are not the benchmark's.
                 "exclude_functions": ["main", "pb_mix"],
-                "harness": f"tsvc/{loop.name}.h",
+                "harness": f"{loop.suite}/{loop.name}.h",
                 "harness_sha256": hashlib.sha256(hdr.read_bytes()).hexdigest(),
                 "protected": protected_lines(loop),
                 "protected_note": PROTECTED_NOTE,
@@ -891,7 +938,7 @@ def main() -> int:
             failed += bool(problems)
             note = "  OK" if not problems else "  FAILED: " + "; ".join(problems)
         print(f"{loop.name:7s} {loop.expected:11s} {loop.transformation[:52]:52s}{note}", flush=True)
-    print(f"{len(a.names) or len(LOOPS)} loops -> {a.out} (harness headers in {harness_root / 'tsvc'})"
+    print(f"{len(a.names) or len(loops)} loops -> {a.out} (harness headers in {harness_root / a.suite})"
           + (f"   ({failed} failed validation)" if a.validate else ""))
     return 1 if failed else 0
 

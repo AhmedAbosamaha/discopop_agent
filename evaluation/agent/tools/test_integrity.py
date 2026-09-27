@@ -67,10 +67,11 @@ for meta_p in sorted(PREPARED.rglob("meta.json")):
     if pkg.relative_to(PREPARED).parts[0] == "calib":
         continue
     meta = json.loads(meta_p.read_text())
-    words = list(TSVC_WORDS) if meta.get("suite") == "tsvc" else []
+    is_tsvc = str(meta.get("suite") or "").startswith("tsvc")   # tsvc and E2-B1's tsvc_b1
+    words = list(TSVC_WORDS) if is_tsvc else []
     for key in ("transformation", "why", "category"):
         v = str(meta.get(key) or "").strip()
-        if meta.get("suite") == "tsvc" and len(v) > 12:
+        if is_tsvc and len(v) > 12:
             words.append(v)
     for f in sorted(p for p in pkg.rglob("*") if p.suffix in SOURCE_EXT):
         text = f.read_text(errors="replace")
@@ -83,6 +84,38 @@ for meta_p in sorted(PREPARED.rglob("meta.json")):
             leaks.append(f"{f.relative_to(PREPARED)}: '{hit}'")
 expect(f"{checked} package sources carry no solution vocabulary", checked > 0 and not leaks,
        "; ".join(leaks[:4]) + (f" (+{len(leaks) - 4} more)" if len(leaks) > 4 else ""))
+
+
+# ---- 1c. every TSVC package is what the packager renders now ---------------------------
+# The packages under prepared/ are generated, not tracked; a change to the packager's shared
+# templates (pb_mix, the harness, the kernel head) must not silently change a package an
+# experiment already ran on. So every TSVC package on disk is rendered again and compared byte
+# for byte — the source, and in layout v4 the harness header outside the package.
+print("1c. TSVC packages equal the packager's rendering")
+import prepare_tsvc  # noqa: E402
+
+rendered, drift = 0, []
+for meta_p in sorted(PREPARED.rglob("meta.json")):
+    meta = json.loads(meta_p.read_text())
+    suite = str(meta.get("suite") or "")
+    if suite not in prepare_tsvc.SUITES:
+        continue
+    loop = {l.name: l for l in prepare_tsvc.SUITES[suite]}.get(meta_p.parent.name)
+    if loop is None:
+        drift.append(f"{suite}/{meta_p.parent.name}: not a loop of the packager's suite")
+        continue
+    src = meta_p.parent / meta["file"]
+    v4 = bool(meta.get("harness"))
+    text = prepare_tsvc.render(loop) if v4 else prepare_tsvc.render_v3(loop)
+    rendered += 1
+    if src.read_text() != text:
+        drift.append(f"{suite}/{loop.name}: source differs from the packager's")
+    if v4:
+        hdr = PREPARED / "_harness" / meta["harness"]
+        if not hdr.exists() or hdr.read_text() != prepare_tsvc.render_harness(loop):
+            drift.append(f"{suite}/{loop.name}: harness header differs from the packager's")
+expect(f"{rendered} TSVC packages equal the packager's rendering", rendered > 0 and not drift,
+       "; ".join(drift[:4]) + (f" (+{len(drift) - 4} more)" if len(drift) > 4 else ""))
 
 
 # ---- 2–4. the guard through the real run loop, profiler and agent stubbed -------------
