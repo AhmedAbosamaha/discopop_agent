@@ -1,4 +1,4 @@
-# E2-B1 — preparation plan (27 Sep 2026; decisions pending with the author)
+# E2-B1 — preparation plan (27 Sep 2026; the author's decisions taken the same day, record §6)
 
 E2-B1 is the evidence experiment on hidden facts (record §6, 26 Sep, decision 4): loops whose deciding
 fact — whether the hot loop may run in parallel — is not in the loop's own statements; direction (a) a
@@ -23,7 +23,7 @@ decides and the record says so.
 
 So (a) can be tested as registered; (b), inside the agent and its twins, cannot show an evidence effect.
 
-## 2. Decisions for the author
+## 2. Decisions (all taken as recommended — "yes go ahead", 27 Sep; record §6. For (b): the index-permutation group starts at vas, s277 is admitted)
 
 1. **How direction (b) is treated.**
    - A (recommended) — (b) is DESCRIPTIVE: the model alone against DiscoPoP alone (does the model alone
