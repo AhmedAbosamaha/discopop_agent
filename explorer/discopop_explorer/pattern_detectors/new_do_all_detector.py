@@ -103,12 +103,18 @@ def show_plot(tg: TaskGraph) -> None:
 
 def _declared_inside_loop(tg: TaskGraph, loop_node: TGNode, var_name: str) -> bool:
     """B13: is `var_name` declared inside the loop's body (by DiscoPoP's CU variables: a local whose
-    declaration line lies within the loop)? Such an array is private to each iteration by its scope, so a
-    write-after-write the profile saw between iterations — the same stack address reused — is no conflict."""
+    declaration line lies within the loop's code)? Such an array is private to each iteration by its scope, so a
+    write-after-write the profile saw between iterations — the same stack address reused — is no conflict. A
+    variable whose declaration line DiscoPoP did not record ("LineNotFound", as the profiler writes for arrays)
+    counts as declared outside: the loop is blocked (conservative)."""
     loop_ctx = loop_node.created_context
     if loop_node.pet_node_id is None or loop_ctx is None:
         return False
-    loop_pet = tg.pet.node_at(loop_node.pet_node_id)
+    scope_lines: Set[Tuple[int, int]] = set()
+    for lid in loop_ctx.get_code_scope(tg.pet):
+        fid, _, ln = str(lid).partition(":")
+        if fid.isdigit() and ln.isdigit():
+            scope_lines.add((int(fid), int(ln)))
     for ctx in loop_ctx.get_contained_contexts(inclusive=True):
         for tg_node in ctx.contained_nodes:
             if tg_node.pet_node_id is None:
@@ -117,12 +123,7 @@ def _declared_inside_loop(tg: TaskGraph, loop_node: TGNode, var_name: str) -> bo
                 if str(v.name) != var_name:
                     continue
                 fid, _, line = str(v.defLine).partition(":")
-                if (
-                    fid.isdigit()
-                    and line.isdigit()
-                    and int(fid) == loop_pet.file_id
-                    and loop_pet.start_line <= int(line) <= loop_pet.end_line
-                ):
+                if fid.isdigit() and line.isdigit() and (int(fid), int(line)) in scope_lines:
                     return True
     return False
 

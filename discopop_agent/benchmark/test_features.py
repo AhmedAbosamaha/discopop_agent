@@ -4491,6 +4491,9 @@ int main(void)
         z[perm[i]] = y[i];
     }
     for (int i = 0; i < N; i++) {
+        if (i % 2) x[dup[i]] = y[i] + 1.0;
+    }
+    for (int i = 0; i < N; i++) {
         double t[4];
         for (int j = 0; j < 4; j++) t[j] = y[i] * j;
         w[i] = t[0] + t[1] + t[2] + t[3];
@@ -4508,8 +4511,9 @@ def check_b13_scatter_waw(work: Path) -> Result:
     write-after-write on an array element — a scatter `x[dup[i]] = …` whose indices repeat, so the result
     depends on which iteration writes last — was reported Do-All: the task graph dropped every WAW as "no
     data flow" before the Do-All detector ran (Rodinia bfs's frontier loop in E2-B1). Here the scatter with
-    repeated indices must be blocked on its WAW; a scatter through a permutation (each element written
-    once) and a loop with an array declared in its body (private by scope) must stay Do-All."""
+    repeated indices must be blocked on its WAW, also when the store sits under a one-line `if` (two contexts
+    on one line, 27 Sep review); a scatter through a permutation (each element written once) and a loop with
+    an array declared in its body (private by scope) must stay Do-All."""
     if not Path(_venv_bin("discopop_cxx")).exists():
         return Result("b13 scatter waw", "skip", "DiscoPoP is not installed in this venv")
     name = "b13 scatter waw"
@@ -4526,6 +4530,7 @@ def check_b13_scatter_waw(work: Path) -> Result:
         return next(i for i, l in enumerate(lines) if marker in l)   # the `for` line is the one above (1-based)
 
     at = {"scatter with repeated indices": loop_before("x[dup[i]] = y[i];"),
+          "one-line if scatter": loop_before("if (i % 2) x[dup[i]] = y[i] + 1.0;"),
           "scatter through a permutation": loop_before("z[perm[i]] = y[i];"),
           "loop with a local array": loop_before("double t[4];")}
     pats = json.loads((d / ".discopop" / "explorer" / "patterns.json").read_text()).get("patterns", {})
@@ -4538,13 +4543,79 @@ def check_b13_scatter_waw(work: Path) -> Result:
     elif not any(r.get("loop_start") == at["scatter with repeated indices"] and "WAW" in str(r.get("dep_type"))
                  for r in prevented):
         problems.append("the scatter with repeated indices is blocked, but not on its write-after-write")
+    if at["one-line if scatter"] in doall:
+        problems.append(f"the scatter under a one-line if at k.c:{at['one-line if scatter']} is reported Do-All")
     for what in ("scatter through a permutation", "loop with a local array"):
         if at[what] not in doall:
             problems.append(f"the {what} at k.c:{at[what]} is no longer Do-All")
     if problems:
         return Result(name, "fail", "; ".join(problems))
-    return Result(name, "pass", "the scatter with repeated indices is blocked on its WAW; the permutation scatter "
-                  "and the loop with a local array stay Do-All")
+    return Result(name, "pass", "the scatter with repeated indices, plain and under a one-line if, is blocked on its "
+                  "WAW; the permutation scatter and the loop with a local array stay Do-All")
+
+
+_B15_PROGRAM = """#include <stdio.h>
+#define N 1000
+double a[N]; int start[N];
+int main(void)
+{
+    for (int i = 0; i < N; i++) { a[i] = i; start[i] = (i / 4) * 4; }
+    int k = 0;
+    int stop;
+    do {
+        stop = 0;
+        for (int t = 1; t < N; t++) {
+            for (int e = start[t]; e < start[t] + 2; e++) {
+                a[t] = a[t - 1] + 1.0;
+            }
+        }
+        for (int t = 0; t < N; t++) {
+            if (a[t] < 0) stop = 1;
+        }
+        k++;
+    } while (k < 3 && stop == 0);
+    printf("%f\\n", a[N - 1]);
+    return 0;
+}
+"""
+
+
+def check_b15_dowhile(work: Path) -> Result:
+    """DiscoPoP bug B15, fixed 27 Sep in the explorer: the task graph builds no loop for a `do … while`,
+    and the loop-state digit positions were numbered over the task graph's loops only, so every loop after
+    it in the function was read at the wrong digit of the profiler's call-path states: no state under the
+    `do … while` matched, every dependence recorded there was lost, and a textbook recurrence nested in it
+    was reported Do-All (Rodinia bfs's kernel in E2-B1). Here the recurrence `a[t] = a[t - 1] + 1.0` inside
+    the `do … while` must be blocked on its read-after-write, and the loop after it that only reads `a`
+    must stay Do-All."""
+    if not Path(_venv_bin("discopop_cxx")).exists():
+        return Result("b15 do-while", "skip", "DiscoPoP is not installed in this venv")
+    name = "b15 do-while"
+    d = work / "b15_dowhile"
+    shutil.rmtree(d, ignore_errors=True)
+    d.mkdir(parents=True)
+    (d / "k.c").write_text(_B15_PROGRAM)
+    ok, err = _profile(d, "k.c", hotspots=False, c_as_c=True)
+    if not ok:
+        return Result(name, "fail", f"profile: {err}")
+    lines = _B15_PROGRAM.splitlines()
+    recurrence = next(i + 1 for i, l in enumerate(lines) if "for (int t = 1; t < N; t++)" in l)
+    reader = next(i + 1 for i, l in enumerate(lines) if "for (int t = 0; t < N; t++)" in l)
+    pats = json.loads((d / ".discopop" / "explorer" / "patterns.json").read_text()).get("patterns", {})
+    doall = {int(str(x.get("start_line", "0:0")).split(":")[1]) for x in pats.get("do_all", [])
+             if str(x.get("applicable_pattern")) == "True"}
+    prevented = json.loads((d / ".discopop" / "explorer" / "doall_prevented.json").read_text())
+    problems: List[str] = []
+    if recurrence in doall:
+        problems.append(f"the recurrence in the do-while at k.c:{recurrence} is reported Do-All")
+    elif not any(r.get("loop_start") == recurrence and "RAW" in str(r.get("dep_type")) for r in prevented):
+        problems.append("the recurrence is blocked, but not on its read-after-write")
+    if reader not in doall:
+        problems.append(f"the loop at k.c:{reader} that only reads a is no longer Do-All")
+    if problems:
+        return Result(name, "fail", "; ".join(problems))
+    return Result(name, "pass", "the recurrence nested in the do-while is blocked on its RAW; the loop after it "
+                  "stays Do-All")
 
 
 _CHECKS: List[Tuple[str, Callable[[Path], Result]]] = [
@@ -4608,6 +4679,7 @@ _CHECKS: List[Tuple[str, Callable[[Path], Result]]] = [
     ("b4-nested-duplication", check_b4_nested_duplication),
     ("b10-carried-scalar", check_b10_carried_scalar),
     ("b13-scatter-waw", check_b13_scatter_waw),
+    ("b15-dowhile", check_b15_dowhile),
 ]
 
 

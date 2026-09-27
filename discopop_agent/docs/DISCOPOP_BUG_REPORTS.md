@@ -35,11 +35,11 @@ LLVM 19 (macOS) and LLVM 20 (Linux).
 | B8 | profiler, `llvm_hooks/runOnBasicBlock.cpp` (call-path states) | fixed 26 Sep (f6b41f57) | a call into a function the pass does not instrument (defined outside the project root) enters its call state for good → every later dependence carries the wrong call path → a true recurrence reported Do-All |
 | B9 | explorer, `TaskGraph.__assign_state_ids` | fixed 26 Sep | the accesses of a function called inside a loop iteration are attached to no context → a loop carrying a dependence through a callee is reported Do-All (every TSVC package's repetition loop) |
 | B10 | explorer (Do-All detector, loop variables) | fixed 27 Sep | a scalar carried across iterations (`x = b[i]` read next iteration; `s += …`) → the patch generator emits `parallel for shared(x)` and a plain `parallel for` on the sum — both races |
-| B11 | explorer, `TaskGraph.__assign_state_ids` | candidate | in TSVC v3's `main`, no access made under the five `pb_emit_array` calls is attached to any context (before and after B9's fix); harness code only |
+| B11 | explorer, `TaskGraph.__assign_state_ids` | explained by B15 (27 Sep) | in TSVC v3's `main`, no access made under the five `pb_emit_array` calls is attached to any context: `pb_emit_array` holds a loop the task graph does not model, so its other loops read the wrong loop-state digit (B15); fixed with B15; harness code only |
 | B12 | profiler, `scripts/CC_wrapper.sh`, `CXX_wrapper.sh` | fixed 27 Sep | the compiler wrappers exit 0 when the instrumented compile or link fails — the AST dump after it sets the exit status; the failure surfaces one step later as a missing `a.out` |
 | B13 | explorer, `TaskGraph.__insert_data_dependencies_from_files` + Do-All detector | fixed 27 Sep | a loop whose only cross-iteration dependence is a WRITE-AFTER-WRITE on an array element (a scatter `x[idx[i]] = …` whose indices repeat) is reported Do-All: the task graph dropped every WAW as "no data flow"; its pragma races (Rodinia bfs's frontier loop in E2-B1) |
 | B14 | profiler, call-path states | candidate | the second of two sibling loops that call a function is never recorded in the call-path states; its writes resolve to both iteration copies, so a dependence carried by the outer loop can block the inner loop (upstream e2e test `case_5`, RAW variant) |
-| B15 | explorer, `TaskGraph.__assign_loopstate_positions_within_functions` / task-graph loops | candidate — reproduced, root cause found | a `do … while` loop gets no loop context in the task graph, so the loop-state digit positions of every loop in the function after it are off by one: no call-path state under the `do … while` matches, every dependence recorded there is lost, and a textbook recurrence nested in it is reported Do-All (Rodinia bfs: all 1,500 dynamic dependences of the kernel lost) |
+| B15 | explorer, `TaskGraph.__assign_loopstate_positions_within_functions` / task-graph loops | fixed 27 Sep | a `do … while` loop gets no loop context in the task graph, so the loop-state digit positions of every loop in the function after it are off by one: no call-path state under the `do … while` matches, every dependence recorded there is lost, and a textbook recurrence nested in it is reported Do-All (Rodinia bfs: all 1,500 dynamic dependences of the kernel lost) |
 | L3 | explorer | limitation | NPB-CPP `mg`: with P1's fix the state assignment is fast, but the run then stays in task-pattern detection (`new_task_detector`) — a first run was read at 4 h 19 min, the same run was stopped unfinished after **11 h 24 min** at 100 % CPU on the server (19–20 Sep); the Do-All detector is not reached. Not usable per trial |
 
 ---
@@ -239,19 +239,39 @@ data-sharing classification even has branches for WAW edges; they were unreachab
 **Fix** (explorer only; the author's decision, 27 Sep):
 1. The dynamic WAW records are kept, after the same-iteration pruning every dynamic dependence goes
    through, in a separate set on the source context (`Context.outgoing_waw_dependencies`) — and only
-   when BOTH writes resolve to exactly one context. A call-path state that does not say which iteration of
-   a loop a write belongs to resolves to every iteration copy of that loop; a pair built from it is no
-   evidence of a conflict between iterations (see B14 below: in `do_all/stack_access/various/case_5` the
-   second of two sibling loops that call a function is never recorded in the states, and without this
-   rule a WAW carried by the OUTER loop blocked that inner loop). They are not
+   when each write is placed in ONE iteration of every loop around it: all the contexts its state
+   resolves to share one chain of enclosing iteration contexts. Several contexts on one line are fine (a
+   one-line `if`: the condition and the store). A call-path state that does not say which iteration of a
+   loop a write belongs to resolves to every iteration copy of that loop; a pair built from it is no
+   evidence of a conflict between iterations. See B14 below: in `do_all/stack_access/various/case_5` the
+   second of two sibling loops that call a function is never recorded in the states, and without this rule
+   a WAW carried by the OUTER loop blocked that inner loop. (The first version of this rule required
+   exactly one context per write; a code review on 27 Sep showed that it dropped the real conflict of a
+   one-line `if x[dup[i]] = …`, and it was replaced before the merge.) They are not
    edges of the task graph, so every other consumer — the clause classification, the task graph's
    cleanup, the context task graph — reads exactly what it read before. Static WAW records stay dropped
    (over-approximate).
 2. The Do-All detector blocks a loop on a WAW between two of its iterations when the variable is an
-   array element (`GEPRESULT_…`), is not a loop variable, and is not declared inside the loop's body
-   (by DiscoPoP's CU variables and their declaration lines: an array declared in the body is private by
-   its scope, although the same stack address is reused). A scalar written in every iteration is left to
-   privatization, as before. The blocker is recorded in `doall_prevented.json` like any other.
+   array element (`GEPRESULT_…`), is not a loop variable, and is not declared inside the loop's code (by
+   DiscoPoP's CU variables and their declaration lines, against the loop's code scope: an array declared
+   in the body is private by its scope, although the same stack address is reused). A scalar written in
+   every iteration is left to privatization, as before. The blocker is recorded in `doall_prevented.json`
+   like any other.
+
+**Limits (found by the code review of 27 Sep and checked on reproducers; none is new, each is a case the
+fix does not reach):**
+- **Multi-dimensional arrays.** The profiler tags only a one-level subscript: `g[dup[i]][0] = …` is
+  recorded under the plain name `g`, so the WAW is not taken as an array element and the loop stays Do-All
+  (the profiler's naming, `names.cpp`).
+- **Repeat distance a multiple of 3.** DiscoPoP's task graph keeps a loop's iterations as two copies,
+  chosen from the profiler's iteration digit, which cycles 0, 1, 2. A scatter whose two writes to one
+  element are a multiple of 3 iterations apart (`dup[i] = 7 i mod 99`) has both ends in one copy, so it
+  is not seen. Irregular repeats (bfs) are.
+- **An array declared in the body whose element is written but never read in the iteration.** The
+  profiler records no declaration line for arrays (`defLine` "LineNotFound"), so the exemption cannot fire
+  and the loop is blocked. This is conservative: a loop that was parallel is refused, never the reverse.
+- **A WAW carried by an outer loop whose iterations fall in the same copy** can be counted for an inner
+  loop in rare shapes (`x[(i + t) % N]` rewritten per `t`). Also conservative.
 
 **Verified** (Mac; the reproducer, the controls and the 33 TSVC packages below):
 - the scatter with repeated indices is blocked on `WAW GEPRESULT_x`;
@@ -268,7 +288,7 @@ data-sharing classification even has branches for WAW edges; they were unreachab
   `s491`, `s4113`) go through permutations, so no WAW is recorded and nothing changes; T0.15's
   equivalence and E1c-v3.1's DiscoPoP verdicts are untouched.
 
-## B15 — candidate: loops nested in a `do … while` lose every dependence (explorer)
+## B15 — loops nested in a `do … while` (or after any loop the task graph does not model) lose every dependence (explorer)
 
 **Found** 27 Sep 2026 while verifying B13 on Rodinia bfs: with B13 fixed, the explorer still reported bfs's
 frontier loop Do-All. Traced: EVERY dynamic dependence of bfs's kernel — RAW, WAR, WAW, INIT, over 1,500
@@ -288,6 +308,37 @@ it (a loop node starting at the `do` line) — and `__assign_loopstate_positions
 numbers only the loops the task graph has: the `for` loops after the `do` get positions one lower than
 the profiler's digits. Every state under the `do … while` then carries an open digit no context can
 consume, and no state matches.
+
+**Fix** (explorer only; the author's decision, 27 Sep; revised after a code review the same day):
+1. Where a function has PET loops the task graph does not model, `__assign_loopstate_positions_within_functions`
+   numbers ALL of the function's PET loops by position, as the profiler numbers the loops it instruments.
+   Each task-graph loop is mapped to its PET loop through its header CU's CHILD in-edge. The first version
+   matched by (file, first line); that gave `while (1)` / `for (;;)` loops two positions and dropped a loop
+   sharing a line with another. The positions of the loops without a task-graph loop are recorded.
+2. `__assign_state_ids` marks those loops' digits processed ("4", as a matched digit is marked) in every
+   state it reads, so the loops the task graph does model match their states.
+3. Guards: the renumbering applies only when the function's PET loop count equals the digit count the
+   profiler wrote for it, and the function's name is unique. Otherwise the numbering stays as it was, with
+   a warning. The profiler numbers only the loops CFA instruments, so a loop CFA skips would otherwise get
+   a phantom position. Functions with no unmodelled loop are numbered exactly as before.
+
+**What it gives, and its limits.**
+- On the reproducer, the recurrence is blocked on its RAW and 21 states are attached (5 before), exactly
+  as under a `for` outer loop.
+- On bfs's profile, 36 states are attached (12 before), and the frontier loop (13) and its edge loop (17)
+  are blocked on `RAW h_cost`. The update loop (29) stays Do-All.
+- The limit: the `do … while` still has no context, so a dependence it CARRIES (bfs's `h_cost` written at
+  one level and read at the next) is compared as if inside one of its iterations. This can block an inner
+  loop whose only dependence is carried by the `do … while`. That is conservative: the fix only adds
+  dependences that the lost states had hidden, never removes one. bfs's frontier loop is blocked for that
+  reason, not by its within-level write-write conflict. The block is right, and the variable is the
+  deciding one, but the dependence kind shown is the cross-level RAW.
+- **Beyond `do … while`.** Any loop the task graph does not model is covered the same way. In every TSVC v3
+  package the harness's `pb_emit_array` holds one loop that `__break_cycles` does not model, and its other
+  loops read the wrong digit. This is B11 below, now explained: those loops lose their false Do-All (they
+  carry a dependence through `pb_emit`). They are harness code, excluded from every arm's regions.
+- **Not attached.** States whose only active loop is the unmodelled one (the `do … while`'s own body and
+  condition) are still not attached to a context.
 
 ## B14 — candidate: the call-path states lose the second of two sibling loops that call a function (profiler)
 

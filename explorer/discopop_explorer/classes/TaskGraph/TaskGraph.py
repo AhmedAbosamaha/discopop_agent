@@ -13,7 +13,7 @@ from pathlib import Path
 import random
 import signal
 import logging
-from typing import TYPE_CHECKING, Any, Deque, Dict, List, Optional, Set, Tuple, Union, cast
+from typing import TYPE_CHECKING, Any, Deque, Dict, Iterable, List, Optional, Set, Tuple, Union, cast
 import warnings
 import re
 import networkx as nx  # type: ignore
@@ -152,6 +152,9 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         self.pet = pet
         self.ast_helper = ast_helper
         self.graph = nx.MultiDiGraph()
+        # B15: per function name, the loop-state digit positions of loops the task graph does not model
+        self._untracked_loopstate_positions: Dict[str, Set[int]] = {}
+        self._dynamic_dependency_file = dynamic_dependency_file
 
         # define updating plot window
         fig1 = plt.figure(1)
@@ -737,6 +740,18 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
     ) -> List[TGConstructionQueueElement]:
         warnings.warn("Not implemented!")
         return queue
+
+    def __pet_loops_of_function(self, function_pet_id: NodeID) -> List[LoopNode]:
+        """B15: every PET loop whose closest enclosing function is `function_pet_id` (cached)."""
+        if not hasattr(self, "_pet_loops_by_function"):
+            self._pet_loops_by_function: Dict[NodeID, List[LoopNode]] = {}
+            for loop in all_nodes(self.pet, LoopNode):
+                try:
+                    fn = get_parent_function(self.pet, loop).id
+                except Exception:
+                    continue
+                self._pet_loops_by_function.setdefault(fn, []).append(loop)
+        return self._pet_loops_by_function.get(function_pet_id, [])
 
     def __function_name_of_loop(self, loop_id: Optional[NodeID]) -> str:
         """Name of the function that contains the PET loop `loop_id` (cached; "" if unknown)."""
@@ -1589,6 +1604,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
             if isinstance(node, TGFunctionNode):
                 entry_points.append(node)
         logger.info("--> Assigning loop state ids")
+        digit_lengths = self.__loopstate_digit_lengths()
         for entry_point in tqdm(entry_points):
             # loop state position corresponds to the position of the iteration count for the specific loop within the "_loopstate"-information in the callpaths reported by the profiler
             # find all loops in function, sort them by location, and assign loopstate_positions.
@@ -1605,11 +1621,112 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                     continue
                 assigned_loopstate_positions[l_pet.id] = next_unused_position
                 next_unused_position += 1
+            # B15: the profiler writes one digit per loop it instruments in the function (a `__dp_loop_entry`), in
+            # the order of the loop headers, but the task graph builds no loop for some of them (a `do … while`, a
+            # loop __break_cycles cannot break cleanly): numbered over the task graph's loops only, every later
+            # loop read the wrong digit and no call-path state under it matched — its dependences were lost. When
+            # the function has loops the task graph lacks, the positions are taken over ALL its PET loops (each
+            # task-graph loop's header CU mapped to its PET loop by the CHILD edge), and the untracked loops'
+            # digits are neutralized in the states (__assign_state_ids) — but only when that count equals the
+            # digit count the profiler wrote for the function and the function's name is unique; otherwise the
+            # numbering stays as it was.
+            renumbered = self.__renumber_with_untracked_loops(entry_point, loops, digit_lengths)
+            if renumbered is not None:
+                assigned_loopstate_positions = renumbered
             # assign loopstate positions to TGStartLoopNode's for later use
             for loop in loops:
                 if loop.pet_node_id not in assigned_loopstate_positions:
                     raise KeyError("No entry in assigned_loopstate_positions for PET node id: " + str(loop.pet_node_id))
                 loop.loopstate_position = assigned_loopstate_positions[loop.pet_node_id]
+
+    @staticmethod
+    def __one_iteration_chain(contexts: Iterable[Context]) -> bool:
+        """B13: do all these contexts lie in the same iteration of every loop around them (one chain of enclosing
+        iteration contexts)? True for a single context; False for none."""
+        chains = set()
+        for ctx in contexts:
+            chains.add(tuple(id(a) for a in ctx.get_ancestor_contexts() if isinstance(a, IterationContext)))
+            if len(chains) > 1:
+                return False
+        return len(chains) == 1
+
+    def __loop_node_of_header(self, header_cu_id: NodeID) -> Optional[NodeID]:
+        """B15: the PET loop whose header CU is `header_cu_id` (its CHILD in-edge), or None."""
+        try:
+            parents = [
+                s
+                for s, t, d in in_edges(self.pet, header_cu_id, EdgeType.CHILD)
+                if isinstance(self.pet.node_at(s), LoopNode)
+            ]
+        except Exception:
+            return None
+        return parents[0] if parents else None
+
+    def __loopstate_digit_lengths(self) -> Dict[str, Set[int]]:
+        """B15: per function name, the lengths of the loop-state digit strings the profiler wrote."""
+        out: Dict[str, Set[int]] = {}
+        dyn = getattr(self, "_dynamic_dependency_file", None)
+        if dyn is None:
+            return out
+        mapping = os.path.join(Path(str(dyn)).parent, "stateID_to_callpath_mapping.txt")
+        if not os.path.exists(mapping):
+            return out
+        with open(mapping, "r") as f:
+            for line in f:
+                parts = line.split()
+                if len(parts) < 2:
+                    continue
+                for elem in parts[1].split("-->"):
+                    if "_loopstate" not in elem:
+                        continue
+                    fn, digits = elem.split("_loopstate", 1)
+                    if digits.isdigit():
+                        out.setdefault(fn, set()).add(len(digits))
+        return out
+
+    def __renumber_with_untracked_loops(
+        self, entry_point: TGNode, loops: List[TGStartLoopNode], digit_lengths: Dict[str, Set[int]]
+    ) -> Optional[Dict[PETNodeID, int]]:
+        """B15: positions over all PET loops of the function when it has loops the task graph does not model and
+        the result is consistent with the profiler's digits; None to keep the task graph's own numbering."""
+        function_pet_id = entry_point.pet_node_id
+        if function_pet_id is None:
+            return None
+        pet_loops = self.__pet_loops_of_function(function_pet_id)
+        tracked: Dict[NodeID, List[NodeID]] = {}  # PET loop id -> header CU ids of its task-graph loops
+        unmapped_headers: List[NodeID] = []
+        for loop in loops:
+            if loop.pet_node_id is None:
+                continue
+            loop_node = self.__loop_node_of_header(loop.pet_node_id)
+            if loop_node is None:
+                unmapped_headers.append(loop.pet_node_id)
+            else:
+                tracked.setdefault(loop_node, []).append(loop.pet_node_id)
+        untracked = [l for l in pet_loops if l.id not in tracked]
+        if not untracked:
+            return None
+        name = self.pet.node_at(function_pet_id).name
+        if unmapped_headers:
+            logger.warning(f"B15: {name}: a task-graph loop header has no PET loop parent; numbering unchanged")
+            return None
+        if sum(1 for f in all_nodes(self.pet, FunctionNode) if f.name == name) != 1:
+            logger.warning(f"B15: {name}: the function name is not unique; numbering unchanged")
+            return None
+        if digit_lengths.get(name) != {len(pet_loops)}:
+            logger.warning(
+                f"B15: {name}: {len(pet_loops)} PET loops but loop-state digits of length {digit_lengths.get(name)}; "
+                "numbering unchanged"
+            )
+            return None
+        positions: Dict[PETNodeID, int] = {}
+        for pos, pet_loop in enumerate(sorted(pet_loops, key=lambda l: (l.file_id, l.start_line, l.id))):
+            if pet_loop.id in tracked:
+                for header in tracked[pet_loop.id]:
+                    positions[header] = pos
+            else:
+                self._untracked_loopstate_positions.setdefault(name, set()).add(pos)
+        return positions
 
     def __calculate_context_successions(self) -> None:
         logger.info("Assigning context successions...")
@@ -2564,6 +2681,23 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         if dynamic_dependency_file is None:
             raise ValueError("Invalid Path!")
         state_mappings_dict = self.__get_state_mappings_from_file(dynamic_dependency_file)
+        # B15: a loop the task graph does not model (a `do … while`) has a digit in every state of its function
+        # that no context can consume; mark it processed ("4"), as a matched digit is marked, so the states
+        # under that loop match the loops the task graph does model.
+        if self._untracked_loopstate_positions:
+            for sid, callpath in state_mappings_dict.items():
+                for idx, elem in enumerate(callpath):
+                    if "_loopstate" not in elem:
+                        continue
+                    fn, digits = elem.split("_loopstate", 1)
+                    positions = self._untracked_loopstate_positions.get(fn)
+                    if not positions or not digits.isdigit():
+                        continue
+                    chars = list(digits)
+                    for pos in positions:
+                        if pos < len(chars):
+                            chars[pos] = "4"
+                    callpath[idx] = fn + "_loopstate" + "".join(chars)
         #        print("state_mappings_dict: ")
         #        for state_id in state_mappings_dict:
         #            print("->", state_id, " -> ", state_mappings_dict[state_id])
@@ -3188,6 +3322,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                             else:
                                 # dynamic dependencies are allowed to leave the current function
                                 # register dependencies between all pairs of source and target contexts
+                                waw_placed: Optional[bool] = None  # B13, decided once per state pair
                                 for source_ctx in source_contexts:
                                     for target_ctx in target_contexts:
                                         if source_ctx == target_ctx:
@@ -3263,14 +3398,20 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                                             # edges — but two iterations writing the same memory is an output
                                             # dependence the Do-All detector must see (a scatter with repeated
                                             # indices). It is kept apart, after the same-iteration pruning above,
-                                            # and only when BOTH writes resolve to one context each: a state that
-                                            # does not say which iteration of a loop a write belongs to (the
-                                            # profiler's call-path states can lose a loop, e.g. the second of two
-                                            # sibling loops that call a function) resolves to every iteration copy,
-                                            # and a pair built from that is no evidence of a conflict between
-                                            # iterations (end-to-end test do_all/stack_access/various/case_5).
+                                            # and only when each write is placed in ONE iteration of every loop
+                                            # around it (all its candidate contexts share one chain of enclosing
+                                            # iteration contexts; several contexts on one line, a one-line `if`,
+                                            # are fine): a state that does not say which iteration a write belongs
+                                            # to (the profiler's call-path states can lose a loop, e.g. the second
+                                            # of two sibling loops that call a function) resolves to every
+                                            # iteration copy, and a pair built from that is no evidence of a
+                                            # conflict between iterations (e2e do_all/stack_access/various/case_5).
                                             if dependency.dtype == DepType.WAW:
-                                                if len(source_contexts) == 1 and len(target_contexts) == 1:
+                                                if waw_placed is None:
+                                                    waw_placed = self.__one_iteration_chain(
+                                                        source_contexts
+                                                    ) and self.__one_iteration_chain(target_contexts)
+                                                if waw_placed:
                                                     source_ctx.outgoing_waw_dependencies.add((target_ctx, dependency))
                                                 continue
                                             source_ctx.register_outgoing_dependency(target_ctx, dependency)
