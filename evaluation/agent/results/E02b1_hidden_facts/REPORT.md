@@ -10,7 +10,7 @@ On loops whose parallelizability is decided by a fact outside the loop's own sta
 
 ## What is in this folder
 
-- [`analysis/`](analysis/) — the read-out: [`doall_rerun_b13.md`](analysis/doall_rerun_b13.md), [`hot_loop_profile.md`](analysis/hot_loop_profile.md), [`hot_loop_profile_s258.md`](analysis/hot_loop_profile_s258.md), [`routing_check.md`](analysis/routing_check.md), [`routing_check_s258.md`](analysis/routing_check_s258.md)
+- [`analysis/`](analysis/) — the read-out: [`doall_rerun_b13.md`](analysis/doall_rerun_b13.md), [`doall_rerun_b15.md`](analysis/doall_rerun_b15.md), [`hot_loop_profile.md`](analysis/hot_loop_profile.md), [`hot_loop_profile_bfs15.md`](analysis/hot_loop_profile_bfs15.md), [`hot_loop_profile_s258.md`](analysis/hot_loop_profile_s258.md), [`routing_check.md`](analysis/routing_check.md), [`routing_check_bfs15.md`](analysis/routing_check_bfs15.md), [`routing_check_s258.md`](analysis/routing_check_s258.md)
 - [`preflight/`](preflight/) — 2 smoke run(s) before the launch
 
 ## Runs

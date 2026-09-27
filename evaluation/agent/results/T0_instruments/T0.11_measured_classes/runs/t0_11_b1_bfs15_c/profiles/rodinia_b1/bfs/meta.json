@@ -1,0 +1,67 @@
+{
+  "suite": "rodinia_b1",
+  "kernel": "bfs",
+  "source": "benchmarks/rodinia_3.1/openmp/bfs/bfs.cpp",
+  "category": "graph-traversal",
+  "file": "bfs.cpp",
+  "language": "cpp",
+  "layout": "single",
+  "restructuring_class": "hidden dependence (E2-B1 a, tier 1)",
+  "transformation": "whether two iterations of the frontier loop store to the same element depends on the edge list",
+  "why": "frontier nodes that share an unvisited neighbour store to the same h_cost and h_updating_graph_mask element in one level; the edge list is the input graph, generated outside the file",
+  "reference_solution": null,
+  "exclude_functions": [
+    "main"
+  ],
+  "harness": "rodinia_b1/bfs.h",
+  "harness_sha256": "bb26fba095bc0ae5d578f142df1ce0a64874ceb5b128c27aea56728cafb73d2c",
+  "protected": [
+    "#include \"rodinia_b1/bfs.h\"",
+    "PB_MAIN(kernel_bfs)"
+  ],
+  "protected_note": "`PB_MAIN(kernel_bfs)` expands to `main`: it sets up the data the included header declares, times one call of `kernel_bfs` and prints its result.",
+  "agent_dataset": "SMALL",
+  "generator_version": 1,
+  "sizes": {
+    "MINI": {
+      "PB_NODES": "4096"
+    },
+    "SMALL": {
+      "PB_NODES": "65536"
+    },
+    "STANDARD": {
+      "PB_NODES": "1000000"
+    },
+    "LARGE": {
+      "PB_NODES": "8000000"
+    },
+    "EXTRALARGE": {
+      "PB_NODES": "48000000"
+    }
+  },
+  "removed": [
+    "3 #ifdef OPEN / OMP_OFFLOAD block(s) in the traversal: both `#pragma omp parallel for`, the offload directives, the commented omp_set_num_threads and the start of the omp_get_wtime timing",
+    "1 comment line(s) left in the traversal (D36: it says a thread changes `stop`)",
+    "with the rest of BFSGraph: the block after the traversal (the timing's end, its `Compute time` line), #include <omp.h>, `#define OPEN`, the commented `#define NUM_THREAD 4`, Usage() and the argv interface (thread count, input file)",
+    "the graph file reading, replaced by the harness's generated graph (the recorded deviation)",
+    "the progress printf lines and the result.txt file, replaced by the digest of h_cost"
+  ],
+  "hot_loop": {
+    "entry": "kernel_bfs",
+    "function": "kernel_bfs",
+    "line": 13,
+    "writes": [
+      "h_cost"
+    ],
+    "shared": [
+      "h_graph_mask",
+      "h_updating_graph_mask"
+    ]
+  },
+  "deviations": [
+    "the graph is generated in the harness (deterministic; the structure of Rodinia's graphgen.cpp: 2-4 random edges drawn per node, stored both ways, the source drawn after the edges) instead of read from Rodinia's input file; MINI/SMALL/STANDARD have the node counts of Rodinia's graph4096, graph65536 and graph1MW_6",
+    "argv[1] seeds the generator: the perturbed input is another graph and another source"
+  ],
+  "inputs_sha256": "308ac84a8e6e752d3a954bf8a57e6668f695df465591de94e38976f3e084f4c8",
+  "output_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c"
+}

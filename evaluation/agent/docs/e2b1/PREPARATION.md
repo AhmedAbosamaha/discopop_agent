@@ -102,7 +102,10 @@ on `a`, s161's on `c` — the deciding dependence in each.
 
 For the author to decide, before any model trial:
 
-1. **B13** (`DISCOPOP_BUG_REPORTS.md`): DiscoPoP reports bfs's frontier loop Do-All although its profile
+1. **B13, then B15 — done (27 Sep).** Both fixed at the root and merged. With them, bfs meets every measured
+   condition, and the pre-flight is complete (record §6). The text below is kept as it was written before
+   the decision.
+   B13 (`DISCOPOP_BUG_REPORTS.md`): DiscoPoP reports bfs's frontier loop Do-All although its profile
    holds the write-after-write conflicts (reproduced on a 12-line scatter).
    - **Fix at the root (recommended, D14).** A false Do-All on a scatter with repeated indices is a defect
      in DiscoPoP's core verdict. Once fixed, bfs's frontier loop stops being Tier 1, and condition 5 holds

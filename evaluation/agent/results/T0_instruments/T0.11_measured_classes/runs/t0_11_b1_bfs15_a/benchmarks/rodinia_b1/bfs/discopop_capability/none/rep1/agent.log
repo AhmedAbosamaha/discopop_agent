@@ -1,0 +1,86 @@
+
+============================================================
+  DiscoPoP Agentic Controller
+============================================================
+  Source         : bfs.cpp
+  DiscoPoP dir   : .discopop
+  Model          : none
+  Budget         : 0 LLM retries/region (+2 free build fixes)
+  λ penalty      : 1.0
+  Min workload   : 0.0
+  Restruct. depth: 0 (Tier-2 allowed at depth 0–0)
+  Quality gate   : Tier-1 = all but speed, no escalation; Tier-2 = full
+  TSan           : barrier-aware (archer: /usr/lib/llvm-20/lib/libarcher.so)
+  Speedup gate   : OFF (--no-require-speedup)
+  Dry run        : False
+  LLM mode       : none
+  Edit mode      : direct
+  Re-profiling   : full (instrument + run + explore) after every kept rewrite
+  Explorer       : one attempt may take 60 s, then the draw is repeated (random stall, L5)
+  Pragmas        : DiscoPoP writes them in Phase B
+============================================================
+
+  [ok] Captured reference output on 2 inputs (49 bytes, 2.9 ms baseline) for the correctness/performance gates.
+
+  [ok] Numerical noise floor 0 — output holds no non-integer number; the floor is 0 by construction, so the remaining build variants were skipped; output is compared byte-for-byte.
+
+  Hotspots       : measured per-region runtimes are available — 22 region(s) measured, 52.1 ms total, ranking by predicted time saved at 48 threads
+
+  Baseline       : DiscoPoP proposes 1 applicable pattern(s) unaided; 1 of them produce a usable pragma
+                   → the run beats DiscoPoP by ending with more than 1
+
+  Initial candidates
+Region ID    Type           Saves    % run    Hot  Tier  Depth  Name
+--------------------------------------------------------------------------------------
+  1:13       loop          6.5 ms    12.8%  MAYBE     2      0  lines 9–40
+  1:16       loop          6.5 ms    12.8%  MAYBE     2      0  lines 13–27
+  1:11       function      6.5 ms    12.8%  MAYBE     2      0  _ZL10kernel_bfsv
+  1:21       loop          3.1 ms     6.1%  MAYBE     2      0  lines 17–25
+  1:32       loop          1.0 ms     2.0%  MAYBE     1      0  lines 29–37
+
+============================================================
+  PHASE A — restructure  (the source stays pragma-free)
+============================================================
+
+┌─ [depth=0] loop 1:13 (lines 9–40)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:16 (lines 13–27)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] function 1:11 (lines 5–41)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:21 (lines 17–25)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:32 (lines 29–37)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+
+============================================================
+  PHASE B — annotate  (1 candidate pragma(s))
+============================================================
+
+┌─ pattern #2  do_all @ lines 29–37  (W=5242880)
+│  #pragma omp parallel for
+│  gate failed at 'tsan': TSan run timed out (300 s) — the sanitized build is too slow to check this workload for races
+└─ DROPPED
+
+
+============================================================
+  SUMMARY: 0 rewrite(s) kept  |  0 pragma(s) applied  |  4 skipped
+  DiscoPoP unaided: 1 usable pragma(s) in this profile's draw  →  this run: 0   [BELOW, informational]
+    ✗  1:13  [skipped]  depth=0
+    ✗  1:16  [skipped]  depth=0
+    ✗  1:11  [skipped]  depth=0
+    ✗  1:21  [skipped]  depth=0
+
+  Results → .discopop/agent_patches/accepted.json
+============================================================
+
