@@ -64,7 +64,11 @@ class TestMethods(unittest.TestCase):
         for pattern_type in self.test_output.patterns.__dict__:
             amount_of_identified_patterns = len(self.test_output.patterns.__dict__[pattern_type])
             if pattern_type == "do_all":
-                expected_lines = ["1:14", "1:16", "1:20"]
+                # B13 (discopop_agent/docs/DISCOPOP_BUG_REPORTS.md, 27 Sep 2026): upstream expected the outer loop
+                # (line 14) Do-All too. Every one of its iterations writes all of x[] and y[] — equal values, but a
+                # write-write race between iterations (the profile records the WAW, see gold_std), which a plain
+                # `parallel for` on it turns into a data race. With B13 fixed the explorer blocks it on that WAW.
+                expected_lines = ["1:16", "1:20"]
                 with self.subTest("check for FP"):
                     res, msg = check_patterns_for_FP(
                         self,

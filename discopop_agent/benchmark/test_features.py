@@ -4478,6 +4478,75 @@ def check_b10_carried_scalar(work: Path) -> Result:
                   "both parallel loops, one of them on one line, stay Do-All")
 
 
+_B13_PROGRAM = """#include <stdio.h>
+#define N 1000
+int dup[N]; int perm[N]; double x[N]; double z[N]; double w[N]; double y[N];
+int main(void)
+{
+    for (int i = 0; i < N; i++) { dup[i] = (i * 7) % 100; perm[i] = (i * 7) % N; y[i] = i; }
+    for (int i = 0; i < N; i++) {
+        x[dup[i]] = y[i];
+    }
+    for (int i = 0; i < N; i++) {
+        z[perm[i]] = y[i];
+    }
+    for (int i = 0; i < N; i++) {
+        double t[4];
+        for (int j = 0; j < 4; j++) t[j] = y[i] * j;
+        w[i] = t[0] + t[1] + t[2] + t[3];
+    }
+    double s = 0;
+    for (int i = 0; i < N; i++) s += x[i] + z[i] + w[i];
+    printf("%f\\n", s);
+    return 0;
+}
+"""
+
+
+def check_b13_scatter_waw(work: Path) -> Result:
+    """DiscoPoP bug B13, fixed 27 Sep in the explorer: a loop whose only cross-iteration dependence is a
+    write-after-write on an array element — a scatter `x[dup[i]] = …` whose indices repeat, so the result
+    depends on which iteration writes last — was reported Do-All: the task graph dropped every WAW as "no
+    data flow" before the Do-All detector ran (Rodinia bfs's frontier loop in E2-B1). Here the scatter with
+    repeated indices must be blocked on its WAW; a scatter through a permutation (each element written
+    once) and a loop with an array declared in its body (private by scope) must stay Do-All."""
+    if not Path(_venv_bin("discopop_cxx")).exists():
+        return Result("b13 scatter waw", "skip", "DiscoPoP is not installed in this venv")
+    name = "b13 scatter waw"
+    d = work / "b13_scatter_waw"
+    shutil.rmtree(d, ignore_errors=True)
+    d.mkdir(parents=True)
+    (d / "k.c").write_text(_B13_PROGRAM)
+    ok, err = _profile(d, "k.c", hotspots=False, c_as_c=True)
+    if not ok:
+        return Result(name, "fail", f"profile: {err}")
+    lines = _B13_PROGRAM.splitlines()
+
+    def loop_before(marker: str) -> int:
+        return next(i for i, l in enumerate(lines) if marker in l)   # the `for` line is the one above (1-based)
+
+    at = {"scatter with repeated indices": loop_before("x[dup[i]] = y[i];"),
+          "scatter through a permutation": loop_before("z[perm[i]] = y[i];"),
+          "loop with a local array": loop_before("double t[4];")}
+    pats = json.loads((d / ".discopop" / "explorer" / "patterns.json").read_text()).get("patterns", {})
+    doall = {int(str(x.get("start_line", "0:0")).split(":")[1]) for x in pats.get("do_all", [])
+             if str(x.get("applicable_pattern")) == "True"}
+    prevented = json.loads((d / ".discopop" / "explorer" / "doall_prevented.json").read_text())
+    problems: List[str] = []
+    if at["scatter with repeated indices"] in doall:
+        problems.append(f"the scatter with repeated indices at k.c:{at['scatter with repeated indices']} is reported Do-All")
+    elif not any(r.get("loop_start") == at["scatter with repeated indices"] and "WAW" in str(r.get("dep_type"))
+                 for r in prevented):
+        problems.append("the scatter with repeated indices is blocked, but not on its write-after-write")
+    for what in ("scatter through a permutation", "loop with a local array"):
+        if at[what] not in doall:
+            problems.append(f"the {what} at k.c:{at[what]} is no longer Do-All")
+    if problems:
+        return Result(name, "fail", "; ".join(problems))
+    return Result(name, "pass", "the scatter with repeated indices is blocked on its WAW; the permutation scatter "
+                  "and the loop with a local array stay Do-All")
+
+
 _CHECKS: List[Tuple[str, Callable[[Path], Result]]] = [
     ("impact", check_impact_ranking),
     ("min-impact", check_min_impact),
@@ -4538,6 +4607,7 @@ _CHECKS: List[Tuple[str, Callable[[Path], Result]]] = [
     ("b9-callee-in-loop", check_b9_callee_in_loop),
     ("b4-nested-duplication", check_b4_nested_duplication),
     ("b10-carried-scalar", check_b10_carried_scalar),
+    ("b13-scatter-waw", check_b13_scatter_waw),
 ]
 
 

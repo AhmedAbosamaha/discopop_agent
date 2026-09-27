@@ -28,6 +28,9 @@ class Context(object):
     parent_context: Optional[Context]
     outgoing_dependencies: Set[Tuple[Context, Dependency]]
     incoming_dependencies: Set[Tuple[Context, Dependency]]
+    # B13: the profile's write-after-write dependences, kept apart from the data-flow edges above (which every
+    # consumer of the task graph reads as data flow); only the Do-All detector reads them
+    outgoing_waw_dependencies: Set[Tuple[Context, Dependency]]
     affected_contexts_by_outgoing_dependency: Dict[
         Dependency, List[Context]
     ]  # List of contexts in order of upward tree traversal
@@ -44,6 +47,7 @@ class Context(object):
         self.predecessor = None
         self.outgoing_dependencies = set()
         self.incoming_dependencies = set()
+        self.outgoing_waw_dependencies = set()
         self.affected_contexts_by_outgoing_dependency = dict()
         self.affecting_contexts_by_incoming_dependency = dict()
         self._ancestor_contexts_cache: Optional[List[Context]] = None

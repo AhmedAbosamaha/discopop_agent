@@ -3097,7 +3097,8 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         _context_lookup_cache: Dict[Tuple[str, str], Set[Context]] = {}
 
         # insert data dependencies into graph
-        # ignores WAW dependencies, as they do not represent data flow and thus are not relevant for the TaskGraph.
+        # WAW dependencies do not represent data flow and are not edges of the TaskGraph; the dynamic ones are kept
+        # apart on the source context (outgoing_waw_dependencies) for the Do-All detector (B13).
         logger.info("--> Inserting data dependencies: ")
         for dep_type, dep_type_deps in tqdm(dependencies.items(), desc="Dependency types"):
             for source_location, source_location_deps in tqdm(
@@ -3216,9 +3217,6 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                                                 else DepOrigin.DYNAMIC_ANALYSIS
                                             )
 
-                                            # ignore WAW, as there is no data flow
-                                            if dependency.dtype == DepType.WAW:
-                                                continue
                                             # ignore INIT as there is no data flow
                                             if dependency.dtype == DepType.INIT:
                                                 continue
@@ -3261,6 +3259,20 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                                                 print("source_states: ", source_ctx.get_state_ids())
                                                 print("sink_states: ", target_ctx.get_state_ids())
                                                 print()
+                                            # B13: a WAW carries no data flow, so it stays out of the task graph's
+                                            # edges — but two iterations writing the same memory is an output
+                                            # dependence the Do-All detector must see (a scatter with repeated
+                                            # indices). It is kept apart, after the same-iteration pruning above,
+                                            # and only when BOTH writes resolve to one context each: a state that
+                                            # does not say which iteration of a loop a write belongs to (the
+                                            # profiler's call-path states can lose a loop, e.g. the second of two
+                                            # sibling loops that call a function) resolves to every iteration copy,
+                                            # and a pair built from that is no evidence of a conflict between
+                                            # iterations (end-to-end test do_all/stack_access/various/case_5).
+                                            if dependency.dtype == DepType.WAW:
+                                                if len(source_contexts) == 1 and len(target_contexts) == 1:
+                                                    source_ctx.outgoing_waw_dependencies.add((target_ctx, dependency))
+                                                continue
                                             source_ctx.register_outgoing_dependency(target_ctx, dependency)
 
         logger.info(

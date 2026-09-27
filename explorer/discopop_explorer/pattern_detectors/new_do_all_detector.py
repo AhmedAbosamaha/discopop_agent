@@ -101,6 +101,32 @@ def show_plot(tg: TaskGraph) -> None:
     tg.run_visualizer()
 
 
+def _declared_inside_loop(tg: TaskGraph, loop_node: TGNode, var_name: str) -> bool:
+    """B13: is `var_name` declared inside the loop's body (by DiscoPoP's CU variables: a local whose
+    declaration line lies within the loop)? Such an array is private to each iteration by its scope, so a
+    write-after-write the profile saw between iterations — the same stack address reused — is no conflict."""
+    loop_ctx = loop_node.created_context
+    if loop_node.pet_node_id is None or loop_ctx is None:
+        return False
+    loop_pet = tg.pet.node_at(loop_node.pet_node_id)
+    for ctx in loop_ctx.get_contained_contexts(inclusive=True):
+        for tg_node in ctx.contained_nodes:
+            if tg_node.pet_node_id is None:
+                continue
+            for v in getattr(tg.pet.node_at(tg_node.pet_node_id), "local_vars", []) or []:
+                if str(v.name) != var_name:
+                    continue
+                fid, _, line = str(v.defLine).partition(":")
+                if (
+                    fid.isdigit()
+                    and line.isdigit()
+                    and int(fid) == loop_pet.file_id
+                    and loop_pet.start_line <= int(line) <= loop_pet.end_line
+                ):
+                    return True
+    return False
+
+
 def identify_simple_doall_and_reduction(
     tg: TaskGraph, ast_helper: ASTPatternDetectionHelper
 ) -> List[DoAllInfo | ReductionInfo]:
@@ -249,6 +275,28 @@ def identify_simple_doall_and_reduction(
                                 potential_breaking_dependencies.append((ic_source, out_dep_target, dep))
                 if dependency_found:
                     break
+            if not dependency_found:
+                # B13: two iterations writing the same ARRAY ELEMENT (a write-after-write the profile observed
+                # between iterations, e.g. a scatter x[idx[i]] = ... whose indices repeat) is an output
+                # dependence: the loop's result depends on which iteration writes last, and a plain
+                # `parallel for` races. The task graph keeps these apart from its data-flow edges. A scalar
+                # written in every iteration is left to privatization (the data-sharing clauses) as before, and
+                # an array declared inside the loop body is private by its scope.
+                for subnode in subtrees[ic_source]:
+                    for out_dep_target, dep in subnode.outgoing_waw_dependencies:
+                        if out_dep_target not in other_iterations_subnodes:
+                            continue
+                        if not str(dep.var_name).startswith("GEPRESULT_"):
+                            continue
+                        if (dep.var_name, dep.memory_region) in loop_variables:
+                            continue
+                        if _declared_inside_loop(tg, node, str(dep.var_name)[len("GEPRESULT_") :]):
+                            continue
+                        dependency_found = True
+                        prevented_records.append(_blocker_record(node, dep))
+                        break
+                    if dependency_found:
+                        break
             if dependency_found:
                 break
         if dependency_found:

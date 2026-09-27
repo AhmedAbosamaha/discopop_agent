@@ -37,7 +37,8 @@ LLVM 19 (macOS) and LLVM 20 (Linux).
 | B10 | explorer (Do-All detector, loop variables) | fixed 27 Sep | a scalar carried across iterations (`x = b[i]` read next iteration; `s += …`) → the patch generator emits `parallel for shared(x)` and a plain `parallel for` on the sum — both races |
 | B11 | explorer, `TaskGraph.__assign_state_ids` | candidate | in TSVC v3's `main`, no access made under the five `pb_emit_array` calls is attached to any context (before and after B9's fix); harness code only |
 | B12 | profiler, `scripts/CC_wrapper.sh`, `CXX_wrapper.sh` | fixed 27 Sep | the compiler wrappers exit 0 when the instrumented compile or link fails — the AST dump after it sets the exit status; the failure surfaces one step later as a missing `a.out` |
-| B13 | explorer (Do-All detector) | candidate — reproduced, root cause not yet located | a loop whose only cross-iteration dependence is a WRITE-AFTER-WRITE on an array element (a scatter `x[idx[i]] = …` whose indices repeat) is reported Do-All: its pragma races and the final values depend on the schedule; Rodinia bfs's frontier loop in E2-B1, 3 of 3 draws |
+| B13 | explorer, `TaskGraph.__insert_data_dependencies_from_files` + Do-All detector | fixed 27 Sep | a loop whose only cross-iteration dependence is a WRITE-AFTER-WRITE on an array element (a scatter `x[idx[i]] = …` whose indices repeat) is reported Do-All: the task graph dropped every WAW as "no data flow"; its pragma races (Rodinia bfs's frontier loop in E2-B1) |
+| B14 | profiler, call-path states | candidate | the second of two sibling loops that call a function is never recorded in the call-path states; its writes resolve to both iteration copies, so a dependence carried by the outer loop can block the inner loop (upstream e2e test `case_5`, RAW variant) |
 | L3 | explorer | limitation | NPB-CPP `mg`: with P1's fix the state assignment is fast, but the run then stays in task-pattern detection (`new_task_detector`) — a first run was read at 4 h 19 min, the same run was stopped unfinished after **11 h 24 min** at 100 % CPU on the server (19–20 Sep); the Do-All detector is not reached. Not usable per trial |
 
 ---
@@ -208,7 +209,7 @@ function holding four such loops) does NOT reproduce it: B9's fix blocks all fou
 only — the evidence given to the models excludes it and packaging v4 moves it out of the file — so it
 blocks nothing; mechanism not investigated.
 
-## B13 — candidate: a cross-iteration write-after-write on an array element does not block Do-All (explorer)
+## B13 — a cross-iteration write-after-write on an array element does not block Do-All (explorer)
 
 **Found** 27 Sep 2026 in E2-B1's pre-flight: on all three T0.11 draws of Rodinia bfs (`t0_11_b1_a/b/c`,
 server, fixed DiscoPoP with B4, B8, B9, B10, B12) the explorer reports the frontier loop (bfs.cpp lines
@@ -228,14 +229,57 @@ y[i];` with `idx[i] = (7 i) mod 100` — each element written by ten iterations,
 last — is reported Do-All, applicable. A nested frontier/edge variant that also reads `cost[tid]` is
 correctly blocked, by the RAW on `cost`. So the missing case is a conflict that is only a WAW.
 
-**Where to look.** `new_do_all_detector.py` skips only WAR edges explicitly; a WAW edge between two
-iterations' contexts would block. So the WAW is most likely lost before the check — a store conflicting
-with ITSELF (the same instruction in two iterations) may map to one context and become a self-loop that
-the two-iteration duplication (`TaskGraph.__duplicate_loop_iterations`) does not reproduce across the
-copies. Not yet verified. A fix must still let a scalar written in every iteration (a scratch `s`, whose
-WAW DiscoPoP resolves by privatization) stay Do-All with `private`. The fix would add blocking
-dependences only where the profile saw two iterations store to the same element, so a loop that stores
-each element once (a permutation scatter: TSVC `vas`, `s491`, `s4113`) keeps its Do-All.
+**Root cause.** `TaskGraph.__insert_data_dependencies_from_files` drops every WAW record, static and
+dynamic, before any context is linked ("ignore WAW, as there is no data flow"). For the task graph's own
+purposes that holds — a WAW carries no value — but the Do-All detector reads its cross-iteration checks
+from those same edges, so an output dependence between two iterations never reached it. (The detector's
+data-sharing classification even has branches for WAW edges; they were unreachable.)
+
+**Fix** (explorer only; the author's decision, 27 Sep):
+1. The dynamic WAW records are kept, after the same-iteration pruning every dynamic dependence goes
+   through, in a separate set on the source context (`Context.outgoing_waw_dependencies`) — and only
+   when BOTH writes resolve to exactly one context. A call-path state that does not say which iteration of
+   a loop a write belongs to resolves to every iteration copy of that loop; a pair built from it is no
+   evidence of a conflict between iterations (see B14 below: in `do_all/stack_access/various/case_5` the
+   second of two sibling loops that call a function is never recorded in the states, and without this
+   rule a WAW carried by the OUTER loop blocked that inner loop). They are not
+   edges of the task graph, so every other consumer — the clause classification, the task graph's
+   cleanup, the context task graph — reads exactly what it read before. Static WAW records stay dropped
+   (over-approximate).
+2. The Do-All detector blocks a loop on a WAW between two of its iterations when the variable is an
+   array element (`GEPRESULT_…`), is not a loop variable, and is not declared inside the loop's body
+   (by DiscoPoP's CU variables and their declaration lines: an array declared in the body is private by
+   its scope, although the same stack address is reused). A scalar written in every iteration is left to
+   privatization, as before. The blocker is recorded in `doall_prevented.json` like any other.
+
+**Verified** (Mac; the reproducer, the controls and the 33 TSVC packages below):
+- the scatter with repeated indices is blocked on `WAW GEPRESULT_x`;
+- a scatter through a permutation (each element written once — no WAW is ever recorded), a loop with a
+  local array in its body, and a loop with a scratch scalar stay Do-All (the scalar `private`);
+- feature check `b13-scatter-waw` (the three cases in one program).
+- the explorer's end-to-end tests 31 of 31, after one expectation was changed: upstream's
+  `do_all/stack_access/various/case_5` expected its OUTER loop (line 14) Do-All, although every one of its
+  iterations writes all of `x[]` and `y[]` — equal values, but a write-write race between iterations (the
+  test's own gold standard lists the WAW). The fixed explorer blocks it on `WAW GEPRESULT_x`; the test now
+  expects lines 16 and 20 only, with this reason in a comment. Feature suite 60 of 60.
+- the 33 TSVC packages, one pristine profile each, the committed explorer (B4, B9, B10) against the
+  fixed one: Do-All loops, their clauses and the reductions identical on all 33. TSVC's scatters (`vas`,
+  `s491`, `s4113`) go through permutations, so no WAW is recorded and nothing changes; T0.15's
+  equivalence and E1c-v3.1's DiscoPoP verdicts are untouched.
+
+## B14 — candidate: the call-path states lose the second of two sibling loops that call a function (profiler)
+
+**Found** 27 Sep 2026 while fixing B13, in the end-to-end test `do_all/stack_access/various/case_5`: an outer
+loop holds two sibling loops, each calling `f(j)`. The profiler prints "No transition found from state 17 via
+instruction 1! State might be incorrect from here on!", and in `stateID_to_callpath_mapping.txt` no state of
+the second inner loop (line 20) ever records it — its digit stays "3" (inactive) in every state of the path,
+while the first inner loop's digit moves 0 → 1 → 2. A write in the second loop therefore resolves to BOTH of
+its iteration copies in the task graph, and a dependence carried by the OUTER loop is paired across the
+inner loop's copies: the same program with `y[j] = y[j] + s` has its inner loop at line 20 blocked on a
+RAW of `y` by the explorer as it was before B13 (the dependence is carried only by the outer loop). B13's
+fix counts a WAW only between writes that resolve to one context each, so B13 adds no such false block;
+the RAW one predates it. Not investigated further; no campaign benchmark is known to have this shape
+(TSVC's 33 packages: no change under B13's sweep).
 
 ## B12 — the compiler wrappers report success when the instrumented build fails (profiler scripts)
 
