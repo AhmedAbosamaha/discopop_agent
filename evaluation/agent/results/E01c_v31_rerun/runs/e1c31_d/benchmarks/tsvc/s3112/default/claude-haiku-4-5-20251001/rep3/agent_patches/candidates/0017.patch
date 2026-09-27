@@ -1,0 +1,29 @@
+--- s3112.c
++++ s3112.c
+@@ -132,13 +132,22 @@
+ {
+     real_t sum;
+     for (int nl = 0; nl < R; nl++) {
+-        sum = (real_t)0.0;
++        /* Apply pb_mix from the previous iteration before reading from a.
++         * This makes the nl-loop dependence explicit: iteration nl depends on
++         * the modifications pb_mix(nl-1) made to array a. */
++        if (nl > 0) {
++            pb_mix(nl - 1);
++        }
++
++        real_t nl_sum = (real_t)0.0;
+         for (int i = 0; i < LEN_1D; i++) {
+-            sum += a[i];
+-            b[i] = sum;
++            nl_sum += a[i];
++            b[i] = nl_sum;
+         }
+-        pb_mix(nl);
++        sum = nl_sum;
+     }
++    /* Apply the final pb_mix after the loop. */
++    pb_mix(R - 1);
+     return sum;
+ }
+ 

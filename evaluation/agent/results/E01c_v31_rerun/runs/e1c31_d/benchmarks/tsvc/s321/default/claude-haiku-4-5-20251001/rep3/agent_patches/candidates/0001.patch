@@ -1,0 +1,23 @@
+--- s321.c
++++ s321.c
+@@ -131,8 +131,18 @@
+ static real_t kernel_s321(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
+-        for (int i = 1; i < LEN_1D; i++) {
+-            a[i] += a[i-1] * b[i];
++        // Repeat odd-even passes until full propagation: each pair allows information to travel
++        // distance 2 farther, so after k pairs we reach distance 2^k.
++        // For distance LEN_1D, need ceil(log2(LEN_1D)) ~15 pairs. Use 20 to be safe.
++        for (int pass_pair = 0; pass_pair < 20; pass_pair++) {
++            // Process odd indices: no dependencies within this pass
++            for (int i = 1; i < LEN_1D; i += 2) {
++                a[i] += a[i-1] * b[i];
++            }
++            // Process even indices: no dependencies within this pass
++            for (int i = 2; i < LEN_1D; i += 2) {
++                a[i] += a[i-1] * b[i];
++            }
+         }
+         pb_mix(nl);
+     }

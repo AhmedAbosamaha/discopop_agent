@@ -1,0 +1,10 @@
+--- s341.c
++++ s341.c
+@@ -130,6 +130,7 @@
+ 
+ static real_t kernel_s341(void)
+ {
++    #pragma omp parallel for 
+     for (int nl = 0; nl < R; nl++) {
+         /* Declare j inside the loop: it is now local (private) to each activation of the nl loop.
+            This removes the loop-carried dependence on j at the nl level. The i loop maintains

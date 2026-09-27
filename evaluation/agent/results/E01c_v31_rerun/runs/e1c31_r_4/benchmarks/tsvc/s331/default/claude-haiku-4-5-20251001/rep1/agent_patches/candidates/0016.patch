@@ -1,0 +1,10 @@
+--- s331.c
++++ s331.c
+@@ -142,6 +142,7 @@
+ 
+         /* Phase 1: Mark all matching indices. Each iteration writes to a distinct
+          * element is_negative[i], so no loop-carried dependence — can be parallelized. */
++        #pragma omp parallel for shared(is_negative) 
+         for (int i = 0; i < LEN_1D; i++) {
+             if (a[i] < (real_t)0.) {
+                 is_negative[i] = 1;

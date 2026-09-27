@@ -1,0 +1,53 @@
+--- s3112.c
++++ s3112.c
+@@ -133,10 +133,48 @@
+     real_t sum;
+     for (int nl = 0; nl < R; nl++) {
+         sum = (real_t)0.0;
++
++        /* Partition into chunks for parallel prefix accumulation */
++        int chunk_size = (LEN_1D + 31) / 32;  /* ~32 chunks */
++        int num_chunks = (LEN_1D + chunk_size - 1) / chunk_size;
++        real_t* chunk_sums = (real_t*)malloc(num_chunks * sizeof(real_t));
++
++        /* Phase 1: sequential local cumsum per chunk */
++        for (int chunk_idx = 0; chunk_idx < num_chunks; chunk_idx++) {
++            int chunk_start = chunk_idx * chunk_size;
++            int chunk_end = (chunk_idx + 1) * chunk_size < LEN_1D ? (chunk_idx + 1) * chunk_size : LEN_1D;
++            real_t local_sum = (real_t)0.0;
++            for (int i = chunk_start; i < chunk_end; i++) {
++                local_sum += a[i];
++                b[i] = local_sum;
++            }
++            chunk_sums[chunk_idx] = local_sum;
++        }
++
++        /* Phase 2: sequential prefix sum of chunks */
++        real_t accum = (real_t)0.0;
++        for (int chunk_idx = 0; chunk_idx < num_chunks; chunk_idx++) {
++            real_t temp = chunk_sums[chunk_idx];
++            chunk_sums[chunk_idx] = accum;
++            accum += temp;
++        }
++
++        /* Phase 3: parallel-ready: add prefix to each chunk */
++        for (int chunk_idx = 0; chunk_idx < num_chunks; chunk_idx++) {
++            int chunk_start = chunk_idx * chunk_size;
++            int chunk_end = (chunk_idx + 1) * chunk_size < LEN_1D ? (chunk_idx + 1) * chunk_size : LEN_1D;
++            for (int i = chunk_start; i < chunk_end; i++) {
++                b[i] += chunk_sums[chunk_idx];
++            }
++        }
++
++        /* Phase 4: recompute sum in original sequential order for exact floating-point match */
++        sum = (real_t)0.0;
+         for (int i = 0; i < LEN_1D; i++) {
+             sum += a[i];
+-            b[i] = sum;
+-        }
++        }
++
++        free(chunk_sums);
+         pb_mix(nl);
+     }
+     return sum;

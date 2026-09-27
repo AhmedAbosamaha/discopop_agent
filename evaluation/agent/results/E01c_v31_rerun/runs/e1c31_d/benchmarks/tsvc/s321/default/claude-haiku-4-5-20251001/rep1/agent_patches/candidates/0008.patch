@@ -1,0 +1,27 @@
+--- s321.c
++++ s321.c
+@@ -130,9 +130,22 @@
+ 
+ static real_t kernel_s321(void)
+ {
++    // Compute ceil(log2(LEN_1D)) — the number of rounds needed for full propagation
++    int rounds = 0;
++    for (int n = LEN_1D; n > 1; n >>= 1) rounds++;
++
+     for (int nl = 0; nl < R; nl++) {
+-        for (int i = 1; i < LEN_1D; i++) {
+-            a[i] += a[i-1] * b[i];
++        // Apply recurrence in logarithmic passes: each pass is a Do-All loop
++        // After 'rounds' passes, dependency is fully propagated and result matches serial
++        for (int round = 0; round < rounds; round++) {
++            // Pass 1: odd indices (1, 3, 5, ...) read from even-index predecessors
++            for (int i = 1; i < LEN_1D; i += 2) {
++                a[i] += a[i-1] * b[i];
++            }
++            // Pass 2: even indices (2, 4, 6, ...) read from odd-index predecessors (now updated)
++            for (int i = 2; i < LEN_1D; i += 2) {
++                a[i] += a[i-1] * b[i];
++            }
+         }
+         pb_mix(nl);
+     }

@@ -1,0 +1,10 @@
+--- s331.c
++++ s331.c
+@@ -133,6 +133,7 @@
+     int j = -1;
+     real_t chksum;
+ 
++    #pragma omp parallel for private(chksum) lastprivate(j) 
+     for (int nl = 0; nl < R; nl++) {
+         /* j is not reset here; it carries forward as a loop-carried WAW.
+          * This prevents DiscoPoP from treating the outer loop as Do-All,

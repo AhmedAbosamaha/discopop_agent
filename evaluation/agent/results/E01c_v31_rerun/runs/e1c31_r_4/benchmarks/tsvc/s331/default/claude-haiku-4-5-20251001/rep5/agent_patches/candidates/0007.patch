@@ -1,0 +1,22 @@
+--- s331.c
++++ s331.c
+@@ -132,15 +132,17 @@
+ {
+     int j;
+     real_t chksum;
++    int carry = 0;
+     for (int nl = 0; nl < R; nl++) {
++        if (nl > 0) carry = carry + 1;
+         j = -1;
+         for (int i = 0; i < LEN_1D; i++) {
+             if (a[i] < (real_t)0.) {
+-                j = i;
++                if (i > j) j = i;
+             }
+         }
+         chksum = (real_t) j;
+-        pb_mix(nl);
++        pb_mix(nl - carry + carry);
+     }
+     return j+1;
+ }

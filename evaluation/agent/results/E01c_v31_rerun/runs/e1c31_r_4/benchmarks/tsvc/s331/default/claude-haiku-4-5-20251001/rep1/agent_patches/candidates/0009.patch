@@ -1,0 +1,35 @@
+--- s331.c
++++ s331.c
+@@ -128,19 +128,25 @@
+ #endif
+ }
+ 
++static int find_last_negative_index_and_mix(int nl)
++{
++    int j = -1;
++    for (int i = 0; i < LEN_1D; i++) {
++        if (a[i] < (real_t)0.) {
++            j = i;
++        }
++    }
++    pb_mix(nl);
++    return j;
++}
++
+ static real_t kernel_s331(void)
+ {
+     int j;
+     real_t chksum;
+     for (int nl = 0; nl < R; nl++) {
+-        j = -1;
+-        for (int i = 0; i < LEN_1D; i++) {
+-            if (a[i] < (real_t)0.) {
+-                j = i;
+-            }
+-        }
++        j = find_last_negative_index_and_mix(nl);
+         chksum = (real_t) j;
+-        pb_mix(nl);
+     }
+     return j+1;
+ }

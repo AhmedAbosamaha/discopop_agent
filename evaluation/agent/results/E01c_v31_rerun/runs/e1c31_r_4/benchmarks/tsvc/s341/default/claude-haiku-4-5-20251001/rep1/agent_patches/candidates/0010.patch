@@ -1,0 +1,10 @@
+--- s341.c
++++ s341.c
+@@ -142,6 +142,7 @@
+         }
+ 
+         // Second pass: gather elements using indices and write to a in parallel
++        #pragma omp parallel for firstprivate(count) shared(indices) 
+         for (int k = 0; k < count; k++) {
+             a[k] = b[indices[k]];
+         }

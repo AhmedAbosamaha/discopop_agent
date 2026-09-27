@@ -1,0 +1,10 @@
+--- s341.c
++++ s341.c
+@@ -133,6 +133,7 @@
+     int *mask = (int*)malloc(LEN_1D * sizeof(int));
+     int *offset = (int*)malloc(LEN_1D * sizeof(int));
+ 
++    #pragma omp parallel for shared(offset,mask) 
+     for (int nl = 0; nl < R; nl++) {
+         // Mark which elements satisfy the condition
+         #pragma omp parallel for shared(mask) 

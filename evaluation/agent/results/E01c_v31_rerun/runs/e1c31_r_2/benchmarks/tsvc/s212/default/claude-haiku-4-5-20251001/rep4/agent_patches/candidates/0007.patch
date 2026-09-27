@@ -1,0 +1,16 @@
+--- s212.c
++++ s212.c
+@@ -132,11 +132,13 @@
+ {
+     for (int nl = 0; nl < R; nl++) {
+         /* Phase 1: Compute b using original values of a (no modification of a yet) */
++        #pragma omp parallel for 
+         for (int i = 0; i < LEN_1D-1; i++) {
+             b[i] += a[i + 1] * d[i];
+         }
+ 
+         /* Phase 2: Modify a (no reads from a anymore) */
++        #pragma omp parallel for 
+         for (int i = 0; i < LEN_1D-1; i++) {
+             a[i] *= c[i];
+         }

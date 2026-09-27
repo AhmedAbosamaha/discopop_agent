@@ -1,0 +1,26 @@
+--- s331.c
++++ s331.c
+@@ -132,7 +132,11 @@
+ {
+     int j;
+     real_t chksum;
++    int prev_nl = -1;
+     for (int nl = 0; nl < R; nl++) {
++        if (nl > 0) {
++            pb_mix(prev_nl);
++        }
+         j = -1;
+         for (int i = 0; i < LEN_1D; i++) {
+             if (a[i] < (real_t)0.) {
+@@ -140,7 +144,10 @@
+             }
+         }
+         chksum = (real_t) j;
+-        pb_mix(nl);
++        if (nl == R - 1) {
++            pb_mix(nl);
++        }
++        prev_nl = nl;
+     }
+     return j+1;
+ }

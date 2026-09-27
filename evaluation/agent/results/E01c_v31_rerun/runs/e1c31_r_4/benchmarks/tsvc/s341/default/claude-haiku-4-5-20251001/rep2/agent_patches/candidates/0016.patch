@@ -1,0 +1,10 @@
+--- s341.c
++++ s341.c
+@@ -149,6 +149,7 @@
+         /* Parallel-safe write: each iteration independently reads from idx and b, writes to a.
+            Different iterations write to different elements of a (idx[j] are unique indices).
+            No loop-carried dependence on a counter variable. */
++        #pragma omp parallel for firstprivate(count) shared(idx) 
+         for (int j = 0; j < count; j++) {
+             a[j] = b[idx[j]];
+         }

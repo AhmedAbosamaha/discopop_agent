@@ -1,0 +1,14 @@
+--- s241.c
++++ s241.c
+@@ -135,9 +135,11 @@
+         for (int i = 0; i < LEN_1D; i++) {
+             saved_a[i] = a[i];
+         }
++        #pragma omp parallel for 
+         for (int i = 0; i < LEN_1D-1; i++) {
+             a[i] = b[i] * c[i  ] * d[i];
+         }
++        #pragma omp parallel for firstprivate(saved_a) 
+         for (int i = 0; i < LEN_1D-1; i++) {
+             b[i] = a[i] * saved_a[i+1] * d[i];
+         }

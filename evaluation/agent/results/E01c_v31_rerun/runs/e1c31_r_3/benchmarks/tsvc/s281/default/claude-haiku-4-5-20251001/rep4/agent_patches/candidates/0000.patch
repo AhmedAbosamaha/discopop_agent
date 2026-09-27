@@ -1,0 +1,18 @@
+--- s281.c
++++ s281.c
+@@ -132,7 +132,14 @@
+ {
+     real_t x;
+     for (int nl = 0; nl < R; nl++) {
+-        for (int i = 0; i < LEN_1D; i++) {
++        // Pass 1: iterations 0 to LEN_1D/2-1 (read backward from untouched half)
++        for (int i = 0; i < LEN_1D/2; i++) {
++            x = a[LEN_1D-i-1] + b[i] * c[i];
++            a[i] = x-(real_t)1.0;
++            b[i] = x;
++        }
++        // Pass 2: iterations LEN_1D/2 to LEN_1D-1 (read from first half, just written)
++        for (int i = LEN_1D/2; i < LEN_1D; i++) {
+             x = a[LEN_1D-i-1] + b[i] * c[i];
+             a[i] = x-(real_t)1.0;
+             b[i] = x;

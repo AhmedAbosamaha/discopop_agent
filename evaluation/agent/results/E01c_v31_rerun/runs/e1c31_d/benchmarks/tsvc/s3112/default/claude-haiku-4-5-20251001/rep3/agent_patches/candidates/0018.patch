@@ -1,0 +1,16 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1c31_d/benchmarks/tsvc/s3112/default/claude-haiku-4-5-20251001/rep3/work/s3112.c	2026-09-27 00:35:39.192709865 +0000
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1c31_d/benchmarks/tsvc/s3112/default/claude-haiku-4-5-20251001/rep3/work/s3112.c.discopop_patch_generator.temp	2026-09-27 00:35:42.279727197 +0000
+@@ -147,7 +147,13 @@
+         sum = nl_sum;
+     }
+     /* Apply the final pb_mix after the loop. */
++    #pragma omp parallel
++    #pragma omp single
++    {
++    #pragma omp task
+     pb_mix(R - 1);
++    #pragma omp task
++    }
+     return sum;
+ }
+ 

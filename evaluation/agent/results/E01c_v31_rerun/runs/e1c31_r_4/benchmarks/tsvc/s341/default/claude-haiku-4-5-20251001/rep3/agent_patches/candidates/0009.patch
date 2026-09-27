@@ -1,0 +1,10 @@
+--- s341.c
++++ s341.c
+@@ -147,6 +147,7 @@
+         }
+ 
+         // Pass 2: Write filtered elements to output array (each iteration writes to a unique index)
++        #pragma omp parallel for shared(idx) 
+         for (int i = 0; i < LEN_1D; i++) {
+             if (idx[i] >= 0) {
+                 a[idx[i]] = b[i];

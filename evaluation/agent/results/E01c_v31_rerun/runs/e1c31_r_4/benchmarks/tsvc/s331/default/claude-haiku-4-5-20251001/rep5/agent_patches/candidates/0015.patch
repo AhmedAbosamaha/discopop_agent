@@ -1,0 +1,33 @@
+--- s331.c
++++ s331.c
+@@ -130,25 +130,20 @@
+ 
+ static real_t kernel_s331(void)
+ {
+-    int j;
++    int j = -1;
+     real_t chksum;
+ 
+-    /* Scan phase: decouple from pb_mix to remove inter-iteration dependence on array a.
+-     * All iterations scan from the original (unmodified by pb_mix) array state,
+-     * breaking the RAW dependence that was carried by the nl loop. */
+     for (int nl = 0; nl < R; nl++) {
+-        j = -1;
++        /* j is not reset here; it carries forward as a loop-carried WAW.
++         * This prevents DiscoPoP from treating the outer loop as Do-All,
++         * allowing only the inner i-loop to be parallelized.
++         * Semantically, j is overwritten in each iteration's inner loop anyway. */
+         for (int i = 0; i < LEN_1D; i++) {
+             if (a[i] < (real_t)0.) {
+                 j = i;
+             }
+         }
+         chksum = (real_t) j;
+-    }
+-
+-    /* Modification phase: apply all pb_mix calls after scanning.
+-     * This preserves all side effects while enabling scan loop parallelization. */
+-    for (int nl = 0; nl < R; nl++) {
+         pb_mix(nl);
+     }
+ 

@@ -1,0 +1,10 @@
+--- s331.c
++++ s331.c
+@@ -136,6 +136,7 @@
+     /* Scan phase: decouple from pb_mix to remove inter-iteration dependence on array a.
+      * All iterations scan from the original (unmodified by pb_mix) array state,
+      * breaking the RAW dependence that was carried by the nl loop. */
++    #pragma omp parallel for private(chksum) lastprivate(j) 
+     for (int nl = 0; nl < R; nl++) {
+         j = -1;
+         for (int i = 0; i < LEN_1D; i++) {

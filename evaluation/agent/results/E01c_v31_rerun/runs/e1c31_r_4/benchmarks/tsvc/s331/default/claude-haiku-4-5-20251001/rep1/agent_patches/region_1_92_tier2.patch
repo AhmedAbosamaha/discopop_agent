@@ -1,0 +1,33 @@
+--- s331.c
++++ s331.c
+@@ -134,11 +134,30 @@
+     real_t chksum;
+     for (int nl = 0; nl < R; nl++) {
+         j = -1;
++
++        /* Allocate temporary marker array to track which indices satisfy the condition.
++         * This decouples the search (parallel) from aggregation (serial), removing
++         * the loop-carried dependence on j that blocked parallelization. */
++        char* is_negative = (char*)calloc(LEN_1D, sizeof(char));
++
++        /* Phase 1: Mark all matching indices. Each iteration writes to a distinct
++         * element is_negative[i], so no loop-carried dependence — can be parallelized. */
+         for (int i = 0; i < LEN_1D; i++) {
+             if (a[i] < (real_t)0.) {
++                is_negative[i] = 1;
++            }
++        }
++
++        /* Phase 2: Find the last matching index by scanning forward and always
++         * updating j. This preserves the original semantics (last match wins). */
++        for (int i = 0; i < LEN_1D; i++) {
++            if (is_negative[i]) {
+                 j = i;
+             }
+         }
++
++        free(is_negative);
++
+         chksum = (real_t) j;
+         pb_mix(nl);
+     }

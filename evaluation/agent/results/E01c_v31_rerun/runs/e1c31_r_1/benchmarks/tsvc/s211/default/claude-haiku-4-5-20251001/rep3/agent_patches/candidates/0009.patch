@@ -1,0 +1,17 @@
+--- s211.c
++++ s211.c
+@@ -132,7 +132,13 @@
+ {
+     for (int nl = 0; nl < R; nl++) {
+         for (int i = 1; i < LEN_1D-1; i++) {
+-            a[i] = b[i - 1] + c[i] * d[i];
++            if (i == 1) {
++                a[i] = b[i - 1] + c[i] * d[i];
++            } else {
++                a[i] = b[i] + c[i] * d[i] - e[i - 1] * d[i - 1];
++            }
++        }
++        for (int i = 1; i < LEN_1D-1; i++) {
+             b[i] = b[i + 1] - e[i] * d[i];
+         }
+         pb_mix(nl);

@@ -1,0 +1,18 @@
+--- s341.c
++++ s341.c
+@@ -138,6 +138,7 @@
+         int* count = (int*)malloc(LEN_1D * sizeof(int));
+ 
+         /* Phase 1: Mark positive elements (Do-All parallelizable) */
++        #pragma omp parallel for shared(count) 
+         for (int i = 0; i < LEN_1D; i++) {
+             count[i] = (b[i] > (real_t)0.) ? 1 : 0;
+         }
+@@ -148,6 +149,7 @@
+         }
+ 
+         /* Phase 3: Write elements to computed positions (Do-All parallelizable) */
++        #pragma omp parallel for shared(count) 
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+                 int target = (i == 0) ? 0 : count[i-1];

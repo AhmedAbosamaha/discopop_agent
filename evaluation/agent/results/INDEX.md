@@ -50,18 +50,18 @@ Status: done
 | `e1c_race_check` | [`E01c_clean_three_way/checks/e1c_race_check/`](E01c_clean_three_way/checks/e1c_race_check/) | race_check.py (the gate's TSan + schedule matrix, archer, server, no model) over every trial of the model alone (bare_llm, mirror prompt) in e1c_r_1..4 — what makes its FASTER count race-free (D35 read-out, H13) | valid | 0 |  |
 | `e1c_ad_race_check` | [`E01c_clean_three_way/checks/e1c_ad_race_check/`](E01c_clean_three_way/checks/e1c_ad_race_check/) | race_check.py over the model alone (bare_llm) in E1c's controls, classes A (e1c_a) and D (e1c_d) | valid | 0 |  |
 
-## [E1c's agent arm rerun on agent v3.1 — the three-way main comparison on the final agent](E01c_v31_rerun/)
+## [E1c's agent arm rerun on agent v3.1 — the three-way main comparison on the final agent](E01c_v31_rerun/REPORT.md)
 
 Status: running
 
 | run | where | what it is | status | trials | outcomes |
 |---|---|---|---|---:|---|
-| `e1c31_r_1` | not archived yet | E1c rerun on agent v3.1 (lane 0.0): s112 s121 s1213 s127 s211 x default, Haiku x5, threads 6,12, repeats 5 — agent v3.1 at commit 5935bded | running |  |  |
-| `e1c31_r_2` | not archived yet | E1c rerun on agent v3.1 (lane 0.1): s212 s241 s243 s244 s252 x default, Haiku x5, threads 6,12, repeats 5 — agent v3.1 at commit 5935bded | running |  |  |
-| `e1c31_r_3` | not archived yet | E1c rerun on agent v3.1 (lane 1.0): s254 s255 s281 s291 x default, Haiku x5, threads 6,12, repeats 5 — agent v3.1 at commit 5935bded | running |  |  |
-| `e1c31_r_4` | not archived yet | E1c rerun on agent v3.1 (lane 1.1): s292 s293 s331 s341 x default, Haiku x5, threads 6,12, repeats 5 — agent v3.1 at commit 5935bded | running |  |  |
-| `e1c31_a` | not archived yet | E1c rerun on agent v3.1, class A (no-harm): s000 vpvtv s313 x default x1 (s313's harness-edit trial is repeated here) — agent v3.1 at commit 5935bded; launched 26 Sep on lane 0.0 while lane 0.1 of the R runs finished, from a Mac worktree at 5935bded (PARITY OK against the server): the Mac repository is ahead (records, B8's profiler source, B9's explorer fix, a feature check) and the server is deliberately NOT synced, so A and D run the same code and the same pre-B8/B9 DiscoPoP as the R runs | running |  |  |
-| `e1c31_d` | not archived yet | E1c rerun on agent v3.1, class D (must-decline): s321 s322 s323 s3112 x default x3 — agent v3.1 at commit 5935bded; launched 26 Sep on lane 1.0, same conditions as e1c31_a (Mac worktree at 5935bded, PARITY OK, server not synced: the R runs' code and DiscoPoP) | running |  |  |
+| `e1c31_r_1` | [`E01c_v31_rerun/runs/e1c31_r_1/`](E01c_v31_rerun/runs/e1c31_r_1/) | E1c rerun on agent v3.1 (lane 0.0): s112 s121 s1213 s127 s211 x default, Haiku x5, threads 6,12, repeats 5 — agent v3.1 at commit 5935bded | valid | 25 | FASTER 21, no-change 1, parallel-not-faster 3 |
+| `e1c31_r_2` | [`E01c_v31_rerun/runs/e1c31_r_2/`](E01c_v31_rerun/runs/e1c31_r_2/) | E1c rerun on agent v3.1 (lane 0.1): s212 s241 s243 s244 s252 x default, Haiku x5, threads 6,12, repeats 5 — agent v3.1 at commit 5935bded | valid | 25 | FASTER 21, no-change 2, parallel-not-faster 2 |
+| `e1c31_r_3` | [`E01c_v31_rerun/runs/e1c31_r_3/`](E01c_v31_rerun/runs/e1c31_r_3/) | E1c rerun on agent v3.1 (lane 1.0): s254 s255 s281 s291 x default, Haiku x5, threads 6,12, repeats 5 — agent v3.1 at commit 5935bded | valid | 20 | FASTER 16, parallel-not-faster 4 |
+| `e1c31_r_4` | [`E01c_v31_rerun/runs/e1c31_r_4/`](E01c_v31_rerun/runs/e1c31_r_4/) | E1c rerun on agent v3.1 (lane 1.1): s292 s293 s331 s341 x default, Haiku x5, threads 6,12, repeats 5 — agent v3.1 at commit 5935bded | valid | 20 | FASTER 13, no-change 5, parallel-not-faster 2 |
+| `e1c31_a` | [`E01c_v31_rerun/runs/e1c31_a/`](E01c_v31_rerun/runs/e1c31_a/) | E1c rerun on agent v3.1, class A (no-harm): s000 vpvtv s313 x default x1 (s313's harness-edit trial is repeated here) — agent v3.1 at commit 5935bded; launched 26 Sep on lane 0.0 while lane 0.1 of the R runs finished, from a Mac worktree at 5935bded (PARITY OK against the server): the Mac repository is ahead (records, B8's profiler source, B9's explorer fix, a feature check) and the server is deliberately NOT synced, so A and D run the same code and the same pre-B8/B9 DiscoPoP as the R runs | valid | 3 | FASTER 3 |
+| `e1c31_d` | [`E01c_v31_rerun/runs/e1c31_d/`](E01c_v31_rerun/runs/e1c31_d/) | E1c rerun on agent v3.1, class D (must-decline): s321 s322 s323 s3112 x default x3 — agent v3.1 at commit 5935bded; launched 26 Sep on lane 1.0, same conditions as e1c31_a (Mac worktree at 5935bded, PARITY OK, server not synced: the R runs' code and DiscoPoP) | valid | 12 | SCAFFOLD_MODIFIED 1, no-change 11 |
 
 ## [E2 — evidence, feedback and model strength](E02_evidence_feedback_model/REPORT.md)
 

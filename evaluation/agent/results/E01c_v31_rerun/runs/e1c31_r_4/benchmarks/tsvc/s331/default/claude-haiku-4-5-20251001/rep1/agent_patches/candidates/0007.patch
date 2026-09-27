@@ -1,0 +1,10 @@
+--- s331.c
++++ s331.c
+@@ -131,6 +131,7 @@
+ static int find_last_negative_index(void)
+ {
+     int j = -1;
++    #pragma omp parallel for lastprivate(j) 
+     for (int i = 0; i < LEN_1D; i++) {
+         if (a[i] < (real_t)0.) {
+             j = i;

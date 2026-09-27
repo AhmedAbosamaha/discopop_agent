@@ -1,0 +1,10 @@
+--- s331.c
++++ s331.c
+@@ -143,6 +143,7 @@
+ 
+     /* Scan phase: find the last negative index in the snapshot.
+      * All iterations are independent; each computes j from the same data. */
++    #pragma omp parallel for private(chksum) lastprivate(j) shared(a_snapshot) 
+     for (int nl = 0; nl < R; nl++) {
+         j = -1;
+         for (int i = 0; i < LEN_1D; i++) {

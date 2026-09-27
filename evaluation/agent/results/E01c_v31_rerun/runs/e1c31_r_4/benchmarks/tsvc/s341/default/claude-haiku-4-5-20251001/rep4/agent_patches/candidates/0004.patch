@@ -1,0 +1,10 @@
+--- s341.c
++++ s341.c
+@@ -144,6 +144,7 @@
+         }
+ 
+         /* Scatter: write matching elements to computed positions (parallelizable) */
++        #pragma omp parallel for shared(pos) 
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+                 a[pos[i]] = b[i];

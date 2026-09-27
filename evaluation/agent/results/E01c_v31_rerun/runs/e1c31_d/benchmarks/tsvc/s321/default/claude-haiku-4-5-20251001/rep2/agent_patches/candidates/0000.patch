@@ -1,0 +1,16 @@
+--- s321.c
++++ s321.c
+@@ -131,7 +131,12 @@
+ static real_t kernel_s321(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
+-        for (int i = 1; i < LEN_1D; i++) {
++        /* Pass 1: odd indices (1, 3, 5, ...) — independent, only depend on even indices */
++        for (int i = 1; i < LEN_1D; i += 2) {
++            a[i] += a[i-1] * b[i];
++        }
++        /* Pass 2: even indices (2, 4, 6, ...) — independent after pass 1 updates odd indices */
++        for (int i = 2; i < LEN_1D; i += 2) {
+             a[i] += a[i-1] * b[i];
+         }
+         pb_mix(nl);

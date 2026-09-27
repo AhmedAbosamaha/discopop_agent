@@ -1,0 +1,10 @@
+--- s241.c
++++ s241.c
+@@ -143,6 +143,7 @@
+         a_out[LEN_1D-1] = a_in[LEN_1D-1];
+         b_out[LEN_1D-1] = b_in[LEN_1D-1];
+ 
++        #pragma omp parallel for shared(a_in,b_out,a_out,b_in) 
+         for (int i = 0; i < LEN_1D-1; i++) {
+             a_out[i] = b_in[i] * c[i  ] * d[i];
+             b_out[i] = a_out[i] * a_in[i+1] * d[i];

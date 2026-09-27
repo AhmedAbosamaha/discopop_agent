@@ -1,0 +1,30 @@
+--- s341.c
++++ s341.c
+@@ -132,13 +132,24 @@
+ {
+     int j;
+     for (int nl = 0; nl < R; nl++) {
+-        j = -1;
++        // First pass: compute output position for each element via exclusive scan
++        int* positions = (int*)malloc(LEN_1D * sizeof(int));
++        int total = 0;
++        for (int i = 0; i < LEN_1D; i++) {
++            positions[i] = total;
++            if (b[i] > (real_t)0.) {
++                total++;
++            }
++        }
++
++        // Second pass: write elements to their positions in parallel
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++                a[positions[i]] = b[i];
+             }
+         }
++
++        free(positions);
+         pb_mix(nl);
+     }
+     return (real_t)0;

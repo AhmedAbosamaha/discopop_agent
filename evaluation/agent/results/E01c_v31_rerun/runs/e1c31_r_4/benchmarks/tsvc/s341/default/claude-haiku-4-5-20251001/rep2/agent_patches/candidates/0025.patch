@@ -1,0 +1,10 @@
+--- s341.c
++++ s341.c
+@@ -133,6 +133,7 @@
+     // Allocate prefix array outside the repeated loop
+     int* prefix = (int*)malloc((LEN_1D + 1) * sizeof(int));
+ 
++    #pragma omp parallel for shared(prefix) 
+     for (int nl = 0; nl < R; nl++) {
+         // First pass: compute prefix sum of elements satisfying b[i] > 0
+         prefix[0] = 0;

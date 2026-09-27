@@ -1,0 +1,10 @@
+--- s331.c
++++ s331.c
+@@ -133,6 +133,7 @@
+     int j = -1;
+     real_t chksum;
+ 
++    #pragma omp parallel for private(chksum) lastprivate(j) 
+     for (int nl = 0; nl < R; nl++) {
+         /* Apply modification from the previous iteration before this scan.
+          * This moves pb_mix out of the inner loop's parallelizable region:

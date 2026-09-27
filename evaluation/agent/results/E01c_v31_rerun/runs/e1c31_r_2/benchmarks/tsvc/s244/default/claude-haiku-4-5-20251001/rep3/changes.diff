@@ -1,0 +1,26 @@
+--- original.c
++++ final.c
+@@ -131,11 +131,21 @@
+ static real_t kernel_s244(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
+-        for (int i = 0; i < LEN_1D-1; ++i) {
++        // Iteration 0: compute a[0], b[0], and a[1] (which will be overwritten)
++        a[0] = b[0] + c[0] * d[0];
++        b[0] = c[0] + b[0];
++
++        // Iterations 1 to LEN_1D-2: compute a[i] and b[i] (these values survive)
++        #pragma omp parallel for 
++        for (int i = 1; i < LEN_1D-1; ++i) {
+             a[i] = b[i] + c[i] * d[i];
+             b[i] = c[i] + b[i];
+-            a[i+1] = b[i] + a[i+1] * d[i];
+         }
++
++        // Final: compute a[LEN_1D-1] (only written by iteration LEN_1D-2)
++        // a[LEN_1D-1] is never modified by the loop above, so it still holds the original value
++        a[LEN_1D-1] = b[LEN_1D-2] + a[LEN_1D-1] * d[LEN_1D-2];
++
+         pb_mix(nl);
+     }
+     return (real_t)0;

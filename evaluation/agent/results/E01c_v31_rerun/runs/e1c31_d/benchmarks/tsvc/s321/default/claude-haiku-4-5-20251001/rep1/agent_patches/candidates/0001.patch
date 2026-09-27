@@ -1,0 +1,31 @@
+--- s321.c
++++ s321.c
+@@ -131,9 +131,26 @@
+ static real_t kernel_s321(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
+-        for (int i = 1; i < LEN_1D; i++) {
+-            a[i] += a[i-1] * b[i];
++        real_t* a_snapshot = (real_t*)malloc((size_t)LEN_1D * sizeof(real_t));
++        int changed = 1;
++        while (changed) {
++            changed = 0;
++            memcpy(a_snapshot, a, (size_t)LEN_1D * sizeof(real_t));
++            for (int i = 1; i < LEN_1D; i += 2) {
++                a[i] = a_snapshot[i] + a_snapshot[i-1] * b[i];
++            }
++            memcpy(a_snapshot, a, (size_t)LEN_1D * sizeof(real_t));
++            for (int i = 2; i < LEN_1D; i += 2) {
++                a[i] = a_snapshot[i] + a_snapshot[i-1] * b[i];
++            }
++            for (int i = 1; i < LEN_1D; i++) {
++                if (a[i] != a_snapshot[i]) {
++                    changed = 1;
++                    break;
++                }
++            }
+         }
++        free(a_snapshot);
+         pb_mix(nl);
+     }
+     return (real_t)0;

@@ -1,0 +1,37 @@
+--- s331.c
++++ s331.c
+@@ -130,13 +130,16 @@
+ 
+ static real_t kernel_s331(void)
+ {
+-    int j;
++    int j = -1;
+     real_t chksum;
+ 
+-    /* Scan phase: decouple from pb_mix to remove inter-iteration dependence on array a.
+-     * All iterations scan from the original (unmodified by pb_mix) array state,
+-     * breaking the RAW dependence that was carried by the nl loop. */
+     for (int nl = 0; nl < R; nl++) {
++        /* Apply modification from the previous iteration before this scan.
++         * This moves pb_mix out of the inner loop's parallelizable region:
++         * pb_mix runs once per outer loop iteration (sequentially),
++         * while the inner scan loop can run in parallel within a fixed array state. */
++        if (nl > 0) pb_mix(nl-1);
++
+         j = -1;
+         for (int i = 0; i < LEN_1D; i++) {
+             if (a[i] < (real_t)0.) {
+@@ -145,12 +148,7 @@
+         }
+         chksum = (real_t) j;
+     }
+-
+-    /* Modification phase: apply all pb_mix calls after scanning.
+-     * This preserves all side effects while enabling scan loop parallelization. */
+-    for (int nl = 0; nl < R; nl++) {
+-        pb_mix(nl);
+-    }
++    pb_mix(R-1);  /* Apply the final modification after the loop. */
+ 
+     return j+1;
+ }

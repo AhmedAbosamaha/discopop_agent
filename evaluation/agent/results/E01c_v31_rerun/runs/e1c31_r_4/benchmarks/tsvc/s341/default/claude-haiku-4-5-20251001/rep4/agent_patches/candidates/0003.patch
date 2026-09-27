@@ -1,0 +1,10 @@
+--- s341.c
++++ s341.c
+@@ -137,6 +137,7 @@
+         int j = -1;
+ 
+         /* Compute prefix sum: for each element that matches, record its target position */
++        #pragma omp parallel for shared(pos) reduction(+:j) 
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+                 pos[i] = ++j;

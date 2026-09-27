@@ -1,0 +1,23 @@
+--- s341.c
++++ s341.c
+@@ -135,17 +135,20 @@
+ 
+     for (int nl = 0; nl < R; nl++) {
+         // Mark which elements satisfy the condition
++        #pragma omp parallel for shared(mask) 
+         for (int i = 0; i < LEN_1D; i++) {
+             mask[i] = (b[i] > (real_t)0.) ? 1 : 0;
+         }
+ 
+         // Compute output indices via prefix sum
+         offset[0] = 0;
++        #pragma omp parallel for shared(offset,mask) 
+         for (int i = 1; i < LEN_1D; i++) {
+             offset[i] = offset[i-1] + mask[i-1];
+         }
+ 
+         // Write marked elements to output array
++        #pragma omp parallel for shared(offset,mask) 
+         for (int i = 0; i < LEN_1D; i++) {
+             if (mask[i]) {
+                 a[offset[i]] = b[i];

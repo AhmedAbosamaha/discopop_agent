@@ -1,0 +1,29 @@
+--- s341.c
++++ s341.c
+@@ -130,15 +130,22 @@
+ 
+ static real_t kernel_s341(void)
+ {
+-    int j;
+     for (int nl = 0; nl < R; nl++) {
+-        j = -1;
++        // First pass: compute prefix sum of elements satisfying b[i] > 0
++        int* prefix = (int*)malloc((LEN_1D + 1) * sizeof(int));
++        prefix[0] = 0;
++        for (int i = 0; i < LEN_1D; i++) {
++            prefix[i + 1] = prefix[i] + (b[i] > (real_t)0. ? 1 : 0);
++        }
++
++        // Second pass: place elements using prefix indices (now parallelizable)
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++                a[prefix[i]] = b[i];
+             }
+         }
++
++        free(prefix);
+         pb_mix(nl);
+     }
+     return (real_t)0;

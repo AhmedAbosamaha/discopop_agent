@@ -1,0 +1,38 @@
+--- s331.c
++++ s331.c
+@@ -132,16 +132,34 @@
+ {
+     int j;
+     real_t chksum;
++
++    /* Snapshot array a before the nl loop to break loop-carried dependence:
++     * each nl iteration must read from the same initial state of a, not from
++     * the modified state left by previous iterations. Separate the scan loop
++     * from pb_mix calls: scans are parallelizable (all read the same snapshot);
++     * pb_mix calls are kept serial to avoid races on a[0], b[LEN_1D-1]. */
++    real_t *a_snapshot = (real_t *)malloc((size_t)LEN_1D * sizeof(real_t));
++    memcpy(a_snapshot, a, (size_t)LEN_1D * sizeof(real_t));
++
++    /* Scan phase: find the last negative index in the snapshot.
++     * All iterations are independent; each computes j from the same data. */
+     for (int nl = 0; nl < R; nl++) {
+         j = -1;
+         for (int i = 0; i < LEN_1D; i++) {
+-            if (a[i] < (real_t)0.) {
++            if (a_snapshot[i] < (real_t)0.) {
+                 j = i;
+             }
+         }
+         chksum = (real_t) j;
++    }
++
++    /* pb_mix phase: apply modifications in order.
++     * Must stay sequential because pb_mix has internal races (a[0], b[LEN_1D-1]). */
++    for (int nl = 0; nl < R; nl++) {
+         pb_mix(nl);
+     }
++
++    free(a_snapshot);
+     return j+1;
+ }
+ 

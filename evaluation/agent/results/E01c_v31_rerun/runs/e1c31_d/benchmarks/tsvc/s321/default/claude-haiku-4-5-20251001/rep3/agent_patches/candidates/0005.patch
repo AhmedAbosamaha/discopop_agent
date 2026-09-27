@@ -1,0 +1,21 @@
+--- s321.c
++++ s321.c
+@@ -131,8 +131,16 @@
+ static real_t kernel_s321(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
+-        for (int i = 1; i < LEN_1D; i++) {
+-            a[i] += a[i-1] * b[i];
++        // Multiple odd-even sweeps to propagate values through the array
++        for (int pass = 0; pass < 16; pass++) {
++            // Odd phase: update indices i ≡ 1 (mod 2), allowing values to propagate from odd indices
++            for (int i = 1; i < LEN_1D; i += 2) {
++                a[i] += a[i-1] * b[i];
++            }
++            // Even phase: update indices i ≡ 0 (mod 2), using newly updated odd indices
++            for (int i = 2; i < LEN_1D; i += 2) {
++                a[i] += a[i-1] * b[i];
++            }
+         }
+         pb_mix(nl);
+     }

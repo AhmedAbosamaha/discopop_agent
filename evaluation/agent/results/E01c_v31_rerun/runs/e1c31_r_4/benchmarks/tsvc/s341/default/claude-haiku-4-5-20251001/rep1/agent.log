@@ -1,0 +1,188 @@
+
+============================================================
+  DiscoPoP Agentic Controller
+============================================================
+  Source         : s341.c
+  DiscoPoP dir   : .discopop
+  Model          : claude-haiku-4-5-20251001
+  Budget         : 3 LLM retries/region (+2 free build fixes)
+  λ penalty      : 1.0
+  Min workload   : 0.0
+  Restruct. depth: 0 (Tier-2 allowed at depth 0–0)
+  Quality gate   : Tier-1 = all but speed, no escalation; Tier-2 = full
+  TSan           : barrier-aware (archer: /usr/lib/llvm-20/lib/libarcher.so)
+  Speedup gate   : require ≥ 1.1× measured
+  Dry run        : False
+  LLM mode       : claude-haiku-4-5-20251001
+  Edit mode      : direct
+  Re-profiling   : full (instrument + run + explore) after every kept rewrite
+  Explorer       : one attempt may take 60 s, then the draw is repeated (random stall, L5)
+  Pragmas        : DiscoPoP writes them in Phase B
+============================================================
+
+  [ok] Captured reference output on 2 inputs (69 bytes, 403.7 ms baseline) for the correctness/performance gates.
+
+  [ok] Numerical noise floor 0 — 6 build variants agreed exactly; output is compared byte-for-byte.
+
+  Hotspots       : measured per-region runtimes are available — 17 region(s) measured, 2.5 ms total, ranking by predicted time saved at 48 threads
+
+  Baseline       : DiscoPoP proposes 2 applicable pattern(s) unaided; 2 of them produce a usable pragma
+                   → the run beats DiscoPoP by ending with more than 2
+
+  Initial candidates
+Region ID    Type           Saves    % run    Hot  Tier  Depth  Name
+--------------------------------------------------------------------------------------
+  1:88       loop          1.2 ms    48.9%    YES     1      0  lines 134–143
+  1:86       function      1.2 ms    48.9%    YES     2      0  kernel_s341
+  1:92       loop          1.2 ms    48.7%    YES     1      0  lines 136–141
+
+============================================================
+  FLOOR — DiscoPoP's own program, as the DiscoPoP-alone arm delivers it (D32)
+============================================================
+  [floor] DiscoPoP alone keeps nothing — the floor is the original program (D32)
+
+============================================================
+  PHASE A — restructure  (the source stays pragma-free)
+============================================================
+
+┌─ [depth=0] loop 1:88 (lines 134–143)  score=0.0
+│  [Phase-A] DiscoPoP reports this region parallel (do_all), but its pragma fails the gate at 'tsan' — requeued for the model
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Original backed up → s341.c.original
+│  [Tier-2] Applied to s341.c
+│  [Tier-2] Re-profiling to refresh data and discover new candidates...
+│  [refresh] kind=full
+│  [Tier-2] Re-measured runtimes: 18 region(s), 3.8 ms total
+│  [Phase-A] Asking DiscoPoP what it now finds in the rewritten lines...
+│  [Phase-A] exposure verdict: exposed
+│  [Phase-A] D40 — judging it as it will ship: DiscoPoP's pragmas for the exposed loops through the safety gate, then the program with them against the program before the rewrite (paired)
+│  [Phase-A] D40: pragma for lines 134–154 fails at 'tsan'
+│  [Phase-A] D40: pragma for lines 146–150 passes the safety gate
+│  [Phase-A] D40 verdict: not_faster 0.17×
+│  [Phase-A] D40 time: 20.2 s
+│  [Tier-2] DiscoPoP parallelized it, but the program is not faster than before the rewrite — reverting (snapshot restore)
+└─ retry (budget remaining: 2)
+
+│  [Tier-2] Assembling evidence (budget remaining: 1)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Applied to s341.c
+│  [Tier-2] Re-profiling to refresh data and discover new candidates...
+│  [refresh] kind=full
+│  [Tier-2] Re-measured runtimes: 18 region(s), 3.7 ms total
+│  [Phase-A] Asking DiscoPoP what it now finds in the rewritten lines...
+│  [Phase-A] exposure verdict: exposed
+│  [Phase-A] D40 — judging it as it will ship: DiscoPoP's pragmas for the exposed loops through the safety gate, then the program with them against the program before the rewrite (paired)
+│  [Phase-A] D40: pragma for lines 135–153 fails at 'tsan'
+│  [Phase-A] D40: pragma for lines 146–150 passes the safety gate
+│  [Phase-A] D40 verdict: not_faster 0.55×
+│  [Phase-A] D40 time: 12.1 s
+│  [Tier-2] DiscoPoP parallelized it, but the program is not faster than before the rewrite — reverting (snapshot restore)
+└─ retry (budget remaining: 1)
+
+│  [Tier-2] Assembling evidence (budget remaining: 0)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Applied to s341.c
+│  [Tier-2] Re-profiling to refresh data and discover new candidates...
+│  [refresh] kind=full
+│  [Tier-2] Re-measured runtimes: 18 region(s), 3.0 ms total
+│  [Phase-A] Asking DiscoPoP what it now finds in the rewritten lines...
+│  [Phase-A] exposure verdict: exposed
+│  [Phase-A] D40 — judging it as it will ship: DiscoPoP's pragmas for the exposed loops through the safety gate, then the program with them against the program before the rewrite (paired)
+│  [Phase-A] D40: pragma for lines 135–150 fails at 'tsan'
+│  [Phase-A] D40: pragma for lines 138–142 fails at 'tsan'
+│  [Phase-A] D40: pragma for lines 145–147 passes the safety gate
+│  [Phase-A] D40 verdict: not_faster 0.66×
+│  [Phase-A] D40 time: 11.7 s
+│  [Tier-2] DiscoPoP parallelized it, but the program is not faster than before the rewrite — reverting (snapshot restore)
+└─ retry (budget remaining: 0)
+
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] function 1:86 (lines 131–144)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Applied to s341.c
+│  [Tier-2] Re-profiling to refresh data and discover new candidates...
+│  [refresh] kind=full
+│  [Tier-2] Re-measured runtimes: 19 region(s), 4.8 ms total
+│  [Phase-A] Asking DiscoPoP what it now finds in the rewritten lines...
+│  [Phase-A] exposure verdict: exposed
+│  [Phase-A] D40 — judging it as it will ship: DiscoPoP's pragmas for the exposed loops through the safety gate, then the program with them against the program before the rewrite (paired)
+│  [Phase-A] D40: pragma for lines 136–156 fails at 'tsan'
+│  [Phase-A] D40: pragma for lines 138–140 passes the safety gate
+│  [Phase-A] D40: pragma for lines 144–146 passes the safety gate
+│  [Phase-A] D40: pragma for lines 149–153 passes the safety gate
+│  [Phase-A] D40: the pragmas together passes the safety gate
+│  [Phase-A] D40 verdict: ok 1.02×
+│  [Phase-A] D40 time: 13.7 s
+│  [Tier-2] 0 survivor(s) rebuilt, 5 new at depth 1
+│  [Tier-2] DiscoPoP now finds: do_all @ lines 136–156, do_all @ lines 144–146, do_all @ lines 149–153
+│  [Tier-2] Restructuring pays off (with its pragmas, against the program before it 1.02×)
+└─ ACCEPTED
+
+┌─ [depth=1] loop 1:90 (lines 136–156)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=1] function 1:86 (lines 131–160)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Restructuring not allowed at depth 1 (--restructure-depth=0) → SKIP
+└─ SKIPPED
+
+┌─ [depth=1] loop 1:99 (lines 144–146)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=1] loop 1:104 (lines 149–153)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=1] loop 1:93 (lines 138–140)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+
+============================================================
+  PHASE B — annotate  (4 candidate pragma(s))
+============================================================
+
+  Timing noise: reusing the run's threshold → keep anything at or above 0.989
+
+┌─ D41: the file is the one D40 judged for 1:86 (3 pragma(s), 1.02× together)
+│  [Phase-B] Applied to s341.c
+└─ APPLIED as D40 judged it — 3 pragma(s), no second timing (D41)
+
+┌─ pattern #126  do_all @ lines 136–156  (W=960)
+│  #pragma omp parallel for
+│  gate failed at 'tsan': Race detected: WARNING: ThreadSanitizer: data race (pid=2014058)   Write of size 4 at 0x72d000000000 by thread T3:     #0 kernel_s341.omp_outlined_deb
+└─ DROPPED
+
+============================================================
+  SETTLING — verify the finished source, drop what does not hold up
+============================================================
+  [note] TSan OMP-barrier false positive on the finished file — re-verifying on output instead
+  [ok] finished source verified — output matches, 1.03x the original, paired
+
+
+============================================================
+  SUMMARY: 1 rewrite(s) kept  |  3 pragma(s) applied  |  1 skipped
+  DiscoPoP unaided: 2 usable pragma(s) in this profile's draw  →  this run: 3   [BEAT, informational]
+    ✓  function 1:86  [Tier-2]  depth=0
+    ✓  loop 1:93  [Phase-B pragma]  depth=0
+    ✓  loop 1:99  [Phase-B pragma]  depth=0
+    ✓  loop 1:104  [Phase-B pragma]  depth=0
+    ✗  1:88  [skipped]  depth=0
+
+  Results → .discopop/agent_patches/accepted.json
+============================================================
+

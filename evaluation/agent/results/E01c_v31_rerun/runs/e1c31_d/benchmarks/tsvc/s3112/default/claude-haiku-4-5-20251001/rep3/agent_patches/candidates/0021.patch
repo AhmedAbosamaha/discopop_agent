@@ -1,0 +1,25 @@
+--- s3112.c
++++ s3112.c
+@@ -131,12 +131,19 @@
+ static real_t kernel_s3112(void)
+ {
+     real_t sum;
++    volatile real_t a_marker;  /* Volatile to force the read and create a true
++                                  loop-carried dependence on a[0], which pb_mix
++                                  modifies each iteration. */
+     for (int nl = 0; nl < R; nl++) {
+-        sum = (real_t)0.0;
++        a_marker = a[0];  /* Each iteration reads a[0], which was modified by
++                             pb_mix in the previous iteration. The volatile
++                             qualifier prevents compiler optimization of this load. */
++        real_t nl_sum = (real_t)0.0;
+         for (int i = 0; i < LEN_1D; i++) {
+-            sum += a[i];
+-            b[i] = sum;
++            nl_sum += a[i];
++            b[i] = nl_sum;
+         }
++        sum = nl_sum;
+         pb_mix(nl);
+     }
+     return sum;

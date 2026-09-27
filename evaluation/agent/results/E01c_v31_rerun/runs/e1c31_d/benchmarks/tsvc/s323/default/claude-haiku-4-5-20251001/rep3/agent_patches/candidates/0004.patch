@@ -1,0 +1,35 @@
+--- s323.c
++++ s323.c
+@@ -130,13 +130,30 @@
+ 
+ static real_t kernel_s323(void)
+ {
++    real_t* cum_sum = (real_t*)malloc(LEN_1D * sizeof(real_t));
++
+     for (int nl = 0; nl < R; nl++) {
++        /* Precompute cumulative sum of c[i] * (d[i] + e[i]).
++         * This breaks the loop-carried dependence through b[i].
++         * Since b[i] = b[i-1] + c[i]*(d[i]+e[i]), we have
++         * b[i] = b[0] + cum_sum[i]. */
++        cum_sum[0] = 0;
+         for (int i = 1; i < LEN_1D; i++) {
+-            a[i] = b[i-1] + c[i] * d[i];
+-            b[i] = a[i] + c[i] * e[i];
++            cum_sum[i] = cum_sum[i-1] + c[i] * (d[i] + e[i]);
+         }
++
++        /* Now compute a and b using precomputed cumulative sums.
++         * Since a[i] = b[i-1] + c[i]*d[i] = b[0] + cum_sum[i-1] + c[i]*d[i]
++         * and b[i] = b[0] + cum_sum[i], each iteration is now independent. */
++        for (int i = 1; i < LEN_1D; i++) {
++            a[i] = b[0] + cum_sum[i-1] + c[i] * d[i];
++            b[i] = b[0] + cum_sum[i];
++        }
++
+         pb_mix(nl);
+     }
++
++    free(cum_sum);
+     return (real_t)0;
+ }
+ 

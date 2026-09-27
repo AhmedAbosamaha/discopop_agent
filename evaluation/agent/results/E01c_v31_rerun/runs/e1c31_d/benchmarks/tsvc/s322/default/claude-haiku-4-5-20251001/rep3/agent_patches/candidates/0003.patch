@@ -1,0 +1,21 @@
+--- s322.c
++++ s322.c
+@@ -131,9 +131,17 @@
+ static real_t kernel_s322(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        real_t *new_a = (real_t*) malloc((size_t)LEN_1D * sizeof(real_t));
++        for (int i = 0; i < LEN_1D; i++) {
++            new_a[i] = a[i];
++        }
+         for (int i = 2; i < LEN_1D; i++) {
+-            a[i] = a[i] + a[i - 1] * b[i] + a[i - 2] * c[i];
++            new_a[i] = new_a[i] + new_a[i - 1] * b[i] + new_a[i - 2] * c[i];
+         }
++        for (int i = 0; i < LEN_1D; i++) {
++            a[i] = new_a[i];
++        }
++        free(new_a);
+         pb_mix(nl);
+     }
+     return (real_t)0;

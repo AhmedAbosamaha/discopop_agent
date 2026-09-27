@@ -1,0 +1,10 @@
+--- s341.c
++++ s341.c
+@@ -146,6 +146,7 @@
+         }
+ 
+         // Write marked elements to output array
++        #pragma omp parallel for shared(offset,mask) 
+         for (int i = 0; i < LEN_1D; i++) {
+             if (mask[i]) {
+                 a[offset[i]] = b[i];

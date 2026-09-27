@@ -1,0 +1,10 @@
+--- s244.c
++++ s244.c
+@@ -137,6 +137,7 @@
+         /* Capture all a[i+1] values BEFORE any iteration modifies them,
+            breaking the loop-carried RAW: iteration i reads a[i+1],
+            iteration i+1 writes a[i+1]. */
++        #pragma omp parallel for shared(a_saved) 
+         for (int i = 0; i < LEN_1D-1; ++i) {
+             a_saved[i] = a[i+1];
+         }

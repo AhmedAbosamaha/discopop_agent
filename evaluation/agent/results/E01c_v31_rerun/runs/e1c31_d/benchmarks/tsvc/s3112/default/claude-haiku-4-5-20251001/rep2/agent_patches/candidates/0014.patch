@@ -1,0 +1,49 @@
+--- s3112.c
++++ s3112.c
+@@ -133,10 +133,43 @@
+     real_t sum;
+     for (int nl = 0; nl < R; nl++) {
+         sum = (real_t)0.0;
+-        for (int i = 0; i < LEN_1D; i++) {
+-            sum += a[i];
+-            b[i] = sum;
++
++        /* Split into blocks to parallelize: compute partial sums independently,
++           then adjust with cumulative offsets. */
++        const int block_size = 4096;
++        int num_blocks = (LEN_1D + block_size - 1) / block_size;
++
++        /* Phase 1: Parallel—compute partial cumulative sums within each block. */
++        for (int block = 0; block < num_blocks; block++) {
++            real_t block_sum = (real_t)0.0;
++            int start = block * block_size;
++            int end = (start + block_size < LEN_1D) ? start + block_size : LEN_1D;
++            for (int i = start; i < end; i++) {
++                block_sum += a[i];
++                b[i] = block_sum;
++            }
+         }
++
++        /* Phase 2: Serial—compute cumulative offsets for each block. */
++        real_t* offsets = (real_t*)malloc(num_blocks * sizeof(real_t));
++        offsets[0] = (real_t)0.0;
++        for (int block = 1; block < num_blocks; block++) {
++            int prev_end = (block * block_size < LEN_1D) ? block * block_size : LEN_1D;
++            offsets[block] = b[prev_end - 1];
++        }
++
++        /* Phase 3: Parallel—adjust b[] values using offsets to get global cumulative sums. */
++        for (int block = 1; block < num_blocks; block++) {
++            int start = block * block_size;
++            int end = (start + block_size < LEN_1D) ? start + block_size : LEN_1D;
++            real_t offset = offsets[block];
++            for (int i = start; i < end; i++) {
++                b[i] += offset;
++            }
++        }
++
++        sum = b[LEN_1D - 1];
++        free(offsets);
+         pb_mix(nl);
+     }
+     return sum;

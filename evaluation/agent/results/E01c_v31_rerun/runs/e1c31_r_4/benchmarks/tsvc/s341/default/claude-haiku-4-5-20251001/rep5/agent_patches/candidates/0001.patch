@@ -1,0 +1,29 @@
+--- s341.c
++++ s341.c
+@@ -132,13 +132,24 @@
+ {
+     int j;
+     for (int nl = 0; nl < R; nl++) {
++        int *idx = malloc(LEN_1D * sizeof(int));
++
++        // First pass: compute indices for positive elements
+         j = -1;
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++                idx[i] = ++j;
+             }
+         }
++
++        // Second pass: write using pre-computed indices
++        for (int i = 0; i < LEN_1D; i++) {
++            if (b[i] > (real_t)0.) {
++                a[idx[i]] = b[i];
++            }
++        }
++
++        free(idx);
+         pb_mix(nl);
+     }
+     return (real_t)0;

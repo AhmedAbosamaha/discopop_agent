@@ -1,0 +1,10 @@
+--- s341.c
++++ s341.c
+@@ -141,6 +141,7 @@
+ 
+         // Compute output indices via prefix sum
+         offset[0] = 0;
++        #pragma omp parallel for shared(offset,mask) 
+         for (int i = 1; i < LEN_1D; i++) {
+             offset[i] = offset[i-1] + mask[i-1];
+         }

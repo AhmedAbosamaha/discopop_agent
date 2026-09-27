@@ -1,0 +1,10 @@
+--- s321.c
++++ s321.c
+@@ -144,6 +144,7 @@
+                 a[i] = a_new;
+             }
+ 
++ #pragma omp parallel for lastprivate(changed) shared(a_base) 
+             for (int i = 1; i < LEN_1D; i += 2) {
+                 real_t a_new = a_base[i] + a[i-1] * b[i];
+                 if (a_new != a[i]) changed = 1;

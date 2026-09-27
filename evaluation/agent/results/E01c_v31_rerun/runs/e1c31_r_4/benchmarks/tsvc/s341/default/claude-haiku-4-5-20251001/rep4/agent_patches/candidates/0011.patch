@@ -1,0 +1,10 @@
+--- s341.c
++++ s341.c
+@@ -132,6 +132,7 @@
+ {
+     int* offsets = (int*)malloc((LEN_1D + 1) * sizeof(int));
+ 
++    #pragma omp parallel for shared(offsets) 
+     for (int nl = 0; nl < R; nl++) {
+         /* Prefix-sum pass: compute write offsets for each element */
+         offsets[0] = 0;

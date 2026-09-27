@@ -1,0 +1,31 @@
+--- s3112.c
++++ s3112.c
+@@ -130,13 +130,23 @@
+ 
+ static real_t kernel_s3112(void)
+ {
+-    real_t sum;
+-    for (int nl = 0; nl < R; nl++) {
+-        sum = (real_t)0.0;
++    real_t sum = (real_t)0.0;
++    for (int nl = 0; nl < R - 1; nl++) {
++        real_t local_sum = (real_t)0.0;
+         for (int i = 0; i < LEN_1D; i++) {
+-            sum += a[i];
+-            b[i] = sum;
++            local_sum += a[i];
+         }
++        sum = local_sum;
++        pb_mix(nl);
++    }
++    if (R > 0) {
++        int nl = R - 1;
++        real_t local_sum = (real_t)0.0;
++        for (int i = 0; i < LEN_1D; i++) {
++            local_sum += a[i];
++            b[i] = local_sum;
++        }
++        sum = local_sum;
+         pb_mix(nl);
+     }
+     return sum;

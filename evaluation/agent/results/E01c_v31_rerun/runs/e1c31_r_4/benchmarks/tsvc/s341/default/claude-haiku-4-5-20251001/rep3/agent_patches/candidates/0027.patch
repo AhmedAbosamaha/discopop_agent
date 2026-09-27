@@ -1,0 +1,10 @@
+--- s341.c
++++ s341.c
+@@ -135,6 +135,7 @@
+     /* Allocate helper array once, outside the nl loop */
+     int* count = (int*)malloc(LEN_1D * sizeof(int));
+ 
++    #pragma omp parallel for private(j) shared(count) 
+     for (int nl = 0; nl < R; nl++) {
+         j = -1;
+ 

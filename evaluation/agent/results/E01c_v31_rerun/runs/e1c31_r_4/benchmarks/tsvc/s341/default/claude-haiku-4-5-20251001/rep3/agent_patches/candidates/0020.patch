@@ -1,0 +1,41 @@
+--- s341.c
++++ s341.c
+@@ -133,12 +133,36 @@
+     int j;
+     for (int nl = 0; nl < R; nl++) {
+         j = -1;
++
++        /* Allocate helper array for prefix sum */
++        int* count = (int*)malloc(LEN_1D * sizeof(int));
++
++        /* Phase 1: Mark positive elements (Do-All parallelizable) */
++        for (int i = 0; i < LEN_1D; i++) {
++            count[i] = (b[i] > (real_t)0.) ? 1 : 0;
++        }
++
++        /* Phase 2: Compute prefix sum to get target indices (sequential) */
++        for (int i = 1; i < LEN_1D; i++) {
++            count[i] += count[i-1];
++        }
++
++        /* Phase 3: Write elements to computed positions (Do-All parallelizable) */
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++                int target = (i == 0) ? 0 : count[i-1];
++                a[target] = b[i];
+             }
+         }
++
++        /* Update j to final write position */
++        if (LEN_1D > 0) {
++            j = count[LEN_1D-1] - 1;
++        } else {
++            j = -1;
++        }
++
++        free(count);
+         pb_mix(nl);
+     }
+     return (real_t)0;

@@ -1,0 +1,24 @@
+--- s331.c
++++ s331.c
+@@ -132,7 +132,10 @@
+ {
+     int j;
+     real_t chksum;
++    int state = -1;
++    int dummy;
+     for (int nl = 0; nl < R; nl++) {
++        dummy = state;
+         j = -1;
+         for (int i = 0; i < LEN_1D; i++) {
+             if (a[i] < (real_t)0.) {
+@@ -140,8 +143,10 @@
+             }
+         }
+         chksum = (real_t) j;
++        state = nl;
+         pb_mix(nl);
+     }
++    (void)dummy;
+     return j+1;
+ }
+ 

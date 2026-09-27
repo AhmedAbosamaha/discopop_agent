@@ -1,0 +1,10 @@
+--- s3112.c
++++ s3112.c
+@@ -139,6 +139,7 @@
+                              pb_mix in the previous iteration. The volatile
+                              qualifier prevents compiler optimization of this load. */
+         real_t nl_sum = (real_t)0.0;
++        #pragma omp parallel for lastprivate(nl_sum) 
+         for (int i = 0; i < LEN_1D; i++) {
+             nl_sum += a[i];
+             b[i] = nl_sum;

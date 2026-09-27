@@ -1,0 +1,10 @@
+--- s3112.c
++++ s3112.c
+@@ -141,6 +141,7 @@
+     }
+     for (int nl = 1; nl < R; nl++) {
+         /* Copy previous iteration's a state */
++        #pragma omp parallel for firstprivate(nl) shared(a_iter) 
+         for (int i = 0; i < LEN_1D; i++) {
+             a_iter[nl * LEN_1D + i] = a_iter[(nl - 1) * LEN_1D + i];
+         }

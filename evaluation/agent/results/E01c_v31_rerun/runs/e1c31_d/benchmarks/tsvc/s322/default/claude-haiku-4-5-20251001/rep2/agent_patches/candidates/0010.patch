@@ -1,0 +1,10 @@
+--- s322.c
++++ s322.c
+@@ -137,6 +137,7 @@
+             a_init[i] = a[i];
+         }
+         // Update each element: add to its *original* value, but use *current* a[i-1] and a[i-2]
++        #pragma omp parallel for shared(a_init) 
+         for (int i = 2; i < LEN_1D; i++) {
+             a[i] = a_init[i] + a[i - 1] * b[i] + a[i - 2] * c[i];
+         }

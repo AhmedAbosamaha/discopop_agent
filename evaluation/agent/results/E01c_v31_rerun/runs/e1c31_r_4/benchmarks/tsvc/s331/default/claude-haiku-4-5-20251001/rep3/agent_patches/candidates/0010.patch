@@ -1,0 +1,20 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1c31_r_4/benchmarks/tsvc/s331/default/claude-haiku-4-5-20251001/rep3/work/s331.c	2026-09-26 15:19:17.106185305 +0000
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1c31_r_4/benchmarks/tsvc/s331/default/claude-haiku-4-5-20251001/rep3/work/s331.c.discopop_patch_generator.temp	2026-09-26 15:19:20.439205041 +0000
+@@ -140,11 +140,17 @@
+                 j = i;
+             }
+         }
++        #pragma omp parallel
++        #pragma omp single
++        {
++        #pragma omp task
+         chksum = (real_t) j;
+         j_final = j;
+         pb_mix(0);
+     }
+ 
++    #pragma omp task
++    }
+     for (int nl = 1; nl < R; nl++) {
+         int j = -1;
+         for (int i = 0; i < LEN_1D; i++) {

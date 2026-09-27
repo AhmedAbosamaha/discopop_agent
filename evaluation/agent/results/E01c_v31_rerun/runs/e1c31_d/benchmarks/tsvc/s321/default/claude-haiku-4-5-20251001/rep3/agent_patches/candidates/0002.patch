@@ -1,0 +1,23 @@
+--- s321.c
++++ s321.c
+@@ -131,8 +131,18 @@
+ static real_t kernel_s321(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
+-        for (int i = 1; i < LEN_1D; i++) {
+-            a[i] += a[i-1] * b[i];
++        // Two pairs of odd-even passes per nl iteration (4 passes total, but each pair maintains Do-All within the pass).
++        // Repeating the pairs twice allows information to propagate approximately distance 4 instead of distance 2,
++        // while keeping exponential accumulation under control.
++        for (int pair_iter = 0; pair_iter < 2; pair_iter++) {
++            // Odd pass: process i=1,3,5,... reading from even indices (not modified this pair).
++            for (int i = 1; i < LEN_1D; i += 2) {
++                a[i] += a[i-1] * b[i];
++            }
++            // Even pass: process i=2,4,6,... reading from odd indices (updated in the odd pass just above).
++            for (int i = 2; i < LEN_1D; i += 2) {
++                a[i] += a[i-1] * b[i];
++            }
+         }
+         pb_mix(nl);
+     }

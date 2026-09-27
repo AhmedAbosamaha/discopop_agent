@@ -1,0 +1,38 @@
+--- s241.c
++++ s241.c
+@@ -130,13 +130,33 @@
+ 
+ static real_t kernel_s241(void)
+ {
++    real_t *a_in = (real_t *)malloc(LEN_1D * sizeof(real_t));
++    real_t *a_out = (real_t *)malloc(LEN_1D * sizeof(real_t));
++    real_t *b_in = (real_t *)malloc(LEN_1D * sizeof(real_t));
++    real_t *b_out = (real_t *)malloc(LEN_1D * sizeof(real_t));
++
++    memcpy(a_in, a, LEN_1D * sizeof(real_t));
++    memcpy(b_in, b, LEN_1D * sizeof(real_t));
++
+     for (int nl = 0; nl < R; nl++) {
+         for (int i = 0; i < LEN_1D-1; i++) {
+-            a[i] = b[i] * c[i  ] * d[i];
+-            b[i] = a[i] * a[i+1] * d[i];
++            a_out[i] = b_in[i] * c[i  ] * d[i];
++            b_out[i] = a_out[i] * a_in[i+1] * d[i];
+         }
+         pb_mix(nl);
++
++        memcpy(a_in, a_out, LEN_1D * sizeof(real_t));
++        memcpy(b_in, b_out, LEN_1D * sizeof(real_t));
+     }
++
++    memcpy(a, a_out, LEN_1D * sizeof(real_t));
++    memcpy(b, b_out, LEN_1D * sizeof(real_t));
++
++    free(a_in);
++    free(a_out);
++    free(b_in);
++    free(b_out);
++
+     return (real_t)0;
+ }
+ 

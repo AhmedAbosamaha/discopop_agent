@@ -1,0 +1,42 @@
+--- s243.c
++++ s243.c
+@@ -130,14 +130,36 @@
+ 
+ static real_t kernel_s243(void)
+ {
++    real_t *a_temp = (real_t*)malloc((size_t)LEN_1D * sizeof(real_t));
++    if (!a_temp) return (real_t)0;
++
++    real_t *a_read = a;
++    real_t *a_write = a_temp;
++
+     for (int nl = 0; nl < R; nl++) {
+         for (int i = 0; i < LEN_1D-1; i++) {
+-            a[i] = b[i] + c[i  ] * d[i];
+-            b[i] = a[i] + d[i  ] * e[i];
+-            a[i] = b[i] + a[i+1] * d[i];
++            a_write[i] = b[i] + c[i  ] * d[i];
++            b[i] = a_write[i] + d[i  ] * e[i];
++            a_write[i] = b[i] + a_read[i+1] * d[i];
+         }
++
++        /* Swap read/write buffers for next iteration */
++        real_t *tmp = a;
++        a = a_write;
+         pb_mix(nl);
++        a = tmp;
++
++        real_t *a_tmp = a_read;
++        a_read = a_write;
++        a_write = a_tmp;
+     }
++
++    /* Copy final result back to original array */
++    for (int i = 0; i < LEN_1D; i++) {
++        a[i] = a_read[i];
++    }
++
++    free(a_temp);
+     return (real_t)0;
+ }
+ 

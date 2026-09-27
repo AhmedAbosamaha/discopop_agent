@@ -1,0 +1,10 @@
+--- s341.c
++++ s341.c
+@@ -141,6 +141,7 @@
+         }
+     }
+ 
++ #pragma omp parallel for shared(idx) 
+     for (int nl = 0; nl < R; nl++) {
+         // Write using pre-computed indices (parallelizable: each iteration writes to distinct a[idx[i]])
+         for (int i = 0; i < LEN_1D; i++) {
