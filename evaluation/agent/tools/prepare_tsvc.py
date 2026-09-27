@@ -74,13 +74,16 @@ SIZES = {"MINI": "2000", "SMALL": "32000", "STANDARD": "4000000", "LARGE": "3200
 class Loop:
     def __init__(self, name: str, expected: str, transformation: str, why: str,
                  expert: Optional[str] = None, init_extra: str = "", reps: int = 48,
-                 pre: str = "", globals_: str = "", suite: str = "tsvc",
+                 pre: str = "", globals_: str = "", suite: str = "tsvc", emit_extra: str = "",
                  hot_function: str = "", hot_writes: Tuple[str, ...] = ()) -> None:
         self.name, self.expected, self.transformation, self.why = name, expected, transformation, why
         # `pre`: the argument declarations TSVC passes through `func_args` (set in its main), which
         # the extracted body does not contain; `globals_`: file-scope code the loop needs (TSVC's
         # `f`, the index array).  Neither may say anything about how to parallelize (D36).
         self.pre, self.globals_ = pre, globals_
+        # `emit_extra` (v4 only): harness code that adds to the digest what the loop writes beyond
+        # TSVC's five vectors (s424's flat array); empty for every loop that writes only a..e
+        self.emit_extra = emit_extra
         self.expert, self.init_extra, self.reps = expert, init_extra, reps
         # the suite the package belongs to (its directory under prepared/, its header's directory
         # under prepared/_harness/, meta.json's `suite`): `tsvc` for every loop of E1-E2, `tsvc_b1` for
@@ -418,8 +421,12 @@ def _tsvc_callee(name: str) -> str:
 # (`prepared/tsvc_b1`), so that a fact set in the harness is truly out of the model's file while DiscoPoP
 # still measures the dependence it causes. Chosen from the screen (docs/screening/) by the selection rule
 # recorded before the screen; every unit still has to pass its measured conditions before any trial
-# (record §6, 26-27 Sep). Tier 1: the fact sits outside the loop's function.
+# (record §6, 26-27 Sep). Tier 1: the fact sits outside the loop's function; tier 2 (reported apart): in
+# the same function. Direction (a) hides a dependence, (b) an independence (the author's decisions, 27 Sep;
+# docs/e2b1/PREPARATION.md). s258 of (b) is not packaged: see s482 below.
 _B1A = "hidden dependence (E2-B1 a)"
+_B1A2 = "hidden dependence (E2-B1 a, tier 2)"
+_B1B = "hidden independence (E2-B1 b)"
 B1_LOOPS: List[Loop] = [
     # tier 1 (a): the distance is the caller's argument — `s151s(a, b, 1)`: a[i] = a[i + 1] + b[i]
     Loop("s151", _B1A, "the distance m of the callee's loop is the caller's argument",
@@ -434,6 +441,80 @@ B1_LOOPS: List[Loop] = [
          "b alternates in sign, so an odd iteration writes c[i+1] and the next one reads it",
          init_extra="    for (int i = 1; i < LEN_1D; i += 2) b[i] = -b[i];", suite="tsvc_b1",
          hot_writes=("a", "c")),
+    # tier 2 (a), the fact in the loop's own function (the author, 27 Sep: reported apart from tier 1).
+    # s131 is the first of its group (s131, s421, s422, s423): `int m  = 1;` stands one line above the
+    # repetition loop in TSVC, after the timer starts, so the extraction's declarations carry it verbatim.
+    Loop("s131", _B1A2, "the distance m is a local set just above the repetition loop",
+         "m = 1 makes each iteration read the element the following iteration overwrites",
+         suite="tsvc_b1", hot_writes=("a",)),
+    # tier 2 (a): TSVC sets `vl = 63; xx = flat_2d_array + vl;` in the function, before its timer, so the
+    # two lines are the kernel's first (`pre`, verbatim; neither is a harness binding, so neither is
+    # protected). `xx` and `flat_2d_array` are TSVC's globals, declared in its header (array_defs.h) — here
+    # in the harness header, `xx` WITHOUT TSVC's `__restrict__`: xx aliases flat_2d_array by design, and
+    # restrict on an alias is undefined behaviour (the screen, s421-s424). Length of the flat array: TSVC's
+    # is LEN_2D*LEN_2D = 65536 for LEN_1D = 32000, about two vectors; so is this one (2 * LEN_1D), which
+    # holds everything the loop reads (flat_2d_array[0 .. LEN_1D-2]) and writes (xx[1 .. LEN_1D-1] =
+    # flat_2d_array[64 .. LEN_1D+62]) at every dataset size. Its values are the packaging's O(1) periodic
+    # ones (TSVC zeroes the first LEN_1D elements; the values decide nothing here, the alias does), and
+    # the digest covers the whole array (`emit_extra`): the five vectors' alone would miss every store.
+    Loop("s424", _B1A2, "xx is flat_2d_array shifted by vl, set in the same function",
+         "with vl = 63 the store to xx[i+1] lands where iteration i+64 reads: a flow at distance 64",
+         globals_=("static real_t *flat_2d_array;   /* TSVC's flat array (array_defs.h), set in init_array */\n"
+                   "static real_t *xx;              /* TSVC's pointer into it (array_defs.h), without restrict */"),
+         init_extra=("    flat_2d_array = (real_t *)malloc((size_t)(2L * LEN_1D) * sizeof(real_t));\n"
+                     "    for (long i = 0; i < 2L * LEN_1D; i++)\n"
+                     "        flat_2d_array[i] = (real_t)0.75 + (real_t)((i * 61L) % 971) * (real_t)0.0005;"),
+         pre="    int vl = 63;\n    xx = flat_2d_array + vl;",
+         emit_extra="  pb_emit_array(flat_2d_array); pb_emit_array(flat_2d_array + LEN_1D);\n",
+         suite="tsvc_b1", hot_writes=("xx",)),
+    # ---- direction (b), hidden independence: DESCRIPTIVE (the author, 27 Sep) — the loop's text suggests
+    # a dependence that the fact outside its function rules out. All tier 1.
+    # s152: whether the call conflicts across iterations is decided in the callee, written in the file
+    # verbatim without its comments (as s151s); TSVC's data decides nothing.
+    Loop("s152", _B1B, "none: the callee the loop calls touches only element i",
+         "s152s updates a[i] from b[i] and c[i] alone, so no two iterations share an element",
+         globals_=_tsvc_callee("s152s"), suite="tsvc_b1", hot_writes=("a", "b")),
+    # s171: `inc` is s171's argument, `n1 = 1` in TSVC's main (tsvc.c: `time_function(&s171, &n1)`). It
+    # is declared in the harness header and set when the harness sets up the data, the way TSVC's main
+    # sets it before the call: the model's file uses `inc` without seeing its value. Not a `pre` line — a
+    # binding in the file would show the value, and a protected one is presented as measurement code.
+    Loop("s171", _B1B, "none: the stride inc is set outside the function (TSVC's main passes 1)",
+         "with inc = 1 each iteration updates its own a[i]; with inc = 0 all would update a[0]",
+         globals_="static int inc;   /* s171's argument: TSVC's main passes n1 (tsvc.c), set in init_array */",
+         init_extra="    inc = 1;", suite="tsvc_b1", hot_writes=("a",)),
+    # s481: the exit test reads d, which TSVC sets to 1/(i+1) > 0 (common.c, s481), so no iteration exits.
+    # The packaging's own d is positive already (0.75-1.25, scaled by 1.0-1.1 on the perturbed input,
+    # +0.125 from pb_mix): the deciding property holds with no init_extra.
+    Loop("s481", _B1B, "none: the exit test never fires on TSVC's data",
+         "d is positive everywhere (TSVC: d = 1/(i+1)), so no iteration exits and each updates its own a[i]",
+         suite="tsvc_b1", hot_writes=("a",)),
+    # s277: TSVC's a = 1 (common.c, s277), so the first test jumps past both updates in every iteration:
+    # the loop does no work with TSVC's data (the screen) — admitted by the author as TSVC ships it (27 Sep).
+    # The packaging's a is positive already; b's signs are reproduced as TSVC sets them (first half +1,
+    # second half -1) on the packaging's magnitudes. pb_mix raises b[LEN_1D-1] by 0.125 per repetition,
+    # which turns that one element positive, but the loop never tests it (i <= LEN_1D-2).
+    Loop("s277", _B1B, "none: with TSVC's data the guard skips both updates in every iteration",
+         "a >= 0 everywhere (TSVC: a = 1), so the b[i+1] to b[i] flow the text shows never happens",
+         init_extra="    for (int i = LEN_1D / 2; i < LEN_1D; i++) b[i] = -b[i];",
+         suite="tsvc_b1", hot_writes=("a", "b")),
+    # vas, the first of the index-permutation group started at vas (the author, 27 Sep; s491 and s4113
+    # stay dropped from new trials): ip is TSVC's permutation (common.c), the harness global the T0.11
+    # probes use.
+    Loop("vas", _B1B, "none: the index array is a permutation, set outside the function",
+         "ip sends distinct iterations to distinct elements of a, so no two iterations write the same one",
+         init_extra=_IP_INIT, globals_=_IP_GLOBAL, pre=_IP, suite="tsvc_b1", hot_writes=("a",)),
+    # s482: TSVC's b and c are both 1/(i+1) (common.c, s482), so `c[i] > b[i]` never holds and the loop
+    # runs to the end; with the packaging's own values it breaks at i = 1 (c[1] > b[1]) and does no work.
+    # Equal values would not survive the perturbed input (b scaled by 1.0-1.2, c by 1.0-1.1,
+    # independently): c is set to half of b, which keeps c below b under the perturbation and pb_mix
+    # (it adds 0.25 to b[k] and only 0.125 to c[k]). s258, in the same (b) list, is left out: its loop
+    # runs LEN_2D iterations over TSVC's 2-D `aa`, which this packaging does not build, and with a LEN_2D
+    # in TSVC's proportion (256 at LEN_1D = 32000) it does no measurable work at any size — packaging it
+    # needs a LEN_2D ladder, a decision shared with every 2-D loop of the screen.
+    Loop("s482", _B1B, "none: the early exit never fires on TSVC's data (c is never above b)",
+         "c <= b everywhere (TSVC: b = c = 1/(i+1)), so every iteration runs and updates its own a[i]",
+         init_extra="    for (int i = 0; i < LEN_1D; i++) c[i] = b[i] * (real_t)0.5;",
+         suite="tsvc_b1", hot_writes=("a",)),
 ]
 SUITES: Dict[str, List[Loop]] = {"tsvc": LOOPS, "tsvc_b1": B1_LOOPS}
 BY_NAME = {l.name: l for l in LOOPS}
@@ -575,7 +656,7 @@ static void pb_finish(real_t result)
 {
   pb_emit(result);
   pb_emit_array(a); pb_emit_array(b); pb_emit_array(c); pb_emit_array(d); pb_emit_array(e);
-  pb_report();
+%(emit_extra)s  pb_report();
   free(a); free(b); free(c); free(d); free(e);
 }
 
@@ -603,9 +684,15 @@ PROTECTED_NOTE = ("`pb_mix(nl)` changes a few input values between two repetitio
 
 
 def _is_harness_global(g: str) -> bool:
-    """File-scope code that is the harness's (the index array TSVC's common.c sets up), as
-    opposed to TSVC's own code the loop calls (s4121's `f`), which stays with the loop."""
-    return "pb_ip" in g
+    """File-scope code that is the harness's, as opposed to TSVC's own code the loop calls
+    (s4121's `f`, s151's `s151s`), which stays with the loop. The line is the one TSVC draws:
+    its DATA is set up outside the loop's function — declared in its headers (array_defs.h),
+    initialised in common.c, passed from main — so a data declaration goes to the header (the
+    index array `pb_ip`; E2-B1's `inc` of s171 and flat array of s424), where the model's file
+    uses it without seeing its value; a FUNCTION definition (a parameter list followed by a
+    body) is TSVC's code and stays in the file. Until E2-B1 the only data global was `pb_ip`,
+    so every earlier package renders as before; an empty `g` is nobody's."""
+    return bool(g.strip()) and not re.search(r"\)\s*\{", g)
 
 
 def _tsvc_function(name: str) -> Tuple[str, str, str, str]:
@@ -634,7 +721,7 @@ def render_harness(loop: Loop) -> str:
             + SIZE_BLOCK % {"reps": loop.reps} + SCAFFOLD
             + DATA % {"init_extra": loop.init_extra,
                       "harness_globals": (loop.globals_ + "\n") if _is_harness_global(loop.globals_) else ""}
-            + DRIVER)
+            + DRIVER % {"emit_extra": loop.emit_extra})
 
 
 def render(loop: Loop, expert: bool = False) -> str:
@@ -799,6 +886,9 @@ int main(int argc, char** argv)
 
 def render_v3(loop: Loop, expert: bool = False) -> str:
     """Packaging v3 (the layout of every run up to E2): one file, our measurement in front of the loop."""
+    if loop.emit_extra:
+        # v3's digest covers the five vectors only: a loop writing more would be checked on part of its output
+        raise ValueError(f"{loop.name}: its digest needs the v4 harness (emit_extra)")
     category, decls, rep, ret = _tsvc_function(loop.name)
     sha = hashlib.sha256(TSVC.read_bytes()).hexdigest()[:12]
     needs_tmp = expert and loop.expert is not None and "pb_tmp" in loop.expert
