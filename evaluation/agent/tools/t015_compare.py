@@ -87,7 +87,7 @@ def main() -> int:
     names = sorted(p.stem for p in (a.runs[0] / "raw").glob("*.json"))
     rows: List[Dict[str, Any]] = []
     for n in names:
-        per = []
+        per: List[Tuple[Tuple[FrozenSet[Key], FrozenSet[Key]], Tuple[FrozenSet[Key], FrozenSet[Key]]]] = []
         for r in a.runs:
             raw = json.loads((r / "raw" / f"{n}.json").read_text())
             if "error" in raw["old"] or "error" in raw["new"]:
@@ -103,8 +103,8 @@ def main() -> int:
             w = [p[1][k] for p in per]
             row[label] = classify(o, w)
             if row[label] in ("LAYOUT", "undecided"):
-                only_old = set.intersection(*(set(x) for x in o)) - set.union(*(set(x) for x in w))
-                only_new = set.intersection(*(set(x) for x in w)) - set.union(*(set(x) for x in o))
+                only_old = frozenset.intersection(*o) - frozenset().union(*w)
+                only_new = frozenset.intersection(*w) - frozenset().union(*o)
                 row[f"{label}_detail"] = {"in every v3 draw, no v4 draw": sorted(map(str, only_old)),
                                           "in every v4 draw, no v3 draw": sorted(map(str, only_new))}
         rows.append(row)
@@ -116,9 +116,10 @@ def main() -> int:
         for r in rows:
             counts.setdefault(dim, {}).setdefault(r[dim], 0)
             counts[dim][r[dim]] += 1
-    lines += ["", "| dimension | " + " | ".join(("same", "noise", "LAYOUT", "undecided")) + " |", "|---|---:|---:|---:|---:|"]
+    classes = ("same", "noise", "LAYOUT", "undecided")
+    lines += ["", "| dimension | " + " | ".join(classes) + " |", "|---|---:|---:|---:|---:|"]
     for dim in ("candidates", "dependences"):
-        lines.append(f"| {dim} | " + " | ".join(str(counts[dim].get(c, 0)) for c in ("same", "noise", "LAYOUT", "undecided")) + " |")
+        lines.append(f"| {dim} | " + " | ".join(str(counts[dim].get(c, 0)) for c in classes) + " |")
     details = [r for r in rows if any(k.endswith("_detail") for k in r)]
     if details:
         lines += ["", "## Stable or undecided differences, per package", ""]
@@ -126,7 +127,8 @@ def main() -> int:
             for dim in ("candidates", "dependences"):
                 d = r.get(f"{dim}_detail")
                 if d:
-                    lines.append(f"- `{r['name']}` {dim} ({r[dim]}): v3 only {d['in every v3 draw, no v4 draw'] or '—'}; "
+                    lines.append(f"- `{r['name']}` {dim} ({r[dim]}): "
+                                 f"v3 only {d['in every v3 draw, no v4 draw'] or '—'}; "
                                  f"v4 only {d['in every v4 draw, no v3 draw'] or '—'}")
     text = "\n".join(lines) + "\n"
     if a.out:
