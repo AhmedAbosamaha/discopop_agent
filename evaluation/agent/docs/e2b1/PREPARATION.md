@@ -97,3 +97,36 @@ package's meta.json declares (`hot_loop`, record §6, 27 Sep).
 
 Local check (Mac, fixed DiscoPoP): neither s151 nor s161 is Do-All; s151's hot loop (in `s151s`) is blocked
 on `a`, s161's on `c` — the deciding dependence in each.
+
+## 5. Before the go on model trials (27 Sep, after the no-model pre-flight)
+
+For the author to decide, before any model trial:
+
+1. **B13** (`DISCOPOP_BUG_REPORTS.md`): DiscoPoP reports bfs's frontier loop Do-All although its profile
+   holds the write-after-write conflicts (reproduced on a 12-line scatter).
+   - **Fix at the root (recommended, D14).** A false Do-All on a scatter with repeated indices is a defect
+     in DiscoPoP's core verdict. Once fixed, bfs's frontier loop stops being Tier 1, and condition 5 holds
+     under the rule as first written. The work that follows:
+     - the same-Do-All-sets check on all 33 TSVC packages (as for B9, B10), to show T0.15 and E1c-v3.1
+       untouched;
+     - a feature check on the reproducer;
+     - bfs's T0.11 × 3, the routing check and the profile check again;
+     - the server synced first.
+   - **Or:** bfs leaves by the rule and kmeans enters. That needs a new packager and its own pre-flight,
+     and kmeans may meet the same defect: its hidden fact is also an index-set conflict.
+2. **Trials:** (a) 5 units × 10 × 5 model arms = 250; (b) 6 units × 5 × 5 = 150. That is 400 Haiku trials,
+   about 8–10 h on four lanes (E2 A+B ran 4.7 min per trial per lane; bfs is heavier).
+   - The model arms: `full_b1_nospeed`, `no_evidence_b1_nospeed`, their twins, `bare_llm_nospeed`.
+   - DiscoPoP alone comes from the T0.11 draws.
+   - Qwen runs later.
+3. **The three statistics settings, each with its reason (recommended):**
+   - The interaction test is one-sided, "larger inside the agent": H12's registered form (D38, 24 Sep).
+   - `--family-size 23`: the plan's 19 hypothesis rows plus E2-B1's four named tests. This is an upper
+     count, so the bound is conservative.
+   - The continuity correction is on: Mantel–Haenszel's published form, conservative at these small
+     per-loop counts. The uncorrected values are reported beside it.
+4. **The race check covers every parallel outcome.** With the speed check off, most parallel programs
+   will be `parallel-not-faster`. `race_check.py` must run on the twins and the model alone with
+   `--outcomes FASTER,parallel-not-faster,parallel-speed-not-measurable` (or no filter), not FASTER only,
+   or e2b1_stats counts no model-only program race-free.
+
