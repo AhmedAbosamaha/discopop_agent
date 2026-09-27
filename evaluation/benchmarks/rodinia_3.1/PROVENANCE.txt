@@ -1,0 +1,29 @@
+Rodinia Benchmark Suite 3.1 (University of Virginia)
+Source : https://github.com/yuhc/gpu-rodinia   commit 31d0ebf5adaf3aaa6c770cc5319a62275d8c1881
+         ("Initial with Rodinia 3.1", 2016-10-25; a mirror of the 3.1 release. openmp/bfs has no later
+         commit there). The official distribution (rodinia_3.1.tar.bz2) was not downloaded.
+Licence: LICENSE in this directory (UVA, BSD-style: redistribution of source permitted with the notice kept).
+         bfs: the OpenMP bfs.cpp carries no notice of its own. Its CUDA sibling does (IIIT Hyderabad, "for
+         educational purpose"), and Rodinia's cuda/bfs/README at the same commit answers it —
+           "The original BFS CUDA code was obtained from Pawan Harish and P. J. Narayanan at IIIT,
+            who have given us permission to include it as part of Rodinia under Rodinia's license."
+           (https://raw.githubusercontent.com/yuhc/gpu-rodinia/31d0ebf5adaf3aaa6c770cc5319a62275d8c1881/cuda/bfs/README,
+            sha256 f1eafa1f2e9f2f1dfbf291720b0da25be6688f13d0d03c1c8eaefe7054e009bd)
+         — so bfs is under Rodinia's licence like the rest of the suite.
+
+Checked 2026-09-27: the 15 files that were here before bfs, outside serial/ (LICENSE, README, Makefile and
+openmp/ hotspot, nw, pathfinder), are byte-identical to the mirror at that commit; the four bfs files below
+were fetched from it. serial/ is not in the mirror; this file records nothing about its origin.
+
+openmp/bfs — added 2026-09-27 for E2-B1 (direction a, tier 1; record §6, 27 Sep), fetched from
+https://raw.githubusercontent.com/yuhc/gpu-rodinia/31d0ebf5adaf3aaa6c770cc5319a62275d8c1881/openmp/bfs/<file>:
+  308ac84a8e6e752d3a954bf8a57e6668f695df465591de94e38976f3e084f4c8  bfs.cpp
+  45387a30f1902d70040345066d8a9bdf8983b14cc438e3be1628595468514882  Makefile
+  1fe529f2432e1afa79e8678cec48a0ea7ab24302b4e8c2e83843f9c5316e4d7d  run
+  3457c6820ee4db7fddb660b6a85c8fdc59b0934a31c3735b625319693c0df246  run_offload
+Nothing here is modified. agent/tools/prepare_bfs.py derives the E2-B1 package from bfs.cpp (OpenMP
+removed, the traversal copied verbatim) and replaces Rodinia's input FILE by a deterministic synthetic graph
+generated in the measurement harness — a recorded deviation. Its structure follows Rodinia's own input
+generator, data/bfs/inputGen/graphgen.cpp, which the mirror above does not hold; the copy read (not kept
+here) is https://raw.githubusercontent.com/JuliaParallel/rodinia/master/data/bfs/inputGen/graphgen.cpp,
+sha256 43b810c7ed13a394f15b1f6c7a18f9a07609b505869c587c7222a265b2c946ec.

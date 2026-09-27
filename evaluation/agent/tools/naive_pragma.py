@@ -13,7 +13,8 @@ the way the agent captures them. Run it where archer is found (the server, LLVM 
 
 The HOT LOOP is the first `for (` statement of the package's source that is not the repetition loop
 (`for (int nl …)`) — for a TSVC package the loop under study, in the kernel or in the callee it calls
-(s151's `s151s`); `--line bench=N` names another.
+(s151's `s151s`); for Rodinia's bfs (`rodinia_b1`, written `for(`) the frontier loop, the first loop of
+its level loop; `--line bench=N` names another.
 
     venv/bin/python evaluation/agent/tools/naive_pragma.py --suite tsvc_b1 --out <dir> [names...]
 """
@@ -45,8 +46,10 @@ CHECK_INPUTS = [["7"]]
 
 
 def hot_loop_line(source: str) -> Optional[int]:
+    # `for\s*\(`: Rodinia writes `for(`. Every TSVC package (v3 and v4) resolves to the same line as with
+    # the earlier `for \(` (checked 27 Sep when bfs was added).
     for i, l in enumerate(source.splitlines(), 1):
-        if re.match(r"\s*for \(", l) and not re.match(r"\s*for \(int nl = 0;", l):
+        if re.match(r"\s*for\s*\(", l) and not re.match(r"\s*for\s*\(int nl = 0;", l):
             return i
     return None
 
