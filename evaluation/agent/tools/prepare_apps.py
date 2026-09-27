@@ -227,8 +227,8 @@ def _strip_commented_pragmas(text: str) -> Tuple[str, int]:
     """Remove every commented-out OpenMP pragma, continuation lines included.
 
     A `//` comment that ends in a backslash continues onto the next line (lines are spliced
-    before comments are removed), so Burkardt's `//# pragma omp parallel \` swallows the
-    `shared ( … ) \` and `private ( … )` lines after it: they are the answer too (§1a). Until
+    before comments are removed), so Burkardt's `//# pragma omp parallel \\` swallows the
+    `shared ( … ) \\` and `private ( … )` lines after it: they are the answer too (§1a). Until
     26 Sep this function only SAID it removed them (record §6, 26 Sep: md's archived model
     trials read the expert's pragmas)."""
     out: List[str] = []
