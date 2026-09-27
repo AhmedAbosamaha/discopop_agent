@@ -114,6 +114,11 @@ for meta_p in sorted(PREPARED.rglob("meta.json")):
         hdr = PREPARED / "_harness" / meta["harness"]
         if not hdr.exists() or hdr.read_text() != prepare_tsvc.render_harness(loop):
             drift.append(f"{suite}/{loop.name}: harness header differs from the packager's")
+    # E2-B1's hot loop (27 Sep) is read from meta.json by every trial: a package made before the
+    # field existed, or from an older declaration, would record `hot_loop_covered: null` in every
+    # trial — the primary outcome silently not computable. None for every other TSVC package.
+    if meta.get("hot_loop") != prepare_tsvc.hot_loop(loop):
+        drift.append(f"{suite}/{loop.name}: meta.json's hot_loop differs from the packager's")
 expect(f"{rendered} TSVC packages equal the packager's rendering", rendered > 0 and not drift,
        "; ".join(drift[:4]) + (f" (+{len(drift) - 4} more)" if len(drift) > 4 else ""))
 

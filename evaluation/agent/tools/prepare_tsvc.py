@@ -52,10 +52,11 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from prepare_calib import SCAFFOLD, _cc, _sysroot  # noqa: E402  (the same packaging code)
+import hot_loop_coverage  # noqa: E402  (E2-B1's hot loop is read by the parser that judges it)
 
 AGENT_DIR = Path(__file__).resolve().parent.parent
 HARNESS_ROOT = AGENT_DIR.parent
@@ -73,7 +74,8 @@ SIZES = {"MINI": "2000", "SMALL": "32000", "STANDARD": "4000000", "LARGE": "3200
 class Loop:
     def __init__(self, name: str, expected: str, transformation: str, why: str,
                  expert: Optional[str] = None, init_extra: str = "", reps: int = 48,
-                 pre: str = "", globals_: str = "", suite: str = "tsvc") -> None:
+                 pre: str = "", globals_: str = "", suite: str = "tsvc",
+                 hot_function: str = "", hot_writes: Tuple[str, ...] = ()) -> None:
         self.name, self.expected, self.transformation, self.why = name, expected, transformation, why
         # `pre`: the argument declarations TSVC passes through `func_args` (set in its main), which
         # the extracted body does not contain; `globals_`: file-scope code the loop needs (TSVC's
@@ -84,6 +86,10 @@ class Loop:
         # under prepared/_harness/, meta.json's `suite`): `tsvc` for every loop of E1-E2, `tsvc_b1` for
         # E2-B1's (packaging v4 only, D39 reversed for E2-B1 alone)
         self.suite = suite
+        # E2-B1's hot loop (see `hot_loop` below): the function that holds it (default: the kernel)
+        # and what it writes, declared by hand from reading the loop — the packager refuses a
+        # package whose parsed hot loop writes anything else
+        self.hot_function, self.hot_writes = hot_function, hot_writes
 
 
 # --------------------------------------------------------------------------------------
@@ -418,7 +424,7 @@ B1_LOOPS: List[Loop] = [
     # tier 1 (a): the distance is the caller's argument — `s151s(a, b, 1)`: a[i] = a[i + 1] + b[i]
     Loop("s151", _B1A, "the distance m of the callee's loop is the caller's argument",
          "with m = 1 each iteration reads the element the next one overwrites",
-         globals_=_tsvc_callee("s151s"), suite="tsvc_b1"),
+         globals_=_tsvc_callee("s151s"), suite="tsvc_b1", hot_function="s151s", hot_writes=("a",)),
     # tier 1 (a): which branch runs is decided by b's sign pattern in TSVC's initial data (common.c:
     # b = +1 at even, -1 at odd indices), set in the harness: an odd iteration writes c[i+1], which the
     # next (even) iteration reads. The packaging's own values are all positive and lose it, so the
@@ -426,7 +432,8 @@ B1_LOOPS: List[Loop] = [
     # perturbation scales by 0.8-1.2: no sign changes).
     Loop("s161", _B1A, "whether a later iteration reads what an earlier one wrote depends on b's signs",
          "b alternates in sign, so an odd iteration writes c[i+1] and the next one reads it",
-         init_extra="    for (int i = 1; i < LEN_1D; i += 2) b[i] = -b[i];", suite="tsvc_b1"),
+         init_extra="    for (int i = 1; i < LEN_1D; i += 2) b[i] = -b[i];", suite="tsvc_b1",
+         hot_writes=("a", "c")),
 ]
 SUITES: Dict[str, List[Loop]] = {"tsvc": LOOPS, "tsvc_b1": B1_LOOPS}
 BY_NAME = {l.name: l for l in LOOPS}
@@ -665,6 +672,25 @@ def protected_lines(loop: Loop) -> List[str]:
     lines += [l.strip() for l in loop.pre.splitlines() if "pb_" in l]
     lines += ["pb_mix(nl);", f"PB_MAIN(kernel_{loop.name})"]
     return lines
+
+
+def hot_loop(loop: Loop) -> Optional[Dict[str, Any]]:
+    """E2-B1's hot loop, for meta.json (`hot_loop`): the author's decision 3 (27 Sep) counts an E2-B1
+    program in the primary outcome only when its parallel construct covers this loop, checked by
+    hot_loop_coverage.py. The first `for` of `hot_function` that is not the repetition loop (the rule
+    of naive_pragma.py, whose loop it must be), its line in the package source, and what it writes —
+    read by the same parser that later judges the final program, and checked against the writes
+    declared by hand. None outside E2-B1 (suite `tsvc`), so every E1-E2 package stays byte for byte
+    what it was. It names the loop under study, so it may only sit where no arm looks: meta.json never
+    enters a trial's working copy (cli.run_trial copies the sources and the profile only; D36)."""
+    if loop.suite != "tsvc_b1":
+        return None
+    entry = f"kernel_{loop.name}"
+    hot = hot_loop_coverage.describe(render(loop), entry, loop.hot_function or entry)
+    if hot["writes"] != sorted(loop.hot_writes):
+        raise ValueError(f"{loop.name}: the hot loop at line {hot['line']} writes {hot['writes']}, "
+                         f"declared {sorted(loop.hot_writes)} — read the loop again")
+    return hot
 
 
 
@@ -910,6 +936,7 @@ def main() -> int:
             ref = refs / f"{loop.name}.c"
             ref.write_text(render(loop, expert=True) if v4 else render_v3(loop, expert=True))
         category = _tsvc_function(loop.name)[0]
+        hot = hot_loop(loop) if v4 else None
         (d / "meta.json").write_text(json.dumps({
             "suite": loop.suite, "kernel": loop.name, "source": "benchmarks/TSVC_2/src/tsvc.c",
             "category": category, "file": src.name, "language": "c", "layout": "single",
@@ -924,6 +951,8 @@ def main() -> int:
                 "harness_sha256": hashlib.sha256(hdr.read_bytes()).hexdigest(),
                 "protected": protected_lines(loop),
                 "protected_note": PROTECTED_NOTE,
+                # E2-B1 only: the loop the primary outcome's coverage check looks for (hot_loop above)
+                **({"hot_loop": hot} if hot else {}),
             } if v4 else {
                 "exclude_functions": ["init_array", "pb_mix", "pb_emit", "pb_emit_array", "pb_report", "pb_seed",
                                       "pb_uniform", "pb_timer_start", "pb_timer_stop", "main"],

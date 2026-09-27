@@ -59,6 +59,7 @@ from run_store import RunStore
 import harness_include  # noqa: E402
 HARNESS_INCLUDE = harness_include.install()   # every build finds prepared/_harness (D39)
 import scaffold
+import hot_loop_coverage
 
 AGENT_DIR = Path(__file__).resolve().parents[1]
 HARNESS_ROOT = AGENT_DIR.parent
@@ -1332,6 +1333,10 @@ def run_trial(bench: str, bench_dir: Path, profile_dir: Path, trial: Path, arm: 
         print("    scaffolding modified: " + "; ".join(rec["scaffold"]["problems"][:2]), flush=True)
     rec["pragmas_in_final"] = (final_text.count("#pragma omp") if proj is None
                                else rec["pragmas_added"])
+    # E2-B1's primary outcome counts a program only when its parallel construct covers the hot loop
+    # (the author's decision 3, 27 Sep; hot_loop_coverage.py). A package that declares no hot loop —
+    # every package before E2-B1 — records null, never false; the outcome (`classify`) is untouched.
+    rec.update(hot_loop_coverage.trial_fields(_meta.get("hot_loop"), final_text))
     if rec["source_changed"]:
         (trial / "changes.diff").write_text("".join(difflib.unified_diff(
             original_text.splitlines(True), final_text.splitlines(True),
@@ -1670,6 +1675,8 @@ def cmd_run(a: argparse.Namespace) -> int:
 def _save_trial(trial: Path, rec: dict, rep: int) -> None:
     rec["repeat"] = rep
     rec["outcome"] = classify(rec)
+    # a trial with no final program (a profile error) has no coverage verdict either
+    rec.setdefault("hot_loop_covered", None)
     trial.mkdir(parents=True, exist_ok=True)
     (trial / "trial.json").write_text(json.dumps(rec, indent=2) + "\n")
     print(f"    → {rec['outcome']}  (agent {rec.get('agent_s', '—')}s, "
@@ -1910,6 +1917,17 @@ def cmd_rescore(a: argparse.Namespace) -> int:
                 continue
             orig_text, final_text = orig.read_text(), final.read_text()
         t["scaffold"] = scaffold.check(orig_text, final_text, t.get("protected") or ())
+        if t.get("hot_loop"):
+            # Only a record that carries its hot loop (made since the coverage check exists) is
+            # judged again; an older record keeps its shape. A changed verdict keeps the old one.
+            cov = hot_loop_coverage.trial_fields(t["hot_loop"], final_text)
+            if cov["hot_loop_covered"] != t.get("hot_loop_covered"):
+                print(f"  {t.get('benchmark')} · {t.get('arm')} · rep{t.get('repeat')}: hot_loop_covered "
+                      f"{t.get('hot_loop_covered')} -> {cov['hot_loop_covered']}")
+                t.setdefault("hot_loop_covered_history", []).append(
+                    {"hot_loop_covered": t.get("hot_loop_covered"),
+                     "replaced_at": time.strftime("%Y-%m-%dT%H:%M:%S"), "reason": "rescore"})
+            t.update(cov)
         # The facts read from the agent's log, re-read with the current parser: a counter
         # fixed after a run (phase_b_deferred, 23 Sep) must reach that run's records too.
         log_file = p.parent / "agent.log"
@@ -2024,6 +2042,9 @@ def cmd_verify_source(a: argparse.Namespace) -> int:
         "host": socket.gethostname(),
         "host_load_start": list(os.getloadavg()),
     }
+    # the same coverage verdict as an agent trial's (E2-B1; null for a package without a hot loop)
+    rec.update(hot_loop_coverage.trial_fields(
+        json.loads((bench_dir / "meta.json").read_text()).get("hot_loop"), text))
     shown = f"{candidate.name}" + (f" + {' '.join(flags)}" if flags else "")
     print(f"verify {a.benchmark} · {a.label}: {shown} at {vsize}", flush=True)
     t0 = time.perf_counter()
