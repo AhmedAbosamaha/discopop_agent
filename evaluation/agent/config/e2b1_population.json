@@ -1,0 +1,45 @@
+{
+  "_comment": "E2-B1's population: the loops whose deciding fact (may the hot loop run in parallel?) is NOT in the loop's own statements. Campaign INPUT for tools/e2b1_stats.py, written from the author's decisions of 27 Sep BEFORE any E2-B1 measurement, and FROZEN before E2-B1's first trial: after that a unit changes only by the substitution rule below, each substitution logged in `substitutions` with its reason and a row in THESIS_EXPERIMENTS.md §6. Names are the harness's benchmark names (<suite>/<kernel>); the Rodinia bfs package does not exist yet (a deterministic synthetic graph input, a recorded deviation).",
+  "recorded": "THESIS_EXPERIMENTS.md §6, 2026-09-27, \"The author's decisions on E2-B1's design\" (the recommendations of docs/e2b1/PREPARATION.md §2); the selection rule of 2026-09-26 (\"The selection rule, written before any benchmark is picked from the screen\")",
+  "frozen": "before E2-B1's first trial",
+  "substitution_rule": "One unit per duplicate group, the FIRST in the source's own order. A unit that fails a hard constraint or a measured condition (PREPARATION.md §3: T0.1 sizes, prepare --validate, naive_pragma.py, T0.11 class and the profile naming (a) / not naming (b) the deciding dependence, routing_check.py on the three draws, a hand-read) leaves with the reason recorded, and the next member of its group in source order enters. No exclusion for effort or for looking weak; never a substitution chosen by any arm's result.",
+  "substitutions": [],
+  "dp_alone_draws": 3,
+  "dp_alone_note": "DiscoPoP alone is read from the three v4 T0.11 draws (`discopop_capability`), labelled 'selected on': a direction-(a) unit is admitted BECAUSE DiscoPoP alone does not parallelize it (class R), a (b) unit because it does (class A) — so its result is fixed by the selection and is never tested against (27 Sep, ruling 5).",
+  "directions": {
+    "a": {
+      "what": "hidden dependence: read alone the loop admits a parallel reading, but a fact set outside its statements carries a dependence",
+      "role": "tier 1 CONFIRMATORY (the named tests join the campaign's Holm family, 27 Sep decision 4); tier 2 reported apart, descriptive",
+      "n_per_cell": 10,
+      "n_why": "the headline direction (26 Sep decision 2); N = 10 for every (a) loop, tier 2 included (27 Sep: the record does not distinguish tiers)",
+      "units": [
+        {"benchmark": "tsvc_b1/s151", "tier": 1, "fact_sits": "the caller's argument (the distance m of s151s)"},
+        {"benchmark": "tsvc_b1/s161", "tier": 1, "fact_sits": "the initial data (b's sign pattern, set in the harness)"},
+        {"benchmark": "rodinia_b1/bfs", "tier": 1, "fact_sits": "the input graph's edge list",
+         "group_in_source_order": ["rodinia_b1/bfs", "rodinia_b1/kmeans", "rodinia_b1/streamcluster"]},
+        {"benchmark": "tsvc_b1/s131", "tier": 2, "fact_sits": "the same function (m set one line above)",
+         "group_in_source_order": ["tsvc_b1/s131", "tsvc_b1/s421", "tsvc_b1/s422", "tsvc_b1/s423"]},
+        {"benchmark": "tsvc_b1/s424", "tier": 2, "fact_sits": "the same function (the alias xx, above the timer)"}
+      ]
+    },
+    "b": {
+      "what": "hidden independence: the loop's text suggests a dependence that facts set outside it rule out",
+      "role": "DESCRIPTIVE (27 Sep decision 1: a deviation from 'both directions' recorded before any measurement) — the model alone against DiscoPoP alone; the agent and twin cells a no-harm control",
+      "n_per_cell": 5,
+      "n_why": "'5 for the rest' (26 Sep decision 2)",
+      "units": [
+        {"benchmark": "tsvc_b1/s152", "tier": 1, "fact_sits": "a callee (touches only index i)"},
+        {"benchmark": "tsvc_b1/s171", "tier": 1, "fact_sits": "inc, set outside the function"},
+        {"benchmark": "tsvc_b1/s481", "tier": 1, "fact_sits": "the initial values", "group_note": "its own group"},
+        {"benchmark": "tsvc_b1/s277", "tier": 1, "fact_sits": "the initial values",
+         "group_note": "its screen group (docs/screening/tsvc2_all_151_loops.md); admitted 27 Sep although it does no work with the shipped data (the rule excludes only by property or hard constraint)"},
+        {"benchmark": "tsvc_b1/vas", "tier": 1, "fact_sits": "the index array is a permutation (the harness's data)",
+         "group_in_source_order": ["tsvc_b1/s491", "tsvc_b1/s4113", "tsvc_b1/vas"],
+         "group_note": "the group starts at vas: s491 and s4113 stay dropped from new trials (26 Sep)"},
+        {"benchmark": "tsvc_b1/s258", "tier": 1, "fact_sits": "the initial values", "group_note": "its screen group"},
+        {"benchmark": "tsvc_b1/s482", "tier": 1, "fact_sits": "the initial values",
+         "group_note": "its screen group; predicted to fail its measured condition (class R, PREPARATION.md §2.3)"}
+      ]
+    }
+  }
+}
