@@ -37,6 +37,7 @@ LLVM 19 (macOS) and LLVM 20 (Linux).
 | B10 | explorer (Do-All detector, loop variables) | fixed 27 Sep | a scalar carried across iterations (`x = b[i]` read next iteration; `s += …`) → the patch generator emits `parallel for shared(x)` and a plain `parallel for` on the sum — both races |
 | B11 | explorer, `TaskGraph.__assign_state_ids` | candidate | in TSVC v3's `main`, no access made under the five `pb_emit_array` calls is attached to any context (before and after B9's fix); harness code only |
 | B12 | profiler, `scripts/CC_wrapper.sh`, `CXX_wrapper.sh` | fixed 27 Sep | the compiler wrappers exit 0 when the instrumented compile or link fails — the AST dump after it sets the exit status; the failure surfaces one step later as a missing `a.out` |
+| B13 | explorer (Do-All detector) | candidate — reproduced, root cause not yet located | a loop whose only cross-iteration dependence is a WRITE-AFTER-WRITE on an array element (a scatter `x[idx[i]] = …` whose indices repeat) is reported Do-All: its pragma races and the final values depend on the schedule; Rodinia bfs's frontier loop in E2-B1, 3 of 3 draws |
 | L3 | explorer | limitation | NPB-CPP `mg`: with P1's fix the state assignment is fast, but the run then stays in task-pattern detection (`new_task_detector`) — a first run was read at 4 h 19 min, the same run was stopped unfinished after **11 h 24 min** at 100 % CPU on the server (19–20 Sep); the Do-All detector is not reached. Not usable per trial |
 
 ---
@@ -206,6 +207,35 @@ stay Do-All. A 25-line program with the same shape (a direct call to the callee,
 function holding four such loops) does NOT reproduce it: B9's fix blocks all four loops there. Harness code
 only — the evidence given to the models excludes it and packaging v4 moves it out of the file — so it
 blocks nothing; mechanism not investigated.
+
+## B13 — candidate: a cross-iteration write-after-write on an array element does not block Do-All (explorer)
+
+**Found** 27 Sep 2026 in E2-B1's pre-flight: on all three T0.11 draws of Rodinia bfs (`t0_11_b1_a/b/c`,
+server, fixed DiscoPoP with B4, B8, B9, B10, B12) the explorer reports the frontier loop (bfs.cpp lines
+13–27) Do-All with an applicable pattern and no data-sharing clause. The loop stores
+`h_cost[id]` and `h_updating_graph_mask[id]` for every unvisited neighbour `id` of a frontier node, and
+frontier nodes share neighbours — about half the stores go to an element another iteration of the same
+level also stores to (prepare_bfs.py's validation). The profile HAS the dependences:
+`dynamic_dependencies.txt` holds WAW records of the `h_cost` store (instruction 122) against itself under
+many call-path states, and likewise for `h_updating_graph_mask`. Only the Do-All verdict ignores them. The
+agent's gate catches the pragma at the race check (TSan with archer) in every draw, so DiscoPoP alone and
+the agent ship nothing wrong; what is wrong is DiscoPoP's EVIDENCE (a Do-All where a conflict exists) and
+the routing that follows from it (Tier 1: the region is deferred to Phase B, and reaches the model only
+through the v3.1 re-queue).
+
+**Reproduced** on a 12-line program (Mac, the same DiscoPoP): `for (i = 0; i < 1000; i++) x[idx[i]] =
+y[i];` with `idx[i] = (7 i) mod 100` — each element written by ten iterations, the final value that of the
+last — is reported Do-All, applicable. A nested frontier/edge variant that also reads `cost[tid]` is
+correctly blocked, by the RAW on `cost`. So the missing case is a conflict that is only a WAW.
+
+**Where to look.** `new_do_all_detector.py` skips only WAR edges explicitly; a WAW edge between two
+iterations' contexts would block. So the WAW is most likely lost before the check — a store conflicting
+with ITSELF (the same instruction in two iterations) may map to one context and become a self-loop that
+the two-iteration duplication (`TaskGraph.__duplicate_loop_iterations`) does not reproduce across the
+copies. Not yet verified. A fix must still let a scalar written in every iteration (a scratch `s`, whose
+WAW DiscoPoP resolves by privatization) stay Do-All with `private`. The fix would add blocking
+dependences only where the profile saw two iterations store to the same element, so a loop that stores
+each element once (a permutation scatter: TSVC `vas`, `s491`, `s4113`) keeps its Do-All.
 
 ## B12 — the compiler wrappers report success when the instrumented build fails (profiler scripts)
 

@@ -10,19 +10,31 @@ On loops whose parallelizability is decided by a fact outside the loop's own sta
 
 ## What is in this folder
 
-- [`preflight/`](preflight/) — 1 smoke run(s) before the launch
+- [`analysis/`](analysis/) — the read-out: [`hot_loop_profile.md`](analysis/hot_loop_profile.md), [`routing_check.md`](analysis/routing_check.md)
+- [`preflight/`](preflight/) — 2 smoke run(s) before the launch
 
 ## Runs
 
 | run | where | what it is | status | trials | outcomes |
 |---|---|---|---|---:|---|
 | `naive_b1` | [`preflight/naive_b1/`](preflight/naive_b1/) | E2-B1 measured condition 3 (H13/C2 property): naive_pragma.py — `#pragma omp parallel for` on the declared hot loop of each of the 11 packages (tsvc_b1 × 10 (s151, s161, s131, s424, s152, s171, s481, s277, vas, s482) and rodinia_b1/bfs) through the agent's safety gate with TSan (archer) and the schedule matrix; lane 1.1, server, no model | valid | 0 |  |
-| `naive_b1_s258` | not archived yet | E2-B1 measured condition 3 for tsvc_b1/s258: naive_pragma.py on its declared hot loop, as naive_b1 (the H13/C2 property is waived for (b); recorded), server, no model | registered |  |  |
+| `naive_b1_s258` | [`preflight/naive_b1_s258/`](preflight/naive_b1_s258/) | E2-B1 measured condition 3 for tsvc_b1/s258: naive_pragma.py on its declared hot loop, as naive_b1 (the H13/C2 property is waived for (b); recorded), server, no model | valid | 0 |  |
 
 ## From the experiment record (§7 run log)
+
+### `t0_11_b1_a`, `t0_11_b1_b`, `t0_11_b1_c`; `t0_1_b1_s258`, `naive_b1_s258` — 2026-09-27, server, **T0.11 on E2-B1's 11 units, and s258's T0.1 and naive pragma** (no model)
+
+- **Setup.** Arm `discopop_capability` (`--budget 0 --no-require-speedup`, no model) on the 11 v4 packages (`tsvc_b1` × 10, `rodinia_b1/bfs`), three separate runs (three profile draws), threads 6/12, repeats 5, lanes 0.0/0.1/1.0, repository `3680f072`, DiscoPoP with B4, B8, B9, B10, B12 fixed, sizes from `t0_1_b1_sizes`; 16:25 → 16:46 UTC, token swept clean after each job. A first launch a minute earlier failed at argument parsing (a shell quoting slip: the benchmark list reached the runner as one word) — no run directory was created, nothing ran, the sweep was clean. Archived under `results/T0_instruments/T0.11_measured_classes/runs/`. Read out with `class_table.py`, `routing_check.py` (extended the same day: in a budget-0 draw a Tier-1 hot loop whose every Phase-B pattern fails a safety stage is the re-queue's own verdict) and `hot_loop_profile.py` (the profile trees, on the server) into `results/E02b1_hidden_facts/analysis/`. After the author packaged s258 (§6, 27 Sep): `t0_1_b1_s258` (lane 1.0) and `naive_b1_s258` (lane 1.1) at `75cfc7c8`.
+- **Result.** As in §6 (27 Sep, "E2-B1's measured conditions 3–5"): the classes are the ones the selection requires (R for the five (a) units, A for five (b) units), s482 R and out; every (a) hot loop reaches the model (bfs's only through the re-queue); every (b) hot loop gets DiscoPoP's pragma; the profile names the deciding dependence for s151, s161, s131, s424 — not for bfs (B13). s258: timing size STANDARD (0.26 s), verification LARGE (2.08 s), merged into `kernel_sizes.json`; its naive pragma races on the shared scratch `s` (the H13/C2 property is waived for (b)).
 
 ### `naive_b1` — 2026-09-27, server, **E2-B1's measured condition 3: the naive pragma on every unit's hot loop** (no model)
 
 - **Setup.** `naive_pragma.py` on the 11 E2-B1 packages (`tsvc_b1` × 10, `rodinia_b1/bfs`; packaging v4, generated and validated on the server at `3680f072`): `#pragma omp parallel for` inserted before the hot loop that meta.json declares (the same loop as the coverage check and `routing_check.py`, §6 27 Sep), through the agent's own gate `validate(mode="safety", stress=True)` — apply, compile, `-fopenmp` under ThreadSanitizer with archer (`/usr/lib/llvm-20/lib/libarcher.so`), the schedule matrix, the output against the original on the shipped input and on `--check-input 7`. Lane 1.1 (cores 36–47), 27 Sep ≈ 16:40 UTC, 1–2 s per unit. Archived under `results/E02b1_hidden_facts/preflight/naive_b1/`.
 - **Result — as the hand-read predicts (`docs/e2b1/HAND_READ.md`).** Direction (a): **all five fail the gate at the race check** — s151 (a write in `s151s`'s loop), s161, s131, s424 and bfs (the `h_cost` store; bfs's conflicting stores are of equal values, so only the race check can see them). Direction (b): s152, s171, s481, s277 and vas **pass** (a truly independent loop passes by nature; the H13/C2 property is waived for (b), 27 Sep); s482 **does not compile** with the pragma (`break` inside an OpenMP loop), as the screen predicted. Condition 3 holds for every (a) unit.
+
+## Change-log rows that name these runs (§6)
+
+| Date | Repo | Change | Why |
+|---|---|---|---|
+| 2026-09-27 | result | **E2-B1's measured conditions 3–5 on the 11 units: all hold as predicted except s482 (leaves) and bfs's profile (a DiscoPoP defect, B13 — the author's decision).** Runs `naive_b1`, `t0_11_b1_a/b/c` (server, fixed DiscoPoP, no model); read by `class_table.py`, `routing_check.py` and `hot_loop_profile.py` (`results/E02b1_hidden_facts/analysis/`). **Class (T0.11, 3 draws):** R for s151, s161, s131, s424, bfs (DiscoPoP alone `no-change` 3 of 3) and A for s152, s171, s481, s277, vas (FASTER 3 of 3, 3.2–8.7×) — as the selection requires; s482 R (predicted by the screen). **Routing:** s151, s161, s131, s424 — the hot loop Tier 2, reaches the model 3 of 3; bfs — its frontier loop is reported Do-All, so it is Tier 1 and DEFERRED, and every one of its Phase-B pragmas fails the race check: with a budget the v3.1 re-queue sends it to the model (implied 3 of 3; the budget-0 draws never try the re-queue); (b) — DiscoPoP's pragma applied on the hot loop 3 of 3. **The profile on the hot loop (condition 4):** s151 and s131 blocked by RAW `a`, s161 by RAW `c`, s424 by RAW `flat_2d_array` — the deciding dependence, 3 of 3; (b) Do-All 3 of 3. **bfs fails condition 4:** DiscoPoP reports the frontier loop Do-All in 3 of 3 draws although its profile records the write-after-write conflicts on `h_cost` and `h_updating_graph_mask` — reproduced on a 12-line scatter with repeated indices (`x[idx[i]] = y[i]`, reported Do-All): **B13**, a DiscoPoP defect (`DISCOPOP_BUG_REPORTS.md`), root cause not yet located. The gate refuses the pragma (TSan), so nothing unsafe ships; DiscoPoP's evidence for bfs is wrong. By the rule bfs leaves and kmeans enters; by D14 the defect is fixed at its root and bfs is measured again — the author's decision. **s258** (packaged today): T0.1 timing STANDARD, verification LARGE; its naive pragma races on the shared scratch `s` (waived for (b)); T0.11 to follow | E2-B1 pre-flight (PREPARATION.md §3) |
 

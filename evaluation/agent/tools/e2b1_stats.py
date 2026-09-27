@@ -870,8 +870,8 @@ def self_test() -> int:
     by = lambda d, t: sorted(b for b, u in units.items() if u["direction"] == d and u["tier"] == t)  # noqa: E731
     expect("(a) tier 1: s151, s161, bfs", by("a", 1) == ["rodinia_b1/bfs", "tsvc_b1/s151", "tsvc_b1/s161"], f"{by('a', 1)}")
     expect("(a) tier 2: s131, s424", by("a", 2) == ["tsvc_b1/s131", "tsvc_b1/s424"], f"{by('a', 2)}")
-    expect("(b): s152, s171, s258, s277, s481, s482, vas",
-           by("b", 1) == [f"tsvc_b1/{k}" for k in ("s152", "s171", "s258", "s277", "s481", "s482", "vas")], f"{by('b', 1)}")
+    expect("(b): s152, s171, s258, s277, s481, vas (s482 left by the substitution rule, 27 Sep)",
+           by("b", 1) == [f"tsvc_b1/{k}" for k in ("s152", "s171", "s258", "s277", "s481", "vas")], f"{by('b', 1)}")
     expect("N = 10 for (a), 5 for (b); DiscoPoP alone 3 draws",
            {u["n_per_cell"] for u in units.values() if u["direction"] == "a"} == {10}
            and {u["n_per_cell"] for u in units.values() if u["direction"] == "b"} == {5} and draws == 3)

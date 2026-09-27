@@ -10,7 +10,7 @@ At which size is each benchmark's serial computation long enough to verify (≥ 
 
 ## What is in this folder
 
-- [`runs/`](runs/) — 5 archived run(s): the evidence
+- [`runs/`](runs/) — 6 archived run(s): the evidence
 - [`superseded/`](superseded/) — 1 run(s) a later one replaced
 
 ## Runs
@@ -23,7 +23,7 @@ At which size is each benchmark's serial computation long enough to verify (≥ 
 | `t0_1_tsvc` | [`runs/t0_1_tsvc/`](runs/t0_1_tsvc/) | the 25 TSVC loops → kernel_sizes.json | valid | 0 |  |
 | `t0_1_probe_sizes` | [`runs/t0_1_probe_sizes/`](runs/t0_1_probe_sizes/) | T0.1 sizes for the 8 TSVC indirect-addressing probe loops (decision 8), no model | valid | 0 |  |
 | `t0_1_b1_sizes` | [`runs/t0_1_b1_sizes/`](runs/t0_1_b1_sizes/) | T0.1 sizes for E2-B1's 11 v4 packages (tsvc_b1 × 10 (s151, s161, s131, s424, s152, s171, s481, s277, vas, s482) and rodinia_b1/bfs): size_table.py, serial -O3 per dataset size, 3 runs, lane 1.0, server, no model → kernel_sizes.json | valid | 0 |  |
-| `t0_1_b1_s258` | not archived yet | T0.1 sizes for tsvc_b1/s258 (packaged 27 Sep after the author's ruling, LEN_2D = LEN_1D deviation): size_table.py, as t0_1_b1_sizes, server, no model | registered |  |  |
+| `t0_1_b1_s258` | [`runs/t0_1_b1_s258/`](runs/t0_1_b1_s258/) | T0.1 sizes for tsvc_b1/s258 (packaged 27 Sep after the author's ruling, LEN_2D = LEN_1D deviation): size_table.py, as t0_1_b1_sizes, server, no model | valid | 0 |  |
 
 ## The instrument, as the record defines it (§5e)
 
@@ -32,6 +32,11 @@ At which size is each benchmark's serial computation long enough to verify (≥ 
 | T0.1 | At which size is each benchmark's serial computation long enough to time? | `size_table.py` | Serial `-O3` build per dataset size, pinned to one NUMA node, 3 runs, median of the timed region (`DP_TIMED_REGION_SECONDS`). Verification size = smallest reaching 1 s; timing size = smallest reaching 0.25 s | `sizes.csv`, `chosen.json` → `kernel_sizes.json` | done (§7 `t0_1_sizes`, `t0_1_apps`) |
 
 ## From the experiment record (§7 run log)
+
+### `t0_11_b1_a`, `t0_11_b1_b`, `t0_11_b1_c`; `t0_1_b1_s258`, `naive_b1_s258` — 2026-09-27, server, **T0.11 on E2-B1's 11 units, and s258's T0.1 and naive pragma** (no model)
+
+- **Setup.** Arm `discopop_capability` (`--budget 0 --no-require-speedup`, no model) on the 11 v4 packages (`tsvc_b1` × 10, `rodinia_b1/bfs`), three separate runs (three profile draws), threads 6/12, repeats 5, lanes 0.0/0.1/1.0, repository `3680f072`, DiscoPoP with B4, B8, B9, B10, B12 fixed, sizes from `t0_1_b1_sizes`; 16:25 → 16:46 UTC, token swept clean after each job. A first launch a minute earlier failed at argument parsing (a shell quoting slip: the benchmark list reached the runner as one word) — no run directory was created, nothing ran, the sweep was clean. Archived under `results/T0_instruments/T0.11_measured_classes/runs/`. Read out with `class_table.py`, `routing_check.py` (extended the same day: in a budget-0 draw a Tier-1 hot loop whose every Phase-B pattern fails a safety stage is the re-queue's own verdict) and `hot_loop_profile.py` (the profile trees, on the server) into `results/E02b1_hidden_facts/analysis/`. After the author packaged s258 (§6, 27 Sep): `t0_1_b1_s258` (lane 1.0) and `naive_b1_s258` (lane 1.1) at `75cfc7c8`.
+- **Result.** As in §6 (27 Sep, "E2-B1's measured conditions 3–5"): the classes are the ones the selection requires (R for the five (a) units, A for five (b) units), s482 R and out; every (a) hot loop reaches the model (bfs's only through the re-queue); every (b) hot loop gets DiscoPoP's pragma; the profile names the deciding dependence for s151, s161, s131, s424 — not for bfs (B13). s258: timing size STANDARD (0.26 s), verification LARGE (2.08 s), merged into `kernel_sizes.json`; its naive pragma races on the shared scratch `s` (the H13/C2 property is waived for (b)).
 
 ### `t0_1_b1_sizes` — 2026-09-27, server, **T0.1 for E2-B1's 11 v4 packages** (no model)
 
