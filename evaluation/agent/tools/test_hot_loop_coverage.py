@@ -361,5 +361,69 @@ r3 = trial_with(par161, {})
 expect("the same program in a package without `hot_loop`: hot_loop_covered null, nothing else added",
        r3.get("hot_loop_covered", "absent") is None and "hot_loop" not in r3 and "hot_loop_coverage" not in r3, r3)
 
+# Every E2-B1 unit, TSVC and Rodinia: the three tools share one hot loop, the original is serial, the
+# naive pragma on that loop covers it. Criterion v2's two additions on the units that need them: bfs's
+# sibling update loop, s424's alias declared in the harness header.
+print("\n7. every E2-B1 unit (criterion v2)")
+import prepare_bfs  # noqa: E402
+
+
+def with_pragma(src: str, line: int, pragma: str = "#pragma omp parallel for") -> str:
+    lines = src.splitlines(keepends=True)
+    indent = lines[line - 1][:len(lines[line - 1]) - len(lines[line - 1].lstrip())]
+    return "".join(lines[:line - 1] + [f"{indent}{pragma}\n"] + lines[line - 1:])
+
+
+UNITS = [(l.name, prepare_tsvc.render(l), prepare_tsvc.hot_loop(l)) for l in prepare_tsvc.B1_LOOPS]
+UNITS.append(("bfs", prepare_bfs.render(), prepare_bfs.hot_loop()))
+for name, src, declared in UNITS:
+    assert declared is not None
+    hot = declared
+    expect(f"{name}: naive_pragma.py's loop is the declared hot loop (line {hot['line']})",
+           naive_pragma.hot_loop_line(src) == hot["line"], naive_pragma.hot_loop_line(src))
+    r = covered(src, hot)
+    expect(f"{name}: the original is NOT covered", r["covered"] is False and not r["uncounted"], r)
+    r = covered(with_pragma(src, hot["line"]), hot)
+    expect(f"{name}: the naive pragma on the hot loop — covered", r["covered"] is True, r)
+
+SRC_BFS, HOT_BFS = prepare_bfs.render(), prepare_bfs.hot_loop()
+expect("bfs: the frontier loop, line 13, known by h_cost; the masks it shares with the update loop listed",
+       HOT_BFS == {"entry": "kernel_bfs", "function": "kernel_bfs", "line": 13, "writes": ["h_cost"],
+                   "shared": ["h_graph_mask", "h_updating_graph_mask"]}, HOT_BFS)
+upd = SRC_BFS.splitlines().index("            for(int tid=0; tid< no_of_nodes ; tid++ )") + 1
+r = covered(with_pragma(SRC_BFS, upd, "#pragma omp parallel for reduction(||:stop)"), HOT_BFS)
+expect("bfs: a parallel update loop alone — NOT covered (v1 said covered), listed in `elsewhere`",
+       r["covered"] is False and [e["line"] for e in r["elsewhere"]] == [upd], r)
+r = covered(with_pragma(with_pragma(SRC_BFS, upd, "#pragma omp parallel for reduction(||:stop)"), 13), HOT_BFS)
+expect("bfs: both loops parallel — covered, by the frontier loop's construct only",
+       r["covered"] is True and [c["line"] for c in r["covering"]] == [13], r)
+v1 = dict(HOT_BFS, writes=sorted(HOT_BFS["writes"] + HOT_BFS["shared"]))
+expect("... and v1's writes would have passed the update loop for the hot loop (why v2)",
+       covered(with_pragma(SRC_BFS, upd, "#pragma omp parallel for reduction(||:stop)"), v1)["covered"] is True)
+try:
+    H.describe(SRC_BFS.replace("h_cost[id]=h_cost[tid]+1;", "h_graph_mask[id]=false;"), "kernel_bfs", "kernel_bfs")
+    refused = False
+except ValueError:
+    refused = True
+expect("a hot loop whose every write another loop also writes is refused", refused)
+
+S424 = prepare_tsvc.render(B1["s424"])
+HOT424 = prepare_tsvc.hot_loop(B1["s424"])
+assert HOT424 is not None
+expect("s424: writes xx; flat_2d_array declared as its alias (both bound in the harness header)",
+       HOT424["writes"] == ["xx"] and HOT424.get("aliases") == ["flat_2d_array"], HOT424)
+flat = edit(S424, "            xx[i+1] = flat_2d_array[i] + a[i];\n",
+            "            flat_2d_array[i + vl + 1] = flat_2d_array[i] + a[i];\n")
+flat = with_pragma(flat, HOT424["line"])
+expect("s424: rewritten to store through flat_2d_array under a parallel for — covered by the alias",
+       covered(flat, HOT424)["covered"] is True, covered(flat, HOT424))
+no_alias = {k: v for k, v in HOT424.items() if k != "aliases"}
+expect("... NOT covered without it (the parser cannot see that xx points into flat_2d_array)",
+       covered(flat, no_alias)["covered"] is False, covered(flat, no_alias))
+local = edit(S424, "            xx[i+1] = flat_2d_array[i] + a[i];\n",
+             "            real_t *p = flat_2d_array + vl;\n            p[i+1] = flat_2d_array[i] + a[i];\n")
+expect("s424: through a local pointer into flat_2d_array — covered",
+       covered(with_pragma(local, HOT424["line"]), HOT424)["covered"] is True)
+
 print(f"\n{'ALL PASS' if not fails else f'{fails} FAILURE(S)'}")
 sys.exit(1 if fails else 0)

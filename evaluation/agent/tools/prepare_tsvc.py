@@ -75,7 +75,8 @@ class Loop:
     def __init__(self, name: str, expected: str, transformation: str, why: str,
                  expert: Optional[str] = None, init_extra: str = "", reps: int = 48,
                  pre: str = "", globals_: str = "", suite: str = "tsvc", emit_extra: str = "",
-                 hot_function: str = "", hot_writes: Tuple[str, ...] = ()) -> None:
+                 hot_function: str = "", hot_writes: Tuple[str, ...] = (),
+                 hot_aliases: Tuple[str, ...] = ()) -> None:
         self.name, self.expected, self.transformation, self.why = name, expected, transformation, why
         # `pre`: the argument declarations TSVC passes through `func_args` (set in its main), which
         # the extracted body does not contain; `globals_`: file-scope code the loop needs (TSVC's
@@ -91,8 +92,9 @@ class Loop:
         self.suite = suite
         # E2-B1's hot loop (see `hot_loop` below): the function that holds it (default: the kernel)
         # and what it writes, declared by hand from reading the loop — the packager refuses a
-        # package whose parsed hot loop writes anything else
-        self.hot_function, self.hot_writes = hot_function, hot_writes
+        # package whose parsed hot loop writes anything else; `hot_aliases`, other names of that
+        # memory bound in the harness header, where the coverage check cannot see them (s424)
+        self.hot_function, self.hot_writes, self.hot_aliases = hot_function, hot_writes, hot_aliases
 
 
 # --------------------------------------------------------------------------------------
@@ -466,7 +468,7 @@ B1_LOOPS: List[Loop] = [
                      "        flat_2d_array[i] = (real_t)0.75 + (real_t)((i * 61L) % 971) * (real_t)0.0005;"),
          pre="    int vl = 63;\n    xx = flat_2d_array + vl;",
          emit_extra="  pb_emit_array(flat_2d_array); pb_emit_array(flat_2d_array + LEN_1D);\n",
-         suite="tsvc_b1", hot_writes=("xx",)),
+         suite="tsvc_b1", hot_writes=("xx",), hot_aliases=("flat_2d_array",)),
     # ---- direction (b), hidden independence: DESCRIPTIVE (the author, 27 Sep) — the loop's text suggests
     # a dependence that the fact outside its function rules out. All tier 1.
     # s152: whether the call conflicts across iterations is decided in the callee, written in the file
@@ -777,6 +779,8 @@ def hot_loop(loop: Loop) -> Optional[Dict[str, Any]]:
     if hot["writes"] != sorted(loop.hot_writes):
         raise ValueError(f"{loop.name}: the hot loop at line {hot['line']} writes {hot['writes']}, "
                          f"declared {sorted(loop.hot_writes)} — read the loop again")
+    if loop.hot_aliases:
+        hot["aliases"] = sorted(loop.hot_aliases)
     return hot
 
 

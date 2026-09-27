@@ -77,20 +77,23 @@ So (a) can be tested as registered; (b), inside the agent and its twins, cannot 
    is applied in 3 of 3.
 6. A hand-read of every unit before measurement.
 
+The hot loop in 3, 5 and in the primary outcome's coverage check is ONE loop per unit: the one the
+package's meta.json declares (`hot_loop`, record §6, 27 Sep).
+
 ## 4. Build status
 
 | item | status |
 |---|---|
-| `prepare_tsvc.py --suite tsvc_b1` (v4 only), s151, s161 | done, validated (27 Sep) |
-| golden-render check (test_integrity 1c) | done: 35 of 35 |
-| `routing_check.py` | done; checked on archived draws |
-| `naive_pragma.py` | done; s151, s161 fail at TSan (Mac) |
-| s131, s424 (flat + `xx`) | after decision 2 |
-| Rodinia bfs packager (synthetic graph) | after decision 2 |
-| (b) units (s152, s171, s481, …) | after decision 1 |
-| hot-loop coverage check in the verdict | after decision 4 |
-| statistics: CMH (Mantel-Haenszel OR, RBG interval), unsafe metric, direction/tier split, selectable DiscoPoP-alone arm | after decision 5 |
-| registry entries for the no-model runs (T0.1, T0.11, T0.15 re-run) | before their launch |
+| `prepare_tsvc.py --suite tsvc_b1` (v4 only): s151, s161, s131, s424 (a); s152, s171, s481, s277, vas, s482 (b) | done, validated on the Mac (27 Sep) |
+| s258 (b) | not packaged: 2-D `aa`, LEN_2D trip count — the author's ruling |
+| Rodinia bfs packager, synthetic graph (`prepare_bfs.py`, `prepared/rodinia_b1`) | done, validated on the Mac against Rodinia's bfs.cpp |
+| golden-render check (test_integrity 1c), `hot_loop` in meta included | done: 44 of 44 |
+| `routing_check.py` (hot loop from meta) | done; checked on archived draws |
+| `naive_pragma.py` | done; s151, s161 fail at TSan (Mac); the rest on the server |
+| hot-loop coverage check in the verdict, criterion v2 | done; every unit tested (`test_hot_loop_coverage.py` §7) |
+| statistics: CMH (Mantel-Haenszel OR, RBG interval), unsafe metric, direction/tier split | done (`e2b1_stats.py`, `config/e2b1_population.json`) |
+| T0.15 re-run on the fixed DiscoPoP | running on the server |
+| registry entries for the no-model runs (T0.1, T0.11, naive pragma) | before their launch, after T0.15 |
 
 Local check (Mac, fixed DiscoPoP): neither s151 nor s161 is Do-All; s151's hot loop (in `s151s`) is blocked
 on `a`, s161's on `c` — the deciding dependence in each.

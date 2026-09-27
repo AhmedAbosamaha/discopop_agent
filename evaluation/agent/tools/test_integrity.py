@@ -114,6 +114,8 @@ for meta_p in sorted(PREPARED.rglob("meta.json")):
         hdr = PREPARED / "_harness" / meta["harness"]
         if not hdr.exists() or hdr.read_text() != prepare_bfs.render_harness():
             drift.append(f"{suite}/{meta_p.parent.name}: harness header differs from the packager's")
+        if meta.get("hot_loop") != prepare_bfs.hot_loop():
+            drift.append(f"{suite}/{meta_p.parent.name}: meta.json's hot_loop differs from the packager's")
         continue
     if suite not in prepare_tsvc.SUITES:
         continue

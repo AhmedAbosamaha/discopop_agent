@@ -65,11 +65,12 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from prepare_apps import _sysroot  # noqa: E402  (macOS SDK and Homebrew's keg-only libomp)
 from prepare_calib import SCAFFOLD  # noqa: E402  (the same digest, seed and timer as TSVC's v4)
+import hot_loop_coverage  # noqa: E402  (E2-B1's hot loop is read by the parser that judges it)
 
 AGENT_DIR = Path(__file__).resolve().parent.parent
 HARNESS_ROOT = AGENT_DIR.parent
@@ -166,6 +167,22 @@ def render() -> str:
     return (KERNEL_HEAD % {"sha": _inputs_sha()[:12], "suite": SUITE, "name": NAME}
             + f"\nstatic void {KERNEL}(void)\n{{\n" + body + "}\n"
             + f"\nPB_MAIN({KERNEL})\n")
+
+
+# E2-B1's hot loop (the author's decision 3, 27 Sep; hot_loop_coverage.py): the frontier loop, the
+# first `for` of the traversal — the loop Rodinia's OpenMP version parallelizes and naive_pragma.py's.
+# Of what it writes, h_graph_mask and h_updating_graph_mask are set by the update loop after it as
+# well, so criterion v2 knows it by h_cost alone (declared by hand; the packager refuses a mismatch).
+HOT_WRITES = ("h_cost",)
+
+
+def hot_loop() -> Dict[str, Any]:
+    """The hot loop for meta.json (`hot_loop`), as prepare_tsvc.hot_loop describes a TSVC unit's."""
+    hot = hot_loop_coverage.describe(render(), KERNEL, KERNEL)
+    if hot["writes"] != sorted(HOT_WRITES):
+        raise ValueError(f"bfs: the hot loop at line {hot['line']} writes {hot['writes']}, "
+                         f"declared {sorted(HOT_WRITES)} — read the loop again")
+    return hot
 
 
 def protected_lines() -> List[str]:
@@ -538,6 +555,9 @@ def main() -> int:
         "agent_dataset": "SMALL", "generator_version": GENERATOR_VERSION,
         "sizes": {k: {"PB_NODES": str(v)} for k, v in SIZES.items()},
         "removed": removed,
+        # E2-B1 only: the loop the primary outcome's coverage check looks for (hot_loop above). It names
+        # the loop under study, so it sits where no arm looks (D36; as prepare_tsvc's)
+        "hot_loop": hot_loop(),
         "deviations": [
             "the graph is generated in the harness (deterministic; the structure of Rodinia's graphgen.cpp: "
             "2-4 random edges drawn per node, stored both ways, the source drawn after the edges) instead of "

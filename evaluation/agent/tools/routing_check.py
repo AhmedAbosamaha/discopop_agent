@@ -15,8 +15,14 @@ model, before any model call:
   Phase B      `┌─ pattern #N do_all @ lines a–b` … `└─ APPLIED | DROPPED`, and D41's
                `└─ APPLIED as D40 judged it`.
 
-The HOT LOOP of a package is its loop region with the largest measured share other than the
-repetition loop (`for (int nl …)`, read from the archived source); ties go to the innermost.
+The HOT LOOP of a package is the one its meta.json declares (`hot_loop.line`; every E2-B1 package,
+prepare_tsvc.hot_loop / prepare_bfs.hot_loop): the loop region of the table whose first line is that
+line — the same loop naive_pragma.py and the coverage check use. The meta is read from the run's own
+profile copy (`profiles/<benchmark>/meta.json`), else from prepared/. A package that declares none
+(every one before E2-B1) falls back to the loop region with the largest measured share other than
+the repetition loop (`for (int nl …)`, read from the archived source); ties go to the innermost.
+Rodinia bfs needs the declaration: it has no `nl` loop, and its level loop (`do … while`) encloses
+everything.
 
   reaches the model   the hot loop is Tier 2 at depth 0 in the table, or its Phase-A block says a
                       re-queue sent it to the model
@@ -27,6 +33,7 @@ repetition loop (`for (int nl …)`, read from the archived source); ties go to 
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import sys
 from pathlib import Path
@@ -100,7 +107,20 @@ def repetition_line(source: str) -> Optional[int]:
     return None
 
 
-def hot_loop(rows: List[Dict[str, Any]], rep_line: Optional[int]) -> Optional[Dict[str, Any]]:
+def declared_line(run_dir: Path, bench: str) -> Optional[int]:
+    """The hot loop's line from the package's meta.json: the run's profile copy, else prepared/."""
+    for meta in (run_dir / "profiles" / bench / "meta.json", AGENT_DIR / "prepared" / bench / "meta.json"):
+        if meta.exists():
+            hot = json.loads(meta.read_text()).get("hot_loop")
+            return int(hot["line"]) if hot else None
+    return None
+
+
+def hot_loop(rows: List[Dict[str, Any]], rep_line: Optional[int],
+             line: Optional[int] = None) -> Optional[Dict[str, Any]]:
+    if line is not None:
+        hits = [r for r in rows if r["type"] == "loop" and r["span"] is not None and r["span"][0] == line]
+        return hits[0] if hits else None
     loops = [r for r in rows if r["type"] == "loop" and r["span"] is not None
              and (rep_line is None or r["span"][0] != rep_line)]
     if not loops:
@@ -108,12 +128,15 @@ def hot_loop(rows: List[Dict[str, Any]], rep_line: Optional[int]) -> Optional[Di
     return sorted(loops, key=lambda r: (-float(r["share"]), r["span"][1] - r["span"][0]))[0]
 
 
-def judge(log_text: str, source: str) -> Dict[str, Any]:
+def judge(log_text: str, source: str, line: Optional[int] = None) -> Dict[str, Any]:
+    """`line`: the hot loop's declared first line (None: the largest-share rule)."""
     rows, phase_a, phase_b = parse_log(log_text)
-    hot = hot_loop(rows, repetition_line(source))
+    hot = hot_loop(rows, repetition_line(source), line)
     out: Dict[str, Any] = {"hot": None, "tier": None, "share": None, "phase_a": None,
                               "reaches_model": False, "dp_applied": False}
     if hot is None:
+        if line is not None:
+            out["phase_a"] = f"no loop region at the declared line {line} in the table"
         return out
     out.update(hot=hot["id"], tier=hot["tier"], share=hot["share"], span=hot["span"])
     blocks = [blk for blk in phase_a if blk.get("id") == hot["id"]]
@@ -157,7 +180,8 @@ def main() -> int:
             if src is None:
                 srcs = [p for p in trial.parent.parent.parent.glob("*.c")]
                 src = srcs[0] if srcs else None
-            verdict = judge(log.read_text(errors="replace"), src.read_text() if src else "")
+            verdict = judge(log.read_text(errors="replace"), src.read_text() if src else "",
+                            declared_line(rd, bench))
             per.setdefault(bench, []).append((f"{run_id}/{trial.name}", verdict))
     lines = ["| benchmark | draw | hot loop | tier | share | Phase A | reaches the model | DiscoPoP applied |",
              "|---|---|---|---:|---:|---|---|---|"]

@@ -22,12 +22,21 @@ only — every other package declares none and its trials record `hot_loop_cover
             iteration, `t = s`; a pointer re-pointed) — a parallel loop that reuses the hot loop's
             scratch variable must not pass for the hot loop. A callee's pointer parameter is named by
             the caller's argument (s151's `s151s(a, b, 1)`: the callee's `a` is the caller's `a`,
-            whatever the callee calls it)
+            whatever the callee calls it) — MINUS what another loop of the same function writes too,
+            a `for` loop neither inside the hot loop nor around it (v2): a parallel construct on that
+            loop must not pass for the hot loop's. Rodinia bfs: its update loop sets the two masks
+            the frontier loop sets, so the frontier loop is known by `h_cost` alone. The names taken
+            out are listed in `shared`; a hot loop left with no write of its own is refused
+  aliases   (optional) other names of the memory the hot loop writes, which the check cannot work out
+            because they are bound outside the file: a pointer declared in the harness header and
+            pointed in the kernel (s424's `xx = flat_2d_array + vl`). A write to one of them counts as
+            a write to the hot variables. Declared by the packager; absent when there are none
 The packager computes `line` and `writes` with `describe` below and refuses a package whose result
 differs from the writes it declares by hand (prepare_tsvc.py): the declaration and the verdict read
 the C the same way, and a hand-read stands behind both.
 
-THE CRITERION (v1). The final program COVERS the hot loop when code that writes at least one of the
+THE CRITERION (v2; v1 until the same day counted the writes the hot loop shares with a sibling loop,
+and had no aliases — no trial was judged by v1). The final program COVERS the hot loop when code that writes at least one of the
 hot loop's `writes` — an array, or the scalar the hot loop reduces into — runs under a thread-parallel
 work-sharing construct in the entry function or in a function it calls (transitively):
   counted      any combined construct of `parallel` with a loop directive (`parallel for`,
@@ -57,6 +66,8 @@ is not an alias. So:
     that loop writes only the temporary;
   * the hot loop split into two parallel loops that write the same array — covered;
   * the pragma inside the callee (s151's `s151s`) — covered, whatever its parameter is called;
+  * a `parallel for` on a sibling loop that writes only what the hot loop shares with it (bfs's
+    update loop) — NOT covered (v2); a write to a declared alias (s424's `flat_2d_array`) — covered;
   * a `parallel for` on the repetition loop (`nl`) — covered: it contains the hot loop's writes. That
     program is wrong (the repetitions depend on each other through pb_mix): the verification calls it
     BROKEN. This check says only WHERE the parallel construct is; whether the program is correct is
@@ -96,7 +107,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, Tuple
 
-CRITERION = "v1 (27 Sep 2026)"
+CRITERION = "v2 (27 Sep 2026)"
 
 # ---------------------------------------------------------------------------
 # Tokens
@@ -925,7 +936,7 @@ def describe(source: str, entry: str, function: str, line: Optional[int] = None,
              repetition_counter: str = "nl") -> Dict[str, Any]:
     """The hot loop's identity for meta.json: the first `for` loop of `function` that is not the
     repetition loop (its header does not set `repetition_counter`) — or the one at `line` — with
-    what it writes, named as `entry` sees it."""
+    what it writes, named as `entry` sees it, less what a sibling loop writes too (`shared`)."""
     prog = Program(source, entry)
     if function not in prog.funcs:
         raise ValueError(f"{function}: no such function")
@@ -941,7 +952,20 @@ def describe(source: str, entry: str, function: str, line: Optional[int] = None,
         raise ValueError(f"{function}: no hot loop found")
     kw, _, end = chosen
     writes = prog.region_writes(f, kw, end)
-    return {"entry": entry, "function": function, "line": prog.toks[kw].line, "writes": sorted(writes)}
+    # v2: what a sibling loop — neither inside the hot loop nor around it — writes as well does not
+    # identify the hot loop (bfs's update loop sets the masks the frontier loop sets)
+    shared: Set[str] = set()
+    for kw2, _, end2 in prog.for_loops(f.lo + 1, f.hi - 1):
+        if not (kw <= kw2 <= end or kw2 <= kw <= end2):
+            shared |= writes & prog.region_writes(f, kw2, end2)
+    if writes and not writes - shared:
+        raise ValueError(f"{function}: every write of the hot loop at line {prog.toks[kw].line} is written by "
+                         f"another loop too ({sorted(shared)}): nothing identifies it")
+    out: Dict[str, Any] = {"entry": entry, "function": function, "line": prog.toks[kw].line,
+                           "writes": sorted(writes - shared)}
+    if shared:
+        out["shared"] = sorted(shared)
+    return out
 
 
 def _where(prog: Program, f: Func, c: Construct, hits: Set[str], reason: Optional[str] = None) -> Dict[str, Any]:
@@ -962,6 +986,8 @@ def coverage(source: str, hot: Dict[str, Any]) -> Dict[str, Any]:
                   serially is NOT covered by the criterion; it shows here)"""
     entry = str(hot["entry"])
     want = set(hot.get("writes") or [])
+    if want:
+        want |= set(hot.get("aliases") or [])
     res: Dict[str, Any] = {"criterion": CRITERION, "covered": False, "covering": [], "uncounted": [],
                            "elsewhere": []}
     prog = Program(source, entry)
