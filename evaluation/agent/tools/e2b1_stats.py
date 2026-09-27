@@ -276,6 +276,13 @@ def or_difference(first: Sequence[Table], second: Sequence[Table], alternative: 
     r1, r2 = mh_odds_ratio(first, z), mh_odds_ratio(second, z)
     out: Dict[str, Any] = {"alternative": alternative, "corrected": False,
                            "uncorrected": {"first": r1, "second": r2}}
+    # A set without one stratum holding both arms and both outcomes says nothing about its effect;
+    # the ½ rule would turn that silence into an odds ratio of 1 — so no test, not a test of nothing.
+    empty = [n for n, s in (("first", first), ("second", second))
+             if not any(a + b > 0 and c + d > 0 and a + c > 0 and b + d > 0 for a, b, c, d in s)]
+    if empty:
+        out["note"] = f"no informative stratum in the {' and the '.join(empty)} set: no test"
+        return out
     if not (_estimable(r1) and _estimable(r2)):
         r1 = mh_odds_ratio([_haldane(t) for t in first], z)
         r2 = mh_odds_ratio([_haldane(t) for t in second], z)
@@ -533,7 +540,11 @@ def analyse(trials: List[dict], units: Dict[str, Dict[str, Any]], arms: Dict[str
         v["campaign_family"] = family_bounds(v["p"], adj[k], family_size, alpha)
     res["tests"] = tests
     res["sensitivity_loop_x_run"] = run_tests(conf, arms, lambda j: f"{j['benchmark']} · {j['run']}", continuity)
-    missing = [f"{k}: " + "; ".join(v["gaps"]) for k, v in tests.items() if v["gaps"]]
+    # A test is established when its inputs are complete (no gaps) AND it could be run; the headline
+    # and the table's last column must agree.
+    missing = [f"{k}: " + ("; ".join(v["gaps"]) if v["gaps"]
+                           else (v.get("cmh") or v.get("test") or {}).get("note", "no test"))
+               for k, v in tests.items() if not v["established"]]
     res["established"] = not missing
     res["not_established"] = missing
     res["coverage_unknown_total"] = sum(1 for j in js if j["bucket"] == "coverage-unknown")
@@ -777,6 +788,9 @@ def self_test() -> int:
            and abs(m["se"] - math.sqrt(2 * r["var_log_or"])) < 1e-12)
     z0 = or_difference([(3, 0, 0, 3)], [(1, 1, 1, 1)])
     expect("an infinite odds ratio: ½ added to every cell, flagged", z0["corrected"] and "z" in z0)
+    z1 = or_difference([(0, 5, 0, 5), (0, 5, 0, 5)], [(1, 1, 1, 1)])
+    expect("a set with no informative stratum: no test, not an odds ratio of 1 by the ½ rule",
+           "z" not in z1 and "first set" in z1.get("note", ""))
 
     # 6. Holm (Scand J Statist 6:65-70, 1979), by hand: p = .01, .04, .03, .005 over m = 4 —
     #    .005·4 = .02; max(.02, .01·3) = .03; max(.03, .03·2) = .06; max(.06, .04·1) = .06.
@@ -832,6 +846,11 @@ def self_test() -> int:
     expect("DiscoPoP alone is exempt from the model list", res["models"] == ["m"])
     expect("outside the population listed", any(k.startswith("tsvc/s000") for k in res["outside_population"]))
     expect("coverage and race gaps: NOT established", not res["established"] and res["coverage_unknown_total"] == 1)
+    quiet = analyse([trial("tsvc_b1/s151", arms[r], k, "no-change") for r in ("agent_full", "agent_none") for k in (1, 2)],
+                    pop, arms, {})
+    expect("a test with complete inputs that cannot run: not established, and why",
+           not quiet["tests"]["E2B1-i"]["gaps"] and "E2B1-i: no informative stratum: no test" in quiet["not_established"],
+           f"{quiet['not_established']}")
     expect("E2B1-iii counts BROKEN and racy of the model alone",
            res["tests"]["E2B1-iii"]["strata"]["tsvc_b1/s151"] == [0.0, 2.0, 2.0, 0.0])
     md = to_markdown(res)
