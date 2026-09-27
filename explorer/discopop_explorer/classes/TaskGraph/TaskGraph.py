@@ -13,8 +13,9 @@ from pathlib import Path
 import random
 import signal
 import logging
-from typing import Any, Deque, Dict, List, Optional, Set, Tuple, Union, cast
+from typing import TYPE_CHECKING, Any, Deque, Dict, List, Optional, Set, Tuple, Union, cast
 import warnings
+import re
 import networkx as nx  # type: ignore
 import matplotlib
 from matplotlib.axes import Axes
@@ -112,6 +113,9 @@ except (ImportError, ModuleNotFoundError):
     Visualizer = object  # type: ignore[assignment, misc]
     ViewableCanvasWithTrees = object  # type: ignore[assignment, misc]
 
+if TYPE_CHECKING:
+    from discopop_explorer.utilities.ASTUtils.ASTPatternDetectionIntegration import ASTPatternDetectionHelper
+
 logger = logging.getLogger("Explorer")
 
 
@@ -141,10 +145,12 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         dynamic_dependency_file: Optional[str] = None,
         static_dependency_file: Optional[str] = None,
         visualizer: Visualizer | None = None,
+        ast_helper: Optional["ASTPatternDetectionHelper"] = None,
     ) -> None:
         super().__init__(visualizer)
 
         self.pet = pet
+        self.ast_helper = ast_helper
         self.graph = nx.MultiDiGraph()
 
         # define updating plot window
@@ -1722,8 +1728,30 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
 
             # remove duplicates
             loop_vars = list(set(loop_vars))
+            # A loop variable must be one the loop's header names. The test above is by LINE, and on a
+            # loop written on one line (`for (i = 0; i < n; i++) s ^= a[i];`) the body's accesses sit
+            # on the header's line: a scalar the body carries from one iteration to the next was taken
+            # for a loop variable, and its dependences were then removed and excused as a loop
+            # counter's — a recurrence reported Do-All (B10, docs/DISCOPOP_BUG_REPORTS.md). Where the
+            # AST holds the `for` statement, only the variables its init and increment clauses name
+            # are kept; a `while` loop or a loop without an AST entry is left as it was.
+            header_vars = self.__for_header_variables(loop_ctx)
+            if header_vars is not None:
+                loop_vars = [v for v in loop_vars if re.sub(r"^_ZL\d+", "", v[0]) in header_vars]
             # save loop variables
             loop_ctx.loop_variables = loop_vars
+
+    def __for_header_variables(self, loop_ctx: LoopParentContext) -> Optional[Set[str]]:
+        """Variables named by the init and increment clauses of the `for` statement of `loop_ctx`, or None
+        when that cannot be told (no AST, not a `for` loop, no source position)."""
+        if self.ast_helper is None or loop_ctx.parent_loop is None:
+            return None
+        try:
+            position = str(self.pet.node_at(loop_ctx.parent_loop).start_position())
+            file_id, line = position.split(":")[:2]
+            return self.ast_helper.get_for_header_variables(int(file_id), int(line))
+        except (KeyError, ValueError, AttributeError):
+            return None
 
     def __cleanup_loop_dependencies(self) -> None:
         """removed incorrectly added static dependencies between loop iterations using the loop variable."""

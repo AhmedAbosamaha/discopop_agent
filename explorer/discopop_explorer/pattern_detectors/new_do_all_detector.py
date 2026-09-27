@@ -467,68 +467,109 @@ def detect_doall_sharing_clauses(
             #   WAR: value is overwritten after cu read the value
             #   WAW: value is overwritten after cu wrote the value
 
+            # The accesses of this CU are taken in PROGRAM order: by the line of this CU's access (an
+            # outgoing edge has this CU as the sink, an incoming one as the source). On one line, a read
+            # and a write of the same memory region and of the same kind (both a scalar, or both an
+            # element reached through an address) are one statement reading and then writing it
+            # (`s += a[i]`, `a[i] += x`): the read comes first. A plain read under the same name as an
+            # element store is the address the store goes through (`dr[i] = …` loads the pointer `dr`):
+            # the store decides.
+            # The edges used to be taken in the order the profile listed its records, which follows how
+            # the profiler happened to number its call-path states: a variable a statement reads and
+            # writes came out "first written" on some profiles, and a static dependence on it — the
+            # recurrence itself — was then excused as privatizable: a running total reported Do-All
+            # with `shared(running)` (B10, docs/DISCOPOP_BUG_REPORTS.md).
+            def _access_line(line_id: Optional[LineID]) -> int:
+                try:
+                    return int(str(line_id).split(":")[1])
+                except (IndexError, ValueError):
+                    return 1 << 30  # no position: after every positioned access, in the old order
+
+            accesses: List[Tuple[int, bool, bool, Any, Any, Dependency]] = []  # (line, is_read, outgoing, …)
             for src, dst, dep in outgoing_deps:
-                if dep.var_name is None:
-                    continue
-
-                # check if dep is access to array type value (or result of pointer arithmetic)
-                if dep.is_gep_result_dependency:
-                    gep_result_access.add(dep.var_name)
-                # check if dep is access to pointer or reference type
-                if dep.var_name in known_vars:
-                    for tmp_var_name, type_str in known_vars_with_types:
-                        if type_str is None:
-                            continue
-                        if tmp_var_name == dep.var_name:
-                            if "*" in type_str or "&" in type_str:
-                                ptr_type_access.add(dep.var_name)
-
-                if dep.dtype == DepType.RAW:
-                    if dep.var_name not in written:
-                        firstread.add(dep.var_name)
-                    read.add(dep.var_name)
-                    if dst not in contained_cu_node_ids_in_sequence:
-                        data_incoming.add(dep.var_name)
-                elif dep.dtype == DepType.WAR:
-                    if dep.var_name not in read:
-                        it_firstwritten.add(dep.var_name)
-                    written.add(dep.var_name)
-                elif dep.dtype == DepType.WAW:
-                    if dep.var_name not in read:
-                        it_firstwritten.add(dep.var_name)
-                    written.add(dep.var_name)
-                elif dep.dtype == DepType.INIT:
-                    if dep.var_name not in read:
-                        it_firstwritten.add(dep.var_name)
-                    it_init.add(dep.var_name)
-                    written.add(dep.var_name)
-                else:
-                    raise ValueError("Unsupported dependency type: " + str(dep.dtype))
-
+                accesses.append((_access_line(dep.sink_line), dep.dtype == DepType.RAW, True, src, dst, dep))
             for src, dst, dep in incoming_deps:
+                accesses.append((_access_line(dep.source_line), dep.dtype == DepType.WAR, False, src, dst, dep))
+            regions: Dict[Tuple[int, Optional[str], bool, bool], Set[str]] = dict()
+            for line_no, is_read, _o, _s, _d, dep in accesses:
+                key = (line_no, dep.var_name, is_read, dep.is_gep_result_dependency)
+                regions.setdefault(key, set()).add(str(dep.memory_region))
+
+            def _order(line_no: int, is_read: bool, dep: Dependency) -> int:
+                if not is_read:
+                    return 1
+                gep = dep.is_gep_result_dependency
+                same_region_written = regions.get((line_no, dep.var_name, True, gep), set()) & regions.get(
+                    (line_no, dep.var_name, False, gep), set()
+                )
+                return 0 if same_region_written else 2
+
+            events: List[Tuple[int, int, bool, Any, Any, Dependency]] = [
+                (line_no, _order(line_no, is_read, dep), outgoing, src, dst, dep)
+                for line_no, is_read, outgoing, src, dst, dep in accesses
+            ]
+            events.sort(key=lambda e: (e[0], e[1]))
+
+            for _line, _rank, is_outgoing, src, dst, dep in events:
                 if dep.var_name is None:
                     continue
-                if dep.dtype == DepType.RAW:
-                    if dep.var_name not in read:
-                        it_firstwritten.add(dep.var_name)
-                    written.add(dep.var_name)
-                    if src not in contained_cu_node_ids_in_sequence:
-                        data_outgoing.add(dep.var_name)
-                elif dep.dtype == DepType.WAR:
-                    if dep.var_name not in written:
-                        firstread.add(dep.var_name)
-                    read.add(dep.var_name)
-                elif dep.dtype == DepType.WAW:
-                    if dep.var_name not in read:
-                        it_firstwritten.add(dep.var_name)
-                    written.add(dep.var_name)
-                elif dep.dtype == DepType.INIT:
-                    if dep.var_name not in read:
-                        it_firstwritten.add(dep.var_name)
-                    it_init.add(dep.var_name)
-                    written.add(dep.var_name)
+
+                if is_outgoing:
+                    # check if dep is access to array type value (or result of pointer arithmetic)
+                    if dep.is_gep_result_dependency:
+                        gep_result_access.add(dep.var_name)
+                    # check if dep is access to pointer or reference type
+                    if dep.var_name in known_vars:
+                        for tmp_var_name, type_str in known_vars_with_types:
+                            if type_str is None:
+                                continue
+                            if tmp_var_name == dep.var_name:
+                                if "*" in type_str or "&" in type_str:
+                                    ptr_type_access.add(dep.var_name)
+
+                    if dep.dtype == DepType.RAW:
+                        if dep.var_name not in written:
+                            firstread.add(dep.var_name)
+                        read.add(dep.var_name)
+                        if dst not in contained_cu_node_ids_in_sequence:
+                            data_incoming.add(dep.var_name)
+                    elif dep.dtype == DepType.WAR:
+                        if dep.var_name not in read:
+                            it_firstwritten.add(dep.var_name)
+                        written.add(dep.var_name)
+                    elif dep.dtype == DepType.WAW:
+                        if dep.var_name not in read:
+                            it_firstwritten.add(dep.var_name)
+                        written.add(dep.var_name)
+                    elif dep.dtype == DepType.INIT:
+                        if dep.var_name not in read:
+                            it_firstwritten.add(dep.var_name)
+                        it_init.add(dep.var_name)
+                        written.add(dep.var_name)
+                    else:
+                        raise ValueError("Unsupported dependency type: " + str(dep.dtype))
                 else:
-                    raise ValueError("Usupported dependency type: " + str(dep.dtype))
+                    if dep.dtype == DepType.RAW:
+                        if dep.var_name not in read:
+                            it_firstwritten.add(dep.var_name)
+                        written.add(dep.var_name)
+                        if src not in contained_cu_node_ids_in_sequence:
+                            data_outgoing.add(dep.var_name)
+                    elif dep.dtype == DepType.WAR:
+                        if dep.var_name not in written:
+                            firstread.add(dep.var_name)
+                        read.add(dep.var_name)
+                    elif dep.dtype == DepType.WAW:
+                        if dep.var_name not in read:
+                            it_firstwritten.add(dep.var_name)
+                        written.add(dep.var_name)
+                    elif dep.dtype == DepType.INIT:
+                        if dep.var_name not in read:
+                            it_firstwritten.add(dep.var_name)
+                        it_init.add(dep.var_name)
+                        written.add(dep.var_name)
+                    else:
+                        raise ValueError("Usupported dependency type: " + str(dep.dtype))
 
         #            print("cunode -> ", cu_node_id)
         # print("--> in deps:", [(d[2].dtype, d[0], d[2].var_name) for d in incoming_deps])

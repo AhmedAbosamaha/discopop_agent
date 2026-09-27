@@ -34,7 +34,7 @@ LLVM 19 (macOS) and LLVM 20 (Linux).
 | L4 | profiler | limitation | PolyBench `adi` (~130 lines): the instrumenting compile takes **2,387 s (40 min)** per profile, ~40x the next slowest PolyBench kernel. The profile is usable (19 Do-Alls, gate-verified parallel), so this is a cost limitation, not a failure |
 | B8 | profiler, `llvm_hooks/runOnBasicBlock.cpp` (call-path states) | fixed 26 Sep (f6b41f57) | a call into a function the pass does not instrument (defined outside the project root) enters its call state for good → every later dependence carries the wrong call path → a true recurrence reported Do-All |
 | B9 | explorer, `TaskGraph.__assign_state_ids` | fixed 26 Sep | the accesses of a function called inside a loop iteration are attached to no context → a loop carrying a dependence through a callee is reported Do-All (every TSVC package's repetition loop) |
-| B10 | explorer (Do-All detector / reduction detection) | open — confirmed; systematic on the server; the verdict follows the profile's state NUMBERING (27 Sep) | a scalar carried across iterations (`x = b[i]` read next iteration; `s += …`) → the patch generator emits `parallel for shared(x)` and a plain `parallel for` on the sum — both races |
+| B10 | explorer (Do-All detector, loop variables) | fixed 27 Sep | a scalar carried across iterations (`x = b[i]` read next iteration; `s += …`) → the patch generator emits `parallel for shared(x)` and a plain `parallel for` on the sum — both races |
 | B11 | explorer, `TaskGraph.__assign_state_ids` | candidate | in TSVC v3's `main`, no access made under the five `pb_emit_array` calls is attached to any context (before and after B9's fix); harness code only |
 | B12 | profiler, `scripts/CC_wrapper.sh`, `CXX_wrapper.sh` | fixed 27 Sep | the compiler wrappers exit 0 when the instrumented compile or link fails — the AST dump after it sets the exit status; the failure surfaces one step later as a missing `a.out` |
 | L3 | explorer | limitation | NPB-CPP `mg`: with P1's fix the state assignment is fast, but the run then stays in task-pattern detection (`new_task_detector`) — a first run was read at 4 h 19 min, the same run was stopped unfinished after **11 h 24 min** at 100 % CPU on the server (19–20 Sep); the Do-All detector is not reached. Not usable per trial |
@@ -150,39 +150,51 @@ int main(void)
 }
 ```
 
-## B10 — a scalar carried across iterations: the patch generator emits a racy pragma (explorer)
+## B10 — a scalar carried across iterations reported Do-All (explorer)
 
-**Found** 26 Sep 2026 (T0.15: the inner loop carrying a scalar — `x`, `sum`, `j` — is Do-All in v4 for
-s254 and s3112 and in v3 for s341; confirmed on B9's reproducer). **Status:** open, confirmed; root cause
-not located.
+**Found** 26 Sep 2026 (T0.15: the inner loop carrying a scalar — `x`, `sum`, `j` — is Do-All in v4 for s254 and
+s3112 and in v3 for s341; confirmed on B9's reproducer); systematic on the server 27 Sep. **Status:** FIXED
+27 Sep 2026 in the explorer, before E2-B1 by the author's decision ("yes fix b10 go ahead"; D14).
 
-**Symptom.** On B9's reproducer above (with B9 fixed), DiscoPoP's own patch generator writes
-`#pragma omp parallel for shared(x)` on line 16 — `x = b[i]` is read by the next iteration — and a plain
-`#pragma omp parallel for` on line 29, `s += a[i] + b[i]`, with no reduction clause (`reduction.txt` is
-empty for this program). Both are races: on the first profile in 10 of 10 explorer runs (5 before B9's
-fix, 5 after), and on two fresh profiles in the one run made on each.
+**Symptom.** DiscoPoP's own patch generator writes `#pragma omp parallel for shared(x)` on a loop whose next
+iteration reads the `x` this one wrote, and a plain `parallel for` on `for (…) s += a[i] + b[i];` with no
+reduction clause — both races; the agent's `prefix_sum.cpp` (`running += …; out[i] = running;`) gets
+`shared(running)` on the server in 3 of 3 profiles and on the Mac in about one of six. The carried RAW IS in
+the profile (`82 NOM RAW 84|running`). The gate catches every one; no arm ships such a pragma, but DiscoPoP's
+verdict decides which regions reach the model.
 
-**What is known.** Not the profiler: the carried RAW is in the profile (`106 NOM RAW 117|x`, and on `s`)
-in 3 of 3 fresh profiles (the first profile lacked it; the explorer's verdict is the same either way). Not B9's
-mechanism: no call is involved. The same-shaped inner loop of s254 (line 136, `x = b[i]` read next
-iteration) IS blocked on the RAW on `x` (2 of 2) — the contrast between the two programs is the lead.
-Scalar records carry no call-path state (`NOM RAW 117|x`, no `@state`), so how they reach the iteration
-contexts is the first thing to read. The gate catches both loops at `correctness`; no arm ships them.
+**Two causes, both in the explorer.** A dependence record without a call-path state (the profiler writes
+scalars this way) is inserted as STATIC; the Do-All check gives a static dependence a "second chance" — it is
+excused when the variable is first written in the loop (privatizable) or is a loop variable.
+- **(A) "First written" by edge order** (`new_do_all_detector.detect_doall_sharing_clauses`). For each CU the
+  classification walked its dependence edges and let the first one decide read-first or written-first. A CU
+  that both reads and writes a variable (`running += …`) was classified by whichever edge came first — and the
+  edges come in the order of the profile's records, which follows how the profiler happened to NUMBER its
+  call-path states. The two prefix-sum profiles (Mac, server) are identical but for that numbering (the same 74
+  paths); the Mac's explorer on the server's profile reproduced the false Do-All, on its own profile not.
+- **(B) Loop variables by line** (`TaskGraph.__determine_loop_variables`, and DiscoPoP's classic `is_loop_index`,
+  which has the same rule). A loop variable is recognised by a RAW between the loop header and the body; the
+  test is by LINE. On a loop written on one line the body's accesses sit on the header's line, so the scalar the
+  body carries (`chk ^= …`, `x = x * … + …`, `s += …`) was taken for a loop variable: its dependences between
+  iterations were removed (`__cleanup_loop_dependencies`) and excused.
 
-**27 Sep — systematic on the server, and a deterministic reproducer.** The agent's `dependence review` feature
-check profiles `prefix_sum.cpp` (`running += …; out[i] = running;`): on the Mac about one profile in six gave
-0 blockers, on the server (Linux, LLVM 20) 3 of 3 — DiscoPoP reports the running-total loop Do-All with
-`shared(running)`, although the profile holds the carried RAW (`82 RAW 84|running`). With B4 fixed the explorer is
-repeatable, which separated the causes: the Mac's explorer on the SERVER's profile gives the same false Do-All
-(2 of 2), on the Mac's own profile it blocks the loop on `running` (2 of 2) — so it is the profile, not the platform.
-The two profiles are identical in `Data.xml`, the static dependences, the loop and instruction tables and, up to the
-order of records within a line, the dynamic dependences (reversing that order changes nothing); what differs is the
-NUMBERING of the call-path states (`stateID_to_callpath_mapping.txt`: the same 74 paths, numbered in another order;
-`initial_stateID` 16 on the Mac, 12 on the server). The explorer's verdict on a scalar recurrence therefore depends
-on how the profiler happened to number the states — the next thing to read is where state order enters
-`__assign_state_ids` and the Do-All check for records that carry no state. Reproduce: profile
-`discopop_agent/benchmark/cases/prefix_sum.cpp` on the server, or keep one such profile and run the explorer on it
-anywhere. Fixing B10 before E2-B1 is the author's decision (the same questions as B9 and B4).
+**Fix.** (A) A CU's accesses are taken in program order: by the line of the access, and on one line a read
+before a write when both touch the same memory region and are of the same kind — both the scalar itself, or both an
+element reached through an address — i.e. one statement that reads and then writes it (`running += …`,
+`a[i] += x`). A plain read under the same name as an element store is the address that store goes through
+(`dr[i] = …` loads the pointer `dr`; DiscoPoP's static/dynamic merge even gives that load the array's region): the
+store decides, as before. (The first version of the fix put every read of a CU first; DiscoPoP's own end-to-end test
+`reduction_pattern/positive/sum_reduction_1` caught it — `dr` came out `first_private` instead of `shared` — before
+anything was committed.) (B) A loop variable must be one the loop's `for` header
+names: where the AST holds the `for` statement, only candidates its init and increment clauses declare or refer
+to are kept (`ASTPatternDetectionHelper.get_for_header_variables`, reading clang's `referencedDecl`); a `while`
+loop, or a loop without an AST entry, is left as it was.
+
+**Verified (27 Sep, Mac; the committed explorer with B4 and B9 as the baseline, one pristine profile per case):**
+`prefix_sum.cpp` — the running total (18), the one-line recurrence on `x` (20) and the one-line `chk ^=` (26)
+blocked on their scalar on both the Mac's and the server's profile (before: 26 and 20 Do-All on both, 18 on the
+server's); the parallel initialisation loop (15) stays Do-All. B9's reproducer `k.c` — the `x`-carried loop (16)
+and the one-line `s +=` (29) blocked; the parallel loop (26) stays. All 33 TSVC v3 packages, one pristine profile each: two Do-Alls fewer — s291 (136: `im1 = i` carried into the next iteration's `b[im1]`) and s341 (136: the packing counter `j`), both true scalar recurrences; nothing gained, no clause or reduction changed on the other 31. The agent's feature check `b10-carried-scalar` fails on the explorer before the fix (the running total Do-All with `shared(run)`, the one-line recurrence Do-All) and passes after. The feature suite 59 of 59; the explorer's end-to-end tests 31 of 31 (DiscoPoP's own sharing-clause and reduction tests included); mypy and `black --check explorer` clean.
 
 ## B11 — candidate: no access under TSVC v3's `pb_emit_array` calls is attached (explorer)
 

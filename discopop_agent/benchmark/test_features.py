@@ -4404,6 +4404,80 @@ def check_b4_nested_duplication(work: Path) -> Result:
                   "blocked in 3 of 3 explorer runs on one profile")
 
 
+_B10_PROGRAM = """#include <stdio.h>
+#define N 4000
+#define M 3000
+static double a[N], b[M], c[N], out[N];
+static void kernel(void)
+{
+    double run = 0.0;
+    for (int i = 0; i < N; i++) {
+        run += a[i] * 0.5;
+        out[i] = run;
+    }
+    double x = 1.0;
+    for (int k = 0; k < M; k++) x = x * 0.5 + b[k];
+    for (int i = 0; i < N; i++) {
+        c[i] = a[i] * 2.0;
+    }
+    for (int i = 0; i < N; i++) c[i] = c[i] + 1.0;
+    printf("%.6f %.6f %.6f\\n", out[N - 1], x, c[N / 2]);
+}
+int main(void)
+{
+    for (int i = 0; i < N; i++) { a[i] = 1.0 + i % 7; out[i] = 0.0; }
+    for (int k = 0; k < M; k++) b[k] = 0.25 * (k % 3);
+    kernel();
+    return 0;
+}
+"""
+
+
+def check_b10_carried_scalar(work: Path) -> Result:
+    """DiscoPoP bug B10, fixed 27 Sep in the explorer: a scalar carried from one iteration to the next
+    was reported Do-All, by two mechanisms. (A) A CU that both reads and writes the scalar
+    (`run += …`) was classified "first written" or "first read" by the order of its dependence edges,
+    which follows the profiler's state numbering — "first written" excused the recurrence as
+    privatizable (a running total Do-All with `shared(run)`; on the server 3 of 3 profiles). (B) On a
+    loop written on one line, the body's scalar was taken for a loop variable, since the test is by
+    line, and its dependences were removed. Here: the running total and the one-line recurrence on `x`
+    must not be Do-All; the two parallel loops (one of them on one line) must stay Do-All."""
+    if not Path(_venv_bin("discopop_cxx")).exists():
+        return Result("b10 carried scalar", "skip", "DiscoPoP is not installed in this venv")
+    name = "b10 carried scalar"
+    d = work / "b10_carried_scalar"
+    shutil.rmtree(d, ignore_errors=True)
+    d.mkdir(parents=True)
+    (d / "k.c").write_text(_B10_PROGRAM)
+    ok, err = _profile(d, "k.c", hotspots=False, c_as_c=True)
+    if not ok:
+        return Result(name, "fail", f"profile: {err}")
+    lines = _B10_PROGRAM.splitlines()
+    at = {
+        "running total": next(i + 1 for i, l in enumerate(lines) if "for (int i" in l and i + 1 < len(lines)
+                              and "run +=" in lines[i + 1]),
+        "one-line recurrence on x": next(i + 1 for i, l in enumerate(lines) if "x = x * 0.5" in l),
+        "parallel loop": next(i + 1 for i, l in enumerate(lines) if "for (int i" in l and i + 1 < len(lines)
+                              and "c[i] = a[i] * 2.0" in lines[i + 1]),
+        "one-line parallel loop": next(i + 1 for i, l in enumerate(lines) if "c[i] = c[i] + 1.0" in l),
+    }
+    pats = json.loads((d / ".discopop" / "explorer" / "patterns.json").read_text()).get("patterns", {})
+    doall = {int(str(x.get("start_line", "0:0")).split(":")[1]): x for x in pats.get("do_all", [])
+             if str(x.get("applicable_pattern")) == "True"}
+    problems: List[str] = []
+    for what in ("running total", "one-line recurrence on x"):
+        if at[what] in doall:
+            clauses = {k: doall[at[what]].get(k) for k in ("shared", "private", "reduction")}
+            problems.append(f"the {what} at k.c:{at[what]} is reported Do-All {clauses}")
+    for what in ("parallel loop", "one-line parallel loop"):
+        if at[what] not in doall:
+            problems.append(f"the {what} at k.c:{at[what]} is no longer Do-All")
+    if problems:
+        return Result(name, "fail", "; ".join(problems))
+    return Result(name, "pass", "the running total and the one-line recurrence are blocked on their scalar; "
+                  "both parallel loops, one of them on one line, stay Do-All")
+
+
 _CHECKS: List[Tuple[str, Callable[[Path], Result]]] = [
     ("impact", check_impact_ranking),
     ("min-impact", check_min_impact),
@@ -4463,6 +4537,7 @@ _CHECKS: List[Tuple[str, Callable[[Path], Result]]] = [
     ("b8-outside-root", check_b8_outside_root),
     ("b9-callee-in-loop", check_b9_callee_in_loop),
     ("b4-nested-duplication", check_b4_nested_duplication),
+    ("b10-carried-scalar", check_b10_carried_scalar),
 ]
 
 

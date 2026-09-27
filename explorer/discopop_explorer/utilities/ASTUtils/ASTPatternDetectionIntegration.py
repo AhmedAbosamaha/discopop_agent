@@ -111,6 +111,57 @@ class ASTPatternDetectionHelper:
 
         return ASTVariableAndTypeQueries.find_all_variables_in_scope(self.ast_graph, file_path_str, line, column)
 
+    def get_for_header_variables(self, file_id: Union[int, str], line: int) -> Optional[set[str]]:
+        """Names the init and increment clauses of the ``for`` statement(s) starting at *line* declare or
+        refer to — the loop's induction variables, as the source states them.
+
+        Returns ``None`` when the AST holds no ``for`` statement starting there (a ``while`` loop, a loop
+        from a macro, no AST loaded): the caller then has no header to check against.
+        """
+        if not self.ast_graph:
+            return None
+        if isinstance(file_id, int):
+            file_path = self.file_mapping.get(file_id)
+            if file_path is None:
+                return None
+            file_path_str = str(file_path)
+        else:
+            file_path_str = file_id
+
+        def names(node: Any, out: set[str]) -> None:
+            stack = [node]
+            while stack:
+                n = stack.pop()
+                if not isinstance(n, dict):
+                    continue
+                if n.get("kind") == "VarDecl" and n.get("name"):
+                    out.add(str(n["name"]))
+                ref = n.get("referencedDecl")
+                if isinstance(ref, dict) and ref.get("name"):
+                    out.add(str(ref["name"]))
+                stack.extend(n.get("inner", []) or [])
+
+        found = False
+        result: set[str] = set()
+        for _, attrs in self.ast_graph.nodes(data=True):
+            if attrs.get("kind") != "ForStmt":
+                continue
+            loc = attrs.get("loc")
+            rng = attrs.get("range")
+            if not isinstance(loc, dict) or loc.get("file") != file_path_str:
+                continue
+            begin = rng.get("begin_line") if isinstance(rng, dict) else None
+            if (begin if begin is not None else loc.get("line")) != line:
+                continue
+            found = True
+            inner = attrs.get("inner") or []
+            # clang's ForStmt children: init, condition variable, condition, increment, body
+            if len(inner) >= 1:
+                names(inner[0], result)
+            if len(inner) >= 4:
+                names(inner[3], result)
+        return result if found else None
+
     def get_variable_declarations_in_scope(self, scope_name: str) -> list[tuple[str, Optional[str]]]:
         """Get variables declared in a scope by function/loop name
 

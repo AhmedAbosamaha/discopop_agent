@@ -106,7 +106,7 @@ class PatternDetectorX(object):
         # create TaskGraph from pet
         dynamic_deps_file = dependencies
         static_deps_file = os.path.join(Path(dependencies).parent, "static_dependencies.txt")
-        task_graph = TaskGraph(self.pet, dynamic_deps_file, static_deps_file, visualizer)
+        task_graph = TaskGraph(self.pet, dynamic_deps_file, static_deps_file, visualizer, self.ast_helper)
         if enable_task_graph_plot:
             task_graph.plot()
         #        if enable_context_graph_plot:
