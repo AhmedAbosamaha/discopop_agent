@@ -36,12 +36,12 @@ repetition loop is sequential by a true dependence. The hot loop sits inside it.
 | s152 | `b[i] = d[i] * e[i]; s152s(a, b, c, i);` | the callee's body, `a[i] += b[i] * c[i]`, another function of the file | each iteration touches element i only |
 | s171 | `a[i * inc] += b[i]` | `inc`, a header global set to 1 by the harness (TSVC's main passes 1) | with inc = 1 every iteration updates its own `a[i]`. The text allows inc = 0 |
 | s481 | `if (d[i] < 0) exit(0); a[i] += b[i] * c[i];` | d's values, set in the header, all positive (and never lowered by `pb_mix`) | no iteration exits; each updates its own `a[i]` |
+| s258 | `real_t s;` in the kernel; `s = 0.;` per repetition; `if (a[i] > 0.) s = d[i]*d[i]; b[i] = s*c[i] + d[i]; e[i] = (s + 1.)*aa[0][i];` over `i < LEN_2D` | a's values, in the header, all positive (`pb_mix` only raises them) | s is set before every use in every iteration, so no value is carried and each iteration writes its own `b[i]`, `e[i]` — parallel with `s` private. Packaged with the recorded deviation (the author, 27 Sep): `LEN_2D` is `LEN_1D` and `aa` one row, both in the header; the text is TSVC's |
 | s277 | the two guarded `goto`s, `a[i] += c[i]*d[i]`, and `b[i+1] = …` | a's values, in the header, all ≥ 0 (`pb_mix` only raises them) | the first test jumps past both updates in every iteration: the loop does no work, and the `b[i+1]`→`b[i]` flow the text shows never happens. Admitted by the author (27 Sep) |
 | vas | `int * __restrict__ ip = pb_ip;` (TSVC's own declaration), `a[ip[i]] = b[i]` | `pb_ip` is a permutation, built in the header | no two iterations write the same element |
 | s482 | `a[i] += b[i] * c[i]; if (c[i] > b[i]) break;` | c = b/2, set in the header, so the exit never fires | every iteration runs and updates its own `a[i]`. The screen predicts class R (a loop with a `break`), so it is expected to fail its measured condition (class A in T0.11). If it fails, the unit leaves with the reason and the next member of its group in source order enters |
 
-**Not packaged.** s258 (b) needs TSVC's 2-D `aa` and a LEN_2D trip count. That is the author's ruling,
-record §6, 27 Sep.
+**s258** was packaged after the author's ruling (27 Sep; the deviation in record §6), read the same way.
 
 ## Checks this reading asks of the measurements
 

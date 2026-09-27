@@ -23,6 +23,7 @@ At which size is each benchmark's serial computation long enough to verify (≥ 
 | `t0_1_tsvc` | [`runs/t0_1_tsvc/`](runs/t0_1_tsvc/) | the 25 TSVC loops → kernel_sizes.json | valid | 0 |  |
 | `t0_1_probe_sizes` | [`runs/t0_1_probe_sizes/`](runs/t0_1_probe_sizes/) | T0.1 sizes for the 8 TSVC indirect-addressing probe loops (decision 8), no model | valid | 0 |  |
 | `t0_1_b1_sizes` | [`runs/t0_1_b1_sizes/`](runs/t0_1_b1_sizes/) | T0.1 sizes for E2-B1's 11 v4 packages (tsvc_b1 × 10 (s151, s161, s131, s424, s152, s171, s481, s277, vas, s482) and rodinia_b1/bfs): size_table.py, serial -O3 per dataset size, 3 runs, lane 1.0, server, no model → kernel_sizes.json | valid | 0 |  |
+| `t0_1_b1_s258` | not archived yet | T0.1 sizes for tsvc_b1/s258 (packaged 27 Sep after the author's ruling, LEN_2D = LEN_1D deviation): size_table.py, as t0_1_b1_sizes, server, no model | registered |  |  |
 
 ## The instrument, as the record defines it (§5e)
 

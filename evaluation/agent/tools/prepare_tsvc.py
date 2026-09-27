@@ -490,6 +490,24 @@ B1_LOOPS: List[Loop] = [
     Loop("s481", _B1B, "none: the exit test never fires on TSVC's data",
          "d is positive everywhere (TSVC: d = 1/(i+1)), so no iteration exits and each updates its own a[i]",
          suite="tsvc_b1", hot_writes=("a",)),
+    # s258: the scalar s is set under `a[i] > 0` and read by the next two statements, so the text shows a
+    # value carried to the next iteration whenever the test fails; TSVC's a is `any,frac` (common.c, s258),
+    # positive, so s is set in every iteration and nothing is carried. The packaging's a is positive already
+    # (0.75-1.25, scaled by 1.0-1.2 on the perturbed input, only raised by pb_mix): no init_extra for it.
+    # The loop runs TSVC's LEN_2D (256) iterations over 1-D arrays and reads row 0 of the 2-D `aa`: the
+    # recorded deviation (the author, 27 Sep; record §6) defines LEN_2D as LEN_1D in the header — the trip
+    # count raised to the 1-D length, so the loop does measurable work at the campaign's sizes — and builds
+    # `aa` as the one row it reads, with the packaging's O(1) positive values (TSVC's are `any,frac`). The
+    # loop's text is verbatim; neither value is in the model's file. The digest covers b and e (TSVC's
+    # checksum for s258, common.c); aa is only read.
+    Loop("s258", _B1B, "none: with TSVC's data the guard holds in every iteration, so s is never carried",
+         "a > 0 everywhere (TSVC: a = any,frac), so s is set before every use and each iteration is independent",
+         globals_=("#define LEN_2D LEN_1D   /* E2-B1 deviation (27 Sep): TSVC's 256 raised to the 1-D length */\n"
+                   "static real_t (*aa)[LEN_1D];   /* TSVC's 2-D aa (array_defs.h): the one row s258 reads */"),
+         init_extra=("    aa = (real_t (*)[LEN_1D])malloc((size_t)LEN_1D * sizeof(real_t));\n"
+                     "    for (long i = 0; i < LEN_1D; i++)\n"
+                     "        aa[0][i] = (real_t)0.75 + (real_t)((i * 43L) % 967) * (real_t)0.0005;"),
+         suite="tsvc_b1", hot_writes=("b", "e")),
     # s277: TSVC's a = 1 (common.c, s277), so the first test jumps past both updates in every iteration:
     # the loop does no work with TSVC's data (the screen) — admitted by the author as TSVC ships it (27 Sep).
     # The packaging's a is positive already; b's signs are reproduced as TSVC sets them (first half +1,
@@ -509,10 +527,7 @@ B1_LOOPS: List[Loop] = [
     # runs to the end; with the packaging's own values it breaks at i = 1 (c[1] > b[1]) and does no work.
     # Equal values would not survive the perturbed input (b scaled by 1.0-1.2, c by 1.0-1.1,
     # independently): c is set to half of b, which keeps c below b under the perturbation and pb_mix
-    # (it adds 0.25 to b[k] and only 0.125 to c[k]). s258, in the same (b) list, is left out: its loop
-    # runs LEN_2D iterations over TSVC's 2-D `aa`, which this packaging does not build, and with a LEN_2D
-    # in TSVC's proportion (256 at LEN_1D = 32000) it does no measurable work at any size — packaging it
-    # needs a LEN_2D ladder, a decision shared with every 2-D loop of the screen.
+    # (it adds 0.25 to b[k] and only 0.125 to c[k]).
     Loop("s482", _B1B, "none: the early exit never fires on TSVC's data (c is never above b)",
          "c <= b everywhere (TSVC: b = c = 1/(i+1)), so every iteration runs and updates its own a[i]",
          init_extra="    for (int i = 0; i < LEN_1D; i++) c[i] = b[i] * (real_t)0.5;",

@@ -85,7 +85,7 @@ package's meta.json declares (`hot_loop`, record §6, 27 Sep).
 | item | status |
 |---|---|
 | `prepare_tsvc.py --suite tsvc_b1` (v4 only): s151, s161, s131, s424 (a); s152, s171, s481, s277, vas, s482 (b) | done, validated on the Mac (27 Sep) |
-| s258 (b) | not packaged: 2-D `aa`, LEN_2D trip count — the author's ruling |
+| s258 (b) | packaged 27 Sep with the recorded deviation (the author: LEN_2D = LEN_1D, `aa` one row in the header); validated on the Mac |
 | Rodinia bfs packager, synthetic graph (`prepare_bfs.py`, `prepared/rodinia_b1`) | done, validated on the Mac against Rodinia's bfs.cpp |
 | golden-render check (test_integrity 1c), `hot_loop` in meta included | done: 44 of 44 |
 | `routing_check.py` (hot loop from meta) | done; checked on archived draws |

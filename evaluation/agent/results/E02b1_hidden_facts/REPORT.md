@@ -17,6 +17,7 @@ On loops whose parallelizability is decided by a fact outside the loop's own sta
 | run | where | what it is | status | trials | outcomes |
 |---|---|---|---|---:|---|
 | `naive_b1` | [`preflight/naive_b1/`](preflight/naive_b1/) | E2-B1 measured condition 3 (H13/C2 property): naive_pragma.py — `#pragma omp parallel for` on the declared hot loop of each of the 11 packages (tsvc_b1 × 10 (s151, s161, s131, s424, s152, s171, s481, s277, vas, s482) and rodinia_b1/bfs) through the agent's safety gate with TSan (archer) and the schedule matrix; lane 1.1, server, no model | valid | 0 |  |
+| `naive_b1_s258` | not archived yet | E2-B1 measured condition 3 for tsvc_b1/s258: naive_pragma.py on its declared hot loop, as naive_b1 (the H13/C2 property is waived for (b); recorded), server, no model | registered |  |  |
 
 ## From the experiment record (§7 run log)
 
