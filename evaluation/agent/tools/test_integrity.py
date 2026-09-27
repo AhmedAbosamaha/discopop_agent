@@ -60,6 +60,9 @@ TSVC_WORDS = ["statement reordering", "loop distribution", "node splitting", "sc
               "loop peeling", "peeling", "index-set", "induction variable", "loop reversal",
               "carry-around", "wrap-around", "crossing threshold", "compaction", "prefix sum",
               "recurrence", "max-index", "search loop", "packing", "reduction"]
+# E2-B1's Rodinia unit comes from an OpenMP program (prepare_bfs.py): nothing of its OpenMP code and no
+# comment about threads may survive the stripping (one of bfs.cpp's comments says a thread changes `stop`).
+OPENMP_WORDS = ["pragma", "omp.h", "omp_", "openmp", "thread", "atomic", "critical", "parallel", "cuda"]
 SOURCE_EXT = {".c", ".cc", ".cpp", ".cxx", ".h", ".hh", ".hpp"}
 checked, leaks = 0, []
 for meta_p in sorted(PREPARED.rglob("meta.json")):
@@ -68,10 +71,11 @@ for meta_p in sorted(PREPARED.rglob("meta.json")):
         continue
     meta = json.loads(meta_p.read_text())
     is_tsvc = str(meta.get("suite") or "").startswith("tsvc")   # tsvc and E2-B1's tsvc_b1
-    words = list(TSVC_WORDS) if is_tsvc else []
+    is_b1_rodinia = meta.get("suite") == "rodinia_b1"
+    words = list(TSVC_WORDS) if is_tsvc else list(OPENMP_WORDS) if is_b1_rodinia else []
     for key in ("transformation", "why", "category"):
         v = str(meta.get(key) or "").strip()
-        if is_tsvc and len(v) > 12:
+        if (is_tsvc or is_b1_rodinia) and len(v) > 12:
             words.append(v)
     for f in sorted(p for p in pkg.rglob("*") if p.suffix in SOURCE_EXT):
         text = f.read_text(errors="replace")
@@ -86,18 +90,31 @@ expect(f"{checked} package sources carry no solution vocabulary", checked > 0 an
        "; ".join(leaks[:4]) + (f" (+{len(leaks) - 4} more)" if len(leaks) > 4 else ""))
 
 
-# ---- 1c. every TSVC package is what the packager renders now ---------------------------
+# ---- 1c. every TSVC and E2-B1 package is what its packager renders now -----------------
 # The packages under prepared/ are generated, not tracked; a change to the packager's shared
 # templates (pb_mix, the harness, the kernel head) must not silently change a package an
 # experiment already ran on. So every TSVC package on disk is rendered again and compared byte
-# for byte — the source, and in layout v4 the harness header outside the package.
-print("1c. TSVC packages equal the packager's rendering")
+# for byte — the source, and in layout v4 the harness header outside the package. E2-B1's
+# Rodinia bfs (prepare_bfs.py, v4) the same way.
+print("1c. TSVC and E2-B1 packages equal their packager's rendering")
+import prepare_bfs  # noqa: E402
 import prepare_tsvc  # noqa: E402
 
 rendered, drift = 0, []
 for meta_p in sorted(PREPARED.rglob("meta.json")):
     meta = json.loads(meta_p.read_text())
     suite = str(meta.get("suite") or "")
+    if suite == prepare_bfs.SUITE:
+        rendered += 1
+        if meta_p.parent.name != prepare_bfs.NAME:
+            drift.append(f"{suite}/{meta_p.parent.name}: not a package of prepare_bfs.py")
+            continue
+        if (meta_p.parent / meta["file"]).read_text() != prepare_bfs.render():
+            drift.append(f"{suite}/{meta_p.parent.name}: source differs from the packager's")
+        hdr = PREPARED / "_harness" / meta["harness"]
+        if not hdr.exists() or hdr.read_text() != prepare_bfs.render_harness():
+            drift.append(f"{suite}/{meta_p.parent.name}: harness header differs from the packager's")
+        continue
     if suite not in prepare_tsvc.SUITES:
         continue
     loop = {l.name: l for l in prepare_tsvc.SUITES[suite]}.get(meta_p.parent.name)
@@ -119,7 +136,7 @@ for meta_p in sorted(PREPARED.rglob("meta.json")):
     # trial — the primary outcome silently not computable. None for every other TSVC package.
     if meta.get("hot_loop") != prepare_tsvc.hot_loop(loop):
         drift.append(f"{suite}/{loop.name}: meta.json's hot_loop differs from the packager's")
-expect(f"{rendered} TSVC packages equal the packager's rendering", rendered > 0 and not drift,
+expect(f"{rendered} TSVC and E2-B1 packages equal their packager's rendering", rendered > 0 and not drift,
        "; ".join(drift[:4]) + (f" (+{len(drift) - 4} more)" if len(drift) > 4 else ""))
 
 
