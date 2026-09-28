@@ -53,7 +53,7 @@ import tempfile
 import time
 from collections import Counter
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from run_store import RunStore
 import harness_include  # noqa: E402
@@ -1570,6 +1570,12 @@ def cmd_run(a: argparse.Namespace) -> int:
     cxx = _find_tool(a.cxx, "AGENT_CXX", _CXX_CANDIDATES, "clang++")
     cc = _find_tool(a.cc, "AGENT_CC", _CC_CANDIDATES, "clang")
 
+    only_reps: Set[int] = set()
+    for part in filter(None, (x.strip() for x in a.reps.split(","))):
+        lo, _, hi = part.partition("-")
+        only_reps.update(range(int(lo), int(hi or lo) + 1))
+    if only_reps and not a.run_id:
+        sys.exit("--reps splits an existing run: name it with --run-id")
     store = RunStore(AGENT_DIR, "agent")
     run_id = a.run_id or store.new_run_id()
     resuming = store.run_dir(run_id).exists()
@@ -1618,6 +1624,8 @@ def cmd_run(a: argparse.Namespace) -> int:
                 for model in a.models:
                     for rep in range(1, a.trials + 1):
                         done += 1
+                        if only_reps and rep not in only_reps:
+                            continue
                         trial = run_dir / "benchmarks" / bench / arm / model / f"rep{rep}"
                         label = f"[{done}/{total}] {bench} · {arm} · {model} · rep{rep}"
                         if (trial / "trial.json").exists():
@@ -2088,6 +2096,9 @@ def main() -> None:
     sp.add_argument("--arms", type=lambda s: s.split(","), default=["full"])
     sp.add_argument("--models", type=lambda s: s.split(","), default=["haiku"])
     sp.add_argument("--trials", type=int, default=1, help="repeats of each (benchmark, arm, model)")
+    sp.add_argument("--reps", default="", metavar="LIST",
+                    help="run only these repeats of --trials, e.g. 1-3 or 4,7 (28 Sep: one run's remaining trials "
+                         "split over several jobs on the same --run-id; disjoint lists, or two jobs write one trial)")
     sp.add_argument("--provider", default="claude-agent-sdk")
     sp.add_argument("--edit-mode", default="direct")
     sp.add_argument("--agent-arg", action="append", default=[],
