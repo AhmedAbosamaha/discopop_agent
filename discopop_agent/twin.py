@@ -41,12 +41,12 @@ from pathlib import Path
 from typing import Any, Dict, List, Set, Tuple
 
 from . import project as project_mod
-from .args import AgentArguments, parse_args
+from .args import AgentArguments, gate_facts, parse_args
 from .evidence import assemble
 from .gate import numerical_noise_floor
-from .llm.prompts import (_ASK, _ASK_ANNOTATE, _CONTRACT_NO_PRAGMA, _CONTRACT_PRAGMA,
-                          _GIVEN_ITEMS, _OMP_RULES, _OUTPUT_DIRECT, _PRAGMA_FORMS, _ROLE,
-                          _ROLE_ANNOTATE, _RULE, _contract, _granularity, _how_compared, _wrap)
+from .llm.prompts import (_ASK, _ASK_ANNOTATE, _CONTRACT_NO_PRAGMA, _CONTRACT_PRAGMA, _OMP_RULES,
+                          _OUTPUT_DIRECT, _PRAGMA_FORMS, _ROLE, _ROLE_ANNOTATE, _RULE, _contract,
+                          _given as _agent_given, _granularity, _how_compared, _sub)
 from .llm.providers import _complete, _make_client, _sync_workspace, _workspace_diff
 from .llm.request import _build_direct_prompt
 from .plan import build_candidates, region_budget, region_fingerprint
@@ -75,25 +75,10 @@ SPEED_GOAL_ANNOTATE = (", and is measurably faster than the same build held to o
                        ", and is measurably faster than the original sequential program")
 
 
-def _given(include: "Set[str] | None") -> str:
-    """prompts._given, less the clause that promises feedback after a failed attempt."""
-    items = [text for name, text in _GIVEN_ITEMS if include is None or name in include]
-    head = _RULE + "WHAT WE GIVE YOU\n" + _RULE
-    if not items:
-        return (head + _wrap(
-            "Every request carries the region's source.  No profiling data is provided for "
-            "this region: work from the code itself.") + "\n\n")
-    body = _wrap("Every request carries the region's source and, from the profile: "
-                 + ", ".join(items) + ".")
-    advice = "Work from that evidence rather than from what the algorithm is called."
-    if include is None or "deps" in include:
-        advice = _wrap(
-            "Work from that evidence rather than from what the algorithm is called.  Two "
-            "things in it are easy to misread on inspection: WAR and WAW usually mean a "
-            "location is reused, not that a value travels between iterations; and a "
-            "dependence on a loop's own counter is never the blocker, because "
-            "privatising the counter removes it.")
-    return head + body + "\n\n" + advice + "\n\n"
+def _given(include: "Set[str] | None", changes: Tuple[str, ...] = ()) -> str:
+    """prompts._given, less the clause that promises feedback after a failed attempt — built by the
+    agent's own function, so a change to the block reaches the twin in the same commit (review D10)."""
+    return _agent_given(include, changes, feedback=False)
 
 
 def _judged_steps(gate: GateFacts) -> List[str]:
@@ -144,22 +129,23 @@ def _system(gate: GateFacts, include: "Set[str] | None", llm_pragmas: bool) -> s
     """prompts._system_prompt("direct", llm_pragmas, False, gate, include), minus the gate
     during the run and feedback.  --llm-recon's addendum is left out: it serves the fast
     refresh, which the twin does not have (E4 has no twin)."""
-    out = _OUTPUT_DIRECT.replace(EARLIER_TURN, "")
+    out = _sub(_OUTPUT_DIRECT, EARLIER_TURN, "")
     if llm_pragmas:
         goal = SPEED_GOAL_ANNOTATE[1] if gate.require_speedup else ""
-        return (_ROLE_ANNOTATE + _ASK_ANNOTATE.replace("{SPEED_GOAL}", goal) + _given(include)
+        return (_ROLE_ANNOTATE + _ASK_ANNOTATE.replace("{SPEED_GOAL}", goal) + _given(include, gate.changes)
                 + _contract(gate, _CONTRACT_PRAGMA) + _judged(gate, True) + _OMP_RULES
                 + _PRAGMA_FORMS + out)
-    ask = _ASK if gate.require_speedup else _ASK.replace(
-        "race-free, output-preserving,\nand faster than the sequential build.",
+    ask = _ASK if gate.require_speedup else _sub(
+        _ASK, "race-free, output-preserving,\nand faster than the sequential build.",
         "race-free and output-preserving.")
-    return (_ROLE + ask + _given(include) + _contract(gate, _CONTRACT_NO_PRAGMA)
+    return (_ROLE + ask + _given(include, gate.changes) + _contract(gate, _CONTRACT_NO_PRAGMA)
             + _judged(gate, False) + _OMP_RULES + out)
 
 
 def _request(agent_request: str) -> str:
     """The agent's own first request for the region; only the speed clause of its goal
-    names the gate's one-thread comparison."""
+    names the gate's one-thread comparison.  A plain replace on purpose: the clause is there only when
+    the speed check is on and the model writes the pragmas (request._goal)."""
     return agent_request.replace(*SPEED_ONE_THREAD)
 
 
@@ -174,13 +160,7 @@ def _gate_facts(args: AgentArguments) -> GateFacts:
         args.noise_floor = numerical_noise_floor(
             args.source_file, args.reprofil_args or None,
             extra_inputs=args.check_inputs or None).value
-    return GateFacts(require_speedup=args.require_speedup,
-                     n_inputs=1 + len(args.check_inputs or []),
-                     numeric=args.noise_floor > 0.0, stress=args.schedule_stress,
-                     omit=tuple(args.prompt_omit or ()),
-                     external_evidence=args.external_evidence or "",
-                     protected=tuple(args.protected_lines or ()),
-                     protected_note=args.protected_note or "")
+    return gate_facts(args, as_shipped=False)
 
 
 def _impact(args: AgentArguments, dp_dir: Path, force: bool = False) -> "impact_mod.ImpactModel":

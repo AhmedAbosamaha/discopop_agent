@@ -4,9 +4,12 @@ import os
 import shlex
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, List, Optional, Set, Tuple
+from typing import TYPE_CHECKING, Any, List, Optional, Set, Tuple
 
 from .project import Project
+
+if TYPE_CHECKING:
+    from .types import GateFacts
 
 
 @dataclass
@@ -94,6 +97,29 @@ class AgentArguments:
     # it at each region's own file in turn.
     project: Optional[Project] = None
     profile_only: bool = False
+    # --prompt-version: which texts the model reads (llm/prompts.PROMPT_VERSIONS).  1, the default,
+    # keeps every arm registered before the prompt review (28 Sep 2026) reading exactly what it read;
+    # 2 is the review's must-changes, adopted for an arm only after its pilot passes.
+    prompt_version: int = 1
+
+
+def gate_facts(args: Any, as_shipped: bool = True) -> "GateFacts":
+    """The GateFacts every model call of a run is built with — one construction for the agent
+    (phases/phase_a.py) and its twin (twin.py), which passes `as_shipped=False`: the twin describes
+    the agent v2 speed wording (D40, types.GateFacts).  `numeric` reads the noise floor the run
+    measured at start-up."""
+    from .llm.prompts import PROMPT_VERSIONS
+    from .types import GateFacts
+    return GateFacts(require_speedup=args.require_speedup,
+                     n_inputs=1 + len(args.check_inputs or []),
+                     numeric=args.noise_floor > 0.0,
+                     stress=args.schedule_stress,
+                     omit=tuple(getattr(args, "prompt_omit", ()) or ()),
+                     external_evidence=getattr(args, "external_evidence", "") or "",
+                     protected=tuple(getattr(args, "protected_lines", ()) or ()),
+                     protected_note=getattr(args, "protected_note", "") or "",
+                     judge_as_shipped=bool(getattr(args, "judge_as_shipped", False)) if as_shipped else False,
+                     changes=PROMPT_VERSIONS[int(getattr(args, "prompt_version", 1) or 1)])
 
 
 def parse_args() -> AgentArguments:
@@ -410,6 +436,12 @@ def parse_args() -> AgentArguments:
                          "duplicates it — as stage `harness`, whose retry is not charged."))
     p.add_argument("--protected-note", default="", metavar="TEXT",
                    help="What the models are told about the protected lines, after listing them.")
+    p.add_argument("--prompt-version", type=int, choices=(1, 2), default=1,
+                   help=("Which texts the model reads (llm/prompts.PROMPT_VERSIONS). 1 (default): as "
+                         "every arm registered before the prompt review of 28 Sep 2026 read them. 2: "
+                         "the review's must-changes (dependence direction with verbs, blockers without "
+                         "'must be removed', no generic array note, in-region RAW only, what a RAW means, "
+                         "'a dependence is moved, not deleted')."))
     p.add_argument("--prompt-omit", default="", metavar="PARTS",
                    help=("Comma list of prompt parts to LEAVE OUT, to measure what each "
                          "contributes (E2 Part D): contract, gate (how the rewrite is "
@@ -672,6 +704,7 @@ def parse_args() -> AgentArguments:
         external_evidence=external_evidence,
         evidence_file=a.evidence_file,
         prompt_omit=prompt_omit,
+        prompt_version=a.prompt_version,
         protected_lines=tuple(x.strip() for x in a.protected_line if x.strip()),
         protected_note=a.protected_note.strip(),
         apply_patches=a.apply_patches,

@@ -33,8 +33,8 @@ import tempfile
 from pathlib import Path
 from typing import List, Tuple
 
-from .llm.prompts import (_ASK_ANNOTATE, _CONTRACT_PRAGMA, _OMP_RULES, _PLAN_SPEC, _PRAGMA_FORMS,
-                          _RULE, _contract, _granularity, _how_compared, _step)
+from .llm.prompts import (PROMPT_VERSIONS, _ASK_ANNOTATE, _CONTRACT_PRAGMA, _OMP_RULES, _PLAN_SPEC,
+                          _PRAGMA_FORMS, _RULE, _contract, _granularity, _how_compared, _step, _sub)
 from .llm.request import _goal, _protected_block, _task_checklist
 from .llm.providers import _complete_claude_agent_sdk
 from .types import GateFacts
@@ -66,11 +66,13 @@ _ROLE_MINIMAL = (
 # (the same checks are described, as what judges the finished program), and feedback / retries
 # (one attempt).  A sentence of the agent's that names one of those is rewritten; nothing is
 # added that the agent's model does not get.
-def mirror_gate(speed: bool = True) -> GateFacts:
+def mirror_gate(speed: bool = True, version: int = 1) -> GateFacts:
     """The gate the mirror describes.  `speed=False` (`--no-require-speedup`, E2-B1, the author
     26 Sep): the agent's arms there run with the speed check off, so the model alone is told
-    the same goal — a correct parallel version — in the agent's own speed-off words."""
-    return GateFacts(require_speedup=speed, n_inputs=2, numeric=False, stress=True)
+    the same goal — a correct parallel version — in the agent's own speed-off words.  `version`:
+    the agent's prompt version (`--prompt-version`), so the shared passages stay the agent's."""
+    return GateFacts(require_speedup=speed, n_inputs=2, numeric=False, stress=True,
+                     changes=PROMPT_VERSIONS[version])
 
 
 MIRROR_GATE = mirror_gate(True)
@@ -88,13 +90,22 @@ def _judged_mirror(gate: GateFacts) -> str:
         "the parallel build is run repeatedly at one thread count, then at\n"
         "     other thread counts and under static, dynamic and guided schedules:\n"
         "     every run has to agree with the others",
-        _how_compared(gate).replace("not only the one that was profiled", "not only the one you can see"),
+        _sub(_how_compared(gate), "not only the one that was profiled", "not only the one you can see"),
     ] + (["it is timed at several thread counts against the original sequential\n"
           "     program, and has to be faster"] if gate.require_speedup else [])
     body = "\n".join(f"  {i}. {t}" for i, t in enumerate(steps, 1))
-    gran = _granularity(gate, len(steps), "annotate").replace(
-        "  The evidence marks\nwhich loops qualify; annotate the outermost one that does",
-        "  Annotate the\noutermost loop that has enough of them")
+    gran = _granularity(gate, len(steps), "annotate")
+    if gate.require_speedup:
+        gran = _sub(gran, "  The evidence marks\nwhich loops qualify; annotate the outermost one that does",
+                    "  Annotate the\noutermost loop that has enough of them")
+    else:
+        # Review M3 (28 Sep): the agent's speed-off paragraph told the model alone that "the program
+        # was profiled" and named "the evidence" — neither of which it has (D37).  E2-B1's model-alone
+        # arm read it; the arm is re-run with this text (THESIS_EXPERIMENTS §6, 28 Sep).
+        gran = _sub(gran, "The program was profiled on a deliberately\nsmall input, so the iteration counts "
+                    "in the evidence are far below what\nthe code runs in practice, and its speed is measured "
+                    "afterwards at full\nsize", "The program's speed is measured afterwards, at sizes far\n"
+                    "larger than any you can see")
     return (_RULE + "HOW YOUR REWRITE IS JUDGED\n" + _RULE
             + "Nothing checks your work while you do it, and you get one attempt.  When you are\n"
             "done, the program as you leave it is judged:\n"
@@ -107,14 +118,13 @@ def _judged_mirror(gate: GateFacts) -> str:
 
 
 def _system_mirror(gate: GateFacts = MIRROR_GATE) -> str:
-    ask = (_ASK_ANNOTATE
-           .replace("DiscoPoP profiled one region and could not extract safe parallelism from\n"
-                    "it.  Rewrite that region's sequential source so the parallelism becomes\n"
-                    "explicit,", "This program runs sequentially.  Rewrite its sequential source so the\n"
-                    "parallelism becomes explicit,")
-           .replace("{SPEED_GOAL}", ", and is measurably faster than the original sequential program"
-                    if gate.require_speedup else "")
-           .replace("Nothing downstream adds\na pragma to the code you rewrite", "Nothing adds a\npragma to the code you rewrite"))
+    ask = _sub(_ASK_ANNOTATE, "DiscoPoP profiled one region and could not extract safe parallelism from\n"
+               "it.  Rewrite that region's sequential source so the parallelism becomes\n"
+               "explicit,", "This program runs sequentially.  Rewrite its sequential source so the\n"
+               "parallelism becomes explicit,")
+    ask = _sub(ask, "{SPEED_GOAL}", ", and is measurably faster than the original sequential program"
+               if gate.require_speedup else "")
+    ask = _sub(ask, "Nothing downstream adds\na pragma to the code you rewrite", "Nothing adds a\npragma to the code you rewrite")
     given = (_RULE + "WHAT WE GIVE YOU\n" + _RULE
              + "The program's source files, and nothing else.\n\n")
     out = ("\n>>> OUTPUT: edit the files yourself. <<<\n"
@@ -131,10 +141,11 @@ def _system_mirror(gate: GateFacts = MIRROR_GATE) -> str:
 
 def _request_mirror(files: List[str], excluded: List[str], protected: Tuple[str, ...] = (),
                     protected_note: str = "", gate: GateFacts = MIRROR_GATE) -> str:
-    goal = (_goal(True, gate)
-            .replace("runs faster than the same build on one thread", "runs faster than the original sequential program")
-            .replace("  Nothing re-profiles your rewrite, and nothing adds a pragma for you.",
-                     "  Nothing adds a pragma for you."))
+    goal = _goal(True, gate)
+    if gate.require_speedup and not gate.judge_as_shipped:      # the clause exists only then (request._goal)
+        goal = _sub(goal, "runs faster than the same build on one thread", "runs faster than the original sequential program")
+    goal = _sub(goal, "  Nothing re-profiles your rewrite, and nothing adds a pragma for you.",
+                "  Nothing adds a pragma for you.")
     # Packaging v4 (D39): the harness is outside the file; the lines the file shares with it are
     # described in EXACTLY the agent's words (Fix 97) — the old sentence naming the measuring
     # functions was the model alone's only (the asymmetry found in E1c class A), and stays for
@@ -213,6 +224,9 @@ def main() -> int:
     p.add_argument("--prompt", choices=("mirror", "minimal", "contract"), default="mirror",
                    help="mirror: the agent's instructions minus DiscoPoP, gate and feedback (default); "
                         "minimal: role, tools, goal; contract: E1-bare's prompt")
+    p.add_argument("--prompt-version", type=int, choices=(1, 2), default=1,
+                   help="mirror only: the agent's prompt version whose shared passages the mirror carries "
+                        "(the agent's --prompt-version; 1 by default)")
     p.add_argument("--no-require-speedup", action="store_true",
                    help="mirror only: describe the gate with the speed check off, in the agent's own "
                         "speed-off words (E2-B1: RQ4 asks for a CORRECT parallel version)")
@@ -233,7 +247,9 @@ def main() -> int:
 
     if a.no_require_speedup and a.prompt != "mirror":
         p.error("--no-require-speedup describes the mirror's gate; the other prompts carry no gate")
-    gate = mirror_gate(not a.no_require_speedup)
+    if a.prompt_version != 1 and a.prompt != "mirror":
+        p.error("--prompt-version selects the mirror's shared passages; the other prompts are frozen")
+    gate = mirror_gate(not a.no_require_speedup, a.prompt_version)
     system = _system(a.prompt, gate)
     protected = tuple(x.strip() for x in a.protected_line if x.strip())
     request = (_request_mirror(units, excluded, protected, a.protected_note.strip(), gate) if a.prompt == "mirror"

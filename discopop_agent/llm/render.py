@@ -13,7 +13,7 @@ every scalar as `ptr (8B)` (alloca slots), which misinformed more than it helped
 from __future__ import annotations
 
 import re
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple
+from typing import Any, Callable, Dict, FrozenSet, List, Optional, Set, Tuple
 
 from ..types import EvidencePackage
 
@@ -69,7 +69,8 @@ def _signature_line(ev: EvidencePackage) -> Optional[int]:
 def _evidence_sections(ev: EvidencePackage, deps_header: str,
                        include: Optional[Set[str]] = None,
                        speed_judged: bool = True,
-                       llm_pragmas: bool = True) -> List[str]:
+                       llm_pragmas: bool = True,
+                       changes: FrozenSet[str] = frozenset()) -> List[str]:
     """The evidence body shared by every edit mode.  Only the surrounding
     header/source/task text differs between --edit-mode diff, function and direct.
 
@@ -79,6 +80,9 @@ def _evidence_sections(ev: EvidencePackage, deps_header: str,
     prompt tokens.  Note `failure` is NOT DiscoPoP evidence: it is the gate's own
     diagnostic from the previous attempt, so an ablation that leaves it in is
     measuring static analysis against a model that still gets empirical feedback.
+
+    `changes`: the prompt review's changes in force (prompts.PROMPT_VERSIONS); empty renders every
+    section as version 1 did.
     """
     want = _wanted(include)
     region = (ev.start_line, ev.end_line)
@@ -89,15 +93,19 @@ def _evidence_sections(ev: EvidencePackage, deps_header: str,
             parts.append(section)
     if want("deps"):
         skip, sig = _induction_vars(ev), _signature_line(ev)
+        v2 = "D2" in changes
         parts += [
             f"{deps_header}\n"
-            "(grouped per variable, each tagged [array element] or [scalar])",
-            _fmt_deps(ev.raw_deps, "RAW — read-after-write (the blocking ones)",
-                      ev.line_text, region, skip, sig),
+            + ("(grouped per variable, each tagged [array element] or [scalar]; each pair is the "
+               "earlier access → the later one)" if v2 else
+               "(grouped per variable, each tagged [array element] or [scalar])"),
+            _fmt_deps(ev.raw_deps, "RAW — read-after-write (a value written by one access and read "
+                      "by a later one)" if v2 else "RAW — read-after-write (the blocking ones)",
+                      ev.line_text, region, skip, sig, "RAW", changes),
             _fmt_deps(ev.war_deps, "WAR — write-after-read", region=region,
-                      skip_vars=skip, signature_line=sig),
+                      skip_vars=skip, signature_line=sig, dep_class="WAR", changes=changes),
             _fmt_deps(ev.waw_deps, "WAW — write-after-write", region=region,
-                      skip_vars=skip, signature_line=sig),
+                      skip_vars=skip, signature_line=sig, dep_class="WAW", changes=changes),
         ]
         if skip:
             parts.append(
@@ -109,10 +117,10 @@ def _evidence_sections(ev: EvidencePackage, deps_header: str,
     for name, section in (
         ("classification", _fmt_classification(ev)),
         ("extra_vars", _fmt_extra_vars(ev)),
-        ("array_note", _array_dep_note(ev)),
+        ("array_note", "" if "D3" in changes else _array_dep_note(ev)),
         ("loop_nest", _fmt_loop_nest(ev, speed_judged, llm_pragmas)),
         ("calls", _fmt_calls(ev)),
-        ("blockers", fmt_blockers(ev.prevented_deps)),
+        ("blockers", fmt_blockers(ev.prevented_deps, changes)),
         ("inner_patterns", _fmt_inner_patterns(ev, llm_pragmas)),
     ):
         if want(name) and section:
@@ -134,13 +142,20 @@ def _fmt_deps(
     region: Optional[Tuple[int, int]] = None,
     skip_vars: Optional[Set[str]] = None,
     signature_line: Optional[int] = None,
+    dep_class: str = "RAW",
+    changes: FrozenSet[str] = frozenset(),
 ) -> str:
     """Render one dependence class aggregated PER VARIABLE (a flat list of raw
     dep lines drowns a small model), quoting the source statement each line
     number points at so the model never has to cross-reference by itself.
     Dependences with an endpoint OUTSIDE `region` (e.g. a later consumer of the
     data in another function) are summarised, not listed — they are not what the
-    rewrite has to remove."""
+    rewrite has to remove.
+
+    Version 2 (review D2, D5): a pair is shown as the earlier access → the later one with what each
+    line does (a record's `to_line` is the source, the earlier access; `from_line` the sink — deps.py),
+    and a variable with no pair inside the region is not listed as a dependence of it at all — the
+    digest names it as a value crossing the region's edge."""
     # Two kinds of entry are noise at the same weight as the signal, and are left
     # out: dependences on a loop's own induction variable, and "dependences" whose
     # source is the function's signature line — the parameter being passed in.
@@ -149,6 +164,8 @@ def _fmt_deps(
             and not (signature_line and signature_line in (d.from_line, d.to_line))]
     if not deps:
         return f"  {label}: none\n"
+    if "D2" in changes or "D5" in changes:
+        return _fmt_deps_v2(deps, label, line_text, region, dep_class, changes)
     groups: Dict[Tuple[str, str], List[Any]] = {}
     for d in deps:
         groups.setdefault((d.variable, getattr(d, "kind", "scalar")), []).append(d)
@@ -188,7 +205,83 @@ def _fmt_deps(
     return "\n".join(lines) + "\n"
 
 
-def _fmt_digest(ev: EvidencePackage, include: Optional[Set[str]] = None) -> str:
+# D2: what each end of a pair does, by class — (earlier access, later access).
+_PAIR_VERBS = {"RAW": ("writes", "reads"), "WAR": ("reads", "overwrites"), "WAW": ("writes", "overwrites")}
+
+
+def _pair(earlier: Any, later: Any, dep_class: str) -> str:
+    first, then = _PAIR_VERBS.get(dep_class, ("accesses", "accesses"))
+    return f"line {earlier} {first} → line {later} {then}"
+
+
+def _fmt_deps_v2(deps: List[Any], label: str, line_text: Optional[Dict[int, str]],
+                 region: Optional[Tuple[int, int]], dep_class: str, changes: FrozenSet[str]) -> str:
+    """_fmt_deps under version 2 (review D2 and D5)."""
+    lo, hi = region if region else (-10**9, 10**9)
+    groups: Dict[Tuple[str, str], List[Any]] = {}
+    for d in deps:
+        groups.setdefault((d.variable, getattr(d, "kind", "scalar")), []).append(d)
+    lines = [f"  {label}:"]
+    quoted: Set[int] = set()
+    for (var, kind), ds in groups.items():
+        tag = "array element" if kind == "array" else "scalar"
+        pairs = sorted({(d.from_line, d.to_line) for d in ds})         # (sink = later, source = earlier)
+        inside = [p for p in pairs if lo <= p[0] <= hi and lo <= p[1] <= hi]
+        read_after = sum(1 for s, w in pairs if lo <= w <= hi and not lo <= s <= hi)
+        written_outside = sum(1 for s, w in pairs if lo <= s <= hi and not lo <= w <= hi)
+        if not inside and "D5" in changes:
+            continue                   # a value crossing the region's edge only: the digest names it
+        shown_var = "(memory DiscoPoP could not name)" if var == "*" else f"`{var}`"
+        if "D2" in changes:
+            shown = "; ".join(_pair(w, s, dep_class) for s, w in inside[:8])
+        else:
+            shown = "lines " + ", ".join(f"{s}→{w}" for s, w in inside[:8])
+        more = f"  (+{len(inside) - 8} more)" if len(inside) > 8 else ""
+        if "D5" in changes:
+            cross = "".join(f"  (+{n} {what})" for n, what in ((read_after, "read outside the region"),
+                                                                (written_outside, "written outside the region and read here"))
+                            if n and dep_class == "RAW")
+        else:                          # D2 alone: version 1's words for what crosses the edge
+            crossing = len(pairs) - len(inside)
+            cross = (f"  (+{crossing} with an endpoint outside the region: values produced here are consumed "
+                     "by later code — the rewrite must preserve them)" if crossing else "")
+            shown = shown or ("(loop-carried; the profiler did not resolve exact in-region line pairs — see "
+                              "the Do-All blockers section)")
+        lines.append(f"    {shown_var} [{tag}]: {shown}{more}{cross}")
+        if line_text:
+            for ln in sorted({x for p in inside[:8] for x in p}):
+                stmt = line_text.get(ln, "").strip()
+                if stmt.strip("{}(); ") and ln not in quoted:
+                    quoted.add(ln)
+                    lines.append(f"        line {ln}: `{stmt}`")
+    if len(lines) == 1:
+        return f"  {label}: none within these lines\n"
+    return "\n".join(lines) + "\n"
+
+
+def _crossing(ev: EvidencePackage, real: List[Any]) -> Tuple[List[str], List[str], List[str]]:
+    """(array variables with a RAW pair inside the region, those only written outside and read here,
+    those only written here and read after it) — review D5.  A record with neither end in the
+    region is not about it and is left out."""
+    lo, hi = ev.start_line, ev.end_line
+    inside: Set[str] = set()
+    read_here: Set[str] = set()
+    read_after: Set[str] = set()
+    for d in real:
+        if getattr(d, "kind", "scalar") != "array":
+            continue
+        s_in, w_in = lo <= d.from_line <= hi, lo <= d.to_line <= hi
+        if s_in and w_in:
+            inside.add(d.variable)
+        elif s_in:
+            read_here.add(d.variable)
+        elif w_in:
+            read_after.add(d.variable)
+    return sorted(inside), sorted(read_here - inside), sorted(read_after - inside)
+
+
+def _fmt_digest(ev: EvidencePackage, include: Optional[Set[str]] = None,
+                changes: FrozenSet[str] = frozenset()) -> str:
     """Compact factual summary placed FIRST in the prompt: what blocks
     parallelization, on which variables, in which loops.  Small models weight
     the beginning of the prompt most heavily; every fact here is repeated in
@@ -210,7 +303,24 @@ def _fmt_digest(ev: EvidencePackage, include: Optional[Set[str]] = None) -> str:
     if want("runtime_share") and ev.runtime_share:
         out.append(f"  - This region accounts for about {ev.runtime_share * 100:.0f}% of the "
                    "program's measured runtime.")
-    if want("deps"):
+    if want("deps") and "D5" in changes:
+        inside, read_here, read_after = _crossing(ev, real)
+        if inside:
+            out.append(f"  - RAW on array elements within these lines: {', '.join(inside)}.")
+        if read_here or read_after:
+            out.append("  - Values that cross the region's edge only — "
+                       + "; ".join(f"{what}: {', '.join(vs)}" for what, vs in
+                                   (("written outside and read here", read_here),
+                                    ("written here and read outside the region", read_after)) if vs) + ".")
+        if scalar_raw:
+            out.append(
+                f"  - RAW on SCALARS: {', '.join(scalar_raw)} — usually a reused "
+                "location or an accumulator, not a value travelling between iterations.")
+        if not real:
+            out.append("  - No RAW dependences observed apart from loop counters and "
+                       "parameters — the blocker is structural (control flow), not "
+                       "data flow.")
+    elif want("deps"):
         if array_raw:
             out.append(
                 f"  - Loop-carried RAW on ARRAY ELEMENTS of: {', '.join(array_raw)} "
@@ -228,7 +338,10 @@ def _fmt_digest(ev: EvidencePackage, include: Optional[Set[str]] = None) -> str:
                        "data flow.")
     if want("accesses"):
         for name, acc in list(ev.array_accesses.items())[:4]:
-            if acc["writes"]:
+            if acc["writes"] and "D5" in changes and not acc["reads"]:
+                out.append(f"  - `{name}` is written as {', '.join(acc['writes'][:3])} and not read "
+                           "in these lines.")
+            elif acc["writes"]:
                 out.append(f"  - `{name}` is written as {', '.join(acc['writes'][:3])} and "
                            f"read as {', '.join(acc['reads'][:5]) or '(not read)'}.")
     if want("loop_nest"):
@@ -526,11 +639,28 @@ def _array_dep_note(ev: EvidencePackage) -> str:
     )
 
 
-def fmt_blockers(prevented: List[Dict[str, Any]]) -> str:
+# D1 (version 2): what an observed blocker of each type means — "it must be removed" had the models
+# delete a RAW by handing the reader a snapshot of the old values.
+_DYNAMIC_NOTE = {
+    "RAW": ("observed: an iteration of this loop read a value an earlier iteration wrote — that value "
+            "must keep reaching its reader, so the dependence can be moved out of the loop you make "
+            "parallel, not deleted"),
+    "WAR": ("observed: an element was overwritten after an earlier iteration read its old value — a copy "
+            "of the old values or a second array removes it"),
+    "WAW": "observed: two iterations write the same element — the write that comes last in the original order must survive",
+}
+_STATIC_NOTE = ("static: not observed on the profiling input, and DiscoPoP could not rule it out from the "
+                "code — a scalar every iteration writes before reading is removed by declaring it inside "
+                "the loop body")
+
+
+def fmt_blockers(prevented: List[Dict[str, Any]], changes: FrozenSet[str] = frozenset()) -> str:
     """Render DiscoPoP's exact Do-All blockers (from doall_prevented.json).
     Returns '' when none are available (old explorer / clean loop)."""
     if not prevented:
         return ""
+    if "D1" in changes:
+        return _fmt_blockers_v2(prevented, changes)
     out = [
         "### Why DiscoPoP could not parallelize (Do-All blockers)",
         "DiscoPoP identified these exact dependences as what blocks Do-All — "
@@ -549,6 +679,29 @@ def fmt_blockers(prevented: List[Dict[str, Any]]) -> str:
         snk = str(b.get("sink_line") or "").split(":")[-1]
         if src and snk and src != "None" and snk != "None":
             where = f"line {src} → {snk}"
+        else:
+            ls, le = b.get("loop_start"), b.get("loop_end")
+            where = f"loop-carried (loop at line{'s' if ls != le else ''} {ls}" + (f"–{le}" if ls != le else "") + ")"
+        out.append(f"  - {dtype} on `{var}`  {where}  [{note}]")
+    return "\n".join(out) + "\n"
+
+
+def _fmt_blockers_v2(prevented: List[Dict[str, Any]], changes: FrozenSet[str]) -> str:
+    """fmt_blockers under version 2 (review D1; D2 for the line pairs)."""
+    from ..evidence.deps import _classify_var
+    out = ["### Why DiscoPoP could not parallelize (Do-All blockers)",
+           "DiscoPoP's Do-All check stopped at these.  Each names the variable and the loop it blocks; "
+           "the line pairs are in the dependence list, when it is shown."]
+    for b in prevented[:20]:
+        dtype = str(b.get("dep_type", "?")).split(".")[-1]
+        dynamic = "DYNAMIC" in str(b.get("origin", "")).upper()
+        note = _DYNAMIC_NOTE.get(dtype, "observed") if dynamic else _STATIC_NOTE
+        var = _classify_var(str(b.get("var_name", "?")))[0]
+        var = var[:-2] if var.endswith("[]") else var
+        src = str(b.get("source_line") or "").split(":")[-1]
+        snk = str(b.get("sink_line") or "").split(":")[-1]
+        if src and snk and src != "None" and snk != "None":
+            where = _pair(src, snk, dtype) if "D2" in changes else f"line {src} → {snk}"
         else:
             ls, le = b.get("loop_start"), b.get("loop_end")
             where = f"loop-carried (loop at line{'s' if ls != le else ''} {ls}" + (f"–{le}" if ls != le else "") + ")"

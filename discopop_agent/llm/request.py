@@ -122,7 +122,7 @@ def _build_prompt(evidence: EvidencePackage,
         f"## Target region: {region_label} at lines "
         f"{evidence.start_line}–{evidence.end_line}  "
         f"(DiscoPoP id {evidence.region_id}; {exec_info})\n",
-        _fmt_digest(evidence, include),
+        _fmt_digest(evidence, include, frozenset(gate.changes)),
         _external_evidence(gate),
         (
             "### Source\n"
@@ -138,7 +138,7 @@ def _build_prompt(evidence: EvidencePackage,
     ]
     parts.extend(_evidence_sections(evidence, "### Runtime data dependences "
                                               "(observed across all executions)",
-                                    include, gate.require_speedup, llm_pragmas))
+                                    include, gate.require_speedup, llm_pragmas, frozenset(gate.changes)))
 
     parts.append(
         f"### Task\n"
@@ -176,7 +176,7 @@ def _build_function_prompt(evidence: EvidencePackage,
         f"(lines {evidence.enclosing_function_start}–{evidence.enclosing_function_end})",
         f"## Target region: {region_label} {evidence.region_id} at lines "
         f"{evidence.start_line}–{evidence.end_line}\n",
-        _fmt_digest(evidence, include),
+        _fmt_digest(evidence, include, frozenset(gate.changes)),
         _external_evidence(gate),
         "### Current function (rewrite this whole function):",
         "```cpp",
@@ -185,7 +185,7 @@ def _build_function_prompt(evidence: EvidencePackage,
     ]
     parts.extend(_evidence_sections(
         evidence, "### Runtime data dependences in the target region (observed)",
-        include, gate.require_speedup, llm_pragmas))
+        include, gate.require_speedup, llm_pragmas, frozenset(gate.changes)))
 
     parts.append(
         "### Task\n"
@@ -233,7 +233,7 @@ def _build_direct_prompt(evidence: EvidencePackage, ws_file: Path,
         f"(lines {evidence.enclosing_function_start}–{evidence.enclosing_function_end})",
         f"## Target region: {region_label} {evidence.region_id} at lines "
         f"{evidence.start_line}–{evidence.end_line}\n",
-        _fmt_digest(evidence, include),
+        _fmt_digest(evidence, include, frozenset(gate.changes)),
         _external_evidence(gate),
         "### The function as it currently stands in the file (excerpt — read the "
         "file itself before editing; line numbers here are the file's own):",
@@ -243,7 +243,7 @@ def _build_direct_prompt(evidence: EvidencePackage, ws_file: Path,
     ]
     parts.extend(_evidence_sections(
         evidence, "### Runtime data dependences in the target region (observed)",
-        include, gate.require_speedup, llm_pragmas))
+        include, gate.require_speedup, llm_pragmas, frozenset(gate.changes)))
 
     parts.append(
         "### Task\n"

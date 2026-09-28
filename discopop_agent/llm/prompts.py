@@ -19,9 +19,30 @@ are fixed for a run, so the same text is built on every call.
 from __future__ import annotations
 
 import textwrap
-from typing import Optional, Set
+from typing import Dict, Optional, Set, Tuple
 
 from ..types import GateFacts
+
+
+# The prompt review of 28 Sep 2026 (evaluation/agent/docs/PROMPT_REVIEW_2026_09_28.md): the changes
+# each prompt version applies, by the review's ids.  Version 1 is every text as the arms registered
+# before the review read it.  Version 2 is the review's must-changes:
+#   D1  the Do-All blockers without "it must be removed", each type said for what it means
+#   D2  every dependence pair in value-flow order (earlier access -> later), with verbs
+#   D3  the generic array note (a second buffer, ordered sub-passes) left out
+#   D5  only pairs with both ends in the region listed as RAW; crossing values said as such
+#   D10 the evidence arms' system prompt says what a carried RAW is
+#   A1  the contract: a dependence is moved, not deleted (every arm)
+PROMPT_VERSIONS: Dict[int, Tuple[str, ...]] = {1: (), 2: ("A1", "D1", "D10", "D2", "D3", "D5")}
+
+
+def _sub(text: str, old: str, new: str) -> str:
+    """`text.replace(old, new)` for a text another arm's prompt is DERIVED from — raising when `old`
+    is not there.  A rewrapped or edited anchor made the plain replace a silent no-op (review M2): the
+    speed-off arms would have kept a speed goal, and the model alone kept the words it must not read."""
+    if old not in text:
+        raise ValueError(f"prompt anchor not found: {old[:60]!r}")
+    return text.replace(old, new)
 
 
 # ---------------------------------------------------------------------------
@@ -93,23 +114,44 @@ def _wrap(text: str, indent: str = "") -> str:
                          break_long_words=False, break_on_hyphens=False)
 
 
-def _given(include: Optional[Set[str]]) -> str:
+# D10 (version 2): the deps item describes the rendering D2 gives it.
+_DEPS_ITEM_V2 = ("the dependences observed at run time (RAW / WAR / WAW, grouped per variable, "
+                 "each pair given as the earlier access → the later one)")
+
+
+def _given(include: Optional[Set[str]], changes: Tuple[str, ...] = (), feedback: bool = True) -> str:
     """The "what we give you" block, listing only what the request really carries.
 
     It used to be a constant describing the full package.  Under `--evidence none`
     the model was therefore told it had been given observed dependences, Do-All
-    blockers and a loop nest, and then shown none of them."""
-    items = [text for name, text in _GIVEN_ITEMS if include is None or name in include]
+    blockers and a loop nest, and then shown none of them.
+
+    `feedback=False` is the twin's (D38): one attempt, so no clause promising feedback."""
+    items = [(_DEPS_ITEM_V2 if name == "deps" and "D10" in changes else text)
+             for name, text in _GIVEN_ITEMS if include is None or name in include]
     head = _RULE + "WHAT WE GIVE YOU\n" + _RULE
     after = "after a failed attempt, which check failed and why"
     if not items:
         return (head + _wrap(
-            "Every request carries the region's source and, " + after + ".  No profiling "
-            "data is provided for this region: work from the code itself.") + "\n\n")
+            ("Every request carries the region's source and, " + after + "." if feedback
+             else "Every request carries the region's source.")
+            + "  No profiling data is provided for this region: work from the code itself.") + "\n\n")
     body = _wrap("Every request carries the region's source and, from the profile: "
-                 + ", ".join(items) + " — and, " + after + ".")
+                 + ", ".join(items) + (" — and, " + after + "." if feedback else "."))
     advice = "Work from that evidence rather than from what the algorithm is called."
-    if include is None or "deps" in include:
+    if (include is None or "deps" in include) and "D10" in changes:
+        # The only standing guidance on reading dependences covered WAR/WAW and counters, and said
+        # nothing about the RAW — the case the models broke by handing the reader a snapshot.
+        advice = _wrap(
+            "Work from that evidence rather than from what the algorithm is called.  Three "
+            "things in it are easy to misread.  A RAW carried by a loop is a value in transit: "
+            "the reading line needs what the writing line stored, so the dependence can be "
+            "moved (the writing loop finishing before the reading loop starts) but not "
+            "deleted, and handing the reader a copy taken before the loop changes the result.  "
+            "WAR and WAW usually mean a location is reused, and there a copy of the old values "
+            "or a private variable does remove them.  A dependence on a loop's own counter is "
+            "never the blocker, because privatising the counter removes it.")
+    elif include is None or "deps" in include:
         advice = _wrap(
             "Work from that evidence rather than from what the algorithm is called.  Two "
             "things in it are easy to misread on inspection: WAR and WAW usually mean a "
@@ -158,6 +200,21 @@ _CONTRACT_CLOSE = """\
   - The original code returned unchanged — renamed, reordered, unrolled, or
     wrapped in an early-exit shortcut — is not an answer, and neither is a
     faster serial algorithm.  The blocking dependence has to be gone.
+
+"""
+# A1 (version 2): "has to be gone" framed every dependence as something to delete, and the answers
+# echoed it while they cut a value's flow ("the RAW on v is eliminated").  In the mirror it had no
+# referent at all.  The accumulator carve-out keeps a reduction allowed; the gate decides the rest.
+_CONTRACT_CLOSE_V2 = """\
+  - The original code returned unchanged — renamed, reordered, unrolled, or
+    wrapped in an early-exit shortcut — is not an answer, and neither is a
+    faster serial algorithm.  The loop you make parallel must no longer
+    carry a dependence between its iterations, but a dependence is moved,
+    not deleted: a value one iteration writes and a later one reads must
+    still reach that read (for example, the writing loop finishes before
+    the reading loop starts).  The exception is an accumulator whose
+    running value feeds nothing but its own total: that may become a
+    reduction.
 
 """
 def _step(text: str) -> str:
@@ -324,14 +381,14 @@ def _contract(gate: GateFacts, pragma_rule: str) -> str:
     rest would turn a prompt ablation into a change of E3's variable."""
     if "contract" in gate.omit:
         return _RULE + "ONE RULE\n" + _RULE + pragma_rule + "\n"
-    return _contract_open(gate) + pragma_rule + _CONTRACT_CLOSE
+    return _contract_open(gate) + pragma_rule + (_CONTRACT_CLOSE_V2 if "A1" in gate.changes else _CONTRACT_CLOSE)
 
 
 def _system_core(gate: GateFacts, include: Optional[Set[str]]) -> str:
-    ask = _ASK if gate.require_speedup else _ASK.replace(
-        "race-free, output-preserving,\nand faster than the sequential build.",
+    ask = _ASK if gate.require_speedup else _sub(
+        _ASK, "race-free, output-preserving,\nand faster than the sequential build.",
         "race-free and output-preserving.")
-    return (_ROLE + ask + _given(include) + _contract(gate, _CONTRACT_NO_PRAGMA)
+    return (_ROLE + ask + _given(include, gate.changes) + _contract(gate, _CONTRACT_NO_PRAGMA)
             + ("" if "gate" in gate.omit else _checked(gate)) + _OMP_RULES)
 
 
@@ -339,7 +396,7 @@ def _system_core_annotate(gate: GateFacts, include: Optional[Set[str]]) -> str:
     goal = ("" if not gate.require_speedup
             else ", and is measurably faster than the original sequential program" if gate.judge_as_shipped
             else ", and is measurably faster than the same build held to one thread")
-    return (_ROLE_ANNOTATE + _ASK_ANNOTATE.replace("{SPEED_GOAL}", goal) + _given(include)
+    return (_ROLE_ANNOTATE + _ASK_ANNOTATE.replace("{SPEED_GOAL}", goal) + _given(include, gate.changes)
             + _contract(gate, _CONTRACT_PRAGMA)
             + ("" if "gate" in gate.omit else _checked_annotate(gate)) + _OMP_RULES + _PRAGMA_FORMS)
 

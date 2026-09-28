@@ -42,6 +42,7 @@ This document contains critical information about working with this codebase. Fo
 ### Python — evaluation harness
 - the harness is a set of scripts, not a package; type check it with `venv/bin/python -m mypy --config-file=evaluation/mypy.ini evaluation/agent/tools/*.py evaluation/shared/*.py`
 - its own tests: `venv/bin/python evaluation/agent/tools/test_integrity.py` and `venv/bin/python evaluation/agent/tools/test_scaffold.py`; and `venv/bin/python evaluation/agent/tools/test_arms.py` (every arm in `arms.json` against the agent's own parser — run it after changing an agent default or an arm)
+- after any change to the texts a model reads (`discopop_agent/llm/prompts.py`, `render.py`, `request.py`, `twin.py`, `bare_llm.py`): `venv/bin/python evaluation/agent/tools/prompt_manifest.py diff --expect ARM,ARM` must name exactly the arms the change declares (then `... build` and commit the manifest), and `venv/bin/python evaluation/agent/tools/test_prompt_v2.py` must pass; the prompt feature checks: `venv/bin/python -m discopop_agent.benchmark.test_features --only prompt-truth prompt-ablation bare-llm bare-speed-off twin-prompt shipped-prompt`
 - results are laid out by experiment from the registry `evaluation/agent/results/campaign.json` (start at `evaluation/agent/results/README.md`); register a run there before launching it, and an experiment is done only when `venv/bin/python evaluation/agent/tools/campaign.py check` prints OK (`campaign.py reports` regenerates the reports and indexes; RUNBOOK § definition of done)
 
 ## Formatting

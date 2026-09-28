@@ -2,6 +2,11 @@
 
 Produced by a read-only review (four lenses and a verifying synthesis) of the real prompts the model received (ORDER-2 pilot, V3 pilot s211/s244, E2-B1 smoke s151/bfs). Nothing here is adopted yet: each change is the author's decision and is tested by a pilot before adoption (rule: pilot the mechanism first).
 
+## Status (28 Sep evening)
+
+- **Stage 0 done** (THESIS_EXPERIMENTS §6, 28 Sep): M1, M2, M3 and the must-changes D1, D2, D3, D5, D10, A1 as prompt version 2 (`--prompt-version 2`; default 1). Every registered arm unchanged except `bare_llm_nospeed` (M3), proven by `tools/prompt_manifest.py`; `tools/test_prompt_v2.py` passes.
+- Not yet: D4 and the 'should' items; Stage 1–3 pilots (pre-registered before they run, after E2-B1's re-runs).
+
 ## Summary
 
 Scope: one prioritized change set for the prompt the restructuring model receives. The system prompt is built in llm/prompts.py (plus twin._given/_judged and bare_llm), the request in llm/request.py, and the evidence in llm/render.py. The repository root is /Users/ahmedsamir/discopop_agent. Every claim below was checked against the code, the samples and the archived pilot calls. I dropped or corrected claims I could not confirm.

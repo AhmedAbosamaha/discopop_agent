@@ -1974,6 +1974,11 @@ def check_bare_speed_off(work: Path) -> Result:
             problems.append(f"speed off: {label} is not the agent's speed-off text")
     if " ".join(_task_checklist(off, set()).split()) not in " ".join(r_off.split()):
         problems.append("speed off: the checklist is not the agent's speed-off checklist")
+    # Review M3 (28 Sep): the speed-off mirror said "The program was profiled … the evidence" — the
+    # leak check ran on the speed-on mirror only.  The same list as check_bare_llm's.
+    for leak in ("DiscoPoP", "profil", "evidence", "Target region", "RAW", "re-profile"):
+        if leak.lower() in (s_off + " " + r_off).lower():
+            problems.append(f"speed off: carries {leak!r}")
     if problems:
         return Result(name, "fail", "; ".join(problems[:3]))
     return Result(name, "pass", f"speed off: no speed goal or timing step ({len((s_off + r_off).split())} words), "

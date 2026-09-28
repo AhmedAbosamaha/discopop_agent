@@ -78,6 +78,10 @@ class GateFacts:
     # alone already read.  False (the default, and every GateFacts the twin and bare_llm build)
     # reproduces agent v2's texts byte for byte.
     judge_as_shipped: bool = False
+    # The prompt review's changes in force (prompts.PROMPT_VERSIONS, `--prompt-version`).  Empty —
+    # the default, and version 1 — builds every text exactly as the arms registered before the
+    # review (28 Sep 2026) read it; config/prompt_manifest.json proves that.
+    changes: Tuple[str, ...] = ()
 
 
 @dataclass

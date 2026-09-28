@@ -46,11 +46,18 @@ import hot_loop_coverage  # noqa: E402
 
 MODEL = "claude-haiku-4-5-20251001"
 SONNET = "claude-sonnet-5"
-# arm -> (model, evidence: "full" | "no_note" | "none" | "order"). The first pilot ran full, no_note, none (Haiku);
-# the follow-up (pre-registered 28 Sep) runs order (Haiku), sonnet_full, sonnet_none.
-ARM_SPECS: Dict[str, Tuple[str, str]] = {
-    "full": (MODEL, "full"), "no_note": (MODEL, "no_note"), "none": (MODEL, "none"),
-    "order": (MODEL, "order"), "sonnet_full": (SONNET, "full"), "sonnet_none": (SONNET, "none"),
+# arm -> (model, evidence: "full" | "no_note" | "none" | "order", the prompt review's changes in force). The first
+# pilot ran full, no_note, none (Haiku); the follow-up (pre-registered 28 Sep) order (Haiku), sonnet_full, sonnet_none
+# — both with instrument v1 (review M1: the kernel id passed as the failure reason, the order note inside '### Task').
+# The prompt-review arms (instrument v2, 28 Sep evening): full_clean re-measures `full` without the stray section;
+# arrow_only adds only D2 (the pair direction); order_clean is `order` with the note before '### Task'; full_v2 and
+# none_v2 are prompt version 2 with and without evidence.
+_V2 = ("A1", "D1", "D10", "D2", "D3", "D5")      # llm/prompts.PROMPT_VERSIONS[2]; test_prompt_v2.py checks they agree
+ARM_SPECS: Dict[str, Tuple[str, str, Tuple[str, ...]]] = {
+    "full": (MODEL, "full", ()), "no_note": (MODEL, "no_note", ()), "none": (MODEL, "none", ()),
+    "order": (MODEL, "order", ()), "sonnet_full": (SONNET, "full", ()), "sonnet_none": (SONNET, "none", ()),
+    "full_clean": (MODEL, "full", ()), "arrow_only": (MODEL, "full", ("D2",)), "order_clean": (MODEL, "order", ()),
+    "full_v2": (MODEL, "full", _V2), "none_v2": (MODEL, "none", _V2),
 }
 LEN = 32000
 VERSIONS = {"X": ("k17", "kv[i] = (int)(i - 1); ku[i] = (int)(LEN_1D + i);"),
@@ -203,12 +210,7 @@ def order_note(ev: Any, src_lines: List[str], lo: int, hi: int) -> str:
 def requests(pk: Dict[str, Dict[str, Any]], out: Path, arms: Tuple[str, ...] = ARMS) -> Dict[Tuple[str, str], Tuple[str, str]]:
     """(version, arm) -> (system prompt, request) for the kernel loop region, as the agent builds them."""
     from discopop_agent.args import parse_args
-    from discopop_agent.evidence import assemble
-    from discopop_agent.llm.prompts import _system_prompt
-    from discopop_agent.llm.render import EVIDENCE_SECTIONS
-    from discopop_agent.llm.request import _build_direct_prompt
     from discopop_agent.plan import build_candidates
-    from discopop_agent.types import GateFacts
     res: Dict[Tuple[str, str], Tuple[str, str]] = {}
     for ver, p in pk.items():
         dp = profile(p["src"], p["inc"], out / "profile" / p["id"])
@@ -227,26 +229,42 @@ def requests(pk: Dict[str, Dict[str, Any]], out: Path, arms: Tuple[str, ...] = A
         loop = next(c for c in cands if c.region.region_type == "loop")
         if loop.tier != 2:
             raise SystemExit(f"{ver}: the loop is Tier {loop.tier}, not Tier 2 — the model would not be asked")
-        ev = assemble(loop, dp / "profiler", p["id"])
+        for arm, texts in build_requests(loop, dp, p, arms).items():
+            res[(ver, arm)] = texts
+    return res
+
+
+def build_requests(loop: Any, dp: Path, p: Dict[str, Any], arms: Tuple[str, ...]) -> Dict[str, Tuple[str, str]]:
+    """arm -> (system prompt, request) for one version's loop, from its DiscoPoP profile `dp`."""
+    from discopop_agent.evidence import assemble
+    from discopop_agent.llm.prompts import _system_prompt
+    from discopop_agent.llm.render import EVIDENCE_SECTIONS
+    from discopop_agent.llm.request import _build_direct_prompt
+    from discopop_agent.twin import FIRST_REASON
+    from discopop_agent.types import GateFacts
+    # Review M1: the reason the agent and the twins pass on a first attempt — the pilot passed the kernel id
+    # here (assemble's third parameter is the failure reason), so its evidence arms read "What went wrong: k17".
+    ev = assemble(loop, dp / "profiler", FIRST_REASON)
+    ws_file = Path("/workspace") / p["src"].name          # replaced per call by the real workspace path
+    src_lines = p["src"].read_text().splitlines()
+    out: Dict[str, Tuple[str, str]] = {}
+    for arm in arms:
+        _model, mode, changes = ARM_SPECS[arm]
         gate = GateFacts(require_speedup=False, n_inputs=2, numeric=False, stress=True,
                          protected=(f'#include "evk/{p["id"]}.h"', f'PB_MAIN(kernel_{p["id"]})'),
-                         protected_note=PROTECTED_NOTE % (p["id"], p["id"]))
-        ws_file = Path("/workspace") / p["src"].name          # replaced per call by the real workspace path
-        src_lines = p["src"].read_text().splitlines()
-        for arm in arms:
-            mode = ARM_SPECS[arm][1]
-            inc: Optional[Set[str]] = (None if mode in ("full", "order") else set(EVIDENCE_SECTIONS) - {"array_note"}
-                                       if mode == "no_note" else set())
-            req = _build_direct_prompt(ev, ws_file, inc, False, gate)
-            if mode == "order":
-                note = order_note(ev, src_lines, loop.region.start_line, loop.region.end_line)
-                if not note:
-                    raise SystemExit(f"{ver}: no carried RAW between two lines to restate")
-                # placed just before the closing task instruction, which the request ends with
-                cut = req.rfind("Edit `")
-                req = req[:cut] + note + req[cut:] if cut > 0 else req + "\n" + note
-            res[(ver, arm)] = (_system_prompt("direct", False, False, gate, inc), req)
-    return res
+                         protected_note=PROTECTED_NOTE % (p["id"], p["id"]), changes=changes)
+        inc: Optional[Set[str]] = (None if mode in ("full", "order") else set(EVIDENCE_SECTIONS) - {"array_note"}
+                                   if mode == "no_note" else set())
+        req = _build_direct_prompt(ev, ws_file, inc, False, gate)
+        if mode == "order":
+            note = order_note(ev, src_lines, loop.region.start_line, loop.region.end_line)
+            if not note:
+                raise SystemExit(f"{p['id']}: no carried RAW between two lines to restate")
+            # Review M1: the last evidence section, before '### Task' (instrument v1 cut after that heading)
+            cut = req.rfind("### Task")
+            req = req[:cut] + note + req[cut:] if cut > 0 else req + "\n" + note
+        out[arm] = (_system_prompt("direct", False, False, gate, inc), req)
+    return out
 
 
 def call(system: str, request: str, src: Path, ws: Path, model: str = MODEL) -> Dict[str, Any]:
@@ -393,6 +411,28 @@ def main() -> int:
                      f"{rate('X', 'sonnet_full')[1]} vs Sonnet without {rate('X', 'sonnet_none')[0]}/{rate('X', 'sonnet_none')[1]} "
                      f"(≥ 7/10 and ≥ 0.4 above needed); Y {rate('Y', 'sonnet_full')[0]}/{rate('Y', 'sonnet_full')[1]} vs "
                      f"{rate('Y', 'sonnet_none')[0]}/{rate('Y', 'sonnet_none')[1]} (no more than 0.2 below)")
+    if ("X", "order_clean") in table:                   # prompt review, stage 1 (pre-registered 28 Sep evening)
+        go = frac("X", "order_clean") >= 0.7 and frac("Y", "order_clean") >= 0.8
+        lines.append(f"**order_clean (the order note, instrument v2): {'GO' if go else 'NO-GO'}** — X "
+                     f"{rate('X', 'order_clean')[0]}/{rate('X', 'order_clean')[1]} (≥ 7/10 needed), Y "
+                     f"{rate('Y', 'order_clean')[0]}/{rate('Y', 'order_clean')[1]} (≥ 8/10 needed)")
+    if ("X", "arrow_only") in table:
+        lines.append(f"**arrow_only (D2 alone), descriptive:** X {rate('X', 'arrow_only')[0]}/{rate('X', 'arrow_only')[1]} "
+                     f"({'≥' if frac('X', 'arrow_only') >= 0.5 else '<'} 5/10: the arrow "
+                     f"{'largely suffices' if frac('X', 'arrow_only') >= 0.5 else 'does not suffice'} to carry the "
+                     f"direction), Y {rate('Y', 'arrow_only')[0]}/{rate('Y', 'arrow_only')[1]}")
+    if ("Y", "full_v2") in table:
+        go = frac("Y", "full_v2") >= 0.9
+        lines.append(f"**full_v2 (prompt version 2, evidence), harm removed: {'GO' if go else 'NO-GO'}** — Y "
+                     f"{rate('Y', 'full_v2')[0]}/{rate('Y', 'full_v2')[1]} (≥ 9/10 needed); X "
+                     f"{rate('X', 'full_v2')[0]}/{rate('X', 'full_v2')[1]} (reported; full_clean X "
+                     f"{rate('X', 'full_clean')[0]}/{rate('X', 'full_clean')[1]})")
+    if ("Y", "none_v2") in table:
+        go = frac("Y", "none_v2") >= 0.9
+        lines.append(f"**none_v2 (version 2's shared text, no evidence), no harm: {'GO' if go else 'NO-GO'}** — Y "
+                     f"{rate('Y', 'none_v2')[0]}/{rate('Y', 'none_v2')[1]} (≥ 9/10 needed); X "
+                     f"{rate('X', 'none_v2')[0]}/{rate('X', 'none_v2')[1]} (expected near 0: without evidence the "
+                     "direction cannot be known)")
     (out / "summary.md").write_text("\n".join(lines) + "\n")
     print("\n".join(lines))
     return 0

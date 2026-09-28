@@ -35,7 +35,7 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 
 from .. import project as project_mod
 from .. import viz
-from ..args import AgentArguments
+from ..args import AgentArguments, gate_facts
 from ..evidence import assemble
 from ..gate import _validate_cached, fix_hunk_headers, measure_marginal, noise_floor
 from ..llm import LLMConnectionError, call_llm
@@ -52,7 +52,7 @@ from ..profiling.tools import _explorer_cmd, _venv_env, run_explorer
 from ..sources import (_apply_to_source, _function_edit_to_diff,
                        _restore_profile, _snapshot_profile)
 from ..gate.harness_lines import check_protected
-from ..types import GateFacts, HotspotCandidate, ValidationResult
+from ..types import HotspotCandidate, ValidationResult
 from .report import _REGION_LABEL, _record_candidate, _write_record
 from .verdicts import (_MARGINAL_NOISE, _OUTCOME_LABEL, D40_SETS_KEY, SPEED_THRESHOLD_KEY, RewriteOutcome, tier1_verdict,
                        _rewrite_feedback, _verify_rewrite, exposed_in, judge_as_shipped)
@@ -344,16 +344,7 @@ def phase_a(state: RunState) -> None:
                     evidence_sections=args.evidence_sections,
                     llm_recon=(args.llm_recon
                                and args.llm_recon_mode == "folded"),
-                    gate=GateFacts(
-                        require_speedup=args.require_speedup,
-                        n_inputs=1 + len(args.check_inputs or []),
-                        numeric=args.noise_floor > 0.0,
-                        stress=args.schedule_stress,
-                        omit=tuple(getattr(args, "prompt_omit", ()) or ()),
-                        external_evidence=getattr(args, "external_evidence", "") or "",
-                        protected=tuple(getattr(args, "protected_lines", ()) or ()),
-                        protected_note=getattr(args, "protected_note", "") or "",
-                        judge_as_shipped=bool(getattr(args, "judge_as_shipped", False))),
+                    gate=gate_facts(args),
                 )
             except LLMConnectionError as e:
                 # Fatal for the whole run: every region needs the endpoint.
@@ -400,8 +391,13 @@ def phase_a(state: RunState) -> None:
                         "role": "user",
                         "content": (
                             f"{what} (comment or formatting edits do not count). "
-                            "That is not an answer: the blocking dependence has to be "
-                            "gone. If your last attempt failed validation, do not fall "
+                            + ("That is not an answer: a loop in the region has to end up "
+                               "with iterations that no longer depend on each other, while "
+                               "the program computes what it computed before. "
+                               if "A1" in gate_facts(args).changes else
+                               "That is not an answer: the blocking dependence has to be "
+                               "gone. ")
+                            + "If your last attempt failed validation, do not fall "
                             "back to the original — restructure it a different way."
                         ),
                     }]
@@ -914,6 +910,7 @@ def phase_a(state: RunState) -> None:
                         outcome, dp_dir, region.file_id, _touched_span(clean_diff),
                         deps_shown=(args.evidence_sections is None
                                     or "deps" in args.evidence_sections),
+                        changes=frozenset(gate_facts(args).changes),
                     )
                     print(f"│  [Tier-2] {_OUTCOME_LABEL[outcome.status]} — reverting "
                           f"(snapshot restore)")

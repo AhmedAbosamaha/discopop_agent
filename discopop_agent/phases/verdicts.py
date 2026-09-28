@@ -361,6 +361,7 @@ _MARGINAL_NOISE = 0.97
 def _rewrite_feedback(
     outcome: RewriteOutcome, dp_dir: Path, file_id: int,
     touched: "tuple[int, int] | None", deps_shown: bool = True,
+    changes: "frozenset[str]" = frozenset(),
 ) -> str:
     """Turn a failed post-restructuring verdict into the message the LLM sees.
 
@@ -381,7 +382,7 @@ def _rewrite_feedback(
             "description of what you just wrote."
         )
         blockers = fmt_blockers(
-            load_prevented_deps(dp_dir, file_id, *(touched or (1, 10**9)))[:12]
+            load_prevented_deps(dp_dir, file_id, *(touched or (1, 10**9)))[:12], changes
         )
         if blockers:
             msg += (
