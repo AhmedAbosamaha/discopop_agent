@@ -94,7 +94,7 @@ BUCKETS: List[Tuple[str, str]] = [
     ("no-change", "left unchanged"),
 ]
 UNSAFE = ("racy", "BROKEN", "did-not-compile")
-OUT_OF_DENOMINATOR = ("harness-edit", "no-verdict")
+OUT_OF_DENOMINATOR = ("harness-edit", "call-failed", "no-verdict")
 
 # The four named tests of decision 4 (27 Sep). (name, what, arm role X, arm role Y, outcome, predicted)
 # `predicted` is the one-sided alternative on the odds ratio of X against Y.
@@ -367,6 +367,10 @@ def judge(t: dict, races: Dict[Tuple[str, str, str, int], str]) -> Dict[str, Any
     cov = _covered(t)
     if _tampered(t):
         bucket = "harness-edit"
+    elif int(t.get("llm_call_failures") or 0) > 0:
+        # RUNBOOK §6: 0 is the only acceptable value. A failed call is infrastructure (a spent session
+        # limit on 28 Sep), not the model's answer — the twin records it as `no-change`. Re-run the trial.
+        bucket = "call-failed"
     elif not _with_verdict(t):
         bucket = "no-verdict"
     elif _timed_out_correct(t):
@@ -453,6 +457,7 @@ def summarise(js: List[Dict[str, Any]]) -> Dict[str, Any]:
         "unsafe_cases": [f"{case(j)}: {j['bucket']}" for j in valid if j["unsafe"]],
         "harness_edits": [case(j) for j in js if j["bucket"] == "harness-edit"],
         "no_verdict": [f"{case(j)}: {j['outcome']}" for j in js if j["bucket"] == "no-verdict"],
+        "call_failed": [case(j) for j in js if j["bucket"] == "call-failed"],
     }
 
 
@@ -716,6 +721,8 @@ def to_markdown(res: Dict[str, Any]) -> str:
                 out.append(f"- Harness edits, {lab} (not counted): " + "; ".join(s["harness_edits"]) + ".")
             if s["no_verdict"]:
                 out.append(f"- No verdict, {lab}: " + "; ".join(s["no_verdict"]) + ".")
+            if s["call_failed"]:
+                out.append(f"- A model call failed, {lab} (not counted — re-run): " + "; ".join(s["call_failed"]) + ".")
     short = [(b, r, c) for b, per in res["completeness"].items() for r, c in per.items() if c["with_verdict"] < c["planned"]]
     out += ["", "## Completeness — trials with a verdict against the plan (a silently missing trial biases what is left)", ""]
     out += ([f"- `{b}` · `{arms[r]}`: {c['with_verdict']} of {c['planned']} planned ({c['found']} found)" for b, r, c in short]
@@ -850,6 +857,7 @@ def self_test() -> int:
                 "build_errors": {"final_seq": "error"}}),
           trial("tsvc_b1/s161", arms["agent_full"], 1, "FASTER"),
           trial("tsvc_b1/s161", arms["agent_none"], 1, "AGENT_ERROR"),
+          trial("tsvc_b1/s161", arms["twin_none"], 1, "no-change", llm_call_failures=3),
           trial("tsvc_b1/s152", arms["dp_alone"], 1, "FASTER", hot_loop_covered=True, model="other"),
           trial("tsvc/s000", arms["agent_full"], 1, "FASTER")]
     races = {("r1", "tsvc_b1/s151", arms["bare"], 1): "tsan"}
@@ -863,6 +871,9 @@ def self_test() -> int:
     expect("final program does not build: did-not-compile", b[("tsvc_b1/s151", arms["twin_none"], 1)] == "did-not-compile")
     expect("harness edit and agent error out of the denominator",
            res["groups"]["a1"]["per_arm"]["agent_none"]["with_verdict"] == 1)
+    expect("a failed model call: call-failed, not a no-change", b[("tsvc_b1/s161", arms["twin_none"], 1)] == "call-failed"
+           and res["groups"]["a1"]["per_arm"]["twin_none"]["call_failed"] == ["tsvc_b1/s161 r1 rep1"]
+           and res["completeness"]["tsvc_b1/s161"]["twin_none"]["with_verdict"] == 0)
     expect("DiscoPoP alone is exempt from the model list", res["models"] == ["m"])
     expect("outside the population listed", any(k.startswith("tsvc/s000") for k in res["outside_population"]))
     expect("coverage and race gaps: NOT established", not res["established"] and res["coverage_unknown_total"] == 1)
