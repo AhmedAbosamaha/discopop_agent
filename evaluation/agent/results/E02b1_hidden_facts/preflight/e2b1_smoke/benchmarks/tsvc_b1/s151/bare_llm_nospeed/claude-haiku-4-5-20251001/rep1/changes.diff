@@ -1,0 +1,10 @@
+--- original.c
++++ final.c
+@@ -15,6 +15,7 @@
+ 
+ void s151s(real_t a[LEN_1D], real_t b[LEN_1D],  int m)
+ {
++    #pragma omp parallel for default(none) shared(a, b, m)
+     for (int i = 0; i < LEN_1D-1; i++) {
+         a[i] = a[i + m] + b[i];
+     }

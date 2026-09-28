@@ -1,0 +1,10 @@
+--- bfs.cpp
++++ bfs.cpp
+@@ -31,6 +31,7 @@
+ 
+             for(int i=0; i<no_of_nodes; i++) h_cost[i] = h_cost_new[i];
+ 
++            #pragma omp parallel for lastprivate(stop) 
+             for(int tid=0; tid< no_of_nodes ; tid++ )
+             {
+                 if (h_updating_graph_mask[tid] == true){

@@ -1,0 +1,247 @@
+{
+  "benchmark": "rodinia_b1/bfs",
+  "kernel": "bfs",
+  "source": "bfs.cpp",
+  "arm": "full_b1_nospeed",
+  "model": "claude-haiku-4-5-20251001",
+  "arm_flags": [
+    "--require-speedup",
+    "--min-runtime-share",
+    "0.01",
+    "--budget",
+    "1",
+    "--no-require-speedup"
+  ],
+  "started_at": "2026-09-27T21:42:35",
+  "host": "rms14562",
+  "host_load_start": [
+    4.79638671875,
+    4.1640625,
+    4.65771484375
+  ],
+  "agent_cmd": [
+    "/home/ahmedabosamaha/discopop_agent/venv/bin/python",
+    "-m",
+    "discopop_agent",
+    "--source-file",
+    "bfs.cpp",
+    "--discopop-dir",
+    ".discopop",
+    "--provider",
+    "claude-agent-sdk",
+    "--model",
+    "claude-haiku-4-5-20251001",
+    "--edit-mode",
+    "direct",
+    "--require-speedup",
+    "--min-runtime-share",
+    "0.01",
+    "--budget",
+    "1",
+    "--no-require-speedup",
+    "--check-input",
+    "7",
+    "--exclude-functions",
+    "main",
+    "--protected-line",
+    "#include \"rodinia_b1/bfs.h\"",
+    "--protected-line",
+    "PB_MAIN(kernel_bfs)",
+    "--protected-note",
+    "`PB_MAIN(kernel_bfs)` expands to `main`: it sets up the data the included header declares, times one call of `kernel_bfs` and prints its result.",
+    "--explorer-timeout",
+    "60"
+  ],
+  "agent_s": 572.2,
+  "agent_rc": 0,
+  "llm_calls": 2,
+  "llm_call_failures": 0,
+  "explorer_retries": 0,
+  "explorer_stalls": 0,
+  "reverts": 0,
+  "refresh_fast": 0,
+  "refresh_full": 2,
+  "refresh_fallback": 0,
+  "runtime_remeasurements": 2,
+  "phase_b_deferred": 0,
+  "phase_b_joint_kept": 0,
+  "dp_floor": null,
+  "gate_failures_phase_a": {},
+  "gate_failures_phase_b": {
+    "tsan": 2
+  },
+  "gate_passes_phase_a": 2,
+  "gate_failures_d40": {
+    "tsan": 3
+  },
+  "d40_verdicts": {
+    "safe": 2
+  },
+  "exposure_verdicts": {
+    "exposed": 2
+  },
+  "d40_seconds": 303.6,
+  "requeued_regions": 1,
+  "region_verdicts": {
+    "ACCEPTED": 2,
+    "DEFERRED": 4,
+    "SKIPPED": 2,
+    "APPLIED": 2,
+    "DROPPED": 2
+  },
+  "settle_dropped": 2,
+  "baseline_claimed": 1,
+  "baseline_pragmas": 1,
+  "rewrites_kept": 1,
+  "pragmas_applied": 1,
+  "pragmas_discopop": 1,
+  "pragmas_llm": 0,
+  "regions_skipped": 2,
+  "llm_usage": {
+    "calls_recorded": 2,
+    "input_tokens": 52,
+    "output_tokens": 26915,
+    "cache_read_input_tokens": 105935,
+    "cache_creation_input_tokens": 33764,
+    "cost_usd": 0.2192,
+    "model_seconds": 249.5
+  },
+  "source_changed": true,
+  "protected": [
+    "#include \"rodinia_b1/bfs.h\"",
+    "PB_MAIN(kernel_bfs)"
+  ],
+  "harness_sha256": "bb26fba095bc0ae5d578f142df1ce0a64874ceb5b128c27aea56728cafb73d2c",
+  "scaffold": {
+    "ok": true,
+    "problems": [],
+    "applies": true
+  },
+  "pragmas_added": 1,
+  "pragmas_in_final": 1,
+  "hot_loop": {
+    "entry": "kernel_bfs",
+    "function": "kernel_bfs",
+    "line": 13,
+    "writes": [
+      "h_cost"
+    ],
+    "shared": [
+      "h_graph_mask",
+      "h_updating_graph_mask"
+    ]
+  },
+  "hot_loop_covered": false,
+  "hot_loop_coverage": {
+    "criterion": "v2 (27 Sep 2026)",
+    "covered": false,
+    "covering": [],
+    "uncounted": [],
+    "elsewhere": [
+      {
+        "function": "kernel_bfs",
+        "line": 14,
+        "directive": "#pragma omp parallel for shared(h_cost_new)",
+        "writes": [
+          "h_cost_new"
+        ]
+      }
+    ]
+  },
+  "candidates_recorded": 12,
+  "verify": {
+    "verify_size": "EXTRALARGE",
+    "threads": [
+      6,
+      12
+    ],
+    "repeats": 5,
+    "compiler": "/usr/bin/clang++-20",
+    "final_flags": [],
+    "dump_exact": true,
+    "dump_max_rel_err": 0.0,
+    "seed": "7",
+    "dump_exact_seeded": true,
+    "dump_seeded_max_rel_err": 0.0,
+    "seq_median_s": 7.8951,
+    "seq_kernel_median_s": 4.336491,
+    "timing_basis": "kernel",
+    "par": {
+      "6": {
+        "median_s": 8.4537,
+        "program_speedup": 0.934,
+        "max_rel_err": 0.0,
+        "kernel_median_s": 4.890366,
+        "kernel_speedup": 0.887,
+        "speedup": 0.887
+      },
+      "12": {
+        "median_s": 8.4867,
+        "program_speedup": 0.93,
+        "max_rel_err": 0.0,
+        "kernel_median_s": 4.91199,
+        "kernel_speedup": 0.883,
+        "speedup": 0.883
+      }
+    },
+    "digest_max_rel_err": 0.0,
+    "stable_at_fixed_threads": true,
+    "kernel_program_disagree": false,
+    "digest_seeded_rel_err": 0.0,
+    "status": "ok",
+    "speed_measurable": true
+  },
+  "verify_s": 140.9,
+  "status": "done",
+  "outcome": "parallel-not-faster",
+  "finished_at": "2026-09-27T21:54:28",
+  "host_load_end": [
+    5.78173828125,
+    6.591796875,
+    6.2900390625
+  ],
+  "profile": {
+    "wrapper": "discopop_cxx",
+    "instrument_s": 0.51,
+    "profiled_run_s": 0.26,
+    "explore_stalls": 0,
+    "explore_s": 3.32,
+    "explore_success_s": 3.32,
+    "explore_attempts": 1,
+    "explore_timed_out": false,
+    "explore_failures": [],
+    "patterns": {
+      "optimizer_output": 0,
+      "merged_pattern": 0,
+      "task": 0,
+      "do_all": 1,
+      "reduction": 0
+    },
+    "profile_sha256": "a925fdeac0cc3863e417ddac9f2ccc4e808d2598319cd332529244961fa9c29f"
+  },
+  "package_integrity": {
+    "before": {
+      "checked": "before trial",
+      "at": "2026-09-27T21:42:35",
+      "prepared_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+      "packager_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+      "harness_sha256": "bb26fba095bc0ae5d578f142df1ce0a64874ceb5b128c27aea56728cafb73d2c",
+      "archived_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+      "profile_sha256": "a925fdeac0cc3863e417ddac9f2ccc4e808d2598319cd332529244961fa9c29f",
+      "ok": true
+    },
+    "after": {
+      "checked": "after trial",
+      "at": "2026-09-27T21:54:28",
+      "prepared_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+      "packager_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+      "harness_sha256": "bb26fba095bc0ae5d578f142df1ce0a64874ceb5b128c27aea56728cafb73d2c",
+      "archived_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+      "profile_sha256": "a925fdeac0cc3863e417ddac9f2ccc4e808d2598319cd332529244961fa9c29f",
+      "ok": true
+    }
+  },
+  "speed_check_off": true,
+  "timing_flags": [],
+  "repeat": 1
+}

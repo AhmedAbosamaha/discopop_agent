@@ -2097,6 +2097,11 @@ Added 2026-09-15 (see §6 rows of that date):
 
 ## 7. Run log
 
+### `e2b1_smoke` — 2026-09-27/28, server, **E2-B1 smoke: s151 and bfs × the five model arms × 1** (10 Haiku trials, not counted)
+
+- **Setup.** Repository `97386786`, lane 1.1, 21:23 → 01:27 UTC, token swept clean; the first model trials on E2-B1's v4 packages.
+- **Result.** Every arm's path runs. s151: `full_b1_nospeed` BROKEN — a stack copy `real_t temp[LEN_1D]` with `firstprivate(temp)`, passed by the gate at SMALL, crashing at EXTRALARGE (the size note added before the main runs, §6 28 Sep); `no_evidence_b1_nospeed` FASTER (a heap copy, covering the hot loop); `twin_full_nospeed` SCAFFOLD_MODIFIED (moved `s151s(…)` after `pb_mix(nl)`); `twin_no_evidence_nospeed` changed-not-parallel; `bare_llm_nospeed` BROKEN (the naive `parallel for` on the callee's loop — the hidden dependence). bfs: both agent arms verified parallel, not faster (with evidence: the parallel construct only on a copy loop — not covering the hot loop, as the criterion registers); both twins BROKEN (DiscoPoP's unchecked `lastprivate(stop)` on the update loop — a flag only some iterations set; the agent's gate refuses it); `bare_llm_nospeed` FASTER with equal-value races on the frontier loop (the race check decides whether it counts).
+
 ### `t0_11_b1_bfs15_a`, `t0_11_b1_bfs15_b`, `t0_11_b1_bfs15_c` — 2026-09-27, server, **bfs on the DiscoPoP with B13 and B15 fixed** (no model)
 
 - **Setup.** As `t0_11_b1_bfs13_a/b/c`, repository `97386786` (B15 merged), lanes 0.0/0.1/1.0, 20:59 → 21:07 UTC, sweep clean. Beside them on lane 1.1: `doall_rerun.py` over the 36 existing E2-B1 profiles (`analysis/doall_rerun_b15.md`) and the server's feature suite (61 of 61).

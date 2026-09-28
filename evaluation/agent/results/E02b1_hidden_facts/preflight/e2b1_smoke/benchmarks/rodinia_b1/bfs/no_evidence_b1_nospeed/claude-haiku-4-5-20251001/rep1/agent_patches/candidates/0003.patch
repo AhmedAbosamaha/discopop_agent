@@ -1,0 +1,10 @@
+--- bfs.cpp
++++ bfs.cpp
+@@ -31,6 +31,7 @@
+             }
+ 
+             // Merge temporary buffers into main arrays (parallelizable loop)
++            #pragma omp parallel for shared(temp_cost,temp_updating_graph_mask) 
+             for(int i = 0; i < no_of_nodes; i++)
+             {
+                 if(temp_updating_graph_mask[i])

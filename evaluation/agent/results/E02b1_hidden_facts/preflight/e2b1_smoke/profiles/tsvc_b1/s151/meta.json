@@ -1,0 +1,42 @@
+{
+  "suite": "tsvc_b1",
+  "kernel": "s151",
+  "source": "benchmarks/TSVC_2/src/tsvc.c",
+  "category": "interprocedural data flow analysis / passing parameter information into a subroutine",
+  "file": "s151.c",
+  "language": "c",
+  "layout": "single",
+  "restructuring_class": "hidden dependence (E2-B1 a)",
+  "transformation": "the distance m of the callee's loop is the caller's argument",
+  "why": "with m = 1 each iteration reads the element the next one overwrites",
+  "reference_solution": null,
+  "exclude_functions": [
+    "main",
+    "pb_mix"
+  ],
+  "harness": "tsvc_b1/s151.h",
+  "harness_sha256": "d57037f8f0c7e1eca9ae72ad2c7f955142f4688466bd7bd90ec227270901c099",
+  "protected": [
+    "#include \"tsvc_b1/s151.h\"",
+    "static void pb_mix(int nl)",
+    "long k = ((long)nl * 7919L + 13L) % LEN_1D;",
+    "a[k] += (real_t)0.25; b[k] += (real_t)0.25; c[k] += (real_t)0.125;",
+    "d[k] += (real_t)0.125; e[k] += (real_t)0.25;",
+    "a[0] += (real_t)0.125; b[LEN_1D-1] += (real_t)0.125;",
+    "pb_mix(nl);",
+    "PB_MAIN(kernel_s151)"
+  ],
+  "protected_note": "`pb_mix(nl)` changes a few input values between two repetitions of the `nl` loop, so the repetitions depend on each other and must run in order; the loop under study is the one inside it.",
+  "hot_loop": {
+    "entry": "kernel_s151",
+    "function": "s151s",
+    "line": 18,
+    "writes": [
+      "a"
+    ]
+  },
+  "agent_dataset": "SMALL",
+  "generator_version": 4,
+  "inputs_sha256": "456dd573b84b30e6f32c943bb559d80374eec67177de48223e95124a8c3fc627",
+  "output_sha256": "bb52f5476cf7c2dcbd6a925f34de881815a599c20a9a2b10330940b20ff58916"
+}

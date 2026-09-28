@@ -1,0 +1,10 @@
+--- bfs.cpp
++++ bfs.cpp
+@@ -27,6 +27,7 @@
+             }
+ 
+             bool any_updated = false;
++            #pragma omp parallel for lastprivate(any_updated) 
+             for(int tid=0; tid< no_of_nodes ; tid++ )
+             {
+                 if (h_updating_graph_mask[tid] == true){
