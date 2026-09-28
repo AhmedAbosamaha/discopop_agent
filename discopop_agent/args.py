@@ -436,7 +436,7 @@ def parse_args() -> AgentArguments:
                          "duplicates it — as stage `harness`, whose retry is not charged."))
     p.add_argument("--protected-note", default="", metavar="TEXT",
                    help="What the models are told about the protected lines, after listing them.")
-    p.add_argument("--prompt-version", type=int, choices=(1, 2), default=1,
+    p.add_argument("--prompt-version", type=int, choices=(1, 2, 3), default=1,
                    help=("Which texts the model reads (llm/prompts.PROMPT_VERSIONS). 1 (default): as "
                          "every arm registered before the prompt review of 28 Sep 2026 read them. 2: "
                          "the review's must-changes (dependence direction with verbs, blockers without "

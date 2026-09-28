@@ -111,6 +111,21 @@ def main() -> int:
             check("s151: 'structural' is not claimed while an array RAW is listed",
                   not ("structural" in r2 and digest_raw(r2)))
 
+    print("2b. D4, the order statement (version 3): only where DiscoPoP names the carrying loop")
+    from discopop_agent.llm.render import order_statement
+    for f, want in (("k17", "the loop holding line 7 has to run completely before the loop holding line 6"),
+                    ("k42", "the loop holding line 6 has to run completely before the loop holding line 7"),
+                    ("s244", ""), ("s211", ""), ("s151", ""), ("bfs", "")):
+        note = order_statement(pm.fixture_evidence(f)[1])
+        check(f"{f}: D4 {'says ' + repr(want[:45]) if want else 'stays silent'}", (want in note and bool(note)) if want else not note,
+              note[:160])
+    loop3, ev3 = pm.fixture_evidence("k17")
+    r3 = _build_direct_prompt(ev3, WS, None, False, GateFacts(require_speedup=False, n_inputs=2,
+                                                               changes=PROMPT_VERSIONS[3]))
+    check("k17 v3: the order statement is the last section before '### Task'",
+          0 < r3.find("### What the observed flow means") < r3.find("### Task")
+          and r3.find("### Why this region is here") < r3.find("### What the observed flow means"))
+
     print("3. what stays: the no-evidence request, and each change only where it belongs")
     loop, ev = pm.fixture_evidence("k17")
     g1, g2 = gates()

@@ -33,7 +33,9 @@ from ..types import GateFacts
 #   D5  only pairs with both ends in the region listed as RAW; crossing values said as such
 #   D10 the evidence arms' system prompt says what a carried RAW is
 #   A1  the contract: a dependence is moved, not deleted (every arm)
-PROMPT_VERSIONS: Dict[int, Tuple[str, ...]] = {1: (), 2: ("A1", "D1", "D10", "D2", "D3", "D5")}
+#   D4  (version 3) the order a carried RAW imposes on a split, where DiscoPoP names the carrying loop
+PROMPT_VERSIONS: Dict[int, Tuple[str, ...]] = {1: (), 2: ("A1", "D1", "D10", "D2", "D3", "D5"),
+                                               3: ("A1", "D1", "D10", "D2", "D3", "D4", "D5")}
 
 
 def _sub(text: str, old: str, new: str) -> str:

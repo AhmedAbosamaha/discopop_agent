@@ -58,6 +58,7 @@ ARM_SPECS: Dict[str, Tuple[str, str, Tuple[str, ...]]] = {
     "order": (MODEL, "order", ()), "sonnet_full": (SONNET, "full", ()), "sonnet_none": (SONNET, "none", ()),
     "full_clean": (MODEL, "full", ()), "arrow_only": (MODEL, "full", ("D2",)), "order_clean": (MODEL, "order", ()),
     "full_v2": (MODEL, "full", _V2), "none_v2": (MODEL, "none", _V2),
+    "full_v3": (MODEL, "full", _V2 + ("D4",)),         # version 3 = version 2 + D4, the generated order statement
 }
 LEN = 32000
 VERSIONS = {"X": ("k17", "kv[i] = (int)(i - 1); ku[i] = (int)(LEN_1D + i);"),
@@ -427,6 +428,14 @@ def main() -> int:
                      f"{rate('Y', 'full_v2')[0]}/{rate('Y', 'full_v2')[1]} (≥ 9/10 needed); X "
                      f"{rate('X', 'full_v2')[0]}/{rate('X', 'full_v2')[1]} (reported; full_clean X "
                      f"{rate('X', 'full_clean')[0]}/{rate('X', 'full_clean')[1]})")
+    if ("X", "full_v3") in table and ("X", "none_v2") in table:
+        wv, nv = rate("X", "full_v3"), rate("X", "none_v2")
+        go = (frac("X", "full_v3") >= 0.7 and frac("X", "none_v2") <= 0.3
+              and frac("Y", "full_v3") >= frac("Y", "none_v2") - 0.2)
+        lines.append(f"**full_v3 (version 3: v2 + D4) against none_v2 — the evidence advantage: {'GO' if go else 'NO-GO'}** — "
+                     f"X {wv[0]}/{wv[1]} vs {nv[0]}/{nv[1]} (≥ 7/10 with, ≤ 3/10 without needed); Y "
+                     f"{rate('Y', 'full_v3')[0]}/{rate('Y', 'full_v3')[1]} vs {rate('Y', 'none_v2')[0]}/"
+                     f"{rate('Y', 'none_v2')[1]} (no more than 2/10 below)")
     if ("Y", "none_v2") in table:
         go = frac("Y", "none_v2") >= 0.9
         lines.append(f"**none_v2 (version 2's shared text, no evidence), no harm: {'GO' if go else 'NO-GO'}** — Y "

@@ -117,7 +117,7 @@ def _evidence_sections(ev: EvidencePackage, deps_header: str,
     for name, section in (
         ("classification", _fmt_classification(ev)),
         ("extra_vars", _fmt_extra_vars(ev)),
-        ("array_note", "" if "D3" in changes else _array_dep_note(ev)),
+        ("array_note", "" if "D3" in changes or "D4" in changes else _array_dep_note(ev)),
         ("loop_nest", _fmt_loop_nest(ev, speed_judged, llm_pragmas)),
         ("calls", _fmt_calls(ev)),
         ("blockers", fmt_blockers(ev.prevented_deps, changes)),
@@ -132,6 +132,11 @@ def _evidence_sections(ev: EvidencePackage, deps_header: str,
                                                      "DiscoPoP reports this region parallel"))
         parts.append(f"### {'Why this region is here' if first else 'What went wrong'}\n"
                      f"{ev.tier1_failure_reason}\n")
+    if want("array_note") and "D4" in changes:
+        # D4: the last evidence section, right before the task — where the pilot's order note sat.
+        note = order_statement(ev)
+        if note:
+            parts.append(note)
     return parts
 
 
@@ -707,3 +712,72 @@ def _fmt_blockers_v2(prevented: List[Dict[str, Any]], changes: FrozenSet[str]) -
             where = f"loop-carried (loop at line{'s' if ls != le else ''} {ls}" + (f"–{le}" if ls != le else "") + ")"
         out.append(f"  - {dtype} on `{var}`  {where}  [{note}]")
     return "\n".join(out) + "\n"
+
+
+def _line_of(x: Any) -> Optional[int]:
+    try:
+        return int(str(x).split(":")[-1])
+    except ValueError:
+        return None
+
+
+def order_statement(ev: EvidencePackage) -> str:
+    """D4 (review, 28 Sep): each array RAW between two different lines of the region, restated as the order
+    it imposes on a split — ONLY where DiscoPoP itself names the carrying loop.  The ORDER-2 pilot's
+    restatement took Haiku from 0/10 to 8/10; applied to every record it would demand a wrong split on
+    s244, whose RAWs are carried by the repetition loop, not by the loop holding both lines.
+
+    A bullet for `x`, written on line w and read on line s, needs: the innermost loop L holding both lines
+    is the ONE loop DiscoPoP's Do-All blockers name for `x` anywhere in the file.  If a record also runs the
+    other way (line s writes something line w reads — any variable, scalars too), the two lines are a cycle
+    unless every variable of that reverse flow is named by the blockers on loops other than L only (carried
+    by an enclosing loop, as in s1213): a cycle gets "splitting between them changes the result" and no
+    order.  Truth table (28 Sep, 29 programs, 64 regions): tools/test_prompt_v2.py.  No iteration distance
+    is claimed — the records carry none."""
+    from ..evidence.deps import _classify_var
+    lo, hi = ev.start_line, ev.end_line
+    ind = _induction_vars(ev)
+    named: Dict[str, Set[int]] = {}
+    for b in ev.file_prevented_deps or ev.prevented_deps or []:
+        name = _classify_var(str(b.get("var_name", "")))[0]
+        ls = _line_of(b.get("loop_start"))
+        if ls is not None:
+            named.setdefault(name[:-2] if name.endswith("[]") else name, set()).add(ls)
+    flows: Dict[Tuple[int, int], Dict[str, str]] = {}      # (writer, reader) -> {variable: kind}
+    for d in ev.raw_deps:
+        s, w = int(d.from_line), int(d.to_line)
+        if d.variable not in ind and s != w and lo <= s <= hi and lo <= w <= hi:
+            flows.setdefault((w, s), {})[d.variable] = getattr(d, "kind", "scalar")
+
+    def carrier(w: int, s: int) -> Optional[int]:
+        holding = [lp for lp in ev.loop_nest if lp["start"] <= min(w, s) and max(w, s) <= lp["end"]]
+        return max(holding, key=lambda lp: lp["start"])["start"] if holding else None
+
+    def text(ln: int) -> str:
+        return ev.line_text.get(ln, "").strip()
+
+    out: List[str] = []
+    cycles: Set[Tuple[int, int]] = set()
+    for (w, s), vs in sorted(flows.items()):
+        loop = carrier(w, s)
+        xs = sorted(x for x, k in vs.items() if k == "array" and loop is not None and named.get(x) == {loop})
+        if not xs:
+            continue
+        back = flows.get((s, w), {})
+        elsewhere = all(named.get(y) and loop not in named[y] for y in back)
+        if back and not elsewhere:
+            key = (min(w, s), max(w, s))
+            if key not in cycles:
+                cycles.add(key)
+                out.append(f"  - Lines {key[0]} (`{text(key[0])}`) and {key[1]} (`{text(key[1])}`) feed each other, "
+                           "so splitting the loop between them changes the result.")
+            continue
+        for x in xs:
+            out.append(f"  - Line {s} (`{text(s)}`) reads an element of `{x}` that line {w} (`{text(w)}`) writes; "
+                       f"DiscoPoP names the loop at line {loop} as carrying this dependence.  The value must flow "
+                       f"from line {w} to line {s}: if you split that loop, the loop holding line {w} has to run "
+                       f"completely before the loop holding line {s}; reading `{x}`'s values from before the loop "
+                       "would change the result.")
+    if not out:
+        return ""
+    return "### What the observed flow means for a rewrite (from DiscoPoP's records)\n" + "\n".join(out) + "\n"

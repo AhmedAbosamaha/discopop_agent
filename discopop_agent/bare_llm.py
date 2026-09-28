@@ -224,7 +224,7 @@ def main() -> int:
     p.add_argument("--prompt", choices=("mirror", "minimal", "contract"), default="mirror",
                    help="mirror: the agent's instructions minus DiscoPoP, gate and feedback (default); "
                         "minimal: role, tools, goal; contract: E1-bare's prompt")
-    p.add_argument("--prompt-version", type=int, choices=(1, 2), default=1,
+    p.add_argument("--prompt-version", type=int, choices=(1, 2, 3), default=1,
                    help="mirror only: the agent's prompt version whose shared passages the mirror carries "
                         "(the agent's --prompt-version; 1 by default)")
     p.add_argument("--no-require-speedup", action="store_true",

@@ -130,6 +130,10 @@ class EvidencePackage:
     # Each dict: {dep_type, source_line, sink_line, var_name, memory_region, origin,
     #             loop_file, loop_start, loop_end}
     prevented_deps: List[Dict[str, Any]] = field(default_factory=list)
+    # Every Do-All blocker DiscoPoP recorded in the region's FILE — a blocker record's loop span is its header
+    # line only, so the loops enclosing the region are not in `prevented_deps`.  Read by D4 (render.order_statement)
+    # to tell which loop carries a dependence; never rendered as such.
+    file_prevented_deps: List[Dict[str, Any]] = field(default_factory=list)
     # Loop structure of the region (from the explorer's PEGraph LoopNodes): one
     # dict per loop overlapping the region, {start, end, depth, index_vars,
     # entries, avg, total, max}.  depth counts containing loops within the region

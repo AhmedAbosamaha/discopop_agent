@@ -63,6 +63,7 @@ def assemble(
     prevented = load_prevented_deps(
         profiler_dir.parent, region.file_id, region.start_line, region.end_line
     )
+    file_prevented = load_prevented_deps(profiler_dir.parent, region.file_id, 1, 10**9)
 
     # DiscoPoP's own OpenMP data-sharing classification for this region (shared /
     # private / first_private / last_private / reduction), taken from the pattern
@@ -142,6 +143,7 @@ def assemble(
         tier1_failure_reason=failure_reason,
         region_fingerprint=fingerprint,
         prevented_deps=prevented,
+        file_prevented_deps=file_prevented,
         shared_vars=cls.get("shared", []),
         private_vars=cls.get("private", []),
         firstprivate_vars=cls.get("first_private", []),
