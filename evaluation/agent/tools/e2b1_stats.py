@@ -86,7 +86,9 @@ BUCKETS: List[Tuple[str, str]] = [
     ("race-unchecked", "verified parallel program, no race verdict (model-only arm) — not a success"),
     ("race-not-judgeable", "verified parallel program the race check could not judge"),
     ("racy", "racy (TSan or the schedule matrix) — unsafe"),
-    ("BROKEN", "BROKEN (wrong output shipped) — unsafe"),
+    ("BROKEN", "BROKEN (wrong output shipped, or a crash at the verification size) — unsafe"),
+    ("timed-out-correct", "correct, but a verification run did not finish at one thread count (verified exact at another) — "
+                          "correct but slower: reported, not unsafe"),
     ("did-not-compile", "shipped a program that does not compile — unsafe"),
     ("changed-not-parallel", "changed, not parallel"),
     ("no-change", "left unchanged"),
@@ -338,6 +340,22 @@ def _covered(t: dict) -> Optional[bool]:
     return v if isinstance(v, bool) else None
 
 
+def _timed_out_correct(t: dict) -> bool:
+    """The author's ruling of 28 Sep (record §6, taken after the data, applying the pre-registered "correct but
+    slower is reported, not unsafe"): the harness calls a program BROKEN when any verification run fails, and a run
+    that exceeds its 30-minute limit fails like a crash. A program whose sequential dump is exact and which finished
+    exact at some thread count before a run at another failed is correct and too slow — not unsafe. A program that
+    failed at the first thread count it ran (a stack array sized by the problem: a crash at the verification size)
+    stays BROKEN."""
+    v = t.get("verify") or {}
+    if t.get("outcome") != "BROKEN" or not str(v.get("status", "")).startswith("final_run_failed_T"):
+        return False
+    if v.get("dump_exact") is not True:
+        return False
+    par = v.get("par") or {}
+    return any(isinstance(r, dict) and r.get("max_rel_err") == 0.0 for r in par.values())
+
+
 def judge(t: dict, races: Dict[Tuple[str, str, str, int], str]) -> Dict[str, Any]:
     """One trial, as E2-B1 counts it: exactly one bucket, and whether it is a success (the primary
     outcome), unsafe, correct but slower, FASTER."""
@@ -351,6 +369,8 @@ def judge(t: dict, races: Dict[Tuple[str, str, str, int], str]) -> Dict[str, Any
         bucket = "harness-edit"
     elif not _with_verdict(t):
         bucket = "no-verdict"
+    elif _timed_out_correct(t):
+        bucket = "timed-out-correct"
     elif outcome == "BROKEN":
         bucket = "BROKEN"
     elif _did_not_compile(t):
@@ -366,7 +386,7 @@ def judge(t: dict, races: Dict[Tuple[str, str, str, int], str]) -> Dict[str, Any
             "model": t.get("model"), "outcome": outcome, "bucket": bucket, "race": race, "covered": cov,
             "with_verdict": counted, "success": bucket == "success", "unsafe": bucket in UNSAFE,
             # speed off in every arm: a correct program slower than the original is reported, not unsafe
-            "slower": counted and bucket not in UNSAFE and _ships_slowdown(t),
+            "slower": counted and bucket not in UNSAFE and (_ships_slowdown(t) or bucket == "timed-out-correct"),
             "faster": counted and outcome == "FASTER" and bucket not in UNSAFE}
 
 
@@ -851,6 +871,16 @@ def self_test() -> int:
     expect("a test with complete inputs that cannot run: not established, and why",
            not quiet["tests"]["E2B1-i"]["gaps"] and "E2B1-i: no informative stratum: no test" in quiet["not_established"],
            f"{quiet['not_established']}")
+    # the 28 Sep ruling: a verification run that did not finish after the program verified exact elsewhere
+    slow = {"benchmark": "tsvc_b1/s424", "arm": "full_b1_nospeed", "outcome": "BROKEN", "repeat": 3, "run": "x",
+            "verify": {"status": "final_run_failed_T12", "dump_exact": True,
+                       "par": {"6": {"max_rel_err": 0.0, "speedup": 0.011}}}}
+    crash = {"benchmark": "tsvc_b1/s171", "arm": "full_b1_nospeed", "outcome": "BROKEN", "repeat": 5, "run": "x",
+             "verify": {"status": "final_run_failed_T6", "dump_exact": True, "par": {}}}
+    js, jc = judge(slow, {}), judge(crash, {})
+    expect("a run that did not finish after an exact one elsewhere: correct but slower, not unsafe",
+           js["bucket"] == "timed-out-correct" and not js["unsafe"] and js["slower"] and not js["success"], str(js))
+    expect("a crash at the first thread count stays BROKEN and unsafe", jc["bucket"] == "BROKEN" and jc["unsafe"], str(jc))
     expect("E2B1-iii counts BROKEN and racy of the model alone",
            res["tests"]["E2B1-iii"]["strata"]["tsvc_b1/s151"] == [0.0, 2.0, 2.0, 0.0])
     md = to_markdown(res)

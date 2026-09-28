@@ -1101,6 +1101,9 @@ def verify(trial: Path, ext: str, cc: str, cxx: str, verify_size: str, threads: 
             rc, t, out, region = _run_binary_full(vdir / "final_par", vdir, t_count)
             if rc != 0:
                 rec["status"] = f"final_run_failed_T{t_count}"
+                # a run past its limit fails like a crash; say which it was (E2-B1, the author's ruling of 28 Sep)
+                rec["final_run_failure"] = {"threads": t_count, "rc": rc, "seconds": round(t, 1),
+                                            "timed_out": rc == -9 and t >= 1800 - 1}
                 return rec
             times.append(t)
             if region is not None:
