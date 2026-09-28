@@ -148,7 +148,9 @@ def outputs(src: Path, inc: Path, work: Path) -> Tuple[Optional[str], Optional[s
 
 
 def profile(src: Path, inc: Path, work: Path) -> Optional[Path]:
-    """DiscoPoP on a copy of `src` in `work`; the profile directory, or None."""
+    """DiscoPoP on a copy of `src` in a CLEAN `work`; the profile directory, or None. (DiscoPoP reuses what it
+    finds in an existing .discopop: a second profile in the same directory mixed with the first — 28 Sep.)"""
+    shutil.rmtree(work, ignore_errors=True)
     work.mkdir(parents=True, exist_ok=True)
     shutil.copy2(src, work / src.name)
     env = {**os.environ, "CPATH": str(inc), "PATH": f"{REPO / 'venv' / 'bin'}{os.pathsep}{os.environ.get('PATH', '')}"}
