@@ -5,6 +5,7 @@ Produced by a read-only review (four lenses and a verifying synthesis) of the re
 ## Status (28 Sep evening)
 
 - **Stage 0 done** (THESIS_EXPERIMENTS §6, 28 Sep): M1, M2, M3 and the must-changes D1, D2, D3, D5, D10, A1 as prompt version 2 (`--prompt-version 2`; default 1). Every registered arm unchanged except `bare_llm_nospeed` (M3), proven by `tools/prompt_manifest.py`; `tools/test_prompt_v2.py` passes.
+- Known limit of v2's D5: a scalar whose RAW records all cross the region's edge is left out of the dependence list; the digest still names it (its scalar line lists every scalar RAW).
 - Not yet: D4 and the 'should' items; Stage 1–3 pilots (pre-registered before they run, after E2-B1's re-runs).
 
 ## Summary
