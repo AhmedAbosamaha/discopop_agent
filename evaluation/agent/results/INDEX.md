@@ -93,10 +93,10 @@ Status: running
 | `naive_b1` | [`E02b1_hidden_facts/preflight/naive_b1/`](E02b1_hidden_facts/preflight/naive_b1/) | E2-B1 measured condition 3 (H13/C2 property): naive_pragma.py — `#pragma omp parallel for` on the declared hot loop of each of the 11 packages (tsvc_b1 × 10 (s151, s161, s131, s424, s152, s171, s481, s277, vas, s482) and rodinia_b1/bfs) through the agent's safety gate with TSan (archer) and the schedule matrix; lane 1.1, server, no model | valid | 0 |  |
 | `naive_b1_s258` | [`E02b1_hidden_facts/preflight/naive_b1_s258/`](E02b1_hidden_facts/preflight/naive_b1_s258/) | E2-B1 measured condition 3 for tsvc_b1/s258: naive_pragma.py on its declared hot loop, as naive_b1 (the H13/C2 property is waived for (b); recorded), server, no model | valid | 0 |  |
 | `e2b1_smoke` | [`E02b1_hidden_facts/preflight/e2b1_smoke/`](E02b1_hidden_facts/preflight/e2b1_smoke/) | E2-B1 smoke: tsvc_b1/s151 and rodinia_b1/bfs × the five model arms × 1 trial, Haiku — the first model trials on packaging v4's E2-B1 packages (tsvc_b1, rodinia_b1); not counted | valid | 10 | BROKEN 4, FASTER 2, SCAFFOLD_MODIFIED 1, changed-not-parallel 1, parallel-not-faster 2 |
-| `e2b1_a_1` | not archived yet | E2-B1 main run: tsvc_b1/s151 tsvc_b1/s161 × full_b1_nospeed, no_evidence_b1_nospeed, twin_full_nospeed, twin_no_evidence_nospeed, bare_llm_nospeed × 10 trials, Haiku, threads 6/12, repeats 5, lane 0.0 | registered |  |  |
-| `e2b1_a_2` | not archived yet | E2-B1 main run: rodinia_b1/bfs × full_b1_nospeed, no_evidence_b1_nospeed, twin_full_nospeed, twin_no_evidence_nospeed, bare_llm_nospeed × 10 trials, Haiku, threads 6/12, repeats 5, lane 0.1 | registered |  |  |
-| `e2b1_a_3` | not archived yet | E2-B1 main run: tsvc_b1/s131 tsvc_b1/s424 × full_b1_nospeed, no_evidence_b1_nospeed, twin_full_nospeed, twin_no_evidence_nospeed, bare_llm_nospeed × 10 trials, Haiku, threads 6/12, repeats 5, lane 1.0 | registered |  |  |
-| `e2b1_b_1` | not archived yet | E2-B1 main run: tsvc_b1/s152 tsvc_b1/s171 tsvc_b1/s481 tsvc_b1/s277 tsvc_b1/vas × full_b1_nospeed, no_evidence_b1_nospeed, twin_full_nospeed, twin_no_evidence_nospeed, bare_llm_nospeed × 5 trials, Haiku, threads 6/12, repeats 5, lane 1.1 | registered |  |  |
+| `e2b1_a_1` | not archived yet | E2-B1 main run: tsvc_b1/s151 tsvc_b1/s161 × full_b1_nospeed, no_evidence_b1_nospeed, twin_full_nospeed, twin_no_evidence_nospeed, bare_llm_nospeed × 10 trials, Haiku, threads 6/12, repeats 5, lane 0.0 | running |  |  |
+| `e2b1_a_2` | not archived yet | E2-B1 main run: rodinia_b1/bfs × full_b1_nospeed, no_evidence_b1_nospeed, twin_full_nospeed, twin_no_evidence_nospeed, bare_llm_nospeed × 10 trials, Haiku, threads 6/12, repeats 5, lane 0.1 | running |  |  |
+| `e2b1_a_3` | not archived yet | E2-B1 main run: tsvc_b1/s131 tsvc_b1/s424 × full_b1_nospeed, no_evidence_b1_nospeed, twin_full_nospeed, twin_no_evidence_nospeed, bare_llm_nospeed × 10 trials, Haiku, threads 6/12, repeats 5, lane 1.0 | running |  |  |
+| `e2b1_b_1` | not archived yet | E2-B1 main run: tsvc_b1/s152 tsvc_b1/s171 tsvc_b1/s481 tsvc_b1/s277 tsvc_b1/vas × full_b1_nospeed, no_evidence_b1_nospeed, twin_full_nospeed, twin_no_evidence_nospeed, bare_llm_nospeed × 5 trials, Haiku, threads 6/12, repeats 5, lane 1.1 | running |  |  |
 
 ## [Agent v3 pilot (D40) — the speed verdict inside the model's budget](V3_pilot_d40/REPORT.md)
 
@@ -298,6 +298,7 @@ Status: done
 | `pilot2` | [`pilots/runs/pilot2/`](pilots/runs/pilot2/) | the first agent trial with working model calls (SCAFFOLD_MODIFIED) | historical | 1 | SCAFFOLD_MODIFIED 1 |
 | `pilot3` | [`pilots/superseded/pilot3/`](pilots/superseded/pilot3/) | first pilot on the original-format packages, stopped after 4 of 9 | superseded by pilot4 | 4 | BROKEN 1, FASTER 2, parallel-not-faster 1 |
 | `pilot4` | [`pilots/runs/pilot4/`](pilots/runs/pilot4/) | the pilot on the fixed DiscoPoP; decided D9 (Haiku for E1) | valid | 8 | FASTER 4, SCAFFOLD_MODIFIED 1, no-change 1, parallel-not-faster 1, parallel-speed-not-measurable 1 |
+| `evidence_pilot_order2` | [`pilots/runs/evidence_pilot_order2/`](pilots/runs/evidence_pilot_order2/) | Evidence-mechanism pilot on ORDER-2 (pre-registered §6, 28 Sep): tools/evidence_pilot.py, single confined Haiku calls with the agent's own prompts, arms full / no_note / none × versions X (k17), Y (k42) × 10, Mac; go/no-go fixed before any call | valid | 0 |  |
 
 ## [Harness and pipeline checks (not experiments)](harness_checks/REPORT.md)
 

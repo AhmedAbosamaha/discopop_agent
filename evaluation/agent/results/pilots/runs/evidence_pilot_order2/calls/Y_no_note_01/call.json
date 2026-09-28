@@ -1,0 +1,8 @@
+{
+ "version": "Y",
+ "arm": "no_note",
+ "rep": 1,
+ "seconds": 56.1,
+ "reply": "## Plan\n\n**Blocking dependence**: A loop-carried RAW on array elements of `u`: iteration j writes to `u[ju[j]]`, and a later iteration i reads from `u[ku[i]]` where these indices coincide. This couples lines 6 and 7 within each iteration, forcing the loop to execute sequentially.\n\n**The fix**: Split the loop into two phases:\n1. First loop: complete all updates to `u` (accumulation via +=)\n2. Second loop: complete all updates to `v`, reading the now-final values of `u`\n\nThis separates reads and writes temporally. Each phase becomes a reduction pattern (element-wise accumulation into u or v), which DiscoPoP can recognize. The output is preserved because v now correctly reads from the fully-accumulated u, matching the original's semantics (each line 6 execution must complete before its effects can be read, which is guaranteed by phase separation).\n\n---Rewrite complete. The loop-carried RAW dependence on `u` has been eliminated by splitting into two sequential phases:\n1. **First loop** accumulates all updates into `u`\n2. **Second loop** reads the fully-accumulated `u` and updates `v`\n\nEach phase presents a reduction pattern (each array element is updated via `+=`), which DiscoPoP can now recognize and parallelize. The output is byte-identical to the original.",
+ "error": ""
+}
