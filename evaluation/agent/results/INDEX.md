@@ -97,6 +97,9 @@ Status: running
 | `e2b1_a_2` | not archived yet | E2-B1 main run: rodinia_b1/bfs × full_b1_nospeed, no_evidence_b1_nospeed, twin_full_nospeed, twin_no_evidence_nospeed, bare_llm_nospeed × 10 trials, Haiku, threads 6/12, repeats 5, lane 0.1 | running |  |  |
 | `e2b1_a_3` | not archived yet | E2-B1 main run: tsvc_b1/s131 tsvc_b1/s424 × full_b1_nospeed, no_evidence_b1_nospeed, twin_full_nospeed, twin_no_evidence_nospeed, bare_llm_nospeed × 10 trials, Haiku, threads 6/12, repeats 5, lane 1.0 | running |  |  |
 | `e2b1_b_1` | not archived yet | E2-B1 main run: tsvc_b1/s152 tsvc_b1/s171 tsvc_b1/s481 tsvc_b1/s277 tsvc_b1/vas × full_b1_nospeed, no_evidence_b1_nospeed, twin_full_nospeed, twin_no_evidence_nospeed, bare_llm_nospeed × 5 trials, Haiku, threads 6/12, repeats 5, lane 1.1 | running |  |  |
+| `e2b1_bare_m3_a` | not archived yet | E2-B1 model alone re-run with the speed-off leak fixed (review M3; the author's decision 3 of 28 Sep, §6): tsvc_b1/s151 tsvc_b1/s161 tsvc_b1/s131 tsvc_b1/s424 × bare_llm_nospeed × 10 trials, Haiku, threads 6/12, repeats 5 (bfs in e2b1_bare_m3_bfs); replaces bare_llm_nospeed of e2b1_a_1..3 (kept, superseded) | registered |  |  |
+| `e2b1_bare_m3_b` | not archived yet | E2-B1 model alone re-run with the speed-off leak fixed (review M3): tsvc_b1/s152 tsvc_b1/s171 tsvc_b1/s481 tsvc_b1/s277 tsvc_b1/vas × bare_llm_nospeed × 5 trials, Haiku, threads 6/12, repeats 5; replaces bare_llm_nospeed of e2b1_b_1 (kept, superseded) | registered |  |  |
+| `e2b1_bare_m3_bfs` | not archived yet | E2-B1 model alone re-run with the speed-off leak fixed (review M3): rodinia_b1/bfs × bare_llm_nospeed × 10 trials, Haiku, threads 6/12, repeats 5, its own lane (§6, 28 Sep speed-up); replaces bare_llm_nospeed of e2b1_a_2, which is never run | registered |  |  |
 
 ## [Agent v3 pilot (D40) — the speed verdict inside the model's budget](V3_pilot_d40/REPORT.md)
 
@@ -300,6 +303,7 @@ Status: done
 | `pilot4` | [`pilots/runs/pilot4/`](pilots/runs/pilot4/) | the pilot on the fixed DiscoPoP; decided D9 (Haiku for E1) | valid | 8 | FASTER 4, SCAFFOLD_MODIFIED 1, no-change 1, parallel-not-faster 1, parallel-speed-not-measurable 1 |
 | `evidence_pilot_order2` | [`pilots/runs/evidence_pilot_order2/`](pilots/runs/evidence_pilot_order2/) | Evidence-mechanism pilot on ORDER-2 (pre-registered §6, 28 Sep): tools/evidence_pilot.py, single confined Haiku calls with the agent's own prompts, arms full / no_note / none × versions X (k17), Y (k42) × 10, Mac; go/no-go fixed before any call | valid | 0 |  |
 | `evidence_pilot_order2b` | [`pilots/runs/evidence_pilot_order2b/`](pilots/runs/evidence_pilot_order2b/) | Follow-up evidence pilot on ORDER-2 (pre-registered §6, 28 Sep): arms order (Haiku + a generated order restatement of each carried RAW), sonnet_full, sonnet_none; X, Y; 50 calls, Mac | valid | 0 |  |
+| `evidence_pilot_v2` | [`pilots/runs/evidence_pilot_v2/`](pilots/runs/evidence_pilot_v2/) | Prompt review stage 1 on ORDER-2 (pre-registered §6, 28 Sep evening): arms full_clean, arrow_only, order_clean, full_v2, none_v2, full_v3 (version 3 = v2 + D4) × X, Y × 10; 120 Haiku calls, Mac; after E2-B1's re-runs | valid | 0 |  |
 
 ## [Harness and pipeline checks (not experiments)](harness_checks/REPORT.md)
 
