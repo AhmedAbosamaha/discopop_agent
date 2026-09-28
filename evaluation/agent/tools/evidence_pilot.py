@@ -45,10 +45,17 @@ sys.path.insert(0, str(HERE))
 import hot_loop_coverage  # noqa: E402
 
 MODEL = "claude-haiku-4-5-20251001"
+SONNET = "claude-sonnet-5"
+# arm -> (model, evidence: "full" | "no_note" | "none" | "order"). The first pilot ran full, no_note, none (Haiku);
+# the follow-up (pre-registered 28 Sep) runs order (Haiku), sonnet_full, sonnet_none.
+ARM_SPECS: Dict[str, Tuple[str, str]] = {
+    "full": (MODEL, "full"), "no_note": (MODEL, "no_note"), "none": (MODEL, "none"),
+    "order": (MODEL, "order"), "sonnet_full": (SONNET, "full"), "sonnet_none": (SONNET, "none"),
+}
 LEN = 32000
 VERSIONS = {"X": ("k17", "kv[i] = (int)(i - 1); ku[i] = (int)(LEN_1D + i);"),
             "Y": ("k42", "ku[i] = (int)(i - 1); kv[i] = (int)(LEN_1D + i);")}
-ARMS = ("full", "no_note", "none")
+ARMS = ("full", "no_note", "none")      # the first pilot's arms (the default of --arms)
 
 MODEL_FILE = """#include "evk/%(id)s.h"
 
@@ -169,7 +176,31 @@ def profile(src: Path, inc: Path, work: Path) -> Optional[Path]:
     return None
 
 
-def requests(pk: Dict[str, Dict[str, Any]], out: Path) -> Dict[Tuple[str, str], Tuple[str, str]]:
+def order_note(ev: Any, src_lines: List[str], lo: int, hi: int) -> str:
+    """The follow-up pilot's `order` arm: each loop-carried RAW between two different lines of the loop, restated
+    as the order it imposes — built mechanically from DiscoPoP's records (from_line = the reading line, the sink;
+    to_line = the writing line, the source; evidence/deps.py), the same rule for any record."""
+    out: List[str] = []
+    seen: Set[Tuple[int, int, str]] = set()
+    for d in getattr(ev, "raw_deps", []) or []:
+        s_ln, w_ln, var = int(d.from_line), int(d.to_line), str(d.variable)
+        if not (lo <= s_ln <= hi and lo <= w_ln <= hi) or s_ln == w_ln or (s_ln, w_ln, var) in seen:
+            continue
+        if getattr(d, "kind", "") != "array":       # array elements only: not the loop counter or a scalar
+            continue
+        seen.add((s_ln, w_ln, var))
+        name = re.sub(r"^GEPRESULT_", "", var)
+        s_txt, w_txt = src_lines[s_ln - 1].strip(), src_lines[w_ln - 1].strip()
+        out.append(f"- Line {s_ln} (`{s_txt}`) reads an element of `{name}` that line {w_ln} (`{w_txt}`) wrote in an "
+                   f"EARLIER iteration of this loop. The value must flow from line {w_ln} to line {s_ln}: if you split "
+                   f"the loop, the loop holding line {w_ln} has to run completely before the loop holding line {s_ln}; "
+                   f"reading `{name}`'s values from before the loop would change the result.")
+    if not out:
+        return ""
+    return "### What the observed dependence means for a rewrite (from DiscoPoP's records)\n" + "\n".join(out) + "\n\n"
+
+
+def requests(pk: Dict[str, Dict[str, Any]], out: Path, arms: Tuple[str, ...] = ARMS) -> Dict[Tuple[str, str], Tuple[str, str]]:
     """(version, arm) -> (system prompt, request) for the kernel loop region, as the agent builds them."""
     from discopop_agent.args import parse_args
     from discopop_agent.evidence import assemble
@@ -201,22 +232,31 @@ def requests(pk: Dict[str, Dict[str, Any]], out: Path) -> Dict[Tuple[str, str], 
                          protected=(f'#include "evk/{p["id"]}.h"', f'PB_MAIN(kernel_{p["id"]})'),
                          protected_note=PROTECTED_NOTE % (p["id"], p["id"]))
         ws_file = Path("/workspace") / p["src"].name          # replaced per call by the real workspace path
-        for arm in ARMS:
-            inc: Optional[Set[str]] = (None if arm == "full" else set(EVIDENCE_SECTIONS) - {"array_note"}
-                                       if arm == "no_note" else set())
-            res[(ver, arm)] = (_system_prompt("direct", False, False, gate, inc),
-                               _build_direct_prompt(ev, ws_file, inc, False, gate))
+        src_lines = p["src"].read_text().splitlines()
+        for arm in arms:
+            mode = ARM_SPECS[arm][1]
+            inc: Optional[Set[str]] = (None if mode in ("full", "order") else set(EVIDENCE_SECTIONS) - {"array_note"}
+                                       if mode == "no_note" else set())
+            req = _build_direct_prompt(ev, ws_file, inc, False, gate)
+            if mode == "order":
+                note = order_note(ev, src_lines, loop.region.start_line, loop.region.end_line)
+                if not note:
+                    raise SystemExit(f"{ver}: no carried RAW between two lines to restate")
+                # placed just before the closing task instruction, which the request ends with
+                cut = req.rfind("Edit `")
+                req = req[:cut] + note + req[cut:] if cut > 0 else req + "\n" + note
+            res[(ver, arm)] = (_system_prompt("direct", False, False, gate, inc), req)
     return res
 
 
-def call(system: str, request: str, src: Path, ws: Path) -> Dict[str, Any]:
+def call(system: str, request: str, src: Path, ws: Path, model: str = MODEL) -> Dict[str, Any]:
     from discopop_agent.llm.providers import _complete_claude_agent_sdk
     ws.mkdir(parents=True, exist_ok=True)
     shutil.copy2(src, ws / src.name)
     req = request.replace(str(Path("/workspace") / src.name), str(ws / src.name))
     t0 = time.time()
     try:
-        reply = _complete_claude_agent_sdk(MODEL, system, [{"role": "user", "content": req}],
+        reply = _complete_claude_agent_sdk(model, system, [{"role": "user", "content": req}],
                                            session_key=f"pilot-{ws.name}", workspace=ws, stateless=True)
         err = ""
     except Exception as e:  # noqa: BLE001 — a failed call is a recorded outcome
@@ -265,7 +305,8 @@ def _one(job: Tuple[str, str, int, str, str, str, str]) -> Dict[str, Any]:
     ws = Path(out) / "calls" / f"{ver}_{arm}_{k:02d}"
     if (ws / "call.json").exists():
         return dict(json.loads((ws / "call.json").read_text()))
-    rec = {"version": ver, "arm": arm, "rep": k, **call(system, request, Path(src), ws)}
+    rec = {"version": ver, "arm": arm, "rep": k, "model": ARM_SPECS[arm][0],
+           **call(system, request, Path(src), ws, ARM_SPECS[arm][0])}
     (ws / "call.json").write_text(json.dumps(rec, indent=1))
     print(f"called {ver} {arm} {k:2d} ({rec['seconds']} s){' ERROR ' + str(rec['error'])[:80] if rec['error'] else ''}",
           flush=True)
@@ -276,6 +317,8 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--n", type=int, default=10)
+    ap.add_argument("--arms", default=",".join(ARMS), help="comma-separated arms of ARM_SPECS")
+    ap.add_argument("--n-arm", action="append", default=[], help="arm=N: a per-arm number of calls per version")
     ap.add_argument("--jobs", type=int, default=4)
     ap.add_argument("--score-only", action="store_true")
     a = ap.parse_args()
@@ -290,11 +333,17 @@ def main() -> int:
                 raise SystemExit(f"{ver}: the original does not build or run: {e}")
             refs[ver] = (s, pt)
     if not a.score_only:
-        reqs = requests(pk, out)
+        arms = tuple(x for x in a.arms.split(",") if x)
+        unknown = [x for x in arms if x not in ARM_SPECS]
+        if unknown:
+            ap.error(f"unknown arm(s): {unknown}")
+        n_of = {x: a.n for x in arms}
+        n_of.update({k: int(v) for k, v in (x.split("=", 1) for x in a.n_arm)})
+        reqs = requests(pk, out, arms)
         (out / "requests.json").write_text(json.dumps({f"{v}/{arm}": {"system": s, "request": r}
                                                        for (v, arm), (s, r) in reqs.items()}, indent=1))
         jobs = [(ver, arm, k, reqs[(ver, arm)][0], reqs[(ver, arm)][1], str(pk[ver]["src"]), str(out))
-                for k in range(1, a.n + 1) for arm in ARMS for ver in VERSIONS]
+                for arm in arms for k in range(1, n_of[arm] + 1) for ver in VERSIONS]
         # one process per call: the model client runs an event loop and a CLI subprocess per call, and
         # calls sharing one process through threads were not isolated enough (28 Sep: a first launch
         # was stopped after 5 calls, one of whose answers did not land; those calls were discarded)
@@ -323,10 +372,27 @@ def main() -> int:
     def rate(ver: str, arm: str) -> Tuple[int, int]:
         rs = table.get((ver, arm), [])
         return sum(r["success"] for r in rs), len(rs)
-    fx, nx = rate("X", "full"); ox, _ = rate("X", "none"); fy, ny = rate("Y", "full"); oy, _ = rate("Y", "none")
-    go = nx > 0 and fx >= 0.7 * nx and ox <= 0.3 * nx and (fy >= oy - 0.2 * ny)
-    lines += ["", f"**Go/no-go (pre-registered): {'GO' if go else 'NO-GO'}** — X full {fx}/{nx} (≥ 7/10 needed), "
-              f"X none {ox}/{nx} (≤ 3/10 needed), Y full {fy}/{ny} vs none {oy}/{ny} (full ≥ none − 2/10 needed)"]
+    def frac(ver: str, arm: str) -> float:
+        k, n = rate(ver, arm)
+        return k / n if n else float("nan")
+    lines.append("")
+    if ("X", "full") in table and ("X", "none") in table:          # the first pilot (pre-registered 28 Sep)
+        fx, nx = rate("X", "full"); ox, _ = rate("X", "none"); fy, ny = rate("Y", "full"); oy, _ = rate("Y", "none")
+        go = nx > 0 and fx >= 0.7 * nx and ox <= 0.3 * nx and (fy >= oy - 0.2 * ny)
+        lines.append(f"**Go/no-go (pre-registered): {'GO' if go else 'NO-GO'}** — X full {fx}/{nx} (≥ 7/10 needed), "
+                     f"X none {ox}/{nx} (≤ 3/10 needed), Y full {fy}/{ny} vs none {oy}/{ny} (full ≥ none − 2/10 needed)")
+    if ("X", "order") in table:                                     # the follow-up (pre-registered 28 Sep)
+        go = frac("X", "order") >= 0.7 and frac("Y", "order") >= 0.8
+        lines.append(f"**order (Haiku + the generated order note): {'GO' if go else 'NO-GO'}** — X {rate('X', 'order')[0]}/"
+                     f"{rate('X', 'order')[1]} (≥ 7/10 needed; Haiku without evidence 0/10), Y {rate('Y', 'order')[0]}/"
+                     f"{rate('Y', 'order')[1]} (≥ 8/10 needed)")
+    if ("X", "sonnet_full") in table and ("X", "sonnet_none") in table:
+        go = (frac("X", "sonnet_full") >= 0.7 and frac("X", "sonnet_full") - frac("X", "sonnet_none") >= 0.4
+              and frac("Y", "sonnet_full") >= frac("Y", "sonnet_none") - 0.2)
+        lines.append(f"**sonnet_full (Sonnet, evidence as rendered): {'GO' if go else 'NO-GO'}** — X {rate('X', 'sonnet_full')[0]}/"
+                     f"{rate('X', 'sonnet_full')[1]} vs Sonnet without {rate('X', 'sonnet_none')[0]}/{rate('X', 'sonnet_none')[1]} "
+                     f"(≥ 7/10 and ≥ 0.4 above needed); Y {rate('Y', 'sonnet_full')[0]}/{rate('Y', 'sonnet_full')[1]} vs "
+                     f"{rate('Y', 'sonnet_none')[0]}/{rate('Y', 'sonnet_none')[1]} (no more than 0.2 below)")
     (out / "summary.md").write_text("\n".join(lines) + "\n")
     print("\n".join(lines))
     return 0
