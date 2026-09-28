@@ -299,6 +299,7 @@ Status: done
 | `pilot3` | [`pilots/superseded/pilot3/`](pilots/superseded/pilot3/) | first pilot on the original-format packages, stopped after 4 of 9 | superseded by pilot4 | 4 | BROKEN 1, FASTER 2, parallel-not-faster 1 |
 | `pilot4` | [`pilots/runs/pilot4/`](pilots/runs/pilot4/) | the pilot on the fixed DiscoPoP; decided D9 (Haiku for E1) | valid | 8 | FASTER 4, SCAFFOLD_MODIFIED 1, no-change 1, parallel-not-faster 1, parallel-speed-not-measurable 1 |
 | `evidence_pilot_order2` | [`pilots/runs/evidence_pilot_order2/`](pilots/runs/evidence_pilot_order2/) | Evidence-mechanism pilot on ORDER-2 (pre-registered §6, 28 Sep): tools/evidence_pilot.py, single confined Haiku calls with the agent's own prompts, arms full / no_note / none × versions X (k17), Y (k42) × 10, Mac; go/no-go fixed before any call | valid | 0 |  |
+| `evidence_pilot_order2b` | [`pilots/runs/evidence_pilot_order2b/`](pilots/runs/evidence_pilot_order2b/) | Follow-up evidence pilot on ORDER-2 (pre-registered §6, 28 Sep): arms order (Haiku + a generated order restatement of each carried RAW), sonnet_full, sonnet_none; X, Y; 50 calls, Mac | valid | 0 |  |
 
 ## [Harness and pipeline checks (not experiments)](harness_checks/REPORT.md)
 
