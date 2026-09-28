@@ -531,6 +531,22 @@ def analyse(trials: List[dict], units: Dict[str, Dict[str, Any]], arms: Dict[str
         j = judge(t, races)
         j["group"] = group_of(units[b])
         js.append(j)
+    # One model-driven trial per (loop, arm, model, repeat): the same cell from two runs means two versions
+    # of an arm were loaded together — e.g. E2-B1's model alone as first run (the speed-off leak) and as
+    # re-run with it fixed (§6, 28 Sep). Load the superseded run with an arm filter (RUN:ARM+ARM) instead.
+    # DiscoPoP alone is exempt: its draws ARE separate runs.
+    first_run: Dict[Tuple[str, str, str, int], str] = {}
+    twice: List[str] = []
+    for j in js:
+        if j["arm"] == arms["dp_alone"]:
+            continue
+        cell = (j["benchmark"], j["arm"], str(j["model"]), j["repeat"])
+        if cell in first_run and first_run[cell] != j["run"]:
+            twice.append(f"{cell[0]} · {cell[1]} · rep{cell[3]} in {first_run[cell]} and {j['run']}")
+        first_run.setdefault(cell, j["run"])
+    if twice:
+        raise ValueError(f"{len(twice)} trial(s) loaded from two runs (pool nothing across versions of an arm): "
+                         + "; ".join(twice[:3]))
     res: Dict[str, Any] = {
         "arms": arms, "runs": sorted({j["run"] for j in js}),
         "models": sorted({str(j["model"]) for j in js if j["arm"] != arms["dp_alone"]}),
@@ -570,6 +586,12 @@ def analyse(trials: List[dict], units: Dict[str, Dict[str, Any]], arms: Dict[str
     missing = [f"{k}: " + ("; ".join(v["gaps"]) if v["gaps"]
                            else (v.get("cmh") or v.get("test") or {}).get("note", "no test"))
                for k, v in tests.items() if not v["established"]]
+    # A cell holding MORE trials than planned pools something it should not (two DiscoPoP builds' draws of
+    # one loop, two versions of an arm): not established until the load is narrowed (--drop, RUN:ARM).
+    over = [f"`{b}` · `{arms[r]}`: {c['found']} found, {c['planned']} planned"
+            for b, per in res["completeness"].items() for r, c in per.items() if c["found"] > c["planned"]]
+    missing += [f"over-complete — {o}" for o in over]
+    res["over_complete"] = over
     res["established"] = not missing
     res["not_established"] = missing
     res["coverage_unknown_total"] = sum(1 for j in js if j["bucket"] == "coverage-unknown")
@@ -875,6 +897,12 @@ def self_test() -> int:
            and res["groups"]["a1"]["per_arm"]["twin_none"]["call_failed"] == ["tsvc_b1/s161 r1 rep1"]
            and res["completeness"]["tsvc_b1/s161"]["twin_none"]["with_verdict"] == 0)
     expect("DiscoPoP alone is exempt from the model list", res["models"] == ["m"])
+    again = dict(ts[4], run_id="r2")                     # the same model-alone trial from a second run
+    try:
+        analyse(ts + [again], pop, arms, races)
+        expect("a trial loaded from two runs is refused", False)
+    except ValueError:
+        expect("a trial loaded from two runs is refused", True)
     expect("outside the population listed", any(k.startswith("tsvc/s000") for k in res["outside_population"]))
     expect("coverage and race gaps: NOT established", not res["established"] and res["coverage_unknown_total"] == 1)
     quiet = analyse([trial("tsvc_b1/s151", arms[r], k, "no-change") for r in ("agent_full", "agent_none") for k in (1, 2)],
@@ -943,6 +971,9 @@ def main() -> int:
     ap.add_argument("--family-size", type=int, default=FAMILY_SIZE,
                     help=f"hypotheses in the campaign's Holm family (default {FAMILY_SIZE}: the plan's 19 rows H1–H13 "
                          "with their lettered forms, plus E2-B1's four named tests of 27 Sep)")
+    ap.add_argument("--drop", action="append", default=[], metavar="RUN:BENCHMARK",
+                    help="leave one benchmark of one run out (repeatable) — e.g. t0_11_b1_a:rodinia_b1/bfs, whose "
+                         "DiscoPoP alone is taken from the B13+B15 draws t0_11_b1_bfs15_*")
     ap.add_argument("--out", type=Path, default=None)
     ap.add_argument("--self-test", action="store_true", help="check the statistics on textbook examples and exit")
     a = ap.parse_args()
@@ -952,6 +983,9 @@ def main() -> int:
         ap.error("give at least one run (or --self-test)")
     arms = {role: str(getattr(a, role)) for role, _, _ in ARM_ROLES}
     trials = load_trials(a.runs)
+    for d in a.drop:
+        run, _, bench = d.partition(":")
+        trials = [t for t in trials if not (_run_of(t) == run and str(t.get("benchmark")) == bench)]
     models = sorted({str(t.get("model")) for t in trials if t.get("arm") in set(arms.values()) - {arms["dp_alone"]}})
     if a.model:
         trials = [t for t in trials if t.get("arm") == arms["dp_alone"] or str(t.get("model")) == a.model]
