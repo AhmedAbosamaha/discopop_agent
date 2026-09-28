@@ -257,6 +257,19 @@ def score(ver: str, pk: Dict[str, Any], answer: Path, ref: Tuple[str, str], work
     return {"class": "success", "success": True, "loops": loops, "inspector_like": inspector}
 
 
+def _one(job: Tuple[str, str, int, str, str, str, str]) -> Dict[str, Any]:
+    """One call in its own process; skipped when its record exists (a resumed pilot)."""
+    ver, arm, k, system, request, src, out = job
+    ws = Path(out) / "calls" / f"{ver}_{arm}_{k:02d}"
+    if (ws / "call.json").exists():
+        return dict(json.loads((ws / "call.json").read_text()))
+    rec = {"version": ver, "arm": arm, "rep": k, **call(system, request, Path(src), ws)}
+    (ws / "call.json").write_text(json.dumps(rec, indent=1))
+    print(f"called {ver} {arm} {k:2d} ({rec['seconds']} s){' ERROR ' + str(rec['error'])[:80] if rec['error'] else ''}",
+          flush=True)
+    return rec
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--out", type=Path, required=True)
@@ -278,20 +291,13 @@ def main() -> int:
         reqs = requests(pk, out)
         (out / "requests.json").write_text(json.dumps({f"{v}/{arm}": {"system": s, "request": r}
                                                        for (v, arm), (s, r) in reqs.items()}, indent=1))
-        jobs = [(ver, arm, k) for k in range(1, a.n + 1) for arm in ARMS for ver in VERSIONS]
-        def one(job: Tuple[str, str, int]) -> Dict[str, Any]:
-            ver, arm, k = job
-            ws = out / "calls" / f"{ver}_{arm}_{k:02d}"
-            if (ws / "call.json").exists():
-                return json.loads((ws / "call.json").read_text())
-            system, request = reqs[(ver, arm)]
-            rec = {"version": ver, "arm": arm, "rep": k, **call(system, request, pk[ver]["src"], ws)}
-            (ws / "call.json").write_text(json.dumps(rec, indent=1))
-            print(f"called {ver} {arm} {k:2d} ({rec['seconds']} s){' ERROR ' + rec['error'][:80] if rec['error'] else ''}",
-                  flush=True)
-            return rec
-        with concurrent.futures.ThreadPoolExecutor(max_workers=a.jobs) as ex:
-            list(ex.map(one, jobs))
+        jobs = [(ver, arm, k, reqs[(ver, arm)][0], reqs[(ver, arm)][1], str(pk[ver]["src"]), str(out))
+                for k in range(1, a.n + 1) for arm in ARMS for ver in VERSIONS]
+        # one process per call: the model client runs an event loop and a CLI subprocess per call, and
+        # calls sharing one process through threads were not isolated enough (28 Sep: a first launch
+        # was stopped after 5 calls, one of whose answers did not land; those calls were discarded)
+        with concurrent.futures.ProcessPoolExecutor(max_workers=a.jobs) as ex:
+            list(ex.map(_one, jobs))
     results: List[Dict[str, Any]] = []
     for ws in sorted((out / "calls").glob("*_*_*")):
         rec = json.loads((ws / "call.json").read_text())
