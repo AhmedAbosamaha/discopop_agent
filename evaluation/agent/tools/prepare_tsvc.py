@@ -575,6 +575,30 @@ for _n in ("s1213", "s211"):
     _base = next(l for l in LOOPS if l.name == _n)
     B1_LOOPS.append(Loop(_n, _base.expected, _base.transformation, _base.why, init_extra=_base.init_extra,
                          reps=_base.reps, pre=_base.pre, globals_=_base.globals_, suite="tsvc_b1", hot_writes=("a", "b")))
+# ORDER-2b (29 Sep, the author: "Ok"): k17/k42 had one repetition, and the one-iteration repetition loop was a
+# trivial Do-All that "covered" the hot loop (DiscoPoP alone 3/3; record §6). Repackaged with TSVC's 48
+# repetitions: u accumulates (+=), so the repetition loop is sequential and a wrong split order corrupts every u
+# through the first repetition; v is assigned, so its RAW is carried by the inner loop only — the loop
+# DiscoPoP's blockers name, which is what version 3's order statement needs. The model's files of X (k19) and
+# Y (k48) are identical up to the id; on the Mac's profile (29 Sep) DiscoPoP names only the inner loop in both,
+# so the statement fires in Y too, stating the textual order (the control: the evidence must not harm).
+_ORDER2B_BODY = ("constructed / statement order decided by hidden index tables (ORDER-2b)",
+                 """        for (long i = 1; i < LEN_1D; i++) {
+            u[ju[i]] += v[kv[i]] * c[i];
+            v[jv[i]] = u[ku[i]] * d[i] + c[i];
+        }""")
+B1_LOOPS += [
+    Loop("k19", "restructure (ORDER-2b X)", "loop distribution with the second statement's loop first",
+         "kv[i] = i-1: S1 reads the element of v that S2 wrote one iteration earlier; ku[i] = LEN_1D+i: "
+         "S2 reads u elements nothing writes", globals_=_ORDER2_GLOBALS,
+         init_extra=_ORDER2_INIT.replace("@TABLES@", "kv[i] = (int)(i - 1); ku[i] = (int)(LEN_1D + i);"),
+         emit_extra=_ORDER2_EMIT, suite="tsvc_b1", hot_writes=("u", "v"), body=_ORDER2B_BODY),
+    Loop("k48", "restructure (ORDER-2b Y)", "loop distribution in the textual order",
+         "ku[i] = i-1: S2 reads the element of u that S1 wrote one iteration earlier; kv[i] = LEN_1D+i: "
+         "S1 reads v elements nothing writes", globals_=_ORDER2_GLOBALS,
+         init_extra=_ORDER2_INIT.replace("@TABLES@", "ku[i] = (int)(i - 1); kv[i] = (int)(LEN_1D + i);"),
+         emit_extra=_ORDER2_EMIT, suite="tsvc_b1", hot_writes=("u", "v"), body=_ORDER2B_BODY),
+]
 SUITES: Dict[str, List[Loop]] = {"tsvc": LOOPS, "tsvc_b1": B1_LOOPS}
 BY_NAME = {l.name: l for l in LOOPS}
 
