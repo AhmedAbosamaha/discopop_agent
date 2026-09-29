@@ -37,6 +37,19 @@ The first agent runs; they decided D9 (the E1 model) and exposed the defects fix
 
 ## From the experiment record (§7 run log)
 
+### `evidence_pilot_v2` — 2026-09-28, Mac, **prompt-review stage 1 on ORDER-2** (120 single Haiku calls)
+
+- **Setup.** `tools/evidence_pilot.py` (instrument v2, M1), arms full_clean (v1), arrow_only (v1 + D2), order_clean (v1 + the pilot's order note), full_v2, none_v2, full_v3 (v2 + D4) × X/Y × 10; pre-registered (§6 28 Sep); 0 call errors.
+- **Result.** X: v1 0/10, arrow only 0/10, v2 4/10, **v3 8/10**, the hand-built note 9/10, v2 without evidence 0/10; Y: 6, 8, 8, 10, 10, 10 of 10. full_v3 vs none_v2: GO — the first evidence advantage with the agent's own prompt.
+
+### `evidence_pilot_order2b` — 2026-09-28, Mac, **follow-up: the evidence stated as an order** (50 calls)
+
+- **Result.** Haiku with the order note: X 8/10 (0/10 in every earlier arm), Y 10/10 — GO. Sonnet arms invalid (19 calls failed on the session limit). Instrument defect recorded (the kernel id passed as the failure reason).
+
+### `evidence_pilot_order2` — 2026-09-28, Mac, **the first evidence-mechanism pilot on ORDER-2** (60 calls)
+
+- **Result.** NO-GO: X 0/10 in every arm (full, no_note, none); Y 7/10 and 8/10 with evidence vs 10/10 without. The v1 wording (sink→source arrow, "it must be removed", the buffer/sub-pass note) led to snapshot rewrites; the prompt review followed (`docs/PROMPT_REVIEW_2026_09_28.md`).
+
 ### `pilot4` — 2026-09-18/19, server, the pilot on the FIXED DiscoPoP (Fixes 80–82) — decides D9
 
 Eight model-driven core benchmarks (the nine minus NPB `mg`, see below) × `full` × 1, Haiku,

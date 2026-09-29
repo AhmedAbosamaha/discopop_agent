@@ -78,6 +78,11 @@
 - [`bare_s341_r2_compaction_order_lost_broken`](E01b_bare_llm/exhibits/bare_s341_r2_compaction_order_lost_broken/) — A compaction whose index comes from a critical counter: the packed order depends on thread timing, and the run then fails.  
   **unsafe** vs DiscoPoP alone (1.00× → 1.00×) · tsvc/s341, `bare_llm`, e1_bare_b rep 2 · pictures: `before_after.png`, `console.png`
 
+## [E2-B1 — evidence on hidden facts: does DiscoPoP's measured evidence help where the deciding fact is not in the loop's text?](E02b1_hidden_facts/REPORT.md)
+
+- [`s161_v1_evidence_twin_broken`](E02b1_hidden_facts/exhibits/s161_v1_evidence_twin_broken/) — E2-B1 with the v1 wording: the gate-free twin given DiscoPoP's evidence ships a wrong program on s161 (evidence twins unsafe 22/29 vs 13/30 without) — the harm the v1 rendering did.  
+  no DiscoPoP-alone trial to pair with · tsvc_b1/s161, `twin_full_nospeed`, e2b1_a_1 rep 1 · pictures: `before_after.png`, `console.png`
+
 ## [E10 — does the speed check keep unnecessary changes out?](E10_speed_check/REPORT.md)
 
 - [`2mm_annotated_faster`](E10_speed_check/exhibits/2mm_annotated_faster/) — Pragmas only on 2mm, 7.5× at 12 threads; DiscoPoP alone was timed on another setup, so no ratio.  
@@ -105,4 +110,13 @@
   no DiscoPoP-alone trial to pair with · polybench/jacobi-2d-imper, `full`, pilot4 rep 1 · pictures: `before_after.png`, `console.png`
 - [`trisolv_reduction_extracted`](pilots/exhibits/trisolv_reduction_extracted/) — Pilot 4: the model extracts a reduction in trisolv; the kernel cannot be timed at any size, so correctness only.  
   no DiscoPoP-alone trial to pair with · polybench/trisolv, `full`, pilot4 rep 1 · pictures: `before_after.png`, `console.png`
+
+## [E2-V3 — prompt version 3 inside the agent: does DiscoPoP's evidence, stated as the split order it imposes, help where the order decides?](E02v3_order_statement/REPORT.md)
+
+- [`k19_evidence_right_split`](E02v3_order_statement/exhibits/k19_evidence_right_split/) — ORDER-2 X with DiscoPoP's evidence (prompt v3): the model splits the loop with line 20's loop first, as the order statement says; the gate keeps it — a race-free verified parallel program covering the hot loop (10 of 10).  
+  no DiscoPoP-alone trial to pair with · tsvc_b1/k19, `full_b1_nospeed_v3`, e2v3_k19 rep 1 · pictures: `before_after.png`, `console.png`
+- [`k19_no_evidence_reverted`](E02v3_order_statement/exhibits/k19_no_evidence_reverted/) — ORDER-2 X without evidence: the model's split in the textual order changes the output, the gate reverts it, and the agent ships the program unchanged (9 of 10).  
+  no DiscoPoP-alone trial to pair with · tsvc_b1/k19, `no_evidence_b1_nospeed_v3`, e2v3_k19 rep 1 · pictures: `before_after.png`, `rejected_attempt.png`, `console.png`
+- [`k19_twin_wrong_order`](E02v3_order_statement/exhibits/k19_twin_wrong_order/) — ORDER-2 X, the twin without evidence (no gate): the wrong-order split is shipped and the output is wrong (9 of 10) — what the gate prevents in the agent.  
+  no DiscoPoP-alone trial to pair with · tsvc_b1/k19, `twin_no_evidence_nospeed_v3`, e2v3_k19 rep 1 · pictures: `before_after.png`, `console.png`
 

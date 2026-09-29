@@ -529,6 +529,22 @@ explorer run from that checkout, so the run's conditions would change between tr
   `agent.log` for `LLM call failed`. This is how `pilot_seidel` was lost, and the numbers it
   produced looked entirely plausible.
 
+- **One subscription pays for every model call** — the server jobs' token (`claude setup-token`), any Mac pilot
+  and the working session. A Mac pilot run during a server run spent the session limit on 28 Sep and cost
+  14 trials (`LLM call failed … session limit`; `e2b1_stats.py` buckets them `call-failed`). Never run model
+  calls on the Mac while a server run is in progress; re-run a call-failed trial, never count it.
+- **A launch needs parity:** `server.sh run` refuses while the Mac is ahead. Do not commit on the Mac while a
+  scheduled launch is pending (28 Sep: three queued launches were refused and the lanes sat idle 50 min).
+- **Never start two jobs on a NEW run id at once:** both profile the benchmark into the same directory
+  (29 Sep, bfs; set aside before any trial). Start the second job only after the first has written
+  `profiles/<bench>/profile.json`; then split the repeats with disjoint `--reps` lists (a profiling lock
+  in `cli.py` is owed).
+- **zsh does not word-split an unquoted variable:** launch commands built from variables run under `bash -c`
+  (28 Sep: three launches failed on an argument string passed as one word).
+- **A package must repeat its kernel (R = 48):** with one repetition the repetition loop is a one-iteration
+  Do-All whose pragma passes every check and counts as covering the hot loop (ORDER-2 `k17`, 29 Sep:
+  DiscoPoP alone 3/3). The coverage check does not know a loop's trip count; the packaging keeps R > 1.
+
 ## 7. When something goes wrong
 
 | Symptom | What it means |

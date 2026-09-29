@@ -354,6 +354,17 @@ fix counts a WAW only between writes that resolve to one context each, so B13 ad
 the RAW one predates it. Not investigated further; no campaign benchmark is known to have this shape
 (TSVC's 33 packages: no change under B13's sweep).
 
+## B16 — candidate: a RAW carried by the repetition loop is attributed to the inner loop (explorer)
+
+**Status: candidate, not re-checked on the fixed explorer.** In the V3 pilot's profile of TSVC `s244`
+(25–26 Sep, before the B4 fix), DiscoPoP's Do-All blockers charge the RAW on `a` to the inner `i` loop,
+although it is carried by the repetition loop `nl` (the value is read in the next repetition); the 20 Sep
+profile of the same package (`t0_11_classes_a`) charges it to `nl`. With the old prompt wording the
+evidence arms were steered to the wrong loop (E2: s244 evidence arms 1/18 vs 12/18 without). The agent's
+order statement (prompt v3, D4) stays silent when the blockers name more than one loop for a variable, so
+it cannot act on such a record. Owed (prompt review M4): re-explore s244 and s211 on the fixed explorer
+and compare the blockers across draws.
+
 ## B12 — the compiler wrappers report success when the instrumented build fails (profiler scripts)
 
 **Found** 27 Sep 2026, running the agent's feature suite on the server (Linux, LLVM 20) for the first time. **Status:**

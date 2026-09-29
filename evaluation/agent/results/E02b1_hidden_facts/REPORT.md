@@ -19,6 +19,7 @@ With the evidence rendered as in prompt v1, no evidence advantage: agent 18/30 w
 ## What is in this folder
 
 - [`analysis/`](analysis/) — the read-out: [`doall_rerun_b13.md`](analysis/doall_rerun_b13.md), [`doall_rerun_b15.md`](analysis/doall_rerun_b15.md), [`figures.md`](analysis/figures.md), [`hot_loop_profile.md`](analysis/hot_loop_profile.md), [`hot_loop_profile_bfs15.md`](analysis/hot_loop_profile_bfs15.md), [`hot_loop_profile_s258.md`](analysis/hot_loop_profile_s258.md), [`main_comparison_stats.md`](analysis/main_comparison_stats.md), [`routing_check.md`](analysis/routing_check.md), [`routing_check_bfs15.md`](analysis/routing_check_bfs15.md), [`routing_check_s258.md`](analysis/routing_check_s258.md), [`vs_discopop_alone.md`](analysis/vs_discopop_alone.md)
+- [`exhibits/`](exhibits/) — 1 case studies, below
 - [`runs/`](runs/) — 7 archived run(s): the evidence
 - [`preflight/`](preflight/) — 3 smoke run(s) before the launch
 
@@ -39,7 +40,17 @@ With the evidence rendered as in prompt v1, no evidence advantage: agent 18/30 w
 | `e2b1v3_twins` | not archived yet | E2-B1 follow-up: tsvc_b1/s151, s161 × twin_full_nospeed_v3, twin_no_evidence_nospeed_v3 × 10 trials, Haiku (prompt v3 on the twins) | registered |  |  |
 | `e2b1v3_bfs` | not archived yet | E2-B1 follow-up: rodinia_b1/bfs × twin_full_nospeed_v3, twin_no_evidence_nospeed_v3 × 10 trials, Haiku, repeats split over lanes with --reps | registered |  |  |
 
+## Exhibits
+
+- [`s161_v1_evidence_twin_broken`](exhibits/s161_v1_evidence_twin_broken/) — E2-B1 with the v1 wording: the gate-free twin given DiscoPoP's evidence ships a wrong program on s161 (evidence twins unsafe 22/29 vs 13/30 without) — the harm the v1 rendering did.  
+  no DiscoPoP-alone trial to pair with · tsvc_b1/s161, `twin_full_nospeed`, e2b1_a_1 rep 1 · pictures: `before_after.png`, `console.png`
+
 ## From the experiment record (§7 run log)
+
+### `e2b1_a_1`, `e2b1_a_2`, `e2b1_a_3`, `e2b1_b_1`; `e2b1_bare_m3_a`, `e2b1_bare_m3_b`, `e2b1_bare_m3_bfs` — 2026-09-28/29, server, **E2-B1: evidence on hidden facts (prompt v1)** (425 analysed Haiku trials)
+
+- **Setup.** Main runs from repository `7f76a310`, launched 28 Sep 01:29 UTC on lanes 0.0/0.1/1.0/1.1 (the pre-registered design, §6 27 Sep). 14 trials lost their model calls to a spent session limit (15:17–17:00 UTC, a Mac pilot on the same subscription): 4 twin trials re-run under their run ids (moved to `_invalid_call_failed/`), the model alone re-run whole in `e2b1_bare_m3_*` (repository `f35fac09`) with its speed-off leak fixed (M3). bfs twin trials took ~93 min each; the remaining bfs twins were split over lanes with `--reps` after a sync during the run (approved, §6); `e2b1_a_2` was stopped before its superseded model-alone trials. Last job ended 29 Sep 02:17 UTC; race checks on the server (`results/E02b1_hidden_facts/analysis/race_check/`).
+- **Result** (`results/E02b1_hidden_facts/stats/e2b1_stats.md`, the command fixed in §6 before the data): (i) agent 18/30 vs 20/30, OR 0.62, p 0.85 — not supported; (ii) twins 3/29 vs 10/30, OR 0.19 (0.04–0.86) — the evidence harmed; (iii) unsafe, agent 0/30 vs model alone 9/30, exact p 0.0006 — rejected. Tier 2 and direction (b) descriptive. Race checks 134 clean, 5 racy of 139.
 
 ### `e2b1_smoke` — 2026-09-27/28, server, **E2-B1 smoke: s151 and bfs × the five model arms × 1** (10 Haiku trials, not counted)
 

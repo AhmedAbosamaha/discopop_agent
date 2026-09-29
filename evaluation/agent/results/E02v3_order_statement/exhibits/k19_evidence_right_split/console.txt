@@ -1,0 +1,36 @@
+  Initial candidates
+Region ID    Type           Saves    % run    Hot  Tier  Depth  Name
+  1:14       loop          3.9 ms    62.7%    YES     2      0  lines 17–23
+  1:12       function      3.9 ms    62.7%    YES     2      0  kernel_k19
+  1:17       loop          3.9 ms    62.6%    YES     2      0  lines 18–21
+  PHASE A — restructure  (the source stays pragma-free)
+┌─ [depth=0] loop 1:14 (lines 17–23)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Applied to k19.c
+│  [Tier-2] Re-measured runtimes: 21 region(s), 8.4 ms total
+│  [Tier-2] DiscoPoP now finds: do_all @ lines 18–20
+└─ ACCEPTED
+┌─ [depth=1] loop 1:14 (lines 17–25)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Restructuring not allowed at depth 1 (--restructure-depth=0) → SKIP
+└─ SKIPPED
+┌─ [depth=1] function 1:12 (lines 15–26)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Restructuring not allowed at depth 1 (--restructure-depth=0) → SKIP
+└─ SKIPPED
+┌─ [depth=1] loop 1:17 (lines 18–20)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+┌─ [depth=1] loop 1:23 (lines 21–23)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Restructuring not allowed at depth 1 (--restructure-depth=0) → SKIP
+└─ SKIPPED
+  PHASE B — annotate  (1 candidate pragma(s))
+┌─ pattern #0  do_all @ lines 18–20  (W=3071904)
+│  [Phase-B] Applied to k19.c
+└─ APPLIED
+  SETTLING — verify the finished source, drop what does not hold up
+  [ok] finished source verified — output matches the original
+  SUMMARY: 1 rewrite(s) kept  |  1 pragma(s) applied  |  2 skipped

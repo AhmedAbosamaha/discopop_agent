@@ -19,6 +19,7 @@ Evidence effect inside the agent SUPPORTED (prompt v3): MH OR 11.0 (1.9–63.4),
 ## What is in this folder
 
 - [`analysis/`](analysis/) — the read-out: [`figures.md`](analysis/figures.md), [`main_comparison_stats.md`](analysis/main_comparison_stats.md), [`vs_discopop_alone.md`](analysis/vs_discopop_alone.md)
+- [`exhibits/`](exhibits/) — 3 case studies, below
 - [`runs/`](runs/) — 6 archived run(s): the evidence
 - [`preflight/`](preflight/) — 8 smoke run(s) before the launch
 
@@ -41,6 +42,28 @@ Evidence effect inside the agent SUPPORTED (prompt v3): MH OR 11.0 (1.9–63.4),
 | `e2v3_k19` | [`runs/e2v3_k19/`](runs/e2v3_k19/) | E2-V3 re-run of ORDER-2 X, repackaged (substitution §6 29 Sep): tsvc_b1/k19 × full_b1_nospeed_v3, no_evidence_b1_nospeed_v3, twin_full_nospeed_v3, twin_no_evidence_nospeed_v3, bare_llm_nospeed_v3 × 10 trials, Haiku, threads 6/12, repeats 5 | valid | 50 | BROKEN 19, FASTER 21, VERIFY_FAILED 1, no-change 9 |
 | `e2v3_k48` | [`runs/e2v3_k48/`](runs/e2v3_k48/) | E2-V3 re-run of ORDER-2 Y (control), repackaged: tsvc_b1/k48 × full_b1_nospeed_v3, no_evidence_b1_nospeed_v3, twin_full_nospeed_v3, twin_no_evidence_nospeed_v3, bare_llm_nospeed_v3 × 10 trials, Haiku, threads 6/12, repeats 5 | valid | 50 | BROKEN 9, FASTER 39, VERIFY_FAILED 2 |
 | `e2v3s_k19` | not archived yet | E2-V3 with Sonnet (claude-sonnet-5): tsvc_b1/k19 × full_b1_nospeed_v3, no_evidence_b1_nospeed_v3, twin_full_nospeed_v3, twin_no_evidence_nospeed_v3, bare_llm_nospeed_v3 × 10 trials, threads 6/12, repeats 5 | registered |  |  |
+
+## Exhibits
+
+- [`k19_evidence_right_split`](exhibits/k19_evidence_right_split/) — ORDER-2 X with DiscoPoP's evidence (prompt v3): the model splits the loop with line 20's loop first, as the order statement says; the gate keeps it — a race-free verified parallel program covering the hot loop (10 of 10).  
+  no DiscoPoP-alone trial to pair with · tsvc_b1/k19, `full_b1_nospeed_v3`, e2v3_k19 rep 1 · pictures: `before_after.png`, `console.png`
+- [`k19_no_evidence_reverted`](exhibits/k19_no_evidence_reverted/) — ORDER-2 X without evidence: the model's split in the textual order changes the output, the gate reverts it, and the agent ships the program unchanged (9 of 10).  
+  no DiscoPoP-alone trial to pair with · tsvc_b1/k19, `no_evidence_b1_nospeed_v3`, e2v3_k19 rep 1 · pictures: `before_after.png`, `rejected_attempt.png`, `console.png`
+- [`k19_twin_wrong_order`](exhibits/k19_twin_wrong_order/) — ORDER-2 X, the twin without evidence (no gate): the wrong-order split is shipped and the output is wrong (9 of 10) — what the gate prevents in the agent.  
+  no DiscoPoP-alone trial to pair with · tsvc_b1/k19, `twin_no_evidence_nospeed_v3`, e2v3_k19 rep 1 · pictures: `before_after.png`, `console.png`
+
+## From the experiment record (§7 run log)
+
+### `e2v3_k19`, `e2v3_k48`; `t0_1_v3b_sizes`, `t0_11_v3b_a`, `t0_11_v3b_b`, `t0_11_v3b_c` — 2026-09-29, server, **E2-V3 with ORDER-2 repackaged: the first evidence effect inside the agent** (100 Haiku trials; 6 draws, no model)
+
+- **Setup.** Repository `f45776d7`; `e2v3_k19` lane 0.0, `e2v3_k48` lane 0.1, draws on lanes 1.0/1.1; 12:05 → 14:43 UTC; 0 failed model calls; sweep clean. Packages `tsvc_b1/k19` (X) and `k48` (Y): ORDER-2 with TSVC's 48 repetitions, `u[ju[i]] += v[kv[i]] * c[i]; v[jv[i]] = u[ku[i]] * d[i] + c[i];`, index tables only in the hidden harness header (`prepare_tsvc.py` `_ORDER2B_BODY`; header line with `kv[i] = i-1` for X, `ku[i] = i-1` for Y). Checked before any trial: no Do-All in either; the v3 order statement fires in both and is right; the right split reproduces the output, the wrong one does not. T0.1: k19 and k48 verified at LARGE. The five v3 arms × 10 (`--prompt-version 3`, speed check off).
+- **Result.** k19 (X): agent with evidence **10/10** race-free verified parallel programs covering the hot loop (all FASTER) vs **1/10** without (9 no-change: the gate reverted every wrong-order rewrite); twins 10/10 vs 0/10 (all 10 BROKEN); the model alone 0/10 (10 unsafe); DiscoPoP alone 0/3. k48 (Y): agent 10/10 in both arms; twins 10/10 vs 8/10; model alone 1/10. Race checks on every model-only parallel program: 49/49 clean (`analysis/race_check_b/`).
+- **Read-out** (the pre-registered E2-V3 command with k19 in place of k17; `results/E02v3_order_statement/stats/e2b1_stats.md`): (i) evidence inside the agent, strata k19/s1213/s211 — **MH OR 11.0 (1.91–63.4), exact p 0.00068, Holm 0.004, campaign family (M = 27) 0.004–0.036: rejected.** (ii) twins OR 2.54, Holm 0.055: not rejected. (iii) unsafe, agent vs model alone, 0/30 vs 25/30: rejected. The effect is carried by k19 alone; s1213 and s211 are at the ceiling in both arms (§6 29 Sep, limits).
+
+### `e2v3_k17`, `e2v3_s1213`, `e2v3_s211`, `e2v3_k42`; `t0_1_v3_sizes`, `t0_11_v3_a`, `t0_11_v3_b`, `t0_11_v3_c` — 2026-09-29, server, **E2-V3: prompt version 3 inside the agent** (200 Haiku trials; 12 draws, no model)
+
+- **Setup.** Repository `dc97e27e`; one lane per unit, 05:04 → 08:12 UTC; 0 failed model calls; sweep clean. Pre-registered (§6 29 Sep): units where the v3 order statement fires on the package's own profile — ORDER-2 X (`k17`, new), `s1213`, `s211` (re-packaged v4) — and ORDER-2 Y (`k42`) as the control; arms `full_b1_nospeed_v3`, `no_evidence_b1_nospeed_v3`, their twins, `bare_llm_nospeed_v3`; N = 10. T0.1: s1213/s211 LARGE; k17/k42 verified at EXTRALARGE, speed not measurable (0.28 s serial).
+- **Result.** Agent 29/30 with and 29/30 without evidence on (a) (k17 10/10 both, s1213 9/9, s211 10/10); twins 17/29 vs 9/30; model alone 8/30 (21 unsafe); race checks 94/94 clean. **Defect found in the data (mine):** k17/k42 were packaged with one repetition; the one-iteration repetition loop is a trivial Do-All whose pragma counts as covering the hot loop, so every k17/k42 "success" is that pragma (DiscoPoP alone 3/3). Classified post hoc from the programs: the model split X in the right order 9/10 (agent) and 10/10 (twin) with evidence, 0 without (agent 10/10 unsplit, twin 9/10 wrong order). The units were repackaged (k19/k48) and re-run; k17/k42 are kept and superseded.
 
 ## Change-log rows that name these runs (§6)
 

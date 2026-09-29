@@ -2,6 +2,14 @@
 
 Produced by a read-only review (four lenses and a verifying synthesis) of the real prompts the model received (ORDER-2 pilot, V3 pilot s211/s244, E2-B1 smoke s151/bfs). Nothing here is adopted yet: each change is the author's decision and is tested by a pilot before adoption (rule: pilot the mechanism first).
 
+## Status (29 Sep)
+
+- **Stage 1 done** (`evidence_pilot_v2`, 120 calls): ORDER-2 X — v1 0/10, v2 4/10, **v3 (v2 + D4) 8/10**, v2 without evidence 0/10 (GO); the arrow alone (D2) 0/10.
+- **D4 built** as prompt version 3 (`render.order_statement`): fires only where DiscoPoP's blockers name one loop for the variable; truth table on 64 regions right in every case it fires.
+- **Stage 3 done as E2-V3** (THESIS_EXPERIMENTS §6/§7, 29 Sep): inside the agent, ORDER-2 X 10/10 with evidence vs 1/10 without; the pre-registered test rejected (OR 11.0, exact p 0.0007). s1213/s211 at the ceiling in both arms.
+- **Known limits:** the agent's evidence builder drops dependences inside a called function (the region-line filter of `evidence/deps.py`; s151 and s131 were shown "RAW: none"); D5 drops scalars that only cross the region's edge from the dependence list. Not changed.
+- Open: the 'should' items (A2–A4, D6–D8, F1, M4) and E2-D's re-versioning (E1).
+
 ## Status (28 Sep evening)
 
 - **Stage 0 done** (THESIS_EXPERIMENTS §6, 28 Sep): M1, M2, M3 and the must-changes D1, D2, D3, D5, D10, A1 as prompt version 2 (`--prompt-version 2`; default 1). Every registered arm unchanged except `bare_llm_nospeed` (M3), proven by `tools/prompt_manifest.py`; `tools/test_prompt_v2.py` passes.
