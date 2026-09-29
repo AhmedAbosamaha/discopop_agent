@@ -86,7 +86,7 @@ Status: running
 
 ## [E2-B1 — evidence on hidden facts: does DiscoPoP's measured evidence help where the deciding fact is not in the loop's text?](E02b1_hidden_facts/REPORT.md)
 
-Status: running
+Status: done
 
 | run | where | what it is | status | trials | outcomes |
 |---|---|---|---|---:|---|

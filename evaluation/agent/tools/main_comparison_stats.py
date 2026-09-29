@@ -583,7 +583,15 @@ def main() -> int:
     ap.add_argument("--suite", default=None,
                     help="only benchmarks of this suite (`tsvc`): the PRIMARY set of D30, computed with the "
                          "same statistics as the registered set, never instead of it")
+    ap.add_argument("--baseline-arm", default=figures.BASELINE_ARM,
+                    help="DiscoPoP alone's arm (default discopop_gate; E2-B1: discopop_capability, the speed check off)")
+    ap.add_argument("--drop", action="append", default=[], metavar="RUN:BENCHMARK",
+                    help="leave one benchmark of one run out (repeatable), as e2b1_stats.py --drop")
+    ap.add_argument("--figures", action="store_true",
+                    help="also write the figures and vs_discopop_alone.md into --out (figures.build)")
     a = ap.parse_args()
+    figures.BASELINE_ARM = a.baseline_arm
+    drops = {tuple(d.split(":", 1)) for d in a.drop}
     trials: List[dict] = []
     wanted = set(a.benchmarks.split(",")) if a.benchmarks else None
     for spec in a.runs:
@@ -598,6 +606,8 @@ def main() -> int:
             t = json.loads(p.read_text())
             t.setdefault("run_id", run)                 # a raw trial record does not name its run
             if keep is not None and t.get("arm") not in keep:
+                continue
+            if (run, str(t.get("benchmark"))) in drops:
                 continue
             if wanted is not None and str(t.get("benchmark", "")).split("/")[-1] not in wanted:
                 continue
@@ -629,6 +639,8 @@ def main() -> int:
         a.out.mkdir(parents=True, exist_ok=True)
         (a.out / "main_comparison_stats.md").write_text(md + "\n")
         (a.out / "main_comparison_stats.json").write_text(json.dumps(res, indent=2, default=str) + "\n")
+        if a.figures:
+            figures.build(trials, a.out)
     return 0
 
 
