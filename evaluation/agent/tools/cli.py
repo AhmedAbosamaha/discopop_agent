@@ -1571,7 +1571,7 @@ def cmd_run(a: argparse.Namespace) -> int:
     cc = _find_tool(a.cc, "AGENT_CC", _CC_CANDIDATES, "clang")
 
     only_reps: Set[int] = set()
-    for part in filter(None, (x.strip() for x in a.reps.split(","))):
+    for part in filter(None, (x.strip() for x in (getattr(a, "reps", "") or "").split(","))):
         lo, _, hi = part.partition("-")
         only_reps.update(range(int(lo), int(hi or lo) + 1))
     if only_reps and not a.run_id:

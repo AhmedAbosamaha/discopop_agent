@@ -1002,6 +1002,80 @@
       "flags": [
         "--no-require-speedup"
       ]
+    },
+    "full_b1_nospeed_v3": {
+      "ids": [
+        "E2-V3"
+      ],
+      "description": "E2-V3 (29 Sep, the author: \"go\"): prompt version 3 (the prompt review's must-changes plus D4, the split order stated where DiscoPoP names the carrying loop) \u2014 the version that gave ORDER-2 X 8/10 with evidence vs 0/10 without in single calls (evidence_pilot_v2). Otherwise exactly E2-B1's arm `full_b1_nospeed`.",
+      "flags": [
+        "--budget",
+        "1",
+        "--no-require-speedup",
+        "--prompt-version",
+        "3"
+      ],
+      "timing_size": "agent",
+      "settings": {
+        "budget": 1,
+        "llm_pragmas": false,
+        "require_speedup": false,
+        "evidence_sections": null,
+        "fast_refresh": false,
+        "prompt_version": 3
+      }
+    },
+    "no_evidence_b1_nospeed_v3": {
+      "ids": [
+        "E2-V3"
+      ],
+      "description": "E2-V3 (29 Sep, the author: \"go\"): prompt version 3 (the prompt review's must-changes plus D4, the split order stated where DiscoPoP names the carrying loop) \u2014 the version that gave ORDER-2 X 8/10 with evidence vs 0/10 without in single calls (evidence_pilot_v2). Otherwise exactly E2-B1's arm `no_evidence_b1_nospeed`.",
+      "flags": [
+        "--budget",
+        "1",
+        "--evidence",
+        "none",
+        "--no-require-speedup",
+        "--prompt-version",
+        "3"
+      ],
+      "timing_size": "agent",
+      "settings": {
+        "budget": 1,
+        "llm_pragmas": false,
+        "require_speedup": false,
+        "evidence_sections": [],
+        "fast_refresh": false,
+        "prompt_version": 3
+      }
+    },
+    "twin_full_nospeed_v3": {
+      "ids": [
+        "E2-V3"
+      ],
+      "description": "The matched twin (D38) of `full_b1_nospeed_v3`.",
+      "runner": "twin",
+      "twin_of": "full_b1_nospeed_v3"
+    },
+    "twin_no_evidence_nospeed_v3": {
+      "ids": [
+        "E2-V3"
+      ],
+      "description": "The matched twin (D38) of `no_evidence_b1_nospeed_v3`.",
+      "runner": "twin",
+      "twin_of": "no_evidence_b1_nospeed_v3"
+    },
+    "bare_llm_nospeed_v3": {
+      "ids": [
+        "E2-V3"
+      ],
+      "description": "The model alone (mirror, speed off) with prompt version 3's shared passages (only A1 reaches the mirror: the contract's 'a dependence is moved, not deleted').",
+      "runner": "bare_llm",
+      "flags": [
+        "--no-require-speedup",
+        "--prompt-version",
+        "3"
+      ]
     }
   },
   "common_timing_size": "per_kernel",
@@ -1381,6 +1455,67 @@
       "check": "runner",
       "agent": "full_b1_nospeed",
       "why": "E2-B1: the model alone beside the agent, both with the speed check off (the runner check compares their speed goals)."
+    },
+    "E2-V3": {
+      "arms": [
+        "discopop_capability",
+        "no_evidence_b1_nospeed_v3",
+        "full_b1_nospeed_v3"
+      ],
+      "variable": [
+        "evidence_sections",
+        "budget",
+        "prompt_version"
+      ],
+      "consequences": [],
+      "why": "E2-V3: the evidence contrast under prompt version 3, speed check off in every arm, DiscoPoP alone beside it (as E2-B1)."
+    },
+    "E2-V3-twins": {
+      "arms": [
+        "twin_no_evidence_nospeed_v3",
+        "twin_full_nospeed_v3"
+      ],
+      "variable": [
+        "evidence_sections"
+      ],
+      "consequences": [],
+      "why": "E2-V3's evidence contrast without the gate."
+    },
+    "E2-V3-twin-match": {
+      "arms": [
+        "full_b1_nospeed_v3",
+        "no_evidence_b1_nospeed_v3",
+        "twin_full_nospeed_v3",
+        "twin_no_evidence_nospeed_v3"
+      ],
+      "variable": [],
+      "consequences": [],
+      "check": "twin",
+      "why": "Each E2-V3 twin resolves exactly to its agent arm (D38)."
+    },
+    "E2-V3-bare": {
+      "arms": [
+        "full_b1_nospeed_v3",
+        "bare_llm_nospeed_v3"
+      ],
+      "variable": [
+        "runner"
+      ],
+      "consequences": [],
+      "check": "runner",
+      "agent": "full_b1_nospeed_v3",
+      "why": "E2-V3: the model alone beside the agent, both with the speed check off."
+    },
+    "E2-V3-vs-B1": {
+      "arms": [
+        "full_b1_nospeed",
+        "full_b1_nospeed_v3"
+      ],
+      "variable": [
+        "prompt_version"
+      ],
+      "consequences": [],
+      "why": "Version 3 differs from E2-B1's agent arm in the prompt version only."
     }
   }
 }

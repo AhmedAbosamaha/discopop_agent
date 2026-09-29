@@ -76,7 +76,7 @@ class Loop:
                  expert: Optional[str] = None, init_extra: str = "", reps: int = 48,
                  pre: str = "", globals_: str = "", suite: str = "tsvc", emit_extra: str = "",
                  hot_function: str = "", hot_writes: Tuple[str, ...] = (),
-                 hot_aliases: Tuple[str, ...] = ()) -> None:
+                 hot_aliases: Tuple[str, ...] = (), body: Optional[Tuple[str, str]] = None) -> None:
         self.name, self.expected, self.transformation, self.why = name, expected, transformation, why
         # `pre`: the argument declarations TSVC passes through `func_args` (set in its main), which
         # the extracted body does not contain; `globals_`: file-scope code the loop needs (TSVC's
@@ -95,6 +95,9 @@ class Loop:
         # package whose parsed hot loop writes anything else; `hot_aliases`, other names of that
         # memory bound in the harness header, where the coverage check cannot see them (s424)
         self.hot_function, self.hot_writes, self.hot_aliases = hot_function, hot_writes, hot_aliases
+        # A constructed kernel instead of a TSVC function (ORDER-2, 29 Sep): (category, the body of one
+        # repetition). None for every TSVC loop, whose body is read from tsvc.c.
+        self.body = body
 
 
 # --------------------------------------------------------------------------------------
@@ -533,6 +536,45 @@ B1_LOOPS: List[Loop] = [
          init_extra="    for (int i = 0; i < LEN_1D; i++) c[i] = b[i] * (real_t)0.5;",
          suite="tsvc_b1", hot_writes=("a",)),
 ]
+# ORDER-2 (the evidence pilots of 28 Sep, packaged for the agent on 29 Sep): two statements whose split order
+# is decided by index tables the harness sets — X (k17): kv[i] = i-1, so S2 feeds S1 and a split must run
+# S2's loop first; Y (k42): ku[i] = i-1, so the textual order is right. The model's files are identical up to
+# the opaque id. u and v are 2*LEN_1D long; ju = jv = identity. One repetition (R = 1): with more, u and v
+# (updated with +=) would carry a dependence across repetitions too, which is not the fact under test.
+_ORDER2_BODY = ("constructed / statement order decided by hidden index tables (ORDER-2)",
+                """        for (long i = 1; i < LEN_1D; i++) {
+            u[ju[i]] += v[kv[i]] * c[i];
+            v[jv[i]] += u[ku[i]] * d[i];
+        }""")
+_ORDER2_GLOBALS = "static real_t *u, *v;\nstatic int *ju, *jv, *ku, *kv;"
+_ORDER2_INIT = """    u = (real_t*)malloc(2 * (size_t)LEN_1D * sizeof(real_t)); v = (real_t*)malloc(2 * (size_t)LEN_1D * sizeof(real_t));
+    ju = (int*)malloc((size_t)LEN_1D * sizeof(int)); jv = (int*)malloc((size_t)LEN_1D * sizeof(int));
+    ku = (int*)malloc((size_t)LEN_1D * sizeof(int)); kv = (int*)malloc((size_t)LEN_1D * sizeof(int));
+    for (long i = 0; i < 2L * LEN_1D; i++) {
+      u[i] = (real_t)0.75 + (real_t)((i * 37L) % 1000) * (real_t)0.0005;
+      v[i] = (real_t)0.75 + (real_t)((i * 53L) % 997) * (real_t)0.0005;
+    }
+    for (long i = 0; i < LEN_1D; i++) { ju[i] = (int)i; jv[i] = (int)i; @TABLES@ }"""
+_ORDER2_EMIT = "  pb_emit_array(u); pb_emit_array(u + LEN_1D); pb_emit_array(v); pb_emit_array(v + LEN_1D);\n"
+B1_LOOPS += [
+    Loop("k17", "restructure (ORDER-2 X)", "loop distribution with the second statement's loop first",
+         "kv[i] = i-1: line S1 reads the element of v that S2 wrote one iteration earlier; ku[i] = LEN_1D+i: "
+         "S2 reads u elements nothing writes", reps=1, globals_=_ORDER2_GLOBALS,
+         init_extra=_ORDER2_INIT.replace("@TABLES@", "kv[i] = (int)(i - 1); ku[i] = (int)(LEN_1D + i);"), emit_extra=_ORDER2_EMIT,
+         suite="tsvc_b1", hot_writes=("u", "v"), body=_ORDER2_BODY),
+    Loop("k42", "restructure (ORDER-2 Y)", "loop distribution in the textual order",
+         "ku[i] = i-1: S2 reads the element of u that S1 wrote one iteration earlier; kv[i] = LEN_1D+i: "
+         "S1 reads v elements nothing writes", reps=1, globals_=_ORDER2_GLOBALS,
+         init_extra=_ORDER2_INIT.replace("@TABLES@", "ku[i] = (int)(i - 1); kv[i] = (int)(LEN_1D + i);"), emit_extra=_ORDER2_EMIT,
+         suite="tsvc_b1", hot_writes=("u", "v"), body=_ORDER2_BODY),
+]
+# E2-V3 (29 Sep): two E1-E2 loops in the v4 layout, so the hot-loop coverage check reads them as it reads every
+# E2-B1 unit — s1213, where prompt version 3's order statement fires (line 139's loop first), and s211, where
+# it stays silent (DiscoPoP names b on two loops). Their TSVC text, class and notes are E1-E2's.
+for _n in ("s1213", "s211"):
+    _base = next(l for l in LOOPS if l.name == _n)
+    B1_LOOPS.append(Loop(_n, _base.expected, _base.transformation, _base.why, init_extra=_base.init_extra,
+                         reps=_base.reps, pre=_base.pre, globals_=_base.globals_, suite="tsvc_b1", hot_writes=("a", "b")))
 SUITES: Dict[str, List[Loop]] = {"tsvc": LOOPS, "tsvc_b1": B1_LOOPS}
 BY_NAME = {l.name: l for l in LOOPS}
 
@@ -745,6 +787,13 @@ def _tsvc_function(name: str) -> Tuple[str, str, str, str]:
     return category, decls, rep.rstrip("\n"), expr
 
 
+def _loop_function(loop: Loop) -> Tuple[str, str, str, str]:
+    """_tsvc_function for a TSVC loop; a constructed kernel's own (category, no declarations, body, 0)."""
+    if loop.body is not None:
+        return loop.body[0], "", loop.body[1], "(real_t)0"
+    return _tsvc_function(loop.name)
+
+
 def render_harness(loop: Loop) -> str:
     """The measurement header for one loop (v4): everything of v3's file except the loop."""
     return (HARNESS_HEAD % {"name": loop.name, "version": GENERATOR_VERSION}
@@ -757,7 +806,7 @@ def render_harness(loop: Loop) -> str:
 def render(loop: Loop, expert: bool = False) -> str:
     """The benchmark's own file (v4) — or, with `expert`, the reference solution in the same
     layout, which declares what the reference needs before including the harness."""
-    category, decls, rep, ret = _tsvc_function(loop.name)
+    category, decls, rep, ret = _loop_function(loop)
     sha = hashlib.sha256(TSVC.read_bytes()).hexdigest()[:12]
     kernel_globals = "" if _is_harness_global(loop.globals_) else loop.globals_
     if expert:
@@ -771,7 +820,8 @@ def render(loop: Loop, expert: bool = False) -> str:
                 + pre + f'#include "{loop.suite}/{loop.name}.h"\n' + PB_MIX)
         kernel = f"static real_t kernel_{loop.name}(void)\n{{\n{loop.expert}\n}}\n"
     else:
-        head = KERNEL_HEAD % {"name": loop.name, "suite": loop.suite, "provenance": f"sha256 {sha}"} + PB_MIX
+        head = (f'/* Kernel {loop.name}. */\n#include "{loop.suite}/{loop.name}.h"\n' if loop.body   # constructed: no TSVC provenance
+                else KERNEL_HEAD % {"name": loop.name, "suite": loop.suite, "provenance": f"sha256 {sha}"}) + PB_MIX
         kernel = (f"static real_t kernel_{loop.name}(void)\n{{\n"
                   + (loop.pre + "\n" if loop.pre else "")
                   + (decls + "\n" if decls else "")
@@ -921,7 +971,7 @@ def render_v3(loop: Loop, expert: bool = False) -> str:
     if loop.emit_extra:
         # v3's digest covers the five vectors only: a loop writing more would be checked on part of its output
         raise ValueError(f"{loop.name}: its digest needs the v4 harness (emit_extra)")
-    category, decls, rep, ret = _tsvc_function(loop.name)
+    category, decls, rep, ret = _loop_function(loop)
     sha = hashlib.sha256(TSVC.read_bytes()).hexdigest()[:12]
     needs_tmp = expert and loop.expert is not None and "pb_tmp" in loop.expert
     needs_omp = expert and loop.expert is not None and "omp_get" in loop.expert
@@ -1057,10 +1107,12 @@ def main() -> int:
         if loop.expert is not None:
             ref = refs / f"{loop.name}.c"
             ref.write_text(render(loop, expert=True) if v4 else render_v3(loop, expert=True))
-        category = _tsvc_function(loop.name)[0]
+        category = _loop_function(loop)[0]
         hot = hot_loop(loop) if v4 else None
         (d / "meta.json").write_text(json.dumps({
-            "suite": loop.suite, "kernel": loop.name, "source": "benchmarks/TSVC_2/src/tsvc.c",
+            "suite": loop.suite, "kernel": loop.name,
+            "source": ("constructed: ORDER-2 (THESIS_EXPERIMENTS §6, 28 Sep; tools/evidence_pilot.py)" if loop.body
+                       else "benchmarks/TSVC_2/src/tsvc.c"),
             "category": category, "file": src.name, "language": "c", "layout": "single",
             "restructuring_class": loop.expected, "transformation": loop.transformation, "why": loop.why,
             "reference_solution": (str(ref.relative_to(HARNESS_ROOT)) if ref.is_relative_to(HARNESS_ROOT)

@@ -331,3 +331,18 @@ Status: done
 | `_launcher_logs` | [`logs/launcher/`](logs/launcher/) | the server launcher's logs, one per job | reference |  |  |
 | `_diagnostic_logs` | [`logs/diagnostic/`](logs/diagnostic/) | diagnostic logs from bug hunts | reference |  |  |
 
+## [E2-V3 — prompt version 3 inside the agent: does DiscoPoP's evidence, stated as the split order it imposes, help where the order decides?](E02v3_order_statement/)
+
+Status: pre-flight
+
+| run | where | what it is | status | trials | outcomes |
+|---|---|---|---|---:|---|
+| `t0_1_v3_sizes` | not archived yet | T0.1 sizes for tsvc_b1/k17, k42, s1213, s211 (server, no model) | registered |  |  |
+| `t0_11_v3_a` | not archived yet | T0.11 draw a on tsvc_b1/k17, k42, s1213, s211: discopop_capability (budget 0, no model), threads 6/12, repeats 5 | registered |  |  |
+| `t0_11_v3_b` | not archived yet | T0.11 draw b on tsvc_b1/k17, k42, s1213, s211: discopop_capability (budget 0, no model), threads 6/12, repeats 5 | registered |  |  |
+| `t0_11_v3_c` | not archived yet | T0.11 draw c on tsvc_b1/k17, k42, s1213, s211: discopop_capability (budget 0, no model), threads 6/12, repeats 5 | registered |  |  |
+| `e2v3_k17` | not archived yet | E2-V3 main run: tsvc_b1/k17 × full_b1_nospeed_v3, no_evidence_b1_nospeed_v3, twin_full_nospeed_v3, twin_no_evidence_nospeed_v3, bare_llm_nospeed_v3 × 10 trials, Haiku, threads 6/12, repeats 5 | registered |  |  |
+| `e2v3_s1213` | not archived yet | E2-V3 main run: tsvc_b1/s1213 × full_b1_nospeed_v3, no_evidence_b1_nospeed_v3, twin_full_nospeed_v3, twin_no_evidence_nospeed_v3, bare_llm_nospeed_v3 × 10 trials, Haiku, threads 6/12, repeats 5 | registered |  |  |
+| `e2v3_s211` | not archived yet | E2-V3 main run: tsvc_b1/s211 × full_b1_nospeed_v3, no_evidence_b1_nospeed_v3, twin_full_nospeed_v3, twin_no_evidence_nospeed_v3, bare_llm_nospeed_v3 × 10 trials, Haiku, threads 6/12, repeats 5 | registered |  |  |
+| `e2v3_k42` | not archived yet | E2-V3 main run: tsvc_b1/k42 × full_b1_nospeed_v3, no_evidence_b1_nospeed_v3, twin_full_nospeed_v3, twin_no_evidence_nospeed_v3, bare_llm_nospeed_v3 × 10 trials, Haiku, threads 6/12, repeats 5 | registered |  |  |
+
