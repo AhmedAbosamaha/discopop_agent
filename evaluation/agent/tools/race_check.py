@@ -132,8 +132,9 @@ def main() -> int:
         t0 = time.time()
         with tempfile.TemporaryDirectory(prefix="race_check_") as tmp:
             src = Path(tmp) / str(t.get("source") or "program.c")
-            shutil.copy2(d / "original.c", src)
-            diff = _unified_diff(src, d / "final.c")
+            ext = Path(str(t.get("source") or "program.c")).suffix or ".c"   # C++ packages (bfs) keep .cpp
+            shutil.copy2(d / f"original{ext}", src)
+            diff = _unified_diff(src, d / f"final{ext}")
             if not diff:
                 rec.update(verdict="unchanged")
             else:
