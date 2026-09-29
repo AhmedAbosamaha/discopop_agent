@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : k48.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : main, pb_mix
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] k48.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan **Dependence Analysis:** 1. **Outer loop** (over `nl`): Sequential by design. Each iteration calls `pb_mix(nl)` which modifies shared arrays `a`, `b`, `c`, `d`, `e` in a way that subsequent iterations depend on. This is a true data dependence—the repetitions cannot run out of order. 2. **Inner loop** (over `i`): Can be parallelized. Each iteration operates on indexed positions via `ju[i]`,
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

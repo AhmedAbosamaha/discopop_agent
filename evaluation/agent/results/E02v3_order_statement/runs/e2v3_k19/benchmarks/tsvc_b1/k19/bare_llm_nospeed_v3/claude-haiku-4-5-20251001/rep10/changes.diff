@@ -1,0 +1,10 @@
+--- original.c
++++ final.c
+@@ -15,6 +15,7 @@
+ static real_t kernel_k19(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        #pragma omp parallel for shared(u, v, c, d, ju, kv, ku, jv)
+         for (long i = 1; i < LEN_1D; i++) {
+             u[ju[i]] += v[kv[i]] * c[i];
+             v[jv[i]] = u[ku[i]] * d[i] + c[i];

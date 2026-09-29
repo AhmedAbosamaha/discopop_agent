@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : k48.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : main, pb_mix
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] k48.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: I'll read the file first to understand the code structure.## Plan The outer loop (over `nl`) must remain sequential because `pb_mix` modifies input arrays between iterations, creating a true inter-repetition dependence. The inner loop (over `i`) is the target for parallelization. The issue: within the inner loop, each iteration reads from `u[ku[i]]` after writing to `u[ju[i]]`. If multiple iterati
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

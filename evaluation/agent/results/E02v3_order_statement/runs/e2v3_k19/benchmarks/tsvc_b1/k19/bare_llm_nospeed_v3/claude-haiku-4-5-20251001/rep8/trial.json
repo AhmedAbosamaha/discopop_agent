@@ -1,0 +1,232 @@
+{
+  "benchmark": "tsvc_b1/k19",
+  "kernel": "k19",
+  "source": "k19.c",
+  "arm": "bare_llm_nospeed_v3",
+  "model": "claude-haiku-4-5-20251001",
+  "arm_flags": [
+    "--require-speedup",
+    "--min-runtime-share",
+    "0.01",
+    "--no-require-speedup",
+    "--prompt-version",
+    "3",
+    "--timing-cflags=-DSTANDARD_DATASET"
+  ],
+  "started_at": "2026-09-29T14:34:31",
+  "host": "rms14562",
+  "host_load_start": [
+    13.5234375,
+    6.30908203125,
+    5.181640625
+  ],
+  "agent_cmd": [
+    "/home/ahmedabosamaha/discopop_agent/venv/bin/python",
+    "-m",
+    "discopop_agent.bare_llm",
+    "--source-file",
+    "k19.c",
+    "--model",
+    "claude-haiku-4-5-20251001",
+    "--no-require-speedup",
+    "--prompt-version",
+    "3",
+    "--exclude-functions",
+    "main,pb_mix",
+    "--protected-line",
+    "#include \"tsvc_b1/k19.h\"",
+    "--protected-line",
+    "static void pb_mix(int nl)",
+    "--protected-line",
+    "long k = ((long)nl * 7919L + 13L) % LEN_1D;",
+    "--protected-line",
+    "a[k] += (real_t)0.25; b[k] += (real_t)0.25; c[k] += (real_t)0.125;",
+    "--protected-line",
+    "d[k] += (real_t)0.125; e[k] += (real_t)0.25;",
+    "--protected-line",
+    "a[0] += (real_t)0.125; b[LEN_1D-1] += (real_t)0.125;",
+    "--protected-line",
+    "pb_mix(nl);",
+    "--protected-line",
+    "PB_MAIN(kernel_k19)",
+    "--protected-note",
+    "`pb_mix(nl)` changes a few input values between two repetitions of the `nl` loop, so the repetitions depend on each other and must run in order; the loop under study is the one inside it. `LEN_1D`, the length of the arrays, is set in the included header: 32000 in the default build, and up to 192000000 in the builds that verify the result."
+  ],
+  "agent_s": 112.6,
+  "agent_rc": 0,
+  "llm_calls": 1,
+  "llm_call_failures": 0,
+  "explorer_retries": 0,
+  "explorer_stalls": 0,
+  "reverts": 0,
+  "refresh_fast": 0,
+  "refresh_full": 0,
+  "refresh_fallback": 0,
+  "runtime_remeasurements": 0,
+  "phase_b_deferred": 0,
+  "phase_b_joint_kept": 0,
+  "dp_floor": null,
+  "gate_failures_phase_a": {},
+  "gate_failures_phase_b": {},
+  "gate_passes_phase_a": 0,
+  "gate_failures_d40": {},
+  "d40_verdicts": {},
+  "exposure_verdicts": {},
+  "d40_seconds": 0,
+  "requeued_regions": 0,
+  "region_verdicts": {},
+  "settle_dropped": 0,
+  "llm_usage": {
+    "calls_recorded": 1,
+    "input_tokens": 34,
+    "output_tokens": 10449,
+    "cache_read_input_tokens": 52249,
+    "cache_creation_input_tokens": 10805,
+    "cost_usd": 0.0803,
+    "model_seconds": 111.2
+  },
+  "source_changed": true,
+  "protected": [
+    "#include \"tsvc_b1/k19.h\"",
+    "static void pb_mix(int nl)",
+    "long k = ((long)nl * 7919L + 13L) % LEN_1D;",
+    "a[k] += (real_t)0.25; b[k] += (real_t)0.25; c[k] += (real_t)0.125;",
+    "d[k] += (real_t)0.125; e[k] += (real_t)0.25;",
+    "a[0] += (real_t)0.125; b[LEN_1D-1] += (real_t)0.125;",
+    "pb_mix(nl);",
+    "PB_MAIN(kernel_k19)"
+  ],
+  "harness_sha256": "68ecaea8bff0fd57431687d968e462c767e8ce93383effb29b9c3daabf1e8e3a",
+  "scaffold": {
+    "ok": true,
+    "problems": [],
+    "applies": true
+  },
+  "pragmas_added": 1,
+  "pragmas_in_final": 1,
+  "hot_loop": {
+    "entry": "kernel_k19",
+    "function": "kernel_k19",
+    "line": 18,
+    "writes": [
+      "u",
+      "v"
+    ]
+  },
+  "hot_loop_covered": true,
+  "hot_loop_coverage": {
+    "criterion": "v2 (27 Sep 2026)",
+    "covered": true,
+    "covering": [
+      {
+        "function": "kernel_k19",
+        "line": 18,
+        "directive": "#pragma omp parallel for shared(u, v, c, d, ju, jv, ku, kv)",
+        "writes": [
+          "u",
+          "v"
+        ]
+      }
+    ],
+    "uncounted": [],
+    "elsewhere": []
+  },
+  "candidates_recorded": 0,
+  "verify": {
+    "verify_size": "LARGE",
+    "threads": [
+      6,
+      12
+    ],
+    "repeats": 5,
+    "compiler": "/usr/bin/clang-20",
+    "final_flags": [],
+    "dump_exact": false,
+    "dump_max_rel_err": 0.013112001252830248,
+    "seed": "7",
+    "dump_exact_seeded": false,
+    "dump_seeded_max_rel_err": 0.013435411876865321,
+    "seq_median_s": 3.0803,
+    "seq_kernel_median_s": 2.267189,
+    "timing_basis": "kernel",
+    "par": {
+      "6": {
+        "median_s": 1.6448,
+        "program_speedup": 1.873,
+        "max_rel_err": 5.319551236309786e-06,
+        "kernel_median_s": 0.812349,
+        "kernel_speedup": 2.791,
+        "speedup": 2.791
+      },
+      "12": {
+        "median_s": 1.5426,
+        "program_speedup": 1.997,
+        "max_rel_err": 3.939452072847279e-06,
+        "kernel_median_s": 0.682455,
+        "kernel_speedup": 3.322,
+        "speedup": 3.322
+      }
+    },
+    "digest_max_rel_err": 5.319551236309786e-06,
+    "stable_at_fixed_threads": true,
+    "kernel_program_disagree": false,
+    "digest_seeded_rel_err": 4.078743065250994e-06,
+    "status": "ok",
+    "speed_measurable": true
+  },
+  "verify_s": 36.9,
+  "status": "done",
+  "outcome": "BROKEN",
+  "finished_at": "2026-09-29T14:37:00",
+  "host_load_end": [
+    24.69189453125,
+    14.96630859375,
+    8.7509765625
+  ],
+  "profile": {
+    "wrapper": "discopop_cc",
+    "instrument_s": 0.21,
+    "profiled_run_s": 0.82,
+    "explore_stalls": 0,
+    "explore_s": 1.42,
+    "explore_success_s": 1.42,
+    "explore_attempts": 1,
+    "explore_timed_out": false,
+    "explore_failures": [],
+    "patterns": {
+      "optimizer_output": 0,
+      "merged_pattern": 0,
+      "task": 0,
+      "do_all": 0,
+      "reduction": 0
+    },
+    "profile_sha256": "386e8b87e8d97d8d2e5147cb63182330b88b9726dda88293f45b1036b8c7b86d"
+  },
+  "package_integrity": {
+    "before": {
+      "checked": "before trial",
+      "at": "2026-09-29T14:34:31",
+      "prepared_sha256": "59e9ec63ca44dea77de316eb5c092316a1001a48c44b3f05565889b3cee51b82",
+      "packager_sha256": "59e9ec63ca44dea77de316eb5c092316a1001a48c44b3f05565889b3cee51b82",
+      "harness_sha256": "68ecaea8bff0fd57431687d968e462c767e8ce93383effb29b9c3daabf1e8e3a",
+      "archived_sha256": "59e9ec63ca44dea77de316eb5c092316a1001a48c44b3f05565889b3cee51b82",
+      "profile_sha256": "386e8b87e8d97d8d2e5147cb63182330b88b9726dda88293f45b1036b8c7b86d",
+      "ok": true
+    },
+    "after": {
+      "checked": "after trial",
+      "at": "2026-09-29T14:37:00",
+      "prepared_sha256": "59e9ec63ca44dea77de316eb5c092316a1001a48c44b3f05565889b3cee51b82",
+      "packager_sha256": "59e9ec63ca44dea77de316eb5c092316a1001a48c44b3f05565889b3cee51b82",
+      "harness_sha256": "68ecaea8bff0fd57431687d968e462c767e8ce93383effb29b9c3daabf1e8e3a",
+      "archived_sha256": "59e9ec63ca44dea77de316eb5c092316a1001a48c44b3f05565889b3cee51b82",
+      "profile_sha256": "386e8b87e8d97d8d2e5147cb63182330b88b9726dda88293f45b1036b8c7b86d",
+      "ok": true
+    }
+  },
+  "speed_check_off": true,
+  "timing_flags": [
+    "--timing-cflags=-DSTANDARD_DATASET"
+  ],
+  "repeat": 8
+}

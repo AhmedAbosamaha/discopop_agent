@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : k48.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : main, pb_mix
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] k48.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Looking at the code structure: **Analysis:** 1. **Outer loop (`nl`)**: The outer `for (int nl = 0; nl < R; nl++)` loop **cannot** be parallelized. It has a true dependence: `pb_mix(nl)` modifies input array elements between iterations (lines 9-12), and those modifications affect the next iteration's computation. 2. **Inner loop (`i`)**: The inner `for (long i = 1; i < LEN_1D; i++)` loop is the one
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

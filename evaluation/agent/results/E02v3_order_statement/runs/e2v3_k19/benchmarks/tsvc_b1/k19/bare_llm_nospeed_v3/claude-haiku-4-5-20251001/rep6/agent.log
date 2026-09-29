@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : k19.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : main, pb_mix
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] k19.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Looking at the code, I need to analyze the dependencies: ## Plan **Outer loop (nl):** Must remain sequential - `pb_mix()` creates true dependencies between repetitions by modifying input arrays between each iteration. **Inner loop (i):** This is the target for parallelization. The loop does indirect indexing into arrays u and v: ``` u[ju[i]] += v[kv[i]] * c[i]; v[jv[i]] = u[ku[i]] * d[i] + c[i]; `
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

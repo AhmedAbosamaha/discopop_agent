@@ -15,8 +15,8 @@ Primary not supported (agent 29/30 vs 29/30: ceiling). ORDER-2 packaging defect 
 ## What is in this folder
 
 - [`analysis/`](analysis/) — the read-out: 
-- [`runs/`](runs/) — 4 archived run(s): the evidence
-- [`preflight/`](preflight/) — 5 smoke run(s) before the launch
+- [`runs/`](runs/) — 6 archived run(s): the evidence
+- [`preflight/`](preflight/) — 8 smoke run(s) before the launch
 
 ## Runs
 
@@ -31,11 +31,11 @@ Primary not supported (agent 29/30 vs 29/30: ceiling). ORDER-2 packaging defect 
 | `e2v3_s211` | [`runs/e2v3_s211/`](runs/e2v3_s211/) | E2-V3 main run: tsvc_b1/s211 × full_b1_nospeed_v3, no_evidence_b1_nospeed_v3, twin_full_nospeed_v3, twin_no_evidence_nospeed_v3, bare_llm_nospeed_v3 × 10 trials, Haiku, threads 6/12, repeats 5 | valid | 50 | BROKEN 20, FASTER 16, SCAFFOLD_MODIFIED 1, VERIFY_FAILED 1, parallel-not-faster 12 |
 | `e2v3_k42` | [`runs/e2v3_k42/`](runs/e2v3_k42/) | E2-V3 main run: tsvc_b1/k42 × full_b1_nospeed_v3, no_evidence_b1_nospeed_v3, twin_full_nospeed_v3, twin_no_evidence_nospeed_v3, bare_llm_nospeed_v3 × 10 trials, Haiku, threads 6/12, repeats 5 — SUPERSEDED (packaging defect, §6 29 Sep): kept, not analysed | valid | 50 | BROKEN 8, VERIFY_FAILED 1, parallel-speed-not-measurable 41 |
 | `t0_1_v3b_sizes` | [`preflight/t0_1_v3b_sizes/`](preflight/t0_1_v3b_sizes/) | T0.1 sizes for tsvc_b1/k19, k48 (ORDER-2b; server, no model) | valid | 0 |  |
-| `t0_11_v3b_a` | not archived yet | T0.11 draw a on tsvc_b1/k19, k48: discopop_capability (budget 0, no model), threads 6/12, repeats 5 | registered |  |  |
-| `t0_11_v3b_b` | not archived yet | T0.11 draw b on tsvc_b1/k19, k48: discopop_capability (budget 0, no model), threads 6/12, repeats 5 | registered |  |  |
-| `t0_11_v3b_c` | not archived yet | T0.11 draw c on tsvc_b1/k19, k48: discopop_capability (budget 0, no model), threads 6/12, repeats 5 | registered |  |  |
-| `e2v3_k19` | not archived yet | E2-V3 re-run of ORDER-2 X, repackaged (substitution §6 29 Sep): tsvc_b1/k19 × full_b1_nospeed_v3, no_evidence_b1_nospeed_v3, twin_full_nospeed_v3, twin_no_evidence_nospeed_v3, bare_llm_nospeed_v3 × 10 trials, Haiku, threads 6/12, repeats 5 | registered |  |  |
-| `e2v3_k48` | not archived yet | E2-V3 re-run of ORDER-2 Y (control), repackaged: tsvc_b1/k48 × full_b1_nospeed_v3, no_evidence_b1_nospeed_v3, twin_full_nospeed_v3, twin_no_evidence_nospeed_v3, bare_llm_nospeed_v3 × 10 trials, Haiku, threads 6/12, repeats 5 | registered |  |  |
+| `t0_11_v3b_a` | [`preflight/t0_11_v3b_a/`](preflight/t0_11_v3b_a/) | T0.11 draw a on tsvc_b1/k19, k48: discopop_capability (budget 0, no model), threads 6/12, repeats 5 | valid | 2 | no-change 2 |
+| `t0_11_v3b_b` | [`preflight/t0_11_v3b_b/`](preflight/t0_11_v3b_b/) | T0.11 draw b on tsvc_b1/k19, k48: discopop_capability (budget 0, no model), threads 6/12, repeats 5 | valid | 2 | no-change 2 |
+| `t0_11_v3b_c` | [`preflight/t0_11_v3b_c/`](preflight/t0_11_v3b_c/) | T0.11 draw c on tsvc_b1/k19, k48: discopop_capability (budget 0, no model), threads 6/12, repeats 5 | valid | 2 | no-change 2 |
+| `e2v3_k19` | [`runs/e2v3_k19/`](runs/e2v3_k19/) | E2-V3 re-run of ORDER-2 X, repackaged (substitution §6 29 Sep): tsvc_b1/k19 × full_b1_nospeed_v3, no_evidence_b1_nospeed_v3, twin_full_nospeed_v3, twin_no_evidence_nospeed_v3, bare_llm_nospeed_v3 × 10 trials, Haiku, threads 6/12, repeats 5 | valid | 50 | BROKEN 19, FASTER 21, VERIFY_FAILED 1, no-change 9 |
+| `e2v3_k48` | [`runs/e2v3_k48/`](runs/e2v3_k48/) | E2-V3 re-run of ORDER-2 Y (control), repackaged: tsvc_b1/k48 × full_b1_nospeed_v3, no_evidence_b1_nospeed_v3, twin_full_nospeed_v3, twin_no_evidence_nospeed_v3, bare_llm_nospeed_v3 × 10 trials, Haiku, threads 6/12, repeats 5 | valid | 50 | BROKEN 9, FASTER 39, VERIFY_FAILED 2 |
 
 ## Change-log rows that name these runs (§6)
 
