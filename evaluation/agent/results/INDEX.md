@@ -333,7 +333,7 @@ Status: done
 
 ## [E2-V3 — prompt version 3 inside the agent: does DiscoPoP's evidence, stated as the split order it imposes, help where the order decides?](E02v3_order_statement/REPORT.md)
 
-Status: running
+Status: done
 
 | run | where | what it is | status | trials | outcomes |
 |---|---|---|---|---:|---|
