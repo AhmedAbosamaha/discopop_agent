@@ -1,0 +1,30 @@
+--- original.c
++++ final.c
+@@ -16,10 +16,26 @@
+ static real_t kernel_s1213(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        /* Save original a[] before inner loops */
++        real_t *a_orig = (real_t *)malloc(LEN_1D * sizeof(real_t));
++        memcpy(a_orig, a, LEN_1D * sizeof(real_t));
++
++        /* First pass: compute new a values.
++         * Each iteration i reads b[i-1], which is different for each iteration,
++         * so no loop-carried dependence. */
++        #pragma omp parallel for shared(a, b, c) private(i)
+         for (int i = 1; i < LEN_1D-1; i++) {
+             a[i] = b[i-1]+c[i];
+-            b[i] = a[i+1]*d[i];
+         }
++
++        /* Second pass: compute new b values using original a.
++         * Each iteration i reads a_orig[i+1], which is independent across iterations. */
++        #pragma omp parallel for shared(b, a_orig, d) private(i)
++        for (int i = 1; i < LEN_1D-1; i++) {
++            b[i] = a_orig[i+1]*d[i];
++        }
++
++        free(a_orig);
+         pb_mix(nl);
+     }
+     return (real_t)0;

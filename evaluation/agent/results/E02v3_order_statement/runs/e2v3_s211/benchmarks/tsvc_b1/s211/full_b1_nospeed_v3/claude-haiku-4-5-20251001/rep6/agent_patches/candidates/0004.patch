@@ -1,0 +1,16 @@
+--- s211.c
++++ s211.c
+@@ -24,11 +24,13 @@
+         memcpy(b_save, b, LEN_1D * sizeof(real_t));
+ 
+         /* Phase 1: Update b using saved values (no loop-carried dependence) */
++        #pragma omp parallel for shared(b_save) 
+         for (int i = 1; i < LEN_1D-1; i++) {
+             b[i] = b_save[i + 1] - e[i] * d[i];
+         }
+ 
+         /* Phase 2: Compute a using updated b (no loop-carried dependence) */
++        #pragma omp parallel for 
+         for (int i = 1; i < LEN_1D-1; i++) {
+             a[i] = b[i - 1] + c[i] * d[i];
+         }

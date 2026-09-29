@@ -1,0 +1,38 @@
+--- original.c
++++ final.c
+@@ -15,13 +15,34 @@
+ 
+ static real_t kernel_s211(void)
+ {
++    real_t *b_new = malloc(LEN_1D * sizeof(real_t));
++
+     for (int nl = 0; nl < R; nl++) {
++        /* Parallel loop: compute new b values in temporary buffer.
++         * No loop-carried dependence: iteration i reads b[i+1] (input),
++         * writes b_new[i]; iteration i+1 reads b[i+2], writes b_new[i+1]. */
++        #pragma omp parallel for shared(b, b_new, e, d)
++        for (int i = 1; i < LEN_1D-1; i++) {
++            b_new[i] = b[i + 1] - e[i] * d[i];
++        }
++
++        /* Copy new b values back to b. */
++        for (int i = 1; i < LEN_1D-1; i++) {
++            b[i] = b_new[i];
++        }
++
++        /* Parallel loop: compute a values using updated b.
++         * No loop-carried dependence: iteration i reads b[i-1], c[i], d[i];
++         * writes a[i]. Iteration i+1 writes a[i+1], no data dependency. */
++        #pragma omp parallel for shared(a, b, c, d)
+         for (int i = 1; i < LEN_1D-1; i++) {
+             a[i] = b[i - 1] + c[i] * d[i];
+-            b[i] = b[i + 1] - e[i] * d[i];
+         }
++
+         pb_mix(nl);
+     }
++
++    free(b_new);
+     return (real_t)0;
+ }
+ 

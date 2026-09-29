@@ -1,0 +1,32 @@
+--- original.c
++++ final.c
+@@ -16,10 +16,28 @@
+ static real_t kernel_s1213(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        // Save original a values to enable parallel execution
++        // Phase 1 reads a[i+1], which may otherwise be updated by a concurrent iteration
++        real_t *a_orig = malloc(LEN_1D * sizeof(real_t));
++        memcpy(a_orig, a, LEN_1D * sizeof(real_t));
++
++        // Phase 1: Compute all b[i] values in parallel using original a values
++        // Each iteration is independent: writes to b[i] only, reads only from a_orig[i+1], d[i]
++        #pragma omp parallel for shared(a_orig, b, d)
++        for (int i = 1; i < LEN_1D-1; i++) {
++            b[i] = a_orig[i+1]*d[i];
++        }
++
++        // Phase 2: Compute all a[i] values in parallel using updated b values
++        // Each iteration is independent: writes to a[i] only, reads from b[i-1], c[i]
++        // b[i-1] is now updated from phase 1, providing the same values as sequential execution
++        #pragma omp parallel for shared(a, b, c)
+         for (int i = 1; i < LEN_1D-1; i++) {
+             a[i] = b[i-1]+c[i];
+-            b[i] = a[i+1]*d[i];
+         }
++
++        free(a_orig);
++
+         pb_mix(nl);
+     }
+     return (real_t)0;

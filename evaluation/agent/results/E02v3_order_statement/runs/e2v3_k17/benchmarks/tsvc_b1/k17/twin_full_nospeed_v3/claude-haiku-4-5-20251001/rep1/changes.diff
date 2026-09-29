@@ -1,0 +1,17 @@
+--- original.c
++++ final.c
+@@ -14,10 +14,13 @@
+ 
+ static real_t kernel_k17(void)
+ {
++    #pragma omp parallel for 
+     for (int nl = 0; nl < R; nl++) {
+         for (long i = 1; i < LEN_1D; i++) {
++            v[jv[i]] += u[ku[i]] * d[i];
++        }
++        for (long i = 1; i < LEN_1D; i++) {
+             u[ju[i]] += v[kv[i]] * c[i];
+-            v[jv[i]] += u[ku[i]] * d[i];
+         }
+         pb_mix(nl);
+     }

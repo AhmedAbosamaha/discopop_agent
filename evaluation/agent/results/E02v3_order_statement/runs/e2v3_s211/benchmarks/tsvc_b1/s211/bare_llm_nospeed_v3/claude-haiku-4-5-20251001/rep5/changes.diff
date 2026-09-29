@@ -1,0 +1,32 @@
+--- original.c
++++ final.c
+@@ -16,10 +16,28 @@
+ static real_t kernel_s211(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        /* Save original b values to break anti-dependence through b[i+1] */
++        real_t *b_old = (real_t *)malloc(LEN_1D * sizeof(real_t));
++        memcpy(b_old, b, LEN_1D * sizeof(real_t));
++
++        /* First pass (parallel): Update b[i] reading from original b[i+1].
++         * All iterations are independent because each writes to a unique b[i]
++         * and all read from the invariant b_old array. */
++        #pragma omp parallel for shared(b, b_old, e, d)
++        for (int i = 1; i < LEN_1D-1; i++) {
++            b[i] = b_old[i + 1] - e[i] * d[i];
++        }
++
++        /* Second pass (parallel): Update a[i] reading from updated b[i-1].
++         * All iterations are independent because each writes to a unique a[i],
++         * reads only read-only arrays (c, d) and updated b array.
++         * No iteration reads from an index another iteration writes. */
++        #pragma omp parallel for shared(a, b, c, d)
+         for (int i = 1; i < LEN_1D-1; i++) {
+             a[i] = b[i - 1] + c[i] * d[i];
+-            b[i] = b[i + 1] - e[i] * d[i];
+         }
++
++        free(b_old);
+         pb_mix(nl);
+     }
+     return (real_t)0;

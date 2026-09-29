@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : k17.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : main, pb_mix
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] k17.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Looking at the code, I need to identify the blocking dependence and structure the parallelization. **Analysis:** The `nl` loop (outer) is sequential by design—`pb_mix()` at the end modifies input arrays between repetitions. The `i` loop (inner) has two statements per iteration: 1. `u[ju[i]] += v[kv[i]] * c[i];` — writes to u, reads from v 2. `v[jv[i]] += u[ku[i]] * d[i];` — writes to v, reads from
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

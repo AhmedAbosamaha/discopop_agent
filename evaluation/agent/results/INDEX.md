@@ -331,18 +331,18 @@ Status: done
 | `_launcher_logs` | [`logs/launcher/`](logs/launcher/) | the server launcher's logs, one per job | reference |  |  |
 | `_diagnostic_logs` | [`logs/diagnostic/`](logs/diagnostic/) | diagnostic logs from bug hunts | reference |  |  |
 
-## [E2-V3 — prompt version 3 inside the agent: does DiscoPoP's evidence, stated as the split order it imposes, help where the order decides?](E02v3_order_statement/)
+## [E2-V3 — prompt version 3 inside the agent: does DiscoPoP's evidence, stated as the split order it imposes, help where the order decides?](E02v3_order_statement/REPORT.md)
 
 Status: pre-flight
 
 | run | where | what it is | status | trials | outcomes |
 |---|---|---|---|---:|---|
 | `t0_1_v3_sizes` | [`E02v3_order_statement/preflight/t0_1_v3_sizes/`](E02v3_order_statement/preflight/t0_1_v3_sizes/) | T0.1 sizes for tsvc_b1/k17, k42, s1213, s211 (server, no model) | valid | 0 |  |
-| `t0_11_v3_a` | not archived yet | T0.11 draw a on tsvc_b1/k17, k42, s1213, s211: discopop_capability (budget 0, no model), threads 6/12, repeats 5 | registered |  |  |
-| `t0_11_v3_b` | not archived yet | T0.11 draw b on tsvc_b1/k17, k42, s1213, s211: discopop_capability (budget 0, no model), threads 6/12, repeats 5 | registered |  |  |
-| `t0_11_v3_c` | not archived yet | T0.11 draw c on tsvc_b1/k17, k42, s1213, s211: discopop_capability (budget 0, no model), threads 6/12, repeats 5 | registered |  |  |
-| `e2v3_k17` | not archived yet | E2-V3 main run: tsvc_b1/k17 × full_b1_nospeed_v3, no_evidence_b1_nospeed_v3, twin_full_nospeed_v3, twin_no_evidence_nospeed_v3, bare_llm_nospeed_v3 × 10 trials, Haiku, threads 6/12, repeats 5 | registered |  |  |
-| `e2v3_s1213` | not archived yet | E2-V3 main run: tsvc_b1/s1213 × full_b1_nospeed_v3, no_evidence_b1_nospeed_v3, twin_full_nospeed_v3, twin_no_evidence_nospeed_v3, bare_llm_nospeed_v3 × 10 trials, Haiku, threads 6/12, repeats 5 | registered |  |  |
-| `e2v3_s211` | not archived yet | E2-V3 main run: tsvc_b1/s211 × full_b1_nospeed_v3, no_evidence_b1_nospeed_v3, twin_full_nospeed_v3, twin_no_evidence_nospeed_v3, bare_llm_nospeed_v3 × 10 trials, Haiku, threads 6/12, repeats 5 | registered |  |  |
-| `e2v3_k42` | not archived yet | E2-V3 main run: tsvc_b1/k42 × full_b1_nospeed_v3, no_evidence_b1_nospeed_v3, twin_full_nospeed_v3, twin_no_evidence_nospeed_v3, bare_llm_nospeed_v3 × 10 trials, Haiku, threads 6/12, repeats 5 | registered |  |  |
+| `t0_11_v3_a` | [`E02v3_order_statement/preflight/t0_11_v3_a/`](E02v3_order_statement/preflight/t0_11_v3_a/) | T0.11 draw a on tsvc_b1/k17, k42, s1213, s211: discopop_capability (budget 0, no model), threads 6/12, repeats 5 | valid | 4 | no-change 2, parallel-speed-not-measurable 2 |
+| `t0_11_v3_b` | [`E02v3_order_statement/preflight/t0_11_v3_b/`](E02v3_order_statement/preflight/t0_11_v3_b/) | T0.11 draw b on tsvc_b1/k17, k42, s1213, s211: discopop_capability (budget 0, no model), threads 6/12, repeats 5 | valid | 4 | no-change 2, parallel-speed-not-measurable 2 |
+| `t0_11_v3_c` | [`E02v3_order_statement/preflight/t0_11_v3_c/`](E02v3_order_statement/preflight/t0_11_v3_c/) | T0.11 draw c on tsvc_b1/k17, k42, s1213, s211: discopop_capability (budget 0, no model), threads 6/12, repeats 5 | valid | 4 | no-change 2, parallel-speed-not-measurable 2 |
+| `e2v3_k17` | [`E02v3_order_statement/runs/e2v3_k17/`](E02v3_order_statement/runs/e2v3_k17/) | E2-V3 main run: tsvc_b1/k17 × full_b1_nospeed_v3, no_evidence_b1_nospeed_v3, twin_full_nospeed_v3, twin_no_evidence_nospeed_v3, bare_llm_nospeed_v3 × 10 trials, Haiku, threads 6/12, repeats 5 | valid | 50 | BROKEN 19, no-change 1, parallel-speed-not-measurable 30 |
+| `e2v3_s1213` | [`E02v3_order_statement/runs/e2v3_s1213/`](E02v3_order_statement/runs/e2v3_s1213/) | E2-V3 main run: tsvc_b1/s1213 × full_b1_nospeed_v3, no_evidence_b1_nospeed_v3, twin_full_nospeed_v3, twin_no_evidence_nospeed_v3, bare_llm_nospeed_v3 × 10 trials, Haiku, threads 6/12, repeats 5 | valid | 50 | BROKEN 12, FASTER 30, VERIFY_FAILED 2, no-change 2, parallel-not-faster 4 |
+| `e2v3_s211` | [`E02v3_order_statement/runs/e2v3_s211/`](E02v3_order_statement/runs/e2v3_s211/) | E2-V3 main run: tsvc_b1/s211 × full_b1_nospeed_v3, no_evidence_b1_nospeed_v3, twin_full_nospeed_v3, twin_no_evidence_nospeed_v3, bare_llm_nospeed_v3 × 10 trials, Haiku, threads 6/12, repeats 5 | valid | 50 | BROKEN 20, FASTER 16, SCAFFOLD_MODIFIED 1, VERIFY_FAILED 1, parallel-not-faster 12 |
+| `e2v3_k42` | [`E02v3_order_statement/runs/e2v3_k42/`](E02v3_order_statement/runs/e2v3_k42/) | E2-V3 main run: tsvc_b1/k42 × full_b1_nospeed_v3, no_evidence_b1_nospeed_v3, twin_full_nospeed_v3, twin_no_evidence_nospeed_v3, bare_llm_nospeed_v3 × 10 trials, Haiku, threads 6/12, repeats 5 | valid | 50 | BROKEN 8, VERIFY_FAILED 1, parallel-speed-not-measurable 41 |
 

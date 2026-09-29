@@ -1,0 +1,15 @@
+--- original.c
++++ final.c
+@@ -15,8 +15,12 @@
+ static real_t kernel_k42(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        #pragma omp parallel for shared(ju, u, v, kv, c)
+         for (long i = 1; i < LEN_1D; i++) {
+             u[ju[i]] += v[kv[i]] * c[i];
++        }
++        #pragma omp parallel for shared(jv, v, u, ku, d)
++        for (long i = 1; i < LEN_1D; i++) {
+             v[jv[i]] += u[ku[i]] * d[i];
+         }
+         pb_mix(nl);

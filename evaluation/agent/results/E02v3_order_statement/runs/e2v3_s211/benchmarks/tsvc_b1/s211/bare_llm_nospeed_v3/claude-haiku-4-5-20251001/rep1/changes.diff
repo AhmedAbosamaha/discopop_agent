@@ -1,0 +1,24 @@
+--- original.c
++++ final.c
+@@ -16,10 +16,20 @@
+ static real_t kernel_s211(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        /* First loop: compute b[i] independently. Each iteration i reads b[i+1] (original,
++         * not written by this loop) and writes b[i]. No iteration depends on another. */
++        #pragma omp parallel for shared(b, e, d)
++        for (int i = 1; i < LEN_1D-1; i++) {
++            b[i] = b[i + 1] - e[i] * d[i];
++        }
++
++        /* Second loop: compute a[i] independently. Each iteration i reads b[i-1] (written
++         * by first loop, now invariant) and writes a[i]. No iteration depends on another. */
++        #pragma omp parallel for shared(a, b, c, d)
+         for (int i = 1; i < LEN_1D-1; i++) {
+             a[i] = b[i - 1] + c[i] * d[i];
+-            b[i] = b[i + 1] - e[i] * d[i];
+         }
++
+         pb_mix(nl);
+     }
+     return (real_t)0;

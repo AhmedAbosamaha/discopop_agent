@@ -1,0 +1,10 @@
+--- s1213.c
++++ s1213.c
+@@ -27,6 +27,7 @@
+             b[i] = new_b[i];
+         }
+         // Phase 3: compute a values using updated b (sequential: reads b[i-1] computed by i-1)
++        #pragma omp parallel for 
+         for (int i = 1; i < LEN_1D-1; i++) {
+             a[i] = b[i-1]+c[i];
+         }

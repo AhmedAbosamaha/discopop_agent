@@ -1,0 +1,20 @@
+--- s1213.c
++++ s1213.c
+@@ -19,14 +19,17 @@
+ 
+     for (int nl = 0; nl < R; nl++) {
+         // Phase 1: compute new b values (parallel-ready: no loop-carried dependence)
++        #pragma omp parallel for 
+         for (int i = 1; i < LEN_1D-1; i++) {
+             new_b[i] = a[i+1]*d[i];
+         }
+         // Phase 2: update b array with newly computed values (parallel-ready)
++        #pragma omp parallel for 
+         for (int i = 1; i < LEN_1D-1; i++) {
+             b[i] = new_b[i];
+         }
+         // Phase 3: compute a values using updated b (sequential: reads b[i-1] computed by i-1)
++        #pragma omp parallel for 
+         for (int i = 1; i < LEN_1D-1; i++) {
+             a[i] = b[i-1]+c[i];
+         }

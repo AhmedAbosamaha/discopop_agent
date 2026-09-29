@@ -1,0 +1,35 @@
+--- s211.c
++++ s211.c
+@@ -1,6 +1,8 @@
+ /* TSVC-2 loop s211, from TSVC-2 src/tsvc.c (sha256 456dd573b84b; University of Illinois licence,
+  * see benchmarks/TSVC_2/license.txt). */
+ #include "tsvc_b1/s211.h"
++#include <string.h>
++#include <stdlib.h>
+ 
+ /* Between two repetitions a few INPUT elements change, so no repetition can be skipped,
+  * merged with another or run out of order: the repetition loop is sequential by a true
+@@ -16,11 +18,22 @@
+ static real_t kernel_s211(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        /* Save original b values before modification */
++        real_t *b_save = malloc(LEN_1D * sizeof(real_t));
++        memcpy(b_save, b, LEN_1D * sizeof(real_t));
++
++        /* Phase 1: Update b using saved values (no loop-carried dependence) */
++        for (int i = 1; i < LEN_1D-1; i++) {
++            b[i] = b_save[i + 1] - e[i] * d[i];
++        }
++
++        /* Phase 2: Compute a using updated b (no loop-carried dependence) */
+         for (int i = 1; i < LEN_1D-1; i++) {
+             a[i] = b[i - 1] + c[i] * d[i];
+-            b[i] = b[i + 1] - e[i] * d[i];
+         }
++
+         pb_mix(nl);
++        free(b_save);
+     }
+     return (real_t)0;
+ }

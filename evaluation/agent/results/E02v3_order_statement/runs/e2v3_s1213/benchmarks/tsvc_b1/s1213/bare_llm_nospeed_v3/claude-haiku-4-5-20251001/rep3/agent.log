@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s1213.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : main, pb_mix
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] s1213.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Looking at the program structure, let me analyze the dependencies: **Current loop:** ```c for (int i = 1; i < LEN_1D-1; i++) { a[i] = b[i-1]+c[i]; // reads b[i-1] (written by i-1), writes a[i] b[i] = a[i+1]*d[i]; // reads a[i+1] (original), writes b[i] } ``` **Key observation:** The loop has two loop-carried dependences: 1. Iteration i reads `b[i-1]` which was written by iteration i-1 2. Iteration
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

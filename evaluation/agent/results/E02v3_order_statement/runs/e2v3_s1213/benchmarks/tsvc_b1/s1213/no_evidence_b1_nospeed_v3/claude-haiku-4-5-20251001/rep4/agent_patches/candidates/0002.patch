@@ -1,0 +1,10 @@
+--- s1213.c
++++ s1213.c
+@@ -23,6 +23,7 @@
+             new_b[i] = a[i+1]*d[i];
+         }
+         // Phase 2: update b array with newly computed values (parallel-ready)
++        #pragma omp parallel for 
+         for (int i = 1; i < LEN_1D-1; i++) {
+             b[i] = new_b[i];
+         }

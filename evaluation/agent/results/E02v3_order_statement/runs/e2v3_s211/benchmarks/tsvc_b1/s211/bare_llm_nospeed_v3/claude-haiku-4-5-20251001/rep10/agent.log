@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s211.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : main, pb_mix
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] s211.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: I'll read the file and analyze the dependencies.## Plan **The blocking dependence:** The inner loop processes `b` and `a` within a single iteration. Looking closely: - Iteration `i` writes to `b[i]` (reads `b[i+1]`) - Iteration `i` also reads `b[i-1]` to compute `a[i]` - In the original sequential code, iteration `i` reads `b[i-1]`, which was *just written* by iteration `i-1` However, the key insi
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

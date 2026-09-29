@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s1213.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : main, pb_mix
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] s1213.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Now let me analyze the code: **Analysis:** Looking at the inner loop (i from 1 to LEN_1D-1): ```c a[i] = b[i-1] + c[i]; // reads b[i-1] (from iteration i-1), writes a[i] b[i] = a[i+1] * d[i]; // reads a[i+1] (initial value), writes b[i] ``` The blocking dependence is **loop-carried through b[i-1]**: iteration i reads `b[i-1]` which is written by iteration i-1. Additionally, iteration i reads `a[i+
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s1213.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : main, pb_mix
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] s1213.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Looking at this program, let me understand the dependencies: **Analysis:** The inner loop has two statements per iteration: ```c a[i] = b[i-1]+c[i]; // reads b[i-1], writes a[i] b[i] = a[i+1]*d[i]; // reads a[i+1], writes b[i] ``` The carry-forward dependences are: - Iteration i writes `b[i]`, iteration i+1 reads `b[i]` → true dependence blocking parallelization - Iteration i reads `a[i+1]`, itera
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result
