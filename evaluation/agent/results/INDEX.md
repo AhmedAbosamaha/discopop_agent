@@ -337,7 +337,7 @@ Status: pre-flight
 
 | run | where | what it is | status | trials | outcomes |
 |---|---|---|---|---:|---|
-| `t0_1_v3_sizes` | not archived yet | T0.1 sizes for tsvc_b1/k17, k42, s1213, s211 (server, no model) | registered |  |  |
+| `t0_1_v3_sizes` | [`E02v3_order_statement/preflight/t0_1_v3_sizes/`](E02v3_order_statement/preflight/t0_1_v3_sizes/) | T0.1 sizes for tsvc_b1/k17, k42, s1213, s211 (server, no model) | valid | 0 |  |
 | `t0_11_v3_a` | not archived yet | T0.11 draw a on tsvc_b1/k17, k42, s1213, s211: discopop_capability (budget 0, no model), threads 6/12, repeats 5 | registered |  |  |
 | `t0_11_v3_b` | not archived yet | T0.11 draw b on tsvc_b1/k17, k42, s1213, s211: discopop_capability (budget 0, no model), threads 6/12, repeats 5 | registered |  |  |
 | `t0_11_v3_c` | not archived yet | T0.11 draw c on tsvc_b1/k17, k42, s1213, s211: discopop_capability (budget 0, no model), threads 6/12, repeats 5 | registered |  |  |
