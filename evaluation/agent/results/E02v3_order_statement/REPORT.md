@@ -16,7 +16,7 @@ Primary not supported (agent 29/30 vs 29/30: ceiling). ORDER-2 packaging defect 
 
 - [`analysis/`](analysis/) — the read-out: 
 - [`runs/`](runs/) — 4 archived run(s): the evidence
-- [`preflight/`](preflight/) — 4 smoke run(s) before the launch
+- [`preflight/`](preflight/) — 5 smoke run(s) before the launch
 
 ## Runs
 
@@ -30,7 +30,7 @@ Primary not supported (agent 29/30 vs 29/30: ceiling). ORDER-2 packaging defect 
 | `e2v3_s1213` | [`runs/e2v3_s1213/`](runs/e2v3_s1213/) | E2-V3 main run: tsvc_b1/s1213 × full_b1_nospeed_v3, no_evidence_b1_nospeed_v3, twin_full_nospeed_v3, twin_no_evidence_nospeed_v3, bare_llm_nospeed_v3 × 10 trials, Haiku, threads 6/12, repeats 5 | valid | 50 | BROKEN 12, FASTER 30, VERIFY_FAILED 2, no-change 2, parallel-not-faster 4 |
 | `e2v3_s211` | [`runs/e2v3_s211/`](runs/e2v3_s211/) | E2-V3 main run: tsvc_b1/s211 × full_b1_nospeed_v3, no_evidence_b1_nospeed_v3, twin_full_nospeed_v3, twin_no_evidence_nospeed_v3, bare_llm_nospeed_v3 × 10 trials, Haiku, threads 6/12, repeats 5 | valid | 50 | BROKEN 20, FASTER 16, SCAFFOLD_MODIFIED 1, VERIFY_FAILED 1, parallel-not-faster 12 |
 | `e2v3_k42` | [`runs/e2v3_k42/`](runs/e2v3_k42/) | E2-V3 main run: tsvc_b1/k42 × full_b1_nospeed_v3, no_evidence_b1_nospeed_v3, twin_full_nospeed_v3, twin_no_evidence_nospeed_v3, bare_llm_nospeed_v3 × 10 trials, Haiku, threads 6/12, repeats 5 — SUPERSEDED (packaging defect, §6 29 Sep): kept, not analysed | valid | 50 | BROKEN 8, VERIFY_FAILED 1, parallel-speed-not-measurable 41 |
-| `t0_1_v3b_sizes` | not archived yet | T0.1 sizes for tsvc_b1/k19, k48 (ORDER-2b; server, no model) | registered |  |  |
+| `t0_1_v3b_sizes` | [`preflight/t0_1_v3b_sizes/`](preflight/t0_1_v3b_sizes/) | T0.1 sizes for tsvc_b1/k19, k48 (ORDER-2b; server, no model) | valid | 0 |  |
 | `t0_11_v3b_a` | not archived yet | T0.11 draw a on tsvc_b1/k19, k48: discopop_capability (budget 0, no model), threads 6/12, repeats 5 | registered |  |  |
 | `t0_11_v3b_b` | not archived yet | T0.11 draw b on tsvc_b1/k19, k48: discopop_capability (budget 0, no model), threads 6/12, repeats 5 | registered |  |  |
 | `t0_11_v3b_c` | not archived yet | T0.11 draw c on tsvc_b1/k19, k48: discopop_capability (budget 0, no model), threads 6/12, repeats 5 | registered |  |  |
