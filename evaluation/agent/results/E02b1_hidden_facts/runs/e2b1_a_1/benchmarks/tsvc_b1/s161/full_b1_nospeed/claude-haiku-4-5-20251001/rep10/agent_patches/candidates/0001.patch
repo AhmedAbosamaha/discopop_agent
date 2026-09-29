@@ -1,0 +1,29 @@
+--- s161.c
++++ s161.c
+@@ -16,6 +16,10 @@
+ static real_t kernel_s161(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        real_t *c_new = (real_t *)malloc(LEN_1D * sizeof(real_t));
++        for (int i = 0; i < LEN_1D; ++i) {
++            c_new[i] = c[i];
++        }
+         for (int i = 0; i < LEN_1D-1; ++i) {
+             if (b[i] < (real_t)0.) {
+                 goto L20;
+@@ -23,10 +27,14 @@
+             a[i] = c[i] + d[i] * e[i];
+             goto L10;
+ L20:
+-            c[i+1] = a[i] + d[i] * d[i];
++            c_new[i+1] = a[i] + d[i] * d[i];
+ L10:
+             ;
+         }
++        for (int i = 0; i < LEN_1D; ++i) {
++            c[i] = c_new[i];
++        }
++        free(c_new);
+         pb_mix(nl);
+     }
+     return (real_t)0;

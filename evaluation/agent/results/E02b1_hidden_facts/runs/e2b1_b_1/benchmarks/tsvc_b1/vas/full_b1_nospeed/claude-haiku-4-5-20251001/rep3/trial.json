@@ -1,0 +1,259 @@
+{
+  "benchmark": "tsvc_b1/vas",
+  "kernel": "vas",
+  "source": "vas.c",
+  "arm": "full_b1_nospeed",
+  "model": "claude-haiku-4-5-20251001",
+  "arm_flags": [
+    "--require-speedup",
+    "--min-runtime-share",
+    "0.01",
+    "--budget",
+    "1",
+    "--no-require-speedup"
+  ],
+  "started_at": "2026-09-28T08:30:18",
+  "host": "rms14562",
+  "host_load_start": [
+    26.4775390625,
+    25.0458984375,
+    23.4853515625
+  ],
+  "agent_cmd": [
+    "/home/ahmedabosamaha/discopop_agent/venv/bin/python",
+    "-m",
+    "discopop_agent",
+    "--source-file",
+    "vas.c",
+    "--discopop-dir",
+    ".discopop",
+    "--provider",
+    "claude-agent-sdk",
+    "--model",
+    "claude-haiku-4-5-20251001",
+    "--edit-mode",
+    "direct",
+    "--require-speedup",
+    "--min-runtime-share",
+    "0.01",
+    "--budget",
+    "1",
+    "--no-require-speedup",
+    "--check-input",
+    "7",
+    "--exclude-functions",
+    "main,pb_mix",
+    "--protected-line",
+    "#include \"tsvc_b1/vas.h\"",
+    "--protected-line",
+    "static void pb_mix(int nl)",
+    "--protected-line",
+    "long k = ((long)nl * 7919L + 13L) % LEN_1D;",
+    "--protected-line",
+    "a[k] += (real_t)0.25; b[k] += (real_t)0.25; c[k] += (real_t)0.125;",
+    "--protected-line",
+    "d[k] += (real_t)0.125; e[k] += (real_t)0.25;",
+    "--protected-line",
+    "a[0] += (real_t)0.125; b[LEN_1D-1] += (real_t)0.125;",
+    "--protected-line",
+    "int * __restrict__ ip = pb_ip;",
+    "--protected-line",
+    "pb_mix(nl);",
+    "--protected-line",
+    "PB_MAIN(kernel_vas)",
+    "--protected-note",
+    "`pb_mix(nl)` changes a few input values between two repetitions of the `nl` loop, so the repetitions depend on each other and must run in order; the loop under study is the one inside it. `LEN_1D`, the length of the arrays, is set in the included header: 32000 in the default build, and up to 192000000 in the builds that verify the result.",
+    "--explorer-timeout",
+    "60"
+  ],
+  "agent_s": 182.7,
+  "agent_rc": 0,
+  "llm_calls": 1,
+  "llm_call_failures": 0,
+  "explorer_retries": 0,
+  "explorer_stalls": 0,
+  "reverts": 0,
+  "refresh_fast": 0,
+  "refresh_full": 1,
+  "refresh_fallback": 0,
+  "runtime_remeasurements": 1,
+  "phase_b_deferred": 0,
+  "phase_b_joint_kept": 0,
+  "dp_floor": null,
+  "gate_failures_phase_a": {},
+  "gate_failures_phase_b": {},
+  "gate_passes_phase_a": 1,
+  "gate_failures_d40": {},
+  "d40_verdicts": {
+    "safe": 1
+  },
+  "exposure_verdicts": {
+    "exposed": 1
+  },
+  "d40_seconds": 0.8,
+  "requeued_regions": 0,
+  "region_verdicts": {
+    "ACCEPTED": 1,
+    "SKIPPED": 2,
+    "DEFERRED": 1,
+    "APPLIED": 1
+  },
+  "settle_dropped": 0,
+  "baseline_claimed": 1,
+  "baseline_pragmas": 1,
+  "rewrites_kept": 1,
+  "pragmas_applied": 1,
+  "pragmas_discopop": 1,
+  "pragmas_llm": 0,
+  "regions_skipped": 2,
+  "llm_usage": {
+    "calls_recorded": 1,
+    "input_tokens": 26,
+    "output_tokens": 16931,
+    "cache_read_input_tokens": 48565,
+    "cache_creation_input_tokens": 20158,
+    "cost_usd": 0.1327,
+    "model_seconds": 175.0
+  },
+  "source_changed": true,
+  "protected": [
+    "#include \"tsvc_b1/vas.h\"",
+    "static void pb_mix(int nl)",
+    "long k = ((long)nl * 7919L + 13L) % LEN_1D;",
+    "a[k] += (real_t)0.25; b[k] += (real_t)0.25; c[k] += (real_t)0.125;",
+    "d[k] += (real_t)0.125; e[k] += (real_t)0.25;",
+    "a[0] += (real_t)0.125; b[LEN_1D-1] += (real_t)0.125;",
+    "int * __restrict__ ip = pb_ip;",
+    "pb_mix(nl);",
+    "PB_MAIN(kernel_vas)"
+  ],
+  "harness_sha256": "d01e0b2685125d5fecde28a4bc0739cc90b3258c6dc7462425d43ee9e4b86845",
+  "scaffold": {
+    "ok": true,
+    "problems": [],
+    "applies": true
+  },
+  "pragmas_added": 1,
+  "pragmas_in_final": 1,
+  "hot_loop": {
+    "entry": "kernel_vas",
+    "function": "kernel_vas",
+    "line": 20,
+    "writes": [
+      "a"
+    ]
+  },
+  "hot_loop_covered": true,
+  "hot_loop_coverage": {
+    "criterion": "v2 (27 Sep 2026)",
+    "covered": true,
+    "covering": [
+      {
+        "function": "kernel_vas",
+        "line": 22,
+        "directive": "#pragma omp parallel for",
+        "writes": [
+          "a"
+        ]
+      }
+    ],
+    "uncounted": [],
+    "elsewhere": []
+  },
+  "candidates_recorded": 3,
+  "verify": {
+    "verify_size": "EXTRALARGE",
+    "threads": [
+      6,
+      12
+    ],
+    "repeats": 5,
+    "compiler": "/usr/bin/clang-20",
+    "final_flags": [],
+    "dump_exact": true,
+    "dump_max_rel_err": 0.0,
+    "seed": "7",
+    "dump_exact_seeded": true,
+    "dump_seeded_max_rel_err": 0.0,
+    "seq_median_s": 6.9015,
+    "seq_kernel_median_s": 4.201813,
+    "timing_basis": "kernel",
+    "par": {
+      "6": {
+        "median_s": 6.5452,
+        "program_speedup": 1.054,
+        "max_rel_err": 0.0,
+        "kernel_median_s": 3.832997,
+        "kernel_speedup": 1.096,
+        "speedup": 1.096
+      },
+      "12": {
+        "median_s": 6.4102,
+        "program_speedup": 1.077,
+        "max_rel_err": 0.0,
+        "kernel_median_s": 3.792812,
+        "kernel_speedup": 1.108,
+        "speedup": 1.108
+      }
+    },
+    "digest_max_rel_err": 0.0,
+    "stable_at_fixed_threads": true,
+    "kernel_program_disagree": false,
+    "digest_seeded_rel_err": 0.0,
+    "status": "ok",
+    "speed_measurable": true
+  },
+  "verify_s": 115.0,
+  "status": "done",
+  "outcome": "FASTER",
+  "finished_at": "2026-09-28T08:35:16",
+  "host_load_end": [
+    24.8203125,
+    24.36767578125,
+    23.53271484375
+  ],
+  "profile": {
+    "wrapper": "discopop_cc",
+    "instrument_s": 0.21,
+    "profiled_run_s": 0.22,
+    "explore_stalls": 0,
+    "explore_s": 1.47,
+    "explore_success_s": 1.47,
+    "explore_attempts": 1,
+    "explore_timed_out": false,
+    "explore_failures": [],
+    "patterns": {
+      "optimizer_output": 0,
+      "merged_pattern": 0,
+      "task": 0,
+      "do_all": 1,
+      "reduction": 0
+    },
+    "profile_sha256": "0fffd45c34092dd733b6d88bd4b8263a3f06ef72720abe99252e345a6624520c"
+  },
+  "package_integrity": {
+    "before": {
+      "checked": "before trial",
+      "at": "2026-09-28T08:30:18",
+      "prepared_sha256": "391964fe31630de12714d10b64009dcf02374e4060d2928472d0b23d10ca3548",
+      "packager_sha256": "391964fe31630de12714d10b64009dcf02374e4060d2928472d0b23d10ca3548",
+      "harness_sha256": "d01e0b2685125d5fecde28a4bc0739cc90b3258c6dc7462425d43ee9e4b86845",
+      "archived_sha256": "391964fe31630de12714d10b64009dcf02374e4060d2928472d0b23d10ca3548",
+      "profile_sha256": "0fffd45c34092dd733b6d88bd4b8263a3f06ef72720abe99252e345a6624520c",
+      "ok": true
+    },
+    "after": {
+      "checked": "after trial",
+      "at": "2026-09-28T08:35:16",
+      "prepared_sha256": "391964fe31630de12714d10b64009dcf02374e4060d2928472d0b23d10ca3548",
+      "packager_sha256": "391964fe31630de12714d10b64009dcf02374e4060d2928472d0b23d10ca3548",
+      "harness_sha256": "d01e0b2685125d5fecde28a4bc0739cc90b3258c6dc7462425d43ee9e4b86845",
+      "archived_sha256": "391964fe31630de12714d10b64009dcf02374e4060d2928472d0b23d10ca3548",
+      "profile_sha256": "0fffd45c34092dd733b6d88bd4b8263a3f06ef72720abe99252e345a6624520c",
+      "ok": true
+    }
+  },
+  "speed_check_off": true,
+  "timing_flags": [],
+  "repeat": 3
+}

@@ -1,0 +1,27 @@
+--- bfs.cpp
++++ bfs.cpp
+@@ -34,15 +34,23 @@
+                 h_cost[i] = temp_cost[i];
+             free(temp_cost);
+ 
++            bool *updated = (bool *)malloc(no_of_nodes * sizeof(bool));
+             for(int tid=0; tid< no_of_nodes ; tid++ )
+             {
++                updated[tid] = false;
+                 if (h_updating_graph_mask[tid] == true){
+                     h_graph_mask[tid]=true;
+                     h_graph_visited[tid]=true;
+-                    stop=true;
++                    updated[tid]=true;
+                     h_updating_graph_mask[tid]=false;
+                 }
+             }
++            stop = false;
++            for(int tid=0; tid< no_of_nodes ; tid++ )
++            {
++                stop = stop || updated[tid];
++            }
++            free(updated);
+             k++;
+         }
+ 	while(stop);

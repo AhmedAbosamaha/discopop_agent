@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s131.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : main, pb_mix
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] s131.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Looking at this code, I need to understand the blocking dependence and determine how to parallelize it. ## Analysis **The blocking dependence:** The inner loop computes `a[i] = a[i + 1] + b[i]` (since m=1). This creates an anti-dependence: - Iteration i reads `a[i+1]` - Iteration i+1 writes to `a[i+1]` If iterations run out of order, iteration i might read a modified value of `a[i+1]` instead of t
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

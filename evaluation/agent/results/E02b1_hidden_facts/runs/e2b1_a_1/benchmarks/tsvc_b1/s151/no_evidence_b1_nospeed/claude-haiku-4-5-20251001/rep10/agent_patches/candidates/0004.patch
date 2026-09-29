@@ -1,0 +1,14 @@
+--- s151.c
++++ s151.c
+@@ -24,9 +24,11 @@
+ {
+     for (int nl = 0; nl < R; nl++) {
+         real_t *temp = malloc(LEN_1D * sizeof(real_t));
++        #pragma omp parallel for shared(temp) 
+         for (int i = 0; i < LEN_1D-1; i++) {
+             temp[i] = a[i + 1] + b[i];
+         }
++        #pragma omp parallel for shared(temp) 
+         for (int i = 0; i < LEN_1D-1; i++) {
+             a[i] = temp[i];
+         }

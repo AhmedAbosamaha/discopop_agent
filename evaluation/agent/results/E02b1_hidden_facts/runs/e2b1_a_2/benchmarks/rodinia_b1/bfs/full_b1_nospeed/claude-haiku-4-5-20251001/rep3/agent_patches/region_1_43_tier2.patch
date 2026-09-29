@@ -1,0 +1,29 @@
+--- bfs.cpp
++++ bfs.cpp
+@@ -36,15 +36,25 @@
+                 h_cost[i] = h_cost_temp[i];
+             }
+ 
++            bool stop_local = false;
++            for(int tid=0; tid< no_of_nodes ; tid++ )
++            {
++                if (h_updating_graph_mask[tid] == true){
++                    stop_local = true;
++                    break;
++                }
++            }
++
+             for(int tid=0; tid< no_of_nodes ; tid++ )
+             {
+                 if (h_updating_graph_mask[tid] == true){
+                     h_graph_mask[tid]=true;
+                     h_graph_visited[tid]=true;
+-                    stop=true;
+                     h_updating_graph_mask[tid]=false;
+                 }
+             }
++
++            stop = stop_local;
+             k++;
+         }
+ 	while(stop);

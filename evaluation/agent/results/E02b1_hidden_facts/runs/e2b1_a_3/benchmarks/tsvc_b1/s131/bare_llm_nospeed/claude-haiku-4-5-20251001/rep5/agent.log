@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s131.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : main, pb_mix
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] s131.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Analysis and Plan **Dependence structure:** The outer loop (`for (int nl = 0; nl < R; nl++)`) must remain sequential because `pb_mix(nl)` modifies global array values between repetitions, creating a true dependence between consecutive repetitions. The inner loop (`for (int i = 0; i < LEN_1D - 1; i++)`) is the candidate for parallelization. Each iteration i executes: ``` a[i] = a[i + m] + b[i]; 
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

@@ -1,0 +1,26 @@
+--- original.c
++++ final.c
+@@ -18,13 +18,19 @@
+     a[i] += b[i] * c[i];
+ }
+ 
++static void s152_inner(void)
++{
++    #pragma omp parallel for 
++    for (int i = 0; i < LEN_1D; i++) {
++        b[i] = d[i] * e[i];
++        s152s(a, b, c, i);
++    }
++}
++
+ static real_t kernel_s152(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
+-        for (int i = 0; i < LEN_1D; i++) {
+-            b[i] = d[i] * e[i];
+-            s152s(a, b, c, i);
+-        }
++        s152_inner();
+         pb_mix(nl);
+     }
+     return (real_t)0;

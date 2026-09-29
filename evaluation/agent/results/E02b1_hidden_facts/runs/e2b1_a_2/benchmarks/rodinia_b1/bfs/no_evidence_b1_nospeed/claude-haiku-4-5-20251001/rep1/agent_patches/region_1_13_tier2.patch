@@ -1,0 +1,56 @@
+--- bfs.cpp
++++ bfs.cpp
+@@ -10,31 +10,48 @@
+         {
+             stop=false;
+ 
++            // Temporary buffers to compute updates for this BFS level
++            int *new_costs = (int *)malloc(no_of_nodes * sizeof(int));
++            bool *new_masks = (bool *)malloc(no_of_nodes * sizeof(bool));
++
++            // Initialize temporary buffers with current values
++            for(int i = 0; i < no_of_nodes; i++) {
++                new_costs[i] = h_cost[i];
++                new_masks[i] = false;
++            }
++
++            // Phase 1: Process all frontier nodes and compute updates
+             for(int tid = 0; tid < no_of_nodes; tid++ )
+             {
+-                if (h_graph_mask[tid] == true){ 
++                if (h_graph_mask[tid] == true){
+                     h_graph_mask[tid]=false;
+                     for(int i=h_graph_nodes[tid].starting; i<(h_graph_nodes[tid].no_of_edges + h_graph_nodes[tid].starting); i++)
+                     {
+                         int id = h_graph_edges[i];
+                         if(!h_graph_visited[id])
+                         {
+-                            h_cost[id]=h_cost[tid]+1;
+-                            h_updating_graph_mask[id]=true;
++                            new_costs[id]=h_cost[tid]+1;
++                            new_masks[id]=true;
+                         }
+                     }
+                 }
+             }
+ 
++            // Phase 2: Apply updates to costs and advance frontier
+             for(int tid=0; tid< no_of_nodes ; tid++ )
+             {
+-                if (h_updating_graph_mask[tid] == true){
++                h_cost[tid]=new_costs[tid];
++                if (new_masks[tid] == true){
+                     h_graph_mask[tid]=true;
+                     h_graph_visited[tid]=true;
+                     stop=true;
+-                    h_updating_graph_mask[tid]=false;
+                 }
++                h_updating_graph_mask[tid]=false;
+             }
++
++            free(new_costs);
++            free(new_masks);
++
+             k++;
+         }
+ 	while(stop);

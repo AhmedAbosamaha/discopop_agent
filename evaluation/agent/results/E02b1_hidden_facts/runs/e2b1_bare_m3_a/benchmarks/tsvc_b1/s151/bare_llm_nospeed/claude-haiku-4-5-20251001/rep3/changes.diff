@@ -1,0 +1,38 @@
+--- original.c
++++ final.c
+@@ -1,6 +1,7 @@
+ /* TSVC-2 loop s151, from TSVC-2 src/tsvc.c (sha256 456dd573b84b; University of Illinois licence,
+  * see benchmarks/TSVC_2/license.txt). */
+ #include "tsvc_b1/s151.h"
++#include <stdlib.h>
+ 
+ /* Between two repetitions a few INPUT elements change, so no repetition can be skipped,
+  * merged with another or run out of order: the repetition loop is sequential by a true
+@@ -15,9 +16,26 @@
+ 
+ void s151s(real_t a[LEN_1D], real_t b[LEN_1D],  int m)
+ {
++    real_t *temp = malloc((LEN_1D-1) * sizeof(real_t));
++
++    /* Parallelize computation into temporary buffer: each iteration i independently
++     * computes temp[i] from a[i+m] and b[i]. No loop-carried dependence since each
++     * thread writes to unique temp[i] and reads from shared a, b (no writes to them).
++     */
++    #pragma omp parallel for shared(a, b, temp, m)
+     for (int i = 0; i < LEN_1D-1; i++) {
+-        a[i] = a[i + m] + b[i];
++        temp[i] = a[i + m] + b[i];
+     }
++
++    /* Parallelize copying results back to array a: each iteration i independently
++     * copies from temp[i] to a[i]. No loop-carried dependence.
++     */
++    #pragma omp parallel for shared(a, temp)
++    for (int i = 0; i < LEN_1D-1; i++) {
++        a[i] = temp[i];
++    }
++
++    free(temp);
+ }
+ 
+ static real_t kernel_s151(void)

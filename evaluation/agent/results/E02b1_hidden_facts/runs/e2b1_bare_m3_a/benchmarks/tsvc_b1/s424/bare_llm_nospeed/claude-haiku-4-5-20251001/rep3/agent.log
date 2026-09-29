@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s424.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : main, pb_mix
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] s424.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Now let me read the file to understand the code structure:## Plan **Blocking dependence:** The inner loop reads `flat_2d_array[i]` and writes to `xx[i+1]` (which is `flat_2d_array[i+64]` since `vl=63`). This creates a loop-carried dependence: iteration j reads what iteration j-64 writes when j ≥ 64, making the inner loop sequential. **Solution:** Copy the input values to a temporary buffer before 
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

@@ -1,0 +1,41 @@
+--- original.c
++++ final.c
+@@ -16,17 +16,30 @@
+ static real_t kernel_s161(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
+-        for (int i = 0; i < LEN_1D-1; ++i) {
++        /* First pass: even indices (0, 2, 4, ...).
++         * These write to c[odd] and a[even], read from c[even].
++         * All threads modify disjoint array elements. */
++        #pragma omp parallel for shared(a, b, c, d, e)
++        for (int i = 0; i < LEN_1D-1; i += 2) {
+             if (b[i] < (real_t)0.) {
+-                goto L20;
++                c[i+1] = a[i] + d[i] * d[i];
++            } else {
++                a[i] = c[i] + d[i] * e[i];
+             }
+-            a[i] = c[i] + d[i] * e[i];
+-            goto L10;
+-L20:
+-            c[i+1] = a[i] + d[i] * d[i];
+-L10:
+-            ;
+         }
++
++        /* Second pass: odd indices (1, 3, 5, ...).
++         * These read from c[odd] (written by pass 1) and a[odd], write to c[even].
++         * All threads modify disjoint array elements. */
++        #pragma omp parallel for shared(a, b, c, d, e)
++        for (int i = 1; i < LEN_1D-1; i += 2) {
++            if (b[i] < (real_t)0.) {
++                c[i+1] = a[i] + d[i] * d[i];
++            } else {
++                a[i] = c[i] + d[i] * e[i];
++            }
++        }
++
+         pb_mix(nl);
+     }
+     return (real_t)0;

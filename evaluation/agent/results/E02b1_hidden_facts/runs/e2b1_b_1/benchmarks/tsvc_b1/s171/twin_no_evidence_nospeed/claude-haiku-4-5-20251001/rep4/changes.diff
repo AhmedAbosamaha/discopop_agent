@@ -1,0 +1,24 @@
+--- original.c
++++ final.c
+@@ -16,9 +16,20 @@
+ static real_t kernel_s171(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        real_t* b_copy = (real_t*)malloc(LEN_1D * sizeof(real_t));
++        if (b_copy == NULL) return (real_t)0;
++
++        #pragma omp parallel for 
+         for (int i = 0; i < LEN_1D; i++) {
+-            a[i * inc] += b[i];
++            b_copy[i] = b[i];
+         }
++
++        #pragma omp parallel for 
++        for (int i = 0; i < LEN_1D; i++) {
++            a[i * inc] += b_copy[i];
++        }
++
++        free(b_copy);
+         pb_mix(nl);
+     }
+     return (real_t)0;

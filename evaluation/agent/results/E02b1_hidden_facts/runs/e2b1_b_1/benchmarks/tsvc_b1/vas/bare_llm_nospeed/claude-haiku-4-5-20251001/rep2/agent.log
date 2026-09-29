@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : vas.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : main, pb_mix
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] vas.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Now let me understand the structure: **Plan:** The program has two nested loops: 1. **Outer loop (nl)**: Sequential by design - each iteration calls `pb_mix(nl)` which modifies input arrays between repetitions, creating a true data dependence. This loop must remain serial. 2. **Inner loop (i)**: The loop under study. It performs `a[ip[i]] = b[i]` for each i from 0 to LEN_1D-1. This loop has **no l
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

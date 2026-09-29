@@ -1,0 +1,70 @@
+
+============================================================
+  Model-only twin (D38) — DiscoPoP's information, no gate, one attempt
+============================================================
+  Source         : bfs.cpp
+  Model          : claude-haiku-4-5-20251001
+  Pragmas by     : DiscoPoP
+  Evidence       : none
+  Depth          : 0
+
+┌─ [depth=0] loop 1:13 (lines 9–40)
+│  [twin] Calling claude-haiku-4-5-20251001...
+│  [twin] the model's plan: **Plan:** This is a breadth-first search that processes nodes level by level. The blocking issue is the `stop` variable: it forces the do-while loop to serialize because it accumulates across the Loop 2 iterations (set to true whenever any node is updated). The two inner loops can be parallelized: 1. **Loop 1** (lines 13–27) is actually a Do-All loop in disguise. Each `tid` iteration independently
+│  [twin] edited, 0 OpenMP pragma(s) in the file — kept unchecked
+│  [twin] Re-profiling (as the agent does after a kept rewrite)...
+│  [twin] 3 new region(s) at depth 1
+└─ EDITED
+
+┌─ [depth=0] loop 1:15 (lines 11–25)
+│  [twin] Calling claude-haiku-4-5-20251001...
+│  [twin] the model's plan: Looking at this BFS kernel, I need to analyze the data dependencies and understand what's blocking parallelization. ## Plan **Dependence Analysis:** The target loop (lines 11–25) processes nodes marked in `h_graph_mask`, explores their outgoing edges, and updates arrays for discovered nodes. The key blocking issues are: 1. **Anti-dependence on h_graph_mask[tid]**: Each iteration reads `h_graph_mas
+│  [twin] edited, 0 OpenMP pragma(s) in the file — kept unchecked
+│  [twin] Re-profiling (as the agent does after a kept rewrite)...
+│  [twin] 4 new region(s) at depth 1
+└─ EDITED
+
+┌─ [depth=0] loop 1:27 (lines 21–29)
+└─ DISCOPOP'S (annotated at the end)
+
+┌─ [depth=1] loop 1:40 (lines 36–44)
+└─ DISCOPOP'S (annotated at the end)
+
+┌─ [depth=1] loop 1:13 (lines 9–48)
+└─ SKIPPED (depth 1 > --restructure-depth 0)
+
+┌─ [depth=1] loop 1:17 (lines 12–15)
+└─ DISCOPOP'S (annotated at the end)
+
+┌─ [depth=1] function 1:11 (lines 5–49)
+└─ SKIPPED (depth 1 > --restructure-depth 0)
+
+┌─ [depth=1] loop 1:22 (lines 17–31)
+└─ DISCOPOP'S (annotated at the end)
+
+
+============================================================
+  DiscoPoP annotates — 4 applicable pattern(s), NOTHING CHECKED
+============================================================
+
+┌─ do_all @ lines 12–15  (W=1966080)
+│  #pragma omp parallel for
+│  [twin] Original backed up → bfs.cpp.original
+│  [twin] Applied to bfs.cpp
+└─ INSERTED (unchecked)
+
+┌─ do_all @ lines 17–31  (W=9175040)
+│  #pragma omp parallel for
+│  [twin] Applied to bfs.cpp
+└─ INSERTED (unchecked)
+
+┌─ do_all @ lines 21–29  (W=3141360)
+└─ SKIPPED (nested in a loop that is already parallel)
+
+┌─ reduction @ lines 36–44  (W=5242880)
+│  #pragma omp parallel for
+│  [twin] Applied to bfs.cpp
+└─ INSERTED (unchecked)
+
+
+  SUMMARY: 2 region(s) asked  |  2 edited  |  3 DiscoPoP pragma(s) inserted unchecked  |  nothing was checked here — the harness judges the result

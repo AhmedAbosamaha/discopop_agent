@@ -1,0 +1,46 @@
+
+============================================================
+  Model-only twin (D38) — DiscoPoP's information, no gate, one attempt
+============================================================
+  Source         : s481.c
+  Model          : claude-haiku-4-5-20251001
+  Pragmas by     : DiscoPoP
+  Evidence       : none
+  Depth          : 0
+
+┌─ [depth=0] loop 1:14 (lines 18–26)
+└─ DISCOPOP'S (annotated at the end)
+
+┌─ [depth=0] function 1:12 (lines 16–27)
+│  [twin] Calling claude-haiku-4-5-20251001...
+│  [twin] the model's plan: Looking at the code, I can identify the issue: **Analysis:** - The inner loop `for (int i = 0; i < LEN_1D; i++)` contains an `exit(0)` statement that makes its trip count data-dependent and unknown before execution - OpenMP requires that loop trip counts be known before the loop starts - The outer `nl` loop cannot be parallelized because `pb_mix(nl)` creates true dependences between iterations (it
+│  [twin] edited, 0 OpenMP pragma(s) in the file — kept unchecked
+│  [twin] Re-profiling (as the agent does after a kept rewrite)...
+│  [twin] 3 new region(s) at depth 1
+└─ EDITED
+
+┌─ [depth=1] loop 1:14 (lines 18–30)
+└─ DISCOPOP'S (annotated at the end)
+
+┌─ [depth=1] function 1:12 (lines 16–31)
+└─ SKIPPED (depth 1 > --restructure-depth 0)
+
+┌─ [depth=1] loop 1:18 (lines 20–25)
+└─ DISCOPOP'S (annotated at the end)
+
+
+============================================================
+  DiscoPoP annotates — 2 applicable pattern(s), NOTHING CHECKED
+============================================================
+
+┌─ do_all @ lines 18–30  (W=576)
+│  #pragma omp parallel for
+│  [twin] Original backed up → s481.c.original
+│  [twin] Applied to s481.c
+└─ INSERTED (unchecked)
+
+┌─ do_all @ lines 20–25  (W=7680000)
+└─ SKIPPED (nested in a loop that is already parallel)
+
+
+  SUMMARY: 1 region(s) asked  |  1 edited  |  1 DiscoPoP pragma(s) inserted unchecked  |  nothing was checked here — the harness judges the result

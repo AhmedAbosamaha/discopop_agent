@@ -1,0 +1,244 @@
+{
+  "benchmark": "rodinia_b1/bfs",
+  "kernel": "bfs",
+  "source": "bfs.cpp",
+  "arm": "twin_full_nospeed",
+  "model": "claude-haiku-4-5-20251001",
+  "arm_flags": [
+    "--require-speedup",
+    "--min-runtime-share",
+    "0.01",
+    "--budget",
+    "1",
+    "--no-require-speedup"
+  ],
+  "started_at": "2026-09-28T11:22:33",
+  "host": "rms14562",
+  "host_load_start": [
+    9.65283203125,
+    9.40478515625,
+    12.0302734375
+  ],
+  "agent_cmd": [
+    "/home/ahmedabosamaha/discopop_agent/venv/bin/python",
+    "-m",
+    "discopop_agent.twin",
+    "--source-file",
+    "bfs.cpp",
+    "--discopop-dir",
+    ".discopop",
+    "--provider",
+    "claude-agent-sdk",
+    "--model",
+    "claude-haiku-4-5-20251001",
+    "--edit-mode",
+    "direct",
+    "--require-speedup",
+    "--min-runtime-share",
+    "0.01",
+    "--budget",
+    "1",
+    "--no-require-speedup",
+    "--check-input",
+    "7",
+    "--exclude-functions",
+    "main",
+    "--protected-line",
+    "#include \"rodinia_b1/bfs.h\"",
+    "--protected-line",
+    "PB_MAIN(kernel_bfs)",
+    "--protected-note",
+    "`PB_MAIN(kernel_bfs)` expands to `main`: it sets up the data the included header declares, times one call of `kernel_bfs` and prints its result. `no_of_nodes`, the number of graph nodes, is set in the included header: 65536 in the default build, and up to 48000000 in the builds that verify the result.",
+    "--explorer-timeout",
+    "60"
+  ],
+  "agent_s": 143.8,
+  "agent_rc": 0,
+  "llm_calls": 1,
+  "llm_call_failures": 0,
+  "explorer_retries": 0,
+  "explorer_stalls": 0,
+  "reverts": 0,
+  "refresh_fast": 0,
+  "refresh_full": 0,
+  "refresh_fallback": 0,
+  "runtime_remeasurements": 0,
+  "phase_b_deferred": 0,
+  "phase_b_joint_kept": 0,
+  "dp_floor": null,
+  "gate_failures_phase_a": {},
+  "gate_failures_phase_b": {},
+  "gate_passes_phase_a": 0,
+  "gate_failures_d40": {},
+  "d40_verdicts": {},
+  "exposure_verdicts": {},
+  "d40_seconds": 0,
+  "requeued_regions": 0,
+  "region_verdicts": {
+    "EDITED": 1,
+    "DISCOPOP": 5,
+    "SKIPPED": 3,
+    "INSERTED": 4
+  },
+  "settle_dropped": 0,
+  "twin_asked": 1,
+  "twin_edited": 1,
+  "twin_dp_inserted": 4,
+  "twin_reprofile_failed": false,
+  "llm_usage": {
+    "calls_recorded": 1,
+    "input_tokens": 26,
+    "output_tokens": 15633,
+    "cache_read_input_tokens": 53410,
+    "cache_creation_input_tokens": 20459,
+    "cost_usd": 0.128,
+    "model_seconds": 137.0
+  },
+  "source_changed": true,
+  "protected": [
+    "#include \"rodinia_b1/bfs.h\"",
+    "PB_MAIN(kernel_bfs)"
+  ],
+  "harness_sha256": "bb26fba095bc0ae5d578f142df1ce0a64874ceb5b128c27aea56728cafb73d2c",
+  "scaffold": {
+    "ok": true,
+    "problems": [],
+    "applies": true
+  },
+  "pragmas_added": 4,
+  "pragmas_in_final": 4,
+  "hot_loop": {
+    "entry": "kernel_bfs",
+    "function": "kernel_bfs",
+    "line": 13,
+    "writes": [
+      "h_cost"
+    ],
+    "shared": [
+      "h_graph_mask",
+      "h_updating_graph_mask"
+    ]
+  },
+  "hot_loop_covered": true,
+  "hot_loop_coverage": {
+    "criterion": "v2 (27 Sep 2026)",
+    "covered": true,
+    "covering": [
+      {
+        "function": "kernel_bfs",
+        "line": 44,
+        "directive": "#pragma omp parallel for shared(h_updating_graph_mask_new,h_cost_new)",
+        "writes": [
+          "h_cost"
+        ]
+      }
+    ],
+    "uncounted": [],
+    "elsewhere": [
+      {
+        "function": "kernel_bfs",
+        "line": 19,
+        "directive": "#pragma omp parallel for shared(h_updating_graph_mask_new,h_cost_new)",
+        "writes": [
+          "h_cost_new",
+          "h_updating_graph_mask_new"
+        ]
+      },
+      {
+        "function": "kernel_bfs",
+        "line": 26,
+        "directive": "#pragma omp parallel for shared(h_updating_graph_mask_new,h_cost_new)",
+        "writes": [
+          "h_cost_new",
+          "h_graph_mask",
+          "h_updating_graph_mask_new"
+        ]
+      },
+      {
+        "function": "kernel_bfs",
+        "line": 50,
+        "directive": "#pragma omp parallel for lastprivate(stop)",
+        "writes": [
+          "h_graph_mask",
+          "h_graph_visited",
+          "h_updating_graph_mask"
+        ]
+      }
+    ]
+  },
+  "candidates_recorded": 0,
+  "verify": {
+    "verify_size": "EXTRALARGE",
+    "threads": [
+      6,
+      12
+    ],
+    "repeats": 5,
+    "compiler": "/usr/bin/clang++-20",
+    "final_flags": [],
+    "dump_exact": false,
+    "dump_max_rel_err": Infinity,
+    "seed": "7",
+    "dump_exact_seeded": false,
+    "dump_seeded_max_rel_err": Infinity,
+    "seq_median_s": 7.9067,
+    "seq_kernel_median_s": 4.352061,
+    "timing_basis": "kernel",
+    "par": {},
+    "status": "final_run_failed_T6",
+    "speed_measurable": true
+  },
+  "verify_s": 5440.6,
+  "status": "done",
+  "outcome": "BROKEN",
+  "finished_at": "2026-09-28T12:55:37",
+  "host_load_end": [
+    17.62548828125,
+    14.62255859375,
+    13.1591796875
+  ],
+  "profile": {
+    "wrapper": "discopop_cxx",
+    "instrument_s": 0.52,
+    "profiled_run_s": 0.26,
+    "explore_stalls": 0,
+    "explore_s": 3.43,
+    "explore_success_s": 3.43,
+    "explore_attempts": 1,
+    "explore_timed_out": false,
+    "explore_failures": [],
+    "patterns": {
+      "optimizer_output": 0,
+      "merged_pattern": 0,
+      "task": 0,
+      "do_all": 1,
+      "reduction": 0
+    },
+    "profile_sha256": "fd5b136627aae897d6f00c3b6b9a72406e5ec679c4daed578e02d69b4fbf8e9b"
+  },
+  "package_integrity": {
+    "before": {
+      "checked": "before trial",
+      "at": "2026-09-28T11:22:32",
+      "prepared_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+      "packager_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+      "harness_sha256": "bb26fba095bc0ae5d578f142df1ce0a64874ceb5b128c27aea56728cafb73d2c",
+      "archived_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+      "profile_sha256": "fd5b136627aae897d6f00c3b6b9a72406e5ec679c4daed578e02d69b4fbf8e9b",
+      "ok": true
+    },
+    "after": {
+      "checked": "after trial",
+      "at": "2026-09-28T12:55:37",
+      "prepared_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+      "packager_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+      "harness_sha256": "bb26fba095bc0ae5d578f142df1ce0a64874ceb5b128c27aea56728cafb73d2c",
+      "archived_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+      "profile_sha256": "fd5b136627aae897d6f00c3b6b9a72406e5ec679c4daed578e02d69b4fbf8e9b",
+      "ok": true
+    }
+  },
+  "speed_check_off": true,
+  "timing_flags": [],
+  "repeat": 4
+}

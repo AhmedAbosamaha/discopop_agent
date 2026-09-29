@@ -1,0 +1,10 @@
+--- bfs.cpp
++++ bfs.cpp
+@@ -21,6 +21,7 @@
+             }
+ 
+             // Phase 1: Process all frontier nodes and compute updates
++ #pragma omp parallel for shared(new_masks,new_costs) 
+             for(int tid = 0; tid < no_of_nodes; tid++ )
+             {
+                 if (h_graph_mask[tid] == true){

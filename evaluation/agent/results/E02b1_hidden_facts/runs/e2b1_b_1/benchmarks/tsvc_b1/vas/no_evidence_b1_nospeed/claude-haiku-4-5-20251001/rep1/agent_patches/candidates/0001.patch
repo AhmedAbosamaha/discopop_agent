@@ -1,0 +1,10 @@
+--- vas.c
++++ vas.c
+@@ -20,6 +20,7 @@
+     /* Compute inverse permutation to convert scatter into gather.
+        This makes the parallelism explicit: each iteration accesses distinct locations. */
+     int *ip_inv = malloc(LEN_1D * sizeof(int));
++    #pragma omp parallel for 
+     for (int i = 0; i < LEN_1D; i++) {
+         ip_inv[ip[i]] = i;
+     }

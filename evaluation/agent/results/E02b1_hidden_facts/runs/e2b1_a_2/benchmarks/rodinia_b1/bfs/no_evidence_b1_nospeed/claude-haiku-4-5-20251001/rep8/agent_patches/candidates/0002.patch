@@ -1,0 +1,10 @@
+--- bfs.cpp
++++ bfs.cpp
+@@ -11,6 +11,7 @@
+             stop=false;
+ 
+             int current_level_cost = -1;
++            #pragma omp parallel for firstprivate(k) shared(current_level_cost,stop) 
+             for(int tid = 0; tid < no_of_nodes; tid++) {
+                 if (h_graph_mask[tid] == true) {
+                     current_level_cost = h_cost[tid];

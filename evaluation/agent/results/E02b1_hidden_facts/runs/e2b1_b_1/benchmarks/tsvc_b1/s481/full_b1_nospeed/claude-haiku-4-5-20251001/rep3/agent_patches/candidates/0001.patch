@@ -1,0 +1,35 @@
+--- s481.c
++++ s481.c
+@@ -15,15 +15,30 @@
+ 
+ static real_t kernel_s481(void)
+ {
++    real_t *b_buf = malloc(LEN_1D * sizeof(real_t));
++    real_t *c_buf = malloc(LEN_1D * sizeof(real_t));
++    real_t *d_buf = malloc(LEN_1D * sizeof(real_t));
++
++    memcpy(b_buf, b, LEN_1D * sizeof(real_t));
++    memcpy(c_buf, c, LEN_1D * sizeof(real_t));
++    memcpy(d_buf, d, LEN_1D * sizeof(real_t));
++
+     for (int nl = 0; nl < R; nl++) {
+         for (int i = 0; i < LEN_1D; i++) {
+-            if (d[i] < (real_t)0.) {
++            if (d_buf[i] < (real_t)0.) {
+                 exit (0);
+             }
+-            a[i] += b[i] * c[i];
++            a[i] += b_buf[i] * c_buf[i];
+         }
+         pb_mix(nl);
++        memcpy(b_buf, b, LEN_1D * sizeof(real_t));
++        memcpy(c_buf, c, LEN_1D * sizeof(real_t));
++        memcpy(d_buf, d, LEN_1D * sizeof(real_t));
+     }
++
++    free(b_buf);
++    free(c_buf);
++    free(d_buf);
+     return (real_t)0;
+ }
+ 

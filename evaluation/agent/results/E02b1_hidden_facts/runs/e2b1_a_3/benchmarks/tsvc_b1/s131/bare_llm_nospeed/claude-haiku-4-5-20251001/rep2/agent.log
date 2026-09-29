@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s131.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : main, pb_mix
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] s131.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Looking at the program, let me analyze the dependencies: **Analysis:** The inner loop: ```c for (int i = 0; i < LEN_1D - 1; i++) { a[i] = a[i + m] + b[i]; // with m = 1: a[i] = a[i+1] + b[i] } ``` Each iteration `i` reads from `a[i+1]` and writes to `a[i]`. This creates a **forward dependence**: iteration `i` reads the value that iteration `i+1` will write. If iterations execute out of order, iter
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

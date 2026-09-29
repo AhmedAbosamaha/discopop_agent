@@ -1,0 +1,46 @@
+--- bfs.cpp
++++ bfs.cpp
+@@ -10,21 +10,40 @@
+         {
+             stop=false;
+ 
++            bool *was_frontier = (bool*)malloc(no_of_nodes * sizeof(bool));
++            int *new_cost = (int*)malloc(no_of_nodes * sizeof(int));
++            bool *new_updating_mask = (bool*)malloc(no_of_nodes * sizeof(bool));
++
++            for(int i = 0; i < no_of_nodes; i++) {
++                was_frontier[i] = h_graph_mask[i];
++                new_cost[i] = h_cost[i];
++                new_updating_mask[i] = h_updating_graph_mask[i];
++            }
++
+             for(int tid = 0; tid < no_of_nodes; tid++ )
+             {
+-                if (h_graph_mask[tid] == true){ 
++                if (was_frontier[tid]){
+                     h_graph_mask[tid]=false;
+                     for(int i=h_graph_nodes[tid].starting; i<(h_graph_nodes[tid].no_of_edges + h_graph_nodes[tid].starting); i++)
+                     {
+                         int id = h_graph_edges[i];
+                         if(!h_graph_visited[id])
+                         {
+-                            h_cost[id]=h_cost[tid]+1;
+-                            h_updating_graph_mask[id]=true;
++                            new_cost[id]=h_cost[tid]+1;
++                            new_updating_mask[id]=true;
+                         }
+                     }
+                 }
+             }
++
++            for(int tid = 0; tid < no_of_nodes; tid++) {
++                h_cost[tid] = new_cost[tid];
++                h_updating_graph_mask[tid] = new_updating_mask[tid];
++            }
++
++            free(was_frontier);
++            free(new_cost);
++            free(new_updating_mask);
+ 
+             int count_updated = 0;
+             for(int tid=0; tid< no_of_nodes ; tid++ )

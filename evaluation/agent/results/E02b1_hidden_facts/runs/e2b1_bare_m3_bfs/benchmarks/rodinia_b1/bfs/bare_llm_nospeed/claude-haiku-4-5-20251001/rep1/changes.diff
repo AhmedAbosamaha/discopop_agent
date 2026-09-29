@@ -1,0 +1,22 @@
+--- original.cpp
++++ final.cpp
+@@ -10,9 +10,10 @@
+         {
+             stop=false;
+ 
++            #pragma omp parallel for shared(h_graph_mask, h_graph_nodes, h_graph_edges, h_graph_visited, h_cost, h_updating_graph_mask)
+             for(int tid = 0; tid < no_of_nodes; tid++ )
+             {
+-                if (h_graph_mask[tid] == true){ 
++                if (h_graph_mask[tid] == true){
+                     h_graph_mask[tid]=false;
+                     for(int i=h_graph_nodes[tid].starting; i<(h_graph_nodes[tid].no_of_edges + h_graph_nodes[tid].starting); i++)
+                     {
+@@ -26,6 +27,7 @@
+                 }
+             }
+ 
++            #pragma omp parallel for reduction(||:stop) shared(h_updating_graph_mask, h_graph_mask, h_graph_visited)
+             for(int tid=0; tid< no_of_nodes ; tid++ )
+             {
+                 if (h_updating_graph_mask[tid] == true){

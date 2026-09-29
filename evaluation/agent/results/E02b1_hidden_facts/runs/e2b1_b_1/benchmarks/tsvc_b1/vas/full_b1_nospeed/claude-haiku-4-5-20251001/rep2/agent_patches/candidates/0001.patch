@@ -1,0 +1,10 @@
+--- vas.c
++++ vas.c
+@@ -19,6 +19,7 @@
+     for (int nl = 0; nl < R; nl++) {
+         real_t *b_local = malloc(LEN_1D * sizeof(real_t));
+         memcpy(b_local, b, LEN_1D * sizeof(real_t));
++        #pragma omp parallel for 
+         for (int i = 0; i < LEN_1D; i++) {
+             a[ip[i]] = b_local[i];
+         }

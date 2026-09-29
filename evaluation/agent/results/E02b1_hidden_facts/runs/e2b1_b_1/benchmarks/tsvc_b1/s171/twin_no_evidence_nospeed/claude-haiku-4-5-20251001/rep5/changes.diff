@@ -1,0 +1,16 @@
+--- original.c
++++ final.c
+@@ -16,9 +16,12 @@
+ static real_t kernel_s171(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        real_t accum = a[0];
++        #pragma omp parallel for reduction(+:accum) 
+         for (int i = 0; i < LEN_1D; i++) {
+-            a[i * inc] += b[i];
++            accum += b[i];
+         }
++        a[0] = accum;
+         pb_mix(nl);
+     }
+     return (real_t)0;

@@ -1,0 +1,10 @@
+--- bfs.cpp
++++ bfs.cpp
+@@ -14,6 +14,7 @@
+             int *new_cost = (int*)malloc(no_of_nodes * sizeof(int));
+             bool *new_updating_mask = (bool*)malloc(no_of_nodes * sizeof(bool));
+ 
++            #pragma omp parallel for shared(new_cost,was_frontier,new_updating_mask) 
+             for(int i = 0; i < no_of_nodes; i++) {
+                 was_frontier[i] = h_graph_mask[i];
+                 new_cost[i] = h_cost[i];

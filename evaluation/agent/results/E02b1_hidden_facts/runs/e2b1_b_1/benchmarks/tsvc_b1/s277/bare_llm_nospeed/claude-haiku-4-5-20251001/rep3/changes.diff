@@ -1,0 +1,27 @@
+--- original.c
++++ final.c
+@@ -16,11 +16,15 @@
+ static real_t kernel_s277(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        real_t *b_copy = (real_t*)malloc(LEN_1D * sizeof(real_t));
++        memcpy(b_copy, b, LEN_1D * sizeof(real_t));
++
++        #pragma omp parallel for shared(a, b, c, d, e, b_copy) private(i)
+         for (int i = 0; i < LEN_1D-1; i++) {
+                 if (a[i] >= (real_t)0.) {
+                     goto L20;
+                 }
+-                if (b[i] >= (real_t)0.) {
++                if (b_copy[i] >= (real_t)0.) {
+                     goto L30;
+                 }
+                 a[i] += c[i] * d[i];
+@@ -29,6 +33,7 @@
+ L20:
+ ;
+         }
++        free(b_copy);
+         pb_mix(nl);
+     }
+     return (real_t)0;

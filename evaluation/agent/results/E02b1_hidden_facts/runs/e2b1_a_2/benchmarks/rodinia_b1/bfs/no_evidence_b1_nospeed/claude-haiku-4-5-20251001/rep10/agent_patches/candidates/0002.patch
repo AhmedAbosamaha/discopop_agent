@@ -1,0 +1,10 @@
+--- bfs.cpp
++++ bfs.cpp
+@@ -24,6 +24,7 @@
+             }
+ 
+             // First loop: process nodes and accumulate updates in temp buffers
++ #pragma omp parallel for shared(temp_mask,temp_cost) 
+             for(int tid = 0; tid < no_of_nodes; tid++ )
+             {
+                 if (h_graph_mask[tid] == true){

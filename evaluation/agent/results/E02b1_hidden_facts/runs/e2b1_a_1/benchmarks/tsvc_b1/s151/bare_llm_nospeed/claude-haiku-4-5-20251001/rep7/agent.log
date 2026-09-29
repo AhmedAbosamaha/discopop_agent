@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s151.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : main, pb_mix
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] s151.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Looking at the code structure, let me analyze the parallelization opportunity: ## Plan **The blocking dependence:** The `s151s` function has a loop where `a[i] = a[i + m] + b[i]` with m=1. Each iteration i reads from a[i+1] while iteration i+1 writes to a[i+1]. This creates an anti-dependence (WAR): iteration i reads a[i+1], then iteration i+1 overwrites it. If iterations run out of order, iterati
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

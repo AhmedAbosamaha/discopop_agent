@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s161.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : main, pb_mix
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] s161.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Looking at the code, I need to analyze the dependencies and structure.## Plan The blocking dependence is in the **outer loop** (`nl` loop), not the inner loop. The `pb_mix(nl)` function modifies array elements between outer loop iterations, creating true dependences that prevent the outer loop from running in parallel. The **inner loop** (`i` loop from 0 to LEN_1D-2) is the one to parallelize. Eac
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

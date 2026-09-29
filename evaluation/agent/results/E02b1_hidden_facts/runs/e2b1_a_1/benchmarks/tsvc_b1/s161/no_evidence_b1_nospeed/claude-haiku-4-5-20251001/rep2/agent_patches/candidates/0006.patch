@@ -1,0 +1,10 @@
+--- s161.c
++++ s161.c
+@@ -30,6 +30,7 @@
+         }
+ 
+         // Phase 2: Apply c updates and compute a values
++        #pragma omp parallel for shared(c_updated,c_new_values) 
+         for (int i = 0; i < LEN_1D-1; ++i) {
+             if (c_updated[i]) {
+                 c[i] = c_new_values[i];

@@ -1,0 +1,27 @@
+--- original.c
++++ final.c
+@@ -15,9 +15,23 @@
+ 
+ void s151s(real_t a[LEN_1D], real_t b[LEN_1D],  int m)
+ {
++    /* Copy a[i+m] into a temporary buffer to break the loop-carried dependence.
++     * This allows the main loop to parallelize: each iteration reads from the
++     * read-only buffer and writes to a unique a[i]. */
++    real_t *a_shift = malloc((LEN_1D - 1) * sizeof(real_t));
++    for (int i = 0; i < LEN_1D - 1; i++) {
++        a_shift[i] = a[i + m];
++    }
++
++    /* Parallelize the main loop. Each iteration i reads a_shift[i] and b[i],
++     * and writes to a[i]. No iteration accesses the same a[i] as another,
++     * so there are no write-write races. */
++    #pragma omp parallel for shared(a, b, a_shift)
+     for (int i = 0; i < LEN_1D-1; i++) {
+-        a[i] = a[i + m] + b[i];
++        a[i] = a_shift[i] + b[i];
+     }
++
++    free(a_shift);
+ }
+ 
+ static real_t kernel_s151(void)

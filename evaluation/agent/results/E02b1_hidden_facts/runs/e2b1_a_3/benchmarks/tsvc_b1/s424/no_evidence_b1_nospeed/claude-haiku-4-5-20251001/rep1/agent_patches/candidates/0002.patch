@@ -1,0 +1,15 @@
+--- s424.c
++++ s424.c
+@@ -18,8 +18,10 @@
+     int vl = 63;
+     xx = flat_2d_array + vl;
+     for (int nl = 0; nl < R; nl++) {
+-        for (int i = 0; i < LEN_1D - 1; i++) {
+-            xx[i+1] = flat_2d_array[i] + a[i];
++        for (int i = 0; i < LEN_1D - 1; i += 64) {
++            for (int j = 0; j < 64 && i + j < LEN_1D - 1; j++) {
++                xx[i + j + 1] = flat_2d_array[i + j] + a[i + j];
++            }
+         }
+         pb_mix(nl);
+     }

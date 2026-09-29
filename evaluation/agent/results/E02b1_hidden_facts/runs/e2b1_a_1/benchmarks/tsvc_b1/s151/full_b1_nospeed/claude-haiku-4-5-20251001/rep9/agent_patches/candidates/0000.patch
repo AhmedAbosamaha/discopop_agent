@@ -1,0 +1,13 @@
+--- s151.c
++++ s151.c
+@@ -23,7 +23,9 @@
+ static real_t kernel_s151(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
+-        s151s(a, b,  1);
++        for (int i = 0; i < LEN_1D-1; i++) {
++            a[i] = a[i + 1] + b[i];
++        }
+         pb_mix(nl);
+     }
+     return (real_t)0;

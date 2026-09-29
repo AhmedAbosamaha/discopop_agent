@@ -1,0 +1,56 @@
+/* TSVC-2 loop s151, from TSVC-2 src/tsvc.c (sha256 456dd573b84b; University of Illinois licence,
+ * see benchmarks/TSVC_2/license.txt). */
+#include <stdlib.h>
+#include "tsvc_b1/s151.h"
+
+/* Between two repetitions a few INPUT elements change, so no repetition can be skipped,
+ * merged with another or run out of order: the repetition loop is sequential by a true
+ * dependence, and the loop under study is the one inside it. */
+static void pb_mix(int nl)
+{
+  long k = ((long)nl * 7919L + 13L) % LEN_1D;
+  a[k] += (real_t)0.25; b[k] += (real_t)0.25; c[k] += (real_t)0.125;
+  d[k] += (real_t)0.125; e[k] += (real_t)0.25;
+  a[0] += (real_t)0.125; b[LEN_1D-1] += (real_t)0.125;
+}
+
+void s151s(real_t a[LEN_1D], real_t b[LEN_1D],  int m)
+{
+    /* Allocate temporary buffer to hold input values of a[i+m].
+     * This eliminates the anti-dependence where iteration i reads a[i+m]
+     * and iteration i+m writes to a[i+m], allowing independent iteration execution.
+     * The loop is split into two phases: read (fill temp) and compute (use temp).
+     */
+    real_t *temp = malloc((LEN_1D - 1) * sizeof(real_t));
+
+    /* Phase 1: Read input values into temp buffer.
+     * Each iteration i reads a[i+m] and writes temp[i] (different locations per iteration).
+     * No loop-carried dependences: each iteration accesses different array elements.
+     */
+    #pragma omp parallel for shared(a, temp, m)
+    for (int i = 0; i < LEN_1D-1; i++) {
+        temp[i] = a[i + m];
+    }
+
+    /* Phase 2: Compute output values using temp buffer.
+     * Each iteration i reads temp[i] and b[i], writes a[i] (different locations per iteration).
+     * No loop-carried dependences: temp is now invariant, each iteration accesses different a[i].
+     */
+    #pragma omp parallel for shared(a, b, temp)
+    for (int i = 0; i < LEN_1D-1; i++) {
+        a[i] = temp[i] + b[i];
+    }
+
+    free(temp);
+}
+
+static real_t kernel_s151(void)
+{
+    for (int nl = 0; nl < R; nl++) {
+        s151s(a, b,  1);
+        pb_mix(nl);
+    }
+    return (real_t)0;
+}
+
+PB_MAIN(kernel_s151)

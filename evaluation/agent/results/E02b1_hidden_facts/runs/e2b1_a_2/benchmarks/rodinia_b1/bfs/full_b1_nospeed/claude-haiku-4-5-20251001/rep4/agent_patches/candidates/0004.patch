@@ -1,0 +1,33 @@
+--- bfs.cpp
++++ bfs.cpp
+@@ -45,15 +45,29 @@
+             free(temp_updating_graph_mask);
+             free(temp_cost);
+ 
++            bool *local_stop = (bool*)malloc(no_of_nodes * sizeof(bool));
++            memset(local_stop, false, no_of_nodes * sizeof(bool));
++
+             for(int tid=0; tid< no_of_nodes ; tid++ )
+             {
+                 if (h_updating_graph_mask[tid] == true){
+                     h_graph_mask[tid]=true;
+                     h_graph_visited[tid]=true;
+-                    stop=true;
++                    local_stop[tid]=true;
+                     h_updating_graph_mask[tid]=false;
+                 }
+             }
++
++            stop=false;
++            for(int tid=0; tid< no_of_nodes ; tid++ )
++            {
++                if(local_stop[tid])
++                {
++                    stop=true;
++                    break;
++                }
++            }
++            free(local_stop);
+             k++;
+         }
+ 	while(stop);

@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s277.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : main, pb_mix
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] s277.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Looking at the code, let me first understand the structure and identify the blocking dependence. **Analysis:** The program has: - Outer loop (nl): Sequential due to `pb_mix()` modifying input arrays between iterations - Inner loop (i): `for (int i = 0; i < LEN_1D-1; i++)` which is the "loop under study" **The blocking dependence in the inner loop:** - Iteration i writes to `b[i+1]` - Iteration i+1
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

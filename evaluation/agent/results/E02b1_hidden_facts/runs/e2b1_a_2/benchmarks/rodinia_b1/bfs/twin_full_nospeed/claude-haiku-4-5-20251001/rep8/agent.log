@@ -1,0 +1,63 @@
+
+============================================================
+  Model-only twin (D38) — DiscoPoP's information, no gate, one attempt
+============================================================
+  Source         : bfs.cpp
+  Model          : claude-haiku-4-5-20251001
+  Pragmas by     : DiscoPoP
+  Evidence       : full
+  Depth          : 0
+
+┌─ [depth=0] loop 1:13 (lines 9–40)
+│  [twin] Calling claude-haiku-4-5-20251001...
+│  [twin] the model's plan: I'll start by reading the file to understand the current code structure.**Plan:** The blocking loop-carried RAW dependence is on `h_cost`: writes at line 22 (`h_cost[id] = h_cost[tid] + 1`) read from `h_cost[tid]` and write to `h_cost[id]`. A value written in one sweep can be read by a different iteration in the next sweep if that iteration's `tid` matches a previous iteration's `id`. Since values
+│  [twin] edited, 0 OpenMP pragma(s) in the file — kept unchecked
+│  [twin] Re-profiling (as the agent does after a kept rewrite)...
+│  [twin] 5 new region(s) at depth 1
+└─ EDITED
+
+┌─ [depth=0] loop 1:43 (lines 40–48)
+└─ DISCOPOP'S (annotated at the end)
+
+┌─ [depth=1] loop 1:14 (lines 10–51)
+└─ SKIPPED (depth 1 > --restructure-depth 0)
+
+┌─ [depth=1] loop 1:17 (lines 14–17)
+└─ DISCOPOP'S (annotated at the end)
+
+┌─ [depth=1] function 1:11 (lines 5–53)
+└─ SKIPPED (depth 1 > --restructure-depth 0)
+
+┌─ [depth=1] loop 1:22 (lines 19–33)
+└─ DISCOPOP'S (annotated at the end)
+
+┌─ [depth=1] loop 1:27 (lines 23–31)
+└─ DISCOPOP'S (annotated at the end)
+
+
+============================================================
+  DiscoPoP annotates — 4 applicable pattern(s), NOTHING CHECKED
+============================================================
+
+┌─ do_all @ lines 14–17  (W=1966080)
+│  #pragma omp parallel for
+│  [twin] Original backed up → bfs.cpp.original
+│  [twin] Applied to bfs.cpp
+└─ INSERTED (unchecked)
+
+┌─ do_all @ lines 19–33  (W=9175040)
+│  [Tier-1] Repairing the generated pragma: i is declared inside the loop body, so cannot appear in a clause
+│  #pragma omp parallel for
+│  [twin] Applied to bfs.cpp
+└─ INSERTED (unchecked)
+
+┌─ do_all @ lines 23–31  (W=3141360)
+└─ SKIPPED (nested in a loop that is already parallel)
+
+┌─ do_all @ lines 40–48  (W=5242880)
+│  #pragma omp parallel for
+│  [twin] Applied to bfs.cpp
+└─ INSERTED (unchecked)
+
+
+  SUMMARY: 1 region(s) asked  |  1 edited  |  3 DiscoPoP pragma(s) inserted unchecked  |  nothing was checked here — the harness judges the result

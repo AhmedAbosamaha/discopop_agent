@@ -1,0 +1,16 @@
+--- s171.c
++++ s171.c
+@@ -16,11 +16,12 @@
+ static real_t kernel_s171(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        if (nl > 0) pb_mix(nl - 1);
+         for (int i = 0; i < LEN_1D; i++) {
+             a[i * inc] += b[i];
+         }
+-        pb_mix(nl);
+     }
++    pb_mix(R - 1);
+     return (real_t)0;
+ }
+ 

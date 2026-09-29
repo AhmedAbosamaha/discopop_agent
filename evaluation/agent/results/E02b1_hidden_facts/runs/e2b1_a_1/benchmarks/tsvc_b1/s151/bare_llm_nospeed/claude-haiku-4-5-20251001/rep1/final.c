@@ -1,0 +1,54 @@
+/* TSVC-2 loop s151, from TSVC-2 src/tsvc.c (sha256 456dd573b84b; University of Illinois licence,
+ * see benchmarks/TSVC_2/license.txt). */
+#include <stdlib.h>
+#include "tsvc_b1/s151.h"
+
+/* Between two repetitions a few INPUT elements change, so no repetition can be skipped,
+ * merged with another or run out of order: the repetition loop is sequential by a true
+ * dependence, and the loop under study is the one inside it. */
+static void pb_mix(int nl)
+{
+  long k = ((long)nl * 7919L + 13L) % LEN_1D;
+  a[k] += (real_t)0.25; b[k] += (real_t)0.25; c[k] += (real_t)0.125;
+  d[k] += (real_t)0.125; e[k] += (real_t)0.25;
+  a[0] += (real_t)0.125; b[LEN_1D-1] += (real_t)0.125;
+}
+
+void s151s(real_t a[LEN_1D], real_t b[LEN_1D],  int m)
+{
+    /* Allocate temporary buffer to break the backward dependence:
+       iteration i reads a[i+m], which iteration i-m would write to.
+       By using two passes with a temp buffer, the first pass has all
+       iterations independent (each reads only from original a, b).
+       temp[i] stores the result a[i+m] + b[i] computed in parallel. */
+    real_t* temp = (real_t*)malloc((LEN_1D - 1) * sizeof(real_t));
+
+    /* First pass: compute results in parallel.
+       Each iteration i reads a[i+m] and b[i] (which never change in this loop),
+       writes to temp[i] (unique per iteration). No iteration depends on another. */
+    #pragma omp parallel for
+    for (int i = 0; i < LEN_1D-1; i++) {
+        temp[i] = a[i + m] + b[i];
+    }
+
+    /* Second pass: copy results back to a in parallel.
+       Each iteration i reads temp[i] (computed in first pass),
+       writes to a[i] (unique per iteration). All iterations independent. */
+    #pragma omp parallel for
+    for (int i = 0; i < LEN_1D-1; i++) {
+        a[i] = temp[i];
+    }
+
+    free(temp);
+}
+
+static real_t kernel_s151(void)
+{
+    for (int nl = 0; nl < R; nl++) {
+        s151s(a, b,  1);
+        pb_mix(nl);
+    }
+    return (real_t)0;
+}
+
+PB_MAIN(kernel_s151)

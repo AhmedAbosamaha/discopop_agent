@@ -1,0 +1,28 @@
+--- original.c
++++ final.c
+@@ -16,12 +16,23 @@
+ static real_t kernel_vas(void)
+ {
+     int * __restrict__ ip = pb_ip;
++
++    // Compute inverse permutation to expose parallelism
++    int *inv_ip = (int *)malloc(LEN_1D * sizeof(int));
++    #pragma omp parallel for 
++    for (int i = 0; i < LEN_1D; i++) {
++        inv_ip[ip[i]] = i;
++    }
++
+     for (int nl = 0; nl < R; nl++) {
+-        for (int i = 0; i < LEN_1D; i++) {
+-            a[ip[i]] = b[i];
++        #pragma omp parallel for shared(inv_ip) 
++        for (int j = 0; j < LEN_1D; j++) {
++            a[j] = b[inv_ip[j]];
+         }
+         pb_mix(nl);
+     }
++
++    free(inv_ip);
+     return (real_t)0;
+ }
+ 

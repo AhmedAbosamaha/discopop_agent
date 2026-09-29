@@ -1,0 +1,26 @@
+--- original.c
++++ final.c
+@@ -17,9 +17,22 @@
+ {
+     int m  = 1;
+     for (int nl = 0; nl < R; nl++) {
++        /* Save input array to eliminate forward dependence:
++         * iteration i needs a[i+1] but iteration i+1 will overwrite it.
++         * By reading from a saved copy, all iterations become independent. */
++        real_t *a_save = malloc(LEN_1D * sizeof(real_t));
++        for (int j = 0; j < LEN_1D; j++) {
++            a_save[j] = a[j];
++        }
++
++        /* Parallelize inner loop: each iteration i reads from a_save[i+1] (read-only)
++         * and writes to a[i] (disjoint elements, no conflicts). */
++        #pragma omp parallel for shared(a, a_save, b, m)
+         for (int i = 0; i < LEN_1D - 1; i++) {
+-            a[i] = a[i + m] + b[i];
++            a[i] = a_save[i + m] + b[i];
+         }
++
++        free(a_save);
+         pb_mix(nl);
+     }
+     return (real_t)0;

@@ -1,0 +1,223 @@
+{
+  "benchmark": "rodinia_b1/bfs",
+  "kernel": "bfs",
+  "source": "bfs.cpp",
+  "arm": "bare_llm_nospeed",
+  "model": "claude-haiku-4-5-20251001",
+  "arm_flags": [
+    "--require-speedup",
+    "--min-runtime-share",
+    "0.01",
+    "--no-require-speedup",
+    "--timing-cflags=-DLARGE_DATASET"
+  ],
+  "started_at": "2026-09-28T21:04:42",
+  "host": "rms14562",
+  "host_load_start": [
+    19.17578125,
+    21.9150390625,
+    18.8583984375
+  ],
+  "agent_cmd": [
+    "/home/ahmedabosamaha/discopop_agent/venv/bin/python",
+    "-m",
+    "discopop_agent.bare_llm",
+    "--source-file",
+    "bfs.cpp",
+    "--model",
+    "claude-haiku-4-5-20251001",
+    "--no-require-speedup",
+    "--exclude-functions",
+    "main",
+    "--protected-line",
+    "#include \"rodinia_b1/bfs.h\"",
+    "--protected-line",
+    "PB_MAIN(kernel_bfs)",
+    "--protected-note",
+    "`PB_MAIN(kernel_bfs)` expands to `main`: it sets up the data the included header declares, times one call of `kernel_bfs` and prints its result. `no_of_nodes`, the number of graph nodes, is set in the included header: 65536 in the default build, and up to 48000000 in the builds that verify the result."
+  ],
+  "agent_s": 94.2,
+  "agent_rc": 0,
+  "llm_calls": 1,
+  "llm_call_failures": 0,
+  "explorer_retries": 0,
+  "explorer_stalls": 0,
+  "reverts": 0,
+  "refresh_fast": 0,
+  "refresh_full": 0,
+  "refresh_fallback": 0,
+  "runtime_remeasurements": 0,
+  "phase_b_deferred": 0,
+  "phase_b_joint_kept": 0,
+  "dp_floor": null,
+  "gate_failures_phase_a": {},
+  "gate_failures_phase_b": {},
+  "gate_passes_phase_a": 0,
+  "gate_failures_d40": {},
+  "d40_verdicts": {},
+  "exposure_verdicts": {},
+  "d40_seconds": 0,
+  "requeued_regions": 0,
+  "region_verdicts": {},
+  "settle_dropped": 0,
+  "llm_usage": {
+    "calls_recorded": 1,
+    "input_tokens": 34,
+    "output_tokens": 11229,
+    "cache_read_input_tokens": 51263,
+    "cache_creation_input_tokens": 11155,
+    "cost_usd": 0.0846,
+    "model_seconds": 92.9
+  },
+  "source_changed": true,
+  "protected": [
+    "#include \"rodinia_b1/bfs.h\"",
+    "PB_MAIN(kernel_bfs)"
+  ],
+  "harness_sha256": "bb26fba095bc0ae5d578f142df1ce0a64874ceb5b128c27aea56728cafb73d2c",
+  "scaffold": {
+    "ok": true,
+    "problems": [],
+    "applies": true
+  },
+  "pragmas_added": 4,
+  "pragmas_in_final": 4,
+  "hot_loop": {
+    "entry": "kernel_bfs",
+    "function": "kernel_bfs",
+    "line": 13,
+    "writes": [
+      "h_cost"
+    ],
+    "shared": [
+      "h_graph_mask",
+      "h_updating_graph_mask"
+    ]
+  },
+  "hot_loop_covered": true,
+  "hot_loop_coverage": {
+    "criterion": "v2 (27 Sep 2026)",
+    "covered": true,
+    "covering": [
+      {
+        "function": "kernel_bfs",
+        "line": 13,
+        "directive": "#pragma omp parallel for",
+        "writes": [
+          "h_cost"
+        ]
+      }
+    ],
+    "uncounted": [],
+    "elsewhere": [
+      {
+        "function": "kernel_bfs",
+        "line": 33,
+        "directive": "#pragma omp parallel for",
+        "writes": [
+          "h_graph_mask",
+          "h_graph_visited",
+          "h_updating_graph_mask"
+        ]
+      }
+    ]
+  },
+  "candidates_recorded": 0,
+  "verify": {
+    "verify_size": "EXTRALARGE",
+    "threads": [
+      6,
+      12
+    ],
+    "repeats": 5,
+    "compiler": "/usr/bin/clang++-20",
+    "final_flags": [],
+    "dump_exact": true,
+    "dump_max_rel_err": 0.0,
+    "seed": "7",
+    "dump_exact_seeded": true,
+    "dump_seeded_max_rel_err": 0.0,
+    "seq_median_s": 7.9745,
+    "seq_kernel_median_s": 4.376876,
+    "timing_basis": "kernel",
+    "par": {
+      "6": {
+        "median_s": 58.0179,
+        "program_speedup": 0.137,
+        "max_rel_err": 0.0,
+        "kernel_median_s": 54.396303,
+        "kernel_speedup": 0.08,
+        "speedup": 0.08
+      },
+      "12": {
+        "median_s": 219.7073,
+        "program_speedup": 0.036,
+        "max_rel_err": 0.0,
+        "kernel_median_s": 216.053204,
+        "kernel_speedup": 0.02,
+        "speedup": 0.02
+      }
+    },
+    "digest_max_rel_err": 0.0,
+    "stable_at_fixed_threads": true,
+    "kernel_program_disagree": false,
+    "digest_seeded_rel_err": 0.0,
+    "status": "ok",
+    "speed_measurable": true
+  },
+  "verify_s": 1344.2,
+  "status": "done",
+  "outcome": "parallel-not-faster",
+  "finished_at": "2026-09-28T21:28:41",
+  "host_load_end": [
+    32.55859375,
+    31.3076171875,
+    27.72314453125
+  ],
+  "profile": {
+    "wrapper": "discopop_cxx",
+    "instrument_s": 0.57,
+    "profiled_run_s": 0.27,
+    "explore_stalls": 0,
+    "explore_s": 3.62,
+    "explore_success_s": 3.62,
+    "explore_attempts": 1,
+    "explore_timed_out": false,
+    "explore_failures": [],
+    "patterns": {
+      "optimizer_output": 0,
+      "merged_pattern": 0,
+      "task": 0,
+      "do_all": 1,
+      "reduction": 0
+    },
+    "profile_sha256": "9b29be7a70f8a13a7d6368452b6a88b6f871793af02a47c496ea4bf51744fe3a"
+  },
+  "package_integrity": {
+    "before": {
+      "checked": "before trial",
+      "at": "2026-09-28T21:04:42",
+      "prepared_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+      "packager_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+      "harness_sha256": "bb26fba095bc0ae5d578f142df1ce0a64874ceb5b128c27aea56728cafb73d2c",
+      "archived_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+      "profile_sha256": "9b29be7a70f8a13a7d6368452b6a88b6f871793af02a47c496ea4bf51744fe3a",
+      "ok": true
+    },
+    "after": {
+      "checked": "after trial",
+      "at": "2026-09-28T21:28:41",
+      "prepared_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+      "packager_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+      "harness_sha256": "bb26fba095bc0ae5d578f142df1ce0a64874ceb5b128c27aea56728cafb73d2c",
+      "archived_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+      "profile_sha256": "9b29be7a70f8a13a7d6368452b6a88b6f871793af02a47c496ea4bf51744fe3a",
+      "ok": true
+    }
+  },
+  "speed_check_off": true,
+  "timing_flags": [
+    "--timing-cflags=-DLARGE_DATASET"
+  ],
+  "repeat": 4
+}

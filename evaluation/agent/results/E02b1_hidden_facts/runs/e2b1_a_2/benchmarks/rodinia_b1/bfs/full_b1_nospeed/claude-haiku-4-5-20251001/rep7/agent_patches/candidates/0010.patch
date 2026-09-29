@@ -1,0 +1,10 @@
+--- bfs.cpp
++++ bfs.cpp
+@@ -45,6 +45,7 @@
+                     h_updating_graph_mask[tid]=false;
+                 }
+             }
++            #pragma omp parallel for firstprivate(h_cost_temp) lastprivate(stop) shared(temp_flags) 
+             for(int tid=0; tid< no_of_nodes ; tid++ )
+             {
+                 if (temp_flags[tid]) stop = true;

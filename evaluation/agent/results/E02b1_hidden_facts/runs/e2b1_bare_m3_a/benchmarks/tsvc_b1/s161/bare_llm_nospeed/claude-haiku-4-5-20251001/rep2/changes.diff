@@ -1,0 +1,41 @@
+--- original.c
++++ final.c
+@@ -16,17 +16,31 @@
+ static real_t kernel_s161(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        /* Phase 1: Compute c[i+1] where b[i] < 0.
++         * Each iteration i writes to a unique location c[i+1] and reads b[i], a[i], d[i].
++         * No inter-iteration dependencies: iterations are independent and can run in parallel.
++         * Shared arrays: a, b, c, d, e (all accessed at different indices per iteration).
++         */
++        #pragma omp parallel for shared(a, b, c, d, e)
+         for (int i = 0; i < LEN_1D-1; ++i) {
+             if (b[i] < (real_t)0.) {
+-                goto L20;
++                c[i+1] = a[i] + d[i] * d[i];
+             }
+-            a[i] = c[i] + d[i] * e[i];
+-            goto L10;
+-L20:
+-            c[i+1] = a[i] + d[i] * d[i];
+-L10:
+-            ;
+         }
++
++        /* Phase 2: Compute a[i] where b[i] >= 0.
++         * Each iteration i writes to a unique location a[i] and reads c[i], b[i], d[i], e[i].
++         * No inter-iteration dependencies: c[i] was finalized in Phase 1, no other iteration reads a[i].
++         * Iterations are independent and can run in parallel.
++         * Shared arrays: a, b, c, d, e (all accessed at different indices per iteration).
++         */
++        #pragma omp parallel for shared(a, b, c, d, e)
++        for (int i = 0; i < LEN_1D-1; ++i) {
++            if (b[i] >= (real_t)0.) {
++                a[i] = c[i] + d[i] * e[i];
++            }
++        }
++
+         pb_mix(nl);
+     }
+     return (real_t)0;

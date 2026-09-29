@@ -1,0 +1,32 @@
+--- s161.c
++++ s161.c
+@@ -16,16 +16,21 @@
+ static real_t kernel_s161(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
+-        for (int i = 0; i < LEN_1D-1; ++i) {
++        // Process even indices: i = 0, 2, 4, ... (elements of c and a do not overlap between iterations)
++        for (int i = 0; i < LEN_1D-1; i += 2) {
+             if (b[i] < (real_t)0.) {
+-                goto L20;
++                c[i+1] = a[i] + d[i] * d[i];
++            } else {
++                a[i] = c[i] + d[i] * e[i];
+             }
+-            a[i] = c[i] + d[i] * e[i];
+-            goto L10;
+-L20:
+-            c[i+1] = a[i] + d[i] * d[i];
+-L10:
+-            ;
++        }
++        // Process odd indices: i = 1, 3, 5, ... (elements of c and a do not overlap between iterations)
++        for (int i = 1; i < LEN_1D-1; i += 2) {
++            if (b[i] < (real_t)0.) {
++                c[i+1] = a[i] + d[i] * d[i];
++            } else {
++                a[i] = c[i] + d[i] * e[i];
++            }
+         }
+         pb_mix(nl);
+     }

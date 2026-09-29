@@ -1,0 +1,21 @@
+--- bfs.cpp
++++ bfs.cpp
+@@ -32,15 +32,17 @@
+                 }
+             }
+ 
++            bool any_found = false;
+             for(int tid=0; tid< no_of_nodes ; tid++ )
+             {
+                 if (h_updating_graph_mask[tid] == true){
+                     h_graph_mask[tid]=true;
+                     h_graph_visited[tid]=true;
+-                    stop=true;
+                     h_updating_graph_mask[tid]=false;
++                    any_found=true;
+                 }
+             }
++            stop = any_found;
+             k++;
+         }
+ 	while(stop);

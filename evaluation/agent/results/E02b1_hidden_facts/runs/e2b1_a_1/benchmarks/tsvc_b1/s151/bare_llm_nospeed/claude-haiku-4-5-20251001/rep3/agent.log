@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s151.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : main, pb_mix
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] s151.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Looking at the program structure: **Analysis:** - The outer `nl` loop in `kernel_s151` is sequential: `pb_mix(nl)` modifies input arrays between iterations, creating true dependences. - The inner loop in `s151s` is the parallelization target: iteration `i` reads from `a[i+m]` and `b[i]`, and writes to `a[i]`. With `m=1`, each iteration accesses distinct array elements—iteration i reads `a[i+1]` bu
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

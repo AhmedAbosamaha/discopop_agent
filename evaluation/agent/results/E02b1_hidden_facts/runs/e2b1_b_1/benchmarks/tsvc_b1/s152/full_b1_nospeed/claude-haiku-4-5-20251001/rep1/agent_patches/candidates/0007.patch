@@ -1,0 +1,18 @@
+--- s152.c
++++ s152.c
+@@ -15,6 +15,7 @@
+ 
+ void s152s(real_t a[LEN_1D], real_t b[LEN_1D], real_t c[LEN_1D], int i)
+ {
++    #pragma omp parallel for 
+     for (int i = 0; i < LEN_1D; i++) {
+         a[i] += b[i] * c[i];
+     }
+@@ -23,6 +24,7 @@
+ static real_t kernel_s152(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        #pragma omp parallel for 
+         for (int i = 0; i < LEN_1D; i++) {
+             b[i] = d[i] * e[i];
+         }

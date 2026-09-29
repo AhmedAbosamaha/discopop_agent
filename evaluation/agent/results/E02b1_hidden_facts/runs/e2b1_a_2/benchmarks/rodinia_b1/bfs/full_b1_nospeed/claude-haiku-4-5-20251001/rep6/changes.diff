@@ -1,0 +1,37 @@
+--- original.cpp
++++ final.cpp
+@@ -10,21 +10,32 @@
+         {
+             stop=false;
+ 
++            int* new_h_cost = (int*)malloc(no_of_nodes * sizeof(int));
++            #pragma omp parallel for shared(new_h_cost) 
++            for(int j = 0; j < no_of_nodes; j++) {
++                new_h_cost[j] = h_cost[j];
++            }
++
+             for(int tid = 0; tid < no_of_nodes; tid++ )
+             {
+-                if (h_graph_mask[tid] == true){ 
++                if (h_graph_mask[tid] == true){
+                     h_graph_mask[tid]=false;
+                     for(int i=h_graph_nodes[tid].starting; i<(h_graph_nodes[tid].no_of_edges + h_graph_nodes[tid].starting); i++)
+                     {
+                         int id = h_graph_edges[i];
+                         if(!h_graph_visited[id])
+                         {
+-                            h_cost[id]=h_cost[tid]+1;
++                            new_h_cost[id]=h_cost[tid]+1;
+                             h_updating_graph_mask[id]=true;
+                         }
+                     }
+                 }
+             }
++
++            for(int j = 0; j < no_of_nodes; j++) {
++                h_cost[j] = new_h_cost[j];
++            }
++            free(new_h_cost);
+ 
+             for(int tid=0; tid< no_of_nodes ; tid++ )
+             {

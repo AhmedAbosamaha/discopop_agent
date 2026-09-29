@@ -1,0 +1,152 @@
+
+============================================================
+  DiscoPoP Agentic Controller
+============================================================
+  Source         : bfs.cpp
+  DiscoPoP dir   : .discopop
+  Model          : claude-haiku-4-5-20251001
+  Budget         : 1 LLM retries/region (+2 free build fixes)
+  λ penalty      : 1.0
+  Min workload   : 0.0
+  Restruct. depth: 0 (Tier-2 allowed at depth 0–0)
+  Quality gate   : Tier-1 = all but speed, no escalation; Tier-2 = full
+  TSan           : barrier-aware (archer: /usr/lib/llvm-20/lib/libarcher.so)
+  Speedup gate   : OFF (--no-require-speedup)
+  Dry run        : False
+  LLM mode       : claude-haiku-4-5-20251001
+  Edit mode      : direct
+  Re-profiling   : full (instrument + run + explore) after every kept rewrite
+  Explorer       : one attempt may take 60 s, then the draw is repeated (random stall, L5)
+  Pragmas        : DiscoPoP writes them in Phase B
+============================================================
+
+  [ok] Captured reference output on 2 inputs (49 bytes, 3.1 ms baseline) for the correctness/performance gates.
+
+  [ok] Numerical noise floor 0 — output holds no non-integer number; the floor is 0 by construction, so the remaining build variants were skipped; output is compared byte-for-byte.
+
+  Hotspots       : measured per-region runtimes are available — 22 region(s) measured, 52.3 ms total, ranking by predicted time saved at 48 threads
+
+  Baseline       : DiscoPoP proposes 1 applicable pattern(s) unaided; 1 of them produce a usable pragma
+                   → the run beats DiscoPoP by ending with more than 1
+
+  Initial candidates
+Region ID    Type           Saves    % run    Hot  Tier  Depth  Name
+--------------------------------------------------------------------------------------
+  1:13       loop          6.5 ms    12.8%  MAYBE     2      0  lines 9–40
+  1:16       loop          6.5 ms    12.8%  MAYBE     2      0  lines 13–27
+  1:11       function      6.5 ms    12.8%  MAYBE     2      0  _ZL10kernel_bfsv
+  1:21       loop          3.1 ms     6.0%  MAYBE     2      0  lines 17–25
+  1:32       loop          1.0 ms     2.0%  MAYBE     1      0  lines 29–37
+
+============================================================
+  PHASE A — restructure  (the source stays pragma-free)
+============================================================
+
+┌─ [depth=0] loop 1:13 (lines 9–40)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Assembling evidence (budget remaining: 0)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Original backed up → bfs.cpp.original
+│  [Tier-2] Applied to bfs.cpp
+│  [Tier-2] Re-profiling to refresh data and discover new candidates...
+│  [refresh] kind=full
+│  [Tier-2] Re-measured runtimes: 23 region(s), 53.4 ms total
+│  [Phase-A] Asking DiscoPoP what it now finds in the rewritten lines...
+│  [Phase-A] exposure verdict: exposed
+│  [Phase-A] D40 — judging it as it will ship: DiscoPoP's pragmas for the exposed loops through the safety gate; the speed check is off, so the safety half only
+│  [Phase-A] D40: pragma for lines 29–36 passes the safety gate
+│  [Phase-A] D40 verdict: safe — its pragmas are safe (the speed check is off)
+│  [Phase-A] D40 time: 0.9 s
+│  [Tier-2] 2 survivor(s) rebuilt, 3 new at depth 1
+│  [Tier-2] DiscoPoP now finds: do_all @ lines 29–36
+│  [Tier-2] DiscoPoP's pragma for it is applied and judged in Phase B
+└─ ACCEPTED
+
+┌─ [depth=0] loop 1:16 (lines 13–27)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Assembling evidence (budget remaining: 0)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Applied to bfs.cpp
+│  [Tier-2] Re-profiling to refresh data and discover new candidates...
+│  [refresh] kind=full
+│  [Tier-2] Re-measured runtimes: 24 region(s), 53.7 ms total
+│  [Phase-A] Asking DiscoPoP what it now finds in the rewritten lines...
+│  [Phase-A] exposure verdict: exposed
+│  [Phase-A] D40 — judging it as it will ship: DiscoPoP's pragmas for the exposed loops through the safety gate; the speed check is off, so the safety half only
+│  [Phase-A] D40: pragma for lines 33–40 passes the safety gate
+│  [Phase-A] D40: pragma for lines 45–52 passes the safety gate
+│  [Phase-A] D40: the pragmas together passes the safety gate
+│  [Phase-A] D40 verdict: safe — its pragmas are safe (the speed check is off)
+│  [Phase-A] D40 time: 2.9 s
+│  [Tier-2] 1 survivor(s) rebuilt, 5 new at depth 1
+│  [Tier-2] DiscoPoP now finds: do_all @ lines 45–52, do_all @ lines 33–40
+│  [Tier-2] DiscoPoP's pragma for it is applied and judged in Phase B
+└─ ACCEPTED
+
+┌─ [depth=1] loop 1:43 (lines 45–52)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=1] loop 1:13 (lines 9–64)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Restructuring not allowed at depth 1 (--restructure-depth=0) → SKIP
+└─ SKIPPED
+
+┌─ [depth=1] loop 1:18 (lines 17–31)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Restructuring not allowed at depth 1 (--restructure-depth=0) → SKIP
+└─ SKIPPED
+
+┌─ [depth=1] function 1:11 (lines 5–65)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Restructuring not allowed at depth 1 (--restructure-depth=0) → SKIP
+└─ SKIPPED
+
+┌─ [depth=1] loop 1:23 (lines 21–29)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Restructuring not allowed at depth 1 (--restructure-depth=0) → SKIP
+└─ SKIPPED
+
+┌─ [depth=1] loop 1:34 (lines 33–40)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+
+============================================================
+  PHASE B — annotate  (2 candidate pragma(s))
+============================================================
+
+┌─ pattern #6  do_all @ lines 45–52  (W=4587520)
+│  #pragma omp parallel for
+│  [Phase-B] Applied to bfs.cpp
+└─ APPLIED
+
+┌─ pattern #5  do_all @ lines 33–40  (W=4587520)
+│  #pragma omp parallel for
+│  [Phase-B] Applied to bfs.cpp
+└─ APPLIED
+
+============================================================
+  SETTLING — verify the finished source, drop what does not hold up
+============================================================
+  [ok] finished source verified — output matches the original
+
+
+============================================================
+  SUMMARY: 2 rewrite(s) kept  |  2 pragma(s) applied  |  3 skipped
+  DiscoPoP unaided: 1 usable pragma(s) in this profile's draw  →  this run: 2   [BEAT, informational]
+    ✓  loop 1:13  [Tier-2]  depth=0
+    ✓  loop 1:16  [Tier-2]  depth=0
+    ✓  loop 1:43  [Phase-B pragma]  depth=0
+    ✓  loop 1:34  [Phase-B pragma]  depth=0
+    ✗  1:18  [skipped]  depth=1
+    ✗  1:11  [skipped]  depth=1
+    ✗  1:23  [skipped]  depth=1
+
+  Results → .discopop/agent_patches/accepted.json
+============================================================
+

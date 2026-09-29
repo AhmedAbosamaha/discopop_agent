@@ -1,0 +1,10 @@
+--- bfs.cpp
++++ bfs.cpp
+@@ -35,6 +35,7 @@
+             }
+ 
+             bool* stop_flags = (bool*)malloc(no_of_nodes * sizeof(bool));
++            #pragma omp parallel for shared(stop_flags) 
+             for(int tid=0; tid< no_of_nodes ; tid++ )
+             {
+                 stop_flags[tid] = false;

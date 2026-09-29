@@ -1,0 +1,10 @@
+--- bfs.cpp
++++ bfs.cpp
+@@ -42,6 +42,7 @@
+             }
+ 
+             // Apply updates from temporary buffers
++            #pragma omp parallel for shared(temp_mask,temp_cost) 
+             for(int id = 0; id < no_of_nodes; id++)
+             {
+                 if (temp_mask[id])

@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s171.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : main, pb_mix
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] s171.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Looking at the code: **Plan:** The blocking dependence is in the outer `nl` loop: `pb_mix(nl)` modifies input arrays between iterations, creating a true dependence between repetitions. This loop must stay sequential. The inner `i` loop is independent: each iteration accesses distinct array elements `a[i * inc]` and `b[i]`. There are no loop-carried dependencies within it. **Solution:** Parallelize
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

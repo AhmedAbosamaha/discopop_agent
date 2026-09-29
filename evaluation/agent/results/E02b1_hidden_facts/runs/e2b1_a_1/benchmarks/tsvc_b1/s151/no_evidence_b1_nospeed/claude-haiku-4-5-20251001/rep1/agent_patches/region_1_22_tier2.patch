@@ -1,0 +1,18 @@
+--- s151.c
++++ s151.c
+@@ -15,9 +15,14 @@
+ 
+ void s151s(real_t a[LEN_1D], real_t b[LEN_1D],  int m)
+ {
++    real_t *temp = malloc(sizeof(real_t) * LEN_1D);
+     for (int i = 0; i < LEN_1D-1; i++) {
+-        a[i] = a[i + m] + b[i];
++        temp[i] = a[i + m] + b[i];
+     }
++    for (int i = 0; i < LEN_1D-1; i++) {
++        a[i] = temp[i];
++    }
++    free(temp);
+ }
+ 
+ static real_t kernel_s151(void)

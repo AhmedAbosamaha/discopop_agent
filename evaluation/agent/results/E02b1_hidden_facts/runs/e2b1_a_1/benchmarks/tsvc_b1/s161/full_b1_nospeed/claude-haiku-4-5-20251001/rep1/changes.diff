@@ -1,0 +1,36 @@
+--- original.c
++++ final.c
+@@ -16,15 +16,28 @@
+ static real_t kernel_s161(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
+-        for (int i = 0; i < LEN_1D-1; ++i) {
++        #pragma omp parallel for 
++        for (int i = 1; i < LEN_1D-1; i += 2) {
+             if (b[i] < (real_t)0.) {
+-                goto L20;
++                goto L20_odd;
+             }
+             a[i] = c[i] + d[i] * e[i];
+-            goto L10;
+-L20:
++            goto L10_odd;
++L20_odd:
+             c[i+1] = a[i] + d[i] * d[i];
+-L10:
++L10_odd:
++            ;
++        }
++        #pragma omp parallel for 
++        for (int i = 0; i < LEN_1D-1; i += 2) {
++            if (b[i] < (real_t)0.) {
++                goto L20_even;
++            }
++            a[i] = c[i] + d[i] * e[i];
++            goto L10_even;
++L20_even:
++            c[i+1] = a[i] + d[i] * d[i];
++L10_even:
+             ;
+         }
+         pb_mix(nl);

@@ -1,0 +1,25 @@
+--- original.c
++++ final.c
+@@ -15,9 +15,21 @@
+ 
+ void s151s(real_t a[LEN_1D], real_t b[LEN_1D],  int m)
+ {
++    real_t *temp = malloc((LEN_1D) * sizeof(real_t));
++
++    /* Pre-read source values into temporary buffer to decouple reads from writes */
++    #pragma omp parallel for shared(a, temp, m)
+     for (int i = 0; i < LEN_1D-1; i++) {
+-        a[i] = a[i + m] + b[i];
++        temp[i] = a[i + m];
+     }
++
++    /* Compute results in parallel using buffered values */
++    #pragma omp parallel for shared(a, b, temp)
++    for (int i = 0; i < LEN_1D-1; i++) {
++        a[i] = temp[i] + b[i];
++    }
++
++    free(temp);
+ }
+ 
+ static real_t kernel_s151(void)

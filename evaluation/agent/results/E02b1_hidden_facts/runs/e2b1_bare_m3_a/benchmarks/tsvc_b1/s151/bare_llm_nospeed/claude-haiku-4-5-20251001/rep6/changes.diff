@@ -1,0 +1,35 @@
+--- original.c
++++ final.c
+@@ -15,9 +15,31 @@
+ 
+ void s151s(real_t a[LEN_1D], real_t b[LEN_1D],  int m)
+ {
++    /* Allocate temporary buffer to eliminate write-before-read anti-dependence.
++     * Phase 1: Read all a[i+m] values into temp (independent iterations).
++     * Phase 2: Compute a[i] = temp[i] + b[i] in parallel (independent iterations).
++     */
++    real_t *temp = malloc((LEN_1D - 1) * sizeof(real_t));
++
++    /* Phase 1: Read all source values.
++     * Each iteration i reads a[i+m] and writes to a distinct temp[i].
++     * No cross-iteration dependencies.
++     */
++    #pragma omp parallel for shared(a, temp)
+     for (int i = 0; i < LEN_1D-1; i++) {
+-        a[i] = a[i + m] + b[i];
++        temp[i] = a[i + m];
+     }
++
++    /* Phase 2: Compute results using buffered values.
++     * Each iteration i reads temp[i] (which holds the original a[i+m]) and b[i],
++     * writes to a[i]. No write-before-read hazard; iterations are independent.
++     */
++    #pragma omp parallel for shared(a, temp, b)
++    for (int i = 0; i < LEN_1D-1; i++) {
++        a[i] = temp[i] + b[i];
++    }
++
++    free(temp);
+ }
+ 
+ static real_t kernel_s151(void)

@@ -1,0 +1,10 @@
+--- s277.c
++++ s277.c
+@@ -28,6 +28,7 @@
+         }
+ 
+         /* Second pass: update a[i] values using the pre-computed b_new values */
++        #pragma omp parallel for shared(b_new) 
+         for (int i = 0; i < LEN_1D-1; i++) {
+                 if (a[i] >= (real_t)0.) {
+                     /* Skip: a[i] is non-negative */

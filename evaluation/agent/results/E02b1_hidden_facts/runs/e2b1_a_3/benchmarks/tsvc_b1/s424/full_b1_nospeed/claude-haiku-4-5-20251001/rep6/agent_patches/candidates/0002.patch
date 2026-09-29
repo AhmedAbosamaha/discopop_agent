@@ -1,0 +1,10 @@
+--- s424.c
++++ s424.c
+@@ -22,6 +22,7 @@
+         for (int start = 0; start < LEN_1D - 1; start += block_size) {
+             int end = start + block_size;
+             if (end > LEN_1D - 1) end = LEN_1D - 1;
++            #pragma omp parallel for 
+             for (int i = start; i < end; i++) {
+                 xx[i+1] = flat_2d_array[i] + a[i];
+             }

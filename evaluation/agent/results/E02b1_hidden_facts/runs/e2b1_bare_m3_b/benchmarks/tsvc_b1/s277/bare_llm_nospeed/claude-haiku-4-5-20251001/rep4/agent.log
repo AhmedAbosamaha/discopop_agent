@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s277.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : main, pb_mix
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] s277.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: I'll read the file and analyze the parallelization opportunity.## Plan **Blocking Dependence Analysis:** The inner `i` loop has a loop-carried dependence through array `b`: - Iteration `i` writes `b[i+1]` - Iteration `i+1` reads `b[i+1]` in the condition check at line 23 However, examining more closely: `b[i+1] = c[i] + d[i] * e[i]` is computed freshly—it doesn't depend on the previous value of `b
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

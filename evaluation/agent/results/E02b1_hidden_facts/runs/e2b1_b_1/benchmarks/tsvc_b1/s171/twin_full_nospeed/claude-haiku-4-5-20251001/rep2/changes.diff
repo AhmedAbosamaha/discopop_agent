@@ -1,0 +1,17 @@
+--- original.c
++++ final.c
+@@ -16,8 +16,13 @@
+ static real_t kernel_s171(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        real_t b_val[LEN_1D];
++        #pragma omp parallel for 
+         for (int i = 0; i < LEN_1D; i++) {
+-            a[i * inc] += b[i];
++            b_val[i] = b[i];
++        }
++        for (int i = 0; i < LEN_1D; i++) {
++            a[i * inc] += b_val[i];
+         }
+         pb_mix(nl);
+     }

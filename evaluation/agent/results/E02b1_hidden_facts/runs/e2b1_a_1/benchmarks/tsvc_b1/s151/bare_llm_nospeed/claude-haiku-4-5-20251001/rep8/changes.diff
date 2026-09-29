@@ -1,0 +1,34 @@
+--- original.c
++++ final.c
+@@ -15,9 +15,30 @@
+ 
+ void s151s(real_t a[LEN_1D], real_t b[LEN_1D],  int m)
+ {
++    /* Allocate temporary buffer to break backward loop-carried dependence:
++     * original loop reads a[i+m] before it's overwritten by iteration i+m.
++     * Use two-pass approach: compute into tmp (parallel), then copy back (parallel) */
++    real_t *tmp = (real_t *)malloc(LEN_1D * sizeof(real_t));
++
++    /* First pass: compute new values using original a and b (fully parallel).
++     * Reads: a (shared, read-only), b (shared, read-only), m (shared, read-only).
++     * Writes: tmp (shared, each iteration writes tmp[i]).
++     * Loop variable i is implicitly private. */
++    #pragma omp parallel for shared(a, b, tmp, m)
+     for (int i = 0; i < LEN_1D-1; i++) {
+-        a[i] = a[i + m] + b[i];
++        tmp[i] = a[i + m] + b[i];
+     }
++
++    /* Second pass: copy results back to a (fully parallel).
++     * Reads: tmp (shared, read-only).
++     * Writes: a (shared, each iteration writes a[i]).
++     * Loop variable i is implicitly private. */
++    #pragma omp parallel for shared(a, tmp)
++    for (int i = 0; i < LEN_1D-1; i++) {
++        a[i] = tmp[i];
++    }
++
++    free(tmp);
+ }
+ 
+ static real_t kernel_s151(void)

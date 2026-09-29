@@ -1,0 +1,38 @@
+--- original.c
++++ final.c
+@@ -15,8 +15,33 @@
+ 
+ void s151s(real_t a[LEN_1D], real_t b[LEN_1D],  int m)
+ {
+-    for (int i = 0; i < LEN_1D-1; i++) {
+-        a[i] = a[i + m] + b[i];
++    if (m == 1) {
++        /* Restructure to expose Do-All parallelism by removing loop-carried dependence.
++         * Original: a[i] = a[i+1] + b[i] (backward dependence on a[i+1])
++         * Restructured: a[i] = a[LEN_1D-1] + suffix_sum[i] where
++         * suffix_sum[i] = b[i] + b[i+1] + ... + b[LEN_1D-2] (suffix sum of b)
++         * This makes the main loop independent across iterations.
++         */
++        real_t *suffix_sum = malloc((LEN_1D - 1) * sizeof(real_t));
++
++        /* Compute suffix sum in reverse (backward loop with dependence) */
++        suffix_sum[LEN_1D - 2] = b[LEN_1D - 2];
++        for (int i = LEN_1D - 3; i >= 0; i--) {
++            suffix_sum[i] = suffix_sum[i + 1] + b[i];
++        }
++
++        /* Main loop: independent assignment, no loop-carried dependence (Do-All) */
++        #pragma omp parallel for shared(suffix_sum,a) 
++        for (int i = 0; i < LEN_1D - 1; i++) {
++            a[i] = a[LEN_1D - 1] + suffix_sum[i];
++        }
++
++        free(suffix_sum);
++    } else {
++        /* Original loop for other values of m */
++        for (int i = 0; i < LEN_1D - 1; i++) {
++            a[i] = a[i + m] + b[i];
++        }
+     }
+ }
+ 

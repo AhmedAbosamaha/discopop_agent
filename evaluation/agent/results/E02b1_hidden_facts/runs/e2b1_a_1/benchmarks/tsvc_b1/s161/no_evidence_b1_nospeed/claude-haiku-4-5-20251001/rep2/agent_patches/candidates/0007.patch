@@ -1,0 +1,10 @@
+--- s161.c
++++ s161.c
+@@ -22,6 +22,7 @@
+         memset(c_updated, 0, LEN_1D * sizeof(int));
+ 
+         // Phase 1: Collect all updates to c
++        #pragma omp parallel for 
+         for (int i = 0; i < LEN_1D-1; ++i) {
+             if (b[i] < (real_t)0.) {
+                 c_new_values[i+1] = a[i] + d[i] * d[i];

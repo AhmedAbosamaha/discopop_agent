@@ -1,0 +1,16 @@
+--- original.c
++++ final.c
+@@ -18,8 +18,11 @@
+     int vl = 63;
+     xx = flat_2d_array + vl;
+     for (int nl = 0; nl < R; nl++) {
+-        for (int i = 0; i < LEN_1D - 1; i++) {
+-            xx[i+1] = flat_2d_array[i] + a[i];
++        int step = vl + 1;
++        for (int start = 0; start < LEN_1D - 1; start += step) {
++            for (int i = start; i < start + step && i < LEN_1D - 1; i++) {
++                xx[i+1] = flat_2d_array[i] + a[i];
++            }
+         }
+         pb_mix(nl);
+     }

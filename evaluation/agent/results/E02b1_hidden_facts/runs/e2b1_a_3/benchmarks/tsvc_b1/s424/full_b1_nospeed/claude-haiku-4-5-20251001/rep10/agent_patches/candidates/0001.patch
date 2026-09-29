@@ -1,0 +1,21 @@
+--- s424.c
++++ s424.c
+@@ -17,12 +17,17 @@
+ {
+     int vl = 63;
+     xx = flat_2d_array + vl;
++    real_t* temp = malloc(LEN_1D * sizeof(real_t));
+     for (int nl = 0; nl < R; nl++) {
+         for (int i = 0; i < LEN_1D - 1; i++) {
+-            xx[i+1] = flat_2d_array[i] + a[i];
++            temp[i] = flat_2d_array[i] + a[i];
++        }
++        for (int i = 0; i < LEN_1D - 1; i++) {
++            xx[i+1] = temp[i];
+         }
+         pb_mix(nl);
+     }
++    free(temp);
+     return (real_t)0;
+ }
+ 

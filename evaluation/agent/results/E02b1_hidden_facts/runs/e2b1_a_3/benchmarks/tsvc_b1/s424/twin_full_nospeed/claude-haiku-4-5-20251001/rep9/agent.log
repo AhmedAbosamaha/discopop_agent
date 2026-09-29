@@ -1,0 +1,37 @@
+
+============================================================
+  Model-only twin (D38) — DiscoPoP's information, no gate, one attempt
+============================================================
+  Source         : s424.c
+  Model          : claude-haiku-4-5-20251001
+  Pragmas by     : DiscoPoP
+  Evidence       : full
+  Depth          : 0
+
+┌─ [depth=0] loop 1:16 (lines 20–25)
+│  [twin] Calling claude-haiku-4-5-20251001...
+│  [twin] the model's plan: I'll read the file first to understand the current state, then write a plan and apply the rewrite.**Plan:** The blocking dependence is a loop-carried RAW on `flat_2d_array` with distance 64. This arises because `xx = flat_2d_array + 63`, so `xx[i+1]` writes to `flat_2d_array[i+64]`. Iteration `i` reads `flat_2d_array[i]` and writes `flat_2d_array[i+64]`; iteration `i+64` then reads what iteration 
+│  [twin] edited, 0 OpenMP pragma(s) in the file — kept unchecked
+│  [twin] Re-profiling (as the agent does after a kept rewrite)...
+│  [twin] 4 new region(s) at depth 1
+└─ EDITED
+
+┌─ [depth=1] loop 1:16 (lines 20–27)
+└─ SKIPPED (depth 1 > --restructure-depth 0)
+
+┌─ [depth=1] function 1:12 (lines 0–28)
+└─ SKIPPED (depth 1 > --restructure-depth 0)
+
+┌─ [depth=1] loop 1:19 (lines 21–25)
+└─ SKIPPED (depth 1 > --restructure-depth 0)
+
+┌─ [depth=1] loop 1:22 (lines 22–24)
+└─ SKIPPED (depth 1 > --restructure-depth 0)
+
+
+============================================================
+  DiscoPoP annotates — 0 applicable pattern(s), NOTHING CHECKED
+============================================================
+
+
+  SUMMARY: 1 region(s) asked  |  1 edited  |  0 DiscoPoP pragma(s) inserted unchecked  |  nothing was checked here — the harness judges the result

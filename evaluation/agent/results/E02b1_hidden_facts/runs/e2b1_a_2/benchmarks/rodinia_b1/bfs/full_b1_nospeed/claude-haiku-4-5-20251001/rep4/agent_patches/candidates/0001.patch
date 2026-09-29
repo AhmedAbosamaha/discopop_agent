@@ -1,0 +1,10 @@
+--- bfs.cpp
++++ bfs.cpp
+@@ -33,6 +33,7 @@
+             }
+ 
+             // Merge collected updates back to global arrays
++            #pragma omp parallel for shared(temp_cost,temp_updating_graph_mask) 
+             for(int id = 0; id < no_of_nodes; id++)
+             {
+                 if(temp_updating_graph_mask[id])

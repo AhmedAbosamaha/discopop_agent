@@ -1,0 +1,29 @@
+--- bfs.cpp
++++ bfs.cpp
+@@ -12,7 +12,7 @@
+ 
+             for(int tid = 0; tid < no_of_nodes; tid++ )
+             {
+-                if (h_graph_mask[tid] == true){ 
++                if (h_graph_mask[tid] == true){
+                     h_graph_mask[tid]=false;
+                     for(int i=h_graph_nodes[tid].starting; i<(h_graph_nodes[tid].no_of_edges + h_graph_nodes[tid].starting); i++)
+                     {
+@@ -20,7 +20,7 @@
+                         if(!h_graph_visited[id])
+                         {
+                             h_cost[id]=h_cost[tid]+1;
+-                            h_updating_graph_mask[id]=true;
++                            h_updating_graph_mask[id] = h_updating_graph_mask[id] || true;
+                         }
+                     }
+                 }
+@@ -31,7 +31,7 @@
+                 if (h_updating_graph_mask[tid] == true){
+                     h_graph_mask[tid]=true;
+                     h_graph_visited[tid]=true;
+-                    stop=true;
++                    stop = stop || true;
+                     h_updating_graph_mask[tid]=false;
+                 }
+             }

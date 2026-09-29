@@ -1,0 +1,24 @@
+--- s481.c
++++ s481.c
+@@ -15,7 +15,10 @@
+ 
+ static real_t kernel_s481(void)
+ {
++    real_t carry = 0.0;
+     for (int nl = 0; nl < R; nl++) {
++        // Carry loop-counter dependence through to make nl-loop sequential
++        carry = carry + (real_t)nl - (real_t)nl;  // carry stays 0, but creates anti-dependence on carry
+         for (int i = 0; i < LEN_1D; i++) {
+             if (d[i] < (real_t)0.) {
+                 exit (0);
+@@ -23,8 +26,9 @@
+             a[i] += b[i] * c[i];
+         }
+         pb_mix(nl);
++        carry = (real_t)nl + 1.0;  // Update carry to make next iteration depend on this one
+     }
+-    return (real_t)0;
++    return carry;
+ }
+ 
+ PB_MAIN(kernel_s481)

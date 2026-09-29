@@ -1,0 +1,32 @@
+--- s424.c
++++ s424.c
+@@ -1,5 +1,6 @@
+ /* TSVC-2 loop s424, from TSVC-2 src/tsvc.c (sha256 456dd573b84b; University of Illinois licence,
+  * see benchmarks/TSVC_2/license.txt). */
++#include <stdlib.h>
+ #include "tsvc_b1/s424.h"
+ 
+ /* Between two repetitions a few INPUT elements change, so no repetition can be skipped,
+@@ -18,9 +19,21 @@
+     int vl = 63;
+     xx = flat_2d_array + vl;
+     for (int nl = 0; nl < R; nl++) {
++        /* Buffer input arrays to break loop-carried dependence on flat_2d_array[i] and a[i].
++         * Iteration i writes to flat_2d_array[vl+i+1] and iteration i+vl+1 reads from
++         * flat_2d_array[i+vl+1], creating a RAW loop-carried dependence. By freezing the
++         * input before the loop, reads come from a fixed buffer, eliminating the dependence. */
++        real_t *temp_flat = (real_t *)malloc((LEN_1D - 1) * sizeof(real_t));
++        real_t *temp_a = (real_t *)malloc((LEN_1D - 1) * sizeof(real_t));
+         for (int i = 0; i < LEN_1D - 1; i++) {
+-            xx[i+1] = flat_2d_array[i] + a[i];
++            temp_flat[i] = flat_2d_array[i];
++            temp_a[i] = a[i];
+         }
++        for (int i = 0; i < LEN_1D - 1; i++) {
++            xx[i+1] = temp_flat[i] + temp_a[i];
++        }
++        free(temp_flat);
++        free(temp_a);
+         pb_mix(nl);
+     }
+     return (real_t)0;

@@ -1,0 +1,10 @@
+--- bfs.cpp
++++ bfs.cpp
+@@ -38,6 +38,7 @@
+                 }
+             }
+ 
++            #pragma omp parallel for lastprivate(stop) shared(local_stop) 
+             for(int tid=0; tid< no_of_nodes ; tid++ )
+             {
+                 if (local_stop[tid] == true){

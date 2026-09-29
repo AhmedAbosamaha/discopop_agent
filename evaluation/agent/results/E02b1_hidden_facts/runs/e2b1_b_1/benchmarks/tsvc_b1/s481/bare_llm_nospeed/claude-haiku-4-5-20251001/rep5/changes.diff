@@ -1,0 +1,30 @@
+--- original.c
++++ final.c
+@@ -16,12 +16,26 @@
+ static real_t kernel_s481(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        /* First pass: determine where the exit would occur (sequential due to data dependence) */
++        int exit_at = LEN_1D;
+         for (int i = 0; i < LEN_1D; i++) {
+             if (d[i] < (real_t)0.) {
+-                exit (0);
++                exit_at = i;
++                break;
+             }
++        }
++
++        /* Second pass: parallelize the computation over iterations that would run sequentially */
++        #pragma omp parallel for shared(a, b, c, exit_at)
++        for (int i = 0; i < exit_at; i++) {
+             a[i] += b[i] * c[i];
+         }
++
++        /* Exit if the condition was met */
++        if (exit_at < LEN_1D) {
++            exit (0);
++        }
++
+         pb_mix(nl);
+     }
+     return (real_t)0;

@@ -1,0 +1,2316 @@
+{
+  "run_id": "e2b1_bare_m3_bfs",
+  "harness": "agent",
+  "timestamp": "e2b1_bare_m3_bfs",
+  "invocation": {
+    "benchmarks": [
+      "rodinia_b1/bfs"
+    ],
+    "arms": [
+      "bare_llm_nospeed"
+    ],
+    "models": [
+      "claude-haiku-4-5-20251001"
+    ],
+    "repeats_per_trial": 10,
+    "provider": "claude-agent-sdk",
+    "edit_mode": "direct",
+    "extra_agent_args": [],
+    "verify_size": "per_kernel",
+    "threads": [
+      6,
+      12
+    ],
+    "repeats": 5,
+    "timeout_s": 5400,
+    "check_seed": "7",
+    "min_runtime_share": 0.0,
+    "cc": "/usr/bin/clang-20",
+    "cxx": "/usr/bin/clang++-20",
+    "host": "rms14562",
+    "platform": "Linux-6.8.0-138-generic-x86_64-with-glibc2.39",
+    "agent_git": {
+      "path": "/home/ahmedabosamaha/discopop_agent",
+      "head": "f35fac09c616bcc1cbb0e35d10d77541a5182782",
+      "branch": "agentic_DiscoPop",
+      "dirty_sha256": null
+    },
+    "harness_git": {
+      "path": "/home/ahmedabosamaha/discopop_agent/evaluation",
+      "head": "f35fac09c616bcc1cbb0e35d10d77541a5182782",
+      "branch": "agentic_DiscoPop",
+      "dirty_sha256": null
+    },
+    "argv": [
+      "agent/benchmark",
+      "run",
+      "rodinia_b1/bfs",
+      "--arms",
+      "bare_llm_nospeed",
+      "--models",
+      "claude-haiku-4-5-20251001",
+      "--threads",
+      "6,12",
+      "--repeats",
+      "5",
+      "--trials",
+      "10",
+      "--run-id",
+      "e2b1_bare_m3_bfs"
+    ],
+    "tool_versions": {
+      "claude_agent_sdk": "0.2.128",
+      "claude_cli_bundled": "2.1.220 (Claude Code)"
+    },
+    "common_flags": [
+      "--require-speedup",
+      "--min-runtime-share",
+      "0.01"
+    ],
+    "timing_sizes": {
+      "rodinia_b1/bfs": "LARGE"
+    },
+    "speed_check_off": [],
+    "verify_sizes": {
+      "rodinia_b1/bfs": "EXTRALARGE"
+    },
+    "arm_flags": {
+      "bare_llm_nospeed": [
+        "--no-require-speedup"
+      ]
+    }
+  },
+  "runs": [
+    {
+      "benchmark": "rodinia_b1/bfs",
+      "kernel": "bfs",
+      "source": "bfs.cpp",
+      "arm": "bare_llm_nospeed",
+      "model": "claude-haiku-4-5-20251001",
+      "arm_flags": [
+        "--require-speedup",
+        "--min-runtime-share",
+        "0.01",
+        "--no-require-speedup",
+        "--timing-cflags=-DLARGE_DATASET"
+      ],
+      "started_at": "2026-09-28T20:46:57",
+      "host": "rms14562",
+      "host_load_start": [
+        16.13916015625,
+        12.634765625,
+        10.50732421875
+      ],
+      "agent_cmd": [
+        "/home/ahmedabosamaha/discopop_agent/venv/bin/python",
+        "-m",
+        "discopop_agent.bare_llm",
+        "--source-file",
+        "bfs.cpp",
+        "--model",
+        "claude-haiku-4-5-20251001",
+        "--no-require-speedup",
+        "--exclude-functions",
+        "main",
+        "--protected-line",
+        "#include \"rodinia_b1/bfs.h\"",
+        "--protected-line",
+        "PB_MAIN(kernel_bfs)",
+        "--protected-note",
+        "`PB_MAIN(kernel_bfs)` expands to `main`: it sets up the data the included header declares, times one call of `kernel_bfs` and prints its result. `no_of_nodes`, the number of graph nodes, is set in the included header: 65536 in the default build, and up to 48000000 in the builds that verify the result."
+      ],
+      "agent_s": 95.9,
+      "agent_rc": 0,
+      "llm_calls": 1,
+      "llm_call_failures": 0,
+      "explorer_retries": 0,
+      "explorer_stalls": 0,
+      "reverts": 0,
+      "refresh_fast": 0,
+      "refresh_full": 0,
+      "refresh_fallback": 0,
+      "runtime_remeasurements": 0,
+      "phase_b_deferred": 0,
+      "phase_b_joint_kept": 0,
+      "dp_floor": null,
+      "gate_failures_phase_a": {},
+      "gate_failures_phase_b": {},
+      "gate_passes_phase_a": 0,
+      "gate_failures_d40": {},
+      "d40_verdicts": {},
+      "exposure_verdicts": {},
+      "d40_seconds": 0,
+      "requeued_regions": 0,
+      "region_verdicts": {},
+      "settle_dropped": 0,
+      "llm_usage": {
+        "calls_recorded": 1,
+        "input_tokens": 42,
+        "output_tokens": 11059,
+        "cache_read_input_tokens": 73448,
+        "cache_creation_input_tokens": 12808,
+        "cost_usd": 0.0893,
+        "model_seconds": 94.6
+      },
+      "source_changed": true,
+      "protected": [
+        "#include \"rodinia_b1/bfs.h\"",
+        "PB_MAIN(kernel_bfs)"
+      ],
+      "harness_sha256": "bb26fba095bc0ae5d578f142df1ce0a64874ceb5b128c27aea56728cafb73d2c",
+      "scaffold": {
+        "ok": true,
+        "problems": [],
+        "applies": true
+      },
+      "pragmas_added": 2,
+      "pragmas_in_final": 2,
+      "hot_loop": {
+        "entry": "kernel_bfs",
+        "function": "kernel_bfs",
+        "line": 13,
+        "writes": [
+          "h_cost"
+        ],
+        "shared": [
+          "h_graph_mask",
+          "h_updating_graph_mask"
+        ]
+      },
+      "hot_loop_covered": true,
+      "hot_loop_coverage": {
+        "criterion": "v2 (27 Sep 2026)",
+        "covered": true,
+        "covering": [
+          {
+            "function": "kernel_bfs",
+            "line": 13,
+            "directive": "#pragma omp parallel for shared(h_graph_mask, h_graph_nodes, h_graph_edges, h_graph_visited, h_cost, h_updating_graph_mask)",
+            "writes": [
+              "h_cost"
+            ]
+          }
+        ],
+        "uncounted": [],
+        "elsewhere": [
+          {
+            "function": "kernel_bfs",
+            "line": 30,
+            "directive": "#pragma omp parallel for reduction(||:stop) shared(h_updating_graph_mask, h_graph_mask, h_graph_visited)",
+            "writes": [
+              "h_graph_mask",
+              "h_graph_visited",
+              "h_updating_graph_mask"
+            ]
+          }
+        ]
+      },
+      "candidates_recorded": 0,
+      "verify": {
+        "verify_size": "EXTRALARGE",
+        "threads": [
+          6,
+          12
+        ],
+        "repeats": 5,
+        "compiler": "/usr/bin/clang++-20",
+        "final_flags": [],
+        "dump_exact": true,
+        "dump_max_rel_err": 0.0,
+        "seed": "7",
+        "dump_exact_seeded": true,
+        "dump_seeded_max_rel_err": 0.0,
+        "seq_median_s": 8.0358,
+        "seq_kernel_median_s": 4.44671,
+        "timing_basis": "kernel",
+        "par": {
+          "6": {
+            "median_s": 4.4083,
+            "program_speedup": 1.823,
+            "max_rel_err": 0.0,
+            "kernel_median_s": 0.707041,
+            "kernel_speedup": 6.289,
+            "speedup": 6.289
+          },
+          "12": {
+            "median_s": 4.3901,
+            "program_speedup": 1.83,
+            "max_rel_err": 0.0,
+            "kernel_median_s": 0.648134,
+            "kernel_speedup": 6.861,
+            "speedup": 6.861
+          }
+        },
+        "digest_max_rel_err": 0.0,
+        "stable_at_fixed_threads": true,
+        "kernel_program_disagree": false,
+        "digest_seeded_rel_err": 0.0,
+        "status": "ok",
+        "speed_measurable": true
+      },
+      "verify_s": 97.9,
+      "status": "done",
+      "outcome": "FASTER",
+      "finished_at": "2026-09-28T20:50:11",
+      "host_load_end": [
+        19.68603515625,
+        15.1708984375,
+        11.8662109375
+      ],
+      "profile": {
+        "wrapper": "discopop_cxx",
+        "instrument_s": 0.57,
+        "profiled_run_s": 0.27,
+        "explore_stalls": 0,
+        "explore_s": 3.62,
+        "explore_success_s": 3.62,
+        "explore_attempts": 1,
+        "explore_timed_out": false,
+        "explore_failures": [],
+        "patterns": {
+          "optimizer_output": 0,
+          "merged_pattern": 0,
+          "task": 0,
+          "do_all": 1,
+          "reduction": 0
+        },
+        "profile_sha256": "9b29be7a70f8a13a7d6368452b6a88b6f871793af02a47c496ea4bf51744fe3a"
+      },
+      "package_integrity": {
+        "before": {
+          "checked": "before trial",
+          "at": "2026-09-28T20:46:57",
+          "prepared_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+          "packager_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+          "harness_sha256": "bb26fba095bc0ae5d578f142df1ce0a64874ceb5b128c27aea56728cafb73d2c",
+          "archived_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+          "profile_sha256": "9b29be7a70f8a13a7d6368452b6a88b6f871793af02a47c496ea4bf51744fe3a",
+          "ok": true
+        },
+        "after": {
+          "checked": "after trial",
+          "at": "2026-09-28T20:50:11",
+          "prepared_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+          "packager_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+          "harness_sha256": "bb26fba095bc0ae5d578f142df1ce0a64874ceb5b128c27aea56728cafb73d2c",
+          "archived_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+          "profile_sha256": "9b29be7a70f8a13a7d6368452b6a88b6f871793af02a47c496ea4bf51744fe3a",
+          "ok": true
+        }
+      },
+      "speed_check_off": true,
+      "timing_flags": [
+        "--timing-cflags=-DLARGE_DATASET"
+      ],
+      "repeat": 1
+    },
+    {
+      "benchmark": "rodinia_b1/bfs",
+      "kernel": "bfs",
+      "source": "bfs.cpp",
+      "arm": "bare_llm_nospeed",
+      "model": "claude-haiku-4-5-20251001",
+      "arm_flags": [
+        "--require-speedup",
+        "--min-runtime-share",
+        "0.01",
+        "--no-require-speedup",
+        "--timing-cflags=-DLARGE_DATASET"
+      ],
+      "started_at": "2026-09-28T21:46:53",
+      "host": "rms14562",
+      "host_load_start": [
+        10.65673828125,
+        12.7919921875,
+        18.20263671875
+      ],
+      "agent_cmd": [
+        "/home/ahmedabosamaha/discopop_agent/venv/bin/python",
+        "-m",
+        "discopop_agent.bare_llm",
+        "--source-file",
+        "bfs.cpp",
+        "--model",
+        "claude-haiku-4-5-20251001",
+        "--no-require-speedup",
+        "--exclude-functions",
+        "main",
+        "--protected-line",
+        "#include \"rodinia_b1/bfs.h\"",
+        "--protected-line",
+        "PB_MAIN(kernel_bfs)",
+        "--protected-note",
+        "`PB_MAIN(kernel_bfs)` expands to `main`: it sets up the data the included header declares, times one call of `kernel_bfs` and prints its result. `no_of_nodes`, the number of graph nodes, is set in the included header: 65536 in the default build, and up to 48000000 in the builds that verify the result."
+      ],
+      "agent_s": 168.7,
+      "agent_rc": 0,
+      "llm_calls": 1,
+      "llm_call_failures": 0,
+      "explorer_retries": 0,
+      "explorer_stalls": 0,
+      "reverts": 0,
+      "refresh_fast": 0,
+      "refresh_full": 0,
+      "refresh_fallback": 0,
+      "runtime_remeasurements": 0,
+      "phase_b_deferred": 0,
+      "phase_b_joint_kept": 0,
+      "dp_floor": null,
+      "gate_failures_phase_a": {},
+      "gate_failures_phase_b": {},
+      "gate_passes_phase_a": 0,
+      "gate_failures_d40": {},
+      "d40_verdicts": {},
+      "exposure_verdicts": {},
+      "d40_seconds": 0,
+      "requeued_regions": 0,
+      "region_verdicts": {},
+      "settle_dropped": 0,
+      "llm_usage": {
+        "calls_recorded": 1,
+        "input_tokens": 50,
+        "output_tokens": 15333,
+        "cache_read_input_tokens": 90383,
+        "cache_creation_input_tokens": 15440,
+        "cost_usd": 0.1177,
+        "model_seconds": 167.4
+      },
+      "source_changed": true,
+      "protected": [
+        "#include \"rodinia_b1/bfs.h\"",
+        "PB_MAIN(kernel_bfs)"
+      ],
+      "harness_sha256": "bb26fba095bc0ae5d578f142df1ce0a64874ceb5b128c27aea56728cafb73d2c",
+      "scaffold": {
+        "ok": true,
+        "problems": [],
+        "applies": true
+      },
+      "pragmas_added": 4,
+      "pragmas_in_final": 4,
+      "hot_loop": {
+        "entry": "kernel_bfs",
+        "function": "kernel_bfs",
+        "line": 13,
+        "writes": [
+          "h_cost"
+        ],
+        "shared": [
+          "h_graph_mask",
+          "h_updating_graph_mask"
+        ]
+      },
+      "hot_loop_covered": true,
+      "hot_loop_coverage": {
+        "criterion": "v2 (27 Sep 2026)",
+        "covered": true,
+        "covering": [
+          {
+            "function": "kernel_bfs",
+            "line": 13,
+            "directive": "#pragma omp parallel for schedule(static) shared(h_graph_mask, h_graph_nodes, h_graph_edges, h_cost, h_graph_visited, h_updating_graph_mask, no_of_nodes)",
+            "writes": [
+              "h_cost"
+            ]
+          }
+        ],
+        "uncounted": [],
+        "elsewhere": [
+          {
+            "function": "kernel_bfs",
+            "line": 33,
+            "directive": "#pragma omp parallel for schedule(static) shared(h_graph_mask, h_graph_visited, h_updating_graph_mask, no_of_nodes) reduction(||:stop)",
+            "writes": [
+              "h_graph_mask",
+              "h_graph_visited",
+              "h_updating_graph_mask"
+            ]
+          }
+        ]
+      },
+      "candidates_recorded": 0,
+      "verify": {
+        "verify_size": "EXTRALARGE",
+        "threads": [
+          6,
+          12
+        ],
+        "repeats": 5,
+        "compiler": "/usr/bin/clang++-20",
+        "final_flags": [],
+        "dump_exact": true,
+        "dump_max_rel_err": 0.0,
+        "seed": "7",
+        "dump_exact_seeded": true,
+        "dump_seeded_max_rel_err": 0.0,
+        "seq_median_s": 7.8961,
+        "seq_kernel_median_s": 4.329356,
+        "timing_basis": "kernel",
+        "par": {
+          "6": {
+            "median_s": 4.5535,
+            "program_speedup": 1.734,
+            "max_rel_err": 0.0,
+            "kernel_median_s": 0.769161,
+            "kernel_speedup": 5.629,
+            "speedup": 5.629
+          },
+          "12": {
+            "median_s": 4.3866,
+            "program_speedup": 1.8,
+            "max_rel_err": 0.0,
+            "kernel_median_s": 0.669653,
+            "kernel_speedup": 6.465,
+            "speedup": 6.465
+          }
+        },
+        "digest_max_rel_err": 0.0,
+        "stable_at_fixed_threads": true,
+        "kernel_program_disagree": false,
+        "digest_seeded_rel_err": 0.0,
+        "status": "ok",
+        "speed_measurable": true
+      },
+      "verify_s": 98.0,
+      "status": "done",
+      "outcome": "FASTER",
+      "finished_at": "2026-09-28T21:51:20",
+      "host_load_end": [
+        11.39013671875,
+        11.8388671875,
+        16.4228515625
+      ],
+      "profile": {
+        "wrapper": "discopop_cxx",
+        "instrument_s": 0.57,
+        "profiled_run_s": 0.27,
+        "explore_stalls": 0,
+        "explore_s": 3.62,
+        "explore_success_s": 3.62,
+        "explore_attempts": 1,
+        "explore_timed_out": false,
+        "explore_failures": [],
+        "patterns": {
+          "optimizer_output": 0,
+          "merged_pattern": 0,
+          "task": 0,
+          "do_all": 1,
+          "reduction": 0
+        },
+        "profile_sha256": "9b29be7a70f8a13a7d6368452b6a88b6f871793af02a47c496ea4bf51744fe3a"
+      },
+      "package_integrity": {
+        "before": {
+          "checked": "before trial",
+          "at": "2026-09-28T21:46:53",
+          "prepared_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+          "packager_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+          "harness_sha256": "bb26fba095bc0ae5d578f142df1ce0a64874ceb5b128c27aea56728cafb73d2c",
+          "archived_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+          "profile_sha256": "9b29be7a70f8a13a7d6368452b6a88b6f871793af02a47c496ea4bf51744fe3a",
+          "ok": true
+        },
+        "after": {
+          "checked": "after trial",
+          "at": "2026-09-28T21:51:20",
+          "prepared_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+          "packager_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+          "harness_sha256": "bb26fba095bc0ae5d578f142df1ce0a64874ceb5b128c27aea56728cafb73d2c",
+          "archived_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+          "profile_sha256": "9b29be7a70f8a13a7d6368452b6a88b6f871793af02a47c496ea4bf51744fe3a",
+          "ok": true
+        }
+      },
+      "speed_check_off": true,
+      "timing_flags": [
+        "--timing-cflags=-DLARGE_DATASET"
+      ],
+      "repeat": 10
+    },
+    {
+      "benchmark": "rodinia_b1/bfs",
+      "kernel": "bfs",
+      "source": "bfs.cpp",
+      "arm": "bare_llm_nospeed",
+      "model": "claude-haiku-4-5-20251001",
+      "arm_flags": [
+        "--require-speedup",
+        "--min-runtime-share",
+        "0.01",
+        "--no-require-speedup",
+        "--timing-cflags=-DLARGE_DATASET"
+      ],
+      "started_at": "2026-09-28T20:50:12",
+      "host": "rms14562",
+      "host_load_start": [
+        19.68603515625,
+        15.1708984375,
+        11.8662109375
+      ],
+      "agent_cmd": [
+        "/home/ahmedabosamaha/discopop_agent/venv/bin/python",
+        "-m",
+        "discopop_agent.bare_llm",
+        "--source-file",
+        "bfs.cpp",
+        "--model",
+        "claude-haiku-4-5-20251001",
+        "--no-require-speedup",
+        "--exclude-functions",
+        "main",
+        "--protected-line",
+        "#include \"rodinia_b1/bfs.h\"",
+        "--protected-line",
+        "PB_MAIN(kernel_bfs)",
+        "--protected-note",
+        "`PB_MAIN(kernel_bfs)` expands to `main`: it sets up the data the included header declares, times one call of `kernel_bfs` and prints its result. `no_of_nodes`, the number of graph nodes, is set in the included header: 65536 in the default build, and up to 48000000 in the builds that verify the result."
+      ],
+      "agent_s": 142.1,
+      "agent_rc": 0,
+      "llm_calls": 1,
+      "llm_call_failures": 0,
+      "explorer_retries": 0,
+      "explorer_stalls": 0,
+      "reverts": 0,
+      "refresh_fast": 0,
+      "refresh_full": 0,
+      "refresh_fallback": 0,
+      "runtime_remeasurements": 0,
+      "phase_b_deferred": 0,
+      "phase_b_joint_kept": 0,
+      "dp_floor": null,
+      "gate_failures_phase_a": {},
+      "gate_failures_phase_b": {},
+      "gate_passes_phase_a": 0,
+      "gate_failures_d40": {},
+      "d40_verdicts": {},
+      "exposure_verdicts": {},
+      "d40_seconds": 0,
+      "requeued_regions": 0,
+      "region_verdicts": {},
+      "settle_dropped": 0,
+      "llm_usage": {
+        "calls_recorded": 1,
+        "input_tokens": 34,
+        "output_tokens": 16457,
+        "cache_read_input_tokens": 51263,
+        "cache_creation_input_tokens": 16414,
+        "cost_usd": 0.1213,
+        "model_seconds": 140.7
+      },
+      "source_changed": true,
+      "protected": [
+        "#include \"rodinia_b1/bfs.h\"",
+        "PB_MAIN(kernel_bfs)"
+      ],
+      "harness_sha256": "bb26fba095bc0ae5d578f142df1ce0a64874ceb5b128c27aea56728cafb73d2c",
+      "scaffold": {
+        "ok": true,
+        "problems": [],
+        "applies": true
+      },
+      "pragmas_added": 3,
+      "pragmas_in_final": 3,
+      "hot_loop": {
+        "entry": "kernel_bfs",
+        "function": "kernel_bfs",
+        "line": 13,
+        "writes": [
+          "h_cost"
+        ],
+        "shared": [
+          "h_graph_mask",
+          "h_updating_graph_mask"
+        ]
+      },
+      "hot_loop_covered": true,
+      "hot_loop_coverage": {
+        "criterion": "v2 (27 Sep 2026)",
+        "covered": true,
+        "covering": [
+          {
+            "function": "kernel_bfs",
+            "line": 13,
+            "directive": "#pragma omp parallel for shared(h_graph_mask,h_graph_nodes,h_graph_edges,h_graph_visited,h_cost,h_updating_graph_mask)",
+            "writes": [
+              "h_cost"
+            ]
+          }
+        ],
+        "uncounted": [],
+        "elsewhere": [
+          {
+            "function": "kernel_bfs",
+            "line": 33,
+            "directive": "#pragma omp parallel for shared(h_graph_mask,h_graph_visited,h_updating_graph_mask) reduction(|:stop)",
+            "writes": [
+              "h_graph_mask",
+              "h_graph_visited",
+              "h_updating_graph_mask"
+            ]
+          }
+        ]
+      },
+      "candidates_recorded": 0,
+      "verify": {
+        "verify_size": "EXTRALARGE",
+        "threads": [
+          6,
+          12
+        ],
+        "repeats": 5,
+        "compiler": "/usr/bin/clang++-20",
+        "final_flags": [],
+        "dump_exact": true,
+        "dump_max_rel_err": 0.0,
+        "seed": "7",
+        "dump_exact_seeded": true,
+        "dump_seeded_max_rel_err": 0.0,
+        "seq_median_s": 7.9444,
+        "seq_kernel_median_s": 4.350106,
+        "timing_basis": "kernel",
+        "par": {
+          "6": {
+            "median_s": 40.7152,
+            "program_speedup": 0.195,
+            "max_rel_err": 0.0,
+            "kernel_median_s": 37.020102,
+            "kernel_speedup": 0.118,
+            "speedup": 0.118
+          },
+          "12": {
+            "median_s": 43.2677,
+            "program_speedup": 0.184,
+            "max_rel_err": 0.0,
+            "kernel_median_s": 39.622071,
+            "kernel_speedup": 0.11,
+            "speedup": 0.11
+          }
+        },
+        "digest_max_rel_err": 0.0,
+        "stable_at_fixed_threads": true,
+        "kernel_program_disagree": false,
+        "digest_seeded_rel_err": 0.0,
+        "status": "ok",
+        "speed_measurable": true
+      },
+      "verify_s": 518.2,
+      "status": "done",
+      "outcome": "parallel-not-faster",
+      "finished_at": "2026-09-28T21:01:12",
+      "host_load_end": [
+        29.7802734375,
+        26.3818359375,
+        19.25927734375
+      ],
+      "profile": {
+        "wrapper": "discopop_cxx",
+        "instrument_s": 0.57,
+        "profiled_run_s": 0.27,
+        "explore_stalls": 0,
+        "explore_s": 3.62,
+        "explore_success_s": 3.62,
+        "explore_attempts": 1,
+        "explore_timed_out": false,
+        "explore_failures": [],
+        "patterns": {
+          "optimizer_output": 0,
+          "merged_pattern": 0,
+          "task": 0,
+          "do_all": 1,
+          "reduction": 0
+        },
+        "profile_sha256": "9b29be7a70f8a13a7d6368452b6a88b6f871793af02a47c496ea4bf51744fe3a"
+      },
+      "package_integrity": {
+        "before": {
+          "checked": "before trial",
+          "at": "2026-09-28T20:50:11",
+          "prepared_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+          "packager_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+          "harness_sha256": "bb26fba095bc0ae5d578f142df1ce0a64874ceb5b128c27aea56728cafb73d2c",
+          "archived_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+          "profile_sha256": "9b29be7a70f8a13a7d6368452b6a88b6f871793af02a47c496ea4bf51744fe3a",
+          "ok": true
+        },
+        "after": {
+          "checked": "after trial",
+          "at": "2026-09-28T21:01:12",
+          "prepared_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+          "packager_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+          "harness_sha256": "bb26fba095bc0ae5d578f142df1ce0a64874ceb5b128c27aea56728cafb73d2c",
+          "archived_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+          "profile_sha256": "9b29be7a70f8a13a7d6368452b6a88b6f871793af02a47c496ea4bf51744fe3a",
+          "ok": true
+        }
+      },
+      "speed_check_off": true,
+      "timing_flags": [
+        "--timing-cflags=-DLARGE_DATASET"
+      ],
+      "repeat": 2
+    },
+    {
+      "benchmark": "rodinia_b1/bfs",
+      "kernel": "bfs",
+      "source": "bfs.cpp",
+      "arm": "bare_llm_nospeed",
+      "model": "claude-haiku-4-5-20251001",
+      "arm_flags": [
+        "--require-speedup",
+        "--min-runtime-share",
+        "0.01",
+        "--no-require-speedup",
+        "--timing-cflags=-DLARGE_DATASET"
+      ],
+      "started_at": "2026-09-28T21:01:12",
+      "host": "rms14562",
+      "host_load_start": [
+        29.7802734375,
+        26.3818359375,
+        19.25927734375
+      ],
+      "agent_cmd": [
+        "/home/ahmedabosamaha/discopop_agent/venv/bin/python",
+        "-m",
+        "discopop_agent.bare_llm",
+        "--source-file",
+        "bfs.cpp",
+        "--model",
+        "claude-haiku-4-5-20251001",
+        "--no-require-speedup",
+        "--exclude-functions",
+        "main",
+        "--protected-line",
+        "#include \"rodinia_b1/bfs.h\"",
+        "--protected-line",
+        "PB_MAIN(kernel_bfs)",
+        "--protected-note",
+        "`PB_MAIN(kernel_bfs)` expands to `main`: it sets up the data the included header declares, times one call of `kernel_bfs` and prints its result. `no_of_nodes`, the number of graph nodes, is set in the included header: 65536 in the default build, and up to 48000000 in the builds that verify the result."
+      ],
+      "agent_s": 113.4,
+      "agent_rc": 0,
+      "llm_calls": 1,
+      "llm_call_failures": 0,
+      "explorer_retries": 0,
+      "explorer_stalls": 0,
+      "reverts": 0,
+      "refresh_fast": 0,
+      "refresh_full": 0,
+      "refresh_fallback": 0,
+      "runtime_remeasurements": 0,
+      "phase_b_deferred": 0,
+      "phase_b_joint_kept": 0,
+      "dp_floor": null,
+      "gate_failures_phase_a": {},
+      "gate_failures_phase_b": {},
+      "gate_passes_phase_a": 0,
+      "gate_failures_d40": {},
+      "d40_verdicts": {},
+      "exposure_verdicts": {},
+      "d40_seconds": 0,
+      "requeued_regions": 0,
+      "region_verdicts": {},
+      "settle_dropped": 0,
+      "llm_usage": {
+        "calls_recorded": 1,
+        "input_tokens": 42,
+        "output_tokens": 11062,
+        "cache_read_input_tokens": 73709,
+        "cache_creation_input_tokens": 11523,
+        "cost_usd": 0.0868,
+        "model_seconds": 112.0
+      },
+      "source_changed": true,
+      "protected": [
+        "#include \"rodinia_b1/bfs.h\"",
+        "PB_MAIN(kernel_bfs)"
+      ],
+      "harness_sha256": "bb26fba095bc0ae5d578f142df1ce0a64874ceb5b128c27aea56728cafb73d2c",
+      "scaffold": {
+        "ok": true,
+        "problems": [],
+        "applies": true
+      },
+      "pragmas_added": 4,
+      "pragmas_in_final": 4,
+      "hot_loop": {
+        "entry": "kernel_bfs",
+        "function": "kernel_bfs",
+        "line": 13,
+        "writes": [
+          "h_cost"
+        ],
+        "shared": [
+          "h_graph_mask",
+          "h_updating_graph_mask"
+        ]
+      },
+      "hot_loop_covered": true,
+      "hot_loop_coverage": {
+        "criterion": "v2 (27 Sep 2026)",
+        "covered": true,
+        "covering": [
+          {
+            "function": "kernel_bfs",
+            "line": 13,
+            "directive": "#pragma omp parallel for",
+            "writes": [
+              "h_cost"
+            ]
+          }
+        ],
+        "uncounted": [],
+        "elsewhere": [
+          {
+            "function": "kernel_bfs",
+            "line": 32,
+            "directive": "#pragma omp parallel for reduction(|:stop)",
+            "writes": [
+              "h_graph_mask",
+              "h_graph_visited",
+              "h_updating_graph_mask"
+            ]
+          }
+        ]
+      },
+      "candidates_recorded": 0,
+      "verify": {
+        "verify_size": "EXTRALARGE",
+        "threads": [
+          6,
+          12
+        ],
+        "repeats": 5,
+        "compiler": "/usr/bin/clang++-20",
+        "final_flags": [],
+        "dump_exact": true,
+        "dump_max_rel_err": 0.0,
+        "seed": "7",
+        "dump_exact_seeded": true,
+        "dump_seeded_max_rel_err": 0.0,
+        "seq_median_s": 7.9105,
+        "seq_kernel_median_s": 4.338907,
+        "timing_basis": "kernel",
+        "par": {
+          "6": {
+            "median_s": 4.3861,
+            "program_speedup": 1.804,
+            "max_rel_err": 0.0,
+            "kernel_median_s": 0.749598,
+            "kernel_speedup": 5.788,
+            "speedup": 5.788
+          },
+          "12": {
+            "median_s": 4.3287,
+            "program_speedup": 1.827,
+            "max_rel_err": 0.0,
+            "kernel_median_s": 0.664804,
+            "kernel_speedup": 6.527,
+            "speedup": 6.527
+          }
+        },
+        "digest_max_rel_err": 0.0,
+        "stable_at_fixed_threads": true,
+        "kernel_program_disagree": false,
+        "digest_seeded_rel_err": 0.0,
+        "status": "ok",
+        "speed_measurable": true
+      },
+      "verify_s": 96.3,
+      "status": "done",
+      "outcome": "FASTER",
+      "finished_at": "2026-09-28T21:04:42",
+      "host_load_end": [
+        19.17578125,
+        21.9150390625,
+        18.8583984375
+      ],
+      "profile": {
+        "wrapper": "discopop_cxx",
+        "instrument_s": 0.57,
+        "profiled_run_s": 0.27,
+        "explore_stalls": 0,
+        "explore_s": 3.62,
+        "explore_success_s": 3.62,
+        "explore_attempts": 1,
+        "explore_timed_out": false,
+        "explore_failures": [],
+        "patterns": {
+          "optimizer_output": 0,
+          "merged_pattern": 0,
+          "task": 0,
+          "do_all": 1,
+          "reduction": 0
+        },
+        "profile_sha256": "9b29be7a70f8a13a7d6368452b6a88b6f871793af02a47c496ea4bf51744fe3a"
+      },
+      "package_integrity": {
+        "before": {
+          "checked": "before trial",
+          "at": "2026-09-28T21:01:12",
+          "prepared_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+          "packager_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+          "harness_sha256": "bb26fba095bc0ae5d578f142df1ce0a64874ceb5b128c27aea56728cafb73d2c",
+          "archived_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+          "profile_sha256": "9b29be7a70f8a13a7d6368452b6a88b6f871793af02a47c496ea4bf51744fe3a",
+          "ok": true
+        },
+        "after": {
+          "checked": "after trial",
+          "at": "2026-09-28T21:04:42",
+          "prepared_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+          "packager_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+          "harness_sha256": "bb26fba095bc0ae5d578f142df1ce0a64874ceb5b128c27aea56728cafb73d2c",
+          "archived_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+          "profile_sha256": "9b29be7a70f8a13a7d6368452b6a88b6f871793af02a47c496ea4bf51744fe3a",
+          "ok": true
+        }
+      },
+      "speed_check_off": true,
+      "timing_flags": [
+        "--timing-cflags=-DLARGE_DATASET"
+      ],
+      "repeat": 3
+    },
+    {
+      "benchmark": "rodinia_b1/bfs",
+      "kernel": "bfs",
+      "source": "bfs.cpp",
+      "arm": "bare_llm_nospeed",
+      "model": "claude-haiku-4-5-20251001",
+      "arm_flags": [
+        "--require-speedup",
+        "--min-runtime-share",
+        "0.01",
+        "--no-require-speedup",
+        "--timing-cflags=-DLARGE_DATASET"
+      ],
+      "started_at": "2026-09-28T21:04:42",
+      "host": "rms14562",
+      "host_load_start": [
+        19.17578125,
+        21.9150390625,
+        18.8583984375
+      ],
+      "agent_cmd": [
+        "/home/ahmedabosamaha/discopop_agent/venv/bin/python",
+        "-m",
+        "discopop_agent.bare_llm",
+        "--source-file",
+        "bfs.cpp",
+        "--model",
+        "claude-haiku-4-5-20251001",
+        "--no-require-speedup",
+        "--exclude-functions",
+        "main",
+        "--protected-line",
+        "#include \"rodinia_b1/bfs.h\"",
+        "--protected-line",
+        "PB_MAIN(kernel_bfs)",
+        "--protected-note",
+        "`PB_MAIN(kernel_bfs)` expands to `main`: it sets up the data the included header declares, times one call of `kernel_bfs` and prints its result. `no_of_nodes`, the number of graph nodes, is set in the included header: 65536 in the default build, and up to 48000000 in the builds that verify the result."
+      ],
+      "agent_s": 94.2,
+      "agent_rc": 0,
+      "llm_calls": 1,
+      "llm_call_failures": 0,
+      "explorer_retries": 0,
+      "explorer_stalls": 0,
+      "reverts": 0,
+      "refresh_fast": 0,
+      "refresh_full": 0,
+      "refresh_fallback": 0,
+      "runtime_remeasurements": 0,
+      "phase_b_deferred": 0,
+      "phase_b_joint_kept": 0,
+      "dp_floor": null,
+      "gate_failures_phase_a": {},
+      "gate_failures_phase_b": {},
+      "gate_passes_phase_a": 0,
+      "gate_failures_d40": {},
+      "d40_verdicts": {},
+      "exposure_verdicts": {},
+      "d40_seconds": 0,
+      "requeued_regions": 0,
+      "region_verdicts": {},
+      "settle_dropped": 0,
+      "llm_usage": {
+        "calls_recorded": 1,
+        "input_tokens": 34,
+        "output_tokens": 11229,
+        "cache_read_input_tokens": 51263,
+        "cache_creation_input_tokens": 11155,
+        "cost_usd": 0.0846,
+        "model_seconds": 92.9
+      },
+      "source_changed": true,
+      "protected": [
+        "#include \"rodinia_b1/bfs.h\"",
+        "PB_MAIN(kernel_bfs)"
+      ],
+      "harness_sha256": "bb26fba095bc0ae5d578f142df1ce0a64874ceb5b128c27aea56728cafb73d2c",
+      "scaffold": {
+        "ok": true,
+        "problems": [],
+        "applies": true
+      },
+      "pragmas_added": 4,
+      "pragmas_in_final": 4,
+      "hot_loop": {
+        "entry": "kernel_bfs",
+        "function": "kernel_bfs",
+        "line": 13,
+        "writes": [
+          "h_cost"
+        ],
+        "shared": [
+          "h_graph_mask",
+          "h_updating_graph_mask"
+        ]
+      },
+      "hot_loop_covered": true,
+      "hot_loop_coverage": {
+        "criterion": "v2 (27 Sep 2026)",
+        "covered": true,
+        "covering": [
+          {
+            "function": "kernel_bfs",
+            "line": 13,
+            "directive": "#pragma omp parallel for",
+            "writes": [
+              "h_cost"
+            ]
+          }
+        ],
+        "uncounted": [],
+        "elsewhere": [
+          {
+            "function": "kernel_bfs",
+            "line": 33,
+            "directive": "#pragma omp parallel for",
+            "writes": [
+              "h_graph_mask",
+              "h_graph_visited",
+              "h_updating_graph_mask"
+            ]
+          }
+        ]
+      },
+      "candidates_recorded": 0,
+      "verify": {
+        "verify_size": "EXTRALARGE",
+        "threads": [
+          6,
+          12
+        ],
+        "repeats": 5,
+        "compiler": "/usr/bin/clang++-20",
+        "final_flags": [],
+        "dump_exact": true,
+        "dump_max_rel_err": 0.0,
+        "seed": "7",
+        "dump_exact_seeded": true,
+        "dump_seeded_max_rel_err": 0.0,
+        "seq_median_s": 7.9745,
+        "seq_kernel_median_s": 4.376876,
+        "timing_basis": "kernel",
+        "par": {
+          "6": {
+            "median_s": 58.0179,
+            "program_speedup": 0.137,
+            "max_rel_err": 0.0,
+            "kernel_median_s": 54.396303,
+            "kernel_speedup": 0.08,
+            "speedup": 0.08
+          },
+          "12": {
+            "median_s": 219.7073,
+            "program_speedup": 0.036,
+            "max_rel_err": 0.0,
+            "kernel_median_s": 216.053204,
+            "kernel_speedup": 0.02,
+            "speedup": 0.02
+          }
+        },
+        "digest_max_rel_err": 0.0,
+        "stable_at_fixed_threads": true,
+        "kernel_program_disagree": false,
+        "digest_seeded_rel_err": 0.0,
+        "status": "ok",
+        "speed_measurable": true
+      },
+      "verify_s": 1344.2,
+      "status": "done",
+      "outcome": "parallel-not-faster",
+      "finished_at": "2026-09-28T21:28:41",
+      "host_load_end": [
+        32.55859375,
+        31.3076171875,
+        27.72314453125
+      ],
+      "profile": {
+        "wrapper": "discopop_cxx",
+        "instrument_s": 0.57,
+        "profiled_run_s": 0.27,
+        "explore_stalls": 0,
+        "explore_s": 3.62,
+        "explore_success_s": 3.62,
+        "explore_attempts": 1,
+        "explore_timed_out": false,
+        "explore_failures": [],
+        "patterns": {
+          "optimizer_output": 0,
+          "merged_pattern": 0,
+          "task": 0,
+          "do_all": 1,
+          "reduction": 0
+        },
+        "profile_sha256": "9b29be7a70f8a13a7d6368452b6a88b6f871793af02a47c496ea4bf51744fe3a"
+      },
+      "package_integrity": {
+        "before": {
+          "checked": "before trial",
+          "at": "2026-09-28T21:04:42",
+          "prepared_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+          "packager_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+          "harness_sha256": "bb26fba095bc0ae5d578f142df1ce0a64874ceb5b128c27aea56728cafb73d2c",
+          "archived_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+          "profile_sha256": "9b29be7a70f8a13a7d6368452b6a88b6f871793af02a47c496ea4bf51744fe3a",
+          "ok": true
+        },
+        "after": {
+          "checked": "after trial",
+          "at": "2026-09-28T21:28:41",
+          "prepared_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+          "packager_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+          "harness_sha256": "bb26fba095bc0ae5d578f142df1ce0a64874ceb5b128c27aea56728cafb73d2c",
+          "archived_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+          "profile_sha256": "9b29be7a70f8a13a7d6368452b6a88b6f871793af02a47c496ea4bf51744fe3a",
+          "ok": true
+        }
+      },
+      "speed_check_off": true,
+      "timing_flags": [
+        "--timing-cflags=-DLARGE_DATASET"
+      ],
+      "repeat": 4
+    },
+    {
+      "benchmark": "rodinia_b1/bfs",
+      "kernel": "bfs",
+      "source": "bfs.cpp",
+      "arm": "bare_llm_nospeed",
+      "model": "claude-haiku-4-5-20251001",
+      "arm_flags": [
+        "--require-speedup",
+        "--min-runtime-share",
+        "0.01",
+        "--no-require-speedup",
+        "--timing-cflags=-DLARGE_DATASET"
+      ],
+      "started_at": "2026-09-28T21:28:41",
+      "host": "rms14562",
+      "host_load_start": [
+        32.11328125,
+        31.23583984375,
+        27.71923828125
+      ],
+      "agent_cmd": [
+        "/home/ahmedabosamaha/discopop_agent/venv/bin/python",
+        "-m",
+        "discopop_agent.bare_llm",
+        "--source-file",
+        "bfs.cpp",
+        "--model",
+        "claude-haiku-4-5-20251001",
+        "--no-require-speedup",
+        "--exclude-functions",
+        "main",
+        "--protected-line",
+        "#include \"rodinia_b1/bfs.h\"",
+        "--protected-line",
+        "PB_MAIN(kernel_bfs)",
+        "--protected-note",
+        "`PB_MAIN(kernel_bfs)` expands to `main`: it sets up the data the included header declares, times one call of `kernel_bfs` and prints its result. `no_of_nodes`, the number of graph nodes, is set in the included header: 65536 in the default build, and up to 48000000 in the builds that verify the result."
+      ],
+      "agent_s": 157.0,
+      "agent_rc": 0,
+      "llm_calls": 1,
+      "llm_call_failures": 0,
+      "explorer_retries": 0,
+      "explorer_stalls": 0,
+      "reverts": 0,
+      "refresh_fast": 0,
+      "refresh_full": 0,
+      "refresh_fallback": 0,
+      "runtime_remeasurements": 0,
+      "phase_b_deferred": 0,
+      "phase_b_joint_kept": 0,
+      "dp_floor": null,
+      "gate_failures_phase_a": {},
+      "gate_failures_phase_b": {},
+      "gate_passes_phase_a": 0,
+      "gate_failures_d40": {},
+      "d40_verdicts": {},
+      "exposure_verdicts": {},
+      "d40_seconds": 0,
+      "requeued_regions": 0,
+      "region_verdicts": {},
+      "settle_dropped": 0,
+      "llm_usage": {
+        "calls_recorded": 1,
+        "input_tokens": 34,
+        "output_tokens": 15876,
+        "cache_read_input_tokens": 51395,
+        "cache_creation_input_tokens": 15880,
+        "cost_usd": 0.1173,
+        "model_seconds": 155.7
+      },
+      "source_changed": true,
+      "protected": [
+        "#include \"rodinia_b1/bfs.h\"",
+        "PB_MAIN(kernel_bfs)"
+      ],
+      "harness_sha256": "bb26fba095bc0ae5d578f142df1ce0a64874ceb5b128c27aea56728cafb73d2c",
+      "scaffold": {
+        "ok": true,
+        "problems": [],
+        "applies": true
+      },
+      "pragmas_added": 4,
+      "pragmas_in_final": 4,
+      "hot_loop": {
+        "entry": "kernel_bfs",
+        "function": "kernel_bfs",
+        "line": 13,
+        "writes": [
+          "h_cost"
+        ],
+        "shared": [
+          "h_graph_mask",
+          "h_updating_graph_mask"
+        ]
+      },
+      "hot_loop_covered": true,
+      "hot_loop_coverage": {
+        "criterion": "v2 (27 Sep 2026)",
+        "covered": true,
+        "covering": [
+          {
+            "function": "kernel_bfs",
+            "line": 13,
+            "directive": "#pragma omp parallel for",
+            "writes": [
+              "h_cost"
+            ]
+          }
+        ],
+        "uncounted": [],
+        "elsewhere": [
+          {
+            "function": "kernel_bfs",
+            "line": 32,
+            "directive": "#pragma omp parallel for reduction(||:stop)",
+            "writes": [
+              "h_graph_mask",
+              "h_graph_visited",
+              "h_updating_graph_mask"
+            ]
+          }
+        ]
+      },
+      "candidates_recorded": 0,
+      "verify": {
+        "verify_size": "EXTRALARGE",
+        "threads": [
+          6,
+          12
+        ],
+        "repeats": 5,
+        "compiler": "/usr/bin/clang++-20",
+        "final_flags": [],
+        "dump_exact": true,
+        "dump_max_rel_err": 0.0,
+        "seed": "7",
+        "dump_exact_seeded": true,
+        "dump_seeded_max_rel_err": 0.0,
+        "seq_median_s": 7.9467,
+        "seq_kernel_median_s": 4.38686,
+        "timing_basis": "kernel",
+        "par": {
+          "6": {
+            "median_s": 4.3361,
+            "program_speedup": 1.833,
+            "max_rel_err": 0.0,
+            "kernel_median_s": 0.728396,
+            "kernel_speedup": 6.023,
+            "speedup": 6.023
+          },
+          "12": {
+            "median_s": 4.302,
+            "program_speedup": 1.847,
+            "max_rel_err": 0.0,
+            "kernel_median_s": 0.659953,
+            "kernel_speedup": 6.647,
+            "speedup": 6.647
+          }
+        },
+        "digest_max_rel_err": 0.0,
+        "stable_at_fixed_threads": true,
+        "kernel_program_disagree": false,
+        "digest_seeded_rel_err": 0.0,
+        "status": "ok",
+        "speed_measurable": true
+      },
+      "verify_s": 95.5,
+      "status": "done",
+      "outcome": "FASTER",
+      "finished_at": "2026-09-28T21:32:54",
+      "host_load_end": [
+        17.0576171875,
+        22.72021484375,
+        24.9912109375
+      ],
+      "profile": {
+        "wrapper": "discopop_cxx",
+        "instrument_s": 0.57,
+        "profiled_run_s": 0.27,
+        "explore_stalls": 0,
+        "explore_s": 3.62,
+        "explore_success_s": 3.62,
+        "explore_attempts": 1,
+        "explore_timed_out": false,
+        "explore_failures": [],
+        "patterns": {
+          "optimizer_output": 0,
+          "merged_pattern": 0,
+          "task": 0,
+          "do_all": 1,
+          "reduction": 0
+        },
+        "profile_sha256": "9b29be7a70f8a13a7d6368452b6a88b6f871793af02a47c496ea4bf51744fe3a"
+      },
+      "package_integrity": {
+        "before": {
+          "checked": "before trial",
+          "at": "2026-09-28T21:28:41",
+          "prepared_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+          "packager_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+          "harness_sha256": "bb26fba095bc0ae5d578f142df1ce0a64874ceb5b128c27aea56728cafb73d2c",
+          "archived_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+          "profile_sha256": "9b29be7a70f8a13a7d6368452b6a88b6f871793af02a47c496ea4bf51744fe3a",
+          "ok": true
+        },
+        "after": {
+          "checked": "after trial",
+          "at": "2026-09-28T21:32:54",
+          "prepared_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+          "packager_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+          "harness_sha256": "bb26fba095bc0ae5d578f142df1ce0a64874ceb5b128c27aea56728cafb73d2c",
+          "archived_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+          "profile_sha256": "9b29be7a70f8a13a7d6368452b6a88b6f871793af02a47c496ea4bf51744fe3a",
+          "ok": true
+        }
+      },
+      "speed_check_off": true,
+      "timing_flags": [
+        "--timing-cflags=-DLARGE_DATASET"
+      ],
+      "repeat": 5
+    },
+    {
+      "benchmark": "rodinia_b1/bfs",
+      "kernel": "bfs",
+      "source": "bfs.cpp",
+      "arm": "bare_llm_nospeed",
+      "model": "claude-haiku-4-5-20251001",
+      "arm_flags": [
+        "--require-speedup",
+        "--min-runtime-share",
+        "0.01",
+        "--no-require-speedup",
+        "--timing-cflags=-DLARGE_DATASET"
+      ],
+      "started_at": "2026-09-28T21:32:54",
+      "host": "rms14562",
+      "host_load_start": [
+        17.0576171875,
+        22.72021484375,
+        24.9912109375
+      ],
+      "agent_cmd": [
+        "/home/ahmedabosamaha/discopop_agent/venv/bin/python",
+        "-m",
+        "discopop_agent.bare_llm",
+        "--source-file",
+        "bfs.cpp",
+        "--model",
+        "claude-haiku-4-5-20251001",
+        "--no-require-speedup",
+        "--exclude-functions",
+        "main",
+        "--protected-line",
+        "#include \"rodinia_b1/bfs.h\"",
+        "--protected-line",
+        "PB_MAIN(kernel_bfs)",
+        "--protected-note",
+        "`PB_MAIN(kernel_bfs)` expands to `main`: it sets up the data the included header declares, times one call of `kernel_bfs` and prints its result. `no_of_nodes`, the number of graph nodes, is set in the included header: 65536 in the default build, and up to 48000000 in the builds that verify the result."
+      ],
+      "agent_s": 100.2,
+      "agent_rc": 0,
+      "llm_calls": 1,
+      "llm_call_failures": 0,
+      "explorer_retries": 0,
+      "explorer_stalls": 0,
+      "reverts": 0,
+      "refresh_fast": 0,
+      "refresh_full": 0,
+      "refresh_fallback": 0,
+      "runtime_remeasurements": 0,
+      "phase_b_deferred": 0,
+      "phase_b_joint_kept": 0,
+      "dp_floor": null,
+      "gate_failures_phase_a": {},
+      "gate_failures_phase_b": {},
+      "gate_passes_phase_a": 0,
+      "gate_failures_d40": {},
+      "d40_verdicts": {},
+      "exposure_verdicts": {},
+      "d40_seconds": 0,
+      "requeued_regions": 0,
+      "region_verdicts": {},
+      "settle_dropped": 0,
+      "llm_usage": {
+        "calls_recorded": 1,
+        "input_tokens": 34,
+        "output_tokens": 10142,
+        "cache_read_input_tokens": 51240,
+        "cache_creation_input_tokens": 10172,
+        "cost_usd": 0.0772,
+        "model_seconds": 98.8
+      },
+      "source_changed": true,
+      "protected": [
+        "#include \"rodinia_b1/bfs.h\"",
+        "PB_MAIN(kernel_bfs)"
+      ],
+      "harness_sha256": "bb26fba095bc0ae5d578f142df1ce0a64874ceb5b128c27aea56728cafb73d2c",
+      "scaffold": {
+        "ok": true,
+        "problems": [],
+        "applies": true
+      },
+      "pragmas_added": 4,
+      "pragmas_in_final": 4,
+      "hot_loop": {
+        "entry": "kernel_bfs",
+        "function": "kernel_bfs",
+        "line": 13,
+        "writes": [
+          "h_cost"
+        ],
+        "shared": [
+          "h_graph_mask",
+          "h_updating_graph_mask"
+        ]
+      },
+      "hot_loop_covered": true,
+      "hot_loop_coverage": {
+        "criterion": "v2 (27 Sep 2026)",
+        "covered": true,
+        "covering": [
+          {
+            "function": "kernel_bfs",
+            "line": 13,
+            "directive": "#pragma omp parallel for",
+            "writes": [
+              "h_cost"
+            ]
+          }
+        ],
+        "uncounted": [],
+        "elsewhere": [
+          {
+            "function": "kernel_bfs",
+            "line": 32,
+            "directive": "#pragma omp parallel for reduction(||:stop)",
+            "writes": [
+              "h_graph_mask",
+              "h_graph_visited",
+              "h_updating_graph_mask"
+            ]
+          }
+        ]
+      },
+      "candidates_recorded": 0,
+      "verify": {
+        "verify_size": "EXTRALARGE",
+        "threads": [
+          6,
+          12
+        ],
+        "repeats": 5,
+        "compiler": "/usr/bin/clang++-20",
+        "final_flags": [],
+        "dump_exact": true,
+        "dump_max_rel_err": 0.0,
+        "seed": "7",
+        "dump_exact_seeded": true,
+        "dump_seeded_max_rel_err": 0.0,
+        "seq_median_s": 8.0371,
+        "seq_kernel_median_s": 4.380853,
+        "timing_basis": "kernel",
+        "par": {
+          "6": {
+            "median_s": 4.3784,
+            "program_speedup": 1.836,
+            "max_rel_err": 0.0,
+            "kernel_median_s": 0.725316,
+            "kernel_speedup": 6.04,
+            "speedup": 6.04
+          },
+          "12": {
+            "median_s": 4.0803,
+            "program_speedup": 1.97,
+            "max_rel_err": 0.0,
+            "kernel_median_s": 0.454131,
+            "kernel_speedup": 9.647,
+            "speedup": 9.647
+          }
+        },
+        "digest_max_rel_err": 0.0,
+        "stable_at_fixed_threads": true,
+        "kernel_program_disagree": false,
+        "digest_seeded_rel_err": 0.0,
+        "status": "ok",
+        "speed_measurable": true
+      },
+      "verify_s": 96.2,
+      "status": "done",
+      "outcome": "FASTER",
+      "finished_at": "2026-09-28T21:36:10",
+      "host_load_end": [
+        18.30615234375,
+        20.54833984375,
+        23.69580078125
+      ],
+      "profile": {
+        "wrapper": "discopop_cxx",
+        "instrument_s": 0.57,
+        "profiled_run_s": 0.27,
+        "explore_stalls": 0,
+        "explore_s": 3.62,
+        "explore_success_s": 3.62,
+        "explore_attempts": 1,
+        "explore_timed_out": false,
+        "explore_failures": [],
+        "patterns": {
+          "optimizer_output": 0,
+          "merged_pattern": 0,
+          "task": 0,
+          "do_all": 1,
+          "reduction": 0
+        },
+        "profile_sha256": "9b29be7a70f8a13a7d6368452b6a88b6f871793af02a47c496ea4bf51744fe3a"
+      },
+      "package_integrity": {
+        "before": {
+          "checked": "before trial",
+          "at": "2026-09-28T21:32:54",
+          "prepared_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+          "packager_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+          "harness_sha256": "bb26fba095bc0ae5d578f142df1ce0a64874ceb5b128c27aea56728cafb73d2c",
+          "archived_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+          "profile_sha256": "9b29be7a70f8a13a7d6368452b6a88b6f871793af02a47c496ea4bf51744fe3a",
+          "ok": true
+        },
+        "after": {
+          "checked": "after trial",
+          "at": "2026-09-28T21:36:10",
+          "prepared_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+          "packager_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+          "harness_sha256": "bb26fba095bc0ae5d578f142df1ce0a64874ceb5b128c27aea56728cafb73d2c",
+          "archived_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+          "profile_sha256": "9b29be7a70f8a13a7d6368452b6a88b6f871793af02a47c496ea4bf51744fe3a",
+          "ok": true
+        }
+      },
+      "speed_check_off": true,
+      "timing_flags": [
+        "--timing-cflags=-DLARGE_DATASET"
+      ],
+      "repeat": 6
+    },
+    {
+      "benchmark": "rodinia_b1/bfs",
+      "kernel": "bfs",
+      "source": "bfs.cpp",
+      "arm": "bare_llm_nospeed",
+      "model": "claude-haiku-4-5-20251001",
+      "arm_flags": [
+        "--require-speedup",
+        "--min-runtime-share",
+        "0.01",
+        "--no-require-speedup",
+        "--timing-cflags=-DLARGE_DATASET"
+      ],
+      "started_at": "2026-09-28T21:36:11",
+      "host": "rms14562",
+      "host_load_start": [
+        18.30615234375,
+        20.54833984375,
+        23.69580078125
+      ],
+      "agent_cmd": [
+        "/home/ahmedabosamaha/discopop_agent/venv/bin/python",
+        "-m",
+        "discopop_agent.bare_llm",
+        "--source-file",
+        "bfs.cpp",
+        "--model",
+        "claude-haiku-4-5-20251001",
+        "--no-require-speedup",
+        "--exclude-functions",
+        "main",
+        "--protected-line",
+        "#include \"rodinia_b1/bfs.h\"",
+        "--protected-line",
+        "PB_MAIN(kernel_bfs)",
+        "--protected-note",
+        "`PB_MAIN(kernel_bfs)` expands to `main`: it sets up the data the included header declares, times one call of `kernel_bfs` and prints its result. `no_of_nodes`, the number of graph nodes, is set in the included header: 65536 in the default build, and up to 48000000 in the builds that verify the result."
+      ],
+      "agent_s": 74.0,
+      "agent_rc": 0,
+      "llm_calls": 1,
+      "llm_call_failures": 0,
+      "explorer_retries": 0,
+      "explorer_stalls": 0,
+      "reverts": 0,
+      "refresh_fast": 0,
+      "refresh_full": 0,
+      "refresh_fallback": 0,
+      "runtime_remeasurements": 0,
+      "phase_b_deferred": 0,
+      "phase_b_joint_kept": 0,
+      "dp_floor": null,
+      "gate_failures_phase_a": {},
+      "gate_failures_phase_b": {},
+      "gate_passes_phase_a": 0,
+      "gate_failures_d40": {},
+      "d40_verdicts": {},
+      "exposure_verdicts": {},
+      "d40_seconds": 0,
+      "requeued_regions": 0,
+      "region_verdicts": {},
+      "settle_dropped": 0,
+      "llm_usage": {
+        "calls_recorded": 1,
+        "input_tokens": 34,
+        "output_tokens": 7249,
+        "cache_read_input_tokens": 51486,
+        "cache_creation_input_tokens": 7613,
+        "cost_usd": 0.0577,
+        "model_seconds": 72.7
+      },
+      "source_changed": true,
+      "protected": [
+        "#include \"rodinia_b1/bfs.h\"",
+        "PB_MAIN(kernel_bfs)"
+      ],
+      "harness_sha256": "bb26fba095bc0ae5d578f142df1ce0a64874ceb5b128c27aea56728cafb73d2c",
+      "scaffold": {
+        "ok": true,
+        "problems": [],
+        "applies": true
+      },
+      "pragmas_added": 3,
+      "pragmas_in_final": 3,
+      "hot_loop": {
+        "entry": "kernel_bfs",
+        "function": "kernel_bfs",
+        "line": 13,
+        "writes": [
+          "h_cost"
+        ],
+        "shared": [
+          "h_graph_mask",
+          "h_updating_graph_mask"
+        ]
+      },
+      "hot_loop_covered": true,
+      "hot_loop_coverage": {
+        "criterion": "v2 (27 Sep 2026)",
+        "covered": true,
+        "covering": [
+          {
+            "function": "kernel_bfs",
+            "line": 13,
+            "directive": "#pragma omp parallel for",
+            "writes": [
+              "h_cost"
+            ]
+          }
+        ],
+        "uncounted": [],
+        "elsewhere": [
+          {
+            "function": "kernel_bfs",
+            "line": 30,
+            "directive": "#pragma omp parallel for",
+            "writes": [
+              "h_graph_mask",
+              "h_graph_visited",
+              "h_updating_graph_mask"
+            ]
+          }
+        ]
+      },
+      "candidates_recorded": 0,
+      "verify": {
+        "verify_size": "EXTRALARGE",
+        "threads": [
+          6,
+          12
+        ],
+        "repeats": 5,
+        "compiler": "/usr/bin/clang++-20",
+        "final_flags": [],
+        "dump_exact": true,
+        "dump_max_rel_err": 0.0,
+        "seed": "7",
+        "dump_exact_seeded": true,
+        "dump_seeded_max_rel_err": 0.0,
+        "seq_median_s": 7.9464,
+        "seq_kernel_median_s": 4.374464,
+        "timing_basis": "kernel",
+        "par": {
+          "6": {
+            "median_s": 4.4655,
+            "program_speedup": 1.78,
+            "max_rel_err": 0.0,
+            "kernel_median_s": 0.766393,
+            "kernel_speedup": 5.708,
+            "speedup": 5.708
+          },
+          "12": {
+            "median_s": 4.5146,
+            "program_speedup": 1.76,
+            "max_rel_err": 0.0,
+            "kernel_median_s": 0.718942,
+            "kernel_speedup": 6.085,
+            "speedup": 6.085
+          }
+        },
+        "digest_max_rel_err": 0.0,
+        "stable_at_fixed_threads": true,
+        "kernel_program_disagree": false,
+        "digest_seeded_rel_err": 0.0,
+        "status": "ok",
+        "speed_measurable": true
+      },
+      "verify_s": 98.7,
+      "status": "done",
+      "outcome": "FASTER",
+      "finished_at": "2026-09-28T21:39:03",
+      "host_load_end": [
+        18.486328125,
+        19.18408203125,
+        22.5927734375
+      ],
+      "profile": {
+        "wrapper": "discopop_cxx",
+        "instrument_s": 0.57,
+        "profiled_run_s": 0.27,
+        "explore_stalls": 0,
+        "explore_s": 3.62,
+        "explore_success_s": 3.62,
+        "explore_attempts": 1,
+        "explore_timed_out": false,
+        "explore_failures": [],
+        "patterns": {
+          "optimizer_output": 0,
+          "merged_pattern": 0,
+          "task": 0,
+          "do_all": 1,
+          "reduction": 0
+        },
+        "profile_sha256": "9b29be7a70f8a13a7d6368452b6a88b6f871793af02a47c496ea4bf51744fe3a"
+      },
+      "package_integrity": {
+        "before": {
+          "checked": "before trial",
+          "at": "2026-09-28T21:36:11",
+          "prepared_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+          "packager_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+          "harness_sha256": "bb26fba095bc0ae5d578f142df1ce0a64874ceb5b128c27aea56728cafb73d2c",
+          "archived_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+          "profile_sha256": "9b29be7a70f8a13a7d6368452b6a88b6f871793af02a47c496ea4bf51744fe3a",
+          "ok": true
+        },
+        "after": {
+          "checked": "after trial",
+          "at": "2026-09-28T21:39:03",
+          "prepared_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+          "packager_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+          "harness_sha256": "bb26fba095bc0ae5d578f142df1ce0a64874ceb5b128c27aea56728cafb73d2c",
+          "archived_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+          "profile_sha256": "9b29be7a70f8a13a7d6368452b6a88b6f871793af02a47c496ea4bf51744fe3a",
+          "ok": true
+        }
+      },
+      "speed_check_off": true,
+      "timing_flags": [
+        "--timing-cflags=-DLARGE_DATASET"
+      ],
+      "repeat": 7
+    },
+    {
+      "benchmark": "rodinia_b1/bfs",
+      "kernel": "bfs",
+      "source": "bfs.cpp",
+      "arm": "bare_llm_nospeed",
+      "model": "claude-haiku-4-5-20251001",
+      "arm_flags": [
+        "--require-speedup",
+        "--min-runtime-share",
+        "0.01",
+        "--no-require-speedup",
+        "--timing-cflags=-DLARGE_DATASET"
+      ],
+      "started_at": "2026-09-28T21:39:04",
+      "host": "rms14562",
+      "host_load_start": [
+        18.486328125,
+        19.18408203125,
+        22.5927734375
+      ],
+      "agent_cmd": [
+        "/home/ahmedabosamaha/discopop_agent/venv/bin/python",
+        "-m",
+        "discopop_agent.bare_llm",
+        "--source-file",
+        "bfs.cpp",
+        "--model",
+        "claude-haiku-4-5-20251001",
+        "--no-require-speedup",
+        "--exclude-functions",
+        "main",
+        "--protected-line",
+        "#include \"rodinia_b1/bfs.h\"",
+        "--protected-line",
+        "PB_MAIN(kernel_bfs)",
+        "--protected-note",
+        "`PB_MAIN(kernel_bfs)` expands to `main`: it sets up the data the included header declares, times one call of `kernel_bfs` and prints its result. `no_of_nodes`, the number of graph nodes, is set in the included header: 65536 in the default build, and up to 48000000 in the builds that verify the result."
+      ],
+      "agent_s": 133.8,
+      "agent_rc": 0,
+      "llm_calls": 1,
+      "llm_call_failures": 0,
+      "explorer_retries": 0,
+      "explorer_stalls": 0,
+      "reverts": 0,
+      "refresh_fast": 0,
+      "refresh_full": 0,
+      "refresh_fallback": 0,
+      "runtime_remeasurements": 0,
+      "phase_b_deferred": 0,
+      "phase_b_joint_kept": 0,
+      "dp_floor": null,
+      "gate_failures_phase_a": {},
+      "gate_failures_phase_b": {},
+      "gate_passes_phase_a": 0,
+      "gate_failures_d40": {},
+      "d40_verdicts": {},
+      "exposure_verdicts": {},
+      "d40_seconds": 0,
+      "requeued_regions": 0,
+      "region_verdicts": {},
+      "settle_dropped": 0,
+      "llm_usage": {
+        "calls_recorded": 1,
+        "input_tokens": 34,
+        "output_tokens": 16351,
+        "cache_read_input_tokens": 51127,
+        "cache_creation_input_tokens": 16441,
+        "cost_usd": 0.1208,
+        "model_seconds": 132.4
+      },
+      "source_changed": true,
+      "protected": [
+        "#include \"rodinia_b1/bfs.h\"",
+        "PB_MAIN(kernel_bfs)"
+      ],
+      "harness_sha256": "bb26fba095bc0ae5d578f142df1ce0a64874ceb5b128c27aea56728cafb73d2c",
+      "scaffold": {
+        "ok": true,
+        "problems": [],
+        "applies": true
+      },
+      "pragmas_added": 4,
+      "pragmas_in_final": 4,
+      "hot_loop": {
+        "entry": "kernel_bfs",
+        "function": "kernel_bfs",
+        "line": 13,
+        "writes": [
+          "h_cost"
+        ],
+        "shared": [
+          "h_graph_mask",
+          "h_updating_graph_mask"
+        ]
+      },
+      "hot_loop_covered": true,
+      "hot_loop_coverage": {
+        "criterion": "v2 (27 Sep 2026)",
+        "covered": true,
+        "covering": [
+          {
+            "function": "kernel_bfs",
+            "line": 13,
+            "directive": "#pragma omp parallel for shared(h_graph_mask, h_graph_nodes, h_graph_edges, h_graph_visited, h_cost, h_updating_graph_mask, no_of_nodes)",
+            "writes": [
+              "h_cost"
+            ]
+          }
+        ],
+        "uncounted": [],
+        "elsewhere": [
+          {
+            "function": "kernel_bfs",
+            "line": 32,
+            "directive": "#pragma omp parallel for shared(h_updating_graph_mask, h_graph_mask, h_graph_visited, no_of_nodes) reduction(||:stop)",
+            "writes": [
+              "h_graph_mask",
+              "h_graph_visited",
+              "h_updating_graph_mask"
+            ]
+          }
+        ]
+      },
+      "candidates_recorded": 0,
+      "verify": {
+        "verify_size": "EXTRALARGE",
+        "threads": [
+          6,
+          12
+        ],
+        "repeats": 5,
+        "compiler": "/usr/bin/clang++-20",
+        "final_flags": [],
+        "dump_exact": true,
+        "dump_max_rel_err": 0.0,
+        "seed": "7",
+        "dump_exact_seeded": true,
+        "dump_seeded_max_rel_err": 0.0,
+        "seq_median_s": 8.5156,
+        "seq_kernel_median_s": 4.677134,
+        "timing_basis": "kernel",
+        "par": {
+          "6": {
+            "median_s": 4.3884,
+            "program_speedup": 1.94,
+            "max_rel_err": 0.0,
+            "kernel_median_s": 0.737003,
+            "kernel_speedup": 6.346,
+            "speedup": 6.346
+          },
+          "12": {
+            "median_s": 4.4439,
+            "program_speedup": 1.916,
+            "max_rel_err": 0.0,
+            "kernel_median_s": 0.673305,
+            "kernel_speedup": 6.947,
+            "speedup": 6.947
+          }
+        },
+        "digest_max_rel_err": 0.0,
+        "stable_at_fixed_threads": true,
+        "kernel_program_disagree": false,
+        "digest_seeded_rel_err": 0.0,
+        "status": "ok",
+        "speed_measurable": true
+      },
+      "verify_s": 100.4,
+      "status": "done",
+      "outcome": "FASTER",
+      "finished_at": "2026-09-28T21:42:58",
+      "host_load_end": [
+        11.3291015625,
+        15.548828125,
+        20.41552734375
+      ],
+      "profile": {
+        "wrapper": "discopop_cxx",
+        "instrument_s": 0.57,
+        "profiled_run_s": 0.27,
+        "explore_stalls": 0,
+        "explore_s": 3.62,
+        "explore_success_s": 3.62,
+        "explore_attempts": 1,
+        "explore_timed_out": false,
+        "explore_failures": [],
+        "patterns": {
+          "optimizer_output": 0,
+          "merged_pattern": 0,
+          "task": 0,
+          "do_all": 1,
+          "reduction": 0
+        },
+        "profile_sha256": "9b29be7a70f8a13a7d6368452b6a88b6f871793af02a47c496ea4bf51744fe3a"
+      },
+      "package_integrity": {
+        "before": {
+          "checked": "before trial",
+          "at": "2026-09-28T21:39:04",
+          "prepared_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+          "packager_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+          "harness_sha256": "bb26fba095bc0ae5d578f142df1ce0a64874ceb5b128c27aea56728cafb73d2c",
+          "archived_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+          "profile_sha256": "9b29be7a70f8a13a7d6368452b6a88b6f871793af02a47c496ea4bf51744fe3a",
+          "ok": true
+        },
+        "after": {
+          "checked": "after trial",
+          "at": "2026-09-28T21:42:58",
+          "prepared_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+          "packager_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+          "harness_sha256": "bb26fba095bc0ae5d578f142df1ce0a64874ceb5b128c27aea56728cafb73d2c",
+          "archived_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+          "profile_sha256": "9b29be7a70f8a13a7d6368452b6a88b6f871793af02a47c496ea4bf51744fe3a",
+          "ok": true
+        }
+      },
+      "speed_check_off": true,
+      "timing_flags": [
+        "--timing-cflags=-DLARGE_DATASET"
+      ],
+      "repeat": 8
+    },
+    {
+      "benchmark": "rodinia_b1/bfs",
+      "kernel": "bfs",
+      "source": "bfs.cpp",
+      "arm": "bare_llm_nospeed",
+      "model": "claude-haiku-4-5-20251001",
+      "arm_flags": [
+        "--require-speedup",
+        "--min-runtime-share",
+        "0.01",
+        "--no-require-speedup",
+        "--timing-cflags=-DLARGE_DATASET"
+      ],
+      "started_at": "2026-09-28T21:42:58",
+      "host": "rms14562",
+      "host_load_start": [
+        11.3291015625,
+        15.548828125,
+        20.41552734375
+      ],
+      "agent_cmd": [
+        "/home/ahmedabosamaha/discopop_agent/venv/bin/python",
+        "-m",
+        "discopop_agent.bare_llm",
+        "--source-file",
+        "bfs.cpp",
+        "--model",
+        "claude-haiku-4-5-20251001",
+        "--no-require-speedup",
+        "--exclude-functions",
+        "main",
+        "--protected-line",
+        "#include \"rodinia_b1/bfs.h\"",
+        "--protected-line",
+        "PB_MAIN(kernel_bfs)",
+        "--protected-note",
+        "`PB_MAIN(kernel_bfs)` expands to `main`: it sets up the data the included header declares, times one call of `kernel_bfs` and prints its result. `no_of_nodes`, the number of graph nodes, is set in the included header: 65536 in the default build, and up to 48000000 in the builds that verify the result."
+      ],
+      "agent_s": 138.8,
+      "agent_rc": 0,
+      "llm_calls": 1,
+      "llm_call_failures": 0,
+      "explorer_retries": 0,
+      "explorer_stalls": 0,
+      "reverts": 0,
+      "refresh_fast": 0,
+      "refresh_full": 0,
+      "refresh_fallback": 0,
+      "runtime_remeasurements": 0,
+      "phase_b_deferred": 0,
+      "phase_b_joint_kept": 0,
+      "dp_floor": null,
+      "gate_failures_phase_a": {},
+      "gate_failures_phase_b": {},
+      "gate_passes_phase_a": 0,
+      "gate_failures_d40": {},
+      "d40_verdicts": {},
+      "exposure_verdicts": {},
+      "d40_seconds": 0,
+      "requeued_regions": 0,
+      "region_verdicts": {},
+      "settle_dropped": 0,
+      "llm_usage": {
+        "calls_recorded": 1,
+        "input_tokens": 42,
+        "output_tokens": 15829,
+        "cache_read_input_tokens": 77861,
+        "cache_creation_input_tokens": 15841,
+        "cost_usd": 0.1197,
+        "model_seconds": 137.6
+      },
+      "source_changed": true,
+      "protected": [
+        "#include \"rodinia_b1/bfs.h\"",
+        "PB_MAIN(kernel_bfs)"
+      ],
+      "harness_sha256": "bb26fba095bc0ae5d578f142df1ce0a64874ceb5b128c27aea56728cafb73d2c",
+      "scaffold": {
+        "ok": true,
+        "problems": [],
+        "applies": true
+      },
+      "pragmas_added": 4,
+      "pragmas_in_final": 4,
+      "hot_loop": {
+        "entry": "kernel_bfs",
+        "function": "kernel_bfs",
+        "line": 13,
+        "writes": [
+          "h_cost"
+        ],
+        "shared": [
+          "h_graph_mask",
+          "h_updating_graph_mask"
+        ]
+      },
+      "hot_loop_covered": true,
+      "hot_loop_coverage": {
+        "criterion": "v2 (27 Sep 2026)",
+        "covered": true,
+        "covering": [
+          {
+            "function": "kernel_bfs",
+            "line": 17,
+            "directive": "#pragma omp parallel for default(none) shared(h_graph_mask, h_graph_nodes, h_graph_edges, h_graph_visited, h_cost, h_updating_graph_mask, no_of_nodes)",
+            "writes": [
+              "h_cost"
+            ]
+          }
+        ],
+        "uncounted": [],
+        "elsewhere": [
+          {
+            "function": "kernel_bfs",
+            "line": 39,
+            "directive": "#pragma omp parallel for default(none) shared(h_updating_graph_mask, h_graph_mask, h_graph_visited, no_of_nodes) reduction(||:stop)",
+            "writes": [
+              "h_graph_mask",
+              "h_graph_visited",
+              "h_updating_graph_mask",
+              "stop"
+            ]
+          }
+        ]
+      },
+      "candidates_recorded": 0,
+      "verify": {
+        "verify_size": "EXTRALARGE",
+        "threads": [
+          6,
+          12
+        ],
+        "repeats": 5,
+        "compiler": "/usr/bin/clang++-20",
+        "final_flags": [],
+        "dump_exact": true,
+        "dump_max_rel_err": 0.0,
+        "seed": "7",
+        "dump_exact_seeded": true,
+        "dump_seeded_max_rel_err": 0.0,
+        "seq_median_s": 7.8475,
+        "seq_kernel_median_s": 4.307244,
+        "timing_basis": "kernel",
+        "par": {
+          "6": {
+            "median_s": 4.3672,
+            "program_speedup": 1.797,
+            "max_rel_err": 0.0,
+            "kernel_median_s": 0.743769,
+            "kernel_speedup": 5.791,
+            "speedup": 5.791
+          },
+          "12": {
+            "median_s": 4.2975,
+            "program_speedup": 1.826,
+            "max_rel_err": 0.0,
+            "kernel_median_s": 0.668332,
+            "kernel_speedup": 6.445,
+            "speedup": 6.445
+          }
+        },
+        "digest_max_rel_err": 0.0,
+        "stable_at_fixed_threads": true,
+        "kernel_program_disagree": false,
+        "digest_seeded_rel_err": 0.0,
+        "status": "ok",
+        "speed_measurable": true
+      },
+      "verify_s": 95.5,
+      "status": "done",
+      "outcome": "FASTER",
+      "finished_at": "2026-09-28T21:46:53",
+      "host_load_end": [
+        10.65673828125,
+        12.7919921875,
+        18.20263671875
+      ],
+      "profile": {
+        "wrapper": "discopop_cxx",
+        "instrument_s": 0.57,
+        "profiled_run_s": 0.27,
+        "explore_stalls": 0,
+        "explore_s": 3.62,
+        "explore_success_s": 3.62,
+        "explore_attempts": 1,
+        "explore_timed_out": false,
+        "explore_failures": [],
+        "patterns": {
+          "optimizer_output": 0,
+          "merged_pattern": 0,
+          "task": 0,
+          "do_all": 1,
+          "reduction": 0
+        },
+        "profile_sha256": "9b29be7a70f8a13a7d6368452b6a88b6f871793af02a47c496ea4bf51744fe3a"
+      },
+      "package_integrity": {
+        "before": {
+          "checked": "before trial",
+          "at": "2026-09-28T21:42:58",
+          "prepared_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+          "packager_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+          "harness_sha256": "bb26fba095bc0ae5d578f142df1ce0a64874ceb5b128c27aea56728cafb73d2c",
+          "archived_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+          "profile_sha256": "9b29be7a70f8a13a7d6368452b6a88b6f871793af02a47c496ea4bf51744fe3a",
+          "ok": true
+        },
+        "after": {
+          "checked": "after trial",
+          "at": "2026-09-28T21:46:53",
+          "prepared_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+          "packager_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+          "harness_sha256": "bb26fba095bc0ae5d578f142df1ce0a64874ceb5b128c27aea56728cafb73d2c",
+          "archived_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+          "profile_sha256": "9b29be7a70f8a13a7d6368452b6a88b6f871793af02a47c496ea4bf51744fe3a",
+          "ok": true
+        }
+      },
+      "speed_check_off": true,
+      "timing_flags": [
+        "--timing-cflags=-DLARGE_DATASET"
+      ],
+      "repeat": 9
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+--- s481.c
++++ s481.c
+@@ -29,6 +29,7 @@
+             memcpy(c_buf, c, LEN_1D * sizeof(real_t));
+             memcpy(d_buf, d, LEN_1D * sizeof(real_t));
+         }
++        #pragma omp parallel for lastprivate(nl) shared(c_buf,d_buf,b_buf) 
+         for (int i = 0; i < LEN_1D; i++) {
+             if (d_buf[i] < (real_t)0.) {
+                 exit (0);

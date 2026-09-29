@@ -1,0 +1,63 @@
+--- original.c
++++ final.c
+@@ -15,22 +15,51 @@
+ 
+ static real_t kernel_s277(void)
+ {
++    /* Allocate temporary buffers to break loop-carried dependencies on both a and b.
++       Reading from original values and writing to independent buffer locations makes
++       all iterations fully independent for parallel execution. */
++    real_t *a_temp = (real_t *)malloc(LEN_1D * sizeof(real_t));
++    real_t *b_temp = (real_t *)malloc(LEN_1D * sizeof(real_t));
++
+     for (int nl = 0; nl < R; nl++) {
++        /* Initialize temporary buffers with original values */
++        for (int i = 0; i < LEN_1D; i++) {
++            a_temp[i] = a[i];
++            b_temp[i] = b[i];
++        }
++
++        /* Parallel loop: each iteration reads original array values and writes to independent locations.
++           Loop-carried dependence is broken by reading from original arrays (a, b) and writing to
++           temporary buffers (a_temp for a[i] updates, b_temp for b[i+1] writes).
++           Data sharing: shared arrays (a, b, c, d, e, a_temp, b_temp) are read/written by independent iterations. */
++        #pragma omp parallel for \
++            shared(a, b, a_temp, b_temp, c, d, e)
+         for (int i = 0; i < LEN_1D-1; i++) {
+                 if (a[i] >= (real_t)0.) {
+-                    goto L20;
++                    /* Skip update, a_temp[i] keeps original value from initialization */
++                } else if (b[i] >= (real_t)0.) {
++                    /* Skip a update, perform b update */
++                    b_temp[i+1] = c[i] + d[i] * e[i];
++                } else {
++                    /* Perform both updates */
++                    a_temp[i] += c[i] * d[i];
++                    b_temp[i+1] = c[i] + d[i] * e[i];
+                 }
+-                if (b[i] >= (real_t)0.) {
+-                    goto L30;
+-                }
+-                a[i] += c[i] * d[i];
+-L30:
+-                b[i+1] = c[i] + d[i] * e[i];
+-L20:
+-;
+         }
++
++        /* Copy temporary buffers back to original arrays */
++        for (int i = 0; i < LEN_1D; i++) {
++            a[i] = a_temp[i];
++        }
++        for (int i = 1; i < LEN_1D; i++) {
++            b[i] = b_temp[i];
++        }
++
+         pb_mix(nl);
+     }
++
++    free(a_temp);
++    free(b_temp);
+     return (real_t)0;
+ }
+ 

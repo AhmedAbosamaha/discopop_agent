@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s131.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : main, pb_mix
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] s131.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: I'll read the file and analyze the dependences.## Analysis & Plan **Dependence blocking parallelization:** The outer loop (nl) is inherently sequential—`pb_mix(nl)` modifies input arrays between iterations, creating true dependences. The inner loop (i) reads `a[i+1]` and writes `a[i]` in-place with m=1, creating a flow dependence: iteration i reads `a[i+1]` before iteration i+1 overwrites it. This
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

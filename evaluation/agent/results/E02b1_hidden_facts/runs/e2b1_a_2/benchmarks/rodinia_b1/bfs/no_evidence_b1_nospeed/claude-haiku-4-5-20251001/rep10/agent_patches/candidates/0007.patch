@@ -1,0 +1,10 @@
+--- bfs.cpp
++++ bfs.cpp
+@@ -17,6 +17,7 @@
+             stop=false;
+ 
+             // Initialize temporary buffers
++            #pragma omp parallel for shared(temp_mask,temp_cost) 
+             for(int i = 0; i < no_of_nodes; i++)
+             {
+                 temp_cost[i] = h_cost[i];

@@ -1,0 +1,67 @@
+/* Rodinia 3.1 bfs, from Rodinia's bfs.cpp (sha256 308ac84a8e6e; University of Virginia licence,
+ * see benchmarks/rodinia_3.1/LICENSE). */
+#include "rodinia_b1/bfs.h"
+
+static void kernel_bfs(void)
+{
+	int k=0;
+	bool stop;
+	do
+        {
+            stop=false;
+
+            // Collection phase: gather updates from each frontier node
+            vector<int> target_nodes;
+            vector<int> target_costs;
+
+            for(int tid = 0; tid < no_of_nodes; tid++ )
+            {
+                if (h_graph_mask[tid] == true){
+                    h_graph_mask[tid]=false;
+                    for(int i=h_graph_nodes[tid].starting; i<(h_graph_nodes[tid].no_of_edges + h_graph_nodes[tid].starting); i++)
+                    {
+                        int id = h_graph_edges[i];
+                        if(!h_graph_visited[id])
+                        {
+                            target_nodes.push_back(id);
+                            target_costs.push_back(h_cost[tid]+1);
+                        }
+                    }
+                }
+            }
+
+            // Application phase: deduplicate and apply updates
+            // (Each target node is reached by potentially multiple frontier nodes,
+            //  but all compute the same distance in a valid BFS, so map ensures race-free application)
+            map<int, int> updates_map;
+            for(size_t j = 0; j < target_nodes.size(); j++)
+            {
+                int id = target_nodes[j];
+                updates_map[id] = target_costs[j];
+            }
+
+            for(auto& kv : updates_map)
+            {
+                int id = kv.first;
+                int cost = kv.second;
+                h_cost[id]=cost;
+                h_updating_graph_mask[id]=true;
+            }
+
+            int updated_nodes = 0;
+            for(int tid=0; tid< no_of_nodes ; tid++ )
+            {
+                if (h_updating_graph_mask[tid] == true){
+                    h_graph_mask[tid]=true;
+                    h_graph_visited[tid]=true;
+                    updated_nodes++;
+                    h_updating_graph_mask[tid]=false;
+                }
+            }
+            stop = (updated_nodes > 0);
+            k++;
+        }
+	while(stop);
+}
+
+PB_MAIN(kernel_bfs)

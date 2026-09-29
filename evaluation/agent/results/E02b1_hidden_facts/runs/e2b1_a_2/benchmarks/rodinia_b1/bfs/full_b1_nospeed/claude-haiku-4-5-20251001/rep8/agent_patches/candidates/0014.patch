@@ -1,0 +1,10 @@
+--- bfs.cpp
++++ bfs.cpp
+@@ -33,6 +33,7 @@
+ 
+             int *node_was_updated = (int*)malloc(no_of_nodes * sizeof(int));
+ 
++            #pragma omp parallel for shared(node_was_updated) 
+             for(int tid=0; tid< no_of_nodes ; tid++ )
+             {
+                 node_was_updated[tid] = 0;

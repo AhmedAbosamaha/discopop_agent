@@ -1,0 +1,36 @@
+--- original.c
++++ final.c
+@@ -16,17 +16,26 @@
+ static real_t kernel_s161(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        /* Phase 1: All iterations that write to c (where b[i] < 0) execute in parallel.
++         * These are independent since each writes to a different c[i+1] index. */
++        #pragma omp parallel for shared(a, b, c, d)
+         for (int i = 0; i < LEN_1D-1; ++i) {
+             if (b[i] < (real_t)0.) {
+-                goto L20;
++                c[i+1] = a[i] + d[i] * d[i];
+             }
+-            a[i] = c[i] + d[i] * e[i];
+-            goto L10;
+-L20:
+-            c[i+1] = a[i] + d[i] * d[i];
+-L10:
+-            ;
+         }
++
++        /* Phase 2: All iterations that read from c and write to a execute in parallel.
++         * By separating from phase 1, all writes to c are complete before any phase 2
++         * reads occur, ensuring correct semantics. Each iteration reads c[i] and writes a[i],
++         * which are at different indices from other iterations. */
++        #pragma omp parallel for shared(a, b, c, d, e)
++        for (int i = 0; i < LEN_1D-1; ++i) {
++            if (b[i] >= (real_t)0.) {
++                a[i] = c[i] + d[i] * e[i];
++            }
++        }
++
+         pb_mix(nl);
+     }
+     return (real_t)0;

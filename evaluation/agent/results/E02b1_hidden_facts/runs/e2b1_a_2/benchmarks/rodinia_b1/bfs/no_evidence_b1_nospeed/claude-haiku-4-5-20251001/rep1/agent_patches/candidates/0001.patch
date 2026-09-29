@@ -1,0 +1,10 @@
+--- bfs.cpp
++++ bfs.cpp
+@@ -15,6 +15,7 @@
+             bool *new_masks = (bool *)malloc(no_of_nodes * sizeof(bool));
+ 
+             // Initialize temporary buffers with current values
++            #pragma omp parallel for shared(new_masks,new_costs) 
+             for(int i = 0; i < no_of_nodes; i++) {
+                 new_costs[i] = h_cost[i];
+                 new_masks[i] = false;

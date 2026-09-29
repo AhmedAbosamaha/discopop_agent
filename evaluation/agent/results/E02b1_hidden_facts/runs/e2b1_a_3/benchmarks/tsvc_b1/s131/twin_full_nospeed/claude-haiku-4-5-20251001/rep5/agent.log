@@ -1,0 +1,48 @@
+
+============================================================
+  Model-only twin (D38) — DiscoPoP's information, no gate, one attempt
+============================================================
+  Source         : s131.c
+  Model          : claude-haiku-4-5-20251001
+  Pragmas by     : DiscoPoP
+  Evidence       : full
+  Depth          : 0
+
+┌─ [depth=0] loop 1:15 (lines 19–24)
+│  [twin] Calling claude-haiku-4-5-20251001...
+│  [twin] the model's plan: I'll start by reading the file to understand the current structure.**Plan:** The blocking dependence is on array element `a`: iteration `i` writes `a[i]` and reads `a[i+m]` (where m=1), creating an anti-dependence. If iterations run out of order, a later iteration updating `a[i+1]` would cause an earlier iteration to read the wrong value. This serializes the inner loop. Fix: Use a temporary buffer
+│  [twin] edited, 0 OpenMP pragma(s) in the file — kept unchecked
+│  [twin] Re-profiling (as the agent does after a kept rewrite)...
+│  [twin] 4 new region(s) at depth 1
+└─ EDITED
+
+┌─ [depth=1] loop 1:16 (lines 20–28)
+└─ SKIPPED (depth 1 > --restructure-depth 0)
+
+┌─ [depth=1] function 1:12 (lines 16–30)
+└─ SKIPPED (depth 1 > --restructure-depth 0)
+
+┌─ [depth=1] loop 1:19 (lines 21–23)
+└─ DISCOPOP'S (annotated at the end)
+
+┌─ [depth=1] loop 1:24 (lines 24–26)
+└─ DISCOPOP'S (annotated at the end)
+
+
+============================================================
+  DiscoPoP annotates — 2 applicable pattern(s), NOTHING CHECKED
+============================================================
+
+┌─ do_all @ lines 21–23  (W=3071904)
+│  #pragma omp parallel for
+│  [twin] Original backed up → s131.c.original
+│  [twin] Applied to s131.c
+└─ INSERTED (unchecked)
+
+┌─ do_all @ lines 24–26  (W=3071904)
+│  #pragma omp parallel for
+│  [twin] Applied to s131.c
+└─ INSERTED (unchecked)
+
+
+  SUMMARY: 1 region(s) asked  |  1 edited  |  2 DiscoPoP pragma(s) inserted unchecked  |  nothing was checked here — the harness judges the result

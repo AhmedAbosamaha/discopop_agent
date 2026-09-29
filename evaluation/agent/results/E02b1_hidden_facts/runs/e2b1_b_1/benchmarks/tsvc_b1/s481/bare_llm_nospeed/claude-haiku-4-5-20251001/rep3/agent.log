@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s481.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : main, pb_mix
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] s481.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Looking at this code, I need to understand the structure and dependencies: 1. **The outer loop (nl)**: Must be sequential because `pb_mix(nl)` modifies array elements between iterations, creating a true dependence. 2. **The inner loop (i)**: Each iteration i only accesses elements at index i: reads `b[i]` and `c[i]`, modifies `a[i]`. No cross-iteration dependencies exist. 3. **The blocking issue**
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

@@ -1,0 +1,21 @@
+--- bfs.cpp
++++ bfs.cpp
+@@ -36,15 +36,17 @@
+             }
+             free(new_h_cost);
+ 
++            bool any_updates = false;
+             for(int tid=0; tid< no_of_nodes ; tid++ )
+             {
+                 if (h_updating_graph_mask[tid] == true){
+                     h_graph_mask[tid]=true;
+                     h_graph_visited[tid]=true;
+-                    stop=true;
+                     h_updating_graph_mask[tid]=false;
++                    any_updates = true;
+                 }
+             }
++            stop = any_updates;
+             k++;
+         }
+ 	while(stop);

@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s152.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : main, pb_mix
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] s152.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Now let me analyze the code: ## Plan **Blocking Dependence Identified:** - The outer loop over `nl` (lines 23-29) has a true dependence: `pb_mix(nl)` modifies array elements between iterations, so repetitions must run sequentially. - The **inner loop over `i`** (lines 24-27) is the parallelizable one: each iteration operates on disjoint array elements. Iteration i only touches indices [i] of array
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

@@ -1,0 +1,63 @@
+--- bfs.cpp
++++ bfs.cpp
+@@ -10,21 +10,57 @@
+         {
+             stop=false;
+ 
++            // Allocate temporary arrays for each node to accumulate updates
++            bool** temp_updating_masks = (bool**)malloc(no_of_nodes * sizeof(bool*));
++            int** temp_costs = (int**)malloc(no_of_nodes * sizeof(int*));
++            for(int tid = 0; tid < no_of_nodes; tid++)
++            {
++                temp_updating_masks[tid] = NULL;
++                temp_costs[tid] = NULL;
++            }
++
++            // Phase 1: Each iteration processes its active node independently
++            // with no shared array accesses between iterations
+             for(int tid = 0; tid < no_of_nodes; tid++ )
+             {
+-                if (h_graph_mask[tid] == true){ 
++                if (h_graph_mask[tid] == true){
+                     h_graph_mask[tid]=false;
++
++                    // Allocate temporary buffers for this node's updates
++                    temp_updating_masks[tid] = (bool*)calloc(no_of_nodes, sizeof(bool));
++                    temp_costs[tid] = (int*)malloc(no_of_nodes * sizeof(int));
++
+                     for(int i=h_graph_nodes[tid].starting; i<(h_graph_nodes[tid].no_of_edges + h_graph_nodes[tid].starting); i++)
+                     {
+                         int id = h_graph_edges[i];
+                         if(!h_graph_visited[id])
+                         {
+-                            h_cost[id]=h_cost[tid]+1;
+-                            h_updating_graph_mask[id]=true;
++                            temp_costs[tid][id]=h_cost[tid]+1;
++                            temp_updating_masks[tid][id]=true;
+                         }
+                     }
+                 }
+             }
++
++            // Phase 2: Merge temporary arrays into global arrays
++            for(int tid = 0; tid < no_of_nodes; tid++)
++            {
++                if (temp_updating_masks[tid] != NULL)
++                {
++                    for(int id = 0; id < no_of_nodes; id++)
++                    {
++                        if (temp_updating_masks[tid][id])
++                        {
++                            h_cost[id] = temp_costs[tid][id];
++                            h_updating_graph_mask[id] = true;
++                        }
++                    }
++                    free(temp_updating_masks[tid]);
++                    free(temp_costs[tid]);
++                }
++            }
++            free(temp_updating_masks);
++            free(temp_costs);
+ 
+             for(int tid=0; tid< no_of_nodes ; tid++ )
+             {

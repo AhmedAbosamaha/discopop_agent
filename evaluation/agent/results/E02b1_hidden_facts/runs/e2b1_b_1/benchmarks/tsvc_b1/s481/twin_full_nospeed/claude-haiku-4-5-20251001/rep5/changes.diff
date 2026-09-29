@@ -1,0 +1,23 @@
+--- original.c
++++ final.c
+@@ -15,13 +15,18 @@
+ 
+ static real_t kernel_s481(void)
+ {
++    #pragma omp parallel for 
+     for (int nl = 0; nl < R; nl++) {
++        int found_negative = 0;
+         for (int i = 0; i < LEN_1D; i++) {
+             if (d[i] < (real_t)0.) {
+-                exit (0);
++                found_negative = 1;
+             }
+-            a[i] += b[i] * c[i];
++            if (!found_negative) {
++                a[i] += b[i] * c[i];
++            }
+         }
++        if (found_negative) exit(0);
+         pb_mix(nl);
+     }
+     return (real_t)0;

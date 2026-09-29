@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s131.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : main, pb_mix
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] s131.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Looking at the code, I need to identify the blocking dependence and remove it to enable parallelization. ## Plan **Blocking dependence:** In the inner loop `for (int i = 0; i < LEN_1D - 1; i++) { a[i] = a[i + m] + b[i]; }`, iteration i reads from `a[i+m]` (which is `a[i+1]` since m=1), and iteration i+1 writes to `a[i+1]`. This creates a flow dependence: each iteration depends on the next iteratio
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

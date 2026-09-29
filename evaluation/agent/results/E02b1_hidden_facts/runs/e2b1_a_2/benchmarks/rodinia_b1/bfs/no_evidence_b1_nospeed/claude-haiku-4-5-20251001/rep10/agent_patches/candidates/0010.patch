@@ -1,0 +1,10 @@
+--- bfs.cpp
++++ bfs.cpp
+@@ -52,6 +52,7 @@
+             }
+ 
+             // Second loop: update visited status and accumulate stop condition
++            #pragma omp parallel for shared(stop_updates) 
+             for(int tid=0; tid< no_of_nodes ; tid++ )
+             {
+                 bool had_update = h_updating_graph_mask[tid];

@@ -1,0 +1,44 @@
+--- original.cpp
++++ final.cpp
+@@ -8,11 +8,17 @@
+ 	bool stop;
+ 	do
+         {
+-            stop=false;
++            bool* temp_mask = (bool*)malloc(no_of_nodes * sizeof(bool));
++            #pragma omp parallel for shared(temp_mask) 
++            for(int tid = 0; tid < no_of_nodes; tid++)
++            {
++                temp_mask[tid] = h_graph_mask[tid];
++            }
+ 
++            #pragma omp parallel for shared(temp_mask) 
+             for(int tid = 0; tid < no_of_nodes; tid++ )
+             {
+-                if (h_graph_mask[tid] == true){ 
++                if (temp_mask[tid] == true){
+                     h_graph_mask[tid]=false;
+                     for(int i=h_graph_nodes[tid].starting; i<(h_graph_nodes[tid].no_of_edges + h_graph_nodes[tid].starting); i++)
+                     {
+@@ -26,15 +32,20 @@
+                 }
+             }
+ 
++            free(temp_mask);
++
++            int num_updated = 0;
++            #pragma omp parallel for reduction(+:num_updated) 
+             for(int tid=0; tid< no_of_nodes ; tid++ )
+             {
+                 if (h_updating_graph_mask[tid] == true){
+                     h_graph_mask[tid]=true;
+                     h_graph_visited[tid]=true;
+-                    stop=true;
+                     h_updating_graph_mask[tid]=false;
++                    num_updated = num_updated + 1;
+                 }
+             }
++            stop = (num_updated > 0);
+             k++;
+         }
+ 	while(stop);

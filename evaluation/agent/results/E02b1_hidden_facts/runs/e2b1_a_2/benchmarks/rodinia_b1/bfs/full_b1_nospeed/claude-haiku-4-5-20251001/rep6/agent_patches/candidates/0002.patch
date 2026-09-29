@@ -1,0 +1,10 @@
+--- bfs.cpp
++++ bfs.cpp
+@@ -11,6 +11,7 @@
+             stop=false;
+ 
+             int* new_h_cost = (int*)malloc(no_of_nodes * sizeof(int));
++            #pragma omp parallel for shared(new_h_cost) 
+             for(int j = 0; j < no_of_nodes; j++) {
+                 new_h_cost[j] = h_cost[j];
+             }

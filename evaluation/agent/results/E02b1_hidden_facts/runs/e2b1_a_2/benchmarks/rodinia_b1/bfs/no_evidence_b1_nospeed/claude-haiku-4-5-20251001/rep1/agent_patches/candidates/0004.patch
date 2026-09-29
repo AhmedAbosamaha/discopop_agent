@@ -1,0 +1,10 @@
+--- bfs.cpp
++++ bfs.cpp
+@@ -38,6 +38,7 @@
+             }
+ 
+             // Phase 2: Apply updates to costs and advance frontier
++            #pragma omp parallel for lastprivate(stop) shared(new_masks,new_costs) 
+             for(int tid=0; tid< no_of_nodes ; tid++ )
+             {
+                 h_cost[tid]=new_costs[tid];

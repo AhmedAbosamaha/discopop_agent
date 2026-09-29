@@ -1,0 +1,27 @@
+--- original.c
++++ final.c
+@@ -22,10 +22,23 @@
+ 
+ static real_t kernel_s151(void)
+ {
++    real_t *a_temp = malloc(LEN_1D * sizeof(real_t));
++
+     for (int nl = 0; nl < R; nl++) {
+-        s151s(a, b,  1);
++        /* Compute s151s transformation into temporary buffer */
++        #pragma omp parallel for shared(a_temp) 
++        for (int i = 0; i < LEN_1D - 1; i++) {
++            a_temp[i] = a[i + 1] + b[i];
++        }
++        /* Update array a with computed values (Do-All pattern) */
++        #pragma omp parallel for shared(a_temp) 
++        for (int i = 0; i < LEN_1D - 1; i++) {
++            a[i] = a_temp[i];
++        }
+         pb_mix(nl);
+     }
++
++    free(a_temp);
+     return (real_t)0;
+ }
+ 

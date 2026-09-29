@@ -1,0 +1,24 @@
+--- original.c
++++ final.c
+@@ -16,11 +16,19 @@
+ static real_t kernel_s481(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        int must_exit = 0;
++        #pragma omp parallel for shared(must_exit, a, b, c, d)
+         for (int i = 0; i < LEN_1D; i++) {
+             if (d[i] < (real_t)0.) {
+-                exit (0);
++                #pragma omp critical
++                must_exit = 1;
+             }
+-            a[i] += b[i] * c[i];
++            if (!must_exit) {
++                a[i] += b[i] * c[i];
++            }
++        }
++        if (must_exit) {
++            exit(0);
+         }
+         pb_mix(nl);
+     }

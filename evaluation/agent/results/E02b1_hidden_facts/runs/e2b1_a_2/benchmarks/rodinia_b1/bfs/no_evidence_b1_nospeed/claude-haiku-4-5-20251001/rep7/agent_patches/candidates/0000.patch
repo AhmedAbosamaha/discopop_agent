@@ -1,0 +1,23 @@
+--- bfs.cpp
++++ bfs.cpp
+@@ -12,14 +12,17 @@
+ 
+             for(int tid = 0; tid < no_of_nodes; tid++ )
+             {
+-                if (h_graph_mask[tid] == true){ 
++                if (h_graph_mask[tid] == true){
+                     h_graph_mask[tid]=false;
+-                    for(int i=h_graph_nodes[tid].starting; i<(h_graph_nodes[tid].no_of_edges + h_graph_nodes[tid].starting); i++)
++                    int tid_start = h_graph_nodes[tid].starting;
++                    int tid_edges = h_graph_nodes[tid].no_of_edges;
++                    int tid_cost = h_cost[tid];
++                    for(int i = tid_start; i < tid_start + tid_edges; i++)
+                     {
+                         int id = h_graph_edges[i];
+                         if(!h_graph_visited[id])
+                         {
+-                            h_cost[id]=h_cost[tid]+1;
++                            h_cost[id]=tid_cost+1;
+                             h_updating_graph_mask[id]=true;
+                         }
+                     }

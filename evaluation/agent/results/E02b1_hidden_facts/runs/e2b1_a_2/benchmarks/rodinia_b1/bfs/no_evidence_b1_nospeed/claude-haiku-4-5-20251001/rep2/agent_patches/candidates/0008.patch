@@ -1,0 +1,18 @@
+--- bfs.cpp
++++ bfs.cpp
+@@ -12,6 +12,7 @@
+         {
+             stop=false;
+ 
++            #pragma omp parallel for shared(temp_updating_mask) 
+             for(int i = 0; i < no_of_nodes; i++) {
+                 temp_updating_mask[i] = false;
+             }
+@@ -32,6 +33,7 @@
+                 }
+             }
+ 
++            #pragma omp parallel for shared(temp_updating_mask) 
+             for(int i = 0; i < no_of_nodes; i++) {
+                 if(temp_updating_mask[i]) {
+                     h_updating_graph_mask[i] = true;

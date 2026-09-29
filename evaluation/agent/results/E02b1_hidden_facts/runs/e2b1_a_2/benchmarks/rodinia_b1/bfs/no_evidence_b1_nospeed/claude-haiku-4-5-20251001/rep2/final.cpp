@@ -1,0 +1,59 @@
+/* Rodinia 3.1 bfs, from Rodinia's bfs.cpp (sha256 308ac84a8e6e; University of Virginia licence,
+ * see benchmarks/rodinia_3.1/LICENSE). */
+#include "rodinia_b1/bfs.h"
+
+static void kernel_bfs(void)
+{
+	int k=0;
+	bool stop;
+	bool *temp_updating_mask = (bool *)malloc(no_of_nodes * sizeof(bool));
+
+	do
+        {
+            stop=false;
+
+            #pragma omp parallel for shared(temp_updating_mask) 
+            for(int i = 0; i < no_of_nodes; i++) {
+                temp_updating_mask[i] = false;
+            }
+
+            for(int tid = 0; tid < no_of_nodes; tid++ )
+            {
+                if (h_graph_mask[tid] == true){
+                    h_graph_mask[tid]=false;
+                    for(int i=h_graph_nodes[tid].starting; i<(h_graph_nodes[tid].no_of_edges + h_graph_nodes[tid].starting); i++)
+                    {
+                        int id = h_graph_edges[i];
+                        if(!h_graph_visited[id])
+                        {
+                            h_cost[id]=h_cost[tid]+1;
+                            temp_updating_mask[id]=true;
+                        }
+                    }
+                }
+            }
+
+            #pragma omp parallel for shared(temp_updating_mask) 
+            for(int i = 0; i < no_of_nodes; i++) {
+                if(temp_updating_mask[i]) {
+                    h_updating_graph_mask[i] = true;
+                }
+            }
+
+            for(int tid=0; tid< no_of_nodes ; tid++ )
+            {
+                if (h_updating_graph_mask[tid] == true){
+                    h_graph_mask[tid]=true;
+                    h_graph_visited[tid]=true;
+                    stop=true;
+                    h_updating_graph_mask[tid]=false;
+                }
+            }
+            k++;
+        }
+	while(stop);
+
+	free(temp_updating_mask);
+}
+
+PB_MAIN(kernel_bfs)

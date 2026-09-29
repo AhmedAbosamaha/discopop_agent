@@ -1,0 +1,78 @@
+
+============================================================
+  Model-only twin (D38) — DiscoPoP's information, no gate, one attempt
+============================================================
+  Source         : bfs.cpp
+  Model          : claude-haiku-4-5-20251001
+  Pragmas by     : DiscoPoP
+  Evidence       : none
+  Depth          : 0
+
+┌─ [depth=0] loop 1:13 (lines 9–40)
+│  [twin] Calling claude-haiku-4-5-20251001...
+│  [twin] the model's plan: I'll analyze the BFS code to identify the blocking dependences and restructure for parallelism. ## Plan The code implements a level-synchronous BFS with two loops per iteration: 1. **First loop (lines 13–27)**: Processes frontier nodes, writes to `h_cost[]` and `h_updating_graph_mask[]` for unvisited neighbors 2. **Second loop (lines 29–37)**: Moves marked nodes to the next frontier, computes a gl
+│  [twin] edited, 0 OpenMP pragma(s) in the file — kept unchecked
+│  [twin] Re-profiling (as the agent does after a kept rewrite)...
+│  [twin] 3 new region(s) at depth 1
+└─ EDITED
+
+┌─ [depth=0] loop 1:16 (lines 13–27)
+│  [twin] Calling claude-haiku-4-5-20251001...
+│  [twin] the model's plan: I'll start by reading the file to understand the current implementation and dependencies.Looking at this BFS code, let me analyze the blocking dependence: **Analysis:** - The loop at lines 13-27 processes nodes in the frontier (where `h_graph_mask[tid] == true`) - For each frontier node, it updates its neighbors' costs and marks them for the next iteration - **Blocking dependence**: Multiple front
+│  [twin] edited, 0 OpenMP pragma(s) in the file — kept unchecked
+│  [twin] Re-profiling (as the agent does after a kept rewrite)...
+│  [twin] 5 new region(s) at depth 1
+└─ EDITED
+
+┌─ [depth=0] loop 1:33 (lines 31–39)
+└─ DISCOPOP'S (annotated at the end)
+
+┌─ [depth=1] loop 1:45 (lines 44–52)
+└─ DISCOPOP'S (annotated at the end)
+
+┌─ [depth=1] loop 1:13 (lines 9–56)
+└─ SKIPPED (depth 1 > --restructure-depth 0)
+
+┌─ [depth=1] loop 1:17 (lines 14–17)
+└─ DISCOPOP'S (annotated at the end)
+
+┌─ [depth=1] function 1:11 (lines 5–57)
+└─ SKIPPED (depth 1 > --restructure-depth 0)
+
+┌─ [depth=1] loop 1:29 (lines 27–41)
+└─ DISCOPOP'S (annotated at the end)
+
+┌─ [depth=1] loop 1:22 (lines 19–25)
+└─ DISCOPOP'S (annotated at the end)
+
+
+============================================================
+  DiscoPoP annotates — 5 applicable pattern(s), NOTHING CHECKED
+============================================================
+
+┌─ do_all @ lines 14–17  (W=1966080)
+│  #pragma omp parallel for
+│  [twin] Original backed up → bfs.cpp.original
+│  [twin] Applied to bfs.cpp
+└─ INSERTED (unchecked)
+
+┌─ do_all @ lines 27–41  (W=9175040)
+│  #pragma omp parallel for
+│  [twin] Applied to bfs.cpp
+└─ INSERTED (unchecked)
+
+┌─ do_all @ lines 31–39  (W=3141360)
+└─ SKIPPED (nested in a loop that is already parallel)
+
+┌─ reduction @ lines 44–52  (W=5242880)
+│  #pragma omp parallel for
+│  [twin] Applied to bfs.cpp
+└─ INSERTED (unchecked)
+
+┌─ do_all @ lines 19–25  (W=3932160)
+│  #pragma omp parallel for
+│  [twin] Applied to bfs.cpp
+└─ INSERTED (unchecked)
+
+
+  SUMMARY: 2 region(s) asked  |  2 edited  |  4 DiscoPoP pragma(s) inserted unchecked  |  nothing was checked here — the harness judges the result

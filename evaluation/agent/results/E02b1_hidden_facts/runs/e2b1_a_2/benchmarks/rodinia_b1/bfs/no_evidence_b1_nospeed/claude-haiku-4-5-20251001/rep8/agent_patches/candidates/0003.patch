@@ -1,0 +1,10 @@
+--- bfs.cpp
++++ bfs.cpp
+@@ -23,6 +23,7 @@
+                 next_level[i] = false;
+             }
+ 
++ #pragma omp parallel for shared(next_level) 
+             for(int tid = 0; tid < no_of_nodes; tid++ )
+             {
+                 if (h_graph_mask[tid] == true){

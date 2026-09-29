@@ -1,0 +1,10 @@
+--- bfs.cpp
++++ bfs.cpp
+@@ -41,6 +41,7 @@
+ 
+             bool* any_found = (bool*)malloc(no_of_nodes * sizeof(bool));
+ 
++            #pragma omp parallel for shared(any_found) 
+             for(int tid=0; tid< no_of_nodes ; tid++ )
+             {
+                 any_found[tid] = false;

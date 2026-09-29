@@ -1,0 +1,10 @@
+--- s277.c
++++ s277.c
+@@ -21,6 +21,7 @@
+         memcpy(b_new, b, LEN_1D * sizeof(real_t));
+ 
+         /* First pass: compute all b[i+1] values independently based on a[i] */
++        #pragma omp parallel for 
+         for (int i = 0; i < LEN_1D-1; i++) {
+                 if (a[i] < (real_t)0.) {
+                     b_new[i+1] = c[i] + d[i] * e[i];

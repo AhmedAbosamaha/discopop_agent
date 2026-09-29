@@ -1,0 +1,29 @@
+--- original.c
++++ final.c
+@@ -17,9 +17,25 @@
+ {
+     int m  = 1;
+     for (int nl = 0; nl < R; nl++) {
++        /* Allocate temporary buffer to break anti-dependence:
++         * iteration i reads a[i+1], iteration i+1 writes a[i+1].
++         * Save original values so all parallel iterations read the same snapshot. */
++        real_t *a_temp = (real_t *)malloc(sizeof(real_t) * (LEN_1D - 1));
++
++        /* Copy phase: independent loop, each iteration reads a[i+m] and writes to a_temp[i] */
++        #pragma omp parallel for shared(a, a_temp, m)
+         for (int i = 0; i < LEN_1D - 1; i++) {
+-            a[i] = a[i + m] + b[i];
++            a_temp[i] = a[i + m];
+         }
++
++        /* Computation phase: independent loop, each iteration reads a_temp[i], b[i]
++         * and writes to a[i]. No anti-dependence now since all threads read from snapshot. */
++        #pragma omp parallel for shared(a, a_temp, b)
++        for (int i = 0; i < LEN_1D - 1; i++) {
++            a[i] = a_temp[i] + b[i];
++        }
++
++        free(a_temp);
+         pb_mix(nl);
+     }
+     return (real_t)0;

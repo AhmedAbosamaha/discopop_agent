@@ -1,0 +1,27 @@
+--- original.c
++++ final.c
+@@ -1,5 +1,7 @@
+ /* TSVC-2 loop s151, from TSVC-2 src/tsvc.c (sha256 456dd573b84b; University of Illinois licence,
+  * see benchmarks/TSVC_2/license.txt). */
++#include <stdlib.h>
++#include <string.h>
+ #include "tsvc_b1/s151.h"
+ 
+ /* Between two repetitions a few INPUT elements change, so no repetition can be skipped,
+@@ -15,9 +17,15 @@
+ 
+ void s151s(real_t a[LEN_1D], real_t b[LEN_1D],  int m)
+ {
++    real_t *a_temp = (real_t*)malloc(LEN_1D * sizeof(real_t));
++    memcpy(a_temp, a, LEN_1D * sizeof(real_t));
++
++    #pragma omp parallel for shared(a, b, a_temp, m)
+     for (int i = 0; i < LEN_1D-1; i++) {
+-        a[i] = a[i + m] + b[i];
++        a[i] = a_temp[i + m] + b[i];
+     }
++
++    free(a_temp);
+ }
+ 
+ static real_t kernel_s151(void)

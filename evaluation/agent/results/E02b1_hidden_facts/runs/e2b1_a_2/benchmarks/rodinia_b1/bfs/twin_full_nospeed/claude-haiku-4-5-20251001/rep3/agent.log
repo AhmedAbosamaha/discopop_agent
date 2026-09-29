@@ -1,0 +1,46 @@
+
+============================================================
+  Model-only twin (D38) — DiscoPoP's information, no gate, one attempt
+============================================================
+  Source         : bfs.cpp
+  Model          : claude-haiku-4-5-20251001
+  Pragmas by     : DiscoPoP
+  Evidence       : full
+  Depth          : 0
+
+┌─ [depth=0] loop 1:13 (lines 9–40)
+│  [twin] Calling claude-haiku-4-5-20251001...
+│  [twin] the model's plan: I'll read the file first to understand the current implementation.**Plan:** The blocking dependence is a loop-carried RAW on `h_cost`: in the outer `tid` loop (lines 13–27), we read `h_cost[tid]` for each frontier node and write `h_cost[id]` for each unvisited neighbor. If some neighbor `id` is processed in a later `tid` iteration, it reads the newly-written `h_cost[id]`, creating a value flow bet
+│  [twin] edited, 0 OpenMP pragma(s) in the file — kept unchecked
+│  [twin] Re-profiling (as the agent does after a kept rewrite)...
+│  [twin] 4 new region(s) at depth 1
+└─ EDITED
+
+┌─ [depth=0] loop 1:35 (lines 34–42)
+└─ DISCOPOP'S (annotated at the end)
+
+┌─ [depth=1] loop 1:13 (lines 9–45)
+└─ SKIPPED (depth 1 > --restructure-depth 0)
+
+┌─ [depth=1] loop 1:18 (lines 16–30)
+└─ SKIPPED (depth 1 > --restructure-depth 0)
+
+┌─ [depth=1] function 1:11 (lines 5–46)
+└─ SKIPPED (depth 1 > --restructure-depth 0)
+
+┌─ [depth=1] loop 1:23 (lines 20–28)
+└─ SKIPPED (depth 1 > --restructure-depth 0)
+
+
+============================================================
+  DiscoPoP annotates — 1 applicable pattern(s), NOTHING CHECKED
+============================================================
+
+┌─ do_all @ lines 34–42  (W=5242880)
+│  #pragma omp parallel for
+│  [twin] Original backed up → bfs.cpp.original
+│  [twin] Applied to bfs.cpp
+└─ INSERTED (unchecked)
+
+
+  SUMMARY: 1 region(s) asked  |  1 edited  |  1 DiscoPoP pragma(s) inserted unchecked  |  nothing was checked here — the harness judges the result

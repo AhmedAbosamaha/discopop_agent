@@ -1,0 +1,10 @@
+--- s277.c
++++ s277.c
+@@ -20,6 +20,7 @@
+         if (b_snapshot == NULL) return (real_t)0;
+ 
+         // Capture snapshot of b array to break loop-carried dependence
++        #pragma omp parallel for 
+         for (int i = 0; i < LEN_1D; i++) {
+             b_snapshot[i] = b[i];
+         }

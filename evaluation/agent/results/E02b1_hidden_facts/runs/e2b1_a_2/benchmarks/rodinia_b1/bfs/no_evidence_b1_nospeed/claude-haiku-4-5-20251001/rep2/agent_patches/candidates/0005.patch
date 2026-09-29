@@ -1,0 +1,10 @@
+--- bfs.cpp
++++ bfs.cpp
+@@ -20,6 +20,7 @@
+             {
+                 if (h_graph_mask[tid] == true){
+                     h_graph_mask[tid]=false;
++                    #pragma omp parallel for firstprivate(tid) shared(temp_updating_mask) 
+                     for(int i=h_graph_nodes[tid].starting; i<(h_graph_nodes[tid].no_of_edges + h_graph_nodes[tid].starting); i++)
+                     {
+                         int id = h_graph_edges[i];

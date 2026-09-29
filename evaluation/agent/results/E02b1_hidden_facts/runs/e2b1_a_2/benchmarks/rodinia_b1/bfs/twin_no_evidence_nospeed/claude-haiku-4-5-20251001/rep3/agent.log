@@ -1,0 +1,54 @@
+
+============================================================
+  Model-only twin (D38) — DiscoPoP's information, no gate, one attempt
+============================================================
+  Source         : bfs.cpp
+  Model          : claude-haiku-4-5-20251001
+  Pragmas by     : DiscoPoP
+  Evidence       : none
+  Depth          : 0
+
+┌─ [depth=0] loop 1:13 (lines 9–40)
+│  [twin] Calling claude-haiku-4-5-20251001...
+│  [twin] the model's plan: Looking at this BFS code, let me identify the blocking dependencies: **Analysis:** 1. **The blocking dependence**: The `stop` variable is set/checked within the do-while body, making the loop's trip count data-dependent. This is the fundamental barrier—the outer loop must complete each iteration to know if another iteration is needed. 2. **Within-iteration structure**: Two sequential for-loops—the
+│  [twin] edited, 0 OpenMP pragma(s) in the file — kept unchecked
+│  [twin] Re-profiling (as the agent does after a kept rewrite)...
+│  [twin] 3 new region(s) at depth 1
+└─ EDITED
+
+┌─ [depth=0] loop 1:17 (lines 11–25)
+│  [twin] Calling claude-haiku-4-5-20251001...
+│  [twin] the model's plan: Looking at this BFS code, let me analyze the target loop (lines 11-25): **Analysis:** The loop iterates through all nodes and processes frontier nodes in parallel. The blocking dependencies are: 1. **Write-write conflicts**: Multiple frontier nodes can have the same unvisited neighbor `id`. When two frontier nodes are both at the same BFS level, both will try to write to `h_cost[id]` and `h_updati
+│  [twin] edited, 0 OpenMP pragma(s) in the file — kept unchecked
+│  [twin] Re-profiling (as the agent does after a kept rewrite)...
+│  [twin] 4 new region(s) at depth 1
+└─ EDITED
+
+┌─ [depth=1] loop 1:34 (lines 29–37)
+└─ DISCOPOP'S (annotated at the end)
+
+┌─ [depth=1] loop 1:14 (lines 9–41)
+└─ SKIPPED (depth 1 > --restructure-depth 0)
+
+┌─ [depth=1] function 1:11 (lines 5–42)
+└─ SKIPPED (depth 1 > --restructure-depth 0)
+
+┌─ [depth=1] loop 1:17 (lines 11–26)
+└─ SKIPPED (depth 1 > --restructure-depth 0)
+
+┌─ [depth=1] loop 1:22 (lines 15–24)
+└─ SKIPPED (depth 1 > --restructure-depth 0)
+
+
+============================================================
+  DiscoPoP annotates — 1 applicable pattern(s), NOTHING CHECKED
+============================================================
+
+┌─ do_all @ lines 29–37  (W=5242880)
+│  #pragma omp parallel for
+│  [twin] Original backed up → bfs.cpp.original
+│  [twin] Applied to bfs.cpp
+└─ INSERTED (unchecked)
+
+
+  SUMMARY: 2 region(s) asked  |  2 edited  |  1 DiscoPoP pragma(s) inserted unchecked  |  nothing was checked here — the harness judges the result

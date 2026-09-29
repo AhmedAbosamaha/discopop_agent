@@ -1,0 +1,48 @@
+--- original.cpp
++++ final.cpp
+@@ -6,13 +6,14 @@
+ {
+ 	int k=0;
+ 	bool stop;
++	bool* local_stop = (bool*)malloc(no_of_nodes * sizeof(bool));
+ 	do
+         {
+             stop=false;
+ 
+             for(int tid = 0; tid < no_of_nodes; tid++ )
+             {
+-                if (h_graph_mask[tid] == true){ 
++                if (h_graph_mask[tid] == true){
+                     h_graph_mask[tid]=false;
+                     for(int i=h_graph_nodes[tid].starting; i<(h_graph_nodes[tid].no_of_edges + h_graph_nodes[tid].starting); i++)
+                     {
+@@ -26,18 +27,28 @@
+                 }
+             }
+ 
++            #pragma omp parallel for shared(local_stop) 
+             for(int tid=0; tid< no_of_nodes ; tid++ )
+             {
++                local_stop[tid] = false;
+                 if (h_updating_graph_mask[tid] == true){
+                     h_graph_mask[tid]=true;
+                     h_graph_visited[tid]=true;
++                    local_stop[tid]=true;
++                    h_updating_graph_mask[tid]=false;
++                }
++            }
++
++            for(int tid=0; tid< no_of_nodes ; tid++ )
++            {
++                if (local_stop[tid] == true){
+                     stop=true;
+-                    h_updating_graph_mask[tid]=false;
+                 }
+             }
+             k++;
+         }
+ 	while(stop);
++	free(local_stop);
+ }
+ 
+ PB_MAIN(kernel_bfs)

@@ -1,0 +1,24 @@
+--- original.c
++++ final.c
+@@ -17,9 +17,20 @@
+ {
+     int m  = 1;
+     for (int nl = 0; nl < R; nl++) {
++        // Copy input values to temporary buffer to decouple iterations
++        real_t *temp = (real_t *)malloc((LEN_1D - 1) * sizeof(real_t));
++        #pragma omp parallel for 
+         for (int i = 0; i < LEN_1D - 1; i++) {
+-            a[i] = a[i + m] + b[i];
++            temp[i] = a[i + m];
+         }
++
++        // Inner loop now reads from immutable buffer—iterations are independent
++        #pragma omp parallel for shared(temp) 
++        for (int i = 0; i < LEN_1D - 1; i++) {
++            a[i] = temp[i] + b[i];
++        }
++        free(temp);
++
+         pb_mix(nl);
+     }
+     return (real_t)0;

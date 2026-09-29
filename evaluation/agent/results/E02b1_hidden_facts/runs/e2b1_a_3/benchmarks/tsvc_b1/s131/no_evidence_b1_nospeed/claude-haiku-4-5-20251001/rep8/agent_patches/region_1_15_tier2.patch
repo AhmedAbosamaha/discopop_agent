@@ -1,0 +1,19 @@
+--- s131.c
++++ s131.c
+@@ -17,9 +17,15 @@
+ {
+     int m  = 1;
+     for (int nl = 0; nl < R; nl++) {
++        // Buffer the right-side values to expose iteration independence
++        real_t *temp = (real_t *)malloc((LEN_1D - 1) * sizeof(real_t));
+         for (int i = 0; i < LEN_1D - 1; i++) {
+-            a[i] = a[i + m] + b[i];
++            temp[i] = a[i + m];
+         }
++        for (int i = 0; i < LEN_1D - 1; i++) {
++            a[i] = temp[i] + b[i];
++        }
++        free(temp);
+         pb_mix(nl);
+     }
+     return (real_t)0;

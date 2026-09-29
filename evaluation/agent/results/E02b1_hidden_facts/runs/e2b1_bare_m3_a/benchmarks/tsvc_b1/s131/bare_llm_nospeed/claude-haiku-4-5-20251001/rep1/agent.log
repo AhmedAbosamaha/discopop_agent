@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s131.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : main, pb_mix
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] s131.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Looking at this code, I need to analyze the dependences: **Analysis:** The program has an outer loop over `nl` that is sequential (calls `pb_mix(nl)` which modifies global arrays). Inside that is the inner loop that reads `a[i+1]` and writes `a[i]`. The inner loop has an **anti-dependence**: iteration `i` reads `a[i+1]`, while iteration `i+1` writes to `a[i+1]`. In a parallel execution with arbitr
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

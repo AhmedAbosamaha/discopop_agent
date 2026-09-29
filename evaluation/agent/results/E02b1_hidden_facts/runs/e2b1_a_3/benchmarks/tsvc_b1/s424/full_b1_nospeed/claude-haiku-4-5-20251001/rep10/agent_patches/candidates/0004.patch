@@ -1,0 +1,10 @@
+--- s424.c
++++ s424.c
+@@ -21,6 +21,7 @@
+         for (int chunk_start = 0; chunk_start < LEN_1D - 1; chunk_start += 64) {
+             int chunk_end = chunk_start + 64;
+             if (chunk_end > LEN_1D - 1) chunk_end = LEN_1D - 1;
++            #pragma omp parallel for 
+             for (int i = chunk_start; i < chunk_end; i++) {
+                 xx[i+1] = flat_2d_array[i] + a[i];
+             }

@@ -1,0 +1,22 @@
+--- original.c
++++ final.c
+@@ -17,9 +17,18 @@
+ {
+     int m  = 1;
+     for (int nl = 0; nl < R; nl++) {
++        /* Copy the input array to eliminate the anti-dependence between iterations:
++         * iteration i reads a[i+1], and iteration i+1 writes a[i+1].
++         * By reading from a snapshot, all iterations read original values. */
++        real_t *a_tmp = malloc(LEN_1D * sizeof(real_t));
++        memcpy(a_tmp, a, LEN_1D * sizeof(real_t));
++
++        #pragma omp parallel for shared(a, b, a_tmp, m)
+         for (int i = 0; i < LEN_1D - 1; i++) {
+-            a[i] = a[i + m] + b[i];
++            a[i] = a_tmp[i + m] + b[i];
+         }
++
++        free(a_tmp);
+         pb_mix(nl);
+     }
+     return (real_t)0;

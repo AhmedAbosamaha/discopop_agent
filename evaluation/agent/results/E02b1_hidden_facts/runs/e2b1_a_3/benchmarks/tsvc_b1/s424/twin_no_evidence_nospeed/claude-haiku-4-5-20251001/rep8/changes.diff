@@ -1,0 +1,17 @@
+--- original.c
++++ final.c
+@@ -16,10 +16,11 @@
+ static real_t kernel_s424(void)
+ {
+     int vl = 63;
+-    xx = flat_2d_array + vl;
+     for (int nl = 0; nl < R; nl++) {
+-        for (int i = 0; i < LEN_1D - 1; i++) {
+-            xx[i+1] = flat_2d_array[i] + a[i];
++        for (int base = 0; base < LEN_1D - 1; base += 64) {
++            for (int i = base; i < base + 64 && i < LEN_1D - 1; i++) {
++                flat_2d_array[vl + i + 1] = flat_2d_array[i] + a[i];
++            }
+         }
+         pb_mix(nl);
+     }

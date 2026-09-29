@@ -1,0 +1,21 @@
+--- original.c
++++ final.c
+@@ -17,9 +17,17 @@
+ {
+     int m  = 1;
+     for (int nl = 0; nl < R; nl++) {
++        real_t *a_save = malloc((LEN_1D) * sizeof(real_t));
++        for (int i = 0; i < LEN_1D; i++) {
++            a_save[i] = a[i];
++        }
++
++        #pragma omp parallel for shared(a, b, a_save, m)
+         for (int i = 0; i < LEN_1D - 1; i++) {
+-            a[i] = a[i + m] + b[i];
++            a[i] = a_save[i + m] + b[i];
+         }
++
++        free(a_save);
+         pb_mix(nl);
+     }
+     return (real_t)0;

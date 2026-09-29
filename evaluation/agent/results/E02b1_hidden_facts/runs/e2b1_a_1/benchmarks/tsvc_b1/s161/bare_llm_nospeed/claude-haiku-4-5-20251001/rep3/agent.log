@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s161.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : main, pb_mix
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] s161.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: I'll read the file and analyze what needs to be parallelized.## Analysis & Plan The **blocking dependence** is the loop-carried flow from iteration `i-1` to iteration `i` through the array `c`: - When `b[i-1] < 0`: iteration i-1 writes `c[i]` (as `c[i-1+1]`) - When `b[i] >= 0`: iteration i reads `c[i]` in the computation `a[i] = c[i] + d[i] * e[i]` This is a **value moving between iterations**, no
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

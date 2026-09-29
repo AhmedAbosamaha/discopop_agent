@@ -1,0 +1,26 @@
+--- bfs.cpp
++++ bfs.cpp
+@@ -17,6 +17,7 @@
+             stop=false;
+ 
+             // Initialize temporary buffers
++            #pragma omp parallel for shared(temp_mask,temp_cost) 
+             for(int i = 0; i < no_of_nodes; i++)
+             {
+                 temp_cost[i] = h_cost[i];
+@@ -41,6 +42,7 @@
+             }
+ 
+             // Apply updates from temporary buffers
++            #pragma omp parallel for shared(temp_mask,temp_cost) 
+             for(int id = 0; id < no_of_nodes; id++)
+             {
+                 if (temp_mask[id])
+@@ -51,6 +53,7 @@
+             }
+ 
+             // Second loop: update visited status and accumulate stop condition
++            #pragma omp parallel for shared(stop_updates) 
+             for(int tid=0; tid< no_of_nodes ; tid++ )
+             {
+                 bool had_update = h_updating_graph_mask[tid];

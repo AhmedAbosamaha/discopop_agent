@@ -1,0 +1,10 @@
+--- bfs.cpp
++++ bfs.cpp
+@@ -19,6 +19,7 @@
+                 new_updating_mask[tid] = false;
+             }
+ 
++            #pragma omp parallel for shared(new_cost,new_updating_mask) 
+             for(int tid = 0; tid < no_of_nodes; tid++ )
+             {
+                 if (h_graph_mask[tid] == true){

@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s424.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : main, pb_mix
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] s424.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Good! I can now see the code. Let me analyze the dependences: **Analysis:** 1. **Outer loop (nl=0..R-1)**: Sequential. The `pb_mix(nl)` call between iterations modifies arrays (a, b, c, d, e) which are read in the next iteration, creating a true dependence between repetitions. 2. **Inner loop (i=0..LEN_1D-2)**: - Each iteration i computes: `xx[i+1] = flat_2d_array[i] + a[i]` - Iteration i writes t
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

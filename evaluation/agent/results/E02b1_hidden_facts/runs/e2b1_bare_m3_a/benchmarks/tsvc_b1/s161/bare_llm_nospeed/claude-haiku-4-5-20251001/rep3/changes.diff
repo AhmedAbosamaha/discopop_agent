@@ -1,0 +1,44 @@
+--- original.c
++++ final.c
+@@ -16,17 +16,33 @@
+ static real_t kernel_s161(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
+-        for (int i = 0; i < LEN_1D-1; ++i) {
++        /* Phase 1: even iterations (i=0,2,4,...) are independent:
++         * each reads from c[i] and writes to c[i+1] where i is even,
++         * so no overlap within the phase.
++         */
++        #pragma omp parallel for shared(a, b, c, d, e)
++        for (int i = 0; i < LEN_1D-1; i += 2) {
+             if (b[i] < (real_t)0.) {
+-                goto L20;
++                c[i+1] = a[i] + d[i] * d[i];
++            } else {
++                a[i] = c[i] + d[i] * e[i];
+             }
+-            a[i] = c[i] + d[i] * e[i];
+-            goto L10;
+-L20:
+-            c[i+1] = a[i] + d[i] * d[i];
+-L10:
+-            ;
+         }
++
++        /* Phase 2: odd iterations (i=1,3,5,...) are independent:
++         * each reads from c[i] and writes to c[i+1] where i is odd,
++         * so no overlap within the phase. Implicit barrier after phase 1
++         * ensures odd iterations see values computed by preceding even iterations.
++         */
++        #pragma omp parallel for shared(a, b, c, d, e)
++        for (int i = 1; i < LEN_1D-1; i += 2) {
++            if (b[i] < (real_t)0.) {
++                c[i+1] = a[i] + d[i] * d[i];
++            } else {
++                a[i] = c[i] + d[i] * e[i];
++            }
++        }
++
+         pb_mix(nl);
+     }
+     return (real_t)0;

@@ -1,0 +1,128 @@
+# Agent experiment run `e2b1_a_3`
+
+- status: finished (created 2026-09-28T01:29:58, finished 2026-09-28T21:58:42)
+- host: `rms14562`, compilers `/usr/bin/clang-20` / `/usr/bin/clang++-20`
+- agent: `7f76a31050f720f76507ebd200d0969c4db8ad5b` (uncommitted diff sha256 `None`)
+- harness: `7f76a31050f720f76507ebd200d0969c4db8ad5b` on `agentic_DiscoPop`
+- verify size `per_kernel`, threads [6, 12], repeats 5
+
+Outcomes are judged by the harness, not by the agent: `BROKEN` means the final program's values differ from the original's (relative error > 1e-09) or move between repeats at a fixed thread count; `SCAFFOLD_MODIFIED` means the rewrite edited the packaging's own code (the timer, the perturbed-input machinery or the digest), so the trial measures nothing and is never counted as a result; `FASTER` means correct and ≥ 1.1× at some thread count.
+
+## Main comparison: DiscoPoP alone vs DiscoPoP + agent
+
+**MISSING — this run has no `discopop_gate` trials.** Run that arm on the same benchmarks (no model, no cost) and rebuild with `plots --runs <this>,<that>`; speedups over the sequential original alone do not show what the agent adds.
+
+## Summary
+
+| Arm | Model | Trials | FASTER | parallel-not-faster | parallel-speed-not-measurable | changed-not-parallel | no-change | BROKEN | SCAFFOLD_MODIFIED | VERIFY_FAILED | AGENT_ERROR | AGENT_TIMEOUT | PROFILE_ERROR | Median agent s | LLM calls |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| bare_llm_nospeed | claude-haiku-4-5-20251001 | 20 | 3 | 4 | 0 | 0 | 0 | 3 | 0 | 0 | 10 | 0 | 0 | 20 | 20 |
+| full_b1_nospeed | claude-haiku-4-5-20251001 | 20 | 5 | 9 | 0 | 0 | 4 | 2 | 0 | 0 | 0 | 0 | 0 | 186 | 35 |
+| no_evidence_b1_nospeed | claude-haiku-4-5-20251001 | 20 | 5 | 5 | 0 | 0 | 10 | 0 | 0 | 0 | 0 | 0 | 0 | 159 | 41 |
+| twin_full_nospeed | claude-haiku-4-5-20251001 | 20 | 7 | 5 | 0 | 3 | 0 | 5 | 0 | 0 | 0 | 0 | 0 | 134 | 20 |
+| twin_no_evidence_nospeed | claude-haiku-4-5-20251001 | 20 | 5 | 6 | 0 | 6 | 0 | 3 | 0 | 0 | 0 | 0 | 0 | 93 | 21 |
+
+## Trials
+
+| Benchmark | Arm | Model | Rep | Outcome | Best speedup | Pragmas (DP+LLM) | Rewrites | Baseline | LLM calls | Agent s |
+|---|---|---|---:|---|---:|---|---:|---:|---:|---:|
+| tsvc_b1/s131 | bare_llm_nospeed | claude-haiku-4-5-20251001 | 1 | FASTER | 1.30x | —+— | — | — | 1 | 46.7 |
+| tsvc_b1/s131 | bare_llm_nospeed | claude-haiku-4-5-20251001 | 10 | BROKEN | 2.77x | —+— | — | — | 1 | 48.8 |
+| tsvc_b1/s131 | bare_llm_nospeed | claude-haiku-4-5-20251001 | 2 | parallel-not-faster | 0.16x | —+— | — | — | 1 | 109.9 |
+| tsvc_b1/s131 | bare_llm_nospeed | claude-haiku-4-5-20251001 | 3 | BROKEN | 3.49x | —+— | — | — | 1 | 54.3 |
+| tsvc_b1/s131 | bare_llm_nospeed | claude-haiku-4-5-20251001 | 4 | FASTER | 1.39x | —+— | — | — | 1 | 77.2 |
+| tsvc_b1/s131 | bare_llm_nospeed | claude-haiku-4-5-20251001 | 5 | BROKEN | 3.53x | —+— | — | — | 1 | 28.1 |
+| tsvc_b1/s131 | bare_llm_nospeed | claude-haiku-4-5-20251001 | 6 | parallel-not-faster | 0.41x | —+— | — | — | 1 | 119.0 |
+| tsvc_b1/s131 | bare_llm_nospeed | claude-haiku-4-5-20251001 | 7 | parallel-not-faster | 0.17x | —+— | — | — | 1 | 82.1 |
+| tsvc_b1/s131 | bare_llm_nospeed | claude-haiku-4-5-20251001 | 8 | parallel-not-faster | 0.71x | —+— | — | — | 1 | 172.3 |
+| tsvc_b1/s131 | bare_llm_nospeed | claude-haiku-4-5-20251001 | 9 | FASTER | 1.23x | —+— | — | — | 1 | 119.0 |
+| tsvc_b1/s131 | full_b1_nospeed | claude-haiku-4-5-20251001 | 1 | parallel-not-faster | 0.14x | 1+0 | 1 | 0 | 1 | 102.1 |
+| tsvc_b1/s131 | full_b1_nospeed | claude-haiku-4-5-20251001 | 10 | parallel-not-faster | 0.77x | 1+0 | 1 | 0 | 1 | 125.0 |
+| tsvc_b1/s131 | full_b1_nospeed | claude-haiku-4-5-20251001 | 2 | parallel-not-faster | 0.12x | 1+0 | 1 | 0 | 1 | 109.1 |
+| tsvc_b1/s131 | full_b1_nospeed | claude-haiku-4-5-20251001 | 3 | FASTER | 1.10x | 2+0 | 1 | 0 | 1 | 131.3 |
+| tsvc_b1/s131 | full_b1_nospeed | claude-haiku-4-5-20251001 | 4 | FASTER | 1.12x | 2+0 | 1 | 0 | 1 | 114.3 |
+| tsvc_b1/s131 | full_b1_nospeed | claude-haiku-4-5-20251001 | 5 | parallel-not-faster | 0.77x | 1+0 | 1 | 0 | 1 | 100.4 |
+| tsvc_b1/s131 | full_b1_nospeed | claude-haiku-4-5-20251001 | 6 | FASTER | 1.45x | 2+0 | 1 | 0 | 1 | 73.1 |
+| tsvc_b1/s131 | full_b1_nospeed | claude-haiku-4-5-20251001 | 7 | FASTER | 1.50x | 2+0 | 1 | 0 | 1 | 82.5 |
+| tsvc_b1/s131 | full_b1_nospeed | claude-haiku-4-5-20251001 | 8 | parallel-not-faster | 0.15x | 1+0 | 1 | 0 | 1 | 195.2 |
+| tsvc_b1/s131 | full_b1_nospeed | claude-haiku-4-5-20251001 | 9 | FASTER | 1.47x | 2+0 | 1 | 0 | 1 | 111.3 |
+| tsvc_b1/s131 | no_evidence_b1_nospeed | claude-haiku-4-5-20251001 | 1 | FASTER | 1.43x | 2+0 | 1 | 0 | 1 | 132.4 |
+| tsvc_b1/s131 | no_evidence_b1_nospeed | claude-haiku-4-5-20251001 | 10 | FASTER | 1.43x | 2+0 | 1 | 0 | 1 | 131.3 |
+| tsvc_b1/s131 | no_evidence_b1_nospeed | claude-haiku-4-5-20251001 | 2 | parallel-not-faster | 0.37x | 2+0 | 1 | 0 | 1 | 78.4 |
+| tsvc_b1/s131 | no_evidence_b1_nospeed | claude-haiku-4-5-20251001 | 3 | FASTER | 1.53x | 2+0 | 1 | 0 | 2 | 136.7 |
+| tsvc_b1/s131 | no_evidence_b1_nospeed | claude-haiku-4-5-20251001 | 4 | FASTER | 1.36x | 2+0 | 1 | 0 | 1 | 84.9 |
+| tsvc_b1/s131 | no_evidence_b1_nospeed | claude-haiku-4-5-20251001 | 5 | parallel-not-faster | 0.79x | 1+0 | 1 | 0 | 1 | 126.7 |
+| tsvc_b1/s131 | no_evidence_b1_nospeed | claude-haiku-4-5-20251001 | 6 | FASTER | 1.37x | 2+0 | 1 | 0 | 1 | 46.3 |
+| tsvc_b1/s131 | no_evidence_b1_nospeed | claude-haiku-4-5-20251001 | 7 | parallel-not-faster | 0.36x | 2+0 | 1 | 0 | 1 | 68.7 |
+| tsvc_b1/s131 | no_evidence_b1_nospeed | claude-haiku-4-5-20251001 | 8 | parallel-not-faster | 0.37x | 2+0 | 1 | 0 | 1 | 107.3 |
+| tsvc_b1/s131 | no_evidence_b1_nospeed | claude-haiku-4-5-20251001 | 9 | parallel-not-faster | 0.38x | 2+0 | 1 | 0 | 1 | 74.3 |
+| tsvc_b1/s131 | twin_full_nospeed | claude-haiku-4-5-20251001 | 1 | FASTER | 1.43x | —+— | — | — | 1 | 63.1 |
+| tsvc_b1/s131 | twin_full_nospeed | claude-haiku-4-5-20251001 | 10 | FASTER | 1.39x | —+— | — | — | 1 | 104.2 |
+| tsvc_b1/s131 | twin_full_nospeed | claude-haiku-4-5-20251001 | 2 | FASTER | 1.41x | —+— | — | — | 1 | 154.0 |
+| tsvc_b1/s131 | twin_full_nospeed | claude-haiku-4-5-20251001 | 3 | parallel-not-faster | 0.35x | —+— | — | — | 1 | 146.1 |
+| tsvc_b1/s131 | twin_full_nospeed | claude-haiku-4-5-20251001 | 4 | FASTER | 1.14x | —+— | — | — | 1 | 127.5 |
+| tsvc_b1/s131 | twin_full_nospeed | claude-haiku-4-5-20251001 | 5 | parallel-not-faster | 1.08x | —+— | — | — | 1 | 97.8 |
+| tsvc_b1/s131 | twin_full_nospeed | claude-haiku-4-5-20251001 | 6 | FASTER | 1.34x | —+— | — | — | 1 | 122.9 |
+| tsvc_b1/s131 | twin_full_nospeed | claude-haiku-4-5-20251001 | 7 | parallel-not-faster | 0.13x | —+— | — | — | 1 | 122.2 |
+| tsvc_b1/s131 | twin_full_nospeed | claude-haiku-4-5-20251001 | 8 | FASTER | 1.56x | —+— | — | — | 1 | 159.6 |
+| tsvc_b1/s131 | twin_full_nospeed | claude-haiku-4-5-20251001 | 9 | FASTER | 1.53x | —+— | — | — | 1 | 147.0 |
+| tsvc_b1/s131 | twin_no_evidence_nospeed | claude-haiku-4-5-20251001 | 1 | FASTER | 1.19x | —+— | — | — | 1 | 66.9 |
+| tsvc_b1/s131 | twin_no_evidence_nospeed | claude-haiku-4-5-20251001 | 10 | FASTER | 1.31x | —+— | — | — | 1 | 116.6 |
+| tsvc_b1/s131 | twin_no_evidence_nospeed | claude-haiku-4-5-20251001 | 2 | parallel-not-faster | 0.36x | —+— | — | — | 1 | 77.9 |
+| tsvc_b1/s131 | twin_no_evidence_nospeed | claude-haiku-4-5-20251001 | 3 | parallel-not-faster | 0.41x | —+— | — | — | 1 | 94.5 |
+| tsvc_b1/s131 | twin_no_evidence_nospeed | claude-haiku-4-5-20251001 | 4 | parallel-not-faster | 0.37x | —+— | — | — | 1 | 91.3 |
+| tsvc_b1/s131 | twin_no_evidence_nospeed | claude-haiku-4-5-20251001 | 5 | FASTER | 1.38x | —+— | — | — | 1 | 104.5 |
+| tsvc_b1/s131 | twin_no_evidence_nospeed | claude-haiku-4-5-20251001 | 6 | parallel-not-faster | 0.15x | —+— | — | — | 1 | 59.7 |
+| tsvc_b1/s131 | twin_no_evidence_nospeed | claude-haiku-4-5-20251001 | 7 | FASTER | 1.24x | —+— | — | — | 1 | 97.0 |
+| tsvc_b1/s131 | twin_no_evidence_nospeed | claude-haiku-4-5-20251001 | 8 | parallel-not-faster | 0.39x | —+— | — | — | 1 | 75.3 |
+| tsvc_b1/s131 | twin_no_evidence_nospeed | claude-haiku-4-5-20251001 | 9 | FASTER | 1.35x | —+— | — | — | 1 | 54.7 |
+| tsvc_b1/s424 | bare_llm_nospeed | claude-haiku-4-5-20251001 | 1 | AGENT_ERROR | — | —+— | — | — | 1 | 11.3 |
+| tsvc_b1/s424 | bare_llm_nospeed | claude-haiku-4-5-20251001 | 10 | AGENT_ERROR | — | —+— | — | — | 1 | 11.7 |
+| tsvc_b1/s424 | bare_llm_nospeed | claude-haiku-4-5-20251001 | 2 | AGENT_ERROR | — | —+— | — | — | 1 | 11.0 |
+| tsvc_b1/s424 | bare_llm_nospeed | claude-haiku-4-5-20251001 | 3 | AGENT_ERROR | — | —+— | — | — | 1 | 11.4 |
+| tsvc_b1/s424 | bare_llm_nospeed | claude-haiku-4-5-20251001 | 4 | AGENT_ERROR | — | —+— | — | — | 1 | 10.7 |
+| tsvc_b1/s424 | bare_llm_nospeed | claude-haiku-4-5-20251001 | 5 | AGENT_ERROR | — | —+— | — | — | 1 | 11.2 |
+| tsvc_b1/s424 | bare_llm_nospeed | claude-haiku-4-5-20251001 | 6 | AGENT_ERROR | — | —+— | — | — | 1 | 11.4 |
+| tsvc_b1/s424 | bare_llm_nospeed | claude-haiku-4-5-20251001 | 7 | AGENT_ERROR | — | —+— | — | — | 1 | 11.2 |
+| tsvc_b1/s424 | bare_llm_nospeed | claude-haiku-4-5-20251001 | 8 | AGENT_ERROR | — | —+— | — | — | 1 | 11.2 |
+| tsvc_b1/s424 | bare_llm_nospeed | claude-haiku-4-5-20251001 | 9 | AGENT_ERROR | — | —+— | — | — | 1 | 10.8 |
+| tsvc_b1/s424 | full_b1_nospeed | claude-haiku-4-5-20251001 | 1 | no-change | 1.01x | 0+0 | 0 | 0 | 3 | 526.1 |
+| tsvc_b1/s424 | full_b1_nospeed | claude-haiku-4-5-20251001 | 10 | parallel-not-faster | 0.01x | 1+0 | 1 | 0 | 3 | 444.1 |
+| tsvc_b1/s424 | full_b1_nospeed | claude-haiku-4-5-20251001 | 2 | parallel-not-faster | 0.01x | 1+0 | 1 | 0 | 2 | 526.1 |
+| tsvc_b1/s424 | full_b1_nospeed | claude-haiku-4-5-20251001 | 3 | BROKEN | 0.01x | 1+0 | 1 | 0 | 3 | 412.6 |
+| tsvc_b1/s424 | full_b1_nospeed | claude-haiku-4-5-20251001 | 4 | parallel-not-faster | 0.24x | 1+0 | 1 | 0 | 2 | 451.7 |
+| tsvc_b1/s424 | full_b1_nospeed | claude-haiku-4-5-20251001 | 5 | BROKEN | 0.01x | 1+0 | 1 | 0 | 2 | 287.5 |
+| tsvc_b1/s424 | full_b1_nospeed | claude-haiku-4-5-20251001 | 6 | parallel-not-faster | 0.01x | 1+0 | 1 | 0 | 1 | 176.7 |
+| tsvc_b1/s424 | full_b1_nospeed | claude-haiku-4-5-20251001 | 7 | no-change | 1.12x | 0+0 | 0 | 0 | 3 | 377.8 |
+| tsvc_b1/s424 | full_b1_nospeed | claude-haiku-4-5-20251001 | 8 | no-change | 1.00x | 0+0 | 0 | 0 | 3 | 304.9 |
+| tsvc_b1/s424 | full_b1_nospeed | claude-haiku-4-5-20251001 | 9 | no-change | 0.94x | 0+0 | 0 | 0 | 3 | 444.7 |
+| tsvc_b1/s424 | no_evidence_b1_nospeed | claude-haiku-4-5-20251001 | 1 | no-change | 1.00x | 0+0 | 0 | 0 | 3 | 325.7 |
+| tsvc_b1/s424 | no_evidence_b1_nospeed | claude-haiku-4-5-20251001 | 10 | no-change | 1.00x | 0+0 | 0 | 0 | 3 | 300.1 |
+| tsvc_b1/s424 | no_evidence_b1_nospeed | claude-haiku-4-5-20251001 | 2 | no-change | 1.00x | 0+0 | 0 | 0 | 3 | 314.3 |
+| tsvc_b1/s424 | no_evidence_b1_nospeed | claude-haiku-4-5-20251001 | 3 | no-change | 1.01x | 0+0 | 0 | 0 | 3 | 286.6 |
+| tsvc_b1/s424 | no_evidence_b1_nospeed | claude-haiku-4-5-20251001 | 4 | no-change | 1.00x | 0+0 | 0 | 0 | 3 | 418.3 |
+| tsvc_b1/s424 | no_evidence_b1_nospeed | claude-haiku-4-5-20251001 | 5 | no-change | 1.00x | 0+0 | 0 | 0 | 3 | 316.0 |
+| tsvc_b1/s424 | no_evidence_b1_nospeed | claude-haiku-4-5-20251001 | 6 | no-change | 1.00x | 0+0 | 0 | 0 | 3 | 181.0 |
+| tsvc_b1/s424 | no_evidence_b1_nospeed | claude-haiku-4-5-20251001 | 7 | no-change | 1.01x | 0+0 | 0 | 0 | 3 | 400.3 |
+| tsvc_b1/s424 | no_evidence_b1_nospeed | claude-haiku-4-5-20251001 | 8 | no-change | 1.00x | 0+0 | 0 | 0 | 3 | 320.4 |
+| tsvc_b1/s424 | no_evidence_b1_nospeed | claude-haiku-4-5-20251001 | 9 | no-change | 0.99x | 0+0 | 0 | 0 | 3 | 268.0 |
+| tsvc_b1/s424 | twin_full_nospeed | claude-haiku-4-5-20251001 | 1 | BROKEN | 1.50x | —+— | — | — | 1 | 136.1 |
+| tsvc_b1/s424 | twin_full_nospeed | claude-haiku-4-5-20251001 | 10 | BROKEN | 0.66x | —+— | — | — | 1 | 105.7 |
+| tsvc_b1/s424 | twin_full_nospeed | claude-haiku-4-5-20251001 | 2 | parallel-not-faster | 0.31x | —+— | — | — | 1 | 189.7 |
+| tsvc_b1/s424 | twin_full_nospeed | claude-haiku-4-5-20251001 | 3 | BROKEN | 1.51x | —+— | — | — | 1 | 131.4 |
+| tsvc_b1/s424 | twin_full_nospeed | claude-haiku-4-5-20251001 | 4 | BROKEN | 1.43x | —+— | — | — | 1 | 148.9 |
+| tsvc_b1/s424 | twin_full_nospeed | claude-haiku-4-5-20251001 | 5 | BROKEN | 0.33x | —+— | — | — | 1 | 108.1 |
+| tsvc_b1/s424 | twin_full_nospeed | claude-haiku-4-5-20251001 | 6 | changed-not-parallel | 1.00x | —+— | — | — | 1 | 233.9 |
+| tsvc_b1/s424 | twin_full_nospeed | claude-haiku-4-5-20251001 | 7 | changed-not-parallel | 1.00x | —+— | — | — | 1 | 282.2 |
+| tsvc_b1/s424 | twin_full_nospeed | claude-haiku-4-5-20251001 | 8 | parallel-not-faster | 0.01x | —+— | — | — | 1 | 155.8 |
+| tsvc_b1/s424 | twin_full_nospeed | claude-haiku-4-5-20251001 | 9 | changed-not-parallel | 0.97x | —+— | — | — | 1 | 113.4 |
+| tsvc_b1/s424 | twin_no_evidence_nospeed | claude-haiku-4-5-20251001 | 1 | changed-not-parallel | 1.01x | —+— | — | — | 1 | 113.8 |
+| tsvc_b1/s424 | twin_no_evidence_nospeed | claude-haiku-4-5-20251001 | 10 | changed-not-parallel | 1.00x | —+— | — | — | 1 | 80.7 |
+| tsvc_b1/s424 | twin_no_evidence_nospeed | claude-haiku-4-5-20251001 | 2 | BROKEN | 1.43x | —+— | — | — | 1 | 114.8 |
+| tsvc_b1/s424 | twin_no_evidence_nospeed | claude-haiku-4-5-20251001 | 3 | BROKEN | 1.44x | —+— | — | — | 1 | 109.8 |
+| tsvc_b1/s424 | twin_no_evidence_nospeed | claude-haiku-4-5-20251001 | 4 | changed-not-parallel | 1.03x | —+— | — | — | 2 | 215.0 |
+| tsvc_b1/s424 | twin_no_evidence_nospeed | claude-haiku-4-5-20251001 | 5 | changed-not-parallel | 1.00x | —+— | — | — | 1 | 86.4 |
+| tsvc_b1/s424 | twin_no_evidence_nospeed | claude-haiku-4-5-20251001 | 6 | changed-not-parallel | 1.00x | —+— | — | — | 1 | 60.2 |
+| tsvc_b1/s424 | twin_no_evidence_nospeed | claude-haiku-4-5-20251001 | 7 | parallel-not-faster | 0.01x | —+— | — | — | 1 | 127.1 |
+| tsvc_b1/s424 | twin_no_evidence_nospeed | claude-haiku-4-5-20251001 | 8 | changed-not-parallel | 1.07x | —+— | — | — | 1 | 382.4 |
+| tsvc_b1/s424 | twin_no_evidence_nospeed | claude-haiku-4-5-20251001 | 9 | BROKEN | 1.44x | —+— | — | — | 1 | 91.5 |

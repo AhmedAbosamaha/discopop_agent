@@ -1,0 +1,10 @@
+--- s151.c
++++ s151.c
+@@ -26,6 +26,7 @@
+ 
+     for (int nl = 0; nl < R; nl++) {
+         memcpy(a_tmp, a, LEN_1D * sizeof(real_t));
++        #pragma omp parallel for shared(a_tmp) 
+         for (int i = 0; i < LEN_1D - 1; i++) {
+             a[i] = a_tmp[i + 1] + b[i];
+         }

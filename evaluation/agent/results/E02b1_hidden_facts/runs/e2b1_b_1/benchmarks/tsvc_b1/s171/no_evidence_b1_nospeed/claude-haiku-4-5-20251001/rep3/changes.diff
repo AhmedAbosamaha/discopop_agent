@@ -1,0 +1,25 @@
+--- original.c
++++ final.c
+@@ -16,9 +16,21 @@
+ static real_t kernel_s171(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        // Temporary buffer to expose parallelism of the inner loop
++        real_t *temp = malloc(LEN_1D * sizeof(real_t));
++
++        // Read phase: load b into temp (independent across i)
++        #pragma omp parallel for 
+         for (int i = 0; i < LEN_1D; i++) {
+-            a[i * inc] += b[i];
++            temp[i] = b[i];
+         }
++
++        // Write phase: accumulate temp into a (independent across i)
++        for (int i = 0; i < LEN_1D; i++) {
++            a[i * inc] += temp[i];
++        }
++
++        free(temp);
+         pb_mix(nl);
+     }
+     return (real_t)0;

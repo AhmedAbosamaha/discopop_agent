@@ -1,0 +1,10 @@
+--- bfs.cpp
++++ bfs.cpp
+@@ -48,6 +48,7 @@
+             bool *local_stop = (bool*)malloc(no_of_nodes * sizeof(bool));
+             memset(local_stop, false, no_of_nodes * sizeof(bool));
+ 
++            #pragma omp parallel for lastprivate(temp_updating_graph_mask) shared(local_stop) 
+             for(int tid=0; tid< no_of_nodes ; tid++ )
+             {
+                 if (h_updating_graph_mask[tid] == true){

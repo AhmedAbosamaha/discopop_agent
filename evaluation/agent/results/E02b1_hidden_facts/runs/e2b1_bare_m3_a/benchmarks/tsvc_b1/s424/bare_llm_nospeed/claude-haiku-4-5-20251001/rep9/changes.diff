@@ -1,0 +1,11 @@
+--- original.c
++++ final.c
+@@ -18,6 +18,8 @@
+     int vl = 63;
+     xx = flat_2d_array + vl;
+     for (int nl = 0; nl < R; nl++) {
++        #pragma omp parallel for \
++            shared(xx, flat_2d_array, a)
+         for (int i = 0; i < LEN_1D - 1; i++) {
+             xx[i+1] = flat_2d_array[i] + a[i];
+         }

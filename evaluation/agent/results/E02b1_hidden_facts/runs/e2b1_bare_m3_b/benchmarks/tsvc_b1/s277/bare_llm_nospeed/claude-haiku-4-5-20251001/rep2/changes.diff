@@ -1,0 +1,28 @@
+--- original.c
++++ final.c
+@@ -16,18 +16,14 @@
+ static real_t kernel_s277(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
+-        for (int i = 0; i < LEN_1D-1; i++) {
+-                if (a[i] >= (real_t)0.) {
+-                    goto L20;
++        #pragma omp parallel for shared(a, b, c, d, e)
++        for (int i = LEN_1D-2; i >= 0; i--) {
++                if (a[i] < (real_t)0.) {
++                    if (b[i] < (real_t)0.) {
++                        a[i] += c[i] * d[i];
++                    }
++                    b[i+1] = c[i] + d[i] * e[i];
+                 }
+-                if (b[i] >= (real_t)0.) {
+-                    goto L30;
+-                }
+-                a[i] += c[i] * d[i];
+-L30:
+-                b[i+1] = c[i] + d[i] * e[i];
+-L20:
+-;
+         }
+         pb_mix(nl);
+     }

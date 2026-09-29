@@ -1,0 +1,41 @@
+--- original.c
++++ final.c
+@@ -16,19 +16,30 @@
+ static real_t kernel_s277(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        // Create snapshot of original b to break loop-carried dependence
++        real_t *b_snapshot = (real_t *)malloc(LEN_1D * sizeof(real_t));
++        #pragma omp parallel for 
++        for (int j = 0; j < LEN_1D; j++) {
++            b_snapshot[j] = b[j];
++        }
++
++        #pragma omp parallel for 
+         for (int i = 0; i < LEN_1D-1; i++) {
+                 if (a[i] >= (real_t)0.) {
+-                    goto L20;
++                    // skip both a and b updates
+                 }
+-                if (b[i] >= (real_t)0.) {
+-                    goto L30;
++                else if (b_snapshot[i] >= (real_t)0.) {
++                    // skip a update, do b update
++                    b[i+1] = c[i] + d[i] * e[i];
+                 }
+-                a[i] += c[i] * d[i];
+-L30:
+-                b[i+1] = c[i] + d[i] * e[i];
+-L20:
+-;
++                else {
++                    // do both updates
++                    a[i] += c[i] * d[i];
++                    b[i+1] = c[i] + d[i] * e[i];
++                }
+         }
++
++        free(b_snapshot);
+         pb_mix(nl);
+     }
+     return (real_t)0;

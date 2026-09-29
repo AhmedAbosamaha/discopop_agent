@@ -1,0 +1,44 @@
+--- original.c
++++ final.c
+@@ -16,19 +16,33 @@
+ static real_t kernel_s277(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        /* Loop 1: Handle conditional logic and update to a[i].
++           Each iteration i independently reads a[i], b[i], c[i], d[i]
++           and possibly writes to a[i]. No loop-carried dependence. */
++        #pragma omp parallel for shared(a, b, c, d, e)
+         for (int i = 0; i < LEN_1D-1; i++) {
+                 if (a[i] >= (real_t)0.) {
+-                    goto L20;
++                    /* Skip both a and b updates */
+                 }
+-                if (b[i] >= (real_t)0.) {
+-                    goto L30;
++                else if (b[i] >= (real_t)0.) {
++                    /* Skip a update, but b will be written in Loop 2 */
+                 }
+-                a[i] += c[i] * d[i];
+-L30:
+-                b[i+1] = c[i] + d[i] * e[i];
+-L20:
+-;
++                else {
++                    a[i] += c[i] * d[i];
++                }
+         }
++
++        /* Implicit barrier after Loop 1 ensures all a[i] updates are visible.
++           Loop 2: Write to b[i+1] for all i where a[i] < 0.
++           Each iteration i independently computes and writes b[i+1].
++           No loop-carried dependence since we only write, never read b[i+1]. */
++        #pragma omp parallel for shared(a, b, c, d, e)
++        for (int i = 0; i < LEN_1D-1; i++) {
++                if (a[i] < (real_t)0.) {
++                    b[i+1] = c[i] + d[i] * e[i];
++                }
++        }
++
+         pb_mix(nl);
+     }
+     return (real_t)0;

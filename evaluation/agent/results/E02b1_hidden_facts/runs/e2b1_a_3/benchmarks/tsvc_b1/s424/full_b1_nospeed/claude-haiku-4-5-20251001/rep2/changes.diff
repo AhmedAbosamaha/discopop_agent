@@ -1,0 +1,19 @@
+--- original.c
++++ final.c
+@@ -18,8 +18,14 @@
+     int vl = 63;
+     xx = flat_2d_array + vl;
+     for (int nl = 0; nl < R; nl++) {
+-        for (int i = 0; i < LEN_1D - 1; i++) {
+-            xx[i+1] = flat_2d_array[i] + a[i];
++        for (int level = 0; level * 64 < LEN_1D - 1; level++) {
++            #pragma omp parallel for 
++            for (int offset = 0; offset < 64; offset++) {
++                int i = level * 64 + offset;
++                if (i < LEN_1D - 1) {
++                    xx[i+1] = flat_2d_array[i] + a[i];
++                }
++            }
+         }
+         pb_mix(nl);
+     }

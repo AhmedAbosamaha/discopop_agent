@@ -1,0 +1,23 @@
+--- original.c
++++ final.c
+@@ -16,10 +16,19 @@
+ static real_t kernel_s481(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        // Check for early exit before parallelization
++        // d[i] is not modified by the inner loop, so this check has the same effect as before
+         for (int i = 0; i < LEN_1D; i++) {
+             if (d[i] < (real_t)0.) {
+-                exit (0);
++                exit(0);
+             }
++        }
++
++        // Parallelize the main kernel loop
++        // Each iteration i only reads b[i], c[i] and modifies a[i] at index i
++        // No cross-iteration dependencies: safe to run in any order
++        #pragma omp parallel for shared(a, b, c)
++        for (int i = 0; i < LEN_1D; i++) {
+             a[i] += b[i] * c[i];
+         }
+         pb_mix(nl);

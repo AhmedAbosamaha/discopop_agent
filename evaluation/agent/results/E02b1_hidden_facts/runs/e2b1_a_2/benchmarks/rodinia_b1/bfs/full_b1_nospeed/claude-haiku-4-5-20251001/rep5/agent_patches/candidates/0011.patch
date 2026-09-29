@@ -1,0 +1,10 @@
+--- bfs.cpp
++++ bfs.cpp
+@@ -40,6 +40,7 @@
+             free(temp_cost);
+ 
+             int count_updates = 0;
++            #pragma omp parallel for reduction(+:count_updates) 
+             for(int tid=0; tid< no_of_nodes ; tid++ )
+             {
+                 if (h_updating_graph_mask[tid] == true){
