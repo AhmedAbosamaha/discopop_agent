@@ -355,17 +355,17 @@ Status: done
 | `e2v3_k48` | [`E02v3_order_statement/runs/e2v3_k48/`](E02v3_order_statement/runs/e2v3_k48/) | E2-V3 re-run of ORDER-2 Y (control), repackaged: tsvc_b1/k48 × full_b1_nospeed_v3, no_evidence_b1_nospeed_v3, twin_full_nospeed_v3, twin_no_evidence_nospeed_v3, bare_llm_nospeed_v3 × 10 trials, Haiku, threads 6/12, repeats 5 | valid | 50 | BROKEN 9, FASTER 39, VERIFY_FAILED 2 |
 | `e2v3s_k19` | [`E02v3_order_statement/runs/e2v3s_k19/`](E02v3_order_statement/runs/e2v3s_k19/) | E2-V3 with Sonnet (claude-sonnet-5): tsvc_b1/k19 × full_b1_nospeed_v3, no_evidence_b1_nospeed_v3, twin_full_nospeed_v3, twin_no_evidence_nospeed_v3, bare_llm_nospeed_v3 × 10 trials, threads 6/12, repeats 5 | valid | 50 | BROKEN 21, FASTER 17, changed-not-parallel 1, no-change 9, parallel-not-faster 2 |
 
-## [E12 — a small model inside the pipeline against stronger models alone](E12_stronger_models_alone/)
+## [E12 — a small model inside the pipeline against stronger models alone](E12_stronger_models_alone/REPORT.md)
 
 Status: running
 
 | run | where | what it is | status | trials | outcomes |
 |---|---|---|---|---:|---|
-| `e12_opus_v3` | not archived yet | E12: claude-opus-5-5 alone on tsvc_b1/k19, k48 × bare_llm_nospeed_v3 × 5 (E2-V3's packages and prompt version) | registered |  |  |
-| `e12_opus_b1` | not archived yet | E12: claude-opus-5-5 alone on tsvc_b1/s424, s161 × bare_llm_nospeed × 5 (E2-B1's packages and model-alone prompt) | registered |  |  |
-| `e12_fable_v3` | not archived yet | E12: claude-fable-5-1 alone on tsvc_b1/k19, k48 × bare_llm_nospeed_v3 × 5 (E2-V3's packages and prompt version) | registered |  |  |
-| `e12_fable_b1` | not archived yet | E12: claude-fable-5-1 alone on tsvc_b1/s424, s161 × bare_llm_nospeed × 5 (E2-B1's packages and model-alone prompt) | registered |  |  |
-| `e12_haiku_v3` | not archived yet | E12 CLI control: claude-haiku-4-5-20251001 alone on tsvc_b1/k19, k48 × bare_llm_nospeed_v3 × 5 with the upgraded SDK (bundled CLI 2.1.285) | registered |  |  |
-| `e12_haiku_b1` | not archived yet | E12 CLI control: claude-haiku-4-5-20251001 alone on tsvc_b1/s424, s161 × bare_llm_nospeed × 5 with the upgraded SDK | registered |  |  |
-| `e12_agent_v3` | not archived yet | E12: the Haiku agent with evidence (full_b1_nospeed_v3) on tsvc_b1/s424, s161 × 10 — the comparison point for the strong models alone on these loops (the E2-B1 agent ran the v1 wording) | registered |  |  |
+| `e12_opus_v3` | [`E12_stronger_models_alone/runs/e12_opus_v3/`](E12_stronger_models_alone/runs/e12_opus_v3/) | E12: claude-opus-5-5 alone on tsvc_b1/k19, k48 × bare_llm_nospeed_v3 × 5 (E2-V3's packages and prompt version) | valid | 10 | BROKEN 3, parallel-not-faster 7 |
+| `e12_opus_b1` | [`E12_stronger_models_alone/runs/e12_opus_b1/`](E12_stronger_models_alone/runs/e12_opus_b1/) | E12: claude-opus-5-5 alone on tsvc_b1/s424, s161 × bare_llm_nospeed × 5 (E2-B1's packages and model-alone prompt) | valid | 10 | FASTER 5, parallel-not-faster 5 |
+| `e12_fable_v3` | [`E12_stronger_models_alone/runs/e12_fable_v3/`](E12_stronger_models_alone/runs/e12_fable_v3/) | E12: claude-fable-5-1 alone on tsvc_b1/k19, k48 × bare_llm_nospeed_v3 × 5 (E2-V3's packages and prompt version) | valid | 10 | BROKEN 3, SCAFFOLD_MODIFIED 3, parallel-not-faster 4 |
+| `e12_fable_b1` | [`E12_stronger_models_alone/runs/e12_fable_b1/`](E12_stronger_models_alone/runs/e12_fable_b1/) | E12: claude-fable-5-1 alone on tsvc_b1/s424, s161 × bare_llm_nospeed × 5 (E2-B1's packages and model-alone prompt) | valid | 10 | FASTER 5, parallel-not-faster 5 |
+| `e12_haiku_v3` | [`E12_stronger_models_alone/runs/e12_haiku_v3/`](E12_stronger_models_alone/runs/e12_haiku_v3/) | E12 CLI control: claude-haiku-4-5-20251001 alone on tsvc_b1/k19, k48 × bare_llm_nospeed_v3 × 5 with the upgraded SDK (bundled CLI 2.1.285) | valid | 10 | BROKEN 9, FASTER 1 |
+| `e12_haiku_b1` | [`E12_stronger_models_alone/runs/e12_haiku_b1/`](E12_stronger_models_alone/runs/e12_haiku_b1/) | E12 CLI control: claude-haiku-4-5-20251001 alone on tsvc_b1/s424, s161 × bare_llm_nospeed × 5 with the upgraded SDK | valid | 10 | BROKEN 5, FASTER 4, VERIFY_FAILED 1 |
+| `e12_agent_v3` | [`E12_stronger_models_alone/runs/e12_agent_v3/`](E12_stronger_models_alone/runs/e12_agent_v3/) | E12: the Haiku agent with evidence (full_b1_nospeed_v3) on tsvc_b1/s424, s161 × 10 — the comparison point for the strong models alone on these loops (the E2-B1 agent ran the v1 wording) | valid | 20 | FASTER 10, no-change 8, parallel-not-faster 2 |
 

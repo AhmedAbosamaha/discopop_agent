@@ -1,0 +1,32 @@
+--- original.c
++++ final.c
+@@ -16,16 +16,22 @@
+ static real_t kernel_s161(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        /* Pass 1: every c[i+1] update (original "L20" branch).  It reads only a[i] and
++         * d[i], which no other iteration writes, so all iterations are independent.
++         * Doing this pass first gives pass 2 the same c[i] values the sequential
++         * order would have produced. */
++#pragma omp parallel for shared(a, b, c, d)
+         for (int i = 0; i < LEN_1D-1; ++i) {
+             if (b[i] < (real_t)0.) {
+-                goto L20;
++                c[i+1] = a[i] + d[i] * d[i];
+             }
+-            a[i] = c[i] + d[i] * e[i];
+-            goto L10;
+-L20:
+-            c[i+1] = a[i] + d[i] * d[i];
+-L10:
+-            ;
++        }
++        /* Pass 2: every a[i] update (original fall-through branch); c is now final. */
++#pragma omp parallel for shared(a, b, c, d, e)
++        for (int i = 0; i < LEN_1D-1; ++i) {
++            if (!(b[i] < (real_t)0.)) {
++                a[i] = c[i] + d[i] * e[i];
++            }
+         }
+         pb_mix(nl);
+     }

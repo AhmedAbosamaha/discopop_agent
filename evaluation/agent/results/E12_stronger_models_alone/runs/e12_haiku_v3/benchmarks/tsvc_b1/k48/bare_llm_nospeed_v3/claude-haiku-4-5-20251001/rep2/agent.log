@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : k48.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : main, pb_mix
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] k48.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Looking at the code, I need to analyze the dependencies: **Analysis:** The inner loop has a loop-carried dependence: - Line 19: `u[ju[i]] += v[kv[i]] * c[i];` writes to array `u` - Line 20: `v[jv[i]] = u[ku[i]] * d[i] + c[i];` reads from array `u` If iteration `i` writes to `u` and iteration `j > i` reads from `u`, there's a loop-carried dependence that blocks parallelization. **Plan:** To remove 
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

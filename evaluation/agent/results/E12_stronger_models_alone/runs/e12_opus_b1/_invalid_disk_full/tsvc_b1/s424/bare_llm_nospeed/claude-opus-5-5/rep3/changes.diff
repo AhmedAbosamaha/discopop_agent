@@ -1,0 +1,18 @@
+--- original.c
++++ final.c
+@@ -18,8 +18,13 @@
+     int vl = 63;
+     xx = flat_2d_array + vl;
+     for (int nl = 0; nl < R; nl++) {
+-        for (int i = 0; i < LEN_1D - 1; i++) {
+-            xx[i+1] = flat_2d_array[i] + a[i];
++        /* xx[i+1] == flat_2d_array[i+vl+1]: a recurrence of distance vl+1 = 64.
++         * The residue classes mod 64 form independent chains. */
++        #pragma omp parallel for schedule(static) firstprivate(vl)
++        for (int r = 0; r < vl + 1; r++) {
++            for (int i = r; i < LEN_1D - 1; i += vl + 1) {
++                xx[i+1] = flat_2d_array[i] + a[i];
++            }
+         }
+         pb_mix(nl);
+     }

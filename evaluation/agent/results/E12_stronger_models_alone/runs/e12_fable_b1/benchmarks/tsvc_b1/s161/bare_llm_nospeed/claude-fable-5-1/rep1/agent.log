@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s161.c
+  Model          : claude-fable-5-1
+  Not editable   : main, pb_mix
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-fable-5-1...
+│  [bare] s161.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: The rewrite is applied in `s161.c`. **Summary of what changed** - The `goto`-based body is split into two `#pragma omp parallel for` loops per repetition, each over the original range `0 ≤ i < LEN_1D-1`: 1. `c[i+1] = a[i] + d[i]*d[i]` for `b[i] < 0` — `shared(a, b, c, d)`. 2. `a[i] = c[i] + d[i]*e[i]` for `b[i] >= 0` — `shared(a, b, c, d, e)`. - `i` is declared in the loop header so it is automati
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

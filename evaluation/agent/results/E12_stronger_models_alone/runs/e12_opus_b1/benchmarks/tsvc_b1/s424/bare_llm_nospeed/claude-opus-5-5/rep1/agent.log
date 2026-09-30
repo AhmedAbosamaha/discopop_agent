@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s424.c
+  Model          : claude-opus-5-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-opus-5-5...
+│  [bare] s424.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: I've rewritten the inner loop of `kernel_s424` in `s424.c` so it runs in parallel. Nothing has been compiled or run, since there's no compiler here. - **The dependence:** because `xx` points 63 elements into `flat_2d_array`, `xx[i+1] = flat_2d_array[i] + a[i]` actually writes index `i+64` and reads index `i`. Iteration `i` therefore uses the value written by iteration `i-64`, so a real value moves
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

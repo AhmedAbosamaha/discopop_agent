@@ -1,0 +1,90 @@
+--- original.c
++++ final.c
+@@ -1,5 +1,6 @@
+ /* Kernel k48. */
+ #include "tsvc_b1/k48.h"
++#include <stdlib.h>
+ 
+ /* Between two repetitions a few INPUT elements change, so no repetition can be skipped,
+  * merged with another or run out of order: the repetition loop is sequential by a true
+@@ -14,13 +15,77 @@
+ 
+ static real_t kernel_k48(void)
+ {
++    long n = LEN_1D;
++    long maxu = 0, maxv = 0;
++
++    /* extent of the u / v locations touched */
++    #pragma omp parallel for reduction(max:maxu, maxv) schedule(static)
++    for (long i = 1; i < n; i++) {
++        long a1 = (long)ju[i], a2 = (long)ku[i];
++        long b1 = (long)jv[i], b2 = (long)kv[i];
++        if (a1 > maxu) maxu = a1;
++        if (a2 > maxu) maxu = a2;
++        if (b1 > maxv) maxv = b1;
++        if (b2 > maxv) maxv = b2;
++    }
++
++    int *lvl = (int *)malloc((size_t)(n > 0 ? n : 1) * sizeof(int));
++    int *wu = (int *)malloc((size_t)(maxu + 1) * sizeof(int));
++    int *ru = (int *)malloc((size_t)(maxu + 1) * sizeof(int));
++    int *wv = (int *)malloc((size_t)(maxv + 1) * sizeof(int));
++    int *rv = (int *)malloc((size_t)(maxv + 1) * sizeof(int));
++
++    #pragma omp parallel for schedule(static)
++    for (long x = 0; x <= maxu; x++) { wu[x] = -1; ru[x] = -1; }
++    #pragma omp parallel for schedule(static)
++    for (long x = 0; x <= maxv; x++) { wv[x] = -1; rv[x] = -1; }
++
++    /* inspector: dependence level of each iteration (true, anti, output) */
++    int nlev = 0;
++    for (long i = 1; i < n; i++) {
++        long ja = (long)ju[i], ka = (long)ku[i];
++        long jb = (long)jv[i], kb = (long)kv[i];
++        int L = wv[kb];                    /* read v[kv]           */
++        if (wu[ja] > L) L = wu[ja];        /* write u[ju] (RMW)    */
++        if (ru[ja] > L) L = ru[ja];
++        if (wu[ka] > L) L = wu[ka];        /* read u[ku]           */
++        if (wv[jb] > L) L = wv[jb];        /* write v[jv]          */
++        if (rv[jb] > L) L = rv[jb];
++        L += 1;
++        lvl[i] = L;
++        if (rv[kb] < L) rv[kb] = L;
++        wu[ja] = L;
++        if (ru[ka] < L) ru[ka] = L;
++        wv[jb] = L;
++        if (L + 1 > nlev) nlev = L + 1;
++    }
++    free(wu); free(ru); free(wv); free(rv);
++
++    /* bucket iterations by level (stable counting sort) */
++    int *start = (int *)calloc((size_t)nlev + 1, sizeof(int));
++    int *cur = (int *)malloc(((size_t)nlev + 1) * sizeof(int));
++    int *order = (int *)malloc((size_t)(n > 0 ? n : 1) * sizeof(int));
++    for (long i = 1; i < n; i++) start[lvl[i] + 1]++;
++    for (int l = 0; l < nlev; l++) start[l + 1] += start[l];
++    for (int l = 0; l < nlev; l++) cur[l] = start[l];
++    for (long i = 1; i < n; i++) order[cur[lvl[i]]++] = (int)i;
++    free(cur);
++    free(lvl);
++
+     for (int nl = 0; nl < R; nl++) {
+-        for (long i = 1; i < LEN_1D; i++) {
+-            u[ju[i]] += v[kv[i]] * c[i];
+-            v[jv[i]] = u[ku[i]] * d[i] + c[i];
++        for (int l = 0; l < nlev; l++) {
++            int s = start[l], e = start[l + 1];
++            #pragma omp parallel for firstprivate(s, e) shared(order) schedule(static)
++            for (int k = s; k < e; k++) {
++                long i = (long)order[k];
++                u[ju[i]] += v[kv[i]] * c[i];
++                v[jv[i]] = u[ku[i]] * d[i] + c[i];
++            }
+         }
+         pb_mix(nl);
+     }
++    free(start);
++    free(order);
+     return (real_t)0;
+ }
+ 

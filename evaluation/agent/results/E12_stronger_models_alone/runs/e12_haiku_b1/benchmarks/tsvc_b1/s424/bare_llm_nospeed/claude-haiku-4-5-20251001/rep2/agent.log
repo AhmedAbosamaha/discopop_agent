@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s424.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : main, pb_mix
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] s424.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: I'll read the program to understand its structure and dependencies.## Analysis Looking at this program: 1. **The outer loop (`for (int nl = 0; nl < R; nl++)`)** runs repeatedly with `pb_mix(nl)` between iterations, which modifies input arrays (a[k], b[k], c[k], d[k], e[k], a[0], b[LEN_1D-1]). This creates true loop-carried dependencies, so the outer loop **must remain sequential**. 2. **The inner 
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

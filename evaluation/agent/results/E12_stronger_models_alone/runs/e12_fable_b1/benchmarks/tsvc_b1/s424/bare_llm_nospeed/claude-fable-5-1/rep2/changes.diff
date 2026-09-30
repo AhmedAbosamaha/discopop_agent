@@ -1,0 +1,23 @@
+--- original.c
++++ final.c
+@@ -17,9 +17,18 @@
+ {
+     int vl = 63;
+     xx = flat_2d_array + vl;
++    /* xx[i+1] is flat_2d_array[i + vl + 1]: iteration i reads what iteration
++     * i - dist wrote (dist = vl + 1).  The index space therefore splits into
++     * `dist` independent chains (residue classes i mod dist); each chain is a
++     * sequential running sum done in the original order, and distinct chains
++     * touch disjoint elements. */
++    const int dist = vl + 1;
+     for (int nl = 0; nl < R; nl++) {
+-        for (int i = 0; i < LEN_1D - 1; i++) {
+-            xx[i+1] = flat_2d_array[i] + a[i];
++        #pragma omp parallel for shared(xx, flat_2d_array, a) firstprivate(dist)
++        for (int j = 0; j < dist; j++) {
++            for (int i = j; i < LEN_1D - 1; i += dist) {
++                xx[i+1] = flat_2d_array[i] + a[i];
++            }
+         }
+         pb_mix(nl);
+     }

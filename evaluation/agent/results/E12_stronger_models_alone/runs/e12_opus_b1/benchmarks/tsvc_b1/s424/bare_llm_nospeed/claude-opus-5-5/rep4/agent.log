@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s424.c
+  Model          : claude-opus-5-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-opus-5-5...
+│  [bare] s424.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: I rewrote the inner sweep in `kernel_s424` (`s424.c`) as 64 independent chains, with one `#pragma omp parallel for` on the chain loop. I couldn't compile or run it here, so none of the checks (the plain and `-fopenmp` builds, ThreadSanitizer, output comparison) have been run. **What was blocking it:** `xx` points 63 elements into `flat_2d_array`. So iteration `i` writes `flat_2d_array[i+64]` and r
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

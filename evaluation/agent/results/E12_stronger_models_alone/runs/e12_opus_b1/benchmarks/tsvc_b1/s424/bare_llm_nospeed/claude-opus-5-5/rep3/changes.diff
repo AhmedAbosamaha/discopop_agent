@@ -1,0 +1,18 @@
+--- original.c
++++ final.c
+@@ -18,8 +18,13 @@
+     int vl = 63;
+     xx = flat_2d_array + vl;
+     for (int nl = 0; nl < R; nl++) {
+-        for (int i = 0; i < LEN_1D - 1; i++) {
+-            xx[i+1] = flat_2d_array[i] + a[i];
++        /* xx[i+1] == flat_2d_array[i+vl+1]: dependence distance vl+1 = 64,
++         * so the 64 residue chains are independent of each other. */
++        #pragma omp parallel for shared(xx, flat_2d_array, a) schedule(static)
++        for (int r = 0; r < 64; r++) {
++            for (int i = r; i < LEN_1D - 1; i += 64) {
++                xx[i+1] = flat_2d_array[i] + a[i];
++            }
+         }
+         pb_mix(nl);
+     }

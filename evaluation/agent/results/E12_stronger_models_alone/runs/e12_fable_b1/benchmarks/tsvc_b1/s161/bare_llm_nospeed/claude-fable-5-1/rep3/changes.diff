@@ -1,0 +1,31 @@
+--- original.c
++++ final.c
+@@ -16,16 +16,21 @@
+ static real_t kernel_s161(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        /* Pass 1: every c[i+1] update.  Reads a[i] (never written before
++         * iteration i in the original), writes distinct c[i+1] slots. */
++#pragma omp parallel for default(none) shared(a, b, c, d)
+         for (int i = 0; i < LEN_1D-1; ++i) {
+             if (b[i] < (real_t)0.) {
+-                goto L20;
++                c[i+1] = a[i] + d[i] * d[i];
+             }
+-            a[i] = c[i] + d[i] * e[i];
+-            goto L10;
+-L20:
+-            c[i+1] = a[i] + d[i] * d[i];
+-L10:
+-            ;
++        }
++        /* Pass 2: every a[i] update.  c[i] now holds the value the original
++         * saw at iteration i (written at iteration i-1, if at all). */
++#pragma omp parallel for default(none) shared(a, b, c, d, e)
++        for (int i = 0; i < LEN_1D-1; ++i) {
++            if (!(b[i] < (real_t)0.)) {
++                a[i] = c[i] + d[i] * e[i];
++            }
+         }
+         pb_mix(nl);
+     }

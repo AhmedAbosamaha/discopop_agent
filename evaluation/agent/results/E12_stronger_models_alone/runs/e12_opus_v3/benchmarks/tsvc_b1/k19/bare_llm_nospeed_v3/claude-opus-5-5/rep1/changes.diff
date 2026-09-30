@@ -1,0 +1,89 @@
+--- original.c
++++ final.c
+@@ -1,5 +1,6 @@
+ /* Kernel k19. */
+ #include "tsvc_b1/k19.h"
++#include <stdlib.h>
+ 
+ /* Between two repetitions a few INPUT elements change, so no repetition can be skipped,
+  * merged with another or run out of order: the repetition loop is sequential by a true
+@@ -14,13 +15,76 @@
+ 
+ static real_t kernel_k19(void)
+ {
++    const long n = LEN_1D;
++
++    /* size of the location tables: largest index used + 1 */
++    long m = 0;
++    #pragma omp parallel for reduction(max:m) schedule(static)
++    for (long i = 1; i < n; i++) {
++        long t0 = (long)ju[i], t1 = (long)ku[i], t2 = (long)kv[i], t3 = (long)jv[i];
++        if (t0 > m) m = t0;
++        if (t1 > m) m = t1;
++        if (t2 > m) m = t2;
++        if (t3 > m) m = t3;
++    }
++    m += 1;
++
++    int *wu = (int *)calloc((size_t)m, sizeof(int));  /* level of last write to u[x] */
++    int *ru = (int *)calloc((size_t)m, sizeof(int));  /* max level of reads of u[x] */
++    int *wv = (int *)calloc((size_t)m, sizeof(int));
++    int *rv = (int *)calloc((size_t)m, sizeof(int));
++    int *lev = (int *)malloc((size_t)n * sizeof(int));
++    int nlev = 0;
++
++    /* inspector: wavefront level of each iteration (index arrays are invariant) */
++    for (long i = 1; i < n; i++) {
++        long xa = (long)ju[i], xb = (long)ku[i], xc = (long)kv[i], xd = (long)jv[i];
++        int L = 0;
++        if (wv[xc] > L) L = wv[xc];
++        if (wu[xa] > L) L = wu[xa];
++        if (ru[xa] > L) L = ru[xa];
++        if (wu[xb] > L) L = wu[xb];
++        if (wv[xd] > L) L = wv[xd];
++        if (rv[xd] > L) L = rv[xd];
++        L += 1;
++        lev[i] = L;
++        if (L > nlev) nlev = L;
++        if (rv[xc] < L) rv[xc] = L;
++        if (ru[xa] < L) ru[xa] = L;
++        if (ru[xb] < L) ru[xb] = L;
++        wu[xa] = L;
++        wv[xd] = L;
++    }
++    free(wu); free(ru); free(wv); free(rv);
++
++    /* counting sort of iterations by level, stable in i */
++    long *start = (long *)calloc((size_t)nlev + 2, sizeof(long));
++    int *order = (int *)malloc((size_t)(n > 1 ? n : 1) * sizeof(int));
++    for (long i = 1; i < n; i++) start[lev[i] + 1]++;
++    for (int L = 1; L <= nlev + 1; L++) start[L] += start[L - 1];
++    {
++        long *pos = (long *)malloc(((size_t)nlev + 2) * sizeof(long));
++        for (int L = 0; L <= nlev + 1; L++) pos[L] = start[L];
++        for (long i = 1; i < n; i++) order[pos[lev[i]]++] = (int)i;
++        free(pos);
++    }
++    free(lev);
++
+     for (int nl = 0; nl < R; nl++) {
+-        for (long i = 1; i < LEN_1D; i++) {
+-            u[ju[i]] += v[kv[i]] * c[i];
+-            v[jv[i]] = u[ku[i]] * d[i] + c[i];
++        for (int L = 1; L <= nlev; L++) {
++            long s = start[L], e = start[L + 1];
++            #pragma omp parallel for schedule(static) shared(order, s, e)
++            for (long p = s; p < e; p++) {
++                long i = order[p];
++                u[ju[i]] += v[kv[i]] * c[i];
++                v[jv[i]] = u[ku[i]] * d[i] + c[i];
++            }
+         }
+         pb_mix(nl);
+     }
++
++    free(start);
++    free(order);
+     return (real_t)0;
+ }
+ 

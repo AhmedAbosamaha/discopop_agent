@@ -1,0 +1,136 @@
+/* Kernel k19. */
+#include "tsvc_b1/k19.h"
+#include <stdlib.h>
+
+/* Between two repetitions a few INPUT elements change, so no repetition can be skipped,
+ * merged with another or run out of order: the repetition loop is sequential by a true
+ * dependence, and the loop under study is the one inside it. */
+static void pb_mix(int nl)
+{
+  long k = ((long)nl * 7919L + 13L) % LEN_1D;
+  a[k] += (real_t)0.25; b[k] += (real_t)0.25; c[k] += (real_t)0.125;
+  d[k] += (real_t)0.125; e[k] += (real_t)0.25;
+  a[0] += (real_t)0.125; b[LEN_1D-1] += (real_t)0.125;
+}
+
+static real_t kernel_k19(void)
+{
+    const long n = (long)LEN_1D - 1;   /* iterations i = 1 .. LEN_1D-1 */
+
+    /* ------------------------------------------------------------------
+     * Inspector (run once: the index arrays ju/jv/ku/kv never change).
+     * Every iteration gets a dependence level: 1 + the highest level of any
+     * earlier iteration that touches one of its locations with at least one
+     * write.  Two conflicting iterations therefore sit on strictly increasing
+     * levels, so executing the levels in order and the iterations of one
+     * level in any order reproduces every access to every location in the
+     * original relative order (bit-identical results).
+     *   mode 0 : original serial loop
+     *   mode 1 : one level only -> the whole i loop is independent
+     *   mode 2 : several levels -> one parallel loop per level
+     * ------------------------------------------------------------------ */
+    int mode = 0;
+    long nlev = 0;
+    long *order = NULL;   /* iterations bucketed by level               */
+    long *start = NULL;   /* level L occupies order[start[L] .. start[L+1]-1] */
+
+    if (n > 0) {
+        long m = 0;
+        int bad = 0;
+        for (long i = 1; i < LEN_1D; i++) {
+            long x0 = (long)ju[i], x1 = (long)ku[i], x2 = (long)jv[i], x3 = (long)kv[i];
+            if (x0 < 0 || x1 < 0 || x2 < 0 || x3 < 0) bad = 1;
+            if (x0 > m) m = x0;
+            if (x1 > m) m = x1;
+            if (x2 > m) m = x2;
+            if (x3 > m) m = x3;
+        }
+        m += 1;
+        if (!bad) {
+            int *lvl = (int *)malloc((size_t)n * sizeof(int));
+            int *wu  = (int *)malloc((size_t)m * sizeof(int));  /* level of last writer of u[x]      */
+            int *ru  = (int *)malloc((size_t)m * sizeof(int));  /* max level of readers of u[x]      */
+            int *wv  = (int *)malloc((size_t)m * sizeof(int));  /* level of last writer of v[x]      */
+            int *rv  = (int *)malloc((size_t)m * sizeof(int));  /* max level of readers of v[x]      */
+            if (lvl && wu && ru && wv && rv) {
+                for (long x = 0; x < m; x++) { wu[x] = -1; ru[x] = -1; wv[x] = -1; rv[x] = -1; }
+                int maxl = 0;
+                for (long i = 1; i < LEN_1D; i++) {
+                    long x0 = (long)ju[i], x1 = (long)ku[i], x2 = (long)jv[i], x3 = (long)kv[i];
+                    int l = wu[x0];                     /* u[ju[i]] : after earlier writers ... */
+                    if (ru[x0] > l) l = ru[x0];         /*            ... and earlier readers    */
+                    if (wu[x1] > l) l = wu[x1];         /* u[ku[i]] : after earlier writers      */
+                    if (wv[x2] > l) l = wv[x2];         /* v[jv[i]] : after earlier writers ...  */
+                    if (rv[x2] > l) l = rv[x2];         /*            ... and earlier readers    */
+                    if (wv[x3] > l) l = wv[x3];         /* v[kv[i]] : after earlier writers      */
+                    l += 1;
+                    lvl[i - 1] = l;
+                    wu[x0] = l;
+                    if (l > ru[x1]) ru[x1] = l;
+                    wv[x2] = l;
+                    if (l > rv[x3]) rv[x3] = l;
+                    if (l > maxl) maxl = l;
+                }
+                nlev = (long)maxl + 1;
+                if (nlev == 1) {
+                    mode = 1;
+                } else if (nlev * 32 <= n) {   /* levels wide enough to be worth scheduling */
+                    order = (long *)malloc((size_t)n * sizeof(long));
+                    start = (long *)calloc((size_t)nlev + 1, sizeof(long));
+                    if (order && start) {
+                        for (long i = 1; i < LEN_1D; i++) start[lvl[i - 1] + 1]++;
+                        for (long L = 1; L <= nlev; L++) start[L] += start[L - 1];
+                        for (long i = 1; i < LEN_1D; i++) order[start[lvl[i - 1]]++] = i;
+                        for (long L = nlev; L >= 1; L--) start[L] = start[L - 1];
+                        start[0] = 0;
+                        mode = 2;
+                    } else {
+                        free(order); free(start);
+                        order = NULL; start = NULL;
+                    }
+                }
+            }
+            free(lvl); free(wu); free(ru); free(wv); free(rv);
+        }
+    }
+
+    /* ------------------------------ executor ------------------------------ */
+    for (int nl = 0; nl < R; nl++) {
+        if (mode == 1) {
+            /* No two iterations touch a common location with a write:
+             * every iteration is independent. */
+            #pragma omp parallel for schedule(static) default(shared) \
+                shared(u, v, c, d, ju, jv, ku, kv)
+            for (long i = 1; i < LEN_1D; i++) {
+                u[ju[i]] += v[kv[i]] * c[i];
+                v[jv[i]] = u[ku[i]] * d[i] + c[i];
+            }
+        } else if (mode == 2) {
+            /* Levels run in order; inside a level every shared location is
+             * read-only and every written location belongs to one iteration. */
+            for (long L = 0; L < nlev; L++) {
+                long lo = start[L];
+                long hi = start[L + 1];
+                #pragma omp parallel for schedule(static) default(shared) \
+                    shared(order, lo, hi, u, v, c, d, ju, jv, ku, kv) if (hi - lo >= 64)
+                for (long p = lo; p < hi; p++) {
+                    long i = order[p];
+                    u[ju[i]] += v[kv[i]] * c[i];
+                    v[jv[i]] = u[ku[i]] * d[i] + c[i];
+                }
+            }
+        } else {
+            for (long i = 1; i < LEN_1D; i++) {
+                u[ju[i]] += v[kv[i]] * c[i];
+                v[jv[i]] = u[ku[i]] * d[i] + c[i];
+            }
+        }
+        pb_mix(nl);
+    }
+
+    free(order);
+    free(start);
+    return (real_t)0;
+}
+
+PB_MAIN(kernel_k19)

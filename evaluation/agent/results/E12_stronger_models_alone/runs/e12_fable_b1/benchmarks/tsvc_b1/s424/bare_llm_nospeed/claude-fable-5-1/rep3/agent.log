@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s424.c
+  Model          : claude-fable-5-1
+  Not editable   : main, pb_mix
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-fable-5-1...
+│  [bare] s424.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: The rewrite is applied. **Summary of the change in `s424.c`:** - The single `i` loop (`xx[i+1] = flat_2d_array[i] + a[i]`, i.e. `flat_2d_array[i+64] = flat_2d_array[i] + a[i]`) carried a true dependence of distance `vl+1 = 64`. - It is now an outer loop over the 64 residue classes `r` (parallel, `#pragma omp parallel for shared(xx, a, flat_2d_array) firstprivate(stride) schedule(static)`) with an 
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s424.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : main, pb_mix
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] s424.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Looking at this program, I need to analyze the loop dependencies and parallelize the inner loop.## Plan **Dependence analysis:** - The outer `nl` loop cannot be parallelized: each iteration depends on `pb_mix` modifying input arrays after the previous iteration. - The inner `i` loop has an **anti-dependence with distance 64**: iteration `i` reads `flat_2d_array[i]` while iteration `i-64` writes to
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

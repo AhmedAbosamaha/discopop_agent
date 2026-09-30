@@ -1,0 +1,138 @@
+/* Kernel k19. */
+#include "tsvc_b1/k19.h"
+#include <stdlib.h>
+
+/* Between two repetitions a few INPUT elements change, so no repetition can be skipped,
+ * merged with another or run out of order: the repetition loop is sequential by a true
+ * dependence, and the loop under study is the one inside it. */
+static void pb_mix(int nl)
+{
+  long k = ((long)nl * 7919L + 13L) % LEN_1D;
+  a[k] += (real_t)0.25; b[k] += (real_t)0.25; c[k] += (real_t)0.125;
+  d[k] += (real_t)0.125; e[k] += (real_t)0.25;
+  a[0] += (real_t)0.125; b[LEN_1D-1] += (real_t)0.125;
+}
+
+/* Inspector: the index arrays ju/jv/ku/kv never change, so the dependence pattern of
+ * the inner loop is fixed for the whole run.  Every iteration i gets a wave level equal
+ * to 1 + the largest level of any earlier iteration it conflicts with (same location in
+ * u or v touched with at least one write).  Iterations of one wave therefore touch
+ * pairwise-disjoint written locations and may run in any order; waves run in sequence,
+ * which keeps every conflicting pair in its original order (and every u[x] += sum in
+ * its original association).  Returns the number of waves, or -1 if memory ran out.
+ * *order_out lists the iterations wave by wave, wave w being [off[w], off[w+1]). */
+static long k19_build_waves(int **order_out, long **off_out)
+{
+    long n = LEN_1D;
+    long maxidx = 0;
+    long i;
+    long x;
+    long w;
+
+#pragma omp parallel for reduction(max:maxidx) shared(n, ju, jv, ku, kv)
+    for (i = 1; i < n; i++) {
+        long m = (long)ju[i];
+        if ((long)jv[i] > m) m = (long)jv[i];
+        if ((long)ku[i] > m) m = (long)ku[i];
+        if ((long)kv[i] > m) m = (long)kv[i];
+        if (m > maxidx) maxidx = m;
+    }
+
+    long L = maxidx + 1;
+    int *lastWu = (int *)malloc((size_t)L * sizeof(int));
+    int *lastRu = (int *)malloc((size_t)L * sizeof(int));
+    int *lastWv = (int *)malloc((size_t)L * sizeof(int));
+    int *lastRv = (int *)malloc((size_t)L * sizeof(int));
+    int *level  = (int *)malloc((size_t)n * sizeof(int));
+    if (!lastWu || !lastRu || !lastWv || !lastRv || !level) {
+        free(lastWu); free(lastRu); free(lastWv); free(lastRv); free(level);
+        return -1;
+    }
+
+#pragma omp parallel for shared(L, lastWu, lastRu, lastWv, lastRv)
+    for (x = 0; x < L; x++) {
+        lastWu[x] = -1; lastRu[x] = -1;
+        lastWv[x] = -1; lastRv[x] = -1;
+    }
+
+    /* Sequential by nature: each level depends on the levels assigned before it. */
+    int maxlev = -1;
+    for (i = 1; i < n; i++) {
+        long xu = (long)ju[i];   /* u location read-modified-written */
+        long yu = (long)ku[i];   /* u location read                  */
+        long xv = (long)jv[i];   /* v location written               */
+        long yv = (long)kv[i];   /* v location read                  */
+        int lv = lastWu[xu];
+        if (lastRu[xu] > lv) lv = lastRu[xu];
+        if (lastWu[yu] > lv) lv = lastWu[yu];
+        if (lastWv[xv] > lv) lv = lastWv[xv];
+        if (lastRv[xv] > lv) lv = lastRv[xv];
+        if (lastWv[yv] > lv) lv = lastWv[yv];
+        lv += 1;
+        level[i] = lv;
+        lastWu[xu] = lv;
+        if (lastRu[xu] < lv) lastRu[xu] = lv;
+        if (lastRu[yu] < lv) lastRu[yu] = lv;
+        lastWv[xv] = lv;
+        if (lastRv[xv] < lv) lastRv[xv] = lv;
+        if (lastRv[yv] < lv) lastRv[yv] = lv;
+        if (lv > maxlev) maxlev = lv;
+    }
+    free(lastWu); free(lastRu); free(lastWv); free(lastRv);
+
+    long nw = (long)maxlev + 1;
+    long *off = (long *)malloc((size_t)(nw + 1) * sizeof(long));
+    int *order = (int *)malloc((size_t)(n > 0 ? n : 1) * sizeof(int));
+    if (!off || !order) {
+        free(off); free(order); free(level);
+        return -1;
+    }
+    for (w = 0; w <= nw; w++) off[w] = 0;
+    for (i = 1; i < n; i++) off[level[i] + 1]++;
+    for (w = 0; w < nw; w++) off[w + 1] += off[w];
+    /* place in increasing i, using off[w] as the cursor of wave w */
+    for (i = 1; i < n; i++) order[off[level[i]]++] = (int)i;
+    /* cursors now hold wave ends: shift back to wave starts */
+    for (w = nw; w >= 1; w--) off[w] = off[w - 1];
+    off[0] = 0;
+    free(level);
+
+    *order_out = order;
+    *off_out = off;
+    return nw;
+}
+
+static real_t kernel_k19(void)
+{
+    int *order = 0;
+    long *off = 0;
+    long nw = k19_build_waves(&order, &off);
+
+    for (int nl = 0; nl < R; nl++) {
+        if (nw < 0) {
+            /* fallback if the schedule could not be allocated: original order */
+            for (long i = 1; i < LEN_1D; i++) {
+                u[ju[i]] += v[kv[i]] * c[i];
+                v[jv[i]] = u[ku[i]] * d[i] + c[i];
+            }
+        } else {
+            for (long w = 0; w < nw; w++) {
+                long lo = off[w];
+                long hi = off[w + 1];
+#pragma omp parallel for shared(order, u, v, c, d, ju, jv, ku, kv) firstprivate(lo, hi) if(hi - lo >= 512)
+                for (long p = lo; p < hi; p++) {
+                    long i = (long)order[p];
+                    u[ju[i]] += v[kv[i]] * c[i];
+                    v[jv[i]] = u[ku[i]] * d[i] + c[i];
+                }
+            }
+        }
+        pb_mix(nl);
+    }
+
+    free(order);
+    free(off);
+    return (real_t)0;
+}
+
+PB_MAIN(kernel_k19)

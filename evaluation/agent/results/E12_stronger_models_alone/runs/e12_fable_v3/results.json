@@ -1,0 +1,2434 @@
+{
+  "run_id": "e12_fable_v3",
+  "harness": "agent",
+  "timestamp": "e12_fable_v3",
+  "invocation": {
+    "benchmarks": [
+      "tsvc_b1/k19",
+      "tsvc_b1/k48"
+    ],
+    "arms": [
+      "bare_llm_nospeed_v3"
+    ],
+    "models": [
+      "claude-fable-5-1"
+    ],
+    "repeats_per_trial": 5,
+    "provider": "claude-agent-sdk",
+    "edit_mode": "direct",
+    "extra_agent_args": [],
+    "verify_size": "per_kernel",
+    "threads": [
+      6,
+      12
+    ],
+    "repeats": 5,
+    "timeout_s": 5400,
+    "check_seed": "7",
+    "min_runtime_share": 0.0,
+    "cc": "/usr/bin/clang-20",
+    "cxx": "/usr/bin/clang++-20",
+    "host": "rms14562",
+    "platform": "Linux-6.8.0-138-generic-x86_64-with-glibc2.39",
+    "agent_git": {
+      "path": "/home/ahmedabosamaha/discopop_agent",
+      "head": "adec159f08dffd173c376f24bb372568263e1e39",
+      "branch": "agentic_DiscoPop",
+      "dirty_sha256": null
+    },
+    "harness_git": {
+      "path": "/home/ahmedabosamaha/discopop_agent/evaluation",
+      "head": "adec159f08dffd173c376f24bb372568263e1e39",
+      "branch": "agentic_DiscoPop",
+      "dirty_sha256": null
+    },
+    "argv": [
+      "agent/benchmark",
+      "run",
+      "tsvc_b1/k19",
+      "tsvc_b1/k48",
+      "--arms",
+      "bare_llm_nospeed_v3",
+      "--models",
+      "claude-fable-5-1",
+      "--threads",
+      "6,12",
+      "--repeats",
+      "5",
+      "--trials",
+      "5",
+      "--run-id",
+      "e12_fable_v3"
+    ],
+    "tool_versions": {
+      "claude_agent_sdk": "0.2.162",
+      "claude_cli_bundled": "2.1.285 (Claude Code)"
+    },
+    "common_flags": [
+      "--require-speedup",
+      "--min-runtime-share",
+      "0.01"
+    ],
+    "timing_sizes": {
+      "tsvc_b1/k19": "STANDARD",
+      "tsvc_b1/k48": "STANDARD"
+    },
+    "speed_check_off": [],
+    "verify_sizes": {
+      "tsvc_b1/k19": "LARGE",
+      "tsvc_b1/k48": "LARGE"
+    },
+    "arm_flags": {
+      "bare_llm_nospeed_v3": [
+        "--no-require-speedup",
+        "--prompt-version",
+        "3"
+      ]
+    }
+  },
+  "runs": [
+    {
+      "benchmark": "tsvc_b1/k19",
+      "kernel": "k19",
+      "source": "k19.c",
+      "arm": "bare_llm_nospeed_v3",
+      "model": "claude-fable-5-1",
+      "arm_flags": [
+        "--require-speedup",
+        "--min-runtime-share",
+        "0.01",
+        "--no-require-speedup",
+        "--prompt-version",
+        "3",
+        "--timing-cflags=-DSTANDARD_DATASET"
+      ],
+      "started_at": "2026-09-30T08:38:30",
+      "host": "rms14562",
+      "host_load_start": [
+        4.578125,
+        16.38134765625,
+        16.185546875
+      ],
+      "agent_cmd": [
+        "/home/ahmedabosamaha/discopop_agent/venv/bin/python",
+        "-m",
+        "discopop_agent.bare_llm",
+        "--source-file",
+        "k19.c",
+        "--model",
+        "claude-fable-5-1",
+        "--no-require-speedup",
+        "--prompt-version",
+        "3",
+        "--exclude-functions",
+        "main,pb_mix",
+        "--protected-line",
+        "#include \"tsvc_b1/k19.h\"",
+        "--protected-line",
+        "static void pb_mix(int nl)",
+        "--protected-line",
+        "long k = ((long)nl * 7919L + 13L) % LEN_1D;",
+        "--protected-line",
+        "a[k] += (real_t)0.25; b[k] += (real_t)0.25; c[k] += (real_t)0.125;",
+        "--protected-line",
+        "d[k] += (real_t)0.125; e[k] += (real_t)0.25;",
+        "--protected-line",
+        "a[0] += (real_t)0.125; b[LEN_1D-1] += (real_t)0.125;",
+        "--protected-line",
+        "pb_mix(nl);",
+        "--protected-line",
+        "PB_MAIN(kernel_k19)",
+        "--protected-note",
+        "`pb_mix(nl)` changes a few input values between two repetitions of the `nl` loop, so the repetitions depend on each other and must run in order; the loop under study is the one inside it. `LEN_1D`, the length of the arrays, is set in the included header: 32000 in the default build, and up to 192000000 in the builds that verify the result."
+      ],
+      "agent_s": 124.3,
+      "agent_rc": 0,
+      "llm_calls": 1,
+      "llm_call_failures": 0,
+      "explorer_retries": 0,
+      "explorer_stalls": 0,
+      "reverts": 0,
+      "refresh_fast": 0,
+      "refresh_full": 0,
+      "refresh_fallback": 0,
+      "runtime_remeasurements": 0,
+      "phase_b_deferred": 0,
+      "phase_b_joint_kept": 0,
+      "dp_floor": null,
+      "gate_failures_phase_a": {},
+      "gate_failures_phase_b": {},
+      "gate_passes_phase_a": 0,
+      "gate_failures_d40": {},
+      "d40_verdicts": {},
+      "exposure_verdicts": {},
+      "d40_seconds": 0,
+      "requeued_regions": 0,
+      "region_verdicts": {},
+      "settle_dropped": 0,
+      "llm_usage": {
+        "calls_recorded": 1,
+        "input_tokens": 98,
+        "output_tokens": 8561,
+        "cache_read_input_tokens": 58609,
+        "cache_creation_input_tokens": 25092,
+        "cost_usd": 0.9471,
+        "model_seconds": 123.3
+      },
+      "source_changed": true,
+      "protected": [
+        "#include \"tsvc_b1/k19.h\"",
+        "static void pb_mix(int nl)",
+        "long k = ((long)nl * 7919L + 13L) % LEN_1D;",
+        "a[k] += (real_t)0.25; b[k] += (real_t)0.25; c[k] += (real_t)0.125;",
+        "d[k] += (real_t)0.125; e[k] += (real_t)0.25;",
+        "a[0] += (real_t)0.125; b[LEN_1D-1] += (real_t)0.125;",
+        "pb_mix(nl);",
+        "PB_MAIN(kernel_k19)"
+      ],
+      "harness_sha256": "68ecaea8bff0fd57431687d968e462c767e8ce93383effb29b9c3daabf1e8e3a",
+      "scaffold": {
+        "ok": false,
+        "problems": [
+          "protected line added: pb_mix(nl);",
+          "scaffolding calls were reordered"
+        ],
+        "applies": true
+      },
+      "pragmas_added": 2,
+      "pragmas_in_final": 2,
+      "hot_loop": {
+        "entry": "kernel_k19",
+        "function": "kernel_k19",
+        "line": 18,
+        "writes": [
+          "u",
+          "v"
+        ]
+      },
+      "hot_loop_covered": true,
+      "hot_loop_coverage": {
+        "criterion": "v2 (27 Sep 2026)",
+        "covered": true,
+        "covering": [
+          {
+            "function": "kernel_k19",
+            "line": 113,
+            "directive": "#pragma omp parallel for shared(order, u, v, c, d, ju, jv, ku, kv) firstprivate(lo, hi)",
+            "writes": [
+              "u",
+              "v"
+            ]
+          }
+        ],
+        "uncounted": [],
+        "elsewhere": [
+          {
+            "function": "kernel_k19",
+            "line": 43,
+            "directive": "#pragma omp parallel for shared(lastWU, lastRU, lastWV, lastRV) firstprivate(n)",
+            "writes": [
+              "lastRU",
+              "lastRV",
+              "lastWU",
+              "lastWV"
+            ]
+          }
+        ]
+      },
+      "candidates_recorded": 0,
+      "verify": {
+        "verify_size": "LARGE",
+        "threads": [
+          6,
+          12
+        ],
+        "repeats": 5,
+        "compiler": "/usr/bin/clang-20",
+        "final_flags": [],
+        "dump_exact": false,
+        "dump_max_rel_err": Infinity,
+        "seed": "7",
+        "dump_exact_seeded": false,
+        "dump_seeded_max_rel_err": Infinity,
+        "seq_median_s": 2.9799,
+        "seq_kernel_median_s": 2.231897,
+        "timing_basis": "kernel",
+        "par": {},
+        "status": "final_run_failed_T6",
+        "final_run_failure": {
+          "threads": 6,
+          "rc": -6,
+          "seconds": 2.0,
+          "timed_out": false
+        },
+        "speed_measurable": true
+      },
+      "verify_s": 19.7,
+      "status": "done",
+      "outcome": "SCAFFOLD_MODIFIED",
+      "finished_at": "2026-09-30T08:40:54",
+      "host_load_end": [
+        6.52294921875,
+        12.171875,
+        14.591796875
+      ],
+      "profile": {
+        "wrapper": "discopop_cc",
+        "instrument_s": 0.16,
+        "profiled_run_s": 0.77,
+        "explore_stalls": 0,
+        "explore_s": 1.37,
+        "explore_success_s": 1.37,
+        "explore_attempts": 1,
+        "explore_timed_out": false,
+        "explore_failures": [],
+        "patterns": {
+          "optimizer_output": 0,
+          "merged_pattern": 0,
+          "task": 0,
+          "do_all": 0,
+          "reduction": 0
+        },
+        "profile_sha256": "90eb13af3c4c36debce293b6ddad61b3cf5f0ba6d57a3339216808ef3aa37183"
+      },
+      "package_integrity": {
+        "before": {
+          "checked": "before trial",
+          "at": "2026-09-30T08:38:30",
+          "prepared_sha256": "59e9ec63ca44dea77de316eb5c092316a1001a48c44b3f05565889b3cee51b82",
+          "packager_sha256": "59e9ec63ca44dea77de316eb5c092316a1001a48c44b3f05565889b3cee51b82",
+          "harness_sha256": "68ecaea8bff0fd57431687d968e462c767e8ce93383effb29b9c3daabf1e8e3a",
+          "archived_sha256": "59e9ec63ca44dea77de316eb5c092316a1001a48c44b3f05565889b3cee51b82",
+          "profile_sha256": "90eb13af3c4c36debce293b6ddad61b3cf5f0ba6d57a3339216808ef3aa37183",
+          "ok": true
+        },
+        "after": {
+          "checked": "after trial",
+          "at": "2026-09-30T08:40:54",
+          "prepared_sha256": "59e9ec63ca44dea77de316eb5c092316a1001a48c44b3f05565889b3cee51b82",
+          "packager_sha256": "59e9ec63ca44dea77de316eb5c092316a1001a48c44b3f05565889b3cee51b82",
+          "harness_sha256": "68ecaea8bff0fd57431687d968e462c767e8ce93383effb29b9c3daabf1e8e3a",
+          "archived_sha256": "59e9ec63ca44dea77de316eb5c092316a1001a48c44b3f05565889b3cee51b82",
+          "profile_sha256": "90eb13af3c4c36debce293b6ddad61b3cf5f0ba6d57a3339216808ef3aa37183",
+          "ok": true
+        }
+      },
+      "speed_check_off": true,
+      "timing_flags": [
+        "--timing-cflags=-DSTANDARD_DATASET"
+      ],
+      "repeat": 1
+    },
+    {
+      "benchmark": "tsvc_b1/k19",
+      "kernel": "k19",
+      "source": "k19.c",
+      "arm": "bare_llm_nospeed_v3",
+      "model": "claude-fable-5-1",
+      "arm_flags": [
+        "--require-speedup",
+        "--min-runtime-share",
+        "0.01",
+        "--no-require-speedup",
+        "--prompt-version",
+        "3",
+        "--timing-cflags=-DSTANDARD_DATASET"
+      ],
+      "started_at": "2026-09-30T08:40:54",
+      "host": "rms14562",
+      "host_load_start": [
+        6.52294921875,
+        12.171875,
+        14.591796875
+      ],
+      "agent_cmd": [
+        "/home/ahmedabosamaha/discopop_agent/venv/bin/python",
+        "-m",
+        "discopop_agent.bare_llm",
+        "--source-file",
+        "k19.c",
+        "--model",
+        "claude-fable-5-1",
+        "--no-require-speedup",
+        "--prompt-version",
+        "3",
+        "--exclude-functions",
+        "main,pb_mix",
+        "--protected-line",
+        "#include \"tsvc_b1/k19.h\"",
+        "--protected-line",
+        "static void pb_mix(int nl)",
+        "--protected-line",
+        "long k = ((long)nl * 7919L + 13L) % LEN_1D;",
+        "--protected-line",
+        "a[k] += (real_t)0.25; b[k] += (real_t)0.25; c[k] += (real_t)0.125;",
+        "--protected-line",
+        "d[k] += (real_t)0.125; e[k] += (real_t)0.25;",
+        "--protected-line",
+        "a[0] += (real_t)0.125; b[LEN_1D-1] += (real_t)0.125;",
+        "--protected-line",
+        "pb_mix(nl);",
+        "--protected-line",
+        "PB_MAIN(kernel_k19)",
+        "--protected-note",
+        "`pb_mix(nl)` changes a few input values between two repetitions of the `nl` loop, so the repetitions depend on each other and must run in order; the loop under study is the one inside it. `LEN_1D`, the length of the arrays, is set in the included header: 32000 in the default build, and up to 192000000 in the builds that verify the result."
+      ],
+      "agent_s": 137.4,
+      "agent_rc": 0,
+      "llm_calls": 1,
+      "llm_call_failures": 0,
+      "explorer_retries": 0,
+      "explorer_stalls": 0,
+      "reverts": 0,
+      "refresh_fast": 0,
+      "refresh_full": 0,
+      "refresh_fallback": 0,
+      "runtime_remeasurements": 0,
+      "phase_b_deferred": 0,
+      "phase_b_joint_kept": 0,
+      "dp_floor": null,
+      "gate_failures_phase_a": {},
+      "gate_failures_phase_b": {},
+      "gate_passes_phase_a": 0,
+      "gate_failures_d40": {},
+      "d40_verdicts": {},
+      "exposure_verdicts": {},
+      "d40_seconds": 0,
+      "requeued_regions": 0,
+      "region_verdicts": {},
+      "settle_dropped": 0,
+      "llm_usage": {
+        "calls_recorded": 1,
+        "input_tokens": 98,
+        "output_tokens": 10885,
+        "cache_read_input_tokens": 66931,
+        "cache_creation_input_tokens": 11912,
+        "cost_usd": 0.8018,
+        "model_seconds": 136.2
+      },
+      "source_changed": true,
+      "protected": [
+        "#include \"tsvc_b1/k19.h\"",
+        "static void pb_mix(int nl)",
+        "long k = ((long)nl * 7919L + 13L) % LEN_1D;",
+        "a[k] += (real_t)0.25; b[k] += (real_t)0.25; c[k] += (real_t)0.125;",
+        "d[k] += (real_t)0.125; e[k] += (real_t)0.25;",
+        "a[0] += (real_t)0.125; b[LEN_1D-1] += (real_t)0.125;",
+        "pb_mix(nl);",
+        "PB_MAIN(kernel_k19)"
+      ],
+      "harness_sha256": "68ecaea8bff0fd57431687d968e462c767e8ce93383effb29b9c3daabf1e8e3a",
+      "scaffold": {
+        "ok": false,
+        "problems": [
+          "protected line added: pb_mix(nl);",
+          "scaffolding calls were reordered"
+        ],
+        "applies": true
+      },
+      "pragmas_added": 1,
+      "pragmas_in_final": 1,
+      "hot_loop": {
+        "entry": "kernel_k19",
+        "function": "kernel_k19",
+        "line": 18,
+        "writes": [
+          "u",
+          "v"
+        ]
+      },
+      "hot_loop_covered": true,
+      "hot_loop_coverage": {
+        "criterion": "v2 (27 Sep 2026)",
+        "covered": true,
+        "covering": [
+          {
+            "function": "kernel_k19",
+            "line": 115,
+            "directive": "#pragma omp parallel for default(shared) shared(order) schedule(static)",
+            "writes": [
+              "u",
+              "v"
+            ]
+          }
+        ],
+        "uncounted": [],
+        "elsewhere": []
+      },
+      "candidates_recorded": 0,
+      "verify": {
+        "verify_size": "LARGE",
+        "threads": [
+          6,
+          12
+        ],
+        "repeats": 5,
+        "compiler": "/usr/bin/clang-20",
+        "final_flags": [],
+        "dump_exact": true,
+        "dump_max_rel_err": 0.0,
+        "seed": "7",
+        "dump_exact_seeded": true,
+        "dump_seeded_max_rel_err": 0.0,
+        "seq_median_s": 2.9784,
+        "seq_kernel_median_s": 2.234385,
+        "timing_basis": "kernel",
+        "par": {
+          "6": {
+            "median_s": 8.2304,
+            "program_speedup": 0.362,
+            "max_rel_err": 0.0,
+            "kernel_median_s": 7.428507,
+            "kernel_speedup": 0.301,
+            "speedup": 0.301
+          },
+          "12": {
+            "median_s": 8.2121,
+            "program_speedup": 0.363,
+            "max_rel_err": 0.0,
+            "kernel_median_s": 7.431818,
+            "kernel_speedup": 0.301,
+            "speedup": 0.301
+          }
+        },
+        "digest_max_rel_err": 0.0,
+        "stable_at_fixed_threads": true,
+        "kernel_program_disagree": false,
+        "digest_seeded_rel_err": 0.0,
+        "status": "ok",
+        "speed_measurable": true
+      },
+      "verify_s": 109.3,
+      "status": "done",
+      "outcome": "SCAFFOLD_MODIFIED",
+      "finished_at": "2026-09-30T08:45:00",
+      "host_load_end": [
+        7.63330078125,
+        9.701171875,
+        13.025390625
+      ],
+      "profile": {
+        "wrapper": "discopop_cc",
+        "instrument_s": 0.16,
+        "profiled_run_s": 0.77,
+        "explore_stalls": 0,
+        "explore_s": 1.37,
+        "explore_success_s": 1.37,
+        "explore_attempts": 1,
+        "explore_timed_out": false,
+        "explore_failures": [],
+        "patterns": {
+          "optimizer_output": 0,
+          "merged_pattern": 0,
+          "task": 0,
+          "do_all": 0,
+          "reduction": 0
+        },
+        "profile_sha256": "90eb13af3c4c36debce293b6ddad61b3cf5f0ba6d57a3339216808ef3aa37183"
+      },
+      "package_integrity": {
+        "before": {
+          "checked": "before trial",
+          "at": "2026-09-30T08:40:54",
+          "prepared_sha256": "59e9ec63ca44dea77de316eb5c092316a1001a48c44b3f05565889b3cee51b82",
+          "packager_sha256": "59e9ec63ca44dea77de316eb5c092316a1001a48c44b3f05565889b3cee51b82",
+          "harness_sha256": "68ecaea8bff0fd57431687d968e462c767e8ce93383effb29b9c3daabf1e8e3a",
+          "archived_sha256": "59e9ec63ca44dea77de316eb5c092316a1001a48c44b3f05565889b3cee51b82",
+          "profile_sha256": "90eb13af3c4c36debce293b6ddad61b3cf5f0ba6d57a3339216808ef3aa37183",
+          "ok": true
+        },
+        "after": {
+          "checked": "after trial",
+          "at": "2026-09-30T08:45:00",
+          "prepared_sha256": "59e9ec63ca44dea77de316eb5c092316a1001a48c44b3f05565889b3cee51b82",
+          "packager_sha256": "59e9ec63ca44dea77de316eb5c092316a1001a48c44b3f05565889b3cee51b82",
+          "harness_sha256": "68ecaea8bff0fd57431687d968e462c767e8ce93383effb29b9c3daabf1e8e3a",
+          "archived_sha256": "59e9ec63ca44dea77de316eb5c092316a1001a48c44b3f05565889b3cee51b82",
+          "profile_sha256": "90eb13af3c4c36debce293b6ddad61b3cf5f0ba6d57a3339216808ef3aa37183",
+          "ok": true
+        }
+      },
+      "speed_check_off": true,
+      "timing_flags": [
+        "--timing-cflags=-DSTANDARD_DATASET"
+      ],
+      "repeat": 2
+    },
+    {
+      "benchmark": "tsvc_b1/k19",
+      "kernel": "k19",
+      "source": "k19.c",
+      "arm": "bare_llm_nospeed_v3",
+      "model": "claude-fable-5-1",
+      "arm_flags": [
+        "--require-speedup",
+        "--min-runtime-share",
+        "0.01",
+        "--no-require-speedup",
+        "--prompt-version",
+        "3",
+        "--timing-cflags=-DSTANDARD_DATASET"
+      ],
+      "started_at": "2026-09-30T08:45:01",
+      "host": "rms14562",
+      "host_load_start": [
+        7.63330078125,
+        9.701171875,
+        13.025390625
+      ],
+      "agent_cmd": [
+        "/home/ahmedabosamaha/discopop_agent/venv/bin/python",
+        "-m",
+        "discopop_agent.bare_llm",
+        "--source-file",
+        "k19.c",
+        "--model",
+        "claude-fable-5-1",
+        "--no-require-speedup",
+        "--prompt-version",
+        "3",
+        "--exclude-functions",
+        "main,pb_mix",
+        "--protected-line",
+        "#include \"tsvc_b1/k19.h\"",
+        "--protected-line",
+        "static void pb_mix(int nl)",
+        "--protected-line",
+        "long k = ((long)nl * 7919L + 13L) % LEN_1D;",
+        "--protected-line",
+        "a[k] += (real_t)0.25; b[k] += (real_t)0.25; c[k] += (real_t)0.125;",
+        "--protected-line",
+        "d[k] += (real_t)0.125; e[k] += (real_t)0.25;",
+        "--protected-line",
+        "a[0] += (real_t)0.125; b[LEN_1D-1] += (real_t)0.125;",
+        "--protected-line",
+        "pb_mix(nl);",
+        "--protected-line",
+        "PB_MAIN(kernel_k19)",
+        "--protected-note",
+        "`pb_mix(nl)` changes a few input values between two repetitions of the `nl` loop, so the repetitions depend on each other and must run in order; the loop under study is the one inside it. `LEN_1D`, the length of the arrays, is set in the included header: 32000 in the default build, and up to 192000000 in the builds that verify the result."
+      ],
+      "agent_s": 128.8,
+      "agent_rc": 0,
+      "llm_calls": 1,
+      "llm_call_failures": 0,
+      "explorer_retries": 0,
+      "explorer_stalls": 0,
+      "reverts": 0,
+      "refresh_fast": 0,
+      "refresh_full": 0,
+      "refresh_fallback": 0,
+      "runtime_remeasurements": 0,
+      "phase_b_deferred": 0,
+      "phase_b_joint_kept": 0,
+      "dp_floor": null,
+      "gate_failures_phase_a": {},
+      "gate_failures_phase_b": {},
+      "gate_passes_phase_a": 0,
+      "gate_failures_d40": {},
+      "d40_verdicts": {},
+      "exposure_verdicts": {},
+      "d40_seconds": 0,
+      "requeued_regions": 0,
+      "region_verdicts": {},
+      "settle_dropped": 0,
+      "llm_usage": {
+        "calls_recorded": 1,
+        "input_tokens": 130,
+        "output_tokens": 9927,
+        "cache_read_input_tokens": 92990,
+        "cache_creation_input_tokens": 11141,
+        "cost_usd": 0.7453,
+        "model_seconds": 127.7
+      },
+      "source_changed": true,
+      "protected": [
+        "#include \"tsvc_b1/k19.h\"",
+        "static void pb_mix(int nl)",
+        "long k = ((long)nl * 7919L + 13L) % LEN_1D;",
+        "a[k] += (real_t)0.25; b[k] += (real_t)0.25; c[k] += (real_t)0.125;",
+        "d[k] += (real_t)0.125; e[k] += (real_t)0.25;",
+        "a[0] += (real_t)0.125; b[LEN_1D-1] += (real_t)0.125;",
+        "pb_mix(nl);",
+        "PB_MAIN(kernel_k19)"
+      ],
+      "harness_sha256": "68ecaea8bff0fd57431687d968e462c767e8ce93383effb29b9c3daabf1e8e3a",
+      "scaffold": {
+        "ok": true,
+        "problems": [],
+        "applies": true
+      },
+      "pragmas_added": 3,
+      "pragmas_in_final": 3,
+      "hot_loop": {
+        "entry": "kernel_k19",
+        "function": "kernel_k19",
+        "line": 18,
+        "writes": [
+          "u",
+          "v"
+        ]
+      },
+      "hot_loop_covered": true,
+      "hot_loop_coverage": {
+        "criterion": "v2 (27 Sep 2026)",
+        "covered": true,
+        "covering": [
+          {
+            "function": "kernel_k19",
+            "line": 73,
+            "directive": "#pragma omp parallel for shared(u, v, c, d, ju, jv, ku, kv, order) firstprivate(lo, hi) if(hi - lo >= 512)",
+            "writes": [
+              "u",
+              "v"
+            ]
+          }
+        ],
+        "uncounted": [],
+        "elsewhere": [
+          {
+            "function": "kernel_k19",
+            "line": 25,
+            "directive": "#pragma omp parallel for reduction(max:mx)",
+            "writes": []
+          },
+          {
+            "function": "kernel_k19",
+            "line": 37,
+            "directive": "#pragma omp parallel for shared(lastU, lastV) firstprivate(mx)",
+            "writes": [
+              "lastU",
+              "lastV"
+            ]
+          }
+        ]
+      },
+      "candidates_recorded": 0,
+      "verify": {
+        "verify_size": "LARGE",
+        "threads": [
+          6,
+          12
+        ],
+        "repeats": 5,
+        "compiler": "/usr/bin/clang-20",
+        "final_flags": [],
+        "dump_exact": true,
+        "dump_max_rel_err": 0.0,
+        "seed": "7",
+        "dump_exact_seeded": true,
+        "dump_seeded_max_rel_err": 0.0,
+        "seq_median_s": 3.0375,
+        "seq_kernel_median_s": 2.252594,
+        "timing_basis": "kernel",
+        "par": {
+          "6": {
+            "median_s": 373.2804,
+            "program_speedup": 0.008,
+            "max_rel_err": 0.0,
+            "kernel_median_s": 372.395117,
+            "kernel_speedup": 0.006,
+            "speedup": 0.006
+          },
+          "12": {
+            "median_s": 380.0976,
+            "program_speedup": 0.008,
+            "max_rel_err": 0.0,
+            "kernel_median_s": 379.191376,
+            "kernel_speedup": 0.006,
+            "speedup": 0.006
+          }
+        },
+        "digest_max_rel_err": 0.0,
+        "stable_at_fixed_threads": true,
+        "kernel_program_disagree": false,
+        "digest_seeded_rel_err": 0.0,
+        "status": "ok",
+        "speed_measurable": true
+      },
+      "verify_s": 4170.8,
+      "status": "done",
+      "outcome": "parallel-not-faster",
+      "finished_at": "2026-09-30T09:56:40",
+      "host_load_end": [
+        8.734375,
+        9.4697265625,
+        9.8642578125
+      ],
+      "profile": {
+        "wrapper": "discopop_cc",
+        "instrument_s": 0.16,
+        "profiled_run_s": 0.77,
+        "explore_stalls": 0,
+        "explore_s": 1.37,
+        "explore_success_s": 1.37,
+        "explore_attempts": 1,
+        "explore_timed_out": false,
+        "explore_failures": [],
+        "patterns": {
+          "optimizer_output": 0,
+          "merged_pattern": 0,
+          "task": 0,
+          "do_all": 0,
+          "reduction": 0
+        },
+        "profile_sha256": "90eb13af3c4c36debce293b6ddad61b3cf5f0ba6d57a3339216808ef3aa37183"
+      },
+      "package_integrity": {
+        "before": {
+          "checked": "before trial",
+          "at": "2026-09-30T08:45:01",
+          "prepared_sha256": "59e9ec63ca44dea77de316eb5c092316a1001a48c44b3f05565889b3cee51b82",
+          "packager_sha256": "59e9ec63ca44dea77de316eb5c092316a1001a48c44b3f05565889b3cee51b82",
+          "harness_sha256": "68ecaea8bff0fd57431687d968e462c767e8ce93383effb29b9c3daabf1e8e3a",
+          "archived_sha256": "59e9ec63ca44dea77de316eb5c092316a1001a48c44b3f05565889b3cee51b82",
+          "profile_sha256": "90eb13af3c4c36debce293b6ddad61b3cf5f0ba6d57a3339216808ef3aa37183",
+          "ok": true
+        },
+        "after": {
+          "checked": "after trial",
+          "at": "2026-09-30T09:56:40",
+          "prepared_sha256": "59e9ec63ca44dea77de316eb5c092316a1001a48c44b3f05565889b3cee51b82",
+          "packager_sha256": "59e9ec63ca44dea77de316eb5c092316a1001a48c44b3f05565889b3cee51b82",
+          "harness_sha256": "68ecaea8bff0fd57431687d968e462c767e8ce93383effb29b9c3daabf1e8e3a",
+          "archived_sha256": "59e9ec63ca44dea77de316eb5c092316a1001a48c44b3f05565889b3cee51b82",
+          "profile_sha256": "90eb13af3c4c36debce293b6ddad61b3cf5f0ba6d57a3339216808ef3aa37183",
+          "ok": true
+        }
+      },
+      "speed_check_off": true,
+      "timing_flags": [
+        "--timing-cflags=-DSTANDARD_DATASET"
+      ],
+      "repeat": 3
+    },
+    {
+      "benchmark": "tsvc_b1/k19",
+      "kernel": "k19",
+      "source": "k19.c",
+      "arm": "bare_llm_nospeed_v3",
+      "model": "claude-fable-5-1",
+      "arm_flags": [
+        "--require-speedup",
+        "--min-runtime-share",
+        "0.01",
+        "--no-require-speedup",
+        "--prompt-version",
+        "3",
+        "--timing-cflags=-DSTANDARD_DATASET"
+      ],
+      "started_at": "2026-09-30T09:56:40",
+      "host": "rms14562",
+      "host_load_start": [
+        8.734375,
+        9.4697265625,
+        9.8642578125
+      ],
+      "agent_cmd": [
+        "/home/ahmedabosamaha/discopop_agent/venv/bin/python",
+        "-m",
+        "discopop_agent.bare_llm",
+        "--source-file",
+        "k19.c",
+        "--model",
+        "claude-fable-5-1",
+        "--no-require-speedup",
+        "--prompt-version",
+        "3",
+        "--exclude-functions",
+        "main,pb_mix",
+        "--protected-line",
+        "#include \"tsvc_b1/k19.h\"",
+        "--protected-line",
+        "static void pb_mix(int nl)",
+        "--protected-line",
+        "long k = ((long)nl * 7919L + 13L) % LEN_1D;",
+        "--protected-line",
+        "a[k] += (real_t)0.25; b[k] += (real_t)0.25; c[k] += (real_t)0.125;",
+        "--protected-line",
+        "d[k] += (real_t)0.125; e[k] += (real_t)0.25;",
+        "--protected-line",
+        "a[0] += (real_t)0.125; b[LEN_1D-1] += (real_t)0.125;",
+        "--protected-line",
+        "pb_mix(nl);",
+        "--protected-line",
+        "PB_MAIN(kernel_k19)",
+        "--protected-note",
+        "`pb_mix(nl)` changes a few input values between two repetitions of the `nl` loop, so the repetitions depend on each other and must run in order; the loop under study is the one inside it. `LEN_1D`, the length of the arrays, is set in the included header: 32000 in the default build, and up to 192000000 in the builds that verify the result."
+      ],
+      "agent_s": 183.2,
+      "agent_rc": 0,
+      "llm_calls": 1,
+      "llm_call_failures": 0,
+      "explorer_retries": 0,
+      "explorer_stalls": 0,
+      "reverts": 0,
+      "refresh_fast": 0,
+      "refresh_full": 0,
+      "refresh_fallback": 0,
+      "runtime_remeasurements": 0,
+      "phase_b_deferred": 0,
+      "phase_b_joint_kept": 0,
+      "dp_floor": null,
+      "gate_failures_phase_a": {},
+      "gate_failures_phase_b": {},
+      "gate_passes_phase_a": 0,
+      "gate_failures_d40": {},
+      "d40_verdicts": {},
+      "exposure_verdicts": {},
+      "d40_seconds": 0,
+      "requeued_regions": 0,
+      "region_verdicts": {},
+      "settle_dropped": 0,
+      "llm_usage": {
+        "calls_recorded": 1,
+        "input_tokens": 98,
+        "output_tokens": 14797,
+        "cache_read_input_tokens": 64615,
+        "cache_creation_input_tokens": 18051,
+        "cost_usd": 1.1196,
+        "model_seconds": 182.1
+      },
+      "source_changed": true,
+      "protected": [
+        "#include \"tsvc_b1/k19.h\"",
+        "static void pb_mix(int nl)",
+        "long k = ((long)nl * 7919L + 13L) % LEN_1D;",
+        "a[k] += (real_t)0.25; b[k] += (real_t)0.25; c[k] += (real_t)0.125;",
+        "d[k] += (real_t)0.125; e[k] += (real_t)0.25;",
+        "a[0] += (real_t)0.125; b[LEN_1D-1] += (real_t)0.125;",
+        "pb_mix(nl);",
+        "PB_MAIN(kernel_k19)"
+      ],
+      "harness_sha256": "68ecaea8bff0fd57431687d968e462c767e8ce93383effb29b9c3daabf1e8e3a",
+      "scaffold": {
+        "ok": true,
+        "problems": [],
+        "applies": true
+      },
+      "pragmas_added": 2,
+      "pragmas_in_final": 2,
+      "hot_loop": {
+        "entry": "kernel_k19",
+        "function": "kernel_k19",
+        "line": 18,
+        "writes": [
+          "u",
+          "v"
+        ]
+      },
+      "hot_loop_covered": true,
+      "hot_loop_coverage": {
+        "criterion": "v2 (27 Sep 2026)",
+        "covered": true,
+        "covering": [
+          {
+            "function": "kernel_k19",
+            "line": 102,
+            "directive": "#pragma omp parallel for schedule(static) default(shared) shared(u, v, c, d, ju, jv, ku, kv)",
+            "writes": [
+              "u",
+              "v"
+            ]
+          },
+          {
+            "function": "kernel_k19",
+            "line": 114,
+            "directive": "#pragma omp parallel for schedule(static) default(shared) shared(order, lo, hi, u, v, c, d, ju, jv, ku, kv) if (hi - lo >= 64)",
+            "writes": [
+              "u",
+              "v"
+            ]
+          }
+        ],
+        "uncounted": [],
+        "elsewhere": []
+      },
+      "candidates_recorded": 0,
+      "verify": {
+        "verify_size": "LARGE",
+        "threads": [
+          6,
+          12
+        ],
+        "repeats": 5,
+        "compiler": "/usr/bin/clang-20",
+        "final_flags": [],
+        "dump_exact": true,
+        "dump_max_rel_err": 0.0,
+        "seed": "7",
+        "dump_exact_seeded": true,
+        "dump_seeded_max_rel_err": 0.0,
+        "seq_median_s": 3.1007,
+        "seq_kernel_median_s": 2.281758,
+        "timing_basis": "kernel",
+        "par": {
+          "6": {
+            "median_s": 3.5564,
+            "program_speedup": 0.872,
+            "max_rel_err": 0.0,
+            "kernel_median_s": 2.666202,
+            "kernel_speedup": 0.856,
+            "speedup": 0.856
+          },
+          "12": {
+            "median_s": 3.4713,
+            "program_speedup": 0.893,
+            "max_rel_err": 0.0,
+            "kernel_median_s": 2.638643,
+            "kernel_speedup": 0.865,
+            "speedup": 0.865
+          }
+        },
+        "digest_max_rel_err": 0.0,
+        "stable_at_fixed_threads": true,
+        "kernel_program_disagree": false,
+        "digest_seeded_rel_err": 0.0,
+        "status": "ok",
+        "speed_measurable": true
+      },
+      "verify_s": 58.3,
+      "status": "done",
+      "outcome": "parallel-not-faster",
+      "finished_at": "2026-09-30T10:00:42",
+      "host_load_end": [
+        5.814453125,
+        7.85302734375,
+        9.1474609375
+      ],
+      "profile": {
+        "wrapper": "discopop_cc",
+        "instrument_s": 0.16,
+        "profiled_run_s": 0.77,
+        "explore_stalls": 0,
+        "explore_s": 1.37,
+        "explore_success_s": 1.37,
+        "explore_attempts": 1,
+        "explore_timed_out": false,
+        "explore_failures": [],
+        "patterns": {
+          "optimizer_output": 0,
+          "merged_pattern": 0,
+          "task": 0,
+          "do_all": 0,
+          "reduction": 0
+        },
+        "profile_sha256": "90eb13af3c4c36debce293b6ddad61b3cf5f0ba6d57a3339216808ef3aa37183"
+      },
+      "package_integrity": {
+        "before": {
+          "checked": "before trial",
+          "at": "2026-09-30T09:56:40",
+          "prepared_sha256": "59e9ec63ca44dea77de316eb5c092316a1001a48c44b3f05565889b3cee51b82",
+          "packager_sha256": "59e9ec63ca44dea77de316eb5c092316a1001a48c44b3f05565889b3cee51b82",
+          "harness_sha256": "68ecaea8bff0fd57431687d968e462c767e8ce93383effb29b9c3daabf1e8e3a",
+          "archived_sha256": "59e9ec63ca44dea77de316eb5c092316a1001a48c44b3f05565889b3cee51b82",
+          "profile_sha256": "90eb13af3c4c36debce293b6ddad61b3cf5f0ba6d57a3339216808ef3aa37183",
+          "ok": true
+        },
+        "after": {
+          "checked": "after trial",
+          "at": "2026-09-30T10:00:42",
+          "prepared_sha256": "59e9ec63ca44dea77de316eb5c092316a1001a48c44b3f05565889b3cee51b82",
+          "packager_sha256": "59e9ec63ca44dea77de316eb5c092316a1001a48c44b3f05565889b3cee51b82",
+          "harness_sha256": "68ecaea8bff0fd57431687d968e462c767e8ce93383effb29b9c3daabf1e8e3a",
+          "archived_sha256": "59e9ec63ca44dea77de316eb5c092316a1001a48c44b3f05565889b3cee51b82",
+          "profile_sha256": "90eb13af3c4c36debce293b6ddad61b3cf5f0ba6d57a3339216808ef3aa37183",
+          "ok": true
+        }
+      },
+      "speed_check_off": true,
+      "timing_flags": [
+        "--timing-cflags=-DSTANDARD_DATASET"
+      ],
+      "repeat": 4
+    },
+    {
+      "benchmark": "tsvc_b1/k19",
+      "kernel": "k19",
+      "source": "k19.c",
+      "arm": "bare_llm_nospeed_v3",
+      "model": "claude-fable-5-1",
+      "arm_flags": [
+        "--require-speedup",
+        "--min-runtime-share",
+        "0.01",
+        "--no-require-speedup",
+        "--prompt-version",
+        "3",
+        "--timing-cflags=-DSTANDARD_DATASET"
+      ],
+      "started_at": "2026-09-30T10:00:42",
+      "host": "rms14562",
+      "host_load_start": [
+        5.814453125,
+        7.85302734375,
+        9.1474609375
+      ],
+      "agent_cmd": [
+        "/home/ahmedabosamaha/discopop_agent/venv/bin/python",
+        "-m",
+        "discopop_agent.bare_llm",
+        "--source-file",
+        "k19.c",
+        "--model",
+        "claude-fable-5-1",
+        "--no-require-speedup",
+        "--prompt-version",
+        "3",
+        "--exclude-functions",
+        "main,pb_mix",
+        "--protected-line",
+        "#include \"tsvc_b1/k19.h\"",
+        "--protected-line",
+        "static void pb_mix(int nl)",
+        "--protected-line",
+        "long k = ((long)nl * 7919L + 13L) % LEN_1D;",
+        "--protected-line",
+        "a[k] += (real_t)0.25; b[k] += (real_t)0.25; c[k] += (real_t)0.125;",
+        "--protected-line",
+        "d[k] += (real_t)0.125; e[k] += (real_t)0.25;",
+        "--protected-line",
+        "a[0] += (real_t)0.125; b[LEN_1D-1] += (real_t)0.125;",
+        "--protected-line",
+        "pb_mix(nl);",
+        "--protected-line",
+        "PB_MAIN(kernel_k19)",
+        "--protected-note",
+        "`pb_mix(nl)` changes a few input values between two repetitions of the `nl` loop, so the repetitions depend on each other and must run in order; the loop under study is the one inside it. `LEN_1D`, the length of the arrays, is set in the included header: 32000 in the default build, and up to 192000000 in the builds that verify the result."
+      ],
+      "agent_s": 199.6,
+      "agent_rc": 0,
+      "llm_calls": 1,
+      "llm_call_failures": 0,
+      "explorer_retries": 0,
+      "explorer_stalls": 0,
+      "reverts": 0,
+      "refresh_fast": 0,
+      "refresh_full": 0,
+      "refresh_fallback": 0,
+      "runtime_remeasurements": 0,
+      "phase_b_deferred": 0,
+      "phase_b_joint_kept": 0,
+      "dp_floor": null,
+      "gate_failures_phase_a": {},
+      "gate_failures_phase_b": {},
+      "gate_passes_phase_a": 0,
+      "gate_failures_d40": {},
+      "d40_verdicts": {},
+      "exposure_verdicts": {},
+      "d40_seconds": 0,
+      "requeued_regions": 0,
+      "region_verdicts": {},
+      "settle_dropped": 0,
+      "llm_usage": {
+        "calls_recorded": 1,
+        "input_tokens": 98,
+        "output_tokens": 15918,
+        "cache_read_input_tokens": 66632,
+        "cache_creation_input_tokens": 16420,
+        "cost_usd": 1.1435,
+        "model_seconds": 198.6
+      },
+      "source_changed": true,
+      "protected": [
+        "#include \"tsvc_b1/k19.h\"",
+        "static void pb_mix(int nl)",
+        "long k = ((long)nl * 7919L + 13L) % LEN_1D;",
+        "a[k] += (real_t)0.25; b[k] += (real_t)0.25; c[k] += (real_t)0.125;",
+        "d[k] += (real_t)0.125; e[k] += (real_t)0.25;",
+        "a[0] += (real_t)0.125; b[LEN_1D-1] += (real_t)0.125;",
+        "pb_mix(nl);",
+        "PB_MAIN(kernel_k19)"
+      ],
+      "harness_sha256": "68ecaea8bff0fd57431687d968e462c767e8ce93383effb29b9c3daabf1e8e3a",
+      "scaffold": {
+        "ok": true,
+        "problems": [],
+        "applies": true
+      },
+      "pragmas_added": 3,
+      "pragmas_in_final": 3,
+      "hot_loop": {
+        "entry": "kernel_k19",
+        "function": "kernel_k19",
+        "line": 18,
+        "writes": [
+          "u",
+          "v"
+        ]
+      },
+      "hot_loop_covered": true,
+      "hot_loop_coverage": {
+        "criterion": "v2 (27 Sep 2026)",
+        "covered": true,
+        "covering": [
+          {
+            "function": "kernel_k19",
+            "line": 122,
+            "directive": "#pragma omp parallel for shared(order, u, v, c, d, ju, jv, ku, kv) firstprivate(lo, hi) if(hi - lo >= 512)",
+            "writes": [
+              "u",
+              "v"
+            ]
+          }
+        ],
+        "uncounted": [],
+        "elsewhere": [
+          {
+            "function": "k19_build_waves",
+            "line": 32,
+            "directive": "#pragma omp parallel for reduction(max:maxidx) shared(n, ju, jv, ku, kv)",
+            "writes": []
+          },
+          {
+            "function": "k19_build_waves",
+            "line": 52,
+            "directive": "#pragma omp parallel for shared(L, lastWu, lastRu, lastWv, lastRv)",
+            "writes": [
+              "lastRu",
+              "lastRv",
+              "lastWu",
+              "lastWv"
+            ]
+          }
+        ]
+      },
+      "candidates_recorded": 0,
+      "verify": {
+        "verify_size": "LARGE",
+        "threads": [
+          6,
+          12
+        ],
+        "repeats": 5,
+        "compiler": "/usr/bin/clang-20",
+        "final_flags": [],
+        "dump_exact": true,
+        "dump_max_rel_err": 0.0,
+        "seed": "7",
+        "dump_exact_seeded": true,
+        "dump_seeded_max_rel_err": 0.0,
+        "seq_median_s": 3.1052,
+        "seq_kernel_median_s": 2.268638,
+        "timing_basis": "kernel",
+        "par": {
+          "6": {
+            "median_s": 389.8219,
+            "program_speedup": 0.008,
+            "max_rel_err": 0.0,
+            "kernel_median_s": 388.992522,
+            "kernel_speedup": 0.006,
+            "speedup": 0.006
+          },
+          "12": {
+            "median_s": 373.4935,
+            "program_speedup": 0.008,
+            "max_rel_err": 0.0,
+            "kernel_median_s": 372.641939,
+            "kernel_speedup": 0.006,
+            "speedup": 0.006
+          }
+        },
+        "digest_max_rel_err": 0.0,
+        "stable_at_fixed_threads": true,
+        "kernel_program_disagree": false,
+        "digest_seeded_rel_err": 0.0,
+        "status": "ok",
+        "speed_measurable": true
+      },
+      "verify_s": 4212.6,
+      "status": "done",
+      "outcome": "parallel-not-faster",
+      "finished_at": "2026-09-30T11:14:14",
+      "host_load_end": [
+        14.78173828125,
+        11.728515625,
+        11.23779296875
+      ],
+      "profile": {
+        "wrapper": "discopop_cc",
+        "instrument_s": 0.16,
+        "profiled_run_s": 0.77,
+        "explore_stalls": 0,
+        "explore_s": 1.37,
+        "explore_success_s": 1.37,
+        "explore_attempts": 1,
+        "explore_timed_out": false,
+        "explore_failures": [],
+        "patterns": {
+          "optimizer_output": 0,
+          "merged_pattern": 0,
+          "task": 0,
+          "do_all": 0,
+          "reduction": 0
+        },
+        "profile_sha256": "90eb13af3c4c36debce293b6ddad61b3cf5f0ba6d57a3339216808ef3aa37183"
+      },
+      "package_integrity": {
+        "before": {
+          "checked": "before trial",
+          "at": "2026-09-30T10:00:42",
+          "prepared_sha256": "59e9ec63ca44dea77de316eb5c092316a1001a48c44b3f05565889b3cee51b82",
+          "packager_sha256": "59e9ec63ca44dea77de316eb5c092316a1001a48c44b3f05565889b3cee51b82",
+          "harness_sha256": "68ecaea8bff0fd57431687d968e462c767e8ce93383effb29b9c3daabf1e8e3a",
+          "archived_sha256": "59e9ec63ca44dea77de316eb5c092316a1001a48c44b3f05565889b3cee51b82",
+          "profile_sha256": "90eb13af3c4c36debce293b6ddad61b3cf5f0ba6d57a3339216808ef3aa37183",
+          "ok": true
+        },
+        "after": {
+          "checked": "after trial",
+          "at": "2026-09-30T11:14:14",
+          "prepared_sha256": "59e9ec63ca44dea77de316eb5c092316a1001a48c44b3f05565889b3cee51b82",
+          "packager_sha256": "59e9ec63ca44dea77de316eb5c092316a1001a48c44b3f05565889b3cee51b82",
+          "harness_sha256": "68ecaea8bff0fd57431687d968e462c767e8ce93383effb29b9c3daabf1e8e3a",
+          "archived_sha256": "59e9ec63ca44dea77de316eb5c092316a1001a48c44b3f05565889b3cee51b82",
+          "profile_sha256": "90eb13af3c4c36debce293b6ddad61b3cf5f0ba6d57a3339216808ef3aa37183",
+          "ok": true
+        }
+      },
+      "speed_check_off": true,
+      "timing_flags": [
+        "--timing-cflags=-DSTANDARD_DATASET"
+      ],
+      "repeat": 5
+    },
+    {
+      "benchmark": "tsvc_b1/k48",
+      "kernel": "k48",
+      "source": "k48.c",
+      "arm": "bare_llm_nospeed_v3",
+      "model": "claude-fable-5-1",
+      "arm_flags": [
+        "--require-speedup",
+        "--min-runtime-share",
+        "0.01",
+        "--no-require-speedup",
+        "--prompt-version",
+        "3",
+        "--timing-cflags=-DSTANDARD_DATASET"
+      ],
+      "started_at": "2026-09-30T11:14:16",
+      "host": "rms14562",
+      "host_load_start": [
+        14.78173828125,
+        11.728515625,
+        11.23779296875
+      ],
+      "agent_cmd": [
+        "/home/ahmedabosamaha/discopop_agent/venv/bin/python",
+        "-m",
+        "discopop_agent.bare_llm",
+        "--source-file",
+        "k48.c",
+        "--model",
+        "claude-fable-5-1",
+        "--no-require-speedup",
+        "--prompt-version",
+        "3",
+        "--exclude-functions",
+        "main,pb_mix",
+        "--protected-line",
+        "#include \"tsvc_b1/k48.h\"",
+        "--protected-line",
+        "static void pb_mix(int nl)",
+        "--protected-line",
+        "long k = ((long)nl * 7919L + 13L) % LEN_1D;",
+        "--protected-line",
+        "a[k] += (real_t)0.25; b[k] += (real_t)0.25; c[k] += (real_t)0.125;",
+        "--protected-line",
+        "d[k] += (real_t)0.125; e[k] += (real_t)0.25;",
+        "--protected-line",
+        "a[0] += (real_t)0.125; b[LEN_1D-1] += (real_t)0.125;",
+        "--protected-line",
+        "pb_mix(nl);",
+        "--protected-line",
+        "PB_MAIN(kernel_k48)",
+        "--protected-note",
+        "`pb_mix(nl)` changes a few input values between two repetitions of the `nl` loop, so the repetitions depend on each other and must run in order; the loop under study is the one inside it. `LEN_1D`, the length of the arrays, is set in the included header: 32000 in the default build, and up to 192000000 in the builds that verify the result."
+      ],
+      "agent_s": 131.0,
+      "agent_rc": 0,
+      "llm_calls": 1,
+      "llm_call_failures": 0,
+      "explorer_retries": 0,
+      "explorer_stalls": 0,
+      "reverts": 0,
+      "refresh_fast": 0,
+      "refresh_full": 0,
+      "refresh_fallback": 0,
+      "runtime_remeasurements": 0,
+      "phase_b_deferred": 0,
+      "phase_b_joint_kept": 0,
+      "dp_floor": null,
+      "gate_failures_phase_a": {},
+      "gate_failures_phase_b": {},
+      "gate_passes_phase_a": 0,
+      "gate_failures_d40": {},
+      "d40_verdicts": {},
+      "exposure_verdicts": {},
+      "d40_seconds": 0,
+      "requeued_regions": 0,
+      "region_verdicts": {},
+      "settle_dropped": 0,
+      "llm_usage": {
+        "calls_recorded": 1,
+        "input_tokens": 98,
+        "output_tokens": 10379,
+        "cache_read_input_tokens": 51583,
+        "cache_creation_input_tokens": 26521,
+        "cost_usd": 1.0648,
+        "model_seconds": 129.8
+      },
+      "source_changed": true,
+      "protected": [
+        "#include \"tsvc_b1/k48.h\"",
+        "static void pb_mix(int nl)",
+        "long k = ((long)nl * 7919L + 13L) % LEN_1D;",
+        "a[k] += (real_t)0.25; b[k] += (real_t)0.25; c[k] += (real_t)0.125;",
+        "d[k] += (real_t)0.125; e[k] += (real_t)0.25;",
+        "a[0] += (real_t)0.125; b[LEN_1D-1] += (real_t)0.125;",
+        "pb_mix(nl);",
+        "PB_MAIN(kernel_k48)"
+      ],
+      "harness_sha256": "a52e89b585b264d69709b332fd6f208baa11f65699d052eb74e5d3bc23bb00f6",
+      "scaffold": {
+        "ok": false,
+        "problems": [
+          "protected line added: pb_mix(nl);",
+          "scaffolding calls were reordered"
+        ],
+        "applies": true
+      },
+      "pragmas_added": 1,
+      "pragmas_in_final": 1,
+      "hot_loop": {
+        "entry": "kernel_k48",
+        "function": "kernel_k48",
+        "line": 18,
+        "writes": [
+          "u",
+          "v"
+        ]
+      },
+      "hot_loop_covered": true,
+      "hot_loop_coverage": {
+        "criterion": "v2 (27 Sep 2026)",
+        "covered": true,
+        "covering": [
+          {
+            "function": "kernel_k48",
+            "line": 109,
+            "directive": "#pragma omp parallel for shared(order, u, v, c, d, ju, jv, ku, kv) firstprivate(s, e) schedule(static) if (e - s > 32)",
+            "writes": [
+              "u",
+              "v"
+            ]
+          }
+        ],
+        "uncounted": [],
+        "elsewhere": []
+      },
+      "candidates_recorded": 0,
+      "verify": {
+        "verify_size": "LARGE",
+        "threads": [
+          6,
+          12
+        ],
+        "repeats": 5,
+        "compiler": "/usr/bin/clang-20",
+        "final_flags": [],
+        "dump_exact": true,
+        "dump_max_rel_err": 0.0,
+        "seed": "7",
+        "dump_exact_seeded": true,
+        "dump_seeded_max_rel_err": 0.0,
+        "seq_median_s": 3.0728,
+        "seq_kernel_median_s": 2.257123,
+        "timing_basis": "kernel",
+        "par": {
+          "6": {
+            "median_s": 377.4661,
+            "program_speedup": 0.008,
+            "max_rel_err": 0.0,
+            "kernel_median_s": 376.588188,
+            "kernel_speedup": 0.006,
+            "speedup": 0.006
+          },
+          "12": {
+            "median_s": 377.4591,
+            "program_speedup": 0.008,
+            "max_rel_err": 0.0,
+            "kernel_median_s": 376.56399,
+            "kernel_speedup": 0.006,
+            "speedup": 0.006
+          }
+        },
+        "digest_max_rel_err": 0.0,
+        "stable_at_fixed_threads": true,
+        "kernel_program_disagree": false,
+        "digest_seeded_rel_err": 0.0,
+        "status": "ok",
+        "speed_measurable": true
+      },
+      "verify_s": 4179.6,
+      "status": "done",
+      "outcome": "SCAFFOLD_MODIFIED",
+      "finished_at": "2026-09-30T12:26:07",
+      "host_load_end": [
+        14.28173828125,
+        11.14453125,
+        8.44677734375
+      ],
+      "profile": {
+        "wrapper": "discopop_cc",
+        "instrument_s": 0.16,
+        "profiled_run_s": 0.77,
+        "explore_stalls": 0,
+        "explore_s": 1.37,
+        "explore_success_s": 1.37,
+        "explore_attempts": 1,
+        "explore_timed_out": false,
+        "explore_failures": [],
+        "patterns": {
+          "optimizer_output": 0,
+          "merged_pattern": 0,
+          "task": 0,
+          "do_all": 0,
+          "reduction": 0
+        },
+        "profile_sha256": "0f76117f5f71f35a460c9d4046488847920d0695dde0e889dcb1e713eaa0ef3f"
+      },
+      "package_integrity": {
+        "before": {
+          "checked": "before trial",
+          "at": "2026-09-30T11:14:16",
+          "prepared_sha256": "cb0cfa9e8e80a9765fac120d976becee32d757803aaf8a0c1aa2b578951d8796",
+          "packager_sha256": "cb0cfa9e8e80a9765fac120d976becee32d757803aaf8a0c1aa2b578951d8796",
+          "harness_sha256": "a52e89b585b264d69709b332fd6f208baa11f65699d052eb74e5d3bc23bb00f6",
+          "archived_sha256": "cb0cfa9e8e80a9765fac120d976becee32d757803aaf8a0c1aa2b578951d8796",
+          "profile_sha256": "0f76117f5f71f35a460c9d4046488847920d0695dde0e889dcb1e713eaa0ef3f",
+          "ok": true
+        },
+        "after": {
+          "checked": "after trial",
+          "at": "2026-09-30T12:26:07",
+          "prepared_sha256": "cb0cfa9e8e80a9765fac120d976becee32d757803aaf8a0c1aa2b578951d8796",
+          "packager_sha256": "cb0cfa9e8e80a9765fac120d976becee32d757803aaf8a0c1aa2b578951d8796",
+          "harness_sha256": "a52e89b585b264d69709b332fd6f208baa11f65699d052eb74e5d3bc23bb00f6",
+          "archived_sha256": "cb0cfa9e8e80a9765fac120d976becee32d757803aaf8a0c1aa2b578951d8796",
+          "profile_sha256": "0f76117f5f71f35a460c9d4046488847920d0695dde0e889dcb1e713eaa0ef3f",
+          "ok": true
+        }
+      },
+      "speed_check_off": true,
+      "timing_flags": [
+        "--timing-cflags=-DSTANDARD_DATASET"
+      ],
+      "repeat": 1
+    },
+    {
+      "benchmark": "tsvc_b1/k48",
+      "kernel": "k48",
+      "source": "k48.c",
+      "arm": "bare_llm_nospeed_v3",
+      "model": "claude-fable-5-1",
+      "arm_flags": [
+        "--require-speedup",
+        "--min-runtime-share",
+        "0.01",
+        "--no-require-speedup",
+        "--prompt-version",
+        "3",
+        "--timing-cflags=-DSTANDARD_DATASET"
+      ],
+      "started_at": "2026-09-30T12:26:07",
+      "host": "rms14562",
+      "host_load_start": [
+        14.28173828125,
+        11.14453125,
+        8.44677734375
+      ],
+      "agent_cmd": [
+        "/home/ahmedabosamaha/discopop_agent/venv/bin/python",
+        "-m",
+        "discopop_agent.bare_llm",
+        "--source-file",
+        "k48.c",
+        "--model",
+        "claude-fable-5-1",
+        "--no-require-speedup",
+        "--prompt-version",
+        "3",
+        "--exclude-functions",
+        "main,pb_mix",
+        "--protected-line",
+        "#include \"tsvc_b1/k48.h\"",
+        "--protected-line",
+        "static void pb_mix(int nl)",
+        "--protected-line",
+        "long k = ((long)nl * 7919L + 13L) % LEN_1D;",
+        "--protected-line",
+        "a[k] += (real_t)0.25; b[k] += (real_t)0.25; c[k] += (real_t)0.125;",
+        "--protected-line",
+        "d[k] += (real_t)0.125; e[k] += (real_t)0.25;",
+        "--protected-line",
+        "a[0] += (real_t)0.125; b[LEN_1D-1] += (real_t)0.125;",
+        "--protected-line",
+        "pb_mix(nl);",
+        "--protected-line",
+        "PB_MAIN(kernel_k48)",
+        "--protected-note",
+        "`pb_mix(nl)` changes a few input values between two repetitions of the `nl` loop, so the repetitions depend on each other and must run in order; the loop under study is the one inside it. `LEN_1D`, the length of the arrays, is set in the included header: 32000 in the default build, and up to 192000000 in the builds that verify the result."
+      ],
+      "agent_s": 165.8,
+      "agent_rc": 0,
+      "llm_calls": 1,
+      "llm_call_failures": 0,
+      "explorer_retries": 0,
+      "explorer_stalls": 0,
+      "reverts": 0,
+      "refresh_fast": 0,
+      "refresh_full": 0,
+      "refresh_fallback": 0,
+      "runtime_remeasurements": 0,
+      "phase_b_deferred": 0,
+      "phase_b_joint_kept": 0,
+      "dp_floor": null,
+      "gate_failures_phase_a": {},
+      "gate_failures_phase_b": {},
+      "gate_passes_phase_a": 0,
+      "gate_failures_d40": {},
+      "d40_verdicts": {},
+      "exposure_verdicts": {},
+      "d40_seconds": 0,
+      "requeued_regions": 0,
+      "region_verdicts": {},
+      "settle_dropped": 0,
+      "llm_usage": {
+        "calls_recorded": 1,
+        "input_tokens": 130,
+        "output_tokens": 12614,
+        "cache_read_input_tokens": 80006,
+        "cache_creation_input_tokens": 29083,
+        "cost_usd": 1.2352,
+        "model_seconds": 164.8
+      },
+      "source_changed": true,
+      "protected": [
+        "#include \"tsvc_b1/k48.h\"",
+        "static void pb_mix(int nl)",
+        "long k = ((long)nl * 7919L + 13L) % LEN_1D;",
+        "a[k] += (real_t)0.25; b[k] += (real_t)0.25; c[k] += (real_t)0.125;",
+        "d[k] += (real_t)0.125; e[k] += (real_t)0.25;",
+        "a[0] += (real_t)0.125; b[LEN_1D-1] += (real_t)0.125;",
+        "pb_mix(nl);",
+        "PB_MAIN(kernel_k48)"
+      ],
+      "harness_sha256": "a52e89b585b264d69709b332fd6f208baa11f65699d052eb74e5d3bc23bb00f6",
+      "scaffold": {
+        "ok": true,
+        "problems": [],
+        "applies": true
+      },
+      "pragmas_added": 2,
+      "pragmas_in_final": 2,
+      "hot_loop": {
+        "entry": "kernel_k48",
+        "function": "kernel_k48",
+        "line": 18,
+        "writes": [
+          "u",
+          "v"
+        ]
+      },
+      "hot_loop_covered": true,
+      "hot_loop_coverage": {
+        "criterion": "v2 (27 Sep 2026)",
+        "covered": true,
+        "covering": [
+          {
+            "function": "kernel_k48",
+            "line": 87,
+            "directive": "#pragma omp parallel for default(none) shared(order, lo, hi, u, v, c, d, ju, jv, ku, kv) schedule(static) if(hi - lo > 64)",
+            "writes": [
+              "u",
+              "v"
+            ]
+          }
+        ],
+        "uncounted": [],
+        "elsewhere": [
+          {
+            "function": "kernel_k48",
+            "line": 36,
+            "directive": "#pragma omp parallel for default(none) shared(lwu, lru, lwv, lrv, n) schedule(static)",
+            "writes": [
+              "lru",
+              "lrv",
+              "lwu",
+              "lwv"
+            ]
+          }
+        ]
+      },
+      "candidates_recorded": 0,
+      "verify": {
+        "verify_size": "LARGE",
+        "threads": [
+          6,
+          12
+        ],
+        "repeats": 5,
+        "compiler": "/usr/bin/clang-20",
+        "final_flags": [],
+        "dump_exact": false,
+        "dump_max_rel_err": Infinity,
+        "seed": "7",
+        "dump_exact_seeded": false,
+        "dump_seeded_max_rel_err": Infinity,
+        "seq_median_s": 3.0772,
+        "seq_kernel_median_s": 2.263391,
+        "timing_basis": "kernel",
+        "par": {},
+        "status": "final_run_failed_T6",
+        "final_run_failure": {
+          "threads": 6,
+          "rc": -6,
+          "seconds": 2.1,
+          "timed_out": false
+        },
+        "speed_measurable": true
+      },
+      "verify_s": 20.3,
+      "status": "done",
+      "outcome": "BROKEN",
+      "finished_at": "2026-09-30T12:29:13",
+      "host_load_end": [
+        11.27587890625,
+        10.412109375,
+        8.59765625
+      ],
+      "profile": {
+        "wrapper": "discopop_cc",
+        "instrument_s": 0.16,
+        "profiled_run_s": 0.77,
+        "explore_stalls": 0,
+        "explore_s": 1.37,
+        "explore_success_s": 1.37,
+        "explore_attempts": 1,
+        "explore_timed_out": false,
+        "explore_failures": [],
+        "patterns": {
+          "optimizer_output": 0,
+          "merged_pattern": 0,
+          "task": 0,
+          "do_all": 0,
+          "reduction": 0
+        },
+        "profile_sha256": "0f76117f5f71f35a460c9d4046488847920d0695dde0e889dcb1e713eaa0ef3f"
+      },
+      "package_integrity": {
+        "before": {
+          "checked": "before trial",
+          "at": "2026-09-30T12:26:07",
+          "prepared_sha256": "cb0cfa9e8e80a9765fac120d976becee32d757803aaf8a0c1aa2b578951d8796",
+          "packager_sha256": "cb0cfa9e8e80a9765fac120d976becee32d757803aaf8a0c1aa2b578951d8796",
+          "harness_sha256": "a52e89b585b264d69709b332fd6f208baa11f65699d052eb74e5d3bc23bb00f6",
+          "archived_sha256": "cb0cfa9e8e80a9765fac120d976becee32d757803aaf8a0c1aa2b578951d8796",
+          "profile_sha256": "0f76117f5f71f35a460c9d4046488847920d0695dde0e889dcb1e713eaa0ef3f",
+          "ok": true
+        },
+        "after": {
+          "checked": "after trial",
+          "at": "2026-09-30T12:29:13",
+          "prepared_sha256": "cb0cfa9e8e80a9765fac120d976becee32d757803aaf8a0c1aa2b578951d8796",
+          "packager_sha256": "cb0cfa9e8e80a9765fac120d976becee32d757803aaf8a0c1aa2b578951d8796",
+          "harness_sha256": "a52e89b585b264d69709b332fd6f208baa11f65699d052eb74e5d3bc23bb00f6",
+          "archived_sha256": "cb0cfa9e8e80a9765fac120d976becee32d757803aaf8a0c1aa2b578951d8796",
+          "profile_sha256": "0f76117f5f71f35a460c9d4046488847920d0695dde0e889dcb1e713eaa0ef3f",
+          "ok": true
+        }
+      },
+      "speed_check_off": true,
+      "timing_flags": [
+        "--timing-cflags=-DSTANDARD_DATASET"
+      ],
+      "repeat": 2
+    },
+    {
+      "benchmark": "tsvc_b1/k48",
+      "kernel": "k48",
+      "source": "k48.c",
+      "arm": "bare_llm_nospeed_v3",
+      "model": "claude-fable-5-1",
+      "arm_flags": [
+        "--require-speedup",
+        "--min-runtime-share",
+        "0.01",
+        "--no-require-speedup",
+        "--prompt-version",
+        "3",
+        "--timing-cflags=-DSTANDARD_DATASET"
+      ],
+      "started_at": "2026-09-30T12:29:13",
+      "host": "rms14562",
+      "host_load_start": [
+        11.27587890625,
+        10.412109375,
+        8.59765625
+      ],
+      "agent_cmd": [
+        "/home/ahmedabosamaha/discopop_agent/venv/bin/python",
+        "-m",
+        "discopop_agent.bare_llm",
+        "--source-file",
+        "k48.c",
+        "--model",
+        "claude-fable-5-1",
+        "--no-require-speedup",
+        "--prompt-version",
+        "3",
+        "--exclude-functions",
+        "main,pb_mix",
+        "--protected-line",
+        "#include \"tsvc_b1/k48.h\"",
+        "--protected-line",
+        "static void pb_mix(int nl)",
+        "--protected-line",
+        "long k = ((long)nl * 7919L + 13L) % LEN_1D;",
+        "--protected-line",
+        "a[k] += (real_t)0.25; b[k] += (real_t)0.25; c[k] += (real_t)0.125;",
+        "--protected-line",
+        "d[k] += (real_t)0.125; e[k] += (real_t)0.25;",
+        "--protected-line",
+        "a[0] += (real_t)0.125; b[LEN_1D-1] += (real_t)0.125;",
+        "--protected-line",
+        "pb_mix(nl);",
+        "--protected-line",
+        "PB_MAIN(kernel_k48)",
+        "--protected-note",
+        "`pb_mix(nl)` changes a few input values between two repetitions of the `nl` loop, so the repetitions depend on each other and must run in order; the loop under study is the one inside it. `LEN_1D`, the length of the arrays, is set in the included header: 32000 in the default build, and up to 192000000 in the builds that verify the result."
+      ],
+      "agent_s": 128.7,
+      "agent_rc": 0,
+      "llm_calls": 1,
+      "llm_call_failures": 0,
+      "explorer_retries": 0,
+      "explorer_stalls": 0,
+      "reverts": 0,
+      "refresh_fast": 0,
+      "refresh_full": 0,
+      "refresh_fallback": 0,
+      "runtime_remeasurements": 0,
+      "phase_b_deferred": 0,
+      "phase_b_joint_kept": 0,
+      "dp_floor": null,
+      "gate_failures_phase_a": {},
+      "gate_failures_phase_b": {},
+      "gate_passes_phase_a": 0,
+      "gate_failures_d40": {},
+      "d40_verdicts": {},
+      "exposure_verdicts": {},
+      "d40_seconds": 0,
+      "requeued_regions": 0,
+      "region_verdicts": {},
+      "settle_dropped": 0,
+      "llm_usage": {
+        "calls_recorded": 1,
+        "input_tokens": 98,
+        "output_tokens": 9844,
+        "cache_read_input_tokens": 66759,
+        "cache_creation_input_tokens": 10288,
+        "cost_usd": 0.7172,
+        "model_seconds": 127.6
+      },
+      "source_changed": true,
+      "protected": [
+        "#include \"tsvc_b1/k48.h\"",
+        "static void pb_mix(int nl)",
+        "long k = ((long)nl * 7919L + 13L) % LEN_1D;",
+        "a[k] += (real_t)0.25; b[k] += (real_t)0.25; c[k] += (real_t)0.125;",
+        "d[k] += (real_t)0.125; e[k] += (real_t)0.25;",
+        "a[0] += (real_t)0.125; b[LEN_1D-1] += (real_t)0.125;",
+        "pb_mix(nl);",
+        "PB_MAIN(kernel_k48)"
+      ],
+      "harness_sha256": "a52e89b585b264d69709b332fd6f208baa11f65699d052eb74e5d3bc23bb00f6",
+      "scaffold": {
+        "ok": true,
+        "problems": [],
+        "applies": true
+      },
+      "pragmas_added": 1,
+      "pragmas_in_final": 1,
+      "hot_loop": {
+        "entry": "kernel_k48",
+        "function": "kernel_k48",
+        "line": 18,
+        "writes": [
+          "u",
+          "v"
+        ]
+      },
+      "hot_loop_covered": true,
+      "hot_loop_coverage": {
+        "criterion": "v2 (27 Sep 2026)",
+        "covered": true,
+        "covering": [
+          {
+            "function": "kernel_k48",
+            "line": 81,
+            "directive": "#pragma omp parallel for shared(order, u, v, c, d, ju, jv, ku, kv) firstprivate(s, e)",
+            "writes": [
+              "u",
+              "v"
+            ]
+          }
+        ],
+        "uncounted": [],
+        "elsewhere": []
+      },
+      "candidates_recorded": 0,
+      "verify": {
+        "verify_size": "LARGE",
+        "threads": [
+          6,
+          12
+        ],
+        "repeats": 5,
+        "compiler": "/usr/bin/clang-20",
+        "final_flags": [],
+        "dump_exact": false,
+        "dump_max_rel_err": Infinity,
+        "seed": "7",
+        "dump_exact_seeded": false,
+        "dump_seeded_max_rel_err": Infinity,
+        "seq_median_s": 3.1087,
+        "seq_kernel_median_s": 2.287874,
+        "timing_basis": "kernel",
+        "par": {},
+        "status": "final_run_failed_T6",
+        "final_run_failure": {
+          "threads": 6,
+          "rc": -6,
+          "seconds": 2.1,
+          "timed_out": false
+        },
+        "speed_measurable": true
+      },
+      "verify_s": 20.4,
+      "status": "done",
+      "outcome": "BROKEN",
+      "finished_at": "2026-09-30T12:31:43",
+      "host_load_end": [
+        12.66552734375,
+        11.08740234375,
+        9.1181640625
+      ],
+      "profile": {
+        "wrapper": "discopop_cc",
+        "instrument_s": 0.16,
+        "profiled_run_s": 0.77,
+        "explore_stalls": 0,
+        "explore_s": 1.37,
+        "explore_success_s": 1.37,
+        "explore_attempts": 1,
+        "explore_timed_out": false,
+        "explore_failures": [],
+        "patterns": {
+          "optimizer_output": 0,
+          "merged_pattern": 0,
+          "task": 0,
+          "do_all": 0,
+          "reduction": 0
+        },
+        "profile_sha256": "0f76117f5f71f35a460c9d4046488847920d0695dde0e889dcb1e713eaa0ef3f"
+      },
+      "package_integrity": {
+        "before": {
+          "checked": "before trial",
+          "at": "2026-09-30T12:29:13",
+          "prepared_sha256": "cb0cfa9e8e80a9765fac120d976becee32d757803aaf8a0c1aa2b578951d8796",
+          "packager_sha256": "cb0cfa9e8e80a9765fac120d976becee32d757803aaf8a0c1aa2b578951d8796",
+          "harness_sha256": "a52e89b585b264d69709b332fd6f208baa11f65699d052eb74e5d3bc23bb00f6",
+          "archived_sha256": "cb0cfa9e8e80a9765fac120d976becee32d757803aaf8a0c1aa2b578951d8796",
+          "profile_sha256": "0f76117f5f71f35a460c9d4046488847920d0695dde0e889dcb1e713eaa0ef3f",
+          "ok": true
+        },
+        "after": {
+          "checked": "after trial",
+          "at": "2026-09-30T12:31:43",
+          "prepared_sha256": "cb0cfa9e8e80a9765fac120d976becee32d757803aaf8a0c1aa2b578951d8796",
+          "packager_sha256": "cb0cfa9e8e80a9765fac120d976becee32d757803aaf8a0c1aa2b578951d8796",
+          "harness_sha256": "a52e89b585b264d69709b332fd6f208baa11f65699d052eb74e5d3bc23bb00f6",
+          "archived_sha256": "cb0cfa9e8e80a9765fac120d976becee32d757803aaf8a0c1aa2b578951d8796",
+          "profile_sha256": "0f76117f5f71f35a460c9d4046488847920d0695dde0e889dcb1e713eaa0ef3f",
+          "ok": true
+        }
+      },
+      "speed_check_off": true,
+      "timing_flags": [
+        "--timing-cflags=-DSTANDARD_DATASET"
+      ],
+      "repeat": 3
+    },
+    {
+      "benchmark": "tsvc_b1/k48",
+      "kernel": "k48",
+      "source": "k48.c",
+      "arm": "bare_llm_nospeed_v3",
+      "model": "claude-fable-5-1",
+      "arm_flags": [
+        "--require-speedup",
+        "--min-runtime-share",
+        "0.01",
+        "--no-require-speedup",
+        "--prompt-version",
+        "3",
+        "--timing-cflags=-DSTANDARD_DATASET"
+      ],
+      "started_at": "2026-09-30T12:31:43",
+      "host": "rms14562",
+      "host_load_start": [
+        12.66552734375,
+        11.08740234375,
+        9.1181640625
+      ],
+      "agent_cmd": [
+        "/home/ahmedabosamaha/discopop_agent/venv/bin/python",
+        "-m",
+        "discopop_agent.bare_llm",
+        "--source-file",
+        "k48.c",
+        "--model",
+        "claude-fable-5-1",
+        "--no-require-speedup",
+        "--prompt-version",
+        "3",
+        "--exclude-functions",
+        "main,pb_mix",
+        "--protected-line",
+        "#include \"tsvc_b1/k48.h\"",
+        "--protected-line",
+        "static void pb_mix(int nl)",
+        "--protected-line",
+        "long k = ((long)nl * 7919L + 13L) % LEN_1D;",
+        "--protected-line",
+        "a[k] += (real_t)0.25; b[k] += (real_t)0.25; c[k] += (real_t)0.125;",
+        "--protected-line",
+        "d[k] += (real_t)0.125; e[k] += (real_t)0.25;",
+        "--protected-line",
+        "a[0] += (real_t)0.125; b[LEN_1D-1] += (real_t)0.125;",
+        "--protected-line",
+        "pb_mix(nl);",
+        "--protected-line",
+        "PB_MAIN(kernel_k48)",
+        "--protected-note",
+        "`pb_mix(nl)` changes a few input values between two repetitions of the `nl` loop, so the repetitions depend on each other and must run in order; the loop under study is the one inside it. `LEN_1D`, the length of the arrays, is set in the included header: 32000 in the default build, and up to 192000000 in the builds that verify the result."
+      ],
+      "agent_s": 161.6,
+      "agent_rc": 0,
+      "llm_calls": 1,
+      "llm_call_failures": 0,
+      "explorer_retries": 0,
+      "explorer_stalls": 0,
+      "reverts": 0,
+      "refresh_fast": 0,
+      "refresh_full": 0,
+      "refresh_fallback": 0,
+      "runtime_remeasurements": 0,
+      "phase_b_deferred": 0,
+      "phase_b_joint_kept": 0,
+      "dp_floor": null,
+      "gate_failures_phase_a": {},
+      "gate_failures_phase_b": {},
+      "gate_passes_phase_a": 0,
+      "gate_failures_d40": {},
+      "d40_verdicts": {},
+      "exposure_verdicts": {},
+      "d40_seconds": 0,
+      "requeued_regions": 0,
+      "region_verdicts": {},
+      "settle_dropped": 0,
+      "llm_usage": {
+        "calls_recorded": 1,
+        "input_tokens": 98,
+        "output_tokens": 11951,
+        "cache_read_input_tokens": 66695,
+        "cache_creation_input_tokens": 13174,
+        "cost_usd": 0.8802,
+        "model_seconds": 160.3
+      },
+      "source_changed": true,
+      "protected": [
+        "#include \"tsvc_b1/k48.h\"",
+        "static void pb_mix(int nl)",
+        "long k = ((long)nl * 7919L + 13L) % LEN_1D;",
+        "a[k] += (real_t)0.25; b[k] += (real_t)0.25; c[k] += (real_t)0.125;",
+        "d[k] += (real_t)0.125; e[k] += (real_t)0.25;",
+        "a[0] += (real_t)0.125; b[LEN_1D-1] += (real_t)0.125;",
+        "pb_mix(nl);",
+        "PB_MAIN(kernel_k48)"
+      ],
+      "harness_sha256": "a52e89b585b264d69709b332fd6f208baa11f65699d052eb74e5d3bc23bb00f6",
+      "scaffold": {
+        "ok": true,
+        "problems": [],
+        "applies": true
+      },
+      "pragmas_added": 2,
+      "pragmas_in_final": 2,
+      "hot_loop": {
+        "entry": "kernel_k48",
+        "function": "kernel_k48",
+        "line": 18,
+        "writes": [
+          "u",
+          "v"
+        ]
+      },
+      "hot_loop_covered": true,
+      "hot_loop_coverage": {
+        "criterion": "v2 (27 Sep 2026)",
+        "covered": true,
+        "covering": [
+          {
+            "function": "kernel_k48",
+            "line": 119,
+            "directive": "#pragma omp parallel for firstprivate(lo, hi) shared(perm)",
+            "writes": [
+              "u",
+              "v"
+            ]
+          }
+        ],
+        "uncounted": [],
+        "elsewhere": [
+          {
+            "function": "kernel_k48",
+            "line": 40,
+            "directive": "#pragma omp parallel for reduction(max:mx)",
+            "writes": []
+          }
+        ]
+      },
+      "candidates_recorded": 0,
+      "verify": {
+        "verify_size": "LARGE",
+        "threads": [
+          6,
+          12
+        ],
+        "repeats": 5,
+        "compiler": "/usr/bin/clang-20",
+        "final_flags": [],
+        "dump_exact": true,
+        "dump_max_rel_err": 0.0,
+        "seed": "7",
+        "dump_exact_seeded": true,
+        "dump_seeded_max_rel_err": 0.0,
+        "seq_median_s": 3.1347,
+        "seq_kernel_median_s": 2.299385,
+        "timing_basis": "kernel",
+        "par": {
+          "6": {
+            "median_s": 8.3223,
+            "program_speedup": 0.377,
+            "max_rel_err": 0.0,
+            "kernel_median_s": 7.40999,
+            "kernel_speedup": 0.31,
+            "speedup": 0.31
+          },
+          "12": {
+            "median_s": 8.128,
+            "program_speedup": 0.386,
+            "max_rel_err": 0.0,
+            "kernel_median_s": 7.234982,
+            "kernel_speedup": 0.318,
+            "speedup": 0.318
+          }
+        },
+        "digest_max_rel_err": 0.0,
+        "stable_at_fixed_threads": true,
+        "kernel_program_disagree": false,
+        "digest_seeded_rel_err": 0.0,
+        "status": "ok",
+        "speed_measurable": true
+      },
+      "verify_s": 110.1,
+      "status": "done",
+      "outcome": "parallel-not-faster",
+      "finished_at": "2026-09-30T12:36:14",
+      "host_load_end": [
+        10.4287109375,
+        11.7255859375,
+        10.0126953125
+      ],
+      "profile": {
+        "wrapper": "discopop_cc",
+        "instrument_s": 0.16,
+        "profiled_run_s": 0.77,
+        "explore_stalls": 0,
+        "explore_s": 1.37,
+        "explore_success_s": 1.37,
+        "explore_attempts": 1,
+        "explore_timed_out": false,
+        "explore_failures": [],
+        "patterns": {
+          "optimizer_output": 0,
+          "merged_pattern": 0,
+          "task": 0,
+          "do_all": 0,
+          "reduction": 0
+        },
+        "profile_sha256": "0f76117f5f71f35a460c9d4046488847920d0695dde0e889dcb1e713eaa0ef3f"
+      },
+      "package_integrity": {
+        "before": {
+          "checked": "before trial",
+          "at": "2026-09-30T12:31:43",
+          "prepared_sha256": "cb0cfa9e8e80a9765fac120d976becee32d757803aaf8a0c1aa2b578951d8796",
+          "packager_sha256": "cb0cfa9e8e80a9765fac120d976becee32d757803aaf8a0c1aa2b578951d8796",
+          "harness_sha256": "a52e89b585b264d69709b332fd6f208baa11f65699d052eb74e5d3bc23bb00f6",
+          "archived_sha256": "cb0cfa9e8e80a9765fac120d976becee32d757803aaf8a0c1aa2b578951d8796",
+          "profile_sha256": "0f76117f5f71f35a460c9d4046488847920d0695dde0e889dcb1e713eaa0ef3f",
+          "ok": true
+        },
+        "after": {
+          "checked": "after trial",
+          "at": "2026-09-30T12:36:14",
+          "prepared_sha256": "cb0cfa9e8e80a9765fac120d976becee32d757803aaf8a0c1aa2b578951d8796",
+          "packager_sha256": "cb0cfa9e8e80a9765fac120d976becee32d757803aaf8a0c1aa2b578951d8796",
+          "harness_sha256": "a52e89b585b264d69709b332fd6f208baa11f65699d052eb74e5d3bc23bb00f6",
+          "archived_sha256": "cb0cfa9e8e80a9765fac120d976becee32d757803aaf8a0c1aa2b578951d8796",
+          "profile_sha256": "0f76117f5f71f35a460c9d4046488847920d0695dde0e889dcb1e713eaa0ef3f",
+          "ok": true
+        }
+      },
+      "speed_check_off": true,
+      "timing_flags": [
+        "--timing-cflags=-DSTANDARD_DATASET"
+      ],
+      "repeat": 4
+    },
+    {
+      "benchmark": "tsvc_b1/k48",
+      "kernel": "k48",
+      "source": "k48.c",
+      "arm": "bare_llm_nospeed_v3",
+      "model": "claude-fable-5-1",
+      "arm_flags": [
+        "--require-speedup",
+        "--min-runtime-share",
+        "0.01",
+        "--no-require-speedup",
+        "--prompt-version",
+        "3",
+        "--timing-cflags=-DSTANDARD_DATASET"
+      ],
+      "started_at": "2026-09-30T12:36:14",
+      "host": "rms14562",
+      "host_load_start": [
+        10.4287109375,
+        11.7255859375,
+        10.0126953125
+      ],
+      "agent_cmd": [
+        "/home/ahmedabosamaha/discopop_agent/venv/bin/python",
+        "-m",
+        "discopop_agent.bare_llm",
+        "--source-file",
+        "k48.c",
+        "--model",
+        "claude-fable-5-1",
+        "--no-require-speedup",
+        "--prompt-version",
+        "3",
+        "--exclude-functions",
+        "main,pb_mix",
+        "--protected-line",
+        "#include \"tsvc_b1/k48.h\"",
+        "--protected-line",
+        "static void pb_mix(int nl)",
+        "--protected-line",
+        "long k = ((long)nl * 7919L + 13L) % LEN_1D;",
+        "--protected-line",
+        "a[k] += (real_t)0.25; b[k] += (real_t)0.25; c[k] += (real_t)0.125;",
+        "--protected-line",
+        "d[k] += (real_t)0.125; e[k] += (real_t)0.25;",
+        "--protected-line",
+        "a[0] += (real_t)0.125; b[LEN_1D-1] += (real_t)0.125;",
+        "--protected-line",
+        "pb_mix(nl);",
+        "--protected-line",
+        "PB_MAIN(kernel_k48)",
+        "--protected-note",
+        "`pb_mix(nl)` changes a few input values between two repetitions of the `nl` loop, so the repetitions depend on each other and must run in order; the loop under study is the one inside it. `LEN_1D`, the length of the arrays, is set in the included header: 32000 in the default build, and up to 192000000 in the builds that verify the result."
+      ],
+      "agent_s": 96.7,
+      "agent_rc": 0,
+      "llm_calls": 1,
+      "llm_call_failures": 0,
+      "explorer_retries": 0,
+      "explorer_stalls": 0,
+      "reverts": 0,
+      "refresh_fast": 0,
+      "refresh_full": 0,
+      "refresh_fallback": 0,
+      "runtime_remeasurements": 0,
+      "phase_b_deferred": 0,
+      "phase_b_joint_kept": 0,
+      "dp_floor": null,
+      "gate_failures_phase_a": {},
+      "gate_failures_phase_b": {},
+      "gate_passes_phase_a": 0,
+      "gate_failures_d40": {},
+      "d40_verdicts": {},
+      "exposure_verdicts": {},
+      "d40_seconds": 0,
+      "requeued_regions": 0,
+      "region_verdicts": {},
+      "settle_dropped": 0,
+      "llm_usage": {
+        "calls_recorded": 1,
+        "input_tokens": 130,
+        "output_tokens": 7705,
+        "cache_read_input_tokens": 90813,
+        "cache_creation_input_tokens": 8992,
+        "cost_usd": 0.5906,
+        "model_seconds": 95.5
+      },
+      "source_changed": true,
+      "protected": [
+        "#include \"tsvc_b1/k48.h\"",
+        "static void pb_mix(int nl)",
+        "long k = ((long)nl * 7919L + 13L) % LEN_1D;",
+        "a[k] += (real_t)0.25; b[k] += (real_t)0.25; c[k] += (real_t)0.125;",
+        "d[k] += (real_t)0.125; e[k] += (real_t)0.25;",
+        "a[0] += (real_t)0.125; b[LEN_1D-1] += (real_t)0.125;",
+        "pb_mix(nl);",
+        "PB_MAIN(kernel_k48)"
+      ],
+      "harness_sha256": "a52e89b585b264d69709b332fd6f208baa11f65699d052eb74e5d3bc23bb00f6",
+      "scaffold": {
+        "ok": true,
+        "problems": [],
+        "applies": true
+      },
+      "pragmas_added": 1,
+      "pragmas_in_final": 1,
+      "hot_loop": {
+        "entry": "kernel_k48",
+        "function": "kernel_k48",
+        "line": 18,
+        "writes": [
+          "u",
+          "v"
+        ]
+      },
+      "hot_loop_covered": true,
+      "hot_loop_coverage": {
+        "criterion": "v2 (27 Sep 2026)",
+        "covered": true,
+        "covering": [
+          {
+            "function": "kernel_k48",
+            "line": 78,
+            "directive": "#pragma omp parallel for default(shared) shared(order, lo, hi)",
+            "writes": [
+              "u",
+              "v"
+            ]
+          }
+        ],
+        "uncounted": [],
+        "elsewhere": []
+      },
+      "candidates_recorded": 0,
+      "verify": {
+        "verify_size": "LARGE",
+        "threads": [
+          6,
+          12
+        ],
+        "repeats": 5,
+        "compiler": "/usr/bin/clang-20",
+        "final_flags": [],
+        "dump_exact": true,
+        "dump_max_rel_err": 0.0,
+        "seed": "7",
+        "dump_exact_seeded": true,
+        "dump_seeded_max_rel_err": 0.0,
+        "seq_median_s": 3.1159,
+        "seq_kernel_median_s": 2.277717,
+        "timing_basis": "kernel",
+        "par": {},
+        "status": "final_run_failed_T6",
+        "final_run_failure": {
+          "threads": 6,
+          "rc": -9,
+          "seconds": 1800.3,
+          "timed_out": true
+        },
+        "speed_measurable": true
+      },
+      "verify_s": 1828.7,
+      "status": "done",
+      "outcome": "BROKEN",
+      "finished_at": "2026-09-30T13:08:20",
+      "host_load_end": [
+        11.20654296875,
+        11.3759765625,
+        10.42724609375
+      ],
+      "profile": {
+        "wrapper": "discopop_cc",
+        "instrument_s": 0.16,
+        "profiled_run_s": 0.77,
+        "explore_stalls": 0,
+        "explore_s": 1.37,
+        "explore_success_s": 1.37,
+        "explore_attempts": 1,
+        "explore_timed_out": false,
+        "explore_failures": [],
+        "patterns": {
+          "optimizer_output": 0,
+          "merged_pattern": 0,
+          "task": 0,
+          "do_all": 0,
+          "reduction": 0
+        },
+        "profile_sha256": "0f76117f5f71f35a460c9d4046488847920d0695dde0e889dcb1e713eaa0ef3f"
+      },
+      "package_integrity": {
+        "before": {
+          "checked": "before trial",
+          "at": "2026-09-30T12:36:14",
+          "prepared_sha256": "cb0cfa9e8e80a9765fac120d976becee32d757803aaf8a0c1aa2b578951d8796",
+          "packager_sha256": "cb0cfa9e8e80a9765fac120d976becee32d757803aaf8a0c1aa2b578951d8796",
+          "harness_sha256": "a52e89b585b264d69709b332fd6f208baa11f65699d052eb74e5d3bc23bb00f6",
+          "archived_sha256": "cb0cfa9e8e80a9765fac120d976becee32d757803aaf8a0c1aa2b578951d8796",
+          "profile_sha256": "0f76117f5f71f35a460c9d4046488847920d0695dde0e889dcb1e713eaa0ef3f",
+          "ok": true
+        },
+        "after": {
+          "checked": "after trial",
+          "at": "2026-09-30T13:08:20",
+          "prepared_sha256": "cb0cfa9e8e80a9765fac120d976becee32d757803aaf8a0c1aa2b578951d8796",
+          "packager_sha256": "cb0cfa9e8e80a9765fac120d976becee32d757803aaf8a0c1aa2b578951d8796",
+          "harness_sha256": "a52e89b585b264d69709b332fd6f208baa11f65699d052eb74e5d3bc23bb00f6",
+          "archived_sha256": "cb0cfa9e8e80a9765fac120d976becee32d757803aaf8a0c1aa2b578951d8796",
+          "profile_sha256": "0f76117f5f71f35a460c9d4046488847920d0695dde0e889dcb1e713eaa0ef3f",
+          "ok": true
+        }
+      },
+      "speed_check_off": true,
+      "timing_flags": [
+        "--timing-cflags=-DSTANDARD_DATASET"
+      ],
+      "repeat": 5
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+--- s424.c
++++ s424.c
+@@ -18,8 +18,15 @@
+     int vl = 63;
+     xx = flat_2d_array + vl;
+     for (int nl = 0; nl < R; nl++) {
+-        for (int i = 0; i < LEN_1D - 1; i++) {
++        // Stage 0: iterations 0-63 (no earlier iteration to depend on)
++        for (int i = 0; i < 64 && i < LEN_1D - 1; i++) {
+             xx[i+1] = flat_2d_array[i] + a[i];
++        }
++        // Stages 1+: iterations 64-end, in groups of 64 (each iteration depends only on prior stage)
++        for (int stage = 1; stage * 64 < LEN_1D - 1; stage++) {
++            for (int i = stage * 64; i < (stage + 1) * 64 && i < LEN_1D - 1; i++) {
++                xx[i+1] = flat_2d_array[i] + a[i];
++            }
+         }
+         pb_mix(nl);
+     }

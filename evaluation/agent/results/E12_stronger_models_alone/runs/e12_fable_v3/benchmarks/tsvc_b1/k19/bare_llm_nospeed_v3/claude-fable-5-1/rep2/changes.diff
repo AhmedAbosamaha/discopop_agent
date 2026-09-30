@@ -1,0 +1,138 @@
+--- original.c
++++ final.c
+@@ -1,5 +1,6 @@
+ /* Kernel k19. */
+ #include "tsvc_b1/k19.h"
++#include <stdlib.h>
+ 
+ /* Between two repetitions a few INPUT elements change, so no repetition can be skipped,
+  * merged with another or run out of order: the repetition loop is sequential by a true
+@@ -12,15 +13,125 @@
+   a[0] += (real_t)0.125; b[LEN_1D-1] += (real_t)0.125;
+ }
+ 
++/* One iteration of the original loop body. */
++static inline void k19_iter(long i)
++{
++    u[ju[i]] += v[kv[i]] * c[i];
++    v[jv[i]] = u[ku[i]] * d[i] + c[i];
++}
++
++/* Levels with fewer iterations than this are run serially (in level order),
++ * to avoid one fork/join per level when the index pattern is heavily chained. */
++#define K19_PAR_THRESH 256L
++
+ static real_t kernel_k19(void)
+ {
++    const long n = (long)LEN_1D;
++
++    /* ---- Inspector: build a dependence-respecting level schedule once.
++     * The index arrays never change, so it is valid for every repetition. ---- */
++    long maxU = -1, maxV = -1, minIdx = 0;
++    for (long i = 1; i < n; i++) {
++        long a1 = (long)ju[i], a2 = (long)ku[i];
++        long b1 = (long)jv[i], b2 = (long)kv[i];
++        if (a1 > maxU) maxU = a1;
++        if (a2 > maxU) maxU = a2;
++        if (b1 > maxV) maxV = b1;
++        if (b2 > maxV) maxV = b2;
++        if (a1 < minIdx) minIdx = a1;
++        if (a2 < minIdx) minIdx = a2;
++        if (b1 < minIdx) minIdx = b1;
++        if (b2 < minIdx) minIdx = b2;
++    }
++
++    int  *level = NULL;
++    int  *lastU = NULL, *lastV = NULL;
++    long *order = NULL, *ls = NULL;
++    long numLevels = 0;
++    int ok = (n > 1 && minIdx >= 0);
++
++    if (ok) {
++        level = (int *)malloc((size_t)n * sizeof(int));
++        lastU = (int *)malloc((size_t)(maxU + 1) * sizeof(int));
++        lastV = (int *)malloc((size_t)(maxV + 1) * sizeof(int));
++        order = (long *)malloc((size_t)n * sizeof(long));
++        if (!level || !lastU || !lastV || !order) ok = 0;
++    }
++
++    if (ok) {
++        for (long k = 0; k <= maxU; k++) lastU[k] = -1;
++        for (long k = 0; k <= maxV; k++) lastV[k] = -1;
++
++        int maxLevel = -1;
++        for (long i = 1; i < n; i++) {
++            long a1 = (long)ju[i], a2 = (long)ku[i];
++            long b1 = (long)jv[i], b2 = (long)kv[i];
++            int lv = lastU[a1];
++            if (lastU[a2] > lv) lv = lastU[a2];
++            if (lastV[b1] > lv) lv = lastV[b1];
++            if (lastV[b2] > lv) lv = lastV[b2];
++            lv += 1;
++            level[i] = lv;
++            lastU[a1] = lv; lastU[a2] = lv;
++            lastV[b1] = lv; lastV[b2] = lv;
++            if (lv > maxLevel) maxLevel = lv;
++        }
++        free(lastU); lastU = NULL;
++        free(lastV); lastV = NULL;
++
++        numLevels = (long)maxLevel + 1;
++        ls = (long *)malloc((size_t)(numLevels + 2) * sizeof(long));
++        if (!ls) ok = 0;
++        else {
++            for (long k = 0; k < numLevels + 2; k++) ls[k] = 0;
++            for (long i = 1; i < n; i++) ls[(long)level[i] + 2]++;
++            for (long k = 1; k < numLevels + 2; k++) ls[k] += ls[k - 1];
++            /* now ls[l+1] == start of level l; place in ascending i */
++            for (long i = 1; i < n; i++) order[ls[(long)level[i] + 1]++] = i;
++            /* now ls[l] == start of level l, ls[l+1] == end of level l */
++        }
++        free(level); level = NULL;
++    }
++
++    if (!ok) {
++        /* Fallback (allocation failure / malformed indices): original sequential loop. */
++        free(level); free(lastU); free(lastV); free(order); free(ls);
++        for (int nl = 0; nl < R; nl++) {
++            for (long i = 1; i < LEN_1D; i++) {
++                k19_iter(i);
++            }
++            pb_mix(nl);
++        }
++        return (real_t)0;
++    }
++
++    /* ---- Executor: level by level; iterations within a level are independent. ---- */
+     for (int nl = 0; nl < R; nl++) {
+-        for (long i = 1; i < LEN_1D; i++) {
+-            u[ju[i]] += v[kv[i]] * c[i];
+-            v[jv[i]] = u[ku[i]] * d[i] + c[i];
++        long L = 0;
++        while (L < numLevels) {
++            const long s = ls[L];
++            const long e = ls[L + 1];
++            if (e - s >= K19_PAR_THRESH) {
++                #pragma omp parallel for default(shared) shared(order) schedule(static)
++                for (long q = s; q < e; q++) {
++                    k19_iter(order[q]);
++                }
++                L++;
++            } else {
++                long L2 = L + 1;
++                while (L2 < numLevels && ls[L2 + 1] - ls[L2] < K19_PAR_THRESH) L2++;
++                const long e2 = ls[L2];
++                for (long q = s; q < e2; q++) {
++                    k19_iter(order[q]);
++                }
++                L = L2;
++            }
+         }
+         pb_mix(nl);
+     }
++
++    free(order);
++    free(ls);
+     return (real_t)0;
+ }
+ 

@@ -1,0 +1,99 @@
+/* Kernel k19. */
+#include "tsvc_b1/k19.h"
+#include <stdlib.h>
+
+/* Between two repetitions a few INPUT elements change, so no repetition can be skipped,
+ * merged with another or run out of order: the repetition loop is sequential by a true
+ * dependence, and the loop under study is the one inside it. */
+static void pb_mix(int nl)
+{
+  long k = ((long)nl * 7919L + 13L) % LEN_1D;
+  a[k] += (real_t)0.25; b[k] += (real_t)0.25; c[k] += (real_t)0.125;
+  d[k] += (real_t)0.125; e[k] += (real_t)0.25;
+  a[0] += (real_t)0.125; b[LEN_1D-1] += (real_t)0.125;
+}
+
+static real_t kernel_k19(void)
+{
+    long n = LEN_1D;
+    long *wu = (long *)malloc((size_t)n * sizeof(long));
+    long *wv = (long *)malloc((size_t)n * sizeof(long));
+    real_t *us = (real_t *)malloc((size_t)n * sizeof(real_t));
+    real_t *vs = (real_t *)malloc((size_t)n * sizeof(real_t));
+    int bad = (wu == NULL || wv == NULL || us == NULL || vs == NULL);
+    int needU = 0, needV = 0;
+
+    /* Inspect the (constant) index pattern once. */
+    if (!bad) {
+        #pragma omp parallel for shared(wu, wv) firstprivate(n)
+        for (long x = 0; x < n; x++) {
+            wu[x] = -1;
+            wv[x] = -1;
+        }
+        for (long i = 1; i < n; i++) {
+            long p = (long)ju[i], q = (long)jv[i];
+            if (p < 0 || p >= n || q < 0 || q >= n) {
+                bad = 1;
+            } else {
+                if (wu[p] != -1) bad = 1; else wu[p] = i;
+                if (wv[q] != -1) bad = 1; else wv[q] = i;
+            }
+        }
+        if (!bad) {
+            #pragma omp parallel for shared(wu, wv) firstprivate(n) reduction(|:bad, needU, needV)
+            for (long i = 1; i < n; i++) {
+                long r = (long)ku[i], s = (long)kv[i];
+                if (r < 0 || r >= n || s < 0 || s >= n) {
+                    bad |= 1;
+                } else {
+                    long w = wu[r];
+                    if (w != -1 && w < i) bad |= 1;
+                    else if (w > i) needU |= 1;
+                    w = wv[s];
+                    if (w != -1 && w < i) bad |= 1;
+                    else if (w > i) needV |= 1;
+                }
+            }
+        }
+    }
+
+    for (int nl = 0; nl < R; nl++) {
+        if (bad) {
+            for (long i = 1; i < LEN_1D; i++) {
+                u[ju[i]] += v[kv[i]] * c[i];
+                v[jv[i]] = u[ku[i]] * d[i] + c[i];
+            }
+        } else {
+            const real_t *ur = u;
+            const real_t *vr = v;
+            if (needU || needV) {
+                #pragma omp parallel for shared(us, vs) firstprivate(n, needU, needV)
+                for (long x = 0; x < n; x++) {
+                    if (needU) us[x] = u[x];
+                    if (needV) vs[x] = v[x];
+                }
+                if (needU) ur = us;
+                if (needV) vr = vs;
+            }
+            #pragma omp parallel for firstprivate(n, ur, vr)
+            for (long i = 1; i < n; i++) {
+                long p = (long)ju[i];
+                long r = (long)ku[i];
+                real_t nu = ur[p];
+                nu += vr[kv[i]] * c[i];
+                u[p] = nu;
+                real_t x = (r == p) ? nu : ur[r];
+                v[jv[i]] = x * d[i] + c[i];
+            }
+        }
+        pb_mix(nl);
+    }
+
+    free(wu);
+    free(wv);
+    free(us);
+    free(vs);
+    return (real_t)0;
+}
+
+PB_MAIN(kernel_k19)

@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s424.c
+  Model          : claude-fable-5-1
+  Not editable   : main, pb_mix
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-fable-5-1...
+│  [bare] s424.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Done. Summary of the rewrite in `s424.c`: - **Dependence removed:** `xx[i+1] = flat_2d_array[i] + a[i]` with `xx = flat_2d_array + 63` is a flow dependence of fixed distance 64 (write `flat[i+64]`, read `flat[i]`). It carries a value, so it partitions the iteration space into 64 independent chains keyed by `i mod 64`. - **New structure:** outer `#pragma omp parallel for` over the 64 residues `r`; 
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

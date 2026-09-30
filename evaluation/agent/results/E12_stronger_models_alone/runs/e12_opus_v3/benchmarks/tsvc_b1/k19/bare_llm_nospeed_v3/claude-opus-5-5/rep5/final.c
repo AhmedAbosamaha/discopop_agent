@@ -1,0 +1,95 @@
+/* Kernel k19. */
+#include "tsvc_b1/k19.h"
+#include <stdlib.h>
+
+/* Between two repetitions a few INPUT elements change, so no repetition can be skipped,
+ * merged with another or run out of order: the repetition loop is sequential by a true
+ * dependence, and the loop under study is the one inside it. */
+static void pb_mix(int nl)
+{
+  long k = ((long)nl * 7919L + 13L) % LEN_1D;
+  a[k] += (real_t)0.25; b[k] += (real_t)0.25; c[k] += (real_t)0.125;
+  d[k] += (real_t)0.125; e[k] += (real_t)0.25;
+  a[0] += (real_t)0.125; b[LEN_1D-1] += (real_t)0.125;
+}
+
+/* Returns 1 when the fused loop may be split into two independent passes
+ * (all u updates, then all v updates) with identical results. */
+static int k19_split_ok(void)
+{
+    int ok = 1;
+    const long n = (long)LEN_1D;
+
+#pragma omp parallel for reduction(&:ok)
+    for (long i = 1; i < n; i++) {
+        long x1 = (long)ju[i], x2 = (long)ku[i], x3 = (long)jv[i], x4 = (long)kv[i];
+        ok &= (x1 >= 0 && x1 < n && x2 >= 0 && x2 < n &&
+               x3 >= 0 && x3 < n && x4 >= 0 && x4 < n);
+    }
+    if (!ok) return 0;
+
+    int *pos = (int *)malloc(sizeof(int) * (size_t)n);
+    if (!pos) return 0;
+
+    /* u: ju injective, and no later iteration writes what u[ku[i]] reads */
+#pragma omp parallel for
+    for (long x = 0; x < n; x++) pos[x] = 0;
+    for (long i = 1; i < n; i++) {           /* serial: builds last-writer map */
+        long x = (long)ju[i];
+        if (pos[x] != 0) ok = 0;
+        pos[x] = (int)i;
+    }
+    if (ok) {
+#pragma omp parallel for reduction(&:ok)
+        for (long i = 1; i < n; i++) {
+            ok &= (pos[(long)ku[i]] <= i);
+        }
+    }
+
+    /* v: jv injective, and no earlier iteration writes what v[kv[i]] reads */
+    if (ok) {
+#pragma omp parallel for
+        for (long x = 0; x < n; x++) pos[x] = 0;
+        for (long i = 1; i < n; i++) {       /* serial: builds writer map */
+            long x = (long)jv[i];
+            if (pos[x] != 0) ok = 0;
+            pos[x] = (int)i;
+        }
+    }
+    if (ok) {
+#pragma omp parallel for reduction(&:ok)
+        for (long i = 1; i < n; i++) {
+            int p = pos[(long)kv[i]];
+            ok &= (p == 0 || p >= i);
+        }
+    }
+
+    free(pos);
+    return ok;
+}
+
+static real_t kernel_k19(void)
+{
+    const int split = k19_split_ok();
+    for (int nl = 0; nl < R; nl++) {
+        if (split) {
+#pragma omp parallel for
+            for (long i = 1; i < LEN_1D; i++) {
+                u[ju[i]] += v[kv[i]] * c[i];
+            }
+#pragma omp parallel for
+            for (long i = 1; i < LEN_1D; i++) {
+                v[jv[i]] = u[ku[i]] * d[i] + c[i];
+            }
+        } else {
+            for (long i = 1; i < LEN_1D; i++) {
+                u[ju[i]] += v[kv[i]] * c[i];
+                v[jv[i]] = u[ku[i]] * d[i] + c[i];
+            }
+        }
+        pb_mix(nl);
+    }
+    return (real_t)0;
+}
+
+PB_MAIN(kernel_k19)

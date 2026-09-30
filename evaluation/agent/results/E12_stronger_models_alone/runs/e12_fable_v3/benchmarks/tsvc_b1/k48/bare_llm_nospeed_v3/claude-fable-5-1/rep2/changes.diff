@@ -1,0 +1,107 @@
+--- original.c
++++ final.c
+@@ -1,5 +1,6 @@
+ /* Kernel k48. */
+ #include "tsvc_b1/k48.h"
++#include <stdlib.h>
+ 
+ /* Between two repetitions a few INPUT elements change, so no repetition can be skipped,
+  * merged with another or run out of order: the repetition loop is sequential by a true
+@@ -14,13 +15,94 @@
+ 
+ static real_t kernel_k48(void)
+ {
++    long n = LEN_1D;
++
++    /* Inspector (once per call; the index arrays never change between repetitions).
++     * Each iteration i gets a wavefront level: 1 + the highest level of any earlier
++     * iteration that touches the same u/v element with at least one write involved
++     * (flow, anti and output dependences).  Iterations sharing a level therefore
++     * never write an element another one of them reads or writes, and every element
++     * sees exactly the original sequential order of its writes and reads. */
++    int *lwu = (int *)malloc(sizeof(int) * (size_t)n);  /* last write level, u[]  */
++    int *lru = (int *)malloc(sizeof(int) * (size_t)n);  /* last read  level, u[]  */
++    int *lwv = (int *)malloc(sizeof(int) * (size_t)n);  /* last write level, v[]  */
++    int *lrv = (int *)malloc(sizeof(int) * (size_t)n);  /* last read  level, v[]  */
++    int *lvl = (int *)malloc(sizeof(int) * (size_t)n);  /* level of iteration i   */
++    int *order = NULL;   /* iterations sorted by level */
++    long *start = NULL;  /* start[L] .. start[L+1]-1 : positions of level L in order */
++    int nlev = 0;
++
++    if (lwu && lru && lwv && lrv && lvl) {
++#pragma omp parallel for default(none) shared(lwu, lru, lwv, lrv, n) schedule(static)
++        for (long j = 0; j < n; j++) {
++            lwu[j] = -1; lru[j] = -1; lwv[j] = -1; lrv[j] = -1;
++        }
++        for (long i = 1; i < n; i++) {
++            long a1 = ju[i];   /* u write (read-modify-write) */
++            long a2 = ku[i];   /* u read  */
++            long a3 = kv[i];   /* v read  */
++            long a4 = jv[i];   /* v write */
++            int L = -1;
++            if (lwu[a1] > L) L = lwu[a1];
++            if (lru[a1] > L) L = lru[a1];
++            if (lwu[a2] > L) L = lwu[a2];
++            if (lwv[a3] > L) L = lwv[a3];
++            if (lwv[a4] > L) L = lwv[a4];
++            if (lrv[a4] > L) L = lrv[a4];
++            L += 1;
++            lvl[i] = L;
++            lwu[a1] = L;
++            if (lru[a2] < L) lru[a2] = L;
++            if (lrv[a3] < L) lrv[a3] = L;
++            lwv[a4] = L;
++            if (L + 1 > nlev) nlev = L + 1;
++        }
++    }
++    free(lwu); free(lru); free(lwv); free(lrv);
++
++    if (lvl && nlev > 0) {
++        long *fill = (long *)malloc(sizeof(long) * (size_t)(nlev + 1));
++        start = (long *)malloc(sizeof(long) * (size_t)(nlev + 1));
++        order = (int *)malloc(sizeof(int) * (size_t)n);
++        if (fill && start && order) {
++            for (int L = 0; L <= nlev; L++) start[L] = 0;
++            for (long i = 1; i < n; i++) start[lvl[i] + 1]++;
++            for (int L = 0; L < nlev; L++) start[L + 1] += start[L];
++            for (int L = 0; L <= nlev; L++) fill[L] = start[L];
++            for (long i = 1; i < n; i++) order[fill[lvl[i]]++] = (int)i;
++        } else {
++            free(start); start = NULL;
++            free(order); order = NULL;
++        }
++        free(fill);
++    }
++    free(lvl);
++
+     for (int nl = 0; nl < R; nl++) {
+-        for (long i = 1; i < LEN_1D; i++) {
+-            u[ju[i]] += v[kv[i]] * c[i];
+-            v[jv[i]] = u[ku[i]] * d[i] + c[i];
++        if (order && start) {
++            /* Executor: levels in order; iterations inside a level are independent. */
++            for (int L = 0; L < nlev; L++) {
++                long lo = start[L];
++                long hi = start[L + 1];
++#pragma omp parallel for default(none) shared(order, lo, hi, u, v, c, d, ju, jv, ku, kv) schedule(static) if(hi - lo > 64)
++                for (long p = lo; p < hi; p++) {
++                    long i = order[p];
++                    u[ju[i]] += v[kv[i]] * c[i];
++                    v[jv[i]] = u[ku[i]] * d[i] + c[i];
++                }
++            }
++        } else {
++            /* Allocation failed: keep the original sequential semantics. */
++            for (long i = 1; i < LEN_1D; i++) {
++                u[ju[i]] += v[kv[i]] * c[i];
++                v[jv[i]] = u[ku[i]] * d[i] + c[i];
++            }
+         }
+         pb_mix(nl);
+     }
++
++    free(order);
++    free(start);
+     return (real_t)0;
+ }
+ 

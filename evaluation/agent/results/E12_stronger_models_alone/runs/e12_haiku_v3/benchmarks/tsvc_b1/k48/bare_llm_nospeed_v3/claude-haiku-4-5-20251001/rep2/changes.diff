@@ -1,0 +1,18 @@
+--- original.c
++++ final.c
+@@ -15,8 +15,15 @@
+ static real_t kernel_k48(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        // Phase 1: accumulate into u, reading from v
++        #pragma omp parallel for shared(u, v, c, kv, ju)
+         for (long i = 1; i < LEN_1D; i++) {
+             u[ju[i]] += v[kv[i]] * c[i];
++        }
++
++        // Phase 2: read from u, write to v
++        #pragma omp parallel for shared(u, v, d, c, ku, jv)
++        for (long i = 1; i < LEN_1D; i++) {
+             v[jv[i]] = u[ku[i]] * d[i] + c[i];
+         }
+         pb_mix(nl);

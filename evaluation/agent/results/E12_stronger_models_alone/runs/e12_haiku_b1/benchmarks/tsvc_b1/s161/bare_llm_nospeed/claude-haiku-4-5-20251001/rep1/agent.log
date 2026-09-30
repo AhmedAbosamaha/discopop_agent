@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s161.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : main, pb_mix
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] s161.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Looking at this code, let me analyze the dependence structure: **Analysis:** 1. **The outer `nl` loop**: Must stay sequential. Each iteration calls `pb_mix(nl)`, which modifies input arrays (a, b, c, d, e) based on `nl`, creating a true data dependence between iterations. 2. **The inner `i` loop**: This is the candidate for parallelization. However, it has gotos which OpenMP prohibits. After remov
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

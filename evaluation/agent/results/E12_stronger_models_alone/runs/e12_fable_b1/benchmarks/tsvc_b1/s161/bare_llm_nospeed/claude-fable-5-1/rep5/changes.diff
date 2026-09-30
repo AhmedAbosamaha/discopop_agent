@@ -1,0 +1,31 @@
+--- original.c
++++ final.c
+@@ -16,16 +16,21 @@
+ static real_t kernel_s161(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        /* Pass 1: every write to c[i+1] (the only value that crosses iterations).
++         * a[i] read here is never written in this pass, and each c[i+1] is distinct. */
++#pragma omp parallel for shared(a, b, c, d) schedule(static)
+         for (int i = 0; i < LEN_1D-1; ++i) {
+             if (b[i] < (real_t)0.) {
+-                goto L20;
++                c[i+1] = a[i] + d[i] * d[i];
+             }
+-            a[i] = c[i] + d[i] * e[i];
+-            goto L10;
+-L20:
+-            c[i+1] = a[i] + d[i] * d[i];
+-L10:
+-            ;
++        }
++        /* Pass 2: every write to a[i]; c[i] now holds the value the original
++         * order produced (its writer, iteration i-1, always preceded this read). */
++#pragma omp parallel for shared(a, b, c, d, e) schedule(static)
++        for (int i = 0; i < LEN_1D-1; ++i) {
++            if (!(b[i] < (real_t)0.)) {
++                a[i] = c[i] + d[i] * e[i];
++            }
+         }
+         pb_mix(nl);
+     }

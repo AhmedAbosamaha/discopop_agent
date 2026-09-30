@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s424.c
+  Model          : claude-fable-5-1
+  Not editable   : main, pb_mix
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-fable-5-1...
+│  [bare] s424.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Done. The rewrite: - **Dependence removed**: the loop `xx[i+1] = flat_2d_array[i] + a[i]` with `xx = flat_2d_array + 63` is a true recurrence of distance 64 (`flat[i+64] = flat[i] + a[i]`). It is a value flowing between iterations, not just a reused location, so it can't be broken by renaming — but it decomposes into 64 completely disjoint chains (one per `i mod 64`). - **Parallel loop**: the oute
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

@@ -1,0 +1,97 @@
+--- original.c
++++ final.c
+@@ -12,15 +12,91 @@
+   a[0] += (real_t)0.125; b[LEN_1D-1] += (real_t)0.125;
+ }
+ 
++#include <stdlib.h>
++
+ static real_t kernel_k48(void)
+ {
++    /* ---- Inspector (sequential, O(LEN_1D)): the index arrays ju/jv/ku/kv are
++     * never modified, so the dependence structure of the i-loop is the same in
++     * every repetition.  Assign each iteration a level: 1 + the highest level of
++     * any earlier iteration it conflicts with (RAW / WAR / WAW on u or v).
++     * Iterations sharing a level touch no common location with a write, so they
++     * may execute in any order; levels are executed one after another. ---- */
++    const long n = (long)LEN_1D;
++    int *lvl = (int *)calloc((size_t)(n > 0 ? n : 1), sizeof(int));
++    int *uW  = (int *)calloc((size_t)(n > 0 ? n : 1), sizeof(int)); /* last write level of u[L] */
++    int *uR  = (int *)calloc((size_t)(n > 0 ? n : 1), sizeof(int)); /* last read  level of u[L] */
++    int *vW  = (int *)calloc((size_t)(n > 0 ? n : 1), sizeof(int)); /* last write level of v[L] */
++    int *vR  = (int *)calloc((size_t)(n > 0 ? n : 1), sizeof(int)); /* last read  level of v[L] */
++    int maxlvl = 0;
++
++    for (long i = 1; i < n; i++) {
++        long lju = (long)ju[i];
++        long lkv = (long)kv[i];
++        long lku = (long)ku[i];
++        long ljv = (long)jv[i];
++        int l = 0;
++        /* read v[kv[i]] : after last write */
++        if (vW[lkv] > l) l = vW[lkv];
++        /* read+write u[ju[i]] : after last write and last read */
++        if (uW[lju] > l) l = uW[lju];
++        if (uR[lju] > l) l = uR[lju];
++        /* read u[ku[i]] : after last write */
++        if (uW[lku] > l) l = uW[lku];
++        /* write v[jv[i]] : after last write and last read */
++        if (vW[ljv] > l) l = vW[ljv];
++        if (vR[ljv] > l) l = vR[ljv];
++        l += 1;
++        lvl[i] = l;
++        if (l > maxlvl) maxlvl = l;
++        /* record this iteration's accesses */
++        if (vR[lkv] < l) vR[lkv] = l;
++        uW[lju] = l;
++        uR[lju] = l;
++        if (uR[lku] < l) uR[lku] = l;
++        vW[ljv] = l;
++    }
++    free(uW); free(uR); free(vW); free(vR);
++
++    /* Counting sort of iterations by level: order[off[l] .. off[l+1]) holds the
++     * iterations of level l (in ascending i, though any order is fine). */
++    long *off   = (long *)calloc((size_t)maxlvl + 2, sizeof(long));
++    long *order = (long *)malloc((size_t)(n > 0 ? n : 1) * sizeof(long));
++    for (long i = 1; i < n; i++) off[lvl[i] + 1]++;
++    for (int l = 1; l <= maxlvl; l++) off[l + 1] += off[l];
++    {
++        long *pos = (long *)malloc((size_t)(maxlvl + 2) * sizeof(long));
++        for (int l = 0; l <= maxlvl + 1; l++) pos[l] = off[l];
++        for (long i = 1; i < n; i++) order[pos[lvl[i]]++] = i;
++        free(pos);
++    }
++    free(lvl);
++
++    /* ---- Executor: levels in order, iterations within a level independent. ---- */
+     for (int nl = 0; nl < R; nl++) {
+-        for (long i = 1; i < LEN_1D; i++) {
+-            u[ju[i]] += v[kv[i]] * c[i];
+-            v[jv[i]] = u[ku[i]] * d[i] + c[i];
++        for (int l = 1; l <= maxlvl; l++) {
++            long s = off[l];
++            long e = off[l + 1];
++            if (e - s >= 256) {
++#pragma omp parallel for shared(order, u, v, c, d, ju, jv, ku, kv) firstprivate(s, e)
++                for (long p = s; p < e; p++) {
++                    long i = order[p];
++                    u[ju[i]] += v[kv[i]] * c[i];
++                    v[jv[i]] = u[ku[i]] * d[i] + c[i];
++                }
++            } else {
++                for (long p = s; p < e; p++) {
++                    long i = order[p];
++                    u[ju[i]] += v[kv[i]] * c[i];
++                    v[jv[i]] = u[ku[i]] * d[i] + c[i];
++                }
++            }
+         }
+         pb_mix(nl);
+     }
++
++    free(order);
++    free(off);
+     return (real_t)0;
+ }
+ 

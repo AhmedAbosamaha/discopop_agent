@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s424.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : main, pb_mix
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] s424.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Looking at the code, let me identify the blocking dependence and how to parallelize it.## Analysis & Plan **Blocking Dependence:** The inner loop has a distance-64 loop-carried dependence. Iteration i writes to `xx[i+1]` = `flat_2d_array[i+64]`. Iteration (i+64) reads from `flat_2d_array[i+64]`, creating a true data dependence (a value moving between iterations 64 positions apart). **Solution:** U
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

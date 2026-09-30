@@ -1,0 +1,20 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e12_agent_v3/benchmarks/tsvc_b1/s424/full_b1_nospeed_v3/claude-haiku-4-5-20251001/rep4/work/s424.c	2026-09-30 10:08:40.633300801 +0000
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e12_agent_v3/benchmarks/tsvc_b1/s424/full_b1_nospeed_v3/claude-haiku-4-5-20251001/rep4/work/s424.c.discopop_patch_generator.temp	2026-09-30 10:08:42.248309494 +0000
+@@ -23,11 +23,17 @@
+             xx[i+1] = flat_2d_array[i] + a[i];
+         }
+         // Stages 1+: iterations 64-end, in groups of 64 (each iteration depends only on prior stage)
++        #pragma omp parallel
++        #pragma omp single
++        {
++        #pragma omp task
++        #pragma omp task
+         for (int stage = 1; stage * 64 < LEN_1D - 1; stage++) {
+             for (int i = stage * 64; i < (stage + 1) * 64 && i < LEN_1D - 1; i++) {
+                 xx[i+1] = flat_2d_array[i] + a[i];
+             }
+         }
++        }
+         pb_mix(nl);
+     }
+     return (real_t)0;

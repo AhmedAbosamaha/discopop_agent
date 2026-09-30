@@ -1,0 +1,21 @@
+--- s424.c
++++ s424.c
+@@ -18,9 +18,17 @@
+     int vl = 63;
+     xx = flat_2d_array + vl;
+     for (int nl = 0; nl < R; nl++) {
++        real_t *a_copy = (real_t *)malloc(sizeof(real_t) * LEN_1D);
++        real_t *flat_copy = (real_t *)malloc(sizeof(real_t) * LEN_1D);
++        memcpy(a_copy, a, sizeof(real_t) * LEN_1D);
++        memcpy(flat_copy, flat_2d_array, sizeof(real_t) * LEN_1D);
++
+         for (int i = 0; i < LEN_1D - 1; i++) {
+-            xx[i+1] = flat_2d_array[i] + a[i];
++            xx[i+1] = flat_copy[i] + a_copy[i];
+         }
++
++        free(a_copy);
++        free(flat_copy);
+         pb_mix(nl);
+     }
+     return (real_t)0;
