@@ -365,4 +365,6 @@ Status: running
 | `e12_opus_b1` | not archived yet | E12: claude-opus-5-5 alone on tsvc_b1/s424, s161 × bare_llm_nospeed × 5 (E2-B1's packages and model-alone prompt) | registered |  |  |
 | `e12_fable_v3` | not archived yet | E12: claude-fable-5-1 alone on tsvc_b1/k19, k48 × bare_llm_nospeed_v3 × 5 (E2-V3's packages and prompt version) | registered |  |  |
 | `e12_fable_b1` | not archived yet | E12: claude-fable-5-1 alone on tsvc_b1/s424, s161 × bare_llm_nospeed × 5 (E2-B1's packages and model-alone prompt) | registered |  |  |
+| `e12_haiku_v3` | not archived yet | E12 CLI control: claude-haiku-4-5-20251001 alone on tsvc_b1/k19, k48 × bare_llm_nospeed_v3 × 5 with the upgraded SDK (bundled CLI 2.1.285) | registered |  |  |
+| `e12_haiku_b1` | not archived yet | E12 CLI control: claude-haiku-4-5-20251001 alone on tsvc_b1/s424, s161 × bare_llm_nospeed × 5 with the upgraded SDK | registered |  |  |
 
