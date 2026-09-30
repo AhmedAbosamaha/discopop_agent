@@ -357,7 +357,7 @@ Status: done
 
 ## [E12 — a small model inside the pipeline against stronger models alone](E12_stronger_models_alone/REPORT.md)
 
-Status: running
+Status: done
 
 | run | where | what it is | status | trials | outcomes |
 |---|---|---|---|---:|---|
