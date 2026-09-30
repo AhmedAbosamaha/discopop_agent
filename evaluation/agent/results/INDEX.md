@@ -355,3 +355,14 @@ Status: done
 | `e2v3_k48` | [`E02v3_order_statement/runs/e2v3_k48/`](E02v3_order_statement/runs/e2v3_k48/) | E2-V3 re-run of ORDER-2 Y (control), repackaged: tsvc_b1/k48 × full_b1_nospeed_v3, no_evidence_b1_nospeed_v3, twin_full_nospeed_v3, twin_no_evidence_nospeed_v3, bare_llm_nospeed_v3 × 10 trials, Haiku, threads 6/12, repeats 5 | valid | 50 | BROKEN 9, FASTER 39, VERIFY_FAILED 2 |
 | `e2v3s_k19` | [`E02v3_order_statement/runs/e2v3s_k19/`](E02v3_order_statement/runs/e2v3s_k19/) | E2-V3 with Sonnet (claude-sonnet-5): tsvc_b1/k19 × full_b1_nospeed_v3, no_evidence_b1_nospeed_v3, twin_full_nospeed_v3, twin_no_evidence_nospeed_v3, bare_llm_nospeed_v3 × 10 trials, threads 6/12, repeats 5 | valid | 50 | BROKEN 21, FASTER 17, changed-not-parallel 1, no-change 9, parallel-not-faster 2 |
 
+## [E12 — a small model inside the pipeline against stronger models alone](E12_stronger_models_alone/)
+
+Status: running
+
+| run | where | what it is | status | trials | outcomes |
+|---|---|---|---|---:|---|
+| `e12_opus_v3` | not archived yet | E12: claude-opus-5-5 alone on tsvc_b1/k19, k48 × bare_llm_nospeed_v3 × 5 (E2-V3's packages and prompt version) | registered |  |  |
+| `e12_opus_b1` | not archived yet | E12: claude-opus-5-5 alone on tsvc_b1/s424, s161 × bare_llm_nospeed × 5 (E2-B1's packages and model-alone prompt) | registered |  |  |
+| `e12_fable_v3` | not archived yet | E12: claude-fable-5-1 alone on tsvc_b1/k19, k48 × bare_llm_nospeed_v3 × 5 (E2-V3's packages and prompt version) | registered |  |  |
+| `e12_fable_b1` | not archived yet | E12: claude-fable-5-1 alone on tsvc_b1/s424, s161 × bare_llm_nospeed × 5 (E2-B1's packages and model-alone prompt) | registered |  |  |
+
