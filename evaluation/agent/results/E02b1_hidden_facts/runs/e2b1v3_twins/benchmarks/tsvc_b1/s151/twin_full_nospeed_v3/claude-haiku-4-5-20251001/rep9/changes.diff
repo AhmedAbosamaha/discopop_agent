@@ -1,0 +1,20 @@
+--- original.c
++++ final.c
+@@ -22,8 +22,16 @@
+ 
+ static real_t kernel_s151(void)
+ {
++    real_t t[LEN_1D];
+     for (int nl = 0; nl < R; nl++) {
+-        s151s(a, b,  1);
++        #pragma omp parallel for lastprivate(t) 
++        for (int i = 0; i < LEN_1D-1; i++) {
++            t[i] = a[i + 1] + b[i];
++        }
++        #pragma omp parallel for firstprivate(t) 
++        for (int i = 0; i < LEN_1D-1; i++) {
++            a[i] = t[i];
++        }
+         pb_mix(nl);
+     }
+     return (real_t)0;

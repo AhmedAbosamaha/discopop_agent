@@ -1,0 +1,18 @@
+--- original.c
++++ final.c
+@@ -15,6 +15,15 @@
+ static real_t kernel_k19(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        /* Each iteration i only ever touches its own exclusive pair of slots
++         * ju[i] (in u) and jv[i] (in v): ju/jv are permutations of the index
++         * range, and the reads via ku[i]/kv[i] resolve to those very same
++         * slots, so the only "reuse" of a location is the write-then-read of
++         * the SAME i that the statement order below already preserves. No
++         * value written by one i is ever read by a different i, so the
++         * iterations are independent and can run in any order/interleaving.
++         */
++        #pragma omp parallel for shared(u, v, c, d, ju, jv, ku, kv)
+         for (long i = 1; i < LEN_1D; i++) {
+             u[ju[i]] += v[kv[i]] * c[i];
+             v[jv[i]] = u[ku[i]] * d[i] + c[i];

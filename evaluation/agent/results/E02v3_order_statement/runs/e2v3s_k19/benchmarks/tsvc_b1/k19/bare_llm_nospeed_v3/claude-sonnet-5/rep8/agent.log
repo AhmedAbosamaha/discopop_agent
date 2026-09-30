@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : k19.c
+  Model          : claude-sonnet-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] k19.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan **What's sequential and why it must stay that way:** The outer `nl` loop calls `pb_mix(nl)` after each repetition, which mutates `a[k]`, `b[k]`, `c[k]`, `d[k]`, `e[k]` at an index depending on `nl`. Those mutations feed the *next* `nl` repetition's `i`-loop (via `c[i]`, `d[i]`), so the `nl` loop carries a genuine cross-repetition dependence and must stay serial and in-order — this is the "
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

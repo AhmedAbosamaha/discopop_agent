@@ -1,0 +1,48 @@
+
+============================================================
+  Model-only twin (D38) — DiscoPoP's information, no gate, one attempt
+============================================================
+  Source         : k19.c
+  Model          : claude-sonnet-5
+  Pragmas by     : DiscoPoP
+  Evidence       : none
+  Depth          : 0
+
+┌─ [depth=0] loop 1:14 (lines 17–23)
+│  [twin] Calling claude-sonnet-5...
+│  [twin] the model's plan: ## Plan **Dependence:** the fused loop couples two scatter/gather statements through two different arrays: - `u[ju[i]] += v[kv[i]] * c[i]` — an (indirect) accumulation into `u`. - `v[jv[i]] = u[ku[i]] * d[i] + c[i]` — a read of `u` and an (indirect) write into `v`. Because both statements sit in the same iteration, DiscoPoP sees one iteration's `u`-write feeding straight into the next statement's 
+│  [twin] edited, 0 OpenMP pragma(s) in the file — kept unchecked
+│  [twin] Re-profiling (as the agent does after a kept rewrite)...
+│  [twin] 4 new region(s) at depth 1
+└─ EDITED
+
+┌─ [depth=1] loop 1:14 (lines 17–25)
+└─ SKIPPED (depth 1 > --restructure-depth 0)
+
+┌─ [depth=1] function 1:12 (lines 15–26)
+└─ SKIPPED (depth 1 > --restructure-depth 0)
+
+┌─ [depth=1] loop 1:23 (lines 21–23)
+└─ DISCOPOP'S (annotated at the end)
+
+┌─ [depth=1] loop 1:17 (lines 18–20)
+└─ DISCOPOP'S (annotated at the end)
+
+
+============================================================
+  DiscoPoP annotates — 2 applicable pattern(s), NOTHING CHECKED
+============================================================
+
+┌─ do_all @ lines 21–23  (W=3071904)
+│  #pragma omp parallel for
+│  [twin] Original backed up → k19.c.original
+│  [twin] Applied to k19.c
+└─ INSERTED (unchecked)
+
+┌─ do_all @ lines 18–20  (W=3071904)
+│  #pragma omp parallel for
+│  [twin] Applied to k19.c
+└─ INSERTED (unchecked)
+
+
+  SUMMARY: 1 region(s) asked  |  1 edited  |  2 DiscoPoP pragma(s) inserted unchecked  |  nothing was checked here — the harness judges the result

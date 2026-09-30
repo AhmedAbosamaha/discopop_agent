@@ -1,0 +1,79 @@
+/* Rodinia 3.1 bfs, from Rodinia's bfs.cpp (sha256 308ac84a8e6e; University of Virginia licence,
+ * see benchmarks/rodinia_3.1/LICENSE). */
+#include "rodinia_b1/bfs.h"
+
+static void kernel_bfs(void)
+{
+	int k=0;
+	bool stop;
+	bool *is_updated = (bool *)malloc(no_of_nodes * sizeof(bool));
+
+	do
+        {
+            stop=false;
+
+            int *temp_cost = (int *)malloc(no_of_nodes * sizeof(int));
+            bool *temp_updating = (bool *)malloc(no_of_nodes * sizeof(bool));
+
+            for(int tid = 0; tid < no_of_nodes; tid++)
+            {
+                temp_cost[tid] = h_cost[tid];
+                temp_updating[tid] = false;
+            }
+
+            #pragma omp parallel for shared(temp_cost,temp_updating) 
+            for(int tid = 0; tid < no_of_nodes; tid++ )
+            {
+                if (h_graph_mask[tid] == true){
+                    h_graph_mask[tid]=false;
+                    for(int i=h_graph_nodes[tid].starting; i<(h_graph_nodes[tid].no_of_edges + h_graph_nodes[tid].starting); i++)
+                    {
+                        int id = h_graph_edges[i];
+                        if(!h_graph_visited[id])
+                        {
+                            temp_cost[id]=h_cost[tid]+1;
+                            temp_updating[id]=true;
+                        }
+                    }
+                }
+            }
+
+            #pragma omp parallel for shared(temp_cost,temp_updating) 
+            for(int tid = 0; tid < no_of_nodes; tid++)
+            {
+                if(temp_updating[tid])
+                {
+                    h_cost[tid] = temp_cost[tid];
+                    h_updating_graph_mask[tid] = true;
+                }
+            }
+
+            free(temp_cost);
+            free(temp_updating);
+
+            #pragma omp parallel for shared(is_updated) 
+            for(int tid=0; tid< no_of_nodes ; tid++ )
+            {
+                if (h_updating_graph_mask[tid] == true){
+                    h_graph_mask[tid]=true;
+                    h_graph_visited[tid]=true;
+                    h_updating_graph_mask[tid]=false;
+                    is_updated[tid]=true;
+                } else {
+                    is_updated[tid]=false;
+                }
+            }
+
+            for(int tid=0; tid< no_of_nodes ; tid++ )
+            {
+                stop = stop || is_updated[tid];
+            }
+
+            k++;
+        }
+	while(stop);
+
+	free(is_updated);
+}
+
+PB_MAIN(kernel_bfs)

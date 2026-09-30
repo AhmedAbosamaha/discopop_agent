@@ -1,0 +1,236 @@
+{
+  "benchmark": "rodinia_b1/bfs",
+  "kernel": "bfs",
+  "source": "bfs.cpp",
+  "arm": "twin_no_evidence_nospeed_v3",
+  "model": "claude-haiku-4-5-20251001",
+  "arm_flags": [
+    "--require-speedup",
+    "--min-runtime-share",
+    "0.01",
+    "--budget",
+    "1",
+    "--evidence",
+    "none",
+    "--no-require-speedup",
+    "--prompt-version",
+    "3"
+  ],
+  "started_at": "2026-09-30T05:49:41",
+  "host": "rms14562",
+  "host_load_start": [
+    8.79931640625,
+    8.35205078125,
+    9.0791015625
+  ],
+  "agent_cmd": [
+    "/home/ahmedabosamaha/discopop_agent/venv/bin/python",
+    "-m",
+    "discopop_agent.twin",
+    "--source-file",
+    "bfs.cpp",
+    "--discopop-dir",
+    ".discopop",
+    "--provider",
+    "claude-agent-sdk",
+    "--model",
+    "claude-haiku-4-5-20251001",
+    "--edit-mode",
+    "direct",
+    "--require-speedup",
+    "--min-runtime-share",
+    "0.01",
+    "--budget",
+    "1",
+    "--evidence",
+    "none",
+    "--no-require-speedup",
+    "--prompt-version",
+    "3",
+    "--check-input",
+    "7",
+    "--exclude-functions",
+    "main",
+    "--protected-line",
+    "#include \"rodinia_b1/bfs.h\"",
+    "--protected-line",
+    "PB_MAIN(kernel_bfs)",
+    "--protected-note",
+    "`PB_MAIN(kernel_bfs)` expands to `main`: it sets up the data the included header declares, times one call of `kernel_bfs` and prints its result. `no_of_nodes`, the number of graph nodes, is set in the included header: 65536 in the default build, and up to 48000000 in the builds that verify the result.",
+    "--explorer-timeout",
+    "60"
+  ],
+  "agent_s": 280.8,
+  "agent_rc": 0,
+  "llm_calls": 2,
+  "llm_call_failures": 0,
+  "explorer_retries": 0,
+  "explorer_stalls": 0,
+  "reverts": 0,
+  "refresh_fast": 0,
+  "refresh_full": 0,
+  "refresh_fallback": 0,
+  "runtime_remeasurements": 0,
+  "phase_b_deferred": 0,
+  "phase_b_joint_kept": 0,
+  "dp_floor": null,
+  "gate_failures_phase_a": {},
+  "gate_failures_phase_b": {},
+  "gate_passes_phase_a": 0,
+  "gate_failures_d40": {},
+  "d40_verdicts": {},
+  "exposure_verdicts": {},
+  "d40_seconds": 0,
+  "requeued_regions": 0,
+  "region_verdicts": {
+    "EDITED": 2,
+    "DISCOPOP": 4,
+    "SKIPPED": 3,
+    "INSERTED": 3
+  },
+  "settle_dropped": 0,
+  "twin_asked": 2,
+  "twin_edited": 2,
+  "twin_dp_inserted": 3,
+  "twin_reprofile_failed": false,
+  "llm_usage": {
+    "calls_recorded": 2,
+    "input_tokens": 68,
+    "output_tokens": 29053,
+    "cache_read_input_tokens": 118602,
+    "cache_creation_input_tokens": 45035,
+    "cost_usd": 0.2503,
+    "model_seconds": 268.7
+  },
+  "source_changed": true,
+  "protected": [
+    "#include \"rodinia_b1/bfs.h\"",
+    "PB_MAIN(kernel_bfs)"
+  ],
+  "harness_sha256": "bb26fba095bc0ae5d578f142df1ce0a64874ceb5b128c27aea56728cafb73d2c",
+  "scaffold": {
+    "ok": true,
+    "problems": [],
+    "applies": true
+  },
+  "pragmas_added": 3,
+  "pragmas_in_final": 3,
+  "hot_loop": {
+    "entry": "kernel_bfs",
+    "function": "kernel_bfs",
+    "line": 13,
+    "writes": [
+      "h_cost"
+    ],
+    "shared": [
+      "h_graph_mask",
+      "h_updating_graph_mask"
+    ]
+  },
+  "hot_loop_covered": true,
+  "hot_loop_coverage": {
+    "criterion": "v2 (27 Sep 2026)",
+    "covered": true,
+    "covering": [
+      {
+        "function": "kernel_bfs",
+        "line": 26,
+        "directive": "#pragma omp parallel for firstprivate(current_cost)",
+        "writes": [
+          "h_cost"
+        ]
+      }
+    ],
+    "uncounted": [],
+    "elsewhere": [
+      {
+        "function": "kernel_bfs",
+        "line": 14,
+        "directive": "#pragma omp parallel for firstprivate(k,current_cost) private(stop)",
+        "writes": []
+      },
+      {
+        "function": "kernel_bfs",
+        "line": 50,
+        "directive": "#pragma omp parallel for",
+        "writes": [
+          "h_graph_mask",
+          "h_graph_visited",
+          "h_updating_graph_mask"
+        ]
+      }
+    ]
+  },
+  "candidates_recorded": 0,
+  "verify": {
+    "verify_size": "EXTRALARGE",
+    "threads": [
+      6,
+      12
+    ],
+    "repeats": 5,
+    "compiler": "/usr/bin/clang++-20",
+    "final_flags": [],
+    "build_errors": {
+      "final_dump": "/home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2b1v3_bfs/benchmarks/rodinia_b1/bfs/twin_no_evidence_nospeed_v3/claude-haiku-4-5-20251001/rep5/final.cpp:20:21: error: 'break' statement cannot be used in OpenMP for loop\n   20 |                     break;\n      |                     ^\n1 error generated.\n",
+      "final_par": "/home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2b1v3_bfs/benchmarks/rodinia_b1/bfs/twin_no_evidence_nospeed_v3/claude-haiku-4-5-20251001/rep5/final.cpp:20:21: error: 'break' statement cannot be used in OpenMP for loop\n   20 |                     break;\n      |                     ^\n1 error generated.\n"
+    },
+    "dump_exact": null,
+    "dump_max_rel_err": null,
+    "status": "verify_build_failed",
+    "speed_measurable": true
+  },
+  "verify_s": 0.5,
+  "status": "done",
+  "outcome": "VERIFY_FAILED",
+  "finished_at": "2026-09-30T05:54:22",
+  "host_load_end": [
+    2.9375,
+    4.95458984375,
+    7.419921875
+  ],
+  "profile": {
+    "wrapper": "discopop_cxx",
+    "instrument_s": 0.52,
+    "profiled_run_s": 0.26,
+    "explore_stalls": 0,
+    "explore_s": 3.37,
+    "explore_success_s": 3.37,
+    "explore_attempts": 1,
+    "explore_timed_out": false,
+    "explore_failures": [],
+    "patterns": {
+      "optimizer_output": 0,
+      "merged_pattern": 0,
+      "task": 0,
+      "do_all": 1,
+      "reduction": 0
+    },
+    "profile_sha256": "56d9bcb6f5789b8f44990bb5e910920def9bae3a4f5454147879f355b40e3764"
+  },
+  "package_integrity": {
+    "before": {
+      "checked": "before trial",
+      "at": "2026-09-30T05:49:40",
+      "prepared_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+      "packager_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+      "harness_sha256": "bb26fba095bc0ae5d578f142df1ce0a64874ceb5b128c27aea56728cafb73d2c",
+      "archived_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+      "profile_sha256": "56d9bcb6f5789b8f44990bb5e910920def9bae3a4f5454147879f355b40e3764",
+      "ok": true
+    },
+    "after": {
+      "checked": "after trial",
+      "at": "2026-09-30T05:54:22",
+      "prepared_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+      "packager_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+      "harness_sha256": "bb26fba095bc0ae5d578f142df1ce0a64874ceb5b128c27aea56728cafb73d2c",
+      "archived_sha256": "fd2615968d626633d0a155caecb78759a97d07a72e39c28902cc067dce12621c",
+      "profile_sha256": "56d9bcb6f5789b8f44990bb5e910920def9bae3a4f5454147879f355b40e3764",
+      "ok": true
+    }
+  },
+  "speed_check_off": true,
+  "timing_flags": [],
+  "repeat": 5
+}

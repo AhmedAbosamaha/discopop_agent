@@ -1,0 +1,36 @@
+--- original.cpp
++++ final.cpp
+@@ -12,14 +12,15 @@
+ 
+             for(int tid = 0; tid < no_of_nodes; tid++ )
+             {
+-                if (h_graph_mask[tid] == true){ 
++                if (h_graph_mask[tid] == true){
+                     h_graph_mask[tid]=false;
++                    int parent_cost = h_cost[tid];
+                     for(int i=h_graph_nodes[tid].starting; i<(h_graph_nodes[tid].no_of_edges + h_graph_nodes[tid].starting); i++)
+                     {
+                         int id = h_graph_edges[i];
+                         if(!h_graph_visited[id])
+                         {
+-                            h_cost[id]=h_cost[tid]+1;
++                            h_cost[id]=parent_cost+1;
+                             h_updating_graph_mask[id]=true;
+                         }
+                     }
+@@ -28,12 +29,14 @@
+ 
+             for(int tid=0; tid< no_of_nodes ; tid++ )
+             {
++                bool local_update=false;
+                 if (h_updating_graph_mask[tid] == true){
+                     h_graph_mask[tid]=true;
+                     h_graph_visited[tid]=true;
+-                    stop=true;
+                     h_updating_graph_mask[tid]=false;
++                    local_update=true;
+                 }
++                stop=stop||local_update;
+             }
+             k++;
+         }

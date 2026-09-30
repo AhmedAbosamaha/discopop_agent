@@ -1,0 +1,53 @@
+--- k19.c
++++ k19.c
+@@ -1,5 +1,6 @@
+ /* Kernel k19. */
+ #include "tsvc_b1/k19.h"
++#include <stdlib.h>
+ 
+ /* Between two repetitions a few INPUT elements change, so no repetition can be skipped,
+  * merged with another or run out of order: the repetition loop is sequential by a true
+@@ -14,13 +15,41 @@
+ 
+ static real_t kernel_k19(void)
+ {
++    /* The i-loop below reads u[] and v[] both directly and through the
++     * indirection arrays ku[]/kv[], while it is simultaneously updating
++     * those same arrays through ju[]/jv[].  That mixes a true loop-carried
++     * dependence (a value one iteration writes and a later one may read)
++     * with the part of every iteration that only ever depends on itself
++     * (an iteration reading back the very bucket it just updated).  We
++     * separate the two: u_old/v_old hold the values as they stood before
++     * this repetition of the i-loop started (exactly what a same-index
++     * read at the very first touch of a location would have seen), so
++     * every cross-iteration read is satisfied from a stable snapshot
++     * instead of from an array that is being mutated concurrently.  The
++     * one place a read legitimately must see *this* iteration's own write
++     * (ku[i] == ju[i], the accumulator that was just bumped) is folded in
++     * explicitly via `contrib`, so that case still gets the updated value.
++     * With that, iterations no longer depend on each other's order and the
++     * whole i-loop becomes safe to run in any order/interleaving. */
++    real_t *u_old = (real_t *)malloc((size_t)LEN_1D * sizeof(real_t));
++    real_t *v_old = (real_t *)malloc((size_t)LEN_1D * sizeof(real_t));
++
+     for (int nl = 0; nl < R; nl++) {
++        for (long t = 0; t < LEN_1D; t++) {
++            u_old[t] = u[t];
++            v_old[t] = v[t];
++        }
+         for (long i = 1; i < LEN_1D; i++) {
+-            u[ju[i]] += v[kv[i]] * c[i];
+-            v[jv[i]] = u[ku[i]] * d[i] + c[i];
++            real_t contrib = v_old[kv[i]] * c[i];
++            u[ju[i]] += contrib;
++            real_t u_val = (ku[i] == ju[i]) ? (u_old[ku[i]] + contrib) : u_old[ku[i]];
++            v[jv[i]] = u_val * d[i] + c[i];
+         }
+         pb_mix(nl);
+     }
++
++    free(u_old);
++    free(v_old);
+     return (real_t)0;
+ }
+ 

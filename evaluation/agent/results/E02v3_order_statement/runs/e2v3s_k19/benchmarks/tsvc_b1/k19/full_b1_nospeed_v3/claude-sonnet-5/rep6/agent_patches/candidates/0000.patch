@@ -1,0 +1,33 @@
+--- k19.c
++++ k19.c
+@@ -14,13 +14,29 @@
+ 
+ static real_t kernel_k19(void)
+ {
++    real_t *vpre = (real_t *)malloc((size_t)LEN_1D * sizeof(real_t));
+     for (int nl = 0; nl < R; nl++) {
++        /* Sequentially replay the v-recurrence: for each i, capture the
++         * value that line 19 would have read from v (i.e. v as of just
++         * before this i's own write), then perform the write. This
++         * reproduces v's exact evolution, decoupling the u-update below
++         * from any loop-carried dependence on v. */
+         for (long i = 1; i < LEN_1D; i++) {
+-            u[ju[i]] += v[kv[i]] * c[i];
++            vpre[i] = v[kv[i]];
+             v[jv[i]] = u[ku[i]] * d[i] + c[i];
++        }
++        /* u[ku[i]] used above is never written by this loop (ju and ku
++         * never alias here), so it already reflects the values from
++         * before this nl-iteration's updates, exactly as in the
++         * original interleaving. The accumulation below only depends
++         * on vpre (already fixed) and distinct ju[i] locations, so its
++         * iterations are independent. */
++        for (long i = 1; i < LEN_1D; i++) {
++            u[ju[i]] += vpre[i] * c[i];
+         }
+         pb_mix(nl);
+     }
++    free(vpre);
+     return (real_t)0;
+ }
+ 

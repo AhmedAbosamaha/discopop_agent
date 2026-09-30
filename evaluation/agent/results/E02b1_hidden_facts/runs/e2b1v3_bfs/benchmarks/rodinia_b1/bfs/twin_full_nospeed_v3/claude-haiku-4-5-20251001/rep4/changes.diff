@@ -1,0 +1,53 @@
+--- original.cpp
++++ final.cpp
+@@ -10,22 +10,48 @@
+         {
+             stop=false;
+ 
++            /* Snapshot h_cost before processing to decouple reads from writes:
++             * moves the RAW dependence outside the loop by reading from a frozen copy.
++             */
++            int *h_cost_snapshot = (int *)malloc(no_of_nodes * sizeof(int));
++            for(int tid = 0; tid < no_of_nodes; tid++)
++            {
++                h_cost_snapshot[tid] = h_cost[tid];
++            }
++
++            int *h_cost_new = (int *)malloc(no_of_nodes * sizeof(int));
++            #pragma omp parallel for shared(h_cost_new) 
++            for(int tid = 0; tid < no_of_nodes; tid++)
++            {
++                h_cost_new[tid] = h_cost[tid];
++            }
++
++            #pragma omp parallel for shared(h_cost_new,h_cost_snapshot) 
+             for(int tid = 0; tid < no_of_nodes; tid++ )
+             {
+-                if (h_graph_mask[tid] == true){ 
++                if (h_graph_mask[tid] == true){
+                     h_graph_mask[tid]=false;
+                     for(int i=h_graph_nodes[tid].starting; i<(h_graph_nodes[tid].no_of_edges + h_graph_nodes[tid].starting); i++)
+                     {
+                         int id = h_graph_edges[i];
+                         if(!h_graph_visited[id])
+                         {
+-                            h_cost[id]=h_cost[tid]+1;
++                            h_cost_new[id]=h_cost_snapshot[tid]+1;
+                             h_updating_graph_mask[id]=true;
+                         }
+                     }
+                 }
+             }
+ 
++            /* Merge computed costs back into h_cost after all iterations complete. */
++            for(int tid = 0; tid < no_of_nodes; tid++)
++            {
++                h_cost[tid] = h_cost_new[tid];
++            }
++            free(h_cost_snapshot);
++            free(h_cost_new);
++
++            #pragma omp parallel for lastprivate(stop) 
+             for(int tid=0; tid< no_of_nodes ; tid++ )
+             {
+                 if (h_updating_graph_mask[tid] == true){

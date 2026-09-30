@@ -20,7 +20,7 @@ With the evidence rendered as in prompt v1, no evidence advantage: agent 18/30 w
 
 - [`analysis/`](analysis/) — the read-out: [`doall_rerun_b13.md`](analysis/doall_rerun_b13.md), [`doall_rerun_b15.md`](analysis/doall_rerun_b15.md), [`figures.md`](analysis/figures.md), [`hot_loop_profile.md`](analysis/hot_loop_profile.md), [`hot_loop_profile_bfs15.md`](analysis/hot_loop_profile_bfs15.md), [`hot_loop_profile_s258.md`](analysis/hot_loop_profile_s258.md), [`main_comparison_stats.md`](analysis/main_comparison_stats.md), [`routing_check.md`](analysis/routing_check.md), [`routing_check_bfs15.md`](analysis/routing_check_bfs15.md), [`routing_check_s258.md`](analysis/routing_check_s258.md), [`vs_discopop_alone.md`](analysis/vs_discopop_alone.md)
 - [`exhibits/`](exhibits/) — 1 case studies, below
-- [`runs/`](runs/) — 7 archived run(s): the evidence
+- [`runs/`](runs/) — 9 archived run(s): the evidence
 - [`preflight/`](preflight/) — 3 smoke run(s) before the launch
 
 ## Runs
@@ -37,8 +37,8 @@ With the evidence rendered as in prompt v1, no evidence advantage: agent 18/30 w
 | `e2b1_bare_m3_a` | [`runs/e2b1_bare_m3_a/`](runs/e2b1_bare_m3_a/) | E2-B1 model alone re-run with the speed-off leak fixed (review M3; the author's decision 3 of 28 Sep, §6): tsvc_b1/s151 tsvc_b1/s161 tsvc_b1/s131 tsvc_b1/s424 × bare_llm_nospeed × 10 trials, Haiku, threads 6/12, repeats 5 (bfs in e2b1_bare_m3_bfs); replaces bare_llm_nospeed of e2b1_a_1..3 (kept, superseded) | valid | 40 | BROKEN 18, FASTER 8, no-change 2, parallel-not-faster 12 |
 | `e2b1_bare_m3_b` | [`runs/e2b1_bare_m3_b/`](runs/e2b1_bare_m3_b/) | E2-B1 model alone re-run with the speed-off leak fixed (review M3): tsvc_b1/s152 tsvc_b1/s171 tsvc_b1/s481 tsvc_b1/s277 tsvc_b1/vas × bare_llm_nospeed × 5 trials, Haiku, threads 6/12, repeats 5; replaces bare_llm_nospeed of e2b1_b_1 (kept, superseded) | valid | 25 | FASTER 19, VERIFY_FAILED 4, parallel-not-faster 2 |
 | `e2b1_bare_m3_bfs` | [`runs/e2b1_bare_m3_bfs/`](runs/e2b1_bare_m3_bfs/) | E2-B1 model alone re-run with the speed-off leak fixed (review M3): rodinia_b1/bfs × bare_llm_nospeed × 10 trials, Haiku, threads 6/12, repeats 5, its own lane (§6, 28 Sep speed-up); replaces bare_llm_nospeed of e2b1_a_2, which is never run | valid | 10 | FASTER 8, parallel-not-faster 2 |
-| `e2b1v3_twins` | not archived yet | E2-B1 follow-up: tsvc_b1/s151, s161 × twin_full_nospeed_v3, twin_no_evidence_nospeed_v3 × 10 trials, Haiku (prompt v3 on the twins) | registered |  |  |
-| `e2b1v3_bfs` | not archived yet | E2-B1 follow-up: rodinia_b1/bfs × twin_full_nospeed_v3, twin_no_evidence_nospeed_v3 × 10 trials, Haiku, repeats split over lanes with --reps | registered |  |  |
+| `e2b1v3_twins` | [`runs/e2b1v3_twins/`](runs/e2b1v3_twins/) | E2-B1 follow-up: tsvc_b1/s151, s161 × twin_full_nospeed_v3, twin_no_evidence_nospeed_v3 × 10 trials, Haiku (prompt v3 on the twins) | valid | 40 | BROKEN 7, FASTER 22, changed-not-parallel 8, parallel-not-faster 3 |
+| `e2b1v3_bfs` | [`runs/e2b1v3_bfs/`](runs/e2b1v3_bfs/) | E2-B1 follow-up: rodinia_b1/bfs × twin_full_nospeed_v3, twin_no_evidence_nospeed_v3 × 10 trials, Haiku, repeats split over lanes with --reps | valid | 20 | BROKEN 14, FASTER 2, VERIFY_FAILED 1, changed-not-parallel 2, parallel-not-faster 1 |
 
 ## Exhibits
 

@@ -1,0 +1,64 @@
+
+============================================================
+  Model-only twin (D38) — DiscoPoP's information, no gate, one attempt
+============================================================
+  Source         : k19.c
+  Model          : claude-sonnet-5
+  Pragmas by     : DiscoPoP
+  Evidence       : none
+  Depth          : 0
+
+┌─ [depth=0] loop 1:14 (lines 17–23)
+│  [twin] Calling claude-sonnet-5...
+│  [twin] the model's plan: ## Plan **Dependence blocking the loop:** each iteration `i` touches `u` at `ju[i]`/`ku[i]` and `v` at `jv[i]`/`kv[i]`. These are indirect (data-dependent) indices, so DiscoPoP cannot statically/dynamically rule out that iteration `i` writes a slot that a *different* iteration `i'` later reads in the same pass — the classic indirect-addressing pattern used in these benchmarks, where each iteration
+│  [twin] edited, 0 OpenMP pragma(s) in the file — kept unchecked
+│  [twin] Re-profiling (as the agent does after a kept rewrite)...
+│  [twin] 6 new region(s) at depth 1
+└─ EDITED
+
+┌─ [depth=1] loop 1:16 (lines 20–40)
+└─ SKIPPED (depth 1 > --restructure-depth 0)
+
+┌─ [depth=1] function 1:12 (lines 16–43)
+└─ SKIPPED (depth 1 > --restructure-depth 0)
+
+┌─ [depth=1] loop 1:19 (lines 22–24)
+└─ DISCOPOP'S (annotated at the end)
+
+┌─ [depth=1] loop 1:30 (lines 32–34)
+└─ DISCOPOP'S (annotated at the end)
+
+┌─ [depth=1] loop 1:25 (lines 28–30)
+└─ DISCOPOP'S (annotated at the end)
+
+┌─ [depth=1] loop 1:36 (lines 36–38)
+└─ DISCOPOP'S (annotated at the end)
+
+
+============================================================
+  DiscoPoP annotates — 4 applicable pattern(s), NOTHING CHECKED
+============================================================
+
+┌─ do_all @ lines 22–24  (W=3071904)
+│  #pragma omp parallel for
+│  [twin] Original backed up → k19.c.original
+│  [twin] Applied to k19.c
+└─ INSERTED (unchecked)
+
+┌─ do_all @ lines 32–34  (W=3071904)
+│  #pragma omp parallel for
+│  [twin] Applied to k19.c
+└─ INSERTED (unchecked)
+
+┌─ do_all @ lines 28–30  (W=3071904)
+│  #pragma omp parallel for
+│  [twin] Applied to k19.c
+└─ INSERTED (unchecked)
+
+┌─ do_all @ lines 36–38  (W=3071904)
+│  #pragma omp parallel for
+│  [twin] Applied to k19.c
+└─ INSERTED (unchecked)
+
+
+  SUMMARY: 1 region(s) asked  |  1 edited  |  4 DiscoPoP pragma(s) inserted unchecked  |  nothing was checked here — the harness judges the result

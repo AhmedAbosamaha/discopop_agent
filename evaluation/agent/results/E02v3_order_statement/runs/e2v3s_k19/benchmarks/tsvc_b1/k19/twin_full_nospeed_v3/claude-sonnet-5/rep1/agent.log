@@ -1,0 +1,43 @@
+
+============================================================
+  Model-only twin (D38) — DiscoPoP's information, no gate, one attempt
+============================================================
+  Source         : k19.c
+  Model          : claude-sonnet-5
+  Pragmas by     : DiscoPoP
+  Evidence       : full
+  Depth          : 0
+
+┌─ [depth=0] loop 1:14 (lines 17–23)
+│  [twin] Calling claude-sonnet-5...
+│  [twin] the model's plan: ## Plan The only cross-iteration blocker inside the `i` loop is the RAW on `v`: line 20 (`v[jv[i]] = ...`) writes a value that a *later* iteration's line 19 (`... = v[kv[i]] ...`) reads. That value must still reach its reader — it can't be dropped — but per the profile there is **no** observed dependence from line 19's write of `u` into line 20's read of `u` (only the trivial same-line `+=` self-r
+│  [twin] edited, 0 OpenMP pragma(s) in the file — kept unchecked
+│  [twin] Re-profiling (as the agent does after a kept rewrite)...
+│  [twin] 4 new region(s) at depth 1
+└─ EDITED
+
+┌─ [depth=1] loop 1:14 (lines 17–25)
+└─ SKIPPED (depth 1 > --restructure-depth 0)
+
+┌─ [depth=1] function 1:12 (lines 15–26)
+└─ SKIPPED (depth 1 > --restructure-depth 0)
+
+┌─ [depth=1] loop 1:17 (lines 18–20)
+└─ DISCOPOP'S (annotated at the end)
+
+┌─ [depth=1] loop 1:23 (lines 21–23)
+└─ SKIPPED (depth 1 > --restructure-depth 0)
+
+
+============================================================
+  DiscoPoP annotates — 1 applicable pattern(s), NOTHING CHECKED
+============================================================
+
+┌─ do_all @ lines 18–20  (W=3071904)
+│  #pragma omp parallel for
+│  [twin] Original backed up → k19.c.original
+│  [twin] Applied to k19.c
+└─ INSERTED (unchecked)
+
+
+  SUMMARY: 1 region(s) asked  |  1 edited  |  1 DiscoPoP pragma(s) inserted unchecked  |  nothing was checked here — the harness judges the result

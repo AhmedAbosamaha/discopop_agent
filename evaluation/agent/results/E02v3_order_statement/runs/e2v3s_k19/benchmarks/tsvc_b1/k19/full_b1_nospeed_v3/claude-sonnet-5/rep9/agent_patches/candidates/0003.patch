@@ -1,0 +1,10 @@
+--- k19.c
++++ k19.c
+@@ -30,6 +30,7 @@
+         for (long i = 1; i < LEN_1D; i++) {
+             k19_rhs[i] = u[ku[i]] * d[i] + c[i];
+         }
++        #pragma omp parallel for shared(k19_rhs,k19_vseen) 
+         for (long i = 1; i < LEN_1D; i++) {
+             k19_vseen[i] = v[kv[i]];
+             v[jv[i]] = k19_rhs[i];

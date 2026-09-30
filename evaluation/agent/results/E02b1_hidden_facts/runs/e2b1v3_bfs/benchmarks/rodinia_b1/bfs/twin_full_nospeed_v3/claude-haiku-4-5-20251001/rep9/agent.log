@@ -1,0 +1,54 @@
+
+============================================================
+  Model-only twin (D38) — DiscoPoP's information, no gate, one attempt
+============================================================
+  Source         : bfs.cpp
+  Model          : claude-haiku-4-5-20251001
+  Pragmas by     : DiscoPoP
+  Evidence       : full
+  Depth          : 0
+
+┌─ [depth=0] loop 1:13 (lines 9–40)
+│  [twin] Calling claude-haiku-4-5-20251001...
+│  [twin] the model's plan: Looking at this BFS code, let me analyze the blocking dependence: ## Plan The first loop (lines 13–27) is blocked by a **RAW on `h_cost`** that is loop-carried: iteration `tid_i` writes to `h_cost[id]` (where `id` is derived from edges), and iteration `tid_j` (where `tid_j > tid_i`) reads `h_cost[tid_j]`. If `tid_j` was a neighbor of `tid_i`, then `tid_j`'s read depends on `tid_i`'s write, creatin
+│  [twin] edited, 0 OpenMP pragma(s) in the file — kept unchecked
+│  [twin] Re-profiling (as the agent does after a kept rewrite)...
+│  [twin] 5 new region(s) at depth 1
+└─ EDITED
+
+┌─ [depth=0] loop 1:44 (lines 44–52)
+└─ DISCOPOP'S (annotated at the end)
+
+┌─ [depth=1] loop 1:13 (lines 9–55)
+└─ SKIPPED (depth 1 > --restructure-depth 0)
+
+┌─ [depth=1] loop 1:19 (lines 17–32)
+└─ SKIPPED (depth 1 > --restructure-depth 0)
+
+┌─ [depth=1] function 1:11 (lines 5–56)
+└─ SKIPPED (depth 1 > --restructure-depth 0)
+
+┌─ [depth=1] loop 1:24 (lines 21–30)
+└─ SKIPPED (depth 1 > --restructure-depth 0)
+
+┌─ [depth=1] loop 1:35 (lines 34–40)
+└─ DISCOPOP'S (annotated at the end)
+
+
+============================================================
+  DiscoPoP annotates — 2 applicable pattern(s), NOTHING CHECKED
+============================================================
+
+┌─ do_all @ lines 44–52  (W=5242880)
+│  #pragma omp parallel for
+│  [twin] Original backed up → bfs.cpp.original
+│  [twin] Applied to bfs.cpp
+└─ INSERTED (unchecked)
+
+┌─ do_all @ lines 34–40  (W=3932160)
+│  #pragma omp parallel for
+│  [twin] Applied to bfs.cpp
+└─ INSERTED (unchecked)
+
+
+  SUMMARY: 1 region(s) asked  |  1 edited  |  2 DiscoPoP pragma(s) inserted unchecked  |  nothing was checked here — the harness judges the result

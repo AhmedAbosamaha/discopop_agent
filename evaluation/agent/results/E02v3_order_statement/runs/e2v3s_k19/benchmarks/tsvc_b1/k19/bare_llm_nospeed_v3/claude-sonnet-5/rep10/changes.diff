@@ -1,0 +1,16 @@
+--- original.c
++++ final.c
+@@ -15,6 +15,13 @@
+ static real_t kernel_k19(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        /* Each i routes (through ju/ku for u, jv/kv for v) to a slot of u and a slot
++         * of v that no other i touches during this repetition; c and d are only
++         * read here (pb_mix, which mutates them, runs strictly between whole
++         * repetitions). So distinct iterations carry no dependence on each other -
++         * only the same-iteration read of u[ku[i]] after the same-iteration write
++         * of u[ju[i]], which a single loop body still executes in order. */
++        #pragma omp parallel for default(none) shared(u, v, c, d, ju, jv, ku, kv)
+         for (long i = 1; i < LEN_1D; i++) {
+             u[ju[i]] += v[kv[i]] * c[i];
+             v[jv[i]] = u[ku[i]] * d[i] + c[i];

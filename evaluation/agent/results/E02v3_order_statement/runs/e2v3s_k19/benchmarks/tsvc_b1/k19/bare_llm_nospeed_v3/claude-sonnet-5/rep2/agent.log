@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : k19.c
+  Model          : claude-sonnet-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] k19.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan **Where the real dependence is:** the only true cross-repetition dependence in this kernel runs through `pb_mix(nl)`: it perturbs `a`, `b`, `c`, `d`, `e` at data-dependent indices between repetitions, so repetition `nl+1` must observe repetition `nl`'s perturbation before it runs. That loop over `nl` stays exactly as written, sequential, in order. **Inside one repetition (the loop under st
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

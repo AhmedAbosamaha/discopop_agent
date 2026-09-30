@@ -1,0 +1,67 @@
+--- original.cpp
++++ final.cpp
+@@ -10,31 +10,54 @@
+         {
+             stop=false;
+ 
+-            for(int tid = 0; tid < no_of_nodes; tid++ )
++            int current_cost = -1;
++            #pragma omp parallel for firstprivate(k,current_cost) private(stop) 
++            for(int i = 0; i < no_of_nodes; i++)
+             {
+-                if (h_graph_mask[tid] == true){ 
+-                    h_graph_mask[tid]=false;
+-                    for(int i=h_graph_nodes[tid].starting; i<(h_graph_nodes[tid].no_of_edges + h_graph_nodes[tid].starting); i++)
+-                    {
+-                        int id = h_graph_edges[i];
+-                        if(!h_graph_visited[id])
++                if (h_graph_mask[i])
++                {
++                    current_cost = h_cost[i];
++                    break;
++                }
++            }
++
++            if (current_cost != -1)
++            {
++ #pragma omp parallel for firstprivate(current_cost) 
++                for(int tid = 0; tid < no_of_nodes; tid++ )
++                {
++                    if (h_graph_mask[tid] == true){
++                        h_graph_mask[tid]=false;
++                        for(int i=h_graph_nodes[tid].starting; i<(h_graph_nodes[tid].no_of_edges + h_graph_nodes[tid].starting); i++)
+                         {
+-                            h_cost[id]=h_cost[tid]+1;
+-                            h_updating_graph_mask[id]=true;
++                            int id = h_graph_edges[i];
++                            if(!h_graph_visited[id])
++                            {
++                                h_cost[id]=current_cost+1;
++                                h_updating_graph_mask[id]=true;
++                            }
+                         }
+                     }
+                 }
+             }
+ 
++            bool any_updating = false;
++            for(int tid=0; tid< no_of_nodes ; tid++ )
++            {
++                any_updating = any_updating || h_updating_graph_mask[tid];
++            }
++
++            #pragma omp parallel for 
+             for(int tid=0; tid< no_of_nodes ; tid++ )
+             {
+                 if (h_updating_graph_mask[tid] == true){
+                     h_graph_mask[tid]=true;
+                     h_graph_visited[tid]=true;
+-                    stop=true;
+                     h_updating_graph_mask[tid]=false;
+                 }
+             }
++
++            stop = any_updating;
+             k++;
+         }
+ 	while(stop);

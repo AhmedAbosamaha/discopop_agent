@@ -1,0 +1,51 @@
+
+============================================================
+  Model-only twin (D38) — DiscoPoP's information, no gate, one attempt
+============================================================
+  Source         : k19.c
+  Model          : claude-sonnet-5
+  Pragmas by     : DiscoPoP
+  Evidence       : full
+  Depth          : 0
+
+┌─ [depth=0] loop 1:14 (lines 17–23)
+│  [twin] Calling claude-sonnet-5...
+│  [twin] the model's plan: **Plan** The real blocker is the RAW on `v`: line 20 (`v[jv[i]] = u[ku[i]]*d[i]+c[i]`) writes a value that a *later* iteration's line 19 (`u[ju[i]] += v[kv[i]]*c[i]`) reads — a genuine value in transit, so it must keep flowing from writer to reader, just moved to run before the read instead of deleted. Key observation: line 20's RHS (`u[ku[i]]`, `d[i]`, `c[i]`) never depends on `v`, and DiscoPoP's
+│  [twin] edited, 0 OpenMP pragma(s) in the file — kept unchecked
+│  [twin] Re-profiling (as the agent does after a kept rewrite)...
+│  [twin] 5 new region(s) at depth 1
+└─ EDITED
+
+┌─ [depth=1] loop 1:16 (lines 21–46)
+└─ SKIPPED (depth 1 > --restructure-depth 0)
+
+┌─ [depth=1] function 1:12 (lines 16–51)
+└─ SKIPPED (depth 1 > --restructure-depth 0)
+
+┌─ [depth=1] loop 1:25 (lines 34–37)
+└─ DISCOPOP'S (annotated at the end)
+
+┌─ [depth=1] loop 1:19 (lines 25–27)
+└─ DISCOPOP'S (annotated at the end)
+
+┌─ [depth=1] loop 1:30 (lines 41–43)
+└─ SKIPPED (depth 1 > --restructure-depth 0)
+
+
+============================================================
+  DiscoPoP annotates — 2 applicable pattern(s), NOTHING CHECKED
+============================================================
+
+┌─ do_all @ lines 34–37  (W=4607856)
+│  #pragma omp parallel for
+│  [twin] Original backed up → k19.c.original
+│  [twin] Applied to k19.c
+└─ INSERTED (unchecked)
+
+┌─ do_all @ lines 25–27  (W=3071904)
+│  #pragma omp parallel for
+│  [twin] Applied to k19.c
+└─ INSERTED (unchecked)
+
+
+  SUMMARY: 1 region(s) asked  |  1 edited  |  2 DiscoPoP pragma(s) inserted unchecked  |  nothing was checked here — the harness judges the result

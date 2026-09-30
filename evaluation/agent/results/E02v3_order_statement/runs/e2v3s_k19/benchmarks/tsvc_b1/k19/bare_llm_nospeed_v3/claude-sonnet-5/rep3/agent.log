@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : k19.c
+  Model          : claude-sonnet-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] k19.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan The comment already tells us the only genuine cross-iteration dependence in this kernel is the outer `nl` sweep: `pb_mix` mutates `a`, `b`, `c`, `d`, `e` between repetitions, so those reps must stay ordered — that loop is left untouched. For the inner loop under study: ```c for (long i = 1; i < LEN_1D; i++) { u[ju[i]] += v[kv[i]] * c[i]; v[jv[i]] = u[ku[i]] * d[i] + c[i]; } ``` The two sta
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

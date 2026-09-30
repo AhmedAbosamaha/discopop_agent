@@ -1,0 +1,19 @@
+--- original.cpp
++++ final.cpp
+@@ -17,7 +17,7 @@
+                     for(int i=h_graph_nodes[tid].starting; i<(h_graph_nodes[tid].no_of_edges + h_graph_nodes[tid].starting); i++)
+                     {
+                         int id = h_graph_edges[i];
+-                        if(!h_graph_visited[id])
++                        if(!h_graph_visited[id] && !h_updating_graph_mask[id])
+                         {
+                             h_cost[id]=h_cost[tid]+1;
+                             h_updating_graph_mask[id]=true;
+@@ -26,6 +26,7 @@
+                 }
+             }
+ 
++            #pragma omp parallel for lastprivate(stop) 
+             for(int tid=0; tid< no_of_nodes ; tid++ )
+             {
+                 if (h_updating_graph_mask[tid] == true){

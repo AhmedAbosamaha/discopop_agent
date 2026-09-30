@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : k19.c
+  Model          : claude-sonnet-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] k19.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan The file's own comment already tells us the `nl` loop is a genuine sequential recurrence (via `pb_mix`), so that loop stays untouched and unparallelized — only the inner `i` loop is the target. Inside that loop: ```c u[ju[i]] += v[kv[i]] * c[i]; v[jv[i]] = u[ku[i]] * d[i] + c[i]; ``` Four independent index arrays make this *look* like an arbitrary scatter/gather where iteration `i` could w
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

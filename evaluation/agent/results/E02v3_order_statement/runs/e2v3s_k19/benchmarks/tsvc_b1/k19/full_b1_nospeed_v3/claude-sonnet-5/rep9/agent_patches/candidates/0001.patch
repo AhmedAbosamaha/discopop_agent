@@ -1,0 +1,10 @@
+--- k19.c
++++ k19.c
+@@ -27,6 +27,7 @@
+     real_t *k19_vseen = (real_t *)malloc((size_t)LEN_1D * sizeof(real_t));
+ 
+     for (int nl = 0; nl < R; nl++) {
++        #pragma omp parallel for shared(k19_rhs) 
+         for (long i = 1; i < LEN_1D; i++) {
+             k19_rhs[i] = u[ku[i]] * d[i] + c[i];
+         }

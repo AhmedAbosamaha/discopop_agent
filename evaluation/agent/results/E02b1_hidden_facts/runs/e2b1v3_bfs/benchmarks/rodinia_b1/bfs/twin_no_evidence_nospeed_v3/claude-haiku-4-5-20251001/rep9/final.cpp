@@ -1,0 +1,55 @@
+/* Rodinia 3.1 bfs, from Rodinia's bfs.cpp (sha256 308ac84a8e6e; University of Virginia licence,
+ * see benchmarks/rodinia_3.1/LICENSE). */
+#include "rodinia_b1/bfs.h"
+#include <set>
+
+static void kernel_bfs(void)
+{
+	int k=0;
+	bool stop;
+	do
+        {
+            stop=false;
+
+            std::set<int> updated_targets;
+            for(int tid = 0; tid < no_of_nodes; tid++ )
+            {
+                if (h_graph_mask[tid] == true){
+                    h_graph_mask[tid]=false;
+                    for(int i=h_graph_nodes[tid].starting; i<(h_graph_nodes[tid].no_of_edges + h_graph_nodes[tid].starting); i++)
+                    {
+                        int id = h_graph_edges[i];
+                        if(!h_graph_visited[id] && updated_targets.count(id) == 0)
+                        {
+                            h_cost[id]=h_cost[tid]+1;
+                            h_updating_graph_mask[id]=true;
+                            updated_targets.insert(id);
+                        }
+                    }
+                }
+            }
+
+            bool any_updates = false;
+            for(int tid=0; tid< no_of_nodes ; tid++ )
+            {
+                if (h_updating_graph_mask[tid] == true){
+                    any_updates = true;
+                }
+            }
+
+            for(int tid=0; tid< no_of_nodes ; tid++ )
+            {
+                if (h_updating_graph_mask[tid] == true){
+                    h_graph_mask[tid]=true;
+                    h_graph_visited[tid]=true;
+                    h_updating_graph_mask[tid]=false;
+                }
+            }
+
+            stop = any_updates;
+            k++;
+        }
+	while(stop);
+}
+
+PB_MAIN(kernel_bfs)

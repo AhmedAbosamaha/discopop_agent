@@ -1,0 +1,42 @@
+--- original.cpp
++++ final.cpp
+@@ -12,27 +12,35 @@
+ 
+             for(int tid = 0; tid < no_of_nodes; tid++ )
+             {
+-                if (h_graph_mask[tid] == true){ 
++                if (h_graph_mask[tid] == true){
+                     h_graph_mask[tid]=false;
+                     for(int i=h_graph_nodes[tid].starting; i<(h_graph_nodes[tid].no_of_edges + h_graph_nodes[tid].starting); i++)
+                     {
+                         int id = h_graph_edges[i];
+                         if(!h_graph_visited[id])
+                         {
+-                            h_cost[id]=h_cost[tid]+1;
+-                            h_updating_graph_mask[id]=true;
++                            __atomic_store_n(&h_cost[id], h_cost[tid]+1, __ATOMIC_RELAXED);
++                            __atomic_store_n(&h_updating_graph_mask[id], true, __ATOMIC_RELAXED);
+                         }
+                     }
+                 }
+             }
+ 
++            #pragma omp parallel for 
+             for(int tid=0; tid< no_of_nodes ; tid++ )
+             {
+                 if (h_updating_graph_mask[tid] == true){
+                     h_graph_mask[tid]=true;
+                     h_graph_visited[tid]=true;
++                    h_updating_graph_mask[tid]=false;
++                }
++            }
++
++            for(int tid=0; tid< no_of_nodes ; tid++ )
++            {
++                if (h_graph_mask[tid]){
+                     stop=true;
+-                    h_updating_graph_mask[tid]=false;
++                    break;
+                 }
+             }
+             k++;

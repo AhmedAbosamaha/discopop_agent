@@ -1,0 +1,27 @@
+--- k19.c
++++ k19.c
+@@ -15,8 +15,24 @@
+ static real_t kernel_k19(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        /* The fused loop wrote u[ju[i]] and, in the same iteration, read
++         * u[ku[i]] to produce v[jv[i]]: whether that read saw the "old"
++         * (previous-repetition) value of u or a "new" one written earlier
++         * in this same i-pass depended on the relative order of i and
++         * ju^-1(ku[i]), which is exactly the loop-carried flow DiscoPoP
++         * cannot safely parallelize. We move the dependence instead of
++         * removing it: split the pass into a write phase that finishes
++         * completely, and a read phase that starts only after it, so
++         * every u write is guaranteed visible to every u read that wants
++         * it, independent of iteration order within each phase. Each
++         * phase's iterations then only touch index-i-local reads (c, d)
++         * plus one indirect write/read, so the i's are independent within
++         * a phase and the phase itself can run as a Do-All.
++         */
+         for (long i = 1; i < LEN_1D; i++) {
+             u[ju[i]] += v[kv[i]] * c[i];
++        }
++        for (long i = 1; i < LEN_1D; i++) {
+             v[jv[i]] = u[ku[i]] * d[i] + c[i];
+         }
+         pb_mix(nl);

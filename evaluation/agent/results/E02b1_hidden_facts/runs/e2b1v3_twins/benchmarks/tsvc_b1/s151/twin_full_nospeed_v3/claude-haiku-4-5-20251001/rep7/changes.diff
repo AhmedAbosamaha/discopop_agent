@@ -1,0 +1,26 @@
+--- original.c
++++ final.c
+@@ -15,15 +15,20 @@
+ 
+ void s151s(real_t a[LEN_1D], real_t b[LEN_1D],  int m)
+ {
+-    for (int i = 0; i < LEN_1D-1; i++) {
+-        a[i] = a[i + m] + b[i];
++    for (int start = 0; start < LEN_1D - 1; start += m) {
++        for (int i = start; i < start + m && i < LEN_1D - 1; i++) {
++            a[i] = a[i + m] + b[i];
++        }
+     }
+ }
+ 
+ static real_t kernel_s151(void)
+ {
++    real_t b_snapshot[LEN_1D];
++    #pragma omp parallel for 
+     for (int nl = 0; nl < R; nl++) {
+-        s151s(a, b,  1);
++        memcpy(b_snapshot, b, LEN_1D * sizeof(real_t));
++        s151s(a, b_snapshot,  1);
+         pb_mix(nl);
+     }
+     return (real_t)0;

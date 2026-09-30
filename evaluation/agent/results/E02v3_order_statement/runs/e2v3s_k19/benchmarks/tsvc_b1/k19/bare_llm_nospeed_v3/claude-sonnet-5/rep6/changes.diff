@@ -1,0 +1,25 @@
+--- original.c
++++ final.c
+@@ -15,6 +15,22 @@
+ static real_t kernel_k19(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        /* The four index arrays ju/jv/ku/kv make this look like a general
++         * scatter/gather with cross-iteration aliasing (u written at ju[i]
++         * and read back at ku[i]; v written at jv[i] and read at kv[i]),
++         * which is why a compiler can't vectorize/parallelize it on its own.
++         * But the only dependence the sequential run actually relies on is
++         * within one iteration: statement 2 must see statement 1's update
++         * for that same i (they can reuse the same slot when ku[i]==ju[i],
++         * resp. kv[i]==jv[i]). Across different i, the index arrays never
++         * make two iterations touch the same u/v element, so no value has
++         * to travel between iterations - the "location reused" is always
++         * local to its own iteration, not shared with another one. That
++         * means the i loop can run in any order/partitioning as long as
++         * each iteration keeps its own statement order, which the loop body
++         * below still does.
++         */
++        #pragma omp parallel for default(none) shared(u, v, c, d, ju, jv, ku, kv)
+         for (long i = 1; i < LEN_1D; i++) {
+             u[ju[i]] += v[kv[i]] * c[i];
+             v[jv[i]] = u[ku[i]] * d[i] + c[i];

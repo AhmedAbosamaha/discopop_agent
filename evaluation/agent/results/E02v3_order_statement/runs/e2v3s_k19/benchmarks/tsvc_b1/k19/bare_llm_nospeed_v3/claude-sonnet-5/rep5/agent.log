@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : k19.c
+  Model          : claude-sonnet-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] k19.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan The `nl` loop must stay sequential (given, via `pb_mix`). The candidate for parallelism is the inner `i` loop: ```c for (long i = 1; i < LEN_1D; i++) { u[ju[i]] += v[kv[i]] * c[i]; v[jv[i]] = u[ku[i]] * d[i] + c[i]; } ``` **Dependence analysis.** Two statements share `u` and `v` through index arrays. For *any* parallel schedule to reproduce the sequential result byte-for-byte, two things a
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result
