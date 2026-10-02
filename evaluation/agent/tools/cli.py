@@ -1613,12 +1613,9 @@ def cmd_run(a: argparse.Namespace) -> int:
             # The package must be exactly what the packager wrote before anything is taken
             # from it; a modified package aborts the run rather than contaminating it.
             check_package(bench, bench_dir, when="run start")
-            if prof_json.exists():
-                prof = json.loads(prof_json.read_text())
-            else:
-                print(f"\n== {bench}: profiling {src_name} with DiscoPoP", flush=True)
-                prof = profile_once(bench_dir, src_name, profile_dir, agent_repo, a.timeout)
-                prof_json.write_text(json.dumps(prof, indent=2) + "\n")
+            prof = _profile_or_wait(prof_json, profile_dir,
+                                    lambda: profile_once(bench_dir, src_name, profile_dir, agent_repo, a.timeout),
+                                    f"{bench}: profiling {src_name} with DiscoPoP")
             print(f"   profile: {prof}", flush=True)
             for arm in a.arms:
                 for model in a.models:
@@ -1681,6 +1678,38 @@ def cmd_run(a: argparse.Namespace) -> int:
     print(f"\nreport: {overview}")
     _build_figures(_trials_for_runs(store, [run_id]), run_dir / "figures")
     return 2 if status == "aborted_package_corrupted" else 0
+
+
+def _profile_or_wait(prof_json: Path, profile_dir: Path, take: Any, label: str,
+                     poll: float = 15.0, limit: float = 7200.0) -> dict:
+    """The run's one profile of a benchmark — taken by exactly one job. Two jobs started on a NEW run id (disjoint
+    `--reps`) both found no profile and profiled the same directory at once (29 Sep, bfs; set aside before any
+    trial). The first job takes a lock and profiles; any other waits for its `profile.json`. A lock left by a job
+    that died is taken over after `limit` seconds."""
+    if prof_json.exists():
+        return dict(json.loads(prof_json.read_text()))
+    profile_dir.mkdir(parents=True, exist_ok=True)
+    lock = profile_dir.parent / f".{profile_dir.name}.profiling"
+    try:
+        fd = os.open(lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        os.write(fd, f"{os.getpid()} {time.time()}\n".encode())
+        os.close(fd)
+    except FileExistsError:
+        print(f"\n== {label}: another job is profiling it — waiting for its profile", flush=True)
+        waited = 0.0
+        while not prof_json.exists() and waited < limit:
+            time.sleep(poll)
+            waited += poll
+        if prof_json.exists():
+            return dict(json.loads(prof_json.read_text()))
+        print(f"   no profile after {limit:.0f} s — the lock is stale; profiling here", flush=True)
+    try:
+        print(f"\n== {label}", flush=True)
+        prof = take()
+        prof_json.write_text(json.dumps(prof, indent=2) + "\n")
+        return dict(prof)
+    finally:
+        lock.unlink(missing_ok=True)
 
 
 def _save_trial(trial: Path, rec: dict, rep: int) -> None:

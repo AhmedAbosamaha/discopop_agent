@@ -1076,6 +1076,58 @@
         "--prompt-version",
         "3"
       ]
+    },
+    "default_v3": {
+      "ids": [
+        "E1-final"
+      ],
+      "description": "E1-final (2 Oct, the author: one version for every remaining experiment): E1's arm at prompt version 3 \u2014 the only flag added; the fixed DiscoPoP, SDK 0.2.162 and packaging v4 come with the run. The campaign default (`default`).",
+      "flags": [
+        "--prompt-version",
+        "3"
+      ],
+      "settings": {
+        "budget": 3,
+        "llm_pragmas": false,
+        "require_speedup": true,
+        "hotspots": true,
+        "fast_refresh": false,
+        "restructure_depth": 0,
+        "pragma_arbitration": false,
+        "prompt_version": 3
+      }
+    },
+    "discopop_gate_v3": {
+      "ids": [
+        "E1-final"
+      ],
+      "description": "E1-final (2 Oct, the author: one version for every remaining experiment): E1's arm at prompt version 3 \u2014 the only flag added; the fixed DiscoPoP, SDK 0.2.162 and packaging v4 come with the run. DiscoPoP alone (`discopop_gate`, budget 0: no model is called; the version flag changes nothing it does, and keeps the two arms differing in the budget only).",
+      "flags": [
+        "--budget",
+        "0",
+        "--prompt-version",
+        "3"
+      ],
+      "settings": {
+        "budget": 0,
+        "llm_pragmas": false,
+        "require_speedup": true,
+        "hotspots": true,
+        "fast_refresh": false,
+        "restructure_depth": 0,
+        "prompt_version": 3
+      }
+    },
+    "bare_llm_v3": {
+      "ids": [
+        "E1-final"
+      ],
+      "description": "The model alone (the mirror, speed check on) with prompt version 3's shared passages \u2014 E1-final's model-alone arm for Haiku, Sonnet, Opus and Fable.",
+      "runner": "bare_llm",
+      "flags": [
+        "--prompt-version",
+        "3"
+      ]
     }
   },
   "common_timing_size": "per_kernel",
@@ -1516,6 +1568,41 @@
       ],
       "consequences": [],
       "why": "Version 3 differs from E2-B1's agent arm in the prompt version only."
+    },
+    "E1-final": {
+      "arms": [
+        "discopop_gate_v3",
+        "default_v3"
+      ],
+      "variable": [
+        "budget"
+      ],
+      "consequences": [],
+      "why": "THE MAIN COMPARISON in the final version: DiscoPoP alone vs DiscoPoP + agent; budget 0 means no model is called, everything else identical."
+    },
+    "E1-final-bare": {
+      "arms": [
+        "default_v3",
+        "bare_llm_v3"
+      ],
+      "variable": [
+        "runner"
+      ],
+      "consequences": [],
+      "check": "runner",
+      "agent": "default_v3",
+      "why": "E1-final: the model alone (Haiku, Sonnet, Opus, Fable) beside the agent, both told the speed goal (the runner check compares their goals)."
+    },
+    "E1-final-vs-E1c": {
+      "arms": [
+        "default",
+        "default_v3"
+      ],
+      "variable": [
+        "prompt_version"
+      ],
+      "consequences": [],
+      "why": "E1-final's agent arm differs from E1c's in the prompt version only."
     }
   }
 }

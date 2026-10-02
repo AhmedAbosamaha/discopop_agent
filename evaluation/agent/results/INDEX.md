@@ -369,3 +369,12 @@ Status: done
 | `e12_haiku_b1` | [`E12_stronger_models_alone/runs/e12_haiku_b1/`](E12_stronger_models_alone/runs/e12_haiku_b1/) | E12 CLI control: claude-haiku-4-5-20251001 alone on tsvc_b1/s424, s161 × bare_llm_nospeed × 5 with the upgraded SDK | valid | 10 | BROKEN 5, FASTER 4, VERIFY_FAILED 1 |
 | `e12_agent_v3` | [`E12_stronger_models_alone/runs/e12_agent_v3/`](E12_stronger_models_alone/runs/e12_agent_v3/) | E12: the Haiku agent with evidence (full_b1_nospeed_v3) on tsvc_b1/s424, s161 × 10 — the comparison point for the strong models alone on these loops (the E2-B1 agent ran the v1 wording) | valid | 20 | FASTER 10, no-change 8, parallel-not-faster 2 |
 
+## [E1-final — the headline three-way comparison in the final version](E01f_final_three_way/)
+
+Status: pre-flight
+
+| run | where | what it is | status | trials | outcomes |
+|---|---|---|---|---:|---|
+| `t0_1_e1f_sizes` | not archived yet | T0.1 sizes for the 23 new tsvc_b1 packages of E1-final (server, no model) | registered |  |  |
+| `e1f_smoke` | not archived yet | E1-final smoke: tsvc_b1/s211 and s000 × default_v3, discopop_gate_v3 (Haiku) and bare_llm_v3 with Haiku, Sonnet, Opus, Fable × 1 — configuration check, not counted | registered |  |  |
+

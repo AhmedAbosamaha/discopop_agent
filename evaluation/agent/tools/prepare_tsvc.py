@@ -599,6 +599,22 @@ B1_LOOPS += [
          init_extra=_ORDER2_INIT.replace("@TABLES@", "ku[i] = (int)(i - 1); kv[i] = (int)(LEN_1D + i);"),
          emit_extra=_ORDER2_EMIT, suite="tsvc_b1", hot_writes=("u", "v"), body=_ORDER2B_BODY),
 ]
+# E1-final (2 Oct, the author: one version — packaging v4 — for every remaining experiment): E1c's population in
+# the v4 layout — the 18 class-R loops (s1213 and s211 above), class A s000, vpvtv, s313 and class D s321, s322,
+# s323, s3112. TSVC text, class and notes are E1-E2's; the hot loop's writes declared from reading each loop (the
+# packager refuses a package whose parsed hot loop writes anything else). s331's hot loop writes only the scalar
+# it searches with, which the coverage check does not count — an empty set.
+_E1_FINAL_WRITES: Dict[str, Tuple[str, ...]] = {
+    "s112": ("a",), "s121": ("a",), "s127": ("a", "j"), "s212": ("a", "b"), "s241": ("a", "b"), "s243": ("a", "b"),
+    "s244": ("a", "b"), "s252": ("a",), "s254": ("a",), "s255": ("a",), "s281": ("a", "b"), "s291": ("a",),
+    "s292": ("a",), "s293": ("a",), "s331": (), "s341": ("a", "j"),
+    "s000": ("a",), "vpvtv": ("a",), "s313": ("dot",),
+    "s321": ("a",), "s322": ("a",), "s323": ("a", "b"), "s3112": ("b", "sum"),
+}
+for _n, _w in _E1_FINAL_WRITES.items():
+    _base = next(l for l in LOOPS if l.name == _n)
+    B1_LOOPS.append(Loop(_n, _base.expected, _base.transformation, _base.why, init_extra=_base.init_extra,
+                         reps=_base.reps, pre=_base.pre, globals_=_base.globals_, suite="tsvc_b1", hot_writes=_w))
 SUITES: Dict[str, List[Loop]] = {"tsvc": LOOPS, "tsvc_b1": B1_LOOPS}
 BY_NAME = {l.name: l for l in LOOPS}
 
