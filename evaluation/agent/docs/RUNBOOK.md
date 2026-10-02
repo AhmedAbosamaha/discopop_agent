@@ -439,6 +439,7 @@ explorer run from that checkout, so the run's conditions would change between tr
   (`s211`) as Do-All in every draw (bug report B8). Regenerate packages only with the default layout;
   it reproduces the packages in use byte for byte. A harness edit by any arm is its own row, never
   a failure (H13); the agent's gate refuses it for packages that list protected lines (Fix 97).
+  **Since 3 Oct (Fix 103, the author) every arm prevents it and the runner redoes it** — see the next trap.
 
 - **A rewrite can be 3–30× slower than the original and pass every gate before Settle.**
   Phase A judges a pragma-free rewrite on output; Phase B measures each pragma against the
@@ -478,9 +479,18 @@ explorer run from that checkout, so the run's conditions would change between tr
   Those jobs go to the server, in a scratch directory outside the campaign's checkout while an
   experiment runs. On the Mac: TSVC and small PolyBench kernels, tests, `verify-source`, one
   job at a time; check `df -h /System/Volumes/Data` first.
-- **`SCAFFOLD_MODIFIED` is not a result.** A trial whose final source changed the packaging's
-  own code (timer calls or their position, `PB_PERTURB`, the digest) gets this outcome and is
-  never counted. The check is `agent/tools/scaffold.py`; `pilot2` is the example.
+- **`SCAFFOLD_MODIFIED` is prevented, then redone — never just left out (Fix 103, 3 Oct; the
+  author: "just no counting is not a good idea").** A trial whose final source changed the
+  packaging's own code (timer calls or their position, `PB_PERTURB`, the digest, a protected line
+  such as `pb_mix(nl)`) measures nothing. (1) The agent's gate refuses it (Fix 97); the model alone
+  and the twins check the finished file with the judge's own rules (`discopop_agent/gate/scaffold.py`,
+  a byte-identical copy of `agent/tools/scaffold.py` — edit both or `test_scaffold.py` fails), send
+  it back in the agent's words up to twice in the same session, and discard the edit if it stays
+  (`harness_reasks`, `harness_discards` per trial). (2) The runner redoes a trial that still ends
+  `SCAFFOLD_MODIFIED`, up to twice (`HARNESS_EDIT_REDOS`); the attempts are kept under
+  `<run>/_harness_edit/` and listed in `harness_edit_redos`. (3) One that survives both redos is
+  COUNTED, as unusable. Trials from before 3 Oct keep their own-row rule. `pilot2` and E12's Fable
+  trials are the examples.
 - **DiscoPoP's explorer crashes at random on some programs** (`pathfinder`: 15 of 20 runs on
   one profile, `IndexError` in `TaskGraph.recursive_assignment`) and its task patterns change
   from run to run on one profile. The harness and the agent retry it on the same profile, up

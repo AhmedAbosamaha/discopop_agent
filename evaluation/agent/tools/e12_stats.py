@@ -33,19 +33,30 @@ AGENT = "Haiku agent + evidence (v3)"
 ROWS: List[Tuple[str, str, str, Tuple[str, ...]]] = [
     (AGENT, "e2v3_k19", "full_b1_nospeed_v3", ("tsvc_b1/k19",)),
     (AGENT, "e2v3_k48", "full_b1_nospeed_v3", ("tsvc_b1/k48",)),
+    (AGENT, "e2v3_s1213", "full_b1_nospeed_v3", ("tsvc_b1/s1213",)),
+    (AGENT, "e2v3_s211", "full_b1_nospeed_v3", ("tsvc_b1/s211",)),
     (AGENT, "e12_agent_v3", "full_b1_nospeed_v3", ("tsvc_b1/s424", "tsvc_b1/s161")),
     ("Opus 5.5 alone", "e12_opus_v3", "bare_llm_nospeed_v3", ("tsvc_b1/k19", "tsvc_b1/k48")),
+    ("Opus 5.5 alone", "e12_opus_v3b", "bare_llm_nospeed_v3", ("tsvc_b1/s1213", "tsvc_b1/s211")),
     ("Opus 5.5 alone", "e12_opus_b1", "bare_llm_nospeed", ("tsvc_b1/s424", "tsvc_b1/s161")),
     ("Fable 5.1 alone", "e12_fable_v3", "bare_llm_nospeed_v3", ("tsvc_b1/k19", "tsvc_b1/k48")),
+    ("Fable 5.1 alone", "e12_fable_redo", "bare_llm_nospeed_v3", ("tsvc_b1/k19", "tsvc_b1/k48")),
+    ("Fable 5.1 alone", "e12_fable_v3b", "bare_llm_nospeed_v3", ("tsvc_b1/s1213", "tsvc_b1/s211")),
     ("Fable 5.1 alone", "e12_fable_b1", "bare_llm_nospeed", ("tsvc_b1/s424", "tsvc_b1/s161")),
     ("Sonnet 5 alone", "e2v3s_k19", "bare_llm_nospeed_v3", ("tsvc_b1/k19",)),
+    ("Sonnet 5 alone", "e12_sonnet_v3", "bare_llm_nospeed_v3", ("tsvc_b1/k48", "tsvc_b1/s1213", "tsvc_b1/s211")),
+    ("Sonnet 5 alone", "e12_sonnet_b1", "bare_llm_nospeed", ("tsvc_b1/s424", "tsvc_b1/s161")),
     ("Haiku alone (new CLI)", "e12_haiku_v3", "bare_llm_nospeed_v3", ("tsvc_b1/k19", "tsvc_b1/k48")),
     ("Haiku alone (new CLI)", "e12_haiku_b1", "bare_llm_nospeed", ("tsvc_b1/s424", "tsvc_b1/s161")),
     ("Haiku alone (old CLI)", "e2v3_k19", "bare_llm_nospeed_v3", ("tsvc_b1/k19",)),
     ("Haiku alone (old CLI)", "e2v3_k48", "bare_llm_nospeed_v3", ("tsvc_b1/k48",)),
+    ("Haiku alone (old CLI)", "e2v3_s1213", "bare_llm_nospeed_v3", ("tsvc_b1/s1213",)),
+    ("Haiku alone (old CLI)", "e2v3_s211", "bare_llm_nospeed_v3", ("tsvc_b1/s211",)),
     ("Haiku alone (old CLI)", "e2b1_bare_m3_a", "bare_llm_nospeed", ("tsvc_b1/s424", "tsvc_b1/s161")),
 ]
-LOOPS = ("tsvc_b1/k19", "tsvc_b1/k48", "tsvc_b1/s424", "tsvc_b1/s161")
+# The completion of 3 Oct (§6): every model alone on the agent's six loops; Fable's three harness-edit trials
+# of `e12_fable_v3` redone in `e12_fable_redo` (Fix 103) — the edits stay listed, marked redone.
+LOOPS = ("tsvc_b1/k19", "tsvc_b1/k48", "tsvc_b1/s1213", "tsvc_b1/s211", "tsvc_b1/s424", "tsvc_b1/s161")
 
 
 def fisher_greater(a: int, n1: int, c: int, n2: int) -> float:
@@ -107,7 +118,8 @@ def main() -> int:
             c = cell
             txt = f"{c['success']}/{c['n']} ({c['faster']} faster) · {c['unsafe']} unsafe"
             if c["harness"]:
-                txt += f" · {c['harness']} harness edit(s)"
+                redone = any(r.endswith("_redo") for r in c["runs"])
+                txt += f" · {c['harness']} harness edit(s){', redone' if redone else ''}"
             if c["unchecked"]:
                 txt += f" · {c['unchecked']} race-unchecked"
             if lab != AGENT and (AGENT, loop) in cells:

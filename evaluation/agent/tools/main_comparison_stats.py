@@ -239,8 +239,19 @@ def _did_not_compile(t: dict) -> bool:
 def _tampered(t: dict) -> bool:
     """The program changed the harness code that measures it (timer, perturbed input, digest).
     Its speed and output verdicts measure nothing, and it is NOT a failure of the code under
-    test (the author, 24 Sep): reported in its own row, left out of every rate and of H13."""
-    return t.get("outcome") == "SCAFFOLD_MODIFIED"
+    test (the author, 24 Sep): reported in its own row, left out of every rate and of H13.
+    Since 3 Oct (the author) the runner REDOES such a trial (cli.HARNESS_EDIT_REDOS) and the
+    model-only arms send the edit back (gate/harness_guard.py); a trial that still edits the
+    measurement after the redos is `_measurement_kept_edited`, not this."""
+    return t.get("outcome") == "SCAFFOLD_MODIFIED" and not _measurement_kept_edited(t)
+
+
+def _measurement_kept_edited(t: dict) -> bool:
+    """A trial run with the runner's redo (it records `harness_edit_redos`) that still ships a
+    program editing the measurement lines: every redo was used. Counted, as unusable (§6, 3 Oct:
+    a trial that is not counted is not a result). Trials from before 3 Oct have no such field and
+    keep the rule they were registered with."""
+    return t.get("outcome") == "SCAFFOLD_MODIFIED" and "harness_edit_redos" in t
 
 
 def _with_verdict(t: dict) -> bool:
@@ -251,7 +262,7 @@ def _with_verdict(t: dict) -> bool:
     if _tampered(t):
         return False
     return (t.get("outcome") in figures.PARALLEL_OK + ("no-change", "changed-not-parallel", "BROKEN")
-            or _did_not_compile(t))
+            or _did_not_compile(t) or _measurement_kept_edited(t))
 
 
 def _ships_slowdown(t: dict) -> bool:
@@ -299,6 +310,7 @@ def three_way(trials: List[dict], agent_arm: str, bare_arm: str = "bare_llm",
             slower = [t for t in valid if _ships_slowdown(t)]
             broken = [t for t in valid if t.get("outcome") == "BROKEN"]
             no_build = [t for t in valid if _did_not_compile(t)]
+            kept_edit = [t for t in valid if _measurement_kept_edited(t)]
             tampered = [t for t in at if _tampered(t)]
             sp = [x for x in (_best_speedup(t) for t in fast) if x]
             block["arms"][label] = {
@@ -312,11 +324,13 @@ def three_way(trials: List[dict], agent_arm: str, bare_arm: str = "bare_llm",
                 "broken": len(broken), "slower_shipped": len(slower), "racy": len(racy),
                 "race_not_judgeable": len(unjudged),
                 "did_not_compile": len(no_build), "tampered": len(tampered),
-                "unusable": len({id(t) for t in broken + slower + racy + no_build}),
+                "measurement_kept_edited": len(kept_edit),
+                "unusable": len({id(t) for t in broken + slower + racy + no_build + kept_edit}),
                 "unusable_cases": [f"{t.get('benchmark')} rep{t.get('repeat')}: "
                                    + ("BROKEN" if t in broken else "did not compile" if t in no_build
-                                      else "racy" if t in racy else "slower")
-                                   for t in valid if t in broken + slower + racy + no_build],
+                                      else "racy" if t in racy
+                                      else "edits the measurement after every redo" if t in kept_edit else "slower")
+                                   for t in valid if t in broken + slower + racy + no_build + kept_edit],
                 "tampered_cases": [f"{t.get('benchmark')} rep{t.get('repeat')}" for t in tampered],
                 "broken_cases": [f"{t.get('benchmark')} rep{t.get('repeat')}" for t in broken],
                 "median_speedup_of_faster": statistics.median(sp) if sp else None,
@@ -324,6 +338,7 @@ def three_way(trials: List[dict], agent_arm: str, bare_arm: str = "bare_llm",
             for b in benches:
                 bt = [t for t in valid if str(t.get("benchmark")) == b]
                 bad = {id(t) for t in bt if t.get("outcome") == "BROKEN" or _did_not_compile(t) or _ships_slowdown(t)
+                       or _measurement_kept_edited(t)
                        or (t.get("outcome") in figures.PARALLEL_OK and race(t) in RACE_STAGES)}
                 per[b][label] = {"faster": sum(1 for t in bt if t.get("outcome") == "FASTER"),
                                  "faster_race_free": sum(1 for t in bt if t.get("outcome") == "FASTER" and race(t) == "clean"),

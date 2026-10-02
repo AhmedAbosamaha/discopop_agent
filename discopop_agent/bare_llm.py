@@ -9,7 +9,10 @@ agent with switches turned off — it shares no control flow with it:
   * no gate: nothing is compiled, run, raced or timed here.  Whatever the model leaves in
     the file is the result, and the experiment harness judges it exactly as it judges the
     agent's — so wrong programs are EXPECTED here, and counted;
-  * one attempt, no feedback.
+  * one attempt, no feedback — with one exception since 3 Oct 2026 (the author): a finished
+    file that edits the lines the harness measures with is sent back in the agent's own words,
+    at most twice, and discarded if it still does (gate/harness_guard.py); the
+    parallelization itself is never checked here.
 
 What it does share, so that the comparison is about the pipeline and not about access or
 wording: the same model through the same client call (`_complete_claude_agent_sdk`, direct
@@ -36,6 +39,7 @@ from typing import List, Tuple
 from .llm.prompts import (PROMPT_VERSIONS, _ASK_ANNOTATE, _CONTRACT_PRAGMA, _OMP_RULES, _PLAN_SPEC,
                           _PRAGMA_FORMS, _RULE, _contract, _granularity, _how_compared, _step, _sub)
 from .llm.request import _goal, _protected_block, _task_checklist
+from .gate.harness_guard import HARNESS_REASKS, harness_feedback, harness_problem
 from .llm.providers import _complete_claude_agent_sdk
 from .types import GateFacts
 
@@ -268,16 +272,47 @@ def main() -> int:
         key = "bare:" + hashlib.sha256("".join(before.values()).encode()).hexdigest()[:16]
         print(f"│  [bare] Calling {a.model}...")
         try:
+            # Not stateless: a harness re-ask (below) resumes this session. The first call
+            # starts a fresh session either way, so the model's first turn is unchanged.
             reply = _complete_claude_agent_sdk(a.model, system,
                                                [{"role": "user", "content": request}],
-                                               key, workspace=ws, stateless=True)
+                                               key, workspace=ws, stateless=False)
         except Exception as e:                       # noqa: BLE001 - one attempt: say why it failed
             print(f"│  [bare] LLM call failed: {str(e)[:300]}")
             print("\n  SUMMARY: 0 file(s) changed  |  the call failed")
             return 1
+        # The measurement lines (gate/harness_guard.py, the author 3 Oct): the agent's own
+        # enforcement, after the turn — the only thing checked here, and not the parallelization.
+        def _harness() -> List[Tuple[str, str]]:
+            out = []
+            for u in units:
+                after = (ws / Path(u).name).read_text(errors="replace")
+                if after != before[u]:
+                    said = harness_problem(before[u], after, protected, u)
+                    if said:
+                        out.append((u, said))
+            return out
+        for reask in range(1, HARNESS_REASKS + 1):
+            bad = _harness()
+            if not bad:
+                break
+            diag = "\n".join(said if len(units) == 1 else f"{u}: {said}" for u, said in bad)
+            print(f"│  [harness] re-ask {reask} of {HARNESS_REASKS}: {' '.join(diag.split())[:300]}")
+            print(f"│  [bare] Calling {a.model}...")
+            try:
+                reply = _complete_claude_agent_sdk(a.model, system,
+                                                   [{"role": "user", "content": harness_feedback(diag)}],
+                                                   key, workspace=ws, stateless=False)
+            except Exception as e:                   # noqa: BLE001 - say why, keep what is there
+                print(f"│  [bare] LLM call failed: {str(e)[:300]}")
+                break
+        still = {u for u, _ in _harness()}
         changed = 0
         for u in units:
             after = (ws / Path(u).name).read_text(errors="replace")
+            if u in still:
+                print(f"│  [harness] edit discarded: {u} still edits the measurement lines — left as it was")
+                continue
             if after != before[u]:
                 (root / u).write_text(after)         # no gate: what the model left IS the result
                 changed += 1

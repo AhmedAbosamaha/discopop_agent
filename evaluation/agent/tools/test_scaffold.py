@@ -111,5 +111,20 @@ tw = M.three_way([trial("FASTER", 2.0, rep=1), trial("SCAFFOLD_MODIFIED", verify
 got = tw["classes"]["R"]["arms"]["model alone"] if "R" in tw["classes"] else {}
 holds("three-way: 2 with a verdict, 1 harness edit, 1 unusable (the slow rewrite), 0 not compiling",
       (got.get("with_verdict"), got.get("tampered"), got.get("unusable"), got.get("did_not_compile")) == (2, 1, 1, 0))
+# 3 Oct (the author): a harness edit is redone by the runner; one that survives every redo
+# (`harness_edit_redos` recorded) is counted, as unusable — older trials keep their rule.
+kept = dict(trial("SCAFFOLD_MODIFIED", 1.5, rep=4), harness_edit_redos=[{"attempt": 1}, {"attempt": 2}])
+holds("harness edit after every redo: a verdict, not tampered", M._with_verdict(kept) and not M._tampered(kept))
+holds("harness edit from before 3 Oct: still its own row", M._tampered(trial("SCAFFOLD_MODIFIED", 1.5)))
+tw = M.three_way([trial("FASTER", 2.0, rep=1), kept, trial("no-change", arm="default"),
+                  trial("no-change", arm="discopop_gate")], "default", "twin_full")
+got = tw["classes"]["R"]["arms"]["model alone"] if "R" in tw["classes"] else {}
+holds("three-way: the kept harness edit is unusable and in the denominator",
+      (got.get("with_verdict"), got.get("tampered"), got.get("unusable"), got.get("measurement_kept_edited")) == (2, 0, 1, 1))
+# The agent's model-only arms check with the judge's rules: a byte-identical copy (gate/harness_guard.py).
+HERE = Path(__file__).resolve().parent
+AGENT_COPY = HERE.parents[2] / "discopop_agent" / "gate" / "scaffold.py"
+holds("discopop_agent/gate/scaffold.py is this scaffold.py, byte for byte",
+      AGENT_COPY.exists() and AGENT_COPY.read_bytes() == (HERE / "scaffold.py").read_bytes())
 print("\nFAILURES:", fails)
 sys.exit(1 if fails else 0)

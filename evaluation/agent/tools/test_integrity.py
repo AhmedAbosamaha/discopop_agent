@@ -174,6 +174,14 @@ def fake_run_trial(bench, bench_dir, profile_dir, trial, arm, arm_flags, model, 
         p.write_text(p.read_text() + "\n/* a trial wrote here */\n")
     elif Damage.kind == "profile":
         (profile_dir / ".discopop" / "explorer" / "patterns.json").write_text('{"patterns": {}}')
+    elif Damage.kind in ("harness_once", "harness_always"):
+        # 3 Oct: a program that edits the measurement lines is redone by the runner
+        (trial / "agent.log").write_text(f"call {Damage.calls}\n")
+        edited = Damage.kind == "harness_always" or Damage.calls == 1
+        return {"benchmark": bench, "kernel": bench_dir.name, "arm": arm, "model": model, "status": "ok",
+                "scaffold": {"ok": not edited, "problems": ["protected line added: pb_mix(nl);"] if edited else [],
+                             "applies": True},
+                "verify": {"status": "ok"}}
     return {"benchmark": bench, "kernel": bench_dir.name, "arm": arm, "model": model,
             "status": "agent_error", "agent_error": "stub agent"}
 
@@ -250,6 +258,24 @@ finally:
 rec = cli.check_package("vecsum", bench_dir, when="test")
 expect("package restored", rec["ok"])
 shutil.rmtree(RUNS / "_test_integrity", ignore_errors=True)
+
+# ---- 5. a harness edit is redone (3 Oct), every attempt kept outside benchmarks/ -------
+for kind, calls, redos, final_edit in (("harness_once", 2, 1, False),
+                                       ("harness_always", 1 + cli.HARNESS_EDIT_REDOS, cli.HARNESS_EDIT_REDOS, True)):
+    Damage.kind, Damage.calls = kind, 0
+    run("_test_harness_redo", "calib/vecsum", 1)
+    recs = trial_records("_test_harness_redo")
+    t = json.loads(recs[0].read_text()) if len(recs) == 1 else {}
+    kept = sorted((RUNS / "_test_harness_redo" / "_harness_edit").rglob("trial.json"))
+    expect(f"{kind}: {calls} attempt(s), one trial record", Damage.calls == calls and len(recs) == 1,
+           f"{Damage.calls} calls, {len(recs)} records")
+    expect(f"{kind}: {redos} redo(s) recorded and kept", len(t.get("harness_edit_redos") or []) == redos
+           and len(kept) == redos and all((k.parent / "agent.log").exists() for k in kept), str(t.get("harness_edit_redos")))
+    expect(f"{kind}: final outcome", (t.get("outcome") == "SCAFFOLD_MODIFIED") == final_edit, str(t.get("outcome")))
+    expect(f"{kind}: the final attempt's own files in the trial", (recs[0].parent / "agent.log").exists()
+           and (recs[0].parent / "agent.log").read_text() == f"call {calls}\n")
+Damage.kind = "none"
+shutil.rmtree(RUNS / "_test_harness_redo", ignore_errors=True)
 
 print(f"\n{'ALL PASS' if not fails else f'{fails} FAILURE(S)'}")
 sys.exit(1 if fails else 0)

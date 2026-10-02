@@ -83,6 +83,9 @@ DEFAULT_AGENT_REPO = _default_agent_repo()
 # last digits (~1e-16 relative); a wrong result moves them by far more.
 DIGEST_REL_TOL = 1e-9
 FASTER_THRESHOLD = 1.1
+# A trial whose program edits the measurement lines (SCAFFOLD_MODIFIED) is redone up to this many
+# times (the author, 3 Oct 2026); one that still does after them counts as unusable (§6, 3 Oct).
+HARNESS_EDIT_REDOS = 2
 # Attempts of DiscoPoP's explorer on one profile before a benchmark is given up (profile_once).
 EXPLORER_ATTEMPTS = 20
 # One explorer attempt's limit and how many stalled draws are repeated — the agent's own
@@ -912,6 +915,10 @@ def _parse_agent_log(log: str) -> dict:
         # server pilot recorded 9 calls and a clean "no-change" while all 9 had
         # failed on a rejected credential (§5c).
         "llm_call_failures": log.count("LLM call failed"),
+        # The measurement lines (the author, 3 Oct): the model alone and the twins send an edit of
+        # them back in the agent's words (gate/harness_guard.py) and discard it if it stays.
+        "harness_reasks": log.count("[harness] re-ask"),
+        "harness_discards": log.count("[harness] edit discarded"),
         # DiscoPoP's explorer crashing on an unchanged profile and being retried by the
         # agent (profiling/tools.py run_explorer); a draw, not a verdict, but counted.
         "explorer_retries": len(re.findall(r"\[explorer\] attempt \d+ failed", log)),
@@ -1633,36 +1640,46 @@ def cmd_run(a: argparse.Namespace) -> int:
                             rec = {"benchmark": bench, "kernel": bench_dir.name, "arm": arm,
                                    "model": model, "status": "profile_error", "detail": prof["error"]}
                         else:
-                            # Before: the package, the archived sources and the archived
-                            # profile are intact, so this trial starts from the real program.
-                            # After: they still are, so the NEXT trial does too.  A failure
-                            # after the trial keeps the trial's record (it ran on an intact
-                            # copy) and then stops the run.
-                            integrity: Dict[str, Any] = {
-                                "before": check_package(bench, bench_dir, profile_dir, "before trial")}
-                            rec = run_trial(bench, bench_dir, profile_dir, trial, arm,
-                                            [*_common_flags(), *arms[arm]["flags"],
-                                             *_timing_flags(arms[arm], bench),
-                                             *_evidence_file_flags(arms[arm], bench, run_dir, cc, cxx)],
-                                            model, a, cc, cxx)
-                            rec["profile"] = prof
-                            rec["package_integrity"] = integrity
-                            # What the agent's own speed check was given for THIS kernel: the
-                            # harness switches it off where no size can be timed, and a gain on
-                            # such a kernel was never speed-judged inside the agent. It was
-                            # promised "per trial" and written to the manifest only until
-                            # 2026-09-21, where no per-trial analysis could see it.
-                            _tf = _timing_flags(arms[arm], bench)
-                            rec["speed_check_off"] = ("--no-require-speedup" in _tf
-                                                      or "--no-require-speedup" in arms[arm]["flags"])
-                            rec["timing_flags"] = _tf
-                            try:
-                                integrity["after"] = check_package(bench, bench_dir, profile_dir,
-                                                                   "after trial")
-                            except PackageCorrupted as e:
-                                integrity["after"] = {"ok": False, "error": str(e)}
-                                _save_trial(trial, rec, rep)
-                                raise
+                            # A trial whose program still edits the measurement lines is REDONE
+                            # (the author, 3 Oct: not counting it is not a result), at most
+                            # HARNESS_EDIT_REDOS times; every such attempt is kept under the run's
+                            # _harness_edit/ and listed in the trial's `harness_edit_redos`.
+                            redos: List[Dict[str, Any]] = []
+                            while True:
+                                # Before: the package, the archived sources and the archived
+                                # profile are intact, so this trial starts from the real program.
+                                # After: they still are, so the NEXT trial does too.  A failure
+                                # after the trial keeps the trial's record (it ran on an intact
+                                # copy) and then stops the run.
+                                integrity: Dict[str, Any] = {
+                                    "before": check_package(bench, bench_dir, profile_dir, "before trial")}
+                                rec = run_trial(bench, bench_dir, profile_dir, trial, arm,
+                                                [*_common_flags(), *arms[arm]["flags"],
+                                                 *_timing_flags(arms[arm], bench),
+                                                 *_evidence_file_flags(arms[arm], bench, run_dir, cc, cxx)],
+                                                model, a, cc, cxx)
+                                rec["profile"] = prof
+                                rec["package_integrity"] = integrity
+                                # What the agent's own speed check was given for THIS kernel: the
+                                # harness switches it off where no size can be timed, and a gain on
+                                # such a kernel was never speed-judged inside the agent. It was
+                                # promised "per trial" and written to the manifest only until
+                                # 2026-09-21, where no per-trial analysis could see it.
+                                _tf = _timing_flags(arms[arm], bench)
+                                rec["speed_check_off"] = ("--no-require-speedup" in _tf
+                                                          or "--no-require-speedup" in arms[arm]["flags"])
+                                rec["timing_flags"] = _tf
+                                rec["harness_edit_redos"] = redos
+                                try:
+                                    integrity["after"] = check_package(bench, bench_dir, profile_dir,
+                                                                       "after trial")
+                                except PackageCorrupted as e:
+                                    integrity["after"] = {"ok": False, "error": str(e)}
+                                    _save_trial(trial, rec, rep)
+                                    raise
+                                if classify(rec) != "SCAFFOLD_MODIFIED" or len(redos) >= HARNESS_EDIT_REDOS:
+                                    break
+                                redos.append(_set_aside_harness_edit(trial, rec, rep, len(redos) + 1, run_dir))
                         _save_trial(trial, rec, rep)
                         write_report(store, run_id)
     except KeyboardInterrupt:
@@ -1710,6 +1727,24 @@ def _profile_or_wait(prof_json: Path, profile_dir: Path, take: Any, label: str,
         return dict(prof)
     finally:
         lock.unlink(missing_ok=True)
+
+
+def _set_aside_harness_edit(trial: Path, rec: dict, rep: int, attempt: int, run_dir: Path) -> Dict[str, Any]:
+    """Keep a trial attempt whose program edited the measurement lines under
+    <run>/_harness_edit/<benchmark>/<arm>/<model>/rep<N>/attempt<K>/ — outside `benchmarks/`, so
+    no tool that globs `benchmarks/**/trial.json` counts it — and empty the trial directory for
+    the redo. Returns the entry for the final trial's `harness_edit_redos`."""
+    keep = run_dir / "_harness_edit" / trial.relative_to(run_dir / "benchmarks") / f"attempt{attempt}"
+    keep.mkdir(parents=True, exist_ok=True)
+    for p in list(trial.iterdir()):
+        shutil.move(str(p), str(keep / p.name))
+    rec = dict(rec, repeat=rep, outcome="SCAFFOLD_MODIFIED")
+    (keep / "trial.json").write_text(json.dumps(rec, indent=2) + "\n")
+    problems = list((rec.get("scaffold") or {}).get("problems") or [])
+    print(f"    → SCAFFOLD_MODIFIED — redone (attempt {attempt} of {HARNESS_EDIT_REDOS} kept in "
+          f"{keep.relative_to(run_dir)}): {'; '.join(problems)[:200]}", flush=True)
+    return {"attempt": attempt, "problems": problems, "kept": str(keep.relative_to(run_dir)),
+            "agent_s": rec.get("agent_s"), "llm_calls": rec.get("llm_calls")}
 
 
 def _save_trial(trial: Path, rec: dict, rep: int) -> None:

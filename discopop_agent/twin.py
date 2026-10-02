@@ -13,7 +13,11 @@ the evidence, the request — and nothing that is the gate's:
     agent's own blocks with the gate's checks described as what judges the FINISHED
     program, and the clause and sentence that promise feedback removed (see `_system`);
   * one attempt per region, no feedback, no format re-prompt; what the model leaves in
-    the file stays in the file — nothing is compiled, run, raced, timed or reverted here;
+    the file stays in the file — nothing is compiled, run, raced, timed or reverted here,
+    with one exception since 3 Oct 2026 (the author): an edit of the lines the harness
+    measures with is sent back in the agent's own words, at most twice, and the region's
+    edit is discarded if it still does (gate/harness_guard.py) — the agent's gate does the
+    same (Fix 97), and the parallelization itself is never checked here;
   * after an edit the program is re-profiled, as the agent re-profiles a kept rewrite, so
     the rest of the queue is read from a profile that describes the file, and regions the
     rewrite created join the queue at depth+1 up to `--restructure-depth`;
@@ -47,7 +51,8 @@ from .gate import numerical_noise_floor
 from .llm.prompts import (_ASK, _ASK_ANNOTATE, _CONTRACT_NO_PRAGMA, _CONTRACT_PRAGMA, _OMP_RULES,
                           _OUTPUT_DIRECT, _PRAGMA_FORMS, _ROLE, _ROLE_ANNOTATE, _RULE, _contract,
                           _given as _agent_given, _granularity, _how_compared, _sub)
-from .llm.providers import _complete, _make_client, _sync_workspace, _workspace_diff
+from .gate.harness_guard import HARNESS_REASKS, harness_feedback, harness_problem
+from .llm.providers import _complete, _make_client, _region_sessions, _sync_workspace, _workspace_diff
 from .llm.request import _build_direct_prompt
 from .plan import build_candidates, region_budget, region_fingerprint
 from .plan import impact as impact_mod
@@ -301,9 +306,13 @@ def run(args: AgentArguments) -> int:
         print(f"│  [twin] Calling {args.model}...")
         asked += 1
         try:
+            # Not stateless: a harness re-ask (below) resumes this session. The first call
+            # starts a fresh session (any earlier one under this key is dropped), so the
+            # model's first turn is what it was with `stateless=True`.
+            _region_sessions.pop(key, None)
             reply = _complete(args.provider, client, args.model,
                               [{"role": "user", "content": request}], system,
-                              session_key=key, workspace=ws_file.parent, stateless=True)
+                              session_key=key, workspace=ws_file.parent, stateless=False)
         except Exception as e:                       # noqa: BLE001 - one attempt: say why it failed
             print(f"│  [twin] LLM call failed: {str(e)[:300]}")
             print("└─ NO ANSWER\n")
@@ -311,6 +320,30 @@ def run(args: AgentArguments) -> int:
         plan = " ".join(reply.split())[:400]
         if plan:
             print(f"│  [twin] the model's plan: {plan}")
+        # The measurement lines (gate/harness_guard.py, the author 3 Oct): the agent's own
+        # enforcement (Fix 97), after the turn — not a check of the parallelization.
+        protected = tuple(getattr(args, "protected_lines", ()) or ())
+        harness_said = None
+        for reask in range(HARNESS_REASKS + 1):
+            harness_said = (harness_problem(disk, ws_file.read_text(), protected, args.source_file)
+                            if _workspace_diff(ws_file, args.source_file, disk) is not None else None)
+            if not harness_said or reask == HARNESS_REASKS:
+                break
+            print(f"│  [harness] re-ask {reask + 1} of {HARNESS_REASKS}: {' '.join(harness_said.split())[:300]}")
+            print(f"│  [twin] Calling {args.model}...")
+            try:
+                _complete(args.provider, client, args.model,
+                          [{"role": "user", "content": harness_feedback(harness_said)}], system,
+                          session_key=key, workspace=ws_file.parent, stateless=False)
+            except Exception as e:                   # noqa: BLE001 - say why, judge what is there
+                print(f"│  [twin] LLM call failed: {str(e)[:300]}")
+                harness_said = (harness_problem(disk, ws_file.read_text(), protected, args.source_file)
+                                if _workspace_diff(ws_file, args.source_file, disk) is not None else None)
+                break
+        if harness_said:
+            print("│  [harness] edit discarded: the region's edit still edits the measurement lines")
+            print("└─ UNCHANGED\n")
+            continue
         if _workspace_diff(ws_file, args.source_file, disk) is None:
             print("└─ UNCHANGED\n")
             continue

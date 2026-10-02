@@ -1885,8 +1885,8 @@ def check_bare_llm(work: Path) -> Result:
                 problems.append(f"{mode}: the header was not in the model's working copy")
             if "] Calling m" not in out.getvalue():
                 problems.append(f"{mode}: the call is not logged in the form the harness counts")
-            if not seen.get("stateless"):
-                problems.append(f"{mode}: the call is not stateless")
+            if seen.get("stateless") is not False:
+                problems.append(f"{mode}: the call cannot be resumed for a harness re-ask (3 Oct)")
             # the mirror names ThreadSanitizer as part of how the FINISHED program is judged
             leaks = ("HOW YOUR REWRITE IS CHECKED", "DiscoPoP", "re-profiled") + (() if mode == "mirror" else ("ThreadSanitizer",))
             for leak in leaks:
@@ -2223,8 +2223,8 @@ def check_twin_run(work: Path) -> Result:
             problems.append("the twin's first request is not the agent's")
         elif "run = run * 0.5" not in calls[0]:
             problems.append("the model was not asked about the recurrence")
-        if not seen.get("stateless"):
-            problems.append("the call is not stateless (one attempt)")
+        if seen.get("stateless") is not False:
+            problems.append("the call cannot be resumed for a harness re-ask (3 Oct)")
         if "a[i] * 0.5 + a[i]" not in final:
             problems.append("the model's edit was not kept")
         if final.count("#pragma omp parallel for") < 2:
@@ -2357,6 +2357,153 @@ def check_harness_lines(work: Path) -> Result:
     return Result(name, "pass", f"{len(good)} legitimate changes through, {len(bad)} harness edits refused "
                   "(inlined, edited, duplicated, moved, include dropped); the same block in the agent's 3 request "
                   "forms, the twin's and the model alone's; v3 packages unchanged")
+
+
+def check_harness_guard(work: Path) -> Result:
+    """The measurement lines, kept by every arm (the author, 3 Oct 2026; gate/harness_guard.py).
+
+    The model alone and the twin check the finished file with the judge's own rules (a
+    byte-identical copy of the harness's scaffold.py), send a violation back in the agent's own
+    words (phase_a.py, stage `harness`) in the same session at most twice, and discard the edit
+    if it stays. Shown with stand-ins for the model: the Fable case (the repetition loop and its
+    `pb_mix(nl)` written twice) fixed on the re-ask; one that never fixes it, discarded after
+    three calls; a clean edit, one call and no re-ask; the twin's re-ask on a profiled program."""
+    name = "harness guard"
+    import contextlib
+    import importlib
+    import inspect
+    import io
+    from .. import bare_llm, twin
+    from ..gate import harness_guard, scaffold as agent_scaffold
+    phase_a: Any = importlib.import_module("discopop_agent.phases.phase_a")
+    problems: List[str] = []
+    # the agent's words, verbatim
+    src_a = " ".join(inspect.getsource(phase_a).replace('"\n', "").split())
+    for label, text in (("guidance", harness_guard.GUIDANCE), ("retry instruction", harness_guard.RETRY)):
+        words = " ".join(text.split())
+        if words.replace(" ", "") not in src_a.replace('"', "").replace(" ", ""):
+            problems.append(f"the {label} is not the agent's (phase_a.py)")
+    if "Your diff failed at the '{result.stage}' stage. {guidance}" not in inspect.getsource(phase_a):
+        problems.append("the agent's retry message changed shape")
+    # the judge's rules, a byte-identical copy
+    judge = Path(__file__).resolve().parents[2] / "evaluation" / "agent" / "tools" / "scaffold.py"
+    if judge.exists() and judge.read_bytes() != Path(agent_scaffold.__file__).read_bytes():
+        problems.append("gate/scaffold.py is not the harness's scaffold.py")
+    P = _HARNESS_PROTECTED
+    fable = _HARNESS_SRC.replace(
+        "    for (int nl = 0; nl < R; nl++) {\n",
+        "    if (LEN_1D < 2) {\n        for (int nl = 0; nl < R; nl++) {\n            pb_mix(nl);\n        }\n"
+        "        return (real_t)0;\n    }\n    for (int nl = 0; nl < R; nl++) {\n")
+    clean = _HARNESS_SRC.replace("        for (int i = 0;", "        #pragma omp parallel for\n        for (int i = 0;")
+    if not harness_guard.harness_problem(_HARNESS_SRC, fable, P, "s000.c"):
+        problems.append("the Fable case (pb_mix written twice) is let through")
+    if harness_guard.harness_problem(_HARNESS_SRC, clean, P, "s000.c"):
+        problems.append("a pragma on the loop is refused")
+
+    d = work / "harness_guard"
+    d.mkdir(parents=True, exist_ok=True)
+    src = d / "s000.c"
+    calls: List[Dict[str, Any]] = []
+
+    def stand_in(fix: bool, first: str) -> Callable[..., str]:
+        def fake(model: str, system: str, current: List[Any], session_key: str,
+                 workspace: Optional[Path] = None, stateless: bool = False) -> str:
+            text = current[-1]["content"]
+            calls.append({"text": text, "stateless": stateless, "key": session_key})
+            f = Path(str(workspace)) / "s000.c"
+            if len(calls) == 1:
+                f.write_text(first)
+            elif fix:
+                f.write_text(clean)
+            return "Plan."
+        return fake
+
+    saved, saved_argv = getattr(bare_llm, "_complete_claude_agent_sdk"), sys.argv
+    outcomes = {}
+    try:
+        for label, fix, first in (("fixed on the re-ask", True, fable), ("never fixed", False, fable),
+                                  ("clean", True, clean)):
+            src.write_text(_HARNESS_SRC)
+            calls.clear()
+            setattr(bare_llm, "_complete_claude_agent_sdk", stand_in(fix, first))
+            sys.argv = ["bare_llm", "--source-file", str(src), "--model", "m", "--exclude-functions", "main,pb_mix",
+                        *[x for line in P for x in ("--protected-line", line)]]
+            out = io.StringIO()
+            cwd = os.getcwd()
+            try:
+                os.chdir(d)
+                with contextlib.redirect_stdout(out):
+                    bare_llm.main()
+            finally:
+                os.chdir(cwd)
+            outcomes[label] = (len(calls), src.read_text(), out.getvalue(), list(calls))
+    finally:
+        setattr(bare_llm, "_complete_claude_agent_sdk", saved)
+        sys.argv = saved_argv
+    n, final, log, cs = outcomes["fixed on the re-ask"]
+    if n != 2 or final != clean:
+        problems.append(f"fixed on the re-ask: {n} call(s), the fix {'kept' if final == clean else 'NOT kept'}")
+    if n == 2 and ("failed at the 'harness' stage" not in cs[1]["text"] or harness_guard.RETRY not in cs[1]["text"]
+                   or cs[1]["key"] != cs[0]["key"] or cs[1]["stateless"] is not False):
+        problems.append("the re-ask is not the agent's message in the same session")
+    if log.count("] Calling m") != 2 or log.count("[harness] re-ask") != 1:
+        problems.append("the re-ask is not logged in the form the harness counts")
+    n, final, log, _ = outcomes["never fixed"]
+    if n != 1 + harness_guard.HARNESS_REASKS or final != _HARNESS_SRC or "[harness] edit discarded" not in log:
+        problems.append(f"never fixed: {n} call(s), the edit {'discarded' if final == _HARNESS_SRC else 'KEPT'}")
+    n, final, log, _ = outcomes["clean"]
+    if n != 1 or final != clean or "[harness]" in log:
+        problems.append("a clean edit was re-asked or not kept")
+
+    # the twin, on a profiled program: a protected line written twice, fixed on the re-ask
+    if Path(_venv_bin("discopop_cxx")).exists():
+        from ..args import parse_args
+        twin_mod: Any = twin
+        t = work / "harness_guard_twin"
+        shutil.rmtree(t, ignore_errors=True)
+        t.mkdir(parents=True)
+        (t / "k.cpp").write_text(_TWIN_SRC)
+        ok, err = _profile(t, "k.cpp")
+        if not ok:
+            problems.append(f"twin: profile: {err}")
+        else:
+            prot = 'printf("%.3f\\n", s);'
+            tcalls: List[str] = []
+
+            def tmodel(provider: str, client: Any, model_name: str, current: List[Any], system: str,
+                       session_key: str = "", workspace: Optional[Path] = None, stateless: bool = False) -> str:
+                f = Path(str(workspace)) / "k.cpp"
+                tcalls.append(current[-1]["content"])
+                body = f.read_text().replace("run = run * 0.5 + a[i];\n    b[i] = run;", "b[i] = a[i] * 0.5 + a[i];")
+                if len(tcalls) == 1:
+                    body = body.replace(prot, prot + "\n  " + prot)
+                else:
+                    body = body.replace(prot + "\n  " + prot, prot)
+                f.write_text(body)
+                return "Plan."
+            saved_c = twin_mod._complete
+            try:
+                twin_mod._complete = tmodel
+                sys.argv = ["x", "--discopop-dir", str(t / ".discopop"), "--source-file", str(t / "k.cpp"),
+                            "--provider", "claude-agent-sdk", "--model", "m", "--edit-mode", "direct",
+                            "--exclude-functions", "main", "--no-require-speedup", "--budget", "1",
+                            "--protected-line", prot]
+                tlog = io.StringIO()
+                with contextlib.redirect_stdout(tlog):
+                    twin.run(parse_args())
+            finally:
+                twin_mod._complete = saved_c
+                sys.argv = saved_argv
+            tfinal = (t / "k.cpp").read_text()
+            if len(tcalls) < 2 or "failed at the 'harness' stage" not in tcalls[1]:
+                problems.append(f"twin: no re-ask in the agent's words ({len(tcalls)} call(s))")
+            if tfinal.count(prot) != 1 or "a[i] * 0.5 + a[i]" not in tfinal:
+                problems.append("twin: the fixed edit was not kept, or the duplicate survived")
+    if problems:
+        return Result(name, "fail", "; ".join(problems))
+    return Result(name, "pass", "the judge's rules (byte-identical copy) and the agent's words; model alone: the "
+                  "Fable case fixed on one re-ask in the same session, an unfixed edit discarded after 3 calls, a clean "
+                  "edit untouched; twin: re-asked and the fix kept")
 
 
 def check_covered_skip(work: Path) -> Result:
@@ -4642,6 +4789,7 @@ _CHECKS: List[Tuple[str, Callable[[Path], Result]]] = [
     ("twin-prompt", check_twin_prompt),
     ("twin-run", check_twin_run),
     ("harness-lines", check_harness_lines),
+    ("harness-guard", check_harness_guard),
     ("evidence-enrich", check_evidence_enrichment),
     ("dep-standing", check_dependence_standing),
     ("schedule-runtime", check_schedule_runtime),
