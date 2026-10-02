@@ -36,7 +36,6 @@ import tempfile
 from pathlib import Path
 from typing import Optional, Sequence
 
-from . import scaffold
 from .harness_lines import check_protected
 from ..llm.diffs import make_diff
 
@@ -55,21 +54,12 @@ RETRY = ("Your parallelization is not what failed. Make the same change again, "
 
 def harness_problem(before: str, after: str, protected: Sequence[str], name: str = "source.c") -> Optional[str]:
     """None when `after` keeps the measurement of `before` as the harness judges it; otherwise
-    what changed — in the agent's words (`check_protected`) when its rule sees it, in the
-    judge's (`scaffold.check`) when only the judge's does."""
-    verdict = scaffold.check(before, after, tuple(protected))
-    if verdict["ok"]:
-        return None
+    what changed, in the agent's words — the agent's own check (`check_protected`, which applies
+    the protected-line rule and the judge's `scaffold.check`), on the two texts."""
     with tempfile.TemporaryDirectory(prefix="dp_harness_") as tmp:
         path = os.path.join(tmp, Path(name).name)
         Path(path).write_text(before)
-        said = check_protected(make_diff(before, after, path), path, tuple(protected)) if protected else None
-    if said:
-        return said
-    found = verdict["problems"]
-    problems = [str(p) for p in found] if isinstance(found, list) else [str(found)]
-    return ("the candidate edits the program's measurement code — " + "; ".join(problems)
-            + ". It must stay exactly as it is and where it is.")
+        return check_protected(make_diff(before, after, path), path, tuple(protected))
 
 
 def harness_feedback(diagnostic: str) -> str:

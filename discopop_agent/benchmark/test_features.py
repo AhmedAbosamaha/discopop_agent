@@ -2331,8 +2331,14 @@ def check_harness_lines(work: Path) -> Result:
     for label, text in bad.items():
         if not check_protected(diff_to(text), str(src), P):
             problems.append(f"let through {label}")
-    if check_protected(diff_to(bad["pb_mix inlined (the s313 case)"]), str(src), ()):
-        problems.append("a package without protected lines is checked anyway")
+    # Fix 103 (3 Oct): the judge's own rules too — a new pb_* call is refused (E1-final s331 rep4 added
+    # `pb_mix(R - 1);` after peeling the last repetition; no protected line changed), and a package
+    # without protected lines is held to the judge's pb_* rules as the harness holds it.
+    peeled = _HARNESS_SRC.replace("        pb_mix(nl);\n    }\n", "        pb_mix(nl);\n    }\n    pb_mix(R - 1);\n")
+    if not check_protected(diff_to(peeled), str(src), P):
+        problems.append("let through a new pb_mix call (the E1-final s331 case)")
+    if not check_protected(diff_to(bad["pb_mix inlined (the s313 case)"]), str(src), ()):
+        problems.append("a package without protected lines is not held to the judge's rules")
 
     note = "`pb_mix(nl)` changes a few input values between two repetitions."
     g = GateFacts(require_speedup=True, n_inputs=2, numeric=False, stress=True, protected=P, protected_note=note)
@@ -2354,9 +2360,9 @@ def check_harness_lines(work: Path) -> Result:
         problems.append("a package without protected lines gets a block")
     if problems:
         return Result(name, "fail", "; ".join(problems))
-    return Result(name, "pass", f"{len(good)} legitimate changes through, {len(bad)} harness edits refused "
-                  "(inlined, edited, duplicated, moved, include dropped); the same block in the agent's 3 request "
-                  "forms, the twin's and the model alone's; v3 packages unchanged")
+    return Result(name, "pass", f"{len(good)} legitimate changes through, {len(bad) + 1} harness edits refused "
+                  "(inlined, edited, duplicated, moved, include dropped, a new pb_mix call); the same block in the "
+                  "agent's 3 request forms, the twin's and the model alone's; v3 packages held to the judge's rules")
 
 
 def check_harness_guard(work: Path) -> Result:
@@ -2397,6 +2403,9 @@ def check_harness_guard(work: Path) -> Result:
     clean = _HARNESS_SRC.replace("        for (int i = 0;", "        #pragma omp parallel for\n        for (int i = 0;")
     if not harness_guard.harness_problem(_HARNESS_SRC, fable, P, "s000.c"):
         problems.append("the Fable case (pb_mix written twice) is let through")
+    peeled = _HARNESS_SRC.replace("        pb_mix(nl);\n    }\n", "        pb_mix(nl);\n    }\n    pb_mix(R - 1);\n")
+    if not harness_guard.harness_problem(_HARNESS_SRC, peeled, P, "s000.c"):
+        problems.append("the E1-final s331 case (a new pb_mix call) is let through")
     if harness_guard.harness_problem(_HARNESS_SRC, clean, P, "s000.c"):
         problems.append("a pragma on the loop is refused")
 
