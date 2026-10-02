@@ -1,0 +1,15 @@
+--- original.c
++++ final.c
+@@ -16,6 +16,12 @@
+ static real_t kernel_s000(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        /* Each iteration writes a[i] from b[i] alone: disjoint locations, no
++         * dependence between iterations. b is only mutated by pb_mix, which
++         * runs after this loop (and thus after the parallel region's implicit
++         * barrier) completes, so the nl-to-nl+1 dependence through b/a is
++         * still honored in order. */
++        #pragma omp parallel for shared(a, b)
+         for (int i = 0; i < LEN_1D; i++) {
+             a[i] = b[i] + 1;
+         }

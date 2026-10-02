@@ -376,5 +376,15 @@ Status: pre-flight
 | run | where | what it is | status | trials | outcomes |
 |---|---|---|---|---:|---|
 | `t0_1_e1f_sizes` | [`E01f_final_three_way/preflight/t0_1_e1f_sizes/`](E01f_final_three_way/preflight/t0_1_e1f_sizes/) | T0.1 sizes for the 23 new tsvc_b1 packages of E1-final (server, no model) | valid | 0 |  |
-| `e1f_smoke` | not archived yet | E1-final smoke: tsvc_b1/s211 and s000 × default_v3, discopop_gate_v3 (Haiku) and bare_llm_v3 with Haiku, Sonnet, Opus, Fable × 1 — configuration check, not counted | registered |  |  |
+| `e1f_smoke` | [`E01f_final_three_way/preflight/e1f_smoke/`](E01f_final_three_way/preflight/e1f_smoke/) | E1-final smoke: tsvc_b1/s211 and s000 × default_v3, discopop_gate_v3 (Haiku) and bare_llm_v3 with Haiku, Sonnet, Opus, Fable × 1 — configuration check, not counted | valid | 12 | FASTER 10, VERIFY_FAILED 1, no-change 1 |
+| `e1f_r_1` | not archived yet | E1-final class R: s112 s121 s1213 s127 s211 × default_v3, discopop_gate_v3 (Haiku) × 5, threads 6,12, repeats 5 | registered |  |  |
+| `e1f_r_2` | not archived yet | E1-final class R: s212 s241 s243 s244 s252 × default_v3, discopop_gate_v3 (Haiku) × 5, threads 6,12, repeats 5 | registered |  |  |
+| `e1f_r_3` | not archived yet | E1-final class R: s254 s255 s281 s291 × default_v3, discopop_gate_v3 (Haiku) × 5, threads 6,12, repeats 5 | registered |  |  |
+| `e1f_r_4` | not archived yet | E1-final class R: s292 s293 s331 s341 × default_v3, discopop_gate_v3 (Haiku) × 5, threads 6,12, repeats 5 | registered |  |  |
+| `e1f_a` | not archived yet | E1-final class A (no-harm): s000 vpvtv s313 × default_v3, discopop_gate_v3 (Haiku) × 1 | registered |  |  |
+| `e1f_d` | not archived yet | E1-final class D (must-decline): s321 s322 s323 s3112 × default_v3, discopop_gate_v3 (Haiku) × 3 | registered |  |  |
+| `e1f_bare_haiku` | not archived yet | E1-final the model alone: bare_llm_v3 with claude-haiku-4-5-20251001 on class R × 5, A × 1, D × 3 (one run per model) | registered |  |  |
+| `e1f_bare_sonnet` | not archived yet | E1-final the model alone: bare_llm_v3 with claude-sonnet-5 on class R × 5, A × 1, D × 3 (one run per model) | registered |  |  |
+| `e1f_bare_opus` | not archived yet | E1-final the model alone: bare_llm_v3 with claude-opus-5-5 on class R × 5, A × 1, D × 3 (one run per model) | registered |  |  |
+| `e1f_bare_fable` | not archived yet | E1-final the model alone: bare_llm_v3 with claude-fable-5-1 on class R × 5, A × 1, D × 3 (one run per model) | registered |  |  |
 

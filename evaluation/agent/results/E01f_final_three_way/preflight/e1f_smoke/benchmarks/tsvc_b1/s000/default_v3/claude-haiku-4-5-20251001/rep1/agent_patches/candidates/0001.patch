@@ -1,0 +1,22 @@
+--- s000.c
++++ s000.c
+@@ -15,11 +15,18 @@
+ 
+ static real_t kernel_s000(void)
+ {
++    real_t b_saved[LEN_1D];
++    for (int i = 0; i < LEN_1D; i++) {
++        b_saved[i] = b[i];
++    }
+     for (int nl = 0; nl < R; nl++) {
+         for (int i = 0; i < LEN_1D; i++) {
+-            a[i] = b[i] + 1;
++            a[i] = b_saved[i] + 1;
+         }
+         pb_mix(nl);
++        for (int i = 0; i < LEN_1D; i++) {
++            b_saved[i] = b[i];
++        }
+     }
+     return (real_t)0;
+ }

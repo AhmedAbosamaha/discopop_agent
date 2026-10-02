@@ -1,0 +1,10 @@
+--- s211.c
++++ s211.c
+@@ -19,6 +19,7 @@
+ 
+     for (int nl = 0; nl < R; nl++) {
+         // Phase 1: compute new b values into temporary buffer (independent iterations)
++        #pragma omp parallel for 
+         for (int i = 1; i < LEN_1D-1; i++) {
+             b_tmp[i] = b[i + 1] - e[i] * d[i];
+         }

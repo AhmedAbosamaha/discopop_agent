@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s211.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] s211.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Looking at this code, I need to analyze the loop structure and dependencies.**Plan:** The inner loop has a flow dependence on `b[i]`: iteration `i` writes `b[i]` (from `b[i+1]`), and iteration `i+1` reads `b[i]` when computing `a[i+1]`. This creates a serial chain. The key insight: `b[i]` is always written from `b[i+1]` (which is never written in this loop), so the *final values* don't depend on i
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

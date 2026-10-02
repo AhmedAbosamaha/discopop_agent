@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s211.c
+  Model          : claude-sonnet-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s211.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Plan: **Dependence found:** The inner loop has two true cross-iteration dependences through `b`: - `b[i] = b[i+1] - e[i]*d[i]` reads `b[i+1]`, which (in sequential order) is still the *old* value because index `i+1` hasn't been processed yet — this part is actually independent across `i`. - `a[i] = b[i-1] + c[i]*d[i]` reads `b[i-1]`, which (for `i-1>=1`) *has* already been overwritten by the previ
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

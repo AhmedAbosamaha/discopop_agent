@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s000.c
+  Model          : claude-fable-5-1
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-fable-5-1...
+│  [bare] s000.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Done. Summary of the rewrite in `s000.c`: - **Dependence analysis**: The inner loop `a[i] = b[i] + 1` has no loop-carried dependence — each iteration reads `b[i]` and writes `a[i]` at distinct indices, and `a` and `b` are different arrays. Nothing is moving between iterations; it's a pure elementwise map. The outer `nl` loop stays sequential because `pb_mix(nl)` mutates `a`/`b` between repetitions
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

@@ -1,0 +1,10 @@
+--- s211.c
++++ s211.c
+@@ -24,6 +24,7 @@
+         }
+ 
+         // Phase 2: compute a using updated b, then copy new b back
++        #pragma omp parallel for shared(b_tmp) 
+         for (int i = 1; i < LEN_1D-1; i++) {
+             a[i] = b[i - 1] + c[i] * d[i];
+             b[i] = b_tmp[i];

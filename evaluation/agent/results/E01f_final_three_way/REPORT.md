@@ -10,12 +10,36 @@ On TSVC class R (with class A and D controls), prompt version 3, the fixed Disco
 
 ## What is in this folder
 
-- [`preflight/`](preflight/) — 1 smoke run(s) before the launch
+- [`preflight/`](preflight/) — 2 smoke run(s) before the launch
 
 ## Runs
 
 | run | where | what it is | status | trials | outcomes |
 |---|---|---|---|---:|---|
 | `t0_1_e1f_sizes` | [`preflight/t0_1_e1f_sizes/`](preflight/t0_1_e1f_sizes/) | T0.1 sizes for the 23 new tsvc_b1 packages of E1-final (server, no model) | valid | 0 |  |
-| `e1f_smoke` | not archived yet | E1-final smoke: tsvc_b1/s211 and s000 × default_v3, discopop_gate_v3 (Haiku) and bare_llm_v3 with Haiku, Sonnet, Opus, Fable × 1 — configuration check, not counted | registered |  |  |
+| `e1f_smoke` | [`preflight/e1f_smoke/`](preflight/e1f_smoke/) | E1-final smoke: tsvc_b1/s211 and s000 × default_v3, discopop_gate_v3 (Haiku) and bare_llm_v3 with Haiku, Sonnet, Opus, Fable × 1 — configuration check, not counted | valid | 12 | FASTER 10, VERIFY_FAILED 1, no-change 1 |
+| `e1f_r_1` | not archived yet | E1-final class R: s112 s121 s1213 s127 s211 × default_v3, discopop_gate_v3 (Haiku) × 5, threads 6,12, repeats 5 | registered |  |  |
+| `e1f_r_2` | not archived yet | E1-final class R: s212 s241 s243 s244 s252 × default_v3, discopop_gate_v3 (Haiku) × 5, threads 6,12, repeats 5 | registered |  |  |
+| `e1f_r_3` | not archived yet | E1-final class R: s254 s255 s281 s291 × default_v3, discopop_gate_v3 (Haiku) × 5, threads 6,12, repeats 5 | registered |  |  |
+| `e1f_r_4` | not archived yet | E1-final class R: s292 s293 s331 s341 × default_v3, discopop_gate_v3 (Haiku) × 5, threads 6,12, repeats 5 | registered |  |  |
+| `e1f_a` | not archived yet | E1-final class A (no-harm): s000 vpvtv s313 × default_v3, discopop_gate_v3 (Haiku) × 1 | registered |  |  |
+| `e1f_d` | not archived yet | E1-final class D (must-decline): s321 s322 s323 s3112 × default_v3, discopop_gate_v3 (Haiku) × 3 | registered |  |  |
+| `e1f_bare_haiku` | not archived yet | E1-final the model alone: bare_llm_v3 with claude-haiku-4-5-20251001 on class R × 5, A × 1, D × 3 (one run per model) | registered |  |  |
+| `e1f_bare_sonnet` | not archived yet | E1-final the model alone: bare_llm_v3 with claude-sonnet-5 on class R × 5, A × 1, D × 3 (one run per model) | registered |  |  |
+| `e1f_bare_opus` | not archived yet | E1-final the model alone: bare_llm_v3 with claude-opus-5-5 on class R × 5, A × 1, D × 3 (one run per model) | registered |  |  |
+| `e1f_bare_fable` | not archived yet | E1-final the model alone: bare_llm_v3 with claude-fable-5-1 on class R × 5, A × 1, D × 3 (one run per model) | registered |  |  |
+
+## From the experiment record (§7 run log)
+
+### `e1f_smoke` — 2026-10-02, server, **E1-final smoke (configuration check, not counted)** (12 trials)
+
+- **Setup.** `tsvc_b1/s211` (class R) and `tsvc_b1/s000` (class A) × 1: job 1 on node 0 — `default_v3`, `discopop_gate_v3`, `bare_llm_v3` with Haiku (20:14 → 20:40 UTC); job 2 on node 1 at the same time on the same new run id — `bare_llm_v3` with Sonnet 5, Opus 5.5, Fable 5.1 (20:15 → 20:25). Commit `b56a086a`, PARITY OK; both sweeps clean.
+- **Result.** Every arm and model runs end to end: prompt version 3 in every agent command, the speed check ON in the agent and DiscoPoP-alone arms (`speed_check_off` false everywhere), 0 failed model calls. Outcomes (not counted): `s211` — agent FASTER (5 calls, 12.6 min), DiscoPoP alone no-change, Haiku alone does not compile (`private(i)` on an undeclared `i`), Sonnet, Opus, Fable alone FASTER; `s000` — FASTER in all six. **The profiling lock worked live:** the two jobs profiled each loop once between them (job 1 `s211`, job 2 `s000`; the same `profile_sha256` in both logs). Time per trial: the agent 5–13 min, a model alone 0.3–2 min plus verification (~1.7 min wall).
+- **What it decides.** The configuration is right; the main runs go ahead as pre-registered (§6, 2 Oct). Archived in `results/E01f_final_three_way/preflight/e1f_smoke/`.
+
+## Change-log rows that name these runs (§6)
+
+| Date | Repo | Change | Why |
+|---|---|---|---|
+| 2026-10-02 | plan | **E1-final pre-registered — written before any main trial (the smoke `e1f_smoke` is a configuration check, never counted).** **Runs** (registered in `results/campaign.json`, group E1-final): the agent and DiscoPoP alone (`default_v3`, `discopop_gate_v3`, Haiku) on class R × 5 in four runs on the four 12-core lanes with E1c's split — `e1f_r_1` (s112 s121 s1213 s127 s211), `e1f_r_2` (s212 s241 s243 s244 s252), `e1f_r_3` (s254 s255 s281 s291), `e1f_r_4` (s292 s293 s331 s341) — then `e1f_a` (class A × 1) and `e1f_d` (class D × 3); the model alone (`bare_llm_v3`) in ONE RUN PER MODEL, so each model's read-out selects its own run: `e1f_bare_haiku` (`claude-haiku-4-5-20251001`), `e1f_bare_sonnet` (`claude-sonnet-5`), `e1f_bare_opus` (`claude-opus-5-5`), `e1f_bare_fable` (`claude-fable-5-1`), each class R × 5, A × 1, D × 3 (jobs split by class and by `--reps` over lanes; Opus and Fable never at the same time). Threads 6,12, repeats 5, speed check ON, sizes from `t0_1_e1f_sizes`; one commit for every run. **Outcomes per trial** (as E1c): race-free FASTER against the sequential original; unusable (BROKEN, racy, slower, not compiling). A model-alone parallel program is race-free only where `race_check.py` finds it clean (run on every model-alone parallel program of all four models). **Tests, class R, paired by loop over the 18 loops** (`main_comparison_stats.py e1f_r_1..4:default_v3+discopop_gate_v3 e1f_bare_<model>:bare_llm_v3 --three-way default_v3 --bare bare_llm_v3 --baseline-arm discopop_gate_v3 --races …`, once per model): (T1, H1) the agent against DiscoPoP alone — Wilcoxon signed-rank on per-loop medians, one-sided, Cliff's delta, bootstrap interval of the median ratio; (T2–T5, H13) the agent against each model alone — per-loop unusable rate, Wilcoxon one-sided (the agent fewer); (T6–T9, reach) the agent against each model alone — per-loop race-free FASTER rate, Wilcoxon one-sided (the agent more). Holm over T1–T9 inside E1-final; reported also in the campaign family (M = 31 + 9 = 40). (H2) the agent's unusable programs: a count with every case named, no p-value — expected 0. **Controls, descriptive:** class A — the agent's speed-up ÷ DiscoPoP alone's per loop (no harm if ≥ 0.9); class D — every valid trial declines. **Exclusions, fixed now:** a harness edit (SCAFFOLD_MODIFIED) is its own row, never counted, the trial repeated once; a trial whose model call failed (`llm_call_failures`) is re-run, never counted; nothing else is dropped. **Expectations** (from E1c-v3.1: agent 71/90, Haiku alone 39/90 with 46 unusable): T1 rejected; H2 holds; T2–T5 rejected for every model; T6–T9 rejected against Haiku alone, open against Opus and Fable (E12: the strong models alone match the agent on real loops). **What decides what:** a strong model alone that reaches as far as the agent with fewer or equal unusable programs is reported as such — the thesis claim then narrows to "a small model with DiscoPoP matches a strong model alone at a fraction of the cost" (cost per trial reported for every arm and model: model calls, tokens, time). Secondary, descriptive: E1-final against E1c-v3.1 per loop (`E1-final-vs-E1c`) | Plan, pre-registered |
 
