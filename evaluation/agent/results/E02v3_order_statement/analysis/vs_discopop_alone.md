@@ -2,32 +2,17 @@
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | bare_llm_nospeed_v3 | claude-haiku-4-5-20251001 | 40 | 5 | 2 | 0 | 0 | 2 | 0 | 0 | 25 | 6 | 0 | 0 | 2.46x (n=9) |
 | full_b1_nospeed_v3 | claude-haiku-4-5-20251001 | 40 | 35 | 2 | 0 | 0 | 2 | 0 | 1 | 0 | 0 | 0 | 0 | 1.71x (n=40) |
-| no_evidence_b1_nospeed_v3 | claude-haiku-4-5-20251001 | 40 | 26 | 1 | 0 | 0 | 3 | 0 | 10 | 0 | 0 | 0 | 0 | 1.32x (n=40) |
-| twin_full_nospeed_v3 | claude-haiku-4-5-20251001 | 40 | 26 | 0 | 0 | 0 | 1 | 0 | 0 | 12 | 1 | 0 | 0 | 2.45x (n=27) |
-| twin_no_evidence_nospeed_v3 | claude-haiku-4-5-20251001 | 40 | 14 | 1 | 0 | 0 | 2 | 0 | 0 | 23 | 0 | 0 | 0 | 2.56x (n=17) |
 
 | Benchmark | Arm | Model | DiscoPoP alone (outcomes · x over seq.) | Agent (outcomes · median x over seq.) | Agent / DiscoPoP alone | Verdicts |
 |---|---|---|---|---|---:|---|
 | tsvc_b1/k19 | bare_llm_nospeed_v3 | claude-haiku-4-5-20251001 | no-change,no-change,no-change · 1.00x | BROKEN,BROKEN,BROKEN,BROKEN,BROKEN,BROKEN,BROKEN,BROKEN,BROKEN,VERIFY_FAILED · — | — | 9 unsafe, 1 invalid |
 | tsvc_b1/k19 | full_b1_nospeed_v3 | claude-haiku-4-5-20251001 | no-change,no-change,no-change · 1.00x | FASTER,FASTER,FASTER,FASTER,FASTER,FASTER,FASTER,FASTER,FASTER,FASTER · 1.43x | 1.43x | 10 gained |
-| tsvc_b1/k19 | no_evidence_b1_nospeed_v3 | claude-haiku-4-5-20251001 | no-change,no-change,no-change · 1.00x | FASTER,no-change,no-change,no-change,no-change,no-change,no-change,no-change,no-change,no-change · 1.00x | 1.00x | 1 gained, 9 neither |
-| tsvc_b1/k19 | twin_full_nospeed_v3 | claude-haiku-4-5-20251001 | no-change,no-change,no-change · 1.00x | FASTER,FASTER,FASTER,FASTER,FASTER,FASTER,FASTER,FASTER,FASTER,FASTER · 1.39x | 1.39x | 10 gained |
-| tsvc_b1/k19 | twin_no_evidence_nospeed_v3 | claude-haiku-4-5-20251001 | no-change,no-change,no-change · 1.00x | BROKEN,BROKEN,BROKEN,BROKEN,BROKEN,BROKEN,BROKEN,BROKEN,BROKEN,BROKEN · — | — | 10 unsafe |
 | tsvc_b1/s1213 | bare_llm_nospeed_v3 | claude-haiku-4-5-20251001 | no-change,no-change,no-change · 1.00x | BROKEN,BROKEN,BROKEN,FASTER,FASTER,FASTER,FASTER,VERIFY_FAILED,VERIFY_FAILED,parallel-not-faster · 2.47x | 2.47x | 4 gained, 1 worse, 3 unsafe, 2 invalid |
 | tsvc_b1/s1213 | full_b1_nospeed_v3 | claude-haiku-4-5-20251001 | no-change,no-change,no-change · 1.00x | FASTER,FASTER,FASTER,FASTER,FASTER,FASTER,FASTER,FASTER,FASTER,no-change · 2.54x | 2.54x | 9 gained, 1 neither |
-| tsvc_b1/s1213 | no_evidence_b1_nospeed_v3 | claude-haiku-4-5-20251001 | no-change,no-change,no-change · 1.00x | FASTER,FASTER,FASTER,FASTER,FASTER,FASTER,FASTER,FASTER,no-change,parallel-not-faster · 2.47x | 2.47x | 8 gained, 1 worse, 1 neither |
-| tsvc_b1/s1213 | twin_full_nospeed_v3 | claude-haiku-4-5-20251001 | no-change,no-change,no-change · 1.00x | BROKEN,BROKEN,BROKEN,BROKEN,FASTER,FASTER,FASTER,FASTER,FASTER,FASTER · 2.47x | 2.47x | 6 gained, 4 unsafe |
-| tsvc_b1/s1213 | twin_no_evidence_nospeed_v3 | claude-haiku-4-5-20251001 | no-change,no-change,no-change · 1.00x | BROKEN,BROKEN,BROKEN,BROKEN,BROKEN,FASTER,FASTER,FASTER,parallel-not-faster,parallel-not-faster · 1.92x | 1.92x | 3 gained, 1 gained-not-faster, 1 worse, 5 unsafe |
 | tsvc_b1/s211 | bare_llm_nospeed_v3 | claude-haiku-4-5-20251001 | no-change,no-change,no-change · 1.00x | BROKEN,BROKEN,BROKEN,BROKEN,BROKEN,BROKEN,VERIFY_FAILED,parallel-not-faster,parallel-not-faster,parallel-not-faster · 1.05x | 1.05x | 2 gained-not-faster, 1 worse, 6 unsafe, 1 invalid |
 | tsvc_b1/s211 | full_b1_nospeed_v3 | claude-haiku-4-5-20251001 | no-change,no-change,no-change · 1.00x | FASTER,FASTER,FASTER,FASTER,FASTER,FASTER,parallel-not-faster,parallel-not-faster,parallel-not-faster,parallel-not-faster · 1.10x | 1.10x | 6 gained, 2 gained-not-faster, 2 worse |
-| tsvc_b1/s211 | no_evidence_b1_nospeed_v3 | claude-haiku-4-5-20251001 | no-change,no-change,no-change · 1.00x | FASTER,FASTER,FASTER,FASTER,FASTER,FASTER,FASTER,parallel-not-faster,parallel-not-faster,parallel-not-faster · 1.14x | 1.14x | 7 gained, 1 gained-not-faster, 2 worse |
-| tsvc_b1/s211 | twin_full_nospeed_v3 | claude-haiku-4-5-20251001 | no-change,no-change,no-change · 1.00x | BROKEN,BROKEN,BROKEN,BROKEN,BROKEN,BROKEN,BROKEN,BROKEN,SCAFFOLD_MODIFIED,parallel-not-faster · 0.79x | 0.79x | 1 worse, 8 unsafe, 1 invalid |
-| tsvc_b1/s211 | twin_no_evidence_nospeed_v3 | claude-haiku-4-5-20251001 | no-change,no-change,no-change · 1.00x | BROKEN,BROKEN,BROKEN,BROKEN,BROKEN,BROKEN,FASTER,FASTER,FASTER,parallel-not-faster · 2.01x | 2.01x | 3 gained, 1 worse, 6 unsafe |
 | tsvc_b1/k48 | bare_llm_nospeed_v3 | claude-haiku-4-5-20251001 | no-change,no-change,no-change · 1.00x | BROKEN,BROKEN,BROKEN,BROKEN,BROKEN,BROKEN,BROKEN,FASTER,VERIFY_FAILED,VERIFY_FAILED · 3.79x | 3.79x | 1 gained, 7 unsafe, 2 invalid |
 | tsvc_b1/k48 | full_b1_nospeed_v3 | claude-haiku-4-5-20251001 | no-change,no-change,no-change · 1.00x | FASTER,FASTER,FASTER,FASTER,FASTER,FASTER,FASTER,FASTER,FASTER,FASTER · 4.02x | 4.02x | 10 gained |
-| tsvc_b1/k48 | no_evidence_b1_nospeed_v3 | claude-haiku-4-5-20251001 | no-change,no-change,no-change · 1.00x | FASTER,FASTER,FASTER,FASTER,FASTER,FASTER,FASTER,FASTER,FASTER,FASTER · 3.78x | 3.78x | 10 gained |
-| tsvc_b1/k48 | twin_full_nospeed_v3 | claude-haiku-4-5-20251001 | no-change,no-change,no-change · 1.00x | FASTER,FASTER,FASTER,FASTER,FASTER,FASTER,FASTER,FASTER,FASTER,FASTER · 3.88x | 3.88x | 10 gained |
-| tsvc_b1/k48 | twin_no_evidence_nospeed_v3 | claude-haiku-4-5-20251001 | no-change,no-change,no-change · 1.00x | BROKEN,BROKEN,FASTER,FASTER,FASTER,FASTER,FASTER,FASTER,FASTER,FASTER · 4.00x | 4.00x | 8 gained, 2 unsafe |
 
 **Speed ratios withheld for 7 trial(s):** the DiscoPoP-alone trial was timed on another host, size or thread set. Outcomes are still paired; run `discopop_gate` in the same run for the ratio.
 

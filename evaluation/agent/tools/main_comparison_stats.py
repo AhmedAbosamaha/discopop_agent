@@ -637,10 +637,13 @@ def main() -> int:
     print(md)
     if a.out:
         a.out.mkdir(parents=True, exist_ok=True)
+        if a.figures:
+            # figures.build writes its own main_comparison_stats.md over ALL the loaded arms (the pooled
+            # campaign view); this read-out, for the one agent arm asked for, is written after it (30 Sep fix:
+            # the E2-B1, E12 and E2 files had been overwritten by the pooled view)
+            figures.build(trials, a.out)
         (a.out / "main_comparison_stats.md").write_text(md + "\n")
         (a.out / "main_comparison_stats.json").write_text(json.dumps(res, indent=2, default=str) + "\n")
-        if a.figures:
-            figures.build(trials, a.out)
     return 0
 
 

@@ -1,11 +1,15 @@
 # Figures
 
-Built from 92 trial(s) in run(s): e2v3_k19, e2v3_k48, e2v3_s1213, e2v3_s211, t0_11_v3_a, t0_11_v3_b, t0_11_v3_c, t0_11_v3b_a, t0_11_v3b_b, t0_11_v3b_c.
+Built from 270 trial(s) in run(s): e1c_r_1, e1c_r_2, e1c_r_3, e1c_r_4, e2c_ab_1, e2c_ab_2, e2c_ab_3, e2c_ab_4.
 Data: `trials.csv` (one row per trial), `gate_failures.csv` (long format), `vs_discopop_alone.csv` / `.md` (the main comparison: every agent trial paired with DiscoPoP alone on the same benchmark).
 
 ## `fig_vs_discopop_alone.pdf`
 
-THE MAIN COMPARISON, trial by trial — every repeat of DiscoPoP alone (upper dots) and of the model alone, no DiscoPoP, no gate (`bare_llm_nospeed_v3`) / DiscoPoP + agent (`full_b1_nospeed_v3`) (lower dots) on the same axis: speedup over the sequential original, which is the reference both are timed against (a program left unchanged sits at 1×). Grouped by the measured class: R is the claim; in A the agent must not do worse than DiscoPoP alone; in D declining — 1× — is the correct answer. At the right: in how many repeats each reached a FASTER program (≥ 1.1×). Verdicts per trial: vs_discopop_alone.md; statistics: main_comparison_stats.md.
+THE MAIN COMPARISON, trial by trial — every repeat of DiscoPoP alone (upper dots) and of the model alone, no DiscoPoP, no gate (`bare_llm`) / DiscoPoP + agent (`full_b1`) (lower dots) on the same axis: speedup over the sequential original, which is the reference both are timed against (a program left unchanged sits at 1×). Grouped by the measured class: R is the claim; in A the agent must not do worse than DiscoPoP alone; in D declining — 1× — is the correct answer. At the right: in how many repeats each reached a FASTER program (≥ 1.1×). Verdicts per trial: vs_discopop_alone.md; statistics: main_comparison_stats.md.
+
+## `fig_verdict_matrix.pdf`
+
+THE MAIN COMPARISON, TRIAL BY TRIAL — arms `bare_llm`, `full_b1`, claude-haiku-4-5-20251001 (one panel each). One square per agent trial, coloured by its verdict against DiscoPoP alone on the same benchmark and profile; rows grouped by MEASURED class (R: DiscoPoP alone reaches no verified parallel program; A: it does; D: a true recurrence, must decline). On class R every green square is a verified parallel program that only the agent reached; hatched = reached, but not 1.1× faster (or too short to time). Counts, rates with intervals and the paired test: main_comparison_stats.md.
 
 ## `fig_outcomes.pdf`
 
