@@ -76,7 +76,8 @@ class Loop:
                  expert: Optional[str] = None, init_extra: str = "", reps: int = 48,
                  pre: str = "", globals_: str = "", suite: str = "tsvc", emit_extra: str = "",
                  hot_function: str = "", hot_writes: Tuple[str, ...] = (),
-                 hot_aliases: Tuple[str, ...] = (), body: Optional[Tuple[str, str]] = None) -> None:
+                 hot_aliases: Tuple[str, ...] = (), body: Optional[Tuple[str, str]] = None,
+                 source: str = "") -> None:
         self.name, self.expected, self.transformation, self.why = name, expected, transformation, why
         # `pre`: the argument declarations TSVC passes through `func_args` (set in its main), which
         # the extracted body does not contain; `globals_`: file-scope code the loop needs (TSVC's
@@ -98,6 +99,8 @@ class Loop:
         # A constructed kernel instead of a TSVC function (ORDER-2, 29 Sep): (category, the body of one
         # repetition). None for every TSVC loop, whose body is read from tsvc.c.
         self.body = body
+        # meta.json's `source` for a constructed kernel other than ORDER-2's (ORDER-3, 3 Oct); "" keeps the default
+        self.source = source
 
 
 # --------------------------------------------------------------------------------------
@@ -615,6 +618,60 @@ for _n, _w in _E1_FINAL_WRITES.items():
     _base = next(l for l in LOOPS if l.name == _n)
     B1_LOOPS.append(Loop(_n, _base.expected, _base.transformation, _base.why, init_extra=_base.init_extra,
                          reps=_base.reps, pre=_base.pre, globals_=_base.globals_, suite="tsvc_b1", hot_writes=_w))
+# ORDER-3 (3 Oct, the author: "yes the design is ok go ahead"; record §6): more hidden-order kernels, because
+# E2-V3's evidence effect rests on ORDER-2 X alone. The same two statements as ORDER-2b X — S1 accumulates into u
+# what S2 wrote into v one iteration earlier, S2 reads u elements nothing writes — so the only legal split runs
+# S2's loop FIRST, against the text; each kernel hides the deciding fact a different way, always in the harness
+# header no model's working copy holds (v4), never in the file:
+#   k23 — an offset pointer (`w` is `v` shifted by one element, as f2c-translated code shifts its arrays);
+#   k31 — an offset variable (`v[i + off]`, `off` set with the data, as a stencil's offsets often are);
+#   k36 — an accessor macro (`AT1(v, i)` reads the element before `i`, defined in the header).
+# The control stays ORDER-2b Y (k48). Kept only where DiscoPoP's evidence states the order (prompt v3, D4) —
+# checked on a profile before any trial; a mechanism it cannot state is recorded as a finding.
+_ORDER3_INIT = """    for (long i = 0; i < 2L * LEN_1D; i++) u[i] = (real_t)0.75 + (real_t)((i * 37L) % 1000) * (real_t)0.0005;
+    for (long i = 0; i < LEN_1D; i++) v[i] = (real_t)0.75 + (real_t)((i * 53L) % 997) * (real_t)0.0005;"""
+_ORDER3_EMIT = "  pb_emit_array(u); pb_emit_array(u + LEN_1D); pb_emit_array(v);\n"
+_ORDER3_SRC = "constructed: ORDER-3 (THESIS_EXPERIMENTS §6, 3 Oct)"
+B1_LOOPS += [
+    Loop("k23", "restructure (ORDER-3 offset pointer)", "loop distribution with the second statement's loop first",
+         "w = v - 1 (the harness allocates one element more and sets v = w + 1): S1 reads the element of v that S2 "
+         "wrote one iteration earlier; x = u + LEN_1D: S2 reads u elements nothing writes",
+         globals_="static real_t *u, *v, *w, *x;",
+         init_extra=("    u = (real_t*)malloc(2 * (size_t)LEN_1D * sizeof(real_t));\n"
+                     "    w = (real_t*)malloc(((size_t)LEN_1D + 1) * sizeof(real_t)); v = w + 1; x = u + LEN_1D;\n"
+                     + _ORDER3_INIT),
+         emit_extra=_ORDER3_EMIT, suite="tsvc_b1", hot_writes=("u", "v"), hot_aliases=("w", "x"), source=_ORDER3_SRC,
+         body=("constructed / statement order decided by an offset pointer (ORDER-3)",
+               """        for (long i = 1; i < LEN_1D; i++) {
+            u[i] += w[i] * c[i];
+            v[i] = x[i] * d[i] + c[i];
+        }""")),
+    Loop("k31", "restructure (ORDER-3 offset variable)", "loop distribution with the second statement's loop first",
+         "off = -1: S1 reads the element of v that S2 wrote one iteration earlier; far = LEN_1D: S2 reads u "
+         "elements nothing writes",
+         globals_="static real_t *u, *v;\nstatic long off, far;",
+         init_extra=("    u = (real_t*)malloc(2 * (size_t)LEN_1D * sizeof(real_t)); v = (real_t*)malloc((size_t)LEN_1D * sizeof(real_t));\n"
+                     "    off = -1; far = LEN_1D;\n" + _ORDER3_INIT),
+         emit_extra=_ORDER3_EMIT, suite="tsvc_b1", hot_writes=("u", "v"), source=_ORDER3_SRC,
+         body=("constructed / statement order decided by an offset variable (ORDER-3)",
+               """        for (long i = 1; i < LEN_1D; i++) {
+            u[i] += v[i + off] * c[i];
+            v[i] = u[i + far] * d[i] + c[i];
+        }""")),
+    Loop("k36", "restructure (ORDER-3 accessor macro)", "loop distribution with the second statement's loop first",
+         "AT1(p, i) is p[i - 1]: S1 reads the element of v that S2 wrote one iteration earlier; AT2(p, i) is "
+         "p[i + LEN_1D]: S2 reads u elements nothing writes",
+         globals_=("#define AT1(p, i) ((p)[(i) - 1])\n#define AT2(p, i) ((p)[(i) + LEN_1D])\n"
+                   "static real_t *u, *v;"),
+         init_extra=("    u = (real_t*)malloc(2 * (size_t)LEN_1D * sizeof(real_t)); v = (real_t*)malloc((size_t)LEN_1D * sizeof(real_t));\n"
+                     + _ORDER3_INIT),
+         emit_extra=_ORDER3_EMIT, suite="tsvc_b1", hot_writes=("u", "v"), source=_ORDER3_SRC,
+         body=("constructed / statement order decided by an accessor macro (ORDER-3)",
+               """        for (long i = 1; i < LEN_1D; i++) {
+            u[i] += AT1(v, i) * c[i];
+            v[i] = AT2(u, i) * d[i] + c[i];
+        }""")),
+]
 SUITES: Dict[str, List[Loop]] = {"tsvc": LOOPS, "tsvc_b1": B1_LOOPS}
 BY_NAME = {l.name: l for l in LOOPS}
 
@@ -1151,8 +1208,8 @@ def main() -> int:
         hot = hot_loop(loop) if v4 else None
         (d / "meta.json").write_text(json.dumps({
             "suite": loop.suite, "kernel": loop.name,
-            "source": ("constructed: ORDER-2 (THESIS_EXPERIMENTS §6, 28 Sep; tools/evidence_pilot.py)" if loop.body
-                       else "benchmarks/TSVC_2/src/tsvc.c"),
+            "source": (loop.source or ("constructed: ORDER-2 (THESIS_EXPERIMENTS §6, 28 Sep; tools/evidence_pilot.py)"
+                                       if loop.body else "benchmarks/TSVC_2/src/tsvc.c")),
             "category": category, "file": src.name, "language": "c", "layout": "single",
             "restructuring_class": loop.expected, "transformation": loop.transformation, "why": loop.why,
             "reference_solution": (str(ref.relative_to(HARNESS_ROOT)) if ref.is_relative_to(HARNESS_ROOT)
