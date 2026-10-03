@@ -42,7 +42,7 @@ O3-i rejected: with DiscoPoP's evidence the Haiku agent finds the hidden split 2
 
 ### `t0_1_o3_sizes`, `t0_11_o3_a`, `t0_11_o3_b`, `t0_11_o3_c`, `e2o3_agent`, `e2o3_bare_haiku`, `e2o3_bare_sonnet`, `e2o3_bare_opus`, `e2o3_bare_fable`, `e2o3_race_check` — 2026-10-03, server, **E2-O3: three more hidden-order kernels** (135 model trials + 61 re-run)
 
-- **Setup.** Pre-registered §6 3 Oct; packages built on the server identical to the Mac's; T0.1 (node 0, idle server): all three at LARGE. Agent (`full_b1_nospeed_v3`, `no_evidence_b1_nospeed_v3`, Haiku × 10) and Haiku alone from 09:45 UTC; the session limit cut the subscription at 10:23 UTC (61 trials recorded failed calls: set aside under `<run>/_call_failed/`, re-run from 18:26 UTC); Sonnet, Opus, Fable alone × 5 after. 0 failed calls in every counted trial. Race check `e2o3_race_check`: all 31 agent programs clean.
+- **Setup.** Pre-registered §6 3 Oct; packages built on the server identical to the Mac's; T0.1 (node 0, idle server): all three at LARGE. Agent (`full_b1_nospeed_v3`, `no_evidence_b1_nospeed_v3`, Haiku × 10) and Haiku alone from 09:45 UTC; the session limit cut the subscription at 10:23 UTC (61 trials recorded failed calls: set aside under `<run>/_call_failed/`, re-run from 18:26 UTC); Sonnet, Opus, Fable alone × 5 after. 0 failed calls in every counted trial. Race check `e2o3_race_check`: all 31 agent programs clean. Fix 104 reached the server with the 18:30 UTC sync: 19 agent trials ran before it and 41 after; the OpenMP-barrier heuristic fired in none of the 60 (no TSan report was excused), so both versions behaved identically.
 - **Result:** §6 3 Oct (E2-O3 read out); `results/E02o3_hidden_order_kernels/stats/`.
 
 ## Change-log rows that name these runs (§6)

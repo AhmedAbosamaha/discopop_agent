@@ -182,7 +182,11 @@ private:
   LoopTable loopStack; // loop stack tracking
   LoopRecords loops;   // loop merging
   LoopCounter lc;      // loop counter
-  bool alreadyDone;
+  // B17 (3 Oct 2026): this was never initialised, so `new LoopManager()` read whatever the heap held. On Linux
+  // that is the path of the working directory left by start-up code: with a path of 99-119 characters the flag
+  // read true, every __dp_loop_incr returned at once and the profile lost its loop iterations (a kernel's
+  // cross-iteration dependences gone, its loops reported Do-All).
+  bool alreadyDone = false;
 };
 
 } // namespace __dp

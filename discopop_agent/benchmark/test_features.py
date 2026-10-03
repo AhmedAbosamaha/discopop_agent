@@ -2567,6 +2567,50 @@ def check_barrier_archer(work: Path) -> Result:
                   "with archer nothing is excused")
 
 
+def check_b17_cwd_length(work: Path) -> Result:
+    """DiscoPoP B17 — the profile must not depend on the path of the directory the program is profiled in.
+
+    `LoopManager::alreadyDone` was read uninitialised: on Linux, with a working directory path of 99-119
+    characters, the runtime's loop tracking switched itself off and the profile lost its cross-iteration
+    dependences (tsvc_b1/k19: 59 dependence lines instead of 125, two false Do-Alls). One instrumented build of a
+    recurrence is run from directories of every path length from 90 to 125: each run must write its loop results
+    and the same number of dependence lines."""
+    name = "B17 profile vs cwd length"
+    if not Path(_venv_bin("discopop_cxx")).exists():
+        return Result(name, "skip", "DiscoPoP is not installed in this venv")
+    root = Path(tempfile.mkdtemp(prefix="b17_"))            # a short root, so every length is reachable
+    try:
+        build = root / "build"
+        build.mkdir()
+        (build / "k.cpp").write_text(_TWIN_SRC)
+        ok, err = _run([_venv_bin("discopop_cxx"), "k.cpp", "-o", "a.out"], build)
+        if not ok:
+            return Result(name, "fail", f"discopop_cxx: {err[-200:]}")
+        counts: Dict[int, int] = {}
+        silent: List[int] = []
+        for length in range(max(90, len(str(root)) + 2), 126):
+            d = root / ("x" * (length - len(str(root)) - 1))
+            shutil.copytree(build, d)
+            dep = d / ".discopop" / "profiler" / "dynamic_dependencies.txt"
+            dep.unlink(missing_ok=True)
+            r = subprocess.run(["./a.out"], cwd=d, capture_output=True, text=True)
+            counts[length] = sum(1 for _ in open(dep)) if dep.exists() else -1
+            if "Outputting instrumentation results... done" not in r.stdout:
+                silent.append(length)
+            shutil.rmtree(d)
+    finally:
+        shutil.rmtree(root, ignore_errors=True)
+    if not counts:
+        return Result(name, "skip", "the temporary directory's path is too long for the lengths under test")
+    distinct = sorted(set(counts.values()))
+    if len(distinct) > 1 or silent:
+        odd = [l for l, n in counts.items() if n != max(distinct)]
+        return Result(name, "fail", f"dependence lines {distinct} over cwd lengths {min(counts)}-{max(counts)}; "
+                      f"differing at {odd[:8]}; no loop results at {silent[:8]}")
+    return Result(name, "pass", f"{len(counts)} cwd path lengths ({min(counts)}-{max(counts)}): the same "
+                  f"{distinct[0]} dependence lines and the loop results written in every run")
+
+
 def check_covered_skip(work: Path) -> Result:
     """A region inside an already-accepted one must leave the queue.
 
@@ -4895,6 +4939,7 @@ _CHECKS: List[Tuple[str, Callable[[Path], Result]]] = [
     ("b10-carried-scalar", check_b10_carried_scalar),
     ("b13-scatter-waw", check_b13_scatter_waw),
     ("b15-dowhile", check_b15_dowhile),
+    ("b17-cwd-length", check_b17_cwd_length),
 ]
 
 

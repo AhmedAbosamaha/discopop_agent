@@ -354,6 +354,39 @@ fix counts a WAW only between writes that resolve to one context each, so B13 ad
 the RAW one predates it. Not investigated further; no campaign benchmark is known to have this shape
 (TSVC's 33 packages: no change under B13's sweep).
 
+## B17 — the profile depends on the path of the working directory: an uninitialised flag switches loop tracking off (profiler runtime)
+
+**Status: fixed (3 Oct 2026), one line; regression check `b17-cwd-length`; the harness refuses such a profile.**
+`rtlib/loop/LoopManager.hpp` declared `bool alreadyDone;` and its constructor `LoopManager() {}` never set it, so
+`new LoopManager()` (`dp_func_entry.cpp`) read whatever the heap held. `__dp_loop_incr` begins with
+`if (loop_manager->is_done()) return;` and `__dp_loop_output` with the same test: when the byte was non-zero the
+runtime counted no loop iteration and wrote no loop results — the profiled run printed no
+`Outputting instrumentation results... done`, `dynamic_dependencies.txt` lacked every dependence between
+iterations, and the explorer reported the loops Do-All.
+
+**What decides the byte.** On Linux (glibc, LLVM 20) it is what start-up code left in freed heap memory: text
+of the working directory's path. Measured on the server with one instrumented build of `tsvc_b1/k19`, run from
+directories of every path length from 30 to 250 characters (path of the profiled file): lengths 105-125 except
+110 give the broken profile (59 dependence lines, 2 false Do-Alls — the inner loop and the repetition loop),
+every other length the right one (125 lines, no Do-All). The build directory does not matter, the environment's
+size does not; moving a good build into a directory of a bad length breaks it, and back repairs it.
+
+**How it was found.** The two Opus pilots of 3 Oct (`pilot_opus_agent_k19`, `pilot_opus_agent_k19_speed`) had the
+longest run names of the campaign; their `k19` profiles reported two Do-Alls where 262 other profiles of the
+same packages on the server agree with each other. The agent re-queued the "false Do-All" to the model and never
+showed prompt version 3's order statement.
+
+**Fix.** `bool alreadyDone = false;`. Verified on the server after rebuilding the runtime: the same scan gives
+the right profile at every length. **Guard.** `agent/tools/cli.py` (`profile_once`) refuses a profiled run whose
+log lacks the runtime's loop-results line, whatever the cause (PROFILE_ERROR instead of a silent wrong profile).
+
+**Which archived profiles had it** (the line is missing from `profiled_run.log`; 56 of 732): the two pilots;
+`t0_11_classes_a`/`_b`/`_c` on 14 PolyBench kernels (covariance, doitgen, dynprog, fdtd-2d, fdtd-apml,
+floyd-warshall, gemver, gesummv, jacobi-1d-imper, jacobi-2d-imper, ludcmp, reg_detect, seidel-2d, trisolv) and
+Rodinia hotspot and pathfinder; `e10_dp_alone` on floyd-warshall and jacobi-2d-imper; `e1_smoke`-`e1_smoke4` on
+floyd-warshall. No profile of TSVC, `tsvc_b1`, LULESH or NPB is affected, and no trial's own working directory
+(where the agent re-profiles) has a path in the range (2,395 server trials checked by path length).
+
 ## B16 — candidate: a RAW carried by the repetition loop is attributed to the inner loop (explorer)
 
 **Status: candidate, not re-checked on the fixed explorer.** In the V3 pilot's profile of TSVC `s244`

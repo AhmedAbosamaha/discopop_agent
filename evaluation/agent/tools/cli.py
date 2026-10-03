@@ -83,6 +83,8 @@ DEFAULT_AGENT_REPO = _default_agent_repo()
 # last digits (~1e-16 relative); a wrong result moves them by far more.
 DIGEST_REL_TOL = 1e-9
 FASTER_THRESHOLD = 1.1
+# What DiscoPoP's runtime prints when it writes its loop results at the end of a profiled run (B17 guard).
+LOOP_OUTPUT_MARK = "Outputting instrumentation results... done"
 # A trial whose program edits the measurement lines (SCAFFOLD_MODIFIED) is redone up to this many
 # times (the author, 3 Oct 2026); one that still does after them counts as unusable (§6, 3 Oct).
 HARNESS_EDIT_REDOS = 2
@@ -855,6 +857,16 @@ def profile_once(bench_dir: Path, src_name: str, dest: Path, agent_repo: Path, t
         if rc != 0:
             rec["error"] = f"{step} failed (rc={rc}): {tail[-500:]}"
             return rec
+    # B17 guard (3 Oct 2026): DiscoPoP's runtime read an uninitialised flag (LoopManager::alreadyDone) and, when
+    # the heap happened to hold a non-zero byte there — on Linux with a working directory path of 99-119
+    # characters — skipped all loop tracking: the profile then lacked every cross-iteration dependence and the
+    # explorer reported the loops Do-All (the Opus pilots, 3 Oct). The flag is initialised now; a profiled run
+    # whose runtime never wrote its loop results is refused here whatever the cause.
+    run_log = dest / "profiled_run.log"
+    if LOOP_OUTPUT_MARK not in (run_log.read_text(errors="replace") if run_log.exists() else ""):
+        rec["error"] = ("profiled run lost its loop tracking: DiscoPoP's runtime did not write its loop results "
+                        f"(no `{LOOP_OUTPUT_MARK}` in profiled_run.log; DISCOPOP_BUG_REPORTS B17)")
+        return rec
     # DiscoPoP's explorer is not deterministic on a fixed profile and can crash on one
     # attempt and succeed on the next (an IndexError in TaskGraph.recursive_assignment:
     # `pathfinder` crashed in 15 of 20 attempts on one profile, T0.7; 20 attempts leave a
