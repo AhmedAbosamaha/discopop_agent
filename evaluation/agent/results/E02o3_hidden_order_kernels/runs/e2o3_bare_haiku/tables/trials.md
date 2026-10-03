@@ -1,0 +1,32 @@
+| Benchmark | Arm | Model | Rep | Outcome | Best speedup | Pragmas (DP+LLM) | Rewrites | Baseline | LLM calls | Agent s |
+|---|---|---|---:|---|---:|---|---:|---:|---:|---:|
+| tsvc_b1/k23 | bare_llm_nospeed_v3 | claude-haiku-4-5-20251001 | 1 | BROKEN | 4.23x | —+— | — | — | 1 | 36.5 |
+| tsvc_b1/k23 | bare_llm_nospeed_v3 | claude-haiku-4-5-20251001 | 10 | BROKEN | 4.29x | —+— | — | — | 1 | 22.9 |
+| tsvc_b1/k23 | bare_llm_nospeed_v3 | claude-haiku-4-5-20251001 | 2 | BROKEN | 4.16x | —+— | — | — | 1 | 22.9 |
+| tsvc_b1/k23 | bare_llm_nospeed_v3 | claude-haiku-4-5-20251001 | 3 | BROKEN | 4.30x | —+— | — | — | 1 | 33.7 |
+| tsvc_b1/k23 | bare_llm_nospeed_v3 | claude-haiku-4-5-20251001 | 4 | BROKEN | 4.28x | —+— | — | — | 1 | 32.0 |
+| tsvc_b1/k23 | bare_llm_nospeed_v3 | claude-haiku-4-5-20251001 | 5 | BROKEN | 4.35x | —+— | — | — | 1 | 18.7 |
+| tsvc_b1/k23 | bare_llm_nospeed_v3 | claude-haiku-4-5-20251001 | 6 | BROKEN | 4.30x | —+— | — | — | 1 | 23.7 |
+| tsvc_b1/k23 | bare_llm_nospeed_v3 | claude-haiku-4-5-20251001 | 7 | BROKEN | 4.29x | —+— | — | — | 1 | 37.7 |
+| tsvc_b1/k23 | bare_llm_nospeed_v3 | claude-haiku-4-5-20251001 | 8 | BROKEN | 4.31x | —+— | — | — | 1 | 16.6 |
+| tsvc_b1/k23 | bare_llm_nospeed_v3 | claude-haiku-4-5-20251001 | 9 | BROKEN | 4.25x | —+— | — | — | 1 | 29.1 |
+| tsvc_b1/k31 | bare_llm_nospeed_v3 | claude-haiku-4-5-20251001 | 1 | AGENT_ERROR | — | —+— | — | — | 1 | 68.4 |
+| tsvc_b1/k31 | bare_llm_nospeed_v3 | claude-haiku-4-5-20251001 | 10 | AGENT_ERROR | — | —+— | — | — | 1 | 10.6 |
+| tsvc_b1/k31 | bare_llm_nospeed_v3 | claude-haiku-4-5-20251001 | 2 | AGENT_ERROR | — | —+— | — | — | 1 | 10.4 |
+| tsvc_b1/k31 | bare_llm_nospeed_v3 | claude-haiku-4-5-20251001 | 3 | AGENT_ERROR | — | —+— | — | — | 1 | 10.7 |
+| tsvc_b1/k31 | bare_llm_nospeed_v3 | claude-haiku-4-5-20251001 | 4 | AGENT_ERROR | — | —+— | — | — | 1 | 10.5 |
+| tsvc_b1/k31 | bare_llm_nospeed_v3 | claude-haiku-4-5-20251001 | 5 | AGENT_ERROR | — | —+— | — | — | 1 | 10.7 |
+| tsvc_b1/k31 | bare_llm_nospeed_v3 | claude-haiku-4-5-20251001 | 6 | AGENT_ERROR | — | —+— | — | — | 1 | 10.7 |
+| tsvc_b1/k31 | bare_llm_nospeed_v3 | claude-haiku-4-5-20251001 | 7 | AGENT_ERROR | — | —+— | — | — | 1 | 10.7 |
+| tsvc_b1/k31 | bare_llm_nospeed_v3 | claude-haiku-4-5-20251001 | 8 | AGENT_ERROR | — | —+— | — | — | 1 | 11.0 |
+| tsvc_b1/k31 | bare_llm_nospeed_v3 | claude-haiku-4-5-20251001 | 9 | AGENT_ERROR | — | —+— | — | — | 1 | 10.5 |
+| tsvc_b1/k36 | bare_llm_nospeed_v3 | claude-haiku-4-5-20251001 | 1 | AGENT_ERROR | — | —+— | — | — | 1 | 10.5 |
+| tsvc_b1/k36 | bare_llm_nospeed_v3 | claude-haiku-4-5-20251001 | 10 | AGENT_ERROR | — | —+— | — | — | 1 | 10.4 |
+| tsvc_b1/k36 | bare_llm_nospeed_v3 | claude-haiku-4-5-20251001 | 2 | AGENT_ERROR | — | —+— | — | — | 1 | 10.7 |
+| tsvc_b1/k36 | bare_llm_nospeed_v3 | claude-haiku-4-5-20251001 | 3 | AGENT_ERROR | — | —+— | — | — | 1 | 10.6 |
+| tsvc_b1/k36 | bare_llm_nospeed_v3 | claude-haiku-4-5-20251001 | 4 | AGENT_ERROR | — | —+— | — | — | 1 | 10.9 |
+| tsvc_b1/k36 | bare_llm_nospeed_v3 | claude-haiku-4-5-20251001 | 5 | AGENT_ERROR | — | —+— | — | — | 1 | 10.5 |
+| tsvc_b1/k36 | bare_llm_nospeed_v3 | claude-haiku-4-5-20251001 | 6 | AGENT_ERROR | — | —+— | — | — | 1 | 10.8 |
+| tsvc_b1/k36 | bare_llm_nospeed_v3 | claude-haiku-4-5-20251001 | 7 | AGENT_ERROR | — | —+— | — | — | 1 | 10.7 |
+| tsvc_b1/k36 | bare_llm_nospeed_v3 | claude-haiku-4-5-20251001 | 8 | AGENT_ERROR | — | —+— | — | — | 1 | 10.7 |
+| tsvc_b1/k36 | bare_llm_nospeed_v3 | claude-haiku-4-5-20251001 | 9 | AGENT_ERROR | — | —+— | — | — | 1 | 10.4 |

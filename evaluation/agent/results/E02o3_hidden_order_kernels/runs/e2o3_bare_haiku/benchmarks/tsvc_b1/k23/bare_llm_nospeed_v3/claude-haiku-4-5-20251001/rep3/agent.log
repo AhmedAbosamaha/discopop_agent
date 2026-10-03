@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : k23.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : main, pb_mix
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] k23.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Looking at the code, I need to analyze the dependencies: ## Plan **Dependence blocking parallelism:** - The outer loop (`nl = 0..R`) is sequential because `pb_mix(nl)` called between iterations modifies global arrays `a`, `b`, `c`, `d`, `e`, creating a true loop-carried dependence. - The **inner loop** (`i = 1..LEN_1D`) has **no loop-carried dependencies**: each iteration reads from `w[i]`, `c[i]`
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

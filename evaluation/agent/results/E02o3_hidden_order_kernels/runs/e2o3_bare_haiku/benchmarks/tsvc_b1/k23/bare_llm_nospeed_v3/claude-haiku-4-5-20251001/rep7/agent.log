@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : k23.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : main, pb_mix
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] k23.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan **Analysis:** - The outer loop (`nl`) CANNOT be parallelized: `pb_mix(nl)` modifies array elements (a, b, c, d, e) that seed the next repetition, creating a true loop-carried dependence between nl iterations. - The inner loop (`i`) CAN be parallelized: each iteration reads `w[i]`, `c[i]`, `x[i]`, `d[i]` and writes to `u[i]` and `v[i]` — disjoint array elements per iteration, no loop-carrie
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

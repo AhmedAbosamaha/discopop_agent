@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : k23.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : main, pb_mix
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] k23.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Looking at the code structure: ## Analysis The outer loop (`nl` from 0 to R) is **sequential by necessity** because `pb_mix(nl)` creates a true dependence between repetitions—it modifies input arrays between iterations. The **inner loop** (`i` from 1 to LEN_1D) is **perfectly parallel**: each iteration reads from arrays indexed by `i` and writes to `u[i]` and `v[i]`. Different iterations access di
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

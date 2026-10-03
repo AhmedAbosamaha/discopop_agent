@@ -1,0 +1,15 @@
+--- k23.c
++++ k23.c
+@@ -14,9 +14,10 @@
+ 
+ static real_t kernel_k23(void)
+ {
++    long len_1d = LEN_1D;
+     for (int nl = 0; nl < R; nl++) {
+-        for (long i = 1; i < LEN_1D; i++) {
+-            u[i] += w[i] * c[i];
++        for (long i = 1; i < len_1d; i++) {
++            u[i] = u[i] + w[i] * c[i];
+             v[i] = x[i] * d[i] + c[i];
+         }
+         pb_mix(nl);

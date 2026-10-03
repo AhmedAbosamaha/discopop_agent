@@ -1,0 +1,15 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : k23.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : main, pb_mix
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+child process pid 4036996 exit status already read:  will report returncode 255
+│  [bare] k23.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: I'll analyze this OpenMP parallelization task. Let me first read the source file.**Analysis:** Looking at the structure: 1. **Outer loop** (`nl`): Has TRUE loop-carried dependence through `pb_mix()` which modifies arrays between repetitions. Must stay SEQUENTIAL. 2. **Inner loop** (`i`): Within each `nl` iteration, each iteration `i` independently reads `w[i]`, `x[i]`, `c[i]`, `d[i]` and writes to
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

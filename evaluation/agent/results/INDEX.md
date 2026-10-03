@@ -400,16 +400,16 @@ Status: running
 
 ## [E2-O3 — does the evidence effect hold on more hidden-order kernels?](E02o3_hidden_order_kernels/REPORT.md)
 
-Status: pre-flight
+Status: running
 
 | run | where | what it is | status | trials | outcomes |
 |---|---|---|---|---:|---|
 | `t0_1_o3_sizes` | [`E02o3_hidden_order_kernels/preflight/t0_1_o3_sizes/`](E02o3_hidden_order_kernels/preflight/t0_1_o3_sizes/) | T0.1 sizes for tsvc_b1/k23, k31, k36 (server, no model) | valid | 0 |  |
-| `t0_11_o3_a` | not archived yet | T0.11 draw a on tsvc_b1/k23, k31, k36: discopop_capability (budget 0, no model), threads 6/12, repeats 5 | registered |  |  |
-| `t0_11_o3_b` | not archived yet | T0.11 draw b on tsvc_b1/k23, k31, k36: discopop_capability, no model | registered |  |  |
-| `t0_11_o3_c` | not archived yet | T0.11 draw c on tsvc_b1/k23, k31, k36: discopop_capability, no model | registered |  |  |
-| `e2o3_agent` | not archived yet | E2-O3: tsvc_b1/k23, k31, k36 × full_b1_nospeed_v3, no_evidence_b1_nospeed_v3 × 10, Haiku, threads 6/12, repeats 5 | registered |  |  |
-| `e2o3_bare_haiku` | not archived yet | E2-O3: claude-haiku-4-5-20251001 alone on tsvc_b1/k23, k31, k36 × bare_llm_nospeed_v3 × 10 | registered |  |  |
+| `t0_11_o3_a` | [`E02o3_hidden_order_kernels/preflight/t0_11_o3_a/`](E02o3_hidden_order_kernels/preflight/t0_11_o3_a/) | T0.11 draw a on tsvc_b1/k23, k31, k36: discopop_capability (budget 0, no model), threads 6/12, repeats 5 | valid | 3 | no-change 3 |
+| `t0_11_o3_b` | [`E02o3_hidden_order_kernels/preflight/t0_11_o3_b/`](E02o3_hidden_order_kernels/preflight/t0_11_o3_b/) | T0.11 draw b on tsvc_b1/k23, k31, k36: discopop_capability, no model | valid | 3 | no-change 3 |
+| `t0_11_o3_c` | [`E02o3_hidden_order_kernels/preflight/t0_11_o3_c/`](E02o3_hidden_order_kernels/preflight/t0_11_o3_c/) | T0.11 draw c on tsvc_b1/k23, k31, k36: discopop_capability, no model | valid | 3 | no-change 3 |
+| `e2o3_agent` | [`E02o3_hidden_order_kernels/runs/e2o3_agent/`](E02o3_hidden_order_kernels/runs/e2o3_agent/) | E2-O3: tsvc_b1/k23, k31, k36 × full_b1_nospeed_v3, no_evidence_b1_nospeed_v3 × 10, Haiku, threads 6/12, repeats 5 | valid | 60 | FASTER 9, no-change 50, parallel-not-faster 1 |
+| `e2o3_bare_haiku` | [`E02o3_hidden_order_kernels/runs/e2o3_bare_haiku/`](E02o3_hidden_order_kernels/runs/e2o3_bare_haiku/) | E2-O3: claude-haiku-4-5-20251001 alone on tsvc_b1/k23, k31, k36 × bare_llm_nospeed_v3 × 10 | valid | 30 | AGENT_ERROR 20, BROKEN 10 |
 | `e2o3_bare_sonnet` | not archived yet | E2-O3: claude-sonnet-5 alone on tsvc_b1/k23, k31, k36 × bare_llm_nospeed_v3 × 5 | registered |  |  |
 | `e2o3_bare_opus` | not archived yet | E2-O3: claude-opus-5-5 alone on tsvc_b1/k23, k31, k36 × bare_llm_nospeed_v3 × 5 | registered |  |  |
 | `e2o3_bare_fable` | not archived yet | E2-O3: claude-fable-5-1 alone on tsvc_b1/k23, k31, k36 × bare_llm_nospeed_v3 × 5 | registered |  |  |
