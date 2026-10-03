@@ -32,6 +32,11 @@ from .toolchain import (_LIBOMP_DIR, _macos_sysroot_flag, _tsan_env,
 
 
 _OUTLINED_RE = re.compile(r"\.omp_outlined[A-Za-z0-9_.]*")
+# The outlined WRAPPER of a parallel region (`f.omp_outlined.1`), not the body clang emits beside it under -g
+# (`f.omp_outlined_debug__.2`, called from the wrapper): one region shows both names, so comparing the first
+# outlined frame of each access took one region for two (Fix 104, E1-final s341: a prefix sum under
+# `parallel for`, its write in the debug body and its read in the wrapper, passed as a barrier artefact).
+_WRAPPER_RE = re.compile(r"\.omp_outlined(?:\.\d+)?(?=\s|$)")
 # Constructs that remove the barrier this reasoning depends on.  `nowait` drops
 # the implicit barrier at the end of a worksharing region outright; a task can
 # outlive the region that spawned it.  Either makes two distinct outlined
@@ -118,12 +123,15 @@ def _is_omp_barrier_false_positive(diagnostic: str, code: str = "") -> bool:
     if not (code and _NO_BARRIER_RE.search(code)):
         outlined: List[str] = []
         for frames in access_blocks:
-            hit = next((_OUTLINED_RE.search(f) for f in frames
-                        if ".omp_outlined" in f), None)
+            # the region's wrapper, named with its function (`kernel.omp_outlined.1`); an access with none
+            # cannot be placed in a region, so nothing is excused (Fix 104)
+            hit = next((m for m in (_WRAPPER_RE.search(f.split(" (")[0]) for f in frames) if m), None)
             if hit is None:
                 outlined = []
                 break
-            outlined.append(hit.group(0))
+            frame = next(f for f in frames if _WRAPPER_RE.search(f.split(" (")[0]))
+            name = frame.split()[1] if len(frame.split()) > 1 else hit.group(0)
+            outlined.append(name)
         if len(outlined) >= 2 and len(set(outlined)) >= 2:
             return True
 
@@ -236,3 +244,15 @@ def _tsan(
             f"report:\n{stderr[-500:]}"
         ), "tsan"
     return True, "", "tsan"
+
+
+def barrier_artefact_possible(diagnostic: str, code: str = "") -> bool:
+    """Whether a TSan report may be the OpenMP-barrier artefact at all (Fix 104, 3 Oct 2026). With libarcher
+    loaded TSan SEES OpenMP's barriers (`find_archer`), so every report is a race and none is excused —
+    E1-final's s341 rep1 (and E1c-v3.1's), a sequential prefix sum under `parallel for`, was passed by the
+    heuristic on the server, where archer runs, and race_check.py found it racy. Without archer (the Mac) the
+    report is read as before."""
+    from .toolchain import find_archer
+    if find_archer():
+        return False
+    return _is_omp_barrier_false_positive(diagnostic, code)

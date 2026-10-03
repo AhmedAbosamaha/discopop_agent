@@ -2515,6 +2515,58 @@ def check_harness_guard(work: Path) -> Result:
                   "edit untouched; twin: re-asked and the fix kept")
 
 
+# E1-final s341 rep1 (3 Oct): a sequential prefix sum under `parallel for` — the write in clang's -g body of the
+# region, the read in its wrapper; the old Variant 3 took the two names for two regions and excused the race.
+_S341_TSAN = """WARNING: ThreadSanitizer: data race (pid=4000223)
+  Write of size 4 at 0x72d000023e88 by thread T2:
+    #0 kernel_s341.omp_outlined_debug__.2 /tmp/dp_agent_val_0ucigsiu/s341.c:36:24 (tsan_binary+0xe9a22)
+    #1 kernel_s341.omp_outlined.1 /tmp/dp_agent_val_0ucigsiu/s341.c:34:9 (tsan_binary+0xe9a22)
+    #2 __kmp_invoke_microtask <null> (libomp.so.5+0xe59b8)
+    #3 kernel_s341 /tmp/dp_agent_val_0ucigsiu/s341.c:34:9 (tsan_binary+0xe9384)
+
+  Previous read of size 4 at 0x72d000023e88 by thread T3:
+    #0 kernel_s341.omp_outlined.1 /tmp/dp_agent_val_0ucigsiu/s341.c (tsan_binary+0xe99f8)
+    #1 __kmp_invoke_microtask <null> (libomp.so.5+0xe59b8)
+    #2 kernel_s341 /tmp/dp_agent_val_0ucigsiu/s341.c:34:9 (tsan_binary+0xe9384)
+
+  Location is heap block of size 128000 at 0x72d000020000 allocated by main thread:
+    #0 malloc <null> (tsan_binary+0x62c14)
+"""
+_S341_CODE = """        #pragma omp parallel for shared(match,indices)
+        for (int i = 1; i < LEN_1D; i++) {
+            indices[i] = indices[i-1] + match[i-1];
+        }"""
+
+
+def check_barrier_archer(work: Path) -> Result:
+    """Fix 104 (3 Oct): the OpenMP-barrier heuristic never excuses a race in ONE region — the region is named by its
+    wrapper, not by clang's -g body beside it — and excuses nothing at all when libarcher is loaded (TSan then sees
+    the barriers). The E1-final s341 report is the fixture; two genuinely different regions are still read as the
+    artefact without archer."""
+    name = "barrier heuristic (Fix 104)"
+    from ..gate import tsan as tsan_mod
+    from ..gate import toolchain
+    problems: List[str] = []
+    if tsan_mod._is_omp_barrier_false_positive(_S341_TSAN, _S341_CODE):
+        problems.append("the s341 race (one region, two outlined names) is excused")
+    two = _S341_TSAN.replace("#0 kernel_s341.omp_outlined.1 /tmp/dp_agent_val_0ucigsiu/s341.c (tsan",
+                             "#0 kernel_s341.omp_outlined.3 /tmp/dp_agent_val_0ucigsiu/s341.c (tsan")
+    saved = toolchain.find_archer
+    try:
+        setattr(toolchain, "find_archer", lambda: None)
+        if not tsan_mod.barrier_artefact_possible(two, "for (;;) {}"):
+            problems.append("without archer, two different regions are no longer read as the artefact")
+        setattr(toolchain, "find_archer", lambda: "/usr/lib/llvm-20/lib/libarcher.so")
+        if tsan_mod.barrier_artefact_possible(two, "for (;;) {}"):
+            problems.append("with archer loaded, a report is still excused")
+    finally:
+        setattr(toolchain, "find_archer", saved)
+    if problems:
+        return Result(name, "fail", "; ".join(problems))
+    return Result(name, "pass", "the s341 race is not excused; two regions are, without archer only; "
+                  "with archer nothing is excused")
+
+
 def check_covered_skip(work: Path) -> Result:
     """A region inside an already-accepted one must leave the queue.
 
@@ -4811,6 +4863,7 @@ _CHECKS: List[Tuple[str, Callable[[Path], Result]]] = [
     ("clause", check_clauses),
     ("dep-review", check_dep_review),
     ("tsan", check_tsan_barrier),
+    ("barrier-archer", check_barrier_archer),
     ("equivalence", check_output_equivalence),
     ("noise-floor", check_noise_floor),
     ("schedule-stress", check_schedule_stress),

@@ -357,7 +357,7 @@ Status: done
 
 ## [E12 — a small model inside the pipeline against stronger models alone](E12_stronger_models_alone/REPORT.md)
 
-Status: running
+Status: done
 
 | run | where | what it is | status | trials | outcomes |
 |---|---|---|---|---:|---|
@@ -373,7 +373,7 @@ Status: running
 | `e12_opus_v3b` | [`E12_stronger_models_alone/runs/e12_opus_v3b/`](E12_stronger_models_alone/runs/e12_opus_v3b/) | E12 completion: claude-opus-5-5 alone on tsvc_b1/s1213, s211 × bare_llm_nospeed_v3 × 5, Fix 103 | valid | 10 | FASTER 10 |
 | `e12_fable_v3b` | [`E12_stronger_models_alone/runs/e12_fable_v3b/`](E12_stronger_models_alone/runs/e12_fable_v3b/) | E12 completion: claude-fable-5-1 alone on tsvc_b1/s1213, s211 × bare_llm_nospeed_v3 × 5, Fix 103 | valid | 10 | FASTER 10 |
 | `e12_fable_redo` | [`E12_stronger_models_alone/runs/e12_fable_redo/`](E12_stronger_models_alone/runs/e12_fable_redo/) | E12 completion: Fable's 3 harness-edit trials of e12_fable_v3 redone (Fix 103; the author 3 Oct): tsvc_b1/k19 × 2, k48 × 1, bare_llm_nospeed_v3 | valid | 3 | BROKEN 1, parallel-not-faster 2 |
-| `e12c_race_check` | not archived yet | race_check.py over E12's completion runs (e12_sonnet_v3, e12_sonnet_b1, e12_opus_v3b, e12_fable_v3b, e12_fable_redo), no model | registered |  |  |
+| `e12c_race_check` | [`E12_stronger_models_alone/checks/e12c_race_check/`](E12_stronger_models_alone/checks/e12c_race_check/) | race_check.py over E12's completion runs (e12_sonnet_v3, e12_sonnet_b1, e12_opus_v3b, e12_fable_v3b, e12_fable_redo), no model | valid | 0 |  |
 
 ## [E1-final — the headline three-way comparison in the final version](E01f_final_three_way/REPORT.md)
 
@@ -393,8 +393,9 @@ Status: running
 | `e1f_bare_sonnet` | [`E01f_final_three_way/runs/e1f_bare_sonnet/`](E01f_final_three_way/runs/e1f_bare_sonnet/) | E1-final the model alone: bare_llm_v3 with claude-sonnet-5 on class R × 5, A × 1, D × 3 (one run per model) | valid | 105 | BROKEN 2, FASTER 91, parallel-not-faster 12 |
 | `e1f_bare_opus` | [`E01f_final_three_way/runs/e1f_bare_opus/`](E01f_final_three_way/runs/e1f_bare_opus/) | E1-final the model alone: bare_llm_v3 with claude-opus-5-5 on class R × 5, A × 1, D × 3 (one run per model) | valid | 105 | FASTER 101, VERIFY_FAILED 1, parallel-not-faster 3 |
 | `e1f_bare_fable` | [`E01f_final_three_way/runs/e1f_bare_fable/`](E01f_final_three_way/runs/e1f_bare_fable/) | E1-final the model alone: bare_llm_v3 with claude-fable-5-1 on class R × 5, A × 1, D × 3 (one run per model) | valid | 105 | FASTER 103, parallel-not-faster 2 |
-| `e1f_fix103_redo` | [`E01f_final_three_way/runs/e1f_fix103_redo/`](E01f_final_three_way/runs/e1f_fix103_redo/) | E1-final agent trials redone on the fixed agent (Fix 103): every trial whose candidate the old harness rule (Fix 97) let through but the judge's rules refuse (a new pb_* line) — found by fix103's scan of every E1-final agent candidate when the agent runs ended; each from a copy of its own run's DiscoPoP profile; the superseded trials kept under <run>/_superseded_fix103/. Known so far: e1f_r_4 s331 rep4 (pb_mix(R - 1)) | valid | 2 | no-change 2 |
-| `e1f_race_check` | not archived yet | race_check.py (the gate's TSan with archer and the schedule matrix, server, no model) over every model-alone trial of E1-final (bare_llm_v3: Haiku, Sonnet, Opus, Fable × 105) and, as the positive control, the agent's FASTER programs of e1f_r_1-4; subdirectories per model and control | registered |  |  |
+| `e1f_fix103_redo` | [`E01f_final_three_way/runs/e1f_fix103_redo/`](E01f_final_three_way/runs/e1f_fix103_redo/) | E1-final agent trials redone on the fixed agent (Fix 103): every trial whose candidate the old harness rule (Fix 97) let through but the judge's rules refuse (a new pb_* line) — found by fix103's scan of every E1-final agent candidate when the agent runs ended; each from a copy of its own run's DiscoPoP profile; the superseded trials kept under <run>/_superseded_fix103/. Known so far: e1f_r_4 s331 rep4 (pb_mix(R - 1)) — INVALID (3 Oct): the redos ran on a COPY of their run's DiscoPoP profile, whose FileMapping.txt kept the source run's absolute paths, so the agent found no region at all ('No hotspot regions found') and both trials ended no-change by infrastructure, not by the model. Redone on fresh profiles in e1f_fix103_redo2 | invalid | 2 | no-change 2 |
+| `e1f_race_check` | [`E01f_final_three_way/checks/e1f_race_check/`](E01f_final_three_way/checks/e1f_race_check/) | race_check.py (the gate's TSan with archer and the schedule matrix, server, no model) over every model-alone trial of E1-final (bare_llm_v3: Haiku, Sonnet, Opus, Fable × 105) and, as the positive control, the agent's FASTER programs of e1f_r_1-4; subdirectories per model and control | valid | 0 |  |
+| `e1f_fix103_redo2` | [`E01f_final_three_way/runs/e1f_fix103_redo2/`](E01f_final_three_way/runs/e1f_fix103_redo2/) | E1-final: the two agent trials Fix 103 changes (e1f_a s313 rep1, e1f_r_4 s331 rep4) redone on the fixed agent, each benchmark freshly profiled in this run (a new DiscoPoP draw; B4 is fixed, so the verdicts repeat) — e1f_fix103_redo's profile copies were broken | valid | 2 | FASTER 2 |
 
 ## [E2-O3 — does the evidence effect hold on more hidden-order kernels?](E02o3_hidden_order_kernels/REPORT.md)
 

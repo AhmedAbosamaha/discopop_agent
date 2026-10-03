@@ -1,0 +1,10 @@
+--- s313.c
++++ s313.c
+@@ -28,6 +28,7 @@
+             memcpy(b_snap, b, LEN_1D * sizeof(real_t));
+         }
+         dot = (real_t)0.;
++        #pragma omp parallel for shared(a_snap,b_snap) reduction(+:dot) 
+         for (int i = 0; i < LEN_1D; i++) {
+             dot += a_snap[i] * b_snap[i];
+         }

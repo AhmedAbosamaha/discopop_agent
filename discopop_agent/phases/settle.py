@@ -22,7 +22,7 @@ from typing import Any, Dict, List, Tuple
 from .. import project as project_mod
 from ..args import AgentArguments
 from ..gate import validate
-from ..gate.tsan import _is_omp_barrier_false_positive
+from ..gate.tsan import barrier_artefact_possible
 from ..gate.timing import measure_marginal
 from ..llm import make_diff, normalize_code
 from .verdicts import _MARGINAL_NOISE
@@ -93,7 +93,7 @@ def _check_final_source(
         # would pass its own gate (which does re-check) and then be thrown away
         # by this one, so the run could never keep anything on this platform.
         if (not res.passed and res.stage == "tsan"
-                and _is_omp_barrier_false_positive(res.diagnostic, final_text)):
+                and barrier_artefact_possible(res.diagnostic, final_text)):
             print(f"  [note] TSan OMP-barrier false positive on the finished file "
                   f"— re-verifying on output instead")
             res = _run(True)

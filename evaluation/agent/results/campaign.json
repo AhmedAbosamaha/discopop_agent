@@ -261,10 +261,10 @@
    "id": "E12",
    "folder": "E12_stronger_models_alone",
    "kind": "experiment",
-   "status": "running",
+   "status": "done",
    "title": "E12 — a small model inside the pipeline against stronger models alone",
    "question": "Does the Haiku agent with DiscoPoP's evidence match or beat Opus 5.5 and Fable 5.1 used alone, and ship fewer unsafe programs? On ORDER-2 X, does a stronger model alone find the hidden order?",
-   "headline": "Stronger models alone match the Haiku agent on the real loops (s161 all faster; s424 Opus/Fable 5/5 correct vs agent 1/10, nobody faster), but on the hidden-order kernels only the agent with DiscoPoP's evidence is faster (10/10 vs 0 for Opus and Fable, Fisher p ≤ 0.0035), and only the agent ships no unsafe program (0 vs Opus 4, Fable 3 + 3 harness edits). N = 5 per strong-model cell.",
+   "headline": "On the two hidden-order kernels (ORDER-2 X and Y) only the Haiku agent with DiscoPoP's evidence is ever faster (20 of 20; Haiku, Sonnet, Opus and Fable alone 0 — correct but serial, or wrong); on the four real loops (s1213, s211, s424, s161) the strong models alone are as good as the agent or better; the agent ships no unsafe program on any. Every model alone on all six loops (N = 5 for the strong models, 10 for the agent).",
    "preregistered": "THESIS_EXPERIMENTS §6, 30 Sep, before any E12 trial"
   },
   {
@@ -274,7 +274,7 @@
    "status": "running",
    "title": "E1-final — the headline three-way comparison in the final version",
    "question": "On TSVC class R (with class A and D controls), prompt version 3, the fixed DiscoPoP, packaging v4: DiscoPoP alone vs the Haiku agent vs Haiku, Sonnet, Opus and Fable alone — who ships correct, race-free, faster programs, and who ships unusable ones?",
-   "headline": "",
+   "headline": "Class R, 90 trials each: DiscoPoP alone 0 race-free FASTER; the Haiku agent 65 (1 unusable — a racy program the gate's barrier heuristic excused, Fix 104); Haiku alone 40 (47 unusable); Sonnet 78 (9); Opus 89 (1); Fable 90 (0). H1 and H13-vs-Haiku rejected; reach and H13 against the strong models not — the strong models alone reach further. The claim narrows: the pipeline makes a small model safe and beats DiscoPoP alone, but does not out-reach a strong model alone on loops whose dependences are visible.",
    "preregistered": "THESIS_EXPERIMENTS §6, before the first main trial"
   },
   {
@@ -1378,8 +1378,8 @@
   "e1f_fix103_redo": {
    "group": "E1-final",
    "section": "runs",
-   "status": "valid",
-   "role": "E1-final agent trials redone on the fixed agent (Fix 103): every trial whose candidate the old harness rule (Fix 97) let through but the judge's rules refuse (a new pb_* line) — found by fix103's scan of every E1-final agent candidate when the agent runs ended; each from a copy of its own run's DiscoPoP profile; the superseded trials kept under <run>/_superseded_fix103/. Known so far: e1f_r_4 s331 rep4 (pb_mix(R - 1))"
+   "status": "invalid",
+   "role": "E1-final agent trials redone on the fixed agent (Fix 103): every trial whose candidate the old harness rule (Fix 97) let through but the judge's rules refuse (a new pb_* line) — found by fix103's scan of every E1-final agent candidate when the agent runs ended; each from a copy of its own run's DiscoPoP profile; the superseded trials kept under <run>/_superseded_fix103/. Known so far: e1f_r_4 s331 rep4 (pb_mix(R - 1)) — INVALID (3 Oct): the redos ran on a COPY of their run's DiscoPoP profile, whose FileMapping.txt kept the source run's absolute paths, so the agent found no region at all ('No hotspot regions found') and both trials ended no-change by infrastructure, not by the model. Redone on fresh profiles in e1f_fix103_redo2"
   },
   "t0_1_o3_sizes": {
    "group": "E2-O3",
@@ -1438,14 +1438,20 @@
   "e1f_race_check": {
    "group": "E1-final",
    "section": "checks",
-   "status": "registered",
+   "status": "valid",
    "role": "race_check.py (the gate's TSan with archer and the schedule matrix, server, no model) over every model-alone trial of E1-final (bare_llm_v3: Haiku, Sonnet, Opus, Fable × 105) and, as the positive control, the agent's FASTER programs of e1f_r_1-4; subdirectories per model and control"
   },
   "e12c_race_check": {
    "group": "E12",
    "section": "checks",
-   "status": "registered",
+   "status": "valid",
    "role": "race_check.py over E12's completion runs (e12_sonnet_v3, e12_sonnet_b1, e12_opus_v3b, e12_fable_v3b, e12_fable_redo), no model"
+  },
+  "e1f_fix103_redo2": {
+   "group": "E1-final",
+   "section": "runs",
+   "status": "valid",
+   "role": "E1-final: the two agent trials Fix 103 changes (e1f_a s313 rep1, e1f_r_4 s331 rep4) redone on the fixed agent, each benchmark freshly profiled in this run (a new DiscoPoP draw; B4 is fixed, so the verdicts repeat) — e1f_fix103_redo's profile copies were broken"
   }
  },
  "analysis": {

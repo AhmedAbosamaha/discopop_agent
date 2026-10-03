@@ -1,0 +1,10 @@
+--- s313.c
++++ s313.c
+@@ -24,6 +24,7 @@
+             memcpy(a_work, a, LEN_1D * sizeof(real_t));
+         }
+         dot = (real_t)0.;
++        #pragma omp parallel for shared(a_work) reduction(+:dot) 
+         for (int i = 0; i < LEN_1D; i++) {
+             dot += a_work[i] * b[i];
+         }

@@ -1,0 +1,20 @@
+--- s313.c
++++ s313.c
+@@ -17,11 +17,16 @@
+ {
+     real_t dot;
+     for (int nl = 0; nl < R; nl++) {
++        if (nl > 0) {
++            pb_mix(nl - 1);
++        }
+         dot = (real_t)0.;
+         for (int i = 0; i < LEN_1D; i++) {
+             dot += a[i] * b[i];
+         }
+-        pb_mix(nl);
++    }
++    if (R > 0) {
++        pb_mix(R - 1);
+     }
+     return dot;
+ }

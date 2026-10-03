@@ -42,7 +42,7 @@ from .schedules import (DEFAULT_REPEATS, DEFAULT_SCHEDULES, DEFAULT_THREADS,
                         stress_schedules, with_runtime_schedule)
 from .timing import SPEED_THRESHOLD_KEY, _measure_speedup, _run_timed, measure_marginal
 from .toolchain import _find_clangpp, uses_omp_runtime
-from .tsan import _is_omp_barrier_false_positive, _tsan
+from .tsan import _is_omp_barrier_false_positive, _tsan, barrier_artefact_possible
 
 
 def check_pragma_compiles(diff: str, source_file: str) -> Tuple[bool, str]:
@@ -538,7 +538,7 @@ def _validate_cached(
         # The source AND the patch: `nowait` or a task anywhere in the program
         # removes the barrier the heuristic reasons from, and it must then not
         # fire.  It used to be called without this, leaving that guard dead.
-        and _is_omp_barrier_false_positive(
+        and barrier_artefact_possible(
             res.diagnostic, _read_text(args.source_file) + "\n" + diff)
     )
     if barrier_fp:

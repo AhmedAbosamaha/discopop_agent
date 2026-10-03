@@ -301,9 +301,13 @@ def three_way(trials: List[dict], agent_arm: str, bare_arm: str = "bare_llm",
             fast = [t for t in valid if t.get("outcome") == "FASTER"]
 
             def race(t: dict) -> str:
+                key = (_run_of(t), str(t.get("benchmark")), str(arm), int(t.get("repeat") or 0))
                 if arm != bare_arm and not _model_only(arm):
-                    return "clean"                    # kept by the gate: TSan and the schedule matrix passed
-                return races.get((_run_of(t), str(t.get("benchmark")), str(arm), int(t.get("repeat") or 0)), "unchecked")
+                    # Kept by the gate: TSan and the schedule matrix passed — unless the race check of the gated
+                    # programs (the positive control) says otherwise: E1-final's s341 rep1, passed by the gate's
+                    # OpenMP-barrier heuristic and racy (record §6, 3 Oct), counts as racy, not as clean.
+                    return "clean" if races.get(key, "clean") in ("clean", "unchanged") else races[key]
+                return races.get(key, "unchecked")
             clean_fast = [t for t in fast if race(t) == "clean"]
             racy = [t for t in par if race(t) in RACE_STAGES]
             unjudged = [t for t in par if race(t) not in RACE_STAGES + ("clean", "unchecked")]
