@@ -1,0 +1,10 @@
+--- k19.c
++++ k19.c
+@@ -23,6 +23,7 @@
+          * gather/scatter below updates, so every value destined for v depends
+          * only on data this repetition does not modify.  Each iteration here
+          * writes only its own w[i]: no dependence between iterations. */
++        #pragma omp parallel for 
+         for (long i = 1; i < LEN_1D; i++) {
+             w[i] = u[ku[i]] * d[i] + c[i];
+         }

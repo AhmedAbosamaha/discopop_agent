@@ -2176,6 +2176,11 @@ Added 2026-09-29 (§6 row of that date):
 - **Setup.** Pre-registered §6 3 Oct; packages built on the server identical to the Mac's; T0.1 (node 0, idle server): all three at LARGE. Agent (`full_b1_nospeed_v3`, `no_evidence_b1_nospeed_v3`, Haiku × 10) and Haiku alone from 09:45 UTC; the session limit cut the subscription at 10:23 UTC (61 trials recorded failed calls: set aside under `<run>/_call_failed/`, re-run from 18:26 UTC); Sonnet, Opus, Fable alone × 5 after. 0 failed calls in every counted trial. Race check `e2o3_race_check`: all 31 agent programs clean. Fix 104 reached the server with the 18:30 UTC sync: 19 agent trials ran before it and 41 after; the OpenMP-barrier heuristic fired in none of the 60 (no TSan report was excused), so both versions behaved identically.
 - **Result:** §6 3 Oct (E2-O3 read out); `results/E02o3_hidden_order_kernels/stats/`.
 
+### `p_fable_k19`, `pilots_race_check` — 2026-10-03/04, server, **the Fable pilot** (3 trials) and the race check of both pilots' programs
+
+- **Setup.** Commit `74d93286`; `full_b1_nospeed_v3`, `tsvc_b1/k19` × 3, Fable 5.1; 23:10 → 23:54 UTC, after `p_opus_k19` (never at once); profile: no Do-All.
+- **Result:** §6 4 Oct (the Fable pilot read).
+
 ### `p_opus_k19` — 2026-10-03/04, server, **the Opus pilot redone on a right profile** (3 trials)
 
 - **Setup.** Commit `fb7b8eb7` (B17 fixed, the runtime rebuilt on the server); `full_b1_nospeed_v3`, `tsvc_b1/k19` × 3, Opus 5.5; 21:58 → 23:10 UTC; the run's profile: 125 dependence lines, no Do-All; sweep clean.

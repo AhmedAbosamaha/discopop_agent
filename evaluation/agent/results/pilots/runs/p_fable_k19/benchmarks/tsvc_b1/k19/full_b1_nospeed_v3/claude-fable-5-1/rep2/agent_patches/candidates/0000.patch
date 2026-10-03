@@ -1,0 +1,82 @@
+--- k19.c
++++ k19.c
+@@ -14,13 +14,76 @@
+ 
+ static real_t kernel_k19(void)
+ {
++    const long n = LEN_1D;
++
++    /* Inspector: the index arrays ju/jv/ku/kv never change, so compute once
++     * a level for every iteration i such that any two iterations that touch
++     * a common element of u or v (with at least one write) sit on strictly
++     * increasing levels in original program order.  Iterations on the same
++     * level are mutually independent. */
++    int  *lev   = (int  *)malloc(sizeof(int)  * (size_t)n);
++    int  *lastWu = (int *)malloc(sizeof(int)  * (size_t)n);
++    int  *lastRu = (int *)malloc(sizeof(int)  * (size_t)n);
++    int  *lastWv = (int *)malloc(sizeof(int)  * (size_t)n);
++    int  *lastRv = (int *)malloc(sizeof(int)  * (size_t)n);
++    long *order = (long *)malloc(sizeof(long) * (size_t)n);
++
++    for (long j = 0; j < n; j++) {
++        lastWu[j] = -1; lastRu[j] = -1; lastWv[j] = -1; lastRv[j] = -1;
++    }
++
++    int nlev = 0;
++    for (long i = 1; i < n; i++) {
++        long wu = ju[i];   /* u[wu] read-modify-written (line 19) */
++        long rv = kv[i];   /* v[rv] read                 (line 19) */
++        long wv = jv[i];   /* v[wv] written              (line 20) */
++        long ru = ku[i];   /* u[ru] read                 (line 20) */
++        int l = lastWu[wu];
++        if (lastRu[wu] > l) l = lastRu[wu];
++        if (lastWv[rv] > l) l = lastWv[rv];
++        if (lastWv[wv] > l) l = lastWv[wv];
++        if (lastRv[wv] > l) l = lastRv[wv];
++        if (lastWu[ru] > l) l = lastWu[ru];
++        l += 1;
++        lev[i] = l;
++        if (l + 1 > nlev) nlev = l + 1;
++        lastWu[wu] = l;
++        if (lastRu[wu] < l) lastRu[wu] = l;
++        if (lastRv[rv] < l) lastRv[rv] = l;
++        lastWv[wv] = l;
++        if (lastRu[ru] < l) lastRu[ru] = l;
++    }
++
++    /* Bucket the iterations by level: level l occupies order[start[l] .. start[l+1]) */
++    long *start = (long *)malloc(sizeof(long) * (size_t)(nlev + 1));
++    long *pos   = (long *)malloc(sizeof(long) * (size_t)(nlev + 1));
++    for (int l = 0; l <= nlev; l++) start[l] = 0;
++    for (long i = 1; i < n; i++) start[lev[i] + 1] += 1;
++    for (int l = 0; l < nlev; l++) start[l + 1] += start[l];
++    for (int l = 0; l <= nlev; l++) pos[l] = start[l];
++    for (long i = 1; i < n; i++) {
++        order[pos[lev[i]]] = i;
++        pos[lev[i]] += 1;
++    }
++
++    free(lev); free(lastWu); free(lastRu); free(lastWv); free(lastRv); free(pos);
++
+     for (int nl = 0; nl < R; nl++) {
+-        for (long i = 1; i < LEN_1D; i++) {
+-            u[ju[i]] += v[kv[i]] * c[i];
+-            v[jv[i]] = u[ku[i]] * d[i] + c[i];
++        /* Executor: levels in order; iterations within one level are independent. */
++        for (int l = 0; l < nlev; l++) {
++            const long kb = start[l];
++            const long ke = start[l + 1];
++            for (long k = kb; k < ke; k++) {
++                long i = order[k];
++                u[ju[i]] += v[kv[i]] * c[i];
++                v[jv[i]] = u[ku[i]] * d[i] + c[i];
++            }
+         }
+         pb_mix(nl);
+     }
++
++    free(start);
++    free(order);
+     return (real_t)0;
+ }
+ 

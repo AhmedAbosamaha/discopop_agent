@@ -11,7 +11,7 @@ The first agent runs; they decided D9 (the E1 model) and exposed the defects fix
 ## What is in this folder
 
 - [`exhibits/`](exhibits/) — 3 case studies, below
-- [`runs/`](runs/) — 9 archived run(s): the evidence
+- [`runs/`](runs/) — 10 archived run(s): the evidence
 - [`superseded/`](superseded/) — 1 run(s) a later one replaced
 
 ## Runs
@@ -28,7 +28,8 @@ The first agent runs; they decided D9 (the E1 model) and exposed the defects fix
 | `pilot_opus_agent_k19` | [`runs/pilot_opus_agent_k19/`](runs/pilot_opus_agent_k19/) | Pilot (§6 3 Oct): the agent with Opus 5.5 (full_b1_nospeed_v3) on tsvc_b1/k19 × 3 — does the pipeline with evidence make a strong model find the hidden order (Opus alone 0/5 FASTER, E12)? GO if ≥ 2 of 3 race-free FASTER — read 3 Oct: NO-GO as designed (2 of 3 finished BROKEN: Opus inside the agent ignored the evidence's split order and wrote a run-time level-by-level scheduler, correct at the agent size and unfinished at the verification size; the speed check was off) — INVALID (3 Oct): the run's DiscoPoP profile of k19 was wrong (B17: 59 dependence lines for 125, two false Do-Alls), the region was re-queued and the model never saw the order statement; redone as p_opus_k19 | invalid | 3 | BROKEN 3 |
 | `pilot_opus_agent_k19_speed` | [`runs/pilot_opus_agent_k19_speed/`](runs/pilot_opus_agent_k19_speed/) | Pilot 2 (§6 3 Oct, the author: "ok"): the agent with Opus 5.5 in its normal setting, default_v3 (speed check ON at the timing size, budget 3, evidence, prompt v3), on tsvc_b1/k19 × 3 — can the pipeline steer a strong model to the evidence's split when its own slow scheduler is rejected? Same GO criterion (≥ 2 of 3 race-free FASTER) — INVALID (3 Oct): the run's DiscoPoP profile of k19 was wrong (B17: 59 dependence lines for 125, two false Do-Alls), the region was re-queued and the model never saw the order statement; redone as p_opus_k19 | invalid | 3 | no-change 3 |
 | `p_opus_k19` | [`runs/p_opus_k19/`](runs/p_opus_k19/) | Pilot redone after B17's fix (§6 3 Oct, the author: "ok"): the agent with Opus 5.5, full_b1_nospeed_v3 (the Haiku and Sonnet agents' arm on k19), tsvc_b1/k19 × 3; the profile checked first (125 dependence lines, no Do-All); GO if ≥ 2 of 3 race-free FASTER (Opus alone 0/5) — read 4 Oct: NO-GO, 0 of 3 FASTER (2 BROKEN at scale, 1 parallel-not-faster); the order statement was shown in every request | valid | 3 | BROKEN 2, parallel-not-faster 1 |
-| `p_fable_k19` | not archived yet | Pilot (§6 4 Oct, the author: "start with fable afterwards"): the agent with Fable 5.1, full_b1_nospeed_v3, tsvc_b1/k19 × 3 — does Fable inside the agent follow the evidence's split order? (Fable alone 5/5 correct, 0 FASTER, E12) | registered |  |  |
+| `p_fable_k19` | [`runs/p_fable_k19/`](runs/p_fable_k19/) | Pilot (§6 4 Oct, the author: "start with fable afterwards"): the agent with Fable 5.1, full_b1_nospeed_v3, tsvc_b1/k19 × 3 — does Fable inside the agent follow the evidence's split order? (Fable alone 5/5 correct, 0 FASTER, E12) | valid | 3 | BROKEN 1, FASTER 2 |
+| `pilots_race_check` | not archived yet | race_check.py over the parallel programs of the Opus and Fable agent pilots (p_opus_k19, p_fable_k19; full_b1_nospeed_v3), no model | registered |  |  |
 
 ## Exhibits
 
@@ -40,6 +41,11 @@ The first agent runs; they decided D9 (the E1 model) and exposed the defects fix
   no DiscoPoP-alone trial to pair with · polybench/trisolv, `full`, pilot4 rep 1 · pictures: `before_after.png`, `console.png`
 
 ## From the experiment record (§7 run log)
+
+### `p_fable_k19`, `pilots_race_check` — 2026-10-03/04, server, **the Fable pilot** (3 trials) and the race check of both pilots' programs
+
+- **Setup.** Commit `74d93286`; `full_b1_nospeed_v3`, `tsvc_b1/k19` × 3, Fable 5.1; 23:10 → 23:54 UTC, after `p_opus_k19` (never at once); profile: no Do-All.
+- **Result:** §6 4 Oct (the Fable pilot read).
 
 ### `p_opus_k19` — 2026-10-03/04, server, **the Opus pilot redone on a right profile** (3 trials)
 

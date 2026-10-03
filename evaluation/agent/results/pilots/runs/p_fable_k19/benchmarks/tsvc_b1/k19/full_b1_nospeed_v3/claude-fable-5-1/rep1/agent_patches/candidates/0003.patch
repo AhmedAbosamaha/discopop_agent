@@ -1,0 +1,18 @@
+--- k19.c
++++ k19.c
+@@ -37,6 +37,7 @@
+ 
+     for (int nl = 0; nl < R; nl++) {
+         /* value each iteration would store into v (u[ku[i]] is never written here) */
++        #pragma omp parallel for shared(w) 
+         for (long i = 1; i < LEN_1D; i++) {
+             w[i] = u[ku[i]] * d[i] + c[i];
+         }
+@@ -47,6 +48,7 @@
+             u[ju[i]] += vi * c[i];
+         }
+         /* final v: only the last store to each element survives */
++        #pragma omp parallel for shared(lw,w) 
+         for (long i = 1; i < LEN_1D; i++) {
+             if (lw[jv[i]] == i) {
+                 v[jv[i]] = w[i];

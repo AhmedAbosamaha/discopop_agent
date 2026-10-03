@@ -1,0 +1,10 @@
+--- k19.c
++++ k19.c
+@@ -47,6 +47,7 @@
+             u[ju[i]] += vi * c[i];
+         }
+         /* final v: only the last store to each element survives */
++        #pragma omp parallel for shared(lw,w) 
+         for (long i = 1; i < LEN_1D; i++) {
+             if (lw[jv[i]] == i) {
+                 v[jv[i]] = w[i];
