@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s112.c
+  Model          : claude-fable-5-1
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-fable-5-1...
+│  [bare] s112.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: The rewrite is applied. **What changed:** - The backward recurrence `a[i+1] = a[i] + b[i]` carried only an anti-dependence (each read of `a[i]` had to see the value from *before* the loop). It is split into two independent passes using a once-allocated heap buffer `s112_tmp` (sized `LEN_1D`, so it is safe at 192M elements): 1. `tmp[i] = a[i] + b[i]` for `i ∈ [0, LEN_1D-1)` — reads only, every iter
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

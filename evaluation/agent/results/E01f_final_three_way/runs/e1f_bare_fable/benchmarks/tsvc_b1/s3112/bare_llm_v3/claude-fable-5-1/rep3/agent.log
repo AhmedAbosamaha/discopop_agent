@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s3112.c
+  Model          : claude-fable-5-1
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-fable-5-1...
+│  [bare] s3112.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: The rewrite is applied. **Summary of what changed in `s3112.c`:** - The sequential prefix-sum loop is replaced by a two-pass block scan over at most 512 contiguous blocks (`nb = min(LEN_1D, 512)`), with the block-sum scratch `bs[512]` a constant-size local array. - **Pass 1** (`#pragma omp parallel for schedule(static) shared(a, bs, nb)`): each block independently sums its range of `a[]` from zero
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

@@ -1,0 +1,17 @@
+--- original.c
++++ final.c
+@@ -18,9 +18,12 @@
+     real_t x;
+     for (int nl = 0; nl < R; nl++) {
+         x = b[LEN_1D-1];
++        /* x at iteration i is b[i-1] (b[LEN_1D-1] for i==0); b is not written here,
++         * so the carried scalar is replaced by a direct read of b. */
++#pragma omp parallel for default(none) shared(a, b) firstprivate(x) schedule(static)
+         for (int i = 0; i < LEN_1D; i++) {
+-            a[i] = (b[i] + x) * (real_t).5;
+-            x = b[i];
++            real_t prev = (i == 0) ? x : b[i-1];
++            a[i] = (b[i] + prev) * (real_t).5;
+         }
+         pb_mix(nl);
+     }

@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s241.c
+  Model          : claude-fable-5-1
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-fable-5-1...
+│  [bare] s241.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Done — the rewrite is applied to `s241.c`. **Summary of what changed:** - The anti-dependence on `a[i+1]` (old value read by iteration `i`, overwritten by iteration `i+1`) is broken by staging the new `a` values in a heap-allocated `tmp` buffer (allocated once before the `nl` loop, freed after). - Loop 1 (parallel, `shared(a,b,c,d,tmp)`): computes `an = b[i]*c[i]*d[i]` (identical rounding to the o
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

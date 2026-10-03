@@ -1,0 +1,22 @@
+--- original.c
++++ final.c
+@@ -16,10 +16,18 @@
+ static real_t kernel_s244(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        /* The original writes a[i+1] at the end of iteration i, but iteration i+1
++         * immediately overwrites it; only the last such write (a[LEN_1D-1]) survives.
++         * Every iteration below touches only its own a[i], b[i], c[i], d[i]. */
++#pragma omp parallel for shared(a, b, c, d)
+         for (int i = 0; i < LEN_1D-1; ++i) {
+             a[i] = b[i] + c[i] * d[i];
+             b[i] = c[i] + b[i];
+-            a[i+1] = b[i] + a[i+1] * d[i];
++        }
++        /* The one surviving a[i+1] update, from the last iteration (i = LEN_1D-2),
++         * using the already-updated b[LEN_1D-2] and the untouched a[LEN_1D-1]. */
++        if (LEN_1D > 1) {
++            a[LEN_1D-1] = b[LEN_1D-2] + a[LEN_1D-1] * d[LEN_1D-2];
+         }
+         pb_mix(nl);
+     }

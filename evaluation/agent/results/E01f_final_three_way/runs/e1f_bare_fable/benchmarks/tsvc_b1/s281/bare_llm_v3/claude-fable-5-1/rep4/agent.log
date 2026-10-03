@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s281.c
+  Model          : claude-fable-5-1
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-fable-5-1...
+│  [bare] s281.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: The rewrite is applied. Summary of what changed in `s281.c`: - The single sweep over `i` was split at `half = (LEN_1D+1)/2` into two loops, each carrying `#pragma omp parallel for private(x) schedule(static)`. - The forward dependence (first-half writes to `a[j]` feeding second-half reads of `a[LEN_1D-1-i]`) is preserved by loop ordering: loop 1 completes before loop 2 starts, rather than being re
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

@@ -1,0 +1,75 @@
+/* TSVC-2 loop s321, from TSVC-2 src/tsvc.c (sha256 456dd573b84b; University of Illinois licence,
+ * see benchmarks/TSVC_2/license.txt). */
+#include "tsvc_b1/s321.h"
+
+/* Between two repetitions a few INPUT elements change, so no repetition can be skipped,
+ * merged with another or run out of order: the repetition loop is sequential by a true
+ * dependence, and the loop under study is the one inside it. */
+static void pb_mix(int nl)
+{
+  long k = ((long)nl * 7919L + 13L) % LEN_1D;
+  a[k] += (real_t)0.25; b[k] += (real_t)0.25; c[k] += (real_t)0.125;
+  d[k] += (real_t)0.125; e[k] += (real_t)0.25;
+  a[0] += (real_t)0.125; b[LEN_1D-1] += (real_t)0.125;
+}
+
+/* Number of chunks of the chunked scan.  Fixed (independent of the thread count and the
+ * schedule) so that the partition, and therefore the result, is identical in every run. */
+#define S321_NCH 256
+
+static real_t kernel_s321(void)
+{
+    const long n = LEN_1D;
+    const long m = n - 1;                 /* elements 1 .. n-1 are updated */
+    long nch = S321_NCH;
+    if (m < nch) nch = m;
+
+    for (int nl = 0; nl < R; nl++) {
+        if (m > 0) {
+            const long csz     = (m + nch - 1) / nch;      /* chunk size            */
+            const long nchunks = (m + csz - 1) / csz;      /* number of chunks used */
+            real_t loc[S321_NCH];    /* end value of chunk with carry-in 0 */
+            real_t prod[S321_NCH];   /* product of b over the chunk        */
+            real_t carry[S321_NCH];  /* exact-order carry-in of each chunk */
+
+            /* Pass 1: each chunk as an affine map of its carry-in: end = loc + carry*prod. */
+            #pragma omp parallel for schedule(static) shared(loc, prod) firstprivate(csz, nchunks, n)
+            for (long k = 0; k < nchunks; k++) {
+                long s = 1 + k * csz;
+                long e = s + csz;
+                if (e > n) e = n;
+                real_t x = (real_t)0;
+                real_t p = (real_t)1;
+                for (long i = s; i < e; i++) {
+                    x = a[i] + x * b[i];
+                    p = p * b[i];
+                }
+                loc[k]  = x;
+                prod[k] = p;
+            }
+
+            /* Pass 2 (sequential, nchunks steps): propagate the carry across chunks. */
+            carry[0] = a[0];
+            for (long k = 1; k < nchunks; k++) {
+                carry[k] = loc[k-1] + carry[k-1] * prod[k-1];
+            }
+
+            /* Pass 3: each chunk runs the original recurrence from its own carry-in. */
+            #pragma omp parallel for schedule(static) shared(carry) firstprivate(csz, nchunks, n)
+            for (long k = 0; k < nchunks; k++) {
+                long s = 1 + k * csz;
+                long e = s + csz;
+                if (e > n) e = n;
+                real_t x = carry[k];
+                for (long i = s; i < e; i++) {
+                    a[i] = a[i] + x * b[i];
+                    x = a[i];
+                }
+            }
+        }
+        pb_mix(nl);
+    }
+    return (real_t)0;
+}
+
+PB_MAIN(kernel_s321)

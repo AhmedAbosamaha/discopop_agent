@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s212.c
+  Model          : claude-fable-5-1
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-fable-5-1...
+│  [bare] s212.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Done. Summary of the rewrite in `s212.c`: - **Dependence removed:** the original loop's only cross-iteration hazard was an anti-dependence — iteration `i` reads `a[i+1]` before iteration `i+1` overwrites it. That's a location reuse, not a value flowing between iterations, so it's eliminated by splitting the body into two passes over the same range: first `b[i] += a[i+1]*d[i]` for all `i` (reads on
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

@@ -1,0 +1,23 @@
+--- original.c
++++ final.c
+@@ -18,12 +18,16 @@
+     int j;
+     for (int nl = 0; nl < R; nl++) {
+         j = -1;
++        /* The induction variable j is 2*i / 2*i+1 in closed form, so each
++         * iteration owns a[2i] and a[2i+1] exclusively; b,c,d,e are read-only. */
++#pragma omp parallel for shared(a, b, c, d, e) schedule(static)
+         for (int i = 0; i < LEN_1D/2; i++) {
+-            j++;
+-            a[j] = b[i] + c[i] * d[i];
+-            j++;
+-            a[j] = b[i] + d[i] * e[i];
++            int j0 = 2 * i;
++            a[j0] = b[i] + c[i] * d[i];
++            a[j0 + 1] = b[i] + d[i] * e[i];
+         }
++        /* Restore j to the value the sequential loop left behind. */
++        if (LEN_1D/2 > 0) j = 2 * (LEN_1D/2) - 1;
+         pb_mix(nl);
+     }
+     return (real_t)0;

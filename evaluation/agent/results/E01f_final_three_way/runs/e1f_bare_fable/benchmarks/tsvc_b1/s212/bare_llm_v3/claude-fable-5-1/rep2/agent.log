@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s212.c
+  Model          : claude-fable-5-1
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-fable-5-1...
+│  [bare] s212.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: The rewrite is applied in `s212.c`. **What was blocking it:** iteration `i` reads `a[i+1]` *before* iteration `i+1` executes `a[i+1] *= c[i+1]` — an anti-dependence (old value flowing backward), not a true forward value flow. **How it was removed:** the loop is split into two passes in the right order so the dependence is preserved, not deleted: 1. `b[i] += a[i+1] * d[i]` for all `i` — consumes ev
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

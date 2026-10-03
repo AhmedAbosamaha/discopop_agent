@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s1213.c
+  Model          : claude-fable-5-1
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-fable-5-1...
+│  [bare] s1213.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: The rewrite is applied. Summary of what changed in `s1213.c`: - The single `i` loop was split into two `#pragma omp parallel for` loops over the same range `1..LEN_1D-2`: 1. `b[i] = a[i+1]*d[i]` — reads only the old `a` (no one has written `a` yet in this repetition), writes distinct `b[i]`. 2. `a[i] = b[i-1]+c[i]` — reads `b[i-1]` after pass 1 has fully completed (for `i=1` that is the untouched 
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

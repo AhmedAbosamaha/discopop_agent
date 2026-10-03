@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s321.c
+  Model          : claude-fable-5-1
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-fable-5-1...
+│  [bare] s321.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: The rewrite is applied in `s321.c`. Summary of what changed: - The serial recurrence `a[i] += a[i-1]*b[i]` (a true loop-carried value dependence) is replaced by a three-pass chunked scan over a fixed 256-chunk partition of indices `1..LEN_1D-1`. - Pass 1 (`#pragma omp parallel for`, chunks independent): computes each chunk's local end value `loc[k]` (carry-in 0) and its `b`-product `prod[k]`. - Pa
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

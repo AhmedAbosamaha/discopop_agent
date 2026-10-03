@@ -1,0 +1,22 @@
+--- original.c
++++ final.c
+@@ -16,9 +16,18 @@
+ static real_t kernel_s1213(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        /* Loop fission.  Original iteration i reads the OLD a[i+1] (anti-dependence)
++         * and the NEW b[i-1] written by iteration i-1 (flow dependence).
++         * Pass 1 computes every b[i] from the untouched old a, then pass 2
++         * computes every a[i] from the finished b, so both passes have
++         * independent iterations and reproduce the original values exactly. */
++#pragma omp parallel for shared(a, b, d)
++        for (int i = 1; i < LEN_1D-1; i++) {
++            b[i] = a[i+1]*d[i];
++        }
++#pragma omp parallel for shared(a, b, c)
+         for (int i = 1; i < LEN_1D-1; i++) {
+             a[i] = b[i-1]+c[i];
+-            b[i] = a[i+1]*d[i];
+         }
+         pb_mix(nl);
+     }

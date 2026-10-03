@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s127.c
+  Model          : claude-fable-5-1
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-fable-5-1...
+│  [bare] s127.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Done. Summary of the rewrite in `s127.c`: - **Dependence removed:** the wrap-around induction variable `j` (incremented twice per iteration) was the only loop-carried value. It equals `2*i` / `2*i+1` in iteration `i`, so it is replaced by a body-local `jj = 2*i`. Each iteration now writes `a[2i]` and `a[2i+1]` only, and reads `b,c,d,e` — disjoint stores, no reads of `a`, hence no cross-iteration d
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

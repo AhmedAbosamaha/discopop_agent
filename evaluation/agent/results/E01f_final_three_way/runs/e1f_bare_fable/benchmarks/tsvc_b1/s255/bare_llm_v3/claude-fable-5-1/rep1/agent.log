@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s255.c
+  Model          : claude-fable-5-1
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-fable-5-1...
+│  [bare] s255.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: The rewrite is applied. Summary of what changed in `s255.c`: - **Dependence removed**: `x` and `y` were a sliding window over `b` (`x = b[i-1]`, `y = b[i-2]`), not values genuinely produced by earlier iterations. Since `b` is read-only inside the loop, iteration `i` now reads `b[i-1]` and `b[i-2]` directly. - **Re-derived boundary**: the first two iterations wrap around (`i=0` uses `b[LEN_1D-1], b
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

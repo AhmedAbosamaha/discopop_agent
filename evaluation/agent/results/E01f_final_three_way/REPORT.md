@@ -10,7 +10,7 @@ On TSVC class R (with class A and D controls), prompt version 3, the fixed Disco
 
 ## What is in this folder
 
-- [`runs/`](runs/) — 10 archived run(s): the evidence
+- [`runs/`](runs/) — 11 archived run(s): the evidence
 - [`preflight/`](preflight/) — 2 smoke run(s) before the launch
 
 ## Runs
@@ -28,7 +28,7 @@ On TSVC class R (with class A and D controls), prompt version 3, the fixed Disco
 | `e1f_bare_haiku` | [`runs/e1f_bare_haiku/`](runs/e1f_bare_haiku/) | E1-final the model alone: bare_llm_v3 with claude-haiku-4-5-20251001 on class R × 5, A × 1, D × 3 (one run per model) | valid | 105 | BROKEN 24, FASTER 45, VERIFY_FAILED 8, changed-not-parallel 2, no-change 2, parallel-not-faster 24 |
 | `e1f_bare_sonnet` | [`runs/e1f_bare_sonnet/`](runs/e1f_bare_sonnet/) | E1-final the model alone: bare_llm_v3 with claude-sonnet-5 on class R × 5, A × 1, D × 3 (one run per model) | valid | 105 | BROKEN 2, FASTER 91, parallel-not-faster 12 |
 | `e1f_bare_opus` | [`runs/e1f_bare_opus/`](runs/e1f_bare_opus/) | E1-final the model alone: bare_llm_v3 with claude-opus-5-5 on class R × 5, A × 1, D × 3 (one run per model) | valid | 105 | FASTER 101, VERIFY_FAILED 1, parallel-not-faster 3 |
-| `e1f_bare_fable` | not archived yet | E1-final the model alone: bare_llm_v3 with claude-fable-5-1 on class R × 5, A × 1, D × 3 (one run per model) | registered |  |  |
+| `e1f_bare_fable` | [`runs/e1f_bare_fable/`](runs/e1f_bare_fable/) | E1-final the model alone: bare_llm_v3 with claude-fable-5-1 on class R × 5, A × 1, D × 3 (one run per model) | valid | 105 | FASTER 103, parallel-not-faster 2 |
 | `e1f_fix103_redo` | [`runs/e1f_fix103_redo/`](runs/e1f_fix103_redo/) | E1-final agent trials redone on the fixed agent (Fix 103): every trial whose candidate the old harness rule (Fix 97) let through but the judge's rules refuse (a new pb_* line) — found by fix103's scan of every E1-final agent candidate when the agent runs ended; each from a copy of its own run's DiscoPoP profile; the superseded trials kept under <run>/_superseded_fix103/. Known so far: e1f_r_4 s331 rep4 (pb_mix(R - 1)) | valid | 2 | no-change 2 |
 
 ## From the experiment record (§7 run log)

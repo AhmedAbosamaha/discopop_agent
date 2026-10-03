@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s313.c
+  Model          : claude-fable-5-1
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-fable-5-1...
+│  [bare] s313.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: I'll add `<stdlib.h>` for `malloc`/`free`, placed after the measurement include (which stays exactly where it is).The rewrite is applied. **What changed in `s313.c`:** - The dot-product accumulator `dot` (the only loop-carried dependence) is turned into a blocked reduction: the `i` range is split into fixed 256-element blocks, the `#pragma omp parallel for` runs over blocks with `shared(a, b, part
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

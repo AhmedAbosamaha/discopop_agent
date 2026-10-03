@@ -1,0 +1,19 @@
+--- original.c
++++ final.c
+@@ -19,9 +19,15 @@
+     real_t chksum;
+     for (int nl = 0; nl < R; nl++) {
+         j = -1;
++        /* Last index with a[i] < 0 == max over such i: an order-independent
++         * max-reduction.  The i > j guard makes the per-thread partial correct
++         * even when chunks reach a thread out of index order. */
++        #pragma omp parallel for default(none) shared(a) reduction(max:j) schedule(static)
+         for (int i = 0; i < LEN_1D; i++) {
+             if (a[i] < (real_t)0.) {
+-                j = i;
++                if (i > j) {
++                    j = i;
++                }
+             }
+         }
+         chksum = (real_t) j;

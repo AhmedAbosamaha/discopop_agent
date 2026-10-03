@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s331.c
+  Model          : claude-fable-5-1
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-fable-5-1...
+│  [bare] s331.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Done. Summary of the rewrite in `s331.c`: - **Dependence removed:** the only cross-iteration carrier was `j`, overwritten by each matching iteration so the last match in index order wins. Since indices are non-negative and the initial value is `-1`, "last match" ≡ `max` over matching indices, which is order-independent. The loop now carries `#pragma omp parallel for shared(a) reduction(max:j)`. - 
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

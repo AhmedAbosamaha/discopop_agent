@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s212.c
+  Model          : claude-fable-5-1
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-fable-5-1...
+│  [bare] s212.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: The rewrite is applied in `s212.c`. **What changed and why** - **Dependence removed:** the original single loop had an anti-dependence — iteration `i` reads `a[i+1]` *before* iteration `i+1` overwrites it with `a[i+1]*c[i+1]`. Run in arbitrary order, a thread could scale `a[i+1]` first and the `b[i]` update would see the new value. It's a location-reuse hazard, not a value flowing between iteratio
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

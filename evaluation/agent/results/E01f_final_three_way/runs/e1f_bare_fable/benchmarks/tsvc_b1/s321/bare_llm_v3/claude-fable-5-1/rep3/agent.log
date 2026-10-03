@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s321.c
+  Model          : claude-fable-5-1
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-fable-5-1...
+│  [bare] s321.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: The rewrite is applied to `s321.c`. **Summary of what changed** - The loop `a[i] += a[i-1] * b[i]` carried a true value dependence (first-order linear recurrence). Rather than deleting it, it is moved: the work is split into ≤256 blocks over `[1, LEN_1D)`. - **Parallel region** (`#pragma omp parallel for schedule(static) shared(a, b, aold, g, n, nb, cs)`): each block runs the recurrence serially f
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

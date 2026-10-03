@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s291.c
+  Model          : claude-fable-5-1
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-fable-5-1...
+│  [bare] s291.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Done. Summary of the rewrite in `s291.c`: - **Dependence removed:** `im1` was carried from one iteration to the next, but it only ever holds the previous index — `i-1`, with `LEN_1D-1` on the first iteration (wrap-around). It is an induction variable, not a value produced by prior computation, so it is now computed directly from `i` inside the body (`int im1 = (i == 0) ? LEN_1D-1 : i-1;`). Being d
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

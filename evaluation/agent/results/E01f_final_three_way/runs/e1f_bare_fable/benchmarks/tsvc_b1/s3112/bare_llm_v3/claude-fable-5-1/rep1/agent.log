@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s3112.c
+  Model          : claude-fable-5-1
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-fable-5-1...
+│  [bare] s3112.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: The rewrite is applied in `s3112.c`. **Summary of what changed** - The sequential prefix scan `sum += a[i]; b[i] = sum;` is now a three-pass blocked scan with a fixed block length of 1024 elements: 1. `#pragma omp parallel for` over blocks: each block sums its slice of `a` into heap-allocated `bsum[blk]`. 2. Sequential exclusive prefix over `bsum` (only `LEN_1D/1024` entries — the carried dependen
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

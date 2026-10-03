@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s244.c
+  Model          : claude-fable-5-1
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-fable-5-1...
+│  [bare] s244.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Done. Summary of the rewrite in `s244.c`: - **Dependence removed:** the original iteration i wrote `a[i+1]`, but iteration i+1 overwrote that same element without reading it, so the write was dead everywhere except the final iteration. That is a reused location, not a value carried between iterations. - **Parallel loop:** `#pragma omp parallel for shared(a, b, c, d) schedule(static)` over `i in [0
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

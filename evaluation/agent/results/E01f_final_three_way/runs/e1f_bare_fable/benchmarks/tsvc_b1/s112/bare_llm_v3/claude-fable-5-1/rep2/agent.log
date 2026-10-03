@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s112.c
+  Model          : claude-fable-5-1
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-fable-5-1...
+│  [bare] s112.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Done. Summary of the rewrite in `s112.c`: - **Dependence removed:** the backward loop `a[i+1] = a[i] + b[i]` only carried an *anti*-dependence (iteration `i-1` overwrites the location `a[i]` that iteration `i` had just read); no value flows between iterations — each result is `old_a[i] + b[i]`. I snapshot `a[0..LEN_1D-2]` into a heap buffer `old_a` (one `malloc` before the `nl` loop, `free` after 
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

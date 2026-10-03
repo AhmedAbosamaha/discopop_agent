@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s3112.c
+  Model          : claude-fable-5-1
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-fable-5-1...
+│  [bare] s3112.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: The rewrite is applied. Summary of what changed in `s3112.c`: - **Dependence removed:** the loop-carried `sum` (a true value flowing from iteration i-1 to i) is replaced by a chunked two-pass scan with a fixed `S3112_NCHUNK = 256` chunks, so the arithmetic performed is identical at every thread count and schedule. - **Pass 1** (`#pragma omp parallel for`, `shared(a, csum)`, `firstprivate(chunk)`):
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

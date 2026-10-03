@@ -1,0 +1,20 @@
+--- original.c
++++ final.c
+@@ -17,10 +17,14 @@
+ {
+     real_t x;
+     for (int nl = 0; nl < R; nl++) {
++        /* Iteration 0 uses the wraparound value b[LEN_1D-1]; peel it. */
+         x = b[LEN_1D-1];
+-        for (int i = 0; i < LEN_1D; i++) {
+-            a[i] = (b[i] + x) * (real_t).5;
+-            x = b[i];
++        a[0] = (b[0] + x) * (real_t).5;
++        /* For i >= 1 the carried scalar x is exactly b[i-1]; b is read-only here,
++         * so every iteration is independent. */
++#pragma omp parallel for default(none) shared(a, b) schedule(static)
++        for (int i = 1; i < LEN_1D; i++) {
++            a[i] = (b[i] + b[i-1]) * (real_t).5;
+         }
+         pb_mix(nl);
+     }

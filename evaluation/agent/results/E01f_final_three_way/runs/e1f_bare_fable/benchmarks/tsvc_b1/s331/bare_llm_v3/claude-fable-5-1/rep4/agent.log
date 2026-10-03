@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s331.c
+  Model          : claude-fable-5-1
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-fable-5-1...
+│  [bare] s331.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Done. The rewrite is applied in `s331.c`: - The inner search loop now carries `#pragma omp parallel for default(none) shared(a) reduction(max:j)`. - The dependence removed is the scalar `j`, which the original overwrote on every iteration with `a[i] < 0`; since the last write in sequential order is the largest such `i`, this is exactly a max-reduction. `j = -1` before the loop is retained as the i
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

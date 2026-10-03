@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s341.c
+  Model          : claude-fable-5-1
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-fable-5-1...
+│  [bare] s341.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: The rewrite is applied in `s341.c`. **What changed and why it is safe:** - **Dependence removed:** the carried counter `j` (a true value dependence) is replaced by per-chunk counts plus a serial exclusive scan, so each chunk knows its starting output index before any write happens. - **Pass 1** (`#pragma omp parallel for`, 1024 chunks): each iteration writes only `cnt[c]`; `lo/hi/n` are declared i
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s254.c
+  Model          : claude-fable-5-1
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-fable-5-1...
+│  [bare] s254.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Done. Summary of the rewrite in `s254.c`: - **Dependence removed:** the loop-carried scalar `x` was just a copy of the previous iteration's `b[i-1]` (a value moving between iterations, but one fully determined by the index). It is replaced by a direct read of `b[i-1]`, making every iteration independent. - **Re-derived bound/initial value:** iteration `i = 0` uses the wrap-around `x = b[LEN_1D-1]`
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

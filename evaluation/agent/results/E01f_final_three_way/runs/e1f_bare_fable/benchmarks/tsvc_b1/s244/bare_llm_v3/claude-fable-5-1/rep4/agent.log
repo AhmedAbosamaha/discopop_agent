@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s244.c
+  Model          : claude-fable-5-1
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-fable-5-1...
+│  [bare] s244.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: The rewrite is applied in `s244.c`. **What changed:** - The inner loop over `i` now only computes `a[i]` and `b[i]`, which depend solely on `b[i]`, `c[i]`, `d[i]` at the same index — every iteration touches a distinct location, so it's annotated with `#pragma omp parallel for default(none) shared(a, b, c, d) schedule(static)`. `i` is declared in the loop header, so it's automatically private and a
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

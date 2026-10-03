@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s331.c
+  Model          : claude-fable-5-1
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-fable-5-1...
+│  [bare] s331.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: The rewrite is applied. Summary of what changed in `s331.c`: - **Dependence removed:** the inner loop's conditional `j = i` was a loop-carried write where only the last writer mattered. Because `i` is strictly increasing, "last index with `a[i] < 0`" equals "max index with `a[i] < 0`", so `j` is now a `reduction(max:j)` accumulator. The body updates `j` only when `i > j`, which is exactly the seri
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

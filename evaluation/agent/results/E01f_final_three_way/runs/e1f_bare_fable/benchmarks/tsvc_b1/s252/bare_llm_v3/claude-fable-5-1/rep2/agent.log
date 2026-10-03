@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s252.c
+  Model          : claude-fable-5-1
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-fable-5-1...
+│  [bare] s252.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: The rewrite is applied. Summary of what changed in `s252.c`: - **Dependence removed:** `t` carried `b[i-1]*c[i-1]` across iterations. Since `b` and `c` are read-only in the loop, each iteration now recomputes that product itself, so no value flows between iterations. - **Peeled i = 0:** `a[0] = b[0]*c[0] + 0.` is done before the parallel loop (keeping the `+ 0.` so sign-of-zero/rounding matches th
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

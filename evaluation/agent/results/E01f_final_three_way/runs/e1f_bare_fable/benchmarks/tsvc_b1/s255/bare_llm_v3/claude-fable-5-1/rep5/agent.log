@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s255.c
+  Model          : claude-fable-5-1
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-fable-5-1...
+│  [bare] s255.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: The rewrite is applied. **What changed in `kernel_s255`:** - Removed the carried scalars `x`, `y`. They were a delay line over `b` (`x = b[i-1]`, `y = b[i-2]`), and `b` is read-only inside the loop, so the dependence was a value re-read from fixed locations, not something produced by a previous iteration. - Peeled `i = 0` and `i = 1`, where the "previous" values wrap around to `b[LEN_1D-1]` and `b
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

@@ -1,0 +1,26 @@
+--- original.c
++++ final.c
+@@ -16,8 +16,22 @@
+ static real_t kernel_s281(void)
+ {
+     real_t x;
++    /* Iteration i reads a[LEN_1D-i-1] and writes a[i].  For i in the first half the
++     * mirrored element is still unwritten (it lies in the second half, or is a[i]
++     * itself for the middle element of an odd length); for i in the second half it
++     * was already written by iteration LEN_1D-i-1 of the first half.  Running the
++     * first half to completion before the second half preserves that value flow,
++     * and within each half no two iterations touch the same location. */
++    const int half = (LEN_1D + 1) / 2;
+     for (int nl = 0; nl < R; nl++) {
+-        for (int i = 0; i < LEN_1D; i++) {
++#pragma omp parallel for private(x) shared(a, b, c)
++        for (int i = 0; i < half; i++) {
++            x = a[LEN_1D-i-1] + b[i] * c[i];
++            a[i] = x-(real_t)1.0;
++            b[i] = x;
++        }
++#pragma omp parallel for private(x) shared(a, b, c)
++        for (int i = half; i < LEN_1D; i++) {
+             x = a[LEN_1D-i-1] + b[i] * c[i];
+             a[i] = x-(real_t)1.0;
+             b[i] = x;

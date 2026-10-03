@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s293.c
+  Model          : claude-fable-5-1
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-fable-5-1...
+│  [bare] s293.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Done. Summary of the rewrite in `s293.c`: - **Dependence removed:** the loop `a[i] = a[0]` had iteration 0 writing `a[0]` while all other iterations read it. Since that write is `a[0] = a[0]` (the value never changes), it's a location conflict, not a value flow. I hoisted `real_t t = a[0];` before the loop and the body is now `a[i] = t;`, so iterations touch disjoint locations and read only a priv
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

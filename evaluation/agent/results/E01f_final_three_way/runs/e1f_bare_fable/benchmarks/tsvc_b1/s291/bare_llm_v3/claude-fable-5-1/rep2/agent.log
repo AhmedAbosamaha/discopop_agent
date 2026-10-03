@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s291.c
+  Model          : claude-fable-5-1
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-fable-5-1...
+│  [bare] s291.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: The rewrite is applied in `s291.c`. **What changed** - The loop-carried scalar `im1` (the wrap-around predecessor index) was eliminated: it is a function of `i` (`LEN_1D-1` when `i == 0`, else `i-1`), not a value flowing between iterations. - The `i == 0` iteration is peeled out before the loop (`a[0] = (b[0] + b[LEN_1D-1]) * .5`), and the remaining `i = 1 .. LEN_1D-1` loop uses `b[i-1]` directly.
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

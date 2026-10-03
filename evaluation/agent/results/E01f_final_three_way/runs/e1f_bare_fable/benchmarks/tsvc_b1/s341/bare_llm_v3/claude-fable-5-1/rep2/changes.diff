@@ -1,0 +1,61 @@
+--- original.c
++++ final.c
+@@ -16,16 +16,53 @@
+ static real_t kernel_s341(void)
+ {
+     int j;
++    enum { NB = 256 };          /* fixed number of blocks, independent of LEN_1D */
++    long cnt[NB];
+     for (int nl = 0; nl < R; nl++) {
+-        j = -1;
+-        for (int i = 0; i < LEN_1D; i++) {
+-            if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++        long chunk = ((long)LEN_1D + NB - 1) / NB;
++
++        /* pass 1: number of positive b[] in each block */
++#pragma omp parallel for firstprivate(chunk) shared(cnt)
++        for (int blk = 0; blk < NB; blk++) {
++            long lo = (long)blk * chunk;
++            long hi = lo + chunk;
++            if (hi > (long)LEN_1D) hi = (long)LEN_1D;
++            long c = 0;
++            for (long i = lo; i < hi; i++) {
++                if (b[i] > (real_t)0.) {
++                    c++;
++                }
++            }
++            cnt[blk] = c;
++        }
++
++        /* exclusive scan: cnt[blk] becomes the output offset where block blk starts */
++        long run = 0;
++        for (int blk = 0; blk < NB; blk++) {
++            long t = cnt[blk];
++            cnt[blk] = run;
++            run += t;
++        }
++
++        /* pass 2: pack each block into its own disjoint range of a[] */
++#pragma omp parallel for firstprivate(chunk) shared(cnt)
++        for (int blk = 0; blk < NB; blk++) {
++            long lo = (long)blk * chunk;
++            long hi = lo + chunk;
++            if (hi > (long)LEN_1D) hi = (long)LEN_1D;
++            long jj = cnt[blk] - 1;
++            for (long i = lo; i < hi; i++) {
++                if (b[i] > (real_t)0.) {
++                    jj++;
++                    a[jj] = b[i];
++                }
+             }
+         }
++
++        j = (int)run - 1;
+         pb_mix(nl);
+     }
++    (void)j;
+     return (real_t)0;
+ }
+ 

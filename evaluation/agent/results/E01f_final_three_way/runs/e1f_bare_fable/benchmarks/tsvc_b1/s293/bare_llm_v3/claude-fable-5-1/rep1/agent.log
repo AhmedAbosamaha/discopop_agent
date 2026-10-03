@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s293.c
+  Model          : claude-fable-5-1
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-fable-5-1...
+│  [bare] s293.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Done. The rewrite hoists `a[0]` into the local `a0` before the inner loop, so every iteration now only writes its own `a[i]` from a private copy (`firstprivate(a0)`); iteration 0's write of `a[0]` stores the same value it held, so the output is byte-identical, and no iteration reads a location another writes, so the loop is race-free in any order. The `nl` loop and `pb_mix` are untouched.
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

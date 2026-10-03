@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s243.c
+  Model          : claude-fable-5-1
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-fable-5-1...
+│  [bare] s243.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Done. Summary of the rewrite in `s243.c`: - **Dependence removed:** the read of `a[i+1]` in the third statement is an anti-dependence (iteration `i` needs the pre-sweep value of a slot that iteration `i+1` overwrites). It is a location reuse, not a value carried forward, so it is broken by snapshotting `a` into a heap buffer `aold` (`malloc`'d once per call with `LEN_1D` elements, freed at the end
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

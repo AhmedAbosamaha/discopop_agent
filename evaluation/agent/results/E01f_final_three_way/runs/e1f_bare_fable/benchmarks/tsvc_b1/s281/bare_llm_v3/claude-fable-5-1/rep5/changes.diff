@@ -1,0 +1,24 @@
+--- original.c
++++ final.c
+@@ -16,8 +16,20 @@
+ static real_t kernel_s281(void)
+ {
+     real_t x;
++    /* Split point: iterations i < half read a[LEN_1D-i-1] with index >= i, i.e. values of a
++     * not yet written in this pass; iterations i >= half read indices < half, which the
++     * first loop has already produced.  Each half is therefore free of loop-carried
++     * dependences once the first finishes before the second starts. */
++    const int half = (LEN_1D + 1) / 2;
+     for (int nl = 0; nl < R; nl++) {
+-        for (int i = 0; i < LEN_1D; i++) {
++        #pragma omp parallel for private(x) schedule(static)
++        for (int i = 0; i < half; i++) {
++            x = a[LEN_1D-i-1] + b[i] * c[i];
++            a[i] = x-(real_t)1.0;
++            b[i] = x;
++        }
++        #pragma omp parallel for private(x) schedule(static)
++        for (int i = half; i < LEN_1D; i++) {
+             x = a[LEN_1D-i-1] + b[i] * c[i];
+             a[i] = x-(real_t)1.0;
+             b[i] = x;

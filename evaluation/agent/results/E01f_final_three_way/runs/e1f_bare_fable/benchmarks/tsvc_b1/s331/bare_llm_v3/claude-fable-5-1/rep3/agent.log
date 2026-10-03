@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s331.c
+  Model          : claude-fable-5-1
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-fable-5-1...
+│  [bare] s331.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Done. The rewrite is in place: - **Dependence removed:** `j` was overwritten by every iteration whose `a[i] < 0`, so the serial order determined the result. The surviving value is simply the maximum such `i`, so I turned it into `reduction(max:j)` and guarded the assignment with `if (i > j)` so each thread's partial is correct regardless of which chunks it receives under dynamic/guided schedules. 
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

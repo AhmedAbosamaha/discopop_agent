@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s211.c
+  Model          : claude-fable-5-1
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-fable-5-1...
+│  [bare] s211.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: The rewrite is applied to `s211.c`. **What changed** - The blocking dependence was a *value* moving between iterations: `a[i]` reads `b[i-1]` after iteration `i-1` has rewritten it. The `b[i] = b[i+1] - e[i]*d[i]` statement only reuses a location (it reads the old `b[i+1]`), so it was never a true dependence. - A heap-allocated `tmp[LEN_1D]` (one `malloc` per kernel call, freed at the end) carries
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

@@ -1,0 +1,24 @@
+--- original.c
++++ final.c
+@@ -15,14 +15,15 @@
+ 
+ static real_t kernel_s127(void)
+ {
+-    int j;
+     for (int nl = 0; nl < R; nl++) {
+-        j = -1;
++        /* Induction variable j replaced by its closed form: iteration i writes
++         * a[2*i] and a[2*i+1], so iterations are independent. */
++#pragma omp parallel for shared(a, b, c, d, e) schedule(static)
+         for (int i = 0; i < LEN_1D/2; i++) {
+-            j++;
+-            a[j] = b[i] + c[i] * d[i];
+-            j++;
+-            a[j] = b[i] + d[i] * e[i];
++            int j0 = 2 * i;
++            int j1 = j0 + 1;
++            a[j0] = b[i] + c[i] * d[i];
++            a[j1] = b[i] + d[i] * e[i];
+         }
+         pb_mix(nl);
+     }

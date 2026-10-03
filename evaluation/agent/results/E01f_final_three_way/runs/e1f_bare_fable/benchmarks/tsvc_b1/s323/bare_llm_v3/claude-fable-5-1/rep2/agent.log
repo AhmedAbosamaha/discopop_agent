@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s323.c
+  Model          : claude-fable-5-1
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-fable-5-1...
+│  [bare] s323.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: The rewrite is applied to `s323.c`. **What changed and why it is safe** - **Dependence handled:** the coupled recurrence `a[i] = b[i-1] + c[i]*d[i]; b[i] = a[i] + c[i]*e[i]` is a value-carrying chain through `b`. It is *not* reassociated (that would change float rounding). Instead the chain is split into fixed 512-element chunks that are evaluated speculatively in parallel from predicted start val
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

@@ -1,0 +1,70 @@
+/* TSVC-2 loop s323, from TSVC-2 src/tsvc.c (sha256 456dd573b84b; University of Illinois licence,
+ * see benchmarks/TSVC_2/license.txt). */
+#include "tsvc_b1/s323.h"
+
+/* Between two repetitions a few INPUT elements change, so no repetition can be skipped,
+ * merged with another or run out of order: the repetition loop is sequential by a true
+ * dependence, and the loop under study is the one inside it. */
+static void pb_mix(int nl)
+{
+  long k = ((long)nl * 7919L + 13L) % LEN_1D;
+  a[k] += (real_t)0.25; b[k] += (real_t)0.25; c[k] += (real_t)0.125;
+  d[k] += (real_t)0.125; e[k] += (real_t)0.25;
+  a[0] += (real_t)0.125; b[LEN_1D-1] += (real_t)0.125;
+}
+
+/* Number of chunks of the i-range handled as independent partial recurrences.  Fixed
+ * (not tied to the thread count) so that every thread count / schedule partitions the
+ * data identically. */
+#define S323_NCHUNK 128
+
+static real_t kernel_s323(void)
+{
+    /* The loop covers i = 1 .. LEN_1D-1, i.e. m elements; chunk j owns
+     * [1 + m*j/NCHUNK, 1 + m*(j+1)/NCHUNK).  b[0] is never written by the loop. */
+    long m = (long)LEN_1D - 1;
+    real_t csum[S323_NCHUNK];   /* carry-free end value of each chunk's recurrence */
+    real_t carry[S323_NCHUNK];  /* true b[] value entering each chunk            */
+
+    for (int nl = 0; nl < R; nl++) {
+        /* Pass 1: each chunk runs the recurrence from a carry of 0
+         * (chunk 0 from the real b[0]) -- iterations are independent. */
+#pragma omp parallel for schedule(static) shared(a, b, c, d, e, csum) firstprivate(m)
+        for (int j = 0; j < S323_NCHUNK; j++) {
+            long lo = 1 + (m * (long)j) / S323_NCHUNK;
+            long hi = 1 + (m * (long)(j + 1)) / S323_NCHUNK;
+            real_t s = (j == 0) ? b[0] : (real_t)0;
+            for (long i = lo; i < hi; i++) {
+                a[i] = s + c[i] * d[i];
+                s = a[i] + c[i] * e[i];
+                b[i] = s;
+            }
+            csum[j] = s;
+        }
+
+        /* Pass 2 (serial, NCHUNK adds): the value chunk j-1 ends with is the
+         * carry chunk j must start from. */
+        carry[0] = (real_t)0;
+        carry[1] = csum[0];
+        for (int j = 2; j < S323_NCHUNK; j++) {
+            carry[j] = carry[j-1] + csum[j-1];
+        }
+
+        /* Pass 3: apply each chunk's carry to its a[] and b[] -- independent. */
+#pragma omp parallel for schedule(static) shared(a, b, carry) firstprivate(m)
+        for (int j = 1; j < S323_NCHUNK; j++) {
+            long lo = 1 + (m * (long)j) / S323_NCHUNK;
+            long hi = 1 + (m * (long)(j + 1)) / S323_NCHUNK;
+            real_t cj = carry[j];
+            for (long i = lo; i < hi; i++) {
+                a[i] += cj;
+                b[i] += cj;
+            }
+        }
+
+        pb_mix(nl);
+    }
+    return (real_t)0;
+}
+
+PB_MAIN(kernel_s323)
