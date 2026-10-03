@@ -1,0 +1,24 @@
+--- original.c
++++ final.c
+@@ -17,9 +17,19 @@
+ {
+     int vl = 63;
+     xx = flat_2d_array + vl;
++    /* xx[i+1] is flat_2d_array[i+dist] with dist = vl+1: a true flow
++     * dependence of distance `dist` runs through flat_2d_array. Indices
++     * are independent across residue classes mod `dist` (writing i+dist
++     * never touches a different class than reading i), so the dist
++     * sequential chains can be run in parallel; within each chain the
++     * original ascending visiting order is preserved. */
++    int dist = vl + 1;
+     for (int nl = 0; nl < R; nl++) {
+-        for (int i = 0; i < LEN_1D - 1; i++) {
+-            xx[i+1] = flat_2d_array[i] + a[i];
++        #pragma omp parallel for default(none) shared(flat_2d_array, a) firstprivate(dist)
++        for (int r = 0; r < dist; r++) {
++            for (int i = r; i < LEN_1D - 1; i += dist) {
++                flat_2d_array[i + dist] = flat_2d_array[i] + a[i];
++            }
+         }
+         pb_mix(nl);
+     }

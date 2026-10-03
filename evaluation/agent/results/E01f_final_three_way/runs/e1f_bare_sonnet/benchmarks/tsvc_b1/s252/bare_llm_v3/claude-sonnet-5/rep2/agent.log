@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s252.c
+  Model          : claude-sonnet-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s252.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan **Dependence:** In the inner loop, `t` carries `s` (i.e., `b[i-1]*c[i-1]`) from iteration `i-1` to iteration `i`, and `a[i] = b[i]*c[i] + t_prev`. This is a true value-carried dependence across `i`, but it's a *recomputable* one: `t_prev` at iteration `i` is just `b[i-1]*c[i-1]` for `i>0`, and `0` for `i==0`. So I can eliminate the carry by having each iteration recompute its own needed pr
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

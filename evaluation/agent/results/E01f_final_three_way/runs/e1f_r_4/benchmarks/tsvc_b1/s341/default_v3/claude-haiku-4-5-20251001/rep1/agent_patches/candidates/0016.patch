@@ -1,0 +1,18 @@
+--- s341.c
++++ s341.c
+@@ -24,6 +24,7 @@
+         int *indices = (int *)malloc(LEN_1D * sizeof(int));
+ 
+         // Pass 1: Identify matching elements (elements > 0)
++        #pragma omp parallel for shared(match) 
+         for (int i = 0; i < LEN_1D; i++) {
+             match[i] = (b[i] > (real_t)0.) ? 1 : 0;
+         }
+@@ -35,6 +36,7 @@
+         }
+ 
+         // Pass 3: Write matched elements to their computed positions
++        #pragma omp parallel for shared(indices,match) 
+         for (int i = 0; i < LEN_1D; i++) {
+             if (match[i]) {
+                 a[indices[i]] = b[i];

@@ -1,0 +1,20 @@
+--- s3112.c
++++ s3112.c
+@@ -17,10 +17,13 @@
+ {
+     real_t sum;
+     for (int nl = 0; nl < R; nl++) {
+-        sum = (real_t)0.0;
+-        for (int i = 0; i < LEN_1D; i++) {
+-            sum += a[i];
+-            b[i] = sum;
++        sum = a[0];
++        b[0] = a[0];
++        for (int i = 1; i < LEN_1D; i++) {
++            // Declare sum_i inside loop to remove scalar loop-carried dependence
++            real_t sum_i = b[i-1] + a[i];
++            b[i] = sum_i;
++            sum = sum_i;
+         }
+         pb_mix(nl);
+     }

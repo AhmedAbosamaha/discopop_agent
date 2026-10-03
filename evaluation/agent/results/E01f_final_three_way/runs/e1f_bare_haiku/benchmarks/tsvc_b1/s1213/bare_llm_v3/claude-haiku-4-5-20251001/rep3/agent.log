@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s1213.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] s1213.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Looking at the code, I need to analyze the loop under study: ```c for (int i = 1; i < LEN_1D-1; i++) { a[i] = b[i-1]+c[i]; b[i] = a[i+1]*d[i]; } ``` **Analysis of dependencies:** Within a single `nl` iteration: - Iteration `i` writes to `b[i]` - Iteration `i+1` reads from `b[i]` (first statement: `a[i+1] = b[i]+c[i+1]`) This is a true loop-carried dependency with distance 1. However, I notice that
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

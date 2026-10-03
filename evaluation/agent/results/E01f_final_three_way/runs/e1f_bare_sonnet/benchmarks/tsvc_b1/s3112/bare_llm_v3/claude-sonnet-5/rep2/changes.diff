@@ -1,0 +1,62 @@
+--- original.c
++++ final.c
+@@ -16,12 +16,55 @@
+ static real_t kernel_s3112(void)
+ {
+     real_t sum;
++    /* Fixed number of blocks for the chunked prefix scan below. Independent
++     * of LEN_1D and of the thread count, so these arrays never grow with
++     * the problem size and are safe to keep on the stack. */
++    enum { NCHUNKS = 256 };
++    real_t chunkSum[NCHUNKS];
++    real_t offset[NCHUNKS];
++
+     for (int nl = 0; nl < R; nl++) {
+-        sum = (real_t)0.0;
+-        for (int i = 0; i < LEN_1D; i++) {
+-            sum += a[i];
+-            b[i] = sum;
++        /* Phase 1: each chunk c sums its own disjoint slice of a[] into
++         * chunkSum[c]. Chunks never touch the same element of a[] or the
++         * same slot of chunkSum[], so a and chunkSum stay shared with no
++         * extra clause; lo, hi, s, i are declared inside the loop body so
++         * they are already private per iteration and must not be listed. */
++        #pragma omp parallel for schedule(static) shared(a, chunkSum)
++        for (int c = 0; c < NCHUNKS; c++) {
++            long lo = (long)c * LEN_1D / NCHUNKS;
++            long hi = (long)(c + 1) * LEN_1D / NCHUNKS;
++            real_t s = (real_t)0.0;
++            for (long i = lo; i < hi; i++) s += a[i];
++            chunkSum[c] = s;
+         }
++
++        /* Phase 2: turn the per-chunk sums into exclusive prefix offsets.
++         * offset[c] genuinely depends on offset[c-1], and NCHUNKS is tiny,
++         * so this stays a plain sequential loop. running ends up holding
++         * the grand total, i.e. exactly what the original sequential loop
++         * left in sum after its last iteration. */
++        real_t running = (real_t)0.0;
++        for (int c = 0; c < NCHUNKS; c++) {
++            offset[c] = running;
++            running += chunkSum[c];
++        }
++        sum = running;
++
++        /* Phase 3: each chunk redoes its own local scan, starting from its
++         * precomputed offset, and writes its disjoint slice of b[]. a, b
++         * and offset stay shared (disjoint access per chunk); lo, hi, s, i
++         * are declared inside the loop body, so again no clause for them. */
++        #pragma omp parallel for schedule(static) shared(a, b, offset)
++        for (int c = 0; c < NCHUNKS; c++) {
++            long lo = (long)c * LEN_1D / NCHUNKS;
++            long hi = (long)(c + 1) * LEN_1D / NCHUNKS;
++            real_t s = offset[c];
++            for (long i = lo; i < hi; i++) {
++                s += a[i];
++                b[i] = s;
++            }
++        }
++
+         pb_mix(nl);
+     }
+     return sum;

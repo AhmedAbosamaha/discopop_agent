@@ -1,0 +1,22 @@
+--- s121.c
++++ s121.c
+@@ -17,10 +17,18 @@
+ {
+     int j;
+     for (int nl = 0; nl < R; nl++) {
++        // Capture input values into a temporary buffer to decouple reads
++        real_t* temp = (real_t*)malloc((LEN_1D - 1) * sizeof(real_t));
++        for (int i = 1; i < LEN_1D; i++) {
++            temp[i - 1] = a[i];
++        }
++
+         for (int i = 0; i < LEN_1D-1; i++) {
+             j = i + 1;
+-            a[i] = a[j] + b[i];
++            a[i] = temp[i] + b[i];
+         }
++
++        free(temp);
+         pb_mix(nl);
+     }
+     return (real_t)0;

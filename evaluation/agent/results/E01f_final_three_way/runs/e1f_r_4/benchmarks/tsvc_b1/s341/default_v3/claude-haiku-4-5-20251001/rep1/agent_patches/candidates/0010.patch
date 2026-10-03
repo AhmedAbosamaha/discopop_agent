@@ -1,0 +1,40 @@
+--- s341.c
++++ s341.c
+@@ -15,17 +15,33 @@
+ 
+ static real_t kernel_s341(void)
+ {
+-    int j;
++    int *prefix = (int *)malloc((LEN_1D + 1) * sizeof(int));
++
++    /* Compute initial prefix sum */
++    prefix[0] = 0;
++    for (int i = 0; i < LEN_1D; i++) {
++        prefix[i + 1] = prefix[i] + (b[i] > (real_t)0. ? 1 : 0);
++    }
++
+     for (int nl = 0; nl < R; nl++) {
+-        j = -1;
++        /* Parallelize write loop with sufficient work per thread */
++        #pragma omp parallel for
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++                a[prefix[i]] = b[i];
+             }
+         }
++
+         pb_mix(nl);
++
++        /* Recompute prefix sum after pb_mix modifies b */
++        prefix[0] = 0;
++        for (int i = 0; i < LEN_1D; i++) {
++            prefix[i + 1] = prefix[i] + (b[i] > (real_t)0. ? 1 : 0);
++        }
+     }
++
++    free(prefix);
+     return (real_t)0;
+ }
+ 

@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s161.c
+  Model          : claude-sonnet-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s161.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan **Dependence analysis:** The inner loop over `i` has one real cross-iteration hazard: when `b[i-1] < 0`, iteration `i-1`'s if-branch writes `c[i]`, and iteration `i`'s else-branch (if taken) reads that same `c[i]`. Everything else is iteration-local: - `a[j]` is written only by iteration `j` itself (else-branch), and read only by iteration `j` itself (if-branch, same `j`) — never touched b
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

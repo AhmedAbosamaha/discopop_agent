@@ -1,0 +1,23 @@
+--- s3112.c
++++ s3112.c
+@@ -17,11 +17,17 @@
+ {
+     real_t sum;
+     for (int nl = 0; nl < R; nl++) {
+-        sum = (real_t)0.0;
++        // Copy a into b (parallelizable Do-All loop)
+         for (int i = 0; i < LEN_1D; i++) {
+-            sum += a[i];
+-            b[i] = sum;
++            b[i] = a[i];
+         }
++
++        // Accumulate in-place to create prefix sum
++        for (int i = 1; i < LEN_1D; i++) {
++            b[i] += b[i-1];
++        }
++
++        sum = b[LEN_1D-1];
+         pb_mix(nl);
+     }
+     return sum;

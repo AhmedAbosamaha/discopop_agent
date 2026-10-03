@@ -1,0 +1,10 @@
+--- s341.c
++++ s341.c
+@@ -31,6 +31,7 @@
+         }
+ 
+         // Pass 3: write selected elements to a using pre-computed positions
++        #pragma omp parallel for shared(flags,positions) 
+         for (int i = 0; i < LEN_1D; i++) {
+             if (flags[i]) {
+                 a[positions[i]] = b[i];

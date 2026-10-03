@@ -1,0 +1,95 @@
+/* TSVC-2 loop s321, from TSVC-2 src/tsvc.c (sha256 456dd573b84b; University of Illinois licence,
+ * see benchmarks/TSVC_2/license.txt). */
+#include "tsvc_b1/s321.h"
+#include <stdlib.h>
+#include <string.h>
+
+/* Between two repetitions a few INPUT elements change, so no repetition can be skipped,
+ * merged with another or run out of order: the repetition loop is sequential by a true
+ * dependence, and the loop under study is the one inside it. */
+static void pb_mix(int nl)
+{
+  long k = ((long)nl * 7919L + 13L) % LEN_1D;
+  a[k] += (real_t)0.25; b[k] += (real_t)0.25; c[k] += (real_t)0.125;
+  d[k] += (real_t)0.125; e[k] += (real_t)0.25;
+  a[0] += (real_t)0.125; b[LEN_1D-1] += (real_t)0.125;
+}
+
+static real_t kernel_s321(void)
+{
+    long n = (long)LEN_1D;
+    long nch = n / 2048;
+    if (nch < 1) nch = 1;
+    if (nch > 1024) nch = 1024;
+    long csz = (n + nch - 1) / nch;
+
+    real_t *orig = (real_t *)malloc((size_t)n * sizeof(real_t));
+    real_t *cm = (real_t *)malloc((size_t)nch * sizeof(real_t));
+    real_t *cc = (real_t *)malloc((size_t)nch * sizeof(real_t));
+    real_t *st = (real_t *)malloc((size_t)nch * sizeof(real_t));
+
+    for (int nl = 0; nl < R; nl++) {
+        /* pass 1: save inputs, compose each chunk's affine map */
+        #pragma omp parallel for schedule(static) shared(orig, cm, cc, n, nch, csz)
+        for (long j = 0; j < nch; j++) {
+            long s = j * csz;
+            long e = s + csz;
+            if (e > n) e = n;
+            real_t m = (real_t)1, c = (real_t)0;
+            for (long i = s; i < e; i++) {
+                real_t v = a[i];
+                orig[i] = v;
+                if (i >= 1) {
+                    c = v + c * b[i];
+                    m = m * b[i];
+                } else {
+                    c = v; m = (real_t)0;
+                }
+            }
+            cm[j] = m;
+            cc[j] = c;
+        }
+        /* estimated chunk start values (value of a[s-1]) */
+        {
+            real_t x = (real_t)0;
+            for (long j = 0; j < nch; j++) {
+                st[j] = x;
+                x = cc[j] + cm[j] * x;
+            }
+        }
+        /* pass 2: speculative recurrence per chunk */
+        #pragma omp parallel for schedule(static) shared(orig, st, n, nch, csz)
+        for (long j = 0; j < nch; j++) {
+            long s = j * csz;
+            long e = s + csz;
+            if (e > n) e = n;
+            long i0 = s;
+            real_t prev = st[j];
+            if (s == 0) { prev = orig[0]; i0 = 1; }
+            for (long i = i0; i < e; i++) {
+                prev = orig[i] + prev * b[i];
+                a[i] = prev;
+            }
+        }
+        /* fix-up: propagate exact boundary values until they agree bitwise */
+        for (long j = 1; j < nch; j++) {
+            long s = j * csz;
+            long e = s + csz;
+            if (e > n) e = n;
+            real_t prev = a[s - 1];
+            long i = s;
+            while (i < e) {
+                real_t v = orig[i] + prev * b[i];
+                if (memcmp(&v, &a[i], sizeof(real_t)) == 0) break;
+                a[i] = v;
+                prev = v;
+                i++;
+            }
+        }
+        pb_mix(nl);
+    }
+    free(orig); free(cm); free(cc); free(st);
+    return (real_t)0;
+}
+
+PB_MAIN(kernel_s321)

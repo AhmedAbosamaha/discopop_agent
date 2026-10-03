@@ -1,0 +1,24 @@
+--- s331.c
++++ s331.c
+@@ -19,11 +19,19 @@
+     real_t chksum;
+     for (int nl = 0; nl < R; nl++) {
+         j = -1;
++        // Phase 1: Identify all indices where condition holds.
++        // Each iteration writes to a distinct array position (Do-All).
++        int *temp = (int *)malloc(LEN_1D * sizeof(int));
+         for (int i = 0; i < LEN_1D; i++) {
+-            if (a[i] < (real_t)0.) {
+-                j = i;
++            temp[i] = (a[i] < (real_t)0.) ? i : -1;
++        }
++        // Phase 2: Reduce to find the maximum valid index (Reduction pattern).
++        for (int i = 0; i < LEN_1D; i++) {
++            if (temp[i] > j) {
++                j = temp[i];
+             }
+         }
++        free(temp);
+         chksum = (real_t) j;
+         pb_mix(nl);
+     }

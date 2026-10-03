@@ -1,0 +1,10 @@
+--- s121.c
++++ s121.c
+@@ -22,6 +22,7 @@
+             a_copy[i] = a[i];
+         }
+         // Inner loop now reads from a_copy, eliminating inter-iteration dependences
++        #pragma omp parallel for 
+         for (int i = 0; i < LEN_1D-1; i++) {
+             a[i] = a_copy[i+1] + b[i];
+         }

@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s212.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] s212.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Looking at this code, I need to analyze the dependencies in the inner loop: ```c for (int i = 0; i < LEN_1D-1; i++) { a[i] *= c[i]; // Iteration i reads a[i], c[i]; writes a[i] b[i] += a[i + 1] * d[i]; // Iteration i reads a[i+1], d[i], b[i]; writes b[i] } ``` **Dependency analysis:** - Iteration i reads `a[i+1]` and iteration i+1 writes `a[i+1]` — this creates a loop-carried dependency - Each ite
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

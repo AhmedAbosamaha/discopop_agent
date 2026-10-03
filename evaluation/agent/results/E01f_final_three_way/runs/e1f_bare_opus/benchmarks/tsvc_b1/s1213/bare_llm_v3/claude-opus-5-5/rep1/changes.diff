@@ -1,0 +1,19 @@
+--- original.c
++++ final.c
+@@ -16,9 +16,15 @@
+ static real_t kernel_s1213(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        /* pass 1: b from the old a (anti-dependence on a[i+1] preserved) */
++        #pragma omp parallel for shared(a, b, d) schedule(static)
++        for (int i = 1; i < LEN_1D-1; i++) {
++            b[i] = a[i+1]*d[i];
++        }
++        /* pass 2: a from the new b[i-1] (flow dependence satisfied by pass 1) */
++        #pragma omp parallel for shared(a, b, c) schedule(static)
+         for (int i = 1; i < LEN_1D-1; i++) {
+             a[i] = b[i-1]+c[i];
+-            b[i] = a[i+1]*d[i];
+         }
+         pb_mix(nl);
+     }

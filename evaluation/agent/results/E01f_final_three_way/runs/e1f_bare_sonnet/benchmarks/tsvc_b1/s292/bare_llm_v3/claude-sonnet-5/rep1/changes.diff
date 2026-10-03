@@ -1,0 +1,29 @@
+--- original.c
++++ final.c
+@@ -15,14 +15,21 @@
+ 
+ static real_t kernel_s292(void)
+ {
+-    int im1, im2;
+     for (int nl = 0; nl < R; nl++) {
+-        im1 = LEN_1D-1;
+-        im2 = LEN_1D-2;
++        /* im1/im2 only ever held the previous iteration's index value (i-1, i-2,
++         * wrapping at the array ends), never a data value carried forward, so they
++         * are recomputed here from i directly. Declaring them inside the loop body
++         * makes each a fresh per-iteration local -- no data-sharing clause needed --
++         * and removes the loop-carried dependence that blocked parallelizing this
++         * loop. a[i] is written once per distinct i and b is only read here (it is
++         * not mutated until pb_mix runs, after the whole inner loop has finished),
++         * so iterations are now fully independent; a and b stay shared (default).
++         */
++        #pragma omp parallel for shared(a, b)
+         for (int i = 0; i < LEN_1D; i++) {
++            int im1 = (i - 1 + LEN_1D) % LEN_1D;
++            int im2 = (i - 2 + LEN_1D) % LEN_1D;
+             a[i] = (b[i] + b[im1] + b[im2]) * (real_t).333;
+-            im2 = im1;
+-            im1 = i;
+         }
+         pb_mix(nl);
+     }

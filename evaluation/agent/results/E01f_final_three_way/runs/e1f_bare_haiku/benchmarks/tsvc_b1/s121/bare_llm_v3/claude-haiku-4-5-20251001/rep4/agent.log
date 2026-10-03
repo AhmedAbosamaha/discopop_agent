@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s121.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] s121.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Looking at the code, I need to analyze the loop structure: **Analysis:** 1. **Outer loop (nl)**: Sequential - `pb_mix(nl)` creates a true dependence between repetitions of the inner loop 2. **Inner loop (i)**: The loop under study ```c for (int i = 0; i < LEN_1D-1; i++) { j = i + 1; a[i] = a[j] + b[i]; } ``` **Dependence Analysis:** - Iteration i reads `a[i+1]` and writes `a[i]` - Iteration i+1 re
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

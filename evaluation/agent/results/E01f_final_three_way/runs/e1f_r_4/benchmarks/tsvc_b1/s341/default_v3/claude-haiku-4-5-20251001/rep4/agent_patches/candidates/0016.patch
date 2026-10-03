@@ -1,0 +1,10 @@
+--- s341.c
++++ s341.c
+@@ -31,6 +31,7 @@
+         j = count - 1;
+ 
+         /* Second pass: write elements to computed destinations (parallelizable) */
++        #pragma omp parallel for shared(dest) 
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+                 a[dest[i]] = b[i];

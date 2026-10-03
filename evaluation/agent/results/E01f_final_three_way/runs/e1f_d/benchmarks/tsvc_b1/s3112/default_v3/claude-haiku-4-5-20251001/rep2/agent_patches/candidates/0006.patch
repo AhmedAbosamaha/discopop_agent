@@ -1,0 +1,21 @@
+--- s3112.c
++++ s3112.c
+@@ -18,10 +18,16 @@
+     real_t sum;
+     for (int nl = 0; nl < R; nl++) {
+         sum = (real_t)0.0;
++        // Parallel phase: copy a to b (Do-All loop, no loop-carried dependence)
+         for (int i = 0; i < LEN_1D; i++) {
+-            sum += a[i];
+-            b[i] = sum;
++            b[i] = a[i];
+         }
++        // Sequential phase: in-place cumulative sum (moved dependence)
++        for (int i = 1; i < LEN_1D; i++) {
++            b[i] += b[i-1];
++        }
++        // Extract final cumulative sum
++        sum = b[LEN_1D-1];
+         pb_mix(nl);
+     }
+     return sum;

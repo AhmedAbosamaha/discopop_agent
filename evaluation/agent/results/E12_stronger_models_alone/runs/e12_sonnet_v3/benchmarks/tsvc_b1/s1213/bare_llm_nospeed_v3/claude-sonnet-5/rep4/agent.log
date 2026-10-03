@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s1213.c
+  Model          : claude-sonnet-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s1213.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Plan (already applied): **Dependence identified:** The inner loop `a[i]=b[i-1]+c[i]; b[i]=a[i+1]*d[i];` only *looks* like a tight RAW chain. In the original sequential order: - `b[i]` always reads `a[i+1]` **before** `a[i+1]` is ever written (that write happens in iteration `i+1`, which executes later), so `b[i]` always sees the value `a[i+1]` had when this repetition's loop began (`a_old`). - `a[
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s121.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] s121.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Looking at the code, I need to analyze the loop structure and data dependencies. ## Analysis **The Inner Loop (lines 20-23):** ```c for (int i = 0; i < LEN_1D-1; i++) { j = i + 1; a[i] = a[j] + b[i]; } ``` Each iteration i: - Reads: `a[i+1]` and `b[i]` - Writes: `a[i]` **The Blocking Dependence:** There's a read-after-write dependence with distance -1: - Iteration i reads `a[i+1]` (expecting the o
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

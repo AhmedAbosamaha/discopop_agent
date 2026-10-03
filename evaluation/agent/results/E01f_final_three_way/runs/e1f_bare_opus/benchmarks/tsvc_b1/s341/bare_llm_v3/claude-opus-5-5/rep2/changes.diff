@@ -1,0 +1,47 @@
+--- original.c
++++ final.c
+@@ -15,13 +15,38 @@
+ 
+ static real_t kernel_s341(void)
+ {
+-    int j;
++    enum { NB = 256 };
++    static long cnt[NB];
++    static long start[NB];
++    const long n = (long)LEN_1D;
++    const long CH = (n + NB - 1) / NB;
+     for (int nl = 0; nl < R; nl++) {
+-        j = -1;
+-        for (int i = 0; i < LEN_1D; i++) {
+-            if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++        int blk;
++        #pragma omp parallel for shared(cnt) firstprivate(n, CH) schedule(static)
++        for (blk = 0; blk < NB; blk++) {
++            long lo = (long)blk * CH;
++            long hi = lo + CH < n ? lo + CH : n;
++            long c = 0;
++            for (long i = lo; i < hi; i++) {
++                if (b[i] > (real_t)0.) c++;
++            }
++            cnt[blk] = c;
++        }
++        long acc = 0;
++        for (int q = 0; q < NB; q++) {
++            start[q] = acc;
++            acc += cnt[q];
++        }
++        #pragma omp parallel for shared(start) firstprivate(n, CH) schedule(static)
++        for (blk = 0; blk < NB; blk++) {
++            long lo = (long)blk * CH;
++            long hi = lo + CH < n ? lo + CH : n;
++            long off = start[blk];
++            for (long i = lo; i < hi; i++) {
++                if (b[i] > (real_t)0.) {
++                    a[off] = b[i];
++                    off++;
++                }
+             }
+         }
+         pb_mix(nl);

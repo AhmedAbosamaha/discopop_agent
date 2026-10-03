@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s1213.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] s1213.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Looking at this code, I need to analyze the data dependencies in the inner loop: ```c for (int i = 1; i < LEN_1D-1; i++) { a[i] = b[i-1]+c[i]; b[i] = a[i+1]*d[i]; } ``` **Plan:** The blocking dependence is a **flow dependence through b**: iteration i writes b[i], and iteration i+1 reads b[i]. This creates a sequential chain. However, I can break this by observing that: - Odd iterations (i=1,3,5,..
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

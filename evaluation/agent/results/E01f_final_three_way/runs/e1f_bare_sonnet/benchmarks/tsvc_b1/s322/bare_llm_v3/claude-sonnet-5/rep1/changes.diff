@@ -1,0 +1,33 @@
+--- original.c
++++ final.c
+@@ -15,6 +15,30 @@
+ 
+ static real_t kernel_s322(void)
+ {
++    /* Dependence analysis for the i-loop (the loop under study):
++     *   a[i] = a[i] + a[i-1]*b[i] + a[i-2]*c[i]
++     * a[i-1] and a[i-2] are VALUES produced by the immediately preceding
++     * iterations of this same loop (flow/true dependences with distance
++     * 1 and 2, not a reused-but-independent location), so every
++     * iteration needs the exact floating-point result its two
++     * predecessors just wrote. That chain has no slack to redistribute:
++     * splitting the range into chunks only moves the same dependence to
++     * the chunk boundary (chunk k+1's first element still needs chunk
++     * k's last two results before it can do anything), so chunks cannot
++     * run concurrently without either (a) reordering the additions and
++     * multiplications - which changes the rounding of every element and
++     * would make the result diverge from the sequential reference, and
++     * diverge differently under static/dynamic/guided schedules, since
++     * the chunking itself would change the arithmetic - or (b) serializing
++     * the chunks end to end, which reproduces the original order but
++     * removes any possibility of overlap. Neither satisfies the
++     * requirement to reproduce the sequential output exactly while also
++     * running measurably faster, so this loop is left sequential: no
++     * `#pragma omp` is attached to it. (The outer nl loop is excluded by
++     * construction: pb_mix() below mutates a[], b[], c[] in a way that
++     * the next repetition's i-loop reads, so repetitions must also run
++     * in program order.)
++     */
+     for (int nl = 0; nl < R; nl++) {
+         for (int i = 2; i < LEN_1D; i++) {
+             a[i] = a[i] + a[i - 1] * b[i] + a[i - 2] * c[i];

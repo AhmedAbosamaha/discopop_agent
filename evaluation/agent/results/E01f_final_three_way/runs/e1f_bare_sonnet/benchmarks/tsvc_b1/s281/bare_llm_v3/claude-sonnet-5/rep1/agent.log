@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s281.c
+  Model          : claude-sonnet-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s281.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan **Dependence analysis.** Inside one activation of the `i` loop, `a[i]` is written and `a[LEN_1D-i-1]` is read. For `i < mid` (`mid = LEN_1D/2`) the mirror index `LEN_1D-i-1 >= mid` hasn't been touched yet this activation, so the read sees the value left over from *before* this activation (i.e. from `pb_mix`/previous `nl`). For `i >= mid` the mirror index `LEN_1D-i-1 < mid` *was* already ov
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

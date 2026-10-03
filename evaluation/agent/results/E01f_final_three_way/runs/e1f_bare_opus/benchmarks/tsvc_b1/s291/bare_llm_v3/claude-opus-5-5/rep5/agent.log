@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s291.c
+  Model          : claude-opus-5-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-opus-5-5...
+│  [bare] s291.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: I've edited `s291.c` so the inner loop of `kernel_s291` now runs as an OpenMP `parallel for`. I haven't compiled or run it, since there's no compiler here. **What was blocking it:** only the variable `im1`. It is a reused index, not a value passed from one iteration to the next. At iteration `i` it is always `LEN_1D-1` when `i` is 0 and `i-1` otherwise, and the loop never writes `b`. **The change:
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

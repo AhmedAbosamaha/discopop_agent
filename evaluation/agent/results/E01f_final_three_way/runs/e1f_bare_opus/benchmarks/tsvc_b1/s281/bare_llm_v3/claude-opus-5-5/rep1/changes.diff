@@ -1,0 +1,25 @@
+--- original.c
++++ final.c
+@@ -15,10 +15,19 @@
+ 
+ static real_t kernel_s281(void)
+ {
+-    real_t x;
++    int h =(LEN_1D + 1) / 2;
+     for (int nl = 0; nl < R; nl++) {
+-        for (int i = 0; i < LEN_1D; i++) {
+-            x = a[LEN_1D-i-1] + b[i] * c[i];
++        /* i < h: a[LEN_1D-1-i] (index >= i) still holds its original value */
++        #pragma omp parallel for shared(a, b, c, h) schedule(static)
++        for (int i = 0; i < h; i++) {
++            real_t x = a[LEN_1D-i-1] + b[i] * c[i];
++            a[i] = x-(real_t)1.0;
++            b[i] = x;
++        }
++        /* i >= h: a[LEN_1D-1-i] (index < h) was written by the loop above */
++        #pragma omp parallel for shared(a, b, c, h) schedule(static)
++        for (int i = h; i < LEN_1D; i++) {
++            real_t x = a[LEN_1D-i-1] + b[i] * c[i];
+             a[i] = x-(real_t)1.0;
+             b[i] = x;
+         }

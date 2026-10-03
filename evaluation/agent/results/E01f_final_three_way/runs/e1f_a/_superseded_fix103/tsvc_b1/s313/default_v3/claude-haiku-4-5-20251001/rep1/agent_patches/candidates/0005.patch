@@ -1,0 +1,16 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1f_a/benchmarks/tsvc_b1/s313/default_v3/claude-haiku-4-5-20251001/rep1/work/s313.c	2026-10-02 23:59:30.444137665 +0000
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1f_a/benchmarks/tsvc_b1/s313/default_v3/claude-haiku-4-5-20251001/rep1/work/s313.c.discopop_patch_generator.temp	2026-10-02 23:59:31.741143437 +0000
+@@ -23,7 +23,13 @@
+     for (int i = 0; i < LEN_1D; i++) {
+         dot += a[i] * b[i];
+     }
++    #pragma omp parallel
++    #pragma omp single
++    {
++    #pragma omp task
+     pb_mix(R - 1);
++    #pragma omp task
++    }
+     return dot;
+ }
+ 

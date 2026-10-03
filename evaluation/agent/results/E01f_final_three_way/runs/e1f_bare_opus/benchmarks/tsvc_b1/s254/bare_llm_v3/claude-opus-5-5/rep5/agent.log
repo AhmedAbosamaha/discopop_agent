@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s254.c
+  Model          : claude-opus-5-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-opus-5-5...
+│  [bare] s254.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: I rewrote the loop in `s254.c` so its iterations are independent and marked it with `#pragma omp parallel for`. I couldn't compile, run or time it here, so it's untested. - **What blocked it:** the scalar `x` was only a reused location, not a computed value moving forward. Each iteration `i` read `x == b[i-1]`, and the loop never writes `b`. Iteration 0 read `b[LEN_1D-1]`. - **The rewrite:** I com
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

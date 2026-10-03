@@ -1,0 +1,10 @@
+--- s341.c
++++ s341.c
+@@ -24,6 +24,7 @@
+         j = -1;
+ 
+         // Phase 1: Compute output index for each element in a single pass
++        #pragma omp parallel for shared(output_idx) reduction(+:j) 
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+                 output_idx[i] = ++j;

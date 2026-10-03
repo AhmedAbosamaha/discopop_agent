@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s252.c
+  Model          : claude-opus-5-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-opus-5-5...
+│  [bare] s252.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: I've rewritten `kernel_s252` in `s252.c` so its inner loop runs in parallel, but nothing has been compiled or run, since there's no compiler here. **The change:** the original loop passed the product `b[i]*c[i]` from each iteration to the next through `t`. Now each iteration works it out itself: `t` is `0` when `i == 0` (so `b[-1]` is never read), and `b[i-1]*c[i-1]` otherwise. The cost is one ext
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

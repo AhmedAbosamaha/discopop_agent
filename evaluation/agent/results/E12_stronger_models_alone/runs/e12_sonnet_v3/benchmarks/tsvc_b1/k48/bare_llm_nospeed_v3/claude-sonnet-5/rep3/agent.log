@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : k48.c
+  Model          : claude-sonnet-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] k48.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan The file already documents the one true cross-iteration dependence: `pb_mix(nl)` mutates `a,b,c,d,e` between repetitions of the `nl` loop, so `nl` must stay strictly sequential — that loop gets no pragma. The loop "under study" is the `i` loop inside one `nl` repetition. Within a single repetition, `c` and `d` are a fixed read-only snapshot (pb_mix only touches them *after* the `i` loop fi
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

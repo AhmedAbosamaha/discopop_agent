@@ -1,0 +1,40 @@
+--- s341.c
++++ s341.c
+@@ -16,16 +16,35 @@
+ static real_t kernel_s341(void)
+ {
+     int j;
++
++    // Allocate temporary array once, outside the repeated loop
++    int *output_idx = (int *)malloc(sizeof(int) * LEN_1D);
++
+     for (int nl = 0; nl < R; nl++) {
+         j = -1;
++
++        // Phase 1: Compute output index for each element in a single pass
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++                output_idx[i] = ++j;
++            } else {
++                output_idx[i] = -1;
+             }
+         }
++
++        // Phase 2: Write elements to output array using pre-computed indices (parallelizable!)
++        for (int i = 0; i < LEN_1D; i++) {
++            if (output_idx[i] >= 0) {
++                a[output_idx[i]] = b[i];
++            }
++        }
++
+         pb_mix(nl);
+     }
++
++    // Free temporary array once, after the repeated loop
++    free(output_idx);
++
+     return (real_t)0;
+ }
+ 

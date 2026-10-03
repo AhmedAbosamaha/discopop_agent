@@ -1,0 +1,42 @@
+--- original.c
++++ final.c
+@@ -17,15 +17,31 @@
+ {
+     int j;
+     real_t chksum;
+-    for (int nl = 0; nl < R; nl++) {
+-        j = -1;
+-        for (int i = 0; i < LEN_1D; i++) {
+-            if (a[i] < (real_t)0.) {
+-                j = i;
+-            }
++
++    // Apply pb_mix updates for iterations 0 through R-2
++    for (int nl = 0; nl < R - 1; nl++) {
++        pb_mix(nl);
++    }
++
++    // Search with array state after first R-1 pb_mix calls
++    j = -1;
++    for (int i = 0; i < LEN_1D; i++) {
++        if (a[i] < (real_t)0. && i > j) {
++            j = i;
+         }
+-        chksum = (real_t) j;
+-        pb_mix(nl);
++    }
++    #pragma omp parallel
++    #pragma omp single
++    {
++    #pragma omp task
++    chksum = (real_t) j;
++
++    // Apply final pb_mix update
++    if (R > 0) {
++        #pragma omp task
++        pb_mix(R - 1);
++    }
++
+     }
+     return j+1;
+ }

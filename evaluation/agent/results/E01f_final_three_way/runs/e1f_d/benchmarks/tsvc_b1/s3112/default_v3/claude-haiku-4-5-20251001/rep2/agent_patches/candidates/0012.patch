@@ -1,0 +1,23 @@
+--- s3112.c
++++ s3112.c
+@@ -17,11 +17,19 @@
+ {
+     real_t sum;
+     for (int nl = 0; nl < R; nl++) {
++        /* Pass 1: Compute total sum (for return value). */
+         sum = (real_t)0.0;
+         for (int i = 0; i < LEN_1D; i++) {
+             sum += a[i];
+-            b[i] = sum;
+         }
++
++        /* Pass 2: Compute prefix sums in original left-to-right order. */
++        real_t prefix = (real_t)0.0;
++        for (int i = 0; i < LEN_1D; i++) {
++            prefix += a[i];
++            b[i] = prefix;
++        }
++
+         pb_mix(nl);
+     }
+     return sum;

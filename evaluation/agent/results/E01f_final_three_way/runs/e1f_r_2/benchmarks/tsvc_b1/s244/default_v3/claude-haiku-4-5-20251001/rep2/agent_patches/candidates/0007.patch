@@ -1,0 +1,14 @@
+--- s244.c
++++ s244.c
+@@ -17,9 +17,10 @@
+ {
+     for (int nl = 0; nl < R; nl++) {
+         for (int i = 0; i < LEN_1D-1; ++i) {
++            real_t a_temp = a[i+1];
+             a[i] = b[i] + c[i] * d[i];
+             b[i] = c[i] + b[i];
+-            a[i+1] = b[i] + a[i+1] * d[i];
++            a[i+1] = b[i] + a_temp * d[i];
+         }
+         pb_mix(nl);
+     }

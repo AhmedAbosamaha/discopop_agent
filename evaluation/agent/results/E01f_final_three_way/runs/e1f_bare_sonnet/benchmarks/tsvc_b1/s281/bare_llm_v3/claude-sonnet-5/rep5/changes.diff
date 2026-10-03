@@ -1,0 +1,36 @@
+--- original.c
++++ final.c
+@@ -15,13 +15,30 @@
+ 
+ static real_t kernel_s281(void)
+ {
+-    real_t x;
+     for (int nl = 0; nl < R; nl++) {
+-        for (int i = 0; i < LEN_1D; i++) {
+-            x = a[LEN_1D-i-1] + b[i] * c[i];
++        /* Split at mid so that each half's iterations are mutually independent:
++         * i < mid reads only still-original elements (mirror index >= mid, not
++         * yet touched this activation); i >= mid reads elements that the first
++         * loop has already finished writing (separate parallel region => the
++         * implicit barrier after it guarantees that). mid = ceil(LEN_1D/2) keeps
++         * the odd-length self-mirrored middle element in the first half, where
++         * it still sees its own original value. */
++        int mid = (LEN_1D + 1) / 2;
++
++        #pragma omp parallel for default(none) shared(a, b, c, mid) schedule(static)
++        for (int i = 0; i < mid; i++) {
++            real_t x = a[LEN_1D-i-1] + b[i] * c[i];
+             a[i] = x-(real_t)1.0;
+             b[i] = x;
+         }
++
++        #pragma omp parallel for default(none) shared(a, b, c, mid) schedule(static)
++        for (int i = mid; i < LEN_1D; i++) {
++            real_t x = a[LEN_1D-i-1] + b[i] * c[i];
++            a[i] = x-(real_t)1.0;
++            b[i] = x;
++        }
++
+         pb_mix(nl);
+     }
+     return (real_t)0;

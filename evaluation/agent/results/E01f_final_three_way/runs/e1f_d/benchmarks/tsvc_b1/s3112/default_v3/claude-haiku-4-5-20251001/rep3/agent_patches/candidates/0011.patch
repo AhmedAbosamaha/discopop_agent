@@ -1,0 +1,22 @@
+--- s3112.c
++++ s3112.c
+@@ -16,12 +16,18 @@
+ static real_t kernel_s3112(void)
+ {
+     real_t sum;
++    real_t *prefix_sum;
+     for (int nl = 0; nl < R; nl++) {
++        prefix_sum = (real_t *)malloc(LEN_1D * sizeof(real_t));
+         sum = (real_t)0.0;
+         for (int i = 0; i < LEN_1D; i++) {
+             sum += a[i];
+-            b[i] = sum;
++            prefix_sum[i] = sum;
+         }
++        for (int i = 0; i < LEN_1D; i++) {
++            b[i] = prefix_sum[i];
++        }
++        free(prefix_sum);
+         pb_mix(nl);
+     }
+     return sum;

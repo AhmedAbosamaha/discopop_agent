@@ -1,0 +1,17 @@
+--- s243.c
++++ s243.c
+@@ -16,12 +16,14 @@
+ static real_t kernel_s243(void)
+ {
+     real_t *a_read = malloc(LEN_1D * sizeof(real_t));
++    #pragma omp parallel for 
+     for (int j = 0; j < LEN_1D; j++) {
+         a_read[j] = a[j];
+     }
+ 
+     for (int nl = 0; nl < R; nl++) {
+         if (nl > 0) {
++            #pragma omp parallel for 
+             for (int j = 0; j < LEN_1D; j++) {
+                 a_read[j] = a[j];
+             }

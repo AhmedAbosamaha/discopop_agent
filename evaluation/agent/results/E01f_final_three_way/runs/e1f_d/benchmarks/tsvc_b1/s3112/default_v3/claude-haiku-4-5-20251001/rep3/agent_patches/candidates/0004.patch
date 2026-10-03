@@ -1,0 +1,26 @@
+--- s3112.c
++++ s3112.c
+@@ -16,11 +16,20 @@
+ static real_t kernel_s3112(void)
+ {
+     real_t sum;
++    int chunk = 512;
++    real_t temp[512];
++
+     for (int nl = 0; nl < R; nl++) {
+         sum = (real_t)0.0;
+-        for (int i = 0; i < LEN_1D; i++) {
+-            sum += a[i];
+-            b[i] = sum;
++        for (int c = 0; c < LEN_1D; c += chunk) {
++            int end = (c + chunk < LEN_1D) ? (c + chunk) : LEN_1D;
++            for (int i = c; i < end; i++) {
++                sum += a[i];
++                temp[i - c] = sum;
++            }
++            for (int i = c; i < end; i++) {
++                b[i] = temp[i - c];
++            }
+         }
+         pb_mix(nl);
+     }

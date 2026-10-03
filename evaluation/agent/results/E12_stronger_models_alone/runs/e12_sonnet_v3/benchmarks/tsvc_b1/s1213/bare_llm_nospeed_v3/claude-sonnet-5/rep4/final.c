@@ -1,0 +1,63 @@
+/* TSVC-2 loop s1213, from TSVC-2 src/tsvc.c (sha256 456dd573b84b; University of Illinois licence,
+ * see benchmarks/TSVC_2/license.txt). */
+#include "tsvc_b1/s1213.h"
+#include <stdlib.h>
+
+/* Between two repetitions a few INPUT elements change, so no repetition can be skipped,
+ * merged with another or run out of order: the repetition loop is sequential by a true
+ * dependence, and the loop under study is the one inside it. */
+static void pb_mix(int nl)
+{
+  long k = ((long)nl * 7919L + 13L) % LEN_1D;
+  a[k] += (real_t)0.25; b[k] += (real_t)0.25; c[k] += (real_t)0.125;
+  d[k] += (real_t)0.125; e[k] += (real_t)0.25;
+  a[0] += (real_t)0.125; b[LEN_1D-1] += (real_t)0.125;
+}
+
+/* Inner loop dependence analysis (per repetition `nl`):
+ *   a[i] = b[i-1] + c[i];
+ *   b[i] = a[i+1] * d[i];
+ * In the original sequential order b[i] always reads a[i+1] BEFORE that
+ * element is ever written (a[i+1] is only written during iteration i+1,
+ * which runs after iteration i), so b[i] always uses the value of a[]
+ * as it was when this repetition's inner loop started -- call it a_old.
+ * Likewise a[i] reads b[i-1]; for i>=2, b[i-1] was written during
+ * iteration i-1 as b[i-1] = a[i] * d[i-1], and that a[i] read is again
+ * the pre-loop a_old[i] (the write to a[i] happens later, in iteration
+ * i itself). So for i>=2: a[i] = a_old[i]*d[i-1] + c[i]. For i==1,
+ * b[0] is never written by this loop, so a[1] = b[0] (loop-invariant,
+ * untouched) + c[1]. With a_old snapshotted up front, every iteration
+ * reads only pre-loop values and writes its own a[i]/b[i]: the
+ * cross-iteration dependence is removed, not merely relocated.
+ */
+static real_t kernel_s1213(void)
+{
+    real_t *a_old = (real_t *)malloc(sizeof(real_t) * (size_t)LEN_1D);
+    for (int nl = 0; nl < R; nl++) {
+        /* Snapshot of a[] as it stands at the start of this repetition;
+         * heap-allocated since LEN_1D can be very large. Each element is
+         * written and read independently, so the copy itself parallelizes. */
+        #pragma omp parallel for default(none) shared(a, a_old)
+        for (int i = 0; i < LEN_1D; i++) {
+            a_old[i] = a[i];
+        }
+        /* b[0] is loop-invariant here (never written inside this loop),
+         * read-only shared value used by the i==1 special case. */
+        #pragma omp parallel for default(none) shared(a, b, c, d, a_old)
+        for (int i = 1; i < LEN_1D-1; i++) {
+            real_t new_a;
+            if (i == 1) {
+                new_a = b[0] + c[i];
+            } else {
+                new_a = a_old[i] * d[i-1] + c[i];
+            }
+            b[i] = a_old[i+1] * d[i];
+            a[i] = new_a;
+        }
+        pb_mix(nl);
+    }
+    free(a_old);
+    return (real_t)0;
+}
+
+PB_MAIN(kernel_s1213)

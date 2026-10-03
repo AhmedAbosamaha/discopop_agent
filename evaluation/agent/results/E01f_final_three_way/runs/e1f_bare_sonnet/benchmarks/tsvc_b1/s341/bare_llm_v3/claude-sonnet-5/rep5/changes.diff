@@ -1,0 +1,34 @@
+--- original.c
++++ final.c
+@@ -17,12 +17,26 @@
+ {
+     int j;
+     for (int nl = 0; nl < R; nl++) {
+-        j = -1;
++        j = 0;
++        /* Original dependence: j is an exclusive running count of how many
++         * earlier i's had b[i] > 0, used as the write slot for a[]. That is
++         * an exclusive prefix-sum (scan) of the predicate, not a reused
++         * location - the count really has to flow from i-1 into i. We keep
++         * the scan order (so results match exactly) but let OpenMP's inscan
++         * reduction carry the running count across threads: each iteration
++         * reads j as the exclusive prefix before this i (pre-scan part),
++         * then folds in its own predicate via the combiner update after the
++         * scan directive. pred is loop-local (private by construction); j
++         * is never read once this loop ends, so reduction is safe. a[] and
++         * b[] stay shared - each iteration writes a distinct a[j] slot and
++         * reads a distinct b[i], so there is no race between iterations.
++         */
++        #pragma omp parallel for reduction(inscan, +:j)
+         for (int i = 0; i < LEN_1D; i++) {
+-            if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
+-            }
++            int pred = (b[i] > (real_t)0.) ? 1 : 0;
++            if (pred) a[j] = b[i];
++            #pragma omp scan exclusive(j)
++            j += pred;
+         }
+         pb_mix(nl);
+     }

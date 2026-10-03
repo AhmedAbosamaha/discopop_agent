@@ -1,0 +1,10 @@
+--- vpvtv.c
++++ vpvtv.c
+@@ -41,6 +41,7 @@
+     /* Phase 2: Compute the products using saved b,c values.
+      * Each outer iteration populates its own delta_a array.
+      * The outer loop iterations are independent for this phase (different nl → different delta_a[nl]). */
++ #pragma omp parallel for shared(c_saved,b_saved,delta_a) 
+     for (int nl = 0; nl < R; nl++) {
+         for (int i = 0; i < LEN_1D; i++) {
+             delta_a[nl][i] = b_saved[nl][i] * c_saved[nl][i];

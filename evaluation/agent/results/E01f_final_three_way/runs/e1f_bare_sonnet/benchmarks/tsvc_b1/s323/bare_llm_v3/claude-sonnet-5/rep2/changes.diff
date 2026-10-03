@@ -1,0 +1,84 @@
+--- original.c
++++ final.c
+@@ -13,12 +13,78 @@
+   a[0] += (real_t)0.125; b[LEN_1D-1] += (real_t)0.125;
+ }
+ 
++/* Fixed number of blocks used to parallelize the prefix-sum recurrence below.
++ * This is a constant, NOT a function of LEN_1D, so the extra block_sum /
++ * block_offset storage stays O(1) regardless of problem size. */
++#define S323_NUM_BLOCKS 256
++
+ static real_t kernel_s323(void)
+ {
++    /* The i-loop carries a true dependence: a[i] needs b[i-1], and b[i-1] was
++     * itself produced by the same loop one iteration earlier. Expanding it:
++     *   a[i] = b[i-1] + c[i]*d[i]
++     *   b[i] = a[i]   + c[i]*e[i]  =  b[i-1] + c[i]*d[i] + c[i]*e[i]
++     * so b is really just a running sum seeded by b[0]; a[] never feeds
++     * anything but b[], so once b[] is known everywhere a[i] = b[i-1] + c[i]*d[i]
++     * can be recovered with no dependence at all. We compute the running sum
++     * with a two-pass block scan (block-local partial sums computed in
++     * parallel, a short sequential carry pass over the fixed S323_NUM_BLOCKS
++     * blocks, then a parallel pass applying each block's carry), and only
++     * then recompute a[] in a fully independent parallel pass.
++     */
+     for (int nl = 0; nl < R; nl++) {
+-        for (int i = 1; i < LEN_1D; i++) {
+-            a[i] = b[i-1] + c[i] * d[i];
+-            b[i] = a[i] + c[i] * e[i];
++        int m = LEN_1D - 1;  /* number of elements at indices 1 .. LEN_1D-1 */
++        if (m > 0) {
++            int nb = (m < S323_NUM_BLOCKS) ? m : S323_NUM_BLOCKS;
++            real_t block_sum[S323_NUM_BLOCKS];    /* per-block total of c[i]*d[i]+c[i]*e[i] */
++            real_t block_offset[S323_NUM_BLOCKS]; /* b-value that must prevail just before each block starts */
++
++            /* Pass 1: each block independently walks its own disjoint index
++             * range, stashes the block-local running sum (started at 0) into
++             * b[i] as scratch, and records the block's grand total. Blocks
++             * touch disjoint ranges of b[], so there is no race. */
++            #pragma omp parallel for default(none) shared(b, c, d, e, block_sum, m, nb)
++            for (int bi = 0; bi < nb; bi++) {
++                long start = 1L + (long)bi * (long)m / nb;
++                long end   = 1L + (long)(bi + 1) * (long)m / nb;
++                real_t running = (real_t)0;
++                for (long i = start; i < end; i++) {
++                    running = running + c[i] * d[i];
++                    running = running + c[i] * e[i];
++                    b[i] = running;
++                }
++                block_sum[bi] = running;
++            }
++
++            /* Sequential carry pass over the fixed, small number of blocks
++             * (not over LEN_1D): turns each block's local total into the
++             * running b-value that has to be in effect before that block
++             * begins. */
++            block_offset[0] = b[0];
++            for (int bi = 1; bi < nb; bi++) {
++                block_offset[bi] = block_offset[bi - 1] + block_sum[bi - 1];
++            }
++
++            /* Pass 2: each block independently folds its own carry into the
++             * block-local values it stashed in b[] during pass 1, producing
++             * the final running sum. Disjoint ranges again, so no race. */
++            #pragma omp parallel for default(none) shared(b, block_offset, m, nb)
++            for (int bi = 0; bi < nb; bi++) {
++                long start = 1L + (long)bi * (long)m / nb;
++                long end   = 1L + (long)(bi + 1) * (long)m / nb;
++                real_t offset = block_offset[bi];
++                for (long i = start; i < end; i++) {
++                    b[i] = offset + b[i];
++                }
++            }
++
++            /* Pass 3: b[] now holds its final values everywhere, so a[i] -
++             * which only ever depended on b[i-1], c[i] and d[i] - can be
++             * recomputed independently for every i. */
++            #pragma omp parallel for default(none) shared(a, b, c, d)
++            for (int i = 1; i < LEN_1D; i++) {
++                a[i] = b[i - 1] + c[i] * d[i];
++            }
+         }
+         pb_mix(nl);
+     }

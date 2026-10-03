@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s1213.c
+  Model          : claude-fable-5-1
+  Not editable   : main, pb_mix
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-fable-5-1...
+│  [bare] s1213.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Done. Summary of the rewrite in `s1213.c`: **Dependence analysis** - `b[i] = a[i+1]*d[i]` — anti-dependence only: it reads `a[i+1]` *before* iteration `i+1` overwrites it, so every `b[i]` is a function of the original `a` and `d`. - `a[i] = b[i-1]+c[i]` — true flow dependence: for `i ≥ 2` it reads the `b[i-1]` just written by the previous iteration; for `i = 1` it reads the untouched `b[0]`. **Res
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

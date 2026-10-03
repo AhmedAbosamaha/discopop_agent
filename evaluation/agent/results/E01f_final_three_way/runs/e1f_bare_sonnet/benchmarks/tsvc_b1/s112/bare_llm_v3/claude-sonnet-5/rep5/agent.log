@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s112.c
+  Model          : claude-sonnet-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s112.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan **Dependence analysis.** The inner loop walks `i` from `LEN_1D-2` down to `0` doing `a[i+1] = a[i] + b[i]`. Because it runs in *descending* order, the write to index `i+1` (done at iteration `i`) always happens *after* the read of that same index `i+1` (done at the earlier iteration `i+1`, since `i+1 > i` runs first in descending order). So every read of `a[i]` in this sweep sees the value
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

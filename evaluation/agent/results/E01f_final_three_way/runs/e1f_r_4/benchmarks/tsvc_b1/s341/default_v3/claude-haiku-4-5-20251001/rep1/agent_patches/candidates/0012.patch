@@ -1,0 +1,43 @@
+--- s341.c
++++ s341.c
+@@ -18,12 +18,37 @@
+     int j;
+     for (int nl = 0; nl < R; nl++) {
+         j = -1;
++
++        // Allocate temporary arrays for filtering indices
++        int *match = (int *)malloc(LEN_1D * sizeof(int));
++        int *indices = (int *)malloc(LEN_1D * sizeof(int));
++
++        // Pass 1: Identify matching elements (elements > 0)
+         for (int i = 0; i < LEN_1D; i++) {
+-            if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++            match[i] = (b[i] > (real_t)0.) ? 1 : 0;
++        }
++
++        // Pass 2: Compute exclusive prefix sum to determine output positions
++        indices[0] = 0;
++        for (int i = 1; i < LEN_1D; i++) {
++            indices[i] = indices[i-1] + match[i-1];
++        }
++
++        // Pass 3: Write matched elements to their computed positions
++        for (int i = 0; i < LEN_1D; i++) {
++            if (match[i]) {
++                a[indices[i]] = b[i];
+             }
+         }
++
++        // Compute final j value: position of last matched element
++        if (LEN_1D > 0) {
++            j = indices[LEN_1D-1] + match[LEN_1D-1] - 1;
++        }
++
++        free(match);
++        free(indices);
++
+         pb_mix(nl);
+     }
+     return (real_t)0;

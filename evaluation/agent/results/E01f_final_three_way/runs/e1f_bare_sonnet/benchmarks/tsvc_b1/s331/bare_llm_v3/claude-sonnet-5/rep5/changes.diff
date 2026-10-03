@@ -1,0 +1,20 @@
+--- original.c
++++ final.c
+@@ -19,9 +19,16 @@
+     real_t chksum;
+     for (int nl = 0; nl < R; nl++) {
+         j = -1;
++        /* j is a running "last index where a[i] < 0"; since i increases
++         * monotonically, this is equivalent to a max-reduction over indices
++         * satisfying the condition (identity -1 when none match). a is only
++         * read here, so it stays shared/read-only across iterations. */
++        #pragma omp parallel for reduction(max:j)
+         for (int i = 0; i < LEN_1D; i++) {
+             if (a[i] < (real_t)0.) {
+-                j = i;
++                if (i > j) {
++                    j = i;
++                }
+             }
+         }
+         chksum = (real_t) j;

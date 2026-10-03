@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s244.c
+  Model          : claude-sonnet-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s244.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan **Dependence analysis.** In the inner loop, each iteration `i` does: 1. `a[i] = b[i] + c[i]*d[i]` — only touches index `i`, reads original `b[i],c[i],d[i]`. 2. `b[i] = c[i] + b[i]` — only touches index `i`. 3. `a[i+1] = b[i] + a[i+1]*d[i]` — writes index `i+1` using the just-updated `b[i]`. Statement 3's write to `a[i+1]` is always overwritten by the *next* iteration's statement 1 (`a[i+1]
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

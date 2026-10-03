@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s293.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] s293.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan **Analysis of dependences:** - The outer `nl` loop is sequential by necessity: `pb_mix(nl)` creates a true dependence by modifying shared arrays `a`, `b`, `c`, `d`, `e` between repetitions. - The inner `i` loop is perfectly parallel: each iteration independently writes `a[i] = a[0]` to a distinct array element. There are no iteration-to-iteration dependences—no iteration reads a value writ
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

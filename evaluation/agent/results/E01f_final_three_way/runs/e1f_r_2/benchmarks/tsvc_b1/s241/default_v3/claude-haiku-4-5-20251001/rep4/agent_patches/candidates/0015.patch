@@ -1,0 +1,10 @@
+--- s241.c
++++ s241.c
+@@ -26,6 +26,7 @@
+         }
+ 
+         // Second loop: compute new b values; a remains unchanged so a[i+1] is original
++        #pragma omp parallel for shared(a_new,b_new) 
+         for (int i = 0; i < LEN_1D-1; i++) {
+             b_new[i] = a_new[i] * a[i+1] * d[i];
+         }

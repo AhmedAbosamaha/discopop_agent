@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s281.c
+  Model          : claude-sonnet-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s281.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan **Dependence.** Inside one `nl` sweep, `a[i] = a[LEN-i-1] + b[i]*c[i] - 1`, `b[i]=x`. Mirroring `j = LEN-1-i` means: for the first half of indices (`i <= j`), `a[j]` hasn't been touched yet this sweep, so the read sees the *pre-sweep* value. For the second half (`i > j`), `a[j]` was already overwritten earlier in the same sweep, so the read sees the *updated* value — which itself was compu
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

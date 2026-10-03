@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s254.c
+  Model          : claude-opus-5-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-opus-5-5...
+│  [bare] s254.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: I've rewritten the inner loop of `kernel_s254` in `s254.c` and marked it parallel. Nothing has been compiled or run, since there's no compiler here. **What was blocking it:** the only thing passed from one iteration to the next was `x`, and it was only holding an input that already exists. On entering iteration `i`, `x` is always `b[i-1]`, or `b[LEN_1D-1]` when `i` is 0. The loop never writes `b`,
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

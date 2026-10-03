@@ -1,0 +1,55 @@
+--- s3112.c
++++ s3112.c
+@@ -16,14 +16,49 @@
+ static real_t kernel_s3112(void)
+ {
+     real_t sum;
++
++    /* Allocate auxiliary storage OUTSIDE the repetition loop to avoid per-iteration allocation cost. */
++    int chunk_size = 4096;
++    int num_chunks = (LEN_1D + chunk_size - 1) / chunk_size;
++    real_t *chunk_sums = (real_t*)malloc(num_chunks * sizeof(real_t));
++
+     for (int nl = 0; nl < R; nl++) {
+         sum = (real_t)0.0;
+-        for (int i = 0; i < LEN_1D; i++) {
+-            sum += a[i];
+-            b[i] = sum;
++
++        /* Phase 1: Compute prefix sums in independent chunks (parallelizable Do-All).
++         * Each chunk accumulates a[i] and stores running total in b[i]. */
++        for (int c = 0; c < num_chunks; c++) {
++            real_t local_sum = (real_t)0.0;
++            int start = c * chunk_size;
++            int end = start + chunk_size;
++            if (end > LEN_1D) end = LEN_1D;
++
++            for (int i = start; i < end; i++) {
++                local_sum += a[i];
++                b[i] = local_sum;
++            }
++            chunk_sums[c] = local_sum;
+         }
++
++        /* Phase 2: Adjust all b values by adding cumulative offset from prior chunks (sequential).
++         * This ensures b[i] contains the global prefix sum (not just within-chunk sum). */
++        real_t accumulated = (real_t)0.0;
++        for (int c = 0; c < num_chunks; c++) {
++            int start = c * chunk_size;
++            int end = start + chunk_size;
++            if (end > LEN_1D) end = LEN_1D;
++
++            for (int i = start; i < end; i++) {
++                b[i] += accumulated;
++            }
++            accumulated += chunk_sums[c];
++        }
++
++        sum = accumulated;
+         pb_mix(nl);
+     }
++
++    free(chunk_sums);
+     return sum;
+ }
+ 

@@ -1,0 +1,47 @@
+/* TSVC-2 loop s243, from TSVC-2 src/tsvc.c (sha256 456dd573b84b; University of Illinois licence,
+ * see benchmarks/TSVC_2/license.txt). */
+#include "tsvc_b1/s243.h"
+
+/* Between two repetitions a few INPUT elements change, so no repetition can be skipped,
+ * merged with another or run out of order: the repetition loop is sequential by a true
+ * dependence, and the loop under study is the one inside it. */
+static void pb_mix(int nl)
+{
+  long k = ((long)nl * 7919L + 13L) % LEN_1D;
+  a[k] += (real_t)0.25; b[k] += (real_t)0.25; c[k] += (real_t)0.125;
+  d[k] += (real_t)0.125; e[k] += (real_t)0.25;
+  a[0] += (real_t)0.125; b[LEN_1D-1] += (real_t)0.125;
+}
+
+static real_t kernel_s243(void)
+{
+    real_t *a_in = (real_t *)malloc(LEN_1D * sizeof(real_t));
+
+    for (int nl = 0; nl < R; nl++) {
+        // Cache the original values of a before modification
+        #pragma omp parallel for 
+        for (int i = 0; i < LEN_1D; i++) {
+            a_in[i] = a[i];
+        }
+
+        // First phase: compute a[i] and b[i] using current input arrays
+        #pragma omp parallel for 
+        for (int i = 0; i < LEN_1D-1; i++) {
+            a[i] = b[i] + c[i  ] * d[i];
+            b[i] = a[i] + d[i  ] * e[i];
+        }
+
+        // Second phase: update a[i] using the next element from cached input a
+        #pragma omp parallel for shared(a_in) 
+        for (int i = 0; i < LEN_1D-1; i++) {
+            a[i] = b[i] + a_in[i+1] * d[i];
+        }
+
+        pb_mix(nl);
+    }
+
+    free(a_in);
+    return (real_t)0;
+}
+
+PB_MAIN(kernel_s243)

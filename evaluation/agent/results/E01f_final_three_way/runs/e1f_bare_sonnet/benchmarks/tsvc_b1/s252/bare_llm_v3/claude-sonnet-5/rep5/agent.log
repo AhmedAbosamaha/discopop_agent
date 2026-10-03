@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s252.c
+  Model          : claude-sonnet-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s252.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan The inner loop has the recurrence `t = s` carrying `s_prev = b[i-1]*c[i-1]` forward, with `a[i] = b[i]*c[i] + t`. This is just a shifted read, not a reduction: `t` at iteration `i` always equals `b[i-1]*c[i-1]` (or `0` at `i==0`). Since `b` and `c` are never written inside this loop, each iteration can recompute that value directly from `b[i-1]`,`c[i-1]` instead of carrying it via `t`. Tha
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

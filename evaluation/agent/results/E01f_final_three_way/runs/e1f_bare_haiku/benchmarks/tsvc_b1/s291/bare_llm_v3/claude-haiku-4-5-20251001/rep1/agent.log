@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s291.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] s291.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Looking at the code, I can see the structure: 1. **Outer loop** (`nl`): Sequential by necessity — `pb_mix(nl)` modifies input arrays between repetitions, creating a true dependence. 2. **Inner loop** (`i`): Currently has a loop-carried dependence through `im1`: - `im1` starts at `LEN_1D-1` - Each iteration i reads the `im1` set by iteration i-1 - This makes iterations dependent on their predecesso
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

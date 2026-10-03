@@ -1,0 +1,27 @@
+--- original.c
++++ final.c
+@@ -16,10 +16,22 @@
+ static real_t kernel_s211(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        /* Copy b to break loop-carried dependence:
++         * iteration i reads b[i-1] and b[i+1];
++         * iteration i+1 reads b[i], which iteration i wrote.
++         * Reading from b_copy (read-only) lets all iterations run in parallel.
++         */
++        real_t *b_copy = (real_t *)malloc(LEN_1D * sizeof(real_t));
++        memcpy(b_copy, b, LEN_1D * sizeof(real_t));
++
++        #pragma omp parallel for \
++            default(none) shared(a, b, c, d, e, b_copy, LEN_1D)
+         for (int i = 1; i < LEN_1D-1; i++) {
+-            a[i] = b[i - 1] + c[i] * d[i];
+-            b[i] = b[i + 1] - e[i] * d[i];
++            a[i] = b_copy[i - 1] + c[i] * d[i];
++            b[i] = b_copy[i + 1] - e[i] * d[i];
+         }
++
++        free(b_copy);
+         pb_mix(nl);
+     }
+     return (real_t)0;

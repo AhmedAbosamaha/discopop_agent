@@ -1,0 +1,33 @@
+--- s331.c
++++ s331.c
+@@ -15,19 +15,26 @@
+ 
+ static real_t kernel_s331(void)
+ {
+-    int j;
++    int j_final = -1;
+     real_t chksum;
++    real_t* a_snap = malloc(LEN_1D * sizeof(real_t));
+     for (int nl = 0; nl < R; nl++) {
+-        j = -1;
++        if (nl > 0) {
++            memcpy(a_snap, a, LEN_1D * sizeof(real_t));
++        }
++        int j = -1;
+         for (int i = 0; i < LEN_1D; i++) {
+-            if (a[i] < (real_t)0.) {
++            real_t a_val = (nl == 0) ? a[i] : a_snap[i];
++            if (a_val < (real_t)0.) {
+                 j = i;
+             }
+         }
+         chksum = (real_t) j;
++        j_final = j;
+         pb_mix(nl);
+     }
+-    return j+1;
++    free(a_snap);
++    return j_final+1;
+ }
+ 
+ PB_MAIN(kernel_s331)

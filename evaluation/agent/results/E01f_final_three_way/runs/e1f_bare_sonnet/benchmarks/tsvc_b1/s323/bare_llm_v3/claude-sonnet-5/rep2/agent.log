@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s323.c
+  Model          : claude-sonnet-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s323.c: edited, 3 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan **Dependence.** The inner loop has a genuine value-carried recurrence, not just a reused location: `a[i] = b[i-1] + c[i]*d[i]; b[i] = a[i] + c[i]*e[i]`. Substituting shows `b[i] = b[i-1] + c[i]*d[i] + c[i]*e[i]`, i.e. `b` is a running sum seeded by `b[0]`, and `a[i]` feeds nothing except that one `b[i]` — once the final `b` array is known, every `a[i]` can be recomputed independently as `b
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

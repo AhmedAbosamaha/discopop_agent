@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s293.c
+  Model          : claude-opus-5-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-opus-5-5...
+│  [bare] s293.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: I parallelized the inner copy loop in `s293.c`, but I haven't compiled or run anything (no compiler here), so speed and byte-identical output are unconfirmed. - **The dependence:** every iteration reads `a[0]`, and iteration 0 also writes `a[0]`. That write puts back the value already there, so no value passes between iterations. It is only a reused location, but in parallel that write would race 
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

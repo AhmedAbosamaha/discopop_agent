@@ -1,0 +1,24 @@
+--- original.c
++++ final.c
+@@ -16,9 +16,20 @@
+ static real_t kernel_s1213(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        /* Original interleaved loop had a[i] use the freshly-written b[i-1] while
++         * b[i] used a[i+1] from before this inner loop began (a[i+1] is always
++         * read before iteration i+1 can overwrite it). Splitting into two passes
++         * makes both independent: pass 1 only reads the untouched a[] and writes
++         * b[]; pass 2 only reads the now-complete b[] and writes a[]. b[0], never
++         * written by pass 1, still holds the same value pass 2's i==1 case read
++         * in the original. */
++        #pragma omp parallel for default(none) shared(a, b, d)
++        for (int i = 1; i < LEN_1D-1; i++) {
++            b[i] = a[i+1]*d[i];
++        }
++        #pragma omp parallel for default(none) shared(a, b, c)
+         for (int i = 1; i < LEN_1D-1; i++) {
+             a[i] = b[i-1]+c[i];
+-            b[i] = a[i+1]*d[i];
+         }
+         pb_mix(nl);
+     }

@@ -1,0 +1,23 @@
+--- original.c
++++ final.c
+@@ -16,9 +16,19 @@
+ static real_t kernel_s1213(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        /* Pass 1: every b[i] reads only the ORIGINAL a[i+1] (in the serial
++         * order a[i+1] is overwritten one iteration later), so compute all
++         * of b first from the untouched a. */
++#pragma omp parallel for shared(a, b, d)
++        for (int i = 1; i < LEN_1D-1; i++) {
++            b[i] = a[i+1]*d[i];
++        }
++        /* Pass 2: a[i] reads b[i-1], which in the serial order is already
++         * the NEW value for i >= 2 and the original b[0] for i == 1; b is
++         * now final, so each a[i] is independent. */
++#pragma omp parallel for shared(a, b, c)
+         for (int i = 1; i < LEN_1D-1; i++) {
+             a[i] = b[i-1]+c[i];
+-            b[i] = a[i+1]*d[i];
+         }
+         pb_mix(nl);
+     }

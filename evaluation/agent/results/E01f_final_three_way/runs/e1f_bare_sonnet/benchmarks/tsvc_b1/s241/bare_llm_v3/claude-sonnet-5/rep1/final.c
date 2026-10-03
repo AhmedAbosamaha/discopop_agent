@@ -1,0 +1,51 @@
+/* TSVC-2 loop s241, from TSVC-2 src/tsvc.c (sha256 456dd573b84b; University of Illinois licence,
+ * see benchmarks/TSVC_2/license.txt). */
+#include "tsvc_b1/s241.h"
+#include <stdlib.h>
+
+/* Between two repetitions a few INPUT elements change, so no repetition can be skipped,
+ * merged with another or run out of order: the repetition loop is sequential by a true
+ * dependence, and the loop under study is the one inside it. */
+static void pb_mix(int nl)
+{
+  long k = ((long)nl * 7919L + 13L) % LEN_1D;
+  a[k] += (real_t)0.25; b[k] += (real_t)0.25; c[k] += (real_t)0.125;
+  d[k] += (real_t)0.125; e[k] += (real_t)0.25;
+  a[0] += (real_t)0.125; b[LEN_1D-1] += (real_t)0.125;
+}
+
+static real_t kernel_s241(void)
+{
+    /* Heap-allocated snapshot of a[] as it stood before this repetition's i-loop
+     * started.  The original sequential loop reads a[i+1] before iteration i+1
+     * has a chance to overwrite it (a WAR/anti-dependence, not a value carried
+     * forward); aold[] reproduces exactly that "old" value so each iteration i
+     * can run independently of iteration i+1 regardless of execution order. */
+    real_t *aold = (real_t *)malloc((size_t)LEN_1D * sizeof(real_t));
+
+    for (int nl = 0; nl < R; nl++) {
+        /* Snapshot: elementwise copy, no cross-iteration dependence. */
+        #pragma omp parallel for shared(a, aold) schedule(static)
+        for (int i = 0; i < LEN_1D; i++) {
+            aold[i] = a[i];
+        }
+
+        /* Each iteration i now reads only b[i], c[i], d[i], aold[i], aold[i+1]
+         * and writes only a[i], b[i]: no iteration depends on another, so the
+         * loop can run in any order/schedule and still match the sequential
+         * result. new_a is a per-iteration scalar declared inside the loop
+         * body, so it is already private and needs no clause. */
+        #pragma omp parallel for shared(a, b, c, d, aold) schedule(static)
+        for (int i = 0; i < LEN_1D-1; i++) {
+            real_t new_a = b[i] * c[i  ] * d[i];
+            b[i] = new_a * aold[i+1] * d[i];
+            a[i] = new_a;
+        }
+        pb_mix(nl);
+    }
+
+    free(aold);
+    return (real_t)0;
+}
+
+PB_MAIN(kernel_s241)

@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s252.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] s252.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan The outer `nl` loop is sequential—each iteration depends on `pb_mix` modifying the input arrays before the next iteration runs. The inner `i` loop has a loop-carried dependence: variable `t` carries the value `b[i-1]*c[i-1]` from iteration i-1 to iteration i, making each `a[i]` depend on `t` from the previous iteration. This sequential chain `t = s` blocks parallelization. To parallelize, 
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

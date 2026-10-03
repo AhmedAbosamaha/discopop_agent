@@ -1,0 +1,26 @@
+--- s3112.c
++++ s3112.c
+@@ -18,10 +18,22 @@
+     real_t sum;
+     for (int nl = 0; nl < R; nl++) {
+         sum = (real_t)0.0;
++
++        /* Compute and store prefix sum in auxiliary array, maintaining exact accumulation order.
++         * First loop: accumulate in original left-associative order into auxiliary array.
++         * Second loop: copy to output array (parallelizable, no data dependence). */
++        real_t *prefix_sum = (real_t*)malloc(LEN_1D * sizeof(real_t));
+         for (int i = 0; i < LEN_1D; i++) {
+             sum += a[i];
+-            b[i] = sum;
++            prefix_sum[i] = sum;
+         }
++
++        /* Assign to output array — each iteration is independent. */
++        for (int i = 0; i < LEN_1D; i++) {
++            b[i] = prefix_sum[i];
++        }
++
++        free(prefix_sum);
+         pb_mix(nl);
+     }
+     return sum;

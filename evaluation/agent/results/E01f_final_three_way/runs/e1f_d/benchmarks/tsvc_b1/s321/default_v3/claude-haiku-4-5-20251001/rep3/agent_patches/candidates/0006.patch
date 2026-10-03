@@ -1,0 +1,10 @@
+--- s321.c
++++ s321.c
+@@ -22,6 +22,7 @@
+         }
+         for (int iter = 0; iter < LEN_1D - 1; iter++) {
+             real_t* prev_vals = malloc(LEN_1D * sizeof(real_t));
++            #pragma omp parallel for 
+             for (int i = 1; i < LEN_1D; i++) {
+                 prev_vals[i] = a[i-1];
+             }

@@ -1,0 +1,10 @@
+--- s331.c
++++ s331.c
+@@ -23,6 +23,7 @@
+             memcpy(a_snap, a, LEN_1D * sizeof(real_t));
+         }
+         int j = -1;
++        #pragma omp parallel for 
+         for (int i = 0; i < LEN_1D; i++) {
+             real_t a_val = (nl == 0) ? a[i] : a_snap[i];
+             if (a_val < (real_t)0.) {

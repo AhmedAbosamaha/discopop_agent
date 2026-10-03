@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s281.c
+  Model          : claude-opus-5-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-opus-5-5...
+│  [bare] s281.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: I've split the inner loop of `s281.c` into two parallel loops. Nothing was compiled or run here, so it hasn't been checked for races, matching output or speed yet. **What was blocking it:** iteration `i` reads `a[LEN_1D-1-i]` and writes `a[i]`. For the second half of the array, that read picks up a value written earlier in the same sweep, so a real value passes between iterations, not just a reuse
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

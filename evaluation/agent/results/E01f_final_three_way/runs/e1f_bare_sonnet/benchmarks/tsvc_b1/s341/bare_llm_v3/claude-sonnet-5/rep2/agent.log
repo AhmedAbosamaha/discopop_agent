@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s341.c
+  Model          : claude-sonnet-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s341.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan **Dependence:** the inner loop's `j` is a running output index — a value that moves between iterations (how many positives were seen so far), not just a reused location. A plain `parallel for` would race on `j` and could place elements in `a[]` out of order relative to `i`, breaking the byte-identical output requirement. **Fix — split the single counter into a block-parallel prefix sum:** 
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

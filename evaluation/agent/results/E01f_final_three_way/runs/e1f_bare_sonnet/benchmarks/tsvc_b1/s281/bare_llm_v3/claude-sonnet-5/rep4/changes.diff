@@ -1,0 +1,39 @@
+--- original.c
++++ final.c
+@@ -16,11 +16,32 @@
+ static real_t kernel_s281(void)
+ {
+     real_t x;
++    int n = LEN_1D;
++    int half = n / 2;
+     for (int nl = 0; nl < R; nl++) {
+-        for (int i = 0; i < LEN_1D; i++) {
+-            x = a[LEN_1D-i-1] + b[i] * c[i];
+-            a[i] = x-(real_t)1.0;
+-            b[i] = x;
++        /* Original loop couples index i with its mirror LEN_1D-1-i: the mirror's
++         * old value is read, then overwritten, and later in the same pass the
++         * mirror reads back the fresh value written at i. Regroup the pass into
++         * independent (lo, hi) pairs with hi = n-1-lo: each pair reproduces,
++         * in the same order, exactly the two reads/writes the original run
++         * performed for indices lo and hi, so pairs no longer depend on each
++         * other and can run in any order/on any thread. */
++        #pragma omp parallel for default(none) shared(a, b, c, n, half)
++        for (int lo = 0; lo < half; lo++) {
++            int hi = n - 1 - lo;
++            real_t aHi = a[hi];
++            real_t xlo = aHi + b[lo] * c[lo];
++            a[lo] = xlo - (real_t)1.0;
++            b[lo] = xlo;
++            real_t xhi = a[lo] + b[hi] * c[hi];
++            a[hi] = xhi - (real_t)1.0;
++            b[hi] = xhi;
++        }
++        if (n % 2 == 1) {
++            int mid = half;
++            x = a[mid] + b[mid] * c[mid];
++            a[mid] = x - (real_t)1.0;
++            b[mid] = x;
+         }
+         pb_mix(nl);
+     }

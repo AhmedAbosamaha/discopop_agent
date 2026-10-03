@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s1213.c
+  Model          : claude-opus-5-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-opus-5-5...
+│  [bare] s1213.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: I've split the inner loop of `s1213.c` into two passes, each with its own `#pragma omp parallel for`. Nothing has been compiled or run here, so it hasn't been through TSan or a timing run yet. **What blocked it:** - `a[i] = b[i-1] + c[i]` reads the `b[i-1]` that the previous iteration just wrote. A value really does move between iterations, and this is what made the loop sequential. - `b[i] = a[i+
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

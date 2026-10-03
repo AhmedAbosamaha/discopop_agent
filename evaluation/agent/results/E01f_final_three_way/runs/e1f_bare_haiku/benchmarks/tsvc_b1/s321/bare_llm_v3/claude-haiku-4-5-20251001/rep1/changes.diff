@@ -1,0 +1,13 @@
+--- original.c
++++ final.c
+@@ -16,6 +16,10 @@
+ static real_t kernel_s321(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        /* Inner loop has loop-carried dependence: iteration i reads a[i-1]
++           which was written by iteration i-1. This creates a strict sequential
++           chain where each a[i] depends on the computed value of a[i-1].
++           No parallelization possible without changing algorithm. */
+         for (int i = 1; i < LEN_1D; i++) {
+             a[i] += a[i-1] * b[i];
+         }

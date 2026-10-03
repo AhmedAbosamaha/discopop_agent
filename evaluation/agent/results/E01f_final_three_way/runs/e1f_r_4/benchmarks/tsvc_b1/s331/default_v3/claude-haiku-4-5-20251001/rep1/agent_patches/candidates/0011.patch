@@ -1,0 +1,10 @@
+--- s331.c
++++ s331.c
+@@ -22,6 +22,7 @@
+         // Phase 1: Identify all indices where condition holds.
+         // Each iteration writes to a distinct array position (Do-All).
+         int *temp = (int *)malloc(LEN_1D * sizeof(int));
++        #pragma omp parallel for 
+         for (int i = 0; i < LEN_1D; i++) {
+             temp[i] = (a[i] < (real_t)0.) ? i : -1;
+         }

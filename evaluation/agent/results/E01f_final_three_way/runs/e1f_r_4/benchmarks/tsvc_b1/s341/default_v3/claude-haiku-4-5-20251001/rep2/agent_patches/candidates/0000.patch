@@ -1,0 +1,30 @@
+--- s341.c
++++ s341.c
+@@ -18,12 +18,26 @@
+     int j;
+     for (int nl = 0; nl < R; nl++) {
+         j = -1;
++        int* out_indices = (int*)malloc(LEN_1D * sizeof(int));
++
++        // Phase 1: Compute output index for each input element
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+                 j++;
+-                a[j] = b[i];
++                out_indices[i] = j;
++            } else {
++                out_indices[i] = -1;
+             }
+         }
++
++        // Phase 2: Scatter write to output (parallel-friendly, no inter-iteration deps)
++        for (int i = 0; i < LEN_1D; i++) {
++            if (out_indices[i] >= 0) {
++                a[out_indices[i]] = b[i];
++            }
++        }
++
++        free(out_indices);
+         pb_mix(nl);
+     }
+     return (real_t)0;

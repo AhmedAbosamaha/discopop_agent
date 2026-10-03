@@ -1,0 +1,62 @@
+--- vpvtv.c
++++ vpvtv.c
+@@ -15,12 +15,57 @@
+ 
+ static real_t kernel_vpvtv(void)
+ {
++    /* Phase 1: For each outer loop iteration, save the current state of b and c,
++     * then apply pb_mix(). This separates the data-dependent modifications from
++     * the computation, moving the loop-carried dependence on b,c out of the
++     * compute phase. */
++    real_t **b_saved = (real_t **)malloc(R * sizeof(real_t *));
++    real_t **c_saved = (real_t **)malloc(R * sizeof(real_t *));
++    real_t **delta_a = (real_t **)malloc(R * sizeof(real_t *));
++
++    for (int nl = 0; nl < R; nl++) {
++        b_saved[nl] = (real_t *)malloc(LEN_1D * sizeof(real_t));
++        c_saved[nl] = (real_t *)malloc(LEN_1D * sizeof(real_t));
++        delta_a[nl] = (real_t *)calloc(LEN_1D, sizeof(real_t));
++
++        /* Save b and c before pb_mix modifies them */
++        for (int i = 0; i < LEN_1D; i++) {
++            b_saved[nl][i] = b[i];
++            c_saved[nl][i] = c[i];
++        }
++
++        /* Apply the mix to advance b,c for the next iteration */
++        pb_mix(nl);
++    }
++
++    /* Phase 2: Compute the products using saved b,c values.
++     * Each outer iteration populates its own delta_a array.
++     * The outer loop iterations are independent for this phase (different nl → different delta_a[nl]). */
+     for (int nl = 0; nl < R; nl++) {
+         for (int i = 0; i < LEN_1D; i++) {
+-            a[i] += b[i] * c[i];
++            delta_a[nl][i] = b_saved[nl][i] * c_saved[nl][i];
+         }
+-        pb_mix(nl);
+     }
++
++    /* Phase 3: Accumulate all delta values into a.
++     * All outer iterations accumulate into the same a[i], forming a Reduction pattern
++     * that DiscoPoP can recognize and parallelize. */
++    for (int nl = 0; nl < R; nl++) {
++        for (int i = 0; i < LEN_1D; i++) {
++            a[i] += delta_a[nl][i];
++        }
++    }
++
++    /* Free all temporary buffers */
++    for (int nl = 0; nl < R; nl++) {
++        free(b_saved[nl]);
++        free(c_saved[nl]);
++        free(delta_a[nl]);
++    }
++    free(b_saved);
++    free(c_saved);
++    free(delta_a);
++
+     return (real_t)0;
+ }
+ 

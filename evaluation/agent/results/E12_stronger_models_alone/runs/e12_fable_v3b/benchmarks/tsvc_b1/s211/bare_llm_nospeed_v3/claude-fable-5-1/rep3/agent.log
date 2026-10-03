@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s211.c
+  Model          : claude-fable-5-1
+  Not editable   : main, pb_mix
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-fable-5-1...
+│  [bare] s211.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: The rewrite is applied; nothing further is needed from the tools. **Summary of the change to `s211.c`:** - **Dependence removed:** the original loop's `a[i] = b[i-1] + …` read the `b[i-1]` written by the previous iteration (a true loop-carried value), while `b[i] = b[i+1] - …` read the *old* `b[i+1]` (just a location being reused). Both are broken by a scratch buffer `tmp` (heap-allocated once, `L
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

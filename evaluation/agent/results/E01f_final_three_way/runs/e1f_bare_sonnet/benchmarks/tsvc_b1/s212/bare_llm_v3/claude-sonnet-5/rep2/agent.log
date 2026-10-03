@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s212.c
+  Model          : claude-sonnet-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s212.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Plan and rewrite summary: **Dependence analysis:** The inner loop body is `a[i] *= c[i]; b[i] += a[i+1]*d[i];`. In the original sequential order (i increasing), when iteration `i` reads `a[i+1]`, iteration `i+1` hasn't run yet, so `b[i]` always picks up the *pre-multiply* value of `a[i+1]`. This is a genuine cross-iteration value flow (write to `a[i]` by iteration `i` feeds the read of `a[i]` by i
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

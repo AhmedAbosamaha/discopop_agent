@@ -1,0 +1,3 @@
+| Arm | Model | Trials | FASTER | parallel-not-faster | parallel-speed-not-measurable | changed-not-parallel | no-change | BROKEN | SCAFFOLD_MODIFIED | VERIFY_FAILED | AGENT_ERROR | AGENT_TIMEOUT | PROFILE_ERROR | Median agent s | LLM calls |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| bare_llm_v3 | claude-sonnet-5 | 105 | 91 | 12 | 0 | 0 | 0 | 2 | 0 | 0 | 0 | 0 | 0 | 76 | 105 |

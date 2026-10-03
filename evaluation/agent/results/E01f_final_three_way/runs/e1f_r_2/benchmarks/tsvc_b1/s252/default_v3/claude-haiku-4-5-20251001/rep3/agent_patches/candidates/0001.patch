@@ -1,0 +1,10 @@
+--- s252.c
++++ s252.c
+@@ -19,6 +19,7 @@
+     for (int nl = 0; nl < R; nl++) {
+         // Stage 1: Compute products (do-all, parallelizable)
+         real_t *s_vals = (real_t *)malloc(LEN_1D * sizeof(real_t));
++        #pragma omp parallel for 
+         for (int i = 0; i < LEN_1D; i++) {
+             s_vals[i] = b[i] * c[i];
+         }

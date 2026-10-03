@@ -1,0 +1,10 @@
+--- vpvtv.c
++++ vpvtv.c
+@@ -51,6 +51,7 @@
+      * All outer iterations accumulate into the same a[i], forming a Reduction pattern
+      * that DiscoPoP can recognize and parallelize. */
+     for (int nl = 0; nl < R; nl++) {
++        #pragma omp parallel for firstprivate(nl) shared(delta_a) 
+         for (int i = 0; i < LEN_1D; i++) {
+             a[i] += delta_a[nl][i];
+         }

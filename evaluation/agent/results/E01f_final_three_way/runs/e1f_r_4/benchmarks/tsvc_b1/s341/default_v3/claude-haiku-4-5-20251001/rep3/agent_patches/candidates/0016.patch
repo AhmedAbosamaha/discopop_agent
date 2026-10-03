@@ -1,0 +1,10 @@
+--- s341.c
++++ s341.c
+@@ -29,6 +29,7 @@
+         }
+ 
+         /* Phase 2: write valid elements to output array in order (parallelizable) */
++ #pragma omp parallel for firstprivate(count) shared(indices) 
+         for (int j = 0; j < count; j++) {
+             int i = indices[j];
+             a[j] = b[i];

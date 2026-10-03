@@ -1,0 +1,25 @@
+--- s252.c
++++ s252.c
+@@ -17,12 +17,21 @@
+ {
+     real_t t, s;
+     for (int nl = 0; nl < R; nl++) {
++        // Stage 1: Compute products (do-all, parallelizable)
++        real_t *s_vals = (real_t *)malloc(LEN_1D * sizeof(real_t));
++        for (int i = 0; i < LEN_1D; i++) {
++            s_vals[i] = b[i] * c[i];
++        }
++
++        // Stage 2: Compute prefix sum (sequential)
+         t = (real_t) 0.;
+         for (int i = 0; i < LEN_1D; i++) {
+-            s = b[i] * c[i];
++            s = s_vals[i];
+             a[i] = s + t;
+             t = s;
+         }
++
++        free(s_vals);
+         pb_mix(nl);
+     }
+     return (real_t)0;

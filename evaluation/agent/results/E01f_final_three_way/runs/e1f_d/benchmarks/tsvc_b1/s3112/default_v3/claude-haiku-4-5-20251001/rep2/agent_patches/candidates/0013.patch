@@ -1,0 +1,10 @@
+--- s3112.c
++++ s3112.c
+@@ -19,6 +19,7 @@
+     for (int nl = 0; nl < R; nl++) {
+         /* Pass 1: Compute total sum (for return value). */
+         sum = (real_t)0.0;
++        #pragma omp parallel for reduction(+:sum) 
+         for (int i = 0; i < LEN_1D; i++) {
+             sum += a[i];
+         }

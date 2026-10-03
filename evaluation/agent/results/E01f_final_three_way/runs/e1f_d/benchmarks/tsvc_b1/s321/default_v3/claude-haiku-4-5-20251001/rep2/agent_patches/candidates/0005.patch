@@ -1,0 +1,46 @@
+--- s321.c
++++ s321.c
+@@ -16,9 +16,42 @@
+ static real_t kernel_s321(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        real_t* a_prev = malloc(LEN_1D * sizeof(real_t));
++        real_t* log_b_cumsum = malloc(LEN_1D * sizeof(real_t));
++
++        // Precompute cumulative sum of log(b) for efficient range products
++        log_b_cumsum[0] = 0.0;
+         for (int i = 1; i < LEN_1D; i++) {
+-            a[i] += a[i-1] * b[i];
++            log_b_cumsum[i] = log_b_cumsum[i-1] + log(b[i]);
+         }
++
++        for (int i = 0; i < LEN_1D; i++) {
++            a_prev[i] = a[i];
++        }
++
++        // Phase 1: stride=1
++        for (int i = 1; i < LEN_1D; i++) {
++            a[i] = a_prev[i] + a_prev[i-1] * b[i];
++        }
++
++        // Subsequent phases: stride=2, 4, 8, 16, ...
++        for (int stride = 2; stride < LEN_1D; stride *= 2) {
++            // Copy current state
++            for (int i = 0; i < LEN_1D; i++) {
++                a_prev[i] = a[i];
++            }
++
++            // Apply phase with this stride
++            for (int i = stride; i < LEN_1D; i++) {
++                // Product of b[i-stride+1] to b[i] using cumulative logs
++                real_t log_prod = log_b_cumsum[i] - log_b_cumsum[i - stride];
++                real_t b_prod = exp(log_prod);
++                a[i] += a_prev[i - stride] * b_prod;
++            }
++        }
++
++        free(a_prev);
++        free(log_b_cumsum);
+         pb_mix(nl);
+     }
+     return (real_t)0;

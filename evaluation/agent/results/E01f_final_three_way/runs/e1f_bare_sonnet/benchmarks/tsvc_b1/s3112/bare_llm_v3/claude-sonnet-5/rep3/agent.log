@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s3112.c
+  Model          : claude-sonnet-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s3112.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan **Dependence:** The inner loop computes a running prefix sum (`sum`) and *also* stores that evolving partial value into `b[i]` at every step — not just the final total. That's a true scan/recurrence, so it can't become a plain `reduction`; the recurrence has to be restructured into an independent form. **Restructuring (classic two-pass block scan):** 1. Split the `LEN_1D` range into `NUM_B
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

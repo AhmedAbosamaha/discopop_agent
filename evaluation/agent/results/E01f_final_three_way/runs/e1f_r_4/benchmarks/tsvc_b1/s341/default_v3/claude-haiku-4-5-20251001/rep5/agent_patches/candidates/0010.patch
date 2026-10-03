@@ -1,0 +1,18 @@
+--- s341.c
++++ s341.c
+@@ -19,6 +19,7 @@
+         int* pos = (int*)malloc(LEN_1D * sizeof(int));
+ 
+         // Pass 1: Mark elements that satisfy the condition
++        #pragma omp parallel for 
+         for (int i = 0; i < LEN_1D; i++) {
+             pos[i] = (b[i] > (real_t)0.) ? 1 : 0;
+         }
+@@ -29,6 +30,7 @@
+         }
+ 
+         // Pass 3: Write filtered elements to output array
++        #pragma omp parallel for shared(pos) 
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+                 a[pos[i] - 1] = b[i];

@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s241.c
+  Model          : claude-sonnet-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s241.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: 計画と実装内容: **依存関係の分析**: 内側ループで `b[i] = a[i] * a[i+1] * d[i]` が読む `a[i+1]` は、次のイテレーション `i+1` が `a[i+1] = b[i+1]*c[i+1]*d[i+1]` で上書きする前の値（逐次実行ではまだ書き換えられていない)。これは反依存（WAR）であり、値そのものが運ばれるわけではなく「古い値がまだ上書きされていない」という実行順序に依存している。並列化すると、別スレッドが先に `a[i+1]` を新しい値に書き換えてから読まれる可能性があり、結果が変わる。 **解消方法**: 各 `nl` 反復の内側ループが始まる前に、配列 `a[]`（長さ `LEN_1D`、ヒープ確保、`nl` ループの外で一度だけ malloc）に `aold[]` としてスナップショットを取る。ループ内では `a[i+1]` の代
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

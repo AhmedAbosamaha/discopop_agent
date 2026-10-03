@@ -1,0 +1,113 @@
+/* TSVC-2 loop s321, from TSVC-2 src/tsvc.c (sha256 456dd573b84b; University of Illinois licence,
+ * see benchmarks/TSVC_2/license.txt). */
+#include "tsvc_b1/s321.h"
+
+/* Between two repetitions a few INPUT elements change, so no repetition can be skipped,
+ * merged with another or run out of order: the repetition loop is sequential by a true
+ * dependence, and the loop under study is the one inside it. */
+static void pb_mix(int nl)
+{
+  long k = ((long)nl * 7919L + 13L) % LEN_1D;
+  a[k] += (real_t)0.25; b[k] += (real_t)0.25; c[k] += (real_t)0.125;
+  d[k] += (real_t)0.125; e[k] += (real_t)0.25;
+  a[0] += (real_t)0.125; b[LEN_1D-1] += (real_t)0.125;
+}
+
+/* a[i] += a[i-1]*b[i] is a first-order linear recurrence: a true value
+ * dependence runs the length of the array (each a[i] needs the just-
+ * written a[i-1]), so plain iteration can't be split across threads as
+ * is. We relocate the dependence instead of deleting it, using a classic
+ * three-pass chunked-scan:
+ *   pass 1 (parallel, independent per chunk): replay the local recurrence
+ *     within each chunk assuming a virtual predecessor of 0, producing a
+ *     chunk-local multiplier (product of b over the chunk) and a
+ *     chunk-local terminal value.
+ *   pass 2 (sequential, one step per chunk -- O(#chunks), not O(LEN_1D)):
+ *     fold the real incoming value (a[0], whatever the previous nl
+ *     repetition's pb_mix left there) through the chunk summaries to get
+ *     each chunk's true incoming carry.
+ *   pass 3 (parallel, independent per chunk): replay the exact same
+ *     multiply-add chain the original loop used, now seeded with the
+ *     real carry from pass 2, so every a[i] is produced by the same
+ *     operation order as the sequential loop, just split across chunks.
+ * The implicit barrier ending each "omp parallel for", plus the ordinary
+ * sequential pass 2 in between, guarantees pass 1's writes reach pass 2's
+ * reads and pass 2's writes reach pass 3's reads before they are used.
+ * The chunk partition is a fixed constant (clamped only by the problem
+ * size), never by the thread count, so the same input yields the same
+ * chunk boundaries -- and hence the same values -- at every thread count
+ * and schedule. */
+#define S321_NCHUNKS 256
+
+static real_t kernel_s321(void)
+{
+    for (int nl = 0; nl < R; nl++) {
+        int total = LEN_1D - 1; /* elements i = 1 .. LEN_1D-1 */
+        if (total > 0) {
+            int nchunks = S321_NCHUNKS;
+            if (nchunks > total) nchunks = total;
+
+            int chunk_start[S321_NCHUNKS + 1];
+            real_t chunk_mult[S321_NCHUNKS];
+            real_t chunk_add[S321_NCHUNKS];
+            real_t chunk_carry_in[S321_NCHUNKS];
+
+            int base = total / nchunks;
+            int rem = total % nchunks;
+            chunk_start[0] = 1;
+            for (int c = 0; c < nchunks; c++) {
+                int sz = base + (c < rem ? 1 : 0);
+                chunk_start[c + 1] = chunk_start[c] + sz;
+            }
+
+            /* Pass 1: per-chunk local summary (reads a[],b[] only; each
+             * iteration writes only its own chunk_mult[c]/chunk_add[c],
+             * so distinct chunks never touch the same memory). */
+            #pragma omp parallel for default(none) \
+                shared(a, b, chunk_start, chunk_mult, chunk_add, nchunks) \
+                schedule(static)
+            for (int c = 0; c < nchunks; c++) {
+                real_t lm = (real_t)1.0;
+                real_t la = (real_t)0.0;
+                int lo = chunk_start[c];
+                int hi = chunk_start[c + 1];
+                for (int i = lo; i < hi; i++) {
+                    lm = lm * b[i];
+                    la = la * b[i] + a[i];
+                }
+                chunk_mult[c] = lm;
+                chunk_add[c] = la;
+            }
+
+            /* Pass 2: sequential, tiny (nchunks steps) -- turns local
+             * summaries into the real incoming carry per chunk. */
+            {
+                real_t carry = a[0];
+                for (int c = 0; c < nchunks; c++) {
+                    chunk_carry_in[c] = carry;
+                    carry = chunk_add[c] + chunk_mult[c] * carry;
+                }
+            }
+
+            /* Pass 3: per-chunk exact recurrence replay, seeded with the
+             * real carry; each iteration writes only its own chunk's
+             * a[lo..hi), so distinct chunks never touch the same memory. */
+            #pragma omp parallel for default(none) \
+                shared(a, b, chunk_start, chunk_carry_in, nchunks) \
+                schedule(static)
+            for (int c = 0; c < nchunks; c++) {
+                real_t prev = chunk_carry_in[c];
+                int lo = chunk_start[c];
+                int hi = chunk_start[c + 1];
+                for (int i = lo; i < hi; i++) {
+                    prev = prev * b[i] + a[i];
+                    a[i] = prev;
+                }
+            }
+        }
+        pb_mix(nl);
+    }
+    return (real_t)0;
+}
+
+PB_MAIN(kernel_s321)

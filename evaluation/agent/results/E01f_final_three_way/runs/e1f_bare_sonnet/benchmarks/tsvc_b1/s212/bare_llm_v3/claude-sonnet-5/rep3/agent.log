@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s212.c
+  Model          : claude-sonnet-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s212.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan **Dependence analysis.** The inner loop body is: ``` a[i] *= c[i]; b[i] += a[i + 1] * d[i]; ``` `a[i+1]` is read by iteration `i`; the only place `a[i+1]` is ever written is by iteration `i+1`'s own `a[i] *= c[i]` statement (with its own index). In the original sequential order, iteration `i` always runs — and finishes its read of `a[i+1]` — before iteration `i+1` runs and writes it. So ev
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

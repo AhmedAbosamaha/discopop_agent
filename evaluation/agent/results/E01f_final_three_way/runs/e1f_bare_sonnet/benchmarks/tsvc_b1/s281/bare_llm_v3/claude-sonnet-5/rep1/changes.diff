@@ -1,0 +1,34 @@
+--- original.c
++++ final.c
+@@ -15,10 +15,28 @@
+ 
+ static real_t kernel_s281(void)
+ {
+-    real_t x;
++    /* Within one activation of the i-loop, a[i] is written and a[LEN_1D-i-1]
++     * is read. For i < mid the mirror index has not been written yet this
++     * activation (read sees the pre-activation value); for i >= mid the
++     * mirror index was already written earlier in this same activation
++     * (read must see the freshly computed value). Splitting at mid into two
++     * parallel regions with the implicit barrier between them reproduces
++     * that exact ordering: all of [0,mid) is finished (and its writes are
++     * visible) before [mid,LEN_1D) starts reading from it. Iterations
++     * within each half only write their own a[i]/b[i] and read from the
++     * other, untouched-by-this-half, index range, so they are mutually
++     * independent. */
++    const int mid = LEN_1D / 2;
+     for (int nl = 0; nl < R; nl++) {
+-        for (int i = 0; i < LEN_1D; i++) {
+-            x = a[LEN_1D-i-1] + b[i] * c[i];
++        #pragma omp parallel for shared(a, b, c, mid)
++        for (int i = 0; i < mid; i++) {
++            real_t x = a[LEN_1D-i-1] + b[i] * c[i];
++            a[i] = x-(real_t)1.0;
++            b[i] = x;
++        }
++        #pragma omp parallel for shared(a, b, c, mid)
++        for (int i = mid; i < LEN_1D; i++) {
++            real_t x = a[LEN_1D-i-1] + b[i] * c[i];
+             a[i] = x-(real_t)1.0;
+             b[i] = x;
+         }

@@ -1,0 +1,48 @@
+[
+  {
+    "region_id": "1:12",
+    "region_type": "function",
+    "tier": 2,
+    "patch_file": ".discopop/agent_patches/region_1_12_tier2.patch",
+    "reprofiled": true,
+    "discovery_depth": 0,
+    "evidence": {
+      "comparison": "exact"
+    },
+    "exposed_pattern": "task @ lines 16\u201340",
+    "refresh": "full",
+    "exposed_speedup": 32.28388816527356
+  },
+  {
+    "region_id": "1:12",
+    "region_type": "function",
+    "phase": "B",
+    "pattern_id": 2,
+    "pattern_type": "task",
+    "pragma": [
+      "#pragma omp parallel",
+      "#pragma omp single"
+    ],
+    "lines": "16\u201340",
+    "marginal_speedup": null,
+    "joint_speedup": 32.28388816527356,
+    "phase_b_mode": "d40_set",
+    "joint_group": "d40:1:12",
+    "applied_to_source": true,
+    "evidence": {
+      "comparison": "exact",
+      "dependences": "rewritten-code",
+      "dependences_detail": "the patch rewrites code, so the profile predates what is being parallelised; the sanitizer and the schedule matrix carry it",
+      "schedules": [
+        "T4/static#1",
+        "T4/static#2",
+        "T4/static#3",
+        "T1/static",
+        "T2/static",
+        "T4/dynamic,1",
+        "T4/guided"
+      ],
+      "reordered": false
+    }
+  }
+]

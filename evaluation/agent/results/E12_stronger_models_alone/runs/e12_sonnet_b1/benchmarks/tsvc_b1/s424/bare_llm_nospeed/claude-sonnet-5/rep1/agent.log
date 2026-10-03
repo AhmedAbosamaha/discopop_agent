@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s424.c
+  Model          : claude-sonnet-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s424.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan **Dependence.** `xx = flat_2d_array + vl` (`vl=63`), so `xx[i+1] = flat_2d_array[i] + a[i]` is really `flat_2d_array[i+off] = flat_2d_array[i] + a[i]` with `off = vl+1 = 64`. That is a true (RAW) loop-carried dependence on `flat_2d_array` with constant distance `off`: for `i >= off`, the value read at `flat_2d_array[i]` was itself written earlier in the *same* `i`-loop (at iteration `i-off
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

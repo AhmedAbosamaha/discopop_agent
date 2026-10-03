@@ -1,0 +1,27 @@
+--- s241.c
++++ s241.c
+@@ -16,10 +16,23 @@
+ static real_t kernel_s241(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        // Save original a values to preserve them for b computation
++        real_t *a_original = (real_t *)malloc(sizeof(real_t) * LEN_1D);
++        for (int k = 0; k < LEN_1D; k++) {
++            a_original[k] = a[k];
++        }
++
++        // First loop: compute new a values independently
+         for (int i = 0; i < LEN_1D-1; i++) {
+             a[i] = b[i] * c[i  ] * d[i];
+-            b[i] = a[i] * a[i+1] * d[i];
+         }
++
++        // Second loop: compute new b values using new a and original a[i+1]
++        for (int i = 0; i < LEN_1D-1; i++) {
++            b[i] = a[i] * a_original[i+1] * d[i];
++        }
++
++        free(a_original);
+         pb_mix(nl);
+     }
+     return (real_t)0;

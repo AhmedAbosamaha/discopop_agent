@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s331.c
+  Model          : claude-opus-5-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-opus-5-5...
+│  [bare] s331.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: I added `#pragma omp parallel for schedule(static) reduction(max:j)` to the inner loop of `kernel_s331` in `s331.c`. Nothing else in the file changed. I haven't compiled or run it, since no compiler is available here. - **Why it's safe:** the loop only records the last index where `a[i]` is negative. The largest such index is the same whatever order the iterations run in, so a max reduction gives 
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

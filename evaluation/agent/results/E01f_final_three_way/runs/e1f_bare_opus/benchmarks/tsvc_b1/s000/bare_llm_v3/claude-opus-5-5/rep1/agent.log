@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s000.c
+  Model          : claude-opus-5-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-opus-5-5...
+│  [bare] s000.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: I added one pragma to `s000.c`, on the inner loop: `#pragma omp parallel for shared(a, b) schedule(static)`. Nothing has been compiled or run, since there's no compiler here. - **Why it's safe:** each `i` writes only `a[i]` and reads only `b[i]`, and nothing in the loop writes `b`. The order the iterations run in can't change the result, so output should stay byte-identical at any thread count or 
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

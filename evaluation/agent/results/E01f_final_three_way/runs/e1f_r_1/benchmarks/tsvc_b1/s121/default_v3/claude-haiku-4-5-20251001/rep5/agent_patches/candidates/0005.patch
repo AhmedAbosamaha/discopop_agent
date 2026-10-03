@@ -1,0 +1,10 @@
+--- s121.c
++++ s121.c
+@@ -25,6 +25,7 @@
+             temp[i - 1] = a[i];
+         }
+ 
++        #pragma omp parallel for private(j) shared(temp) 
+         for (int i = 0; i < LEN_1D-1; i++) {
+             j = i + 1;
+             a[i] = temp[i] + b[i];

@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : k48.c
+  Model          : claude-sonnet-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] k48.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan **What's sequential and stays sequential:** the outer `nl` loop. `pb_mix(nl)` mutates `a`, `b`, `c`, `d`, `e` between repetitions, and the inner loop reads `c`/`d`, so repetition `nl+1` must observe repetition `nl`'s `pb_mix` edits. That's a true loop-carried dependence I leave untouched — one `pb_mix` call per `nl`, in order, exactly as in the original. **The loop under study:** the `i` l
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

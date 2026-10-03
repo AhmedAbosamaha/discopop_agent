@@ -1,0 +1,91 @@
+--- original.c
++++ final.c
+@@ -13,13 +13,84 @@
+   a[0] += (real_t)0.125; b[LEN_1D-1] += (real_t)0.125;
+ }
+ 
++#define S322_BS 1024L
++#define S322_G 64
++
++static long s322_owner(long idx)
++{
++    return idx < 2 ? 0L : (idx - 2L) / S322_BS;
++}
++
++/* apply the recorded effect of pb_mix(p) restricted to elements owned by block j
++ * (in pb_mix's own order) */
++static void s322_apply_mix(long j, long kk, real_t nbk, real_t nck, real_t nbl)
++{
++    long ok = s322_owner(kk);
++    if (ok == j) a[kk] += (real_t)0.25;
++    if (j == 0) a[0] += (real_t)0.125;
++    if (ok == j) { b[kk] = nbk; c[kk] = nck; }
++    if (s322_owner((long)LEN_1D - 1L) == j) b[LEN_1D - 1] = nbl;
++}
++
+ static real_t kernel_s322(void)
+ {
+-    for (int nl = 0; nl < R; nl++) {
+-        for (int i = 2; i < LEN_1D; i++) {
+-            a[i] = a[i] + a[i - 1] * b[i] + a[i - 2] * c[i];
++    long mk[S322_G];
++    real_t mnb[S322_G], mnc[S322_G], mnbl[S322_G];
++    real_t mob[S322_G], moc[S322_G], mobl[S322_G];
++    real_t msak[S322_G], msa0[S322_G];
++    long nblk = ((long)LEN_1D - 2L + S322_BS - 1L) / S322_BS;
++    if (nblk < 1) nblk = 1;
++
++    for (int nl0 = 0; nl0 < R; nl0 += S322_G) {
++        int g = R - nl0 < S322_G ? R - nl0 : S322_G;
++
++        /* record pb_mix effects of this group, keeping a,b,c at group-start state */
++        for (int nl = nl0; nl < nl0 + g; nl++) {
++            int r = nl - nl0;
++            long kk = ((long)nl * 7919L + 13L) % LEN_1D;
++            if (r > 0) {
++                /* finish recording the previous call, then undo its effect on a */
++                long kp = mk[r - 1];
++                mnb[r - 1] = b[kp]; mnc[r - 1] = c[kp]; mnbl[r - 1] = b[LEN_1D - 1];
++                a[0] = msa0[r - 1]; a[kp] = msak[r - 1];
++            }
++            msak[r] = a[kk]; msa0[r] = a[0];
++            mk[r] = kk;
++            mob[r] = b[kk]; moc[r] = c[kk]; mobl[r] = b[LEN_1D - 1];
++            pb_mix(nl);
+         }
+-        pb_mix(nl);
++        {
++            long kp = mk[g - 1];
++            mnb[g - 1] = b[kp]; mnc[g - 1] = c[kp]; mnbl[g - 1] = b[LEN_1D - 1];
++            a[0] = msa0[g - 1]; a[kp] = msak[g - 1];
++        }
++        for (int r = g - 1; r >= 0; r--) {
++            b[LEN_1D - 1] = mobl[r];
++            c[mk[r]] = moc[r];
++            b[mk[r]] = mob[r];
++        }
++
++        /* wavefront over (repetition r, block j), step t = 2r + j */
++        long tend = 2L * (g - 1) + nblk;
++        for (long t = 0; t < tend; t++) {
++            long rlo = t - nblk + 1 <= 0 ? 0L : (t - nblk + 2) / 2;
++            long rhi = t / 2 < (long)(g - 1) ? t / 2 : (long)(g - 1);
++            #pragma omp parallel for schedule(static) if(rhi > rlo) shared(mk, mnb, mnc, mnbl) firstprivate(t)
++            for (long r = rlo; r <= rhi; r++) {
++                long j = t - 2L * r;
++                long lo = 2L + j * S322_BS;
++                long hi = lo + S322_BS < (long)LEN_1D ? lo + S322_BS : (long)LEN_1D;
++                if (r > 0)
++                    s322_apply_mix(j, mk[r - 1], mnb[r - 1], mnc[r - 1], mnbl[r - 1]);
++                for (long i = lo; i < hi; i++) {
++                    a[i] = a[i] + a[i - 1] * b[i] + a[i - 2] * c[i];
++                }
++            }
++        }
++
++        /* effect of the group's last pb_mix on every block */
++        for (long j = 0; j < nblk; j++)
++            s322_apply_mix(j, mk[g - 1], mnb[g - 1], mnc[g - 1], mnbl[g - 1]);
+     }
+     return (real_t)0;
+ }

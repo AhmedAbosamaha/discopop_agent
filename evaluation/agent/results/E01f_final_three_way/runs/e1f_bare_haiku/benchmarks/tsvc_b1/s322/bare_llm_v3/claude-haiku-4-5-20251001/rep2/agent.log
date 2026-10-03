@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s322.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] s322.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Looking at the code, let me analyze the dependence blocking parallelization: **The loop has a loop-carried dependence:** - Line 20: `a[i] = a[i] + a[i - 1] * b[i] + a[i - 2] * c[i];` - Iteration i reads `a[i-1]` (written by iteration i-1) and `a[i-2]` (written by iteration i-2) - This creates a sequential chain: iteration i depends on the output of previous iterations **The solution: Split the com
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

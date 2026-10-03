@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s112.c
+  Model          : claude-sonnet-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s112.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: This looks correct. The file compiles with plain C (malloc/free from stdlib.h, standard for-loops with invariant bounds `i <= LEN_1D - 2`, increment `i++`, no break/continue/return/goto), and with `-fopenmp` the two `#pragma omp parallel for` directives apply cleanly. ## Plan (recap) **Dependence removed:** The inner loop `for (i = LEN_1D-2; i >= 0; i--) a[i+1] = a[i] + b[i]` looks like a true rec
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

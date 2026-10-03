@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s1213.c
+  Model          : claude-fable-5-1
+  Not editable   : main, pb_mix
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-fable-5-1...
+│  [bare] s1213.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: The rewrite is applied. Summary of what changed in `s1213.c`: - The single loop with the carried dependence (`a[i]` ← `b[i-1]` written one iteration earlier) was split into two loops over the same bounds `1 .. LEN_1D-2`: 1. `b[i] = a[i+1]*d[i]` — reads only the original `a`, which this loop never writes, so iterations are independent. 2. `a[i] = b[i-1]+c[i]` — runs after loop 1 completes, so it se
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

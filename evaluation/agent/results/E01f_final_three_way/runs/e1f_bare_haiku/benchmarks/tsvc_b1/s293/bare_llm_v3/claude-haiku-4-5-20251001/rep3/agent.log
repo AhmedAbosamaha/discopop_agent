@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s293.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] s293.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: I'll start by reading the source file to understand the code structure.**PLAN:** The outer `nl` loop is correctly sequential—`pb_mix(nl)` modifies input array elements between iterations, enforcing a true dependence between repetitions. The inner `i` loop is the target: it reads `a[0]` (shared read, no write) and writes to `a[i]` (unique location per iteration). There is no loop-carried dependence
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

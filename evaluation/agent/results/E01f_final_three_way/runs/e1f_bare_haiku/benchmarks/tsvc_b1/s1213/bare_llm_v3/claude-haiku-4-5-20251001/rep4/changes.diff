@@ -1,0 +1,25 @@
+--- original.c
++++ final.c
+@@ -16,7 +16,21 @@
+ static real_t kernel_s1213(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
+-        for (int i = 1; i < LEN_1D-1; i++) {
++        /* Process odd indices in parallel. Each odd iteration accesses
++         * different array elements from other odd iterations, breaking
++         * the flow dependence by separating odd and even updates. */
++        #pragma omp parallel for shared(a, b, c, d)
++        for (int i = 1; i < LEN_1D-1; i += 2) {
++            a[i] = b[i-1]+c[i];
++            b[i] = a[i+1]*d[i];
++        }
++
++        /* Process even indices in parallel. Even iterations depend on
++         * odd iterations (even i reads b[i] written by odd i-1), so this
++         * loop must run after the odd loop completes. Within even iterations,
++         * each accesses different elements, allowing parallelization. */
++        #pragma omp parallel for shared(a, b, c, d)
++        for (int i = 2; i < LEN_1D-1; i += 2) {
+             a[i] = b[i-1]+c[i];
+             b[i] = a[i+1]*d[i];
+         }

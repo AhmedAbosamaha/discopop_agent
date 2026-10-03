@@ -1,0 +1,60 @@
+/* TSVC-2 loop s1213, from TSVC-2 src/tsvc.c (sha256 456dd573b84b; University of Illinois licence,
+ * see benchmarks/TSVC_2/license.txt). */
+#include "tsvc_b1/s1213.h"
+#include <stdlib.h>
+
+/* Between two repetitions a few INPUT elements change, so no repetition can be skipped,
+ * merged with another or run out of order: the repetition loop is sequential by a true
+ * dependence, and the loop under study is the one inside it. */
+static void pb_mix(int nl)
+{
+  long k = ((long)nl * 7919L + 13L) % LEN_1D;
+  a[k] += (real_t)0.25; b[k] += (real_t)0.25; c[k] += (real_t)0.125;
+  d[k] += (real_t)0.125; e[k] += (real_t)0.25;
+  a[0] += (real_t)0.125; b[LEN_1D-1] += (real_t)0.125;
+}
+
+static real_t kernel_s1213(void)
+{
+    /* In the original forward sweep, at the moment iteration i runs:
+     *   - a[i+1] has not been written yet (writes only ever touch index i),
+     *     so b[i] = a[i+1]*d[i] always reads the pre-sweep value of a[i+1];
+     *   - b[i-1] has already been overwritten by iteration i-1, whose value
+     *     itself was computed purely from the pre-sweep a and d.
+     * So every new a[i]/b[i] is a function only of the array contents from
+     * before this sweep started. Snapshotting a[] lets both the b-update and
+     * the a-update be split into two independent, parallel elementwise loops
+     * that reproduce the same values without any iteration reading another
+     * iteration's new write.
+     */
+    real_t *a_old = (real_t *)malloc((size_t)LEN_1D * sizeof(real_t));
+    for (int nl = 0; nl < R; nl++) {
+        /* Snapshot: elementwise copy, no cross-iteration dependence. */
+        #pragma omp parallel for default(none) shared(a, a_old)
+        for (int i = 0; i < LEN_1D; i++) {
+            a_old[i] = a[i];
+        }
+
+        /* Each b[i] depends only on a_old[i+1] and d[i] (both pre-sweep
+         * values), never on another iteration's write: independent. */
+        #pragma omp parallel for default(none) shared(a_old, b, d)
+        for (int i = 1; i < LEN_1D-1; i++) {
+            b[i] = a_old[i+1]*d[i];
+        }
+
+        /* b[] now holds its final values for this repetition (index 0 was
+         * never written above, so it still equals the pre-sweep value, just
+         * as in the original). Each a[i] depends only on b[i-1] and c[i],
+         * neither of which this loop itself writes: independent. */
+        #pragma omp parallel for default(none) shared(a, b, c)
+        for (int i = 1; i < LEN_1D-1; i++) {
+            a[i] = b[i-1]+c[i];
+        }
+
+        pb_mix(nl);
+    }
+    free(a_old);
+    return (real_t)0;
+}
+
+PB_MAIN(kernel_s1213)

@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s255.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] s255.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Reading the file to understand the structure... The code contains an outer loop (`nl` loop) which must remain sequential because `pb_mix(nl)` modifies array elements between iterations. The inner loop (over `i`) is what we can parallelize. ## Analysis **The blocking dependence**: The inner loop carries a dependency on variables `x` and `y`: - `x` and `y` are initialized before the loop - Each iter
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

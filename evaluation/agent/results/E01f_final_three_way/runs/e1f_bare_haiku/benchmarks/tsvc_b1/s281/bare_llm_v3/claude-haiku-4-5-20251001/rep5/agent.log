@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s281.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] s281.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Looking at this code, I need to understand the loop structure and identify what's blocking parallelization. ## Analysis **The outer loop** (`nl`) is sequential by design - `pb_mix()` modifies input arrays between repetitions, creating true dependencies. **The inner loop** (over `i`) has a specific read/write pattern: - Iteration `i` reads from `a[LEN_1D-i-1]` and writes to `a[i]` - Iteration `i` w
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

@@ -1,0 +1,10 @@
+--- s341.c
++++ s341.c
+@@ -24,6 +24,7 @@
+         }
+ 
+         // Pass 2: Prefix sum to compute output indices
++        #pragma omp parallel for shared(pos) 
+         for (int i = 1; i < LEN_1D; i++) {
+             pos[i] += pos[i-1];
+         }

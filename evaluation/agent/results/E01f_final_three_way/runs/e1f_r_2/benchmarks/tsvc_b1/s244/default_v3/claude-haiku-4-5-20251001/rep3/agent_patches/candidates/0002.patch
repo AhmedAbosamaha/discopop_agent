@@ -1,0 +1,10 @@
+--- s244.c
++++ s244.c
+@@ -19,6 +19,7 @@
+         /* Main loop: iterations 0 to LEN_1D-3 compute only a[i] and b[i].
+          * Each iteration i's line 22 (a[i+1]) is overwritten by iteration i+1's line 20,
+          * so we skip it here to eliminate the WAW loop-carried dependence. */
++        #pragma omp parallel for 
+         for (int i = 0; i < LEN_1D-2; ++i) {
+             a[i] = b[i] + c[i] * d[i];
+             b[i] = c[i] + b[i];

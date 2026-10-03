@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : k48.c
+  Model          : claude-sonnet-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] k48.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan The outer `nl` loop (`R` repetitions) is genuinely sequential: `pb_mix(nl)` mutates `a,b,c,d,e` between repetitions, so repetition `nl+1` must see repetition `nl`'s effects. That loop is left untouched, exactly as instructed. The loop under study is the inner one: ```c for (long i = 1; i < LEN_1D; i++) { u[ju[i]] += v[kv[i]] * c[i]; v[jv[i]] = u[ku[i]] * d[i] + c[i]; } ``` Each iteration b
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

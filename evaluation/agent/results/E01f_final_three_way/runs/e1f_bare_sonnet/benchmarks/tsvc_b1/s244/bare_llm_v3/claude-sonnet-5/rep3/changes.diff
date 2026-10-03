@@ -1,0 +1,25 @@
+--- original.c
++++ final.c
+@@ -16,10 +16,21 @@
+ static real_t kernel_s244(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        /* The original a[i+1] = b[i] + a[i+1]*d[i] write is a dead store for every
++         * i except the last iteration (i = LEN_1D-2): the next iteration's
++         * a[i+1] = b[i+1] + c[i+1]*d[i+1] overwrites it before it is ever read.
++         * So a[i] and b[i] for i = 0..LEN_1D-2 depend only on the original
++         * b[i],c[i],d[i] at that same index and are independent across i; the
++         * one surviving boundary write (the last iteration's a[i+1]) is hoisted
++         * out and done once, after the parallel loop, using the updated
++         * b[LEN_1D-2]. */
++        #pragma omp parallel for shared(a, b, c, d) schedule(static)
+         for (int i = 0; i < LEN_1D-1; ++i) {
+             a[i] = b[i] + c[i] * d[i];
+             b[i] = c[i] + b[i];
+-            a[i+1] = b[i] + a[i+1] * d[i];
++        }
++        if (LEN_1D >= 2) {
++            a[LEN_1D-1] = b[LEN_1D-2] + a[LEN_1D-1] * d[LEN_1D-2];
+         }
+         pb_mix(nl);
+     }

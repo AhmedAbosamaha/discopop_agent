@@ -1,0 +1,10 @@
+--- vpvtv.c
++++ vpvtv.c
+@@ -29,6 +29,7 @@
+          * will be modified by pb_mix). This breaks the loop-carried dependence
+          * while preserving correctness: each outer iteration computes with b's
+          * state as of when that iteration began. */
++        #pragma omp parallel for shared(b_saved) 
+         for (int i = 0; i < LEN_1D; i++) {
+             a[i] += b_saved[i] * c[i];
+         }

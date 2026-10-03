@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s293.c
+  Model          : claude-sonnet-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s293.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan The inner loop `for (int i = 0; i < LEN_1D; i++) a[i] = a[0];` looks like it carries a dependence (every iteration reads `a[0]`, and iteration `i==0` also writes `a[0]`), but the write at `i==0` is `a[0] = a[0]` — it never changes the value. So every iteration only ever reads the value of `a[0]` as it stood *before* this loop started, and writes its own distinct `a[i]`. There is no value f
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

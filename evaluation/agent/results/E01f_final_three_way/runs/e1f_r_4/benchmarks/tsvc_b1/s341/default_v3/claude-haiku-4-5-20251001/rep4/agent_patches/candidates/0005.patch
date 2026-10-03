@@ -1,0 +1,10 @@
+--- s341.c
++++ s341.c
+@@ -25,6 +25,7 @@
+     for (int nl = 0; nl < R; nl++) {
+         /* Phase 1: Mark which elements pass the filter.
+            Each i writes to independent mark[i]. */
++        #pragma omp parallel for shared(mark) 
+         for (int i = 0; i < LEN_1D; i++) {
+             mark[i] = (b[i] > (real_t)0.) ? 1 : 0;
+         }

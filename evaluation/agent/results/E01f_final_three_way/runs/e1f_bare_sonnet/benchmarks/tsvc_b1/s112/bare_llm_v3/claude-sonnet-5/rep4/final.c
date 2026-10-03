@@ -1,0 +1,61 @@
+/* TSVC-2 loop s112, from TSVC-2 src/tsvc.c (sha256 456dd573b84b; University of Illinois licence,
+ * see benchmarks/TSVC_2/license.txt). */
+#include "tsvc_b1/s112.h"
+#include <stdlib.h>
+#include <string.h>
+
+/* Between two repetitions a few INPUT elements change, so no repetition can be skipped,
+ * merged with another or run out of order: the repetition loop is sequential by a true
+ * dependence, and the loop under study is the one inside it. */
+static void pb_mix(int nl)
+{
+  long k = ((long)nl * 7919L + 13L) % LEN_1D;
+  a[k] += (real_t)0.25; b[k] += (real_t)0.25; c[k] += (real_t)0.125;
+  d[k] += (real_t)0.125; e[k] += (real_t)0.25;
+  a[0] += (real_t)0.125; b[LEN_1D-1] += (real_t)0.125;
+}
+
+static real_t kernel_s112(void)
+{
+    /* Original inner loop walks i from LEN_1D-2 down to 0 doing a[i+1] = a[i] + b[i].
+     * That order looks like a dependence chain, but it is only an anti-dependence:
+     * the write at step i targets a[i+1]; the only step that could overwrite a[i]
+     * before it is read is step i-1, which (with i decreasing) always runs AFTER
+     * step i. So every read of a[i] in the original loop sees the value a[i] held
+     * before the inner loop started that repetition - the loop never actually reads
+     * a value another of its own iterations produced.
+     *
+     * Running the iterations in arbitrary order (required for a parallel for) would
+     * let the write to a[i] (done by the iteration handling i-1) race ahead of the
+     * read of a[i] (done by the iteration handling i), which would corrupt the
+     * result. We break that anti-dependence with a heap snapshot: copy a[] into
+     * a_prev[] before the inner loop runs each repetition, then have every
+     * iteration read from the frozen a_prev[] instead of from a[] itself. Reads and
+     * writes then target disjoint arrays, so the iterations are truly independent
+     * and can run in any order/any split across threads. The copy is an extra O(n)
+     * pass per repetition, the same order as the loop it protects, so it stays a
+     * constant-factor overhead, not an asymptotic one. a_prev is heap-allocated
+     * (not a stack array) because LEN_1D can be far larger than the 8MB stack
+     * allows. The buffer is allocated once and reused across all R repetitions. */
+    real_t *a_prev = (real_t *)malloc((size_t)LEN_1D * sizeof(real_t));
+
+    for (int nl = 0; nl < R; nl++) {
+        /* Sequential snapshot: must fully complete before any parallel iteration
+         * below reads from it. */
+        memcpy(a_prev, a, (size_t)LEN_1D * sizeof(real_t));
+
+        /* a_prev, b: shared, read-only in this loop (no iteration writes them).
+         * a: shared; each iteration writes a disjoint element (a[i+1], i unique
+         * per iteration), so distinct iterations never touch the same location. */
+        #pragma omp parallel for schedule(static) shared(a, b, a_prev)
+        for (int i = 0; i < LEN_1D - 1; i++) {
+            a[i+1] = a_prev[i] + b[i];
+        }
+        pb_mix(nl);
+    }
+
+    free(a_prev);
+    return (real_t)0;
+}
+
+PB_MAIN(kernel_s112)

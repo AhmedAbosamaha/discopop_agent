@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s292.c
+  Model          : claude-sonnet-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s292.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan **Dependence analysis of the inner loop:** ```c im1 = LEN_1D-1; im2 = LEN_1D-2; for (i = 0; i < LEN_1D; i++) { a[i] = (b[i] + b[im1] + b[im2]) * 0.333; im2 = im1; im1 = i; } ``` `im1`/`im2` don't carry a *data value* across iterations — they just carry the previous iteration's index, which deterministically equals `i-1` and `i-2` (mod `LEN_1D`, since the initial values wrap around at the e
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

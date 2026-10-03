@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s212.c
+  Model          : claude-opus-5-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-opus-5-5...
+│  [bare] s212.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: I split the inner loop of `kernel_s212` in `s212.c` into two loops, each with its own `#pragma omp parallel for`. Nothing was compiled or run here, so I haven't checked that it builds, is race-free, or is faster. **What was blocking it:** iteration `i` read `a[i+1]` before iteration `i+1` changed it. That is only a location being reused, not a value passed from one iteration to the next. **The cha
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

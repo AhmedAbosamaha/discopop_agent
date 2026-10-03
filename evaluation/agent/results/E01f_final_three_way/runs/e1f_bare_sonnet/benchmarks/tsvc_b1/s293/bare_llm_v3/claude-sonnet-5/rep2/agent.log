@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s293.c
+  Model          : claude-sonnet-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s293.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Plan: The inner loop `for i: a[i] = a[0]` only *looks* dependent because it writes a[0] at i==0 while reading a[0] at every i. In reality a[0] never changes during this loop — it's only mutated by `pb_mix(nl)` after the loop finishes — so the loop is just "broadcast the current a[0] to the whole array," which has no true cross-iteration dependence. I snapshot `a[0]` into a local `a0` before the lo
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s3112.c
+  Model          : claude-sonnet-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s3112.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan **Dependence:** The inner `i` loop computes a running prefix sum (`sum += a[i]; b[i] = sum;`). Each `b[i]` depends on the sum of all `a[0..i]`, and the final `sum` after the loop (used in the next repetition via `pb_mix`, and as the return value) is `b[LEN_1D-1]`. This is a classic scan/recurrence — it cannot be left as a flat loop and parallelized in place; the dependence has to be *restr
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

@@ -1,0 +1,21 @@
+--- s331.c
++++ s331.c
+@@ -18,12 +18,17 @@
+     int j;
+     real_t chksum;
+     for (int nl = 0; nl < R; nl++) {
++        real_t *a_local = (real_t *)malloc(LEN_1D * sizeof(real_t));
++        for (int k = 0; k < LEN_1D; k++) {
++            a_local[k] = a[k];
++        }
+         j = -1;
+         for (int i = 0; i < LEN_1D; i++) {
+-            if (a[i] < (real_t)0.) {
++            if (a_local[i] < (real_t)0.) {
+                 j = i;
+             }
+         }
++        free(a_local);
+         chksum = (real_t) j;
+         pb_mix(nl);
+     }

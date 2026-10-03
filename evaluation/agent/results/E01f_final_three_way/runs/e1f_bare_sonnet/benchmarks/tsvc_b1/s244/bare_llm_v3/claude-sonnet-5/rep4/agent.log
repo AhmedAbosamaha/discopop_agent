@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s244.c
+  Model          : claude-sonnet-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s244.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan **Dependence analysis.** The inner loop body for index `i` is: ``` a[i] = b[i] + c[i]*d[i]; // S1, reads old b[i] b[i] = c[i] + b[i]; // S2, writes new b[i] a[i+1] = b[i] + a[i+1]*d[i]; // S3, reads new b[i] and old a[i+1] ``` S3's write to `a[i+1]` is a dead store for every `i` except the last one (`i == LEN_1D-2`): iteration `i+1`'s own S1 (`a[i+1] = b[i+1] + c[i+1]*d[i+1]`) immediately 
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

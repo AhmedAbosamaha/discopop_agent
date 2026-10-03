@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s212.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] s212.c: edited, 3 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Looking at this code, let me analyze the dependencies: ## Plan **Loop structure:** The inner loop `for (int i = 0; i < LEN_1D-1; i++)` has an anti-dependence: each iteration i reads `a[i+1]`, which is then written by iteration i+1. This prevents straightforward parallelization while preserving correctness. **Solution:** Split the loop into two phases to move the dependence outside the loop: 1. Fir
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

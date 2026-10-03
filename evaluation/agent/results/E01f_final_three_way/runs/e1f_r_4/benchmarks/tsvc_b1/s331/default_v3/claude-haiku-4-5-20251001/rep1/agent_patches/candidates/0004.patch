@@ -1,0 +1,19 @@
+--- s331.c
++++ s331.c
+@@ -19,11 +19,15 @@
+     real_t chksum;
+     for (int nl = 0; nl < R; nl++) {
+         j = -1;
++        int last_neg = -1;
+         for (int i = 0; i < LEN_1D; i++) {
+             if (a[i] < (real_t)0.) {
+-                j = i;
++                if (i > last_neg) {
++                    last_neg = i;
++                }
+             }
+         }
++        j = last_neg;
+         chksum = (real_t) j;
+         pb_mix(nl);
+     }

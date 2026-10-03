@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s252.c
+  Model          : claude-opus-5-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-opus-5-5...
+│  [bare] s252.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: I've rewritten `kernel_s252` in `s252.c` so the inner loop runs in parallel. I had no compiler here, so it hasn't been compiled, run or timed. **What was blocking it:** a value passed between iterations, not just a reused location. `t` carried the previous iteration's product `b[i-1]*c[i-1]` into the next one. The loop only reads `b` and `c`, so each iteration can now recompute that product itself
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

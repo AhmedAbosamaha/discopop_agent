@@ -1,0 +1,101 @@
+/* TSVC-2 loop s321, from TSVC-2 src/tsvc.c (sha256 456dd573b84b; University of Illinois licence,
+ * see benchmarks/TSVC_2/license.txt). */
+#include "tsvc_b1/s321.h"
+#include <stdlib.h>
+
+/* Between two repetitions a few INPUT elements change, so no repetition can be skipped,
+ * merged with another or run out of order: the repetition loop is sequential by a true
+ * dependence, and the loop under study is the one inside it. */
+static void pb_mix(int nl)
+{
+  long k = ((long)nl * 7919L + 13L) % LEN_1D;
+  a[k] += (real_t)0.25; b[k] += (real_t)0.25; c[k] += (real_t)0.125;
+  d[k] += (real_t)0.125; e[k] += (real_t)0.25;
+  a[0] += (real_t)0.125; b[LEN_1D-1] += (real_t)0.125;
+}
+
+/* The i-loop computes a first-order linear recurrence: a[i] = a[i] + a[i-1]*b[i].
+ * Each a[i] truly depends on a[i-1], so the dependence cannot be deleted - but it can
+ * be MOVED from "every element" to a short, strictly sequential pass over block
+ * boundaries instead:
+ *
+ *   1. Split [1, LEN_1D-1] into nb contiguous blocks. In parallel, each block computes,
+ *      from data inside the block only, (a) its running prefix product of b (prefb[i]:
+ *      the factor a carry-in would be multiplied by to reach position i) and (b) its
+ *      "local" result assuming the value flowing in from the block's left edge were 0.
+ *      Blocks write disjoint index ranges of a[] and prefb[], so there is no
+ *      cross-iteration dependence in this pass. Block 0 is special: its carry-in
+ *      (a[0]) is already known before the loop starts, so it is run with the real
+ *      carry-in directly, which reproduces the original arithmetic exactly and needs
+ *      no later correction.
+ *   2. A tiny strictly sequential loop, O(nb) and not O(LEN_1D), propagates the true
+ *      carry-in z[t] block to block. This is the same recurrence as the original loop,
+ *      just at block granularity: it runs after step 1 has produced every block's
+ *      totals and completes before step 3 reads any z[t], so the value each block
+ *      writes still reaches the block that reads it.
+ *   3. In parallel again, each block folds its true carry-in into its local result:
+ *      a[i] = prefb[i]*z[t] + a[i]. Again disjoint writes, no dependence.
+ */
+static real_t kernel_s321(void)
+{
+    const int n = LEN_1D - 1;   /* number of elements the recurrence updates: a[1..LEN_1D-1] */
+    real_t *prefb = NULL;       /* per-position prefix product of b within its block; grows with LEN_1D -> heap */
+    if (n > 0) {
+        prefb = (real_t *)malloc((size_t)LEN_1D * sizeof(real_t));
+    }
+
+    for (int nl = 0; nl < R; nl++) {
+        if (n > 0) {
+            int nb = (n < 256) ? n : 256;  /* block count: bounded constant, independent of thread count */
+            int lo[256], hi[256];          /* per-block index range [lo[t], hi[t]] */
+            real_t blockP[256];            /* per-block total prefix product of b (coefficient of carry-in) */
+            real_t blockL[256];            /* per-block local result at its last index, carry-in assumed 0 */
+            real_t z[256];                 /* true carry-in value at the start of each block */
+
+            for (int t = 0; t < nb; t++) {
+                lo[t] = 1 + (int)((long)t * n / nb);
+                hi[t] = (int)((long)(t + 1) * n / nb);
+            }
+
+            /* Step 1: independent per-block local scan. Each t writes only
+             * a[lo[t]..hi[t]] and prefb[lo[t]..hi[t]] - disjoint ranges across t. */
+            #pragma omp parallel for schedule(dynamic) default(none) \
+                shared(a, b, prefb, lo, hi, blockP, blockL) firstprivate(nb)
+            for (int t = 0; t < nb; t++) {
+                real_t prev = (t == 0) ? a[0] : (real_t)0;
+                for (int i = lo[t]; i <= hi[t]; i++) {
+                    real_t p = (i == lo[t]) ? b[i] : prefb[i - 1] * b[i];
+                    prefb[i] = p;
+                    real_t val = a[i] + prev * b[i];
+                    a[i] = val;
+                    prev = val;
+                }
+                blockP[t] = prefb[hi[t]];
+                blockL[t] = a[hi[t]];
+            }
+
+            /* Step 2: strictly sequential, O(nb). z[0] (a[0]) is unused since block 0
+             * needed no correction; z[t], t>0, is the true value the original loop
+             * would have held at index lo[t]-1, carried forward from block to block. */
+            z[0] = a[0];
+            for (int t = 1; t < nb; t++) {
+                z[t] = blockP[t - 1] * z[t - 1] + blockL[t - 1];
+            }
+
+            /* Step 3: independent per-block correction, disjoint writes a[lo[t]..hi[t]]. */
+            #pragma omp parallel for schedule(dynamic) default(none) \
+                shared(a, prefb, lo, hi, z) firstprivate(nb)
+            for (int t = 1; t < nb; t++) {
+                for (int i = lo[t]; i <= hi[t]; i++) {
+                    a[i] = prefb[i] * z[t] + a[i];
+                }
+            }
+        }
+        pb_mix(nl);
+    }
+
+    if (prefb) free(prefb);
+    return (real_t)0;
+}
+
+PB_MAIN(kernel_s321)

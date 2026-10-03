@@ -1,0 +1,26 @@
+--- original.c
++++ final.c
+@@ -15,10 +15,20 @@
+ 
+ static real_t kernel_s281(void)
+ {
+-    real_t x;
++    const int mid = LEN_1D / 2;
+     for (int nl = 0; nl < R; nl++) {
+-        for (int i = 0; i < LEN_1D; i++) {
+-            x = a[LEN_1D-i-1] + b[i] * c[i];
++        /* first half: reads a[LEN_1D-i-1] with index >= mid, still original */
++        #pragma omp parallel for firstprivate(mid) schedule(static)
++        for (int i = 0; i < mid; i++) {
++            real_t x = a[LEN_1D-i-1] + b[i] * c[i];
++            a[i] = x-(real_t)1.0;
++            b[i] = x;
++        }
++        /* second half: reads a[LEN_1D-i-1] with index <= mid, updated by first half
++           (or, for i == mid with odd LEN_1D, its own element read before write) */
++        #pragma omp parallel for firstprivate(mid) schedule(static)
++        for (int i = mid; i < LEN_1D; i++) {
++            real_t x = a[LEN_1D-i-1] + b[i] * c[i];
+             a[i] = x-(real_t)1.0;
+             b[i] = x;
+         }

@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s281.c
+  Model          : claude-opus-5-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-opus-5-5...
+│  [bare] s281.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: I rewrote the loop inside `kernel_s281` in `s281.c` so its two halves run in parallel. I have no compiler here, so nothing has been compiled, run or timed. **The dependence:** iteration `i` reads `a[LEN_1D-1-i]`. - **First half (including the middle):** that element hasn't been written yet, so the iteration needs its original value. - **Second half:** that element was already written by its mirror
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

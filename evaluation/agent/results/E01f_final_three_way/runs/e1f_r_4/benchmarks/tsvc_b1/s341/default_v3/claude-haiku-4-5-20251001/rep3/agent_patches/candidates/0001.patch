@@ -1,0 +1,10 @@
+--- s341.c
++++ s341.c
+@@ -27,6 +27,7 @@
+             }
+         }
+         // Second pass: copy positive elements to output array in parallel
++        #pragma omp parallel for firstprivate(count) shared(indices) 
+         for (int j = 0; j < count; j++) {
+             a[j] = b[indices[j]];
+         }

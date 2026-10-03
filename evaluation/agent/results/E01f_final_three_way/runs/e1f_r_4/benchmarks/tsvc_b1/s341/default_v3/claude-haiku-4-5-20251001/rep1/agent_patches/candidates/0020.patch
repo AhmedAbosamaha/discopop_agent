@@ -1,0 +1,10 @@
+--- s341.c
++++ s341.c
+@@ -35,6 +35,7 @@
+         }
+ 
+         // Pass 3: Write matched elements to their computed positions
++        #pragma omp parallel for shared(match,indices) 
+         for (int i = 0; i < LEN_1D; i++) {
+             if (match[i]) {
+                 a[indices[i]] = b[i];

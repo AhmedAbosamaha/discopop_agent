@@ -1,0 +1,22 @@
+--- s331.c
++++ s331.c
+@@ -30,13 +30,19 @@
+             j = i;
+         }
+     }
++    #pragma omp parallel
++    #pragma omp single
++    {
++    #pragma omp task
+     chksum = (real_t) j;
+ 
+     // Apply final pb_mix update
+     if (R > 0) {
++        #pragma omp task
+         pb_mix(R - 1);
+     }
+ 
++    }
+     return j+1;
+ }
+ 

@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s254.c
+  Model          : claude-sonnet-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s254.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Plan: The inner loop has an apparent recurrence through `x`, but `x` at iteration `i` is always just `b[i-1]` (with wraparound to `b[LEN_1D-1]` at `i==0`), since `b` is never written inside the loop. So each `a[i]` depends only on `b[i]` and `b[i-1]`, not on any value computed by the loop itself. I remove the carried variable `x` and instead read `b[i-1]` (or `b[LEN_1D-1]` when `i==0`) directly, m
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

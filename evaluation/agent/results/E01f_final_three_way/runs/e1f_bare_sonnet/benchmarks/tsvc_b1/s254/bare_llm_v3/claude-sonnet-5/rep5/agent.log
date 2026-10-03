@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s254.c
+  Model          : claude-sonnet-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s254.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan **Dependence analysis:** In the inner loop, `x` is just carrying forward the previous iteration's `b[i-1]` value (with `x` initialized to `b[LEN_1D-1]` before `i=0`). Since `b` itself is never written inside the inner loop (only `a` is written, and `pb_mix` only touches `b`/`a`/etc. *between* repetitions, after the inner loop finishes), the value `x` carries is always just `b[i-1]` (with w
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

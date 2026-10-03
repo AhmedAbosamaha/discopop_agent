@@ -1,0 +1,28 @@
+--- s3112.c
++++ s3112.c
+@@ -18,10 +18,24 @@
+     real_t sum;
+     for (int nl = 0; nl < R; nl++) {
+         sum = (real_t)0.0;
++
++        // Allocate temporary buffer for cumulative sums
++        real_t *cumsum = (real_t *)malloc(LEN_1D * sizeof(real_t));
++
++        // Compute cumulative sums sequentially
+         for (int i = 0; i < LEN_1D; i++) {
+             sum += a[i];
+-            b[i] = sum;
++            cumsum[i] = sum;
+         }
++
++        // Assign cumulative sums to b (this loop is now dependency-free)
++        for (int i = 0; i < LEN_1D; i++) {
++            b[i] = cumsum[i];
++        }
++
++        // Free temporary buffer
++        free(cumsum);
++
+         pb_mix(nl);
+     }
+     return sum;

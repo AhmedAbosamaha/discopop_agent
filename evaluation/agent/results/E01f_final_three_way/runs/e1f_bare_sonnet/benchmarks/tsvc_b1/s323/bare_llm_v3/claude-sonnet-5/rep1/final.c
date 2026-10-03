@@ -1,0 +1,75 @@
+/* TSVC-2 loop s323, from TSVC-2 src/tsvc.c (sha256 456dd573b84b; University of Illinois licence,
+ * see benchmarks/TSVC_2/license.txt). */
+#include "tsvc_b1/s323.h"
+#include <stdlib.h>
+
+/* Between two repetitions a few INPUT elements change, so no repetition can be skipped,
+ * merged with another or run out of order: the repetition loop is sequential by a true
+ * dependence, and the loop under study is the one inside it. */
+static void pb_mix(int nl)
+{
+  long k = ((long)nl * 7919L + 13L) % LEN_1D;
+  a[k] += (real_t)0.25; b[k] += (real_t)0.25; c[k] += (real_t)0.125;
+  d[k] += (real_t)0.125; e[k] += (real_t)0.25;
+  a[0] += (real_t)0.125; b[LEN_1D-1] += (real_t)0.125;
+}
+
+static real_t kernel_s323(void)
+{
+    /* Original recurrence: a[i] = b[i-1] + c[i]*d[i]; b[i] = a[i] + c[i]*e[i];
+     * a[i] depends on b[i-1], which in turn was written as a[i-1]+c[i-1]*e[i-1]
+     * in the previous iteration, so the two statements together form a first
+     * order linear recurrence in (a,b) that cannot be split across iterations
+     * as written. Substituting b[i-1] = a[i-1] + c[i-1]*e[i-1] (valid for
+     * i-1 >= 1) turns it into:
+     *   a[i] = a[i-1] + (c[i-1]*e[i-1] + c[i]*d[i])   for i = 2 .. LEN_1D-1
+     * i.e. a[] is the running prefix sum (starting from a[1]) of the
+     * per-index term delta[i] = c[i-1]*e[i-1] + c[i]*d[i]. That term has no
+     * dependence between indices, so it is computed in parallel into a
+     * heap buffer; the prefix sum itself is a short, cheap sequential pass
+     * (one add per element) that turns the running total into a[i]; once
+     * all of a[] is finalized, b[i] = a[i] + c[i]*e[i] has no cross-iteration
+     * dependence left and is computed in a second parallel loop.
+     * a[1] = b[0] + c[1]*d[1] reproduces the original first iteration
+     * exactly, reading b[0] fresh each repetition (b[0] is never written by
+     * this loop, only possibly by pb_mix between repetitions, exactly as in
+     * the original). */
+    real_t *delta = (real_t *)malloc(sizeof(real_t) * (size_t)LEN_1D);
+    for (int nl = 0; nl < R; nl++) {
+        int n = LEN_1D;
+        if (n > 1) {
+            a[1] = b[0] + c[1] * d[1];
+        }
+        if (n > 2) {
+            /* delta[i] for i=2..n-1 is independent across i: reads only
+             * c, d, e at indices i-1 and i, writes only delta[i]. */
+            #pragma omp parallel for schedule(static) default(none) shared(c, d, e, delta, n)
+            for (int i = 2; i < n; i++) {
+                delta[i] = c[i-1] * e[i-1] + c[i] * d[i];
+            }
+
+            /* Sequential prefix sum: running carries the cumulative delta
+             * from iteration to iteration (true scan dependence, kept
+             * serial), a[1] is read-only here (set above, finalized before
+             * this loop, and not modified by it). */
+            real_t running = (real_t)0;
+            for (int i = 2; i < n; i++) {
+                running += delta[i];
+                a[i] = a[1] + running;
+            }
+        }
+        if (n > 1) {
+            /* b[i] only depends on a[i] (already fully finalized above)
+             * and c[i], e[i]; no cross-iteration dependence remains. */
+            #pragma omp parallel for schedule(static) default(none) shared(a, b, c, e, n)
+            for (int i = 1; i < n; i++) {
+                b[i] = a[i] + c[i] * e[i];
+            }
+        }
+        pb_mix(nl);
+    }
+    free(delta);
+    return (real_t)0;
+}
+
+PB_MAIN(kernel_s323)

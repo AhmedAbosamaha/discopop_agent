@@ -1,0 +1,30 @@
+--- s341.c
++++ s341.c
+@@ -15,17 +15,23 @@
+ 
+ static real_t kernel_s341(void)
+ {
+-    int j;
++    int* indices = (int*)malloc(LEN_1D * sizeof(int));
+     for (int nl = 0; nl < R; nl++) {
+-        j = -1;
++        // First pass: identify indices of positive elements
++        int count = 0;
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++                indices[count] = i;
++                count++;
+             }
++        }
++        // Second pass: copy positive elements to output array in parallel
++        for (int j = 0; j < count; j++) {
++            a[j] = b[indices[j]];
+         }
+         pb_mix(nl);
+     }
++    free(indices);
+     return (real_t)0;
+ }
+ 

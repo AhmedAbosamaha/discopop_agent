@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s293.c
+  Model          : claude-sonnet-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s293.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: **Plan:** The inner loop `for (i=0..LEN_1D) a[i] = a[0];` has a[0] both read by every iteration and written by the i==0 iteration. Although the value stored at i==0 is identical to what's read, concurrently writing a[0] while other threads read a[0] is a race (and would trip ThreadSanitizer). The fix: snapshot `a[0]` into a local scalar **before** the loop starts, then have every iteration write f
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

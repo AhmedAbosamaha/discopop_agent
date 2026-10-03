@@ -1,0 +1,10 @@
+--- s3112.c
++++ s3112.c
+@@ -27,6 +27,7 @@
+                 sum += a[i];
+                 temp[i - c] = sum;
+             }
++            #pragma omp parallel for firstprivate(temp,c,end) 
+             for (int i = c; i < end; i++) {
+                 b[i] = temp[i - c];
+             }

@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s243.c
+  Model          : claude-sonnet-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s243.c: edited, 3 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan **Dependence analysis:** The inner loop body is ``` a[i] = b[i] + c[i]*d[i]; b[i] = a[i] + d[i]*e[i]; a[i] = b[i] + a[i+1]*d[i]; ``` The third statement reads `a[i+1]`. In the original sequential order (`i = 0,1,2,...`), when iteration `i` runs, iteration `i+1` hasn't executed yet, so `a[i+1]` is still whatever it was *before this sweep started* (set either by the previous `nl` repetition'
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

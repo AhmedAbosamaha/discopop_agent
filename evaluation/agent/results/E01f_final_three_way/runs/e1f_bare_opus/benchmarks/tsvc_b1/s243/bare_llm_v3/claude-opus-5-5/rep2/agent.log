@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s243.c
+  Model          : claude-opus-5-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-opus-5-5...
+│  [bare] s243.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: I've rewritten `kernel_s243` in `s243.c` so its inner loop runs in parallel, but nothing has been compiled or run, since there's no compiler here. So the race-free, byte-identical and faster claims are untested. **What was blocking it:** each iteration reads `a[i+1]` just before the next iteration overwrites it. No value moves from one iteration to the next; it's only a memory location being reuse
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

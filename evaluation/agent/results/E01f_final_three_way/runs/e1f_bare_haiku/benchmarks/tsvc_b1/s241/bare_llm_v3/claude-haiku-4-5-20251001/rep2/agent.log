@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s241.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] s241.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: I'll analyze the program to identify the parallelization opportunity.**Analysis:** Reading the code, I can see: 1. **The outer loop** (`nl`) is sequential because `pb_mix(nl)` modifies global arrays between repetitions—true data dependencies. 2. **The inner loop** (the one to parallelize) reads and writes arrays based on index `i`: ```c a[i] = b[i] * c[i] * d[i]; // line 20: write a[i] b[i] = a[i]
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

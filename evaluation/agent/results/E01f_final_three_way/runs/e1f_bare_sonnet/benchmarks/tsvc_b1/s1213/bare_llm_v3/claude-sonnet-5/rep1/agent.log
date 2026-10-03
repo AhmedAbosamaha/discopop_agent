@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s1213.c
+  Model          : claude-sonnet-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s1213.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: The dependence here is only textual, not real: `a[i]=b[i-1]+c[i]; b[i]=a[i+1]*d[i]` looks like it carries values forward and backward, but expanding the recurrence shows every new value is expressible purely from the array contents as they stood **before this inner-loop activation started** (snapshot), plus `c`/`d` which this loop never writes: - `b_new[i] = a_old[i+1] * d[i]` for all `i` in range
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

@@ -1,0 +1,21 @@
+--- s281.c
++++ s281.c
+@@ -15,12 +15,14 @@
+ 
+ static real_t kernel_s281(void)
+ {
+-    real_t x;
++    real_t x_new[LEN_1D];
+     for (int nl = 0; nl < R; nl++) {
+         for (int i = 0; i < LEN_1D; i++) {
+-            x = a[LEN_1D-i-1] + b[i] * c[i];
+-            a[i] = x-(real_t)1.0;
+-            b[i] = x;
++            x_new[i] = a[LEN_1D-i-1] + b[i] * c[i];
++        }
++        for (int i = 0; i < LEN_1D; i++) {
++            a[i] = x_new[i]-(real_t)1.0;
++            b[i] = x_new[i];
+         }
+         pb_mix(nl);
+     }

@@ -1,0 +1,23 @@
+--- original.c
++++ final.c
+@@ -17,9 +17,18 @@
+ {
+     int vl = 63;
+     xx = flat_2d_array + vl;
++    /* xx[i+1] == flat_2d_array[i+off] with off = vl+1: the i-loop below is a true
++     * recurrence on flat_2d_array with constant distance off. Splitting i by its
++     * residue r = i % off turns it into off independent chains (off is fixed and
++     * loop-invariant), each walked in the original increasing-i order, so results
++     * are bit-identical while the chains themselves run in parallel. */
++    int off = vl + 1;
+     for (int nl = 0; nl < R; nl++) {
+-        for (int i = 0; i < LEN_1D - 1; i++) {
+-            xx[i+1] = flat_2d_array[i] + a[i];
++        #pragma omp parallel for default(none) shared(flat_2d_array, a, off) schedule(static)
++        for (int r = 0; r < off; r++) {
++            for (int i = r; i < LEN_1D - 1; i += off) {
++                flat_2d_array[i + off] = flat_2d_array[i] + a[i];
++            }
+         }
+         pb_mix(nl);
+     }

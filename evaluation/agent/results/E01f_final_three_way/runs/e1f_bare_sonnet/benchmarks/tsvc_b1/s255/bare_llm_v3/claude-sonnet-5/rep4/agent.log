@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s255.c
+  Model          : claude-sonnet-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s255.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan **Dependence analysis:** In the inner `i` loop, `a[i] = (b[i] + x + y) * 0.333` with `y = x; x = b[i];` updated each iteration. Unrolling this, `x` at the top of iteration `i` always equals `b[i-1]` (with wraparound: `b[LEN_1D-1]` when `i==0`), and `y` always equals `b[i-2]` (wraparound: `b[LEN_1D-2]` when `i==0`, `b[LEN_1D-1]` when `i==1`). So the "dependence" is just `x`/`y` carrying for
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

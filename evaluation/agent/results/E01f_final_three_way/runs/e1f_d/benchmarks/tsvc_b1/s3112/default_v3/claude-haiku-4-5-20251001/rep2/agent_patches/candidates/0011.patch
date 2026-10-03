@@ -1,0 +1,52 @@
+--- s3112.c
++++ s3112.c
+@@ -16,14 +16,45 @@
+ static real_t kernel_s3112(void)
+ {
+     real_t sum;
++    int NUM_SEGS = 8;
++    int SEG_SIZE = (LEN_1D + NUM_SEGS - 1) / NUM_SEGS;
++
++    real_t *seg_sums = (real_t *)malloc(NUM_SEGS * sizeof(real_t));
++    real_t *seg_prefix = (real_t *)malloc(NUM_SEGS * sizeof(real_t));
++
+     for (int nl = 0; nl < R; nl++) {
+-        sum = (real_t)0.0;
+-        for (int i = 0; i < LEN_1D; i++) {
+-            sum += a[i];
+-            b[i] = sum;
++        /* Pass 1: Compute segment sums in parallel. */
++        for (int seg = 0; seg < NUM_SEGS; seg++) {
++            real_t seg_sum = (real_t)0.0;
++            for (int i = seg * SEG_SIZE; i < seg * SEG_SIZE + SEG_SIZE && i < LEN_1D; i++) {
++                seg_sum += a[i];
++            }
++            seg_sums[seg] = seg_sum;
+         }
++
++        /* Pass 2: Compute prefix of segment sums (sequential, O(NUM_SEGS)). */
++        real_t prefix_sum = (real_t)0.0;
++        for (int seg = 0; seg < NUM_SEGS; seg++) {
++            seg_prefix[seg] = prefix_sum;
++            prefix_sum += seg_sums[seg];
++        }
++        sum = prefix_sum;
++
++        /* Pass 3: Compute final b values in parallel. */
++        for (int seg = 0; seg < NUM_SEGS; seg++) {
++            real_t base = seg_prefix[seg];
++            real_t seg_sum = (real_t)0.0;
++            for (int i = seg * SEG_SIZE; i < seg * SEG_SIZE + SEG_SIZE && i < LEN_1D; i++) {
++                seg_sum += a[i];
++                b[i] = base + seg_sum;
++            }
++        }
++
+         pb_mix(nl);
+     }
++
++    free(seg_sums);
++    free(seg_prefix);
+     return sum;
+ }
+ 

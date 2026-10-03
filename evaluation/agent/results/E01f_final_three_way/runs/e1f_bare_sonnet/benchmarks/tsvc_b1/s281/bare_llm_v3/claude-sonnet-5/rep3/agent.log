@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s281.c
+  Model          : claude-sonnet-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s281.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: This looks correct. Summary of the plan and reasoning: **Dependence identified:** The inner loop writes `a[i]` and reads `a[LEN_1D-1-i]` (its mirror index) in the same sweep. This is a genuine value-carried dependence, not just location reuse: for `i` in the first half (`i <= mid`, where `mid = (LEN_1D-1)/2`), the mirror index hasn't been touched yet this sweep, so the read sees the *pre-sweep* va
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

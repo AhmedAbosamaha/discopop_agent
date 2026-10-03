@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s254.c
+  Model          : claude-sonnet-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s254.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan **Dependence:** The inner loop carries `x` as a running value: `x` starts as `b[LEN_1D-1]`, then each iteration does `a[i] = (b[i]+x)*0.5; x = b[i]`. So `x` at iteration `i` is just `b[i-1]` (or `b[LEN_1D-1]` when `i==0`) — it's a value being *relayed* from the previous iteration's `b[i]`, not an independent accumulation. Since `b` itself is never written inside this inner loop (it's only 
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

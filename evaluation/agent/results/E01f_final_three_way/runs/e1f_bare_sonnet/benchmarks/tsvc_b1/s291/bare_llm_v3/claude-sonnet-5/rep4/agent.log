@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s291.c
+  Model          : claude-sonnet-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s291.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan The inner `i` loop computes `a[i] = (b[i] + b[im1]) * 0.5`, where `im1` is just the previous iteration's index (wrapping to `LEN_1D-1` when `i==0`). This is a value carried between iterations, but it's not real data dependence — `im1` is fully determined by `i` itself, so it can be recomputed locally in each iteration instead of carried forward. `b` is only read in this loop (never written
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

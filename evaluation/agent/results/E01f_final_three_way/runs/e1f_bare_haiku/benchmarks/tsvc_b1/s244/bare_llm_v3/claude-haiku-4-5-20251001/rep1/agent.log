@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s244.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] s244.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Looking at the code structure, I need to identify the dependence blocking parallelization of the inner loop in `kernel_s244`. **Analysis:** The inner loop has this structure: ```c for (int i = 0; i < LEN_1D-1; ++i) { a[i] = b[i] + c[i] * d[i]; // Line 1: writes a[i] b[i] = c[i] + b[i]; // Line 2: writes b[i] a[i+1] = b[i] + a[i+1] * d[i]; // Line 3: reads a[i+1], writes a[i+1] } ``` The blocking d
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

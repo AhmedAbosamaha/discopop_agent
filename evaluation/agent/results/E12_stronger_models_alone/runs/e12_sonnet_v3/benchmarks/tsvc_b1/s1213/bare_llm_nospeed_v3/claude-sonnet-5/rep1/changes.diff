@@ -1,0 +1,30 @@
+--- original.c
++++ final.c
+@@ -16,9 +16,26 @@
+ static real_t kernel_s1213(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        /* Original single loop had, at each i, "a[i] = b[i-1]+c[i]" reading the
++         * b[i-1] value already *updated* earlier in this same pass (a true
++         * loop-carried dependence through b), while "b[i] = a[i+1]*d[i]" always
++         * read the *old* a[i+1] (not yet touched by this pass, since a[i+1] is
++         * only written once the loop variable reaches i+1). So the b-update
++         * never depends on anything this pass writes, and the a-update only
++         * needs the b-update's *final* values, not interleaving with it.
++         * Splitting into two loops - first finish all of b (independent,
++         * reads only old a/d), then compute all of a from the now-final b
++         * (independent, reads only b/c) - reproduces the exact same values
++         * with no cross-iteration dependence left in either loop. b[0] is
++         * never written by either loop (loop starts at i=1), so the i=1 case
++         * of the second loop still sees the same old b[0] it did originally. */
++        #pragma omp parallel for default(none) shared(a, b, d)
++        for (int i = 1; i < LEN_1D-1; i++) {
++            b[i] = a[i+1]*d[i];
++        }
++        #pragma omp parallel for default(none) shared(a, b, c)
+         for (int i = 1; i < LEN_1D-1; i++) {
+             a[i] = b[i-1]+c[i];
+-            b[i] = a[i+1]*d[i];
+         }
+         pb_mix(nl);
+     }

@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s121.c
+  Model          : claude-opus-5-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-opus-5-5...
+│  [bare] s121.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: I've rewritten `kernel_s121` in `s121.c` so its inner loop runs in parallel. Nothing has been compiled or run, because there's no compiler here. **What was blocking it:** the loop `a[i] = a[i+1] + b[i]` only had a reused location, not a value carried forward. Each step reads the old `a[i+1]`, and the next step then overwrites that slot. If both run at once, a thread could read a value another thre
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

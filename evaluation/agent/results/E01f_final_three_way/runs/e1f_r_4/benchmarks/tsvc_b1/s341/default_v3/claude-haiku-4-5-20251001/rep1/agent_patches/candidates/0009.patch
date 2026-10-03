@@ -1,0 +1,55 @@
+--- s341.c
++++ s341.c
+@@ -15,17 +15,48 @@
+ 
+ static real_t kernel_s341(void)
+ {
+-    int j;
++    int *prefix = (int *)malloc((LEN_1D + 1) * sizeof(int));
++
++    /* Compute initial prefix sum */
++    prefix[0] = 0;
++    for (int i = 0; i < LEN_1D; i++) {
++        prefix[i + 1] = prefix[i] + (b[i] > (real_t)0. ? 1 : 0);
++    }
++
+     for (int nl = 0; nl < R; nl++) {
+-        j = -1;
++        /* Parallelize write loop with sufficient work per thread */
++        #pragma omp parallel for
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++                a[prefix[i]] = b[i];
+             }
+         }
++
+         pb_mix(nl);
++
++        /* Incrementally update prefix sum for the elements modified by pb_mix.
++           pb_mix modifies b[k] where k = ((long)nl * 7919L + 13L) % LEN_1D,
++           and b[LEN_1D-1]. Only update prefix entries after these positions. */
++        long k = ((long)nl * 7919L + 13L) % LEN_1D;
++
++        /* Update prefix from k+1 onward if b[k] sign changed */
++        int delta_k = (b[k] > (real_t)0. ? 1 : 0);
++        int old_k = prefix[k + 1] - prefix[k];
++        int delta_change_k = delta_k - old_k;
++        for (long i = k + 1; i <= LEN_1D; i++) {
++            prefix[i] += delta_change_k;
++        }
++
++        /* Update prefix[LEN_1D] for b[LEN_1D-1] sign change, if distinct from b[k] */
++        if (k != LEN_1D - 1) {
++            int delta_last = (b[LEN_1D - 1] > (real_t)0. ? 1 : 0);
++            int old_last = prefix[LEN_1D] - prefix[LEN_1D - 1];
++            int delta_change_last = delta_last - old_last;
++            prefix[LEN_1D] += delta_change_last;
++        }
+     }
++
++    free(prefix);
+     return (real_t)0;
+ }
+ 

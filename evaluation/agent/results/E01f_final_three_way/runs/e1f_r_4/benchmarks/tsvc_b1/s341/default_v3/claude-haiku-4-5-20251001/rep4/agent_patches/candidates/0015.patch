@@ -1,0 +1,31 @@
+--- s341.c
++++ s341.c
+@@ -18,12 +18,26 @@
+     int j;
+     for (int nl = 0; nl < R; nl++) {
+         j = -1;
++        int *dest = (int *)malloc(LEN_1D * sizeof(int));
++        int count = 0;
++
++        /* First pass: compute destination index for each positive element */
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++                dest[i] = count;
++                count++;
+             }
+         }
++        j = count - 1;
++
++        /* Second pass: write elements to computed destinations (parallelizable) */
++        for (int i = 0; i < LEN_1D; i++) {
++            if (b[i] > (real_t)0.) {
++                a[dest[i]] = b[i];
++            }
++        }
++
++        free(dest);
+         pb_mix(nl);
+     }
+     return (real_t)0;

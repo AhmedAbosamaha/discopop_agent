@@ -1,0 +1,51 @@
+--- original.c
++++ final.c
+@@ -15,17 +15,43 @@
+ 
+ static real_t kernel_s341(void)
+ {
+-    int j;
++    // Allocate temporary buffers for parallelization
++    // is_pos[i]: marks whether b[i] is positive
++    // offsets[i]: target index in a[] for element i (if positive)
++    int *is_pos = (int *)malloc(LEN_1D * sizeof(int));
++    int *offsets = (int *)malloc(LEN_1D * sizeof(int));
++
+     for (int nl = 0; nl < R; nl++) {
+-        j = -1;
++        // Phase 1: Identify positive elements in parallel
++        // Each thread independently checks b[i] and writes is_pos[i] (no races: disjoint writes)
++        #pragma omp parallel for schedule(static)
+         for (int i = 0; i < LEN_1D; i++) {
+-            if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++            is_pos[i] = (b[i] > (real_t)0.) ? 1 : 0;
++        }
++
++        // Phase 2: Compute prefix sum to determine write positions
++        // offsets[i] = count of positive elements in b[0..i-1]
++        // This is sequential because each offsets[i] depends on all previous is_pos values
++        offsets[0] = 0;
++        for (int i = 1; i < LEN_1D; i++) {
++            offsets[i] = offsets[i-1] + is_pos[i-1];
++        }
++
++        // Phase 3: Write positive elements to their computed offsets in parallel
++        // Each thread i writes a[offsets[i]] = b[i] if b[i] > 0
++        // No races: all offsets[i] are distinct for positive elements (monotonic prefix sum)
++        #pragma omp parallel for schedule(static)
++        for (int i = 0; i < LEN_1D; i++) {
++            if (is_pos[i]) {
++                a[offsets[i]] = b[i];
+             }
+         }
++
+         pb_mix(nl);
+     }
++
++    free(is_pos);
++    free(offsets);
+     return (real_t)0;
+ }
+ 

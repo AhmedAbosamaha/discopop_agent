@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s291.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] s291.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Looking at this code, I can identify the issue: **Plan:** The inner loop has a **loop-carried dependence on `im1`**: each iteration's value of `im1` depends on the previous iteration's value. Tracing through: - i=0: uses im1=LEN_1D-1, then sets im1=0 - i=1: uses im1=0, then sets im1=1 - i=i: uses im1=i-1 This dependence is artificial—`im1` is simply tracking the previous index. I can remove it by 
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

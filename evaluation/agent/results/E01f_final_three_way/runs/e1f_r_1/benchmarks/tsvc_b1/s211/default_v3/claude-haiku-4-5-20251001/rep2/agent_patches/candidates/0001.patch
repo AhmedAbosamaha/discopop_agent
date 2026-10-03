@@ -1,0 +1,10 @@
+--- s211.c
++++ s211.c
+@@ -19,6 +19,7 @@
+ 
+     for (int nl = 0; nl < R; nl++) {
+         // Phase 1: Compute new b values in parallel (each iteration writes unique b_new[i])
++        #pragma omp parallel for 
+         for (int i = 1; i < LEN_1D-1; i++) {
+             b_new[i] = b[i + 1] - e[i] * d[i];
+         }

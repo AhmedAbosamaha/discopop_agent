@@ -1,0 +1,22 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1f_r_4/benchmarks/tsvc_b1/s331/default_v3/claude-haiku-4-5-20251001/rep4/work/s331.c	2026-10-02 22:30:37.329964047 +0000
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1f_r_4/benchmarks/tsvc_b1/s331/default_v3/claude-haiku-4-5-20251001/rep4/work/s331.c.discopop_patch_generator.temp	2026-10-02 22:30:38.629979771 +0000
+@@ -30,13 +30,19 @@
+             j = i;
+         }
+     }
++    #pragma omp parallel
++    #pragma omp single
++    {
++    #pragma omp task
+     chksum = (real_t) j;
+ 
+     // Apply final pb_mix update
+     if (R > 0) {
++        #pragma omp task
+         pb_mix(R - 1);
+     }
+ 
++    }
+     return j+1;
+ }
+ 

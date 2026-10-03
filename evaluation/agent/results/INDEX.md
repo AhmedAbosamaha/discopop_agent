@@ -357,7 +357,7 @@ Status: done
 
 ## [E12 — a small model inside the pipeline against stronger models alone](E12_stronger_models_alone/REPORT.md)
 
-Status: done
+Status: running
 
 | run | where | what it is | status | trials | outcomes |
 |---|---|---|---|---:|---|
@@ -368,23 +368,45 @@ Status: done
 | `e12_haiku_v3` | [`E12_stronger_models_alone/runs/e12_haiku_v3/`](E12_stronger_models_alone/runs/e12_haiku_v3/) | E12 CLI control: claude-haiku-4-5-20251001 alone on tsvc_b1/k19, k48 × bare_llm_nospeed_v3 × 5 with the upgraded SDK (bundled CLI 2.1.285) | valid | 10 | BROKEN 9, FASTER 1 |
 | `e12_haiku_b1` | [`E12_stronger_models_alone/runs/e12_haiku_b1/`](E12_stronger_models_alone/runs/e12_haiku_b1/) | E12 CLI control: claude-haiku-4-5-20251001 alone on tsvc_b1/s424, s161 × bare_llm_nospeed × 5 with the upgraded SDK | valid | 10 | BROKEN 5, FASTER 4, VERIFY_FAILED 1 |
 | `e12_agent_v3` | [`E12_stronger_models_alone/runs/e12_agent_v3/`](E12_stronger_models_alone/runs/e12_agent_v3/) | E12: the Haiku agent with evidence (full_b1_nospeed_v3) on tsvc_b1/s424, s161 × 10 — the comparison point for the strong models alone on these loops (the E2-B1 agent ran the v1 wording) | valid | 20 | FASTER 10, no-change 8, parallel-not-faster 2 |
+| `e12_sonnet_v3` | [`E12_stronger_models_alone/runs/e12_sonnet_v3/`](E12_stronger_models_alone/runs/e12_sonnet_v3/) | E12 completion (§6 3 Oct): claude-sonnet-5 alone on tsvc_b1/k48, s1213, s211 × bare_llm_nospeed_v3 × 5, threads 6/12, repeats 5, the fixed commit (Fix 103) | valid | 15 | BROKEN 5, FASTER 10 |
+| `e12_sonnet_b1` | [`E12_stronger_models_alone/runs/e12_sonnet_b1/`](E12_stronger_models_alone/runs/e12_sonnet_b1/) | E12 completion: claude-sonnet-5 alone on tsvc_b1/s424, s161 × bare_llm_nospeed × 5 (E12's model-alone arm on E2-B1's packages), Fix 103 | valid | 10 | FASTER 3, parallel-not-faster 7 |
+| `e12_opus_v3b` | [`E12_stronger_models_alone/runs/e12_opus_v3b/`](E12_stronger_models_alone/runs/e12_opus_v3b/) | E12 completion: claude-opus-5-5 alone on tsvc_b1/s1213, s211 × bare_llm_nospeed_v3 × 5, Fix 103 | valid | 10 | FASTER 10 |
+| `e12_fable_v3b` | [`E12_stronger_models_alone/runs/e12_fable_v3b/`](E12_stronger_models_alone/runs/e12_fable_v3b/) | E12 completion: claude-fable-5-1 alone on tsvc_b1/s1213, s211 × bare_llm_nospeed_v3 × 5, Fix 103 | valid | 10 | FASTER 10 |
+| `e12_fable_redo` | [`E12_stronger_models_alone/runs/e12_fable_redo/`](E12_stronger_models_alone/runs/e12_fable_redo/) | E12 completion: Fable's 3 harness-edit trials of e12_fable_v3 redone (Fix 103; the author 3 Oct): tsvc_b1/k19 × 2, k48 × 1, bare_llm_nospeed_v3 | valid | 3 | BROKEN 1, parallel-not-faster 2 |
 
 ## [E1-final — the headline three-way comparison in the final version](E01f_final_three_way/REPORT.md)
 
-Status: pre-flight
+Status: running
 
 | run | where | what it is | status | trials | outcomes |
 |---|---|---|---|---:|---|
 | `t0_1_e1f_sizes` | [`E01f_final_three_way/preflight/t0_1_e1f_sizes/`](E01f_final_three_way/preflight/t0_1_e1f_sizes/) | T0.1 sizes for the 23 new tsvc_b1 packages of E1-final (server, no model) | valid | 0 |  |
 | `e1f_smoke` | [`E01f_final_three_way/preflight/e1f_smoke/`](E01f_final_three_way/preflight/e1f_smoke/) | E1-final smoke: tsvc_b1/s211 and s000 × default_v3, discopop_gate_v3 (Haiku) and bare_llm_v3 with Haiku, Sonnet, Opus, Fable × 1 — configuration check, not counted | valid | 12 | FASTER 10, VERIFY_FAILED 1, no-change 1 |
-| `e1f_r_1` | not archived yet | E1-final class R: s112 s121 s1213 s127 s211 × default_v3, discopop_gate_v3 (Haiku) × 5, threads 6,12, repeats 5 | registered |  |  |
-| `e1f_r_2` | not archived yet | E1-final class R: s212 s241 s243 s244 s252 × default_v3, discopop_gate_v3 (Haiku) × 5, threads 6,12, repeats 5 | registered |  |  |
-| `e1f_r_3` | not archived yet | E1-final class R: s254 s255 s281 s291 × default_v3, discopop_gate_v3 (Haiku) × 5, threads 6,12, repeats 5 | registered |  |  |
-| `e1f_r_4` | not archived yet | E1-final class R: s292 s293 s331 s341 × default_v3, discopop_gate_v3 (Haiku) × 5, threads 6,12, repeats 5 | registered |  |  |
-| `e1f_a` | not archived yet | E1-final class A (no-harm): s000 vpvtv s313 × default_v3, discopop_gate_v3 (Haiku) × 1 | registered |  |  |
-| `e1f_d` | not archived yet | E1-final class D (must-decline): s321 s322 s323 s3112 × default_v3, discopop_gate_v3 (Haiku) × 3 | registered |  |  |
-| `e1f_bare_haiku` | not archived yet | E1-final the model alone: bare_llm_v3 with claude-haiku-4-5-20251001 on class R × 5, A × 1, D × 3 (one run per model) | registered |  |  |
-| `e1f_bare_sonnet` | not archived yet | E1-final the model alone: bare_llm_v3 with claude-sonnet-5 on class R × 5, A × 1, D × 3 (one run per model) | registered |  |  |
-| `e1f_bare_opus` | not archived yet | E1-final the model alone: bare_llm_v3 with claude-opus-5-5 on class R × 5, A × 1, D × 3 (one run per model) | registered |  |  |
+| `e1f_r_1` | [`E01f_final_three_way/runs/e1f_r_1/`](E01f_final_three_way/runs/e1f_r_1/) | E1-final class R: s112 s121 s1213 s127 s211 × default_v3, discopop_gate_v3 (Haiku) × 5, threads 6,12, repeats 5 | valid | 50 | FASTER 24, no-change 25, parallel-not-faster 1 |
+| `e1f_r_2` | [`E01f_final_three_way/runs/e1f_r_2/`](E01f_final_three_way/runs/e1f_r_2/) | E1-final class R: s212 s241 s243 s244 s252 × default_v3, discopop_gate_v3 (Haiku) × 5, threads 6,12, repeats 5 | valid | 50 | FASTER 14, no-change 26, parallel-not-faster 10 |
+| `e1f_r_3` | [`E01f_final_three_way/runs/e1f_r_3/`](E01f_final_three_way/runs/e1f_r_3/) | E1-final class R: s254 s255 s281 s291 × default_v3, discopop_gate_v3 (Haiku) × 5, threads 6,12, repeats 5 | valid | 40 | FASTER 15, no-change 20, parallel-not-faster 5 |
+| `e1f_r_4` | [`E01f_final_three_way/runs/e1f_r_4/`](E01f_final_three_way/runs/e1f_r_4/) | E1-final class R: s292 s293 s331 s341 × default_v3, discopop_gate_v3 (Haiku) × 5, threads 6,12, repeats 5 | valid | 39 | FASTER 11, no-change 27, parallel-not-faster 1 |
+| `e1f_a` | [`E01f_final_three_way/runs/e1f_a/`](E01f_final_three_way/runs/e1f_a/) | E1-final class A (no-harm): s000 vpvtv s313 × default_v3, discopop_gate_v3 (Haiku) × 1 — launched on commit 912e3d9b (the agent runs' commit) while lanes were idle; agent path identical to the fixed commit (§6 3 Oct) | valid | 5 | FASTER 5 |
+| `e1f_d` | [`E01f_final_three_way/runs/e1f_d/`](E01f_final_three_way/runs/e1f_d/) | E1-final class D (must-decline): s321 s322 s323 s3112 × default_v3, discopop_gate_v3 (Haiku) × 3 — launched on commit 912e3d9b (the agent runs' commit) while lanes were idle; agent path identical to the fixed commit (§6 3 Oct) | valid | 24 | no-change 24 |
+| `e1f_bare_haiku` | [`E01f_final_three_way/runs/e1f_bare_haiku/`](E01f_final_three_way/runs/e1f_bare_haiku/) | E1-final the model alone: bare_llm_v3 with claude-haiku-4-5-20251001 on class R × 5, A × 1, D × 3 (one run per model) | valid | 105 | BROKEN 24, FASTER 45, VERIFY_FAILED 8, changed-not-parallel 2, no-change 2, parallel-not-faster 24 |
+| `e1f_bare_sonnet` | [`E01f_final_three_way/runs/e1f_bare_sonnet/`](E01f_final_three_way/runs/e1f_bare_sonnet/) | E1-final the model alone: bare_llm_v3 with claude-sonnet-5 on class R × 5, A × 1, D × 3 (one run per model) | valid | 105 | BROKEN 2, FASTER 91, parallel-not-faster 12 |
+| `e1f_bare_opus` | [`E01f_final_three_way/runs/e1f_bare_opus/`](E01f_final_three_way/runs/e1f_bare_opus/) | E1-final the model alone: bare_llm_v3 with claude-opus-5-5 on class R × 5, A × 1, D × 3 (one run per model) | valid | 105 | FASTER 101, VERIFY_FAILED 1, parallel-not-faster 3 |
 | `e1f_bare_fable` | not archived yet | E1-final the model alone: bare_llm_v3 with claude-fable-5-1 on class R × 5, A × 1, D × 3 (one run per model) | registered |  |  |
+| `e1f_fix103_redo` | [`E01f_final_three_way/runs/e1f_fix103_redo/`](E01f_final_three_way/runs/e1f_fix103_redo/) | E1-final agent trials redone on the fixed agent (Fix 103): every trial whose candidate the old harness rule (Fix 97) let through but the judge's rules refuse (a new pb_* line) — found by fix103's scan of every E1-final agent candidate when the agent runs ended; each from a copy of its own run's DiscoPoP profile; the superseded trials kept under <run>/_superseded_fix103/. Known so far: e1f_r_4 s331 rep4 (pb_mix(R - 1)) | valid | 2 | no-change 2 |
+
+## [E2-O3 — does the evidence effect hold on more hidden-order kernels?](E02o3_hidden_order_kernels/REPORT.md)
+
+Status: pre-flight
+
+| run | where | what it is | status | trials | outcomes |
+|---|---|---|---|---:|---|
+| `t0_1_o3_sizes` | not archived yet | T0.1 sizes for tsvc_b1/k23, k31, k36 (server, no model) | registered |  |  |
+| `t0_11_o3_a` | not archived yet | T0.11 draw a on tsvc_b1/k23, k31, k36: discopop_capability (budget 0, no model), threads 6/12, repeats 5 | registered |  |  |
+| `t0_11_o3_b` | not archived yet | T0.11 draw b on tsvc_b1/k23, k31, k36: discopop_capability, no model | registered |  |  |
+| `t0_11_o3_c` | not archived yet | T0.11 draw c on tsvc_b1/k23, k31, k36: discopop_capability, no model | registered |  |  |
+| `e2o3_agent` | not archived yet | E2-O3: tsvc_b1/k23, k31, k36 × full_b1_nospeed_v3, no_evidence_b1_nospeed_v3 × 10, Haiku, threads 6/12, repeats 5 | registered |  |  |
+| `e2o3_bare_haiku` | not archived yet | E2-O3: claude-haiku-4-5-20251001 alone on tsvc_b1/k23, k31, k36 × bare_llm_nospeed_v3 × 10 | registered |  |  |
+| `e2o3_bare_sonnet` | not archived yet | E2-O3: claude-sonnet-5 alone on tsvc_b1/k23, k31, k36 × bare_llm_nospeed_v3 × 5 | registered |  |  |
+| `e2o3_bare_opus` | not archived yet | E2-O3: claude-opus-5-5 alone on tsvc_b1/k23, k31, k36 × bare_llm_nospeed_v3 × 5 | registered |  |  |
+| `e2o3_bare_fable` | not archived yet | E2-O3: claude-fable-5-1 alone on tsvc_b1/k23, k31, k36 × bare_llm_nospeed_v3 × 5 | registered |  |  |
 

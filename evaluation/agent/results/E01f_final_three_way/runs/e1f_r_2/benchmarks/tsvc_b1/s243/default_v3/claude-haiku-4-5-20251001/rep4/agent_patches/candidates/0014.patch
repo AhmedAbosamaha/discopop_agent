@@ -1,0 +1,10 @@
+--- s243.c
++++ s243.c
+@@ -30,6 +30,7 @@
+         }
+ 
+         // Second phase: update a[i] using the next element from cached input a
++        #pragma omp parallel for shared(a_in) 
+         for (int i = 0; i < LEN_1D-1; i++) {
+             a[i] = b[i] + a_in[i+1] * d[i];
+         }

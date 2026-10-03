@@ -1,0 +1,112 @@
+
+============================================================
+  DiscoPoP Agentic Controller
+============================================================
+  Source         : s313.c
+  DiscoPoP dir   : .discopop
+  Model          : claude-haiku-4-5-20251001
+  Budget         : 3 LLM retries/region (+2 free build fixes)
+  λ penalty      : 1.0
+  Min workload   : 0.0
+  Restruct. depth: 0 (Tier-2 allowed at depth 0–0)
+  Quality gate   : Tier-1 = all but speed, no escalation; Tier-2 = full
+  TSan           : barrier-aware (archer: /usr/lib/llvm-20/lib/libarcher.so)
+  Speedup gate   : require ≥ 1.1× measured
+  Dry run        : False
+  LLM mode       : claude-haiku-4-5-20251001
+  Edit mode      : direct
+  Re-profiling   : full (instrument + run + explore) after every kept rewrite
+  Explorer       : one attempt may take 60 s, then the draw is repeated (random stall, L5)
+  Pragmas        : DiscoPoP writes them in Phase B
+============================================================
+
+  [ok] Captured reference output on 2 inputs (69 bytes, 720.4 ms baseline) for the correctness/performance gates.
+
+  [ok] Numerical noise floor 3.66e-17 of output scale (widest disagreement 3.66e-18 of output scale across 6 build variants, x10 margin).
+  [note] values may move that far without failing the correctness gate; labels, line structure and integers must still match exactly.
+
+  Hotspots       : measured per-region runtimes are available — 18 region(s) measured, 5.5 ms total, ranking by predicted time saved at 48 threads
+
+  Baseline       : DiscoPoP proposes 1 applicable pattern(s) unaided; 1 of them produce a usable pragma
+                   → the run beats DiscoPoP by ending with more than 1
+
+  Initial candidates
+Region ID    Type           Saves    % run    Hot  Tier  Depth  Name
+--------------------------------------------------------------------------------------
+  1:14       loop          4.2 ms    78.0%    YES     2      0  lines 19–25
+  1:18       loop          4.2 ms    77.9%    YES     1      0  lines 21–23
+  1:12       function      4.2 ms    78.0%    YES     2      0  kernel_s313
+
+============================================================
+  FLOOR — DiscoPoP's own program, as the DiscoPoP-alone arm delivers it (D32)
+============================================================
+  [floor] DiscoPoP alone keeps 1 pragma(s) — the agent's program must not be slower than that one (D32; details in floor/floor.log)
+
+============================================================
+  PHASE A — restructure  (the source stays pragma-free)
+============================================================
+
+┌─ [depth=0] loop 1:14 (lines 19–25)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Original backed up → s313.c.original
+│  [Tier-2] Applied to s313.c
+│  [Tier-2] Re-profiling to refresh data and discover new candidates...
+│  [refresh] kind=full
+│  [Tier-2] Re-measured runtimes: 17 region(s), 1.3 ms total
+│  [Phase-A] Asking DiscoPoP what it now finds in the rewritten lines...
+│  [Phase-A] exposure verdict: exposed
+│  [Phase-A] D40 — judging it as it will ship: DiscoPoP's pragmas for the exposed loops through the safety gate, then the program with them against the program before the rewrite (paired)
+│  [Phase-A] D40: pragma for lines 16–27 fails at 'openmp_compile'
+│  [Phase-A] D40: pragma for lines 23–25 passes the safety gate
+│  [Phase-A] D40 verdict: ok 117.27×
+│  [Phase-A] D40 time: 9.5 s
+│  [Tier-2] 1 survivor(s) rebuilt, 1 new at depth 1
+│  [Tier-2] DiscoPoP now finds: reduction @ lines 23–25, task @ lines 16–27
+│  [Tier-2] Restructuring pays off (with its pragmas, against the program before it 117.27×)
+└─ ACCEPTED
+
+┌─ [depth=0] loop 1:22 (lines 23–25)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (reduction) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=1] function 1:12 (lines 16–27)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (task) — deferred to Phase B
+└─ DEFERRED
+
+
+============================================================
+  PHASE B — annotate  (2 candidate pragma(s))
+============================================================
+
+  Timing noise: reusing the run's threshold → keep anything at or above 0.988
+
+┌─ D41: the file is the one D40 judged for 1:14 (1 pragma(s), 117.27× together)
+│  [Phase-B] Applied to s313.c
+└─ APPLIED as D40 judged it — 1 pragma(s), no second timing (D41)
+
+┌─ pattern #2  task @ lines 16–27  (W=0)
+│  ['#pragma omp parallel', '#pragma omp single']
+│  gate failed at 'openmp_compile': OpenMP compile failed (loop not in OpenMP-canonical form): /tmp/dp_agent_val_fzmkltde/s313.c:33:5: error: expected statement    33 |     }       |    
+└─ DROPPED
+
+============================================================
+  SETTLING — verify the finished source, drop what does not hold up
+============================================================
+  [ok] finished source verified — output matches, 97.38x the original, paired
+
+  [floor] kept the agent's program — 16.19× DiscoPoP's own, paired (kept at or above 0.988; D32)
+
+
+============================================================
+  SUMMARY: 1 rewrite(s) kept  |  1 pragma(s) applied  |  0 skipped
+  DiscoPoP unaided: 1 usable pragma(s) in this profile's draw  →  this run: 1   [MATCHED, informational]
+    ✓  loop 1:14  [Tier-2]  depth=0
+    ✓  loop 1:22  [Phase-B pragma]  depth=0
+
+  Results → .discopop/agent_patches/accepted.json
+============================================================
+

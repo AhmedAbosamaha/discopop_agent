@@ -1,0 +1,17 @@
+--- original.c
++++ final.c
+@@ -19,6 +19,14 @@
+     real_t chksum;
+     for (int nl = 0; nl < R; nl++) {
+         j = -1;
++        /* j ends up holding the largest i with a[i] < 0 (or -1 if none), since the
++         * sequential scan keeps overwriting j with increasing i. That is exactly what
++         * a max-reduction computes regardless of iteration order: each iteration
++         * contributes either i (when the condition holds) or nothing, and combining
++         * with the pre-loop value -1 via max reproduces the same result. a[] is only
++         * read here, so it stays implicitly shared; j is written here and read right
++         * after the loop (chksum), so it must be a reduction variable, not private. */
++        #pragma omp parallel for reduction(max:j)
+         for (int i = 0; i < LEN_1D; i++) {
+             if (a[i] < (real_t)0.) {
+                 j = i;

@@ -1,0 +1,31 @@
+--- s322.c
++++ s322.c
+@@ -15,12 +15,27 @@
+ 
+ static real_t kernel_s322(void)
+ {
++    real_t *contrib_b = malloc(LEN_1D * sizeof(real_t));
++    real_t *contrib_c = malloc(LEN_1D * sizeof(real_t));
++
+     for (int nl = 0; nl < R; nl++) {
++        // Compute contributions from a[i-1]*b[i] (independent loop)
+         for (int i = 2; i < LEN_1D; i++) {
+-            a[i] = a[i] + a[i - 1] * b[i] + a[i - 2] * c[i];
++            contrib_b[i] = a[i - 1] * b[i];
++        }
++        // Compute contributions from a[i-2]*c[i] (independent loop)
++        for (int i = 2; i < LEN_1D; i++) {
++            contrib_c[i] = a[i - 2] * c[i];
++        }
++        // Apply contributions to a[i] (independent loop)
++        for (int i = 2; i < LEN_1D; i++) {
++            a[i] = a[i] + contrib_b[i] + contrib_c[i];
+         }
+         pb_mix(nl);
+     }
++
++    free(contrib_b);
++    free(contrib_c);
+     return (real_t)0;
+ }
+ 

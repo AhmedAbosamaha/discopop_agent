@@ -1,0 +1,10 @@
+--- s244.c
++++ s244.c
+@@ -17,6 +17,7 @@
+ {
+     real_t *b_old = malloc((LEN_1D - 1) * sizeof(real_t));
+     for (int nl = 0; nl < R; nl++) {
++        #pragma omp parallel for 
+         for (int i = 0; i < LEN_1D-1; ++i) {
+             b_old[i] = b[i];
+             b[i] = c[i] + b[i];

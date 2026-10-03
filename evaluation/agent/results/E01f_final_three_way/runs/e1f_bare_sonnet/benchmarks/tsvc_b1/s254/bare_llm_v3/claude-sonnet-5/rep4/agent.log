@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s254.c
+  Model          : claude-sonnet-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s254.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: 計画: 内側の`i`ループで`x`は単に`b[i-1]`(i=0時は`b[LEN_1D-1]`)を次のイテレーションに渡しているだけで、他の値は生成していない。したがって`x`を使った逐次依存を取り除き、各イテレーションで必要な`prev`値を直接`b[]`から読み出せば、イテレーション間の依存はなくなる。`a`は書き込みのみ、`b`は読み取りのみなので安全に並列化できる。外側の`nl`ループは`pb_mix`が`a,b,c,d,e`を書き換えるため逐次のまま残す（指示通り）。ループ境界はLEN_1Dで変わらない。Final check of the file:This looks correct and complete. Summary: **Dependence removed:** The inner loop carried `x` from iteration `i` to `
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

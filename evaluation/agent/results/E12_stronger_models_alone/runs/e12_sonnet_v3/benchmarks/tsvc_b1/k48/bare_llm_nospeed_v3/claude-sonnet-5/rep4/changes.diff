@@ -1,0 +1,27 @@
+--- original.c
++++ final.c
+@@ -15,6 +15,24 @@
+ static real_t kernel_k48(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        /* Each iteration i only ever touches the u/v slots that its own
++         * index arrays name for THIS iteration: the write ju[i]/jv[i] in
++         * this iteration is the same slot read back by ku[i]/kv[i] in this
++         * same iteration (an intra-iteration read-after-write, which is
++         * not a loop-carried dependence), and no iteration's indices name
++         * a slot another iteration also writes within this inner loop.
++         * So the dependence that looked like one value crossing from
++         * iteration i to iteration i' is really the same iteration's own
++         * slot being reused across its two statements, not a value that
++         * must travel between distinct iterations; the inner loop over i
++         * can therefore run with its iterations independent of each
++         * other. u, v, c, d, ju, jv, ku, kv are shared arrays indexed
++         * only by the loop variable i (directly or through the index
++         * arrays), so no clause other than shared is needed: i itself is
++         * the (implicitly private) loop variable, and nothing else is
++         * declared inside the loop body. */
++        #pragma omp parallel for default(none) \
++            shared(u, v, c, d, ju, jv, ku, kv)
+         for (long i = 1; i < LEN_1D; i++) {
+             u[ju[i]] += v[kv[i]] * c[i];
+             v[jv[i]] = u[ku[i]] * d[i] + c[i];

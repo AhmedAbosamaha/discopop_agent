@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s293.c
+  Model          : claude-opus-5-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-opus-5-5...
+│  [bare] s293.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: I've parallelized the inner fill loop in `s293.c`; I haven't compiled or run it, since there's no compiler here. **What changed:** each pass now reads `a[0]` into a local `a0` before the loop, and the loop writes `a[i] = a0` under `#pragma omp parallel for schedule(static) firstprivate(a0) shared(a)`. **Why the result is unchanged:** the dependence was only a reused location, not a value passed be
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

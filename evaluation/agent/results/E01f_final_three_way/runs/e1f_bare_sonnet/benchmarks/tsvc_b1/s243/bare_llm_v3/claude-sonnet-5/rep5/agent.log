@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s243.c
+  Model          : claude-sonnet-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s243.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: **Plan:** The dependence is inside the `i` loop: `a[i+1]` is read while only indices `0..i-1` have been written so far in the current activation, so in the original order the read always sees the value `a[i+1]` had *before this activation of the loop started* (set by the previous `nl` iteration's body + `pb_mix`). If `i` iterations run out of order/in parallel, a thread doing iteration `i+1` could
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

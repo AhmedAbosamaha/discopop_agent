@@ -1,0 +1,100 @@
+/* TSVC-2 loop s3112, from TSVC-2 src/tsvc.c (sha256 456dd573b84b; University of Illinois licence,
+ * see benchmarks/TSVC_2/license.txt). */
+#include "tsvc_b1/s3112.h"
+#include <stdlib.h>
+
+/* Between two repetitions a few INPUT elements change, so no repetition can be skipped,
+ * merged with another or run out of order: the repetition loop is sequential by a true
+ * dependence, and the loop under study is the one inside it. */
+static void pb_mix(int nl)
+{
+  long k = ((long)nl * 7919L + 13L) % LEN_1D;
+  a[k] += (real_t)0.25; b[k] += (real_t)0.25; c[k] += (real_t)0.125;
+  d[k] += (real_t)0.125; e[k] += (real_t)0.25;
+  a[0] += (real_t)0.125; b[LEN_1D-1] += (real_t)0.125;
+}
+
+/* The inner loop is a prefix-sum (scan): b[i] = a[0]+a[1]+...+a[i]. That is a true
+ * dependence carried through "sum" from one i to the next, but the dependence can be
+ * MOVED rather than removed: split the index range into a fixed number of contiguous
+ * chunks (fixed at min(LEN_1D,256), so the grouping of additions never depends on the
+ * thread count or schedule actually used), let each chunk compute its own local prefix
+ * sum and block total independently (pass 1), then fold the block totals into a small
+ * per-chunk offset table sequentially (O(nchunks), not O(LEN_1D)), and finally add each
+ * chunk's offset into its own slice of b[] (pass 2). The value a block-total offset
+ * carries is written by pass 1 and only read starting in pass 2, which begins only
+ * after pass 1's parallel region has fully completed (implicit barrier at the end of a
+ * "#pragma omp parallel for"), so the moved dependence still reaches its reader. */
+static real_t kernel_s3112(void)
+{
+    real_t sum;
+    const int n = LEN_1D;
+    int nchunks = (n < 256) ? n : 256;
+    if (nchunks < 1) nchunks = 1;
+    const int block = (n + nchunks - 1) / nchunks;
+
+    real_t *chunk_sum = (real_t *)malloc((size_t)nchunks * sizeof(real_t));
+    real_t *chunk_offset = (real_t *)malloc((size_t)nchunks * sizeof(real_t));
+
+    for (int nl = 0; nl < R; nl++) {
+        sum = (real_t)0.0;
+
+        /* Pass 1: independent per-chunk local prefix sums + block totals.
+         * shared: a (read-only here), b (each chunk writes a disjoint slice),
+         *         chunk_sum (each chunk writes only its own element chunk_sum[c]).
+         * firstprivate: n, block, nchunks -- loop-invariant bounds, read only, never
+         *         written inside the loop, so the outer copies stay valid afterwards.
+         * c is the loop variable (private by construction); start, end, local are
+         * declared inside the loop body, hence already private and must not be
+         * (and are not) named in any clause. */
+        #pragma omp parallel for default(none) shared(a, b, chunk_sum) \
+            firstprivate(n, block, nchunks) schedule(static)
+        for (int c = 0; c < nchunks; c++) {
+            int start = c * block;
+            int end = start + block;
+            if (end > n) end = n;
+            real_t local = (real_t)0.0;
+            for (int i = start; i < end; i++) {
+                local += a[i];
+                b[i] = local;
+            }
+            chunk_sum[c] = local;
+        }
+
+        /* Small sequential scan over the per-chunk totals: O(nchunks), not O(LEN_1D).
+         * This is exactly the dependence that used to run through every element of the
+         * big loop, now carried only between the nchunks block totals. */
+        chunk_offset[0] = (real_t)0.0;
+        for (int c = 1; c < nchunks; c++) {
+            chunk_offset[c] = chunk_offset[c - 1] + chunk_sum[c - 1];
+        }
+
+        /* Pass 2: fold each chunk's offset into its own disjoint slice of b[].
+         * shared: b (disjoint writes per chunk), chunk_offset (read-only here).
+         * firstprivate: n, block, nchunks -- same loop-invariant bounds as above.
+         * off is declared inside the loop body, so it is already private and is not
+         * named in any clause. */
+        #pragma omp parallel for default(none) shared(b, chunk_offset) \
+            firstprivate(n, block, nchunks) schedule(static)
+        for (int c = 0; c < nchunks; c++) {
+            real_t off = chunk_offset[c];
+            int start = c * block;
+            int end = start + block;
+            if (end > n) end = n;
+            for (int i = start; i < end; i++) {
+                b[i] += off;
+            }
+        }
+
+        sum = b[n - 1];
+
+        pb_mix(nl);
+    }
+
+    free(chunk_sum);
+    free(chunk_offset);
+
+    return sum;
+}
+
+PB_MAIN(kernel_s3112)

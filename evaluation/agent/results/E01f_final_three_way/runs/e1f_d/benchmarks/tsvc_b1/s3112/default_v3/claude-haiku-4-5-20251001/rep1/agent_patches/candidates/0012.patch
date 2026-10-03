@@ -1,0 +1,10 @@
+--- s3112.c
++++ s3112.c
+@@ -29,6 +29,7 @@
+         }
+ 
+         /* Assign to output array — each iteration is independent. */
++        #pragma omp parallel for shared(prefix_sum) 
+         for (int i = 0; i < LEN_1D; i++) {
+             b[i] = prefix_sum[i];
+         }

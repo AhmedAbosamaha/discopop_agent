@@ -1,0 +1,26 @@
+--- original.c
++++ final.c
+@@ -15,13 +15,18 @@
+ 
+ static real_t kernel_s252(void)
+ {
+-    real_t t, s;
+     for (int nl = 0; nl < R; nl++) {
+-        t = (real_t) 0.;
++        /* a[i] = b[i]*c[i] + (previous iteration's b[i-1]*c[i-1], or 0 for i==0).
++         * The original serial loop carried that previous product forward through
++         * `t`; here each iteration recomputes it directly from b[i-1]*c[i-1], so
++         * there is no loop-carried dependence left and iterations can run in any
++         * order/partition. a, b, c are shared: each i writes a[i] exactly once and
++         * only reads b/c, never writes them, so there is no race. */
++        #pragma omp parallel for shared(a, b, c)
+         for (int i = 0; i < LEN_1D; i++) {
+-            s = b[i] * c[i];
+-            a[i] = s + t;
+-            t = s;
++            real_t s = b[i] * c[i];
++            real_t prev = (i > 0) ? (b[i - 1] * c[i - 1]) : (real_t) 0.;
++            a[i] = s + prev;
+         }
+         pb_mix(nl);
+     }

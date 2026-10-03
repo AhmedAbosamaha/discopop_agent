@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s254.c
+  Model          : claude-sonnet-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s254.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan **Dependence analysis.** Inside the inner `i` loop, `x` carries `b[i-1]` (or `b[LEN_1D-1]` for `i==0`) forward to compute `a[i]`. This is a *value* dependence, but the value is just the previous iteration's `b[i]`, which is still available directly as `b[i-1]` — `b` itself is never written inside this loop, only read. So the recurrence can be eliminated by expressing `a[i]` purely in terms
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

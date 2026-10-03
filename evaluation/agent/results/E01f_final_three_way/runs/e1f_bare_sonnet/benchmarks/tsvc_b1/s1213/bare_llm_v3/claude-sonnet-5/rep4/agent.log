@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s1213.c
+  Model          : claude-sonnet-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s1213.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan **Dependence analysis.** The inner loop ``` a[i] = b[i-1] + c[i]; b[i] = a[i+1] * d[i]; ``` has two chains: `a[i]` reads `b[i-1]` just written at iteration `i-1` (true dependence through a *reused location*), and `b[i]` reads `a[i+1]`, which at that point in sequential execution still holds its **pre-sweep** value (iteration `i+1` hasn't run yet) — a value that is simply never updated befo
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s161.c
+  Model          : claude-sonnet-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s161.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan **Dependence analysis.** In the inner loop, `b`, `d`, `e` are only ever *read* — nothing inside this loop writes them, so they can stay as direct shared reads. The only variables both read and written are `a` and `c`, and each iteration `i` writes **exactly one** location: either `a[i]` (when `b[i]>=0`) or `c[i+1]` (when `b[i]<0`) — these write targets are mutually exclusive per iteration 
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

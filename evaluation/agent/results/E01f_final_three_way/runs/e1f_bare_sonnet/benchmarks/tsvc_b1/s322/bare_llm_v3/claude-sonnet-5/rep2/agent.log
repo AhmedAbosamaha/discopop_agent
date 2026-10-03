@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s322.c
+  Model          : claude-sonnet-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s322.c: edited, 0 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan I read `s322.c`. The only code I'm allowed to touch is the body of `kernel_s322`: ```c for (int nl = 0; nl < R; nl++) { for (int i = 2; i < LEN_1D; i++) { a[i] = a[i] + a[i - 1] * b[i] + a[i - 2] * c[i]; } pb_mix(nl); } ``` **Outer `nl` loop:** already established by the problem statement (and confirmed by reading `pb_mix`) to be sequential — `pb_mix` mutates `a[0]`, `b[LEN_1D-1]`, and `a/
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

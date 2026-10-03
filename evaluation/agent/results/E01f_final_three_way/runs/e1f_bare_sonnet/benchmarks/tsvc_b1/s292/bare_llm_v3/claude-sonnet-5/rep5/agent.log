@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s292.c
+  Model          : claude-sonnet-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s292.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan The inner `i`-loop computes `a[i] = (b[i] + b[im1] + b[im2]) * 0.333`, where `im1`/`im2` are just "previous i" and "previous im1", carried forward only to encode `im1 = i-1`, `im2 = i-2` (mod wraparound for i=0,1). That's a location (loop-variable bookkeeping) reused across iterations, not a real data dependence: `b` is read-only throughout this loop (only `pb_mix`, called *after* the loop
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

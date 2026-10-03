@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s121.c
+  Model          : claude-opus-5-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-opus-5-5...
+│  [bare] s121.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: I've rewritten `kernel_s121` in `s121.c`, but nothing has been compiled or run, so it's untested. **What blocked parallelism:** `a[i] = a[i+1] + b[i]` only reuses a location; no value passes between iterations. Each iteration needs the *old* `a[i+1]`, and run in parallel, iteration i+1 could overwrite it first. **The rewrite:** each `nl` repetition now runs two parallel loops, one after the other:
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

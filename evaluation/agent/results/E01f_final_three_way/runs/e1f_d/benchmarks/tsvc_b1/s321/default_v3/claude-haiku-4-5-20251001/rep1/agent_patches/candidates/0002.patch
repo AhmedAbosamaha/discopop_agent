@@ -1,0 +1,25 @@
+--- s321.c
++++ s321.c
+@@ -16,9 +16,21 @@
+ static real_t kernel_s321(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        real_t *delta = (real_t *)malloc(LEN_1D * sizeof(real_t));
++
++        /* Compute products into delta (read-only loop on a) */
++        real_t carry = a[0];
+         for (int i = 1; i < LEN_1D; i++) {
+-            a[i] += a[i-1] * b[i];
++            delta[i] = carry * b[i];
++            carry = a[i] + delta[i];
+         }
++
++        /* Apply updates to a */
++        for (int i = 1; i < LEN_1D; i++) {
++            a[i] += delta[i];
++        }
++
++        free(delta);
+         pb_mix(nl);
+     }
+     return (real_t)0;

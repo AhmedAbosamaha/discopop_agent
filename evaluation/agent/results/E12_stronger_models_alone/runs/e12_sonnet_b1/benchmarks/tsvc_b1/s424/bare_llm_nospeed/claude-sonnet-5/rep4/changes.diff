@@ -1,0 +1,27 @@
+--- original.c
++++ final.c
+@@ -17,9 +17,22 @@
+ {
+     int vl = 63;
+     xx = flat_2d_array + vl;
++    /* xx[i+1] writes flat_2d_array[i + (vl+1)]; the loop reads flat_2d_array[i].
++     * So this is a true, loop-carried recurrence with CONSTANT distance (vl+1):
++     * iteration i's write is read back by iteration i+(vl+1). The write index
++     * i+(vl+1) and the read index i both have the same residue mod (vl+1), so
++     * the recurrence never crosses residue classes: splitting i by i % (vl+1)
++     * yields (vl+1) independent chains, each of which must keep its original
++     * ascending-i order (that order is what the sequential code executed).
++     * Parallelizing across chains (the outer "r" loop below) is therefore safe;
++     * the inner chain loop keeps the dependence and must stay sequential. */
+     for (int nl = 0; nl < R; nl++) {
+-        for (int i = 0; i < LEN_1D - 1; i++) {
+-            xx[i+1] = flat_2d_array[i] + a[i];
++        int stride = vl + 1;
++        #pragma omp parallel for schedule(static) firstprivate(stride) shared(xx, flat_2d_array, a)
++        for (int r = 0; r < stride; r++) {
++            for (int i = r; i < LEN_1D - 1; i += stride) {
++                xx[i+1] = flat_2d_array[i] + a[i];
++            }
+         }
+         pb_mix(nl);
+     }

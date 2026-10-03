@@ -1,0 +1,52 @@
+/* TSVC-2 loop s241, from TSVC-2 src/tsvc.c (sha256 456dd573b84b; University of Illinois licence,
+ * see benchmarks/TSVC_2/license.txt). */
+#include <stdlib.h>
+#include "tsvc_b1/s241.h"
+
+/* Between two repetitions a few INPUT elements change, so no repetition can be skipped,
+ * merged with another or run out of order: the repetition loop is sequential by a true
+ * dependence, and the loop under study is the one inside it. */
+static void pb_mix(int nl)
+{
+  long k = ((long)nl * 7919L + 13L) % LEN_1D;
+  a[k] += (real_t)0.25; b[k] += (real_t)0.25; c[k] += (real_t)0.125;
+  d[k] += (real_t)0.125; e[k] += (real_t)0.25;
+  a[0] += (real_t)0.125; b[LEN_1D-1] += (real_t)0.125;
+}
+
+static real_t kernel_s241(void)
+{
+    /* Snapshot buffer: holds the value a[] had before the current activation of
+     * the inner loop started. The original sequential loop always reads a[i+1]
+     * before iteration i+1 has had a chance to overwrite it, so every read of
+     * a[i+1] here must see this pre-loop value, not whatever a parallel write
+     * from iteration i+1 might produce. Heap-allocated because LEN_1D can be
+     * very large; reused (not re-malloc'd) across all R repetitions. */
+    real_t *a_old = (real_t *)malloc((size_t)LEN_1D * sizeof(real_t));
+
+    for (int nl = 0; nl < R; nl++) {
+        /* Capture the pre-loop values of a[] that the compute loop below needs
+         * to read as a[i+1]. Each iteration writes only its own a_old[i] and
+         * reads only its own a[i]: no cross-iteration dependence. */
+        #pragma omp parallel for default(none) shared(a, a_old) schedule(static)
+        for (int i = 0; i < LEN_1D; i++) {
+            a_old[i] = a[i];
+        }
+
+        /* Each iteration writes only a[i] and b[i] (disjoint across i) and reads
+         * only b[i], c[i], d[i] (own index) and a_old[i+1] (read-only snapshot
+         * taken above, matching what the sequential loop would have read).
+         * That removes the dependence that blocked parallelizing this loop. */
+        #pragma omp parallel for default(none) shared(a, b, c, d, a_old) schedule(static)
+        for (int i = 0; i < LEN_1D-1; i++) {
+            a[i] = b[i] * c[i  ] * d[i];
+            b[i] = a[i] * a_old[i+1] * d[i];
+        }
+        pb_mix(nl);
+    }
+
+    free(a_old);
+    return (real_t)0;
+}
+
+PB_MAIN(kernel_s241)

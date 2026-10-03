@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s112.c
+  Model          : claude-sonnet-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s112.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Now applying the plan. **Plan:** - The inner loop `for (i = LEN_1D-2 downto 0) a[i+1] = a[i] + b[i]` looks like a recurrence, but because `i` decreases, each `a[i]` is *read* before any iteration could overwrite it (the write that would clobber `a[i]` happens at the *later* iteration `i-1`). So sequentially, every read sees the value `a[i]` had **before this inner loop started this repetition** — 
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

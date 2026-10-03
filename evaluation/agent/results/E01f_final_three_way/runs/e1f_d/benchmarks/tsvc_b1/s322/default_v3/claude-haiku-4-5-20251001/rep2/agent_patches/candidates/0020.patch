@@ -1,0 +1,10 @@
+--- s322.c
++++ s322.c
+@@ -26,6 +26,7 @@
+             new_a[i] = new_a[i] + new_a[i - 1] * b[i] + new_a[i - 2] * c[i];
+         }
+ 
++        #pragma omp parallel for shared(new_a) 
+         for (int i = 0; i < LEN_1D; i++) {
+             a[i] = new_a[i];
+         }

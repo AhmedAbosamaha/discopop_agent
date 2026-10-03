@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s291.c
+  Model          : claude-sonnet-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s291.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan **Dependence analysis:** The inner loop carries `im1` as a running "previous index" variable: `im1` starts at `LEN_1D-1`, then becomes `i` each iteration. This looks like a loop-carried dependence, but it's purely an index computation, not a value dependence — `im1` is deterministically `i-1` for `i>0`, and `LEN_1D-1` for `i==0` (wraparound). The actual data flow is: read `b[i]` and `b[im1
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

@@ -1,0 +1,18 @@
+--- s121.c
++++ s121.c
+@@ -16,10 +16,14 @@
+ static real_t kernel_s121(void)
+ {
+     int j;
++    real_t temp[LEN_1D];
+     for (int nl = 0; nl < R; nl++) {
+         for (int i = 0; i < LEN_1D-1; i++) {
+             j = i + 1;
+-            a[i] = a[j] + b[i];
++            temp[i] = a[j] + b[i];
++        }
++        for (int i = 0; i < LEN_1D-1; i++) {
++            a[i] = temp[i];
+         }
+         pb_mix(nl);
+     }

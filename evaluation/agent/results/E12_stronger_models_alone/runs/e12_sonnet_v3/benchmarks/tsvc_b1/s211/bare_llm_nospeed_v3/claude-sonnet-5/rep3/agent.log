@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s211.c
+  Model          : claude-sonnet-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s211.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan **Dependence analysis.** In the inner loop (`i = 1 … LEN_1D-2`): - `b[i] = b[i+1] - e[i]*d[i]` reads `b[i+1]`, which — in the original forward order — is still untouched at the time iteration `i` runs (the loop only ever writes indices `≤ i`, and index `i+1` isn't written until iteration `i+1`). So every `b[i]` write only ever needs the *pre-loop* value of `b[i+1]`. No real cross-iteration
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

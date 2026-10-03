@@ -1,0 +1,10 @@
+--- s341.c
++++ s341.c
+@@ -17,6 +17,7 @@
+ {
+     for (int nl = 0; nl < R; nl++) {
+         int j = -1;
++        #pragma omp parallel for 
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+                 int pos = __atomic_fetch_add(&j, 1, __ATOMIC_SEQ_CST);

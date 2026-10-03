@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s244.c
+  Model          : claude-sonnet-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s244.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan **Dependence analysis.** The inner loop body for iteration `i` is: 1. `a[i] = b[i] + c[i]*d[i]` — reads original `b[i],c[i],d[i]` 2. `b[i] = c[i] + b[i]` — updates `b[i]` in place, using only index `i` 3. `a[i+1] = b[i] + a[i+1]*d[i]` — writes into the **next** iteration's slot, using the just-updated `b[i]` Iteration `i+1` then immediately executes its own step 1, `a[i+1] = b[i+1] + c[i+1
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

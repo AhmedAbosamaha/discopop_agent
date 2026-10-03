@@ -1,0 +1,10 @@
+--- s341.c
++++ s341.c
+@@ -23,6 +23,7 @@
+     for (int nl = 0; nl < R; nl++) {
+         /* Phase 1: Parallel filtering - mark elements that pass the filter.
+            Each iteration writes to independent temp[i]; no loop-carried dependence. */
++        #pragma omp parallel for 
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+                 temp[i] = b[i];

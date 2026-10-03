@@ -1,0 +1,10 @@
+--- s341.c
++++ s341.c
+@@ -30,6 +30,7 @@
+ 
+         // Pass 2: Compute exclusive prefix sum to determine output positions
+         indices[0] = 0;
++        #pragma omp parallel for shared(match,indices) 
+         for (int i = 1; i < LEN_1D; i++) {
+             indices[i] = indices[i-1] + match[i-1];
+         }

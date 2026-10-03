@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s424.c
+  Model          : claude-sonnet-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s424.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan **Dependence analysis.** `xx = flat_2d_array + vl` with `vl = 63`, so `xx[i+1]` is really `flat_2d_array[i+64]`. The inner loop ``` for (i = 0; i < LEN_1D-1; i++) flat_2d_array[i+64] = flat_2d_array[i] + a[i]; ``` writes index `i+64` while reading index `i`, both into the *same* array. In the original sequential order, when `i >= 64` the read of `flat_2d_array[i]` sees the value that itera
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

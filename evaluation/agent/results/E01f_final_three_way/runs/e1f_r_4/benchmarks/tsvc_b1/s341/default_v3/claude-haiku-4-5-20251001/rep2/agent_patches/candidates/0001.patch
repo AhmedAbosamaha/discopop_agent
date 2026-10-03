@@ -1,0 +1,10 @@
+--- s341.c
++++ s341.c
+@@ -31,6 +31,7 @@
+         }
+ 
+         // Phase 2: Scatter write to output (parallel-friendly, no inter-iteration deps)
++        #pragma omp parallel for shared(out_indices) 
+         for (int i = 0; i < LEN_1D; i++) {
+             if (out_indices[i] >= 0) {
+                 a[out_indices[i]] = b[i];

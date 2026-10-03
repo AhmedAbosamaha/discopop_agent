@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s323.c
+  Model          : claude-sonnet-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s323.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Plan: The inner loop has a true loop-carried dependence through `b`: `a[i]` reads `b[i-1]`, which the previous iteration wrote. Resolving the recurrence: since `b[i] = b[i-1] + c[i]*d[i] + c[i]*e[i]`, we get `b[i] = b0 + sum_{j=1}^{i} (c[j]*d[j]+c[j]*e[j])` where `b0` is the loop-invariant `b[0]` (never written by this loop, only by `pb_mix` between repetitions). So: - Phase 1 (parallel, independe
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

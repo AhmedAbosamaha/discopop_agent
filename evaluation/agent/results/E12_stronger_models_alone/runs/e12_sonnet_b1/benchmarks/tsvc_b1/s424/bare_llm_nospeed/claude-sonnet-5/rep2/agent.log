@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s424.c
+  Model          : claude-sonnet-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s424.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan **Dependence analysis.** `xx = flat_2d_array + vl` with `vl = 63`, so `xx[i+1]` is `flat_2d_array[i+64]`. The loop body is therefore: ``` flat_2d_array[i + 64] = flat_2d_array[i] + a[i] for i = 0 .. LEN_1D-2 ``` This is a true flow dependence with constant distance `STRIDE = vl+1 = 64`: the read of `flat_2d_array[i]` at iteration `i` depends on the write of `flat_2d_array[i]` made at itera
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

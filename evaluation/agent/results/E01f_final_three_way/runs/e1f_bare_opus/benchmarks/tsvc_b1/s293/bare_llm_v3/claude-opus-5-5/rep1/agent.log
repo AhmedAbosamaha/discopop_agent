@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s293.c
+  Model          : claude-opus-5-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-opus-5-5...
+│  [bare] s293.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: I've parallelized the inner fill loop in `s293.c`; nothing has been compiled or run, since there's no compiler here. **The change:** before each repetition's loop, `a[0]` is copied into a local `a0`. The loop then runs as `#pragma omp parallel for firstprivate(a0) schedule(static)` and writes `a[i] = a0`. The array `a` is shared by default, and `i` is private because it's declared in the loop head
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

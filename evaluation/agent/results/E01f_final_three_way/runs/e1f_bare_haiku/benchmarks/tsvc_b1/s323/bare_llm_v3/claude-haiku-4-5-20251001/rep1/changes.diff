@@ -1,0 +1,37 @@
+--- original.c
++++ final.c
+@@ -16,10 +16,33 @@
+ static real_t kernel_s323(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        /* Pass 1: Compute delta[i] = c[i] * (d[i] + e[i]) in parallel
++           This extracts the increment that will be added to b[i] in the prefix sum.
++           delta[i] is private to each iteration; c, d, e are shared read-only. */
++        real_t *delta = (real_t *)malloc(LEN_1D * sizeof(real_t));
++
++        #pragma omp parallel for schedule(static) shared(c, d, e, delta) private(i)
++        for (int i = 1; i < LEN_1D; i++) {
++            delta[i] = c[i] * (d[i] + e[i]);
++        }
++
++        /* Pass 2: Sequential prefix sum to update b[i] = b[i-1] + delta[i]
++           This maintains the original loop-carried dependence through b.
++           b and delta are shared; i is private. */
++        for (int i = 1; i < LEN_1D; i++) {
++            b[i] = b[i-1] + delta[i];
++        }
++
++        /* Pass 3: Compute a[i] = b[i-1] + c[i] * d[i] in parallel
++           Each iteration is independent: reads b[i-1] (from pass 2, invariant per iteration),
++           c[i], and d[i] (read-only arrays), and writes to a[i].
++           a, b, c, d are shared; i is private. */
++        #pragma omp parallel for schedule(static) shared(a, b, c, d) private(i)
+         for (int i = 1; i < LEN_1D; i++) {
+             a[i] = b[i-1] + c[i] * d[i];
+-            b[i] = a[i] + c[i] * e[i];
+         }
++
++        free(delta);
+         pb_mix(nl);
+     }
+     return (real_t)0;

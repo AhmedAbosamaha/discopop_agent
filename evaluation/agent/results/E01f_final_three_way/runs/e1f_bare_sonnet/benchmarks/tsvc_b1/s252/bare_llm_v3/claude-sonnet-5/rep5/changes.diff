@@ -1,0 +1,22 @@
+--- original.c
++++ final.c
+@@ -15,13 +15,14 @@
+ 
+ static real_t kernel_s252(void)
+ {
+-    real_t t, s;
+     for (int nl = 0; nl < R; nl++) {
+-        t = (real_t) 0.;
++        /* a[i] = b[i]*c[i] + (i==0 ? 0 : b[i-1]*c[i-1]); recomputing the shifted
++         * term directly removes the t = s loop-carried dependence, since b and c
++         * are not written by this loop. */
++        #pragma omp parallel for default(none) shared(a, b, c) schedule(static)
+         for (int i = 0; i < LEN_1D; i++) {
+-            s = b[i] * c[i];
+-            a[i] = s + t;
+-            t = s;
++            real_t tprev = (i == 0) ? (real_t) 0. : b[i - 1] * c[i - 1];
++            a[i] = b[i] * c[i] + tprev;
+         }
+         pb_mix(nl);
+     }

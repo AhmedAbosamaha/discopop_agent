@@ -1,0 +1,18 @@
+--- s341.c
++++ s341.c
+@@ -25,6 +25,7 @@
+     for (int nl = 0; nl < R; nl++) {
+         /* Phase 1: Mark which elements pass the filter.
+            Each i writes to independent mark[i]. */
++        #pragma omp parallel for shared(mark) 
+         for (int i = 0; i < LEN_1D; i++) {
+             mark[i] = (b[i] > (real_t)0.) ? 1 : 0;
+         }
+@@ -39,6 +40,7 @@
+         /* Phase 3: Parallel write—each i with mark[i]=1 writes to a[pos[i]-1].
+            No loop-carried dependence: each iteration writes to a pre-computed,
+            unique position based on pos[i]. */
++        #pragma omp parallel for shared(mark,pos) 
+         for (int i = 0; i < LEN_1D; i++) {
+             if (mark[i]) {
+                 a[pos[i] - 1] = b[i];

@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s244.c
+  Model          : claude-sonnet-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s244.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan **Dependence analysis.** Inside the `i` loop, statement 3 (`a[i+1] = b[i] + a[i+1] * d[i]`) writes `a[i+1]`, but iteration `i+1`'s statement 1 (`a[i+1] = b[i+1] + c[i+1] * d[i+1]`) unconditionally overwrites that same slot without ever reading it. So the value statement 3 writes is dead for every `i` except the very last one (`i == LEN_1D-2`), where there is no following iteration to overw
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

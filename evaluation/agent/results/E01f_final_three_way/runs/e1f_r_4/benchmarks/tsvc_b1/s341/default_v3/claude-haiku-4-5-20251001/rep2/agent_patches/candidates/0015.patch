@@ -1,0 +1,40 @@
+--- s341.c
++++ s341.c
+@@ -18,12 +18,34 @@
+     int j;
+     for (int nl = 0; nl < R; nl++) {
+         j = -1;
++
++        // Allocate temporary arrays for prefix sum approach
++        int *count_arr = (int *)malloc(sizeof(int) * LEN_1D);
++        int *prefix = (int *)malloc(sizeof(int) * LEN_1D);
++
++        // Phase 1: Mark which elements satisfy the condition
+         for (int i = 0; i < LEN_1D; i++) {
+-            if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++            count_arr[i] = (b[i] > (real_t)0.) ? 1 : 0;
++        }
++
++        // Phase 2: Compute prefix sums to determine output indices
++        int cumsum = 0;
++        for (int i = 0; i < LEN_1D; i++) {
++            prefix[i] = cumsum;
++            cumsum += count_arr[i];
++        }
++
++        // Phase 3: Write elements to output array (parallelizable!)
++        for (int i = 0; i < LEN_1D; i++) {
++            if (count_arr[i]) {
++                a[prefix[i]] = b[i];
+             }
+         }
++
++        // Free temporary arrays
++        free(count_arr);
++        free(prefix);
++
+         pb_mix(nl);
+     }
+     return (real_t)0;

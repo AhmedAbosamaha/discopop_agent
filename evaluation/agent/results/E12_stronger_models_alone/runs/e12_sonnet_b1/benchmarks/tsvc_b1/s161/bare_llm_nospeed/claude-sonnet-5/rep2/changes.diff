@@ -1,0 +1,71 @@
+--- original.c
++++ final.c
+@@ -1,6 +1,7 @@
+ /* TSVC-2 loop s161, from TSVC-2 src/tsvc.c (sha256 456dd573b84b; University of Illinois licence,
+  * see benchmarks/TSVC_2/license.txt). */
+ #include "tsvc_b1/s161.h"
++#include <stdlib.h>
+ 
+ /* Between two repetitions a few INPUT elements change, so no repetition can be skipped,
+  * merged with another or run out of order: the repetition loop is sequential by a true
+@@ -15,20 +16,52 @@
+ 
+ static real_t kernel_s161(void)
+ {
++    /* Heap-allocated (size grows with LEN_1D): snapshot of c[] taken at the
++     * start of each nl pass, read by the update loop below instead of the
++     * live c[] array so the loop-carried dependence through c[i+1]/c[i] is
++     * removed rather than hidden. */
++    real_t *c_in = (real_t *)malloc((size_t)LEN_1D * sizeof(real_t));
++
+     for (int nl = 0; nl < R; nl++) {
+-        for (int i = 0; i < LEN_1D-1; ++i) {
++        /* Plain copy: c_in[i] only ever reads/writes index i, no cross-
++         * iteration data, safe to run in any order. */
++        #pragma omp parallel for shared(c, c_in)
++        for (int i = 0; i < LEN_1D; ++i) {
++            c_in[i] = c[i];
++        }
++
++        /* Original dependence: when b[i] < 0, iteration i writes c[i+1],
++         * which iteration i+1 would read as "c[i]" in its else-branch -- a
++         * true RAW hazard on the live c[] array under arbitrary iteration
++         * order. Removed by reconstructing that value directly from the
++         * loop-entry snapshot (c_in) and from a[i-1]/d[i-1], which are safe
++         * to read here because whenever b[i-1] < 0 holds, iteration i-1's
++         * own write to a[i-1] is skipped (the two branches are mutually
++         * exclusive), so a[i-1] still holds its loop-entry value. Every
++         * iteration now only touches c[i+1] or a[i], indices no other
++         * iteration writes, and only reads shared arrays that no other
++         * iteration can be concurrently mutating at those indices. */
++        #pragma omp parallel for shared(a, b, c, d, e, c_in)
++        for (int i = 0; i < LEN_1D - 1; ++i) {
+             if (b[i] < (real_t)0.) {
+-                goto L20;
++                c[i+1] = a[i] + d[i] * d[i];
++            } else {
++                real_t cval;
++                if (i == 0) {
++                    cval = c_in[0];
++                } else if (b[i-1] < (real_t)0.) {
++                    cval = a[i-1] + d[i-1] * d[i-1];
++                } else {
++                    cval = c_in[i];
++                }
++                a[i] = cval + d[i] * e[i];
+             }
+-            a[i] = c[i] + d[i] * e[i];
+-            goto L10;
+-L20:
+-            c[i+1] = a[i] + d[i] * d[i];
+-L10:
+-            ;
+         }
++
+         pb_mix(nl);
+     }
++
++    free(c_in);
+     return (real_t)0;
+ }
+ 

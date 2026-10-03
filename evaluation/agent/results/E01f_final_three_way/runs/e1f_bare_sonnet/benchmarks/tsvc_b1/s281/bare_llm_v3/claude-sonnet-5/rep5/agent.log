@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s281.c
+  Model          : claude-sonnet-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s281.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Plan: The inner loop computes `x = a[LEN_1D-i-1] + b[i]*c[i]; a[i]=x-1; b[i]=x;`. Tracing execution order shows: for `i` in the first half (`i < mid`, `mid=(LEN_1D+1)/2`), the mirrored index `LEN_1D-i-1` lies in the second half and is never written before being read in this activation — those iterations are independent of each other and of the second half. For `i` in the second half (`i >= mid`), 
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

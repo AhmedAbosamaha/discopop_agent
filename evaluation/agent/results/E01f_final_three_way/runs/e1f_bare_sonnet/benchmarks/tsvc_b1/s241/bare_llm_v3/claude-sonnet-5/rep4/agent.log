@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s241.c
+  Model          : claude-sonnet-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s241.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan **Dependence analysis.** In the inner loop ``` a[i] = b[i]*c[i]*d[i]; b[i] = a[i]*a[i+1]*d[i]; ``` the write to `a[i]` happens in iteration `i`; it is read back by iteration `i-1`'s second statement (`a[i-1]*a[i]*d[i-1]`). In the original sequential order iteration `i-1` runs *before* iteration `i`, so that read always sees the value `a[i]` had *before this activation of the loop started* 
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

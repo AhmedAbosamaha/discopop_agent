@@ -1,0 +1,20 @@
+--- s341.c
++++ s341.c
+@@ -17,11 +17,14 @@
+ {
+     int j;
+     for (int nl = 0; nl < R; nl++) {
+-        j = -1;
++        // Use atomic fetch-and-add to parallelize: each thread computes its own index
++        j = 0;
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++                // Atomic fetch-and-add: returns old value, increments j
++                // No loop-carried dependence visible to compiler; each iteration gets unique index
++                int index = __sync_fetch_and_add(&j, 1);
++                a[index] = b[i];
+             }
+         }
+         pb_mix(nl);

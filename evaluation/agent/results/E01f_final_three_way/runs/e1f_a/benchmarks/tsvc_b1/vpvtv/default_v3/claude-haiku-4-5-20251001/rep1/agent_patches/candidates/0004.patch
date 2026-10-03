@@ -1,0 +1,10 @@
+--- vpvtv.c
++++ vpvtv.c
+@@ -57,6 +57,7 @@
+     }
+ 
+     /* Free all temporary buffers */
++    #pragma omp parallel for shared(c_saved,b_saved,delta_a) 
+     for (int nl = 0; nl < R; nl++) {
+         free(b_saved[nl]);
+         free(c_saved[nl]);

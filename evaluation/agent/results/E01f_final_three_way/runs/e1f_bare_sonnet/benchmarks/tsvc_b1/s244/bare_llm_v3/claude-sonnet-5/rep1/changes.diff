@@ -1,0 +1,23 @@
+--- original.c
++++ final.c
+@@ -16,11 +16,19 @@
+ static real_t kernel_s244(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        /* a[i+1] = b[i] + a[i+1]*d[i] in the original loop is always overwritten by the
++         * next iteration's a[i+1] = b[i+1]+c[i+1]*d[i+1], except for the very last i,
++         * where it is the only write to a[LEN_1D-1]. So statements 1 and 2 touch only
++         * index i (independent across i) and can run in parallel; the dead statement 3
++         * is replaced by a single boundary update after the loop using the now-updated
++         * b[LEN_1D-2] and the still-original a[LEN_1D-1]/d[LEN_1D-2], reproducing the
++         * exact same final values. */
++        #pragma omp parallel for default(none) shared(a, b, c, d) schedule(static)
+         for (int i = 0; i < LEN_1D-1; ++i) {
+             a[i] = b[i] + c[i] * d[i];
+             b[i] = c[i] + b[i];
+-            a[i+1] = b[i] + a[i+1] * d[i];
+         }
++        a[LEN_1D-1] = b[LEN_1D-2] + a[LEN_1D-1] * d[LEN_1D-2];
+         pb_mix(nl);
+     }
+     return (real_t)0;

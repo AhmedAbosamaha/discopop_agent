@@ -1,0 +1,26 @@
+--- original.c
++++ final.c
+@@ -15,12 +15,19 @@
+ 
+ static real_t kernel_s254(void)
+ {
+-    real_t x;
+     for (int nl = 0; nl < R; nl++) {
+-        x = b[LEN_1D-1];
++        /* Original recurrence: x holds b[i-1] (wrapping to b[LEN_1D-1] at i==0)
++         * while computing this iteration, then becomes b[i] for the next one.
++         * Since b is not modified anywhere inside this inner loop (pb_mix only
++         * runs after it, between repetitions), that carried value is always
++         * just b[i-1] (or b[LEN_1D-1] for i==0): read it directly instead of
++         * threading it through x, so iterations no longer depend on each
++         * other and only write their own distinct a[i].
++         */
++        #pragma omp parallel for shared(a, b)
+         for (int i = 0; i < LEN_1D; i++) {
+-            a[i] = (b[i] + x) * (real_t).5;
+-            x = b[i];
++            real_t prev = (i == 0) ? b[LEN_1D-1] : b[i-1];
++            a[i] = (b[i] + prev) * (real_t).5;
+         }
+         pb_mix(nl);
+     }

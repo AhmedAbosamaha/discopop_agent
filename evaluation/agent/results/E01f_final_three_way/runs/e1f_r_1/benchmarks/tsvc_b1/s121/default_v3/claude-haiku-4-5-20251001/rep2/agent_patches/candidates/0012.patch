@@ -1,0 +1,15 @@
+--- s121.c
++++ s121.c
+@@ -19,10 +19,12 @@
+ 
+     for (int nl = 0; nl < R; nl++) {
+         /* Read phase: capture a[i+1] for all iterations before any writes */
++        #pragma omp parallel for 
+         for (int i = 0; i < LEN_1D-1; i++) {
+             temp[i] = a[i+1];
+         }
+         /* Write phase: compute a[i] using pre-read values */
++        #pragma omp parallel for 
+         for (int i = 0; i < LEN_1D-1; i++) {
+             a[i] = temp[i] + b[i];
+         }

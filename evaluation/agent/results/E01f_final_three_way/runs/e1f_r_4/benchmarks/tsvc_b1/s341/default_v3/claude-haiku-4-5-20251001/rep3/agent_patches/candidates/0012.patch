@@ -1,0 +1,10 @@
+--- s341.c
++++ s341.c
+@@ -33,6 +33,7 @@
+         }
+ 
+         /* Phase 2: write elements to their computed positions (parallelizable) */
++        #pragma omp parallel for shared(pos) 
+         for (int i = 0; i < LEN_1D; i++) {
+             if (pos[i] >= 0) {
+                 a[pos[i]] = b[i];

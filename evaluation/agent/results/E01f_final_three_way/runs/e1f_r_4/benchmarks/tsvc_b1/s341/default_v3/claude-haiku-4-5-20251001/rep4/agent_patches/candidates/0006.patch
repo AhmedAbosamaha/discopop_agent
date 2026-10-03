@@ -1,0 +1,10 @@
+--- s341.c
++++ s341.c
+@@ -32,6 +32,7 @@
+         /* Phase 2: Compute prefix sums to determine target positions.
+            Sequential; each pos[i] = sum of mark[0..i]. */
+         pos[0] = mark[0];
++        #pragma omp parallel for shared(mark,pos) 
+         for (int i = 1; i < LEN_1D; i++) {
+             pos[i] = pos[i-1] + mark[i];
+         }

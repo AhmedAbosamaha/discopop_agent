@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s1213.c
+  Model          : claude-sonnet-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s1213.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Reading confirms the structure: `pb_mix` and the `PB_MAIN` lines must stay untouched; only the loop inside `kernel_s1213` is mine to restructure. **Dependence analysis** In the original loop: ``` a[i] = b[i-1]+c[i]; b[i] = a[i+1]*d[i]; ``` - `b[i-1]` used in the `a[i]` update is the value **just written** at iteration `i-1` (since `i-1` already ran) — the recurrence target is really `b[i] = a_old[
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

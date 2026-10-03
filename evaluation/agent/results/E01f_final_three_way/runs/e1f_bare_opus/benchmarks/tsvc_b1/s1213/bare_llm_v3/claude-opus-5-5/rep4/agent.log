@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s1213.c
+  Model          : claude-opus-5-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-opus-5-5...
+│  [bare] s1213.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: I split the inner loop of `kernel_s1213` in `s1213.c` into two passes, each marked `#pragma omp parallel for schedule(static)`. Nothing has been compiled, run or timed, since I have no compiler here. - **Pass 1:** `b[i] = a[i+1]*d[i]`. It only reads `a`, so every iteration sees the old `a[i+1]`, just as the original did. - **Pass 2:** `a[i] = b[i-1]+c[i]`. It starts only after pass 1 has finished,
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

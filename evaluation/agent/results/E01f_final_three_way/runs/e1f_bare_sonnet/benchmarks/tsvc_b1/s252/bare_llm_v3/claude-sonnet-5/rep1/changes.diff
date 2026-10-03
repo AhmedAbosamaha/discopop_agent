@@ -1,0 +1,24 @@
+--- original.c
++++ final.c
+@@ -15,13 +15,16 @@
+ 
+ static real_t kernel_s252(void)
+ {
+-    real_t t, s;
+     for (int nl = 0; nl < R; nl++) {
+-        t = (real_t) 0.;
++        /* a[i] = b[i]*c[i] + (previous iteration's b[i-1]*c[i-1], or 0 at i==0).
++         * Recomputing the "previous product" locally removes the loop-carried
++         * dependence (t/s no longer need to flow from iteration i-1 to i),
++         * so each iteration writes its own a[i] independently of the others. */
++        #pragma omp parallel for default(none) shared(a, b, c) schedule(static)
+         for (int i = 0; i < LEN_1D; i++) {
+-            s = b[i] * c[i];
+-            a[i] = s + t;
+-            t = s;
++            real_t s = b[i] * c[i];
++            real_t tprev = (i == 0) ? (real_t) 0. : b[i - 1] * c[i - 1];
++            a[i] = s + tprev;
+         }
+         pb_mix(nl);
+     }

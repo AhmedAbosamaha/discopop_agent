@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s211.c
+  Model          : claude-opus-5-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-opus-5-5...
+│  [bare] s211.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: I rewrote the inner loop of `kernel_s211` in `s211.c` as two parallel loops. The outer `nl` loop stays serial, because `pb_mix(nl)` changes the inputs between repetitions. I couldn't compile or run anything here, so none of the checks have been run. **What was blocking it:** Two things link neighbouring iterations through `b`: - **A value moving forward:** `a[i]` reads `b[i-1]`, the value the prev
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s331.c
+  Model          : claude-opus-5-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-opus-5-5...
+│  [bare] s331.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: I added one pragma to `s331.c`, on the inner loop over `i`: `#pragma omp parallel for schedule(static) reduction(max:j)`. Nothing has been compiled, run or timed here, since there's no compiler in this environment. **Why it's correct:** each iteration only reads `a[i]` and may set `j = i`. Since `i` only increases, the last match the original loop records is also the largest matching index. Taking
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

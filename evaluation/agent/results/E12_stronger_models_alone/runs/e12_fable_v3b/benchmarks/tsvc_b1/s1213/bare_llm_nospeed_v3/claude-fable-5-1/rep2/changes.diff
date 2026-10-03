@@ -1,0 +1,21 @@
+--- original.c
++++ final.c
+@@ -16,9 +16,17 @@
+ static real_t kernel_s1213(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        /* Pass 1: b[i] depends only on the OLD a[i+1] (anti-dependence in the
++         * original); computing all of b first preserves exactly those reads. */
++#pragma omp parallel for default(none) shared(a, b, d)
++        for (int i = 1; i < LEN_1D-1; i++) {
++            b[i] = a[i+1]*d[i];
++        }
++        /* Pass 2: a[i] uses the NEW b[i-1] (true dependence in the original);
++         * b is fully updated by now, and b[0] is untouched in both versions. */
++#pragma omp parallel for default(none) shared(a, b, c)
+         for (int i = 1; i < LEN_1D-1; i++) {
+             a[i] = b[i-1]+c[i];
+-            b[i] = a[i+1]*d[i];
+         }
+         pb_mix(nl);
+     }

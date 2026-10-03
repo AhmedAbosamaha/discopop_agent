@@ -1,0 +1,16 @@
+--- original.c
++++ final.c
+@@ -16,6 +16,13 @@
+ static real_t kernel_vpvtv(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        /* Each iteration i only reads b[i], c[i] and updates a[i]; no iteration
++         * reads or writes another iteration's elements, so the LEN_1D loop has
++         * no cross-iteration dependence and can run in parallel. a, b, c are
++         * shared arrays indexed only by the loop variable i (no aliasing
++         * between the written element a[i] and the read-only b[i]/c[i] across
++         * iterations), so no reduction or privatization is needed. */
++        #pragma omp parallel for shared(a, b, c)
+         for (int i = 0; i < LEN_1D; i++) {
+             a[i] += b[i] * c[i];
+         }

@@ -1,0 +1,35 @@
+--- original.c
++++ final.c
+@@ -15,14 +15,27 @@
+ 
+ static real_t kernel_s341(void)
+ {
+-    int j;
+     for (int nl = 0; nl < R; nl++) {
+-        j = -1;
++        /* cnt is the scan (reduction(inscan,+:cnt)) variable: at the point of the "omp scan"
++         * directive it holds the exclusive prefix sum of the predicate (b[i] > 0) over all
++         * iterations strictly before i, i.e. exactly the compaction index the original code
++         * built incrementally via "j++; a[j] = b[i];". After the directive it is advanced by
++         * this iteration's own predicate value so the next iteration sees the updated count.
++         * This replaces the loop-carried dependence on j (a value that moved from one
++         * iteration to the next) with the same dependence expressed as a parallel scan, which
++         * OpenMP is allowed to compute out of textual order while still producing, for every
++         * iteration, the identical prefix count the sequential loop would have produced. */
++        int cnt = 0;
++        #pragma omp parallel for reduction(inscan, +:cnt)
+         for (int i = 0; i < LEN_1D; i++) {
+-            if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++            int p = (b[i] > (real_t)0.) ? 1 : 0; /* per-iteration predicate; declared in the
++                                                     loop body, so it is private automatically
++                                                     and needs no data-sharing clause */
++            if (p) {
++                a[cnt] = b[i]; /* cnt: exclusive prefix count of valid b[i] before this i */
+             }
++            #pragma omp scan exclusive(cnt)
++            cnt += p;
+         }
+         pb_mix(nl);
+     }

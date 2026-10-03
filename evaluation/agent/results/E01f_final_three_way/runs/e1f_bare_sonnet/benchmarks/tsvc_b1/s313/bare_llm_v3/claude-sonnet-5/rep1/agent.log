@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s313.c
+  Model          : claude-sonnet-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s313.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Plan: The inner loop computes `dot = sum(a[i]*b[i])`, a pure reduction with no cross-iteration dependence (only `dot` moving forward, which is an accumulator feeding nothing but its own total). The outer `nl` loop must stay sequential because `pb_mix` mutates `a`,`b`,`c`,`d`,`e` between repetitions. So I'll parallelize just the inner `i` loop with `#pragma omp parallel for reduction(+:dot)`, keepi
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

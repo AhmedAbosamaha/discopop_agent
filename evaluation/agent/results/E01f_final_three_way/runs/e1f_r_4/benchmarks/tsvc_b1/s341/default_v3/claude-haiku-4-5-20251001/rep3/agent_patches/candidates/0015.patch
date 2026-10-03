@@ -1,0 +1,36 @@
+--- s341.c
++++ s341.c
+@@ -15,17 +15,29 @@
+ 
+ static real_t kernel_s341(void)
+ {
+-    int j;
++    /* Allocate indices array once, outside the repeated loop */
++    int *indices = malloc(LEN_1D * sizeof(int));
++
+     for (int nl = 0; nl < R; nl++) {
+-        j = -1;
++        /* Phase 1: gather indices of valid elements (only one pass through condition) */
++        int count = 0;
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++                indices[count] = i;
++                count++;
+             }
+         }
++
++        /* Phase 2: write valid elements to output array in order (parallelizable) */
++        for (int j = 0; j < count; j++) {
++            int i = indices[j];
++            a[j] = b[i];
++        }
++
+         pb_mix(nl);
+     }
++
++    free(indices);
+     return (real_t)0;
+ }
+ 

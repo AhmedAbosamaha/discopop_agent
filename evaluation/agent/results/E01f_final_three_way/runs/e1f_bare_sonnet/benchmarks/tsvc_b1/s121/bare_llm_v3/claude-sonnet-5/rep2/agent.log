@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s121.c
+  Model          : claude-sonnet-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s121.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan **Dependence analysis of the inner loop:** `a[i] = a[j] + b[i]` with `j = i+1`, for `i = 0..LEN_1D-2`. In the original sequential order (increasing `i`), each iteration writes `a[i]` and reads `a[i+1]`. Since `i+1 > i`, the write to `a[i+1]` (which happens at iteration `i+1`) always happens *after* the read of `a[i+1]` at iteration `i`. So in the serial execution every read actually observ
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

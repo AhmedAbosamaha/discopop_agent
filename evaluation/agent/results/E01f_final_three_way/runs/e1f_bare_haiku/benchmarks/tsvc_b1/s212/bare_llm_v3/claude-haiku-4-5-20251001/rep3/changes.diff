@@ -1,0 +1,31 @@
+--- original.c
++++ final.c
+@@ -16,10 +16,27 @@
+ static real_t kernel_s212(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        /* Save original a[] values before any modifications to enable parallelization:
++         * iteration i reads a[i+1], which must be the original value (before iteration i+1
++         * modifies it). By saving a copy first, both phases can run in parallel safely. */
++        real_t *a_orig = malloc(sizeof(real_t) * LEN_1D);
++        memcpy(a_orig, a, sizeof(real_t) * LEN_1D);
++
++        /* Phase 1: Parallelize multiplication of a[]. Each iteration i writes only to a[i],
++         * so there are no conflicts between iterations. */
++        #pragma omp parallel for shared(a, c)
+         for (int i = 0; i < LEN_1D-1; i++) {
+             a[i] *= c[i];
+-            b[i] += a[i + 1] * d[i];
+         }
++
++        /* Phase 2: Parallelize update of b[] using original a values. Each iteration i
++         * reads a_orig[i+1] (original value) and d[i], and writes to b[i]. No conflicts. */
++        #pragma omp parallel for shared(b, a_orig, d)
++        for (int i = 0; i < LEN_1D-1; i++) {
++            b[i] += a_orig[i + 1] * d[i];
++        }
++
++        free(a_orig);
+         pb_mix(nl);
+     }
+     return (real_t)0;

@@ -1,0 +1,13 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s3112.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] the model's plan: Looking at the code structure, let me identify the key characteristics: **Code Analysis:** - Outer loop (`nl`): Must stay sequential due to `pb_mix()` modifying input arrays between iterations - Inner loop (`i`): The candidate for parallelization **The Dependence Issue:** The inner loop has a **true loop-carried dependence on the scalar `sum`**: ```c for (int i = 0; i < LEN_1D; i++) { sum += a[i];
+
+  SUMMARY: 0 file(s) changed  |  nothing was checked here — the harness judges the result

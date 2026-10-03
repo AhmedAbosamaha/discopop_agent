@@ -1,0 +1,23 @@
+--- s244.c
++++ s244.c
+@@ -16,13 +16,17 @@
+ static real_t kernel_s244(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        // Compute new a[i] and b[i] for all i
+         for (int i = 0; i < LEN_1D-1; ++i) {
+             a[i] = b[i] + c[i] * d[i];
+             b[i] = c[i] + b[i];
+-            a[i+1] = b[i] + a[i+1] * d[i];
+         }
+-        pb_mix(nl);
+-    }
++
++        // Separately compute the final element a[LEN_1D-1] using the last updated b value
++        // (only a[LEN_1D-1] survives from the original loop's a[i+1] computation)
++        int i = LEN_1D-2;
++        a[i+1] = b[i] + a[i+1] * d[i];
++
+     return (real_t)0;
+ }
+ 

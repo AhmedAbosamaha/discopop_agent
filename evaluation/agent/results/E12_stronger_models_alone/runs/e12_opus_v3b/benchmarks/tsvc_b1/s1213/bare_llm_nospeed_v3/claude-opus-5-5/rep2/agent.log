@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s1213.c
+  Model          : claude-opus-5-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-opus-5-5...
+│  [bare] s1213.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: I split the inner loop of `s1213.c` into two loops and gave each its own `#pragma omp parallel for`. I couldn't compile or run anything here, so none of this has been tested. **Why it was sequential:** each step read the `b[i-1]` the step before had just written. Each step also had to read `a[i+1]` before the next step overwrote it. **The rewrite**, inside each `nl` repetition: 1. **First loop:** 
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

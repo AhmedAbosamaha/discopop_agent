@@ -1,0 +1,64 @@
+/* TSVC-2 loop s281, from TSVC-2 src/tsvc.c (sha256 456dd573b84b; University of Illinois licence,
+ * see benchmarks/TSVC_2/license.txt). */
+#include "tsvc_b1/s281.h"
+#include <stdlib.h>
+#include <string.h>
+
+/* Between two repetitions a few INPUT elements change, so no repetition can be skipped,
+ * merged with another or run out of order: the repetition loop is sequential by a true
+ * dependence, and the loop under study is the one inside it. */
+static void pb_mix(int nl)
+{
+  long k = ((long)nl * 7919L + 13L) % LEN_1D;
+  a[k] += (real_t)0.25; b[k] += (real_t)0.25; c[k] += (real_t)0.125;
+  d[k] += (real_t)0.125; e[k] += (real_t)0.25;
+  a[0] += (real_t)0.125; b[LEN_1D-1] += (real_t)0.125;
+}
+
+static real_t kernel_s281(void)
+{
+    real_t x;
+    /* Snapshot of a[] as it is at the start of each nl-sweep. The i-loop both
+     * reads a[LEN_1D-i-1] and writes a[i], so whether an index sees the
+     * pre-sweep value or a value already written earlier in the same sweep
+     * depends on whether its mirror index precedes or follows it. a_old
+     * freezes the pre-sweep state so the two halves of the sweep can be
+     * computed independently instead of carrying that dependence between
+     * iterations. Size grows with LEN_1D, so it is heap-allocated. */
+    real_t *a_old = (real_t *)malloc(sizeof(real_t) * (size_t)LEN_1D);
+    for (int nl = 0; nl < R; nl++) {
+        memcpy(a_old, a, sizeof(real_t) * (size_t)LEN_1D);
+
+        /* For i <= mid, the mirror index LEN_1D-1-i is still untouched at
+         * the point the original sequential loop would reach i (it is equal
+         * to i, when LEN_1D is odd, or strictly greater), so it must read
+         * the pre-sweep snapshot. For i > mid, the mirror index LEN_1D-1-i
+         * is strictly less than i and was already written earlier in the
+         * original sequential order, so it must read the value this same
+         * sweep already produced. The two halves write disjoint a[i]/b[i]
+         * indices and the second half only reads indices the first half
+         * finished writing (guaranteed by the barrier between the two
+         * parallel regions), so both halves are independent of each other. */
+        int mid = (LEN_1D - 1) / 2;
+
+        #pragma omp parallel for default(none) shared(a, b, c, a_old, mid) private(x)
+        for (int i = 0; i <= mid; i++) {
+            x = a_old[LEN_1D-i-1] + b[i] * c[i];
+            a[i] = x-(real_t)1.0;
+            b[i] = x;
+        }
+
+        #pragma omp parallel for default(none) shared(a, b, c, mid) private(x)
+        for (int i = mid+1; i < LEN_1D; i++) {
+            x = a[LEN_1D-i-1] + b[i] * c[i];
+            a[i] = x-(real_t)1.0;
+            b[i] = x;
+        }
+
+        pb_mix(nl);
+    }
+    free(a_old);
+    return (real_t)0;
+}
+
+PB_MAIN(kernel_s281)

@@ -1,0 +1,17 @@
+--- original.c
++++ final.c
+@@ -19,6 +19,14 @@
+     real_t chksum;
+     for (int nl = 0; nl < R; nl++) {
+         j = -1;
++        /* Each iteration either leaves j untouched or sets it to i, and the
++         * original loop keeps overwriting j so the largest qualifying i
++         * wins (or -1 if none qualify). That is a max-reduction over the
++         * per-iteration candidate i (or -1 when a[i] >= 0): no dependence
++         * between iterations once expressed this way. a is read-only here
++         * (shared), i is loop-private, j is the max-reduction accumulator
++         * seeded at -1 as in the original. */
++        #pragma omp parallel for shared(a) reduction(max:j)
+         for (int i = 0; i < LEN_1D; i++) {
+             if (a[i] < (real_t)0.) {
+                 j = i;

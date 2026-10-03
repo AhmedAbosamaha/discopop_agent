@@ -1,0 +1,43 @@
+{
+  "suite": "tsvc_b1",
+  "kernel": "s1213",
+  "source": "benchmarks/TSVC_2/src/tsvc.c",
+  "category": "statement reordering / dependency needing temporary",
+  "file": "s1213.c",
+  "language": "c",
+  "layout": "single",
+  "restructuring_class": "restructure",
+  "transformation": "statement reordering (dependency needing a temporary)",
+  "why": "a[i] needs the NEW b[i-1], b[i] the OLD a[i+1]: a cycle that distribution breaks",
+  "reference_solution": null,
+  "exclude_functions": [
+    "main",
+    "pb_mix"
+  ],
+  "harness": "tsvc_b1/s1213.h",
+  "harness_sha256": "bd62e0c3aaf7922fb5ba1f7bb206222a40aa893f9c541487ae428b48005eba12",
+  "protected": [
+    "#include \"tsvc_b1/s1213.h\"",
+    "static void pb_mix(int nl)",
+    "long k = ((long)nl * 7919L + 13L) % LEN_1D;",
+    "a[k] += (real_t)0.25; b[k] += (real_t)0.25; c[k] += (real_t)0.125;",
+    "d[k] += (real_t)0.125; e[k] += (real_t)0.25;",
+    "a[0] += (real_t)0.125; b[LEN_1D-1] += (real_t)0.125;",
+    "pb_mix(nl);",
+    "PB_MAIN(kernel_s1213)"
+  ],
+  "protected_note": "`pb_mix(nl)` changes a few input values between two repetitions of the `nl` loop, so the repetitions depend on each other and must run in order; the loop under study is the one inside it. `LEN_1D`, the length of the arrays, is set in the included header: 32000 in the default build, and up to 192000000 in the builds that verify the result.",
+  "hot_loop": {
+    "entry": "kernel_s1213",
+    "function": "kernel_s1213",
+    "line": 19,
+    "writes": [
+      "a",
+      "b"
+    ]
+  },
+  "agent_dataset": "SMALL",
+  "generator_version": 4,
+  "inputs_sha256": "456dd573b84b30e6f32c943bb559d80374eec67177de48223e95124a8c3fc627",
+  "output_sha256": "d84fbfe656c423e03256b75c732ce6e037919aa1e28ae9b4431b8d772397ab4f"
+}

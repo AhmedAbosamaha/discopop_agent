@@ -1,0 +1,10 @@
+--- s341.c
++++ s341.c
+@@ -26,6 +26,7 @@
+ 
+         // Pass 2: compute write positions via serial prefix sum
+         positions[0] = 0;
++        #pragma omp parallel for shared(flags,positions) 
+         for (int i = 1; i < LEN_1D; i++) {
+             positions[i] = positions[i-1] + flags[i-1];
+         }

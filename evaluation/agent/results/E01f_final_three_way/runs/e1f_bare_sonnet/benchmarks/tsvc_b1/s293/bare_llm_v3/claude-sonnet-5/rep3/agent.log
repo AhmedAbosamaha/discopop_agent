@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s293.c
+  Model          : claude-sonnet-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s293.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan **Dependence analysis:** The inner loop `a[i] = a[0]` for `i in [0, LEN_1D)` only *reads* `a[0]` and writes `a[i]`. The only write to `a[0]` within the loop happens at `i == 0`, where it writes `a[0] = a[0]` — a no-op value-wise, but it's still a concurrent write/read on the same location if `i==0` runs on one thread while another thread reads `a[0]` for its own iteration, which is a genui
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result
