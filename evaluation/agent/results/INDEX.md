@@ -306,6 +306,7 @@ Status: done
 | `evidence_pilot_order2` | [`pilots/runs/evidence_pilot_order2/`](pilots/runs/evidence_pilot_order2/) | Evidence-mechanism pilot on ORDER-2 (pre-registered §6, 28 Sep): tools/evidence_pilot.py, single confined Haiku calls with the agent's own prompts, arms full / no_note / none × versions X (k17), Y (k42) × 10, Mac; go/no-go fixed before any call | valid | 0 |  |
 | `evidence_pilot_order2b` | [`pilots/runs/evidence_pilot_order2b/`](pilots/runs/evidence_pilot_order2b/) | Follow-up evidence pilot on ORDER-2 (pre-registered §6, 28 Sep): arms order (Haiku + a generated order restatement of each carried RAW), sonnet_full, sonnet_none; X, Y; 50 calls, Mac | valid | 0 |  |
 | `evidence_pilot_v2` | [`pilots/runs/evidence_pilot_v2/`](pilots/runs/evidence_pilot_v2/) | Prompt review stage 1 on ORDER-2 (pre-registered §6, 28 Sep evening): arms full_clean, arrow_only, order_clean, full_v2, none_v2, full_v3 (version 3 = v2 + D4) × X, Y × 10; 120 Haiku calls, Mac; after E2-B1's re-runs | valid | 0 |  |
+| `pilot_opus_agent_k19` | not archived yet | Pilot (§6 3 Oct): the agent with Opus 5.5 (full_b1_nospeed_v3) on tsvc_b1/k19 × 3 — does the pipeline with evidence make a strong model find the hidden order (Opus alone 0/5 FASTER, E12)? GO if ≥ 2 of 3 race-free FASTER | registered |  |  |
 
 ## [Harness and pipeline checks (not experiments)](harness_checks/REPORT.md)
 
