@@ -39,6 +39,11 @@ The first agent runs; they decided D9 (the E1 model) and exposed the defects fix
 
 ## From the experiment record (§7 run log)
 
+### `pilot_opus_agent_k19`, `pilot_opus_agent_k19_speed` — 2026-10-03, server, **the agent with Opus 5.5 on ORDER-2 X** (6 trials)
+
+- **Setup.** Pre-registered §6 3 Oct; pilot 1 `full_b1_nospeed_v3` (speed check off), pilot 2 `default_v3` (speed check on, timing size STANDARD), `tsvc_b1/k19` × 3 each.
+- **Result:** §6 3 Oct (the two Opus pilots read): pilot 1 3/3 BROKEN, pilot 2 3/3 no-change — NO-GO.
+
 ### `evidence_pilot_v2` — 2026-09-28, Mac, **prompt-review stage 1 on ORDER-2** (120 single Haiku calls)
 
 - **Setup.** `tools/evidence_pilot.py` (instrument v2, M1), arms full_clean (v1), arrow_only (v1 + D2), order_clean (v1 + the pilot's order note), full_v2, none_v2, full_v3 (v2 + D4) × X/Y × 10; pre-registered (§6 28 Sep); 0 call errors.

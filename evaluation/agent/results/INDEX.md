@@ -402,7 +402,7 @@ Status: running
 
 ## [E2-O3 — does the evidence effect hold on more hidden-order kernels?](E02o3_hidden_order_kernels/REPORT.md)
 
-Status: running
+Status: done
 
 | run | where | what it is | status | trials | outcomes |
 |---|---|---|---|---:|---|
@@ -415,5 +415,5 @@ Status: running
 | `e2o3_bare_sonnet` | [`E02o3_hidden_order_kernels/runs/e2o3_bare_sonnet/`](E02o3_hidden_order_kernels/runs/e2o3_bare_sonnet/) | E2-O3: claude-sonnet-5 alone on tsvc_b1/k23, k31, k36 × bare_llm_nospeed_v3 × 5 | valid | 15 | BROKEN 12, FASTER 2, VERIFY_FAILED 1 |
 | `e2o3_bare_opus` | [`E02o3_hidden_order_kernels/runs/e2o3_bare_opus/`](E02o3_hidden_order_kernels/runs/e2o3_bare_opus/) | E2-O3: claude-opus-5-5 alone on tsvc_b1/k23, k31, k36 × bare_llm_nospeed_v3 × 5 | valid | 15 | BROKEN 7, FASTER 2, parallel-not-faster 6 |
 | `e2o3_bare_fable` | [`E02o3_hidden_order_kernels/runs/e2o3_bare_fable/`](E02o3_hidden_order_kernels/runs/e2o3_bare_fable/) | E2-O3: claude-fable-5-1 alone on tsvc_b1/k23, k31, k36 × bare_llm_nospeed_v3 × 5 | valid | 15 | BROKEN 9, FASTER 5, parallel-not-faster 1 |
-| `e2o3_race_check` | not archived yet | race_check.py over every model-alone program of E2-O3 (bare_llm_nospeed_v3: Haiku, Sonnet, Opus, Fable) and, as the positive control, the agent's parallel programs (both arms), no model | registered |  |  |
+| `e2o3_race_check` | [`E02o3_hidden_order_kernels/checks/e2o3_race_check/`](E02o3_hidden_order_kernels/checks/e2o3_race_check/) | race_check.py over every model-alone program of E2-O3 (bare_llm_nospeed_v3: Haiku, Sonnet, Opus, Fable) and, as the positive control, the agent's parallel programs (both arms), no model | valid | 0 |  |
 

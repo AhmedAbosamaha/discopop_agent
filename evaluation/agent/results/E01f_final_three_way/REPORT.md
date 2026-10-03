@@ -42,6 +42,13 @@ Class R, 90 trials each: DiscoPoP alone 0 race-free FASTER; the Haiku agent 65 (
 
 ## From the experiment record (§7 run log)
 
+### `e1f_r_1`, `e1f_r_2`, `e1f_r_3`, `e1f_r_4`, `e1f_a`, `e1f_d`, `e1f_fix103_redo`, `e1f_fix103_redo2`, `e1f_bare_haiku`, `e1f_bare_sonnet`, `e1f_bare_opus`, `e1f_bare_fable`, `e1f_race_check`, `e1f_race_check2` — 2026-10-02/03, server, **E1-final: the headline three-way comparison in the final version** (630 trials + 2 redone)
+
+- **Setup.** Pre-registered §6 2 Oct. Agent and DiscoPoP alone (`default_v3`, `discopop_gate_v3`, Haiku) at commit `912e3d9b`: class R on four 12-core lanes 2 Oct 20:43 → 3 Oct ≈ 04:30 UTC, class A and D on idle lanes. Fix 103 merged at 04:34 UTC (`ab0e7f47`); the model-alone runs (`bare_llm_v3`, one run per model) and the redos on it, 04:35 → 09:40 UTC; Opus and Fable never at once. Every sweep clean; 0 failed model calls.
+- **Redos (Fix 103).** The scan of every agent candidate (104 trials, 817 candidates, comments ignored) found two shipped harness edits invisible to Fix 97 — `e1f_a` `s313` rep1 and `e1f_r_4` `s331` rep4, both `pb_mix(R - 1);` — set aside under `<run>/_superseded_fix103/`. The first redo run (`e1f_fix103_redo`) ran on copies of the source runs' profiles whose file map kept the old absolute paths: the agent found no region — invalid, kept (its unneeded `s000` trial, flagged by a comment, under `_not_needed/`). `e1f_fix103_redo2` redid both on fresh profiles: both FASTER, race-clean (`e1f_race_check2`).
+- **Race checks** (`e1f_race_check`, server, archer): every model-alone program (420) and the agent's 81 parallel programs as the positive control — 80 clean, 1 racy (`s341` rep1, Fix 104).
+- **Result:** §6 3 Oct (E1-final read out); `results/E01f_final_three_way/analysis/` (per model, `e1f_tests.md`).
+
 ### `e1f_smoke` — 2026-10-02, server, **E1-final smoke (configuration check, not counted)** (12 trials)
 
 - **Setup.** `tsvc_b1/s211` (class R) and `tsvc_b1/s000` (class A) × 1: job 1 on node 0 — `default_v3`, `discopop_gate_v3`, `bare_llm_v3` with Haiku (20:14 → 20:40 UTC); job 2 on node 1 at the same time on the same new run id — `bare_llm_v3` with Sonnet 5, Opus 5.5, Fable 5.1 (20:15 → 20:25). Commit `b56a086a`, PARITY OK; both sweeps clean.

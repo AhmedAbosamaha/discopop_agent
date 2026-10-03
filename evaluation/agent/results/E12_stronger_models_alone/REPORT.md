@@ -42,6 +42,11 @@ On the two hidden-order kernels (ORDER-2 X and Y) only the Haiku agent with Disc
 
 ## From the experiment record (§7 run log)
 
+### `e12_sonnet_v3`, `e12_sonnet_b1`, `e12_opus_v3b`, `e12_fable_v3b`, `e12_fable_redo`, `e12c_race_check` — 2026-10-03, server, **E12 completed on six loops** (48 trials)
+
+- **Setup.** Pre-registered §6 3 Oct; the fixed commit (Fix 103); 04:35 → 06:15 UTC; race check `e12c_race_check` (48 programs: 45 clean, 5 racy on Sonnet's `k48`, 1 schedules on a Fable redo). Fable's redo `k19` rep1 was re-asked once (it duplicated `pb_mix` again) and fixed in the same session — the first live harness re-ask.
+- **Result:** §6 3 Oct (E12 completed); `results/E12_stronger_models_alone/stats/e12_stats.md`.
+
 ### `e12_opus_v3`, `e12_opus_b1`, `e12_fable_v3`, `e12_fable_b1`, `e12_haiku_v3`, `e12_haiku_b1`, `e12_agent_v3` — 2026-09-30, server, **E12: the Haiku agent with evidence against Opus 5.5 and Fable 5.1 alone** (20 Opus, 20 Fable, 20 Haiku-alone and 20 Haiku-agent trials)
 
 - **Setup.** Pre-registered §6 30 Sep. The first Opus launch (07:04) refused by the old bundled Claude Code (2.1.220); the SDK upgraded to 0.2.162 (Claude Code 2.1.285) on both machines, Opus relaunched 07:16 with a Haiku-alone control on the new version; a full disk on the shared server (07:29) cut three jobs, resumed without double counting; Fable 08:38 → 13:00 (its ORDER-2 programs often hung in verification until the 30-minute limit); the Haiku agent re-run on s424/s161 with prompt v3 (the author) 09:42. 0 failed model calls; sweep clean; race checks on the server.
