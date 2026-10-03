@@ -1,0 +1,10 @@
+--- k19.c
++++ k19.c
+@@ -26,6 +26,7 @@
+     if (ok) {
+         for (long i = 0; i < LEN_1D; i++) { last[i] = -1; mark[i] = 0; lastw[i] = 0; }
+         src[0] = -1;
++        #pragma omp parallel for lastprivate(ok) shared(last,src,mark) 
+         for (long i = 1; i < LEN_1D; i++) {
+             long a1 = (long)ju[i], a2 = (long)kv[i], a3 = (long)jv[i], a4 = (long)ku[i];
+             if (a1 < 0 || a1 >= LEN_1D || a2 < 0 || a2 >= LEN_1D ||

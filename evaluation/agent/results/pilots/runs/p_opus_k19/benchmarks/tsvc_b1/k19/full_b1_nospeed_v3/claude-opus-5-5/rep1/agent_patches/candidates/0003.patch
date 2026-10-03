@@ -1,0 +1,10 @@
+--- k19.c
++++ k19.c
+@@ -73,6 +73,7 @@
+         for (long L = 0; L < nlev; L++) {
+             long s = off[L];
+             long e = off[L + 1];
++ #pragma omp parallel for firstprivate(s,e) shared(order) 
+             for (long t = s; t < e; t++) {
+                 long i = order[t];
+                 u[ju[i]] += v[kv[i]] * c[i];
