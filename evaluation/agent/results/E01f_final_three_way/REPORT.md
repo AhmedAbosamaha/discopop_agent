@@ -30,6 +30,7 @@ On TSVC class R (with class A and D controls), prompt version 3, the fixed Disco
 | `e1f_bare_opus` | [`runs/e1f_bare_opus/`](runs/e1f_bare_opus/) | E1-final the model alone: bare_llm_v3 with claude-opus-5-5 on class R × 5, A × 1, D × 3 (one run per model) | valid | 105 | FASTER 101, VERIFY_FAILED 1, parallel-not-faster 3 |
 | `e1f_bare_fable` | [`runs/e1f_bare_fable/`](runs/e1f_bare_fable/) | E1-final the model alone: bare_llm_v3 with claude-fable-5-1 on class R × 5, A × 1, D × 3 (one run per model) | valid | 105 | FASTER 103, parallel-not-faster 2 |
 | `e1f_fix103_redo` | [`runs/e1f_fix103_redo/`](runs/e1f_fix103_redo/) | E1-final agent trials redone on the fixed agent (Fix 103): every trial whose candidate the old harness rule (Fix 97) let through but the judge's rules refuse (a new pb_* line) — found by fix103's scan of every E1-final agent candidate when the agent runs ended; each from a copy of its own run's DiscoPoP profile; the superseded trials kept under <run>/_superseded_fix103/. Known so far: e1f_r_4 s331 rep4 (pb_mix(R - 1)) | valid | 2 | no-change 2 |
+| `e1f_race_check` | not archived yet | race_check.py (the gate's TSan with archer and the schedule matrix, server, no model) over every model-alone trial of E1-final (bare_llm_v3: Haiku, Sonnet, Opus, Fable × 105) and, as the positive control, the agent's FASTER programs of e1f_r_1-4; subdirectories per model and control | registered |  |  |
 
 ## From the experiment record (§7 run log)
 

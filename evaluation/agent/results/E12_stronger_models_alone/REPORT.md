@@ -37,6 +37,7 @@ Stronger models alone match the Haiku agent on the real loops (s161 all faster; 
 | `e12_opus_v3b` | [`runs/e12_opus_v3b/`](runs/e12_opus_v3b/) | E12 completion: claude-opus-5-5 alone on tsvc_b1/s1213, s211 × bare_llm_nospeed_v3 × 5, Fix 103 | valid | 10 | FASTER 10 |
 | `e12_fable_v3b` | [`runs/e12_fable_v3b/`](runs/e12_fable_v3b/) | E12 completion: claude-fable-5-1 alone on tsvc_b1/s1213, s211 × bare_llm_nospeed_v3 × 5, Fix 103 | valid | 10 | FASTER 10 |
 | `e12_fable_redo` | [`runs/e12_fable_redo/`](runs/e12_fable_redo/) | E12 completion: Fable's 3 harness-edit trials of e12_fable_v3 redone (Fix 103; the author 3 Oct): tsvc_b1/k19 × 2, k48 × 1, bare_llm_nospeed_v3 | valid | 3 | BROKEN 1, parallel-not-faster 2 |
+| `e12c_race_check` | not archived yet | race_check.py over E12's completion runs (e12_sonnet_v3, e12_sonnet_b1, e12_opus_v3b, e12_fable_v3b, e12_fable_redo), no model | registered |  |  |
 
 ## From the experiment record (§7 run log)
 

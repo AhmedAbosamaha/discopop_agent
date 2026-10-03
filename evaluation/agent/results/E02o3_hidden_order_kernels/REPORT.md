@@ -10,12 +10,13 @@ On three new kernels whose split order is decided by a fact hidden outside the f
 
 ## What is in this folder
 
+- [`preflight/`](preflight/) — 1 smoke run(s) before the launch
 
 ## Runs
 
 | run | where | what it is | status | trials | outcomes |
 |---|---|---|---|---:|---|
-| `t0_1_o3_sizes` | not archived yet | T0.1 sizes for tsvc_b1/k23, k31, k36 (server, no model) | registered |  |  |
+| `t0_1_o3_sizes` | [`preflight/t0_1_o3_sizes/`](preflight/t0_1_o3_sizes/) | T0.1 sizes for tsvc_b1/k23, k31, k36 (server, no model) | valid | 0 |  |
 | `t0_11_o3_a` | not archived yet | T0.11 draw a on tsvc_b1/k23, k31, k36: discopop_capability (budget 0, no model), threads 6/12, repeats 5 | registered |  |  |
 | `t0_11_o3_b` | not archived yet | T0.11 draw b on tsvc_b1/k23, k31, k36: discopop_capability, no model | registered |  |  |
 | `t0_11_o3_c` | not archived yet | T0.11 draw c on tsvc_b1/k23, k31, k36: discopop_capability, no model | registered |  |  |
