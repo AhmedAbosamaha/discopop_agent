@@ -1,0 +1,98 @@
+--- original.c
++++ final.c
+@@ -1,5 +1,6 @@
+ /* Kernel k36. */
+ #include "tsvc_b1/k36.h"
++#include <stdlib.h>
+ 
+ /* Between two repetitions a few INPUT elements change, so no repetition can be skipped,
+  * merged with another or run out of order: the repetition loop is sequential by a true
+@@ -12,15 +13,85 @@
+   a[0] += (real_t)0.125; b[LEN_1D-1] += (real_t)0.125;
+ }
+ 
++/* Derive the constant index offset used by an AT macro from its value on a
++ * probe array holding probe[j] == j.  Returns 0 if the access is not a plain
++ * constant-offset element reference. */
++static int k36_probe_offset(real_t pa, real_t pb, long *off)
++{
++    if (!(pa >= (real_t)0 && pa < (real_t)64)) return 0;
++    long o = (long)pa - 32;
++    if ((real_t)(o + 32) != pa) return 0;
++    if ((real_t)(o + 33) != pb) return 0;
++    *off = o;
++    return 1;
++}
++
+ static real_t kernel_k36(void)
+ {
++    /* Offsets o1 (AT1 on v) and o2 (AT2 on u) relative to i. */
++    real_t probe[64];
++    for (int j = 0; j < 64; j++) probe[j] = (real_t)j;
++    long o1 = 0, o2 = 0;
++    int pure = k36_probe_offset(AT1(probe, 32), AT1(probe, 33), &o1)
++            && k36_probe_offset(AT2(probe, 32), AT2(probe, 33), &o2);
++
++    /* mode 1: u reads old v, v reads new u  -> u-pass then v-pass
++     * mode 2: v reads old u, u reads new v  -> v-pass then u-pass
++     * mode 3: both read old values          -> copy v, v-pass, u-pass(vold)
++     * mode 0: true recurrence / unknown     -> serial */
++    int mode = 0;
++    if (pure) {
++        if (o1 >= 0 && o2 <= 0) mode = 1;
++        else if (o1 < 0 && o2 > 0) mode = 2;
++        else if (o1 >= 0 && o2 > 0) mode = 3;
++    }
++    real_t *vold = NULL;
++    if (mode == 3) {
++        vold = (real_t *)malloc((size_t)LEN_1D * sizeof(real_t));
++        if (vold == NULL) mode = 0;
++    }
++
+     for (int nl = 0; nl < R; nl++) {
+-        for (long i = 1; i < LEN_1D; i++) {
+-            u[i] += AT1(v, i) * c[i];
+-            v[i] = AT2(u, i) * d[i] + c[i];
++        if (mode == 1) {
++            #pragma omp parallel for shared(u, v, c)
++            for (long i = 1; i < LEN_1D; i++) {
++                u[i] += AT1(v, i) * c[i];
++            }
++            #pragma omp parallel for shared(u, v, c, d)
++            for (long i = 1; i < LEN_1D; i++) {
++                v[i] = AT2(u, i) * d[i] + c[i];
++            }
++        } else if (mode == 2) {
++            #pragma omp parallel for shared(u, v, c, d)
++            for (long i = 1; i < LEN_1D; i++) {
++                v[i] = AT2(u, i) * d[i] + c[i];
++            }
++            #pragma omp parallel for shared(u, v, c)
++            for (long i = 1; i < LEN_1D; i++) {
++                u[i] += AT1(v, i) * c[i];
++            }
++        } else if (mode == 3) {
++            #pragma omp parallel for shared(v, vold)
++            for (long i = 0; i < LEN_1D; i++) {
++                vold[i] = v[i];
++            }
++            #pragma omp parallel for shared(u, v, c, d)
++            for (long i = 1; i < LEN_1D; i++) {
++                v[i] = AT2(u, i) * d[i] + c[i];
++            }
++            #pragma omp parallel for shared(u, vold, c)
++            for (long i = 1; i < LEN_1D; i++) {
++                u[i] += AT1(vold, i) * c[i];
++            }
++        } else {
++            for (long i = 1; i < LEN_1D; i++) {
++                u[i] += AT1(v, i) * c[i];
++                v[i] = AT2(u, i) * d[i] + c[i];
++            }
+         }
+         pb_mix(nl);
+     }
++    free(vold);
+     return (real_t)0;
+ }
+ 

@@ -1,0 +1,58 @@
+--- original.c
++++ final.c
+@@ -1,5 +1,7 @@
+ /* Kernel k36. */
+ #include "tsvc_b1/k36.h"
++#include <stdlib.h>
++#include <string.h>
+ 
+ /* Between two repetitions a few INPUT elements change, so no repetition can be skipped,
+  * merged with another or run out of order: the repetition loop is sequential by a true
+@@ -14,13 +16,44 @@
+ 
+ static real_t kernel_k36(void)
+ {
++    /* Copy of v as it was before a repetition: the u pass may need the element the
++     * original read before it was overwritten.  Grows with LEN_1D -> heap. */
++    real_t *vold = (real_t *)malloc((size_t)LEN_1D * sizeof(real_t));
++    /* Offsets the accessors apply to the loop counter (loop-invariant). */
++    const long qoff = (long)(&AT2(u, 1) - &u[0]) - 1;
++
+     for (int nl = 0; nl < R; nl++) {
+-        for (long i = 1; i < LEN_1D; i++) {
+-            u[i] += AT1(v, i) * c[i];
+-            v[i] = AT2(u, i) * d[i] + c[i];
++        if (qoff > 0) {
++            /* v[i] reads an element of u the original had not yet updated, so every v
++             * is computed first from the untouched u.  Then u[i] reads v: the element
++             * is the freshly written one when its index is below i (the original had
++             * already stored it), otherwise the value v held before this repetition. */
++            memcpy(vold, v, (size_t)LEN_1D * sizeof(real_t));
++            #pragma omp parallel for shared(u, v, c, d) schedule(static)
++            for (long i = 1; i < LEN_1D; i++) {
++                v[i] = AT2(u, i) * d[i] + c[i];
++            }
++            #pragma omp parallel for shared(u, v, vold, c) schedule(static)
++            for (long i = 1; i < LEN_1D; i++) {
++                long j = (long)(&AT1(v, i) - &v[0]);
++                u[i] += ((j < i) ? v[j] : vold[j]) * c[i];
++            }
++        } else {
++            /* v[i] reads u at an index <= i, i.e. an element already updated by the
++             * original; u[i] therefore reads v before any of it is overwritten.
++             * Update all of u first (v untouched), then all of v from the new u. */
++            #pragma omp parallel for shared(u, v, c) schedule(static)
++            for (long i = 1; i < LEN_1D; i++) {
++                u[i] += AT1(v, i) * c[i];
++            }
++            #pragma omp parallel for shared(u, v, c, d) schedule(static)
++            for (long i = 1; i < LEN_1D; i++) {
++                v[i] = AT2(u, i) * d[i] + c[i];
++            }
+         }
+         pb_mix(nl);
+     }
++    free(vold);
+     return (real_t)0;
+ }
+ 

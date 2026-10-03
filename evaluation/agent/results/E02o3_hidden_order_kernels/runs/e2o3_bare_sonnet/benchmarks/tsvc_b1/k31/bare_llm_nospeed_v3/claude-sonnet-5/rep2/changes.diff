@@ -1,0 +1,125 @@
+--- original.c
++++ final.c
+@@ -1,5 +1,6 @@
+ /* Kernel k31. */
+ #include "tsvc_b1/k31.h"
++#include <stdlib.h>
+ 
+ /* Between two repetitions a few INPUT elements change, so no repetition can be skipped,
+  * merged with another or run out of order: the repetition loop is sequential by a true
+@@ -14,13 +15,112 @@
+ 
+ static real_t kernel_k31(void)
+ {
++    /* Scratch buffers holding this sweep's freshly computed u/v values, so the
++     * cross-iteration read (whichever of u or v needs the OTHER array's value
++     * from this same sweep, decided by the fixed sign of off/far -- see the
++     * comment below) is satisfied by a pass that has already finished writing,
++     * rather than by memory the writing loop and the reading loop would
++     * otherwise race on in place. Heap allocated: size grows with LEN_1D, same
++     * order as the arrays already in use, so this is a constant-factor buffer,
++     * not an extra pass that grows faster than the computation itself. */
++    real_t *unew = (real_t *)malloc((size_t)LEN_1D * sizeof(real_t));
++    real_t *vnew = (real_t *)malloc((size_t)LEN_1D * sizeof(real_t));
++
++    /* Index 0 is never written by the i-loop below (it starts at i = 1), and
++     * nothing else in this function touches u[0]/v[0], so they are constant
++     * for the whole function. Seed the buffers once so that any i+off or
++     * i+far that lands on index 0 (off == -1 or far == -1) reads a defined,
++     * correct value out of unew/vnew instead of uninitialised memory. */
++    unew[0] = u[0];
++    vnew[0] = v[0];
++
+     for (int nl = 0; nl < R; nl++) {
+-        for (long i = 1; i < LEN_1D; i++) {
+-            u[i] += v[i + off] * c[i];
+-            v[i] = u[i + far] * d[i] + c[i];
++        /* u[i] is written only by "u[i] += v[i+off]*c[i]" and v[i] only by
++         * "v[i] = u[i+far]*d[i]+c[i]". Since off and far are loop-invariant,
++         * whether v[i+off] (resp. u[i+far]) refers to a value this sweep has
++         * already produced or to the value left over from before this sweep
++         * depends only on the constant sign of off (resp. far), the same way
++         * for every i -- never on i itself. That fixes, for the whole sweep,
++         * which of the two quantities must be computed completely before the
++         * other can be computed at all:
++         *   off >= 0  -> v[i+off] is always last sweep's value (untouched so far)
++         *   off <  0  -> v[i+off] is always this sweep's freshly produced value
++         *   far >  0  -> u[i+far] is always last sweep's value (untouched so far)
++         *   far <= 0  -> u[i+far] is always this sweep's freshly produced value
++         * u/v themselves are left untouched until the commit at the end of the
++         * iteration, so every read below -- whether from u/v or from the
++         * buffers -- sees exactly the value the original sequential loop would
++         * have seen at that point. */
++        if (off >= 0 && far <= 0) {
++            /* unew needs only the untouched v; vnew needs unew once it is complete. */
++            #pragma omp parallel for shared(u, v, c, off, unew)
++            for (long i = 1; i < LEN_1D; i++) {
++                unew[i] = u[i] + v[i + off] * c[i];
++            }
++            #pragma omp parallel for shared(unew, d, c, far, vnew)
++            for (long i = 1; i < LEN_1D; i++) {
++                vnew[i] = unew[i + far] * d[i] + c[i];
++            }
++            #pragma omp parallel for shared(u, unew)
++            for (long i = 1; i < LEN_1D; i++) {
++                u[i] = unew[i];
++            }
++            #pragma omp parallel for shared(v, vnew)
++            for (long i = 1; i < LEN_1D; i++) {
++                v[i] = vnew[i];
++            }
++        } else if (off < 0 && far > 0) {
++            /* vnew needs only the untouched u; unew needs vnew once it is complete. */
++            #pragma omp parallel for shared(u, d, c, far, vnew)
++            for (long i = 1; i < LEN_1D; i++) {
++                vnew[i] = u[i + far] * d[i] + c[i];
++            }
++            #pragma omp parallel for shared(u, vnew, c, off, unew)
++            for (long i = 1; i < LEN_1D; i++) {
++                unew[i] = u[i] + vnew[i + off] * c[i];
++            }
++            #pragma omp parallel for shared(u, unew)
++            for (long i = 1; i < LEN_1D; i++) {
++                u[i] = unew[i];
++            }
++            #pragma omp parallel for shared(v, vnew)
++            for (long i = 1; i < LEN_1D; i++) {
++                v[i] = vnew[i];
++            }
++        } else if (off >= 0 && far > 0) {
++            /* Neither update needs the other's fresh value: both are independent. */
++            #pragma omp parallel for shared(u, v, c, off, unew)
++            for (long i = 1; i < LEN_1D; i++) {
++                unew[i] = u[i] + v[i + off] * c[i];
++            }
++            #pragma omp parallel for shared(u, d, c, far, vnew)
++            for (long i = 1; i < LEN_1D; i++) {
++                vnew[i] = u[i + far] * d[i] + c[i];
++            }
++            #pragma omp parallel for shared(u, unew)
++            for (long i = 1; i < LEN_1D; i++) {
++                u[i] = unew[i];
++            }
++            #pragma omp parallel for shared(v, vnew)
++            for (long i = 1; i < LEN_1D; i++) {
++                v[i] = vnew[i];
++            }
++        } else {
++            /* off < 0 && far <= 0: u's update needs v's fresh value and v's update
++             * needs u's fresh value at the same time -- a genuine mutual
++             * recurrence that cannot be split into two independent passes.
++             * Left sequential; still correct, just not parallelised. */
++            for (long i = 1; i < LEN_1D; i++) {
++                u[i] += v[i + off] * c[i];
++                v[i] = u[i + far] * d[i] + c[i];
++            }
+         }
++
+         pb_mix(nl);
+     }
++
++    free(unew);
++    free(vnew);
+     return (real_t)0;
+ }
+ 

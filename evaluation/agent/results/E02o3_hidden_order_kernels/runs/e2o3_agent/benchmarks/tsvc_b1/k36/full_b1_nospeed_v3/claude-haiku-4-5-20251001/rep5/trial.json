@@ -14,12 +14,12 @@
     "--prompt-version",
     "3"
   ],
-  "started_at": "2026-10-03T10:42:59",
+  "started_at": "2026-10-03T19:40:04",
   "host": "rms14562",
   "host_load_start": [
-    4.01171875,
-    3.916015625,
-    4.21337890625
+    11.07080078125,
+    9.58984375,
+    9.27685546875
   ],
   "agent_cmd": [
     "/home/ahmedabosamaha/discopop_agent/venv/bin/python",
@@ -68,51 +68,58 @@
     "--explorer-timeout",
     "60"
   ],
-  "agent_s": 32.9,
+  "agent_s": 124.1,
   "agent_rc": 0,
-  "llm_calls": 3,
-  "llm_call_failures": 3,
+  "llm_calls": 1,
+  "llm_call_failures": 0,
   "harness_reasks": 0,
   "harness_discards": 0,
   "explorer_retries": 0,
   "explorer_stalls": 0,
   "reverts": 0,
   "refresh_fast": 0,
-  "refresh_full": 0,
+  "refresh_full": 1,
   "refresh_fallback": 0,
-  "runtime_remeasurements": 0,
+  "runtime_remeasurements": 1,
   "phase_b_deferred": 0,
   "phase_b_joint_kept": 0,
   "dp_floor": null,
   "gate_failures_phase_a": {},
   "gate_failures_phase_b": {},
-  "gate_passes_phase_a": 0,
+  "gate_passes_phase_a": 1,
   "gate_failures_d40": {},
-  "d40_verdicts": {},
-  "exposure_verdicts": {},
-  "d40_seconds": 0,
+  "d40_verdicts": {
+    "safe": 1
+  },
+  "exposure_verdicts": {
+    "exposed": 1
+  },
+  "d40_seconds": 0.8,
   "requeued_regions": 0,
   "region_verdicts": {
-    "SKIPPED": 3
+    "ACCEPTED": 1,
+    "SKIPPED": 3,
+    "DEFERRED": 1,
+    "APPLIED": 1
   },
   "settle_dropped": 0,
   "baseline_claimed": 0,
   "baseline_pragmas": 0,
-  "rewrites_kept": 0,
-  "pragmas_applied": 0,
-  "pragmas_discopop": 0,
+  "rewrites_kept": 1,
+  "pragmas_applied": 1,
+  "pragmas_discopop": 1,
   "pragmas_llm": 0,
-  "regions_skipped": 3,
+  "regions_skipped": 2,
   "llm_usage": {
-    "calls_recorded": 9,
-    "input_tokens": 0,
-    "output_tokens": 0,
-    "cache_read_input_tokens": 0,
-    "cache_creation_input_tokens": 0,
-    "cost_usd": 0.0,
-    "model_seconds": 4.9
+    "calls_recorded": 1,
+    "input_tokens": 26,
+    "output_tokens": 14702,
+    "cache_read_input_tokens": 56062,
+    "cache_creation_input_tokens": 17790,
+    "cost_usd": 0.1178,
+    "model_seconds": 116.7
   },
-  "source_changed": false,
+  "source_changed": true,
   "protected": [
     "#include \"tsvc_b1/k36.h\"",
     "static void pb_mix(int nl)",
@@ -129,8 +136,8 @@
     "problems": [],
     "applies": true
   },
-  "pragmas_added": 0,
-  "pragmas_in_final": 0,
+  "pragmas_added": 1,
+  "pragmas_in_final": 1,
   "hot_loop": {
     "entry": "kernel_k36",
     "function": "kernel_k36",
@@ -140,15 +147,24 @@
       "v"
     ]
   },
-  "hot_loop_covered": false,
+  "hot_loop_covered": true,
   "hot_loop_coverage": {
     "criterion": "v2 (27 Sep 2026)",
-    "covered": false,
-    "covering": [],
+    "covered": true,
+    "covering": [
+      {
+        "function": "kernel_k36",
+        "line": 18,
+        "directive": "#pragma omp parallel for",
+        "writes": [
+          "v"
+        ]
+      }
+    ],
     "uncounted": [],
     "elsewhere": []
   },
-  "candidates_recorded": 0,
+  "candidates_recorded": 3,
   "verify": {
     "verify_size": "LARGE",
     "threads": [
@@ -163,25 +179,25 @@
     "seed": "7",
     "dump_exact_seeded": true,
     "dump_seeded_max_rel_err": 0.0,
-    "seq_median_s": 2.0849,
-    "seq_kernel_median_s": 1.416298,
+    "seq_median_s": 2.0262,
+    "seq_kernel_median_s": 1.399922,
     "timing_basis": "kernel",
     "par": {
       "6": {
-        "median_s": 2.0796,
-        "program_speedup": 1.003,
+        "median_s": 1.7315,
+        "program_speedup": 1.17,
         "max_rel_err": 0.0,
-        "kernel_median_s": 1.415605,
-        "kernel_speedup": 1.0,
-        "speedup": 1.0
+        "kernel_median_s": 1.045132,
+        "kernel_speedup": 1.339,
+        "speedup": 1.339
       },
       "12": {
-        "median_s": 1.9978,
-        "program_speedup": 1.044,
+        "median_s": 1.7918,
+        "program_speedup": 1.131,
         "max_rel_err": 0.0,
-        "kernel_median_s": 1.391775,
-        "kernel_speedup": 1.018,
-        "speedup": 1.018
+        "kernel_median_s": 1.100221,
+        "kernel_speedup": 1.272,
+        "speedup": 1.272
       }
     },
     "digest_max_rel_err": 0.0,
@@ -191,14 +207,14 @@
     "status": "ok",
     "speed_measurable": true
   },
-  "verify_s": 35.8,
+  "verify_s": 32.5,
   "status": "done",
-  "outcome": "no-change",
-  "finished_at": "2026-10-03T10:44:07",
+  "outcome": "FASTER",
+  "finished_at": "2026-10-03T19:42:41",
   "host_load_end": [
-    4.02783203125,
-    3.9365234375,
-    4.1953125
+    11.3154296875,
+    9.763671875,
+    9.35791015625
   ],
   "profile": {
     "wrapper": "discopop_cc",
@@ -222,7 +238,7 @@
   "package_integrity": {
     "before": {
       "checked": "before trial",
-      "at": "2026-10-03T10:42:59",
+      "at": "2026-10-03T19:40:04",
       "prepared_sha256": "8ba9f87cb73bb1ddbc98280e418f4e8ae62011dc7f94466931047a50b7f03df0",
       "packager_sha256": "8ba9f87cb73bb1ddbc98280e418f4e8ae62011dc7f94466931047a50b7f03df0",
       "harness_sha256": "4b2a4a7c4b8172acdc67c5bdab589f817729b7a3acb712abab169b835ab3b5f2",
@@ -232,7 +248,7 @@
     },
     "after": {
       "checked": "after trial",
-      "at": "2026-10-03T10:44:07",
+      "at": "2026-10-03T19:42:41",
       "prepared_sha256": "8ba9f87cb73bb1ddbc98280e418f4e8ae62011dc7f94466931047a50b7f03df0",
       "packager_sha256": "8ba9f87cb73bb1ddbc98280e418f4e8ae62011dc7f94466931047a50b7f03df0",
       "harness_sha256": "4b2a4a7c4b8172acdc67c5bdab589f817729b7a3acb712abab169b835ab3b5f2",

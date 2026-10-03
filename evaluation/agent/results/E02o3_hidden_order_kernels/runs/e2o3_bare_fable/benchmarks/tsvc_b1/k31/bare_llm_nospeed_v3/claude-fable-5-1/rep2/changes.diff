@@ -1,0 +1,87 @@
+--- original.c
++++ final.c
+@@ -1,5 +1,6 @@
+ /* Kernel k31. */
+ #include "tsvc_b1/k31.h"
++#include <stdlib.h>
+ 
+ /* Between two repetitions a few INPUT elements change, so no repetition can be skipped,
+  * merged with another or run out of order: the repetition loop is sequential by a true
+@@ -14,13 +15,74 @@
+ 
+ static real_t kernel_k31(void)
+ {
++    const long off_ = (long)off;
++    const long far_ = (long)far;
++    real_t *up = u;
++    real_t *vp = v;
++    const real_t *cp = c;
++    const real_t *dp = d;
++    real_t *vo = NULL;
++
++    /* Only the "both reads want the old value" configuration needs a scratch copy. */
++    if (off_ >= 0 && far_ > 0) {
++        vo = (real_t *)malloc(sizeof(real_t) * (size_t)LEN_1D);
++    }
++
+     for (int nl = 0; nl < R; nl++) {
+-        for (long i = 1; i < LEN_1D; i++) {
+-            u[i] += v[i + off] * c[i];
+-            v[i] = u[i + far] * d[i] + c[i];
++        if (off_ >= 0 && far_ <= 0) {
++            /* v[i+off] is read before any iteration overwrites it (old value);
++             * u[i+far] is read after iteration i+far updated it (new value).
++             * Pass 1 updates every u from the untouched v, pass 2 builds v
++             * from the finished u. */
++            #pragma omp parallel for shared(up, vp, cp) firstprivate(off_)
++            for (long i = 1; i < LEN_1D; i++) {
++                up[i] += vp[i + off_] * cp[i];
++            }
++            #pragma omp parallel for shared(up, vp, cp, dp) firstprivate(far_)
++            for (long i = 1; i < LEN_1D; i++) {
++                vp[i] = up[i + far_] * dp[i] + cp[i];
++            }
++        } else if (off_ < 0 && far_ > 0) {
++            /* u[i+far] is read before iteration i+far writes it (old value);
++             * v[i+off] is read after iteration i+off wrote it from old u.
++             * Pass 1 builds every v from the untouched u, pass 2 updates u
++             * from the finished v. */
++            #pragma omp parallel for shared(up, vp, cp, dp) firstprivate(far_)
++            for (long i = 1; i < LEN_1D; i++) {
++                vp[i] = up[i + far_] * dp[i] + cp[i];
++            }
++            #pragma omp parallel for shared(up, vp, cp) firstprivate(off_)
++            for (long i = 1; i < LEN_1D; i++) {
++                up[i] += vp[i + off_] * cp[i];
++            }
++        } else if (far_ > 0 && vo != NULL) {
++            /* Both reads want the old values.  Snapshot the v elements the
++             * original reads, build v from the untouched u, then update u
++             * from the snapshot. */
++            #pragma omp parallel for shared(vp, vo) firstprivate(off_)
++            for (long i = 1; i < LEN_1D; i++) {
++                vo[i] = vp[i + off_];
++            }
++            #pragma omp parallel for shared(up, vp, cp, dp) firstprivate(far_)
++            for (long i = 1; i < LEN_1D; i++) {
++                vp[i] = up[i + far_] * dp[i] + cp[i];
++            }
++            #pragma omp parallel for shared(up, vo, cp)
++            for (long i = 1; i < LEN_1D; i++) {
++                up[i] += vo[i] * cp[i];
++            }
++        } else {
++            /* off < 0 && far <= 0: u[i] depends on u[i-1+far] through v, a true
++             * recurrence that no reordering reproduces bit-for-bit. */
++            for (long i = 1; i < LEN_1D; i++) {
++                u[i] += v[i + off] * c[i];
++                v[i] = u[i + far] * d[i] + c[i];
++            }
+         }
+         pb_mix(nl);
+     }
++
++    free(vo);
+     return (real_t)0;
+ }
+ 

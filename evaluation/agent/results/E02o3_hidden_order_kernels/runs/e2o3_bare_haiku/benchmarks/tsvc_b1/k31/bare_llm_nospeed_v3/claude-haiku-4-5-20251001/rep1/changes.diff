@@ -1,0 +1,20 @@
+--- original.c
++++ final.c
+@@ -15,8 +15,17 @@
+ static real_t kernel_k31(void)
+ {
+     for (int nl = 0; nl < R; nl++) {
++        /* Compute u[i] in parallel: reads v[i+off] and c[i], writes u[i].
++           No inter-iteration dependence within this loop. */
++        #pragma omp parallel for shared(u, v, c)
+         for (long i = 1; i < LEN_1D; i++) {
+             u[i] += v[i + off] * c[i];
++        }
++        /* Compute v[i] in parallel: reads updated u[i+far], d[i], and c[i], writes v[i].
++           No inter-iteration dependence within this loop. Barrier implicit: first loop must
++           complete before this loop reads u. */
++        #pragma omp parallel for shared(v, u, d, c)
++        for (long i = 1; i < LEN_1D; i++) {
+             v[i] = u[i + far] * d[i] + c[i];
+         }
+         pb_mix(nl);

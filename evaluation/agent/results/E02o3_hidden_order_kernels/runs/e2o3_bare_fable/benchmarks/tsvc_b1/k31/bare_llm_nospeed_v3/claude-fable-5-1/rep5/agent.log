@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : k31.c
+  Model          : claude-fable-5-1
+  Not editable   : main, pb_mix
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-fable-5-1...
+│  [bare] k31.c: edited, 3 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Removing `default(none)` from the remaining two pragmas so the loops compile whether `off`/`far`/`LEN_1D` are macros or globals (the sharing is still spelled out explicitly).The rewrite is complete. **What was blocking:** the `i` loop reads `v[i+off]` and `u[i+far]`, locations that iterations `i+off` / `i+far` later overwrite. That is an anti-dependence — a location being reused, not a value flowi
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

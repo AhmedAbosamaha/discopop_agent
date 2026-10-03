@@ -14,13 +14,21 @@ static void pb_mix(int nl)
 
 static real_t kernel_k31(void)
 {
+    real_t *u_temp = (real_t *)malloc(LEN_1D * sizeof(real_t));
+
     for (int nl = 0; nl < R; nl++) {
+        #pragma omp parallel for 
+        for (long i = 1; i < LEN_1D; i++) {
+            u_temp[i] = u[i + far];
+        }
         for (long i = 1; i < LEN_1D; i++) {
             u[i] += v[i + off] * c[i];
-            v[i] = u[i + far] * d[i] + c[i];
+            v[i] = u_temp[i] * d[i] + c[i];
         }
         pb_mix(nl);
     }
+
+    free(u_temp);
     return (real_t)0;
 }
 

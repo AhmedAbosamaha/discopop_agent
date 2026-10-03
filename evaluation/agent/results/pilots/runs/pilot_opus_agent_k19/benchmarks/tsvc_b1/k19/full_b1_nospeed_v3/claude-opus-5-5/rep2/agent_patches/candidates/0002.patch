@@ -1,0 +1,56 @@
+--- k19.c
++++ k19.c
+@@ -1,5 +1,6 @@
+ /* Kernel k19. */
+ #include "tsvc_b1/k19.h"
++#include <stdlib.h>
+ 
+ /* Between two repetitions a few INPUT elements change, so no repetition can be skipped,
+  * merged with another or run out of order: the repetition loop is sequential by a true
+@@ -14,10 +15,43 @@
+ 
+ static real_t kernel_k19(void)
+ {
++    /* Inspector: the index arrays are constant, so decide once whether the
++     * iterations of the i loop touch disjoint written elements. */
++    long *owner = (long *)malloc((size_t)LEN_1D * sizeof(long));
++    int bad = 0;
++    for (long x = 0; x < LEN_1D; x++)
++        owner[x] = -1;
++    for (long i = 1; i < LEN_1D; i++)
++        owner[ju[i]] = i;
++    for (long i = 1; i < LEN_1D; i++) {
++        long w = owner[ju[i]];
++        long r = owner[ku[i]];
++        bad |= (w != i) | ((r != -1) & (r != i));
++    }
++    for (long x = 0; x < LEN_1D; x++)
++        owner[x] = -1;
++    for (long i = 1; i < LEN_1D; i++)
++        owner[jv[i]] = i;
++    for (long i = 1; i < LEN_1D; i++) {
++        long w = owner[jv[i]];
++        long r = owner[kv[i]];
++        bad |= (w != i) | ((r != -1) & (r != i));
++    }
++    free(owner);
++
+     for (int nl = 0; nl < R; nl++) {
+-        for (long i = 1; i < LEN_1D; i++) {
+-            u[ju[i]] += v[kv[i]] * c[i];
+-            v[jv[i]] = u[ku[i]] * d[i] + c[i];
++        if (!bad) {
++            /* every iteration owns the elements it writes: independent */
++            for (long i = 1; i < LEN_1D; i++) {
++                real_t uu = u[ju[i]] + v[kv[i]] * c[i];
++                u[ju[i]] = uu;
++                v[jv[i]] = u[ku[i]] * d[i] + c[i];
++            }
++        } else {
++            for (long i = 1; i < LEN_1D; i++) {
++                u[ju[i]] += v[kv[i]] * c[i];
++                v[jv[i]] = u[ku[i]] * d[i] + c[i];
++            }
+         }
+         pb_mix(nl);
+     }

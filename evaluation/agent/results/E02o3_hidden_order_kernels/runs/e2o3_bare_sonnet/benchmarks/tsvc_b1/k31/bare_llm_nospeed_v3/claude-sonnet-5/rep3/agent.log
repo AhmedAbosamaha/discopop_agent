@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : k31.c
+  Model          : claude-sonnet-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] k31.c: edited, 7 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan The inner loop (over `i`) is the one under study; the `nl` repetition loop must stay sequential because of `pb_mix`. Per iteration it does: ``` u[i] += v[i + off] * c[i]; (A) v[i] = u[i + far] * d[i] + c[i]; (B) ``` Each iteration only ever *writes* `u[i]` and `v[i]` — distinct locations per iteration — so the only cross-iteration dependence is whether a read at an offset index sees the pr
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

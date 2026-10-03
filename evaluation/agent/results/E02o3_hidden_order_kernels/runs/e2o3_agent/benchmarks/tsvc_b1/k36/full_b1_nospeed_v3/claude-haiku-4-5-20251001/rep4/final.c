@@ -15,9 +15,12 @@ static void pb_mix(int nl)
 static real_t kernel_k36(void)
 {
     for (int nl = 0; nl < R; nl++) {
+        #pragma omp parallel for 
+        for (long i = 1; i < LEN_1D; i++) {
+            v[i] = AT2(u, i) * d[i] + c[i];
+        }
         for (long i = 1; i < LEN_1D; i++) {
             u[i] += AT1(v, i) * c[i];
-            v[i] = AT2(u, i) * d[i] + c[i];
         }
         pb_mix(nl);
     }

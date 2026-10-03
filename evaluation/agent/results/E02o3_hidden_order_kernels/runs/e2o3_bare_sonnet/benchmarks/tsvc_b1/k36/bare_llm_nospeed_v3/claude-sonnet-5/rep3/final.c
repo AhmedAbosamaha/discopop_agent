@@ -1,0 +1,38 @@
+/* Kernel k36. */
+#include "tsvc_b1/k36.h"
+
+/* Between two repetitions a few INPUT elements change, so no repetition can be skipped,
+ * merged with another or run out of order: the repetition loop is sequential by a true
+ * dependence, and the loop under study is the one inside it. */
+static void pb_mix(int nl)
+{
+  long k = ((long)nl * 7919L + 13L) % LEN_1D;
+  a[k] += (real_t)0.25; b[k] += (real_t)0.25; c[k] += (real_t)0.125;
+  d[k] += (real_t)0.125; e[k] += (real_t)0.25;
+  a[0] += (real_t)0.125; b[LEN_1D-1] += (real_t)0.125;
+}
+
+static real_t kernel_k36(void)
+{
+    for (int nl = 0; nl < R; nl++) {
+        /* Each iteration i only ever touches element i of u, v, c and d:
+         * u[i] is read-modify-written and then v[i] is written using the
+         * value of u[i] that this same iteration just produced. No
+         * iteration reads or writes an element that any other iteration
+         * touches, so there is no value that needs to travel between
+         * iterations here (the true, must-stay-ordered dependence is the
+         * one pb_mix creates between successive nl repetitions, handled
+         * by leaving this outer loop sequential). u, v, c, d are the
+         * shared result/input arrays; i is the per-iteration work index
+         * and is private by default as the omp-for loop variable. */
+        #pragma omp parallel for shared(u, v, c, d)
+        for (long i = 1; i < LEN_1D; i++) {
+            u[i] += AT1(v, i) * c[i];
+            v[i] = AT2(u, i) * d[i] + c[i];
+        }
+        pb_mix(nl);
+    }
+    return (real_t)0;
+}
+
+PB_MAIN(kernel_k36)

@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : k23.c
+  Model          : claude-sonnet-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] k23.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan The outer `nl` loop is sequential — `pb_mix` mutates `a,b,c,d,e` at a few indices using values that must be seen by the next repetition, so repetitions cannot be reordered or merged. That part is left untouched. The inner loop over `i` is the one to parallelize. Each iteration writes to `u[i]` and `v[i]` only (distinct locations per `i`), and reads `w[i]`, `c[i]`, `x[i]`, `d[i]` — all inde
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

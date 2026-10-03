@@ -10,7 +10,7 @@ On three new kernels whose split order is decided by a fact hidden outside the f
 
 ## What is in this folder
 
-- [`runs/`](runs/) — 2 archived run(s): the evidence
+- [`runs/`](runs/) — 5 archived run(s): the evidence
 - [`preflight/`](preflight/) — 4 smoke run(s) before the launch
 
 ## Runs
@@ -21,11 +21,12 @@ On three new kernels whose split order is decided by a fact hidden outside the f
 | `t0_11_o3_a` | [`preflight/t0_11_o3_a/`](preflight/t0_11_o3_a/) | T0.11 draw a on tsvc_b1/k23, k31, k36: discopop_capability (budget 0, no model), threads 6/12, repeats 5 | valid | 3 | no-change 3 |
 | `t0_11_o3_b` | [`preflight/t0_11_o3_b/`](preflight/t0_11_o3_b/) | T0.11 draw b on tsvc_b1/k23, k31, k36: discopop_capability, no model | valid | 3 | no-change 3 |
 | `t0_11_o3_c` | [`preflight/t0_11_o3_c/`](preflight/t0_11_o3_c/) | T0.11 draw c on tsvc_b1/k23, k31, k36: discopop_capability, no model | valid | 3 | no-change 3 |
-| `e2o3_agent` | [`runs/e2o3_agent/`](runs/e2o3_agent/) | E2-O3: tsvc_b1/k23, k31, k36 × full_b1_nospeed_v3, no_evidence_b1_nospeed_v3 × 10, Haiku, threads 6/12, repeats 5 | valid | 60 | FASTER 9, no-change 50, parallel-not-faster 1 |
-| `e2o3_bare_haiku` | [`runs/e2o3_bare_haiku/`](runs/e2o3_bare_haiku/) | E2-O3: claude-haiku-4-5-20251001 alone on tsvc_b1/k23, k31, k36 × bare_llm_nospeed_v3 × 10 | valid | 30 | AGENT_ERROR 20, BROKEN 10 |
-| `e2o3_bare_sonnet` | not archived yet | E2-O3: claude-sonnet-5 alone on tsvc_b1/k23, k31, k36 × bare_llm_nospeed_v3 × 5 | registered |  |  |
-| `e2o3_bare_opus` | not archived yet | E2-O3: claude-opus-5-5 alone on tsvc_b1/k23, k31, k36 × bare_llm_nospeed_v3 × 5 | registered |  |  |
-| `e2o3_bare_fable` | not archived yet | E2-O3: claude-fable-5-1 alone on tsvc_b1/k23, k31, k36 × bare_llm_nospeed_v3 × 5 | registered |  |  |
+| `e2o3_agent` | [`runs/e2o3_agent/`](runs/e2o3_agent/) | E2-O3: tsvc_b1/k23, k31, k36 × full_b1_nospeed_v3, no_evidence_b1_nospeed_v3 × 10, Haiku, threads 6/12, repeats 5 | valid | 60 | FASTER 29, no-change 29, parallel-not-faster 2 |
+| `e2o3_bare_haiku` | [`runs/e2o3_bare_haiku/`](runs/e2o3_bare_haiku/) | E2-O3: claude-haiku-4-5-20251001 alone on tsvc_b1/k23, k31, k36 × bare_llm_nospeed_v3 × 10 | valid | 30 | BROKEN 28, VERIFY_FAILED 2 |
+| `e2o3_bare_sonnet` | [`runs/e2o3_bare_sonnet/`](runs/e2o3_bare_sonnet/) | E2-O3: claude-sonnet-5 alone on tsvc_b1/k23, k31, k36 × bare_llm_nospeed_v3 × 5 | valid | 15 | BROKEN 12, FASTER 2, VERIFY_FAILED 1 |
+| `e2o3_bare_opus` | [`runs/e2o3_bare_opus/`](runs/e2o3_bare_opus/) | E2-O3: claude-opus-5-5 alone on tsvc_b1/k23, k31, k36 × bare_llm_nospeed_v3 × 5 | valid | 15 | BROKEN 7, FASTER 2, parallel-not-faster 6 |
+| `e2o3_bare_fable` | [`runs/e2o3_bare_fable/`](runs/e2o3_bare_fable/) | E2-O3: claude-fable-5-1 alone on tsvc_b1/k23, k31, k36 × bare_llm_nospeed_v3 × 5 | valid | 15 | BROKEN 9, FASTER 5, parallel-not-faster 1 |
+| `e2o3_race_check` | not archived yet | race_check.py over every model-alone program of E2-O3 (bare_llm_nospeed_v3: Haiku, Sonnet, Opus, Fable) and, as the positive control, the agent's parallel programs (both arms), no model | registered |  |  |
 
 ## Change-log rows that name these runs (§6)
 

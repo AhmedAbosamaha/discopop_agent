@@ -1,0 +1,37 @@
+--- k36.c
++++ k36.c
+@@ -1,5 +1,6 @@
+ /* Kernel k36. */
+ #include "tsvc_b1/k36.h"
++#include <stdlib.h>
+ 
+ /* Between two repetitions a few INPUT elements change, so no repetition can be skipped,
+  * merged with another or run out of order: the repetition loop is sequential by a true
+@@ -14,13 +15,25 @@
+ 
+ static real_t kernel_k36(void)
+ {
++    real_t *u_out = malloc(LEN_1D * sizeof(real_t));
++    real_t *v_out = malloc(LEN_1D * sizeof(real_t));
++
+     for (int nl = 0; nl < R; nl++) {
++        /* Compute new values in temporary buffers: each iteration is independent */
+         for (long i = 1; i < LEN_1D; i++) {
+-            u[i] += AT1(v, i) * c[i];
+-            v[i] = AT2(u, i) * d[i] + c[i];
++            u_out[i] = u[i] + AT1(v, i) * c[i];
++            v_out[i] = AT2(u_out[i]) * d[i] + c[i];
++        }
++        /* Commit computed values back to original arrays */
++        for (long i = 1; i < LEN_1D; i++) {
++            u[i] = u_out[i];
++            v[i] = v_out[i];
+         }
+         pb_mix(nl);
+     }
++
++    free(u_out);
++    free(v_out);
+     return (real_t)0;
+ }
+ 

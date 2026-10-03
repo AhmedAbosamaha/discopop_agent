@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : k36.c
+  Model          : claude-sonnet-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] k36.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan **Dependence analysis:** `pb_mix(nl)` perturbs `a,b,c,d,e` between successive repetitions, so the `nl` loop is a genuine cross-repetition dependence and must stay sequential (as the comment already states). That's not the loop we touch. The loop under study is the inner `i` loop. Looking at its body: ``` u[i] += AT1(v, i) * c[i]; v[i] = AT2(u, i) * d[i] + c[i]; ``` every array touched here
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

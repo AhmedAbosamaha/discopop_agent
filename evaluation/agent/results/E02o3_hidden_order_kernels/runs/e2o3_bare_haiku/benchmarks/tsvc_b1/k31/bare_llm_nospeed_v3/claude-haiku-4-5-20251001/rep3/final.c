@@ -15,8 +15,14 @@ static void pb_mix(int nl)
 static real_t kernel_k31(void)
 {
     for (int nl = 0; nl < R; nl++) {
+        /* Compute all u[i] values using current v values */
+        #pragma omp parallel for shared(u, v, c)
         for (long i = 1; i < LEN_1D; i++) {
             u[i] += v[i + off] * c[i];
+        }
+        /* Compute all v[i] values using updated u values */
+        #pragma omp parallel for shared(u, v, d, c)
+        for (long i = 1; i < LEN_1D; i++) {
             v[i] = u[i + far] * d[i] + c[i];
         }
         pb_mix(nl);

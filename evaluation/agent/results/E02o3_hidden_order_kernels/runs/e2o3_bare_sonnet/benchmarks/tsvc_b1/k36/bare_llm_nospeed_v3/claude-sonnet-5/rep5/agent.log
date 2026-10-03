@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : k36.c
+  Model          : claude-sonnet-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] k36.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan **Dependence analysis.** Across repetitions (`nl`), `pb_mix` mutates `c`, `d` (and `a`, `b`, `e`) at one index, so repetition `nl+1`'s read of `c`/`d` must see repetition `nl`'s writes — that loop stays strictly sequential, as the comment already states, and I leave it untouched. Inside one repetition, the loop body only ever touches index `i` of `u` and `v`: ``` u[i] += AT1(v, i) * c[i]; 
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

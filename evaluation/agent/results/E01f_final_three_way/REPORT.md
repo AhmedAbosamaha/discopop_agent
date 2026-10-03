@@ -16,7 +16,7 @@ Class R, 90 trials each: DiscoPoP alone 0 race-free FASTER; the Haiku agent 65 (
 
 - [`analysis/`](analysis/) — the read-out: [`e1f_tests.md`](analysis/e1f_tests.md), [`fable/main_comparison_stats.md`](analysis/fable/main_comparison_stats.md), [`haiku/main_comparison_stats.md`](analysis/haiku/main_comparison_stats.md), [`opus/main_comparison_stats.md`](analysis/opus/main_comparison_stats.md), [`sonnet/main_comparison_stats.md`](analysis/sonnet/main_comparison_stats.md)
 - [`runs/`](runs/) — 12 archived run(s): the evidence
-- [`checks/`](checks/) — 1 verification(s) made during the read-out
+- [`checks/`](checks/) — 2 verification(s) made during the read-out
 - [`preflight/`](preflight/) — 2 smoke run(s) before the launch
 
 ## Runs
@@ -38,6 +38,7 @@ Class R, 90 trials each: DiscoPoP alone 0 race-free FASTER; the Haiku agent 65 (
 | `e1f_fix103_redo` | [`runs/e1f_fix103_redo/`](runs/e1f_fix103_redo/) | E1-final agent trials redone on the fixed agent (Fix 103): every trial whose candidate the old harness rule (Fix 97) let through but the judge's rules refuse (a new pb_* line) — found by fix103's scan of every E1-final agent candidate when the agent runs ended; each from a copy of its own run's DiscoPoP profile; the superseded trials kept under <run>/_superseded_fix103/. Known so far: e1f_r_4 s331 rep4 (pb_mix(R - 1)) — INVALID (3 Oct): the redos ran on a COPY of their run's DiscoPoP profile, whose FileMapping.txt kept the source run's absolute paths, so the agent found no region at all ('No hotspot regions found') and both trials ended no-change by infrastructure, not by the model. Redone on fresh profiles in e1f_fix103_redo2 | invalid | 2 | no-change 2 |
 | `e1f_race_check` | [`checks/e1f_race_check/`](checks/e1f_race_check/) | race_check.py (the gate's TSan with archer and the schedule matrix, server, no model) over every model-alone trial of E1-final (bare_llm_v3: Haiku, Sonnet, Opus, Fable × 105) and, as the positive control, the agent's FASTER programs of e1f_r_1-4; subdirectories per model and control | valid | 0 |  |
 | `e1f_fix103_redo2` | [`runs/e1f_fix103_redo2/`](runs/e1f_fix103_redo2/) | E1-final: the two agent trials Fix 103 changes (e1f_a s313 rep1, e1f_r_4 s331 rep4) redone on the fixed agent, each benchmark freshly profiled in this run (a new DiscoPoP draw; B4 is fixed, so the verdicts repeat) — e1f_fix103_redo's profile copies were broken | valid | 2 | FASTER 2 |
+| `e1f_race_check2` | [`checks/e1f_race_check2/`](checks/e1f_race_check2/) | race_check.py over the two redone agent programs of e1f_fix103_redo2 (s313 rep1, s331 rep4), no model — owed by the E1-final read-out | valid | 0 |  |
 
 ## From the experiment record (§7 run log)
 

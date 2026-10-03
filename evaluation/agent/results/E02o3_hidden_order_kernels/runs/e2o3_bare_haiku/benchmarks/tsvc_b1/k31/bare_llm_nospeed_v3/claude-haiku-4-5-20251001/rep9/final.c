@@ -15,10 +15,35 @@ static void pb_mix(int nl)
 static real_t kernel_k31(void)
 {
     for (int nl = 0; nl < R; nl++) {
-        for (long i = 1; i < LEN_1D; i++) {
-            u[i] += v[i + off] * c[i];
-            v[i] = u[i + far] * d[i] + c[i];
+        /* Allocate temporary buffers to capture old values of u and v.
+           This removes the forward dependence: each parallel iteration reads
+           from the old state, not from concurrent writes. */
+        real_t *u_old = malloc(LEN_1D * sizeof(real_t));
+        real_t *v_old = malloc(LEN_1D * sizeof(real_t));
+
+        /* Copy old values before parallel loop */
+        for (long i = 0; i < LEN_1D; i++) {
+            u_old[i] = u[i];
+            v_old[i] = v[i];
         }
+
+        /* Parallel loop: each iteration (i) is independent because it reads from
+           u_old and v_old (shared buffers, read-only) and writes to unique
+           locations u[i] and v[i].
+           Data-sharing: i is implicitly private (loop variable);
+           u_old, v_old are shared read-only buffers;
+           u, v are shared, each iteration writes to a unique element;
+           c, d, off, far are shared read-only. */
+        #pragma omp parallel for
+        for (long i = 1; i < LEN_1D; i++) {
+            u[i] = u_old[i] + v_old[i + off] * c[i];
+            v[i] = u_old[i + far] * d[i] + c[i];
+        }
+
+        /* Free temporary buffers */
+        free(u_old);
+        free(v_old);
+
         pb_mix(nl);
     }
     return (real_t)0;

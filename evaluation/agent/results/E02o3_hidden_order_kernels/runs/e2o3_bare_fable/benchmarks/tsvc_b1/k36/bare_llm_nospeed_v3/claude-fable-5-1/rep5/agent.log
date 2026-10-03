@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : k36.c
+  Model          : claude-fable-5-1
+  Not editable   : main, pb_mix
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-fable-5-1...
+│  [bare] k36.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: The rewrite is applied in `k36.c`: - The single `i` loop is split into two passes over the same range `1..LEN_1D-1`. - Pass 1 (`u[i] += AT1(v,i)*c[i]`) reads only `v` and `c`, which it never writes, so each `u[i]` is independent — annotated `#pragma omp parallel for schedule(static) shared(u, v, c)`. - Pass 2 (`v[i] = AT2(u,i)*d[i] + c[i]`) runs only after pass 1 has completed, so whatever element
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

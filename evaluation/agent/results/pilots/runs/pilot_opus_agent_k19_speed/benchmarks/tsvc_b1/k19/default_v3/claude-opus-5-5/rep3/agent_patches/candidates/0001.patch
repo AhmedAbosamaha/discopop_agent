@@ -1,0 +1,85 @@
+--- k19.c
++++ k19.c
+@@ -1,5 +1,6 @@
+ /* Kernel k19. */
+ #include "tsvc_b1/k19.h"
++#include <stdlib.h>
+ 
+ /* Between two repetitions a few INPUT elements change, so no repetition can be skipped,
+  * merged with another or run out of order: the repetition loop is sequential by a true
+@@ -14,13 +15,72 @@
+ 
+ static real_t kernel_k19(void)
+ {
++    /* Inspector: assign each iteration a wavefront level so that iterations in one
++     * level touch no common u/v element in a conflicting way. */
++    long n = (long)LEN_1D;
++    long mu = 0, mv = 0;
++    for (long i = 1; i < n; i++) {
++        long a1 = (long)ju[i], a2 = (long)ku[i], b1 = (long)kv[i], b2 = (long)jv[i];
++        if (a1 > mu) mu = a1;
++        if (a2 > mu) mu = a2;
++        if (b1 > mv) mv = b1;
++        if (b2 > mv) mv = b2;
++    }
++    long *lwu = (long *)calloc((size_t)(mu + 1), sizeof(long));
++    long *lru = (long *)calloc((size_t)(mu + 1), sizeof(long));
++    long *lwv = (long *)calloc((size_t)(mv + 1), sizeof(long));
++    long *lrv = (long *)calloc((size_t)(mv + 1), sizeof(long));
++    long *lev = (long *)malloc((size_t)n * sizeof(long));
++    long nlev = 0;
++    for (long i = 1; i < n; i++) {
++        long a1 = (long)ju[i], a2 = (long)ku[i], b1 = (long)kv[i], b2 = (long)jv[i];
++        long L = lwu[a1];
++        if (lru[a1] > L) L = lru[a1];
++        if (lwu[a2] > L) L = lwu[a2];
++        if (lwv[b1] > L) L = lwv[b1];
++        if (lwv[b2] > L) L = lwv[b2];
++        if (lrv[b2] > L) L = lrv[b2];
++        L++;
++        lev[i] = L;
++        if (L > nlev) nlev = L;
++        lwu[a1] = L;
++        if (lru[a1] < L) lru[a1] = L;
++        if (lru[a2] < L) lru[a2] = L;
++        if (lrv[b1] < L) lrv[b1] = L;
++        lwv[b2] = L;
++    }
++    free(lwu); free(lru); free(lwv); free(lrv);
++    long *start = (long *)calloc((size_t)(nlev + 2), sizeof(long));
++    long *order = (long *)malloc((size_t)n * sizeof(long));
++    for (long i = 1; i < n; i++)
++        start[lev[i] + 1]++;
++    for (long L = 1; L <= nlev; L++)
++        start[L + 1] += start[L];
++    {
++        long *pos = (long *)malloc((size_t)(nlev + 2) * sizeof(long));
++        for (long L = 0; L <= nlev + 1; L++)
++            pos[L] = start[L];
++        for (long i = 1; i < n; i++)
++            order[pos[lev[i]]++] = i;
++        free(pos);
++    }
++    free(lev);
++
++    /* Executor: levels in order; iterations within a level are independent. */
+     for (int nl = 0; nl < R; nl++) {
+-        for (long i = 1; i < LEN_1D; i++) {
+-            u[ju[i]] += v[kv[i]] * c[i];
+-            v[jv[i]] = u[ku[i]] * d[i] + c[i];
++        for (long L = 1; L <= nlev; L++) {
++            long lo = start[L];
++            long hi = start[L + 1];
++            for (long t = lo; t < hi; t++) {
++                long i = order[t];
++                u[ju[i]] += v[kv[i]] * c[i];
++                v[jv[i]] = u[ku[i]] * d[i] + c[i];
++            }
+         }
+         pb_mix(nl);
+     }
++    free(start);
++    free(order);
+     return (real_t)0;
+ }
+ 

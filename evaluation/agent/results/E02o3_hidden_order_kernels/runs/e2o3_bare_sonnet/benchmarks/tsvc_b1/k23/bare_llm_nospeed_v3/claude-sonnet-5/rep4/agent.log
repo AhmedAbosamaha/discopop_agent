@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : k23.c
+  Model          : claude-sonnet-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] k23.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan The outer `nl` loop is a true sequential dependence: `pb_mix(nl)` mutates `a[0]`, `a[k]`, `b[k]`, `b[LEN_1D-1]`, `c[k]`, `d[k]`, `e[k]` (where `k` depends on `nl`), and the next outer iteration's inner loop reads `c[i]`/`d[i]` at `i == k`. So the outer loop must stay sequential and is left untouched. The inner loop (the one named as "under study") has no such dependence: for each `i` it on
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

@@ -1,0 +1,131 @@
+/* Kernel k31. */
+#include <stdlib.h>
+#include "tsvc_b1/k31.h"
+
+/* Between two repetitions a few INPUT elements change, so no repetition can be skipped,
+ * merged with another or run out of order: the repetition loop is sequential by a true
+ * dependence, and the loop under study is the one inside it. */
+static void pb_mix(int nl)
+{
+  long k = ((long)nl * 7919L + 13L) % LEN_1D;
+  a[k] += (real_t)0.25; b[k] += (real_t)0.25; c[k] += (real_t)0.125;
+  d[k] += (real_t)0.125; e[k] += (real_t)0.25;
+  a[0] += (real_t)0.125; b[LEN_1D-1] += (real_t)0.125;
+}
+
+static real_t kernel_k31(void)
+{
+    /* For a fixed i, the loop body is:
+     *   S1: u[i] += v[i + off] * c[i];
+     *   S2: v[i]  = u[i + far] * d[i] + c[i];
+     * Whether S1 sees this round's freshly produced v[i+off] or the
+     * value v held before this round depends only on the sign of off,
+     * the same way for every i: off<0 means slot i+off was already
+     * written by S2 earlier in this same round (new value); off>=0
+     * means that slot is untouched so far this round (old, round-start
+     * value). Symmetrically, S2's read of u[i+far] is this round's new
+     * u when far<=0 (this includes far==0, since S1 of the same i runs
+     * first), and the round-start u when far>0. u and v are each
+     * written exactly once per round, one element per i, so once a
+     * "new" array has been produced in full by one pass, a later pass
+     * may read any of its elements with no further ordering constraint:
+     * the loop-carried dependence is satisfied by letting the producing
+     * pass run to completion (the implicit barrier at the end of a
+     * "#pragma omp parallel for") before the consuming pass starts, not
+     * by visiting i in a particular order within a pass.
+     *
+     * off and far are fixed for the whole run, so which of the four
+     * sign combinations applies is decided once, outside the
+     * (necessarily sequential, because of pb_mix) repetition loop. */
+    enum { NEEDS_V_THEN_U, NEEDS_U_THEN_V, NEEDS_SNAPSHOT, NEEDS_SEQUENTIAL } plan;
+    if (far > 0 && off < 0)
+        plan = NEEDS_V_THEN_U;      /* S2 only needs old u; S1 needs new v */
+    else if (far <= 0 && off >= 0)
+        plan = NEEDS_U_THEN_V;      /* S1 only needs old v; S2 needs new u */
+    else if (far > 0 && off >= 0)
+        plan = NEEDS_SNAPSHOT;      /* both only need the other's old value */
+    else
+        plan = NEEDS_SEQUENTIAL;    /* both need the other's new value: a
+                                      * genuine cross-array recurrence */
+
+    /* u_old/v_old: round-start copies of u and v. Used only by
+     * NEEDS_SNAPSHOT, where neither array can be safely updated in
+     * place before the other pass has read its untouched contents.
+     * Heap-allocated because LEN_1D can be far larger than the default
+     * build's size. */
+    real_t *u_old = NULL;
+    real_t *v_old = NULL;
+    if (plan == NEEDS_SNAPSHOT) {
+        u_old = (real_t *)malloc(sizeof(real_t) * (size_t)LEN_1D);
+        v_old = (real_t *)malloc(sizeof(real_t) * (size_t)LEN_1D);
+    }
+
+    for (int nl = 0; nl < R; nl++) {
+        switch (plan) {
+        case NEEDS_V_THEN_U:
+            /* Pass 1: v[i] depends only on round-start u, and this pass
+             * never writes u, so every i is independent.
+             * u, v, c, d: shared arrays, each i touches disjoint slots. */
+            #pragma omp parallel for schedule(static) shared(u, v, c, d)
+            for (long i = 1; i < LEN_1D; i++) {
+                v[i] = u[i + far] * d[i] + c[i];
+            }
+            /* Pass 2: v has now been fully produced for this round, so
+             * u[i]'s read of v[i + off] is safe for every i. */
+            #pragma omp parallel for schedule(static) shared(u, v, c)
+            for (long i = 1; i < LEN_1D; i++) {
+                u[i] = u[i] + v[i + off] * c[i];
+            }
+            break;
+        case NEEDS_U_THEN_V:
+            /* Symmetric to the case above. */
+            #pragma omp parallel for schedule(static) shared(u, v, c)
+            for (long i = 1; i < LEN_1D; i++) {
+                u[i] = u[i] + v[i + off] * c[i];
+            }
+            #pragma omp parallel for schedule(static) shared(u, v, c, d)
+            for (long i = 1; i < LEN_1D; i++) {
+                v[i] = u[i + far] * d[i] + c[i];
+            }
+            break;
+        case NEEDS_SNAPSHOT:
+            /* Snapshot copy: u_old/v_old capture the round-start state
+             * before either array is overwritten in place below. */
+            #pragma omp parallel for schedule(static) shared(u, v, u_old, v_old)
+            for (long i = 0; i < LEN_1D; i++) {
+                u_old[i] = u[i];
+                v_old[i] = v[i];
+            }
+            /* Both statements now read only the untouched snapshot
+             * arrays, so every i is independent in each pass. */
+            #pragma omp parallel for schedule(static) shared(u, u_old, v_old, c)
+            for (long i = 1; i < LEN_1D; i++) {
+                u[i] = u_old[i] + v_old[i + off] * c[i];
+            }
+            #pragma omp parallel for schedule(static) shared(v, u_old, c, d)
+            for (long i = 1; i < LEN_1D; i++) {
+                v[i] = u_old[i + far] * d[i] + c[i];
+            }
+            break;
+        case NEEDS_SEQUENTIAL:
+        default:
+            /* Both statements need each other's brand-new value within
+             * the same round: a true recurrence across u and v with no
+             * constant-size independent restructuring, so it stays
+             * serial (no pragma -- this branch is not expected to be
+             * the one this kernel's fixed off/far land in). */
+            for (long i = 1; i < LEN_1D; i++) {
+                u[i] += v[i + off] * c[i];
+                v[i] = u[i + far] * d[i] + c[i];
+            }
+            break;
+        }
+        pb_mix(nl);
+    }
+
+    free(u_old);
+    free(v_old);
+    return (real_t)0;
+}
+
+PB_MAIN(kernel_k31)

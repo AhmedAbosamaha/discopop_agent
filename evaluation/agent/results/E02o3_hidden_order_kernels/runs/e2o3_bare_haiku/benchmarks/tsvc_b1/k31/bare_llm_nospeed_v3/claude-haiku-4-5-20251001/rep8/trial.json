@@ -13,12 +13,12 @@
     "3",
     "--timing-cflags=-DLARGE_DATASET"
   ],
-  "started_at": "2026-10-03T10:25:09",
+  "started_at": "2026-10-03T18:40:50",
   "host": "rms14562",
   "host_load_start": [
-    4.05029296875,
-    4.30029296875,
-    4.82080078125
+    10.52099609375,
+    9.58544921875,
+    6.85791015625
   ],
   "agent_cmd": [
     "/home/ahmedabosamaha/discopop_agent/venv/bin/python",
@@ -52,10 +52,10 @@
     "--protected-note",
     "`pb_mix(nl)` changes a few input values between two repetitions of the `nl` loop, so the repetitions depend on each other and must run in order; the loop under study is the one inside it. `LEN_1D`, the length of the arrays, is set in the included header: 32000 in the default build, and up to 192000000 in the builds that verify the result."
   ],
-  "agent_s": 11.0,
-  "agent_rc": 1,
+  "agent_s": 76.5,
+  "agent_rc": 0,
   "llm_calls": 1,
-  "llm_call_failures": 1,
+  "llm_call_failures": 0,
   "harness_reasks": 0,
   "harness_discards": 0,
   "explorer_retries": 0,
@@ -79,17 +79,15 @@
   "region_verdicts": {},
   "settle_dropped": 0,
   "llm_usage": {
-    "calls_recorded": 3,
-    "input_tokens": 0,
-    "output_tokens": 0,
-    "cache_read_input_tokens": 0,
-    "cache_creation_input_tokens": 0,
-    "cost_usd": 0.0,
-    "model_seconds": 2.0
+    "calls_recorded": 1,
+    "input_tokens": 26,
+    "output_tokens": 9380,
+    "cache_read_input_tokens": 39577,
+    "cache_creation_input_tokens": 11006,
+    "cost_usd": 0.0745,
+    "model_seconds": 75.5
   },
-  "status": "agent_error",
-  "agent_error": "\n============================================================\n  Bare-LLM baseline \u2014 no DiscoPoP, no gate, one attempt\n============================================================\n  Files          : k31.c\n  Model          : claude-haiku-4-5-20251001\n  Not editable   : main, pb_mix\n  Prompt         : mirror  (speed check off)\n\n\u2502  [bare] Calling claude-haiku-4-5-20251001...\n\u2502  [bare] LLM call failed: Claude Code returned an error result: You've hit your session limit \u00b7 resets 1pm (UTC)\n\n  SUMMARY: 0 file(s) changed  |  the call failed",
-  "source_changed": false,
+  "source_changed": true,
   "protected": [
     "#include \"tsvc_b1/k31.h\"",
     "static void pb_mix(int nl)",
@@ -106,8 +104,8 @@
     "problems": [],
     "applies": true
   },
-  "pragmas_added": 0,
-  "pragmas_in_final": 0,
+  "pragmas_added": 1,
+  "pragmas_in_final": 1,
   "hot_loop": {
     "entry": "kernel_k31",
     "function": "kernel_k31",
@@ -117,21 +115,75 @@
       "v"
     ]
   },
-  "hot_loop_covered": false,
+  "hot_loop_covered": true,
   "hot_loop_coverage": {
     "criterion": "v2 (27 Sep 2026)",
-    "covered": false,
-    "covering": [],
+    "covered": true,
+    "covering": [
+      {
+        "function": "kernel_k31",
+        "line": 18,
+        "directive": "#pragma omp parallel for",
+        "writes": [
+          "u",
+          "v"
+        ]
+      }
+    ],
     "uncounted": [],
     "elsewhere": []
   },
   "candidates_recorded": 0,
-  "outcome": "AGENT_ERROR",
-  "finished_at": "2026-10-03T10:25:20",
+  "verify": {
+    "verify_size": "LARGE",
+    "threads": [
+      6,
+      12
+    ],
+    "repeats": 5,
+    "compiler": "/usr/bin/clang-20",
+    "final_flags": [],
+    "dump_exact": false,
+    "dump_max_rel_err": 0.013112001252830248,
+    "seed": "7",
+    "dump_exact_seeded": false,
+    "dump_seeded_max_rel_err": 0.013435411876865321,
+    "seq_median_s": 1.9858,
+    "seq_kernel_median_s": 1.389803,
+    "timing_basis": "kernel",
+    "par": {
+      "6": {
+        "median_s": 1.0311,
+        "program_speedup": 1.926,
+        "max_rel_err": 5.374695636528731e-06,
+        "kernel_median_s": 0.370636,
+        "kernel_speedup": 3.75,
+        "speedup": 3.75
+      },
+      "12": {
+        "median_s": 1.0117,
+        "program_speedup": 1.963,
+        "max_rel_err": 3.98028986387477e-06,
+        "kernel_median_s": 0.339366,
+        "kernel_speedup": 4.095,
+        "speedup": 4.095
+      }
+    },
+    "digest_max_rel_err": 5.374695636528731e-06,
+    "stable_at_fixed_threads": true,
+    "kernel_program_disagree": false,
+    "digest_seeded_rel_err": 4.117210373927966e-06,
+    "status": "ok",
+    "speed_measurable": true
+  },
+  "verify_s": 24.1,
+  "status": "done",
+  "outcome": "BROKEN",
+  "finished_at": "2026-10-03T18:42:30",
   "host_load_end": [
-    3.88818359375,
-    4.2568359375,
-    4.80078125
+    10.82763671875,
+    9.8720703125,
+    7.25244140625
   ],
   "profile": {
     "wrapper": "discopop_cc",
@@ -155,7 +207,7 @@
   "package_integrity": {
     "before": {
       "checked": "before trial",
-      "at": "2026-10-03T10:25:09",
+      "at": "2026-10-03T18:40:50",
       "prepared_sha256": "1d56d5f5ec75e459692752dd0ce443e099b71e7e131fb8ed47cab72ab68b605c",
       "packager_sha256": "1d56d5f5ec75e459692752dd0ce443e099b71e7e131fb8ed47cab72ab68b605c",
       "harness_sha256": "95fbd2d34527b9fa96560d96294d65a0cb2e7455fe92c2302cbe633a3d656ad8",
@@ -165,7 +217,7 @@
     },
     "after": {
       "checked": "after trial",
-      "at": "2026-10-03T10:25:20",
+      "at": "2026-10-03T18:42:30",
       "prepared_sha256": "1d56d5f5ec75e459692752dd0ce443e099b71e7e131fb8ed47cab72ab68b605c",
       "packager_sha256": "1d56d5f5ec75e459692752dd0ce443e099b71e7e131fb8ed47cab72ab68b605c",
       "harness_sha256": "95fbd2d34527b9fa96560d96294d65a0cb2e7455fe92c2302cbe633a3d656ad8",

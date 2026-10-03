@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : k23.c
+  Model          : claude-opus-5-5
+  Not editable   : main, pb_mix
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-opus-5-5...
+│  [bare] k23.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: I parallelized the inner `i` loop in `kernel_k23` (in `k23.c`) by adding `#pragma omp parallel for schedule(static)`. Nothing else changed. I couldn't compile or run it here. **Why no rewrite was needed:** each iteration `i` reads and writes only element `i` of `u` and `v`, and only reads element `i` of `w`, `c`, `x` and `d`. No value passes from one iteration to the next and no location is shared
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

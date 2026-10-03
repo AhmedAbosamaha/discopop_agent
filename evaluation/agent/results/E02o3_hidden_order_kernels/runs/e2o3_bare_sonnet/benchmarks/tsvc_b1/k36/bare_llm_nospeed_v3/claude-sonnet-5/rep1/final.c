@@ -1,0 +1,60 @@
+/* Kernel k36. */
+#include "tsvc_b1/k36.h"
+
+/* Between two repetitions a few INPUT elements change, so no repetition can be skipped,
+ * merged with another or run out of order: the repetition loop is sequential by a true
+ * dependence, and the loop under study is the one inside it. */
+static void pb_mix(int nl)
+{
+  long k = ((long)nl * 7919L + 13L) % LEN_1D;
+  a[k] += (real_t)0.25; b[k] += (real_t)0.25; c[k] += (real_t)0.125;
+  d[k] += (real_t)0.125; e[k] += (real_t)0.25;
+  a[0] += (real_t)0.125; b[LEN_1D-1] += (real_t)0.125;
+}
+
+static real_t kernel_k36(void)
+{
+    for (int nl = 0; nl < R; nl++) {
+        /* Fission of the original two-statement loop into two independent
+         * sweeps over i. In the original, for a given i, statement 2 reads
+         * u through AT2 *after* statement 1 of the same i has updated u,
+         * and statement 1 reads v through AT1 *before* statement 2 of that
+         * same i has written v. So whichever element AT1(v,i) names was
+         * never touched yet by this sweep when it is read (it is only
+         * written, if at all, by v's own statement, which has not run for
+         * that i yet in sequential order), and whichever element AT2(u,i)
+         * names has already reached its final value for this sweep by the
+         * time it is read in sequential order (u's statement for any index
+         * up to i has already completed). Running all of statement 1 (for
+         * every i) to completion before starting statement 2 (for every i)
+         * reproduces exactly those values: pass 1 leaves v completely
+         * unmodified (so AT1 sees the same, untouched v it would have seen
+         * sequentially) and pass 1 fully finishes writing u before pass 2
+         * reads it through AT2 (so AT2 sees the same fully-updated u it
+         * would have seen sequentially, for same or earlier indices). The
+         * dependence that made this look sequential is a stale value that
+         * must be read before it's overwritten by the same/later work, not
+         * a value that must move forward between arbitrary iterations; the
+         * two passes deliver it in the right order without any per-i
+         * cross-iteration communication remaining within a pass, so each
+         * pass is now independent across i and safe to run in any order or
+         * schedule.
+         * a: unused here; b/e: unused here; c, d: read-only coefficients,
+         * shared; u, v: shared arrays, each pass writes disjoint indices
+         * (one index per iteration) and the only cross-array read (AT1 of
+         * v in pass 1, AT2 of u in pass 2) targets an array that is not
+         * written anywhere in that same pass, so there is no race. */
+        #pragma omp parallel for default(none) shared(u, v, c)
+        for (long i = 1; i < LEN_1D; i++) {
+            u[i] += AT1(v, i) * c[i];
+        }
+        #pragma omp parallel for default(none) shared(u, v, c, d)
+        for (long i = 1; i < LEN_1D; i++) {
+            v[i] = AT2(u, i) * d[i] + c[i];
+        }
+        pb_mix(nl);
+    }
+    return (real_t)0;
+}
+
+PB_MAIN(kernel_k36)

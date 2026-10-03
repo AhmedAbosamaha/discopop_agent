@@ -15,6 +15,7 @@ static void pb_mix(int nl)
 static real_t kernel_k36(void)
 {
     for (int nl = 0; nl < R; nl++) {
+        #pragma omp parallel for schedule(static) shared(u, v, c, d)
         for (long i = 1; i < LEN_1D; i++) {
             u[i] += AT1(v, i) * c[i];
             v[i] = AT2(u, i) * d[i] + c[i];
