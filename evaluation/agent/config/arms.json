@@ -1128,6 +1128,116 @@
         "--prompt-version",
         "3"
       ]
+    },
+    "default_v4": {
+      "ids": [
+        "E1-v5"
+      ],
+      "description": "E1-v5 (4 Oct, the author: \"ok go with recommendation\"): E1-final's agent arm at prompt version 4 (4 Oct: the order statement decided by what carries a flow, read from the profile's call-path states, and every dependence read by its own type \u2014 D11, D12; the wording is version 3's), packaging v5 (suite tsvc_c1: the benchmark's file holds the loop's function alone, one editable file). Otherwise exactly `default_v3`.",
+      "flags": [
+        "--prompt-version",
+        "4"
+      ],
+      "settings": {
+        "budget": 3,
+        "llm_pragmas": false,
+        "require_speedup": true,
+        "hotspots": true,
+        "fast_refresh": false,
+        "restructure_depth": 0,
+        "pragma_arbitration": false,
+        "prompt_version": 4
+      }
+    },
+    "discopop_gate_v4": {
+      "ids": [
+        "E1-v5"
+      ],
+      "description": "E1-v5: DiscoPoP alone (budget 0: no model is called) beside `default_v4` \u2014 the two differ in the budget only. prompt version 4 (4 Oct: the order statement decided by what carries a flow, read from the profile's call-path states, and every dependence read by its own type \u2014 D11, D12; the wording is version 3's), packaging v5 (suite tsvc_c1: the benchmark's file holds the loop's function alone, one editable file).",
+      "flags": [
+        "--budget",
+        "0",
+        "--prompt-version",
+        "4"
+      ],
+      "settings": {
+        "budget": 0,
+        "llm_pragmas": false,
+        "require_speedup": true,
+        "hotspots": true,
+        "fast_refresh": false,
+        "restructure_depth": 0,
+        "prompt_version": 4
+      }
+    },
+    "bare_llm_v4": {
+      "ids": [
+        "E1-v5"
+      ],
+      "description": "E1-v5: the model alone (the mirror, speed check on) with prompt version 4's shared passages (the same as version 3's: D11 and D12 change evidence, which the mirror has none of) \u2014 for Haiku, Sonnet, Opus and Fable on packaging v5.",
+      "runner": "bare_llm",
+      "flags": [
+        "--prompt-version",
+        "4"
+      ]
+    },
+    "full_b1_nospeed_v4": {
+      "ids": [
+        "E2-v5"
+      ],
+      "description": "E2-v5 (4 Oct, the author: \"ok go with recommendation\"): the hidden-order kernels on the clean layout, the agent WITH DiscoPoP's evidence, speed check off \u2014 E2-O3's arm at prompt version 4 (4 Oct: the order statement decided by what carries a flow, read from the profile's call-path states, and every dependence read by its own type \u2014 D11, D12; the wording is version 3's), packaging v5 (suite tsvc_c1: the benchmark's file holds the loop's function alone, one editable file).",
+      "flags": [
+        "--budget",
+        "1",
+        "--no-require-speedup",
+        "--prompt-version",
+        "4"
+      ],
+      "timing_size": "agent",
+      "settings": {
+        "budget": 1,
+        "llm_pragmas": false,
+        "require_speedup": false,
+        "evidence_sections": null,
+        "fast_refresh": false,
+        "prompt_version": 4
+      }
+    },
+    "no_evidence_b1_nospeed_v4": {
+      "ids": [
+        "E2-v5"
+      ],
+      "description": "E2-v5: the agent WITHOUT evidence, speed check off \u2014 `full_b1_nospeed_v4` minus the evidence, on packaging v5.",
+      "flags": [
+        "--budget",
+        "1",
+        "--evidence",
+        "none",
+        "--no-require-speedup",
+        "--prompt-version",
+        "4"
+      ],
+      "timing_size": "agent",
+      "settings": {
+        "budget": 1,
+        "llm_pragmas": false,
+        "require_speedup": false,
+        "evidence_sections": [],
+        "fast_refresh": false,
+        "prompt_version": 4
+      }
+    },
+    "bare_llm_nospeed_v4": {
+      "ids": [
+        "E2-v5"
+      ],
+      "description": "E2-v5: the model alone (mirror, speed off) with prompt version 4's shared passages, on packaging v5.",
+      "runner": "bare_llm",
+      "flags": [
+        "--no-require-speedup",
+        "--prompt-version",
+        "4"
+      ]
     }
   },
   "common_timing_size": "per_kernel",
@@ -1603,6 +1713,68 @@
       ],
       "consequences": [],
       "why": "E1-final's agent arm differs from E1c's in the prompt version only."
+    },
+    "E1-v5": {
+      "arms": [
+        "discopop_gate_v4",
+        "default_v4"
+      ],
+      "variable": [
+        "budget"
+      ],
+      "consequences": [],
+      "why": "THE MAIN COMPARISON on the clean layout: DiscoPoP alone vs DiscoPoP + agent; budget 0 means no model is called, everything else identical."
+    },
+    "E1-v5-bare": {
+      "arms": [
+        "default_v4",
+        "bare_llm_v4"
+      ],
+      "variable": [
+        "runner"
+      ],
+      "consequences": [],
+      "check": "runner",
+      "agent": "default_v4",
+      "why": "E1-v5: the model alone (Haiku, Sonnet, Opus, Fable) beside the agent, both told the speed goal."
+    },
+    "E1-v5-vs-E1-final": {
+      "arms": [
+        "default_v3",
+        "default_v4"
+      ],
+      "variable": [
+        "prompt_version"
+      ],
+      "consequences": [],
+      "why": "E1-v5's agent arm differs from E1-final's in the prompt version only (the packaging is the run's, not the arm's)."
+    },
+    "E2-v5": {
+      "arms": [
+        "discopop_capability",
+        "no_evidence_b1_nospeed_v4",
+        "full_b1_nospeed_v4"
+      ],
+      "variable": [
+        "evidence_sections",
+        "budget",
+        "prompt_version"
+      ],
+      "consequences": [],
+      "why": "E2-v5: the evidence contrast under prompt version 4 on the clean layout, speed check off in every arm, DiscoPoP alone beside it (as E2-V3 and E2-O3)."
+    },
+    "E2-v5-bare": {
+      "arms": [
+        "full_b1_nospeed_v4",
+        "bare_llm_nospeed_v4"
+      ],
+      "variable": [
+        "runner"
+      ],
+      "consequences": [],
+      "check": "runner",
+      "agent": "full_b1_nospeed_v4",
+      "why": "E2-v5: the model alone beside the agent, both with the speed check off."
     }
   }
 }

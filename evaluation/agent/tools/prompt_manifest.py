@@ -58,14 +58,36 @@ def _fixture_meta(name: str) -> Dict[str, Any]:
     return dict(json.loads((FIXTURES / name / "fixture.json").read_text()))
 
 
-def _evidence(dp: Path, src: Path, exclude: Tuple[str, ...], line: int = 0) -> Tuple[Any, Any]:
+def _project_flags(root: Path, project: Optional[Dict[str, Any]]) -> List[str]:
+    """The agent's flags for a multi-file fixture (packaging v5: `units`, and the ONE `editable` file)."""
+    if not project:
+        return []
+    return ["--project-dir", str(root), "--project-units", ",".join(project["units"]), "--project-include", ".",
+            *(["--project-editable", ",".join(project["editable"])] if project.get("editable") else [])]
+
+
+def _activate(root: Path, project: Optional[Dict[str, Any]], src: Optional[Path] = None) -> None:
+    """Make the fixture's project the agent's active one (or none): the evidence and the request read it."""
+    from discopop_agent import project as project_mod
+    project_mod.activate(None)
+    if project:
+        project_mod.activate(project_mod.Project.discover(root, units=project["units"], include_dirs=["."],
+                                                          editable=project.get("editable")))
+        if src is not None:
+            project_mod.set_focus(str(src))
+
+
+def _evidence(dp: Path, src: Path, exclude: Tuple[str, ...], line: int = 0,
+              project: Optional[Dict[str, Any]] = None) -> Tuple[Any, Any]:
     """(candidate, evidence) for the fixture's region: the first Tier-2 loop in the agent's rank order
     (as the evidence pilot picks it), or the loop starting at `line`."""
     from discopop_agent.args import parse_args
     from discopop_agent.evidence import assemble
     from discopop_agent.plan import build_candidates
+    _activate(src.parent, project, src)
     saved = sys.argv
-    sys.argv = ["x", "--discopop-dir", str(dp), "--source-file", str(src), "--min-runtime-share", "0"]
+    sys.argv = ["x", "--discopop-dir", str(dp), *(_project_flags(src.parent, project) or ["--source-file", str(src)]),
+                "--min-runtime-share", "0"]
     try:
         with contextlib.redirect_stdout(io.StringIO()):
             args = parse_args()
@@ -81,25 +103,38 @@ def _evidence(dp: Path, src: Path, exclude: Tuple[str, ...], line: int = 0) -> T
         return loops[0], assemble(loops[0], dp / "profiler", FIRST_REASON)
 
 
-def capture(name: str, origin: Path, src_name: str, exclude: Tuple[str, ...], line: int) -> None:
-    """Copy `origin`/SRC and the profile files the agent reads into tools/fixtures/prompt/NAME."""
+def capture(name: str, origin: Path, src_name: str, exclude: Tuple[str, ...], line: int,
+            project: Optional[Dict[str, Any]] = None) -> None:
+    """Copy `origin`/SRC and the profile files the agent reads into tools/fixtures/prompt/NAME. A multi-file
+    fixture (`project`) keeps every source and header of the program as well."""
     opened: Set[str] = set()
-    root = str(origin.resolve())
+    origin = origin.resolve()
+    root = str(origin)
 
     def hook(event: str, args: Tuple[Any, ...]) -> None:
         if event == "open" and isinstance(args[0], (str, Path)) and str(Path(args[0]).resolve()).startswith(root):
             opened.add(str(Path(args[0]).resolve()))
     sys.addaudithook(hook)
-    cand, ev = _evidence(origin / ".discopop", origin / src_name, exclude, line)
+    cand, ev = _evidence(origin / ".discopop", origin / src_name, exclude, line, project)
+    _activate(origin, None)
     dest = FIXTURES / name
     shutil.rmtree(dest, ignore_errors=True)
+    if project:
+        opened |= {str(p) for p in origin.iterdir() if p.suffix in (".c", ".h", ".cpp", ".hpp")}
+        opened.add(str(origin / ".discopop" / "FileMapping.txt"))
     files = sorted(p for p in opened if Path(p).is_file())
     for p in files:
         rel = Path(p).relative_to(origin.resolve())
         (dest / rel).parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(p, dest / rel)
     shutil.copy2(origin / src_name, dest / src_name)
+    if project:
+        # FileMapping names files by absolute path: the fixture's names its own copies (by file name)
+        fm = dest / ".discopop" / "FileMapping.txt"
+        fm.write_text("".join(f"{l.split()[0]}\t{Path(l.split(None, 1)[1].strip()).name}\n"
+                              for l in fm.read_text().splitlines() if l.strip()))
     (dest / "fixture.json").write_text(json.dumps({
+        **({"project": project} if project else {}),
         "source": src_name, "exclude_functions": list(exclude), "region_line": cand.region.start_line,
         "origin": str(origin.resolve().relative_to(REPO)) if origin.resolve().is_relative_to(REPO) else str(origin),
         "files": [str(Path(p).relative_to(origin.resolve())) for p in files]}, indent=1) + "\n")
@@ -107,21 +142,49 @@ def capture(name: str, origin: Path, src_name: str, exclude: Tuple[str, ...], li
           + ", ".join(str(Path(p).relative_to(origin.resolve())) for p in files))
 
 
+def _locate(d: Path) -> None:
+    """A multi-file fixture's FileMapping holds file NAMES (it is tracked in git); the agent reads absolute
+    paths — written here, into a copy the fixture's own file is never touched for."""
+    fm = d / ".discopop" / "FileMapping.txt"
+    lines = [l.split(None, 1) for l in fm.read_text().splitlines() if l.strip()]
+    if any(not Path(p.strip()).is_absolute() for _i, p in lines):
+        fm.write_text("".join(f"{i}\t{(d / Path(p.strip()).name)}\n" for i, p in lines))
+
+
+def _fixture_dir(name: str) -> Path:
+    """The fixture as the agent can read it: itself, or — multi-file — a scratch copy with located paths."""
+    d = FIXTURES / name
+    if not _fixture_meta(name).get("project"):
+        return d
+    import tempfile
+    scratch = Path(tempfile.gettempdir()) / "dp_prompt_fixtures" / name
+    shutil.rmtree(scratch, ignore_errors=True)
+    shutil.copytree(d, scratch)
+    _locate(scratch)
+    return scratch
+
+
 def fixture_evidence(name: str) -> Tuple[Any, Any]:
     m = _fixture_meta(name)
-    d = FIXTURES / name
-    return _evidence(d / ".discopop", d / m["source"], tuple(m["exclude_functions"]), int(m["region_line"]))
+    d = _fixture_dir(name)
+    try:
+        return _evidence(d / ".discopop", d / m["source"], tuple(m["exclude_functions"]), int(m["region_line"]),
+                         m.get("project"))
+    finally:
+        _activate(d, None)
 
 
 # ---- rendering, with each arm's own runner code -------------------------------------------------
 
-def _agent_args(spec: Dict[str, Any], dp: Path, src: Path) -> Any:
+def _agent_args(spec: Dict[str, Any], dp: Path, src: Path, project: Optional[Dict[str, Any]] = None) -> Any:
     import cli
     from discopop_agent.args import parse_args
-    argv = ["x", "--discopop-dir", str(dp), "--source-file", str(src), *cli._common_flags(),
-            *spec.get("flags", []), *cli._timing_flags(spec, BENCH),
-            *cli._evidence_file_flags(spec, BENCH, None, "", ""), "--edit-mode", "direct",
-            *[x for p in PROTECTED for x in ("--protected-line", p)], "--protected-note", PROTECTED_NOTE]
+    # a multi-file fixture (packaging v5) has no protected line: nothing of the harness is in the model's file
+    protected = [] if project else [*[x for p in PROTECTED for x in ("--protected-line", p)],
+                                    "--protected-note", PROTECTED_NOTE]
+    argv = ["x", "--discopop-dir", str(dp), *(_project_flags(src.parent, project) or ["--source-file", str(src)]),
+            *cli._common_flags(), *spec.get("flags", []), *cli._timing_flags(spec, BENCH),
+            *cli._evidence_file_flags(spec, BENCH, None, "", ""), "--edit-mode", "direct", *protected]
     saved = sys.argv
     sys.argv = argv
     try:
@@ -163,11 +226,22 @@ def _flag(flags: List[str], name: str, default: str) -> str:
 
 def render(arm: str, spec: Dict[str, Any], fixture: str, ev: Any) -> Dict[str, str]:
     """{'system', 'request'[, 'feedback']} for one arm on one fixture."""
-    d = FIXTURES / fixture
     m = _fixture_meta(fixture)
+    project = m.get("project")
+    d = Path(ev.source_file).parent if project else FIXTURES / fixture      # a multi-file fixture's located copy
     src = d / m["source"]
     ws = Path("/workspace") / m["source"]
     runner = spec.get("runner")
+    _activate(d, project, src)
+    try:
+        return _render(arm, spec, m, d, src, ws, runner, ev)
+    finally:
+        _activate(d, None)
+
+
+def _render(arm: str, spec: Dict[str, Any], m: Dict[str, Any], d: Path, src: Path, ws: Path, runner: Any,
+            ev: Any) -> Dict[str, str]:
+    project = m.get("project")
     if runner == "bare_llm":
         from discopop_agent import bare_llm
         flags = list(spec.get("flags", []))
@@ -178,11 +252,16 @@ def render(arm: str, spec: Dict[str, Any], fixture: str, ev: Any) -> Dict[str, s
         except TypeError:
             gate = bare_llm.mirror_gate(speed)
         excl = list(m["exclude_functions"])
+        if project and project.get("editable") and prompt == "mirror":
+            # packaging v5: the model alone's ONE file, the agent's sentence about it, no list of functions
+            read_only = [u for u in project["units"] if u not in project["editable"]]
+            return {"system": bare_llm._system(prompt, gate, one_file=True),
+                    "request": bare_llm._request_mirror(list(project["editable"]), [], (), "", gate, read_only)}
         request = (bare_llm._request_mirror([m["source"]], excl, PROTECTED, PROTECTED_NOTE, gate) if prompt == "mirror"
                    else {"minimal": bare_llm._request_minimal, "contract": bare_llm._request}[prompt]([m["source"]], excl))
         return {"system": bare_llm._system(prompt, gate), "request": request}
     from discopop_agent.llm.request import _build_direct_prompt
-    args = _agent_args(spec, d / ".discopop", src)
+    args = _agent_args(spec, d / ".discopop", src, project)
     if runner == "twin":
         from discopop_agent import twin
         gate = _gate(args, as_shipped=False)
@@ -215,7 +294,10 @@ def render_all() -> Dict[str, Any]:
         per: Dict[str, str] = {}
         for f in fixtures:
             texts = render(arm, spec, f, evs[f])
-            per["system"] = _h(texts["system"])          # the same on every fixture
+            if _fixture_meta(f).get("project"):
+                per[f"system:{f}"] = _h(texts["system"])     # the model alone's differs in one sentence there
+            else:
+                per["system"] = _h(texts["system"])          # the same on every one-file fixture
             for part, text in texts.items():
                 if part != "system":
                     per[f"{part}:{f}"] = _h(text)
@@ -238,7 +320,8 @@ def changed(old: Dict[str, Any], new: Dict[str, Any]) -> Dict[str, List[str]]:
         if a is None or b is None:
             out[arm] = ["(arm added)" if a is None else "(arm removed)"]
             continue
-        parts = sorted(k for k in set(a) | set(b) if a.get(k) != b.get(k))
+        added = set(new.get("fixtures", {})) - set(old.get("fixtures", {}))
+        parts = sorted(k for k in set(a) | set(b) if a.get(k) != b.get(k) and k.split(":", 1)[-1] not in added)
         if parts:
             out[arm] = parts
     return out
@@ -253,6 +336,8 @@ def main() -> int:
     c.add_argument("src")
     c.add_argument("--exclude", default="main", help="comma list of functions out of scope")
     c.add_argument("--line", type=int, default=0, help="the region's first line (default: the first Tier-2 loop)")
+    c.add_argument("--project-units", default="", help="a multi-file fixture: its translation units, comma list")
+    c.add_argument("--editable", default="", help="... and the ONE file a model's changes are taken from")
     b = sub.add_parser("build")
     b.add_argument("--agent-root", type=Path, default=None, help="render with the agent code of this checkout")
     d = sub.add_parser("diff")
@@ -266,7 +351,9 @@ def main() -> int:
     a = ap.parse_args()
     _import_agent(getattr(a, "agent_root", None))
     if a.cmd == "capture":
-        capture(a.name, a.dir, a.src, tuple(x for x in a.exclude.split(",") if x), a.line)
+        project = ({"units": [u for u in a.project_units.split(",") if u],
+                    **({"editable": [a.editable]} if a.editable else {})} if a.project_units else None)
+        capture(a.name, a.dir, a.src, tuple(x for x in a.exclude.split(",") if x), a.line, project)
         return 0
     if a.cmd == "show":
         texts = render(a.arm, _arms()[a.arm], a.fixture, fixture_evidence(a.fixture)[1])
@@ -283,6 +370,9 @@ def main() -> int:
     old = json.loads(MANIFEST.read_text())
     diff = changed(old, new)
     print(f"manifest built from {old.get('built_from')}; rendered now from {new['built_from']}")
+    fresh = sorted(set(new.get("fixtures", {})) - set(old.get("fixtures", {})))
+    if fresh:
+        print(f"  fixture(s) not in the manifest yet (no arm's text is compared on them): {', '.join(fresh)}")
     for arm, parts in diff.items():
         print(f"  changed  {arm}: {', '.join(parts)}")
     if not diff:
