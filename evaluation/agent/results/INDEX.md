@@ -307,8 +307,8 @@ Status: pre-flight
 
 | run | where | what it is | status | trials | outcomes |
 |---|---|---|---|---:|---|
-| `t0_17_server_a` | not archived yet | T0.17 draw a, server (LLVM 20), no model: tools/layout_equivalence.py — tsvc_b1 (packaging v4) against tsvc_c2 (v6), 42 loops: output, DiscoPoP's view of the loop under study, the order statement; sequential time at LARGE | registered |  |  |
-| `t0_17_server_b` | not archived yet | T0.17 draw b, server, no model: the same comparison on a second profile of each layout (no timing) | registered |  |  |
+| `t0_17_server_a` | [`T0_instruments/T0.17_repetition_loop_inside/checks/t0_17_server_a/`](T0_instruments/T0.17_repetition_loop_inside/checks/t0_17_server_a/) | T0.17 draw a, server (LLVM 20), no model: tools/layout_equivalence.py — tsvc_b1 (packaging v4) against tsvc_c2 (v6), 42 loops: output, DiscoPoP's view of the loop under study, the order statement | valid | 0 |  |
+| `t0_17_server_b` | [`T0_instruments/T0.17_repetition_loop_inside/checks/t0_17_server_b/`](T0_instruments/T0.17_repetition_loop_inside/checks/t0_17_server_b/) | T0.17 draw b, server, no model: the same comparison on a second profile of each layout (no timing) | valid | 0 |  |
 | `t0_1_c2_sizes` | [`T0_instruments/T0.17_repetition_loop_inside/preflight/t0_1_c2_sizes/`](T0_instruments/T0.17_repetition_loop_inside/preflight/t0_1_c2_sizes/) | T0.1 on packaging v6, server, no model: size_table.py on the 44 tsvc_c2 packages, NUMA node 0 — the sizes are measured on the new packages | valid | 0 |  |
 | `t0_11_c2_a` | not archived yet | T0.11 on packaging v6, draw a, server, no model: arm discopop_capability on the 44 tsvc_c2 packages — the measured class of every loop in this packaging | registered |  |  |
 | `t0_11_c2_b` | not archived yet | T0.11 on packaging v6, draw b, server, no model: arm discopop_capability on the 44 tsvc_c2 packages — the measured class of every loop in this packaging | registered |  |  |
