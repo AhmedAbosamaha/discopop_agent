@@ -1247,6 +1247,141 @@ V5_NEW: List[Loop] = [
 SUITES[V5_SUITE] = [_as_v5(l) for l in B1_LOOPS if l.name not in V5_LEFT_OUT] + V5_NEW
 
 
+# ---- packaging v6 (the author, 4 Oct 2026, evening; record §6; T0.17): v5 with the repetition loop where
+# TSVC has it ---------------------------------------------------------------------------------------------
+# The author, on what v5 costs: "I do not like that this solution make the speed up worse … the tmp array is
+# also a problem". In v5 the function is ONE repetition and main.c calls it R times, so a temporary array that
+# a solution obtains inside the function is obtained — and its pages are faulted in — on every call: the
+# expert references written that ordinary way (malloc at the top, free at the end) fall from 1.4–2.5× to
+# 0.4–1.0× (T0.17). TSVC's own function holds its repetition loop, with a call of TSVC's `dummy` between two
+# repetitions (tsvc.c; dummy.c: "called in each loop to make all computations appear required"). v6 gives the
+# function back in that form:
+#   <name>.c   `#include "data.h"` and the loop's function — the repetition loop (`nl < iterations`), TSVC's
+#              loop text inside it, `dummy(a, b, c, d, e);` after it. No comment, no `pb_` name. The ONLY file
+#              a model's changes are taken from.
+#   data.h     as v5's, plus `#define iterations N` and the prototype of `dummy`.
+#   main.c     ours: `dummy` — the change of a few input values between two repetitions that `pb_mix` made,
+#              counted by its own calls — and `main`: set-up, the timer, ONE call of the function. Inside the
+#              package for v5's reasons: DiscoPoP has to instrument both to follow the call path and to see
+#              that the repetitions depend on each other.
+# Everything else is v5's: the measurement header outside the package, no note, no protected line, one
+# editable file. The program is v4's and v5's, statement for statement (validated byte for byte). What comes
+# back with the loop: a solution may do work once, in front of the repetitions — and may get the repetitions
+# wrong, which the output check catches as it catches any wrong program.
+V6_SUITE = "tsvc_c2"
+V6_CALL = "        dummy(a, b, c, d, e);"
+V6_PROTO = "int dummy(real_t *, real_t *, real_t *, real_t *, real_t *);"
+V6_LOOP = "    for (int nl = 0; nl < iterations; nl++) {"
+
+
+def render_v6_header(loop: Loop) -> str:
+    """data.h (v6): v5's declarations, the number of repetitions and the prototype of `dummy`."""
+    text = render_v5_header(loop)
+    text = _exact(text, "\n\ntypedef double real_t;", f"\n#define iterations {loop.reps}\n\ntypedef double real_t;")
+    return _exact(text, f"\nreal_t kernel_{loop.name}(", f"\n{V6_PROTO}\nreal_t kernel_{loop.name}(")
+
+
+def _v6_expert_body(loop: Loop) -> Tuple[str, str]:
+    """(function body, the standard headers it needs) of the expert reference with the repetition loop inside
+    the function: v4's text. Its scratch vector — the harness's `pb_tmp` in v4 — is the function's own,
+    obtained once in front of the repetitions and released after them, as an ordinary solution does it."""
+    body = _exact(loop.expert or "", "    for (int nl = 0; nl < R; nl++) {", V6_LOOP)
+    body = _exact(body, "        pb_mix(nl);", V6_CALL).rstrip("\n")
+    includes = ""
+    if "pb_tmp" in body:
+        if re.search(r"\btmp\b", body):
+            raise ValueError(f"{loop.name}: the expert reference already uses the name `tmp`")
+        lines = body.replace("pb_tmp", "tmp").split("\n")
+        last = max(i for i, l in enumerate(lines) if l.strip().startswith("return "))
+        lines.insert(last, "    free(tmp);")
+        body = "    real_t *tmp = (real_t *)malloc((size_t)LEN_1D * sizeof(real_t));\n" + "\n".join(lines)
+        includes += "#include <stdlib.h>\n"
+    if "omp_get" in body:
+        includes += "#include <omp.h>\n"
+    return body, includes
+
+
+def render_v6_kernel(loop: Loop, expert: bool = False) -> str:
+    """The benchmark's own file (v6) — or, with `expert`, the reference solution as the same file."""
+    _category, decls, rep, ret = _loop_function(loop)
+    kernel_globals = "" if _is_harness_global(loop.globals_) else _no_comments(loop.globals_)
+    param = V5_PARAMS.get(loop.name, ("void", ""))[0]
+    if expert:
+        if loop.expert is None:
+            raise ValueError(f"{loop.name}: no expert reference (class {loop.expected})")
+        body, includes = _v6_expert_body(loop)
+    else:
+        pre = "\n".join(l for l in loop.pre.splitlines() if "pb_" not in l)      # a harness binding is the parameter
+        body = "\n".join(x for x in (_no_comments(pre), _no_comments(decls), V6_LOOP, _no_comments(rep), V6_CALL,
+                                     "    }", f"    return {ret};") if x)
+        includes = "#include <stdlib.h>\n" if re.search(r"\bexit\s*\(", rep) else ""     # s481 calls exit()
+    return (includes + f'#include "{V5_HEADER}"\n' + ("\n" + kernel_globals + "\n" if kernel_globals else "")
+            + f"\nreal_t kernel_{loop.name}({param})\n{{\n" + body + "\n}\n")
+
+
+def render_v6_main(loop: Loop) -> str:
+    """main.c (v6): ours, inside the package so that DiscoPoP instruments it; no comment — a model can read
+    it. `dummy` is `pb_mix`'s body on its own arguments, the repetition counted by a counter of its own."""
+    mix = [l for l in PB_MIX.strip("\n").splitlines() if not l.lstrip().startswith(("/*", "*"))]
+    if mix[:2] != ["static void pb_mix(int nl)", "{"] or mix[-1] != "}":
+        raise ValueError("PB_MIX is not `static void pb_mix(int nl) { … }` any more")
+    body = "\n".join(mix[2:-1])
+    body = _exact(body, "  long k = ((long)nl * 7919L + 13L) % LEN_1D;", "  long k = (n * 7919L + 13L) % LEN_1D;")
+    arg = V5_PARAMS.get(loop.name, ("", ""))[1]
+    return (f'#include "{V5_HEADER}"\n#include "{loop.suite}/{loop.name}.h"\n\n'
+            "int dummy(real_t *a, real_t *b, real_t *c, real_t *d, real_t *e)\n{\n"
+            "  static long n = 0;\n" + body + "\n  n++;\n  return 0;\n}\n\n"
+            "int main(int argc, char** argv)\n{\n"
+            "  if (pb_setup(argc, argv)) return 1;\n"
+            "  pb_timer_start();\n"
+            f"  real_t pb_result = kernel_{loop.name}({arg});\n"
+            "  pb_timer_stop();\n"
+            "  pb_finish(pb_result);\n"
+            "  return 0;\n}\n")
+
+
+def render_v6_harness(loop: Loop) -> str:
+    """The measurement header outside the package (v6): v5's without the repetition count, which is data.h's."""
+    text = render_v5_harness(loop)
+    text = _exact(text, f"harness for {loop.name} (packaging v5)", f"harness for {loop.name} (packaging v6)")
+    return _exact(text, f"\n#define R {loop.reps}\n", "\n")
+
+
+def v6_files(loop: Loop) -> Dict[str, str]:
+    """The package's files (v6), by name."""
+    return {f"{loop.name}.c": render_v6_kernel(loop), V5_HEADER: render_v6_header(loop), V5_MAIN: render_v6_main(loop)}
+
+
+def hot_loop_v6(loop: Loop) -> Dict[str, Any]:
+    """meta.json's `hot_loop` (v6): the first `for` of the function that holds the loop under study that is
+    not the repetition loop, and what it writes, checked against the writes declared by hand."""
+    entry = f"kernel_{loop.name}"
+    hot = hot_loop_coverage.describe(render_v6_kernel(loop), entry, loop.hot_function or entry)
+    if hot["writes"] != sorted(loop.hot_writes):
+        raise ValueError(f"{loop.name}: the hot loop at line {hot['line']} writes {hot['writes']}, "
+                         f"declared {sorted(loop.hot_writes)} — read the loop again")
+    if loop.hot_aliases:
+        hot["aliases"] = sorted(loop.hot_aliases)
+    return hot
+
+
+def _as_v6(loop: Loop) -> Loop:
+    """A loop of the v5 suite as a loop of the v6 suite: the same record under the other suite's name."""
+    c = copy.copy(loop)
+    c.suite = V6_SUITE
+    return c
+
+
+# The v6 suite: the v5 suite's 44 loops, each in the other form.
+SUITES[V6_SUITE] = [_as_v6(l) for l in SUITES[V5_SUITE]]
+# the clean layouts, by suite: (generator version, the package's files, the header outside it, the reference,
+# meta.json's hot loop, the functions of main.c)
+CLEAN: Dict[str, Tuple[int, Any, Any, Any, Any, List[str]]] = {
+    V5_SUITE: (5, v5_files, render_v5_harness, render_v5_kernel, hot_loop_v5, ["main", "pb_mix"]),
+    V6_SUITE: (6, v6_files, render_v6_harness, render_v6_kernel, hot_loop_v6, ["main", "dummy"]),
+}
+
+
 # ---- packaging v3, kept verbatim: every run up to E2 used it, and it stays the default until T0.15 ---------
 # shows v4 leaves DiscoPoP's view of every loop unchanged (it does not yet: s211, 25 Sep).
 V3_HEADER = """/* Generated by agent/tools/prepare_tsvc.py (v%(version)d) — do not edit by hand.
@@ -1518,20 +1653,21 @@ def validate_v5(loop: Loop, package: Path, reference: Optional[Path]) -> List[st
 
 
 def write_v5(loop: Loop, out: Path, harness_root: Path, refs: Path, check: bool) -> Tuple[List[str], bool]:
-    """One v5 package: its three files, the header outside it, the reference, meta.json. Returns
-    (validation problems, validated)."""
+    """One package of a clean layout (v5, v6 — by the loop's suite): its three files, the header outside it,
+    the reference, meta.json. Returns (validation problems, validated)."""
+    version, files_of, harness_of, kernel_of, hot_of, ours = CLEAN[loop.suite]
     d = out / loop.name
     shutil.rmtree(d, ignore_errors=True)
     d.mkdir(parents=True)
-    files = v5_files(loop)
+    files = files_of(loop)
     for fname, text in files.items():
         (d / fname).write_text(text)
     hdr = harness_root / loop.suite / f"{loop.name}.h"
-    hdr.write_text(render_v5_harness(loop))
+    hdr.write_text(harness_of(loop))
     ref: Optional[Path] = None
     if loop.expert is not None:
         ref = refs / f"{loop.name}.c"
-        ref.write_text(render_v5_kernel(loop, expert=True))
+        ref.write_text(kernel_of(loop, expert=True))
     (d / "meta.json").write_text(json.dumps({
         "suite": loop.suite, "kernel": loop.name,
         "source": (loop.source or ("constructed: ORDER-2 (THESIS_EXPERIMENTS §6, 28 Sep; tools/evidence_pilot.py)"
@@ -1544,11 +1680,11 @@ def write_v5(loop: Loop, out: Path, harness_root: Path, refs: Path, check: bool)
         "reference_solution": (str(ref.relative_to(HARNESS_ROOT)) if ref.is_relative_to(HARNESS_ROOT)
                                else str(ref)) if ref else None,
         # the functions of main.c: nothing in them is the benchmark's (the agent's queue leaves them out)
-        "exclude_functions": ["main", "pb_mix"],
+        "exclude_functions": ours,
         "harness": f"{loop.suite}/{loop.name}.h",
         "harness_sha256": hashlib.sha256(hdr.read_bytes()).hexdigest(),
-        "hot_loop": hot_loop_v5(loop),
-        "agent_dataset": "SMALL", "generator_version": 5,
+        "hot_loop": hot_of(loop),
+        "agent_dataset": "SMALL", "generator_version": version,
         "inputs_sha256": hashlib.sha256(TSVC.read_bytes()).hexdigest(),
         "output_sha256": v5_digest(files),
     }, indent=2) + "\n")
@@ -1564,16 +1700,20 @@ def main() -> int:
                          "package, D39); builds find them through CPATH (harness_include.py)")
     ap.add_argument("--references-out", type=Path, default=REFERENCES,
                     help="where the expert references go (default: the tracked agent/reference_solutions/tsvc)")
-    ap.add_argument("--layout", choices=("v3", "v4", "v5"), default="v3",
+    ap.add_argument("--layout", choices=("v3", "v4", "v5", "v6"), default="v3",
                     help="v3 (default): the one-file layout of E1 and E2; v4 (D39): the measurement in a "
                          "header outside the package — E2-B1 to E2-O3; v5 (the author, 4 Oct): the benchmark's "
-                         "file holds only the loop's function, `main` in a second file (suite tsvc_c1)")
+                         "file holds only the loop's function, `main` in a second file (suite tsvc_c1); v6 (4 Oct, "
+                         "evening): v5 with the repetition loop inside the function, as TSVC has it (suite tsvc_c2)")
     ap.add_argument("--suite", choices=sorted(SUITES), default="tsvc",
-                    help="which loops: `tsvc` (E1-E2, v3 or v4), `tsvc_b1` (v4 only) or `tsvc_c1` (v5 only)")
+                    help="which loops: `tsvc` (E1-E2, v3 or v4), `tsvc_b1` (v4 only), `tsvc_c1` (v5 only) or "
+                         "`tsvc_c2` (v6 only)")
     ap.add_argument("--validate", action="store_true")
     a = ap.parse_args()
-    if (a.suite == V5_SUITE) != (a.layout == "v5"):
-        ap.error(f"layout v5 and suite {V5_SUITE} go together")
+    for layout, suite in (("v5", V5_SUITE), ("v6", V6_SUITE)):
+        if (a.suite == suite) != (a.layout == layout):
+            ap.error(f"layout {layout} and suite {suite} go together")
+    clean = a.layout in ("v5", "v6")
     if a.suite == "tsvc_b1" and a.layout != "v4":
         ap.error(f"--suite {a.suite} is packaged in layout v4 only")
     loops = SUITES[a.suite]
@@ -1583,16 +1723,16 @@ def main() -> int:
         ap.error(f"not in suite {a.suite}: {', '.join(unknown)}")
     harness_root = (a.harness_out or a.out.parent / "_harness").resolve()
     refs: Path = a.references_out
-    if a.layout == "v5" and refs == REFERENCES:
-        refs = REFERENCES.parent / V5_SUITE          # a reference is the benchmark's FILE of this layout
+    if clean and refs == REFERENCES:
+        refs = REFERENCES.parent / a.suite           # a reference is the benchmark's FILE of this layout
     # The validation builds must find the headers exactly as every other build does.
     os.environ["CPATH"] = os.pathsep.join([str(harness_root)] + [p for p in os.environ.get("CPATH", "").split(os.pathsep) if p])
     failed = 0
     refs.mkdir(parents=True, exist_ok=True)
-    if a.layout in ("v4", "v5"):
+    if a.layout == "v4" or clean:
         (harness_root / a.suite).mkdir(parents=True, exist_ok=True)
     for loop in [by_name[n] for n in a.names] if a.names else loops:
-        if a.layout == "v5":
+        if clean:
             problems, checked = write_v5(loop, a.out, harness_root, refs, a.validate)
             failed += bool(problems)
             note = ("  OK" if not problems else "  FAILED: " + "; ".join(problems)) if checked else ""

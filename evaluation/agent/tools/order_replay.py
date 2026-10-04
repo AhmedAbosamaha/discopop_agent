@@ -98,9 +98,15 @@ def _extract(src: Path, dest: Path) -> Path:
     return root
 
 
-def _statements(work: Path, name: str, version: int) -> Dict[str, Any]:
+# the repetition loop's header: v4's (`nl < R`) and v6's, where it is the function's own as in TSVC
+REPETITION = ("nl < R", "nl < iterations")
+
+
+def _statements(work: Path, name: str, version: int, repetition_loop: bool = False) -> Dict[str, Any]:
     """The order statement of every candidate of the loop under study, under one prompt version: a set of
-    ("order", first text, second text, variable) and ("mutual", text, text)."""
+    ("order", first text, second text, variable) and ("mutual", text, text). With `repetition_loop`, the
+    statement of the repetition loop's own candidate is read too — in packaging v4 and v6 that loop is the
+    agent's FIRST region, and what its request says about the statements inside has to be as true."""
     dp = work / ".discopop"
     project = (work / "main.c").exists()
     project_mod.activate(None)
@@ -114,7 +120,7 @@ def _statements(work: Path, name: str, version: int) -> Dict[str, Any]:
     else:
         argv = ["--source-file", str(work / f"{name}.c")]
     old = sys.argv
-    sys.argv = ["x", "--discopop-dir", str(dp), *argv, "--exclude-functions", "main,pb_mix",
+    sys.argv = ["x", "--discopop-dir", str(dp), *argv, "--exclude-functions", "main,pb_mix,dummy",
                 "--min-runtime-share", "0.01", "--prompt-version", str(version)]
     try:
         args = parse_args()
@@ -128,8 +134,9 @@ def _statements(work: Path, name: str, version: int) -> Dict[str, Any]:
         found: set = set()
         for c in cands:
             lines = Path(c.source_file).read_text().splitlines()
-            if "nl < R" in (lines[c.region.start_line - 1] if c.region.start_line <= len(lines) else ""):
-                continue                                   # v4's repetition loop: measurement, not the loop under study
+            head = lines[c.region.start_line - 1] if c.region.start_line <= len(lines) else ""
+            if any(r in head for r in REPETITION) and not repetition_loop:
+                continue                                   # the repetition loop: measurement, not the loop under study
             ev = assemble(c, dp / "profiler", "")
             note = order_statement(ev, frozenset(PROMPT_VERSIONS[version]))
             for b in (l.strip() for l in note.splitlines() if l.strip().startswith("- ")):
@@ -181,6 +188,9 @@ def main() -> int:
     ap.add_argument("--versions", default="3,4", help="prompt versions to replay (default 3,4)")
     ap.add_argument("--check", default="4", help="versions that must agree with the ground truth (default 4)")
     ap.add_argument("--md", type=Path, default=None)
+    ap.add_argument("--repetition-loop", action="store_true",
+                    help="read the statement of the repetition loop's own candidate too (packaging v4, v6: the "
+                         "agent's first region)")
     a = ap.parse_args()
     versions = [int(v) for v in a.versions.split(",") if v]
     check = {int(v) for v in a.check.split(",") if v}
@@ -196,7 +206,7 @@ def main() -> int:
             name, layout = m.group("name"), m.group("layout")
             row = [name, layout, "; ".join(f"{k}: {x} / {y}" for k, x, y in TRUTH.get(name, [])) or "none"]
             for v in versions:
-                res = _statements(d, name, v)
+                res = _statements(d, name, v, a.repetition_loop)
                 problems = _judge(name, res["statements"])
                 if problems:
                     wrong[v].append(f"{name} ({layout}): {'; '.join(problems)}")

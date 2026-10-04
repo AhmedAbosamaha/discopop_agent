@@ -124,17 +124,20 @@ for meta_p in sorted(PREPARED.rglob("meta.json")):
         drift.append(f"{suite}/{meta_p.parent.name}: not a loop of the packager's suite")
         continue
     src = meta_p.parent / meta["file"]
-    if suite == prepare_tsvc.V5_SUITE:
-        # packaging v5 (4 Oct): three files in the package, the measurement header outside it
+    if suite in prepare_tsvc.CLEAN:
+        # packaging v5 and v6 (4 Oct): three files in the package, the measurement header outside it
+        version, files_of, harness_of, _kernel_of, hot_of, ours = prepare_tsvc.CLEAN[suite]
         rendered += 1
-        for fname, text in prepare_tsvc.v5_files(loop).items():
+        for fname, text in files_of(loop).items():
             if not (meta_p.parent / fname).exists() or (meta_p.parent / fname).read_text() != text:
                 drift.append(f"{suite}/{loop.name}: {fname} differs from the packager's")
         hdr = PREPARED / "_harness" / meta["harness"]
-        if not hdr.exists() or hdr.read_text() != prepare_tsvc.render_v5_harness(loop):
+        if not hdr.exists() or hdr.read_text() != harness_of(loop):
             drift.append(f"{suite}/{loop.name}: harness header differs from the packager's")
-        if meta.get("hot_loop") != prepare_tsvc.hot_loop_v5(loop):
+        if meta.get("hot_loop") != hot_of(loop):
             drift.append(f"{suite}/{loop.name}: meta.json's hot_loop differs from the packager's")
+        if meta.get("generator_version") != version or meta.get("exclude_functions") != ours:
+            drift.append(f"{suite}/{loop.name}: meta.json is not this layout's (version, the functions of main.c)")
         if (meta.get("project") or {}).get("editable") != [f"{loop.name}.c"]:
             drift.append(f"{suite}/{loop.name}: meta.json does not name the benchmark's file as the one editable file")
         continue
@@ -156,12 +159,13 @@ expect(f"{rendered} TSVC and E2-B1 packages equal their packager's rendering", r
        "; ".join(drift[:4]) + (f" (+{len(drift) - 4} more)" if len(drift) > 4 else ""))
 
 
-# ---- 1d. a file a model reads is an ordinary code file (the author, 4 Oct 2026; packaging v5) ----------
+# ---- 1d. a file a model reads is an ordinary code file (the author, 4 Oct 2026; packaging v5, v6) ------
 # "the only thing we should do if we receive a benchmark, we have to make sure to remove the comments": no
-# comment in any file of a v5 package — the benchmark's own, data.h, main.c: a model can read all three —
+# comment in any file of a clean package — the benchmark's own, data.h, main.c: a model can read all three —
 # and nothing of the measurement in the benchmark's own file or in data.h: no `pb_` name, no harness include.
-# The repetition loop and its counter belong to main.c alone.
-print("1d. packaging v5: no comment in a file a model reads, nothing of the harness in the benchmark's file")
+# v5: the repetition loop and its counter belong to main.c alone. v6: the repetition loop is the function's,
+# as in TSVC — once, with TSVC's `dummy` call once after the loop under study, and never the harness's `R`.
+print("1d. packaging v5, v6: no comment in a file a model reads, nothing of the harness in the benchmark's file")
 clean, dirty = 0, []
 for meta_p in sorted(PREPARED.rglob("meta.json")):
     meta = json.loads(meta_p.read_text())
@@ -179,12 +183,16 @@ for meta_p in sorted(PREPARED.rglob("meta.json")):
                 dirty.append(f"{f.relative_to(PREPARED)}: a harness name")
             if re.search(r'#include\s+"[^"]*/', text):
                 dirty.append(f"{f.relative_to(PREPARED)}: an include from outside the package")
-        if f.name in editable and re.search(r"\bnl\b|\bR\b", text):
+        if f.name in editable and meta.get("generator_version") == 6:
+            if (len(re.findall(r"for \(int nl = 0; nl < iterations; nl\+\+\)", text)) != 1
+                    or text.count("dummy(a, b, c, d, e);") != 1 or re.search(r"\bR\b", text)):
+                dirty.append(f"{f.relative_to(PREPARED)}: not one repetition loop with one `dummy` call")
+        elif f.name in editable and re.search(r"\bnl\b|\bR\b", text):
             dirty.append(f"{f.relative_to(PREPARED)}: the repetition loop")
     stray = sorted(p.name for p in pkg.iterdir() if p.name != "meta.json" and p.suffix not in SOURCE_EXT)
     if stray:
         dirty.append(f"{pkg.relative_to(PREPARED)}: files that are not sources ({', '.join(stray)})")
-expect(f"{clean} files of v5 packages are ordinary code files", clean > 0 and not dirty,
+expect(f"{clean} files of v5 and v6 packages are ordinary code files", clean > 0 and not dirty,
        "; ".join(dirty[:4]) + (f" (+{len(dirty) - 4} more)" if len(dirty) > 4 else ""))
 
 

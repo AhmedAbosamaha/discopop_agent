@@ -221,6 +221,15 @@
    "headline": "Server, two draws (42 loops, no model): output identical 42 of 42; DiscoPoP's view of the loop under study the same in both draws on 37; kept differences: s151 (by construction), s481 (v4 reports the REPETITION loop Do-All, v5 blocks it) and s482 (v4 blocks the loop on a RAW only the repetitions carry, v5 reports it Do-All); s244's blocker changes with the draw in both layouts. The order statement under prompt version 4 is the same in both layouts for all 42, and right on all 254 profiles replayed (86 Mac, 168 server) against the truth written down per loop; version 3 is wrong on 9, 6 and 13 of them. The sequential original is within 4 % for 37 loops; 20-26 % slower in v5 on s243, s244, s482 and 18 % faster on s292 (a separately compiled function: with link-time optimisation the difference is gone). Two draws of one layout agree on every WAR/WAW when each dependence is read by its own type; the old reading differed on 23 of 84 — T0.15's \"draw noise\" was the parser."
   },
   {
+   "id": "T0.17",
+   "folder": "T0_instruments/T0.17_repetition_loop_inside",
+   "kind": "instrument",
+   "status": "pre-flight",
+   "title": "T0.17 — the repetition loop inside the benchmark's function, as TSVC has it (packaging v6): does a temporary array cost once again, and does anything else change?",
+   "question": "The author, 4 Oct, on the clean layout (v5): \"I do not like that this solution make the speed up worse … the tmp array is also a problem\". In v5 the function is ONE repetition, called 48 times, so a temporary array obtained inside it is obtained on every call. Layout tested (v6, suite `tsvc_c2`): v5 with the repetition loop and TSVC's `dummy` call inside the function, where TSVC's own function has them. Per loop: identical output; the expert reference as fast as in the one-file packaging (v4) on the same lane, the reference with malloc/free inside the function included; DiscoPoP's view and the order statement as in v4; then sizes, classes and references through the harness.",
+   "headline": ""
+  },
+  {
    "id": "audit",
    "folder": "audit_benchmark_suitability",
    "title": "Benchmark suitability audit (§5k, D18)",
@@ -1657,6 +1666,48 @@
    "section": "checks",
    "status": "registered",
    "role": "race_check.py (the gate's TSan with archer and the schedule matrix, server, no model) over every model-alone parallel program of E1-v5 and, as the positive control, every parallel program of the agent"
+  },
+  "t0_17_server_a": {
+   "group": "T0.17",
+   "section": "checks",
+   "status": "registered",
+   "role": "T0.17 draw a, server (LLVM 20), no model: tools/layout_equivalence.py — tsvc_b1 (packaging v4) against tsvc_c2 (v6), 42 loops: output, DiscoPoP's view of the loop under study, the order statement; sequential time at LARGE"
+  },
+  "t0_17_server_b": {
+   "group": "T0.17",
+   "section": "checks",
+   "status": "registered",
+   "role": "T0.17 draw b, server, no model: the same comparison on a second profile of each layout (no timing)"
+  },
+  "t0_1_c2_sizes": {
+   "group": "T0.17",
+   "section": "preflight",
+   "status": "registered",
+   "role": "T0.1 on packaging v6, server, no model: size_table.py on the 44 tsvc_c2 packages, NUMA node 0 — the sizes are measured on the new packages"
+  },
+  "t0_11_c2_a": {
+   "group": "T0.17",
+   "section": "preflight",
+   "status": "registered",
+   "role": "T0.11 on packaging v6, draw a, server, no model: arm discopop_capability on the 44 tsvc_c2 packages — the measured class of every loop in this packaging"
+  },
+  "t0_11_c2_b": {
+   "group": "T0.17",
+   "section": "preflight",
+   "status": "registered",
+   "role": "T0.11 on packaging v6, draw b, server, no model: arm discopop_capability on the 44 tsvc_c2 packages — the measured class of every loop in this packaging"
+  },
+  "t0_11_c2_c": {
+   "group": "T0.17",
+   "section": "preflight",
+   "status": "registered",
+   "role": "T0.11 on packaging v6, draw c, server, no model: arm discopop_capability on the 44 tsvc_c2 packages — the measured class of every loop in this packaging"
+  },
+  "t0_14_c2_refs": {
+   "group": "T0.17",
+   "section": "preflight",
+   "status": "registered",
+   "role": "T0.14/T0.10 on packaging v6, server, no model: verify-source on the 28 expert references rendered as the benchmark's file (reference_solutions/tsvc_c2), threads 6 and 12"
   }
  },
  "analysis": {

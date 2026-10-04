@@ -58,7 +58,13 @@ from discopop_agent.profiling import tools as profiling_tools      # noqa: E402
 
 PREPARED = HERE.parent / "prepared"
 KEEP_OUT = ("a.out", "ast_dump.json", "patch_generator", "patch_applicator", "private", "statistics")
-MIX = ("a[k] +=", "d[k] +=", "a[0] +=", "long k =", "pb_mix(")
+MIX = ("a[k] +=", "d[k] +=", "a[0] +=", "long k =", "pb_mix(", "static long n", "n++;")      # v6: the lines of `dummy`
+# the repetition loop's header: v4's, and v6's — where it is the function's own, as in TSVC
+REPETITION = ("nl < R", "nl < iterations")
+
+
+def _rep(text: str) -> bool:
+    return any(r in text for r in REPETITION)
 
 
 def _run(cmd: List[str], args: List[str]) -> Tuple[str, str]:
@@ -182,19 +188,19 @@ def profile(pkg: Path, name: str, work: Path) -> Dict[str, Any]:
 
 def view(p: Dict[str, Any]) -> Dict[str, Any]:
     """What the comparison is about, by line TEXT: the benchmark's own code."""
-    ks = [c for c in p.get("candidates", []) if "nl < R" not in c["text"]]
+    ks = [c for c in p.get("candidates", []) if not _rep(c["text"])]
 
     def mine(tx: str) -> bool:
-        return bool(tx) and "nl < R" not in tx and not tx.startswith(MIX)
+        return bool(tx) and not _rep(tx) and not tx.startswith(MIX)
     def shape(c: Dict[str, Any]) -> str:
         # a function is named without its parameter list (v5 hands `vas` its index array as a parameter)
         text = str(c["text"]).replace("static ", "")
         return re.sub(r"\(.*\)\s*$", "()", text) if c["type"] == "function" else text
     return {"candidates": sorted((c["type"], shape(c), c["tier"], str(c["pattern"])) for c in ks),
-            "do_all": sorted(d for d in p.get("do_all", []) if "nl < R" not in d),
-            "blocker": sorted((b[0], b[1], b[2]) for b in p.get("blockers", []) if "nl < R" not in b[2]),
-            "repetition": ("Do-All" if any("nl < R" in d for d in p.get("do_all", [])) else
-                           "blocked" if any("nl < R" in b[2] for b in p.get("blockers", [])) else "no verdict"),
+            "do_all": sorted(d for d in p.get("do_all", []) if not _rep(d)),
+            "blocker": sorted((b[0], b[1], b[2]) for b in p.get("blockers", []) if not _rep(b[2])),
+            "repetition": ("Do-All" if any(_rep(d) for d in p.get("do_all", [])) else
+                           "blocked" if any(_rep(b[2]) for b in p.get("blockers", [])) else "no verdict"),
             "statement": sorted({s for c in ks for s in c["statements"]["4"]}),
             "statement_v3": sorted({s for c in ks for s in c["statements"]["3"]}),
             # a stack scalar's flow carries no call path (`unknown`): only the placed ones are compared

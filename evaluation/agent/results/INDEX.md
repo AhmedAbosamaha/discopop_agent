@@ -301,6 +301,20 @@ Status: pre-flight
 | `t0_11_c1b_b` | [`T0_instruments/T0.16_clean_layout/preflight/t0_11_c1b_b/`](T0_instruments/T0.16_clean_layout/preflight/t0_11_c1b_b/) | T0.11 for ORDER-4's two kernels (tsvc_c1/k27, tsvc_c1/k53), draw b, server, discopop_capability, no model | valid | 2 | no-change 2 |
 | `t0_11_c1b_c` | [`T0_instruments/T0.16_clean_layout/preflight/t0_11_c1b_c/`](T0_instruments/T0.16_clean_layout/preflight/t0_11_c1b_c/) | T0.11 for ORDER-4's two kernels (tsvc_c1/k27, tsvc_c1/k53), draw c, server, discopop_capability, no model | valid | 2 | no-change 2 |
 
+## [T0.17 — the repetition loop inside the benchmark's function, as TSVC has it (packaging v6): does a temporary array cost once again, and does anything else change?](T0_instruments/T0.17_repetition_loop_inside/)
+
+Status: pre-flight
+
+| run | where | what it is | status | trials | outcomes |
+|---|---|---|---|---:|---|
+| `t0_17_server_a` | not archived yet | T0.17 draw a, server (LLVM 20), no model: tools/layout_equivalence.py — tsvc_b1 (packaging v4) against tsvc_c2 (v6), 42 loops: output, DiscoPoP's view of the loop under study, the order statement; sequential time at LARGE | registered |  |  |
+| `t0_17_server_b` | not archived yet | T0.17 draw b, server, no model: the same comparison on a second profile of each layout (no timing) | registered |  |  |
+| `t0_1_c2_sizes` | not archived yet | T0.1 on packaging v6, server, no model: size_table.py on the 44 tsvc_c2 packages, NUMA node 0 — the sizes are measured on the new packages | registered |  |  |
+| `t0_11_c2_a` | not archived yet | T0.11 on packaging v6, draw a, server, no model: arm discopop_capability on the 44 tsvc_c2 packages — the measured class of every loop in this packaging | registered |  |  |
+| `t0_11_c2_b` | not archived yet | T0.11 on packaging v6, draw b, server, no model: arm discopop_capability on the 44 tsvc_c2 packages — the measured class of every loop in this packaging | registered |  |  |
+| `t0_11_c2_c` | not archived yet | T0.11 on packaging v6, draw c, server, no model: arm discopop_capability on the 44 tsvc_c2 packages — the measured class of every loop in this packaging | registered |  |  |
+| `t0_14_c2_refs` | not archived yet | T0.14/T0.10 on packaging v6, server, no model: verify-source on the 28 expert references rendered as the benchmark's file (reference_solutions/tsvc_c2), threads 6 and 12 | registered |  |  |
+
 ## [Benchmark suitability audit (§5k, D18)](audit_benchmark_suitability/REPORT.md)
 
 Status: done
