@@ -227,7 +227,7 @@
    "status": "pre-flight",
    "title": "T0.17 — the repetition loop inside the benchmark's function, as TSVC has it (packaging v6): does a temporary array cost once again, and does anything else change?",
    "question": "The author, 4 Oct, on the clean layout (v5): \"I do not like that this solution make the speed up worse … the tmp array is also a problem\". In v5 the function is ONE repetition, called 48 times, so a temporary array obtained inside it is obtained on every call. Layout tested (v6, suite `tsvc_c2`): v5 with the repetition loop and TSVC's `dummy` call inside the function, where TSVC's own function has them. Per loop: identical output; the expert reference as fast as in the one-file packaging (v4) on the same lane, the reference with malloc/free inside the function included; DiscoPoP's view and the order statement as in v4; then sizes, classes and references through the harness.",
-   "headline": ""
+   "headline": "Pre-flight (server and Mac, no model): the program is the same (output byte for byte, 44 of 44). Measured alike — one 12-core lane, variants interleaved — the expert references reach the same in the one-file packaging, in v5 and in v6 (median 3.27×, 3.19×, 3.32×); the 'lower ceiling' reported for v5 compared a lane with a whole node. The real cost of v5 is the temporary array: the five references that need one, written with malloc and free in the function, reach 0.39–1.09× in v5 and 1.36–2.60× in v6 (v4: 1.41–2.39×). DiscoPoP's view as in v4 on 40 of 42 loops (Mac, one draw; the two others differ in which blocker is named); the order statement right on 42 of 42, the repetition loop's request included."
   },
   {
    "id": "audit",
@@ -1682,7 +1682,7 @@
   "t0_1_c2_sizes": {
    "group": "T0.17",
    "section": "preflight",
-   "status": "registered",
+   "status": "valid",
    "role": "T0.1 on packaging v6, server, no model: size_table.py on the 44 tsvc_c2 packages, NUMA node 0 — the sizes are measured on the new packages"
   },
   "t0_11_c2_a": {
