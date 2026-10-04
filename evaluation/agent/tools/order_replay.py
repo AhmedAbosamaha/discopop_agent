@@ -184,7 +184,8 @@ def main() -> int:
     with tempfile.TemporaryDirectory(prefix="order_replay_") as tmp:
         root = _extract(a.profiles, Path(tmp))
         for d in sorted(root.iterdir()):
-            m = re.match(r"^(?P<name>.+)_(?P<layout>v\d)$", d.name)
+            # `<loop>_v4` / `<loop>_v5` (the Mac screen) or `<loop>_<suite>` (layout_equivalence.py's profiles)
+            m = re.match(r"^(?P<name>.+?)_(?P<layout>v\d|tsvc_[a-z0-9]+)$", d.name)
             if not m or not (d / ".discopop").exists():
                 continue
             name, layout = m.group("name"), m.group("layout")

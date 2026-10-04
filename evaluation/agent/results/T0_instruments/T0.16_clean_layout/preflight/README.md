@@ -1,5 +1,7 @@
 # T0.16 pre-flight — a clean two-file layout, prototype (Mac, 4 Oct 2026, no model)
 
+> **Superseded in two points by the server's two draws** (`../analysis/two_draws.md`, record §6 4 Oct): `s244`'s blocker changes with the draw in BOTH layouts — it is not a layout difference, and candidate bug B16 still arises in the new layout (less: `s482` is free of it); and the sequential original is 20–26 % slower on `s243`, `s244`, `s482` in the new layout (18 % faster on `s292`) — the six loops timed here did not include them.
+
 **Why.** The author (4 Oct): the file a model reads has to be an ordinary code file — no note of ours, no
 measurement code, nothing to tell a model to leave alone; the only preparation of a benchmark is removing its
 comments. Packaging v4 does not meet that: the file holds `pb_mix` with a three-line note, the repetition
