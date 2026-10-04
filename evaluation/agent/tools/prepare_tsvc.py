@@ -1161,18 +1161,90 @@ def v5_digest(files: Dict[str, str]) -> str:
     return hashlib.sha256("".join(files[n] for n in sorted(files)).encode()).hexdigest()
 
 
+def _split_expert(*loops: str) -> str:
+    """The expert reference of a constructed hidden-order kernel: its statements as loops of their own, in the
+    order the hidden tables impose, each one parallel (in the form `_v5_expert_body` reads)."""
+    return ("    for (int nl = 0; nl < R; nl++) {\n"
+            + "".join("        #pragma omp parallel for\n"
+                      f"        for (long i = 1; i < LEN_1D; i++) {stmt}\n" for stmt in loops)
+            + "        pb_mix(nl);\n    }\n    return (real_t)0;")
+
+
+# The constructed kernels' expert solutions (v5): until now a constructed kernel had none on file — its
+# solution was the experiment's premise. As functions they are verified like every reference (T0.14).
+V5_EXPERT: Dict[str, str] = {
+    "k17": _split_expert("v[jv[i]] += u[ku[i]] * d[i];", "u[ju[i]] += v[kv[i]] * c[i];"),
+    "k42": _split_expert("u[ju[i]] += v[kv[i]] * c[i];", "v[jv[i]] += u[ku[i]] * d[i];"),
+    "k19": _split_expert("v[jv[i]] = u[ku[i]] * d[i] + c[i];", "u[ju[i]] += v[kv[i]] * c[i];"),
+    "k48": _split_expert("u[ju[i]] += v[kv[i]] * c[i];", "v[jv[i]] = u[ku[i]] * d[i] + c[i];"),
+    "k23": _split_expert("v[i] = x[i] * d[i] + c[i];", "u[i] += w[i] * c[i];"),
+    "k31": _split_expert("v[i] = u[i + far] * d[i] + c[i];", "u[i] += v[i + off] * c[i];"),
+}
+
+
 def _as_v5(loop: Loop) -> Loop:
     """A `tsvc_b1` loop as a loop of the v5 suite: the same record, with the expert reference of the TSVC
-    loop of that name (the `tsvc` suite's records carry them)."""
+    loop of that name (the `tsvc` suite's records carry them) or of the constructed kernel (V5_EXPERT)."""
     c = copy.copy(loop)
     c.suite = V5_SUITE
     base = BY_NAME.get(loop.name)
-    c.expert = base.expert if base is not None else None
+    c.expert = base.expert if base is not None else V5_EXPERT.get(loop.name)
     return c
 
 
-# The v5 suite: every loop of `tsvc_b1` (E1-final's 25, E2-B1's units, the constructed kernels) but V5_LEFT_OUT.
-SUITES[V5_SUITE] = [_as_v5(l) for l in B1_LOOPS if l.name not in V5_LEFT_OUT]
+# ORDER-4 (the author, 4 Oct: "ok"; record §6): two more hidden-order units of OTHER shapes — the three test
+# kernels so far (k19, k23, k31) are the same two statements with the same fix, hidden three ways. v5 only.
+#   k27 — a CHAIN of three statements: S3 reads the v element S2 wrote one iteration earlier, S1 reads the w
+#         element S3 wrote one iteration earlier, S2 reads u elements nothing writes. The only legal split runs
+#         S2's loop, then S3's, then S1's — neither the text's order nor its reverse.
+#   k53 — a hidden CYCLE: the text of k19 and k48, word for word, with tables that make S1 read the v element
+#         S2 wrote one iteration earlier AND S2 read the u element S1 wrote in the SAME iteration: one chain
+#         through every iteration. The right outcome is to leave the loop alone; a model alone cannot tell it
+#         from k19 (second loop first) or k48 (textual order). Its d is a quarter of the suite's, so that the
+#         chain's gain per iteration (c * d) stays well below one and the values stay small at every size.
+_ORDER4_SRC = "constructed: ORDER-4 (THESIS_EXPERIMENTS §6, 4 Oct)"
+_CHAIN_GLOBALS = "static real_t *u, *v, *w;\nstatic int *ju, *jv, *jw, *ku, *kv, *kw;"
+_CHAIN_INIT = """    u = (real_t*)malloc(2 * (size_t)LEN_1D * sizeof(real_t)); v = (real_t*)malloc(2 * (size_t)LEN_1D * sizeof(real_t));
+    w = (real_t*)malloc(2 * (size_t)LEN_1D * sizeof(real_t));
+    ju = (int*)malloc((size_t)LEN_1D * sizeof(int)); jv = (int*)malloc((size_t)LEN_1D * sizeof(int));
+    jw = (int*)malloc((size_t)LEN_1D * sizeof(int)); ku = (int*)malloc((size_t)LEN_1D * sizeof(int));
+    kv = (int*)malloc((size_t)LEN_1D * sizeof(int)); kw = (int*)malloc((size_t)LEN_1D * sizeof(int));
+    for (long i = 0; i < 2L * LEN_1D; i++) {
+      u[i] = (real_t)0.75 + (real_t)((i * 37L) % 1000) * (real_t)0.0005;
+      v[i] = (real_t)0.75 + (real_t)((i * 53L) % 997) * (real_t)0.0005;
+      w[i] = (real_t)0.75 + (real_t)((i * 61L) % 971) * (real_t)0.0005;
+    }
+    for (long i = 0; i < LEN_1D; i++) {
+      ju[i] = (int)i; jv[i] = (int)i; jw[i] = (int)i;
+      kv[i] = (int)(i - 1); kw[i] = (int)(i - 1); ku[i] = (int)(LEN_1D + i);
+    }"""
+_CHAIN_EMIT = "  pb_emit_array(u); pb_emit_array(u + LEN_1D); pb_emit_array(v); pb_emit_array(w);\n"
+V5_NEW: List[Loop] = [
+    Loop("k27", "restructure (ORDER-4 chain)", "loop distribution into three loops: the second statement's, the third's, the first's",
+         "kv[i] = i-1: S3 reads the element of v that S2 wrote one iteration earlier; kw[i] = i-1: S1 reads the "
+         "element of w that S3 wrote one iteration earlier; ku[i] = LEN_1D+i: S2 reads u elements nothing writes",
+         globals_=_CHAIN_GLOBALS, init_extra=_CHAIN_INIT, emit_extra=_CHAIN_EMIT, suite=V5_SUITE,
+         hot_writes=("u", "v", "w"), source=_ORDER4_SRC,
+         expert=_split_expert("v[jv[i]] = u[ku[i]] * d[i] + c[i];", "w[jw[i]] = v[kv[i]] * e[i] + d[i];",
+                              "u[ju[i]] += w[kw[i]] * c[i];"),
+         body=("constructed / the order of three statements decided by hidden index tables (ORDER-4)",
+               """        for (long i = 1; i < LEN_1D; i++) {
+            u[ju[i]] += w[kw[i]] * c[i];
+            v[jv[i]] = u[ku[i]] * d[i] + c[i];
+            w[jw[i]] = v[kv[i]] * e[i] + d[i];
+        }""")),
+    Loop("k53", "decline (ORDER-4 cycle)", "none: the two statements feed each other",
+         "kv[i] = i-1: S1 reads the element of v that S2 wrote one iteration earlier; ku[i] = i: S2 reads the "
+         "element of u that S1 wrote in the same iteration — a recurrence through every iteration",
+         globals_=_ORDER2_GLOBALS,
+         init_extra=(_ORDER2_INIT.replace("@TABLES@", "kv[i] = (int)(i - 1); ku[i] = (int)i;")
+                     + "\n    for (long i = 0; i < LEN_1D; i++) d[i] *= (real_t)0.25;"),
+         emit_extra=_ORDER2_EMIT, suite=V5_SUITE, hot_writes=("u", "v"), source=_ORDER4_SRC, body=_ORDER2B_BODY),
+]
+
+# The v5 suite: every loop of `tsvc_b1` (E1-final's 25, E2-B1's units, the constructed kernels) but V5_LEFT_OUT,
+# and ORDER-4's two.
+SUITES[V5_SUITE] = [_as_v5(l) for l in B1_LOOPS if l.name not in V5_LEFT_OUT] + V5_NEW
 
 
 # ---- packaging v3, kept verbatim: every run up to E2 used it, and it stays the default until T0.15 ---------
@@ -1403,12 +1475,13 @@ def validate_v5(loop: Loop, package: Path, reference: Optional[Path]) -> List[st
     with OpenMP at 4 threads, computes the same values on both inputs."""
     problems: List[str] = []
     units = [package / f"{loop.name}.c", package / V5_MAIN]
-    b1 = next(l for l in B1_LOOPS if l.name == loop.name)
+    b1 = next((l for l in B1_LOOPS if l.name == loop.name), None)      # None: a kernel v4 never had (ORDER-4)
     with tempfile.TemporaryDirectory(prefix=f"tsvc_{loop.name}_") as tmp:
         t = Path(tmp)
-        (t / "h" / b1.suite).mkdir(parents=True)
-        (t / "h" / b1.suite / f"{b1.name}.h").write_text(render_harness(b1))
-        (t / f"{b1.name}_v4.c").write_text(render(b1))
+        if b1 is not None:
+            (t / "h" / b1.suite).mkdir(parents=True)
+            (t / "h" / b1.suite / f"{b1.name}.h").write_text(render_harness(b1))
+            (t / f"{b1.name}_v4.c").write_text(render(b1))
         outs: Dict[str, str] = {}
         for tag, flags, args in (("default", ["-DPB_FULL_DUMP"], []), ("seeded", ["-DPB_FULL_DUMP"], ["7"]),
                                  ("digest", [], [])):
@@ -1418,6 +1491,8 @@ def validate_v5(loop: Loop, package: Path, reference: Optional[Path]) -> List[st
             outs[tag] = out
             if tag != "digest" and any(v != v or abs(v) == float("inf") for v in map(float, out.split())):
                 problems.append(f"original ({tag}): non-finite values")
+            if b1 is None:
+                continue
             ok, old = _build_run_units([t / f"{b1.name}_v4.c"], t, t / "v4", [*flags, "-DSMALL_DATASET"], args, None,
                                        cpath=t / "h")
             if not ok:

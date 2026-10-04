@@ -52,6 +52,11 @@ TRUTH: Dict[str, List[Tuple[str, str, str]]] = {
     "k36": [("order", "v[i] = AT2", "u[i] += AT1")],
     "k42": [("order", "u[ju[i]] +=", "v[jv[i]] +=")],     # Y: S2 reads the u element S1 wrote one iteration earlier
     "k48": [("order", "u[ju[i]] +=", "v[jv[i]] =")],
+    # ORDER-4 (4 Oct). k27, the chain: S3 reads the v element S2 wrote one iteration earlier, S1 the w element S3
+    # wrote one iteration earlier — two orders, S2 before S3 before S1. k53, the cycle: k19's text, but S2 reads
+    # the u element S1 wrote in the SAME iteration while S1 reads the v element S2 wrote one iteration earlier
+    "k27": [("order", "v[jv[i]] = u[ku[i]]", "w[jw[i]] = v[kv[i]]"), ("order", "w[jw[i]] = v[kv[i]]", "u[ju[i]] += w[kw[i]]")],
+    "k53": [("mutual", "u[ju[i]] +=", "v[jv[i]] =")],
     # s211: a[i] = b[i-1] + c[i]*d[i]; b[i] = b[i+1] - e[i]*d[i] — S1 reads the b element S2 wrote one iteration
     # earlier; S2 reads nothing S1 writes
     "s211": [("order", "b[i] = b[i + 1]", "a[i] = b[i - 1]")],

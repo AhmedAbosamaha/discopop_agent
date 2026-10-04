@@ -1,0 +1,10 @@
+#include "data.h"
+
+real_t kernel_k23(void)
+{
+    #pragma omp parallel for
+    for (long i = 1; i < LEN_1D; i++) v[i] = x[i] * d[i] + c[i];
+    #pragma omp parallel for
+    for (long i = 1; i < LEN_1D; i++) u[i] += w[i] * c[i];
+    return (real_t)0;
+}
