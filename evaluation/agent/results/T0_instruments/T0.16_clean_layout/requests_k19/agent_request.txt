@@ -1,0 +1,76 @@
+## File to edit: /workspace/k19.c
+## This file is `k19.c` of a multi-file program.  The directory it sits in is a copy of the whole program — read its headers and the other units (main.c) for context.  Only your changes to `k19.c` are used; an edit to any other file is discarded.
+## Function containing the target region: kernel_k19  (lines 3–10)
+## Target region: loop 1:2 at lines 5–8
+
+### Evidence digest (details in the sections below)
+  - RAW on array elements within these lines: u, v.
+  - Values that cross the region's edge only — written outside and read here: c, d.
+  - `u` is written as [ju[i]] and read as [ju[i]], [ku[i]].
+  - `v` is written as [jv[i]] and read as [kv[i]].
+  - Loop lines 5–8 (index: i): 48 activation(s) × ~31999 iterations.
+
+### The function as it currently stands in the file (excerpt — read the file itself before editing; line numbers here are the file's own):
+```cpp
+real_t kernel_k19(void)
+{
+    for (long i = 1; i < LEN_1D; i++) {
+        u[ju[i]] += v[kv[i]] * c[i];
+        v[jv[i]] = u[ku[i]] * d[i] + c[i];
+    }
+    return (real_t)0;
+}
+```
+
+### Array accesses in the region (index expressions, read from the source)
+  u:  written as [ju[i]]  |  read as [ju[i]], [ku[i]]
+  ju:  written as —  |  read as [i]   (read-only here: never a source of a dependence)
+  v:  written as [jv[i]]  |  read as [kv[i]]
+  kv:  written as —  |  read as [i]   (read-only here: never a source of a dependence)
+  c:  written as —  |  read as [i]   (read-only here: never a source of a dependence)
+  jv:  written as —  |  read as [i]   (read-only here: never a source of a dependence)
+  ku:  written as —  |  read as [i]   (read-only here: never a source of a dependence)
+  d:  written as —  |  read as [i]   (read-only here: never a source of a dependence)
+  A loop whose index appears identically in every subscript that touches an array visits a different element on each of its iterations, so THAT loop does not carry a dependence through the array.  A dependence is carried by the loop whose index differs between a write and a read (`a[i]` written, `a[i-1]` read).
+
+### Runtime data dependences in the target region (observed)
+(grouped per variable, each tagged [array element] or [scalar]; each pair is the earlier access → the later one)
+  RAW — read-after-write (a value written by one access and read by a later one):
+    `v` [array element]: line 7 writes → line 6 reads
+        line 6: `u[ju[i]] += v[kv[i]] * c[i];`
+        line 7: `v[jv[i]] = u[ku[i]] * d[i] + c[i];`
+    `u` [array element]: line 6 writes → line 6 reads
+
+  WAR — write-after-read:
+    `v` [array element]: line 6 reads → line 7 overwrites
+
+  WAW — write-after-write:
+    `v` [array element]: line 7 writes → line 7 overwrites
+
+  (Not listed: dependences on the induction variable(s) i — they are never what blocks a loop; see 'Loop structure' for which of them a pragma has to privatise.)
+
+### Loop structure (nesting, induction variables, observed iterations)
+  - loop at lines 5–8  induction variable(s): i  |  48 activation(s) × ~31999 iterations = 1,535,952 total (max 31999)  <-- enough work per activation to be worth it
+  (Marked against ~1000 iterations per activation — below that, thread startup costs more than the loop saves.)
+
+### Why DiscoPoP could not parallelize (Do-All blockers)
+DiscoPoP's Do-All check stopped at these.  Each names the variable and the loop it blocks; the line pairs are in the dependence list, when it is shown.
+  - RAW on `v`  loop-carried (loop at line 5)  [observed: an iteration of this loop read a value an earlier iteration wrote — that value must keep reaching its reader, so the dependence can be moved out of the loop you make parallel, not deleted]
+
+### Why this region is here
+DiscoPoP found no applicable parallelism pattern for this region
+
+### What the observed flow means for a rewrite (from DiscoPoP's records)
+  - Line 6 (`u[ju[i]] += v[kv[i]] * c[i];`) reads an element of `v` that line 7 (`v[jv[i]] = u[ku[i]] * d[i] + c[i];`) writes; DiscoPoP names the loop at line 5 as carrying this dependence.  The value must flow from line 7 to line 6: if you split that loop, the loop holding line 7 has to run completely before the loop holding line 6; reading `v`'s values from before the loop would change the result.
+
+### Task
+Edit `/workspace/k19.c`: the loop (lines 5–8) inside `kernel_k19` is to be restructured so that, after re-profiling, DiscoPoP detects a genuinely parallel pattern (Do-All, Reduction, Pipeline, or Task-Parallel) in the lines you changed.  The pragma it then inserts must compile cleanly, be race-free under ThreadSanitizer and output-preserving, and achieve measurable speedup.  Do not write `#pragma omp` yourself.
+
+Worth settling before you write:
+  - Which dependence is actually blocking this, and is it a value moving
+    between iterations or just a location being reused?
+  - Does the loop you are making parallel have enough work per activation
+    to be worth it?  The loop structure above says which do.
+  - Re-derive any bound the old execution order made safe.
+
+>>> Read the file, give the short plan, then APPLY the rewrite with the Edit tool. Do not print a diff or the rewritten code — the file's content is what is used. Keep the function's name and signature.

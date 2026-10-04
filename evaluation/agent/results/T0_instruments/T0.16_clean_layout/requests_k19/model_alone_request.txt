@@ -1,0 +1,16 @@
+## The program
+  - k19.c
+
+This file is `k19.c` of a multi-file program.  The directory it sits in is a copy of the whole program — read its headers and the other units (main.c) for context.  Only your changes to `k19.c` are used; an edit to any other file is discarded.
+
+### Task
+This program's computation is to be restructured so that its iterations are independent, and ANNOTATED BY YOU: every loop you make parallel carries its own `#pragma omp` with explicit data-sharing clauses.  The result has to be code that compiles, is race-free under ThreadSanitizer, gives the same result at every thread count and schedule, reproduces the original program's results, and runs faster than the original sequential program.  Nothing adds a pragma for you.
+
+Worth settling before you write:
+  - Which dependence is actually blocking this, and is it a value moving
+    between iterations or just a location being reused?
+  - Does the loop you are making parallel have enough work per activation
+    to be worth it?
+  - Re-derive any bound the old execution order made safe.
+
+>>> Read the files, give the short plan, then APPLY the rewrite with the Edit tool. Do not print a diff or the rewritten code — the files' content is what is used. Keep the functions' names and signatures.
