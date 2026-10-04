@@ -212,6 +212,15 @@
    "headline": "Fixed DiscoPoP (B4, B8, B9, B10, B12), two draws per layout: outputs identical, and the agent's candidates on the code under test (lines, tier, pattern) identical in v3 and v4 for all 33 TSVC packages; dependence differences only inter-repetition WAW/WAR lines, both directions, as between draws of one layout (9 same, 17 noise, 4 stable in two draws, 3 undecided). v4 is admissible for E2-B1."
   },
   {
+   "id": "T0.16",
+   "folder": "T0_instruments/T0.16_clean_layout",
+   "kind": "instrument",
+   "status": "pre-flight",
+   "title": "T0.16 — does a clean two-file layout (the benchmark's file holds only the loop's function) change anything but the harness?",
+   "question": "The author, 4 Oct: the file a model reads must be an ordinary code file — no note, no measurement code. Layout tested: the loop's function alone in the benchmark's file, `main` with the repetition loop and `pb_mix` in a second file no model can change, data and digest outside the package as in v4. Per `tsvc_b1` loop: identical output; DiscoPoP's view of the loop under study (candidates, Do-All set, blockers, the order statement) as in v4; the runner end to end with no model.",
+   "headline": "Mac prototype, 4 Oct (43 loops, no model): outputs identical 43 of 43 (two sizes, both inputs, full dump); the sequential original as fast (0.96–1.03, six loops); DiscoPoP's view the same on 34 of 43 by the recorded criteria — of the 9 that differ, 5 are the order statement (an agent defect that v4 has too: the sentence depends on which variable DiscoPoP names first for the repetition loop), 1 is by construction (s151) and 3 are DiscoPoP verdicts that are right in the new layout and wrong in v4 (s244, s481, s482; one profile each); the order statement is word for word the same on k19, k23, k31, k36; the runner works on the layout with no code change. Open before any model run: the order statement's rule, the model alone taking back one file only, four tools that open `final.c` by name; then two draws on the server."
+  },
+  {
    "id": "audit",
    "folder": "audit_benchmark_suitability",
    "title": "Benchmark suitability audit (§5k, D18)",
@@ -1494,6 +1503,12 @@
    "section": "checks",
    "status": "valid",
    "role": "race_check.py over the parallel programs of the Opus and Fable agent pilots (p_opus_k19, p_fable_k19; full_b1_nospeed_v3), no model"
+  },
+  "mac_v5_preflight": {
+   "group": "T0.16",
+   "section": "checks",
+   "status": "valid",
+   "role": "T0.16 pre-flight, Mac, no model (§6 4 Oct): the runner end to end on two prototype packages of the clean layout (tsvc_c1/s000, tsvc_c1/k19), arm discopop_gate_v3 (budget 0), verified at SMALL, 2 and 4 threads — s000: DiscoPoP's pragma placed in the clean file, verification exact; k19: no change. Registered after it ran (a no-model check on the Mac, like mac_order3_check)"
   }
  },
  "analysis": {

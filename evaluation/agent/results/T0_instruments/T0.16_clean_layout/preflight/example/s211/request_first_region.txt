@@ -1,0 +1,72 @@
+## File to edit: /ws/s211.c
+## This file is `s211.c` of a multi-file program.  The directory it sits in is a copy of the whole program — read its headers and the other units (main.c) for context.  Only your changes to `s211.c` are used; an edit to any other file is discarded.
+## Function containing the target region: kernel_s211  (lines 3–10)
+## Target region: loop 1:2 at lines 5–8
+
+### Evidence digest (details in the sections below)
+  - This region accounts for about 72% of the program's measured runtime.
+  - RAW on array elements within these lines: b.
+  - Values that cross the region's edge only — written outside and read here: c, d, e; written here and read outside the region: a.
+  - `a` is written as [i] and not read in these lines.
+  - `b` is written as [i] and read as [i-1], [i+1].
+  - Loop lines 5–8 (index: i): 48 activation(s) × ~31998 iterations.
+
+### The function as it currently stands in the file (excerpt — read the file itself before editing; line numbers here are the file's own):
+```cpp
+real_t kernel_s211(void)
+{
+    for (int i = 1; i < LEN_1D-1; i++) {
+        a[i] = b[i - 1] + c[i] * d[i];
+        b[i] = b[i + 1] - e[i] * d[i];
+    }
+    return (real_t)0;
+}
+```
+
+### Array accesses in the region (index expressions, read from the source)
+  a:  written as [i]  |  read as —
+  b:  written as [i]  |  read as [i-1], [i+1]
+  c:  written as —  |  read as [i]   (read-only here: never a source of a dependence)
+  d:  written as —  |  read as [i]   (read-only here: never a source of a dependence)
+  e:  written as —  |  read as [i]   (read-only here: never a source of a dependence)
+  A loop whose index appears identically in every subscript that touches an array visits a different element on each of its iterations, so THAT loop does not carry a dependence through the array.  A dependence is carried by the loop whose index differs between a write and a read (`a[i]` written, `a[i-1]` read).
+
+### Runtime data dependences in the target region (observed)
+(grouped per variable, each tagged [array element] or [scalar]; each pair is the earlier access → the later one)
+  RAW — read-after-write (a value written by one access and read by a later one):
+    `b` [array element]: line 7 writes → line 6 reads; line 7 writes → line 7 reads  (+1 read outside the region)  (+1 written outside the region and read here)
+        line 6: `a[i] = b[i - 1] + c[i] * d[i];`
+        line 7: `b[i] = b[i + 1] - e[i] * d[i];`
+
+  WAR — write-after-read:
+    `a` [array element]: line 6 reads → line 6 overwrites
+    `b` [array element]: line 6 reads → line 7 overwrites; line 7 reads → line 7 overwrites
+
+  WAW — write-after-write:
+    `a` [array element]: line 6 writes → line 6 overwrites
+
+  (Not listed: dependences on the induction variable(s) i — they are never what blocks a loop; see 'Loop structure' for which of them a pragma has to privatise.)
+
+### Loop structure (nesting, induction variables, observed iterations)
+  - loop at lines 5–8  induction variable(s): i  |  48 activation(s) × ~31998 iterations = 1,535,904 total (max 31998)
+  (These counts come from a deliberately small profiling input; the code is measured at full size later.  They show the SHAPE of the nest — which loop is entered once and which thousands of times — not whether a loop is worth parallelising.)
+
+### Why DiscoPoP could not parallelize (Do-All blockers)
+DiscoPoP's Do-All check stopped at these.  Each names the variable and the loop it blocks; the line pairs are in the dependence list, when it is shown.
+  - RAW on `b`  loop-carried (loop at line 5)  [observed: an iteration of this loop read a value an earlier iteration wrote — that value must keep reaching its reader, so the dependence can be moved out of the loop you make parallel, not deleted]
+
+### What the observed flow means for a rewrite (from DiscoPoP's records)
+  - Line 6 (`a[i] = b[i - 1] + c[i] * d[i];`) reads an element of `b` that line 7 (`b[i] = b[i + 1] - e[i] * d[i];`) writes; DiscoPoP names the loop at line 5 as carrying this dependence.  The value must flow from line 7 to line 6: if you split that loop, the loop holding line 7 has to run completely before the loop holding line 6; reading `b`'s values from before the loop would change the result.
+
+### Task
+Edit `/ws/s211.c`: the loop (lines 5–8) inside `kernel_s211` is to be restructured so that, after re-profiling, DiscoPoP detects a genuinely parallel pattern (Do-All, Reduction, Pipeline, or Task-Parallel) in the lines you changed.  The pragma it then inserts must compile cleanly, be race-free under ThreadSanitizer and output-preserving.  Do not write `#pragma omp` yourself.
+
+Worth settling before you write:
+  - Which dependence is actually blocking this, and is it a value moving
+    between iterations or just a location being reused?
+  - Which is the OUTERMOST loop whose iterations can be made independent?
+    That is the one to make parallel — speed is not judged at this input
+    size, so a small iteration count is no reason to leave a loop serial.
+  - Re-derive any bound the old execution order made safe.
+
+>>> Read the file, give the short plan, then APPLY the rewrite with the Edit tool. Do not print a diff or the rewritten code — the file's content is what is used. Keep the function's name and signature.
