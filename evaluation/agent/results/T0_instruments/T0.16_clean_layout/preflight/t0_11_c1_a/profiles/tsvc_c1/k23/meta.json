@@ -1,0 +1,48 @@
+{
+  "suite": "tsvc_c1",
+  "kernel": "k23",
+  "source": "constructed: ORDER-3 (THESIS_EXPERIMENTS \u00a76, 3 Oct)",
+  "category": "constructed / statement order decided by an offset pointer (ORDER-3)",
+  "file": "k23.c",
+  "language": "c",
+  "layout": "project",
+  "project": {
+    "units": [
+      "k23.c",
+      "main.c"
+    ],
+    "include_dirs": [
+      "."
+    ],
+    "editable": [
+      "k23.c"
+    ]
+  },
+  "restructuring_class": "restructure (ORDER-3 offset pointer)",
+  "transformation": "loop distribution with the second statement's loop first",
+  "why": "w = v - 1 (the harness allocates one element more and sets v = w + 1): S1 reads the element of v that S2 wrote one iteration earlier; x = u + LEN_1D: S2 reads u elements nothing writes",
+  "reference_solution": null,
+  "exclude_functions": [
+    "main",
+    "pb_mix"
+  ],
+  "harness": "tsvc_c1/k23.h",
+  "harness_sha256": "089af73cf1b24742c4e16ab51f7ccef89dada000b6cda08a363f9dfab25dabf4",
+  "hot_loop": {
+    "entry": "kernel_k23",
+    "function": "kernel_k23",
+    "line": 5,
+    "writes": [
+      "u",
+      "v"
+    ],
+    "aliases": [
+      "w",
+      "x"
+    ]
+  },
+  "agent_dataset": "SMALL",
+  "generator_version": 5,
+  "inputs_sha256": "456dd573b84b30e6f32c943bb559d80374eec67177de48223e95124a8c3fc627",
+  "output_sha256": "bf38f7c8e9719b7e77e8df83aeca5f4f688f9576753ab4a09e0fa39325168aaa"
+}

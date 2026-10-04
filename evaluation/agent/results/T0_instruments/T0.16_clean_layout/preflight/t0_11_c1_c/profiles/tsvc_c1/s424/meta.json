@@ -1,0 +1,46 @@
+{
+  "suite": "tsvc_c1",
+  "kernel": "s424",
+  "source": "benchmarks/TSVC_2/src/tsvc.c",
+  "category": "storage classes and equivalencing / common and equivalenced variables - overlap / vectorizeable in strips of 64 or less / do this again here",
+  "file": "s424.c",
+  "language": "c",
+  "layout": "project",
+  "project": {
+    "units": [
+      "s424.c",
+      "main.c"
+    ],
+    "include_dirs": [
+      "."
+    ],
+    "editable": [
+      "s424.c"
+    ]
+  },
+  "restructuring_class": "hidden dependence (E2-B1 a, tier 2)",
+  "transformation": "xx is flat_2d_array shifted by vl, set in the same function",
+  "why": "with vl = 63 the store to xx[i+1] lands where iteration i+64 reads: a flow at distance 64",
+  "reference_solution": null,
+  "exclude_functions": [
+    "main",
+    "pb_mix"
+  ],
+  "harness": "tsvc_c1/s424.h",
+  "harness_sha256": "fc19e01c64a8497f01ed676e527ef71b9d9184ea8b3603ce387e45e206beb2f0",
+  "hot_loop": {
+    "entry": "kernel_s424",
+    "function": "kernel_s424",
+    "line": 7,
+    "writes": [
+      "xx"
+    ],
+    "aliases": [
+      "flat_2d_array"
+    ]
+  },
+  "agent_dataset": "SMALL",
+  "generator_version": 5,
+  "inputs_sha256": "456dd573b84b30e6f32c943bb559d80374eec67177de48223e95124a8c3fc627",
+  "output_sha256": "e3d1e848bcdc836356a0af782d685f1fa09a191da479b98ce7e3c241a466c01e"
+}

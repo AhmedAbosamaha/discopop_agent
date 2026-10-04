@@ -1,0 +1,43 @@
+{
+  "suite": "tsvc_c1",
+  "kernel": "s293",
+  "source": "benchmarks/TSVC_2/src/tsvc.c",
+  "category": "loop peeling / a(i)=a(0) with actual dependence cycle, loop is vectorizable",
+  "file": "s293.c",
+  "language": "c",
+  "layout": "project",
+  "project": {
+    "units": [
+      "s293.c",
+      "main.c"
+    ],
+    "include_dirs": [
+      "."
+    ],
+    "editable": [
+      "s293.c"
+    ]
+  },
+  "restructuring_class": "restructure",
+  "transformation": "loop peeling (a[i] = a[0] with a[0] written first)",
+  "why": "every iteration reads a[0], which the first iteration writes (with its own value)",
+  "reference_solution": "agent/reference_solutions/tsvc_c1/s293.c",
+  "exclude_functions": [
+    "main",
+    "pb_mix"
+  ],
+  "harness": "tsvc_c1/s293.h",
+  "harness_sha256": "1cb9a9438235b1750fe8c83b4d7060b2c503f4f2486bc45c013fc46fecfe64a5",
+  "hot_loop": {
+    "entry": "kernel_s293",
+    "function": "kernel_s293",
+    "line": 5,
+    "writes": [
+      "a"
+    ]
+  },
+  "agent_dataset": "SMALL",
+  "generator_version": 5,
+  "inputs_sha256": "456dd573b84b30e6f32c943bb559d80374eec67177de48223e95124a8c3fc627",
+  "output_sha256": "da313f09033d63e55246de1f9c9650f044ecb68f85194118340622e81cce16f5"
+}
