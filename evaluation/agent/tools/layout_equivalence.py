@@ -218,6 +218,7 @@ def main() -> int:
     harness_include.install()
     os.environ["PATH"] = f"{Path(sys.executable).parent}{os.pathsep}{os.environ.get('PATH', '')}"
     profiling_tools.set_explorer_timeout(a.explorer_timeout)
+    a.out = a.out.resolve()          # the agent's project code reads a relative path as relative to the project
     a.out.mkdir(parents=True, exist_ok=True)
     names = a.names or sorted(p.name for p in (PREPARED / a.new).iterdir() if (p / "meta.json").exists())
     rows, fails = [], []
