@@ -292,10 +292,14 @@ Status: pre-flight
 | `t0_16_server_a` | [`T0_instruments/T0.16_clean_layout/checks/t0_16_server_a/`](T0_instruments/T0.16_clean_layout/checks/t0_16_server_a/) | T0.16 draw a, server (LLVM 20), no model: tools/layout_equivalence.py — tsvc_b1 (packaging v4) against tsvc_c1 (v5), 42 loops: output, DiscoPoP's view by the recorded criteria, the order statement under prompt versions 3 and 4, and the sequential timed region at LARGE (median of 5, NUMA node 0) | valid | 0 |  |
 | `t0_16_server_b` | [`T0_instruments/T0.16_clean_layout/checks/t0_16_server_b/`](T0_instruments/T0.16_clean_layout/checks/t0_16_server_b/) | T0.16 draw b, server, no model: the same comparison on a second profile of each layout (no timing) | valid | 0 |  |
 | `t0_1_c1_sizes` | [`T0_instruments/T0.16_clean_layout/preflight/t0_1_c1_sizes/`](T0_instruments/T0.16_clean_layout/preflight/t0_1_c1_sizes/) | T0.1 on the clean layout (4 Oct), server, no model: size_table.py on the 42 tsvc_c1 packages, NUMA node 1 — the sizes are measured on the new packages, not copied from tsvc_b1: t0_16_server_a showed the sequential original 20-26 % slower on s243, s244, s482 and 18 % faster on s292 (a separately compiled function; the compiler no longer sees where the arrays come from) | valid | 0 |  |
-| `t0_11_c1_a` | [`T0_instruments/T0.16_clean_layout/preflight/t0_11_c1_a/`](T0_instruments/T0.16_clean_layout/preflight/t0_11_c1_a/) | T0.11 on the clean layout, draw a, server, no model: arm discopop_capability on the 42 tsvc_c1 packages — the measured class of every loop in packaging v5 (three draws) | registered | 42 | FASTER 8, no-change 34 |
-| `t0_11_c1_b` | [`T0_instruments/T0.16_clean_layout/preflight/t0_11_c1_b/`](T0_instruments/T0.16_clean_layout/preflight/t0_11_c1_b/) | T0.11 on the clean layout, draw b, server, no model: arm discopop_capability on the 42 tsvc_c1 packages — the measured class of every loop in packaging v5 (three draws) | registered | 42 | FASTER 8, no-change 34 |
-| `t0_11_c1_c` | [`T0_instruments/T0.16_clean_layout/preflight/t0_11_c1_c/`](T0_instruments/T0.16_clean_layout/preflight/t0_11_c1_c/) | T0.11 on the clean layout, draw c, server, no model: arm discopop_capability on the 42 tsvc_c1 packages — the measured class of every loop in packaging v5 (three draws) | registered | 42 | FASTER 8, no-change 34 |
+| `t0_11_c1_a` | [`T0_instruments/T0.16_clean_layout/preflight/t0_11_c1_a/`](T0_instruments/T0.16_clean_layout/preflight/t0_11_c1_a/) | T0.11 on the clean layout, draw a, server, no model: arm discopop_capability on the 42 tsvc_c1 packages — the measured class of every loop in packaging v5 (three draws) | valid | 42 | FASTER 8, no-change 34 |
+| `t0_11_c1_b` | [`T0_instruments/T0.16_clean_layout/preflight/t0_11_c1_b/`](T0_instruments/T0.16_clean_layout/preflight/t0_11_c1_b/) | T0.11 on the clean layout, draw b, server, no model: arm discopop_capability on the 42 tsvc_c1 packages — the measured class of every loop in packaging v5 (three draws) | valid | 42 | FASTER 8, no-change 34 |
+| `t0_11_c1_c` | [`T0_instruments/T0.16_clean_layout/preflight/t0_11_c1_c/`](T0_instruments/T0.16_clean_layout/preflight/t0_11_c1_c/) | T0.11 on the clean layout, draw c, server, no model: arm discopop_capability on the 42 tsvc_c1 packages — the measured class of every loop in packaging v5 (three draws) | valid | 42 | FASTER 8, no-change 34 |
 | `t0_14_c1_refs` | not archived yet | T0.14/T0.10 on the clean layout, server, no model: verify-source on the 21 expert references rendered as the benchmark's file (reference_solutions/tsvc_c1/) — accepted by the harness, and the speedup ceiling when a solution has to live inside the function | registered |  |  |
+| `t0_1_c1b_sizes` | [`T0_instruments/T0.16_clean_layout/preflight/t0_1_c1b_sizes/`](T0_instruments/T0.16_clean_layout/preflight/t0_1_c1b_sizes/) | T0.1 for ORDER-4's two kernels (tsvc_c1/k27, tsvc_c1/k53), server, node 1, no model | valid | 0 |  |
+| `t0_11_c1b_a` | [`T0_instruments/T0.16_clean_layout/preflight/t0_11_c1b_a/`](T0_instruments/T0.16_clean_layout/preflight/t0_11_c1b_a/) | T0.11 for ORDER-4's two kernels (tsvc_c1/k27, tsvc_c1/k53), draw a, server, discopop_capability, no model | registered | 2 | no-change 2 |
+| `t0_11_c1b_b` | [`T0_instruments/T0.16_clean_layout/preflight/t0_11_c1b_b/`](T0_instruments/T0.16_clean_layout/preflight/t0_11_c1b_b/) | T0.11 for ORDER-4's two kernels (tsvc_c1/k27, tsvc_c1/k53), draw b, server, discopop_capability, no model | registered | 2 | no-change 2 |
+| `t0_11_c1b_c` | [`T0_instruments/T0.16_clean_layout/preflight/t0_11_c1b_c/`](T0_instruments/T0.16_clean_layout/preflight/t0_11_c1b_c/) | T0.11 for ORDER-4's two kernels (tsvc_c1/k27, tsvc_c1/k53), draw c, server, discopop_capability, no model | registered | 2 | no-change 2 |
 
 ## [Benchmark suitability audit (§5k, D18)](audit_benchmark_suitability/REPORT.md)
 
@@ -417,6 +421,25 @@ Status: running
 | `e1f_race_check` | [`E01f_final_three_way/checks/e1f_race_check/`](E01f_final_three_way/checks/e1f_race_check/) | race_check.py (the gate's TSan with archer and the schedule matrix, server, no model) over every model-alone trial of E1-final (bare_llm_v3: Haiku, Sonnet, Opus, Fable × 105) and, as the positive control, the agent's FASTER programs of e1f_r_1-4; subdirectories per model and control | valid | 0 |  |
 | `e1f_fix103_redo2` | [`E01f_final_three_way/runs/e1f_fix103_redo2/`](E01f_final_three_way/runs/e1f_fix103_redo2/) | E1-final: the two agent trials Fix 103 changes (e1f_a s313 rep1, e1f_r_4 s331 rep4) redone on the fixed agent, each benchmark freshly profiled in this run (a new DiscoPoP draw; B4 is fixed, so the verdicts repeat) — e1f_fix103_redo's profile copies were broken | valid | 2 | FASTER 2 |
 | `e1f_race_check2` | [`E01f_final_three_way/checks/e1f_race_check2/`](E01f_final_three_way/checks/e1f_race_check2/) | race_check.py over the two redone agent programs of e1f_fix103_redo2 (s313 rep1, s331 rep4), no model — owed by the E1-final read-out | valid | 0 |  |
+
+## [E1-v5 — the headline three-way comparison on clean files (packaging v5, prompt version 4)](E01v5_clean_files_three_way/)
+
+Status: running
+
+| run | where | what it is | status | trials | outcomes |
+|---|---|---|---|---:|---|
+| `e1v5_smoke` | not archived yet | E1-v5 smoke: tsvc_c1/s211 and s000 × default_v4, discopop_gate_v4 (Haiku) and bare_llm_v4 with Haiku, Sonnet, Opus, Fable × 1 — configuration check on the clean layout, never counted | registered |  |  |
+| `e1v5_r_1` | not archived yet | E1-v5 class R: s112 s121 s1213 s127 s211 × default_v4, discopop_gate_v4 (Haiku) × 5, threads 6,12, repeats 5 | registered |  |  |
+| `e1v5_r_2` | not archived yet | E1-v5 class R: s212 s241 s243 s244 s252 × default_v4, discopop_gate_v4 (Haiku) × 5, threads 6,12, repeats 5 | registered |  |  |
+| `e1v5_r_3` | not archived yet | E1-v5 class R: s254 s255 s281 s291 × default_v4, discopop_gate_v4 (Haiku) × 5, threads 6,12, repeats 5 | registered |  |  |
+| `e1v5_r_4` | not archived yet | E1-v5 class R: s292 s293 s331 s341 × default_v4, discopop_gate_v4 (Haiku) × 5, threads 6,12, repeats 5 | registered |  |  |
+| `e1v5_a` | not archived yet | E1-v5 class A (no-harm): s000 vpvtv s313 × default_v4, discopop_gate_v4 (Haiku) × 1 | registered |  |  |
+| `e1v5_d` | not archived yet | E1-v5 class D (must-decline): s321 s322 s323 s3112 × default_v4, discopop_gate_v4 (Haiku) × 3 | registered |  |  |
+| `e1v5_bare_haiku` | not archived yet | E1-v5 the model alone: bare_llm_v4 with claude-haiku-4-5-20251001 on class R × 5, A × 1, D × 3 (one run per model) | registered |  |  |
+| `e1v5_bare_sonnet` | not archived yet | E1-v5 the model alone: bare_llm_v4 with claude-sonnet-5 on class R × 5, A × 1, D × 3 (one run per model) | registered |  |  |
+| `e1v5_bare_opus` | not archived yet | E1-v5 the model alone: bare_llm_v4 with claude-opus-5-5 on class R × 5, A × 1, D × 3 (one run per model) | registered |  |  |
+| `e1v5_bare_fable` | not archived yet | E1-v5 the model alone: bare_llm_v4 with claude-fable-5-1 on class R × 5, A × 1, D × 3 (one run per model) | registered |  |  |
+| `e1v5_race_check` | not archived yet | race_check.py (the gate's TSan with archer and the schedule matrix, server, no model) over every model-alone parallel program of E1-v5 and, as the positive control, every parallel program of the agent | registered |  |  |
 
 ## [E2-O3 — does the evidence effect hold on more hidden-order kernels?](E02o3_hidden_order_kernels/REPORT.md)
 

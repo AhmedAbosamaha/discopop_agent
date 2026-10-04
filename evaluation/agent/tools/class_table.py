@@ -52,7 +52,9 @@ def _declared_class(bench: str) -> Optional[str]:
         d = json.loads(meta.read_text())
     except (OSError, ValueError):
         return None
-    return {"restructure": "R", "annotate": "A", "decline": "D"}.get(d.get("restructuring_class", ""))
+    # the first word: a constructed kernel says more ("restructure (ORDER-2b X)", "decline (ORDER-4 cycle)")
+    declared = str(d.get("restructuring_class", "")).split(" ")[0]
+    return {"restructure": "R", "annotate": "A", "decline": "D"}.get(declared)
 
 
 def collect(runs: List[str], root: Path) -> Dict[str, Dict[str, Any]]:
