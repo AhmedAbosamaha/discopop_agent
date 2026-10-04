@@ -58,6 +58,19 @@ ROWS: List[Tuple[str, str, str, Tuple[str, ...]]] = [
 # of `e12_fable_v3` redone in `e12_fable_redo` (Fix 103) — the edits stay listed, marked redone.
 LOOPS = ("tsvc_b1/k19", "tsvc_b1/k48", "tsvc_b1/s1213", "tsvc_b1/s211", "tsvc_b1/s424", "tsvc_b1/s161")
 
+# E2-O3 (3 Oct): the three ORDER-3 kernels — the Haiku agent with and without evidence, and every model alone.
+O3 = ("tsvc_b1/k23", "tsvc_b1/k31", "tsvc_b1/k36")
+ROWS_O3: List[Tuple[str, str, str, Tuple[str, ...]]] = [
+    (AGENT, "e2o3_agent", "full_b1_nospeed_v3", O3),
+    ("Haiku agent, no evidence", "e2o3_agent", "no_evidence_b1_nospeed_v3", O3),
+    ("Haiku alone", "e2o3_bare_haiku", "bare_llm_nospeed_v3", O3),
+    ("Sonnet 5 alone", "e2o3_bare_sonnet", "bare_llm_nospeed_v3", O3),
+    ("Opus 5.5 alone", "e2o3_bare_opus", "bare_llm_nospeed_v3", O3),
+    ("Fable 5.1 alone", "e2o3_bare_fable", "bare_llm_nospeed_v3", O3),
+]
+SETS = {"e12": (ROWS, LOOPS, "E12 — the Haiku agent with evidence against stronger models alone", "e12_stats"),
+        "e2o3": (ROWS_O3, O3, "E2-O3 — the Haiku agent against every model alone on the ORDER-3 kernels", "models_alone")}
+
 
 def fisher_greater(a: int, n1: int, c: int, n2: int) -> float:
     """P(X >= a) for the first group's count under the hypergeometric (one-sided Fisher)."""
@@ -82,14 +95,16 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--races", type=Path, action="append", default=[])
     ap.add_argument("--out", type=Path, required=True)
+    ap.add_argument("--set", choices=sorted(SETS), default="e12", help="which table (default: E12's six loops)")
     a = ap.parse_args()
+    rows, loops_shown, title, stem = SETS[a.set]
     races = es.load_races(a.races)
     cells: Dict[Tuple[str, str], Dict[str, Any]] = {}
-    for label, run, arm, loops in ROWS:
+    for label, run, arm, loops in rows:
         for loop in loops:
             js = [es.judge(t, races) for t in load(run, arm, loop)]
             c = cells.setdefault((label, loop), {"n": 0, "success": 0, "faster": 0, "unsafe": 0, "harness": 0,
-                                                 "unchecked": 0, "runs": []})
+                                                 "unchecked": 0, "too_slow": 0, "runs": []})
             c["runs"].append(run)
             for j in js:
                 if j["bucket"] == "harness-edit":
@@ -102,21 +117,26 @@ def main() -> int:
                 c["faster"] += j["faster"] and j["bucket"] == "success"
                 c["unsafe"] += j["unsafe"]
                 c["unchecked"] += j["bucket"] == "race-unchecked"
-    labels = list(dict.fromkeys(r[0] for r in ROWS))
-    md = ["# E12 — the Haiku agent with evidence against stronger models alone", "",
+                c["too_slow"] += j["bucket"] == "timed-out-correct"
+    labels = list(dict.fromkeys(r[0] for r in rows))
+    md = [f"# {title}", "",
           "Per loop: successes (race-free verified parallel program covering the hot loop) · of them FASTER · "
-          "unsafe (BROKEN, racy, not compiling) · trials with a verdict; harness edits apart. p: Fisher's exact, "
+          "unsafe (wrong output, a crash, racy, not compiling) · trials with a verdict; harness edits apart. "
+          "\"did not finish\": the output verified exact, the timed run exceeded 30 minutes — correct but far too "
+          "slow, not unsafe (§6, 4 Oct). p: Fisher's exact, "
           "one-sided, the agent against the row (more successes / more FASTER successes / fewer unsafe).", ""]
-    md += ["| arm | " + " | ".join(f"`{l.split('/')[1]}`" for l in LOOPS) + " |", "|---|" + "---|" * len(LOOPS)]
+    md += ["| arm | " + " | ".join(f"`{l.split('/')[1]}`" for l in loops_shown) + " |", "|---|" + "---|" * len(loops_shown)]
     for lab in labels:
         row = [lab]
-        for loop in LOOPS:
+        for loop in loops_shown:
             cell = cells.get((lab, loop))
             if cell is None:
                 row.append("—")
                 continue
             c = cell
             txt = f"{c['success']}/{c['n']} ({c['faster']} faster) · {c['unsafe']} unsafe"
+            if c["too_slow"]:
+                txt += f" · {c['too_slow']} did not finish"
             if c["harness"]:
                 redone = any(r.endswith("_redo") for r in c["runs"])
                 txt += f" · {c['harness']} harness edit(s){', redone' if redone else ''}"
@@ -133,8 +153,8 @@ def main() -> int:
     md += ["", "Runs: " + "; ".join(f"{lab} — " + ", ".join(sorted({r for (l, _), c in cells.items() if l == lab
                                                                         for r in c['runs']})) for lab in labels) + "."]
     a.out.mkdir(parents=True, exist_ok=True)
-    (a.out / "e12_stats.md").write_text("\n".join(md) + "\n")
-    (a.out / "e12_stats.json").write_text(json.dumps({f"{k[0]} | {k[1]}": v for k, v in cells.items()}, indent=1) + "\n")
+    (a.out / f"{stem}.md").write_text("\n".join(md) + "\n")
+    (a.out / f"{stem}.json").write_text(json.dumps({f"{k[0]} | {k[1]}": v for k, v in cells.items()}, indent=1) + "\n")
     print("\n".join(md))
     return 0
 

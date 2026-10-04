@@ -88,7 +88,7 @@ BUCKETS: List[Tuple[str, str]] = [
     ("race-not-judgeable", "verified parallel program the race check could not judge"),
     ("racy", "racy (TSan or the schedule matrix) — unsafe"),
     ("BROKEN", "BROKEN (wrong output shipped, or a crash at the verification size) — unsafe"),
-    ("timed-out-correct", "correct, but a verification run did not finish at one thread count (verified exact at another) — "
+    ("timed-out-correct", "correct, but a verification run did not finish in 30 minutes (output verified exact beforehand) — "
                           "correct but slower: reported, not unsafe"),
     ("did-not-compile", "shipped a program that does not compile — unsafe"),
     ("measurement-edited", "still edits the measurement lines after every redo (3 Oct) — counted, unsafe"),
@@ -355,7 +355,13 @@ def _timed_out_correct(t: dict) -> bool:
     if v.get("dump_exact") is not True:
         return False
     par = v.get("par") or {}
-    return any(isinstance(r, dict) and r.get("max_rel_err") == 0.0 for r in par.values())
+    if any(isinstance(r, dict) and r.get("max_rel_err") == 0.0 for r in par.values()):
+        return True
+    # 4 Oct 2026 (record §6): the same ruling where the FIRST timed run is the one that hit the 30-minute limit.
+    # The harness records which it was (`final_run_failure.timed_out`); with the full dump exact on both inputs
+    # beforehand the program is correct and far too slow (E12 and the Opus/Fable pilots: a run-time level
+    # scheduler with one level per iteration) — not a wrong or crashing program. A crash stays BROKEN.
+    return bool((v.get("final_run_failure") or {}).get("timed_out")) and v.get("dump_exact_seeded") is not False
 
 
 def judge(t: dict, races: Dict[Tuple[str, str, str, int], str]) -> Dict[str, Any]:
@@ -924,6 +930,15 @@ def self_test() -> int:
     expect("a run that did not finish after an exact one elsewhere: correct but slower, not unsafe",
            js["bucket"] == "timed-out-correct" and not js["unsafe"] and js["slower"] and not js["success"], str(js))
     expect("a crash at the first thread count stays BROKEN and unsafe", jc["bucket"] == "BROKEN" and jc["unsafe"], str(jc))
+    def first_run(rc: int, seconds: float, timed_out: bool) -> Dict[str, Any]:
+        return {"benchmark": "tsvc_b1/k19", "arm": "bare_llm_nospeed", "outcome": "BROKEN", "repeat": 1, "run": "x",
+                "verify": {"status": "final_run_failed_T6", "dump_exact": True, "dump_exact_seeded": True, "par": {},
+                           "final_run_failure": {"threads": 6, "rc": rc, "seconds": seconds, "timed_out": timed_out}}}
+    late, died = first_run(-9, 1800.3, True), first_run(-6, 2.0, False)
+    jl, jd = judge(late, {}), judge(died, {})
+    expect("the first timed run hit the 30-minute limit, output exact beforehand: correct but too slow, not unsafe",
+           jl["bucket"] == "timed-out-correct" and not jl["unsafe"] and jl["slower"], str(jl))
+    expect("the first timed run crashed: BROKEN and unsafe", jd["bucket"] == "BROKEN" and jd["unsafe"], str(jd))
     expect("E2B1-iii counts BROKEN and racy of the model alone",
            res["tests"]["E2B1-iii"]["strata"]["tsvc_b1/s151"] == [0.0, 2.0, 2.0, 0.0])
     md = to_markdown(res)
