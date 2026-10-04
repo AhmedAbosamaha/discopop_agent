@@ -58,7 +58,9 @@ loop, `PB_MAIN`, and every request carries two sentences of ours about them (rec
   wrong — the split with line 7's loop first is the solution). Two defects, to keep apart: (a) v5 only — load
   the blockers for the whole program and key a carrying loop by (file, line): back to v4's level, no DiscoPoP
   change; (b) inherited — one blocker per loop by discovery order and no category for a flow inside one
-  iteration. Any new rule is replayed on the 86 profiles in `screen/` and on `test_prompt_v2.py`'s truth table
+  iteration. Any new rule is replayed on the 86 profiles of the screen (`screen_profiles.tar.gz`: sources,
+  `FileMapping.txt` — its paths are the scratch directory's and are rewritten on extraction —, the profiler's
+  and the explorer's files; no build product, no AST dump) and on `test_prompt_v2.py`'s truth table
   first; `k19`, `k23`, `k31`, `k36` must keep their sentence word for word.
 - **The model alone takes back every unit of a project**, `main.c` included (`bare_llm.py` copies back all
   `--project-units`); the agent takes back the file under work only. For "a harness edit is impossible" to
