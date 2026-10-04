@@ -55,8 +55,11 @@ loop, `PB_MAIN`, and every request carries two sentences of ours about them (rec
   stands for the repetition loop is arbitrary. Seen here: `s1213` in v4 has the (correct) order sentence in one
   profile and none in another; `s323`, a true recurrence, gets an ORDER in v4 that is wrong. In v5 the agent
   loads blockers by file and so never sees the repetition loop's: every such pair is called a cycle (`s1213`:
-  wrong — the split with line 7's loop first is the solution). Needed: flows told apart by what carries them
-  (one call of the function / the loop itself / between calls), not by variable name.
+  wrong — the split with line 7's loop first is the solution). Two defects, to keep apart: (a) v5 only — load
+  the blockers for the whole program and key a carrying loop by (file, line): back to v4's level, no DiscoPoP
+  change; (b) inherited — one blocker per loop by discovery order and no category for a flow inside one
+  iteration. Any new rule is replayed on the 86 profiles in `screen/` and on `test_prompt_v2.py`'s truth table
+  first; `k19`, `k23`, `k31`, `k36` must keep their sentence word for word.
 - **The model alone takes back every unit of a project**, `main.c` included (`bare_llm.py` copies back all
   `--project-units`); the agent takes back the file under work only. For "a harness edit is impossible" to
   hold in every arm the model alone must take back the benchmark's file only.
@@ -75,7 +78,9 @@ front of the repetitions, merge them or copy them; the agent's first region is t
 v4 it was the repetition loop around it); nothing says how long `u` and `v` are (v4's request said, wrongly for
 these kernels, that every array has `LEN_1D` elements).
 
-**Not done here:** a second draw per layout; the server (LLVM 20); the classes (T0.11) and sizes (T0.1) on the
+**Checked:** none of the 129 files a model could read (43 × `<name>.c`, `data.h`, `main.c`) holds a comment.
+
+**Not done here:** a second draw per layout (every DiscoPoP verdict above is ONE profile per layout); the server (LLVM 20); the classes (T0.11) and sizes (T0.1) on the
 layout; any model call.
 
 **Reproduce** (from the repository root, the agent's venv first on PATH):
