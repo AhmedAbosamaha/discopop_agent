@@ -27,8 +27,9 @@ HARNESS_INCLUDE = Path(__file__).resolve().parent.parent / "prepared" / "_harnes
 # (a block above 32 MB is always mmap'ed and unmapped): every element page-faults anew, which costs more
 # than the loop itself — Opus's and Sonnet's correct split of s211 ran at 0.69x and 0.73x of the sequential
 # original for this reason alone, Fable's (a static buffer) at 2.2x. With the allocator told to serve every
-# block from the heap and to keep freed memory (the three variables below — a common setting on HPC
-# installations), the same two programs run at 1.85x and 2.07x and the others are unchanged. It is a
+# block from the heap and to keep freed memory (the three variables below — a known glibc tuning), the same
+# two programs run at 1.85x and 2.07x; the sequential original moves by up to 8 % on some loops (where the
+# arrays lie changes), and a speedup is always the ratio of two runs under the same setting. It is a
 # property of how the program is RUN, the same for the original and every candidate, for the harness's
 # verification and the agent's own speed check alike; no file and no prompt changes. glibc only: without
 # effect on macOS, and under ThreadSanitizer (its own allocator).
