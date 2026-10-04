@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s211.c
+  Model          : claude-sonnet-5
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s211.c: edited, 3 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Now applying the rewrite.I've rewritten `s211.c` to remove the loop-carried dependence through `b[]`. **Plan / reasoning:** The original loop has two statements per iteration: - `a[i] = b[i-1] + c[i]*d[i]` — reads the just-updated `b[i-1]` (written by iteration `i-1`) - `b[i] = b[i+1] - e[i]*d[i]` — reads the still-pristine `b[i+1]` (iteration `i+1` hasn't executed yet) So the real dependence is: 
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

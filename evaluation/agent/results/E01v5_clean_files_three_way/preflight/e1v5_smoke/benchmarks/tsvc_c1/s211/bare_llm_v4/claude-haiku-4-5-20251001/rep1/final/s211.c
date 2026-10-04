@@ -1,0 +1,35 @@
+#include "data.h"
+#include <stdlib.h>
+
+real_t kernel_s211(void)
+{
+    // Allocate temporary array for new b values (heap to handle large datasets)
+    real_t *b_new = malloc(LEN_1D * sizeof(real_t));
+
+    // Phase 1: Compute all a[i] values in parallel
+    // No loop-carried dependencies: each iteration writes to distinct a[i]
+    // Shared: a (write), b, c, d (read-only within this phase)
+    #pragma omp parallel for
+    for (int i = 1; i < LEN_1D-1; i++) {
+        a[i] = b[i - 1] + c[i] * d[i];
+    }
+
+    // Phase 2: Compute all b[i] values in parallel (into temporary array)
+    // No loop-carried dependencies: all iterations read from original b[i+1] values,
+    // each writes to distinct b_new[i]
+    // Shared: b_new (write), b, e, d (read-only)
+    #pragma omp parallel for
+    for (int i = 1; i < LEN_1D-1; i++) {
+        b_new[i] = b[i + 1] - e[i] * d[i];
+    }
+
+    // Phase 3: Copy computed values back to b
+    // Shared: b (write), b_new (read-only)
+    #pragma omp parallel for
+    for (int i = 1; i < LEN_1D-1; i++) {
+        b[i] = b_new[i];
+    }
+
+    free(b_new);
+    return (real_t)0;
+}

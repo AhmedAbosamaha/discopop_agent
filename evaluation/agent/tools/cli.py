@@ -1640,6 +1640,8 @@ def cmd_run(a: argparse.Namespace) -> int:
         "timing_sizes": timing_sizes, "speed_check_off": no_timing,
         "verify_sizes": verify_sizes,
         "arm_flags": {x: arms[x]["flags"] for x in a.arms},
+        # how every program of the run is run: {} = glibc's default allocator (harness_include.py)
+        "allocator_env": harness_include.allocator_env(),
     }
     if not resuming:
         store.create_run(run_id, invocation)

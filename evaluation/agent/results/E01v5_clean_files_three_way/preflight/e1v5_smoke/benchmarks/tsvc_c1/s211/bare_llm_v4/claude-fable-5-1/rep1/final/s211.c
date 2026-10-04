@@ -1,0 +1,30 @@
+#include <stdlib.h>
+#include "data.h"
+
+real_t kernel_s211(void)
+{
+    /* Heap-allocated scratch for the new values of b, sized with the problem. */
+    static real_t *bt = NULL;
+    if (bt == NULL) {
+        bt = (real_t *)malloc((size_t)LEN_1D * sizeof(real_t));
+    }
+
+    /* Pass 1: new b values, computed from the OLD b (only reads of b here). */
+#pragma omp parallel for default(none) shared(bt, b, d, e)
+    for (int i = 1; i < LEN_1D-1; i++) {
+        bt[i] = b[i + 1] - e[i] * d[i];
+    }
+
+    /* Boundary: a[1] uses b[0], which the original loop never modifies. */
+    a[1] = b[0] + c[1] * d[1];
+
+    /* Pass 2: a[i] uses the NEW b[i-1] (= bt[i-1]); commit the new b. */
+#pragma omp parallel for default(none) shared(a, b, c, d, bt)
+    for (int i = 2; i < LEN_1D-1; i++) {
+        a[i] = bt[i - 1] + c[i] * d[i];
+        b[i] = bt[i];
+    }
+    b[1] = bt[1];
+
+    return (real_t)0;
+}
