@@ -1938,6 +1938,92 @@ def check_bare_llm(work: Path) -> Result:
                   f"({len((m_sys + ' ' + m_req).split())} words) and contract (E1-bare) reproducible; the edit kept unchecked")
 
 
+def check_one_editable_file(work: Path) -> Result:
+    """Packaging v5 (4 Oct 2026): a program whose measurement sits in a file of its own names the ONE file
+    that is the program's (`--project-editable`).  No arm may change another file: the agent's queue has no
+    region there and its focus refuses the file; the model alone — whose stand-in here edits BOTH files —
+    takes back the one file only, is told so in the agent's own sentence, and is handed no list of functions."""
+    name = "one editable file"
+    import contextlib
+    import io
+    from .. import bare_llm
+    from .. import project as project_mod
+    from ..llm.request import _project_file_note
+
+    sub = work / "one_file"
+    sub.mkdir(parents=True, exist_ok=True)
+    kern, main_c = sub / "k.c", sub / "main.c"
+    kern.write_text('#include "data.h"\nvoid kernel(void){for(int i=0;i<N;i++)a[i]*=2;}\n')
+    main_text = ('#include <stdio.h>\n#include "data.h"\ndouble a[N];\n'
+                 'int main(void){for(int r=0;r<3;r++)kernel();printf("%f\\n",a[0]);return 0;}\n')
+    main_c.write_text(main_text)
+    (sub / "data.h").write_text("#define N 8\nextern double a[N];\nvoid kernel(void);\n")
+    problems: List[str] = []
+
+    proj = project_mod.Project.discover(sub, units=["k.c", "main.c"], include_dirs=["."], editable=["k.c"])
+    if not proj.may_edit(kern) or proj.may_edit(main_c) or proj.may_edit(sub / "data.h"):
+        problems.append("may_edit: not exactly the named file")
+    everything = project_mod.Project.discover(sub, units=["k.c", "main.c"], include_dirs=["."])
+    if not (everything.may_edit(kern) and everything.may_edit(main_c)):
+        problems.append("a project that names no editable file lost a file (every earlier project run)")
+    saved_proj, saved_focus = project_mod.active(), project_mod.focus()
+    try:
+        project_mod.activate(proj)
+        project_mod.set_focus(str(kern))
+        try:
+            project_mod.set_focus(str(main_c))
+            problems.append("the focus accepted a file that is not the program's to change")
+        except ValueError:
+            pass
+    finally:
+        project_mod.activate(saved_proj)
+        if saved_proj is not None and saved_focus is not None:
+            project_mod.set_focus(saved_focus)
+
+    seen: Dict[str, Any] = {}
+
+    def fake(model: str, system: str, current: List[Any], session_key: str,
+             workspace: Optional[Path] = None, stateless: bool = False) -> str:
+        ws = Path(str(workspace))
+        seen.update(system=system, request=current[-1]["content"], files=sorted(f.name for f in ws.iterdir()))
+        (ws / "k.c").write_text((ws / "k.c").read_text().replace("for(int i", "\n#pragma omp parallel for\nfor(int i"))
+        (ws / "main.c").write_text((ws / "main.c").read_text().replace("r<3", "r<1"))     # the edit that must not count
+        return "Plan: the loop is independent."
+
+    saved, saved_argv = getattr(bare_llm, "_complete_claude_agent_sdk"), sys.argv
+    setattr(bare_llm, "_complete_claude_agent_sdk", fake)
+    try:
+        sys.argv = ["bare_llm", "--project-dir", str(sub), "--project-units", "k.c,main.c", "--project-editable", "k.c",
+                    "--model", "m", "--exclude-functions", "main", "--prompt-version", "3", "--no-require-speedup"]
+        with contextlib.redirect_stdout(io.StringIO()):
+            rc = bare_llm.main()
+    finally:
+        setattr(bare_llm, "_complete_claude_agent_sdk", saved)
+        sys.argv = saved_argv
+    req, system = str(seen.get("request", "")), str(seen.get("system", ""))
+    if rc != 0 or "#pragma omp parallel for" not in kern.read_text():
+        problems.append("the model alone's edit of its own file was not taken back")
+    if main_c.read_text() != main_text:
+        problems.append("the model alone's edit of main.c was TAKEN BACK")
+    if seen.get("files") != ["data.h", "k.c", "main.c"]:
+        problems.append(f"the working copy holds {seen.get('files')}, not the program's three files")
+    if _project_file_note("k.c", ["main.c"]) not in req:
+        problems.append("the model alone is not told about its file in the agent's own sentence")
+    for banned in ("Do not change these functions", "main,", "measuring the program", "These lines belong"):
+        if banned in req or banned in system:
+            problems.append(f"the model alone still reads {banned!r}")
+    if "Edit only the file named in the request" not in " ".join(system.split()):
+        problems.append("the system prompt lacks the agent's own sentence about the file")
+    # an earlier project (no editable file named): the request and the copy-back as they were
+    plain = bare_llm._request_mirror(["k.c", "main.c"], ["main"], gate=bare_llm.mirror_gate(False, 3))
+    if "Do not change these functions" not in plain or "These files are in your working directory" not in plain:
+        problems.append("the request of a project WITHOUT an editable file changed")
+    if problems:
+        return Result(name, "fail", "; ".join(problems))
+    return Result(name, "pass", "the agent's queue and focus refuse every other file; the model alone edited both "
+                  "files and only its own was taken back; it reads the agent's sentence and no list of functions")
+
+
 def check_bare_speed_off(work: Path) -> Result:
     """E2-B1 (the author, 26 Sep): the speed check OFF in every arm, the model alone included.
 
@@ -4763,6 +4849,113 @@ int main(void)
 """
 
 
+_CARRIER_PROGRAM = """#include <stdio.h>
+#define N 40
+#define M 7
+double a[N][M], b[N], c[N], p[N], q[N], r[N], s[N];
+void f(void)
+{
+    for (int i = 1; i < N; i++) {
+        for (int j = 1; j < M; j++)
+            a[i][j] = a[i][j-1] + 1.0;
+        b[i] = b[i-1] + a[i][M-1];
+    }
+    for (int i = 0; i < N; i++)
+        c[i] = b[i] * 2.0;
+    for (int i = 1; i < N; i++) {
+        p[i] = q[i-1] + 1.0;
+        q[i] = p[i] * 0.5;
+    }
+    for (int i = 1; i < N-1; i++) {
+        r[i] = s[i-1] + 1.0;
+        s[i] = r[i+1] * 0.5;
+    }
+}
+int main(void)
+{
+    for (int r = 0; r < 5; r++)
+        f();
+    printf("%f %f %f %f\\n", b[N-1], c[N-1], q[N-2], s[N-2]);
+    return 0;
+}
+"""
+
+
+def check_flow_carriers(work: Path) -> Result:
+    """D11/D12 (prompt version 4, 4 Oct 2026): what carries a dependence is read from the profile's call-path
+    states, and every dependence by its own type.  A small program with a nest, a second loop and two
+    two-statement loops — one a true recurrence, one that a split solves (its reverse flow comes from the
+    previous CALL of the function) — is profiled HERE, with the DiscoPoP
+    this venv holds, so the reading is checked against the state encoding this build writes: the same
+    iteration, the loop, or the calls around it; then the order statement built on it."""
+    if not Path(_venv_bin("discopop_cc")).exists():
+        return Result("flow carriers", "skip", "DiscoPoP is not installed in this venv")
+    name = "flow carriers"
+    from ..evidence.carriers import load_flow_relations
+    from ..evidence.deps import _parse_dep_line
+    from ..llm.prompts import PROMPT_VERSIONS
+    from ..llm.render import order_statement
+    d = work / "flow_carriers"
+    shutil.rmtree(d, ignore_errors=True)
+    d.mkdir(parents=True)
+    (d / "k.c").write_text(_CARRIER_PROGRAM)
+    ok, err = _profile(d, "k.c", hotspots=False, c_as_c=True)
+    if not ok:
+        return Result(name, "fail", f"profile: {err}")
+    lines = _CARRIER_PROGRAM.splitlines()
+
+    def at(marker: str, nth: int = 0) -> int:
+        return [i + 1 for i, l in enumerate(lines) if marker in l][nth]
+
+    inner, outer = at("a[i][j] = a[i][j-1]"), at("b[i] = b[i-1]")
+    rec_p, rec_q = at("p[i] = q[i-1]"), at("q[i] = p[i] * 0.5")
+    spl_p, spl_q = at("r[i] = s[i-1]"), at("s[i] = r[i+1]")
+    rel = load_flow_relations(d / ".discopop" / "profiler", None, at("void f(void)"), at("int main(void)") - 1)
+    want = {("RAW", inner, inner, "a"): {"loop"},            # a[i][j-1], one j earlier: the inner loop carries it
+            ("RAW", outer, inner, "a"): {"iteration"},       # a[i][M-1], written in the same i
+            ("RAW", outer, outer, "b"): {"loop"},            # b[i-1], one i earlier
+            ("RAW", rec_p, rec_q, "q"): {"loop"},            # the recurrence: q[i-1] one iteration earlier …
+            ("RAW", rec_q, rec_p, "p"): {"iteration"},       # … and p[i] in the same one
+            ("RAW", spl_p, spl_q, "s"): {"loop"},            # the splittable pair: s[i-1] one iteration earlier …
+            ("RAW", spl_q, spl_p, "r"): {"outside"}}         # … and r[i+1] from the PREVIOUS call of f
+    problems = [f"{k}: read as {sorted(rel.get(k, set())) or 'nothing'}, is {sorted(v)}"
+                for k, v in want.items() if rel.get(k) != v]
+    if ("RAW", at("c[i] = b[i]"), outer, "b") in rel:
+        problems.append("a flow between two loops that share none was given a carrier")
+    # D12: one line of the profile, several types
+    mixed = "5@1 NOM  INIT 0@0|GEPRESULT_a(1) WAR 7@1|GEPRESULT_a(1) WAW 5@2|GEPRESULT_a(1)"
+    table = {"5": (1, 10), "7": (1, 11)}
+    if [t[0] for t in _parse_dep_line(mixed, table, typed=True)] != ["WAR", "WAW"]:
+        problems.append("typed reading: INIT, WAR and WAW on one line are not read each by its own type")
+    if _parse_dep_line(mixed, table):
+        problems.append("the reading of versions 1-3 changed (a line that starts with INIT was dropped whole)")
+    # D11 on the two pairs, through the agent's own evidence
+    old_argv = sys.argv
+    sys.argv = ["x", "--discopop-dir", str(d / ".discopop"), "--source-file", str(d / "k.c"), "--min-runtime-share", "0"]
+    try:
+        from ..args import parse_args
+        from ..evidence import assemble
+        from ..plan import build_candidates
+        args = parse_args()
+    finally:
+        sys.argv = old_argv
+    cands = build_candidates(d / ".discopop", str(d / "k.c"), args.lambda_penalty, args.min_workload, impact=None,
+                             min_impact=0.0, min_runtime_share=0.0, exclude_functions=("main",))
+    notes = {c.region.start_line: order_statement(assemble(c, d / ".discopop" / "profiler", ""),
+                                                  frozenset(PROMPT_VERSIONS[4]))
+             for c in cands if c.region.region_type == "loop"}
+    rec_note, spl_note = notes.get(rec_p - 1, ""), notes.get(spl_p - 1, "")
+    if "feed each other" not in rec_note or "has to run completely before" in rec_note:
+        problems.append(f"the recurrence is not called mutual: {rec_note[-200:]!r}")
+    if f"the loop holding line {spl_q} has to run completely before the loop holding line {spl_p}" not in spl_note:
+        problems.append(f"the splittable pair is not given its order: {spl_note[-200:]!r}")
+    if problems:
+        return Result(name, "fail", "; ".join(problems))
+    return Result(name, "pass", "inner loop, outer loop, same iteration and previous call told apart from this "
+                  "build's call-path states; INIT/WAR/WAW on one line read each by its type; the recurrence called "
+                  "mutual and the splittable pair given its order")
+
+
 def check_b13_scatter_waw(work: Path) -> Result:
     """DiscoPoP bug B13, fixed 27 Sep in the explorer: a loop whose only cross-iteration dependence is a
     write-after-write on an array element — a scatter `x[dup[i]] = …` whose indices repeat, so the result
@@ -4890,6 +5083,8 @@ _CHECKS: List[Tuple[str, Callable[[Path], Result]]] = [
     ("prompt-ablation", check_prompt_ablation),
     ("bare-llm", check_bare_llm),
     ("bare-speed-off", check_bare_speed_off),
+    ("one-editable-file", check_one_editable_file),
+    ("flow-carriers", check_flow_carriers),
     ("workspace-confined", check_workspace_confined),
     ("twin-prompt", check_twin_prompt),
     ("twin-run", check_twin_run),

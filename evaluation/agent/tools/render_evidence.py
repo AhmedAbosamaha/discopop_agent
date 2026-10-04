@@ -25,7 +25,7 @@ SECTIONS = ("### Evidence digest", "### Runtime data dependences", "### Choosing
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("fixture", help="a fixture under tools/fixtures/prompt/ (e.g. k17, s211)")
-    ap.add_argument("--version", type=int, choices=(1, 2, 3), default=3)
+    ap.add_argument("--version", type=int, choices=(1, 2, 3, 4), default=3)
     ap.add_argument("--full", action="store_true", help="the whole request, not only the evidence sections")
     a = ap.parse_args()
     from discopop_agent.llm.prompts import PROMPT_VERSIONS

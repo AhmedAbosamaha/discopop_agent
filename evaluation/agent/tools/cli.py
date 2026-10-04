@@ -561,6 +561,8 @@ def _project_agent_flags(proj: dict) -> List[str]:
     return ["--project-dir", ".",
             "--project-units", ",".join(proj["units"]),
             "--project-include", ",".join(proj.get("include_dirs") or []),
+            # packaging v5: the ONE file a model's changes are taken from (agent, twin, model alone)
+            *(["--project-editable", ",".join(proj["editable"])] if proj.get("editable") else []),
             *(["--project-cflags", " ".join(proj["cflags"])] if proj.get("cflags") else []),
             *(["--project-ldflags", " ".join(proj["ldflags"])] if proj.get("ldflags") else [])]
 
@@ -1239,6 +1241,28 @@ def _agent_explorer_limit(profile_dir: Path) -> int:
     return int(max(AGENT_EXPLORER_FLOOR_S, math.ceil(AGENT_EXPLORER_FACTOR * float(t))))
 
 
+def _editable_judgement(trial: Path, editable: List[str], verdict: Dict[str, Any],
+                        final_text: str) -> Tuple[Dict[str, Any], str]:
+    """Packaging v5 — a package that names the ONE file that is the benchmark's (`project.editable`):
+    (the scaffold verdict, the text the hot-loop coverage reads). Only that file may differ between
+    `original/` and `final/`: no arm can change another (the agent and its twin work on that file only, the
+    model alone takes back that file only), and this proves it per trial instead of assuming it. The hot loop
+    is described on the benchmark's file (meta.json), so it is looked for there, not in the joined project
+    text. A package without the field: both as given."""
+    if not editable:
+        return verdict, final_text
+    orig, final = trial / "original", trial / "final"
+    stray = [r for r in _project_sources(orig) if r not in editable
+             and (not (final / r).exists() or (final / r).read_text(errors="replace") != (orig / r).read_text(errors="replace"))]
+    stray += [r for r in _project_sources(final) if r not in editable and not (orig / r).exists()]
+    if stray:
+        verdict = {**verdict, "ok": False,
+                   "problems": [*verdict.get("problems", []),
+                                f"a file that is not the benchmark's was changed: {', '.join(sorted(stray))}"]}
+    hot_text = "".join((final / f).read_text(errors="replace") for f in editable if (final / f).exists())
+    return verdict, hot_text
+
+
 def run_trial(bench: str, bench_dir: Path, profile_dir: Path, trial: Path, arm: str,
               arm_flags: List[str], model: str, a: argparse.Namespace, cc: str, cxx: str) -> dict:
     src_name = _source_name(bench_dir)
@@ -1347,6 +1371,11 @@ def run_trial(bench: str, bench_dir: Path, profile_dir: Path, trial: Path, arm: 
         rec["protected"] = list(_meta["protected"])
         rec["harness_sha256"] = _meta.get("harness_sha256")
     rec["scaffold"] = scaffold.check(original_text, final_text, rec.get("protected") or ())
+    _editable = list((proj or {}).get("editable") or [])
+    if _editable:                         # packaging v5: kept with the trial for re-scoring
+        rec["editable"] = _editable
+        rec["harness_sha256"] = _meta.get("harness_sha256")
+    rec["scaffold"], hot_text = _editable_judgement(trial, _editable, rec["scaffold"], final_text)
     # Pragmas the run ADDED.  In a project the count must not include pragmas the original
     # carries in code that is never compiled (polybench.c holds nine inside its PAPI
     # block), or "changed-not-parallel" could never be reached.
@@ -1358,7 +1387,7 @@ def run_trial(bench: str, bench_dir: Path, profile_dir: Path, trial: Path, arm: 
     # E2-B1's primary outcome counts a program only when its parallel construct covers the hot loop
     # (the author's decision 3, 27 Sep; hot_loop_coverage.py). A package that declares no hot loop —
     # every package before E2-B1 — records null, never false; the outcome (`classify`) is untouched.
-    rec.update(hot_loop_coverage.trial_fields(_meta.get("hot_loop"), final_text))
+    rec.update(hot_loop_coverage.trial_fields(_meta.get("hot_loop"), hot_text))
     if rec["source_changed"]:
         (trial / "changes.diff").write_text("".join(difflib.unified_diff(
             original_text.splitlines(True), final_text.splitlines(True),
@@ -2004,10 +2033,11 @@ def cmd_rescore(a: argparse.Namespace) -> int:
                 continue
             orig_text, final_text = orig.read_text(), final.read_text()
         t["scaffold"] = scaffold.check(orig_text, final_text, t.get("protected") or ())
+        t["scaffold"], hot_text = _editable_judgement(p.parent, t.get("editable") or [], t["scaffold"], final_text)
         if t.get("hot_loop"):
             # Only a record that carries its hot loop (made since the coverage check exists) is
             # judged again; an older record keeps its shape. A changed verdict keeps the old one.
-            cov = hot_loop_coverage.trial_fields(t["hot_loop"], final_text)
+            cov = hot_loop_coverage.trial_fields(t["hot_loop"], hot_text)
             if cov["hot_loop_covered"] != t.get("hot_loop_covered"):
                 print(f"  {t.get('benchmark')} · {t.get('arm')} · rep{t.get('repeat')}: hot_loop_covered "
                       f"{t.get('hot_loop_covered')} -> {cov['hot_loop_covered']}")
@@ -2130,8 +2160,10 @@ def cmd_verify_source(a: argparse.Namespace) -> int:
         "host_load_start": list(os.getloadavg()),
     }
     # the same coverage verdict as an agent trial's (E2-B1; null for a package without a hot loop)
+    _editable = list((proj or {}).get("editable") or [])
     rec.update(hot_loop_coverage.trial_fields(
-        json.loads((bench_dir / "meta.json").read_text()).get("hot_loop"), text))
+        json.loads((bench_dir / "meta.json").read_text()).get("hot_loop"),
+        _editable_judgement(trial, _editable, {}, text)[1] if _editable else text))
     shown = f"{candidate.name}" + (f" + {' '.join(flags)}" if flags else "")
     print(f"verify {a.benchmark} · {a.label}: {shown} at {vsize}", flush=True)
     t0 = time.perf_counter()

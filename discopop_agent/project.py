@@ -51,13 +51,18 @@ class Project:
     ldflags: Tuple[str, ...] = ()
     build_cmd: str = ""                 # optional: the project's own build, run in the root
     binary: str = "a.out"               # what `build_cmd` produces, relative to the root
+    # The files whose changes are taken, relative to root; empty (the default) = every file of the
+    # project.  A benchmark whose measurement lives in files of its own (packaging v5: `main.c`) names
+    # the one file that is the benchmark's — the agent, its twin and the model alone then all work on
+    # that file only, by this one rule (`may_edit`), whatever a function is called.
+    editable: Tuple[str, ...] = ()
 
     # ------------------------------------------------------------------ discovery
     @classmethod
     def discover(cls, root: "str | Path", units: Optional[List[str]] = None,
                  include_dirs: Optional[List[str]] = None, cflags: Optional[List[str]] = None,
                  ldflags: Optional[List[str]] = None, build_cmd: str = "",
-                 binary: str = "a.out") -> "Project":
+                 binary: str = "a.out", editable: Optional[List[str]] = None) -> "Project":
         """Describe the project at `root`.
 
         Anything not given is found: every C/C++ source under the root is a unit
@@ -84,6 +89,7 @@ class Project:
             include_dirs=tuple(include_dirs if include_dirs is not None else header_dirs),
             cflags=tuple(cflags or ()), ldflags=tuple(ldflags or ()),
             build_cmd=build_cmd, binary=binary,
+            editable=tuple(Path(e).as_posix() for e in (editable or ())),
         )
 
     # ------------------------------------------------------------------ paths
@@ -103,6 +109,11 @@ class Project:
 
     def contains(self, path: "str | Path") -> bool:
         return self.rel(path) is not None
+
+    def may_edit(self, path: "str | Path") -> bool:
+        """Is `path` a file of the project whose changes are taken?"""
+        rel = self.rel(path)
+        return rel is not None and (not self.editable or rel in self.editable)
 
     # ------------------------------------------------------------------ staging
     def stage(self, dest: Path, replace: Optional[Dict[str, str]] = None) -> Path:
@@ -208,6 +219,9 @@ def set_focus(path: "str | Path | None") -> None:
         _ACTIVE["focus"] = None
         return
     rel = p.rel(path) if Path(str(path)).is_absolute() else Path(str(path)).as_posix()
+    if rel is not None and not p.may_edit(p.abs(rel)):
+        raise ValueError(f"{rel} is not a file of this project the agent may change "
+                         f"(editable: {', '.join(p.editable)})")
     _ACTIVE["focus"] = rel
 
 

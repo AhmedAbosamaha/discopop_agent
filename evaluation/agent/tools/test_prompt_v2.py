@@ -126,6 +126,34 @@ def main() -> int:
           0 < r3.find("### What the observed flow means") < r3.find("### Task")
           and r3.find("### Why this region is here") < r3.find("### What the observed flow means"))
 
+    print("2c. D11, the order statement by carrier (version 4): the truth table on the screen's 86 profiles")
+    # The rule is not changed on reasoning alone (record §6, 4 Oct): order_replay.py runs the agent's own
+    # planning and evidence on the 86 archived profiles (43 loops, packaging v4 and v5) and compares the
+    # statement with what is true of each loop, written down there by reading it.  Version 4 must be right on
+    # every one; version 3's known misses (a false order on s212, s241, s244; s323 given an order) are the
+    # finding that led to it and are not asserted here.
+    import order_replay
+    archive = (HERE.parent / "results" / "T0_instruments" / "T0.16_clean_layout" / "preflight"
+               / "screen_profiles.tar.gz")
+    check("the screen's profiles are archived", archive.exists(), str(archive))
+    if archive.exists():
+        import contextlib
+        import io
+        saved = sys.argv
+        sys.argv = ["order_replay.py", str(archive), "--versions", "4", "--check", "4"]
+        out = io.StringIO()
+        try:
+            with contextlib.redirect_stdout(out):
+                rc = order_replay.main()
+        finally:
+            sys.argv = saved
+        tail = out.getvalue().strip().splitlines()[-1] if out.getvalue().strip() else ""
+        check("version 4 is right on all 86 profiles", rc == 0 and "86 right, 0 wrong" in tail, tail[:300])
+        rows = [l for l in out.getvalue().splitlines() if l.startswith("| k")]
+        check("the hidden-order kernels keep their order in both layouts (k17, k19, k23, k31, k36: 10 profiles)",
+              sum(1 for l in rows if l.split("|")[1].strip() in ("k17", "k19", "k23", "k31", "k36")
+                  and "right — " in l and "⟶" in l) == 10, str(len(rows)))
+
     print("3. what stays: the no-evidence request, and each change only where it belongs")
     loop, ev = pm.fixture_evidence("k17")
     g1, g2 = gates()

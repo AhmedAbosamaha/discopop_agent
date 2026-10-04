@@ -108,14 +108,34 @@ def _endpoint_position(
     return instr_lines.get(instr, (0, 0))
 
 
+def _typed_targets(parts: List[str]) -> List[Tuple[str, str]]:
+    """Every target of a dependence line with ITS OWN type: `<sink> NOM  INIT 0@0|a(..) WAR 34@57|a(..)`
+    holds one INIT and one WAR.  A type token stands before each target."""
+    out: List[Tuple[str, str]] = []
+    dep_type = ""
+    for tok in parts[2:]:
+        if tok in ("RAW", "WAR", "WAW", "INIT"):
+            dep_type = tok
+        elif "|" in tok and dep_type:
+            out.append((dep_type, tok))
+    return out
+
+
 def _parse_dep_line(
     line: str, instr_lines: Optional[Dict[str, Tuple[int, int]]] = None,
-    file_id: Optional[int] = None,
+    file_id: Optional[int] = None, typed: bool = False,
 ) -> List[Tuple[str, int, int, str, str]]:
     """Parse one line of dynamic_dependencies.txt.
 
-    Format: <sink> NOM  <DEP_TYPE> <source>|<var>(<region>) …
+    Format: <sink> NOM  <DEP_TYPE> <source>|<var>(<region>) [<DEP_TYPE> <source>|<var>(<region>)] …
     Returns list of (dep_type, from_line, to_line, variable, kind).
+
+    `typed` (D12, prompt version 4; found 4 Oct 2026): each target is read with the type token in
+    front of it.  Without it — the reading every request up to version 3 was built from, kept so those
+    texts stay reproducible — the FIRST type of the line is applied to every target: a line that starts
+    with INIT is dropped with the WAR/WAW behind it, an INIT behind a WAR is listed as a WAR with no
+    line, and a WAW behind a WAR as a WAR (measured on 86 profiles: 325, 420 and 364 of 8,571 lines).
+    A read's line holds RAW only, so RAW is the same in both readings.
 
     `instr_lines` resolves instruction ids to source lines (see
     `_load_instruction_lines`).  Without it the variable names and dependence
@@ -136,13 +156,14 @@ def _parse_dep_line(
     if file_id is not None and from_file != file_id:
         from_line = 0
 
-    dep_type = parts[2]
-    if dep_type not in ("RAW", "WAR", "WAW"):
-        return results
+    if typed:
+        pairs = [(t, target) for t, target in _typed_targets(parts) if t != "INIT"]
+    else:
+        if parts[2] not in ("RAW", "WAR", "WAW"):
+            return results
+        pairs = [(parts[2], target) for target in parts[3:] if "|" in target]
 
-    for target in parts[3:]:
-        if "|" not in target:
-            continue
+    for dep_type, target in pairs:
         to_part, var_part = target.split("|", 1)
         to_file, to_line = _endpoint_position(to_part, lines_map)
         if file_id is not None and to_file != file_id:
@@ -158,6 +179,7 @@ def _load_dependencies(
     start_line: int,
     end_line: int,
     file_id: Optional[int] = None,
+    typed: bool = False,
 ) -> Tuple[List[Dependency], List[Dependency], List[Dependency]]:
     """Load deps where at least one endpoint falls inside [start_line, end_line].
 
@@ -177,7 +199,7 @@ def _load_dependencies(
     for line in dep_file.read_text().splitlines():
         if not line.strip() or line.startswith("START"):
             continue
-        for dep_type, fl, tl, var, kind in _parse_dep_line(line, instr_lines, file_id):
+        for dep_type, fl, tl, var, kind in _parse_dep_line(line, instr_lines, file_id, typed):
             in_region = (fl and start_line <= fl <= end_line) or \
                         (tl and start_line <= tl <= end_line)
             if not in_region:
@@ -237,7 +259,7 @@ def _load_reductions(profiler_dir: Path, start_line: int, end_line: int,
     return list(dict.fromkeys(reds))
 
 
-def _all_observed_dep_vars(profiler_dir: Path) -> Set[str]:
+def _all_observed_dep_vars(profiler_dir: Path, typed: bool = False) -> Set[str]:
     """Every variable name that appears in ANY runtime (dynamic) dependence in the
     whole program.  Used as the reference for static-only detection: a variable
     observed dynamically anywhere is NOT spurious, even if a given region's window
@@ -251,7 +273,7 @@ def _all_observed_dep_vars(profiler_dir: Path) -> Set[str]:
     for line in f.read_text().splitlines():
         if not line.strip() or line.startswith("START"):
             continue
-        for _dt, _fl, _tl, var, _kind in _parse_dep_line(line):
+        for _dt, _fl, _tl, var, _kind in _parse_dep_line(line, typed=typed):
             out.add(var)
     return out
 

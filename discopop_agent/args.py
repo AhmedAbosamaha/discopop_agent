@@ -143,6 +143,11 @@ def parse_args() -> AgentArguments:
     p.add_argument("--project-include", default=None,
                    help=("Comma-separated include directories relative to --project-dir "
                          "(default: every directory under it that holds a header)."))
+    p.add_argument("--project-editable", default="",
+                   help=("Comma-separated files, relative to --project-dir, whose changes are "
+                         "taken (default: every file of the project). A program whose "
+                         "measurement sits in files of its own names the files that are the "
+                         "program's: no region in any other file is worked on."))
     p.add_argument("--project-cflags", default="",
                    help="Extra compile flags for every build of the project, e.g. '-DCLASS_S'.")
     p.add_argument("--project-ldflags", default="",
@@ -436,12 +441,14 @@ def parse_args() -> AgentArguments:
                          "duplicates it — as stage `harness`, whose retry is not charged."))
     p.add_argument("--protected-note", default="", metavar="TEXT",
                    help="What the models are told about the protected lines, after listing them.")
-    p.add_argument("--prompt-version", type=int, choices=(1, 2, 3), default=1,
+    p.add_argument("--prompt-version", type=int, choices=(1, 2, 3, 4), default=1,
                    help=("Which texts the model reads (llm/prompts.PROMPT_VERSIONS). 1 (default): as "
                          "every arm registered before the prompt review of 28 Sep 2026 read them. 2: "
                          "the review's must-changes (dependence direction with verbs, blockers without "
                          "'must be removed', no generic array note, in-region RAW only, what a RAW means, "
-                         "'a dependence is moved, not deleted')."))
+                         "'a dependence is moved, not deleted'). 3: plus the order a carried RAW imposes "
+                         "on a split. 4: the same sentences, with each flow's carrier read from the "
+                         "profile's call-path states and every dependence read by its own type."))
     p.add_argument("--prompt-omit", default="", metavar="PARTS",
                    help=("Comma list of prompt parts to LEAVE OUT, to measure what each "
                          "contributes (E2 Part D): contract, gate (how the rewrite is "
@@ -642,12 +649,16 @@ def parse_args() -> AgentArguments:
             include_dirs=([d.strip() for d in a.project_include.split(",") if d.strip()]
                           if a.project_include is not None else None),
             cflags=shlex.split(a.project_cflags), ldflags=shlex.split(a.project_ldflags),
-            build_cmd=a.build_cmd, binary=a.project_binary)
+            build_cmd=a.build_cmd, binary=a.project_binary,
+            editable=[e.strip() for e in a.project_editable.split(",") if e.strip()])
         if not project.units:
             p.error(f"--project-dir {a.project_dir}: no C/C++ translation unit found")
         missing = [u for u in project.units if not (project.root / u).is_file()]
         if missing:
             p.error(f"--project-units: not found under the project root: {', '.join(missing)}")
+        missing = [e for e in project.editable if not (project.root / e).is_file()]
+        if missing:
+            p.error(f"--project-editable: not found under the project root: {', '.join(missing)}")
         suffixes = {Path(u).suffix == ".c" for u in project.units}
         if len(suffixes) > 1 and not a.build_cmd:
             p.error("the project mixes C and C++ units; one compiler invocation cannot "
@@ -661,8 +672,8 @@ def parse_args() -> AgentArguments:
             a.source_file = str(project.root / project.units[0])
     elif not a.source_file:
         p.error("--source-file is required (or give --project-dir for a multi-file program)")
-    elif a.build_cmd or a.project_units or a.project_include is not None:
-        p.error("--build-cmd / --project-units / --project-include need --project-dir")
+    elif a.build_cmd or a.project_units or a.project_include is not None or a.project_editable:
+        p.error("--build-cmd / --project-units / --project-include / --project-editable need --project-dir")
 
     args = AgentArguments(
         project=project,

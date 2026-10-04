@@ -52,6 +52,20 @@ def load_prevented_deps(
     return matched
 
 
+def load_all_prevented(discopop_dir: Path) -> List[Dict[str, Any]]:
+    """Every Do-All blocker DiscoPoP recorded for the program, each with its loop's file (`loop_file`)."""
+    import json
+
+    f = discopop_dir / "explorer" / "doall_prevented.json"
+    if not f.exists():
+        return []
+    try:
+        records = json.loads(f.read_text())
+    except (OSError, ValueError):
+        return []
+    return [r for r in records if isinstance(r, dict)]
+
+
 def _var_classification(pattern: Optional[Dict[str, Any]]) -> Dict[str, Any]:
     """Pull DiscoPoP's OpenMP data-sharing classification out of a detected
     pattern (a patterns.json entry, carried on the candidate).

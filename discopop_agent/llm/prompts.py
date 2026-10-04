@@ -34,8 +34,15 @@ from ..types import GateFacts
 #   D10 the evidence arms' system prompt says what a carried RAW is
 #   A1  the contract: a dependence is moved, not deleted (every arm)
 #   D4  (version 3) the order a carried RAW imposes on a split, where DiscoPoP names the carrying loop
+# Version 4 (4 Oct 2026; record §6, T0.16) corrects two readings of the profile and changes no wording:
+#   D11 D4's statement decided by what carries each flow — the same iteration, the loop, or the
+#       repetitions/calls around it — read from the profile's call-path states (evidence/carriers.py),
+#       instead of by which variable the Do-All detector names first for which loop
+#   D12 WAR and WAW (and the static-only variables) from every dependence read by its own type: up to
+#       version 3 a dependence line's first type was applied to all of its targets (evidence/deps.py)
 PROMPT_VERSIONS: Dict[int, Tuple[str, ...]] = {1: (), 2: ("A1", "D1", "D10", "D2", "D3", "D5"),
-                                               3: ("A1", "D1", "D10", "D2", "D3", "D4", "D5")}
+                                               3: ("A1", "D1", "D10", "D2", "D3", "D4", "D5"),
+                                               4: ("A1", "D1", "D10", "D11", "D12", "D2", "D3", "D4", "D5")}
 
 
 def _sub(text: str, old: str, new: str) -> str:

@@ -13,7 +13,8 @@ from typing import List
 
 from ..plan import find_enclosing_function, region_fingerprint
 from ..types import Dependency, EvidencePackage, HotspotCandidate
-from .blockers import _var_classification, load_prevented_deps
+from .blockers import _var_classification, load_all_prevented, load_prevented_deps
+from .carriers import load_flow_relations
 from .context import (_array_accesses, _brace_match_end, _demangle,
                       _extract_source_region, _inner_patterns, _line_text_map,
                       _load_calls_in_region, _load_local_vars,
@@ -64,6 +65,12 @@ def assemble(
         profiler_dir.parent, region.file_id, region.start_line, region.end_line
     )
     file_prevented = load_prevented_deps(profiler_dir.parent, region.file_id, 1, 10**9)
+    if project_mod.active() is not None:
+        # A multi-file program (4 Oct 2026): the loop that carries a dependence between two lines of this
+        # file can be in ANOTHER file — the caller's loop around a function, as in packaging v5, where the
+        # repetition loop is main.c's.  D4 has to see that loop's blocker too, or it reads a flow carried
+        # between calls as one inside the loop and calls every such pair a cycle (T0.16: s1213).
+        file_prevented = load_all_prevented(profiler_dir.parent)
 
     # DiscoPoP's own OpenMP data-sharing classification for this region (shared /
     # private / first_private / last_private / reduction), taken from the pattern
@@ -82,6 +89,11 @@ def assemble(
     observed_vars = _all_observed_dep_vars(profiler_dir)
     static_only = _load_static_only_vars(
         profiler_dir, observed_vars, region.start_line, region.end_line, fid
+    )
+    # D12: the same two facts from every dependence read by its own type (deps._parse_dep_line)
+    _raw_t, war_t, waw_t = _load_dependencies(profiler_dir, region.start_line, region.end_line, fid, typed=True)
+    static_only_typed = _load_static_only_vars(
+        profiler_dir, _all_observed_dep_vars(profiler_dir, typed=True), region.start_line, region.end_line, fid
     )
 
     # Structural facts: loop nest with induction variables, declared variable
@@ -125,6 +137,13 @@ def assemble(
         return out
 
     raw, war, waw = _retag(raw), _retag(war), _retag(waw)
+    war_t, waw_t = _retag(war_t), _retag(waw_t)
+    # D11: what carries each flow between two lines of the enclosing function — the loops of that function
+    # (not only the region's) are the cross-check on the call paths (carriers.load_flow_relations)
+    fn_loops = _load_loop_nest(profiler_dir.parent, region.file_id, min(fn_start, region.start_line),
+                               max(fn_end, region.end_line))
+    relations = load_flow_relations(profiler_dir, fid, min(fn_start, region.start_line),
+                                    max(fn_end, region.end_line), [(lp["start"], lp["end"]) for lp in fn_loops])
     region_accesses = _array_accesses(candidate.source_file, region.start_line, region.end_line)
     inner = _inner_patterns(profiler_dir.parent, region.file_id, region.start_line,
                             region.end_line, region.start_line)
@@ -158,6 +177,11 @@ def assemble(
         enclosing_function_name=fn_name,
         enclosing_function_start=fn_start,
         enclosing_function_end=fn_end,
+        file_id=region.file_id,
+        war_typed=war_t,
+        waw_typed=waw_t,
+        static_only_typed=static_only_typed,
+        flow_relations=relations,
         enclosing_function_source=fn_source,
         array_accesses=region_accesses,
         inner_patterns=inner,

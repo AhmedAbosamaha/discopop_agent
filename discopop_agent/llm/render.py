@@ -102,9 +102,10 @@ def _evidence_sections(ev: EvidencePackage, deps_header: str,
             _fmt_deps(ev.raw_deps, "RAW — read-after-write (a value written by one access and read "
                       "by a later one)" if v2 else "RAW — read-after-write (the blocking ones)",
                       ev.line_text, region, skip, sig, "RAW", changes),
-            _fmt_deps(ev.war_deps, "WAR — write-after-read", region=region,
+            # D12 (version 4): every dependence read by its own type (evidence/deps.py)
+            _fmt_deps(ev.war_typed if "D12" in changes else ev.war_deps, "WAR — write-after-read", region=region,
                       skip_vars=skip, signature_line=sig, dep_class="WAR", changes=changes),
-            _fmt_deps(ev.waw_deps, "WAW — write-after-write", region=region,
+            _fmt_deps(ev.waw_typed if "D12" in changes else ev.waw_deps, "WAW — write-after-write", region=region,
                       skip_vars=skip, signature_line=sig, dep_class="WAW", changes=changes),
         ]
         if skip:
@@ -116,7 +117,7 @@ def _evidence_sections(ev: EvidencePackage, deps_header: str,
         parts.append(f"### Reduction variables: {', '.join(ev.reduction_vars)}\n")
     for name, section in (
         ("classification", _fmt_classification(ev)),
-        ("extra_vars", _fmt_extra_vars(ev)),
+        ("extra_vars", _fmt_extra_vars(ev, changes)),
         ("array_note", "" if "D3" in changes or "D4" in changes else _array_dep_note(ev)),
         ("loop_nest", _fmt_loop_nest(ev, speed_judged, llm_pragmas)),
         ("calls", _fmt_calls(ev)),
@@ -134,7 +135,7 @@ def _evidence_sections(ev: EvidencePackage, deps_header: str,
                      f"{ev.tier1_failure_reason}\n")
     if want("array_note") and "D4" in changes:
         # D4: the last evidence section, right before the task — where the pilot's order note sat.
-        note = order_statement(ev)
+        note = order_statement(ev, changes)
         if note:
             parts.append(note)
     return parts
@@ -586,20 +587,21 @@ def _fmt_trip_counts(ev: EvidencePackage, speed_judged: bool = True) -> str:
     return "\n".join(out) + "\n"
 
 
-def _fmt_extra_vars(ev: EvidencePackage) -> str:
+def _fmt_extra_vars(ev: EvidencePackage, changes: FrozenSet[str] = frozenset()) -> str:
     """Render loop-local (already-private) variables and static-only (likely
     spurious) dependence variables.  Returns '' when neither is present."""
     lines = []
+    static_only = ev.static_only_typed if "D12" in changes else ev.static_only_vars
     if ev.local_vars_in_region:
         lines.append(
             f"  loop-local (already per-iteration private — no privatization "
             f"needed): {', '.join(ev.local_vars_in_region)}"
         )
-    if ev.static_only_vars:
+    if static_only:
         lines.append(
             f"  static-only deps (compiler-conservative, NEVER observed at "
             f"runtime → the dependence is likely spurious; exposing or privatizing "
-            f"may already be safe): {', '.join(ev.static_only_vars)}"
+            f"may already be safe): {', '.join(static_only)}"
         )
     if not lines:
         return ""
@@ -721,7 +723,84 @@ def _line_of(x: Any) -> Optional[int]:
         return None
 
 
-def order_statement(ev: EvidencePackage) -> str:
+_ORDER_HEAD = "### What the observed flow means for a rewrite (from DiscoPoP's records)\n"
+
+
+def _order_bullet(ev: EvidencePackage, x: str, w: int, s: int, loop: int) -> str:
+    def text(ln: int) -> str:
+        return ev.line_text.get(ln, "").strip()
+    return (f"  - Line {s} (`{text(s)}`) reads an element of `{x}` that line {w} (`{text(w)}`) writes; "
+            f"DiscoPoP names the loop at line {loop} as carrying this dependence.  The value must flow "
+            f"from line {w} to line {s}: if you split that loop, the loop holding line {w} has to run "
+            f"completely before the loop holding line {s}; reading `{x}`'s values from before the loop "
+            "would change the result.")
+
+
+def _cycle_bullet(ev: EvidencePackage, a: int, b: int) -> str:
+    def text(ln: int) -> str:
+        return ev.line_text.get(ln, "").strip()
+    return (f"  - Lines {a} (`{text(a)}`) and {b} (`{text(b)}`) feed each other, "
+            "so splitting the loop between them changes the result.")
+
+
+def _order_by_carrier(ev: EvidencePackage) -> str:
+    """D11 (prompt version 4, 4 Oct 2026; record §6, T0.16): D4's statement, decided by what CARRIES each
+    flow — read from the profile's call-path states (evidence/carriers.py) — instead of by which variable
+    DiscoPoP's Do-All detector names for which loop.  The detector records one blocker per loop, the first
+    it meets, so D4 depended on the profile's draw wherever two statements also feed each other the other
+    way (s1213: the sentence in one profile, none in the next), and a variable name cannot tell a flow
+    inside ONE iteration from one between repetitions (s323, a true recurrence, was given an order).
+
+    For an array `x` written on line w and read on line s, L the innermost loop holding both lines:
+      * an order needs the flow w -> s observed between two iterations of L, in one activation of L;
+      * the two lines are mutual — "feed each other" — when a value also flows s -> w inside one
+        activation of L (the same iteration, or carried by L).  A flow s -> w that exists only between
+        activations (carried by a loop around L, or between two calls of the function — the repetition
+        loop of a benchmark) does not stand against a split of L.  A flow through one of the function's
+        own scalars is recorded without call paths (`unknown`): it counts as inside the activation, as
+        D4 counted every reverse flow it could not place elsewhere;
+      * no order is given when line s also READS elements before line w overwrites them inside one
+        activation (a WAR against the order): running w's loop first would hand s the new values, so a
+        plain split in that order is wrong, and the statement says nothing rather than half of it.
+    The sentences are D4's, word for word."""
+    lo, hi = ev.start_line, ev.end_line
+    ind = _induction_vars(ev)
+    arrays = {d.variable for d in ev.raw_deps if getattr(d, "kind", "scalar") == "array"}
+    flows: Dict[Tuple[int, int], Dict[str, Set[str]]] = {}        # (writer, reader) -> {variable: relations}
+    read_first: Dict[Tuple[int, int], Set[str]] = {}              # (reader, later writer) -> relations
+    for (kind, later, earlier, var), rels in ev.flow_relations.items():
+        if var in ind or later == earlier or not (lo <= later <= hi and lo <= earlier <= hi):
+            continue
+        if kind == "RAW":
+            flows.setdefault((earlier, later), {}).setdefault(var, set()).update(rels)
+        elif kind == "WAR":
+            read_first.setdefault((earlier, later), set()).update(rels)
+
+    def carrier(w: int, s: int) -> Optional[int]:
+        holding = [lp for lp in ev.loop_nest if lp["start"] <= min(w, s) and max(w, s) <= lp["end"]]
+        return max(holding, key=lambda lp: lp["start"])["start"] if holding else None
+
+    within = {"loop", "iteration"}
+    out: List[str] = []
+    cycles: Set[Tuple[int, int]] = set()
+    for (w, s), vs in sorted(flows.items()):
+        loop = carrier(w, s)
+        xs = sorted(x for x, rels in vs.items() if x in arrays and "loop" in rels and loop is not None)
+        if not xs or loop is None:
+            continue
+        if any(rels & (within | {"unknown"}) for rels in flows.get((s, w), {}).values()):
+            key = (min(w, s), max(w, s))
+            if key not in cycles:
+                cycles.add(key)
+                out.append(_cycle_bullet(ev, key[0], key[1]))
+            continue
+        if read_first.get((s, w), set()) & within:
+            continue
+        out += [_order_bullet(ev, x, w, s, loop) for x in xs]
+    return _ORDER_HEAD + "\n".join(out) + "\n" if out else ""
+
+
+def order_statement(ev: EvidencePackage, changes: FrozenSet[str] = frozenset()) -> str:
     """D4 (review, 28 Sep): each array RAW between two different lines of the region, restated as the order
     it imposes on a split — ONLY where DiscoPoP itself names the carrying loop.  The ORDER-2 pilot's
     restatement took Haiku from 0/10 to 8/10; applied to every record it would demand a wrong split on
@@ -733,16 +812,27 @@ def order_statement(ev: EvidencePackage) -> str:
     unless every variable of that reverse flow is named by the blockers on loops other than L only (carried
     by an enclosing loop, as in s1213): a cycle gets "splitting between them changes the result" and no
     order.  Truth table (28 Sep, 29 programs, 64 regions): tools/test_prompt_v2.py.  No iteration distance
-    is claimed — the records carry none."""
+    is claimed — the records carry none.
+
+    With `D11` in `changes` (prompt version 4) the rule is `_order_by_carrier`'s; this one stays as every
+    request up to version 3 was built — with one correction for a MULTI-FILE program (4 Oct 2026): a
+    carrying loop is named by (file, line) and the blockers of the whole program are read, so a loop in
+    another file — the caller's loop around the function — counts as "another loop" instead of not
+    existing.  A one-file program has one file id: nothing changes there (the manifest proves it)."""
+    if "D11" in changes:
+        return _order_by_carrier(ev)
     from ..evidence.deps import _classify_var
     lo, hi = ev.start_line, ev.end_line
     ind = _induction_vars(ev)
-    named: Dict[str, Set[int]] = {}
+    fid = ev.file_id
+    named: Dict[str, Set[Tuple[Optional[int], int]]] = {}
     for b in ev.file_prevented_deps or ev.prevented_deps or []:
         name = _classify_var(str(b.get("var_name", "")))[0]
         ls = _line_of(b.get("loop_start"))
         if ls is not None:
-            named.setdefault(name[:-2] if name.endswith("[]") else name, set()).add(ls)
+            lf = b.get("loop_file")
+            named.setdefault(name[:-2] if name.endswith("[]") else name, set()).add(
+                (lf if fid is not None and lf is not None else fid, ls))
     flows: Dict[Tuple[int, int], Dict[str, str]] = {}      # (writer, reader) -> {variable: kind}
     for d in ev.raw_deps:
         s, w = int(d.from_line), int(d.to_line)
@@ -753,31 +843,21 @@ def order_statement(ev: EvidencePackage) -> str:
         holding = [lp for lp in ev.loop_nest if lp["start"] <= min(w, s) and max(w, s) <= lp["end"]]
         return max(holding, key=lambda lp: lp["start"])["start"] if holding else None
 
-    def text(ln: int) -> str:
-        return ev.line_text.get(ln, "").strip()
-
     out: List[str] = []
     cycles: Set[Tuple[int, int]] = set()
     for (w, s), vs in sorted(flows.items()):
         loop = carrier(w, s)
-        xs = sorted(x for x, k in vs.items() if k == "array" and loop is not None and named.get(x) == {loop})
-        if not xs:
+        here = (fid, loop)
+        xs = sorted(x for x, k in vs.items() if k == "array" and loop is not None and named.get(x) == {here})
+        if not xs or loop is None:
             continue
         back = flows.get((s, w), {})
-        elsewhere = all(named.get(y) and loop not in named[y] for y in back)
+        elsewhere = all(named.get(y) and here not in named[y] for y in back)
         if back and not elsewhere:
             key = (min(w, s), max(w, s))
             if key not in cycles:
                 cycles.add(key)
-                out.append(f"  - Lines {key[0]} (`{text(key[0])}`) and {key[1]} (`{text(key[1])}`) feed each other, "
-                           "so splitting the loop between them changes the result.")
+                out.append(_cycle_bullet(ev, key[0], key[1]))
             continue
-        for x in xs:
-            out.append(f"  - Line {s} (`{text(s)}`) reads an element of `{x}` that line {w} (`{text(w)}`) writes; "
-                       f"DiscoPoP names the loop at line {loop} as carrying this dependence.  The value must flow "
-                       f"from line {w} to line {s}: if you split that loop, the loop holding line {w} has to run "
-                       f"completely before the loop holding line {s}; reading `{x}`'s values from before the loop "
-                       "would change the result.")
-    if not out:
-        return ""
-    return "### What the observed flow means for a rewrite (from DiscoPoP's records)\n" + "\n".join(out) + "\n"
+        out += [_order_bullet(ev, x, w, s, loop) for x in xs]
+    return _ORDER_HEAD + "\n".join(out) + "\n" if out else ""

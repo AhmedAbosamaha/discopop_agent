@@ -1,6 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
-from typing import Tuple, Any, Dict, Optional, List
+from typing import Tuple, Any, Dict, Optional, List, Set
 
 
 @dataclass
@@ -163,6 +163,19 @@ class EvidencePackage:
     enclosing_function_name: str = ""
     enclosing_function_start: int = 0
     enclosing_function_end: int = 0
+    # The region's file as DiscoPoP numbers it.  D4 (render.order_statement) names a carrying loop by
+    # (file, line): a bare line number of another file of a project could be the number of a loop here.
+    file_id: Optional[int] = None
+    # D12 (prompt version 4, 4 Oct 2026): WAR and WAW with every target of a dependence line read by ITS
+    # OWN type, and the static-only variables computed from that reading.  `war_deps`, `waw_deps` and
+    # `static_only_vars` keep the reading versions 1-3 rendered (one type per line: evidence/deps.py).
+    war_typed: List[Dependency] = field(default_factory=list)
+    waw_typed: List[Dependency] = field(default_factory=list)
+    static_only_typed: List[str] = field(default_factory=list)
+    # D11 (prompt version 4): what carries each RAW and WAR between two lines of the enclosing function —
+    # (type, later line, earlier line, variable) -> {"iteration", "loop", "outside"}, read from the profile's
+    # call-path states (evidence/carriers.py).  Empty when the profile holds no state mapping.
+    flow_relations: Dict[Tuple[str, int, int, str], Set[str]] = field(default_factory=dict)
     enclosing_function_source: str = ""
 
 

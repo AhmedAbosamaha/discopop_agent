@@ -27,6 +27,15 @@ for meta in sorted(glob.glob(f"{R}/prepared/*/*/meta.json")):
         continue
     f = f"{meta[:-len('meta.json')]}{m['file']}"      # the unit holding main and the harness code
     t = open(f).read(); r = S.check(t, t); n_self += 1
+    if (m.get("project") or {}).get("editable"):
+        # packaging v5 (4 Oct 2026): `file` is the benchmark's OWN file and holds nothing of the measurement,
+        # so the check has nothing to apply to there; it applies to the program as a whole (main.c has the
+        # timer and the repetition loop) — and the judge compares every other file byte for byte.
+        whole = "".join(open(f"{meta[:-len('meta.json')]}{u}").read() for u in sorted(m["project"]["units"]))
+        w = S.check(whole, whole)
+        if not (r["ok"] and not r["applies"] and w["ok"] and w["applies"]):
+            fails += 1; print("  FAIL self (v5)", f, r, w)
+        continue
     if not (r["ok"] and r["applies"]): fails += 1; print("  FAIL self", f, r)
 print(f"  {n_self} unchanged sources checked")
 for run, name, want in [  # recorded runs: skipped when absent

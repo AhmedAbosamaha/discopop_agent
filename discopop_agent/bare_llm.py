@@ -34,11 +34,11 @@ import shutil
 import sys
 import tempfile
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 from .llm.prompts import (PROMPT_VERSIONS, _ASK_ANNOTATE, _CONTRACT_PRAGMA, _OMP_RULES, _PLAN_SPEC,
                           _PRAGMA_FORMS, _RULE, _contract, _granularity, _how_compared, _step, _sub)
-from .llm.request import _goal, _protected_block, _task_checklist
+from .llm.request import _goal, _project_file_note, _protected_block, _task_checklist
 from .gate.harness_guard import HARNESS_REASKS, harness_feedback, harness_problem
 from .llm.providers import _complete_claude_agent_sdk
 from .types import GateFacts
@@ -121,7 +121,7 @@ def _judged_mirror(gate: GateFacts) -> str:
             "loop that was never parallelized.\n\n" + gran)
 
 
-def _system_mirror(gate: GateFacts = MIRROR_GATE) -> str:
+def _system_mirror(gate: GateFacts = MIRROR_GATE, one_file: bool = False) -> str:
     ask = _sub(_ASK_ANNOTATE, "DiscoPoP profiled one region and could not extract safe parallelism from\n"
                "it.  Rewrite that region's sequential source so the parallelism becomes\n"
                "explicit,", "This program runs sequentially.  Rewrite its sequential source so the\n"
@@ -139,12 +139,25 @@ def _system_mirror(gate: GateFacts = MIRROR_GATE) -> str:
            "Leave the functions the request names as measuring the program untouched, and\n"
            "leave the files compiling — you have no compiler here, so re-read anything you\n"
            "are unsure of.\n")
+    if one_file:
+        # A program that names the one file a model's changes are taken from (packaging v5, 4 Oct): no
+        # function is named as measuring anything — the measurement is in files that are not the model's —
+        # so the closing sentence is the agent's own about its file (prompts._OUTPUT_DIRECT).
+        out = _sub(out, "Leave the functions the request names as measuring the program untouched, and\n"
+                   "leave the files compiling — you have no compiler here, so re-read anything you\n"
+                   "are unsure of.\n",
+                   "Edit only the file named in the request, and leave it compiling — you have\n"
+                   "no compiler here, so re-read anything you are unsure of.\n")
     return (_ROLE_MIRROR + ask + given + _contract(gate, _CONTRACT_PRAGMA) + _judged_mirror(gate)
             + _OMP_RULES + _PRAGMA_FORMS + out)
 
 
 def _request_mirror(files: List[str], excluded: List[str], protected: Tuple[str, ...] = (),
-                    protected_note: str = "", gate: GateFacts = MIRROR_GATE) -> str:
+                    protected_note: str = "", gate: GateFacts = MIRROR_GATE,
+                    read_only: Optional[List[str]] = None) -> str:
+    """`read_only` (packaging v5): the program's other files, which the model can read and whose changes
+    are discarded — `files` is then the ONE file that is the model's, described in the agent's own sentence
+    (request._project_file_note), and no function is named as off limits."""
     goal = _goal(True, gate)
     if gate.require_speedup and not gate.judge_as_shipped:      # the clause exists only then (request._goal)
         goal = _sub(goal, "runs faster than the same build on one thread", "runs faster than the original sequential program")
@@ -157,9 +170,14 @@ def _request_mirror(files: List[str], excluded: List[str], protected: Tuple[str,
     keep = (_protected_block(GateFacts(protected=protected, protected_note=protected_note)) if protected
             else f"Do not change these functions — they set up, time and print the program, and the "
                  f"measurement depends on them: {', '.join(excluded)}.\n" if excluded else "")
+    where = "These files are in your working directory.  Read them."
+    if read_only is not None:
+        if len(files) != 1:
+            raise ValueError("a project names ONE file as the model's (--project-editable)")
+        where, keep = _project_file_note(files[0], read_only), ""
     return ("## The program\n"
             + "".join(f"  - {f}\n" for f in files)
-            + "\nThese files are in your working directory.  Read them.\n\n"
+            + "\n" + where + "\n\n"
             "### Task\n"
             f"This program's computation is to be {goal}\n" + keep + "\n"
             "Worth settling before you write:\n" + _task_checklist(gate, set()) + "\n"
@@ -168,13 +186,13 @@ def _request_mirror(files: List[str], excluded: List[str], protected: Tuple[str,
             "Keep the functions' names and signatures.")
 
 
-def _system(prompt: str = "mirror", gate: GateFacts = MIRROR_GATE) -> str:
+def _system(prompt: str = "mirror", gate: GateFacts = MIRROR_GATE, one_file: bool = False) -> str:
     """`mirror` (the default since 23 Sep evening): the agent's own instructions minus DiscoPoP,
     the gate during the run and feedback.  `minimal` (D37 as first decided, `d36_hint_check`'s
     `bare_llm` arm): role and tools only.  `contract` (E1-bare, kept to reproduce it): the
     baseline's own role, then THE CONTRACT, the OpenMP loop rules and the pragma forms."""
     if prompt == "mirror":
-        return _system_mirror(gate)
+        return _system_mirror(gate, one_file)
     if prompt == "minimal":
         return _ROLE_MINIMAL
     return _ROLE_BARE + _contract(GateFacts(), _CONTRACT_PRAGMA) + _OMP_RULES + _PRAGMA_FORMS
@@ -220,6 +238,9 @@ def main() -> int:
     p.add_argument("--project-include", default="")
     p.add_argument("--project-cflags", default="")
     p.add_argument("--project-ldflags", default="")
+    p.add_argument("--project-editable", default="",
+                   help="the ONE file of the project whose changes are taken (packaging v5); the other "
+                        "units are read-only context, and no function is named as off limits")
     p.add_argument("--model", required=True)
     p.add_argument("--exclude-functions", default="")
     p.add_argument("--protected-line", action="append", default=[],
@@ -228,7 +249,7 @@ def main() -> int:
     p.add_argument("--prompt", choices=("mirror", "minimal", "contract"), default="mirror",
                    help="mirror: the agent's instructions minus DiscoPoP, gate and feedback (default); "
                         "minimal: role, tools, goal; contract: E1-bare's prompt")
-    p.add_argument("--prompt-version", type=int, choices=(1, 2, 3), default=1,
+    p.add_argument("--prompt-version", type=int, choices=(1, 2, 3, 4), default=1,
                    help="mirror only: the agent's prompt version whose shared passages the mirror carries "
                         "(the agent's --prompt-version; 1 by default)")
     p.add_argument("--no-require-speedup", action="store_true",
@@ -242,11 +263,22 @@ def main() -> int:
     if not units:
         p.error("give --source-file, or --project-dir with --project-units")
     excluded = [x for x in a.exclude_functions.split(",") if x]
+    # Packaging v5: the model's file is one; the program's other units are context it can read.
+    editable = [e for e in a.project_editable.split(",") if e]
+    read_only: Optional[List[str]] = None
+    if editable:
+        if not a.project_dir or a.prompt != "mirror":
+            p.error("--project-editable needs --project-dir and the mirror prompt")
+        if len(editable) != 1 or editable[0] not in units:
+            p.error("--project-editable names ONE of --project-units")
+        read_only = [u for u in units if u not in editable]
+        units, excluded = editable, []
 
     print("\n" + "=" * 60 + "\n  Bare-LLM baseline — no DiscoPoP, no gate, one attempt\n" + "=" * 60)
     print(f"  Files          : {', '.join(units)}")
     print(f"  Model          : {a.model}")
-    print(f"  Not editable   : {', '.join(excluded) or '—'}")
+    print(f"  Not editable   : {', '.join(excluded) or '—'}"
+          + (f"  (read-only files: {', '.join(read_only) or '—'})" if read_only is not None else ""))
     print(f"  Prompt         : {a.prompt}" + ("  (speed check off)" if a.no_require_speedup else "") + "\n")
 
     if a.no_require_speedup and a.prompt != "mirror":
@@ -254,9 +286,10 @@ def main() -> int:
     if a.prompt_version != 1 and a.prompt != "mirror":
         p.error("--prompt-version selects the mirror's shared passages; the other prompts are frozen")
     gate = mirror_gate(not a.no_require_speedup, a.prompt_version)
-    system = _system(a.prompt, gate)
+    system = _system(a.prompt, gate, one_file=read_only is not None)
     protected = tuple(x.strip() for x in a.protected_line if x.strip())
-    request = (_request_mirror(units, excluded, protected, a.protected_note.strip(), gate) if a.prompt == "mirror"
+    request = (_request_mirror(units, excluded, protected, a.protected_note.strip(), gate, read_only)
+               if a.prompt == "mirror"
                else {"minimal": _request_minimal, "contract": _request}[a.prompt](units, excluded))
     with tempfile.TemporaryDirectory(prefix="dp_bare_") as tmp:
         ws = Path(tmp)

@@ -9,7 +9,7 @@ produce.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional, Set
+from typing import List, Optional, Set
 
 from ..types import EvidencePackage, GateFacts
 from .render import _evidence_sections, _fmt_digest
@@ -68,6 +68,16 @@ def _protected_block(gate: GateFacts) -> str:
             "each exactly as it is and where it is:\n"
             + "".join(f"    {l}\n" for l in gate.protected)
             + (gate.protected_note + "\n" if gate.protected_note else ""))
+
+
+def _project_file_note(rel: str, others: List[str]) -> str:
+    """What a model is told about the ONE file of a multi-file program its changes are taken from — the
+    same sentence for the agent (the file a region lives in), its twin and the model alone (bare_llm,
+    for a project that names its editable file)."""
+    return (f"This file is `{rel}` of a multi-file program.  The directory it sits in "
+            f"is a copy of the whole program — read its headers and the other units "
+            f"({', '.join(others[:8]) or 'none'}) for context.  Only your changes to "
+            f"`{rel}` are used; an edit to any other file is discarded.")
 
 
 def _checklist_block(gate: GateFacts, include: Optional[Set[str]]) -> str:
@@ -221,11 +231,7 @@ def _build_direct_prompt(evidence: EvidencePackage, ws_file: Path,
     if proj is not None:
         rel = proj.rel(evidence.source_file) or Path(evidence.source_file).name
         others = [u for u in proj.units if u != rel]
-        context = [
-            f"## This file is `{rel}` of a multi-file program.  The directory it sits in "
-            f"is a copy of the whole program — read its headers and the other units "
-            f"({', '.join(others[:8]) or 'none'}) for context.  Only your changes to "
-            f"`{rel}` are used; an edit to any other file is discarded."]
+        context = ["## " + _project_file_note(rel, others)]
     parts = [
         f"## File to edit: {ws_file}",
         *context,

@@ -149,7 +149,9 @@ def build_candidates(
     def file_of(region: CodeRegion) -> Optional[str]:
         mapped = fmap.get(region.file_id)
         if proj is not None:
-            return str(mapped) if mapped is not None and proj.contains(mapped) else None
+            # ... and, where the project names the files that are its own to change
+            # (`Project.editable`), a region in any other file is not the agent's either
+            return str(mapped) if mapped is not None and proj.may_edit(mapped) else None
         if mapped is not None and mapping_knows_source and mapped != own:
             return None
         return source_file

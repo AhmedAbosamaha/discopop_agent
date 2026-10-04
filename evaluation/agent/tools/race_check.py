@@ -82,6 +82,13 @@ def _unified_diff(original: Path, final: Path) -> str:
     return r.stdout
 
 
+def _project_units(t: Dict[str, Any]) -> List[str]:
+    """The translation units of a multi-file trial, as the agent was given them (`--project-units` in the
+    trial's recorded command)."""
+    cmd = [str(x) for x in t.get("agent_cmd") or []]
+    return cmd[cmd.index("--project-units") + 1].split(",") if "--project-units" in cmd else []
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--runs", required=True, help="comma-separated archived runs")
@@ -92,6 +99,7 @@ def main() -> int:
     ap.add_argument("--out", type=Path, required=True)
     a = ap.parse_args()
 
+    from discopop_agent import project as project_mod
     from discopop_agent.gate.equivalence import numerical_noise_floor
     from discopop_agent.gate.timing import capture_reference
     from discopop_agent.gate.toolchain import _find_clangpp, find_archer
@@ -131,10 +139,29 @@ def main() -> int:
                                "repeat": t.get("repeat"), "harness_outcome": t.get("outcome")}
         t0 = time.time()
         with tempfile.TemporaryDirectory(prefix="race_check_") as tmp:
-            src = Path(tmp) / str(t.get("source") or "program.c")
             ext = Path(str(t.get("source") or "program.c")).suffix or ".c"   # C++ packages (bfs) keep .cpp
-            shutil.copy2(d / f"original{ext}", src)
-            diff = _unified_diff(src, d / f"final{ext}")
+            project_mod.activate(None)
+            if (d / "original").is_dir():
+                # A multi-file trial (packaging v5): the whole program is copied, the gate builds every unit,
+                # and the patch is the change to the ONE file that is the benchmark's (trial.json `editable`).
+                editable = list(t.get("editable") or [])
+                units = _project_units(t)
+                if len(editable) != 1 or not units:
+                    rec.update(verdict="not-checked", note="a multi-file trial without one editable file")
+                    with results_path.open("a") as f:
+                        f.write(json.dumps(rec, default=str) + "\n")
+                    continue
+                root = Path(tmp) / "program"
+                shutil.copytree(d / "original", root)
+                src = root / editable[0]
+                project_mod.activate(project_mod.Project.discover(root, units=units, include_dirs=["."],
+                                                                  editable=editable))
+                project_mod.set_focus(str(src))
+                diff = _unified_diff(src, d / "final" / editable[0])
+            else:
+                src = Path(tmp) / str(t.get("source") or "program.c")
+                shutil.copy2(d / f"original{ext}", src)
+                diff = _unified_diff(src, d / f"final{ext}")
             if not diff:
                 rec.update(verdict="unchanged")
             else:
@@ -150,6 +177,7 @@ def main() -> int:
                            diagnostic=res.diagnostic[:2000], skipped_stages=res.skipped_stages,
                            evidence={k: v for k, v in res.evidence.items()}, noise_floor=floors[sha],
                            barrier_heuristic_would_fire=barrier_fp, reference_inputs=len(ref_pairs or []))
+        project_mod.activate(None)
         rec["seconds"] = round(time.time() - t0, 1)
         with results_path.open("a") as f:
             f.write(json.dumps(rec, default=str) + "\n")
