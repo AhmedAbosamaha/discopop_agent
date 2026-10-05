@@ -1,0 +1,44 @@
+{
+  "suite": "tsvc_c2",
+  "kernel": "k53",
+  "source": "constructed: ORDER-4 (THESIS_EXPERIMENTS \u00a76, 4 Oct)",
+  "category": "constructed / statement order decided by hidden index tables (ORDER-2b)",
+  "file": "k53.c",
+  "language": "c",
+  "layout": "project",
+  "project": {
+    "units": [
+      "k53.c",
+      "main.c"
+    ],
+    "include_dirs": [
+      "."
+    ],
+    "editable": [
+      "k53.c"
+    ]
+  },
+  "restructuring_class": "decline (ORDER-4 cycle)",
+  "transformation": "none: the two statements feed each other",
+  "why": "kv[i] = i-1: S1 reads the element of v that S2 wrote one iteration earlier; ku[i] = i: S2 reads the element of u that S1 wrote in the same iteration \u2014 a recurrence through every iteration",
+  "reference_solution": null,
+  "exclude_functions": [
+    "main",
+    "dummy"
+  ],
+  "harness": "tsvc_c2/k53.h",
+  "harness_sha256": "af1764fa5907f3fbdd0315b3de469d0fba9b82f98c1ecf304d959d9e9e9db444",
+  "hot_loop": {
+    "entry": "kernel_k53",
+    "function": "kernel_k53",
+    "line": 6,
+    "writes": [
+      "u",
+      "v"
+    ]
+  },
+  "agent_dataset": "SMALL",
+  "generator_version": 6,
+  "inputs_sha256": "456dd573b84b30e6f32c943bb559d80374eec67177de48223e95124a8c3fc627",
+  "output_sha256": "8175ab856b302fcf402635a649434904d2b55c0b1308efd460e737053d5109fd"
+}

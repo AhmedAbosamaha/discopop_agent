@@ -1,0 +1,43 @@
+{
+  "suite": "tsvc_c2",
+  "kernel": "vas",
+  "source": "benchmarks/TSVC_2/src/tsvc.c",
+  "category": "control loops / vector assignment, scatter / scatter is required",
+  "file": "vas.c",
+  "language": "c",
+  "layout": "project",
+  "project": {
+    "units": [
+      "vas.c",
+      "main.c"
+    ],
+    "include_dirs": [
+      "."
+    ],
+    "editable": [
+      "vas.c"
+    ]
+  },
+  "restructuring_class": "hidden independence (E2-B1 b)",
+  "transformation": "none: the index array is a permutation, set outside the function",
+  "why": "ip sends distinct iterations to distinct elements of a, so no two iterations write the same one",
+  "reference_solution": null,
+  "exclude_functions": [
+    "main",
+    "dummy"
+  ],
+  "harness": "tsvc_c2/vas.h",
+  "harness_sha256": "16a47532f4ad7ed6280b4a61da476d65ffad2c06c93d8fc34d559dfb1375e387",
+  "hot_loop": {
+    "entry": "kernel_vas",
+    "function": "kernel_vas",
+    "line": 6,
+    "writes": [
+      "a"
+    ]
+  },
+  "agent_dataset": "SMALL",
+  "generator_version": 6,
+  "inputs_sha256": "456dd573b84b30e6f32c943bb559d80374eec67177de48223e95124a8c3fc627",
+  "output_sha256": "4fe2e99117b4d16913cf3baf52f16c2e2a58a9bff819d52d7e1ea59602c7c0ce"
+}

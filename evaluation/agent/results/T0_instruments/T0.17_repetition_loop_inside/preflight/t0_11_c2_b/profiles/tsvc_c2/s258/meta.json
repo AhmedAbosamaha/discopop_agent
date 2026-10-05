@@ -1,0 +1,44 @@
+{
+  "suite": "tsvc_c2",
+  "kernel": "s258",
+  "source": "benchmarks/TSVC_2/src/tsvc.c",
+  "category": "scalar and array expansion / wrap-around scalar under an if",
+  "file": "s258.c",
+  "language": "c",
+  "layout": "project",
+  "project": {
+    "units": [
+      "s258.c",
+      "main.c"
+    ],
+    "include_dirs": [
+      "."
+    ],
+    "editable": [
+      "s258.c"
+    ]
+  },
+  "restructuring_class": "hidden independence (E2-B1 b)",
+  "transformation": "none: with TSVC's data the guard holds in every iteration, so s is never carried",
+  "why": "a > 0 everywhere (TSVC: a = any,frac), so s is set before every use and each iteration is independent",
+  "reference_solution": null,
+  "exclude_functions": [
+    "main",
+    "dummy"
+  ],
+  "harness": "tsvc_c2/s258.h",
+  "harness_sha256": "fd5dc4cdf684b6406d489233030cf22377c3f6904ab2bcd3240279dc3e6a5d3c",
+  "hot_loop": {
+    "entry": "kernel_s258",
+    "function": "kernel_s258",
+    "line": 8,
+    "writes": [
+      "b",
+      "e"
+    ]
+  },
+  "agent_dataset": "SMALL",
+  "generator_version": 6,
+  "inputs_sha256": "456dd573b84b30e6f32c943bb559d80374eec67177de48223e95124a8c3fc627",
+  "output_sha256": "d5753ce890436faf50c4a7de61e5105444b16daa0ca65c5ab85889fe957f12fe"
+}

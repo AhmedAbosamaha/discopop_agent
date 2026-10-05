@@ -1,0 +1,30 @@
+| Benchmark | Arm | Model | Rep | Outcome | Best speedup | Pragmas (DP+LLM) | Rewrites | Baseline | LLM calls | Agent s |
+|---|---|---|---:|---|---:|---|---:|---:|---:|---:|
+| tsvc_c2/k17 | expert_openmp | none | 1 | parallel-speed-not-measurable | 3.28x | —+— | — | — | 0 | — |
+| tsvc_c2/k19 | expert_openmp | none | 1 | FASTER | 4.14x | —+— | — | — | 0 | — |
+| tsvc_c2/k23 | expert_openmp | none | 1 | FASTER | 3.33x | —+— | — | — | 0 | — |
+| tsvc_c2/k27 | expert_openmp | none | 1 | FASTER | 4.17x | —+— | — | — | 0 | — |
+| tsvc_c2/k31 | expert_openmp | none | 1 | FASTER | 3.09x | —+— | — | — | 0 | — |
+| tsvc_c2/k42 | expert_openmp | none | 1 | parallel-speed-not-measurable | 3.63x | —+— | — | — | 0 | — |
+| tsvc_c2/k48 | expert_openmp | none | 1 | FASTER | 4.13x | —+— | — | — | 0 | — |
+| tsvc_c2/s000 | expert_openmp | none | 1 | FASTER | 3.67x | —+— | — | — | 0 | — |
+| tsvc_c2/s112 | expert_openmp | none | 1 | FASTER | 1.33x | —+— | — | — | 0 | — |
+| tsvc_c2/s121 | expert_openmp | none | 1 | FASTER | 1.40x | —+— | — | — | 0 | — |
+| tsvc_c2/s1213 | expert_openmp | none | 1 | FASTER | 2.62x | —+— | — | — | 0 | — |
+| tsvc_c2/s127 | expert_openmp | none | 1 | FASTER | 3.91x | —+— | — | — | 0 | — |
+| tsvc_c2/s211 | expert_openmp | none | 1 | FASTER | 2.12x | —+— | — | — | 0 | — |
+| tsvc_c2/s212 | expert_openmp | none | 1 | FASTER | 3.35x | —+— | — | — | 0 | — |
+| tsvc_c2/s241 | expert_openmp | none | 1 | FASTER | 1.85x | —+— | — | — | 0 | — |
+| tsvc_c2/s243 | expert_openmp | none | 1 | FASTER | 2.55x | —+— | — | — | 0 | — |
+| tsvc_c2/s244 | expert_openmp | none | 1 | FASTER | 5.51x | —+— | — | — | 0 | — |
+| tsvc_c2/s252 | expert_openmp | none | 1 | FASTER | 3.62x | —+— | — | — | 0 | — |
+| tsvc_c2/s254 | expert_openmp | none | 1 | FASTER | 3.46x | —+— | — | — | 0 | — |
+| tsvc_c2/s255 | expert_openmp | none | 1 | FASTER | 2.59x | —+— | — | — | 0 | — |
+| tsvc_c2/s281 | expert_openmp | none | 1 | FASTER | 3.28x | —+— | — | — | 0 | — |
+| tsvc_c2/s291 | expert_openmp | none | 1 | FASTER | 3.52x | —+— | — | — | 0 | — |
+| tsvc_c2/s292 | expert_openmp | none | 1 | FASTER | 3.02x | —+— | — | — | 0 | — |
+| tsvc_c2/s293 | expert_openmp | none | 1 | FASTER | 2.88x | —+— | — | — | 0 | — |
+| tsvc_c2/s313 | expert_openmp | none | 1 | FASTER | 4.64x | —+— | — | — | 0 | — |
+| tsvc_c2/s331 | expert_openmp | none | 1 | FASTER | 4.50x | —+— | — | — | 0 | — |
+| tsvc_c2/s341 | expert_openmp | none | 1 | FASTER | 2.40x | —+— | — | — | 0 | — |
+| tsvc_c2/vpvtv | expert_openmp | none | 1 | FASTER | 3.72x | —+— | — | — | 0 | — |

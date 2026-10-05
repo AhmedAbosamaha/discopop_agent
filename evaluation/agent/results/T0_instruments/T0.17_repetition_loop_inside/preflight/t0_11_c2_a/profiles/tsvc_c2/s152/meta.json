@@ -1,0 +1,44 @@
+{
+  "suite": "tsvc_c2",
+  "kernel": "s152",
+  "source": "benchmarks/TSVC_2/src/tsvc.c",
+  "category": "interprocedural data flow analysis / collecting information from a subroutine",
+  "file": "s152.c",
+  "language": "c",
+  "layout": "project",
+  "project": {
+    "units": [
+      "s152.c",
+      "main.c"
+    ],
+    "include_dirs": [
+      "."
+    ],
+    "editable": [
+      "s152.c"
+    ]
+  },
+  "restructuring_class": "hidden independence (E2-B1 b)",
+  "transformation": "none: the callee the loop calls touches only element i",
+  "why": "s152s updates a[i] from b[i] and c[i] alone, so no two iterations share an element",
+  "reference_solution": null,
+  "exclude_functions": [
+    "main",
+    "dummy"
+  ],
+  "harness": "tsvc_c2/s152.h",
+  "harness_sha256": "b38ba78420d48d247bf2baadd4ca6fadc3f5cb6fba38f551eda0c229945637a7",
+  "hot_loop": {
+    "entry": "kernel_s152",
+    "function": "kernel_s152",
+    "line": 11,
+    "writes": [
+      "a",
+      "b"
+    ]
+  },
+  "agent_dataset": "SMALL",
+  "generator_version": 6,
+  "inputs_sha256": "456dd573b84b30e6f32c943bb559d80374eec67177de48223e95124a8c3fc627",
+  "output_sha256": "681a8d3a4f97d51319161026f9c66846b19992c74db0c8184ccd4d4dd9018a52"
+}
