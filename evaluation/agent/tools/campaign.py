@@ -341,20 +341,24 @@ def write_start_here(reg: Optional[dict] = None) -> List[Path]:
             L.append("")
     L += ["### Everything else", "", "| folder | what it is | status |", "|---|---|---|"]
     lined = {line["current"] for line in reg["lines"]} | {h["id"] for line in reg["lines"] for h in line.get("history", [])}
-    seen = set()
+    instruments = False
     for g in reg.get("groups", []):
-        if g["id"] in lined:
-            continue
         d = group_dir(g["id"], reg)
-        top = _rel(d, RESULTS).split("/")[0]
-        if top in seen or not d.exists():
+        if g["id"] in lined or not d.exists():
             continue
-        seen.add(top)
-        if top == "T0_instruments":
-            L.append("| [`T0_instruments/`](T0_instruments/) | the studies that prove the instruments before an experiment "
-                     "is read (sizes, classes, timing noise, package equivalence …), one sub-folder each | see each |")
-        else:
-            L.append(f"| [`{top}/`]({top}/" + ("REPORT.md" if (d / "REPORT.md").exists() else "") + f") | {g['title']} | {g['status']} |")
+        folder = _rel(d, RESULTS)
+        if folder.startswith("T0_instruments/"):
+            if not instruments:
+                L.append("| [`T0_instruments/`](T0_instruments/) | the studies that prove the instruments before an "
+                         "experiment is read (sizes, classes, timing noise, package equivalence …), one sub-folder each "
+                         "| see each |")
+            instruments = True
+            continue
+        L.append(f"| [`{folder}/`]({folder}/" + ("REPORT.md" if (d / "REPORT.md").exists() else "")
+                 + f") | {g['title']} | {g['status']} |")
+    L += ["", "`history/` holds every folder a later experiment replaced, and the first pilots and harness checks "
+          "(moved there on 5 Oct 2026; a path `results/E0…` in an older entry of the experiment record now starts "
+          "`results/history/`). Nothing in `history/` is cited as a result."]
     L += ["", END]
     head, rest = text.split(START, 1)
     readme.write_text(head + "\n".join(L) + rest.split(END, 1)[1])
@@ -392,10 +396,14 @@ def check() -> List[str]:
     groups = _groups(reg)
     record = RECORD.read_text() if RECORD.exists() else ""
     # 1. every folder under results/ is accounted for
-    known = {group_dir(g, reg) for g in groups} | {RESULTS / "T0_instruments"}
+    known = {group_dir(g, reg) for g in groups} | {RESULTS / "T0_instruments", RESULTS / "history"}
     for p in sorted(RESULTS.iterdir()):
         if p.is_dir() and p not in known and p.name not in ("_unregistered",):
             P.append(f"results/{p.name}/ is not in the layout (register it in campaign.json, then `campaign.py migrate --apply`)")
+    # history/ (5 Oct 2026): the folders a later experiment replaced — each one a registered group, nothing else
+    for p in sorted((RESULTS / "history").iterdir()) if (RESULTS / "history").exists() else []:
+        if p.is_dir() and p not in known:
+            P.append(f"results/history/{p.name}/ is not a registered experiment's folder")
     for p in (RESULTS / "_unregistered").glob("*") if (RESULTS / "_unregistered").exists() else []:
         P.append(f"run {p.name} was archived without being registered (results/_unregistered/)")
     # 2. every registered run: archived where it belongs, complete, and in the record

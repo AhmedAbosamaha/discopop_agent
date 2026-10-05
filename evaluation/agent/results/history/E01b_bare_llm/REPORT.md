@@ -4,7 +4,7 @@
 
 **Status:** done
 
-> **Not the current result.** This question is answered by [E1-v6 — the headline three-way comparison on clean files in TSVC's own form (packaging v6, prompt version 4)](../E01v6_clean_files_three_way/REPORT.md); this folder is kept as history. See [`results/README.md`](../README.md).
+> **Not the current result.** This question is answered by [E1-v6 — the headline three-way comparison on clean files in TSVC's own form (packaging v6, prompt version 4)](../../E01v6_clean_files_three_way/REPORT.md); this folder is kept as history. See [`results/README.md`](../../README.md).
 
 ## The question
 
@@ -113,7 +113,7 @@ repeats, seeded input — the harness's verification code is unchanged since E1'
 `e1_bare_a` (node 0, `s112 s121 s1213 s127 s211 s212 s241 s243 s244`) 04:59–07:32 UTC,
 `e1_bare_b` (node 1, the other nine) 04:59–08:12 UTC; both `SWEEP: clean`. Its `default`
 counterpart and DiscoPoP-alone baseline are E1's own trials (`e1_r_a`, `e1_r_b`). Read-out:
-`results/E01b_bare_llm/analysis/` — the README there has the commands, the per-loop table and
+`results/history/E01b_bare_llm/analysis/` — the README there has the commands, the per-loop table and
 every BROKEN trial by cause.
 
 **Deviations, recorded first.** (1) The runner profiles every benchmark before its trials, so
@@ -175,7 +175,7 @@ TRUST, not reach — the reach claim (C1) is against DiscoPoP alone and is uncha
 loops are recorded as a limitation of `default` and as the question E2/E3 answer.
 
 **Two checks the same afternoon (no model), and what they correct.** The author asked for the race
-check and for WHY the agent reaches less. Both are in `results/E01b_bare_llm/checks/`.
+check and for WHY the agent reaches less. Both are in `results/history/E01b_bare_llm/checks/`.
 
 *`e1b_race_check`* (`tools/race_check.py`, server, clang-20 with archer): every model-alone program
 through the agent's own `validate(mode="safety")` — TSan, the schedule matrix, output on two inputs —

@@ -124,4 +124,4 @@ answered by the two tests above.
 `agent/tools/cli.py` (verify, classify), `discopop_agent/gate/timing.py` (`measure_marginal`, `noise_floor`),
 `discopop_agent/phases/phase_b.py`, `settle.py`, `floor.py`, `verdicts.py`; `agent/tools/race_check.py`,
 `main_comparison_stats.py`; T0.1 and T0.4 in THESIS_EXPERIMENTS §6; E1-final's archived trials
-(`results/E01f_final_three_way/runs/`) and read-out (`analysis/`).
+(`results/history/E01f_final_three_way/runs/`) and read-out (`analysis/`).

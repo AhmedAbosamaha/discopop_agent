@@ -103,7 +103,7 @@ contract, "a dependence is moved, not deleted".
 
 ## Which change did it — the pilot that added them one at a time
 
-`evidence_pilot_v2` (28 Sep, pre-registered; `results/pilots/runs/evidence_pilot_v2/summary.md`): single
+`evidence_pilot_v2` (28 Sep, pre-registered; `results/history/pilots/runs/evidence_pilot_v2/summary.md`): single
 Haiku calls in the agent's direct mode, no agent loop, 10 per cell; success = the output identical on both
 inputs, no pragma written, and DiscoPoP's re-profile reports both loops Do-All.
 
@@ -171,10 +171,10 @@ naive rule would have stated the wrong order.
 - Record: `docs/THESIS_EXPERIMENTS.md` §6 (28 Sep: the pilots, the prompt review, D4; 29 Sep: E2-V3; 30 Sep:
   the Sonnet follow-up, E12; 2 Oct: E2's combined conclusion) and §7 (run entries).
 - The review that found the rendering defects: `docs/PROMPT_REVIEW_2026_09_28.md`.
-- Pilots: `results/pilots/runs/evidence_pilot_order2`, `evidence_pilot_order2b`, `evidence_pilot_v2`.
-- E2-V3: `results/E02v3_order_statement/` (`stats/e2b1_stats.md`, `stats_sonnet/`, exhibits
+- Pilots: `results/history/pilots/runs/evidence_pilot_order2`, `evidence_pilot_order2b`, `evidence_pilot_v2`.
+- E2-V3: `results/history/E02v3_order_statement/` (`stats/e2b1_stats.md`, `stats_sonnet/`, exhibits
   `k19_evidence_right_split`, `k19_no_evidence_reverted`, `k19_twin_wrong_order` — before/after pictures,
   LaTeX diffs, consoles).
-- E12: `results/E12_stronger_models_alone/stats/e12_stats.md`.
+- E12: `results/history/E12_stronger_models_alone/stats/e12_stats.md`.
 - Code: `discopop_agent/llm/render.py` (`order_statement`, `_fmt_deps_v2`, `_fmt_blockers_v2`),
   `discopop_agent/llm/prompts.py` (`PROMPT_VERSIONS`, `_given`, `_CONTRACT_CLOSE_V2`).

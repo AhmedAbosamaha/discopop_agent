@@ -4,7 +4,7 @@
 
 **Status:** done
 
-> **Not the current result.** This question is answered by [E1-v6 — the headline three-way comparison on clean files in TSVC's own form (packaging v6, prompt version 4)](../E01v6_clean_files_three_way/REPORT.md); this folder is kept as history. See [`results/README.md`](../README.md).
+> **Not the current result.** This question is answered by [E1-v6 — the headline three-way comparison on clean files in TSVC's own form (packaging v6, prompt version 4)](../../E01v6_clean_files_three_way/REPORT.md); this folder is kept as history. See [`results/README.md`](../../README.md).
 
 ## The question
 

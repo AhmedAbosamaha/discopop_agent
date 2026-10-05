@@ -24,12 +24,12 @@ Earlier versions (history):
 
 | folder | what it was | why it is not the result |
 |---|---|---|
-| [`E01v5_clean_files_three_way/`](E01v5_clean_files_three_way/REPORT.md) | the same experiment on the first clean layout — the function was one repetition, called 48 times (4 Oct) | stopped by the author after 8 trials, none analysed: that layout made every temporary array be created 48 times |
-| [`E01f_final_three_way/`](E01f_final_three_way/REPORT.md) | E1 on the one-file packages with four models alone (2–3 Oct) | its files carried our note and protected lines, every request a false size sentence, and the agent was sent a false order sentence on three loops; kept for the comparison between packagings |
-| [`E01c_v31_rerun/`](E01c_v31_rerun/REPORT.md) | the three-way E1 re-run with agent v3.1 (27 Sep) | an older agent version, one model alone |
-| [`E01c_clean_three_way/`](E01c_clean_three_way/REPORT.md) | the first three-way E1 on packages without the solution hint (25 Sep) | agent v2; replaced by the re-runs above |
-| [`E01b_bare_llm/`](E01b_bare_llm/REPORT.md) | the model alone, first version (23 Sep) | its packages named the solving transformation in a comment (D36) |
-| [`E01_main_comparison/`](E01_main_comparison/REPORT.md) | the first main comparison (21–22 Sep) | its packages named the solving transformation in a comment (D36); agent v1 |
+| [`history/E01v5_clean_files_three_way/`](history/E01v5_clean_files_three_way/REPORT.md) | the same experiment on the first clean layout — the function was one repetition, called 48 times (4 Oct) | stopped by the author after 8 trials, none analysed: that layout made every temporary array be created 48 times |
+| [`history/E01f_final_three_way/`](history/E01f_final_three_way/REPORT.md) | E1 on the one-file packages with four models alone (2–3 Oct) | its files carried our note and protected lines, every request a false size sentence, and the agent was sent a false order sentence on three loops; kept for the comparison between packagings |
+| [`history/E01c_v31_rerun/`](history/E01c_v31_rerun/REPORT.md) | the three-way E1 re-run with agent v3.1 (27 Sep) | an older agent version, one model alone |
+| [`history/E01c_clean_three_way/`](history/E01c_clean_three_way/REPORT.md) | the first three-way E1 on packages without the solution hint (25 Sep) | agent v2; replaced by the re-runs above |
+| [`history/E01b_bare_llm/`](history/E01b_bare_llm/REPORT.md) | the model alone, first version (23 Sep) | its packages named the solving transformation in a comment (D36) |
+| [`history/E01_main_comparison/`](history/E01_main_comparison/REPORT.md) | the first main comparison (21–22 Sep) | its packages named the solving transformation in a comment (D36); agent v1 |
 
 ### E2 — does DiscoPoP's evidence help the model, and what do retries with feedback add?
 
@@ -42,12 +42,12 @@ Earlier versions (history):
 
 | folder | what it was | why it is not the result |
 |---|---|---|
-| [`E02o3_hidden_order_kernels/`](E02o3_hidden_order_kernels/REPORT.md) | the hidden order on three more kernels (3 Oct): with evidence 29 of 30, without 0 of 30 | old packages (our note, a false size sentence) and the order sentence of prompt version 3; E2-v6 re-tests exactly this on clean files |
-| [`E12_stronger_models_alone/`](E12_stronger_models_alone/REPORT.md) | Opus and Fable alone on the hidden-order kernels (30 Sep – 3 Oct) | old packages; several of their failures were caused by our false size sentence |
-| [`E02v3_order_statement/`](E02v3_order_statement/REPORT.md) | the order sentence on the first hidden-order kernel, two models (29–30 Sep) | old packages; version 3's sentence is wrong on several other loops |
-| [`V3_pilot_d40/`](V3_pilot_d40/REPORT.md) | pilot of agent v3 — the speed verdict inside the model's attempts (26 Sep) | a pilot, not an experiment |
-| [`E02b1_hidden_facts/`](E02b1_hidden_facts/REPORT.md) | hidden facts on TSVC loops, the earlier wording (27–29 Sep) | its primary test was not supported; the wording was replaced |
-| [`E02_evidence_feedback_model/`](E02_evidence_feedback_model/REPORT.md) | evidence, feedback and model strength on the 18 TSVC loops (25 Sep) | on those loops the dependences are in plain sight and the evidence added nothing; agent v2 |
+| [`history/E02o3_hidden_order_kernels/`](history/E02o3_hidden_order_kernels/REPORT.md) | the hidden order on three more kernels (3 Oct): with evidence 29 of 30, without 0 of 30 | old packages (our note, a false size sentence) and the order sentence of prompt version 3; E2-v6 re-tests exactly this on clean files |
+| [`history/E12_stronger_models_alone/`](history/E12_stronger_models_alone/REPORT.md) | Opus and Fable alone on the hidden-order kernels (30 Sep – 3 Oct) | old packages; several of their failures were caused by our false size sentence |
+| [`history/E02v3_order_statement/`](history/E02v3_order_statement/REPORT.md) | the order sentence on the first hidden-order kernel, two models (29–30 Sep) | old packages; version 3's sentence is wrong on several other loops |
+| [`history/V3_pilot_d40/`](history/V3_pilot_d40/REPORT.md) | pilot of agent v3 — the speed verdict inside the model's attempts (26 Sep) | a pilot, not an experiment |
+| [`history/E02b1_hidden_facts/`](history/E02b1_hidden_facts/REPORT.md) | hidden facts on TSVC loops, the earlier wording (27–29 Sep) | its primary test was not supported; the wording was replaced |
+| [`history/E02_evidence_feedback_model/`](history/E02_evidence_feedback_model/REPORT.md) | evidence, feedback and model strength on the 18 TSVC loops (25 Sep) | on those loops the dependences are in plain sight and the evidence added nothing; agent v2 |
 
 ### Everything else
 
@@ -57,9 +57,11 @@ Earlier versions (history):
 | [`E11_repoomp/`](E11_repoomp/REPORT.md) | E11 — against RepoOMP on its NPB-C kernels | pre-flight |
 | [`T0_instruments/`](T0_instruments/) | the studies that prove the instruments before an experiment is read (sizes, classes, timing noise, package equivalence …), one sub-folder each | see each |
 | [`audit_benchmark_suitability/`](audit_benchmark_suitability/REPORT.md) | Benchmark suitability audit (§5k, D18) | done |
-| [`pilots/`](pilots/REPORT.md) | Pilots (before the campaign's design was fixed) | done |
-| [`harness_checks/`](harness_checks/REPORT.md) | Harness and pipeline checks (not experiments) | done |
+| [`history/pilots/`](history/pilots/REPORT.md) | Pilots (before the campaign's design was fixed) | done |
+| [`history/harness_checks/`](history/harness_checks/REPORT.md) | Harness and pipeline checks (not experiments) | done |
 | [`logs/`](logs/) | Logs | done |
+
+`history/` holds every folder a later experiment replaced, and the first pilots and harness checks (moved there on 5 Oct 2026; a path `results/E0…` in an older entry of the experiment record now starts `results/history/`). Nothing in `history/` is cited as a result.
 
 <!-- END GENERATED -->
 

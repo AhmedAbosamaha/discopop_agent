@@ -4,7 +4,7 @@
 
 **Status:** done
 
-> **Not the current result.** This question is answered by [E1-v6 — the headline three-way comparison on clean files in TSVC's own form (packaging v6, prompt version 4)](../E01v6_clean_files_three_way/REPORT.md); this folder is kept as history. See [`results/README.md`](../README.md).
+> **Not the current result.** This question is answered by [E1-v6 — the headline three-way comparison on clean files in TSVC's own form (packaging v6, prompt version 4)](../../E01v6_clean_files_three_way/REPORT.md); this folder is kept as history. See [`results/README.md`](../../README.md).
 
 ## The question
 
@@ -42,7 +42,7 @@ TSVC class R, clean packages, agent v2, the model alone with the mirror prompt, 
 
 ### `e2c_ab_1`, `e2c_ab_2`, `e2c_ab_3`, `e2c_ab_4`, `e2c_race_check`; `e1c_a`, `e1c_d`, `e1c_ad_race_check` — 2026-09-25, server, **E2 Parts A+B (Haiku) with the D38 twins, and E1c's controls** (540 + 45 trials; 315 race checks, no model)
 
-- **Setup.** E2: commit `3f296eac` (agent code of E1c, `33673d7d`, plus the twin entry point); the 18 class-R loops × `full_b1`, `no_evidence`, `no_evidence_b1` and their twins `twin_full`, `twin_no_evidence`, plus `twin_dp` (DiscoPoP's pragmas unchecked, no model) × 5, four 12-core lanes (E1c's split), 25 Sep 05:15 → ≈ 20:00 UTC; `default`, `bare_llm`, `discopop_gate` are E1c's cells (same loops, same agent code). Controls: `e1c_a` (classes A: s000, vpvtv, s313 × the three E1c arms × 1) and `e1c_d` (class D: s321, s322, s323, s3112 × 3), same commit, lanes 1.0/1.1 after E2's node-1 lanes. The server checkout was synced once during E2's lanes 0.x, for two HTML documents and a registry line only (no file a trial reads). Race checks (`race_check.py`, the gate's TSan with archer and the schedule matrix, no model) over every program no gate saw: E2's three twin arms, the model alone in the controls. Read-outs in `results/E02_evidence_feedback_model/analysis/` and `results/E01c_clean_three_way/analysis/`.
+- **Setup.** E2: commit `3f296eac` (agent code of E1c, `33673d7d`, plus the twin entry point); the 18 class-R loops × `full_b1`, `no_evidence`, `no_evidence_b1` and their twins `twin_full`, `twin_no_evidence`, plus `twin_dp` (DiscoPoP's pragmas unchecked, no model) × 5, four 12-core lanes (E1c's split), 25 Sep 05:15 → ≈ 20:00 UTC; `default`, `bare_llm`, `discopop_gate` are E1c's cells (same loops, same agent code). Controls: `e1c_a` (classes A: s000, vpvtv, s313 × the three E1c arms × 1) and `e1c_d` (class D: s321, s322, s323, s3112 × 3), same commit, lanes 1.0/1.1 after E2's node-1 lanes. The server checkout was synced once during E2's lanes 0.x, for two HTML documents and a registry line only (no file a trial reads). Race checks (`race_check.py`, the gate's TSan with archer and the schedule matrix, no model) over every program no gate saw: E2's three twin arms, the model alone in the controls. Read-outs in `results/history/E02_evidence_feedback_model/analysis/` and `results/history/E01c_clean_three_way/analysis/`.
 - **E2 — every arm against the sequential original (class R, 90 trials each):**
 
   | arm | race-free FASTER | unusable programs |
@@ -66,7 +66,7 @@ TSVC class R, clean packages, agent v2, the model alone with the mirror prompt, 
 
 ### `e1c_r_1`, `e1c_r_2`, `e1c_r_3`, `e1c_r_4`, `e1c_race_check` — 2026-09-24/25, server, **E1 clean: the three-way main comparison on TSVC class R** (270 trials, Haiku; 90 race checks, no model)
 
-- **Setup.** Commit `33673d7d` (agent v2: D32, D33, Fixes 91–92; packages v3 without the header hint, D36; the model confined to its workspace, Fix 95; the model alone with the MIRROR prompt, D37; per-benchmark explorer limit). The 18 class-R loops × `discopop_gate`, `default`, `bare_llm` × 5, threads 6,12, repeats 5, check seed 7, on four 12-core lanes (`--node N.H`, split 5/5/4/4 loops), 24 Sep 18:33 → 25 Sep ≈ 04:50 UTC; every lane's credential sweep clean. `e1c_race_check`: `race_check.py` (the gate's TSan with archer and the schedule matrix) over all 90 `bare_llm` trials on the server, 25 Sep. Read-out `results/E01c_clean_three_way/analysis/main_comparison_stats.md` (`--arm default --three-way default --races …`).
+- **Setup.** Commit `33673d7d` (agent v2: D32, D33, Fixes 91–92; packages v3 without the header hint, D36; the model confined to its workspace, Fix 95; the model alone with the MIRROR prompt, D37; per-benchmark explorer limit). The 18 class-R loops × `discopop_gate`, `default`, `bare_llm` × 5, threads 6,12, repeats 5, check seed 7, on four 12-core lanes (`--node N.H`, split 5/5/4/4 loops), 24 Sep 18:33 → 25 Sep ≈ 04:50 UTC; every lane's credential sweep clean. `e1c_race_check`: `race_check.py` (the gate's TSan with archer and the schedule matrix) over all 90 `bare_llm` trials on the server, 25 Sep. Read-out `results/history/E01c_clean_three_way/analysis/main_comparison_stats.md` (`--arm default --three-way default --races …`).
 - **The three arms against the sequential original (class R, 90 trials each):**
 
   | | DiscoPoP alone | DiscoPoP + agent | the model alone |

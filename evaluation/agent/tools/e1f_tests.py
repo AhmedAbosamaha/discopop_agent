@@ -14,7 +14,7 @@ Holm over the nine inside E1-final, and the campaign family's bound (M = 40). A 
 non-zero pairs cannot reach significance and is reported "no test" (p = 1). H2 is a count with every case named.
 The opposite direction of T6–T9 (a model alone ahead) is reported beside them, two-sided, as description.
 
-    venv/bin/python evaluation/agent/tools/e1f_tests.py --analysis evaluation/agent/results/E01f_final_three_way/analysis
+    venv/bin/python evaluation/agent/tools/e1f_tests.py --analysis evaluation/agent/results/history/E01f_final_three_way/analysis
 
 The same nine tests were registered again for E1-v6 (§6, 5 Oct 2026: E1-final on packaging v6, arms `*_v4`); its
 read-out names the experiment, the registration date, the family's size and the file:
