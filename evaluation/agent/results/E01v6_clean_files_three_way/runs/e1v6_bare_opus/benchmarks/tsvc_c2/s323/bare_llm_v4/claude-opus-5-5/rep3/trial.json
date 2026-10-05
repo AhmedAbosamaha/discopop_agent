@@ -12,12 +12,12 @@
     "4",
     "--timing-cflags=-DEXTRALARGE_DATASET"
   ],
-  "started_at": "2026-10-05T08:52:09",
+  "started_at": "2026-10-05T12:16:08",
   "host": "rms14562",
   "host_load_start": [
-    3.8115234375,
-    4.7509765625,
-    4.8017578125
+    5.861328125,
+    8.61376953125,
+    7.060546875
   ],
   "agent_cmd": [
     "/home/ahmedabosamaha/discopop_agent/venv/bin/python",
@@ -38,10 +38,10 @@
     "--exclude-functions",
     "main,dummy"
   ],
-  "agent_s": 10.8,
-  "agent_rc": 1,
+  "agent_s": 45.3,
+  "agent_rc": 0,
   "llm_calls": 1,
-  "llm_call_failures": 1,
+  "llm_call_failures": 0,
   "harness_reasks": 0,
   "harness_discards": 0,
   "explorer_retries": 0,
@@ -65,19 +65,19 @@
   "region_verdicts": {},
   "settle_dropped": 0,
   "llm_usage": {
-    "calls_recorded": 3,
-    "input_tokens": 0,
-    "output_tokens": 0,
-    "cache_read_input_tokens": 0,
-    "cache_creation_input_tokens": 0,
-    "cost_usd": 0.0,
-    "model_seconds": 1.8
+    "calls_recorded": 1,
+    "input_tokens": 8,
+    "output_tokens": 3946,
+    "cache_read_input_tokens": 68540,
+    "cache_creation_input_tokens": 4678,
+    "cost_usd": 0.1314,
+    "model_seconds": 44.2
   },
-  "status": "agent_error",
-  "agent_error": "\n============================================================\n  Bare-LLM baseline \u2014 no DiscoPoP, no gate, one attempt\n============================================================\n  Files          : s323.c\n  Model          : claude-opus-5-5\n  Not editable   : \u2014  (read-only files: main.c)\n  Prompt         : mirror\n\n\u2502  [bare] Calling claude-opus-5-5...\n\u2502  [bare] LLM call failed: Claude Code returned an error result: You've hit your session limit \u00b7 resets 10:40am (UTC)\n\n  SUMMARY: 0 file(s) changed  |  the call failed",
   "layout": "project",
-  "files_changed": [],
-  "source_changed": false,
+  "files_changed": [
+    "s323.c"
+  ],
+  "source_changed": true,
   "scaffold": {
     "ok": true,
     "problems": [],
@@ -87,8 +87,8 @@
     "s323.c"
   ],
   "harness_sha256": "32cf24c39ca16e0b227cf06cf31aa4e13eafbd463ca0d7d96f3103b9e1b96149",
-  "pragmas_added": 0,
-  "pragmas_in_final": 0,
+  "pragmas_added": 1,
+  "pragmas_in_final": 1,
   "hot_loop": {
     "entry": "kernel_s323",
     "function": "kernel_s323",
@@ -98,21 +98,75 @@
       "b"
     ]
   },
-  "hot_loop_covered": false,
+  "hot_loop_covered": true,
   "hot_loop_coverage": {
     "criterion": "v2 (27 Sep 2026)",
-    "covered": false,
-    "covering": [],
+    "covered": true,
+    "covering": [
+      {
+        "function": "kernel_s323",
+        "line": 7,
+        "directive": "#pragma omp parallel for schedule(static) default(none) shared(a, b, c, d, e)",
+        "writes": [
+          "a",
+          "b"
+        ]
+      }
+    ],
     "uncounted": [],
     "elsewhere": []
   },
   "candidates_recorded": 0,
-  "outcome": "AGENT_ERROR",
-  "finished_at": "2026-10-05T08:52:19",
+  "verify": {
+    "verify_size": "EXTRALARGE",
+    "threads": [
+      6,
+      12
+    ],
+    "repeats": 5,
+    "compiler": "/usr/bin/clang-20",
+    "final_flags": [],
+    "dump_exact": true,
+    "dump_max_rel_err": 0.0,
+    "seed": "7",
+    "dump_exact_seeded": true,
+    "dump_seeded_max_rel_err": 0.0,
+    "seq_median_s": 3.932,
+    "seq_kernel_median_s": 1.475414,
+    "timing_basis": "kernel",
+    "par": {
+      "6": {
+        "median_s": 4.2678,
+        "program_speedup": 0.921,
+        "max_rel_err": 0.0,
+        "kernel_median_s": 1.810813,
+        "kernel_speedup": 0.815,
+        "speedup": 0.815
+      },
+      "12": {
+        "median_s": 4.2465,
+        "program_speedup": 0.926,
+        "max_rel_err": 0.0,
+        "kernel_median_s": 1.821714,
+        "kernel_speedup": 0.81,
+        "speedup": 0.81
+      }
+    },
+    "digest_max_rel_err": 0.0,
+    "stable_at_fixed_threads": true,
+    "kernel_program_disagree": false,
+    "digest_seeded_rel_err": 0.0,
+    "status": "ok",
+    "speed_measurable": true
+  },
+  "verify_s": 72.7,
+  "status": "done",
+  "outcome": "parallel-not-faster",
+  "finished_at": "2026-10-05T12:18:06",
   "host_load_end": [
-    3.5322265625,
-    4.66015625,
-    4.771484375
+    10.08544921875,
+    8.78369140625,
+    7.27734375
   ],
   "profile": {
     "wrapper": "discopop_cc",
@@ -141,7 +195,7 @@
   "package_integrity": {
     "before": {
       "checked": "before trial",
-      "at": "2026-10-05T08:52:09",
+      "at": "2026-10-05T12:16:08",
       "prepared_sha256": "0be5592beb7563aa2b933b08faeffda982010c842252e7788e8270ab03e14458",
       "packager_sha256": "0be5592beb7563aa2b933b08faeffda982010c842252e7788e8270ab03e14458",
       "harness_sha256": "32cf24c39ca16e0b227cf06cf31aa4e13eafbd463ca0d7d96f3103b9e1b96149",
@@ -151,7 +205,7 @@
     },
     "after": {
       "checked": "after trial",
-      "at": "2026-10-05T08:52:19",
+      "at": "2026-10-05T12:18:06",
       "prepared_sha256": "0be5592beb7563aa2b933b08faeffda982010c842252e7788e8270ab03e14458",
       "packager_sha256": "0be5592beb7563aa2b933b08faeffda982010c842252e7788e8270ab03e14458",
       "harness_sha256": "32cf24c39ca16e0b227cf06cf31aa4e13eafbd463ca0d7d96f3103b9e1b96149",

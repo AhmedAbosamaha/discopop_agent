@@ -1,6 +1,6 @@
 # Agent experiment run `e1v6_bare_opus`
 
-- status: finished (created 2026-10-05T05:34:12, finished 2026-10-05T08:52:55)
+- status: finished (created 2026-10-05T05:34:12, finished 2026-10-05T12:26:12)
 - host: `rms14562`, compilers `/usr/bin/clang-20` / `/usr/bin/clang++-20`
 - agent: `70cb05ff3d1ecc75158877a042809fcfdf7d5da8` (uncommitted diff sha256 `None`)
 - harness: `70cb05ff3d1ecc75158877a042809fcfdf7d5da8` on `agentic_DiscoPop`
@@ -16,7 +16,7 @@ Outcomes are judged by the harness, not by the agent: `BROKEN` means the final p
 
 | Arm | Model | Trials | FASTER | parallel-not-faster | parallel-speed-not-measurable | changed-not-parallel | no-change | BROKEN | SCAFFOLD_MODIFIED | VERIFY_FAILED | AGENT_ERROR | AGENT_TIMEOUT | PROFILE_ERROR | Median agent s | LLM calls |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| bare_llm_v4 | claude-opus-5-5 | 105 | 92 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 12 | 0 | 0 | 21 | 105 |
+| bare_llm_v4 | claude-opus-5-5 | 105 | 101 | 4 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 22 | 105 |
 
 ## Trials
 
@@ -103,19 +103,19 @@ Outcomes are judged by the harness, not by the agent: `BROKEN` means the final p
 | tsvc_c2/s293 | bare_llm_v4 | claude-opus-5-5 | 3 | FASTER | 2.33x | —+— | — | — | 1 | 18.6 |
 | tsvc_c2/s293 | bare_llm_v4 | claude-opus-5-5 | 4 | FASTER | 2.29x | —+— | — | — | 1 | 14.9 |
 | tsvc_c2/s293 | bare_llm_v4 | claude-opus-5-5 | 5 | FASTER | 2.82x | —+— | — | — | 1 | 16.6 |
-| tsvc_c2/s3112 | bare_llm_v4 | claude-opus-5-5 | 1 | AGENT_ERROR | — | —+— | — | — | 1 | 11.1 |
-| tsvc_c2/s3112 | bare_llm_v4 | claude-opus-5-5 | 2 | AGENT_ERROR | — | —+— | — | — | 1 | 11.1 |
-| tsvc_c2/s3112 | bare_llm_v4 | claude-opus-5-5 | 3 | AGENT_ERROR | — | —+— | — | — | 1 | 11.1 |
-| tsvc_c2/s313 | bare_llm_v4 | claude-opus-5-5 | 1 | AGENT_ERROR | — | —+— | — | — | 1 | 11.0 |
+| tsvc_c2/s3112 | bare_llm_v4 | claude-opus-5-5 | 1 | FASTER | 3.43x | —+— | — | — | 1 | 67.0 |
+| tsvc_c2/s3112 | bare_llm_v4 | claude-opus-5-5 | 2 | FASTER | 9.93x | —+— | — | — | 1 | 95.6 |
+| tsvc_c2/s3112 | bare_llm_v4 | claude-opus-5-5 | 3 | FASTER | 9.35x | —+— | — | — | 1 | 85.2 |
+| tsvc_c2/s313 | bare_llm_v4 | claude-opus-5-5 | 1 | FASTER | 4.76x | —+— | — | — | 1 | 28.1 |
 | tsvc_c2/s321 | bare_llm_v4 | claude-opus-5-5 | 1 | FASTER | 4.67x | —+— | — | — | 1 | 146.6 |
-| tsvc_c2/s321 | bare_llm_v4 | claude-opus-5-5 | 2 | AGENT_ERROR | — | —+— | — | — | 1 | 11.0 |
-| tsvc_c2/s321 | bare_llm_v4 | claude-opus-5-5 | 3 | AGENT_ERROR | — | —+— | — | — | 1 | 10.9 |
-| tsvc_c2/s322 | bare_llm_v4 | claude-opus-5-5 | 1 | AGENT_ERROR | — | —+— | — | — | 1 | 11.4 |
-| tsvc_c2/s322 | bare_llm_v4 | claude-opus-5-5 | 2 | AGENT_ERROR | — | —+— | — | — | 1 | 10.8 |
-| tsvc_c2/s322 | bare_llm_v4 | claude-opus-5-5 | 3 | AGENT_ERROR | — | —+— | — | — | 1 | 10.9 |
-| tsvc_c2/s323 | bare_llm_v4 | claude-opus-5-5 | 1 | AGENT_ERROR | — | —+— | — | — | 1 | 11.3 |
-| tsvc_c2/s323 | bare_llm_v4 | claude-opus-5-5 | 2 | AGENT_ERROR | — | —+— | — | — | 1 | 11.0 |
-| tsvc_c2/s323 | bare_llm_v4 | claude-opus-5-5 | 3 | AGENT_ERROR | — | —+— | — | — | 1 | 10.8 |
+| tsvc_c2/s321 | bare_llm_v4 | claude-opus-5-5 | 2 | FASTER | 2.37x | —+— | — | — | 1 | 101.9 |
+| tsvc_c2/s321 | bare_llm_v4 | claude-opus-5-5 | 3 | FASTER | 6.62x | —+— | — | — | 1 | 94.1 |
+| tsvc_c2/s322 | bare_llm_v4 | claude-opus-5-5 | 1 | FASTER | 6.74x | —+— | — | — | 1 | 147.7 |
+| tsvc_c2/s322 | bare_llm_v4 | claude-opus-5-5 | 2 | FASTER | 6.39x | —+— | — | — | 1 | 121.6 |
+| tsvc_c2/s322 | bare_llm_v4 | claude-opus-5-5 | 3 | FASTER | 2.99x | —+— | — | — | 1 | 62.6 |
+| tsvc_c2/s323 | bare_llm_v4 | claude-opus-5-5 | 1 | parallel-not-faster | 0.85x | —+— | — | — | 1 | 64.4 |
+| tsvc_c2/s323 | bare_llm_v4 | claude-opus-5-5 | 2 | parallel-not-faster | 0.82x | —+— | — | — | 1 | 49.4 |
+| tsvc_c2/s323 | bare_llm_v4 | claude-opus-5-5 | 3 | parallel-not-faster | 0.81x | —+— | — | — | 1 | 45.3 |
 | tsvc_c2/s331 | bare_llm_v4 | claude-opus-5-5 | 1 | FASTER | 4.66x | —+— | — | — | 1 | 18.3 |
 | tsvc_c2/s331 | bare_llm_v4 | claude-opus-5-5 | 2 | FASTER | 4.53x | —+— | — | — | 1 | 16.9 |
 | tsvc_c2/s331 | bare_llm_v4 | claude-opus-5-5 | 3 | FASTER | 4.43x | —+— | — | — | 1 | 19.3 |

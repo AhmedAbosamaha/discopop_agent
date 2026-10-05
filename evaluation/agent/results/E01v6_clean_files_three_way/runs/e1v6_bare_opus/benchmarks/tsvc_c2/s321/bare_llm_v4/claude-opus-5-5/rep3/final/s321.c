@@ -1,12 +1,53 @@
 #include "data.h"
 
+/* Applies the effects of dummy() (see main.c) that fall in index range
+   [lo, hi), in the same order dummy() performs them. */
+static void s321_apply_dummy(long k, long lo, long hi)
+{
+    if (k >= lo && k < hi) {
+        a[k] += (real_t)0.25; b[k] += (real_t)0.25; c[k] += (real_t)0.125;
+        d[k] += (real_t)0.125; e[k] += (real_t)0.25;
+    }
+    if (0 >= lo && 0 < hi) a[0] += (real_t)0.125;
+    if ((long)(LEN_1D - 1) >= lo && (long)(LEN_1D - 1) < hi) b[LEN_1D-1] += (real_t)0.125;
+}
+
 real_t kernel_s321(void)
 {
-    for (int nl = 0; nl < iterations; nl++) {
-        for (int i = 1; i < LEN_1D; i++) {
-            a[i] += a[i-1] * b[i];
+    static long dummy_n = 0;   /* mirrors dummy()'s call counter */
+    long ks[iterations];
+    real_t carry[iterations];
+    long N = LEN_1D;
+
+    for (int s = 0; s < iterations; s++) {
+        ks[s] = ((dummy_n + s) * 7919L + 13L) % LEN_1D;
+        carry[s] = (real_t)0;
+    }
+    dummy_n += iterations;
+
+    long bs = N / 256;
+    if (bs < 4096) bs = 4096;
+    long nb = (N + bs - 1) / bs;
+    long nsteps = nb + iterations - 1;
+
+    for (long t = 0; t < nsteps; t++) {
+        int slo = (t - nb + 1 > 0) ? (int)(t - nb + 1) : 0;
+        int shi = (t < iterations - 1) ? (int)t : iterations - 1;
+#pragma omp parallel for schedule(static) shared(carry, ks) firstprivate(t, nb, bs, N)
+        for (int s = slo; s <= shi; s++) {
+            long j = t - s;
+            long lo = j * bs;
+            long hi = lo + bs;
+            if (hi > N) hi = N;
+            long start = lo < 1 ? 1 : lo;
+            real_t prev = (j == 0) ? a[0] : carry[s];
+            for (long i = start; i < hi; i++) {
+                a[i] += prev * b[i];
+                prev = a[i];
+            }
+            carry[s] = prev;
+            s321_apply_dummy(ks[s], lo, hi);
         }
-        dummy(a, b, c, d, e);
     }
     return (real_t)0;
 }

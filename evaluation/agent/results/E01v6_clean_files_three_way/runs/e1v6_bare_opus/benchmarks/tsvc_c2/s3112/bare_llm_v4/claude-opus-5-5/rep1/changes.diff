@@ -1,0 +1,63 @@
+--- original.c
++++ final.c
+@@ -58,19 +58,55 @@
+ }
+ 
+ /* ==== s3112.c ==== */
++#include <stdlib.h>
+ #include "data.h"
++
++#define S3112_BS 4096
+ 
+ real_t kernel_s3112(void)
+ {
+-    real_t sum;
++    real_t sum = (real_t)0.0;
++    int nb = (LEN_1D + S3112_BS - 1) / S3112_BS;
++    real_t *bsum = (real_t *)malloc((size_t)nb * sizeof(real_t));
++    real_t *off = (real_t *)malloc((size_t)nb * sizeof(real_t));
++
+     for (int nl = 0; nl < iterations; nl++) {
+-        sum = (real_t)0.0;
+-        for (int i = 0; i < LEN_1D; i++) {
+-            sum += a[i];
+-            b[i] = sum;
++        /* pass 1: independent per-block totals */
++        #pragma omp parallel for shared(a, bsum) firstprivate(nb) schedule(static)
++        for (int blk = 0; blk < nb; blk++) {
++            int lo = blk * S3112_BS;
++            int hi = lo + S3112_BS;
++            if (hi > LEN_1D) hi = LEN_1D;
++            real_t s = (real_t)0.0;
++            for (int i = lo; i < hi; i++)
++                s += a[i];
++            bsum[blk] = s;
+         }
++
++        /* short serial exclusive scan over block totals */
++        off[0] = (real_t)0.0;
++        for (int blk = 1; blk < nb; blk++)
++            off[blk] = off[blk - 1] + bsum[blk - 1];
++
++        /* pass 2: each block runs its own scan from its offset */
++        #pragma omp parallel for shared(a, b, off) firstprivate(nb) schedule(static)
++        for (int blk = 0; blk < nb; blk++) {
++            int lo = blk * S3112_BS;
++            int hi = lo + S3112_BS;
++            if (hi > LEN_1D) hi = LEN_1D;
++            real_t s = off[blk];
++            for (int i = lo; i < hi; i++) {
++                s += a[i];
++                b[i] = s;
++            }
++        }
++
++        sum = b[LEN_1D - 1];
+         dummy(a, b, c, d, e);
+     }
++
++    free(bsum);
++    free(off);
+     return sum;
+ }
+ 

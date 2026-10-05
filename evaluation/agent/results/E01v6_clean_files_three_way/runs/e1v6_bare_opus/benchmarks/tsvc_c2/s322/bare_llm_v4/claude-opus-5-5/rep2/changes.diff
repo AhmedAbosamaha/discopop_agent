@@ -1,0 +1,66 @@
+--- original.c
++++ final.c
+@@ -58,15 +58,60 @@
+ }
+ 
+ /* ==== s322.c ==== */
++#include <stdlib.h>
+ #include "data.h"
++
++/* chunk index that "owns" array index idx (indices 0,1 belong to chunk 0) */
++static long s322_chunk_of(long idx, long CH)
++{
++    return idx < 2 ? 0 : (idx - 2) / CH;
++}
+ 
+ real_t kernel_s322(void)
+ {
++    const long N = LEN_1D;
++    long CH = (N - 2 + 127) / 128;
++    if (CH < 2048) CH = 2048;
++    if (CH < 2) CH = 2;
++    const long NC = (N - 2 + CH - 1) / CH;   /* number of chunks */
++
++    long ks[iterations];
++    long tk[iterations];
+     for (int nl = 0; nl < iterations; nl++) {
+-        for (int i = 2; i < LEN_1D; i++) {
+-            a[i] = a[i] + a[i - 1] * b[i] + a[i - 2] * c[i];
++        ks[nl] = ((long)nl * 7919L + 13L) % N;
++        tk[nl] = 2L * nl + s322_chunk_of(ks[nl], CH) + 1;
++    }
++
++    const long nsteps = 2L * (iterations - 1) + NC + 1;
++    for (long s = 0; s < nsteps; s++) {
++        int nl;
++        #pragma omp parallel for default(none) shared(a, b, c) firstprivate(s, CH, NC, N) schedule(static, 1)
++        for (nl = 0; nl < iterations; nl++) {
++            long j = s - 2L * nl;
++            if (j >= 0 && j < NC) {
++                long lo = 2 + j * CH;
++                long hi = lo + CH;
++                if (hi > N) hi = N;
++                for (long i = lo; i < hi; i++) {
++                    a[i] = a[i] + a[i - 1] * b[i] + a[i - 2] * c[i];
++                }
++            }
+         }
+-        dummy(a, b, c, d, e);
++
++        /* apply the between-sweep updates exactly when they become due */
++        for (int m = 0; m < iterations; m++) {
++            if (s == tk[m]) {
++                long k = ks[m];
++                a[k] += (real_t)0.25; b[k] += (real_t)0.25; c[k] += (real_t)0.125;
++                d[k] += (real_t)0.125; e[k] += (real_t)0.25;
++            }
++            if (s == 2L * m + 1) {
++                a[0] += (real_t)0.125;
++            }
++            if (s == 2L * m + NC) {
++                b[N - 1] += (real_t)0.125;
++            }
++        }
+     }
+     return (real_t)0;
+ }

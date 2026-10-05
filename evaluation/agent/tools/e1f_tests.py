@@ -15,6 +15,12 @@ non-zero pairs cannot reach significance and is reported "no test" (p = 1). H2 i
 The opposite direction of T6–T9 (a model alone ahead) is reported beside them, two-sided, as description.
 
     venv/bin/python evaluation/agent/tools/e1f_tests.py --analysis evaluation/agent/results/E01f_final_three_way/analysis
+
+The same nine tests were registered again for E1-v6 (§6, 5 Oct 2026: E1-final on packaging v6, arms `*_v4`); its
+read-out names the experiment, the registration date, the family's size and the file:
+
+    … e1f_tests.py --analysis …/E01v6_clean_files_three_way/analysis --name E1-v6 --registered "5 Oct 2026" \
+        --family 50 --out-name e1v6_tests.md
 """
 from __future__ import annotations
 
@@ -42,6 +48,10 @@ def holm(ps: List[float]) -> List[float]:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--analysis", type=Path, required=True)
+    ap.add_argument("--name", default="E1-final", help="the experiment the nine tests were registered for")
+    ap.add_argument("--registered", default="2 Oct 2026", help="the date of that registration (record §6)")
+    ap.add_argument("--family", type=int, default=FAMILY, help="the campaign family's size M for the bound p × M")
+    ap.add_argument("--out-name", default="e1f_tests.md")
     a = ap.parse_args()
     reads: Dict[str, Dict[str, Any]] = {m: json.loads((a.analysis / m / "main_comparison_stats.json").read_text())
                                         for m, _ in MODELS}
@@ -62,13 +72,13 @@ def main() -> int:
                       + (f"; two-sided p {w['p_two_sided']:.3g}" if "p_two_sided" in w else f"; {w.get('note', '')}"))
             tests.append((test.format(n=n), label.format(m=name + " alone"), p, detail))
     adj = holm([t[2] for t in tests])
-    out = ["# E1-final — the nine pre-registered tests (class R, 18 loops, paired by loop)", "",
-           "Registered in THESIS_EXPERIMENTS §6, 2 Oct 2026, before any main trial. One-sided as registered; Holm "
-           f"over the nine; the campaign family's bound is p × {FAMILY}. \"no test\": fewer than six loops differ.", "",
-           "| test | hypothesis | p (one-sided) | Holm (E1-final) | family bound | rejected (Holm, 0.05) | detail |",
+    out = [f"# {a.name} — the nine pre-registered tests (class R, 18 loops, paired by loop)", "",
+           f"Registered in THESIS_EXPERIMENTS §6, {a.registered}, before any main trial. One-sided as registered; Holm "
+           f"over the nine; the campaign family's bound is p × {a.family}. \"no test\": fewer than six loops differ.", "",
+           f"| test | hypothesis | p (one-sided) | Holm ({a.name}) | family bound | rejected (Holm, 0.05) | detail |",
            "|---|---|---:|---:|---:|---|---|"]
     for (t, label, p, detail), q in zip(tests, adj):
-        out.append(f"| {t} | {label} | {p:.3g} | {q:.3g} | {min(1.0, p * FAMILY):.3g} | {'yes' if q < 0.05 else 'no'} | {detail} |")
+        out.append(f"| {t} | {label} | {p:.3g} | {q:.3g} | {min(1.0, p * a.family):.3g} | {'yes' if q < 0.05 else 'no'} | {detail} |")
     out += ["", "## The three-way table per model (class R, 90 trials per setup)", "",
             "| setup | race-free FASTER | verified parallel | unusable (BROKEN · slower · racy · not compiling) |",
             "|---|---:|---:|---|"]
@@ -86,7 +96,7 @@ def main() -> int:
     agent = reads["haiku"]["three_way"]["classes"]["R"]["arms"]["DiscoPoP + agent"]
     out += ["", f"**H2 (the agent ships no unusable program): {agent['unusable']} case(s)** — "
             + ("; ".join(agent["unusable_cases"]) or "none") + "."]
-    (a.analysis / "e1f_tests.md").write_text("\n".join(out) + "\n")
+    (a.analysis / a.out_name).write_text("\n".join(out) + "\n")
     print("\n".join(out))
     return 0
 

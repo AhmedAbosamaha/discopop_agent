@@ -1,12 +1,68 @@
+#include <stdlib.h>
 #include "data.h"
 
 real_t kernel_s321(void)
 {
+    long ks[iterations];
+
+    /* Run dummy's side effects on c,d,e (in original order) and discover
+       the index k it touches in a/b for each outer iteration, using
+       zeroed scratch arrays in place of a and b. */
+    real_t *sa = (real_t *)calloc(LEN_1D, sizeof(real_t));
+    real_t *sb = (real_t *)calloc(LEN_1D, sizeof(real_t));
     for (int nl = 0; nl < iterations; nl++) {
-        for (int i = 1; i < LEN_1D; i++) {
-            a[i] += a[i-1] * b[i];
+        dummy(sa, sb, c, d, e);
+        long kk = LEN_1D;
+#pragma omp parallel for reduction(min:kk) shared(sa, sb)
+        for (long i = 0; i < LEN_1D; i++) {
+            if (sb[i] != (real_t)0 && i < kk) kk = i;
+            sa[i] = (real_t)0;
+            sb[i] = (real_t)0;
         }
-        dummy(a, b, c, d, e);
+        ks[nl] = kk;
+    }
+    free(sa);
+    free(sb);
+
+    /* Block decomposition of i in [1, LEN_1D). */
+    long n = LEN_1D - 1;
+    long nb = n / 32768;
+    if (nb < 8) nb = n / 4096;
+    if (nb > 256) nb = 256;
+    if (nb < 1) nb = 1;
+    long bs = (n + nb - 1) / nb;
+    if (bs < 1) bs = 1;
+    nb = (n + bs - 1) / bs;
+    if (nb < 1) nb = 1;
+
+    /* Wavefront: task (nl, j) runs at step t = j + 2*nl. */
+    long nsteps = nb + 2L * (iterations - 1);
+    for (long t = 0; t < nsteps; t++) {
+#pragma omp parallel for schedule(static, 1) shared(a, b, ks) firstprivate(t, nb, bs)
+        for (int nl = 0; nl < iterations; nl++) {
+            long j = t - 2L * nl;
+            if (j >= 0 && j < nb) {
+                long lo = 1 + j * bs;
+                long hi = lo + bs;
+                if (hi > LEN_1D) hi = LEN_1D;
+                for (long i = lo; i < hi; i++) {
+                    a[i] += a[i-1] * b[i];
+                }
+                /* dummy's a/b updates that fall in this block */
+                long blo = (j == 0) ? 0 : lo;
+                long k = ks[nl];
+                /* a[k] is still read by sweep nl at i = k+1, so its update
+                   goes to the block owning k+1 (last block if k+1 == LEN_1D) */
+                long ka = (k + 1 < LEN_1D) ? k + 1 : k;
+                if (ka >= blo && ka < hi)
+                    a[k] += (real_t)0.25;
+                if (k >= blo && k < hi)
+                    b[k] += (real_t)0.25;
+                if (j == 0) a[0] += (real_t)0.125;
+                if (LEN_1D - 1 >= blo && LEN_1D - 1 < hi)
+                    b[LEN_1D-1] += (real_t)0.125;
+            }
+        }
     }
     return (real_t)0;
 }

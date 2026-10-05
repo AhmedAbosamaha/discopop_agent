@@ -3,9 +3,21 @@
 real_t kernel_s323(void)
 {
     for (int nl = 0; nl < iterations; nl++) {
+        /* Pass 1: the true recurrence b[i] <- b[i-1], kept serial with the
+           running value carried in a register (same expression shape). */
+        {
+            real_t bp = b[0];
+            for (int i = 1; i < LEN_1D; i++) {
+                real_t ai = bp + c[i] * d[i];
+                real_t bi = ai + c[i] * e[i];
+                b[i] = bi;
+                bp = bi;
+            }
+        }
+        /* Pass 2: a[i] depends only on the finished b chain -> independent. */
+        #pragma omp parallel for schedule(static) default(none) shared(a, b, c, d)
         for (int i = 1; i < LEN_1D; i++) {
             a[i] = b[i-1] + c[i] * d[i];
-            b[i] = a[i] + c[i] * e[i];
         }
         dummy(a, b, c, d, e);
     }

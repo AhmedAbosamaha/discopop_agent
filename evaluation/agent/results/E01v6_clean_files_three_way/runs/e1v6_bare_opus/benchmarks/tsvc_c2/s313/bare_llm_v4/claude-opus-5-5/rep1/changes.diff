@@ -1,0 +1,41 @@
+--- original.c
++++ final.c
+@@ -58,18 +58,35 @@
+ }
+ 
+ /* ==== s313.c ==== */
++#include <stdlib.h>
+ #include "data.h"
++
++#define S313_NBLK 256
+ 
+ real_t kernel_s313(void)
+ {
+-    real_t dot;
++    real_t dot = (real_t)0.;
++    const long blk = ((long)LEN_1D + S313_NBLK - 1) / S313_NBLK;
++    real_t *part = (real_t *)malloc(sizeof(real_t) * S313_NBLK);
+     for (int nl = 0; nl < iterations; nl++) {
++        #pragma omp parallel for default(none) shared(a, b, part) firstprivate(blk) schedule(static)
++        for (int k = 0; k < S313_NBLK; k++) {
++            long lo = (long)k * blk;
++            long hi = lo + blk;
++            if (hi > LEN_1D) hi = LEN_1D;
++            real_t s = (real_t)0.;
++            for (long i = lo; i < hi; i++) {
++                s += a[i] * b[i];
++            }
++            part[k] = s;
++        }
+         dot = (real_t)0.;
+-        for (int i = 0; i < LEN_1D; i++) {
+-            dot += a[i] * b[i];
++        for (int k = 0; k < S313_NBLK; k++) {
++            dot += part[k];
+         }
+         dummy(a, b, c, d, e);
+     }
++    free(part);
+     return dot;
+ }
+ 

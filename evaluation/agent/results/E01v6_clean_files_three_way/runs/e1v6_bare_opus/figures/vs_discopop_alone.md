@@ -29,11 +29,11 @@ Classes are MEASURED (T0.11, `benchmark_classes.json`): R = DiscoPoP alone reach
 | tsvc_c2/s291 | bare_llm_v4 | claude-opus-5-5 | — · — | FASTER,FASTER,FASTER,FASTER,FASTER · 3.48x | — | 5 no-baseline |
 | tsvc_c2/s292 | bare_llm_v4 | claude-opus-5-5 | — · — | FASTER,FASTER,FASTER,FASTER,FASTER · 4.14x | — | 5 no-baseline |
 | tsvc_c2/s293 | bare_llm_v4 | claude-opus-5-5 | — · — | FASTER,FASTER,FASTER,FASTER,FASTER · 2.34x | — | 5 no-baseline |
-| tsvc_c2/s3112 | bare_llm_v4 | claude-opus-5-5 | — · — | AGENT_ERROR,AGENT_ERROR,AGENT_ERROR · — | — | 3 no-baseline |
-| tsvc_c2/s313 | bare_llm_v4 | claude-opus-5-5 | — · — | AGENT_ERROR · — | — | 1 no-baseline |
-| tsvc_c2/s321 | bare_llm_v4 | claude-opus-5-5 | — · — | AGENT_ERROR,AGENT_ERROR,FASTER · 4.67x | — | 3 no-baseline |
-| tsvc_c2/s322 | bare_llm_v4 | claude-opus-5-5 | — · — | AGENT_ERROR,AGENT_ERROR,AGENT_ERROR · — | — | 3 no-baseline |
-| tsvc_c2/s323 | bare_llm_v4 | claude-opus-5-5 | — · — | AGENT_ERROR,AGENT_ERROR,AGENT_ERROR · — | — | 3 no-baseline |
+| tsvc_c2/s3112 | bare_llm_v4 | claude-opus-5-5 | — · — | FASTER,FASTER,FASTER · 9.35x | — | 3 no-baseline |
+| tsvc_c2/s313 | bare_llm_v4 | claude-opus-5-5 | — · — | FASTER · 4.76x | — | 1 no-baseline |
+| tsvc_c2/s321 | bare_llm_v4 | claude-opus-5-5 | — · — | FASTER,FASTER,FASTER · 4.67x | — | 3 no-baseline |
+| tsvc_c2/s322 | bare_llm_v4 | claude-opus-5-5 | — · — | FASTER,FASTER,FASTER · 6.39x | — | 3 no-baseline |
+| tsvc_c2/s323 | bare_llm_v4 | claude-opus-5-5 | — · — | parallel-not-faster,parallel-not-faster,parallel-not-faster · 0.82x | — | 3 no-baseline |
 | tsvc_c2/s331 | bare_llm_v4 | claude-opus-5-5 | — · — | FASTER,FASTER,FASTER,FASTER,FASTER · 4.64x | — | 5 no-baseline |
 | tsvc_c2/s341 | bare_llm_v4 | claude-opus-5-5 | — · — | FASTER,FASTER,FASTER,FASTER,FASTER · 2.35x | — | 5 no-baseline |
 | tsvc_c2/vpvtv | bare_llm_v4 | claude-opus-5-5 | — · — | FASTER · 3.60x | — | 1 no-baseline |

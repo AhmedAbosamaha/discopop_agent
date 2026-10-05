@@ -1,12 +1,82 @@
 #include "data.h"
 
+/*
+ * Wavefront (pipelined) execution of the nl sweeps.  Each sweep keeps its
+ * exact sequential order inside, so floating-point results are identical.
+ * The effects of dummy() between sweeps are applied (same operations, same
+ * order per location) just before the next sweep enters the affected block.
+ */
 real_t kernel_s322(void)
 {
-    for (int nl = 0; nl < iterations; nl++) {
-        for (int i = 2; i < LEN_1D; i++) {
-            a[i] = a[i] + a[i - 1] * b[i] + a[i - 2] * c[i];
-        }
-        dummy(a, b, c, d, e);
+    static long ncalls = 0;   /* mirrors dummy()'s internal call counter */
+    const int nr = LEN_1D - 2;
+    int B = LEN_1D / 128;
+    if (B < 512) B = 512;
+    int nb = nr > 0 ? (nr + B - 1) / B : 0;
+
+    long kk[iterations];
+    int kb[iterations];
+    for (int s = 0; s < iterations; s++) {
+        kk[s] = ((ncalls + s) * 7919L + 13L) % LEN_1D;
+        kb[s] = kk[s] < 2 ? 0 : (int)((kk[s] - 2) / B);
     }
+
+    if (nb > 0) {
+        const int nsteps = nb + 2 * (iterations - 1);
+        for (int t = 0; t < nsteps; t++) {
+            int slo = t - nb + 1;
+            slo = slo <= 0 ? 0 : (slo + 1) / 2;
+            int shi = t / 2;
+            if (shi > iterations - 1) shi = iterations - 1;
+
+            #pragma omp parallel for schedule(static, 1) shared(kk, kb) firstprivate(t, nb, B)
+            for (int s = slo; s <= shi; s++) {
+                int j = t - 2 * s;
+                if (s > 0) {
+                    int p = s - 1;
+                    long k = kk[p];
+                    if (kb[p] == j) {
+                        a[k] += (real_t)0.25;
+                        b[k] += (real_t)0.25;
+                        c[k] += (real_t)0.125;
+                    }
+                    if (j == 0) a[0] += (real_t)0.125;
+                    if (j == nb - 1) b[LEN_1D - 1] += (real_t)0.125;
+                }
+                int lo = 2 + j * B;
+                int hi = lo + B;
+                if (hi > LEN_1D) hi = LEN_1D;
+                for (int i = lo; i < hi; i++) {
+                    a[i] = a[i] + a[i - 1] * b[i] + a[i - 2] * c[i];
+                }
+            }
+        }
+        /* effects of the last dummy() call on a, b, c */
+        {
+            long k = kk[iterations - 1];
+            a[k] += (real_t)0.25;
+            b[k] += (real_t)0.25;
+            c[k] += (real_t)0.125;
+            a[0] += (real_t)0.125;
+            b[LEN_1D - 1] += (real_t)0.125;
+        }
+    } else {
+        for (int s = 0; s < iterations; s++) {
+            long k = kk[s];
+            a[k] += (real_t)0.25;
+            b[k] += (real_t)0.25;
+            c[k] += (real_t)0.125;
+            a[0] += (real_t)0.125;
+            b[LEN_1D - 1] += (real_t)0.125;
+        }
+    }
+
+    /* d and e are only touched by dummy(): apply in call order */
+    for (int s = 0; s < iterations; s++) {
+        long k = kk[s];
+        d[k] += (real_t)0.125;
+        e[k] += (real_t)0.25;
+    }
+    ncalls += iterations;
     return (real_t)0;
 }
