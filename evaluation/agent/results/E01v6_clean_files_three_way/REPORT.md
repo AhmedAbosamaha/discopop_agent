@@ -19,7 +19,7 @@ Class R, 18 loops × 5, race-checked: DiscoPoP alone 0 of 90; the Haiku agent 73
 
 ## What is in this folder
 
-- [`analysis/`](analysis/) — the read-out: [`e1v6_tests.md`](analysis/e1v6_tests.md), [`fable/main_comparison_stats.md`](analysis/fable/main_comparison_stats.md), [`figures.md`](analysis/figures.md), [`haiku/main_comparison_stats.md`](analysis/haiku/main_comparison_stats.md), [`main_comparison_stats.md`](analysis/main_comparison_stats.md), [`opus/main_comparison_stats.md`](analysis/opus/main_comparison_stats.md), [`repetition_loop.md`](analysis/repetition_loop.md), [`sonnet/main_comparison_stats.md`](analysis/sonnet/main_comparison_stats.md), [`vs_discopop_alone.md`](analysis/vs_discopop_alone.md), [`vs_e1_final.md`](analysis/vs_e1_final.md)
+- [`analysis/`](analysis/) — the read-out: [`e1v6_tests.md`](analysis/e1v6_tests.md), [`fable/main_comparison_stats.md`](analysis/fable/main_comparison_stats.md), [`figures.md`](analysis/figures.md), [`haiku/main_comparison_stats.md`](analysis/haiku/main_comparison_stats.md), [`main_comparison_stats.md`](analysis/main_comparison_stats.md), [`opus/main_comparison_stats.md`](analysis/opus/main_comparison_stats.md), [`repetition_loop.md`](analysis/repetition_loop.md), [`repetitions_necessary.md`](analysis/repetitions_necessary.md), [`sonnet/main_comparison_stats.md`](analysis/sonnet/main_comparison_stats.md), [`vs_discopop_alone.md`](analysis/vs_discopop_alone.md), [`vs_e1_final.md`](analysis/vs_e1_final.md)
 - [`runs/`](runs/) — 10 archived run(s): the evidence
 - [`checks/`](checks/) — 1 verification(s) made during the read-out
 - [`preflight/`](preflight/) — 1 smoke run(s) before the launch

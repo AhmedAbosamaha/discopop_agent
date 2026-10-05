@@ -35,8 +35,10 @@ Earlier versions (history):
 
 ### E2 — does DiscoPoP's evidence help the model, and what do retries with feedback add?
 
-**Current: [`E02v6_hidden_order_clean_files/`](E02v6_hidden_order_clean_files/)** — E2-v6 — the hidden order on clean files: does DiscoPoP's evidence let the agent find a split no reading of the file can find, and can retries with feedback stand in for it?.  
-Status: pre-flight.
+**Current: [`E02v6_hidden_order_clean_files/`](E02v6_hidden_order_clean_files/REPORT.md)** — E2-v6 — the hidden order on clean files: does DiscoPoP's evidence let the agent find a split no reading of the file can find, and can retries with feedback stand in for it?.  
+Status: running.
+
+Open first: [`REPORT.md`](E02v6_hidden_order_clean_files/REPORT.md).
 
 Planned 5 Oct, not run yet. Until it is read out, the latest FINISHED results on this question are the first rows of the list below — all on the old one-file packages.
 

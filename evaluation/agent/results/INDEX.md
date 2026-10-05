@@ -467,13 +467,13 @@ Status: done
 | `e1v6_bare_fable` | [`E01v6_clean_files_three_way/runs/e1v6_bare_fable/`](E01v6_clean_files_three_way/runs/e1v6_bare_fable/) | E1-v6 the model alone: bare_llm_v4 with claude-fable-5-1 on class R × 5, A × 1, D × 3 (one run per model) | valid | 105 | FASTER 98, changed-not-parallel 1, no-change 1, parallel-not-faster 5 |
 | `e1v6_race_check` | [`E01v6_clean_files_three_way/checks/e1v6_race_check/`](E01v6_clean_files_three_way/checks/e1v6_race_check/) | race_check.py (the gate's TSan with archer and the schedule matrix, server, no model) over every model-alone parallel program of E1-v6 and, as the positive control, every parallel program of the agent | valid | 0 |  |
 
-## [E2-v6 — the hidden order on clean files: does DiscoPoP's evidence let the agent find a split no reading of the file can find, and can retries with feedback stand in for it?](E02v6_hidden_order_clean_files/)
+## [E2-v6 — the hidden order on clean files: does DiscoPoP's evidence let the agent find a split no reading of the file can find, and can retries with feedback stand in for it?](E02v6_hidden_order_clean_files/REPORT.md)
 
-Status: pre-flight
+Status: running
 
 | run | where | what it is | status | trials | outcomes |
 |---|---|---|---|---:|---|
-| `e2v6_pilot` | not archived yet | E2-v6 mechanism pilot (the rule: a with/without pilot before a long experiment): tsvc_c2/k19 and k27 × full_b1_nospeed_v4, no_evidence_b1_nospeed_v4 × 2, Haiku — never counted | registered |  |  |
+| `e2v6_pilot` | [`E02v6_hidden_order_clean_files/preflight/e2v6_pilot/`](E02v6_hidden_order_clean_files/preflight/e2v6_pilot/) | E2-v6 mechanism pilot (the rule: a with/without pilot before a long experiment): tsvc_c2/k19 and k27 × full_b1_nospeed_v4, no_evidence_b1_nospeed_v4 × 2, Haiku — never counted | valid | 8 | FASTER 3, no-change 5 |
 | `e2v6_agent_1` | not archived yet | E2-v6: tsvc_c2/k19, k23 × full_b1_nospeed_v4, no_evidence_b1_nospeed_v4 × 10, Haiku, threads 6/12, repeats 5 | registered |  |  |
 | `e2v6_agent_2` | not archived yet | E2-v6: tsvc_c2/k31, k27 × full_b1_nospeed_v4, no_evidence_b1_nospeed_v4 × 10, Haiku, threads 6/12, repeats 5 | registered |  |  |
 | `e2v6_agent_3` | not archived yet | E2-v6: tsvc_c2/s161, k53, k48 × full_b1_nospeed_v4, no_evidence_b1_nospeed_v4 × 10, Haiku, threads 6/12, repeats 5 | registered |  |  |
