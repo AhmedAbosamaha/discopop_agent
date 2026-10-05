@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s244.c
+  Model          : claude-sonnet-5
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s244.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan **Dependence analysis:** In the original inner loop, each iteration `i` does: 1. `a[i] = b[i] + c[i]*d[i]` (reads original `b[i]`) 2. `b[i] = c[i] + b[i]` (updates `b[i]` in place) 3. `a[i+1] = b[i] + a[i+1]*d[i]` (writes `a[i+1]` using the *just-updated* `b[i]` and the *old* `a[i+1]`) The write to `a[i+1]` in step 3 of iteration `i` is dead for every `i` except the last (`i = LEN_1D-2`): 
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

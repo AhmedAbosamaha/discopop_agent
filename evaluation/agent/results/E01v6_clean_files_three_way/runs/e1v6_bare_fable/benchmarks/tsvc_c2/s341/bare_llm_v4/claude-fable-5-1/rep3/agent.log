@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s341.c
+  Model          : claude-fable-5-1
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror
+
+│  [bare] Calling claude-fable-5-1...
+│  [bare] s341.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: The rewrite is applied to `s341.c`. **Summary of what changed** - **Dependence removed:** the carried counter `j` (a value flowing between iterations). It is replaced by a chunked prefix-sum pack: 1. `#pragma omp parallel for` over a fixed `S341_NCHUNK = 512` chunks counts the positives in each chunk into `counts[cidx]` (each iteration writes only its own slot). 2. A serial exclusive scan over the
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

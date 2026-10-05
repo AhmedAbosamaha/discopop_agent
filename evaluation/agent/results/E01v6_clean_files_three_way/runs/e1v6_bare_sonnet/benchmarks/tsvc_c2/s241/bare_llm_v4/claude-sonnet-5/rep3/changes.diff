@@ -1,0 +1,35 @@
+--- original.c
++++ final.c
+@@ -59,16 +59,31 @@
+ 
+ /* ==== s241.c ==== */
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s241(void)
+ {
++    /* Snapshot buffer holding the pre-sweep values of a[], so that each
++     * iteration of the parallel loop can read the "old" a[i+1] value
++     * (the one the original sequential loop would still have seen,
++     * since it hadn't reached index i+1 yet) instead of a value another
++     * thread may have already overwritten this sweep. Heap-allocated
++     * since LEN_1D can be very large. */
++    real_t *a_old = (real_t *)malloc((size_t)LEN_1D * sizeof(real_t));
++
+     for (int nl = 0; nl < iterations; nl++) {
++        for (int i = 0; i < LEN_1D; i++) {
++            a_old[i] = a[i];
++        }
++#pragma omp parallel for default(none) shared(a, b, c, d, a_old) schedule(static)
+         for (int i = 0; i < LEN_1D-1; i++) {
+             a[i] = b[i] * c[i  ] * d[i];
+-            b[i] = a[i] * a[i+1] * d[i];
++            b[i] = a[i] * a_old[i+1] * d[i];
+         }
+         dummy(a, b, c, d, e);
+     }
++
++    free(a_old);
+     return (real_t)0;
+ }
+ 

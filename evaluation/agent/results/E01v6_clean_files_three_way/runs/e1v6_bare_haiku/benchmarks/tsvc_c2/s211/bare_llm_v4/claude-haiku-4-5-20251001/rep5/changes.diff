@@ -1,0 +1,38 @@
+--- original.c
++++ final.c
+@@ -59,16 +59,34 @@
+ 
+ /* ==== s211.c ==== */
+ #include "data.h"
++#include <string.h>
++#include <stdlib.h>
+ 
+ real_t kernel_s211(void)
+ {
++    // Allocate temporary buffer to break loop-carried dependence on b
++    real_t *b_temp = (real_t *)malloc(LEN_1D * sizeof(real_t));
++    if (!b_temp) {
++        return (real_t)-1;
++    }
++
+     for (int nl = 0; nl < iterations; nl++) {
++        // Initialize b_temp with current b values (for elements 0 and LEN_1D-1)
++        memcpy(b_temp, b, LEN_1D * sizeof(real_t));
++
++        // Parallel loop: each iteration i reads original b[i-1], b[i+1]
++        // and writes to a[i] and b_temp[i] independently
++        #pragma omp parallel for default(none) shared(a, b, c, d, e, b_temp)
+         for (int i = 1; i < LEN_1D-1; i++) {
+             a[i] = b[i - 1] + c[i] * d[i];
+-            b[i] = b[i + 1] - e[i] * d[i];
++            b_temp[i] = b[i + 1] - e[i] * d[i];
+         }
++
++        // Copy new b values from temp buffer back to b
++        memcpy(b, b_temp, LEN_1D * sizeof(real_t));
+         dummy(a, b, c, d, e);
+     }
++    free(b_temp);
+     return (real_t)0;
+ }
+ 

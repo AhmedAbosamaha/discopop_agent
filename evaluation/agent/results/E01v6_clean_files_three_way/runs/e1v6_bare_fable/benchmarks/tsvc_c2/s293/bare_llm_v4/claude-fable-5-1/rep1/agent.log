@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s293.c
+  Model          : claude-fable-5-1
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror
+
+│  [bare] Calling claude-fable-5-1...
+│  [bare] s293.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Done. The rewrite in `s293.c`: - Hoists `a[0]` into a scalar `a0` once per `nl` iteration (after `dummy` has updated it), removing the read of `a[0]` from inside the loop. - Annotates the `i` loop with `#pragma omp parallel for firstprivate(a0) schedule(static)`; `a` is shared and each iteration writes only its own `a[i]`, so there are no conflicting accesses. Iteration 0 writes `a[0] = a0`, which
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

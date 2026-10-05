@@ -1,0 +1,31 @@
+#include "data.h"
+#include <stdlib.h>
+
+real_t kernel_s241(void)
+{
+    /* Snapshot of the old a[] so iteration i can read the pre-loop a[i+1]
+       without depending on iteration i+1.  Heap-allocated: size grows with
+       LEN_1D. */
+    real_t *a_old = (real_t *)malloc(sizeof(real_t) * (size_t)LEN_1D);
+
+    for (int nl = 0; nl < iterations; nl++) {
+        /* Copy the values of a[] that the main loop reads as a[i+1]. */
+#pragma omp parallel for default(none) shared(a, a_old) schedule(static)
+        for (int i = 1; i < LEN_1D; i++) {
+            a_old[i] = a[i];
+        }
+
+        /* Original computation; a[i+1] is replaced by its snapshot, so each
+           iteration touches only a[i], b[i] (write) and c[i], d[i],
+           a_old[i+1] (read). */
+#pragma omp parallel for default(none) shared(a, b, c, d, a_old) schedule(static)
+        for (int i = 0; i < LEN_1D-1; i++) {
+            a[i] = b[i] * c[i  ] * d[i];
+            b[i] = a[i] * a_old[i+1] * d[i];
+        }
+        dummy(a, b, c, d, e);
+    }
+
+    free(a_old);
+    return (real_t)0;
+}

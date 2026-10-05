@@ -1,0 +1,31 @@
+#include "data.h"
+
+real_t kernel_s281(void)
+{
+    real_t x;
+    for (int nl = 0; nl < iterations; nl++) {
+        // First part: iterations 0 to LEN_1D/2-1
+        // These iterations have no flow dependencies on each other because
+        // they read from the upper half of array 'a' before it's written.
+        #pragma omp parallel for private(x)
+        for (int i = 0; i < LEN_1D / 2; i++) {
+            x = a[LEN_1D-i-1] + b[i] * c[i];
+            a[i] = x-(real_t)1.0;
+            b[i] = x;
+        }
+
+        // Second part: iterations LEN_1D/2 to LEN_1D-1
+        // These iterations depend only on the first part (which has completed).
+        // Each iteration in this part reads from a location written in the first part,
+        // but each iteration reads from a different location.
+        #pragma omp parallel for private(x)
+        for (int i = LEN_1D / 2; i < LEN_1D; i++) {
+            x = a[LEN_1D-i-1] + b[i] * c[i];
+            a[i] = x-(real_t)1.0;
+            b[i] = x;
+        }
+
+        dummy(a, b, c, d, e);
+    }
+    return (real_t)0;
+}

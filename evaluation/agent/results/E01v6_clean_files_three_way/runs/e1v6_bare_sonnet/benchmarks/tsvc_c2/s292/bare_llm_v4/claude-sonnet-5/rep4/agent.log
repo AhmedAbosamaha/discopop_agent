@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s292.c
+  Model          : claude-sonnet-5
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s292.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan The dependence is that `im1`/`im2` are updated sequentially each iteration, carrying the previous iteration's index forward. But the actual *value* they encode is just `i-1` and `i-2` (mod `LEN_1D`, due to the special wraparound at `i==0,1`). That's a pure function of `i`, not a true carried value — so I can replace the running `im1/im2` state with a direct modulo computation of the two in
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

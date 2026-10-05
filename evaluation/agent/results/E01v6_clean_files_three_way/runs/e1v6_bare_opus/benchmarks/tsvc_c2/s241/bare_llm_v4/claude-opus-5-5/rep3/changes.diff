@@ -1,0 +1,31 @@
+--- original.c
++++ final.c
+@@ -58,17 +58,26 @@
+ }
+ 
+ /* ==== s241.c ==== */
++#include <stdlib.h>
+ #include "data.h"
+ 
+ real_t kernel_s241(void)
+ {
++    /* t holds the new a[] values so the old a[i+1] stays readable */
++    real_t *t = (real_t *)malloc(sizeof(real_t) * LEN_1D);
+     for (int nl = 0; nl < iterations; nl++) {
++        #pragma omp parallel for default(none) shared(a, b, c, d, t) schedule(static)
+         for (int i = 0; i < LEN_1D-1; i++) {
+-            a[i] = b[i] * c[i  ] * d[i];
+-            b[i] = a[i] * a[i+1] * d[i];
++            t[i] = b[i] * c[i  ] * d[i];
++            b[i] = t[i] * a[i+1] * d[i];
++        }
++        #pragma omp parallel for default(none) shared(a, t) schedule(static)
++        for (int i = 0; i < LEN_1D-1; i++) {
++            a[i] = t[i];
+         }
+         dummy(a, b, c, d, e);
+     }
++    free(t);
+     return (real_t)0;
+ }
+ 

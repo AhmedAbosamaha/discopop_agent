@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_r_4/benchmarks/tsvc_c2/s341/default_v4/claude-haiku-4-5-20251001/rep1/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_r_4/benchmarks/tsvc_c2/s341/default_v4/claude-haiku-4-5-20251001/rep1/work/s341.c
+@@ -7,6 +7,7 @@
+     for (int nl = 0; nl < iterations; nl++) {
+         // Phase 1: mark which elements pass the filter
+         int* pass_filter = (int*)malloc(sizeof(int) * LEN_1D);
++        #pragma omp parallel for shared(pass_filter) 
+         for (int i = 0; i < LEN_1D; i++) {
+             pass_filter[i] = (b[i] > (real_t)0.) ? 1 : 0;
+         }

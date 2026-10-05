@@ -1,0 +1,21 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_d/benchmarks/tsvc_c2/s322/default_v4/claude-haiku-4-5-20251001/rep3/work/s322.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_d/benchmarks/tsvc_c2/s322/default_v4/claude-haiku-4-5-20251001/rep3/work/s322.c
+@@ -1,12 +1,17 @@
+ #include "data.h"
++#include <stdlib.h>
++#include <string.h>
+ 
+ real_t kernel_s322(void)
+ {
++    real_t *a_base = (real_t*)malloc(LEN_1D * sizeof(real_t));
+     for (int nl = 0; nl < iterations; nl++) {
++        memcpy(a_base, a, LEN_1D * sizeof(real_t));
+         for (int i = 2; i < LEN_1D; i++) {
+-            a[i] = a[i] + a[i - 1] * b[i] + a[i - 2] * c[i];
++            a[i] = a_base[i] + a[i - 1] * b[i] + a[i - 2] * c[i];
+         }
+         dummy(a, b, c, d, e);
+     }
++    free(a_base);
+     return (real_t)0;
+ }

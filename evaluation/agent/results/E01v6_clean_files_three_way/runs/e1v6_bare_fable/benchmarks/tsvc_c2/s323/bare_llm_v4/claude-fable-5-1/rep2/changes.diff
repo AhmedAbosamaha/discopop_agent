@@ -1,0 +1,47 @@
+--- original.c
++++ final.c
+@@ -60,12 +60,41 @@
+ /* ==== s323.c ==== */
+ #include "data.h"
+ 
++/* Elements per pipeline chunk: the products of one chunk are computed by a
++ * thread while the serial recurrence of the previous chunk runs elsewhere. */
++#define S323_CHUNK 8192
++
+ real_t kernel_s323(void)
+ {
+     for (int nl = 0; nl < iterations; nl++) {
+-        for (int i = 1; i < LEN_1D; i++) {
+-            a[i] = b[i-1] + c[i] * d[i];
+-            b[i] = a[i] + c[i] * e[i];
++        int nchunks = (LEN_1D - 1 + S323_CHUNK - 1) / S323_CHUNK;
++
++        /* Independent part (products) runs in parallel; the loop-carried
++         * recurrence b[i-1] -> b[i] runs inside the ordered block, chunk by
++         * chunk in original order, pipelined behind the product phase. */
++        #pragma omp parallel for ordered schedule(static,1) default(none) shared(a, b, c, d, e, nchunks)
++        for (int ch = 0; ch < nchunks; ch++) {
++            int lo = 1 + ch * S323_CHUNK;
++            int hi = lo + S323_CHUNK;
++            if (hi > LEN_1D) hi = LEN_1D;
++
++            /* products staged in a[] and b[] (both are overwritten below) */
++            for (int i = lo; i < hi; i++) {
++                a[i] = c[i] * d[i];
++                b[i] = c[i] * e[i];
++            }
++
++            #pragma omp ordered
++            {
++                /* carry = b[lo-1], finalised by the previous chunk (or b[0]) */
++                real_t bp = b[lo - 1];
++                for (int i = lo; i < hi; i++) {
++                    real_t t = bp + a[i];   /* a[i] = b[i-1] + c[i]*d[i] */
++                    a[i] = t;
++                    bp = t + b[i];          /* b[i] = a[i] + c[i]*e[i]   */
++                    b[i] = bp;
++                }
++            }
+         }
+         dummy(a, b, c, d, e);
+     }

@@ -1,0 +1,36 @@
+--- original.c
++++ final.c
+@@ -60,6 +60,33 @@
+ /* ==== s321.c ==== */
+ #include "data.h"
+ 
++/*
++ * kernel_s321 computes a first-order linear recurrence:
++ *     a[i] = a[i] + a[i-1] * b[i]      (i = 1 .. LEN_1D-1)
++ * Each iteration reads the value the previous iteration just wrote to
++ * a[i-1] and the result feeds the next iteration (and the final array
++ * contents, which are part of the program's observable output) -- it is
++ * not an accumulator whose running value feeds only its own total, so it
++ * cannot become a reduction, and there is no later, independent loop to
++ * move the dependence into. The only known way to break such a
++ * recurrence into independent work (block/cyclic-reduction style parallel
++ * scan: compute each block assuming a zero carry-in, then correct with
++ * the true carry) regroups the floating-point multiplies/adds relative
++ * to the strictly sequential evaluation. Because IEEE-754 addition and
++ * multiplication are not associative, that regrouping changes rounding
++ * from the second element of every block onward, so the result would no
++ * longer match the sequential reference bit-for-bit, and would also
++ * change with the thread count (block boundaries follow the thread
++ * count), which the required run-to-run/schedule-to-schedule agreement
++ * forbids. The outer nl loop is likewise sequential: dummy() mutates
++ * a[0]/a[k]/b[k]/b[LEN_1D-1] using the exact floating-point state left by
++ * the inner loop, and the next nl iteration's inner loop consumes that
++ * state, so splitting nl across threads would reorder those same
++ * floating-point dependencies (and iterations==8 offers negligible work
++ * per activation regardless). No loop here has iterations that can be
++ * made independent without changing the computed result, so none is
++ * annotated with #pragma omp.
++ */
+ real_t kernel_s321(void)
+ {
+     for (int nl = 0; nl < iterations; nl++) {

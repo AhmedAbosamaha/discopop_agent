@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s241.c
+  Model          : claude-fable-5-1
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror
+
+│  [bare] Calling claude-fable-5-1...
+│  [bare] s241.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Done. Summary of the rewrite in `s241.c`: - **Dependence removed:** the only cross-iteration dependence was the read of the *old* `a[i+1]` in the `b[i]` statement. It's a true value flow (not just location reuse), so it was *moved*, not dropped: pass 1 computes the new `a` value into a heap scratch array `tmp` and uses it together with the still-unmodified `a[i+1]` to form `b[i]`; pass 2 copies `t
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

@@ -1,0 +1,14 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_d/benchmarks/tsvc_c2/s321/default_v4/claude-haiku-4-5-20251001/rep2/work/s321.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_d/benchmarks/tsvc_c2/s321/default_v4/claude-haiku-4-5-20251001/rep2/work/s321.c
+@@ -3,8 +3,10 @@
+ real_t kernel_s321(void)
+ {
+     for (int nl = 0; nl < iterations; nl++) {
++        real_t prev = a[0];
+         for (int i = 1; i < LEN_1D; i++) {
+-            a[i] += a[i-1] * b[i];
++            a[i] += prev * b[i];
++            prev = a[i];
+         }
+         dummy(a, b, c, d, e);
+     }

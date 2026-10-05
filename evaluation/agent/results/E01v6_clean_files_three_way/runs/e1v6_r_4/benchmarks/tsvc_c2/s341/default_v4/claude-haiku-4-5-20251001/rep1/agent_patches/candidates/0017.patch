@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_r_4/benchmarks/tsvc_c2/s341/default_v4/claude-haiku-4-5-20251001/rep1/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_r_4/benchmarks/tsvc_c2/s341/default_v4/claude-haiku-4-5-20251001/rep1/work/s341.c
+@@ -19,6 +19,7 @@
+         }
+ 
+         // Copy result to output (no loop-carried dependencies—Do-All)
++        #pragma omp parallel for firstprivate(j) shared(temp) 
+         for (int i = 0; i < j; i++) {
+             a[i] = temp[i];
+         }

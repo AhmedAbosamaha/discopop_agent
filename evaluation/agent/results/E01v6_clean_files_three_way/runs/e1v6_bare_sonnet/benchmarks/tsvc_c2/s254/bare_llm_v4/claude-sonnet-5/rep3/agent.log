@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s254.c
+  Model          : claude-sonnet-5
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s254.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Plan: The recurrence `x = b[i-1]` (with `x = b[LEN_1D-1]` for `i=0`) only ever reads `b`, which is not written inside the inner loop (it's written only by `dummy`, called after the inner loop finishes). So `x` at iteration `i` is simply `b[i-1]` (or `b[LEN_1D-1]` when `i==0`) — the "dependence" is just rereading `b`, not a value that must be carried forward. I can compute `prev` directly from `b` 
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

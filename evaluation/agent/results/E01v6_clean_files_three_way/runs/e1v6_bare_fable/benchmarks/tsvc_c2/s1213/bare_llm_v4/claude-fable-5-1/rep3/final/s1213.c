@@ -1,0 +1,23 @@
+#include "data.h"
+
+real_t kernel_s1213(void)
+{
+    for (int nl = 0; nl < iterations; nl++) {
+        /* Original: a[i] = b[i-1]+c[i]; b[i] = a[i+1]*d[i];
+         * In the original order b[i-1] (read at i) was written at i-1 as
+         * a_old[i]*d[i-1], and a[i+1] (read at i) is always the pre-pass
+         * value.  So first compute every new b from the untouched a, then
+         * compute every new a from the finished b.  b[0] is never written,
+         * so iteration i=1 reads the same b[0] as the original. */
+        #pragma omp parallel for default(none) shared(a, b, d) schedule(static)
+        for (int i = 1; i < LEN_1D-1; i++) {
+            b[i] = a[i+1]*d[i];
+        }
+        #pragma omp parallel for default(none) shared(a, b, c) schedule(static)
+        for (int i = 1; i < LEN_1D-1; i++) {
+            a[i] = b[i-1]+c[i];
+        }
+        dummy(a, b, c, d, e);
+    }
+    return (real_t)0;
+}

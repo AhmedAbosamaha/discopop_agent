@@ -1,0 +1,35 @@
+#include "data.h"
+#include <stdlib.h>
+
+real_t kernel_s323(void)
+{
+    /* f[i] = c[i]*(d[i]+e[i]) is the per-element increment of the scan
+     * b[i] = b[i-1] + f[i]; heap-allocated since LEN_1D can be huge. */
+    real_t *f = (real_t *)malloc(sizeof(real_t) * (size_t)LEN_1D);
+
+    for (int nl = 0; nl < iterations; nl++) {
+        /* Independent across i: each f[i] depends only on c,d,e at index i. */
+        #pragma omp parallel for default(none) shared(f, c, d, e) schedule(static)
+        for (int i = 1; i < LEN_1D; i++) {
+            f[i] = c[i] * (d[i] + e[i]);
+        }
+
+        /* True scan recurrence b[i] = b[i-1] + f[i]; kept sequential since
+         * this is the only real cross-iteration dependence in the kernel. */
+        for (int i = 1; i < LEN_1D; i++) {
+            b[i] = b[i-1] + f[i];
+        }
+
+        /* Independent across i: b[] is now fully computed for this nl, so
+         * a[i] only reads b[i-1] (already finalized) and c[i], d[i]. */
+        #pragma omp parallel for default(none) shared(a, b, c, d) schedule(static)
+        for (int i = 1; i < LEN_1D; i++) {
+            a[i] = b[i-1] + c[i] * d[i];
+        }
+
+        dummy(a, b, c, d, e);
+    }
+
+    free(f);
+    return (real_t)0;
+}

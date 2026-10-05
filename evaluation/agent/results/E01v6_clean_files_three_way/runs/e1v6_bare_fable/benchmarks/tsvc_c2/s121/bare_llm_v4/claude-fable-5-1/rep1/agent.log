@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s121.c
+  Model          : claude-fable-5-1
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror
+
+│  [bare] Calling claude-fable-5-1...
+│  [bare] s121.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Done. `s121.c` now computes `tmp[i] = a[i+1] + b[i]` in one `#pragma omp parallel for` (every iteration reads only the original `a`, since nothing in that loop writes `a`), then copies `tmp` back into `a[0..LEN_1D-2]` in a second parallel loop, preserving the original write set (`a[LEN_1D-1]` untouched). The scratch buffer is heap-allocated once per call and freed at the end; `default(none)` with 
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

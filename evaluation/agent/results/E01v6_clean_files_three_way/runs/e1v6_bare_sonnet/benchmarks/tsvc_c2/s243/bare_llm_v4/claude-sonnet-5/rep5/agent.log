@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s243.c
+  Model          : claude-sonnet-5
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s243.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Plan (applied): **Dependence:** In the original loop, statement 3 (`a[i] = b[i] + a[i+1]*d[i]`) reads `a[i+1]` as it existed *before* iteration `i+1` runs its statement 1 overwrite — i.e., the value `a[i+1]` held when this `nl` pass began (carried over from the previous `nl` iteration / `dummy()`'s mutation). That's a genuine value-flow dependence from iteration `i+1` into iteration `i`'s read, no
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

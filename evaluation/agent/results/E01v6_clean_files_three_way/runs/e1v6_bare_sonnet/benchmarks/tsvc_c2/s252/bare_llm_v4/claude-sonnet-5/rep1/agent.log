@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s252.c
+  Model          : claude-sonnet-5
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s252.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan **Dependence:** In the inner loop, `t` carries the value of `s` from the previous iteration (`t_{i} = s_{i-1} = b[i-1]*c[i-1]`), with `t_0 = 0`. This is a simple 1-element shift, not an accumulating reduction — each iteration's needed value can be *recomputed* directly from `b[i-1]*c[i-1]` instead of being carried forward through `t`. So the fix is: replace the carried `t` with an inline c
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

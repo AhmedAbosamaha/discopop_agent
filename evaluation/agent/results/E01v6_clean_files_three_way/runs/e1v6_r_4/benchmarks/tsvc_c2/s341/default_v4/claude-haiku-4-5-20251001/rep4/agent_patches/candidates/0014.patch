@@ -1,0 +1,36 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_r_4/benchmarks/tsvc_c2/s341/default_v4/claude-haiku-4-5-20251001/rep4/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_r_4/benchmarks/tsvc_c2/s341/default_v4/claude-haiku-4-5-20251001/rep4/work/s341.c
+@@ -1,17 +1,32 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s341(void)
+ {
+     int j;
++    int *indices = malloc(LEN_1D * sizeof(int));
++
+     for (int nl = 0; nl < iterations; nl++) {
+         j = -1;
++
++        // Pass 1: Compute write indices for each element
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+                 j++;
+-                a[j] = b[i];
++            }
++            indices[i] = j;
++        }
++
++        // Pass 2: Place filtered elements in parallel
++        for (int i = 0; i < LEN_1D; i++) {
++            if (b[i] > (real_t)0.) {
++                a[indices[i]] = b[i];
+             }
+         }
++
+         dummy(a, b, c, d, e);
+     }
++
++    free(indices);
+     return (real_t)0;
+ }

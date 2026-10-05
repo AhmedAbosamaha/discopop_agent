@@ -1,0 +1,15 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s241.c
+  Model          : claude-fable-5-1
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror
+
+│  [bare] Calling claude-fable-5-1...
+child process pid 1264155 exit status already read:  will report returncode 255
+│  [bare] s241.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: The rewrite is applied to `s241.c`. **Summary of the change** - **Dependence removed:** the anti-dependence through `a[i+1]` (iteration `i` reads the old value that iteration `i+1` overwrites). New `a` values go to a `malloc`'d buffer `anew` during the main loop, so every iteration touches only `anew[i]`, `b[i]`, and reads the untouched old `a`; a second parallel loop copies `anew` back to `a`. - 
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

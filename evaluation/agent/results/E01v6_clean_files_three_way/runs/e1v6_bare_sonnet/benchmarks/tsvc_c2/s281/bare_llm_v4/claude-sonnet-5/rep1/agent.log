@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s281.c
+  Model          : claude-sonnet-5
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s281.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan **Dependence:** In the original loop, `a[LEN_1D-1-i]` is read at iteration `i`. For `i` in the lower half, that index hasn't been written yet this pass, so it reads the pre-loop value. For `i` in the upper half, that index *was* already written earlier this same pass (at iteration `j = LEN_1D-1-i < i`), so it reads the freshly computed value. So iterations are paired: `i` and `j = LEN_1D-1
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

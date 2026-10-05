@@ -1,0 +1,38 @@
+#include "data.h"
+#include <stdlib.h>
+
+real_t kernel_s211(void)
+{
+    /* b_old holds the value of b[] as it was before this sweep started.
+     * The original loop's a[i] = b[i-1] + c[i]*d[i] reads a b[i-1] that
+     * iteration i-1 already overwrote with b_old[i] - e[i-1]*d[i-1] (for
+     * i-1 >= 1); for i==1, b[0] is never written by the loop, so it is
+     * just b_old[0]. b[i] = b[i+1] - e[i]*d[i] always read the old b[i+1]
+     * anyway (it hasn't been written yet in the original order). Using
+     * this snapshot removes the loop-carried dependence: every iteration
+     * now reads only from b_old/c/d/e and writes only a[i]/b[i]. */
+    real_t *b_old = (real_t *)malloc((size_t)LEN_1D * sizeof(real_t));
+
+    for (int nl = 0; nl < iterations; nl++) {
+        #pragma omp parallel for shared(b, b_old) schedule(static)
+        for (int i = 0; i < LEN_1D; i++) {
+            b_old[i] = b[i];
+        }
+
+        #pragma omp parallel for shared(a, b, b_old, c, d, e) schedule(static)
+        for (int i = 1; i < LEN_1D - 1; i++) {
+            real_t bim1;
+            if (i == 1)
+                bim1 = b_old[0];
+            else
+                bim1 = b_old[i] - e[i - 1] * d[i - 1];
+            a[i] = bim1 + c[i] * d[i];
+            b[i] = b_old[i + 1] - e[i] * d[i];
+        }
+
+        dummy(a, b, c, d, e);
+    }
+
+    free(b_old);
+    return (real_t)0;
+}

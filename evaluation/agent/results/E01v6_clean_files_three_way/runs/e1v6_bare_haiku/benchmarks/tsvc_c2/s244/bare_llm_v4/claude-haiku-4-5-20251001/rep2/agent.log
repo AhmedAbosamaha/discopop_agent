@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s244.c
+  Model          : claude-haiku-4-5-20251001
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror
+
+│  [bare] Calling claude-haiku-4-5-20251001...
+│  [bare] s244.c: edited, 3 OpenMP pragma(s) in the file
+│  [bare] the model's plan: I'll read the files to understand the program structure and identify parallelization opportunities.**PLAN** The inner loop (over `i`) has three operations that appear sequential: ```c a[i] = b[i] + c[i] * d[i]; // (1) writes a[i] b[i] = c[i] + b[i]; // (2) writes b[i] a[i+1] = b[i] + a[i+1] * d[i]; // (3) writes a[i+1] ``` **Dependence analysis:** - (1) reads `b[i], c[i], d[i]` from the *previous*
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

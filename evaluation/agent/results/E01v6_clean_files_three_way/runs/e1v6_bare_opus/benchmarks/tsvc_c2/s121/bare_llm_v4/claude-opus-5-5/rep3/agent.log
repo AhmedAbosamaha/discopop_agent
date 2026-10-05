@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s121.c
+  Model          : claude-opus-5-5
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror
+
+│  [bare] Calling claude-opus-5-5...
+│  [bare] s121.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: I rewrote `s121.c` so each sweep over `a` runs as two parallel loops; nothing has been compiled or run, since there's no compiler here. **What was blocking it:** iteration `i` reads `a[i+1]`, and the next iteration overwrites that same slot. No new value moves between iterations — each one only needs the *old* `a[i+1]`. Run in parallel, though, the overwrite could happen before the read. **The fix
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

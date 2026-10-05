@@ -1,0 +1,58 @@
+--- original.c
++++ final.c
+@@ -59,16 +59,53 @@
+ 
+ /* ==== s1213.c ==== */
+ #include "data.h"
++#include <stdlib.h>
+ 
++/*
++ * Original loop has a loop-carried dependence through two arrays:
++ *   a[i] = b[i-1] + c[i]         (reads b[i-1], written by the previous i)
++ *   b[i] = a[i+1] * d[i]         (reads a[i+1], which at this point in the
++ *                                  sequential order still holds the value
++ *                                  it had on ENTRY to this nl-trip, because
++ *                                  index i+1 has not been visited yet)
++ *
++ * Working out the closed form in terms of the array contents a^(nl) that
++ * exist at the START of trip nl (b[0] is never written anywhere in this
++ * kernel, so it is a true constant across every trip):
++ *
++ *   b[i] = a^(nl)[i+1] * d[i]                              for i = 1..LEN_1D-2
++ *   a[i] = b0            + c[i]    when i == 1   (b[0]=b0 unchanged)
++ *   a[i] = a^(nl)[i]*d[i-1] + c[i]  when i >= 2    (uses old b[i-1]
++ *                                                   expressed via old a[i])
++ *
++ * So every new a[i]/b[i] value depends only on the snapshot of "a" taken at
++ * the start of the trip (old_a), plus constants b[0], c, d — never on a
++ * value another iteration of this same trip writes.  Taking that snapshot
++ * first removes the inter-iteration dependence and lets the i-loop run in
++ * any order/partition.  old_a is heap-allocated since its size grows with
++ * LEN_1D.
++ */
+ real_t kernel_s1213(void)
+ {
++    real_t *old_a = (real_t *) malloc(sizeof(real_t) * (size_t)LEN_1D);
++
+     for (int nl = 0; nl < iterations; nl++) {
++        const real_t b0 = b[0];
++
++        #pragma omp parallel for default(none) shared(a, old_a) schedule(static)
++        for (int i = 1; i < LEN_1D; i++) {
++            old_a[i] = a[i];
++        }
++
++        #pragma omp parallel for default(none) shared(a, b, c, d, old_a) firstprivate(b0) schedule(static)
+         for (int i = 1; i < LEN_1D-1; i++) {
+-            a[i] = b[i-1]+c[i];
+-            b[i] = a[i+1]*d[i];
++            a[i] = (i == 1) ? (b0 + c[i]) : (old_a[i]*d[i-1] + c[i]);
++            b[i] = old_a[i+1]*d[i];
+         }
+         dummy(a, b, c, d, e);
+     }
++
++    free(old_a);
+     return (real_t)0;
+ }
+ 

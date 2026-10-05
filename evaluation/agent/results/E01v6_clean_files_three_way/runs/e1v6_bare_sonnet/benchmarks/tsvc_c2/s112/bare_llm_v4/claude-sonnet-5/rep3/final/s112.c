@@ -1,0 +1,33 @@
+#include "data.h"
+#include <stdlib.h>
+
+real_t kernel_s112(void)
+{
+    /* Snapshot buffer: holds the pre-update values of a[0..LEN_1D-2].
+       Heap-allocated because its size scales with LEN_1D. */
+    real_t *a_old = (real_t *)malloc((size_t)(LEN_1D - 1) * sizeof(real_t));
+
+    for (int nl = 0; nl < iterations; nl++) {
+        /* Take a read-only snapshot of a before the update pass.
+           a: shared, read-only here. a_old: shared, write-only, each
+           index written by exactly one iteration -> race-free. */
+        #pragma omp parallel for shared(a, a_old)
+        for (int i = 0; i < LEN_1D - 1; i++) {
+            a_old[i] = a[i];
+        }
+
+        /* Update pass: each iteration reads a_old[i] (snapshot, never
+           written by this loop) and b[i] (read-only), and writes a[i+1]
+           (a distinct index per iteration). No cross-iteration
+           dependence remains, so iterations may run in any order. */
+        #pragma omp parallel for shared(a, a_old, b)
+        for (int i = 0; i < LEN_1D - 1; i++) {
+            a[i+1] = a_old[i] + b[i];
+        }
+
+        dummy(a, b, c, d, e);
+    }
+
+    free(a_old);
+    return (real_t)0;
+}

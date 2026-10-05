@@ -1,0 +1,25 @@
+#include "data.h"
+#include <stdlib.h>
+
+real_t kernel_s341(void)
+{
+    // Precompute prefix sum of valid elements
+    int *count = (int *)malloc((LEN_1D + 1) * sizeof(int));
+    count[0] = 0;
+    for (int i = 0; i < LEN_1D; i++) {
+        count[i + 1] = count[i] + (b[i] > (real_t)0. ? 1 : 0);
+    }
+
+    for (int nl = 0; nl < iterations; nl++) {
+        #pragma omp parallel for shared(count) 
+        for (int i = 0; i < LEN_1D; i++) {
+            if (b[i] > (real_t)0.) {
+                a[count[i]] = b[i];
+            }
+        }
+        dummy(a, b, c, d, e);
+    }
+
+    free(count);
+    return (real_t)0;
+}

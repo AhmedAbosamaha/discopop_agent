@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : vpvtv.c
+  Model          : claude-opus-5-5
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror
+
+│  [bare] Calling claude-opus-5-5...
+│  [bare] vpvtv.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: I added one pragma to `vpvtv.c`, on the inner `i` loop: `#pragma omp parallel for default(none) shared(a, b, c) schedule(static)`. I couldn't compile or run anything here, so the build, ThreadSanitizer, output comparison and timing are all unchecked. - **What stays serial:** the outer loop over the 48 passes. `dummy()` changes `a`, `b` and `c` after every pass, and the next pass reads those values
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

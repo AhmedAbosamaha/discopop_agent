@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s321.c
+  Model          : claude-sonnet-5
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s321.c: edited, 0 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Analysis `s321.c` computes, for `nl = 0..iterations-1`: ``` for (i = 1; i < LEN_1D; i++) a[i] += a[i-1] * b[i]; dummy(a,b,c,d,e); ``` This is the textbook TSVC "first-order linear recurrence" kernel. I checked both candidate dependences before deciding what to do: 1. **Inner `i` loop.** `a[i-1]` read at step `i` is the *value just written* by step `i-1` in this same sweep (not a stale/reused sl
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

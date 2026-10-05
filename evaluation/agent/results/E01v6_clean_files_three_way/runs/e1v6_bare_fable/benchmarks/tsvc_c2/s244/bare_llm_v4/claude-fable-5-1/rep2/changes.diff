@@ -1,0 +1,22 @@
+--- original.c
++++ final.c
+@@ -63,11 +63,18 @@
+ real_t kernel_s244(void)
+ {
+     for (int nl = 0; nl < iterations; nl++) {
++        /* In the original, iteration i wrote a[i+1] and iteration i+1
++         * immediately overwrote it without reading it, so that write is
++         * dead for every element except the last one (a[LEN_1D-1]).
++         * Iterations now touch only index i of a and b. */
++#pragma omp parallel for default(none) shared(a, b, c, d) schedule(static)
+         for (int i = 0; i < LEN_1D-1; ++i) {
+             a[i] = b[i] + c[i] * d[i];
+             b[i] = c[i] + b[i];
+-            a[i+1] = b[i] + a[i+1] * d[i];
+         }
++        /* The surviving write of the original's last iteration (i = LEN_1D-2):
++         * uses the updated b[LEN_1D-2] and the untouched a[LEN_1D-1]. */
++        a[LEN_1D-1] = b[LEN_1D-2] + a[LEN_1D-1] * d[LEN_1D-2];
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

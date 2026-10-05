@@ -1,0 +1,41 @@
+--- original.c
++++ final.c
+@@ -59,16 +59,36 @@
+ 
+ /* ==== s211.c ==== */
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s211(void)
+ {
++    /* Scratch buffer holding the new values of b for one sweep.
++       Heap-allocated: its size grows with LEN_1D. */
++    real_t *bnew = (real_t *)malloc(sizeof(real_t) * (size_t)LEN_1D);
++    if (bnew == NULL) return (real_t)0;
++
+     for (int nl = 0; nl < iterations; nl++) {
++        /* Pass 1: new b values, computed only from the OLD b (b[i+1] is
++           never written in this pass), so every iteration is independent. */
++#pragma omp parallel for default(none) shared(b, d, e, bnew) schedule(static)
+         for (int i = 1; i < LEN_1D-1; i++) {
+-            a[i] = b[i - 1] + c[i] * d[i];
+-            b[i] = b[i + 1] - e[i] * d[i];
++            bnew[i] = b[i + 1] - e[i] * d[i];
++        }
++        /* b[0] is never modified by the sweep; a[1] reads it as-is. */
++        bnew[0] = b[0];
++
++        /* Pass 2: a[i] uses the already-updated b[i-1] (= bnew[i-1]),
++           and b receives its new values. No iteration reads what another writes. */
++#pragma omp parallel for default(none) shared(a, b, c, d, bnew) schedule(static)
++        for (int i = 1; i < LEN_1D-1; i++) {
++            a[i] = bnew[i - 1] + c[i] * d[i];
++            b[i] = bnew[i];
+         }
+         dummy(a, b, c, d, e);
+     }
++
++    free(bnew);
+     return (real_t)0;
+ }
+ 

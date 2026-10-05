@@ -1,0 +1,36 @@
+#include "data.h"
+#include <stdlib.h>
+
+real_t kernel_s211(void)
+{
+    // Temporary array to break anti-dependence in b updates
+    real_t *b_temp = (real_t *)malloc((LEN_1D) * sizeof(real_t));
+
+    for (int nl = 0; nl < iterations; nl++) {
+        // First loop: compute new b values in temporary array (breaks anti-dependence)
+        // Each iteration i reads b[i+1] (from input), writes b_temp[i].
+        // No iteration depends on another: i reads b[i+1], i+1 reads b[i+2] (different input).
+        #pragma omp parallel for shared(b, b_temp, d, e)
+        for (int i = 1; i < LEN_1D-1; i++) {
+            b_temp[i] = b[i + 1] - e[i] * d[i];
+        }
+
+        // Copy results back to b[] (sequential is fine, single memory write pattern)
+        for (int i = 1; i < LEN_1D-1; i++) {
+            b[i] = b_temp[i];
+        }
+
+        // Second loop: update a[] (no loop-carried dependence)
+        // Each iteration i reads b[i-1] (now finalized), writes a[i].
+        // No iteration depends on another: i reads b[i-1], i+1 reads b[i] (already finalized).
+        #pragma omp parallel for shared(a, b, c, d)
+        for (int i = 1; i < LEN_1D-1; i++) {
+            a[i] = b[i - 1] + c[i] * d[i];
+        }
+
+        dummy(a, b, c, d, e);
+    }
+
+    free(b_temp);
+    return (real_t)0;
+}

@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s293.c
+  Model          : claude-sonnet-5
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s293.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan The inner loop `for (i) a[i] = a[0];` only reads `a[0]` and writes `a[i]`. The only apparent cross-iteration contact is at `i == 0`, which writes `a[0] = a[0]` — the same value it reads, so no iteration actually depends on another iteration's write: every iteration can read the original `a[0]` and write its own slot independently. That's a location being reused (every iteration touches the
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

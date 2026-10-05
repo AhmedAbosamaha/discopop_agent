@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s254.c
+  Model          : claude-opus-5-5
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror
+
+│  [bare] Calling claude-opus-5-5...
+│  [bare] s254.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: I rewrote `s254.c` and added one `#pragma omp parallel for`. I had no compiler here, so it hasn't been compiled, run or timed. **The dependence.** The inner loop passed `x` from each iteration to the next, but `x` only ever carries `b[i-1]`. The loop never writes `b`, so each iteration can read `b[i-1]` directly and the chain disappears. Nothing is recomputed, so the work per pass stays the same. 
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

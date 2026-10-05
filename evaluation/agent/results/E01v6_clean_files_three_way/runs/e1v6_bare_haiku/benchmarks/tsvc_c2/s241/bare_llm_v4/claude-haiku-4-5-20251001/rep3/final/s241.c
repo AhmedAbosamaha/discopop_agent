@@ -1,0 +1,21 @@
+#include "data.h"
+
+real_t kernel_s241(void)
+{
+    for (int nl = 0; nl < iterations; nl++) {
+        // Phase 1: Compute a[i] for all i independently
+        #pragma omp parallel for shared(a, b, c, d)
+        for (int i = 0; i < LEN_1D-1; i++) {
+            a[i] = b[i] * c[i] * d[i];
+        }
+
+        // Phase 2: Compute b[i] for all i independently (using completed a array)
+        #pragma omp parallel for shared(a, b, c, d)
+        for (int i = 0; i < LEN_1D-1; i++) {
+            b[i] = a[i] * a[i+1] * d[i];
+        }
+
+        dummy(a, b, c, d, e);
+    }
+    return (real_t)0;
+}

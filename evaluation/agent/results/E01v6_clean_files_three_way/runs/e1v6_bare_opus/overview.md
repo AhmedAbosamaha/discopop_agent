@@ -1,0 +1,129 @@
+# Agent experiment run `e1v6_bare_opus`
+
+- status: finished (created 2026-10-05T05:34:12, finished 2026-10-05T08:52:55)
+- host: `rms14562`, compilers `/usr/bin/clang-20` / `/usr/bin/clang++-20`
+- agent: `70cb05ff3d1ecc75158877a042809fcfdf7d5da8` (uncommitted diff sha256 `None`)
+- harness: `70cb05ff3d1ecc75158877a042809fcfdf7d5da8` on `agentic_DiscoPop`
+- verify size `per_kernel`, threads [6, 12], repeats 5
+
+Outcomes are judged by the harness, not by the agent: `BROKEN` means the final program's values differ from the original's (relative error > 1e-09) or move between repeats at a fixed thread count; `SCAFFOLD_MODIFIED` means the rewrite edited the packaging's own code (the timer, the perturbed-input machinery or the digest), so the trial measures nothing and is never counted as a result; `FASTER` means correct and ≥ 1.1× at some thread count.
+
+## Main comparison: DiscoPoP alone vs DiscoPoP + agent
+
+**MISSING — this run has no `discopop_gate` trials.** Run that arm on the same benchmarks (no model, no cost) and rebuild with `plots --runs <this>,<that>`; speedups over the sequential original alone do not show what the agent adds.
+
+## Summary
+
+| Arm | Model | Trials | FASTER | parallel-not-faster | parallel-speed-not-measurable | changed-not-parallel | no-change | BROKEN | SCAFFOLD_MODIFIED | VERIFY_FAILED | AGENT_ERROR | AGENT_TIMEOUT | PROFILE_ERROR | Median agent s | LLM calls |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| bare_llm_v4 | claude-opus-5-5 | 105 | 92 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 12 | 0 | 0 | 21 | 105 |
+
+## Trials
+
+| Benchmark | Arm | Model | Rep | Outcome | Best speedup | Pragmas (DP+LLM) | Rewrites | Baseline | LLM calls | Agent s |
+|---|---|---|---:|---|---:|---|---:|---:|---:|---:|
+| tsvc_c2/s000 | bare_llm_v4 | claude-opus-5-5 | 1 | FASTER | 3.48x | —+— | — | — | 1 | 12.7 |
+| tsvc_c2/s112 | bare_llm_v4 | claude-opus-5-5 | 1 | FASTER | 1.13x | —+— | — | — | 1 | 21.2 |
+| tsvc_c2/s112 | bare_llm_v4 | claude-opus-5-5 | 2 | FASTER | 1.19x | —+— | — | — | 1 | 22.7 |
+| tsvc_c2/s112 | bare_llm_v4 | claude-opus-5-5 | 3 | FASTER | 1.14x | —+— | — | — | 1 | 19.2 |
+| tsvc_c2/s112 | bare_llm_v4 | claude-opus-5-5 | 4 | FASTER | 1.14x | —+— | — | — | 1 | 24.7 |
+| tsvc_c2/s112 | bare_llm_v4 | claude-opus-5-5 | 5 | FASTER | 1.14x | —+— | — | — | 1 | 20.9 |
+| tsvc_c2/s121 | bare_llm_v4 | claude-opus-5-5 | 1 | FASTER | 2.83x | —+— | — | — | 1 | 33.1 |
+| tsvc_c2/s121 | bare_llm_v4 | claude-opus-5-5 | 2 | FASTER | 1.16x | —+— | — | — | 1 | 20.1 |
+| tsvc_c2/s121 | bare_llm_v4 | claude-opus-5-5 | 3 | parallel-not-faster | 1.09x | —+— | — | — | 1 | 20.4 |
+| tsvc_c2/s121 | bare_llm_v4 | claude-opus-5-5 | 4 | FASTER | 2.78x | —+— | — | — | 1 | 28.7 |
+| tsvc_c2/s121 | bare_llm_v4 | claude-opus-5-5 | 5 | FASTER | 2.61x | —+— | — | — | 1 | 28.8 |
+| tsvc_c2/s1213 | bare_llm_v4 | claude-opus-5-5 | 1 | FASTER | 2.19x | —+— | — | — | 1 | 21.3 |
+| tsvc_c2/s1213 | bare_llm_v4 | claude-opus-5-5 | 2 | FASTER | 2.07x | —+— | — | — | 1 | 25.1 |
+| tsvc_c2/s1213 | bare_llm_v4 | claude-opus-5-5 | 3 | FASTER | 2.17x | —+— | — | — | 1 | 20.5 |
+| tsvc_c2/s1213 | bare_llm_v4 | claude-opus-5-5 | 4 | FASTER | 2.16x | —+— | — | — | 1 | 19.5 |
+| tsvc_c2/s1213 | bare_llm_v4 | claude-opus-5-5 | 5 | FASTER | 2.02x | —+— | — | — | 1 | 21.4 |
+| tsvc_c2/s127 | bare_llm_v4 | claude-opus-5-5 | 1 | FASTER | 3.06x | —+— | — | — | 1 | 15.8 |
+| tsvc_c2/s127 | bare_llm_v4 | claude-opus-5-5 | 2 | FASTER | 3.02x | —+— | — | — | 1 | 23.7 |
+| tsvc_c2/s127 | bare_llm_v4 | claude-opus-5-5 | 3 | FASTER | 3.03x | —+— | — | — | 1 | 19.5 |
+| tsvc_c2/s127 | bare_llm_v4 | claude-opus-5-5 | 4 | FASTER | 3.94x | —+— | — | — | 1 | 16.5 |
+| tsvc_c2/s127 | bare_llm_v4 | claude-opus-5-5 | 5 | FASTER | 3.13x | —+— | — | — | 1 | 15.2 |
+| tsvc_c2/s211 | bare_llm_v4 | claude-opus-5-5 | 1 | FASTER | 2.12x | —+— | — | — | 1 | 28.5 |
+| tsvc_c2/s211 | bare_llm_v4 | claude-opus-5-5 | 2 | FASTER | 2.08x | —+— | — | — | 1 | 32.3 |
+| tsvc_c2/s211 | bare_llm_v4 | claude-opus-5-5 | 3 | FASTER | 2.19x | —+— | — | — | 1 | 24.9 |
+| tsvc_c2/s211 | bare_llm_v4 | claude-opus-5-5 | 4 | FASTER | 2.12x | —+— | — | — | 1 | 27.1 |
+| tsvc_c2/s211 | bare_llm_v4 | claude-opus-5-5 | 5 | FASTER | 2.10x | —+— | — | — | 1 | 40.3 |
+| tsvc_c2/s212 | bare_llm_v4 | claude-opus-5-5 | 1 | FASTER | 3.40x | —+— | — | — | 1 | 28.4 |
+| tsvc_c2/s212 | bare_llm_v4 | claude-opus-5-5 | 2 | FASTER | 3.26x | —+— | — | — | 1 | 28.2 |
+| tsvc_c2/s212 | bare_llm_v4 | claude-opus-5-5 | 3 | FASTER | 3.44x | —+— | — | — | 1 | 22.7 |
+| tsvc_c2/s212 | bare_llm_v4 | claude-opus-5-5 | 4 | FASTER | 3.33x | —+— | — | — | 1 | 19.8 |
+| tsvc_c2/s212 | bare_llm_v4 | claude-opus-5-5 | 5 | FASTER | 3.34x | —+— | — | — | 1 | 19.2 |
+| tsvc_c2/s241 | bare_llm_v4 | claude-opus-5-5 | 1 | FASTER | 1.76x | —+— | — | — | 1 | 24.2 |
+| tsvc_c2/s241 | bare_llm_v4 | claude-opus-5-5 | 2 | FASTER | 1.73x | —+— | — | — | 1 | 25.1 |
+| tsvc_c2/s241 | bare_llm_v4 | claude-opus-5-5 | 3 | FASTER | 1.86x | —+— | — | — | 1 | 21.5 |
+| tsvc_c2/s241 | bare_llm_v4 | claude-opus-5-5 | 4 | FASTER | 1.69x | —+— | — | — | 1 | 24.1 |
+| tsvc_c2/s241 | bare_llm_v4 | claude-opus-5-5 | 5 | FASTER | 1.86x | —+— | — | — | 1 | 22.0 |
+| tsvc_c2/s243 | bare_llm_v4 | claude-opus-5-5 | 1 | FASTER | 2.56x | —+— | — | — | 1 | 20.8 |
+| tsvc_c2/s243 | bare_llm_v4 | claude-opus-5-5 | 2 | FASTER | 2.55x | —+— | — | — | 1 | 32.0 |
+| tsvc_c2/s243 | bare_llm_v4 | claude-opus-5-5 | 3 | FASTER | 2.54x | —+— | — | — | 1 | 23.3 |
+| tsvc_c2/s243 | bare_llm_v4 | claude-opus-5-5 | 4 | FASTER | 1.94x | —+— | — | — | 1 | 23.5 |
+| tsvc_c2/s243 | bare_llm_v4 | claude-opus-5-5 | 5 | FASTER | 2.45x | —+— | — | — | 1 | 22.4 |
+| tsvc_c2/s244 | bare_llm_v4 | claude-opus-5-5 | 1 | FASTER | 5.39x | —+— | — | — | 1 | 21.3 |
+| tsvc_c2/s244 | bare_llm_v4 | claude-opus-5-5 | 2 | FASTER | 5.19x | —+— | — | — | 1 | 20.1 |
+| tsvc_c2/s244 | bare_llm_v4 | claude-opus-5-5 | 3 | FASTER | 5.40x | —+— | — | — | 1 | 23.1 |
+| tsvc_c2/s244 | bare_llm_v4 | claude-opus-5-5 | 4 | FASTER | 5.19x | —+— | — | — | 1 | 21.9 |
+| tsvc_c2/s244 | bare_llm_v4 | claude-opus-5-5 | 5 | FASTER | 5.50x | —+— | — | — | 1 | 26.9 |
+| tsvc_c2/s252 | bare_llm_v4 | claude-opus-5-5 | 1 | FASTER | 3.45x | —+— | — | — | 1 | 16.4 |
+| tsvc_c2/s252 | bare_llm_v4 | claude-opus-5-5 | 2 | FASTER | 3.44x | —+— | — | — | 1 | 20.0 |
+| tsvc_c2/s252 | bare_llm_v4 | claude-opus-5-5 | 3 | FASTER | 3.46x | —+— | — | — | 1 | 19.8 |
+| tsvc_c2/s252 | bare_llm_v4 | claude-opus-5-5 | 4 | FASTER | 3.60x | —+— | — | — | 1 | 40.4 |
+| tsvc_c2/s252 | bare_llm_v4 | claude-opus-5-5 | 5 | FASTER | 3.52x | —+— | — | — | 1 | 26.3 |
+| tsvc_c2/s254 | bare_llm_v4 | claude-opus-5-5 | 1 | FASTER | 3.27x | —+— | — | — | 1 | 16.6 |
+| tsvc_c2/s254 | bare_llm_v4 | claude-opus-5-5 | 2 | FASTER | 3.32x | —+— | — | — | 1 | 18.8 |
+| tsvc_c2/s254 | bare_llm_v4 | claude-opus-5-5 | 3 | FASTER | 3.29x | —+— | — | — | 1 | 22.1 |
+| tsvc_c2/s254 | bare_llm_v4 | claude-opus-5-5 | 4 | FASTER | 3.31x | —+— | — | — | 1 | 16.4 |
+| tsvc_c2/s254 | bare_llm_v4 | claude-opus-5-5 | 5 | FASTER | 2.71x | —+— | — | — | 1 | 15.9 |
+| tsvc_c2/s255 | bare_llm_v4 | claude-opus-5-5 | 1 | FASTER | 3.63x | —+— | — | — | 1 | 72.7 |
+| tsvc_c2/s255 | bare_llm_v4 | claude-opus-5-5 | 2 | FASTER | 3.68x | —+— | — | — | 1 | 17.3 |
+| tsvc_c2/s255 | bare_llm_v4 | claude-opus-5-5 | 3 | FASTER | 2.95x | —+— | — | — | 1 | 21.0 |
+| tsvc_c2/s255 | bare_llm_v4 | claude-opus-5-5 | 4 | FASTER | 3.65x | —+— | — | — | 1 | 19.7 |
+| tsvc_c2/s255 | bare_llm_v4 | claude-opus-5-5 | 5 | FASTER | 3.71x | —+— | — | — | 1 | 24.4 |
+| tsvc_c2/s281 | bare_llm_v4 | claude-opus-5-5 | 1 | FASTER | 3.48x | —+— | — | — | 1 | 28.0 |
+| tsvc_c2/s281 | bare_llm_v4 | claude-opus-5-5 | 2 | FASTER | 3.53x | —+— | — | — | 1 | 23.2 |
+| tsvc_c2/s281 | bare_llm_v4 | claude-opus-5-5 | 3 | FASTER | 3.29x | —+— | — | — | 1 | 22.3 |
+| tsvc_c2/s281 | bare_llm_v4 | claude-opus-5-5 | 4 | FASTER | 3.56x | —+— | — | — | 1 | 36.0 |
+| tsvc_c2/s281 | bare_llm_v4 | claude-opus-5-5 | 5 | FASTER | 3.29x | —+— | — | — | 1 | 25.4 |
+| tsvc_c2/s291 | bare_llm_v4 | claude-opus-5-5 | 1 | FASTER | 3.40x | —+— | — | — | 1 | 16.4 |
+| tsvc_c2/s291 | bare_llm_v4 | claude-opus-5-5 | 2 | FASTER | 3.58x | —+— | — | — | 1 | 16.5 |
+| tsvc_c2/s291 | bare_llm_v4 | claude-opus-5-5 | 3 | FASTER | 3.44x | —+— | — | — | 1 | 14.8 |
+| tsvc_c2/s291 | bare_llm_v4 | claude-opus-5-5 | 4 | FASTER | 3.54x | —+— | — | — | 1 | 18.5 |
+| tsvc_c2/s291 | bare_llm_v4 | claude-opus-5-5 | 5 | FASTER | 3.48x | —+— | — | — | 1 | 16.9 |
+| tsvc_c2/s292 | bare_llm_v4 | claude-opus-5-5 | 1 | FASTER | 4.18x | —+— | — | — | 1 | 17.3 |
+| tsvc_c2/s292 | bare_llm_v4 | claude-opus-5-5 | 2 | FASTER | 4.15x | —+— | — | — | 1 | 18.4 |
+| tsvc_c2/s292 | bare_llm_v4 | claude-opus-5-5 | 3 | FASTER | 4.14x | —+— | — | — | 1 | 18.9 |
+| tsvc_c2/s292 | bare_llm_v4 | claude-opus-5-5 | 4 | FASTER | 4.12x | —+— | — | — | 1 | 19.1 |
+| tsvc_c2/s292 | bare_llm_v4 | claude-opus-5-5 | 5 | FASTER | 4.00x | —+— | — | — | 1 | 17.9 |
+| tsvc_c2/s293 | bare_llm_v4 | claude-opus-5-5 | 1 | FASTER | 2.34x | —+— | — | — | 1 | 20.9 |
+| tsvc_c2/s293 | bare_llm_v4 | claude-opus-5-5 | 2 | FASTER | 2.40x | —+— | — | — | 1 | 21.1 |
+| tsvc_c2/s293 | bare_llm_v4 | claude-opus-5-5 | 3 | FASTER | 2.33x | —+— | — | — | 1 | 18.6 |
+| tsvc_c2/s293 | bare_llm_v4 | claude-opus-5-5 | 4 | FASTER | 2.29x | —+— | — | — | 1 | 14.9 |
+| tsvc_c2/s293 | bare_llm_v4 | claude-opus-5-5 | 5 | FASTER | 2.82x | —+— | — | — | 1 | 16.6 |
+| tsvc_c2/s3112 | bare_llm_v4 | claude-opus-5-5 | 1 | AGENT_ERROR | — | —+— | — | — | 1 | 11.1 |
+| tsvc_c2/s3112 | bare_llm_v4 | claude-opus-5-5 | 2 | AGENT_ERROR | — | —+— | — | — | 1 | 11.1 |
+| tsvc_c2/s3112 | bare_llm_v4 | claude-opus-5-5 | 3 | AGENT_ERROR | — | —+— | — | — | 1 | 11.1 |
+| tsvc_c2/s313 | bare_llm_v4 | claude-opus-5-5 | 1 | AGENT_ERROR | — | —+— | — | — | 1 | 11.0 |
+| tsvc_c2/s321 | bare_llm_v4 | claude-opus-5-5 | 1 | FASTER | 4.67x | —+— | — | — | 1 | 146.6 |
+| tsvc_c2/s321 | bare_llm_v4 | claude-opus-5-5 | 2 | AGENT_ERROR | — | —+— | — | — | 1 | 11.0 |
+| tsvc_c2/s321 | bare_llm_v4 | claude-opus-5-5 | 3 | AGENT_ERROR | — | —+— | — | — | 1 | 10.9 |
+| tsvc_c2/s322 | bare_llm_v4 | claude-opus-5-5 | 1 | AGENT_ERROR | — | —+— | — | — | 1 | 11.4 |
+| tsvc_c2/s322 | bare_llm_v4 | claude-opus-5-5 | 2 | AGENT_ERROR | — | —+— | — | — | 1 | 10.8 |
+| tsvc_c2/s322 | bare_llm_v4 | claude-opus-5-5 | 3 | AGENT_ERROR | — | —+— | — | — | 1 | 10.9 |
+| tsvc_c2/s323 | bare_llm_v4 | claude-opus-5-5 | 1 | AGENT_ERROR | — | —+— | — | — | 1 | 11.3 |
+| tsvc_c2/s323 | bare_llm_v4 | claude-opus-5-5 | 2 | AGENT_ERROR | — | —+— | — | — | 1 | 11.0 |
+| tsvc_c2/s323 | bare_llm_v4 | claude-opus-5-5 | 3 | AGENT_ERROR | — | —+— | — | — | 1 | 10.8 |
+| tsvc_c2/s331 | bare_llm_v4 | claude-opus-5-5 | 1 | FASTER | 4.66x | —+— | — | — | 1 | 18.3 |
+| tsvc_c2/s331 | bare_llm_v4 | claude-opus-5-5 | 2 | FASTER | 4.53x | —+— | — | — | 1 | 16.9 |
+| tsvc_c2/s331 | bare_llm_v4 | claude-opus-5-5 | 3 | FASTER | 4.43x | —+— | — | — | 1 | 19.3 |
+| tsvc_c2/s331 | bare_llm_v4 | claude-opus-5-5 | 4 | FASTER | 4.71x | —+— | — | — | 1 | 47.5 |
+| tsvc_c2/s331 | bare_llm_v4 | claude-opus-5-5 | 5 | FASTER | 4.64x | —+— | — | — | 1 | 24.1 |
+| tsvc_c2/s341 | bare_llm_v4 | claude-opus-5-5 | 1 | FASTER | 2.35x | —+— | — | — | 1 | 26.9 |
+| tsvc_c2/s341 | bare_llm_v4 | claude-opus-5-5 | 2 | FASTER | 1.77x | —+— | — | — | 1 | 25.1 |
+| tsvc_c2/s341 | bare_llm_v4 | claude-opus-5-5 | 3 | FASTER | 2.35x | —+— | — | — | 1 | 24.9 |
+| tsvc_c2/s341 | bare_llm_v4 | claude-opus-5-5 | 4 | FASTER | 2.37x | —+— | — | — | 1 | 25.4 |
+| tsvc_c2/s341 | bare_llm_v4 | claude-opus-5-5 | 5 | FASTER | 2.35x | —+— | — | — | 1 | 27.2 |
+| tsvc_c2/vpvtv | bare_llm_v4 | claude-opus-5-5 | 1 | FASTER | 3.60x | —+— | — | — | 1 | 20.9 |

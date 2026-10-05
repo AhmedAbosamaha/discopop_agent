@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_r_2/benchmarks/tsvc_c2/s241/default_v4/claude-haiku-4-5-20251001/rep4/work/s241.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_r_2/benchmarks/tsvc_c2/s241/default_v4/claude-haiku-4-5-20251001/rep4/work/s241.c
+@@ -8,6 +8,7 @@
+ 
+     for (int nl = 0; nl < iterations; nl++) {
+         // Copy a to preserve old values for a[i+1] reads in parallel loop
++        #pragma omp parallel for shared(old_a) 
+         for (int i = 0; i < LEN_1D; i++) {
+             old_a[i] = a[i];
+         }

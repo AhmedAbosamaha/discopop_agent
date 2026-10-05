@@ -1,0 +1,43 @@
+{
+  "suite": "tsvc_c2",
+  "kernel": "s121",
+  "source": "benchmarks/TSVC_2/src/tsvc.c",
+  "category": "induction variable recognition / loop with possible ambiguity because of scalar store",
+  "file": "s121.c",
+  "language": "c",
+  "layout": "project",
+  "project": {
+    "units": [
+      "s121.c",
+      "main.c"
+    ],
+    "include_dirs": [
+      "."
+    ],
+    "editable": [
+      "s121.c"
+    ]
+  },
+  "restructuring_class": "restructure",
+  "transformation": "induction variable + old-value read (needs a copy)",
+  "why": "j = i+1: a[i] reads a[i+1] before it is overwritten",
+  "reference_solution": "agent/reference_solutions/tsvc_c2/s121.c",
+  "exclude_functions": [
+    "main",
+    "dummy"
+  ],
+  "harness": "tsvc_c2/s121.h",
+  "harness_sha256": "a0c321833000003c859c417ed83d252edf06e19590270e00fa5428febe874025",
+  "hot_loop": {
+    "entry": "kernel_s121",
+    "function": "kernel_s121",
+    "line": 7,
+    "writes": [
+      "a"
+    ]
+  },
+  "agent_dataset": "SMALL",
+  "generator_version": 6,
+  "inputs_sha256": "456dd573b84b30e6f32c943bb559d80374eec67177de48223e95124a8c3fc627",
+  "output_sha256": "ab7012f5f41084615da693e0a3ffbec34710726ca4d8feed2f50df3ea7551465"
+}

@@ -1,0 +1,21 @@
+--- original.c
++++ final.c
+@@ -62,12 +62,14 @@
+ 
+ real_t kernel_s254(void)
+ {
+-    real_t x;
+     for (int nl = 0; nl < iterations; nl++) {
+-        x = b[LEN_1D-1];
++        #pragma omp parallel for schedule(auto) shared(a, b, LEN_1D) private(i)
+         for (int i = 0; i < LEN_1D; i++) {
+-            a[i] = (b[i] + x) * (real_t).5;
+-            x = b[i];
++            if (i == 0) {
++                a[i] = (b[i] + b[LEN_1D-1]) * (real_t).5;
++            } else {
++                a[i] = (b[i] + b[i-1]) * (real_t).5;
++            }
+         }
+         dummy(a, b, c, d, e);
+     }

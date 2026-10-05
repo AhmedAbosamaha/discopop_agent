@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s112.c
+  Model          : claude-opus-5-5
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror
+
+│  [bare] Calling claude-opus-5-5...
+│  [bare] s112.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: I rewrote `s112.c` so each sweep runs as two parallel loops. I haven't compiled or run it, since there's no compiler here. **What was blocking it:** the original loop runs backwards and does `a[i+1] = a[i] + b[i]`. Each iteration reads `a[i]` before the next iteration (`i-1`) overwrites it, so every read sees the value from before the sweep. No value passes from one iteration to another; the same 
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

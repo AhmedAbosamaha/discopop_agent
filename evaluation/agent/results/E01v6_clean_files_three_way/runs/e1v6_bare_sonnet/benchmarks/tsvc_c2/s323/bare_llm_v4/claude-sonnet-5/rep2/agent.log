@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s323.c
+  Model          : claude-sonnet-5
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s323.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan **Dependence analysis:** The loop body is ``` a[i] = b[i-1] + c[i]*d[i] b[i] = a[i] + c[i]*e[i] ``` Substituting, `b[i] = b[i-1] + c[i]*(d[i]+e[i])`. So `b` is a prefix-sum (scan) recurrence: `b[i] = b[i-1] + f[i]` with `f[i] = c[i]*(d[i]+e[i])`, and `f[i]` depends only on `c,d,e` at index `i` — independent across `i`. Once the full `b[]` prefix sum for this `nl` iteration is known, `a[i] 
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

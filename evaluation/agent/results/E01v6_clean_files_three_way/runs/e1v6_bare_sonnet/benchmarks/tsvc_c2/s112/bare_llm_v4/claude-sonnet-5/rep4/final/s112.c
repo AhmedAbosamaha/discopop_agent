@@ -1,0 +1,38 @@
+#include "data.h"
+#include <stdlib.h>
+
+real_t kernel_s112(void)
+{
+    /* tmp holds a snapshot of a[0..LEN_1D-2] taken before each update pass.
+       The original decreasing-i sweep always read a[i] before any later
+       iteration overwrote it, so every read saw the pre-loop value of a[].
+       That dependence is preserved here by copying a[] into tmp first and
+       then computing the update purely from tmp[] and b[], which makes
+       each iteration of both loops touch disjoint indices and removes the
+       in-place read/write race that a direct parallel rewrite would have. */
+    real_t *tmp = (real_t *)malloc((size_t)(LEN_1D - 1) * sizeof(real_t));
+
+    for (int nl = 0; nl < iterations; nl++) {
+        /* Snapshot copy: tmp[i] is written once from a[i]; indices are
+           disjoint across iterations, so this is safely parallel. */
+        #pragma omp parallel for shared(a, tmp) schedule(static)
+        for (int i = 0; i < LEN_1D - 1; i++) {
+            tmp[i] = a[i];
+        }
+
+        /* Update pass: each iteration writes the single distinct element
+           a[i+1], reading only tmp[i] (the pre-pass snapshot) and b[i].
+           No iteration reads a value another iteration writes, so the
+           original recurrence's dependence has been satisfied by running
+           the copy pass to completion first instead of interleaving it. */
+        #pragma omp parallel for shared(a, b, tmp) schedule(static)
+        for (int i = 0; i < LEN_1D - 1; i++) {
+            a[i+1] = tmp[i] + b[i];
+        }
+
+        dummy(a, b, c, d, e);
+    }
+
+    free(tmp);
+    return (real_t)0;
+}

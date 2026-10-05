@@ -1,0 +1,36 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_r_4/benchmarks/tsvc_c2/s341/default_v4/claude-haiku-4-5-20251001/rep1/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_r_4/benchmarks/tsvc_c2/s341/default_v4/claude-haiku-4-5-20251001/rep1/work/s341.c
+@@ -4,13 +4,29 @@
+ {
+     int j;
+     for (int nl = 0; nl < iterations; nl++) {
+-        j = -1;
++        // Phase 1: mark which elements pass the filter
++        int* pass_filter = (int*)malloc(sizeof(int) * LEN_1D);
+         for (int i = 0; i < LEN_1D; i++) {
+-            if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++            pass_filter[i] = (b[i] > (real_t)0.) ? 1 : 0;
++        }
++
++        // Phase 2: compute target index for each element via prefix sum
++        int* target_index = (int*)malloc(sizeof(int) * LEN_1D);
++        j = 0;
++        for (int i = 0; i < LEN_1D; i++) {
++            target_index[i] = j;
++            j += pass_filter[i];
++        }
++
++        // Phase 3: copy filtered elements (no loop-carried dependencies—Do-All)
++        for (int i = 0; i < LEN_1D; i++) {
++            if (pass_filter[i]) {
++                a[target_index[i]] = b[i];
+             }
+         }
++
++        free(pass_filter);
++        free(target_index);
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

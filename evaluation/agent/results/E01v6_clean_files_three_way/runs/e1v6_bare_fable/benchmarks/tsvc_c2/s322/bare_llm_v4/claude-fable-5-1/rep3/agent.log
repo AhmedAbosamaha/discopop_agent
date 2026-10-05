@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s322.c
+  Model          : claude-fable-5-1
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror
+
+│  [bare] Calling claude-fable-5-1...
+│  [bare] s322.c: edited, 0 OpenMP pragma(s) in the file
+│  [bare] the model's plan: I'll start by reading the source files.**Analysis** The kernel is a single loop nest: `a[i] = a[i] + a[i-1]*b[i] + a[i-2]*c[i]` for `i = 2 … LEN_1D-1`, repeated 8 times with `dummy()` between repeats. Which dependence blocks it: this is a *true* value-carried dependence, not a reused location. Every `a[i]` is computed from the freshly written `a[i-1]` and `a[i-2]`, so the dependence chain has leng
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

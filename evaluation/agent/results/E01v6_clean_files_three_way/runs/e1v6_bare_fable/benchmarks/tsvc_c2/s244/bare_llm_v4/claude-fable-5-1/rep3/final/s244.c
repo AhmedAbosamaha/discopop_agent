@@ -1,0 +1,18 @@
+#include "data.h"
+
+real_t kernel_s244(void)
+{
+    for (int nl = 0; nl < iterations; nl++) {
+        /* The write to a[i+1] in iteration i is overwritten by iteration
+         * i+1 (which reads only the original a[i+1] first), so only the
+         * last iteration's a[LEN_1D-1] survives.  Split that out. */
+#pragma omp parallel for shared(a, b, c, d) schedule(static)
+        for (int i = 0; i < LEN_1D-1; ++i) {
+            a[i] = b[i] + c[i] * d[i];
+            b[i] = c[i] + b[i];
+        }
+        a[LEN_1D-1] = b[LEN_1D-2] + a[LEN_1D-1] * d[LEN_1D-2];
+        dummy(a, b, c, d, e);
+    }
+    return (real_t)0;
+}

@@ -1,0 +1,46 @@
+#include "data.h"
+
+#define S341_NB 256
+
+real_t kernel_s341(void)
+{
+    long long cnt[S341_NB];
+    long long off[S341_NB];
+    int k;
+    for (int nl = 0; nl < iterations; nl++) {
+        /* pass 1: count positives per block */
+        #pragma omp parallel for default(none) shared(b, cnt) schedule(static)
+        for (k = 0; k < S341_NB; k++) {
+            long long lo = (long long)k * LEN_1D / S341_NB;
+            long long hi = (long long)(k + 1) * LEN_1D / S341_NB;
+            long long c0 = 0;
+            for (long long i = lo; i < hi; i++) {
+                if (b[i] > (real_t)0.) {
+                    c0++;
+                }
+            }
+            cnt[k] = c0;
+        }
+        /* exclusive scan over block counts (serial, NB entries) */
+        long long run = 0;
+        for (int q = 0; q < S341_NB; q++) {
+            off[q] = run;
+            run += cnt[q];
+        }
+        /* pass 2: compact each block starting at its offset */
+        #pragma omp parallel for default(none) shared(a, b, off) schedule(static)
+        for (k = 0; k < S341_NB; k++) {
+            long long lo = (long long)k * LEN_1D / S341_NB;
+            long long hi = (long long)(k + 1) * LEN_1D / S341_NB;
+            long long jj = off[k] - 1;
+            for (long long i = lo; i < hi; i++) {
+                if (b[i] > (real_t)0.) {
+                    jj++;
+                    a[jj] = b[i];
+                }
+            }
+        }
+        dummy(a, b, c, d, e);
+    }
+    return (real_t)0;
+}

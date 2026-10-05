@@ -1,0 +1,77 @@
+--- original.c
++++ final.c
+@@ -59,15 +59,72 @@
+ 
+ /* ==== s321.c ==== */
+ #include "data.h"
++#include <stdlib.h>
++#include <string.h>
++
++/* One step of the recurrence.  Both passes below go through this single
++ * helper so they perform bit-identical arithmetic (same contraction, same
++ * evaluation order) as the original `a[i] += a[i-1]*b[i]`. */
++static inline real_t s321_step(real_t carry, real_t bi, real_t ci)
++{
++    return ci + carry * bi;
++}
+ 
+ real_t kernel_s321(void)
+ {
++    const long n = LEN_1D;
++
++    long chunk = (n + 255) / 256;
++    if (chunk < 1024) chunk = 1024;
++    const int nchunks = (int)((n + chunk - 1) / chunk);
++
++    real_t *orig = (real_t *)malloc((size_t)n * sizeof(real_t));
++
+     for (int nl = 0; nl < iterations; nl++) {
+-        for (int i = 1; i < LEN_1D; i++) {
+-            a[i] += a[i-1] * b[i];
++        /* Pass 1: speculative, chunk-local recurrence.  Each chunk reads and
++         * writes only its own index range [s, e), so chunks are independent. */
++#pragma omp parallel for schedule(static) default(none) \
++        shared(a, b, orig, n, chunk, nchunks)
++        for (int k = 0; k < nchunks; k++) {
++            const long s = (long)k * chunk;
++            long e = s + chunk;
++            if (e > n) e = n;
++            orig[s] = a[s];
++            real_t carry = a[s];
++            for (long i = s + 1; i < e; i++) {
++                orig[i] = a[i];
++                a[i] = s321_step(carry, b[i], orig[i]);
++                carry = a[i];
++            }
+         }
++
++        /* Pass 2: sequential fix-up.  Chunk 0 is already exact.  For every
++         * later chunk, re-run the chain from the true carry-in until the
++         * recomputed value is bit-identical to the provisional one; from
++         * that point on the provisional chain is exact. */
++        for (int k = 1; k < nchunks; k++) {
++            const long s = (long)k * chunk;
++            long e = s + chunk;
++            if (e > n) e = n;
++            real_t carry = a[s - 1];
++            long i = s;
++            int done = 0;
++            while (!done && i < e) {
++                real_t v = s321_step(carry, b[i], orig[i]);
++                if (memcmp(&v, &a[i], sizeof(real_t)) == 0) {
++                    done = 1;
++                } else {
++                    a[i] = v;
++                    carry = v;
++                    i++;
++                }
++            }
++        }
++
+         dummy(a, b, c, d, e);
+     }
++
++    free(orig);
+     return (real_t)0;
+ }
+ 

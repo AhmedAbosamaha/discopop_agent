@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s211.c
+  Model          : claude-sonnet-5
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s211.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan **Dependence:** In the original loop, `b[i] = b[i+1] - e[i]*d[i]` reads the *old* `b[i+1]` (not yet written this sweep) but `a[i] = b[i-1] + c[i]*d[i]` reads the *new* `b[i-1]` written by the previous iteration. So there's a true flow dependence i→i+1 through `b`, carried forward every iteration — that's what blocks parallelization of the `i` loop as written. **Removing it:** Note the new 
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

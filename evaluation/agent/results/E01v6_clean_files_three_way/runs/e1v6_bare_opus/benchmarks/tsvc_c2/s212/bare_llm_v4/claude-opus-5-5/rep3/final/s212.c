@@ -1,0 +1,19 @@
+#include "data.h"
+
+real_t kernel_s212(void)
+{
+    for (int nl = 0; nl < iterations; nl++) {
+        /* pass 1: all reads of the old a[i+1] */
+        #pragma omp parallel for schedule(static) default(none) shared(a, b, d)
+        for (int i = 0; i < LEN_1D-1; i++) {
+            b[i] += a[i + 1] * d[i];
+        }
+        /* pass 2: all updates of a[i], after every old value was read */
+        #pragma omp parallel for schedule(static) default(none) shared(a, c)
+        for (int i = 0; i < LEN_1D-1; i++) {
+            a[i] *= c[i];
+        }
+        dummy(a, b, c, d, e);
+    }
+    return (real_t)0;
+}

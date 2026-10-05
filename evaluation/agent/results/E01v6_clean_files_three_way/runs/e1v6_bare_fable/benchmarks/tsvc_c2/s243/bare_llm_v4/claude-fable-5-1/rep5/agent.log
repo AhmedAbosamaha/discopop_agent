@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s243.c
+  Model          : claude-fable-5-1
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror
+
+│  [bare] Calling claude-fable-5-1...
+│  [bare] s243.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: The rewrite is applied to `s243.c`. **What was blocking:** `a[i] = b[i] + a[i+1] * d[i]` reads `a[i+1]` before iteration `i+1` has rewritten it — an anti-dependence on a reused location, not a value carried forward. **How it was removed:** before each `nl` sweep, `a` is copied into a heap-allocated `a_old` (malloc'd once, freed at the end — LEN_1D grows to 192M elements, so no stack array). The ma
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

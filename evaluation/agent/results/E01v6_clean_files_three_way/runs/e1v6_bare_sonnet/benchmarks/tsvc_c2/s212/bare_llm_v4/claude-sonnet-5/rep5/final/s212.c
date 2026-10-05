@@ -1,0 +1,23 @@
+#include "data.h"
+
+real_t kernel_s212(void)
+{
+    for (int nl = 0; nl < iterations; nl++) {
+        /* Pass 1: b[i] uses the pre-update value of a[i+1], matching the
+         * original interleaved loop where a[i+1] is not yet written when
+         * iteration i reads it. Reads a,d (shared, read-only here); writes
+         * distinct b[i] per iteration -> no cross-iteration dependence. */
+        #pragma omp parallel for default(none) shared(a, b, d) schedule(static)
+        for (int i = 0; i < LEN_1D-1; i++) {
+            b[i] += a[i + 1] * d[i];
+        }
+        /* Pass 2: updates a[i] in place, independent of all other i since
+         * pass 1 already consumed every needed original a value. */
+        #pragma omp parallel for default(none) shared(a, c) schedule(static)
+        for (int i = 0; i < LEN_1D-1; i++) {
+            a[i] *= c[i];
+        }
+        dummy(a, b, c, d, e);
+    }
+    return (real_t)0;
+}

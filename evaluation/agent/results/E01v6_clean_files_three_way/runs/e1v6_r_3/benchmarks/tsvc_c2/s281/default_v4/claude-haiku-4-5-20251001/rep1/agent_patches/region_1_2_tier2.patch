@@ -1,0 +1,22 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_r_3/benchmarks/tsvc_c2/s281/default_v4/claude-haiku-4-5-20251001/rep1/work/s281.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_r_3/benchmarks/tsvc_c2/s281/default_v4/claude-haiku-4-5-20251001/rep1/work/s281.c
+@@ -4,7 +4,18 @@
+ {
+     real_t x;
+     for (int nl = 0; nl < iterations; nl++) {
+-        for (int i = 0; i < LEN_1D; i++) {
++        // Phase 1: first half of iterations (i < (LEN_1D+1)/2)
++        // These write to the first half of array a while reading from the second half
++        // No cross-iteration dependencies within this phase
++        for (int i = 0; i < (LEN_1D + 1) / 2; i++) {
++            x = a[LEN_1D-i-1] + b[i] * c[i];
++            a[i] = x-(real_t)1.0;
++            b[i] = x;
++        }
++        // Phase 2: second half of iterations (i >= (LEN_1D+1)/2)
++        // These read from values written by phase 1, write to the second half
++        // No cross-iteration dependencies within this phase
++        for (int i = (LEN_1D + 1) / 2; i < LEN_1D; i++) {
+             x = a[LEN_1D-i-1] + b[i] * c[i];
+             a[i] = x-(real_t)1.0;
+             b[i] = x;

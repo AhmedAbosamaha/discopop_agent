@@ -1,0 +1,38 @@
+#include "data.h"
+#include <stdlib.h>
+
+real_t kernel_s112(void)
+{
+    /* Scratch snapshot of 'a' taken before each inner-loop update.  The
+       original backward loop (i from LEN_1D-2 downto 0) never reads a
+       slot of 'a' that it has already written within the same loop
+       invocation (slot i is only written when the loop variable reaches
+       i-1, which runs strictly later in the backward order), so every
+       read of a[i] always sees the value 'a' held before this loop ran.
+       That lets us replace the order-dependent in-place recurrence with
+       a[i+1] = a_prev[i] + b[i] computed from a read-only snapshot,
+       which has no cross-iteration dependence at all.  Heap-allocated
+       because LEN_1D can be very large. */
+    real_t *a_prev = (real_t *)malloc((LEN_1D - 1) * sizeof(real_t));
+
+    for (int nl = 0; nl < iterations; nl++) {
+        /* a_prev: shared scratch buffer, each i writes a distinct slot.
+           a: shared, each i reads a distinct slot (i) -- read-only here. */
+        #pragma omp parallel for schedule(static) default(none) shared(a, a_prev)
+        for (int i = 0; i < LEN_1D - 1; i++) {
+            a_prev[i] = a[i];
+        }
+
+        /* a: shared, each i writes a distinct slot (i+1) -- no overlap.
+           a_prev, b: shared, read-only, each i reads a distinct slot. */
+        #pragma omp parallel for schedule(static) default(none) shared(a, b, a_prev)
+        for (int i = 0; i < LEN_1D - 1; i++) {
+            a[i+1] = a_prev[i] + b[i];
+        }
+
+        dummy(a, b, c, d, e);
+    }
+
+    free(a_prev);
+    return (real_t)0;
+}

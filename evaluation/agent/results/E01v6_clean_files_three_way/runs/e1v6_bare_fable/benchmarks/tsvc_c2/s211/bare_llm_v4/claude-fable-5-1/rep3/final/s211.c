@@ -1,0 +1,31 @@
+#include <stdlib.h>
+#include "data.h"
+
+real_t kernel_s211(void)
+{
+    real_t *tmp = (real_t *)malloc(sizeof(real_t) * (size_t)LEN_1D);
+
+    for (int nl = 0; nl < iterations; nl++) {
+        /* Pass 1: new value of b[i] depends only on the OLD b[i+1]. */
+#pragma omp parallel for default(none) shared(b, d, e, tmp) schedule(static)
+        for (int i = 1; i < LEN_1D-1; i++) {
+            tmp[i] = b[i + 1] - e[i] * d[i];
+        }
+
+        /* Peeled i = 1: b[0] is never written by this loop nest. */
+        a[1] = b[0] + c[1] * d[1];
+        b[1] = tmp[1];
+
+        /* Pass 2: a[i] uses the NEW b[i-1], which is tmp[i-1]. */
+#pragma omp parallel for default(none) shared(a, b, c, d, tmp) schedule(static)
+        for (int i = 2; i < LEN_1D-1; i++) {
+            a[i] = tmp[i - 1] + c[i] * d[i];
+            b[i] = tmp[i];
+        }
+
+        dummy(a, b, c, d, e);
+    }
+
+    free(tmp);
+    return (real_t)0;
+}

@@ -1,0 +1,60 @@
+#include "data.h"
+#include <stdlib.h>
+
+real_t kernel_s341(void)
+{
+    int j;
+    /* Number of chunks for the two-pass compaction; chunk bounds are
+       re-derived from LEN_1D so any dataset size works. */
+    int nchunk = 512;
+    if (nchunk > LEN_1D) nchunk = LEN_1D;
+    int chunk = (LEN_1D + nchunk - 1) / nchunk;
+    int *counts = (int *)malloc((size_t)(nchunk + 1) * sizeof(int));
+
+    for (int nl = 0; nl < iterations; nl++) {
+        /* Pass 1: count positives per chunk (independent chunks). */
+        #pragma omp parallel for schedule(static) shared(counts, b) firstprivate(chunk, nchunk)
+        for (int ch = 0; ch < nchunk; ch++) {
+            int start = ch * chunk;
+            int end = start + chunk;
+            if (end > LEN_1D) end = LEN_1D;
+            int cnt = 0;
+            for (int i = start; i < end; i++) {
+                if (b[i] > (real_t)0.) {
+                    cnt++;
+                }
+            }
+            counts[ch] = cnt;
+        }
+
+        /* Serial exclusive scan over chunk counts -> starting offsets. */
+        int total = 0;
+        for (int ch = 0; ch < nchunk; ch++) {
+            int cnt = counts[ch];
+            counts[ch] = total;
+            total += cnt;
+        }
+        counts[nchunk] = total;
+
+        /* Pass 2: each chunk writes its own disjoint range of a[]. */
+        #pragma omp parallel for schedule(static) shared(counts, a, b) firstprivate(chunk, nchunk)
+        for (int ch = 0; ch < nchunk; ch++) {
+            int start = ch * chunk;
+            int end = start + chunk;
+            if (end > LEN_1D) end = LEN_1D;
+            int pos = counts[ch];
+            for (int i = start; i < end; i++) {
+                if (b[i] > (real_t)0.) {
+                    a[pos] = b[i];
+                    pos++;
+                }
+            }
+        }
+
+        j = total - 1;
+        dummy(a, b, c, d, e);
+    }
+    (void)j;
+    free(counts);
+    return (real_t)0;
+}

@@ -1,0 +1,37 @@
+--- original.c
++++ final.c
+@@ -62,12 +62,29 @@
+ 
+ real_t kernel_s281(void)
+ {
+-    real_t x;
++    const int half = LEN_1D / 2;
+     for (int nl = 0; nl < iterations; nl++) {
+-        for (int i = 0; i < LEN_1D; i++) {
+-            x = a[LEN_1D-i-1] + b[i] * c[i];
+-            a[i] = x-(real_t)1.0;
+-            b[i] = x;
++        /* Iterations i and j = LEN_1D-1-i form a dependent pair: the
++         * sequential loop writes a[i] before iteration j reads it (when
++         * j < i). Different pairs never touch each other's elements, so
++         * pairs are independent and can run in parallel; within a pair
++         * the two sequential steps are reproduced in order. */
++        #pragma omp parallel for shared(a, b, c, half) schedule(static)
++        for (int p = 0; p < half; p++) {
++            int i = p;
++            int j = LEN_1D - 1 - p;
++            real_t x1 = a[j] + b[i] * c[i];
++            a[i] = x1 - (real_t)1.0;
++            b[i] = x1;
++            real_t x2 = a[i] + b[j] * c[j];
++            a[j] = x2 - (real_t)1.0;
++            b[j] = x2;
++        }
++        if (LEN_1D % 2 == 1) {
++            int m = LEN_1D / 2;
++            real_t xm = a[m] + b[m] * c[m];
++            a[m] = xm - (real_t)1.0;
++            b[m] = xm;
+         }
+         dummy(a, b, c, d, e);
+     }

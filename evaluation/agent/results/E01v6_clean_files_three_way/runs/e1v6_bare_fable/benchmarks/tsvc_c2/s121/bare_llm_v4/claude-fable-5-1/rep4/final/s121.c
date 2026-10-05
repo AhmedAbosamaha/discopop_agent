@@ -1,0 +1,22 @@
+#include "data.h"
+#include <stdlib.h>
+#include <string.h>
+
+real_t kernel_s121(void)
+{
+    int j;
+    /* Scratch snapshot of a[] so the read of a[i+1] does not race the
+       write of a[i+1] by the neighbouring iteration (anti-dependence). */
+    real_t *tmp = (real_t *)malloc(sizeof(real_t) * (size_t)LEN_1D);
+    for (int nl = 0; nl < iterations; nl++) {
+        memcpy(tmp, a, sizeof(real_t) * (size_t)LEN_1D);
+#pragma omp parallel for default(none) shared(a, b, tmp) private(j) schedule(static)
+        for (int i = 0; i < LEN_1D-1; i++) {
+            j = i + 1;
+            a[i] = tmp[j] + b[i];
+        }
+        dummy(a, b, c, d, e);
+    }
+    free(tmp);
+    return (real_t)0;
+}

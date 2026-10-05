@@ -1,0 +1,24 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_d/benchmarks/tsvc_c2/s322/default_v4/claude-haiku-4-5-20251001/rep2/work/s322.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_d/benchmarks/tsvc_c2/s322/default_v4/claude-haiku-4-5-20251001/rep2/work/s322.c
+@@ -3,9 +3,20 @@
+ real_t kernel_s322(void)
+ {
+     for (int nl = 0; nl < iterations; nl++) {
++        real_t* b_local = (real_t*) malloc(LEN_1D * sizeof(real_t));
++        real_t* c_local = (real_t*) malloc(LEN_1D * sizeof(real_t));
++
++        for (int j = 0; j < LEN_1D; j++) {
++            b_local[j] = b[j];
++            c_local[j] = c[j];
++        }
++
+         for (int i = 2; i < LEN_1D; i++) {
+-            a[i] = a[i] + a[i - 1] * b[i] + a[i - 2] * c[i];
++            a[i] = a[i] + a[i - 1] * b_local[i] + a[i - 2] * c_local[i];
+         }
++
++        free(b_local);
++        free(c_local);
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

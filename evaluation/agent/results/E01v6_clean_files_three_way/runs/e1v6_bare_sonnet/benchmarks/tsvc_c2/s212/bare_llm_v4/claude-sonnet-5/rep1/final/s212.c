@@ -1,0 +1,41 @@
+#include "data.h"
+#include <stdlib.h>
+
+real_t kernel_s212(void)
+{
+    /* aold holds a snapshot of a[] taken before this iteration's updates.
+     * The original sequential loop reads a[i+1] at a point where index
+     * i+1 has not yet been processed, so b[i] always uses the OLD
+     * (pre-multiplication) value of a[i+1], never the new one written by
+     * iteration i+1. Snapshotting a[] into aold before the loop body runs
+     * makes that dependence explicit: every iteration i now reads only
+     * from aold (never-written-this-sweep) and writes only to a[i] and
+     * b[i], so iterations become independent and can run in any order or
+     * in parallel. LEN_1D can be very large, so aold is heap-allocated. */
+    real_t *aold = (real_t *)malloc(sizeof(real_t) * (size_t)LEN_1D);
+
+    for (int nl = 0; nl < iterations; nl++) {
+        /* Snapshot a[] so the update loop below can read pre-update
+         * values without any cross-iteration dependence. Each iteration
+         * writes a distinct aold[i], so this is fully parallel. */
+        #pragma omp parallel for shared(a, aold) schedule(static)
+        for (int i = 0; i < LEN_1D; i++) {
+            aold[i] = a[i];
+        }
+
+        /* Each iteration now only reads aold[i], aold[i+1], c[i], d[i]
+         * (all untouched this sweep) and writes a[i] and b[i] (distinct
+         * per iteration), so there is no dependence left between
+         * iterations: safe to run in parallel in any order/schedule. */
+        #pragma omp parallel for shared(a, b, c, d, aold) schedule(static)
+        for (int i = 0; i < LEN_1D-1; i++) {
+            a[i] = aold[i] * c[i];
+            b[i] += aold[i + 1] * d[i];
+        }
+
+        dummy(a, b, c, d, e);
+    }
+
+    free(aold);
+    return (real_t)0;
+}

@@ -1,0 +1,31 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_r_2/benchmarks/tsvc_c2/s252/default_v4/claude-haiku-4-5-20251001/rep2/work/s252.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_r_2/benchmarks/tsvc_c2/s252/default_v4/claude-haiku-4-5-20251001/rep2/work/s252.c
+@@ -2,15 +2,25 @@
+ 
+ real_t kernel_s252(void)
+ {
+-    real_t t, s;
++    real_t *products = (real_t *)malloc(LEN_1D * sizeof(real_t));
++
+     for (int nl = 0; nl < iterations; nl++) {
+-        t = (real_t) 0.;
++        // Phase 1: Compute all products (Do-All: no loop-carried dependences)
+         for (int i = 0; i < LEN_1D; i++) {
+-            s = b[i] * c[i];
++            products[i] = b[i] * c[i];
++        }
++
++        // Phase 2: Compute sums using products
++        real_t t = (real_t) 0.;
++        for (int i = 0; i < LEN_1D; i++) {
++            real_t s = products[i];
+             a[i] = s + t;
+             t = s;
+         }
++
+         dummy(a, b, c, d, e);
+     }
++
++    free(products);
+     return (real_t)0;
+ }

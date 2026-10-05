@@ -1,0 +1,27 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_d/benchmarks/tsvc_c2/s322/default_v4/claude-haiku-4-5-20251001/rep2/work/s322.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_d/benchmarks/tsvc_c2/s322/default_v4/claude-haiku-4-5-20251001/rep2/work/s322.c
+@@ -1,12 +1,23 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s322(void)
+ {
++    real_t *a_temp = (real_t*) malloc(LEN_1D * sizeof(real_t));
++
+     for (int nl = 0; nl < iterations; nl++) {
++        // Compute phase: read from a (unmodified) and write to a_temp
++        // No loop-carried dependence: each iteration reads different elements and writes to different elements
+         for (int i = 2; i < LEN_1D; i++) {
+-            a[i] = a[i] + a[i - 1] * b[i] + a[i - 2] * c[i];
++            a_temp[i] = a[i] + a[i - 1] * b[i] + a[i - 2] * c[i];
++        }
++        // Write-back phase: copy computed values back to a
++        for (int i = 2; i < LEN_1D; i++) {
++            a[i] = a_temp[i];
+         }
+         dummy(a, b, c, d, e);
+     }
++
++    free(a_temp);
+     return (real_t)0;
+ }

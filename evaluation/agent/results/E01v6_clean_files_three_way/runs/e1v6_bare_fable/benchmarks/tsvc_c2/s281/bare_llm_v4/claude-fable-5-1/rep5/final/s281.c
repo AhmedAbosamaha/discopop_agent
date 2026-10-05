@@ -1,0 +1,27 @@
+#include "data.h"
+
+real_t kernel_s281(void)
+{
+    real_t x;
+    const int half = (LEN_1D + 1) / 2;
+    for (int nl = 0; nl < iterations; nl++) {
+        /* First half: reads a[LEN_1D-i-1] with index >= LEN_1D-half, which no
+           other iteration of this loop writes (original values). */
+#pragma omp parallel for private(x) shared(a, b, c)
+        for (int i = 0; i < half; i++) {
+            x = a[LEN_1D-i-1] + b[i] * c[i];
+            a[i] = x-(real_t)1.0;
+            b[i] = x;
+        }
+        /* Second half: reads a[LEN_1D-i-1] with index < LEN_1D-half, all
+           already produced by the first loop and not written here. */
+#pragma omp parallel for private(x) shared(a, b, c)
+        for (int i = half; i < LEN_1D; i++) {
+            x = a[LEN_1D-i-1] + b[i] * c[i];
+            a[i] = x-(real_t)1.0;
+            b[i] = x;
+        }
+        dummy(a, b, c, d, e);
+    }
+    return (real_t)0;
+}

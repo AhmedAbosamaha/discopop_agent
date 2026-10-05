@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s1213.c
+  Model          : claude-sonnet-5
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s1213.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan **Dependence analysis.** In the original loop (increasing `i`): - `a[i] = b[i-1] + c[i]`: for `i>=2`, `b[i-1]` was just written at step `i-1` of the *same* sweep (RAW through `b`, serializing the loop). For `i==1`, `b[0]` is never written by this loop at all, so it's just the untouched value. - `b[i] = a[i+1]*d[i]`: `a[i+1]` has index `> i`, so in increasing order it hasn't been touched ye
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

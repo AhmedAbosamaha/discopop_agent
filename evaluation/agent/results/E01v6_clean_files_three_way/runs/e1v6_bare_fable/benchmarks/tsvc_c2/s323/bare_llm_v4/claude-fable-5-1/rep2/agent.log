@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s323.c
+  Model          : claude-fable-5-1
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror
+
+│  [bare] Calling claude-fable-5-1...
+│  [bare] s323.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: The rewrite is applied to `s323.c`. **What changed and why** - **Dependence removed from the parallel part:** the only cross-iteration value is the carry `b[i-1] → b[i]`; the two products `c[i]*d[i]` and `c[i]*e[i]` never depend on it. Those products are now computed in parallel over chunks and staged into `a[i]`/`b[i]` (both are fully overwritten afterwards, so no extra heap or stack buffers are 
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

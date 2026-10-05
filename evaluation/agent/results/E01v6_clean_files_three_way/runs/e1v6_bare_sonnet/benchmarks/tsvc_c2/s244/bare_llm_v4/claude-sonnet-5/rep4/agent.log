@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s244.c
+  Model          : claude-sonnet-5
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s244.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Arrays `a,b,c,d` are heap-allocated globals (good, no stack issue). Now applying the rewrite.This looks correct and complete. ## Plan **Dependence analysis:** The original loop body for index `i` does three things: (1) `a[i] = b[i] + c[i]*d[i]` using the *old* `b[i]`, (2) `b[i] = c[i] + b[i]` (self-contained, no cross-index dependence at all), (3) `a[i+1] = b[i] + a[i+1]*d[i]` using the *new* `b[i
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

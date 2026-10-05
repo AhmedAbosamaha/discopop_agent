@@ -1,0 +1,29 @@
+#include "data.h"
+#include <stdlib.h>
+
+real_t kernel_s241(void)
+{
+    // Allocate buffer outside the loop to avoid malloc overhead per iteration
+    real_t *old_a = (real_t *)malloc(sizeof(real_t) * LEN_1D);
+
+    for (int nl = 0; nl < iterations; nl++) {
+        // Phase 1: Save a[i] and compute new a[i] in a single pass
+        #pragma omp parallel for shared(old_a) 
+        for (int i = 0; i < LEN_1D-1; i++) {
+            old_a[i] = a[i];
+            a[i] = b[i] * c[i  ] * d[i];
+        }
+        old_a[LEN_1D-1] = a[LEN_1D-1];
+
+        // Phase 2: Compute all new b[i] values using new a[i] and old a[i+1]
+        #pragma omp parallel for shared(old_a) 
+        for (int i = 0; i < LEN_1D-1; i++) {
+            b[i] = a[i] * old_a[i+1] * d[i];
+        }
+
+        dummy(a, b, c, d, e);
+    }
+
+    free(old_a);
+    return (real_t)0;
+}

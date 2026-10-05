@@ -1,0 +1,10 @@
+--- original.c
++++ final.c
+@@ -63,6 +63,7 @@
+ real_t kernel_vpvtv(void)
+ {
+     for (int nl = 0; nl < iterations; nl++) {
++        #pragma omp parallel for shared(a, b, c)
+         for (int i = 0; i < LEN_1D; i++) {
+             a[i] += b[i] * c[i];
+         }

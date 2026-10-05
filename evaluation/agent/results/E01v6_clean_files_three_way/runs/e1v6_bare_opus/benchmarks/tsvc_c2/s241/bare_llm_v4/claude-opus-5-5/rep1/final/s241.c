@@ -1,0 +1,22 @@
+#include <stdlib.h>
+#include "data.h"
+
+real_t kernel_s241(void)
+{
+    real_t *t = (real_t *)malloc(sizeof(real_t) * (size_t)LEN_1D);
+    for (int nl = 0; nl < iterations; nl++) {
+        #pragma omp parallel for schedule(static) default(none) shared(a, b, c, d, t)
+        for (int i = 0; i < LEN_1D-1; i++) {
+            real_t ai = b[i] * c[i  ] * d[i];
+            t[i] = ai;
+            b[i] = ai * a[i+1] * d[i];
+        }
+        #pragma omp parallel for schedule(static) default(none) shared(a, t)
+        for (int i = 0; i < LEN_1D-1; i++) {
+            a[i] = t[i];
+        }
+        dummy(a, b, c, d, e);
+    }
+    free(t);
+    return (real_t)0;
+}

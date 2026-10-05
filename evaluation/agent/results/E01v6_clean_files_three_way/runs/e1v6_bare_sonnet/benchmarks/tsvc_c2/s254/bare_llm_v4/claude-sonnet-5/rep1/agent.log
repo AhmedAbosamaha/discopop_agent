@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s254.c
+  Model          : claude-sonnet-5
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s254.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan The inner loop carries `x` as "the previous element of `b`" (with wraparound: `x` starts as `b[LEN_1D-1]` for `i==0`, then becomes `b[i]` after each iteration, so at iteration `i` the value used is `b[i-1]` for `i>0`). This is not a dependence on anything *computed* by the loop (like `a`) — it's just `b[i-1]` reused through a scalar. So I can eliminate the carried variable entirely by read
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

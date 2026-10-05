@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_r_4/benchmarks/tsvc_c2/s341/default_v4/claude-haiku-4-5-20251001/rep1/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_r_4/benchmarks/tsvc_c2/s341/default_v4/claude-haiku-4-5-20251001/rep1/work/s341.c
+@@ -15,6 +15,7 @@
+ 
+         /* Pass 2: compute prefix sum for write positions */
+         pos[0] = 0;
++        #pragma omp parallel for shared(pos,count) 
+         for (int i = 1; i < LEN_1D; i++) {
+             pos[i] = pos[i-1] + count[i-1];
+         }

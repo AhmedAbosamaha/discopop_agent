@@ -1,0 +1,33 @@
+--- original.c
++++ final.c
+@@ -58,17 +58,28 @@
+ }
+ 
+ /* ==== s211.c ==== */
++#include <stdlib.h>
+ #include "data.h"
+ 
+ real_t kernel_s211(void)
+ {
++    real_t *bn = (real_t *)malloc(sizeof(real_t) * LEN_1D);
+     for (int nl = 0; nl < iterations; nl++) {
++        /* pass 1: new b values, computed from old b only */
++#pragma omp parallel for default(none) shared(b, d, e, bn) schedule(static)
+         for (int i = 1; i < LEN_1D-1; i++) {
+-            a[i] = b[i - 1] + c[i] * d[i];
+-            b[i] = b[i + 1] - e[i] * d[i];
++            bn[i] = b[i + 1] - e[i] * d[i];
++        }
++        /* pass 2: a uses the new b[i-1] (old b[0] for i==1); commit b */
++#pragma omp parallel for default(none) shared(a, b, c, d, bn) schedule(static)
++        for (int i = 1; i < LEN_1D-1; i++) {
++            real_t bprev = (i == 1) ? b[0] : bn[i - 1];
++            a[i] = bprev + c[i] * d[i];
++            b[i] = bn[i];
+         }
+         dummy(a, b, c, d, e);
+     }
++    free(bn);
+     return (real_t)0;
+ }
+ 

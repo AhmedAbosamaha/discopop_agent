@@ -1,0 +1,31 @@
+#include "data.h"
+
+real_t kernel_s244(void)
+{
+    for (int nl = 0; nl < iterations; nl++) {
+        // Process even iterations (i=0,2,4,...) in parallel
+        // No loop-carry dependencies within this pass: each iteration writes
+        // to a[i+1] where i is even, so a[i+1] is odd; iterations read only
+        // odd-indexed a values, which are disjoint across iterations.
+        #pragma omp parallel for private(i) shared(a, b, c, d, e)
+        for (int i = 0; i < LEN_1D-1; i += 2) {
+            a[i] = b[i] + c[i] * d[i];
+            b[i] = c[i] + b[i];
+            a[i+1] = b[i] + a[i+1] * d[i];
+        }
+
+        // Process odd iterations (i=1,3,5,...) in parallel
+        // No loop-carry dependencies within this pass: each iteration writes
+        // to a[i+1] where i is odd, so a[i+1] is even; iterations read only
+        // even-indexed a values, which are disjoint across iterations.
+        #pragma omp parallel for private(i) shared(a, b, c, d, e)
+        for (int i = 1; i < LEN_1D-1; i += 2) {
+            a[i] = b[i] + c[i] * d[i];
+            b[i] = c[i] + b[i];
+            a[i+1] = b[i] + a[i+1] * d[i];
+        }
+
+        dummy(a, b, c, d, e);
+    }
+    return (real_t)0;
+}

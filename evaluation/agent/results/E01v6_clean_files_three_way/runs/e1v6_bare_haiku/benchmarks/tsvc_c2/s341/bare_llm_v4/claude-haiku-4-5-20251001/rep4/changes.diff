@@ -1,0 +1,74 @@
+--- original.c
++++ final.c
+@@ -59,20 +59,65 @@
+ 
+ /* ==== s341.c ==== */
+ #include "data.h"
++#include <omp.h>
++#include <stdlib.h>
+ 
+ real_t kernel_s341(void)
+ {
+-    int j;
++    int nthreads;
++    // Determine the number of threads
++    #pragma omp parallel
++    {
++        #pragma omp single
++        nthreads = omp_get_num_threads();
++    }
++
++    // Allocate arrays for thread-local positive counts and starting positions
++    int *local_count = (int*)malloc(nthreads * sizeof(int));
++    int *starts = (int*)malloc(nthreads * sizeof(int));
++
+     for (int nl = 0; nl < iterations; nl++) {
+-        j = -1;
+-        for (int i = 0; i < LEN_1D; i++) {
+-            if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++        // Phase 1 (parallel): Count positive elements in each thread's range
++        // Each thread counts positives in its assigned iterations of the input array;
++        // count is private to each thread, then written to local_count[tid]
++        #pragma omp parallel shared(b, local_count)
++        {
++            int count = 0;
++            #pragma omp for schedule(static)
++            for (int i = 0; i < LEN_1D; i++) {
++                if (b[i] > (real_t)0.) count++;
++            }
++            int tid = omp_get_thread_num();
++            local_count[tid] = count;
++        }
++
++        // Phase 2 (serial): Compute starting positions for each thread's output range
++        // starts[t] = where thread t begins writing in array a
++        starts[0] = 0;
++        for (int t = 1; t < nthreads; t++) {
++            starts[t] = starts[t-1] + local_count[t-1];
++        }
++
++        // Phase 3 (parallel): Write positive elements to output array
++        // Each thread writes to a pre-computed non-overlapping range determined by starts[tid]
++        // out_idx is private to each thread and increments sequentially within its range
++        #pragma omp parallel shared(b, a, starts)
++        {
++            int tid = omp_get_thread_num();
++            int out_idx = starts[tid];
++            #pragma omp for schedule(static)
++            for (int i = 0; i < LEN_1D; i++) {
++                if (b[i] > (real_t)0.) {
++                    a[out_idx++] = b[i];
++                }
+             }
+         }
++
+         dummy(a, b, c, d, e);
+     }
++
++    free(local_count);
++    free(starts);
+     return (real_t)0;
+ }
+ 

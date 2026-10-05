@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s293.c
+  Model          : claude-fable-5-1
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror
+
+│  [bare] Calling claude-fable-5-1...
+│  [bare] s293.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: `LEN_1D` is a macro and `a` is a global pointer, so `shared(a)` under `default(none)` is valid. The edit stands. **Summary of the rewrite in `s293.c`:** - **Dependence removed:** the original `a[i] = a[0]` has iteration 0 writing `a[0]` while all other iterations read it — a value-carrying read/write on one location. Since `a[0]` never changes during a sweep (iteration 0 stores back its own value)
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

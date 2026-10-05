@@ -1,0 +1,50 @@
+--- original.c
++++ final.c
+@@ -58,17 +58,44 @@
+ }
+ 
+ /* ==== s211.c ==== */
++#include <stdlib.h>
+ #include "data.h"
+ 
+ real_t kernel_s211(void)
+ {
++    /* Temporary buffer holding the "new" b values computed from the old
++     * b array, breaking the b[i-1]/b[i+1] cross-iteration dependence.
++     * Heap-allocated since LEN_1D can be very large. */
++    real_t *nb = (real_t *)malloc((size_t)LEN_1D * sizeof(real_t));
++
+     for (int nl = 0; nl < iterations; nl++) {
+-        for (int i = 1; i < LEN_1D-1; i++) {
+-            a[i] = b[i - 1] + c[i] * d[i];
+-            b[i] = b[i + 1] - e[i] * d[i];
++        /* Pass 1: compute all new b[i] values from the untouched old b
++         * array into nb. Each iteration only reads b[i+1] (old, never
++         * written here) and writes its own nb[i] -> fully independent. */
++        #pragma omp parallel for default(none) shared(nb, b, d, e) schedule(static)
++        for (int i = 1; i < LEN_1D - 1; i++) {
++            nb[i] = b[i + 1] - e[i] * d[i];
+         }
++
++        /* b[0] is never written by this loop, so it stays as the value
++         * a[1] needs (matches sequential semantics). */
++        nb[0] = b[0];
++
++        /* Pass 2: a[i] uses nb[i-1], which is exactly the "already
++         * updated" b[i-1] the sequential loop would have seen at this
++         * point; then publish nb[i] into b[i]. Independent across i
++         * since nb is fully populated before this loop starts and each
++         * iteration writes distinct a[i]/b[i]. */
++        #pragma omp parallel for default(none) shared(a, b, c, d, nb) schedule(static)
++        for (int i = 1; i < LEN_1D - 1; i++) {
++            a[i] = nb[i - 1] + c[i] * d[i];
++            b[i] = nb[i];
++        }
++
+         dummy(a, b, c, d, e);
+     }
++
++    free(nb);
+     return (real_t)0;
+ }
+ 

@@ -1,0 +1,37 @@
+--- original.c
++++ final.c
+@@ -59,19 +59,31 @@
+ 
+ /* ==== s252.c ==== */
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s252(void)
+ {
+-    real_t t, s;
++    real_t *products = (real_t *)malloc(LEN_1D * sizeof(real_t));
++
+     for (int nl = 0; nl < iterations; nl++) {
+-        t = (real_t) 0.;
++        // Phase 1: Compute all products (Do-All: no loop-carried dependences)
++        #pragma omp parallel for shared(products) 
+         for (int i = 0; i < LEN_1D; i++) {
+-            s = b[i] * c[i];
++            products[i] = b[i] * c[i];
++        }
++
++        // Phase 2: Compute sums using products
++        real_t t = (real_t) 0.;
++        for (int i = 0; i < LEN_1D; i++) {
++            real_t s = products[i];
+             a[i] = s + t;
+             t = s;
+         }
++
+         dummy(a, b, c, d, e);
+     }
++
++    free(products);
+     return (real_t)0;
+ }
+ 

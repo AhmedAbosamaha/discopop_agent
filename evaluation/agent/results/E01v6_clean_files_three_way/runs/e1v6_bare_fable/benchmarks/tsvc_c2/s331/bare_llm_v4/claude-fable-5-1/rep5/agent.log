@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s331.c
+  Model          : claude-fable-5-1
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror
+
+│  [bare] Calling claude-fable-5-1...
+│  [bare] s331.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Let me check `data.h` so `default(none)` doesn't trip on `LEN_1D` if it's a variable rather than a macro.`LEN_1D` is a macro and `a` is a global pointer, so `default(none) shared(a) reduction(max:j)` is complete and compiles. The rewrite is applied. **Summary of the change in `s331.c`:** - Inner `i` loop now carries `#pragma omp parallel for default(none) shared(a) reduction(max:j)`. - The depende
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

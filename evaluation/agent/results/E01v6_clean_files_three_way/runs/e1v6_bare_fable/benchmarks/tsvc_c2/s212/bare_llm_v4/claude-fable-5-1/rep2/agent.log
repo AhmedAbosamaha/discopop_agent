@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s212.c
+  Model          : claude-fable-5-1
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror
+
+│  [bare] Calling claude-fable-5-1...
+│  [bare] s212.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: `LEN_1D` is a macro and `a`–`d` are global pointers, so the `default(none) shared(...)` clauses are complete and the file compiles as written. The rewrite is done: - **Dependence removed:** the anti-dependence through `a[i+1]` (read in iteration `i`, written in iteration `i+1`). It was a reuse of a location in a fixed order, not a carried value, so it is split into two passes: all reads of old `a`
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

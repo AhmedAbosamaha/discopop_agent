@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_r_1/benchmarks/tsvc_c2/s112/default_v4/claude-haiku-4-5-20251001/rep1/work/s112.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_r_1/benchmarks/tsvc_c2/s112/default_v4/claude-haiku-4-5-20251001/rep1/work/s112.c
+@@ -6,6 +6,7 @@
+ {
+     for (int nl = 0; nl < iterations; nl++) {
+         real_t* temp = (real_t*)malloc(LEN_1D * sizeof(real_t));
++        #pragma omp parallel for shared(temp) 
+         for (int i = 0; i < LEN_1D - 1; i++) {
+             temp[i+1] = a[i] + b[i];
+         }

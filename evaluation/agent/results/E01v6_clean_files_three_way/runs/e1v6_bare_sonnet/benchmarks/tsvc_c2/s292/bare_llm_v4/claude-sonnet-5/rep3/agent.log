@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s292.c
+  Model          : claude-sonnet-5
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s292.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan The loop carries `im1`/`im2` as rolling copies of the previous two `i` values, used only to index `b` with wraparound at the start (`im1 = i-1 mod LEN_1D`, `im2 = i-2 mod LEN_1D`). That's a state-carrying location reuse, not a value computed from prior iterations' results — it can be recomputed directly from `i` with no cross-iteration dependence, since `b` is never written inside the loop
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

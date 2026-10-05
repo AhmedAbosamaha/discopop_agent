@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s112.c
+  Model          : claude-opus-5-5
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror
+
+│  [bare] Calling claude-opus-5-5...
+│  [bare] s112.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: I rewrote `s112.c` so each pass over `a` runs as two parallel loops. I haven't compiled or run it, since there's no compiler here. **The dependence:** a location being reused, not a value moving between iterations. The original loop runs downward, so iteration `i` reads `a[i]` before iteration `i-1` overwrites it. Every read sees the old `a`. **The rewrite:** I added a heap buffer `tmp` of `LEN_1D
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s292.c
+  Model          : claude-sonnet-5
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s292.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan The loop carries `im1`/`im2` as mutable state that at iteration `i` always equals `(i-1) mod LEN_1D` and `(i-2) mod LEN_1D` respectively (trace: i=0 im1=LEN-1,im2=LEN-2; i=1 im1=0,im2=LEN-1; i=2 im1=1,im2=0 — i.e. wrap-around predecessor indices). That's not a true data dependence between iterations — it's just two variables being reused to track an index that is a pure function of `i`. So
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

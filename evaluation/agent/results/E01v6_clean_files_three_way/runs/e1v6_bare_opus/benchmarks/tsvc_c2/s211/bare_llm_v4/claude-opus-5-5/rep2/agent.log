@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s211.c
+  Model          : claude-opus-5-5
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror
+
+│  [bare] Calling claude-opus-5-5...
+│  [bare] s211.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: I rewrote `s211.c` so the kernel runs as two parallel passes per outer iteration. I haven't compiled or run it, so it hasn't been through ThreadSanitizer, the output comparison or the timing yet. **What was blocking it:** `a[i]` reads the new `b[i-1]`, which the previous iteration just wrote, so a value really does move forward. The other dependence, `b[i]` reading the old `b[i+1]`, only reuses a 
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

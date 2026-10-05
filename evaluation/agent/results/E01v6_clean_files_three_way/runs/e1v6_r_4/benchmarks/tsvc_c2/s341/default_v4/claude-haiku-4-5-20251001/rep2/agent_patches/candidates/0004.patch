@@ -1,0 +1,22 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_r_4/benchmarks/tsvc_c2/s341/default_v4/claude-haiku-4-5-20251001/rep2/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_r_4/benchmarks/tsvc_c2/s341/default_v4/claude-haiku-4-5-20251001/rep2/work/s341.c
+@@ -1,14 +1,15 @@
++#include <stdatomic.h>
+ #include "data.h"
+ 
+ real_t kernel_s341(void)
+ {
+-    int j;
+     for (int nl = 0; nl < iterations; nl++) {
+-        j = -1;
++        atomic_int j;
++        atomic_store(&j, -1);
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++                int idx = atomic_fetch_add(&j, 1) + 1;
++                a[idx] = b[i];
+             }
+         }
+         dummy(a, b, c, d, e);

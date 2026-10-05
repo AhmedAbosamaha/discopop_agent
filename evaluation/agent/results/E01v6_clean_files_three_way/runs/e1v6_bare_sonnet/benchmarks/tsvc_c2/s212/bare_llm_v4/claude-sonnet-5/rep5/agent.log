@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s212.c
+  Model          : claude-sonnet-5
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s212.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan **Dependence analysis:** In the original loop, iteration `i` does `a[i] *= c[i]` then `b[i] += a[i+1] * d[i]`. The read of `a[i+1]` at iteration `i` always sees the *original* (unmodified) value, because `a[i+1]` only gets written at iteration `i+1`, which in sequential order happens *after* iteration `i`'s read. So the real dependence is: each element `a[k]` is written once (by the step t
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

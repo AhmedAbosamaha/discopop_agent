@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s331.c
+  Model          : claude-sonnet-5
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s331.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: 計画: - 依存関係: 内側ループは「a[i]<0 を満たす最後の(最大の) i」を求める書き込み専用の走査。各イテレーションが書くのは j だけで、その値は「条件を満たす i の中での最大値」という性質に単純化できるので、max-reduction で表現できる。 - `j = -1` を初期値として残し、`reduction(max:j)` を使う。各反復は `a[i] < 0` のとき `i` を候補にし、`j` をその候補でのみ更新（更新しない場合は現状維持）。OpenMPのmax reductionは各スレッドのローカル最大値を取り、最後にグローバル最大を取るので、逐次版の「最後に見つかった負のインデックス」と同じ結果になる（配列中に複数の負値があっても、その中の最大indexが選ばれる点で一致）。 - `chksum` と `dummy()` 呼び出しは `nl` ループ内はそ
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

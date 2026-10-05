@@ -1,0 +1,216 @@
+{
+  "benchmark": "tsvc_c2/s321",
+  "kernel": "s321",
+  "source": "s321.c",
+  "arm": "bare_llm_v4",
+  "model": "claude-haiku-4-5-20251001",
+  "arm_flags": [
+    "--require-speedup",
+    "--min-runtime-share",
+    "0.01",
+    "--prompt-version",
+    "4",
+    "--timing-cflags=-DLARGE_DATASET"
+  ],
+  "started_at": "2026-10-05T06:37:18",
+  "host": "rms14562",
+  "host_load_start": [
+    6.43115234375,
+    6.3427734375,
+    8.17626953125
+  ],
+  "agent_cmd": [
+    "/home/ahmedabosamaha/discopop_agent/venv/bin/python",
+    "-m",
+    "discopop_agent.bare_llm",
+    "--project-dir",
+    ".",
+    "--project-units",
+    "s321.c,main.c",
+    "--project-include",
+    ".",
+    "--project-editable",
+    "s321.c",
+    "--model",
+    "claude-haiku-4-5-20251001",
+    "--prompt-version",
+    "4",
+    "--exclude-functions",
+    "main,dummy"
+  ],
+  "agent_s": 163.5,
+  "agent_rc": 0,
+  "llm_calls": 1,
+  "llm_call_failures": 0,
+  "harness_reasks": 0,
+  "harness_discards": 0,
+  "explorer_retries": 0,
+  "explorer_stalls": 0,
+  "reverts": 0,
+  "refresh_fast": 0,
+  "refresh_full": 0,
+  "refresh_fallback": 0,
+  "runtime_remeasurements": 0,
+  "phase_b_deferred": 0,
+  "phase_b_joint_kept": 0,
+  "dp_floor": null,
+  "gate_failures_phase_a": {},
+  "gate_failures_phase_b": {},
+  "gate_passes_phase_a": 0,
+  "gate_failures_d40": {},
+  "d40_verdicts": {},
+  "exposure_verdicts": {},
+  "d40_seconds": 0,
+  "requeued_regions": 0,
+  "region_verdicts": {},
+  "settle_dropped": 0,
+  "llm_usage": {
+    "calls_recorded": 1,
+    "input_tokens": 58,
+    "output_tokens": 21003,
+    "cache_read_input_tokens": 113554,
+    "cache_creation_input_tokens": 21661,
+    "cost_usd": 0.161,
+    "model_seconds": 162.5
+  },
+  "layout": "project",
+  "files_changed": [
+    "s321.c"
+  ],
+  "source_changed": true,
+  "scaffold": {
+    "ok": true,
+    "problems": [],
+    "applies": true
+  },
+  "editable": [
+    "s321.c"
+  ],
+  "harness_sha256": "96ae157eb52b0c6e9255f691537688ed5ad8accc5d45c576adcc00f52bbc44ba",
+  "pragmas_added": 3,
+  "pragmas_in_final": 3,
+  "hot_loop": {
+    "entry": "kernel_s321",
+    "function": "kernel_s321",
+    "line": 6,
+    "writes": [
+      "a"
+    ]
+  },
+  "hot_loop_covered": true,
+  "hot_loop_coverage": {
+    "criterion": "v2 (27 Sep 2026)",
+    "covered": true,
+    "covering": [
+      {
+        "function": "kernel_s321",
+        "line": 42,
+        "directive": "#pragma omp parallel for schedule(static) private(i) shared(a, sum)",
+        "writes": [
+          "a"
+        ]
+      }
+    ],
+    "uncounted": [],
+    "elsewhere": [
+      {
+        "function": "kernel_s321",
+        "line": 18,
+        "directive": "#pragma omp parallel for schedule(static) private(i) shared(sum, prod, a, b)",
+        "writes": [
+          "prod",
+          "sum"
+        ]
+      },
+      {
+        "function": "kernel_s321",
+        "line": 28,
+        "directive": "#pragma omp parallel for schedule(static) private(i) shared(sum, prod, d)",
+        "writes": [
+          "prod",
+          "sum"
+        ]
+      }
+    ]
+  },
+  "candidates_recorded": 0,
+  "verify": {
+    "verify_size": "EXTRALARGE",
+    "threads": [
+      6,
+      12
+    ],
+    "repeats": 5,
+    "compiler": "/usr/bin/clang-20",
+    "final_flags": [],
+    "build_errors": {
+      "final_dump": "                         ^\n/home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_bare_haiku/benchmarks/tsvc_c2/s321/bare_llm_v4/claude-haiku-4-5-20251001/rep1/final/s321.c:42:59: error: use of undeclared identifier 'i'\n   42 |         #pragma omp parallel for schedule(static) private(i) shared(a, sum)\n      |                                                           ^\n5 errors generated.\n",
+      "final_par": "                         ^\n/home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_bare_haiku/benchmarks/tsvc_c2/s321/bare_llm_v4/claude-haiku-4-5-20251001/rep1/final/s321.c:42:59: error: use of undeclared identifier 'i'\n   42 |         #pragma omp parallel for schedule(static) private(i) shared(a, sum)\n      |                                                           ^\n5 errors generated.\n"
+    },
+    "dump_exact": null,
+    "dump_max_rel_err": null,
+    "status": "verify_build_failed",
+    "speed_measurable": true
+  },
+  "verify_s": 0.4,
+  "status": "done",
+  "outcome": "VERIFY_FAILED",
+  "finished_at": "2026-10-05T06:40:02",
+  "host_load_end": [
+    5.09228515625,
+    6.07177734375,
+    7.78955078125
+  ],
+  "profile": {
+    "wrapper": "discopop_cc",
+    "layout": "project",
+    "units": [
+      "s321.c",
+      "main.c"
+    ],
+    "instrument_s": 0.21,
+    "profiled_run_s": 0.03,
+    "explore_stalls": 0,
+    "explore_s": 1.37,
+    "explore_success_s": 1.37,
+    "explore_attempts": 1,
+    "explore_timed_out": false,
+    "explore_failures": [],
+    "patterns": {
+      "optimizer_output": 0,
+      "merged_pattern": 0,
+      "task": 0,
+      "do_all": 0,
+      "reduction": 0
+    },
+    "profile_sha256": "48fd5c865f4ea694c28077a0c4cc147d21c864e07f4dece6c2461f8c1f4c177a"
+  },
+  "package_integrity": {
+    "before": {
+      "checked": "before trial",
+      "at": "2026-10-05T06:37:18",
+      "prepared_sha256": "1973c7896505a6456666858234460ca46dee03779e5b2f904b8759b8a75fcba5",
+      "packager_sha256": "1973c7896505a6456666858234460ca46dee03779e5b2f904b8759b8a75fcba5",
+      "harness_sha256": "96ae157eb52b0c6e9255f691537688ed5ad8accc5d45c576adcc00f52bbc44ba",
+      "archived_sha256": "1973c7896505a6456666858234460ca46dee03779e5b2f904b8759b8a75fcba5",
+      "profile_sha256": "48fd5c865f4ea694c28077a0c4cc147d21c864e07f4dece6c2461f8c1f4c177a",
+      "ok": true
+    },
+    "after": {
+      "checked": "after trial",
+      "at": "2026-10-05T06:40:02",
+      "prepared_sha256": "1973c7896505a6456666858234460ca46dee03779e5b2f904b8759b8a75fcba5",
+      "packager_sha256": "1973c7896505a6456666858234460ca46dee03779e5b2f904b8759b8a75fcba5",
+      "harness_sha256": "96ae157eb52b0c6e9255f691537688ed5ad8accc5d45c576adcc00f52bbc44ba",
+      "archived_sha256": "1973c7896505a6456666858234460ca46dee03779e5b2f904b8759b8a75fcba5",
+      "profile_sha256": "48fd5c865f4ea694c28077a0c4cc147d21c864e07f4dece6c2461f8c1f4c177a",
+      "ok": true
+    }
+  },
+  "speed_check_off": false,
+  "timing_flags": [
+    "--timing-cflags=-DLARGE_DATASET"
+  ],
+  "harness_edit_redos": [],
+  "repeat": 1
+}

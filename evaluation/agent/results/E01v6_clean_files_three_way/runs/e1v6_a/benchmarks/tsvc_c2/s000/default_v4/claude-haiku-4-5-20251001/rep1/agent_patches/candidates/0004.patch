@@ -1,0 +1,16 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_a/benchmarks/tsvc_c2/s000/default_v4/claude-haiku-4-5-20251001/rep1/work/s000.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_a/benchmarks/tsvc_c2/s000/default_v4/claude-haiku-4-5-20251001/rep1/work/s000.c
+@@ -3,11 +3,13 @@
+ real_t kernel_s000(void)
+ {
+     if (iterations > 0) {
++        #pragma omp parallel for 
+         for (int i = 0; i < LEN_1D; i++) {
+             a[i] = b[i] + 1;
+         }
+         for (int nl = 1; nl < iterations; nl++) {
+             dummy(a, b, c, d, e);
++            #pragma omp parallel for 
+             for (int i = 0; i < LEN_1D; i++) {
+                 a[i] = b[i] + 1;
+             }

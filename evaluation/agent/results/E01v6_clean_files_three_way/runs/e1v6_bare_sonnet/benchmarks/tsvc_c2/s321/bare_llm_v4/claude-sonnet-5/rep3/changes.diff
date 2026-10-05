@@ -1,0 +1,100 @@
+--- original.c
++++ final.c
+@@ -60,12 +60,95 @@
+ /* ==== s321.c ==== */
+ #include "data.h"
+ 
++/* Fixed, input-size-independent block count used to parallelize the
++ * first-order recurrence below. Keeping it constant (not derived from
++ * the thread count) means the block partition - and therefore the
++ * floating-point rounding path - never changes with thread count or
++ * schedule, only which thread executes which block does. */
++#define S321_NUM_BLOCKS 1024
++
+ real_t kernel_s321(void)
+ {
+     for (int nl = 0; nl < iterations; nl++) {
+-        for (int i = 1; i < LEN_1D; i++) {
+-            a[i] += a[i-1] * b[i];
++        /* Original dependence: a[i] = a[i] + a[i-1]*b[i] is a true
++         * recurrence x_i = c_i + b_i*x_{i-1} (c_i = original a[i],
++         * x_0 = a[0]). x_{i-1} written by iteration i-1 is read by
++         * iteration i, so the loop cannot run as independent
++         * iterations in place. Instead we move the dependence: split
++         * [1,LEN_1D) into fixed blocks, (1) in parallel compute per
++         * block the affine map (M_k,C_k) describing how its exit
++         * value depends on its (still unknown) entry value, by
++         * replaying the recurrence from an assumed entry of 0; (2)
++         * sequentially combine those small per-block maps into the
++         * true entry value of every block, starting from the real
++         * a[0] - this tiny O(#blocks) loop is where the old
++         * cross-iteration value now travels; (3) in parallel, each
++         * block reruns the exact same per-element update, now
++         * starting from its true entry value, writing disjoint
++         * slices of a[]. This costs a constant extra pass, not extra
++         * asymptotic work. */
++        int n = LEN_1D;
++
++        if (n > 1) {
++            int nblocks = S321_NUM_BLOCKS;
++            if (nblocks > n - 1) nblocks = n - 1;
++
++            /* Fixed-size (S321_NUM_BLOCKS), not input-scaling, scratch:
++             * safe on the stack regardless of LEN_1D. */
++            real_t blockM[S321_NUM_BLOCKS];
++            real_t blockC[S321_NUM_BLOCKS];
++            real_t carryIn[S321_NUM_BLOCKS];
++            int blockStart[S321_NUM_BLOCKS + 1];
++
++            long len = (long)n - 1;
++            for (int k = 0; k <= nblocks; k++) {
++                blockStart[k] = 1 + (int)((len * (long)k) / nblocks);
++            }
++
++            /* Pass 1: per block, independent - compute (M_k, C_k) as if
++             * the block's entry value were 0. Reads a[] (still the
++             * untouched, original values for this nl iteration) and
++             * b[]; writes only its own index k of blockM/blockC. */
++            #pragma omp parallel for default(none) \
++                shared(a, b, blockStart, blockM, blockC, nblocks)
++            for (int k = 0; k < nblocks; k++) {
++                int s = blockStart[k];
++                int e = blockStart[k + 1];
++                real_t prev = (real_t)0;
++                real_t m = (real_t)1;
++                for (int i = s; i < e; i++) {
++                    m *= b[i];
++                    prev = a[i] + b[i] * prev;
++                }
++                blockM[k] = m;
++                blockC[k] = prev;
++            }
++
++            /* Carry pass: sequential, O(#blocks) only - this is the
++             * moved dependence: block k's true entry value needs
++             * block k-1's true entry value and (M_{k-1}, C_{k-1}). */
++            carryIn[0] = a[0];
++            for (int k = 1; k < nblocks; k++) {
++                carryIn[k] = blockM[k - 1] * carryIn[k - 1] + blockC[k - 1];
++            }
++
++            /* Pass 2: per block, independent - rerun the exact same
++             * update formula as the original loop, now starting from
++             * the true entry value, writing the final results into
++             * disjoint slices of a[]. */
++            #pragma omp parallel for default(none) \
++                shared(a, b, blockStart, carryIn, nblocks)
++            for (int k = 0; k < nblocks; k++) {
++                int s = blockStart[k];
++                int e = blockStart[k + 1];
++                real_t prev = carryIn[k];
++                for (int i = s; i < e; i++) {
++                    a[i] = a[i] + b[i] * prev;
++                    prev = a[i];
++                }
++            }
+         }
++
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

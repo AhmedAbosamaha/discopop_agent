@@ -1,0 +1,38 @@
+--- original.c
++++ final.c
+@@ -59,15 +59,33 @@
+ 
+ /* ==== s112.c ==== */
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s112(void)
+ {
++    /* Heap snapshot of a: the original backward loop reads a[i] before
++     * the later (i-1) iteration overwrites it, i.e. an anti-dependence
++     * on the location a[i].  Copying the old values first turns every
++     * iteration into an independent read of tmp[i]. */
++    real_t *tmp = (real_t *)malloc((size_t)LEN_1D * sizeof(real_t));
++
+     for (int nl = 0; nl < iterations; nl++) {
+-        for (int i = LEN_1D - 2; i >= 0; i--) {
+-            a[i+1] = a[i] + b[i];
++        int i;
++
++#pragma omp parallel for default(none) shared(a, tmp) private(i) schedule(static)
++        for (i = 0; i < LEN_1D - 1; i++) {
++            tmp[i] = a[i];
+         }
++
++#pragma omp parallel for default(none) shared(a, b, tmp) private(i) schedule(static)
++        for (i = 0; i < LEN_1D - 1; i++) {
++            a[i+1] = tmp[i] + b[i];
++        }
++
+         dummy(a, b, c, d, e);
+     }
++
++    free(tmp);
+     return (real_t)0;
+ }
+ 

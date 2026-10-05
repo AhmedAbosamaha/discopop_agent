@@ -1,0 +1,38 @@
+#include "data.h"
+#include <stdlib.h>
+
+static real_t *a_old = NULL;
+
+real_t kernel_s241(void)
+{
+    // Allocate temporary buffer once to hold old values of a
+    if (a_old == NULL) {
+        a_old = (real_t *)malloc(LEN_1D * sizeof(real_t));
+    }
+
+    // Initialize a_old with current values of a
+    #pragma omp parallel for shared(a, a_old)
+    for (int i = 0; i < LEN_1D; i++) {
+        a_old[i] = a[i];
+    }
+
+    for (int nl = 0; nl < iterations; nl++) {
+        // Parallelize inner loop: each iteration reads a_old[i+1] (from before inner loop)
+        // instead of a[i+1] (which may be modified by other iterations), removing loop-carried
+        // dependence. Loop variable i is implicitly private. a, b, c, d are shared
+        // (each thread writes different elements, no race). a_old is shared read-only.
+        #pragma omp parallel for shared(a, b, c, d, a_old)
+        for (int i = 0; i < LEN_1D-1; i++) {
+            a[i] = b[i] * c[i] * d[i];
+            b[i] = a[i] * a_old[i+1] * d[i];
+        }
+        dummy(a, b, c, d, e);
+
+        // Update a_old for next outer iteration
+        #pragma omp parallel for shared(a, a_old)
+        for (int i = 0; i < LEN_1D; i++) {
+            a_old[i] = a[i];
+        }
+    }
+    return (real_t)0;
+}

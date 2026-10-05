@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_r_4/benchmarks/tsvc_c2/s341/default_v4/claude-haiku-4-5-20251001/rep3/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_r_4/benchmarks/tsvc_c2/s341/default_v4/claude-haiku-4-5-20251001/rep3/work/s341.c
+@@ -16,6 +16,7 @@
+ 
+     // Reuse precomputed indices for each outer loop iteration
+     for (int nl = 0; nl < iterations; nl++) {
++        #pragma omp parallel for shared(indices) 
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+                 a[indices[i]] = b[i];

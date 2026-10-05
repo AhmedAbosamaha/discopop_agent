@@ -1,0 +1,34 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_r_2/benchmarks/tsvc_c2/s252/default_v4/claude-haiku-4-5-20251001/rep4/work/s252.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_r_2/benchmarks/tsvc_c2/s252/default_v4/claude-haiku-4-5-20251001/rep4/work/s252.c
+@@ -1,16 +1,27 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s252(void)
+ {
+-    real_t t, s;
++    real_t t;
++    real_t *s = (real_t *)malloc(LEN_1D * sizeof(real_t));
++
+     for (int nl = 0; nl < iterations; nl++) {
++        // Pass 1: Compute s values (parallel candidate: no loop-carried dependence)
++        for (int i = 0; i < LEN_1D; i++) {
++            s[i] = b[i] * c[i];
++        }
++
++        // Pass 2: Compute a values with cumulative sum (sequential, dependence moved out)
+         t = (real_t) 0.;
+         for (int i = 0; i < LEN_1D; i++) {
+-            s = b[i] * c[i];
+-            a[i] = s + t;
+-            t = s;
++            a[i] = s[i] + t;
++            t = s[i];
+         }
++
+         dummy(a, b, c, d, e);
+     }
++
++    free(s);
+     return (real_t)0;
+ }

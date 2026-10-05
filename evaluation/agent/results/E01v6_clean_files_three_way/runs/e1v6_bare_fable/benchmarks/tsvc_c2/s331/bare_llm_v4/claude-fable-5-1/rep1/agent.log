@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s331.c
+  Model          : claude-fable-5-1
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror
+
+│  [bare] Calling claude-fable-5-1...
+│  [bare] s331.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: `LEN_1D` is a macro and `a` is a global pointer, so the `default(none) shared(a) reduction(max:j)` clauses cover everything the loop body touches. The edit is complete. **Summary of the rewrite in `s331.c`:** - The inner `for (i < LEN_1D)` loop now carries `#pragma omp parallel for default(none) shared(a) reduction(max:j)`. - Dependence removed: the sequential "last index where `a[i] < 0`" is equi
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

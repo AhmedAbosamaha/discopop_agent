@@ -1,0 +1,18 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_r_1/benchmarks/tsvc_c2/s112/default_v4/claude-haiku-4-5-20251001/rep1/work/s112.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_r_1/benchmarks/tsvc_c2/s112/default_v4/claude-haiku-4-5-20251001/rep1/work/s112.c
+@@ -1,10 +1,13 @@
+ #include "data.h"
++#include <stdlib.h>
++#include <string.h>
+ 
+ real_t kernel_s112(void)
+ {
+     for (int nl = 0; nl < iterations; nl++) {
+-        for (int i = LEN_1D - 2; i >= 0; i--) {
+-            a[i+1] = a[i] + b[i];
++        for (int i = 0; i < LEN_1D - 1; i++) {
++            int idx = LEN_1D - 2 - i;
++            a[idx + 1] = a[idx] + b[idx];
+         }
+         dummy(a, b, c, d, e);
+     }

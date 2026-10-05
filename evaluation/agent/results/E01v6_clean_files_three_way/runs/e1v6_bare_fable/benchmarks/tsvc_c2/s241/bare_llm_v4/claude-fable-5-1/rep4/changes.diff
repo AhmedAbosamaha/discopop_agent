@@ -1,0 +1,39 @@
+--- original.c
++++ final.c
+@@ -58,17 +58,34 @@
+ }
+ 
+ /* ==== s241.c ==== */
++#include <stdlib.h>
+ #include "data.h"
+ 
+ real_t kernel_s241(void)
+ {
++    /* Scratch buffer holding the new values of a[] for one pass, so that the
++       b[i] statement can still read the OLD a[i+1] (as the serial order did)
++       while all iterations run independently. Heap allocated: grows with LEN_1D. */
++    real_t *tmp = (real_t *)malloc((size_t)LEN_1D * sizeof(real_t));
++
+     for (int nl = 0; nl < iterations; nl++) {
++        /* Pass 1: compute new a into tmp, and new b from (new a[i], old a[i+1]).
++           a[] is only read here, so a[i+1] is the pre-pass value for every i. */
++#pragma omp parallel for default(none) shared(a, b, c, d, tmp) schedule(static)
+         for (int i = 0; i < LEN_1D-1; i++) {
+-            a[i] = b[i] * c[i  ] * d[i];
+-            b[i] = a[i] * a[i+1] * d[i];
++            real_t t = b[i] * c[i  ] * d[i];
++            tmp[i] = t;
++            b[i] = t * a[i+1] * d[i];
++        }
++        /* Pass 2: commit the new a values (a[LEN_1D-1] is never written). */
++#pragma omp parallel for default(none) shared(a, tmp) schedule(static)
++        for (int i = 0; i < LEN_1D-1; i++) {
++            a[i] = tmp[i];
+         }
+         dummy(a, b, c, d, e);
+     }
++
++    free(tmp);
+     return (real_t)0;
+ }
+ 

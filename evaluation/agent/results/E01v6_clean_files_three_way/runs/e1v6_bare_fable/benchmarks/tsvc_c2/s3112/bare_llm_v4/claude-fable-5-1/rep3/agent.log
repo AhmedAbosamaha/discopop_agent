@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s3112.c
+  Model          : claude-fable-5-1
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror
+
+│  [bare] Calling claude-fable-5-1...
+│  [bare] s3112.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: The rewrite is applied. Summary of what changed in `s3112.c`: - **Dependence removed:** the running `sum` carried across `i` iterations. It is now a blocked scan — pass 1 (`#pragma omp parallel for`, 128 blocks) computes each block's total independently; pass 2 is a tiny serial exclusive scan over the 128 totals that produces each block's starting offset (this is where the carried value now lives)
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

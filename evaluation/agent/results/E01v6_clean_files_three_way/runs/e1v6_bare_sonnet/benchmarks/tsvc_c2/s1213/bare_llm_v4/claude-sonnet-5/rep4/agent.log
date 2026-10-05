@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s1213.c
+  Model          : claude-sonnet-5
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s1213.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan **Dependence analysis.** The loop body is ``` a[i] = b[i-1] + c[i]; b[i] = a[i+1] * d[i]; ``` Because the sweep runs `i` increasing, `a[i+1]` used by `b[i]` has *not* been written yet this sweep — it's still the pre-sweep value. So `b[i]_new` only ever depends on pre-sweep `a`, never on anything written in-loop. Expanding `b[i-1]_new` used by `a[i]` (`b[i-1]_new = a[i]_old * d[i-1]`, valid
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

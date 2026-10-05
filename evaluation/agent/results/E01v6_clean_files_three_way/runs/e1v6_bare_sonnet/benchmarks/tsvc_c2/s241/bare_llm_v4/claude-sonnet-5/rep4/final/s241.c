@@ -1,0 +1,40 @@
+#include "data.h"
+#include <stdlib.h>
+
+real_t kernel_s241(void)
+{
+    /* Heap-allocated snapshot of a[] taken before each sweep updates it.
+       Needed because the compute loop below reads a[i+1], and the
+       original sequential order always saw the *pre-sweep* value of
+       a[i+1] (since index i+1 hasn't been written yet when index i
+       runs).  Size scales with the problem (LEN_1D), so it must live
+       on the heap, not the stack. */
+    real_t *a_old = (real_t *)malloc(sizeof(real_t) * (size_t)LEN_1D);
+
+    for (int nl = 0; nl < iterations; nl++) {
+        /* Snapshot pass: independent per i.
+           a_old is written here (shared, one index per iteration),
+           a is only read (shared, read-only in this loop). */
+        #pragma omp parallel for shared(a, a_old) schedule(static)
+        for (int i = 0; i < LEN_1D; i++) {
+            a_old[i] = a[i];
+        }
+
+        /* Compute pass: iterations are now independent.
+           a, b are shared and each iteration writes only its own
+           index i (no two iterations touch the same element).
+           c, d are shared and read-only.
+           a_old is shared and read-only, supplying the pre-sweep
+           value that a[i+1] would have had at this point in the
+           original sequential execution. */
+        #pragma omp parallel for shared(a, b, c, d, a_old) schedule(static)
+        for (int i = 0; i < LEN_1D-1; i++) {
+            a[i] = b[i] * c[i  ] * d[i];
+            b[i] = a[i] * a_old[i+1] * d[i];
+        }
+        dummy(a, b, c, d, e);
+    }
+
+    free(a_old);
+    return (real_t)0;
+}

@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s281.c
+  Model          : claude-sonnet-5
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s281.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan **Dependence analysis:** The loop body reads `a[LEN_1D-i-1]` and writes `a[i]`. In the original sequential order: - For `i` in the first half (`i < half`, where `half = (LEN_1D+1)/2`), the mirror index `LEN_1D-1-i` falls in the *second* half, which hasn't been written yet this sweep — so these iterations read the **original** `a` value. - For `i` in the second half (`i >= half`), the mirro
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

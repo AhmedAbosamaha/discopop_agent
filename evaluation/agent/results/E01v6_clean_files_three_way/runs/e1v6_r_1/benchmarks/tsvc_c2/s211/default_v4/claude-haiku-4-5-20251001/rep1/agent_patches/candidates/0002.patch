@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_r_1/benchmarks/tsvc_c2/s211/default_v4/claude-haiku-4-5-20251001/rep1/work/s211.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_r_1/benchmarks/tsvc_c2/s211/default_v4/claude-haiku-4-5-20251001/rep1/work/s211.c
+@@ -7,6 +7,7 @@
+         for (int i = 0; i < LEN_1D; i++) {
+             b_temp[i] = b[i];
+         }
++        #pragma omp parallel for firstprivate(b_temp) 
+         for (int i = 1; i < LEN_1D-1; i++) {
+             b[i] = b_temp[i + 1] - e[i] * d[i];
+         }

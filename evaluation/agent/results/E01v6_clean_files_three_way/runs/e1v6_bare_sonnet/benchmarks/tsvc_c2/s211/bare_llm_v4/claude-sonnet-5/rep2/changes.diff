@@ -1,0 +1,50 @@
+--- original.c
++++ final.c
+@@ -59,16 +59,44 @@
+ 
+ /* ==== s211.c ==== */
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s211(void)
+ {
++    /* bnew holds the new value of b[] for this sweep, computed from the
++     * old (pre-sweep) b[], so it has no dependence on other iterations.
++     * Size grows with LEN_1D, so it is heap-allocated, not a local array. */
++    real_t *bnew = (real_t *)malloc((size_t)LEN_1D * sizeof(real_t));
++
+     for (int nl = 0; nl < iterations; nl++) {
+-        for (int i = 1; i < LEN_1D-1; i++) {
+-            a[i] = b[i - 1] + c[i] * d[i];
+-            b[i] = b[i + 1] - e[i] * d[i];
++        /* b[0] is never written by the sweep below; seed bnew[0] with it
++         * so that a[1] = bnew[1-1] + ... reads the correct boundary value. */
++        bnew[0] = b[0];
++
++        /* Each bnew[i] depends only on the OLD b[i+1], e[i], d[i] -- none
++         * of which are written anywhere in this loop -- so iterations are
++         * independent. b, d, e are read-only here; bnew entries are
++         * disjoint per i. */
++        #pragma omp parallel for default(none) shared(b, d, e, bnew)
++        for (int i = 1; i < LEN_1D - 1; i++) {
++            bnew[i] = b[i + 1] - e[i] * d[i];
+         }
++
++        /* bnew is now fully populated (barrier at the end of the loop
++         * above), so a[i] can read bnew[i-1] -- the "new" b value the
++         * original code would have seen -- without any cross-iteration
++         * dependence. b[i] is simply copied back from bnew[i]; a[i] and
++         * b[i] writes are disjoint per i, and c, d, bnew are read-only. */
++        #pragma omp parallel for default(none) shared(a, b, c, d, bnew)
++        for (int i = 1; i < LEN_1D - 1; i++) {
++            a[i] = bnew[i - 1] + c[i] * d[i];
++            b[i] = bnew[i];
++        }
++
+         dummy(a, b, c, d, e);
+     }
++
++    free(bnew);
+     return (real_t)0;
+ }
+ 

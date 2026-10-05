@@ -1,0 +1,45 @@
+#include "data.h"
+#include <stdlib.h>
+
+real_t kernel_s341(void)
+{
+    /* idx[i] holds the destination slot that element i would receive under
+     * the original sequential compaction (the running count of positive
+     * elements seen so far, or -1 if b[i] is not positive).  It is
+     * heap-allocated since LEN_1D can be very large. */
+    int *idx = (int *)malloc((size_t)LEN_1D * sizeof(int));
+
+    for (int nl = 0; nl < iterations; nl++) {
+        /* Sequential scan: reproduces the exact destination index that the
+         * original loop's running counter j would have produced for each
+         * i.  This removes the cross-iteration dependence on j by turning
+         * it into a precomputed table, so the actual data movement below
+         * can run with iterations in any order. */
+        int j = -1;
+        for (int i = 0; i < LEN_1D; i++) {
+            if (b[i] > (real_t)0.) {
+                j++;
+                idx[i] = j;
+            } else {
+                idx[i] = -1;
+            }
+        }
+
+        /* Parallel compaction write: each i that passes the predicate
+         * writes to its own precomputed, unique slot idx[i], so no two
+         * iterations ever touch the same a[] location. a and b are shared
+         * pointers to the (unchanged) data arrays; idx is a shared
+         * read-only lookup table built above. */
+        #pragma omp parallel for default(none) shared(a, b, idx)
+        for (int i = 0; i < LEN_1D; i++) {
+            if (idx[i] >= 0) {
+                a[idx[i]] = b[i];
+            }
+        }
+
+        dummy(a, b, c, d, e);
+    }
+
+    free(idx);
+    return (real_t)0;
+}

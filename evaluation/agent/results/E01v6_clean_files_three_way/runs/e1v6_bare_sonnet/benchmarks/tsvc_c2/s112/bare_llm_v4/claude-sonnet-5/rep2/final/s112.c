@@ -1,0 +1,36 @@
+#include "data.h"
+#include <stdlib.h>
+#include <string.h>
+
+real_t kernel_s112(void)
+{
+    /* Heap-allocated snapshot buffer: in the original decreasing-i loop,
+       a[i+1] = a[i] + b[i] always reads the pre-loop value of a[i], since
+       the iteration that would overwrite a[i] (the one with loop variable
+       i-1) runs strictly later in the i-descending order. Copying a's
+       pre-loop values into tmp makes that fact explicit instead of relying
+       on execution order, so the update loop below can run its iterations
+       in any order: each iteration writes a distinct a[i+1] and only reads
+       from tmp/b, which are never written inside the loop. */
+    real_t *tmp = (real_t *)malloc((size_t)(LEN_1D - 1) * sizeof(real_t));
+
+    for (int nl = 0; nl < iterations; nl++) {
+        /* Snapshot current a[0 .. LEN_1D-2] (reflects any mutation dummy()
+           made on the previous outer iteration), same cost class as the
+           loop it feeds. */
+        memcpy(tmp, a, (size_t)(LEN_1D - 1) * sizeof(real_t));
+
+        /* a: shared, written at a[i+1] for each i -- all indices distinct
+                across iterations, so no two iterations write the same slot.
+           b, tmp: shared, read-only inside this loop.
+           i: loop variable, implicitly private. */
+        #pragma omp parallel for shared(a, b, tmp) schedule(static)
+        for (int i = LEN_1D - 2; i >= 0; i--) {
+            a[i+1] = tmp[i] + b[i];
+        }
+        dummy(a, b, c, d, e);
+    }
+
+    free(tmp);
+    return (real_t)0;
+}

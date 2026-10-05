@@ -1,0 +1,35 @@
+#include "data.h"
+#include <stdlib.h>
+#include <string.h>
+
+real_t kernel_s243(void)
+{
+    /* Snapshot buffer holding a[]'s values as they were before the current
+     * sweep starts.  The loop body reads a[i+1]; in the original ascending
+     * sweep that read always observed the pre-sweep value (iteration i runs
+     * before iteration i+1 overwrites it).  Taking this snapshot once per
+     * sweep lets every iteration i run independently of every other. */
+    real_t *a_old = (real_t *)malloc(sizeof(real_t) * (size_t)LEN_1D);
+
+    for (int nl = 0; nl < iterations; nl++) {
+        memcpy(a_old, a, sizeof(real_t) * (size_t)LEN_1D);
+
+        /* a, b, c, d, e: global arrays, shared; each iteration writes only
+         * a[i] and b[i] and reads c[i], d[i], e[i] and the pre-sweep
+         * a_old[i+1] -- no index is shared between iterations, so the
+         * iterations are now fully independent.
+         * a_old: read-only snapshot of a[], shared.
+         * i: loop variable, declared in the for-statement, private by
+         * construction -- no clause needed. */
+        #pragma omp parallel for default(none) shared(a, b, c, d, e, a_old) schedule(static)
+        for (int i = 0; i < LEN_1D-1; i++) {
+            a[i] = b[i] + c[i  ] * d[i];
+            b[i] = a[i] + d[i  ] * e[i];
+            a[i] = b[i] + a_old[i+1] * d[i];
+        }
+        dummy(a, b, c, d, e);
+    }
+
+    free(a_old);
+    return (real_t)0;
+}

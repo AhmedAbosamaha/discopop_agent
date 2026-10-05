@@ -1,0 +1,19 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_r_4/benchmarks/tsvc_c2/s292/default_v4/claude-haiku-4-5-20251001/rep1/work/s292.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_r_4/benchmarks/tsvc_c2/s292/default_v4/claude-haiku-4-5-20251001/rep1/work/s292.c
+@@ -2,14 +2,11 @@
+ 
+ real_t kernel_s292(void)
+ {
+-    int im1, im2;
+     for (int nl = 0; nl < iterations; nl++) {
+-        im1 = LEN_1D-1;
+-        im2 = LEN_1D-2;
+         for (int i = 0; i < LEN_1D; i++) {
++            int im1 = (i - 1 + LEN_1D) % LEN_1D;
++            int im2 = (i - 2 + LEN_1D) % LEN_1D;
+             a[i] = (b[i] + b[im1] + b[im2]) * (real_t).333;
+-            im2 = im1;
+-            im1 = i;
+         }
+         dummy(a, b, c, d, e);
+     }

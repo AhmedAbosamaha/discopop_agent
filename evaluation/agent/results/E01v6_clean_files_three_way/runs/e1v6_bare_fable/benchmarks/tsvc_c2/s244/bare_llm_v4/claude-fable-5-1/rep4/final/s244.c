@@ -1,0 +1,21 @@
+#include "data.h"
+
+real_t kernel_s244(void)
+{
+    for (int nl = 0; nl < iterations; nl++) {
+        /* The write a[i+1] = ... in iteration i is overwritten by
+         * iteration i+1's a[i+1] = b[i+1] + c[i+1]*d[i+1] without being
+         * read, so it is dead except for the final iteration.  Each i
+         * therefore only touches a[i] and b[i]: fully independent. */
+#pragma omp parallel for default(none) shared(a, b, c, d) schedule(static)
+        for (int i = 0; i < LEN_1D-1; ++i) {
+            a[i] = b[i] + c[i] * d[i];
+            b[i] = c[i] + b[i];
+        }
+        /* Surviving write from the last original iteration (i = LEN_1D-2),
+         * using the already-updated b[LEN_1D-2]. */
+        a[LEN_1D-1] = b[LEN_1D-2] + a[LEN_1D-1] * d[LEN_1D-2];
+        dummy(a, b, c, d, e);
+    }
+    return (real_t)0;
+}

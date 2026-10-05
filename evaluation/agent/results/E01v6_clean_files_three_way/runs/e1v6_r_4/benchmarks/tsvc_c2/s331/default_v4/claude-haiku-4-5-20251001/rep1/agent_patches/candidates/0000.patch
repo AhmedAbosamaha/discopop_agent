@@ -1,0 +1,22 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_r_4/benchmarks/tsvc_c2/s331/default_v4/claude-haiku-4-5-20251001/rep1/work/s331.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_r_4/benchmarks/tsvc_c2/s331/default_v4/claude-haiku-4-5-20251001/rep1/work/s331.c
+@@ -2,15 +2,16 @@
+ 
+ real_t kernel_s331(void)
+ {
+-    int j;
++    int j = -1;
+     real_t chksum;
+     for (int nl = 0; nl < iterations; nl++) {
+-        j = -1;
++        int j_local = -1;
+         for (int i = 0; i < LEN_1D; i++) {
+             if (a[i] < (real_t)0.) {
+-                j = i;
++                j_local = i;
+             }
+         }
++        j = j_local;
+         chksum = (real_t) j;
+         dummy(a, b, c, d, e);
+     }

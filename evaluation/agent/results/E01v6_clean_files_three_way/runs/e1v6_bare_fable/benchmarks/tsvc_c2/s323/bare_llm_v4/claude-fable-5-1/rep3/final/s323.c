@@ -1,0 +1,26 @@
+#include "data.h"
+
+real_t kernel_s323(void)
+{
+    for (int nl = 0; nl < iterations; nl++) {
+        /* Phase 1: the true recurrence on b, kept sequential and in the
+         * original operation order so rounding is identical.  The value
+         * the original stored into a[i] is just the intermediate t. */
+        real_t bp = b[0];
+        for (int i = 1; i < LEN_1D; i++) {
+            real_t t = bp + c[i] * d[i];
+            bp = t + c[i] * e[i];
+            b[i] = bp;
+        }
+
+        /* Phase 2: a[i] depends only on the final b[i-1], c[i], d[i];
+         * iterations are independent (each writes only its own a[i]). */
+        #pragma omp parallel for default(none) shared(a, b, c, d) schedule(static)
+        for (int i = 1; i < LEN_1D; i++) {
+            a[i] = b[i-1] + c[i] * d[i];
+        }
+
+        dummy(a, b, c, d, e);
+    }
+    return (real_t)0;
+}

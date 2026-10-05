@@ -1,0 +1,19 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_d/benchmarks/tsvc_c2/s322/default_v4/claude-haiku-4-5-20251001/rep2/work/s322.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_d/benchmarks/tsvc_c2/s322/default_v4/claude-haiku-4-5-20251001/rep2/work/s322.c
+@@ -3,8 +3,15 @@
+ real_t kernel_s322(void)
+ {
+     for (int nl = 0; nl < iterations; nl++) {
++        // Track propagating values explicitly through scalar chain variables
++        // to make the pipeline of computed values clear
++        real_t carry_i_minus_1 = a[1];
++        real_t carry_i_minus_2 = a[0];
+         for (int i = 2; i < LEN_1D; i++) {
+-            a[i] = a[i] + a[i - 1] * b[i] + a[i - 2] * c[i];
++            real_t new_a_i = a[i] + carry_i_minus_1 * b[i] + carry_i_minus_2 * c[i];
++            a[i] = new_a_i;
++            carry_i_minus_2 = carry_i_minus_1;
++            carry_i_minus_1 = new_a_i;
+         }
+         dummy(a, b, c, d, e);
+     }

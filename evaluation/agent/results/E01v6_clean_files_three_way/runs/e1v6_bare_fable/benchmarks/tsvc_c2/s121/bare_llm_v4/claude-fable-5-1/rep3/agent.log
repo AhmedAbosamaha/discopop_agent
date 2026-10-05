@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s121.c
+  Model          : claude-fable-5-1
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror
+
+│  [bare] Calling claude-fable-5-1...
+│  [bare] s121.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: I'll read the target file and the main unit for context.The rewrite is applied to `s121.c`. **What changed** - The loop `a[i] = a[i+1] + b[i]` carried only an anti-dependence (a reused location, not a value flowing between iterations). Each `nl` activation now first copies `a` into a heap buffer `a_old` (one `malloc` outside the `nl` loop, `free`d after), then computes `a[i] = a_old[i+1] + b[i]`. 
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

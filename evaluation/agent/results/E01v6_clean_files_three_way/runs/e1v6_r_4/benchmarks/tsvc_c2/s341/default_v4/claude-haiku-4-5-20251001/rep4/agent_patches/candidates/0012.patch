@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_r_4/benchmarks/tsvc_c2/s341/default_v4/claude-haiku-4-5-20251001/rep4/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_r_4/benchmarks/tsvc_c2/s341/default_v4/claude-haiku-4-5-20251001/rep4/work/s341.c
+@@ -16,6 +16,7 @@
+             }
+         }
+         // Second pass: write to correct positions (parallelizable - no loop-carried dependence)
++        #pragma omp parallel for shared(prefix) 
+         for (int i = 0; i < LEN_1D; i++) {
+             if (prefix[i] > 0) {
+                 a[prefix[i] - 1] = b[i];

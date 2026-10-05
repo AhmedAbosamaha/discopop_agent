@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s254.c
+  Model          : claude-sonnet-5
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s254.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: **Plan:** The loop carries `x`, which at iteration `i` always equals `b[i-1]` (with wraparound: `b[LEN_1D-1]` when `i==0`). This is just a shifted read of `b`, not an accumulation — so the carried value can be reconstructed locally each iteration via `b[i==0 ? LEN_1D-1 : i-1]` instead of being threaded through `x`. That removes the loop-carried dependence entirely: each iteration only reads `b[i]`
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

@@ -1,0 +1,60 @@
+--- original.c
++++ final.c
+@@ -59,18 +59,52 @@
+ 
+ /* ==== s281.c ==== */
+ #include "data.h"
++#include <stdlib.h>
++#include <string.h>
+ 
+ real_t kernel_s281(void)
+ {
+-    real_t x;
++    /* a_orig: heap-allocated snapshot of 'a' taken before each pass, so
++     * that the cross-iteration read a[LEN_1D-1-i] can be resolved without
++     * a dependence between parallel iterations. */
++    real_t *a_orig = (real_t *)malloc(sizeof(real_t) * LEN_1D);
++
+     for (int nl = 0; nl < iterations; nl++) {
+-        for (int i = 0; i < LEN_1D; i++) {
+-            x = a[LEN_1D-i-1] + b[i] * c[i];
+-            a[i] = x-(real_t)1.0;
+-            b[i] = x;
++        memcpy(a_orig, a, sizeof(real_t) * LEN_1D);
++
++        int half = LEN_1D / 2;
++
++        /* Each loop iteration owns the disjoint pair of indices (i, j)
++         * with j = LEN_1D-1-i. All cross-iteration reads of 'a' are
++         * satisfied from the read-only snapshot a_orig, and the
++         * within-pair dependence (j's computation needs the value just
++         * written to a[i]) is kept local to the iteration, so different
++         * iterations no longer depend on each other. */
++        #pragma omp parallel for default(none) shared(a, b, c, a_orig) \
++            firstprivate(half) schedule(static)
++        for (int i = 0; i < half; i++) {
++            int j = LEN_1D - 1 - i;
++
++            real_t xi = a_orig[j] + b[i] * c[i];
++            a[i] = xi - (real_t)1.0;
++            b[i] = xi;
++
++            real_t xj = a[i] + b[j] * c[j];
++            a[j] = xj - (real_t)1.0;
++            b[j] = xj;
+         }
++
++        if (LEN_1D % 2 == 1) {
++            int mid = LEN_1D / 2;
++            real_t xm = a_orig[mid] + b[mid] * c[mid];
++            a[mid] = xm - (real_t)1.0;
++            b[mid] = xm;
++        }
++
+         dummy(a, b, c, d, e);
+     }
++
++    free(a_orig);
+     return (real_t)0;
+ }
+ 

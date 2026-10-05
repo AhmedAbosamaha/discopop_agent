@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s313.c
+  Model          : claude-sonnet-5
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s313.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Plan: The inner loop computes a dot product reduction over `a[i]*b[i]`. The dependence is the accumulation into `dot` — that's a classic reduction, not a true cross-iteration data dependence, so it's safe to parallelize with `reduction(+:dot)`. The outer loop must stay sequential (it calls `dummy` each iteration, reusing `dot` from the previous iteration's last computed value, and iterations aren'
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

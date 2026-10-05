@@ -1,0 +1,231 @@
+{
+  "benchmark": "tsvc_c2/s244",
+  "kernel": "s244",
+  "source": "s244.c",
+  "arm": "bare_llm_v4",
+  "model": "claude-haiku-4-5-20251001",
+  "arm_flags": [
+    "--require-speedup",
+    "--min-runtime-share",
+    "0.01",
+    "--prompt-version",
+    "4",
+    "--timing-cflags=-DLARGE_DATASET"
+  ],
+  "started_at": "2026-10-05T04:30:41",
+  "host": "rms14562",
+  "host_load_start": [
+    5.55859375,
+    5.78369140625,
+    6.18994140625
+  ],
+  "agent_cmd": [
+    "/home/ahmedabosamaha/discopop_agent/venv/bin/python",
+    "-m",
+    "discopop_agent.bare_llm",
+    "--project-dir",
+    ".",
+    "--project-units",
+    "s244.c,main.c",
+    "--project-include",
+    ".",
+    "--project-editable",
+    "s244.c",
+    "--model",
+    "claude-haiku-4-5-20251001",
+    "--prompt-version",
+    "4",
+    "--exclude-functions",
+    "main,dummy"
+  ],
+  "agent_s": 110.5,
+  "agent_rc": 0,
+  "llm_calls": 1,
+  "llm_call_failures": 0,
+  "harness_reasks": 0,
+  "harness_discards": 0,
+  "explorer_retries": 0,
+  "explorer_stalls": 0,
+  "reverts": 0,
+  "refresh_fast": 0,
+  "refresh_full": 0,
+  "refresh_fallback": 0,
+  "runtime_remeasurements": 0,
+  "phase_b_deferred": 0,
+  "phase_b_joint_kept": 0,
+  "dp_floor": null,
+  "gate_failures_phase_a": {},
+  "gate_failures_phase_b": {},
+  "gate_passes_phase_a": 0,
+  "gate_failures_d40": {},
+  "d40_verdicts": {},
+  "exposure_verdicts": {},
+  "d40_seconds": 0,
+  "requeued_regions": 0,
+  "region_verdicts": {},
+  "settle_dropped": 0,
+  "llm_usage": {
+    "calls_recorded": 1,
+    "input_tokens": 66,
+    "output_tokens": 15391,
+    "cache_read_input_tokens": 123864,
+    "cache_creation_input_tokens": 17199,
+    "cost_usd": 0.1251,
+    "model_seconds": 109.4
+  },
+  "layout": "project",
+  "files_changed": [
+    "s244.c"
+  ],
+  "source_changed": true,
+  "scaffold": {
+    "ok": true,
+    "problems": [],
+    "applies": true
+  },
+  "editable": [
+    "s244.c"
+  ],
+  "harness_sha256": "d754b41593298ebfe8a7a0c71dc02927660b210fc6efc3316bff614375342199",
+  "pragmas_added": 2,
+  "pragmas_in_final": 2,
+  "hot_loop": {
+    "entry": "kernel_s244",
+    "function": "kernel_s244",
+    "line": 6,
+    "writes": [
+      "a",
+      "b"
+    ]
+  },
+  "hot_loop_covered": true,
+  "hot_loop_coverage": {
+    "criterion": "v2 (27 Sep 2026)",
+    "covered": true,
+    "covering": [
+      {
+        "function": "kernel_s244",
+        "line": 7,
+        "directive": "#pragma omp parallel for shared(a, b, c, d)",
+        "writes": [
+          "a",
+          "b"
+        ]
+      },
+      {
+        "function": "kernel_s244",
+        "line": 14,
+        "directive": "#pragma omp parallel for shared(a, b, d)",
+        "writes": [
+          "a"
+        ]
+      }
+    ],
+    "uncounted": [],
+    "elsewhere": []
+  },
+  "candidates_recorded": 0,
+  "verify": {
+    "verify_size": "LARGE",
+    "threads": [
+      6,
+      12
+    ],
+    "repeats": 5,
+    "compiler": "/usr/bin/clang-20",
+    "final_flags": [],
+    "dump_exact": false,
+    "dump_max_rel_err": 0.6487681302917042,
+    "seed": "7",
+    "dump_exact_seeded": false,
+    "dump_seeded_max_rel_err": 0.6738410406031652,
+    "seq_median_s": 1.9546,
+    "seq_kernel_median_s": 1.583156,
+    "timing_basis": "kernel",
+    "par": {
+      "6": {
+        "median_s": 0.8892,
+        "program_speedup": 2.198,
+        "max_rel_err": 0.3253907777958083,
+        "kernel_median_s": 0.466312,
+        "kernel_speedup": 3.395,
+        "speedup": 3.395
+      },
+      "12": {
+        "median_s": 0.8824,
+        "program_speedup": 2.215,
+        "max_rel_err": 0.3253907777958083,
+        "kernel_median_s": 0.455975,
+        "kernel_speedup": 3.472,
+        "speedup": 3.472
+      }
+    },
+    "digest_max_rel_err": 0.3253907777958083,
+    "stable_at_fixed_threads": true,
+    "kernel_program_disagree": false,
+    "digest_seeded_rel_err": 0.33587795019242933,
+    "status": "ok",
+    "speed_measurable": true
+  },
+  "verify_s": 22.5,
+  "status": "done",
+  "outcome": "BROKEN",
+  "finished_at": "2026-10-05T04:32:53",
+  "host_load_end": [
+    6.017578125,
+    6.0166015625,
+    6.2294921875
+  ],
+  "profile": {
+    "wrapper": "discopop_cc",
+    "layout": "project",
+    "units": [
+      "s244.c",
+      "main.c"
+    ],
+    "instrument_s": 0.21,
+    "profiled_run_s": 0.27,
+    "explore_stalls": 0,
+    "explore_s": 1.42,
+    "explore_success_s": 1.42,
+    "explore_attempts": 1,
+    "explore_timed_out": false,
+    "explore_failures": [],
+    "patterns": {
+      "optimizer_output": 0,
+      "merged_pattern": 0,
+      "task": 0,
+      "do_all": 0,
+      "reduction": 0
+    },
+    "profile_sha256": "610f7249c66f48ae6cdd1dc9ec61cdf8533eb06d5b9f55ebb832305025f4047a"
+  },
+  "package_integrity": {
+    "before": {
+      "checked": "before trial",
+      "at": "2026-10-05T04:30:40",
+      "prepared_sha256": "0de7c5eb740875d527837f24c7b23b74d3f74c9dc72c2305f99938917f73a2b4",
+      "packager_sha256": "0de7c5eb740875d527837f24c7b23b74d3f74c9dc72c2305f99938917f73a2b4",
+      "harness_sha256": "d754b41593298ebfe8a7a0c71dc02927660b210fc6efc3316bff614375342199",
+      "archived_sha256": "0de7c5eb740875d527837f24c7b23b74d3f74c9dc72c2305f99938917f73a2b4",
+      "profile_sha256": "610f7249c66f48ae6cdd1dc9ec61cdf8533eb06d5b9f55ebb832305025f4047a",
+      "ok": true
+    },
+    "after": {
+      "checked": "after trial",
+      "at": "2026-10-05T04:32:53",
+      "prepared_sha256": "0de7c5eb740875d527837f24c7b23b74d3f74c9dc72c2305f99938917f73a2b4",
+      "packager_sha256": "0de7c5eb740875d527837f24c7b23b74d3f74c9dc72c2305f99938917f73a2b4",
+      "harness_sha256": "d754b41593298ebfe8a7a0c71dc02927660b210fc6efc3316bff614375342199",
+      "archived_sha256": "0de7c5eb740875d527837f24c7b23b74d3f74c9dc72c2305f99938917f73a2b4",
+      "profile_sha256": "610f7249c66f48ae6cdd1dc9ec61cdf8533eb06d5b9f55ebb832305025f4047a",
+      "ok": true
+    }
+  },
+  "speed_check_off": false,
+  "timing_flags": [
+    "--timing-cflags=-DLARGE_DATASET"
+  ],
+  "harness_edit_redos": [],
+  "repeat": 1
+}

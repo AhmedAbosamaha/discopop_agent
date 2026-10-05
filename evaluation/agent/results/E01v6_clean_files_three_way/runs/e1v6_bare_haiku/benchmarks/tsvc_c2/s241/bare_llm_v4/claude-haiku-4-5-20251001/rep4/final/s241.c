@@ -1,0 +1,25 @@
+#include "data.h"
+#include <stdlib.h>
+#include <string.h>
+
+real_t kernel_s241(void)
+{
+    for (int nl = 0; nl < iterations; nl++) {
+        /* Save old a[] values before the loop to break the loop-carried dependence:
+           iteration i reads a[i+1], which would be written by iteration i+1.
+           Using a_old ensures each iteration reads the same initial value it would
+           see in the sequential version, allowing full parallelization. */
+        real_t *a_old = malloc(sizeof(real_t) * LEN_1D);
+        memcpy(a_old, a, sizeof(real_t) * LEN_1D);
+
+        #pragma omp parallel for shared(a, b, c, d, a_old)
+        for (int i = 0; i < LEN_1D-1; i++) {
+            a[i] = b[i] * c[i] * d[i];
+            b[i] = a[i] * a_old[i+1] * d[i];
+        }
+
+        free(a_old);
+        dummy(a, b, c, d, e);
+    }
+    return (real_t)0;
+}

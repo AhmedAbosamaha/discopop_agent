@@ -1,0 +1,44 @@
+{
+  "suite": "tsvc_c2",
+  "kernel": "s341",
+  "source": "benchmarks/TSVC_2/src/tsvc.c",
+  "category": "packing / pack positive values / not vectorizable, value of j in unknown at each iteration",
+  "file": "s341.c",
+  "language": "c",
+  "layout": "project",
+  "project": {
+    "units": [
+      "s341.c",
+      "main.c"
+    ],
+    "include_dirs": [
+      "."
+    ],
+    "editable": [
+      "s341.c"
+    ]
+  },
+  "restructuring_class": "restructure",
+  "transformation": "packing (stream compaction): count, prefix offsets, scatter",
+  "why": "the output position j depends on how many earlier elements were positive",
+  "reference_solution": "agent/reference_solutions/tsvc_c2/s341.c",
+  "exclude_functions": [
+    "main",
+    "dummy"
+  ],
+  "harness": "tsvc_c2/s341.h",
+  "harness_sha256": "e6528d0fea1bf53f19e59ba98fd21c5407b0343eeb19bd77d5246735ec8f18fc",
+  "hot_loop": {
+    "entry": "kernel_s341",
+    "function": "kernel_s341",
+    "line": 8,
+    "writes": [
+      "a",
+      "j"
+    ]
+  },
+  "agent_dataset": "SMALL",
+  "generator_version": 6,
+  "inputs_sha256": "456dd573b84b30e6f32c943bb559d80374eec67177de48223e95124a8c3fc627",
+  "output_sha256": "390d25c4d1de954e139818de9237fb53b57b4bcb562c79885d991014ad547246"
+}

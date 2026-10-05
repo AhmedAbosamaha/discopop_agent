@@ -1,0 +1,18 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_r_4/benchmarks/tsvc_c2/s341/default_v4/claude-haiku-4-5-20251001/rep1/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_r_4/benchmarks/tsvc_c2/s341/default_v4/claude-haiku-4-5-20251001/rep1/work/s341.c
+@@ -9,6 +9,7 @@
+ 
+     for (int nl = 0; nl < iterations; nl++) {
+         /* Pass 1: compute count array (1 if b[i] > 0, else 0) */
++        #pragma omp parallel for shared(count) 
+         for (int i = 0; i < LEN_1D; i++) {
+             count[i] = (b[i] > (real_t)0.) ? 1 : 0;
+         }
+@@ -20,6 +21,7 @@
+         }
+ 
+         /* Pass 3: write positive elements to a at precomputed positions */
++        #pragma omp parallel for shared(pos,count) 
+         for (int i = 0; i < LEN_1D; i++) {
+             if (count[i]) {
+                 a[pos[i]] = b[i];

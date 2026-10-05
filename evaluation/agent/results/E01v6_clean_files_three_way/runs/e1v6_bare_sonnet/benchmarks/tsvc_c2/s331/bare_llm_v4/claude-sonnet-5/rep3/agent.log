@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s331.c
+  Model          : claude-sonnet-5
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s331.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: LEN_1D is large (32000+ up to 192M) and `iterations`=48 is just a fixed repeat count for timing — confirms the inner `i` loop is the one with real per-activation work, and the outer `nl` loop must stay sequential (it carries `j`/`chksum` across iterations into the final `return j+1`, and reorders the `dummy()` call sequence). Plan: - Dependence being removed: the inner loop currently does a sequen
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

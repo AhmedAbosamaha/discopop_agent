@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_a/benchmarks/tsvc_c2/vpvtv/default_v4/claude-haiku-4-5-20251001/rep1/work/vpvtv.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_a/benchmarks/tsvc_c2/vpvtv/default_v4/claude-haiku-4-5-20251001/rep1/work/vpvtv.c
+@@ -8,6 +8,7 @@
+     memcpy(b_prev, b, sizeof(real_t) * LEN_1D);
+ 
+     for (int nl = 0; nl < iterations; nl++) {
++        #pragma omp parallel for shared(b_prev) 
+         for (int i = 0; i < LEN_1D; i++) {
+             a[i] += b_prev[i] * c[i];
+         }

@@ -1,0 +1,25 @@
+#include "data.h"
+
+real_t kernel_s255(void)
+{
+    for (int nl = 0; nl < iterations; nl++) {
+        /* Original recurrence carried x = b[i-1] and y = b[i-2] (circularly
+         * wrapped at the array ends via the initial x = b[LEN_1D-1],
+         * y = b[LEN_1D-2]) forward through the loop body, which serializes
+         * the iterations. That carried value is just b at a shifted,
+         * wrapped-around index, so it can be recovered directly from b
+         * with no dependence between iterations: for each i, the two
+         * indices needed are (i-1) and (i-2) taken modulo LEN_1D. This
+         * makes every iteration independent and safe to run in parallel
+         * in any order.
+         */
+        #pragma omp parallel for shared(a, b) schedule(static)
+        for (int i = 0; i < LEN_1D; i++) {
+            int im1 = (i == 0) ? LEN_1D - 1 : i - 1;
+            int im2 = (i <= 1) ? LEN_1D - 2 + i : i - 2;
+            a[i] = (b[i] + b[im1] + b[im2]) * (real_t).333;
+        }
+        dummy(a, b, c, d, e);
+    }
+    return (real_t)0;
+}

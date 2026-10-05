@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s3112.c
+  Model          : claude-sonnet-5
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s3112.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan **Dependence:** `sum` is a running total carried left‑to‑right across `i`; `b[i]` depends on every `a[0..i]`. That's a true value dependence between iterations of the inner loop, so the inner loop itself can't be sliced into independent iterations as written — but the *value* can be moved instead of deleted: split `i` into contiguous blocks, let each block compute its own local prefix sum 
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

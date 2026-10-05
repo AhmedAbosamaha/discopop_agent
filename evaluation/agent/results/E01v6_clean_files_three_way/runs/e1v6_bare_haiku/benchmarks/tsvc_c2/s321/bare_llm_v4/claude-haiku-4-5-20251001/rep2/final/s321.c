@@ -1,0 +1,18 @@
+#include "data.h"
+
+real_t kernel_s321(void)
+{
+    /* The inner loop contains a loop-carry dependency: a[i] += a[i-1] * b[i]
+       where a[i-1] is computed in the previous iteration. This recurrence
+       relation makes direct parallelization impossible while preserving
+       byte-identical output (floating-point operations are not associative).
+       The outer loop is also dependent on previous iterations since each
+       iteration operates on the modified state of array a[]. */
+    for (int nl = 0; nl < iterations; nl++) {
+        for (int i = 1; i < LEN_1D; i++) {
+            a[i] += a[i-1] * b[i];
+        }
+        dummy(a, b, c, d, e);
+    }
+    return (real_t)0;
+}

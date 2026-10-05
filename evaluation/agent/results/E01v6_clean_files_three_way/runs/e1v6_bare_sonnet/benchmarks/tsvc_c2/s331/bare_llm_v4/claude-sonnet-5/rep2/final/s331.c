@@ -1,0 +1,30 @@
+#include "data.h"
+
+real_t kernel_s331(void)
+{
+    int j;
+    real_t chksum;
+    for (int nl = 0; nl < iterations; nl++) {
+        j = -1;
+        /* Original dependence: j is overwritten by every qualifying i, so
+         * after the loop j holds the LAST (largest) index i for which
+         * a[i] < 0.  That is exactly a max-reduction over i restricted to
+         * qualifying elements, with -1 as the neutral/"no match" value.
+         * Rewritten as: each thread keeps its own running max index of
+         * qualifying elements (shared array a is read-only here, i is
+         * loop-private), and the per-thread maxima are combined with the
+         * original j (-1) via max, giving the same final j as the
+         * sequential last-match scan regardless of iteration order. */
+        #pragma omp parallel for reduction(max:j)
+        for (int i = 0; i < LEN_1D; i++) {
+            if (a[i] < (real_t)0.) {
+                if (i > j) {
+                    j = i;
+                }
+            }
+        }
+        chksum = (real_t) j;
+        dummy(a, b, c, d, e);
+    }
+    return j+1;
+}

@@ -1,0 +1,10 @@
+--- original.c
++++ final.c
+@@ -66,6 +66,7 @@
+     real_t chksum;
+     for (int nl = 0; nl < iterations; nl++) {
+         j = -1;
++        #pragma omp parallel for reduction(max:j) shared(a) schedule(static)
+         for (int i = 0; i < LEN_1D; i++) {
+             if (a[i] < (real_t)0.) {
+                 j = i;

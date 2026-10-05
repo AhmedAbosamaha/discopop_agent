@@ -1,0 +1,47 @@
+#include "data.h"
+
+#define S3112_NB 128
+
+real_t kernel_s3112(void)
+{
+    real_t sum = (real_t)0.0;
+    real_t part[S3112_NB];
+    for (int nl = 0; nl < iterations; nl++) {
+        /* pass 1: per-block totals, each accumulated in index order from 0 */
+#pragma omp parallel for schedule(static) shared(a, part) default(none)
+        for (int k = 0; k < S3112_NB; k++) {
+            long lo = (long)k * LEN_1D / S3112_NB;
+            long hi = (long)(k + 1) * LEN_1D / S3112_NB;
+            real_t s = (real_t)0.0;
+            for (long i = lo; i < hi; i++) {
+                s += a[i];
+            }
+            part[k] = s;
+        }
+
+        /* pass 2: serial exclusive scan of block totals -> block offsets */
+        real_t run = (real_t)0.0;
+        for (int k = 0; k < S3112_NB; k++) {
+            real_t t = part[k];
+            part[k] = run;
+            run += t;
+        }
+
+        /* pass 3: each block writes its running sums starting from its offset */
+#pragma omp parallel for schedule(static) shared(a, b, part) default(none)
+        for (int k = 0; k < S3112_NB; k++) {
+            long lo = (long)k * LEN_1D / S3112_NB;
+            long hi = (long)(k + 1) * LEN_1D / S3112_NB;
+            real_t s = part[k];
+            for (long i = lo; i < hi; i++) {
+                s += a[i];
+                b[i] = s;
+            }
+        }
+
+        /* the original leaves sum equal to the last value stored in b */
+        sum = b[LEN_1D - 1];
+        dummy(a, b, c, d, e);
+    }
+    return sum;
+}

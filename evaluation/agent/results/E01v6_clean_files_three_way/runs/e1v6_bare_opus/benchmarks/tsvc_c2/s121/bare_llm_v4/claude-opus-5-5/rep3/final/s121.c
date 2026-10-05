@@ -1,0 +1,23 @@
+#include <stdlib.h>
+#include "data.h"
+
+real_t kernel_s121(void)
+{
+    real_t *tmp = (real_t *)malloc(sizeof(real_t) * LEN_1D);
+    for (int nl = 0; nl < iterations; nl++) {
+        /* pass 1: read only old values of a */
+        #pragma omp parallel for default(none) shared(a, b, tmp) schedule(static)
+        for (int i = 0; i < LEN_1D - 1; i++) {
+            int j = i + 1;
+            tmp[i] = a[j] + b[i];
+        }
+        /* pass 2: commit new values */
+        #pragma omp parallel for default(none) shared(a, tmp) schedule(static)
+        for (int i = 0; i < LEN_1D - 1; i++) {
+            a[i] = tmp[i];
+        }
+        dummy(a, b, c, d, e);
+    }
+    free(tmp);
+    return (real_t)0;
+}

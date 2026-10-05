@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s255.c
+  Model          : claude-sonnet-5
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s255.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan The inner loop carries a true recurrence: `x` and `y` hold `b[i-1]` and `b[i-2]` (with wraparound at the start, since `x`/`y` are seeded from `b[LEN_1D-1]`/`b[LEN_1D-2]`). Tracing it through: - `i == 0`: `a[0] = b[0] + b[LEN_1D-1] + b[LEN_1D-2]` - `i == 1`: `a[1] = b[1] + b[0] + b[LEN_1D-1]` - `i >= 2`: `a[i] = b[i] + b[i-1] + b[i-2]` So `x` and `y` are nothing but `b` indexed at `i-1` and
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

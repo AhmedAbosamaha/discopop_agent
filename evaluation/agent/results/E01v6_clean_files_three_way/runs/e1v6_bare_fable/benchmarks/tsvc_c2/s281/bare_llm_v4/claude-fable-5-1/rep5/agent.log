@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s281.c
+  Model          : claude-fable-5-1
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror
+
+│  [bare] Calling claude-fable-5-1...
+│  [bare] s281.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: The rewrite is applied in `s281.c`: - **Dependence removed**: the mirrored read `a[LEN_1D-i-1]` in the second half of the loop consumed values written by the first half. Splitting at `half = (LEN_1D+1)/2` moves that dependence between two loops instead of between iterations: loop 1 finishes (implicit barrier at the end of its parallel region) before loop 2 reads what it wrote. - **Bound re-derivat
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

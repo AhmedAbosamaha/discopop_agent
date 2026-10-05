@@ -1,0 +1,37 @@
+#include <stdlib.h>
+#include "data.h"
+
+real_t kernel_s112(void)
+{
+    real_t *tmp = (real_t *)malloc((size_t)LEN_1D * sizeof(real_t));
+    if (tmp == NULL) {
+        /* fall back to the original sequential computation */
+        for (int nl = 0; nl < iterations; nl++) {
+            for (int i = LEN_1D - 2; i >= 0; i--) {
+                a[i+1] = a[i] + b[i];
+            }
+            dummy(a, b, c, d, e);
+        }
+        return (real_t)0;
+    }
+
+    for (int nl = 0; nl < iterations; nl++) {
+        /* Snapshot the old values of a[0..LEN_1D-2]; the original loop
+           reads each a[i] before it is overwritten (anti-dependence). */
+#pragma omp parallel for default(none) shared(a, tmp) schedule(static)
+        for (int i = 0; i < LEN_1D - 1; i++) {
+            tmp[i] = a[i];
+        }
+
+        /* a[i+1] = old a[i] + b[i]; now independent across iterations. */
+#pragma omp parallel for default(none) shared(a, b, tmp) schedule(static)
+        for (int i = 0; i < LEN_1D - 1; i++) {
+            a[i+1] = tmp[i] + b[i];
+        }
+
+        dummy(a, b, c, d, e);
+    }
+
+    free(tmp);
+    return (real_t)0;
+}

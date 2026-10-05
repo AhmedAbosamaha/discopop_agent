@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s281.c
+  Model          : claude-sonnet-5
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s281.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan **Dependence:** `a[LEN_1D-i-1]` reads index `k = LEN_1D-1-i` while the loop writes `a[i]`. In the sequential order, iteration `i` sees: - the **original** `a[k]` if `k > i` (not yet reached), or - the **freshly written** `a[k]` if `k < i` (already processed). So index `i` and its mirror `k = LEN_1D-1-i` form a dependent *pair*: whichever of the two has the smaller index is computed first (
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

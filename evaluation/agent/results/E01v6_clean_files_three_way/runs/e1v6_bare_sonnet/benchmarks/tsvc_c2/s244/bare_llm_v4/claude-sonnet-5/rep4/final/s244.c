@@ -1,0 +1,26 @@
+#include "data.h"
+
+real_t kernel_s244(void)
+{
+    for (int nl = 0; nl < iterations; nl++) {
+        /* Original loop wrote a[i] (from old b[i]) and then a[i+1] (from the
+         * just-updated b[i] and the *old* a[i+1]).  For every i except the
+         * very last one, that a[i+1] write is immediately clobbered by the
+         * next iteration's a[i+1] = b[i+1] + c[i+1]*d[i+1] computation, so
+         * it never survives to be read anywhere.  Only the last iteration's
+         * a[i+1] write (into a[LEN_1D-1]) is never overwritten and is the
+         * only one that matters.  b[i] = c[i] + b[i] never depends on any
+         * other index, so the whole loop body is independent across i once
+         * the dead a[i+1] write is dropped; we do that single surviving
+         * write afterward, sequentially, using the now-updated b[LEN_1D-2]
+         * and the still-untouched original a[LEN_1D-1]. */
+        #pragma omp parallel for schedule(static) shared(a, b, c, d) default(none)
+        for (int i = 0; i < LEN_1D-1; ++i) {
+            a[i] = b[i] + c[i] * d[i];
+            b[i] = c[i] + b[i];
+        }
+        a[LEN_1D-1] = b[LEN_1D-2] + a[LEN_1D-1] * d[LEN_1D-2];
+        dummy(a, b, c, d, e);
+    }
+    return (real_t)0;
+}

@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s212.c
+  Model          : claude-sonnet-5
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s212.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan **Dependence analysis:** In the original loop ``` for i in 0..LEN_1D-2: a[i] *= c[i]; b[i] += a[i+1] * d[i]; ``` iteration `i` reads `a[i+1]` *before* iteration `i+1` has had a chance to scale it (sequential order guarantees that). So the value used for `b[i]` is always the **pre-loop** value of `a[i+1]`, while iteration `i+1` later overwrites `a[i+1]` in place. Running iterations out of o
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

@@ -1,0 +1,26 @@
+--- original.c
++++ final.c
+@@ -66,9 +66,20 @@
+     real_t chksum;
+     for (int nl = 0; nl < iterations; nl++) {
+         j = -1;
+-        for (int i = 0; i < LEN_1D; i++) {
+-            if (a[i] < (real_t)0.) {
+-                j = i;
++        #pragma omp parallel shared(a, j)
++        {
++            int local_j = -1;
++            #pragma omp for
++            for (int i = 0; i < LEN_1D; i++) {
++                if (a[i] < (real_t)0.) {
++                    local_j = i;
++                }
++            }
++            #pragma omp critical
++            {
++                if (local_j > j) {
++                    j = local_j;
++                }
+             }
+         }
+         chksum = (real_t) j;

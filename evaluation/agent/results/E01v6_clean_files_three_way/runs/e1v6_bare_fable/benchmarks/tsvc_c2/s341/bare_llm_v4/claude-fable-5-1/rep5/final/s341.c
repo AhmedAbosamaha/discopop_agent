@@ -1,0 +1,61 @@
+#include "data.h"
+#include <stdlib.h>
+
+#define S341_NBLK 512
+
+real_t kernel_s341(void)
+{
+    int j;
+    const int nblk = S341_NBLK;
+    const int chunk = (LEN_1D + nblk - 1) / nblk;
+    int *cnt = (int *)malloc((size_t)nblk * sizeof(int));
+    int *off = (int *)malloc((size_t)(nblk + 1) * sizeof(int));
+
+    for (int nl = 0; nl < iterations; nl++) {
+        /* Phase 1: count positives in each block (independent per block). */
+#pragma omp parallel for default(none) shared(b, cnt) firstprivate(nblk, chunk) schedule(static)
+        for (int blk = 0; blk < nblk; blk++) {
+            int lo = blk * chunk;
+            int hi = lo + chunk;
+            if (lo > LEN_1D) lo = LEN_1D;
+            if (hi > LEN_1D) hi = LEN_1D;
+            int c_local = 0;
+            for (int i = lo; i < hi; i++) {
+                if (b[i] > (real_t)0.) {
+                    c_local++;
+                }
+            }
+            cnt[blk] = c_local;
+        }
+
+        /* Phase 2: exclusive prefix scan over block counts (serial, O(nblk)). */
+        off[0] = 0;
+        for (int blk = 0; blk < nblk; blk++) {
+            off[blk + 1] = off[blk] + cnt[blk];
+        }
+
+        /* Phase 3: each block packs its positives starting at its own offset. */
+#pragma omp parallel for default(none) shared(a, b, off) firstprivate(nblk, chunk) schedule(static)
+        for (int blk = 0; blk < nblk; blk++) {
+            int lo = blk * chunk;
+            int hi = lo + chunk;
+            if (lo > LEN_1D) lo = LEN_1D;
+            if (hi > LEN_1D) hi = LEN_1D;
+            int k = off[blk];
+            for (int i = lo; i < hi; i++) {
+                if (b[i] > (real_t)0.) {
+                    a[k] = b[i];
+                    k++;
+                }
+            }
+        }
+
+        j = off[nblk] - 1;
+        (void)j;
+        dummy(a, b, c, d, e);
+    }
+
+    free(cnt);
+    free(off);
+    return (real_t)0;
+}

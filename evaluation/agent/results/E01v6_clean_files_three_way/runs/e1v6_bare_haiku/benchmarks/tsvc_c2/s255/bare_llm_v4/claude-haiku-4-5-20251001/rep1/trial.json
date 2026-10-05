@@ -1,0 +1,197 @@
+{
+  "benchmark": "tsvc_c2/s255",
+  "kernel": "s255",
+  "source": "s255.c",
+  "arm": "bare_llm_v4",
+  "model": "claude-haiku-4-5-20251001",
+  "arm_flags": [
+    "--require-speedup",
+    "--min-runtime-share",
+    "0.01",
+    "--prompt-version",
+    "4",
+    "--timing-cflags=-DLARGE_DATASET"
+  ],
+  "started_at": "2026-10-05T04:10:38",
+  "host": "rms14562",
+  "host_load_start": [
+    5.98583984375,
+    7.09619140625,
+    7.404296875
+  ],
+  "agent_cmd": [
+    "/home/ahmedabosamaha/discopop_agent/venv/bin/python",
+    "-m",
+    "discopop_agent.bare_llm",
+    "--project-dir",
+    ".",
+    "--project-units",
+    "s255.c,main.c",
+    "--project-include",
+    ".",
+    "--project-editable",
+    "s255.c",
+    "--model",
+    "claude-haiku-4-5-20251001",
+    "--prompt-version",
+    "4",
+    "--exclude-functions",
+    "main,dummy"
+  ],
+  "agent_s": 41.2,
+  "agent_rc": 0,
+  "llm_calls": 1,
+  "llm_call_failures": 0,
+  "harness_reasks": 0,
+  "harness_discards": 0,
+  "explorer_retries": 0,
+  "explorer_stalls": 0,
+  "reverts": 0,
+  "refresh_fast": 0,
+  "refresh_full": 0,
+  "refresh_fallback": 0,
+  "runtime_remeasurements": 0,
+  "phase_b_deferred": 0,
+  "phase_b_joint_kept": 0,
+  "dp_floor": null,
+  "gate_failures_phase_a": {},
+  "gate_failures_phase_b": {},
+  "gate_passes_phase_a": 0,
+  "gate_failures_d40": {},
+  "d40_verdicts": {},
+  "exposure_verdicts": {},
+  "d40_seconds": 0,
+  "requeued_regions": 0,
+  "region_verdicts": {},
+  "settle_dropped": 0,
+  "llm_usage": {
+    "calls_recorded": 1,
+    "input_tokens": 58,
+    "output_tokens": 4847,
+    "cache_read_input_tokens": 98967,
+    "cache_creation_input_tokens": 6563,
+    "cost_usd": 0.0486,
+    "model_seconds": 40.2
+  },
+  "layout": "project",
+  "files_changed": [
+    "s255.c"
+  ],
+  "source_changed": true,
+  "scaffold": {
+    "ok": true,
+    "problems": [],
+    "applies": true
+  },
+  "editable": [
+    "s255.c"
+  ],
+  "harness_sha256": "9feb8102ff32af4e19c60fc436b13433e14e95ac08bfbef1c4147fe18efc8055",
+  "pragmas_added": 1,
+  "pragmas_in_final": 1,
+  "hot_loop": {
+    "entry": "kernel_s255",
+    "function": "kernel_s255",
+    "line": 9,
+    "writes": [
+      "a"
+    ]
+  },
+  "hot_loop_covered": true,
+  "hot_loop_coverage": {
+    "criterion": "v2 (27 Sep 2026)",
+    "covered": true,
+    "covering": [
+      {
+        "function": "kernel_s255",
+        "line": 6,
+        "directive": "#pragma omp parallel for schedule(static) shared(a, b) private(i)",
+        "writes": [
+          "a"
+        ]
+      }
+    ],
+    "uncounted": [],
+    "elsewhere": []
+  },
+  "candidates_recorded": 0,
+  "verify": {
+    "verify_size": "EXTRALARGE",
+    "threads": [
+      6,
+      12
+    ],
+    "repeats": 5,
+    "compiler": "/usr/bin/clang-20",
+    "final_flags": [],
+    "build_errors": {
+      "final_dump": "/home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_bare_haiku/benchmarks/tsvc_c2/s255/bare_llm_v4/claude-haiku-4-5-20251001/rep1/final/s255.c:8:21: error: use of undeclared identifier 'i'\n    8 |             private(i)\n      |                     ^\n1 error generated.\n",
+      "final_par": "/home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_bare_haiku/benchmarks/tsvc_c2/s255/bare_llm_v4/claude-haiku-4-5-20251001/rep1/final/s255.c:8:21: error: use of undeclared identifier 'i'\n    8 |             private(i)\n      |                     ^\n1 error generated.\n"
+    },
+    "dump_exact": null,
+    "dump_max_rel_err": null,
+    "status": "verify_build_failed",
+    "speed_measurable": true
+  },
+  "verify_s": 0.4,
+  "status": "done",
+  "outcome": "VERIFY_FAILED",
+  "finished_at": "2026-10-05T04:11:20",
+  "host_load_end": [
+    5.91357421875,
+    6.95068359375,
+    7.3408203125
+  ],
+  "profile": {
+    "wrapper": "discopop_cc",
+    "layout": "project",
+    "units": [
+      "s255.c",
+      "main.c"
+    ],
+    "instrument_s": 0.21,
+    "profiled_run_s": 0.16,
+    "explore_stalls": 0,
+    "explore_s": 1.37,
+    "explore_success_s": 1.37,
+    "explore_attempts": 1,
+    "explore_timed_out": false,
+    "explore_failures": [],
+    "patterns": {
+      "optimizer_output": 0,
+      "merged_pattern": 0,
+      "task": 0,
+      "do_all": 0,
+      "reduction": 0
+    },
+    "profile_sha256": "b96acb8668ba7503ea2864e8c7484cd91da3389c0880e930acedc495a902da1f"
+  },
+  "package_integrity": {
+    "before": {
+      "checked": "before trial",
+      "at": "2026-10-05T04:10:38",
+      "prepared_sha256": "35e2621d1d7caeb690d0a90b5c17276bd93dd0f69a91cbfb6ec9574fe066c415",
+      "packager_sha256": "35e2621d1d7caeb690d0a90b5c17276bd93dd0f69a91cbfb6ec9574fe066c415",
+      "harness_sha256": "9feb8102ff32af4e19c60fc436b13433e14e95ac08bfbef1c4147fe18efc8055",
+      "archived_sha256": "35e2621d1d7caeb690d0a90b5c17276bd93dd0f69a91cbfb6ec9574fe066c415",
+      "profile_sha256": "b96acb8668ba7503ea2864e8c7484cd91da3389c0880e930acedc495a902da1f",
+      "ok": true
+    },
+    "after": {
+      "checked": "after trial",
+      "at": "2026-10-05T04:11:20",
+      "prepared_sha256": "35e2621d1d7caeb690d0a90b5c17276bd93dd0f69a91cbfb6ec9574fe066c415",
+      "packager_sha256": "35e2621d1d7caeb690d0a90b5c17276bd93dd0f69a91cbfb6ec9574fe066c415",
+      "harness_sha256": "9feb8102ff32af4e19c60fc436b13433e14e95ac08bfbef1c4147fe18efc8055",
+      "archived_sha256": "35e2621d1d7caeb690d0a90b5c17276bd93dd0f69a91cbfb6ec9574fe066c415",
+      "profile_sha256": "b96acb8668ba7503ea2864e8c7484cd91da3389c0880e930acedc495a902da1f",
+      "ok": true
+    }
+  },
+  "speed_check_off": false,
+  "timing_flags": [
+    "--timing-cflags=-DLARGE_DATASET"
+  ],
+  "harness_edit_redos": [],
+  "repeat": 1
+}

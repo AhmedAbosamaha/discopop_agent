@@ -1,0 +1,60 @@
+#include <stdlib.h>
+#include "data.h"
+
+real_t kernel_s321(void)
+{
+    long n = LEN_1D;
+
+    /* Fixed chunking derived from the problem size only, so every thread
+       count and schedule performs exactly the same arithmetic. */
+    long nchunks = (n - 1) / 512;
+    if (nchunks < 1) nchunks = 1;
+    if (nchunks > 65536) nchunks = 65536;
+
+    real_t *pend  = (real_t *)malloc(sizeof(real_t) * (size_t)nchunks);
+    real_t *qend  = (real_t *)malloc(sizeof(real_t) * (size_t)nchunks);
+    real_t *start = (real_t *)malloc(sizeof(real_t) * (size_t)nchunks);
+
+    for (int nl = 0; nl < iterations; nl++) {
+        /* Pass 1: per chunk, express a_new[hi-1] = pend + qend * a_new[lo-1]. */
+        #pragma omp parallel for shared(a, b, pend, qend, n, nchunks)
+        for (long ch = 0; ch < nchunks; ch++) {
+            long lo = 1 + (n - 1) * ch / nchunks;
+            long hi = 1 + (n - 1) * (ch + 1) / nchunks;
+            real_t p = (real_t)0;
+            real_t q = (real_t)1;
+            for (long i = lo; i < hi; i++) {
+                p = a[i] + p * b[i];
+                q = q * b[i];
+            }
+            pend[ch] = p;
+            qend[ch] = q;
+        }
+
+        /* Pass 2: serial propagation of the incoming value of every chunk. */
+        start[0] = a[0];
+        for (long ch = 1; ch < nchunks; ch++) {
+            start[ch] = pend[ch - 1] + qend[ch - 1] * start[ch - 1];
+        }
+
+        /* Pass 3: per chunk, run the original recurrence seeded with its
+           own incoming value; each chunk touches only its own elements. */
+        #pragma omp parallel for shared(a, b, start, n, nchunks)
+        for (long ch = 0; ch < nchunks; ch++) {
+            long lo = 1 + (n - 1) * ch / nchunks;
+            long hi = 1 + (n - 1) * (ch + 1) / nchunks;
+            real_t prev = start[ch];
+            for (long i = lo; i < hi; i++) {
+                a[i] += prev * b[i];
+                prev = a[i];
+            }
+        }
+
+        dummy(a, b, c, d, e);
+    }
+
+    free(pend);
+    free(qend);
+    free(start);
+    return (real_t)0;
+}

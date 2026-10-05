@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_r_4/benchmarks/tsvc_c2/s341/default_v4/claude-haiku-4-5-20251001/rep2/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_r_4/benchmarks/tsvc_c2/s341/default_v4/claude-haiku-4-5-20251001/rep2/work/s341.c
+@@ -19,6 +19,7 @@
+         }
+ 
+         // Pass 2: Write selected elements to output (Do-All)
++ #pragma omp parallel for firstprivate(num_selected) shared(indices) 
+         for (int j_out = 0; j_out < num_selected; j_out++) {
+             int i = indices[j_out];
+             a[j_out] = b[i];

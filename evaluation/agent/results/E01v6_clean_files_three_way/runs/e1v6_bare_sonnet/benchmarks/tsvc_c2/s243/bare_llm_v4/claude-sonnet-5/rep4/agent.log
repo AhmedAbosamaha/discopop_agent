@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s243.c
+  Model          : claude-sonnet-5
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s243.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan **Dependence:** In the inner loop, `a[i] = b[i] + a[i+1] * d[i]` reads `a[i+1]`. Since the original loop runs `i` ascending, at the time iteration `i` executes, `a[i+1]` has **not yet been overwritten** by iteration `i+1` (that happens later, in program order) — so the read sees the value `a[i+1]` had *before this inner sweep began*. If iterations run in parallel/out of order, iteration `i
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

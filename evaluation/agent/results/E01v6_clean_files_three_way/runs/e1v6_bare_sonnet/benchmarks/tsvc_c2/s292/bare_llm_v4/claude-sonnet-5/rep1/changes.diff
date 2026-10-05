@@ -1,0 +1,33 @@
+--- original.c
++++ final.c
+@@ -62,14 +62,25 @@
+ 
+ real_t kernel_s292(void)
+ {
+-    int im1, im2;
+     for (int nl = 0; nl < iterations; nl++) {
+-        im1 = LEN_1D-1;
+-        im2 = LEN_1D-2;
++        /*
++         * Original code carried im1/im2 (the two previous loop indices,
++         * wrapping around at the start of the array) forward from one
++         * iteration to the next.  That is a location-reuse dependence,
++         * not a true value dependence: im1 and im2 at iteration i are
++         * fully determined by i itself, so each iteration can recompute
++         * them directly (with wraparound via modulo) instead of reading
++         * them from the previous iteration.  im1/im2 are declared inside
++         * the loop body, so they are per-iteration scratch and need no
++         * data-sharing clause.  a[] is written once per index i (no
++         * overlap between iterations) and b[] is only read, so the loop
++         * is safe to run with iterations in any order/interleaving.
++         */
++        #pragma omp parallel for shared(a, b) schedule(static)
+         for (int i = 0; i < LEN_1D; i++) {
++            int im1 = (i - 1 + LEN_1D) % LEN_1D;
++            int im2 = (i - 2 + LEN_1D) % LEN_1D;
+             a[i] = (b[i] + b[im1] + b[im2]) * (real_t).333;
+-            im2 = im1;
+-            im1 = i;
+         }
+         dummy(a, b, c, d, e);
+     }

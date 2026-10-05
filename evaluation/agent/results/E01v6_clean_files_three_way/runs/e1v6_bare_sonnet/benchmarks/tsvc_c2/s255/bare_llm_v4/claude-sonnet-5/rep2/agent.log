@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s255.c
+  Model          : claude-sonnet-5
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s255.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan The inner loop carries `x`/`y` as lagged copies of `b`: tracing through, `x` holds `b[i-1]` and `y` holds `b[i-2]` (with wraparound: `b[-1]` → `b[LEN_1D-1]`, `b[-2]` → `b[LEN_1D-2]`). So `a[i] = (b[i] + b[(i-1+LEN_1D)%LEN_1D] + b[(i-2+LEN_1D)%LEN_1D]) * .333`. This removes the iteration-to-iteration dependence (x,y) by re-deriving the needed values directly from `b` via modular indexing in
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

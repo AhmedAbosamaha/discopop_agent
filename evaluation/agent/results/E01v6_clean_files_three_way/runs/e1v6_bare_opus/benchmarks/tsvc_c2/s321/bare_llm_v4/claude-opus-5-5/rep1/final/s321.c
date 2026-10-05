@@ -1,0 +1,111 @@
+#include <stdlib.h>
+#include "data.h"
+
+typedef struct { long idx; real_t val; } s321_delta_t;
+typedef struct { s321_delta_t *v; long n, cap; } s321_dlist_t;
+
+static void s321_push(s321_dlist_t *l, long idx, real_t val)
+{
+    if (l->n == l->cap) {
+        long nc = l->cap ? 2 * l->cap : 8;
+        l->v = (s321_delta_t *)realloc(l->v, (size_t)nc * sizeof(s321_delta_t));
+        l->cap = nc;
+    }
+    l->v[l->n].idx = idx;
+    l->v[l->n].val = val;
+    l->n++;
+}
+
+real_t kernel_s321(void)
+{
+    long N = LEN_1D;
+    long S = iterations;
+    if (S <= 0) return (real_t)0;
+
+    /* chunking of the index space for the sweep pipeline */
+    long NC = (N + 1023) / 1024;
+    if (NC > 128) NC = 128;
+    if (NC < 1) NC = 1;
+    long CH = (N + NC - 1) / NC;
+    NC = (N + CH - 1) / CH;
+
+    /* deltas that dummy-call t (t = 0..S-2) applies to a and b */
+    s321_dlist_t *da = (s321_dlist_t *)calloc((size_t)S, sizeof(s321_dlist_t));
+    s321_dlist_t *db = (s321_dlist_t *)calloc((size_t)S, sizeof(s321_dlist_t));
+
+    if (S > 1) {
+        real_t *pa = (real_t *)calloc((size_t)N, sizeof(real_t));
+        real_t *pb = (real_t *)calloc((size_t)N, sizeof(real_t));
+        long PB = 4096;
+        long nb = (N + PB - 1) / PB;
+        long *bc = (long *)malloc((size_t)nb * sizeof(long));
+        for (long t = 0; t < S - 1; t++) {
+            dummy(pa, pb, c, d, e);
+#pragma omp parallel for schedule(static) shared(pa, pb, bc) firstprivate(nb, N, PB)
+            for (long blk = 0; blk < nb; blk++) {
+                long lo = blk * PB;
+                long hi = (lo + PB < N) ? lo + PB : N;
+                long cnt = 0;
+                for (long i = lo; i < hi; i++)
+                    cnt += (pa[i] != (real_t)0 || pb[i] != (real_t)0);
+                bc[blk] = cnt;
+            }
+            for (long blk = 0; blk < nb; blk++) {
+                if (bc[blk] == 0) continue;
+                long lo = blk * PB;
+                long hi = (lo + PB < N) ? lo + PB : N;
+                for (long i = lo; i < hi; i++) {
+                    if (pa[i] != (real_t)0) { s321_push(&da[t], i, pa[i]); pa[i] = (real_t)0; }
+                    if (pb[i] != (real_t)0) { s321_push(&db[t], i, pb[i]); pb[i] = (real_t)0; }
+                }
+            }
+        }
+        free(bc);
+        free(pa);
+        free(pb);
+    }
+
+    /* carry[s*NC + j] = a[last index of chunk j] right after sweep s */
+    real_t *carry = (real_t *)malloc((size_t)(S * NC) * sizeof(real_t));
+
+    for (long w = 0; w < NC + S - 1; w++) {
+        long smin = (w - NC + 1 > 0) ? w - NC + 1 : 0;
+        long smax = (w < S - 1) ? w : S - 1;
+#pragma omp parallel for schedule(static, 1) shared(a, b, carry, da, db) firstprivate(w, NC, CH, N)
+        for (long s = smin; s <= smax; s++) {
+            long j = w - s;
+            long lo = j * CH;
+            long hi = (lo + CH < N) ? lo + CH : N;
+            if (s > 0) {
+                s321_dlist_t *la = &da[s - 1];
+                s321_dlist_t *lb = &db[s - 1];
+                for (long q = 0; q < la->n; q++) {
+                    long k = la->v[q].idx;
+                    if (k >= lo && k < hi) a[k] += la->v[q].val;
+                }
+                for (long q = 0; q < lb->n; q++) {
+                    long k = lb->v[q].idx;
+                    if (k >= lo && k < hi) b[k] += lb->v[q].val;
+                }
+            }
+            real_t prev;
+            long i0;
+            if (j == 0) { prev = a[0]; i0 = 1; }
+            else        { prev = carry[s * NC + j - 1]; i0 = lo; }
+            for (long i = i0; i < hi; i++) {
+                a[i] = a[i] + prev * b[i];
+                prev = a[i];
+            }
+            carry[s * NC + j] = prev;
+        }
+    }
+
+    /* last dummy call, after the final sweep, on the real arrays */
+    dummy(a, b, c, d, e);
+
+    for (long t = 0; t < S; t++) { free(da[t].v); free(db[t].v); }
+    free(da);
+    free(db);
+    free(carry);
+    return (real_t)0;
+}

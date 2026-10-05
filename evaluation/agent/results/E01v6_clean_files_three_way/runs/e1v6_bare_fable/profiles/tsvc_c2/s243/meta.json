@@ -1,0 +1,44 @@
+{
+  "suite": "tsvc_c2",
+  "kernel": "s243",
+  "source": "benchmarks/TSVC_2/src/tsvc.c",
+  "category": "node splitting / false dependence cycle breaking",
+  "file": "s243.c",
+  "language": "c",
+  "layout": "project",
+  "project": {
+    "units": [
+      "s243.c",
+      "main.c"
+    ],
+    "include_dirs": [
+      "."
+    ],
+    "editable": [
+      "s243.c"
+    ]
+  },
+  "restructuring_class": "restructure",
+  "transformation": "node splitting (false dependence cycle)",
+  "why": "the last statement reads the OLD a[i+1]; a copy breaks the cycle",
+  "reference_solution": "agent/reference_solutions/tsvc_c2/s243.c",
+  "exclude_functions": [
+    "main",
+    "dummy"
+  ],
+  "harness": "tsvc_c2/s243.h",
+  "harness_sha256": "3e2b2084bbf12512f9c5a1122797da30d220c3d89885e59e6027d10cf7ba0348",
+  "hot_loop": {
+    "entry": "kernel_s243",
+    "function": "kernel_s243",
+    "line": 6,
+    "writes": [
+      "a",
+      "b"
+    ]
+  },
+  "agent_dataset": "SMALL",
+  "generator_version": 6,
+  "inputs_sha256": "456dd573b84b30e6f32c943bb559d80374eec67177de48223e95124a8c3fc627",
+  "output_sha256": "46319cde888e79fcf291549e7d9401651297fdf46454ab3dea36260e60b4f854"
+}

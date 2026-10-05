@@ -1,0 +1,11 @@
+--- original.c
++++ final.c
+@@ -66,6 +66,8 @@
+     real_t chksum;
+     for (int nl = 0; nl < iterations; nl++) {
+         j = -1;
++        /* "last index with a[i] < 0" == max such index; order-independent. */
++#pragma omp parallel for default(none) shared(a) reduction(max:j)
+         for (int i = 0; i < LEN_1D; i++) {
+             if (a[i] < (real_t)0.) {
+                 j = i;

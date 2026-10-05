@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s323.c
+  Model          : claude-sonnet-5
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s323.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: I read `s323.c`, `data.h`, and `main.c`. Here's the plan: **Dependence analysis.** The inner loop has a genuine loop-carried recurrence: `a[i] = b[i-1] + c[i]*d[i]; b[i] = a[i] + c[i]*e[i]`, i.e. `b[i] = b[i-1] + c[i]*d[i] + c[i]*e[i]` — a running prefix accumulation, not independent iterations. This is a classic parallel-scan case: the value being carried (`b[i-1]`) is a *location reused for diff
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

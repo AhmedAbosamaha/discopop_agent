@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s293.c
+  Model          : claude-opus-5-5
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror
+
+│  [bare] Calling claude-opus-5-5...
+│  [bare] s293.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: I've edited `s293.c` so the inner fill loop runs in parallel. I haven't compiled or run it, since there's no compiler here. **What was blocking it:** every iteration reads `a[0]`, and iteration 0 also writes `a[0]`. But it writes `a[0]` back into itself, so the value never changes during the loop. The problem was the shared location, not data passing between iterations. **The change:** at the star
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

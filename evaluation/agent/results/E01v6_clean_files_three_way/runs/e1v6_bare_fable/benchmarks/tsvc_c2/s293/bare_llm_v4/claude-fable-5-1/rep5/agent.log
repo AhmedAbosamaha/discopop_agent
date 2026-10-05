@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s293.c
+  Model          : claude-fable-5-1
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror
+
+│  [bare] Calling claude-fable-5-1...
+│  [bare] s293.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Done. `s293.c` now reads `a[0]` once into `a0` before each activation of the inner loop, then fills `a[i] = a0` in a `#pragma omp parallel for firstprivate(a0) schedule(static)` region. Every iteration writes only its own `a[i]` and reads only the private copy of `a0`, so there is no shared read/write on `a[0]` for ThreadSanitizer to flag, the result is identical for any iteration order or schedul
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

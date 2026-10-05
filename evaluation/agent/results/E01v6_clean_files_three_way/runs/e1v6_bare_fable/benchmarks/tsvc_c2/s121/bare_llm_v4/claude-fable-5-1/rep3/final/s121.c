@@ -1,0 +1,25 @@
+#include "data.h"
+#include <stdlib.h>
+
+real_t kernel_s121(void)
+{
+    int j;
+    /* Heap snapshot of a[] so the anti-dependence (iteration i reads the
+       old a[i+1] that iteration i+1 overwrites) is broken: every iteration
+       reads from the frozen copy and writes only its own a[i]. */
+    real_t *a_old = (real_t *)malloc((size_t)LEN_1D * sizeof(real_t));
+    for (int nl = 0; nl < iterations; nl++) {
+        #pragma omp parallel for default(none) shared(a, a_old)
+        for (int i = 0; i < LEN_1D; i++) {
+            a_old[i] = a[i];
+        }
+        #pragma omp parallel for default(none) shared(a, a_old, b) private(j)
+        for (int i = 0; i < LEN_1D-1; i++) {
+            j = i + 1;
+            a[i] = a_old[j] + b[i];
+        }
+        dummy(a, b, c, d, e);
+    }
+    free(a_old);
+    return (real_t)0;
+}

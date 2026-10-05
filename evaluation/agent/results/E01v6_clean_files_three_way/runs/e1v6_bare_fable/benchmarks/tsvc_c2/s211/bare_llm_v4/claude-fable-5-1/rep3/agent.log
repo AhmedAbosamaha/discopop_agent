@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s211.c
+  Model          : claude-fable-5-1
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror
+
+│  [bare] Calling claude-fable-5-1...
+│  [bare] s211.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Done. `s211.c` now has two `#pragma omp parallel for` loops per outer step: - **Pass 1** (`i = 1 .. LEN_1D-2`): `tmp[i] = b[i+1] - e[i]*d[i]` — reads only the old `b`, writes only `tmp`, so no iteration touches another's data. - **Peeled `i = 1`**: `a[1] = b[0] + c[1]*d[1]; b[1] = tmp[1]` (`b[0]` is never modified by the nest, so the original read it unchanged too). - **Pass 2** (`i = 2 .. LEN_1D-
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

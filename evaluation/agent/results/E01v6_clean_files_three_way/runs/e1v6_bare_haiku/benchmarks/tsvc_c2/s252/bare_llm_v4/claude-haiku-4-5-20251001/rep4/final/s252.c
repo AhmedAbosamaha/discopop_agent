@@ -1,0 +1,35 @@
+#include "data.h"
+#include <stdlib.h>
+
+real_t kernel_s252(void)
+{
+    real_t t, s;
+
+    // Allocate temporary array to break loop-carried dependence
+    real_t *prod = malloc(LEN_1D * sizeof(real_t));
+
+    for (int nl = 0; nl < iterations; nl++) {
+        // Phase 1: Parallel loop to compute all products independently
+        // No loop-carried dependence: each iteration computes prod[i] from
+        // independent reads of b[i] and c[i]
+        #pragma omp parallel for shared(b, c, prod)
+        for (int i = 0; i < LEN_1D; i++) {
+            prod[i] = b[i] * c[i];
+        }
+
+        // Phase 2: Sequential loop to apply the recurrence a[i] = prod[i] + t
+        // The dependence is preserved here: t carries the value from the
+        // previous iteration. This must run sequentially.
+        t = (real_t) 0.;
+        for (int i = 0; i < LEN_1D; i++) {
+            s = prod[i];
+            a[i] = s + t;
+            t = s;
+        }
+
+        dummy(a, b, c, d, e);
+    }
+
+    free(prod);
+    return (real_t)0;
+}

@@ -1,0 +1,39 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_r_4/benchmarks/tsvc_c2/s341/default_v4/claude-haiku-4-5-20251001/rep2/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_r_4/benchmarks/tsvc_c2/s341/default_v4/claude-haiku-4-5-20251001/rep2/work/s341.c
+@@ -1,17 +1,34 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s341(void)
+ {
+     int j;
++    int *indices = malloc(LEN_1D * sizeof(int));
++
+     for (int nl = 0; nl < iterations; nl++) {
+         j = -1;
++
++        // Pass 1: Compute output indices for each element
++        int count = 0;
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++                indices[i] = count++;
+             }
+         }
++
++        // Pass 2: Write elements to their computed indices (Do-All)
++        for (int i = 0; i < LEN_1D; i++) {
++            if (b[i] > (real_t)0.) {
++                a[indices[i]] = b[i];
++            }
++        }
++
++        j = count - 1;
++
+         dummy(a, b, c, d, e);
+     }
++
++    free(indices);
+     return (real_t)0;
+ }

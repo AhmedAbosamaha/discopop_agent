@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s112.c
+  Model          : claude-fable-5-1
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror
+
+│  [bare] Calling claude-fable-5-1...
+│  [bare] s112.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: The rewrite is applied to `s112.c`. **What changed and why** - **Dependence removed:** the original loop walks `i` downward and does `a[i+1] = a[i] + b[i]`. Because `a[i]` is overwritten only by the *later* iteration `i-1`, each read sees the value `a` held before the loop began — a pure anti-dependence (storage reuse), not a value carried forward. Copying `a` to a heap buffer `tmp` first and then
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

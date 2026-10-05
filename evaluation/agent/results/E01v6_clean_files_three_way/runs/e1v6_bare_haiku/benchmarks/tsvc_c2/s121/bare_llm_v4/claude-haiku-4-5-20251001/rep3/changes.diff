@@ -1,0 +1,12 @@
+--- original.c
++++ final.c
+@@ -64,7 +64,8 @@
+ {
+     int j;
+     for (int nl = 0; nl < iterations; nl++) {
+-        for (int i = 0; i < LEN_1D-1; i++) {
++        #pragma omp parallel for private(j)
++        for (int i = LEN_1D-2; i >= 0; i--) {
+             j = i + 1;
+             a[i] = a[j] + b[i];
+         }

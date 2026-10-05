@@ -1,0 +1,77 @@
+--- original.c
++++ final.c
+@@ -60,17 +60,69 @@
+ /* ==== s341.c ==== */
+ #include "data.h"
+ 
++/* Fixed, input-size-independent block count used to split the compaction
++ * scan into independent chunks.  Never scaled with LEN_1D, so the scratch
++ * arrays sized by it are safe on the stack. */
++#define S341_NUM_BLOCKS 256
++
+ real_t kernel_s341(void)
+ {
+     int j;
+     for (int nl = 0; nl < iterations; nl++) {
+-        j = -1;
+-        for (int i = 0; i < LEN_1D; i++) {
+-            if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++        int nblocks = S341_NUM_BLOCKS;
++        if (nblocks > LEN_1D) nblocks = LEN_1D;
++
++        /* Per-block count of elements satisfying b[i] > 0, and the
++         * exclusive prefix sum of those counts (= starting write offset
++         * for each block).  Both are sized by the fixed nblocks constant,
++         * not by LEN_1D. */
++        long blockCount[S341_NUM_BLOCKS];
++        long blockOffset[S341_NUM_BLOCKS];
++
++        /* Pass 1: count matches within each block.  Blocks partition
++         * [0, LEN_1D) into disjoint contiguous ranges, so each iteration
++         * only reads b[] and writes its own blockCount[blk] slot -- no
++         * dependence between blocks. */
++        #pragma omp parallel for schedule(static) shared(b, nblocks, blockCount)
++        for (int blk = 0; blk < nblocks; blk++) {
++            long start = (long)blk * LEN_1D / nblocks;
++            long end = (long)(blk + 1) * LEN_1D / nblocks;
++            long cnt = 0;
++            for (long i = start; i < end; i++) {
++                if (b[i] > (real_t)0.) cnt++;
++            }
++            blockCount[blk] = cnt;
++        }
++
++        /* Pass 2: sequential exclusive prefix sum over only nblocks
++         * values -- O(1) relative to LEN_1D, carries the running total
++         * (the dependence j used to carry) from block to block. */
++        long running = 0;
++        for (int blk = 0; blk < nblocks; blk++) {
++            blockOffset[blk] = running;
++            running += blockCount[blk];
++        }
++
++        /* Pass 3: each block re-scans its own range and packs matches
++         * starting at its precomputed blockOffset[blk].  Because the
++         * offsets come from exact per-block counts, the output ranges
++         * written by different blocks never overlap, so a[] writes are
++         * race-free regardless of block execution order. */
++        #pragma omp parallel for schedule(static) shared(a, b, nblocks, blockOffset)
++        for (int blk = 0; blk < nblocks; blk++) {
++            long start = (long)blk * LEN_1D / nblocks;
++            long end = (long)(blk + 1) * LEN_1D / nblocks;
++            long pos = blockOffset[blk];
++            for (long i = start; i < end; i++) {
++                if (b[i] > (real_t)0.) {
++                    a[pos] = b[i];
++                    pos++;
++                }
+             }
+         }
++
++        j = (int)running - 1;
++
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

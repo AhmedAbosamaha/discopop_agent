@@ -1,0 +1,32 @@
+#include "data.h"
+
+/*
+ * s322: second-order linear recurrence
+ *     a[i] = a[i] + a[i-1]*b[i] + a[i-2]*c[i]
+ *
+ * NOT parallelized, deliberately.  The dependence here is a value carried
+ * from iteration i-1 (and i-2) into iteration i, not a reused location:
+ * every a[i] is computed from the just-written, already-rounded a[i-1] and
+ * a[i-2], so the chain of dependent floating-point operations is LEN_1D
+ * long.  The only known way to run such a recurrence in parallel is a 2x2
+ * matrix prefix-scan over chunks, which reassociates the arithmetic and
+ * therefore changes the rounding of a[]; those differences are amplified
+ * through the recurrence and across the `iterations` repeats, so the
+ * program's output would no longer be byte-identical to the sequential
+ * version.  A wavefront across consecutive nl iterations is likewise
+ * invalid because dummy() rewrites a[0] and b[LEN_1D-1] between sweeps,
+ * pinning each sweep strictly after the previous one.
+ *
+ * Any `#pragma omp parallel for` on these loops would therefore be either a
+ * data race or a change in results, so the loop nest is left sequential.
+ */
+real_t kernel_s322(void)
+{
+    for (int nl = 0; nl < iterations; nl++) {
+        for (int i = 2; i < LEN_1D; i++) {
+            a[i] = a[i] + a[i - 1] * b[i] + a[i - 2] * c[i];
+        }
+        dummy(a, b, c, d, e);
+    }
+    return (real_t)0;
+}

@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s212.c
+  Model          : claude-sonnet-5
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s212.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan **Dependence:** In `b[i] += a[i+1]*d[i]`, the original sequential loop order guarantees that when iteration `i` runs, iteration `i+1` has *not yet* executed, so `a[i+1]` is read in its pre-update (not yet multiplied by `c[i+1]`) state. That's a real value flowing from "the state of `a` before this sweep" into `b[i]`, not from iteration `i+1`'s own write. The fix is to make that explicit: s
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

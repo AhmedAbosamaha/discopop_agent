@@ -1,0 +1,158 @@
+#include "data.h"
+#include <stdlib.h>
+
+/* Pure helper: maps a chunk index k to its half-open index range
+ * [lo, hi] inside [base, base+total).  chunk_len/rem describe how the
+ * "total" positions are split into "nchunks" near-equal pieces (the
+ * first "rem" chunks get one extra element).  No shared state, so this
+ * is safe to call concurrently from every thread. */
+static void s322_chunk_bounds(int k, int chunk_len, int rem, int base,
+                               int *lo_out, int *hi_out)
+{
+    int start, len;
+    if (k < rem) {
+        start = base + k * (chunk_len + 1);
+        len = chunk_len + 1;
+    } else {
+        start = base + rem * (chunk_len + 1) + (k - rem) * chunk_len;
+        len = chunk_len;
+    }
+    *lo_out = start;
+    *hi_out = start + len - 1;
+}
+
+real_t kernel_s322(void)
+{
+    const int n = LEN_1D;
+    const int total = n - 2; /* number of recurrence positions, i = 2..n-1 */
+
+    int nchunks = 0;
+    if (total > 0) {
+        int cap = total / 2;
+        if (cap < 1) cap = 1;
+        nchunks = 64;
+        if (nchunks > cap) nchunks = cap;
+    }
+    const int chunk_len = (nchunks > 0) ? (total / nchunks) : 0;
+    const int rem       = (nchunks > 0) ? (total % nchunks) : 0;
+
+    /* Per-chunk affine coefficients: for chunk k, with carry-ins
+     * ain1 = a[lo(k)-1], ain2 = a[lo(k)-2] (the values just before the
+     * chunk starts),
+     *   a[hi(k)]   = pend[k]  + qend[k]  * ain1 + rend[k]  * ain2
+     *   a[hi(k)-1] = pend1[k] + qend1[k] * ain1 + rend1[k] * ain2
+     * These depend only on b[], c[] and the pre-sweep a[] *inside* the
+     * chunk, so every chunk's coefficients can be computed independently
+     * of every other chunk (Phase 1). ain1[]/ain2[] hold the actual
+     * resolved carry-in value per chunk, filled in sequentially,
+     * chunk-by-chunk, since that is an O(nchunks) (cheap) pass (Phase 2).
+     * Buffers are heap allocated since nchunks is derived from the
+     * problem size family, not a compile-time constant. */
+    real_t *pend  = NULL, *qend  = NULL, *rend  = NULL;
+    real_t *pend1 = NULL, *qend1 = NULL, *rend1 = NULL;
+    real_t *ain1  = NULL, *ain2  = NULL;
+    if (nchunks > 0) {
+        pend  = (real_t *)malloc((size_t)nchunks * sizeof(real_t));
+        qend  = (real_t *)malloc((size_t)nchunks * sizeof(real_t));
+        rend  = (real_t *)malloc((size_t)nchunks * sizeof(real_t));
+        pend1 = (real_t *)malloc((size_t)nchunks * sizeof(real_t));
+        qend1 = (real_t *)malloc((size_t)nchunks * sizeof(real_t));
+        rend1 = (real_t *)malloc((size_t)nchunks * sizeof(real_t));
+        ain1  = (real_t *)malloc((size_t)nchunks * sizeof(real_t));
+        ain2  = (real_t *)malloc((size_t)nchunks * sizeof(real_t));
+    }
+
+    for (int nl = 0; nl < iterations; nl++) {
+
+        if (nchunks > 0) {
+            /* ---- Phase 1 (parallel across chunks): local, per-chunk
+             * affine coefficients. a,b,c are read-only here; pend.. are
+             * written at disjoint index k by each iteration, so no two
+             * iterations touch the same element -- race free. chunk_len,
+             * rem, nchunks are read-only loop parameters. */
+            #pragma omp parallel for schedule(runtime) default(none) \
+                shared(a, b, c, pend, qend, rend, pend1, qend1, rend1, \
+                       nchunks, chunk_len, rem)
+            for (int k = 0; k < nchunks; k++) {
+                int klo, khi;
+                s322_chunk_bounds(k, chunk_len, rem, 2, &klo, &khi);
+                /* symbol for position (klo-2) == ain2: P=0,Q=0,R=1 */
+                real_t Pm2 = (real_t)0, Qm2 = (real_t)0, Rm2 = (real_t)1;
+                /* symbol for position (klo-1) == ain1: P=0,Q=1,R=0 */
+                real_t Pm1 = (real_t)0, Qm1 = (real_t)1, Rm1 = (real_t)0;
+                real_t P = Pm1, Q = Qm1, R = Rm1;
+                for (int i = klo; i <= khi; i++) {
+                    real_t bi = b[i], ci = c[i], oi = a[i];
+                    P = oi + bi * Pm1 + ci * Pm2;
+                    Q = bi * Qm1 + ci * Qm2;
+                    R = bi * Rm1 + ci * Rm2;
+                    Pm2 = Pm1; Qm2 = Qm1; Rm2 = Rm1;
+                    Pm1 = P;   Qm1 = Q;   Rm1 = R;
+                }
+                pend[k] = P; qend[k] = Q; rend[k] = R;
+                if (khi > klo) {
+                    /* Pm2/Qm2/Rm2 now describe position khi-1 */
+                    pend1[k] = Pm2; qend1[k] = Qm2; rend1[k] = Rm2;
+                } else {
+                    /* single-element chunk: "second to last" collapses
+                     * onto the ain1 symbol itself */
+                    pend1[k] = (real_t)0; qend1[k] = (real_t)1; rend1[k] = (real_t)0;
+                }
+            }
+
+            /* ---- Phase 2 (sequential, O(nchunks), cheap): resolve the
+             * real carry-in value for every chunk, in chunk order. */
+            ain1[0] = a[1];
+            ain2[0] = a[0];
+            for (int k = 1; k < nchunks; k++) {
+                real_t p_ain1 = ain1[k - 1], p_ain2 = ain2[k - 1];
+                real_t real_end  = pend[k - 1]  + qend[k - 1]  * p_ain1 + rend[k - 1]  * p_ain2;
+                real_t real_end1 = pend1[k - 1] + qend1[k - 1] * p_ain1 + rend1[k - 1] * p_ain2;
+                ain1[k] = real_end;
+                ain2[k] = real_end1;
+            }
+
+            /* ---- Phase 3 (parallel across chunks): fill in the actual
+             * a[] values. Each chunk only writes its own [klo,khi] range,
+             * so chunks never write the same element -- race free. The
+             * interior of the chunk uses the exact same formula and
+             * operand order as the original sequential loop (bit
+             * identical to it once seeded with the correct carry-ins);
+             * the last two elements are taken directly from the already
+             * resolved affine values so they are numerically consistent
+             * with what seeded the next chunk. */
+            #pragma omp parallel for schedule(runtime) default(none) \
+                shared(a, b, c, ain1, ain2, pend, qend, rend, pend1, qend1, rend1, \
+                       nchunks, chunk_len, rem)
+            for (int k = 0; k < nchunks; k++) {
+                int klo, khi;
+                s322_chunk_bounds(k, chunk_len, rem, 2, &klo, &khi);
+                real_t a_im1 = ain1[k];
+                real_t a_im2 = ain2[k];
+                for (int i = klo; i <= khi - 2; i++) {
+                    real_t v = a[i] + b[i] * a_im1 + c[i] * a_im2;
+                    a[i] = v;
+                    a_im2 = a_im1;
+                    a_im1 = v;
+                }
+                if (khi > klo) {
+                    real_t end1v = pend1[k] + qend1[k] * ain1[k] + rend1[k] * ain2[k];
+                    real_t endv  = pend[k]  + qend[k]  * ain1[k] + rend[k]  * ain2[k];
+                    a[khi - 1] = end1v;
+                    a[khi]     = endv;
+                } else {
+                    real_t endv = pend[k] + qend[k] * ain1[k] + rend[k] * ain2[k];
+                    a[khi] = endv;
+                }
+            }
+        }
+
+        dummy(a, b, c, d, e);
+    }
+
+    free(pend);  free(qend);  free(rend);
+    free(pend1); free(qend1); free(rend1);
+    free(ain1);  free(ain2);
+
+    return (real_t)0;
+}

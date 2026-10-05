@@ -1,0 +1,34 @@
+#include "data.h"
+
+real_t kernel_s281(void)
+{
+    for (int nl = 0; nl < iterations; nl++) {
+        int mid = (LEN_1D + 1) / 2;
+
+        // Phase 1: First half iterations (0 to mid-1)
+        // No loop-carried dependencies within this phase; each iteration accesses
+        // different indices. Iteration i writes a[i] and reads a[LEN_1D-i-1].
+        // Since i < mid <= (LEN_1D+1)/2, we have LEN_1D-i-1 >= mid, so reads
+        // come from the "far end" not yet modified in this phase.
+        #pragma omp parallel for shared(a, b, c)
+        for (int i = 0; i < mid; i++) {
+            real_t x = a[LEN_1D-i-1] + b[i] * c[i];
+            a[i] = x-(real_t)1.0;
+            b[i] = x;
+        }
+
+        // Phase 2: Second half iterations (mid to LEN_1D-1)
+        // All reads from a[LEN_1D-i-1] for i >= mid are reads of indices < mid,
+        // which were written in Phase 1. Each iteration still accesses different
+        // array indices, so no loop-carried dependencies within this phase.
+        #pragma omp parallel for shared(a, b, c)
+        for (int i = mid; i < LEN_1D; i++) {
+            real_t x = a[LEN_1D-i-1] + b[i] * c[i];
+            a[i] = x-(real_t)1.0;
+            b[i] = x;
+        }
+
+        dummy(a, b, c, d, e);
+    }
+    return (real_t)0;
+}

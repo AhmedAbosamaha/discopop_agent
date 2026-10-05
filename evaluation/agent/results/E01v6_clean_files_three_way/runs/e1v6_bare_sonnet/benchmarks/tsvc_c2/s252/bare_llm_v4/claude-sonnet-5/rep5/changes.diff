@@ -1,0 +1,45 @@
+--- original.c
++++ final.c
+@@ -59,19 +59,37 @@
+ 
+ /* ==== s252.c ==== */
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s252(void)
+ {
+-    real_t t, s;
++    /*
++     * Original recurrence: t starts at 0 each outer iteration, and
++     * a[i] = s[i] + t; t = s[i], where s[i] = b[i]*c[i].
++     * Unrolled this is a[i] = s[i] + s[i-1] for i>0, and a[0] = s[0] + 0.
++     * s[i] only depends on b[i],c[i] (no cross-iteration dependence), so we
++     * materialize s[] into a heap buffer first (parallel, independent), then
++     * compute a[i] from s[i] and s[i-1] (also independent once s[] is fully
++     * written). The write-then-read ordering across the two loops preserves
++     * the dependence that used to flow through t.
++     */
++    real_t *s_arr = (real_t *) malloc((size_t) LEN_1D * sizeof(real_t));
++
+     for (int nl = 0; nl < iterations; nl++) {
+-        t = (real_t) 0.;
++        #pragma omp parallel for default(none) shared(s_arr, b, c)
+         for (int i = 0; i < LEN_1D; i++) {
+-            s = b[i] * c[i];
+-            a[i] = s + t;
+-            t = s;
++            s_arr[i] = b[i] * c[i];
+         }
++
++        #pragma omp parallel for default(none) shared(s_arr, a)
++        for (int i = 0; i < LEN_1D; i++) {
++            a[i] = s_arr[i] + (i == 0 ? (real_t) 0. : s_arr[i - 1]);
++        }
++
+         dummy(a, b, c, d, e);
+     }
++
++    free(s_arr);
+     return (real_t)0;
+ }
+ 

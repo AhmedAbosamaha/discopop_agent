@@ -1,0 +1,47 @@
+--- original.c
++++ final.c
+@@ -59,16 +59,42 @@
+ 
+ /* ==== s1213.c ==== */
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s1213(void)
+ {
++    /* Heap-allocated snapshot of a[] taken before each sweep.  b[i] only
++       ever needs the pre-sweep value of a[i+1] (the original sequential
++       loop reads it before it would be overwritten at iteration i+1), and
++       a[i] (for i>=2) likewise reduces to a function of the pre-sweep
++       a[i] alone.  Capturing that snapshot lets every iteration of the
++       inner loop below write only its own a[i]/b[i] from independent,
++       already-finalized inputs. */
++    real_t *a_old = (real_t *)malloc((size_t)LEN_1D * sizeof(real_t));
++
+     for (int nl = 0; nl < iterations; nl++) {
++        /* a: array being snapshotted, read-only here (shared).
++           a_old: heap buffer, each iteration writes a distinct slot (shared). */
++        #pragma omp parallel for default(none) shared(a, a_old)
++        for (int i = 0; i < LEN_1D; i++) {
++            a_old[i] = a[i];
++        }
++
++        /* a, b: outputs, each iteration writes only index i (shared).
++           c, d: read-only inputs indexed by i (shared).
++           a_old: read-only pre-sweep snapshot of a, indexed i-1/i/i+1 (shared).
++           b[0] read here is never written by this loop, so it is a safe
++           shared read-only access. */
++        #pragma omp parallel for default(none) shared(a, b, c, d, a_old)
+         for (int i = 1; i < LEN_1D-1; i++) {
+-            a[i] = b[i-1]+c[i];
+-            b[i] = a[i+1]*d[i];
++            real_t new_a = (i == 1) ? (b[0] + c[i]) : (a_old[i]*d[i-1] + c[i]);
++            b[i] = a_old[i+1]*d[i];
++            a[i] = new_a;
+         }
+         dummy(a, b, c, d, e);
+     }
++
++    free(a_old);
+     return (real_t)0;
+ }
+ 

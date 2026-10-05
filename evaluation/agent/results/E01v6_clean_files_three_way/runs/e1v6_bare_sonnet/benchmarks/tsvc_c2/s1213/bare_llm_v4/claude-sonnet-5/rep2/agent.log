@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s1213.c
+  Model          : claude-sonnet-5
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s1213.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Plan (already applied): **Dependence analysis.** In the original loop, `a[i] = b[i-1]+c[i]` reads `b[i-1]`, which iteration `i-1` *just wrote* — a real carried dependence through `b`. But `b[i] = a[i+1]*d[i]` reads `a[i+1]`, which belongs to a *future* iteration not yet executed — so it's actually reading the pre-sweep value of `a[i+1]`, not a genuine forward dependence, just a reused location. Un
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

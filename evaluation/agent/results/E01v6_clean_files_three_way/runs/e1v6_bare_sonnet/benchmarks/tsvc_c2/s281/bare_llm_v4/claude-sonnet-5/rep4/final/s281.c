@@ -1,0 +1,47 @@
+#include "data.h"
+
+/*
+ * Dependence analysis:
+ * The original loop reads a[LEN_1D-1-i] and writes a[i] for each i.
+ * Pairing index i with its mirror j = LEN_1D-1-i, the sequential run
+ * (i increasing) processes the lower-numbered member of each pair
+ * first (reading the still-original a[j]) and the higher-numbered
+ * member second (reading the just-updated a[i]).  Different pairs
+ * never touch each other's indices, so the pairs themselves are
+ * fully independent of one another - the dependence only lives
+ * *inside* a pair, between its two members, and it is preserved here
+ * by computing i before j within the same loop iteration.  The lone
+ * middle element (when LEN_1D is odd) reads its own original value,
+ * same as before.
+ *
+ * x was only ever used within the same original iteration (it is
+ * never read again after being overwritten, nor after the loop), so
+ * it carries no cross-iteration value and is simply replaced by
+ * loop-local temporaries, each private by construction since they
+ * are declared inside the parallel loop body.
+ */
+real_t kernel_s281(void)
+{
+    for (int nl = 0; nl < iterations; nl++) {
+        int half = LEN_1D / 2;
+        #pragma omp parallel for schedule(static) shared(a, b, c, half) default(none)
+        for (int k = 0; k < half; k++) {
+            int i = k;
+            int j = LEN_1D - 1 - k;
+            real_t xi = a[j] + b[i] * c[i];
+            a[i] = xi - (real_t)1.0;
+            b[i] = xi;
+            real_t xj = a[i] + b[j] * c[j];
+            a[j] = xj - (real_t)1.0;
+            b[j] = xj;
+        }
+        if (LEN_1D % 2 == 1) {
+            int mid = LEN_1D / 2;
+            real_t xm = a[mid] + b[mid] * c[mid];
+            a[mid] = xm - (real_t)1.0;
+            b[mid] = xm;
+        }
+        dummy(a, b, c, d, e);
+    }
+    return (real_t)0;
+}

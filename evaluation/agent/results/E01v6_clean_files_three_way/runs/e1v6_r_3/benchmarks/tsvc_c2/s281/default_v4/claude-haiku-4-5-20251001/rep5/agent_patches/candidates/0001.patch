@@ -1,0 +1,16 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_r_3/benchmarks/tsvc_c2/s281/default_v4/claude-haiku-4-5-20251001/rep5/work/s281.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_r_3/benchmarks/tsvc_c2/s281/default_v4/claude-haiku-4-5-20251001/rep5/work/s281.c
+@@ -4,7 +4,12 @@
+ {
+     real_t x;
+     for (int nl = 0; nl < iterations; nl++) {
+-        for (int i = 0; i < LEN_1D; i++) {
++        for (int i = 0; i < LEN_1D / 2; i++) {
++            x = a[LEN_1D-i-1] + b[i] * c[i];
++            a[i] = x-(real_t)1.0;
++            b[i] = x;
++        }
++        for (int i = LEN_1D / 2; i < LEN_1D; i++) {
+             x = a[LEN_1D-i-1] + b[i] * c[i];
+             a[i] = x-(real_t)1.0;
+             b[i] = x;

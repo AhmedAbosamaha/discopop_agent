@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s211.c
+  Model          : claude-fable-5-1
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror
+
+│  [bare] Calling claude-fable-5-1...
+│  [bare] s211.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: The rewrite is applied to `s211.c`. **What changed and why it is safe:** - The original loop's only loop-carried value is `b[i-1]` in `a[i] = b[i-1] + ...`, which is the value iteration `i-1` just stored. `b[i+1]` is always the pre-sweep value. So each sweep is really "compute new `b` from old `b`", then "compute `a` from new `b`". - Phase 1 writes all new `b` values into the heap scratch `bn` (re
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

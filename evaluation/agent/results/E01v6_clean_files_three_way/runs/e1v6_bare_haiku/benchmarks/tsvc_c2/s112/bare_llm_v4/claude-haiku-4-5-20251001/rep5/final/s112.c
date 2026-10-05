@@ -1,0 +1,27 @@
+#include "data.h"
+#include <stdlib.h>
+#include <string.h>
+
+real_t kernel_s112(void)
+{
+    // Allocate snapshot of array 'a' to break read-after-write dependency
+    real_t *a_snap = (real_t *)malloc(LEN_1D * sizeof(real_t));
+
+    for (int nl = 0; nl < iterations; nl++) {
+        // Copy current state of 'a' before the inner loop
+        memcpy(a_snap, a, LEN_1D * sizeof(real_t));
+
+        // Parallel loop: each iteration i reads from a_snap[i] (unmodified snapshot)
+        // and writes to unique location a[i+1], so all iterations are independent
+        #pragma omp parallel for \
+            shared(a, a_snap, b) \
+            private(i)
+        for (int i = LEN_1D - 2; i >= 0; i--) {
+            a[i+1] = a_snap[i] + b[i];
+        }
+        dummy(a, b, c, d, e);
+    }
+
+    free(a_snap);
+    return (real_t)0;
+}

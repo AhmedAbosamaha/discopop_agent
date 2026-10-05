@@ -1,0 +1,54 @@
+--- original.c
++++ final.c
+@@ -59,16 +59,48 @@
+ 
+ /* ==== s1213.c ==== */
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s1213(void)
+ {
++    /* a_old holds a snapshot of a[] taken before each sweep.  The original
++     * loop's dependence a[i] <- b[i-1] <- a_old[i] (via b[i] = a[i+1]*d[i]
++     * computed on a PRIOR i) is algebraically unrolled so that, for i>=2,
++     *   a_new[i] = a_old[i]*d[i-1] + c[i]
++     *   b_new[i] = a_old[i+1]*d[i]
++     * both of which depend only on the pre-sweep snapshot a_old (and c, d),
++     * never on each other or on another loop iteration's new value.  The
++     * i==1 boundary uses b[0], which this loop never writes, so it is read
++     * directly.  a_old must be a separate heap buffer (grows with LEN_1D)
++     * because iterations running out of order must not see a[] partially
++     * overwritten by other iterations. */
++    real_t *a_old = (real_t *)malloc(sizeof(real_t) * (size_t)LEN_1D);
++
+     for (int nl = 0; nl < iterations; nl++) {
+-        for (int i = 1; i < LEN_1D-1; i++) {
+-            a[i] = b[i-1]+c[i];
+-            b[i] = a[i+1]*d[i];
++        /* Snapshot: a_old[i] is per-iteration output, a is read-only here. */
++        #pragma omp parallel for default(none) shared(a, a_old) schedule(static)
++        for (int i = 0; i < LEN_1D; i++) {
++            a_old[i] = a[i];
+         }
++
++        if (LEN_1D > 2) {
++            /* Boundary i==1: depends on untouched b[0], not on a_old. */
++            a[1] = b[0] + c[1];
++            b[1] = a_old[2] * d[1];
++
++            /* Independent body: writes a[i], b[i] at distinct i, reads only
++             * from the read-only snapshot a_old and the read-only c, d. */
++            #pragma omp parallel for default(none) shared(a, b, a_old, c, d) schedule(static)
++            for (int i = 2; i < LEN_1D-1; i++) {
++                a[i] = a_old[i]*d[i-1] + c[i];
++                b[i] = a_old[i+1]*d[i];
++            }
++        }
++
+         dummy(a, b, c, d, e);
+     }
++
++    free(a_old);
+     return (real_t)0;
+ }
+ 

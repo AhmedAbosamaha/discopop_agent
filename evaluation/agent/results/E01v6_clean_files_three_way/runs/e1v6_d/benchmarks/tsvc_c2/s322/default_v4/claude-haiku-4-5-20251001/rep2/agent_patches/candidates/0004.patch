@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_d/benchmarks/tsvc_c2/s322/default_v4/claude-haiku-4-5-20251001/rep2/work/s322.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_d/benchmarks/tsvc_c2/s322/default_v4/claude-haiku-4-5-20251001/rep2/work/s322.c
+@@ -6,6 +6,7 @@
+     real_t* b_local = (real_t*) malloc(LEN_1D * sizeof(real_t));
+ 
+     for (int nl = 0; nl < iterations; nl++) {
++        #pragma omp parallel for shared(b_local) 
+         for (int j = 0; j < LEN_1D; j++) {
+             b_local[j] = b[j];
+         }

@@ -1,0 +1,52 @@
+--- original.c
++++ final.c
+@@ -60,15 +60,43 @@
+ /* ==== s341.c ==== */
+ #include "data.h"
+ 
++#define S341_NCHUNK 256
++
+ real_t kernel_s341(void)
+ {
+-    int j;
++    int cnt[S341_NCHUNK];
++    int off[S341_NCHUNK];
+     for (int nl = 0; nl < iterations; nl++) {
+-        j = -1;
+-        for (int i = 0; i < LEN_1D; i++) {
+-            if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++        int k;
++        #pragma omp parallel for default(none) shared(b, cnt) schedule(static)
++        for (k = 0; k < S341_NCHUNK; k++) {
++            int lo = (int)(((long long)k * LEN_1D) / S341_NCHUNK);
++            int hi = (int)(((long long)(k + 1) * LEN_1D) / S341_NCHUNK);
++            int c0 = 0;
++            for (int i = lo; i < hi; i++) {
++                if (b[i] > (real_t)0.) {
++                    c0++;
++                }
++            }
++            cnt[k] = c0;
++        }
++
++        int run = 0;
++        for (k = 0; k < S341_NCHUNK; k++) {
++            off[k] = run;
++            run += cnt[k];
++        }
++
++        #pragma omp parallel for default(none) shared(a, b, off) schedule(static)
++        for (k = 0; k < S341_NCHUNK; k++) {
++            int lo = (int)(((long long)k * LEN_1D) / S341_NCHUNK);
++            int hi = (int)(((long long)(k + 1) * LEN_1D) / S341_NCHUNK);
++            int j = off[k] - 1;
++            for (int i = lo; i < hi; i++) {
++                if (b[i] > (real_t)0.) {
++                    j++;
++                    a[j] = b[i];
++                }
+             }
+         }
+         dummy(a, b, c, d, e);

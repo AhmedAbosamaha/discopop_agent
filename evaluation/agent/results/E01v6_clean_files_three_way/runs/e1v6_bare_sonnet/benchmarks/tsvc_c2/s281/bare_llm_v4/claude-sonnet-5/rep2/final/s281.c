@@ -1,0 +1,31 @@
+#include "data.h"
+
+real_t kernel_s281(void)
+{
+    for (int nl = 0; nl < iterations; nl++) {
+        /* half is the boundary at which the mirror index LEN_1D-1-i
+         * switches from pointing into the not-yet-written second half
+         * (read of original value) to pointing into the already-written
+         * first half (read of the new value).  Splitting here preserves
+         * the original read-after-write ordering while letting each
+         * half run with independent iterations. */
+        int half = (LEN_1D + 1) / 2;
+
+        #pragma omp parallel for default(none) shared(a, b, c, half)
+        for (int i = 0; i < half; i++) {
+            real_t x = a[LEN_1D-i-1] + b[i] * c[i];
+            a[i] = x-(real_t)1.0;
+            b[i] = x;
+        }
+
+        #pragma omp parallel for default(none) shared(a, b, c, half)
+        for (int i = half; i < LEN_1D; i++) {
+            real_t x = a[LEN_1D-i-1] + b[i] * c[i];
+            a[i] = x-(real_t)1.0;
+            b[i] = x;
+        }
+
+        dummy(a, b, c, d, e);
+    }
+    return (real_t)0;
+}

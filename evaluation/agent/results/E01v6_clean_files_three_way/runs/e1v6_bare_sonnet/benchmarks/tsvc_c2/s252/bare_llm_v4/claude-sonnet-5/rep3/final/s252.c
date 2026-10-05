@@ -1,0 +1,21 @@
+#include "data.h"
+
+real_t kernel_s252(void)
+{
+    for (int nl = 0; nl < iterations; nl++) {
+        /*
+         * Original recurrence: s = b[i]*c[i]; a[i] = s + t; t = s;
+         * so t going into iteration i is exactly b[i-1]*c[i-1] (and 0 for i==0).
+         * That means a[i] = b[i]*c[i] + (i>0 ? b[i-1]*c[i-1] : 0), which has
+         * no dependence between iterations: each a[i] is computed purely from
+         * b/c at indices i and i-1, so the loop can run in any order/parallel.
+         */
+        #pragma omp parallel for default(none) shared(a, b, c) schedule(static)
+        for (int i = 0; i < LEN_1D; i++) {
+            real_t prev = (i == 0) ? (real_t) 0. : b[i - 1] * c[i - 1];
+            a[i] = b[i] * c[i] + prev;
+        }
+        dummy(a, b, c, d, e);
+    }
+    return (real_t)0;
+}

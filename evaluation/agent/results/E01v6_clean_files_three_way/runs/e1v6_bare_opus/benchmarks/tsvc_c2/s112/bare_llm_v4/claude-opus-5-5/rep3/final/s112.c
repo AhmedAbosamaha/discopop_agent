@@ -1,0 +1,22 @@
+#include <stdlib.h>
+#include "data.h"
+
+real_t kernel_s112(void)
+{
+    real_t *old = (real_t *)malloc(sizeof(real_t) * LEN_1D);
+    for (int nl = 0; nl < iterations; nl++) {
+        /* Snapshot a: every read of a[i] in the original backward loop
+           sees the value from before this sweep (anti-dependence only). */
+        #pragma omp parallel for default(none) shared(a, old) schedule(static)
+        for (int i = 0; i < LEN_1D - 1; i++) {
+            old[i] = a[i];
+        }
+        #pragma omp parallel for default(none) shared(a, b, old) schedule(static)
+        for (int i = 0; i < LEN_1D - 1; i++) {
+            a[i+1] = old[i] + b[i];
+        }
+        dummy(a, b, c, d, e);
+    }
+    free(old);
+    return (real_t)0;
+}

@@ -1,0 +1,23 @@
+#include <stdlib.h>
+#include "data.h"
+
+real_t kernel_s112(void)
+{
+    real_t *tmp = (real_t *)malloc((size_t)LEN_1D * sizeof(real_t));
+    for (int nl = 0; nl < iterations; nl++) {
+        /* snapshot the old values of a[0..LEN_1D-2]; the original loop
+           read a[i] before any iteration overwrote it (anti-dependence only) */
+#pragma omp parallel for default(none) shared(a, tmp) schedule(static)
+        for (int i = 0; i < LEN_1D - 1; i++) {
+            tmp[i] = a[i];
+        }
+        /* new a[i+1] = old a[i] + b[i], now order-independent */
+#pragma omp parallel for default(none) shared(a, b, tmp) schedule(static)
+        for (int i = 0; i < LEN_1D - 1; i++) {
+            a[i+1] = tmp[i] + b[i];
+        }
+        dummy(a, b, c, d, e);
+    }
+    free(tmp);
+    return (real_t)0;
+}

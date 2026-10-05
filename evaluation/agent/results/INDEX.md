@@ -455,16 +455,16 @@ Status: running
 | run | where | what it is | status | trials | outcomes |
 |---|---|---|---|---:|---|
 | `e1v6_smoke` | [`E01v6_clean_files_three_way/preflight/e1v6_smoke/`](E01v6_clean_files_three_way/preflight/e1v6_smoke/) | E1-v6 smoke: tsvc_c2/s211 and s000 × default_v4, discopop_gate_v4 (Haiku) and bare_llm_v4 with Haiku, Sonnet, Opus, Fable × 1 (12 trials, 18 model calls) — configuration check on packaging v6, never counted | valid | 12 | FASTER 11, no-change 1 |
-| `e1v6_r_1` | not archived yet | E1-v6 class R: s112 s121 s1213 s127 s211 × default_v4, discopop_gate_v4 (Haiku) × 5, threads 6,12, repeats 5 | registered |  |  |
-| `e1v6_r_2` | not archived yet | E1-v6 class R: s212 s241 s243 s244 s252 × default_v4, discopop_gate_v4 (Haiku) × 5, threads 6,12, repeats 5 | registered |  |  |
-| `e1v6_r_3` | not archived yet | E1-v6 class R: s254 s255 s281 s291 × default_v4, discopop_gate_v4 (Haiku) × 5, threads 6,12, repeats 5 | registered |  |  |
-| `e1v6_r_4` | not archived yet | E1-v6 class R: s292 s293 s331 s341 × default_v4, discopop_gate_v4 (Haiku) × 5, threads 6,12, repeats 5 | registered |  |  |
-| `e1v6_a` | not archived yet | E1-v6 class A (no-harm): s000 vpvtv s313 × default_v4, discopop_gate_v4 (Haiku) × 1 | registered |  |  |
-| `e1v6_d` | not archived yet | E1-v6 class D (must-decline): s321 s322 s323 s3112 × default_v4, discopop_gate_v4 (Haiku) × 3 | registered |  |  |
-| `e1v6_bare_haiku` | not archived yet | E1-v6 the model alone: bare_llm_v4 with claude-haiku-4-5-20251001 on class R × 5, A × 1, D × 3 (one run per model) | registered |  |  |
-| `e1v6_bare_sonnet` | not archived yet | E1-v6 the model alone: bare_llm_v4 with claude-sonnet-5 on class R × 5, A × 1, D × 3 (one run per model) | registered |  |  |
-| `e1v6_bare_opus` | not archived yet | E1-v6 the model alone: bare_llm_v4 with claude-opus-5-5 on class R × 5, A × 1, D × 3 (one run per model) | registered |  |  |
-| `e1v6_bare_fable` | not archived yet | E1-v6 the model alone: bare_llm_v4 with claude-fable-5-1 on class R × 5, A × 1, D × 3 (one run per model) | registered |  |  |
+| `e1v6_r_1` | [`E01v6_clean_files_three_way/runs/e1v6_r_1/`](E01v6_clean_files_three_way/runs/e1v6_r_1/) | E1-v6 class R: s112 s121 s1213 s127 s211 × default_v4, discopop_gate_v4 (Haiku) × 5, threads 6,12, repeats 5 | registered | 50 | FASTER 23, no-change 25, parallel-not-faster 2 |
+| `e1v6_r_2` | [`E01v6_clean_files_three_way/runs/e1v6_r_2/`](E01v6_clean_files_three_way/runs/e1v6_r_2/) | E1-v6 class R: s212 s241 s243 s244 s252 × default_v4, discopop_gate_v4 (Haiku) × 5, threads 6,12, repeats 5 | registered | 50 | FASTER 19, no-change 27, parallel-not-faster 4 |
+| `e1v6_r_3` | [`E01v6_clean_files_three_way/runs/e1v6_r_3/`](E01v6_clean_files_three_way/runs/e1v6_r_3/) | E1-v6 class R: s254 s255 s281 s291 × default_v4, discopop_gate_v4 (Haiku) × 5, threads 6,12, repeats 5 | registered | 40 | FASTER 16, no-change 21, parallel-not-faster 3 |
+| `e1v6_r_4` | [`E01v6_clean_files_three_way/runs/e1v6_r_4/`](E01v6_clean_files_three_way/runs/e1v6_r_4/) | E1-v6 class R: s292 s293 s331 s341 × default_v4, discopop_gate_v4 (Haiku) × 5, threads 6,12, repeats 5 | registered | 40 | FASTER 15, no-change 25 |
+| `e1v6_a` | [`E01v6_clean_files_three_way/runs/e1v6_a/`](E01v6_clean_files_three_way/runs/e1v6_a/) | E1-v6 class A (no-harm): s000 vpvtv s313 × default_v4, discopop_gate_v4 (Haiku) × 1 | registered | 6 | FASTER 6 |
+| `e1v6_d` | [`E01v6_clean_files_three_way/runs/e1v6_d/`](E01v6_clean_files_three_way/runs/e1v6_d/) | E1-v6 class D (must-decline): s321 s322 s323 s3112 × default_v4, discopop_gate_v4 (Haiku) × 3 | registered | 24 | no-change 24 |
+| `e1v6_bare_haiku` | [`E01v6_clean_files_three_way/runs/e1v6_bare_haiku/`](E01v6_clean_files_three_way/runs/e1v6_bare_haiku/) | E1-v6 the model alone: bare_llm_v4 with claude-haiku-4-5-20251001 on class R × 5, A × 1, D × 3 (one run per model) | registered | 105 | BROKEN 25, FASTER 43, VERIFY_FAILED 24, changed-not-parallel 1, parallel-not-faster 12 |
+| `e1v6_bare_sonnet` | [`E01v6_clean_files_three_way/runs/e1v6_bare_sonnet/`](E01v6_clean_files_three_way/runs/e1v6_bare_sonnet/) | E1-v6 the model alone: bare_llm_v4 with claude-sonnet-5 on class R × 5, A × 1, D × 3 (one run per model) | registered | 105 | BROKEN 2, FASTER 91, no-change 1, parallel-not-faster 11 |
+| `e1v6_bare_opus` | [`E01v6_clean_files_three_way/runs/e1v6_bare_opus/`](E01v6_clean_files_three_way/runs/e1v6_bare_opus/) | E1-v6 the model alone: bare_llm_v4 with claude-opus-5-5 on class R × 5, A × 1, D × 3 (one run per model) | registered | 105 | AGENT_ERROR 12, FASTER 92, parallel-not-faster 1 |
+| `e1v6_bare_fable` | [`E01v6_clean_files_three_way/runs/e1v6_bare_fable/`](E01v6_clean_files_three_way/runs/e1v6_bare_fable/) | E1-v6 the model alone: bare_llm_v4 with claude-fable-5-1 on class R × 5, A × 1, D × 3 (one run per model) | registered | 105 | FASTER 98, changed-not-parallel 1, no-change 1, parallel-not-faster 5 |
 | `e1v6_race_check` | not archived yet | race_check.py (the gate's TSan with archer and the schedule matrix, server, no model) over every model-alone parallel program of E1-v6 and, as the positive control, every parallel program of the agent | registered |  |  |
 
 ## [E2-O3 — does the evidence effect hold on more hidden-order kernels?](E02o3_hidden_order_kernels/REPORT.md)

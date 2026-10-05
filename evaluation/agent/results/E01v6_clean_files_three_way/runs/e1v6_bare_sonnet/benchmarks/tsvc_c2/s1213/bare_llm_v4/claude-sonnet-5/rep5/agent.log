@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s1213.c
+  Model          : claude-sonnet-5
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s1213.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: **Plan** The inner loop has a loop-carried dependence through `b`: `a[i]` reads `b[i-1]`, which was written by iteration `i-1` of the *same* trip. Also `b[i]` reads `a[i+1]`, which in sequential order still holds its value from the *start* of the trip (index `i+1` hasn't been visited yet when `b[i]` is computed). Since `b[0]` is never written anywhere in this kernel, it's a loop-invariant constant
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

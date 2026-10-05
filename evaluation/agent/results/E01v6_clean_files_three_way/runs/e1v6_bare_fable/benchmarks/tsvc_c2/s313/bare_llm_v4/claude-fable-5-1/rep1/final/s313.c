@@ -1,0 +1,36 @@
+#include "data.h"
+
+#define S313_NCHUNK 256
+
+real_t kernel_s313(void)
+{
+    real_t dot = (real_t)0.;
+    real_t partial[S313_NCHUNK];
+
+    /* Fixed chunking independent of the thread count so the summation
+       order (and hence the result) is identical at every thread count
+       and schedule. */
+    int nchunks = S313_NCHUNK;
+    if (nchunks > LEN_1D) nchunks = LEN_1D;
+    const int csz = (LEN_1D + nchunks - 1) / nchunks;
+
+    for (int nl = 0; nl < iterations; nl++) {
+#pragma omp parallel for default(none) shared(a, b, partial) firstprivate(nchunks, csz)
+        for (int ch = 0; ch < nchunks; ch++) {
+            int lo = ch * csz;
+            int hi = lo + csz;
+            if (hi > LEN_1D) hi = LEN_1D;
+            real_t s = (real_t)0.;
+            for (int i = lo; i < hi; i++) {
+                s += a[i] * b[i];
+            }
+            partial[ch] = s;
+        }
+        dot = (real_t)0.;
+        for (int ch = 0; ch < nchunks; ch++) {
+            dot += partial[ch];
+        }
+        dummy(a, b, c, d, e);
+    }
+    return dot;
+}

@@ -1,0 +1,197 @@
+{
+  "benchmark": "tsvc_c2/s254",
+  "kernel": "s254",
+  "source": "s254.c",
+  "arm": "bare_llm_v4",
+  "model": "claude-haiku-4-5-20251001",
+  "arm_flags": [
+    "--require-speedup",
+    "--min-runtime-share",
+    "0.01",
+    "--prompt-version",
+    "4",
+    "--timing-cflags=-DLARGE_DATASET"
+  ],
+  "started_at": "2026-10-05T04:09:54",
+  "host": "rms14562",
+  "host_load_start": [
+    7.60498046875,
+    7.51220703125,
+    7.5478515625
+  ],
+  "agent_cmd": [
+    "/home/ahmedabosamaha/discopop_agent/venv/bin/python",
+    "-m",
+    "discopop_agent.bare_llm",
+    "--project-dir",
+    ".",
+    "--project-units",
+    "s254.c,main.c",
+    "--project-include",
+    ".",
+    "--project-editable",
+    "s254.c",
+    "--model",
+    "claude-haiku-4-5-20251001",
+    "--prompt-version",
+    "4",
+    "--exclude-functions",
+    "main,dummy"
+  ],
+  "agent_s": 42.2,
+  "agent_rc": 0,
+  "llm_calls": 1,
+  "llm_call_failures": 0,
+  "harness_reasks": 0,
+  "harness_discards": 0,
+  "explorer_retries": 0,
+  "explorer_stalls": 0,
+  "reverts": 0,
+  "refresh_fast": 0,
+  "refresh_full": 0,
+  "refresh_fallback": 0,
+  "runtime_remeasurements": 0,
+  "phase_b_deferred": 0,
+  "phase_b_joint_kept": 0,
+  "dp_floor": null,
+  "gate_failures_phase_a": {},
+  "gate_failures_phase_b": {},
+  "gate_passes_phase_a": 0,
+  "gate_failures_d40": {},
+  "d40_verdicts": {},
+  "exposure_verdicts": {},
+  "d40_seconds": 0,
+  "requeued_regions": 0,
+  "region_verdicts": {},
+  "settle_dropped": 0,
+  "llm_usage": {
+    "calls_recorded": 1,
+    "input_tokens": 50,
+    "output_tokens": 3941,
+    "cache_read_input_tokens": 81825,
+    "cache_creation_input_tokens": 5495,
+    "cost_usd": 0.0402,
+    "model_seconds": 41.2
+  },
+  "layout": "project",
+  "files_changed": [
+    "s254.c"
+  ],
+  "source_changed": true,
+  "scaffold": {
+    "ok": true,
+    "problems": [],
+    "applies": true
+  },
+  "editable": [
+    "s254.c"
+  ],
+  "harness_sha256": "75e53a112d7571f6db3eb825fba7576ef686d0c99ca36e02373541823b5ae388",
+  "pragmas_added": 1,
+  "pragmas_in_final": 1,
+  "hot_loop": {
+    "entry": "kernel_s254",
+    "function": "kernel_s254",
+    "line": 8,
+    "writes": [
+      "a"
+    ]
+  },
+  "hot_loop_covered": true,
+  "hot_loop_coverage": {
+    "criterion": "v2 (27 Sep 2026)",
+    "covered": true,
+    "covering": [
+      {
+        "function": "kernel_s254",
+        "line": 6,
+        "directive": "#pragma omp parallel for schedule(auto) shared(a, b, LEN_1D) private(i)",
+        "writes": [
+          "a"
+        ]
+      }
+    ],
+    "uncounted": [],
+    "elsewhere": []
+  },
+  "candidates_recorded": 0,
+  "verify": {
+    "verify_size": "EXTRALARGE",
+    "threads": [
+      6,
+      12
+    ],
+    "repeats": 5,
+    "compiler": "/usr/bin/clang-20",
+    "final_flags": [],
+    "build_errors": {
+      "final_dump": "~~~~\n/home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_bare_haiku/benchmarks/tsvc_c2/s254/bare_llm_v4/claude-haiku-4-5-20251001/rep5/final/s254.c:6:78: error: use of undeclared identifier 'i'\n    6 |         #pragma omp parallel for schedule(auto) shared(a, b, LEN_1D) private(i)\n      |                                                                              ^\n2 errors generated.\n",
+      "final_par": "~~~~\n/home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_bare_haiku/benchmarks/tsvc_c2/s254/bare_llm_v4/claude-haiku-4-5-20251001/rep5/final/s254.c:6:78: error: use of undeclared identifier 'i'\n    6 |         #pragma omp parallel for schedule(auto) shared(a, b, LEN_1D) private(i)\n      |                                                                              ^\n2 errors generated.\n"
+    },
+    "dump_exact": null,
+    "dump_max_rel_err": null,
+    "status": "verify_build_failed",
+    "speed_measurable": true
+  },
+  "verify_s": 0.5,
+  "status": "done",
+  "outcome": "VERIFY_FAILED",
+  "finished_at": "2026-10-05T04:10:36",
+  "host_load_end": [
+    5.98583984375,
+    7.09619140625,
+    7.404296875
+  ],
+  "profile": {
+    "wrapper": "discopop_cc",
+    "layout": "project",
+    "units": [
+      "s254.c",
+      "main.c"
+    ],
+    "instrument_s": 0.21,
+    "profiled_run_s": 0.11,
+    "explore_stalls": 0,
+    "explore_s": 1.37,
+    "explore_success_s": 1.37,
+    "explore_attempts": 1,
+    "explore_timed_out": false,
+    "explore_failures": [],
+    "patterns": {
+      "optimizer_output": 0,
+      "merged_pattern": 0,
+      "task": 0,
+      "do_all": 0,
+      "reduction": 0
+    },
+    "profile_sha256": "6bcb7560978145dc701a66e7d54d83c0b4f468260b1e68164dd12b69c344d5e9"
+  },
+  "package_integrity": {
+    "before": {
+      "checked": "before trial",
+      "at": "2026-10-05T04:09:54",
+      "prepared_sha256": "3326d0e2e3304ed6c7f107fa0a3217b4d9babfde6341809ef31f5b4ed3a25637",
+      "packager_sha256": "3326d0e2e3304ed6c7f107fa0a3217b4d9babfde6341809ef31f5b4ed3a25637",
+      "harness_sha256": "75e53a112d7571f6db3eb825fba7576ef686d0c99ca36e02373541823b5ae388",
+      "archived_sha256": "3326d0e2e3304ed6c7f107fa0a3217b4d9babfde6341809ef31f5b4ed3a25637",
+      "profile_sha256": "6bcb7560978145dc701a66e7d54d83c0b4f468260b1e68164dd12b69c344d5e9",
+      "ok": true
+    },
+    "after": {
+      "checked": "after trial",
+      "at": "2026-10-05T04:10:36",
+      "prepared_sha256": "3326d0e2e3304ed6c7f107fa0a3217b4d9babfde6341809ef31f5b4ed3a25637",
+      "packager_sha256": "3326d0e2e3304ed6c7f107fa0a3217b4d9babfde6341809ef31f5b4ed3a25637",
+      "harness_sha256": "75e53a112d7571f6db3eb825fba7576ef686d0c99ca36e02373541823b5ae388",
+      "archived_sha256": "3326d0e2e3304ed6c7f107fa0a3217b4d9babfde6341809ef31f5b4ed3a25637",
+      "profile_sha256": "6bcb7560978145dc701a66e7d54d83c0b4f468260b1e68164dd12b69c344d5e9",
+      "ok": true
+    }
+  },
+  "speed_check_off": false,
+  "timing_flags": [
+    "--timing-cflags=-DLARGE_DATASET"
+  ],
+  "harness_edit_redos": [],
+  "repeat": 5
+}

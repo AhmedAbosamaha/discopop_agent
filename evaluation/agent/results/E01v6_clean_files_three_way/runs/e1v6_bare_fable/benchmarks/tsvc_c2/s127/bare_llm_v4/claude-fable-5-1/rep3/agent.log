@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s127.c
+  Model          : claude-fable-5-1
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror
+
+│  [bare] Calling claude-fable-5-1...
+│  [bare] s127.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Done. The rewrite in `s127.c`: - Removed the carried induction variable `j` (it was always `2*i` then `2*i+1`), so iteration `i` writes exactly `a[2i]` and `a[2i+1]` — disjoint locations across iterations — and only reads `b[i], c[i], d[i], e[i]`. - Annotated the inner `i` loop with `#pragma omp parallel for shared(a,b,c,d,e) schedule(static)`; `i` is the loop index (implicitly private), and no ot
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

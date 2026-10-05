@@ -1,0 +1,44 @@
+{
+  "suite": "tsvc_c2",
+  "kernel": "s244",
+  "source": "benchmarks/TSVC_2/src/tsvc.c",
+  "category": "node splitting / false dependence cycle breaking",
+  "file": "s244.c",
+  "language": "c",
+  "layout": "project",
+  "project": {
+    "units": [
+      "s244.c",
+      "main.c"
+    ],
+    "include_dirs": [
+      "."
+    ],
+    "editable": [
+      "s244.c"
+    ]
+  },
+  "restructuring_class": "restructure",
+  "transformation": "node splitting (dead store except in the last iteration)",
+  "why": "a[i+1] written by iteration i is overwritten by iteration i+1 without being read: only the last iteration's store survives",
+  "reference_solution": "agent/reference_solutions/tsvc_c2/s244.c",
+  "exclude_functions": [
+    "main",
+    "dummy"
+  ],
+  "harness": "tsvc_c2/s244.h",
+  "harness_sha256": "d754b41593298ebfe8a7a0c71dc02927660b210fc6efc3316bff614375342199",
+  "hot_loop": {
+    "entry": "kernel_s244",
+    "function": "kernel_s244",
+    "line": 6,
+    "writes": [
+      "a",
+      "b"
+    ]
+  },
+  "agent_dataset": "SMALL",
+  "generator_version": 6,
+  "inputs_sha256": "456dd573b84b30e6f32c943bb559d80374eec67177de48223e95124a8c3fc627",
+  "output_sha256": "0de7c5eb740875d527837f24c7b23b74d3f74c9dc72c2305f99938917f73a2b4"
+}

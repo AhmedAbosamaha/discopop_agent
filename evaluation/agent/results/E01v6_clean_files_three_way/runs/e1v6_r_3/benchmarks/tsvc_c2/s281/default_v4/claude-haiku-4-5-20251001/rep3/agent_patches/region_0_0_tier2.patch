@@ -1,0 +1,18 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_r_3/benchmarks/tsvc_c2/s281/default_v4/claude-haiku-4-5-20251001/rep3/work/s281.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_r_3/benchmarks/tsvc_c2/s281/default_v4/claude-haiku-4-5-20251001/rep3/work/s281.c
+@@ -4,7 +4,14 @@
+ {
+     real_t x;
+     for (int nl = 0; nl < iterations; nl++) {
+-        for (int i = 0; i < LEN_1D; i++) {
++        // Parallel part: iterations 0 to (LEN_1D-1)/2 have no loop-carried dependencies
++        for (int i = 0; i <= (LEN_1D-1)/2; i++) {
++            x = a[LEN_1D-i-1] + b[i] * c[i];
++            a[i] = x-(real_t)1.0;
++            b[i] = x;
++        }
++        // Sequential part: iterations (LEN_1D-1)/2+1 to LEN_1D-1 depend on earlier iterations
++        for (int i = (LEN_1D-1)/2+1; i < LEN_1D; i++) {
+             x = a[LEN_1D-i-1] + b[i] * c[i];
+             a[i] = x-(real_t)1.0;
+             b[i] = x;

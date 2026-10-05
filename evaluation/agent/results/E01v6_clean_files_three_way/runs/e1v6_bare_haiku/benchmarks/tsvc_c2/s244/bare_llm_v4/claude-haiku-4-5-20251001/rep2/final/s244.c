@@ -1,0 +1,28 @@
+#include "data.h"
+
+real_t kernel_s244(void)
+{
+    for (int nl = 0; nl < iterations; nl++) {
+        // Phase 1: Update a[i] - no loop-carried dependence
+        #pragma omp parallel for
+        for (int i = 0; i < LEN_1D-1; ++i) {
+            a[i] = b[i] + c[i] * d[i];
+        }
+
+        // Phase 2: Update b[i] - no loop-carried dependence
+        #pragma omp parallel for
+        for (int i = 0; i < LEN_1D-1; ++i) {
+            b[i] = c[i] + b[i];
+        }
+
+        // Phase 3: Update a[i+1] - no loop-carried dependence
+        // Each iteration i writes to a[i+1]; iteration i+1 writes to a[i+2]
+        #pragma omp parallel for
+        for (int i = 0; i < LEN_1D-1; ++i) {
+            a[i+1] = b[i] + a[i+1] * d[i];
+        }
+
+        dummy(a, b, c, d, e);
+    }
+    return (real_t)0;
+}
