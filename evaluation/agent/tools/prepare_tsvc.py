@@ -1382,6 +1382,149 @@ CLEAN: Dict[str, Tuple[int, Any, Any, Any, Any, List[str]]] = {
 }
 
 
+# ---- packaging v7 (the author, 5 Oct 2026: "ok build the proper fix"; record §6): every repetition is NECESSARY ----
+# Found with E1-v6: where a loop recomputes its whole result from arrays it does not write, the repetitions before
+# the last one can be skipped without changing the output — `dummy`'s change of a few input elements makes the
+# repetitions different, not necessary (12 loops of the suite; the agent did it on `s313`), and on `s331`, whose
+# search found the same index in every repetition, they could be run in any order (the agent did that too). v7:
+#   * `dummy` RECORDS before it changes the input: the number the repetition computed, where TSVC's own call hands
+#     `dummy` one (`dummy(a, b, c, d, e, dot)`: s313, s331, s3112 — tsvc.c), and a few elements of each of the five
+#     vectors as they stand at that call, go into two running sums that are part of the output. The recording
+#     function is in the measurement header outside the package: DiscoPoP does not observe it, so its view of a
+#     package is v6's.
+#   * `s331` gets data in which the result MOVES between repetitions: its last negative elements are among those
+#     `dummy` turns positive.
+#   * the generator PROVES it per package (`validate_v5`): a variant that runs the loop only in the first and the
+#     last repetition, and one that runs all repetitions before all `dummy` calls, must both change the output.
+# The benchmark's file is v6's, byte for byte, except where the call gains TSVC's argument (three loops); `main.c`
+# and the header outside the package change for every loop; the output gains two values.
+V7_SUITE = "tsvc_c3"
+V7_FOLD = """/* ---- every repetition leaves its mark (packaging v7) ---------------------------------------
+ * dummy() calls this BEFORE it changes the input: the number the repetition computed and a few elements of
+ * each vector, as they stand at that moment, go into two running sums that are part of the output. A
+ * repetition that was skipped, merged with another or run out of order leaves other values here. */
+static double pb_rep_scalar = 0.0, pb_rep_arrays = 0.0;
+static void pb_fold(long n, const real_t* a, const real_t* b, const real_t* c, const real_t* d, const real_t* e,
+                    real_t s)
+{
+  long p = ((n > 0 ? n - 1 : 0) * 7919L + 13L) % LEN_1D;     /* the element the previous call changed */
+  long m = LEN_1D / 2, z = LEN_1D - 1;
+  double w = (double)(n % 7 + 1);
+  pb_rep_scalar += w * (double)s;
+  /* a different factor for every element: two elements that are off by the same amount in opposite
+   * directions (s000: a[0] too large, a[LEN_1D-1] too small) must not cancel */
+  pb_rep_arrays += w * (2.0 * a[0] + 3.0 * b[0] + 5.0 * c[0] + 7.0 * d[0] + 11.0 * e[0]
+                        + 13.0 * a[p] + 17.0 * b[p] + 19.0 * c[p] + 23.0 * d[p] + 29.0 * e[p]
+                        + 31.0 * a[m] + 37.0 * b[m] + 41.0 * c[m] + 43.0 * d[m] + 47.0 * e[m]
+                        + 53.0 * a[z] + 59.0 * b[z] + 61.0 * c[z] + 67.0 * d[z] + 71.0 * e[z]);
+}
+
+"""
+# `s331` (v7): a low region of fixed negative elements, and above it the elements `dummy` turns positive in the
+# first half of the repetitions — the last negative index is one of those until they are used up, then the top
+# of the fixed region: the search's result changes while the repetitions run, at every size. The upper part of
+# the array holds no negative element (a parallel version that keeps the LAST chunk's index instead of the
+# maximum returns -1).
+V7_S331_INIT = """    for (int i = 1; i < 7000 && i < LEN_1D / 4; i++) if (i % 101 == 0) a[i] = -a[i];
+    for (long n = 1; n < iterations / 2; n++) a[(n * 7919L + 13L) % LEN_1D] = (real_t)-0.1;"""
+# packages whose DATA differs from v4's by this layout's design: their output is not compared with v4's
+V7_NEW_DATA = ("s331",)
+# packages for which the proof cannot hold, with the reason — reported by the validation, not failed; meta.json
+# says so (`repetitions_proven`), and such a package must not enter an experiment that judges speed
+V7_NOT_PROVEN = {
+    "s277": "with TSVC's data the guard skips both statements in every iteration: the loop executes nothing, so "
+            "there is nothing a skipped repetition would have done",
+    "s424": "the loop writes `flat_2d_array`, an array `dummy` is not handed (as in TSVC), from inputs only: the "
+            "record of the five vectors cannot see a skipped repetition",
+}
+
+
+def _dummy_scalar(loop: Loop) -> Optional[str]:
+    """The variable TSVC's own function hands to `dummy` as its last argument (tsvc.c) — None where TSVC passes
+    a constant, and for a constructed kernel."""
+    if loop.body is not None:
+        return None
+    m = re.search(r"^real_t %s\(struct args_t \* func_args\)\n\{\n(.*?)^\}" % re.escape(loop.name), TSVC.read_text(),
+                  re.S | re.M)
+    calls = re.findall(r"\bdummy\(([^;]*)\);", m.group(1)) if m else []
+    if len(calls) != 1:
+        raise ValueError(f"{loop.name}: {len(calls)} calls of dummy in TSVC's function")
+    last = calls[0].split(",")[-1].strip()
+    return last if re.fullmatch(r"[A-Za-z_]\w*", last) else None
+
+
+def render_v7_kernel(loop: Loop, expert: bool = False) -> str:
+    """The benchmark's own file (v7), or the reference as that file: v6's, the call with TSVC's argument where
+    TSVC has one."""
+    text = render_v6_kernel(loop, expert)
+    scalar = _dummy_scalar(loop)
+    return _exact(text, V6_CALL.strip(), f"dummy(a, b, c, d, e, {scalar});") if scalar else text
+
+
+def render_v7_header(loop: Loop) -> str:
+    text = render_v6_header(loop)
+    return _exact(text, V6_PROTO, V6_PROTO[:-2] + ", real_t);") if _dummy_scalar(loop) else text
+
+
+def render_v7_main(loop: Loop) -> str:
+    """main.c (v7): `dummy` records the repetition (pb_fold, in the header outside the package) before it changes
+    the input."""
+    text = render_v6_main(loop)
+    scalar = _dummy_scalar(loop)
+    if scalar:
+        text = _exact(text, "int dummy(real_t *a, real_t *b, real_t *c, real_t *d, real_t *e)\n",
+                      "int dummy(real_t *a, real_t *b, real_t *c, real_t *d, real_t *e, real_t s)\n")
+    return _exact(text, "  long k = (n * 7919L + 13L) % LEN_1D;\n",
+                  "  long k = (n * 7919L + 13L) % LEN_1D;\n"
+                  f"  pb_fold(n, a, b, c, d, e, {'s' if scalar else '(real_t)0'});\n")
+
+
+def render_v7_harness(loop: Loop) -> str:
+    """The measurement header outside the package (v7): v6's, with the record of the repetitions and its two
+    sums at the end of the output."""
+    text = _exact(render_v6_harness(loop), f"harness for {loop.name} (packaging v6)", f"harness for {loop.name} (packaging v7)")
+    text = _exact(text, "/* ---- what main.c calls: set-up before the timed region, the digest after it ------- */",
+                  V7_FOLD + "/* ---- what main.c calls: set-up before the timed region, the digest after it ------- */")
+    return _exact(text, "  pb_report();\n  free(a);", "  pb_emit(pb_rep_scalar); pb_emit(pb_rep_arrays);\n  pb_report();\n  free(a);")
+
+
+def v7_files(loop: Loop) -> Dict[str, str]:
+    return {f"{loop.name}.c": render_v7_kernel(loop), V5_HEADER: render_v7_header(loop), V5_MAIN: render_v7_main(loop)}
+
+
+def hot_loop_v7(loop: Loop) -> Dict[str, Any]:
+    return hot_loop_v6(loop)          # the function's text differs from v6's in the `dummy` call's argument only
+
+
+def v7_mutants(loop: Loop) -> Dict[str, str]:
+    """The two variants of the benchmark's file that must NOT pass (v7): `skip` runs the loop's statements in
+    the first and the last repetition only, `reorder` runs every repetition before any `dummy` call. {} for a
+    package with one repetition."""
+    if loop.reps < 2:
+        return {}
+    text = render_v7_kernel(loop)
+    call = "        " + (f"dummy(a, b, c, d, e, {_dummy_scalar(loop)});" if _dummy_scalar(loop) else V6_CALL.strip())
+    m = re.search(re.escape(V6_LOOP) + r"\n(?P<rep>.*?)\n" + re.escape(call) + r"\n    \}\n", text, re.S)
+    if not m:
+        raise ValueError(f"{loop.name}: the repetition loop is not `loop, statements, dummy call` any more")
+    rep = m.group("rep")
+    skip = (V6_LOOP + "\n        if (nl == 0 || nl == iterations - 1) {\n" + rep + "\n        }\n" + call + "\n    }\n")
+    reorder = (V6_LOOP + "\n" + rep + "\n    }\n" + V6_LOOP + "\n" + call + "\n    }\n")
+    return {"skip": text[:m.start()] + skip + text[m.end():], "reorder": text[:m.start()] + reorder + text[m.end():]}
+
+
+def _as_v7(loop: Loop) -> Loop:
+    c = copy.copy(loop)
+    c.suite = V7_SUITE
+    if loop.name == "s331":
+        c.init_extra = V7_S331_INIT
+    return c
+
+
+SUITES[V7_SUITE] = [_as_v7(l) for l in SUITES[V6_SUITE]]
+CLEAN[V7_SUITE] = (7, v7_files, render_v7_harness, render_v7_kernel, hot_loop_v7, ["main", "dummy"])
+
+
 # ---- packaging v3, kept verbatim: every run up to E2 used it, and it stays the default until T0.15 ---------
 # shows v4 leaves DiscoPoP's view of every loop unchanged (it does not yet: s211, 25 Sep).
 V3_HEADER = """/* Generated by agent/tools/prepare_tsvc.py (v%(version)d) — do not edit by hand.
@@ -1611,6 +1754,13 @@ def validate_v5(loop: Loop, package: Path, reference: Optional[Path]) -> List[st
     problems: List[str] = []
     units = [package / f"{loop.name}.c", package / V5_MAIN]
     b1 = next((l for l in B1_LOOPS if l.name == loop.name), None)      # None: a kernel v4 never had (ORDER-4)
+    v7 = loop.suite == V7_SUITE
+    if v7 and loop.name in V7_NEW_DATA:
+        b1 = None                      # this layout gives the loop other data: nothing of v4's to equal
+
+    def as_v4(out: str) -> str:
+        """A v7 dump without the two sums of the repetitions' record — what v4 printed."""
+        return "".join(out.splitlines(keepends=True)[:-2]) if v7 else out
     with tempfile.TemporaryDirectory(prefix=f"tsvc_{loop.name}_") as tmp:
         t = Path(tmp)
         if b1 is not None:
@@ -1632,7 +1782,9 @@ def validate_v5(loop: Loop, package: Path, reference: Optional[Path]) -> List[st
                                        cpath=t / "h")
             if not ok:
                 problems.append(f"layout v4 ({tag}): {old}")
-            elif old != out:
+            elif v7 and tag == "digest":
+                pass                   # the digest sums every printed value, the two new ones included
+            elif old != as_v4(out):
                 problems.append(f"the output differs from layout v4's ({tag})")
         if outs["default"] == outs["seeded"]:
             problems.append("the perturbed input does not change the output")
@@ -1649,6 +1801,21 @@ def validate_v5(loop: Loop, package: Path, reference: Optional[Path]) -> List[st
                 err = _max_rel(outs[tag], out)
                 if err > 1e-9:
                     problems.append(f"reference ({tag}) differs from the original: max rel err {err:.2e}")
+        if v7:
+            # every repetition is necessary: neither variant may reproduce the output, on either input
+            for name, text in v7_mutants(loop).items():
+                (t / "mutant").mkdir(exist_ok=True)
+                for f in (V5_HEADER, V5_MAIN):
+                    shutil.copy2(package / f, t / "mutant" / f)
+                (t / "mutant" / f"{loop.name}.c").write_text(text)
+                for tag, args in (("default", []), ("seeded", ["7"])):
+                    ok, out = _build_run_units([t / "mutant" / f"{loop.name}.c", t / "mutant" / V5_MAIN], t / "mutant",
+                                               t / "mut", ["-DPB_FULL_DUMP", "-DSMALL_DATASET"], args, None)
+                    same = ok and _max_rel(outs[tag], out) <= 1e-6
+                    if not ok:
+                        problems.append(f"variant `{name}` ({tag}): {out}")
+                    elif same and loop.name not in V7_NOT_PROVEN:
+                        problems.append(f"variant `{name}` reproduces the output ({tag}): the repetitions are not necessary")
     return problems
 
 
@@ -1684,6 +1851,11 @@ def write_v5(loop: Loop, out: Path, harness_root: Path, refs: Path, check: bool)
         "harness": f"{loop.suite}/{loop.name}.h",
         "harness_sha256": hashlib.sha256(hdr.read_bytes()).hexdigest(),
         "hot_loop": hot_of(loop),
+        # v7: whether the generator proved that skipping or reordering repetitions changes the output
+        **({"repetitions_proven": loop.name not in V7_NOT_PROVEN and loop.reps > 1,
+            **({"repetitions_note": V7_NOT_PROVEN[loop.name]} if loop.name in V7_NOT_PROVEN else {}),
+            **({"repetitions_note": "one repetition: nothing to skip or reorder"} if loop.reps < 2 else {})}
+           if version == 7 else {}),
         "agent_dataset": "SMALL", "generator_version": version,
         "inputs_sha256": hashlib.sha256(TSVC.read_bytes()).hexdigest(),
         "output_sha256": v5_digest(files),
@@ -1700,20 +1872,21 @@ def main() -> int:
                          "package, D39); builds find them through CPATH (harness_include.py)")
     ap.add_argument("--references-out", type=Path, default=REFERENCES,
                     help="where the expert references go (default: the tracked agent/reference_solutions/tsvc)")
-    ap.add_argument("--layout", choices=("v3", "v4", "v5", "v6"), default="v3",
+    ap.add_argument("--layout", choices=("v3", "v4", "v5", "v6", "v7"), default="v3",
                     help="v3 (default): the one-file layout of E1 and E2; v4 (D39): the measurement in a "
                          "header outside the package — E2-B1 to E2-O3; v5 (the author, 4 Oct): the benchmark's "
                          "file holds only the loop's function, `main` in a second file (suite tsvc_c1); v6 (4 Oct, "
-                         "evening): v5 with the repetition loop inside the function, as TSVC has it (suite tsvc_c2)")
+                         "evening): v5 with the repetition loop inside the function, as TSVC has it (suite tsvc_c2); v7 (5 Oct): "
+                         "v6 with every repetition recorded by `dummy`, so that none can be skipped (suite tsvc_c3)")
     ap.add_argument("--suite", choices=sorted(SUITES), default="tsvc",
                     help="which loops: `tsvc` (E1-E2, v3 or v4), `tsvc_b1` (v4 only), `tsvc_c1` (v5 only) or "
                          "`tsvc_c2` (v6 only)")
     ap.add_argument("--validate", action="store_true")
     a = ap.parse_args()
-    for layout, suite in (("v5", V5_SUITE), ("v6", V6_SUITE)):
+    for layout, suite in (("v5", V5_SUITE), ("v6", V6_SUITE), ("v7", V7_SUITE)):
         if (a.suite == suite) != (a.layout == layout):
             ap.error(f"layout {layout} and suite {suite} go together")
-    clean = a.layout in ("v5", "v6")
+    clean = a.layout in ("v5", "v6", "v7")
     if a.suite == "tsvc_b1" and a.layout != "v4":
         ap.error(f"--suite {a.suite} is packaged in layout v4 only")
     loops = SUITES[a.suite]
