@@ -4,6 +4,8 @@
 
 **Status:** done
 
+> **Not the current result.** This question is answered by [E2-v6 — the hidden order on clean files: does DiscoPoP's evidence let the agent find a split no reading of the file can find, and can retries with feedback stand in for it?](../E02v6_hidden_order_clean_files/REPORT.md); this folder is kept as history. See [`results/README.md`](../README.md).
+
 ## The question
 
 On three new kernels whose split order is decided by a fact hidden outside the file in three different ways (an offset pointer, an offset variable, an accessor macro), speed check off, prompt version 3: does the Haiku agent with DiscoPoP's evidence ship more race-free verified parallel programs covering the hot loop than without, and how do Haiku, Sonnet, Opus and Fable alone do on the same kernels?

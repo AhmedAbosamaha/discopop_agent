@@ -1,24 +1,67 @@
-# `agent/results/` — every result of the campaign, one folder per experiment
+# `agent/results/` — every result of the campaign
 
-**Start here.** Each folder below is one experiment or instrument. Inside each, `REPORT.md` is the
-report: the question, the status, the result in one paragraph, the figures, what the folder
-holds, every run with its purpose and status, the case studies, and the experiment record's own
-entries for it. Everything here is tracked in git.
+**Start here.** The block below names, for each question of the campaign, the ONE folder that holds the result
+that counts, what to open first in it, and the earlier versions with the reason each was replaced. Inside any
+folder, `REPORT.md` is the report: the question, the status, the result in one paragraph, what the folder holds,
+every run with its purpose. Everything here is tracked in git.
 
-| Folder | What it is | Status |
+<!-- BEGIN GENERATED: where the final results are -->
+
+## Where the final results are
+
+*This block is generated from `campaign.json` (`lines`) by `agent/tools/campaign.py reports` — edit the registry, not this text.* One folder per question holds the result that counts; every other folder of that question is an earlier version, kept as history and never cited as the result.
+
+### E1 — the main comparison: DiscoPoP alone · DiscoPoP + agent · the model alone
+
+**Current: [`E01v6_clean_files_three_way/`](E01v6_clean_files_three_way/REPORT.md)** — E1-v6 — the headline three-way comparison on clean files in TSVC's own form (packaging v6, prompt version 4).  
+Status: running.
+
+Open first: [`analysis/e1v6_tests.md`](E01v6_clean_files_three_way/analysis/e1v6_tests.md), [`analysis/haiku/main_comparison_stats.md`](E01v6_clean_files_three_way/analysis/haiku/main_comparison_stats.md), [`REPORT.md`](E01v6_clean_files_three_way/REPORT.md).
+
+Read-out of 5 Oct: the main table and the nine tests (the 18 loops that need restructuring) are final; the control loops and the race-check control are being completed.
+
+Earlier versions (history):
+
+| folder | what it was | why it is not the result |
 |---|---|---|
-| [`E01_main_comparison/`](E01_main_comparison/REPORT.md) | **E1 — the main comparison: DiscoPoP alone vs DiscoPoP + agent** (the thesis's headline) | done |
-| [`E01b_bare_llm/`](E01b_bare_llm/REPORT.md) | E1-bare — the same model with no DiscoPoP and no gate | done 23 Sep; superseded by E1c's model-alone arm (D36) |
-| [`E01c_clean_three_way/`](E01c_clean_three_way/REPORT.md) | E1c — the clean three-way E1: DiscoPoP alone · the agent · the model alone | done 25 Sep |
-| [`E02_evidence_feedback_model/`](E02_evidence_feedback_model/REPORT.md) | E2 — evidence, feedback and model strength | A+B done 25 Sep; the rest waits for the V3 pilot |
-| [`V3_pilot_d40/`](V3_pilot_d40/REPORT.md) | The agent v3 pilot (D40) — the speed verdict inside the model's budget | running 26 Sep |
+| [`E01v5_clean_files_three_way/`](E01v5_clean_files_three_way/REPORT.md) | the same experiment on the first clean layout — the function was one repetition, called 48 times (4 Oct) | stopped by the author after 8 trials, none analysed: that layout made every temporary array be created 48 times |
+| [`E01f_final_three_way/`](E01f_final_three_way/REPORT.md) | E1 on the one-file packages with four models alone (2–3 Oct) | its files carried our note and protected lines, every request a false size sentence, and the agent was sent a false order sentence on three loops; kept for the comparison between packagings |
+| [`E01c_v31_rerun/`](E01c_v31_rerun/REPORT.md) | the three-way E1 re-run with agent v3.1 (27 Sep) | an older agent version, one model alone |
+| [`E01c_clean_three_way/`](E01c_clean_three_way/REPORT.md) | the first three-way E1 on packages without the solution hint (25 Sep) | agent v2; replaced by the re-runs above |
+| [`E01b_bare_llm/`](E01b_bare_llm/REPORT.md) | the model alone, first version (23 Sep) | its packages named the solving transformation in a comment (D36) |
+| [`E01_main_comparison/`](E01_main_comparison/REPORT.md) | the first main comparison (21–22 Sep) | its packages named the solving transformation in a comment (D36); agent v1 |
+
+### E2 — does DiscoPoP's evidence help the model, and what do retries with feedback add?
+
+**Current: [`E02v6_hidden_order_clean_files/`](E02v6_hidden_order_clean_files/)** — E2-v6 — the hidden order on clean files: does DiscoPoP's evidence let the agent find a split no reading of the file can find, and can retries with feedback stand in for it?.  
+Status: pre-flight.
+
+Planned 5 Oct, not run yet. Until it is read out, the latest FINISHED results on this question are the first rows of the list below — all on the old one-file packages.
+
+Earlier versions (history):
+
+| folder | what it was | why it is not the result |
+|---|---|---|
+| [`E02o3_hidden_order_kernels/`](E02o3_hidden_order_kernels/REPORT.md) | the hidden order on three more kernels (3 Oct): with evidence 29 of 30, without 0 of 30 | old packages (our note, a false size sentence) and the order sentence of prompt version 3; E2-v6 re-tests exactly this on clean files |
+| [`E12_stronger_models_alone/`](E12_stronger_models_alone/REPORT.md) | Opus and Fable alone on the hidden-order kernels (30 Sep – 3 Oct) | old packages; several of their failures were caused by our false size sentence |
+| [`E02v3_order_statement/`](E02v3_order_statement/REPORT.md) | the order sentence on the first hidden-order kernel, two models (29–30 Sep) | old packages; version 3's sentence is wrong on several other loops |
+| [`V3_pilot_d40/`](V3_pilot_d40/REPORT.md) | pilot of agent v3 — the speed verdict inside the model's attempts (26 Sep) | a pilot, not an experiment |
+| [`E02b1_hidden_facts/`](E02b1_hidden_facts/REPORT.md) | hidden facts on TSVC loops, the earlier wording (27–29 Sep) | its primary test was not supported; the wording was replaced |
+| [`E02_evidence_feedback_model/`](E02_evidence_feedback_model/REPORT.md) | evidence, feedback and model strength on the 18 TSVC loops (25 Sep) | on those loops the dependences are in plain sight and the evidence added nothing; agent v2 |
+
+### Everything else
+
+| folder | what it is | status |
+|---|---|---|
 | [`E10_speed_check/`](E10_speed_check/REPORT.md) | E10 — does the speed check keep unnecessary changes out? | done |
 | [`E11_repoomp/`](E11_repoomp/REPORT.md) | E11 — against RepoOMP on its NPB-C kernels | pre-flight |
-| [`T0_instruments/`](T0_instruments/) | T0.1–T0.14 — the studies that prove the instruments before any experiment is read | done |
-| [`audit_benchmark_suitability/`](audit_benchmark_suitability/REPORT.md) | DiscoPoP alone on every benchmark: which can show the contribution at all (§5k) | done |
-| [`pilots/`](pilots/REPORT.md) | the first agent runs, before the design was fixed | history |
-| [`harness_checks/`](harness_checks/REPORT.md) | smokes and observed runs that tested the harness and the agent (not experiments) | history |
-| [`logs/`](logs/) | launcher and diagnostic logs | reference |
+| [`T0_instruments/`](T0_instruments/) | the studies that prove the instruments before an experiment is read (sizes, classes, timing noise, package equivalence …), one sub-folder each | see each |
+| [`audit_benchmark_suitability/`](audit_benchmark_suitability/REPORT.md) | Benchmark suitability audit (§5k, D18) | done |
+| [`pilots/`](pilots/REPORT.md) | Pilots (before the campaign's design was fixed) | done |
+| [`harness_checks/`](harness_checks/REPORT.md) | Harness and pipeline checks (not experiments) | done |
+| [`logs/`](logs/) | Logs | done |
+
+<!-- END GENERATED -->
 
 Two lists span all folders: [`INDEX.md`](INDEX.md) — every run, by experiment, with its purpose
 and status (valid · superseded · void · running); [`EXHIBITS.md`](EXHIBITS.md) — every case study,

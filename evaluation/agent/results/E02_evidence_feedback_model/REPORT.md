@@ -4,6 +4,8 @@
 
 **Status:** done
 
+> **Not the current result.** This question is answered by [E2-v6 — the hidden order on clean files: does DiscoPoP's evidence let the agent find a split no reading of the file can find, and can retries with feedback stand in for it?](../E02v6_hidden_order_clean_files/REPORT.md); this folder is kept as history. See [`results/README.md`](../README.md).
+
 ## The question
 
 On TSVC class R, does DiscoPoP's evidence raise the model's success rate (H5), more for Haiku than for Sonnet? Does the gate's failure feedback partly substitute for it (H5b)? Where must the evidence come from (none, compiler remarks, where the time goes, DiscoPoP), which part of it matters, and which part of the prompt? Runs on agent v2 with its own default arm (D34).

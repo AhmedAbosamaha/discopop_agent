@@ -1244,6 +1244,48 @@
         "--prompt-version",
         "4"
       ]
+    },
+    "full_nospeed_v4": {
+      "ids": [
+        "E2-v6"
+      ],
+      "description": "E2-v6 (5 Oct, the author: \"yes we can [add] the two three-attempt setups\"): the agent WITH DiscoPoP's evidence and THREE attempts per region, speed check off \u2014 `full_b1_nospeed_v4` with the default budget. A rejected attempt goes back to the model with the reason (the gate's diagnostic; after a rewrite DiscoPoP still cannot parallelize, DiscoPoP's blockers of THAT rewrite) and it may try again.",
+      "flags": [
+        "--no-require-speedup",
+        "--prompt-version",
+        "4"
+      ],
+      "timing_size": "agent",
+      "settings": {
+        "budget": 3,
+        "llm_pragmas": false,
+        "require_speedup": false,
+        "evidence_sections": null,
+        "fast_refresh": false,
+        "prompt_version": 4
+      }
+    },
+    "no_evidence_nospeed_v4": {
+      "ids": [
+        "E2-v6"
+      ],
+      "description": "E2-v6: the agent WITHOUT evidence in its requests and THREE attempts per region, speed check off \u2014 `no_evidence_b1_nospeed_v4` with the default budget. The first request of a region carries no DiscoPoP data; a rejected attempt goes back with the reason, and after a rewrite DiscoPoP still cannot parallelize that reason includes DiscoPoP's blockers of the model's OWN rewrite (`phases/verdicts._rewrite_feedback`): this arm is 'feedback without evidence up front', not 'no DiscoPoP information at all' \u2014 only the one-attempt arm is that.",
+      "flags": [
+        "--evidence",
+        "none",
+        "--no-require-speedup",
+        "--prompt-version",
+        "4"
+      ],
+      "timing_size": "agent",
+      "settings": {
+        "budget": 3,
+        "llm_pragmas": false,
+        "require_speedup": false,
+        "evidence_sections": [],
+        "fast_refresh": false,
+        "prompt_version": 4
+      }
     }
   },
   "common_timing_size": "per_kernel",
@@ -1832,6 +1874,28 @@
       "check": "runner",
       "agent": "full_b1_nospeed_v4",
       "why": "E2-v6: the model alone beside the agent, both with the speed check off."
+    },
+    "E2-v6-feedback": {
+      "arms": [
+        "full_b1_nospeed_v4",
+        "full_nospeed_v4"
+      ],
+      "variable": [
+        "budget"
+      ],
+      "consequences": [],
+      "why": "E2-v6: what two more attempts with feedback add when the evidence is in the request."
+    },
+    "E2-v6-feedback-no-evidence": {
+      "arms": [
+        "no_evidence_b1_nospeed_v4",
+        "no_evidence_nospeed_v4"
+      ],
+      "variable": [
+        "budget"
+      ],
+      "consequences": [],
+      "why": "E2-v6: what two more attempts with feedback add when no evidence is in the request \u2014 can the feedback stand in for it?"
     }
   }
 }

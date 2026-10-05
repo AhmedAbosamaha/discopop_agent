@@ -4,6 +4,8 @@
 
 **Status:** done
 
+> **Not the current result.** This question is answered by [E2-v6 — the hidden order on clean files: does DiscoPoP's evidence let the agent find a split no reading of the file can find, and can retries with feedback stand in for it?](../E02v6_hidden_order_clean_files/REPORT.md); this folder is kept as history. See [`results/README.md`](../README.md).
+
 ## The question
 
 Does the Haiku agent with DiscoPoP's evidence match or beat Opus 5.5 and Fable 5.1 used alone, and ship fewer unsafe programs? On ORDER-2 X, does a stronger model alone find the hidden order?

@@ -284,7 +284,7 @@ Status: done
 
 ## [T0.16 — does a clean two-file layout (the benchmark's file holds only the loop's function) change anything but the harness?](T0_instruments/T0.16_clean_layout/REPORT.md)
 
-Status: pre-flight
+Status: done
 
 | run | where | what it is | status | trials | outcomes |
 |---|---|---|---|---:|---|
@@ -415,7 +415,7 @@ Status: done
 
 ## [E1-final — the headline three-way comparison in the final version](E01f_final_three_way/REPORT.md)
 
-Status: running
+Status: read out 3 Oct — replaced as the headline by E1-v6
 
 | run | where | what it is | status | trials | outcomes |
 |---|---|---|---|---:|---|
@@ -467,7 +467,7 @@ Status: running
 | `e1v6_bare_fable` | [`E01v6_clean_files_three_way/runs/e1v6_bare_fable/`](E01v6_clean_files_three_way/runs/e1v6_bare_fable/) | E1-v6 the model alone: bare_llm_v4 with claude-fable-5-1 on class R × 5, A × 1, D × 3 (one run per model) | registered | 105 | FASTER 98, changed-not-parallel 1, no-change 1, parallel-not-faster 5 |
 | `e1v6_race_check` | [`E01v6_clean_files_three_way/checks/e1v6_race_check/`](E01v6_clean_files_three_way/checks/e1v6_race_check/) | race_check.py (the gate's TSan with archer and the schedule matrix, server, no model) over every model-alone parallel program of E1-v6 and, as the positive control, every parallel program of the agent | registered | 0 |  |
 
-## [E2-v6 — the hidden order on clean files: does DiscoPoP's evidence let the agent find a split no reading of the file can find?](E02v6_hidden_order_clean_files/)
+## [E2-v6 — the hidden order on clean files: does DiscoPoP's evidence let the agent find a split no reading of the file can find, and can retries with feedback stand in for it?](E02v6_hidden_order_clean_files/)
 
 Status: pre-flight
 
@@ -482,6 +482,9 @@ Status: pre-flight
 | `e2v6_bare_opus` | not archived yet | E2-v6: claude-opus-5-5 alone on the seven units × bare_llm_nospeed_v4 × 5 | registered |  |  |
 | `e2v6_bare_fable` | not archived yet | E2-v6: claude-fable-5-1 alone on the seven units × bare_llm_nospeed_v4 × 5 | registered |  |  |
 | `e2v6_race_check` | not archived yet | race_check.py (server, no model) over every model-alone program of E2-v6 and, as the positive control, the agent's parallel programs (both arms) | registered |  |  |
+| `e2v6_fb_1` | not archived yet | E2-v6, the feedback arms: tsvc_c2/k19, k23 × full_nospeed_v4, no_evidence_nospeed_v4 (three attempts per region) × 10, Haiku, threads 6/12, repeats 5 | registered |  |  |
+| `e2v6_fb_2` | not archived yet | E2-v6, the feedback arms: tsvc_c2/k31, k27 × full_nospeed_v4, no_evidence_nospeed_v4 (three attempts per region) × 10, Haiku, threads 6/12, repeats 5 | registered |  |  |
+| `e2v6_fb_3` | not archived yet | E2-v6, the feedback arms: tsvc_c2/s161, k53, k48 × full_nospeed_v4, no_evidence_nospeed_v4 (three attempts per region) × 10, Haiku, threads 6/12, repeats 5 | registered |  |  |
 
 ## [E2-O3 — does the evidence effect hold on more hidden-order kernels?](E02o3_hidden_order_kernels/REPORT.md)
 

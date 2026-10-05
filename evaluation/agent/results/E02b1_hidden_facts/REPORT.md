@@ -4,6 +4,8 @@
 
 **Status:** done
 
+> **Not the current result.** This question is answered by [E2-v6 — the hidden order on clean files: does DiscoPoP's evidence let the agent find a split no reading of the file can find, and can retries with feedback stand in for it?](../E02v6_hidden_order_clean_files/REPORT.md); this folder is kept as history. See [`results/README.md`](../README.md).
+
 ## The question
 
 On loops whose parallelizability is decided by a fact outside the loop's own statements — (a) a hidden dependence (TSVC s151, s161, Rodinia bfs; tier 2 s131, s424), (b) a hidden independence (s152, s171, s481, s277, vas, s482; descriptive) — with the speed check off: does the agent with DiscoPoP's evidence ship more verified parallel programs whose construct covers the hot loop than without it, inside the agent and on the matched twins, and fewer unsafe programs than the model alone? (the author's decisions of 27 Sep; docs/e2b1/PREPARATION.md)

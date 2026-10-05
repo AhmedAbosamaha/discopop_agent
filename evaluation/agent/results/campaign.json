@@ -215,7 +215,7 @@
    "id": "T0.16",
    "folder": "T0_instruments/T0.16_clean_layout",
    "kind": "instrument",
-   "status": "pre-flight",
+   "status": "done",
    "title": "T0.16 — does a clean two-file layout (the benchmark's file holds only the loop's function) change anything but the harness?",
    "question": "The author, 4 Oct: the file a model reads must be an ordinary code file — no note, no measurement code. Layout tested: the loop's function alone in the benchmark's file, `main` with the repetition loop and `pb_mix` in a second file no model can change, data and digest outside the package as in v4. Per `tsvc_b1` loop: identical output; DiscoPoP's view of the loop under study (candidates, Do-All set, blockers, the order statement) as in v4; the runner end to end with no model.",
    "headline": "Server, two draws (42 loops, no model): output identical 42 of 42; DiscoPoP's view of the loop under study the same in both draws on 37; kept differences: s151 (by construction), s481 (v4 reports the REPETITION loop Do-All, v5 blocks it) and s482 (v4 blocks the loop on a RAW only the repetitions carry, v5 reports it Do-All); s244's blocker changes with the draw in both layouts. The order statement under prompt version 4 is the same in both layouts for all 42, and right on all 254 profiles replayed (86 Mac, 168 server) against the truth written down per loop; version 3 is wrong on 9, 6 and 13 of them. The sequential original is within 4 % for 37 loops; 20-26 % slower in v5 on s243, s244, s482 and 18 % faster on s292 (a separately compiled function: with link-time optimisation the difference is gone). Two draws of one layout agree on every WAR/WAW when each dependence is read by its own type; the old reading differed on 23 of 84 — T0.15's \"draw noise\" was the parser."
@@ -289,7 +289,7 @@
    "id": "E1-final",
    "folder": "E01f_final_three_way",
    "kind": "experiment",
-   "status": "running",
+   "status": "read out 3 Oct — replaced as the headline by E1-v6",
    "title": "E1-final — the headline three-way comparison in the final version",
    "question": "On TSVC class R (with class A and D controls), prompt version 3, the fixed DiscoPoP, packaging v4: DiscoPoP alone vs the Haiku agent vs Haiku, Sonnet, Opus and Fable alone — who ships correct, race-free, faster programs, and who ships unusable ones?",
    "headline": "Class R, 90 trials each: DiscoPoP alone 0 race-free FASTER; the Haiku agent 65 (1 unusable — a racy program the gate's barrier heuristic excused, Fix 104); Haiku alone 40 (47 unusable); Sonnet 78 (9); Opus 89 (1); Fable 90 (0). H1 and H13-vs-Haiku rejected; reach and H13 against the strong models not — the strong models alone reach further. The claim narrows: the pipeline makes a small model safe and beats DiscoPoP alone, but does not out-reach a strong model alone on loops whose dependences are visible.",
@@ -320,7 +320,7 @@
    "folder": "E02v6_hidden_order_clean_files",
    "kind": "experiment",
    "status": "pre-flight",
-   "title": "E2-v6 — the hidden order on clean files: does DiscoPoP's evidence let the agent find a split no reading of the file can find?",
+   "title": "E2-v6 — the hidden order on clean files: does DiscoPoP's evidence let the agent find a split no reading of the file can find, and can retries with feedback stand in for it?",
    "question": "On seven units of packaging v6 whose deciding fact is outside the benchmark's file — four constructed kernels of three shapes, the real TSVC loop s161, a hidden cycle that must be left alone, and a control whose textual order is right — speed check off, prompt version 4: does the Haiku agent with DiscoPoP's evidence ship more race-free verified parallel programs covering the hot loop than without it, and how do Haiku, Sonnet, Opus and Fable alone do on the same units?",
    "headline": "",
    "preregistered": "THESIS_EXPERIMENTS §6, 5 Oct, before any E2-v6 trial; config/e2v6_population.json"
@@ -1812,6 +1812,24 @@
    "section": "checks",
    "status": "registered",
    "role": "race_check.py (server, no model) over every model-alone program of E2-v6 and, as the positive control, the agent's parallel programs (both arms)"
+  },
+  "e2v6_fb_1": {
+   "group": "E2-v6",
+   "section": "runs",
+   "status": "registered",
+   "role": "E2-v6, the feedback arms: tsvc_c2/k19, k23 × full_nospeed_v4, no_evidence_nospeed_v4 (three attempts per region) × 10, Haiku, threads 6/12, repeats 5"
+  },
+  "e2v6_fb_2": {
+   "group": "E2-v6",
+   "section": "runs",
+   "status": "registered",
+   "role": "E2-v6, the feedback arms: tsvc_c2/k31, k27 × full_nospeed_v4, no_evidence_nospeed_v4 (three attempts per region) × 10, Haiku, threads 6/12, repeats 5"
+  },
+  "e2v6_fb_3": {
+   "group": "E2-v6",
+   "section": "runs",
+   "status": "registered",
+   "role": "E2-v6, the feedback arms: tsvc_c2/s161, k53, k48 × full_nospeed_v4, no_evidence_nospeed_v4 (three attempts per region) × 10, Haiku, threads 6/12, repeats 5"
   }
  },
  "analysis": {
@@ -2037,5 +2055,92 @@
    "group": "E2-B1",
    "shows": "E2-B1 with the v1 wording: the gate-free twin given DiscoPoP's evidence ships a wrong program on s161 (evidence twins unsafe 22/29 vs 13/30 without) — the harm the v1 rendering did."
   }
- }
+ },
+ "lines": [
+  {
+   "id": "E1",
+   "title": "E1 — the main comparison: DiscoPoP alone · DiscoPoP + agent · the model alone",
+   "current": "E1-v6",
+   "read_first": [
+    "analysis/e1v6_tests.md",
+    "analysis/haiku/main_comparison_stats.md",
+    "REPORT.md"
+   ],
+   "note": "Read-out of 5 Oct: the main table and the nine tests (the 18 loops that need restructuring) are final; the control loops and the race-check control are being completed.",
+   "history": [
+    {
+     "id": "E1-v5",
+     "what": "the same experiment on the first clean layout — the function was one repetition, called 48 times (4 Oct)",
+     "why": "stopped by the author after 8 trials, none analysed: that layout made every temporary array be created 48 times"
+    },
+    {
+     "id": "E1-final",
+     "what": "E1 on the one-file packages with four models alone (2–3 Oct)",
+     "why": "its files carried our note and protected lines, every request a false size sentence, and the agent was sent a false order sentence on three loops; kept for the comparison between packagings"
+    },
+    {
+     "id": "E1c-v3.1",
+     "what": "the three-way E1 re-run with agent v3.1 (27 Sep)",
+     "why": "an older agent version, one model alone"
+    },
+    {
+     "id": "E1c",
+     "what": "the first three-way E1 on packages without the solution hint (25 Sep)",
+     "why": "agent v2; replaced by the re-runs above"
+    },
+    {
+     "id": "E1-bare",
+     "what": "the model alone, first version (23 Sep)",
+     "why": "its packages named the solving transformation in a comment (D36)"
+    },
+    {
+     "id": "E1",
+     "what": "the first main comparison (21–22 Sep)",
+     "why": "its packages named the solving transformation in a comment (D36); agent v1"
+    }
+   ]
+  },
+  {
+   "id": "E2",
+   "title": "E2 — does DiscoPoP's evidence help the model, and what do retries with feedback add?",
+   "current": "E2-v6",
+   "read_first": [
+    "stats/e2b1_stats.md",
+    "REPORT.md"
+   ],
+   "note": "Planned 5 Oct, not run yet. Until it is read out, the latest FINISHED results on this question are the first rows of the list below — all on the old one-file packages.",
+   "history": [
+    {
+     "id": "E2-O3",
+     "what": "the hidden order on three more kernels (3 Oct): with evidence 29 of 30, without 0 of 30",
+     "why": "old packages (our note, a false size sentence) and the order sentence of prompt version 3; E2-v6 re-tests exactly this on clean files"
+    },
+    {
+     "id": "E12",
+     "what": "Opus and Fable alone on the hidden-order kernels (30 Sep – 3 Oct)",
+     "why": "old packages; several of their failures were caused by our false size sentence"
+    },
+    {
+     "id": "E2-V3",
+     "what": "the order sentence on the first hidden-order kernel, two models (29–30 Sep)",
+     "why": "old packages; version 3's sentence is wrong on several other loops"
+    },
+    {
+     "id": "V3-pilot",
+     "what": "pilot of agent v3 — the speed verdict inside the model's attempts (26 Sep)",
+     "why": "a pilot, not an experiment"
+    },
+    {
+     "id": "E2-B1",
+     "what": "hidden facts on TSVC loops, the earlier wording (27–29 Sep)",
+     "why": "its primary test was not supported; the wording was replaced"
+    },
+    {
+     "id": "E2",
+     "what": "evidence, feedback and model strength on the 18 TSVC loops (25 Sep)",
+     "why": "on those loops the dependences are in plain sight and the evidence added nothing; agent v2"
+    }
+   ]
+  }
+ ]
 }

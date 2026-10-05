@@ -4,6 +4,8 @@
 
 **Status:** done
 
+> **Not the current result.** This question is answered by [E1-v6 — the headline three-way comparison on clean files in TSVC's own form (packaging v6, prompt version 4)](../E01v6_clean_files_three_way/REPORT.md); this folder is kept as history. See [`results/README.md`](../README.md).
+
 ## The question
 
 On TSVC class R, with no hint in the source (D36), the model confined to its workspace (Fix 95) and agent v2: DiscoPoP alone vs DiscoPoP + agent (`default`) vs the model alone (`bare_llm`, the mirror prompt, D37) — which delivers correct, race-free, faster programs, and which ships wrong or slower ones? Plus the no-harm (class A) and must-decline (class D) controls.

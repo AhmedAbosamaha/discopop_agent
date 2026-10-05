@@ -4,6 +4,8 @@
 
 **Status:** done
 
+> **Not the current result.** This question is answered by [E1-v6 — the headline three-way comparison on clean files in TSVC's own form (packaging v6, prompt version 4)](../E01v6_clean_files_three_way/REPORT.md); this folder is kept as history. See [`results/README.md`](../README.md).
+
 ## The question
 
 Where DiscoPoP alone reaches no verified parallel program (class R), does the agent — the same DiscoPoP and gate plus a model that restructures — deliver correct speedups? Does it do no harm where DiscoPoP already succeeds (class A), and decline true recurrences (class D)? Does anything wrong get through? (H1, H2, H4)

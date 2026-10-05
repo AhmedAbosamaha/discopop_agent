@@ -4,6 +4,8 @@
 
 **Status:** done
 
+> **Not the current result.** This question is answered by [E1-v6 — the headline three-way comparison on clean files in TSVC's own form (packaging v6, prompt version 4)](../E01v6_clean_files_three_way/REPORT.md); this folder is kept as history. See [`results/README.md`](../README.md).
+
 ## The question
 
 On E1c's population (TSVC class R, 18 loops × 5; controls class A ×1, class D ×3) with agent v3.1 (D40, D40.1, D41, the re-queue): the agent's (`default`) race-free FASTER rate and unusable programs, in the three-way comparison with E1c's DiscoPoP alone and model alone — arms no agent version changes.

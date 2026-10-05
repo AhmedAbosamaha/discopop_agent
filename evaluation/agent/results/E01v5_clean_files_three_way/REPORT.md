@@ -4,6 +4,8 @@
 
 **Status:** stopped 4 Oct — superseded by E1-v6
 
+> **Not the current result.** This question is answered by [E1-v6 — the headline three-way comparison on clean files in TSVC's own form (packaging v6, prompt version 4)](../E01v6_clean_files_three_way/REPORT.md); this folder is kept as history. See [`results/README.md`](../README.md).
+
 ## The question
 
 E1-final again where the file a model reads is an ordinary code file (the loop's function alone, no note, no harness, one editable file) and the order statement is the corrected one: on TSVC class R (with class A and D controls), DiscoPoP alone vs the Haiku agent vs Haiku, Sonnet, Opus and Fable alone — who ships correct, race-free, faster programs, and who ships unusable ones?

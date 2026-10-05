@@ -4,6 +4,8 @@
 
 **Status:** done
 
+> **Not the current result.** This question is answered by [E2-v6 — the hidden order on clean files: does DiscoPoP's evidence let the agent find a split no reading of the file can find, and can retries with feedback stand in for it?](../E02v6_hidden_order_clean_files/REPORT.md); this folder is kept as history. See [`results/README.md`](../README.md).
+
 ## The question
 
 On the units where version 3's order statement fires (ORDER-2 X, s1213, s211), speed check off: does the agent with evidence ship more race-free verified parallel programs covering the hot loop than without, inside the agent and on the twins, and fewer unsafe programs than the model alone; with no harm on ORDER-2 Y?

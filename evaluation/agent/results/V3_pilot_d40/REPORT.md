@@ -4,6 +4,8 @@
 
 **Status:** done
 
+> **Not the current result.** This question is answered by [E2-v6 — the hidden order on clean files: does DiscoPoP's evidence let the agent find a split no reading of the file can find, and can retries with feedback stand in for it?](../E02v6_hidden_order_clean_files/REPORT.md); this folder is kept as history. See [`results/README.md`](../README.md).
+
 ## The question
 
 Does D40 — a kept rewrite's pragmas judged in Phase A (safety, then timed against the program before it) with the failure fed back while the region's budget lasts, and the prompt stating the deciding comparison — raise the race-free FASTER rate on the ten class-R loops where v2's results varied? And, with it, does DiscoPoP's evidence start to matter (default vs no_evidence)? Decides whether E1c's and E2's agent arms are rerun under v3.
