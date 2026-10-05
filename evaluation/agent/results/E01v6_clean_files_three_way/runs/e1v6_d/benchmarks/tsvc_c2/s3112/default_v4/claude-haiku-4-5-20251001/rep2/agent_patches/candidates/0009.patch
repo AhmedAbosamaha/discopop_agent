@@ -1,0 +1,15 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_d/benchmarks/tsvc_c2/s3112/default_v4/claude-haiku-4-5-20251001/rep2/work/s3112.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_d/benchmarks/tsvc_c2/s3112/default_v4/claude-haiku-4-5-20251001/rep2/work/s3112.c
+@@ -7,7 +7,11 @@
+         sum = (real_t)0.0;
+         for (int i = 0; i < LEN_1D; i++) {
+             sum += a[i];
+-            b[i] = sum;
++        }
++        real_t suffix = 0.0;
++        for (int i = LEN_1D - 1; i >= 0; i--) {
++            suffix += a[i];
++            b[i] = sum - suffix + a[i];
+         }
+         dummy(a, b, c, d, e);
+     }

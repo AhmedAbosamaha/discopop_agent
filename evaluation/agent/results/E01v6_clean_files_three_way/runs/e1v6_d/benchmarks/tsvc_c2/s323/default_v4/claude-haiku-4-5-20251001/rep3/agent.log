@@ -22,11 +22,11 @@
 
   Project        : /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_d/benchmarks/tsvc_c2/s323/default_v4/claude-haiku-4-5-20251001/rep3/work  (2 unit(s): s323.c, main.c)
 
-  [ok] Captured reference output on 2 inputs (69 bytes, 1462.7 ms baseline) for the correctness/performance gates.
+  [ok] Captured reference output on 2 inputs (69 bytes, 1473.2 ms baseline) for the correctness/performance gates.
 
   [ok] Numerical noise floor 0 — 6 build variants agreed exactly; output is compared byte-for-byte.
 
-  Hotspots       : measured per-region runtimes are available — 18 region(s) measured, 2.6 ms total, ranking by predicted time saved at 48 threads
+  Hotspots       : measured per-region runtimes are available — 17 region(s) measured, 2.8 ms total, ranking by predicted time saved at 48 threads
 
   Baseline       : DiscoPoP proposes 0 applicable pattern(s) unaided; 0 of them produce a usable pragma
                    → the run beats DiscoPoP by ending with more than 0
@@ -34,9 +34,9 @@
   Initial candidates
 Region ID    Type           Saves    % run    Hot  Tier  Depth  Name
 --------------------------------------------------------------------------------------
-  1:2        loop          1.4 ms    54.1%    YES     2      0  lines 5–11
-  0:0        function      1.4 ms    54.1%    YES     2      0  kernel_s323
-  1:5        loop          1.4 ms    54.0%    YES     2      0  lines 6–9
+  1:2        loop          1.4 ms    51.2%    YES     2      0  lines 5–11
+  1:5        loop          1.4 ms    51.2%    YES     2      0  lines 6–9
+  0:0        function      1.4 ms    51.2%    YES     2      0  kernel_s323
 
 ============================================================
   FLOOR — DiscoPoP's own program, as the DiscoPoP-alone arm delivers it (D32)
@@ -51,57 +51,89 @@ Region ID    Type           Saves    % run    Hot  Tier  Depth  Name
 │  [Tier-1] No applicable pattern → Tier-2 (LLM)
 │  [Tier-2] Assembling evidence (budget remaining: 2)
 │  [Tier-2] Calling claude-haiku-4-5-20251001...
-│  [Tier-2] LLM call failed: Claude Code returned an error result: You've hit your session limit · resets 10:40am (UTC)
-│           counting it as a failed attempt and moving on
-│  [Tier-2] LLM returned invalid output — retrying
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Stage 'correctness' failed: Program output changed — the patched program is NOT semantically equivalent to the original. output differs and no numerical slack is in effect first difference at line 2:   expected: pb_sum 132786056
 │  [Tier-2] Assembling evidence (budget remaining: 1)
 │  [Tier-2] Calling claude-haiku-4-5-20251001...
-│  [Tier-2] LLM call failed: Claude Code returned an error result: You've hit your session limit · resets 10:40am (UTC)
-│           counting it as a failed attempt and moving on
-│  [Tier-2] LLM returned invalid output — retrying
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Stage 'compile' failed (build fix — budget not charged, 1 left): /tmp/dp_agent_val_yj58c2e9/_dp_proj_validate_binary/s323.c:6:25: error: call to undeclared library function 'malloc' with type 'void *(unsigned long)'; ISO C99 and later do not support implicit functi
+│  [Tier-2] Assembling evidence (budget remaining: 1)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Stage 'correctness' failed: Program output changed — the patched program is NOT semantically equivalent to the original. output differs and no numerical slack is in effect first difference at line 2:   expected: pb_sum 132786056
 │  [Tier-2] Assembling evidence (budget remaining: 0)
 │  [Tier-2] Calling claude-haiku-4-5-20251001...
-│  [Tier-2] LLM call failed: Claude Code returned an error result: You've hit your session limit · resets 10:40am (UTC)
-│           counting it as a failed attempt and moving on
-│  [Tier-2] LLM returned invalid output
-└─ SKIPPED (budget exhausted)
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Original backed up → s323.c.original
+│  [Tier-2] Applied to s323.c
+│  [Tier-2] Re-profiling to refresh data and discover new candidates...
+│  [refresh] kind=full
+│  [Tier-2] Re-measured runtimes: 17 region(s), 2.8 ms total
+│  [Phase-A] Asking DiscoPoP what it now finds in the rewritten lines...
+│  [Phase-A] exposure verdict: no_pattern
+│  [Tier-2] DiscoPoP still finds no parallelism in the rewritten lines — reverting (snapshot restore)
+└─ retry (budget remaining: 0)
 
-┌─ [depth=0] function 0:0 (lines 3–12)  score=0.0
-│  [Tier-1] No applicable pattern → Tier-2 (LLM)
-│  [Tier-2] Assembling evidence (budget remaining: 2)
-│  [Tier-2] Calling claude-haiku-4-5-20251001...
-│  [Tier-2] LLM call failed: Claude Code returned an error result: You've hit your session limit · resets 10:40am (UTC)
-│           counting it as a failed attempt and moving on
-│  [Tier-2] LLM returned invalid output — retrying
-│  [Tier-2] Assembling evidence (budget remaining: 1)
-│  [Tier-2] Calling claude-haiku-4-5-20251001...
-│  [Tier-2] LLM call failed: Claude Code returned an error result: You've hit your session limit · resets 10:40am (UTC)
-│           counting it as a failed attempt and moving on
-│  [Tier-2] LLM returned invalid output — retrying
-│  [Tier-2] Assembling evidence (budget remaining: 0)
-│  [Tier-2] Calling claude-haiku-4-5-20251001...
-│  [Tier-2] LLM call failed: Claude Code returned an error result: You've hit your session limit · resets 10:40am (UTC)
-│           counting it as a failed attempt and moving on
-│  [Tier-2] LLM returned invalid output
 └─ SKIPPED (budget exhausted)
 
 ┌─ [depth=0] loop 1:5 (lines 6–9)  score=0.0
 │  [Tier-1] No applicable pattern → Tier-2 (LLM)
 │  [Tier-2] Assembling evidence (budget remaining: 2)
 │  [Tier-2] Calling claude-haiku-4-5-20251001...
-│  [Tier-2] LLM call failed: Claude Code returned an error result: You've hit your session limit · resets 10:40am (UTC)
-│           counting it as a failed attempt and moving on
-│  [Tier-2] LLM returned invalid output — retrying
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Stage 'correctness' failed: Program output changed — the patched program is NOT semantically equivalent to the original. output differs and no numerical slack is in effect first difference at line 2:   expected: pb_sum 132786056
 │  [Tier-2] Assembling evidence (budget remaining: 1)
 │  [Tier-2] Calling claude-haiku-4-5-20251001...
-│  [Tier-2] LLM call failed: Claude Code returned an error result: You've hit your session limit · resets 10:40am (UTC)
-│           counting it as a failed attempt and moving on
-│  [Tier-2] LLM returned invalid output — retrying
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Applied to s323.c
+│  [Tier-2] Re-profiling to refresh data and discover new candidates...
+│  [refresh] kind=full
+│  [Tier-2] Re-measured runtimes: 17 region(s), 2.7 ms total
+│  [Phase-A] Asking DiscoPoP what it now finds in the rewritten lines...
+│  [Phase-A] exposure verdict: no_pattern
+│  [Tier-2] DiscoPoP still finds no parallelism in the rewritten lines — reverting (snapshot restore)
+└─ retry (budget remaining: 1)
+
 │  [Tier-2] Assembling evidence (budget remaining: 0)
 │  [Tier-2] Calling claude-haiku-4-5-20251001...
-│  [Tier-2] LLM call failed: Claude Code returned an error result: You've hit your session limit · resets 10:40am (UTC)
-│           counting it as a failed attempt and moving on
-│  [Tier-2] LLM returned invalid output
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Stage 'compile' failed (build fix — budget not charged, 1 left): /tmp/dp_agent_val_9zu3mj9k/_dp_proj_validate_binary/s323.c:5:32: error: call to undeclared library function 'malloc' with type 'void *(unsigned long)'; ISO C99 and later do not support implicit functi
+│  [Tier-2] Assembling evidence (budget remaining: 0)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Stage 'correctness' failed: Program output changed — the patched program is NOT semantically equivalent to the original. output differs and no numerical slack is in effect first difference at line 2:   expected: pb_sum 132786056
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] function 0:0 (lines 3–12)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Stage 'correctness' failed: Program output changed — the patched program is NOT semantically equivalent to the original. output differs and no numerical slack is in effect first difference at line 2:   expected: pb_sum 132786056
+│  [Tier-2] Assembling evidence (budget remaining: 1)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Stage 'correctness' failed: Program output changed — the patched program is NOT semantically equivalent to the original. output differs and no numerical slack is in effect first difference at line 2:   expected: pb_sum 132786056
+│  [Tier-2] Assembling evidence (budget remaining: 0)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Applied to s323.c
+│  [Tier-2] Re-profiling to refresh data and discover new candidates...
+│  [refresh] kind=full
+│  [Tier-2] Re-measured runtimes: 18 region(s), 3.0 ms total
+│  [Phase-A] Asking DiscoPoP what it now finds in the rewritten lines...
+│  [Phase-A] exposure verdict: exposed
+│  [Phase-A] D40 — judging it as it will ship: DiscoPoP's pragmas for the exposed loops through the safety gate, then the program with them against the program before the rewrite (paired)
+│  [Phase-A] timing noise on this machine: 0.998 → keep at or above 0.988
+│  [Phase-A] D40: pragma for lines 10–12 passes the safety gate
+│  [Phase-A] D40 verdict: not_faster 0.76×
+│  [Phase-A] D40 time: 193.8 s
+│  [Tier-2] DiscoPoP parallelized it, but the program is not faster than before the rewrite — reverting (snapshot restore)
+└─ retry (budget remaining: 0)
+
 └─ SKIPPED (budget exhausted)
 
 
@@ -116,8 +148,8 @@ Region ID    Type           Saves    % run    Hot  Tier  Depth  Name
   SUMMARY: 0 rewrite(s) kept  |  0 pragma(s) applied  |  3 skipped
   DiscoPoP unaided: 0 usable pragma(s) in this profile's draw  →  this run: 0   [MATCHED, informational]
     ✗  1:2  [skipped]  depth=0
-    ✗  0:0  [skipped]  depth=0
     ✗  1:5  [skipped]  depth=0
+    ✗  0:0  [skipped]  depth=0
 
   Results → .discopop/agent_patches/accepted.json
 ============================================================

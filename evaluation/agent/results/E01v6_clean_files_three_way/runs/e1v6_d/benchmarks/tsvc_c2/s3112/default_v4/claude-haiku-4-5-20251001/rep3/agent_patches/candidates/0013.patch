@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_d/benchmarks/tsvc_c2/s3112/default_v4/claude-haiku-4-5-20251001/rep3/work/s3112.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_d/benchmarks/tsvc_c2/s3112/default_v4/claude-haiku-4-5-20251001/rep3/work/s3112.c
+@@ -16,6 +16,7 @@
+             }
+ 
+             // Write prefix sums to b (now parallel-friendly: no loop-carried deps)
++            #pragma omp parallel for firstprivate(prefix) 
+             for (int i = 0; i < LEN_1D; i++) {
+                 b[i] = prefix[i];
+             }

@@ -1,0 +1,21 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_d/benchmarks/tsvc_c2/s3112/default_v4/claude-haiku-4-5-20251001/rep3/work/s3112.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_d/benchmarks/tsvc_c2/s3112/default_v4/claude-haiku-4-5-20251001/rep3/work/s3112.c
+@@ -2,13 +2,14 @@
+ 
+ real_t kernel_s3112(void)
+ {
+-    real_t sum;
++    real_t sum = (real_t)0.0;
+     for (int nl = 0; nl < iterations; nl++) {
+-        sum = (real_t)0.0;
++        real_t local_sum = (real_t)0.0;
+         for (int i = 0; i < LEN_1D; i++) {
+-            sum += a[i];
+-            b[i] = sum;
++            local_sum += a[i];
++            b[i] = local_sum;
+         }
++        sum = local_sum;
+         dummy(a, b, c, d, e);
+     }
+     return sum;

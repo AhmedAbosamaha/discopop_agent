@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_d/benchmarks/tsvc_c2/s3112/default_v4/claude-haiku-4-5-20251001/rep3/work/s3112.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_d/benchmarks/tsvc_c2/s3112/default_v4/claude-haiku-4-5-20251001/rep3/work/s3112.c
+@@ -15,6 +15,7 @@
+         }
+ 
+         // Stage 2: copy cumulative sums to output (parallelizable: no loop-carried dependencies)
++        #pragma omp parallel for shared(temp) 
+         for (int i = 0; i < LEN_1D; i++) {
+             b[i] = temp[i];
+         }

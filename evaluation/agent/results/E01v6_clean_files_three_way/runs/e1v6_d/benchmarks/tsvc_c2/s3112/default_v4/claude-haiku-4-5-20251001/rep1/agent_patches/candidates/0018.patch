@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_d/benchmarks/tsvc_c2/s3112/default_v4/claude-haiku-4-5-20251001/rep1/work/s3112.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_d/benchmarks/tsvc_c2/s3112/default_v4/claude-haiku-4-5-20251001/rep1/work/s3112.c
+@@ -5,6 +5,7 @@
+     real_t sum;
+     for (int nl = 0; nl < iterations; nl++) {
+         real_t sum_prev = (real_t)0.0;
++ #pragma omp parallel for reduction(+:sum_prev) 
+         for (int i = 0; i < LEN_1D; i++) {
+             real_t sum = sum_prev + a[i];
+             b[i] = sum;

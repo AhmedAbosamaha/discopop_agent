@@ -1,0 +1,23 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_d/benchmarks/tsvc_c2/s3112/default_v4/claude-haiku-4-5-20251001/rep1/work/s3112.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_d/benchmarks/tsvc_c2/s3112/default_v4/claude-haiku-4-5-20251001/rep1/work/s3112.c
+@@ -5,10 +5,19 @@
+     real_t sum;
+     for (int nl = 0; nl < iterations; nl++) {
+         sum = (real_t)0.0;
++
++        // Pass 1: Compute total sum (reduction pattern)
+         for (int i = 0; i < LEN_1D; i++) {
+             sum += a[i];
+-            b[i] = sum;
+         }
++
++        // Pass 2: Compute prefix sums for array b
++        real_t prefix_sum = (real_t)0.0;
++        for (int i = 0; i < LEN_1D; i++) {
++            prefix_sum += a[i];
++            b[i] = prefix_sum;
++        }
++
+         dummy(a, b, c, d, e);
+     }
+     return sum;

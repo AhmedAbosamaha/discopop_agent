@@ -1,0 +1,30 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_d/benchmarks/tsvc_c2/s323/default_v4/claude-haiku-4-5-20251001/rep1/work/s323.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_d/benchmarks/tsvc_c2/s323/default_v4/claude-haiku-4-5-20251001/rep1/work/s323.c
+@@ -1,12 +1,25 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s323(void)
+ {
+     for (int nl = 0; nl < iterations; nl++) {
++        real_t *ce_sum = (real_t *)malloc(LEN_1D * sizeof(real_t));
++
+         for (int i = 1; i < LEN_1D; i++) {
+-            a[i] = b[i-1] + c[i] * d[i];
+-            b[i] = a[i] + c[i] * e[i];
++            ce_sum[i] = c[i] * (d[i] + e[i]);
+         }
++
++        for (int i = 2; i < LEN_1D; i++) {
++            ce_sum[i] += ce_sum[i-1];
++        }
++
++        for (int i = 1; i < LEN_1D; i++) {
++            b[i] = b[0] + ce_sum[i];
++            a[i] = b[0] + (i > 1 ? ce_sum[i-1] : 0) + c[i] * d[i];
++        }
++
++        free(ce_sum);
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;
