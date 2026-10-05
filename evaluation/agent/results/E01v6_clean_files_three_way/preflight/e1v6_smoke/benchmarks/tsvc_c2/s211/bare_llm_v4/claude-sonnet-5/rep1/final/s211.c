@@ -1,0 +1,43 @@
+#include "data.h"
+#include <stdlib.h>
+
+real_t kernel_s211(void)
+{
+    /* bold holds the pre-sweep snapshot of b[]; its size tracks LEN_1D so
+     * it must live on the heap, not the stack. */
+    real_t *bold = (real_t *)malloc((size_t)LEN_1D * sizeof(real_t));
+
+    for (int nl = 0; nl < iterations; nl++) {
+        /* Snapshot b[] before this sweep so the compute loop below has no
+         * cross-iteration dependence: it only ever reads bold (read-only)
+         * and writes its own a[i]/b[i]. */
+        #pragma omp parallel for default(none) shared(bold, b)
+        for (int i = 0; i < LEN_1D; i++) {
+            bold[i] = b[i];
+        }
+
+        /* Original recurrence: a[i] read b[i-1], which iteration i-1 had
+         * already overwritten from the OLD b[i] (b[i+1] is untouched when
+         * b[i] is written, since the sweep proceeds in increasing index
+         * order). Expressed purely in terms of the pre-sweep snapshot
+         * bold[]:
+         *   b_new[i]   = bold[i+1] - e[i]*d[i]
+         *   a[i] (i==1)  = bold[0] + c[1]*d[1]                 (b[0] is
+         *                  never written by this loop, so it's just old)
+         *   a[i] (i>=2)  = (bold[i] - e[i-1]*d[i-1]) + c[i]*d[i]
+         *                  (this equals b_new[i-1], since
+         *                  b_new[i-1] = bold[i] - e[i-1]*d[i-1])
+         * Every iteration now only reads bold/c/d/e and writes its own
+         * a[i], b[i] slot: no inter-iteration dependence remains. */
+        #pragma omp parallel for default(none) shared(a, b, bold, c, d, e)
+        for (int i = 1; i < LEN_1D-1; i++) {
+            real_t bim1 = (i == 1) ? bold[0] : (bold[i] - e[i - 1] * d[i - 1]);
+            a[i] = bim1 + c[i] * d[i];
+            b[i] = bold[i + 1] - e[i] * d[i];
+        }
+        dummy(a, b, c, d, e);
+    }
+
+    free(bold);
+    return (real_t)0;
+}

@@ -448,13 +448,13 @@ Status: stopped 4 Oct — superseded by E1-v6
 | `e1v5_r_3` | [`E01v5_clean_files_three_way/superseded/e1v5_r_3/`](E01v5_clean_files_three_way/superseded/e1v5_r_3/) | E1-v5 class R: s254 s255 s281 s291 × default_v4, discopop_gate_v4 (Haiku) × 5, threads 6,12, repeats 5 — STOPPED 4 Oct 20:10 UTC by the author's objection, a few trials in; never analysed | stopped 4 Oct: the author does not accept that the clean layout lowers the speedups (scratch memory paid on each of the 48 calls) — no trial analysed; superseded by the run on the next package form | 4 | FASTER 4 |
 | `e1v5_r_4` | [`E01v5_clean_files_three_way/superseded/e1v5_r_4/`](E01v5_clean_files_three_way/superseded/e1v5_r_4/) | E1-v5 class R: s292 s293 s331 s341 × default_v4, discopop_gate_v4 (Haiku) × 5, threads 6,12, repeats 5 — STOPPED 4 Oct 20:10 UTC by the author's objection, a few trials in; never analysed | stopped 4 Oct: the author does not accept that the clean layout lowers the speedups (scratch memory paid on each of the 48 calls) — no trial analysed; superseded by the run on the next package form | 3 | FASTER 3 |
 
-## [E1-v6 — the headline three-way comparison on clean files in TSVC's own form (packaging v6, prompt version 4)](E01v6_clean_files_three_way/)
+## [E1-v6 — the headline three-way comparison on clean files in TSVC's own form (packaging v6, prompt version 4)](E01v6_clean_files_three_way/REPORT.md)
 
 Status: running
 
 | run | where | what it is | status | trials | outcomes |
 |---|---|---|---|---:|---|
-| `e1v6_smoke` | not archived yet | E1-v6 smoke: tsvc_c2/s211 and s000 × default_v4, discopop_gate_v4 (Haiku) and bare_llm_v4 with Haiku, Sonnet, Opus, Fable × 1 — configuration check on packaging v6, never counted | registered |  |  |
+| `e1v6_smoke` | [`E01v6_clean_files_three_way/preflight/e1v6_smoke/`](E01v6_clean_files_three_way/preflight/e1v6_smoke/) | E1-v6 smoke: tsvc_c2/s211 and s000 × default_v4, discopop_gate_v4 (Haiku) and bare_llm_v4 with Haiku, Sonnet, Opus, Fable × 1 (12 trials, 18 model calls) — configuration check on packaging v6, never counted | valid | 12 | FASTER 11, no-change 1 |
 | `e1v6_r_1` | not archived yet | E1-v6 class R: s112 s121 s1213 s127 s211 × default_v4, discopop_gate_v4 (Haiku) × 5, threads 6,12, repeats 5 | registered |  |  |
 | `e1v6_r_2` | not archived yet | E1-v6 class R: s212 s241 s243 s244 s252 × default_v4, discopop_gate_v4 (Haiku) × 5, threads 6,12, repeats 5 | registered |  |  |
 | `e1v6_r_3` | not archived yet | E1-v6 class R: s254 s255 s281 s291 × default_v4, discopop_gate_v4 (Haiku) × 5, threads 6,12, repeats 5 | registered |  |  |

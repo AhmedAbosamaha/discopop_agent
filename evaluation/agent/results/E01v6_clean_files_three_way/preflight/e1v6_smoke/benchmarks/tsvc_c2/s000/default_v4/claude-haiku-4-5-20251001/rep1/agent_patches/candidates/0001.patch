@@ -1,0 +1,24 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_smoke/benchmarks/tsvc_c2/s000/default_v4/claude-haiku-4-5-20251001/rep1/work/s000.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6_smoke/benchmarks/tsvc_c2/s000/default_v4/claude-haiku-4-5-20251001/rep1/work/s000.c
+@@ -2,11 +2,19 @@
+ 
+ real_t kernel_s000(void)
+ {
++    real_t * b_copy = (real_t *)malloc(iterations * LEN_1D * sizeof(real_t));
++
++    for (int nl = 0; nl < iterations; nl++) {
++        memcpy(&b_copy[nl * LEN_1D], b, LEN_1D * sizeof(real_t));
++        dummy(a, b, c, d, e);
++    }
++
+     for (int nl = 0; nl < iterations; nl++) {
+         for (int i = 0; i < LEN_1D; i++) {
+-            a[i] = b[i] + 1;
++            a[i] = b_copy[nl * LEN_1D + i] + 1;
+         }
+-        dummy(a, b, c, d, e);
+     }
++
++    free(b_copy);
+     return (real_t)0;
+ }
