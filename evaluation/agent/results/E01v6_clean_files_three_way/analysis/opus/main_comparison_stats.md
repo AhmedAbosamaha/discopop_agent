@@ -31,8 +31,8 @@ Runs: e1v6_a, e1v6_bare_opus, e1v6_d, e1v6_r_1, e1v6_r_2, e1v6_r_3, e1v6_r_4. Ag
 
 ## What actually happened inside the trials
 
-- 105 agent trials, 389 model calls (54 failed).
-- Profile refreshes after a kept rewrite: 203 full, 0 fast, **0 fast→full fallback(s)**; runtimes re-measured 203 time(s).
+- 105 agent trials, 401 model calls (0 failed).
+- Profile refreshes after a kept rewrite: 232 full, 0 fast, **0 fast→full fallback(s)**; runtimes re-measured 232 time(s).
 - Explorer stalls (killed at the limit, draw repeated): 0 inside agents, 0 in the harness's profile step.
 - Agent trials with the speed check off (untimeable kernel): 0.
 - Host load (1-min) at trial start: 3–25.
@@ -88,10 +88,10 @@ Agent arm `default_v4`, model alone `bare_llm_v4`, DiscoPoP alone `discopop_gate
 |---|---:|---:|---:|
 | verified parallel program | 3 of 3 (100 %, 95 % CI 44–100 %) | 3 of 3 (100 %, 95 % CI 44–100 %) | 3 of 3 (100 %, 95 % CI 44–100 %) |
 | FASTER (≥ 1.1×) | 3 of 3 (100 %, 95 % CI 44–100 %) | 3 of 3 (100 %, 95 % CI 44–100 %) | 3 of 3 (100 %, 95 % CI 44–100 %) |
-| FASTER and race-free | 3 of 3 (100 %, 95 % CI 44–100 %) | 3 of 3 (100 %, 95 % CI 44–100 %) | 2 of 3 (67 %, 95 % CI 21–94 %) |
+| FASTER and race-free | 3 of 3 (100 %, 95 % CI 44–100 %) | 3 of 3 (100 %, 95 % CI 44–100 %) | 3 of 3 (100 %, 95 % CI 44–100 %) |
 | **BROKEN** (wrong output shipped) | **0** | **0** | **0** |
 | correct but slower, shipped (< 0.91×, parallel or not) | 0 | 0 | 0 |
-| racy (race check: TSan or the schedule matrix) | 0 | 0 | 0 (+1 not judgeable) |
+| racy (race check: TSan or the schedule matrix) | 0 | 0 | 0 |
 | shipped a program that does not compile | 0 | 0 | 0 |
 | **unusable programs** (any of the four above) | **0** | **0** | **0** |
 | touched the harness — no valid measurement, not counted above | 0 | 0 | 0 |
@@ -100,12 +100,12 @@ Agent arm `default_v4`, model alone `bare_llm_v4`, DiscoPoP alone `discopop_gate
 
 - **H13 — unusable programs shipped (wrong, racy, slower or not compiling — failures of the code under test), rate per benchmark, paired:** the agent ships fewer on 0, the model-only arm fewer on 0, tied on 3; fewer than 6 non-zero pairs: no test. Each is a result, not a discarded trial.
 - Agent vs model alone, FASTER rate per benchmark (Wilcoxon signed-rank, paired): agent ahead on 0, model alone ahead on 0, tied on 3; fewer than 6 non-zero pairs: no test.
-- Agent vs model alone, race-free FASTER rate per benchmark (Wilcoxon signed-rank, paired): agent ahead on 1, model alone ahead on 0, tied on 2; fewer than 6 non-zero pairs: no test.
+- Agent vs model alone, race-free FASTER rate per benchmark (Wilcoxon signed-rank, paired): agent ahead on 0, model alone ahead on 0, tied on 3; fewer than 6 non-zero pairs: no test.
 
 | benchmark | DiscoPoP alone FASTER / race-free / BROKEN / unusable | DiscoPoP + agent FASTER / race-free / BROKEN / unusable | model alone FASTER / race-free / BROKEN / unusable |
 |---|---:|---:|---:|
 | `tsvc_c2/s000` | 1 / 1 / 0 / 0 of 1 | 1 / 1 / 0 / 0 of 1 | 1 / 1 / 0 / 0 of 1 |
-| `tsvc_c2/s313` | 1 / 1 / 0 / 0 of 1 | 1 / 1 / 0 / 0 of 1 | 1 / 0 / 0 / 0 of 1 |
+| `tsvc_c2/s313` | 1 / 1 / 0 / 0 of 1 | 1 / 1 / 0 / 0 of 1 | 1 / 1 / 0 / 0 of 1 |
 | `tsvc_c2/vpvtv` | 1 / 1 / 0 / 0 of 1 | 1 / 1 / 0 / 0 of 1 | 1 / 1 / 0 / 0 of 1 |
 
 ### Class D (must-decline control) — 4 benchmarks
@@ -114,10 +114,10 @@ Agent arm `default_v4`, model alone `bare_llm_v4`, DiscoPoP alone `discopop_gate
 |---|---:|---:|---:|
 | verified parallel program | 0 of 12 (0 %, 95 % CI 0–24 %) | 0 of 12 (0 %, 95 % CI 0–24 %) | 12 of 12 (100 %, 95 % CI 76–100 %) |
 | FASTER (≥ 1.1×) | 0 of 12 (0 %, 95 % CI 0–24 %) | 0 of 12 (0 %, 95 % CI 0–24 %) | 9 of 12 (75 %, 95 % CI 47–91 %) |
-| FASTER and race-free | 0 of 12 (0 %, 95 % CI 0–24 %) | 0 of 12 (0 %, 95 % CI 0–24 %) | 1 of 12 (8 %, 95 % CI 1–35 %) |
+| FASTER and race-free | 0 of 12 (0 %, 95 % CI 0–24 %) | 0 of 12 (0 %, 95 % CI 0–24 %) | 8 of 12 (67 %, 95 % CI 39–86 %) |
 | **BROKEN** (wrong output shipped) | **0** | **0** | **0** |
 | correct but slower, shipped (< 0.91×, parallel or not) | 0 | 0 | 3 |
-| racy (race check: TSan or the schedule matrix) | 0 | 0 | 0 (+11 not judgeable) |
+| racy (race check: TSan or the schedule matrix) | 0 | 0 | 0 (+1 not judgeable) |
 | shipped a program that does not compile | 0 | 0 | 0 |
 | **unusable programs** (any of the four above) | **0** | **0** | **3** |
 | touched the harness — no valid measurement, not counted above | 0 | 0 | 0 |
@@ -127,12 +127,12 @@ Agent arm `default_v4`, model alone `bare_llm_v4`, DiscoPoP alone `discopop_gate
 - Unusable programs shipped by model alone (3): tsvc_c2/s323 rep1: slower; tsvc_c2/s323 rep2: slower; tsvc_c2/s323 rep3: slower.
 - **H13 — unusable programs shipped (wrong, racy, slower or not compiling — failures of the code under test), rate per benchmark, paired:** the agent ships fewer on 1, the model-only arm fewer on 0, tied on 3; fewer than 6 non-zero pairs: no test. Each is a result, not a discarded trial.
 - Agent vs model alone, FASTER rate per benchmark (Wilcoxon signed-rank, paired): agent ahead on 0, model alone ahead on 3, tied on 1; fewer than 6 non-zero pairs: no test.
-- Agent vs model alone, race-free FASTER rate per benchmark (Wilcoxon signed-rank, paired): agent ahead on 0, model alone ahead on 1, tied on 3; fewer than 6 non-zero pairs: no test.
+- Agent vs model alone, race-free FASTER rate per benchmark (Wilcoxon signed-rank, paired): agent ahead on 0, model alone ahead on 3, tied on 1; fewer than 6 non-zero pairs: no test.
 
 | benchmark | DiscoPoP alone FASTER / race-free / BROKEN / unusable | DiscoPoP + agent FASTER / race-free / BROKEN / unusable | model alone FASTER / race-free / BROKEN / unusable |
 |---|---:|---:|---:|
-| `tsvc_c2/s3112` | 0 / 0 / 0 / 0 of 3 | 0 / 0 / 0 / 0 of 3 | 3 / 0 / 0 / 0 of 3 |
-| `tsvc_c2/s321` | 0 / 0 / 0 / 0 of 3 | 0 / 0 / 0 / 0 of 3 | 3 / 1 / 0 / 0 of 3 |
-| `tsvc_c2/s322` | 0 / 0 / 0 / 0 of 3 | 0 / 0 / 0 / 0 of 3 | 3 / 0 / 0 / 0 of 3 |
+| `tsvc_c2/s3112` | 0 / 0 / 0 / 0 of 3 | 0 / 0 / 0 / 0 of 3 | 3 / 2 / 0 / 0 of 3 |
+| `tsvc_c2/s321` | 0 / 0 / 0 / 0 of 3 | 0 / 0 / 0 / 0 of 3 | 3 / 3 / 0 / 0 of 3 |
+| `tsvc_c2/s322` | 0 / 0 / 0 / 0 of 3 | 0 / 0 / 0 / 0 of 3 | 3 / 3 / 0 / 0 of 3 |
 | `tsvc_c2/s323` | 0 / 0 / 0 / 0 of 3 | 0 / 0 / 0 / 0 of 3 | 0 / 0 / 0 / 3 of 3 |
 

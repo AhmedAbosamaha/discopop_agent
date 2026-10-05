@@ -31,8 +31,8 @@ Runs: e1v6_a, e1v6_bare_haiku, e1v6_d, e1v6_r_1, e1v6_r_2, e1v6_r_3, e1v6_r_4. A
 
 ## What actually happened inside the trials
 
-- 105 agent trials, 389 model calls (54 failed).
-- Profile refreshes after a kept rewrite: 203 full, 0 fast, **0 fast→full fallback(s)**; runtimes re-measured 203 time(s).
+- 105 agent trials, 401 model calls (0 failed).
+- Profile refreshes after a kept rewrite: 232 full, 0 fast, **0 fast→full fallback(s)**; runtimes re-measured 232 time(s).
 - Explorer stalls (killed at the limit, draw repeated): 0 inside agents, 0 in the harness's profile step.
 - Agent trials with the speed check off (untimeable kernel): 0.
 - Host load (1-min) at trial start: 3–19.

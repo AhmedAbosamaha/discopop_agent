@@ -14,11 +14,13 @@ every run with its purpose. Everything here is tracked in git.
 ### E1 — the main comparison: DiscoPoP alone · DiscoPoP + agent · the model alone
 
 **Current: [`E01v6_clean_files_three_way/`](E01v6_clean_files_three_way/REPORT.md)** — E1-v6 — the headline three-way comparison on clean files in TSVC's own form (packaging v6, prompt version 4).  
-Status: running.
+Status: done.
 
-Open first: [`analysis/e1v6_tests.md`](E01v6_clean_files_three_way/analysis/e1v6_tests.md), [`analysis/haiku/main_comparison_stats.md`](E01v6_clean_files_three_way/analysis/haiku/main_comparison_stats.md), [`REPORT.md`](E01v6_clean_files_three_way/REPORT.md).
+Open first: [`analysis/e1v6_tests.md`](E01v6_clean_files_three_way/analysis/e1v6_tests.md), [`analysis/vs_e1_final.md`](E01v6_clean_files_three_way/analysis/vs_e1_final.md), [`analysis/repetition_loop.md`](E01v6_clean_files_three_way/analysis/repetition_loop.md), [`analysis/haiku/main_comparison_stats.md`](E01v6_clean_files_three_way/analysis/haiku/main_comparison_stats.md), [`REPORT.md`](E01v6_clean_files_three_way/REPORT.md).
 
-Read-out of 5 Oct: the main table and the nine tests (the 18 loops that need restructuring) are final; the control loops and the race-check control are being completed.
+Class R, 18 loops × 5, race-checked: DiscoPoP alone 0 of 90; the Haiku agent 73 race-free FASTER with 0 unusable; Haiku alone 38 with 50 unusable; Sonnet alone 77 with 11 (5 racy); Opus alone 89 with 0; Fable alone 89 with 1. T1 (agent > DiscoPoP alone, median 1.70×), T2 (fewer unusable than Haiku alone) and T6 (more reach than Haiku alone) rejected; against Sonnet, Opus and Fable alone no advantage in reach (Opus and Fable ahead on 6 loops). Controls: every setup but Haiku alone FASTER on the three class-A loops; the agent declines all 12 class-D trials. One of the agent's 73 (s331) parallelizes the repetition loop itself and is right only for the tested data; on s313 the agent removes the 47 unused repetitions (164×) — both possible because the result of those two loops is a scalar that our `dummy` call does not take. 821 model calls, $134 API-equivalent, 8.5 h + re-runs.
+
+Read out 5 Oct 2026, complete: the nine tests, the controls, the race check with its positive control (all 85 of the agent's parallel programs clean), the cost, and what every program did to the repetition loop (`analysis/repetition_loop.md`).
 
 Earlier versions (history):
 

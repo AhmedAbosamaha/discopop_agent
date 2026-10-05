@@ -309,10 +309,10 @@
    "id": "E1-v6",
    "folder": "E01v6_clean_files_three_way",
    "kind": "experiment",
-   "status": "running",
+   "status": "done",
    "title": "E1-v6 — the headline three-way comparison on clean files in TSVC's own form (packaging v6, prompt version 4)",
    "question": "E1-final again where the file a model reads is an ordinary code file — TSVC's function with its repetition loop and its `dummy` call, comments removed, no note, no harness, one editable file — and the order statement is the corrected one: on TSVC class R (with class A and D controls), DiscoPoP alone vs the Haiku agent vs Haiku, Sonnet, Opus and Fable alone — who ships correct, race-free, faster programs, and who ships unusable ones?",
-   "headline": "",
+   "headline": "Class R, 18 loops × 5, race-checked: DiscoPoP alone 0 of 90; the Haiku agent 73 race-free FASTER with 0 unusable; Haiku alone 38 with 50 unusable; Sonnet alone 77 with 11 (5 racy); Opus alone 89 with 0; Fable alone 89 with 1. T1 (agent > DiscoPoP alone, median 1.70×), T2 (fewer unusable than Haiku alone) and T6 (more reach than Haiku alone) rejected; against Sonnet, Opus and Fable alone no advantage in reach (Opus and Fable ahead on 6 loops). Controls: every setup but Haiku alone FASTER on the three class-A loops; the agent declines all 12 class-D trials. One of the agent's 73 (s331) parallelizes the repetition loop itself and is right only for the tested data; on s313 the agent removes the 47 unused repetitions (164×) — both possible because the result of those two loops is a scalar that our `dummy` call does not take. 821 model calls, $134 API-equivalent, 8.5 h + re-runs.",
    "preregistered": "THESIS_EXPERIMENTS §6, 5 Oct, before the first main trial"
   },
   {
@@ -1696,67 +1696,67 @@
   "e1v6_r_1": {
    "group": "E1-v6",
    "section": "runs",
-   "status": "registered",
+   "status": "valid",
    "role": "E1-v6 class R: s112 s121 s1213 s127 s211 × default_v4, discopop_gate_v4 (Haiku) × 5, threads 6,12, repeats 5"
   },
   "e1v6_r_2": {
    "group": "E1-v6",
    "section": "runs",
-   "status": "registered",
+   "status": "valid",
    "role": "E1-v6 class R: s212 s241 s243 s244 s252 × default_v4, discopop_gate_v4 (Haiku) × 5, threads 6,12, repeats 5"
   },
   "e1v6_r_3": {
    "group": "E1-v6",
    "section": "runs",
-   "status": "registered",
+   "status": "valid",
    "role": "E1-v6 class R: s254 s255 s281 s291 × default_v4, discopop_gate_v4 (Haiku) × 5, threads 6,12, repeats 5"
   },
   "e1v6_r_4": {
    "group": "E1-v6",
    "section": "runs",
-   "status": "registered",
+   "status": "valid",
    "role": "E1-v6 class R: s292 s293 s331 s341 × default_v4, discopop_gate_v4 (Haiku) × 5, threads 6,12, repeats 5"
   },
   "e1v6_a": {
    "group": "E1-v6",
    "section": "runs",
-   "status": "registered",
+   "status": "valid",
    "role": "E1-v6 class A (no-harm): s000 vpvtv s313 × default_v4, discopop_gate_v4 (Haiku) × 1"
   },
   "e1v6_d": {
    "group": "E1-v6",
    "section": "runs",
-   "status": "registered",
+   "status": "valid",
    "role": "E1-v6 class D (must-decline): s321 s322 s323 s3112 × default_v4, discopop_gate_v4 (Haiku) × 3"
   },
   "e1v6_bare_haiku": {
    "group": "E1-v6",
    "section": "runs",
-   "status": "registered",
+   "status": "valid",
    "role": "E1-v6 the model alone: bare_llm_v4 with claude-haiku-4-5-20251001 on class R × 5, A × 1, D × 3 (one run per model)"
   },
   "e1v6_bare_sonnet": {
    "group": "E1-v6",
    "section": "runs",
-   "status": "registered",
+   "status": "valid",
    "role": "E1-v6 the model alone: bare_llm_v4 with claude-sonnet-5 on class R × 5, A × 1, D × 3 (one run per model)"
   },
   "e1v6_bare_opus": {
    "group": "E1-v6",
    "section": "runs",
-   "status": "registered",
+   "status": "valid",
    "role": "E1-v6 the model alone: bare_llm_v4 with claude-opus-5-5 on class R × 5, A × 1, D × 3 (one run per model)"
   },
   "e1v6_bare_fable": {
    "group": "E1-v6",
    "section": "runs",
-   "status": "registered",
+   "status": "valid",
    "role": "E1-v6 the model alone: bare_llm_v4 with claude-fable-5-1 on class R × 5, A × 1, D × 3 (one run per model)"
   },
   "e1v6_race_check": {
    "group": "E1-v6",
    "section": "checks",
-   "status": "registered",
+   "status": "valid",
    "role": "race_check.py (the gate's TSan with archer and the schedule matrix, server, no model) over every model-alone parallel program of E1-v6 and, as the positive control, every parallel program of the agent"
   },
   "e2v6_pilot": {
@@ -2063,10 +2063,12 @@
    "current": "E1-v6",
    "read_first": [
     "analysis/e1v6_tests.md",
+    "analysis/vs_e1_final.md",
+    "analysis/repetition_loop.md",
     "analysis/haiku/main_comparison_stats.md",
     "REPORT.md"
    ],
-   "note": "Read-out of 5 Oct: the main table and the nine tests (the 18 loops that need restructuring) are final; the control loops and the race-check control are being completed.",
+   "note": "Read out 5 Oct 2026, complete: the nine tests, the controls, the race check with its positive control (all 85 of the agent's parallel programs clean), the cost, and what every program did to the repetition loop (`analysis/repetition_loop.md`).",
    "history": [
     {
      "id": "E1-v5",
