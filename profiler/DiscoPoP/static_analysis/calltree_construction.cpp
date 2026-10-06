@@ -205,9 +205,70 @@ std::vector<std::vector<int32_t>> get_loopIDs_in_function_body(Function &F){
   return nested_loop_ids;
 }
 
+// returns the parent of every loop of the function: the innermost loop that is open where the loop is entered,
+// or -1 for a loop at the top level of the function.
+// get_loopIDs_in_function_body lists the loops of one nest in the order of their entries; that order alone does
+// not say which loop a loop lies in — two loops side by side in a loop are siblings, not nested in each other.
+std::unordered_map<LOOP_ID, LOOP_ID> get_loop_parents_in_function_body(Function &F){
+  std::unordered_map<LOOP_ID, LOOP_ID> loop_parents;
+  std::vector<LOOP_ID> open_loops;
+
+  for (Function::iterator FI = F.begin(), FE = F.end(); FI != FE; ++FI) {
+    BasicBlock &BB = *FI;
+    for (BasicBlock::iterator BI = BB.begin(), E = BB.end(); BI != E; ++BI) {
+      auto instruction = &*BI;
+      if(!isa<CallInst>(instruction)){
+        continue;
+      }
+      auto ci = cast<CallInst>(BI);
+      Function* callee = ci->getCalledFunction();
+      if(!callee){
+        continue;
+      }
+      auto fn = callee->getName();
+      bool is_entry = fn.find("__dp_loop_entry") != string::npos;
+      bool is_exit = fn.find("__dp_loop_exit") != string::npos;
+      if(!is_entry && !is_exit){
+        continue;
+      }
+      llvm::ConstantInt* CI = dyn_cast<llvm::ConstantInt>(ci->getArgOperand(1));
+      if(!CI || CI->getBitWidth() > 32){
+        continue;
+      }
+      LOOP_ID loop_id = CI->getSExtValue();
+      if(is_entry){
+        if(loop_parents.count(loop_id) == 0){
+          loop_parents[loop_id] = open_loops.empty() ? -1 : open_loops.back();
+        }
+        open_loops.push_back(loop_id);
+      }
+      else{
+        // the loop is left: it is open no longer (a loop can have several exit calls)
+        for (auto it = open_loops.begin(); it != open_loops.end();){
+          if (*it == loop_id)
+            it = open_loops.erase(it);
+          else
+            ++it;
+        }
+      }
+    }
+  }
+
+  return loop_parents;
+}
+
 // returns all combinations of allowed loop iteration counters for the given loop ids
 // contained in the parent function
-std::unordered_map<string, std::unordered_map<TRANSITION_TYPE, std::unordered_map<LOOP_ID, string>>> get_loop_iteration_instances_and_transitions(std::vector<std::vector<LOOP_ID>> contained_loops, std::vector<LOOP_ID>  sequentialized_contained_loops){
+//
+// The loops of a nest form a TREE (loop_parents). A loop is entered from the states of its PARENT loop, in which
+// every loop that is not one of its ancestors is inactive ("3"), and it is left back into that state. Until
+// 7 Oct 2026 the list of a nest was read as a chain — every loop the child of the loop before it: for two loops
+// side by side in a loop the entry into the second existed only from states in which the first was active, the
+// runtime found no transition when the second loop began after the first had ended, and every access in the
+// second loop was recorded without that loop's iteration state. A dependence carried by the enclosing loop was
+// then charged to the second loop and blocked its Do-All (docs: DISCOPOP_BUG_REPORTS B14). For loops that do
+// nest in a chain the states and transitions are the same as before.
+std::unordered_map<string, std::unordered_map<TRANSITION_TYPE, std::unordered_map<LOOP_ID, string>>> get_loop_iteration_instances_and_transitions(std::vector<std::vector<LOOP_ID>> contained_loops, std::vector<LOOP_ID>  sequentialized_contained_loops, std::unordered_map<LOOP_ID, LOOP_ID> loop_parents){
   std::vector<ITERATION_INSTANCE> loop_iteration_instances;
   // describes transitions between loop instances
   std::unordered_map<string, std::unordered_map<TRANSITION_TYPE, std::unordered_map<LOOP_ID, string>>> loop_iteration_instance_transitions;
@@ -234,18 +295,57 @@ std::unordered_map<string, std::unordered_map<TRANSITION_TYPE, std::unordered_ma
     std::vector<ITERATION_INSTANCE> instances;
     instances.push_back(base_state);
     int32_t inner_index = 0;
-    std::vector<ITERATION_INSTANCE> parent_instances;  // iteration instances of the parent loop
+    int32_t nest_start = offset;  // position of the nest's outermost loop
     for(auto inner: outer){
       // get loop id from position via lookup in sequentialized_contained_loops
       auto loop_id = sequentialized_contained_loops[offset];
 
+      // the positions of the loop's ancestors within this nest (B14). A loop whose parent is not known, or
+      // does not lie earlier in this nest, is treated as before: as the child of the loop before it.
+      std::unordered_set<int32_t> ancestor_positions;
+      if(inner_index > 0){
+        bool parents_known = true;
+        LOOP_ID current = loop_id;
+        while(true){
+          auto parent_it = loop_parents.find(current);
+          if(parent_it == loop_parents.end()){
+            parents_known = false;
+            break;
+          }
+          LOOP_ID parent_id = parent_it->second;
+          if(parent_id == -1){
+            break;
+          }
+          int32_t parent_position = -1;
+          for(int32_t position = nest_start; position < offset; ++position){
+            if(sequentialized_contained_loops[position] == parent_id){
+              parent_position = position;
+              break;
+            }
+          }
+          if(parent_position == -1 || ancestor_positions.count(parent_position) != 0){
+            parents_known = false;
+            break;
+          }
+          ancestor_positions.insert(parent_position);
+          current = parent_id;
+        }
+        if(!parents_known || ancestor_positions.empty()){
+          ancestor_positions.clear();
+          for(int32_t position = nest_start; position < offset; ++position){
+            ancestor_positions.insert(position);
+          }
+        }
+      }
+
       std::vector<ITERATION_INSTANCE> new_instances;
       for(auto instance: instances){
-        // check for instances, where the parent loops are active
+        // the loop is entered from the states of its parent: every ancestor active, every other earlier loop
+        // of the nest inactive
         bool skip_instance = false;
-        for(int32_t negative_parent_loop_offset = 1; negative_parent_loop_offset <= inner_index; ++negative_parent_loop_offset){
-          if(instance[offset-negative_parent_loop_offset] == 3){
-            // parent loop is not active
+        for(int32_t position = nest_start; position < offset; ++position){
+          bool is_ancestor = ancestor_positions.count(position) != 0;
+          if(is_ancestor != (instance[position] != 3)){
             skip_instance = true;
             break;
           }
@@ -316,11 +416,11 @@ std::unordered_map<string, std::unordered_map<TRANSITION_TYPE, std::unordered_ma
         // ---> register transition
         loop_iteration_instance_transitions[instance_copy_2_str][TRANSITION_TYPE_INCREMENTLOOP][loop_id] = instance_copy_0_str;
 
-        // register transitions between parents and iteration instances
-        for(auto parent_instance : parent_instances){
+        // register transitions between the parent's state and the iteration instances created from it
+        if(inner_index > 0){
           // get string
           string parent_instance_str = "";
-          for(auto it_count: parent_instance){
+          for(auto it_count: instance){
             parent_instance_str += to_string(it_count);
           }
           // ---> extend map
@@ -363,7 +463,6 @@ std::unordered_map<string, std::unordered_map<TRANSITION_TYPE, std::unordered_ma
       }
       offset++;
       inner_index++;
-      parent_instances = new_instances;
     }
     for(auto instance_vector: instances){
       // only push "interesting" states, i.e., such, that contain not only don't cares
@@ -535,7 +634,8 @@ StaticCalltree DiscoPoP::buildStaticCalltree(Module &M) {
     // The value 3 is chosen to keep the amount of total states somewhat concise, while still allowing to distinguish between
     // intra- and inter-iteration dependencies with a comparatively high probability.
     // Valid Iteration counters are 0, 1, and 2. A value of 3 acts as a "dont care" symbol.
-    auto iteration_instances_and_transitions = get_loop_iteration_instances_and_transitions(contained_loops, sequentialized_contained_loops);
+    auto loop_parents = get_loop_parents_in_function_body(F);
+    auto iteration_instances_and_transitions = get_loop_iteration_instances_and_transitions(contained_loops, sequentialized_contained_loops, loop_parents);
 
     // create StaticCalltreeNode instances for function F
     std::vector<StaticCalltreeNode*> function_node_instances;

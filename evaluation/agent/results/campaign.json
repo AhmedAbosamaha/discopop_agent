@@ -334,6 +334,15 @@
    "question": "On three new kernels whose split order is decided by a fact hidden outside the file in three different ways (an offset pointer, an offset variable, an accessor macro), speed check off, prompt version 3: does the Haiku agent with DiscoPoP's evidence ship more race-free verified parallel programs covering the hot loop than without, and how do Haiku, Sonnet, Opus and Fable alone do on the same kernels?",
    "headline": "O3-i rejected: with DiscoPoP's evidence the Haiku agent finds the hidden split 29/30 (29 FASTER) vs 0/30 without, on three new ways of hiding the order (offset pointer, offset variable, accessor macro); exact p 1.7e-15, family at most 3.5e-11. Models alone over the three: Haiku 0/30 (30 unsafe), Sonnet 2/15, Opus 8/15 (2 faster), Fable 6/15 (5 faster), unsafe 7 to 13 of 15; the agent 0 unsafe.",
    "preregistered": "THESIS_EXPERIMENTS §6, 3 Oct, before any E2-O3 trial; config/e2o3_population.json"
+  },
+  {
+   "id": "B14",
+   "folder": "T0_instruments/B14_side_by_side_loops",
+   "kind": "instrument",
+   "status": "running",
+   "title": "DiscoPoP B14 — two loops side by side inside a loop: the fix, its regression check, and what it changes on the programs the agent shipped",
+   "question": "After the profiler models the loops of a nest as a tree: does DiscoPoP alone still give every one of the 44 tsvc_c2 originals its measured class, and on how many of the agent's archived programs does DiscoPoP now report more loops as Do-All than it did?",
+   "headline": ""
   }
  ],
  "runs": {
@@ -1842,6 +1851,30 @@
    "section": "checks",
    "status": "valid",
    "role": "marginal_replay.py --from-final (server, no model; after the read-out, descriptive): the agent's own speed measurement on its three programs that crash in the final run — k23 rep 10, k53 rep 3 and rep 10 of full_nospeed_v4 — at the size the harness passes when the speed check is on; all cores of one 12-core group"
+  },
+  "b14_replay_before": {
+   "group": "B14",
+   "section": "checks",
+   "status": "registered",
+   "role": "doall_replay.py (server, no model) with the profiler BEFORE the B14 fix: DiscoPoP's Do-All verdict on every changed program the agent shipped in E1-v6 (default_v4) and E2-v6 (its four arms), directives removed"
+  },
+  "b14_replay_after": {
+   "group": "B14",
+   "section": "checks",
+   "status": "registered",
+   "role": "doall_replay.py (server, no model) with the profiler AFTER the B14 fix, on the same archived programs"
+  },
+  "t0_11_c2_b14_a": {
+   "group": "B14",
+   "section": "runs",
+   "status": "registered",
+   "role": "T0.11 on packaging v6 with DiscoPoP B14 fixed, draw a, server, no model: arm discopop_capability on the 44 tsvc_c2 packages — the regression check (every class as t0_11_c2_a–c measured it)"
+  },
+  "t0_11_c2_b14_b": {
+   "group": "B14",
+   "section": "runs",
+   "status": "registered",
+   "role": "T0.11 on packaging v6 with DiscoPoP B14 fixed, draw b, server, no model: arm discopop_capability on the 44 tsvc_c2 packages"
   }
  },
  "analysis": {
