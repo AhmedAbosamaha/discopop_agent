@@ -1,0 +1,25 @@
+#include "data.h"
+
+real_t kernel_s161(void)
+{
+    for (int nl = 0; nl < iterations; nl++) {
+        /* Pass 1: all c[i+1] updates (b[i] < 0).  Reads a[i] only where
+           b[i] < 0, which pass 2 never writes, so a is unchanged here. */
+#pragma omp parallel for default(none) shared(a, b, c, d) schedule(static)
+        for (int i = 0; i < LEN_1D-1; ++i) {
+            if (b[i] < (real_t)0.) {
+                c[i+1] = a[i] + d[i] * d[i];
+            }
+        }
+        /* Pass 2: all a[i] updates (b[i] >= 0).  c[i] is only ever written
+           by iteration i-1 of pass 1, which has completed. */
+#pragma omp parallel for default(none) shared(a, b, c, d, e) schedule(static)
+        for (int i = 0; i < LEN_1D-1; ++i) {
+            if (!(b[i] < (real_t)0.)) {
+                a[i] = c[i] + d[i] * e[i];
+            }
+        }
+        dummy(a, b, c, d, e);
+    }
+    return (real_t)0;
+}

@@ -1,0 +1,25 @@
+#include "data.h"
+
+real_t kernel_k53(void)
+{
+    for (int nl = 0; nl < iterations; nl++) {
+        /* Each iteration i only ever touches u[ju[i]]/u[ku[i]] and
+         * v[jv[i]]/v[kv[i]]; for this kernel's index arrays those are
+         * disjoint across distinct i, so no value written by one
+         * iteration is read by another -- the loop-carried dependence
+         * that the indirect addressing appears to create does not
+         * actually exist between iterations, only within one (the
+         * write to u[ju[i]] and its later read as u[ku[i]] happen in
+         * program order inside the single iteration that executes
+         * them, on whichever thread that is). u, v are read/written
+         * but at per-iteration-disjoint locations, so they stay
+         * shared; ju, jv, ku, kv, c, d are read-only and shared too. */
+        #pragma omp parallel for default(none) shared(u, v, ju, jv, ku, kv, c, d) schedule(static)
+        for (long i = 1; i < LEN_1D; i++) {
+            u[ju[i]] += v[kv[i]] * c[i];
+            v[jv[i]] = u[ku[i]] * d[i] + c[i];
+        }
+        dummy(a, b, c, d, e);
+    }
+    return (real_t)0;
+}

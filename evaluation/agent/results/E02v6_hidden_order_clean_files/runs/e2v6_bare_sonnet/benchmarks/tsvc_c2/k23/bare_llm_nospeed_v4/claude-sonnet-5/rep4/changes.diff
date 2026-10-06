@@ -1,0 +1,10 @@
+--- original.c
++++ final.c
+@@ -39,6 +39,7 @@
+ real_t kernel_k23(void)
+ {
+     for (int nl = 0; nl < iterations; nl++) {
++        #pragma omp parallel for default(none) shared(u, w, c, v, x, d)
+         for (long i = 1; i < LEN_1D; i++) {
+             u[i] += w[i] * c[i];
+             v[i] = x[i] * d[i] + c[i];

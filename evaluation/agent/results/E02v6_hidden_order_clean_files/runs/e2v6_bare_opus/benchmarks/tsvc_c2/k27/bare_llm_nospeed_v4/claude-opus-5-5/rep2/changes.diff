@@ -1,0 +1,111 @@
+--- original.c
++++ final.c
+@@ -35,18 +35,104 @@
+ #endif
+ 
+ /* ==== k27.c ==== */
++#include <stdlib.h>
+ #include "data.h"
++
++/* update helpers for the inspector */
++static inline int k27_max(int x, int y) { return x > y ? x : y; }
+ 
+ real_t kernel_k27(void)
+ {
++    const long n = LEN_1D;
++
++    /* ---- index range (to size the tracking tables) ---- */
++    long lo = 0, hi = 0;
++    if (n > 1) { lo = ju[1]; hi = ju[1]; }
++    #pragma omp parallel for reduction(min:lo) reduction(max:hi)
++    for (long i = 1; i < n; i++) {
++        long t;
++        t = ju[i]; if (t < lo) lo = t; if (t > hi) hi = t;
++        t = jv[i]; if (t < lo) lo = t; if (t > hi) hi = t;
++        t = jw[i]; if (t < lo) lo = t; if (t > hi) hi = t;
++        t = ku[i]; if (t < lo) lo = t; if (t > hi) hi = t;
++        t = kv[i]; if (t < lo) lo = t; if (t > hi) hi = t;
++        t = kw[i]; if (t < lo) lo = t; if (t > hi) hi = t;
++    }
++    long range = hi - lo + 1;
++
++    /* last-write wave and max last-read wave, per location of u, v, w */
++    int *lwu = (int *)malloc(sizeof(int) * range);
++    int *lwv = (int *)malloc(sizeof(int) * range);
++    int *lww = (int *)malloc(sizeof(int) * range);
++    int *lru = (int *)malloc(sizeof(int) * range);
++    int *lrv = (int *)malloc(sizeof(int) * range);
++    int *lrw = (int *)malloc(sizeof(int) * range);
++    int *wave = (int *)malloc(sizeof(int) * (n > 0 ? n : 1));
++
++    #pragma omp parallel for
++    for (long x = 0; x < range; x++) {
++        lwu[x] = -1; lwv[x] = -1; lww[x] = -1;
++        lru[x] = -1; lrv[x] = -1; lrw[x] = -1;
++    }
++
++    /* ---- inspector: wave of each iteration (sequential, O(n)) ---- */
++    int nwaves = 0;
++    for (long i = 1; i < n; i++) {
++        long rw = kw[i] - lo, xu = ju[i] - lo, ru = ku[i] - lo;
++        long xv = jv[i] - lo, rv = kv[i] - lo, xw = jw[i] - lo;
++        int L = -1;
++        L = k27_max(L, lww[rw]);                 /* read w[kw] */
++        L = k27_max(L, lwu[xu]);                 /* read/write u[ju] */
++        L = k27_max(L, lru[xu]);
++        L = k27_max(L, lwu[ru]);                 /* read u[ku] */
++        L = k27_max(L, lwv[xv]);                 /* write v[jv] */
++        L = k27_max(L, lrv[xv]);
++        L = k27_max(L, lwv[rv]);                 /* read v[kv] */
++        L = k27_max(L, lww[xw]);                 /* write w[jw] */
++        L = k27_max(L, lrw[xw]);
++        L += 1;
++        wave[i] = L;
++        if (L + 1 > nwaves) nwaves = L + 1;
++        lrw[rw] = k27_max(lrw[rw], L);
++        lru[xu] = k27_max(lru[xu], L);
++        lwu[xu] = L;
++        lru[ru] = k27_max(lru[ru], L);
++        lwv[xv] = L;
++        lrv[rv] = k27_max(lrv[rv], L);
++        lww[xw] = L;
++    }
++
++    /* ---- group iterations by wave (counting sort) ---- */
++    long *start = (long *)calloc((size_t)nwaves + 1, sizeof(long));
++    long *order = (long *)malloc(sizeof(long) * (n > 0 ? n : 1));
++    for (long i = 1; i < n; i++) start[wave[i] + 1]++;
++    for (int k = 0; k < nwaves; k++) start[k + 1] += start[k];
++    {
++        long *pos = (long *)malloc(sizeof(long) * ((size_t)nwaves + 1));
++        for (int k = 0; k <= nwaves; k++) pos[k] = start[k];
++        for (long i = 1; i < n; i++) order[pos[wave[i]]++] = i;
++        free(pos);
++    }
++
++    /* ---- executor ---- */
+     for (int nl = 0; nl < iterations; nl++) {
+-        for (long i = 1; i < LEN_1D; i++) {
+-            u[ju[i]] += w[kw[i]] * c[i];
+-            v[jv[i]] = u[ku[i]] * d[i] + c[i];
+-            w[jw[i]] = v[kv[i]] * e[i] + d[i];
++        for (int k = 0; k < nwaves; k++) {
++            long s = start[k], t = start[k + 1];
++            #pragma omp parallel for schedule(static) default(none) \
++                shared(order, u, v, w, ju, jv, jw, ku, kv, kw, c, d, e) firstprivate(s, t)
++            for (long m = s; m < t; m++) {
++                long i = order[m];
++                u[ju[i]] += w[kw[i]] * c[i];
++                v[jv[i]] = u[ku[i]] * d[i] + c[i];
++                w[jw[i]] = v[kv[i]] * e[i] + d[i];
++            }
+         }
+         dummy(a, b, c, d, e);
+     }
++
++    free(lwu); free(lwv); free(lww);
++    free(lru); free(lrv); free(lrw);
++    free(wave); free(start); free(order);
+     return (real_t)0;
+ }
+ 

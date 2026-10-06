@@ -1,0 +1,51 @@
+--- original.c
++++ final.c
+@@ -63,17 +63,41 @@
+ real_t kernel_s161(void)
+ {
+     for (int nl = 0; nl < iterations; nl++) {
++        // Allocate temporary array for new c values
++        real_t *c_new = malloc(LEN_1D * sizeof(real_t));
++
++        // Initialize c_new with current c values
++        for (int i = 0; i < LEN_1D; ++i) {
++            c_new[i] = c[i];
++        }
++
++        // Pass 1: Compute new c values in parallel
++        // Each iteration computes c[i+1] based on condition b[i]
++        // No loop-carried dependence since different iterations write different indices
++        #pragma omp parallel for shared(b, a, d, c_new)
+         for (int i = 0; i < LEN_1D-1; ++i) {
+             if (b[i] < (real_t)0.) {
+-                goto L20;
++                c_new[i+1] = a[i] + d[i] * d[i];
+             }
+-            a[i] = c[i] + d[i] * e[i];
+-            goto L10;
+-L20:
+-            c[i+1] = a[i] + d[i] * d[i];
+-L10:
+-            ;
+         }
++
++        // Update c with newly computed values
++        for (int i = 0; i < LEN_1D; ++i) {
++            c[i] = c_new[i];
++        }
++        free(c_new);
++
++        // Pass 2: Compute new a values in parallel
++        // Each iteration computes a[i] based on condition b[i]
++        // No loop-carried dependence since different iterations write different indices
++        // Reads from c are now seeing updated values from Pass 1
++        #pragma omp parallel for shared(b, c, d, e, a)
++        for (int i = 0; i < LEN_1D-1; ++i) {
++            if (b[i] >= (real_t)0.) {
++                a[i] = c[i] + d[i] * e[i];
++            }
++        }
++
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

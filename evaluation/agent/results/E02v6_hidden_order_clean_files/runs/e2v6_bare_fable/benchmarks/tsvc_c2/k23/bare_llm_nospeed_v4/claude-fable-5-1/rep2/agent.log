@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : k23.c
+  Model          : claude-fable-5-1
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-fable-5-1...
+│  [bare] k23.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: `LEN_1D` and `iterations` are macros, and `u, v, w, c, d, x` are the global pointers — all covered by the `shared(...)` clause under `default(none)`. The edit is complete. **Summary of the rewrite in `k23.c`:** - The inner `i` loop (`u[i] += w[i]*c[i]; v[i] = x[i]*d[i] + c[i];`) only reads and writes element `i` of each array, so there was never a value flowing between iterations — it was already 
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

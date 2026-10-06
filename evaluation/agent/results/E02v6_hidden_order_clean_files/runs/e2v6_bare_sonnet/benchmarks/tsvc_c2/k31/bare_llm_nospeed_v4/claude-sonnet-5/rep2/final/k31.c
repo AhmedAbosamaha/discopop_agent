@@ -1,0 +1,102 @@
+#include "data.h"
+#include <stdlib.h>
+
+/*
+ * Whether u[i+far] / v[i+off] carry a value forward within one sweep, or
+ * just reuse a location that is still holding its pre-sweep contents,
+ * depends only on the sign of the runtime offsets off/far (fixed for the
+ * whole call), not on i:
+ *   - off >= 0  => i+off >= i, so v[i+off] is read before iteration
+ *                  i+off's own write this sweep: it is a REUSED location,
+ *                  still holding the pre-sweep ("old") value.
+ *   - off <  0  => i+off <  i, so v[i+off] was already written by an
+ *                  earlier iteration this sweep: a real value is carried
+ *                  forward ("new").
+ *   - far >  0  => i+far >  i: u[i+far] is still pre-sweep ("old").
+ *   - far <= 0  => i+far <= i: u[i+far] (including far==0, the same
+ *                  iteration's own just-updated slot) is already this
+ *                  sweep's value ("new").
+ * Three of the four combinations can be split into two independent,
+ * fully-parallel passes by moving the dependence instead of deleting it:
+ * whichever statement needs the "old" side runs first (or is snapshotted
+ * before anything is overwritten), and the statement needing the "new"
+ * side runs in a second pass that starts only after the first pass (and
+ * its implicit barrier) has finished writing every element it will read.
+ * The remaining combination (off<0 and far<=0) needs BOTH arrays' fully
+ * updated values for every i simultaneously -- a genuine circular
+ * per-element recurrence with no legal reordering -- so it is left
+ * sequential, exactly like the original.
+ */
+real_t kernel_k31(void)
+{
+    real_t *snap_u = (real_t *)malloc(sizeof(real_t) * (size_t)LEN_1D);
+    real_t *snap_v = (real_t *)malloc(sizeof(real_t) * (size_t)LEN_1D);
+
+    for (int nl = 0; nl < iterations; nl++) {
+        if (off >= 0 && far > 0) {
+            /* Both references are still pre-sweep ("old") data. Snapshot
+             * them before either live array is touched this sweep; the
+             * snapshot loop (writer) fully completes -- implicit barrier
+             * at the end of the pragma -- before the update loop (reader)
+             * starts, so every snapshot slot a reader needs has already
+             * been produced. After that, each iteration only touches its
+             * own u[i]/v[i] and its own snapshot slots, so iterations are
+             * independent. */
+            #pragma omp parallel for default(none) shared(u, v, snap_u, snap_v, off, far)
+            for (long i = 1; i < LEN_1D; i++) {
+                snap_u[i] = u[i + far];
+                snap_v[i] = v[i + off];
+            }
+            #pragma omp parallel for default(none) shared(u, v, c, d, snap_u, snap_v)
+            for (long i = 1; i < LEN_1D; i++) {
+                u[i] += snap_v[i] * c[i];
+                v[i] = snap_u[i] * d[i] + c[i];
+            }
+        } else if (off >= 0 && far <= 0) {
+            /* v[i+off] is still pre-sweep ("old") data, so the u update
+             * can run first directly on the live array (v is not touched
+             * until the second loop). u[i+far] needs the fully updated
+             * ("new") u, so the v update must only start after every u
+             * write from the first loop has landed -- the first loop
+             * (writer of u) finishes before the second loop (reader of u)
+             * starts. */
+            #pragma omp parallel for default(none) shared(u, v, c, off)
+            for (long i = 1; i < LEN_1D; i++) {
+                u[i] += v[i + off] * c[i];
+            }
+            #pragma omp parallel for default(none) shared(u, v, c, d, far)
+            for (long i = 1; i < LEN_1D; i++) {
+                v[i] = u[i + far] * d[i] + c[i];
+            }
+        } else if (off < 0 && far > 0) {
+            /* u[i+far] is still pre-sweep ("old") data, so the v update
+             * can run first directly on the live array (the v update
+             * never writes u). v[i+off] needs the fully updated ("new")
+             * v, so the u update must only start after every v write from
+             * the first loop has landed. */
+            #pragma omp parallel for default(none) shared(u, v, c, d, far)
+            for (long i = 1; i < LEN_1D; i++) {
+                v[i] = u[i + far] * d[i] + c[i];
+            }
+            #pragma omp parallel for default(none) shared(u, v, c, off)
+            for (long i = 1; i < LEN_1D; i++) {
+                u[i] += v[i + off] * c[i];
+            }
+        } else {
+            /* off < 0 and far <= 0: the u update needs this sweep's fully
+             * updated v, and the v update needs this sweep's fully
+             * updated u -- a circular, element-by-element recurrence, not
+             * just a reused location. No split or snapshot removes it, so
+             * it stays sequential, identical to the original loop. */
+            for (long i = 1; i < LEN_1D; i++) {
+                u[i] += v[i + off] * c[i];
+                v[i] = u[i + far] * d[i] + c[i];
+            }
+        }
+        dummy(a, b, c, d, e);
+    }
+
+    free(snap_u);
+    free(snap_v);
+    return (real_t)0;
+}

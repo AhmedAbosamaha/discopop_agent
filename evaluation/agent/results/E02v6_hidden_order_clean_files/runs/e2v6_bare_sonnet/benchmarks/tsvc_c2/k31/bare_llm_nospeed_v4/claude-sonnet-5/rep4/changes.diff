@@ -1,0 +1,66 @@
+--- original.c
++++ final.c
+@@ -36,16 +36,61 @@
+ 
+ /* ==== k31.c ==== */
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_k31(void)
+ {
++    /* Snapshot buffers must be large enough to hold every index the
++       original loop dereferenced: u[i+far] and v[i+off] for i up to
++       LEN_1D-1, i.e. LEN_1D + far and LEN_1D + off respectively (the
++       extra term only applies when the offset is positive). */
++    long far_ext = (far > 0) ? far : 0;
++    long off_ext = (off > 0) ? off : 0;
++    long usize = (long)LEN_1D + far_ext;
++    long vsize = (long)LEN_1D + off_ext;
++    real_t *u_old = (real_t *)malloc((size_t)usize * sizeof(real_t));
++    real_t *v_old = (real_t *)malloc((size_t)vsize * sizeof(real_t));
++
+     for (int nl = 0; nl < iterations; nl++) {
++        /* Capture the pre-sweep state of u and v.  In the original
++           sequential sweep, statement 1 always reads v[i+off] before any
++           write to that element can have happened this sweep, and
++           statement 2 reads u[i+far] before that element is rewritten
++           this sweep (except when far==0, handled locally below).  Doing
++           the copy as its own, fully-completed pass before the compute
++           loop starts means the compute loop's reads no longer depend on
++           what order its iterations run in. */
++        #pragma omp parallel for schedule(static) default(none) shared(u, u_old) firstprivate(usize)
++        for (long i = 0; i < usize; i++) {
++            u_old[i] = u[i];
++        }
++        #pragma omp parallel for schedule(static) default(none) shared(v, v_old) firstprivate(vsize)
++        for (long i = 0; i < vsize; i++) {
++            v_old[i] = v[i];
++        }
++
++        /* Each iteration now only writes its own u[i] and v[i] (disjoint
++           across i) and only reads: c[i]/d[i] (read-only, untouched by
++           this loop), and the pre-sweep snapshots u_old/v_old.  The one
++           value that can flow within a single iteration (u[i] feeding
++           u[i+far] when far==0) is reproduced via the local new_u
++           instead of going through memory, so no iteration depends on
++           another iteration having already run. */
++        #pragma omp parallel for schedule(static) default(none) \
++            shared(u, v, u_old, v_old, c, d) firstprivate(off, far)
+         for (long i = 1; i < LEN_1D; i++) {
+-            u[i] += v[i + off] * c[i];
+-            v[i] = u[i + far] * d[i] + c[i];
++            real_t new_u = u_old[i] + v_old[i + off] * c[i];
++            real_t u_far_val = (far == 0) ? new_u : u_old[i + far];
++            u[i] = new_u;
++            v[i] = u_far_val * d[i] + c[i];
+         }
++
+         dummy(a, b, c, d, e);
+     }
++
++    free(u_old);
++    free(v_old);
++
+     return (real_t)0;
+ }
+ 

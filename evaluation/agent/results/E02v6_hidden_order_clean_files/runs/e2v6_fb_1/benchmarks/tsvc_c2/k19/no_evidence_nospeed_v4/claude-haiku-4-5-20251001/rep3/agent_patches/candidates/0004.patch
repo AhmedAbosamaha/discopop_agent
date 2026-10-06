@@ -1,0 +1,32 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6_fb_1/benchmarks/tsvc_c2/k19/no_evidence_nospeed_v4/claude-haiku-4-5-20251001/rep3/work/k19.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6_fb_1/benchmarks/tsvc_c2/k19/no_evidence_nospeed_v4/claude-haiku-4-5-20251001/rep3/work/k19.c
+@@ -2,12 +2,28 @@
+ 
+ real_t kernel_k19(void)
+ {
++    real_t *u_delta = (real_t *)malloc(LEN_1D * sizeof(real_t));
++
+     for (int nl = 0; nl < iterations; nl++) {
++        for (long i = 0; i < LEN_1D; i++) {
++            u_delta[i] = 0.0;
++        }
++
+         for (long i = 1; i < LEN_1D; i++) {
+-            u[ju[i]] += v[kv[i]] * c[i];
++            u_delta[ju[i]] += v[kv[i]] * c[i];
++        }
++
++        for (long i = 0; i < LEN_1D; i++) {
++            u[i] += u_delta[i];
++        }
++
++        for (long i = 1; i < LEN_1D; i++) {
+             v[jv[i]] = u[ku[i]] * d[i] + c[i];
+         }
++
+         dummy(a, b, c, d, e);
+     }
++
++    free(u_delta);
+     return (real_t)0;
+ }

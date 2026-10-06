@@ -1,0 +1,104 @@
+--- original.c
++++ final.c
+@@ -36,16 +36,96 @@
+ 
+ /* ==== k48.c ==== */
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_k48(void)
+ {
+-    for (int nl = 0; nl < iterations; nl++) {
+-        for (long i = 1; i < LEN_1D; i++) {
+-            u[ju[i]] += v[kv[i]] * c[i];
+-            v[jv[i]] = u[ku[i]] * d[i] + c[i];
++    long n = LEN_1D;
++    int ok = 1;
++
++    /* Temporary tables used only to classify the (constant) index arrays. */
++    int *posJU   = (int *)malloc(sizeof(int) * (size_t)n);  /* x -> the unique i with ju[i]==x, or -1 */
++    int *firstJV = (int *)malloc(sizeof(int) * (size_t)n);  /* x -> smallest i with jv[i]==x, or -1 */
++    int *lastJV  = (int *)malloc(sizeof(int) * (size_t)n);  /* x -> largest  i with jv[i]==x, or -1 */
++    /* Per-iteration data used by the parallel phases. */
++    int *src      = (int *)malloc(sizeof(int) * (size_t)n); /* i -> p>i whose old u value i must read, or -1 */
++    char *writeV  = (char *)malloc((size_t)n);              /* i -> 1 if i is the last writer of v[jv[i]] */
++    real_t *uold  = (real_t *)malloc(sizeof(real_t) * (size_t)n); /* i -> u[ju[i]] before iteration i updates it */
++
++    if (!posJU || !firstJV || !lastJV || !src || !writeV || !uold) ok = 0;
++
++    if (ok) {
++        for (long x = 0; x < n; x++) {
++            posJU[x] = -1;
++            firstJV[x] = -1;
++            lastJV[x] = -1;
+         }
+-        dummy(a, b, c, d, e);
++        for (long i = 1; i < n; i++) {
++            long a1 = ju[i], a2 = jv[i], a3 = ku[i], a4 = kv[i];
++            if (a1 < 0 || a1 >= n || a2 < 0 || a2 >= n ||
++                a3 < 0 || a3 >= n || a4 < 0 || a4 >= n) {
++                ok = 0;
++            } else {
++                if (posJU[a1] != -1) ok = 0;   /* two iterations accumulate into the same u location */
++                posJU[a1] = (int)i;
++                if (firstJV[a2] == -1) firstJV[a2] = (int)i;
++                lastJV[a2] = (int)i;
++            }
++        }
+     }
++
++    if (ok) {
++        int bad = 0;
++#pragma omp parallel for shared(n, ku, kv, jv, posJU, firstJV, lastJV, src, writeV) reduction(|:bad)
++        for (long i = 1; i < n; i++) {
++            long rv = kv[i];
++            int fj = firstJV[rv];
++            if (fj != -1 && fj < i) bad |= 1;  /* v read after an earlier iteration wrote it */
++            long ru = ku[i];
++            int p = posJU[ru];
++            src[i] = (p != -1 && p > i) ? p : -1;
++            writeV[i] = (lastJV[jv[i]] == i) ? 1 : 0;
++        }
++        if (bad) ok = 0;
++    }
++
++    free(posJU);
++    free(firstJV);
++    free(lastJV);
++
++    if (ok) {
++        for (int nl = 0; nl < iterations; nl++) {
++            /* Phase A: every u update; reads only the v values from before this step. */
++#pragma omp parallel for shared(n, u, v, c, ju, kv, uold)
++            for (long i = 1; i < n; i++) {
++                uold[i] = u[ju[i]];
++                u[ju[i]] += v[kv[i]] * c[i];
++            }
++            /* Phase B: every v store, using the u value the serial order would have seen. */
++#pragma omp parallel for shared(n, u, v, c, d, jv, ku, src, writeV, uold)
++            for (long i = 1; i < n; i++) {
++                if (writeV[i]) {
++                    long p = src[i];
++                    real_t uval = (p >= 0) ? uold[p] : u[ku[i]];
++                    v[jv[i]] = uval * d[i] + c[i];
++                }
++            }
++            dummy(a, b, c, d, e);
++        }
++    } else {
++        /* Index pattern carries a true recurrence: keep the exact serial order. */
++        for (int nl = 0; nl < iterations; nl++) {
++            for (long i = 1; i < LEN_1D; i++) {
++                u[ju[i]] += v[kv[i]] * c[i];
++                v[jv[i]] = u[ku[i]] * d[i] + c[i];
++            }
++            dummy(a, b, c, d, e);
++        }
++    }
++
++    free(src);
++    free(writeV);
++    free(uold);
+     return (real_t)0;
+ }
+ 

@@ -1,0 +1,84 @@
+#include <stdlib.h>
+#include "data.h"
+
+static void upd_max(int *x, int v) { if (v > *x) *x = v; }
+
+real_t kernel_k27(void)
+{
+    /* ---- inspector: dependence levels (index arrays are loop-invariant) ---- */
+    long maxidx = 0;
+    for (long i = 1; i < LEN_1D; i++) {
+        if (ju[i] > maxidx) maxidx = ju[i];
+        if (jv[i] > maxidx) maxidx = jv[i];
+        if (jw[i] > maxidx) maxidx = jw[i];
+        if (ku[i] > maxidx) maxidx = ku[i];
+        if (kv[i] > maxidx) maxidx = kv[i];
+        if (kw[i] > maxidx) maxidx = kw[i];
+    }
+    long tsz = maxidx + 1;
+    int *lwu = (int *)malloc(sizeof(int) * tsz);
+    int *lwv = (int *)malloc(sizeof(int) * tsz);
+    int *lww = (int *)malloc(sizeof(int) * tsz);
+    int *lru = (int *)malloc(sizeof(int) * tsz);
+    int *lrv = (int *)malloc(sizeof(int) * tsz);
+    int *lrw = (int *)malloc(sizeof(int) * tsz);
+    int *level = (int *)malloc(sizeof(int) * LEN_1D);
+    for (long k = 0; k < tsz; k++) {
+        lwu[k] = lwv[k] = lww[k] = -1;
+        lru[k] = lrv[k] = lrw[k] = -1;
+    }
+    int nlev = 0;
+    for (long i = 1; i < LEN_1D; i++) {
+        int a1 = ju[i], b1 = kw[i], c1 = jv[i], d1 = ku[i], e1 = jw[i], f1 = kv[i];
+        int lv = 0;
+        /* reads: u[ju], w[kw], u[ku], v[kv] */
+        upd_max(&lv, lwu[a1] + 1);
+        upd_max(&lv, lww[b1] + 1);
+        upd_max(&lv, lwu[d1] + 1);
+        upd_max(&lv, lwv[f1] + 1);
+        /* writes: u[ju], v[jv], w[jw] */
+        upd_max(&lv, lru[a1] + 1);
+        upd_max(&lv, lwv[c1] + 1);
+        upd_max(&lv, lrv[c1] + 1);
+        upd_max(&lv, lww[e1] + 1);
+        upd_max(&lv, lrw[e1] + 1);
+        level[i] = lv;
+        upd_max(&lru[a1], lv);
+        upd_max(&lrw[b1], lv);
+        upd_max(&lru[d1], lv);
+        upd_max(&lrv[f1], lv);
+        lwu[a1] = lv;
+        lwv[c1] = lv;
+        lww[e1] = lv;
+        if (lv + 1 > nlev) nlev = lv + 1;
+    }
+    free(lwu); free(lwv); free(lww); free(lru); free(lrv); free(lrw);
+
+    long *start = (long *)calloc((size_t)nlev + 1, sizeof(long));
+    long *order = (long *)malloc(sizeof(long) * LEN_1D);
+    for (long i = 1; i < LEN_1D; i++) start[level[i] + 1]++;
+    for (int l = 0; l < nlev; l++) start[l + 1] += start[l];
+    long *pos = (long *)malloc(sizeof(long) * ((size_t)nlev + 1));
+    for (int l = 0; l <= nlev; l++) pos[l] = start[l];
+    for (long i = 1; i < LEN_1D; i++) order[pos[level[i]]++] = i;
+    free(pos);
+    free(level);
+
+    /* ---- executor ---- */
+    for (int nl = 0; nl < iterations; nl++) {
+        for (int l = 0; l < nlev; l++) {
+            long lo = start[l], hi = start[l + 1];
+#pragma omp parallel for default(none) shared(u, v, w, c, d, e, ju, jv, jw, ku, kv, kw, order) firstprivate(lo, hi) schedule(static)
+            for (long k = lo; k < hi; k++) {
+                long i = order[k];
+                u[ju[i]] += w[kw[i]] * c[i];
+                v[jv[i]] = u[ku[i]] * d[i] + c[i];
+                w[jw[i]] = v[kv[i]] * e[i] + d[i];
+            }
+        }
+        dummy(a, b, c, d, e);
+    }
+    free(start);
+    free(order);
+    return (real_t)0;
+}

@@ -1,0 +1,23 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6_fb_2/benchmarks/tsvc_c2/k27/no_evidence_nospeed_v4/claude-haiku-4-5-20251001/rep2/work/k27.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6_fb_2/benchmarks/tsvc_c2/k27/no_evidence_nospeed_v4/claude-haiku-4-5-20251001/rep2/work/k27.c
+@@ -1,12 +1,17 @@
+ #include "data.h"
++
++static void compute_step(long i)
++{
++    u[ju[i]] += w[kw[i]] * c[i];
++    v[jv[i]] = u[ku[i]] * d[i] + c[i];
++    w[jw[i]] = v[kv[i]] * e[i] + d[i];
++}
+ 
+ real_t kernel_k27(void)
+ {
+     for (int nl = 0; nl < iterations; nl++) {
+         for (long i = 1; i < LEN_1D; i++) {
+-            u[ju[i]] += w[kw[i]] * c[i];
+-            v[jv[i]] = u[ku[i]] * d[i] + c[i];
+-            w[jw[i]] = v[kv[i]] * e[i] + d[i];
++            compute_step(i);
+         }
+         dummy(a, b, c, d, e);
+     }

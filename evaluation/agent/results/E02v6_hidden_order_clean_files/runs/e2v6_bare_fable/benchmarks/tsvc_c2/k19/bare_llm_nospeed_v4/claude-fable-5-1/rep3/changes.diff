@@ -1,0 +1,83 @@
+--- original.c
++++ final.c
+@@ -36,13 +36,77 @@
+ 
+ /* ==== k19.c ==== */
+ #include "data.h"
++#include <stdlib.h>
++
++/*
++ * Runtime dependence inspector for the i-loop of kernel_k19.
++ *
++ * Iteration i writes u[ju[i]] and v[jv[i]] and reads v[kv[i]], u[ku[i]]
++ * (and u[ju[i]] via +=).  The iterations are mutually independent iff
++ *   - ju is injective on [1, LEN_1D)   (no two iterations update the same u)
++ *   - jv is injective on [1, LEN_1D)   (no two iterations write the same v)
++ *   - ku[i] is never some ju[i'] with i' != i   (no u value crosses iterations)
++ *   - kv[i] is never some jv[i'] with i' != i   (no v value crosses iterations)
++ * ku[i] == ju[i] and kv[i] == jv[i] are allowed: the read/write order inside
++ * one iteration is preserved by the parallel loop body.
++ * The index arrays are never modified by the kernel or by dummy(), so the
++ * test is done once.  Marker arrays are heap-allocated (size LEN_1D).
++ */
++static int k19_iterations_independent(void)
++{
++    unsigned char *wu = (unsigned char *)calloc((size_t)LEN_1D, 1);
++    unsigned char *wv = (unsigned char *)calloc((size_t)LEN_1D, 1);
++    int ok = 1;
++
++    if (wu == NULL || wv == NULL) {
++        free(wu);
++        free(wv);
++        return 0;
++    }
++
++    for (long i = 1; i < LEN_1D && ok; i++) {
++        int a_ = ju[i], b_ = jv[i], p_ = ku[i], q_ = kv[i];
++        if (a_ < 0 || a_ >= LEN_1D || b_ < 0 || b_ >= LEN_1D ||
++            p_ < 0 || p_ >= LEN_1D || q_ < 0 || q_ >= LEN_1D) {
++            ok = 0;
++        } else if (wu[a_] || wv[b_]) {
++            ok = 0;
++        } else {
++            wu[a_] = 1;
++            wv[b_] = 1;
++        }
++    }
++
++    for (long i = 1; i < LEN_1D && ok; i++) {
++        if (wu[ku[i]] && ku[i] != ju[i]) ok = 0;
++        if (wv[kv[i]] && kv[i] != jv[i]) ok = 0;
++    }
++
++    free(wu);
++    free(wv);
++    return ok;
++}
+ 
+ real_t kernel_k19(void)
+ {
++    const int indep = k19_iterations_independent();
++
+     for (int nl = 0; nl < iterations; nl++) {
+-        for (long i = 1; i < LEN_1D; i++) {
+-            u[ju[i]] += v[kv[i]] * c[i];
+-            v[jv[i]] = u[ku[i]] * d[i] + c[i];
++        if (indep) {
++            /* Every iteration touches u/v locations no other iteration touches
++             * (verified above), so all arrays stay shared; i is the loop index. */
++#pragma omp parallel for default(none) shared(u, v, c, d, ju, jv, ku, kv)
++            for (long i = 1; i < LEN_1D; i++) {
++                u[ju[i]] += v[kv[i]] * c[i];
++                v[jv[i]] = u[ku[i]] * d[i] + c[i];
++            }
++        } else {
++            /* Genuine loop-carried dependence through the index arrays:
++             * must run in original order. */
++            for (long i = 1; i < LEN_1D; i++) {
++                u[ju[i]] += v[kv[i]] * c[i];
++                v[jv[i]] = u[ku[i]] * d[i] + c[i];
++            }
+         }
+         dummy(a, b, c, d, e);
+     }

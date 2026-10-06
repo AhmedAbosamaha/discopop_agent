@@ -1,0 +1,99 @@
+#include "data.h"
+#include <stdlib.h>
+
+/* Minimum bucket size worth a parallel region; smaller levels run serially. */
+#define K48_PAR_THRESHOLD 256
+
+static inline void k48_iter(long i)
+{
+    u[ju[i]] += v[kv[i]] * c[i];
+    v[jv[i]] = u[ku[i]] * d[i] + c[i];
+}
+
+static inline int k48_max(int x, int y) { return x > y ? x : y; }
+
+real_t kernel_k48(void)
+{
+    const long n = LEN_1D;
+    const long niter = n - 1;           /* iterations i = 1 .. n-1 */
+
+    /* ---------- inspector: build a dependence-respecting level schedule ----------
+     * The index arrays never change (dummy() only touches a..e), so this is
+     * computed once and reused for every outer iteration. */
+    int maxidx = 0;
+    for (long i = 1; i < n; i++) {
+        maxidx = k48_max(maxidx, ju[i]);
+        maxidx = k48_max(maxidx, jv[i]);
+        maxidx = k48_max(maxidx, ku[i]);
+        maxidx = k48_max(maxidx, kv[i]);
+    }
+    const long m = (long)maxidx + 1;
+
+    int *uW = (int *)calloc((size_t)m, sizeof(int));   /* last level writing u[x] */
+    int *uR = (int *)calloc((size_t)m, sizeof(int));   /* last level reading u[x] */
+    int *vW = (int *)calloc((size_t)m, sizeof(int));
+    int *vR = (int *)calloc((size_t)m, sizeof(int));
+    int *level = (int *)malloc((size_t)n * sizeof(int));
+
+    int nlev = 0;
+    for (long i = 1; i < n; i++) {
+        const int a_ju = ju[i], a_jv = jv[i], a_ku = ku[i], a_kv = kv[i];
+        int L = 0;
+        L = k48_max(L, vW[a_kv]);                 /* read  v[kv]  : RAW */
+        L = k48_max(L, uW[a_ku]);                 /* read  u[ku]  : RAW */
+        L = k48_max(L, k48_max(uW[a_ju], uR[a_ju])); /* rd/wr u[ju] : WAW/WAR */
+        L = k48_max(L, k48_max(vW[a_jv], vR[a_jv])); /* write v[jv] : WAW/WAR */
+        L += 1;
+        level[i] = L;
+        uR[a_ku] = k48_max(uR[a_ku], L);
+        vR[a_kv] = k48_max(vR[a_kv], L);
+        uW[a_ju] = L;
+        uR[a_ju] = k48_max(uR[a_ju], L);
+        vW[a_jv] = L;
+        nlev = k48_max(nlev, L);
+    }
+    free(uW); free(uR); free(vW); free(vR);
+
+    /* Counting sort of iterations by level, stable in i. */
+    long *off = (long *)calloc((size_t)nlev + 2, sizeof(long));
+    for (long i = 1; i < n; i++)
+        off[level[i] + 1]++;
+    for (int l = 1; l <= nlev; l++)
+        off[l + 1] += off[l];
+    /* now off[l] .. off[l+1]-1 is the range for level l (l = 1..nlev) */
+    long *order = (long *)malloc((size_t)(niter > 0 ? niter : 1) * sizeof(long));
+    {
+        long *fill = (long *)malloc((size_t)(nlev + 2) * sizeof(long));
+        for (int l = 0; l <= nlev + 1; l++) fill[l] = off[l];
+        for (long i = 1; i < n; i++)
+            order[fill[level[i]]++] = i;
+        free(fill);
+    }
+    free(level);
+
+    /* ---------- executor ---------- */
+    for (int nl = 0; nl < iterations; nl++) {
+        for (int l = 1; l <= nlev; l++) {
+            const long s = off[l];
+            const long t = off[l + 1];
+            if (t - s >= K48_PAR_THRESHOLD) {
+                /* All iterations in one level touch distinct written
+                 * locations, so they are independent in any order. */
+                #pragma omp parallel for default(none) \
+                    firstprivate(s, t) shared(order, u, v, c, d, ju, jv, ku, kv)
+                for (long k = s; k < t; k++) {
+                    k48_iter(order[k]);
+                }
+            } else {
+                for (long k = s; k < t; k++) {
+                    k48_iter(order[k]);
+                }
+            }
+        }
+        dummy(a, b, c, d, e);
+    }
+
+    free(order);
+    free(off);
+    return (real_t)0;
+}

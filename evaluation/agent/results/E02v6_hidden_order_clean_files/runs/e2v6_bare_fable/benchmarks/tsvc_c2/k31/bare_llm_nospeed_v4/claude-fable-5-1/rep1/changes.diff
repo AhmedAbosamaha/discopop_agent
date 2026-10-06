@@ -1,0 +1,91 @@
+--- original.c
++++ final.c
+@@ -36,16 +36,85 @@
+ 
+ /* ==== k31.c ==== */
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_k31(void)
+ {
++    real_t *vt = NULL;
++
+     for (int nl = 0; nl < iterations; nl++) {
+-        for (long i = 1; i < LEN_1D; i++) {
+-            u[i] += v[i + off] * c[i];
+-            v[i] = u[i + far] * d[i] + c[i];
++        const long o = off;
++        const long f = far;
++
++        if (f > 0) {
++            /* v[i] reads u[i+f], which the original has not yet updated:
++             * compute the new v into scratch from the untouched u. */
++            if (vt == NULL)
++                vt = (real_t *)malloc(sizeof(real_t) * (size_t)LEN_1D);
++
++#pragma omp parallel for shared(u, vt, c, d) firstprivate(f)
++            for (long i = 1; i < LEN_1D; i++) {
++                vt[i] = u[i + f] * d[i] + c[i];
++            }
++            vt[0] = v[0];
++
++            if (o < 0) {
++                /* original read the already-updated v[i+o] */
++#pragma omp parallel for shared(u, vt, c) firstprivate(o)
++                for (long i = 1; i < LEN_1D; i++) {
++                    u[i] += vt[i + o] * c[i];
++                }
++            } else {
++                /* original read the not-yet-updated v[i+o] */
++#pragma omp parallel for shared(u, v, c) firstprivate(o)
++                for (long i = 1; i < LEN_1D; i++) {
++                    u[i] += v[i + o] * c[i];
++                }
++            }
++
++#pragma omp parallel for shared(v, vt)
++            for (long i = 1; i < LEN_1D; i++) {
++                v[i] = vt[i];
++            }
++        } else if (o >= 0) {
++            /* u reads old v; v reads new u (or the never-written u[0]). */
++#pragma omp parallel for shared(u, v, c) firstprivate(o)
++            for (long i = 1; i < LEN_1D; i++) {
++                u[i] += v[i + o] * c[i];
++            }
++
++#pragma omp parallel for shared(u, v, c, d) firstprivate(f)
++            for (long i = 1; i < LEN_1D; i++) {
++                v[i] = u[i + f] * d[i] + c[i];
++            }
++        } else {
++            /* True recurrence: u[i] depends on u[i - k], k = -(o + f) >= 1.
++             * The k residue chains are independent of one another. */
++            const long k = -(o + f);
++
++#pragma omp parallel for shared(u, v, c, d) firstprivate(o, f, k)
++            for (long s = 1; s <= k; s++) {
++                for (long i = s; i < LEN_1D; i += k) {
++                    long j = i + o;
++                    if (j >= 1) {
++                        v[j] = u[j + f] * d[j] + c[j];
++                    }
++                    u[i] += v[j] * c[i];
++                }
++            }
++
++            /* Final v from the final u (recomputes the same values for the
++             * entries already written above, and fills the rest). */
++#pragma omp parallel for shared(u, v, c, d) firstprivate(f)
++            for (long i = 1; i < LEN_1D; i++) {
++                v[i] = u[i + f] * d[i] + c[i];
++            }
+         }
++
+         dummy(a, b, c, d, e);
+     }
++
++    free(vt);
+     return (real_t)0;
+ }
+ 

@@ -1,0 +1,59 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6_fb_2/benchmarks/tsvc_c2/k27/full_nospeed_v4/claude-haiku-4-5-20251001/rep5/work/k27.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6_fb_2/benchmarks/tsvc_c2/k27/full_nospeed_v4/claude-haiku-4-5-20251001/rep5/work/k27.c
+@@ -2,13 +2,53 @@
+ 
+ real_t kernel_k27(void)
+ {
++    // Allocate private buffers for each nl iteration
++    real_t **u_nl = malloc(iterations * sizeof(real_t*));
++    real_t **v_nl = malloc(iterations * sizeof(real_t*));
++    real_t **w_nl = malloc(iterations * sizeof(real_t*));
++
++    for (int nl = 0; nl < iterations; nl++) {
++        u_nl[nl] = malloc(LEN_1D * sizeof(real_t));
++        v_nl[nl] = malloc(LEN_1D * sizeof(real_t));
++        w_nl[nl] = malloc(LEN_1D * sizeof(real_t));
++    }
++
++    // Initialize first iteration's buffers with initial values
++    memcpy(u_nl[0], u, LEN_1D * sizeof(real_t));
++    memcpy(v_nl[0], v, LEN_1D * sizeof(real_t));
++    memcpy(w_nl[0], w, LEN_1D * sizeof(real_t));
++
++    // Propagate initial state through all nl iterations for independent execution
++    for (int nl = 1; nl < iterations; nl++) {
++        memcpy(u_nl[nl], u_nl[nl-1], LEN_1D * sizeof(real_t));
++        memcpy(v_nl[nl], v_nl[nl-1], LEN_1D * sizeof(real_t));
++        memcpy(w_nl[nl], w_nl[nl-1], LEN_1D * sizeof(real_t));
++    }
++
++    // Each nl iteration computes with its own buffer copies (no shared state)
+     for (int nl = 0; nl < iterations; nl++) {
+         for (long i = 1; i < LEN_1D; i++) {
+-            u[ju[i]] += w[kw[i]] * c[i];
+-            v[jv[i]] = u[ku[i]] * d[i] + c[i];
+-            w[jw[i]] = v[kv[i]] * e[i] + d[i];
++            u_nl[nl][ju[i]] += w_nl[nl][kw[i]] * c[i];
++            v_nl[nl][jv[i]] = u_nl[nl][ku[i]] * d[i] + c[i];
++            w_nl[nl][jw[i]] = v_nl[nl][kv[i]] * e[i] + d[i];
+         }
+         dummy(a, b, c, d, e);
+     }
++
++    // Copy final results back to original arrays
++    memcpy(u, u_nl[iterations-1], LEN_1D * sizeof(real_t));
++    memcpy(v, v_nl[iterations-1], LEN_1D * sizeof(real_t));
++    memcpy(w, w_nl[iterations-1], LEN_1D * sizeof(real_t));
++
++    // Free allocated memory
++    for (int nl = 0; nl < iterations; nl++) {
++        free(u_nl[nl]);
++        free(v_nl[nl]);
++        free(w_nl[nl]);
++    }
++    free(u_nl);
++    free(v_nl);
++    free(w_nl);
++
+     return (real_t)0;
+ }

@@ -1,0 +1,37 @@
+--- original.c
++++ final.c
+@@ -63,17 +63,27 @@
+ real_t kernel_s161(void)
+ {
+     for (int nl = 0; nl < iterations; nl++) {
++        // Loop 1: Process elements where b[i] < 0 (writes to c[i+1])
++        // Each iteration i writes to a unique location c[i+1], so all iterations are independent.
++        // Variables: b,d are read-only; c is written; i is the loop variable (private by default)
++        #pragma omp parallel for schedule(static) shared(b, c, d, a) private(i)
+         for (int i = 0; i < LEN_1D-1; ++i) {
+             if (b[i] < (real_t)0.) {
+-                goto L20;
++                c[i+1] = a[i] + d[i] * d[i];
+             }
+-            a[i] = c[i] + d[i] * e[i];
+-            goto L10;
+-L20:
+-            c[i+1] = a[i] + d[i] * d[i];
+-L10:
+-            ;
+         }
++
++        // Loop 2: Process elements where b[i] >= 0 (reads from c[i], writes to a[i])
++        // Each iteration i writes to a unique location a[i], so all iterations are independent.
++        // The implicit barrier between loops ensures c is fully updated before reading in this loop.
++        // Variables: b,c,d,e are read-only; a is written; i is the loop variable (private by default)
++        #pragma omp parallel for schedule(static) shared(b, c, d, e, a) private(i)
++        for (int i = 0; i < LEN_1D-1; ++i) {
++            if (b[i] >= (real_t)0.) {
++                a[i] = c[i] + d[i] * e[i];
++            }
++        }
++
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

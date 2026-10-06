@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : k23.c
+  Model          : claude-opus-5-5
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-opus-5-5...
+│  [bare] k23.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: I've added one `#pragma omp parallel for` to `k23.c`, on the inner `i` loop. I couldn't compile or run anything here, so it is untested. **What blocks the outer loop:** a value really does move between `nl` iterations. Each pass ends with a call to `dummy()`, which changes `c[k]` and `d[k]` and advances its own internal counter, and the next pass reads those arrays. `dummy` is defined in `main.c`,
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

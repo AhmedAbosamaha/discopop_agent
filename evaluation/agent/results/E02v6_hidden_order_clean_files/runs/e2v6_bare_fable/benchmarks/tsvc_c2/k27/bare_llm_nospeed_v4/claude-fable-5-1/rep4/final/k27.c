@@ -1,0 +1,133 @@
+#include "data.h"
+#include <stdlib.h>
+
+/* Original loop body, used only if the inspector cannot allocate its buffers. */
+static void k27_body_serial(void)
+{
+    for (long i = 1; i < LEN_1D; i++) {
+        u[ju[i]] += w[kw[i]] * c[i];
+        v[jv[i]] = u[ku[i]] * d[i] + c[i];
+        w[jw[i]] = v[kv[i]] * e[i] + d[i];
+    }
+}
+
+real_t kernel_k27(void)
+{
+    long n = LEN_1D;
+    long m = 0;            /* largest index used by any of the six index arrays */
+    long nlev = 0;         /* number of dependence levels */
+    int *lev = NULL;       /* level of each iteration i (1..nlev) */
+    int *order = NULL;     /* iterations sorted by level */
+    long *start = NULL;    /* level l occupies order[start[l] .. start[l+1]) */
+    int *wu = NULL, *ru = NULL, *wv = NULL, *rv = NULL, *ww = NULL, *rw = NULL;
+    int ok = 0;
+
+    /* ---------------- Inspector: computed once, index arrays never change ---------------- */
+    if (n > 1) {
+#pragma omp parallel for reduction(max:m) shared(ju, jv, jw, ku, kv, kw, n)
+        for (long i = 1; i < n; i++) {
+            if (ju[i] > m) m = ju[i];
+            if (jv[i] > m) m = jv[i];
+            if (jw[i] > m) m = jw[i];
+            if (ku[i] > m) m = ku[i];
+            if (kv[i] > m) m = kv[i];
+            if (kw[i] > m) m = kw[i];
+        }
+        long sz = m + 1;
+
+        lev = (int *)malloc((size_t)n * sizeof(int));
+        order = (int *)malloc((size_t)n * sizeof(int));
+        wu = (int *)malloc((size_t)sz * sizeof(int));
+        ru = (int *)malloc((size_t)sz * sizeof(int));
+        wv = (int *)malloc((size_t)sz * sizeof(int));
+        rv = (int *)malloc((size_t)sz * sizeof(int));
+        ww = (int *)malloc((size_t)sz * sizeof(int));
+        rw = (int *)malloc((size_t)sz * sizeof(int));
+
+        if (lev && order && wu && ru && wv && rv && ww && rw) {
+#pragma omp parallel for shared(wu, ru, wv, rv, ww, rw, sz)
+            for (long k = 0; k < sz; k++) {
+                wu[k] = 0; ru[k] = 0;
+                wv[k] = 0; rv[k] = 0;
+                ww[k] = 0; rw[k] = 0;
+            }
+
+            /* Level scheduling: wX[loc] = level of last writer of X[loc],
+               rX[loc] = max level of readers of X[loc] so far. */
+            for (long i = 1; i < n; i++) {
+                int a_ = ju[i], b_ = jv[i], c_ = jw[i];
+                int d_ = ku[i], e_ = kv[i], f_ = kw[i];
+                int L = 0;
+                /* reads (w[kw], u[ku], v[kv]) must follow the last write of what they read */
+                if (ww[f_] > L) L = ww[f_];
+                if (wu[d_] > L) L = wu[d_];
+                if (wv[e_] > L) L = wv[e_];
+                /* writes (u[ju], v[jv], w[jw]) must follow last read and last write of their target */
+                if (wu[a_] > L) L = wu[a_];
+                if (ru[a_] > L) L = ru[a_];
+                if (wv[b_] > L) L = wv[b_];
+                if (rv[b_] > L) L = rv[b_];
+                if (ww[c_] > L) L = ww[c_];
+                if (rw[c_] > L) L = rw[c_];
+                L += 1;
+                lev[i] = L;
+                wu[a_] = L; wv[b_] = L; ww[c_] = L;
+                if (ru[a_] < L) ru[a_] = L;   /* u[ju[i]] is read by the += as well */
+                if (ru[d_] < L) ru[d_] = L;
+                if (rv[e_] < L) rv[e_] = L;
+                if (rw[f_] < L) rw[f_] = L;
+                if (L > nlev) nlev = L;
+            }
+
+            free(wu); free(ru); free(wv); free(rv); free(ww); free(rw);
+            wu = ru = wv = rv = ww = rw = NULL;
+
+            start = (long *)malloc((size_t)(nlev + 2) * sizeof(long));
+            if (start) {
+                /* counting sort of iterations by level */
+                for (long l = 0; l <= nlev + 1; l++) start[l] = 0;
+                for (long i = 1; i < n; i++) start[lev[i]]++;
+                for (long l = 1; l <= nlev; l++) start[l] += start[l - 1];
+                start[nlev + 1] = start[nlev];
+                for (long i = n - 1; i >= 1; i--) {
+                    long l = lev[i];
+                    start[l]--;
+                    order[start[l]] = (int)i;
+                }
+                /* now level l occupies order[start[l] .. start[l+1]) */
+                ok = 1;
+            }
+        }
+        if (wu) free(wu);
+        if (ru) free(ru);
+        if (wv) free(wv);
+        if (rv) free(rv);
+        if (ww) free(ww);
+        if (rw) free(rw);
+        if (lev) { free(lev); lev = NULL; }
+    }
+
+    /* ---------------- Executor ---------------- */
+    for (int nl = 0; nl < iterations; nl++) {
+        if (ok) {
+            for (long l = 1; l <= nlev; l++) {
+                long s = start[l];
+                long t = start[l + 1];
+#pragma omp parallel for if(t - s >= 256) shared(order, u, v, w, c, d, e, ju, jv, jw, ku, kv, kw, s, t)
+                for (long p = s; p < t; p++) {
+                    long i = order[p];
+                    u[ju[i]] += w[kw[i]] * c[i];
+                    v[jv[i]] = u[ku[i]] * d[i] + c[i];
+                    w[jw[i]] = v[kv[i]] * e[i] + d[i];
+                }
+            }
+        } else {
+            k27_body_serial();
+        }
+        dummy(a, b, c, d, e);
+    }
+
+    if (order) free(order);
+    if (start) free(start);
+    return (real_t)0;
+}

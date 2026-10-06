@@ -1,0 +1,122 @@
+--- original.c
++++ final.c
+@@ -36,8 +36,12 @@
+ 
+ /* ==== k53.c ==== */
+ #include "data.h"
++#include <stdlib.h>
+ 
+-real_t kernel_k53(void)
++/* Levels with fewer iterations than this are run without a parallel region. */
++#define K53_PAR_THRESHOLD 256L
++
++static void k53_serial(void)
+ {
+     for (int nl = 0; nl < iterations; nl++) {
+         for (long i = 1; i < LEN_1D; i++) {
+@@ -46,6 +50,105 @@
+         }
+         dummy(a, b, c, d, e);
+     }
++}
++
++real_t kernel_k53(void)
++{
++    const long n = LEN_1D;
++
++    /* ---- inspector: extent of the indirectly addressed cells ---- */
++    long umax = 0, vmax = 0;
++#pragma omp parallel for shared(ju, ku, jv, kv) reduction(max:umax, vmax)
++    for (long i = 1; i < n; i++) {
++        long t;
++        t = (long)ju[i] + 1; if (t > umax) umax = t;
++        t = (long)ku[i] + 1; if (t > umax) umax = t;
++        t = (long)jv[i] + 1; if (t > vmax) vmax = t;
++        t = (long)kv[i] + 1; if (t > vmax) vmax = t;
++    }
++    if (umax < 1) umax = 1;
++    if (vmax < 1) vmax = 1;
++
++    int *uw = (int *)calloc((size_t)umax, sizeof(int)); /* last level writing u[x] */
++    int *ur = (int *)calloc((size_t)umax, sizeof(int)); /* last level reading u[x] */
++    int *vw = (int *)calloc((size_t)vmax, sizeof(int)); /* last level writing v[x] */
++    int *vr = (int *)calloc((size_t)vmax, sizeof(int)); /* last level reading v[x] */
++    int *level = (int *)malloc((size_t)(n > 0 ? n : 1) * sizeof(int));
++    long *order = (long *)malloc((size_t)(n > 0 ? n : 1) * sizeof(long));
++
++    if (!uw || !ur || !vw || !vr || !level || !order) {
++        free(uw); free(ur); free(vw); free(vr); free(level); free(order);
++        k53_serial();
++        return (real_t)0;
++    }
++
++    /* ---- inspector: wavefront level of every iteration (sequential, done once) ---- */
++    int maxlvl = 0;
++    for (long i = 1; i < n; i++) {
++        const int xa = ju[i]; /* u[xa] read+written */
++        const int xb = ku[i]; /* u[xb] read          */
++        const int xc = jv[i]; /* v[xc] written       */
++        const int xd = kv[i]; /* v[xd] read          */
++        int l = uw[xa];
++        if (ur[xa] > l) l = ur[xa];
++        if (uw[xb] > l) l = uw[xb];
++        if (vw[xd] > l) l = vw[xd];
++        if (vw[xc] > l) l = vw[xc];
++        if (vr[xc] > l) l = vr[xc];
++        l += 1;
++        level[i] = l;
++        if (l > maxlvl) maxlvl = l;
++        if (ur[xb] < l) ur[xb] = l;
++        if (vr[xd] < l) vr[xd] = l;
++        uw[xa] = l; ur[xa] = l;
++        vw[xc] = l; vr[xc] = l;
++    }
++    free(uw); free(ur); free(vw); free(vr);
++
++    /* ---- bucket iterations by level: level l occupies order[start[l] .. start[l+1]) ---- */
++    long *start = (long *)calloc((size_t)maxlvl + 2, sizeof(long));
++    long *fill = (long *)malloc(((size_t)maxlvl + 2) * sizeof(long));
++    if (!start || !fill) {
++        free(start); free(fill); free(level); free(order);
++        k53_serial();
++        return (real_t)0;
++    }
++    for (long i = 1; i < n; i++)
++        start[level[i] + 1]++;
++    for (int l = 1; l <= maxlvl + 1; l++)
++        start[l] += start[l - 1];
++    for (int l = 0; l <= maxlvl + 1; l++)
++        fill[l] = start[l];
++    for (long i = 1; i < n; i++)
++        order[fill[level[i]]++] = i;
++    free(fill);
++    free(level);
++
++    /* ---- executor ---- */
++    for (int nl = 0; nl < iterations; nl++) {
++        for (int l = 1; l <= maxlvl; l++) {
++            const long lo = start[l];
++            const long hi = start[l + 1];
++            if (hi - lo >= K53_PAR_THRESHOLD) {
++#pragma omp parallel for shared(order, u, v, c, d, ju, jv, ku, kv) firstprivate(lo, hi)
++                for (long p = lo; p < hi; p++) {
++                    const long i = order[p];
++                    u[ju[i]] += v[kv[i]] * c[i];
++                    v[jv[i]] = u[ku[i]] * d[i] + c[i];
++                }
++            } else {
++                for (long p = lo; p < hi; p++) {
++                    const long i = order[p];
++                    u[ju[i]] += v[kv[i]] * c[i];
++                    v[jv[i]] = u[ku[i]] * d[i] + c[i];
++                }
++            }
++        }
++        dummy(a, b, c, d, e);
++    }
++
++    free(start);
++    free(order);
+     return (real_t)0;
+ }
+ 

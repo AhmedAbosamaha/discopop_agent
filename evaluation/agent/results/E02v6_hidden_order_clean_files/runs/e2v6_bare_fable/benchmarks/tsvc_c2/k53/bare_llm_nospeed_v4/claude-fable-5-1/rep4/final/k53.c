@@ -1,0 +1,102 @@
+#include "data.h"
+#include <stdlib.h>
+#include <string.h>
+
+real_t kernel_k53(void)
+{
+    const long n = LEN_1D;
+
+    /* ------------------------------------------------------------------
+     * Inspector: the index arrays ju/jv/ku/kv never change, so the
+     * dependence structure of the i-loop is identical for every nl.
+     * Assign every iteration i a wavefront level such that all iterations
+     * of one level touch pairwise non-conflicting locations of u and v
+     * (no location written by one is read or written by another).
+     * Levels are executed in order, iterations within a level in parallel.
+     * ------------------------------------------------------------------ */
+
+    /* largest index used, to size the per-location tracking arrays */
+    int maxidx = 0;
+#pragma omp parallel for shared(ju, jv, ku, kv) reduction(max:maxidx)
+    for (long i = 1; i < n; i++) {
+        int m = ju[i];
+        if (kv[i] > m) m = kv[i];
+        if (jv[i] > m) m = jv[i];
+        if (ku[i] > m) m = ku[i];
+        if (m > maxidx) maxidx = m;
+    }
+    const long nloc = (long)maxidx + 1;
+
+    int *wU = (int *)calloc((size_t)nloc, sizeof(int)); /* last write level of u[loc] */
+    int *rU = (int *)calloc((size_t)nloc, sizeof(int)); /* last read  level of u[loc] */
+    int *wV = (int *)calloc((size_t)nloc, sizeof(int)); /* last write level of v[loc] */
+    int *rV = (int *)calloc((size_t)nloc, sizeof(int)); /* last read  level of v[loc] */
+    int *level = (int *)malloc((size_t)n * sizeof(int));
+
+    int maxlev = 0;
+    for (long i = 1; i < n; i++) {
+        const int a1 = ju[i]; /* u[a1] read+write */
+        const int a2 = kv[i]; /* v[a2] read        */
+        const int a3 = ku[i]; /* u[a3] read        */
+        const int a4 = jv[i]; /* v[a4] write       */
+        int l = wU[a1];
+        if (rU[a1] > l) l = rU[a1];
+        if (wV[a2] > l) l = wV[a2];
+        if (wU[a3] > l) l = wU[a3];
+        if (wV[a4] > l) l = wV[a4];
+        if (rV[a4] > l) l = rV[a4];
+        l += 1;
+        level[i] = l;
+        wU[a1] = l;
+        rU[a1] = l;
+        if (rV[a2] < l) rV[a2] = l;
+        if (rU[a3] < l) rU[a3] = l;
+        wV[a4] = l;
+        if (l > maxlev) maxlev = l;
+    }
+    free(wU);
+    free(rU);
+    free(wV);
+    free(rV);
+
+    /* counting sort of iterations by level: order[start[l] .. start[l+1]) */
+    int *start = (int *)calloc((size_t)maxlev + 2, sizeof(int));
+    int *pos = (int *)malloc(((size_t)maxlev + 2) * sizeof(int));
+    int *order = (int *)malloc((size_t)(n > 1 ? n - 1 : 1) * sizeof(int));
+
+    for (long i = 1; i < n; i++) start[level[i]]++;
+    {
+        int acc = 0;
+        for (int l = 1; l <= maxlev; l++) {
+            const int cnt = start[l];
+            start[l] = acc;
+            acc += cnt;
+        }
+        start[maxlev + 1] = acc;
+    }
+    memcpy(pos, start, ((size_t)maxlev + 2) * sizeof(int));
+    for (long i = 1; i < n; i++) order[pos[level[i]]++] = (int)i;
+    free(pos);
+    free(level);
+
+    /* ------------------------------------------------------------------
+     * Executor
+     * ------------------------------------------------------------------ */
+    for (int nl = 0; nl < iterations; nl++) {
+        for (int l = 1; l <= maxlev; l++) {
+            const long lo = start[l];
+            const long hi = start[l + 1];
+#pragma omp parallel for shared(u, v, c, d, ju, jv, ku, kv, order, lo, hi) if (hi - lo > 256)
+            for (long p = lo; p < hi; p++) {
+                const long i = order[p];
+                u[ju[i]] += v[kv[i]] * c[i];
+                v[jv[i]] = u[ku[i]] * d[i] + c[i];
+            }
+        }
+        dummy(a, b, c, d, e);
+    }
+
+    free(start);
+    free(order);
+    return (real_t)0;
+}

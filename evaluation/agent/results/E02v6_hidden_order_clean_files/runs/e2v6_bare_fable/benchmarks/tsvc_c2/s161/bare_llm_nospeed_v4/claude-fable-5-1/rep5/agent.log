@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s161.c
+  Model          : claude-fable-5-1
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-fable-5-1...
+│  [bare] s161.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: The rewrite is applied to `s161.c`. **Summary of the change** - The single `goto`-based loop is split into two straight-line passes over the same range `i < LEN_1D-1`: 1. `b[i] < 0` → `c[i+1] = a[i] + d[i]*d[i]` — each iteration writes a distinct `c[i+1]`; it reads `a[i]`, which no iteration of this pass writes, so the value is the same one the original read. 2. `b[i] >= 0` → `a[i] = c[i] + d[i]*e
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

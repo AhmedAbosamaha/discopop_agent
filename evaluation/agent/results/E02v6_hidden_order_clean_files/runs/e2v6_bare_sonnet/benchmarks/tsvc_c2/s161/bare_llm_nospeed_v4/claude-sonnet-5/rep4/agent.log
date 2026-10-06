@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s161.c
+  Model          : claude-sonnet-5
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s161.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan **Dependence analysis:** In the inner loop, each index is written by exactly one iteration: `a[i]` is written only by iteration `i` (else-branch), `c[i+1]` only by iteration `i` (then-branch). So writes never collide. The only cross-iteration hazard is the *read* of `c[i]` in the else-branch, which — in the sequential version — may have just been written by iteration `i-1` (when `b[i-1]<0`
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

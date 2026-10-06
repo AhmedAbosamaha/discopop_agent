@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s161.c
+  Model          : claude-sonnet-5
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] s161.c: edited, 2 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan **Dependence.** In the inner loop, each `i` either writes `a[i]` (branch "else": `a[i]=c[i]+d[i]*e[i]`) or writes `c[i+1]` (branch "if `b[i]<0`": `c[i+1]=a[i]+d[i]*d[i]`). The only cross-iteration hazard is that the `else` branch at iteration `i` reads `c[i]`, which may have been overwritten by iteration `i-1` (when `b[i-1]<0`). The value that overwrites it is `a[i-1]+d[i-1]*d[i-1]`, and `
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

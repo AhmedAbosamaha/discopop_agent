@@ -1,0 +1,86 @@
+--- original.c
++++ final.c
+@@ -35,17 +35,80 @@
+ #endif
+ 
+ /* ==== k53.c ==== */
++#include <stdlib.h>
+ #include "data.h"
++
++static int imax2(int a, int b) { return a > b ? a : b; }
+ 
+ real_t kernel_k53(void)
+ {
++    const long n = LEN_1D;
++
++    /* ---- inspector: level-schedule the iterations (once; indices never change) ---- */
++    long maxu = 0, maxv = 0;
++    for (long i = 1; i < n; i++) {
++        if (ju[i] > maxu) maxu = ju[i];
++        if (ku[i] > maxu) maxu = ku[i];
++        if (jv[i] > maxv) maxv = jv[i];
++        if (kv[i] > maxv) maxv = kv[i];
++    }
++    int *wu = (int *)calloc((size_t)maxu + 1, sizeof(int)); /* last write level of u[x] */
++    int *ru = (int *)calloc((size_t)maxu + 1, sizeof(int)); /* max read level of u[x]   */
++    int *wv = (int *)calloc((size_t)maxv + 1, sizeof(int));
++    int *rv = (int *)calloc((size_t)maxv + 1, sizeof(int));
++    int *lvl = (int *)malloc((size_t)n * sizeof(int));
++    int nlev = 0;
++
++    for (long i = 1; i < n; i++) {
++        int L = 0;
++        L = imax2(L, wu[ju[i]]);   /* WAW / RAW on u[ju[i]] */
++        L = imax2(L, ru[ju[i]]);   /* WAR on u[ju[i]]       */
++        L = imax2(L, wu[ku[i]]);   /* RAW on u[ku[i]]       */
++        L = imax2(L, wv[kv[i]]);   /* RAW on v[kv[i]]       */
++        L = imax2(L, wv[jv[i]]);   /* WAW on v[jv[i]]       */
++        L = imax2(L, rv[jv[i]]);   /* WAR on v[jv[i]]       */
++        L += 1;
++        lvl[i] = L;
++        if (L > nlev) nlev = L;
++        if (ru[ju[i]] < L) ru[ju[i]] = L;
++        if (ru[ku[i]] < L) ru[ku[i]] = L;
++        if (rv[kv[i]] < L) rv[kv[i]] = L;
++        wu[ju[i]] = L;
++        wv[jv[i]] = L;
++    }
++    free(wu); free(ru); free(wv); free(rv);
++
++    long *pos = (long *)calloc((size_t)nlev + 2, sizeof(long));
++    long *fill = (long *)malloc(((size_t)nlev + 2) * sizeof(long));
++    long *order = (long *)malloc((size_t)n * sizeof(long));
++    for (long i = 1; i < n; i++)
++        pos[lvl[i] + 1]++;
++    for (long L = 1; L <= (long)nlev + 1; L++)
++        pos[L] += pos[L - 1];
++    for (long L = 0; L <= (long)nlev + 1; L++)
++        fill[L] = pos[L];
++    for (long i = 1; i < n; i++)
++        order[fill[lvl[i]]++] = i;
++    free(fill);
++    free(lvl);
++
++    /* ---- executor ---- */
+     for (int nl = 0; nl < iterations; nl++) {
+-        for (long i = 1; i < LEN_1D; i++) {
+-            u[ju[i]] += v[kv[i]] * c[i];
+-            v[jv[i]] = u[ku[i]] * d[i] + c[i];
++        for (int L = 1; L <= nlev; L++) {
++            long kb = pos[L];
++            long ke = pos[L + 1];
++#pragma omp parallel for schedule(static) shared(order, u, v, ju, jv, ku, kv, c, d) firstprivate(kb, ke)
++            for (long k = kb; k < ke; k++) {
++                long i = order[k];
++                u[ju[i]] += v[kv[i]] * c[i];
++                v[jv[i]] = u[ku[i]] * d[i] + c[i];
++            }
+         }
+         dummy(a, b, c, d, e);
+     }
++
++    free(pos);
++    free(order);
+     return (real_t)0;
+ }
+ 

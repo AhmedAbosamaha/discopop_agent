@@ -1,0 +1,27 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6_agent_3/benchmarks/tsvc_c2/s161/no_evidence_b1_nospeed_v4/claude-haiku-4-5-20251001/rep9/work/s161.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6_agent_3/benchmarks/tsvc_c2/s161/no_evidence_b1_nospeed_v4/claude-haiku-4-5-20251001/rep9/work/s161.c
+@@ -3,16 +3,17 @@
+ real_t kernel_s161(void)
+ {
+     for (int nl = 0; nl < iterations; nl++) {
++        // Phase A: write c[i+1] where b[i] < 0
+         for (int i = 0; i < LEN_1D-1; ++i) {
+             if (b[i] < (real_t)0.) {
+-                goto L20;
++                c[i+1] = a[i] + d[i] * d[i];
+             }
+-            a[i] = c[i] + d[i] * e[i];
+-            goto L10;
+-L20:
+-            c[i+1] = a[i] + d[i] * d[i];
+-L10:
+-            ;
++        }
++        // Phase B: write a[i] where b[i] >= 0
++        for (int i = 0; i < LEN_1D-1; ++i) {
++            if (b[i] >= (real_t)0.) {
++                a[i] = c[i] + d[i] * e[i];
++            }
+         }
+         dummy(a, b, c, d, e);
+     }

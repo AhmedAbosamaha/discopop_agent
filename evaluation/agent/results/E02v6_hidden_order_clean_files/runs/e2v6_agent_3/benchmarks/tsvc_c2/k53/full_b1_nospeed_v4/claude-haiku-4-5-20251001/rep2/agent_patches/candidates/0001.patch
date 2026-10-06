@@ -1,0 +1,38 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6_agent_3/benchmarks/tsvc_c2/k53/full_b1_nospeed_v4/claude-haiku-4-5-20251001/rep2/work/k53.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6_agent_3/benchmarks/tsvc_c2/k53/full_b1_nospeed_v4/claude-haiku-4-5-20251001/rep2/work/k53.c
+@@ -1,13 +1,33 @@
++#include <stdlib.h>
+ #include "data.h"
+ 
+ real_t kernel_k53(void)
+ {
++    real_t *v_read = malloc(LEN_1D * sizeof(real_t));
++    real_t *c_copy = malloc(LEN_1D * sizeof(real_t));
++    real_t *d_copy = malloc(LEN_1D * sizeof(real_t));
++
+     for (int nl = 0; nl < iterations; nl++) {
++        // Copy c and d to break nl-level loop-carried dependence through dummy()
++        for (long i = 0; i < LEN_1D; i++) {
++            c_copy[i] = c[i];
++            d_copy[i] = d[i];
++        }
++
++        // Buffer v values to break i-level loop-carried dependence
++        for (long i = 0; i < LEN_1D; i++) {
++            v_read[i] = v[i];
++        }
++
+         for (long i = 1; i < LEN_1D; i++) {
+-            u[ju[i]] += v[kv[i]] * c[i];
+-            v[jv[i]] = u[ku[i]] * d[i] + c[i];
++            u[ju[i]] += v_read[kv[i]] * c_copy[i];
++            v[jv[i]] = u[ku[i]] * d_copy[i] + c_copy[i];
+         }
+         dummy(a, b, c, d, e);
+     }
++
++    free(v_read);
++    free(c_copy);
++    free(d_copy);
+     return (real_t)0;
+ }

@@ -1,0 +1,148 @@
+#include "data.h"
+#include <stdlib.h>
+
+static inline int k27_max2(int x, int y) { return x > y ? x : y; }
+
+real_t kernel_k27(void)
+{
+    const long n = LEN_1D;
+
+    /* ---- inspector: find the extent of the index arrays ---- */
+    long maxidx = n - 1;
+    for (long i = 1; i < n; i++) {
+        if (ju[i] > maxidx) maxidx = ju[i];
+        if (jv[i] > maxidx) maxidx = jv[i];
+        if (jw[i] > maxidx) maxidx = jw[i];
+        if (ku[i] > maxidx) maxidx = ku[i];
+        if (kv[i] > maxidx) maxidx = kv[i];
+        if (kw[i] > maxidx) maxidx = kw[i];
+    }
+    const long m = maxidx + 1;
+
+    int *lastWu = (int *)malloc(sizeof(int) * (size_t)m);
+    int *lastRu = (int *)malloc(sizeof(int) * (size_t)m);
+    int *lastWv = (int *)malloc(sizeof(int) * (size_t)m);
+    int *lastRv = (int *)malloc(sizeof(int) * (size_t)m);
+    int *lastWw = (int *)malloc(sizeof(int) * (size_t)m);
+    int *lastRw = (int *)malloc(sizeof(int) * (size_t)m);
+    int *level  = (int *)malloc(sizeof(int) * (size_t)n);
+    int *order  = (int *)malloc(sizeof(int) * (size_t)n);
+
+    if (!lastWu || !lastRu || !lastWv || !lastRv || !lastWw || !lastRw ||
+        !level || !order) {
+        free(lastWu); free(lastRu); free(lastWv); free(lastRv);
+        free(lastWw); free(lastRw); free(level); free(order);
+        /* allocation failed: original serial computation */
+        for (int nl = 0; nl < iterations; nl++) {
+            for (long i = 1; i < LEN_1D; i++) {
+                u[ju[i]] += w[kw[i]] * c[i];
+                v[jv[i]] = u[ku[i]] * d[i] + c[i];
+                w[jw[i]] = v[kv[i]] * e[i] + d[i];
+            }
+            dummy(a, b, c, d, e);
+        }
+        return (real_t)0;
+    }
+
+    for (long x = 0; x < m; x++) {
+        lastWu[x] = -1; lastRu[x] = -1;
+        lastWv[x] = -1; lastRv[x] = -1;
+        lastWw[x] = -1; lastRw[x] = -1;
+    }
+
+    /* ---- inspector: assign a wavefront level to every iteration ---- */
+    int maxlevel = -1;
+    for (long i = 1; i < n; i++) {
+        const int iju = ju[i], ijv = jv[i], ijw = jw[i];
+        const int iku = ku[i], ikv = kv[i], ikw = kw[i];
+        int lv = -1;
+        /* u[ju[i]] += ...  : read+write of u[ju[i]] */
+        lv = k27_max2(lv, lastWu[iju]);
+        lv = k27_max2(lv, lastRu[iju]);
+        /* read w[kw[i]] */
+        lv = k27_max2(lv, lastWw[ikw]);
+        /* read u[ku[i]] */
+        lv = k27_max2(lv, lastWu[iku]);
+        /* write v[jv[i]] */
+        lv = k27_max2(lv, lastWv[ijv]);
+        lv = k27_max2(lv, lastRv[ijv]);
+        /* read v[kv[i]] */
+        lv = k27_max2(lv, lastWv[ikv]);
+        /* write w[jw[i]] */
+        lv = k27_max2(lv, lastWw[ijw]);
+        lv = k27_max2(lv, lastRw[ijw]);
+        lv += 1;
+        level[i] = lv;
+        if (lv > maxlevel) maxlevel = lv;
+
+        /* record this iteration's accesses */
+        lastWu[iju] = lv;
+        lastRw[ikw] = k27_max2(lastRw[ikw], lv);
+        lastRu[iku] = k27_max2(lastRu[iku], lv);
+        lastWv[ijv] = lv;
+        lastRv[ikv] = k27_max2(lastRv[ikv], lv);
+        lastWw[ijw] = lv;
+    }
+
+    free(lastWu); free(lastRu); free(lastWv); free(lastRv);
+    free(lastWw); free(lastRw);
+
+    const long nlev = (long)maxlevel + 1;
+    long *start = (long *)malloc(sizeof(long) * (size_t)(nlev + 1));
+    if (!start) {
+        free(level); free(order);
+        for (int nl = 0; nl < iterations; nl++) {
+            for (long i = 1; i < LEN_1D; i++) {
+                u[ju[i]] += w[kw[i]] * c[i];
+                v[jv[i]] = u[ku[i]] * d[i] + c[i];
+                w[jw[i]] = v[kv[i]] * e[i] + d[i];
+            }
+            dummy(a, b, c, d, e);
+        }
+        return (real_t)0;
+    }
+
+    /* counting sort of iterations by level (stable in i) */
+    for (long l = 0; l <= nlev; l++) start[l] = 0;
+    for (long i = 1; i < n; i++) start[level[i] + 1]++;
+    for (long l = 0; l < nlev; l++) start[l + 1] += start[l];
+    {
+        long *pos = (long *)malloc(sizeof(long) * (size_t)nlev);
+        if (!pos) {
+            free(start); free(level); free(order);
+            for (int nl = 0; nl < iterations; nl++) {
+                for (long i = 1; i < LEN_1D; i++) {
+                    u[ju[i]] += w[kw[i]] * c[i];
+                    v[jv[i]] = u[ku[i]] * d[i] + c[i];
+                    w[jw[i]] = v[kv[i]] * e[i] + d[i];
+                }
+                dummy(a, b, c, d, e);
+            }
+            return (real_t)0;
+        }
+        for (long l = 0; l < nlev; l++) pos[l] = start[l];
+        for (long i = 1; i < n; i++) order[pos[level[i]]++] = (int)i;
+        free(pos);
+    }
+    free(level);
+
+    /* ---- executor: levels in order, iterations within a level in parallel ---- */
+    for (int nl = 0; nl < iterations; nl++) {
+        for (long l = 0; l < nlev; l++) {
+            const long lo = start[l];
+            const long hi = start[l + 1];
+#pragma omp parallel for shared(order, u, v, w, c, d, e, ju, jv, jw, ku, kv, kw) firstprivate(lo, hi) if (hi - lo > 64)
+            for (long k = lo; k < hi; k++) {
+                const long i = order[k];
+                u[ju[i]] += w[kw[i]] * c[i];
+                v[jv[i]] = u[ku[i]] * d[i] + c[i];
+                w[jw[i]] = v[kv[i]] * e[i] + d[i];
+            }
+        }
+        dummy(a, b, c, d, e);
+    }
+
+    free(start);
+    free(order);
+    return (real_t)0;
+}

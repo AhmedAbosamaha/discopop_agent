@@ -1,0 +1,30 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6_fb_1/benchmarks/tsvc_c2/k23/no_evidence_nospeed_v4/claude-haiku-4-5-20251001/rep1/work/k23.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6_fb_1/benchmarks/tsvc_c2/k23/no_evidence_nospeed_v4/claude-haiku-4-5-20251001/rep1/work/k23.c
+@@ -1,13 +1,25 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_k23(void)
+ {
++    real_t *du = (real_t *)malloc(LEN_1D * sizeof(real_t));
++    real_t *dv = (real_t *)malloc(LEN_1D * sizeof(real_t));
++
+     for (int nl = 0; nl < iterations; nl++) {
+         for (long i = 1; i < LEN_1D; i++) {
+-            u[i] += w[i] * c[i];
+-            v[i] = x[i] * d[i] + c[i];
++            du[i] = w[i] * c[i];
++            dv[i] = x[i] * d[i] + c[i];
++        }
++        for (long i = 1; i < LEN_1D; i++) {
++            u[i] += du[i];
++            v[i] = dv[i];
+         }
+         dummy(a, b, c, d, e);
+     }
++
++    free(du);
++    free(dv);
++
+     return (real_t)0;
+ }

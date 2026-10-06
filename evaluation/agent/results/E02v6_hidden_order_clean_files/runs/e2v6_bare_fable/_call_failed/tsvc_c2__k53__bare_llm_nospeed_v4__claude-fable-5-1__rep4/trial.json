@@ -1,0 +1,171 @@
+{
+  "benchmark": "tsvc_c2/k53",
+  "kernel": "k53",
+  "source": "k53.c",
+  "arm": "bare_llm_nospeed_v4",
+  "model": "claude-fable-5-1",
+  "arm_flags": [
+    "--require-speedup",
+    "--min-runtime-share",
+    "0.01",
+    "--no-require-speedup",
+    "--prompt-version",
+    "4",
+    "--timing-cflags=-DSTANDARD_DATASET"
+  ],
+  "started_at": "2026-10-05T21:04:33",
+  "host": "rms14562",
+  "host_load_start": [
+    2.69384765625,
+    3.25146484375,
+    3.62744140625
+  ],
+  "agent_cmd": [
+    "/home/ahmedabosamaha/discopop_agent/venv/bin/python",
+    "-m",
+    "discopop_agent.bare_llm",
+    "--project-dir",
+    ".",
+    "--project-units",
+    "k53.c,main.c",
+    "--project-include",
+    ".",
+    "--project-editable",
+    "k53.c",
+    "--model",
+    "claude-fable-5-1",
+    "--no-require-speedup",
+    "--prompt-version",
+    "4",
+    "--exclude-functions",
+    "main,dummy"
+  ],
+  "agent_s": 10.5,
+  "agent_rc": 1,
+  "llm_calls": 1,
+  "llm_call_failures": 1,
+  "harness_reasks": 0,
+  "harness_discards": 0,
+  "explorer_retries": 0,
+  "explorer_stalls": 0,
+  "reverts": 0,
+  "refresh_fast": 0,
+  "refresh_full": 0,
+  "refresh_fallback": 0,
+  "runtime_remeasurements": 0,
+  "phase_b_deferred": 0,
+  "phase_b_joint_kept": 0,
+  "dp_floor": null,
+  "gate_failures_phase_a": {},
+  "gate_failures_phase_b": {},
+  "gate_passes_phase_a": 0,
+  "gate_failures_d40": {},
+  "d40_verdicts": {},
+  "exposure_verdicts": {},
+  "d40_seconds": 0,
+  "requeued_regions": 0,
+  "region_verdicts": {},
+  "settle_dropped": 0,
+  "llm_usage": {
+    "calls_recorded": 3,
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "cache_read_input_tokens": 0,
+    "cache_creation_input_tokens": 0,
+    "cost_usd": 0.0,
+    "model_seconds": 1.7
+  },
+  "status": "agent_error",
+  "agent_error": "\n============================================================\n  Bare-LLM baseline \u2014 no DiscoPoP, no gate, one attempt\n============================================================\n  Files          : k53.c\n  Model          : claude-fable-5-1\n  Not editable   : \u2014  (read-only files: main.c)\n  Prompt         : mirror  (speed check off)\n\n\u2502  [bare] Calling claude-fable-5-1...\n\u2502  [bare] LLM call failed: Claude Code returned an error result: You've hit your session limit \u00b7 resets 9:50pm (UTC)\n\n  SUMMARY: 0 file(s) changed  |  the call failed",
+  "layout": "project",
+  "files_changed": [],
+  "source_changed": false,
+  "scaffold": {
+    "ok": true,
+    "problems": [],
+    "applies": true
+  },
+  "editable": [
+    "k53.c"
+  ],
+  "harness_sha256": "af1764fa5907f3fbdd0315b3de469d0fba9b82f98c1ecf304d959d9e9e9db444",
+  "pragmas_added": 0,
+  "pragmas_in_final": 0,
+  "hot_loop": {
+    "entry": "kernel_k53",
+    "function": "kernel_k53",
+    "line": 6,
+    "writes": [
+      "u",
+      "v"
+    ]
+  },
+  "hot_loop_covered": false,
+  "hot_loop_coverage": {
+    "criterion": "v2 (27 Sep 2026)",
+    "covered": false,
+    "covering": [],
+    "uncounted": [],
+    "elsewhere": []
+  },
+  "candidates_recorded": 0,
+  "outcome": "AGENT_ERROR",
+  "finished_at": "2026-10-05T21:04:43",
+  "host_load_end": [
+    2.5869140625,
+    3.2099609375,
+    3.60986328125
+  ],
+  "profile": {
+    "wrapper": "discopop_cc",
+    "layout": "project",
+    "units": [
+      "k53.c",
+      "main.c"
+    ],
+    "instrument_s": 0.21,
+    "profiled_run_s": 0.62,
+    "explore_stalls": 0,
+    "explore_s": 1.32,
+    "explore_success_s": 1.32,
+    "explore_attempts": 1,
+    "explore_timed_out": false,
+    "explore_failures": [],
+    "patterns": {
+      "optimizer_output": 0,
+      "merged_pattern": 0,
+      "task": 0,
+      "do_all": 0,
+      "reduction": 0
+    },
+    "profile_sha256": "c87de5a4fae1a2753ab609f96097bf20fa0b12fe678c7e992971b22a0e911564"
+  },
+  "package_integrity": {
+    "before": {
+      "checked": "before trial",
+      "at": "2026-10-05T21:04:33",
+      "prepared_sha256": "8175ab856b302fcf402635a649434904d2b55c0b1308efd460e737053d5109fd",
+      "packager_sha256": "8175ab856b302fcf402635a649434904d2b55c0b1308efd460e737053d5109fd",
+      "harness_sha256": "af1764fa5907f3fbdd0315b3de469d0fba9b82f98c1ecf304d959d9e9e9db444",
+      "archived_sha256": "8175ab856b302fcf402635a649434904d2b55c0b1308efd460e737053d5109fd",
+      "profile_sha256": "c87de5a4fae1a2753ab609f96097bf20fa0b12fe678c7e992971b22a0e911564",
+      "ok": true
+    },
+    "after": {
+      "checked": "after trial",
+      "at": "2026-10-05T21:04:43",
+      "prepared_sha256": "8175ab856b302fcf402635a649434904d2b55c0b1308efd460e737053d5109fd",
+      "packager_sha256": "8175ab856b302fcf402635a649434904d2b55c0b1308efd460e737053d5109fd",
+      "harness_sha256": "af1764fa5907f3fbdd0315b3de469d0fba9b82f98c1ecf304d959d9e9e9db444",
+      "archived_sha256": "8175ab856b302fcf402635a649434904d2b55c0b1308efd460e737053d5109fd",
+      "profile_sha256": "c87de5a4fae1a2753ab609f96097bf20fa0b12fe678c7e992971b22a0e911564",
+      "ok": true
+    }
+  },
+  "speed_check_off": true,
+  "timing_flags": [
+    "--timing-cflags=-DSTANDARD_DATASET"
+  ],
+  "harness_edit_redos": [],
+  "repeat": 4
+}

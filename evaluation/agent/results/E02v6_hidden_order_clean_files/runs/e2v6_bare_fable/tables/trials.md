@@ -1,0 +1,37 @@
+| Benchmark | Arm | Model | Rep | Outcome | Best speedup | Pragmas (DP+LLM) | Rewrites | Baseline | LLM calls | Agent s |
+|---|---|---|---:|---|---:|---|---:|---:|---:|---:|
+| tsvc_c2/k19 | bare_llm_nospeed_v4 | claude-fable-5-1 | 1 | parallel-not-faster | 0.28x | —+— | — | — | 1 | 112.8 |
+| tsvc_c2/k19 | bare_llm_nospeed_v4 | claude-fable-5-1 | 2 | parallel-not-faster | 0.01x | —+— | — | — | 1 | 116.4 |
+| tsvc_c2/k19 | bare_llm_nospeed_v4 | claude-fable-5-1 | 3 | parallel-not-faster | 1.00x | —+— | — | — | 1 | 72.6 |
+| tsvc_c2/k19 | bare_llm_nospeed_v4 | claude-fable-5-1 | 4 | parallel-not-faster | 0.01x | —+— | — | — | 1 | 99.4 |
+| tsvc_c2/k19 | bare_llm_nospeed_v4 | claude-fable-5-1 | 5 | BROKEN | — | —+— | — | — | 1 | 123.6 |
+| tsvc_c2/k23 | bare_llm_nospeed_v4 | claude-fable-5-1 | 1 | BROKEN | 4.29x | —+— | — | — | 1 | 19.6 |
+| tsvc_c2/k23 | bare_llm_nospeed_v4 | claude-fable-5-1 | 2 | BROKEN | 4.13x | —+— | — | — | 1 | 32.3 |
+| tsvc_c2/k23 | bare_llm_nospeed_v4 | claude-fable-5-1 | 3 | BROKEN | 4.22x | —+— | — | — | 1 | 20.7 |
+| tsvc_c2/k23 | bare_llm_nospeed_v4 | claude-fable-5-1 | 4 | BROKEN | 4.24x | —+— | — | — | 1 | 34.9 |
+| tsvc_c2/k23 | bare_llm_nospeed_v4 | claude-fable-5-1 | 5 | BROKEN | 4.24x | —+— | — | — | 1 | 20.5 |
+| tsvc_c2/k27 | bare_llm_nospeed_v4 | claude-fable-5-1 | 1 | BROKEN | — | —+— | — | — | 1 | 119.7 |
+| tsvc_c2/k27 | bare_llm_nospeed_v4 | claude-fable-5-1 | 2 | BROKEN | — | —+— | — | — | 1 | 125.0 |
+| tsvc_c2/k27 | bare_llm_nospeed_v4 | claude-fable-5-1 | 3 | parallel-not-faster | 0.01x | —+— | — | — | 1 | 114.4 |
+| tsvc_c2/k27 | bare_llm_nospeed_v4 | claude-fable-5-1 | 4 | parallel-not-faster | 0.01x | —+— | — | — | 1 | 159.3 |
+| tsvc_c2/k27 | bare_llm_nospeed_v4 | claude-fable-5-1 | 5 | parallel-not-faster | 0.01x | —+— | — | — | 1 | 107.6 |
+| tsvc_c2/k31 | bare_llm_nospeed_v4 | claude-fable-5-1 | 1 | FASTER | 2.29x | —+— | — | — | 1 | 142.6 |
+| tsvc_c2/k31 | bare_llm_nospeed_v4 | claude-fable-5-1 | 2 | FASTER | 3.17x | —+— | — | — | 1 | 175.2 |
+| tsvc_c2/k31 | bare_llm_nospeed_v4 | claude-fable-5-1 | 3 | FASTER | 2.27x | —+— | — | — | 1 | 141.1 |
+| tsvc_c2/k31 | bare_llm_nospeed_v4 | claude-fable-5-1 | 4 | FASTER | 2.30x | —+— | — | — | 1 | 125.6 |
+| tsvc_c2/k31 | bare_llm_nospeed_v4 | claude-fable-5-1 | 5 | FASTER | 3.06x | —+— | — | — | 1 | 210.3 |
+| tsvc_c2/k48 | bare_llm_nospeed_v4 | claude-fable-5-1 | 1 | parallel-not-faster | 0.31x | —+— | — | — | 1 | 129.6 |
+| tsvc_c2/k48 | bare_llm_nospeed_v4 | claude-fable-5-1 | 2 | parallel-not-faster | 0.49x | —+— | — | — | 1 | 149.7 |
+| tsvc_c2/k48 | bare_llm_nospeed_v4 | claude-fable-5-1 | 3 | parallel-not-faster | 0.01x | —+— | — | — | 1 | 193.0 |
+| tsvc_c2/k48 | bare_llm_nospeed_v4 | claude-fable-5-1 | 4 | parallel-not-faster | 0.94x | —+— | — | — | 1 | 219.1 |
+| tsvc_c2/k48 | bare_llm_nospeed_v4 | claude-fable-5-1 | 5 | parallel-not-faster | 0.93x | —+— | — | — | 1 | 138.8 |
+| tsvc_c2/k53 | bare_llm_nospeed_v4 | claude-fable-5-1 | 1 | parallel-not-faster | 0.90x | —+— | — | — | 1 | 128.2 |
+| tsvc_c2/k53 | bare_llm_nospeed_v4 | claude-fable-5-1 | 2 | parallel-not-faster | 0.03x | —+— | — | — | 1 | 147.8 |
+| tsvc_c2/k53 | bare_llm_nospeed_v4 | claude-fable-5-1 | 3 | parallel-not-faster | 0.98x | —+— | — | — | 1 | 182.3 |
+| tsvc_c2/k53 | bare_llm_nospeed_v4 | claude-fable-5-1 | 4 | parallel-not-faster | 0.03x | —+— | — | — | 1 | 113.6 |
+| tsvc_c2/k53 | bare_llm_nospeed_v4 | claude-fable-5-1 | 5 | parallel-not-faster | 0.92x | —+— | — | — | 1 | 139.2 |
+| tsvc_c2/s161 | bare_llm_nospeed_v4 | claude-fable-5-1 | 1 | FASTER | 2.16x | —+— | — | — | 1 | 45.9 |
+| tsvc_c2/s161 | bare_llm_nospeed_v4 | claude-fable-5-1 | 2 | FASTER | 2.02x | —+— | — | — | 1 | 40.1 |
+| tsvc_c2/s161 | bare_llm_nospeed_v4 | claude-fable-5-1 | 3 | FASTER | 2.17x | —+— | — | — | 1 | 50.3 |
+| tsvc_c2/s161 | bare_llm_nospeed_v4 | claude-fable-5-1 | 4 | FASTER | 2.24x | —+— | — | — | 1 | 59.0 |
+| tsvc_c2/s161 | bare_llm_nospeed_v4 | claude-fable-5-1 | 5 | FASTER | 2.18x | —+— | — | — | 1 | 33.6 |

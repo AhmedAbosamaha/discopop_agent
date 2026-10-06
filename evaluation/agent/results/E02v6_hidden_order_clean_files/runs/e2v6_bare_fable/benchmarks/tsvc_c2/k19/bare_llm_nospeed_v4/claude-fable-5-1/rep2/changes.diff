@@ -1,0 +1,104 @@
+--- original.c
++++ final.c
+@@ -36,16 +36,98 @@
+ 
+ /* ==== k19.c ==== */
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_k19(void)
+ {
++    const long n = LEN_1D;
++
++    /* ------------------------------------------------------------------
++     * Inspector: the index arrays ju/jv/ku/kv never change, so the
++     * dependence structure of the i-loop is the same for every nl.
++     * Assign each iteration a wavefront level such that every iteration
++     * depends (RAW, WAW or WAR, through u and v) only on iterations of
++     * strictly lower level.  Iterations of equal level touch no
++     * conflicting location and may run in any order / concurrently.
++     * ------------------------------------------------------------------ */
++    long maxidx = 0;
++    for (long i = 1; i < n; i++) {
++        if (ju[i] > maxidx) maxidx = ju[i];
++        if (jv[i] > maxidx) maxidx = jv[i];
++        if (ku[i] > maxidx) maxidx = ku[i];
++        if (kv[i] > maxidx) maxidx = kv[i];
++    }
++    const long m = maxidx + 1;
++
++    int *wU = (int *)calloc((size_t)m, sizeof(int)); /* level of last write to u[x] (0 = none) */
++    int *rU = (int *)calloc((size_t)m, sizeof(int)); /* max level of reads of u[x] since last write */
++    int *wV = (int *)calloc((size_t)m, sizeof(int)); /* same for v */
++    int *rV = (int *)calloc((size_t)m, sizeof(int));
++    int *lvl = (int *)malloc((size_t)n * sizeof(int));
++
++    int maxlvl = 0;
++    for (long i = 1; i < n; i++) {
++        const int xu = ju[i]; /* u[xu] read+written (stmt 1) */
++        const int xv = kv[i]; /* v[xv] read           (stmt 1) */
++        const int yu = ku[i]; /* u[yu] read           (stmt 2) */
++        const int yv = jv[i]; /* v[yv] written        (stmt 2) */
++
++        int L = wU[xu];
++        if (rU[xu] > L) L = rU[xu];
++        if (wV[xv] > L) L = wV[xv];
++        if (wU[yu] > L) L = wU[yu];
++        if (wV[yv] > L) L = wV[yv];
++        if (rV[yv] > L) L = rV[yv];
++        L += 1;
++
++        /* record accesses in statement order */
++        if (L > rV[xv]) rV[xv] = L;      /* stmt 1: read v[kv[i]]   */
++        wU[xu] = L; rU[xu] = 0;          /* stmt 1: write u[ju[i]]  */
++        if (L > rU[yu]) rU[yu] = L;      /* stmt 2: read u[ku[i]]   */
++        wV[yv] = L; rV[yv] = 0;          /* stmt 2: write v[jv[i]]  */
++
++        lvl[i] = L;
++        if (L > maxlvl) maxlvl = L;
++    }
++
++    free(wU); free(rU); free(wV); free(rV);
++
++    /* counting sort of iterations by level: order[start[L] .. start[L+1]) */
++    long *start = (long *)calloc((size_t)maxlvl + 2, sizeof(long));
++    long *pos   = (long *)malloc(((size_t)maxlvl + 2) * sizeof(long));
++    long *order = (long *)malloc((size_t)n * sizeof(long));
++
++    for (long i = 1; i < n; i++) start[lvl[i] + 1]++;
++    /* start[L+1] currently holds count of level L; prefix-sum into offsets */
++    start[1] = 0;
++    for (int L = 1; L <= maxlvl; L++) start[L + 1] += start[L];
++    for (int L = 1; L <= maxlvl + 1; L++) pos[L] = start[L];
++    for (long i = 1; i < n; i++) order[pos[lvl[i]]++] = i;
++
++    free(pos);
++    free(lvl);
++
++    /* ------------------------------------------------------------------
++     * Executor: run level by level; within a level all iterations are
++     * independent.  The level barrier carries every inter-iteration
++     * dependence of the original loop.
++     * ------------------------------------------------------------------ */
+     for (int nl = 0; nl < iterations; nl++) {
+-        for (long i = 1; i < LEN_1D; i++) {
+-            u[ju[i]] += v[kv[i]] * c[i];
+-            v[jv[i]] = u[ku[i]] * d[i] + c[i];
++        for (int L = 1; L <= maxlvl; L++) {
++            long lo = start[L];
++            long hi = start[L + 1];
++#pragma omp parallel for default(none) shared(order, u, v, c, d, ju, jv, ku, kv) firstprivate(lo, hi) if(hi - lo > 1024)
++            for (long p = lo; p < hi; p++) {
++                const long i = order[p];
++                u[ju[i]] += v[kv[i]] * c[i];
++                v[jv[i]] = u[ku[i]] * d[i] + c[i];
++            }
+         }
+         dummy(a, b, c, d, e);
+     }
++
++    free(order);
++    free(start);
+     return (real_t)0;
+ }
+ 

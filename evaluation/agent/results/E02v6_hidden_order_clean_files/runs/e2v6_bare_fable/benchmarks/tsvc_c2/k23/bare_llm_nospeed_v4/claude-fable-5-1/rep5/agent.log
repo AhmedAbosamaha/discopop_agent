@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : k23.c
+  Model          : claude-fable-5-1
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-fable-5-1...
+│  [bare] k23.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Done. The `i` loop in `kernel_k23` is now `#pragma omp parallel for default(none) shared(u, v, w, c, x, d)`; the outer `nl` loop stays sequential because `dummy` modifies `c`/`d` between trips and `u[i] +=` accumulates across them. Each `i` iteration touches only its own index, so the loop is race-free and order-independent at any thread count or schedule.
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

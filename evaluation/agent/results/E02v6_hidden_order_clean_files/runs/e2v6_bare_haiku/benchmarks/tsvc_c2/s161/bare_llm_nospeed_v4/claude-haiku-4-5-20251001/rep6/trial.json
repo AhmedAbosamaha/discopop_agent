@@ -1,0 +1,208 @@
+{
+  "benchmark": "tsvc_c2/s161",
+  "kernel": "s161",
+  "source": "s161.c",
+  "arm": "bare_llm_nospeed_v4",
+  "model": "claude-haiku-4-5-20251001",
+  "arm_flags": [
+    "--require-speedup",
+    "--min-runtime-share",
+    "0.01",
+    "--no-require-speedup",
+    "--prompt-version",
+    "4",
+    "--timing-cflags=-DSTANDARD_DATASET"
+  ],
+  "started_at": "2026-10-06T06:24:04",
+  "host": "rms14562",
+  "host_load_start": [
+    10.48193359375,
+    9.50537109375,
+    9.59716796875
+  ],
+  "agent_cmd": [
+    "/home/ahmedabosamaha/discopop_agent/venv/bin/python",
+    "-m",
+    "discopop_agent.bare_llm",
+    "--project-dir",
+    ".",
+    "--project-units",
+    "s161.c,main.c",
+    "--project-include",
+    ".",
+    "--project-editable",
+    "s161.c",
+    "--model",
+    "claude-haiku-4-5-20251001",
+    "--no-require-speedup",
+    "--prompt-version",
+    "4",
+    "--exclude-functions",
+    "main,dummy"
+  ],
+  "agent_s": 103.2,
+  "agent_rc": 0,
+  "llm_calls": 1,
+  "llm_call_failures": 0,
+  "harness_reasks": 0,
+  "harness_discards": 0,
+  "explorer_retries": 0,
+  "explorer_stalls": 0,
+  "reverts": 0,
+  "refresh_fast": 0,
+  "refresh_full": 0,
+  "refresh_fallback": 0,
+  "runtime_remeasurements": 0,
+  "phase_b_deferred": 0,
+  "phase_b_joint_kept": 0,
+  "dp_floor": null,
+  "gate_failures_phase_a": {},
+  "gate_failures_phase_b": {},
+  "gate_passes_phase_a": 0,
+  "gate_failures_d40": {},
+  "d40_verdicts": {},
+  "exposure_verdicts": {},
+  "d40_seconds": 0,
+  "requeued_regions": 0,
+  "region_verdicts": {},
+  "settle_dropped": 0,
+  "llm_usage": {
+    "calls_recorded": 1,
+    "input_tokens": 66,
+    "output_tokens": 13204,
+    "cache_read_input_tokens": 133376,
+    "cache_creation_input_tokens": 15362,
+    "cost_usd": 0.1115,
+    "model_seconds": 102.1
+  },
+  "layout": "project",
+  "files_changed": [
+    "s161.c"
+  ],
+  "source_changed": true,
+  "scaffold": {
+    "ok": true,
+    "problems": [],
+    "applies": true
+  },
+  "editable": [
+    "s161.c"
+  ],
+  "harness_sha256": "01b04085fb14391ee7a771e2b8b5b2bc7a5e71ec602803f9ced0400370257466",
+  "pragmas_added": 2,
+  "pragmas_in_final": 2,
+  "hot_loop": {
+    "entry": "kernel_s161",
+    "function": "kernel_s161",
+    "line": 6,
+    "writes": [
+      "a",
+      "c"
+    ]
+  },
+  "hot_loop_covered": true,
+  "hot_loop_coverage": {
+    "criterion": "v2 (27 Sep 2026)",
+    "covered": true,
+    "covering": [
+      {
+        "function": "kernel_s161",
+        "line": 9,
+        "directive": "#pragma omp parallel for schedule(static) shared(b, c, d, a) private(i)",
+        "writes": [
+          "c"
+        ]
+      },
+      {
+        "function": "kernel_s161",
+        "line": 20,
+        "directive": "#pragma omp parallel for schedule(static) shared(b, c, d, e, a) private(i)",
+        "writes": [
+          "a"
+        ]
+      }
+    ],
+    "uncounted": [],
+    "elsewhere": []
+  },
+  "candidates_recorded": 0,
+  "verify": {
+    "verify_size": "LARGE",
+    "threads": [
+      6,
+      12
+    ],
+    "repeats": 5,
+    "compiler": "/usr/bin/clang-20",
+    "final_flags": [],
+    "build_errors": {
+      "final_dump": "dabosamaha/discopop_agent/evaluation/agent/runs/e2v6_bare_haiku/benchmarks/tsvc_c2/s161/bare_llm_nospeed_v4/claude-haiku-4-5-20251001/rep6/final/s161.c:20:81: error: use of undeclared identifier 'i'\n   20 |         #pragma omp parallel for schedule(static) shared(b, c, d, e, a) private(i)\n      |                                                                                 ^\n2 errors generated.\n",
+      "final_par": "dabosamaha/discopop_agent/evaluation/agent/runs/e2v6_bare_haiku/benchmarks/tsvc_c2/s161/bare_llm_nospeed_v4/claude-haiku-4-5-20251001/rep6/final/s161.c:20:81: error: use of undeclared identifier 'i'\n   20 |         #pragma omp parallel for schedule(static) shared(b, c, d, e, a) private(i)\n      |                                                                                 ^\n2 errors generated.\n"
+    },
+    "dump_exact": null,
+    "dump_max_rel_err": null,
+    "status": "verify_build_failed",
+    "speed_measurable": true
+  },
+  "verify_s": 0.4,
+  "status": "done",
+  "outcome": "VERIFY_FAILED",
+  "finished_at": "2026-10-06T06:25:48",
+  "host_load_end": [
+    8.94384765625,
+    9.2578125,
+    9.49755859375
+  ],
+  "profile": {
+    "wrapper": "discopop_cc",
+    "layout": "project",
+    "units": [
+      "s161.c",
+      "main.c"
+    ],
+    "instrument_s": 0.21,
+    "profiled_run_s": 0.31,
+    "explore_stalls": 0,
+    "explore_s": 1.37,
+    "explore_success_s": 1.37,
+    "explore_attempts": 1,
+    "explore_timed_out": false,
+    "explore_failures": [],
+    "patterns": {
+      "optimizer_output": 0,
+      "merged_pattern": 0,
+      "task": 0,
+      "do_all": 0,
+      "reduction": 0
+    },
+    "profile_sha256": "81f2e56bc03da09484bb4a8af1c1b2ba8e794d076847ae485cb6d5507b1b9621"
+  },
+  "package_integrity": {
+    "before": {
+      "checked": "before trial",
+      "at": "2026-10-06T06:24:04",
+      "prepared_sha256": "d6b27034a392ab9655a7d4166b416c4b39578f1441aef4b219c8337dec842d5d",
+      "packager_sha256": "d6b27034a392ab9655a7d4166b416c4b39578f1441aef4b219c8337dec842d5d",
+      "harness_sha256": "01b04085fb14391ee7a771e2b8b5b2bc7a5e71ec602803f9ced0400370257466",
+      "archived_sha256": "d6b27034a392ab9655a7d4166b416c4b39578f1441aef4b219c8337dec842d5d",
+      "profile_sha256": "81f2e56bc03da09484bb4a8af1c1b2ba8e794d076847ae485cb6d5507b1b9621",
+      "ok": true
+    },
+    "after": {
+      "checked": "after trial",
+      "at": "2026-10-06T06:25:48",
+      "prepared_sha256": "d6b27034a392ab9655a7d4166b416c4b39578f1441aef4b219c8337dec842d5d",
+      "packager_sha256": "d6b27034a392ab9655a7d4166b416c4b39578f1441aef4b219c8337dec842d5d",
+      "harness_sha256": "01b04085fb14391ee7a771e2b8b5b2bc7a5e71ec602803f9ced0400370257466",
+      "archived_sha256": "d6b27034a392ab9655a7d4166b416c4b39578f1441aef4b219c8337dec842d5d",
+      "profile_sha256": "81f2e56bc03da09484bb4a8af1c1b2ba8e794d076847ae485cb6d5507b1b9621",
+      "ok": true
+    }
+  },
+  "speed_check_off": true,
+  "timing_flags": [
+    "--timing-cflags=-DSTANDARD_DATASET"
+  ],
+  "harness_edit_redos": [],
+  "repeat": 6
+}

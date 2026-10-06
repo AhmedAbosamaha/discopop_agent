@@ -1,0 +1,96 @@
+#include "data.h"
+#include <stdlib.h>
+
+/* A level with fewer iterations than this is run serially (same body). */
+#define K19_PAR_THRESHOLD 256
+
+static inline int k19_imax(int x, int y) { return x > y ? x : y; }
+
+real_t kernel_k19(void)
+{
+    const long n = LEN_1D;
+
+    /* ---------------- inspector (index arrays never change) ---------------- */
+
+    /* 1. range of indices used, to size the per-location tables */
+    int maxidx = 0;
+#pragma omp parallel for reduction(max:maxidx) shared(ju, jv, ku, kv) firstprivate(n)
+    for (long i = 1; i < n; i++) {
+        int m = ju[i];
+        if (jv[i] > m) m = jv[i];
+        if (ku[i] > m) m = ku[i];
+        if (kv[i] > m) m = kv[i];
+        if (m > maxidx) maxidx = m;
+    }
+    const long tab = (long)maxidx + 1;
+
+    int *lw_u = (int *)calloc((size_t)tab, sizeof(int)); /* last level writing u[x] */
+    int *lr_u = (int *)calloc((size_t)tab, sizeof(int)); /* last level reading u[x] */
+    int *lw_v = (int *)calloc((size_t)tab, sizeof(int)); /* last level writing v[x] */
+    int *lr_v = (int *)calloc((size_t)tab, sizeof(int)); /* last level reading v[x] */
+    int *level = (int *)malloc((size_t)n * sizeof(int));
+
+    /* 2. wavefront levels: level[i] = 1 + max level of any earlier conflicting iteration
+     *    (RAW, WAR and WAW on u and v).  Sequential by nature. */
+    int nlev = 0;
+    for (long i = 1; i < n; i++) {
+        const int a1 = ju[i], a2 = ku[i], b1 = jv[i], b2 = kv[i];
+        int L = lw_u[a1];               /* u[a1] is read+written: after earlier writes */
+        L = k19_imax(L, lr_u[a1]);      /* ... and after earlier reads (WAR) */
+        L = k19_imax(L, lw_u[a2]);      /* read of u[a2] after earlier writes (RAW) */
+        L = k19_imax(L, lw_v[b1]);      /* write of v[b1] after earlier writes (WAW) */
+        L = k19_imax(L, lr_v[b1]);      /* ... and after earlier reads (WAR) */
+        L = k19_imax(L, lw_v[b2]);      /* read of v[b2] after earlier writes (RAW) */
+        L += 1;
+        level[i] = L;
+        if (L > nlev) nlev = L;
+        lw_u[a1] = L;
+        lw_v[b1] = L;
+        if (L > lr_u[a2]) lr_u[a2] = L;
+        if (L > lr_v[b2]) lr_v[b2] = L;
+    }
+    free(lw_u);
+    free(lr_u);
+    free(lw_v);
+    free(lr_v);
+
+    /* 3. counting sort of iterations by level -> CSR (off[lev] .. off[lev+1]) */
+    long *off = (long *)calloc((size_t)nlev + 2, sizeof(long));
+    long *pos = (long *)malloc(((size_t)nlev + 2) * sizeof(long));
+    long *order = (long *)malloc((size_t)(n > 1 ? n - 1 : 1) * sizeof(long));
+    for (long i = 1; i < n; i++) off[level[i] + 1]++;
+    for (int l = 1; l <= nlev + 1; l++) off[l] += off[l - 1];
+    for (int l = 0; l <= nlev + 1; l++) pos[l] = off[l];
+    for (long i = 1; i < n; i++) order[pos[level[i]]++] = i;
+    free(pos);
+    free(level);
+
+    /* ---------------- executor ---------------- */
+    for (int nl = 0; nl < iterations; nl++) {
+        for (int lev = 1; lev <= nlev; lev++) {
+            const long s = off[lev];
+            const long e = off[lev + 1];
+            if (e - s >= K19_PAR_THRESHOLD) {
+                /* iterations of one level touch disjoint written locations and read
+                 * nothing written within the level: any order gives the same result */
+#pragma omp parallel for shared(order, u, v, c, d, ju, jv, ku, kv) firstprivate(s, e)
+                for (long k = s; k < e; k++) {
+                    const long i = order[k];
+                    u[ju[i]] += v[kv[i]] * c[i];
+                    v[jv[i]] = u[ku[i]] * d[i] + c[i];
+                }
+            } else {
+                for (long k = s; k < e; k++) {
+                    const long i = order[k];
+                    u[ju[i]] += v[kv[i]] * c[i];
+                    v[jv[i]] = u[ku[i]] * d[i] + c[i];
+                }
+            }
+        }
+        dummy(a, b, c, d, e);
+    }
+
+    free(off);
+    free(order);
+    return (real_t)0;
+}

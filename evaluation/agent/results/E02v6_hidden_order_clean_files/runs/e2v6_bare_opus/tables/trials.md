@@ -1,0 +1,37 @@
+| Benchmark | Arm | Model | Rep | Outcome | Best speedup | Pragmas (DP+LLM) | Rewrites | Baseline | LLM calls | Agent s |
+|---|---|---|---:|---|---:|---|---:|---:|---:|---:|
+| tsvc_c2/k19 | bare_llm_nospeed_v4 | claude-opus-5-5 | 1 | BROKEN | — | —+— | — | — | 1 | 56.5 |
+| tsvc_c2/k19 | bare_llm_nospeed_v4 | claude-opus-5-5 | 2 | BROKEN | — | —+— | — | — | 1 | 100.6 |
+| tsvc_c2/k19 | bare_llm_nospeed_v4 | claude-opus-5-5 | 3 | BROKEN | — | —+— | — | — | 1 | 63.9 |
+| tsvc_c2/k19 | bare_llm_nospeed_v4 | claude-opus-5-5 | 4 | BROKEN | — | —+— | — | — | 1 | 65.9 |
+| tsvc_c2/k19 | bare_llm_nospeed_v4 | claude-opus-5-5 | 5 | BROKEN | — | —+— | — | — | 1 | 66.7 |
+| tsvc_c2/k23 | bare_llm_nospeed_v4 | claude-opus-5-5 | 1 | BROKEN | 4.32x | —+— | — | — | 1 | 16.2 |
+| tsvc_c2/k23 | bare_llm_nospeed_v4 | claude-opus-5-5 | 2 | BROKEN | 4.25x | —+— | — | — | 1 | 19.3 |
+| tsvc_c2/k23 | bare_llm_nospeed_v4 | claude-opus-5-5 | 3 | BROKEN | 4.29x | —+— | — | — | 1 | 15.6 |
+| tsvc_c2/k23 | bare_llm_nospeed_v4 | claude-opus-5-5 | 4 | BROKEN | 4.28x | —+— | — | — | 1 | 17.0 |
+| tsvc_c2/k23 | bare_llm_nospeed_v4 | claude-opus-5-5 | 5 | BROKEN | 4.17x | —+— | — | — | 1 | 19.5 |
+| tsvc_c2/k27 | bare_llm_nospeed_v4 | claude-opus-5-5 | 1 | BROKEN | — | —+— | — | — | 1 | 60.2 |
+| tsvc_c2/k27 | bare_llm_nospeed_v4 | claude-opus-5-5 | 2 | BROKEN | — | —+— | — | — | 1 | 56.2 |
+| tsvc_c2/k27 | bare_llm_nospeed_v4 | claude-opus-5-5 | 3 | BROKEN | — | —+— | — | — | 1 | 54.4 |
+| tsvc_c2/k27 | bare_llm_nospeed_v4 | claude-opus-5-5 | 4 | BROKEN | — | —+— | — | — | 1 | 58.3 |
+| tsvc_c2/k27 | bare_llm_nospeed_v4 | claude-opus-5-5 | 5 | BROKEN | — | —+— | — | — | 1 | 72.7 |
+| tsvc_c2/k31 | bare_llm_nospeed_v4 | claude-opus-5-5 | 1 | parallel-not-faster | 1.00x | —+— | — | — | 1 | 55.4 |
+| tsvc_c2/k31 | bare_llm_nospeed_v4 | claude-opus-5-5 | 2 | FASTER | 2.27x | —+— | — | — | 1 | 60.9 |
+| tsvc_c2/k31 | bare_llm_nospeed_v4 | claude-opus-5-5 | 3 | FASTER | 2.45x | —+— | — | — | 1 | 64.9 |
+| tsvc_c2/k31 | bare_llm_nospeed_v4 | claude-opus-5-5 | 4 | FASTER | 2.33x | —+— | — | — | 1 | 71.8 |
+| tsvc_c2/k31 | bare_llm_nospeed_v4 | claude-opus-5-5 | 5 | parallel-not-faster | 1.00x | —+— | — | — | 1 | 46.8 |
+| tsvc_c2/k48 | bare_llm_nospeed_v4 | claude-opus-5-5 | 1 | parallel-not-faster | 0.01x | —+— | — | — | 1 | 66.7 |
+| tsvc_c2/k48 | bare_llm_nospeed_v4 | claude-opus-5-5 | 2 | parallel-not-faster | 0.01x | —+— | — | — | 1 | 74.5 |
+| tsvc_c2/k48 | bare_llm_nospeed_v4 | claude-opus-5-5 | 3 | parallel-not-faster | 0.01x | —+— | — | — | 1 | 64.2 |
+| tsvc_c2/k48 | bare_llm_nospeed_v4 | claude-opus-5-5 | 4 | parallel-not-faster | 0.01x | —+— | — | — | 1 | 75.5 |
+| tsvc_c2/k48 | bare_llm_nospeed_v4 | claude-opus-5-5 | 5 | BROKEN | — | —+— | — | — | 1 | 72.2 |
+| tsvc_c2/k53 | bare_llm_nospeed_v4 | claude-opus-5-5 | 1 | parallel-not-faster | 0.00x | —+— | — | — | 1 | 71.6 |
+| tsvc_c2/k53 | bare_llm_nospeed_v4 | claude-opus-5-5 | 2 | parallel-not-faster | 0.03x | —+— | — | — | 1 | 71.0 |
+| tsvc_c2/k53 | bare_llm_nospeed_v4 | claude-opus-5-5 | 3 | parallel-not-faster | 0.03x | —+— | — | — | 1 | 64.0 |
+| tsvc_c2/k53 | bare_llm_nospeed_v4 | claude-opus-5-5 | 4 | BROKEN | 0.01x | —+— | — | — | 1 | 63.4 |
+| tsvc_c2/k53 | bare_llm_nospeed_v4 | claude-opus-5-5 | 5 | parallel-not-faster | 0.00x | —+— | — | — | 1 | 68.8 |
+| tsvc_c2/s161 | bare_llm_nospeed_v4 | claude-opus-5-5 | 1 | FASTER | 1.66x | —+— | — | — | 1 | 130.7 |
+| tsvc_c2/s161 | bare_llm_nospeed_v4 | claude-opus-5-5 | 2 | FASTER | 1.71x | —+— | — | — | 1 | 24.1 |
+| tsvc_c2/s161 | bare_llm_nospeed_v4 | claude-opus-5-5 | 3 | FASTER | 1.67x | —+— | — | — | 1 | 24.2 |
+| tsvc_c2/s161 | bare_llm_nospeed_v4 | claude-opus-5-5 | 4 | FASTER | 2.26x | —+— | — | — | 1 | 28.0 |
+| tsvc_c2/s161 | bare_llm_nospeed_v4 | claude-opus-5-5 | 5 | FASTER | 2.21x | —+— | — | — | 1 | 25.8 |

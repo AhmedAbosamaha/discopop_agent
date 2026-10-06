@@ -1,0 +1,68 @@
+#include <stdlib.h>
+#include "data.h"
+
+real_t kernel_k31(void)
+{
+    const long o = off;
+    const long f = far;
+    real_t *tmp = NULL;
+    if (f > 0) {
+        tmp = (real_t *)malloc(sizeof(real_t) * (size_t)LEN_1D);
+        if (!tmp) return (real_t)0;
+    }
+
+    for (int nl = 0; nl < iterations; nl++) {
+        if (f > 0) {
+            /* new v depends only on old u */
+#pragma omp parallel for default(none) shared(u, c, d, tmp) firstprivate(f) schedule(static)
+            for (long i = 1; i < LEN_1D; i++) {
+                tmp[i] = u[i + f] * d[i] + c[i];
+            }
+            /* u uses new v when i+off in [1, i), old v otherwise */
+#pragma omp parallel for default(none) shared(u, v, c, tmp) firstprivate(o) schedule(static)
+            for (long i = 1; i < LEN_1D; i++) {
+                real_t vv;
+                if (o < 0 && i + o >= 1)
+                    vv = tmp[i + o];
+                else
+                    vv = v[i + o];
+                u[i] += vv * c[i];
+            }
+#pragma omp parallel for default(none) shared(v, tmp) schedule(static)
+            for (long i = 1; i < LEN_1D; i++) {
+                v[i] = tmp[i];
+            }
+        } else {
+            if (o >= 0) {
+                /* u reads only old v */
+#pragma omp parallel for default(none) shared(u, v, c) firstprivate(o) schedule(static)
+                for (long i = 1; i < LEN_1D; i++) {
+                    u[i] += v[i + o] * c[i];
+                }
+            } else {
+                /* recurrence u[i] <- u[i-k], k = -(off+far) >= 1: independent chains */
+                const long k = -(o + f);
+                const long nch = (k < (long)LEN_1D - 1) ? k : (long)LEN_1D - 1;
+#pragma omp parallel for default(none) shared(u, v, c, d) firstprivate(o, k, nch) schedule(static)
+                for (long r = 0; r < nch; r++) {
+                    for (long i = 1 + r; i < LEN_1D; i += k) {
+                        real_t vv;
+                        if (i + o >= 1)
+                            vv = u[i - k] * d[i + o] + c[i + o];
+                        else
+                            vv = v[i + o];
+                        u[i] += vv * c[i];
+                    }
+                }
+            }
+            /* v reads final u (indices < 1 are never modified) */
+#pragma omp parallel for default(none) shared(u, v, c, d) firstprivate(f) schedule(static)
+            for (long i = 1; i < LEN_1D; i++) {
+                v[i] = u[i + f] * d[i] + c[i];
+            }
+        }
+        dummy(a, b, c, d, e);
+    }
+    free(tmp);
+    return (real_t)0;
+}

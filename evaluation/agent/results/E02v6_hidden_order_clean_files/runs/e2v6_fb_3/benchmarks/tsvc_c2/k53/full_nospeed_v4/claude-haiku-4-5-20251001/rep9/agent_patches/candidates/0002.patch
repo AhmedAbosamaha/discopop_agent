@@ -1,0 +1,33 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6_fb_3/benchmarks/tsvc_c2/k53/full_nospeed_v4/claude-haiku-4-5-20251001/rep9/work/k53.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6_fb_3/benchmarks/tsvc_c2/k53/full_nospeed_v4/claude-haiku-4-5-20251001/rep9/work/k53.c
+@@ -2,12 +2,27 @@
+ 
+ real_t kernel_k53(void)
+ {
++    // Pre-compute and save c values for each nl iteration
++    real_t** c_saved = (real_t**)malloc(iterations * sizeof(real_t*));
++    for (int nl = 0; nl < iterations; nl++) {
++        c_saved[nl] = (real_t*)malloc(LEN_1D * sizeof(real_t));
++        memcpy(c_saved[nl], c, LEN_1D * sizeof(real_t));
++        dummy(a, b, c, d, e);
++    }
++
++    // Compute with saved c values (nl iterations now independent)
+     for (int nl = 0; nl < iterations; nl++) {
+         for (long i = 1; i < LEN_1D; i++) {
+-            u[ju[i]] += v[kv[i]] * c[i];
+-            v[jv[i]] = u[ku[i]] * d[i] + c[i];
++            u[ju[i]] += v[kv[i]] * c_saved[nl][i];
++            v[jv[i]] = u[ku[i]] * d[i] + c_saved[nl][i];
+         }
+-        dummy(a, b, c, d, e);
+     }
++
++    // Free allocated memory
++    for (int nl = 0; nl < iterations; nl++) {
++        free(c_saved[nl]);
++    }
++    free(c_saved);
++
+     return (real_t)0;
+ }

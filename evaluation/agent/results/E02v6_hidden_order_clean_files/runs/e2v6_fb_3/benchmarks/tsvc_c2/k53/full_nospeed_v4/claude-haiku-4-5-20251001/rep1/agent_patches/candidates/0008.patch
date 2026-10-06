@@ -1,0 +1,30 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6_fb_3/benchmarks/tsvc_c2/k53/full_nospeed_v4/claude-haiku-4-5-20251001/rep1/work/k53.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6_fb_3/benchmarks/tsvc_c2/k53/full_nospeed_v4/claude-haiku-4-5-20251001/rep1/work/k53.c
+@@ -2,12 +2,26 @@
+ 
+ real_t kernel_k53(void)
+ {
++    real_t *v_saved = (real_t *)malloc(sizeof(real_t) * LEN_1D);
++
+     for (int nl = 0; nl < iterations; nl++) {
++        // Save v at start of this iteration to preserve cross-iteration flow
+         for (long i = 1; i < LEN_1D; i++) {
+-            u[ju[i]] += v[kv[i]] * c[i];
++            v_saved[i] = v[i];
++        }
++
++        // First loop: read from saved v, update u
++        for (long i = 1; i < LEN_1D; i++) {
++            u[ju[i]] += v_saved[kv[i]] * c[i];
++        }
++        // Second loop: read updated u, write to v
++        for (long i = 1; i < LEN_1D; i++) {
+             v[jv[i]] = u[ku[i]] * d[i] + c[i];
+         }
++
+         dummy(a, b, c, d, e);
+     }
++
++    free(v_saved);
+     return (real_t)0;
+ }

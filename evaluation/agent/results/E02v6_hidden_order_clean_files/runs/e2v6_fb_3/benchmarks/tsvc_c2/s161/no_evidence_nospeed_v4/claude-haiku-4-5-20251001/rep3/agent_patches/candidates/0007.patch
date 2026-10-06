@@ -1,0 +1,29 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6_fb_3/benchmarks/tsvc_c2/s161/no_evidence_nospeed_v4/claude-haiku-4-5-20251001/rep3/work/s161.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6_fb_3/benchmarks/tsvc_c2/s161/no_evidence_nospeed_v4/claude-haiku-4-5-20251001/rep3/work/s161.c
+@@ -6,22 +6,26 @@
+     for (int nl = 0; nl < iterations; nl++) {
+         real_t *a_new = (real_t *)malloc(LEN_1D * sizeof(real_t));
+ 
++        #pragma omp parallel for shared(a_new) 
+         for (int i = 0; i < LEN_1D-1; ++i) {
+             a_new[i] = a[i];
+         }
+ 
++        #pragma omp parallel for shared(a_new) 
+         for (int i = 0; i < LEN_1D-1; ++i) {
+             if (b[i] < (real_t)0.) {
+                 c[i+1] = a_new[i] + d[i] * d[i];
+             }
+         }
+ 
++        #pragma omp parallel for shared(a_new) 
+         for (int i = 0; i < LEN_1D-1; ++i) {
+             if (!(b[i] < (real_t)0.)) {
+                 a_new[i] = c[i] + d[i] * e[i];
+             }
+         }
+ 
++        #pragma omp parallel for shared(a_new) 
+         for (int i = 0; i < LEN_1D-1; ++i) {
+             a[i] = a_new[i];
+         }

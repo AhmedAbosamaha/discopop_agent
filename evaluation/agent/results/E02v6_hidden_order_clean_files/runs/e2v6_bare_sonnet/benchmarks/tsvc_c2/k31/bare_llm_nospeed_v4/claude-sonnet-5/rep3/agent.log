@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : k31.c
+  Model          : claude-sonnet-5
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] k31.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan **Dependence analysis.** In the inner loop ``` u[i] += v[i+off]*c[i]; v[i] = u[i+far]*d[i] + c[i]; ``` with the sweep running `i` from low to high, the only way one iteration can see a value *written earlier in the same sweep* is when `off<0` (index `i+off<i` already updated this sweep) or `far<0` (index `i+far<i`, or `far==0` reading the value this same iteration just wrote). The task gua
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

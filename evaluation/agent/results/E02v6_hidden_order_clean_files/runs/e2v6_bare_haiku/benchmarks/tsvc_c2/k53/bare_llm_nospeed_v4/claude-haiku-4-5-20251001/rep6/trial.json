@@ -1,0 +1,232 @@
+{
+  "benchmark": "tsvc_c2/k53",
+  "kernel": "k53",
+  "source": "k53.c",
+  "arm": "bare_llm_nospeed_v4",
+  "model": "claude-haiku-4-5-20251001",
+  "arm_flags": [
+    "--require-speedup",
+    "--min-runtime-share",
+    "0.01",
+    "--no-require-speedup",
+    "--prompt-version",
+    "4",
+    "--timing-cflags=-DSTANDARD_DATASET"
+  ],
+  "started_at": "2026-10-06T06:44:04",
+  "host": "rms14562",
+  "host_load_start": [
+    10.25732421875,
+    9.44580078125,
+    9.4892578125
+  ],
+  "agent_cmd": [
+    "/home/ahmedabosamaha/discopop_agent/venv/bin/python",
+    "-m",
+    "discopop_agent.bare_llm",
+    "--project-dir",
+    ".",
+    "--project-units",
+    "k53.c,main.c",
+    "--project-include",
+    ".",
+    "--project-editable",
+    "k53.c",
+    "--model",
+    "claude-haiku-4-5-20251001",
+    "--no-require-speedup",
+    "--prompt-version",
+    "4",
+    "--exclude-functions",
+    "main,dummy"
+  ],
+  "agent_s": 40.7,
+  "agent_rc": 0,
+  "llm_calls": 1,
+  "llm_call_failures": 0,
+  "harness_reasks": 0,
+  "harness_discards": 0,
+  "explorer_retries": 0,
+  "explorer_stalls": 0,
+  "reverts": 0,
+  "refresh_fast": 0,
+  "refresh_full": 0,
+  "refresh_fallback": 0,
+  "runtime_remeasurements": 0,
+  "phase_b_deferred": 0,
+  "phase_b_joint_kept": 0,
+  "dp_floor": null,
+  "gate_failures_phase_a": {},
+  "gate_failures_phase_b": {},
+  "gate_passes_phase_a": 0,
+  "gate_failures_d40": {},
+  "d40_verdicts": {},
+  "exposure_verdicts": {},
+  "d40_seconds": 0,
+  "requeued_regions": 0,
+  "region_verdicts": {},
+  "settle_dropped": 0,
+  "llm_usage": {
+    "calls_recorded": 1,
+    "input_tokens": 66,
+    "output_tokens": 4613,
+    "cache_read_input_tokens": 114350,
+    "cache_creation_input_tokens": 6811,
+    "cost_usd": 0.0495,
+    "model_seconds": 39.6
+  },
+  "layout": "project",
+  "files_changed": [
+    "k53.c"
+  ],
+  "source_changed": true,
+  "scaffold": {
+    "ok": true,
+    "problems": [],
+    "applies": true
+  },
+  "editable": [
+    "k53.c"
+  ],
+  "harness_sha256": "af1764fa5907f3fbdd0315b3de469d0fba9b82f98c1ecf304d959d9e9e9db444",
+  "pragmas_added": 2,
+  "pragmas_in_final": 2,
+  "hot_loop": {
+    "entry": "kernel_k53",
+    "function": "kernel_k53",
+    "line": 6,
+    "writes": [
+      "u",
+      "v"
+    ]
+  },
+  "hot_loop_covered": true,
+  "hot_loop_coverage": {
+    "criterion": "v2 (27 Sep 2026)",
+    "covered": true,
+    "covering": [
+      {
+        "function": "kernel_k53",
+        "line": 7,
+        "directive": "#pragma omp parallel for schedule(static) shared(u, v, c, ju, kv)",
+        "writes": [
+          "u"
+        ]
+      },
+      {
+        "function": "kernel_k53",
+        "line": 13,
+        "directive": "#pragma omp parallel for schedule(static) shared(v, u, d, c, jv, ku)",
+        "writes": [
+          "v"
+        ]
+      }
+    ],
+    "uncounted": [],
+    "elsewhere": []
+  },
+  "candidates_recorded": 0,
+  "verify": {
+    "verify_size": "STANDARD",
+    "threads": [
+      6,
+      12
+    ],
+    "repeats": 5,
+    "compiler": "/usr/bin/clang-20",
+    "final_flags": [],
+    "dump_exact": false,
+    "dump_max_rel_err": 0.9736720015645566,
+    "seed": "7",
+    "dump_exact_seeded": false,
+    "dump_seeded_max_rel_err": 0.9868507462298313,
+    "seq_median_s": 1.4395,
+    "seq_kernel_median_s": 1.337899,
+    "timing_basis": "kernel",
+    "par": {
+      "6": {
+        "median_s": 0.1935,
+        "program_speedup": 7.441,
+        "max_rel_err": 0.9478537033769178,
+        "kernel_median_s": 0.084117,
+        "kernel_speedup": 15.905,
+        "speedup": 15.905
+      },
+      "12": {
+        "median_s": 0.1975,
+        "program_speedup": 7.29,
+        "max_rel_err": 0.9478537033769178,
+        "kernel_median_s": 0.079304,
+        "kernel_speedup": 16.871,
+        "speedup": 16.871
+      }
+    },
+    "digest_max_rel_err": 0.9478537033769178,
+    "stable_at_fixed_threads": true,
+    "kernel_program_disagree": false,
+    "digest_seeded_rel_err": 0.9736907281230683,
+    "status": "ok",
+    "speed_measurable": true
+  },
+  "verify_s": 11.8,
+  "status": "done",
+  "outcome": "BROKEN",
+  "finished_at": "2026-10-06T06:44:56",
+  "host_load_end": [
+    9.5498046875,
+    9.36328125,
+    9.45703125
+  ],
+  "profile": {
+    "wrapper": "discopop_cc",
+    "layout": "project",
+    "units": [
+      "k53.c",
+      "main.c"
+    ],
+    "instrument_s": 0.21,
+    "profiled_run_s": 0.67,
+    "explore_stalls": 0,
+    "explore_s": 1.37,
+    "explore_success_s": 1.37,
+    "explore_attempts": 1,
+    "explore_timed_out": false,
+    "explore_failures": [],
+    "patterns": {
+      "optimizer_output": 0,
+      "merged_pattern": 0,
+      "task": 0,
+      "do_all": 0,
+      "reduction": 0
+    },
+    "profile_sha256": "1877f1f9cc0dacf4dfc547d6eb6fa9035a787edec62ab3e04a3c9910e4fd63c5"
+  },
+  "package_integrity": {
+    "before": {
+      "checked": "before trial",
+      "at": "2026-10-06T06:44:04",
+      "prepared_sha256": "8175ab856b302fcf402635a649434904d2b55c0b1308efd460e737053d5109fd",
+      "packager_sha256": "8175ab856b302fcf402635a649434904d2b55c0b1308efd460e737053d5109fd",
+      "harness_sha256": "af1764fa5907f3fbdd0315b3de469d0fba9b82f98c1ecf304d959d9e9e9db444",
+      "archived_sha256": "8175ab856b302fcf402635a649434904d2b55c0b1308efd460e737053d5109fd",
+      "profile_sha256": "1877f1f9cc0dacf4dfc547d6eb6fa9035a787edec62ab3e04a3c9910e4fd63c5",
+      "ok": true
+    },
+    "after": {
+      "checked": "after trial",
+      "at": "2026-10-06T06:44:56",
+      "prepared_sha256": "8175ab856b302fcf402635a649434904d2b55c0b1308efd460e737053d5109fd",
+      "packager_sha256": "8175ab856b302fcf402635a649434904d2b55c0b1308efd460e737053d5109fd",
+      "harness_sha256": "af1764fa5907f3fbdd0315b3de469d0fba9b82f98c1ecf304d959d9e9e9db444",
+      "archived_sha256": "8175ab856b302fcf402635a649434904d2b55c0b1308efd460e737053d5109fd",
+      "profile_sha256": "1877f1f9cc0dacf4dfc547d6eb6fa9035a787edec62ab3e04a3c9910e4fd63c5",
+      "ok": true
+    }
+  },
+  "speed_check_off": true,
+  "timing_flags": [
+    "--timing-cflags=-DSTANDARD_DATASET"
+  ],
+  "harness_edit_redos": [],
+  "repeat": 6
+}

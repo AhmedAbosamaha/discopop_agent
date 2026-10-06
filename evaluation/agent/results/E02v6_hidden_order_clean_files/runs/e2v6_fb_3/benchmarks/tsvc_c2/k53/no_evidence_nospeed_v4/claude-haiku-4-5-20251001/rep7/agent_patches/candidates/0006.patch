@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6_fb_3/benchmarks/tsvc_c2/k53/no_evidence_nospeed_v4/claude-haiku-4-5-20251001/rep7/work/k53.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6_fb_3/benchmarks/tsvc_c2/k53/no_evidence_nospeed_v4/claude-haiku-4-5-20251001/rep7/work/k53.c
+@@ -15,6 +15,7 @@
+             u_work[ju[i]] += v_work[kv[i]] * c[i];
+             v_work[jv[i]] = u_work[ku[i]] * d[i] + c[i];
+         }
++        #pragma omp parallel for shared(v_work,u_work) 
+         for (long i = 0; i < LEN_1D; i++) {
+             u[i] = u_work[i];
+             v[i] = v_work[i];

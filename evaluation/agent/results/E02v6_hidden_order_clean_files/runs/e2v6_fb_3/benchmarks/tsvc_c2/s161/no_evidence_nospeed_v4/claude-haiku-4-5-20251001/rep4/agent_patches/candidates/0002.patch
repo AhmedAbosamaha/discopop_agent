@@ -1,0 +1,34 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6_fb_3/benchmarks/tsvc_c2/s161/no_evidence_nospeed_v4/claude-haiku-4-5-20251001/rep4/work/s161.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6_fb_3/benchmarks/tsvc_c2/s161/no_evidence_nospeed_v4/claude-haiku-4-5-20251001/rep4/work/s161.c
+@@ -1,19 +1,24 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s161(void)
+ {
+     for (int nl = 0; nl < iterations; nl++) {
++        real_t *a_init = (real_t *)malloc(LEN_1D * sizeof(real_t));
++        for (int i = 0; i < LEN_1D; ++i) {
++            a_init[i] = a[i];
++        }
++        for (int i = 0; i < LEN_1D-1; ++i) {
++            if (b[i] >= (real_t)0.) {
++                a[i] = c[i] + d[i] * e[i];
++            }
++        }
+         for (int i = 0; i < LEN_1D-1; ++i) {
+             if (b[i] < (real_t)0.) {
+-                goto L20;
++                c[i+1] = a_init[i] + d[i] * d[i];
+             }
+-            a[i] = c[i] + d[i] * e[i];
+-            goto L10;
+-L20:
+-            c[i+1] = a[i] + d[i] * d[i];
+-L10:
+-            ;
+         }
++        free(a_init);
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

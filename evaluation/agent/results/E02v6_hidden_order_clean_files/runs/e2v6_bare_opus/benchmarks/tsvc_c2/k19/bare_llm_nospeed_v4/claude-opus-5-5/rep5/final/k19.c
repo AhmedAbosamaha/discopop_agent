@@ -1,0 +1,86 @@
+#include <stdlib.h>
+#include "data.h"
+
+static int imax2(int x, int y) { return x > y ? x : y; }
+
+real_t kernel_k19(void)
+{
+    const long n = LEN_1D;
+
+    /* ---- inspector: size of the index space ---- */
+    long maxidx = 0;
+#pragma omp parallel for reduction(max:maxidx) schedule(static)
+    for (long i = 1; i < n; i++) {
+        long m = ju[i];
+        if (jv[i] > m) m = jv[i];
+        if (ku[i] > m) m = ku[i];
+        if (kv[i] > m) m = kv[i];
+        if (m > maxidx) maxidx = m;
+    }
+    long nloc = maxidx + 1;
+
+    int *lw_u = (int *)malloc((size_t)nloc * sizeof(int));
+    int *mr_u = (int *)malloc((size_t)nloc * sizeof(int));
+    int *lw_v = (int *)malloc((size_t)nloc * sizeof(int));
+    int *mr_v = (int *)malloc((size_t)nloc * sizeof(int));
+    int *lev  = (int *)malloc((size_t)(n > 0 ? n : 1) * sizeof(int));
+
+#pragma omp parallel for schedule(static)
+    for (long k = 0; k < nloc; k++) {
+        lw_u[k] = -1; mr_u[k] = -1; lw_v[k] = -1; mr_v[k] = -1;
+    }
+
+    /* ---- inspector: wavefront level of every iteration (sequential) ---- */
+    int nlev = 0;
+    for (long i = 1; i < n; i++) {
+        int a1 = ju[i], a2 = ku[i], b1 = kv[i], b2 = jv[i];
+        int L = lw_v[b1];
+        L = imax2(L, lw_u[a1]);
+        L = imax2(L, mr_u[a1]);
+        L = imax2(L, lw_u[a2]);
+        L = imax2(L, lw_v[b2]);
+        L = imax2(L, mr_v[b2]);
+        L = L + 1;
+        lev[i] = L;
+        mr_v[b1] = imax2(mr_v[b1], L);
+        mr_u[a1] = imax2(mr_u[a1], L);
+        lw_u[a1] = L;
+        mr_u[a2] = imax2(mr_u[a2], L);
+        lw_v[b2] = L;
+        if (L + 1 > nlev) nlev = L + 1;
+    }
+
+    /* ---- bucket iterations by level, original order kept inside a level ---- */
+    long *start = (long *)calloc((size_t)nlev + 1, sizeof(long));
+    long *order = (long *)malloc((size_t)(n > 0 ? n : 1) * sizeof(long));
+    for (long i = 1; i < n; i++)
+        start[lev[i] + 1]++;
+    for (int l = 0; l < nlev; l++)
+        start[l + 1] += start[l];
+    {
+        long *pos = (long *)malloc(((size_t)nlev + 1) * sizeof(long));
+        for (int l = 0; l <= nlev; l++) pos[l] = start[l];
+        for (long i = 1; i < n; i++)
+            order[pos[lev[i]]++] = i;
+        free(pos);
+    }
+
+    /* ---- executor ---- */
+    for (int nl = 0; nl < iterations; nl++) {
+        for (int l = 0; l < nlev; l++) {
+            long pbeg = start[l];
+            long pend = start[l + 1];
+#pragma omp parallel for shared(order, pbeg, pend) schedule(static)
+            for (long p = pbeg; p < pend; p++) {
+                long i = order[p];
+                u[ju[i]] += v[kv[i]] * c[i];
+                v[jv[i]] = u[ku[i]] * d[i] + c[i];
+            }
+        }
+        dummy(a, b, c, d, e);
+    }
+
+    free(order); free(start); free(lev);
+    free(lw_u); free(mr_u); free(lw_v); free(mr_v);
+    return (real_t)0;
+}

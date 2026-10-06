@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : k27.c
+  Model          : claude-sonnet-5
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] k27.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan **Structure:** `kernel_k27` has two loops. The outer `nl` loop (48 iterations) is a genuine sequential recurrence: each pass's `u/v/w` state feeds the next pass, and `dummy()` mutates `a,b,c,d,e` (used as `c[i],d[i],e[i]` next pass) between passes. That loop must stay serial. **The inner `i` loop** is the one to parallelize. Each iteration does: ``` u[ju[i]] += w[kw[i]] * c[i]; v[jv[i]] = 
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

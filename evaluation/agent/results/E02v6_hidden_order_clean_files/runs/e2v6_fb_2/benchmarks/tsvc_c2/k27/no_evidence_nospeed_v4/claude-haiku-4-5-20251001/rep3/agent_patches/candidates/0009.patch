@@ -1,0 +1,24 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6_fb_2/benchmarks/tsvc_c2/k27/no_evidence_nospeed_v4/claude-haiku-4-5-20251001/rep3/work/k27.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6_fb_2/benchmarks/tsvc_c2/k27/no_evidence_nospeed_v4/claude-haiku-4-5-20251001/rep3/work/k27.c
+@@ -1,14 +1,20 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_k27(void)
+ {
++    real_t *u_delta = (real_t *)malloc(LEN_1D * sizeof(real_t));
+     for (int nl = 0; nl < iterations; nl++) {
+         for (long i = 1; i < LEN_1D; i++) {
+-            u[ju[i]] += w[kw[i]] * c[i];
++            u_delta[i] = w[kw[i]] * c[i];
++        }
++        for (long i = 1; i < LEN_1D; i++) {
++            u[ju[i]] += u_delta[i];
+             v[jv[i]] = u[ku[i]] * d[i] + c[i];
+             w[jw[i]] = v[kv[i]] * e[i] + d[i];
+         }
+         dummy(a, b, c, d, e);
+     }
++    free(u_delta);
+     return (real_t)0;
+ }

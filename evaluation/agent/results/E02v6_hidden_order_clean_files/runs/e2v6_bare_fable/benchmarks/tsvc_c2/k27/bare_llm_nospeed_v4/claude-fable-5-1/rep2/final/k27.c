@@ -1,0 +1,98 @@
+#include "data.h"
+#include <stdlib.h>
+
+/*
+ * Inspector/executor parallelization.
+ *
+ * The only loop-carried dependences run through the indirectly indexed
+ * arrays u, v, w.  The index arrays (ju, jv, jw, ku, kv, kw) never change,
+ * so the dependence graph is computed once: every iteration i is assigned a
+ * "level" such that iterations in the same level touch no common location
+ * with at least one write.  Iterations of one level are therefore mutually
+ * independent and may run in any order; levels are executed one after the
+ * other, which preserves every original read-after-write, write-after-read
+ * and write-after-write order (including the order of the += updates on u,
+ * so the floating point result is bit-identical).
+ */
+real_t kernel_k27(void)
+{
+    const long n = LEN_1D;
+
+    /* per-location bookkeeping: level of last writer / max level of readers */
+    int *lwu = (int *)calloc((size_t)n, sizeof(int));
+    int *lru = (int *)calloc((size_t)n, sizeof(int));
+    int *lwv = (int *)calloc((size_t)n, sizeof(int));
+    int *lrv = (int *)calloc((size_t)n, sizeof(int));
+    int *lww = (int *)calloc((size_t)n, sizeof(int));
+    int *lrw = (int *)calloc((size_t)n, sizeof(int));
+    int *lvl = (int *)malloc((size_t)n * sizeof(int));
+    long *order = (long *)malloc((size_t)n * sizeof(long));
+
+    int maxlvl = 0;
+    lvl[0] = 0;
+    for (long i = 1; i < n; i++) {
+        const int ju_i = ju[i], kw_i = kw[i], ku_i = ku[i];
+        const int jv_i = jv[i], kv_i = kv[i], jw_i = jw[i];
+        int L = 0;
+        /* reads must follow the last writer of the location */
+        if (lww[kw_i] > L) L = lww[kw_i];
+        if (lwu[ku_i] > L) L = lwu[ku_i];
+        if (lwv[kv_i] > L) L = lwv[kv_i];
+        /* writes must follow last writer and all previous readers */
+        if (lwu[ju_i] > L) L = lwu[ju_i];
+        if (lru[ju_i] > L) L = lru[ju_i];
+        if (lwv[jv_i] > L) L = lwv[jv_i];
+        if (lrv[jv_i] > L) L = lrv[jv_i];
+        if (lww[jw_i] > L) L = lww[jw_i];
+        if (lrw[jw_i] > L) L = lrw[jw_i];
+        L += 1;
+        lvl[i] = L;
+        if (L > maxlvl) maxlvl = L;
+        /* record this iteration's accesses */
+        if (lrw[kw_i] < L) lrw[kw_i] = L;
+        if (lru[ku_i] < L) lru[ku_i] = L;
+        if (lrv[kv_i] < L) lrv[kv_i] = L;
+        lwu[ju_i] = L;
+        lwv[jv_i] = L;
+        lww[jw_i] = L;
+    }
+
+    /* counting sort of iterations by level (stable: original order kept) */
+    long *start = (long *)calloc((size_t)maxlvl + 2, sizeof(long));
+    for (long i = 1; i < n; i++) {
+        start[lvl[i] + 1]++;
+    }
+    for (int L = 1; L <= maxlvl; L++) {
+        start[L + 1] += start[L];
+    }
+    {
+        long *fill = (long *)malloc(((size_t)maxlvl + 2) * sizeof(long));
+        for (int L = 0; L <= maxlvl + 1; L++) fill[L] = start[L];
+        for (long i = 1; i < n; i++) {
+            order[fill[lvl[i]]++] = i;
+        }
+        free(fill);
+    }
+
+    free(lwu); free(lru); free(lwv); free(lrv); free(lww); free(lrw);
+    free(lvl);
+
+    for (int nl = 0; nl < iterations; nl++) {
+        for (int L = 1; L <= maxlvl; L++) {
+            const long s = start[L];
+            const long t = start[L + 1];
+#pragma omp parallel for shared(order, u, v, w, c, d, e, ju, jv, jw, ku, kv, kw) firstprivate(s, t) if(t - s >= 256)
+            for (long p = s; p < t; p++) {
+                const long i = order[p];
+                u[ju[i]] += w[kw[i]] * c[i];
+                v[jv[i]] = u[ku[i]] * d[i] + c[i];
+                w[jw[i]] = v[kv[i]] * e[i] + d[i];
+            }
+        }
+        dummy(a, b, c, d, e);
+    }
+
+    free(start);
+    free(order);
+    return (real_t)0;
+}

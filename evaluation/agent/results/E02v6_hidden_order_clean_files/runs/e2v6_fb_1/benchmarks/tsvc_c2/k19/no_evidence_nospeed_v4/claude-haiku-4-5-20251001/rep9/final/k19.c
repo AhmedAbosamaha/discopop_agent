@@ -1,0 +1,16 @@
+#include "data.h"
+
+real_t kernel_k19(void)
+{
+    for (int nl = 0; nl < iterations; nl++) {
+        u[ju[1]] += v[kv[1]] * c[1];
+        #pragma omp parallel for 
+        for (long i = 1; i < LEN_1D - 1; i++) {
+            v[jv[i]] = u[ku[i]] * d[i] + c[i];
+            u[ju[i+1]] += v[kv[i+1]] * c[i+1];
+        }
+        v[jv[LEN_1D-1]] = u[ku[LEN_1D-1]] * d[LEN_1D-1] + c[LEN_1D-1];
+        dummy(a, b, c, d, e);
+    }
+    return (real_t)0;
+}

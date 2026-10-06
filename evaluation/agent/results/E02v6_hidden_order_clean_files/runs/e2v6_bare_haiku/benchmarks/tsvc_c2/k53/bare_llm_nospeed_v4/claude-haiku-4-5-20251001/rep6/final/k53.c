@@ -1,0 +1,21 @@
+#include "data.h"
+
+real_t kernel_k53(void)
+{
+    for (int nl = 0; nl < iterations; nl++) {
+        // Phase 1: Write to u array (all iterations independent)
+        #pragma omp parallel for schedule(static) shared(u, v, c, ju, kv)
+        for (long i = 1; i < LEN_1D; i++) {
+            u[ju[i]] += v[kv[i]] * c[i];
+        }
+
+        // Phase 2: Write to v array (all iterations independent, u values ready from phase 1)
+        #pragma omp parallel for schedule(static) shared(v, u, d, c, jv, ku)
+        for (long i = 1; i < LEN_1D; i++) {
+            v[jv[i]] = u[ku[i]] * d[i] + c[i];
+        }
+
+        dummy(a, b, c, d, e);
+    }
+    return (real_t)0;
+}

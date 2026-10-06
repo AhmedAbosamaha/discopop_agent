@@ -1,0 +1,36 @@
+--- original.c
++++ final.c
+@@ -63,17 +63,26 @@
+ real_t kernel_s161(void)
+ {
+     for (int nl = 0; nl < iterations; nl++) {
++        /* Pass 1: Process iterations where b[i] < 0 (write to c[i+1]).
++           All iterations are independent; each writes to a unique c[i+1]. */
++        #pragma omp parallel for shared(a, b, c, d, e)
+         for (int i = 0; i < LEN_1D-1; ++i) {
+             if (b[i] < (real_t)0.) {
+-                goto L20;
++                c[i+1] = a[i] + d[i] * d[i];
+             }
+-            a[i] = c[i] + d[i] * e[i];
+-            goto L10;
+-L20:
+-            c[i+1] = a[i] + d[i] * d[i];
+-L10:
+-            ;
+         }
++
++        /* Pass 2: Process iterations where b[i] >= 0 (read from c[i], write to a[i]).
++           All iterations are independent; each accesses unique array elements.
++           The implicit barrier between passes ensures Pass 1 writes to c[i+1]
++           complete before Pass 2 reads c[i+1] in iteration i+1. */
++        #pragma omp parallel for shared(a, b, c, d, e)
++        for (int i = 0; i < LEN_1D-1; ++i) {
++            if (b[i] >= (real_t)0.) {
++                a[i] = c[i] + d[i] * e[i];
++            }
++        }
++
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

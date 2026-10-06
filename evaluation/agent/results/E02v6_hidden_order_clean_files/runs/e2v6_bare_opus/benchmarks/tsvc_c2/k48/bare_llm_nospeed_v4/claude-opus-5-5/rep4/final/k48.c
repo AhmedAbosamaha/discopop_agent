@@ -1,0 +1,94 @@
+#include <stdlib.h>
+#include "data.h"
+
+real_t kernel_k48(void)
+{
+    const long n = LEN_1D;
+
+    if (n <= 1) {
+        for (int nl = 0; nl < iterations; nl++)
+            dummy(a, b, c, d, e);
+        return (real_t)0;
+    }
+
+    /* ---- inspector: index ranges (index arrays are never modified) ---- */
+    long umin = ju[1], umax = ju[1], vmin = kv[1], vmax = kv[1];
+    for (long i = 1; i < n; i++) {
+        if (ju[i] < umin) umin = ju[i];
+        if (ju[i] > umax) umax = ju[i];
+        if (ku[i] < umin) umin = ku[i];
+        if (ku[i] > umax) umax = ku[i];
+        if (kv[i] < vmin) vmin = kv[i];
+        if (kv[i] > vmax) vmax = kv[i];
+        if (jv[i] < vmin) vmin = jv[i];
+        if (jv[i] > vmax) vmax = jv[i];
+    }
+    long usz = umax - umin + 1, vsz = vmax - vmin + 1;
+
+    int *uR = (int *)calloc((size_t)usz, sizeof(int));
+    int *uW = (int *)calloc((size_t)usz, sizeof(int));
+    int *vR = (int *)calloc((size_t)vsz, sizeof(int));
+    int *vW = (int *)calloc((size_t)vsz, sizeof(int));
+    int *lev = (int *)malloc((size_t)n * sizeof(int));
+
+    /* ---- inspector: wavefront level of each iteration ---- */
+    int nlev = 0;
+    for (long i = 1; i < n; i++) {
+        long a1 = (long)ju[i] - umin;   /* u read+write */
+        long a2 = (long)ku[i] - umin;   /* u read */
+        long b1 = (long)kv[i] - vmin;   /* v read */
+        long b2 = (long)jv[i] - vmin;   /* v write */
+        int L = 0;
+        /* reads must follow earlier writes */
+        if (uW[a1] > L) L = uW[a1];
+        if (uW[a2] > L) L = uW[a2];
+        if (vW[b1] > L) L = vW[b1];
+        /* writes must follow earlier reads and writes */
+        if (uR[a1] > L) L = uR[a1];
+        if (vR[b2] > L) L = vR[b2];
+        if (vW[b2] > L) L = vW[b2];
+        L += 1;
+        lev[i] = L;
+        if (L > nlev) nlev = L;
+        if (uR[a1] < L) uR[a1] = L;
+        if (uR[a2] < L) uR[a2] = L;
+        if (vR[b1] < L) vR[b1] = L;
+        uW[a1] = L;
+        vW[b2] = L;
+    }
+    free(uR); free(uW); free(vR); free(vW);
+
+    /* ---- bucket iterations by level (stable in i) ---- */
+    long *start = (long *)calloc((size_t)nlev + 2, sizeof(long));
+    long *order = (long *)malloc((size_t)n * sizeof(long));
+    for (long i = 1; i < n; i++)
+        start[lev[i] + 1]++;
+    for (int l = 1; l <= nlev + 1; l++)
+        start[l] += start[l - 1];
+    {
+        long *pos = (long *)malloc(((size_t)nlev + 2) * sizeof(long));
+        for (int l = 0; l <= nlev + 1; l++) pos[l] = start[l];
+        for (long i = 1; i < n; i++)
+            order[pos[lev[i]]++] = i;
+        free(pos);
+    }
+    free(lev);
+
+    /* ---- executor ---- */
+    for (int nl = 0; nl < iterations; nl++) {
+        for (int l = 1; l <= nlev; l++) {
+            long s = start[l], t = start[l + 1];
+            #pragma omp parallel for if(t - s > 512) schedule(static) shared(order, u, v, ju, jv, ku, kv, c, d) firstprivate(s, t)
+            for (long k = s; k < t; k++) {
+                long i = order[k];
+                u[ju[i]] += v[kv[i]] * c[i];
+                v[jv[i]] = u[ku[i]] * d[i] + c[i];
+            }
+        }
+        dummy(a, b, c, d, e);
+    }
+
+    free(start);
+    free(order);
+    return (real_t)0;
+}

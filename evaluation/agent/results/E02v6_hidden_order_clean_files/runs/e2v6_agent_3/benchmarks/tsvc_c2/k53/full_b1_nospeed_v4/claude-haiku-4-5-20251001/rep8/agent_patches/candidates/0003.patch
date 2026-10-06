@@ -1,0 +1,34 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6_agent_3/benchmarks/tsvc_c2/k53/full_b1_nospeed_v4/claude-haiku-4-5-20251001/rep8/work/k53.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6_agent_3/benchmarks/tsvc_c2/k53/full_b1_nospeed_v4/claude-haiku-4-5-20251001/rep8/work/k53.c
+@@ -1,12 +1,29 @@
+ #include "data.h"
++#include <stdlib.h>
++#include <string.h>
+ 
+ real_t kernel_k53(void)
+ {
+     for (int nl = 0; nl < iterations; nl++) {
++        real_t *u_local = (real_t *)malloc(sizeof(real_t) * LEN_1D);
++        real_t *v_local = (real_t *)malloc(sizeof(real_t) * LEN_1D);
++        real_t *c_local = (real_t *)malloc(sizeof(real_t) * LEN_1D);
++
++        memcpy(u_local, u, sizeof(real_t) * LEN_1D);
++        memcpy(v_local, v, sizeof(real_t) * LEN_1D);
++        memcpy(c_local, c, sizeof(real_t) * LEN_1D);
++
+         for (long i = 1; i < LEN_1D; i++) {
+-            u[ju[i]] += v[kv[i]] * c[i];
+-            v[jv[i]] = u[ku[i]] * d[i] + c[i];
++            u_local[ju[i]] += v_local[kv[i]] * c_local[i];
++            v_local[jv[i]] = u_local[ku[i]] * d[i] + c_local[i];
+         }
++
++        memcpy(u, u_local, sizeof(real_t) * LEN_1D);
++        memcpy(v, v_local, sizeof(real_t) * LEN_1D);
++        free(u_local);
++        free(v_local);
++        free(c_local);
++
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

@@ -1,0 +1,88 @@
+#include <stdlib.h>
+#include "data.h"
+
+real_t kernel_k27(void)
+{
+    const long n = LEN_1D;
+
+    /* ---- inspector: size the per-location tables ---- */
+    long maxidx = 0;
+    #pragma omp parallel for reduction(max:maxidx)
+    for (long i = 1; i < n; i++) {
+        long m = ju[i];
+        if (ku[i] > m) m = ku[i];
+        if (jv[i] > m) m = jv[i];
+        if (kv[i] > m) m = kv[i];
+        if (jw[i] > m) m = jw[i];
+        if (kw[i] > m) m = kw[i];
+        if (m > maxidx) maxidx = m;
+    }
+    long nloc = maxidx + 1;
+
+    int *wU = (int *)malloc(sizeof(int) * nloc), *rU = (int *)malloc(sizeof(int) * nloc);
+    int *wV = (int *)malloc(sizeof(int) * nloc), *rV = (int *)malloc(sizeof(int) * nloc);
+    int *wW = (int *)malloc(sizeof(int) * nloc), *rW = (int *)malloc(sizeof(int) * nloc);
+    int *lev = (int *)malloc(sizeof(int) * n);
+
+    #pragma omp parallel for
+    for (long k = 0; k < nloc; k++) {
+        wU[k] = -1; rU[k] = -1;
+        wV[k] = -1; rV[k] = -1;
+        wW[k] = -1; rW[k] = -1;
+    }
+
+    /* ---- inspector: wavefront level of each iteration (sequential, O(n)) ---- */
+    int nlev = 0;
+    for (long i = 1; i < n; i++) {
+        int L = 0, t;
+        /* reads */
+        t = wW[kw[i]] + 1; if (t > L) L = t;
+        t = wU[ku[i]] + 1; if (t > L) L = t;
+        t = wV[kv[i]] + 1; if (t > L) L = t;
+        /* writes (u[ju] is also read) */
+        t = wU[ju[i]] + 1; if (t > L) L = t;
+        t = rU[ju[i]] + 1; if (t > L) L = t;
+        t = wV[jv[i]] + 1; if (t > L) L = t;
+        t = rV[jv[i]] + 1; if (t > L) L = t;
+        t = wW[jw[i]] + 1; if (t > L) L = t;
+        t = rW[jw[i]] + 1; if (t > L) L = t;
+        lev[i] = L;
+        if (L + 1 > nlev) nlev = L + 1;
+        /* update tables */
+        if (rW[kw[i]] < L) rW[kw[i]] = L;
+        if (rU[ku[i]] < L) rU[ku[i]] = L;
+        if (rV[kv[i]] < L) rV[kv[i]] = L;
+        if (rU[ju[i]] < L) rU[ju[i]] = L;
+        wU[ju[i]] = L;
+        wV[jv[i]] = L;
+        wW[jw[i]] = L;
+    }
+
+    /* ---- bucket iterations by level (counting sort) ---- */
+    long *start = (long *)calloc((size_t)nlev + 1, sizeof(long));
+    long *order = (long *)malloc(sizeof(long) * (n > 1 ? n : 1));
+    for (long i = 1; i < n; i++) start[lev[i] + 1]++;
+    for (int L = 0; L < nlev; L++) start[L + 1] += start[L];
+    long *pos = (long *)malloc(sizeof(long) * ((size_t)nlev + 1));
+    for (int L = 0; L <= nlev; L++) pos[L] = start[L];
+    for (long i = 1; i < n; i++) order[pos[lev[i]]++] = i;
+
+    /* ---- executor ---- */
+    for (int nl = 0; nl < iterations; nl++) {
+        for (int L = 0; L < nlev; L++) {
+            long lo = start[L], hi = start[L + 1];
+            #pragma omp parallel for default(none) shared(order, u, v, w, c, d, e, ju, jv, jw, ku, kv, kw) firstprivate(lo, hi)
+            for (long k = lo; k < hi; k++) {
+                long i = order[k];
+                u[ju[i]] += w[kw[i]] * c[i];
+                v[jv[i]] = u[ku[i]] * d[i] + c[i];
+                w[jw[i]] = v[kv[i]] * e[i] + d[i];
+            }
+        }
+        dummy(a, b, c, d, e);
+    }
+
+    free(pos); free(order); free(start); free(lev);
+    free(wU); free(rU); free(wV); free(rV); free(wW); free(rW);
+    return (real_t)0;
+}

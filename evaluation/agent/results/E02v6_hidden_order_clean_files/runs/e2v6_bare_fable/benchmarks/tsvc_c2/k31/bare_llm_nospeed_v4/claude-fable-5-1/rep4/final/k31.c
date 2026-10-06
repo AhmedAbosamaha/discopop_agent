@@ -1,0 +1,85 @@
+#include "data.h"
+#include <stdlib.h>
+
+real_t kernel_k31(void)
+{
+    real_t *vn = NULL;
+    if (far >= 1) {
+        vn = (real_t *)malloc(sizeof(real_t) * (size_t)LEN_1D);
+    }
+
+    for (int nl = 0; nl < iterations; nl++) {
+        if (far >= 1) {
+            if (vn == NULL) {
+                /* allocation failed: original sequential form */
+                for (long i = 1; i < LEN_1D; i++) {
+                    u[i] += v[i + off] * c[i];
+                    v[i] = u[i + far] * d[i] + c[i];
+                }
+            } else {
+                /* v[i] reads u[i+far] BEFORE it is updated (far >= 1):
+                   compute the new v from the old u into a buffer. */
+                #pragma omp parallel for shared(u, d, c, vn, far)
+                for (long i = 1; i < LEN_1D; i++) {
+                    vn[i] = u[i + far] * d[i] + c[i];
+                }
+
+                if (off >= 0) {
+                    /* u[i] reads the OLD v[i+off] */
+                    #pragma omp parallel for shared(u, v, c, off)
+                    for (long i = 1; i < LEN_1D; i++) {
+                        u[i] += v[i + off] * c[i];
+                    }
+                    #pragma omp parallel for shared(v, vn)
+                    for (long i = 1; i < LEN_1D; i++) {
+                        v[i] = vn[i];
+                    }
+                } else {
+                    /* u[i] reads the NEW v[i+off] (or untouched v for i+off < 1) */
+                    #pragma omp parallel for shared(v, vn)
+                    for (long i = 1; i < LEN_1D; i++) {
+                        v[i] = vn[i];
+                    }
+                    #pragma omp parallel for shared(u, v, c, off)
+                    for (long i = 1; i < LEN_1D; i++) {
+                        u[i] += v[i + off] * c[i];
+                    }
+                }
+            }
+        } else {
+            /* far <= 0: v[i] reads the NEW u[i+far]; finish all of u first. */
+            if (off >= 0) {
+                /* u[i] reads the OLD v[i+off] */
+                #pragma omp parallel for shared(u, v, c, off)
+                for (long i = 1; i < LEN_1D; i++) {
+                    u[i] += v[i + off] * c[i];
+                }
+            } else {
+                /* u[i] depends on new u[i+off+far]: independent chains
+                   by residue class modulo D = -(off+far) >= 1. */
+                long D = -(off + far);
+                #pragma omp parallel for shared(u, v, c, d, off, far, D)
+                for (long r = 1; r <= D; r++) {
+                    for (long i = r; i < LEN_1D; i += D) {
+                        real_t t;
+                        if (i + off >= 1) {
+                            t = u[i + off + far] * d[i + off] + c[i + off];
+                        } else {
+                            t = v[i + off];
+                        }
+                        u[i] += t * c[i];
+                    }
+                }
+            }
+
+            #pragma omp parallel for shared(u, v, c, d, far)
+            for (long i = 1; i < LEN_1D; i++) {
+                v[i] = u[i + far] * d[i] + c[i];
+            }
+        }
+        dummy(a, b, c, d, e);
+    }
+
+    free(vn);
+    return (real_t)0;
+}

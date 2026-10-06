@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : k23.c
+  Model          : claude-fable-5-1
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-fable-5-1...
+│  [bare] k23.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: `LEN_1D` and `iterations` are macros, and `u, v, w, c, x, d` are the only globals the loop body touches, so `default(none) shared(u, v, w, c, x, d)` is complete and will compile. The edit is done. **Summary of the rewrite in `k23.c`:** - The `nl` loop stays sequential: `dummy()` modifies `c` and `d` between sweeps, which the next sweep reads — a genuine carried dependence. - The inner `i` loop (`1
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

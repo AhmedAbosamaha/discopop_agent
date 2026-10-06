@@ -1,0 +1,28 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6_fb_2/benchmarks/tsvc_c2/k27/full_nospeed_v4/claude-haiku-4-5-20251001/rep5/work/k27.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6_fb_2/benchmarks/tsvc_c2/k27/full_nospeed_v4/claude-haiku-4-5-20251001/rep5/work/k27.c
+@@ -1,14 +1,24 @@
+ #include "data.h"
++#include <stdlib.h>
++#include <string.h>
+ 
+ real_t kernel_k27(void)
+ {
++    // Allocate buffer to snapshot v at start of each nl iteration
++    real_t *v_snapshot = malloc(LEN_1D * sizeof(real_t));
++
+     for (int nl = 0; nl < iterations; nl++) {
++        // Snapshot v before the loop to decouple line 9 reads from line 8 writes
++        memcpy(v_snapshot, v, LEN_1D * sizeof(real_t));
++
+         for (long i = 1; i < LEN_1D; i++) {
+             u[ju[i]] += w[kw[i]] * c[i];
+             v[jv[i]] = u[ku[i]] * d[i] + c[i];
+-            w[jw[i]] = v[kv[i]] * e[i] + d[i];
++            w[jw[i]] = v_snapshot[kv[i]] * e[i] + d[i];
+         }
+         dummy(a, b, c, d, e);
+     }
++
++    free(v_snapshot);
+     return (real_t)0;
+ }

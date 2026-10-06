@@ -1,0 +1,38 @@
+--- original.c
++++ final.c
+@@ -63,17 +63,28 @@
+ real_t kernel_s161(void)
+ {
+     for (int nl = 0; nl < iterations; nl++) {
++        // Phase 1: Process iterations where b[i] < 0
++        // Each iteration i writes c[i+1], reads a[i]
++        // No intra-phase dependencies: iterations write to c[i+1], c[i+2], ...
++        // and do not read from c
++        #pragma omp parallel for shared(a, b, c, d, e)
+         for (int i = 0; i < LEN_1D-1; ++i) {
+             if (b[i] < (real_t)0.) {
+-                goto L20;
++                c[i+1] = a[i] + d[i] * d[i];
+             }
+-            a[i] = c[i] + d[i] * e[i];
+-            goto L10;
+-L20:
+-            c[i+1] = a[i] + d[i] * d[i];
+-L10:
+-            ;
+         }
++
++        // Phase 2: Process iterations where b[i] >= 0
++        // Each iteration i reads c[i], writes a[i]
++        // No intra-phase dependencies: iterations read from c[i], c[i+1], ...
++        // and do not read from a
++        #pragma omp parallel for shared(a, b, c, d, e)
++        for (int i = 0; i < LEN_1D-1; ++i) {
++            if (b[i] >= (real_t)0.) {
++                a[i] = c[i] + d[i] * e[i];
++            }
++        }
++
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

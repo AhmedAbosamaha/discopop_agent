@@ -1,0 +1,25 @@
+--- original.c
++++ final.c
+@@ -40,6 +40,22 @@
+ real_t kernel_k48(void)
+ {
+     for (int nl = 0; nl < iterations; nl++) {
++        /* The two statements below are only linked through the SAME
++         * iteration's index (statement 2 reads back the u[] slot that
++         * statement 1 of the very same i just wrote).  Across different
++         * values of i the index arrays ju/kv/jv/ku address disjoint
++         * elements of u[] and v[], so there is no value that one
++         * iteration writes and a *different* iteration needs to read:
++         * the dependence is entirely intra-iteration and survives any
++         * reordering/overlap of the i iterations across threads, since
++         * both statements of a given i always execute on the same
++         * thread, in order, inside one loop body.  The outer nl loop is
++         * left sequential: dummy() advances a static call counter and
++         * rewrites c[]/d[] entries that the next nl pass's inner loop
++         * reads, so nl iterations carry a genuine cross-iteration
++         * dependence through c, d, u and v.
++         */
++        #pragma omp parallel for default(none) shared(u, v, c, d, ju, jv, ku, kv)
+         for (long i = 1; i < LEN_1D; i++) {
+             u[ju[i]] += v[kv[i]] * c[i];
+             v[jv[i]] = u[ku[i]] * d[i] + c[i];

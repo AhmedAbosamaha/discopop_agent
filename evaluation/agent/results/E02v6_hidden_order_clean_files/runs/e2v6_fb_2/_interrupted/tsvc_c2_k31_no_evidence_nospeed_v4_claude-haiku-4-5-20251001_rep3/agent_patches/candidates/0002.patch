@@ -1,0 +1,30 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6_fb_2/benchmarks/tsvc_c2/k31/no_evidence_nospeed_v4/claude-haiku-4-5-20251001/rep3/work/k31.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6_fb_2/benchmarks/tsvc_c2/k31/no_evidence_nospeed_v4/claude-haiku-4-5-20251001/rep3/work/k31.c
+@@ -1,12 +1,25 @@
+ #include "data.h"
++#include <string.h>
++#include <stdlib.h>
+ 
+ real_t kernel_k31(void)
+ {
+     for (int nl = 0; nl < iterations; nl++) {
++        real_t *u_new = malloc(LEN_1D * sizeof(real_t));
++        real_t *v_new = malloc(LEN_1D * sizeof(real_t));
++        memcpy(u_new, u, LEN_1D * sizeof(real_t));
++        memcpy(v_new, v, LEN_1D * sizeof(real_t));
++
+         for (long i = 1; i < LEN_1D; i++) {
+-            u[i] += v[i + off] * c[i];
+-            v[i] = u[i + far] * d[i] + c[i];
++            u_new[i] += v_new[i + off] * c[i];
++            v_new[i] = u_new[i + far] * d[i] + c[i];
+         }
++
++        memcpy(u, u_new, LEN_1D * sizeof(real_t));
++        memcpy(v, v_new, LEN_1D * sizeof(real_t));
++        free(u_new);
++        free(v_new);
++
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

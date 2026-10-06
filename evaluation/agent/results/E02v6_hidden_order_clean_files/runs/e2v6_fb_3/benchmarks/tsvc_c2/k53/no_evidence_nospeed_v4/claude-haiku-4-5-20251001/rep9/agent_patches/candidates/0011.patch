@@ -1,0 +1,28 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6_fb_3/benchmarks/tsvc_c2/k53/no_evidence_nospeed_v4/claude-haiku-4-5-20251001/rep9/work/k53.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6_fb_3/benchmarks/tsvc_c2/k53/no_evidence_nospeed_v4/claude-haiku-4-5-20251001/rep9/work/k53.c
+@@ -1,13 +1,24 @@
++#include <stdlib.h>
+ #include "data.h"
+ 
+ real_t kernel_k53(void)
+ {
++    real_t *u_cached = (real_t *)malloc(LEN_1D * sizeof(real_t));
++
+     for (int nl = 0; nl < iterations; nl++) {
++        for (long i = 0; i < LEN_1D; i++) {
++            u_cached[i] = u[i];
++        }
+         for (long i = 1; i < LEN_1D; i++) {
+             u[ju[i]] += v[kv[i]] * c[i];
+-            v[jv[i]] = u[ku[i]] * d[i] + c[i];
++            u_cached[i] = u[ku[i]];
++        }
++        for (long i = 1; i < LEN_1D; i++) {
++            v[jv[i]] = u_cached[i] * d[i] + c[i];
+         }
+         dummy(a, b, c, d, e);
+     }
++
++    free(u_cached);
+     return (real_t)0;
+ }

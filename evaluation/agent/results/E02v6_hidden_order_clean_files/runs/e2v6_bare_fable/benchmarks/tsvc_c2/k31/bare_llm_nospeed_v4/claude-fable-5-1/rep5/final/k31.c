@@ -1,0 +1,81 @@
+#include <stdlib.h>
+#include "data.h"
+
+real_t kernel_k31(void)
+{
+    /* scratch buffer holding the new v values when both reads see
+       pre-loop data (off >= 0, far > 0); sized with the problem -> heap */
+    real_t *tmp = (real_t *)malloc(sizeof(real_t) * (size_t)LEN_1D);
+    long o = off;
+    long f = far;
+
+    for (int nl = 0; nl < iterations; nl++) {
+        if (o >= 0 && f > 0) {
+            /* v[i+off] and u[i+far] both see pre-loop values:
+               compute new v into tmp from untouched u, update u from
+               untouched v, then publish tmp into v. */
+            #pragma omp parallel for shared(u, d, c, tmp) firstprivate(f)
+            for (long i = 1; i < LEN_1D; i++) {
+                tmp[i] = u[i + f] * d[i] + c[i];
+            }
+            #pragma omp parallel for shared(u, v, c) firstprivate(o)
+            for (long i = 1; i < LEN_1D; i++) {
+                u[i] += v[i + o] * c[i];
+            }
+            #pragma omp parallel for shared(v, tmp)
+            for (long i = 1; i < LEN_1D; i++) {
+                v[i] = tmp[i];
+            }
+        } else if (o >= 0) {
+            /* f <= 0: u reads old v; v reads the already-updated u
+               (indices < 1 are never written, so they are unchanged). */
+            #pragma omp parallel for shared(u, v, c) firstprivate(o)
+            for (long i = 1; i < LEN_1D; i++) {
+                u[i] += v[i + o] * c[i];
+            }
+            #pragma omp parallel for shared(u, v, c, d) firstprivate(f)
+            for (long i = 1; i < LEN_1D; i++) {
+                v[i] = u[i + f] * d[i] + c[i];
+            }
+        } else if (f > 0) {
+            /* o < 0: v reads old u; u reads the already-updated v
+               (indices < 1 are never written, so they are unchanged). */
+            #pragma omp parallel for shared(u, v, c, d) firstprivate(f)
+            for (long i = 1; i < LEN_1D; i++) {
+                v[i] = u[i + f] * d[i] + c[i];
+            }
+            #pragma omp parallel for shared(u, v, c) firstprivate(o)
+            for (long i = 1; i < LEN_1D; i++) {
+                u[i] += v[i + o] * c[i];
+            }
+        } else {
+            /* o < 0, f <= 0: true recurrence u[i] <- v[i+o] <- u[i+o+f].
+               Residue classes modulo s = -(o+f) are independent chains. */
+            long s = -(o + f);
+            long pre_end = 1 - f;
+            if (pre_end > LEN_1D) pre_end = LEN_1D;
+
+            /* v[j] with j + f < 1 depend only on never-written u entries */
+            #pragma omp parallel for shared(u, v, c, d) firstprivate(f, pre_end)
+            for (long j = 1; j < pre_end; j++) {
+                v[j] = u[j + f] * d[j] + c[j];
+            }
+
+            /* chain r: u[i] for i = r (mod s) in increasing order, each
+               followed by v[i - f] which reads the just-updated u[i]. */
+            #pragma omp parallel for shared(u, v, c, d) firstprivate(s, o, f)
+            for (long r = 0; r < s; r++) {
+                long i0 = (r == 0) ? s : r;
+                for (long i = i0; i < LEN_1D; i += s) {
+                    u[i] += v[i + o] * c[i];
+                    if (i - f < LEN_1D) {
+                        v[i - f] = u[i] * d[i - f] + c[i - f];
+                    }
+                }
+            }
+        }
+        dummy(a, b, c, d, e);
+    }
+    free(tmp);
+    return (real_t)0;
+}

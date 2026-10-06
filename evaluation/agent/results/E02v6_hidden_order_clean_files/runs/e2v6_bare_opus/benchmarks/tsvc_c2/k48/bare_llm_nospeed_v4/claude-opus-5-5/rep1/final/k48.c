@@ -1,0 +1,72 @@
+#include <stdlib.h>
+#include "data.h"
+
+real_t kernel_k48(void)
+{
+    const long n = LEN_1D;
+    long maxu = 0, maxv = 0;
+
+    /* inspector: size the per-location tracking arrays */
+    for (long i = 1; i < n; i++) {
+        if (ju[i] > maxu) maxu = ju[i];
+        if (ku[i] > maxu) maxu = ku[i];
+        if (jv[i] > maxv) maxv = jv[i];
+        if (kv[i] > maxv) maxv = kv[i];
+    }
+
+    int *wu = (int *)calloc((size_t)maxu + 1, sizeof(int)); /* last write level of u[x] */
+    int *ru = (int *)calloc((size_t)maxu + 1, sizeof(int)); /* max read level of u[x]   */
+    int *wv = (int *)calloc((size_t)maxv + 1, sizeof(int));
+    int *rv = (int *)calloc((size_t)maxv + 1, sizeof(int));
+    int *lev = (int *)malloc((size_t)n * sizeof(int));
+    int nlev = 0;
+
+    /* inspector: assign each iteration a wavefront level */
+    for (long i = 1; i < n; i++) {
+        int L = wv[kv[i]];
+        if (wu[ju[i]] > L) L = wu[ju[i]];
+        if (ru[ju[i]] > L) L = ru[ju[i]];
+        if (wu[ku[i]] > L) L = wu[ku[i]];
+        if (wv[jv[i]] > L) L = wv[jv[i]];
+        if (rv[jv[i]] > L) L = rv[jv[i]];
+        L++;
+        wu[ju[i]] = L;
+        if (ru[ku[i]] < L) ru[ku[i]] = L;
+        wv[jv[i]] = L;
+        if (rv[kv[i]] < L) rv[kv[i]] = L;
+        lev[i] = L;
+        if (L > nlev) nlev = L;
+    }
+
+    /* bucket iterations by level (levels 1..nlev) */
+    long *start = (long *)calloc((size_t)nlev + 2, sizeof(long));
+    long *pos = (long *)malloc(((size_t)nlev + 2) * sizeof(long));
+    long *order = (long *)malloc((size_t)(n > 0 ? n : 1) * sizeof(long));
+    for (long i = 1; i < n; i++)
+        start[lev[i] + 1]++;
+    for (int L = 1; L <= nlev + 1; L++)
+        start[L] += start[L - 1];
+    for (int L = 0; L <= nlev + 1; L++)
+        pos[L] = start[L];
+    for (long i = 1; i < n; i++)
+        order[pos[lev[i]]++] = i;
+
+    for (int nl = 0; nl < iterations; nl++) {
+        for (int L = 1; L <= nlev; L++) {
+            long lo = start[L];
+            long hi = start[L + 1];
+            #pragma omp parallel for schedule(static) if(hi - lo >= 64) \
+                shared(order, u, v, ju, jv, ku, kv, c, d, lo, hi)
+            for (long k = lo; k < hi; k++) {
+                long i = order[k];
+                u[ju[i]] += v[kv[i]] * c[i];
+                v[jv[i]] = u[ku[i]] * d[i] + c[i];
+            }
+        }
+        dummy(a, b, c, d, e);
+    }
+
+    free(wu); free(ru); free(wv); free(rv);
+    free(lev); free(start); free(pos); free(order);
+    return (real_t)0;
+}

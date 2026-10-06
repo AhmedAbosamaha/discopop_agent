@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : k53.c
+  Model          : claude-sonnet-5
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] k53.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan **Dependence analysis:** The outer `nl` loop is *not* independent — each iteration reads `u`/`v` left behind by the previous `nl` iteration, and `dummy()` carries its own sequential state (`static long n`) that determines which index it touches each call. So the outer loop must stay serial. The inner `i` loop is the outermost loop that *can* be made independent. For a given `i`, the body: 
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

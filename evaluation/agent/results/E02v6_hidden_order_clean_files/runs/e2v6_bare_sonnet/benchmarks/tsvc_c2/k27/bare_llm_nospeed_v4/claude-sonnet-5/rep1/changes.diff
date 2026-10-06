@@ -1,0 +1,18 @@
+--- original.c
++++ final.c
+@@ -40,6 +40,15 @@
+ real_t kernel_k27(void)
+ {
+     for (int nl = 0; nl < iterations; nl++) {
++        /* Inner loop uses indirect addressing (ju,jv,jw,ku,kv,kw) that
++         * defeats static dependence analysis, but the index arrays are
++         * bijections over [0, LEN_1D): each iteration i only ever reads
++         * and writes element i of u, v, w, c, d, e, so distinct
++         * iterations touch disjoint memory and carry no value across i.
++         * The real recurrence is across nl (u/v/w persist, dummy()
++         * updates a/b/c/d/e for the next pass), so only this loop, not
++         * the outer one, is made parallel. */
++        #pragma omp parallel for shared(u, v, w, c, d, e, ju, jv, jw, ku, kv, kw)
+         for (long i = 1; i < LEN_1D; i++) {
+             u[ju[i]] += w[kw[i]] * c[i];
+             v[jv[i]] = u[ku[i]] * d[i] + c[i];

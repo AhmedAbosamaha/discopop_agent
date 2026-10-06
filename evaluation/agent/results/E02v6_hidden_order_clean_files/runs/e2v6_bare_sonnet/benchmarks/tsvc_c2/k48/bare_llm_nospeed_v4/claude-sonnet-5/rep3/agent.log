@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : k48.c
+  Model          : claude-sonnet-5
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] k48.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan **Outer `nl` loop:** stays sequential. `dummy()` mutates `c` and `d` each sweep, and the next `nl` sweep's inner loop reads those same `c`/`d` values — a genuine value flow between outer iterations, so it cannot be parallelized. **Inner `i` loop:** this is the outermost loop whose iterations are actually independent, so it's the one to annotate. The apparent dependence here is not a value 
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

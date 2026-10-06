@@ -1,0 +1,23 @@
+--- original.c
++++ final.c
+@@ -39,6 +39,20 @@
+ 
+ real_t kernel_k19(void)
+ {
++    /*
++     * Not parallelized: this is TSVC's "indirect addressing / induction
++     * dependent" kernel. ju and jv are permutations, so each i writes a
++     * unique slot of u and v, but the reads u[ku[i]] and v[kv[i]] depend
++     * on whether the iteration that owns that slot (via ju^-1/jv^-1) ran
++     * earlier or later in sequential order -- a genuine value chain
++     * carried between iterations (length data-dependent, not a fixed
++     * one-hop snapshot), not just a reused memory location. Any
++     * iteration-order change (parallel for, any schedule) changes which
++     * values are observed, so the result would no longer be
++     * schedule/thread-count independent. The outer nl loop is likewise
++     * sequential: dummy() carries static state across calls, and u/v
++     * carry state from one sweep into the next.
++     */
+     for (int nl = 0; nl < iterations; nl++) {
+         for (long i = 1; i < LEN_1D; i++) {
+             u[ju[i]] += v[kv[i]] * c[i];

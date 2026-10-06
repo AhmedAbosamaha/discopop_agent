@@ -1,0 +1,93 @@
+--- original.c
++++ final.c
+@@ -35,17 +35,87 @@
+ #endif
+ 
+ /* ==== k53.c ==== */
++#include <stdlib.h>
+ #include "data.h"
+ 
+ real_t kernel_k53(void)
+ {
++    /* Inspector: the index arrays ju/jv/ku/kv are never modified by this
++       kernel nor by dummy(), so classify the indirect accesses once.
++       wu[loc] / wv[loc] = the (unique) iteration that writes u[loc] / v[loc],
++       0 if no iteration writes it (iterations start at 1). */
++    int *wu = (int *)calloc((size_t)LEN_1D, sizeof(int));
++    int *wv = (int *)calloc((size_t)LEN_1D, sizeof(int));
++    real_t *uo = (real_t *)malloc((size_t)LEN_1D * sizeof(real_t));
++    real_t *vo = (real_t *)malloc((size_t)LEN_1D * sizeof(real_t));
++    int ok = (wu != NULL && wv != NULL && uo != NULL && vo != NULL);
++
++    if (ok) {
++        /* sequential: builds the writer maps and checks injectivity */
++        for (long i = 1; i < LEN_1D; i++) {
++            int a_ = ju[i], b_ = jv[i], c_ = ku[i], d_ = kv[i];
++            if (a_ < 0 || a_ >= LEN_1D || b_ < 0 || b_ >= LEN_1D ||
++                c_ < 0 || c_ >= LEN_1D || d_ < 0 || d_ >= LEN_1D) {
++                ok = 0;
++            } else if (wu[a_] != 0 || wv[b_] != 0) {
++                ok = 0;
++            } else {
++                wu[a_] = (int)i;
++                wv[b_] = (int)i;
++            }
++        }
++    }
++
++    if (ok) {
++        /* A read of a location written by an EARLIER iteration is a true
++           value flow across iterations: not order-independent -> fallback. */
++        int bad = 0;
++        #pragma omp parallel for shared(ku, kv, wu, wv) reduction(|:bad)
++        for (long i = 1; i < LEN_1D; i++) {
++            int tu = wu[ku[i]];
++            int tv = wv[kv[i]];
++            bad |= (int)((tu != 0 && tu < i) || (tv != 0 && tv < i));
++        }
++        if (bad) ok = 0;
++    }
++
+     for (int nl = 0; nl < iterations; nl++) {
+-        for (long i = 1; i < LEN_1D; i++) {
+-            u[ju[i]] += v[kv[i]] * c[i];
+-            v[jv[i]] = u[ku[i]] * d[i] + c[i];
++        if (ok) {
++            /* snapshot of u and v as they are before this pass */
++            #pragma omp parallel for shared(u, v, uo, vo)
++            for (long i = 0; i < LEN_1D; i++) {
++                uo[i] = u[i];
++                vo[i] = v[i];
++            }
++
++            /* Every write location is unique to its iteration.  A read whose
++               writer is a LATER iteration must see the pre-pass value (the
++               snapshot); any other read touches a location no other
++               iteration writes, so it reads the live array race-free. */
++            #pragma omp parallel for shared(u, v, uo, vo, c, d, ju, jv, ku, kv, wu, wv)
++            for (long i = 1; i < LEN_1D; i++) {
++                long iu = ju[i];
++                long iv = jv[i];
++                long ru = ku[i];
++                long rv = kv[i];
++                real_t vr = (wv[rv] > i) ? vo[rv] : v[rv];
++                u[iu] += vr * c[i];
++                real_t ur = (wu[ru] > i) ? uo[ru] : u[ru];
++                v[iv] = ur * d[i] + c[i];
++            }
++        } else {
++            for (long i = 1; i < LEN_1D; i++) {
++                u[ju[i]] += v[kv[i]] * c[i];
++                v[jv[i]] = u[ku[i]] * d[i] + c[i];
++            }
+         }
+         dummy(a, b, c, d, e);
+     }
++
++    free(wu);
++    free(wv);
++    free(uo);
++    free(vo);
+     return (real_t)0;
+ }
+ 

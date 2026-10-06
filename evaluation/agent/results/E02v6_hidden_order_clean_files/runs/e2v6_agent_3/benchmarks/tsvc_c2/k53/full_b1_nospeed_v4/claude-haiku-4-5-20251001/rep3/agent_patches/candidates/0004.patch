@@ -1,0 +1,29 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6_agent_3/benchmarks/tsvc_c2/k53/full_b1_nospeed_v4/claude-haiku-4-5-20251001/rep3/work/k53.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6_agent_3/benchmarks/tsvc_c2/k53/full_b1_nospeed_v4/claude-haiku-4-5-20251001/rep3/work/k53.c
+@@ -1,13 +1,25 @@
+ #include "data.h"
++#include <stdlib.h>
++#include <string.h>
+ 
+ real_t kernel_k53(void)
+ {
++    real_t *v_old = (real_t *)malloc(LEN_1D * sizeof(real_t));
++
+     for (int nl = 0; nl < iterations; nl++) {
++        memcpy(v_old, v, LEN_1D * sizeof(real_t));
++
+         for (long i = 1; i < LEN_1D; i++) {
+-            u[ju[i]] += v[kv[i]] * c[i];
++            u[ju[i]] += v_old[kv[i]] * c[i];
++        }
++
++        for (long i = 1; i < LEN_1D; i++) {
+             v[jv[i]] = u[ku[i]] * d[i] + c[i];
+         }
++
+         dummy(a, b, c, d, e);
+     }
++
++    free(v_old);
+     return (real_t)0;
+ }

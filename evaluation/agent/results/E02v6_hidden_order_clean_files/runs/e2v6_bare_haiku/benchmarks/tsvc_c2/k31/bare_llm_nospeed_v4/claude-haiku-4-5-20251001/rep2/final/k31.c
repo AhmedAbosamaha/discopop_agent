@@ -1,0 +1,23 @@
+#include "data.h"
+
+real_t kernel_k31(void)
+{
+    for (int nl = 0; nl < iterations; nl++) {
+        // Phase 1: Compute u[i] values in parallel
+        // Each iteration i writes to unique u[i] and reads from v and c (shared, not modified)
+        #pragma omp parallel for shared(u, v, c, off)
+        for (long i = 1; i < LEN_1D; i++) {
+            u[i] += v[i + off] * c[i];
+        }
+
+        // Phase 2: Compute v[i] values in parallel using updated u from Phase 1
+        // Each iteration i writes to unique v[i] and reads from updated u, d, and c (shared, not modified here)
+        #pragma omp parallel for shared(u, v, d, c, far)
+        for (long i = 1; i < LEN_1D; i++) {
+            v[i] = u[i + far] * d[i] + c[i];
+        }
+
+        dummy(a, b, c, d, e);
+    }
+    return (real_t)0;
+}

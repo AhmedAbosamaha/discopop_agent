@@ -1,0 +1,76 @@
+#include <stdlib.h>
+#include <string.h>
+#include "data.h"
+
+real_t kernel_k48(void)
+{
+    long n = LEN_1D;
+    int mu = 0, mv = 0;
+
+    /* extent of the index sets (sizes the inspector's tracking tables) */
+#pragma omp parallel for reduction(max:mu, mv)
+    for (long i = 1; i < n; i++) {
+        if (ju[i] > mu) mu = ju[i];
+        if (ku[i] > mu) mu = ku[i];
+        if (jv[i] > mv) mv = jv[i];
+        if (kv[i] > mv) mv = kv[i];
+    }
+
+    long *wu = (long *)calloc((size_t)mu + 1, sizeof(long)); /* last write level of u[x] */
+    long *ru = (long *)calloc((size_t)mu + 1, sizeof(long)); /* last read level of u[x]  */
+    long *wv = (long *)calloc((size_t)mv + 1, sizeof(long));
+    long *rv = (long *)calloc((size_t)mv + 1, sizeof(long));
+    long *lv = (long *)malloc((size_t)n * sizeof(long));
+    long nlev = 0;
+
+    /* inspector: wavefront level of each iteration (serial, O(n)) */
+    for (long i = 1; i < n; i++) {
+        int a_ju = ju[i], a_ku = ku[i], a_jv = jv[i], a_kv = kv[i];
+        long m = wv[a_kv];
+        if (wu[a_ju] > m) m = wu[a_ju];
+        if (wu[a_ku] > m) m = wu[a_ku];
+        if (ru[a_ju] > m) m = ru[a_ju];
+        if (rv[a_jv] > m) m = rv[a_jv];
+        if (wv[a_jv] > m) m = wv[a_jv];
+        long L = m + 1;
+        lv[i] = L;
+        if (L > nlev) nlev = L;
+        wu[a_ju] = L;
+        if (ru[a_ju] < L) ru[a_ju] = L;
+        if (ru[a_ku] < L) ru[a_ku] = L;
+        if (rv[a_kv] < L) rv[a_kv] = L;
+        wv[a_jv] = L;
+    }
+    free(wu); free(ru); free(wv); free(rv);
+
+    /* bucket iterations by level: level L occupies order[start[L] .. start[L+1]) */
+    long *start = (long *)calloc((size_t)nlev + 2, sizeof(long));
+    long *pos = (long *)malloc(((size_t)nlev + 2) * sizeof(long));
+    long *order = (long *)malloc((size_t)n * sizeof(long));
+    for (long i = 1; i < n; i++)
+        start[lv[i] + 1]++;
+    for (long L = 1; L <= nlev + 1; L++)
+        start[L] += start[L - 1];
+    memcpy(pos, start, ((size_t)nlev + 2) * sizeof(long));
+    for (long i = 1; i < n; i++)
+        order[pos[lv[i]]++] = i;
+    free(pos);
+    free(lv);
+
+    for (int nl = 0; nl < iterations; nl++) {
+        for (long L = 1; L <= nlev; L++) {
+            long lo = start[L], hi = start[L + 1];
+#pragma omp parallel for default(none) shared(order, u, v, ju, jv, ku, kv, c, d) firstprivate(lo, hi) if (hi - lo > 2048)
+            for (long k = lo; k < hi; k++) {
+                long i = order[k];
+                u[ju[i]] += v[kv[i]] * c[i];
+                v[jv[i]] = u[ku[i]] * d[i] + c[i];
+            }
+        }
+        dummy(a, b, c, d, e);
+    }
+
+    free(start);
+    free(order);
+    return (real_t)0;
+}

@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : k53.c
+  Model          : claude-sonnet-5
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror  (speed check off)
+
+│  [bare] Calling claude-sonnet-5...
+│  [bare] k53.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: ## Plan **Outer `nl` loop:** stays sequential. Each pass reads `u`/`v` left over from the previous pass, and `dummy()` mutates `a,b,c,d,e` (which feed back into the next pass's `c[i]`/`d[i]` reads) — a genuine value carried from one `nl` iteration to the next. This loop can't be parallelized without breaking that chain. **Inner `i` loop:** this is the outermost loop whose iterations are actually i
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

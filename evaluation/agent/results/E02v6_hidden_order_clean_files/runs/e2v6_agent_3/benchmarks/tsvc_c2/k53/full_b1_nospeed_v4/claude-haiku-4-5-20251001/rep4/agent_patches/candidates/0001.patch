@@ -1,0 +1,36 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6_agent_3/benchmarks/tsvc_c2/k53/full_b1_nospeed_v4/claude-haiku-4-5-20251001/rep4/work/k53.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6_agent_3/benchmarks/tsvc_c2/k53/full_b1_nospeed_v4/claude-haiku-4-5-20251001/rep4/work/k53.c
+@@ -2,12 +2,31 @@
+ 
+ real_t kernel_k53(void)
+ {
++    // Allocate temporary buffer for v updates
++    real_t *v_new = malloc(sizeof(real_t) * LEN_1D);
++
+     for (int nl = 0; nl < iterations; nl++) {
++        // Phase 1: Compute all new v values, starting with current v
++        for (long i = 0; i < LEN_1D; i++) {
++            v_new[i] = v[i];
++        }
+         for (long i = 1; i < LEN_1D; i++) {
+-            u[ju[i]] += v[kv[i]] * c[i];
+-            v[jv[i]] = u[ku[i]] * d[i] + c[i];
++            v_new[jv[i]] = u[ku[i]] * d[i] + c[i];
+         }
++
++        // Phase 2: Compute all new u values using the new v
++        for (long i = 1; i < LEN_1D; i++) {
++            u[ju[i]] += v_new[kv[i]] * c[i];
++        }
++
++        // Copy updated v values back
++        for (long i = 0; i < LEN_1D; i++) {
++            v[i] = v_new[i];
++        }
++
+         dummy(a, b, c, d, e);
+     }
++
++    free(v_new);
+     return (real_t)0;
+ }

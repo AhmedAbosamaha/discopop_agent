@@ -1,0 +1,84 @@
+#include <stdlib.h>
+#include "data.h"
+
+/*
+ * The i loop carries dependences only through the indirect accesses
+ * u[ju[i]] (read+write), u[ku[i]] (read), v[kv[i]] (read), v[jv[i]] (write).
+ * The index arrays are never modified by the kernel, so we compute once a
+ * dependence level for every iteration: level(i) = 1 + max level of every
+ * earlier iteration that conflicts with i (RAW, WAR, WAW on u or v).
+ * Iterations within one level touch no common written location, so they can
+ * run in any order; levels run in increasing order, so each value written by
+ * one iteration still reaches every later reader exactly as before.
+ */
+real_t kernel_k19(void)
+{
+    const long n = LEN_1D;
+    int mu = 0, mv = 0;
+
+#pragma omp parallel for schedule(static) reduction(max:mu, mv)
+    for (long i = 1; i < n; i++) {
+        if (ju[i] > mu) mu = ju[i];
+        if (ku[i] > mu) mu = ku[i];
+        if (jv[i] > mv) mv = jv[i];
+        if (kv[i] > mv) mv = kv[i];
+    }
+
+    int *uw = (int *)calloc((size_t)mu + 1, sizeof(int)); /* level of last writer of u[x] */
+    int *ur = (int *)calloc((size_t)mu + 1, sizeof(int)); /* max level of readers of u[x] */
+    int *vw = (int *)calloc((size_t)mv + 1, sizeof(int));
+    int *vr = (int *)calloc((size_t)mv + 1, sizeof(int));
+    int *lev = (int *)malloc((size_t)n * sizeof(int));
+    long *order = (long *)malloc((size_t)n * sizeof(long));
+    int nlev = 0;
+
+    /* serial O(n) pass: dependence levels (needs program order) */
+    for (long i = 1; i < n; i++) {
+        int L = 0;
+        int x = ju[i];
+        if (uw[x] > L) L = uw[x];
+        if (ur[x] > L) L = ur[x];
+        int y = ku[i];
+        if (uw[y] > L) L = uw[y];
+        int r = kv[i];
+        if (vw[r] > L) L = vw[r];
+        int w = jv[i];
+        if (vw[w] > L) L = vw[w];
+        if (vr[w] > L) L = vr[w];
+        L++;
+        uw[x] = L;
+        if (ur[y] < L) ur[y] = L;
+        if (vr[r] < L) vr[r] = L;
+        vw[w] = L;
+        lev[i] = L;
+        if (L > nlev) nlev = L;
+    }
+
+    long *start = (long *)calloc((size_t)nlev + 2, sizeof(long));
+    long *pos = (long *)malloc(((size_t)nlev + 2) * sizeof(long));
+    for (long i = 1; i < n; i++)
+        start[lev[i] + 1]++;
+    for (int k = 1; k <= nlev + 1; k++)
+        start[k] += start[k - 1];
+    for (int k = 0; k <= nlev + 1; k++)
+        pos[k] = start[k];
+    for (long i = 1; i < n; i++)
+        order[pos[lev[i]]++] = i;
+
+    for (int nl = 0; nl < iterations; nl++) {
+        for (int L = 1; L <= nlev; L++) {
+            long lo = start[L], hi = start[L + 1];
+#pragma omp parallel for schedule(static) firstprivate(lo, hi) shared(order)
+            for (long k = lo; k < hi; k++) {
+                long i = order[k];
+                u[ju[i]] += v[kv[i]] * c[i];
+                v[jv[i]] = u[ku[i]] * d[i] + c[i];
+            }
+        }
+        dummy(a, b, c, d, e);
+    }
+
+    free(uw); free(ur); free(vw); free(vr);
+    free(lev); free(order); free(start); free(pos);
+    return (real_t)0;
+}

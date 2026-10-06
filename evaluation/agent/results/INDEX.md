@@ -474,17 +474,17 @@ Status: running
 | run | where | what it is | status | trials | outcomes |
 |---|---|---|---|---:|---|
 | `e2v6_pilot` | [`E02v6_hidden_order_clean_files/preflight/e2v6_pilot/`](E02v6_hidden_order_clean_files/preflight/e2v6_pilot/) | E2-v6 mechanism pilot (the rule: a with/without pilot before a long experiment): tsvc_c2/k19 and k27 × full_b1_nospeed_v4, no_evidence_b1_nospeed_v4 × 2, Haiku — never counted | valid | 8 | FASTER 3, no-change 5 |
-| `e2v6_agent_1` | not archived yet | E2-v6: tsvc_c2/k19, k23 × full_b1_nospeed_v4, no_evidence_b1_nospeed_v4 × 10, Haiku, threads 6/12, repeats 5 | registered |  |  |
-| `e2v6_agent_2` | not archived yet | E2-v6: tsvc_c2/k31, k27 × full_b1_nospeed_v4, no_evidence_b1_nospeed_v4 × 10, Haiku, threads 6/12, repeats 5 | registered |  |  |
-| `e2v6_agent_3` | not archived yet | E2-v6: tsvc_c2/s161, k53, k48 × full_b1_nospeed_v4, no_evidence_b1_nospeed_v4 × 10, Haiku, threads 6/12, repeats 5 | registered |  |  |
-| `e2v6_bare_haiku` | not archived yet | E2-v6: claude-haiku-4-5-20251001 alone on the seven units × bare_llm_nospeed_v4 × 10 | registered |  |  |
-| `e2v6_bare_sonnet` | not archived yet | E2-v6: claude-sonnet-5 alone on the seven units × bare_llm_nospeed_v4 × 5 | registered |  |  |
-| `e2v6_bare_opus` | not archived yet | E2-v6: claude-opus-5-5 alone on the seven units × bare_llm_nospeed_v4 × 5 | registered |  |  |
-| `e2v6_bare_fable` | not archived yet | E2-v6: claude-fable-5-1 alone on the seven units × bare_llm_nospeed_v4 × 5 | registered |  |  |
+| `e2v6_agent_1` | [`E02v6_hidden_order_clean_files/runs/e2v6_agent_1/`](E02v6_hidden_order_clean_files/runs/e2v6_agent_1/) | E2-v6: tsvc_c2/k19, k23 × full_b1_nospeed_v4, no_evidence_b1_nospeed_v4 × 10, Haiku, threads 6/12, repeats 5 | valid | 40 | FASTER 19, no-change 20, parallel-not-faster 1 |
+| `e2v6_agent_2` | [`E02v6_hidden_order_clean_files/runs/e2v6_agent_2/`](E02v6_hidden_order_clean_files/runs/e2v6_agent_2/) | E2-v6: tsvc_c2/k31, k27 × full_b1_nospeed_v4, no_evidence_b1_nospeed_v4 × 10, Haiku, threads 6/12, repeats 5 | valid | 40 | FASTER 16, no-change 24 |
+| `e2v6_agent_3` | [`E02v6_hidden_order_clean_files/runs/e2v6_agent_3/`](E02v6_hidden_order_clean_files/runs/e2v6_agent_3/) | E2-v6: tsvc_c2/s161, k53, k48 × full_b1_nospeed_v4, no_evidence_b1_nospeed_v4 × 10, Haiku, threads 6/12, repeats 5 | valid | 60 | FASTER 38, no-change 21, parallel-not-faster 1 |
+| `e2v6_bare_haiku` | [`E02v6_hidden_order_clean_files/runs/e2v6_bare_haiku/`](E02v6_hidden_order_clean_files/runs/e2v6_bare_haiku/) | E2-v6: claude-haiku-4-5-20251001 alone on the seven units × bare_llm_nospeed_v4 × 10 | valid | 70 | BROKEN 61, FASTER 4, VERIFY_FAILED 5 |
+| `e2v6_bare_sonnet` | [`E02v6_hidden_order_clean_files/runs/e2v6_bare_sonnet/`](E02v6_hidden_order_clean_files/runs/e2v6_bare_sonnet/) | E2-v6: claude-sonnet-5 alone on the seven units × bare_llm_nospeed_v4 × 5 | valid | 35 | BROKEN 27, FASTER 7, changed-not-parallel 1 |
+| `e2v6_bare_opus` | [`E02v6_hidden_order_clean_files/runs/e2v6_bare_opus/`](E02v6_hidden_order_clean_files/runs/e2v6_bare_opus/) | E2-v6: claude-opus-5-5 alone on the seven units × bare_llm_nospeed_v4 × 5 | valid | 35 | BROKEN 17, FASTER 8, parallel-not-faster 10 |
+| `e2v6_bare_fable` | [`E02v6_hidden_order_clean_files/runs/e2v6_bare_fable/`](E02v6_hidden_order_clean_files/runs/e2v6_bare_fable/) | E2-v6: claude-fable-5-1 alone on the seven units × bare_llm_nospeed_v4 × 5 | valid | 35 | BROKEN 8, FASTER 10, parallel-not-faster 17 |
 | `e2v6_race_check` | not archived yet | race_check.py (server, no model) over every model-alone program of E2-v6 and, as the positive control, the agent's parallel programs (both arms) | registered |  |  |
-| `e2v6_fb_1` | not archived yet | E2-v6, the feedback arms: tsvc_c2/k19, k23 × full_nospeed_v4, no_evidence_nospeed_v4 (three attempts per region) × 10, Haiku, threads 6/12, repeats 5 | registered |  |  |
-| `e2v6_fb_2` | not archived yet | E2-v6, the feedback arms: tsvc_c2/k31, k27 × full_nospeed_v4, no_evidence_nospeed_v4 (three attempts per region) × 10, Haiku, threads 6/12, repeats 5 | registered |  |  |
-| `e2v6_fb_3` | not archived yet | E2-v6, the feedback arms: tsvc_c2/s161, k53, k48 × full_nospeed_v4, no_evidence_nospeed_v4 (three attempts per region) × 10, Haiku, threads 6/12, repeats 5 | registered |  |  |
+| `e2v6_fb_1` | [`E02v6_hidden_order_clean_files/runs/e2v6_fb_1/`](E02v6_hidden_order_clean_files/runs/e2v6_fb_1/) | E2-v6, the feedback arms: tsvc_c2/k19, k23 × full_nospeed_v4, no_evidence_nospeed_v4 (three attempts per region) × 10, Haiku, threads 6/12, repeats 5 | valid | 40 | BROKEN 1, FASTER 24, no-change 15 |
+| `e2v6_fb_2` | [`E02v6_hidden_order_clean_files/runs/e2v6_fb_2/`](E02v6_hidden_order_clean_files/runs/e2v6_fb_2/) | E2-v6, the feedback arms: tsvc_c2/k31, k27 × full_nospeed_v4, no_evidence_nospeed_v4 (three attempts per region) × 10, Haiku, threads 6/12, repeats 5 | valid | 40 | FASTER 23, no-change 16, parallel-not-faster 1 |
+| `e2v6_fb_3` | [`E02v6_hidden_order_clean_files/runs/e2v6_fb_3/`](E02v6_hidden_order_clean_files/runs/e2v6_fb_3/) | E2-v6, the feedback arms: tsvc_c2/s161, k53, k48 × full_nospeed_v4, no_evidence_nospeed_v4 (three attempts per region) × 10, Haiku, threads 6/12, repeats 5 | valid | 60 | BROKEN 2, FASTER 37, no-change 12, parallel-not-faster 9 |
 
 ## [E2-O3 — does the evidence effect hold on more hidden-order kernels?](history/E02o3_hidden_order_kernels/REPORT.md)
 

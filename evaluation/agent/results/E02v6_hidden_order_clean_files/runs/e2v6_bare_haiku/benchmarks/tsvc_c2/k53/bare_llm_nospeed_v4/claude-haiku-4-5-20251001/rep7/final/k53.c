@@ -1,0 +1,26 @@
+#include "data.h"
+
+real_t kernel_k53(void)
+{
+    for (int nl = 0; nl < iterations; nl++) {
+        // Pass 1: Accumulate into u from v
+        // Each iteration i writes to u[ju[i]], reading from v[kv[i]] and c[i]
+        // No loop-carried dependence: each iteration writes to a distinct location
+        #pragma omp parallel for
+        for (long i = 1; i < LEN_1D; i++) {
+            u[ju[i]] += v[kv[i]] * c[i];
+        }
+
+        // Pass 2: Update v using finalized u values
+        // Each iteration i writes to v[jv[i]], reading from u[ku[i]], d[i], and c[i]
+        // No loop-carried dependence: each iteration writes to a distinct location
+        // Implicit barrier ensures pass 1 fully completes before this loop starts
+        #pragma omp parallel for
+        for (long i = 1; i < LEN_1D; i++) {
+            v[jv[i]] = u[ku[i]] * d[i] + c[i];
+        }
+
+        dummy(a, b, c, d, e);
+    }
+    return (real_t)0;
+}

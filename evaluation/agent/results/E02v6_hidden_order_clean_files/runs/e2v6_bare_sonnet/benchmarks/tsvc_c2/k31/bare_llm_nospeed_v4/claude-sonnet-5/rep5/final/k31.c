@@ -1,0 +1,49 @@
+#include "data.h"
+#include <stdlib.h>
+
+real_t kernel_k31(void)
+{
+    /* Heap-allocated scratch (sized with the problem, so it must not be a
+       stack array): holds the new u[]/v[] values for one sweep before they
+       are published, which is what breaks the WAR anti-dependence between
+       the read of v[i+off]/u[i+far] at iteration i and the write of
+       v[j]/u[j] performed when the loop variable later reaches
+       j == i+off / j == i+far. */
+    real_t *tmp_u = (real_t *)malloc((size_t)LEN_1D * sizeof(real_t));
+    real_t *tmp_v = (real_t *)malloc((size_t)LEN_1D * sizeof(real_t));
+
+    for (int nl = 0; nl < iterations; nl++) {
+        /* Phase 1: compute the new values from the state u/v had at the
+           start of this sweep. Neither u nor v is written here (only
+           tmp_u/tmp_v are, one slot per i, disjoint across iterations), so
+           every read of u[i+far]/v[i+off] sees the pre-sweep value no
+           matter what order iterations run in -- exactly what the original
+           sequential sweep also sees, since off/far are non-negative and
+           thus i+off/i+far are never behind i. The one place that is a
+           genuine same-iteration (not cross-iteration) dependence is
+           far == 0, where statement 2 must see the value statement 1 of
+           the SAME i just produced; that is handled explicitly with
+           new_u instead of re-reading u[i]. */
+        #pragma omp parallel for default(none) shared(u, v, c, d, tmp_u, tmp_v, off, far) schedule(static)
+        for (long i = 1; i < LEN_1D; i++) {
+            real_t new_u = u[i] + v[i + off] * c[i];
+            real_t u_far_val = (far == 0) ? new_u : u[i + far];
+            tmp_u[i] = new_u;
+            tmp_v[i] = u_far_val * d[i] + c[i];
+        }
+
+        /* Phase 2: publish the new values. Each i reads/writes only its own
+           slot of tmp_u/tmp_v/u/v, so iterations are fully independent. */
+        #pragma omp parallel for default(none) shared(u, v, tmp_u, tmp_v) schedule(static)
+        for (long i = 1; i < LEN_1D; i++) {
+            u[i] = tmp_u[i];
+            v[i] = tmp_v[i];
+        }
+
+        dummy(a, b, c, d, e);
+    }
+
+    free(tmp_u);
+    free(tmp_v);
+    return (real_t)0;
+}

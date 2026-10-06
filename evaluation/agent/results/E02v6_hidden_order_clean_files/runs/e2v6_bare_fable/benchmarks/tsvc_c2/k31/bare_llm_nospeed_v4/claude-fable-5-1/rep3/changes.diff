@@ -1,0 +1,76 @@
+--- original.c
++++ final.c
+@@ -36,16 +36,70 @@
+ 
+ /* ==== k31.c ==== */
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_k31(void)
+ {
++    long n = LEN_1D;
++    /* scratch for the new v values when they must not be stored yet */
++    real_t *tmpv = (real_t *)malloc((size_t)n * sizeof(real_t));
++
+     for (int nl = 0; nl < iterations; nl++) {
+-        for (long i = 1; i < LEN_1D; i++) {
+-            u[i] += v[i + off] * c[i];
+-            v[i] = u[i + far] * d[i] + c[i];
++        if (far > 0) {
++            /* u[i+far] is written only by a later iteration: old u */
++            #pragma omp parallel for shared(u, c, d, tmpv, n, far)
++            for (long i = 1; i < n; i++) {
++                tmpv[i] = u[i + far] * d[i] + c[i];
++            }
++            /* v[i+off] is the new value only for off<0 and i+off>=1;
++               otherwise it is the pre-sweep value still sitting in v */
++            #pragma omp parallel for shared(u, v, c, tmpv, n, off)
++            for (long i = 1; i < n; i++) {
++                long j = i + off;
++                real_t vj = (off < 0 && j >= 1) ? tmpv[j] : v[j];
++                u[i] += vj * c[i];
++            }
++            #pragma omp parallel for shared(v, tmpv, n)
++            for (long i = 1; i < n; i++) {
++                v[i] = tmpv[i];
++            }
++        } else {
++            if (off >= 0) {
++                /* v[i+off] is never written before iteration i reads it */
++                #pragma omp parallel for shared(u, v, c, n, off)
++                for (long i = 1; i < n; i++) {
++                    u[i] += v[i + off] * c[i];
++                }
++            } else {
++                /* true recurrence of distance k = -(off+far) >= 1:
++                   u[i] += (u[i-k]*d[i+off] + c[i+off]) * c[i]
++                   residue classes mod k are independent chains */
++                long k = -(off + far);
++                long nr = (k < n) ? k : n;
++                #pragma omp parallel for shared(u, v, c, d, n, off, far, k, nr)
++                for (long r = 0; r < nr; r++) {
++                    for (long i = (r == 0) ? k : r; i < n; i += k) {
++                        long j = i + off;
++                        real_t vj;
++                        if (j < 1) {
++                            vj = v[j];                 /* never written */
++                        } else {
++                            vj = u[j + far] * d[j] + c[j]; /* j+far == i-k */
++                        }
++                        u[i] += vj * c[i];
++                    }
++                }
++            }
++            /* u[i+far], i+far <= i: fully updated (or untouched if < 1) */
++            #pragma omp parallel for shared(u, v, c, d, n, far)
++            for (long i = 1; i < n; i++) {
++                v[i] = u[i + far] * d[i] + c[i];
++            }
+         }
+         dummy(a, b, c, d, e);
+     }
++
++    free(tmpv);
+     return (real_t)0;
+ }
+ 

@@ -1,0 +1,76 @@
+#include <stdlib.h>
+#include "data.h"
+
+real_t kernel_k19(void)
+{
+    const long n = LEN_1D;
+
+    /* ---- inspector: dependence levels (index arrays never change) ---- */
+    long maxidx = 0;
+    for (long i = 1; i < n; i++) {
+        if (ju[i] > maxidx) maxidx = ju[i];
+        if (jv[i] > maxidx) maxidx = jv[i];
+        if (ku[i] > maxidx) maxidx = ku[i];
+        if (kv[i] > maxidx) maxidx = kv[i];
+    }
+    const long m = maxidx + 1;
+    long *wU = (long *)malloc((size_t)m * sizeof(long));
+    long *rU = (long *)malloc((size_t)m * sizeof(long));
+    long *wV = (long *)malloc((size_t)m * sizeof(long));
+    long *rV = (long *)malloc((size_t)m * sizeof(long));
+    long *lev = (long *)malloc((size_t)n * sizeof(long));
+    for (long x = 0; x < m; x++) { wU[x] = -1; rU[x] = -1; wV[x] = -1; rV[x] = -1; }
+
+    long nlev = 0;
+    for (long i = 1; i < n; i++) {
+        long L = 0, t;
+        long a_ju = ju[i], a_ku = ku[i], a_jv = jv[i], a_kv = kv[i];
+        /* reads: v[kv], u[ju], u[ku]; writes: u[ju], v[jv] */
+        t = wV[a_kv] + 1; if (t > L) L = t;
+        t = wU[a_ju] + 1; if (t > L) L = t;
+        t = rU[a_ju] + 1; if (t > L) L = t;
+        t = wU[a_ku] + 1; if (t > L) L = t;
+        t = wV[a_jv] + 1; if (t > L) L = t;
+        t = rV[a_jv] + 1; if (t > L) L = t;
+        lev[i] = L;
+        wU[a_ju] = L;
+        wV[a_jv] = L;
+        if (rU[a_ju] < L) rU[a_ju] = L;
+        if (rU[a_ku] < L) rU[a_ku] = L;
+        if (rV[a_kv] < L) rV[a_kv] = L;
+        if (L + 1 > nlev) nlev = L + 1;
+    }
+    free(wU); free(rU); free(wV); free(rV);
+
+    /* bucket iterations by level (counting sort, stable in i) */
+    long *start = (long *)calloc((size_t)(nlev + 1), sizeof(long));
+    long *order = (long *)malloc((size_t)(n > 1 ? n - 1 : 1) * sizeof(long));
+    for (long i = 1; i < n; i++) start[lev[i] + 1]++;
+    for (long L = 0; L < nlev; L++) start[L + 1] += start[L];
+    {
+        long *pos = (long *)malloc((size_t)(nlev > 0 ? nlev : 1) * sizeof(long));
+        for (long L = 0; L < nlev; L++) pos[L] = start[L];
+        for (long i = 1; i < n; i++) order[pos[lev[i]]++] = i;
+        free(pos);
+    }
+    free(lev);
+
+    /* ---- executor ---- */
+    for (int nl = 0; nl < iterations; nl++) {
+        for (long L = 0; L < nlev; L++) {
+            const long lo = start[L];
+            const long hi = start[L + 1];
+            #pragma omp parallel for default(none) shared(order, u, v, ju, jv, ku, kv, c, d) firstprivate(lo, hi)
+            for (long k = lo; k < hi; k++) {
+                long i = order[k];
+                u[ju[i]] += v[kv[i]] * c[i];
+                v[jv[i]] = u[ku[i]] * d[i] + c[i];
+            }
+        }
+        dummy(a, b, c, d, e);
+    }
+
+    free(start);
+    free(order);
+    return (real_t)0;
+}

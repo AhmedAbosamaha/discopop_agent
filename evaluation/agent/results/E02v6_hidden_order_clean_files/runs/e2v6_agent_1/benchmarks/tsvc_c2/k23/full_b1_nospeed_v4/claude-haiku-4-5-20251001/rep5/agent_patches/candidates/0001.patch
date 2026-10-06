@@ -1,0 +1,33 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6_agent_1/benchmarks/tsvc_c2/k23/full_b1_nospeed_v4/claude-haiku-4-5-20251001/rep5/work/k23.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6_agent_1/benchmarks/tsvc_c2/k23/full_b1_nospeed_v4/claude-haiku-4-5-20251001/rep5/work/k23.c
+@@ -1,13 +1,28 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_k23(void)
+ {
++    real_t *w_saved = (real_t*)malloc(LEN_1D * sizeof(real_t));
++    real_t *d_saved = (real_t*)malloc(LEN_1D * sizeof(real_t));
++
+     for (int nl = 0; nl < iterations; nl++) {
++        // Extract inputs before dummy modifies them
+         for (long i = 1; i < LEN_1D; i++) {
+-            u[i] += w[i] * c[i];
+-            v[i] = x[i] * d[i] + c[i];
++            w_saved[i] = w[i];
++            d_saved[i] = d[i];
+         }
++
++        // Process with extracted values (no loop-carried dependence)
++        for (long i = 1; i < LEN_1D; i++) {
++            u[i] += w_saved[i] * c[i];
++            v[i] = x[i] * d_saved[i] + c[i];
++        }
++
+         dummy(a, b, c, d, e);
+     }
++
++    free(w_saved);
++    free(d_saved);
+     return (real_t)0;
+ }

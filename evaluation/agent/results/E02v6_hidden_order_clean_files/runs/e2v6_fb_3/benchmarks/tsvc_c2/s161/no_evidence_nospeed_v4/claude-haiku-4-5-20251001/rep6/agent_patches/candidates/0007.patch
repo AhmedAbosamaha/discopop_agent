@@ -1,0 +1,26 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6_fb_3/benchmarks/tsvc_c2/s161/no_evidence_nospeed_v4/claude-haiku-4-5-20251001/rep6/work/s161.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6_fb_3/benchmarks/tsvc_c2/s161/no_evidence_nospeed_v4/claude-haiku-4-5-20251001/rep6/work/s161.c
+@@ -5,9 +5,11 @@
+ {
+     for (int nl = 0; nl < iterations; nl++) {
+         real_t* c_updates = (real_t*) malloc(LEN_1D * sizeof(real_t));
++        #pragma omp parallel for shared(c_updates) 
+         for (int i = 0; i < LEN_1D; i++) c_updates[i] = c[i];
+ 
+         // Pass 1: Compute c[i+1] updates where b[i] < 0, using a[i] from previous outer iteration
++        #pragma omp parallel for firstprivate(c_updates) 
+         for (int i = 0; i < LEN_1D-1; ++i) {
+             if (b[i] < (real_t)0.) {
+                 c_updates[i+1] = a[i] + d[i] * d[i];
+@@ -15,9 +17,11 @@
+         }
+ 
+         // Apply c updates
++        #pragma omp parallel for shared(c_updates) 
+         for (int i = 0; i < LEN_1D; i++) c[i] = c_updates[i];
+ 
+         // Pass 2: Compute a[i] where b[i] >= 0, using updated c[i]
++        #pragma omp parallel for 
+         for (int i = 0; i < LEN_1D-1; ++i) {
+             if (b[i] >= (real_t)0.) {
+                 a[i] = c[i] + d[i] * e[i];
