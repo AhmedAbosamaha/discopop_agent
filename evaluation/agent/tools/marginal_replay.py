@@ -16,6 +16,16 @@ with ALL its safety-passing pragmas together against the original, the compariso
 
     venv/bin/python evaluation/agent/tools/marginal_replay.py e1_r_b:tsvc/s281@2 e1_r_a:tsvc/s121@1 \
         --threads 6,12,all --out evaluation/agent/analysis/marginal_replay
+
+`--from-final` (7 Oct 2026, E2-v6): for a trial of an arm that ran with the speed check OFF, ask what the speed
+check would have measured on the program it shipped. The two states are taken from the archive as they are:
+the shipped file against the same file without its OpenMP directives (Phase B's question), and the shipped file
+against the original (Settle's). The timing size is the one the harness passes when the speed check is on
+(`--timing-size-from-verify`: `-D<verification size>_DATASET`, the per-kernel size of T0.1). A candidate that
+CRASHES in that run is one the agent drops (`phases/phase_b.py`: "the program CRASHED at the timing size"); the
+record says so. Multi-file packages (packaging v5 and later) are built as the agent builds them.
+
+    venv/bin/python evaluation/agent/tools/marginal_replay.py e2v6_fb_3:tsvc_c2/k53@3 --arm full_nospeed_v4 --from-final --timing-size-from-verify --threads all --out evaluation/agent/runs/e2v6_speed_replay
 """
 from __future__ import annotations
 
@@ -23,6 +33,8 @@ import argparse
 import json
 import os
 import platform
+import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -74,8 +86,15 @@ def main() -> int:
     ap.add_argument("--threads", default="6,12,all", help="`all` = OMP_NUM_THREADS unset, as in the agent's runs")
     ap.add_argument("--pairs", type=int, default=5, help="as measure_marginal's default")
     ap.add_argument("--out", type=Path, required=True)
+    ap.add_argument("--from-final", action="store_true",
+                    help="take the two states from the archive: the shipped file without its directives, and the "
+                         "original, each against the shipped file (for an arm that ran with the speed check off)")
+    ap.add_argument("--timing-size-from-verify", action="store_true",
+                    help="when the trial's command carries no --timing-cflags: time at -D<verification size>_DATASET, "
+                         "the flag the harness passes for that kernel when the speed check is on")
     a = ap.parse_args()
 
+    from discopop_agent import project as project_mod
     from discopop_agent.gate.timing import measure_marginal
 
     a.out.mkdir(parents=True, exist_ok=True)
@@ -91,11 +110,68 @@ def main() -> int:
     for spec in a.specs:
         d = _trial_dir(spec, a.arm)
         t = json.loads((d / "trial.json").read_text())
-        name = str(t.get("source"))
         cmd = [str(x) for x in t.get("agent_cmd") or []]
         flags = [x.split("=", 1)[1] for x in cmd if x.startswith("--timing-cflags=")]
+        if not flags and a.timing_size_from_verify:
+            flags = [f"-D{(t.get('verify') or {}).get('verify_size')}_DATASET"]
+        multi = (d / "original").is_dir()            # packaging v5 and later: the package is a directory
+        if multi:
+            editable = list(t.get("editable") or [])
+            units = cmd[cmd.index("--project-units") + 1].split(",") if "--project-units" in cmd else []
+            if len(editable) != 1 or not units:
+                sys.exit(f"{spec}: a multi-file trial without one editable file")
+            name = editable[0]
+            original = (d / "original" / name).read_text()
+        else:
+            name = str(t.get("source"))
+            original = (d / "original.c").read_text()
+        if a.from_final:
+            final = (d / "final" / name).read_text() if multi else (d / "final.c").read_text()
+            bare = "\n".join(ln for ln in final.split("\n") if not re.match(r"\s*#\s*pragma\s+omp\b", ln))
+            states_ff: List[Dict[str, Any]] = [
+                {"what": "the shipped file against the same file without its directives (Phase B's question)",
+                 "before": bare, "after": final},
+                {"what": "the shipped file against the ORIGINAL (Settle's question)", "before": original, "after": final}]
+            (a.out / f"{spec.replace(':', '_').replace('/', '_')}_final.c").write_text(final)
+            for st in states_ff:
+                rec_ff: Dict[str, Any] = {"spec": spec, "arm": a.arm, "harness_outcome": t.get("outcome"),
+                                          "what": st["what"], "timing_flags": flags, "ratio": {}, "crashed": {}}
+                with tempfile.TemporaryDirectory(prefix="replay_src_") as tmp:
+                    if multi:
+                        root = Path(tmp) / "program"
+                        shutil.copytree(d / "original", root)
+                        src = root / name
+                        project_mod.activate(project_mod.Project.discover(root, units=units, include_dirs=["."],
+                                                                          editable=[name]))
+                        project_mod.set_focus(str(src))
+                    else:
+                        src = Path(tmp) / name
+                        src.write_text(original)
+                    for setting in settings:
+                        if setting == "all":
+                            os.environ.pop("OMP_NUM_THREADS", None)
+                        else:
+                            os.environ["OMP_NUM_THREADS"] = setting
+                        ok, ratio, diag = measure_marginal(st["before"], st["after"], str(src),
+                                                           pairs=a.pairs, extra_flags=flags or None)
+                        # as phases/phase_b.py reads the diagnostic: a crash at the timing size, not a failed timing
+                        rec_ff["crashed"][setting] = (not ok) and ("non-zero exit (-" in diag or "signal" in diag.lower())
+                        rec_ff["ratio"][setting] = round(ratio, 3) if ok else f"failed: {diag[:300]}"
+                    project_mod.activate(None)
+                if base_env is None:
+                    os.environ.pop("OMP_NUM_THREADS", None)
+                else:
+                    os.environ["OMP_NUM_THREADS"] = base_env
+                with results.open("a") as f:
+                    f.write(json.dumps(rec_ff) + "\n")
+                print(f"{spec} [{t.get('outcome')}] {st['what']} at {' '.join(flags) or 'the agent size'}: "
+                      + "  ".join(f"{k}={v}" + (" (CRASHED)" if rec_ff["crashed"][k] else "")
+                                  for k, v in rec_ff["ratio"].items()), flush=True)
+            continue
+        if multi:
+            sys.exit(f"{spec}: a multi-file trial is replayed with --from-final only")
+        name = str(t.get("source"))
         cands = [json.loads(l) for l in (d / "agent_patches" / "candidates.jsonl").read_text().splitlines() if l.strip()]
-        original = (d / "original.c").read_text()
         # A Phase-A candidate can pass the gate and still be reverted ("DiscoPoP sees a
         # pattern, but no pragma it generates for it can run — reverting"); candidates.jsonl
         # does not say so, the log does, in the same order. Only the kept ones are the base.
