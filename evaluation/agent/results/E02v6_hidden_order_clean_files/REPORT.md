@@ -12,9 +12,14 @@ On seven units of packaging v6 whose deciding fact is outside the benchmark's fi
 
 Five units whose split order is decided outside the file, Haiku, speed check off, race-checked; DiscoPoP alone changes nothing on any unit (three draws). The agent with DiscoPoP's evidence at one attempt: 45 of 50 race-free verified parallel programs covering the hot loop (all 45 FASTER), 0 unsafe; without the evidence 10 of 50, 9 of them on `s161`, where the model finds the order alone — V6-i rejected (MH odds ratio 351, exact p 1.4e-16, family bound at most 4.0e-12). Three attempts with feedback, without evidence: 22 of 50 against 10 — V6-ii rejected (odds ratio 21, p 0.00068, family bound 0.035) — at 17.8 model calls per success against 1.6, and far below the evidence at one attempt (22 against 45); with evidence, three attempts add nothing (46 against 45). On the unit that has to be left alone (`k53`) the one-attempt agent ships no parallel program in 20 trials; at three attempts 8 of 20 trials ship one that parallelizes only a loop the model added, and 2 of those crash at the verification size (an array of the data's length on the stack) — with a third on `k23` the agent's first unsafe programs, 3 of 280. The models alone on the five units: Haiku 3 of 50 with 47 unsafe, Sonnet 7 of 25 with 17, Opus 10 of 25 with 6 unsafe and 9 too slow, Fable 17 of 25 with 7 unsafe; on `k23` every model alone fails all 25. Fast and right on the four constructed kernels: the agent with evidence 35 of 40, Fable 5 of 20, Opus 3 of 20, Sonnet 2 of 20, Haiku 0 of 40. The agent's successes there reach 1.4–1.9× where the expert version reaches 3.1–4.2×: DiscoPoP writes the directive on only part of the loops of the split. 1,181 model calls, $243 API-equivalent.
 
+## Figures
+
+![fig_verdict_matrix](analysis/fig_verdict_matrix.png)
+![fig_vs_discopop_alone](analysis/fig_vs_discopop_alone.png)
+
 ## What is in this folder
 
-- [`analysis/`](analysis/) — the read-out: [`e2v6_readout.md`](analysis/e2v6_readout.md)
+- [`analysis/`](analysis/) — the read-out: [`e2v6_readout.md`](analysis/e2v6_readout.md), [`figures.md`](analysis/figures.md), [`main_comparison_stats.md`](analysis/main_comparison_stats.md), [`vs_discopop_alone.md`](analysis/vs_discopop_alone.md)
 - [`exhibits/`](exhibits/) — 11 case studies, below
 - [`runs/`](runs/) — 10 archived run(s): the evidence
 - [`checks/`](checks/) — 2 verification(s) made during the read-out
