@@ -38,7 +38,7 @@ LLVM 19 (macOS) and LLVM 20 (Linux).
 | B11 | explorer, `TaskGraph.__assign_state_ids` | explained by B15 (27 Sep) | in TSVC v3's `main`, no access made under the five `pb_emit_array` calls is attached to any context: `pb_emit_array` holds a loop the task graph does not model, so its other loops read the wrong loop-state digit (B15); fixed with B15; harness code only |
 | B12 | profiler, `scripts/CC_wrapper.sh`, `CXX_wrapper.sh` | fixed 27 Sep | the compiler wrappers exit 0 when the instrumented compile or link fails — the AST dump after it sets the exit status; the failure surfaces one step later as a missing `a.out` |
 | B13 | explorer, `TaskGraph.__insert_data_dependencies_from_files` + Do-All detector | fixed 27 Sep | a loop whose only cross-iteration dependence is a WRITE-AFTER-WRITE on an array element (a scatter `x[idx[i]] = …` whose indices repeat) is reported Do-All: the task graph dropped every WAW as "no data flow"; its pragma races (Rodinia bfs's frontier loop in E2-B1) |
-| B14 | profiler, call-path states | candidate | the second of two sibling loops that call a function is never recorded in the call-path states; its writes resolve to both iteration copies, so a dependence carried by the outer loop can block the inner loop (upstream e2e test `case_5`, RAW variant) |
+| B14 | profiler, `static_analysis/calltree_construction.cpp` (loop states of the call path) | **root cause found 7 Oct, fix owed** | two loops side by side inside a loop are modelled as nested in each other: no transition enters the second loop from the outer loop's state, every access in it is recorded without its iteration state, and a dependence carried by the OUTER loop blocks its Do-All — the shape every loop distribution inside a repetition loop creates |
 | B15 | explorer, `TaskGraph.__assign_loopstate_positions_within_functions` / task-graph loops | fixed 27 Sep | a `do … while` loop gets no loop context in the task graph, so the loop-state digit positions of every loop in the function after it are off by one: no call-path state under the `do … while` matches, every dependence recorded there is lost, and a textbook recurrence nested in it is reported Do-All (Rodinia bfs: all 1,500 dynamic dependences of the kernel lost) |
 | L3 | explorer | limitation | NPB-CPP `mg`: with P1's fix the state assignment is fast, but the run then stays in task-pattern detection (`new_task_detector`) — a first run was read at 4 h 19 min, the same run was stopped unfinished after **11 h 24 min** at 100 % CPU on the server (19–20 Sep); the Do-All detector is not reached. Not usable per trial |
 
@@ -340,19 +340,56 @@ consume, and no state matches.
 - **Not attached.** States whose only active loop is the unmodelled one (the `do … while`'s own body and
   condition) are still not attached to a context.
 
-## B14 — candidate: the call-path states lose the second of two sibling loops that call a function (profiler)
+## B14 — two loops side by side inside a loop are modelled as nested: the second loop's iterations are never recorded (profiler)
 
-**Found** 27 Sep 2026 while fixing B13, in the end-to-end test `do_all/stack_access/various/case_5`: an outer
-loop holds two sibling loops, each calling `f(j)`. The profiler prints "No transition found from state 17 via
-instruction 1! State might be incorrect from here on!", and in `stateID_to_callpath_mapping.txt` no state of
-the second inner loop (line 20) ever records it — its digit stays "3" (inactive) in every state of the path,
-while the first inner loop's digit moves 0 → 1 → 2. A write in the second loop therefore resolves to BOTH of
-its iteration copies in the task graph, and a dependence carried by the OUTER loop is paired across the
-inner loop's copies: the same program with `y[j] = y[j] + s` has its inner loop at line 20 blocked on a
-RAW of `y` by the explorer as it was before B13 (the dependence is carried only by the outer loop). B13's
-fix counts a WAW only between writes that resolve to one context each, so B13 adds no such false block;
-the RAW one predates it. Not investigated further; no campaign benchmark is known to have this shape
-(TSVC's 33 packages: no change under B13's sweep).
+**Root cause found 7 Oct 2026; fix owed.** (27 Sep, as a candidate: "the second of two sibling loops that call a
+function" — no call is needed, and the warning quoted then is unrelated; see below.)
+
+**Symptom on the campaign.** In E2-v6 the agent splits the hidden-order kernels in the right order, and the
+explorer then reports Do-All for the loop of the assignment and none for the loop of `u[…] += …`: the agent's
+programs carry a directive on one of two loops (two of three on `k27`) and reach 1.4–1.9× where the expert
+versions reach 3.1–4.2×.
+
+**Reproducer** (no model; `k23` of `tsvc_c2` with its file replaced by the split, profiled as the harness
+profiles a package):
+
+```c
+for (int nl = 0; nl < iterations; nl++) {          /* line 5 */
+    for (long i = 1; i < LEN_1D; i++) {            /* line 6 */
+        v[i] = x[i] * d[i] + c[i];
+    }
+    for (long i = 1; i < LEN_1D; i++) {            /* line 9 */
+        u[i] += w[i] * c[i];
+    }
+    dummy(a, b, c, d, e);
+}
+```
+
+`patterns.json`: Do-All for line 6 only. `doall_prevented.json`: loop 9, RAW, `u` — a dependence carried only by
+the loop at line 5 (`u[i]` is read in the next repetition).
+
+**Cause.** `get_loopIDs_in_function_body` collects the loops of one top-level nest as a flat list, in the order
+of their `__dp_loop_entry` calls; `get_loop_iteration_instances_and_transitions` reads that list as a CHAIN —
+the parent of every loop is the loop before it (`parent_instances = new_instances`; a base instance needs all
+earlier loops active). For the list [5, 6, 9] it generates the entry into loop 9 only from states in which loop
+6 is active (`…203 → …200`), never from the outer loop's own state (`…233`). At run time loop 6 has ended
+before loop 9 begins; `update_callstate` (`rtlib/static_callstate_transitions/utils.cpp`) finds no transition
+for loop 9's entry and keeps the outer loop's state without a word — only a function exit reports a missing
+transition, and the one line the profiled run prints ("No transition found from state 31 via instruction 1")
+is the program's own exit. Every access inside loop 9 is therefore recorded with that loop's digit at 3
+(inactive): the load and the store of `u[i]` on line 10 carry the states `033`, `133` and `233`, where the
+accesses of line 7 carry `…003`, `…013`, `…023` as they should. The explorer then resolves the store to both
+iteration copies of loop 9 and pairs the dependence the outer loop carries across them.
+
+**Scope.** Every loop that holds two or more loops side by side: all but the first lose their iteration state.
+None of the 44 `tsvc_c2` originals has that shape (text scan) — DiscoPoP alone is not affected on them; every
+loop distribution the agent makes inside the repetition loop creates it, so the defect caps exactly what the
+agent can get from DiscoPoP after a split. B16 (`s244`: a RAW of the repetition loop charged to the inner loop)
+is most likely the same defect on a model's rewrite; to be re-checked on the fixed profiler.
+
+**Fix owed.** Build the loop TREE (the parent of each loop from the entry and exit markers) and create a loop's
+instances from its parent's instances with every loop that is not an ancestor inactive; then the profiler's
+tests, the end-to-end tests, the reproducer, and the classes of the suites measured again.
 
 ## B17 — the profile depends on the path of the working directory: an uninitialised flag switches loop tracking off (profiler runtime)
 
