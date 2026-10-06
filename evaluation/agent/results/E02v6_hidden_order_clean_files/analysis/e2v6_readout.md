@@ -17,6 +17,22 @@ Per unit: successes of the trials (of them FASTER) · unsafe; "too slow" = the o
 | Opus 5.5 alone | 0/5 (0) · 1 unsafe · 4 too slow | 0/5 (0) · 5 unsafe | 0/5 (0) · 0 unsafe · 5 too slow | 5/5 (3) · 0 unsafe | 5/5 (5) · 0 unsafe | **10/25** (8) · 6 unsafe · 9 too slow | 23–59 % |
 | Fable 5.1 alone | 4/5 (0) · 0 unsafe · 1 too slow | 0/5 (0) · 5 unsafe | 3/5 (0) · 2 unsafe | 5/5 (5) · 0 unsafe | 5/5 (5) · 0 unsafe | **17/25** (10) · 7 unsafe · 1 too slow | 48–83 % |
 
+## How fast the successes are — beside the expert version
+
+A success only has to be parallel, right and race-free: the speed check is off. Median speedup of the successes over the original (the larger of 6 and 12 threads), lowest to highest, and how many; the last row is the expert version of the unit through the same verification (`t0_14_c2_refs`; `s161` has none).
+
+| setup | `k19` | `k23` | `k27` | `k31` | `s161` | `k48` |
+|---|---|---|---|---|---|---|
+| Haiku agent, evidence, one attempt | 1.45× (1.31–1.54, 10) | 1.40× (1.37–1.47, 9) | 1.93× (1.75–2.00, 6) | 1.37× (1.22–1.39, 10) | 2.15× (1.88–2.23, 10) | 3.80× (3.62–4.04, 10) |
+| Haiku agent, no evidence, one attempt | — | 0.65× (0.65–0.65, 1) | — | — | 2.15× (0.66–2.24, 9) | 3.77× (3.66–4.08, 10) |
+| Haiku agent, evidence, three attempts | 1.51× (1.37–1.54, 10) | 1.39× (1.25–1.46, 8) | 1.99× (1.94–2.04, 8) | 1.37× (1.31–1.38, 10) | 2.19× (2.01–2.23, 10) | 3.34× (3.20–4.34, 10) |
+| Haiku agent, no evidence, three attempts | 3.27× (1.51–5.04, 2) | 1.45× (1.44–1.46, 4) | 0.66× (0.66–0.66, 1) | 1.36× (1.35–1.37, 5) | 1.99× (0.36–2.25, 10) | 3.33× (3.22–4.17, 10) |
+| Haiku alone | — | — | — | — | 2.15× (1.66–2.16, 3) | 3.87× (3.87–3.87, 1) |
+| Sonnet 5 alone | — | — | — | 3.05× (3.02–3.08, 2) | 3.77× (1.33–3.84, 5) | — |
+| Opus 5.5 alone | — | — | — | 2.27× (1.00–2.45, 5) | 1.71× (1.66–2.26, 5) | 0.01× (0.01–0.01, 4) |
+| Fable 5.1 alone | 0.14× (0.01–1.00, 4) | — | 0.01× (0.01–0.01, 3) | 2.30× (2.27–3.17, 5) | 2.17× (2.02–2.24, 5) | 0.49× (0.01–0.94, 5) |
+| **expert version** | 4.14× | 3.33× | 4.17× | 3.09× | — | 4.13× |
+
 ## The agent's four setups against each other
 
 Pooled over the five units, stratified by unit: Mantel-Haenszel odds ratio (95 % RBG interval), the Cochran-Mantel-Haenszel p with the continuity correction and the exact conditional p. The two registered tests are one-sided as predicted and are `e2b1_stats.py`'s (`stats/v6_i`, `stats/v6_ii`); they are repeated here from this tool's own tables as a cross-check. The others are descriptive and two-sided.

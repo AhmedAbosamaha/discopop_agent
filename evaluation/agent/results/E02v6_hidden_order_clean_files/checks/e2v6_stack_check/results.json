@@ -1,0 +1,590 @@
+{
+  "run_id": "e2v6_stack_check",
+  "harness": "agent",
+  "timestamp": "e2v6_stack_check",
+  "invocation": {
+    "kind": "baselines",
+    "benchmarks": [
+      "tsvc_c2/k23"
+    ],
+    "verify_size": "per_kernel",
+    "threads": [
+      6,
+      12
+    ],
+    "repeats": 5,
+    "check_seed": "7",
+    "cc": "/usr/bin/clang-20",
+    "cxx": "/usr/bin/clang++-20",
+    "host": "rms14562",
+    "platform": "Linux-6.8.0-138-generic-x86_64-with-glibc2.39",
+    "harness_git": {
+      "path": "/home/ahmedabosamaha/discopop_agent/evaluation",
+      "head": "0758ef82ad136cde97ec0e0afd2b70511c0cba42",
+      "branch": "agentic_DiscoPop",
+      "dirty_sha256": null
+    },
+    "argv": [
+      "agent/benchmark",
+      "verify-source",
+      "tsvc_c2/k23",
+      "--label",
+      "k23_rep10_as_run",
+      "--source",
+      "agent/results/E02v6_hidden_order_clean_files/runs/e2v6_fb_1/benchmarks/tsvc_c2/k23/full_nospeed_v4/claude-haiku-4-5-20251001/rep10/final/k23.c",
+      "--run-id",
+      "e2v6_stack_check",
+      "--threads",
+      "6,12",
+      "--repeats",
+      "5"
+    ]
+  },
+  "runs": [
+    {
+      "benchmark": "tsvc_c2/k23",
+      "kernel": "k23",
+      "source": "k23.c",
+      "arm": "k23_rep10_as_run",
+      "model": "none",
+      "repeat": 1,
+      "kind": "baseline",
+      "candidate": "/home/ahmedabosamaha/discopop_agent/evaluation/agent/results/E02v6_hidden_order_clean_files/runs/e2v6_fb_1/benchmarks/tsvc_c2/k23/full_nospeed_v4/claude-haiku-4-5-20251001/rep10/final/k23.c",
+      "candidate_sha256": "751bcf7cd5039eb44343147578ca35faec3801564c07606321e676d0162cccf1",
+      "source_changed": true,
+      "pragmas_in_final": 1,
+      "started_at": "2026-10-06T20:58:51",
+      "host": "rms14562",
+      "host_load_start": [
+        2.9189453125,
+        5.99658203125,
+        7.736328125
+      ],
+      "hot_loop": {
+        "entry": "kernel_k23",
+        "function": "kernel_k23",
+        "line": 6,
+        "writes": [
+          "u",
+          "v"
+        ],
+        "aliases": [
+          "w",
+          "x"
+        ]
+      },
+      "hot_loop_covered": true,
+      "hot_loop_coverage": {
+        "criterion": "v2 (27 Sep 2026)",
+        "covered": true,
+        "covering": [
+          {
+            "function": "kernel_k23",
+            "line": 15,
+            "directive": "#pragma omp parallel for firstprivate(c_snapshot,d_snapshot)",
+            "writes": [
+              "v"
+            ]
+          }
+        ],
+        "uncounted": [],
+        "elsewhere": []
+      },
+      "verify": {
+        "verify_size": "LARGE",
+        "threads": [
+          6,
+          12
+        ],
+        "repeats": 5,
+        "compiler": "/usr/bin/clang-20",
+        "final_flags": [],
+        "dump_exact": true,
+        "dump_max_rel_err": 0.0,
+        "seed": "7",
+        "dump_exact_seeded": true,
+        "dump_seeded_max_rel_err": 0.0,
+        "seq_median_s": 2.0328,
+        "seq_kernel_median_s": 1.510866,
+        "timing_basis": "kernel",
+        "par": {},
+        "status": "final_run_failed_T6",
+        "final_run_failure": {
+          "threads": 6,
+          "rc": -11,
+          "seconds": 1.6,
+          "timed_out": false
+        },
+        "speed_measurable": true
+      },
+      "verify_s": 12.5,
+      "status": "done",
+      "outcome": "VERIFY_FAILED",
+      "finished_at": "2026-10-06T20:59:04",
+      "host_load_end": [
+        3.08447265625,
+        5.8818359375,
+        7.67041015625
+      ]
+    },
+    {
+      "benchmark": "tsvc_c2/k23",
+      "kernel": "k23",
+      "source": "k23.c",
+      "arm": "k23_rep10_stack_lifted",
+      "model": "none",
+      "repeat": 1,
+      "kind": "baseline",
+      "candidate": "/home/ahmedabosamaha/discopop_agent/evaluation/agent/results/E02v6_hidden_order_clean_files/runs/e2v6_fb_1/benchmarks/tsvc_c2/k23/full_nospeed_v4/claude-haiku-4-5-20251001/rep10/final/k23.c",
+      "candidate_sha256": "751bcf7cd5039eb44343147578ca35faec3801564c07606321e676d0162cccf1",
+      "source_changed": true,
+      "pragmas_in_final": 1,
+      "started_at": "2026-10-06T20:59:04",
+      "host": "rms14562",
+      "host_load_start": [
+        3.08447265625,
+        5.8818359375,
+        7.67041015625
+      ],
+      "hot_loop": {
+        "entry": "kernel_k23",
+        "function": "kernel_k23",
+        "line": 6,
+        "writes": [
+          "u",
+          "v"
+        ],
+        "aliases": [
+          "w",
+          "x"
+        ]
+      },
+      "hot_loop_covered": true,
+      "hot_loop_coverage": {
+        "criterion": "v2 (27 Sep 2026)",
+        "covered": true,
+        "covering": [
+          {
+            "function": "kernel_k23",
+            "line": 15,
+            "directive": "#pragma omp parallel for firstprivate(c_snapshot,d_snapshot)",
+            "writes": [
+              "v"
+            ]
+          }
+        ],
+        "uncounted": [],
+        "elsewhere": []
+      },
+      "verify": {
+        "verify_size": "LARGE",
+        "threads": [
+          6,
+          12
+        ],
+        "repeats": 5,
+        "compiler": "/usr/bin/clang-20",
+        "final_flags": [],
+        "dump_exact": true,
+        "dump_max_rel_err": 0.0,
+        "seed": "7",
+        "dump_exact_seeded": true,
+        "dump_seeded_max_rel_err": 0.0,
+        "seq_median_s": 2.0012,
+        "seq_kernel_median_s": 1.499775,
+        "timing_basis": "kernel",
+        "par": {
+          "6": {
+            "median_s": 4.1531,
+            "program_speedup": 0.482,
+            "max_rel_err": 0.0,
+            "kernel_median_s": 3.468047,
+            "kernel_speedup": 0.432,
+            "speedup": 0.432
+          },
+          "12": {
+            "median_s": 5.0167,
+            "program_speedup": 0.399,
+            "max_rel_err": 0.0,
+            "kernel_median_s": 4.253804,
+            "kernel_speedup": 0.353,
+            "speedup": 0.353
+          }
+        },
+        "digest_max_rel_err": 0.0,
+        "stable_at_fixed_threads": true,
+        "kernel_program_disagree": false,
+        "digest_seeded_rel_err": 0.0,
+        "status": "ok",
+        "speed_measurable": true
+      },
+      "verify_s": 64.8,
+      "status": "done",
+      "outcome": "parallel-not-faster",
+      "finished_at": "2026-10-06T21:00:09",
+      "host_load_end": [
+        7.5712890625,
+        6.58154296875,
+        7.79443359375
+      ]
+    },
+    {
+      "benchmark": "tsvc_c2/k53",
+      "kernel": "k53",
+      "source": "k53.c",
+      "arm": "k53_rep10_as_run",
+      "model": "none",
+      "repeat": 1,
+      "kind": "baseline",
+      "candidate": "/home/ahmedabosamaha/discopop_agent/evaluation/agent/results/E02v6_hidden_order_clean_files/runs/e2v6_fb_3/benchmarks/tsvc_c2/k53/full_nospeed_v4/claude-haiku-4-5-20251001/rep10/final/k53.c",
+      "candidate_sha256": "1458500c508aae4c6cda6c0726b045e84897bd74e68648e0b6d08cbb2e5b07a3",
+      "source_changed": true,
+      "pragmas_in_final": 1,
+      "started_at": "2026-10-06T21:00:47",
+      "host": "rms14562",
+      "host_load_start": [
+        7.81787109375,
+        6.68603515625,
+        7.77392578125
+      ],
+      "hot_loop": {
+        "entry": "kernel_k53",
+        "function": "kernel_k53",
+        "line": 6,
+        "writes": [
+          "u",
+          "v"
+        ]
+      },
+      "hot_loop_covered": true,
+      "hot_loop_coverage": {
+        "criterion": "v2 (27 Sep 2026)",
+        "covered": true,
+        "covering": [
+          {
+            "function": "kernel_k53",
+            "line": 18,
+            "directive": "#pragma omp parallel for firstprivate(u_snapshot)",
+            "writes": [
+              "u"
+            ]
+          }
+        ],
+        "uncounted": [],
+        "elsewhere": []
+      },
+      "verify": {
+        "verify_size": "STANDARD",
+        "threads": [
+          6,
+          12
+        ],
+        "repeats": 5,
+        "compiler": "/usr/bin/clang-20",
+        "final_flags": [],
+        "dump_exact": true,
+        "dump_max_rel_err": 0.0,
+        "seed": "7",
+        "dump_exact_seeded": true,
+        "dump_seeded_max_rel_err": 0.0,
+        "seq_median_s": 1.4259,
+        "seq_kernel_median_s": 1.334224,
+        "timing_basis": "kernel",
+        "par": {},
+        "status": "final_run_failed_T6",
+        "final_run_failure": {
+          "threads": 6,
+          "rc": -11,
+          "seconds": 1.2,
+          "timed_out": false
+        },
+        "speed_measurable": true
+      },
+      "verify_s": 9.2,
+      "status": "done",
+      "outcome": "VERIFY_FAILED",
+      "finished_at": "2026-10-06T21:00:56",
+      "host_load_end": [
+        7.150390625,
+        6.58056640625,
+        7.7275390625
+      ]
+    },
+    {
+      "benchmark": "tsvc_c2/k53",
+      "kernel": "k53",
+      "source": "k53.c",
+      "arm": "k53_rep10_stack_lifted",
+      "model": "none",
+      "repeat": 1,
+      "kind": "baseline",
+      "candidate": "/home/ahmedabosamaha/discopop_agent/evaluation/agent/results/E02v6_hidden_order_clean_files/runs/e2v6_fb_3/benchmarks/tsvc_c2/k53/full_nospeed_v4/claude-haiku-4-5-20251001/rep10/final/k53.c",
+      "candidate_sha256": "1458500c508aae4c6cda6c0726b045e84897bd74e68648e0b6d08cbb2e5b07a3",
+      "source_changed": true,
+      "pragmas_in_final": 1,
+      "started_at": "2026-10-06T21:00:56",
+      "host": "rms14562",
+      "host_load_start": [
+        7.150390625,
+        6.58056640625,
+        7.7275390625
+      ],
+      "hot_loop": {
+        "entry": "kernel_k53",
+        "function": "kernel_k53",
+        "line": 6,
+        "writes": [
+          "u",
+          "v"
+        ]
+      },
+      "hot_loop_covered": true,
+      "hot_loop_coverage": {
+        "criterion": "v2 (27 Sep 2026)",
+        "covered": true,
+        "covering": [
+          {
+            "function": "kernel_k53",
+            "line": 18,
+            "directive": "#pragma omp parallel for firstprivate(u_snapshot)",
+            "writes": [
+              "u"
+            ]
+          }
+        ],
+        "uncounted": [],
+        "elsewhere": []
+      },
+      "verify": {
+        "verify_size": "STANDARD",
+        "threads": [
+          6,
+          12
+        ],
+        "repeats": 5,
+        "compiler": "/usr/bin/clang-20",
+        "final_flags": [],
+        "dump_exact": true,
+        "dump_max_rel_err": 0.0,
+        "seed": "7",
+        "dump_exact_seeded": true,
+        "dump_seeded_max_rel_err": 0.0,
+        "seq_median_s": 1.4286,
+        "seq_kernel_median_s": 1.335097,
+        "timing_basis": "kernel",
+        "par": {
+          "6": {
+            "median_s": 1.9153,
+            "program_speedup": 0.746,
+            "max_rel_err": 0.0,
+            "kernel_median_s": 1.795875,
+            "kernel_speedup": 0.743,
+            "speedup": 0.743
+          },
+          "12": {
+            "median_s": 2.0055,
+            "program_speedup": 0.712,
+            "max_rel_err": 0.0,
+            "kernel_median_s": 1.875024,
+            "kernel_speedup": 0.712,
+            "speedup": 0.712
+          }
+        },
+        "digest_max_rel_err": 0.0,
+        "stable_at_fixed_threads": true,
+        "kernel_program_disagree": false,
+        "digest_seeded_rel_err": 0.0,
+        "status": "ok",
+        "speed_measurable": true
+      },
+      "verify_s": 31.1,
+      "status": "done",
+      "outcome": "parallel-not-faster",
+      "finished_at": "2026-10-06T21:01:28",
+      "host_load_end": [
+        7.9677734375,
+        6.79150390625,
+        7.75927734375
+      ]
+    },
+    {
+      "benchmark": "tsvc_c2/k53",
+      "kernel": "k53",
+      "source": "k53.c",
+      "arm": "k53_rep3_as_run",
+      "model": "none",
+      "repeat": 1,
+      "kind": "baseline",
+      "candidate": "/home/ahmedabosamaha/discopop_agent/evaluation/agent/results/E02v6_hidden_order_clean_files/runs/e2v6_fb_3/benchmarks/tsvc_c2/k53/full_nospeed_v4/claude-haiku-4-5-20251001/rep3/final/k53.c",
+      "candidate_sha256": "9a06b13cdc26b925704a48382aeab4a73c5a11a0252cbba59e3444021674d0f9",
+      "source_changed": true,
+      "pragmas_in_final": 1,
+      "started_at": "2026-10-06T21:00:09",
+      "host": "rms14562",
+      "host_load_start": [
+        7.5712890625,
+        6.58154296875,
+        7.79443359375
+      ],
+      "hot_loop": {
+        "entry": "kernel_k53",
+        "function": "kernel_k53",
+        "line": 6,
+        "writes": [
+          "u",
+          "v"
+        ]
+      },
+      "hot_loop_covered": true,
+      "hot_loop_coverage": {
+        "criterion": "v2 (27 Sep 2026)",
+        "covered": true,
+        "covering": [
+          {
+            "function": "kernel_k53",
+            "line": 14,
+            "directive": "#pragma omp parallel for firstprivate(v_work)",
+            "writes": [
+              "v"
+            ]
+          }
+        ],
+        "uncounted": [],
+        "elsewhere": []
+      },
+      "verify": {
+        "verify_size": "STANDARD",
+        "threads": [
+          6,
+          12
+        ],
+        "repeats": 5,
+        "compiler": "/usr/bin/clang-20",
+        "final_flags": [],
+        "dump_exact": true,
+        "dump_max_rel_err": 0.0,
+        "seed": "7",
+        "dump_exact_seeded": true,
+        "dump_seeded_max_rel_err": 0.0,
+        "seq_median_s": 1.422,
+        "seq_kernel_median_s": 1.333455,
+        "timing_basis": "kernel",
+        "par": {},
+        "status": "final_run_failed_T6",
+        "final_run_failure": {
+          "threads": 6,
+          "rc": -11,
+          "seconds": 1.2,
+          "timed_out": false
+        },
+        "speed_measurable": true
+      },
+      "verify_s": 9.1,
+      "status": "done",
+      "outcome": "VERIFY_FAILED",
+      "finished_at": "2026-10-06T21:00:18",
+      "host_load_end": [
+        6.8681640625,
+        6.46337890625,
+        7.74267578125
+      ]
+    },
+    {
+      "benchmark": "tsvc_c2/k53",
+      "kernel": "k53",
+      "source": "k53.c",
+      "arm": "k53_rep3_stack_lifted",
+      "model": "none",
+      "repeat": 1,
+      "kind": "baseline",
+      "candidate": "/home/ahmedabosamaha/discopop_agent/evaluation/agent/results/E02v6_hidden_order_clean_files/runs/e2v6_fb_3/benchmarks/tsvc_c2/k53/full_nospeed_v4/claude-haiku-4-5-20251001/rep3/final/k53.c",
+      "candidate_sha256": "9a06b13cdc26b925704a48382aeab4a73c5a11a0252cbba59e3444021674d0f9",
+      "source_changed": true,
+      "pragmas_in_final": 1,
+      "started_at": "2026-10-06T21:00:18",
+      "host": "rms14562",
+      "host_load_start": [
+        6.8681640625,
+        6.46337890625,
+        7.74267578125
+      ],
+      "hot_loop": {
+        "entry": "kernel_k53",
+        "function": "kernel_k53",
+        "line": 6,
+        "writes": [
+          "u",
+          "v"
+        ]
+      },
+      "hot_loop_covered": true,
+      "hot_loop_coverage": {
+        "criterion": "v2 (27 Sep 2026)",
+        "covered": true,
+        "covering": [
+          {
+            "function": "kernel_k53",
+            "line": 14,
+            "directive": "#pragma omp parallel for firstprivate(v_work)",
+            "writes": [
+              "v"
+            ]
+          }
+        ],
+        "uncounted": [],
+        "elsewhere": []
+      },
+      "verify": {
+        "verify_size": "STANDARD",
+        "threads": [
+          6,
+          12
+        ],
+        "repeats": 5,
+        "compiler": "/usr/bin/clang-20",
+        "final_flags": [],
+        "dump_exact": true,
+        "dump_max_rel_err": 0.0,
+        "seed": "7",
+        "dump_exact_seeded": true,
+        "dump_seeded_max_rel_err": 0.0,
+        "seq_median_s": 1.4256,
+        "seq_kernel_median_s": 1.333796,
+        "timing_basis": "kernel",
+        "par": {
+          "6": {
+            "median_s": 1.7581,
+            "program_speedup": 0.811,
+            "max_rel_err": 0.0,
+            "kernel_median_s": 1.649236,
+            "kernel_speedup": 0.809,
+            "speedup": 0.809
+          },
+          "12": {
+            "median_s": 1.8623,
+            "program_speedup": 0.765,
+            "max_rel_err": 0.0,
+            "kernel_median_s": 1.740792,
+            "kernel_speedup": 0.766,
+            "speedup": 0.766
+          }
+        },
+        "digest_max_rel_err": 0.0,
+        "stable_at_fixed_threads": true,
+        "kernel_program_disagree": false,
+        "digest_seeded_rel_err": 0.0,
+        "status": "ok",
+        "speed_measurable": true
+      },
+      "verify_s": 29.4,
+      "status": "done",
+      "outcome": "parallel-not-faster",
+      "finished_at": "2026-10-06T21:00:47",
+      "host_load_end": [
+        7.81787109375,
+        6.68603515625,
+        7.77392578125
+      ]
+    }
+  ]
+}

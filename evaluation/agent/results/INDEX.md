@@ -469,7 +469,7 @@ Status: done
 
 ## [E2-v6 — the hidden order on clean files: does DiscoPoP's evidence let the agent find a split no reading of the file can find, and can retries with feedback stand in for it?](E02v6_hidden_order_clean_files/REPORT.md)
 
-Status: running
+Status: done
 
 | run | where | what it is | status | trials | outcomes |
 |---|---|---|---|---:|---|
@@ -481,10 +481,11 @@ Status: running
 | `e2v6_bare_sonnet` | [`E02v6_hidden_order_clean_files/runs/e2v6_bare_sonnet/`](E02v6_hidden_order_clean_files/runs/e2v6_bare_sonnet/) | E2-v6: claude-sonnet-5 alone on the seven units × bare_llm_nospeed_v4 × 5 | valid | 35 | BROKEN 27, FASTER 7, changed-not-parallel 1 |
 | `e2v6_bare_opus` | [`E02v6_hidden_order_clean_files/runs/e2v6_bare_opus/`](E02v6_hidden_order_clean_files/runs/e2v6_bare_opus/) | E2-v6: claude-opus-5-5 alone on the seven units × bare_llm_nospeed_v4 × 5 | valid | 35 | BROKEN 17, FASTER 8, parallel-not-faster 10 |
 | `e2v6_bare_fable` | [`E02v6_hidden_order_clean_files/runs/e2v6_bare_fable/`](E02v6_hidden_order_clean_files/runs/e2v6_bare_fable/) | E2-v6: claude-fable-5-1 alone on the seven units × bare_llm_nospeed_v4 × 5 | valid | 35 | BROKEN 8, FASTER 10, parallel-not-faster 17 |
-| `e2v6_race_check` | [`E02v6_hidden_order_clean_files/checks/e2v6_race_check/`](E02v6_hidden_order_clean_files/checks/e2v6_race_check/) | race_check.py (server, no model) over every model-alone program of E2-v6 and, as the positive control, the agent's parallel programs (both arms) | registered | 0 |  |
+| `e2v6_race_check` | [`E02v6_hidden_order_clean_files/checks/e2v6_race_check/`](E02v6_hidden_order_clean_files/checks/e2v6_race_check/) | race_check.py (server, no model) over every model-alone program of E2-v6 and, as the positive control, every program of the agent's four arms (an unchanged program is recorded as such) | valid | 0 |  |
 | `e2v6_fb_1` | [`E02v6_hidden_order_clean_files/runs/e2v6_fb_1/`](E02v6_hidden_order_clean_files/runs/e2v6_fb_1/) | E2-v6, the feedback arms: tsvc_c2/k19, k23 × full_nospeed_v4, no_evidence_nospeed_v4 (three attempts per region) × 10, Haiku, threads 6/12, repeats 5 | valid | 40 | BROKEN 1, FASTER 24, no-change 15 |
 | `e2v6_fb_2` | [`E02v6_hidden_order_clean_files/runs/e2v6_fb_2/`](E02v6_hidden_order_clean_files/runs/e2v6_fb_2/) | E2-v6, the feedback arms: tsvc_c2/k31, k27 × full_nospeed_v4, no_evidence_nospeed_v4 (three attempts per region) × 10, Haiku, threads 6/12, repeats 5 | valid | 40 | FASTER 23, no-change 16, parallel-not-faster 1 |
 | `e2v6_fb_3` | [`E02v6_hidden_order_clean_files/runs/e2v6_fb_3/`](E02v6_hidden_order_clean_files/runs/e2v6_fb_3/) | E2-v6, the feedback arms: tsvc_c2/s161, k53, k48 × full_nospeed_v4, no_evidence_nospeed_v4 (three attempts per region) × 10, Haiku, threads 6/12, repeats 5 | valid | 60 | BROKEN 2, FASTER 37, no-change 12, parallel-not-faster 9 |
+| `e2v6_stack_check` | [`E02v6_hidden_order_clean_files/checks/e2v6_stack_check/`](E02v6_hidden_order_clean_files/checks/e2v6_stack_check/) | verify-source (server, no model; added after the data, descriptive) over the agent's three programs that crash in the final run — k23 rep 10, k53 rep 3 and rep 10 of full_nospeed_v4: as the harness ran them, and with the stack limits lifted (ulimit -s unlimited, OMP_STACKSIZE=1G); threads 6/12, repeats 5 | valid | 6 | VERIFY_FAILED 3, parallel-not-faster 3 |
 
 ## [E2-O3 — does the evidence effect hold on more hidden-order kernels?](history/E02o3_hidden_order_kernels/REPORT.md)
 

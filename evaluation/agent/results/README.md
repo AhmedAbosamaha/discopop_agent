@@ -36,11 +36,13 @@ Earlier versions (history):
 ### E2 — does DiscoPoP's evidence help the model, and what do retries with feedback add?
 
 **Current: [`E02v6_hidden_order_clean_files/`](E02v6_hidden_order_clean_files/REPORT.md)** — E2-v6 — the hidden order on clean files: does DiscoPoP's evidence let the agent find a split no reading of the file can find, and can retries with feedback stand in for it?.  
-Status: running.
+Status: done.
 
-Open first: [`REPORT.md`](E02v6_hidden_order_clean_files/REPORT.md).
+Open first: [`analysis/e2v6_readout.md`](E02v6_hidden_order_clean_files/analysis/e2v6_readout.md), [`stats/README.md`](E02v6_hidden_order_clean_files/stats/README.md), [`stats/v6_i/e2b1_stats.md`](E02v6_hidden_order_clean_files/stats/v6_i/e2b1_stats.md), [`stats/v6_ii/e2b1_stats.md`](E02v6_hidden_order_clean_files/stats/v6_ii/e2b1_stats.md), [`stats/models_alone.md`](E02v6_hidden_order_clean_files/stats/models_alone.md), [`REPORT.md`](E02v6_hidden_order_clean_files/REPORT.md).
 
-Planned 5 Oct, not run yet. Until it is read out, the latest FINISHED results on this question are the first rows of the list below — all on the old one-file packages.
+Five units whose split order is decided outside the file, Haiku, speed check off, race-checked; DiscoPoP alone changes nothing on any unit (three draws). The agent with DiscoPoP's evidence at one attempt: 45 of 50 race-free verified parallel programs covering the hot loop (all 45 FASTER), 0 unsafe; without the evidence 10 of 50, 9 of them on `s161`, where the model finds the order alone — V6-i rejected (MH odds ratio 351, exact p 1.4e-16, family bound at most 4.0e-12). Three attempts with feedback, without evidence: 22 of 50 against 10 — V6-ii rejected (odds ratio 21, p 0.00068, family bound 0.035) — at 17.8 model calls per success against 1.6, and far below the evidence at one attempt (22 against 45); with evidence, three attempts add nothing (46 against 45). On the unit that has to be left alone (`k53`) the one-attempt agent ships no parallel program in 20 trials; at three attempts 8 of 20 trials ship one that parallelizes only a loop the model added, and 2 of those crash at the verification size (an array of the data's length on the stack) — with a third on `k23` the agent's first unsafe programs, 3 of 280. The models alone on the five units: Haiku 3 of 50 with 47 unsafe, Sonnet 7 of 25 with 17, Opus 10 of 25 with 6 unsafe and 9 too slow, Fable 17 of 25 with 7 unsafe; on `k23` every model alone fails all 25. Fast and right on the four constructed kernels: the agent with evidence 35 of 40, Fable 5 of 20, Opus 3 of 20, Sonnet 2 of 20, Haiku 0 of 40. The agent's successes there reach 1.4–1.9× where the expert version reaches 3.1–4.2×: DiscoPoP writes the directive on only part of the loops of the split. 1,181 model calls, $243 API-equivalent.
+
+Read out 6 Oct 2026, complete: the two registered tests, everything the registration lists as descriptive, the race check with its positive control (all 172 changed programs of the agent clean), the stack check on the agent's three crashing programs, the cost, and eleven case studies.
 
 Earlier versions (history):
 

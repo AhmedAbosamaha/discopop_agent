@@ -57,6 +57,7 @@ SETUPS: List[Tuple[str, Tuple[str, ...], str]] = [
 ]
 AGENT_LABELS = [s[0] for s in SETUPS[:4]]
 RACE_PARTS = ("haiku", "sonnet", "opus", "fable")            # the model-alone parts of e2v6_race_check
+REFERENCES = "t0_14_c2_refs"                                 # the expert versions, verified the same way
 K53_TABLES = ("ju[", "kv[", "jv[", "ku[")                      # the kernel's four index tables
 
 
@@ -77,6 +78,27 @@ def load(runs: Sequence[str], arm: str) -> List[dict]:
 
 def unit(t: dict) -> str:
     return str(t.get("benchmark", "")).split("/")[-1]
+
+
+def best_speedup(t: dict) -> Optional[float]:
+    """The larger of the speedups the harness measured at its thread counts (None when no timed run ended)."""
+    par = (t.get("verify") or {}).get("par") or {}
+    xs = [float(p["speedup"]) for p in par.values() if isinstance(p, dict) and p.get("speedup")]
+    return max(xs) if xs else None
+
+
+def reference_speedups() -> Dict[str, float]:
+    """The expert versions through the same verification (`t0_14_c2_refs`, T0.17's pre-flight): unit -> speedup."""
+    root = campaign.find_run(REFERENCES)
+    out: Dict[str, float] = {}
+    if root is None:
+        return out
+    for p in sorted(root.glob(f"benchmarks/{SUITE}/*/*/none/rep1/trial.json")):
+        t = json.loads(p.read_text())
+        sp = best_speedup(t)
+        if sp is not None and t.get("outcome") == "FASTER":
+            out[unit(t)] = sp
+    return out
 
 
 def _p(x: Optional[float]) -> str:
@@ -273,6 +295,7 @@ def main() -> int:
             j["cost"] = float((t.get("llm_usage") or {}).get("cost_usd") or 0.0)
             j["agent_s"] = float(t.get("agent_s") or 0.0)
             j["omp"] = int(t.get("pragmas_in_final") or 0) > 0     # ships a parallel program at all
+            j["speedup"] = best_speedup(t)
             j["status"] = str((t.get("verify") or {}).get("status") or "")
             j["failure"] = (t.get("verify") or {}).get("final_run_failure")
             j["k53_real_loop_parallel"] = k53_real_loop_parallel(t) if j["unit"] == DECLINE else None
@@ -322,6 +345,32 @@ def main() -> int:
         row.append(f"{100 * lo:.0f}–{100 * hi:.0f} %")
         md.append("| " + " | ".join(row) + " |")
     res["pooled"] = pooled
+    md.append("")
+
+    # ---- 1b. how fast the successes are ------------------------------------------------------------------
+    refs = reference_speedups()
+    shown = ORDER_UNITS + (CONTROL,)
+    md += ["## How fast the successes are — beside the expert version", "",
+           "A success only has to be parallel, right and race-free: the speed check is off. Median speedup of the "
+           "successes over the original (the larger of 6 and 12 threads), lowest to highest, and how many; the last "
+           f"row is the expert version of the unit through the same verification (`{REFERENCES}`; `s161` has none).", "",
+           "| setup | " + " | ".join(f"`{u}`" for u in shown) + " |", "|---|" + "---|" * len(shown)]
+    speed: Dict[str, Dict[str, Any]] = {}
+    for label, _, _ in SETUPS:
+        row = [label]
+        speed[label] = {}
+        for u in shown:
+            xs = sorted(j["speedup"] for j in js[label] if j["unit"] == u and j["success"] and j["speedup"])
+            if not xs:
+                row.append("—")
+                continue
+            med = xs[len(xs) // 2] if len(xs) % 2 else (xs[len(xs) // 2 - 1] + xs[len(xs) // 2]) / 2
+            speed[label][u] = {"median": med, "min": xs[0], "max": xs[-1], "n": len(xs)}
+            row.append(f"{med:.2f}× ({xs[0]:.2f}–{xs[-1]:.2f}, {len(xs)})")
+        md.append("| " + " | ".join(row) + " |")
+    md.append("| **expert version** | " + " | ".join(f"{refs[u]:.2f}×" if u in refs else "—" for u in shown) + " |")
+    res["speedup_of_successes"] = speed
+    res["reference_speedups"] = refs
     md.append("")
 
     # ---- 2. the contrasts between the agent's four setups ------------------------------------------------

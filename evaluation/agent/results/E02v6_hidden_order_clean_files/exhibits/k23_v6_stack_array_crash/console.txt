@@ -1,0 +1,49 @@
+  Initial candidates
+Region ID    Type           Saves    % run    Hot  Tier  Depth  Name
+  1:2        loop          2.9 ms    60.0%    YES     2      0  lines 5–11
+  0:0        function      2.9 ms    60.0%    YES     2      0  kernel_k23
+  1:5        loop          2.9 ms    59.9%    YES     2      0  lines 6–9
+  PHASE A — restructure  (the source stays pragma-free)
+┌─ [depth=0] loop 1:2 (lines 5–11)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Applied to k23.c
+│  [Tier-2] Re-measured runtimes: 19 region(s), 5.1 ms total
+│  [Tier-2] DiscoPoP still finds no parallelism in the rewritten lines — reverting (snapshot restore)
+└─ retry (budget remaining: 1)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Applied to k23.c
+│  [Tier-2] Re-measured runtimes: 21 region(s), 6.1 ms total
+│  [Tier-2] DiscoPoP now finds: do_all @ lines 9–12, do_all @ lines 15–17
+└─ ACCEPTED
+┌─ [depth=1] loop 1:2 (lines 5–25)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Restructuring not allowed at depth 1 (--restructure-depth=0) → SKIP
+└─ SKIPPED
+┌─ [depth=1] function 0:0 (lines 3–26)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Restructuring not allowed at depth 1 (--restructure-depth=0) → SKIP
+└─ SKIPPED
+┌─ [depth=1] loop 1:5 (lines 9–12)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+┌─ [depth=1] loop 1:10 (lines 15–17)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+┌─ [depth=1] loop 1:16 (lines 20–22)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Restructuring not allowed at depth 1 (--restructure-depth=0) → SKIP
+└─ SKIPPED
+  PHASE B — annotate  (2 candidate pragma(s))
+┌─ pattern #0  do_all @ lines 9–12  (W=4608000)
+│  gate failed at 'correctness': Program output changed — the patched program is NOT semantically equivalent to the original. output differs and no numerical slack is in effect first 
+└─ DROPPED
+┌─ pattern #1  do_all @ lines 15–17  (W=3071904)
+│  [Phase-B] Applied to k23.c
+└─ APPLIED
+  SETTLING — verify the finished source, drop what does not hold up
+  [ok] finished source verified — output matches the original
+  SUMMARY: 1 rewrite(s) kept  |  1 pragma(s) applied  |  2 skipped
