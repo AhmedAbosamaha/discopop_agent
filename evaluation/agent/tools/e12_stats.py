@@ -68,8 +68,30 @@ ROWS_O3: List[Tuple[str, str, str, Tuple[str, ...]]] = [
     ("Opus 5.5 alone", "e2o3_bare_opus", "bare_llm_nospeed_v3", O3),
     ("Fable 5.1 alone", "e2o3_bare_fable", "bare_llm_nospeed_v3", O3),
 ]
+# E2-v6 (6 Oct): the seven units on clean files (packaging v6, prompt version 4) — the agent's four setups
+# (evidence × attempts) and every model alone; the comparison point is the agent with evidence at one attempt.
+V6 = ("tsvc_c2/k19", "tsvc_c2/k23", "tsvc_c2/k27", "tsvc_c2/k31", "tsvc_c2/s161", "tsvc_c2/k48", "tsvc_c2/k53")
+V6_SPLIT = (("1", V6[0:2]), ("2", (V6[3], V6[2])), ("3", (V6[4], V6[6], V6[5])))
+ROWS_V6: List[Tuple[str, str, str, Tuple[str, ...]]] = (
+    [(label, f"{stem}_{n}", arm, loops)
+     for label, stem, arm in (("Haiku agent + evidence, one attempt (v4)", "e2v6_agent", "full_b1_nospeed_v4"),
+                              ("Haiku agent, no evidence, one attempt", "e2v6_agent", "no_evidence_b1_nospeed_v4"),
+                              ("Haiku agent + evidence, three attempts", "e2v6_fb", "full_nospeed_v4"),
+                              ("Haiku agent, no evidence, three attempts", "e2v6_fb", "no_evidence_nospeed_v4"))
+     for n, loops in V6_SPLIT]
+    + [(label, run, "bare_llm_nospeed_v4", V6)
+       for label, run in (("Haiku alone", "e2v6_bare_haiku"), ("Sonnet 5 alone", "e2v6_bare_sonnet"),
+                          ("Opus 5.5 alone", "e2v6_bare_opus"), ("Fable 5.1 alone", "e2v6_bare_fable"))])
 SETS = {"e12": (ROWS, LOOPS, "E12 — the Haiku agent with evidence against stronger models alone", "e12_stats"),
-        "e2o3": (ROWS_O3, O3, "E2-O3 — the Haiku agent against every model alone on the ORDER-3 kernels", "models_alone")}
+        "e2o3": (ROWS_O3, O3, "E2-O3 — the Haiku agent against every model alone on the ORDER-3 kernels", "models_alone"),
+        "e2v6": (ROWS_V6, V6, "E2-v6 — the Haiku agent against every model alone on the clean hidden-order units",
+                 "models_alone")}
+# What a reader of one set's table has to know beside the general legend.
+NOTES = {"e2v6": "`k48` is the control (the order in the file is right). `k53` is the decline unit: its statements feed "
+                 "each other, nothing can be gained, and the efficient answer is the unchanged program — a \"success\" "
+                 "in that column is a parallel program that still runs the kernel's iterations in their order, by "
+                 "leaving that loop outside every parallel region or by ordering the iterations at run time; none of "
+                 "them is faster (`analysis/e2v6_readout.md`)."}
 
 
 def fisher_greater(a: int, n1: int, c: int, n2: int) -> float:
@@ -98,6 +120,7 @@ def main() -> int:
     ap.add_argument("--set", choices=sorted(SETS), default="e12", help="which table (default: E12's six loops)")
     a = ap.parse_args()
     rows, loops_shown, title, stem = SETS[a.set]
+    agent = rows[0][0]                       # the comparison point: the set's first row
     races = es.load_races(a.races)
     cells: Dict[Tuple[str, str], Dict[str, Any]] = {}
     for label, run, arm, loops in rows:
@@ -142,14 +165,16 @@ def main() -> int:
                 txt += f" · {c['harness']} harness edit(s){', redone' if redone else ''}"
             if c["unchecked"]:
                 txt += f" · {c['unchecked']} race-unchecked"
-            if lab != AGENT and (AGENT, loop) in cells:
-                g = cells[(AGENT, loop)]
+            if lab != agent and (agent, loop) in cells:
+                g = cells[(agent, loop)]
                 ps = fisher_greater(g["success"], g["n"], c["success"], c["n"])
                 pf = fisher_greater(g["faster"], g["n"], c["faster"], c["n"])
                 pu = fisher_greater(c["unsafe"], c["n"], g["unsafe"], g["n"])
                 txt += f"<br>p: success {ps:.3g} · faster {pf:.3g} · unsafe {pu:.3g}"
             row.append(txt)
         md.append("| " + " | ".join(row) + " |")
+    if a.set in NOTES:
+        md += ["", NOTES[a.set]]
     md += ["", "Runs: " + "; ".join(f"{lab} — " + ", ".join(sorted({r for (l, _), c in cells.items() if l == lab
                                                                         for r in c['runs']})) for lab in labels) + "."]
     a.out.mkdir(parents=True, exist_ok=True)
