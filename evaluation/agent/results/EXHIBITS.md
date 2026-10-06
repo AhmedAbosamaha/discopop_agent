@@ -122,7 +122,7 @@
 
 ## [E2-v6 — the hidden order on clean files: does DiscoPoP's evidence let the agent find a split no reading of the file can find, and can retries with feedback stand in for it?](E02v6_hidden_order_clean_files/REPORT.md)
 
-- [`k19_v6_feedback_aligned_loop`](E02v6_hidden_order_clean_files/exhibits/k19_v6_feedback_aligned_loop/) — E2-v6, three attempts without evidence: led by DiscoPoP's blockers of its own rewrites, the model shifts the first statement by one iteration so that the whole loop is one parallel loop — 5.04×, above the expert version (4.14×) and the evidence-guided split (1.45×); 1 of 10 trials, 10 model calls.  
+- [`k19_v6_feedback_aligned_loop`](E02v6_hidden_order_clean_files/exhibits/k19_v6_feedback_aligned_loop/) — E2-v6, three attempts without evidence: in the third region it tries, after one rewrite the gate rejected (the output differed), the model shifts the first statement by one iteration so that the whole loop is one parallel loop — 5.04×, above the expert version (4.14×) and the evidence-guided split (1.45×); 1 of 10 trials, 10 model calls.  
   no DiscoPoP-alone trial to pair with · tsvc_c2/k19, `no_evidence_nospeed_v4`, e2v6_fb_1 rep 9 · pictures: `before_after.png`, `rejected_attempt.png`, `console.png`
 - [`k23_v6_evidence_right_split`](E02v6_hidden_order_clean_files/exhibits/k23_v6_evidence_right_split/) — E2-v6, with evidence, one attempt: the split with the second statement's loop first — the order the file does not show — and DiscoPoP's directive on that loop; the first statement's loop stays sequential (1.47× where the expert version reaches 3.33×).  
   no DiscoPoP-alone trial to pair with · tsvc_c2/k23, `full_b1_nospeed_v4`, e2v6_agent_1 rep 1 · pictures: `before_after.png`, `console.png`
