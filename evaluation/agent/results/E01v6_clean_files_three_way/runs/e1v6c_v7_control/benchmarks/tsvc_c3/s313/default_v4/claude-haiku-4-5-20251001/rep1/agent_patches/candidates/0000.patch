@@ -1,0 +1,26 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6c_v7_control/benchmarks/tsvc_c3/s313/default_v4/claude-haiku-4-5-20251001/rep1/work/s313.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6c_v7_control/benchmarks/tsvc_c3/s313/default_v4/claude-haiku-4-5-20251001/rep1/work/s313.c
+@@ -3,12 +3,20 @@
+ real_t kernel_s313(void)
+ {
+     real_t dot;
++    real_t *dots = (real_t *)malloc(iterations * sizeof(real_t));
++
+     for (int nl = 0; nl < iterations; nl++) {
+-        dot = (real_t)0.;
++        dots[nl] = (real_t)0.;
+         for (int i = 0; i < LEN_1D; i++) {
+-            dot += a[i] * b[i];
++            dots[nl] += a[i] * b[i];
+         }
+-        dummy(a, b, c, d, e, dot);
+     }
++
++    for (int nl = 0; nl < iterations; nl++) {
++        dummy(a, b, c, d, e, dots[nl]);
++    }
++
++    dot = dots[iterations - 1];
++    free(dots);
+     return dot;
+ }

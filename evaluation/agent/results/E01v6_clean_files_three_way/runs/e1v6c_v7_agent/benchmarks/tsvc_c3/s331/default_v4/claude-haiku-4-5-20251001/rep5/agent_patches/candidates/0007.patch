@@ -1,0 +1,36 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6c_v7_agent/benchmarks/tsvc_c3/s331/default_v4/claude-haiku-4-5-20251001/rep5/work/s331.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6c_v7_agent/benchmarks/tsvc_c3/s331/default_v4/claude-haiku-4-5-20251001/rep5/work/s331.c
+@@ -1,18 +1,29 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s331(void)
+ {
+-    int j;
+-    real_t chksum;
++    int *j_values = (int *)malloc(iterations * sizeof(int));
++
++    // Pass 1: Read from a and compute j for each iteration (Do-All loop)
+     for (int nl = 0; nl < iterations; nl++) {
+-        j = -1;
++        int j = -1;
+         for (int i = 0; i < LEN_1D; i++) {
+             if (a[i] < (real_t)0.) {
+                 j = i;
+             }
+         }
+-        chksum = (real_t) j;
++        j_values[nl] = j;
++    }
++
++    // Pass 2: Call dummy with computed values
++    real_t chksum;
++    for (int nl = 0; nl < iterations; nl++) {
++        chksum = (real_t) j_values[nl];
+         dummy(a, b, c, d, e, chksum);
+     }
++
++    int j = j_values[iterations - 1];
++    free(j_values);
+     return j+1;
+ }

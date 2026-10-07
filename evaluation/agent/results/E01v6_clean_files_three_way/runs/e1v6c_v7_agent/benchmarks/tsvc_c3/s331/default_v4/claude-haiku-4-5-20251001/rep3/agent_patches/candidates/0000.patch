@@ -1,0 +1,44 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6c_v7_agent/benchmarks/tsvc_c3/s331/default_v4/claude-haiku-4-5-20251001/rep3/work/s331.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6c_v7_agent/benchmarks/tsvc_c3/s331/default_v4/claude-haiku-4-5-20251001/rep3/work/s331.c
+@@ -1,9 +1,16 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s331(void)
+ {
+     int j;
+     real_t chksum;
++
++    // Allocate arrays to store j and chksum for each iteration
++    int *j_array = (int *)malloc(iterations * sizeof(int));
++    real_t *chksum_array = (real_t *)malloc(iterations * sizeof(real_t));
++
++    // First pass: compute j and chksum for all iterations (reading original a[])
+     for (int nl = 0; nl < iterations; nl++) {
+         j = -1;
+         for (int i = 0; i < LEN_1D; i++) {
+@@ -11,8 +18,21 @@
+                 j = i;
+             }
+         }
+-        chksum = (real_t) j;
+-        dummy(a, b, c, d, e, chksum);
++        j_array[nl] = j;
++        chksum_array[nl] = (real_t) j;
+     }
+-    return j+1;
++
++    // Second pass: call dummy for each iteration (preserves order and side effects)
++    for (int nl = 0; nl < iterations; nl++) {
++        dummy(a, b, c, d, e, chksum_array[nl]);
++    }
++
++    // Get the final j value
++    j = j_array[iterations - 1];
++
++    // Free allocated memory
++    free(j_array);
++    free(chksum_array);
++
++    return j + 1;
+ }

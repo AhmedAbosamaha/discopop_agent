@@ -1,0 +1,28 @@
+#include "data.h"
+
+real_t kernel_s331(void)
+{
+    int j;
+    real_t chksum;
+    for (int nl = 0; nl < iterations; nl++) {
+        j = -1;
+        #pragma omp parallel
+        {
+            int my_j = -1;  /* private: thread-local maximum index where a[i] < 0 */
+            #pragma omp for
+            for (int i = 0; i < LEN_1D; i++) {
+                if (a[i] < (real_t)0.) {
+                    if (i > my_j) my_j = i;
+                }
+            }
+            /* Combine thread-local maxima into global j */
+            #pragma omp critical
+            {
+                if (my_j > j) j = my_j;
+            }
+        }
+        chksum = (real_t) j;
+        dummy(a, b, c, d, e, chksum);
+    }
+    return j+1;
+}

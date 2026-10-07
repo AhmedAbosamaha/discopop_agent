@@ -1,0 +1,17 @@
+--- original.c
++++ final.c
+@@ -65,10 +65,12 @@
+ {
+     real_t dot;
+     for (int nl = 0; nl < iterations; nl++) {
+-        dot = (real_t)0.;
++        real_t local_dot = (real_t)0.;
++        #pragma omp parallel for reduction(+:local_dot) 
+         for (int i = 0; i < LEN_1D; i++) {
+-            dot += a[i] * b[i];
++            local_dot += a[i] * b[i];
+         }
++        dot = local_dot;
+         dummy(a, b, c, d, e, dot);
+     }
+     return dot;

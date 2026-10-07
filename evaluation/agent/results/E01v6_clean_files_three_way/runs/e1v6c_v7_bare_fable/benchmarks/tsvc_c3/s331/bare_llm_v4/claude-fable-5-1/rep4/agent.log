@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s331.c
+  Model          : claude-fable-5-1
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror
+
+│  [bare] Calling claude-fable-5-1...
+│  [bare] s331.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: Done. Summary of the rewrite in `s331.c`: - **Dependence removed:** `j` was carried across iterations as "last `i` seen with `a[i] < 0`". Because `i` increases monotonically, that value is exactly `max{ i : a[i] < 0 }` (or `-1` if none), so the serial chain becomes a `reduction(max:j)`. The pre-loop `j = -1` is kept and participates in the reduction combine, so a run with no negatives still yields
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

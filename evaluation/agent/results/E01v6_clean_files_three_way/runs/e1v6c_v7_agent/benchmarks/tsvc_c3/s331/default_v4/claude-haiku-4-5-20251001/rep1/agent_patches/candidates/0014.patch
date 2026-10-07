@@ -1,0 +1,33 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6c_v7_agent/benchmarks/tsvc_c3/s331/default_v4/claude-haiku-4-5-20251001/rep1/work/s331.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6c_v7_agent/benchmarks/tsvc_c3/s331/default_v4/claude-haiku-4-5-20251001/rep1/work/s331.c
+@@ -1,18 +1,25 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s331(void)
+ {
+-    int j;
++    int j = -1;
+     real_t chksum;
++    real_t *a_copy = (real_t *)malloc(LEN_1D * sizeof(real_t));
+     for (int nl = 0; nl < iterations; nl++) {
+-        j = -1;
+         for (int i = 0; i < LEN_1D; i++) {
+-            if (a[i] < (real_t)0.) {
+-                j = i;
++            a_copy[i] = a[i];
++        }
++        int j_local = -1;
++        for (int i = 0; i < LEN_1D; i++) {
++            if (a_copy[i] < (real_t)0.) {
++                j_local = (i > j_local) ? i : j_local;
+             }
+         }
+-        chksum = (real_t) j;
++        chksum = (real_t) j_local;
+         dummy(a, b, c, d, e, chksum);
++        j = j_local;
+     }
++    free(a_copy);
+     return j+1;
+ }

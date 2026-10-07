@@ -1,0 +1,14 @@
+
+============================================================
+  Bare-LLM baseline — no DiscoPoP, no gate, one attempt
+============================================================
+  Files          : s313.c
+  Model          : claude-fable-5-1
+  Not editable   : —  (read-only files: main.c)
+  Prompt         : mirror
+
+│  [bare] Calling claude-fable-5-1...
+│  [bare] s313.c: edited, 1 OpenMP pragma(s) in the file
+│  [bare] the model's plan: The rewrite is applied. Summary of the change to `s313.c`: - Added `#pragma omp parallel for default(none) shared(a, b) reduction(+:dot)` on the inner dot-product loop. - `dot` is the accumulator — it's a reduction, not private, so its value correctly reaches the `dummy(...)` call and the final `return dot`. - `a` and `b` are read-only inside the loop and are shared globals; `i` is the loop index 
+
+  SUMMARY: 1 file(s) changed  |  nothing was checked here — the harness judges the result

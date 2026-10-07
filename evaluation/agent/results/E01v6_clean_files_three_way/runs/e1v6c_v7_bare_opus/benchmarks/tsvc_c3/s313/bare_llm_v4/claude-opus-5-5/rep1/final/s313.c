@@ -1,0 +1,32 @@
+#include <stdlib.h>
+#include "data.h"
+
+#define S313_BLK 1024
+
+real_t kernel_s313(void)
+{
+    real_t dot = (real_t)0.;
+    const int nblk = (LEN_1D + S313_BLK - 1) / S313_BLK;
+    real_t *part = (real_t *)malloc((size_t)nblk * sizeof(real_t));
+    for (int nl = 0; nl < iterations; nl++) {
+        /* fixed blocking: per-block partial sums, independent of thread count */
+        #pragma omp parallel for default(none) shared(a, b, part) firstprivate(nblk) schedule(static)
+        for (int blk = 0; blk < nblk; blk++) {
+            int lo = blk * S313_BLK;
+            int hi = lo + S313_BLK;
+            if (hi > LEN_1D) hi = LEN_1D;
+            real_t s = (real_t)0.;
+            for (int i = lo; i < hi; i++) {
+                s += a[i] * b[i];
+            }
+            part[blk] = s;
+        }
+        dot = (real_t)0.;
+        for (int blk = 0; blk < nblk; blk++) {
+            dot += part[blk];
+        }
+        dummy(a, b, c, d, e, dot);
+    }
+    free(part);
+    return dot;
+}

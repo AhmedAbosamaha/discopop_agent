@@ -1,0 +1,46 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6c_v7_agent/benchmarks/tsvc_c3/s331/default_v4/claude-haiku-4-5-20251001/rep3/work/s331.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6c_v7_agent/benchmarks/tsvc_c3/s331/default_v4/claude-haiku-4-5-20251001/rep3/work/s331.c
+@@ -1,18 +1,39 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s331(void)
+ {
+     int j;
+     real_t chksum;
++
++    // Array to store chksum for each iteration, deferred to next iteration's dummy call
++    real_t *chksum_array = (real_t *)malloc(iterations * sizeof(real_t));
++
++    // Restructure: defer each iteration's dummy() call to the beginning of the next iteration
++    // This removes the RAW dependence from blocking the loop, while preserving:
++    // - the order of modifications to a[]
++    // - what each inner loop reads
++    // - which chksum each dummy() receives
+     for (int nl = 0; nl < iterations; nl++) {
++        // Call dummy from the previous iteration (at the start of this iteration)
++        if (nl > 0) {
++            dummy(a, b, c, d, e, chksum_array[nl - 1]);
++        }
++
+         j = -1;
+         for (int i = 0; i < LEN_1D; i++) {
+-            if (a[i] < (real_t)0.) {
++            if (a[i] < (real_t)0. && i > j) {
+                 j = i;
+             }
+         }
+-        chksum = (real_t) j;
+-        dummy(a, b, c, d, e, chksum);
++        chksum_array[nl] = (real_t) j;
+     }
+-    return j+1;
++
++    // Call dummy for the last iteration
++    if (iterations > 0) {
++        dummy(a, b, c, d, e, chksum_array[iterations - 1]);
++    }
++
++    free(chksum_array);
++    return j + 1;
+ }
