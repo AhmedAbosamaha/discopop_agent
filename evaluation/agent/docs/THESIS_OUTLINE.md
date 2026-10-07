@@ -90,8 +90,9 @@ Follows the pipeline page stage by stage; each design decision is given with its
 - **3.9 Implementation.** Structure, the model's sandbox, multi-file programs, platforms.
 - **3.10 What was fixed in DiscoPoP.** The defects found on the way, each with cause and effect
   (`DISCOPOP_BUG_REPORTS.md`): a Do-All verdict that changed between runs, a carried scalar reported Do-All, a
-  write-after-write that did not block Do-All, dependences lost under `do … while`, and others; the candidates
-  still open.
+  write-after-write that did not block Do-All, dependences lost under `do … while`, loops side by side modelled
+  as nested (found through the hidden-order experiment: it held the agent's programs to half their speed, and it
+  could report a recurrence as parallel — which the gate caught), and others; the candidates still open.
 
 ## 4 Evaluation
 
@@ -112,8 +113,9 @@ Follows the pipeline page stage by stage; each design decision is given with its
   was first worded. Then the experiment where the deciding fact is not in the file: 45 of 50 with evidence against
   10 without; retries with feedback alone 22 of 50 at eleven times the calls; no model alone above 5 of 20 fast
   and right. Stated with it: retries produce pointless parallel programs where nothing can be gained, and the
-  agent's successes reach a third to a half of the expert's speed. **[open]** Why DiscoPoP writes its directive
-  on only part of the split's loops.
+  agent's successes reach a third to a half of the expert's speed — traced to a defect in DiscoPoP's profiler
+  (two loops one after the other inside a loop were treated as nested; fixed 7 Oct, section 3.10). **[open]** The
+  speeds on the fixed DiscoPoP: a re-run or a replay, the author's decision.
 - **4.6 Who judges the result.** **[done]** The speed check: on, at a measurable size, it is the only setting with
   nothing unsafe and nothing below DiscoPoP alone. The unsafe programs that did occur, each by name and cause.
   **[planned]** The gate as a classifier: its error rate and what each stage alone catches.
