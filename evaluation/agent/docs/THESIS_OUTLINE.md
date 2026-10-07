@@ -101,8 +101,7 @@ proposed here and is to be confirmed with the title.
    the directive, a gate decides.
 3. **System.** An agent around DiscoPoP: profile, rank, restructure, check, profile again, annotate, verify.
 4. **Results.** On 18 loops that need restructuring: DiscoPoP alone 0 of 90 trials; the agent with a small model
-   73 of 90 right, race-free and faster (77 once one loop is corrected for a DiscoPoP defect), none unusable; the
-   same model alone 38, with 50 unusable. Where the fact that decides the rewrite is not in the file: 44 of 50
+   76 of 90 right, race-free and faster, none unusable; the same model alone 38, with 50 unusable. Where the fact that decides the rewrite is not in the file: 44 of 50
    with DiscoPoP's evidence against 14 without, at the speed of an expert's version, and no stronger model alone is
    fast and right in more than 5 of 20.
 5. **Limits.** Stronger models alone reach further on plain loops (89 of 90); the agent's reach is bounded by its
@@ -272,7 +271,8 @@ number of the record (D-numbers), so the text can be checked against the reposit
   write-after-write that did not block Do-All (B13); two loops side by side modelled as nested (B14);
   dependences lost after a `do … while` (B15); loop tracking switched off by the length of a path (B17); the
   earlier crashes (B1–B3, B5). Not fixed: the patch generator's hang (B6); loop counts paired with the wrong
-  loops (B7: cause found, worked around in the agent); two candidates (B16, B18). Limits met: programs DiscoPoP
+  loops (B7: cause found, worked around in the agent); three candidates (B16, B18, and B19: a wrong
+  `lastprivate` for a scalar assigned under a condition). Limits met: programs DiscoPoP
   cannot profile in reasonable time (L1–L5).
 - **5.8 The repository.** Layout, the experiment registry, how a number in the thesis is traced to a file.
 
@@ -322,15 +322,20 @@ result, or the expectation written down before the run.
 - **7.2 The whole system: coverage and safety** (E1; RQ1–RQ3; H1, H2, H4, H13). **[done on kernels]**
   - Setups: DiscoPoP alone · the agent with Haiku · Haiku, Sonnet, Opus and Fable alone. 18 loops × 5 trials,
     with class-A and class-D controls.
-  - Result on clean files: DiscoPoP alone 0 of 90; the agent 73 with none unusable; Haiku alone 38 with 50
-    unusable; Sonnet 77 with 11; Opus 89; Fable 89. The agent declines all 12 class-D trials.
-  - Read with it: how the comparison developed (five runs, each on a corrected instrument: 44 → 51 → 71 → 65 → 73)
-    and what each correction was; where the agent's lost trials go (after the model, not in it); what the claim
-    is and is not — the pipeline makes a small model safe and beats DiscoPoP alone; it does not out-reach a
-    strong model alone on loops whose dependences are visible.
+  - Result on clean files, corrected: DiscoPoP alone 0 of 90; the agent 76 with none unusable; Haiku alone 38
+    with 50 unusable; Sonnet 77 with 11; Opus 89; Fable 89. The agent declines all 12 class-D trials.
+  - Read with it: how the comparison developed (five runs, each on a corrected instrument: 44 → 51 → 71 → 65 → 73,
+    and 76 after two corrections: one loop on the fixed DiscoPoP, two loops on packages in which no repetition
+    can be skipped) and what each correction was; where the agent's lost trials go (after the model, not in it);
+    what the claim is and is not — the pipeline makes a small model safe and beats DiscoPoP alone; it does not
+    out-reach a strong model alone on loops whose dependences are visible.
+  - One loop where the agent ends with nothing and every model alone succeeds in one call (`s331`): the loop
+    needs a maximum reduction, DiscoPoP writes a `lastprivate` that gives wrong results, and the checks refuse
+    it every time. The bridge to 7.7.
   - Worked examples from the archived trials: a rewrite the agent kept, one it reverted and why, one the model
     alone shipped wrong.
-  - Owed: two loops on the corrected packages (`s313`, `s331`); the correction for defect B14 (one loop, 5 of 5).
+  - Owed: a replay, without a model, of the rewrites the agent discarded before the profiler fix; until then
+    the corrected count is a lower bound in that respect.
 - **7.3 A small model inside the pipeline against stronger models alone** (E12). **[done]** On the two
   hidden-order kernels only the Haiku agent is ever faster (20 of 20; every model alone 0); on four real loops
   the strong models alone are as good or better.
@@ -371,7 +376,7 @@ result, or the expectation written down before the run.
 - **7.7 Stage 4 — who writes the directive, and how the evidence survives the edit** (E3, E4; RQ5–RQ7;
   H6, H6b, H7, H7b). **[planned]**
   - 7.7.1 A two-by-two: directive by DiscoPoP or by the model × full re-profile or fast refresh. Four setups and
-    two twins, 18 loops × 5 (360 trials). Read out per row: accepted changes, unusable programs, which stage
+    two twins, 18 loops × 5 (360 trials). The motivating case is already measured: `s331` of 7.2. Read out per row: accepted changes, unusable programs, which stage
     decided. Per column: profiling seconds per kept rewrite and whether decisions differ from the full
     re-profile. Written down before the run: the refresh can only change a decision where DiscoPoP, not the gate,
     judges the rewrite; with the model writing the directive, the agent should reach at least what the model
