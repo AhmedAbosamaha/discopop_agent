@@ -38,7 +38,7 @@ LLVM 19 (macOS) and LLVM 20 (Linux).
 | B11 | explorer, `TaskGraph.__assign_state_ids` | explained by B15 (27 Sep) | in TSVC v3's `main`, no access made under the five `pb_emit_array` calls is attached to any context: `pb_emit_array` holds a loop the task graph does not model, so its other loops read the wrong loop-state digit (B15); fixed with B15; harness code only |
 | B12 | profiler, `scripts/CC_wrapper.sh`, `CXX_wrapper.sh` | fixed 27 Sep | the compiler wrappers exit 0 when the instrumented compile or link fails — the AST dump after it sets the exit status; the failure surfaces one step later as a missing `a.out` |
 | B13 | explorer, `TaskGraph.__insert_data_dependencies_from_files` + Do-All detector | fixed 27 Sep | a loop whose only cross-iteration dependence is a WRITE-AFTER-WRITE on an array element (a scatter `x[idx[i]] = …` whose indices repeat) is reported Do-All: the task graph dropped every WAW as "no data flow"; its pragma races (Rodinia bfs's frontier loop in E2-B1) |
-| B14 | profiler, `static_analysis/calltree_construction.cpp` (loop states of the call path) | **fixed 7 Oct** | two loops side by side inside a loop are modelled as nested in each other: no transition enters the second loop from the outer loop's state, every access in it is recorded without its iteration state, and a dependence carried by the OUTER loop blocks its Do-All — the shape every loop distribution inside a repetition loop creates |
+| B14 | profiler, `static_analysis/calltree_construction.cpp` (loop states of the call path) | **fixed 7 Oct** | two loops side by side inside a loop are modelled as nested in each other, and the later loop's iterations are never recorded. Two faces: a dependence carried by the OUTER loop blocks the later loop's Do-All (the shape every loop distribution inside a repetition loop creates), and a dependence BETWEEN the later loop's own iterations is not seen — a recurrence reported Do-All |
 | B15 | explorer, `TaskGraph.__assign_loopstate_positions_within_functions` / task-graph loops | fixed 27 Sep | a `do … while` loop gets no loop context in the task graph, so the loop-state digit positions of every loop in the function after it are off by one: no call-path state under the `do … while` matches, every dependence recorded there is lost, and a textbook recurrence nested in it is reported Do-All (Rodinia bfs: all 1,500 dynamic dependences of the kernel lost) |
 | L3 | explorer | limitation | NPB-CPP `mg`: with P1's fix the state assignment is fast, but the run then stays in task-pattern detection (`new_task_detector`) — a first run was read at 4 h 19 min, the same run was stopped unfinished after **11 h 24 min** at 100 % CPU on the server (19–20 Sep); the Do-All detector is not reached. Not usable per trial |
 
@@ -385,7 +385,14 @@ iteration copies of loop 9 and pairs the dependence the outer loop carries acros
 None of the 44 `tsvc_c2` originals has that shape (text scan) — DiscoPoP alone is not affected on them; every
 loop distribution the agent makes inside the repetition loop creates it, so the defect caps exactly what the
 agent can get from DiscoPoP after a split. B16 (`s244`: a RAW of the repetition loop charged to the inner loop)
-is most likely the same defect on a model's rewrite; to be re-checked on the fixed profiler.
+is NOT this defect: `s244` as packaged has one inner loop, nothing side by side; B16 stays a candidate.
+
+**The second face, found by the replay (7 Oct): a FALSE Do-All.** With its iterations unrecorded, a later loop
+shows every dependence between two of its own iterations as a dependence inside one iteration. In four programs
+of E2-v6 on `k53` (the unit whose statements feed each other) the model had put the kernel's loop after a copy
+loop inside the repetition loop, and the explorer reported that loop — a true recurrence through the index
+tables — as Do-All. The agent's gate refused the directive at its race stage in each of the four trials, so none
+shipped; DiscoPoP alone would have emitted it. With the fix the loop is not reported.
 
 **Fix** (`profiler/DiscoPoP/static_analysis/calltree_construction.cpp`). `get_loop_parents_in_function_body`
 gives every loop its parent — the innermost loop open where its `__dp_loop_entry` stands, from the entry and
@@ -402,6 +409,15 @@ the same Do-All verdicts. The profiler's unit tests: 184 passed. The end-to-end 
 `test/end_to_end/do_all/stack_access/various/case_6` (two loops side by side, the second `y[j] = y[j] + x[j]`),
 which FAILS on the profiler before the fix ("Overlooked expected do_all patterns at lines ['1:18']") and passes
 with it. (`case_5`, where B14 was first seen, has two plain writes and passes either way.)
+
+**Verified on the server** (LLVM 20, no model; `evaluation/agent/results/T0_instruments/B14_side_by_side_loops/`,
+read-out `analysis/b14_readout.md`). The profiler rebuilt from the fix's commit; `case_6` passes there. The
+agent's 257 changed programs of E1-v6 and E2-v6, directives removed, profiled before and after the fix
+(`tools/doall_replay.py`): 86 programs gain loops and then have EVERY loop reported — all 35 successes of
+E2-v6's arm with evidence at one attempt on `k19`, `k23`, `k27`, `k31` (81 loops reported before, 116 after),
+37 and 10 in its three-attempt arms, 4 of 85 in E1-v6 (all `s281`); 4 programs have a loop withdrawn, each the
+recurrence of `k53` above; no other loop changes. DiscoPoP alone on the 44 `tsvc_c2` originals, two draws on the
+fixed profiler: outcome and number of directives of every package as in the three draws before the fix.
 
 **What the false block needs, precisely:** a loop that is not the first of the loops side by side, and that
 both reads and writes an array whose value the enclosing loop carries (`u[i] += …`, `y[j] = y[j] + …`). A later

@@ -1,0 +1,44 @@
+{
+  "suite": "tsvc_c2",
+  "kernel": "s211",
+  "source": "benchmarks/TSVC_2/src/tsvc.c",
+  "category": "statement reordering / statement reordering allows vectorization",
+  "file": "s211.c",
+  "language": "c",
+  "layout": "project",
+  "project": {
+    "units": [
+      "s211.c",
+      "main.c"
+    ],
+    "include_dirs": [
+      "."
+    ],
+    "editable": [
+      "s211.c"
+    ]
+  },
+  "restructuring_class": "restructure",
+  "transformation": "statement reordering + loop distribution",
+  "why": "a[i] needs b[i-1] written by the PREVIOUS iteration, b[i] needs the OLD b[i+1]",
+  "reference_solution": "agent/reference_solutions/tsvc_c2/s211.c",
+  "exclude_functions": [
+    "main",
+    "dummy"
+  ],
+  "harness": "tsvc_c2/s211.h",
+  "harness_sha256": "26d4170f175ce505c2762f4571047ce7f9265bccddbc56dcf1da70a2dfda2449",
+  "hot_loop": {
+    "entry": "kernel_s211",
+    "function": "kernel_s211",
+    "line": 6,
+    "writes": [
+      "a",
+      "b"
+    ]
+  },
+  "agent_dataset": "SMALL",
+  "generator_version": 6,
+  "inputs_sha256": "456dd573b84b30e6f32c943bb559d80374eec67177de48223e95124a8c3fc627",
+  "output_sha256": "15f239c19619609e724f9bf8d9fc57d31aad805f7a2e217e441127aa182b971a"
+}

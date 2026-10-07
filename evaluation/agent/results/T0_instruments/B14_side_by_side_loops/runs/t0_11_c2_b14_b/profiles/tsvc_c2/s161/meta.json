@@ -1,0 +1,44 @@
+{
+  "suite": "tsvc_c2",
+  "kernel": "s161",
+  "source": "benchmarks/TSVC_2/src/tsvc.c",
+  "category": "control flow / tests for recognition of loop independent dependences / between statements in mutually exclusive regions.",
+  "file": "s161.c",
+  "language": "c",
+  "layout": "project",
+  "project": {
+    "units": [
+      "s161.c",
+      "main.c"
+    ],
+    "include_dirs": [
+      "."
+    ],
+    "editable": [
+      "s161.c"
+    ]
+  },
+  "restructuring_class": "hidden dependence (E2-B1 a)",
+  "transformation": "whether a later iteration reads what an earlier one wrote depends on b's signs",
+  "why": "b alternates in sign, so an odd iteration writes c[i+1] and the next one reads it",
+  "reference_solution": null,
+  "exclude_functions": [
+    "main",
+    "dummy"
+  ],
+  "harness": "tsvc_c2/s161.h",
+  "harness_sha256": "01b04085fb14391ee7a771e2b8b5b2bc7a5e71ec602803f9ced0400370257466",
+  "hot_loop": {
+    "entry": "kernel_s161",
+    "function": "kernel_s161",
+    "line": 6,
+    "writes": [
+      "a",
+      "c"
+    ]
+  },
+  "agent_dataset": "SMALL",
+  "generator_version": 6,
+  "inputs_sha256": "456dd573b84b30e6f32c943bb559d80374eec67177de48223e95124a8c3fc627",
+  "output_sha256": "d6b27034a392ab9655a7d4166b416c4b39578f1441aef4b219c8337dec842d5d"
+}

@@ -505,14 +505,14 @@ Status: done
 | `e2o3_bare_fable` | [`history/E02o3_hidden_order_kernels/runs/e2o3_bare_fable/`](history/E02o3_hidden_order_kernels/runs/e2o3_bare_fable/) | E2-O3: claude-fable-5-1 alone on tsvc_b1/k23, k31, k36 × bare_llm_nospeed_v3 × 5 | valid | 15 | BROKEN 9, FASTER 5, parallel-not-faster 1 |
 | `e2o3_race_check` | [`history/E02o3_hidden_order_kernels/checks/e2o3_race_check/`](history/E02o3_hidden_order_kernels/checks/e2o3_race_check/) | race_check.py over every model-alone program of E2-O3 (bare_llm_nospeed_v3: Haiku, Sonnet, Opus, Fable) and, as the positive control, the agent's parallel programs (both arms), no model | valid | 0 |  |
 
-## [DiscoPoP B14 — two loops side by side inside a loop: the fix, its regression check, and what it changes on the programs the agent shipped](T0_instruments/B14_side_by_side_loops/)
+## [DiscoPoP B14 — two loops side by side inside a loop: the fix, its regression check, and what it changes on the programs the agent shipped](T0_instruments/B14_side_by_side_loops/REPORT.md)
 
-Status: running
+Status: done
 
 | run | where | what it is | status | trials | outcomes |
 |---|---|---|---|---:|---|
-| `b14_replay_before` | not archived yet | doall_replay.py (server, no model) with the profiler BEFORE the B14 fix: DiscoPoP's Do-All verdict on every changed program the agent shipped in E1-v6 (default_v4) and E2-v6 (its four arms), directives removed | registered |  |  |
-| `b14_replay_after` | not archived yet | doall_replay.py (server, no model) with the profiler AFTER the B14 fix, on the same archived programs | registered |  |  |
-| `t0_11_c2_b14_a` | not archived yet | T0.11 on packaging v6 with DiscoPoP B14 fixed, draw a, server, no model: arm discopop_capability on the 44 tsvc_c2 packages — the regression check (every class as t0_11_c2_a–c measured it) | registered |  |  |
-| `t0_11_c2_b14_b` | not archived yet | T0.11 on packaging v6 with DiscoPoP B14 fixed, draw b, server, no model: arm discopop_capability on the 44 tsvc_c2 packages | registered |  |  |
+| `b14_replay_before` | [`T0_instruments/B14_side_by_side_loops/checks/b14_replay_before/`](T0_instruments/B14_side_by_side_loops/checks/b14_replay_before/) | doall_replay.py (server, no model) with the profiler BEFORE the B14 fix: DiscoPoP's Do-All verdict on every changed program the agent shipped in E1-v6 (default_v4) and E2-v6 (its four arms), directives removed | valid | 0 |  |
+| `b14_replay_after` | [`T0_instruments/B14_side_by_side_loops/checks/b14_replay_after/`](T0_instruments/B14_side_by_side_loops/checks/b14_replay_after/) | doall_replay.py (server, no model) with the profiler AFTER the B14 fix, on the same archived programs | valid | 0 |  |
+| `t0_11_c2_b14_a` | [`T0_instruments/B14_side_by_side_loops/runs/t0_11_c2_b14_a/`](T0_instruments/B14_side_by_side_loops/runs/t0_11_c2_b14_a/) | T0.11 on packaging v6 with DiscoPoP B14 fixed, draw a, server, no model: arm discopop_capability on the 44 tsvc_c2 packages — the regression check (every class as t0_11_c2_a–c measured it) | valid | 44 | FASTER 8, no-change 34, parallel-speed-not-measurable 2 |
+| `t0_11_c2_b14_b` | [`T0_instruments/B14_side_by_side_loops/runs/t0_11_c2_b14_b/`](T0_instruments/B14_side_by_side_loops/runs/t0_11_c2_b14_b/) | T0.11 on packaging v6 with DiscoPoP B14 fixed, draw b, server, no model: arm discopop_capability on the 44 tsvc_c2 packages | valid | 44 | FASTER 8, no-change 34, parallel-speed-not-measurable 2 |
 
