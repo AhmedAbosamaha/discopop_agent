@@ -19,6 +19,11 @@ same. This checks it per loop against the v4 package (`tsvc_b1`), with the agent
   A difference in the WAR/WAW lists of version 3's reading is NOT a criterion: that reading applies a line's
   first type to all of its targets, and the order on a line changes from profile to profile (deps.py, D12).
 
+T0.18 (7 Oct 2026) compares packaging v6 with v7 (`--old tsvc_c2 --new tsvc_c3 --added-values 2`): v7's output
+ends with two values more, the sums of the repetitions' record. With `--added-values N` the output criterion is
+the full dump on the shipped AND the perturbed input, the new packaging's last N lines left out, byte for byte;
+the digest sums every printed value, the new ones included, and is not compared (it must exist).
+
 Every profile is kept (without build products and AST dumps) under <out>/profiles/ — a rule about the evidence
 is replayed on them (order_replay.py), never argued. Run with the agent's venv, one profile at a time:
 
@@ -58,7 +63,8 @@ from discopop_agent.profiling import tools as profiling_tools      # noqa: E402
 
 PREPARED = HERE.parent / "prepared"
 KEEP_OUT = ("a.out", "ast_dump.json", "patch_generator", "patch_applicator", "private", "statistics")
-MIX = ("a[k] +=", "d[k] +=", "a[0] +=", "long k =", "pb_mix(", "static long n", "n++;")      # v6: the lines of `dummy`
+# the lines of `dummy` that are ours — v6's, and v7's call that records the repetition
+MIX = ("a[k] +=", "d[k] +=", "a[0] +=", "long k =", "pb_mix(", "static long n", "n++;", "pb_fold(")
 # the repetition loop's header: v4's, and v6's — where it is the function's own, as in TSVC
 REPETITION = ("nl < R", "nl < iterations")
 
@@ -84,12 +90,28 @@ def _sources(pkg: Path) -> Tuple[List[str], List[str]]:
     return [str(pkg / meta["file"])], []
 
 
-def outputs(pkg: Path, work: Path) -> Dict[str, str]:
+def outputs(pkg: Path, work: Path, seeded_dump: bool = False) -> Dict[str, str]:
     units, inc = _sources(pkg)
     out = {}
-    for tag, flags, args in (("digest", [], []), ("digest_seed7", [], ["7"]), ("dump", ["-DPB_FULL_DUMP"], [])):
+    builds = [("digest", [], []), ("digest_seed7", [], ["7"]), ("dump", ["-DPB_FULL_DUMP"], [])]
+    if seeded_dump:
+        builds.append(("dump_seed7", ["-DPB_FULL_DUMP"], ["7"]))
+    for tag, flags, args in builds:
         out[tag] = _run([*_cc(), "-O2", *flags, *inc, *units, "-o", str(work / f"plain_{tag}"), "-lm"], args)[0]
     return out
+
+
+def same_output(old: Dict[str, str], new: Dict[str, str], added: int) -> bool:
+    """Is the new packaging's output the old one's? Without added values: every output byte for byte. With N
+    added values: the full dumps without the new packaging's last N lines, on both inputs — the digests sum
+    every printed value, so they are only required to exist."""
+    def ran(o: str) -> bool:
+        return len(o) > 0 and not o.startswith(("BUILD", "RUN"))
+    if not all(ran(o) for o in (*old.values(), *new.values())):
+        return False
+    if not added:
+        return all(old[k] == new[k] for k in old)
+    return all(old[k] == "".join(new[k].splitlines(keepends=True)[:-added]) for k in ("dump", "dump_seed7"))
 
 
 def timed(pkg: Path, work: Path, size: str, runs: int, tag: str) -> List[float]:
@@ -219,6 +241,10 @@ def main() -> int:
     ap.add_argument("--time", default=None, metavar="SIZE", help="also time the sequential original at this size")
     ap.add_argument("--runs", type=int, default=5)
     ap.add_argument("--explorer-timeout", type=int, default=180)
+    ap.add_argument("--added-values", type=int, default=0, metavar="N",
+                    help="the new packaging prints N values more at the end of its output (v7: the two sums of the "
+                         "repetitions' record): the full dump is compared without them, on both inputs; the digest "
+                         "is not compared")
     ap.add_argument("names", nargs="*")
     a = ap.parse_args()
     harness_include.install()
@@ -232,8 +258,9 @@ def main() -> int:
         t = Path(tmp)
         for n in names:
             old_pkg, new_pkg = PREPARED / a.old / n, PREPARED / a.new / n
-            oo, on = outputs(old_pkg, t), outputs(new_pkg, t)
-            same_out = all(oo[k] == on[k] and len(oo[k]) > 0 and not oo[k].startswith(("BUILD", "RUN")) for k in oo)
+            seeded = a.added_values > 0
+            oo, on = outputs(old_pkg, t, seeded), outputs(new_pkg, t, seeded)
+            same_out = same_output(oo, on, a.added_values)
             ratio: Optional[float] = None
             if a.time:
                 to, tn = timed(old_pkg, t, a.time, a.runs, "old"), timed(new_pkg, t, a.time, a.runs, "new")
