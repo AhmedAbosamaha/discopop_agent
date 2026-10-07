@@ -21,9 +21,10 @@ a gate decides whether the result is safe and worth keeping.
 2. **Idea.** Read the dependence as a diagnosis and let a language model restructure the code.
 3. **System.** An agent around DiscoPoP: profile, rank, restructure, check, re-profile, annotate, verify.
 4. **Results.** On 18 loops that need restructuring: DiscoPoP alone 0 of 90 trials; the agent with a small model
-   73 of 90 right, race-free and faster, none unusable; the same model alone 38, with 50 unusable. Where the fact
-   that decides the rewrite is not in the file: 45 of 50 with DiscoPoP's evidence against 10 without, and no
-   stronger model alone is fast and right in more than 5 of 20.
+   73 of 90 right, race-free and faster (77 once one loop is corrected for a DiscoPoP defect), none unusable; the
+   same model alone 38, with 50 unusable. Where the fact that decides the rewrite is not in the file: 44 of 50 with
+   DiscoPoP's evidence against 14 without, at the speed of an expert's version, and no stronger model alone is
+   fast and right in more than 5 of 20.
 5. **Limits.** Stronger models alone reach further on plain loops (89 of 90); the agent's reach is bounded by its
    model and by what DiscoPoP confirms; the cost claim is not measured yet.
 
@@ -110,12 +111,12 @@ Follows the pipeline page stage by stage; each design decision is given with its
   the corrected packages. **[planned]** A large code (LULESH) and the head-to-head with RepoOMP on its own programs.
 - **4.4 Where to look first.** **[planned]** Ranking by measured time saved against a static estimate.
 - **4.5 What the model is told, and how often it may try.** **[done]** First, why the evidence did nothing as it
-  was first worded. Then the experiment where the deciding fact is not in the file: 45 of 50 with evidence against
-  10 without; retries with feedback alone 22 of 50 at eleven times the calls; no model alone above 5 of 20 fast
-  and right. Stated with it: retries produce pointless parallel programs where nothing can be gained, and the
-  agent's successes reach a third to a half of the expert's speed — traced to a defect in DiscoPoP's profiler
-  (two loops one after the other inside a loop were treated as nested; fixed 7 Oct, section 3.10). **[open]** The
-  speeds on the fixed DiscoPoP: a re-run or a replay, the author's decision.
+  was first worded. Then the experiment where the deciding fact is not in the file, on the fixed DiscoPoP: 44 of
+  50 with evidence against 14 without, and the programs run at the expert's speed (4.07× against 4.14×). Retries
+  with feedback alone reach 22 of 50 at eight times the calls per success; against 14 at one attempt that effect
+  is not established. No model alone is fast and right in more than 5 of 20. Stated with it: retries produce
+  pointless parallel programs where nothing can be gained. The first run of this experiment, on the profiler with
+  the defect, is told as part of the story: it is how the defect was found (section 3.10).
 - **4.6 Who judges the result.** **[done]** The speed check: on, at a measurable size, it is the only setting with
   nothing unsafe and nothing below DiscoPoP alone. The unsafe programs that did occur, each by name and cause.
   **[planned]** The gate as a classifier: its error rate and what each stage alone catches.
