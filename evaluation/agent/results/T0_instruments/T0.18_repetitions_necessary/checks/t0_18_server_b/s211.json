@@ -1,0 +1,499 @@
+{
+ "name": "s211",
+ "output_identical": true,
+ "time_ratio": null,
+ "old": {
+  "profile_s": 1.9,
+  "hotspots": "ok",
+  "do_all": [],
+  "blockers": [
+   [
+    "b",
+    "RAW",
+    "for (int i = 1; i < LEN_1D-1; i++) {"
+   ],
+   [
+    "dummy.n",
+    "RAW",
+    "for (int nl = 0; nl < iterations; nl++) {"
+   ]
+  ],
+  "candidates": [
+   {
+    "rank": 0,
+    "file": "s211.c",
+    "type": "loop",
+    "text": "for (int nl = 0; nl < iterations; nl++) {",
+    "tier": 2,
+    "pattern": null,
+    "share": 0.7105,
+    "statements": {
+     "3": [
+      "- Line N (`a[i] = b[i - 1] + c[i] * d[i];`) reads an element of `b` that line N (`b[i] = b[i + 1] - e[i] * d[i];`) writes; DiscoPoP names the loop at line N as carrying this dependence.  The value must flow from line N to line N: if you split that loop, the loop holding line N has to run completely before the loop holding line N; reading `b`'s values from before the loop would change the result."
+     ],
+     "4": [
+      "- Line N (`a[i] = b[i - 1] + c[i] * d[i];`) reads an element of `b` that line N (`b[i] = b[i + 1] - e[i] * d[i];`) writes; DiscoPoP names the loop at line N as carrying this dependence.  The value must flow from line N to line N: if you split that loop, the loop holding line N has to run completely before the loop holding line N; reading `b`'s values from before the loop would change the result."
+     ]
+    },
+    "flows": [
+     [
+      "RAW",
+      "b[i] = b[i + 1] - e[i] * d[i];",
+      "a[i] = b[i - 1] + c[i] * d[i];",
+      "b",
+      "loop"
+     ],
+     [
+      "RAW",
+      "b[i] = b[i + 1] - e[i] * d[i];",
+      "b[i] = b[i + 1] - e[i] * d[i];",
+      "b",
+      "outside"
+     ],
+     [
+      "RAW",
+      "for (int i = 1; i < LEN_1D-1; i++) {",
+      "a[i] = b[i - 1] + c[i] * d[i];",
+      "i",
+      "unknown"
+     ],
+     [
+      "RAW",
+      "for (int i = 1; i < LEN_1D-1; i++) {",
+      "b[i] = b[i + 1] - e[i] * d[i];",
+      "i",
+      "unknown"
+     ],
+     [
+      "RAW",
+      "for (int i = 1; i < LEN_1D-1; i++) {",
+      "for (int i = 1; i < LEN_1D-1; i++) {",
+      "i",
+      "unknown"
+     ],
+     [
+      "RAW",
+      "for (int nl = 0; nl < iterations; nl++) {",
+      "for (int nl = 0; nl < iterations; nl++) {",
+      "nl",
+      "unknown"
+     ]
+    ]
+   },
+   {
+    "rank": 1,
+    "file": "s211.c",
+    "type": "function",
+    "text": "real_t kernel_s211(void)",
+    "tier": 2,
+    "pattern": null,
+    "share": 0.7105,
+    "statements": {
+     "3": [
+      "- Line N (`a[i] = b[i - 1] + c[i] * d[i];`) reads an element of `b` that line N (`b[i] = b[i + 1] - e[i] * d[i];`) writes; DiscoPoP names the loop at line N as carrying this dependence.  The value must flow from line N to line N: if you split that loop, the loop holding line N has to run completely before the loop holding line N; reading `b`'s values from before the loop would change the result."
+     ],
+     "4": [
+      "- Line N (`a[i] = b[i - 1] + c[i] * d[i];`) reads an element of `b` that line N (`b[i] = b[i + 1] - e[i] * d[i];`) writes; DiscoPoP names the loop at line N as carrying this dependence.  The value must flow from line N to line N: if you split that loop, the loop holding line N has to run completely before the loop holding line N; reading `b`'s values from before the loop would change the result."
+     ]
+    },
+    "flows": [
+     [
+      "RAW",
+      "b[i] = b[i + 1] - e[i] * d[i];",
+      "a[i] = b[i - 1] + c[i] * d[i];",
+      "b",
+      "loop"
+     ],
+     [
+      "RAW",
+      "b[i] = b[i + 1] - e[i] * d[i];",
+      "b[i] = b[i + 1] - e[i] * d[i];",
+      "b",
+      "outside"
+     ],
+     [
+      "RAW",
+      "for (int i = 1; i < LEN_1D-1; i++) {",
+      "a[i] = b[i - 1] + c[i] * d[i];",
+      "i",
+      "unknown"
+     ],
+     [
+      "RAW",
+      "for (int i = 1; i < LEN_1D-1; i++) {",
+      "b[i] = b[i + 1] - e[i] * d[i];",
+      "i",
+      "unknown"
+     ],
+     [
+      "RAW",
+      "for (int i = 1; i < LEN_1D-1; i++) {",
+      "for (int i = 1; i < LEN_1D-1; i++) {",
+      "i",
+      "unknown"
+     ],
+     [
+      "RAW",
+      "for (int nl = 0; nl < iterations; nl++) {",
+      "for (int nl = 0; nl < iterations; nl++) {",
+      "nl",
+      "unknown"
+     ]
+    ]
+   },
+   {
+    "rank": 2,
+    "file": "s211.c",
+    "type": "loop",
+    "text": "for (int i = 1; i < LEN_1D-1; i++) {",
+    "tier": 2,
+    "pattern": null,
+    "share": 0.7089,
+    "statements": {
+     "3": [
+      "- Line N (`a[i] = b[i - 1] + c[i] * d[i];`) reads an element of `b` that line N (`b[i] = b[i + 1] - e[i] * d[i];`) writes; DiscoPoP names the loop at line N as carrying this dependence.  The value must flow from line N to line N: if you split that loop, the loop holding line N has to run completely before the loop holding line N; reading `b`'s values from before the loop would change the result."
+     ],
+     "4": [
+      "- Line N (`a[i] = b[i - 1] + c[i] * d[i];`) reads an element of `b` that line N (`b[i] = b[i + 1] - e[i] * d[i];`) writes; DiscoPoP names the loop at line N as carrying this dependence.  The value must flow from line N to line N: if you split that loop, the loop holding line N has to run completely before the loop holding line N; reading `b`'s values from before the loop would change the result."
+     ]
+    },
+    "flows": [
+     [
+      "RAW",
+      "b[i] = b[i + 1] - e[i] * d[i];",
+      "a[i] = b[i - 1] + c[i] * d[i];",
+      "b",
+      "loop"
+     ],
+     [
+      "RAW",
+      "b[i] = b[i + 1] - e[i] * d[i];",
+      "b[i] = b[i + 1] - e[i] * d[i];",
+      "b",
+      "outside"
+     ],
+     [
+      "RAW",
+      "for (int i = 1; i < LEN_1D-1; i++) {",
+      "a[i] = b[i - 1] + c[i] * d[i];",
+      "i",
+      "unknown"
+     ],
+     [
+      "RAW",
+      "for (int i = 1; i < LEN_1D-1; i++) {",
+      "b[i] = b[i + 1] - e[i] * d[i];",
+      "i",
+      "unknown"
+     ],
+     [
+      "RAW",
+      "for (int i = 1; i < LEN_1D-1; i++) {",
+      "for (int i = 1; i < LEN_1D-1; i++) {",
+      "i",
+      "unknown"
+     ]
+    ]
+   }
+  ]
+ },
+ "new": {
+  "profile_s": 1.9,
+  "hotspots": "ok",
+  "do_all": [],
+  "blockers": [
+   [
+    "b",
+    "RAW",
+    "for (int i = 1; i < LEN_1D-1; i++) {"
+   ],
+   [
+    "dummy.n",
+    "RAW",
+    "for (int nl = 0; nl < iterations; nl++) {"
+   ]
+  ],
+  "candidates": [
+   {
+    "rank": 0,
+    "file": "s211.c",
+    "type": "loop",
+    "text": "for (int nl = 0; nl < iterations; nl++) {",
+    "tier": 2,
+    "pattern": null,
+    "share": 0.711,
+    "statements": {
+     "3": [
+      "- Line N (`a[i] = b[i - 1] + c[i] * d[i];`) reads an element of `b` that line N (`b[i] = b[i + 1] - e[i] * d[i];`) writes; DiscoPoP names the loop at line N as carrying this dependence.  The value must flow from line N to line N: if you split that loop, the loop holding line N has to run completely before the loop holding line N; reading `b`'s values from before the loop would change the result."
+     ],
+     "4": [
+      "- Line N (`a[i] = b[i - 1] + c[i] * d[i];`) reads an element of `b` that line N (`b[i] = b[i + 1] - e[i] * d[i];`) writes; DiscoPoP names the loop at line N as carrying this dependence.  The value must flow from line N to line N: if you split that loop, the loop holding line N has to run completely before the loop holding line N; reading `b`'s values from before the loop would change the result."
+     ]
+    },
+    "flows": [
+     [
+      "RAW",
+      "b[i] = b[i + 1] - e[i] * d[i];",
+      "a[i] = b[i - 1] + c[i] * d[i];",
+      "b",
+      "loop"
+     ],
+     [
+      "RAW",
+      "b[i] = b[i + 1] - e[i] * d[i];",
+      "b[i] = b[i + 1] - e[i] * d[i];",
+      "b",
+      "outside"
+     ],
+     [
+      "RAW",
+      "for (int i = 1; i < LEN_1D-1; i++) {",
+      "a[i] = b[i - 1] + c[i] * d[i];",
+      "i",
+      "unknown"
+     ],
+     [
+      "RAW",
+      "for (int i = 1; i < LEN_1D-1; i++) {",
+      "b[i] = b[i + 1] - e[i] * d[i];",
+      "i",
+      "unknown"
+     ],
+     [
+      "RAW",
+      "for (int i = 1; i < LEN_1D-1; i++) {",
+      "for (int i = 1; i < LEN_1D-1; i++) {",
+      "i",
+      "unknown"
+     ],
+     [
+      "RAW",
+      "for (int nl = 0; nl < iterations; nl++) {",
+      "for (int nl = 0; nl < iterations; nl++) {",
+      "nl",
+      "unknown"
+     ]
+    ]
+   },
+   {
+    "rank": 1,
+    "file": "s211.c",
+    "type": "function",
+    "text": "real_t kernel_s211(void)",
+    "tier": 2,
+    "pattern": null,
+    "share": 0.711,
+    "statements": {
+     "3": [
+      "- Line N (`a[i] = b[i - 1] + c[i] * d[i];`) reads an element of `b` that line N (`b[i] = b[i + 1] - e[i] * d[i];`) writes; DiscoPoP names the loop at line N as carrying this dependence.  The value must flow from line N to line N: if you split that loop, the loop holding line N has to run completely before the loop holding line N; reading `b`'s values from before the loop would change the result."
+     ],
+     "4": [
+      "- Line N (`a[i] = b[i - 1] + c[i] * d[i];`) reads an element of `b` that line N (`b[i] = b[i + 1] - e[i] * d[i];`) writes; DiscoPoP names the loop at line N as carrying this dependence.  The value must flow from line N to line N: if you split that loop, the loop holding line N has to run completely before the loop holding line N; reading `b`'s values from before the loop would change the result."
+     ]
+    },
+    "flows": [
+     [
+      "RAW",
+      "b[i] = b[i + 1] - e[i] * d[i];",
+      "a[i] = b[i - 1] + c[i] * d[i];",
+      "b",
+      "loop"
+     ],
+     [
+      "RAW",
+      "b[i] = b[i + 1] - e[i] * d[i];",
+      "b[i] = b[i + 1] - e[i] * d[i];",
+      "b",
+      "outside"
+     ],
+     [
+      "RAW",
+      "for (int i = 1; i < LEN_1D-1; i++) {",
+      "a[i] = b[i - 1] + c[i] * d[i];",
+      "i",
+      "unknown"
+     ],
+     [
+      "RAW",
+      "for (int i = 1; i < LEN_1D-1; i++) {",
+      "b[i] = b[i + 1] - e[i] * d[i];",
+      "i",
+      "unknown"
+     ],
+     [
+      "RAW",
+      "for (int i = 1; i < LEN_1D-1; i++) {",
+      "for (int i = 1; i < LEN_1D-1; i++) {",
+      "i",
+      "unknown"
+     ],
+     [
+      "RAW",
+      "for (int nl = 0; nl < iterations; nl++) {",
+      "for (int nl = 0; nl < iterations; nl++) {",
+      "nl",
+      "unknown"
+     ]
+    ]
+   },
+   {
+    "rank": 2,
+    "file": "s211.c",
+    "type": "loop",
+    "text": "for (int i = 1; i < LEN_1D-1; i++) {",
+    "tier": 2,
+    "pattern": null,
+    "share": 0.7088,
+    "statements": {
+     "3": [
+      "- Line N (`a[i] = b[i - 1] + c[i] * d[i];`) reads an element of `b` that line N (`b[i] = b[i + 1] - e[i] * d[i];`) writes; DiscoPoP names the loop at line N as carrying this dependence.  The value must flow from line N to line N: if you split that loop, the loop holding line N has to run completely before the loop holding line N; reading `b`'s values from before the loop would change the result."
+     ],
+     "4": [
+      "- Line N (`a[i] = b[i - 1] + c[i] * d[i];`) reads an element of `b` that line N (`b[i] = b[i + 1] - e[i] * d[i];`) writes; DiscoPoP names the loop at line N as carrying this dependence.  The value must flow from line N to line N: if you split that loop, the loop holding line N has to run completely before the loop holding line N; reading `b`'s values from before the loop would change the result."
+     ]
+    },
+    "flows": [
+     [
+      "RAW",
+      "b[i] = b[i + 1] - e[i] * d[i];",
+      "a[i] = b[i - 1] + c[i] * d[i];",
+      "b",
+      "loop"
+     ],
+     [
+      "RAW",
+      "b[i] = b[i + 1] - e[i] * d[i];",
+      "b[i] = b[i + 1] - e[i] * d[i];",
+      "b",
+      "outside"
+     ],
+     [
+      "RAW",
+      "for (int i = 1; i < LEN_1D-1; i++) {",
+      "a[i] = b[i - 1] + c[i] * d[i];",
+      "i",
+      "unknown"
+     ],
+     [
+      "RAW",
+      "for (int i = 1; i < LEN_1D-1; i++) {",
+      "b[i] = b[i + 1] - e[i] * d[i];",
+      "i",
+      "unknown"
+     ],
+     [
+      "RAW",
+      "for (int i = 1; i < LEN_1D-1; i++) {",
+      "for (int i = 1; i < LEN_1D-1; i++) {",
+      "i",
+      "unknown"
+     ]
+    ]
+   }
+  ]
+ },
+ "same": {
+  "candidates": true,
+  "do_all": true,
+  "blocker": true,
+  "repetition": true,
+  "statement": true
+ },
+ "flows_same": true,
+ "views": {
+  "old": {
+   "candidates": [
+    [
+     "function",
+     "real_t kernel_s211()",
+     2,
+     "None"
+    ],
+    [
+     "loop",
+     "for (int i = 1; i < LEN_1D-1; i++) {",
+     2,
+     "None"
+    ]
+   ],
+   "do_all": [],
+   "blocker": [
+    [
+     "b",
+     "RAW",
+     "for (int i = 1; i < LEN_1D-1; i++) {"
+    ]
+   ],
+   "repetition": "blocked",
+   "statement": [
+    "- Line N (`a[i] = b[i - 1] + c[i] * d[i];`) reads an element of `b` that line N (`b[i] = b[i + 1] - e[i] * d[i];`) writes; DiscoPoP names the loop at line N as carrying this dependence.  The value must flow from line N to line N: if you split that loop, the loop holding line N has to run completely before the loop holding line N; reading `b`'s values from before the loop would change the result."
+   ],
+   "statement_v3": [
+    "- Line N (`a[i] = b[i - 1] + c[i] * d[i];`) reads an element of `b` that line N (`b[i] = b[i + 1] - e[i] * d[i];`) writes; DiscoPoP names the loop at line N as carrying this dependence.  The value must flow from line N to line N: if you split that loop, the loop holding line N has to run completely before the loop holding line N; reading `b`'s values from before the loop would change the result."
+   ],
+   "flows": [
+    [
+     "RAW",
+     "b[i] = b[i + 1] - e[i] * d[i];",
+     "a[i] = b[i - 1] + c[i] * d[i];",
+     "b",
+     "loop"
+    ],
+    [
+     "RAW",
+     "b[i] = b[i + 1] - e[i] * d[i];",
+     "b[i] = b[i + 1] - e[i] * d[i];",
+     "b",
+     "outside"
+    ]
+   ]
+  },
+  "new": {
+   "candidates": [
+    [
+     "function",
+     "real_t kernel_s211()",
+     2,
+     "None"
+    ],
+    [
+     "loop",
+     "for (int i = 1; i < LEN_1D-1; i++) {",
+     2,
+     "None"
+    ]
+   ],
+   "do_all": [],
+   "blocker": [
+    [
+     "b",
+     "RAW",
+     "for (int i = 1; i < LEN_1D-1; i++) {"
+    ]
+   ],
+   "repetition": "blocked",
+   "statement": [
+    "- Line N (`a[i] = b[i - 1] + c[i] * d[i];`) reads an element of `b` that line N (`b[i] = b[i + 1] - e[i] * d[i];`) writes; DiscoPoP names the loop at line N as carrying this dependence.  The value must flow from line N to line N: if you split that loop, the loop holding line N has to run completely before the loop holding line N; reading `b`'s values from before the loop would change the result."
+   ],
+   "statement_v3": [
+    "- Line N (`a[i] = b[i - 1] + c[i] * d[i];`) reads an element of `b` that line N (`b[i] = b[i + 1] - e[i] * d[i];`) writes; DiscoPoP names the loop at line N as carrying this dependence.  The value must flow from line N to line N: if you split that loop, the loop holding line N has to run completely before the loop holding line N; reading `b`'s values from before the loop would change the result."
+   ],
+   "flows": [
+    [
+     "RAW",
+     "b[i] = b[i + 1] - e[i] * d[i];",
+     "a[i] = b[i - 1] + c[i] * d[i];",
+     "b",
+     "loop"
+    ],
+    [
+     "RAW",
+     "b[i] = b[i + 1] - e[i] * d[i];",
+     "b[i] = b[i + 1] - e[i] * d[i];",
+     "b",
+     "outside"
+    ]
+   ]
+  }
+ }
+}

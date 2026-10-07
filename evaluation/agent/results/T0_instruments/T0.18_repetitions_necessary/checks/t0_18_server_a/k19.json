@@ -1,0 +1,499 @@
+{
+ "name": "k19",
+ "output_identical": true,
+ "time_ratio": null,
+ "old": {
+  "profile_s": 2.2,
+  "hotspots": "ok",
+  "do_all": [],
+  "blockers": [
+   [
+    "c",
+    "RAW",
+    "for (int nl = 0; nl < iterations; nl++) {"
+   ],
+   [
+    "v",
+    "RAW",
+    "for (long i = 1; i < LEN_1D; i++) {"
+   ]
+  ],
+  "candidates": [
+   {
+    "rank": 0,
+    "file": "k19.c",
+    "type": "loop",
+    "text": "for (int nl = 0; nl < iterations; nl++) {",
+    "tier": 2,
+    "pattern": null,
+    "share": 0.634,
+    "statements": {
+     "3": [
+      "- Line N (`u[ju[i]] += v[kv[i]] * c[i];`) reads an element of `v` that line N (`v[jv[i]] = u[ku[i]] * d[i] + c[i];`) writes; DiscoPoP names the loop at line N as carrying this dependence.  The value must flow from line N to line N: if you split that loop, the loop holding line N has to run completely before the loop holding line N; reading `v`'s values from before the loop would change the result."
+     ],
+     "4": [
+      "- Line N (`u[ju[i]] += v[kv[i]] * c[i];`) reads an element of `v` that line N (`v[jv[i]] = u[ku[i]] * d[i] + c[i];`) writes; DiscoPoP names the loop at line N as carrying this dependence.  The value must flow from line N to line N: if you split that loop, the loop holding line N has to run completely before the loop holding line N; reading `v`'s values from before the loop would change the result."
+     ]
+    },
+    "flows": [
+     [
+      "RAW",
+      "for (int nl = 0; nl < iterations; nl++) {",
+      "for (int nl = 0; nl < iterations; nl++) {",
+      "nl",
+      "unknown"
+     ],
+     [
+      "RAW",
+      "for (long i = 1; i < LEN_1D; i++) {",
+      "for (long i = 1; i < LEN_1D; i++) {",
+      "i",
+      "unknown"
+     ],
+     [
+      "RAW",
+      "for (long i = 1; i < LEN_1D; i++) {",
+      "u[ju[i]] += v[kv[i]] * c[i];",
+      "i",
+      "unknown"
+     ],
+     [
+      "RAW",
+      "for (long i = 1; i < LEN_1D; i++) {",
+      "v[jv[i]] = u[ku[i]] * d[i] + c[i];",
+      "i",
+      "unknown"
+     ],
+     [
+      "RAW",
+      "u[ju[i]] += v[kv[i]] * c[i];",
+      "u[ju[i]] += v[kv[i]] * c[i];",
+      "u",
+      "outside"
+     ],
+     [
+      "RAW",
+      "v[jv[i]] = u[ku[i]] * d[i] + c[i];",
+      "u[ju[i]] += v[kv[i]] * c[i];",
+      "v",
+      "loop"
+     ]
+    ]
+   },
+   {
+    "rank": 1,
+    "file": "k19.c",
+    "type": "function",
+    "text": "real_t kernel_k19(void)",
+    "tier": 2,
+    "pattern": null,
+    "share": 0.634,
+    "statements": {
+     "3": [
+      "- Line N (`u[ju[i]] += v[kv[i]] * c[i];`) reads an element of `v` that line N (`v[jv[i]] = u[ku[i]] * d[i] + c[i];`) writes; DiscoPoP names the loop at line N as carrying this dependence.  The value must flow from line N to line N: if you split that loop, the loop holding line N has to run completely before the loop holding line N; reading `v`'s values from before the loop would change the result."
+     ],
+     "4": [
+      "- Line N (`u[ju[i]] += v[kv[i]] * c[i];`) reads an element of `v` that line N (`v[jv[i]] = u[ku[i]] * d[i] + c[i];`) writes; DiscoPoP names the loop at line N as carrying this dependence.  The value must flow from line N to line N: if you split that loop, the loop holding line N has to run completely before the loop holding line N; reading `v`'s values from before the loop would change the result."
+     ]
+    },
+    "flows": [
+     [
+      "RAW",
+      "for (int nl = 0; nl < iterations; nl++) {",
+      "for (int nl = 0; nl < iterations; nl++) {",
+      "nl",
+      "unknown"
+     ],
+     [
+      "RAW",
+      "for (long i = 1; i < LEN_1D; i++) {",
+      "for (long i = 1; i < LEN_1D; i++) {",
+      "i",
+      "unknown"
+     ],
+     [
+      "RAW",
+      "for (long i = 1; i < LEN_1D; i++) {",
+      "u[ju[i]] += v[kv[i]] * c[i];",
+      "i",
+      "unknown"
+     ],
+     [
+      "RAW",
+      "for (long i = 1; i < LEN_1D; i++) {",
+      "v[jv[i]] = u[ku[i]] * d[i] + c[i];",
+      "i",
+      "unknown"
+     ],
+     [
+      "RAW",
+      "u[ju[i]] += v[kv[i]] * c[i];",
+      "u[ju[i]] += v[kv[i]] * c[i];",
+      "u",
+      "outside"
+     ],
+     [
+      "RAW",
+      "v[jv[i]] = u[ku[i]] * d[i] + c[i];",
+      "u[ju[i]] += v[kv[i]] * c[i];",
+      "v",
+      "loop"
+     ]
+    ]
+   },
+   {
+    "rank": 2,
+    "file": "k19.c",
+    "type": "loop",
+    "text": "for (long i = 1; i < LEN_1D; i++) {",
+    "tier": 2,
+    "pattern": null,
+    "share": 0.6331,
+    "statements": {
+     "3": [
+      "- Line N (`u[ju[i]] += v[kv[i]] * c[i];`) reads an element of `v` that line N (`v[jv[i]] = u[ku[i]] * d[i] + c[i];`) writes; DiscoPoP names the loop at line N as carrying this dependence.  The value must flow from line N to line N: if you split that loop, the loop holding line N has to run completely before the loop holding line N; reading `v`'s values from before the loop would change the result."
+     ],
+     "4": [
+      "- Line N (`u[ju[i]] += v[kv[i]] * c[i];`) reads an element of `v` that line N (`v[jv[i]] = u[ku[i]] * d[i] + c[i];`) writes; DiscoPoP names the loop at line N as carrying this dependence.  The value must flow from line N to line N: if you split that loop, the loop holding line N has to run completely before the loop holding line N; reading `v`'s values from before the loop would change the result."
+     ]
+    },
+    "flows": [
+     [
+      "RAW",
+      "for (long i = 1; i < LEN_1D; i++) {",
+      "for (long i = 1; i < LEN_1D; i++) {",
+      "i",
+      "unknown"
+     ],
+     [
+      "RAW",
+      "for (long i = 1; i < LEN_1D; i++) {",
+      "u[ju[i]] += v[kv[i]] * c[i];",
+      "i",
+      "unknown"
+     ],
+     [
+      "RAW",
+      "for (long i = 1; i < LEN_1D; i++) {",
+      "v[jv[i]] = u[ku[i]] * d[i] + c[i];",
+      "i",
+      "unknown"
+     ],
+     [
+      "RAW",
+      "u[ju[i]] += v[kv[i]] * c[i];",
+      "u[ju[i]] += v[kv[i]] * c[i];",
+      "u",
+      "outside"
+     ],
+     [
+      "RAW",
+      "v[jv[i]] = u[ku[i]] * d[i] + c[i];",
+      "u[ju[i]] += v[kv[i]] * c[i];",
+      "v",
+      "loop"
+     ]
+    ]
+   }
+  ]
+ },
+ "new": {
+  "profile_s": 2.3,
+  "hotspots": "ok",
+  "do_all": [],
+  "blockers": [
+   [
+    "u",
+    "RAW",
+    "for (int nl = 0; nl < iterations; nl++) {"
+   ],
+   [
+    "v",
+    "RAW",
+    "for (long i = 1; i < LEN_1D; i++) {"
+   ]
+  ],
+  "candidates": [
+   {
+    "rank": 0,
+    "file": "k19.c",
+    "type": "loop",
+    "text": "for (int nl = 0; nl < iterations; nl++) {",
+    "tier": 2,
+    "pattern": null,
+    "share": 0.5563,
+    "statements": {
+     "3": [
+      "- Line N (`u[ju[i]] += v[kv[i]] * c[i];`) reads an element of `v` that line N (`v[jv[i]] = u[ku[i]] * d[i] + c[i];`) writes; DiscoPoP names the loop at line N as carrying this dependence.  The value must flow from line N to line N: if you split that loop, the loop holding line N has to run completely before the loop holding line N; reading `v`'s values from before the loop would change the result."
+     ],
+     "4": [
+      "- Line N (`u[ju[i]] += v[kv[i]] * c[i];`) reads an element of `v` that line N (`v[jv[i]] = u[ku[i]] * d[i] + c[i];`) writes; DiscoPoP names the loop at line N as carrying this dependence.  The value must flow from line N to line N: if you split that loop, the loop holding line N has to run completely before the loop holding line N; reading `v`'s values from before the loop would change the result."
+     ]
+    },
+    "flows": [
+     [
+      "RAW",
+      "for (int nl = 0; nl < iterations; nl++) {",
+      "for (int nl = 0; nl < iterations; nl++) {",
+      "nl",
+      "unknown"
+     ],
+     [
+      "RAW",
+      "for (long i = 1; i < LEN_1D; i++) {",
+      "for (long i = 1; i < LEN_1D; i++) {",
+      "i",
+      "unknown"
+     ],
+     [
+      "RAW",
+      "for (long i = 1; i < LEN_1D; i++) {",
+      "u[ju[i]] += v[kv[i]] * c[i];",
+      "i",
+      "unknown"
+     ],
+     [
+      "RAW",
+      "for (long i = 1; i < LEN_1D; i++) {",
+      "v[jv[i]] = u[ku[i]] * d[i] + c[i];",
+      "i",
+      "unknown"
+     ],
+     [
+      "RAW",
+      "u[ju[i]] += v[kv[i]] * c[i];",
+      "u[ju[i]] += v[kv[i]] * c[i];",
+      "u",
+      "outside"
+     ],
+     [
+      "RAW",
+      "v[jv[i]] = u[ku[i]] * d[i] + c[i];",
+      "u[ju[i]] += v[kv[i]] * c[i];",
+      "v",
+      "loop"
+     ]
+    ]
+   },
+   {
+    "rank": 1,
+    "file": "k19.c",
+    "type": "function",
+    "text": "real_t kernel_k19(void)",
+    "tier": 2,
+    "pattern": null,
+    "share": 0.5563,
+    "statements": {
+     "3": [
+      "- Line N (`u[ju[i]] += v[kv[i]] * c[i];`) reads an element of `v` that line N (`v[jv[i]] = u[ku[i]] * d[i] + c[i];`) writes; DiscoPoP names the loop at line N as carrying this dependence.  The value must flow from line N to line N: if you split that loop, the loop holding line N has to run completely before the loop holding line N; reading `v`'s values from before the loop would change the result."
+     ],
+     "4": [
+      "- Line N (`u[ju[i]] += v[kv[i]] * c[i];`) reads an element of `v` that line N (`v[jv[i]] = u[ku[i]] * d[i] + c[i];`) writes; DiscoPoP names the loop at line N as carrying this dependence.  The value must flow from line N to line N: if you split that loop, the loop holding line N has to run completely before the loop holding line N; reading `v`'s values from before the loop would change the result."
+     ]
+    },
+    "flows": [
+     [
+      "RAW",
+      "for (int nl = 0; nl < iterations; nl++) {",
+      "for (int nl = 0; nl < iterations; nl++) {",
+      "nl",
+      "unknown"
+     ],
+     [
+      "RAW",
+      "for (long i = 1; i < LEN_1D; i++) {",
+      "for (long i = 1; i < LEN_1D; i++) {",
+      "i",
+      "unknown"
+     ],
+     [
+      "RAW",
+      "for (long i = 1; i < LEN_1D; i++) {",
+      "u[ju[i]] += v[kv[i]] * c[i];",
+      "i",
+      "unknown"
+     ],
+     [
+      "RAW",
+      "for (long i = 1; i < LEN_1D; i++) {",
+      "v[jv[i]] = u[ku[i]] * d[i] + c[i];",
+      "i",
+      "unknown"
+     ],
+     [
+      "RAW",
+      "u[ju[i]] += v[kv[i]] * c[i];",
+      "u[ju[i]] += v[kv[i]] * c[i];",
+      "u",
+      "outside"
+     ],
+     [
+      "RAW",
+      "v[jv[i]] = u[ku[i]] * d[i] + c[i];",
+      "u[ju[i]] += v[kv[i]] * c[i];",
+      "v",
+      "loop"
+     ]
+    ]
+   },
+   {
+    "rank": 2,
+    "file": "k19.c",
+    "type": "loop",
+    "text": "for (long i = 1; i < LEN_1D; i++) {",
+    "tier": 2,
+    "pattern": null,
+    "share": 0.554,
+    "statements": {
+     "3": [
+      "- Line N (`u[ju[i]] += v[kv[i]] * c[i];`) reads an element of `v` that line N (`v[jv[i]] = u[ku[i]] * d[i] + c[i];`) writes; DiscoPoP names the loop at line N as carrying this dependence.  The value must flow from line N to line N: if you split that loop, the loop holding line N has to run completely before the loop holding line N; reading `v`'s values from before the loop would change the result."
+     ],
+     "4": [
+      "- Line N (`u[ju[i]] += v[kv[i]] * c[i];`) reads an element of `v` that line N (`v[jv[i]] = u[ku[i]] * d[i] + c[i];`) writes; DiscoPoP names the loop at line N as carrying this dependence.  The value must flow from line N to line N: if you split that loop, the loop holding line N has to run completely before the loop holding line N; reading `v`'s values from before the loop would change the result."
+     ]
+    },
+    "flows": [
+     [
+      "RAW",
+      "for (long i = 1; i < LEN_1D; i++) {",
+      "for (long i = 1; i < LEN_1D; i++) {",
+      "i",
+      "unknown"
+     ],
+     [
+      "RAW",
+      "for (long i = 1; i < LEN_1D; i++) {",
+      "u[ju[i]] += v[kv[i]] * c[i];",
+      "i",
+      "unknown"
+     ],
+     [
+      "RAW",
+      "for (long i = 1; i < LEN_1D; i++) {",
+      "v[jv[i]] = u[ku[i]] * d[i] + c[i];",
+      "i",
+      "unknown"
+     ],
+     [
+      "RAW",
+      "u[ju[i]] += v[kv[i]] * c[i];",
+      "u[ju[i]] += v[kv[i]] * c[i];",
+      "u",
+      "outside"
+     ],
+     [
+      "RAW",
+      "v[jv[i]] = u[ku[i]] * d[i] + c[i];",
+      "u[ju[i]] += v[kv[i]] * c[i];",
+      "v",
+      "loop"
+     ]
+    ]
+   }
+  ]
+ },
+ "same": {
+  "candidates": true,
+  "do_all": true,
+  "blocker": true,
+  "repetition": true,
+  "statement": true
+ },
+ "flows_same": true,
+ "views": {
+  "old": {
+   "candidates": [
+    [
+     "function",
+     "real_t kernel_k19()",
+     2,
+     "None"
+    ],
+    [
+     "loop",
+     "for (long i = 1; i < LEN_1D; i++) {",
+     2,
+     "None"
+    ]
+   ],
+   "do_all": [],
+   "blocker": [
+    [
+     "v",
+     "RAW",
+     "for (long i = 1; i < LEN_1D; i++) {"
+    ]
+   ],
+   "repetition": "blocked",
+   "statement": [
+    "- Line N (`u[ju[i]] += v[kv[i]] * c[i];`) reads an element of `v` that line N (`v[jv[i]] = u[ku[i]] * d[i] + c[i];`) writes; DiscoPoP names the loop at line N as carrying this dependence.  The value must flow from line N to line N: if you split that loop, the loop holding line N has to run completely before the loop holding line N; reading `v`'s values from before the loop would change the result."
+   ],
+   "statement_v3": [
+    "- Line N (`u[ju[i]] += v[kv[i]] * c[i];`) reads an element of `v` that line N (`v[jv[i]] = u[ku[i]] * d[i] + c[i];`) writes; DiscoPoP names the loop at line N as carrying this dependence.  The value must flow from line N to line N: if you split that loop, the loop holding line N has to run completely before the loop holding line N; reading `v`'s values from before the loop would change the result."
+   ],
+   "flows": [
+    [
+     "RAW",
+     "u[ju[i]] += v[kv[i]] * c[i];",
+     "u[ju[i]] += v[kv[i]] * c[i];",
+     "u",
+     "outside"
+    ],
+    [
+     "RAW",
+     "v[jv[i]] = u[ku[i]] * d[i] + c[i];",
+     "u[ju[i]] += v[kv[i]] * c[i];",
+     "v",
+     "loop"
+    ]
+   ]
+  },
+  "new": {
+   "candidates": [
+    [
+     "function",
+     "real_t kernel_k19()",
+     2,
+     "None"
+    ],
+    [
+     "loop",
+     "for (long i = 1; i < LEN_1D; i++) {",
+     2,
+     "None"
+    ]
+   ],
+   "do_all": [],
+   "blocker": [
+    [
+     "v",
+     "RAW",
+     "for (long i = 1; i < LEN_1D; i++) {"
+    ]
+   ],
+   "repetition": "blocked",
+   "statement": [
+    "- Line N (`u[ju[i]] += v[kv[i]] * c[i];`) reads an element of `v` that line N (`v[jv[i]] = u[ku[i]] * d[i] + c[i];`) writes; DiscoPoP names the loop at line N as carrying this dependence.  The value must flow from line N to line N: if you split that loop, the loop holding line N has to run completely before the loop holding line N; reading `v`'s values from before the loop would change the result."
+   ],
+   "statement_v3": [
+    "- Line N (`u[ju[i]] += v[kv[i]] * c[i];`) reads an element of `v` that line N (`v[jv[i]] = u[ku[i]] * d[i] + c[i];`) writes; DiscoPoP names the loop at line N as carrying this dependence.  The value must flow from line N to line N: if you split that loop, the loop holding line N has to run completely before the loop holding line N; reading `v`'s values from before the loop would change the result."
+   ],
+   "flows": [
+    [
+     "RAW",
+     "u[ju[i]] += v[kv[i]] * c[i];",
+     "u[ju[i]] += v[kv[i]] * c[i];",
+     "u",
+     "outside"
+    ],
+    [
+     "RAW",
+     "v[jv[i]] = u[ku[i]] * d[i] + c[i];",
+     "u[ju[i]] += v[kv[i]] * c[i];",
+     "v",
+     "loop"
+    ]
+   ]
+  }
+ }
+}

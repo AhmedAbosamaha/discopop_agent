@@ -549,9 +549,9 @@ Status: running
 
 | run | where | what it is | status | trials | outcomes |
 |---|---|---|---|---:|---|
-| `t0_18_server_a` | not archived yet | T0.18 draw a, server, no model: tools/layout_equivalence.py — tsvc_c2 (packaging v6) against tsvc_c3 (v7), 44 loops: output, DiscoPoP's view | registered |  |  |
-| `t0_18_server_b` | not archived yet | T0.18 draw b, server, no model: the same comparison on a second profile of each packaging | registered |  |  |
-| `t0_1_c3_sizes` | [`T0_instruments/T0.18_repetitions_necessary/preflight/t0_1_c3_sizes/`](T0_instruments/T0.18_repetitions_necessary/preflight/t0_1_c3_sizes/) | T0.1 on packaging v7, server, no model: size_table.py on the 44 tsvc_c3 packages | registered | 0 |  |
+| `t0_18_server_a` | [`T0_instruments/T0.18_repetitions_necessary/checks/t0_18_server_a/`](T0_instruments/T0.18_repetitions_necessary/checks/t0_18_server_a/) | T0.18 draw a, server, no model: tools/layout_equivalence.py — tsvc_c2 (packaging v6) against tsvc_c3 (v7), 44 loops: output, DiscoPoP's view | registered | 0 |  |
+| `t0_18_server_b` | [`T0_instruments/T0.18_repetitions_necessary/checks/t0_18_server_b/`](T0_instruments/T0.18_repetitions_necessary/checks/t0_18_server_b/) | T0.18 draw b, server, no model: the same comparison on a second profile of each packaging | registered | 0 |  |
+| `t0_1_c3_sizes` | [`T0_instruments/T0.18_repetitions_necessary/preflight/t0_1_c3_sizes/`](T0_instruments/T0.18_repetitions_necessary/preflight/t0_1_c3_sizes/) | T0.1 on packaging v7, server, no model: size_table.py on the 44 tsvc_c3 packages | valid | 0 |  |
 | `t0_14_c3_refs` | not archived yet | T0.14/T0.10 on packaging v7, server, no model: verify-source on the 28 expert references rendered as the benchmark's file (reference_solutions/tsvc_c3) | registered |  |  |
 | `t0_11_c3_a` | not archived yet | T0.11 on packaging v7, draw a, server, no model: arm discopop_capability on the 44 tsvc_c3 packages — the measured class of every loop, on the fixed DiscoPoP | registered |  |  |
 | `t0_11_c3_b` | not archived yet | T0.11 on packaging v7, draw b, server, no model: arm discopop_capability on the 44 tsvc_c3 packages — the measured class of every loop, on the fixed DiscoPoP | registered |  |  |
