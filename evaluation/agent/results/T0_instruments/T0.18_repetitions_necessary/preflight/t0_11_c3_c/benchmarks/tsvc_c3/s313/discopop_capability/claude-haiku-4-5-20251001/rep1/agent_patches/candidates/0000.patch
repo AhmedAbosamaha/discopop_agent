@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/t0_11_c3_c/benchmarks/tsvc_c3/s313/discopop_capability/claude-haiku-4-5-20251001/rep1/work/s313.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/t0_11_c3_c/benchmarks/tsvc_c3/s313/discopop_capability/claude-haiku-4-5-20251001/rep1/work/s313.c
+@@ -5,6 +5,7 @@
+     real_t dot;
+     for (int nl = 0; nl < iterations; nl++) {
+         dot = (real_t)0.;
++        #pragma omp parallel for reduction(+:dot) 
+         for (int i = 0; i < LEN_1D; i++) {
+             dot += a[i] * b[i];
+         }

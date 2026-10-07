@@ -1,0 +1,105 @@
+{
+  "benchmark": "tsvc_c3/k48",
+  "kernel": "k48",
+  "source": "k48.c",
+  "arm": "expert_openmp",
+  "model": "none",
+  "repeat": 1,
+  "kind": "baseline",
+  "candidate": "/home/ahmedabosamaha/discopop_agent/evaluation/agent/reference_solutions/tsvc_c3/k48.c",
+  "candidate_sha256": "67c1acb7f45f1c3faf731fcd25819ba1ea6e0295739a301df35407bae63d4858",
+  "source_changed": true,
+  "pragmas_in_final": 2,
+  "started_at": "2026-10-07T18:46:45",
+  "host": "rms14562",
+  "host_load_start": [
+    4.01806640625,
+    5.44384765625,
+    6.24169921875
+  ],
+  "hot_loop": {
+    "entry": "kernel_k48",
+    "function": "kernel_k48",
+    "line": 6,
+    "writes": [
+      "u",
+      "v"
+    ]
+  },
+  "hot_loop_covered": true,
+  "hot_loop_coverage": {
+    "criterion": "v2 (27 Sep 2026)",
+    "covered": true,
+    "covering": [
+      {
+        "function": "kernel_k48",
+        "line": 6,
+        "directive": "#pragma omp parallel for",
+        "writes": [
+          "u"
+        ]
+      },
+      {
+        "function": "kernel_k48",
+        "line": 8,
+        "directive": "#pragma omp parallel for",
+        "writes": [
+          "v"
+        ]
+      }
+    ],
+    "uncounted": [],
+    "elsewhere": []
+  },
+  "verify": {
+    "verify_size": "LARGE",
+    "threads": [
+      6,
+      12
+    ],
+    "repeats": 5,
+    "compiler": "/usr/bin/clang-20",
+    "final_flags": [],
+    "dump_exact": true,
+    "dump_max_rel_err": 0.0,
+    "seed": "7",
+    "dump_exact_seeded": true,
+    "dump_seeded_max_rel_err": 0.0,
+    "seq_median_s": 3.0659,
+    "seq_kernel_median_s": 2.259576,
+    "timing_basis": "kernel",
+    "par": {
+      "6": {
+        "median_s": 1.5367,
+        "program_speedup": 1.995,
+        "max_rel_err": 0.0,
+        "kernel_median_s": 0.606716,
+        "kernel_speedup": 3.724,
+        "speedup": 3.724
+      },
+      "12": {
+        "median_s": 1.4278,
+        "program_speedup": 2.147,
+        "max_rel_err": 0.0,
+        "kernel_median_s": 0.55078,
+        "kernel_speedup": 4.102,
+        "speedup": 4.102
+      }
+    },
+    "digest_max_rel_err": 0.0,
+    "stable_at_fixed_threads": true,
+    "kernel_program_disagree": false,
+    "digest_seeded_rel_err": 0.0,
+    "status": "ok",
+    "speed_measurable": true
+  },
+  "verify_s": 35.9,
+  "status": "done",
+  "outcome": "FASTER",
+  "finished_at": "2026-10-07T18:47:20",
+  "host_load_end": [
+    4.36083984375,
+    5.36376953125,
+    6.18408203125
+  ]
+}

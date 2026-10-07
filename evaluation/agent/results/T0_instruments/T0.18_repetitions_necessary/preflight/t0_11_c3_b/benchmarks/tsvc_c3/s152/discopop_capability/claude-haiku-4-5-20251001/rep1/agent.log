@@ -1,0 +1,89 @@
+
+============================================================
+  DiscoPoP Agentic Controller
+============================================================
+  Source         : /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/t0_11_c3_b/benchmarks/tsvc_c3/s152/discopop_capability/claude-haiku-4-5-20251001/rep1/work/s152.c
+  DiscoPoP dir   : .discopop
+  Model          : claude-haiku-4-5-20251001
+  Budget         : 0 LLM retries/region (+2 free build fixes)
+  λ penalty      : 1.0
+  Min workload   : 0.0
+  Restruct. depth: 0 (Tier-2 allowed at depth 0–0)
+  Quality gate   : Tier-1 = all but speed, no escalation; Tier-2 = full
+  TSan           : barrier-aware (archer: /usr/lib/llvm-20/lib/libarcher.so)
+  Speedup gate   : OFF (--no-require-speedup)
+  Dry run        : False
+  LLM mode       : claude-haiku-4-5-20251001
+  Edit mode      : direct
+  Re-profiling   : full (instrument + run + explore) after every kept rewrite
+  Explorer       : one attempt may take 60 s, then the draw is repeated (random stall, L5)
+  Pragmas        : DiscoPoP writes them in Phase B
+============================================================
+
+  Project        : /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/t0_11_c3_b/benchmarks/tsvc_c3/s152/discopop_capability/claude-haiku-4-5-20251001/rep1/work  (2 unit(s): s152.c, main.c)
+
+  [ok] Captured reference output on 2 inputs (69 bytes, 0.5 ms baseline) for the correctness/performance gates.
+
+  [ok] Numerical noise floor 0 — 6 build variants agreed exactly; output is compared byte-for-byte.
+
+  Hotspots       : measured per-region runtimes are available — 20 region(s) measured, 97.4 ms total, ranking by predicted time saved at 48 threads
+
+  Baseline       : DiscoPoP proposes 1 applicable pattern(s) unaided; 1 of them produce a usable pragma
+                   → the run beats DiscoPoP by ending with more than 1
+
+  Initial candidates
+Region ID    Type           Saves    % run    Hot  Tier  Depth  Name
+--------------------------------------------------------------------------------------
+  1:6        loop         94.1 ms    98.7%    YES     2      0  lines 10–16
+  1:9        loop         94.1 ms    98.7%    YES     1      0  lines 11–14
+  1:4        function     94.1 ms    98.7%    YES     2      0  kernel_s152
+  0:0        function     44.8 ms    47.0%    YES     2      0  s152s
+
+============================================================
+  PHASE A — restructure  (the source stays pragma-free)
+============================================================
+
+┌─ [depth=0] loop 1:6 (lines 10–16)  score=0.1
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:9 (lines 11–14)  score=0.1
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] function 1:4 (lines 8–17)  score=0.1
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] function 0:0 (lines 3–6)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+
+============================================================
+  PHASE B — annotate  (1 candidate pragma(s))
+============================================================
+
+┌─ pattern #8  do_all @ lines 11–14  (W=4608000)
+│  #pragma omp parallel for
+│  [Phase-B] Original backed up → s152.c.original
+│  [Phase-B] Applied to s152.c
+└─ APPLIED
+
+============================================================
+  SETTLING — verify the finished source, drop what does not hold up
+============================================================
+  [ok] finished source verified — output matches the original
+
+
+============================================================
+  SUMMARY: 0 rewrite(s) kept  |  1 pragma(s) applied  |  3 skipped
+  DiscoPoP unaided: 1 usable pragma(s) in this profile's draw  →  this run: 1   [MATCHED, informational]
+    ✓  loop 1:9  [Phase-B pragma]  depth=0
+    ✗  1:6  [skipped]  depth=0
+    ✗  1:4  [skipped]  depth=0
+    ✗  0:0  [skipped]  depth=0
+
+  Results → .discopop/agent_patches/accepted.json
+============================================================
+

@@ -1,0 +1,45 @@
+{
+  "suite": "tsvc_c3",
+  "kernel": "s212",
+  "source": "benchmarks/TSVC_2/src/tsvc.c",
+  "category": "statement reordering / dependency needing temporary",
+  "file": "s212.c",
+  "language": "c",
+  "layout": "project",
+  "project": {
+    "units": [
+      "s212.c",
+      "main.c"
+    ],
+    "include_dirs": [
+      "."
+    ],
+    "editable": [
+      "s212.c"
+    ]
+  },
+  "restructuring_class": "restructure",
+  "transformation": "statement reordering (dependency needing a temporary)",
+  "why": "b[i] reads a[i+1] before iteration i+1 scales it: the OLD value",
+  "reference_solution": "agent/reference_solutions/tsvc_c3/s212.c",
+  "exclude_functions": [
+    "main",
+    "dummy"
+  ],
+  "harness": "tsvc_c3/s212.h",
+  "harness_sha256": "29a41da51a94029f3a7917eddd12a91ae5995f1920372e0971b29ee93e55306e",
+  "hot_loop": {
+    "entry": "kernel_s212",
+    "function": "kernel_s212",
+    "line": 6,
+    "writes": [
+      "a",
+      "b"
+    ]
+  },
+  "repetitions_proven": true,
+  "agent_dataset": "SMALL",
+  "generator_version": 7,
+  "inputs_sha256": "456dd573b84b30e6f32c943bb559d80374eec67177de48223e95124a8c3fc627",
+  "output_sha256": "7b1b8fdb5dba3bea72e5860293e622d1df9d01dfde7171cc8ab40b37af1e7b38"
+}

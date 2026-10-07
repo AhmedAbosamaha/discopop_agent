@@ -1,0 +1,114 @@
+{
+  "benchmark": "tsvc_c3/s211",
+  "kernel": "s211",
+  "source": "s211.c",
+  "arm": "expert_openmp",
+  "model": "none",
+  "repeat": 1,
+  "kind": "baseline",
+  "candidate": "/home/ahmedabosamaha/discopop_agent/evaluation/agent/reference_solutions/tsvc_c3/s211.c",
+  "candidate_sha256": "9cda71cc09fd1bf6e8b078319e57b33c5ccf57ec2dc9f1bc36c134ab29ceb910",
+  "source_changed": true,
+  "pragmas_in_final": 3,
+  "started_at": "2026-10-07T18:53:08",
+  "host": "rms14562",
+  "host_load_start": [
+    6.7548828125,
+    5.65234375,
+    6.00927734375
+  ],
+  "hot_loop": {
+    "entry": "kernel_s211",
+    "function": "kernel_s211",
+    "line": 6,
+    "writes": [
+      "a",
+      "b"
+    ]
+  },
+  "hot_loop_covered": true,
+  "hot_loop_coverage": {
+    "criterion": "v2 (27 Sep 2026)",
+    "covered": true,
+    "covering": [
+      {
+        "function": "kernel_s211",
+        "line": 10,
+        "directive": "#pragma omp parallel for",
+        "writes": [
+          "b"
+        ]
+      },
+      {
+        "function": "kernel_s211",
+        "line": 12,
+        "directive": "#pragma omp parallel for",
+        "writes": [
+          "a"
+        ]
+      }
+    ],
+    "uncounted": [],
+    "elsewhere": [
+      {
+        "function": "kernel_s211",
+        "line": 8,
+        "directive": "#pragma omp parallel for",
+        "writes": [
+          "tmp"
+        ]
+      }
+    ]
+  },
+  "verify": {
+    "verify_size": "LARGE",
+    "threads": [
+      6,
+      12
+    ],
+    "repeats": 5,
+    "compiler": "/usr/bin/clang-20",
+    "final_flags": [],
+    "dump_exact": true,
+    "dump_max_rel_err": 0.0,
+    "seed": "7",
+    "dump_exact_seeded": true,
+    "dump_seeded_max_rel_err": 0.0,
+    "seq_median_s": 1.7318,
+    "seq_kernel_median_s": 1.372651,
+    "timing_basis": "kernel",
+    "par": {
+      "6": {
+        "median_s": 1.3658,
+        "program_speedup": 1.268,
+        "max_rel_err": 0.0,
+        "kernel_median_s": 0.926234,
+        "kernel_speedup": 1.482,
+        "speedup": 1.482
+      },
+      "12": {
+        "median_s": 1.142,
+        "program_speedup": 1.516,
+        "max_rel_err": 0.0,
+        "kernel_median_s": 0.711353,
+        "kernel_speedup": 1.93,
+        "speedup": 1.93
+      }
+    },
+    "digest_max_rel_err": 0.0,
+    "stable_at_fixed_threads": true,
+    "kernel_program_disagree": false,
+    "digest_seeded_rel_err": 0.0,
+    "status": "ok",
+    "speed_measurable": true
+  },
+  "verify_s": 25.5,
+  "status": "done",
+  "outcome": "FASTER",
+  "finished_at": "2026-10-07T18:53:33",
+  "host_load_end": [
+    7.77587890625,
+    5.9462890625,
+    6.095703125
+  ]
+}
