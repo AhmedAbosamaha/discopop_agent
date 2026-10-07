@@ -41,7 +41,7 @@ LLVM 19 (macOS) and LLVM 20 (Linux).
 | B14 | profiler, `static_analysis/calltree_construction.cpp` (loop states of the call path) | **fixed 7 Oct** | two loops side by side inside a loop are modelled as nested in each other, and the later loop's iterations are never recorded. Two faces: a dependence carried by the OUTER loop blocks the later loop's Do-All (the shape every loop distribution inside a repetition loop creates), and a dependence BETWEEN the later loop's own iterations is not seen — a recurrence reported Do-All |
 | B15 | explorer, `TaskGraph.__assign_loopstate_positions_within_functions` / task-graph loops | fixed 27 Sep | a `do … while` loop gets no loop context in the task graph, so the loop-state digit positions of every loop in the function after it are off by one: no call-path state under the `do … while` matches, every dependence recorded there is lost, and a textbook recurrence nested in it is reported Do-All (Rodinia bfs: all 1,500 dynamic dependences of the kernel lost) |
 | B18 | explorer (suspected: the carried-scalar rule of B10's fix) | candidate, 7 Oct | on PolyBench the current DiscoPoP reports no Do-All for outer loops it reported on 20 Sep — `correlation`, `covariance` (one directive, 5–6×, race-clean in three draws then; none now), `gramschmidt`, `fdtd-2d` (the directive now on a smaller loop: 8× → 0.35×, 5× → 0.6×); the blockers it names are the inner loops' own counters (`i`, `j`), declared at the top of the function |
-| B19 | explorer and patch generator (data-sharing clauses) | candidate, 7 Oct | a scalar assigned under a condition inside the loop and read after it (`if (a[i] < 0) j = i;`, TSVC `s331`): the loop is reported Do-All and the directive written is `parallel for lastprivate(j)`, which returns the last CHUNK's value, not the last assignment's — wrong output; the gate refuses it every time |
+| B19 | explorer (Do-All verdict and data-sharing classification) | candidate, 7 Oct | a scalar assigned under a condition inside the loop and read after it (`if (a[i] < 0) j = i;`, TSVC `s331`): the loop is reported Do-All with `last_private: [j]`; as a directive that is `parallel for lastprivate(j)`, which returns the last CHUNK's value, not the last assignment's — wrong output; the gate refuses it every time |
 | L3 | explorer | limitation | NPB-CPP `mg`: with P1's fix the state assignment is fast, but the run then stays in task-pattern detection (`new_task_detector`) — a first run was read at 4 h 19 min, the same run was stopped unfinished after **11 h 24 min** at 100 % CPU on the server (19–20 Sep); the Do-All detector is not reached. Not usable per trial |
 
 ---
@@ -426,7 +426,7 @@ both reads and writes an array whose value the enclosing loop carries (`u[i] += 
 loop that only writes is not blocked — which is why `k48`, where the `+=` loop comes first, had both loops
 reported, and why `case_5` never failed.
 
-## B19 — candidate: a conditionally assigned scalar that is read after the loop gets `lastprivate` (explorer, patch generator)
+## B19 — candidate: a conditionally assigned scalar that is read after the loop is classified `last_private` (explorer)
 
 **Status: candidate, 7 Oct 2026 — seen in every draw, not fixed; what the fix should be is a decision.** TSVC
 `s331` searches the last negative element:
@@ -441,8 +441,10 @@ for (int i = 0; i < LEN_1D; i++) {
 chksum = (real_t) j;
 ```
 
-DiscoPoP reports the loop Do-All (pattern `do_all`, both server draws of T0.18 and every DiscoPoP-alone trial) and
-writes `#pragma omp parallel for lastprivate(j)`. `lastprivate` hands back the value of `j` in the thread that ran
+DiscoPoP's explorer reports the loop Do-All (pattern `do_all`, both server draws of T0.18 and every DiscoPoP-alone
+trial) and classifies the variable in the pattern itself — `patterns.json`: `"last_private": ["j"]`, `"reduction":
+[]` (read on the Mac's profiles of both packagings; the patch generator's own patch was not looked at). Rendered as
+a directive that is `#pragma omp parallel for lastprivate(j)`. `lastprivate` hands back the value of `j` in the thread that ran
 the sequentially last iteration; where that iteration does not assign, the value is not the last assignment's. The
 harness's gate refuses the directive at the output check in every trial (`e1v6c_v7_agent`, DiscoPoP alone: 5 of 5
 "Program output changed"; the same on packaging v6), so no wrong program was shipped — DiscoPoP alone ends
