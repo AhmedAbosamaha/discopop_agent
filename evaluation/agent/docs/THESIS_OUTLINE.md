@@ -391,7 +391,9 @@ result, or the expectation written down before the run.
   - The closest published system: RepoOMP on its eight NPB kernels (E11; H11). **[planned]** Every contestant
     through one verification: the agent, RepoOMP's released outputs and baselines, NPB's expert version, DiscoPoP
     alone, Polly. Written down before the run: little benefit from the agent's default here, because that code
-    is already restructured and what remains is writing directives.
+    is already restructured and what remains is writing directives. Limits stated with the result: their outputs
+    were produced on other hardware and with other models, and their repository builds without optimisation, so
+    their own reported acceptance is shown beside ours.
 - **7.10 Cost** (C3). **[partly]** Model calls, tokens, time and API-equivalent cost per success from every run
   (recorded). Profiling time per kept rewrite from 7.7. The profile of a large code from 7.9. The separate
   cost-curve experiment was dropped (it measures DiscoPoP, not the agent).
@@ -453,7 +455,8 @@ the results folder · F. Full result tables · G. The agent's command-line refer
 
 ## 11 Decisions the outline needs
 
-1. **Title.** Three candidates in section 0.
+1. **Title.** Three candidates in section 0. Recommended: the first — it says the idea, not the tool. The case
+   for the third: it names the system the way the repository and DiscoPoP's users would look for it.
 2. **Related work after the background or after the evaluation.** Recommended: after the background — the reader
    needs to know what annotation tools and language models do before the approach makes sense. The case for the
    other place: the thesis measures its neighbours (Polly, expert OpenMP, RepoOMP), so the field could be
@@ -486,5 +489,7 @@ the results folder · F. Full result tables · G. The agent's command-line refer
 | Trust (C2) | no unusable program in the main comparison; the speed check; the unsafe cases named | **supported**; the gate's own error rate planned |
 | Cost (C3) | calls, time and cost recorded in every run | **no result yet** on refresh, reconstruction and depth |
 
-Dropped, to be said in the thesis: the profiling-cost curve; the small open model; the evidence's parts and the
-prompt's parts given one by one; the first clean-file layout (stopped after eight trials).
+Dropped, to be said in the thesis with the reason: the profiling-cost curve (26 Sep: it measures DiscoPoP, not
+the agent); the small open model as a third model; the evidence's parts and the prompt's parts given one by one
+(2 Oct: the experiment was closed); the first clean-file layout (4 Oct: stopped after eight trials, replaced by
+TSVC's own form).
