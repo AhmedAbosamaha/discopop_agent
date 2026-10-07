@@ -20,7 +20,7 @@ Five units whose split order is decided outside the file, Haiku, speed check off
 ## What is in this folder
 
 - [`analysis/`](analysis/) — the read-out: [`e2v6_readout.md`](analysis/e2v6_readout.md), [`figures.md`](analysis/figures.md), [`main_comparison_stats.md`](analysis/main_comparison_stats.md), [`vs_discopop_alone.md`](analysis/vs_discopop_alone.md)
-- [`exhibits/`](exhibits/) — 11 case studies, below
+- [`exhibits/`](exhibits/) — 12 case studies, below
 - [`runs/`](runs/) — 10 archived run(s): the evidence
 - [`checks/`](checks/) — 3 verification(s) made during the read-out
 - [`preflight/`](preflight/) — 1 smoke run(s) before the launch
@@ -60,6 +60,8 @@ Five units whose split order is decided outside the file, Haiku, speed check off
   no DiscoPoP-alone trial to pair with · tsvc_c2/k27, `full_b1_nospeed_v4`, e2v6_agent_2 rep 1 · pictures: `before_after.png`, `rejected_attempt.png`, `console.png`
 - [`k27_v6_evidence_three_loops`](exhibits/k27_v6_evidence_three_loops/) — E2-v6, with evidence, one attempt, three statements: the split into three loops in the only legal order (second, third, first) in one call; DiscoPoP's directive on two of the three loops (1.92× where the expert version reaches 4.17×).  
   no DiscoPoP-alone trial to pair with · tsvc_c2/k27, `full_b1_nospeed_v4`, e2v6_agent_2 rep 7 · pictures: `before_after.png`, `console.png`
+- [`k53_v6_false_doall_refused`](exhibits/k53_v6_false_doall_refused/) — The gate catching a false Do-All of DiscoPoP's (defect B14, fixed 7 Oct): on `k53` the model put the kernel's loop after a copy loop; the profiler, not recording a later loop's iterations, reported that loop — a recurrence through the index tables — as Do-All; the agent's race stage refused the directive (ThreadSanitizer: data race) in Phase A's check and again in Phase B, and only the two copy loops kept their directives. One of four such trials; DiscoPoP alone would have emitted the unsafe directive.  
+  no DiscoPoP-alone trial to pair with · tsvc_c2/k53, `no_evidence_nospeed_v4`, e2v6_fb_3 rep 6 · pictures: `before_after.png`, `rejected_attempt.png`, `console.png`
 - [`k53_v6_opus_orders_at_run_time`](exhibits/k53_v6_opus_orders_at_run_time/) — E2-v6, Opus alone on the unit that has to be left alone: an inspector sorts the iterations into dependence levels at run time and runs each level in parallel — right for any tables, here close to one level per iteration: 0.03×. The same construction puts Opus's `k19` and `k27` programs past the 30-minute limit and its `k48` programs at 0.01×.  
   no DiscoPoP-alone trial to pair with · tsvc_c2/k53, `bare_llm_nospeed_v4`, e2v6_bare_opus rep 2 · pictures: `before_after.png`, `console.png`
 - [`k53_v6_retries_add_copy_loops`](exhibits/k53_v6_retries_add_copy_loops/) — E2-v6, three attempts without evidence on the unit that has to be left alone: the model copies `u` and `v`, runs the kernel's loop sequentially on the copies and copies back in parallel — a parallel program that parallelizes nothing of the kernel (0.94×); 8 of 20 three-attempt trials end like this, none of 20 at one attempt.  

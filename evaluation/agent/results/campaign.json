@@ -2143,6 +2143,10 @@
   "k23_v6_fable_alone_racy": {
    "group": "E2-v6",
    "shows": "E2-v6, Fable alone on `k23`: both statements in one parallel loop as they stand, 4.3× and a wrong output — the offset pointer that links the iterations is set outside the file; every model alone fails all its `k23` trials (25 of 25)."
+  },
+  "k53_v6_false_doall_refused": {
+   "group": "E2-v6",
+   "shows": "The gate catching a false Do-All of DiscoPoP's (defect B14, fixed 7 Oct): on `k53` the model put the kernel's loop after a copy loop; the profiler, not recording a later loop's iterations, reported that loop — a recurrence through the index tables — as Do-All; the agent's race stage refused the directive (ThreadSanitizer: data race) in Phase A's check and again in Phase B, and only the two copy loops kept their directives. One of four such trials; DiscoPoP alone would have emitted the unsafe directive."
   }
  },
  "lines": [
