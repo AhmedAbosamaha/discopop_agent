@@ -1,0 +1,30 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6b_agent_3/benchmarks/tsvc_c2/k53/full_b1_nospeed_v4/claude-haiku-4-5-20251001/rep1/work/k53.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6b_agent_3/benchmarks/tsvc_c2/k53/full_b1_nospeed_v4/claude-haiku-4-5-20251001/rep1/work/k53.c
+@@ -1,12 +1,25 @@
+ #include "data.h"
++#include <stdlib.h>
++#include <string.h>
+ 
+ real_t kernel_k53(void)
+ {
+     for (int nl = 0; nl < iterations; nl++) {
++        real_t *u_local = (real_t *)malloc(LEN_1D * sizeof(real_t));
++        real_t *v_local = (real_t *)malloc(LEN_1D * sizeof(real_t));
++        memcpy(u_local, u, LEN_1D * sizeof(real_t));
++        memcpy(v_local, v, LEN_1D * sizeof(real_t));
++
+         for (long i = 1; i < LEN_1D; i++) {
+-            u[ju[i]] += v[kv[i]] * c[i];
+-            v[jv[i]] = u[ku[i]] * d[i] + c[i];
++            u_local[ju[i]] += v_local[kv[i]] * c[i];
++            v_local[jv[i]] = u_local[ku[i]] * d[i] + c[i];
+         }
++
++        memcpy(u, u_local, LEN_1D * sizeof(real_t));
++        memcpy(v, v_local, LEN_1D * sizeof(real_t));
++        free(u_local);
++        free(v_local);
++
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

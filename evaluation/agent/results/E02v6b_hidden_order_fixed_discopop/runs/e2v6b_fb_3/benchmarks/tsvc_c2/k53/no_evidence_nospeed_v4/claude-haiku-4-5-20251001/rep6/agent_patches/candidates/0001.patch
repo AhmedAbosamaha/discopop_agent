@@ -1,0 +1,22 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6b_fb_3/benchmarks/tsvc_c2/k53/no_evidence_nospeed_v4/claude-haiku-4-5-20251001/rep6/work/k53.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6b_fb_3/benchmarks/tsvc_c2/k53/no_evidence_nospeed_v4/claude-haiku-4-5-20251001/rep6/work/k53.c
+@@ -3,10 +3,17 @@
+ real_t kernel_k53(void)
+ {
+     for (int nl = 0; nl < iterations; nl++) {
++        real_t *u_temp = calloc(LEN_1D, sizeof(real_t));
+         for (long i = 1; i < LEN_1D; i++) {
+-            u[ju[i]] += v[kv[i]] * c[i];
+-            v[jv[i]] = u[ku[i]] * d[i] + c[i];
++            u_temp[ju[i]] += v[kv[i]] * c[i];
+         }
++        for (long i = 1; i < LEN_1D; i++) {
++            v[jv[i]] = (u[ku[i]] + u_temp[ku[i]]) * d[i] + c[i];
++        }
++        for (long j = 0; j < LEN_1D; j++) {
++            u[j] += u_temp[j];
++        }
++        free(u_temp);
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

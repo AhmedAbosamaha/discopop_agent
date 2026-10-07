@@ -1,0 +1,28 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6c_s281/benchmarks/tsvc_c2/s281/default_v4/claude-haiku-4-5-20251001/rep3/work/s281.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6c_s281/benchmarks/tsvc_c2/s281/default_v4/claude-haiku-4-5-20251001/rep3/work/s281.c
+@@ -1,14 +1,21 @@
++#include <stdlib.h>
+ #include "data.h"
+ 
+ real_t kernel_s281(void)
+ {
+-    real_t x;
+     for (int nl = 0; nl < iterations; nl++) {
++        real_t *x_vals = (real_t *)malloc(LEN_1D * sizeof(real_t));
++
+         for (int i = 0; i < LEN_1D; i++) {
+-            x = a[LEN_1D-i-1] + b[i] * c[i];
+-            a[i] = x-(real_t)1.0;
+-            b[i] = x;
++            x_vals[i] = a[LEN_1D-i-1] + b[i] * c[i];
++            b[i] = x_vals[i];
+         }
++
++        for (int i = 0; i < LEN_1D; i++) {
++            a[i] = x_vals[i]-(real_t)1.0;
++        }
++
++        free(x_vals);
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

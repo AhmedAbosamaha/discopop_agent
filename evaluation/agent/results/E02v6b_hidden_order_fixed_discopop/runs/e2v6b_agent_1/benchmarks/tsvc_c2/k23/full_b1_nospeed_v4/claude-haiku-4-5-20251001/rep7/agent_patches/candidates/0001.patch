@@ -1,0 +1,29 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6b_agent_1/benchmarks/tsvc_c2/k23/full_b1_nospeed_v4/claude-haiku-4-5-20251001/rep7/work/k23.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6b_agent_1/benchmarks/tsvc_c2/k23/full_b1_nospeed_v4/claude-haiku-4-5-20251001/rep7/work/k23.c
+@@ -2,12 +2,24 @@
+ 
+ real_t kernel_k23(void)
+ {
++    real_t *c_snapshot = (real_t *)malloc(LEN_1D * sizeof(real_t));
++    real_t *w_snapshot = (real_t *)malloc(LEN_1D * sizeof(real_t));
++
+     for (int nl = 0; nl < iterations; nl++) {
++        // Snapshot c and w before the inner loop to break loop-carried dependences
+         for (long i = 1; i < LEN_1D; i++) {
+-            u[i] += w[i] * c[i];
+-            v[i] = x[i] * d[i] + c[i];
++            c_snapshot[i] = c[i];
++            w_snapshot[i] = w[i];
++        }
++
++        for (long i = 1; i < LEN_1D; i++) {
++            u[i] += w_snapshot[i] * c_snapshot[i];
++            v[i] = x[i] * d[i] + c_snapshot[i];
+         }
+         dummy(a, b, c, d, e);
+     }
++
++    free(c_snapshot);
++    free(w_snapshot);
+     return (real_t)0;
+ }

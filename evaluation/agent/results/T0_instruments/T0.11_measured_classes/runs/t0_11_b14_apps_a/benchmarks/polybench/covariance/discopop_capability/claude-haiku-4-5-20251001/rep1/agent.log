@@ -1,0 +1,92 @@
+
+============================================================
+  DiscoPoP Agentic Controller
+============================================================
+  Source         : /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/t0_11_b14_apps_a/benchmarks/polybench/covariance/discopop_capability/claude-haiku-4-5-20251001/rep1/work/covariance.c
+  DiscoPoP dir   : .discopop
+  Model          : claude-haiku-4-5-20251001
+  Budget         : 0 LLM retries/region (+2 free build fixes)
+  λ penalty      : 1.0
+  Min workload   : 0.0
+  Restruct. depth: 0 (Tier-2 allowed at depth 0–0)
+  Quality gate   : Tier-1 = all but speed, no escalation; Tier-2 = full
+  TSan           : barrier-aware (archer: /usr/lib/llvm-20/lib/libarcher.so)
+  Speedup gate   : OFF (--no-require-speedup)
+  Dry run        : False
+  LLM mode       : claude-haiku-4-5-20251001
+  Edit mode      : direct
+  Re-profiling   : full (instrument + run + explore) after every kept rewrite
+  Explorer       : one attempt may take 60 s, then the draw is repeated (random stall, L5)
+  Pragmas        : DiscoPoP writes them in Phase B
+============================================================
+
+  Project        : /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/t0_11_b14_apps_a/benchmarks/polybench/covariance/discopop_capability/claude-haiku-4-5-20251001/rep1/work  (2 unit(s): covariance.c, polybench.c)
+
+  [ok] Captured reference output on 2 inputs (78 bytes, 57.5 ms baseline) for the correctness/performance gates.
+
+  [ok] Numerical noise floor 4.67e-15 of output scale (widest disagreement 4.67e-16 of output scale across 6 build variants, x10 margin).
+  [note] values may move that far without failing the correctness gate; labels, line structure and integers must still match exactly.
+
+  Hotspots       : measured per-region runtimes are available — 21 region(s) measured, 202.6 ms total, ranking by predicted time saved at 48 threads
+
+  Baseline       : DiscoPoP proposes 1 applicable pattern(s) unaided; 0 of them produce a usable pragma (1 rejected before it could run)
+                   → the run beats DiscoPoP by ending with more than 0
+
+  Initial candidates
+Region ID    Type           Saves    % run    Hot  Tier  Depth  Name
+--------------------------------------------------------------------------------------
+  1:110      loop        181.0 ms    91.3%    YES     2      0  lines 83–90
+  1:113      loop        181.0 ms    91.2%    YES     2      0  lines 84–90
+  3:86       function    182.0 ms    91.7%    YES     2      0  kernel_covariance
+  1:117      loop        176.6 ms    89.0%    YES     1      0  lines 87–88
+
+============================================================
+  PHASE A — restructure  (the source stays pragma-free)
+============================================================
+
+┌─ [depth=0] loop 1:110 (lines 83–90)  score=0.2
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:113 (lines 84–90)  score=0.2
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] function 3:86 (lines 59–93)  score=0.2
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:117 (lines 87–88)  score=0.2
+│  [Phase-A] DiscoPoP already has a pattern here (reduction) — deferred to Phase B
+└─ DEFERRED
+
+
+============================================================
+  PHASE B — annotate  (1 candidate pragma(s))
+============================================================
+
+  5 loop(s) are already parallel in the source; nothing is nested inside them.
+
+┌─ pattern #70  reduction @ lines 87–88  (W=62625000)
+│  #pragma omp parallel for
+│  gate failed at 'openmp_compile': OpenMP compile failed (loop not in OpenMP-canonical form): /tmp/dp_agent_val_al3uzb_3/_dp_proj_tsan_binary/covariance.c:87:79: error: invalid operands
+└─ DROPPED
+
+   DiscoPoP reports another pattern for this loop (do_all) — trying it
+
+┌─ pattern #56  do_all @ lines 87–88  (W=62625000)
+│  #pragma omp parallel for
+│  gate failed at 'tsan': Race detected: WARNING: ThreadSanitizer: data race (pid=1839334)   Read of size 8 at 0x7ffff4417000 by thread T3:     #0 kernel_covariance.omp_outline
+└─ DROPPED
+
+
+============================================================
+  SUMMARY: 0 rewrite(s) kept  |  0 pragma(s) applied  |  3 skipped
+  DiscoPoP unaided: 0 usable pragma(s) in this profile's draw  →  this run: 0   [MATCHED, informational]
+    ✗  1:110  [skipped]  depth=0
+    ✗  1:113  [skipped]  depth=0
+    ✗  3:86  [skipped]  depth=0
+
+  Results → .discopop/agent_patches/accepted.json
+============================================================
+

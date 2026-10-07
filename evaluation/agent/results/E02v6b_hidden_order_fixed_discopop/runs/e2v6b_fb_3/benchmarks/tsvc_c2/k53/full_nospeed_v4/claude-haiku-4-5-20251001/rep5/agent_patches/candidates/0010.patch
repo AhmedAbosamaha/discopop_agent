@@ -1,0 +1,18 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6b_fb_3/benchmarks/tsvc_c2/k53/full_nospeed_v4/claude-haiku-4-5-20251001/rep5/work/k53.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6b_fb_3/benchmarks/tsvc_c2/k53/full_nospeed_v4/claude-haiku-4-5-20251001/rep5/work/k53.c
+@@ -3,9 +3,13 @@
+ real_t kernel_k53(void)
+ {
+     for (int nl = 0; nl < iterations; nl++) {
++        real_t c_local[LEN_1D];
+         for (long i = 1; i < LEN_1D; i++) {
+-            u[ju[i]] += v[kv[i]] * c[i];
+-            v[jv[i]] = u[ku[i]] * d[i] + c[i];
++            c_local[i] = c[i];
++        }
++        for (long i = 1; i < LEN_1D; i++) {
++            u[ju[i]] += v[kv[i]] * c_local[i];
++            v[jv[i]] = u[ku[i]] * d[i] + c_local[i];
+         }
+         dummy(a, b, c, d, e);
+     }

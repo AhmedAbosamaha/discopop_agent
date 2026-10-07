@@ -1,0 +1,17 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6b_fb_1/benchmarks/tsvc_c2/k23/no_evidence_nospeed_v4/claude-haiku-4-5-20251001/rep6/work/k23.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6b_fb_1/benchmarks/tsvc_c2/k23/no_evidence_nospeed_v4/claude-haiku-4-5-20251001/rep6/work/k23.c
+@@ -4,8 +4,12 @@
+ {
+     for (int nl = 0; nl < iterations; nl++) {
+         for (long i = 1; i < LEN_1D; i++) {
+-            u[i] += w[i] * c[i];
+-            v[i] = x[i] * d[i] + c[i];
++            long i_cur = i;
++            u[i_cur] = u[i_cur] + w[i_cur] * c[i_cur];
++        }
++        for (long i = 1; i < LEN_1D; i++) {
++            long i_cur = i;
++            v[i_cur] = x[i_cur] * d[i_cur] + c[i_cur];
+         }
+         dummy(a, b, c, d, e);
+     }

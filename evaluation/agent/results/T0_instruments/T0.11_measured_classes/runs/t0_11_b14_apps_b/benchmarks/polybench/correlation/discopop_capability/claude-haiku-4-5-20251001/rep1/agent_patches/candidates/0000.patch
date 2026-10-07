@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/t0_11_b14_apps_b/benchmarks/polybench/correlation/discopop_capability/claude-haiku-4-5-20251001/rep1/work/correlation.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/t0_11_b14_apps_b/benchmarks/polybench/correlation/discopop_capability/claude-haiku-4-5-20251001/rep1/work/correlation.c
+@@ -109,6 +109,7 @@
+       for (j2 = j1+1; j2 < _PB_M; j2++)
+ 	{
+ 	  symmat[j1][j2] = 0.0;
++	  #pragma omp parallel for firstprivate(j1,n,j2) shared(symmat,data) 
+ 	  for (i = 0; i < _PB_N; i++)
+ 	    symmat[j1][j2] += (data[i][j1] * data[i][j2]);
+ 	  symmat[j2][j1] = symmat[j1][j2];

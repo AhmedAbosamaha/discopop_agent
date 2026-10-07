@@ -1,0 +1,29 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6b_fb_3/benchmarks/tsvc_c2/k53/no_evidence_nospeed_v4/claude-haiku-4-5-20251001/rep4/work/k53.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6b_fb_3/benchmarks/tsvc_c2/k53/no_evidence_nospeed_v4/claude-haiku-4-5-20251001/rep4/work/k53.c
+@@ -1,13 +1,24 @@
+ #include "data.h"
++#include <stdlib.h>
++#include <string.h>
+ 
+ real_t kernel_k53(void)
+ {
++    real_t *u_snap = (real_t *)malloc(sizeof(real_t) * LEN_1D);
++    real_t *v_snap = (real_t *)malloc(sizeof(real_t) * LEN_1D);
++
+     for (int nl = 0; nl < iterations; nl++) {
++        memcpy(u_snap, u, sizeof(real_t) * LEN_1D);
++        memcpy(v_snap, v, sizeof(real_t) * LEN_1D);
++
+         for (long i = 1; i < LEN_1D; i++) {
+-            u[ju[i]] += v[kv[i]] * c[i];
+-            v[jv[i]] = u[ku[i]] * d[i] + c[i];
++            u[ju[i]] += v_snap[kv[i]] * c[i];
++            v[jv[i]] = u_snap[ku[i]] * d[i] + c[i];
+         }
+         dummy(a, b, c, d, e);
+     }
++
++    free(u_snap);
++    free(v_snap);
+     return (real_t)0;
+ }

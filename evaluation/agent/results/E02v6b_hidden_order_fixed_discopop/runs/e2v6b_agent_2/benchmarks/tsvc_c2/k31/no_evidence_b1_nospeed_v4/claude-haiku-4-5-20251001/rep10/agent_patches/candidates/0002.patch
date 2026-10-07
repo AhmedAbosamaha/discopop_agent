@@ -1,0 +1,26 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6b_agent_2/benchmarks/tsvc_c2/k31/no_evidence_b1_nospeed_v4/claude-haiku-4-5-20251001/rep10/work/k31.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6b_agent_2/benchmarks/tsvc_c2/k31/no_evidence_b1_nospeed_v4/claude-haiku-4-5-20251001/rep10/work/k31.c
+@@ -3,10 +3,22 @@
+ real_t kernel_k31(void)
+ {
+     for (int nl = 0; nl < iterations; nl++) {
++        // Save current u values before they are modified
++        long u_save_size = LEN_1D + 10000;
++        real_t *u_old = malloc(u_save_size * sizeof(real_t));
++        memcpy(u_old, u, u_save_size * sizeof(real_t));
++
++        // Pass 1: Update u using v values
+         for (long i = 1; i < LEN_1D; i++) {
+             u[i] += v[i + off] * c[i];
+-            v[i] = u[i + far] * d[i] + c[i];
+         }
++
++        // Pass 2: Update v using saved u values from before pass 1
++        for (long i = 1; i < LEN_1D; i++) {
++            v[i] = u_old[i + far] * d[i] + c[i];
++        }
++
++        free(u_old);
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

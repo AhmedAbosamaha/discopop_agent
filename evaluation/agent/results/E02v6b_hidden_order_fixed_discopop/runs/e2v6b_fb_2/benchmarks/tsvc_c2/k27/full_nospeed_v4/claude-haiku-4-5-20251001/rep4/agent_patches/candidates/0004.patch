@@ -1,0 +1,18 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6b_fb_2/benchmarks/tsvc_c2/k27/full_nospeed_v4/claude-haiku-4-5-20251001/rep4/work/k27.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6b_fb_2/benchmarks/tsvc_c2/k27/full_nospeed_v4/claude-haiku-4-5-20251001/rep4/work/k27.c
+@@ -3,12 +3,15 @@
+ real_t kernel_k27(void)
+ {
+     for (int nl = 0; nl < iterations; nl++) {
++        #pragma omp parallel for 
+         for (long i = 1; i < LEN_1D; i++) {
+             v[jv[i]] = u[ku[i]] * d[i] + c[i];
+         }
++        #pragma omp parallel for 
+         for (long i = 1; i < LEN_1D; i++) {
+             w[jw[i]] = v[kv[i]] * e[i] + d[i];
+         }
++        #pragma omp parallel for 
+         for (long i = 1; i < LEN_1D; i++) {
+             u[ju[i]] += w[kw[i]] * c[i];
+         }

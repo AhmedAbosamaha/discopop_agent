@@ -1,0 +1,36 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6b_fb_2/benchmarks/tsvc_c2/k27/no_evidence_nospeed_v4/claude-haiku-4-5-20251001/rep3/work/k27.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6b_fb_2/benchmarks/tsvc_c2/k27/no_evidence_nospeed_v4/claude-haiku-4-5-20251001/rep3/work/k27.c
+@@ -2,13 +2,30 @@
+ 
+ real_t kernel_k27(void)
+ {
++    real_t *u_local = (real_t *)malloc(LEN_1D * sizeof(real_t));
++    real_t *v_local = (real_t *)malloc(LEN_1D * sizeof(real_t));
++
+     for (int nl = 0; nl < iterations; nl++) {
++        for (long i = 0; i < LEN_1D; i++) {
++            u_local[i] = u[i];
++            v_local[i] = v[i];
++        }
+         for (long i = 1; i < LEN_1D; i++) {
+-            u[ju[i]] += w[kw[i]] * c[i];
+-            v[jv[i]] = u[ku[i]] * d[i] + c[i];
+-            w[jw[i]] = v[kv[i]] * e[i] + d[i];
++            u_local[ju[i]] += w[kw[i]] * c[i];
++        }
++        for (long i = 1; i < LEN_1D; i++) {
++            v_local[jv[i]] = u_local[ku[i]] * d[i] + c[i];
++        }
++        for (long i = 1; i < LEN_1D; i++) {
++            w[jw[i]] = v_local[kv[i]] * e[i] + d[i];
++        }
++        for (long i = 0; i < LEN_1D; i++) {
++            u[i] = u_local[i];
++            v[i] = v_local[i];
+         }
+         dummy(a, b, c, d, e);
+     }
++    free(u_local);
++    free(v_local);
+     return (real_t)0;
+ }

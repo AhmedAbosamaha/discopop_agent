@@ -1,0 +1,31 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6b_agent_1/benchmarks/tsvc_c2/k19/no_evidence_b1_nospeed_v4/claude-haiku-4-5-20251001/rep10/work/k19.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6b_agent_1/benchmarks/tsvc_c2/k19/no_evidence_b1_nospeed_v4/claude-haiku-4-5-20251001/rep10/work/k19.c
+@@ -2,12 +2,26 @@
+ 
+ real_t kernel_k19(void)
+ {
++    real_t *u_inc = (real_t *)malloc((LEN_1D) * sizeof(real_t));
++    real_t *v_new = (real_t *)malloc((LEN_1D) * sizeof(real_t));
++
+     for (int nl = 0; nl < iterations; nl++) {
++        // Phase 1: Read inputs and compute values for each index i
+         for (long i = 1; i < LEN_1D; i++) {
+-            u[ju[i]] += v[kv[i]] * c[i];
+-            v[jv[i]] = u[ku[i]] * d[i] + c[i];
++            u_inc[i] = v[kv[i]] * c[i];
++            v_new[i] = u[ku[i]] * d[i] + c[i];
+         }
++
++        // Phase 2: Apply computed updates to arrays u and v
++        for (long i = 1; i < LEN_1D; i++) {
++            u[ju[i]] += u_inc[i];
++            v[jv[i]] = v_new[i];
++        }
++
+         dummy(a, b, c, d, e);
+     }
++
++    free(u_inc);
++    free(v_new);
+     return (real_t)0;
+ }

@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6c_s281/benchmarks/tsvc_c2/s281/default_v4/claude-haiku-4-5-20251001/rep2/work/s281.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6c_s281/benchmarks/tsvc_c2/s281/default_v4/claude-haiku-4-5-20251001/rep2/work/s281.c
+@@ -16,6 +16,7 @@
+ 
+         // Phase 2: iterations half to LEN_1D-1 (no loop-carried dependence on a within phase)
+         // These iterations read values written by phase 1
++        #pragma omp parallel for firstprivate(half) private(x) 
+         for (int i = half; i < LEN_1D; i++) {
+             x = a[LEN_1D-i-1] + b[i] * c[i];
+             a[i] = x-(real_t)1.0;

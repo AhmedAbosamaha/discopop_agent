@@ -1,0 +1,24 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6b_agent_1/benchmarks/tsvc_c2/k23/full_b1_nospeed_v4/claude-haiku-4-5-20251001/rep6/work/k23.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6b_agent_1/benchmarks/tsvc_c2/k23/full_b1_nospeed_v4/claude-haiku-4-5-20251001/rep6/work/k23.c
+@@ -2,12 +2,19 @@
+ 
+ real_t kernel_k23(void)
+ {
++    real_t *c_snapshot = malloc(sizeof(real_t) * LEN_1D);
++
+     for (int nl = 0; nl < iterations; nl++) {
++        // Save c before the inner loop so reads within the loop are invariant
++        memcpy(c_snapshot, c, sizeof(real_t) * LEN_1D);
++
+         for (long i = 1; i < LEN_1D; i++) {
+-            u[i] += w[i] * c[i];
+-            v[i] = x[i] * d[i] + c[i];
++            u[i] += w[i] * c_snapshot[i];
++            v[i] = x[i] * d[i] + c_snapshot[i];
+         }
+         dummy(a, b, c, d, e);
+     }
++
++    free(c_snapshot);
+     return (real_t)0;
+ }

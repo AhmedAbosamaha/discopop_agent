@@ -1,0 +1,26 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6b_fb_1/benchmarks/tsvc_c2/k23/no_evidence_nospeed_v4/claude-haiku-4-5-20251001/rep2/work/k23.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6b_fb_1/benchmarks/tsvc_c2/k23/no_evidence_nospeed_v4/claude-haiku-4-5-20251001/rep2/work/k23.c
+@@ -1,13 +1,21 @@
+ #include "data.h"
++#include <stdlib.h>
++#include <string.h>
+ 
+ real_t kernel_k23(void)
+ {
++    real_t *c_snapshot = malloc(LEN_1D * sizeof(real_t));
++    memcpy(c_snapshot, c, LEN_1D * sizeof(real_t));
++
+     for (int nl = 0; nl < iterations; nl++) {
+         for (long i = 1; i < LEN_1D; i++) {
+-            u[i] += w[i] * c[i];
+-            v[i] = x[i] * d[i] + c[i];
++            u[i] += w[i] * c_snapshot[i];
++            v[i] = x[i] * d[i] + c_snapshot[i];
+         }
+         dummy(a, b, c, d, e);
++        memcpy(c_snapshot, c, LEN_1D * sizeof(real_t));
+     }
++
++    free(c_snapshot);
+     return (real_t)0;
+ }

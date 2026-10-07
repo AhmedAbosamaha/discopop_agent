@@ -1,0 +1,30 @@
+--- original.c
++++ final.c
+@@ -36,14 +36,25 @@
+ 
+ /* ==== k53.c ==== */
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_k53(void)
+ {
+     for (int nl = 0; nl < iterations; nl++) {
++        real_t* v_local = (real_t*)malloc(sizeof(real_t) * LEN_1D);
++        #pragma omp parallel for shared(v_local) 
++        for (long i = 0; i < LEN_1D; i++) {
++            v_local[i] = v[i];
++        }
+         for (long i = 1; i < LEN_1D; i++) {
+-            u[ju[i]] += v[kv[i]] * c[i];
+-            v[jv[i]] = u[ku[i]] * d[i] + c[i];
++            u[ju[i]] += v_local[kv[i]] * c[i];
++            v_local[jv[i]] = u[ku[i]] * d[i] + c[i];
+         }
++        #pragma omp parallel for shared(v_local) 
++        for (long i = 0; i < LEN_1D; i++) {
++            v[i] = v_local[i];
++        }
++        free(v_local);
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

@@ -1,0 +1,18 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6b_fb_3/benchmarks/tsvc_c2/k53/full_nospeed_v4/claude-haiku-4-5-20251001/rep2/work/k53.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6b_fb_3/benchmarks/tsvc_c2/k53/full_nospeed_v4/claude-haiku-4-5-20251001/rep2/work/k53.c
+@@ -6,6 +6,7 @@
+     for (int nl = 0; nl < iterations; nl++) {
+         real_t *u_temp = (real_t *)malloc(LEN_1D * sizeof(real_t));
+         real_t *v_temp = (real_t *)malloc(LEN_1D * sizeof(real_t));
++        #pragma omp parallel for shared(v_temp,u_temp) 
+         for (long i = 0; i < LEN_1D; i++) {
+             u_temp[i] = u[i];
+             v_temp[i] = v[i];
+@@ -14,6 +15,7 @@
+             u_temp[ju[i]] += v_temp[kv[i]] * c[i];
+             v_temp[jv[i]] = u_temp[ku[i]] * d[i] + c[i];
+         }
++        #pragma omp parallel for shared(v_temp,u_temp) 
+         for (long i = 0; i < LEN_1D; i++) {
+             u[i] = u_temp[i];
+             v[i] = v_temp[i];

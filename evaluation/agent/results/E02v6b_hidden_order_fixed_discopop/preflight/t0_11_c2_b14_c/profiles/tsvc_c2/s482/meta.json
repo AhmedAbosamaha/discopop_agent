@@ -1,0 +1,43 @@
+{
+  "suite": "tsvc_c2",
+  "kernel": "s482",
+  "source": "benchmarks/TSVC_2/src/tsvc.c",
+  "category": "non-local goto's / other loop exit with code before exit",
+  "file": "s482.c",
+  "language": "c",
+  "layout": "project",
+  "project": {
+    "units": [
+      "s482.c",
+      "main.c"
+    ],
+    "include_dirs": [
+      "."
+    ],
+    "editable": [
+      "s482.c"
+    ]
+  },
+  "restructuring_class": "hidden independence (E2-B1 b)",
+  "transformation": "none: the early exit never fires on TSVC's data (c is never above b)",
+  "why": "c <= b everywhere (TSVC: b = c = 1/(i+1)), so every iteration runs and updates its own a[i]",
+  "reference_solution": null,
+  "exclude_functions": [
+    "main",
+    "dummy"
+  ],
+  "harness": "tsvc_c2/s482.h",
+  "harness_sha256": "63ffbe0d99e565a2f086e513f60a0a88e49e6d8bcb6e31416b4e55c4aa8fcf11",
+  "hot_loop": {
+    "entry": "kernel_s482",
+    "function": "kernel_s482",
+    "line": 6,
+    "writes": [
+      "a"
+    ]
+  },
+  "agent_dataset": "SMALL",
+  "generator_version": 6,
+  "inputs_sha256": "456dd573b84b30e6f32c943bb559d80374eec67177de48223e95124a8c3fc627",
+  "output_sha256": "d80f8a9c18ceab6ec796a2e50d5a70e00db239a42314dff667bd4e5985524bf2"
+}

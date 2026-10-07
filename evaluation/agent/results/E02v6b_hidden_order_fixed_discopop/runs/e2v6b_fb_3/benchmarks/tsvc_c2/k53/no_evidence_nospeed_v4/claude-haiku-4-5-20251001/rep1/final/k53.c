@@ -1,0 +1,24 @@
+#include <stdlib.h>
+#include "data.h"
+
+real_t kernel_k53(void)
+{
+    real_t *temp_c = (real_t *)malloc(LEN_1D * sizeof(real_t));
+    real_t *temp_d = (real_t *)malloc(LEN_1D * sizeof(real_t));
+
+    for (int nl = 0; nl < iterations; nl++) {
+        #pragma omp parallel for shared(temp_d,temp_c) 
+        for (long i = 1; i < LEN_1D; i++) {
+            temp_c[i] = c[i];
+            temp_d[i] = d[i];
+        }
+        for (long i = 1; i < LEN_1D; i++) {
+            u[ju[i]] += v[kv[i]] * temp_c[i];
+            v[jv[i]] = u[ku[i]] * temp_d[i] + temp_c[i];
+        }
+        dummy(a, b, c, d, e);
+    }
+    free(temp_c);
+    free(temp_d);
+    return (real_t)0;
+}

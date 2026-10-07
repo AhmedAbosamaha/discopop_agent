@@ -1,0 +1,33 @@
+#include "data.h"
+#include <stdlib.h>
+#include <string.h>
+
+real_t kernel_k23(void)
+{
+    real_t **increments = malloc(sizeof(real_t *) * iterations);
+    for (int nl = 0; nl < iterations; nl++) {
+        increments[nl] = malloc(sizeof(real_t) * LEN_1D);
+    }
+
+    for (int nl = 0; nl < iterations; nl++) {
+        for (long i = 1; i < LEN_1D; i++) {
+            increments[nl][i] = w[i] * c[i];
+            v[i] = x[i] * d[i] + c[i];
+        }
+        dummy(a, b, c, d, e);
+    }
+
+ #pragma omp parallel for shared(increments) 
+    for (long i = 1; i < LEN_1D; i++) {
+        for (int nl = 0; nl < iterations; nl++) {
+            u[i] += increments[nl][i];
+        }
+    }
+
+    #pragma omp parallel for shared(increments) 
+    for (int nl = 0; nl < iterations; nl++) {
+        free(increments[nl]);
+    }
+    free(increments);
+    return (real_t)0;
+}

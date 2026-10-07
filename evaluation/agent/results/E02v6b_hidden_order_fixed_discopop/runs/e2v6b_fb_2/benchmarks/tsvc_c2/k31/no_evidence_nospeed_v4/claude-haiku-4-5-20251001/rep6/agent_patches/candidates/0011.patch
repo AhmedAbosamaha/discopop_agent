@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6b_fb_2/benchmarks/tsvc_c2/k31/no_evidence_nospeed_v4/claude-haiku-4-5-20251001/rep6/work/k31.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6b_fb_2/benchmarks/tsvc_c2/k31/no_evidence_nospeed_v4/claude-haiku-4-5-20251001/rep6/work/k31.c
+@@ -12,6 +12,7 @@
+         for (long i = 1; i < LEN_1D; i++) {
+             v_new[i] = u[i + far] * d[i] + c[i];
+         }
++        #pragma omp parallel for shared(v_new) 
+         for (long i = 1; i < LEN_1D; i++) {
+             u[i] += v_new[i + off] * c[i];
+         }

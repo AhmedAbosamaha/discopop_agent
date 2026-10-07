@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/t0_11_b14_apps_b/benchmarks/polybench/gramschmidt/discopop_capability/claude-haiku-4-5-20251001/rep1/work/gramschmidt.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/t0_11_b14_apps_b/benchmarks/polybench/gramschmidt/discopop_capability/claude-haiku-4-5-20251001/rep1/work/gramschmidt.c
+@@ -94,6 +94,7 @@
+       for (j = k + 1; j < _PB_NJ; j++)
+ 	{
+ 	  R[k][j] = 0;
++	  #pragma omp parallel for firstprivate(ni,k,j) shared(R,A,Q) 
+ 	  for (i = 0; i < _PB_NI; i++)
+ 	    R[k][j] += Q[i][k] * A[i][j];
+ 	  for (i = 0; i < _PB_NI; i++)

@@ -1,0 +1,29 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6b_fb_2/benchmarks/tsvc_c2/k31/no_evidence_nospeed_v4/claude-haiku-4-5-20251001/rep10/work/k31.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6b_fb_2/benchmarks/tsvc_c2/k31/no_evidence_nospeed_v4/claude-haiku-4-5-20251001/rep10/work/k31.c
+@@ -2,12 +2,24 @@
+ 
+ real_t kernel_k31(void)
+ {
++    real_t *u_old = malloc(sizeof(real_t) * LEN_1D);
++    real_t *v_old = malloc(sizeof(real_t) * LEN_1D);
++
+     for (int nl = 0; nl < iterations; nl++) {
+         for (long i = 1; i < LEN_1D; i++) {
+-            u[i] += v[i + off] * c[i];
+-            v[i] = u[i + far] * d[i] + c[i];
++            u_old[i] = u[i];
++            v_old[i] = v[i];
++        }
++        for (long i = 1; i < LEN_1D; i++) {
++            u[i] = u_old[i] + v_old[i + off] * c[i];
++        }
++        real_t *u_src = (far < 0) ? u : u_old;
++        for (long i = 1; i < LEN_1D; i++) {
++            v[i] = u_src[i + far] * d[i] + c[i];
+         }
+         dummy(a, b, c, d, e);
+     }
++    free(u_old);
++    free(v_old);
+     return (real_t)0;
+ }

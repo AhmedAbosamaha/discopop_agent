@@ -1,0 +1,39 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6b_fb_2/benchmarks/tsvc_c2/k27/no_evidence_nospeed_v4/claude-haiku-4-5-20251001/rep4/work/k27.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6b_fb_2/benchmarks/tsvc_c2/k27/no_evidence_nospeed_v4/claude-haiku-4-5-20251001/rep4/work/k27.c
+@@ -1,14 +1,33 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_k27(void)
+ {
++    real_t *u_temp = (real_t *)malloc(LEN_1D * sizeof(real_t));
++    real_t *v_temp = (real_t *)malloc(LEN_1D * sizeof(real_t));
++    real_t *w_temp = (real_t *)malloc(LEN_1D * sizeof(real_t));
++
+     for (int nl = 0; nl < iterations; nl++) {
++        for (long i = 0; i < LEN_1D; i++) {
++            u_temp[i] = u[i];
++            v_temp[i] = v[i];
++            w_temp[i] = w[i];
++        }
+         for (long i = 1; i < LEN_1D; i++) {
+-            u[ju[i]] += w[kw[i]] * c[i];
+-            v[jv[i]] = u[ku[i]] * d[i] + c[i];
+-            w[jw[i]] = v[kv[i]] * e[i] + d[i];
++            u_temp[ju[i]] += w_temp[kw[i]] * c[i];
++            v_temp[jv[i]] = u_temp[ku[i]] * d[i] + c[i];
++            w_temp[jw[i]] = v_temp[kv[i]] * e[i] + d[i];
++        }
++        for (long i = 0; i < LEN_1D; i++) {
++            u[i] = u_temp[i];
++            v[i] = v_temp[i];
++            w[i] = w_temp[i];
+         }
+         dummy(a, b, c, d, e);
+     }
++
++    free(u_temp);
++    free(v_temp);
++    free(w_temp);
+     return (real_t)0;
+ }

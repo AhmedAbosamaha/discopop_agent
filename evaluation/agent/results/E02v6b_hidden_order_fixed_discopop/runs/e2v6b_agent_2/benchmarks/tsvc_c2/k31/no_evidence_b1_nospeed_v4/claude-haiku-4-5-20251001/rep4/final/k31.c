@@ -1,0 +1,22 @@
+#include "data.h"
+#include <stdlib.h>
+
+real_t kernel_k31(void)
+{
+    real_t *temp_u = (real_t *)malloc(LEN_1D * sizeof(real_t));
+
+    for (int nl = 0; nl < iterations; nl++) {
+        for (long i = 1; i < LEN_1D; i++) {
+            temp_u[i] = u[i] + v[i + off] * c[i];
+            v[i] = u[i + far] * d[i] + c[i];
+        }
+        #pragma omp parallel for shared(temp_u) 
+        for (long i = 1; i < LEN_1D; i++) {
+            u[i] = temp_u[i];
+        }
+        dummy(a, b, c, d, e);
+    }
+
+    free(temp_u);
+    return (real_t)0;
+}
