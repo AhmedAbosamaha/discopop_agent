@@ -40,6 +40,7 @@ LLVM 19 (macOS) and LLVM 20 (Linux).
 | B13 | explorer, `TaskGraph.__insert_data_dependencies_from_files` + Do-All detector | fixed 27 Sep | a loop whose only cross-iteration dependence is a WRITE-AFTER-WRITE on an array element (a scatter `x[idx[i]] = …` whose indices repeat) is reported Do-All: the task graph dropped every WAW as "no data flow"; its pragma races (Rodinia bfs's frontier loop in E2-B1) |
 | B14 | profiler, `static_analysis/calltree_construction.cpp` (loop states of the call path) | **fixed 7 Oct** | two loops side by side inside a loop are modelled as nested in each other, and the later loop's iterations are never recorded. Two faces: a dependence carried by the OUTER loop blocks the later loop's Do-All (the shape every loop distribution inside a repetition loop creates), and a dependence BETWEEN the later loop's own iterations is not seen — a recurrence reported Do-All |
 | B15 | explorer, `TaskGraph.__assign_loopstate_positions_within_functions` / task-graph loops | fixed 27 Sep | a `do … while` loop gets no loop context in the task graph, so the loop-state digit positions of every loop in the function after it are off by one: no call-path state under the `do … while` matches, every dependence recorded there is lost, and a textbook recurrence nested in it is reported Do-All (Rodinia bfs: all 1,500 dynamic dependences of the kernel lost) |
+| B18 | explorer (suspected: the carried-scalar rule of B10's fix) | candidate, 7 Oct | on PolyBench the current DiscoPoP reports no Do-All for outer loops it reported on 20 Sep — `correlation`, `covariance` (one directive, 5–6×, race-clean in three draws then; none now), `gramschmidt`, `fdtd-2d` (the directive now on a smaller loop: 8× → 0.35×, 5× → 0.6×); the blockers it names are the inner loops' own counters (`i`, `j`), declared at the top of the function |
 | L3 | explorer | limitation | NPB-CPP `mg`: with P1's fix the state assignment is fast, but the run then stays in task-pattern detection (`new_task_detector`) — a first run was read at 4 h 19 min, the same run was stopped unfinished after **11 h 24 min** at 100 % CPU on the server (19–20 Sep); the Do-All detector is not reached. Not usable per trial |
 
 ---
@@ -423,6 +424,36 @@ fixed profiler: outcome and number of directives of every package as in the thre
 both reads and writes an array whose value the enclosing loop carries (`u[i] += …`, `y[j] = y[j] + …`). A later
 loop that only writes is not blocked — which is why `k48`, where the `+=` loop comes first, had both loops
 reported, and why `case_5` never failed.
+
+## B18 — candidate: outer loops of PolyBench kernels lose their Do-All; the blockers named are inner loop counters (explorer)
+
+**Status: candidate, 7 Oct 2026 — seen, not examined; not B14 as far as the evidence goes.** DiscoPoP alone on the
+31 packages of T0.11 outside TSVC, three draws on the current DiscoPoP (`t0_11_b14_apps_a`–`c`), against the three
+draws of 20 Sep (`t0_11_classes_a`–`c`): 23 packages as then, 8 differ. Between the two lie eight fixes (B4, B8,
+B9, B10, B12, B13, B15 of 26–27 Sep, B17, and B14), a new agent version and the harness's changes — the
+comparison does not isolate one of them. What differs:
+
+| package | 20 Sep | 7 Oct |
+|---|---|---|
+| `polybench/correlation` | FASTER, 1 directive, 5.4–5.8× | no change, no directive |
+| `polybench/covariance` | FASTER, 1 directive, 5.1–5.8× | no change, no directive |
+| `polybench/gramschmidt` | FASTER, 1 directive, 8.0–8.6× | parallel, not faster: 0.32–0.40× |
+| `polybench/fdtd-2d` | FASTER, 3 directives, 4.5–5.7× | parallel, not faster: 0.57–0.60× |
+| `polybench/ludcmp` | parallel, not faster: 0.15–0.18× | FASTER, 4.8–5.9× |
+| `polybench/adi` | one draw FASTER (4 directives), two without a result | FASTER in three draws, 1.7–1.9× |
+| `polybench/atax` | one draw unchanged, two parallel (speed not measurable) | parallel in three draws |
+| `rodinia-3.1/pathfinder` | parallel, 1 directive | no change, no directive |
+
+On the current profiles the explorer names as what blocks the outer loops: `correlation` RAW on `j` and on `i`,
+`covariance` RAW on `j`, `i` and `mean`, `gramschmidt` RAW on `i`, `fdtd-2d` RAW on `j` — the counters of the
+inner loops, which PolyBench declares once at the top of the function; `pathfinder` RAW on `src`. An inner
+loop's counter is written before it is read in every iteration of the outer loop; the directive of 20 Sep made
+it `private` and passed the race stage in three draws. The natural suspect is the rule that came with B10's fix
+(a scalar carried from one iteration to the next blocks Do-All), applied to a scalar that is not carried but
+re-initialised. `correlation` and `covariance` have no loops side by side that meet B14's condition. **Owed:** the
+same packages on a build before B14 and on one before B10 (PolyBench runs on the Mac; `pathfinder` does not),
+then the fix at the root. No TSVC package is affected: their loop counters are declared in the loop header, and
+the three TSVC draws on the current DiscoPoP equal the earlier ones.
 
 ## B17 — the profile depends on the path of the working directory: an uninitialised flag switches loop tracking off (profiler runtime)
 

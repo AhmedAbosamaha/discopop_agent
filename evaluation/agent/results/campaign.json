@@ -319,7 +319,7 @@
    "id": "E2-v6",
    "folder": "E02v6_hidden_order_clean_files",
    "kind": "experiment",
-   "status": "done",
+   "status": "read out 6 Oct — replaced as the result by E2-v6b (profiler defect B14)",
    "title": "E2-v6 — the hidden order on clean files: does DiscoPoP's evidence let the agent find a split no reading of the file can find, and can retries with feedback stand in for it?",
    "question": "On seven units of packaging v6 whose deciding fact is outside the benchmark's file — four constructed kernels of three shapes, the real TSVC loop s161, a hidden cycle that must be left alone, and a control whose textual order is right — speed check off, prompt version 4: does the Haiku agent with DiscoPoP's evidence ship more race-free verified parallel programs covering the hot loop than without it, and how do Haiku, Sonnet, Opus and Fable alone do on the same units?",
    "headline": "Five units whose split order is decided outside the file, Haiku, speed check off, race-checked; DiscoPoP alone changes nothing on any unit (three draws). The agent with DiscoPoP's evidence at one attempt: 45 of 50 race-free verified parallel programs covering the hot loop (all 45 FASTER), 0 unsafe; without the evidence 10 of 50, 9 of them on `s161`, where the model finds the order alone — V6-i rejected (MH odds ratio 351, exact p 1.4e-16, family bound at most 4.0e-12). Three attempts with feedback, without evidence: 22 of 50 against 10 — V6-ii rejected (odds ratio 21, p 0.00068, family bound 0.035) — at 17.8 model calls per success against 1.6, and far below the evidence at one attempt (22 against 45); with evidence, three attempts add nothing (46 against 45). On the unit that has to be left alone (`k53`) the one-attempt agent ships no parallel program in 20 trials; at three attempts 8 of 20 trials ship one that parallelizes only a loop the model added, and 2 of those crash at the verification size (an array of the data's length on the stack) — with a third on `k23`, three unsafe programs of the agent in 280 trials (E1-v6: none in 90). The models alone on the five units: Haiku 3 of 50 with 47 unsafe, Sonnet 7 of 25 with 17, Opus 10 of 25 with 6 unsafe and 9 too slow, Fable 17 of 25 with 7 unsafe; on `k23` every model alone fails all 25. Fast and right on the four constructed kernels: the agent with evidence 35 of 40, Fable 5 of 20, Opus 3 of 20, Sonnet 2 of 20, Haiku 0 of 40. The agent's successes there reach 1.4–1.9× where the expert version reaches 3.1–4.2×: DiscoPoP writes the directive on only part of the loops of the split. 1,181 model calls, $243 API-equivalent.",
@@ -348,10 +348,10 @@
    "id": "E2-v6b",
    "folder": "E02v6b_hidden_order_fixed_discopop",
    "kind": "experiment",
-   "status": "running",
+   "status": "done",
    "title": "E2-v6b — the hidden order on clean files, run again on the fixed DiscoPoP (defect B14): evidence × attempts",
    "question": "E2-v6's question, with a profiler that records the iterations of every loop: does the Haiku agent with DiscoPoP's evidence ship more race-free verified parallel programs covering the hot loop than without it, what do retries with feedback add — and how fast are the programs now that DiscoPoP can report every loop of a split?",
-   "headline": "",
+   "headline": "E2-v6 run again on the fixed DiscoPoP (defect B14 of the profiler), Haiku, speed check off, race-checked; the models alone are E2-v6's runs. The agent with DiscoPoP's evidence at one attempt: 44 of 50 race-free verified parallel programs covering the hot loop (all FASTER), 0 unsafe; without the evidence 14 of 50 — V6-i rejected (MH odds ratio 76, exact p 7.0e-13, family bound at most 2.9e-09). Three attempts with feedback, without evidence: 22 of 50 against 14 — V6-ii NOT rejected (odds ratio 3.6, one-sided p 0.028, family bound 0.11): the feedback's effect is not established on the corrected instrument; it had been in E2-v6 (22 against 10). With every loop of the split now reported, the successes with evidence run at the expert version's speed: 4.07×, 3.27×, 4.04×, 3.06× on k19, k23, k27, k31 (expert 4.14×, 3.33×, 4.17×, 3.09×; E2-v6: 1.45×, 1.40×, 1.93×, 1.37×). No unsafe program in 280 trials. On the unit that has to be left alone the one-attempt agent ships nothing parallel in 20 trials; at three attempts 10 of 20 ship a program that parallelizes only a loop the model added. Against the models alone: fast and right on the four constructed kernels 34 of 40, Fable 5 of 20, Opus 3, Sonnet 2, Haiku 0 of 40. 977 model calls, $191 API-equivalent.",
    "preregistered": "THESIS_EXPERIMENTS §6, 7 Oct, before any E2-v6b trial; config/e2v6b_population.json"
   },
   {
@@ -1910,7 +1910,7 @@
   "e2v6b_race_check": {
    "group": "E2-v6b",
    "section": "checks",
-   "status": "registered",
+   "status": "valid",
    "role": "race_check.py (server, no model) over every program of the agent's four arms of E2-v6b — the positive control; the models alone and their race check are E2-v6's"
   },
   "e1v6c_s281": {
@@ -2328,6 +2328,14 @@
   "k53_v6_false_doall_refused": {
    "group": "E2-v6",
    "shows": "The gate catching a false Do-All of DiscoPoP's (defect B14, fixed 7 Oct): on `k53` the model put the kernel's loop after a copy loop; the profiler, not recording a later loop's iterations, reported that loop — a recurrence through the index tables — as Do-All; the agent's race stage refused the directive (ThreadSanitizer: data race) in Phase A's check and again in Phase B, and only the two copy loops kept their directives. One of four such trials; DiscoPoP alone would have emitted the unsafe directive."
+  },
+  "k19_v6b_both_loops_expert_speed": {
+   "group": "E2-v6b",
+   "shows": "E2-v6b, with evidence, one attempt, on the fixed DiscoPoP: the split with the second statement's loop first and a directive on BOTH loops, in one model call — 4.12×, the expert version's speed (4.14×); the same trial shape reached 1.45× before defect B14 was fixed (`k23_v6_evidence_right_split` in E2-v6's folder shows the one-directive program)."
+  },
+  "k53_v6b_retries_add_a_loop": {
+   "group": "E2-v6b",
+   "shows": "E2-v6b, three attempts with evidence on the unit that has to be left alone: after rejected rewrites the model adds loops it can make parallel and leaves the kernel's own loop sequential — a parallel program that gains nothing (0.98×), 10 model calls; 10 of 20 three-attempt trials end like this, none of 20 at one attempt. The pressure of the retries, not the profiler's defect."
   }
  },
  "lines": [
@@ -2342,7 +2350,7 @@
     "analysis/haiku/main_comparison_stats.md",
     "REPORT.md"
    ],
-   "note": "Read out 5 Oct 2026, complete: the nine tests, the controls, the race check with its positive control (all 85 of the agent's parallel programs clean), the cost, and what every program did to the repetition loop (`analysis/repetition_loop.md`). A correction is running (7 Oct): `s281` on the fixed DiscoPoP (defect B14), `s313` and `s331` on the packages with necessary repetitions.",
+   "note": "Read out 5 Oct 2026, complete: the nine tests, the controls, the race check with its positive control (all 85 of the agent's parallel programs clean), the cost, and what every program did to the repetition loop (`analysis/repetition_loop.md`). A correction is running (7 Oct): `s281` on the fixed DiscoPoP (defect B14), `s313` and `s331` on the packages with necessary repetitions. 7 Oct: `s281` on the fixed DiscoPoP is 5 of 5 FASTER at 3.3× (was 1 of 5) — the agent's 73 of 90 becomes 77, provisionally; the corrected read-out follows with `s313` and `s331`.",
    "history": [
     {
      "id": "E1-v5",
@@ -2379,17 +2387,21 @@
   {
    "id": "E2",
    "title": "E2 — does DiscoPoP's evidence help the model, and what do retries with feedback add?",
-   "current": "E2-v6",
+   "current": "E2-v6b",
    "read_first": [
     "analysis/e2v6_readout.md",
-    "stats/README.md",
     "stats/v6_i/e2b1_stats.md",
     "stats/v6_ii/e2b1_stats.md",
     "stats/models_alone.md",
     "REPORT.md"
    ],
-   "note": "Read out 6 Oct 2026, complete: the two registered tests, everything the registration lists as descriptive, the race check with its positive control (all 172 changed programs of the agent clean), the stack check on the agent's three crashing programs, the cost, and eleven case studies. Being run again on the fixed DiscoPoP since 7 Oct (E2-v6b): the counts below were not produced by defect B14 of the profiler, the speeds were.",
+   "note": "Read out 7 Oct 2026, complete: the two registered tests on the fixed DiscoPoP (the evidence effect holds; the feedback effect is not established any more), every cell beside its value before the fix, the race check with its positive control (all 182 changed programs of the agent clean), the cost. The models alone are E2-v6's runs, which are kept in E2-v6's folder.",
    "history": [
+    {
+     "id": "E2-v6",
+     "what": "the same experiment on the profiler before defect B14 was fixed (5–6 Oct): with evidence 45 of 50, without 10 of 50; three attempts without evidence 22 of 50",
+     "why": "the profiler did not record the iterations of the second of two loops side by side: the agent's programs carried a directive on one of two loops (1.4–1.9× instead of the expert's 3–4×), and in the three-attempt arms the model was sent a blocker that was false. Its four model-alone runs and their race check are part of E2-v6b's result"
+    },
     {
      "id": "E2-O3",
      "what": "the hidden order on three more kernels (3 Oct): with evidence 29 of 30, without 0 of 30",

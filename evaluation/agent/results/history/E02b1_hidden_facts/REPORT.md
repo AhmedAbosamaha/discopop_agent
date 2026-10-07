@@ -4,7 +4,7 @@
 
 **Status:** done
 
-> **Not the current result.** This question is answered by [E2-v6 — the hidden order on clean files: does DiscoPoP's evidence let the agent find a split no reading of the file can find, and can retries with feedback stand in for it?](../../E02v6_hidden_order_clean_files/REPORT.md); this folder is kept as history. See [`results/README.md`](../../README.md).
+> **Not the current result.** This question is answered by [E2-v6b — the hidden order on clean files, run again on the fixed DiscoPoP (defect B14): evidence × attempts](../../E02v6b_hidden_order_fixed_discopop/REPORT.md); this folder is kept as history. See [`results/README.md`](../../README.md).
 
 ## The question
 

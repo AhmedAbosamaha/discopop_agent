@@ -472,7 +472,7 @@ Status: running
 | `e1v6c_s281` | [`E01v6_clean_files_three_way/runs/e1v6c_s281/`](E01v6_clean_files_three_way/runs/e1v6c_s281/) | E1-v6 corrected for DiscoPoP B14: tsvc_c2/s281 × default_v4, discopop_gate_v4 × 5, Haiku, threads 6/12, repeats 5, as e1v6_r_3 — on the fixed DiscoPoP; read out beside the registered result | valid | 10 | FASTER 5, no-change 5 |
 | `e1v6c_v7_agent` | not archived yet | E1-v6 corrected for the repetitions (packaging v7): tsvc_c3/s331 × default_v4, discopop_gate_v4 × 5 (as e1v6_r_4), Haiku — on the fixed DiscoPoP | registered |  |  |
 | `e1v6c_v7_control` | not archived yet | E1-v6 corrected for the repetitions (packaging v7): tsvc_c3/s313 × default_v4, discopop_gate_v4 × 1 (as e1v6_a), Haiku — on the fixed DiscoPoP | registered |  |  |
-| `e1v6c_race_check` | not archived yet | race_check.py (server, no model) over the model-alone programs and the agent's parallel programs of the corrected runs (e1v6c_*) | registered |  |  |
+| `e1v6c_race_check` | [`E01v6_clean_files_three_way/checks/e1v6c_race_check/`](E01v6_clean_files_three_way/checks/e1v6c_race_check/) | race_check.py (server, no model) over the model-alone programs and the agent's parallel programs of the corrected runs (e1v6c_*) | registered | 0 |  |
 | `e1v6c_v7_bare_haiku` | not archived yet | E1-v6 corrected for the repetitions (packaging v7): haiku alone on tsvc_c3/s313 and s331 × bare_llm_v4 × 5, as e1v6_bare_haiku | registered |  |  |
 | `e1v6c_v7_bare_sonnet` | not archived yet | E1-v6 corrected for the repetitions (packaging v7): sonnet alone on tsvc_c3/s313 and s331 × bare_llm_v4 × 5, as e1v6_bare_sonnet | registered |  |  |
 | `e1v6c_v7_bare_opus` | not archived yet | E1-v6 corrected for the repetitions (packaging v7): opus alone on tsvc_c3/s313 and s331 × bare_llm_v4 × 5, as e1v6_bare_opus | registered |  |  |
@@ -480,7 +480,7 @@ Status: running
 
 ## [E2-v6 — the hidden order on clean files: does DiscoPoP's evidence let the agent find a split no reading of the file can find, and can retries with feedback stand in for it?](E02v6_hidden_order_clean_files/REPORT.md)
 
-Status: done
+Status: read out 6 Oct — replaced as the result by E2-v6b (profiler defect B14)
 
 | run | where | what it is | status | trials | outcomes |
 |---|---|---|---|---:|---|
@@ -529,13 +529,13 @@ Status: done
 
 ## [E2-v6b — the hidden order on clean files, run again on the fixed DiscoPoP (defect B14): evidence × attempts](E02v6b_hidden_order_fixed_discopop/REPORT.md)
 
-Status: running
+Status: done
 
 | run | where | what it is | status | trials | outcomes |
 |---|---|---|---|---:|---|
 | `e2v6b_smoke` | [`E02v6b_hidden_order_fixed_discopop/preflight/e2v6b_smoke/`](E02v6b_hidden_order_fixed_discopop/preflight/e2v6b_smoke/) | E2-v6b instrument check, never counted: tsvc_c2/k23 × full_b1_nospeed_v4 × 2, Haiku — does the agent's own re-profiling on the rebuilt profiler give both loops of the split their directive | valid | 2 | FASTER 2 |
 | `t0_11_c2_b14_c` | [`E02v6b_hidden_order_fixed_discopop/preflight/t0_11_c2_b14_c/`](E02v6b_hidden_order_fixed_discopop/preflight/t0_11_c2_b14_c/) | T0.11 on packaging v6 with DiscoPoP B14 fixed, draw c, server, no model: arm discopop_capability on the 44 tsvc_c2 packages — the third draw of DiscoPoP alone on the fixed profiler (a and b: group B14) | valid | 44 | FASTER 8, no-change 34, parallel-speed-not-measurable 2 |
-| `e2v6b_race_check` | not archived yet | race_check.py (server, no model) over every program of the agent's four arms of E2-v6b — the positive control; the models alone and their race check are E2-v6's | registered |  |  |
+| `e2v6b_race_check` | [`E02v6b_hidden_order_fixed_discopop/checks/e2v6b_race_check/`](E02v6b_hidden_order_fixed_discopop/checks/e2v6b_race_check/) | race_check.py (server, no model) over every program of the agent's four arms of E2-v6b — the positive control; the models alone and their race check are E2-v6's | valid | 0 |  |
 | `e2v6b_agent_1` | [`E02v6b_hidden_order_fixed_discopop/runs/e2v6b_agent_1/`](E02v6b_hidden_order_fixed_discopop/runs/e2v6b_agent_1/) | E2-v6b: tsvc_c2/k19, k23 × full_b1_nospeed_v4, no_evidence_b1_nospeed_v4 × 10, Haiku, threads 6/12, repeats 5 — as e2v6_agent_1, fixed DiscoPoP | valid | 40 | FASTER 22, no-change 17, parallel-not-faster 1 |
 | `e2v6b_fb_1` | [`E02v6b_hidden_order_fixed_discopop/runs/e2v6b_fb_1/`](E02v6b_hidden_order_fixed_discopop/runs/e2v6b_fb_1/) | E2-v6b, the three-attempt arms: tsvc_c2/k19, k23 × full_nospeed_v4, no_evidence_nospeed_v4 × 10, Haiku, threads 6/12, repeats 5 — as e2v6_fb_1, fixed DiscoPoP | valid | 40 | FASTER 24, no-change 10, parallel-not-faster 6 |
 | `e2v6b_agent_2` | [`E02v6b_hidden_order_fixed_discopop/runs/e2v6b_agent_2/`](E02v6b_hidden_order_fixed_discopop/runs/e2v6b_agent_2/) | E2-v6b: tsvc_c2/k31, k27 × full_b1_nospeed_v4, no_evidence_b1_nospeed_v4 × 10, Haiku, threads 6/12, repeats 5 — as e2v6_agent_2, fixed DiscoPoP | valid | 40 | FASTER 15, no-change 24, parallel-not-faster 1 |

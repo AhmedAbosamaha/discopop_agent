@@ -147,3 +147,10 @@
 - [`k53_v6_stack_array_crash_b`](E02v6_hidden_order_clean_files/exhibits/k53_v6_stack_array_crash_b/) — E2-v6, the second crash on `k53` (rep 10): three snapshots of the data's length on the stack, a parallel copy-back loop with `firstprivate(u_snapshot)`.  
   no DiscoPoP-alone trial to pair with · tsvc_c2/k53, `full_nospeed_v4`, e2v6_fb_3 rep 10 · pictures: `before_after.png`, `rejected_attempt.png`, `console.png`
 
+## [E2-v6b — the hidden order on clean files, run again on the fixed DiscoPoP (defect B14): evidence × attempts](E02v6b_hidden_order_fixed_discopop/REPORT.md)
+
+- [`k19_v6b_both_loops_expert_speed`](E02v6b_hidden_order_fixed_discopop/exhibits/k19_v6b_both_loops_expert_speed/) — E2-v6b, with evidence, one attempt, on the fixed DiscoPoP: the split with the second statement's loop first and a directive on BOTH loops, in one model call — 4.12×, the expert version's speed (4.14×); the same trial shape reached 1.45× before defect B14 was fixed (`k23_v6_evidence_right_split` in E2-v6's folder shows the one-directive program).  
+  no DiscoPoP-alone trial to pair with · tsvc_c2/k19, `full_b1_nospeed_v4`, e2v6b_agent_1 rep 1 · pictures: `before_after.png`, `console.png`
+- [`k53_v6b_retries_add_a_loop`](E02v6b_hidden_order_fixed_discopop/exhibits/k53_v6b_retries_add_a_loop/) — E2-v6b, three attempts with evidence on the unit that has to be left alone: after rejected rewrites the model adds loops it can make parallel and leaves the kernel's own loop sequential — a parallel program that gains nothing (0.98×), 10 model calls; 10 of 20 three-attempt trials end like this, none of 20 at one attempt. The pressure of the retries, not the profiler's defect.  
+  no DiscoPoP-alone trial to pair with · tsvc_c2/k53, `full_nospeed_v4`, e2v6b_fb_3 rep 1 · pictures: `before_after.png`, `rejected_attempt.png`, `console.png`
+
