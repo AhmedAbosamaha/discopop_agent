@@ -66,6 +66,7 @@ Earlier versions (history):
 | [`history/pilots/`](history/pilots/REPORT.md) | Pilots (before the campaign's design was fixed) | done |
 | [`history/harness_checks/`](history/harness_checks/REPORT.md) | Harness and pipeline checks (not experiments) | done |
 | [`logs/`](logs/) | Logs | done |
+| [`E02v6b_hidden_order_fixed_discopop/`](E02v6b_hidden_order_fixed_discopop/REPORT.md) | E2-v6b — the hidden order on clean files, run again on the fixed DiscoPoP (defect B14): evidence × attempts | running |
 
 `history/` holds every folder a later experiment replaced, and the first pilots and harness checks (moved there on 5 Oct 2026; a path `results/E0…` in an older entry of the experiment record now starts `results/history/`). Nothing in `history/` is cited as a result.
 

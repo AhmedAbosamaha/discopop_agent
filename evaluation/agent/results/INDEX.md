@@ -527,13 +527,13 @@ Status: done
 | `t0_11_c2_b14_a` | [`T0_instruments/B14_side_by_side_loops/runs/t0_11_c2_b14_a/`](T0_instruments/B14_side_by_side_loops/runs/t0_11_c2_b14_a/) | T0.11 on packaging v6 with DiscoPoP B14 fixed, draw a, server, no model: arm discopop_capability on the 44 tsvc_c2 packages — the regression check (every class as t0_11_c2_a–c measured it) | valid | 44 | FASTER 8, no-change 34, parallel-speed-not-measurable 2 |
 | `t0_11_c2_b14_b` | [`T0_instruments/B14_side_by_side_loops/runs/t0_11_c2_b14_b/`](T0_instruments/B14_side_by_side_loops/runs/t0_11_c2_b14_b/) | T0.11 on packaging v6 with DiscoPoP B14 fixed, draw b, server, no model: arm discopop_capability on the 44 tsvc_c2 packages | valid | 44 | FASTER 8, no-change 34, parallel-speed-not-measurable 2 |
 
-## [E2-v6b — the hidden order on clean files, run again on the fixed DiscoPoP (defect B14): evidence × attempts](E02v6b_hidden_order_fixed_discopop/)
+## [E2-v6b — the hidden order on clean files, run again on the fixed DiscoPoP (defect B14): evidence × attempts](E02v6b_hidden_order_fixed_discopop/REPORT.md)
 
 Status: running
 
 | run | where | what it is | status | trials | outcomes |
 |---|---|---|---|---:|---|
-| `e2v6b_smoke` | not archived yet | E2-v6b instrument check, never counted: tsvc_c2/k23 × full_b1_nospeed_v4 × 2, Haiku — does the agent's own re-profiling on the rebuilt profiler give both loops of the split their directive | registered |  |  |
+| `e2v6b_smoke` | [`E02v6b_hidden_order_fixed_discopop/preflight/e2v6b_smoke/`](E02v6b_hidden_order_fixed_discopop/preflight/e2v6b_smoke/) | E2-v6b instrument check, never counted: tsvc_c2/k23 × full_b1_nospeed_v4 × 2, Haiku — does the agent's own re-profiling on the rebuilt profiler give both loops of the split their directive | valid | 2 | FASTER 2 |
 | `t0_11_c2_b14_c` | not archived yet | T0.11 on packaging v6 with DiscoPoP B14 fixed, draw c, server, no model: arm discopop_capability on the 44 tsvc_c2 packages — the third draw of DiscoPoP alone on the fixed profiler (a and b: group B14) | registered |  |  |
 | `e2v6b_race_check` | not archived yet | race_check.py (server, no model) over every program of the agent's four arms of E2-v6b — the positive control; the models alone and their race check are E2-v6's | registered |  |  |
 | `e2v6b_agent_1` | not archived yet | E2-v6b: tsvc_c2/k19, k23 × full_b1_nospeed_v4, no_evidence_b1_nospeed_v4 × 10, Haiku, threads 6/12, repeats 5 — as e2v6_agent_1, fixed DiscoPoP | registered |  |  |
