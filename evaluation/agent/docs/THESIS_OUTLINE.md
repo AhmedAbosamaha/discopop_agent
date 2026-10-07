@@ -300,7 +300,7 @@ number of the record (D-numbers), so the text can be checked against the reposit
   threads; five timing repeats; four pinned groups of 12 cores on a two-socket server; timing noise.
 - **6.7 The instruments are proven first.** One table: study · question · result. Sizes; DiscoPoP's variation
   between profiles and within one; whether the output check can see a wrong program (it could not on
-  `seidel-2d`); timing noise; where the runtime goes; packaging equivalence (five studies, the last one running);
+  `seidel-2d`); timing noise; where the runtime goes; packaging equivalence (five studies);
   fast-refresh fidelity; expert references; measured classes; what the default setup can keep at best when handed
   a perfect rewrite (16 of 18).
 - **6.8 Statistics.** Repeats sized to the claim; paired tests per loop; exact tests for stratified two-by-two
