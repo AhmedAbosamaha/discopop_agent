@@ -96,3 +96,20 @@ Best speed-up of 6 and 12 threads, v7 / v6 (28 references with a speed-up on bot
 | `s331` | EXTRALARGE | EXTRALARGE | FASTER | FASTER | 4.50× | 4.48× | 1.00 |
 | `s341` | EXTRALARGE | EXTRALARGE | FASTER | FASTER | 2.40× | 2.36× | 0.98 |
 | `vpvtv` | EXTRALARGE | EXTRALARGE | FASTER | FASTER | 3.72× | 3.63× | 0.98 |
+
+## 6 `s255`'s reference on both packagings, side by side (`t0_14_c3_s255_recheck`)
+
+In `t0_14_c3_refs` this reference reached 1.41× at 12 threads where `t0_14_c2_refs` had 2.59× three days earlier (6 threads: 1.43× and 1.48×). The same reference file, alternating between the packagings in one session, same 12-core group, no job of the harness running:
+
+| started (UTC) | packaging | round | load at start | outcome | sequential kernel (s) | speed-up at 6 threads | at 12 threads |
+|---|---|---|---|---|---|---|---|
+| 19:13:21 | v6 (`tsvc_c2`) | 1 | 2.72 | FASTER | 3.020 | 1.48× | 2.55× |
+| 19:14:42 | v7 (`tsvc_c3`) | 1 | 4.71 | FASTER | 2.963 | 1.44× | 2.56× |
+| 19:16:01 | v6 (`tsvc_c2`) | 2 | 6.29 | FASTER | 2.963 | 1.45× | 2.55× |
+| 19:17:21 | v7 (`tsvc_c3`) | 2 | 7.58 | FASTER | 2.985 | 1.45× | 2.56× |
+| 19:18:40 | v6 (`tsvc_c2`) | 3 | 9.36 | FASTER | 2.994 | 1.47× | 2.59× |
+| 19:20:00 | v7 (`tsvc_c3`) | 3 | 6.82 | FASTER | 2.928 | 1.43× | 2.51× |
+
+v6: at 12 threads 2.55×, 2.55×, 2.59× (median 2.55×); at 6 threads 1.45×, 1.47×, 1.48× (median 1.47×).
+
+v7: at 12 threads 2.51×, 2.56×, 2.56× (median 2.56×); at 6 threads 1.43×, 1.44×, 1.45× (median 1.44×).

@@ -8,6 +8,7 @@ is? No model in anything here. Reads
   preflight/t0_11_c3_a, b, c  DiscoPoP alone in three draws, against the three draws of tsvc_c2 on the same
                               DiscoPoP (t0_11_c2_b14_a, _b, _c)
   preflight/t0_14_c3_refs     the 28 expert references through the harness, against t0_14_c2_refs
+  checks/t0_14_c3_s255_recheck  one reference (s255) on both packagings, alternating, three times each
 
     venv/bin/python evaluation/agent/results/T0_instruments/T0.18_repetitions_necessary/analysis/t018_readout.py
 """
@@ -226,5 +227,33 @@ for k in sorted(rn):
     md.append(f"| `{k}` | {o['size']} | {n['size']} | {o['outcome']} | {n['outcome']} | "
               f"{(format(o['best'], '.2f') + '×') if o['best'] else '—'} | {(format(n['best'], '.2f') + '×') if n['best'] else '—'} | "
               f"{format(n['best'] / o['best'], '.2f') if o['best'] and n['best'] else '—'} |")
+
+# ---- (6) the one reference whose 12-thread speed-up did not fit: both packagings side by side -------------------
+root = campaign.find_run("t0_14_c3_s255_recheck")
+rows6 = []
+for p in sorted(root.glob("benchmarks/*/s255/expert_openmp_r*/none/rep1/trial.json")):
+    t = json.loads(p.read_text())
+    v = t.get("verify") or {}
+    par = v.get("par") or {}
+    rows6.append({"suite": t["benchmark"].split("/")[0], "round": p.parts[-4][-1], "started": t.get("started_at"),
+                  "load": (t.get("host_load_start") or [None])[0], "outcome": t.get("outcome"),
+                  "seq": v.get("seq_kernel_median_s"), "s6": (par.get("6") or {}).get("speedup"),
+                  "s12": (par.get("12") or {}).get("speedup")})
+rows6.sort(key=lambda r: r["started"] or "")
+md += ["", "## 6 `s255`'s reference on both packagings, side by side (`t0_14_c3_s255_recheck`)", "",
+       "In `t0_14_c3_refs` this reference reached 1.41× at 12 threads where `t0_14_c2_refs` had 2.59× three days "
+       "earlier (6 threads: 1.43× and 1.48×). The same reference file, alternating between the packagings in one "
+       "session, same 12-core group, no job of the harness running:", "",
+       "| started (UTC) | packaging | round | load at start | outcome | sequential kernel (s) | speed-up at 6 threads | at 12 threads |",
+       "|---|---|---|---|---|---|---|---|"]
+for r in rows6:
+    md.append(f"| {(r['started'] or '')[11:19]} | {'v6' if r['suite'] == 'tsvc_c2' else 'v7'} (`{r['suite']}`) | {r['round']} | "
+              f"{r['load']:.2f} | {r['outcome']} | {r['seq']:.3f} | {r['s6']:.2f}× | {r['s12']:.2f}× |")
+for suite, name in (("tsvc_c2", "v6"), ("tsvc_c3", "v7")):
+    x = sorted(r["s12"] for r in rows6 if r["suite"] == suite)
+    y = sorted(r["s6"] for r in rows6 if r["suite"] == suite)
+    md.append("")
+    md.append(f"{name}: at 12 threads {', '.join(format(a, '.2f') + '×' for a in x)} (median {x[len(x) // 2]:.2f}×); "
+              f"at 6 threads {', '.join(format(a, '.2f') + '×' for a in y)} (median {y[len(y) // 2]:.2f}×).")
 (HERE / "t018_readout.md").write_text("\n".join(md) + "\n")
 print("\n".join(md))
