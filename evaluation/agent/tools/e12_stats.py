@@ -82,12 +82,20 @@ ROWS_V6: List[Tuple[str, str, str, Tuple[str, ...]]] = (
     + [(label, run, "bare_llm_nospeed_v4", V6)
        for label, run in (("Haiku alone", "e2v6_bare_haiku"), ("Sonnet 5 alone", "e2v6_bare_sonnet"),
                           ("Opus 5.5 alone", "e2v6_bare_opus"), ("Fable 5.1 alone", "e2v6_bare_fable"))])
+# E2-v6b (7 Oct): E2-v6's agent arms run again on the fixed DiscoPoP (B14); the models alone are E2-v6's runs.
+ROWS_V6B: List[Tuple[str, str, str, Tuple[str, ...]]] = [
+    (label, run.replace("e2v6_agent", "e2v6b_agent").replace("e2v6_fb", "e2v6b_fb"), arm, loops)
+    for label, run, arm, loops in ROWS_V6]
 SETS = {"e12": (ROWS, LOOPS, "E12 — the Haiku agent with evidence against stronger models alone", "e12_stats"),
         "e2o3": (ROWS_O3, O3, "E2-O3 — the Haiku agent against every model alone on the ORDER-3 kernels", "models_alone"),
         "e2v6": (ROWS_V6, V6, "E2-v6 — the Haiku agent against every model alone on the clean hidden-order units",
-                 "models_alone")}
+                 "models_alone"),
+        "e2v6b": (ROWS_V6B, V6, "E2-v6b — the Haiku agent on the fixed DiscoPoP against every model alone (E2-v6's runs) "
+                  "on the clean hidden-order units", "models_alone")}
 # What a reader of one set's table has to know beside the general legend.
-NOTES = {"e2v6": "`k48` is the control (the order in the file is right). `k53` is the decline unit: its statements feed "
+NOTES = {"e2v6b": "The models alone are E2-v6's runs: no DiscoPoP is in their path, so the fix of B14 does not touch them. "
+                  "`k48` is the control; `k53` is the unit that has to be left alone (`analysis/e2v6_readout.md`).",
+         "e2v6": "`k48` is the control (the order in the file is right). `k53` is the decline unit: its statements feed "
                  "each other, nothing can be gained, and the efficient answer is the unchanged program — a \"success\" "
                  "in that column is a parallel program that still runs the kernel's iterations in their order, by "
                  "leaving that loop outside every parallel region or by ordering the iterations at run time; none of "

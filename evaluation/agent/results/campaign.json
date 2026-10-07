@@ -309,7 +309,7 @@
    "id": "E1-v6",
    "folder": "E01v6_clean_files_three_way",
    "kind": "experiment",
-   "status": "done",
+   "status": "running",
    "title": "E1-v6 — the headline three-way comparison on clean files in TSVC's own form (packaging v6, prompt version 4)",
    "question": "E1-final again where the file a model reads is an ordinary code file — TSVC's function with its repetition loop and its `dummy` call, comments removed, no note, no harness, one editable file — and the order statement is the corrected one: on TSVC class R (with class A and D controls), DiscoPoP alone vs the Haiku agent vs Haiku, Sonnet, Opus and Fable alone — who ships correct, race-free, faster programs, and who ships unusable ones?",
    "headline": "Class R, 18 loops × 5, race-checked: DiscoPoP alone 0 of 90; the Haiku agent 73 race-free FASTER with 0 unusable; Haiku alone 38 with 50 unusable; Sonnet alone 77 with 11 (5 racy); Opus alone 89 with 0; Fable alone 89 with 1. T1 (agent > DiscoPoP alone, median 1.70×), T2 (fewer unusable than Haiku alone) and T6 (more reach than Haiku alone) rejected; against Sonnet, Opus and Fable alone no advantage in reach (Opus and Fable ahead on 6 loops). Controls: every setup but Haiku alone FASTER on the three class-A loops; the agent declines all 12 class-D trials. One of the agent's 73 (s331) parallelizes the repetition loop itself and is right only for the tested data; on s313 the agent removes the 47 unused repetitions (164×) — both possible because the result of those two loops is a scalar that our `dummy` call does not take. 821 model calls, $134 API-equivalent, 8.5 h + re-runs.",
@@ -343,6 +343,25 @@
    "title": "DiscoPoP B14 — two loops side by side inside a loop: the fix, its regression check, and what it changes on the programs the agent shipped",
    "question": "After the profiler models the loops of a nest as a tree: does DiscoPoP alone still give every one of the 44 tsvc_c2 originals its measured class, and on how many of the agent's archived programs does DiscoPoP now report more loops as Do-All than it did?",
    "headline": "Fixed in the profiler (7 Oct): the loops of a nest are modelled as a tree. DiscoPoP alone on the 44 tsvc_c2 originals is unchanged in two draws (no original has loops side by side). On the agent's 257 changed programs of E1-v6 and E2-v6, directives removed and profiled before and after: 86 gain loops and then have every loop reported — all 35 successes on the four constructed hidden-order kernels with evidence at one attempt, 37 and 10 in the three-attempt arms, 4 of 85 in E1-v6 (all s281). The defect had a second face: in 4 programs on k53 it reported the kernel's recurrence as Do-All; the gate's race stage had refused that directive in every one of those trials. No experiment has been run again."
+  },
+  {
+   "id": "E2-v6b",
+   "folder": "E02v6b_hidden_order_fixed_discopop",
+   "kind": "experiment",
+   "status": "running",
+   "title": "E2-v6b — the hidden order on clean files, run again on the fixed DiscoPoP (defect B14): evidence × attempts",
+   "question": "E2-v6's question, with a profiler that records the iterations of every loop: does the Haiku agent with DiscoPoP's evidence ship more race-free verified parallel programs covering the hot loop than without it, what do retries with feedback add — and how fast are the programs now that DiscoPoP can report every loop of a split?",
+   "headline": "",
+   "preregistered": "THESIS_EXPERIMENTS §6, 7 Oct, before any E2-v6b trial; config/e2v6b_population.json"
+  },
+  {
+   "id": "T0.18",
+   "folder": "T0_instruments/T0.18_repetitions_necessary",
+   "kind": "instrument",
+   "status": "running",
+   "title": "T0.18 — packaging v7 (suite tsvc_c3: every repetition necessary) on the server, before a model reads it",
+   "question": "Is a tsvc_c3 package the program its tsvc_c2 package is — the same view for DiscoPoP in two draws, the same sizes, the same classes in three draws — and is every expert reference accepted on it?",
+   "headline": ""
   }
  ],
  "runs": {
@@ -1875,6 +1894,168 @@
    "section": "runs",
    "status": "valid",
    "role": "T0.11 on packaging v6 with DiscoPoP B14 fixed, draw b, server, no model: arm discopop_capability on the 44 tsvc_c2 packages"
+  },
+  "e2v6b_smoke": {
+   "group": "E2-v6b",
+   "section": "preflight",
+   "status": "registered",
+   "role": "E2-v6b instrument check, never counted: tsvc_c2/k23 × full_b1_nospeed_v4 × 2, Haiku — does the agent's own re-profiling on the rebuilt profiler give both loops of the split their directive"
+  },
+  "t0_11_c2_b14_c": {
+   "group": "E2-v6b",
+   "section": "preflight",
+   "status": "registered",
+   "role": "T0.11 on packaging v6 with DiscoPoP B14 fixed, draw c, server, no model: arm discopop_capability on the 44 tsvc_c2 packages — the third draw of DiscoPoP alone on the fixed profiler (a and b: group B14)"
+  },
+  "e2v6b_race_check": {
+   "group": "E2-v6b",
+   "section": "checks",
+   "status": "registered",
+   "role": "race_check.py (server, no model) over every program of the agent's four arms of E2-v6b — the positive control; the models alone and their race check are E2-v6's"
+  },
+  "e1v6c_s281": {
+   "group": "E1-v6",
+   "section": "runs",
+   "status": "registered",
+   "role": "E1-v6 corrected for DiscoPoP B14: tsvc_c2/s281 × default_v4, discopop_gate_v4 × 5, Haiku, threads 6/12, repeats 5, as e1v6_r_3 — on the fixed DiscoPoP; read out beside the registered result"
+  },
+  "e1v6c_v7_agent": {
+   "group": "E1-v6",
+   "section": "runs",
+   "status": "registered",
+   "role": "E1-v6 corrected for the repetitions (packaging v7): tsvc_c3/s331 × default_v4, discopop_gate_v4 × 5 (as e1v6_r_4), Haiku — on the fixed DiscoPoP"
+  },
+  "e1v6c_v7_control": {
+   "group": "E1-v6",
+   "section": "runs",
+   "status": "registered",
+   "role": "E1-v6 corrected for the repetitions (packaging v7): tsvc_c3/s313 × default_v4, discopop_gate_v4 × 1 (as e1v6_a), Haiku — on the fixed DiscoPoP"
+  },
+  "e1v6c_race_check": {
+   "group": "E1-v6",
+   "section": "checks",
+   "status": "registered",
+   "role": "race_check.py (server, no model) over the model-alone programs and the agent's parallel programs of the corrected runs (e1v6c_*)"
+  },
+  "t0_18_server_a": {
+   "group": "T0.18",
+   "section": "checks",
+   "status": "registered",
+   "role": "T0.18 draw a, server, no model: tools/layout_equivalence.py — tsvc_c2 (packaging v6) against tsvc_c3 (v7), 44 loops: output, DiscoPoP's view"
+  },
+  "t0_18_server_b": {
+   "group": "T0.18",
+   "section": "checks",
+   "status": "registered",
+   "role": "T0.18 draw b, server, no model: the same comparison on a second profile of each packaging"
+  },
+  "t0_1_c3_sizes": {
+   "group": "T0.18",
+   "section": "preflight",
+   "status": "registered",
+   "role": "T0.1 on packaging v7, server, no model: size_table.py on the 44 tsvc_c3 packages"
+  },
+  "t0_14_c3_refs": {
+   "group": "T0.18",
+   "section": "preflight",
+   "status": "registered",
+   "role": "T0.14/T0.10 on packaging v7, server, no model: verify-source on the 28 expert references rendered as the benchmark's file (reference_solutions/tsvc_c3)"
+  },
+  "e2v6b_agent_1": {
+   "group": "E2-v6b",
+   "section": "runs",
+   "status": "registered",
+   "role": "E2-v6b: tsvc_c2/k19, k23 × full_b1_nospeed_v4, no_evidence_b1_nospeed_v4 × 10, Haiku, threads 6/12, repeats 5 — as e2v6_agent_1, fixed DiscoPoP"
+  },
+  "e2v6b_fb_1": {
+   "group": "E2-v6b",
+   "section": "runs",
+   "status": "registered",
+   "role": "E2-v6b, the three-attempt arms: tsvc_c2/k19, k23 × full_nospeed_v4, no_evidence_nospeed_v4 × 10, Haiku, threads 6/12, repeats 5 — as e2v6_fb_1, fixed DiscoPoP"
+  },
+  "e2v6b_agent_2": {
+   "group": "E2-v6b",
+   "section": "runs",
+   "status": "registered",
+   "role": "E2-v6b: tsvc_c2/k31, k27 × full_b1_nospeed_v4, no_evidence_b1_nospeed_v4 × 10, Haiku, threads 6/12, repeats 5 — as e2v6_agent_2, fixed DiscoPoP"
+  },
+  "e2v6b_fb_2": {
+   "group": "E2-v6b",
+   "section": "runs",
+   "status": "registered",
+   "role": "E2-v6b, the three-attempt arms: tsvc_c2/k31, k27 × full_nospeed_v4, no_evidence_nospeed_v4 × 10, Haiku, threads 6/12, repeats 5 — as e2v6_fb_2, fixed DiscoPoP"
+  },
+  "e2v6b_agent_3": {
+   "group": "E2-v6b",
+   "section": "runs",
+   "status": "registered",
+   "role": "E2-v6b: tsvc_c2/s161, k53, k48 × full_b1_nospeed_v4, no_evidence_b1_nospeed_v4 × 10, Haiku, threads 6/12, repeats 5 — as e2v6_agent_3, fixed DiscoPoP"
+  },
+  "e2v6b_fb_3": {
+   "group": "E2-v6b",
+   "section": "runs",
+   "status": "registered",
+   "role": "E2-v6b, the three-attempt arms: tsvc_c2/s161, k53, k48 × full_nospeed_v4, no_evidence_nospeed_v4 × 10, Haiku, threads 6/12, repeats 5 — as e2v6_fb_3, fixed DiscoPoP"
+  },
+  "e1v6c_v7_bare_haiku": {
+   "group": "E1-v6",
+   "section": "runs",
+   "status": "registered",
+   "role": "E1-v6 corrected for the repetitions (packaging v7): haiku alone on tsvc_c3/s313 and s331 × bare_llm_v4 × 5, as e1v6_bare_haiku"
+  },
+  "e1v6c_v7_bare_sonnet": {
+   "group": "E1-v6",
+   "section": "runs",
+   "status": "registered",
+   "role": "E1-v6 corrected for the repetitions (packaging v7): sonnet alone on tsvc_c3/s313 and s331 × bare_llm_v4 × 5, as e1v6_bare_sonnet"
+  },
+  "e1v6c_v7_bare_opus": {
+   "group": "E1-v6",
+   "section": "runs",
+   "status": "registered",
+   "role": "E1-v6 corrected for the repetitions (packaging v7): opus alone on tsvc_c3/s313 and s331 × bare_llm_v4 × 5, as e1v6_bare_opus"
+  },
+  "e1v6c_v7_bare_fable": {
+   "group": "E1-v6",
+   "section": "runs",
+   "status": "registered",
+   "role": "E1-v6 corrected for the repetitions (packaging v7): fable alone on tsvc_c3/s313 and s331 × bare_llm_v4 × 5, as e1v6_bare_fable"
+  },
+  "t0_11_c3_a": {
+   "group": "T0.18",
+   "section": "preflight",
+   "status": "registered",
+   "role": "T0.11 on packaging v7, draw a, server, no model: arm discopop_capability on the 44 tsvc_c3 packages — the measured class of every loop, on the fixed DiscoPoP"
+  },
+  "t0_11_b14_apps_a": {
+   "group": "T0.11",
+   "section": "runs",
+   "status": "registered",
+   "role": "T0.11 draw a on the fixed profiler (DiscoPoP B14), server, no model: discopop_capability on the 31 packages of t0_11_classes outside TSVC — PolyBench × 27, NPB is, md, Rodinia hotspot and pathfinder — the suites whose originals have loops side by side"
+  },
+  "t0_11_c3_b": {
+   "group": "T0.18",
+   "section": "preflight",
+   "status": "registered",
+   "role": "T0.11 on packaging v7, draw b, server, no model: arm discopop_capability on the 44 tsvc_c3 packages — the measured class of every loop, on the fixed DiscoPoP"
+  },
+  "t0_11_b14_apps_b": {
+   "group": "T0.11",
+   "section": "runs",
+   "status": "registered",
+   "role": "T0.11 draw b on the fixed profiler (DiscoPoP B14), server, no model: discopop_capability on the 31 packages of t0_11_classes outside TSVC — PolyBench × 27, NPB is, md, Rodinia hotspot and pathfinder — the suites whose originals have loops side by side"
+  },
+  "t0_11_c3_c": {
+   "group": "T0.18",
+   "section": "preflight",
+   "status": "registered",
+   "role": "T0.11 on packaging v7, draw c, server, no model: arm discopop_capability on the 44 tsvc_c3 packages — the measured class of every loop, on the fixed DiscoPoP"
+  },
+  "t0_11_b14_apps_c": {
+   "group": "T0.11",
+   "section": "runs",
+   "status": "registered",
+   "role": "T0.11 draw c on the fixed profiler (DiscoPoP B14), server, no model: discopop_capability on the 31 packages of t0_11_classes outside TSVC — PolyBench × 27, NPB is, md, Rodinia hotspot and pathfinder — the suites whose originals have loops side by side"
   }
  },
  "analysis": {
@@ -2161,7 +2342,7 @@
     "analysis/haiku/main_comparison_stats.md",
     "REPORT.md"
    ],
-   "note": "Read out 5 Oct 2026, complete: the nine tests, the controls, the race check with its positive control (all 85 of the agent's parallel programs clean), the cost, and what every program did to the repetition loop (`analysis/repetition_loop.md`).",
+   "note": "Read out 5 Oct 2026, complete: the nine tests, the controls, the race check with its positive control (all 85 of the agent's parallel programs clean), the cost, and what every program did to the repetition loop (`analysis/repetition_loop.md`). A correction is running (7 Oct): `s281` on the fixed DiscoPoP (defect B14), `s313` and `s331` on the packages with necessary repetitions.",
    "history": [
     {
      "id": "E1-v5",
@@ -2207,7 +2388,7 @@
     "stats/models_alone.md",
     "REPORT.md"
    ],
-   "note": "Read out 6 Oct 2026, complete: the two registered tests, everything the registration lists as descriptive, the race check with its positive control (all 172 changed programs of the agent clean), the stack check on the agent's three crashing programs, the cost, and eleven case studies.",
+   "note": "Read out 6 Oct 2026, complete: the two registered tests, everything the registration lists as descriptive, the race check with its positive control (all 172 changed programs of the agent clean), the stack check on the agent's three crashing programs, the cost, and eleven case studies. Being run again on the fixed DiscoPoP since 7 Oct (E2-v6b): the counts below were not produced by defect B14 of the profiler, the speeds were.",
    "history": [
     {
      "id": "E2-O3",

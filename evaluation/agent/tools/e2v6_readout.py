@@ -42,19 +42,29 @@ CONTROL, DECLINE = "k48", "k53"
 FULL1, NONE1 = "full_b1_nospeed_v4", "no_evidence_b1_nospeed_v4"
 FULL3, NONE3 = "full_nospeed_v4", "no_evidence_nospeed_v4"
 BARE = "bare_llm_nospeed_v4"
-AGENT_RUNS_1 = ("e2v6_agent_1", "e2v6_agent_2", "e2v6_agent_3")
-AGENT_RUNS_3 = ("e2v6_fb_1", "e2v6_fb_2", "e2v6_fb_3")
-# (label, runs, arm) — the order of every table
-SETUPS: List[Tuple[str, Tuple[str, ...], str]] = [
-    ("Haiku agent, evidence, one attempt", AGENT_RUNS_1, FULL1),
-    ("Haiku agent, no evidence, one attempt", AGENT_RUNS_1, NONE1),
-    ("Haiku agent, evidence, three attempts", AGENT_RUNS_3, FULL3),
-    ("Haiku agent, no evidence, three attempts", AGENT_RUNS_3, NONE3),
-    ("Haiku alone", ("e2v6_bare_haiku",), BARE),
-    ("Sonnet 5 alone", ("e2v6_bare_sonnet",), BARE),
-    ("Opus 5.5 alone", ("e2v6_bare_opus",), BARE),
-    ("Fable 5.1 alone", ("e2v6_bare_fable",), BARE),
-]
+# The experiment as it ran (E2-v6, 5–6 Oct 2026) and run again on the fixed DiscoPoP (E2-v6b, from 7 Oct: defect B14
+# of the profiler). The models alone have no DiscoPoP in their path: E2-v6b reuses E2-v6's four runs and their
+# race check.
+EXPERIMENTS: Dict[str, str] = {"e2v6": "e2v6", "e2v6b": "e2v6b"}
+
+
+def setups(stem: str) -> List[Tuple[str, Tuple[str, ...], str]]:
+    """(label, runs, arm) — the order of every table."""
+    one = tuple(f"{stem}_agent_{n}" for n in (1, 2, 3))
+    three = tuple(f"{stem}_fb_{n}" for n in (1, 2, 3))
+    return [
+        ("Haiku agent, evidence, one attempt", one, FULL1),
+        ("Haiku agent, no evidence, one attempt", one, NONE1),
+        ("Haiku agent, evidence, three attempts", three, FULL3),
+        ("Haiku agent, no evidence, three attempts", three, NONE3),
+        ("Haiku alone", ("e2v6_bare_haiku",), BARE),
+        ("Sonnet 5 alone", ("e2v6_bare_sonnet",), BARE),
+        ("Opus 5.5 alone", ("e2v6_bare_opus",), BARE),
+        ("Fable 5.1 alone", ("e2v6_bare_fable",), BARE),
+    ]
+
+
+SETUPS: List[Tuple[str, Tuple[str, ...], str]] = setups("e2v6")
 AGENT_LABELS = [s[0] for s in SETUPS[:4]]
 RACE_PARTS = ("haiku", "sonnet", "opus", "fable")            # the model-alone parts of e2v6_race_check
 REFERENCES = "t0_14_c2_refs"                                 # the expert versions, verified the same way
@@ -271,9 +281,13 @@ def program_shape(t: dict) -> Dict[str, Any]:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--out", type=Path, required=True)
+    ap.add_argument("--experiment", choices=sorted(EXPERIMENTS), default="e2v6",
+                    help="e2v6 (default) or e2v6b — the same experiment on the fixed DiscoPoP")
     a = ap.parse_args()
 
-    group = campaign.find_run("e2v6_agent_1")
+    global SETUPS
+    SETUPS = setups(EXPERIMENTS[a.experiment])
+    group = campaign.find_run("e2v6_bare_haiku")           # the models alone and their race check: E2-v6's
     if group is None:
         sys.exit("E2-v6 is not in the archive")
     checks = group.parents[1] / "checks" / "e2v6_race_check"
@@ -303,7 +317,8 @@ def main() -> int:
             rows.append(j)
         js[label] = rows
     res: Dict[str, Any] = {"race_files": [str(p.relative_to(campaign.RESULTS)) for p in race_files]}
-    md: List[str] = ["# E2-v6 — the read-out beside the registered tests", "",
+    title = {"e2v6": "E2-v6", "e2v6b": "E2-v6b (E2-v6 on the fixed DiscoPoP; the models alone are E2-v6's)"}[a.experiment]
+    md: List[str] = [f"# {title} — the read-out beside the registered tests", "",
                      "Every trial is judged as the registration says (`e2b1_stats.judge`): a **success** is a race-free "
                      "verified parallel program whose parallel construct covers the hot loop; **unsafe** is a wrong "
                      "output, a crash at the verification size, a race or a program that does not compile; the speed "

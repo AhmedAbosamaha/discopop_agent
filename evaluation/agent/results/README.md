@@ -14,13 +14,13 @@ every run with its purpose. Everything here is tracked in git.
 ### E1 — the main comparison: DiscoPoP alone · DiscoPoP + agent · the model alone
 
 **Current: [`E01v6_clean_files_three_way/`](E01v6_clean_files_three_way/REPORT.md)** — E1-v6 — the headline three-way comparison on clean files in TSVC's own form (packaging v6, prompt version 4).  
-Status: done.
+Status: running.
 
 Open first: [`analysis/e1v6_tests.md`](E01v6_clean_files_three_way/analysis/e1v6_tests.md), [`analysis/vs_e1_final.md`](E01v6_clean_files_three_way/analysis/vs_e1_final.md), [`analysis/repetition_loop.md`](E01v6_clean_files_three_way/analysis/repetition_loop.md), [`analysis/haiku/main_comparison_stats.md`](E01v6_clean_files_three_way/analysis/haiku/main_comparison_stats.md), [`REPORT.md`](E01v6_clean_files_three_way/REPORT.md).
 
 Class R, 18 loops × 5, race-checked: DiscoPoP alone 0 of 90; the Haiku agent 73 race-free FASTER with 0 unusable; Haiku alone 38 with 50 unusable; Sonnet alone 77 with 11 (5 racy); Opus alone 89 with 0; Fable alone 89 with 1. T1 (agent > DiscoPoP alone, median 1.70×), T2 (fewer unusable than Haiku alone) and T6 (more reach than Haiku alone) rejected; against Sonnet, Opus and Fable alone no advantage in reach (Opus and Fable ahead on 6 loops). Controls: every setup but Haiku alone FASTER on the three class-A loops; the agent declines all 12 class-D trials. One of the agent's 73 (s331) parallelizes the repetition loop itself and is right only for the tested data; on s313 the agent removes the 47 unused repetitions (164×) — both possible because the result of those two loops is a scalar that our `dummy` call does not take. 821 model calls, $134 API-equivalent, 8.5 h + re-runs.
 
-Read out 5 Oct 2026, complete: the nine tests, the controls, the race check with its positive control (all 85 of the agent's parallel programs clean), the cost, and what every program did to the repetition loop (`analysis/repetition_loop.md`).
+Read out 5 Oct 2026, complete: the nine tests, the controls, the race check with its positive control (all 85 of the agent's parallel programs clean), the cost, and what every program did to the repetition loop (`analysis/repetition_loop.md`). A correction is running (7 Oct): `s281` on the fixed DiscoPoP (defect B14), `s313` and `s331` on the packages with necessary repetitions.
 
 Earlier versions (history):
 
@@ -42,7 +42,7 @@ Open first: [`analysis/e2v6_readout.md`](E02v6_hidden_order_clean_files/analysis
 
 Five units whose split order is decided outside the file, Haiku, speed check off, race-checked; DiscoPoP alone changes nothing on any unit (three draws). The agent with DiscoPoP's evidence at one attempt: 45 of 50 race-free verified parallel programs covering the hot loop (all 45 FASTER), 0 unsafe; without the evidence 10 of 50, 9 of them on `s161`, where the model finds the order alone — V6-i rejected (MH odds ratio 351, exact p 1.4e-16, family bound at most 4.0e-12). Three attempts with feedback, without evidence: 22 of 50 against 10 — V6-ii rejected (odds ratio 21, p 0.00068, family bound 0.035) — at 17.8 model calls per success against 1.6, and far below the evidence at one attempt (22 against 45); with evidence, three attempts add nothing (46 against 45). On the unit that has to be left alone (`k53`) the one-attempt agent ships no parallel program in 20 trials; at three attempts 8 of 20 trials ship one that parallelizes only a loop the model added, and 2 of those crash at the verification size (an array of the data's length on the stack) — with a third on `k23`, three unsafe programs of the agent in 280 trials (E1-v6: none in 90). The models alone on the five units: Haiku 3 of 50 with 47 unsafe, Sonnet 7 of 25 with 17, Opus 10 of 25 with 6 unsafe and 9 too slow, Fable 17 of 25 with 7 unsafe; on `k23` every model alone fails all 25. Fast and right on the four constructed kernels: the agent with evidence 35 of 40, Fable 5 of 20, Opus 3 of 20, Sonnet 2 of 20, Haiku 0 of 40. The agent's successes there reach 1.4–1.9× where the expert version reaches 3.1–4.2×: DiscoPoP writes the directive on only part of the loops of the split. 1,181 model calls, $243 API-equivalent.
 
-Read out 6 Oct 2026, complete: the two registered tests, everything the registration lists as descriptive, the race check with its positive control (all 172 changed programs of the agent clean), the stack check on the agent's three crashing programs, the cost, and eleven case studies.
+Read out 6 Oct 2026, complete: the two registered tests, everything the registration lists as descriptive, the race check with its positive control (all 172 changed programs of the agent clean), the stack check on the agent's three crashing programs, the cost, and eleven case studies. Being run again on the fixed DiscoPoP since 7 Oct (E2-v6b): the counts below were not produced by defect B14 of the profiler, the speeds were.
 
 Earlier versions (history):
 

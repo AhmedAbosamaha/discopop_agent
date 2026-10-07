@@ -256,6 +256,9 @@ Status: done
 | `t0_11_b1_bfs15_a` | [`T0_instruments/T0.11_measured_classes/runs/t0_11_b1_bfs15_a/`](T0_instruments/T0.11_measured_classes/runs/t0_11_b1_bfs15_a/) | T0.11 draw a on rodinia_b1/bfs with DiscoPoP B13 and B15 fixed (the author, 27 Sep): discopop_capability (budget 0, no model), threads 6/12, repeats 5, sizes from t0_1_b1_sizes; replaces t0_11_b1_bfs13_a for E2-B1's measured conditions 4-5 | valid | 1 | no-change 1 |
 | `t0_11_b1_bfs15_b` | [`T0_instruments/T0.11_measured_classes/runs/t0_11_b1_bfs15_b/`](T0_instruments/T0.11_measured_classes/runs/t0_11_b1_bfs15_b/) | T0.11 draw b on rodinia_b1/bfs with DiscoPoP B13 and B15 fixed (the author, 27 Sep): discopop_capability (budget 0, no model), threads 6/12, repeats 5, sizes from t0_1_b1_sizes; replaces t0_11_b1_bfs13_b for E2-B1's measured conditions 4-5 | valid | 1 | no-change 1 |
 | `t0_11_b1_bfs15_c` | [`T0_instruments/T0.11_measured_classes/runs/t0_11_b1_bfs15_c/`](T0_instruments/T0.11_measured_classes/runs/t0_11_b1_bfs15_c/) | T0.11 draw c on rodinia_b1/bfs with DiscoPoP B13 and B15 fixed (the author, 27 Sep): discopop_capability (budget 0, no model), threads 6/12, repeats 5, sizes from t0_1_b1_sizes; replaces t0_11_b1_bfs13_c for E2-B1's measured conditions 4-5 | valid | 1 | no-change 1 |
+| `t0_11_b14_apps_a` | not archived yet | T0.11 draw a on the fixed profiler (DiscoPoP B14), server, no model: discopop_capability on the 31 packages of t0_11_classes outside TSVC — PolyBench × 27, NPB is, md, Rodinia hotspot and pathfinder — the suites whose originals have loops side by side | registered |  |  |
+| `t0_11_b14_apps_b` | not archived yet | T0.11 draw b on the fixed profiler (DiscoPoP B14), server, no model: discopop_capability on the 31 packages of t0_11_classes outside TSVC — PolyBench × 27, NPB is, md, Rodinia hotspot and pathfinder — the suites whose originals have loops side by side | registered |  |  |
+| `t0_11_b14_apps_c` | not archived yet | T0.11 draw c on the fixed profiler (DiscoPoP B14), server, no model: discopop_capability on the 31 packages of t0_11_classes outside TSVC — PolyBench × 27, NPB is, md, Rodinia hotspot and pathfinder — the suites whose originals have loops side by side | registered |  |  |
 
 ## [T0.13 — the default arm's ceiling](T0_instruments/T0.13_default_arm_ceiling/REPORT.md)
 
@@ -450,7 +453,7 @@ Status: stopped 4 Oct — superseded by E1-v6
 
 ## [E1-v6 — the headline three-way comparison on clean files in TSVC's own form (packaging v6, prompt version 4)](E01v6_clean_files_three_way/REPORT.md)
 
-Status: done
+Status: running
 
 | run | where | what it is | status | trials | outcomes |
 |---|---|---|---|---:|---|
@@ -466,6 +469,14 @@ Status: done
 | `e1v6_bare_opus` | [`E01v6_clean_files_three_way/runs/e1v6_bare_opus/`](E01v6_clean_files_three_way/runs/e1v6_bare_opus/) | E1-v6 the model alone: bare_llm_v4 with claude-opus-5-5 on class R × 5, A × 1, D × 3 (one run per model) | valid | 105 | FASTER 101, parallel-not-faster 4 |
 | `e1v6_bare_fable` | [`E01v6_clean_files_three_way/runs/e1v6_bare_fable/`](E01v6_clean_files_three_way/runs/e1v6_bare_fable/) | E1-v6 the model alone: bare_llm_v4 with claude-fable-5-1 on class R × 5, A × 1, D × 3 (one run per model) | valid | 105 | FASTER 98, changed-not-parallel 1, no-change 1, parallel-not-faster 5 |
 | `e1v6_race_check` | [`E01v6_clean_files_three_way/checks/e1v6_race_check/`](E01v6_clean_files_three_way/checks/e1v6_race_check/) | race_check.py (the gate's TSan with archer and the schedule matrix, server, no model) over every model-alone parallel program of E1-v6 and, as the positive control, every parallel program of the agent | valid | 0 |  |
+| `e1v6c_s281` | not archived yet | E1-v6 corrected for DiscoPoP B14: tsvc_c2/s281 × default_v4, discopop_gate_v4 × 5, Haiku, threads 6/12, repeats 5, as e1v6_r_3 — on the fixed DiscoPoP; read out beside the registered result | registered |  |  |
+| `e1v6c_v7_agent` | not archived yet | E1-v6 corrected for the repetitions (packaging v7): tsvc_c3/s331 × default_v4, discopop_gate_v4 × 5 (as e1v6_r_4), Haiku — on the fixed DiscoPoP | registered |  |  |
+| `e1v6c_v7_control` | not archived yet | E1-v6 corrected for the repetitions (packaging v7): tsvc_c3/s313 × default_v4, discopop_gate_v4 × 1 (as e1v6_a), Haiku — on the fixed DiscoPoP | registered |  |  |
+| `e1v6c_race_check` | not archived yet | race_check.py (server, no model) over the model-alone programs and the agent's parallel programs of the corrected runs (e1v6c_*) | registered |  |  |
+| `e1v6c_v7_bare_haiku` | not archived yet | E1-v6 corrected for the repetitions (packaging v7): haiku alone on tsvc_c3/s313 and s331 × bare_llm_v4 × 5, as e1v6_bare_haiku | registered |  |  |
+| `e1v6c_v7_bare_sonnet` | not archived yet | E1-v6 corrected for the repetitions (packaging v7): sonnet alone on tsvc_c3/s313 and s331 × bare_llm_v4 × 5, as e1v6_bare_sonnet | registered |  |  |
+| `e1v6c_v7_bare_opus` | not archived yet | E1-v6 corrected for the repetitions (packaging v7): opus alone on tsvc_c3/s313 and s331 × bare_llm_v4 × 5, as e1v6_bare_opus | registered |  |  |
+| `e1v6c_v7_bare_fable` | not archived yet | E1-v6 corrected for the repetitions (packaging v7): fable alone on tsvc_c3/s313 and s331 × bare_llm_v4 × 5, as e1v6_bare_fable | registered |  |  |
 
 ## [E2-v6 — the hidden order on clean files: does DiscoPoP's evidence let the agent find a split no reading of the file can find, and can retries with feedback stand in for it?](E02v6_hidden_order_clean_files/REPORT.md)
 
@@ -515,4 +526,34 @@ Status: done
 | `b14_replay_after` | [`T0_instruments/B14_side_by_side_loops/checks/b14_replay_after/`](T0_instruments/B14_side_by_side_loops/checks/b14_replay_after/) | doall_replay.py (server, no model) with the profiler AFTER the B14 fix, on the same archived programs | valid | 0 |  |
 | `t0_11_c2_b14_a` | [`T0_instruments/B14_side_by_side_loops/runs/t0_11_c2_b14_a/`](T0_instruments/B14_side_by_side_loops/runs/t0_11_c2_b14_a/) | T0.11 on packaging v6 with DiscoPoP B14 fixed, draw a, server, no model: arm discopop_capability on the 44 tsvc_c2 packages — the regression check (every class as t0_11_c2_a–c measured it) | valid | 44 | FASTER 8, no-change 34, parallel-speed-not-measurable 2 |
 | `t0_11_c2_b14_b` | [`T0_instruments/B14_side_by_side_loops/runs/t0_11_c2_b14_b/`](T0_instruments/B14_side_by_side_loops/runs/t0_11_c2_b14_b/) | T0.11 on packaging v6 with DiscoPoP B14 fixed, draw b, server, no model: arm discopop_capability on the 44 tsvc_c2 packages | valid | 44 | FASTER 8, no-change 34, parallel-speed-not-measurable 2 |
+
+## [E2-v6b — the hidden order on clean files, run again on the fixed DiscoPoP (defect B14): evidence × attempts](E02v6b_hidden_order_fixed_discopop/)
+
+Status: running
+
+| run | where | what it is | status | trials | outcomes |
+|---|---|---|---|---:|---|
+| `e2v6b_smoke` | not archived yet | E2-v6b instrument check, never counted: tsvc_c2/k23 × full_b1_nospeed_v4 × 2, Haiku — does the agent's own re-profiling on the rebuilt profiler give both loops of the split their directive | registered |  |  |
+| `t0_11_c2_b14_c` | not archived yet | T0.11 on packaging v6 with DiscoPoP B14 fixed, draw c, server, no model: arm discopop_capability on the 44 tsvc_c2 packages — the third draw of DiscoPoP alone on the fixed profiler (a and b: group B14) | registered |  |  |
+| `e2v6b_race_check` | not archived yet | race_check.py (server, no model) over every program of the agent's four arms of E2-v6b — the positive control; the models alone and their race check are E2-v6's | registered |  |  |
+| `e2v6b_agent_1` | not archived yet | E2-v6b: tsvc_c2/k19, k23 × full_b1_nospeed_v4, no_evidence_b1_nospeed_v4 × 10, Haiku, threads 6/12, repeats 5 — as e2v6_agent_1, fixed DiscoPoP | registered |  |  |
+| `e2v6b_fb_1` | not archived yet | E2-v6b, the three-attempt arms: tsvc_c2/k19, k23 × full_nospeed_v4, no_evidence_nospeed_v4 × 10, Haiku, threads 6/12, repeats 5 — as e2v6_fb_1, fixed DiscoPoP | registered |  |  |
+| `e2v6b_agent_2` | not archived yet | E2-v6b: tsvc_c2/k31, k27 × full_b1_nospeed_v4, no_evidence_b1_nospeed_v4 × 10, Haiku, threads 6/12, repeats 5 — as e2v6_agent_2, fixed DiscoPoP | registered |  |  |
+| `e2v6b_fb_2` | not archived yet | E2-v6b, the three-attempt arms: tsvc_c2/k31, k27 × full_nospeed_v4, no_evidence_nospeed_v4 × 10, Haiku, threads 6/12, repeats 5 — as e2v6_fb_2, fixed DiscoPoP | registered |  |  |
+| `e2v6b_agent_3` | not archived yet | E2-v6b: tsvc_c2/s161, k53, k48 × full_b1_nospeed_v4, no_evidence_b1_nospeed_v4 × 10, Haiku, threads 6/12, repeats 5 — as e2v6_agent_3, fixed DiscoPoP | registered |  |  |
+| `e2v6b_fb_3` | not archived yet | E2-v6b, the three-attempt arms: tsvc_c2/s161, k53, k48 × full_nospeed_v4, no_evidence_nospeed_v4 × 10, Haiku, threads 6/12, repeats 5 — as e2v6_fb_3, fixed DiscoPoP | registered |  |  |
+
+## [T0.18 — packaging v7 (suite tsvc_c3: every repetition necessary) on the server, before a model reads it](T0_instruments/T0.18_repetitions_necessary/)
+
+Status: running
+
+| run | where | what it is | status | trials | outcomes |
+|---|---|---|---|---:|---|
+| `t0_18_server_a` | not archived yet | T0.18 draw a, server, no model: tools/layout_equivalence.py — tsvc_c2 (packaging v6) against tsvc_c3 (v7), 44 loops: output, DiscoPoP's view | registered |  |  |
+| `t0_18_server_b` | not archived yet | T0.18 draw b, server, no model: the same comparison on a second profile of each packaging | registered |  |  |
+| `t0_1_c3_sizes` | not archived yet | T0.1 on packaging v7, server, no model: size_table.py on the 44 tsvc_c3 packages | registered |  |  |
+| `t0_14_c3_refs` | not archived yet | T0.14/T0.10 on packaging v7, server, no model: verify-source on the 28 expert references rendered as the benchmark's file (reference_solutions/tsvc_c3) | registered |  |  |
+| `t0_11_c3_a` | not archived yet | T0.11 on packaging v7, draw a, server, no model: arm discopop_capability on the 44 tsvc_c3 packages — the measured class of every loop, on the fixed DiscoPoP | registered |  |  |
+| `t0_11_c3_b` | not archived yet | T0.11 on packaging v7, draw b, server, no model: arm discopop_capability on the 44 tsvc_c3 packages — the measured class of every loop, on the fixed DiscoPoP | registered |  |  |
+| `t0_11_c3_c` | not archived yet | T0.11 on packaging v7, draw c, server, no model: arm discopop_capability on the 44 tsvc_c3 packages — the measured class of every loop, on the fixed DiscoPoP | registered |  |  |
 

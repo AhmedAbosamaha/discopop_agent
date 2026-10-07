@@ -1,6 +1,6 @@
 {
   "_comment": "Agent configurations ('arms'). Each arm adds its flags on top of the common flags passed by `run` (--provider, --model, --edit-mode). Ids B*/E*/X* refer to claude_project/06-thesis-plan.md and the Restructuring Spine artifact. Change an arm only together with an entry in agent/THESIS_EXPERIMENTS.md.",
-  "_common_flags_comment": "Passed to the agent in EVERY arm, before the arm's own flags. --no-require-speedup: the agent keeps correct parallelizations without timing them; speed is judged only by the harness verification at the per-kernel verification size (THESIS_EXPERIMENTS.md \u00a76, 2026-09-15). At the agent's size kernels run 0.06-15 ms, below thread start-up cost, so the agent's own speed stage measured noise. --min-runtime-share 0.01 (decision D1, 2026-09-16, THESIS_EXPERIMENTS.md \u00a75d): regions below 1% of measured runtime are not attempted, in every arm and in Phase B alike; T0.5 bounds the runtime this can give up at 1.7% in any benchmark (1.2% at the verification size).",
+  "_common_flags_comment": "Passed to the agent in EVERY arm, before the arm's own flags. --no-require-speedup: the agent keeps correct parallelizations without timing them; speed is judged only by the harness verification at the per-kernel verification size (THESIS_EXPERIMENTS.md §6, 2026-09-15). At the agent's size kernels run 0.06-15 ms, below thread start-up cost, so the agent's own speed stage measured noise. --min-runtime-share 0.01 (decision D1, 2026-09-16, THESIS_EXPERIMENTS.md §5d): regions below 1% of measured runtime are not attempted, in every arm and in Phase B alike; T0.5 bounds the runtime this can give up at 1.7% in any benchmark (1.2% at the verification size).",
   "common_flags": [
     "--require-speedup",
     "--min-runtime-share",
@@ -53,7 +53,7 @@
         "E2-C",
         "E2-D"
       ],
-      "description": "E2's (full evidence, budget 1) cell: the campaign default with a single LLM attempt per region, so the gate's failure feedback cannot substitute for evidence. Until 2026-09-21 it carried --fast-refresh, pinned there by D27's blanket 'keep what was implicit' \u2014 which left E2's 2x2 differing from its own baseline (`default`, full re-profile) in the refresh as well as in evidence and budget. Removed: the refresh is E3's variable, not E2's.",
+      "description": "E2's (full evidence, budget 1) cell: the campaign default with a single LLM attempt per region, so the gate's failure feedback cannot substitute for evidence. Until 2026-09-21 it carried --fast-refresh, pinned there by D27's blanket 'keep what was implicit' — which left E2's 2x2 differing from its own baseline (`default`, full re-profile) in the refresh as well as in evidence and budget. Removed: the refresh is E3's variable, not E2's.",
       "flags": [
         "--budget",
         "1"
@@ -88,7 +88,7 @@
     },
     "discopop_annotates": {
       "ids": [],
-      "description": "RETIRED 2026-09-21 \u2014 since D27 this resolves to exactly the same configuration as `default` (DiscoPoP annotates, full re-profile), so it is no experiment's arm any more; E3's cell is `default`. Kept only so the name still resolves.",
+      "description": "RETIRED 2026-09-21 — since D27 this resolves to exactly the same configuration as `default` (DiscoPoP annotates, full re-profile), so it is no experiment's arm any more; E3's cell is `default`. Kept only so the name still resolves.",
       "flags": [
         "--no-llm-pragmas",
         "--no-fast-refresh"
@@ -106,7 +106,7 @@
         "E3",
         "E4"
       ],
-      "description": "DiscoPoP annotates (--no-llm-pragmas) with the fast refresh ON. Two roles: E3's (DiscoPoP annotates, fast refresh) cell, and the BASELINE of E4 \u2014 every E4 cell needs the fast refresh, because reconstruction only runs inside that branch, so E4 cannot be paired against `default`, which does a full re-profile.",
+      "description": "DiscoPoP annotates (--no-llm-pragmas) with the fast refresh ON. Two roles: E3's (DiscoPoP annotates, fast refresh) cell, and the BASELINE of E4 — every E4 cell needs the fast refresh, because reconstruction only runs inside that branch, so E4 cannot be paired against `default`, which does a full re-profile.",
       "flags": [
         "--no-llm-pragmas",
         "--fast-refresh"
@@ -194,7 +194,7 @@
       "ids": [
         "E2"
       ],
-      "description": "E2's (no evidence, budget 3) cell: no DiscoPoP evidence in the prompt, full budget \u2014 the gate's failure feedback is the only information beyond the source. Paired with `default`, `full_b1` and `no_evidence_b1` for the evidence x feedback 2x2; like them it follows the campaign default in everything else (no --fast-refresh since 2026-09-21, see `full_b1`).",
+      "description": "E2's (no evidence, budget 3) cell: no DiscoPoP evidence in the prompt, full budget — the gate's failure feedback is the only information beyond the source. Paired with `default`, `full_b1` and `no_evidence_b1` for the evidence x feedback 2x2; like them it follows the campaign default in everything else (no --fast-refresh since 2026-09-21, see `full_b1`).",
       "flags": [
         "--evidence",
         "none"
@@ -211,7 +211,7 @@
       "ids": [
         "E4"
       ],
-      "description": "DiscoPoP decides from the refreshed profile, and the model may DELETE static dependences it judges spurious in code it just wrote (--llm-deps) \u2014 the unsound direction, kept to test the add-vs-delete principle against discopop_pragmas_recon. Carries --fast-refresh explicitly since 2026-09-21: reconstruction runs only inside that branch, so without it this arm would silently measure nothing.",
+      "description": "DiscoPoP decides from the refreshed profile, and the model may DELETE static dependences it judges spurious in code it just wrote (--llm-deps) — the unsound direction, kept to test the add-vs-delete principle against discopop_pragmas_recon. Carries --fast-refresh explicitly since 2026-09-21: reconstruction runs only inside that branch, so without it this arm would silently measure nothing.",
       "flags": [
         "--no-llm-pragmas",
         "--llm-deps",
@@ -250,7 +250,7 @@
       "ids": [
         "E9"
       ],
-      "description": "Defaults, but regions ranked by DiscoPoP's static workload proxy instead of measured time saved (--no-hotspots). NOTE, to be stated wherever E9's result is reported: turning hotspots off also makes --min-runtime-share INERT, because the share is a share of MEASURED runtime. This arm therefore ranks by the workload proxy AND queues regions the share filter would have dropped. That is a consequence of the variable, not an independent difference \u2014 but E9's effect is the two together, not ranking alone.",
+      "description": "Defaults, but regions ranked by DiscoPoP's static workload proxy instead of measured time saved (--no-hotspots). NOTE, to be stated wherever E9's result is reported: turning hotspots off also makes --min-runtime-share INERT, because the share is a share of MEASURED runtime. This arm therefore ranks by the workload proxy AND queues regions the share filter would have dropped. That is a consequence of the variable, not an independent difference — but E9's effect is the two together, not ranking alone.",
       "flags": [
         "--no-hotspots"
       ],
@@ -266,7 +266,7 @@
       "ids": [
         "E10"
       ],
-      "description": "E10's winning arm, pinned to the configuration E10 ran (--llm-pragmas, --fast-refresh, speed check ON at the kernel's timing size) so the archived trials stay reproducible. NOT the campaign default and NOT E1's agent arm \u2014 that is `default` since D23/D27; what E10 established and the default keeps is the speed check at the right size (D8, D22).",
+      "description": "E10's winning arm, pinned to the configuration E10 ran (--llm-pragmas, --fast-refresh, speed check ON at the kernel's timing size) so the archived trials stay reproducible. NOT the campaign default and NOT E1's agent arm — that is `default` since D23/D27; what E10 established and the default keeps is the speed check at the right size (D8, D22).",
       "flags": [
         "--llm-pragmas",
         "--require-speedup",
@@ -364,7 +364,7 @@
         "E2-B1",
         "T0.11"
       ],
-      "description": "T0.11, and since 26 Sep E2-B1's DiscoPoP alone (the speed check is off in every arm there): DiscoPoP's own suggestions through the gate with the speed check OFF. The class of a benchmark is a question about CAPABILITY \u2014 can DiscoPoP plus the gate reach a verified-correct parallel program at all? \u2014 and the speed check answers a different one. With it on, a kernel whose DiscoPoP pragma is correct but slow (polybench/lu: 0.21x) ends `no-change` and would be filed as 'needs restructuring', which is wrong: it needs a BETTER PRAGMA, not a rewrite. Whether the program is faster is recorded anyway, because the harness's own verification always times it. It is also much cheaper \u2014 the speed check times every candidate pragma, which cost 8.2 min per trial.",
+      "description": "T0.11, and since 26 Sep E2-B1's DiscoPoP alone (the speed check is off in every arm there): DiscoPoP's own suggestions through the gate with the speed check OFF. The class of a benchmark is a question about CAPABILITY — can DiscoPoP plus the gate reach a verified-correct parallel program at all? — and the speed check answers a different one. With it on, a kernel whose DiscoPoP pragma is correct but slow (polybench/lu: 0.21x) ends `no-change` and would be filed as 'needs restructuring', which is wrong: it needs a BETTER PRAGMA, not a rewrite. Whether the program is faster is recorded anyway, because the harness's own verification always times it. It is also much cheaper — the speed check times every candidate pragma, which cost 8.2 min per trial.",
       "flags": [
         "--budget",
         "0",
@@ -427,7 +427,7 @@
       "ids": [
         "E2-C"
       ],
-      "description": "E2 Part C: full evidence WITHOUT the `deps` group (deps, blockers, reductions) \u2014 is the group necessary? Budget 1.",
+      "description": "E2 Part C: full evidence WITHOUT the `deps` group (deps, blockers, reductions) — is the group necessary? Budget 1.",
       "flags": [
         "--budget",
         "1",
@@ -456,7 +456,7 @@
       "ids": [
         "E2-C"
       ],
-      "description": "E2 Part C: ONLY the `deps` group (deps, blockers, reductions) \u2014 is the group sufficient? Overlapping sections hide each other in a leave-one-out alone. Budget 1.",
+      "description": "E2 Part C: ONLY the `deps` group (deps, blockers, reductions) — is the group sufficient? Overlapping sections hide each other in a leave-one-out alone. Budget 1.",
       "flags": [
         "--budget",
         "1",
@@ -480,7 +480,7 @@
       "ids": [
         "E2-C"
       ],
-      "description": "E2 Part C: full evidence WITHOUT the `sharing` group (classification, extra_vars) \u2014 is the group necessary? Budget 1.",
+      "description": "E2 Part C: full evidence WITHOUT the `sharing` group (classification, extra_vars) — is the group necessary? Budget 1.",
       "flags": [
         "--budget",
         "1",
@@ -510,7 +510,7 @@
       "ids": [
         "E2-C"
       ],
-      "description": "E2 Part C: ONLY the `sharing` group (classification, extra_vars) \u2014 is the group sufficient? Overlapping sections hide each other in a leave-one-out alone. Budget 1.",
+      "description": "E2 Part C: ONLY the `sharing` group (classification, extra_vars) — is the group sufficient? Overlapping sections hide each other in a leave-one-out alone. Budget 1.",
       "flags": [
         "--budget",
         "1",
@@ -533,7 +533,7 @@
       "ids": [
         "E2-C"
       ],
-      "description": "E2 Part C: full evidence WITHOUT the `struct` group (loop_nest, accesses, calls, inner_patterns) \u2014 is the group necessary? Budget 1.",
+      "description": "E2 Part C: full evidence WITHOUT the `struct` group (loop_nest, accesses, calls, inner_patterns) — is the group necessary? Budget 1.",
       "flags": [
         "--budget",
         "1",
@@ -561,7 +561,7 @@
       "ids": [
         "E2-C"
       ],
-      "description": "E2 Part C: ONLY the `struct` group (loop_nest, accesses, calls, inner_patterns) \u2014 is the group sufficient? Overlapping sections hide each other in a leave-one-out alone. Budget 1.",
+      "description": "E2 Part C: ONLY the `struct` group (loop_nest, accesses, calls, inner_patterns) — is the group sufficient? Overlapping sections hide each other in a leave-one-out alone. Budget 1.",
       "flags": [
         "--budget",
         "1",
@@ -586,7 +586,7 @@
       "ids": [
         "E2-C"
       ],
-      "description": "E2 Part C: full evidence WITHOUT the `where` group (runtime_share) \u2014 is the group necessary? Budget 1.",
+      "description": "E2 Part C: full evidence WITHOUT the `where` group (runtime_share) — is the group necessary? Budget 1.",
       "flags": [
         "--budget",
         "1",
@@ -617,7 +617,7 @@
       "ids": [
         "E2-C"
       ],
-      "description": "E2 Part C: ONLY the `where` group (runtime_share) \u2014 is the group sufficient? Overlapping sections hide each other in a leave-one-out alone. Budget 1.",
+      "description": "E2 Part C: ONLY the `where` group (runtime_share) — is the group sufficient? Overlapping sections hide each other in a leave-one-out alone. Budget 1.",
       "flags": [
         "--budget",
         "1",
@@ -639,7 +639,7 @@
       "ids": [
         "E2-C"
       ],
-      "description": "E2 Part C: full evidence WITHOUT the `howto` group (array_note) \u2014 is the group necessary? Budget 1.",
+      "description": "E2 Part C: full evidence WITHOUT the `howto` group (array_note) — is the group necessary? Budget 1.",
       "flags": [
         "--budget",
         "1",
@@ -670,7 +670,7 @@
       "ids": [
         "E2-C"
       ],
-      "description": "E2 Part C: ONLY the `howto` group (array_note) \u2014 is the group sufficient? Overlapping sections hide each other in a leave-one-out alone. Budget 1.",
+      "description": "E2 Part C: ONLY the `howto` group (array_note) — is the group sufficient? Overlapping sections hide each other in a leave-one-out alone. Budget 1.",
       "flags": [
         "--budget",
         "1",
@@ -690,7 +690,7 @@
     },
     "ev_without_feedback_b1": {
       "ids": [],
-      "description": "RETIRED 23 Sep (the author), never run: E2 Part C: full evidence WITHOUT the `feedback` group (failure) \u2014 is the group necessary? Budget 1. At budget 1 a region gets one attempt, so the `failure` section renders only the fixed line 'Why this region is here: DiscoPoP found no applicable parallelism pattern' (a build-fix retry aside) \u2014 this arm would differ from its neighbour by that one sentence. What the gate's feedback is worth is E2 Part B's question (budget 1 vs 3).",
+      "description": "RETIRED 23 Sep (the author), never run: E2 Part C: full evidence WITHOUT the `feedback` group (failure) — is the group necessary? Budget 1. At budget 1 a region gets one attempt, so the `failure` section renders only the fixed line 'Why this region is here: DiscoPoP found no applicable parallelism pattern' (a build-fix retry aside) — this arm would differ from its neighbour by that one sentence. What the gate's feedback is worth is E2 Part B's question (budget 1 vs 3).",
       "flags": [
         "--budget",
         "1",
@@ -719,7 +719,7 @@
     },
     "ev_only_feedback_b1": {
       "ids": [],
-      "description": "RETIRED 23 Sep (the author), never run: E2 Part C: ONLY the `feedback` group (failure) \u2014 is the group sufficient? Overlapping sections hide each other in a leave-one-out alone. Budget 1. At budget 1 a region gets one attempt, so the `failure` section renders only the fixed line 'Why this region is here: DiscoPoP found no applicable parallelism pattern' (a build-fix retry aside) \u2014 this arm would differ from its neighbour by that one sentence. What the gate's feedback is worth is E2 Part B's question (budget 1 vs 3).",
+      "description": "RETIRED 23 Sep (the author), never run: E2 Part C: ONLY the `feedback` group (failure) — is the group sufficient? Overlapping sections hide each other in a leave-one-out alone. Budget 1. At budget 1 a region gets one attempt, so the `failure` section renders only the fixed line 'Why this region is here: DiscoPoP found no applicable parallelism pattern' (a build-fix retry aside) — this arm would differ from its neighbour by that one sentence. What the gate's feedback is worth is E2 Part B's question (budget 1 vs 3).",
       "flags": [
         "--budget",
         "1",
@@ -830,7 +830,7 @@
         "E1-bare",
         "E2"
       ],
-      "description": "The model alone (D35: one of the three arms of every main comparison). The SAME model through the same client call, handed the program and asked to parallelize it: no DiscoPoP (no profile read, nothing ranked, no evidence), no gate (nothing compiled, run, raced or timed), one attempt, no feedback. Since 23 Sep (the author, D37 as revised the same evening) with the MIRROR prompt: the agent's own instructions in the mode where the model writes the pragmas \u2014 its contract, OpenMP rules, pragma forms, the list of how the finished program is judged, plan and checklist, verbatim \u2014 minus DiscoPoP (role, what it profiled, the region, its evidence), minus the gate during the run and minus feedback: one attempt. Whatever it leaves in the file is judged by the harness like any other trial, and its parallel programs are race-checked afterwards (race_check.py), so BROKEN and racy programs are expected and counted. A separate runner (discopop_agent/bare_llm.py), deliberately NOT the agent with switches off. E1-bare (e1_bare_a/b) ran with the contract prompt \u2014 arm `bare_llm_contract`.",
+      "description": "The model alone (D35: one of the three arms of every main comparison). The SAME model through the same client call, handed the program and asked to parallelize it: no DiscoPoP (no profile read, nothing ranked, no evidence), no gate (nothing compiled, run, raced or timed), one attempt, no feedback. Since 23 Sep (the author, D37 as revised the same evening) with the MIRROR prompt: the agent's own instructions in the mode where the model writes the pragmas — its contract, OpenMP rules, pragma forms, the list of how the finished program is judged, plan and checklist, verbatim — minus DiscoPoP (role, what it profiled, the region, its evidence), minus the gate during the run and minus feedback: one attempt. Whatever it leaves in the file is judged by the harness like any other trial, and its parallel programs are race-checked afterwards (race_check.py), so BROKEN and racy programs are expected and counted. A separate runner (discopop_agent/bare_llm.py), deliberately NOT the agent with switches off. E1-bare (e1_bare_a/b) ran with the contract prompt — arm `bare_llm_contract`.",
       "runner": "bare_llm",
       "flags": []
     },
@@ -845,7 +845,7 @@
     },
     "bare_llm_minimal": {
       "ids": [],
-      "description": "The model alone with the MINIMAL prompt (role, tools, 'parallelize with OpenMP so that it runs faster; output exactly the same', the measuring functions; 87 words) \u2014 D37 as first decided; `d36_hint_check`'s `bare_llm` arm ran this prompt (commit 1be54f01). Kept to measure what our instructions are worth.",
+      "description": "The model alone with the MINIMAL prompt (role, tools, 'parallelize with OpenMP so that it runs faster; output exactly the same', the measuring functions; 87 words) — D37 as first decided; `d36_hint_check`'s `bare_llm` arm ran this prompt (commit 1be54f01). Kept to measure what our instructions are worth.",
       "runner": "bare_llm",
       "flags": [
         "--prompt",
@@ -857,7 +857,7 @@
         "E1",
         "E2"
       ],
-      "description": "A matched model-only twin (D38): the agent arm `discopop_gate` minus the gate. Runs discopop_agent/twin.py with discopop_gate's own arguments (inherited: flags, settings, timing size, evidence file), so its model gets the agent's own first request for each region the agent would ask about \u2014 same region, same DiscoPoP evidence, same system prompt except that the gate's checks are described as what judges the FINISHED program and the feedback clause is gone. One attempt per region, no feedback; what the model leaves stays; after an edit the program is re-profiled (as after a kept rewrite) and at the end DiscoPoP inserts every applicable pragma with NOTHING checked (no clause check, TSan, schedules, speed, D33, Settle or floor). Judged afterwards like any trial; race_check.py on its programs is mandatory. `twin_model_program.*` in agent_patches/ is the program before DiscoPoP's unchecked pragmas. With --budget 0 no model is called: DiscoPoP's own program with nothing checked \u2014 the corner the gate's value on DiscoPoP alone is read from. No model cost.",
+      "description": "A matched model-only twin (D38): the agent arm `discopop_gate` minus the gate. Runs discopop_agent/twin.py with discopop_gate's own arguments (inherited: flags, settings, timing size, evidence file), so its model gets the agent's own first request for each region the agent would ask about — same region, same DiscoPoP evidence, same system prompt except that the gate's checks are described as what judges the FINISHED program and the feedback clause is gone. One attempt per region, no feedback; what the model leaves stays; after an edit the program is re-profiled (as after a kept rewrite) and at the end DiscoPoP inserts every applicable pragma with NOTHING checked (no clause check, TSan, schedules, speed, D33, Settle or floor). Judged afterwards like any trial; race_check.py on its programs is mandatory. `twin_model_program.*` in agent_patches/ is the program before DiscoPoP's unchecked pragmas. With --budget 0 no model is called: DiscoPoP's own program with nothing checked — the corner the gate's value on DiscoPoP alone is read from. No model cost.",
       "runner": "twin",
       "twin_of": "discopop_gate"
     },
@@ -867,7 +867,7 @@
         "E8",
         "E9"
       ],
-      "description": "A matched model-only twin (D38): the agent arm `default` minus the gate. Runs discopop_agent/twin.py with default's own arguments (inherited: flags, settings, timing size, evidence file), so its model gets the agent's own first request for each region the agent would ask about \u2014 same region, same DiscoPoP evidence, same system prompt except that the gate's checks are described as what judges the FINISHED program and the feedback clause is gone. One attempt per region, no feedback; what the model leaves stays; after an edit the program is re-profiled (as after a kept rewrite) and at the end DiscoPoP inserts every applicable pragma with NOTHING checked (no clause check, TSan, schedules, speed, D33, Settle or floor). Judged afterwards like any trial; race_check.py on its programs is mandatory. `twin_model_program.*` in agent_patches/ is the program before DiscoPoP's unchecked pragmas. The reference twin of E3/E8/E9. Behaves exactly as `twin_full` (a twin makes one attempt per region, so --budget 1 vs 3 is inert); E3/E8/E9 may reuse E2's `twin_full` trials on the same loops, as E3 reuses E2's `default`.",
+      "description": "A matched model-only twin (D38): the agent arm `default` minus the gate. Runs discopop_agent/twin.py with default's own arguments (inherited: flags, settings, timing size, evidence file), so its model gets the agent's own first request for each region the agent would ask about — same region, same DiscoPoP evidence, same system prompt except that the gate's checks are described as what judges the FINISHED program and the feedback clause is gone. One attempt per region, no feedback; what the model leaves stays; after an edit the program is re-profiled (as after a kept rewrite) and at the end DiscoPoP inserts every applicable pragma with NOTHING checked (no clause check, TSan, schedules, speed, D33, Settle or floor). Judged afterwards like any trial; race_check.py on its programs is mandatory. `twin_model_program.*` in agent_patches/ is the program before DiscoPoP's unchecked pragmas. The reference twin of E3/E8/E9. Behaves exactly as `twin_full` (a twin makes one attempt per region, so --budget 1 vs 3 is inert); E3/E8/E9 may reuse E2's `twin_full` trials on the same loops, as E3 reuses E2's `default`.",
       "runner": "twin",
       "twin_of": "default"
     },
@@ -876,7 +876,7 @@
         "E2",
         "E2-source"
       ],
-      "description": "A matched model-only twin (D38): the agent arm `full_b1` minus the gate. Runs discopop_agent/twin.py with full_b1's own arguments (inherited: flags, settings, timing size, evidence file), so its model gets the agent's own first request for each region the agent would ask about \u2014 same region, same DiscoPoP evidence, same system prompt except that the gate's checks are described as what judges the FINISHED program and the feedback clause is gone. One attempt per region, no feedback; what the model leaves stays; after an edit the program is re-profiled (as after a kept rewrite) and at the end DiscoPoP inserts every applicable pragma with NOTHING checked (no clause check, TSan, schedules, speed, D33, Settle or floor). Judged afterwards like any trial; race_check.py on its programs is mandatory. `twin_model_program.*` in agent_patches/ is the program before DiscoPoP's unchecked pragmas. E2's twin with DiscoPoP's full evidence.",
+      "description": "A matched model-only twin (D38): the agent arm `full_b1` minus the gate. Runs discopop_agent/twin.py with full_b1's own arguments (inherited: flags, settings, timing size, evidence file), so its model gets the agent's own first request for each region the agent would ask about — same region, same DiscoPoP evidence, same system prompt except that the gate's checks are described as what judges the FINISHED program and the feedback clause is gone. One attempt per region, no feedback; what the model leaves stays; after an edit the program is re-profiled (as after a kept rewrite) and at the end DiscoPoP inserts every applicable pragma with NOTHING checked (no clause check, TSan, schedules, speed, D33, Settle or floor). Judged afterwards like any trial; race_check.py on its programs is mandatory. `twin_model_program.*` in agent_patches/ is the program before DiscoPoP's unchecked pragmas. E2's twin with DiscoPoP's full evidence.",
       "runner": "twin",
       "twin_of": "full_b1"
     },
@@ -885,7 +885,7 @@
         "E2",
         "E2-source"
       ],
-      "description": "A matched model-only twin (D38): the agent arm `no_evidence_b1` minus the gate. Runs discopop_agent/twin.py with no_evidence_b1's own arguments (inherited: flags, settings, timing size, evidence file), so its model gets the agent's own first request for each region the agent would ask about \u2014 same region, same DiscoPoP evidence, same system prompt except that the gate's checks are described as what judges the FINISHED program and the feedback clause is gone. One attempt per region, no feedback; what the model leaves stays; after an edit the program is re-profiled (as after a kept rewrite) and at the end DiscoPoP inserts every applicable pragma with NOTHING checked (no clause check, TSan, schedules, speed, D33, Settle or floor). Judged afterwards like any trial; race_check.py on its programs is mandatory. `twin_model_program.*` in agent_patches/ is the program before DiscoPoP's unchecked pragmas. E2's twin with the region but no evidence (the target region is held constant across the evidence contrast, as in the agent's arms); `bare_llm` is the same model with no region.",
+      "description": "A matched model-only twin (D38): the agent arm `no_evidence_b1` minus the gate. Runs discopop_agent/twin.py with no_evidence_b1's own arguments (inherited: flags, settings, timing size, evidence file), so its model gets the agent's own first request for each region the agent would ask about — same region, same DiscoPoP evidence, same system prompt except that the gate's checks are described as what judges the FINISHED program and the feedback clause is gone. One attempt per region, no feedback; what the model leaves stays; after an edit the program is re-profiled (as after a kept rewrite) and at the end DiscoPoP inserts every applicable pragma with NOTHING checked (no clause check, TSan, schedules, speed, D33, Settle or floor). Judged afterwards like any trial; race_check.py on its programs is mandatory. `twin_model_program.*` in agent_patches/ is the program before DiscoPoP's unchecked pragmas. E2's twin with the region but no evidence (the target region is held constant across the evidence contrast, as in the agent's arms); `bare_llm` is the same model with no region.",
       "runner": "twin",
       "twin_of": "no_evidence_b1"
     },
@@ -893,7 +893,7 @@
       "ids": [
         "E2-source"
       ],
-      "description": "A matched model-only twin (D38): the agent arm `compiler_remarks_b1` minus the gate. Runs discopop_agent/twin.py with compiler_remarks_b1's own arguments (inherited: flags, settings, timing size, evidence file), so its model gets the agent's own first request for each region the agent would ask about \u2014 same region, same DiscoPoP evidence, same system prompt except that the gate's checks are described as what judges the FINISHED program and the feedback clause is gone. One attempt per region, no feedback; what the model leaves stays; after an edit the program is re-profiled (as after a kept rewrite) and at the end DiscoPoP inserts every applicable pragma with NOTHING checked (no clause check, TSan, schedules, speed, D33, Settle or floor). Judged afterwards like any trial; race_check.py on its programs is mandatory. `twin_model_program.*` in agent_patches/ is the program before DiscoPoP's unchecked pragmas. The compiler's remarks instead of DiscoPoP's evidence.",
+      "description": "A matched model-only twin (D38): the agent arm `compiler_remarks_b1` minus the gate. Runs discopop_agent/twin.py with compiler_remarks_b1's own arguments (inherited: flags, settings, timing size, evidence file), so its model gets the agent's own first request for each region the agent would ask about — same region, same DiscoPoP evidence, same system prompt except that the gate's checks are described as what judges the FINISHED program and the feedback clause is gone. One attempt per region, no feedback; what the model leaves stays; after an edit the program is re-profiled (as after a kept rewrite) and at the end DiscoPoP inserts every applicable pragma with NOTHING checked (no clause check, TSan, schedules, speed, D33, Settle or floor). Judged afterwards like any trial; race_check.py on its programs is mandatory. `twin_model_program.*` in agent_patches/ is the program before DiscoPoP's unchecked pragmas. The compiler's remarks instead of DiscoPoP's evidence.",
       "runner": "twin",
       "twin_of": "compiler_remarks_b1"
     },
@@ -901,7 +901,7 @@
       "ids": [
         "E2-source"
       ],
-      "description": "A matched model-only twin (D38): the agent arm `hotspot_only_b1` minus the gate. Runs discopop_agent/twin.py with hotspot_only_b1's own arguments (inherited: flags, settings, timing size, evidence file), so its model gets the agent's own first request for each region the agent would ask about \u2014 same region, same DiscoPoP evidence, same system prompt except that the gate's checks are described as what judges the FINISHED program and the feedback clause is gone. One attempt per region, no feedback; what the model leaves stays; after an edit the program is re-profiled (as after a kept rewrite) and at the end DiscoPoP inserts every applicable pragma with NOTHING checked (no clause check, TSan, schedules, speed, D33, Settle or floor). Judged afterwards like any trial; race_check.py on its programs is mandatory. `twin_model_program.*` in agent_patches/ is the program before DiscoPoP's unchecked pragmas. Only where the time goes.",
+      "description": "A matched model-only twin (D38): the agent arm `hotspot_only_b1` minus the gate. Runs discopop_agent/twin.py with hotspot_only_b1's own arguments (inherited: flags, settings, timing size, evidence file), so its model gets the agent's own first request for each region the agent would ask about — same region, same DiscoPoP evidence, same system prompt except that the gate's checks are described as what judges the FINISHED program and the feedback clause is gone. One attempt per region, no feedback; what the model leaves stays; after an edit the program is re-profiled (as after a kept rewrite) and at the end DiscoPoP inserts every applicable pragma with NOTHING checked (no clause check, TSan, schedules, speed, D33, Settle or floor). Judged afterwards like any trial; race_check.py on its programs is mandatory. `twin_model_program.*` in agent_patches/ is the program before DiscoPoP's unchecked pragmas. Only where the time goes.",
       "runner": "twin",
       "twin_of": "hotspot_only_b1"
     },
@@ -909,7 +909,7 @@
       "ids": [
         "E3"
       ],
-      "description": "A matched model-only twin (D38): the agent arm `llm_pragmas_full_reprofile` minus the gate. Runs discopop_agent/twin.py with llm_pragmas_full_reprofile's own arguments (inherited: flags, settings, timing size, evidence file), so its model gets the agent's own first request for each region the agent would ask about \u2014 same region, same DiscoPoP evidence, same system prompt except that the gate's checks are described as what judges the FINISHED program and the feedback clause is gone. One attempt per region, no feedback; what the model leaves stays; after an edit the program is re-profiled (as after a kept rewrite) and at the end DiscoPoP inserts every applicable pragma with NOTHING checked (no clause check, TSan, schedules, speed, D33, Settle or floor). Judged afterwards like any trial; race_check.py on its programs is mandatory. `twin_model_program.*` in agent_patches/ is the program before DiscoPoP's unchecked pragmas. The model writes the pragmas in its rewrite; DiscoPoP's own pragmas for the loops it can parallelize still go in at the end, unchecked, as the agent's Phase B would put them in through the gate. The fast-refresh cells of E3 get no twin: the refresh is a pipeline cost lever with no model-only meaning (the twin always re-profiles fully).",
+      "description": "A matched model-only twin (D38): the agent arm `llm_pragmas_full_reprofile` minus the gate. Runs discopop_agent/twin.py with llm_pragmas_full_reprofile's own arguments (inherited: flags, settings, timing size, evidence file), so its model gets the agent's own first request for each region the agent would ask about — same region, same DiscoPoP evidence, same system prompt except that the gate's checks are described as what judges the FINISHED program and the feedback clause is gone. One attempt per region, no feedback; what the model leaves stays; after an edit the program is re-profiled (as after a kept rewrite) and at the end DiscoPoP inserts every applicable pragma with NOTHING checked (no clause check, TSan, schedules, speed, D33, Settle or floor). Judged afterwards like any trial; race_check.py on its programs is mandatory. `twin_model_program.*` in agent_patches/ is the program before DiscoPoP's unchecked pragmas. The model writes the pragmas in its rewrite; DiscoPoP's own pragmas for the loops it can parallelize still go in at the end, unchecked, as the agent's Phase B would put them in through the gate. The fast-refresh cells of E3 get no twin: the refresh is a pipeline cost lever with no model-only meaning (the twin always re-profiles fully).",
       "runner": "twin",
       "twin_of": "llm_pragmas_full_reprofile"
     },
@@ -917,7 +917,7 @@
       "ids": [
         "E8"
       ],
-      "description": "A matched model-only twin (D38): the agent arm `full_depth1` minus the gate. Runs discopop_agent/twin.py with full_depth1's own arguments (inherited: flags, settings, timing size, evidence file), so its model gets the agent's own first request for each region the agent would ask about \u2014 same region, same DiscoPoP evidence, same system prompt except that the gate's checks are described as what judges the FINISHED program and the feedback clause is gone. One attempt per region, no feedback; what the model leaves stays; after an edit the program is re-profiled (as after a kept rewrite) and at the end DiscoPoP inserts every applicable pragma with NOTHING checked (no clause check, TSan, schedules, speed, D33, Settle or floor). Judged afterwards like any trial; race_check.py on its programs is mandatory. `twin_model_program.*` in agent_patches/ is the program before DiscoPoP's unchecked pragmas. Regions a rewrite creates are asked about once more (depth 1). Confound, stated before any run: a deeper twin can make more model calls than a shallower one, as the agent can.",
+      "description": "A matched model-only twin (D38): the agent arm `full_depth1` minus the gate. Runs discopop_agent/twin.py with full_depth1's own arguments (inherited: flags, settings, timing size, evidence file), so its model gets the agent's own first request for each region the agent would ask about — same region, same DiscoPoP evidence, same system prompt except that the gate's checks are described as what judges the FINISHED program and the feedback clause is gone. One attempt per region, no feedback; what the model leaves stays; after an edit the program is re-profiled (as after a kept rewrite) and at the end DiscoPoP inserts every applicable pragma with NOTHING checked (no clause check, TSan, schedules, speed, D33, Settle or floor). Judged afterwards like any trial; race_check.py on its programs is mandatory. `twin_model_program.*` in agent_patches/ is the program before DiscoPoP's unchecked pragmas. Regions a rewrite creates are asked about once more (depth 1). Confound, stated before any run: a deeper twin can make more model calls than a shallower one, as the agent can.",
       "runner": "twin",
       "twin_of": "full_depth1"
     },
@@ -925,7 +925,7 @@
       "ids": [
         "E8"
       ],
-      "description": "A matched model-only twin (D38): the agent arm `full_depth2` minus the gate. Runs discopop_agent/twin.py with full_depth2's own arguments (inherited: flags, settings, timing size, evidence file), so its model gets the agent's own first request for each region the agent would ask about \u2014 same region, same DiscoPoP evidence, same system prompt except that the gate's checks are described as what judges the FINISHED program and the feedback clause is gone. One attempt per region, no feedback; what the model leaves stays; after an edit the program is re-profiled (as after a kept rewrite) and at the end DiscoPoP inserts every applicable pragma with NOTHING checked (no clause check, TSan, schedules, speed, D33, Settle or floor). Judged afterwards like any trial; race_check.py on its programs is mandatory. `twin_model_program.*` in agent_patches/ is the program before DiscoPoP's unchecked pragmas. Two further levels.",
+      "description": "A matched model-only twin (D38): the agent arm `full_depth2` minus the gate. Runs discopop_agent/twin.py with full_depth2's own arguments (inherited: flags, settings, timing size, evidence file), so its model gets the agent's own first request for each region the agent would ask about — same region, same DiscoPoP evidence, same system prompt except that the gate's checks are described as what judges the FINISHED program and the feedback clause is gone. One attempt per region, no feedback; what the model leaves stays; after an edit the program is re-profiled (as after a kept rewrite) and at the end DiscoPoP inserts every applicable pragma with NOTHING checked (no clause check, TSan, schedules, speed, D33, Settle or floor). Judged afterwards like any trial; race_check.py on its programs is mandatory. `twin_model_program.*` in agent_patches/ is the program before DiscoPoP's unchecked pragmas. Two further levels.",
       "runner": "twin",
       "twin_of": "full_depth2"
     },
@@ -933,7 +933,7 @@
       "ids": [
         "E9"
       ],
-      "description": "A matched model-only twin (D38): the agent arm `full_no_hotspots` minus the gate. Runs discopop_agent/twin.py with full_no_hotspots's own arguments (inherited: flags, settings, timing size, evidence file), so its model gets the agent's own first request for each region the agent would ask about \u2014 same region, same DiscoPoP evidence, same system prompt except that the gate's checks are described as what judges the FINISHED program and the feedback clause is gone. One attempt per region, no feedback; what the model leaves stays; after an edit the program is re-profiled (as after a kept rewrite) and at the end DiscoPoP inserts every applicable pragma with NOTHING checked (no clause check, TSan, schedules, speed, D33, Settle or floor). Judged afterwards like any trial; race_check.py on its programs is mandatory. `twin_model_program.*` in agent_patches/ is the program before DiscoPoP's unchecked pragmas. Regions ranked by DiscoPoP's static workload proxy, so the twin is asked about the region the unmeasured agent would be. As for the agent arm, --min-runtime-share is inert.",
+      "description": "A matched model-only twin (D38): the agent arm `full_no_hotspots` minus the gate. Runs discopop_agent/twin.py with full_no_hotspots's own arguments (inherited: flags, settings, timing size, evidence file), so its model gets the agent's own first request for each region the agent would ask about — same region, same DiscoPoP evidence, same system prompt except that the gate's checks are described as what judges the FINISHED program and the feedback clause is gone. One attempt per region, no feedback; what the model leaves stays; after an edit the program is re-profiled (as after a kept rewrite) and at the end DiscoPoP inserts every applicable pragma with NOTHING checked (no clause check, TSan, schedules, speed, D33, Settle or floor). Judged afterwards like any trial; race_check.py on its programs is mandatory. `twin_model_program.*` in agent_patches/ is the program before DiscoPoP's unchecked pragmas. Regions ranked by DiscoPoP's static workload proxy, so the twin is asked about the region the unmeasured agent would be. As for the agent arm, --min-runtime-share is inert.",
       "runner": "twin",
       "twin_of": "full_no_hotspots"
     },
@@ -941,7 +941,7 @@
       "ids": [
         "E2-B1"
       ],
-      "description": "E2-B1's (full evidence, budget 1) cell with the speed check off: `full_b1` less --require-speedup. E2-B1 (the author, 26 Sep): RQ4 asks whether the model finds CORRECT parallelism when the deciding fact is hidden, so the speed check is OFF in every arm \u2014 the agent, its twins, the model alone and DiscoPoP alone \u2014 and the primary outcome is a verified parallel program (FASTER reported beside it).",
+      "description": "E2-B1's (full evidence, budget 1) cell with the speed check off: `full_b1` less --require-speedup. E2-B1 (the author, 26 Sep): RQ4 asks whether the model finds CORRECT parallelism when the deciding fact is hidden, so the speed check is OFF in every arm — the agent, its twins, the model alone and DiscoPoP alone — and the primary outcome is a verified parallel program (FASTER reported beside it).",
       "flags": [
         "--budget",
         "1",
@@ -960,7 +960,7 @@
       "ids": [
         "E2-B1"
       ],
-      "description": "E2-B1's (no evidence, budget 1) cell with the speed check off: `no_evidence_b1` less --require-speedup. E2-B1 (the author, 26 Sep): RQ4 asks whether the model finds CORRECT parallelism when the deciding fact is hidden, so the speed check is OFF in every arm \u2014 the agent, its twins, the model alone and DiscoPoP alone \u2014 and the primary outcome is a verified parallel program (FASTER reported beside it).",
+      "description": "E2-B1's (no evidence, budget 1) cell with the speed check off: `no_evidence_b1` less --require-speedup. E2-B1 (the author, 26 Sep): RQ4 asks whether the model finds CORRECT parallelism when the deciding fact is hidden, so the speed check is OFF in every arm — the agent, its twins, the model alone and DiscoPoP alone — and the primary outcome is a verified parallel program (FASTER reported beside it).",
       "flags": [
         "--budget",
         "1",
@@ -997,7 +997,7 @@
       "ids": [
         "E2-B1"
       ],
-      "description": "The model alone (D37 mirror) told the speed-off goal in the agent's own speed-off words (`--no-require-speedup`, feature check bare-speed-off). E2-B1 (the author, 26 Sep): RQ4 asks whether the model finds CORRECT parallelism when the deciding fact is hidden, so the speed check is OFF in every arm \u2014 the agent, its twins, the model alone and DiscoPoP alone \u2014 and the primary outcome is a verified parallel program (FASTER reported beside it).",
+      "description": "The model alone (D37 mirror) told the speed-off goal in the agent's own speed-off words (`--no-require-speedup`, feature check bare-speed-off). E2-B1 (the author, 26 Sep): RQ4 asks whether the model finds CORRECT parallelism when the deciding fact is hidden, so the speed check is OFF in every arm — the agent, its twins, the model alone and DiscoPoP alone — and the primary outcome is a verified parallel program (FASTER reported beside it).",
       "runner": "bare_llm",
       "flags": [
         "--no-require-speedup"
@@ -1007,7 +1007,7 @@
       "ids": [
         "E2-V3"
       ],
-      "description": "E2-V3 (29 Sep, the author: \"go\"): prompt version 3 (the prompt review's must-changes plus D4, the split order stated where DiscoPoP names the carrying loop) \u2014 the version that gave ORDER-2 X 8/10 with evidence vs 0/10 without in single calls (evidence_pilot_v2). Otherwise exactly E2-B1's arm `full_b1_nospeed`.",
+      "description": "E2-V3 (29 Sep, the author: \"go\"): prompt version 3 (the prompt review's must-changes plus D4, the split order stated where DiscoPoP names the carrying loop) — the version that gave ORDER-2 X 8/10 with evidence vs 0/10 without in single calls (evidence_pilot_v2). Otherwise exactly E2-B1's arm `full_b1_nospeed`.",
       "flags": [
         "--budget",
         "1",
@@ -1029,7 +1029,7 @@
       "ids": [
         "E2-V3"
       ],
-      "description": "E2-V3 (29 Sep, the author: \"go\"): prompt version 3 (the prompt review's must-changes plus D4, the split order stated where DiscoPoP names the carrying loop) \u2014 the version that gave ORDER-2 X 8/10 with evidence vs 0/10 without in single calls (evidence_pilot_v2). Otherwise exactly E2-B1's arm `no_evidence_b1_nospeed`.",
+      "description": "E2-V3 (29 Sep, the author: \"go\"): prompt version 3 (the prompt review's must-changes plus D4, the split order stated where DiscoPoP names the carrying loop) — the version that gave ORDER-2 X 8/10 with evidence vs 0/10 without in single calls (evidence_pilot_v2). Otherwise exactly E2-B1's arm `no_evidence_b1_nospeed`.",
       "flags": [
         "--budget",
         "1",
@@ -1081,7 +1081,7 @@
       "ids": [
         "E1-final"
       ],
-      "description": "E1-final (2 Oct, the author: one version for every remaining experiment): E1's arm at prompt version 3 \u2014 the only flag added; the fixed DiscoPoP, SDK 0.2.162 and packaging v4 come with the run. The campaign default (`default`).",
+      "description": "E1-final (2 Oct, the author: one version for every remaining experiment): E1's arm at prompt version 3 — the only flag added; the fixed DiscoPoP, SDK 0.2.162 and packaging v4 come with the run. The campaign default (`default`).",
       "flags": [
         "--prompt-version",
         "3"
@@ -1101,7 +1101,7 @@
       "ids": [
         "E1-final"
       ],
-      "description": "E1-final (2 Oct, the author: one version for every remaining experiment): E1's arm at prompt version 3 \u2014 the only flag added; the fixed DiscoPoP, SDK 0.2.162 and packaging v4 come with the run. DiscoPoP alone (`discopop_gate`, budget 0: no model is called; the version flag changes nothing it does, and keeps the two arms differing in the budget only).",
+      "description": "E1-final (2 Oct, the author: one version for every remaining experiment): E1's arm at prompt version 3 — the only flag added; the fixed DiscoPoP, SDK 0.2.162 and packaging v4 come with the run. DiscoPoP alone (`discopop_gate`, budget 0: no model is called; the version flag changes nothing it does, and keeps the two arms differing in the budget only).",
       "flags": [
         "--budget",
         "0",
@@ -1122,7 +1122,7 @@
       "ids": [
         "E1-final"
       ],
-      "description": "The model alone (the mirror, speed check on) with prompt version 3's shared passages \u2014 E1-final's model-alone arm for Haiku, Sonnet, Opus and Fable.",
+      "description": "The model alone (the mirror, speed check on) with prompt version 3's shared passages — E1-final's model-alone arm for Haiku, Sonnet, Opus and Fable.",
       "runner": "bare_llm",
       "flags": [
         "--prompt-version",
@@ -1134,7 +1134,7 @@
         "E1-v5",
         "E1-v6"
       ],
-      "description": "E1-v5 (4 Oct, the author: \"ok go with recommendation\"): E1-final's agent arm at prompt version 4 (4 Oct: the order statement decided by what carries a flow, read from the profile's call-path states, and every dependence read by its own type \u2014 D11, D12; the wording is version 3's), packaging v5 (suite tsvc_c1: the benchmark's file holds the loop's function alone, one editable file). Otherwise exactly `default_v3`.",
+      "description": "E1-v5 (4 Oct, the author: \"ok go with recommendation\"): E1-final's agent arm at prompt version 4 (4 Oct: the order statement decided by what carries a flow, read from the profile's call-path states, and every dependence read by its own type — D11, D12; the wording is version 3's), packaging v5 (suite tsvc_c1: the benchmark's file holds the loop's function alone, one editable file). Otherwise exactly `default_v3`.",
       "flags": [
         "--prompt-version",
         "4"
@@ -1155,7 +1155,7 @@
         "E1-v5",
         "E1-v6"
       ],
-      "description": "E1-v5: DiscoPoP alone (budget 0: no model is called) beside `default_v4` \u2014 the two differ in the budget only. prompt version 4 (4 Oct: the order statement decided by what carries a flow, read from the profile's call-path states, and every dependence read by its own type \u2014 D11, D12; the wording is version 3's), packaging v5 (suite tsvc_c1: the benchmark's file holds the loop's function alone, one editable file).",
+      "description": "E1-v5: DiscoPoP alone (budget 0: no model is called) beside `default_v4` — the two differ in the budget only. prompt version 4 (4 Oct: the order statement decided by what carries a flow, read from the profile's call-path states, and every dependence read by its own type — D11, D12; the wording is version 3's), packaging v5 (suite tsvc_c1: the benchmark's file holds the loop's function alone, one editable file).",
       "flags": [
         "--budget",
         "0",
@@ -1177,7 +1177,7 @@
         "E1-v5",
         "E1-v6"
       ],
-      "description": "E1-v5: the model alone (the mirror, speed check on) with prompt version 4's shared passages (the same as version 3's: D11 and D12 change evidence, which the mirror has none of) \u2014 for Haiku, Sonnet, Opus and Fable on packaging v5.",
+      "description": "E1-v5: the model alone (the mirror, speed check on) with prompt version 4's shared passages (the same as version 3's: D11 and D12 change evidence, which the mirror has none of) — for Haiku, Sonnet, Opus and Fable on packaging v5.",
       "runner": "bare_llm",
       "flags": [
         "--prompt-version",
@@ -1187,9 +1187,10 @@
     "full_b1_nospeed_v4": {
       "ids": [
         "E2-v5",
-        "E2-v6"
+        "E2-v6",
+        "E2-v6b"
       ],
-      "description": "E2-v5 (4 Oct, the author: \"ok go with recommendation\"): the hidden-order kernels on the clean layout, the agent WITH DiscoPoP's evidence, speed check off \u2014 E2-O3's arm at prompt version 4 (4 Oct: the order statement decided by what carries a flow, read from the profile's call-path states, and every dependence read by its own type \u2014 D11, D12; the wording is version 3's), packaging v5 (suite tsvc_c1: the benchmark's file holds the loop's function alone, one editable file).",
+      "description": "E2-v5 (4 Oct, the author: \"ok go with recommendation\"): the hidden-order kernels on the clean layout, the agent WITH DiscoPoP's evidence, speed check off — E2-O3's arm at prompt version 4 (4 Oct: the order statement decided by what carries a flow, read from the profile's call-path states, and every dependence read by its own type — D11, D12; the wording is version 3's), packaging v5 (suite tsvc_c1: the benchmark's file holds the loop's function alone, one editable file).",
       "flags": [
         "--budget",
         "1",
@@ -1210,9 +1211,10 @@
     "no_evidence_b1_nospeed_v4": {
       "ids": [
         "E2-v5",
-        "E2-v6"
+        "E2-v6",
+        "E2-v6b"
       ],
-      "description": "E2-v5: the agent WITHOUT evidence, speed check off \u2014 `full_b1_nospeed_v4` minus the evidence, on packaging v5.",
+      "description": "E2-v5: the agent WITHOUT evidence, speed check off — `full_b1_nospeed_v4` minus the evidence, on packaging v5.",
       "flags": [
         "--budget",
         "1",
@@ -1247,9 +1249,10 @@
     },
     "full_nospeed_v4": {
       "ids": [
-        "E2-v6"
+        "E2-v6",
+        "E2-v6b"
       ],
-      "description": "E2-v6 (5 Oct, the author: \"yes we can [add] the two three-attempt setups\"): the agent WITH DiscoPoP's evidence and THREE attempts per region, speed check off \u2014 `full_b1_nospeed_v4` with the default budget. A rejected attempt goes back to the model with the reason (the gate's diagnostic; after a rewrite DiscoPoP still cannot parallelize, DiscoPoP's blockers of THAT rewrite) and it may try again.",
+      "description": "E2-v6 (5 Oct, the author: \"yes we can [add] the two three-attempt setups\"): the agent WITH DiscoPoP's evidence and THREE attempts per region, speed check off — `full_b1_nospeed_v4` with the default budget. A rejected attempt goes back to the model with the reason (the gate's diagnostic; after a rewrite DiscoPoP still cannot parallelize, DiscoPoP's blockers of THAT rewrite) and it may try again.",
       "flags": [
         "--no-require-speedup",
         "--prompt-version",
@@ -1267,9 +1270,10 @@
     },
     "no_evidence_nospeed_v4": {
       "ids": [
-        "E2-v6"
+        "E2-v6",
+        "E2-v6b"
       ],
-      "description": "E2-v6: the agent WITHOUT evidence in its requests and THREE attempts per region, speed check off \u2014 `no_evidence_b1_nospeed_v4` with the default budget. The first request of a region carries no DiscoPoP data; a rejected attempt goes back with the reason, and after a rewrite DiscoPoP still cannot parallelize that reason includes DiscoPoP's blockers of the model's OWN rewrite (`phases/verdicts._rewrite_feedback`): this arm is 'feedback without evidence up front', not 'no DiscoPoP information at all' \u2014 only the one-attempt arm is that.",
+      "description": "E2-v6: the agent WITHOUT evidence in its requests and THREE attempts per region, speed check off — `no_evidence_b1_nospeed_v4` with the default budget. The first request of a region carries no DiscoPoP data; a rejected attempt goes back with the reason, and after a rewrite DiscoPoP still cannot parallelize that reason includes DiscoPoP's blockers of the model's OWN rewrite (`phases/verdicts._rewrite_feedback`): this arm is 'feedback without evidence up front', not 'no DiscoPoP information at all' — only the one-attempt arm is that.",
       "flags": [
         "--evidence",
         "none",
@@ -1291,7 +1295,7 @@
   "common_timing_size": "per_kernel",
   "common_flags_note": "Fixed configuration every arm inherits. Until 2026-09-20 this was --no-require-speedup (15 Sep: at SMALL sizes kernels run in milliseconds and the check measured noise). E10 settled it: the check ON at the kernel's TIMING size is the only configuration with no unsafe acceptance and no result below DiscoPoP alone, while OFF kept 5 slower programs and 1 BROKEN, and ON at the small size deleted DiscoPoP's own pragmas in 10 of 21 trials. What was wrong in September was the size, not the check. An arm that wants the old behaviour says so explicitly. --min-runtime-share 0.01 is unchanged (D1, from T0.5).",
   "settings_note": "`settings` is what each arm DECLARES the agent must be configured with for the experiment it serves. Before a run the harness asks the agent what it actually parsed (`--print-config`) and refuses to start on any difference, so a changed default, an inherited flag or a typo cannot silently change what an arm means. Add a key here for every argument that carries the arm's purpose; leave out the ones it genuinely does not care about (paths, model, credentials).",
-  "experiments_note": "Every experiment names its arms, the resolved agent settings that are its VARIABLE, and any setting that may differ only as a CONSEQUENCE of the variable. tools/test_arms.py resolves every arm through the agent's own parser and fails unless the arms of an experiment differ in exactly that: nothing else (a confound), and nothing less (a variable that does not vary is an experiment whose arms cannot differ). The per-arm `ids` are derived from this block. E5 and E7 run no agent arm \u2014 E5 measures DiscoPoP's profiling cost as the size grows, E7 replays archived candidates through the gate with stages switched off \u2014 so they have no entry here (26 Sep).",
+  "experiments_note": "Every experiment names its arms, the resolved agent settings that are its VARIABLE, and any setting that may differ only as a CONSEQUENCE of the variable. tools/test_arms.py resolves every arm through the agent's own parser and fails unless the arms of an experiment differ in exactly that: nothing else (a confound), and nothing less (a variable that does not vary is an experiment whose arms cannot differ). The per-arm `ids` are derived from this block. E5 and E7 run no agent arm — E5 measures DiscoPoP's profiling cost as the size grows, E7 replays archived candidates through the gate with stages switched off — so they have no entry here (26 Sep).",
   "experiments": {
     "E1": {
       "arms": [
@@ -1302,7 +1306,7 @@
         "budget"
       ],
       "consequences": [],
-      "why": "THE MAIN COMPARISON (D19): DiscoPoP alone vs DiscoPoP + agent. Budget 0 means no model is ever called; everything else \u2014 gate, speed check, sizes, filter \u2014 is identical, so the difference is the agent."
+      "why": "THE MAIN COMPARISON (D19): DiscoPoP alone vs DiscoPoP + agent. Budget 0 means no model is ever called; everything else — gate, speed check, sizes, filter — is identical, so the difference is the agent."
     },
     "E2": {
       "arms": [
@@ -1317,7 +1321,7 @@
         "budget"
       ],
       "consequences": [],
-      "why": "Evidence x feedback 2x2 (H5, H5b). The evidence-source arms of D16 (`hotspot_only`, `compiler_remarks`) join when --evidence-file exists. Runs on agent v2 (D32, D33, Fixes 91-92) with its OWN `default` arm, in the same run as its other arms (D34, the author, 23 Sep) \u2014 E1's `default` trials are agent v1 and are not E2's reference cell. `discopop_gate` is in the same runs (D19): D33 also changes Phase B at --budget 0, so DiscoPoP alone is re-measured on v2 rather than taken from E1 (v1)."
+      "why": "Evidence x feedback 2x2 (H5, H5b). The evidence-source arms of D16 (`hotspot_only`, `compiler_remarks`) join when --evidence-file exists. Runs on agent v2 (D32, D33, Fixes 91-92) with its OWN `default` arm, in the same run as its other arms (D34, the author, 23 Sep) — E1's `default` trials are agent v1 and are not E2's reference cell. `discopop_gate` is in the same runs (D19): D33 also changes Phase B at --budget 0, so DiscoPoP alone is re-measured on v2 rather than taken from E1 (v1)."
     },
     "E3": {
       "arms": [
@@ -1438,7 +1442,7 @@
         "evidence_sections"
       ],
       "consequences": [],
-      "why": "Which PART of DiscoPoP's evidence matters (D16 Part C): six groups, each left OUT of full evidence (necessary?) and given ALONE (sufficient?). Exploratory: effect sizes, not significance tests. N = 3 on the seven loops (the author, 23 Sep). The `feedback` group's two arms were dropped before any E2-C trial (the author, 23 Sep): at budget 1 the group holds one fixed sentence, and the feedback's worth is Part B's question \u2014 five groups, ten arms."
+      "why": "Which PART of DiscoPoP's evidence matters (D16 Part C): six groups, each left OUT of full evidence (necessary?) and given ALONE (sufficient?). Exploratory: effect sizes, not significance tests. N = 3 on the seven loops (the author, 23 Sep). The `feedback` group's two arms were dropped before any E2-C trial (the author, 23 Sep): at budget 1 the group holds one fixed sentence, and the feedback's worth is Part B's question — five groups, ten arms."
     },
     "E2-D": {
       "arms": [
@@ -1452,7 +1456,7 @@
         "prompt_omit"
       ],
       "consequences": [],
-      "why": "Which part of the PROMPT matters (D16 Part D): leave one part out, evidence held at full. Read with gate rejections by stage \u2014 a prompt part may prevent wasted attempts rather than failures. N = 3 on the seven loops (the author, 23 Sep)."
+      "why": "Which part of the PROMPT matters (D16 Part D): leave one part out, evidence held at full. Read with gate rejections by stage — a prompt part may prevent wasted attempts rather than failures. N = 3 on the seven loops (the author, 23 Sep)."
     },
     "E1-bare": {
       "arms": [
@@ -1464,7 +1468,7 @@
       ],
       "consequences": [],
       "check": "runner",
-      "why": "The whole pipeline (DiscoPoP's evidence, ranking, the gate, feedback, DiscoPoP's pragmas) against the same model asked directly. `bare_llm` has its own runner and takes no agent arguments, so the arms cannot be compared setting by setting: the test only checks that the runner arm exists and the other one is the campaign default. Since D35 (23 Sep) the model alone is part of the MAIN comparison of every experiment: E1c's bare_llm trials (the mirror prompt, D37, on packages without the hint, D36) are the model-alone reference of every TSVC class-R experiment run with Haiku (E2, E3, E4, E8) \u2014 E1-bare's 90 read the hint and are superseded \u2014 the bare arm never runs the agent, so agent versions do not change it; a new model or benchmark set gets its own `bare_llm` run."
+      "why": "The whole pipeline (DiscoPoP's evidence, ranking, the gate, feedback, DiscoPoP's pragmas) against the same model asked directly. `bare_llm` has its own runner and takes no agent arguments, so the arms cannot be compared setting by setting: the test only checks that the runner arm exists and the other one is the campaign default. Since D35 (23 Sep) the model alone is part of the MAIN comparison of every experiment: E1c's bare_llm trials (the mirror prompt, D37, on packages without the hint, D36) are the model-alone reference of every TSVC class-R experiment run with Haiku (E2, E3, E4, E8) — E1-bare's 90 read the hint and are superseded — the bare arm never runs the agent, so agent versions do not change it; a new model or benchmark set gets its own `bare_llm` run."
     },
     "D38-twins": {
       "arms": [
@@ -1494,7 +1498,7 @@
       ],
       "consequences": [],
       "check": "twin",
-      "why": "D38: every twin resolves, through its own entry point, to EXACTLY the configuration of the agent arm it is the twin of \u2014 the agent's parser, the agent's flags, nothing added. Its only difference is the runner: no gate. Since agent v3.1 (26 Sep) the agent also re-queues a Tier-1 region whose DiscoPoP pragma its safety gate refuses; a twin has no gate, so it cannot \u2014 'the agent minus the gate' includes that re-queue, and the twin's regions are the agent's Tier-2 regions without it."
+      "why": "D38: every twin resolves, through its own entry point, to EXACTLY the configuration of the agent arm it is the twin of — the agent's parser, the agent's flags, nothing added. Its only difference is the runner: no gate. Since agent v3.1 (26 Sep) the agent also re-queues a Tier-1 region whose DiscoPoP pragma its safety gate refuses; a twin has no gate, so it cannot — 'the agent minus the gate' includes that re-queue, and the twin's regions are the agent's Tier-2 regions without it."
     },
     "E2-twins": {
       "arms": [
@@ -1579,7 +1583,7 @@
       ],
       "consequences": [],
       "check": "runner",
-      "why": "LULESH: the model alone beside the agent (D35 \u2014 every experiment's main comparison is three-way); its own runner, so only its existence is checked. Edit-scope asymmetry to report: bare_llm copies back every unit, the agent edits only lulesh.cc."
+      "why": "LULESH: the model alone beside the agent (D35 — every experiment's main comparison is three-way); its own runner, so only its existence is checked. Edit-scope asymmetry to report: bare_llm copies back every unit, the agent edits only lulesh.cc."
     },
     "E11": {
       "arms": [
@@ -1628,7 +1632,7 @@
         "budget"
       ],
       "consequences": [],
-      "why": "E2-B1 (pre-registered before its first trial): the evidence contrast on loops whose deciding fact is not in the loop text, speed check off in every arm, DiscoPoP alone beside it. E2-B1 (the author, 26 Sep): RQ4 asks whether the model finds CORRECT parallelism when the deciding fact is hidden, so the speed check is OFF in every arm \u2014 the agent, its twins, the model alone and DiscoPoP alone \u2014 and the primary outcome is a verified parallel program (FASTER reported beside it)."
+      "why": "E2-B1 (pre-registered before its first trial): the evidence contrast on loops whose deciding fact is not in the loop text, speed check off in every arm, DiscoPoP alone beside it. E2-B1 (the author, 26 Sep): RQ4 asks whether the model finds CORRECT parallelism when the deciding fact is hidden, so the speed check is OFF in every arm — the agent, its twins, the model alone and DiscoPoP alone — and the primary outcome is a verified parallel program (FASTER reported beside it)."
     },
     "E2-B1-twins": {
       "arms": [
@@ -1806,7 +1810,7 @@
         "budget"
       ],
       "consequences": [],
-      "why": "THE MAIN COMPARISON on packaging v6 (5 Oct, the author: \"ok go ahead\"; the arms are E1-v5's \u2014 the packaging is the run's, not the arm's): DiscoPoP alone vs DiscoPoP + agent; budget 0 means no model is called, everything else identical."
+      "why": "THE MAIN COMPARISON on packaging v6 (5 Oct, the author: \"ok go ahead\"; the arms are E1-v5's — the packaging is the run's, not the arm's): DiscoPoP alone vs DiscoPoP + agent; budget 0 means no model is called, everything else identical."
     },
     "E1-v6-bare": {
       "arms": [
@@ -1895,7 +1899,43 @@
         "budget"
       ],
       "consequences": [],
-      "why": "E2-v6: what two more attempts with feedback add when no evidence is in the request \u2014 can the feedback stand in for it?"
+      "why": "E2-v6: what two more attempts with feedback add when no evidence is in the request — can the feedback stand in for it?"
+    },
+    "E2-v6b": {
+      "arms": [
+        "discopop_capability",
+        "no_evidence_b1_nospeed_v4",
+        "full_b1_nospeed_v4"
+      ],
+      "variable": [
+        "evidence_sections",
+        "budget",
+        "prompt_version"
+      ],
+      "consequences": [],
+      "why": "E2-v6b (7 Oct, the author: \"ok go with your recommendation\"): E2-v6 run again on the fixed DiscoPoP (B14) — the same arms, units and packages."
+    },
+    "E2-v6b-feedback": {
+      "arms": [
+        "full_b1_nospeed_v4",
+        "full_nospeed_v4"
+      ],
+      "variable": [
+        "budget"
+      ],
+      "consequences": [],
+      "why": "E2-v6b: what two more attempts with feedback add when the evidence is in the request, on the fixed DiscoPoP."
+    },
+    "E2-v6b-feedback-no-evidence": {
+      "arms": [
+        "no_evidence_b1_nospeed_v4",
+        "no_evidence_nospeed_v4"
+      ],
+      "variable": [
+        "budget"
+      ],
+      "consequences": [],
+      "why": "E2-v6b: what two more attempts with feedback add when no evidence is in the request, on the fixed DiscoPoP."
     }
   }
 }
