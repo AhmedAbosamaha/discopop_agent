@@ -41,6 +41,7 @@ LLVM 19 (macOS) and LLVM 20 (Linux).
 | B14 | profiler, `static_analysis/calltree_construction.cpp` (loop states of the call path) | **fixed 7 Oct** | two loops side by side inside a loop are modelled as nested in each other, and the later loop's iterations are never recorded. Two faces: a dependence carried by the OUTER loop blocks the later loop's Do-All (the shape every loop distribution inside a repetition loop creates), and a dependence BETWEEN the later loop's own iterations is not seen — a recurrence reported Do-All |
 | B15 | explorer, `TaskGraph.__assign_loopstate_positions_within_functions` / task-graph loops | fixed 27 Sep | a `do … while` loop gets no loop context in the task graph, so the loop-state digit positions of every loop in the function after it are off by one: no call-path state under the `do … while` matches, every dependence recorded there is lost, and a textbook recurrence nested in it is reported Do-All (Rodinia bfs: all 1,500 dynamic dependences of the kernel lost) |
 | B18 | explorer (suspected: the carried-scalar rule of B10's fix) | candidate, 7 Oct | on PolyBench the current DiscoPoP reports no Do-All for outer loops it reported on 20 Sep — `correlation`, `covariance` (one directive, 5–6×, race-clean in three draws then; none now), `gramschmidt`, `fdtd-2d` (the directive now on a smaller loop: 8× → 0.35×, 5× → 0.6×); the blockers it names are the inner loops' own counters (`i`, `j`), declared at the top of the function |
+| B19 | explorer and patch generator (data-sharing clauses) | candidate, 7 Oct | a scalar assigned under a condition inside the loop and read after it (`if (a[i] < 0) j = i;`, TSVC `s331`): the loop is reported Do-All and the directive written is `parallel for lastprivate(j)`, which returns the last CHUNK's value, not the last assignment's — wrong output; the gate refuses it every time |
 | L3 | explorer | limitation | NPB-CPP `mg`: with P1's fix the state assignment is fast, but the run then stays in task-pattern detection (`new_task_detector`) — a first run was read at 4 h 19 min, the same run was stopped unfinished after **11 h 24 min** at 100 % CPU on the server (19–20 Sep); the Do-All detector is not reached. Not usable per trial |
 
 ---
@@ -424,6 +425,39 @@ fixed profiler: outcome and number of directives of every package as in the thre
 both reads and writes an array whose value the enclosing loop carries (`u[i] += …`, `y[j] = y[j] + …`). A later
 loop that only writes is not blocked — which is why `k48`, where the `+=` loop comes first, had both loops
 reported, and why `case_5` never failed.
+
+## B19 — candidate: a conditionally assigned scalar that is read after the loop gets `lastprivate` (explorer, patch generator)
+
+**Status: candidate, 7 Oct 2026 — seen in every draw, not fixed; what the fix should be is a decision.** TSVC
+`s331` searches the last negative element:
+
+```c
+j = -1;
+for (int i = 0; i < LEN_1D; i++) {
+    if (a[i] < (real_t)0.) {
+        j = i;
+    }
+}
+chksum = (real_t) j;
+```
+
+DiscoPoP reports the loop Do-All (pattern `do_all`, both server draws of T0.18 and every DiscoPoP-alone trial) and
+writes `#pragma omp parallel for lastprivate(j)`. `lastprivate` hands back the value of `j` in the thread that ran
+the sequentially last iteration; where that iteration does not assign, the value is not the last assignment's. The
+harness's gate refuses the directive at the output check in every trial (`e1v6c_v7_agent`, DiscoPoP alone: 5 of 5
+"Program output changed"; the same on packaging v6), so no wrong program was shipped — DiscoPoP alone ends
+unchanged and the loop is of class R.
+
+The loop is parallel, with a directive DiscoPoP does not produce: `reduction(max: j)` (the last index is the
+largest; every model alone writes it, 17 of 20 programs in `e1v6c_v7_bare_*`, FASTER 3.6–4.7×, race-free) or
+OpenMP 5.0's `lastprivate(conditional: j)`. T0.13 (21 Sep) had named `s331` as needing "a pragma DiscoPoP cannot
+write"; this entry says which one DiscoPoP writes instead and why it is wrong.
+
+**Two possible fixes at the root, with different consequences — not chosen:** (1) do not report Do-All when a
+scalar that is live after the loop is assigned under a condition: DiscoPoP alone is unchanged (the gate already
+refuses the directive), the agent goes to the model at once instead of after the refusal; (2) write
+`lastprivate(conditional: …)` for such a scalar: then DiscoPoP alone parallelizes `s331`, the loop's class becomes
+A, and the main comparison's population changes by one loop. Until one is chosen the loop stays as measured.
 
 ## B18 — candidate: outer loops of PolyBench kernels lose their Do-All; the blockers named are inner loop counters (explorer)
 

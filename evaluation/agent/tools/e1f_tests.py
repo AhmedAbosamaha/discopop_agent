@@ -60,7 +60,7 @@ def main() -> int:
     tests: List[Tuple[str, str, float, str]] = [
         ("T1", "H1 — the agent faster than DiscoPoP alone (per-loop medians)", float(h1["p_value"]),
          f"{h1['n_nonzero']} non-zero pairs of {h1['n_pairs']}, median agent ÷ DiscoPoP alone "
-         f"{first['classes']['R']['median_ratio_agent_over_dp_alone']}×")]
+         f"{round(float(first['classes']['R']['median_ratio_agent_over_dp_alone']), 4)}×")]
     rows: List[str] = []
     for key, label, test in (("agent_vs_model_alone_unusable", "H13 — fewer unusable programs than {m}", "T{n}"),
                              ("agent_vs_model_alone_faster_race_free", "reach — more race-free FASTER than {m}", "T{n}")):
