@@ -453,7 +453,7 @@ Status: stopped 4 Oct — superseded by E1-v6
 
 ## [E1-v6 — the headline three-way comparison on clean files in TSVC's own form (packaging v6, prompt version 4)](E01v6_clean_files_three_way/REPORT.md)
 
-Status: running
+Status: done
 
 | run | where | what it is | status | trials | outcomes |
 |---|---|---|---|---:|---|
@@ -477,6 +477,8 @@ Status: running
 | `e1v6c_v7_bare_sonnet` | [`E01v6_clean_files_three_way/runs/e1v6c_v7_bare_sonnet/`](E01v6_clean_files_three_way/runs/e1v6c_v7_bare_sonnet/) | E1-v6 corrected for the repetitions (packaging v7): sonnet alone on tsvc_c3/s313 and s331 × bare_llm_v4 × 5, as e1v6_bare_sonnet | valid | 6 | FASTER 6 |
 | `e1v6c_v7_bare_opus` | [`E01v6_clean_files_three_way/runs/e1v6c_v7_bare_opus/`](E01v6_clean_files_three_way/runs/e1v6c_v7_bare_opus/) | E1-v6 corrected for the repetitions (packaging v7): opus alone on tsvc_c3/s313 and s331 × bare_llm_v4 × 5, as e1v6_bare_opus | valid | 6 | FASTER 6 |
 | `e1v6c_v7_bare_fable` | [`E01v6_clean_files_three_way/runs/e1v6c_v7_bare_fable/`](E01v6_clean_files_three_way/runs/e1v6c_v7_bare_fable/) | E1-v6 corrected for the repetitions (packaging v7): fable alone on tsvc_c3/s313 and s331 × bare_llm_v4 × 5, as e1v6_bare_fable | valid | 6 | FASTER 6 |
+| `e1v6c_replay` | [`E01v6_clean_files_three_way/checks/e1v6c_replay/`](E01v6_clean_files_three_way/checks/e1v6c_replay/) | candidate_replay.py replay (server, no model): the 26 pragma-free rewrites that six E1-v6 trials received and accepted at the first stages (s241 repeats 1, 4, 5; s252 repeats 1, 2; s341 repeat 2) handed to the pipeline on the fixed DiscoPoP — would a discarded one be kept? | valid | 0 |  |
+| `e1v6c_replay_verify` | [`E01v6_clean_files_three_way/checks/e1v6c_replay_verify/`](E01v6_clean_files_three_way/checks/e1v6c_replay_verify/) | verify-source (server, no model) on every finished file the replay e1v6c_replay kept: the harness's verdict against the benchmark's original, verification size, threads 6 and 12 | valid | 21 | FASTER 2, parallel-not-faster 19 |
 
 ## [E2-v6 — the hidden order on clean files: does DiscoPoP's evidence let the agent find a split no reading of the file can find, and can retries with feedback stand in for it?](E02v6_hidden_order_clean_files/REPORT.md)
 
