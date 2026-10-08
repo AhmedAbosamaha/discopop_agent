@@ -533,7 +533,10 @@ int main(void) {
 
 prints 182150 with one thread and an arbitrary number with four — as it does with plain `lastprivate(j)` (this
 form at -O1 with `-fopenmp-version` unset, 50, 51 and 52; the same loop with braces at -O0 and -O3, as one
-combined directive and split in two; no diagnostic; the generated code holds no tracking of the assignment). On the `s331` package at 4,000,000 elements the same: both forms change the
+combined directive and split in two; no diagnostic). In the unoptimized code the compiler does keep the variable
+in a per-thread record with a flag (`%struct.lasprivate.conditional`, the flag set to zero) and adds a barrier
+after the loop, but the assignment only stores into that record and the copy-back is the plain one — the thread of
+the last iteration writes its own value. Why it does not compare the assigning iterations is not traced. On the `s331` package at 4,000,000 elements the same: both forms change the
 output (the search returns 3 where the original returns 182150); `reduction(max: j)` keeps the output and runs in
 0.04 s against 0.12–0.20 s. So the conditional form is not a directive DiscoPoP could simply write: with this
 compiler it behaves as the plain one. The server's compiler (LLVM 20) is not looked at.
