@@ -334,8 +334,9 @@ result, or the expectation written down before the run.
     it every time. The bridge to 7.7.
   - Worked examples from the archived trials: a rewrite the agent kept, one it reverted and why, one the model
     alone shipped wrong.
-  - Owed: a replay, without a model, of the rewrites the agent discarded before the profiler fix. At most 6
-    more trials on 3 loops could change, so the corrected count lies between 76 and 82.
+  - The replay, without a model, of the rewrites the agent discarded before the profiler fix: two trials on
+    one loop had thrown away a rewrite that is right and 1.8× faster once DiscoPoP reports both of its loops.
+    The count is 76 measured, at most 78; the other discarded rewrites were dropped for good reason.
 - **7.3 A small model inside the pipeline against stronger models alone** (E12). **[done]** On the two
   hidden-order kernels only the Haiku agent is ever faster (20 of 20; every model alone 0); on four real loops
   the strong models alone are as good or better.
