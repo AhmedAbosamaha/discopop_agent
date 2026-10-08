@@ -19,9 +19,11 @@ analysis, the gate, or the speed at this machine.
     agent/tools/default_arm_ceiling.py [LOOP...] --out DIR [--agent-repo PATH]
 
 A LOOP may be given as `LOOP=FILE` to hand over another restructuring than the expert's — e.g. a
-rewrite a model wrote in an archived trial (pragmas stripped the same way). Single-file
-benchmarks only. Used to run agent v2's new Phase B paths end to end on E1's rewrites (E2
-pre-flight, 23 Sep), where a smoke's model draw may never produce one.
+rewrite a model wrote in an archived trial (pragmas stripped the same way). For a project
+package (the clean layouts: `tsvc_c2/s241=FILE`) the file takes the place of the benchmark's
+own unit, `meta.json`'s `file`; the package's other files stay. Used to run agent v2's new
+Phase B paths end to end on E1's rewrites (E2 pre-flight, 23 Sep), where a smoke's model draw
+may never produce one, and by `candidate_replay.py` (8 Oct) for the rewrites a trial discarded.
 """
 from __future__ import annotations
 
@@ -64,9 +66,7 @@ def run_one(loop: str, out: Path, repo: Path, timeout: int, speed: bool = True,
     ref_root = AGENT_DIR / "reference_solutions" / bench.split("/")[0]
     ref_dir, ref = ref_root / bench.split("/")[1], ref_root / f"{bench.split('/')[1]}{ext}"
     if source is not None:
-        if proj is not None:
-            sys.exit(f"{bench}: LOOP=FILE takes a single-file benchmark only")
-        ref = source
+        ref = source                  # single file, or — for a project — the benchmark's own unit
     work = out / (bench.replace("/", "_") + (f"@{source.stem}" if source is not None else ""))
     shutil.rmtree(work, ignore_errors=True)
     work.mkdir(parents=True)
@@ -94,10 +94,11 @@ def run_one(loop: str, out: Path, repo: Path, timeout: int, speed: bool = True,
         shutil.rmtree(staged, ignore_errors=True)
         cli._copy_tree(bench_dir, staged)
         shutil.copy2(bench_dir / "meta.json", staged / "meta.json")   # _copy_tree takes the program only
-        given = ([f for f in sorted(ref_dir.rglob("*")) if f.is_file()] if ref_dir.is_dir() else [ref])
+        several = source is None and ref_dir.is_dir()
+        given = [f for f in sorted(ref_dir.rglob("*")) if f.is_file()] if several else [ref]
         n_expert = 0
         for f in given:
-            rel = f.relative_to(ref_dir) if ref_dir.is_dir() else Path(meta["file"]).name
+            rel = f.relative_to(ref_dir) if several else Path(meta["file"]).name
             text = f.read_text(errors="replace")
             n_expert += sum(1 for l in text.splitlines() if PRAGMA.match(l))
             (staged / rel).write_text(strip_pragmas(text) if f.suffix in (".c", ".cc", ".cpp") else text)
