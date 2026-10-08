@@ -380,7 +380,7 @@ result, or the expectation written down before the run.
     setups with the speed check off); a false Do-All from DiscoPoP that the race stage refused. And one wrong
     refusal with a known cause: the check against DiscoPoP's observed dependences compared line numbers of the
     working file with those of the profiled file and refused a correct directive below an accepted one (once in
-    3,020 candidate files; found 8 Oct; to be repaired before 7.6.3 is measured).
+    3,020 candidate files; found 8 Oct; what its repair changes on the saved directives is counted in 7.6.3).
   - 7.6.3 The gate as a classifier. **[planned, no model calls]** Every candidate the agent produced, accepted or
     not, judged again by the harness: a confusion matrix, the gate's precision and recall, per stage the wrong
     candidates only that stage caught (by replay with the stage switched off), every false accept and false
