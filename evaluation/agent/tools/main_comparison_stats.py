@@ -193,8 +193,34 @@ def _run_of(t: dict) -> str:
     return str(t.get("run_id") or "")
 
 
-def load_races(paths: Sequence[Path]) -> Dict[Tuple[str, str, str, int], str]:
-    """race_check.py results: (run, benchmark, arm, repeat) -> 'clean' or the stage that failed."""
+def same_loop_map(specs: Sequence[str]) -> Dict[str, str]:
+    """--same-loop FROM=TO: the trials of benchmark FROM are counted in the row of benchmark TO —
+    one kernel file in two packagings.  E1-v6, 8 Oct: the agent ran `s241` again on `tsvc_c3`, the
+    models alone ran it on `tsvc_c2` only; the file a model reads is the same byte for byte and
+    T0.18 found the two packages one program (record §6).  Without it the three-way comparison,
+    which takes its benchmarks from the model alone, leaves the agent's trials of that loop out."""
+    out: Dict[str, str] = {}
+    for spec in specs:
+        old, sep, new = spec.partition("=")
+        if not (sep and old and new):
+            sys.exit(f"--same-loop takes FROM=TO, got {spec!r}")
+        out[old] = new
+    return out
+
+
+def count_as(t: dict, same_loop: Dict[str, str]) -> dict:
+    """--same-loop: the trial is counted under the other packaging's name; the package it ran on
+    stays in the record (`benchmark_as_run`)."""
+    if str(t.get("benchmark")) in same_loop:
+        t["benchmark_as_run"] = t["benchmark"]
+        t["benchmark"] = same_loop[str(t["benchmark"])]
+    return t
+
+
+def load_races(paths: Sequence[Path], same_loop: Optional[Dict[str, str]] = None) -> Dict[Tuple[str, str, str, int], str]:
+    """race_check.py results: (run, benchmark, arm, repeat) -> 'clean' or the stage that failed.
+    `same_loop` (--same-loop) renames a benchmark as it renames the trials'."""
+    same_loop = same_loop or {}
     out: Dict[Tuple[str, str, str, int], str] = {}
     for p in paths:
         for line in Path(p).read_text().splitlines():
@@ -205,7 +231,8 @@ def load_races(paths: Sequence[Path]) -> Dict[Tuple[str, str, str, int], str]:
             # <group>/<section>/<run>/benchmarks/...: the run is the directory before `benchmarks`
             # (keyed on `runs/` until 24 Sep, which matched nothing archived under preflight/ or checks/)
             run = parts[parts.index("benchmarks") - 1] if "benchmarks" in parts[1:] else ""
-            out[(run, str(r.get("benchmark")), str(r.get("arm")), int(r.get("repeat") or 0))] = str(r.get("verdict"))
+            bench = str(r.get("benchmark"))
+            out[(run, same_loop.get(bench, bench), str(r.get("arm")), int(r.get("repeat") or 0))] = str(r.get("verdict"))
     return out
 
 
@@ -538,6 +565,9 @@ def to_markdown(res: Dict[str, Any]) -> str:
            "(DiscoPoP's own pragmas through the same gate, no model). Statistics as pre-registered: Wilson "
            "intervals on rates, Wilcoxon signed-rank on per-benchmark medians (one-sided), Cliff's delta, "
            "bootstrap interval on the median ratio; unsafe acceptances are named, not tested." + suite_note, ""]
+    if res.get("same_loop"):
+        out += ["Counted in one row (`--same-loop`, one kernel file in two packagings): "
+                + "; ".join(f"the trials on `{old}` under `{new}`" for old, new in res["same_loop"].items()) + ".", ""]
     names = {"R": "Class R — DiscoPoP alone reaches nothing (THE CLAIM)",
              "A": "Class A — parallel as written (no-harm control)",
              "D": "Class D — true recurrences (must-decline control)", "unclassified": "Unclassified"}
@@ -606,11 +636,15 @@ def main() -> int:
                     help="DiscoPoP alone's arm (default discopop_gate; E2-B1: discopop_capability, the speed check off)")
     ap.add_argument("--drop", action="append", default=[], metavar="RUN:BENCHMARK",
                     help="leave one benchmark of one run out (repeatable), as e2b1_stats.py --drop")
+    ap.add_argument("--same-loop", action="append", default=[], metavar="FROM=TO",
+                    help="count the trials of benchmark FROM in the row of benchmark TO (repeatable): one kernel "
+                         "file in two packagings, e.g. tsvc_c2/s241=tsvc_c3/s241; applied after --drop, named in the read-out")
     ap.add_argument("--figures", action="store_true",
                     help="also write the figures and vs_discopop_alone.md into --out (figures.build)")
     a = ap.parse_args()
     figures.BASELINE_ARM = a.baseline_arm
     drops = {tuple(d.split(":", 1)) for d in a.drop}
+    same_loop = same_loop_map(a.same_loop)
     trials: List[dict] = []
     wanted = set(a.benchmarks.split(",")) if a.benchmarks else None
     for spec in a.runs:
@@ -628,6 +662,7 @@ def main() -> int:
                 continue
             if (run, str(t.get("benchmark"))) in drops:
                 continue
+            count_as(t, same_loop)
             if wanted is not None and str(t.get("benchmark", "")).split("/")[-1] not in wanted:
                 continue
             if a.suite and not str(t.get("benchmark", "")).startswith(a.suite + "/"):
@@ -636,15 +671,17 @@ def main() -> int:
     res = analyse(trials, a.arm)
     if a.suite:
         res["suite"] = a.suite
+    if same_loop:
+        res["same_loop"] = same_loop
     md = to_markdown(res)
     if a.three_way:
-        res["three_way"] = three_way(trials, a.three_way, a.bare, load_races(a.races))
+        res["three_way"] = three_way(trials, a.three_way, a.bare, load_races(a.races, same_loop))
         md += "\n" + three_way_markdown(res["three_way"])
     if a.interaction:
         hi_lo = a.interaction.split(",")
         if len(hi_lo) != 4:
             sys.exit("--interaction takes four arms: AGENT_HI,AGENT_LO,TWIN_HI,TWIN_LO")
-        res["interaction"] = interaction(trials, hi_lo[0], hi_lo[1], hi_lo[2], hi_lo[3], load_races(a.races))
+        res["interaction"] = interaction(trials, hi_lo[0], hi_lo[1], hi_lo[2], hi_lo[3], load_races(a.races, same_loop))
         labels = H12_LABELS
         if a.interaction_labels:
             parts = a.interaction_labels.split(";")

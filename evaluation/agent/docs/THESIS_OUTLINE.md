@@ -101,7 +101,7 @@ proposed here and is to be confirmed with the title.
    the directive, a gate decides.
 3. **System.** An agent around DiscoPoP: profile, rank, restructure, check, profile again, annotate, verify.
 4. **Results.** On 18 loops that need restructuring: DiscoPoP alone 0 of 90 trials; the agent with a small model
-   76 of 90 right, race-free and faster, none unusable; the same model alone 38, with 50 unusable. Where the fact that decides the rewrite is not in the file: 44 of 50
+   79 of 90 right, race-free and faster, none unusable; the same model alone 38, with 50 unusable. Where the fact that decides the rewrite is not in the file: 44 of 50
    with DiscoPoP's evidence against 14 without, at the speed of an expert's version, and no stronger model alone is
    fast and right in more than 5 of 20.
 5. **Limits.** Stronger models alone reach further on plain loops (89 of 90); the agent's reach is bounded by its
@@ -264,7 +264,7 @@ number of the record (D-numbers), so the text can be checked against the reposit
 - **5.4 Toolchain.** LLVM 19 and 20; building Archer where the system ships none; what the race detector reports
   around OpenMP barriers and how the agent treats it (Fix 104).
 - **5.5 Timing inside the agent.** Interleaved paired runs, the noise threshold, the timing size.
-- **5.6 Testing the agent.** The deterministic feature checks (67, no model), unit and end-to-end tests, type checks.
+- **5.6 Testing the agent.** The deterministic feature checks (68, no model), unit and end-to-end tests, type checks.
 - **5.7 What was fixed in DiscoPoP.** Table of the defects with cause, effect and how each was found: a Do-All
   verdict that changed between runs (B4); a call into code outside the project (B8); a callee's accesses lost
   (B9); a carried scalar reported Do-All (B10); a failed instrumented build reported as success (B12); a
@@ -272,7 +272,8 @@ number of the record (D-numbers), so the text can be checked against the reposit
   dependences lost after a `do … while` (B15); loop tracking switched off by the length of a path (B17); the
   outer loop of a nest blocked on its inner counter (B18, one of our own fixes meeting older code); a wrong
   `lastprivate` in three places — a value assigned under a condition, a whole array, a variable of the code
-  around the loop (B19); the earlier crashes (B1–B3, B5). Not fixed: the patch generator's hang (B6); loop
+  around the loop (B19; its array rule corrected the same day, after the server's draws showed a work array
+  shared that each thread needs for itself); the earlier crashes (B1–B3, B5). Not fixed: the patch generator's hang (B6); loop
   counts paired with the wrong loops (B7: cause found, worked around in the agent); four candidates, each
   measured and reproduced — a dependence of the surrounding loop charged to the inner loop (B16); a call that
   does not return inside a nest (B20); an analysis that on one profile blocks every loop carrying an observed
@@ -326,11 +327,12 @@ result, or the expectation written down before the run.
 - **7.2 The whole system: coverage and safety** (E1; RQ1–RQ3; H1, H2, H4, H13). **[done on kernels]**
   - Setups: DiscoPoP alone · the agent with Haiku · Haiku, Sonnet, Opus and Fable alone. 18 loops × 5 trials,
     with class-A and class-D controls.
-  - Result on clean files, corrected: DiscoPoP alone 0 of 90; the agent 76 with none unusable; Haiku alone 38
+  - Result on clean files, corrected: DiscoPoP alone 0 of 90; the agent 79 with none unusable; Haiku alone 38
     with 50 unusable; Sonnet 77 with 11; Opus 89; Fable 89. The agent declines all 12 class-D trials.
   - Read with it: how the comparison developed (five runs, each on a corrected instrument: 44 → 51 → 71 → 65 → 73,
-    and 76 after two corrections: one loop on the fixed DiscoPoP, two loops on packages in which no repetition
-    can be skipped) and what each correction was; where the agent's lost trials go (after the model, not in it);
+    and 79 after three corrections: one loop on the fixed profiler, two loops on packages in which no repetition
+    can be skipped, one loop run again on the repaired DiscoPoP) and what each correction was; that the table
+    then holds agent trials on three DiscoPoP versions, said with it; where the agent's lost trials go (after the model, not in it);
     what the claim is and is not — the pipeline makes a small model safe and beats DiscoPoP alone; it does not
     out-reach a strong model alone on loops whose dependences are visible.
   - One loop where the agent ends with nothing and every model alone succeeds in one call (`s331`): the loop
@@ -340,7 +342,9 @@ result, or the expectation written down before the run.
     alone shipped wrong.
   - The replay, without a model, of the rewrites the agent discarded before the profiler fix: two trials on
     one loop had thrown away a rewrite that is right and 1.8× faster once DiscoPoP reports both of its loops.
-    The count is 76 measured, at most 78; the other discarded rewrites were dropped for good reason.
+    The count was 76 measured, at most 78; the other discarded rewrites were dropped for good reason. Run again
+    on the repaired DiscoPoP, that loop is faster in 5 of 5 trials, all race-free: 79 of 90. (A replay bounds
+    what the old trials' rewrites could reach, not what a new run writes.)
 - **7.3 A small model inside the pipeline against stronger models alone** (E12). **[done]** On the two
   hidden-order kernels only the Haiku agent is ever faster (20 of 20; every model alone 0); on four real loops
   the strong models alone are as good or better.
@@ -373,7 +377,10 @@ result, or the expectation written down before the run.
     DiscoPoP's own good directives.
   - 7.6.2 The unsafe programs that did occur, each by name and cause. **[done]** A racy program the barrier rule
     excused; three programs with data-sized arrays on the stack that crash at the verification size (only in
-    setups with the speed check off); a false Do-All from DiscoPoP that the race stage refused.
+    setups with the speed check off); a false Do-All from DiscoPoP that the race stage refused. And one wrong
+    refusal with a known cause: the check against DiscoPoP's observed dependences compared line numbers of the
+    working file with those of the profiled file and refused a correct directive below an accepted one (once in
+    3,020 candidate files; found 8 Oct; to be repaired before 7.6.3 is measured).
   - 7.6.3 The gate as a classifier. **[planned, no model calls]** Every candidate the agent produced, accepted or
     not, judged again by the harness: a confusion matrix, the gate's precision and recall, per stage the wrong
     candidates only that stage caught (by replay with the stage switched off), every false accept and false
@@ -411,9 +418,10 @@ result, or the expectation written down before the run.
   to half their speed and a recurrence reported as parallel (B14); verdicts that were a draw (B4); a wrong
   clause that shipped in one program and crashed three others at the larger size (B19); outer loops of PolyBench
   nests lost and given back (B18). Open, and it decides how PolyBench may be described: on one profile DiscoPoP's
-  analysis blocks every loop that carries an observed dependence, or none of them — "none" in 57 of 81 PolyBench
-  profiles — so that "DiscoPoP alone" there is what DiscoPoP offered and the checks let through (B21); TSVC's
-  verdicts do not vary. A loop whose iteration reads an array element a later iteration overwrites is called
+  analysis blocks every loop that carries an observed dependence, or none of them — over nine draws "none" in 133
+  of the 198 profiles of the 22 kernels that ever block, never a part — so that "DiscoPoP alone" there is what DiscoPoP offered and the checks let through (B21); on TSVC
+  the loops called parallel and the loops blocked do not vary, the dependence named for a blocked loop does (on one
+  loop also its kind). A loop whose iteration reads an array element a later iteration overwrites is called
   parallel (B22), hidden on TSVC by B16. The rule: the fixed version in every setup.
 - **7.12 The answers, question by question.** One table: question · answer · evidence · status.
 

@@ -1,0 +1,44 @@
+{
+  "suite": "tsvc_c3",
+  "kernel": "s112",
+  "source": "benchmarks/TSVC_2/src/tsvc.c",
+  "category": "linear dependence testing / loop reversal",
+  "file": "s112.c",
+  "language": "c",
+  "layout": "project",
+  "project": {
+    "units": [
+      "s112.c",
+      "main.c"
+    ],
+    "include_dirs": [
+      "."
+    ],
+    "editable": [
+      "s112.c"
+    ]
+  },
+  "restructuring_class": "restructure",
+  "transformation": "loop reversal with an anti-dependence (needs a copy)",
+  "why": "running downwards, a[i+1] is written from the OLD a[i]",
+  "reference_solution": "agent/reference_solutions/tsvc_c3/s112.c",
+  "exclude_functions": [
+    "main",
+    "dummy"
+  ],
+  "harness": "tsvc_c3/s112.h",
+  "harness_sha256": "437986120ea681bb261a82441ca243b8dfb0798f8b810a2dc53c9cca56abb980",
+  "hot_loop": {
+    "entry": "kernel_s112",
+    "function": "kernel_s112",
+    "line": 6,
+    "writes": [
+      "a"
+    ]
+  },
+  "repetitions_proven": true,
+  "agent_dataset": "SMALL",
+  "generator_version": 7,
+  "inputs_sha256": "456dd573b84b30e6f32c943bb559d80374eec67177de48223e95124a8c3fc627",
+  "output_sha256": "654b19c15d3c90d4ffbea732d37e737a70ecc041fc10d2e94c49e2598f7e28ef"
+}

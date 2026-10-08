@@ -42,7 +42,7 @@ LLVM 19 (macOS) and LLVM 20 (Linux).
 | B15 | explorer, `TaskGraph.__assign_loopstate_positions_within_functions` / task-graph loops | fixed 27 Sep | a `do … while` loop gets no loop context in the task graph, so the loop-state digit positions of every loop in the function after it are off by one: no call-path state under the `do … while` matches, every dependence recorded there is lost, and a textbook recurrence nested in it is reported Do-All (Rodinia bfs: all 1,500 dynamic dependences of the kernel lost) |
 | B18 | explorer (attaching dependences to units; met by B10's fix) | **FIXED 8 Oct** | the outer loop of a nest whose inner counter is declared at the top of the function lost its Do-All (PolyBench `correlation`, `covariance`, `gramschmidt`, `fdtd-2d`): a write-after-read was attached to the units of its lines by the wrong roles, so the unit that initialises the inner counter counted as reading it, and since B10's fix a read and a write on one line count as read-first — the counter was no longer privatizable |
 | B20 | explorer (task graph) | candidate, 8 Oct | a call that does not return (`exit`) in the body of a nested loop: every dependence the surrounding loop carries is lost and that loop is reported Do-All (TSVC `s481`'s repetition loop; a 20-line reproducer); the gate refuses the directive under ThreadSanitizer |
-| B21 | explorer (task graph) | candidate, 8 Oct — width measured, not traced | on ONE profile of a PolyBench kernel the explorer gives one of two answers: every loop that carries a dependence the profiler observed is blocked, or NONE of them is and all are reported Do-All — never a part (Mac, 30 kernels: 114 runs, 50 block all, 64 none, 0 some; the server's draws of 8 Oct: 57 of 81 PolyBench profiles with no such loop blocked; on `md` the loops of one function flip together while another function's stay). Records without a call path (scalars) stay in both. Not Python's hash seed. The 44 TSVC packages: every verdict agrees in every draw; only the variable a blocker record names differs (36 of 44). The gate refuses the false directives |
+| B21 | explorer (task graph) | candidate, 8 Oct — width measured, not traced | on ONE profile of a PolyBench kernel the explorer gives one of two answers: every loop that carries a dependence the profiler observed is blocked, or NONE of them is and all are reported Do-All — never a part (Mac, 30 kernels: 114 runs, 50 block all, 64 none, 0 some; the server's nine draws of 7 and 8 Oct, 27 kernels: the 198 profiles of the 22 kernels that block in any draw — 65 block all, 133 none, 0 some; on `md` the loops of one function flip together while another function's stay). Records without a call path (scalars) stay in both. Not Python's hash seed. The 44 TSVC packages: the loops called parallel, the reductions and the blocked loops agree in every draw; what differs is which of a loop's dependences its blocker record names — the variable on 40 of 44 packages, on `s244` also the type (RAW or WAW). The gate refuses the false directives |
 | B22 | explorer, Do-All detector (a rule of the original code, 28 Apr 2026) | candidate, 8 Oct | a write-after-read between passes never blocks Do-All ("can be privatized") — also on an array element, where it cannot: a loop whose pass reads an element a LATER pass overwrites (`x[i] = x[i + 1] * 0.5`; PolyBench `adi`'s last nest) is reported Do-All with the array `shared`, and its directive gives wrong sums. On TSVC the loops of this kind (`s121`, `s131`, `s151`, `s212`, `s241`, `s243`) are blocked all the same — through the repetition loop around them (B16): two defects that cancel. The gate refuses the directive on `adi` |
 | B19 | explorer (data-sharing clauses of a Do-All loop) | **FIXED 8 Oct** | `lastprivate` was written for any variable a loop writes and something after it reads. Three mechanisms: a scalar assigned in only some passes (`if (a[i] < 0) j = i;`, TSVC `s331`: the clause hands back the last CHUNK's value — wrong output, refused by the gate every time) — the loop is no longer reported Do-All; a whole stack array (`lastprivate(a_old)` on the loop that fills it, `firstprivate(a_old)` on one that reads it) — an array is now `shared` where the loop reads it or writes it itself (corrected the same day: one that a called function fills keeps its private clause); a unit of the code AROUND the loop counted among the loop's (`s481`: `lastprivate(nl)`, shipped) — only the loop's own units decide its clauses |
 | L3 | explorer | limitation | NPB-CPP `mg`: with P1's fix the state assignment is fast, but the run then stays in task-pattern detection (`new_task_detector`) — a first run was read at 4 h 19 min, the same run was stopped unfinished after **11 h 24 min** at 100 % CPU on the server (19–20 Sep); the Do-All detector is not reached. Not usable per trial |
@@ -646,17 +646,34 @@ patterns with the same clauses for the loop in three runs each; the first repair
 
 **What is NOT the repair's:** on `md` the loop comes out with two patterns, the second with
 `private(nd, rij)` — `nd` is only read by the loop, and `dist`'s own parameter is also called `nd`. The explorer
-from before the repairs gives that second pattern too, on the Mac's profile and on the server's of 8 Oct (the
-three draws of 7 Oct show one pattern; on the Mac one run of five showed one). Not traced; the gate refuses the
-directive.
+from before the repairs gives that second pattern too. Counted on one profile (the one the server kept for
+`t0_11_b19_apps_a`, explored on the Mac, ten runs of each explorer): before the repairs two patterns in 9 runs
+and one in 1; the corrected explorer two in 8 and one in 2. In no run of the corrected explorer is `rij`
+`shared`. On the server the three draws of 7 Oct show one pattern at this loop and the six draws since show
+two; why one copy of the loop is classified differently, and in some runs only, is not traced. The gate refuses
+both directives (`evaluation/agent/results/T0_instruments/B19_B18_clauses_and_nests/analysis/b19r_readout.md` §2.1 and §4).
 
 **Verified on the Mac:** the new feature check `b19-work-array` and the end-to-end case
 `first_private/case_2` (a work array filled by a called function) fail on the first repair and pass on the
 explorer before the repairs and on the corrected one. The agent's feature suite: 68 passed, 0 failed, 0 skipped (67 before, and the new check). DiscoPoP's
 end-to-end tests: 36 of 36 (35 before, and the new case). The 44 `tsvc_c3` packages, one kept profile each, the first repair against the
 correction: 44 of 44 the same in their patterns, clauses and blocked loops. The kept profile of an `s241` rewrite with a stack array (`a_old`): both give
-`shared(a_old)` on both loops. The server's draws again (`t0_11_c3_b19r_a`–`c`, `t0_11_b19r_apps_a`–`c`) and
-the check of `e1v6c_s241`'s rewrites are in the record.
+`shared(a_old)` on both loops.
+
+**Verified on the server (8 Oct, 18:46–20:32 UTC; no model; commit `b6297e53b`):** DiscoPoP alone in three draws
+on the 44 `tsvc_c3` packages (`t0_11_c3_b19r_a`, `t0_11_c3_b19r_b`, `t0_11_c3_b19r_c`) and three on the 31
+packages outside TSVC (`t0_11_b19r_apps_a`, `t0_11_b19r_apps_b`, `t0_11_b19r_apps_c`), against the six draws on
+the first repair. *TSVC:* no package differs — not in its class, not in an outcome, not in a directive offered,
+its clauses or the gate's verdict on it. *Outside TSVC:* `md`'s force loop has the clauses of 7 Oct again in three
+draws of three (`firstprivate(PI2, nd, np, rij)`; refused at the correctness stage as on 7 Oct, no longer under
+ThreadSanitizer); no package that is offered the same loops with the same verdicts differs in a clause. What
+else differs between the two sets of draws is which loops a PolyBench kernel is offered, in the kernels whose
+explorer answer differs from draw to draw on any explorer (B21; `gramschmidt` is FASTER in three draws of three
+this time because all three got the answer that blocks nothing). Read-out: `evaluation/agent/results/T0_instruments/B19_B18_clauses_and_nests/analysis/b19r_readout.md`.
+**`e1v6c_s241`'s rewrites** (it ran on the first repair's explorer, commit `f9e7744df`): the 15 different
+pragma-free rewrites its five agent trials produced, each profiled once on the Mac — the first repair's
+explorer and the corrected one report the same patterns, clauses and blocked loops on all 15 (every one keeps
+its copy `a_old` `shared`; `evaluation/agent/results/E01v6_clean_files_three_way/analysis/corrected_2/s241_rewrites.md`).
 
 ## B18 — outer loops of PolyBench kernels lost their Do-All: a write-after-read is attached to units by the wrong roles, and B10's fix made that decide (explorer)
 
@@ -795,19 +812,23 @@ two in `initialize` (396, 398: the random-number seed) in one draw only; those t
 | Mac: 30 PolyBench kernels, three runs of each explorer (before and after the repairs of 8 Oct) on one kept profile per kernel; the 38 kernel-and-explorer pairs whose three runs differ | 114 | 50 | 64 | 0 |
 | Mac: one kept profile of `correlation`, 14 runs of the repaired explorer | 14 | 5 | 9 | 0 |
 | server: the 27 PolyBench kernels, the three draws of 7 Oct (each its own profile); the 13 kernels whose draws differ | 39 | 16 | 23 | 0 |
-| server: the same, the three draws of 8 Oct; the 11 kernels whose draws differ | 33 | 15 | 18 | 0 |
+| server: the same, the three draws of 8 Oct on the first repair; the 11 kernels whose draws differ | 33 | 15 | 18 | 0 |
+| server: the same, the three draws of 8 Oct on the corrected explorer; the 15 kernels whose draws differ | 45 | 22 | 23 | 0 |
+| server: the nine draws together; the 22 kernels with such a loop blocked in at least one draw | 198 | 65 | 133 | 0 |
 
 ("Loops in question": those blocked on an observed dependence in some run of the three and not in all. In every
 "none" run of a PolyBench kernel the blocker file holds no observed record at all.)
 
-The second answer is the common one. On the server's draws of 8 Oct, 57 of the 81 PolyBench profiles (27 kernels
-× 3) have no loop blocked on an observed dependence (62 of 81 on 7 Oct). 13 kernels have none in any of their
-three draws of 8 Oct; seven of those 13 had such blockers in a draw of 7 Oct, so "none in three draws" is three
-draws of the second answer, not a kernel without such loops (every kernel's harness has output loops with running
-sums). Six kernels were not seen with the first answer in six draws (`3mm`, `bicg`, `gemver`, `gesummv`, `syr2k`,
-`trisolv`). The profile is not the cause: both answers come from one kept profile on the Mac, and each of the 186
-profiled runs behind the server's two sets of draws printed the runtime's loop-results line (so this is not B17, whose
-symptom it shares). Sources: `evaluation/agent/results/T0_instruments/B19_B18_clauses_and_nests/analysis/b19_readout.md` §2.2 and §3, `evaluation/agent/results/T0_instruments/B19_B18_clauses_and_nests/analysis/server_explorer_reports.json`,
+The second answer is the common one. On the server's first draws of 8 Oct, 57 of the 81 PolyBench profiles (27
+kernels × 3) have no loop blocked on an observed dependence (62 of 81 on 7 Oct, 59 of 81 on the corrected
+explorer's draws). 13 kernels have none in any of their first three draws of 8 Oct; seven of those 13 had such
+blockers in a draw of 7 Oct, so "none in three draws" is three draws of the second answer, not a kernel without
+such loops (every kernel's harness has output loops with running sums). Five kernels were not seen with the first
+answer in nine draws (`3mm`, `bicg`, `gemver`, `gesummv`, `trisolv`); `syr2k`, the sixth after six draws, showed
+it in the seventh (`t0_11_b19r_apps_a`). How often a kernel gets the first answer differs widely: `lu` in 8 draws
+of 9, `seidel-2d` in 7, `syrk` in 6, twelve kernels in one or two (`evaluation/agent/results/T0_instruments/B19_B18_clauses_and_nests/analysis/b19r_readout.md` §3). The profile is not the
+cause: both answers come from one kept profile on the Mac, and each of the 279 profiled runs behind the server's
+three sets of draws printed the runtime's loop-results line (so this is not B17, whose symptom it shares). Sources: `evaluation/agent/results/T0_instruments/B19_B18_clauses_and_nests/analysis/b19_readout.md` §2.2 and §3, `evaluation/agent/results/T0_instruments/B19_B18_clauses_and_nests/analysis/server_explorer_reports.json`,
 `evaluation/agent/results/T0_instruments/B19_B18_clauses_and_nests/analysis/mac_explorer_runs/all_or_nothing.py`.
 
 **What a fixed hash seed shows.** One kept profile of `correlation`, the explorer started with `PYTHONHASHSEED`
@@ -816,13 +837,25 @@ and 2 changed likewise (`evaluation/agent/results/T0_instruments/B19_B18_clauses
 randomised hashing of strings. Iteration over a set of objects is not excluded by this: objects hash by address,
 and addresses differ between processes whatever the seed — B4's family.
 
-**TSVC does not show it in the verdicts.** The 44 `tsvc_c3` packages, three draws after the repairs: the loops
-called parallel, the reductions, the blocked loops and the type of the dependence that blocks each agree in all
-three draws of every package (one run of each explorer on one kept profile per package agreed on 42 of 44, the
-other two being the repairs' targets). What differs between draws there, on 36 of 44 packages, is the VARIABLE a
-blocker record names — a record holds one of the dependences that block a loop (`s241`, the repetition loop: `a`
-in one draw, `b` in two; `vas`: `b` in two draws, `dummy.n` in one). That is the one form of this the main
-comparison's trials can carry, where a blocker record reaches the model.
+**TSVC does not show it in the verdicts.** The 44 `tsvc_c3` packages, six draws after the repairs (three on the
+first repair, three on the corrected explorer): the loops called parallel, the reductions and the blocked loops
+agree in all six draws of every package (one run of each explorer on one kept profile per package agreed on 42 of
+44, the other two being the repairs' targets). What differs between draws there is which of a loop's dependences
+its blocker record names — a record holds ONE of the dependences that block a loop. The VARIABLE differs on 40
+of 44 packages over the six draws (36 over the first three; `s241`, the repetition loop: `a` in one draw, `b` in
+two; `vas`: `b` in two draws, `dummy.n` in one). The TYPE differs on one package, `s244`, the inner loop (line
+6): a write-after-write on `a` in four draws, a read-after-write on `a` in two — the first three draws agreed in
+the type on every package, and the sentence written from them ("the type agrees") was three draws' worth. It is
+not the correction's: on one kept profile of `s244`, eight runs of each explorer, the explorer before the
+repairs names the read-after-write in 6 runs and the write-after-write in 2, the first repair 5 and 3, the
+corrected one 3 and 5; the loop is blocked in every run (`evaluation/agent/results/T0_instruments/B19_B18_clauses_and_nests/analysis/b19r_readout.md` §4,
+`evaluation/agent/results/T0_instruments/B19_B18_clauses_and_nests/analysis/mac_explorer_runs/b19r_s244_runs.txt`).
+
+That is the one form of this the main comparison's trials can carry, where a blocker record reaches the model
+(the agent's request quotes the records). How it enters an experiment: the harness profiles a benchmark once
+per run and every trial of that run starts from that profile, so the trials of a loop in one run read the same
+record in their first request (the five first requests of each of the 18 loops of `e1v6_r_1`–`e1v6_r_4` are the
+same byte for byte); the record can differ between two runs and after a re-profile inside a trial.
 
 **What it means.** (1) DiscoPoP alone on PolyBench is, in most runs, "every loop that no scalar's record blocks",
 filtered by the gate: recurrences, time loops and accumulations are offered and refused under ThreadSanitizer

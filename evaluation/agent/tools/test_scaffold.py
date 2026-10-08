@@ -9,6 +9,7 @@ import glob
 import json
 import re
 import sys
+import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -130,6 +131,37 @@ tw = M.three_way([trial("FASTER", 2.0, rep=1), kept, trial("no-change", arm="def
 got = tw["classes"]["R"]["arms"]["model alone"] if "R" in tw["classes"] else {}
 holds("three-way: the kept harness edit is unusable and in the denominator",
       (got.get("with_verdict"), got.get("tampered"), got.get("unusable"), got.get("measurement_kept_edited")) == (2, 0, 1, 1))
+# 8 Oct: one kernel file in two packagings (--same-loop). The agent ran `s241` again on `tsvc_c3`, the models
+# alone ran it on `tsvc_c2` only; the three-way comparison takes its benchmarks from the model alone.
+def on(bench, arm, rep, outcome="FASTER", run="r"):
+    return {"arm": arm, "benchmark": bench, "repeat": rep, "outcome": outcome, "run_id": run,
+            "verify": {"status": "ok", "par": {"6": {"speedup": 2.0}}}}
+def two_packagings():
+    return ([on("tsvc_c3/s241", "default", r, run="agent") for r in (1, 2)] + [on("tsvc_c3/s241", "discopop_gate", 1, "no-change", "agent")]
+            + [on("tsvc_c2/s241", "bare", r, run="alone") for r in (1, 2)])
+SAME = M.same_loop_map(["tsvc_c2/s241=tsvc_c3/s241"])
+tw = M.three_way(two_packagings(), "default", "bare")
+got = tw["classes"]["R"]["per_benchmark"] if "R" in tw["classes"] else {}
+holds("two packagings, not named the same loop: the agent's trials are left out of the model alone's row",
+      list(got) == ["tsvc_c2/s241"] and not got["tsvc_c2/s241"]["DiscoPoP + agent"]["n"])
+with tempfile.TemporaryDirectory() as tmp:
+    rf = Path(tmp) / "results.jsonl"
+    rf.write_text(json.dumps({"trial": "E/runs/alone/benchmarks/tsvc_c2/s241/bare/m/rep1", "benchmark": "tsvc_c2/s241",
+                              "arm": "bare", "repeat": 1, "verdict": "clean"}) + "\n"
+                  + json.dumps({"trial": "E/runs/alone/benchmarks/tsvc_c2/s241/bare/m/rep2", "benchmark": "tsvc_c2/s241",
+                                "arm": "bare", "repeat": 2, "verdict": "tsan"}) + "\n")
+    races = M.load_races([rf], SAME)
+renamed = [M.count_as(t, SAME) for t in two_packagings()]
+tw = M.three_way(renamed, "default", "bare", races)
+got = tw["classes"]["R"]["per_benchmark"] if "R" in tw["classes"] else {}
+row = got.get("tsvc_c3/s241", {})
+holds("two packagings named the same loop: one row, every setup in it",
+      list(got) == ["tsvc_c3/s241"] and (row["DiscoPoP alone"]["n"], row["DiscoPoP + agent"]["n"], row["model alone"]["n"]) == (1, 2, 2))
+holds("... and the model alone's race verdicts follow the rename (1 clean, 1 racy)",
+      (row["model alone"]["faster_race_free"], row["model alone"]["unusable"]) == (1, 1))
+holds("... and the package a trial ran on stays in its record",
+      {t.get("benchmark_as_run") for t in renamed if t["arm"] == "bare"} == {"tsvc_c2/s241"}
+      and all("benchmark_as_run" not in t for t in renamed if t["arm"] != "bare"))
 # The agent's model-only arms check with the judge's rules: a byte-identical copy (gate/harness_guard.py).
 HERE = Path(__file__).resolve().parent
 AGENT_COPY = HERE.parents[2] / "discopop_agent" / "gate" / "scaffold.py"

@@ -1,0 +1,103 @@
+
+============================================================
+  DiscoPoP Agentic Controller
+============================================================
+  Source         : hotspot.cpp
+  DiscoPoP dir   : .discopop
+  Model          : claude-haiku-4-5-20251001
+  Budget         : 0 LLM retries/region (+2 free build fixes)
+  λ penalty      : 1.0
+  Min workload   : 0.0
+  Restruct. depth: 0 (Tier-2 allowed at depth 0–0)
+  Quality gate   : Tier-1 = all but speed, no escalation; Tier-2 = full
+  TSan           : barrier-aware (archer: /usr/lib/llvm-20/lib/libarcher.so)
+  Speedup gate   : OFF (--no-require-speedup)
+  Dry run        : False
+  LLM mode       : claude-haiku-4-5-20251001
+  Edit mode      : direct
+  Re-profiling   : full (instrument + run + explore) after every kept rewrite
+  Explorer       : one attempt may take 886 s, then the draw is repeated (random stall, L5)
+  Pragmas        : DiscoPoP writes them in Phase B
+============================================================
+
+  [ok] Captured reference output on 2 inputs (70 bytes, 307.8 ms baseline) for the correctness/performance gates.
+
+  [ok] Numerical noise floor 1.67e-11 of output scale (widest disagreement 1.67e-12 of output scale across 6 build variants, x10 margin — on input '7').
+  [note] values may move that far without failing the correctness gate; labels, line structure and integers must still match exactly.
+
+  Hotspots       : measured per-region runtimes are available — 17 region(s) measured, 4333.4 ms total, ranking by predicted time saved at 48 threads
+
+  Baseline       : DiscoPoP proposes 0 applicable pattern(s) unaided; 0 of them produce a usable pragma
+                   → the run beats DiscoPoP by ending with more than 0
+
+  Initial candidates
+Region ID    Type           Saves    % run    Hot  Tier  Depth  Name
+--------------------------------------------------------------------------------------
+  1:102      loop       4048.7 ms    95.4%    YES     2      0  lines 255–264
+  1:4        loop       4048.7 ms    95.4%    YES     2      0  lines 147–224
+  1:94       function   4048.7 ms    95.4%    YES     2      0  _Z17compute_tran_tempPfiS_S_ii
+  0:0        function   4048.7 ms    95.4%    YES     2      0  _Z16single_iterationPfS_S_iifffff
+  1:76       loop       3753.5 ms    88.5%    YES     2      0  lines 213–223
+  1:79       loop       2732.4 ms    64.4%    YES     2      0  lines 215–222
+  1:14       loop        228.5 ms     5.4%  MAYBE     2      0  lines 156–209
+  1:17       loop        161.4 ms     3.8%  MAYBE     2      0  lines 157–208
+
+============================================================
+  PHASE A — restructure  (the source stays pragma-free)
+============================================================
+
+┌─ [depth=0] loop 1:102 (lines 255–264)  score=4.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:4 (lines 147–224)  score=4.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] function 1:94 (lines 226–269)  score=4.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] function 0:0 (lines 147–225)  score=4.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:76 (lines 213–223)  score=3.8
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:79 (lines 215–222)  score=2.7
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:14 (lines 156–209)  score=0.2
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:17 (lines 157–208)  score=0.2
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+
+============================================================
+  PHASE B — annotate  (0 candidate pragma(s))
+============================================================
+
+  DiscoPoP proposes no applicable pattern for the final source.
+
+
+============================================================
+  SUMMARY: 0 rewrite(s) kept  |  0 pragma(s) applied  |  8 skipped
+  DiscoPoP unaided: 0 usable pragma(s) in this profile's draw  →  this run: 0   [MATCHED, informational]
+    ✗  1:102  [skipped]  depth=0
+    ✗  1:4  [skipped]  depth=0
+    ✗  1:94  [skipped]  depth=0
+    ✗  0:0  [skipped]  depth=0
+    ✗  1:76  [skipped]  depth=0
+    ✗  1:79  [skipped]  depth=0
+    ✗  1:14  [skipped]  depth=0
+    ✗  1:17  [skipped]  depth=0
+
+  Results → .discopop/agent_patches/accepted.json
+============================================================
+

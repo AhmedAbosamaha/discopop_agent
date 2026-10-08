@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/t0_11_b19r_apps_a/benchmarks/polybench/3mm/discopop_capability/claude-haiku-4-5-20251001/rep1/work/3mm.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/t0_11_b19r_apps_a/benchmarks/polybench/3mm/discopop_capability/claude-haiku-4-5-20251001/rep1/work/3mm.c
+@@ -85,6 +85,7 @@
+ 	  E[i][j] += A[i][k] * B[k][j];
+       }
+   /* F := C*D */
++  #pragma omp parallel for firstprivate(nl,nj,nm) private(k,j) shared(F,C,D) 
+   for (i = 0; i < _PB_NJ; i++)
+     for (j = 0; j < _PB_NL; j++)
+       {

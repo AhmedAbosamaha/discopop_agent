@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/t0_11_b19r_apps_b/benchmarks/polybench/covariance/discopop_capability/claude-haiku-4-5-20251001/rep1/work/covariance.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/t0_11_b19r_apps_b/benchmarks/polybench/covariance/discopop_capability/claude-haiku-4-5-20251001/rep1/work/covariance.c
+@@ -80,6 +80,7 @@
+       data[i][j] -= mean[j];
+ 
+   /* Calculate the m * m covariance matrix. */
++  #pragma omp parallel for firstprivate(m,n) private(j2,i) shared(data,symmat) 
+   for (j1 = 0; j1 < _PB_M; j1++)
+     for (j2 = j1; j2 < _PB_M; j2++)
+       {

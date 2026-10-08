@@ -1,0 +1,10 @@
+--- original.c
++++ final.c
+@@ -81,6 +81,7 @@
+       data[i][j] -= mean[j];
+ 
+   /* Calculate the m * m covariance matrix. */
++  #pragma omp parallel for firstprivate(m,n) private(i,j2) shared(symmat,data) 
+   for (j1 = 0; j1 < _PB_M; j1++)
+     for (j2 = j1; j2 < _PB_M; j2++)
+       {
