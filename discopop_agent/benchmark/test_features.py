@@ -4849,6 +4849,131 @@ int main(void)
 """
 
 
+_B19_PROGRAM = """#include <stdio.h>
+#include <stdlib.h>
+#define N 2000
+#define M 40
+double a[N], b[N], c[N], d[N], e[N], g[M][M], h[M];
+int calls;
+void tick(void) { calls++; }
+int main(void)
+{
+    int i, j;
+    for (i = 0; i < N; i++) { a[i] = (i % 7 == 3) ? -1.0 : 1.0; b[i] = i; c[i] = 2.0; d[i] = 1.0; }
+    for (j = 0; j < M; j++) h[j] = j;
+    for (i = 0; i < M; i++)
+        for (j = 0; j < M; j++)
+            g[i][j] = h[j] * 2.0 + i;
+    int last = -1;
+    for (int k = 0; k < N; k++) {
+        if (a[k] < 0.0) {
+            last = k;
+        }
+    }
+    double z = 0.0;
+    for (int k = 0; k < N; k++) {
+        z = b[k] * 2.0;
+        e[k] = z;
+    }
+    double old[N];
+    for (int k = 0; k < N; k++) {
+        old[k] = b[k];
+    }
+    for (int k = 0; k < N - 1; k++) {
+        c[k] = old[k + 1] + 1.0;
+    }
+    for (int r = 0; r < 4; r++) {
+        for (int k = 0; k < N; k++) {
+            if (d[k] < 0.0) {
+                exit(0);
+            }
+            b[k] += d[k] * c[k];
+        }
+        tick();
+    }
+    printf("%d %f %f %f %f %d\\n", last, z, e[N-1], c[0], g[M-1][M-1] + b[N-1], calls);
+    return 0;
+}
+"""
+
+
+def check_b19_last_value(work: Path) -> Result:
+    """DiscoPoP bugs B19 and B18, repaired 8 Oct in the explorer. B19: the clause `lastprivate` was written for
+    any variable a loop writes and something after it reads — also where only some passes assign it (TSVC s331,
+    a search for the last negative element: the clause hands back the last chunk's value), for a whole stack
+    array (every thread fills a copy of its own, the last thread's is handed back; a loop that reads it got
+    `firstprivate`, a copy per thread), and for the counter of the loop AROUND a loop whose body can call
+    `exit` (TSVC s481). B18: the write-after-read dependences of a line were attached to its units by the
+    wrong roles, so the unit that initialises an inner loop's counter (`j = 0` of a one-line `for` header)
+    counted as reading it, and the loop around lost its Do-All (PolyBench, counters declared at the top of
+    the function). Here: the search loop is not Do-All and its record says why; a value every pass assigns
+    keeps `lastprivate`; the stack array is in no private clause; the nest keeps its Do-All with the inner
+    counter private; the loop with `exit` in its body names no variable of the loop around it."""
+    if not Path(_venv_bin("discopop_cc")).exists():
+        return Result("b19 last value", "skip", "DiscoPoP is not installed in this venv")
+    name = "b19 last value"
+    d = work / "b19_last_value"
+    shutil.rmtree(d, ignore_errors=True)
+    d.mkdir(parents=True)
+    (d / "k.c").write_text(_B19_PROGRAM)
+    ok, err = _profile(d, "k.c", hotspots=False, c_as_c=True)
+    if not ok:
+        return Result(name, "fail", f"profile: {err}")
+    lines = _B19_PROGRAM.splitlines()
+
+    def loop_before(marker: str) -> int:
+        """The line of the `for` header that stands directly above the line holding `marker`."""
+        body = next(i for i, l in enumerate(lines) if marker in l)
+        return next(i + 1 for i in range(body - 1, -1, -1) if lines[i].lstrip().startswith("for ("))
+
+    at = {
+        "nest": next(i + 1 for i, l in enumerate(lines) if l.strip() == "for (i = 0; i < M; i++)"),
+        "search": loop_before("if (a[k] < 0.0)"),
+        "every pass": loop_before("z = b[k] * 2.0;"),
+        "array filled": loop_before("old[k] = b[k];"),
+        "array read": loop_before("c[k] = old[k + 1] + 1.0;"),
+        "exit in body": loop_before("if (d[k] < 0.0)"),
+    }
+    pats = json.loads((d / ".discopop" / "explorer" / "patterns.json").read_text()).get("patterns", {})
+    doall = {int(str(x.get("start_line", "0:0")).split(":")[1]): x for x in pats.get("do_all", [])
+             if str(x.get("applicable_pattern")) == "True"}
+
+    def clause(what: str, key: str) -> List[str]:
+        return sorted(str(v.get("name") if isinstance(v, dict) else v) for v in doall[at[what]].get(key) or [])
+
+    problems: List[str] = []
+    for what in ("nest", "every pass", "array filled", "array read", "exit in body"):
+        if at[what] not in doall:
+            problems.append(f"the loop '{what}' at k.c:{at[what]} is not Do-All")
+    if at["search"] in doall:
+        problems.append(f"the search loop at k.c:{at['search']} is reported Do-All "
+                        f"(last_private {clause('search', 'last_private')})")
+    if at["nest"] in doall and "j" not in clause("nest", "private"):
+        problems.append(f"the nest's inner counter is not private: {doall[at['nest']]}")
+    if at["every pass"] in doall and clause("every pass", "last_private") != ["z"]:
+        problems.append(f"a value every pass assigns is not lastprivate: {clause('every pass', 'last_private')}")
+    for what in ("array filled", "array read"):
+        for key in ("last_private", "first_private", "private"):
+            if at[what] in doall and "old" in clause(what, key):
+                problems.append(f"the stack array is {key} in the loop '{what}'")
+    named = [key for key in ("last_private", "first_private", "private", "shared")
+             if at["exit in body"] in doall and "r" in clause("exit in body", key)]
+    if named:
+        problems.append(f"the loop with exit in its body names the counter of the loop around it: {named}")
+    prevented = d / ".discopop" / "explorer" / "doall_prevented.json"
+    records = [b for b in (json.loads(prevented.read_text()) if prevented.exists() else [])
+               if b.get("loop_start") == at["search"]]
+    want = {"dep_type": "DepType.WAW", "var_name": "last", "reason": "conditional_last_value"}
+    if not any(all(b.get(k) == v for k, v in want.items()) for b in records):
+        problems.append(f"the search loop's record does not name the last value: {records[:2]}")
+    if problems:
+        return Result(name, "fail", "; ".join(problems))
+    return Result(name, "pass", "the search loop is not Do-All and its record names the write-after-write on the "
+                  "variable read after it; a value every pass assigns keeps lastprivate; the stack array is in no "
+                  "private clause; the nest keeps its Do-All with the inner counter private; the loop with exit "
+                  "in its body names no variable of the loop around it")
+
+
 _CARRIER_PROGRAM = """#include <stdio.h>
 #define N 40
 #define M 7
@@ -5135,6 +5260,7 @@ _CHECKS: List[Tuple[str, Callable[[Path], Result]]] = [
     ("b13-scatter-waw", check_b13_scatter_waw),
     ("b15-dowhile", check_b15_dowhile),
     ("b17-cwd-length", check_b17_cwd_length),
+    ("b19-last-value", check_b19_last_value),
 ]
 
 

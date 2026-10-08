@@ -40,8 +40,10 @@ LLVM 19 (macOS) and LLVM 20 (Linux).
 | B13 | explorer, `TaskGraph.__insert_data_dependencies_from_files` + Do-All detector | fixed 27 Sep | a loop whose only cross-iteration dependence is a WRITE-AFTER-WRITE on an array element (a scatter `x[idx[i]] = …` whose indices repeat) is reported Do-All: the task graph dropped every WAW as "no data flow"; its pragma races (Rodinia bfs's frontier loop in E2-B1) |
 | B14 | profiler, `static_analysis/calltree_construction.cpp` (loop states of the call path) | **fixed 7 Oct** | two loops side by side inside a loop are modelled as nested in each other, and the later loop's iterations are never recorded. Two faces: a dependence carried by the OUTER loop blocks the later loop's Do-All (the shape every loop distribution inside a repetition loop creates), and a dependence BETWEEN the later loop's own iterations is not seen — a recurrence reported Do-All |
 | B15 | explorer, `TaskGraph.__assign_loopstate_positions_within_functions` / task-graph loops | fixed 27 Sep | a `do … while` loop gets no loop context in the task graph, so the loop-state digit positions of every loop in the function after it are off by one: no call-path state under the `do … while` matches, every dependence recorded there is lost, and a textbook recurrence nested in it is reported Do-All (Rodinia bfs: all 1,500 dynamic dependences of the kernel lost) |
-| B18 | explorer (suspected: the carried-scalar rule of B10's fix) | candidate, 7 Oct | on PolyBench the current DiscoPoP reports no Do-All for outer loops it reported on 20 Sep — `correlation`, `covariance` (one directive, 5–6×, race-clean in three draws then; none now), `gramschmidt`, `fdtd-2d` (the directive now on a smaller loop: 8× → 0.35×, 5× → 0.6×); the blockers it names are the inner loops' own counters (`i`, `j`), declared at the top of the function |
-| B19 | explorer (data-sharing classification: `last_private`) | candidate, 7 Oct; found wider 8 Oct | a variable written in the loop and read after it is classified `last_private` without asking whether the sequentially last iteration assigns it. Three faces: a scalar assigned under a condition (`if (a[i] < 0) j = i;`, TSVC `s331`: `parallel for lastprivate(j)` returns the last CHUNK's value — wrong output, the gate refuses it every time); the counter of the enclosing loop on `s481` (`lastprivate(nl)`, never written by the loop: accepted and shipped, right only because the compiler leaves the unspecified value alone); whole stack arrays in the model's rewrites (`lastprivate(a_old)`: wrong output, refused) |
+| B18 | explorer (attaching dependences to units; met by B10's fix) | **FIXED 8 Oct** | the outer loop of a nest whose inner counter is declared at the top of the function lost its Do-All (PolyBench `correlation`, `covariance`, `gramschmidt`, `fdtd-2d`): a write-after-read was attached to the units of its lines by the wrong roles, so the unit that initialises the inner counter counted as reading it, and since B10's fix a read and a write on one line count as read-first — the counter was no longer privatizable |
+| B20 | explorer (task graph) | candidate, 8 Oct | a call that does not return (`exit`) in the body of a nested loop: every dependence the surrounding loop carries is lost and that loop is reported Do-All (TSVC `s481`'s repetition loop; a 20-line reproducer); the gate refuses the directive under ThreadSanitizer |
+| B21 | explorer (task graph) | candidate, 8 Oct | the verdict still differs between runs on ONE profile (PolyBench `correlation`, three runs: the two accumulation loops and the two output loops are Do-All in two runs and blocked on their true dependence in one; the `shared` clause of some loops present or empty) — B4's symptom, on programs with several nests; not seen on the 44 TSVC packages |
+| B19 | explorer (data-sharing clauses of a Do-All loop) | **FIXED 8 Oct** | `lastprivate` was written for any variable a loop writes and something after it reads. Three mechanisms: a scalar assigned in only some passes (`if (a[i] < 0) j = i;`, TSVC `s331`: the clause hands back the last CHUNK's value — wrong output, refused by the gate every time) — the loop is no longer reported Do-All; a whole stack array (`lastprivate(a_old)` on the loop that fills it, `firstprivate(a_old)` on one that reads it) — an array is now `shared`; a unit of the code AROUND the loop counted among the loop's (`s481`: `lastprivate(nl)`, shipped) — only the loop's own units decide its clauses |
 | L3 | explorer | limitation | NPB-CPP `mg`: with P1's fix the state assignment is fast, but the run then stays in task-pattern detection (`new_task_detector`) — a first run was read at 4 h 19 min, the same run was stopped unfinished after **11 h 24 min** at 100 % CPU on the server (19–20 Sep); the Do-All detector is not reached. Not usable per trial |
 
 ---
@@ -426,10 +428,11 @@ both reads and writes an array whose value the enclosing loop carries (`u[i] += 
 loop that only writes is not blocked — which is why `k48`, where the `+=` loop comes first, had both loops
 reported, and why `case_5` never failed.
 
-## B19 — candidate: a conditionally assigned scalar that is read after the loop is classified `last_private` (explorer)
+## B19 — `lastprivate` written where the last iteration does not assign the variable, for whole arrays, and for a variable of the code around the loop (explorer)
 
-**Status: candidate, 7 Oct 2026 — seen in every draw, not fixed; what the fix should be is a decision.** TSVC
-`s331` searches the last negative element:
+**Found** 7 Oct 2026 on TSVC `s331`; read wider on 8 Oct (three mechanisms). **Status:** FIXED 8 Oct 2026 in the
+explorer, by the author's decision ("Ok fix"); the fix is at the end of this entry. TSVC `s331` searches the last
+negative element:
 
 ```c
 j = -1;
@@ -557,9 +560,62 @@ not usable with clang 19; to be checked on the server's compiler before it is co
 the search as a maximum reduction:* a new detection, not a repair; `s331` would become of class A and the main
 comparison's population would change by one loop. Until one is chosen the loop stays as measured.
 
-## B18 — candidate: outer loops of PolyBench kernels lose their Do-All; the blockers named are inner loop counters (explorer)
+**Fix (8 Oct 2026; `explorer/discopop_explorer/pattern_detectors/new_do_all_detector.py`).** The three places
+turned out to be three mechanisms; each is repaired where it sits.
 
-**Status: candidate, 7 Oct 2026 — seen, not examined; not B14 as far as the evidence goes.** DiscoPoP alone on the
+1. *A last value assigned in only some passes (`s331`).* The detector's modelled iterations cannot tell an
+   assignment under a condition from one every pass makes — each holds all units of the body — but the control flow
+   can. `_written_in_every_pass`: with the units that write the variable taken out, a pass must not be able to get
+   from the unit it starts at (the one unit of the loop entered from outside it) back to that unit. A variable that
+   `detect_doall_sharing_clauses` would make `lastprivate` and that fails this test is handed back apart
+   (`conditional_last`), and the loop is not reported Do-All: DiscoPoP has no clause that says "the value of the
+   last assignment". The blocker written to `doall_prevented.json` is the write-after-write between passes on the
+   line of the assignment — what stands against running the passes in any order — with two fields that say what
+   the record is, `"reason": "conditional_last_value"` and `"read_after_loop"` (the first line after the loop that
+   reads the variable). Its origin says whether the profile holds the dependence: DYNAMIC where the assignment
+   was seen to overwrite its own earlier write (`_seen_to_overwrite_itself`: a write-after-write of the variable
+   from the assigning unit onto the same line — two passes assigned; the static dependences only run forward),
+   STATIC where the profiling input showed at most one assigning pass.
+   DiscoPoP's own definition of the clause, `test/end_to_end/sharing_clauses/do_all/last_private/case_1`
+   (`z = i;` in every pass), keeps `lastprivate(z)`. Only a loop that would otherwise be reported Do-All is
+   concerned: one that a dependence blocks already keeps its record as it was (a scalar that is also read in the
+   loop before a later pass assigns it is carried, and blocked on that). The test errs to one side, by decision —
+   it answers "not in every pass" for an assignment inside a nested loop (which may run zero times), for one made
+   only by a called function, and for a loop that is entered at more than one unit — so a `lastprivate` that would
+   have been right can become a loop that is not reported. The evidence that this costs nothing here: before the
+   repair the explorer wrote the clause on two of the 44 `tsvc_c3` packages, `s331` and `s481`, both wrong, and on
+   none of the PolyBench packages. A variable the source does not make visible at the loop (a global from a
+   header) gets no clause from DiscoPoP either way and is left as it was. Not repaired, and not this defect:
+   where the profiling input never runs the assignment, DiscoPoP's static records do not carry it to the read
+   after the loop, and the loop is reported Do-All — the dependence of a dynamic analysis on its input.
+2. *Whole arrays.* The test that keeps a pointer's target `shared` looked for `*` or `&` in the variable's type; a
+   stack array's type is `real_t[32000]`. An array is reached through its address as a pointer's target is: `[`
+   counts as well, and the array is `shared` on the loop that fills it and on the loop that reads it.
+3. *A unit of the code around the loop (`s481`).* With `exit(0)` in the inner loop's body the task graph places
+   units of the ENCLOSING loop inside the inner loop's iterations (B20 below) — `nl++` among them, so `nl` came out
+   written by, and `lastprivate` of, a loop that never touches it. A loop's data-sharing clauses are now decided by
+   the loop's own units (nested loops included) and what they call; any other unit an iteration is modelled to
+   hold is passed over. The loop is found through the unit the task graph's loop starts at; where it cannot be
+   found, the classification is the one it was.
+
+**Verified on the Mac (8 Oct; one kept profile per case, the explorer alone before and after):** `s331` — the
+search loop Do-All with `last_private: [j]` before, not Do-All after, its record `WAW on j, 11 <- 11, origin
+DYNAMIC, reason conditional_last_value, read_after_loop 14`; the repetition loop blocked as before. The `s241`
+rewrite of the replay with the copy in a stack array — `last_private: [a_old]` and `first_private: [a_old]` before,
+`shared: [a_old]` on both loops after. `s481` — the inner loop Do-All with `last_private: [nl]` before, Do-All
+without a clause after (its repetition loop is still reported Do-All: B20). The agent's feature check
+`b19-last-value`, a 40-line program holding all of it and B18's nest: on the explorer before the repairs it fails
+on five counts (the nest not Do-All; the search loop Do-All with `last_private`; the array `last_private` and
+`first_private`; the counter of the loop around the `exit` loop `last_private`), on the repaired one it passes.
+The checks of the earlier fixes (`b4`, `b8`, `b9`, `b10`, `b13`, `b15`) pass; DiscoPoP's end-to-end tests pass (32
+of 32 before the three new cases `last_private/case_2`, `shared/case_4`, `private/case_2`; with them see the
+record); mypy and `black --check` on the explorer clean. On the Mac's profiles of the 44 `tsvc_c3` packages, the explorer before against the one after (one run each, the final code): 42 packages with the same patterns, clauses and blocked loops; the two that differ are `s331` and `s481`, as above. For PolyBench one run against one says nothing (B21): `correlation` in three runs each is in B18's entry, the 30 packages in three runs each in the record. The server's
+draws are in the record (`evaluation/agent/docs/THESIS_EXPERIMENTS.md` §6).
+
+## B18 — outer loops of PolyBench kernels lost their Do-All: a write-after-read is attached to units by the wrong roles, and B10's fix made that decide (explorer)
+
+**Found** 7 Oct 2026 (seen, not examined). **Status:** TRACED and FIXED 8 Oct 2026 in the explorer (the trace and
+the fix are at the end of this entry; the author: "trace the PolyBench difference"). DiscoPoP alone on the
 31 packages of T0.11 outside TSVC, three draws on the current DiscoPoP (`t0_11_b14_apps_a`–`c`), against the three
 draws of 20 Sep (`t0_11_classes_a`–`c`): 23 packages as then, 8 differ. Between the two lie eight fixes (B4, B8,
 B9, B10, B12, B13, B15 of 26–27 Sep, B17, and B14), a new agent version and the harness's changes — the
@@ -586,6 +642,100 @@ re-initialised. `correlation` and `covariance` have no loops side by side that m
 same packages on a build before B14 and on one before B10 (PolyBench runs on the Mac; `pathfinder` does not),
 then the fix at the root. No TSVC package is affected: their loop counters are declared in the loop header, and
 the three TSVC draws on the current DiscoPoP equal the earlier ones.
+
+**Trace (8 Oct 2026, Mac; one kept profile of `polybench/correlation`, made with the current profiler).** The
+suspect named above is the one. *Which change:* the explorer of the commit before B10's fix (`9a86f4855`) and the
+explorer of B10's fix (`8c7e6066f`), run on that same profile: before, the loops at lines 98, 106 and 109 are Do-All
+with the inner counters `private`; after, they are blocked on a static RAW on `j`, `i`, `i`. Nothing else differs
+between the two runs' inputs. *Why:* the nest is
+
+```c
+for (i = 0; i < _PB_N; i++)
+  for (j = 0; j < _PB_M; j++)      /* three units on one line: j = 0 | j < m | j++ */
+    { ... }
+```
+
+and the detector's log for the outer loop shows the unit that only initialises the counter (`j = 0`) holding
+"incoming WAR" records on `j` — it is taken for a unit that READS `j` and is overwritten later. It never reads `j`.
+`PEGraphX.from_parsed_input` attaches a dependence to the units of its two lines by role, and for a write-after-read
+it used the roles of a read-after-write: the sink (the WRITE) was looked up among the units that read on its line
+and the source (the earlier READ) among those that write on its line. On a line shared by a unit that only writes
+and units that read, the writer is credited with the reads. That is original DiscoPoP code; it decided nothing
+as long as the order of a unit's accesses followed the order of the profile's records. B10's fix (part A) made the
+order a rule — on one line a read and a write of the same variable in one unit are one statement, read first — and
+the initialising unit became "read first": the counter is not first written in the outer loop's pass, the static
+RAW on it is not excused, the loop is blocked. The two other nests of the file kept their Do-All through another
+door: an INIT record on the inner header's line puts their counter among the variables initialised in the pass,
+which excuses it; the blocked nest's counter has no such record on its line.
+
+**Fix (8 Oct 2026; `explorer/discopop_explorer/classes/PEGraph/PEGraphX.py`).** A write-after-read is attached by
+its own roles: the sink among the units that write on its line, the source among those that read on its line.
+Where a line has no unit in the right role the old lookup stays, so that no dependence is dropped. B10's rule is
+unchanged; it now meets units that really read. On the kept profile: the loops at 98, 106 and 109 Do-All again
+with `private(j)`, `private(i, j2)`, `private(i)`; every other pattern of the file as before. The agent's
+check of B10 (`b10-carried-scalar`: the running total and the one-line recurrence blocked, the parallel loops
+Do-All) passes on the changed explorer, as do the checks of B4, B8, B9, B13 and B15. **A sentence of this entry
+that the trace leaves standing only as an observation:** "No TSVC package is affected" — the TSVC packages declare
+their counters in the loop header, which is why the three TSVC draws did not move; the mechanism does not ask
+where a counter is declared. `rodinia-3.1/pathfinder` (RAW on `src`) is not examined here (Rodinia does not run on
+the Mac); the draws on the server say whether it moved.
+
+## B20 — candidate: a call that does not return in the body of a nested loop loses every dependence of the surrounding loop (explorer, task graph)
+
+**Status: candidate, 8 Oct 2026 — reproduced in 20 lines, not traced, not fixed.** Found while tracing B19's third
+place (`s481`). The program
+
+```c
+for (int r = 0; r < 4; r++) {
+    for (int k = 0; k < N; k++) {
+        if (d[k] < 0.0) {
+            exit(0);
+        }
+        b[k] += d[k] * c[k];
+    }
+    tick();                      /* calls++ */
+}
+```
+
+is profiled with no `d[k]` negative, so `exit` is never called. DiscoPoP reports the `r` loop Do-All, although
+every repetition reads the `b[k]` the one before wrote and `tick` counts in a global. With the guarded statement
+replaced by an assignment (`c[k] = 0.0;`) the `r` loop is blocked on the RAW on `b`, as it must be. On TSVC `s481`
+(the kernel's own `exit (0);`) the same: the repetition loop is reported Do-All on the Mac's profile and in the
+server's class draw (`t0_11_c3_a`: candidate 0, `#pragma omp parallel for` on the repetition loop, refused by the
+gate under ThreadSanitizer), where `s331`'s repetition loop in the same packaging is blocked on `dummy.n`.
+
+What the detector's log shows on `s481`: the modelled iterations of the inner loop hold units of the code after
+it — the call of `dummy`, the surrounding loop's `nl++`, the next start of the inner loop — and the scopes of the
+loops overlap (`['1:6', '1:7']`, a scope with the callee's lines). The unit of the `exit` call has no successor;
+the task graph seems not to close the loops around it when a path ends there. Not traced further. Whether a
+`return` inside a nested loop does the same is not tested.
+
+**Consequence today.** A false Do-All on the loop around; the gate refuses it wherever it was offered. B19's third
+repair keeps the foreign units out of the inner loop's clauses. **Reproducer:** the program above (the loop with
+`exit` in its body is also part of the feature check `b19-last-value`, which tests the clause, not this verdict).
+
+## B21 — candidate: the explorer's verdict still differs between runs on one profile (explorer, task graph)
+
+**Status: candidate, 8 Oct 2026 — seen while checking B18's repair, not traced, not fixed.** B4 (26 Sep) repaired
+one cause of this — the order in which the loops of a nest were duplicated. On ONE kept profile of
+`polybench/correlation`, three runs of the explorer, the same with the explorer before and after the repairs of
+8 Oct:
+
+| loop | what it does | two of three runs | one of three runs |
+|---|---|---|---|
+| lines 78, 87 | `mean[j] += …`, `stddev[j] += …` over `i`: an accumulation | Do-All | blocked, RAW on the element |
+| lines 48, 49 | the output loops (the harness counts the values it emits) | Do-All | blocked, RAW on the counter |
+| line 112 | `symmat[j1][j2] += …` over `i` | Do-All | Do-All and a reduction `+:symmat` |
+
+The run that blocks is the right one: the accumulations and the output loops carry a dependence from one pass to
+the next. In single runs on other PolyBench profiles the `shared` clause of some loops was present in one run and
+empty in the next (`adi`, `cholesky`, `dynprog`) — the first symptom B4's entry lists. The 44 TSVC packages gave
+the same patterns, clauses and blocked loops in two independent explorer runs on one profile each (but for the
+two packages the repairs aim at), and their class draws agree draw by draw; a TSVC kernel is one nest. **What it
+means:** on a program with several nests DiscoPoP's verdict is a draw of the explorer as well as of the profile;
+the class draws of PolyBench differ draw by draw for this reason too (`atax`, `adi` in B18's table), and a single
+run before against a single run after says nothing — B18's repair was read from three runs of each explorer on
+one profile. The gate refuses a false Do-All. **Owed before any PolyBench experiment:** the trace.
 
 ## B17 — the profile depends on the path of the working directory: an uninitialised flag switches loop tracking off (profiler runtime)
 

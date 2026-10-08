@@ -183,9 +183,19 @@ class PEGraphX(Plottable, object):  # type: ignore[misc]
                     for s in sink:
                         g.add_edge(s, s, data=parse_dependency(dep))
                 continue
-            elif dep.type == "RAW" or dep.type == "WAR":
+            elif dep.type == "RAW":
                 sink_cu_ids = readlineToCUIdMap[dep.sink]
                 source_cu_ids = writelineToCUIdMap[dep.source]
+            elif dep.type == "WAR":
+                # A write-after-read: the SINK is the write, the SOURCE the earlier read. Both ends used to be
+                # looked up as a RAW's are (sink among the units that read on its line, source among those that
+                # write on its line). On a line that several units share — a one-line `for (j = 0; j < m; j++)`
+                # is three: the initialisation, the condition, the increment — the unit that only WRITES (`j = 0`)
+                # was then credited with the condition's and the increment's reads of `j`, and the unit that only
+                # reads with a write (B18, docs/DISCOPOP_BUG_REPORTS.md). Where a line has no unit in the right
+                # role the old lookup stays, so that no dependence is dropped.
+                sink_cu_ids = writelineToCUIdMap[dep.sink] or readlineToCUIdMap[dep.sink]
+                source_cu_ids = readlineToCUIdMap[dep.source] or writelineToCUIdMap[dep.source]
             elif dep.type == "WAW":
                 sink_cu_ids = writelineToCUIdMap[dep.sink]
                 source_cu_ids = writelineToCUIdMap[dep.source]

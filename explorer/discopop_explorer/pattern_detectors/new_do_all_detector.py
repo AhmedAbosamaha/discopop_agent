@@ -16,6 +16,9 @@ from tqdm import tqdm  # type: ignore
 
 from discopop_explorer.aliases.LineID import LineID
 from discopop_explorer.aliases.NodeID import NodeID
+from discopop_explorer.classes.PEGraph.CUNode import CUNode
+from discopop_explorer.classes.PEGraph.LoopNode import LoopNode
+from discopop_explorer.classes.PEGraph.Node import Node
 from discopop_explorer.classes.PEGraph.Dependency import Dependency
 from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
 from discopop_explorer.classes.TaskGraph.ContextTaskGraph import ContextTaskGraph
@@ -43,6 +46,7 @@ from discopop_gui.Visualizers.WithSidebar import WithSidebar as VisualizerWithSi
 
 from discopop_explorer.utils import classify_loop_variables
 from discopop_explorer.functions.PEGraph.queries.edges import in_edges, out_edges
+from discopop_explorer.functions.PEGraph.queries.subtree import subtree_of_type
 from discopop_explorer.classes.variable import Variable
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import MemoryRegion, VarName
 from discopop_explorer.enums.DepOrigin import DepOrigin
@@ -128,6 +132,61 @@ def _declared_inside_loop(tg: TaskGraph, loop_node: TGNode, var_name: str) -> bo
     return False
 
 
+def _written_in_every_pass(pet: PEGraphX, own_cu_ids: Set[NodeID], writers: Set[NodeID]) -> bool:
+    """B19: does EVERY pass through the loop's body run one of `writers` — units of the loop that write a
+    variable? OpenMP's `lastprivate` hands back the value of the sequentially last iteration; it is the
+    variable's value after the loop only if that iteration assigns it. The modelled iterations cannot tell an
+    assignment under a condition from one every pass makes (each holds all units of the body); the control flow
+    can: with the writing units taken out, a pass must not be able to get from the unit it starts at back to
+    that unit. The unit a pass starts at is the one unit of the loop that is entered from outside it. A loop
+    entered at several units, and a variable written only by what the loop calls, are not shown to assign in
+    every pass: the answer is no."""
+    writers = writers & own_cu_ids
+    if not writers:
+        return False
+    entries = [
+        cu_id
+        for cu_id in own_cu_ids
+        if any(src not in own_cu_ids for src, _, _ in in_edges(pet, cu_id, EdgeType.SUCCESSOR))
+    ]
+    if len(entries) != 1:
+        return False
+    entry = entries[0]
+    if entry in writers:
+        return True
+    seen: Set[NodeID] = set()
+    stack: List[NodeID] = [entry]
+    while stack:
+        current = stack.pop()
+        for _, successor, _ in out_edges(pet, current, EdgeType.SUCCESSOR):
+            if successor == entry:
+                return False  # back at the start of a pass without having met a write
+            if successor not in own_cu_ids or successor in writers or successor in seen:
+                continue
+            seen.add(successor)
+            stack.append(successor)
+    return True
+
+
+def _seen_to_overwrite_itself(pet: PEGraphX, own_cu_ids: Set[NodeID], writers: Set[NodeID], var_name: str) -> bool:
+    """B19: does the profile hold a write-after-write of `var_name` from a writing unit of the loop onto the SAME
+    line — the assignment overwriting what an earlier pass of it had written? Then at least two passes were
+    observed to assign the variable. (The static dependences only run forward: an assignment that overwrites its
+    own line's write is a record of the run.)"""
+    writers = writers & own_cu_ids
+    for cu_id in writers:
+        for _, target, dep in out_edges(pet, cu_id, EdgeType.DATA):
+            if (
+                dep.dtype == DepType.WAW
+                and dep.var_name == var_name
+                and target in writers
+                and dep.source_line is not None
+                and dep.source_line == dep.sink_line
+            ):
+                return True
+    return False
+
+
 def identify_simple_doall_and_reduction(
     tg: TaskGraph, ast_helper: ASTPatternDetectionHelper
 ) -> List[DoAllInfo | ReductionInfo]:
@@ -169,6 +228,27 @@ def identify_simple_doall_and_reduction(
             "memory_region": str(dep.memory_region),
             "origin": str(dep.origin),
         }
+
+    def _last_value_record(
+        loop_node: TGNode, var_name: str, write_line: Optional[LineID], read_line: Optional[LineID], observed: bool
+    ) -> Dict[str, Any]:
+        """B19: the record of a loop that is not Do-All because a variable read after it is assigned in only
+        some of its passes. What stands against running the passes in any order is the write-after-write
+        between them — the write that comes last in the original order must be the one that is read — so the
+        record is that dependence, on the line of the assignment. Its origin says whether the profile holds
+        it: DYNAMIC where the assignment was seen to overwrite its own earlier write (two passes assigned),
+        STATIC where the profiling input showed at most one assigning pass and only the code says that there
+        can be more. `reason` and `read_after_loop` say what the record is for a reader that knows them."""
+        dep = Dependency(EdgeType.DATA)
+        dep.dtype = DepType.WAW
+        dep.var_name = var_name
+        dep.source_line = write_line
+        dep.sink_line = write_line
+        dep.origin = DepOrigin.DYNAMIC_ANALYSIS if observed else DepOrigin.STATIC_ANALYSIS
+        record = _blocker_record(loop_node, dep)
+        record["reason"] = "conditional_last_value"
+        record["read_after_loop"] = str(read_line)
+        return record
 
     for node in tg.graph.nodes():
         # check if node is LoopParent
@@ -308,13 +388,14 @@ def identify_simple_doall_and_reduction(
         loopparent_contained_ctxs = node.created_context.get_contained_contexts(inclusive=True)
         # node is a valid doall loop. Detect data sharing clauses
         logger.debug("CURRENT LOOP: " + str(node.created_context.get_code_scope(tg.pet)))
-        firstprivate, private, lastprivate, shared, firstwritten, init = detect_doall_sharing_clauses(
+        firstprivate, private, lastprivate, shared, firstwritten, init, conditional_last = detect_doall_sharing_clauses(
             tg.pet,
             ast_helper,
             node.pet_node_id,
             iteration_contexts,
             loopparent_contained_ctxs,
             set([v[0] for v in loop_variables]),
+            node.created_context.parent_loop,
         )
         reduction: Set[str] = set([ri[2].var_name for ri in reduction_info if ri[2].var_name is not None])
         # check potential_breaking_dependencies for cases which actually prevent doall
@@ -333,6 +414,21 @@ def identify_simple_doall_and_reduction(
         #    print(
         #        "HERE DUE TO SECOND CHANCEs!: ", [(d[2].dtype, d[2].var_name) for d in potential_breaking_dependencies]
         #    )
+        # B19: a variable that is read after the loop and assigned in only some of its passes. `lastprivate`
+        # would hand back the last CHUNK's value, not the last assignment's (TSVC s331: `if (a[i] < 0) j = i;`),
+        # and DiscoPoP has no clause that says "the last assignment": the loop is not reported Do-All. Only a
+        # loop that would otherwise be reported is concerned — one that a dependence blocks already keeps its
+        # record as it was.
+        if node.pet_node_id not in prevented_loops:
+            for var_name in sorted(conditional_last):
+                if var_name in reduction:
+                    continue
+                write_line, read_line, observed = conditional_last[var_name]
+                prevented_loops.add(node.pet_node_id)
+                record = _last_value_record(node, var_name, write_line, read_line, observed)
+                if record not in prevented_records:
+                    prevented_records.append(record)
+                break
 
         # Register a pattern
         pattern: DoAllInfo | ReductionInfo
@@ -413,10 +509,23 @@ def detect_doall_sharing_clauses(
     iteration_contexts: List[IterationContext],
     loopparent_contained_ctxs: Set[Context],
     loop_variables: Set[str],
-) -> Tuple[Set[str], Set[str], Set[str], Set[str], Set[str], Set[str]]:
+    pet_loop_id: Optional[NodeID] = None,
+) -> Tuple[
+    Set[str],
+    Set[str],
+    Set[str],
+    Set[str],
+    Set[str],
+    Set[str],
+    Dict[str, Tuple[Optional[LineID], Optional[LineID], bool]],
+]:
     """classifies variables used inside the iterations and returns the OpenMP data sharing clauses in the following structure:
-    (firstprivate, private, lastprivate, shared, firstwritten, init)
+    (firstprivate, private, lastprivate, shared, firstwritten, init, conditional_last)
     firstwritten and init are not data sharing clauses, but required to validate potential doall-breaking dependencies originating from static information.
+    conditional_last (B19) is no clause either: the variables that are read after the loop but assigned in only
+    some of its passes, each with the line of an assignment, the line of a read after the loop, and whether the
+    profile holds the assignment overwriting itself. No clause DiscoPoP writes fits them; the caller does not
+    report the loop as Do-All.
     """
     logger.debug("-------------------- LOOP START ---------------------")
     # Initialization
@@ -434,6 +543,36 @@ def detect_doall_sharing_clauses(
 
     known_vars_with_types = ast_helper.get_variables_at_location(file_id, line_num)
     known_vars = set([v[0] for v in known_vars_with_types])
+    logger.debug("\t--> known variables with types: " + str(known_vars_with_types))
+
+    # B19: the units that are the loop's own (nested loops included), and those with what they call. The task
+    # graph can place a unit of the code AROUND the loop inside one of its iterations (TSVC s481, an `exit(0)`
+    # in the body: the enclosing loop's `nl++` stood in the inner loop's iteration, and `nl` came out
+    # `lastprivate` of a loop that never touches it). Such a unit's accesses are not the loop's and say
+    # nothing about its data-sharing clauses.
+    # (`loop_node_id` is the unit the task graph's loop starts at; `pet_loop_id` is the loop itself. Where the
+    # loop is not known the units cannot be told apart, and the classification is the one it was before.)
+    own_cu_ids: Optional[Set[NodeID]] = None
+    own_or_called_cu_ids: Optional[Set[NodeID]] = None
+    pet_loop: Optional[Node] = None
+    if pet_loop_id is not None and isinstance(pet.node_at(pet_loop_id), LoopNode):
+        pet_loop = pet.node_at(pet_loop_id)
+    else:
+        # the loop that holds the unit the task graph's loop starts at
+        for parent_id, _, _ in in_edges(pet, loop_node_id, EdgeType.CHILD):
+            if isinstance(pet.node_at(parent_id), LoopNode):
+                pet_loop = pet.node_at(parent_id)
+                break
+    logger.debug(
+        "\t--> the loop: " + str(pet_loop.id if pet_loop is not None else None) + " (given: " + str(pet_loop_id) + ")"
+    )
+    if pet_loop is not None:
+        own_cu_ids = set([n.id for n in subtree_of_type(pet, pet_loop, CUNode)])
+        own_or_called_cu_ids = set(
+            [n.id for n in subtree_of_type(pet, pet_loop, CUNode, ignore_called_functions=False)]
+        )
+    conditional_last: Dict[str, Tuple[Optional[LineID], Optional[LineID], bool]] = dict()
+    logger.debug("\t--> the loop's own units: " + str(sorted(own_cu_ids) if own_cu_ids is not None else None))
 
     # shared:
     # - no dependency between iterations
@@ -478,6 +617,7 @@ def detect_doall_sharing_clauses(
             tg.pet_node_id for tg in contained_tg_nodes_in_sequence if tg.pet_node_id is not None
         ]
         #        print("contained cu nodes in sequence: ", contained_cu_node_ids_in_sequence)
+        logger.debug("\t--> CUs in sequence: " + str(contained_cu_node_ids_in_sequence))
 
         # -> get lists of firstwritten, firstread, written, read, read_in, read_out for all iterations.
         # -> use the gathered lists to determine sharing clauses after the loop over iteration contexts
@@ -488,8 +628,14 @@ def detect_doall_sharing_clauses(
         firstread: Set[str] = set()
         data_incoming: Set[str] = set()
         data_outgoing: Set[str] = set()
+        # B19: per variable, the loop's units that write it, the line of a write, the line of a read after the loop
+        writer_units: Dict[str, Set[NodeID]] = dict()
+        write_line: Dict[str, Optional[LineID]] = dict()
+        read_after_line: Dict[str, Optional[LineID]] = dict()
 
         for cu_node_id in contained_cu_node_ids_in_sequence:
+            if own_or_called_cu_ids is not None and cu_node_id not in own_or_called_cu_ids:
+                continue
             incoming_deps = in_edges(pet, cu_node_id, EdgeType.DATA)
             outgoing_deps = out_edges(pet, cu_node_id, EdgeType.DATA)
 
@@ -558,6 +704,12 @@ def detect_doall_sharing_clauses(
                 for line_no, is_read, outgoing, src, dst, dep in accesses
             ]
             events.sort(key=lambda e: (e[0], e[1]))
+            logger.debug(
+                "\t--> accesses of "
+                + str(cu_node_id)
+                + ": "
+                + str([(e[0], str(e[5].dtype).split(".")[-1], "out" if e[2] else "in", e[5].var_name) for e in events])
+            )
 
             for _line, _rank, is_outgoing, src, dst, dep in events:
                 if dep.var_name is None:
@@ -573,7 +725,12 @@ def detect_doall_sharing_clauses(
                             if type_str is None:
                                 continue
                             if tmp_var_name == dep.var_name:
-                                if "*" in type_str or "&" in type_str:
+                                # B19: an array (`real_t a_old[N]`, type `real_t[N]`) is reached through its
+                                # address as a pointer's target is. Taken for a scalar it came out
+                                # `lastprivate` on the loop that fills it — every thread fills a copy of its
+                                # own and only the last thread's is handed back — and `firstprivate` on a
+                                # loop that reads it, a copy of the whole array per thread.
+                                if "*" in type_str or "&" in type_str or "[" in type_str:
                                     ptr_type_access.add(dep.var_name)
 
                     if dep.dtype == DepType.RAW:
@@ -586,15 +743,21 @@ def detect_doall_sharing_clauses(
                         if dep.var_name not in read:
                             it_firstwritten.add(dep.var_name)
                         written.add(dep.var_name)
+                        writer_units.setdefault(dep.var_name, set()).add(cu_node_id)
+                        write_line.setdefault(dep.var_name, dep.sink_line)
                     elif dep.dtype == DepType.WAW:
                         if dep.var_name not in read:
                             it_firstwritten.add(dep.var_name)
                         written.add(dep.var_name)
+                        writer_units.setdefault(dep.var_name, set()).add(cu_node_id)
+                        write_line.setdefault(dep.var_name, dep.sink_line)
                     elif dep.dtype == DepType.INIT:
                         if dep.var_name not in read:
                             it_firstwritten.add(dep.var_name)
                         it_init.add(dep.var_name)
                         written.add(dep.var_name)
+                        writer_units.setdefault(dep.var_name, set()).add(cu_node_id)
+                        write_line.setdefault(dep.var_name, dep.sink_line)
                     else:
                         raise ValueError("Unsupported dependency type: " + str(dep.dtype))
                 else:
@@ -602,8 +765,13 @@ def detect_doall_sharing_clauses(
                         if dep.var_name not in read:
                             it_firstwritten.add(dep.var_name)
                         written.add(dep.var_name)
+                        writer_units.setdefault(dep.var_name, set()).add(cu_node_id)
+                        write_line.setdefault(dep.var_name, dep.source_line)
                         if src not in contained_cu_node_ids_in_sequence:
                             data_outgoing.add(dep.var_name)
+                            earlier = read_after_line.get(dep.var_name)
+                            if earlier is None or _access_line(dep.sink_line) < _access_line(earlier):
+                                read_after_line[dep.var_name] = dep.sink_line
                     elif dep.dtype == DepType.WAR:
                         if dep.var_name not in written:
                             firstread.add(dep.var_name)
@@ -612,11 +780,15 @@ def detect_doall_sharing_clauses(
                         if dep.var_name not in read:
                             it_firstwritten.add(dep.var_name)
                         written.add(dep.var_name)
+                        writer_units.setdefault(dep.var_name, set()).add(cu_node_id)
+                        write_line.setdefault(dep.var_name, dep.source_line)
                     elif dep.dtype == DepType.INIT:
                         if dep.var_name not in read:
                             it_firstwritten.add(dep.var_name)
                         it_init.add(dep.var_name)
                         written.add(dep.var_name)
+                        writer_units.setdefault(dep.var_name, set()).add(cu_node_id)
+                        write_line.setdefault(dep.var_name, dep.source_line)
                     else:
                         raise ValueError("Usupported dependency type: " + str(dep.dtype))
 
@@ -723,9 +895,24 @@ def detect_doall_sharing_clauses(
                 or var_name in it_init
             )
 
+        # B19: `lastprivate` is the variable's value after the loop only if the last pass assigns it
+        for var_name in sorted(it_lastprivate):
+            if own_cu_ids is None:
+                break
+            if not _written_in_every_pass(pet, own_cu_ids, writer_units.get(var_name, set())):
+                it_lastprivate.discard(var_name)
+                seen_twice = _seen_to_overwrite_itself(pet, own_cu_ids, writer_units.get(var_name, set()), var_name)
+                earlier_record = conditional_last.get(var_name)
+                conditional_last[var_name] = (
+                    write_line.get(var_name) if earlier_record is None else earlier_record[0],
+                    read_after_line.get(var_name) if earlier_record is None else earlier_record[1],
+                    seen_twice or (earlier_record is not None and earlier_record[2]),
+                )
+
         logger.debug("\tit_private: " + str(it_private))
         logger.debug("\tit_shared: " + str(it_shared))
         logger.debug("\tit_lastprivate: " + str(it_lastprivate))
+        logger.debug("\tconditional_last: " + str(conditional_last))
         logger.debug("\tit_firstprivate: " + str(it_firstprivate))
         logger.debug("\tloop_vars: " + str(loop_variables))
 
@@ -760,7 +947,10 @@ def detect_doall_sharing_clauses(
     logger.debug("\tPOST FILTER: firstprivate: " + str(firstprivate))
     logger.debug("---------------------------- LOOP END --------------------")
     logger.debug("")
-    return firstprivate, private, lastprivate, shared, firstwritten, init
+    # a variable some modelled iteration assigns in every pass and another only under a condition is the latter
+    conditional_last = {v: lines for v, lines in conditional_last.items() if v in known_vars}
+    lastprivate = lastprivate - set(conditional_last)
+    return firstprivate, private, lastprivate, shared, firstwritten, init, conditional_last
 
 
 def __merge_classifications(
