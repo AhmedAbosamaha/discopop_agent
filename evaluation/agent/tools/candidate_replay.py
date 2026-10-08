@@ -140,7 +140,8 @@ def cmd_replay(a: argparse.Namespace) -> int:
             print(f"{label}  ({rec['harness_outcome']}{', the shipped rewrite' if rec.get('is_shipped_rewrite') else ''}): "
                   f"{rec['result']}" + (f"  pragmas kept {rec.get('applied')}, rejected by {rec.get('rejected_by')}, "
                                         f"marginals {rec.get('marginals')}" if "applied" in rec else "")
-                  + (f"  = {rec['same_as']}" if rec.get("same_as") else ""), flush=True)
+                  + (f"  = {rec['same_as']}" if rec.get("same_as") else "")
+                  + (f"  [{rec['detail']}]" if rec.get("detail") else ""), flush=True)
     manifest["finished"] = time.strftime("%Y-%m-%dT%H:%M:%S%z")
     (a.out / "manifest.json").write_text(json.dumps(manifest, indent=1) + "\n")
     return 0

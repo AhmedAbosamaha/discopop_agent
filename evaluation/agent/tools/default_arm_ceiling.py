@@ -131,9 +131,15 @@ def run_one(loop: str, out: Path, repo: Path, timeout: int, speed: bool = True,
                dropped_slower=log.count("DROPPED (slower)"),
                marginals=re.findall(r"marginal ([0-9.]+)×", log),
                settle_ok="finished source verified" in log,
-               result=("KEPT" if applied > 0 and "finished source verified" in log
+               # no SUMMARY line: the agent stopped before it judged anything (e.g. the handed-over program
+               # does not build or crashes at the timing size) — not "DiscoPoP found no pattern"
+               result=("AGENT_ABORTED" if m is None
+                       else "KEPT" if applied > 0 and "finished source verified" in log
                        else "NO_PATTERN" if not cands or int(cands.group(1)) == 0
                        else "ALL_REJECTED" if applied == 0 else "UNVERIFIED"))
+    if m is None:
+        fatal = re.search(r"\[FATAL\]\s*(.+)", log)
+        rec["detail"] = (fatal.group(1) if fatal else log[-300:]).strip()[:300]
     return rec
 
 
