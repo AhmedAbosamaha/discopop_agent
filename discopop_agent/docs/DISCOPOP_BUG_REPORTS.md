@@ -459,12 +459,18 @@ write"; this entry says which one DiscoPoP writes instead and why it is wrong.
 author asked why it should be left alone. No run: the saved candidates of the runs on the clean packages (E1-v6 and
 its corrections, E2-v6, E2-v6b, the class draws) and the explorer's code.
 
-*The root is the clause, not the Do-All verdict.* `explorer/discopop_explorer/utils.py`, `classify_loop_variables`,
-puts a scalar that is written in the loop and read after it into `last_private` (lines 776–778 and 805–807), and a
-loop index that is read after the loop likewise (lines 758–760). None of the three asks whether the sequentially
-last iteration assigns the variable — which is what OpenMP's `lastprivate` needs. For `s331` the Do-All verdict is
-right (the loop is parallel); the clause is wrong. Not reporting such a loop as Do-All would be a way around the
-defect, not its repair.
+*The root is the clause, not the Do-All verdict.* The clauses of the patterns the explorer writes out are decided in
+`explorer/discopop_explorer/pattern_detectors/new_do_all_detector.py`, `detect_doall_sharing_clauses`: a variable
+that an iteration writes and that something outside the loop reads afterwards becomes `lastprivate` unless its type
+in the source carries `*` or `&` (lines 657–662). Nothing asks whether the sequentially last iteration assigns the
+variable — which is what OpenMP's `lastprivate` needs. For `s331` the Do-All verdict is right (the loop is
+parallel); the clause is wrong. Not reporting such a loop as Do-All would be a way around the defect, not its
+repair. *Corrected 8 Oct, later:* this paragraph first named `utils.py`, `classify_loop_variables` (lines 758–760,
+776–778, 805–807). That function holds the same rule, but it is the older classification: of the detectors that
+call it only `DoAllInfo`'s constructor still runs, and the new detector overwrites its result
+(`pattern_detection.py` runs `new_do_all_detector.run_detection` alone; the older Do-All and reduction detectors
+are commented out). Read from the detector's own log on the Mac's profile of `s331`: `written: {i, j}`,
+`data_outgoing: {j}`, `it_lastprivate: {j}`.
 
 *On `s331` the clause is written again and again.* The five agent trials on the corrected packages and the fixed
 DiscoPoP (`e1v6c_v7_agent`, the normal setup): 51 model calls, $9.69, 94 minutes; 35 of the 51 rewrites passed the
