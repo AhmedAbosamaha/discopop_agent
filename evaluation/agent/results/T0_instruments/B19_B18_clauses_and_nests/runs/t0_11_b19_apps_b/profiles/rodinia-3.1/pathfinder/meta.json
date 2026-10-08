@@ -1,0 +1,56 @@
+{
+  "suite": "rodinia-3.1",
+  "kernel": "pathfinder",
+  "source": "benchmarks/rodinia_3.1/serial/pathfinder/pathfinder.cpp",
+  "category": "dynamic-programming",
+  "language": "cpp",
+  "exclude_functions": [
+    "pf_init",
+    "pb_emit",
+    "pb_report",
+    "pb_seed",
+    "pb_uniform",
+    "pb_timer_start",
+    "pb_timer_stop"
+  ],
+  "agent_dataset": "SMALL",
+  "generator_version": 1,
+  "sizes": {
+    "MINI": {
+      "PF_COLS": "1000",
+      "PF_ROWS": "10",
+      "PF_SEED": "9"
+    },
+    "SMALL": {
+      "PF_COLS": "10000",
+      "PF_ROWS": "50",
+      "PF_SEED": "9"
+    },
+    "STANDARD": {
+      "PF_COLS": "100000",
+      "PF_ROWS": "100",
+      "PF_SEED": "9"
+    },
+    "LARGE": {
+      "PF_COLS": "200000",
+      "PF_ROWS": "500",
+      "PF_SEED": "9"
+    },
+    "EXTRALARGE": {
+      "PF_COLS": "400000",
+      "PF_ROWS": "1000",
+      "PF_SEED": "9"
+    }
+  },
+  "note": "unperturbed, the grid is generated exactly as the original does (srand(9), rand()%10), so the dumps compare value for value; a seed switches to the packaging's generator, which is what perturbs the input",
+  "inputs_sha256": "ff98e000d90db918556579961c4009b27384e50d02fb9292274cc8ef5ef1fd43",
+  "file": "pathfinder.cpp",
+  "layout": "single",
+  "removed": [
+    "timer.h: rdtsc inline assembly and the pin_stats_* macros (x86-only, replaced by the timed region)",
+    "BENCH_PRINT block, replaced by the digest",
+    "argv sizes, replaced by the dataset guard",
+    "the `timer: <cycles>` line (a measurement, not a result)"
+  ],
+  "output_sha256": "630990911795b9b559acf2231b99c793a76602851032ea0f1d96b40b3b0a20bc"
+}

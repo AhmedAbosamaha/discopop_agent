@@ -1,0 +1,33 @@
+| Benchmark | Arm | Model | Rep | Outcome | Best speedup | Pragmas (DP+LLM) | Rewrites | Baseline | LLM calls | Agent s |
+|---|---|---|---:|---|---:|---|---:|---:|---:|---:|
+| burkardt/md | discopop_capability | claude-haiku-4-5-20251001 | 1 | no-change | 1.00x | 0+0 | 0 | 3 | 0 | 648.2 |
+| npb/is | discopop_capability | claude-haiku-4-5-20251001 | 1 | no-change | 1.02x | 0+0 | 0 | 0 | 0 | 9.5 |
+| polybench/2mm | discopop_capability | claude-haiku-4-5-20251001 | 1 | FASTER | 9.88x | 2+0 | 0 | 6 | 0 | 5.3 |
+| polybench/3mm | discopop_capability | claude-haiku-4-5-20251001 | 1 | FASTER | 10.16x | 3+0 | 0 | 9 | 0 | 7.0 |
+| polybench/adi | discopop_capability | claude-haiku-4-5-20251001 | 1 | FASTER | 1.93x | 4+0 | 0 | 9 | 0 | 14.8 |
+| polybench/atax | discopop_capability | claude-haiku-4-5-20251001 | 1 | parallel-speed-not-measurable | 0.71x | 1+0 | 0 | 3 | 0 | 4.9 |
+| polybench/bicg | discopop_capability | claude-haiku-4-5-20251001 | 1 | no-change | 1.00x | 0+0 | 0 | 2 | 0 | 3.3 |
+| polybench/correlation | discopop_capability | claude-haiku-4-5-20251001 | 1 | FASTER | 5.71x | 1+0 | 0 | 2 | 0 | 5.0 |
+| polybench/covariance | discopop_capability | claude-haiku-4-5-20251001 | 1 | FASTER | 5.31x | 1+0 | 0 | 3 | 0 | 5.9 |
+| polybench/doitgen | discopop_capability | claude-haiku-4-5-20251001 | 1 | no-change | 1.02x | 0+0 | 0 | 4 | 0 | 4.5 |
+| polybench/dynprog | discopop_capability | claude-haiku-4-5-20251001 | 1 | parallel-not-faster | 0.95x | 1+0 | 0 | 6 | 0 | 4.9 |
+| polybench/fdtd-2d | discopop_capability | claude-haiku-4-5-20251001 | 1 | FASTER | 4.17x | 3+0 | 0 | 6 | 0 | 6.7 |
+| polybench/fdtd-apml | discopop_capability | claude-haiku-4-5-20251001 | 1 | FASTER | 4.62x | 1+0 | 0 | 4 | 0 | 5.2 |
+| polybench/floyd-warshall | discopop_capability | claude-haiku-4-5-20251001 | 1 | no-change | 1.00x | 0+0 | 0 | 0 | 0 | 2.1 |
+| polybench/gemm | discopop_capability | claude-haiku-4-5-20251001 | 1 | FASTER | 6.43x | 1+0 | 0 | 3 | 0 | 4.0 |
+| polybench/gemver | discopop_capability | claude-haiku-4-5-20251001 | 1 | parallel-speed-not-measurable | 3.90x | 3+0 | 0 | 6 | 0 | 5.8 |
+| polybench/gesummv | discopop_capability | claude-haiku-4-5-20251001 | 1 | parallel-speed-not-measurable | 4.04x | 1+0 | 0 | 2 | 0 | 3.8 |
+| polybench/gramschmidt | discopop_capability | claude-haiku-4-5-20251001 | 1 | FASTER | 7.76x | 1+0 | 0 | 4 | 0 | 4.3 |
+| polybench/jacobi-1d-imper | discopop_capability | claude-haiku-4-5-20251001 | 1 | parallel-speed-not-measurable | 4.56x | 2+0 | 0 | 2 | 0 | 4.6 |
+| polybench/jacobi-2d-imper | discopop_capability | claude-haiku-4-5-20251001 | 1 | FASTER | 4.32x | 2+0 | 0 | 4 | 0 | 5.1 |
+| polybench/lu | discopop_capability | claude-haiku-4-5-20251001 | 1 | parallel-not-faster | 0.22x | 1+0 | 0 | 0 | 0 | 5.2 |
+| polybench/ludcmp | discopop_capability | claude-haiku-4-5-20251001 | 1 | FASTER | 5.28x | 2+0 | 0 | 4 | 0 | 4.6 |
+| polybench/mvt | discopop_capability | claude-haiku-4-5-20251001 | 1 | parallel-speed-not-measurable | 2.80x | 2+0 | 0 | 4 | 0 | 4.9 |
+| polybench/reg_detect | discopop_capability | claude-haiku-4-5-20251001 | 1 | parallel-speed-not-measurable | 0.36x | 3+0 | 0 | 7 | 0 | 5.7 |
+| polybench/seidel-2d | discopop_capability | claude-haiku-4-5-20251001 | 1 | no-change | 1.00x | 0+0 | 0 | 0 | 0 | 2.4 |
+| polybench/symm | discopop_capability | claude-haiku-4-5-20251001 | 1 | FASTER | 1.32x | 1+0 | 0 | 3 | 0 | 9.9 |
+| polybench/syr2k | discopop_capability | claude-haiku-4-5-20251001 | 1 | FASTER | 10.50x | 1+0 | 0 | 3 | 0 | 4.3 |
+| polybench/syrk | discopop_capability | claude-haiku-4-5-20251001 | 1 | FASTER | 8.50x | 1+0 | 0 | 2 | 0 | 4.0 |
+| polybench/trisolv | discopop_capability | claude-haiku-4-5-20251001 | 1 | no-change | 1.00x | 0+0 | 0 | 2 | 0 | 2.9 |
+| rodinia-3.1/hotspot | discopop_capability | claude-haiku-4-5-20251001 | 1 | no-change | 1.02x | 0+0 | 0 | 0 | 0 | 13.1 |
+| rodinia-3.1/pathfinder | discopop_capability | claude-haiku-4-5-20251001 | 1 | no-change | 1.01x | 0+0 | 0 | 2 | 0 | 12.6 |

@@ -264,16 +264,20 @@ number of the record (D-numbers), so the text can be checked against the reposit
 - **5.4 Toolchain.** LLVM 19 and 20; building Archer where the system ships none; what the race detector reports
   around OpenMP barriers and how the agent treats it (Fix 104).
 - **5.5 Timing inside the agent.** Interleaved paired runs, the noise threshold, the timing size.
-- **5.6 Testing the agent.** The deterministic feature checks (66, no model), unit and end-to-end tests, type checks.
+- **5.6 Testing the agent.** The deterministic feature checks (67, no model), unit and end-to-end tests, type checks.
 - **5.7 What was fixed in DiscoPoP.** Table of the defects with cause, effect and how each was found: a Do-All
   verdict that changed between runs (B4); a call into code outside the project (B8); a callee's accesses lost
   (B9); a carried scalar reported Do-All (B10); a failed instrumented build reported as success (B12); a
   write-after-write that did not block Do-All (B13); two loops side by side modelled as nested (B14);
   dependences lost after a `do … while` (B15); loop tracking switched off by the length of a path (B17); the
-  earlier crashes (B1–B3, B5). Not fixed: the patch generator's hang (B6); loop counts paired with the wrong
-  loops (B7: cause found, worked around in the agent); three candidates (B16, B18, and B19: a wrong
-  `lastprivate` for a scalar assigned under a condition). Limits met: programs DiscoPoP
-  cannot profile in reasonable time (L1–L5).
+  outer loop of a nest blocked on its inner counter (B18, one of our own fixes meeting older code); a wrong
+  `lastprivate` in three places — a value assigned under a condition, a whole array, a variable of the code
+  around the loop (B19); the earlier crashes (B1–B3, B5). Not fixed: the patch generator's hang (B6); loop
+  counts paired with the wrong loops (B7: cause found, worked around in the agent); four candidates, each
+  measured and reproduced — a dependence of the surrounding loop charged to the inner loop (B16); a call that
+  does not return inside a nest (B20); an analysis that on one profile blocks every loop carrying an observed
+  dependence or none of them (B21, PolyBench); a write-after-read between iterations that never blocks a loop,
+  also on an array element (B22). Limits met: programs DiscoPoP cannot profile in reasonable time (L1–L5).
 - **5.8 The repository.** Layout, the experiment registry, how a number in the thesis is traced to a file.
 
 ## 6 Evaluation method (12–14 pages)
@@ -330,8 +334,8 @@ result, or the expectation written down before the run.
     what the claim is and is not — the pipeline makes a small model safe and beats DiscoPoP alone; it does not
     out-reach a strong model alone on loops whose dependences are visible.
   - One loop where the agent ends with nothing and every model alone succeeds in one call (`s331`): the loop
-    needs a maximum reduction, DiscoPoP writes a `lastprivate` that gives wrong results, and the checks refuse
-    it every time. The bridge to 7.7.
+    needs a maximum reduction; DiscoPoP wrote a `lastprivate` that gives wrong results, and the checks refused
+    it every time (B19, repaired 8 Oct: DiscoPoP no longer calls this loop parallel). The bridge to 7.7.
   - Worked examples from the archived trials: a rewrite the agent kept, one it reverted and why, one the model
     alone shipped wrong.
   - The replay, without a model, of the rewrites the agent discarded before the profiler fix: two trials on
@@ -404,8 +408,13 @@ result, or the expectation written down before the run.
   (recorded). Profiling time per kept rewrite from 7.7. The profile of a large code from 7.9. The separate
   cost-curve experiment was dropped (it measures DiscoPoP, not the agent).
 - **7.11 What the campaign found in DiscoPoP.** **[done]** The defects by their effect on results: programs held
-  to half their speed and a recurrence reported as parallel (B14); verdicts that were a draw (B4); what DiscoPoP
-  alone reports on other suites since the fixes (open, candidate B18). The rule: the fixed version in every setup.
+  to half their speed and a recurrence reported as parallel (B14); verdicts that were a draw (B4); a wrong
+  clause that shipped in one program and crashed three others at the larger size (B19); outer loops of PolyBench
+  nests lost and given back (B18). Open, and it decides how PolyBench may be described: on one profile DiscoPoP's
+  analysis blocks every loop that carries an observed dependence, or none of them — "none" in 57 of 81 PolyBench
+  profiles — so that "DiscoPoP alone" there is what DiscoPoP offered and the checks let through (B21); TSVC's
+  verdicts do not vary. A loop whose iteration reads an array element a later iteration overwrites is called
+  parallel (B22), hidden on TSVC by B16. The rule: the fixed version in every setup.
 - **7.12 The answers, question by question.** One table: question · answer · evidence · status.
 
 ## 8 Discussion (6–8 pages)

@@ -1,0 +1,466 @@
+{
+ "tsvc_same": 42,
+ "tsvc_diff": {
+  "s331": "the search loop is no longer reported; its record is the write-after-write on `j`",
+  "s481": "the inner loop's directive no longer carries `lastprivate(nl)`"
+ },
+ "polybench_packages": 30,
+ "gained": [
+  {
+   "kernel": "adi",
+   "line": 96,
+   "blocked_on": "`i2`",
+   "reading": "the inner loop's counter (B18's mechanism) — a wrong reason on a loop that is NOT parallel: each pass reads the row of `X` the next pass overwrites. With the counter record gone the explorer calls it parallel in every run, because its own rule skips a write-after-read between passes (candidate B22). On the server the directive is offered and refused under ThreadSanitizer in 3 of 3 draws"
+  },
+  {
+   "kernel": "correlation",
+   "line": 106,
+   "blocked_on": "`i`",
+   "reading": "the inner loop's counter: B18's mechanism, repaired. The loop is called parallel after the repair in the runs that block the kernel's dependence-carrying loops and in those that block none"
+  },
+  {
+   "kernel": "correlation",
+   "line": 109,
+   "blocked_on": "`i`",
+   "reading": "the inner loop's counter: B18's mechanism, repaired. The loop is called parallel after the repair in the runs that block the kernel's dependence-carrying loops and in those that block none"
+  },
+  {
+   "kernel": "correlation",
+   "line": 98,
+   "blocked_on": "`j`",
+   "reading": "the inner loop's counter: B18's mechanism, repaired. The loop is called parallel after the repair in the runs that block the kernel's dependence-carrying loops and in those that block none"
+  },
+  {
+   "kernel": "covariance",
+   "line": 78,
+   "blocked_on": "`j`",
+   "reading": "the inner loop's counter: B18's mechanism, repaired. The loop is called parallel after the repair in the runs that block the kernel's dependence-carrying loops and in those that block none"
+  },
+  {
+   "kernel": "covariance",
+   "line": 83,
+   "blocked_on": "`i`",
+   "reading": "the inner loop's counter: B18's mechanism, repaired. The loop is called parallel after the repair in the runs that block the kernel's dependence-carrying loops and in those that block none"
+  },
+  {
+   "kernel": "covariance",
+   "line": 84,
+   "blocked_on": "`i`",
+   "reading": "the inner loop's counter: B18's mechanism, repaired. The loop is called parallel after the repair in the runs that block the kernel's dependence-carrying loops and in those that block none"
+  },
+  {
+   "kernel": "fdtd-2d",
+   "line": 87,
+   "blocked_on": "`j`",
+   "reading": "the inner loop's counter: B18's mechanism, repaired. The loop is called parallel after the repair in the runs that block the kernel's dependence-carrying loops and in those that block none"
+  },
+  {
+   "kernel": "fdtd-2d",
+   "line": 90,
+   "blocked_on": "`j`",
+   "reading": "the inner loop's counter: B18's mechanism, repaired. The loop is called parallel after the repair in the runs that block the kernel's dependence-carrying loops and in those that block none"
+  },
+  {
+   "kernel": "fdtd-2d",
+   "line": 93,
+   "blocked_on": "`j`",
+   "reading": "the inner loop's counter: B18's mechanism, repaired. The loop is called parallel after the repair in the runs that block the kernel's dependence-carrying loops and in those that block none"
+  },
+  {
+   "kernel": "gramschmidt",
+   "line": 94,
+   "blocked_on": "`i`",
+   "reading": "the inner loop's counter (B18's mechanism). After the repair the loop is called parallel only in the runs in which the explorer blocks NO loop on an observed dependence (all three runs here; six of eight more on a new profile; two of three draws on the server). In the runs that block them, it is blocked on a read-after-write on `A` (server draw c; two of the eight Mac runs) — so not given back there"
+  },
+  {
+   "kernel": "seidel-2d",
+   "line": 44,
+   "blocked_on": "`pb_sum`, `pb_wsum`",
+   "reading": "a dependence that is real: three runs of the kind that blocks before, three of the kind that blocks nothing after (B21), see below"
+  },
+  {
+   "kernel": "seidel-2d",
+   "line": 45,
+   "blocked_on": "`pb_sum`, `pb_wsum`",
+   "reading": "a dependence that is real: three runs of the kind that blocks before, three of the kind that blocks nothing after (B21), see below"
+  },
+  {
+   "kernel": "seidel-2d",
+   "line": 63,
+   "blocked_on": "`A`",
+   "reading": "a dependence that is real: three runs of the kind that blocks before, three of the kind that blocks nothing after (B21), see below"
+  },
+  {
+   "kernel": "seidel-2d",
+   "line": 64,
+   "blocked_on": "`A`",
+   "reading": "a dependence that is real: three runs of the kind that blocks before, three of the kind that blocks nothing after (B21), see below"
+  },
+  {
+   "kernel": "seidel-2d",
+   "line": 65,
+   "blocked_on": "`A`",
+   "reading": "a dependence that is real: three runs of the kind that blocks before, three of the kind that blocks nothing after (B21), see below"
+  }
+ ],
+ "lost": 0,
+ "varying_packages": 24,
+ "seidel_note": "`seidel-2d` (a Gauss-Seidel sweep; lines 63–65 are its three loops, 44–45 the output loops) is the one kernel in the table whose loops were blocked on a real dependence. Five more runs of each explorer on one new profile: the five loops are reported Do-All in 2 of 5 runs of the explorer before the repairs and in 2 of 5 runs of the explorer after, and blocked (on `A`, on the harness's sum) in the others. So its row is the explorer's two answers (B21), not an effect of the repairs.",
+ "states": {
+  "2mm": {
+   "new": {
+    "loops": 2,
+    "runs": [
+     "none",
+     "none",
+     "all"
+    ]
+   }
+  },
+  "adi": {
+   "new": {
+    "loops": 5,
+    "runs": [
+     "none",
+     "all",
+     "none"
+    ]
+   }
+  },
+  "atax": {
+   "old": {
+    "loops": 3,
+    "runs": [
+     "none",
+     "none",
+     "all"
+    ]
+   },
+   "new": {
+    "loops": 3,
+    "runs": [
+     "all",
+     "none",
+     "all"
+    ]
+   }
+  },
+  "bicg": {
+   "old": {
+    "loops": 4,
+    "runs": [
+     "none",
+     "none",
+     "all"
+    ]
+   },
+   "new": {
+    "loops": 4,
+    "runs": [
+     "none",
+     "all",
+     "none"
+    ]
+   }
+  },
+  "cholesky": {
+   "old": {
+    "loops": 2,
+    "runs": [
+     "all",
+     "all",
+     "none"
+    ]
+   },
+   "new": {
+    "loops": 2,
+    "runs": [
+     "all",
+     "none",
+     "all"
+    ]
+   }
+  },
+  "correlation": {
+   "old": {
+    "loops": 4,
+    "runs": [
+     "none",
+     "all",
+     "none"
+    ]
+   },
+   "new": {
+    "loops": 4,
+    "runs": [
+     "all",
+     "all",
+     "none"
+    ]
+   }
+  },
+  "doitgen": {
+   "old": {
+    "loops": 4,
+    "runs": [
+     "all",
+     "none",
+     "none"
+    ]
+   },
+   "new": {
+    "loops": 4,
+    "runs": [
+     "all",
+     "none",
+     "none"
+    ]
+   }
+  },
+  "durbin": {
+   "old": {
+    "loops": 2,
+    "runs": [
+     "all",
+     "none",
+     "none"
+    ]
+   },
+   "new": {
+    "loops": 2,
+    "runs": [
+     "none",
+     "all",
+     "all"
+    ]
+   }
+  },
+  "dynprog": {
+   "new": {
+    "loops": 2,
+    "runs": [
+     "none",
+     "all",
+     "none"
+    ]
+   }
+  },
+  "fdtd-2d": {
+   "old": {
+    "loops": 3,
+    "runs": [
+     "all",
+     "none",
+     "none"
+    ]
+   },
+   "new": {
+    "loops": 3,
+    "runs": [
+     "none",
+     "none",
+     "all"
+    ]
+   }
+  },
+  "fdtd-apml": {
+   "old": {
+    "loops": 4,
+    "runs": [
+     "all",
+     "none",
+     "none"
+    ]
+   },
+   "new": {
+    "loops": 4,
+    "runs": [
+     "none",
+     "none",
+     "all"
+    ]
+   }
+  },
+  "floyd-warshall": {
+   "new": {
+    "loops": 5,
+    "runs": [
+     "all",
+     "all",
+     "none"
+    ]
+   }
+  },
+  "gemm": {
+   "new": {
+    "loops": 2,
+    "runs": [
+     "none",
+     "all",
+     "none"
+    ]
+   }
+  },
+  "gesummv": {
+   "old": {
+    "loops": 2,
+    "runs": [
+     "none",
+     "all",
+     "none"
+    ]
+   }
+  },
+  "gramschmidt": {
+   "old": {
+    "loops": 7,
+    "runs": [
+     "none",
+     "none",
+     "all"
+    ]
+   }
+  },
+  "jacobi-1d-imper": {
+   "old": {
+    "loops": 2,
+    "runs": [
+     "all",
+     "none",
+     "none"
+    ]
+   },
+   "new": {
+    "loops": 2,
+    "runs": [
+     "none",
+     "all",
+     "none"
+    ]
+   }
+  },
+  "jacobi-2d-imper": {
+   "old": {
+    "loops": 3,
+    "runs": [
+     "all",
+     "none",
+     "all"
+    ]
+   },
+   "new": {
+    "loops": 3,
+    "runs": [
+     "none",
+     "all",
+     "all"
+    ]
+   }
+  },
+  "lu": {
+   "new": {
+    "loops": 3,
+    "runs": [
+     "none",
+     "none",
+     "all"
+    ]
+   }
+  },
+  "ludcmp": {
+   "old": {
+    "loops": 2,
+    "runs": [
+     "all",
+     "none",
+     "none"
+    ]
+   },
+   "new": {
+    "loops": 2,
+    "runs": [
+     "all",
+     "all",
+     "none"
+    ]
+   }
+  },
+  "mvt": {
+   "old": {
+    "loops": 3,
+    "runs": [
+     "none",
+     "all",
+     "none"
+    ]
+   }
+  },
+  "symm": {
+   "old": {
+    "loops": 3,
+    "runs": [
+     "all",
+     "all",
+     "none"
+    ]
+   },
+   "new": {
+    "loops": 3,
+    "runs": [
+     "all",
+     "all",
+     "none"
+    ]
+   }
+  },
+  "syrk": {
+   "old": {
+    "loops": 2,
+    "runs": [
+     "all",
+     "none",
+     "all"
+    ]
+   },
+   "new": {
+    "loops": 2,
+    "runs": [
+     "none",
+     "all",
+     "none"
+    ]
+   }
+  },
+  "trisolv": {
+   "new": {
+    "loops": 3,
+    "runs": [
+     "none",
+     "none",
+     "all"
+    ]
+   }
+  },
+  "trmm": {
+   "old": {
+    "loops": 2,
+    "runs": [
+     "none",
+     "all",
+     "none"
+    ]
+   },
+   "new": {
+    "loops": 2,
+    "runs": [
+     "all",
+     "none",
+     "none"
+    ]
+   }
+  }
+ },
+ "all_or_nothing": "Where the three runs of one explorer on one profile do not agree (17 packages with the explorer before the repairs, 21 with the one after), a run blocks either every loop in question or none of them: 50 runs block all, 64 block none, 0 block some. (`mac_explorer_runs/all_or_nothing.py`.)",
+ "gained_by_repair": 9,
+ "both_kinds_note": "**Read against the kind of run (B21):** of the 16 rows, 9 are loops the repair gives back in both kinds of run — `correlation` 98, 106, 109 (two of the three runs after block the accumulations and the output loops, and the three loops are Do-All in them), `fdtd-2d` 87, 90, 93 (one such run), `covariance` 78, 83, 84 (the three runs here block nothing; on a new profile, eight runs under fixed hash seeds: three block lines 47, 48 and 72, and the three loops are Do-All in all eight — `hash_seed_three_kernels.txt`). `adi` 96 comes back as a false Do-All (B22). `gramschmidt` 94 comes back only in the runs that block nothing. `seidel-2d`'s five are the explorer's two answers. None is lost."
+}

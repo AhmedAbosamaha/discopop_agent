@@ -42,7 +42,8 @@ LLVM 19 (macOS) and LLVM 20 (Linux).
 | B15 | explorer, `TaskGraph.__assign_loopstate_positions_within_functions` / task-graph loops | fixed 27 Sep | a `do … while` loop gets no loop context in the task graph, so the loop-state digit positions of every loop in the function after it are off by one: no call-path state under the `do … while` matches, every dependence recorded there is lost, and a textbook recurrence nested in it is reported Do-All (Rodinia bfs: all 1,500 dynamic dependences of the kernel lost) |
 | B18 | explorer (attaching dependences to units; met by B10's fix) | **FIXED 8 Oct** | the outer loop of a nest whose inner counter is declared at the top of the function lost its Do-All (PolyBench `correlation`, `covariance`, `gramschmidt`, `fdtd-2d`): a write-after-read was attached to the units of its lines by the wrong roles, so the unit that initialises the inner counter counted as reading it, and since B10's fix a read and a write on one line count as read-first — the counter was no longer privatizable |
 | B20 | explorer (task graph) | candidate, 8 Oct | a call that does not return (`exit`) in the body of a nested loop: every dependence the surrounding loop carries is lost and that loop is reported Do-All (TSVC `s481`'s repetition loop; a 20-line reproducer); the gate refuses the directive under ThreadSanitizer |
-| B21 | explorer (task graph) | candidate, 8 Oct | the verdict still differs between runs on ONE profile (PolyBench `correlation`, three runs: the two accumulation loops and the two output loops are Do-All in two runs and blocked on their true dependence in one; the `shared` clause of some loops present or empty) — B4's symptom, on programs with several nests; not seen on the 44 TSVC packages |
+| B21 | explorer (task graph) | candidate, 8 Oct — width measured, not traced | on ONE profile the explorer gives one of two answers: every loop that carries a dependence the profiler observed is blocked, or NONE of them is and all are reported Do-All — never a part (Mac, 30 PolyBench kernels: 114 runs, 50 block all, 64 none, 0 some; the server's draws of 8 Oct: 57 of 81 PolyBench profiles with no such loop blocked). Records without a call path (scalars) stay in both. Not Python's hash seed. The 44 TSVC packages: every verdict agrees in every draw; only the variable a blocker record names differs (36 of 44). The gate refuses the false directives |
+| B22 | explorer, Do-All detector (a rule of the original code, 28 Apr 2026) | candidate, 8 Oct | a write-after-read between passes never blocks Do-All ("can be privatized") — also on an array element, where it cannot: a loop whose pass reads an element a LATER pass overwrites (`x[i] = x[i + 1] * 0.5`; PolyBench `adi`'s last nest) is reported Do-All with the array `shared`, and its directive gives wrong sums. On TSVC the loops of this kind (`s121`, `s131`, `s151`, `s212`, `s241`, `s243`) are blocked all the same — through the repetition loop around them (B16): two defects that cancel. The gate refuses the directive on `adi` |
 | B19 | explorer (data-sharing clauses of a Do-All loop) | **FIXED 8 Oct** | `lastprivate` was written for any variable a loop writes and something after it reads. Three mechanisms: a scalar assigned in only some passes (`if (a[i] < 0) j = i;`, TSVC `s331`: the clause hands back the last CHUNK's value — wrong output, refused by the gate every time) — the loop is no longer reported Do-All; a whole stack array (`lastprivate(a_old)` on the loop that fills it, `firstprivate(a_old)` on one that reads it) — an array is now `shared`; a unit of the code AROUND the loop counted among the loop's (`s481`: `lastprivate(nl)`, shipped) — only the loop's own units decide its clauses |
 | L3 | explorer | limitation | NPB-CPP `mg`: with P1's fix the state assignment is fast, but the run then stays in task-pattern detection (`new_task_detector`) — a first run was read at 4 h 19 min, the same run was stopped unfinished after **11 h 24 min** at 100 % CPU on the server (19–20 Sep); the Do-All detector is not reached. Not usable per trial |
 
@@ -680,6 +681,18 @@ their counters in the loop header, which is why the three TSVC draws did not mov
 where a counter is declared. `rodinia-3.1/pathfinder` (RAW on `src`) is not examined here (Rodinia does not run on
 the Mac); the draws on the server say whether it moved.
 
+**The server's draws (8 Oct, `t0_11_b19_apps_a`–`c`, no model) and the second reading.** `correlation`,
+`covariance` and `fdtd-2d` have the directive on their outer loop again in all three draws, kept by the gate
+(5.7–5.8×, 5.3–5.7×, 4.0–4.3×; on 7 Oct: no change, no change, 0.6×) — the same directives as on 20 Sep.
+`pathfinder` did not move (no directive offered; six of its loops blocked on an observed dependence in every draw, before and after). The Mac's
+three-against-three comparison had read eleven loops as given back; read against the kind of run (B21) it is
+nine — `correlation` 98, 106, 109, `covariance` 78, 83, 84, `fdtd-2d` 87, 90, 93: Do-All after the repair also
+in the runs that block the kernel's dependence-carrying loops. The other two: `gramschmidt`'s `j` loop (94) is
+Do-All only in the runs that block nothing — two of the three draws, where the gate keeps it at 8×; in the third
+it is blocked on a read-after-write on `A` (B16's shape) and the kernel runs at 0.3×. `adi`'s last nest (96) is
+not a parallel loop: with the counter record gone the explorer calls it Do-All by its rule on write-after-read
+(B22), and the gate refuses it under ThreadSanitizer in three of three draws. No loop is lost by the repair.
+
 ## B20 — candidate: a call that does not return in the body of a nested loop loses every dependence of the surrounding loop (explorer, task graph)
 
 **Status: candidate, 8 Oct 2026 — reproduced in 20 lines, not traced, not fixed.** Found while tracing B19's third
@@ -714,28 +727,115 @@ the task graph seems not to close the loops around it when a path ends there. No
 repair keeps the foreign units out of the inner loop's clauses. **Reproducer:** the program above (the loop with
 `exit` in its body is also part of the feature check `b19-last-value`, which tests the clause, not this verdict).
 
-## B21 — candidate: the explorer's verdict still differs between runs on one profile (explorer, task graph)
+## B21 — candidate: on one profile the explorer blocks every loop that carries an observed dependence, or none of them (explorer, task graph)
 
-**Status: candidate, 8 Oct 2026 — seen while checking B18's repair, not traced, not fixed.** B4 (26 Sep) repaired
-one cause of this — the order in which the loops of a nest were duplicated. On ONE kept profile of
-`polybench/correlation`, three runs of the explorer, the same with the explorer before and after the repairs of
-8 Oct:
+**Status: candidate, 8 Oct 2026 — the width is measured, the cause is not traced, nothing is fixed.** First seen
+while checking B18's repair, as single loops whose verdict "differs between runs"; the server's draws of 8 Oct and
+a second reading of the Mac's runs show what it is. B4 (26 Sep) repaired one cause of run-to-run differences (the
+order in which a nest's loops were duplicated); this is another.
 
-| loop | what it does | two of three runs | one of three runs |
-|---|---|---|---|
-| lines 78, 87 | `mean[j] += …`, `stddev[j] += …` over `i`: an accumulation | Do-All | blocked, RAW on the element |
-| lines 48, 49 | the output loops (the harness counts the values it emits) | Do-All | blocked, RAW on the counter |
-| line 112 | `symmat[j1][j2] += …` over `i` | Do-All | Do-All and a reduction `+:symmat` |
+**What happens.** On one unchanged profile the explorer gives one of two answers. In one, every loop that carries
+a dependence the profiler OBSERVED between its passes is blocked on it: the accumulations, the recurrences, the
+time loop, the harness's output loops with their running sums. In the other, none of them is: the blocker file
+holds no record of an observed dependence, and all of those loops are reported Do-All. Records WITHOUT a call path —
+the profiler writes a scalar's dependences that way — are there in both answers (B18's counter records were:
+17 PolyBench draws of 7 Oct hold such records and no observed one). No run blocks some of the loops in question
+and not others.
 
-The run that blocks is the right one: the accumulations and the output loops carry a dependence from one pass to
-the next. In single runs on other PolyBench profiles the `shared` clause of some loops was present in one run and
-empty in the next (`adi`, `cholesky`, `dynprog`) — the first symptom B4's entry lists. The 44 TSVC packages gave
-the same patterns, clauses and blocked loops in two independent explorer runs on one profile each (but for the
-two packages the repairs aim at), and their class draws agree draw by draw; a TSVC kernel is one nest. **What it
-means:** on a program with several nests DiscoPoP's verdict is a draw of the explorer as well as of the profile;
-the class draws of PolyBench differ draw by draw for this reason too (`atax`, `adi` in B18's table), and a single
-run before against a single run after says nothing — B18's repair was read from three runs of each explorer on
-one profile. The gate refuses a false Do-All. **Owed before any PolyBench experiment:** the trace.
+| where | runs | block every loop in question | block none | block some |
+|---|---|---|---|---|
+| Mac: 30 PolyBench kernels, three runs of each explorer (before and after the repairs of 8 Oct) on one kept profile per kernel; the 38 kernel-and-explorer pairs whose three runs differ | 114 | 50 | 64 | 0 |
+| Mac: one kept profile of `correlation`, 14 runs of the repaired explorer | 14 | 5 | 9 | 0 |
+| server: the 31 packages outside TSVC, the three draws of 7 Oct (each its own profile); the 14 packages whose draws differ | 42 | 17 | 25 | 0 |
+| server: the same, the three draws of 8 Oct; the 11 packages whose draws differ | 33 | 15 | 18 | 0 |
+
+The second answer is the common one. On the server's draws of 8 Oct, 57 of the 81 PolyBench profiles (27 kernels
+× 3) have no loop blocked on an observed dependence (62 of 81 on 7 Oct). 13 kernels have none in any of their
+three draws of 8 Oct; seven of those 13 had such blockers in a draw of 7 Oct, so "none in three draws" is three
+draws of the second answer, not a kernel without such loops (every kernel's harness has output loops with running
+sums). Six kernels were not seen with the first answer in six draws (`3mm`, `bicg`, `gemver`, `gesummv`, `syr2k`,
+`trisolv`). The profile is not the cause: both answers come from one kept profile on the Mac, and each of the 186
+profiled runs behind the server's two sets of draws printed the runtime's loop-results line (so this is not B17, whose
+symptom it shares). Sources: `evaluation/agent/results/T0_instruments/B19_B18_clauses_and_nests/analysis/b19_readout.md` §2.2 and §3, `evaluation/agent/results/T0_instruments/B19_B18_clauses_and_nests/analysis/server_explorer_reports.json`,
+`evaluation/agent/results/T0_instruments/B19_B18_clauses_and_nests/analysis/mac_explorer_runs/all_or_nothing.py`.
+
+**What a fixed hash seed shows.** One kept profile of `correlation`, the explorer started with `PYTHONHASHSEED`
+0 to 9 and then 0 to 3 again: seed 0 gave the second answer in its first run and the first in its second; seeds 1
+and 2 changed likewise (`evaluation/agent/results/T0_instruments/B19_B18_clauses_and_nests/analysis/mac_explorer_runs/hash_seed_correlation.txt`). So the answer does not come from the
+randomised hashing of strings. Iteration over a set of objects is not excluded by this: objects hash by address,
+and addresses differ between processes whatever the seed — B4's family.
+
+**TSVC does not show it in the verdicts.** The 44 `tsvc_c3` packages, three draws after the repairs: the loops
+called parallel, the reductions, the blocked loops and the type of the dependence that blocks each agree in all
+three draws of every package (one run of each explorer on one kept profile per package agreed on 42 of 44, the
+other two being the repairs' targets). What differs between draws there, on 36 of 44 packages, is the VARIABLE a
+blocker record names — a record holds one of the dependences that block a loop (`s241`, the repetition loop: `a`
+in one draw, `b` in two; `vas`: `b` in two draws, `dummy.n` in one). That is the one form of this the main
+comparison's trials can carry, where a blocker record reaches the model.
+
+**What it means.** (1) DiscoPoP alone on PolyBench is, in most runs, "every loop that no scalar's record blocks",
+filtered by the gate: recurrences, time loops and accumulations are offered and refused under ThreadSanitizer
+(`b19_readout.md` §2.1, loop by loop). A kernel's class then rests on the gate and on which answer the draw got.
+`gramschmidt` on 8 Oct: in the two draws with the second answer the `j` loop is offered, kept and 8× faster; in
+the third it is blocked (a read-after-write on `A`; by the source that dependence is carried by the `k` loop
+around it — it has the shape of B16, not traced), DiscoPoP offers the inner loops and the program runs at 0.3×.
+(2) A scalar's record decided more than it should: in a run with the second answer B18's counter record was the
+only thing that blocked anything. (3) One run before against one run after says nothing on such a program, and
+three against three can mislead as well: B18's repair was first read as eleven loops given back; against the
+kind of run it is nine (B18's entry).
+
+**Owed before any experiment that uses PolyBench:** the trace. Where to start: what goes missing is exactly the
+set of records that carry a call path, all at once — the matching of call-path states to loops (the territory of
+B9, B15 and B17), not the detector.
+
+## B22 — candidate: a write-after-read between passes never blocks Do-All, also on an array element (explorer, Do-All detector)
+
+**Status: candidate, 8 Oct 2026 — found in the server's draws after B18's repair, reproduced in 17 lines, not
+fixed.** The rule is DiscoPoP's own (`pattern_detectors/new_do_all_detector.py`, the loop over a pass's outgoing
+dependences; commit `6a30fc2a6a` of 28 Apr 2026): "WAR dependencies between iterations are non-critical, as they
+overwrite data and thus can be privatized" — every write-after-read is skipped before the detector asks whether
+it joins two passes. For a scalar that each pass sets before it uses it, that is right. For an array element it
+is not: when a pass reads an element and a LATER pass overwrites it, the reader must get the old value, and with
+the array `shared` — which is what DiscoPoP writes — a thread that runs the later pass first hands it the new
+one. It is the mirror of B13 (a write-after-write on an array element; fixed 27 Sep).
+
+**Reproducer** (`evaluation/agent/results/T0_instruments/B19_B18_clauses_and_nests/analysis/write_after_read_small/`, Mac, LLVM 19; not a measurement of speed):
+
+```c
+    for (int i = 0; i < N; i++)          /* line 9 */
+        x[i] = x[i + 1] * 0.5;
+    for (int i = 1; i <= N; i++)         /* line 11 */
+        y[i] = y[i - 1] * 0.5;
+```
+
+The explorer: line 9 Do-All in four runs of four on one profile (so not B21), line 11 blocked on the
+read-after-write on `y`. With `#pragma omp parallel for` on line 9 the program prints `501250.000000` without
+threads and on one thread; on 4 threads five runs print three different sums (`500937.750000`, `501000.250000`,
+`501125.125000`), on 8 threads three others.
+
+**Where it shows.** PolyBench `adi`, the last nest (`for (i1 = 0; i1 < _PB_N-2; i1++)`, line 96): pass `i1` writes
+row `N-2-i1` of `X` and reads row `N-3-i1`, which pass `i1 + 1` writes. The explorer reports it Do-All in the runs
+that block the kernel's other dependences and in those that block none (B21), so it does not depend on B21; the
+directive is offered and refused under ThreadSanitizer in all three draws of 8 Oct and in the draw of 20 Sep.
+From 27 Sep to 8 Oct it was not offered: B18's mechanism blocked the loop on its inner counter — a wrong reason
+that hid a wrong verdict.
+
+**Why TSVC does not show it.** Every TSVC kernel loop sits in a repetition loop. From the second repetition on, a
+pass that reads `a[i + 1]` reads what pass `i + 1` of the repetition BEFORE wrote: a read-after-write between two
+different passes of the inner loop, carried by the repetition loop, and the explorer counts it against the inner
+loop (the shape of B16). The same 17 lines with `for (int r = 0; r < 3; r++)` around line 9: the inner loop is
+blocked, "RAW on `x`". The Mac's dumps of the 44 packages show that record on the loops of this kind — `s121`,
+`s131`, `s151`, `s212`, `s241`, `s243` (all on `a`). So on TSVC two defects cancel: the verdict is right, and the record that
+names the blocker names the repetition loop's read-after-write, not the loop's own write-after-read. (The model
+is shown the write-after-read all the same in its first request, by the agent's own list of the profile's
+dependences — `e1v6_r_2`, `s241`: "WAR — write-after-read: `a` [array element]: line 8 reads → line 7
+overwrites".) **Consequence for any repair:** B16 repaired alone would turn these loops into false Do-Alls; this
+rule has to be repaired before B16 or with it.
+
+**Not repaired; the author decides.** A repair in B13's manner (a write-after-read between passes on an array
+element blocks) changes no verdict the draws show on TSVC; which record DiscoPoP then names on those loops is not
+measured. The agent already has a text for such a record (`render.py`, the note for `WAR`), so no new
+model-facing text would be needed.
 
 ## B17 — the profile depends on the path of the working directory: an uninitialised flag switches loop tracking off (profiler runtime)
 
@@ -780,6 +880,15 @@ evidence arms were steered to the wrong loop (E2: s244 evidence arms 1/18 vs 12/
 order statement (prompt v3, D4) stays silent when the blockers name more than one loop for a variable, so
 it cannot act on such a record. Owed (prompt review M4): re-explore s244 and s211 on the fixed explorer
 and compare the blockers across draws.
+
+**8 Oct 2026, what B22's reproducer adds (still a candidate, still not traced).** The shape is reproduced on the
+current explorer in 17 lines: a loop whose pass reads the element the NEXT pass overwrites has no read-after-write
+between its own passes; put inside a repetition loop it is blocked on one ("RAW on `x`"), because a pass then reads
+what a different pass wrote one repetition earlier. On TSVC's loops of that kind this gives the right verdict for
+the wrong dependence, and it hides B22 (see there: the two must be repaired together, B22 first). It can also block
+a loop that IS parallel: PolyBench `gramschmidt`'s `j` loop (`for (j = k + 1; …)`) is blocked on a read-after-write
+on `A` in the runs that block anything (B21), although within one `k` step its passes touch different columns —
+the gate keeps its directive and measures 8× where DiscoPoP offers it.
 
 ## B12 — the compiler wrappers report success when the instrumented build fails (profiler scripts)
 
