@@ -227,9 +227,15 @@ if SRV.is_file():
                   f"{t['draws with all']} draws block every one of the loops in question and {t['draws with none']} block none of them; "
                   f"{t['same, no loop blocked']} packages have no loop blocked on an observed dependence in any of the three draws, "
                   f"{t['same, some loop blocked']} have the same blocked loops in all three.")
-    md += ["", f"Draws that block SOME of the loops in question and not others: {len(part)}"
-           + (" — " + ", ".join(f"`{k}` ({n})" for n, k in part) if part else "") + ". So where a package's draws differ, "
-           "the explorer has either every dependence-blocked loop or none of them — all or nothing, per run.", ""]
+    still = sorted({k for name, runs in (("7 Oct", AP_OLD), ("8 Oct", AP_NEW)) for k in apps
+                    for s_, st_ in zip(states(runs, k)[0], states(runs, k)[2] or []) if st_ == "none" and s_})
+    md += ["", "(\"The loops in question\": those blocked on an observed dependence in some draw of the three and not in all.) "
+           f"Draws that block SOME of the loops in question and not others: {len(part)}"
+           + (" — " + ", ".join(f"`{k}` ({n})" for n, k in part) if part else "") + ". Packages in which a draw that blocks "
+           "none of the loops in question still has OTHER loops blocked on an observed dependence: "
+           + (", ".join(f"`{k}`" for k in still) or "none") + ". So on every PolyBench kernel whose draws differ, a draw "
+           "holds either every loop blocked on an observed dependence or no such record at all; `burkardt/md` is the "
+           "one partial case (the two loops of `initialize` go together, the two of `main` stay).", ""]
     ts = [k for k in kern if not all(
         (srv[r][key(k)]["do_all"], srv[r][key(k)]["reduction"], sorted({(b[0], b[1]) for b in srv[r][key(k)]["blocked"]}))
         == (srv[TS_NEW[0]][key(k)]["do_all"], srv[TS_NEW[0]][key(k)]["reduction"], sorted({(b[0], b[1]) for b in srv[TS_NEW[0]][key(k)]["blocked"]}))

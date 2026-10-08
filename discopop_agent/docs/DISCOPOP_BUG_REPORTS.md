@@ -42,7 +42,7 @@ LLVM 19 (macOS) and LLVM 20 (Linux).
 | B15 | explorer, `TaskGraph.__assign_loopstate_positions_within_functions` / task-graph loops | fixed 27 Sep | a `do … while` loop gets no loop context in the task graph, so the loop-state digit positions of every loop in the function after it are off by one: no call-path state under the `do … while` matches, every dependence recorded there is lost, and a textbook recurrence nested in it is reported Do-All (Rodinia bfs: all 1,500 dynamic dependences of the kernel lost) |
 | B18 | explorer (attaching dependences to units; met by B10's fix) | **FIXED 8 Oct** | the outer loop of a nest whose inner counter is declared at the top of the function lost its Do-All (PolyBench `correlation`, `covariance`, `gramschmidt`, `fdtd-2d`): a write-after-read was attached to the units of its lines by the wrong roles, so the unit that initialises the inner counter counted as reading it, and since B10's fix a read and a write on one line count as read-first — the counter was no longer privatizable |
 | B20 | explorer (task graph) | candidate, 8 Oct | a call that does not return (`exit`) in the body of a nested loop: every dependence the surrounding loop carries is lost and that loop is reported Do-All (TSVC `s481`'s repetition loop; a 20-line reproducer); the gate refuses the directive under ThreadSanitizer |
-| B21 | explorer (task graph) | candidate, 8 Oct — width measured, not traced | on ONE profile the explorer gives one of two answers: every loop that carries a dependence the profiler observed is blocked, or NONE of them is and all are reported Do-All — never a part (Mac, 30 PolyBench kernels: 114 runs, 50 block all, 64 none, 0 some; the server's draws of 8 Oct: 57 of 81 PolyBench profiles with no such loop blocked). Records without a call path (scalars) stay in both. Not Python's hash seed. The 44 TSVC packages: every verdict agrees in every draw; only the variable a blocker record names differs (36 of 44). The gate refuses the false directives |
+| B21 | explorer (task graph) | candidate, 8 Oct — width measured, not traced | on ONE profile of a PolyBench kernel the explorer gives one of two answers: every loop that carries a dependence the profiler observed is blocked, or NONE of them is and all are reported Do-All — never a part (Mac, 30 kernels: 114 runs, 50 block all, 64 none, 0 some; the server's draws of 8 Oct: 57 of 81 PolyBench profiles with no such loop blocked; on `md` the loops of one function flip together while another function's stay). Records without a call path (scalars) stay in both. Not Python's hash seed. The 44 TSVC packages: every verdict agrees in every draw; only the variable a blocker record names differs (36 of 44). The gate refuses the false directives |
 | B22 | explorer, Do-All detector (a rule of the original code, 28 Apr 2026) | candidate, 8 Oct | a write-after-read between passes never blocks Do-All ("can be privatized") — also on an array element, where it cannot: a loop whose pass reads an element a LATER pass overwrites (`x[i] = x[i + 1] * 0.5`; PolyBench `adi`'s last nest) is reported Do-All with the array `shared`, and its directive gives wrong sums. On TSVC the loops of this kind (`s121`, `s131`, `s151`, `s212`, `s241`, `s243`) are blocked all the same — through the repetition loop around them (B16): two defects that cancel. The gate refuses the directive on `adi` |
 | B19 | explorer (data-sharing clauses of a Do-All loop) | **FIXED 8 Oct** | `lastprivate` was written for any variable a loop writes and something after it reads. Three mechanisms: a scalar assigned in only some passes (`if (a[i] < 0) j = i;`, TSVC `s331`: the clause hands back the last CHUNK's value — wrong output, refused by the gate every time) — the loop is no longer reported Do-All; a whole stack array (`lastprivate(a_old)` on the loop that fills it, `firstprivate(a_old)` on one that reads it) — an array is now `shared`; a unit of the code AROUND the loop counted among the loop's (`s481`: `lastprivate(nl)`, shipped) — only the loop's own units decide its clauses |
 | L3 | explorer | limitation | NPB-CPP `mg`: with P1's fix the state assignment is fast, but the run then stays in task-pattern detection (`new_task_detector`) — a first run was read at 4 h 19 min, the same run was stopped unfinished after **11 h 24 min** at 100 % CPU on the server (19–20 Sep); the Do-All detector is not reached. Not usable per trial |
@@ -613,6 +613,30 @@ of 32 before the three new cases `last_private/case_2`, `shared/case_4`, `privat
 record); mypy and `black --check` on the explorer clean. On the Mac's profiles of the 44 `tsvc_c3` packages, the explorer before against the one after (one run each, the final code): 42 packages with the same patterns, clauses and blocked loops; the two that differ are `s331` and `s481`, as above. For PolyBench one run against one says nothing (B21): `correlation` in three runs each is in B18's entry, the 30 packages in three runs each in the record. The server's
 draws are in the record (`evaluation/agent/docs/THESIS_EXPERIMENTS.md` §6).
 
+**A regression of repair (2), found in the server's draws (8 Oct, after the check was recorded; NOT yet repaired).**
+`burkardt/md`, the force loop (`for ( k = 0; k < np; k++ )`, line 255; `compute` calls `dist ( nd, pos+k*nd,
+pos+j*nd, rij )`, which fills the small array `rij` through its parameter `dr`, and the loop then reads `rij[i]`).
+`rij` is a work array every pass fills before it reads it — each thread needs its own.
+
+| | patterns for the loop | clauses | the gate |
+|---|---|---|---|
+| 7 Oct, three draws | one | `firstprivate(nd, PI2, np, rij) private(d, j, i, d2) shared(vel, pos, f) reduction(+:ke, pe)` | refused at the correctness stage |
+| 8 Oct, three draws | two | `firstprivate(np, nd, PI2) private(j, d2, d, i) shared(pos, vel, rij, f) reduction(…)` and `firstprivate(np, PI2) private(nd, d2, i, j, d) shared(pos, rij, vel, f) reduction(…)` | one refused at the correctness stage, one under ThreadSanitizer |
+
+Two things are worse than before. `rij` is `shared`: the repair's test ("an array is shared") does not ask whether
+the passes use the array's elements each for itself or all the same ones, and by name the loop only reads `rij` —
+the writes happen in the callee under the name `dr`. Before, the array was taken for a scalar that is only read
+and got `firstprivate`, which is right here (and which was the wasteful per-thread copy on the loops the repair
+aimed at). And the loop now has a second pattern whose clause set differs in `private(nd)` — `nd` is only read by
+the loop; `dist`'s own parameter is also called `nd`. Whether the two patterns existed before and were merged as
+equal, and which of the three repairs makes the second one differ, is not traced. `md`'s result is unchanged
+(DiscoPoP alone gets no directive accepted there, before and after), no TSVC package shows either (their draws
+offer what they offered, but for `s331` and `s481`), and the gate refuses both directives. **Owed:** the repair
+of the repair — an array stays with the scalar's classification where the loop hands it to a function or its
+passes touch the same elements, and is `shared` where each pass has its own; a test with these lines that fails
+now; the check of the 44 packages and of the other suites again; and `e1v6c_s241`'s saved rewrites replayed on
+the corrected explorer (no model), since that run started before this was found.
+
 ## B18 — outer loops of PolyBench kernels lost their Do-All: a write-after-read is attached to units by the wrong roles, and B10's fix made that decide (explorer)
 
 **Found** 7 Oct 2026 (seen, not examined). **Status:** TRACED and FIXED 8 Oct 2026 in the explorer (the trace and
@@ -734,20 +758,26 @@ while checking B18's repair, as single loops whose verdict "differs between runs
 a second reading of the Mac's runs show what it is. B4 (26 Sep) repaired one cause of run-to-run differences (the
 order in which a nest's loops were duplicated); this is another.
 
-**What happens.** On one unchanged profile the explorer gives one of two answers. In one, every loop that carries
-a dependence the profiler OBSERVED between its passes is blocked on it: the accumulations, the recurrences, the
-time loop, the harness's output loops with their running sums. In the other, none of them is: the blocker file
-holds no record of an observed dependence, and all of those loops are reported Do-All. Records WITHOUT a call path —
-the profiler writes a scalar's dependences that way — are there in both answers (B18's counter records were:
-17 PolyBench draws of 7 Oct hold such records and no observed one). No run blocks some of the loops in question
-and not others.
+**What happens.** On one unchanged profile of a PolyBench kernel the explorer gives one of two answers. In one,
+every loop that carries a dependence the profiler OBSERVED between its passes is blocked on it: the accumulations,
+the recurrences, the time loop, the harness's output loops with their running sums. In the other, none of them
+is: the blocker file holds no record of an observed dependence, and all of those loops are reported Do-All.
+Records WITHOUT a call path — the profiler writes a scalar's dependences that way — survive where they exist
+(B18's counter records did: 17 PolyBench draws of 7 Oct hold such records and no observed one; on `covariance`
+they kept the outer loops blocked in the second answer). No run of a PolyBench kernel blocks some of the loops in
+question and not others. **The one partial case in the draws is not a PolyBench kernel:** `burkardt/md` (C++,
+7 Oct) — the two loops in `main` (lines 154, 173) are blocked on an observed dependence in all three draws, the
+two in `initialize` (396, 398: the random-number seed) in one draw only; those two flip together.
 
 | where | runs | block every loop in question | block none | block some |
 |---|---|---|---|---|
 | Mac: 30 PolyBench kernels, three runs of each explorer (before and after the repairs of 8 Oct) on one kept profile per kernel; the 38 kernel-and-explorer pairs whose three runs differ | 114 | 50 | 64 | 0 |
 | Mac: one kept profile of `correlation`, 14 runs of the repaired explorer | 14 | 5 | 9 | 0 |
-| server: the 31 packages outside TSVC, the three draws of 7 Oct (each its own profile); the 14 packages whose draws differ | 42 | 17 | 25 | 0 |
-| server: the same, the three draws of 8 Oct; the 11 packages whose draws differ | 33 | 15 | 18 | 0 |
+| server: the 27 PolyBench kernels, the three draws of 7 Oct (each its own profile); the 13 kernels whose draws differ | 39 | 16 | 23 | 0 |
+| server: the same, the three draws of 8 Oct; the 11 kernels whose draws differ | 33 | 15 | 18 | 0 |
+
+("Loops in question": those blocked on an observed dependence in some run of the three and not in all. In every
+"none" run of a PolyBench kernel the blocker file holds no observed record at all.)
 
 The second answer is the common one. On the server's draws of 8 Oct, 57 of the 81 PolyBench profiles (27 kernels
 × 3) have no loop blocked on an observed dependence (62 of 81 on 7 Oct). 13 kernels have none in any of their
@@ -784,9 +814,11 @@ only thing that blocked anything. (3) One run before against one run after says 
 three against three can mislead as well: B18's repair was first read as eleven loops given back; against the
 kind of run it is nine (B18's entry).
 
-**Owed before any experiment that uses PolyBench:** the trace. Where to start: what goes missing is exactly the
-set of records that carry a call path, all at once — the matching of call-path states to loops (the territory of
-B9, B15 and B17), not the detector.
+**Owed before any experiment that uses PolyBench:** the trace. Where to start: on a PolyBench kernel what goes
+missing is every record that carries a call path, at once; on `md` it is the records of one function
+(`initialize`) while `main`'s stay. So the unit that is lost may be one function's call-path state rather than
+the program's — a check to make first, not a conclusion. Either way it points at the matching of call-path
+states to loops (the territory of B9, B15 and B17), not at the detector.
 
 ## B22 — candidate: a write-after-read between passes never blocks Do-All, also on an array element (explorer, Do-All detector)
 
