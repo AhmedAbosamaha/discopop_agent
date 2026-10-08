@@ -187,6 +187,21 @@ def _seen_to_overwrite_itself(pet: PEGraphX, own_cu_ids: Set[NodeID], writers: S
     return False
 
 
+def _names_written_by(pet: PEGraphX, cu_node_id: NodeID) -> Set[str]:
+    """B19: the variables the unit `cu_node_id` writes, read off its data edges as the classification in
+    `detect_doall_sharing_clauses` reads them (an outgoing WAR, WAW or INIT: the unit overwrites or initialises;
+    an incoming RAW, WAW or INIT: something uses or overwrites what the unit wrote). The names are those the
+    dependences carry: a store through a parameter is named after the variable whose value is read later."""
+    names: Set[str] = set()
+    for _src, _dst, dep in out_edges(pet, cu_node_id, EdgeType.DATA):
+        if dep.var_name is not None and dep.dtype in (DepType.WAR, DepType.WAW, DepType.INIT):
+            names.add(dep.var_name)
+    for _src, _dst, dep in in_edges(pet, cu_node_id, EdgeType.DATA):
+        if dep.var_name is not None and dep.dtype in (DepType.RAW, DepType.WAW, DepType.INIT):
+            names.add(dep.var_name)
+    return names
+
+
 def identify_simple_doall_and_reduction(
     tg: TaskGraph, ast_helper: ASTPatternDetectionHelper
 ) -> List[DoAllInfo | ReductionInfo]:
@@ -606,6 +621,8 @@ def detect_doall_sharing_clauses(
     gep_result_access: Set[str] = set()
     ptr_type_access: Set[str] = set()
 
+    # the units of each modelled iteration, in sequence
+    sequences: List[List[NodeID]] = []
     for it_ctx in iteration_contexts:
         contained_contexts_in_sequence = it_ctx.get_contained_contexts_in_sequence(pet)
         #        print("contained CTXs in sequence: ", [c.get_code_scope(pet) for c in contained_contexts_in_sequence])
@@ -613,9 +630,34 @@ def detect_doall_sharing_clauses(
         for ctx in contained_contexts_in_sequence:
             contained_tg_nodes_in_sequence += ctx.contained_nodes
         #        print("contained tg nodes in sequence: ", [(n, n.pet_node_id) for n in contained_tg_nodes_in_sequence])
-        contained_cu_node_ids_in_sequence = [
-            tg.pet_node_id for tg in contained_tg_nodes_in_sequence if tg.pet_node_id is not None
-        ]
+        sequences.append([tg.pet_node_id for tg in contained_tg_nodes_in_sequence if tg.pet_node_id is not None])
+
+    # B19: an ARRAY (`real_t a_old[N]`, type `real_t[N]`) is reached through its address as a pointer's target
+    # is. Taken for a scalar it came out `lastprivate` on the loop that fills it — every thread fills a copy of
+    # its own and only the last thread's is handed back — and `firstprivate` on a loop that reads it, a copy of
+    # the whole array per thread. Where the loop only reads the array, or its own statements write it, the
+    # array is `shared`: the loop is a Do-All, so no two passes write the same element under the array's name
+    # (B13 blocks that). NOT where a function the loop calls writes it: the callee's stores go by its
+    # parameter's name, the detector cannot see whether every pass fills the same elements, and where it does —
+    # a work array (burkardt/md: `d = dist(nd, …, rij)` fills `rij`, the loop then reads `rij[i]`) — each
+    # thread needs the array for itself. Such an array keeps the classification it had before
+    # (`firstprivate`/`private`); `shared` made the directive race.
+    array_typed: Set[str] = set(
+        name
+        for name, type_str in known_vars_with_types
+        if type_str is not None and "[" in type_str and "*" not in type_str and "&" not in type_str
+    )
+    arrays_written_by_callees: Set[str] = set()
+    if own_cu_ids is None or own_or_called_cu_ids is None:
+        arrays_written_by_callees = set(array_typed)  # the units cannot be told apart: as before the repair
+    elif array_typed:
+        # every unit of a function the loop calls, whether or not the task graph put it into a modelled
+        # iteration: one copy of md's force loop shows `rij` as read only, its values coming from `dist`'s unit
+        for cu_node_id in sorted(own_or_called_cu_ids - own_cu_ids):
+            arrays_written_by_callees |= array_typed & _names_written_by(pet, cu_node_id)
+    logger.debug("\t--> arrays a called function writes: " + str(sorted(arrays_written_by_callees)))
+
+    for contained_cu_node_ids_in_sequence in sequences:
         #        print("contained cu nodes in sequence: ", contained_cu_node_ids_in_sequence)
         logger.debug("\t--> CUs in sequence: " + str(contained_cu_node_ids_in_sequence))
 
@@ -725,12 +767,10 @@ def detect_doall_sharing_clauses(
                             if type_str is None:
                                 continue
                             if tmp_var_name == dep.var_name:
-                                # B19: an array (`real_t a_old[N]`, type `real_t[N]`) is reached through its
-                                # address as a pointer's target is. Taken for a scalar it came out
-                                # `lastprivate` on the loop that fills it — every thread fills a copy of its
-                                # own and only the last thread's is handed back — and `firstprivate` on a
-                                # loop that reads it, a copy of the whole array per thread.
-                                if "*" in type_str or "&" in type_str or "[" in type_str:
+                                if "*" in type_str or "&" in type_str:
+                                    ptr_type_access.add(dep.var_name)
+                                elif "[" in type_str and dep.var_name not in arrays_written_by_callees:
+                                    # B19: an array the loop reads or writes itself (see above)
                                     ptr_type_access.add(dep.var_name)
 
                     if dep.dtype == DepType.RAW:

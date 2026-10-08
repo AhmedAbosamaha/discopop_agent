@@ -4974,6 +4974,97 @@ def check_b19_last_value(work: Path) -> Result:
                   "in its body names no variable of the loop around it")
 
 
+_B19_WORK_ARRAY_PROGRAM = """#include <stdio.h>
+#define NP 40
+#define ND 3
+double pos[NP * ND], f[NP * ND];
+double dist(int nd, double r1[], double r2[], double dr[])
+{
+    double d = 0.0;
+    for (int i = 0; i < nd; i++) {
+        dr[i] = r1[i] - r2[i];
+        d = d + dr[i] * dr[i];
+    }
+    return d + 1.0;
+}
+void compute(int np, int nd, double *pot)
+{
+    double rij[3];
+    double pe = 0.0;
+    double d;
+    int i, j, k;
+    for (k = 0; k < np; k++) {
+        for (i = 0; i < nd; i++)
+            f[i + k * nd] = 0.0;
+        for (j = 0; j < np; j++) {
+            if (k != j) {
+                d = dist(nd, pos + k * nd, pos + j * nd, rij);
+                pe = pe + 0.5 * d;
+                for (i = 0; i < nd; i++)
+                    f[i + k * nd] = f[i + k * nd] - rij[i] / d;
+            }
+        }
+    }
+    *pot = pe;
+}
+int main(void)
+{
+    double pot = 0.0, s = 0.0;
+    for (int i = 0; i < NP * ND; i++)
+        pos[i] = (double)((i * 7) % 13) + 0.25 * i;
+    compute(NP, ND, &pot);
+    for (int i = 0; i < NP * ND; i++)
+        s += f[i];
+    printf("%f %f\\n", pot, s);
+    return 0;
+}
+"""
+
+
+def check_b19_work_array(work: Path) -> Result:
+    """A regression of B19's array repair, found in the server's draws of 8 Oct on burkardt/md and repaired the
+    same day. The repair made every stack array `shared` (it had come out `lastprivate` on the loop that fills
+    it and `firstprivate` on a loop that reads it). That is right where the loop only reads the array or its own
+    statements write it — each pass has its own elements. It is wrong for a work array that a function the loop
+    calls fills on every pass (md's force loop: `d = dist(nd, …, rij)` writes `rij`, the loop then reads
+    `rij[i]`): every thread needs the array for itself, and `shared(rij)` is a race — the sum of the forces
+    then differs from run to run. Here, on md's force loop in 40 lines: the work array is not `shared` on the
+    loop that calls the function, and it is in a private clause as before the repair."""
+    if not Path(_venv_bin("discopop_cc")).exists():
+        return Result("b19 work array", "skip", "DiscoPoP is not installed in this venv")
+    name = "b19 work array"
+    d = work / "b19_work_array"
+    shutil.rmtree(d, ignore_errors=True)
+    d.mkdir(parents=True)
+    (d / "k.c").write_text(_B19_WORK_ARRAY_PROGRAM)
+    ok, err = _profile(d, "k.c", hotspots=False, c_as_c=True)
+    if not ok:
+        return Result(name, "fail", f"profile: {err}")
+    lines = _B19_WORK_ARRAY_PROGRAM.splitlines()
+    force = next(i + 1 for i, l in enumerate(lines) if l.strip() == "for (k = 0; k < np; k++) {")
+    pats = json.loads((d / ".discopop" / "explorer" / "patterns.json").read_text()).get("patterns", {})
+    found = [x for kind in ("do_all", "reduction") for x in pats.get(kind, [])
+             if int(str(x.get("start_line", "0:0")).split(":")[1]) == force
+             and str(x.get("applicable_pattern")) == "True"]
+    if not found:
+        return Result(name, "fail", f"the force loop at k.c:{force} is not reported (Do-All or reduction)")
+
+    def clause(x: Dict[str, Any], key: str) -> List[str]:
+        return sorted(str(v.get("name") if isinstance(v, dict) else v) for v in x.get(key) or [])
+
+    problems: List[str] = []
+    for x in found:
+        if "rij" in clause(x, "shared"):
+            problems.append(f"the work array is shared on the loop that calls the function: {clause(x, 'shared')}")
+        if "rij" not in clause(x, "first_private") + clause(x, "private"):
+            problems.append("the work array is in no private clause "
+                            f"(first_private {clause(x, 'first_private')}, private {clause(x, 'private')})")
+    if problems:
+        return Result(name, "fail", "; ".join(sorted(set(problems))))
+    return Result(name, "pass", "a work array that a called function fills on every pass is not shared on the loop "
+                  "that calls it; it is in a private clause, as before the array repair")
+
+
 _CARRIER_PROGRAM = """#include <stdio.h>
 #define N 40
 #define M 7
@@ -5261,6 +5352,7 @@ _CHECKS: List[Tuple[str, Callable[[Path], Result]]] = [
     ("b15-dowhile", check_b15_dowhile),
     ("b17-cwd-length", check_b17_cwd_length),
     ("b19-last-value", check_b19_last_value),
+    ("b19-work-array", check_b19_work_array),
 ]
 
 

@@ -44,7 +44,7 @@ LLVM 19 (macOS) and LLVM 20 (Linux).
 | B20 | explorer (task graph) | candidate, 8 Oct | a call that does not return (`exit`) in the body of a nested loop: every dependence the surrounding loop carries is lost and that loop is reported Do-All (TSVC `s481`'s repetition loop; a 20-line reproducer); the gate refuses the directive under ThreadSanitizer |
 | B21 | explorer (task graph) | candidate, 8 Oct — width measured, not traced | on ONE profile of a PolyBench kernel the explorer gives one of two answers: every loop that carries a dependence the profiler observed is blocked, or NONE of them is and all are reported Do-All — never a part (Mac, 30 kernels: 114 runs, 50 block all, 64 none, 0 some; the server's draws of 8 Oct: 57 of 81 PolyBench profiles with no such loop blocked; on `md` the loops of one function flip together while another function's stay). Records without a call path (scalars) stay in both. Not Python's hash seed. The 44 TSVC packages: every verdict agrees in every draw; only the variable a blocker record names differs (36 of 44). The gate refuses the false directives |
 | B22 | explorer, Do-All detector (a rule of the original code, 28 Apr 2026) | candidate, 8 Oct | a write-after-read between passes never blocks Do-All ("can be privatized") — also on an array element, where it cannot: a loop whose pass reads an element a LATER pass overwrites (`x[i] = x[i + 1] * 0.5`; PolyBench `adi`'s last nest) is reported Do-All with the array `shared`, and its directive gives wrong sums. On TSVC the loops of this kind (`s121`, `s131`, `s151`, `s212`, `s241`, `s243`) are blocked all the same — through the repetition loop around them (B16): two defects that cancel. The gate refuses the directive on `adi` |
-| B19 | explorer (data-sharing clauses of a Do-All loop) | **FIXED 8 Oct** | `lastprivate` was written for any variable a loop writes and something after it reads. Three mechanisms: a scalar assigned in only some passes (`if (a[i] < 0) j = i;`, TSVC `s331`: the clause hands back the last CHUNK's value — wrong output, refused by the gate every time) — the loop is no longer reported Do-All; a whole stack array (`lastprivate(a_old)` on the loop that fills it, `firstprivate(a_old)` on one that reads it) — an array is now `shared`; a unit of the code AROUND the loop counted among the loop's (`s481`: `lastprivate(nl)`, shipped) — only the loop's own units decide its clauses |
+| B19 | explorer (data-sharing clauses of a Do-All loop) | **FIXED 8 Oct** | `lastprivate` was written for any variable a loop writes and something after it reads. Three mechanisms: a scalar assigned in only some passes (`if (a[i] < 0) j = i;`, TSVC `s331`: the clause hands back the last CHUNK's value — wrong output, refused by the gate every time) — the loop is no longer reported Do-All; a whole stack array (`lastprivate(a_old)` on the loop that fills it, `firstprivate(a_old)` on one that reads it) — an array is now `shared` where the loop reads it or writes it itself (corrected the same day: one that a called function fills keeps its private clause); a unit of the code AROUND the loop counted among the loop's (`s481`: `lastprivate(nl)`, shipped) — only the loop's own units decide its clauses |
 | L3 | explorer | limitation | NPB-CPP `mg`: with P1's fix the state assignment is fast, but the run then stays in task-pattern detection (`new_task_detector`) — a first run was read at 4 h 19 min, the same run was stopped unfinished after **11 h 24 min** at 100 % CPU on the server (19–20 Sep); the Do-All detector is not reached. Not usable per trial |
 
 ---
@@ -613,29 +613,50 @@ of 32 before the three new cases `last_private/case_2`, `shared/case_4`, `privat
 record); mypy and `black --check` on the explorer clean. On the Mac's profiles of the 44 `tsvc_c3` packages, the explorer before against the one after (one run each, the final code): 42 packages with the same patterns, clauses and blocked loops; the two that differ are `s331` and `s481`, as above. For PolyBench one run against one says nothing (B21): `correlation` in three runs each is in B18's entry, the 30 packages in three runs each in the record. The server's
 draws are in the record (`evaluation/agent/docs/THESIS_EXPERIMENTS.md` §6).
 
-**A regression of repair (2), found in the server's draws (8 Oct, after the check was recorded; NOT yet repaired).**
+**A regression of repair (2), found in the server's draws of 8 Oct and repaired the same day.**
 `burkardt/md`, the force loop (`for ( k = 0; k < np; k++ )`, line 255; `compute` calls `dist ( nd, pos+k*nd,
 pos+j*nd, rij )`, which fills the small array `rij` through its parameter `dr`, and the loop then reads `rij[i]`).
 `rij` is a work array every pass fills before it reads it — each thread needs its own.
 
-| | patterns for the loop | clauses | the gate |
-|---|---|---|---|
-| 7 Oct, three draws | one | `firstprivate(nd, PI2, np, rij) private(d, j, i, d2) shared(vel, pos, f) reduction(+:ke, pe)` | refused at the correctness stage |
-| 8 Oct, three draws | two | `firstprivate(np, nd, PI2) private(j, d2, d, i) shared(pos, vel, rij, f) reduction(…)` and `firstprivate(np, PI2) private(nd, d2, i, j, d) shared(pos, rij, vel, f) reduction(…)` | one refused at the correctness stage, one under ThreadSanitizer |
+| | clauses of the loop's pattern | the gate |
+|---|---|---|
+| 7 Oct, three draws | `firstprivate(nd, PI2, np, rij) private(d, j, i, d2) shared(vel, pos, f) reduction(+:ke, pe)` | refused at the correctness stage |
+| 8 Oct, three draws (the first repair) | `firstprivate(np, nd, PI2) private(j, d2, d, i) shared(pos, vel, rij, f) reduction(…)` | refused under ThreadSanitizer |
 
-Two things are worse than before. `rij` is `shared`: the repair's test ("an array is shared") does not ask whether
-the passes use the array's elements each for itself or all the same ones, and by name the loop only reads `rij` —
-the writes happen in the callee under the name `dr`. Before, the array was taken for a scalar that is only read
-and got `firstprivate`, which is right here (and which was the wasteful per-thread copy on the loops the repair
-aimed at). And the loop now has a second pattern whose clause set differs in `private(nd)` — `nd` is only read by
-the loop; `dist`'s own parameter is also called `nd`. Whether the two patterns existed before and were merged as
-equal, and which of the three repairs makes the second one differ, is not traced. `md`'s result is unchanged
-(DiscoPoP alone gets no directive accepted there, before and after), no TSVC package shows either (their draws
-offer what they offered, but for `s331` and `s481`), and the gate refuses both directives. **Owed:** the repair
-of the repair — an array stays with the scalar's classification where the loop hands it to a function or its
-passes touch the same elements, and is `shared` where each pass has its own; a test with these lines that fails
-now; the check of the 44 packages and of the other suites again; and `e1v6c_s241`'s saved rewrites replayed on
-the corrected explorer (no model), since that run started before this was found.
+`shared(rij)` is a race the directive of 7 Oct did not have. The first repair's test was "the variable's type is
+an array", and by name the loop only reads `rij` — the callee's stores go by its parameter's name. In 40 lines
+(the feature check's program, `md`'s loop without the physics; Mac, LLVM 19, one profile): the explorer before
+the repairs gives `firstprivate(nd, rij, np)`, the first repair `shared(rij)`, the corrected one
+`firstprivate(nd, np, rij)`; with the first repair's directive the sum of the forces differs in five runs of five
+on 4 threads, with the other it is the sequential one each time.
+
+**The corrected rule** (`detect_doall_sharing_clauses`). An array is `shared` where the loop only reads it or
+its own statements write it: the loop is a Do-All, so no two passes write the same element under the array's
+name (B13 blocks that), each pass has its own elements, and that was the case the repair aimed at (`a_old`
+filled by one loop, read by the next). An array that a function the loop calls writes keeps the classification
+it had before the repair (`firstprivate` or `private`): the detector cannot see whether the callee fills the
+same elements on every pass, and where it does, each thread needs the array for itself. "A function the loop
+calls writes it" is read off the data edges of every unit of the called functions (the loop's subtree with the
+callees, less its own units), not only off the units a modelled iteration holds — one copy of `md`'s loop shows
+`rij` as read only. On a profile of `md` made on the Mac the loop's pattern has the clauses of 7 Oct again, in
+three runs of three; the inner loop that only reads `rij` keeps `shared(rij)`. On the server's own profile of
+8 Oct (draw a, read on the Mac): the explorer from before the repairs and the corrected one report the same
+patterns with the same clauses for the loop in three runs each; the first repair's differ from them in
+`shared(rij)` (two runs).
+
+**What is NOT the repair's:** on `md` the loop comes out with two patterns, the second with
+`private(nd, rij)` — `nd` is only read by the loop, and `dist`'s own parameter is also called `nd`. The explorer
+from before the repairs gives that second pattern too, on the Mac's profile and on the server's of 8 Oct (the
+three draws of 7 Oct show one pattern; on the Mac one run of five showed one). Not traced; the gate refuses the
+directive.
+
+**Verified on the Mac:** the new feature check `b19-work-array` and the end-to-end case
+`first_private/case_2` (a work array filled by a called function) fail on the first repair and pass on the
+explorer before the repairs and on the corrected one. The agent's feature suite: 68 passed, 0 failed, 0 skipped (67 before, and the new check). DiscoPoP's
+end-to-end tests: 36 of 36 (35 before, and the new case). The 44 `tsvc_c3` packages, one kept profile each, the first repair against the
+correction: 44 of 44 the same in their patterns, clauses and blocked loops. The kept profile of an `s241` rewrite with a stack array (`a_old`): both give
+`shared(a_old)` on both loops. The server's draws again (`t0_11_c3_b19r_a`–`c`, `t0_11_b19r_apps_a`–`c`) and
+the check of `e1v6c_s241`'s rewrites are in the record.
 
 ## B18 — outer loops of PolyBench kernels lost their Do-All: a write-after-read is attached to units by the wrong roles, and B10's fix made that decide (explorer)
 

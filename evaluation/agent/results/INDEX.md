@@ -479,7 +479,8 @@ Status: done
 | `e1v6c_v7_bare_fable` | [`E01v6_clean_files_three_way/runs/e1v6c_v7_bare_fable/`](E01v6_clean_files_three_way/runs/e1v6c_v7_bare_fable/) | E1-v6 corrected for the repetitions (packaging v7): fable alone on tsvc_c3/s313 and s331 × bare_llm_v4 × 5, as e1v6_bare_fable | valid | 6 | FASTER 6 |
 | `e1v6c_replay` | [`E01v6_clean_files_three_way/checks/e1v6c_replay/`](E01v6_clean_files_three_way/checks/e1v6c_replay/) | candidate_replay.py replay (server, no model): the 26 pragma-free rewrites that six E1-v6 trials received and accepted at the first stages (s241 repeats 1, 4, 5; s252 repeats 1, 2; s341 repeat 2) handed to the pipeline on the fixed DiscoPoP — would a discarded one be kept? | valid | 0 |  |
 | `e1v6c_replay_verify` | [`E01v6_clean_files_three_way/checks/e1v6c_replay_verify/`](E01v6_clean_files_three_way/checks/e1v6c_replay_verify/) | verify-source (server, no model) on every finished file the replay e1v6c_replay kept: the harness's verdict against the benchmark's original, verification size, threads 6 and 12 | valid | 21 | FASTER 2, parallel-not-faster 19 |
-| `e1v6c_s241` | not archived yet | E1-v6 corrected: tsvc_c3/s241 × default_v4, discopop_gate_v4 × 5, Haiku, threads 6/12, repeats 5, as e1v6c_s281 — on the DiscoPoP with B14, B19 and B18 repaired (B20, B21, B22 known and not repaired; B22 concerns this loop's kind, the verdict is the same either way); the author's instruction of 8 Oct; read out beside the corrected result; launched after the class draws of group B19 passed | registered |  |  |
+| `e1v6c_s241` | [`E01v6_clean_files_three_way/runs/e1v6c_s241/`](E01v6_clean_files_three_way/runs/e1v6c_s241/) | E1-v6 corrected: tsvc_c3/s241 × default_v4, discopop_gate_v4 × 5, Haiku, threads 6/12, repeats 5, as e1v6c_s281 — on the DiscoPoP with B14, B19 and B18 repaired (B20, B21, B22 known and not repaired; B22 concerns this loop's kind, the verdict is the same either way); the author's instruction of 8 Oct; read out beside the corrected result; launched after the class draws of group B19 passed | registered | 10 | FASTER 5, no-change 5 |
+| `e1v6c_s241_race_check` | not archived yet | race_check.py (server, no model) over the agent's parallel programs of e1v6c_s241 — the gate's ThreadSanitizer build and schedule matrix on each finished file, as e1v6c_race_check did for e1v6c_s281 | registered |  |  |
 
 ## [E2-v6 — the hidden order on clean files: does DiscoPoP's evidence let the agent find a split no reading of the file can find, and can retries with feedback stand in for it?](E02v6_hidden_order_clean_files/REPORT.md)
 
@@ -563,7 +564,7 @@ Status: done
 
 ## [DiscoPoP B19 and B18 — a wrong `lastprivate` in three places and the Do-All that nests with counters declared at the top of the function had lost: the repairs and their regression check](T0_instruments/B19_B18_clauses_and_nests/REPORT.md)
 
-Status: done
+Status: running
 
 | run | where | what it is | status | trials | outcomes |
 |---|---|---|---|---:|---|
@@ -573,4 +574,10 @@ Status: done
 | `t0_11_b19_apps_a` | [`T0_instruments/B19_B18_clauses_and_nests/runs/t0_11_b19_apps_a/`](T0_instruments/B19_B18_clauses_and_nests/runs/t0_11_b19_apps_a/) | T0.11 draw a with DiscoPoP B19 and B18 repaired, server, no model: discopop_capability on the 31 packages of t0_11_classes outside TSVC — PolyBench × 27, NPB is, md, Rodinia hotspot and pathfinder — against t0_11_b14_apps_a–c and the draws of 20 Sep | valid | 31 | FASTER 14, no-change 9, parallel-not-faster 2, parallel-speed-not-measurable 6 |
 | `t0_11_b19_apps_b` | [`T0_instruments/B19_B18_clauses_and_nests/runs/t0_11_b19_apps_b/`](T0_instruments/B19_B18_clauses_and_nests/runs/t0_11_b19_apps_b/) | T0.11 draw b with DiscoPoP B19 and B18 repaired, server, no model: discopop_capability on the 31 packages outside TSVC | valid | 31 | FASTER 14, no-change 9, parallel-not-faster 2, parallel-speed-not-measurable 6 |
 | `t0_11_b19_apps_c` | [`T0_instruments/B19_B18_clauses_and_nests/runs/t0_11_b19_apps_c/`](T0_instruments/B19_B18_clauses_and_nests/runs/t0_11_b19_apps_c/) | T0.11 draw c with DiscoPoP B19 and B18 repaired, server, no model: discopop_capability on the 31 packages outside TSVC | valid | 31 | FASTER 13, no-change 9, parallel-not-faster 3, parallel-speed-not-measurable 6 |
+| `t0_11_c3_b19r_a` | not archived yet | T0.11 on packaging v7 with B19's array repair corrected (an array a called function writes keeps its private clause), draw a, server, no model: arm discopop_capability on the 44 tsvc_c3 packages — the regression check against t0_11_c3_b19_a–c | registered |  |  |
+| `t0_11_c3_b19r_b` | not archived yet | T0.11 on packaging v7 with B19's array repair corrected, draw b, server, no model: arm discopop_capability on the 44 tsvc_c3 packages | registered |  |  |
+| `t0_11_c3_b19r_c` | not archived yet | T0.11 on packaging v7 with B19's array repair corrected, draw c, server, no model: arm discopop_capability on the 44 tsvc_c3 packages | registered |  |  |
+| `t0_11_b19r_apps_a` | not archived yet | T0.11 draw a with B19's array repair corrected, server, no model: discopop_capability on the 31 packages of t0_11_classes outside TSVC — against t0_11_b19_apps_a–c (burkardt/md's force loop is the one the correction aims at) | registered |  |  |
+| `t0_11_b19r_apps_b` | not archived yet | T0.11 draw b with B19's array repair corrected, server, no model: discopop_capability on the 31 packages outside TSVC | registered |  |  |
+| `t0_11_b19r_apps_c` | not archived yet | T0.11 draw c with B19's array repair corrected, server, no model: discopop_capability on the 31 packages outside TSVC | registered |  |  |
 
