@@ -129,6 +129,11 @@ def _phase_b(
     # threshold ON THEIR OWN — judged together after the pass (D33).
     deferred_safe: List[Dict[str, Any]] = []
 
+    # Each file as it stood when this pass began: the text the profile describes.
+    # Every pragma kept below moves the lines under it, and the gate's dependence
+    # stage has to read the profile at the profile's line numbers (Fix 105).
+    profiled_text: Dict[str, str] = {}
+
     def annotate(cand: HotspotCandidate, ptype: Optional[str],
                  pattern: Optional[Dict[str, Any]]) -> str:
         """Try ONE of DiscoPoP's patterns for this loop.
@@ -137,6 +142,8 @@ def _phase_b(
         fare the same), "deferred" (safe but slower alone: judged jointly afterwards,
         D33) or "dropped" (this pattern's pragma failed: try the next)."""
         project_mod.work_on(args, cand.source_file)
+        if args.source_file not in profiled_text:
+            profiled_text[args.source_file] = Path(args.source_file).read_text()
         rid = cand.region.region_id
         pid = pattern.get("pattern_id", "?") if pattern else "?"
         pragma = (pattern or {}).get("pragma", "")
@@ -207,6 +214,7 @@ def _phase_b(
             reference_time, reference_outputs=reference_outputs, mode="safety",
             dep_region=(cand.region.file_id, cand.region.start_line,
                         cand.region.end_line),
+            profiled_source=profiled_text[args.source_file],
         )
         _record_candidate(output_dir, {
             "phase": "B", "region_id": cand.region.region_id, "passed": res.passed,

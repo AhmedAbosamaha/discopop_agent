@@ -35,7 +35,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from ..args import AgentArguments
 from ..types import ValidationResult
-from .dependences import annotated_loop_lines, dependence_evidence
+from .dependences import annotated_loop_lines, dependence_evidence, profile_lines
 from .equivalence import compare_outputs
 from .patching import _apply, _compile, _compile_variant
 from .schedules import (DEFAULT_REPEATS, DEFAULT_SCHEDULES, DEFAULT_THREADS,
@@ -86,6 +86,7 @@ def validate(
     dep_region: Optional[Tuple[int, int, int]] = None,
     timing_flags: Optional[List[str]] = None,
     paired_threshold: Optional[float] = None,
+    profiled_source: Optional[str] = None,
 ) -> ValidationResult:
     """Run the quality-gate stages. Return the first failure or success.
 
@@ -116,6 +117,12 @@ def validate(
       start-up — one run against another minutes apart, the unpaired method Fix 89 removed
       from Settle (guards against a rewrite whose own single-threaded build is
       overhead-slowed making the ratio look flattering).
+
+    `profiled_source` (Fix 105): the text of `source_file` as DiscoPoP profiled it, when
+    the file has had lines inserted since — Phase B, which keeps one pragma and derives
+    the next against the file that now holds it.  The dependence stage reads the profile
+    at the profile's line numbers; without this it read it at the working file's.  None
+    means the file IS the profiled text, which holds everywhere outside Phase B.
     """
     if mode not in ("safety", "full"):
         raise ValueError(f"validate(mode=): unknown mode {mode!r}")
@@ -174,7 +181,20 @@ def validate(
         # static-only blocker or a gap in the profile is recorded and passed,
         # because neither is evidence that the pragma is wrong.
         loop_lines = annotated_loop_lines(diff) if has_pragma else None
-        if has_pragma and loop_lines is None:
+        unplaced = False
+        if loop_lines is not None and profiled_source is not None:
+            placed = profile_lines(loop_lines, Path(source_file).read_text(), profiled_source)
+            unplaced = placed is None
+            loop_lines = placed if placed is not None else loop_lines
+        if has_pragma and unplaced:
+            # The working file is not the profiled text plus inserted lines, so no line of
+            # this patch can be found in the profile.  No opinion — the stage never guesses.
+            evidence["dependences"] = "unavailable"
+            evidence["dependences_detail"] = (
+                "the file is not the profiled text with lines inserted, so the patch's "
+                "lines cannot be placed in the profile; the sanitizer and the schedule "
+                "matrix carry it")
+        elif has_pragma and loop_lines is None:
             # A rewrite: the profile describes the code this patch replaced, so it
             # has no standing to judge it.  Recorded, never failed (review F6).
             evidence["dependences"] = "rewritten-code"
@@ -482,6 +502,7 @@ def _validate_cached(
     reference_outputs: "List[Tuple[List[str], str]] | None" = None,
     mode: str = "full",
     dep_region: "Tuple[int, int, int] | None" = None,
+    profiled_source: "str | None" = None,
 ) -> "tuple[ValidationResult, bool, bool]":
     """Run the gate on `diff`, or return the answer already computed for it.
 
@@ -521,6 +542,7 @@ def _validate_cached(
             noise_floor=getattr(args, "noise_floor", 0.0),
             discopop_dir=getattr(args, "discopop_dir", None),
             dep_region=dep_region,
+            profiled_source=profiled_source,
             timing_flags=list(getattr(args, "timing_cflags", ()) or ()) or None,
             stress=getattr(args, "schedule_stress", True),
             stress_threads=tuple(getattr(args, "stress_threads", None) or ())

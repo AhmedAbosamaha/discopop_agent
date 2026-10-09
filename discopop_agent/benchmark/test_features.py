@@ -3236,6 +3236,18 @@ _NEST_SRC = (
     "  printf(\"%.10f\\n\", s);\n  return 0;\n}\n")
 
 
+_NESTS_SRC = (
+    "#include <stdio.h>\n#define R 300\n#define T 40\nstatic double a[R][T], b[R][T];\n"
+    "int main(void) {\n  int i, t;\n"
+    "  for (i = 0; i < R; i++) { a[i][0] = 1.0 + (i % 17) * 0.25; b[i][0] = 2.0 + (i % 13) * 0.5; }\n"
+    "  for (i = 0; i < R; i++)\n    for (t = 1; t < T; t++)\n"
+    "      a[i][t] = a[i][t-1] * 0.5 + 1.0;\n"
+    "  for (i = 0; i < R; i++)\n    for (t = 1; t < T; t++)\n"
+    "      b[i][t] = b[i][t-1] * 0.5 + 2.0;\n"
+    "  double s = 0.0;\n  for (i = 0; i < R; i++) { s += a[i][T-1]; s += b[i][T-1]; }\n"
+    "  printf(\"%.10f\\n\", s);\n  return 0;\n}\n")
+
+
 def check_dependence_standing(work: Path) -> Result:
     """The profile may judge a pragma only on code it actually profiled.
 
@@ -3284,6 +3296,7 @@ def check_dependence_standing(work: Path) -> Result:
     # End to end: the rewrite must reach the evidence as "rewritten-code", never fail here.
     from ..gate import capture_reference
     from ..gate.validate import validate
+    from ..types import ValidationResult
     ref, _t, refs = capture_reference(str(src), None)
     res = validate(rewrite, str(src), reference_output=ref, reference_outputs=refs,
                    discopop_dir=dp, dep_region=(1, outer, inner + 1), mode="safety")
@@ -3291,10 +3304,68 @@ def check_dependence_standing(work: Path) -> Result:
         problems.append("a rewrite was failed by the original code's dependences")
     elif res.evidence.get("dependences") != "rewritten-code":
         problems.append(f"rewrite evidence reads {res.evidence.get('dependences')!r}")
+
+    # Fix 105 — the final pass inserts DiscoPoP's pragmas one after another, so from the second one
+    # on the patch's lines are the working file's while the blocker records keep the numbering of
+    # the file as it was profiled.  Two nests side by side (polybench/mvt, where it was found): with
+    # the first nest's pragma in the file, the second nest's OUTER loop sits on the line the profile
+    # gives its INNER loop.
+    src2 = d / "nests.c"
+    src2.write_text(_NESTS_SRC)
+    plines = _NESTS_SRC.splitlines()
+    heads = [i for i, l in enumerate(plines, 1) if l.startswith("  for (i = 0; i < R; i++)") and l.rstrip().endswith("i++)")]
+    if len(heads) != 2 or heads[1] != heads[0] + 3:
+        return Result(name, "fail", f"the two-nest source is not laid out as the check assumes ({heads})")
+    outer1, outer2 = heads
+    inner2 = outer2 + 1
+    head1, head2 = plines[outer1 - 1] + "\n", plines[outer2 - 1] + "\n"
+    pragma = "  #pragma omp parallel for private(t)\n"
+    working = _NESTS_SRC.replace(head1, pragma + head1, 1)          # the first nest's pragma is kept
+    w_second = working.index(head2, working.index(pragma) + len(pragma) + len(head1))
+    ann_second = make_diff(working, working[:w_second] + pragma + working[w_second:], str(src2))
+    src2.write_text(working)
+    if annotated_loop_lines(ann_second) != [outer2 + 1]:
+        problems.append(f"the second nest's annotation is at {annotated_loop_lines(ann_second)} of the working "
+                        f"file, want [{outer2 + 1}]")
+    ref2, _t2, refs2 = capture_reference(str(src2), None)
+
+    def _blocked(loop_line: int, var: str) -> None:
+        (d / ".discopop" / "explorer" / "doall_prevented.json").write_text(json.dumps([{
+            "loop_file": 1, "loop_start": loop_line, "loop_end": loop_line, "dep_type": "DepType.RAW",
+            "source_line": "None", "sink_line": "None", "var_name": var,
+            "origin": "DepOrigin.DYNAMIC_ANALYSIS"}]))
+
+    def _second(profiled: str) -> ValidationResult:
+        return validate(ann_second, str(src2), reference_output=ref2, reference_outputs=refs2,
+                        discopop_dir=dp, dep_region=(1, outer2, inner2 + 1), mode="safety",
+                        profiled_source=profiled)
+
+    # (a) the observed blocker is on the second nest's INNER loop: its outer loop is a Do-All.
+    _blocked(inner2, "GEPRESULT_b")
+    res_a = _second(_NESTS_SRC)
+    if res_a.stage == "dependences":
+        problems.append("with a pragma kept above, the INNER loop's blocker failed DiscoPoP's pragma on the "
+                        "outer loop of the second nest (the wrong refusal of polybench/mvt)")
+    elif not res_a.passed:
+        problems.append(f"DiscoPoP's pragma on the second nest failed at {res_a.stage!r}: {res_a.diagnostic[:120]}")
+    # (b) the observed blocker is on the second nest's own outer loop: the pragma contradicts it.
+    _blocked(outer2, "GEPRESULT_b")
+    res_b = _second(_NESTS_SRC)
+    if res_b.stage != "dependences":
+        problems.append(f"with a pragma kept above, an OBSERVED dependence on the annotated loop itself was not "
+                        f"seen (stage {res_b.stage!r}, evidence {res_b.evidence.get('dependences')!r})")
+    # (c) a working file that is not the profiled text plus inserted lines: no opinion, never a guess.
+    res_c = _second(_NESTS_SRC.replace("a[i][t-1] * 0.5", "a[i][t-1] * 0.25", 1))
+    if res_c.stage == "dependences" or res_c.evidence.get("dependences") != "unavailable":
+        problems.append(f"a profiled text the working file does not come from was used anyway "
+                        f"(stage {res_c.stage!r}, evidence {res_c.evidence.get('dependences')!r})")
     if problems:
         return Result(name, "fail", "; ".join(problems))
     return Result(name, "pass", "rewrite not judged by the old profile; outer Do-All survives an inner "
-                                "blocker; the blocked loop itself is still contradicted")
+                                "blocker; the blocked loop itself is still contradicted; below a kept "
+                                "pragma the profile is read at the profile's lines (both directions), "
+                                "and not at all when the working file is not the profiled text plus "
+                                "inserted lines")
 
 
 def check_schedule_runtime(work: Path) -> Result:

@@ -142,6 +142,35 @@ def annotated_loop_lines(diff: str) -> Optional[List[int]]:
     return lines
 
 
+def profile_lines(lines: List[int], working: str, profiled: str) -> Optional[List[int]]:
+    """`lines` of the `working` text, as line numbers of the `profiled` text.
+
+    Phase B inserts DiscoPoP's pragmas one after another and never re-profiles, so
+    from the second pragma on a patch's line numbers are those of a file the
+    profile has not seen: every pragma kept above a loop moves it one line down,
+    while `doall_prevented.json` keeps numbering it as it was profiled.  Read
+    untranslated, the stage looked up the line below the loop — nothing, or the
+    INNER loop of a nest that starts there (polybench/mvt: DiscoPoP's own correct
+    pragma refused on the inner loop's dependence, and a dependence on the
+    annotated loop itself would not have been seen).  Fix 105.
+
+    The walk is exact, not a best match: `working` must be `profiled` with lines
+    inserted and nothing else.  Returns None when it is not — the caller then has
+    no line in the profile to ask about, and says so rather than guessing.  A line
+    that was itself inserted has no counterpart and is left out.
+    """
+    old, new = profiled.splitlines(), working.splitlines()
+    back: Dict[int, int] = {}
+    i = 0
+    for j, text in enumerate(new):
+        if i < len(old) and text == old[i]:
+            back[j + 1] = i + 1
+            i += 1
+    if i != len(old):
+        return None
+    return [back[n] for n in lines if n in back]
+
+
 def dependence_evidence(
     discopop_dir: Optional[str], file_id: Optional[int],
     start_line: Optional[int], end_line: Optional[int],
