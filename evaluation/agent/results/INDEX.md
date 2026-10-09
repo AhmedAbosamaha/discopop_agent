@@ -124,6 +124,13 @@ Status: done
 | `e10_dp_alone` | [`E10_speed_check/runs/e10_dp_alone/`](E10_speed_check/runs/e10_dp_alone/) | DiscoPoP alone on five of E10's kernels (the main comparison, D19) | valid | 15 | FASTER 6, no-change 9 |
 | `e10_lu_fix84` | [`E10_speed_check/runs/e10_lu_fix84/`](E10_speed_check/runs/e10_lu_fix84/) | lu, all four arms, after Fix 84 | valid | 12 | FASTER 6, no-change 3, parallel-not-faster 3 |
 
+## [E7 — the gate as a classifier: every saved candidate judged again by the harness, each check on its own, DataRaceBench as the outside ground truth for races](E07_gate_as_classifier/REPORT.md)
+
+Status: designed 9 Oct — awaiting the author's go
+
+| run | where | what it is | status | trials | outcomes |
+|---|---|---|---|---:|---|
+
 ## [E11 — against RepoOMP on its NPB-C kernels](E11_repoomp/REPORT.md)
 
 Status: pre-flight

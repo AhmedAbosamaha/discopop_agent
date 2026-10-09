@@ -39,7 +39,7 @@ proposed here and is to be confirmed with the title.
 | RQ | Question | Claim | Hypotheses | Experiments | Section | Status |
 |---|---|---|---|---|---|---|
 | RQ1 | Does restructuring parallelize loops DiscoPoP alone cannot? | C1 | H1, H11 | E1, E11 | 7.2, 7.9 | done on kernels |
-| RQ2 | Is every accepted change right and race-free, what does each check catch, and where are the checks blind? | C2 | H2, H3, H10, H10b, H13 | E1, E10, E7 | 7.2, 7.6 | E1, E10 done · E7 planned |
+| RQ2 | Is every accepted change right and race-free, what does each check catch, and where are the checks blind? | C2 | H2, H3, H10, H10b, H13 | E1, E10, E7 | 7.2, 7.6 | E1, E10 done · E7 designed 9 Oct |
 | RQ3 | How close do the accepted programs come to an expert's version, and do they scale with threads? | C1 | H4, H11 | E1, E2, E6, E11 | 7.2, 7.5, 7.9 | partly |
 | RQ4 | What does the model need: DiscoPoP's evidence, feedback from failed attempts, or more strength? | C1 | H5, H5b, H5d, H12 | E2, E12 | 7.3, 7.5 | done |
 | RQ5 | Who should write the directive: DiscoPoP or the model? | C1, C2 | H6, H6b | E3 | 7.7 | planned |
@@ -379,12 +379,18 @@ result, or the expectation written down before the run.
     excused; three programs with data-sized arrays on the stack that crash at the verification size (only in
     setups with the speed check off); a false Do-All from DiscoPoP that the race stage refused. And one wrong
     refusal with a known cause: the check against DiscoPoP's observed dependences compared line numbers of the
-    working file with those of the profiled file and refused a correct directive below an accepted one (once in
-    3,020 candidate files; found 8 Oct; what its repair changes on the saved directives is counted in 7.6.3).
-  - 7.6.3 The gate as a classifier. **[planned, no model calls]** Every candidate the agent produced, accepted or
-    not, judged again by the harness: a confusion matrix, the gate's precision and recall, per stage the wrong
-    candidates only that stage caught (by replay with the stage switched off), every false accept and false
-    reject listed; DataRaceBench as outside ground truth for races; twelve trials without the perturbed input.
+    working file with those of the profiled file and refused a correct directive below an accepted one (once
+    among the 14,200 candidates of the whole archive; found 8 Oct). Counted from the archive: on the loops of the
+    two main experiments it only made the check silent (149 of 569 directives, no other loop read); on whole
+    programs it read an inner loop's record for 19 of 248 directives. What its repair changes is counted in 7.6.3.
+  - 7.6.3 The gate as a classifier. **[planned, designed 9 Oct, no model calls]** Every candidate the agent produced in
+    the two main experiments (3,034), accepted or not, and the 248 directives of DiscoPoP alone on the 75
+    packages, rebuilt and judged again by the harness plus a race run at the verification size: gate against
+    judge for rewrites and for directives, every false accept and false reject by name, the shares with
+    intervals; each check run on its own on every candidate — what only it stops, what only it refuses (H3);
+    the wrong candidates only the perturbed input stops (in place of twelve model trials, if agreed); the
+    dependence check as it ran and repaired; DataRaceBench as outside ground truth for races. Limit stated with
+    it: inside the corpus the race label comes from the gate's own detector under other conditions.
 - **7.7 Stage 4 — who writes the directive, and how the evidence survives the edit** (E3, E4; RQ5–RQ7;
   H6, H6b, H7, H7b). **[planned]**
   - 7.7.1 A two-by-two: directive by DiscoPoP or by the model × full re-profile or fast refresh. Four setups and
