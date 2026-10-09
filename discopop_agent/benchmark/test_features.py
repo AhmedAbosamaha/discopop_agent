@@ -4054,6 +4054,112 @@ def check_shipped_prompt(work: Path) -> Result:
                   "differ from v2, and nothing differs with the speed check off")
 
 
+def check_prompt_v5(work: Path) -> Result:
+    """Prompt version 5 (9 Oct 2026) — D13 and P1 say what is the case, and nothing else moves.
+
+    D13: a blocker without DiscoPoP's mark is not called "not observed on the profiling input" (on a
+    scalar the mark can be missing although the dependence was seen), the instructions' legend says the
+    same, and the digest names a scalar's RAW without a rule of thumb about it.  P1: in the mode in which
+    the model writes the pragma the instructions no longer say that nothing re-profiles the rewrite or
+    adds a pragma — both happen — the timing step and the task line name the same two comparisons with
+    the configured ratio, and a rewrite without a pragma is said to be judged by what DiscoPoP finds.
+
+    What must NOT move: the mode in which DiscoPoP writes the pragma outside D13's three sentences, every
+    text at version 4, and the blocks the model alone and the twins derive their instructions from —
+    for the model alone "nothing adds a pragma" is true."""
+    import dataclasses
+    import difflib
+    from .. import bare_llm
+    from ..llm.prompts import (PROMPT_VERSIONS, _ASK_ANNOTATE, _ASK_ANNOTATE_ALONE, _CONTRACT_PRAGMA,
+                               _CONTRACT_PRAGMA_ALONE, _system_prompt)
+    from ..llm.render import fmt_blockers
+    from ..llm.request import _build_direct_prompt
+    from ..types import Dependency, GateFacts
+    name = "prompt v5"
+    ev = _fw_evidence()
+    ev.raw_deps = list(ev.raw_deps) + [Dependency("RAW", 423, 422, "x")]        # a scalar that is not a counter
+    ev.prevented_deps = [
+        {"dep_type": "DepType.RAW", "var_name": "x", "origin": "DepOrigin.STATIC", "loop_start": 418, "loop_end": 424},
+        {"dep_type": "DepType.RAW", "var_name": "path", "origin": "DepOrigin.DYNAMIC", "loop_start": 418, "loop_end": 424}]
+    ws = Path("/tmp/ws/fw.c")
+    v4 = GateFacts(n_inputs=2, judge_as_shipped=True, changes=PROMPT_VERSIONS[4])
+    v5 = dataclasses.replace(v4, changes=PROMPT_VERSIONS[5])
+    problems: List[str] = []
+
+    def lines(old: str, new: str) -> List[str]:
+        return [ln for ln in difflib.unified_diff(old.splitlines(), new.splitlines(), lineterm="", n=0)
+                if ln[:1] in "+-" and ln[:3] not in ("+++", "---")]
+
+    # --- the model alone's and the twins' blocks are the ones version 4 had
+    if _ASK_ANNOTATE_ALONE not in _ASK_ANNOTATE or _CONTRACT_PRAGMA_ALONE not in _CONTRACT_PRAGMA:
+        problems.append("the blocks the model alone derives from no longer hold its own sentences")
+    mirror = bare_llm._system_mirror(bare_llm.mirror_gate(True, 4))
+    if "Nothing adds a\npragma to the code you rewrite" not in mirror or "still a sequential program" not in mirror:
+        problems.append("the model alone's instructions lost 'nothing adds a pragma' — true for it")
+
+    # --- DiscoPoP writes: only D13's sentences differ from version 4, and nothing without evidence
+    for speed in (True, False):
+        g4, g5 = (dataclasses.replace(g, require_speedup=speed) for g in (v4, v5))
+        if (_system_prompt("direct", False, False, g4, set()), _build_direct_prompt(ev, ws, set(), False, g4)) != \
+                (_system_prompt("direct", False, False, g5, set()), _build_direct_prompt(ev, ws, set(), False, g5)):
+            problems.append("DiscoPoP writes, no evidence: version 5 changes a text")
+        moved = lines(_system_prompt("direct", False, False, g4, None) + _build_direct_prompt(ev, ws, None, False, g4),
+                      _system_prompt("direct", False, False, g5, None) + _build_direct_prompt(ev, ws, None, False, g5))
+        gone = "\n".join(ln for ln in moved if ln.startswith("-"))
+        came = "\n".join(ln for ln in moved if ln.startswith("+"))
+        if not all(s in gone for s in ("it could not rule out", "RAW on SCALARS: x — usually a reused",
+                                       "static: not observed on the profiling input")):
+            problems.append("DiscoPoP writes: one of D13's three old sentences did not go")
+        if not all(s in came for s in ("static = not marked, which for a scalar does not mean it did not occur",
+                                       "- RAW on SCALARS: x.", "static: DiscoPoP did not mark it as observed.")):
+            problems.append("DiscoPoP writes: one of D13's three new sentences is missing")
+        off = [ln for ln in moved if not re.search(
+            r"origin|rule out|actually observed|not marked|loop nest with induction|iterations per activation|"
+            r"already reports as parallel|any calls in|the region — and|failed attempt|"
+            r"RAW on SCALARS|RAW on `x`", ln)]
+        if off:
+            problems.append(f"DiscoPoP writes: a line outside D13 changed: {off[0][:70]!r}")
+    if "observed: an iteration of this loop read" not in fmt_blockers(ev.prevented_deps, frozenset(v5.changes)):
+        problems.append("the note of a blocker DiscoPoP marked as observed changed")
+
+    # --- the model writes: the untrue sentences are gone, the true ones are there, the two agree
+    sys5 = _system_prompt("direct", True, False, v5, None)
+    req5 = _build_direct_prompt(ev, ws, None, True, v5)
+    for s in ("Nothing downstream adds", "Nothing here re-profiles", "Nothing re-profiles your rewrite",
+              "nothing adds a pragma for you", "still a sequential program", "than both",
+              "was never parallelized", "whole judgement"):
+        if s in sys5 + req5:
+            problems.append(f"the model writes, version 5: still says {s!r}")
+    for s in ("DiscoPoP profiles the program again", "it adds its own pragma,\nthrough the same checks",
+              "judged differently: it is kept only if DiscoPoP", "be at least 1.1× faster",
+              "before your rewrite, which it must not be slower than"):
+        if s not in sys5:
+            problems.append(f"the model writes, version 5: the instructions lack {s!r}")
+    if "runs at least 1.1× faster than the same build pinned to one thread and no slower than the program " \
+            "as it stood before your rewrite." not in req5:
+        problems.append("the model writes, version 5: the task line does not name the gate's two comparisons")
+    sys4 = _system_prompt("direct", True, False, v4, None)
+    if "Nothing downstream adds" not in sys4 or "than both" not in sys4 or \
+            "nothing adds a pragma for you" not in _build_direct_prompt(ev, ws, None, True, v4):
+        problems.append("the model writes, version 4: a sentence the registered arms read is gone")
+    # the ratio is the configured one, in both places
+    odd = dataclasses.replace(v5, min_speedup=1.25)
+    if "be at least 1.25× faster" not in _system_prompt("direct", True, False, odd, None) or \
+            "runs at least 1.25× faster" not in _build_direct_prompt(ev, ws, None, True, odd):
+        problems.append("the ratio in the text is not the configured --min-measured-speedup")
+    # with the speed check off nothing about timing is said, and the closing sentence is gone too
+    off5 = dataclasses.replace(v5, require_speedup=False)
+    req_off = _build_direct_prompt(ev, ws, None, True, off5)
+    if "faster" in req_off.split("### Task")[-1] or "nothing adds a pragma" in req_off:
+        problems.append("the model writes, version 5, speed off: the task line names a timing or the old sentence")
+    if problems:
+        return Result(name, "fail", "; ".join(problems[:3]))
+    return Result(name, "pass", "D13: the blocker note, the legend and the digest's scalar line, and nothing else "
+                  "where DiscoPoP writes the pragma; P1: no 'nothing re-profiles / nothing adds a pragma' where the "
+                  "model writes it, step 6 and the task line name the same two comparisons at the configured "
+                  "ratio; version 4 and the model alone's blocks unchanged")
+
+
 _SHIP_SRC = """#include <stdlib.h>
 void k(double *a, double *b, int n) {
   double *t = (double *)malloc(sizeof(double) * n);
@@ -5409,6 +5515,7 @@ _CHECKS: List[Tuple[str, Callable[[Path], Result]]] = [
     ("phase-b-joint", check_phase_b_joint),
     ("dp-floor", check_dp_floor),
     ("shipped-prompt", check_shipped_prompt),
+    ("prompt-v5", check_prompt_v5),
     ("shipped-judge", check_shipped_judge),
     ("request-log", check_request_log),
     ("exposed-repair", check_exposed_repair),

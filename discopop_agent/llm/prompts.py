@@ -40,9 +40,22 @@ from ..types import GateFacts
 #       instead of by which variable the Do-All detector names first for which loop
 #   D12 WAR and WAW (and the static-only variables) from every dependence read by its own type: up to
 #       version 3 a dependence line's first type was applied to all of its targets (evidence/deps.py)
+# Version 5 (9 Oct 2026; record §6, "Decision (author), E3 texts") makes two sets of sentences say what
+# is the case, each read against the code before E3:
+#   D13 a blocker's origin label for what DiscoPoP's mark means.  A blocker on a scalar can carry the
+#       static origin although its dependence was observed (finding of 8 Oct), so "static: not observed
+#       on the profiling input" stood beside the observed dependence in one request (s254).  The note,
+#       the legend in the instructions, and the digest's rule of thumb on a scalar's RAW, which goes
+#   P1  the mode in which the model writes the pragma (--llm-pragmas): a kept rewrite is profiled again,
+#       the final pass adds DiscoPoP's pragma to a loop it finds parallel that carries none, a rewrite
+#       without a pragma is judged by what DiscoPoP finds in it, and the paired timing is against the
+#       program before the rewrite.  The agent's path only — the model alone and the twins derive their
+#       texts from the same blocks, and for the model alone "nothing adds a pragma" is true
 PROMPT_VERSIONS: Dict[int, Tuple[str, ...]] = {1: (), 2: ("A1", "D1", "D10", "D2", "D3", "D5"),
                                                3: ("A1", "D1", "D10", "D2", "D3", "D4", "D5"),
-                                               4: ("A1", "D1", "D10", "D11", "D12", "D2", "D3", "D4", "D5")}
+                                               4: ("A1", "D1", "D10", "D11", "D12", "D2", "D3", "D4", "D5"),
+                                               5: ("A1", "D1", "D10", "D11", "D12", "D13", "D2", "D3", "D4",
+                                                   "D5", "P1")}
 
 
 def _sub(text: str, old: str, new: str) -> str:
@@ -126,6 +139,10 @@ def _wrap(text: str, indent: str = "") -> str:
 # D10 (version 2): the deps item describes the rendering D2 gives it.
 _DEPS_ITEM_V2 = ("the dependences observed at run time (RAW / WAR / WAW, grouped per variable, "
                  "each pair given as the earlier access → the later one)")
+# D13 (version 5): the two origins are DiscoPoP's mark, which a scalar's blocker can lack although its
+# dependence was observed — "a dependence it could not rule out" read as "it did not happen".
+_BLOCKERS_ITEM_V5 = ("DiscoPoP's own Do-All blockers with their origin (dynamic = marked as observed at "
+                     "run time; static = not marked, which for a scalar does not mean it did not occur)")
 
 
 def _given(include: Optional[Set[str]], changes: Tuple[str, ...] = (), feedback: bool = True) -> str:
@@ -136,7 +153,8 @@ def _given(include: Optional[Set[str]], changes: Tuple[str, ...] = (), feedback:
     blockers and a loop nest, and then shown none of them.
 
     `feedback=False` is the twin's (D38): one attempt, so no clause promising feedback."""
-    items = [(_DEPS_ITEM_V2 if name == "deps" and "D10" in changes else text)
+    items = [(_DEPS_ITEM_V2 if name == "deps" and "D10" in changes
+              else _BLOCKERS_ITEM_V5 if name == "blockers" and "D13" in changes else text)
              for name, text in _GIVEN_ITEMS if include is None or name in include]
     head = _RULE + "WHAT WE GIVE YOU\n" + _RULE
     after = "after a failed attempt, which check failed and why"
@@ -204,6 +222,26 @@ _CONTRACT_PRAGMA = """\
         later read sees a stale value and the program keeps running with a
         wrong answer.  Use `reduction`, or `lastprivate`, or leave it shared
         and make the write itself safe.
+"""
+# P1 (version 5): what the agent does with a rewrite and its pragmas, in place of three sentences that
+# are the model alone's truth (bare_llm and the twin derive theirs from the blocks above, which stay as
+# they are).  A rewrite that carries a pragma is kept on the gate's verdict and the program is profiled
+# again; Phase B annotates what DiscoPoP then reports parallel and finds unannotated; a rewrite without a
+# pragma goes the way of the other mode (phases/phase_a.py).
+_ASK_ANNOTATE_ALONE = ("Nothing downstream adds\n"
+                       "a pragma to the code you rewrite — a loop you leave unannotated stays\n"
+                       "sequential, and a rewrite with no pragma in it has parallelized nothing.")
+_ASK_ANNOTATE_AGENT = ("After a rewrite is kept,\n"
+                       "DiscoPoP profiles the program again.  At the end it adds its own pragma,\n"
+                       "through the same checks, to a loop it finds parallel that carries none.")
+_CONTRACT_PRAGMA_ALONE = """\
+  - Annotate what you parallelize: a rewrite with no `#pragma omp` in it is
+    still a sequential program, however independent its iterations are.
+"""
+_CONTRACT_PRAGMA_AGENT = """\
+  - Annotate what you parallelize.  A rewrite without a `#pragma omp` is
+    judged differently: it is kept only if DiscoPoP, run on it again, finds
+    a parallel pattern in the lines you changed.
 """
 _CONTRACT_CLOSE = """\
   - The original code returned unchanged — renamed, reordered, unrolled, or
@@ -327,18 +365,28 @@ def _checked_annotate(gate: GateFacts) -> str:
     if gate.require_speedup:
         # The gate checks both (validate.py: one thread vs all, and not slower than the
         # original); v2's text named only the first.
-        steps.append("that same build is timed against itself pinned to one thread and\n"
+        # P1 (version 5): the second comparison is D40.1's — paired against the program the
+        # rewrite applies to, kept at or above the timing noise — and the first has a ratio.
+        steps.append("that same build is timed against itself pinned to one thread and has to\n"
+                     f"     be at least {gate.min_speedup:g}× faster; and against the program as it stood\n"
+                     "     before your rewrite, which it must not be slower than"
+                     if gate.judge_as_shipped and "P1" in gate.changes else
+                     "that same build is timed against itself pinned to one thread and\n"
                      "     against the original sequential program, and has to be faster\n"
                      "     than both" if gate.judge_as_shipped else
                      "that same build is timed against itself pinned to one thread, and\n"
                      "     has to be faster")
     body = "\n".join(f"  {i}. {t}" for i, t in enumerate(steps, 1))
+    # P1 (version 5): the list is not the whole judgement — the program is profiled again and the
+    # final pass may add a pragma — so the sentence that said it was is left out.
+    whole = ("" if "P1" in gate.changes else
+             "  Nothing here re-profiles your code: this list is the whole judgement,\n"
+             "and a pragma you did not write is a loop that was never parallelized.")
     return (_RULE + "HOW YOUR REWRITE IS CHECKED\n" + _RULE + f"{body}\n\n"
             f"Steps 3-{len(steps)} run your loops with iterations overlapping in arbitrary order.  A\n"
             "loop you marked parallel has to give the same result whatever order its\n"
             "iterations run in — reproducing the output in serial proves nothing about\n"
-            "that.  Nothing here re-profiles your code: this list is the whole judgement,\n"
-            "and a pragma you did not write is a loop that was never parallelized.\n\n"
+            "that." + whole + "\n\n"
             + _granularity(gate, len(steps), "annotate"))
 
 
@@ -405,8 +453,12 @@ def _system_core_annotate(gate: GateFacts, include: Optional[Set[str]]) -> str:
     goal = ("" if not gate.require_speedup
             else ", and is measurably faster than the original sequential program" if gate.judge_as_shipped
             else ", and is measurably faster than the same build held to one thread")
-    return (_ROLE_ANNOTATE + _ASK_ANNOTATE.replace("{SPEED_GOAL}", goal) + _given(include, gate.changes)
-            + _contract(gate, _CONTRACT_PRAGMA)
+    ask, pragma_rule = _ASK_ANNOTATE, _CONTRACT_PRAGMA
+    if "P1" in gate.changes:
+        ask = _sub(ask, _ASK_ANNOTATE_ALONE, _ASK_ANNOTATE_AGENT)
+        pragma_rule = _sub(pragma_rule, _CONTRACT_PRAGMA_ALONE, _CONTRACT_PRAGMA_AGENT)
+    return (_ROLE_ANNOTATE + ask.replace("{SPEED_GOAL}", goal) + _given(include, gate.changes)
+            + _contract(gate, pragma_rule)
             + ("" if "gate" in gate.omit else _checked_annotate(gate)) + _OMP_RULES + _PRAGMA_FORMS)
 
 

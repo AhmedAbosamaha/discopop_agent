@@ -319,7 +319,10 @@ def _fmt_digest(ev: EvidencePackage, include: Optional[Set[str]] = None,
                                    (("written outside and read here", read_here),
                                     ("written here and read outside the region", read_after)) if vs) + ".")
         if scalar_raw:
+            # D13 (version 5): the names only.  "Usually a reused location" is a rule of thumb, and on
+            # the loops of the 8 Oct finding the scalar IS a value travelling between iterations.
             out.append(
+                f"  - RAW on SCALARS: {', '.join(scalar_raw)}." if "D13" in changes else
                 f"  - RAW on SCALARS: {', '.join(scalar_raw)} — usually a reused "
                 "location or an accumulator, not a value travelling between iterations.")
         if not real:
@@ -659,6 +662,13 @@ _DYNAMIC_NOTE = {
 _STATIC_NOTE = ("static: not observed on the profiling input, and DiscoPoP could not rule it out from the "
                 "code — a scalar every iteration writes before reading is removed by declaring it inside "
                 "the loop body")
+# D13 (version 5): the origin is DiscoPoP's mark, and a blocker on a scalar can lack it although its
+# dependence was observed (finding of 8 Oct: on seven loops of the main comparison; s254's request
+# showed the observed RAW on `x` and "not observed" side by side).  The dependence list is what was seen.
+_STATIC_NOTE_V5 = ("static: DiscoPoP did not mark it as observed. For a scalar that does not mean it did not "
+                   "occur on the profiling input — the dependence list, when it is shown, has what was "
+                   "observed. A scalar every iteration writes before reading is removed by declaring it "
+                   "inside the loop body")
 
 
 def fmt_blockers(prevented: List[Dict[str, Any]], changes: FrozenSet[str] = frozenset()) -> str:
@@ -702,7 +712,8 @@ def _fmt_blockers_v2(prevented: List[Dict[str, Any]], changes: FrozenSet[str]) -
     for b in prevented[:20]:
         dtype = str(b.get("dep_type", "?")).split(".")[-1]
         dynamic = "DYNAMIC" in str(b.get("origin", "")).upper()
-        note = _DYNAMIC_NOTE.get(dtype, "observed") if dynamic else _STATIC_NOTE
+        note = (_DYNAMIC_NOTE.get(dtype, "observed") if dynamic
+                else _STATIC_NOTE_V5 if "D13" in changes else _STATIC_NOTE)
         var = _classify_var(str(b.get("var_name", "?")))[0]
         var = var[:-2] if var.endswith("[]") else var
         src = str(b.get("source_line") or "").split(":")[-1]

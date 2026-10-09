@@ -596,3 +596,14 @@ Status: done
 |---|---|---|---|---:|---|
 | `f105_replay` | [`T0_instruments/F105_gate_dependence_lines/checks/f105_replay/`](T0_instruments/F105_gate_dependence_lines/checks/f105_replay/) | candidate_replay.py replay (server, no model) on the repaired gate: the 69 pragma-free rewrites accepted in the 38 agent trials of E1-v6 (default_v4, the corrected table) whose final pass judged two or more directives, handed to today's pipeline at budget 0 in four parts — does the dependence stage, reading the profile at the profile's lines, refuse a directive? | valid | 0 |  |
 
+## [E3 — who writes the pragma: DiscoPoP from its analysis of the rewritten code, or the model in the same edit](E03_who_writes_the_pragmas/REPORT.md)
+
+Status: pre-flight
+
+| run | where | what it is | status | trials | outcomes |
+|---|---|---|---|---:|---|
+| `e3_pilot_s331` | not archived yet | E3 pilot, never counted: `tsvc_c3/s331` × 1, Haiku — the setup in which the model writes the pragma (`llm_pragmas_v5`, prompt version 5, arbitration off) beside DiscoPoP alone (`discopop_gate_v5`, no model); the loop the agent of the main comparison never won (0 of 5: four unchanged, one parallel and not faster), and the one class-R loop whose request shows a loop DiscoPoP already reports parallel | registered |  |  |
+| `e3_pilot_s341` | not archived yet | E3 pilot, never counted: `tsvc_c2/s341` × 1, Haiku — the setup in which the model writes the pragma (`llm_pragmas_v5`, prompt version 5, arbitration off) beside DiscoPoP alone (`discopop_gate_v5`, no model); a loop the agent of the main comparison won 4 times of 5 (one trial ended unchanged) | registered |  |  |
+| `e3_pilot_s321` | not archived yet | E3 pilot, never counted: `tsvc_c2/s321` × 1, Haiku — the setup in which the model writes the pragma (`llm_pragmas_v5`, prompt version 5, arbitration off) beside DiscoPoP alone (`discopop_gate_v5`, no model); a true recurrence, on which a plain pragma is wrong | registered |  |  |
+| `e3_pilot_pair` | not archived yet | E3 pilot, never counted: `tsvc_c2/s1213` and `tsvc_c2/s254` × 2, Haiku — BOTH setups in one run (`llm_pragmas_v5`: the model writes the pragma, arbitration off; `default_v5`: DiscoPoP writes it; prompt version 5) beside DiscoPoP alone (`discopop_gate_v5`, no model); two loops the agent of the main comparison wins 5 times of 5 — does the other setup lose them? — and `s254` is a loop of the 8 Oct finding, to read the corrected blocker note in a real request | registered |  |  |
+

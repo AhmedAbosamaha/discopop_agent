@@ -28,15 +28,23 @@ def _goal(llm_pragmas: bool, gate: GateFacts) -> str:
         if gate.stress:
             checks.append("gives the same result at every thread count and schedule")
         checks.append("reproduces the original program's results")
+        p1 = "P1" in gate.changes
         if gate.require_speedup:
             # D40: the words the twins and the model alone read (twin.SPEED_ONE_THREAD).
-            checks.append("runs faster than the original sequential program" if gate.judge_as_shipped
+            # P1 (version 5): the two comparisons the gate makes, as step 6 of the instructions
+            # states them — one clause naming only the second said "faster" where "not slower" decides.
+            checks.append(f"runs at least {gate.min_speedup:g}× faster than the same build pinned to "
+                          "one thread and no slower than the program as it stood before your rewrite"
+                          if gate.judge_as_shipped and p1 else
+                          "runs faster than the original sequential program" if gate.judge_as_shipped
                           else "runs faster than the same build on one thread")
+        # P1: the closing sentence is the model alone's truth, not the agent's — the rewrite is
+        # profiled again and the final pass may add a pragma (prompts.py, version 5).
         return ("restructured so that its iterations are independent, and ANNOTATED BY "
                 "YOU: every loop you make parallel carries its own `#pragma omp` with "
                 "explicit data-sharing clauses.  The result has to be code that "
                 + ", ".join(checks[:-1]) + ", and " + checks[-1]
-                + ".  Nothing re-profiles your rewrite, and nothing adds a pragma for you.")
+                + ("." if p1 else ".  Nothing re-profiles your rewrite, and nothing adds a pragma for you."))
     tail = "race-free under ThreadSanitizer and output-preserving"
     if gate.require_speedup:
         tail += ", and achieve measurable speedup"

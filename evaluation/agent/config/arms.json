@@ -123,7 +123,7 @@
       "ids": [
         "E3"
       ],
-      "description": "E3's (the model writes the pragmas, full re-profile) cell: the default plus --llm-pragmas. Fix 85's arbitration is active here (it needs --llm-pragmas and the speed check), as a consequence of the cell, not a second variable.",
+      "description": "E3's (the model writes the pragmas, full re-profile) cell: the default plus --llm-pragmas. Fix 85's arbitration is active here (it needs --llm-pragmas and the speed check), as a consequence of the cell, not a second variable. Never run: superseded for E3 by `llm_pragmas_v5` (9 Oct), which runs at prompt version 5 with the arbitration OFF — the two authorships in isolation, as `--pragma-arbitration`'s own help prescribes for E3.",
       "flags": [
         "--llm-pragmas",
         "--no-fast-refresh"
@@ -1290,6 +1290,70 @@
         "fast_refresh": false,
         "prompt_version": 4
       }
+    },
+    "default_v5": {
+      "ids": [
+        "E3-v6",
+        "E3-v6-floor"
+      ],
+      "description": "E3 (9 Oct, the author: \"ok go with your recommendation and continue\"): the agent with DiscoPoP writing the pragma — `default_v4` at prompt version 5 (9 Oct: a Do-All blocker's origin label said for what DiscoPoP's mark means, in the blocker note and in the instructions' legend, and no rule of thumb on a scalar's read-after-write — D13; and the instructions and task line of the mode in which the model writes the pragma say what the pipeline does — P1). This arm reads D13's three sentences; P1's are in the other mode's texts, which it does not read. Otherwise exactly `default_v4`.",
+      "flags": [
+        "--prompt-version",
+        "5"
+      ],
+      "settings": {
+        "budget": 3,
+        "llm_pragmas": false,
+        "require_speedup": true,
+        "hotspots": true,
+        "fast_refresh": false,
+        "restructure_depth": 0,
+        "pragma_arbitration": false,
+        "prompt_version": 5
+      }
+    },
+    "llm_pragmas_v5": {
+      "ids": [
+        "E3-v6"
+      ],
+      "description": "E3: the model writes the pragma — `default_v5` plus --llm-pragmas, at prompt version 5 (9 Oct: a Do-All blocker's origin label said for what DiscoPoP's mark means, in the blocker note and in the instructions' legend, and no rule of thumb on a scalar's read-after-write — D13; and the instructions and task line of the mode in which the model writes the pragma say what the pipeline does — P1). As built, and as its texts now say: a rewrite that carries the model's pragma is kept on the gate's verdict (clause check, compile, ThreadSanitizer, schedules, output, speed) and the program is profiled again; a rewrite without a pragma is judged as in `default_v5`; at the end DiscoPoP adds its own pragma, through the gate, to a loop it finds parallel that carries none. Fix 85's arbitration is OFF (--no-pragma-arbitration): where the model has annotated a loop DiscoPoP already reports parallel, the model's pragma stands if the gate passes it and DiscoPoP's is not timed against it — so DiscoPoP never replaces a pragma, the texts are true as written, and the two arms of E3 differ in `llm_pragmas` alone (record §6, 9 Oct, \"Decision (author), E3 texts\").",
+      "flags": [
+        "--llm-pragmas",
+        "--no-pragma-arbitration",
+        "--prompt-version",
+        "5"
+      ],
+      "settings": {
+        "budget": 3,
+        "llm_pragmas": true,
+        "require_speedup": true,
+        "hotspots": true,
+        "fast_refresh": false,
+        "restructure_depth": 0,
+        "pragma_arbitration": false,
+        "prompt_version": 5
+      }
+    },
+    "discopop_gate_v5": {
+      "ids": [
+        "E3-v6-floor"
+      ],
+      "description": "E3: DiscoPoP alone (budget 0: no model is called, so the prompt version is inert) beside `default_v5` — the two differ in the budget only. Run again on E3's cells so that the three-way table of E3 is measured on the DiscoPoP its two agent arms run on.",
+      "flags": [
+        "--budget",
+        "0",
+        "--prompt-version",
+        "5"
+      ],
+      "settings": {
+        "budget": 0,
+        "llm_pragmas": false,
+        "require_speedup": true,
+        "hotspots": true,
+        "fast_refresh": false,
+        "restructure_depth": 0,
+        "prompt_version": 5
+      }
     }
   },
   "common_timing_size": "per_kernel",
@@ -1337,7 +1401,7 @@
       "consequences": [
         "pragma_arbitration"
       ],
-      "why": "Pragma author x profile refresh 2x2 (H6). Arbitration follows --llm-pragmas (D28)."
+      "why": "Pragma author x profile refresh 2x2 (H6). Arbitration follows --llm-pragmas (D28). Never run: superseded on 9 Oct by `E3-v6` (the author split the fast refresh off into E4)."
     },
     "E4": {
       "arms": [
@@ -1936,6 +2000,28 @@
       ],
       "consequences": [],
       "why": "E2-v6b: what two more attempts with feedback add when no evidence is in the request, on the fixed DiscoPoP."
+    },
+    "E3-v6": {
+      "arms": [
+        "default_v5",
+        "llm_pragmas_v5"
+      ],
+      "variable": [
+        "llm_pragmas"
+      ],
+      "consequences": [],
+      "why": "E3 as the author decided it on 9 Oct (\"I think we need first to run the experiment of who writes the pragmas the agent or discopop\"): who writes the pragma, alone — DiscoPoP from its analysis of the rewritten code, or the model in the same edit. A full re-profile in both; the fast refresh is E4. Arbitration off in both, so nothing follows the variable. Supersedes the 2x2 of `E3`, which never ran."
+    },
+    "E3-v6-floor": {
+      "arms": [
+        "discopop_gate_v5",
+        "default_v5"
+      ],
+      "variable": [
+        "budget"
+      ],
+      "consequences": [],
+      "why": "E3's reference: DiscoPoP alone on the same cells (budget 0 means no model is called), everything else identical to the arm in which DiscoPoP writes the pragma."
     }
   }
 }

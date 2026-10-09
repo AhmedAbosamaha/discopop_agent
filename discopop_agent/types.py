@@ -82,6 +82,9 @@ class GateFacts:
     # the default, and version 1 — builds every text exactly as the arms registered before the
     # review (28 Sep 2026) read it; config/prompt_manifest.json proves that.
     changes: Tuple[str, ...] = ()
+    # P1 (prompt version 5): the ratio the parallel build has to reach against itself on one
+    # thread (`--min-measured-speedup`), so the text that names it names the configured value.
+    min_speedup: float = 1.1
 
 
 @dataclass

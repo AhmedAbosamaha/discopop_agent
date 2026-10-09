@@ -68,6 +68,7 @@ Earlier versions (history):
 | [`history/pilots/`](history/pilots/REPORT.md) | Pilots (before the campaign's design was fixed) | done |
 | [`history/harness_checks/`](history/harness_checks/REPORT.md) | Harness and pipeline checks (not experiments) | done |
 | [`logs/`](logs/) | Logs | done |
+| [`E03_who_writes_the_pragmas/`](E03_who_writes_the_pragmas/REPORT.md) | E3 — who writes the pragma: DiscoPoP from its analysis of the rewritten code, or the model in the same edit | pre-flight |
 
 `history/` holds every folder a later experiment replaced, and the first pilots and harness checks (moved there on 5 Oct 2026; a path `results/E0…` in an older entry of the experiment record now starts `results/history/`). Nothing in `history/` is cited as a result.
 

@@ -261,6 +261,12 @@ def run(args: AgentArguments) -> int:
     print(f"  Depth          : {args.restructure_depth}\n")
 
     gate = _gate_facts(args)
+    if args.llm_pragmas and "P1" in gate.changes:
+        # Version 5 corrected the AGENT's model-writes texts (P1, 9 Oct 2026).  The twin's derive from
+        # the blocks that stayed as they are, and nobody revised them for it (E3 runs no twin): refused
+        # rather than sent with one half revised and the other not.
+        raise SystemExit("the twin has no model-writes texts at prompt version 5: version 5 revised the "
+                         "agent's (P1) and left the twin's unread — use --prompt-version 4, or revise them")
     system = _system(gate, args.evidence_sections, args.llm_pragmas)
     impact = _impact(args, dp_dir)
     ext = Path(args.source_file).suffix

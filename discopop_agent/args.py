@@ -119,7 +119,8 @@ def gate_facts(args: Any, as_shipped: bool = True) -> "GateFacts":
                      protected=tuple(getattr(args, "protected_lines", ()) or ()),
                      protected_note=getattr(args, "protected_note", "") or "",
                      judge_as_shipped=bool(getattr(args, "judge_as_shipped", False)) if as_shipped else False,
-                     changes=PROMPT_VERSIONS[int(getattr(args, "prompt_version", 1) or 1)])
+                     changes=PROMPT_VERSIONS[int(getattr(args, "prompt_version", 1) or 1)],
+                     min_speedup=float(getattr(args, "min_measured_speedup", 1.1) or 1.1))
 
 
 def parse_args() -> AgentArguments:
@@ -441,14 +442,17 @@ def parse_args() -> AgentArguments:
                          "duplicates it — as stage `harness`, whose retry is not charged."))
     p.add_argument("--protected-note", default="", metavar="TEXT",
                    help="What the models are told about the protected lines, after listing them.")
-    p.add_argument("--prompt-version", type=int, choices=(1, 2, 3, 4), default=1,
+    p.add_argument("--prompt-version", type=int, choices=(1, 2, 3, 4, 5), default=1,
                    help=("Which texts the model reads (llm/prompts.PROMPT_VERSIONS). 1 (default): as "
                          "every arm registered before the prompt review of 28 Sep 2026 read them. 2: "
                          "the review's must-changes (dependence direction with verbs, blockers without "
                          "'must be removed', no generic array note, in-region RAW only, what a RAW means, "
                          "'a dependence is moved, not deleted'). 3: plus the order a carried RAW imposes "
                          "on a split. 4: the same sentences, with each flow's carrier read from the "
-                         "profile's call-path states and every dependence read by its own type."))
+                         "profile's call-path states and every dependence read by its own type. 5: a "
+                         "blocker's origin label said for what DiscoPoP's mark means, no rule of thumb "
+                         "on scalars, and — with --llm-pragmas — what the pipeline does with a rewrite "
+                         "and its pragmas."))
     p.add_argument("--prompt-omit", default="", metavar="PARTS",
                    help=("Comma list of prompt parts to LEAVE OUT, to measure what each "
                          "contributes (E2 Part D): contract, gate (how the rewrite is "

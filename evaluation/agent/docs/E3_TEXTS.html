@@ -23,46 +23,92 @@ details { background:var(--card); border:1px solid var(--line); padding:10px 14p
 summary { cursor:pointer; font-weight:600; }
 ul { margin:0; padding-left:1.2em; max-width:70ch; }
 li { margin:4px 0; }
+.chg { color:var(--warn); font-weight:600; font-family:inherit; }
+td q { display:block; }
 </style>
 <main>
 <h1>The texts the model reads in the next experiment</h1>
-<p class="lead">9 Oct 2026 · for the author's approval · no model has read any of the proposed wording. The experiment (E3) compares two setups of the same agent: DiscoPoP writes the pragmas (as now), or the model writes them.</p>
+<p class="lead">9 Oct 2026 · the wording as built, after your go ("ok go with your recommendation and continue") · no model has read it yet; a small pilot reads it first. The experiment (E3) compares two setups of the same agent: DiscoPoP writes the pragmas (as now), or the model writes them.</p>
 
-<h2>1 · Three sentences about what DiscoPoP "observed" (both setups)</h2>
-<p>DiscoPoP marks a dependence as observed only when its record carries run-time call information. For a single variable it often writes the record without it, although the dependence did occur. The agent turned the missing mark into "not observed". In the main comparison the model then read both statements in one request. On <code>s254</code>:</p>
-<pre>### Runtime data dependences in the target region (observed)
-  RAW — read-after-write:
+<div class="note"><p><strong>What differs from the page you approved — three things, all in section 2 and 3.</strong></p>
+<ul>
+<li><strong>The last line of the task</strong> names both timings instead of one, so that it agrees with the instructions.</li>
+<li><strong>One behaviour is switched off in the setup where the model writes the pragmas:</strong> the timing of DiscoPoP's pragma against the model's on the same loop. The earlier page described it as staying on.</li>
+<li><strong>One passage is now shown in full</strong> that the earlier page only mentioned (section 3). It is not changed.</li>
+</ul>
+<p>Everything else is built exactly as you saw it.</p></div>
+
+<h2>1 · Three sentences about what DiscoPoP "observed" (both setups) — built as shown</h2>
+<p>DiscoPoP marks a dependence as observed only when its record carries run-time call information. For a single variable it often writes the record without it, although the dependence did occur. The agent turned the missing mark into "not observed".</p>
+<div class="tw"><table><thead><tr><th>As it was (versions 2 to 4)</th><th>What is true</th><th>As built (version 5)</th></tr></thead><tbody>
+<tr><td><q>static: not observed on the profiling input, and DiscoPoP could not rule it out from the code — a scalar every iteration writes before reading is removed by declaring it inside the loop body</q></td><td>The note on a blocker without the mark. On seven loops of the main comparison the variable carries a value from one pass to the next, and its dependence was observed.</td><td><q>static: DiscoPoP did not mark it as observed. For a scalar that does not mean it did not occur on the profiling input — the dependence list, when it is shown, has what was observed. A scalar every iteration writes before reading is removed by declaring it inside the loop body</q></td></tr>
+<tr><td><q>DiscoPoP&#x27;s own Do-All blockers with their origin (static = a dependence it could not rule out, dynamic = one it actually observed)</q></td><td>The line of the instructions that explains the two labels. It supported the same wrong reading.</td><td><q>DiscoPoP&#x27;s own Do-All blockers with their origin (dynamic = marked as observed at run time; static = not marked, which for a scalar does not mean it did not occur)</q></td></tr>
+<tr><td><q>RAW on SCALARS: x — usually a reused location or an accumulator, not a value travelling between iterations.</q></td><td>A rule of thumb, not a fact about the loop. On the same seven loops the variable <em>is</em> a value travelling between iterations.</td><td><q>RAW on SCALARS: x.</q></td></tr>
+</tbody></table></div>
+<p>In context, on the loop <code>s254</code>. What the model read in the main comparison:</p>
+<pre>### Evidence digest
+  - RAW on SCALARS: x — usually a reused location or an accumulator, not a value travelling
+    between iterations.
+...
+### Runtime data dependences in the target region (observed)
+  RAW — read-after-write (a value written by one access and read by a later one):
     `x` [scalar]: line 7 writes → line 9 reads; line 10 writes → line 9 reads
 ...
 ### Why DiscoPoP could not parallelize (Do-All blockers)
   - RAW on `x`  loop-carried (loop at line 8)  [static: not observed on the profiling input, and
     DiscoPoP could not rule it out from the code — a scalar every iteration writes before reading
     is removed by declaring it inside the loop body]</pre>
-<div class="tw"><table><thead><tr><th>As it is (versions 2 to 4)</th><th>What is true</th><th>Proposed</th></tr></thead><tbody>
-<tr><td><q>static: not observed on the profiling input, and DiscoPoP could not rule it out from the code — a scalar every iteration writes before reading is removed by declaring it inside the loop body</q></td><td>The note on a blocker without the mark. On seven loops of the main comparison (178 lines) the variable is one that carries a value from one pass to the next, and its dependence was observed.</td><td><q>static: DiscoPoP did not mark it as observed. For a scalar that does not mean it did not occur on the profiling input — the dependence list, when it is shown, has what was observed. A scalar every iteration writes before reading is removed by declaring it inside the loop body</q></td></tr>
-<tr><td><q>DiscoPoP&#x27;s own Do-All blockers with their origin (static = a dependence it could not rule out, dynamic = one it actually observed)</q></td><td>The line of the instructions that explains the two labels. It supports the same wrong reading.</td><td><q>DiscoPoP&#x27;s own Do-All blockers with their origin (dynamic = marked as observed at run time; static = not marked, which for a scalar does not mean it did not occur)</q></td></tr>
-<tr><td><q>RAW on SCALARS: x — usually a reused location or an accumulator, not a value travelling between iterations.</q></td><td>A rule of thumb, not a fact about the loop. On the same seven loops the variable <em>is</em> a value travelling between iterations. Not part of the finding of 8 Oct; I recommend removing it with the other two.</td><td><q>RAW on SCALARS: x.</q></td></tr>
-</tbody></table></div>
-<p>The last clause of the first sentence ("a scalar every iteration writes before reading …") is kept: it is true as a general statement, and the notes for observed dependences name a remedy in the same way. Say so if you want it out.</p>
+<p>The same request with the three sentences as built (the real request of this loop comes with the pilot):</p>
+<pre>### Evidence digest
+  - RAW on SCALARS: x.
+...
+### Runtime data dependences in the target region (observed)
+  RAW — read-after-write (a value written by one access and read by a later one):
+    `x` [scalar]: line 7 writes → line 9 reads; line 10 writes → line 9 reads
+...
+### Why DiscoPoP could not parallelize (Do-All blockers)
+  - RAW on `x`  loop-carried (loop at line 8)  [static: DiscoPoP did not mark it as observed. For
+    a scalar that does not mean it did not occur on the profiling input — the dependence list,
+    when it is shown, has what was observed. A scalar every iteration writes before reading is
+    removed by declaring it inside the loop body]</pre>
 
-<h2>2 · The setup where the model writes the pragmas: its instructions say things the pipeline does not do</h2>
-<p>These instructions were written in August and September and have not been shown to you at the current version. Read against the code today:</p>
+<h2>2 · The setup where the model writes the pragmas — the instructions now say what the agent does</h2>
+<p>What the agent does in this setup, read from the code:</p>
 <ul>
 <li>A rewrite that carries the model's pragma is kept or reverted by our checks alone (clauses, compile, race detector, schedules, output, speed).</li>
-<li>The program <strong>is</strong> profiled again after every kept rewrite. DiscoPoP's verdict then no longer decides, but its profile is used for everything that follows.</li>
-<li>A rewrite <strong>without</strong> a pragma is still accepted the old way: DiscoPoP has to find a parallel pattern in it, and then <strong>DiscoPoP adds the pragma</strong> at the end.</li>
-<li>At the end DiscoPoP's final pass adds its own pragma to <strong>any</strong> loop it finds parallel that carries none — also in code the model rewrote. Where both wrote a pragma for one loop, both are timed and the faster is kept.</li>
+<li>The program <strong>is</strong> profiled again after every kept rewrite.</li>
+<li>A rewrite <strong>without</strong> a pragma is judged the old way: DiscoPoP has to find a parallel pattern in it, and then DiscoPoP adds the pragma.</li>
+<li>At the end DiscoPoP's final pass adds its own pragma to any loop it finds parallel that carries none — also in code the model rewrote.</li>
+<li>At the very end the finished program is compared with what DiscoPoP alone produces, and the faster of the two is kept. This holds in both setups.</li>
 </ul>
-<div class="tw"><table><thead><tr><th>The instructions say</th><th>The pipeline does</th><th>Proposed, if the pipeline stays as it is</th></tr></thead><tbody>
-<tr><td><q>Nothing downstream adds a pragma to the code you rewrite — a loop you leave unannotated stays sequential, and a rewrite with no pragma in it has parallelized nothing.</q></td><td>Not true: DiscoPoP's final pass adds pragmas to loops it finds parallel, and a rewrite without a pragma can be kept and annotated by DiscoPoP.</td><td><q>After a rewrite is kept, DiscoPoP profiles the program again. At the end it adds its own pragma, through the same checks, to a loop it finds parallel that carries none.</q></td></tr>
-<tr><td><q>Annotate what you parallelize: a rewrite with no `#pragma omp` in it is still a sequential program, however independent its iterations are.</q></td><td>Half true: it is sequential at that moment, but DiscoPoP may annotate it later.</td><td><q>Annotate what you parallelize. A rewrite without a `#pragma omp` is judged differently: it is kept only if DiscoPoP, run on it again, finds a parallel pattern in the lines you changed.</q></td></tr>
+<div class="tw"><table><thead><tr><th>As it was</th><th>What the agent does</th><th>As built (version 5)</th></tr></thead><tbody>
+<tr><td><q>Nothing downstream adds a pragma to the code you rewrite — a loop you leave unannotated stays sequential, and a rewrite with no pragma in it has parallelized nothing.</q></td><td>DiscoPoP's final pass adds pragmas to loops it finds parallel, and a rewrite without a pragma can be kept and annotated by DiscoPoP.</td><td><q>After a rewrite is kept, DiscoPoP profiles the program again. At the end it adds its own pragma, through the same checks, to a loop it finds parallel that carries none.</q></td></tr>
+<tr><td><q>Annotate what you parallelize: a rewrite with no `#pragma omp` in it is still a sequential program, however independent its iterations are.</q></td><td>Sequential at that moment, but DiscoPoP may annotate it later.</td><td><q>Annotate what you parallelize. A rewrite without a `#pragma omp` is judged differently: it is kept only if DiscoPoP, run on it again, finds a parallel pattern in the lines you changed.</q></td></tr>
 <tr><td><q>that same build is timed against itself pinned to one thread and against the original sequential program, and has to be faster than both</q></td><td>The second timing is against the program as it stood before this rewrite, not the original; the first has to reach 1.1×, the second must not be slower.</td><td><q>that same build is timed against itself pinned to one thread and has to be at least 1.1× faster; and against the program as it stood before your rewrite, which it must not be slower than</q></td></tr>
-<tr><td><q>Nothing here re-profiles your code: this list is the whole judgement, and a pragma you did not write is a loop that was never parallelized.</q></td><td>Not true on all three counts: the code is profiled again; the finished program is checked once more as a whole; DiscoPoP may add a pragma.</td><td><q>(sentence removed)</q></td></tr>
-<tr><td><q>Nothing re-profiles your rewrite, and nothing adds a pragma for you.</q></td><td>The last sentence of the task. Not true, as above.</td><td><q>(sentence removed; the words before it, &#x27;runs faster than the original sequential program&#x27;, become &#x27;… than the program as it stood before your rewrite&#x27;)</q></td></tr>
+<tr><td><q>Nothing here re-profiles your code: this list is the whole judgement, and a pragma you did not write is a loop that was never parallelized.</q></td><td>The code is profiled again; the finished program is checked once more as a whole; DiscoPoP may add a pragma.</td><td><q>(sentence removed)</q></td></tr>
+<tr><td><q>… and runs faster than the original sequential program. Nothing re-profiles your rewrite, and nothing adds a pragma for you.</q></td><td>The end of the task line. The last sentence is not true, as above.</td><td><span class="chg">Differs from what you approved — see the box.</span> <q>… and runs at least 1.1× faster than the same build pinned to one thread and no slower than the program as it stood before your rewrite.</q></td></tr>
 </tbody></table></div>
-<div class="note"><p><strong>The choice behind the wording.</strong> As built, this setup is not "only the model writes": it is "the model may write, and DiscoPoP adds what it can". Either the text is corrected to say so (recommended: nothing in the agent changes, the read-out reports for every pragma who wrote it), or the agent is changed so that the text becomes true — DiscoPoP's final pass leaves rewritten code alone and a rewrite without a pragma is not kept. The second gives a clean either-or comparison, at the price of a new, untested path in the agent and a pilot of its own.</p></div>
+<div class="note">
+<p><strong>The last line of the task.</strong> The earlier page proposed "runs faster than the program as it stood before your rewrite". The check behind it keeps a rewrite that is <em>not slower</em>. "Faster" in the task and "must not be slower" in the instructions would have contradicted each other inside one request, so both now state the same two timings.</p>
+<p style="margin-top:10px"><strong>Two pragmas for one loop.</strong> By default, when the model puts a pragma on a loop that DiscoPoP already reports as parallel, the agent builds DiscoPoP's pragma too, times the two and keeps the faster. I switched this off for this setup, for two reasons: with it on, DiscoPoP can also <em>replace</em> a pragma, which the corrected sentence ("adds its own pragma … to a loop … that carries none") does not say; and with it off the two setups differ in exactly one switch. It can matter on 4 of the 25 loops (<code>s000</code>, <code>s313</code>, <code>vpvtv</code>, <code>s331</code>), and only if the model annotates such a loop although the request tells it not to (section 3).</p>
+<p style="margin-top:10px"><strong>The case for leaving it on:</strong> it is how this mode runs by default, so "on" tests the mode exactly as it ships. If you prefer that, say so: I turn it back on, add one sentence to the instructions that says so, and repeat the pilot trials of this setup.</p>
+</div>
 
-<h2>3 · The full texts as they are today (version 4)</h2>
+<h2>3 · One passage shown in full — not changed</h2>
+<p>It appears only in a request for a region that contains a loop DiscoPoP already reports as parallel. In the main comparison that was the case on 4 of the 25 loops (8 of the 105 trials). When the model writes the pragmas:</p>
+<pre>### Already parallel according to DiscoPoP (inside this region)
+  - loop at line 137: Do-All
+  These loops need no restructuring and DiscoPoP annotates them itself, after you are done.  Do
+  NOT put a pragma on them: write pragmas only for loops you restructure or create.  What is
+  asked of you is whatever stops a loop OUTSIDE them from running in parallel; if nothing can be
+  done there, say so — leaving these loops to DiscoPoP is a valid answer.</pre>
+<p>When DiscoPoP writes them (the agent of the main comparison read this):</p>
+<pre>### Already parallel according to DiscoPoP (inside this region)
+  - loop at line 137: Do-All
+  These loops need no restructuring and DiscoPoP annotates them itself.  What is asked of you is
+  whatever stops a loop OUTSIDE them from running in parallel.</pre>
+
+<h2>4 · The full texts as built (version 5)</h2>
 <details><summary>Instructions when the model writes the pragmas</summary><pre>You are the restructuring and annotation stage of DiscoPoP, a profiler that
 finds OpenMP parallelism in C/C++ programs.
 
@@ -76,9 +122,9 @@ parallel carries its own `#pragma omp`, with its data-sharing clauses
 spelled out.
 
 You have succeeded when the annotated code compiles, runs race-free and
-reproduces the original program&#x27;s results, and is measurably faster than the original sequential program.  Nothing downstream adds
-a pragma to the code you rewrite — a loop you leave unannotated stays
-sequential, and a rewrite with no pragma in it has parallelized nothing.
+reproduces the original program&#x27;s results, and is measurably faster than the original sequential program.  After a rewrite is kept,
+DiscoPoP profiles the program again.  At the end it adds its own pragma,
+through the same checks, to a loop it finds parallel that carries none.
 
 ------------------------------------------------------------------
 WHAT WE GIVE YOU
@@ -87,11 +133,11 @@ Every request carries the region&#x27;s source and, from the profile: the
 dependences observed at run time (RAW / WAR / WAW, grouped per variable,
 each pair given as the earlier access → the later one), the index
 expressions each array is written and read with, DiscoPoP&#x27;s own Do-All
-blockers with their origin (static = a dependence it could not rule out,
-dynamic = one it actually observed), the loop nest with induction
-variables and iterations per activation, the loops inside the region
-DiscoPoP already reports as parallel, any calls in the region — and, after
-a failed attempt, which check failed and why.
+blockers with their origin (dynamic = marked as observed at run time;
+static = not marked, which for a scalar does not mean it did not occur),
+the loop nest with induction variables and iterations per activation, the
+loops inside the region DiscoPoP already reports as parallel, any calls in
+the region — and, after a failed attempt, which check failed and why.
 
 Work from that evidence rather than from what the algorithm is called.
 Three things in it are easy to misread.  A RAW carried by a loop is a
@@ -122,8 +168,9 @@ THE CONTRACT
     computes anything.  A one-dimensional `T buf[N]` is fine.
   - Do not rename the function or change its signature, and do not touch
     I/O or its formatting.
-  - Annotate what you parallelize: a rewrite with no `#pragma omp` in it is
-    still a sequential program, however independent its iterations are.
+  - Annotate what you parallelize.  A rewrite without a `#pragma omp` is
+    judged differently: it is kept only if DiscoPoP, run on it again, finds
+    a parallel pattern in the lines you changed.
   - Say what every variable does.  `reduction(op:var)` for an accumulator,
     `private` for per-iteration scratch declared OUTSIDE the loop,
     `firstprivate` for a value read in and not needed after.  Two rules
@@ -159,15 +206,14 @@ HOW YOUR REWRITE IS CHECKED
   5. its output is compared with the original program&#x27;s — floating-point
      values may differ only by the rounding that reordering additions
      legitimately causes; labels, counts and integers must match exactly
-  6. that same build is timed against itself pinned to one thread and
-     against the original sequential program, and has to be faster
-     than both
+  6. that same build is timed against itself pinned to one thread and has to
+     be at least 1.1× faster; and against the program as it stood
+     before your rewrite, which it must not be slower than
 
 Steps 3-6 run your loops with iterations overlapping in arbitrary order.  A
 loop you marked parallel has to give the same result whatever order its
 iterations run in — reproducing the output in serial proves nothing about
-that.  Nothing here re-profiles your code: this list is the whole judgement,
-and a pragma you did not write is a loop that was never parallelized.
+that.
 
 Step 6 also decides granularity: each ACTIVATION of a loop is a separate
 parallel region, so it is the iterations per activation, not the total
@@ -208,7 +254,7 @@ have no compiler here, so re-read anything you are unsure of.  If you
 edited this file on an earlier turn those edits are still there: build on
 them or replace them, but never restore the original code.
 </pre></details>
-<details><summary>Instructions when DiscoPoP writes the pragmas (the agent of the main comparison)</summary><pre>You are the restructuring stage of DiscoPoP, a profiler that finds OpenMP
+<details><summary>Instructions when DiscoPoP writes the pragmas</summary><pre>You are the restructuring stage of DiscoPoP, a profiler that finds OpenMP
 parallelism in C/C++ programs.
 
 ------------------------------------------------------------------
@@ -231,11 +277,11 @@ Every request carries the region&#x27;s source and, from the profile: the
 dependences observed at run time (RAW / WAR / WAW, grouped per variable,
 each pair given as the earlier access → the later one), the index
 expressions each array is written and read with, DiscoPoP&#x27;s own Do-All
-blockers with their origin (static = a dependence it could not rule out,
-dynamic = one it actually observed), the loop nest with induction
-variables and iterations per activation, the loops inside the region
-DiscoPoP already reports as parallel, any calls in the region — and, after
-a failed attempt, which check failed and why.
+blockers with their origin (dynamic = marked as observed at run time;
+static = not marked, which for a scalar does not mean it did not occur),
+the loop nest with induction variables and iterations per activation, the
+loops inside the region DiscoPoP already reports as parallel, any calls in
+the region — and, after a failed attempt, which check failed and why.
 
 Work from that evidence rather than from what the algorithm is called.
 Three things in it are easy to misread.  A RAW carried by a loop is a
@@ -394,7 +440,7 @@ DiscoPoP found no applicable parallelism pattern for this region
   - Line 6 (`a[i] = b[i-1]+c[i];`) reads an element of `b` that line 7 (`b[i] = a[i+1]*d[i];`) writes; DiscoPoP names the loop at line 5 as carrying this dependence.  The value must flow from line 7 to line 6: if you split that loop, the loop holding line 7 has to run completely before the loop holding line 6; reading `b`&#x27;s values from before the loop would change the result.
 
 ### Task
-Edit `/workspace/s1213.c`: the loop (lines 5–8) inside `kernel_s1213` is to be restructured so that its iterations are independent, and ANNOTATED BY YOU: every loop you make parallel carries its own `#pragma omp` with explicit data-sharing clauses.  The result has to be code that compiles, is race-free under ThreadSanitizer, gives the same result at every thread count and schedule, reproduces the original program&#x27;s results, and runs faster than the original sequential program.  Nothing re-profiles your rewrite, and nothing adds a pragma for you.
+Edit `/workspace/s1213.c`: the loop (lines 5–8) inside `kernel_s1213` is to be restructured so that its iterations are independent, and ANNOTATED BY YOU: every loop you make parallel carries its own `#pragma omp` with explicit data-sharing clauses.  The result has to be code that compiles, is race-free under ThreadSanitizer, gives the same result at every thread count and schedule, reproduces the original program&#x27;s results, and runs at least 1.1× faster than the same build pinned to one thread and no slower than the program as it stood before your rewrite.
 
 Worth settling before you write:
   - Which dependence is actually blocking this, and is it a value moving
@@ -404,5 +450,82 @@ Worth settling before you write:
   - Re-derive any bound the old execution order made safe.
 
 &gt;&gt;&gt; Read the file, give the short plan, then APPLY the rewrite with the Edit tool. Do not print a diff or the rewritten code — the file&#x27;s content is what is used. Keep the function&#x27;s name and signature.</pre></details>
-<p class="lead">In a request, two passages differ between the setups: the task line at the end, and — where DiscoPoP already reports loops inside the region as parallel — a note that DiscoPoP annotates those itself and the model must not.</p>
+<details><summary>The same request when DiscoPoP writes the pragmas</summary><pre>## File to edit: /workspace/s1213.c
+## This file is `s1213.c` of a multi-file program.  The directory it sits in is a copy of the whole program — read its headers and the other units (main.c) for context.  Only your changes to `s1213.c` are used; an edit to any other file is discarded.
+## Function containing the target region: kernel_s1213  (lines 3–10)
+## Target region: loop 1:2 at lines 5–8
+
+### Evidence digest (details in the sections below)
+  - RAW on array elements within these lines: a, b.
+  - Values that cross the region&#x27;s edge only — written outside and read here: c, d.
+  - `a` is written as [i] and read as [i+1].
+  - `b` is written as [i] and read as [i-1].
+  - Loop lines 5–8 (index: i): 48 activation(s) × ~31998 iterations.
+
+### The function as it currently stands in the file (excerpt — read the file itself before editing; line numbers here are the file&#x27;s own):
+```cpp
+real_t kernel_s1213(void)
+{
+    for (int i = 1; i &lt; LEN_1D-1; i++) {
+        a[i] = b[i-1]+c[i];
+        b[i] = a[i+1]*d[i];
+    }
+    return (real_t)0;
+}
+```
+
+### Array accesses in the region (index expressions, read from the source)
+  a:  written as [i]  |  read as [i+1]
+  b:  written as [i]  |  read as [i-1]
+  c:  written as —  |  read as [i]   (read-only here: never a source of a dependence)
+  d:  written as —  |  read as [i]   (read-only here: never a source of a dependence)
+  A loop whose index appears identically in every subscript that touches an array visits a different element on each of its iterations, so THAT loop does not carry a dependence through the array.  A dependence is carried by the loop whose index differs between a write and a read (`a[i]` written, `a[i-1]` read).
+
+### Runtime data dependences in the target region (observed)
+(grouped per variable, each tagged [array element] or [scalar]; each pair is the earlier access → the later one)
+  RAW — read-after-write (a value written by one access and read by a later one):
+    `b` [array element]: line 7 writes → line 6 reads  (+1 read outside the region)
+        line 6: `a[i] = b[i-1]+c[i];`
+        line 7: `b[i] = a[i+1]*d[i];`
+    `a` [array element]: line 6 writes → line 7 reads  (+1 read outside the region)  (+1 written outside the region and read here)
+
+  WAR — write-after-read:
+    `b` [array element]: line 6 reads → line 7 overwrites
+    `a` [array element]: line 7 reads → line 6 overwrites
+
+  WAW — write-after-write:
+    `b` [array element]: line 7 writes → line 7 overwrites
+    `a` [array element]: line 6 writes → line 6 overwrites
+
+  (Not listed: dependences on the induction variable(s) i — they are never what blocks a loop; see &#x27;Loop structure&#x27; for which of them a pragma has to privatise.)
+
+### Loop structure (nesting, induction variables, observed iterations)
+  - loop at lines 5–8  induction variable(s): i  |  48 activation(s) × ~31998 iterations = 1,535,904 total (max 31998)  &lt;-- enough work per activation to be worth it
+  (Marked against ~1000 iterations per activation — below that, thread startup costs more than the loop saves.)
+
+### Why DiscoPoP could not parallelize (Do-All blockers)
+DiscoPoP&#x27;s Do-All check stopped at these.  Each names the variable and the loop it blocks; the line pairs are in the dependence list, when it is shown.
+  - RAW on `a`  loop-carried (loop at line 5)  [observed: an iteration of this loop read a value an earlier iteration wrote — that value must keep reaching its reader, so the dependence can be moved out of the loop you make parallel, not deleted]
+
+### Why this region is here
+DiscoPoP found no applicable parallelism pattern for this region
+
+### What the observed flow means for a rewrite (from DiscoPoP&#x27;s records)
+  - Line 6 (`a[i] = b[i-1]+c[i];`) reads an element of `b` that line 7 (`b[i] = a[i+1]*d[i];`) writes; DiscoPoP names the loop at line 5 as carrying this dependence.  The value must flow from line 7 to line 6: if you split that loop, the loop holding line 7 has to run completely before the loop holding line 6; reading `b`&#x27;s values from before the loop would change the result.
+
+### Task
+Edit `/workspace/s1213.c`: the loop (lines 5–8) inside `kernel_s1213` is to be restructured so that, after re-profiling, DiscoPoP detects a genuinely parallel pattern (Do-All, Reduction, Pipeline, or Task-Parallel) in the lines you changed.  The pragma it then inserts must compile cleanly, be race-free under ThreadSanitizer and output-preserving, and achieve measurable speedup.  Do not write `#pragma omp` yourself.
+
+Worth settling before you write:
+  - Which dependence is actually blocking this, and is it a value moving
+    between iterations or just a location being reused?
+  - Does the loop you are making parallel have enough work per activation
+    to be worth it?  The loop structure above says which do.
+  - Re-derive any bound the old execution order made safe.
+
+&gt;&gt;&gt; Read the file, give the short plan, then APPLY the rewrite with the Edit tool. Do not print a diff or the rewritten code — the file&#x27;s content is what is used. Keep the function&#x27;s name and signature.</pre></details>
+<p class="lead">Between the two setups a request differs in the task line at its end, and in the passage of section 3 where it appears. Nothing else.</p>
+
+<h2>5 · What reads these texts first</h2>
+<p>A pilot of 11 trials with the small model (Haiku), about $7, in four runs side by side: the setup where the model writes the pragmas once each on <code>s331</code> and <code>s341</code> (the two loops the agent does not yet win reliably) and on <code>s321</code> (a loop on which a plain pragma is wrong); and <strong>both</strong> setups twice on <code>s1213</code> and <code>s254</code> (two loops the agent wins; <code>s254</code> shows the corrected note in a real request). It shows whether the setup runs end to end, whether the model does write pragmas, what the checks do with them, and what a trial costs. Its trials are never counted. The 210 trials of the experiment wait for your go.</p>
 </main>
