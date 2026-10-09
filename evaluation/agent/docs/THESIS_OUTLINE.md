@@ -39,7 +39,7 @@ proposed here and is to be confirmed with the title.
 | RQ | Question | Claim | Hypotheses | Experiments | Section | Status |
 |---|---|---|---|---|---|---|
 | RQ1 | Does restructuring parallelize loops DiscoPoP alone cannot? | C1 | H1, H11 | E1, E11 | 7.2, 7.9 | done on kernels |
-| RQ2 | Is every accepted change right and race-free, what does each check catch, and where are the checks blind? | C2 | H2, H3, H10, H10b, H13 | E1, E10, E7 | 7.2, 7.6 | E1, E10 done · E7 designed 9 Oct |
+| RQ2 | Is every accepted change right and race-free, what does each check catch, and where are the checks blind? | C2 | H2, H3, H10, H10b, H13 | E1, E10, E7 | 7.2, 7.6 | E1, E10 done · E7 designed 9 Oct and set aside by the author the same day (not run) |
 | RQ3 | How close do the accepted programs come to an expert's version, and do they scale with threads? | C1 | H4, H11 | E1, E2, E6, E11 | 7.2, 7.5, 7.9 | partly |
 | RQ4 | What does the model need: DiscoPoP's evidence, feedback from failed attempts, or more strength? | C1 | H5, H5b, H5d, H12 | E2, E12 | 7.3, 7.5 | done |
 | RQ5 | Who should write the directive: DiscoPoP or the model? | C1, C2 | H6, H6b | E3 | 7.7 | planned |
@@ -382,15 +382,19 @@ result, or the expectation written down before the run.
     working file with those of the profiled file and refused a correct directive below an accepted one (once
     among the 14,200 candidates of the whole archive; found 8 Oct). Counted from the archive: on the loops of the
     two main experiments it only made the check silent (149 of 569 directives, no other loop read); on whole
-    programs it read an inner loop's record for 19 of 248 directives. What its repair changes is counted in 7.6.3.
-  - 7.6.3 The gate as a classifier. **[planned, designed 9 Oct, no model calls]** Every candidate the agent produced in
-    the two main experiments (3,034), accepted or not, and the 248 directives of DiscoPoP alone on the 75
-    packages, rebuilt and judged again by the harness plus a race run at the verification size: gate against
-    judge for rewrites and for directives, every false accept and false reject by name, the shares with
-    intervals; each check run on its own on every candidate — what only it stops, what only it refuses (H3);
-    the wrong candidates only the perturbed input stops (in place of twelve model trials, if agreed); the
-    dependence check as it ran and repaired; DataRaceBench as outside ground truth for races. Limit stated with
-    it: inside the corpus the race label comes from the gate's own detector under other conditions.
+    programs it read an inner loop's record for 19 of 248 directives. What its repair changes has not been counted (7.6.3).
+  - 7.6.3 The gate as a classifier. **[dropped for now, 9 Oct, by the author — designed, not run]** What the
+    thesis reports instead, from the runs in hand: the harness judges every final program on its own, and in the
+    283 trials of the two main experiments in which the agent changed the source it found no wrong program (the
+    models alone: 51 of 450 wrong or not verifiable); the race checks of the agent's final programs reported
+    nothing (279 clean); and one early look at single candidates (18 Sep, 82 candidates): 14 of 23 wrong ones
+    were stopped by the second input only, 2 correct programs were refused. Stated as limits, not measured:
+    what each check catches that the others miss (H3 stays open); how many correct candidates the checks refused
+    — 576 of the 1,389 distinct programs they judged were refused and never judged by anything else, and 105 of
+    the 248 directives DiscoPoP alone offered on the 75 packages; how the race check does on programs with
+    labelled races. The design (every saved candidate judged again by the harness, each check on its own,
+    DataRaceBench from outside) is kept in the record and needs no model call — it can be run at any point and
+    would turn each of these limits into a number.
 - **7.7 Stage 4 — who writes the directive, and how the evidence survives the edit** (E3, E4; RQ5–RQ7;
   H6, H6b, H7, H7b). **[planned]**
   - 7.7.1 A two-by-two: directive by DiscoPoP or by the model × full re-profile or fast refresh. Four setups and
@@ -494,8 +498,9 @@ the results folder · F. Full result tables · G. The agent's command-line refer
    becomes a design contribution with its experiment registered, and moves to future work. The case for keeping
    it regardless: the fast refresh and the reconstruction are built and tested, and the soundness principle
    behind them is a contribution even without the measurement.
-4. **Which planned experiments must run before submission.** Recommended order: the gate as a classifier (no
-   model calls), the two-by-two, depth, then ranking, LULESH and RepoOMP as time allows. Each planned section is
+4. **Which planned experiments must run before submission.** Order: the two-by-two, depth, then ranking,
+   LULESH and RepoOMP as time allows. The gate as a classifier was set aside by the author on 9 Oct (no model
+   calls; it can be run at any point — until then 7.6.3 states its questions as limits). Each planned section is
    written so that it can move to future work without changing the chapter's structure.
 5. **Nine chapters or six parts.** See section 12.
 

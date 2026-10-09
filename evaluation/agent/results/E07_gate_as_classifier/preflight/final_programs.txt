@@ -1,0 +1,32 @@
+valid runs of E1-v6 and E2-v6b: 33; trials: 1045
+trials whose source changed, and the harness's verdict on the final program:
+  bare_llm_v4: 450 — BROKEN 27, FASTER 365, VERIFY_FAILED 24, changed-not-parallel 2, parallel-not-faster 32 — wrong or not verifiable: 51
+  default_v4: 99 — FASTER 89, parallel-not-faster 10 — wrong or not verifiable: 0
+  discopop_capability: 10 — FASTER 8, parallel-speed-not-measurable 2 — wrong or not verifiable: 0
+  discopop_gate_v4: 5 — FASTER 5 — wrong or not verifiable: 0
+  full_b1_nospeed_v4: 56 — FASTER 56 — wrong or not verifiable: 0
+  full_nospeed_v4: 66 — FASTER 54, parallel-not-faster 12 — wrong or not verifiable: 0
+  no_evidence_b1_nospeed_v4: 24 — FASTER 22, parallel-not-faster 2 — wrong or not verifiable: 0
+  no_evidence_nospeed_v4: 38 — FASTER 30, parallel-not-faster 8 — wrong or not verifiable: 0
+  (candidate_replay.py arms, one program each, no agent trial: 21)
+the agent's arms together (default_v4, full_b1_nospeed_v4, full_nospeed_v4, no_evidence_b1_nospeed_v4, no_evidence_nospeed_v4): 283 changed, 0 wrong or not verifiable
+
+race checks over final programs (race_check.py):
+  e1v6_race_check/control_agent (the agent, default_v4): clean 85
+  e1v6_race_check/fable (the models alone, bare_llm_v4): clean 101, correctness 3, unchanged 1
+  e1v6_race_check/haiku (the models alone, bare_llm_v4): clean 53, compile 7, correctness 18, openmp_compile 17, schedules 1, tsan 9
+  e1v6_race_check/opus (the models alone, bare_llm_v4): clean 104, correctness 1
+  e1v6_race_check/sonnet (the models alone, bare_llm_v4): clean 91, correctness 8, tsan 5, unchanged 1
+  e1v6c_race_check/s281_agent (the agent, default_v4): clean 5
+  e1v6c_race_check/v7_agent (the agent, default_v4): clean 2, unchanged 4
+  e1v6c_race_check/v7_fable (the models alone, bare_llm_v4): clean 6
+  e1v6c_race_check/v7_haiku (the models alone, bare_llm_v4): clean 6
+  e1v6c_race_check/v7_opus (the models alone, bare_llm_v4): clean 6
+  e1v6c_race_check/v7_sonnet (the models alone, bare_llm_v4): clean 6
+  e1v6c_s241_race_check/s241_agent (the agent, default_v4): clean 5
+  e2v6b_race_check/control_full (the agent, full_nospeed_v4): clean 66, unchanged 4
+  e2v6b_race_check/control_full_b1 (the agent, full_b1_nospeed_v4): clean 54, unchanged 16
+  e2v6b_race_check/control_none (the agent, no_evidence_nospeed_v4): clean 38, unchanged 32
+  e2v6b_race_check/control_none_b1 (the agent, no_evidence_b1_nospeed_v4): clean 24, unchanged 46
+the agent: 381 programs — clean 279, unchanged 102
+the models alone: 444 programs — clean 373, compile 7, correctness 30, openmp_compile 17, schedules 1, tsan 14, unchanged 2

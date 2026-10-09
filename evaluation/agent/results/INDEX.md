@@ -126,7 +126,7 @@ Status: done
 
 ## [E7 — the gate as a classifier: every saved candidate judged again by the harness, each check on its own, DataRaceBench as the outside ground truth for races](E07_gate_as_classifier/REPORT.md)
 
-Status: designed 9 Oct — awaiting the author's go
+Status: designed 9 Oct; set aside by the author 9 Oct (for now) — nothing built, nothing run
 
 | run | where | what it is | status | trials | outcomes |
 |---|---|---|---|---:|---|

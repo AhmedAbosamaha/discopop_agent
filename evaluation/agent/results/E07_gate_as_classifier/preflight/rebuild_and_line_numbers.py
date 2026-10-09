@@ -22,7 +22,11 @@ and looks it up among records that carry the PROFILE's line numbers (the file be
 anything). For every directive of the final pass this prints how many directive lines the working file already
 held above the loop (the shift), and — where the shift is not zero — whether a loop starts at the shifted line in
 the profiled text (the check then read another loop's records) or not (the check found no record and said
-nothing)."""
+nothing).
+
+Already judged. Added 9 Oct after the author asked what the study adds to the runs in hand: of the distinct
+programs the gate judged, how many are a trial's final file — those the harness verified in the trial itself —
+how many the gate refused (never judged by anything else), and how many it accepted on the way to a final file."""
 import argparse
 import collections
 import hashlib
@@ -74,6 +78,7 @@ trials = collections.Counter()
 lines_b = collections.Counter()
 floors = collections.Counter()
 programs = collections.defaultdict(set)
+judged, finals = [], set()                             # (kind, the gate's verdict, program) per rebuilt candidate
 not_rebuilt, not_verified, misread = [], [], []
 shift_trials = set()
 for run in runs:
@@ -141,6 +146,7 @@ for run in runs:
                 continue
             rebuilt[(ph, "rebuilt")] += 1
             programs[kind].add(hashlib.sha256((bench + "\0" + prog).encode()).hexdigest())
+            judged.append((kind, verdict, hashlib.sha256((bench + "\0" + prog).encode()).hexdigest()))
             if ph == "A" and e.get("passed"):
                 tentative, keep_it = prog, i in kept
             elif ph in ("B", "floor") and e.get("passed"):
@@ -150,6 +156,8 @@ for run in runs:
         if floor:                                      # its program is not the trial's final file
             floors[("every candidate rebuilt" if complete else "a candidate not rebuilt")] += 1
             continue
+        if fin.is_file():
+            finals.add(hashlib.sha256((bench + "\0" + fin.read_text()).encode()).hexdigest())
         same = fin.is_file() and fin.read_text() == state
         trials[("end state equals the final file" if same else "end state differs from the final file")
                + (", every candidate rebuilt" if complete else ", a candidate not rebuilt")] += 1
@@ -178,3 +186,22 @@ print("\ncandidates not rebuilt:")
 print("\n".join("  " + x for x in not_rebuilt) or "  none")
 print("trials whose history is not verified:")
 print("\n".join("  " + x for x in not_verified) or "  none")
+
+
+acc = {h for _, v, h in judged if v == "accepted"}
+ref = {h for _, v, h in judged if v != "accepted"}
+print(f"\nwhat the trials already judged (rebuilt candidates: {sum(1 for x in judged if x[1] == 'accepted')} accepted, "
+      f"{sum(1 for x in judged if x[1] != 'accepted')} refused):")
+print(f"  distinct programs {len(acc | ref)}: accepted {len(acc)}, refused {len(ref)}, "
+      f"the same text accepted in one trial and refused in another {len(acc & ref)}")
+print(f"  accepted and a trial's final file (the harness verified it in the trial): {len(acc & finals)} "
+      f"({sum(1 for x in judged if x[1] == 'accepted' and x[2] in finals)} candidates)")
+print(f"  accepted on the way, no trial's final file: {len(acc - finals)}")
+by_stage = collections.defaultdict(set)
+for kind_, verdict_, h in judged:
+    if verdict_ != "accepted":
+        by_stage[(kind_, verdict_)].add(h)
+print("  refused, by kind and check (distinct programs): "
+      + ", ".join(f"{key[0]} {key[1]} {len(progs)}" for key, progs in sorted(by_stage.items())))
+builds = set().union(*[progs for key, progs in by_stage.items() if key[1] != "compile"]) if by_stage else set()
+print(f"  refused programs that build (every check but `compile`): {len(builds)}")
