@@ -588,3 +588,11 @@ Status: done
 | `t0_11_b19r_apps_b` | [`T0_instruments/B19_B18_clauses_and_nests/runs/t0_11_b19r_apps_b/`](T0_instruments/B19_B18_clauses_and_nests/runs/t0_11_b19r_apps_b/) | T0.11 draw b with B19's array repair corrected, server, no model: discopop_capability on the 31 packages outside TSVC | valid | 31 | FASTER 14, no-change 9, parallel-not-faster 2, parallel-speed-not-measurable 6 |
 | `t0_11_b19r_apps_c` | [`T0_instruments/B19_B18_clauses_and_nests/runs/t0_11_b19r_apps_c/`](T0_instruments/B19_B18_clauses_and_nests/runs/t0_11_b19r_apps_c/) | T0.11 draw c with B19's array repair corrected, server, no model: discopop_capability on the 31 packages outside TSVC | valid | 31 | FASTER 14, no-change 9, parallel-not-faster 2, parallel-speed-not-measurable 6 |
 
+## [Fix 105 — the gate's dependence stage reads the profile at the profile's line numbers: the repair, its check, and what it changes on the rewrites of the main comparison](T0_instruments/F105_gate_dependence_lines/REPORT.md)
+
+Status: done
+
+| run | where | what it is | status | trials | outcomes |
+|---|---|---|---|---:|---|
+| `f105_replay` | [`T0_instruments/F105_gate_dependence_lines/checks/f105_replay/`](T0_instruments/F105_gate_dependence_lines/checks/f105_replay/) | candidate_replay.py replay (server, no model) on the repaired gate: the 69 pragma-free rewrites accepted in the 38 agent trials of E1-v6 (default_v4, the corrected table) whose final pass judged two or more directives, handed to today's pipeline at budget 0 in four parts — does the dependence stage, reading the profile at the profile's lines, refuse a directive? | valid | 0 |  |
+

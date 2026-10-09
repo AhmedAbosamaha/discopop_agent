@@ -1,0 +1,98 @@
+
+============================================================
+  DiscoPoP Agentic Controller
+============================================================
+  Source         : /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/f105_replay/lane2/tsvc_c2_s281@replay_s281_r4_c00/s281.c
+  DiscoPoP dir   : .discopop
+  Model          : none
+  Budget         : 0 LLM retries/region (+2 free build fixes)
+  λ penalty      : 1.0
+  Min workload   : 0.0
+  Restruct. depth: 0 (Tier-2 allowed at depth 0–0)
+  Quality gate   : Tier-1 = all but speed, no escalation; Tier-2 = full
+  TSan           : barrier-aware (archer: /usr/lib/llvm-20/lib/libarcher.so)
+  Speedup gate   : require ≥ 1.1× measured
+  Dry run        : False
+  LLM mode       : none
+  Edit mode      : direct
+  Re-profiling   : full (instrument + run + explore) after every kept rewrite
+  Explorer       : one attempt may take 600 s, then the draw is repeated (random stall, L5)
+  Pragmas        : DiscoPoP writes them in Phase B
+============================================================
+
+  Project        : /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/f105_replay/lane2/tsvc_c2_s281@replay_s281_r4_c00  (2 unit(s): s281.c, main.c)
+
+  [ok] Captured reference output on 2 inputs (77 bytes, 1025.5 ms baseline) for the correctness/performance gates.
+
+  [ok] Numerical noise floor 0 — 6 build variants agreed exactly; output is compared byte-for-byte.
+
+  Hotspots       : measured per-region runtimes are available — 19 region(s) measured, 3.7 ms total, ranking by predicted time saved at 48 threads
+
+  Baseline       : DiscoPoP proposes 2 applicable pattern(s) unaided; 2 of them produce a usable pragma
+                   → the run beats DiscoPoP by ending with more than 2
+
+  Initial candidates
+Region ID    Type           Saves    % run    Hot  Tier  Depth  Name
+--------------------------------------------------------------------------------------
+  1:2        loop          2.4 ms    66.7%    YES     2      0  lines 6–18
+  0:0        function      2.4 ms    66.7%    YES     2      0  kernel_s281
+  1:5        loop          1.2 ms    33.6%    YES     1      0  lines 7–11
+  1:12       loop          1.2 ms    33.1%    YES     1      0  lines 12–16
+
+============================================================
+  PHASE A — restructure  (the source stays pragma-free)
+============================================================
+
+┌─ [depth=0] loop 1:2 (lines 6–18)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] function 0:0 (lines 3–19)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:5 (lines 7–11)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:12 (lines 12–16)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+
+============================================================
+  PHASE B — annotate  (2 candidate pragma(s))
+============================================================
+
+  Timing noise floor on this machine: 0.994 → keep anything at or above 0.984
+
+┌─ pattern #0  do_all @ lines 7–11  (W=3072000)
+│  #pragma omp parallel for
+│  marginal 1.07×
+│  [Phase-B] Original backed up → s281.c.original
+│  [Phase-B] Applied to s281.c
+└─ APPLIED
+
+┌─ pattern #1  do_all @ lines 12–16  (W=3072000)
+│  #pragma omp parallel for
+│  marginal 3.28×
+│  [Phase-B] Applied to s281.c
+└─ APPLIED
+
+============================================================
+  SETTLING — verify the finished source, drop what does not hold up
+============================================================
+  [ok] finished source verified — output matches, 2.87x the original, paired
+
+
+============================================================
+  SUMMARY: 0 rewrite(s) kept  |  2 pragma(s) applied  |  2 skipped
+  DiscoPoP unaided: 2 usable pragma(s) in this profile's draw  →  this run: 2   [MATCHED, informational]
+    ✓  loop 1:5  [Phase-B pragma]  depth=0  marginal 1.07×
+    ✓  loop 1:12  [Phase-B pragma]  depth=0  marginal 3.28×
+    ✗  1:2  [skipped]  depth=0
+    ✗  0:0  [skipped]  depth=0
+
+  Results → .discopop/agent_patches/accepted.json
+============================================================
+

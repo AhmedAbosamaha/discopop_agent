@@ -1,0 +1,44 @@
+{
+  "suite": "tsvc_c2",
+  "kernel": "s1213",
+  "source": "benchmarks/TSVC_2/src/tsvc.c",
+  "category": "statement reordering / dependency needing temporary",
+  "file": "s1213.c",
+  "language": "c",
+  "layout": "project",
+  "project": {
+    "units": [
+      "s1213.c",
+      "main.c"
+    ],
+    "include_dirs": [
+      "."
+    ],
+    "editable": [
+      "s1213.c"
+    ]
+  },
+  "restructuring_class": "restructure",
+  "transformation": "statement reordering (dependency needing a temporary)",
+  "why": "a[i] needs the NEW b[i-1], b[i] the OLD a[i+1]: a cycle that distribution breaks",
+  "reference_solution": "agent/reference_solutions/tsvc_c2/s1213.c",
+  "exclude_functions": [
+    "main",
+    "dummy"
+  ],
+  "harness": "tsvc_c2/s1213.h",
+  "harness_sha256": "7aa6fbc9c715db0828bf08c90c70afbf1739290e4e3eb1e6cd2c619a6bc27686",
+  "hot_loop": {
+    "entry": "kernel_s1213",
+    "function": "kernel_s1213",
+    "line": 6,
+    "writes": [
+      "a",
+      "b"
+    ]
+  },
+  "agent_dataset": "SMALL",
+  "generator_version": 6,
+  "inputs_sha256": "456dd573b84b30e6f32c943bb559d80374eec67177de48223e95124a8c3fc627",
+  "output_sha256": "d541795934799c486f40b0b89600b76a39fdc38d7a29afb7c14f3c2be66a70b5"
+}
