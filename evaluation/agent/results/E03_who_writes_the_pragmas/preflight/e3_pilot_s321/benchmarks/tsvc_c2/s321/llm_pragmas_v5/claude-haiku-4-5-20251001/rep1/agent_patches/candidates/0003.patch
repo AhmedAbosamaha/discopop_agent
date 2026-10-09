@@ -1,0 +1,23 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_pilot_s321/benchmarks/tsvc_c2/s321/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/s321.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_pilot_s321/benchmarks/tsvc_c2/s321/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/s321.c
+@@ -3,9 +3,19 @@
+ real_t kernel_s321(void)
+ {
+     for (int nl = 0; nl < iterations; nl++) {
+-        for (int i = 1; i < LEN_1D; i++) {
++        // Pass 1: update odd indices (each a[i] depends on a[i-1] which is even, not updated in this pass)
++        #pragma omp parallel for schedule(static)
++        for (int i = 1; i < LEN_1D; i += 2) {
+             a[i] += a[i-1] * b[i];
+         }
++        // Implicit barrier ensures all odd updates complete before next pass
++
++        // Pass 2: update even indices (each a[i] depends on a[i-1] which is odd, already updated)
++        #pragma omp parallel for schedule(static)
++        for (int i = 2; i < LEN_1D; i += 2) {
++            a[i] += a[i-1] * b[i];
++        }
++
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

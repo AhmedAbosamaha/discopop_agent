@@ -1,0 +1,21 @@
+#include "data.h"
+
+real_t kernel_s1213(void)
+{
+    for (int nl = 0; nl < iterations; nl++) {
+        // Pass 1: compute new b using old a (all iterations independent)
+        #pragma omp parallel for collapse(1) schedule(static)
+        for (int i = 1; i < LEN_1D-1; i++) {
+            b[i] = a[i+1]*d[i];
+        }
+
+        // Pass 2: compute new a using updated b (all iterations independent)
+        #pragma omp parallel for collapse(1) schedule(static)
+        for (int i = 1; i < LEN_1D-1; i++) {
+            a[i] = b[i-1]+c[i];
+        }
+
+        dummy(a, b, c, d, e);
+    }
+    return (real_t)0;
+}

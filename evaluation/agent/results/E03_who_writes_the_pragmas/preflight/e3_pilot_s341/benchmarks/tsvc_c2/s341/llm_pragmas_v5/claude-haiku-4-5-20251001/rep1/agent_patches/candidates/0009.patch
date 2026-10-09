@@ -1,0 +1,43 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_pilot_s341/benchmarks/tsvc_c2/s341/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_pilot_s341/benchmarks/tsvc_c2/s341/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/s341.c
+@@ -2,16 +2,37 @@
+ 
+ real_t kernel_s341(void)
+ {
+-    int j;
++    /* Allocate temporary array once to store target indices for each element */
++    int* target_idx = (int*)malloc(LEN_1D * sizeof(int));
++
+     for (int nl = 0; nl < iterations; nl++) {
+-        j = -1;
++        int j = -1;
++
++        /* Phase 1: Sequential computation of target indices.
++           For each positive element in b, determine its target position in a. */
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+                 j++;
+-                a[j] = b[i];
++                target_idx[i] = j;
++            } else {
++                target_idx[i] = -1;  /* Mark as excluded */
+             }
+         }
++
++        /* Phase 2: Parallel copy using precomputed indices.
++           Each iteration accesses distinct elements of a and b, eliminating
++           the data dependence on j. The loop is parallel-safe because
++           target_idx[i] ensures each thread writes to a different a[...]. */
++        #pragma omp parallel for default(none) shared(target_idx, a, b) schedule(static)
++        for (int i = 0; i < LEN_1D; i++) {
++            if (target_idx[i] != -1) {
++                a[target_idx[i]] = b[i];
++            }
++        }
++
+         dummy(a, b, c, d, e);
+     }
++
++    free(target_idx);
+     return (real_t)0;
+ }

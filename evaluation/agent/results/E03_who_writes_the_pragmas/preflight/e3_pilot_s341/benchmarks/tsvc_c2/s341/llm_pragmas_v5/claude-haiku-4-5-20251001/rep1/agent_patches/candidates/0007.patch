@@ -1,0 +1,34 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_pilot_s341/benchmarks/tsvc_c2/s341/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_pilot_s341/benchmarks/tsvc_c2/s341/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/s341.c
+@@ -1,16 +1,30 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s341(void)
+ {
+     int j;
+     for (int nl = 0; nl < iterations; nl++) {
++        int *pos = malloc(LEN_1D * sizeof(int));
++
++        // First pass: compute write positions deterministically
+         j = -1;
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+                 j++;
+-                a[j] = b[i];
++                pos[i] = j;
+             }
+         }
++
++        // Second pass: write to a in parallel using pre-computed positions
++        #pragma omp parallel for
++        for (int i = 0; i < LEN_1D; i++) {
++            if (b[i] > (real_t)0.) {
++                a[pos[i]] = b[i];
++            }
++        }
++
++        free(pos);
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

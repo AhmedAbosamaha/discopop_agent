@@ -1,0 +1,39 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_pilot_s321/benchmarks/tsvc_c2/s321/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/s321.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_pilot_s321/benchmarks/tsvc_c2/s321/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/s321.c
+@@ -1,12 +1,32 @@
+ #include "data.h"
++#include <stdlib.h>
++#include <string.h>
+ 
+ real_t kernel_s321(void)
+ {
+-    for (int nl = 0; nl < iterations; nl++) {
+-        for (int i = 1; i < LEN_1D; i++) {
+-            a[i] += a[i-1] * b[i];
++    #pragma omp parallel
++    {
++        real_t *a_local = (real_t *)malloc(LEN_1D * sizeof(real_t));
++        real_t *b_local = (real_t *)malloc(LEN_1D * sizeof(real_t));
++        memcpy(a_local, a, LEN_1D * sizeof(real_t));
++        memcpy(b_local, b, LEN_1D * sizeof(real_t));
++
++        #pragma omp for
++        for (int nl = 0; nl < iterations; nl++) {
++            for (int i = 1; i < LEN_1D; i++) {
++                a_local[i] += a_local[i-1] * b_local[i];
++            }
++            dummy(a_local, b_local, c, d, e);
+         }
+-        dummy(a, b, c, d, e);
++
++        #pragma omp critical
++        {
++            memcpy(a, a_local, LEN_1D * sizeof(real_t));
++        }
++
++        free(a_local);
++        free(b_local);
+     }
++
+     return (real_t)0;
+ }

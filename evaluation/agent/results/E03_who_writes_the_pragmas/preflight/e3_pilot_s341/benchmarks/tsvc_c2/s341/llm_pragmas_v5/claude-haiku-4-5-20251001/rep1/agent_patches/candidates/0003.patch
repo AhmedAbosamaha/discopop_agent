@@ -1,0 +1,56 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_pilot_s341/benchmarks/tsvc_c2/s341/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_pilot_s341/benchmarks/tsvc_c2/s341/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/s341.c
+@@ -1,17 +1,45 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s341(void)
+ {
+-    int j;
+-    for (int nl = 0; nl < iterations; nl++) {
+-        j = -1;
+-        for (int i = 0; i < LEN_1D; i++) {
+-            if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++    int *prefix;
++    #pragma omp parallel shared(prefix)
++    {
++        for (int nl = 0; nl < iterations; nl++) {
++            /* Prefix sum: compute target position for each positive element (sequential) */
++            #pragma omp single
++            {
++                prefix = (int *)malloc((LEN_1D + 1) * sizeof(int));
++                prefix[0] = 0;
++                for (int i = 0; i < LEN_1D; i++) {
++                    prefix[i + 1] = prefix[i] + (b[i] > (real_t)0. ? 1 : 0);
++                }
++            }
++
++            /* Parallel compaction: each thread writes to independent position */
++            #pragma omp for
++            for (int i = 0; i < LEN_1D; i++) {
++                if (b[i] > (real_t)0.) {
++                    a[prefix[i]] = b[i];
++                }
++            }
++
++            /* Synchronize before dummy() call */
++            #pragma omp barrier
++            /* Execute dummy() once, then wait for all threads */
++            #pragma omp single
++            {
++                dummy(a, b, c, d, e);
++            }
++            /* Synchronize after dummy() before next nl iteration */
++            #pragma omp barrier
++
++            #pragma omp single
++            {
++                free(prefix);
+             }
+         }
+-        dummy(a, b, c, d, e);
+     }
+     return (real_t)0;
+ }

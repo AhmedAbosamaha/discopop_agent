@@ -1,0 +1,18 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_pilot_s331/benchmarks/tsvc_c3/s331/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/s331.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_pilot_s331/benchmarks/tsvc_c3/s331/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/s331.c
+@@ -6,11 +6,15 @@
+     real_t chksum;
+     for (int nl = 0; nl < iterations; nl++) {
+         j = -1;
++        int found = 0;
++        #pragma omp parallel for reduction(max:j) reduction(||:found)
+         for (int i = 0; i < LEN_1D; i++) {
+             if (a[i] < (real_t)0.) {
+                 j = i;
++                found = 1;
+             }
+         }
++        if (!found) j = -1;
+         chksum = (real_t) j;
+         dummy(a, b, c, d, e, chksum);
+     }

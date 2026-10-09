@@ -1,0 +1,32 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_pilot_s321/benchmarks/tsvc_c2/s321/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/s321.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_pilot_s321/benchmarks/tsvc_c2/s321/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/s321.c
+@@ -2,11 +2,25 @@
+ 
+ real_t kernel_s321(void)
+ {
+-    for (int nl = 0; nl < iterations; nl++) {
+-        for (int i = 1; i < LEN_1D; i++) {
+-            a[i] += a[i-1] * b[i];
++    #pragma omp parallel
++    {
++        for (int nl = 0; nl < iterations; nl++) {
++            // Each thread processes the sequential inner loop independently,
++            // preserving the recurrence a[i] += a[i-1] * b[i]
++            #pragma omp for
++            for (int i = 1; i < LEN_1D; i++) {
++                a[i] += a[i-1] * b[i];
++            }
++            // Barrier: move loop-carried dependence on b (via dummy) outside parallel region
++            #pragma omp barrier
++            // Single thread calls dummy to update shared state
++            #pragma omp single
++            {
++                dummy(a, b, c, d, e);
++            }
++            // Barrier: ensure dummy completes before next outer iteration
++            #pragma omp barrier
+         }
+-        dummy(a, b, c, d, e);
+     }
+     return (real_t)0;
+ }
