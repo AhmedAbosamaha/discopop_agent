@@ -42,9 +42,9 @@ proposed here and is to be confirmed with the title.
 | RQ2 | Is every accepted change right and race-free, what does each check catch, and where are the checks blind? | C2 | H2, H3, H10, H10b, H13 | E1, E10, E7 | 7.2, 7.6 | E1, E10 done · E7 designed 9 Oct and set aside by the author the same day (not run) |
 | RQ3 | How close do the accepted programs come to an expert's version, and do they scale with threads? | C1 | H4, H11 | E1, E2, E6, E11 | 7.2, 7.5, 7.9 | partly |
 | RQ4 | What does the model need: DiscoPoP's evidence, feedback from failed attempts, or more strength? | C1 | H5, H5b, H5d, H12 | E2, E12 | 7.3, 7.5 | done |
-| RQ5 | Who should write the directive: DiscoPoP or the model? | C1, C2 | H6, H6b | E3 | 7.7 | planned |
-| RQ6 | Can the model close the gap a fast refresh leaves, without making the analysis unsafe? | C3 | H7, H7b | E4 | 7.7 | planned, conditional on E3 |
-| RQ7 | Can the profile be refreshed without running the program again, without changing decisions? | C3 | H6 | E3 | 7.7 | planned |
+| RQ5 | Who should write the directive: DiscoPoP or the model? | C1, C2 | H6b | E3 | 7.7 | planned, next (two setups; split from the fast refresh by the author, 9 Oct) |
+| RQ6 | Can the model close the gap a fast refresh leaves, without making the analysis unsafe? | C3 | H7, H7b | E4 | 7.7 | planned, after E3 — one experiment with RQ7 (9 Oct) |
+| RQ7 | Can the profile be refreshed without running the program again, without changing decisions? | C3 | H6 | E4 | 7.7 | planned, after E3 (moved out of E3 by the author, 9 Oct) |
 | RQ8 | How far should restructuring be chained? | C1, C3 | H8 | E8 | 7.8 | planned |
 | RQ9 | Where should the agent look first? | C1 | H9 | E9 | 7.4 | planned |
 
@@ -396,17 +396,24 @@ result, or the expectation written down before the run.
     DataRaceBench from outside) is kept in the record and needs no model call — it can be run at any point and
     would turn each of these limits into a number.
 - **7.7 Stage 4 — who writes the directive, and how the evidence survives the edit** (E3, E4; RQ5–RQ7;
-  H6, H6b, H7, H7b). **[planned]**
-  - 7.7.1 A two-by-two: directive by DiscoPoP or by the model × full re-profile or fast refresh. Four setups and
-    two twins, 18 loops × 5 (360 trials). The motivating case is already measured: `s331` of 7.2. Read out per row: accepted changes, unusable programs, which stage
-    decided. Per column: profiling seconds per kept rewrite and whether decisions differ from the full
-    re-profile. Written down before the run: the refresh can only change a decision where DiscoPoP, not the gate,
-    judges the rewrite; with the model writing the directive, the agent should reach at least what the model
-    alone reaches and ship nothing wrong.
-  - 7.7.2 Adding against deleting dependences. Reconstruction, review and the folded variant against the fast
-    refresh alone and the full re-profile; 18 loops × 3 (162 trials). Run only if 7.7.1 shows the fast refresh
-    losing or wrongly accepting something; otherwise reported as not needed, with 7.7.1's numbers as the reason.
-    Read out: decisions that differ from the full re-profile, split into unsafe and over-cautious; extra calls.
+  H6, H6b, H7, H7b). **[planned — two experiments, split by the author on 9 Oct]**
+  - 7.7.1 Who writes the directive (E3): DiscoPoP, as the agent does now, or the model in the same edit as its
+    rewrite — the whole program profiled again after every kept rewrite in both. Two setups, 18 loops × 5
+    (180 trials). No trials of the agent without its checks, so the claim that a factor acts through the checks
+    (H12) is not tested here and the thesis says so. The motivating case is already measured: `s331` of 7.2.
+    Read out per setup: accepted changes, unusable programs, which stage decided. Written down before the run:
+    with the model writing the directive, the agent should reach at least what the model alone reaches and ship
+    nothing wrong.
+  - 7.7.2 The fast refresh, with the model reporting the dependences of the code it wrote (E4). An experiment of
+    its own after 7.7.1 (the author, 9 Oct); whether DiscoPoP or the model writes the directive in it is taken
+    from 7.7.1's result, by a rule written down before 7.7.1 runs. Already known from the main comparison: on
+    the 18 loops the profiling run the refresh skips is 0.08 % of the agent's time (188 re-profiles in 90 trials,
+    0.17 s each), so the saving can only be measured on programs whose profiling run is long (53 s, 31 s and
+    21 s on three whole programs in the archive). What it is compared against (the full re-profile; the fast
+    refresh without the model's report), on which programs and how many trials: fixed when it is planned. Read
+    out: profiling seconds per kept rewrite; decisions that differ from the full re-profile, split into unsafe
+    and over-cautious; extra calls. Written down before the run: the refresh can only change a decision where
+    DiscoPoP, not the gate, judges the rewrite.
 - **7.8 Stage 5 — how far to chain restructuring** (E8; RQ8; H8). **[planned]** Depth 0, 1 and 2 with twins,
   18 loops × 3 (108 new trials). Read out per level: speed-up gained, regions seen and regions parallelized,
   re-profiles, calls and time, unusable programs, the sequential cost of kept rewrites. Written down before the
@@ -494,7 +501,7 @@ the results folder · F. Full result tables · G. The agent's command-line refer
    needs to know what annotation tools and language models do before the approach makes sense. The case for the
    other place: the thesis measures its neighbours (Polly, expert OpenMP, RepoOMP), so the field could be
    discussed with the numbers on the table.
-3. **The cost claim (C3).** Recommended: keep it as a claim only if the two-by-two of 7.7 has run; otherwise C3
+3. **The cost claim (C3).** Recommended: keep it as a claim only if the fast-refresh experiment of 7.7.2 has run; otherwise C3
    becomes a design contribution with its experiment registered, and moves to future work. The case for keeping
    it regardless: the fast refresh and the reconstruction are built and tested, and the soundness principle
    behind them is a contribution even without the measurement.
