@@ -42,7 +42,7 @@ proposed here and is to be confirmed with the title.
 | RQ2 | Is every accepted change right and race-free, what does each check catch, and where are the checks blind? | C2 | H2, H3, H10, H10b, H13 | E1, E10, E7 | 7.2, 7.6 | E1, E10 done · E7 designed 9 Oct and set aside by the author the same day (not run) |
 | RQ3 | How close do the accepted programs come to an expert's version, and do they scale with threads? | C1 | H4, H11 | E1, E2, E6, E11 | 7.2, 7.5, 7.9 | partly |
 | RQ4 | What does the model need: DiscoPoP's evidence, feedback from failed attempts, or more strength? | C1 | H5, H5b, H5d, H12 | E2, E12 | 7.3, 7.5 | done |
-| RQ5 | Who should write the directive: DiscoPoP or the model? | C1, C2 | H6b | E3 | 7.7 | planned, next (two setups; split from the fast refresh by the author, 9 Oct) |
+| RQ5 | Who should write the directive: DiscoPoP or the model? | C1, C2 | H6 (its half on the author), H6b | E3 | 7.7 | pilot done 9 Oct; 210 trials pre-registered, waiting for the author's go (two setups; split from the fast refresh by the author, 9 Oct) |
 | RQ6 | Can the model close the gap a fast refresh leaves, without making the analysis unsafe? | C3 | H7, H7b | E4 | 7.7 | planned, after E3 — one experiment with RQ7 (9 Oct) |
 | RQ7 | Can the profile be refreshed without running the program again, without changing decisions? | C3 | H6 | E4 | 7.7 | planned, after E3 (moved out of E3 by the author, 9 Oct) |
 | RQ8 | How far should restructuring be chained? | C1, C3 | H8 | E8 | 7.8 | planned |
@@ -398,12 +398,25 @@ result, or the expectation written down before the run.
 - **7.7 Stage 4 — who writes the directive, and how the evidence survives the edit** (E3, E4; RQ5–RQ7;
   H6, H6b, H7, H7b). **[planned — two experiments, split by the author on 9 Oct]**
   - 7.7.1 Who writes the directive (E3): DiscoPoP, as the agent does now, or the model in the same edit as its
-    rewrite — the whole program profiled again after every kept rewrite in both. Two setups, 18 loops × 5
-    (180 trials). No trials of the agent without its checks, so the claim that a factor acts through the checks
-    (H12) is not tested here and the thesis says so. The motivating case is already measured: `s331` of 7.2.
-    Read out per setup: accepted changes, unusable programs, which stage decided. Written down before the run:
-    with the model writing the directive, the agent should reach at least what the model alone reaches and ship
-    nothing wrong.
+    rewrite — the whole program profiled again after every kept rewrite in both. Two setups on the main
+    comparison's whole set: 18 loops that need restructuring × 5, four loops with a true recurrence × 3, three
+    loops DiscoPoP alone parallelizes × 1 (25 loops, 105 trials per setup, 210 trials); DiscoPoP alone run again
+    beside them, the models alone taken from 7.2. The setup in which the model writes is, as built and as its
+    instructions now say, "the model may write, DiscoPoP adds what it can": DiscoPoP still adds its own
+    directive to a loop it finds parallel that carries none; it never replaces the model's (the timing of the
+    two against each other is switched off for this experiment). The instructions of this setup had described
+    the model alone's situation, not the agent's; they and three sentences about what DiscoPoP "observed" were
+    corrected before the run (a new version of the texts; the finished experiments keep theirs). No trials of
+    the agent without its checks, so the claim that a factor acts through the checks (H12) is not tested here
+    and the thesis says so. The motivating case: `s331` of 7.2. Pilot (11 trials, never counted): where the
+    model writes, six of six won on the loops that need restructuring, `s331` among them with a directive
+    DiscoPoP cannot write; on a recurrence loop the checks refused all twelve of the model's directives.
+    Read out per setup: the three-way table, what was shipped on the recurrence loops, who wrote each kept
+    directive, which check refused what, calls and cost. Written down before the run: more fast and race-free
+    trials where the model writes (refuted by more unusable programs); with the model writing, the agent
+    reaches at least what the model alone reaches and ships nothing wrong; and the rule by which the result
+    picks the directive's author for 7.7.2. Limit: one setup is already at 79 of 90, so a gain can show only
+    where it fails.
   - 7.7.2 The fast refresh, with the model reporting the dependences of the code it wrote (E4). An experiment of
     its own after 7.7.1 (the author, 9 Oct); whether DiscoPoP or the model writes the directive in it is taken
     from 7.7.1's result, by a rule written down before 7.7.1 runs. Already known from the main comparison: on

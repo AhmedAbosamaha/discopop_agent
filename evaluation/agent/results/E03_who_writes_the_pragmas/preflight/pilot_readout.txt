@@ -57,3 +57,20 @@
         A passed: 1; A refused at compile: 3; A refused at openmp_compile: 1; A refused at performance: 5; A refused at schedules: 1; A refused at tsan: 1
 
     trials whose texts are not version 5's: 0
+
+the race check over the finished programs (e3_pilot_race_check: the gate's ThreadSanitizer build and schedule matrix, no model)
+    model_writes: 7 program(s): {'clean': 6, 'unchanged': 1}
+    discopop_writes: 4 program(s): {'clean': 4}
+
+(iv) what the 210 trials may cost — E1-v6's cost per class (analysis/corrected_2/trials.csv, the agent arm) and the pilot beside it
+    E1-v6, one setup: class R 18 loops $43.01, class D $34.09, class A $1.26 = $78.37
+    pilot default_v5      s1213 : mean $0.56 over 2   (E1-v6, DiscoPoP writes: $0.20)
+    pilot default_v5      s254  : mean $0.05 over 2   (E1-v6, DiscoPoP writes: $0.04)
+    pilot llm_pragmas_v5  s1213 : mean $0.14 over 2   (E1-v6, DiscoPoP writes: $0.20)
+    pilot llm_pragmas_v5  s254  : mean $0.06 over 2   (E1-v6, DiscoPoP writes: $0.04)
+    pilot llm_pragmas_v5  s321  : mean $4.99 over 1   (E1-v6, DiscoPoP writes: $2.67)
+    pilot llm_pragmas_v5  s331  : mean $0.13 over 1   (E1-v6, DiscoPoP writes: $1.94)
+    pilot llm_pragmas_v5  s341  : mean $1.23 over 1   (E1-v6, DiscoPoP writes: $1.16)
+    the setup in which DiscoPoP writes the pragma, as E1-v6: $78
+    the setup in which the model writes it: class R $34 (E1-v6's costs, s331 and s341 at the pilot's), class D $64 (E1-v6's x 1.87, the one pilot trial on s321), class A $1 = $99
+    both: about $178; between $139 (both setups at E1-v6's costs with s331 solved at once) and $186 (class R at E1-v6's cost in both, class D at the pilot's ratio where the model writes)

@@ -72,3 +72,38 @@ for d in sorted(glob.glob(str(H / "e3_pilot_*/benchmarks/*/*/*_v5/*/rep*"))):
     st = collections.Counter((c.get("phase"), "passed" if c.get("passed") else f"refused at {c.get('stage')}") for c in cands)
     print("        " + "; ".join(f"{k[0]} {k[1]}: {n}" for k, n in sorted(st.items())))
 print(f"\n    trials whose texts are not version 5's: {bad}")
+
+print("\nthe race check over the finished programs (e3_pilot_race_check: the gate's ThreadSanitizer build and schedule matrix, no model)")
+for part in ("model_writes", "discopop_writes"):
+    res = [json.loads(l) for l in open(H / "e3_pilot_race_check" / part / "results.jsonl")]
+    c = collections.Counter(r.get("verdict") or r.get("result") or r.get("status") for r in res)
+    print(f"    {part}: {len(res)} program(s): {dict(c)}")
+
+print("\n(iv) what the 210 trials may cost — E1-v6's cost per class (analysis/corrected_2/trials.csv, the agent arm) and the pilot beside it")
+E1 = H.parents[1] / "E01v6_clean_files_three_way" / "analysis" / "corrected_2" / "trials.csv"
+old = [r for r in csv.DictReader(open(E1)) if r["arm"] == "default_v4"]
+cost = collections.defaultdict(list)
+for r in old:
+    cost[r["benchmark"].split("/")[-1]].append(float(r["cost_usd_equivalent"] or 0))
+D, A = ["s3112", "s321", "s322", "s323"], ["s000", "vpvtv", "s313"]
+R = [b for b in cost if b not in D + A]
+tot = lambda names: sum(sum(cost[b]) for b in names)
+print(f"    E1-v6, one setup: class R {len(R)} loops ${tot(R):.2f}, class D ${tot(D):.2f}, class A ${tot(A):.2f} = ${tot(R) + tot(D) + tot(A):.2f}")
+mean = lambda b: sum(cost[b]) / len(cost[b])
+pil = collections.defaultdict(list)
+for r in agent:
+    pil[(r["arm"], r["benchmark"].split("/")[-1])].append(float(r["cost_usd_equivalent"]))
+for (arm, b), v in sorted(pil.items()):
+    print(f"    pilot {arm:15s} {b:6s}: mean ${sum(v) / len(v):.2f} over {len(v)}   (E1-v6, DiscoPoP writes: ${mean(b):.2f})")
+ratio_d = pil[("llm_pragmas_v5", "s321")][0] / mean("s321")
+rest = tot(R) - sum(cost["s331"]) - sum(cost["s341"])
+mw_r = rest + 5 * pil[("llm_pragmas_v5", "s331")][0] + 5 * pil[("llm_pragmas_v5", "s341")][0]
+mw = mw_r + tot(D) * ratio_d + tot(A)
+dp = tot(R) + tot(D) + tot(A)
+print(f"    the setup in which DiscoPoP writes the pragma, as E1-v6: ${dp:.0f}")
+print(f"    the setup in which the model writes it: class R ${mw_r:.0f} (E1-v6's costs, s331 and s341 at the pilot's), class D ${tot(D) * ratio_d:.0f} "
+      f"(E1-v6's x {ratio_d:.2f}, the one pilot trial on s321), class A ${tot(A):.0f} = ${mw:.0f}")
+lo = 2 * (dp - sum(cost['s331']) + 5 * pil[('llm_pragmas_v5', 's331')][0])
+hi = dp + tot(R) + tot(D) * ratio_d + tot(A)
+print(f"    both: about ${dp + mw:.0f}; between ${lo:.0f} (both setups at E1-v6's costs with s331 solved at once) and ${hi:.0f} "
+      f"(class R at E1-v6's cost in both, class D at the pilot's ratio where the model writes)")
