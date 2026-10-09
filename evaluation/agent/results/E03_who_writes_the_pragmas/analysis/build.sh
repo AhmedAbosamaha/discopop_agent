@@ -11,6 +11,10 @@ E=agent/results/E03_who_writes_the_pragmas
 E1=agent/results/E01v6_clean_files_three_way
 O=${1:-$E/analysis}
 RUNS="e3_r_1 e3_r_2 e3_r_3 e3_r_4 e3_d_1 e3_d_2 e3_d_3 e3_d_4 e3_a"
+mkdir -p "$O"
+# the group's own read-out and figures (the registry asks for them at analysis/): the agent in either setup, pooled,
+# against DiscoPoP alone — the two setups apart are in the sub-folders below
+$PY agent/tools/main_comparison_stats.py $RUNS --baseline-arm discopop_gate_v5 --figures --out "$O" > "$O/main_comparison_stats.log" 2>&1
 for setup in discopop_writes:default_v5 model_writes:llm_pragmas_v5; do
     d=${setup%%:*}; arm=${setup##*:}
     mkdir -p "$O/$d"
