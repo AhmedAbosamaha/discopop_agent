@@ -1,0 +1,82 @@
+# Every candidate of tsvc_c2/k27 · full_b1_nospeed_v4 · rep1 (history/E02v6_hidden_order_clean_files/runs/e2v6_agent_2/benchmarks/tsvc_c2/k27/full_b1_nospeed_v4/claude-haiku-4-5-20251001/rep1)
+
+In the order the agent built them. `passed` = the gate accepted it; what happened to it after (kept, reverted, dropped for speed, dropped by Settle) is in `console.txt`.
+
+## 1. Phase A · region 1:2 — rejected at `correctness`
+
+```
+Program output changed — the patched program is NOT semantically equivalent to the original.
+output differs and no numerical slack is in effect
+first difference at line 2:
+  expected: pb_sum 323574.18114425638
+  got:      pb_sum 319416.26602868212
+--- expected (original) ---
+```
+
+```diff
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6_agent_2/benchmarks/tsvc_c2/k27/full_b1_nospeed_v4/claude-haiku-4-5-20251001/rep1/work/k27.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6_agent_2/benchmarks/tsvc_c2/k27/full_b1_nospeed_v4/claude-haiku-4-5-20251001/rep1/work/k27.c
+@@ -6,6 +6,8 @@
+         for (long i = 1; i < LEN_1D; i++) {
+             u[ju[i]] += w[kw[i]] * c[i];
+             v[jv[i]] = u[ku[i]] * d[i] + c[i];
++        }
++        for (long i = 1; i < LEN_1D; i++) {
+             w[jw[i]] = v[kv[i]] * e[i] + d[i];
+         }
+         dummy(a, b, c, d, e);
+```
+
+## 2. Phase A · region 1:5 — rejected at `correctness`
+
+```
+Program output changed — the patched program is NOT semantically equivalent to the original.
+output differs and no numerical slack is in effect
+first difference at line 2:
+  expected: pb_sum 323574.18114425638
+  got:      pb_sum 319416.26602868212
+--- expected (original) ---
+```
+
+```diff
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6_agent_2/benchmarks/tsvc_c2/k27/full_b1_nospeed_v4/claude-haiku-4-5-20251001/rep1/work/k27.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6_agent_2/benchmarks/tsvc_c2/k27/full_b1_nospeed_v4/claude-haiku-4-5-20251001/rep1/work/k27.c
+@@ -6,6 +6,8 @@
+         for (long i = 1; i < LEN_1D; i++) {
+             u[ju[i]] += w[kw[i]] * c[i];
+             v[jv[i]] = u[ku[i]] * d[i] + c[i];
++        }
++        for (long i = 1; i < LEN_1D; i++) {
+             w[jw[i]] = v[kv[i]] * e[i] + d[i];
+         }
+         dummy(a, b, c, d, e);
+```
+
+## 3. Phase A · region 0:0 — rejected at `correctness`
+
+```
+Program output changed — the patched program is NOT semantically equivalent to the original.
+output differs and no numerical slack is in effect
+first difference at line 2:
+  expected: pb_sum 323574.18114425638
+  got:      pb_sum 319416.26602868212
+--- expected (original) ---
+```
+
+```diff
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6_agent_2/benchmarks/tsvc_c2/k27/full_b1_nospeed_v4/claude-haiku-4-5-20251001/rep1/work/k27.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e2v6_agent_2/benchmarks/tsvc_c2/k27/full_b1_nospeed_v4/claude-haiku-4-5-20251001/rep1/work/k27.c
+@@ -5,7 +5,11 @@
+     for (int nl = 0; nl < iterations; nl++) {
+         for (long i = 1; i < LEN_1D; i++) {
+             u[ju[i]] += w[kw[i]] * c[i];
++        }
++        for (long i = 1; i < LEN_1D; i++) {
+             v[jv[i]] = u[ku[i]] * d[i] + c[i];
++        }
++        for (long i = 1; i < LEN_1D; i++) {
+             w[jw[i]] = v[kv[i]] * e[i] + d[i];
+         }
+         dummy(a, b, c, d, e);
+```
+

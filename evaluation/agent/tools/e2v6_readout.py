@@ -19,7 +19,7 @@ out of every denominator), and repeats the two tests from its own tables as a cr
   * every unsafe program of the agent, with what the harness recorded;
   * model calls, calls per success and the API-equivalent cost per setup.
 
-    venv/bin/python evaluation/agent/tools/e2v6_readout.py --out evaluation/agent/results/E02v6_hidden_order_clean_files/analysis
+    venv/bin/python evaluation/agent/tools/e2v6_readout.py --out evaluation/agent/results/history/E02v6_hidden_order_clean_files/analysis
 """
 from __future__ import annotations
 
