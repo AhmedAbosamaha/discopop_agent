@@ -62,7 +62,7 @@ The reduction file of every package, from the profiles of the last draws before 
   and `npb/is` (`+`, `-`), `polybench/adi` (`+`, `-`, `>`), `covariance` (`+`, `-`), `lu` (`+`, `>`), `syr2k` and
   `syrk` (`*`, `+`).
 
-The profiler's half can act only where a minimum call is stored: none of these files holds one (to be confirmed
-by the files after the rebuild: no `<`). The explorer's half can act only in the seven packages with more than
+The profiler's half can act only where a minimum call is stored: none of these files holds one (confirmed by
+the files after the rebuild, `b23_readout.md` §4: no `<`, no file with other operations). The explorer's half can act only in the seven packages with more than
 one operation; in the profiles read, every reduction pattern DiscoPoP reports there (`lu`, `syrk`, `md`) belongs
 to a `+` entry and the last entry of the file is a `+` as well, so no operation is expected to change.

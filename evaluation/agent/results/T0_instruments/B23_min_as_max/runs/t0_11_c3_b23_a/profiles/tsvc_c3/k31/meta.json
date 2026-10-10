@@ -1,0 +1,45 @@
+{
+  "suite": "tsvc_c3",
+  "kernel": "k31",
+  "source": "constructed: ORDER-3 (THESIS_EXPERIMENTS \u00a76, 3 Oct)",
+  "category": "constructed / statement order decided by an offset variable (ORDER-3)",
+  "file": "k31.c",
+  "language": "c",
+  "layout": "project",
+  "project": {
+    "units": [
+      "k31.c",
+      "main.c"
+    ],
+    "include_dirs": [
+      "."
+    ],
+    "editable": [
+      "k31.c"
+    ]
+  },
+  "restructuring_class": "restructure (ORDER-3 offset variable)",
+  "transformation": "loop distribution with the second statement's loop first",
+  "why": "off = -1: S1 reads the element of v that S2 wrote one iteration earlier; far = LEN_1D: S2 reads u elements nothing writes",
+  "reference_solution": "agent/reference_solutions/tsvc_c3/k31.c",
+  "exclude_functions": [
+    "main",
+    "dummy"
+  ],
+  "harness": "tsvc_c3/k31.h",
+  "harness_sha256": "4e169cab6ab3d30fff9d49b9f4912da854a2db887561767fe006be3fa76a1622",
+  "hot_loop": {
+    "entry": "kernel_k31",
+    "function": "kernel_k31",
+    "line": 6,
+    "writes": [
+      "u",
+      "v"
+    ]
+  },
+  "repetitions_proven": true,
+  "agent_dataset": "SMALL",
+  "generator_version": 7,
+  "inputs_sha256": "456dd573b84b30e6f32c943bb559d80374eec67177de48223e95124a8c3fc627",
+  "output_sha256": "8652bcb2f764e34385417ca355a9d0234a237b45b8578e33ea6b5783c84e3cf9"
+}

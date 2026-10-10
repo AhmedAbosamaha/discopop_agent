@@ -1,0 +1,58 @@
+{
+  "suite": "rodinia-3.1",
+  "kernel": "hotspot",
+  "source": "benchmarks/rodinia_3.1/serial/hotspot/hotspot_serial.cpp",
+  "category": "thermal-simulation",
+  "language": "cpp",
+  "exclude_functions": [
+    "hs_generate",
+    "pb_emit",
+    "pb_report",
+    "pb_seed",
+    "pb_uniform",
+    "pb_timer_start",
+    "pb_timer_stop",
+    "main"
+  ],
+  "agent_dataset": "SMALL",
+  "generator_version": 1,
+  "sizes": {
+    "MINI": {
+      "HS_ROWS": "64",
+      "HS_COLS": "64",
+      "HS_ITERATIONS": "10"
+    },
+    "SMALL": {
+      "HS_ROWS": "512",
+      "HS_COLS": "512",
+      "HS_ITERATIONS": "100"
+    },
+    "STANDARD": {
+      "HS_ROWS": "1024",
+      "HS_COLS": "1024",
+      "HS_ITERATIONS": "500"
+    },
+    "LARGE": {
+      "HS_ROWS": "2048",
+      "HS_COLS": "2048",
+      "HS_ITERATIONS": "1000"
+    },
+    "EXTRALARGE": {
+      "HS_ROWS": "4096",
+      "HS_COLS": "4096",
+      "HS_ITERATIONS": "2000"
+    }
+  },
+  "note": "the grids are generated in-process, not read from files, because the harness passes no arguments; -DPB_EMIT_INPUT writes them in the original's format so the validator gives the original the same input",
+  "inputs_sha256": "b79721a9d71b5a6681d43cc7c93185c6da28a44223558cc891e19a5828aa3cb3",
+  "file": "hotspot.cpp",
+  "layout": "single",
+  "removed": [
+    "1 disabled #ifdef OMP_OFFLOAD block(s) in the kernel (\u00a71a)",
+    "1 omp_set_num_threads() call(s) and the num_omp_threads declaration \u2014 the pragma they configure is disabled in the serial file",
+    "omp.h and the thread-count argument",
+    "get_time()/gettimeofday timing and the 'Start computing' line",
+    "read_input() and writeoutput(): the grids are generated in-process and the result becomes the digest, because the harness passes no arguments"
+  ],
+  "output_sha256": "4b8a430a42c6776d30d9027254563e98606b6dff005730c92423947ca0ea2924"
+}

@@ -1,0 +1,136 @@
+
+============================================================
+  DiscoPoP Agentic Controller
+============================================================
+  Source         : /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/t0_11_b23_apps_b/benchmarks/polybench/dynprog/discopop_capability/claude-haiku-4-5-20251001/rep1/work/dynprog.c
+  DiscoPoP dir   : .discopop
+  Model          : claude-haiku-4-5-20251001
+  Budget         : 0 LLM retries/region (+2 free build fixes)
+  λ penalty      : 1.0
+  Min workload   : 0.0
+  Restruct. depth: 0 (Tier-2 allowed at depth 0–0)
+  Quality gate   : Tier-1 = all but speed, no escalation; Tier-2 = full
+  TSan           : barrier-aware (archer: /usr/lib/llvm-20/lib/libarcher.so)
+  Speedup gate   : OFF (--no-require-speedup)
+  Dry run        : False
+  LLM mode       : claude-haiku-4-5-20251001
+  Edit mode      : direct
+  Re-profiling   : full (instrument + run + explore) after every kept rewrite
+  Explorer       : one attempt may take 60 s, then the draw is repeated (random stall, L5)
+  Pragmas        : DiscoPoP writes them in Phase B
+============================================================
+
+  Project        : /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/t0_11_b23_apps_b/benchmarks/polybench/dynprog/discopop_capability/claude-haiku-4-5-20251001/rep1/work  (2 unit(s): dynprog.c, polybench.c)
+
+  [ok] Captured reference output on 2 inputs (31 bytes, 0.8 ms baseline) for the correctness/performance gates.
+
+  [ok] Numerical noise floor 0 — output holds no non-integer number; the floor is 0 by construction, so the remaining build variants were skipped; output is compared byte-for-byte.
+
+  Hotspots       : measured per-region runtimes are available — 16 region(s) measured, 12.1 ms total, ranking by predicted time saved at 48 threads
+
+  Baseline       : DiscoPoP proposes 6 applicable pattern(s) unaided; 6 of them produce a usable pragma
+                   → the run beats DiscoPoP by ending with more than 6
+
+  Initial candidates
+Region ID    Type           Saves    % run    Hot  Tier  Depth  Name
+--------------------------------------------------------------------------------------
+  1:86       loop         11.7 ms    99.4%    YES     1      0  lines 61–78
+  3:82       function     11.7 ms    99.4%    YES     2      0  kernel_dynprog
+  1:99       loop         11.3 ms    95.6%    YES     1      0  lines 67–76
+  1:102      loop         11.1 ms    94.3%    YES     1      0  lines 69–75
+  1:106      loop          6.8 ms    57.4%    YES     1      0  lines 72–73
+  1:89       loop          0.4 ms     3.7%  MAYBE     1      0  lines 63–65
+  1:92       loop          0.3 ms     2.3%  MAYBE     1      0  lines 64–65
+
+============================================================
+  PHASE A — restructure  (the source stays pragma-free)
+============================================================
+
+┌─ [depth=0] loop 1:86 (lines 61–78)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (reduction) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] function 3:82 (lines 50–82)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:99 (lines 67–76)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:102 (lines 69–75)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:106 (lines 72–73)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:89 (lines 63–65)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:92 (lines 64–65)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+
+============================================================
+  PHASE B — annotate  (6 candidate pragma(s))
+============================================================
+
+  5 loop(s) are already parallel in the source; nothing is nested inside them.
+
+┌─ pattern #22  reduction @ lines 61–78  (W=1700)
+│  #pragma omp parallel for
+│  gate failed at 'tsan': Race detected: WARNING: ThreadSanitizer: data race (pid=1753419)   Write of size 4 at 0x7fffffffe6a4 by thread T9:     #0 kernel_dynprog.omp_outlined_
+└─ DROPPED
+
+   DiscoPoP reports another pattern for this loop (do_all) — trying it
+
+┌─ pattern #57  do_all @ lines 61–78  (W=1700)
+│  #pragma omp parallel for
+│  gate failed at 'tsan': Race detected: WARNING: ThreadSanitizer: data race (pid=1753445)   Write of size 4 at 0x7fffffffe6a4 by thread T3:     #0 kernel_dynprog.omp_outlined_
+└─ DROPPED
+
+┌─ pattern #21  do_all @ lines 67–76  (W=44100)
+│  #pragma omp parallel for
+│  gate failed at 'tsan': Race detected: WARNING: ThreadSanitizer: data race (pid=1753472)   Write of size 4 at 0x7fffffffe6a4 by thread T1:     #0 kernel_dynprog.omp_outlined_
+└─ DROPPED
+
+┌─ pattern #20  do_all @ lines 69–75  (W=735000)
+│  #pragma omp parallel for
+│  gate failed at 'tsan': Race detected: WARNING: ThreadSanitizer: data race (pid=1753499)   Write of size 4 at 0x7fffffffe6a4 by thread T7:     #0 kernel_dynprog.omp_outlined_
+└─ DROPPED
+
+┌─ pattern #19  do_all @ lines 72–73  (W=1960000)
+│  #pragma omp parallel for
+│  gate failed at 'tsan': Race detected: WARNING: ThreadSanitizer: data race (pid=1753527)   Read of size 4 at 0x7ffff6bd425c by thread T1:     #0 kernel_dynprog.omp_outlined_d
+└─ DROPPED
+
+┌─ pattern #18  do_all @ lines 63–65  (W=10000)
+│  #pragma omp parallel for
+│  [Phase-B] Original backed up → dynprog.c.original
+│  [Phase-B] Applied to dynprog.c
+└─ APPLIED
+
+┌─ pattern #17  do_all @ lines 64–65  (W=250000)
+│  #pragma omp parallel for
+│  nested inside the already-parallelized region at lines 63–65
+└─ SKIPPED (enclosing loop is already parallel)
+
+============================================================
+  SETTLING — verify the finished source, drop what does not hold up
+============================================================
+  [ok] finished source verified — output matches the original
+
+
+============================================================
+  SUMMARY: 0 rewrite(s) kept  |  1 pragma(s) applied  |  1 skipped
+  DiscoPoP unaided: 6 usable pragma(s) in this profile's draw  →  this run: 1   [BELOW, informational]
+    ✓  loop 1:89  [Phase-B pragma]  depth=0
+    ✗  3:82  [skipped]  depth=0
+
+  Results → .discopop/agent_patches/accepted.json
+============================================================
+

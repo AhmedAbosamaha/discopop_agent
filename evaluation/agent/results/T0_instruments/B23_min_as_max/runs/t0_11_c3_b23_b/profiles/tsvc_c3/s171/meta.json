@@ -1,0 +1,44 @@
+{
+  "suite": "tsvc_c3",
+  "kernel": "s171",
+  "source": "benchmarks/TSVC_2/src/tsvc.c",
+  "category": "symbolics / symbolic dependence tests",
+  "file": "s171.c",
+  "language": "c",
+  "layout": "project",
+  "project": {
+    "units": [
+      "s171.c",
+      "main.c"
+    ],
+    "include_dirs": [
+      "."
+    ],
+    "editable": [
+      "s171.c"
+    ]
+  },
+  "restructuring_class": "hidden independence (E2-B1 b)",
+  "transformation": "none: the stride inc is set outside the function (TSVC's main passes 1)",
+  "why": "with inc = 1 each iteration updates its own a[i]; with inc = 0 all would update a[0]",
+  "reference_solution": null,
+  "exclude_functions": [
+    "main",
+    "dummy"
+  ],
+  "harness": "tsvc_c3/s171.h",
+  "harness_sha256": "a38863a1f81201d29e00fbc751fdf1cdc6a22e94f7cbb13bcb6bc4384e4a142f",
+  "hot_loop": {
+    "entry": "kernel_s171",
+    "function": "kernel_s171",
+    "line": 6,
+    "writes": [
+      "a"
+    ]
+  },
+  "repetitions_proven": true,
+  "agent_dataset": "SMALL",
+  "generator_version": 7,
+  "inputs_sha256": "456dd573b84b30e6f32c943bb559d80374eec67177de48223e95124a8c3fc627",
+  "output_sha256": "eb5cf4004b405b65dfa6ed311c1d0bd9810af66cd909fe929a2f34a2dc810293"
+}

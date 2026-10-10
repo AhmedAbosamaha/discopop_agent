@@ -1,0 +1,120 @@
+<title>Fast Refresh Design</title>
+<style>
+:root{--bg:#fbfaf7;--fg:#1d1c1a;--mute:#66625b;--line:#dedad2;--card:#ffffff;--accent:#8a4b12;--ok:#1f6b3a;--warn:#9a5a00;--code:#f3f0ea}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#171614;--fg:#ebe7df;--mute:#a39d92;--line:#35322d;--card:#1f1e1b;--accent:#e0a064;--ok:#7ec795;--warn:#e2b25c;--code:#23211e;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#171614;--fg:#ebe7df;--mute:#a39d92;--line:#35322d;--card:#1f1e1b;--accent:#e0a064;--ok:#7ec795;--warn:#e2b25c;--code:#23211e;color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font:15px/1.55 Georgia,"Iowan Old Style","Times New Roman",serif;padding-block:28px 60px;padding-inline:16px}
+main{max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+h1{font-size:28px;line-height:1.2;margin:0;text-wrap:balance}
+h2{font-size:19px;margin:14px 0 0;padding-top:14px;border-top:1px solid var(--line);text-wrap:balance}
+h3{font-size:15.5px;margin:0}
+p{margin:0;max-width:68ch}
+.lede{color:var(--mute)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:14px 16px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.code{overflow-x:auto;background:var(--code);border-radius:4px;border:1px solid var(--line)}
+pre{margin:0;padding:10px 12px;font:12.5px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;word-break:break-word}
+code{font:0.9em ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--code);padding:0 3px;border-radius:3px}
+.tw{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px;font-variant-numeric:tabular-nums}
+th,td{text-align:left;vertical-align:top;padding:7px 10px;border-bottom:1px solid var(--line)}
+th{font-weight:600;color:var(--mute);font-size:12.5px;letter-spacing:.04em;text-transform:uppercase}
+.k{color:var(--mute);font-size:13px;letter-spacing:.04em;text-transform:uppercase}
+.ask{border-left:3px solid var(--accent);padding-left:12px}
+ul,ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;max-width:68ch}
+</style>
+<main>
+<header><p class="k">For your decision · 10 Oct 2026 · nothing is built or run</p>
+<h1>The fast-refresh experiment: a design</h1>
+<p class="lede">After the model rewrites a loop, the agent profiles the whole program again: it compiles it with DiscoPoP's instrumentation, runs it, and lets DiscoPoP analyse the run. The fast refresh skips the run. It compiles only, and carries the dependences of the last run over to the new code. For the lines the model just wrote there is then no measurement. The second idea is to ask the model itself which dependences those lines have.</p></header>
+<h2>What it would tell us that our runs cannot</h2>
+<ol><li><strong>Does skipping the run change what DiscoPoP says about the model's real rewrites?</strong> We only know it for three small programs written for the purpose: in 7 of 18 comparisons the fast refresh suggested a parallel loop that the full profile does not support.</li>
+<li><strong>Does the model's own report of the dependences repair that?</strong> Never measured.</li>
+<li><strong>How many seconds does it save where the run is long?</strong> We know how long the runs are, not what one refresh saves.</li></ol>
+<h2>What our runs already say</h2>
+<p><strong>On the 18 loops there is no time to save.</strong> From the 90 agent trials of the main comparison:</p>
+<div class="tw"><table><thead><tr><th>One profile of such a program</th><th>Time</th><th>Skipped by the fast refresh</th></tr></thead><tbody><tr><td>compile with instrumentation</td><td>0.20 s</td><td>no</td></tr><tr><td>run</td><td>0.17 s</td><td>yes</td></tr><tr><td>DiscoPoP's analysis</td><td>1.41 s</td><td>no</td></tr></tbody></table></div>
+<p>The skipped runs add up to 0.08 % of the agent's time. So on these loops the fast refresh can only be harmless or harmful, never useful.</p>
+<p><strong>The run is long on three whole programs</strong> (DiscoPoP alone, three draws): <code>hotspot</code> 53.0 s, <code>is</code> 30.6 s, <code>md</code> 21.4 s. It is over one second on eight programs in all; on PolyBench the middle value is 0.11 s and the longest 4.4 s.</p>
+<p><strong>The profile after a rewrite matters only where DiscoPoP writes the pragmas</strong> — which is the setup you chose for this experiment. There every rewrite that passes the checks is kept or thrown away by what DiscoPoP says about it.</p>
+<p><strong>We already hold 601 real rewrites to test it on.</strong> Every rewrite of the model that passed the checks is saved with its trial:</p>
+<div class="tw"><table><thead><tr><th>Experiment, setup in which DiscoPoP writes the pragmas</th><th>Trials</th><th>Saved rewrites that passed the checks</th></tr></thead><tbody><tr><td>The pragma experiment, 18 loops</td><td>90</td><td>227</td></tr><tr><td>The pragma experiment, the four recurrence loops</td><td>12</td><td>52</td></tr><tr><td>The contrast set</td><td>35</td><td>144</td></tr><tr><td>The main comparison, 18 loops</td><td>90</td><td>178</td></tr><tr><td><strong>Together</strong></td><td>227</td><td><strong>601</strong></td></tr></tbody></table></div>
+<h2>The design I propose: four steps, the cheap ones first</h2>
+<div class="tw"><table><thead><tr><th>Step</th><th>Model?</th><th>What runs</th><th>What it reads out</th><th>Cost</th></tr></thead><tbody><tr><td><strong>1. Replay</strong></td><td>no</td><td>Each of the 601 saved rewrites, on the server: the program before it is profiled in full; then the rewritten program once with the full profile and once with the fast refresh.</td><td>How often DiscoPoP says the same about the rewrite. Where it differs: <em>parallel only after the fast refresh</em> (the dangerous side — and whether the agent's checks then stop the pragma) or <em>parallel only after the full profile</em> (a lost chance). Per loop.</td><td>No model. A new tool, about a day to build and test; about an hour of server time.</td></tr><tr><td><strong>2. The model's report</strong></td><td>yes, one call per rewrite, no agent run</td><td>On the rewrites where step 1 found a difference, and as many where it found none: the model is asked for the dependences of the new lines (the text below), its answer is added, DiscoPoP analyses again.</td><td>Differences removed; agreeing cases it breaks; answers that could not be placed. And the opposite direction on the same rewrites — the model <em>deletes</em> dependences it calls unreal — which the thesis argues is the unsafe one.</td><td>About $15 to $40, fixed when step 1 shows how many rewrites differ.</td></tr><tr><td><strong>3. Time</strong></td><td>no</td><td>On the three programs with a long run and on PolyBench's longest: an edit that changes nothing, then full profile against fast refresh, five times each.</td><td>Seconds saved by one refresh, and what share of an agent run that would be.</td><td>No model. Minutes of server time.</td></tr><tr><td><strong>4. Live trials</strong> — only if steps 1 and 2 say the refresh keeps DiscoPoP's verdicts</td><td>yes</td><td>The agent with the fast refresh and the model's report on the 18 loops × 5, against the pragma experiment's setup with the full profile (its 90 trials exist).</td><td>Whether the finished programs are as often correct, race-free and faster, and whether anything unusable is shipped.</td><td>90 trials, about $55 to $60.</td></tr></tbody></table></div>
+<p><strong>If steps 1 and 2 show that the refresh changes verdicts and the report does not repair it,</strong> step 4 is not run. The thesis then says the fast refresh is not adopted, with the measured reason — the agent has profiled in full by default since 21 September.</p>
+<p><strong>What the steps answer.</strong> Your three written-down claims are all about <em>decisions that differ from a full profile</em>: that the refresh changes none; that the model's report reduces the ones it changes; that letting the model delete dependences is unsafe while letting it add them is not. Steps 1 and 2 count exactly those decisions, on 601 real rewrites instead of trial by trial.</p>
+<h2>The other way: live trials from the start</h2>
+<p>September's plan: three setups × 18 loops × 3 = 162 agent trials, about $100.</p>
+<ul><li><strong>For it:</strong> it measures the whole agent, including how a different verdict changes what the model tries next; and the report is asked in the model's own conversation, as the agent would do it. A replay asks the model fresh, and judges one rewrite at a time.</li>
+<li><strong>Against it:</strong> on these loops there is nothing to save, so the trials can only show harm or no harm; the replay shows the same on four times as many rewrites, without the noise between trials, and for a fraction of the cost. Step 4 keeps the live check for the case in which it is worth running.</li></ul>
+<h2>The texts a model would read</h2>
+<p>Word for word from the agent's code, unchanged since September. Nothing has been sent to a model.</p>
+<div class="card"><h3>The instructions of the report request</h3><div class="code"><pre>You are reporting the DATA DEPENDENCES in C/C++ code that was just rewritten.
+
+A profiler would normally observe these by running the program.  That run has
+been skipped, so for the lines below there is no measurement — you are being
+asked what a run WOULD have observed, because you have the code in front of
+you.
+
+Report only dependences carried BETWEEN ITERATIONS of a loop, and only for
+the lines shown.  A dependence within one iteration does not constrain
+parallelism and must not be reported.
+
+  RAW  an iteration reads a location an earlier iteration wrote
+  WAR  an iteration writes a location an earlier iteration read
+  WAW  two iterations write the same location
+
+Do NOT report the loop&#x27;s own induction variable: it is handled separately and
+is never a blocker.
+
+Completeness matters more than precision here.  A dependence you omit makes a
+sequential loop look parallel, which is a race.  A dependence you add that is
+not real only costs a missed parallelization.  When you are unsure whether
+iterations touch the same location, REPORT IT.
+
+Answer with one line per dependence and nothing else:
+
+    LOOP &lt;loop-header-line&gt; &lt;RAW|WAR|WAW&gt; &lt;variable&gt; &lt;writer-line&gt; &lt;reader-line&gt;
+
+and for a loop whose iterations are genuinely independent, exactly:
+
+    LOOP &lt;loop-header-line&gt; NONE</pre></div></div>
+<div class="card"><h3>The request itself, sent after a rewrite has passed the checks</h3><div class="code"><pre>Your rewrite was accepted and written to the file.
+
+The profiler will NOT be run on it, so no dependence has been measured in the code you just wrote. Report what a run would have observed.
+
+IMPORTANT — the checks your rewrite just passed say nothing about whether the loop iterations are independent. If your rewrite carried no pragma, it was compiled and run SEQUENTIALLY: nothing ran in parallel, so ThreadSanitizer had nothing to race and its silence is not evidence. Report what the CODE does, not what the checks did.
+
+```cpp
+&lt;the lines the rewrite added or changed, with six lines around them, each with its line number&gt;
+```
+
+Loops to report on, by header line: &lt;the header lines of the loops shown&gt;
+
+One line per dependence, or `LOOP &lt;line&gt; NONE` for an independent loop.</pre></div></div>
+<div class="card"><h3>The other form: the same request appended to the rewrite instructions (no extra call)</h3><div class="code"><pre>
+ALSO REPORT THE DEPENDENCES IN THE CODE YOU WRITE.
+
+The profiler will not be re-run on your rewrite, so nothing will be measured
+there.  Only you know what the new code does.  After your edit, list the
+dependences a run WOULD have observed, carried BETWEEN ITERATIONS of a loop:
+
+    LOOP &lt;loop-header-line&gt; &lt;RAW|WAR|WAW&gt; &lt;variable&gt; &lt;writer-line&gt; &lt;reader-line&gt;
+
+and for a loop whose iterations are genuinely independent, exactly:
+
+    LOOP &lt;loop-header-line&gt; NONE
+
+Use the line numbers of the code AFTER your edit.  Skip the loop&#x27;s own
+induction variable.  Report anything you are unsure about: a dependence you
+omit makes a sequential loop look parallel, which is a race, while one you
+add that is not real costs only a missed parallelization.  These lines go
+after your edit, not instead of it.</pre></div><p>I propose not to use this form: it changes the text of the rewrite request itself, so the rewrites would no longer be comparable with the pragma experiment's.</p></div>
+<p><strong>Three sentences are not exactly true of what the agent does.</strong> Your rule is that a text must be true; these are yours to decide.</p>
+<div class="tw"><table><thead><tr><th>The text says</th><th>What the agent does</th><th>I would write</th></tr></thead><tbody><tr><td>“Your rewrite was accepted and written to the file.”</td><td>It has passed the checks and is in the file. Whether it is kept is decided afterwards, by what DiscoPoP finds in it and by its speed.</td><td>“Your rewrite passed the checks and is in the file.”</td></tr><tr><td>“The profiler will NOT be run on it …”</td><td>Not now. Before the pragmas are written at the end, the whole program is profiled in full once.</td><td>“The profiler has not been run on it …”</td></tr><tr><td>“A dependence you omit makes a sequential loop look parallel, which is a race.”</td><td>The loop can then look parallel to DiscoPoP; a pragma written on it still has to pass the race check and the output check.</td><td>“A dependence you omit can make a sequential loop look parallel.” — and nothing about what follows.</td></tr></tbody></table></div>
+<p>The honest case for leaving the third as it is: the warning pushes the model to report when unsure, which is the safe direction, and a softer sentence may make it report less.</p>
+<h2>What I need from you</h2>
+<ol class="ask"><li><strong>The design:</strong> the four steps (my recommendation), or live trials from the start.</li>
+<li><strong>The three sentences:</strong> corrected as proposed, or left.</li>
+<li><strong>The form of the request:</strong> a separate request after the rewrite (my recommendation), not the appended form.</li></ol>
+<p>Nothing starts before your answer. The 15 trials of the repaired loop come first in any case.</p>
+</main>
