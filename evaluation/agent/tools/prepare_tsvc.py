@@ -1547,7 +1547,8 @@ V8_SUITE = "tsvc_c4"
 _V8_RAISED = "(n * 7919L + 13L) % LEN_1D"
 # a maximum that moves: the ladder spans less than `dummy`'s 0.25, so the element just raised is above every other
 # one of the ladder; `a[0]`, which `dummy` raises by 0.125 per call, overtakes the ladder about a quarter of the way
-# through and is the maximum from then on — a new value in every repetition on any input
+# through and is the maximum from then on. On the shipped input the result is a new value in every repetition; the
+# perturbed input scales the ladder out of order, and there the proof is the validation's (`skip`, `reorder`)
 _V8_MAX_INIT = (f"    for (long n = 0; n < iterations; n++) a[{_V8_RAISED}] = (real_t)2.0 + (real_t)0.005 * (real_t)n;")
 # a minimum that moves: the smallest element is always the one `dummy` raises next
 _V8_MIN_INIT = (f"    for (long n = 0; n < iterations; n++) a[{_V8_RAISED}] = (real_t)-2.0 + (real_t)0.005 * (real_t)n;")
