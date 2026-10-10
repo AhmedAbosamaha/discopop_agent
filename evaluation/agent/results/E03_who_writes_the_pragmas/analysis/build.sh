@@ -28,3 +28,8 @@ for setup in discopop_writes:default_v5 model_writes:llm_pragmas_v5; do
         --figures --out "$O/$d" > "$O/$d.log" 2>&1
 done
 $PY agent/tools/e3_tests.py --analysis "$O"
+# the descriptive read-outs fixed in the pre-registration (added to this script on 10 Oct 2026, after the trials: they
+# read the archive and test nothing) — per loop and per class, the gate's verdicts by stage, who wrote each kept pragma,
+# the floor; and E1-v6's instrument for the repetition loop on E3's programs and, for the tag added on 10 Oct, E1-v6's
+$PY $E/analysis/e3_descriptive.py > /dev/null
+$PY $E/analysis/rep_loop_readout.py $E/runs $E1/runs --md "$O/repetition_loop.md" > /dev/null
