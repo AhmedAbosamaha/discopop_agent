@@ -441,8 +441,8 @@ result, or the expectation written down before the run.
   - 7.7.2 The fast refresh, with the model reporting the dependences of the code it wrote (E4). An experiment of
     its own after 7.7.1 (the author, 9 Oct); whether DiscoPoP or the model writes the directive in it is the
     author's decision, open since 10 Oct: under the rule proposed before 7.7.1 the model would write (met exactly,
-    81 − 76 = 5), but the refresh decides something only where DiscoPoP writes — where the model writes, the
-    checks alone judged 441 of the 446 rewrites. Already known from the main comparison: on
+    81 − 76 = 5), but the refresh decides something only where DiscoPoP writes — a profile made after a rewrite was
+    read for 14 judgments where the model writes, against 416 where DiscoPoP writes. Already known from the main comparison: on
     the 18 loops the profiling run the refresh skips is 0.08 % of the agent's time (188 re-profiles in 90 trials,
     0.17 s each), so the saving can only be measured on programs whose profiling run is long (53 s, 31 s and
     21 s on three whole programs in the archive). What it is compared against (the full re-profile; the fast
