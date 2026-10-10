@@ -1,0 +1,248 @@
+<title>Contrast Set Loops</title>
+<style>
+:root{--bg:#fbfaf7;--fg:#1d1c1a;--mute:#66625b;--line:#dedad2;--card:#ffffff;--accent:#8a4b12;--ok:#1f6b3a;--warn:#9a5a00;--code:#f3f0ea}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#171614;--fg:#ebe7df;--mute:#a39d92;--line:#35322d;--card:#1f1e1b;--accent:#e0a064;--ok:#7ec795;--warn:#e2b25c;--code:#23211e;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#171614;--fg:#ebe7df;--mute:#a39d92;--line:#35322d;--card:#1f1e1b;--accent:#e0a064;--ok:#7ec795;--warn:#e2b25c;--code:#23211e;color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font:15px/1.55 Georgia,"Iowan Old Style","Times New Roman",serif;padding-block:28px 60px;padding-inline:16px}
+main{max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:22px}
+h1{font-size:28px;line-height:1.2;margin:0;text-wrap:balance}
+h2{font-size:19px;margin:14px 0 0;padding-top:14px;border-top:1px solid var(--line);text-wrap:balance}
+h3{font-size:15.5px;margin:0;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+p{margin:0;max-width:68ch}
+.lede{color:var(--mute)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:14px 16px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.code{overflow-x:auto;background:var(--code);border-radius:4px;border:1px solid var(--line)}
+pre{margin:0;padding:10px 12px;font:12.5px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre}
+code{font:0.9em ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--code);padding:0 3px;border-radius:3px}
+.tw{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;vertical-align:top;padding:7px 10px;border-bottom:1px solid var(--line)}
+th{font-weight:600;color:var(--mute);font-size:12.5px;letter-spacing:.04em;text-transform:uppercase}
+.k{color:var(--mute);font-size:13px;letter-spacing:.04em;text-transform:uppercase}
+.ok{color:var(--ok)} .warn{color:var(--warn)}
+ul{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;max-width:68ch}
+</style>
+<main>
+<header><p class="k">Before any model reads them · 10 Oct 2026</p>
+<h1>The new loops, as a model will read them</h1>
+<p class="lede">Each file below is the whole text a model is given for that loop: the suite's own code with its comments removed, nothing of ours in it. No model has read any of them yet.</p></header>
+<h2>How the loops were chosen</h2>
+<p>The rule was written down before DiscoPoP or a model touched any of them: every loop of the suite's two sections <em>reductions</em> and <em>search loops</em> that is not in the main set already and can be measured soundly. DiscoPoP alone, without a model, then sorts them: a loop it parallelizes itself is a <strong>control</strong>; a loop it leaves unchanged is <strong>under test</strong>.</p>
+<p>That gives six loops under test and one control, not the eight I named. I named the eight from their headings before reading them.</p>
+<div class="tw"><table><thead><tr><th>Left out</th><th>Why</th></tr></thead><tbody><tr><td><code>s13110</code></td><td>Its text is <code>s3110</code>'s, statement for statement. One loop, not two.</td></tr><tr><td><code>s3110</code></td><td>It searches a two-dimensional array that nothing changes between repetitions, so a program could compute the answer once and reuse it — the weakness we just closed on <code>s341</code>. It is also far too small to time (256 × 256 elements).</td></tr><tr><td><code>s332</code></td><td>It stops at the first element above a threshold. To make its result move between repetitions the match would have to sit at the start of the array, and then there is nothing left to search.</td></tr><tr><td><code>s31111</code></td><td>No loop over the data inside a repetition.</td></tr><tr><td><code>s312</code>, <code>s317</code></td><td>A product over the whole array is zero or infinite at the size we measure at.</td></tr><tr><td><code>s3111</code></td><td>Packaged and measured, then left out. DiscoPoP does offer its pragma for this sum, and the agent's output check refuses it: a sum added in parallel differs in the 15th digit, and on this loop the check compares byte for byte. No setup can win it, whoever writes the pragma.</td></tr></tbody></table></div>
+<h2>The six loops under test</h2>
+<p>DiscoPoP alone leaves each of them unchanged. Five need a pragma it cannot write: it writes one for a loop with no dependence, or for a sum, product, and, or, xor — nothing else. The sixth is a sum for which it offers nothing.</p>
+<div class="card"><h3>s314.c</h3><p>The largest element of an array. <span class="k">What a right answer needs:</span> <code>reduction(max:x)</code> on the loop as it stands.</p><div class="code"><pre>#include &quot;data.h&quot;
+
+real_t kernel_s314(void)
+{
+    real_t x;
+    for (int nl = 0; nl &lt; iterations; nl++) {
+        x = a[0];
+        for (int i = 0; i &lt; LEN_1D; i++) {
+            if (a[i] &gt; x) {
+                x = a[i];
+            }
+        }
+        dummy(a, b, c, d, e, x);
+    }
+    return x;
+}</pre></div><ul><li>DiscoPoP alone, three runs without a model: unchanged in all three.</li><li>The reference parallel version is correct and 8.98× faster at 12 threads.</li></ul></div>
+<div class="card"><h3>s316.c</h3><p>The smallest element. <span class="k">What a right answer needs:</span> <code>reduction(min:x)</code> on the loop as it stands.</p><div class="code"><pre>#include &quot;data.h&quot;
+
+real_t kernel_s316(void)
+{
+    real_t x;
+    for (int nl = 0; nl &lt; iterations; nl++) {
+        x = a[0];
+        for (int i = 1; i &lt; LEN_1D; ++i) {
+            if (a[i] &lt; x) {
+                x = a[i];
+            }
+        }
+        dummy(a, b, c, d, e, x);
+    }
+    return x;
+}</pre></div><ul><li>DiscoPoP alone, three runs without a model: unchanged in all three.</li><li>The reference parallel version is correct and 9.03× faster at 12 threads.</li></ul></div>
+<div class="card"><h3>s3113.c</h3><p>The largest absolute value. <span class="k">What a right answer needs:</span> <code>reduction(max:max)</code> on the loop as it stands.</p><div class="code"><pre>#include &quot;data.h&quot;
+
+real_t kernel_s3113(void)
+{
+    real_t max;
+    for (int nl = 0; nl &lt; iterations; nl++) {
+        max = ABS(a[0]);
+        for (int i = 0; i &lt; LEN_1D; i++) {
+            if ((ABS(a[i])) &gt; max) {
+                max = ABS(a[i]);
+            }
+        }
+        dummy(a, b, c, d, e, max);
+    }
+    return max;
+}</pre></div><ul><li>DiscoPoP alone, three runs without a model: unchanged in all three.</li><li>The reference parallel version is correct and 8.72× faster at 12 threads.</li></ul></div>
+<div class="card"><h3>s315.c</h3><p>The largest element and the first position that holds it. <span class="k">What a right answer needs:</span> no single clause: each thread keeps its own value and position, and the pairs are merged under a lock.</p><div class="code"><pre>#include &quot;data.h&quot;
+
+real_t kernel_s315(void)
+{
+    real_t x, chksum;
+    int index;
+    for (int nl = 0; nl &lt; iterations; nl++) {
+        x = a[0];
+        index = 0;
+        for (int i = 0; i &lt; LEN_1D; ++i) {
+            if (a[i] &gt; x) {
+                x = a[i];
+                index = i;
+            }
+        }
+        chksum = x + (real_t) index;
+        dummy(a, b, c, d, e, chksum);
+    }
+    return index + x + 1;
+}</pre></div><ul><li>DiscoPoP alone, three runs without a model: unchanged in all three.</li><li>The reference parallel version is correct and 10.62× faster at 12 threads.</li></ul></div>
+<div class="card"><h3>s318.c</h3><p>The largest absolute value at a stride, and the first position that holds it. <span class="k">What a right answer needs:</span> the same pair per thread; the running position <code>k</code> first has to be written as <code>i * inc</code>.</p><div class="code"><pre>#include &quot;data.h&quot;
+
+real_t kernel_s318(void)
+{
+    int k, index;
+    real_t max, chksum;
+    for (int nl = 0; nl &lt; iterations; nl++) {
+        k = 0;
+        index = 0;
+        max = ABS(a[0]);
+        k += inc;
+        for (int i = 1; i &lt; LEN_1D; i++) {
+            if (ABS(a[k]) &lt;= max) {
+                goto L5;
+            }
+            index = i;
+            max = ABS(a[k]);
+L5:
+            k += inc;
+        }
+        chksum = max + (real_t) index;
+        dummy(a, b, c, d, e, chksum);
+    }
+    return max + index + 1;
+}</pre></div><ul><li>DiscoPoP alone, three runs without a model: unchanged in all three.</li><li>The reference parallel version is correct and 20.58× faster at 12 threads.</li><li>That factor is not parallelism alone: the reference also replaces the running position and the jump by a plain loop.</li></ul></div>
+<div class="card"><h3>s319.c</h3><p>Two arrays computed per element, both added to one sum. <span class="k">What a right answer needs:</span> <code>reduction(+:sum)</code> — a pragma DiscoPoP does write elsewhere, but it offers nothing for this loop.</p><div class="code"><pre>#include &quot;data.h&quot;
+
+real_t kernel_s319(void)
+{
+    real_t sum;
+    for (int nl = 0; nl &lt; iterations; nl++) {
+        sum = 0.;
+        for (int i = 0; i &lt; LEN_1D; i++) {
+            a[i] = c[i] + d[i];
+            sum += a[i];
+            b[i] = c[i] + e[i];
+            sum += b[i];
+        }
+        dummy(a, b, c, d, e, sum);
+    }
+    return sum;
+}</pre></div><ul><li>DiscoPoP alone, three runs without a model: unchanged in all three; no pragma offered.</li><li>The reference parallel version is correct and 4.13× faster at 12 threads.</li></ul></div>
+<h2>The control loop</h2>
+<p>The same shape of loop, and DiscoPoP parallelizes it by itself. Both setups should end equal here.</p>
+<div class="card"><h3>s311.c</h3><p>The sum of an array.</p><div class="code"><pre>#include &quot;data.h&quot;
+
+real_t kernel_s311(void)
+{
+    real_t sum;
+    for (int nl = 0; nl &lt; iterations; nl++) {
+        sum = (real_t)0.;
+        for (int i = 0; i &lt; LEN_1D; i++) {
+            sum += a[i];
+        }
+        dummy(a, b, c, d, e, sum);
+    }
+    return (real_t)0;
+}</pre></div><ul><li>DiscoPoP alone, three runs without a model: parallelized in all three, 8.26× faster.</li><li>The reference parallel version is correct and 8.77× faster at 12 threads.</li></ul></div>
+<h2>The two other files of a package</h2>
+<p>A model can read them and cannot change them. They are the same for every loop except for the loop's name; shown here for <code>s318</code>, the one with the most in it.</p>
+<div class="card"><h3>data.h</h3><div class="code"><pre>#ifndef DATA_H
+#define DATA_H
+
+#if !defined(MINI_DATASET) &amp;&amp; !defined(SMALL_DATASET) &amp;&amp; !defined(STANDARD_DATASET) \
+    &amp;&amp; !defined(LARGE_DATASET) &amp;&amp; !defined(EXTRALARGE_DATASET)
+# define SMALL_DATASET
+#endif
+#ifdef MINI_DATASET
+# define LEN_1D 2000
+#endif
+#ifdef SMALL_DATASET
+# define LEN_1D 32000
+#endif
+#ifdef STANDARD_DATASET
+# define LEN_1D 4000000
+#endif
+#ifdef LARGE_DATASET
+# define LEN_1D 32000000
+#endif
+#ifdef EXTRALARGE_DATASET
+# define LEN_1D 192000000
+#endif
+#define iterations 48
+
+typedef double real_t;
+
+extern real_t *a, *b, *c, *d, *e;
+#include &lt;math.h&gt;
+#define ABS fabs
+extern int inc;
+
+int dummy(real_t *, real_t *, real_t *, real_t *, real_t *, real_t);
+real_t kernel_s318(void);
+
+#endif</pre></div></div>
+<div class="card"><h3>main.c</h3><div class="code"><pre>#include &quot;data.h&quot;
+#include &quot;tsvc_c4/s318.h&quot;
+
+int dummy(real_t *a, real_t *b, real_t *c, real_t *d, real_t *e, real_t s)
+{
+  static long n = 0;
+  long k = (n * 7919L + 13L) % LEN_1D;
+  pb_fold(n, a, b, c, d, e, s);
+  a[k] += (real_t)0.25; b[k] += (real_t)0.25; c[k] += (real_t)0.125;
+  d[k] += (real_t)0.125; e[k] += (real_t)0.25;
+  a[0] += (real_t)0.125; b[LEN_1D-1] += (real_t)0.125;
+  n++;
+  return 0;
+}
+
+int main(int argc, char** argv)
+{
+  if (pb_setup(argc, argv)) return 1;
+  pb_timer_start();
+  real_t pb_result = kernel_s318();
+  pb_timer_stop();
+  pb_finish(pb_result);
+  return 0;
+}</pre></div></div>
+<h2>What a model does not see</h2>
+<ul><li><strong>The data.</strong> The arrays are filled in a file outside the package. For these loops the values are arranged so that the answer changes from one repetition to the next — otherwise a program could compute it once and reuse it.</li><li><strong>The stride of <code>s318</code>.</strong> <code>inc</code> is 1, set outside the package, as the suite's own driver passes it.</li><li><strong>One thing removed from <code>s315</code>.</strong> The suite's function fills the array itself before its repetitions. That is data set-up, so it is done outside the package here; the two lines are not in the file.</li></ul>
+<h2><code>s341</code>: the file is unchanged, the data are not</h2>
+<p>The model reads the same file as before. Only the hidden data changed: some elements now cross zero between repetitions, so the positions in the packed array move.</p>
+<div class="card"><h3>s341.c</h3><div class="code"><pre>#include &quot;data.h&quot;
+
+real_t kernel_s341(void)
+{
+    int j;
+    for (int nl = 0; nl &lt; iterations; nl++) {
+        j = -1;
+        for (int i = 0; i &lt; LEN_1D; i++) {
+            if (b[i] &gt; (real_t)0.) {
+                j++;
+                a[j] = b[i];
+            }
+        }
+        dummy(a, b, c, d, e);
+    }
+    return (real_t)0;
+}</pre></div></div>
+<div class="tw"><table><thead><tr><th>The form that computes the positions once</th><th>Shipped input</th><th>Perturbed input</th></tr></thead><tbody><tr><td>on the data of every run so far</td><td>reproduces the output exactly</td><td>reproduces the output exactly</td></tr><tr><td>on the new data</td><td>output differs</td><td>output differs</td></tr></tbody></table></div>
+<h2>What the checks without a model found</h2>
+<ul><li><strong>The packages are the same on both machines:</strong> 9 of 9 pass the generator's checks on the Mac and on the server, and all 45 files have the same digest on both.</li><li><strong>Every repetition is necessary:</strong> for each package, a variant that skips repetitions and one that reorders them both change the output, on both inputs.</li><li><strong>Every loop can be timed:</strong> 1.5 to 5.5 seconds for the serial loop at the size we measure at.</li><li><strong>Every reference is correct and faster</strong> by the harness's own verification.</li><li><strong>DiscoPoP cannot annotate the reference either:</strong> given the reference of each of the five extreme-value loops with its pragmas removed, DiscoPoP writes none.</li><li><strong>The agent's checks do not wrongly refuse the plain right pragma</strong> on the three one-clause loops (asked directly, without a model).</li><li><strong><code>s341</code> is the loop DiscoPoP saw before:</strong> on the new data its view is the same in two runs.</li></ul>
+<h2>Open before the run</h2>
+<ul><li><strong>A limit of the agent's output check, found here.</strong> It allows a numerical difference only as large as six builds of the original disagree among themselves. Where they agree exactly, a correct parallel sum is refused for a difference in the 15th digit (<code>s3111</code>). The harness's own verification accepts the same program. Whether the check should allow for a reordered sum when the pragma is a sum reduction is your decision; nothing is changed.</li></ul>
+</main>
