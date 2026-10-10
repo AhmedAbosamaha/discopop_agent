@@ -199,7 +199,8 @@ void DiscoPoP::instrument_loop(Function &F, int file_id, llvm::Loop *loop, LoopI
             // check if loaded value is used in the store instruction to prevent
             // "false positives"
             if (check_value_usage(candidate.store_inst_->getValueOperand(), cast<Value>(candidate.load_inst_))) {
-              candidate.operation_ = '>';
+              // '<' for a minimum (x = fmin(x, ...)), '>' otherwise
+              candidate.operation_ = dp_reduction_get_min_max_char(candidate.store_inst_, candidate.load_inst_);
             } else {
               continue;
             }

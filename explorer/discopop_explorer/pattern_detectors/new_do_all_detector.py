@@ -306,6 +306,10 @@ def identify_simple_doall_and_reduction(
                     if out_dep_target in other_iterations_subnodes:
                         # check if the preventing dependency is a reduction dependency.
                         is_reduction_dependency = False
+                        # the entry of the reduction file that belongs to this dependency. Without it, the entry
+                        # recorded below was the LAST one of the file, whichever had matched, and every reduction
+                        # of a program got that entry's operation.
+                        matching_red_var_dict: Optional[Dict[str, str]] = None
                         for red_var_dict in tg.pet.reduction_vars:
                             # check for correct parent loop
                             if red_var_dict["loop_line"] not in node.created_context.get_code_scope(tg.pet):
@@ -320,9 +324,11 @@ def identify_simple_doall_and_reduction(
                                 continue
                             # all of the previous requirements are met
                             is_reduction_dependency = True
-                        if is_reduction_dependency:
+                            matching_red_var_dict = red_var_dict
+                            break
+                        if is_reduction_dependency and matching_red_var_dict is not None:
                             # not a valid doall loop
-                            reduction_info.append((subnode, out_dep_target, dep, red_var_dict))
+                            reduction_info.append((subnode, out_dep_target, dep, matching_red_var_dict))
                         #                            dependency_found = True
                         #                            break
 

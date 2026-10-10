@@ -654,4 +654,22 @@ Status: done
 | `e3b_4` | [`E03b_contrast_set/runs/e3b_4/`](E03b_contrast_set/runs/e3b_4/) | E3b, × 5, Haiku: `tsvc_c4` s318 — `default_v5` (DiscoPoP writes the pragma), `llm_pragmas_v5` (the model writes it) and `discopop_gate_v5` (DiscoPoP alone, no model) | valid | 15 | FASTER 9, no-change 5, parallel-not-faster 1 |
 | `e3b_bare_haiku` | [`E03b_contrast_set/runs/e3b_bare_haiku/`](E03b_contrast_set/runs/e3b_bare_haiku/) | E3b, Haiku alone: `bare_llm_v4` on the seven loops of the contrast set × 5 (`tsvc_c4` s314 s316 s3113 s315 s318 s319 s311) | valid | 35 | BROKEN 2, FASTER 33 |
 | `e3b_race_check` | [`E03b_contrast_set/checks/e3b_race_check/`](E03b_contrast_set/checks/e3b_race_check/) | race_check.py (server, no model) over every changed program of E3b's two setups and of Haiku alone — the gate's ThreadSanitizer build and schedule matrix on each finished file | valid | 0 |  |
+| `e3bc_s316` | not archived yet | E3b corrected for DiscoPoP B23 (a minimum reported as a maximum, repaired 10 Oct): `tsvc_c4/s316` × 5, Haiku — `default_v5` (DiscoPoP writes the pragma), `llm_pragmas_v5` (the model writes it) and `discopop_gate_v5` (DiscoPoP alone, no model), as `e3b_1`, on the repaired DiscoPoP; replaces the `tsvc_c4/s316` cells of `e3b_1` in the corrected read-out. Launched only after the regression of group B23 is read | registered |  |  |
+| `e3bc_race_check` | not archived yet | race_check.py (server, no model) over the changed programs of `e3bc_s316` | registered |  |  |
+
+## [DiscoPoP B23 — a minimum reported as a maximum, and every reduction given the operation of the last entry of the reduction file: the two repairs and their regression check](T0_instruments/B23_min_as_max/REPORT.md)
+
+Status: running
+
+| run | where | what it is | status | trials | outcomes |
+|---|---|---|---|---:|---|
+| `t0_11_c3_b23_a` | not archived yet | T0.11 with DiscoPoP B23 repaired (the profiler reads minimum or maximum from the stored call; the explorer records the matching reduction entry), draw a, server, no model: arm discopop_capability on the 44 tsvc_c3 packages — the regression check against t0_11_c3_b19r_a–c | registered |  |  |
+| `t0_11_c3_b23_b` | not archived yet | T0.11 with DiscoPoP B23 repaired (the profiler reads minimum or maximum from the stored call; the explorer records the matching reduction entry), draw b, server, no model: arm discopop_capability on the 44 tsvc_c3 packages | registered |  |  |
+| `t0_11_c3_b23_c` | not archived yet | T0.11 with DiscoPoP B23 repaired (the profiler reads minimum or maximum from the stored call; the explorer records the matching reduction entry), draw c, server, no model: arm discopop_capability on the 44 tsvc_c3 packages | registered |  |  |
+| `t0_11_c4_b23_a` | not archived yet | T0.11 with DiscoPoP B23 repaired (the profiler reads minimum or maximum from the stored call; the explorer records the matching reduction entry), draw a, server, no model: arm discopop_capability on the 9 tsvc_c4 packages — against t0_11_c4_a–c | registered |  |  |
+| `t0_11_c4_b23_b` | not archived yet | T0.11 with DiscoPoP B23 repaired (the profiler reads minimum or maximum from the stored call; the explorer records the matching reduction entry), draw b, server, no model: arm discopop_capability on the 9 tsvc_c4 packages | registered |  |  |
+| `t0_11_c4_b23_c` | not archived yet | T0.11 with DiscoPoP B23 repaired (the profiler reads minimum or maximum from the stored call; the explorer records the matching reduction entry), draw c, server, no model: arm discopop_capability on the 9 tsvc_c4 packages | registered |  |  |
+| `t0_11_b23_apps_a` | not archived yet | T0.11 with DiscoPoP B23 repaired (the profiler reads minimum or maximum from the stored call; the explorer records the matching reduction entry), draw a, server, no model: arm discopop_capability on the 31 packages outside TSVC — PolyBench × 27, NPB is, md, Rodinia hotspot and pathfinder; against t0_11_b19r_apps_a–c | registered |  |  |
+| `t0_11_b23_apps_b` | not archived yet | T0.11 with DiscoPoP B23 repaired (the profiler reads minimum or maximum from the stored call; the explorer records the matching reduction entry), draw b, server, no model: arm discopop_capability on the 31 packages outside TSVC | registered |  |  |
+| `t0_11_b23_apps_c` | not archived yet | T0.11 with DiscoPoP B23 repaired (the profiler reads minimum or maximum from the stored call; the explorer records the matching reduction entry), draw c, server, no model: arm discopop_capability on the 31 packages outside TSVC | registered |  |  |
 

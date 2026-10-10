@@ -228,6 +228,52 @@ char DiscoPoP::dp_reduction_get_char_for_opcode(llvm::Instruction *instr) {
   return ' ';
 }
 
+// returns the operation of a reduction found by the minimum / maximum heuristic of instrument_loop:
+// '<' if the stored value is the result of a call of a minimum function (fmin, fminf, fminl or one of the
+// intrinsics llvm.minnum, llvm.minimum, llvm.minimumnum, llvm.smin, llvm.umin) that takes the loaded value of the
+// variable as one of its arguments, e.g. x = fmin(x, a[i]) -- and '>' in every other case, as before.
+// (Until this function existed, every reduction found by that heuristic was reported with '>', so a minimum
+// was given reduction(max:x).)
+char DiscoPoP::dp_reduction_get_min_max_char(llvm::StoreInst *store_instr, llvm::LoadInst *load_instr) {
+  if (!store_instr || !load_instr)
+    return '>';
+
+  // look through type conversions of the stored value, e.g. x = (float) fmin(x, a[i])
+  llvm::Value *stored_value = store_instr->getValueOperand();
+  while (llvm::isa<llvm::CastInst>(stored_value)) {
+    stored_value = llvm::cast<llvm::CastInst>(stored_value)->getOperand(0);
+  }
+
+  llvm::CallInst *call = llvm::dyn_cast<llvm::CallInst>(stored_value);
+  if (!call)
+    return '>';
+  llvm::Function *callee = call->getCalledFunction();
+  if (!callee)
+    return '>';
+
+  llvm::StringRef name = callee->getName();
+  bool is_minimum = name == "fmin" || name == "fminf" || name == "fminl" || name.starts_with("llvm.minnum.") ||
+                    name.starts_with("llvm.minimum.") || name.starts_with("llvm.minimumnum.") ||
+                    name.starts_with("llvm.smin.") || name.starts_with("llvm.umin.");
+  if (!is_minimum)
+    return '>';
+
+  // one of the arguments has to be the loaded value of the reduction variable
+  for (unsigned i = 0; i < call->arg_size(); ++i) {
+    llvm::Value *argument = call->getArgOperand(i);
+    while (llvm::isa<llvm::CastInst>(argument)) {
+      argument = llvm::cast<llvm::CastInst>(argument)->getOperand(0);
+    }
+    if (argument == load_instr)
+      return '<';
+    if (llvm::LoadInst *argument_load = llvm::dyn_cast<llvm::LoadInst>(argument)) {
+      if (argument_load->getPointerOperand() == store_instr->getPointerOperand())
+        return '<';
+    }
+  }
+  return '>';
+}
+
 // return true if 'operand' is an operand of the instruction 'instr'
 bool DiscoPoP::dp_reduction_is_operand(llvm::Instruction *instr, llvm::Value *operand) {
   unsigned num_operands = instr->getNumOperands();
