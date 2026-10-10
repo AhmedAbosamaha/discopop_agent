@@ -571,18 +571,18 @@ Status: done
 
 ## [T0.19 — packaging v8 (suite tsvc_c4: the contrast set's loops and s341 on data that move) on the server, before a model reads it](T0_instruments/T0.19_packaging_v8/REPORT.md)
 
-Status: running
+Status: done
 
 | run | where | what it is | status | trials | outcomes |
 |---|---|---|---|---:|---|
-| `t0_1_c4_sizes` | [`T0_instruments/T0.19_packaging_v8/preflight/t0_1_c4_sizes/`](T0_instruments/T0.19_packaging_v8/preflight/t0_1_c4_sizes/) | T0.1 on packaging v8, server, no model: size_table.py on the 9 tsvc_c4 packages | registered | 0 |  |
-| `t0_11_c4_a` | not archived yet | T0.11 on packaging v8, draw a, server, no model: arm discopop_capability on the 9 tsvc_c4 packages — which loops DiscoPoP alone parallelizes | registered |  |  |
-| `t0_11_c4_b` | not archived yet | T0.11 on packaging v8, draw b, server, no model: arm discopop_capability on the 9 tsvc_c4 packages | registered |  |  |
-| `t0_11_c4_c` | not archived yet | T0.11 on packaging v8, draw c, server, no model: arm discopop_capability on the 9 tsvc_c4 packages | registered |  |  |
-| `t0_14_c4_refs` | not archived yet | T0.14/T0.10 on packaging v8, server, no model: verify-source on the 9 expert references rendered as the benchmark's file (reference_solutions/tsvc_c4) | registered |  |  |
-| `t0_13_c4_ceiling` | not archived yet | T0.13 on packaging v8, server, no model: default_arm_ceiling.py — the reference of each loop expected under test (s314, s316, s3113, s315, s318) with its directives removed: does DiscoPoP write a directive on it? | registered |  |  |
-| `t0_19_s341_a` | not archived yet | T0.19 draw a, server, no model: tools/layout_equivalence.py — tsvc_c3/s341 (the data of every run so far) against tsvc_c4/s341 (data that move): output, DiscoPoP's view | registered |  |  |
-| `t0_19_s341_b` | not archived yet | T0.19 draw b, server, no model: the same comparison on a second profile of each package | registered |  |  |
+| `t0_1_c4_sizes` | [`T0_instruments/T0.19_packaging_v8/preflight/t0_1_c4_sizes/`](T0_instruments/T0.19_packaging_v8/preflight/t0_1_c4_sizes/) | T0.1 on packaging v8, server, no model: size_table.py on the 9 tsvc_c4 packages | valid | 0 |  |
+| `t0_11_c4_a` | [`T0_instruments/T0.19_packaging_v8/preflight/t0_11_c4_a/`](T0_instruments/T0.19_packaging_v8/preflight/t0_11_c4_a/) | T0.11 on packaging v8, draw a, server, no model: arm discopop_capability on the 9 tsvc_c4 packages — which loops DiscoPoP alone parallelizes | valid | 9 | FASTER 1, no-change 8 |
+| `t0_11_c4_b` | [`T0_instruments/T0.19_packaging_v8/preflight/t0_11_c4_b/`](T0_instruments/T0.19_packaging_v8/preflight/t0_11_c4_b/) | T0.11 on packaging v8, draw b, server, no model: arm discopop_capability on the 9 tsvc_c4 packages | valid | 9 | FASTER 1, no-change 8 |
+| `t0_11_c4_c` | [`T0_instruments/T0.19_packaging_v8/preflight/t0_11_c4_c/`](T0_instruments/T0.19_packaging_v8/preflight/t0_11_c4_c/) | T0.11 on packaging v8, draw c, server, no model: arm discopop_capability on the 9 tsvc_c4 packages | valid | 9 | FASTER 1, no-change 8 |
+| `t0_14_c4_refs` | [`T0_instruments/T0.19_packaging_v8/preflight/t0_14_c4_refs/`](T0_instruments/T0.19_packaging_v8/preflight/t0_14_c4_refs/) | T0.14/T0.10 on packaging v8, server, no model: verify-source on the 9 expert references rendered as the benchmark's file (reference_solutions/tsvc_c4) | valid | 9 | FASTER 9 |
+| `t0_13_c4_ceiling` | [`T0_instruments/T0.19_packaging_v8/checks/t0_13_c4_ceiling/`](T0_instruments/T0.19_packaging_v8/checks/t0_13_c4_ceiling/) | T0.13 on packaging v8, server, no model: default_arm_ceiling.py — the reference of each loop expected under test (s314, s316, s3113, s315, s318) with its directives removed: does DiscoPoP write a directive on it? | valid | 0 |  |
+| `t0_19_s341_a` | [`T0_instruments/T0.19_packaging_v8/checks/t0_19_s341_a/`](T0_instruments/T0.19_packaging_v8/checks/t0_19_s341_a/) | T0.19 draw a, server, no model: tools/layout_equivalence.py — tsvc_c3/s341 (the data of every run so far) against tsvc_c4/s341 (data that move): output, DiscoPoP's view | valid | 0 |  |
+| `t0_19_s341_b` | [`T0_instruments/T0.19_packaging_v8/checks/t0_19_s341_b/`](T0_instruments/T0.19_packaging_v8/checks/t0_19_s341_b/) | T0.19 draw b, server, no model: the same comparison on a second profile of each package | valid | 0 |  |
 
 ## [DiscoPoP B19 and B18 — a wrong `lastprivate` in three places and the Do-All that nests with counters declared at the top of the function had lost: the repairs and their regression check](T0_instruments/B19_B18_clauses_and_nests/REPORT.md)
 

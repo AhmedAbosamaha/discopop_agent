@@ -1,0 +1,25 @@
+== s314: `#pragma omp parallel for reduction(max:x)` above the loop at line 8 (file id 1; loop lines read from the patch: [8])
+   the stage's verdict: static-only   -> not refused by this stage
+   2 STATIC blocker(s) only, never observed at runtime (RAW on x in the loop at line 8; RAW on x in the loop at line 8) — conservative analysis, not evidence of a real dependence; not failing on it
+   DiscoPoP's blockers recorded for this file: [{'loop_start': 8, 'loop_end': 8, 'origin': 'DepOrigin.STATIC_ANALYSIS', 'var_name': 'x', 'dep_type': 'DepType.RAW'}, {'loop_start': 8, 'loop_end': 8, 'origin': 'DepOrigin.STATIC_ANALYSIS', 'var_name': 'x', 'dep_type': 'DepType.RAW'}, {'loop_start': 6, 'loop_end': 6, 'origin': 'DepOrigin.DYNAMIC_ANALYSIS', 'var_name': 'dummy.n', 'dep_type': 'DepType.RAW'}]
+== s316: `#pragma omp parallel for reduction(min:x)` above the loop at line 8 (file id 1; loop lines read from the patch: [8])
+   the stage's verdict: static-only   -> not refused by this stage
+   2 STATIC blocker(s) only, never observed at runtime (RAW on x in the loop at line 8; RAW on x in the loop at line 8) — conservative analysis, not evidence of a real dependence; not failing on it
+   DiscoPoP's blockers recorded for this file: [{'loop_start': 8, 'loop_end': 8, 'origin': 'DepOrigin.STATIC_ANALYSIS', 'var_name': 'x', 'dep_type': 'DepType.RAW'}, {'loop_start': 8, 'loop_end': 8, 'origin': 'DepOrigin.STATIC_ANALYSIS', 'var_name': 'x', 'dep_type': 'DepType.RAW'}, {'loop_start': 6, 'loop_end': 6, 'origin': 'DepOrigin.DYNAMIC_ANALYSIS', 'var_name': 'GEPRESULT_a', 'dep_type': 'DepType.RAW'}]
+== s3113: `#pragma omp parallel for reduction(max:max)` above the loop at line 8 (file id 1; loop lines read from the patch: [8])
+   the stage's verdict: static-only   -> not refused by this stage
+   2 STATIC blocker(s) only, never observed at runtime (RAW on max in the loop at line 8; RAW on max in the loop at line 8) — conservative analysis, not evidence of a real dependence; not failing on it
+   DiscoPoP's blockers recorded for this file: [{'loop_start': 8, 'loop_end': 8, 'origin': 'DepOrigin.STATIC_ANALYSIS', 'var_name': 'max', 'dep_type': 'DepType.RAW'}, {'loop_start': 8, 'loop_end': 8, 'origin': 'DepOrigin.STATIC_ANALYSIS', 'var_name': 'max', 'dep_type': 'DepType.RAW'}, {'loop_start': 6, 'loop_end': 6, 'origin': 'DepOrigin.DYNAMIC_ANALYSIS', 'var_name': 'dummy.n', 'dep_type': 'DepType.RAW'}]
+== s311: `#pragma omp parallel for reduction(+:sum)` above the loop at line 8 (file id 1; loop lines read from the patch: [8])
+   the stage's verdict: no-blocker   -> not refused by this stage
+   the profiler covered lines 8-10 (21 RAW, 3 WAR, 0 WAW observed) and the Do-All detector recorded no blocker. Not proof the pragma is safe — the detector rules out what it can prove — so this neither passes nor fails the patch on its own
+   DiscoPoP's blockers recorded for this file: [{'loop_start': 6, 'loop_end': 6, 'origin': 'DepOrigin.DYNAMIC_ANALYSIS', 'var_name': 'dummy.n', 'dep_type': 'DepType.RAW'}]
+== s3111: `#pragma omp parallel for reduction(+:sum)` above the loop at line 8 (file id 1; loop lines read from the patch: [8])
+   the stage's verdict: no-blocker   -> not refused by this stage
+   the profiler covered lines 8-12 (29 RAW, 3 WAR, 0 WAW observed) and the Do-All detector recorded no blocker. Not proof the pragma is safe — the detector rules out what it can prove — so this neither passes nor fails the patch on its own
+   DiscoPoP's blockers recorded for this file: [{'loop_start': 6, 'loop_end': 6, 'origin': 'DepOrigin.DYNAMIC_ANALYSIS', 'var_name': 'GEPRESULT_a', 'dep_type': 'DepType.RAW'}]
+== s319: `#pragma omp parallel for reduction(+:sum)` above the loop at line 8 (file id 1; loop lines read from the patch: [8])
+   the stage's verdict: static-only   -> not refused by this stage
+   4 STATIC blocker(s) only, never observed at runtime (RAW on sum in the loop at line 8; RAW on sum in the loop at line 8; RAW on sum in the loop at line 8) — conservative analysis, not evidence of a real dependence; not failing on it
+   DiscoPoP's blockers recorded for this file: [{'loop_start': 8, 'loop_end': 8, 'origin': 'DepOrigin.STATIC_ANALYSIS', 'var_name': 'sum', 'dep_type': 'DepType.RAW'}, {'loop_start': 8, 'loop_end': 8, 'origin': 'DepOrigin.STATIC_ANALYSIS', 'var_name': 'sum', 'dep_type': 'DepType.RAW'}, {'loop_start': 8, 'loop_end': 8, 'origin': 'DepOrigin.STATIC_ANALYSIS', 'var_name': 'sum', 'dep_type': 'DepType.RAW'}, {'loop_start': 
+GATE_PROBE_DONE
