@@ -575,7 +575,7 @@ Status: running
 
 | run | where | what it is | status | trials | outcomes |
 |---|---|---|---|---:|---|
-| `t0_1_c4_sizes` | not archived yet | T0.1 on packaging v8, server, no model: size_table.py on the 9 tsvc_c4 packages | registered |  |  |
+| `t0_1_c4_sizes` | [`T0_instruments/T0.19_packaging_v8/preflight/t0_1_c4_sizes/`](T0_instruments/T0.19_packaging_v8/preflight/t0_1_c4_sizes/) | T0.1 on packaging v8, server, no model: size_table.py on the 9 tsvc_c4 packages | registered | 0 |  |
 | `t0_11_c4_a` | not archived yet | T0.11 on packaging v8, draw a, server, no model: arm discopop_capability on the 9 tsvc_c4 packages — which loops DiscoPoP alone parallelizes | registered |  |  |
 | `t0_11_c4_b` | not archived yet | T0.11 on packaging v8, draw b, server, no model: arm discopop_capability on the 9 tsvc_c4 packages | registered |  |  |
 | `t0_11_c4_c` | not archived yet | T0.11 on packaging v8, draw c, server, no model: arm discopop_capability on the 9 tsvc_c4 packages | registered |  |  |
