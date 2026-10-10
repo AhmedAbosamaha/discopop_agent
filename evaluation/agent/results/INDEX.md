@@ -488,6 +488,12 @@ Status: done
 | `e1v6c_replay_verify` | [`E01v6_clean_files_three_way/checks/e1v6c_replay_verify/`](E01v6_clean_files_three_way/checks/e1v6c_replay_verify/) | verify-source (server, no model) on every finished file the replay e1v6c_replay kept: the harness's verdict against the benchmark's original, verification size, threads 6 and 12 | valid | 21 | FASTER 2, parallel-not-faster 19 |
 | `e1v6c_s241` | [`E01v6_clean_files_three_way/runs/e1v6c_s241/`](E01v6_clean_files_three_way/runs/e1v6c_s241/) | E1-v6 corrected: tsvc_c3/s241 × default_v4, discopop_gate_v4 × 5, Haiku, threads 6/12, repeats 5, as e1v6c_s281 — on the DiscoPoP with B14, B19 and B18 repaired (the explorer of B19's first repair, commit f9e7744df; its 15 rewrites get the same answer from the corrected explorer, analysis/corrected_2/s241_rewrites.md); B20, B21, B22 known and not repaired; the author's instruction of 8 Oct; read out in analysis/corrected_2/ | valid | 10 | FASTER 5, no-change 5 |
 | `e1v6c_s241_race_check` | [`E01v6_clean_files_three_way/checks/e1v6c_s241_race_check/`](E01v6_clean_files_three_way/checks/e1v6c_s241_race_check/) | race_check.py (server, no model) over the agent's parallel programs of e1v6c_s241 — the gate's ThreadSanitizer build and schedule matrix on each finished file, as e1v6c_race_check did for e1v6c_s281 | valid | 0 |  |
+| `e1v6c_v8_agent` | not archived yet | E1-v6 corrected for `s341` (packaging v8): `tsvc_c4/s341` × `default_v4`, `discopop_gate_v4` × 5, Haiku — E1-v6's agent on today's DiscoPoP and gate, as its other corrected cells | registered |  |  |
+| `e1v6c_v8_bare_haiku` | not archived yet | E1-v6 corrected for `s341` (packaging v8): Haiku alone on `tsvc_c4/s341` × `bare_llm_v4` × 5, as e1v6_bare_haiku | registered |  |  |
+| `e1v6c_v8_bare_sonnet` | not archived yet | E1-v6 corrected for `s341` (packaging v8): sonnet alone on `tsvc_c4/s341` × `bare_llm_v4` × 5, as e1v6_bare_sonnet | registered |  |  |
+| `e1v6c_v8_bare_opus` | not archived yet | E1-v6 corrected for `s341` (packaging v8): opus alone on `tsvc_c4/s341` × `bare_llm_v4` × 5, as e1v6_bare_opus | registered |  |  |
+| `e1v6c_v8_bare_fable` | not archived yet | E1-v6 corrected for `s341` (packaging v8): fable alone on `tsvc_c4/s341` × `bare_llm_v4` × 5, as e1v6_bare_fable | registered |  |  |
+| `e1v6c_v8_race_check` | not archived yet | race_check.py (server, no model) over the changed programs of the `s341` cells on packaging v8: the agent's (`e1v6c_v8_agent`) and the four models alone | registered |  |  |
 
 ## [E2-v6 — the hidden order on clean files: does DiscoPoP's evidence let the agent find a split no reading of the file can find, and can retries with feedback stand in for it?](history/E02v6_hidden_order_clean_files/REPORT.md)
 
@@ -632,4 +638,20 @@ Status: done
 | `e3_d_4` | [`E03_who_writes_the_pragmas/runs/e3_d_4/`](E03_who_writes_the_pragmas/runs/e3_d_4/) | E3, class D × 3 (a true recurrence), Haiku: `tsvc_c2/s3112` — `default_v5` (DiscoPoP writes the pragma), `llm_pragmas_v5` (the model writes it) and `discopop_gate_v5` (DiscoPoP alone, no model) | valid | 9 | no-change 9 |
 | `e3_a` | [`E03_who_writes_the_pragmas/runs/e3_a/`](E03_who_writes_the_pragmas/runs/e3_a/) | E3, class A × 1 (DiscoPoP alone parallelizes them), Haiku: `tsvc_c2` s000 vpvtv and `tsvc_c3` s313 — `default_v5` (DiscoPoP writes the pragma), `llm_pragmas_v5` (the model writes it) and `discopop_gate_v5` (DiscoPoP alone, no model) | valid | 9 | FASTER 9 |
 | `e3_race_check` | [`E03_who_writes_the_pragmas/checks/e3_race_check/`](E03_who_writes_the_pragmas/checks/e3_race_check/) | race_check.py (server, no model) over every changed program of E3's two setups — the gate's ThreadSanitizer build and schedule matrix on each finished file | valid | 0 |  |
+| `e3c_v8_s341` | not archived yet | E3 corrected for `s341` (packaging v8: data in which the positions move between repetitions): `tsvc_c4/s341` × 5, Haiku — `default_v5` (DiscoPoP writes the pragma), `llm_pragmas_v5` (the model writes it) and `discopop_gate_v5` (DiscoPoP alone, no model); replaces the `tsvc_c2/s341` cells of `e3_r_4` in the corrected read-out | registered |  |  |
+| `e3c_v8_race_check` | not archived yet | race_check.py (server, no model) over the changed programs of `e3c_v8_s341` | registered |  |  |
+
+## [E3b — the contrast set: who writes the pragma, on loops DiscoPoP has no pragma for](E03b_contrast_set/REPORT.md)
+
+Status: running
+
+| run | where | what it is | status | trials | outcomes |
+|---|---|---|---|---:|---|
+| `e3b_smoke` | not archived yet | E3b smoke, never counted: `tsvc_c4/s314` × 1 — `default_v5` (DiscoPoP writes the pragma), `llm_pragmas_v5` (the model writes it) and `discopop_gate_v5` (DiscoPoP alone, no model), Haiku: the first model call on a package of the new suite, checked before the 140 counted trials start | registered |  |  |
+| `e3b_1` | not archived yet | E3b, × 5, Haiku: `tsvc_c4` s314 s316 — `default_v5` (DiscoPoP writes the pragma), `llm_pragmas_v5` (the model writes it) and `discopop_gate_v5` (DiscoPoP alone, no model) | registered |  |  |
+| `e3b_2` | not archived yet | E3b, × 5, Haiku: `tsvc_c4` s3113 s319 — `default_v5` (DiscoPoP writes the pragma), `llm_pragmas_v5` (the model writes it) and `discopop_gate_v5` (DiscoPoP alone, no model) | registered |  |  |
+| `e3b_3` | not archived yet | E3b, × 5, Haiku: `tsvc_c4` s315 and the control s311 — `default_v5` (DiscoPoP writes the pragma), `llm_pragmas_v5` (the model writes it) and `discopop_gate_v5` (DiscoPoP alone, no model) | registered |  |  |
+| `e3b_4` | not archived yet | E3b, × 5, Haiku: `tsvc_c4` s318 — `default_v5` (DiscoPoP writes the pragma), `llm_pragmas_v5` (the model writes it) and `discopop_gate_v5` (DiscoPoP alone, no model) | registered |  |  |
+| `e3b_bare_haiku` | not archived yet | E3b, Haiku alone: `bare_llm_v4` on the seven loops of the contrast set × 5 (`tsvc_c4` s314 s316 s3113 s315 s318 s319 s311) | registered |  |  |
+| `e3b_race_check` | not archived yet | race_check.py (server, no model) over every changed program of E3b's two setups and of Haiku alone — the gate's ThreadSanitizer build and schedule matrix on each finished file | registered |  |  |
 

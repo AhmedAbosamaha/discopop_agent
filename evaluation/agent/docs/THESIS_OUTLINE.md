@@ -42,7 +42,7 @@ proposed here and is to be confirmed with the title.
 | RQ2 | Is every accepted change right and race-free, what does each check catch, and where are the checks blind? | C2 | H2, H3, H10, H10b, H13 | E1, E10, E7 | 7.2, 7.6 | E1, E10 done · E7 designed 9 Oct and set aside by the author the same day (not run) |
 | RQ3 | How close do the accepted programs come to an expert's version, and do they scale with threads? | C1 | H4, H11 | E1, E2, E6, E11 | 7.2, 7.5, 7.9 | partly |
 | RQ4 | What does the model need: DiscoPoP's evidence, feedback from failed attempts, or more strength? | C1 | H5, H5b, H5d, H12 | E2, E12 | 7.3, 7.5 | done |
-| RQ5 | Who should write the directive: DiscoPoP or the model? | C1, C2 | H6 (its half on the author), H6b | E3 | 7.7 | done 10 Oct: 81 of 90 fast and race-free where the model writes, 76 of 90 where DiscoPoP writes — not established (p = 0.14; four of the five trials are `s331`); no unusable program in either setup; the directive's author for 7.7.2 is the author's decision |
+| RQ5 | Who should write the directive: DiscoPoP or the model? | C1, C2 | H6 (its half on the author), H6b | E3 | 7.7 | done 10 Oct: 81 of 90 fast and race-free where the model writes, 76 of 90 where DiscoPoP writes — not established (p = 0.14; four of the five trials are `s331`); no unusable program in either setup; DiscoPoP keeps writing in 7.7.2 (the author, 10 Oct); the contrast set (E3b, 7.7.1b) is running |
 | RQ6 | Can the model close the gap a fast refresh leaves, without making the analysis unsafe? | C3 | H7, H7b | E4 | 7.7 | planned, after E3 — one experiment with RQ7 (9 Oct) |
 | RQ7 | Can the profile be refreshed without running the program again, without changing decisions? | C3 | H6 | E4 | 7.7 | planned, after E3 (moved out of E3 by the author, 9 Oct) |
 | RQ8 | How far should restructuring be chained? | C1, C3 | H8 | E8 | 7.8 | planned |
@@ -438,6 +438,22 @@ result, or the expectation written down before the run.
       speed-up, in no test.
     - *Limits.* Five trials per loop; one model; the lead sits on few loops; the timing of two directives
       against each other was off.
+  - 7.7.1b The same question on loops chosen for it (E3b). **[running since 10 Oct]** 7.7.1's lead sits on one
+    loop, the only one of the main set that needs a directive DiscoPoP cannot write. E3b asks whether that is a
+    class: six more loops of the suite that DiscoPoP alone leaves unchanged — three need one clause it does not
+    write (a largest or smallest value), two a value together with its position, one is a sum for which it
+    offers nothing — and one control loop it parallelizes itself. The loops were chosen by a rule written down
+    before any trial (the suite's sections on reductions and searches, minus what cannot be measured soundly),
+    and sorted into test and control by DiscoPoP alone without a model; one loop was taken out after that
+    measurement, and the thesis says so. One test, written down before the run: more fast and race-free trials
+    where the model writes. Reported BESIDE 7.7.1, not instead of it: 7.7.1 is the comparison on the main set,
+    E3b a test of the mechanism on loops chosen where it is expected.
+    With it: `s341` of 7.2 and 7.7.1 is run again in every setup on data in which the positions move between
+    repetitions, so that the form found on 10 Oct fails the output check; the tables of 7.2 and 7.7.1 are then
+    given as registered and as corrected.
+    Found on the way, for 5.x (the checks) and the limits: the output check compares byte for byte where six
+    builds of the original agree exactly, and then refuses a correct parallel sum for a difference in the 15th
+    digit — a loop left out of E3b for that reason.
   - 7.7.2 The fast refresh, with the model reporting the dependences of the code it wrote (E4). An experiment of
     its own after 7.7.1 (the author, 9 Oct); whether DiscoPoP or the model writes the directive in it is the
     author's decision, open since 10 Oct: under the rule proposed before 7.7.1 the model would write (met exactly,

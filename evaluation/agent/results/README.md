@@ -69,6 +69,7 @@ Earlier versions (history):
 | [`history/harness_checks/`](history/harness_checks/REPORT.md) | Harness and pipeline checks (not experiments) | done |
 | [`logs/`](logs/) | Logs | done |
 | [`E03_who_writes_the_pragmas/`](E03_who_writes_the_pragmas/REPORT.md) | E3 — who writes the pragma: DiscoPoP from its analysis of the rewritten code, or the model in the same edit | done |
+| [`E03b_contrast_set/`](E03b_contrast_set/REPORT.md) | E3b — the contrast set: who writes the pragma, on loops DiscoPoP has no pragma for | running |
 
 `history/` holds every folder a later experiment replaced, and the first pilots and harness checks (moved there on 5 Oct 2026; a path `results/E0…` in an older entry of the experiment record now starts `results/history/`). Nothing in `history/` is cited as a result.
 
