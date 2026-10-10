@@ -22,3 +22,7 @@ for setup in discopop_writes:default_v5 model_writes:llm_pragmas_v5; do
         --figures --out "$O/$d" > "$O/$d.log" 2>&1
 done
 $PY agent/tools/e3b_tests.py --analysis "$O"
+# the descriptive read-outs fixed in the pre-registration (no test): per loop — outcomes, speed-ups, calls, cost, the
+# forms of the directives and who wrote them, the gate's verdicts — and the repetition-loop instrument (E3's script)
+$PY $E/analysis/e3b_descriptive.py > /dev/null
+$PY agent/results/E03_who_writes_the_pragmas/analysis/rep_loop_readout.py $E/runs --md "$O/repetition_loop.md" > /dev/null

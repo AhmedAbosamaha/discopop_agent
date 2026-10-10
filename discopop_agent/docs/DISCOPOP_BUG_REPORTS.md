@@ -874,6 +874,44 @@ missing is every record that carries a call path, at once; on `md` it is the rec
 the program's — a check to make first, not a conclusion. Either way it points at the matching of call-path
 states to loops (the territory of B9, B15 and B17), not at the detector.
 
+## B23 — a minimum is reported as a maximum: `reduction(max:x)` written for `x = fmin(x, a[i])` (profiler, reduction detection)
+
+**Status: found 10 Oct 2026 in the trials of E3b, not fixed — the trials of E3b ran on this DiscoPoP in every arm;
+the repair and what is run again after it are the author's decision.** DiscoPoP has a maximum/minimum reduction:
+the explorer turns the profiler's operation `>` into `max` and `<` into `min`
+(`pattern_detectors/new_do_all_detector.py`, "correct operation"). The profiler finds such a reduction by a
+heuristic of its own (`profiler/DiscoPoP/instrumentation/high_level/instrumentLoop.cpp`, "We want to find max or
+min reduction operations"): a store to a loop-carried variable for which no arithmetic instruction is found, in
+a basic block whose name holds `if` or `for`, whose stored value uses the loaded value of the same variable, is
+recorded with `candidate.operation_ = '>'`. Nothing in that branch looks at which way the comparison goes, and
+`'<'` is never written. So:
+
+* `x = fmax(x, a[i])` is reported as a reduction with `max` — right;
+* `x = fmin(x, a[i])` is reported as a reduction with `max` — wrong: DiscoPoP writes
+  `#pragma omp parallel for reduction(max:x)` on a loop that computes a minimum;
+* the plain form `if (a[i] > x) x = a[i];` is not reported at all (the stored value, `a[i]`, does not use the
+  loaded `x`) — the form TSVC's `s314`, `s316`, `s3113` are written in, and the form of the comment's own
+  example from LULESH.
+
+**Where it was seen** (`evaluation/agent/results/E03b_contrast_set/analysis/e3b_descriptive.md`, the table of
+DiscoPoP's own directives on the model's rewrites): on `tsvc_c4/s316`, a minimum, DiscoPoP wrote
+`reduction(max:x)` in 9 candidates of four of the five trials of the setup in which DiscoPoP writes the
+directive; the gate's output check refused every one. On the maxima (`s314`, `s3113`, `s318`) the same directive
+was right and passed in all 16 candidates.
+
+**Effect on a result:** small. In E3b the setup in which DiscoPoP writes won `s316` in 3 of 5 trials. The defect
+fired in four trials: three of them were won all the same, through arrays of partial results, and one was lost;
+the fifth trial was lost without it (no `fmin` form was judged there). A right `reduction(min:x)` — which passed
+as `reduction(max:x)` did on `s314` — could have changed at most one trial of that cell.
+
+**Not unsafe in the agent:** the wrong directive changes the output and the gate refuses it. A user of DiscoPoP
+alone is given a wrong directive, and nothing checks it there.
+
+**A repair would** derive the direction from what is stored — a call of `fmin`/`fmax` or of the `llvm.minnum`/
+`llvm.maxnum` intrinsics, or the predicate of the comparison that selects the stored value — and report no
+reduction where it cannot. It is a change to the LLVM pass: rebuild on both machines, and the regression of the
+earlier repairs (the measured class of every package in three draws).
+
 ## B22 — candidate: a write-after-read between passes never blocks Do-All, also on an array element (explorer, Do-All detector)
 
 **Status: candidate, 8 Oct 2026 — found in the server's draws after B18's repair, reproduced in 17 lines, not

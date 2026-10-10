@@ -36,6 +36,9 @@ R = "s112 s121 s1213 s127 s211 s212 s241 s243 s244 s252 s254 s255 s281 s291 s292
 A = "s000 vpvtv s313".split()
 D = "s321 s322 s323 s3112".split()
 cls = {**{n: "R" for n in R}, **{n: "A" for n in A}, **{n: "D" for n in D}}
+# E3b's loops (suite tsvc_c4, 10 Oct 2026): under test R, the control A
+cls.update({n: "R" for n in "s314 s316 s3113 s315 s318 s319".split()})
+cls["s311"] = "A"
 SETUP = {"default_v5": "E3, DiscoPoP writes the pragma", "llm_pragmas_v5": "E3, the model writes the pragma",
          "default_v4": "E1-v6, the agent"}
 REP = r"\bfor\s*\(\s*(int\s+)?nl\b"

@@ -1526,9 +1526,12 @@ CLEAN[V7_SUITE] = (7, v7_files, render_v7_harness, render_v7_kernel, hot_loop_v7
 
 
 # ---- packaging v8 (the author, 10 Oct 2026; record §6): the contrast set of E3 and `s341` on data that move ----
-# Two decisions of the author on E3's read-out. (1) "building it and running it before the fast refresh": loops whose
-# parallel form needs a clause DiscoPoP does not write — it writes a reduction over + - * & | ^ and nothing else
-# (profiler/DiscoPoP/dp_reduction/utils.cpp) — so that what `s331` showed in E3 is tested on a class of loops.
+# Two decisions of the author on E3's read-out. (1) "building it and running it before the fast refresh": loops that
+# DiscoPoP alone leaves unchanged and whose reference is one or a few directives away, so that what `s331` showed in
+# E3 is tested on a class of loops. (This comment said until the read-out of E3b that DiscoPoP "writes a reduction
+# over + - * & | ^ and nothing else": wrong — it has a max/min reduction, found by a heuristic of the profiler that
+# fires on `x = fmax(x, a[i])` and not on TSVC's `if (a[i] > x) x = a[i];`; record §6, 10 Oct, "Correction,
+# DiscoPoP's reductions".)
 # (2) `s341`'s data are changed so that the form every winning program of E1-v6 and E3 took — the positions computed
 # once, in front of the repetition loop — fails the output check. v8 is v7 (the repetition loop inside the function,
 # `dummy` recording every repetition) with:
