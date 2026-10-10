@@ -42,7 +42,7 @@ proposed here and is to be confirmed with the title.
 | RQ2 | Is every accepted change right and race-free, what does each check catch, and where are the checks blind? | C2 | H2, H3, H10, H10b, H13 | E1, E10, E7 | 7.2, 7.6 | E1, E10 done · E7 designed 9 Oct and set aside by the author the same day (not run) |
 | RQ3 | How close do the accepted programs come to an expert's version, and do they scale with threads? | C1 | H4, H11 | E1, E2, E6, E11 | 7.2, 7.5, 7.9 | partly |
 | RQ4 | What does the model need: DiscoPoP's evidence, feedback from failed attempts, or more strength? | C1 | H5, H5b, H5d, H12 | E2, E12 | 7.3, 7.5 | done |
-| RQ5 | Who should write the directive: DiscoPoP or the model? | C1, C2 | H6 (its half on the author), H6b | E3 | 7.7 | pilot done 9 Oct; 210 trials pre-registered, waiting for the author's go (two setups; split from the fast refresh by the author, 9 Oct) |
+| RQ5 | Who should write the directive: DiscoPoP or the model? | C1, C2 | H6 (its half on the author), H6b | E3 | 7.7 | done 10 Oct: 81 of 90 fast and race-free where the model writes, 76 of 90 where DiscoPoP writes — not established (p = 0.14; four of the five trials are `s331`); no unusable program in either setup; the directive's author for 7.7.2 is the author's decision |
 | RQ6 | Can the model close the gap a fast refresh leaves, without making the analysis unsafe? | C3 | H7, H7b | E4 | 7.7 | planned, after E3 — one experiment with RQ7 (9 Oct) |
 | RQ7 | Can the profile be refreshed without running the program again, without changing decisions? | C3 | H6 | E4 | 7.7 | planned, after E3 (moved out of E3 by the author, 9 Oct) |
 | RQ8 | How far should restructuring be chained? | C1, C3 | H8 | E8 | 7.8 | planned |
@@ -396,7 +396,7 @@ result, or the expectation written down before the run.
     DataRaceBench from outside) is kept in the record and needs no model call — it can be run at any point and
     would turn each of these limits into a number.
 - **7.7 Stage 4 — who writes the directive, and how the evidence survives the edit** (E3, E4; RQ5–RQ7;
-  H6, H6b, H7, H7b). **[planned — two experiments, split by the author on 9 Oct]**
+  H6, H6b, H7, H7b). **[7.7.1 done 10 Oct; 7.7.2 planned — two experiments, split by the author on 9 Oct]**
   - 7.7.1 Who writes the directive (E3): DiscoPoP, as the agent does now, or the model in the same edit as its
     rewrite — the whole program profiled again after every kept rewrite in both. Two setups on the main
     comparison's whole set: 18 loops that need restructuring × 5, four loops with a true recurrence × 3, three
@@ -408,18 +408,41 @@ result, or the expectation written down before the run.
     the model alone's situation, not the agent's; they and three sentences about what DiscoPoP "observed" were
     corrected before the run (a new version of the texts; the finished experiments keep theirs). No trials of
     the agent without its checks, so the claim that a factor acts through the checks (H12) is not tested here
-    and the thesis says so. The motivating case: `s331` of 7.2. Pilot (11 trials, never counted): where the
-    model writes, six of six won on the loops that need restructuring, `s331` among them with a directive
-    DiscoPoP cannot write; on a recurrence loop the checks refused all twelve of the model's directives.
-    Read out per setup: the three-way table, what was shipped on the recurrence loops, who wrote each kept
-    directive, which check refused what, calls and cost. Written down before the run: more fast and race-free
-    trials where the model writes (refuted by more unusable programs); with the model writing, the agent
-    reaches at least what the model alone reaches and ships nothing wrong; and the rule by which the result
-    picks the directive's author for 7.7.2. Limit: one setup is already at 79 of 90, so a gain can show only
-    where it fails.
+    and the thesis says so. The motivating case: `s331` of 7.2.
+    **Result (10 Oct; 315 trials, no failed model call, every changed program race-clean).**
+    - *The counts.* On the 18 loops: fast and race-free in 81 of 90 trials where the model writes, 76 of 90 where
+      DiscoPoP writes, 38 of 90 for the model alone (7.2). Unusable programs shipped: none in either setup's 105
+      trials. On the four recurrence loops: nothing shipped by either.
+    - *The two tests written down before the run.* More fast and race-free trials where the model writes: not
+      established (one-sided p = 0.142, exact 0.140, odds ratio 2.0 with interval 0.70–5.68), and not refuted
+      (no more unusable programs). With the model writing, the agent reaches at least what the model alone
+      reaches and ships nothing wrong: holds (ahead on 15 loops, behind on none).
+    - *Where the difference sits.* Ten loops at 5 of 5 in both. `s331`: 5 of 5 against 1 of 5 — the loop needs
+      a directive DiscoPoP cannot write (a maximum of an index, or a guarded update); the model wrote it at its
+      first call in four trials, while with DiscoPoP writing the model must find a two-pass rewrite DiscoPoP
+      can annotate. One or two trials either way on six more loops.
+    - *The recurrence loops.* Where the model writes it put a directive on a true recurrence 144 times and the
+      checks refused every one (wrong output 65, a race 24, the schedule test 1, 42 not compiling or breaking
+      a clause rule, 12 correct but not faster). It costs more there ($3.70 a trial against $2.54).
+    - *Who wrote the kept directives where the model may write:* 150 the model's, 9 DiscoPoP's.
+    - *Cost.* $175.03 for both setups ($84.49 and $90.54); 465 and 446 model calls.
+    - *To say with it.* (a) The setup in which DiscoPoP writes reached 76 where 7.2 has 79 on the same loops;
+      texts and DiscoPoP changed in between, so it is not a repetition and the cause is not known. (b) Seven of
+      the model's fast programs open one parallel region around the repetition loop — threads started once, a
+      form DiscoPoP's directives never take; no trial of the comparison turns on it, their speed-ups are not
+      comparable. (c) `s341`: the one win in each setup, and the four of 7.2, compute the positions once in
+      front of the repetition loop — right on the tested data only (the routine called between repetitions
+      changes the array); the thesis states the cell with this limit, and 7.2 also without the loop (75 of
+      85), unless the author decides to change the loop's data and run it again. (d) One control program
+      (`s000`, 127.70×) runs the loop once instead of in every repetition: exact output, not a parallel
+      speed-up, in no test.
+    - *Limits.* Five trials per loop; one model; the lead sits on few loops; the timing of two directives
+      against each other was off.
   - 7.7.2 The fast refresh, with the model reporting the dependences of the code it wrote (E4). An experiment of
-    its own after 7.7.1 (the author, 9 Oct); whether DiscoPoP or the model writes the directive in it is taken
-    from 7.7.1's result, by a rule written down before 7.7.1 runs. Already known from the main comparison: on
+    its own after 7.7.1 (the author, 9 Oct); whether DiscoPoP or the model writes the directive in it is the
+    author's decision, open since 10 Oct: under the rule proposed before 7.7.1 the model would write (met exactly,
+    81 − 76 = 5), but the refresh decides something only where DiscoPoP writes — where the model writes, the
+    checks alone judged 441 of the 446 rewrites. Already known from the main comparison: on
     the 18 loops the profiling run the refresh skips is 0.08 % of the agent's time (188 re-profiles in 90 trials,
     0.17 s each), so the saving can only be measured on programs whose profiling run is long (53 s, 31 s and
     21 s on three whole programs in the archive). What it is compared against (the full re-profile; the fast
