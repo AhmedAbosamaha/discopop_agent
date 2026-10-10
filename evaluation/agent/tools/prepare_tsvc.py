@@ -1039,7 +1039,7 @@ def _v5_split_globals(loop: Loop) -> Tuple[List[str], List[str]]:
         code = re.sub(r"\s*/\*.*?\*/\s*$", "", line).rstrip()
         if not code:
             continue
-        if code.startswith("#define"):
+        if code.startswith(("#define", "#include")):      # #include: v8 (TSVC's `ABS` is `fabs`, common.h)
             decl.append(code)
         elif code.startswith("static "):
             if passed and re.search(r"\b%s\b" % re.escape(passed), code):
@@ -1496,13 +1496,13 @@ def hot_loop_v7(loop: Loop) -> Dict[str, Any]:
     return hot_loop_v6(loop)          # the function's text differs from v6's in the `dummy` call's argument only
 
 
-def v7_mutants(loop: Loop) -> Dict[str, str]:
+def v7_mutants(loop: Loop, text: Optional[str] = None) -> Dict[str, str]:
     """The two variants of the benchmark's file that must NOT pass (v7): `skip` runs the loop's statements in
     the first and the last repetition only, `reorder` runs every repetition before any `dummy` call. {} for a
     package with one repetition."""
     if loop.reps < 2:
         return {}
-    text = render_v7_kernel(loop)
+    text = render_v7_kernel(loop) if text is None else text
     call = "        " + (f"dummy(a, b, c, d, e, {_dummy_scalar(loop)});" if _dummy_scalar(loop) else V6_CALL.strip())
     m = re.search(re.escape(V6_LOOP) + r"\n(?P<rep>.*?)\n" + re.escape(call) + r"\n    \}\n", text, re.S)
     if not m:
@@ -1523,6 +1523,205 @@ def _as_v7(loop: Loop) -> Loop:
 
 SUITES[V7_SUITE] = [_as_v7(l) for l in SUITES[V6_SUITE]]
 CLEAN[V7_SUITE] = (7, v7_files, render_v7_harness, render_v7_kernel, hot_loop_v7, ["main", "dummy"])
+
+
+# ---- packaging v8 (the author, 10 Oct 2026; record §6): the contrast set of E3 and `s341` on data that move ----
+# Two decisions of the author on E3's read-out. (1) "building it and running it before the fast refresh": loops whose
+# parallel form needs a clause DiscoPoP does not write — it writes a reduction over + - * & | ^ and nothing else
+# (profiler/DiscoPoP/dp_reduction/utils.cpp) — so that what `s331` showed in E3 is tested on a class of loops.
+# (2) `s341`'s data are changed so that the form every winning program of E1-v6 and E3 took — the positions computed
+# once, in front of the repetition loop — fails the output check. v8 is v7 (the repetition loop inside the function,
+# `dummy` recording every repetition) with:
+#   * the loops of TSVC's sections "reductions" and "search loops" that are not in the main set (s313, s3112, s331)
+#     and can be packaged soundly — the rule and what it leaves out, with the reasons, is in the record (§6, 10 Oct):
+#     three sums, which DiscoPoP is expected to parallelize itself (the control), and five extreme-value loops;
+#   * data in which each of those loops' results MOVES between repetitions, as v7 gave `s331`: `dummy` adds 0.25 to
+#     one element of `a` per call, at positions known here, so a ladder of values on those positions makes every
+#     call produce a new maximum (the element just raised) or remove the minimum (the element raised next);
+#   * `s341`: the elements of `b` that `dummy` raises start just below zero, so one more element is positive in
+#     every repetition and every later position of the packed array shifts;
+#   * a third variant the generator proves wrong for `s341` (`hoist`): the positions computed once.
+# Nothing of v7 or earlier changes: the suite is new (`tsvc_c4`), its loops are records of their own.
+V8_SUITE = "tsvc_c4"
+# the elements `dummy` raises, in the order it raises them (main.c: k = (n * 7919 + 13) % LEN_1D at its n-th call)
+_V8_RAISED = "(n * 7919L + 13L) % LEN_1D"
+# a maximum that moves: the ladder spans less than `dummy`'s 0.25, so the element just raised is above every other
+# one of the ladder; `a[0]`, which `dummy` raises by 0.125 per call, overtakes the ladder about a quarter of the way
+# through and is the maximum from then on — a new value in every repetition on any input
+_V8_MAX_INIT = (f"    for (long n = 0; n < iterations; n++) a[{_V8_RAISED}] = (real_t)2.0 + (real_t)0.005 * (real_t)n;")
+# a minimum that moves: the smallest element is always the one `dummy` raises next
+_V8_MIN_INIT = (f"    for (long n = 0; n < iterations; n++) a[{_V8_RAISED}] = (real_t)-2.0 + (real_t)0.005 * (real_t)n;")
+V8_S341_INIT = ("    for (int i = 0; i < LEN_1D; i++) if ((i * 17) % 5 < 2) b[i] = -b[i];\n"
+                f"    for (long n = 0; n < iterations; n++) b[{_V8_RAISED}] = (real_t)-0.1;")
+_V8_ABS = "#include <math.h>\n#define ABS fabs"      # TSVC: common.h
+# TSVC's own function sets `a` to a permutation in front of the repetitions, inside its timed region (tsvc.c,
+# s315): data set-up, which is the measurement header's here — the function's text is TSVC's without these lines
+V8_DROP = {"s315": "    for (int i = 0; i < LEN_1D; i++)\n        a[i] = (i * 7) % LEN_1D;\n"}
+
+
+def _v8_extreme(decl: str, first: str, loop: str, test: str, take: str, ret: str, clause: str) -> str:
+    """The reference of a loop that keeps an extreme VALUE: TSVC's loop with the reduction clause on it."""
+    return (f"    {decl}\n    for (int nl = 0; nl < R; nl++) {{\n        {first}\n"
+            f"        #pragma omp parallel for reduction({clause})\n        {loop} {{\n"
+            f"            if ({test}) {{\n                {take}\n            }}\n        }}\n"
+            f"        pb_mix(nl);\n    }}\n    return {ret};")
+
+
+def _v8_extreme_index(name: str, first: str, start: str, value: str, ret: str) -> str:
+    """The reference of a loop that keeps an extreme value AND the first index that has it: each thread keeps its
+    own pair, the pairs are merged under a lock — the larger value, and of two equal values the smaller index.
+    `name` is TSVC's name of the value (the function's result is written with it)."""
+    return f"""    int index = 0;
+    real_t {name} = 0, chksum = 0;
+    for (int nl = 0; nl < R; nl++) {{
+        index = 0;
+        {name} = {first};
+        #pragma omp parallel
+        {{
+            real_t best = {first};
+            int where = 0;
+            #pragma omp for nowait
+            for (int i = {start}; i < LEN_1D; i++) {{
+                real_t v = {value};
+                if (v > best) {{
+                    best = v;
+                    where = i;
+                }}
+            }}
+            #pragma omp critical
+            {{
+                if (best > {name} || (best == {name} && where < index)) {{
+                    {name} = best;
+                    index = where;
+                }}
+            }}
+        }}
+        chksum = {name} + (real_t) index;
+        pb_mix(nl);
+    }}
+    return {ret};"""
+
+
+def _v8_sum(body: str, ret: str) -> str:
+    return ("    real_t sum = 0;\n    for (int nl = 0; nl < R; nl++) {\n        sum = (real_t)0.;\n"
+            "        #pragma omp parallel for reduction(+:sum)\n        for (int i = 0; i < LEN_1D; i++) {\n"
+            + body + "        }\n        pb_mix(nl);\n    }\n" + f"    return {ret};")
+
+
+V8_NEW: List[Loop] = [
+    # ---- the control: a sum, which DiscoPoP's own reduction clause covers (to be measured, not assumed) ----
+    Loop("s311", "annotate", "none (a sum reduction clause)", "the sum of a",
+         expert=_v8_sum("            sum += a[i];\n", "(real_t)0"), suite=V8_SUITE, hot_writes=("sum",)),
+    Loop("s3111", "annotate", "none (a sum reduction clause on a conditional sum)", "the sum of the positive elements of a",
+         init_extra="    for (int i = 0; i < LEN_1D; i++) if ((i * 17) % 5 < 2) a[i] = -a[i];",
+         expert=_v8_sum("            if (a[i] > (real_t)0.) {\n                sum += a[i];\n            }\n", "sum"),
+         suite=V8_SUITE, hot_writes=("sum",)),
+    Loop("s319", "annotate", "none (a sum reduction clause; the two arrays are written per element)",
+         "a[i] and b[i] from inputs only, both added to one sum",
+         expert=_v8_sum("            a[i] = c[i] + d[i];\n            sum += a[i];\n            b[i] = c[i] + e[i];\n"
+                        "            sum += b[i];\n", "sum"),
+         suite=V8_SUITE, hot_writes=("a", "b", "sum")),
+    # ---- an extreme value: a clause DiscoPoP does not write ------------------------------------------------
+    Loop("s314", "annotate (a clause outside DiscoPoP's set)", "none (a max reduction clause)",
+         "x is the largest element: reduction(max:x)", init_extra=_V8_MAX_INIT,
+         expert=_v8_extreme("real_t x = 0;", "x = a[0];", "for (int i = 0; i < LEN_1D; i++)", "a[i] > x", "x = a[i];", "x",
+                            "max:x"), suite=V8_SUITE),
+    Loop("s316", "annotate (a clause outside DiscoPoP's set)", "none (a min reduction clause)",
+         "x is the smallest element: reduction(min:x)", init_extra=_V8_MIN_INIT,
+         expert=_v8_extreme("real_t x = 0;", "x = a[0];", "for (int i = 1; i < LEN_1D; ++i)", "a[i] < x", "x = a[i];", "x",
+                            "min:x"), suite=V8_SUITE),
+    Loop("s3113", "annotate (a clause outside DiscoPoP's set)", "none (a max reduction clause on the absolute value)",
+         "max is the largest absolute value: reduction(max:max)", globals_=_V8_ABS, init_extra=_V8_MAX_INIT,
+         expert=_v8_extreme("real_t max = 0;", "max = ABS(a[0]);", "for (int i = 0; i < LEN_1D; i++)", "(ABS(a[i])) > max",
+                            "max = ABS(a[i]);", "max", "max:max"), suite=V8_SUITE),
+    # ---- an extreme value with its index: no clause at all; a pair per thread, merged ------------------------
+    Loop("s315", "restructure", "the largest element and the FIRST index that holds it: a pair per thread, merged",
+         "x and index belong together; of two equal values the smaller index is the answer", init_extra=_V8_MAX_INIT,
+         expert=_v8_extreme_index("x", "a[0]", "0", "a[i]", "index + x + 1"),
+         suite=V8_SUITE),
+    Loop("s318", "restructure", "the largest absolute value at stride inc and the first index that holds it: the "
+         "running position as a function of i, a pair per thread, merged",
+         "k advances by inc per iteration (k = i * inc); max and index belong together",
+         globals_=_V8_ABS + "\nstatic int inc;   /* s318's argument: TSVC's main passes n1 = 1 (tsvc.c), set in init_array */",
+         init_extra="    inc = 1;\n" + _V8_MAX_INIT,
+         expert=_v8_extreme_index("max", "ABS(a[0])", "1", "ABS(a[(long)i * inc])", "max + index + 1"), suite=V8_SUITE,
+         hot_writes=("k",)),
+]
+
+
+def render_v8_kernel(loop: Loop, expert: bool = False) -> str:
+    """The benchmark's own file (v8), or the reference as that file: v7's — without the data set-up TSVC's function
+    holds in front of its repetitions (V8_DROP)."""
+    text = render_v7_kernel(loop, expert)
+    drop = V8_DROP.get(loop.name)
+    return _exact(text, drop, "") if drop and not expert else text
+
+
+def render_v8_harness(loop: Loop) -> str:
+    return _exact(render_v7_harness(loop), f"harness for {loop.name} (packaging v7)", f"harness for {loop.name} (packaging v8)")
+
+
+def v8_files(loop: Loop) -> Dict[str, str]:
+    return {f"{loop.name}.c": render_v8_kernel(loop), V5_HEADER: render_v7_header(loop), V5_MAIN: render_v7_main(loop)}
+
+
+def hot_loop_v8(loop: Loop) -> Dict[str, Any]:
+    entry = f"kernel_{loop.name}"
+    hot = hot_loop_coverage.describe(render_v8_kernel(loop), entry, loop.hot_function or entry)
+    if hot["writes"] != sorted(loop.hot_writes):
+        raise ValueError(f"{loop.name}: the hot loop at line {hot['line']} writes {hot['writes']}, "
+                         f"declared {sorted(loop.hot_writes)} — read the loop again")
+    return hot
+
+
+# `s341`, the form E1-v6's and E3's winning programs took, with the directive removed: every element's position in
+# the packed array computed once, in front of the repetitions. On v6's and v7's data it reproduces the output
+# (no element of `b` changes sign between two repetitions there); on v8's it must not.
+V8_S341_HOIST = """#include <stdlib.h>
+#include "data.h"
+
+real_t kernel_s341(void)
+{
+    int *pos = (int *)malloc((size_t)LEN_1D * sizeof(int));
+    int count = 0;
+    for (int i = 0; i < LEN_1D; i++) {
+        pos[i] = count;
+        if (b[i] > (real_t)0.) {
+            count++;
+        }
+    }
+    for (int nl = 0; nl < iterations; nl++) {
+        for (int i = 0; i < LEN_1D; i++) {
+            if (b[i] > (real_t)0.) {
+                a[pos[i]] = b[i];
+            }
+        }
+        dummy(a, b, c, d, e);
+    }
+    free(pos);
+    return (real_t)0;
+}
+"""
+
+
+def v8_mutants(loop: Loop) -> Dict[str, str]:
+    """The variants of the benchmark's file that must NOT pass (v8): v7's two, and for `s341` the hoisted form."""
+    out = v7_mutants(loop, render_v8_kernel(loop))
+    if loop.name == "s341":
+        out["hoist"] = V8_S341_HOIST
+    return out
+
+
+def _as_v8(loop: Loop) -> Loop:
+    c = copy.copy(loop)
+    c.suite = V8_SUITE
+    if loop.name == "s341":
+        c.init_extra = V8_S341_INIT
+    return c
+
+
+SUITES[V8_SUITE] = V8_NEW + [_as_v8(l) for l in SUITES[V7_SUITE] if l.name == "s341"]
+CLEAN[V8_SUITE] = (8, v8_files, render_v8_harness, render_v8_kernel, hot_loop_v8, ["main", "dummy"])
 
 
 # ---- packaging v3, kept verbatim: every run up to E2 used it, and it stays the default until T0.15 ---------
@@ -1754,9 +1953,10 @@ def validate_v5(loop: Loop, package: Path, reference: Optional[Path]) -> List[st
     problems: List[str] = []
     units = [package / f"{loop.name}.c", package / V5_MAIN]
     b1 = next((l for l in B1_LOOPS if l.name == loop.name), None)      # None: a kernel v4 never had (ORDER-4)
-    v7 = loop.suite == V7_SUITE
-    if v7 and loop.name in V7_NEW_DATA:
-        b1 = None                      # this layout gives the loop other data: nothing of v4's to equal
+    v8 = loop.suite == V8_SUITE
+    v7 = loop.suite == V7_SUITE or v8      # the output carries the two sums of the repetitions' record
+    if (v7 and loop.name in V7_NEW_DATA) or v8:
+        b1 = None                      # this layout gives the loop other data (v8: or a loop v4 never had): nothing to equal
 
     def as_v4(out: str) -> str:
         """A v7 dump without the two sums of the repetitions' record — what v4 printed."""
@@ -1803,7 +2003,7 @@ def validate_v5(loop: Loop, package: Path, reference: Optional[Path]) -> List[st
                     problems.append(f"reference ({tag}) differs from the original: max rel err {err:.2e}")
         if v7:
             # every repetition is necessary: neither variant may reproduce the output, on either input
-            for name, text in v7_mutants(loop).items():
+            for name, text in (v8_mutants(loop) if v8 else v7_mutants(loop)).items():
                 (t / "mutant").mkdir(exist_ok=True)
                 for f in (V5_HEADER, V5_MAIN):
                     shutil.copy2(package / f, t / "mutant" / f)
@@ -1855,7 +2055,7 @@ def write_v5(loop: Loop, out: Path, harness_root: Path, refs: Path, check: bool)
         **({"repetitions_proven": loop.name not in V7_NOT_PROVEN and loop.reps > 1,
             **({"repetitions_note": V7_NOT_PROVEN[loop.name]} if loop.name in V7_NOT_PROVEN else {}),
             **({"repetitions_note": "one repetition: nothing to skip or reorder"} if loop.reps < 2 else {})}
-           if version == 7 else {}),
+           if version in (7, 8) else {}),
         "agent_dataset": "SMALL", "generator_version": version,
         "inputs_sha256": hashlib.sha256(TSVC.read_bytes()).hexdigest(),
         "output_sha256": v5_digest(files),
@@ -1872,21 +2072,22 @@ def main() -> int:
                          "package, D39); builds find them through CPATH (harness_include.py)")
     ap.add_argument("--references-out", type=Path, default=REFERENCES,
                     help="where the expert references go (default: the tracked agent/reference_solutions/tsvc)")
-    ap.add_argument("--layout", choices=("v3", "v4", "v5", "v6", "v7"), default="v3",
+    ap.add_argument("--layout", choices=("v3", "v4", "v5", "v6", "v7", "v8"), default="v3",
                     help="v3 (default): the one-file layout of E1 and E2; v4 (D39): the measurement in a "
                          "header outside the package — E2-B1 to E2-O3; v5 (the author, 4 Oct): the benchmark's "
                          "file holds only the loop's function, `main` in a second file (suite tsvc_c1); v6 (4 Oct, "
                          "evening): v5 with the repetition loop inside the function, as TSVC has it (suite tsvc_c2); v7 (5 Oct): "
-                         "v6 with every repetition recorded by `dummy`, so that none can be skipped (suite tsvc_c3)")
+                         "v6 with every repetition recorded by `dummy`, so that none can be skipped (suite tsvc_c3); v8 (10 Oct): v7 for "
+                         "the loops that need a clause DiscoPoP does not write, and `s341` on data that move (suite tsvc_c4)")
     ap.add_argument("--suite", choices=sorted(SUITES), default="tsvc",
                     help="which loops: `tsvc` (E1-E2, v3 or v4), `tsvc_b1` (v4 only), `tsvc_c1` (v5 only) or "
                          "`tsvc_c2` (v6 only)")
     ap.add_argument("--validate", action="store_true")
     a = ap.parse_args()
-    for layout, suite in (("v5", V5_SUITE), ("v6", V6_SUITE), ("v7", V7_SUITE)):
+    for layout, suite in (("v5", V5_SUITE), ("v6", V6_SUITE), ("v7", V7_SUITE), ("v8", V8_SUITE)):
         if (a.suite == suite) != (a.layout == layout):
             ap.error(f"layout {layout} and suite {suite} go together")
-    clean = a.layout in ("v5", "v6", "v7")
+    clean = a.layout in ("v5", "v6", "v7", "v8")
     if a.suite == "tsvc_b1" and a.layout != "v4":
         ap.error(f"--suite {a.suite} is packaged in layout v4 only")
     loops = SUITES[a.suite]

@@ -183,7 +183,7 @@ for meta_p in sorted(PREPARED.rglob("meta.json")):
                 dirty.append(f"{f.relative_to(PREPARED)}: a harness name")
             if re.search(r'#include\s+"[^"]*/', text):
                 dirty.append(f"{f.relative_to(PREPARED)}: an include from outside the package")
-        if f.name in editable and meta.get("generator_version") in (6, 7):
+        if f.name in editable and meta.get("generator_version") in (6, 7, 8):
             # v7: where TSVC's own call hands `dummy` a number, the call keeps it (`dummy(a, b, c, d, e, dot);`)
             if (len(re.findall(r"for \(int nl = 0; nl < iterations; nl\+\+\)", text)) != 1
                     or len(re.findall(r"\bdummy\(a, b, c, d, e(?:, \w+)?\);", text)) != 1 or re.search(r"\bR\b", text)):
