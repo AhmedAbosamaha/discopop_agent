@@ -1,0 +1,50 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3c_v8_s341/benchmarks/tsvc_c4/s341/llm_pragmas_v5/claude-haiku-4-5-20251001/rep4/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3c_v8_s341/benchmarks/tsvc_c4/s341/llm_pragmas_v5/claude-haiku-4-5-20251001/rep4/work/s341.c
+@@ -1,17 +1,39 @@
++#include <stdlib.h>
+ #include "data.h"
+ 
+ real_t kernel_s341(void)
+ {
+-    int j;
+-    for (int nl = 0; nl < iterations; nl++) {
+-        j = -1;
+-        for (int i = 0; i < LEN_1D; i++) {
+-            if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++    #pragma omp parallel
++    {
++        // Thread-local index array to avoid races on shared indices
++        int *indices = malloc(LEN_1D * sizeof(int));
++
++        #pragma omp for
++        for (int nl = 0; nl < iterations; nl++) {
++            int j = -1;
++
++            // Compute target indices for elements satisfying the condition
++            for (int i = 0; i < LEN_1D; i++) {
++                if (b[i] > (real_t)0.) {
++                    j++;
++                    indices[i] = j;
++                } else {
++                    indices[i] = -1;
++                }
+             }
++
++            // Write elements to their target positions
++            for (int i = 0; i < LEN_1D; i++) {
++                if (indices[i] >= 0) {
++                    a[indices[i]] = b[i];
++                }
++            }
++
++            dummy(a, b, c, d, e);
+         }
+-        dummy(a, b, c, d, e);
++
++        free(indices);
+     }
++
+     return (real_t)0;
+ }

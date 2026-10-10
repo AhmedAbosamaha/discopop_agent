@@ -1,0 +1,26 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3b_smoke/benchmarks/tsvc_c4/s314/default_v5/claude-haiku-4-5-20251001/rep1/work/s314.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3b_smoke/benchmarks/tsvc_c4/s314/default_v5/claude-haiku-4-5-20251001/rep1/work/s314.c
+@@ -4,12 +4,19 @@
+ {
+     real_t x;
+     for (int nl = 0; nl < iterations; nl++) {
+-        x = a[0];
+-        for (int i = 0; i < LEN_1D; i++) {
+-            if (a[i] > x) {
+-                x = a[i];
++        real_t x1 = a[0];
++        for (int i = 0; i < LEN_1D; i += 2) {
++            if (a[i] > x1) {
++                x1 = a[i];
+             }
+         }
++        real_t x2 = a[1];
++        for (int i = 1; i < LEN_1D; i += 2) {
++            if (a[i] > x2) {
++                x2 = a[i];
++            }
++        }
++        x = (x1 > x2) ? x1 : x2;
+         dummy(a, b, c, d, e, x);
+     }
+     return x;

@@ -1,0 +1,47 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3c_v8_s341/benchmarks/tsvc_c4/s341/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3c_v8_s341/benchmarks/tsvc_c4/s341/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/s341.c
+@@ -1,16 +1,40 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s341(void)
+ {
+     int j;
+     for (int nl = 0; nl < iterations; nl++) {
+-        j = -1;
++        // Create temporary arrays for parallel compaction
++        int *mask = (int *)malloc(LEN_1D * sizeof(int));
++        int *prefix = (int *)malloc((LEN_1D + 1) * sizeof(int));
++
++        // First pass: identify which elements to keep (parallel)
++        #pragma omp parallel for shared(b, mask)
+         for (int i = 0; i < LEN_1D; i++) {
+-            if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++            mask[i] = (b[i] > (real_t)0.) ? 1 : 0;
++        }
++
++        // Second pass: compute prefix sum (sequential)
++        prefix[0] = 0;
++        for (int i = 0; i < LEN_1D; i++) {
++            prefix[i + 1] = prefix[i] + mask[i];
++        }
++
++        // Third pass: write filtered elements (parallel)
++        #pragma omp parallel for shared(a, b, mask, prefix)
++        for (int i = 0; i < LEN_1D; i++) {
++            if (mask[i]) {
++                a[prefix[i]] = b[i];
+             }
+         }
++
++        // Set j to the last valid index written to
++        j = prefix[LEN_1D] - 1;
++
++        free(mask);
++        free(prefix);
++
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

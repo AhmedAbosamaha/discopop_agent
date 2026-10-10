@@ -1,0 +1,32 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3b_1/benchmarks/tsvc_c4/s316/default_v5/claude-haiku-4-5-20251001/rep4/work/s316.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3b_1/benchmarks/tsvc_c4/s316/default_v5/claude-haiku-4-5-20251001/rep4/work/s316.c
+@@ -1,16 +1,25 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s316(void)
+ {
+     real_t x;
++    real_t* temp = (real_t*)malloc(LEN_1D * sizeof(real_t));
++
+     for (int nl = 0; nl < iterations; nl++) {
+-        x = a[0];
+-        for (int i = 1; i < LEN_1D; ++i) {
+-            if (a[i] < x) {
+-                x = a[i];
++        for (int stride = 1; stride < LEN_1D; stride *= 2) {
++            for (int i = 0; i < LEN_1D - stride; i += 2 * stride) {
++                if (stride == 1) {
++                    temp[i] = (a[i] < a[i + stride]) ? a[i] : a[i + stride];
++                } else {
++                    temp[i] = (temp[i] < temp[i + stride]) ? temp[i] : temp[i + stride];
++                }
+             }
+         }
++        x = temp[0];
+         dummy(a, b, c, d, e, x);
+     }
++
++    free(temp);
+     return x;
+ }

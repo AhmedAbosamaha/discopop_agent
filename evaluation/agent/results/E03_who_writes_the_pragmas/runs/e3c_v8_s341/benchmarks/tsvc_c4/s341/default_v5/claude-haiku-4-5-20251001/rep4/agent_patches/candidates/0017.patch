@@ -1,0 +1,35 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3c_v8_s341/benchmarks/tsvc_c4/s341/default_v5/claude-haiku-4-5-20251001/rep4/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3c_v8_s341/benchmarks/tsvc_c4/s341/default_v5/claude-haiku-4-5-20251001/rep4/work/s341.c
+@@ -1,16 +1,28 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s341(void)
+ {
+-    int j;
+     for (int nl = 0; nl < iterations; nl++) {
+-        j = -1;
++        // Compute exclusive prefix sum: position[i] = count of elements written before position i
++        int *position = (int *)malloc((LEN_1D + 1) * sizeof(int));
++        position[0] = 0;
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++                position[i+1] = position[i] + 1;
++            } else {
++                position[i+1] = position[i];
+             }
+         }
++
++        // Scatter elements using precomputed positions (no loop-carry dependency)
++        for (int i = 0; i < LEN_1D; i++) {
++            if (b[i] > (real_t)0.) {
++                a[position[i]] = b[i];
++            }
++        }
++
++        free(position);
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

@@ -1,0 +1,42 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3c_v8_s341/benchmarks/tsvc_c4/s341/default_v5/claude-haiku-4-5-20251001/rep1/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3c_v8_s341/benchmarks/tsvc_c4/s341/default_v5/claude-haiku-4-5-20251001/rep1/work/s341.c
+@@ -1,16 +1,35 @@
++#include <stdlib.h>
+ #include "data.h"
+ 
+ real_t kernel_s341(void)
+ {
+-    int j;
+     for (int nl = 0; nl < iterations; nl++) {
+-        j = -1;
++        real_t* temp = (real_t*)malloc(LEN_1D * sizeof(real_t));
++        int* matched = (int*)malloc(LEN_1D * sizeof(int));
++
++        // First loop: mark which elements pass filter and collect them at their index.
++        // Each iteration is independent — no loop-carried dependence.
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++                matched[i] = 1;
++                temp[i] = b[i];
++            } else {
++                matched[i] = 0;
+             }
+         }
++
++        // Second loop: compact marked elements into final positions in a.
++        // Sequential but unavoidable; operates only on matched subset.
++        int j = -1;
++        for (int i = 0; i < LEN_1D; i++) {
++            if (matched[i]) {
++                j++;
++                a[j] = temp[i];
++            }
++        }
++
++        free(temp);
++        free(matched);
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

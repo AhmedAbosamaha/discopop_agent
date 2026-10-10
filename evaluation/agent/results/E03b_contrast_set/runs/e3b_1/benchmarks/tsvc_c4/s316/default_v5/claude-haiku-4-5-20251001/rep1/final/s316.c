@@ -1,0 +1,34 @@
+#include "data.h"
+#include <stdlib.h>
+
+real_t kernel_s316(void)
+{
+    real_t x;
+    for (int nl = 0; nl < iterations; nl++) {
+        // Compute minimum via a loop over partitions (each partition is independent)
+        real_t *part_mins = (real_t *)malloc(2 * sizeof(real_t));
+
+        // Loop to compute minimum of each partition - Do-All: each iteration independent
+        #pragma omp parallel for shared(part_mins) 
+        for (int p = 0; p < 2; p++) {
+            int start = (p == 0) ? 0 : LEN_1D / 2;
+            int end = (p == 0) ? LEN_1D / 2 : LEN_1D;
+            part_mins[p] = a[start];
+            for (int i = start + 1; i < end; ++i) {
+                if (a[i] < part_mins[p]) {
+                    part_mins[p] = a[i];
+                }
+            }
+        }
+
+        // Combine partitions
+        x = part_mins[0];
+        if (part_mins[1] < x) {
+            x = part_mins[1];
+        }
+
+        free(part_mins);
+        dummy(a, b, c, d, e, x);
+    }
+    return x;
+}

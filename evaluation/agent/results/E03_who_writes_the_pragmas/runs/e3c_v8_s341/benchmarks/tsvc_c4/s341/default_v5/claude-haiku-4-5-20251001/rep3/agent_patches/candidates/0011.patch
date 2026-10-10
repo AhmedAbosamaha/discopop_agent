@@ -1,0 +1,33 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3c_v8_s341/benchmarks/tsvc_c4/s341/default_v5/claude-haiku-4-5-20251001/rep3/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3c_v8_s341/benchmarks/tsvc_c4/s341/default_v5/claude-haiku-4-5-20251001/rep3/work/s341.c
+@@ -1,16 +1,26 @@
++#include <stdlib.h>
+ #include "data.h"
+ 
+ real_t kernel_s341(void)
+ {
+-    int j;
+     for (int nl = 0; nl < iterations; nl++) {
+-        j = -1;
++        // First pass: collect indices of positive elements
++        int *positive_indices = (int *)malloc(LEN_1D * sizeof(int));
++        int count = 0;
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++                positive_indices[count] = i;
++                count++;
+             }
+         }
++
++        // Second pass: write positive elements using collected indices
++        for (int j = 0; j < count; j++) {
++            int i = positive_indices[j];
++            a[j] = b[i];
++        }
++
++        free(positive_indices);
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

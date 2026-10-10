@@ -1,0 +1,42 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6c_v8_agent/benchmarks/tsvc_c4/s341/default_v4/claude-haiku-4-5-20251001/rep4/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6c_v8_agent/benchmarks/tsvc_c4/s341/default_v4/claude-haiku-4-5-20251001/rep4/work/s341.c
+@@ -1,17 +1,34 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s341(void)
+ {
+-    int j;
++    int *mask = (int *)malloc(LEN_1D * sizeof(int));
++    int *indices = (int *)malloc(LEN_1D * sizeof(int));
++
+     for (int nl = 0; nl < iterations; nl++) {
+-        j = -1;
++        // Create mask array: 1 if b[i] > 0, else 0
+         for (int i = 0; i < LEN_1D; i++) {
+-            if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++            mask[i] = (b[i] > (real_t)0.) ? 1 : 0;
++        }
++
++        // Compute exclusive prefix sum (gives destination indices)
++        indices[0] = 0;
++        for (int i = 1; i < LEN_1D; i++) {
++            indices[i] = indices[i-1] + mask[i-1];
++        }
++
++        // Write elements to their destinations (this is now a Do-All loop)
++        for (int i = 0; i < LEN_1D; i++) {
++            if (mask[i]) {
++                a[indices[i]] = b[i];
+             }
+         }
++
+         dummy(a, b, c, d, e);
+     }
++
++    free(mask);
++    free(indices);
+     return (real_t)0;
+ }

@@ -1,0 +1,35 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3c_v8_s341/benchmarks/tsvc_c4/s341/default_v5/claude-haiku-4-5-20251001/rep3/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3c_v8_s341/benchmarks/tsvc_c4/s341/default_v5/claude-haiku-4-5-20251001/rep3/work/s341.c
+@@ -4,13 +4,28 @@
+ {
+     int j;
+     for (int nl = 0; nl < iterations; nl++) {
+-        j = -1;
++        // Mark which elements satisfy the condition
++        bool match[LEN_1D];
+         for (int i = 0; i < LEN_1D; i++) {
+-            if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++            match[i] = (b[i] > (real_t)0.);
++        }
++
++        // Compute output indices for matching elements
++        int pos[LEN_1D];
++        j = 0;
++        for (int i = 0; i < LEN_1D; i++) {
++            if (match[i]) {
++                pos[i] = j++;
+             }
+         }
++
++        // Write matched elements using pre-computed indices (Do-All loop)
++        for (int i = 0; i < LEN_1D; i++) {
++            if (match[i]) {
++                a[pos[i]] = b[i];
++            }
++        }
++
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

@@ -1,0 +1,51 @@
+#include "data.h"
+#include <stdlib.h>
+
+real_t kernel_s315(void)
+{
+    real_t x, chksum;
+    int index;
+    for (int nl = 0; nl < iterations; nl++) {
+        // Chunk the array to expose parallelism: find max in each chunk independently (Do-All)
+        const int CHUNK_SIZE = 256;
+        int num_chunks = (LEN_1D + CHUNK_SIZE - 1) / CHUNK_SIZE;
+
+        real_t* local_max = (real_t*) malloc(num_chunks * sizeof(real_t));
+        int* local_index = (int*) malloc(num_chunks * sizeof(int));
+
+        // Find local max/index in each chunk (Do-All pattern: each chunk is independent)
+        #pragma omp parallel for firstprivate(num_chunks) shared(local_max,local_index) 
+        for (int chunk = 0; chunk < num_chunks; chunk++) {
+            int start = chunk * CHUNK_SIZE;
+            int end = (chunk + 1) * CHUNK_SIZE;
+            if (end > LEN_1D) end = LEN_1D;
+
+            local_max[chunk] = a[start];
+            local_index[chunk] = start;
+
+            for (int i = start; i < end; i++) {
+                if (a[i] > local_max[chunk]) {
+                    local_max[chunk] = a[i];
+                    local_index[chunk] = i;
+                }
+            }
+        }
+
+        // Combine results to find global max and index
+        x = local_max[0];
+        index = local_index[0];
+        for (int chunk = 1; chunk < num_chunks; chunk++) {
+            if (local_max[chunk] > x) {
+                x = local_max[chunk];
+                index = local_index[chunk];
+            }
+        }
+
+        chksum = x + (real_t) index;
+        dummy(a, b, c, d, e, chksum);
+
+        free(local_max);
+        free(local_index);
+    }
+    return index + x + 1;
+}

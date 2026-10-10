@@ -1,0 +1,48 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3b_1/benchmarks/tsvc_c4/s314/default_v5/claude-haiku-4-5-20251001/rep3/work/s314.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3b_1/benchmarks/tsvc_c4/s314/default_v5/claude-haiku-4-5-20251001/rep3/work/s314.c
+@@ -1,16 +1,41 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s314(void)
+ {
+     real_t x;
++
++    // Allocate outside outer loop to avoid repeated allocations
++    int chunk_size = 1024;
++    int num_chunks = (LEN_1D + chunk_size - 1) / chunk_size;
++    real_t *chunk_max = (real_t *)malloc(num_chunks * sizeof(real_t));
++
+     for (int nl = 0; nl < iterations; nl++) {
+-        x = a[0];
+-        for (int i = 0; i < LEN_1D; i++) {
+-            if (a[i] > x) {
+-                x = a[i];
++        // Compute max of each chunk independently (parallelizable loop)
++        for (int chunk = 0; chunk < num_chunks; chunk++) {
++            int start = chunk * chunk_size;
++            int end = start + chunk_size;
++            if (end > LEN_1D) end = LEN_1D;
++
++            chunk_max[chunk] = a[start];
++            for (int i = start + 1; i < end; i++) {
++                if (a[i] > chunk_max[chunk]) {
++                    chunk_max[chunk] = a[i];
++                }
+             }
+         }
++
++        // Combine chunk maxima to get global maximum
++        x = chunk_max[0];
++        for (int chunk = 1; chunk < num_chunks; chunk++) {
++            if (chunk_max[chunk] > x) {
++                x = chunk_max[chunk];
++            }
++        }
++
+         dummy(a, b, c, d, e, x);
+     }
++
++    free(chunk_max);
+     return x;
+ }

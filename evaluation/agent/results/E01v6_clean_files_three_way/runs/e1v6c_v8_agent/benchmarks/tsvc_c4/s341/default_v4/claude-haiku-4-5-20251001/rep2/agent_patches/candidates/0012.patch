@@ -1,0 +1,35 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6c_v8_agent/benchmarks/tsvc_c4/s341/default_v4/claude-haiku-4-5-20251001/rep2/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6c_v8_agent/benchmarks/tsvc_c4/s341/default_v4/claude-haiku-4-5-20251001/rep2/work/s341.c
+@@ -1,16 +1,28 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s341(void)
+ {
+-    int j;
+     for (int nl = 0; nl < iterations; nl++) {
+-        j = -1;
++        // Heap-allocate indices to avoid stack overflow at large problem sizes
++        int* indices = (int*)malloc(LEN_1D * sizeof(int));
++
++        // Pass 1: Collect indices of elements that pass the filter
++        int count = 0;
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++                indices[count] = i;
++                count++;
+             }
+         }
++
++        // Pass 2: Write filtered elements to sequential output positions
++        // Each iteration j writes to unique position a[j]
++        for (int j = 0; j < count; j++) {
++            a[j] = b[indices[j]];
++        }
++
++        free(indices);
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

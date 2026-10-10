@@ -1,0 +1,66 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3c_v8_s341/benchmarks/tsvc_c4/s341/default_v5/claude-haiku-4-5-20251001/rep5/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3c_v8_s341/benchmarks/tsvc_c4/s341/default_v5/claude-haiku-4-5-20251001/rep5/work/s341.c
+@@ -1,17 +1,58 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s341(void)
+ {
+-    int j;
++    // Allocate temporary arrays once, outside the repeated loop
++    int* mask = (int*)malloc(LEN_1D * sizeof(int));
++    int* prefix = (int*)malloc(LEN_1D * sizeof(int));
++    int* temp = (int*)malloc(LEN_1D * sizeof(int));
++
+     for (int nl = 0; nl < iterations; nl++) {
+-        j = -1;
++        // Create a binary mask: 1 if b[i] > 0, else 0
+         for (int i = 0; i < LEN_1D; i++) {
+-            if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++            mask[i] = (b[i] > (real_t)0.) ? 1 : 0;
++        }
++
++        // Copy mask to prefix as initial state
++        for (int i = 0; i < LEN_1D; i++) {
++            prefix[i] = mask[i];
++        }
++
++        // Compute prefix sums using Kogge-Stone parallel algorithm
++        int stride = 1;
++        while (stride < LEN_1D) {
++            // Parallel loop: combine with offset stride (no loop-carried dependence)
++            for (int i = stride; i < LEN_1D; i++) {
++                temp[i] = prefix[i] + prefix[i - stride];
++            }
++
++            // Copy remaining elements
++            for (int i = 0; i < stride; i++) {
++                temp[i] = prefix[i];
++            }
++
++            // Swap: copy temp back to prefix
++            for (int i = 0; i < LEN_1D; i++) {
++                prefix[i] = temp[i];
++            }
++
++            stride *= 2;
++        }
++
++        // Write elements to their computed positions (parallelizable Do-All)
++        for (int i = 0; i < LEN_1D; i++) {
++            if (mask[i]) {
++                int write_pos = (i > 0) ? prefix[i - 1] : 0;
++                a[write_pos] = b[i];
+             }
+         }
++
+         dummy(a, b, c, d, e);
+     }
++
++    free(mask);
++    free(prefix);
++    free(temp);
+     return (real_t)0;
+ }

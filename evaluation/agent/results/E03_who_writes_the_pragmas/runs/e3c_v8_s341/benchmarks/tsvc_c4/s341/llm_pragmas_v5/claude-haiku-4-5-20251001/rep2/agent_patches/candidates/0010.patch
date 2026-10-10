@@ -1,0 +1,50 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3c_v8_s341/benchmarks/tsvc_c4/s341/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3c_v8_s341/benchmarks/tsvc_c4/s341/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/s341.c
+@@ -1,16 +1,45 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s341(void)
+ {
+     int j;
+     for (int nl = 0; nl < iterations; nl++) {
+         j = -1;
++
++        /* Allocate temporary array for position tracking */
++        int *pos = (int *)malloc(LEN_1D * sizeof(int));
++
++        /* Phase 1: Parallel - identify which elements pass the filter.
++           pos[i] = 1 if b[i] > 0, else 0. No loop-carried dependence. */
++        #pragma omp parallel for private(i)
++        for (int i = 0; i < LEN_1D; i++) {
++            pos[i] = (b[i] > (real_t)0.) ? 1 : 0;
++        }
++
++        /* Phase 2: Sequential - compute exclusive prefix sum.
++           After this loop, pos[i] holds the count of passing elements up to i,
++           which is the target position in array a for element i. */
++        for (int i = 1; i < LEN_1D; i++) {
++            pos[i] += pos[i-1];
++        }
++
++        /* Phase 3: Parallel - write elements to their pre-computed positions.
++           Each iteration writes to a[pos[i]-1], which is distinct for each i
++           where b[i] > 0, so no races occur. No loop-carried dependence. */
++        #pragma omp parallel for private(i)
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++                a[pos[i] - 1] = b[i];
+             }
+         }
++
++        /* Compute final j: count of passing elements minus 1 */
++        if (pos[LEN_1D - 1] > 0) {
++            j = pos[LEN_1D - 1] - 1;
++        }
++
++        free(pos);
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

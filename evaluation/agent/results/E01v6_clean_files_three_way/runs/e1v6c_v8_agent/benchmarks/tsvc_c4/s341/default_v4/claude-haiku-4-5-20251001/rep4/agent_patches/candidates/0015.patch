@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6c_v8_agent/benchmarks/tsvc_c4/s341/default_v4/claude-haiku-4-5-20251001/rep4/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6c_v8_agent/benchmarks/tsvc_c4/s341/default_v4/claude-haiku-4-5-20251001/rep4/work/s341.c
+@@ -6,6 +6,7 @@
+     for (int nl = 0; nl < iterations; nl++) {
+         // Create mask array: 1 if b[i] > 0, else 0
+         int *mask = (int *)malloc(LEN_1D * sizeof(int));
++        #pragma omp parallel for shared(mask) 
+         for (int i = 0; i < LEN_1D; i++) {
+             mask[i] = (b[i] > (real_t)0.) ? 1 : 0;
+         }

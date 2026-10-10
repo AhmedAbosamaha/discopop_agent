@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3b_1/benchmarks/tsvc_c4/s314/default_v5/claude-haiku-4-5-20251001/rep3/work/s314.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3b_1/benchmarks/tsvc_c4/s314/default_v5/claude-haiku-4-5-20251001/rep3/work/s314.c
+@@ -12,6 +12,7 @@
+ 
+     for (int nl = 0; nl < iterations; nl++) {
+         // Compute max of each chunk independently (parallelizable loop)
++ #pragma omp parallel for firstprivate(num_chunks) shared(chunk_max) 
+         for (int chunk = 0; chunk < num_chunks; chunk++) {
+             int start = chunk * chunk_size;
+             int end = start + chunk_size;

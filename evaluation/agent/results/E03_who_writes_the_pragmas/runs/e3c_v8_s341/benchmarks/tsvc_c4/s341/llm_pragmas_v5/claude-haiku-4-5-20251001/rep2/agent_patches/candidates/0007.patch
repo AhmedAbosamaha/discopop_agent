@@ -1,0 +1,60 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3c_v8_s341/benchmarks/tsvc_c4/s341/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3c_v8_s341/benchmarks/tsvc_c4/s341/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/s341.c
+@@ -1,16 +1,52 @@
++#include <stdlib.h>
+ #include "data.h"
+ 
+ real_t kernel_s341(void)
+ {
+     int j;
+     for (int nl = 0; nl < iterations; nl++) {
+-        j = -1;
+-        for (int i = 0; i < LEN_1D; i++) {
+-            if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++        // Allocate temporary arrays for parallel filtering
++        int* mask = (int*)malloc(sizeof(int) * LEN_1D);
++        int* pos = (int*)malloc(sizeof(int) * LEN_1D);
++
++        // Single parallel region containing all passes to reduce startup overhead
++        #pragma omp parallel shared(b, a, mask, pos)
++        {
++            // Pass 1: Mark elements that satisfy the condition (parallel)
++            #pragma omp for schedule(static)
++            for (int i = 0; i < LEN_1D; i++) {
++                mask[i] = (b[i] > (real_t)0.) ? 1 : 0;
++            }
++
++            // Synchronize all threads before sequential prefix sum
++            #pragma omp barrier
++
++            // Pass 2: Sequential prefix sum to compute output positions
++            #pragma omp single
++            {
++                j = -1;
++                for (int i = 0; i < LEN_1D; i++) {
++                    if (mask[i]) {
++                        j++;
++                        pos[i] = j;
++                    }
++                }
++            }
++
++            // Synchronize all threads before writing
++            #pragma omp barrier
++
++            // Pass 3: Write marked elements to output array (parallel)
++            #pragma omp for schedule(static)
++            for (int i = 0; i < LEN_1D; i++) {
++                if (mask[i]) {
++                    a[pos[i]] = b[i];
++                }
+             }
+         }
++
++        free(mask);
++        free(pos);
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

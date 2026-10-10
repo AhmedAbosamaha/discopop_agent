@@ -1,0 +1,36 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3c_v8_s341/benchmarks/tsvc_c4/s341/default_v5/claude-haiku-4-5-20251001/rep4/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3c_v8_s341/benchmarks/tsvc_c4/s341/default_v5/claude-haiku-4-5-20251001/rep4/work/s341.c
+@@ -1,16 +1,29 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s341(void)
+ {
+-    int j;
+     for (int nl = 0; nl < iterations; nl++) {
+-        j = -1;
++        int *prefix = malloc((LEN_1D + 1) * sizeof(int));
++
++        // Compute prefix sum of filter matches
++        prefix[0] = 0;
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++                prefix[i + 1] = prefix[i] + 1;
++            } else {
++                prefix[i + 1] = prefix[i];
+             }
+         }
++
++        // Copy filtered elements using precomputed prefix indices
++        for (int i = 0; i < LEN_1D; i++) {
++            if (b[i] > (real_t)0.) {
++                a[prefix[i]] = b[i];
++            }
++        }
++
++        free(prefix);
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

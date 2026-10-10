@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6c_v8_agent/benchmarks/tsvc_c4/s341/default_v4/claude-haiku-4-5-20251001/rep2/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6c_v8_agent/benchmarks/tsvc_c4/s341/default_v4/claude-haiku-4-5-20251001/rep2/work/s341.c
+@@ -18,6 +18,7 @@
+ 
+         // Pass 2: Write filtered elements to sequential output positions
+         // Each iteration j writes to unique position a[j]
++        #pragma omp parallel for firstprivate(count) shared(indices) 
+         for (int j = 0; j < count; j++) {
+             a[j] = b[indices[j]];
+         }

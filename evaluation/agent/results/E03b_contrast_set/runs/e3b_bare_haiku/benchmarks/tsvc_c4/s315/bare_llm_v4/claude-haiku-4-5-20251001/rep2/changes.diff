@@ -1,0 +1,21 @@
+--- original.c
++++ final.c
+@@ -68,10 +68,16 @@
+     for (int nl = 0; nl < iterations; nl++) {
+         x = a[0];
+         index = 0;
++        #pragma omp parallel for
+         for (int i = 0; i < LEN_1D; ++i) {
+             if (a[i] > x) {
+-                x = a[i];
+-                index = i;
++                #pragma omp critical
++                {
++                    if (a[i] > x) {
++                        x = a[i];
++                        index = i;
++                    }
++                }
+             }
+         }
+         chksum = x + (real_t) index;

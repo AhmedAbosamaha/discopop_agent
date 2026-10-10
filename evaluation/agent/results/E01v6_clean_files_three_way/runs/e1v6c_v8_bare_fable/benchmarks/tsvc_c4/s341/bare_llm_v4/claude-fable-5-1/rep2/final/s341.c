@@ -1,0 +1,62 @@
+#include <stdlib.h>
+#include "data.h"
+
+/* Elements of b[] handled by one chunk of the two-pass compaction. */
+#define S341_CHUNK 512
+
+real_t kernel_s341(void)
+{
+    const int nchunks = (LEN_1D + S341_CHUNK - 1) / S341_CHUNK;
+    /* Per-chunk positive counts, later turned into write offsets.
+       Grows with LEN_1D, so it lives on the heap. */
+    int *counts = (int *)malloc((size_t)nchunks * sizeof(int));
+    if (counts == NULL) return (real_t)0;
+
+    for (int nl = 0; nl < iterations; nl++) {
+        /* Pass 1: count the positives in each chunk independently. */
+        #pragma omp parallel for default(none) shared(counts, b, nchunks) schedule(static)
+        for (int ck = 0; ck < nchunks; ck++) {
+            int lo = ck * S341_CHUNK;
+            int hi = lo + S341_CHUNK;
+            if (hi > LEN_1D) hi = LEN_1D;
+            int cnt = 0;
+            for (int i = lo; i < hi; i++) {
+                if (b[i] > (real_t)0.) {
+                    cnt++;
+                }
+            }
+            counts[ck] = cnt;
+        }
+
+        /* Exclusive scan: counts[ck] becomes the index in a[] where chunk ck
+           writes its first positive.  The original's j starts at -1 and is
+           pre-incremented, so the first positive lands at a[0]: run = 0. */
+        int run = 0;
+        for (int ck = 0; ck < nchunks; ck++) {
+            int t = counts[ck];
+            counts[ck] = run;
+            run += t;
+        }
+
+        /* Pass 2: each chunk writes its positives into its own disjoint
+           range of a[], in the same order the original visited them. */
+        #pragma omp parallel for default(none) shared(counts, a, b, nchunks) schedule(static)
+        for (int ck = 0; ck < nchunks; ck++) {
+            int lo = ck * S341_CHUNK;
+            int hi = lo + S341_CHUNK;
+            if (hi > LEN_1D) hi = LEN_1D;
+            int j = counts[ck];
+            for (int i = lo; i < hi; i++) {
+                if (b[i] > (real_t)0.) {
+                    a[j] = b[i];
+                    j++;
+                }
+            }
+        }
+
+        dummy(a, b, c, d, e);
+    }
+
+    free(counts);
+    return (real_t)0;
+}

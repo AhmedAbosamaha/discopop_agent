@@ -1,0 +1,26 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3b_2/benchmarks/tsvc_c4/s3113/default_v5/claude-haiku-4-5-20251001/rep4/work/s3113.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3b_2/benchmarks/tsvc_c4/s3113/default_v5/claude-haiku-4-5-20251001/rep4/work/s3113.c
+@@ -4,12 +4,18 @@
+ {
+     real_t max;
+     for (int nl = 0; nl < iterations; nl++) {
+-        max = ABS(a[0]);
+-        for (int i = 0; i < LEN_1D; i++) {
+-            if ((ABS(a[i])) > max) {
+-                max = ABS(a[i]);
+-            }
++        int mid = LEN_1D / 2;
++        real_t max_1 = ABS(a[0]);
++        real_t max_2 = ABS(a[mid]);
++        for (int i = 1; i < mid; i++) {
++            real_t abs_val = ABS(a[i]);
++            max_1 = (abs_val > max_1) ? abs_val : max_1;
+         }
++        for (int i = mid + 1; i < LEN_1D; i++) {
++            real_t abs_val = ABS(a[i]);
++            max_2 = (abs_val > max_2) ? abs_val : max_2;
++        }
++        max = (max_1 > max_2) ? max_1 : max_2;
+         dummy(a, b, c, d, e, max);
+     }
+     return max;

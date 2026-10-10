@@ -1,0 +1,22 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3b_3/benchmarks/tsvc_c4/s315/llm_pragmas_v5/claude-haiku-4-5-20251001/rep3/work/s315.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3b_3/benchmarks/tsvc_c4/s315/llm_pragmas_v5/claude-haiku-4-5-20251001/rep3/work/s315.c
+@@ -4,6 +4,7 @@
+ {
+     real_t x, chksum;
+     int index;
++    #pragma omp parallel for ordered private(i, chksum) lastprivate(x, index)
+     for (int nl = 0; nl < iterations; nl++) {
+         x = a[0];
+         index = 0;
+@@ -14,7 +15,10 @@
+             }
+         }
+         chksum = x + (real_t) index;
+-        dummy(a, b, c, d, e, chksum);
++        #pragma omp ordered
++        {
++            dummy(a, b, c, d, e, chksum);
++        }
+     }
+     return index + x + 1;
+ }

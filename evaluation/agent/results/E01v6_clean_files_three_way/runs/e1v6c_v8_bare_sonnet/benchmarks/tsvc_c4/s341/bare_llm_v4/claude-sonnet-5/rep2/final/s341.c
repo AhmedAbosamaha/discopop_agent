@@ -1,0 +1,47 @@
+#include "data.h"
+#include <stdlib.h>
+
+real_t kernel_s341(void)
+{
+    /* Scratch array holding, for each i, the exclusive prefix count of
+     * elements with b[.] > 0 among b[0..i-1]. This is exactly the slot
+     * the sequential code's running index j would have given element i,
+     * computed independently of execution order via a parallel scan.
+     * Heap-allocated because LEN_1D can be very large (up to 192M). */
+    int *pos = (int *)malloc((size_t)LEN_1D * sizeof(int));
+
+    for (int nl = 0; nl < iterations; nl++) {
+        int count = 0; /* running number of qualifying elements seen so far */
+
+        /* Pass 1: parallel exclusive scan.
+         * pos[i] is written with the running count BEFORE i's own
+         * contribution is folded in (exclusive scan), then count is
+         * updated with i's contribution. The omp scan directive makes
+         * this correct regardless of how iterations are scheduled/
+         * interleaved across threads. */
+        #pragma omp parallel for default(none) shared(b, pos) \
+            reduction(inscan, +:count)
+        for (int i = 0; i < LEN_1D; i++) {
+            pos[i] = count;
+            #pragma omp scan exclusive(count)
+            count += (b[i] > (real_t)0.) ? 1 : 0;
+        }
+
+        /* Pass 2: parallel compaction write. Each qualifying i writes to
+         * its own unique, strictly increasing pos[i] slot in a, so there
+         * is no overlap between iterations. Non-qualifying slots of a
+         * beyond the final count are left untouched, matching the
+         * original sequential behavior. */
+        #pragma omp parallel for default(none) shared(a, b, pos) schedule(static)
+        for (int i = 0; i < LEN_1D; i++) {
+            if (b[i] > (real_t)0.) {
+                a[pos[i]] = b[i];
+            }
+        }
+
+        dummy(a, b, c, d, e);
+    }
+
+    free(pos);
+    return (real_t)0;
+}

@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3b_4/benchmarks/tsvc_c4/s318/default_v5/claude-haiku-4-5-20251001/rep1/work/s318.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3b_4/benchmarks/tsvc_c4/s318/default_v5/claude-haiku-4-5-20251001/rep1/work/s318.c
+@@ -9,6 +9,7 @@
+         real_t *vals = (real_t *)malloc(LEN_1D * sizeof(real_t));
+ 
+         // First pass: compute absolute values (Do-All, no dependences)
++        #pragma omp parallel for shared(vals) 
+         for (int i = 0; i < LEN_1D; i++) {
+             vals[i] = ABS(a[i * inc]);
+         }

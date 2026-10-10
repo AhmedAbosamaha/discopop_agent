@@ -1,0 +1,22 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3b_3/benchmarks/tsvc_c4/s315/llm_pragmas_v5/claude-haiku-4-5-20251001/rep5/work/s315.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3b_3/benchmarks/tsvc_c4/s315/llm_pragmas_v5/claude-haiku-4-5-20251001/rep5/work/s315.c
+@@ -7,10 +7,19 @@
+     for (int nl = 0; nl < iterations; nl++) {
+         x = a[0];
+         index = 0;
++        // Pass 1: Find maximum value in parallel using reduction
++        #pragma omp parallel for reduction(max:x)
+         for (int i = 0; i < LEN_1D; ++i) {
+             if (a[i] > x) {
+                 x = a[i];
++            }
++        }
++
++        // Pass 2: Find index of maximum value (serial scan)
++        for (int i = 0; i < LEN_1D; ++i) {
++            if (a[i] == x) {
+                 index = i;
++                break;
+             }
+         }
+         chksum = x + (real_t) index;

@@ -1,0 +1,49 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3c_v8_s341/benchmarks/tsvc_c4/s341/default_v5/claude-haiku-4-5-20251001/rep3/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3c_v8_s341/benchmarks/tsvc_c4/s341/default_v5/claude-haiku-4-5-20251001/rep3/work/s341.c
+@@ -1,3 +1,4 @@
++#include <stdlib.h>
+ #include "data.h"
+ 
+ real_t kernel_s341(void)
+@@ -5,12 +6,39 @@
+     int j;
+     for (int nl = 0; nl < iterations; nl++) {
+         j = -1;
++
++        // Phase 1: Count valid elements (pure reduction, suitable for parallel reduction)
++        int count = 0;
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++                count++;
+             }
+         }
++
++        // Phase 2: Compute write positions for each element (sequential, no reduction pattern)
++        int *positions = (int *)malloc(LEN_1D * sizeof(int));
++        int pos = 0;
++        for (int i = 0; i < LEN_1D; i++) {
++            if (b[i] > (real_t)0.) {
++                positions[i] = pos;
++                pos++;
++            } else {
++                positions[i] = -1;
++            }
++        }
++
++        // Phase 3: Write elements using precomputed positions (parallelizable Do-All)
++        for (int i = 0; i < LEN_1D; i++) {
++            if (positions[i] >= 0) {
++                a[positions[i]] = b[i];
++            }
++        }
++
++        // Recover final j value to match original semantics
++        j = count - 1;
++
++        free(positions);
++
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

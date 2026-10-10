@@ -1,0 +1,64 @@
+--- original.c
++++ final.c
+@@ -61,17 +61,56 @@
+ /* ==== s341.c ==== */
+ #include "data.h"
+ 
++#define S341_NB 256
++
+ real_t kernel_s341(void)
+ {
+     int j;
++    int cnt[S341_NB + 1];
++    const int bs = (LEN_1D + S341_NB - 1) / S341_NB;
++
+     for (int nl = 0; nl < iterations; nl++) {
+-        j = -1;
+-        for (int i = 0; i < LEN_1D; i++) {
+-            if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++        /* pass 1: count positive entries per block */
++#pragma omp parallel for schedule(static) shared(cnt, b) firstprivate(bs)
++        for (int blk = 0; blk < S341_NB; blk++) {
++            int lo = blk * bs;
++            int hi = lo + bs;
++            if (hi > LEN_1D) hi = LEN_1D;
++            int c0 = 0;
++            for (int i = lo; i < hi; i++) {
++                if (b[i] > (real_t)0.) {
++                    c0++;
++                }
++            }
++            cnt[blk] = c0;
++        }
++
++        /* exclusive scan: cnt[blk] becomes the starting index in a[] */
++        {
++            int run = 0;
++            for (int blk = 0; blk < S341_NB; blk++) {
++                int t = cnt[blk];
++                cnt[blk] = run;
++                run += t;
++            }
++            cnt[S341_NB] = run;
++        }
++
++        /* pass 2: pack each block into its disjoint range of a[] */
++#pragma omp parallel for schedule(static) shared(cnt, a, b) firstprivate(bs) private(j)
++        for (int blk = 0; blk < S341_NB; blk++) {
++            int lo = blk * bs;
++            int hi = lo + bs;
++            if (hi > LEN_1D) hi = LEN_1D;
++            j = cnt[blk] - 1;
++            for (int i = lo; i < hi; i++) {
++                if (b[i] > (real_t)0.) {
++                    j++;
++                    a[j] = b[i];
++                }
+             }
+         }
++
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

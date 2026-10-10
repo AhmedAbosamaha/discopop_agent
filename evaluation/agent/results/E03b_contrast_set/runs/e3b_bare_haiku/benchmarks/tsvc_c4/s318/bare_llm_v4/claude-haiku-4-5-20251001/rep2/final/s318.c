@@ -1,0 +1,37 @@
+#include "data.h"
+
+real_t kernel_s318(void)
+{
+    int k, index;
+    real_t max, chksum;
+    for (int nl = 0; nl < iterations; nl++) {
+        index = 0;
+        max = ABS(a[0]);
+
+        // Parallel pass 1: find maximum absolute value
+        // Reduction combines local maxima from all threads
+        #pragma omp parallel for reduction(max:max) firstprivate(inc)
+        for (int i = 1; i < LEN_1D; i++) {
+            int k = i * inc;
+            real_t abs_val = ABS(a[k]);
+            if (abs_val > max) {
+                max = abs_val;
+            }
+        }
+
+        // Serial pass 2: find index of the maximum value
+        // Scans sequentially to pick the last occurrence in case of ties,
+        // maintaining determinism across different thread schedules
+        k = inc;
+        for (int i = 1; i < LEN_1D; i++) {
+            if (ABS(a[k]) == max) {
+                index = i;
+            }
+            k += inc;
+        }
+
+        chksum = max + (real_t) index;
+        dummy(a, b, c, d, e, chksum);
+    }
+    return max + index + 1;
+}

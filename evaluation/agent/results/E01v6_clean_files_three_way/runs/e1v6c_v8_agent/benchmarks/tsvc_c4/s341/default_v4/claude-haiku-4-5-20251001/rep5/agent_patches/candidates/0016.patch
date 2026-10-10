@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6c_v8_agent/benchmarks/tsvc_c4/s341/default_v4/claude-haiku-4-5-20251001/rep5/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6c_v8_agent/benchmarks/tsvc_c4/s341/default_v4/claude-haiku-4-5-20251001/rep5/work/s341.c
+@@ -10,6 +10,7 @@
+ 
+     for (int nl = 0; nl < iterations; nl++) {
+         // Allocate result buffers for each segment
++        #pragma omp parallel for firstprivate(num_segs,seg_size) shared(seg_data) 
+         for (int seg = 0; seg < num_segs; seg++) {
+             seg_data[seg] = (real_t *)malloc(seg_size * sizeof(real_t));
+         }

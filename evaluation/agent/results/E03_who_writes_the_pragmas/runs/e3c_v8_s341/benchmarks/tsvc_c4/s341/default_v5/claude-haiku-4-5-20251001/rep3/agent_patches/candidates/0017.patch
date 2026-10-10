@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3c_v8_s341/benchmarks/tsvc_c4/s341/default_v5/claude-haiku-4-5-20251001/rep3/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3c_v8_s341/benchmarks/tsvc_c4/s341/default_v5/claude-haiku-4-5-20251001/rep3/work/s341.c
+@@ -13,6 +13,7 @@
+         // Phase 1: Compute write positions via prefix sum (sequential)
+         int count = 0;
+         volatile int iter_marker = 0;
++        #pragma omp parallel for shared(positions) reduction(+:iter_marker,count) 
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+                 positions[i] = count++;

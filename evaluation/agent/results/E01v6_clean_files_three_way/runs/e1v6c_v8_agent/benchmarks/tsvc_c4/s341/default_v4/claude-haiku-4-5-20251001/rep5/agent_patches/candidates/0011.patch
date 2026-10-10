@@ -1,0 +1,40 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6c_v8_agent/benchmarks/tsvc_c4/s341/default_v4/claude-haiku-4-5-20251001/rep5/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6c_v8_agent/benchmarks/tsvc_c4/s341/default_v4/claude-haiku-4-5-20251001/rep5/work/s341.c
+@@ -3,15 +3,35 @@
+ real_t kernel_s341(void)
+ {
+     int j;
++    int *selected = (int *)malloc(LEN_1D * sizeof(int));
++    int *pos = (int *)malloc(LEN_1D * sizeof(int));
++
+     for (int nl = 0; nl < iterations; nl++) {
++        // Phase 1: Mark which elements pass the filter (Do-All)
++        for (int i = 0; i < LEN_1D; i++) {
++            selected[i] = (b[i] > (real_t)0.) ? 1 : 0;
++        }
++
++        // Phase 2: Compute output positions via prefix sum (sequential)
+         j = -1;
+         for (int i = 0; i < LEN_1D; i++) {
+-            if (b[i] > (real_t)0.) {
++            if (selected[i]) {
+                 j++;
+-                a[j] = b[i];
++                pos[i] = j;
+             }
+         }
++
++        // Phase 3: Write selected elements to computed positions (Do-All)
++        for (int i = 0; i < LEN_1D; i++) {
++            if (selected[i]) {
++                a[pos[i]] = b[i];
++            }
++        }
++
+         dummy(a, b, c, d, e);
+     }
++
++    free(selected);
++    free(pos);
+     return (real_t)0;
+ }

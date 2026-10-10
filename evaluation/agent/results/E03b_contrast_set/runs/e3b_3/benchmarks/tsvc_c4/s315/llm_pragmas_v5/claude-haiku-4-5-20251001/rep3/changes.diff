@@ -1,0 +1,30 @@
+--- original.c
++++ final.c
+@@ -68,10 +68,23 @@
+     for (int nl = 0; nl < iterations; nl++) {
+         x = a[0];
+         index = 0;
+-        for (int i = 0; i < LEN_1D; ++i) {
+-            if (a[i] > x) {
+-                x = a[i];
+-                index = i;
++        #pragma omp parallel
++        {
++            real_t local_x = a[0];
++            int local_index = 0;
++            #pragma omp for
++            for (int i = 0; i < LEN_1D; ++i) {
++                if (a[i] > local_x) {
++                    local_x = a[i];
++                    local_index = i;
++                }
++            }
++            #pragma omp critical
++            {
++                if (local_x > x) {
++                    x = local_x;
++                    index = local_index;
++                }
+             }
+         }
+         chksum = x + (real_t) index;

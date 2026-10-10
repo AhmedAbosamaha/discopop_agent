@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3c_v8_s341/benchmarks/tsvc_c4/s341/default_v5/claude-haiku-4-5-20251001/rep3/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3c_v8_s341/benchmarks/tsvc_c4/s341/default_v5/claude-haiku-4-5-20251001/rep3/work/s341.c
+@@ -15,6 +15,7 @@
+         }
+ 
+         // Second pass: write positive elements using collected indices
++ #pragma omp parallel for firstprivate(count) shared(positive_indices) 
+         for (int j = 0; j < count; j++) {
+             int i = positive_indices[j];
+             a[j] = b[i];

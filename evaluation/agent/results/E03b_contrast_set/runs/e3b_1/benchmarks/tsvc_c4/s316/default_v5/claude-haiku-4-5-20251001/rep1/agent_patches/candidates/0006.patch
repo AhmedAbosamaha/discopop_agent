@@ -1,0 +1,31 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3b_1/benchmarks/tsvc_c4/s316/default_v5/claude-haiku-4-5-20251001/rep1/work/s316.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3b_1/benchmarks/tsvc_c4/s316/default_v5/claude-haiku-4-5-20251001/rep1/work/s316.c
+@@ -4,12 +4,24 @@
+ {
+     real_t x;
+     for (int nl = 0; nl < iterations; nl++) {
+-        x = a[0];
+-        for (int i = 1; i < LEN_1D; ++i) {
+-            if (a[i] < x) {
+-                x = a[i];
++        // Compute minimum of first half
++        real_t x1 = a[0];
++        for (int i = 1; i < LEN_1D / 2; ++i) {
++            if (a[i] < x1) {
++                x1 = a[i];
+             }
+         }
++
++        // Compute minimum of second half
++        real_t x2 = a[LEN_1D / 2];
++        for (int i = LEN_1D / 2 + 1; i < LEN_1D; ++i) {
++            if (a[i] < x2) {
++                x2 = a[i];
++            }
++        }
++
++        // Combine the two halves
++        x = (x1 < x2) ? x1 : x2;
+         dummy(a, b, c, d, e, x);
+     }
+     return x;

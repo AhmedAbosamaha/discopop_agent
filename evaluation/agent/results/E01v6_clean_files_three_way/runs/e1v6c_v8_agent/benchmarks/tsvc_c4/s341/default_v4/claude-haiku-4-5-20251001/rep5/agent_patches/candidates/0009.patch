@@ -1,0 +1,42 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6c_v8_agent/benchmarks/tsvc_c4/s341/default_v4/claude-haiku-4-5-20251001/rep5/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6c_v8_agent/benchmarks/tsvc_c4/s341/default_v4/claude-haiku-4-5-20251001/rep5/work/s341.c
+@@ -1,17 +1,36 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s341(void)
+ {
+     int j;
++    real_t* temp = (real_t*)malloc(LEN_1D * sizeof(real_t));
++    int* valid = (int*)malloc(LEN_1D * sizeof(int));
++
+     for (int nl = 0; nl < iterations; nl++) {
+-        j = -1;
++        // Phase 1: Parallel-friendly processing—store qualifying elements without counter
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++                temp[i] = b[i];
++                valid[i] = 1;
++            } else {
++                valid[i] = 0;
+             }
+         }
++
++        // Phase 2: Sequential compaction into output array
++        j = 0;
++        for (int i = 0; i < LEN_1D; i++) {
++            if (valid[i]) {
++                a[j] = temp[i];
++                j++;
++            }
++        }
++
+         dummy(a, b, c, d, e);
+     }
++
++    free(temp);
++    free(valid);
+     return (real_t)0;
+ }

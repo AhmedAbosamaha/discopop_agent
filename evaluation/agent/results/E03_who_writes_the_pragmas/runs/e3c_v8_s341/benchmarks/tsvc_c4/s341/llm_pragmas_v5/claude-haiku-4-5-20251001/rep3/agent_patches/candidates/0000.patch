@@ -1,0 +1,41 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3c_v8_s341/benchmarks/tsvc_c4/s341/llm_pragmas_v5/claude-haiku-4-5-20251001/rep3/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3c_v8_s341/benchmarks/tsvc_c4/s341/llm_pragmas_v5/claude-haiku-4-5-20251001/rep3/work/s341.c
+@@ -4,14 +4,34 @@
+ {
+     int j;
+     for (int nl = 0; nl < iterations; nl++) {
+-        j = -1;
++        // Allocate temporary index array for this outer loop iteration
++        int* temp_indices = (int*)malloc(LEN_1D * sizeof(int));
++
++        // Phase 1 (parallel): Mark which elements satisfy the condition
++        #pragma omp parallel for
+         for (int i = 0; i < LEN_1D; i++) {
+-            if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++            temp_indices[i] = (b[i] > (real_t)0.) ? 1 : 0;
++        }
++
++        // Phase 2 (sequential): Compute prefix sum to assign target indices
++        int sum = 0;
++        for (int i = 0; i < LEN_1D; i++) {
++            int val = temp_indices[i];
++            temp_indices[i] = (val == 1) ? sum : -1;
++            sum += val;
++        }
++        j = (sum > 0) ? sum - 1 : -1;
++
++        // Phase 3 (parallel): Write elements to a using precomputed indices
++        #pragma omp parallel for
++        for (int i = 0; i < LEN_1D; i++) {
++            if (temp_indices[i] >= 0) {
++                a[temp_indices[i]] = b[i];
+             }
+         }
++
+         dummy(a, b, c, d, e);
++        free(temp_indices);
+     }
+     return (real_t)0;
+ }

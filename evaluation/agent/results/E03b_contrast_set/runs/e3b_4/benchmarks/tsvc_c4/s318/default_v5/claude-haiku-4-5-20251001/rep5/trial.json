@@ -1,0 +1,252 @@
+{
+  "benchmark": "tsvc_c4/s318",
+  "kernel": "s318",
+  "source": "s318.c",
+  "arm": "default_v5",
+  "model": "claude-haiku-4-5-20251001",
+  "arm_flags": [
+    "--require-speedup",
+    "--min-runtime-share",
+    "0.01",
+    "--prompt-version",
+    "5",
+    "--timing-cflags=-DSTANDARD_DATASET"
+  ],
+  "started_at": "2026-10-10T13:47:35",
+  "host": "rms14562",
+  "host_load_start": [
+    4.296875,
+    4.79150390625,
+    4.7822265625
+  ],
+  "agent_cmd": [
+    "/home/ahmedabosamaha/discopop_agent/venv/bin/python",
+    "-m",
+    "discopop_agent",
+    "--project-dir",
+    ".",
+    "--project-units",
+    "s318.c,main.c",
+    "--project-include",
+    ".",
+    "--project-editable",
+    "s318.c",
+    "--discopop-dir",
+    ".discopop",
+    "--provider",
+    "claude-agent-sdk",
+    "--model",
+    "claude-haiku-4-5-20251001",
+    "--edit-mode",
+    "direct",
+    "--require-speedup",
+    "--min-runtime-share",
+    "0.01",
+    "--prompt-version",
+    "5",
+    "--timing-cflags=-DSTANDARD_DATASET",
+    "--check-input",
+    "7",
+    "--exclude-functions",
+    "main,dummy",
+    "--explorer-timeout",
+    "60"
+  ],
+  "agent_s": 514.5,
+  "agent_rc": 0,
+  "llm_calls": 6,
+  "llm_call_failures": 0,
+  "harness_reasks": 0,
+  "harness_discards": 0,
+  "explorer_retries": 0,
+  "explorer_stalls": 0,
+  "reverts": 5,
+  "refresh_fast": 0,
+  "refresh_full": 6,
+  "refresh_fallback": 0,
+  "runtime_remeasurements": 6,
+  "phase_b_deferred": 0,
+  "phase_b_joint_kept": 0,
+  "dp_floor": "original",
+  "gate_failures_phase_a": {},
+  "gate_failures_phase_b": {},
+  "gate_passes_phase_a": 6,
+  "gate_failures_d40": {},
+  "d40_verdicts": {
+    "ok": 1
+  },
+  "exposure_verdicts": {
+    "no_pattern": 5,
+    "exposed": 1
+  },
+  "d40_seconds": 17.0,
+  "requeued_regions": 0,
+  "region_verdicts": {
+    "SKIPPED": 4,
+    "ACCEPTED": 1,
+    "DEFERRED": 1,
+    "APPLIED": 1
+  },
+  "settle_dropped": 0,
+  "baseline_claimed": 0,
+  "baseline_pragmas": 0,
+  "rewrites_kept": 1,
+  "pragmas_applied": 1,
+  "pragmas_discopop": 1,
+  "pragmas_llm": 0,
+  "regions_skipped": 2,
+  "llm_usage": {
+    "calls_recorded": 6,
+    "input_tokens": 184,
+    "output_tokens": 44174,
+    "cache_read_input_tokens": 591599,
+    "cache_creation_input_tokens": 57716,
+    "cost_usd": 0.8,
+    "model_seconds": 467.9
+  },
+  "layout": "project",
+  "files_changed": [
+    "s318.c"
+  ],
+  "source_changed": true,
+  "scaffold": {
+    "ok": true,
+    "problems": [],
+    "applies": true
+  },
+  "editable": [
+    "s318.c"
+  ],
+  "harness_sha256": "e179ddffd45904dd24fcdb6e2a05bdfc2e9b881905fb44038db7ae8c955f7bba",
+  "pragmas_added": 1,
+  "pragmas_in_final": 1,
+  "hot_loop": {
+    "entry": "kernel_s318",
+    "function": "kernel_s318",
+    "line": 12,
+    "writes": [
+      "k"
+    ]
+  },
+  "hot_loop_covered": false,
+  "hot_loop_coverage": {
+    "criterion": "v2 (27 Sep 2026)",
+    "covered": false,
+    "covering": [],
+    "uncounted": [],
+    "elsewhere": [
+      {
+        "function": "kernel_s318",
+        "line": 9,
+        "directive": "#pragma omp parallel for reduction(max:max)",
+        "writes": [
+          "max"
+        ]
+      }
+    ]
+  },
+  "candidates_recorded": 8,
+  "verify": {
+    "verify_size": "LARGE",
+    "threads": [
+      6,
+      12
+    ],
+    "repeats": 5,
+    "compiler": "/usr/bin/clang-20",
+    "final_flags": [],
+    "dump_exact": true,
+    "dump_max_rel_err": 0.0,
+    "seed": "7",
+    "dump_exact_seeded": true,
+    "dump_seeded_max_rel_err": 0.0,
+    "seq_median_s": 2.8712,
+    "seq_kernel_median_s": 2.498982,
+    "timing_basis": "kernel",
+    "par": {
+      "6": {
+        "median_s": 1.2162,
+        "program_speedup": 2.361,
+        "max_rel_err": 0.0,
+        "kernel_median_s": 0.791857,
+        "kernel_speedup": 3.156,
+        "speedup": 3.156
+      },
+      "12": {
+        "median_s": 1.2641,
+        "program_speedup": 2.271,
+        "max_rel_err": 0.0,
+        "kernel_median_s": 0.827795,
+        "kernel_speedup": 3.019,
+        "speedup": 3.019
+      }
+    },
+    "digest_max_rel_err": 0.0,
+    "stable_at_fixed_threads": true,
+    "kernel_program_disagree": false,
+    "digest_seeded_rel_err": 0.0,
+    "status": "ok",
+    "speed_measurable": true
+  },
+  "verify_s": 31.8,
+  "status": "done",
+  "outcome": "FASTER",
+  "finished_at": "2026-10-10T13:56:41",
+  "host_load_end": [
+    6.849609375,
+    5.59619140625,
+    5.07470703125
+  ],
+  "profile": {
+    "wrapper": "discopop_cc",
+    "layout": "project",
+    "units": [
+      "s318.c",
+      "main.c"
+    ],
+    "instrument_s": 0.21,
+    "profiled_run_s": 0.11,
+    "explore_stalls": 0,
+    "explore_s": 1.42,
+    "explore_success_s": 1.42,
+    "explore_attempts": 1,
+    "explore_timed_out": false,
+    "explore_failures": [],
+    "patterns": {
+      "optimizer_output": 0,
+      "merged_pattern": 0,
+      "task": 24,
+      "do_all": 0,
+      "reduction": 0
+    },
+    "profile_sha256": "c4433e2acc5aa1c6f6cc95e261a22b46511c1ced88fa5c5ec4748888407e7f41"
+  },
+  "package_integrity": {
+    "before": {
+      "checked": "before trial",
+      "at": "2026-10-10T13:47:35",
+      "prepared_sha256": "ef025fc45f0f3c08f888331f4b940db0cbb2895e3f4f579bc035fd886fe573b8",
+      "packager_sha256": "ef025fc45f0f3c08f888331f4b940db0cbb2895e3f4f579bc035fd886fe573b8",
+      "harness_sha256": "e179ddffd45904dd24fcdb6e2a05bdfc2e9b881905fb44038db7ae8c955f7bba",
+      "archived_sha256": "ef025fc45f0f3c08f888331f4b940db0cbb2895e3f4f579bc035fd886fe573b8",
+      "profile_sha256": "c4433e2acc5aa1c6f6cc95e261a22b46511c1ced88fa5c5ec4748888407e7f41",
+      "ok": true
+    },
+    "after": {
+      "checked": "after trial",
+      "at": "2026-10-10T13:56:41",
+      "prepared_sha256": "ef025fc45f0f3c08f888331f4b940db0cbb2895e3f4f579bc035fd886fe573b8",
+      "packager_sha256": "ef025fc45f0f3c08f888331f4b940db0cbb2895e3f4f579bc035fd886fe573b8",
+      "harness_sha256": "e179ddffd45904dd24fcdb6e2a05bdfc2e9b881905fb44038db7ae8c955f7bba",
+      "archived_sha256": "ef025fc45f0f3c08f888331f4b940db0cbb2895e3f4f579bc035fd886fe573b8",
+      "profile_sha256": "c4433e2acc5aa1c6f6cc95e261a22b46511c1ced88fa5c5ec4748888407e7f41",
+      "ok": true
+    }
+  },
+  "speed_check_off": false,
+  "timing_flags": [
+    "--timing-cflags=-DSTANDARD_DATASET"
+  ],
+  "harness_edit_redos": [],
+  "repeat": 5
+}

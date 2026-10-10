@@ -1,0 +1,48 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3c_v8_s341/benchmarks/tsvc_c4/s341/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3c_v8_s341/benchmarks/tsvc_c4/s341/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/s341.c
+@@ -3,15 +3,38 @@
+ real_t kernel_s341(void)
+ {
+     int j;
+-    for (int nl = 0; nl < iterations; nl++) {
+-        j = -1;
+-        for (int i = 0; i < LEN_1D; i++) {
+-            if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++    #pragma omp parallel
++    {
++        for (int nl = 0; nl < iterations; nl++) {
++            // Pass 1: count valid elements (parallel, no j dependence)
++            int count = 0;
++            #pragma omp for reduction(+:count)
++            for (int i = 0; i < LEN_1D; i++) {
++                if (b[i] > (real_t)0.) {
++                    count++;
++                }
++            }
++            #pragma omp barrier
++
++            // Pass 2: write valid elements in order (serial, preserves original order)
++            #pragma omp single
++            {
++                j = count - 1;
++                int idx = 0;
++                for (int i = 0; i < LEN_1D; i++) {
++                    if (b[i] > (real_t)0.) {
++                        a[idx] = b[i];
++                        idx++;
++                    }
++                }
++            }
++
++            // Call dummy (serial, preserves sequential semantics)
++            #pragma omp single
++            {
++                dummy(a, b, c, d, e);
+             }
+         }
+-        dummy(a, b, c, d, e);
+     }
+     return (real_t)0;
+ }

@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6c_v8_agent/benchmarks/tsvc_c4/s341/default_v4/claude-haiku-4-5-20251001/rep1/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6c_v8_agent/benchmarks/tsvc_c4/s341/default_v4/claude-haiku-4-5-20251001/rep1/work/s341.c
+@@ -17,6 +17,7 @@
+         }
+ 
+         // Second pass: write filtered values to a using collected indices
++        #pragma omp parallel for firstprivate(qualified_count) shared(qualified_indices) 
+         for (int j = 0; j < qualified_count; j++) {
+             a[j] = b[qualified_indices[j]];
+         }

@@ -1,0 +1,43 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3b_1/benchmarks/tsvc_c4/s314/default_v5/claude-haiku-4-5-20251001/rep3/work/s314.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3b_1/benchmarks/tsvc_c4/s314/default_v5/claude-haiku-4-5-20251001/rep3/work/s314.c
+@@ -4,12 +4,37 @@
+ {
+     real_t x;
+     for (int nl = 0; nl < iterations; nl++) {
+-        x = a[0];
++        // Compute maximum using tree-based reduction
++        real_t *temp = (real_t *)malloc(LEN_1D * sizeof(real_t));
++
++        // Initialize temp with array a
+         for (int i = 0; i < LEN_1D; i++) {
+-            if (a[i] > x) {
+-                x = a[i];
++            temp[i] = a[i];
++        }
++
++        // Tree reduction: each level is a Do-All loop
++        int n = LEN_1D;
++        while (n > 1) {
++            int next_n = (n + 1) / 2;
++            real_t *next = (real_t *)malloc(next_n * sizeof(real_t));
++
++            // Each iteration i combines two elements independently
++            for (int i = 0; i < n / 2; i++) {
++                next[i] = (temp[2*i] > temp[2*i+1]) ? temp[2*i] : temp[2*i+1];
+             }
++
++            // Handle odd element if present
++            if (n % 2 == 1) {
++                next[n / 2] = temp[n - 1];
++            }
++
++            free(temp);
++            temp = next;
++            n = next_n;
+         }
++
++        x = temp[0];
++        free(temp);
+         dummy(a, b, c, d, e, x);
+     }
+     return x;

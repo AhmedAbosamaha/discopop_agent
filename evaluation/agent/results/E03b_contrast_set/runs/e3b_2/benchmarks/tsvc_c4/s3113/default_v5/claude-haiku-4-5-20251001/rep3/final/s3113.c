@@ -1,0 +1,35 @@
+#include "data.h"
+#include <stdlib.h>
+
+real_t kernel_s3113(void)
+{
+    real_t max;
+    for (int nl = 0; nl < iterations; nl++) {
+        int num_blocks = 16;
+        real_t *block_max = (real_t *)malloc(num_blocks * sizeof(real_t));
+        int block_size = LEN_1D / num_blocks;
+
+ #pragma omp parallel for firstprivate(num_blocks) shared(block_max) 
+        for (int block = 0; block < num_blocks; block++) {
+            int start = block * block_size;
+            int end = (block == num_blocks - 1) ? LEN_1D : (block + 1) * block_size;
+            block_max[block] = ABS(a[start]);
+            for (int i = start + 1; i < end; i++) {
+                if ((ABS(a[i])) > block_max[block]) {
+                    block_max[block] = ABS(a[i]);
+                }
+            }
+        }
+
+        max = block_max[0];
+        for (int block = 1; block < num_blocks; block++) {
+            if (block_max[block] > max) {
+                max = block_max[block];
+            }
+        }
+
+        free(block_max);
+        dummy(a, b, c, d, e, max);
+    }
+    return max;
+}

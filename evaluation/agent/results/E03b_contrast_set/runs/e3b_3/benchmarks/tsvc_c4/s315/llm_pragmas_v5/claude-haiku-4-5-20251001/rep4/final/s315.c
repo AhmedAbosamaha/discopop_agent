@@ -1,0 +1,52 @@
+#include "data.h"
+#include <omp.h>
+#include <stdlib.h>
+
+real_t kernel_s315(void)
+{
+    real_t x, chksum;
+    int index;
+    for (int nl = 0; nl < iterations; nl++) {
+        x = a[0];
+        index = 0;
+
+        /* Allocate thread-local storage for max tracking */
+        int nthreads = omp_get_max_threads();
+        real_t *local_max_vals = (real_t *)malloc(nthreads * sizeof(real_t));
+        int *local_max_indices = (int *)malloc(nthreads * sizeof(int));
+
+        /* Initialize thread-local storage */
+        for (int t = 0; t < nthreads; t++) {
+            local_max_vals[t] = a[0];
+            local_max_indices[t] = 0;
+        }
+
+        /* Parallel inner loop: each thread finds max in its range independently */
+        #pragma omp parallel for schedule(static)
+        for (int i = 0; i < LEN_1D; ++i) {
+            int tid = omp_get_thread_num();
+            if (a[i] > local_max_vals[tid]) {
+                local_max_vals[tid] = a[i];
+                local_max_indices[tid] = i;
+            }
+        }
+
+        /* Sequentially reduce thread-local results to global max */
+        x = local_max_vals[0];
+        index = local_max_indices[0];
+        for (int t = 1; t < nthreads; t++) {
+            if (local_max_vals[t] > x) {
+                x = local_max_vals[t];
+                index = local_max_indices[t];
+            }
+        }
+
+        /* Free thread-local storage */
+        free(local_max_vals);
+        free(local_max_indices);
+
+        chksum = x + (real_t) index;
+        dummy(a, b, c, d, e, chksum);
+    }
+    return index + x + 1;
+}

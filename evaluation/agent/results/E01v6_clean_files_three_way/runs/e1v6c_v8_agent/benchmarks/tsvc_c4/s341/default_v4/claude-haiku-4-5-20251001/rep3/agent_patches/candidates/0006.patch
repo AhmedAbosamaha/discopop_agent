@@ -1,0 +1,30 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6c_v8_agent/benchmarks/tsvc_c4/s341/default_v4/claude-haiku-4-5-20251001/rep3/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6c_v8_agent/benchmarks/tsvc_c4/s341/default_v4/claude-haiku-4-5-20251001/rep3/work/s341.c
+@@ -2,15 +2,23 @@
+ 
+ real_t kernel_s341(void)
+ {
+-    int j;
+     for (int nl = 0; nl < iterations; nl++) {
+-        j = -1;
++        int *offset = (int*)malloc(LEN_1D * sizeof(int));
++
++        // Compute prefix sum: offset[i] = count of passing elements up to and including i
++        offset[0] = (b[0] > (real_t)0.) ? 1 : 0;
++        for (int i = 1; i < LEN_1D; i++) {
++            offset[i] = offset[i-1] + ((b[i] > (real_t)0.) ? 1 : 0);
++        }
++
++        // Write pass: each iteration independent, writes to unique location determined by offset
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++                a[offset[i] - 1] = b[i];
+             }
+         }
++
++        free(offset);
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

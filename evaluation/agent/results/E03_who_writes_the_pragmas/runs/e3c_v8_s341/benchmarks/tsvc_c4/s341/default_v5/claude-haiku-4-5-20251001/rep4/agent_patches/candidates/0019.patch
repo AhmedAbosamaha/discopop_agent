@@ -1,0 +1,41 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3c_v8_s341/benchmarks/tsvc_c4/s341/default_v5/claude-haiku-4-5-20251001/rep4/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3c_v8_s341/benchmarks/tsvc_c4/s341/default_v5/claude-haiku-4-5-20251001/rep4/work/s341.c
+@@ -1,17 +1,33 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s341(void)
+ {
+-    int j;
++    int *matches = (int *)malloc(LEN_1D * sizeof(int));
++    int *position = (int *)malloc((LEN_1D + 1) * sizeof(int));
++
+     for (int nl = 0; nl < iterations; nl++) {
+-        j = -1;
++        // Pass 1: Mark matching elements (purely independent iterations)
+         for (int i = 0; i < LEN_1D; i++) {
+-            if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++            matches[i] = (b[i] > (real_t)0.) ? 1 : 0;
++        }
++
++        // Pass 2: Compute positions via prefix sum (sequential)
++        position[0] = 0;
++        for (int i = 0; i < LEN_1D; i++) {
++            position[i+1] = position[i] + matches[i];
++        }
++
++        // Pass 3: Scatter using precomputed positions (independent iterations)
++        for (int i = 0; i < LEN_1D; i++) {
++            if (matches[i]) {
++                a[position[i]] = b[i];
+             }
+         }
++
+         dummy(a, b, c, d, e);
+     }
++    free(matches);
++    free(position);
+     return (real_t)0;
+ }

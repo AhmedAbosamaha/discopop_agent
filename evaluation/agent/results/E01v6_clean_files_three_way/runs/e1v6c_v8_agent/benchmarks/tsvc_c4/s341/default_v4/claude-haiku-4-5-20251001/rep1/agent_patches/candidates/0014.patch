@@ -1,0 +1,40 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6c_v8_agent/benchmarks/tsvc_c4/s341/default_v4/claude-haiku-4-5-20251001/rep1/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6c_v8_agent/benchmarks/tsvc_c4/s341/default_v4/claude-haiku-4-5-20251001/rep1/work/s341.c
+@@ -1,16 +1,35 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s341(void)
+ {
+     int j;
+     for (int nl = 0; nl < iterations; nl++) {
+         j = -1;
++
++        // Compute output indices for positive elements via prefix sum
++        // Note: this loop has true loop-carried dependence on count (not a reduction)
++        int *indices = (int *)malloc(LEN_1D * sizeof(int));
++        int count = 0;
+         for (int i = 0; i < LEN_1D; i++) {
++            int prev_count = count;
+             if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++                indices[i] = prev_count;
++                count = prev_count + 1;
++            } else {
++                indices[i] = -1;
+             }
+         }
++        j = count - 1;
++
++        // Write positive elements to output array (Do-All loop)
++        for (int i = 0; i < LEN_1D; i++) {
++            if (indices[i] >= 0) {
++                a[indices[i]] = b[i];
++            }
++        }
++
++        free(indices);
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

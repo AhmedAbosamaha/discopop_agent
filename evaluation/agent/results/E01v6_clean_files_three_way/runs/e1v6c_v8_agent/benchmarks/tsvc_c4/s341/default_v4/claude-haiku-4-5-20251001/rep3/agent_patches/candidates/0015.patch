@@ -1,0 +1,41 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6c_v8_agent/benchmarks/tsvc_c4/s341/default_v4/claude-haiku-4-5-20251001/rep3/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6c_v8_agent/benchmarks/tsvc_c4/s341/default_v4/claude-haiku-4-5-20251001/rep3/work/s341.c
+@@ -1,16 +1,35 @@
+ #include "data.h"
++#include <stdlib.h>
++
++static inline void compute_indices(int *idx, int *count_out) {
++    int count = 0;
++    for (int i = 0; i < LEN_1D; i++) {
++        idx[i] = count;
++        if (b[i] > (real_t)0.) {
++            count++;
++        }
++    }
++    *count_out = count;
++}
+ 
+ real_t kernel_s341(void)
+ {
+     int j;
+     for (int nl = 0; nl < iterations; nl++) {
+-        j = -1;
++        // Pre-compute output indices for each element
++        int *idx = (int *)malloc(LEN_1D * sizeof(int));
++        int count;
++        compute_indices(idx, &count);
++
++        // Write elements using pre-computed indices (loop-carried dependence on j removed)
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++                a[idx[i]] = b[i];
+             }
+         }
++
++        free(idx);
++
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

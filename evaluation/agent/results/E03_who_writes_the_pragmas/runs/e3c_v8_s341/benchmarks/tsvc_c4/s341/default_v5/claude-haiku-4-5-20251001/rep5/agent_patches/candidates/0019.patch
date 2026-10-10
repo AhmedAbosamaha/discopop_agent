@@ -1,0 +1,37 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3c_v8_s341/benchmarks/tsvc_c4/s341/default_v5/claude-haiku-4-5-20251001/rep5/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3c_v8_s341/benchmarks/tsvc_c4/s341/default_v5/claude-haiku-4-5-20251001/rep5/work/s341.c
+@@ -6,12 +6,14 @@
+     for (int nl = 0; nl < iterations; nl++) {
+         // Create a binary mask: 1 if b[i] > 0, else 0
+         int* mask = (int*)malloc(LEN_1D * sizeof(int));
++        #pragma omp parallel for shared(mask) 
+         for (int i = 0; i < LEN_1D; i++) {
+             mask[i] = (b[i] > (real_t)0.) ? 1 : 0;
+         }
+ 
+         // Compute prefix sums using Kogge-Stone parallel algorithm
+         int* prefix = (int*)malloc(LEN_1D * sizeof(int));
++        #pragma omp parallel for shared(prefix,mask) 
+         for (int i = 0; i < LEN_1D; i++) {
+             prefix[i] = mask[i];
+         }
+@@ -21,16 +23,19 @@
+             int* temp = (int*)malloc(LEN_1D * sizeof(int));
+ 
+             // Parallel loop: combine with offset stride (no dependence)
++            #pragma omp parallel for firstprivate(stride) shared(prefix,temp) 
+             for (int i = stride; i < LEN_1D; i++) {
+                 temp[i] = prefix[i] + prefix[i - stride];
+             }
+ 
+             // Copy remaining elements
++            #pragma omp parallel for firstprivate(stride) shared(prefix,temp) 
+             for (int i = 0; i < stride; i++) {
+                 temp[i] = prefix[i];
+             }
+ 
+             // Swap
++            #pragma omp parallel for shared(prefix,temp) 
+             for (int i = 0; i < LEN_1D; i++) {
+                 prefix[i] = temp[i];
+             }

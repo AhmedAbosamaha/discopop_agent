@@ -1,0 +1,31 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3c_v8_s341/benchmarks/tsvc_c4/s341/default_v5/claude-haiku-4-5-20251001/rep5/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3c_v8_s341/benchmarks/tsvc_c4/s341/default_v5/claude-haiku-4-5-20251001/rep5/work/s341.c
+@@ -4,14 +4,27 @@
+ {
+     int j;
+     for (int nl = 0; nl < iterations; nl++) {
++        // First pass: compute write indices for each element
++        int* write_idx = (int*)malloc(LEN_1D * sizeof(int));
+         j = -1;
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+                 j++;
+-                a[j] = b[i];
++                write_idx[i] = j;
++            } else {
++                write_idx[i] = -1;
+             }
+         }
++
++        // Second pass: write values independently (parallelizable)
++        for (int i = 0; i < LEN_1D; i++) {
++            if (write_idx[i] >= 0) {
++                a[write_idx[i]] = b[i];
++            }
++        }
++
+         dummy(a, b, c, d, e);
++        free(write_idx);
+     }
+     return (real_t)0;
+ }

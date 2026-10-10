@@ -1,0 +1,16 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6c_v8_agent/benchmarks/tsvc_c4/s341/default_v4/claude-haiku-4-5-20251001/rep5/work/s341.c	2026-10-10 18:00:25.311779301 +0000
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6c_v8_agent/benchmarks/tsvc_c4/s341/default_v4/claude-haiku-4-5-20251001/rep5/work/s341.c.discopop_patch_generator.temp	2026-10-10 18:00:27.835798545 +0000
+@@ -30,7 +30,13 @@
+ 
+         // Phase 2: Merge segments into a (sequential)
+         int write_pos = 0;
++        #pragma omp parallel
++        #pragma omp single
++        {
++        #pragma omp task
++        #pragma omp task
+         for (int seg = 0; seg < num_segs; seg++) {
++            }
+             for (int i = 0; i < seg_counts[seg]; i++) {
+                 a[write_pos] = seg_data[seg][i];
+                 write_pos++;

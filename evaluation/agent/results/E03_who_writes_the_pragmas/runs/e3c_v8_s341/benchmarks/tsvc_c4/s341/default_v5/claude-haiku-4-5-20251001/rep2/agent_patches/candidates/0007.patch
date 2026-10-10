@@ -1,0 +1,34 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3c_v8_s341/benchmarks/tsvc_c4/s341/default_v5/claude-haiku-4-5-20251001/rep2/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3c_v8_s341/benchmarks/tsvc_c4/s341/default_v5/claude-haiku-4-5-20251001/rep2/work/s341.c
+@@ -1,16 +1,28 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s341(void)
+ {
+     int j;
+     for (int nl = 0; nl < iterations; nl++) {
+-        j = -1;
++        // Allocate temporary array to mark included elements
++        char *included = (char *)malloc(LEN_1D * sizeof(char));
++
++        // Mark filtered elements (no dependencies — parallelizable)
+         for (int i = 0; i < LEN_1D; i++) {
+-            if (b[i] > (real_t)0.) {
++            included[i] = (b[i] > (real_t)0.) ? 1 : 0;
++        }
++
++        // Compact: copy included values from b to a sequentially
++        j = 0;
++        for (int i = 0; i < LEN_1D; i++) {
++            if (included[i]) {
++                a[j] = b[i];
+                 j++;
+-                a[j] = b[i];
+             }
+         }
++
++        free(included);
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

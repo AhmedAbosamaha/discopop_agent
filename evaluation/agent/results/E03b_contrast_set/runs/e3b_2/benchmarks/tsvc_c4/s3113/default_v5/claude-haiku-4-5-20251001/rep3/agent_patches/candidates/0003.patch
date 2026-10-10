@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3b_2/benchmarks/tsvc_c4/s3113/default_v5/claude-haiku-4-5-20251001/rep3/work/s3113.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3b_2/benchmarks/tsvc_c4/s3113/default_v5/claude-haiku-4-5-20251001/rep3/work/s3113.c
+@@ -9,6 +9,7 @@
+         real_t *block_max = (real_t *)malloc(num_blocks * sizeof(real_t));
+         int block_size = LEN_1D / num_blocks;
+ 
++ #pragma omp parallel for firstprivate(num_blocks) shared(block_max) 
+         for (int block = 0; block < num_blocks; block++) {
+             int start = block * block_size;
+             int end = (block == num_blocks - 1) ? LEN_1D : (block + 1) * block_size;

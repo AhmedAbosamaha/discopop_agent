@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3b_4/benchmarks/tsvc_c4/s318/default_v5/claude-haiku-4-5-20251001/rep2/work/s318.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3b_4/benchmarks/tsvc_c4/s318/default_v5/claude-haiku-4-5-20251001/rep2/work/s318.c
+@@ -8,6 +8,7 @@
+         // Phase 1: Compute absolute values in parallel
+         // No loop-carried dependencies: each iteration writes to a different array element
+         real_t abs_vals[LEN_1D];
++        #pragma omp parallel for shared(abs_vals) 
+         for (int i = 0; i < LEN_1D; i++) {
+             abs_vals[i] = ABS(a[i * inc]);
+         }

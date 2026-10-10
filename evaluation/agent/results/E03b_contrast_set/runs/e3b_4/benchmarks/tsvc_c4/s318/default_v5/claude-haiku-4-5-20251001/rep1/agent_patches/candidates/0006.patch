@@ -1,0 +1,41 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3b_4/benchmarks/tsvc_c4/s318/default_v5/claude-haiku-4-5-20251001/rep1/work/s318.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3b_4/benchmarks/tsvc_c4/s318/default_v5/claude-haiku-4-5-20251001/rep1/work/s318.c
+@@ -2,22 +2,28 @@
+ 
+ real_t kernel_s318(void)
+ {
+-    int k, index;
++    int index;
+     real_t max, chksum;
+     for (int nl = 0; nl < iterations; nl++) {
+-        k = 0;
++        real_t *vals = (real_t *)malloc(LEN_1D * sizeof(real_t));
++
++        // First pass: compute absolute values (Do-All, no dependences)
++        for (int i = 0; i < LEN_1D; i++) {
++            vals[i] = ABS(a[i * inc]);
++        }
++
++        // Second pass: find max and index (sequential reduction)
+         index = 0;
+-        max = ABS(a[0]);
+-        k += inc;
++        max = vals[0];
+         for (int i = 1; i < LEN_1D; i++) {
+-            if (ABS(a[k]) <= max) {
+-                goto L5;
++            if (vals[i] > max) {
++                max = vals[i];
++                index = i;
+             }
+-            index = i;
+-            max = ABS(a[k]);
+-L5:
+-            k += inc;
+         }
++
++        free(vals);
++
+         chksum = max + (real_t) index;
+         dummy(a, b, c, d, e, chksum);
+     }

@@ -1,0 +1,42 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6c_v8_agent/benchmarks/tsvc_c4/s341/default_v4/claude-haiku-4-5-20251001/rep3/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6c_v8_agent/benchmarks/tsvc_c4/s341/default_v4/claude-haiku-4-5-20251001/rep3/work/s341.c
+@@ -1,17 +1,34 @@
++#include <stdlib.h>
+ #include "data.h"
+ 
+ real_t kernel_s341(void)
+ {
+-    int j;
++    int *flags = (int *)malloc(LEN_1D * sizeof(int));
++    int *positions = (int *)malloc((LEN_1D + 1) * sizeof(int));
++
+     for (int nl = 0; nl < iterations; nl++) {
+-        j = -1;
++        // First pass: mark elements that pass the filter
+         for (int i = 0; i < LEN_1D; i++) {
+-            if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++            flags[i] = (b[i] > (real_t)0.) ? 1 : 0;
++        }
++
++        // Compute prefix sum to get output positions
++        positions[0] = 0;
++        for (int i = 0; i < LEN_1D; i++) {
++            positions[i + 1] = positions[i] + flags[i];
++        }
++
++        // Second pass: scatter to computed positions
++        for (int i = 0; i < LEN_1D; i++) {
++            if (flags[i]) {
++                a[positions[i]] = b[i];
+             }
+         }
++
+         dummy(a, b, c, d, e);
+     }
++
++    free(flags);
++    free(positions);
+     return (real_t)0;
+ }

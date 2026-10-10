@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6c_v8_agent/benchmarks/tsvc_c4/s341/default_v4/claude-haiku-4-5-20251001/rep1/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6c_v8_agent/benchmarks/tsvc_c4/s341/default_v4/claude-haiku-4-5-20251001/rep1/work/s341.c
+@@ -7,6 +7,7 @@
+         // Compute output indices for positive elements via prefix sum
+         int *indices = (int *)malloc(LEN_1D * sizeof(int));
+         int count = 0;
++        #pragma omp parallel for shared(indices) reduction(+:count) 
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+                 indices[i] = count++;

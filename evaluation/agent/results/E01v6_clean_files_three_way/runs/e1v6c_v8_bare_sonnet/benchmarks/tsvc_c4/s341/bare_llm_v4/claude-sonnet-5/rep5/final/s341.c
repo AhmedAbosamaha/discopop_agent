@@ -1,0 +1,25 @@
+#include "data.h"
+
+real_t kernel_s341(void)
+{
+    for (int nl = 0; nl < iterations; nl++) {
+        /* count: exclusive-scan reduction variable - holds, for each i,
+         * the number of positive b[] elements seen strictly before i.
+         * This is exactly the index 'j' the original serial loop would
+         * have used, recovered without a cross-iteration dependence. */
+        int count = 0;
+        #pragma omp parallel for reduction(inscan, +:count)
+        for (int i = 0; i < LEN_1D; i++) {
+            /* flag: declared inside the loop body -> private per
+             * iteration, no data-sharing clause needed. */
+            int flag = (b[i] > (real_t)0.) ? 1 : 0;
+            #pragma omp scan exclusive(count)
+            if (flag) {
+                a[count] = b[i];
+            }
+            count += flag;
+        }
+        dummy(a, b, c, d, e);
+    }
+    return (real_t)0;
+}

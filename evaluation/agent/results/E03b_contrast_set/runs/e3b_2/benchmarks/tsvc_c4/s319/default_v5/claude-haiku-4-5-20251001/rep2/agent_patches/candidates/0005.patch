@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3b_2/benchmarks/tsvc_c4/s319/default_v5/claude-haiku-4-5-20251001/rep2/work/s319.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3b_2/benchmarks/tsvc_c4/s319/default_v5/claude-haiku-4-5-20251001/rep2/work/s319.c
+@@ -13,6 +13,7 @@
+             partial[i] += b[i];
+         }
+         sum = 0.;
++        #pragma omp parallel for shared(partial) reduction(+:sum) 
+         for (int i = 0; i < LEN_1D; i++) {
+             sum += partial[i];
+         }

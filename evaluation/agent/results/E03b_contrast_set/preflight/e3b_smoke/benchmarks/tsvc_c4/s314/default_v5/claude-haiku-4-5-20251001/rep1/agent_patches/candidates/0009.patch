@@ -1,0 +1,46 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3b_smoke/benchmarks/tsvc_c4/s314/default_v5/claude-haiku-4-5-20251001/rep1/work/s314.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3b_smoke/benchmarks/tsvc_c4/s314/default_v5/claude-haiku-4-5-20251001/rep1/work/s314.c
+@@ -1,16 +1,39 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s314(void)
+ {
+     real_t x;
+     for (int nl = 0; nl < iterations; nl++) {
+-        x = a[0];
+-        for (int i = 0; i < LEN_1D; i++) {
+-            if (a[i] > x) {
+-                x = a[i];
++        int num_chunks = 128;
++        int chunk_size = (LEN_1D + num_chunks - 1) / num_chunks;
++        real_t *chunk_maxes = malloc(num_chunks * sizeof(real_t));
++
++        for (int chunk = 0; chunk < num_chunks; chunk++) {
++            int start = chunk * chunk_size;
++            int end = (chunk + 1) * chunk_size;
++            if (end > LEN_1D) end = LEN_1D;
++            if (start >= LEN_1D) break;
++
++            chunk_maxes[chunk] = a[start];
++            for (int i = start + 1; i < end; i++) {
++                if (a[i] > chunk_maxes[chunk]) {
++                    chunk_maxes[chunk] = a[i];
++                }
+             }
+         }
++
++        x = chunk_maxes[0];
++        for (int chunk = 1; chunk < num_chunks; chunk++) {
++            int end = (chunk + 1) * chunk_size;
++            if ((chunk) * chunk_size >= LEN_1D) break;
++            if (chunk_maxes[chunk] > x) {
++                x = chunk_maxes[chunk];
++            }
++        }
++
+         dummy(a, b, c, d, e, x);
++        free(chunk_maxes);
+     }
+     return x;
+ }

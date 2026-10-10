@@ -1,0 +1,63 @@
+#include "data.h"
+#include <stdlib.h>
+
+/* Number of chunks the index range is split into for the two-pass
+   compaction.  Fixed, independent of the problem size. */
+#define S341_NCH 1024
+
+real_t kernel_s341(void)
+{
+    int j;
+    long *cnt = (long *)malloc((size_t)(S341_NCH + 1) * sizeof(long));
+    long n = (long)LEN_1D;
+    long nch = (long)S341_NCH;
+
+    for (int nl = 0; nl < iterations; nl++) {
+        int ch;
+
+        /* Pass 1: count positives per chunk. */
+#pragma omp parallel for default(none) shared(cnt, b) firstprivate(n, nch) schedule(static)
+        for (ch = 0; ch < S341_NCH; ch++) {
+            long lo = n * (long)ch / nch;
+            long hi = n * (long)(ch + 1) / nch;
+            long k = 0;
+            for (long i = lo; i < hi; i++) {
+                if (b[i] > (real_t)0.) {
+                    k++;
+                }
+            }
+            cnt[ch] = k;
+        }
+
+        /* Exclusive scan over chunk counts (serial, S341_NCH entries). */
+        {
+            long run = 0;
+            for (ch = 0; ch < S341_NCH; ch++) {
+                long t = cnt[ch];
+                cnt[ch] = run;
+                run += t;
+            }
+            cnt[S341_NCH] = run;
+        }
+
+        /* Pass 2: each chunk writes its positives at its own offset. */
+#pragma omp parallel for default(none) shared(cnt, a, b) firstprivate(n, nch) schedule(static)
+        for (ch = 0; ch < S341_NCH; ch++) {
+            long lo = n * (long)ch / nch;
+            long hi = n * (long)(ch + 1) / nch;
+            long pos = cnt[ch];
+            for (long i = lo; i < hi; i++) {
+                if (b[i] > (real_t)0.) {
+                    a[pos] = b[i];
+                    pos++;
+                }
+            }
+        }
+
+        j = (int)cnt[S341_NCH] - 1;
+        (void)j;
+        dummy(a, b, c, d, e);
+    }
+    free(cnt);
+    return (real_t)0;
+}

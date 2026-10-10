@@ -1,0 +1,39 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3b_1/benchmarks/tsvc_c4/s316/default_v5/claude-haiku-4-5-20251001/rep2/work/s316.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3b_1/benchmarks/tsvc_c4/s316/default_v5/claude-haiku-4-5-20251001/rep2/work/s316.c
+@@ -1,16 +1,32 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s316(void)
+ {
+     real_t x;
++    real_t *x_vals = (real_t *)malloc(LEN_1D * sizeof(real_t));
++
+     for (int nl = 0; nl < iterations; nl++) {
+-        x = a[0];
+-        for (int i = 1; i < LEN_1D; ++i) {
+-            if (a[i] < x) {
+-                x = a[i];
++        for (int i = 0; i < LEN_1D; ++i) {
++            x_vals[i] = a[i];
++        }
++
++        int size = LEN_1D;
++        while (size > 1) {
++            for (int i = 0; i < (size + 1) / 2; ++i) {
++                if (2 * i + 1 < size) {
++                    x_vals[i] = (x_vals[2*i+1] < x_vals[2*i]) ? x_vals[2*i+1] : x_vals[2*i];
++                } else {
++                    x_vals[i] = x_vals[2*i];
++                }
+             }
++            size = (size + 1) / 2;
+         }
++
++        x = x_vals[0];
+         dummy(a, b, c, d, e, x);
+     }
++
++    free(x_vals);
+     return x;
+ }

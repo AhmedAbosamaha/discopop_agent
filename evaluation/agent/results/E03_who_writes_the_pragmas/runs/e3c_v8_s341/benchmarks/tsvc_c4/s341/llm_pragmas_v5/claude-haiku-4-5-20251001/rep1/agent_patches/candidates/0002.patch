@@ -1,0 +1,61 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3c_v8_s341/benchmarks/tsvc_c4/s341/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3c_v8_s341/benchmarks/tsvc_c4/s341/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/s341.c
+@@ -1,17 +1,50 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s341(void)
+ {
+-    int j;
+-    for (int nl = 0; nl < iterations; nl++) {
+-        j = -1;
+-        for (int i = 0; i < LEN_1D; i++) {
+-            if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++    char *keep = malloc(LEN_1D * sizeof(char));
++    int *pos = malloc(LEN_1D * sizeof(int));
++
++    #pragma omp parallel
++    {
++        for (int nl = 0; nl < iterations; nl++) {
++            // Phase 1: Mark valid elements (parallel)
++            #pragma omp for
++            for (int i = 0; i < LEN_1D; i++) {
++                keep[i] = (b[i] > (real_t)0.) ? 1 : 0;
++            }
++
++            // Phase 2: Compute output positions (sequential scan to maintain order)
++            #pragma omp single
++            {
++                int count = 0;
++                for (int i = 0; i < LEN_1D; i++) {
++                    pos[i] = count;
++                    if (keep[i]) {
++                        count++;
++                    }
++                }
++            }
++
++            // Phase 3: Parallel scatter (place filtered elements)
++            #pragma omp for
++            for (int i = 0; i < LEN_1D; i++) {
++                if (keep[i]) {
++                    a[pos[i]] = b[i];
++                }
++            }
++
++            // Call dummy() sequentially (maintains state order)
++            #pragma omp single
++            {
++                dummy(a, b, c, d, e);
+             }
+         }
+-        dummy(a, b, c, d, e);
+     }
++
++    free(keep);
++    free(pos);
++
+     return (real_t)0;
+ }

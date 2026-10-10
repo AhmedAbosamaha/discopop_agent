@@ -1,0 +1,79 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3c_v8_s341/benchmarks/tsvc_c4/s341/llm_pragmas_v5/claude-haiku-4-5-20251001/rep5/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3c_v8_s341/benchmarks/tsvc_c4/s341/llm_pragmas_v5/claude-haiku-4-5-20251001/rep5/work/s341.c
+@@ -1,17 +1,70 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s341(void)
+ {
+-    int j;
++    /* Use thread-local accumulation to filter b into a in parallel.
++       Each thread processes a chunk of b independently, accumulating into local buffers.
++       Then a parallel merge (via prefix-sum of thread counts) writes results to a
++       in the correct order. This removes the loop-carried j dependence and enables
++       true data parallelism on the filtering work. */
++
+     for (int nl = 0; nl < iterations; nl++) {
+-        j = -1;
+-        for (int i = 0; i < LEN_1D; i++) {
+-            if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++        int *thread_counts = (int *)malloc(omp_get_max_threads() * sizeof(int));
++        int *thread_starts = (int *)malloc(omp_get_max_threads() * sizeof(int));
++
++        #pragma omp parallel
++        {
++            int tid = omp_get_thread_num();
++            int nthreads = omp_get_num_threads();
++
++            /* Allocate thread-local buffer for filtered elements. */
++            real_t *local_a = (real_t *)malloc(LEN_1D * sizeof(real_t));
++            int local_j = -1;
++
++            /* Phase 1: Each thread independently filters its chunk of b.
++               With schedule(static), thread 0 gets b[0..chunk), thread 1 gets b[chunk..2*chunk), etc.
++               Elements are accumulated in order into local buffers. */
++            #pragma omp for schedule(static)
++            for (int i = 0; i < LEN_1D; i++) {
++                if (b[i] > (real_t)0.) {
++                    local_j++;
++                    local_a[local_j] = b[i];
++                }
+             }
++
++            /* Record how many elements this thread produced. */
++            thread_counts[tid] = local_j + 1;
++
++            /* Synchronize before merge phase. */
++            #pragma omp barrier
++
++            /* Phase 2: Compute prefix sum of thread counts to get starting indices.
++               One thread does this; others wait. */
++            #pragma omp single
++            {
++                thread_starts[0] = 0;
++                for (int t = 1; t < nthreads; t++) {
++                    thread_starts[t] = thread_starts[t - 1] + thread_counts[t - 1];
++                }
++                /* Final j value for potential later use. */
++                int j = thread_starts[nthreads - 1] + thread_counts[nthreads - 1] - 1;
++            }
++
++            /* Phase 3: Each thread copies its results to the global array a
++               at the offset computed by the prefix sum. No data races: threads
++               write to disjoint ranges. */
++            for (int i = 0; i < thread_counts[tid]; i++) {
++                a[thread_starts[tid] + i] = local_a[i];
++            }
++
++            free(local_a);
+         }
++
+         dummy(a, b, c, d, e);
++        free(thread_counts);
++        free(thread_starts);
+     }
++
+     return (real_t)0;
+ }

@@ -1,0 +1,32 @@
+| Benchmark | Arm | Model | Rep | Outcome | Best speedup | Pragmas (DP+LLM) | Rewrites | Baseline | LLM calls | Agent s |
+|---|---|---|---:|---|---:|---|---:|---:|---:|---:|
+| tsvc_c4/s311 | default_v5 | claude-haiku-4-5-20251001 | 1 | FASTER | 8.55x | 1+0 | 0 | 1 | 1 | 228.2 |
+| tsvc_c4/s311 | default_v5 | claude-haiku-4-5-20251001 | 2 | FASTER | 8.06x | 1+0 | 0 | 1 | 6 | 816.0 |
+| tsvc_c4/s311 | default_v5 | claude-haiku-4-5-20251001 | 3 | FASTER | 8.52x | 1+0 | 0 | 1 | 2 | 366.0 |
+| tsvc_c4/s311 | default_v5 | claude-haiku-4-5-20251001 | 4 | FASTER | 8.75x | 1+0 | 1 | 1 | 1 | 233.0 |
+| tsvc_c4/s311 | default_v5 | claude-haiku-4-5-20251001 | 5 | FASTER | 8.19x | 2+0 | 1 | 1 | 6 | 1053.9 |
+| tsvc_c4/s311 | discopop_gate_v5 | claude-haiku-4-5-20251001 | 1 | FASTER | 8.54x | 1+0 | 0 | 1 | 0 | 59.4 |
+| tsvc_c4/s311 | discopop_gate_v5 | claude-haiku-4-5-20251001 | 2 | FASTER | 8.45x | 1+0 | 0 | 1 | 0 | 59.5 |
+| tsvc_c4/s311 | discopop_gate_v5 | claude-haiku-4-5-20251001 | 3 | FASTER | 8.35x | 1+0 | 0 | 1 | 0 | 58.9 |
+| tsvc_c4/s311 | discopop_gate_v5 | claude-haiku-4-5-20251001 | 4 | FASTER | 8.70x | 1+0 | 0 | 1 | 0 | 59.4 |
+| tsvc_c4/s311 | discopop_gate_v5 | claude-haiku-4-5-20251001 | 5 | FASTER | 8.76x | 1+0 | 0 | 1 | 0 | 63.4 |
+| tsvc_c4/s311 | llm_pragmas_v5 | claude-haiku-4-5-20251001 | 1 | FASTER | 8.54x | 0+1 | 1 | 1 | 2 | 310.1 |
+| tsvc_c4/s311 | llm_pragmas_v5 | claude-haiku-4-5-20251001 | 2 | FASTER | 5.50x | 0+1 | 1 | 1 | 1 | 197.2 |
+| tsvc_c4/s311 | llm_pragmas_v5 | claude-haiku-4-5-20251001 | 3 | FASTER | 8.60x | 1+0 | 0 | 1 | 1 | 240.8 |
+| tsvc_c4/s311 | llm_pragmas_v5 | claude-haiku-4-5-20251001 | 4 | FASTER | 8.74x | 0+1 | 1 | 1 | 2 | 294.8 |
+| tsvc_c4/s311 | llm_pragmas_v5 | claude-haiku-4-5-20251001 | 5 | FASTER | 8.47x | 1+0 | 1 | 1 | 2 | 425.4 |
+| tsvc_c4/s315 | default_v5 | claude-haiku-4-5-20251001 | 1 | FASTER | 1.73x | 1+0 | 1 | 0 | 3 | 373.9 |
+| tsvc_c4/s315 | default_v5 | claude-haiku-4-5-20251001 | 2 | no-change | 1.00x | 0+0 | 0 | 0 | 9 | 839.5 |
+| tsvc_c4/s315 | default_v5 | claude-haiku-4-5-20251001 | 3 | no-change | 1.00x | 0+0 | 0 | 0 | 11 | 1017.2 |
+| tsvc_c4/s315 | default_v5 | claude-haiku-4-5-20251001 | 4 | no-change | 1.01x | 0+0 | 0 | 0 | 9 | 785.5 |
+| tsvc_c4/s315 | default_v5 | claude-haiku-4-5-20251001 | 5 | FASTER | 11.57x | 1+0 | 1 | 0 | 5 | 510.0 |
+| tsvc_c4/s315 | discopop_gate_v5 | claude-haiku-4-5-20251001 | 1 | no-change | 1.00x | 0+0 | 0 | 0 | 0 | 6.2 |
+| tsvc_c4/s315 | discopop_gate_v5 | claude-haiku-4-5-20251001 | 2 | no-change | 1.00x | 0+0 | 0 | 0 | 0 | 6.1 |
+| tsvc_c4/s315 | discopop_gate_v5 | claude-haiku-4-5-20251001 | 3 | no-change | 1.00x | 0+0 | 0 | 0 | 0 | 6.1 |
+| tsvc_c4/s315 | discopop_gate_v5 | claude-haiku-4-5-20251001 | 4 | no-change | 1.00x | 0+0 | 0 | 0 | 0 | 6.3 |
+| tsvc_c4/s315 | discopop_gate_v5 | claude-haiku-4-5-20251001 | 5 | no-change | 1.00x | 0+0 | 0 | 0 | 0 | 6.2 |
+| tsvc_c4/s315 | llm_pragmas_v5 | claude-haiku-4-5-20251001 | 1 | FASTER | 11.05x | 0+3 | 1 | 0 | 1 | 136.2 |
+| tsvc_c4/s315 | llm_pragmas_v5 | claude-haiku-4-5-20251001 | 2 | FASTER | 11.26x | 0+1 | 1 | 0 | 1 | 147.7 |
+| tsvc_c4/s315 | llm_pragmas_v5 | claude-haiku-4-5-20251001 | 3 | FASTER | 10.62x | 0+3 | 1 | 0 | 3 | 255.4 |
+| tsvc_c4/s315 | llm_pragmas_v5 | claude-haiku-4-5-20251001 | 4 | FASTER | 1.68x | 0+1 | 1 | 0 | 2 | 168.8 |
+| tsvc_c4/s315 | llm_pragmas_v5 | claude-haiku-4-5-20251001 | 5 | FASTER | 13.53x | 0+1 | 1 | 0 | 2 | 209.7 |

@@ -1,0 +1,15 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3b_1/benchmarks/tsvc_c4/s314/default_v5/claude-haiku-4-5-20251001/rep3/work/s314.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3b_1/benchmarks/tsvc_c4/s314/default_v5/claude-haiku-4-5-20251001/rep3/work/s314.c
+@@ -6,8 +6,10 @@
+     for (int nl = 0; nl < iterations; nl++) {
+         x = a[0];
+         for (int i = 0; i < LEN_1D; i++) {
+-            if (a[i] > x) {
+-                x = a[i];
++            real_t prev_x = x;
++            x = a[i];
++            if (x < prev_x) {
++                x = prev_x;
+             }
+         }
+         dummy(a, b, c, d, e, x);

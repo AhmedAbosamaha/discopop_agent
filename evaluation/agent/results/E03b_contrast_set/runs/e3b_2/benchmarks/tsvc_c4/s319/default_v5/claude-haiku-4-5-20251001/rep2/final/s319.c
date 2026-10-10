@@ -1,0 +1,24 @@
+#include <stdlib.h>
+#include "data.h"
+
+real_t kernel_s319(void)
+{
+    real_t sum;
+    real_t *partial = malloc(LEN_1D * sizeof(real_t));
+    for (int nl = 0; nl < iterations; nl++) {
+        #pragma omp parallel for shared(partial) 
+        for (int i = 0; i < LEN_1D; i++) {
+            a[i] = c[i] + d[i];
+            partial[i] = a[i];
+            b[i] = c[i] + e[i];
+            partial[i] += b[i];
+        }
+        sum = 0.;
+        for (int i = 0; i < LEN_1D; i++) {
+            sum += partial[i];
+        }
+        dummy(a, b, c, d, e, sum);
+    }
+    free(partial);
+    return sum;
+}

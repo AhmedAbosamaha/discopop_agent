@@ -1,0 +1,26 @@
+--- original.c
++++ final.c
+@@ -65,13 +65,20 @@
+ {
+     real_t sum;
+     for (int nl = 0; nl < iterations; nl++) {
+-        sum = 0.;
++        // Phase 1: Compute and write array values
++        #pragma omp parallel for 
+         for (int i = 0; i < LEN_1D; i++) {
+             a[i] = c[i] + d[i];
+-            sum += a[i];
+             b[i] = c[i] + e[i];
+-            sum += b[i];
+         }
++
++        // Phase 2: Accumulate sum from arrays
++        sum = 0.;
++        #pragma omp parallel for reduction(+:sum) 
++        for (int i = 0; i < LEN_1D; i++) {
++            sum += a[i] + b[i];
++        }
++
+         dummy(a, b, c, d, e, sum);
+     }
+     return sum;

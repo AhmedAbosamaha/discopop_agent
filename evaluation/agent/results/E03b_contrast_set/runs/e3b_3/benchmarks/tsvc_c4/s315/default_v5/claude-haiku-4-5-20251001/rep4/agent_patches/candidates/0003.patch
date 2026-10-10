@@ -1,0 +1,43 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3b_3/benchmarks/tsvc_c4/s315/default_v5/claude-haiku-4-5-20251001/rep4/work/s315.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3b_3/benchmarks/tsvc_c4/s315/default_v5/claude-haiku-4-5-20251001/rep4/work/s315.c
+@@ -5,14 +5,34 @@
+     real_t x, chksum;
+     int index;
+     for (int nl = 0; nl < iterations; nl++) {
+-        x = a[0];
+-        index = 0;
+-        for (int i = 0; i < LEN_1D; ++i) {
+-            if (a[i] > x) {
+-                x = a[i];
+-                index = i;
++        int mid = LEN_1D / 2;
++
++        real_t max_left = a[0];
++        int idx_left = 0;
++        for (int i = 0; i < mid; ++i) {
++            if (a[i] > max_left) {
++                max_left = a[i];
++                idx_left = i;
+             }
+         }
++
++        real_t max_right = a[mid];
++        int idx_right = mid;
++        for (int i = mid; i < LEN_1D; ++i) {
++            if (a[i] > max_right) {
++                max_right = a[i];
++                idx_right = i;
++            }
++        }
++
++        if (max_left >= max_right) {
++            x = max_left;
++            index = idx_left;
++        } else {
++            x = max_right;
++            index = idx_right;
++        }
++
+         chksum = x + (real_t) index;
+         dummy(a, b, c, d, e, chksum);
+     }

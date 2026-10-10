@@ -1,0 +1,60 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6c_v8_agent/benchmarks/tsvc_c4/s341/default_v4/claude-haiku-4-5-20251001/rep5/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6c_v8_agent/benchmarks/tsvc_c4/s341/default_v4/claude-haiku-4-5-20251001/rep5/work/s341.c
+@@ -1,17 +1,51 @@
++#include <stdlib.h>
+ #include "data.h"
+ 
+ real_t kernel_s341(void)
+ {
+-    int j;
++    int seg_size = (LEN_1D + 127) / 128;  // Process in ~128 segments
++    int num_segs = (LEN_1D + seg_size - 1) / seg_size;
++    int *seg_counts = (int *)malloc(num_segs * sizeof(int));
++    real_t **seg_data = (real_t **)malloc(num_segs * sizeof(real_t *));
++
+     for (int nl = 0; nl < iterations; nl++) {
+-        j = -1;
+-        for (int i = 0; i < LEN_1D; i++) {
+-            if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++        // Allocate result buffers for each segment
++        for (int seg = 0; seg < num_segs; seg++) {
++            seg_data[seg] = (real_t *)malloc(seg_size * sizeof(real_t));
++        }
++
++        // Phase 1: Process each segment independently (Do-All)
++        for (int seg = 0; seg < num_segs; seg++) {
++            int start = seg * seg_size;
++            int end = (start + seg_size < LEN_1D) ? start + seg_size : LEN_1D;
++            int count = 0;
++            for (int i = start; i < end; i++) {
++                if (b[i] > (real_t)0.) {
++                    seg_data[seg][count] = b[i];
++                    count++;
++                }
++            }
++            seg_counts[seg] = count;
++        }
++
++        // Phase 2: Merge segments into a (sequential)
++        int write_pos = 0;
++        for (int seg = 0; seg < num_segs; seg++) {
++            for (int i = 0; i < seg_counts[seg]; i++) {
++                a[write_pos] = seg_data[seg][i];
++                write_pos++;
+             }
+         }
++
++        // Free segment data for this iteration
++        for (int seg = 0; seg < num_segs; seg++) {
++            free(seg_data[seg]);
++        }
++
+         dummy(a, b, c, d, e);
+     }
++
++    free(seg_counts);
++    free(seg_data);
+     return (real_t)0;
+ }

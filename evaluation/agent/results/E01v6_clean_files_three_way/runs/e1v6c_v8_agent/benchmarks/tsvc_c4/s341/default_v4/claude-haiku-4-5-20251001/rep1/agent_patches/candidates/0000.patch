@@ -1,0 +1,32 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6c_v8_agent/benchmarks/tsvc_c4/s341/default_v4/claude-haiku-4-5-20251001/rep1/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6c_v8_agent/benchmarks/tsvc_c4/s341/default_v4/claude-haiku-4-5-20251001/rep1/work/s341.c
+@@ -5,12 +5,28 @@
+     int j;
+     for (int nl = 0; nl < iterations; nl++) {
+         j = -1;
++
++        // Allocate temporary position array
++        int* pos = (int*)malloc(LEN_1D * sizeof(int));
++
++        // First pass: compute target positions for qualifying elements
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+                 j++;
+-                a[j] = b[i];
++                pos[i] = j;
++            } else {
++                pos[i] = -1;
+             }
+         }
++
++        // Second pass: write filtered values to a (parallelizable Do-All)
++        for (int i = 0; i < LEN_1D; i++) {
++            if (pos[i] >= 0) {
++                a[pos[i]] = b[i];
++            }
++        }
++
++        free(pos);
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

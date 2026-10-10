@@ -1,0 +1,28 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3c_v8_s341/benchmarks/tsvc_c4/s341/default_v5/claude-haiku-4-5-20251001/rep1/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3c_v8_s341/benchmarks/tsvc_c4/s341/default_v5/claude-haiku-4-5-20251001/rep1/work/s341.c
+@@ -2,15 +2,23 @@
+ 
+ real_t kernel_s341(void)
+ {
+-    int j;
+     for (int nl = 0; nl < iterations; nl++) {
+-        j = -1;
++        // Compute prefix sum: count of elements satisfying condition
++        int prefix[LEN_1D];
++        prefix[0] = (b[0] > (real_t)0.) ? 1 : 0;
++        for (int i = 1; i < LEN_1D; i++) {
++            prefix[i] = prefix[i-1] + ((b[i] > (real_t)0.) ? 1 : 0);
++        }
++
++        // Loop with j declared inside: each iteration has independent j
+         for (int i = 0; i < LEN_1D; i++) {
++            int j = (i > 0 ? prefix[i-1] : 0) - 1;
+             if (b[i] > (real_t)0.) {
+                 j++;
+                 a[j] = b[i];
+             }
+         }
++
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

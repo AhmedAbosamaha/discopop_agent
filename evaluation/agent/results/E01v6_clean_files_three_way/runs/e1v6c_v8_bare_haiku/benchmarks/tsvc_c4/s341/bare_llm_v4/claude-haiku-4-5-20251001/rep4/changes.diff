@@ -1,0 +1,46 @@
+--- original.c
++++ final.c
+@@ -60,20 +60,41 @@
+ 
+ /* ==== s341.c ==== */
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s341(void)
+ {
+     int j;
++    int *pos = (int *)malloc(LEN_1D * sizeof(int));
++
+     for (int nl = 0; nl < iterations; nl++) {
+         j = -1;
++
++        // Pass 1: Compute prefix sum to determine target position for each element
++        // Count total elements satisfying condition
++        int count = 0;
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++                pos[i] = count;
++                count++;
+             }
+         }
++
++        // Pass 2: Write selected elements to their computed positions in parallel
++        #pragma omp parallel for shared(pos, b, a) private(j)
++        for (int i = 0; i < LEN_1D; i++) {
++            if (b[i] > (real_t)0.) {
++                a[pos[i]] = b[i];
++            }
++        }
++
++        // Update j to final value
++        j = count - 1;
++
+         dummy(a, b, c, d, e);
+     }
++
++    free(pos);
+     return (real_t)0;
+ }
+ 

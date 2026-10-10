@@ -1,0 +1,20 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3b_2/benchmarks/tsvc_c4/s3113/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/s3113.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3b_2/benchmarks/tsvc_c4/s3113/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/s3113.c
+@@ -4,12 +4,14 @@
+ {
+     real_t max;
+     for (int nl = 0; nl < iterations; nl++) {
+-        max = ABS(a[0]);
++        real_t local_max;
++        #pragma omp parallel for reduction(max:local_max)
+         for (int i = 0; i < LEN_1D; i++) {
+-            if ((ABS(a[i])) > max) {
+-                max = ABS(a[i]);
++            if ((ABS(a[i])) > local_max) {
++                local_max = ABS(a[i]);
+             }
+         }
++        max = local_max;
+         dummy(a, b, c, d, e, max);
+     }
+     return max;

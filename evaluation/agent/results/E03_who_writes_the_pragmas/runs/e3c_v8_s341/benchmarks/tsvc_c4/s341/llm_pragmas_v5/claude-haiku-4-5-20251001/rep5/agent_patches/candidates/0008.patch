@@ -1,0 +1,57 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3c_v8_s341/benchmarks/tsvc_c4/s341/llm_pragmas_v5/claude-haiku-4-5-20251001/rep5/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3c_v8_s341/benchmarks/tsvc_c4/s341/llm_pragmas_v5/claude-haiku-4-5-20251001/rep5/work/s341.c
+@@ -5,12 +5,52 @@
+     int j;
+     for (int nl = 0; nl < iterations; nl++) {
+         j = -1;
++
++        // Determine number of threads that will participate in the parallel region
++        int num_threads;
++        #pragma omp parallel
++        #pragma omp single
++        num_threads = omp_get_num_threads();
++
++        // Allocate thread-local buffers for storing filtered values
++        // Each thread will accumulate its own portion of the result
++        real_t** temp_a = malloc(num_threads * sizeof(real_t*));
++        int* temp_j = malloc(num_threads * sizeof(int));
++
++        // Initialize thread-local state: each thread gets its own buffer and counter
++        #pragma omp parallel
++        {
++            int tid = omp_get_thread_num();
++            temp_a[tid] = malloc(LEN_1D * sizeof(real_t));
++            temp_j[tid] = -1;
++        }
++
++        // Parallel loop with static scheduling: each thread processes a contiguous range
++        // of iterations, filters positive values, and stores in its thread-local buffer.
++        // The static schedule ensures deterministic iteration-to-thread assignment.
++        #pragma omp parallel for schedule(static)
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++                int tid = omp_get_thread_num();
++                temp_j[tid]++;
++                temp_a[tid][temp_j[tid]] = b[i];
+             }
+         }
++
++        // Merge results back into array a[] in thread order (which preserves iteration order
++        // due to static schedule assignment). This maintains the original element ordering.
++        j = -1;
++        for (int t = 0; t < num_threads; t++) {
++            for (int i = 0; i <= temp_j[t]; i++) {
++                j++;
++                a[j] = temp_a[t][i];
++            }
++            free(temp_a[t]);
++        }
++
++        free(temp_a);
++        free(temp_j);
++
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

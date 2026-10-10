@@ -1,0 +1,250 @@
+{
+  "benchmark": "tsvc_c4/s311",
+  "kernel": "s311",
+  "source": "s311.c",
+  "arm": "llm_pragmas_v5",
+  "model": "claude-haiku-4-5-20251001",
+  "arm_flags": [
+    "--require-speedup",
+    "--min-runtime-share",
+    "0.01",
+    "--llm-pragmas",
+    "--no-pragma-arbitration",
+    "--prompt-version",
+    "5",
+    "--timing-cflags=-DLARGE_DATASET"
+  ],
+  "started_at": "2026-10-10T16:07:02",
+  "host": "rms14562",
+  "host_load_start": [
+    8.90283203125,
+    8.44921875,
+    7.1923828125
+  ],
+  "agent_cmd": [
+    "/home/ahmedabosamaha/discopop_agent/venv/bin/python",
+    "-m",
+    "discopop_agent",
+    "--project-dir",
+    ".",
+    "--project-units",
+    "s311.c,main.c",
+    "--project-include",
+    ".",
+    "--project-editable",
+    "s311.c",
+    "--discopop-dir",
+    ".discopop",
+    "--provider",
+    "claude-agent-sdk",
+    "--model",
+    "claude-haiku-4-5-20251001",
+    "--edit-mode",
+    "direct",
+    "--require-speedup",
+    "--min-runtime-share",
+    "0.01",
+    "--llm-pragmas",
+    "--no-pragma-arbitration",
+    "--prompt-version",
+    "5",
+    "--timing-cflags=-DLARGE_DATASET",
+    "--check-input",
+    "7",
+    "--exclude-functions",
+    "main,dummy",
+    "--explorer-timeout",
+    "60"
+  ],
+  "agent_s": 294.8,
+  "agent_rc": 0,
+  "llm_calls": 2,
+  "llm_call_failures": 0,
+  "harness_reasks": 0,
+  "harness_discards": 0,
+  "explorer_retries": 0,
+  "explorer_stalls": 0,
+  "reverts": 0,
+  "refresh_fast": 0,
+  "refresh_full": 1,
+  "refresh_fallback": 0,
+  "runtime_remeasurements": 1,
+  "phase_b_deferred": 0,
+  "phase_b_joint_kept": 0,
+  "dp_floor": "same",
+  "gate_failures_phase_a": {
+    "correctness": 1
+  },
+  "gate_failures_phase_b": {},
+  "gate_passes_phase_a": 1,
+  "gate_failures_d40": {},
+  "d40_verdicts": {},
+  "exposure_verdicts": {},
+  "d40_seconds": 0,
+  "requeued_regions": 0,
+  "region_verdicts": {
+    "ACCEPTED": 1
+  },
+  "settle_dropped": 0,
+  "baseline_claimed": 1,
+  "baseline_pragmas": 1,
+  "rewrites_kept": 1,
+  "pragmas_applied": 1,
+  "pragmas_discopop": 0,
+  "pragmas_llm": 1,
+  "regions_skipped": 0,
+  "llm_usage": {
+    "calls_recorded": 2,
+    "input_tokens": 92,
+    "output_tokens": 22872,
+    "cache_read_input_tokens": 265597,
+    "cache_creation_input_tokens": 27627,
+    "cost_usd": 0.3205,
+    "model_seconds": 206.0
+  },
+  "layout": "project",
+  "files_changed": [
+    "s311.c"
+  ],
+  "source_changed": true,
+  "scaffold": {
+    "ok": true,
+    "problems": [],
+    "applies": true
+  },
+  "editable": [
+    "s311.c"
+  ],
+  "harness_sha256": "8018a59ea27bf3ab6aa920785c2d05ecd72399c5b615acb490b7ef3a46f9c2c0",
+  "pragmas_added": 1,
+  "pragmas_in_final": 1,
+  "hot_loop": {
+    "entry": "kernel_s311",
+    "function": "kernel_s311",
+    "line": 8,
+    "writes": [
+      "sum"
+    ]
+  },
+  "hot_loop_covered": true,
+  "hot_loop_coverage": {
+    "criterion": "v2 (27 Sep 2026)",
+    "covered": true,
+    "covering": [
+      {
+        "function": "kernel_s311",
+        "line": 10,
+        "directive": "#pragma omp parallel for reduction(+:sum)",
+        "writes": [
+          "sum"
+        ]
+      }
+    ],
+    "uncounted": [],
+    "elsewhere": []
+  },
+  "candidates_recorded": 2,
+  "verify": {
+    "verify_size": "EXTRALARGE",
+    "threads": [
+      6,
+      12
+    ],
+    "repeats": 5,
+    "compiler": "/usr/bin/clang-20",
+    "final_flags": [],
+    "dump_exact": true,
+    "dump_max_rel_err": 0.0,
+    "seed": "7",
+    "dump_exact_seeded": false,
+    "dump_seeded_max_rel_err": 2.379434628492085e-15,
+    "seq_median_s": 6.6854,
+    "seq_kernel_median_s": 4.284776,
+    "timing_basis": "kernel",
+    "par": {
+      "6": {
+        "median_s": 3.2688,
+        "program_speedup": 2.045,
+        "max_rel_err": 0.0,
+        "kernel_median_s": 0.742209,
+        "kernel_speedup": 5.773,
+        "speedup": 5.773
+      },
+      "12": {
+        "median_s": 3.0116,
+        "program_speedup": 2.22,
+        "max_rel_err": 0.0,
+        "kernel_median_s": 0.490051,
+        "kernel_speedup": 8.744,
+        "speedup": 8.744
+      }
+    },
+    "digest_max_rel_err": 0.0,
+    "stable_at_fixed_threads": true,
+    "kernel_program_disagree": false,
+    "digest_seeded_rel_err": 2.8715040390982095e-13,
+    "status": "ok",
+    "speed_measurable": true
+  },
+  "verify_s": 77.2,
+  "status": "done",
+  "outcome": "FASTER",
+  "finished_at": "2026-10-10T16:13:14",
+  "host_load_end": [
+    5.26904296875,
+    6.22021484375,
+    6.59326171875
+  ],
+  "profile": {
+    "wrapper": "discopop_cc",
+    "layout": "project",
+    "units": [
+      "s311.c",
+      "main.c"
+    ],
+    "instrument_s": 0.21,
+    "profiled_run_s": 0.06,
+    "explore_stalls": 0,
+    "explore_s": 1.37,
+    "explore_success_s": 1.37,
+    "explore_attempts": 1,
+    "explore_timed_out": false,
+    "explore_failures": [],
+    "patterns": {
+      "optimizer_output": 0,
+      "merged_pattern": 0,
+      "task": 0,
+      "do_all": 0,
+      "reduction": 1
+    },
+    "profile_sha256": "149c719bed68d8efff5c3a80f37a6fa6da4e36e0bb60d273e2289da70f34f8d9"
+  },
+  "package_integrity": {
+    "before": {
+      "checked": "before trial",
+      "at": "2026-10-10T16:07:02",
+      "prepared_sha256": "50b2f692fbcdec65983992fc6e9afd6017b2d00958b543a54030aae738efeda2",
+      "packager_sha256": "50b2f692fbcdec65983992fc6e9afd6017b2d00958b543a54030aae738efeda2",
+      "harness_sha256": "8018a59ea27bf3ab6aa920785c2d05ecd72399c5b615acb490b7ef3a46f9c2c0",
+      "archived_sha256": "50b2f692fbcdec65983992fc6e9afd6017b2d00958b543a54030aae738efeda2",
+      "profile_sha256": "149c719bed68d8efff5c3a80f37a6fa6da4e36e0bb60d273e2289da70f34f8d9",
+      "ok": true
+    },
+    "after": {
+      "checked": "after trial",
+      "at": "2026-10-10T16:13:15",
+      "prepared_sha256": "50b2f692fbcdec65983992fc6e9afd6017b2d00958b543a54030aae738efeda2",
+      "packager_sha256": "50b2f692fbcdec65983992fc6e9afd6017b2d00958b543a54030aae738efeda2",
+      "harness_sha256": "8018a59ea27bf3ab6aa920785c2d05ecd72399c5b615acb490b7ef3a46f9c2c0",
+      "archived_sha256": "50b2f692fbcdec65983992fc6e9afd6017b2d00958b543a54030aae738efeda2",
+      "profile_sha256": "149c719bed68d8efff5c3a80f37a6fa6da4e36e0bb60d273e2289da70f34f8d9",
+      "ok": true
+    }
+  },
+  "speed_check_off": false,
+  "timing_flags": [
+    "--timing-cflags=-DLARGE_DATASET"
+  ],
+  "harness_edit_redos": [],
+  "repeat": 4
+}

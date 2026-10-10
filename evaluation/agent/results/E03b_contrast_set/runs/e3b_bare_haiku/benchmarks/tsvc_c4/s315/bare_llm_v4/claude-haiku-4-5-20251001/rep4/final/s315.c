@@ -1,0 +1,40 @@
+#include "data.h"
+
+real_t kernel_s315(void)
+{
+    real_t x, chksum;
+    int index;
+    for (int nl = 0; nl < iterations; nl++) {
+        x = a[0];
+        index = 0;
+
+        #pragma omp parallel
+        {
+            /* Each thread maintains local max and its index */
+            real_t local_x = x;
+            int local_index = index;
+
+            /* Parallel loop to search for local maximum in this thread's range */
+            #pragma omp for
+            for (int i = 0; i < LEN_1D; ++i) {
+                if (a[i] > local_x) {
+                    local_x = a[i];
+                    local_index = i;
+                }
+            }
+
+            /* Atomically merge local max with global max */
+            #pragma omp critical
+            {
+                if (local_x > x) {
+                    x = local_x;
+                    index = local_index;
+                }
+            }
+        }
+
+        chksum = x + (real_t) index;
+        dummy(a, b, c, d, e, chksum);
+    }
+    return index + x + 1;
+}

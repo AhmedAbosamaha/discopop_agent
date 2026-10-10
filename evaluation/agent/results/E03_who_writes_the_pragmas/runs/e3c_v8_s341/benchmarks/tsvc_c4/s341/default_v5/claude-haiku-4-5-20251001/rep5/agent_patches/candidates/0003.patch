@@ -1,0 +1,37 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3c_v8_s341/benchmarks/tsvc_c4/s341/default_v5/claude-haiku-4-5-20251001/rep5/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3c_v8_s341/benchmarks/tsvc_c4/s341/default_v5/claude-haiku-4-5-20251001/rep5/work/s341.c
+@@ -1,16 +1,30 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s341(void)
+ {
+-    int j;
+     for (int nl = 0; nl < iterations; nl++) {
+-        j = -1;
++        // Compute prefix sum per outer iteration (dummy() may modify a)
++        // prefix[i] = count of elements satisfying condition before i
++        int *prefix = (int *)malloc((LEN_1D + 1) * sizeof(int));
++        int prefix_val = 0;
++        for (int i = 0; i < LEN_1D; i++) {
++            prefix[i] = prefix_val;
++            if (b[i] > (real_t)0.) {
++                prefix_val++;
++            }
++        }
++        prefix[LEN_1D] = prefix_val;
++
++        // Write elements: no loop-carried scalar dependence
++        // Each iteration writes to a[prefix[i]], independent of other inner-loop iterations
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++                a[prefix[i]] = b[i];
+             }
+         }
++
++        free(prefix);
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

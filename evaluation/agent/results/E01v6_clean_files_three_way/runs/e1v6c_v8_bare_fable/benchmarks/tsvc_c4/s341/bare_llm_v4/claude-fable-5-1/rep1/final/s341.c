@@ -1,0 +1,58 @@
+#include "data.h"
+#include <stdlib.h>
+
+/* Fixed block length used to break the compaction into independent pieces. */
+#define S341_BLOCK 1024
+
+real_t kernel_s341(void)
+{
+    const int nblk = (LEN_1D + S341_BLOCK - 1) / S341_BLOCK;
+    int *cnt = (int *)malloc((size_t)nblk * sizeof(int));
+
+    for (int nl = 0; nl < iterations; nl++) {
+        /* Pass 1: number of positive b[] entries in every block. */
+        #pragma omp parallel for shared(b, cnt, nblk)
+        for (int blk = 0; blk < nblk; blk++) {
+            int lo = blk * S341_BLOCK;
+            int hi = lo + S341_BLOCK;
+            int c0 = 0;
+            if (hi > LEN_1D) hi = LEN_1D;
+            for (int i = lo; i < hi; i++) {
+                if (b[i] > (real_t)0.) {
+                    c0++;
+                }
+            }
+            cnt[blk] = c0;
+        }
+
+        /* Exclusive scan: cnt[blk] becomes the first output slot of block blk.
+           Sequential, but only nblk = LEN_1D/1024 steps. */
+        int run = 0;
+        for (int blk = 0; blk < nblk; blk++) {
+            int t = cnt[blk];
+            cnt[blk] = run;
+            run += t;
+        }
+
+        /* Pass 2: each block compacts its positives into its own disjoint
+           slice of a[], starting at cnt[blk]. */
+        #pragma omp parallel for shared(a, b, cnt, nblk)
+        for (int blk = 0; blk < nblk; blk++) {
+            int lo = blk * S341_BLOCK;
+            int hi = lo + S341_BLOCK;
+            int j = cnt[blk];
+            if (hi > LEN_1D) hi = LEN_1D;
+            for (int i = lo; i < hi; i++) {
+                if (b[i] > (real_t)0.) {
+                    a[j] = b[i];
+                    j++;
+                }
+            }
+        }
+
+        dummy(a, b, c, d, e);
+    }
+
+    free(cnt);
+    return (real_t)0;
+}

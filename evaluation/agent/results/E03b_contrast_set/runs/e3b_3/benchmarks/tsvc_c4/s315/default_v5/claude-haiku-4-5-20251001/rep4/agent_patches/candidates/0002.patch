@@ -1,0 +1,26 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3b_3/benchmarks/tsvc_c4/s315/default_v5/claude-haiku-4-5-20251001/rep4/work/s315.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3b_3/benchmarks/tsvc_c4/s315/default_v5/claude-haiku-4-5-20251001/rep4/work/s315.c
+@@ -5,12 +5,20 @@
+     real_t x, chksum;
+     int index;
+     for (int nl = 0; nl < iterations; nl++) {
+-        x = a[0];
++        real_t max_val = a[0];
++        for (int i = 0; i < LEN_1D; ++i) {
++            real_t x = a[i];
++            if (x > max_val) {
++                max_val = x;
++            }
++        }
++        x = max_val;
+         index = 0;
++        int found = 0;
+         for (int i = 0; i < LEN_1D; ++i) {
+-            if (a[i] > x) {
+-                x = a[i];
++            if (!found && a[i] == x) {
+                 index = i;
++                found = 1;
+             }
+         }
+         chksum = x + (real_t) index;

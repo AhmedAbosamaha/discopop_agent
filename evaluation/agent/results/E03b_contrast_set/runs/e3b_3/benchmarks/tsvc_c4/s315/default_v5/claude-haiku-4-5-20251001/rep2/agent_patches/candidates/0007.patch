@@ -1,0 +1,24 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3b_3/benchmarks/tsvc_c4/s315/default_v5/claude-haiku-4-5-20251001/rep2/work/s315.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3b_3/benchmarks/tsvc_c4/s315/default_v5/claude-haiku-4-5-20251001/rep2/work/s315.c
+@@ -5,11 +5,19 @@
+     real_t x, chksum;
+     int index;
+     for (int nl = 0; nl < iterations; nl++) {
++        // First pass: find the maximum value (reduction pattern)
+         x = a[0];
+-        index = 0;
+-        for (int i = 0; i < LEN_1D; ++i) {
++        for (int i = 1; i < LEN_1D; ++i) {
+             if (a[i] > x) {
+                 x = a[i];
++            }
++        }
++
++        // Second pass: find the first index with the maximum value
++        // Iterate backward; the last update will be at the smallest index
++        index = LEN_1D - 1;
++        for (int i = LEN_1D - 1; i >= 0; --i) {
++            if (a[i] == x) {
+                 index = i;
+             }
+         }

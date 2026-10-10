@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3c_v8_s341/benchmarks/tsvc_c4/s341/default_v5/claude-haiku-4-5-20251001/rep5/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3c_v8_s341/benchmarks/tsvc_c4/s341/default_v5/claude-haiku-4-5-20251001/rep5/work/s341.c
+@@ -12,6 +12,7 @@
+ 
+         // Compute prefix sums using Kogge-Stone parallel algorithm
+         int* prefix = (int*)malloc(LEN_1D * sizeof(int));
++        #pragma omp parallel for shared(prefix,mask) 
+         for (int i = 0; i < LEN_1D; i++) {
+             prefix[i] = mask[i];
+         }

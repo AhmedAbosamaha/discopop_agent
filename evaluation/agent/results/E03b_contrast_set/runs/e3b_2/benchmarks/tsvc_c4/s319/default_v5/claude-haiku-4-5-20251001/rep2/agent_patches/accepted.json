@@ -1,0 +1,47 @@
+[
+  {
+    "region_id": "1:2",
+    "region_type": "loop",
+    "tier": 2,
+    "patch_file": ".discopop/agent_patches/region_1_2_tier2.patch",
+    "reprofiled": true,
+    "discovery_depth": 0,
+    "evidence": {
+      "comparison": "numeric",
+      "deviation": 5.10749691623363e-15,
+      "floor": 1.9528664679716818e-14
+    },
+    "exposed_pattern": "reduction @ lines 16\u201318, do_all @ lines 9\u201314",
+    "refresh": "full",
+    "exposed_speedup": 2.8795006848191975
+  },
+  {
+    "region_id": "1:6",
+    "region_type": "loop",
+    "phase": "B",
+    "pattern_id": 0,
+    "pattern_type": "do_all",
+    "pragma": "#pragma omp parallel for",
+    "lines": "9\u201314",
+    "marginal_speedup": 2.0548617133417424,
+    "applied_to_source": true,
+    "evidence": {
+      "comparison": "numeric",
+      "dependences": "no-blocker",
+      "dependences_detail": "the profiler covered lines 9-14 (28 RAW, 13 WAR, 3 WAW observed) and the Do-All detector recorded no blocker. Not proof the pragma is safe \u2014 the detector rules out what it can prove \u2014 so this neither passes nor fails the patch on its own",
+      "schedule_runtime_loops": 1,
+      "schedules": [
+        "T4/static#1",
+        "T4/static#2",
+        "T4/static#3",
+        "T1/static",
+        "T2/static",
+        "T4/dynamic,1",
+        "T4/guided"
+      ],
+      "reordered": false,
+      "floor": 1.9528664679716818e-14,
+      "deviation": 5.10749691623363e-15
+    }
+  }
+]

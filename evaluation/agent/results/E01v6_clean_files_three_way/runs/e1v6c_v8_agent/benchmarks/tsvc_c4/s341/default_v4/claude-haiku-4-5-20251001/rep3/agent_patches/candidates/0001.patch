@@ -1,0 +1,36 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6c_v8_agent/benchmarks/tsvc_c4/s341/default_v4/claude-haiku-4-5-20251001/rep3/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e1v6c_v8_agent/benchmarks/tsvc_c4/s341/default_v4/claude-haiku-4-5-20251001/rep3/work/s341.c
+@@ -1,16 +1,30 @@
++#include <stdlib.h>
+ #include "data.h"
+ 
+ real_t kernel_s341(void)
+ {
+-    int j;
+     for (int nl = 0; nl < iterations; nl++) {
+-        j = -1;
++        int *positions = (int *)malloc(LEN_1D * sizeof(int));
++        int j = -1;
++
++        // First pass: compute output position for each element
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+                 j++;
+-                a[j] = b[i];
++                positions[i] = j;
++            } else {
++                positions[i] = -1;
+             }
+         }
++
++        // Second pass: scatter to computed positions
++        for (int i = 0; i < LEN_1D; i++) {
++            if (positions[i] >= 0) {
++                a[positions[i]] = b[i];
++            }
++        }
++
++        free(positions);
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3b_1/benchmarks/tsvc_c4/s316/default_v5/claude-haiku-4-5-20251001/rep1/work/s316.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3b_1/benchmarks/tsvc_c4/s316/default_v5/claude-haiku-4-5-20251001/rep1/work/s316.c
+@@ -9,6 +9,7 @@
+         real_t *part_mins = (real_t *)malloc(2 * sizeof(real_t));
+ 
+         // Loop to compute minimum of each partition - Do-All: each iteration independent
++        #pragma omp parallel for shared(part_mins) 
+         for (int p = 0; p < 2; p++) {
+             int start = (p == 0) ? 0 : LEN_1D / 2;
+             int end = (p == 0) ? LEN_1D / 2 : LEN_1D;

@@ -1,0 +1,21 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3c_v8_s341/benchmarks/tsvc_c4/s341/llm_pragmas_v5/claude-haiku-4-5-20251001/rep4/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3c_v8_s341/benchmarks/tsvc_c4/s341/llm_pragmas_v5/claude-haiku-4-5-20251001/rep4/work/s341.c
+@@ -5,10 +5,16 @@
+     int j;
+     for (int nl = 0; nl < iterations; nl++) {
+         j = -1;
++        #pragma omp parallel for
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++                int idx;
++                #pragma omp atomic capture
++                {
++                    ++j;
++                    idx = j;
++                }
++                a[idx] = b[i];
+             }
+         }
+         dummy(a, b, c, d, e);
