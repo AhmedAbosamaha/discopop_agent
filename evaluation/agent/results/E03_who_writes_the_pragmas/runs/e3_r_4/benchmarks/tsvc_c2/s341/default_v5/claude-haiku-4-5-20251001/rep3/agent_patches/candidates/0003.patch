@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c2/s341/default_v5/claude-haiku-4-5-20251001/rep3/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c2/s341/default_v5/claude-haiku-4-5-20251001/rep3/work/s341.c
+@@ -19,6 +19,7 @@
+         }
+ 
+         // Pass 3: Write elements to their precomputed positions (no loop-carried dependencies)
++        #pragma omp parallel for shared(pass,pos) 
+         for (int i = 0; i < LEN_1D; i++) {
+             if (pass[i]) {
+                 a[pos[i]] = b[i];

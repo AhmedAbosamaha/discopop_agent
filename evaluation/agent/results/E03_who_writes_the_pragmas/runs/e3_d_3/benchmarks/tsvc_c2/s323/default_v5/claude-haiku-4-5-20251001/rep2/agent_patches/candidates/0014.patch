@@ -1,0 +1,31 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_3/benchmarks/tsvc_c2/s323/default_v5/claude-haiku-4-5-20251001/rep2/work/s323.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_3/benchmarks/tsvc_c2/s323/default_v5/claude-haiku-4-5-20251001/rep2/work/s323.c
+@@ -2,12 +2,27 @@
+ 
+ real_t kernel_s323(void)
+ {
++    real_t *delta_b = (real_t *)malloc(LEN_1D * sizeof(real_t));
++
+     for (int nl = 0; nl < iterations; nl++) {
++        // Phase 1: Compute b increments (independent loop)
++        for (int i = 1; i < LEN_1D; i++) {
++            delta_b[i] = c[i] * (d[i] + e[i]);
++        }
++
++        // Phase 2: Update b using prefix sum (sequential recurrence)
++        for (int i = 1; i < LEN_1D; i++) {
++            b[i] = b[i-1] + delta_b[i];
++        }
++
++        // Phase 3: Compute a using updated b (independent loop)
+         for (int i = 1; i < LEN_1D; i++) {
+             a[i] = b[i-1] + c[i] * d[i];
+-            b[i] = a[i] + c[i] * e[i];
+         }
++
+         dummy(a, b, c, d, e);
+     }
++
++    free(delta_b);
+     return (real_t)0;
+ }

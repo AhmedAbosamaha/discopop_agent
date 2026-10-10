@@ -1,0 +1,41 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_3/benchmarks/tsvc_c2/s323/llm_pragmas_v5/claude-haiku-4-5-20251001/rep3/work/s323.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_3/benchmarks/tsvc_c2/s323/llm_pragmas_v5/claude-haiku-4-5-20251001/rep3/work/s323.c
+@@ -1,12 +1,36 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s323(void)
+ {
+     for (int nl = 0; nl < iterations; nl++) {
+-        for (int i = 1; i < LEN_1D; i++) {
++        int i;
++        real_t *accum = (real_t *)malloc(LEN_1D * sizeof(real_t));
++
++        // Phase 1: Compute a[i] in parallel and accumulation terms for b
++        // a[i] = b[i-1] + c[i]*d[i]; no loop-carried dependence within this phase
++        // since each iteration reads unique b[i-1] and writes unique a[i].
++        #pragma omp parallel for private(i) shared(a, b, c, d, e, accum)
++        for (i = 1; i < LEN_1D; i++) {
+             a[i] = b[i-1] + c[i] * d[i];
+-            b[i] = a[i] + c[i] * e[i];
++            accum[i] = c[i] * (d[i] + e[i]);
+         }
++
++        // Phase 2: Serial prefix sum to compute b updates
++        // b[i] = b[i-1] + c[i]*(d[i]+e[i]), so accumulate the increments
++        accum[1] += b[0];
++        for (i = 2; i < LEN_1D; i++) {
++            accum[i] += accum[i-1];
++        }
++
++        // Phase 3: Write b values in parallel using prefix sums
++        // b[i] = accum[i] = b[0] + sum(c[j]*(d[j]+e[j]) for j=1..i)
++        #pragma omp parallel for private(i) shared(b, accum)
++        for (i = 1; i < LEN_1D; i++) {
++            b[i] = accum[i];
++        }
++
++        free(accum);
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

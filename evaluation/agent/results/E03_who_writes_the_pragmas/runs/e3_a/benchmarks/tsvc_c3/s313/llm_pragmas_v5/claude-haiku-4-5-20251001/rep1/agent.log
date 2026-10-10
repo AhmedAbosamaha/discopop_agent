@@ -1,0 +1,90 @@
+
+============================================================
+  DiscoPoP Agentic Controller
+============================================================
+  Source         : /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_a/benchmarks/tsvc_c3/s313/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/s313.c
+  DiscoPoP dir   : .discopop
+  Model          : claude-haiku-4-5-20251001
+  Budget         : 3 LLM retries/region (+2 free build fixes)
+  λ penalty      : 1.0
+  Min workload   : 0.0
+  Restruct. depth: 0 (Tier-2 allowed at depth 0–0)
+  Quality gate   : Tier-1 = all but speed, no escalation; Tier-2 = full
+  TSan           : barrier-aware (archer: /usr/lib/llvm-20/lib/libarcher.so)
+  Speedup gate   : require ≥ 1.1× measured
+  Dry run        : False
+  LLM mode       : claude-haiku-4-5-20251001
+  Edit mode      : direct
+  Re-profiling   : full (instrument + run + explore) after every kept rewrite
+  Explorer       : one attempt may take 60 s, then the draw is repeated (random stall, L5)
+  Pragmas        : LLM writes them with the rewrite, gate decides (--llm-pragmas)
+============================================================
+
+  Project        : /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_a/benchmarks/tsvc_c3/s313/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work  (2 unit(s): s313.c, main.c)
+
+  [ok] Captured reference output on 2 inputs (69 bytes, 719.9 ms baseline) for the correctness/performance gates.
+
+  [ok] Numerical noise floor 5.71e-14 of output scale (widest disagreement 5.71e-15 of output scale across 6 build variants, x10 margin).
+  [note] values may move that far without failing the correctness gate; labels, line structure and integers must still match exactly.
+
+  Hotspots       : measured per-region runtimes are available — 19 region(s) measured, 5.5 ms total, ranking by predicted time saved at 48 threads
+
+  Baseline       : DiscoPoP proposes 1 applicable pattern(s) unaided; 1 of them produce a usable pragma
+                   → the run beats DiscoPoP by ending with more than 1
+
+  Initial candidates
+Region ID    Type           Saves    % run    Hot  Tier  Depth  Name
+--------------------------------------------------------------------------------------
+  1:2        loop          4.2 ms    78.1%    YES     2      0  lines 6–12
+  0:0        function      4.2 ms    78.1%    YES     2      0  kernel_s313
+  1:6        loop          4.2 ms    77.9%    YES     1      0  lines 8–10
+
+============================================================
+  FLOOR — DiscoPoP's own program, as the DiscoPoP-alone arm delivers it (D32)
+============================================================
+  [floor] DiscoPoP alone keeps 1 pragma(s) — the agent's program must not be slower than that one (D32; details in floor/floor.log)
+
+============================================================
+  PHASE A — restructure  (the source stays pragma-free)
+============================================================
+
+┌─ [depth=0] loop 1:2 (lines 6–12)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 1 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for reduction(+:dot) schedule(static)
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Original backed up → s313.c.original
+│  [Tier-2] Applied to s313.c
+│  [Tier-2] Re-profiling to refresh data and discover new candidates...
+│  [refresh] kind=full
+│  [Tier-2] Re-measured runtimes: 19 region(s), 5.5 ms total
+│  [Tier-2] 0 survivor(s) rebuilt, 0 new at depth 1
+│  [Tier-2] Kept on its own pragmas: 1 annotated loop(s), gate passed end to end
+│  [Tier-2] Restructuring pays off (measured 4.49×)
+└─ ACCEPTED
+
+
+============================================================
+  PHASE B — annotate  (0 candidate pragma(s))
+============================================================
+
+  DiscoPoP proposes no applicable pattern for the final source.
+
+============================================================
+  SETTLING — verify the finished source, drop what does not hold up
+============================================================
+  [ok] finished source verified — output matches, 4.49x the original, paired
+
+  [floor] shipped DiscoPoP's own program (D32) — the agent's was 0.97× DiscoPoP's own, paired
+
+
+============================================================
+  SUMMARY: 0 rewrite(s) kept  |  1 pragma(s) applied  |  0 skipped
+  DiscoPoP unaided: 1 usable pragma(s) in this profile's draw  →  this run: 1   [MATCHED, informational]
+    ✓  loop 1:6  [Phase-B pragma]  depth=0  marginal 4.50×
+
+  Results → .discopop/agent_patches/accepted.json
+============================================================
+

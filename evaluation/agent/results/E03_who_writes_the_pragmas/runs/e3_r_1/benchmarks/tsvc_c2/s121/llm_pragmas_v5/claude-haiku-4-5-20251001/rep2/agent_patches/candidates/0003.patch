@@ -1,0 +1,38 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_1/benchmarks/tsvc_c2/s121/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/s121.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_1/benchmarks/tsvc_c2/s121/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/s121.c
+@@ -1,14 +1,32 @@
++#include <stdlib.h>
+ #include "data.h"
+ 
+ real_t kernel_s121(void)
+ {
+     int j;
++    real_t *temp = (real_t*)malloc((LEN_1D - 1) * sizeof(real_t));
++
+     for (int nl = 0; nl < iterations; nl++) {
+-        for (int i = 0; i < LEN_1D-1; i++) {
+-            j = i + 1;
+-            a[i] = a[j] + b[i];
++        // Single parallel region with two worksharing loops to amortize thread startup overhead
++        #pragma omp parallel shared(a, temp, b)
++        {
++            // Copy initial values of a[1..LEN_1D-1] to temp[0..LEN_1D-2]
++            // This captures the values before the compute loop modifies a
++            #pragma omp for schedule(static) nowait
++            for (int i = 0; i < LEN_1D - 1; i++) {
++                temp[i] = a[i + 1];
++            }
++
++            // Compute loop: read from temp (fixed initial values) and write to a
++            // Each iteration writes a unique element of a, so no loop-carried dependence
++            #pragma omp for schedule(static)
++            for (int i = 0; i < LEN_1D - 1; i++) {
++                a[i] = temp[i] + b[i];
++            }
+         }
+         dummy(a, b, c, d, e);
+     }
++
++    free(temp);
+     return (real_t)0;
+ }

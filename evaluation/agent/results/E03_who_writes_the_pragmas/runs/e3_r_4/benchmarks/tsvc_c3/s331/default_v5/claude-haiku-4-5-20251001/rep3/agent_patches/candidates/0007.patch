@@ -1,0 +1,38 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c3/s331/default_v5/claude-haiku-4-5-20251001/rep3/work/s331.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c3/s331/default_v5/claude-haiku-4-5-20251001/rep3/work/s331.c
+@@ -1,4 +1,5 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s331(void)
+ {
+@@ -6,11 +7,28 @@
+     real_t chksum;
+     for (int nl = 0; nl < iterations; nl++) {
+         j = -1;
++
++        // Allocate temporary array to track negative indices (one per loop element)
++        int *neg_idx = (int *)malloc(LEN_1D * sizeof(int));
++
++        // Parallel-amenable loop: each iteration writes only to neg_idx[i]
+         for (int i = 0; i < LEN_1D; i++) {
+             if (a[i] < (real_t)0.) {
+-                j = i;
++                neg_idx[i] = i;
++            } else {
++                neg_idx[i] = -1;
+             }
+         }
++
++        // Sequential reduction: find maximum negative index
++        for (int i = 0; i < LEN_1D; i++) {
++            if (neg_idx[i] > j) {
++                j = neg_idx[i];
++            }
++        }
++
++        free(neg_idx);
++
+         chksum = (real_t) j;
+         dummy(a, b, c, d, e, chksum);
+     }

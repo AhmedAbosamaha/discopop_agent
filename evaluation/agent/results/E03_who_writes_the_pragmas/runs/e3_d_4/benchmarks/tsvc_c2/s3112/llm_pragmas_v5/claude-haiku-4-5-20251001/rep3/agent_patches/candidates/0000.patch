@@ -1,0 +1,76 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_4/benchmarks/tsvc_c2/s3112/llm_pragmas_v5/claude-haiku-4-5-20251001/rep3/work/s3112.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_4/benchmarks/tsvc_c2/s3112/llm_pragmas_v5/claude-haiku-4-5-20251001/rep3/work/s3112.c
+@@ -1,15 +1,69 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s3112(void)
+ {
+     real_t sum;
+     for (int nl = 0; nl < iterations; nl++) {
+-        sum = (real_t)0.0;
+-        for (int i = 0; i < LEN_1D; i++) {
+-            sum += a[i];
+-            b[i] = sum;
++        // Segmented parallel prefix sum algorithm:
++        // Break the loop-carried dependence on sum by computing prefix sums
++        // in chunks, then merging results.
++
++        const int chunk_size = 256;
++        int num_chunks = (LEN_1D + chunk_size - 1) / chunk_size;
++
++        // Allocate buffer for per-chunk totals
++        real_t *segment_sums = (real_t *)malloc((num_chunks + 1) * sizeof(real_t));
++        segment_sums[0] = (real_t)0.0;
++
++        // Phase 1 (parallel): compute local prefix sums for each chunk
++        // Each chunk c processes a[start..end), computes local prefix,
++        // stores in b[start..end), and records total in segment_sums[c+1].
++        // No iteration of chunk c reads data written by chunk c' (c != c'),
++        // so chunks are independent.
++        #pragma omp parallel for shared(segment_sums) schedule(static)
++        for (int c = 0; c < num_chunks; c++) {
++            real_t chunk_sum = (real_t)0.0;
++            int start = c * chunk_size;
++            int end = start + chunk_size;
++            if (end > LEN_1D) end = LEN_1D;
++
++            for (int i = start; i < end; i++) {
++                chunk_sum += a[i];
++                b[i] = chunk_sum;
++            }
++            segment_sums[c + 1] = chunk_sum;
+         }
++
++        // Phase 2 (sequential): compute prefix sum of segment_sums.
++        // segment_sums[c] becomes the sum of all a[0..end_of_chunk_c)
++        // This step is necessarily sequential (recurrence).
++        for (int c = 1; c <= num_chunks; c++) {
++            segment_sums[c] += segment_sums[c - 1];
++        }
++
++        // Phase 3 (parallel): add global offset to each chunk's b values.
++        // For chunk c, segment_sums[c] is the sum of all elements in
++        // chunks 0..c-1. Adding this to each b[i] in chunk c gives
++        // the global prefix sum at position i.
++        #pragma omp parallel for shared(segment_sums) schedule(static)
++        for (int c = 0; c < num_chunks; c++) {
++            real_t offset = segment_sums[c];
++            int start = c * chunk_size;
++            int end = start + chunk_size;
++            if (end > LEN_1D) end = LEN_1D;
++
++            for (int i = start; i < end; i++) {
++                b[i] += offset;
++            }
++        }
++
++        // Final sum is the total of all elements
++        sum = segment_sums[num_chunks];
++
+         dummy(a, b, c, d, e);
++
++        free(segment_sums);
+     }
+     return sum;
+ }

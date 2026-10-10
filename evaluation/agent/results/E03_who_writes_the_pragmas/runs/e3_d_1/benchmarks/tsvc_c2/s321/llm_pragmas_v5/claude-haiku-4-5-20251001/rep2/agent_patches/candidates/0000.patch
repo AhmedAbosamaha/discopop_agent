@@ -1,0 +1,23 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_1/benchmarks/tsvc_c2/s321/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/s321.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_1/benchmarks/tsvc_c2/s321/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/s321.c
+@@ -3,9 +3,19 @@
+ real_t kernel_s321(void)
+ {
+     for (int nl = 0; nl < iterations; nl++) {
++        // Restructure: separate product computation from accumulation
++        // Phase 1: Compute all products independently (no loop-carried dependency on a writes)
++        real_t *temp = malloc(LEN_1D * sizeof(real_t));
++        #pragma omp parallel for shared(a, b, temp)
+         for (int i = 1; i < LEN_1D; i++) {
+-            a[i] += a[i-1] * b[i];
++            temp[i] = a[i-1] * b[i];
+         }
++
++        // Phase 2: Sequential accumulation preserves the value flow
++        for (int i = 1; i < LEN_1D; i++) {
++            a[i] += temp[i];
++        }
++        free(temp);
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

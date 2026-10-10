@@ -1,0 +1,24 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_1/benchmarks/tsvc_c2/s211/llm_pragmas_v5/claude-haiku-4-5-20251001/rep5/work/s211.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_1/benchmarks/tsvc_c2/s211/llm_pragmas_v5/claude-haiku-4-5-20251001/rep5/work/s211.c
+@@ -3,10 +3,20 @@
+ real_t kernel_s211(void)
+ {
+     for (int nl = 0; nl < iterations; nl++) {
++        // Phase 1: Compute all new b values in parallel
++        // Each iteration i writes b[i] and reads b[i+1] (not modified in this phase)
++        #pragma omp parallel for
++        for (int i = 1; i < LEN_1D-1; i++) {
++            b[i] = b[i + 1] - e[i] * d[i];
++        }
++
++        // Phase 2: Compute all a values in parallel using updated b values
++        // Each iteration i writes a[i] and reads b[i-1] (just computed in phase 1)
++        #pragma omp parallel for
+         for (int i = 1; i < LEN_1D-1; i++) {
+             a[i] = b[i - 1] + c[i] * d[i];
+-            b[i] = b[i + 1] - e[i] * d[i];
+         }
++
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

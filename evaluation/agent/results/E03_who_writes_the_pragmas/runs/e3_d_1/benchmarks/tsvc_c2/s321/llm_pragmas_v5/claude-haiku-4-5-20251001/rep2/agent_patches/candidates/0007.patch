@@ -1,0 +1,40 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_1/benchmarks/tsvc_c2/s321/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/s321.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_1/benchmarks/tsvc_c2/s321/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/s321.c
+@@ -1,12 +1,35 @@
+ #include "data.h"
++#include <stdlib.h>
++#include <string.h>
+ 
+ real_t kernel_s321(void)
+ {
++    // Parallelize outer loop over 8 iterations; each iteration has ~32k inner work.
++    // Each iteration works on a private copy of 'a' to avoid races on the true recurrence
++    // (a[i] += a[i-1] * b[i]). Critical sections preserve sequential state updates.
++    #pragma omp parallel for shared(a, b, c, d, e, iterations, LEN_1D)
+     for (int nl = 0; nl < iterations; nl++) {
++        real_t *a_private = (real_t*)malloc(LEN_1D * sizeof(real_t));
++
++        // Load current state of 'a' into private copy (after all previous iterations)
++        #pragma omp critical
++        {
++            memcpy(a_private, a, LEN_1D * sizeof(real_t));
++        }
++
++        // Inner loop runs sequentially on private copy; no cross-thread interference
+         for (int i = 1; i < LEN_1D; i++) {
+-            a[i] += a[i-1] * b[i];
++            a_private[i] += a_private[i-1] * b[i];
+         }
+-        dummy(a, b, c, d, e);
++
++        // Write result back and call dummy() in order (critical ensures sequential state)
++        #pragma omp critical
++        {
++            memcpy(a, a_private, LEN_1D * sizeof(real_t));
++            dummy(a, b, c, d, e);
++        }
++
++        free(a_private);
+     }
+     return (real_t)0;
+ }

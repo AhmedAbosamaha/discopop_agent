@@ -1,0 +1,36 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_2/benchmarks/tsvc_c2/s244/llm_pragmas_v5/claude-haiku-4-5-20251001/rep5/work/s244.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_2/benchmarks/tsvc_c2/s244/llm_pragmas_v5/claude-haiku-4-5-20251001/rep5/work/s244.c
+@@ -3,11 +3,30 @@
+ real_t kernel_s244(void)
+ {
+     for (int nl = 0; nl < iterations; nl++) {
++        // Save original a and b to break loop-carried dependences
++        real_t *a_orig = (real_t *)malloc(LEN_1D * sizeof(real_t));
++        real_t *b_orig = (real_t *)malloc(LEN_1D * sizeof(real_t));
++        memcpy(a_orig, a, LEN_1D * sizeof(real_t));
++        memcpy(b_orig, b, LEN_1D * sizeof(real_t));
++
++        // Phase 1: Update b values in parallel (each iteration writes to its own b[i])
++        #pragma omp parallel for shared(b, c, b_orig) schedule(static)
+         for (int i = 0; i < LEN_1D-1; ++i) {
+-            a[i] = b[i] + c[i] * d[i];
+-            b[i] = c[i] + b[i];
+-            a[i+1] = b[i] + a[i+1] * d[i];
++            b[i] = c[i] + b_orig[i];
+         }
++
++        // Phase 2: Compute a[0..LEN_1D-2] in parallel using saved b_orig
++        // (reads from a_orig avoid RAW, no iteration reads what another writes)
++        #pragma omp parallel for shared(a, b_orig, c, d) schedule(static)
++        for (int i = 0; i < LEN_1D-1; ++i) {
++            a[i] = b_orig[i] + c[i] * d[i];
++        }
++
++        // Phase 3: Compute a[LEN_1D-1] using new b[LEN_1D-2] and saved a_orig[LEN_1D-1]
++        a[LEN_1D-1] = b[LEN_1D-2] + a_orig[LEN_1D-1] * d[LEN_1D-2];
++
++        free(a_orig);
++        free(b_orig);
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

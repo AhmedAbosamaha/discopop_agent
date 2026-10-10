@@ -1,0 +1,29 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_4/benchmarks/tsvc_c2/s3112/default_v5/claude-haiku-4-5-20251001/rep2/work/s3112.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_4/benchmarks/tsvc_c2/s3112/default_v5/claude-haiku-4-5-20251001/rep2/work/s3112.c
+@@ -1,14 +1,25 @@
++#include <stdlib.h>
+ #include "data.h"
+ 
+ real_t kernel_s3112(void)
+ {
+     real_t sum;
+     for (int nl = 0; nl < iterations; nl++) {
++        real_t *prefix = (real_t *)malloc(LEN_1D * sizeof(real_t));
+         sum = (real_t)0.0;
++
++        // Sequential accumulation: compute prefix sums preserving original floating-point order
+         for (int i = 0; i < LEN_1D; i++) {
+             sum += a[i];
+-            b[i] = sum;
++            prefix[i] = sum;
+         }
++
++        // Do-All copy loop: write prefix sums to output array
++        for (int i = 0; i < LEN_1D; i++) {
++            b[i] = prefix[i];
++        }
++
++        free(prefix);
+         dummy(a, b, c, d, e);
+     }
+     return sum;

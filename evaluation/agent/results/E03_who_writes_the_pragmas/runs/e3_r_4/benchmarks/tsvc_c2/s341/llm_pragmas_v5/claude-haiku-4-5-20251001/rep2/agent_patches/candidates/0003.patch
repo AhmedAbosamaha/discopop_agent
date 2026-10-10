@@ -1,0 +1,62 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c2/s341/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c2/s341/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/s341.c
+@@ -1,17 +1,51 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s341(void)
+ {
+-    int j;
+-    for (int nl = 0; nl < iterations; nl++) {
+-        j = -1;
+-        for (int i = 0; i < LEN_1D; i++) {
+-            if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++    int* counts = (int*)malloc(LEN_1D * sizeof(int));
++
++    // Create parallel region once, outside the nl loop, to reuse threads across all iterations
++    #pragma omp parallel
++    {
++        for (int nl = 0; nl < iterations; nl++) {
++            // First pass: count how many elements pass the filter
++            #pragma omp for
++            for (int i = 0; i < LEN_1D; i++) {
++                counts[i] = (b[i] > (real_t)0.) ? 1 : 0;
+             }
++            // Implicit barrier after #pragma omp for
++
++            // Prefix sum to compute target indices (serial, executed by one thread)
++            #pragma omp single
++            {
++                int total = 0;
++                for (int i = 0; i < LEN_1D; i++) {
++                    int temp = counts[i];
++                    counts[i] = total;
++                    total += temp;
++                }
++            }
++            // Implicit barrier after #pragma omp single
++
++            // Second pass: write filtered elements to a[]
++            #pragma omp for
++            for (int i = 0; i < LEN_1D; i++) {
++                if (b[i] > (real_t)0.) {
++                    a[counts[i]] = b[i];
++                }
++            }
++            // Implicit barrier after #pragma omp for
++
++            // Call dummy with modified a[] and b[]
++            #pragma omp single
++            {
++                dummy(a, b, c, d, e);
++            }
++            // Implicit barrier after #pragma omp single
+         }
+-        dummy(a, b, c, d, e);
+     }
++
++    free(counts);
+     return (real_t)0;
+ }

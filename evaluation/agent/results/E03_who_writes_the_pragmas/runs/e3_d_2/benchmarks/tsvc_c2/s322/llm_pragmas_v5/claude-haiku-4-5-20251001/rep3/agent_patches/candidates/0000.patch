@@ -1,0 +1,37 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_2/benchmarks/tsvc_c2/s322/llm_pragmas_v5/claude-haiku-4-5-20251001/rep3/work/s322.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_2/benchmarks/tsvc_c2/s322/llm_pragmas_v5/claude-haiku-4-5-20251001/rep3/work/s322.c
+@@ -1,12 +1,33 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s322(void)
+ {
++    // Allocate temporary arrays for intermediate products (heap-allocated due to size)
++    real_t *prod1 = (real_t *)malloc(LEN_1D * sizeof(real_t));
++    real_t *prod2 = (real_t *)malloc(LEN_1D * sizeof(real_t));
++
+     for (int nl = 0; nl < iterations; nl++) {
++        // Phase 1: Compute products in parallel
++        // Each iteration i reads a[i-1], a[i-2], b[i], c[i] which do not change during this loop
++        // and writes to unique prod1[i], prod2[i] — no inter-iteration RAW dependence
++        #pragma omp parallel for shared(a, b, c, prod1, prod2)
+         for (int i = 2; i < LEN_1D; i++) {
+-            a[i] = a[i] + a[i - 1] * b[i] + a[i - 2] * c[i];
++            prod1[i] = a[i - 1] * b[i];
++            prod2[i] = a[i - 2] * c[i];
+         }
++
++        // Phase 2: Apply accumulated updates in parallel
++        // Each iteration i reads and writes only a[i], prod1[i], prod2[i] — element-wise independent
++        #pragma omp parallel for shared(a, prod1, prod2)
++        for (int i = 2; i < LEN_1D; i++) {
++            a[i] = a[i] + prod1[i] + prod2[i];
++        }
++
+         dummy(a, b, c, d, e);
+     }
++
++    free(prod1);
++    free(prod2);
+     return (real_t)0;
+ }

@@ -1,0 +1,26 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_2/benchmarks/tsvc_c2/s252/default_v5/claude-haiku-4-5-20251001/rep3/work/s252.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_2/benchmarks/tsvc_c2/s252/default_v5/claude-haiku-4-5-20251001/rep3/work/s252.c
+@@ -4,12 +4,22 @@
+ {
+     real_t t, s;
+     for (int nl = 0; nl < iterations; nl++) {
++        real_t *s_vals = (real_t *)malloc(LEN_1D * sizeof(real_t));
++
++        // Phase 1: compute all s values independently
++        for (int i = 0; i < LEN_1D; i++) {
++            s_vals[i] = b[i] * c[i];
++        }
++
++        // Phase 2: use precomputed s values to compute a with carry-forward
+         t = (real_t) 0.;
+         for (int i = 0; i < LEN_1D; i++) {
+-            s = b[i] * c[i];
++            s = s_vals[i];
+             a[i] = s + t;
+             t = s;
+         }
++
++        free(s_vals);
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

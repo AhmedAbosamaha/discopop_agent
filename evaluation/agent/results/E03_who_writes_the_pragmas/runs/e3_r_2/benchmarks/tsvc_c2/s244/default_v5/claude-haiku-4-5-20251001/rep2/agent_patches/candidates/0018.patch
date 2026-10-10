@@ -1,0 +1,18 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_2/benchmarks/tsvc_c2/s244/default_v5/claude-haiku-4-5-20251001/rep2/work/s244.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_2/benchmarks/tsvc_c2/s244/default_v5/claude-haiku-4-5-20251001/rep2/work/s244.c
+@@ -3,10 +3,14 @@
+ real_t kernel_s244(void)
+ {
+     for (int nl = 0; nl < iterations; nl++) {
++        real_t a_temp[LEN_1D];
+         for (int i = 0; i < LEN_1D-1; ++i) {
+-            a[i] = b[i] + c[i] * d[i];
++            a_temp[i] = b[i] + c[i] * d[i];
+             b[i] = c[i] + b[i];
+             a[i+1] = b[i] + a[i+1] * d[i];
++        }
++        for (int i = 0; i < LEN_1D-1; ++i) {
++            a[i] = a_temp[i];
+         }
+         dummy(a, b, c, d, e);
+     }

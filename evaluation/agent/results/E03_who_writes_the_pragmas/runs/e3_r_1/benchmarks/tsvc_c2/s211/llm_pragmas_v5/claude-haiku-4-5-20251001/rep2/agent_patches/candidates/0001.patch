@@ -1,0 +1,29 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_1/benchmarks/tsvc_c2/s211/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/s211.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_1/benchmarks/tsvc_c2/s211/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/s211.c
+@@ -2,12 +2,25 @@
+ 
+ real_t kernel_s211(void)
+ {
++    real_t *b_orig = malloc(LEN_1D * sizeof(real_t));
++
+     for (int nl = 0; nl < iterations; nl++) {
++        // Save original b values before modifying
++        memcpy(b_orig, b, LEN_1D * sizeof(real_t));
++
++        // Pass 1: compute all new b values from saved originals (iteration-independent)
++        #pragma omp parallel for
++        for (int i = 1; i < LEN_1D-1; i++) {
++            b[i] = b_orig[i + 1] - e[i] * d[i];
++        }
++        // Pass 2: compute a values using updated b (iteration-independent)
++        #pragma omp parallel for
+         for (int i = 1; i < LEN_1D-1; i++) {
+             a[i] = b[i - 1] + c[i] * d[i];
+-            b[i] = b[i + 1] - e[i] * d[i];
+         }
+         dummy(a, b, c, d, e);
+     }
++
++    free(b_orig);
+     return (real_t)0;
+ }

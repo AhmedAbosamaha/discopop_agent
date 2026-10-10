@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c3/s331/default_v5/claude-haiku-4-5-20251001/rep3/work/s331.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c3/s331/default_v5/claude-haiku-4-5-20251001/rep3/work/s331.c
+@@ -8,6 +8,7 @@
+     for (int nl = 0; nl < iterations; nl++) {
+         j = -1;
+         int *matches = (int *)malloc(LEN_1D * sizeof(int));
++        #pragma omp parallel for shared(matches) 
+         for (int i = 0; i < LEN_1D; i++) {
+             matches[i] = (a[i] < (real_t)0.) ? i : -1;
+         }

@@ -1,0 +1,34 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c2/s341/default_v5/claude-haiku-4-5-20251001/rep5/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c2/s341/default_v5/claude-haiku-4-5-20251001/rep5/work/s341.c
+@@ -1,17 +1,29 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s341(void)
+ {
+     int j;
++    int *pos_map = malloc(LEN_1D * sizeof(int));
+     for (int nl = 0; nl < iterations; nl++) {
+         j = -1;
++        // Compute positions: pos_map[i] = count of positive elements before i
++        int count = 0;
++        for (int i = 0; i < LEN_1D; i++) {
++            pos_map[i] = count;
++            if (b[i] > (real_t)0.) {
++                count++;
++            }
++        }
++        // Write using precomputed positions (parallel-friendly, order-preserving)
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++                a[pos_map[i]] = b[i];
+             }
+         }
++        j = count - 1;
+         dummy(a, b, c, d, e);
+     }
++    free(pos_map);
+     return (real_t)0;
+ }

@@ -1,0 +1,25 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c2/s341/llm_pragmas_v5/claude-haiku-4-5-20251001/rep5/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c2/s341/llm_pragmas_v5/claude-haiku-4-5-20251001/rep5/work/s341.c
+@@ -2,13 +2,18 @@
+ 
+ real_t kernel_s341(void)
+ {
+-    int j;
+     for (int nl = 0; nl < iterations; nl++) {
+-        j = -1;
++        int j = 0;
++        #pragma omp parallel for
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++                int pos;
++                #pragma omp atomic capture
++                {
++                    pos = j;
++                    j++;
++                }
++                a[pos] = b[i];
+             }
+         }
+         dummy(a, b, c, d, e);

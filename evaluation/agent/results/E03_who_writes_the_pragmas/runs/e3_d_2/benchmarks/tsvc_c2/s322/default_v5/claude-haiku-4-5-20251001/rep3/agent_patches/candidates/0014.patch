@@ -1,0 +1,33 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_2/benchmarks/tsvc_c2/s322/default_v5/claude-haiku-4-5-20251001/rep3/work/s322.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_2/benchmarks/tsvc_c2/s322/default_v5/claude-haiku-4-5-20251001/rep3/work/s322.c
+@@ -1,11 +1,29 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s322(void)
+ {
++    static real_t *prod1 = NULL, *prod2 = NULL;
++    static size_t allocated_size = 0;
++
++    if (prod1 == NULL) {
++        allocated_size = LEN_1D;
++        prod1 = malloc(LEN_1D * sizeof(real_t));
++        prod2 = malloc(LEN_1D * sizeof(real_t));
++    }
++
+     for (int nl = 0; nl < iterations; nl++) {
++        // Phase 1: Compute products (Do-All loop)
+         for (int i = 2; i < LEN_1D; i++) {
+-            a[i] = a[i] + a[i - 1] * b[i] + a[i - 2] * c[i];
++            prod1[i] = a[i - 1] * b[i];
++            prod2[i] = a[i - 2] * c[i];
+         }
++
++        // Phase 2: Accumulate results (Do-All loop)
++        for (int i = 2; i < LEN_1D; i++) {
++            a[i] = a[i] + prod1[i] + prod2[i];
++        }
++
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

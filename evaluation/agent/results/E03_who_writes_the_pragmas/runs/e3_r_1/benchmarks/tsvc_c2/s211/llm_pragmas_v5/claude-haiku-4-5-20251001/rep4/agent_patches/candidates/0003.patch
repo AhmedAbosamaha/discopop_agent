@@ -1,0 +1,32 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_1/benchmarks/tsvc_c2/s211/llm_pragmas_v5/claude-haiku-4-5-20251001/rep4/work/s211.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_1/benchmarks/tsvc_c2/s211/llm_pragmas_v5/claude-haiku-4-5-20251001/rep4/work/s211.c
+@@ -3,10 +3,27 @@
+ real_t kernel_s211(void)
+ {
+     for (int nl = 0; nl < iterations; nl++) {
++        real_t *b_new = (real_t *)malloc(LEN_1D * sizeof(real_t));
++        memcpy(b_new, b, LEN_1D * sizeof(real_t));
++
++        /* Phase 1: Compute all updated b values in parallel.
++           Each iteration i writes to b_new[i] independently,
++           reading only from the unchanged b array. */
++        #pragma omp parallel for shared(b_new, b, e, d)
+         for (int i = 1; i < LEN_1D-1; i++) {
+-            a[i] = b[i - 1] + c[i] * d[i];
+-            b[i] = b[i + 1] - e[i] * d[i];
++            b_new[i] = b[i + 1] - e[i] * d[i];
+         }
++
++        /* Phase 2: Compute all a values in parallel.
++           Each iteration i reads from b_new[i-1] (fully computed by phase 1)
++           and writes to a[i] independently. */
++        #pragma omp parallel for shared(a, b_new, c, d)
++        for (int i = 1; i < LEN_1D-1; i++) {
++            a[i] = b_new[i - 1] + c[i] * d[i];
++        }
++
++        memcpy(b, b_new, LEN_1D * sizeof(real_t));
++        free(b_new);
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

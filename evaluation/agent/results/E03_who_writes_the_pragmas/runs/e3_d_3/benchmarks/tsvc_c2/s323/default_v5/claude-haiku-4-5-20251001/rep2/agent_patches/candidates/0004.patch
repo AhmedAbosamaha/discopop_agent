@@ -1,0 +1,31 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_3/benchmarks/tsvc_c2/s323/default_v5/claude-haiku-4-5-20251001/rep2/work/s323.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_3/benchmarks/tsvc_c2/s323/default_v5/claude-haiku-4-5-20251001/rep2/work/s323.c
+@@ -1,13 +1,26 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s323(void)
+ {
++    real_t *prefix = malloc(LEN_1D * sizeof(real_t));
++
+     for (int nl = 0; nl < iterations; nl++) {
++        // Phase 1: compute prefix sum of b + c*d + c*e recurrence (unfactored to preserve FP rounding)
++        prefix[0] = b[0];
+         for (int i = 1; i < LEN_1D; i++) {
+-            a[i] = b[i-1] + c[i] * d[i];
+-            b[i] = a[i] + c[i] * e[i];
++            prefix[i] = prefix[i-1] + c[i] * d[i] + c[i] * e[i];
+         }
++
++        // Phase 2: compute a and b using prefix sums (no loop-carried dependence)
++        for (int i = 1; i < LEN_1D; i++) {
++            a[i] = prefix[i-1] + c[i] * d[i];
++            b[i] = prefix[i];
++        }
++
+         dummy(a, b, c, d, e);
+     }
++
++    free(prefix);
+     return (real_t)0;
+ }

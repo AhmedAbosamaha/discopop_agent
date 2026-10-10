@@ -1,0 +1,29 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_2/benchmarks/tsvc_c2/s243/llm_pragmas_v5/claude-haiku-4-5-20251001/rep4/work/s243.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_2/benchmarks/tsvc_c2/s243/llm_pragmas_v5/claude-haiku-4-5-20251001/rep4/work/s243.c
+@@ -1,13 +1,25 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s243(void)
+ {
+     for (int nl = 0; nl < iterations; nl++) {
++        // Save a[] before the inner loop since line 9 reads a[i+1]
++        // In sequential execution, that read gets the old value (before iteration i+1 updates it).
++        // Snapshot it so parallel iterations are independent.
++        real_t *a_old = malloc(LEN_1D * sizeof(real_t));
++        for (int j = 0; j < LEN_1D; j++) {
++            a_old[j] = a[j];
++        }
++
++        #pragma omp parallel for private(i) schedule(auto)
+         for (int i = 0; i < LEN_1D-1; i++) {
+             a[i] = b[i] + c[i  ] * d[i];
+             b[i] = a[i] + d[i  ] * e[i];
+-            a[i] = b[i] + a[i+1] * d[i];
++            a[i] = b[i] + a_old[i+1] * d[i];
+         }
++
++        free(a_old);
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

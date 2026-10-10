@@ -1,0 +1,72 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c2/s341/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c2/s341/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/s341.c
+@@ -1,16 +1,66 @@
+ #include "data.h"
++#include <omp.h>
++#include <stdlib.h>
+ 
+ real_t kernel_s341(void)
+ {
+     int j;
+     for (int nl = 0; nl < iterations; nl++) {
++        // Determine number of threads for this activation
++        int num_threads;
++        #pragma omp parallel
++        {
++            #pragma omp single
++            num_threads = omp_get_num_threads();
++        }
++
++        // Allocate per-thread buffers to accumulate filtered elements
++        real_t **thread_buffers = (real_t **)malloc(num_threads * sizeof(real_t *));
++        int *thread_counts = (int *)malloc(num_threads * sizeof(int));
++
++        for (int t = 0; t < num_threads; t++) {
++            thread_buffers[t] = (real_t *)malloc(LEN_1D * sizeof(real_t));
++            thread_counts[t] = 0;
++        }
++
++        // Phase 1: Parallel filtering loop with thread-local accumulators
++        // Removes loop-carried dependence on scalar j by making each thread
++        // process its iterations independently with a private counter (local_j)
++        #pragma omp parallel
++        {
++            int tid = omp_get_thread_num();  // private: thread id
++            int local_j = -1;                 // private: thread-local counter
++
++            #pragma omp for
++            for (int i = 0; i < LEN_1D; i++) {
++                if (b[i] > (real_t)0.) {
++                    local_j++;
++                    thread_buffers[tid][local_j] = b[i];
++                }
++            }
++
++            // Each thread atomically updates its slot in thread_counts
++            #pragma omp critical
++            thread_counts[tid] = local_j + 1;
++        }
++
++        // Phase 2: Consolidate results from thread buffers into final array a
++        // Done serially; overhead is negligible compared to ~32K iter/activation
+         j = -1;
+-        for (int i = 0; i < LEN_1D; i++) {
+-            if (b[i] > (real_t)0.) {
++        for (int t = 0; t < num_threads; t++) {
++            for (int k = 0; k < thread_counts[t]; k++) {
+                 j++;
+-                a[j] = b[i];
++                a[j] = thread_buffers[t][k];
+             }
+         }
++
++        // Cleanup thread buffers
++        for (int t = 0; t < num_threads; t++) {
++            free(thread_buffers[t]);
++        }
++        free(thread_buffers);
++        free(thread_counts);
++
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

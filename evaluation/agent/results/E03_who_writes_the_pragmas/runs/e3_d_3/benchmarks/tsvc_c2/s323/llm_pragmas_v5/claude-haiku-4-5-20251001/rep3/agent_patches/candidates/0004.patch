@@ -1,0 +1,30 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_3/benchmarks/tsvc_c2/s323/llm_pragmas_v5/claude-haiku-4-5-20251001/rep3/work/s323.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_3/benchmarks/tsvc_c2/s323/llm_pragmas_v5/claude-haiku-4-5-20251001/rep3/work/s323.c
+@@ -1,12 +1,26 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s323(void)
+ {
+     for (int nl = 0; nl < iterations; nl++) {
+-        for (int i = 1; i < LEN_1D; i++) {
++        int i;
++
++        // Phase 1: Compute a[i] in parallel. Each iteration reads unique b[i-1]
++        // and writes unique a[i], so no loop-carried dependence within this phase.
++        #pragma omp parallel for private(i) shared(a, b, c, d)
++        for (i = 1; i < LEN_1D; i++) {
+             a[i] = b[i-1] + c[i] * d[i];
++        }
++
++        // Phase 2: Compute b[i] serially using computed a[i] values.
++        // This preserves the original floating-point operation order:
++        // b[i] = a[i] + c[i]*e[i], which when expanded is
++        // (b[i-1] + c[i]*d[i]) + c[i]*e[i] = b[i-1] + c[i]*(d[i]+e[i])
++        for (i = 1; i < LEN_1D; i++) {
+             b[i] = a[i] + c[i] * e[i];
+         }
++
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

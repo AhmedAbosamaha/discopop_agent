@@ -1,0 +1,19 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_2/benchmarks/tsvc_c2/s322/default_v5/claude-haiku-4-5-20251001/rep1/work/s322.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_2/benchmarks/tsvc_c2/s322/default_v5/claude-haiku-4-5-20251001/rep1/work/s322.c
+@@ -1,9 +1,15 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s322(void)
+ {
+     for (int nl = 0; nl < iterations; nl++) {
+-        for (int i = 2; i < LEN_1D; i++) {
++        for (int i = 2; i < LEN_1D - 1; i += 2) {
++            a[i] = a[i] + a[i - 1] * b[i] + a[i - 2] * c[i];
++            a[i + 1] = a[i + 1] + a[i] * b[i + 1] + a[i - 1] * c[i + 1];
++        }
++        if ((LEN_1D - 2) % 2 == 1) {
++            int i = LEN_1D - 1;
+             a[i] = a[i] + a[i - 1] * b[i] + a[i - 2] * c[i];
+         }
+         dummy(a, b, c, d, e);

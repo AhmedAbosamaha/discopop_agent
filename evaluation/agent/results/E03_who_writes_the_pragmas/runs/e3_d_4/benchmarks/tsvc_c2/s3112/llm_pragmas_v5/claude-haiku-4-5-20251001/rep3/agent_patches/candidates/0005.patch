@@ -1,0 +1,51 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_4/benchmarks/tsvc_c2/s3112/llm_pragmas_v5/claude-haiku-4-5-20251001/rep3/work/s3112.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_4/benchmarks/tsvc_c2/s3112/llm_pragmas_v5/claude-haiku-4-5-20251001/rep3/work/s3112.c
+@@ -3,13 +3,45 @@
+ real_t kernel_s3112(void)
+ {
+     real_t sum;
++    /* Allocate thread-local workspace to avoid races when parallelizing outer loop */
++    real_t **b_thread = (real_t**)malloc(omp_get_max_threads() * sizeof(real_t*));
++    for (int t = 0; t < omp_get_max_threads(); t++) {
++        b_thread[t] = (real_t*)malloc(LEN_1D * sizeof(real_t));
++    }
++
++    /* Parallelize outer loop to amortize thread startup over 48 iterations */
++    #pragma omp parallel for schedule(static) lastprivate(sum)
+     for (int nl = 0; nl < iterations; nl++) {
++        int tid = omp_get_thread_num();
++        real_t *b_local = b_thread[tid];
+         sum = (real_t)0.0;
++
++        /* Phase 1: Initialize b_local[i] = a[i] with no loop-carried dependencies */
+         for (int i = 0; i < LEN_1D; i++) {
+-            sum += a[i];
+-            b[i] = sum;
++            b_local[i] = a[i];
+         }
+-        dummy(a, b, c, d, e);
++        /* Phase 2: Sequential accumulation - build cumulative sum via b_local[i] = b_local[i-1] + b_local[i] */
++        for (int i = 1; i < LEN_1D; i++) {
++            b_local[i] = b_local[i-1] + b_local[i];
++        }
++        /* Extract final sum value from last element */
++        sum = b_local[LEN_1D - 1];
++
++        /* Copy result back to global b and call dummy (critical section prevents races) */
++        #pragma omp critical
++        {
++            for (int i = 0; i < LEN_1D; i++) {
++                b[i] = b_local[i];
++            }
++            dummy(a, b, c, d, e);
++        }
+     }
++
++    /* Clean up thread-local buffers */
++    for (int t = 0; t < omp_get_max_threads(); t++) {
++        free(b_thread[t]);
++    }
++    free(b_thread);
++
+     return sum;
+ }

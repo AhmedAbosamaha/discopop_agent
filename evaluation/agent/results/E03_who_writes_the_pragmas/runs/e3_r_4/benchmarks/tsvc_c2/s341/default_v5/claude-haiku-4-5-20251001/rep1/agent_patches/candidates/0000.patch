@@ -1,0 +1,49 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c2/s341/default_v5/claude-haiku-4-5-20251001/rep1/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c2/s341/default_v5/claude-haiku-4-5-20251001/rep1/work/s341.c
+@@ -4,13 +4,43 @@
+ {
+     int j;
+     for (int nl = 0; nl < iterations; nl++) {
+-        j = -1;
++        // Allocate temporary arrays for positions and validity flags
++        int *valid = calloc(LEN_1D, sizeof(int));
++        int *positions = calloc(LEN_1D, sizeof(int));
++
++        // Phase 1: Mark which elements satisfy the condition
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++                valid[i] = 1;
++            } else {
++                valid[i] = 0;
+             }
+         }
++
++        // Phase 2: Compute prefix sum to determine target position for each element
++        positions[0] = 0;
++        for (int i = 1; i < LEN_1D; i++) {
++            positions[i] = positions[i-1] + valid[i-1];
++        }
++
++        // Phase 3: Write valid elements to their target positions (parallel-friendly)
++        for (int i = 0; i < LEN_1D; i++) {
++            if (valid[i]) {
++                a[positions[i]] = b[i];
++            }
++        }
++
++        // Compute final j as the count of valid elements minus 1
++        int count = 0;
++        for (int i = 0; i < LEN_1D; i++) {
++            if (valid[i]) {
++                count++;
++            }
++        }
++        j = count - 1;
++
++        free(valid);
++        free(positions);
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

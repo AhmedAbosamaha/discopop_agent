@@ -1,0 +1,36 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_4/benchmarks/tsvc_c2/s3112/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/s3112.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_4/benchmarks/tsvc_c2/s3112/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/s3112.c
+@@ -1,14 +1,30 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s3112(void)
+ {
+     real_t sum;
+     for (int nl = 0; nl < iterations; nl++) {
+-        sum = (real_t)0.0;
++        // Allocate temporary array for cumulative sums
++        real_t* prefix = malloc((LEN_1D + 1) * sizeof(real_t));
++        prefix[0] = (real_t)0.0;
++
++        // Phase 1: Compute cumulative sums sequentially
++        // (prefix[i+1] = prefix[i] + a[i], cannot be parallelized due to data dependence)
+         for (int i = 0; i < LEN_1D; i++) {
+-            sum += a[i];
+-            b[i] = sum;
++            prefix[i + 1] = prefix[i] + a[i];
+         }
++
++        // Phase 2: Assign cumulative sums to b in parallel
++        // (each iteration writes a unique element b[i], no loop-carried dependence)
++        #pragma omp parallel for shared(prefix, b)
++        for (int i = 0; i < LEN_1D; i++) {
++            b[i] = prefix[i + 1];
++        }
++
++        sum = prefix[LEN_1D];
++        free(prefix);
++
+         dummy(a, b, c, d, e);
+     }
+     return sum;

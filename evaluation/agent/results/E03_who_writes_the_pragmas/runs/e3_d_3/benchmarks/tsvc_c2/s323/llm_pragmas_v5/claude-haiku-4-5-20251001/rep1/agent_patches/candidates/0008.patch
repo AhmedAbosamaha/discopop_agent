@@ -1,0 +1,31 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_3/benchmarks/tsvc_c2/s323/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/s323.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_3/benchmarks/tsvc_c2/s323/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/s323.c
+@@ -1,12 +1,26 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s323(void)
+ {
+     for (int nl = 0; nl < iterations; nl++) {
+-        for (int i = 1; i < LEN_1D; i++) {
+-            a[i] = b[i-1] + c[i] * d[i];
++        int i;
++        real_t *b_prev = (real_t *)malloc(LEN_1D * sizeof(real_t));
++
++        // Copy current b to b_prev before the main loop
++        #pragma omp parallel for schedule(static) shared(b, b_prev)
++        for (i = 0; i < LEN_1D; i++) {
++            b_prev[i] = b[i];
++        }
++
++        // Compute a and b using b_prev (which captures b before iteration i writes to b)
++        #pragma omp parallel for schedule(static) shared(a, b, b_prev, c, d, e) private(i)
++        for (i = 1; i < LEN_1D; i++) {
++            a[i] = b_prev[i-1] + c[i] * d[i];
+             b[i] = a[i] + c[i] * e[i];
+         }
++
++        free(b_prev);
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

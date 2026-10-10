@@ -1,0 +1,84 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_4/benchmarks/tsvc_c2/s3112/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/s3112.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_4/benchmarks/tsvc_c2/s3112/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/s3112.c
+@@ -1,14 +1,80 @@
+ #include "data.h"
++#include <omp.h>
++#include <stdlib.h>
+ 
+ real_t kernel_s3112(void)
+ {
+     real_t sum;
+     for (int nl = 0; nl < iterations; nl++) {
+         sum = (real_t)0.0;
++
++        int num_threads = 1;
++
++        // Determine number of threads available
++        #pragma omp parallel
++        {
++            #pragma omp single
++            {
++                num_threads = omp_get_num_threads();
++            }
++        }
++
++        // Allocate array to store partial sums (one per thread)
++        real_t* partial_sums = (real_t*)malloc(num_threads * sizeof(real_t));
++
++        int chunk_size = (LEN_1D + num_threads - 1) / num_threads;
++
++        // Parallel three-phase prefix sum algorithm:
++        // Phase 1: Each thread computes sum of its assigned chunk (private:thread_sum; shared:partial_sums)
++        // Phase 2: Sequential accumulation of offsets (shared:partial_sums,sum)
++        // Phase 3: Each thread computes offset prefix sums (shared:partial_sums,a,b)
++
++        #pragma omp parallel default(none) shared(partial_sums, a, b, sum, num_threads, chunk_size)
++        {
++            int tid = omp_get_thread_num();
++            int start = tid * chunk_size;
++            int end = (start + chunk_size < LEN_1D) ? (start + chunk_size) : LEN_1D;
++
++            // Phase 1: Each thread computes the sum of its assigned chunk
++            real_t thread_sum = (real_t)0.0;
++            for (int i = start; i < end; i++) {
++                thread_sum += a[i];
++            }
++            partial_sums[tid] = thread_sum;
++
++            // Implicit barrier at end of parallel block ensures all threads reach here
++            #pragma omp barrier
++
++            // Phase 2: Single thread sequentially accumulates partial sums to compute offsets
++            #pragma omp single
++            {
++                real_t cumulative = (real_t)0.0;
++                for (int t = 0; t < num_threads; t++) {
++                    real_t temp = partial_sums[t];
++                    partial_sums[t] = cumulative;
++                    cumulative += temp;
++                }
++            }
++
++            // Implicit barrier after omp single ensures all threads reach here
++
++            // Phase 3: Each thread computes prefix sums in its chunk, offset by cumulative
++            real_t offset = partial_sums[tid];
++            real_t running_sum = offset;
++            for (int i = start; i < end; i++) {
++                running_sum += a[i];
++                b[i] = running_sum;
++            }
++        }
++
++        free(partial_sums);
++
++        // Compute sum sequentially in original order to preserve exact floating-point result
++        sum = (real_t)0.0;
+         for (int i = 0; i < LEN_1D; i++) {
+             sum += a[i];
+-            b[i] = sum;
+         }
++
+         dummy(a, b, c, d, e);
+     }
+     return sum;

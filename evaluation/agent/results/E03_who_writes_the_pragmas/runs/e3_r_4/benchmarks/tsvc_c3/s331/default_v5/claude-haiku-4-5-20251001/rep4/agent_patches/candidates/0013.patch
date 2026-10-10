@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c3/s331/default_v5/claude-haiku-4-5-20251001/rep4/work/s331.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c3/s331/default_v5/claude-haiku-4-5-20251001/rep4/work/s331.c
+@@ -9,6 +9,7 @@
+         j = -1;
+         int *satisfied = malloc(LEN_1D * sizeof(int));
+ 
++        #pragma omp parallel for shared(satisfied) 
+         for (int i = 0; i < LEN_1D; i++) {
+             satisfied[i] = (a[i] < (real_t)0.) ? i : -1;
+         }

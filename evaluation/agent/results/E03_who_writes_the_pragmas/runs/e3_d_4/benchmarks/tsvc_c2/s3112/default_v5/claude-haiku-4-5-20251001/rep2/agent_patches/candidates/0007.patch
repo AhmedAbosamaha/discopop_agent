@@ -1,0 +1,42 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_4/benchmarks/tsvc_c2/s3112/default_v5/claude-haiku-4-5-20251001/rep2/work/s3112.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_4/benchmarks/tsvc_c2/s3112/default_v5/claude-haiku-4-5-20251001/rep2/work/s3112.c
+@@ -4,11 +4,36 @@
+ {
+     real_t sum;
+     for (int nl = 0; nl < iterations; nl++) {
+-        sum = (real_t)0.0;
++        real_t *x = (real_t *)malloc(LEN_1D * sizeof(real_t));
++
++        // Initialize x with input values a
+         for (int i = 0; i < LEN_1D; i++) {
+-            sum += a[i];
+-            b[i] = sum;
++            x[i] = a[i];
+         }
++
++        // Kogge-Stone parallel prefix sum algorithm
++        for (int d = 1; d < LEN_1D; d *= 2) {
++            real_t *temp = (real_t *)malloc(LEN_1D * sizeof(real_t));
++            for (int i = 0; i < LEN_1D; i++) {
++                if (i < d) {
++                    temp[i] = x[i];
++                } else {
++                    temp[i] = x[i] + x[i - d];
++                }
++            }
++            for (int i = 0; i < LEN_1D; i++) {
++                x[i] = temp[i];
++            }
++            free(temp);
++        }
++
++        // Copy prefix sums to output array b
++        for (int i = 0; i < LEN_1D; i++) {
++            b[i] = x[i];
++        }
++        sum = x[LEN_1D - 1];
++
++        free(x);
+         dummy(a, b, c, d, e);
+     }
+     return sum;

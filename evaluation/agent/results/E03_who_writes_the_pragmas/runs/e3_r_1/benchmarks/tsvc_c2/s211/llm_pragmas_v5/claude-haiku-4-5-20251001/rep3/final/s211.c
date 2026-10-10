@@ -1,0 +1,35 @@
+#include "data.h"
+#include <stdlib.h>
+
+real_t kernel_s211(void)
+{
+    real_t *b_new = malloc(LEN_1D * sizeof(real_t));
+
+    for (int nl = 0; nl < iterations; nl++) {
+        // Initialize first element of b_new from current b
+        b_new[0] = b[0];
+
+        // Loop 1: Compute new b values in parallel using original b values
+        #pragma omp parallel for shared(b, b_new, d, e)
+        for (int i = 1; i < LEN_1D-1; i++) {
+            b_new[i] = b[i + 1] - e[i] * d[i];
+        }
+
+        // Loop 2: Compute a values in parallel using b_new
+        #pragma omp parallel for shared(a, b_new, c, d)
+        for (int i = 1; i < LEN_1D-1; i++) {
+            a[i] = b_new[i - 1] + c[i] * d[i];
+        }
+
+        // Copy computed b values back to b
+        #pragma omp parallel for shared(b_new) 
+        for (int i = 1; i < LEN_1D-1; i++) {
+            b[i] = b_new[i];
+        }
+
+        dummy(a, b, c, d, e);
+    }
+
+    free(b_new);
+    return (real_t)0;
+}

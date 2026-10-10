@@ -1,0 +1,17 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_3/benchmarks/tsvc_c2/s255/default_v5/claude-haiku-4-5-20251001/rep4/work/s255.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_3/benchmarks/tsvc_c2/s255/default_v5/claude-haiku-4-5-20251001/rep4/work/s255.c
+@@ -10,12 +10,14 @@
+         // Compute the shift register values
+         x_vals[0] = b[LEN_1D-1];
+         y_vals[0] = b[LEN_1D-2];
++        #pragma omp parallel for shared(y_vals,x_vals) 
+         for (int i = 1; i < LEN_1D; i++) {
+             x_vals[i] = b[i-1];
+             y_vals[i] = (i >= 2) ? b[i-2] : b[LEN_1D-1];
+         }
+ 
+         // Main computation - dependencies removed, can be parallelized
++        #pragma omp parallel for shared(y_vals,x_vals) 
+         for (int i = 0; i < LEN_1D; i++) {
+             a[i] = (b[i] + x_vals[i] + y_vals[i]) * (real_t).333;
+         }

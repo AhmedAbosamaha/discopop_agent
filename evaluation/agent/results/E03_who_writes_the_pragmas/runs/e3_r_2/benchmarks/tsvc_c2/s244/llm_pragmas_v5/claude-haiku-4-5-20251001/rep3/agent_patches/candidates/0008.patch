@@ -1,0 +1,63 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_2/benchmarks/tsvc_c2/s244/llm_pragmas_v5/claude-haiku-4-5-20251001/rep3/work/s244.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_2/benchmarks/tsvc_c2/s244/llm_pragmas_v5/claude-haiku-4-5-20251001/rep3/work/s244.c
+@@ -1,14 +1,56 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s244(void)
+ {
++    // Allocate temporary arrays once outside the loop to amortize allocation overhead
++    real_t *a_old = (real_t *)malloc(LEN_1D * sizeof(real_t));
++    real_t *b_old = (real_t *)malloc(LEN_1D * sizeof(real_t));
++    real_t *a_new = (real_t *)malloc(LEN_1D * sizeof(real_t));
++    real_t *b_new = (real_t *)malloc(LEN_1D * sizeof(real_t));
++
++    #pragma omp parallel for collapse(2) shared(a_old, b_old, a_new, b_new, a, b, c, d)
+     for (int nl = 0; nl < iterations; nl++) {
+         for (int i = 0; i < LEN_1D-1; ++i) {
+-            a[i] = b[i] + c[i] * d[i];
+-            b[i] = c[i] + b[i];
+-            a[i+1] = b[i] + a[i+1] * d[i];
++            // Save original values once per outer iteration (when i=0)
++            if (i == 0) {
++                for (int j = 0; j < LEN_1D; ++j) {
++                    a_old[j] = a[j];
++                    b_old[j] = b[j];
++                    a_new[j] = a[j];
++                    b_new[j] = b[j];
++                }
++            }
++
++            // Synchronize to ensure all threads completed snapshot before computing
++            #pragma omp barrier
++
++            // Compute new values of a and b using original snapshots
++            real_t b_computed = c[i] + b_old[i];
++            a_new[i] = b_old[i] + c[i] * d[i];
++            b_new[i] = b_computed;
++            // Compute a[i+1] only for last iteration to avoid overwriting
++            if (i == LEN_1D-2) {
++                a_new[i+1] = b_computed + a_old[i+1] * d[i];
++            }
++
++            // Synchronize to ensure all writes complete
++            #pragma omp barrier
++
++            // Copy results back and call dummy (only on last i of each nl)
++            if (i == LEN_1D-2) {
++                for (int j = 0; j < LEN_1D; ++j) {
++                    a[j] = a_new[j];
++                    b[j] = b_new[j];
++                }
++                dummy(a, b, c, d, e);
++            }
+         }
+-        dummy(a, b, c, d, e);
+     }
++
++    free(a_old);
++    free(b_old);
++    free(a_new);
++    free(b_new);
+     return (real_t)0;
+ }

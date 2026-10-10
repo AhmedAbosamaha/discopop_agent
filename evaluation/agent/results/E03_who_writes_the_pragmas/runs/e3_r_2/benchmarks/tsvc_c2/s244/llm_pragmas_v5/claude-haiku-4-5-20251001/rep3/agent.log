@@ -1,0 +1,166 @@
+
+============================================================
+  DiscoPoP Agentic Controller
+============================================================
+  Source         : /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_2/benchmarks/tsvc_c2/s244/llm_pragmas_v5/claude-haiku-4-5-20251001/rep3/work/s244.c
+  DiscoPoP dir   : .discopop
+  Model          : claude-haiku-4-5-20251001
+  Budget         : 3 LLM retries/region (+2 free build fixes)
+  λ penalty      : 1.0
+  Min workload   : 0.0
+  Restruct. depth: 0 (Tier-2 allowed at depth 0–0)
+  Quality gate   : Tier-1 = all but speed, no escalation; Tier-2 = full
+  TSan           : barrier-aware (archer: /usr/lib/llvm-20/lib/libarcher.so)
+  Speedup gate   : require ≥ 1.1× measured
+  Dry run        : False
+  LLM mode       : claude-haiku-4-5-20251001
+  Edit mode      : direct
+  Re-profiling   : full (instrument + run + explore) after every kept rewrite
+  Explorer       : one attempt may take 60 s, then the draw is repeated (random stall, L5)
+  Pragmas        : LLM writes them with the rewrite, gate decides (--llm-pragmas)
+============================================================
+
+  Project        : /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_2/benchmarks/tsvc_c2/s244/llm_pragmas_v5/claude-haiku-4-5-20251001/rep3/work  (2 unit(s): s244.c, main.c)
+
+  [ok] Captured reference output on 2 inputs (69 bytes, 1561.0 ms baseline) for the correctness/performance gates.
+
+  [ok] Numerical noise floor 0 — 6 build variants agreed exactly; output is compared byte-for-byte.
+
+  Hotspots       : measured per-region runtimes are available — 18 region(s) measured, 6.9 ms total, ranking by predicted time saved at 48 threads
+
+  Baseline       : DiscoPoP proposes 0 applicable pattern(s) unaided; 0 of them produce a usable pragma
+                   → the run beats DiscoPoP by ending with more than 0
+
+  Initial candidates
+Region ID    Type           Saves    % run    Hot  Tier  Depth  Name
+--------------------------------------------------------------------------------------
+  1:2        loop          4.5 ms    67.4%    YES     2      0  lines 5–12
+  0:0        function      4.5 ms    67.4%    YES     2      0  kernel_s244
+  1:5        loop          4.5 ms    67.2%    YES     2      0  lines 6–10
+
+============================================================
+  FLOOR — DiscoPoP's own program, as the DiscoPoP-alone arm delivers it (D32)
+============================================================
+  [floor] DiscoPoP alone keeps nothing — the floor is the original program (D32)
+
+============================================================
+  PHASE A — restructure  (the source stays pragma-free)
+============================================================
+
+┌─ [depth=0] loop 1:2 (lines 5–12)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 1 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for shared(a, b, c, d, a_old) private(i)
+│  [Phase-A] timing noise on this machine: 0.996 → keep at or above 0.986
+│  [Tier-2] Stage 'compile' failed (build fix — budget not charged, 1 left): /tmp/dp_agent_val_wyrjehe9/_dp_proj_validate_binary/s244.c:6:25: error: call to undeclared library function 'malloc' with type 'void *(unsigned long)'; ISO C99 and later do not support implicit functi
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 1 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for shared(a, b, c, d, a_old) private(i)
+│  [Tier-2] Stage 'openmp_compile' failed (build fix — budget not charged, 0 left): OpenMP compile failed (loop not in OpenMP-canonical form): /tmp/dp_agent_val_2do2quqo/_dp_proj_tsan_binary/s244.c:11:68: error: use of undeclared identifier 'i'    11 |         #pragma omp parallel fo
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 1 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for shared(a, b, c, d, a_old)
+│  [Tier-2] Stage 'tsan' failed: Race detected: WARNING: ThreadSanitizer: data race (pid=3920456)   Write of size 8 at 0x7ffff7c25358 by main thread:     #0 kernel_s244.omp_outlined_debug__ /tmp/dp_agent_val_2zt08s87/_dp_proj_tsan_bi
+│  [Tier-2] Assembling evidence (budget remaining: 1)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 1 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for shared(a, b, c, d, a_old, a_tmp)
+│  [Tier-2] Stage 'correctness' failed: Program output changed under the parallel build at a fixed thread count — the patched program is NOT semantically equivalent to the original. output differs and no numerical slack is in effect first d
+│  [Tier-2] Assembling evidence (budget remaining: 0)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 1 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for shared(a, b, c, d, a_old, a_tmp)
+│  [Tier-2] Stage 'performance' failed: Net regression: the program with this rewrite runs at 0.36x the speed of the program before it (the two timed in turn, paired; kept at or above 0.99x). The 1.57x scaling is real but starts from a slow
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] function 0:0 (lines 3–13)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 1 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for shared(a_old, b_old, c, d, a_new, b_new)
+│  [Tier-2] Stage 'compile' failed (build fix — budget not charged, 1 left): /tmp/dp_agent_val_vsre0wb8/_dp_proj_validate_binary/s244.c:7:35: error: call to undeclared library function 'malloc' with type 'void *(unsigned long)'; ISO C99 and later do not support implicit functi
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 1 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for shared(a_old, b_old, c, d, a_new, b_new)
+│  [Tier-2] Stage 'performance' failed: No speedup from parallelization: measured 1.02× (same binary, median of interleaved pairs; best at 1 thread 14015.0 ms vs best at all threads 13695.7 ms), below the required 1.10×.
+│  [Tier-2] Assembling evidence (budget remaining: 1)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 1 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for shared(a_old, b_old, c, d, a_new, b_new)
+│  [Tier-2] Stage 'performance' failed: Net regression: the program with this rewrite runs at 0.42x the speed of the program before it (the two timed in turn, paired; kept at or above 0.99x). The 1.14x scaling is real but starts from a slow
+│  [Tier-2] Assembling evidence (budget remaining: 0)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 3 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for collapse(2) shared(a_old, b_old, a_new, b_new, a, b, c, d)
+│           #pragma omp barrier
+│           #pragma omp barrier
+│  [Tier-2] Stage 'openmp_compile' failed (build fix — budget not charged, 0 left): OpenMP compile failed (loop not in OpenMP-canonical form): /tmp/dp_agent_val_k9gaj07j/_dp_proj_tsan_binary/s244.c:26:13: error: region cannot be closely nested inside 'parallel for' region    26 |    
+│  [Tier-2] Assembling evidence (budget remaining: 0)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 1 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for shared(a_old, b_old, a_new, b_new, a, b, c, d)
+│  [Tier-2] Stage 'tsan' failed: Race detected: WARNING: ThreadSanitizer: data race (pid=3954003)   Write of size 8 at 0x7ffff6381000 by thread T3:     #0 kernel_s244.omp_outlined_debug__ /tmp/dp_agent_val_vtpza5dc/_dp_proj_tsan_bina
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:5 (lines 6–10)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 1 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for private(i) shared(a, b, c, d, temp_a, line9_values)
+│  [Tier-2] Stage 'openmp_compile' failed (build fix — budget not charged, 1 left): OpenMP compile failed (loop not in OpenMP-canonical form): /tmp/dp_agent_val_67nfojgx/_dp_proj_tsan_binary/s244.c:18:42: error: use of undeclared identifier 'i'    18 |         #pragma omp parallel fo
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 1 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for shared(a, b, c, d, temp_a, line9_values)
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Original backed up → s244.c.original
+│  [Tier-2] Applied to s244.c
+│  [Tier-2] Re-profiling to refresh data and discover new candidates...
+│  [refresh] kind=full
+│  [Tier-2] Re-measured runtimes: 18 region(s), 7.0 ms total
+│  [Tier-2] 0 survivor(s) rebuilt, 2 new at depth 1
+│  [Tier-2] Kept on its own pragmas: 1 annotated loop(s), gate passed end to end
+│  [Tier-2] Restructuring pays off (measured 2.28×)
+└─ ACCEPTED
+
+┌─ [depth=1] loop 1:4 (lines 10–31)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Restructuring not allowed at depth 1 (--restructure-depth=0) → SKIP
+└─ SKIPPED
+
+┌─ [depth=1] function 0:0 (lines 5–35)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Restructuring not allowed at depth 1 (--restructure-depth=0) → SKIP
+└─ SKIPPED
+
+
+============================================================
+  PHASE B — annotate  (0 candidate pragma(s))
+============================================================
+
+  DiscoPoP proposes no applicable pattern for the final source.
+
+============================================================
+  SETTLING — verify the finished source, drop what does not hold up
+============================================================
+  [ok] finished source verified — output matches, 1.61x the original, paired
+
+
+============================================================
+  SUMMARY: 1 rewrite(s) kept  |  1 pragma(s) applied (0 DiscoPoP + 1 LLM)  |  3 skipped
+  DiscoPoP unaided: 0 usable pragma(s) in this profile's draw  →  this run: 1   [BEAT, informational]
+    ✓  loop 1:5  [Tier-2]  depth=0  1 own pragma(s), 2.28×
+    ✗  1:2  [skipped]  depth=0
+    ✗  0:0  [skipped]  depth=0
+    ✗  1:4  [skipped]  depth=1
+
+  Results → .discopop/agent_patches/accepted.json
+============================================================
+

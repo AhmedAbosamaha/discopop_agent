@@ -1,0 +1,59 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_2/benchmarks/tsvc_c2/s244/llm_pragmas_v5/claude-haiku-4-5-20251001/rep5/work/s244.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_2/benchmarks/tsvc_c2/s244/llm_pragmas_v5/claude-haiku-4-5-20251001/rep5/work/s244.c
+@@ -1,14 +1,50 @@
+ #include "data.h"
++#include <stdlib.h>
++#include <string.h>
+ 
+ real_t kernel_s244(void)
+ {
+-    for (int nl = 0; nl < iterations; nl++) {
+-        for (int i = 0; i < LEN_1D-1; ++i) {
+-            a[i] = b[i] + c[i] * d[i];
+-            b[i] = c[i] + b[i];
+-            a[i+1] = b[i] + a[i+1] * d[i];
++    // Allocate buffers once before outer loop to amortize allocation overhead
++    real_t *a_orig = (real_t *)malloc(LEN_1D * sizeof(real_t));
++    real_t *b_new = (real_t *)malloc(LEN_1D * sizeof(real_t));
++
++    // Single parallel region wrapping the entire outer loop
++    // Thread pool created once, reused for all 48 outer loop iterations
++    #pragma omp parallel shared(a, b, c, d, a_orig, b_new, iterations)
++    {
++        for (int nl = 0; nl < iterations; nl++) {
++            // Save original a (one-time snapshot for this nl iteration)
++            #pragma omp single
++            {
++                memcpy(a_orig, a, LEN_1D * sizeof(real_t));
++            }
++
++            // Phase 1: Compute new b values in b_new buffer (old b still readable)
++            #pragma omp for schedule(static)
++            for (int i = 0; i < LEN_1D-1; ++i) {
++                b_new[i] = c[i] + b[i];
++            }
++
++            // Phase 2: Compute a[0..LEN_1D-2] using old b (before phase 1 updates it)
++            // Implicit barrier after phase 1 for reads-before-writes ordering
++            #pragma omp for schedule(static)
++            for (int i = 0; i < LEN_1D-1; ++i) {
++                a[i] = b[i] + c[i] * d[i];
++            }
++
++            // Phase 3: Finalize b updates and compute a[LEN_1D-1] (serial)
++            #pragma omp single
++            {
++                for (int i = 0; i < LEN_1D-1; ++i) {
++                    b[i] = b_new[i];
++                }
++                a[LEN_1D-1] = b_new[LEN_1D-2] + a_orig[LEN_1D-1] * d[LEN_1D-2];
++                dummy(a, b, c, d, e);
++            }
+         }
+-        dummy(a, b, c, d, e);
+     }
++
++    free(a_orig);
++    free(b_new);
+     return (real_t)0;
+ }

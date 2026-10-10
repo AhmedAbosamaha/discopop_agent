@@ -1,0 +1,150 @@
+
+============================================================
+  DiscoPoP Agentic Controller
+============================================================
+  Source         : /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_4/benchmarks/tsvc_c2/s3112/llm_pragmas_v5/claude-haiku-4-5-20251001/rep3/work/s3112.c
+  DiscoPoP dir   : .discopop
+  Model          : claude-haiku-4-5-20251001
+  Budget         : 3 LLM retries/region (+2 free build fixes)
+  λ penalty      : 1.0
+  Min workload   : 0.0
+  Restruct. depth: 0 (Tier-2 allowed at depth 0–0)
+  Quality gate   : Tier-1 = all but speed, no escalation; Tier-2 = full
+  TSan           : barrier-aware (archer: /usr/lib/llvm-20/lib/libarcher.so)
+  Speedup gate   : require ≥ 1.1× measured
+  Dry run        : False
+  LLM mode       : claude-haiku-4-5-20251001
+  Edit mode      : direct
+  Re-profiling   : full (instrument + run + explore) after every kept rewrite
+  Explorer       : one attempt may take 60 s, then the draw is repeated (random stall, L5)
+  Pragmas        : LLM writes them with the rewrite, gate decides (--llm-pragmas)
+============================================================
+
+  Project        : /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_4/benchmarks/tsvc_c2/s3112/llm_pragmas_v5/claude-haiku-4-5-20251001/rep3/work  (2 unit(s): s3112.c, main.c)
+
+  [ok] Captured reference output on 2 inputs (69 bytes, 719.1 ms baseline) for the correctness/performance gates.
+
+  [ok] Numerical noise floor 0 — 6 build variants agreed exactly; output is compared byte-for-byte.
+
+  Hotspots       : measured per-region runtimes are available — 18 region(s) measured, 6.1 ms total, ranking by predicted time saved at 48 threads
+
+  Baseline       : DiscoPoP proposes 0 applicable pattern(s) unaided; 0 of them produce a usable pragma
+                   → the run beats DiscoPoP by ending with more than 0
+
+  Initial candidates
+Region ID    Type           Saves    % run    Hot  Tier  Depth  Name
+--------------------------------------------------------------------------------------
+  1:2        loop          4.3 ms    71.9%    YES     2      0  lines 6–13
+  1:6        loop          4.3 ms    71.9%    YES     2      0  lines 8–11
+  0:0        function      4.3 ms    71.9%    YES     2      0  kernel_s3112
+
+============================================================
+  FLOOR — DiscoPoP's own program, as the DiscoPoP-alone arm delivers it (D32)
+============================================================
+  [floor] DiscoPoP alone keeps nothing — the floor is the original program (D32)
+
+============================================================
+  PHASE A — restructure  (the source stays pragma-free)
+============================================================
+
+┌─ [depth=0] loop 1:2 (lines 6–13)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 2 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for shared(segment_sums) schedule(static)
+│           #pragma omp parallel for shared(segment_sums) schedule(static)
+│  [Phase-A] timing noise on this machine: 1.002 → keep at or above 0.990
+│  [Tier-2] Stage 'correctness' failed: Program output changed for input '7' — the patched program is NOT semantically equivalent to the original. This input differs from the one the profile was taken on: the rewrite is right for the profil
+│  [Tier-2] Assembling evidence (budget remaining: 1)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 2 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for shared(segment_sums) schedule(static)
+│           #pragma omp parallel for shared(segment_sums) schedule(static)
+│  [Tier-2] Stage 'correctness' failed: Program output changed for input '7' — the patched program is NOT semantically equivalent to the original. This input differs from the one the profile was taken on: the rewrite is right for the profil
+│  [Tier-2] Assembling evidence (budget remaining: 0)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 2 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for shared(segment_sums) schedule(static)
+│           #pragma omp parallel for shared(segment_sums) schedule(static)
+│  [Tier-2] Stage 'correctness' failed: Program output changed under the parallel build at a fixed thread count — the patched program is NOT semantically equivalent to the original. output differs and no numerical slack is in effect first d
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:6 (lines 8–11)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 1 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for schedule(static)
+│  [Tier-2] Stage 'performance' failed: Net regression: the program with this rewrite runs at 0.74x the speed of the program before it (the two timed in turn, paired; kept at or above 0.99x). The 1.30x scaling is real but starts from a slow
+│  [Tier-2] Assembling evidence (budget remaining: 1)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 1 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for schedule(static) lastprivate(sum)
+│  [Tier-2] Stage 'tsan' failed: Race detected: WARNING: ThreadSanitizer: data race (pid=111610)   Write of size 8 at 0x7ffff6633000 by thread T7:     #0 kernel_s3112.omp_outlined_debug__ /tmp/dp_agent_val_iys7l0v1/_dp_proj_tsan_bina
+│  [Tier-2] Assembling evidence (budget remaining: 0)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 2 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for schedule(static) lastprivate(sum)
+│           #pragma omp critical
+│  [Tier-2] Stage 'compile' failed (build fix — budget not charged, 1 left): /tmp/dp_agent_val_mnw85zyb/_dp_proj_validate_binary/s3112.c:7:35: error: call to undeclared library function 'malloc' with type 'void *(unsigned long)'; ISO C99 and later do not support implicit funct
+│  [Tier-2] Assembling evidence (budget remaining: 0)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 2 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for schedule(static) lastprivate(sum)
+│           #pragma omp critical
+│  [Tier-2] Stage 'tsan' failed: Race detected: WARNING: ThreadSanitizer: data race (pid=115387)   Write of size 8 at 0x7ffff7c20068 by thread T11 (mutexes: write M0):     #0 dummy /tmp/dp_agent_val_ctfhha_m/_dp_proj_tsan_binary/main
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] function 0:0 (lines 3–14)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 2 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for private(sum) lastprivate(sum)
+│           #pragma omp ordered
+│  [Tier-2] Stage 'openmp_compile' failed (build fix — budget not charged, 1 left): OpenMP compile failed (loop not in OpenMP-canonical form): /tmp/dp_agent_val_wg8jepjt/_dp_proj_tsan_binary/s3112.c:6:55: error: private variable cannot be lastprivate     6 |     #pragma omp parallel 
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 2 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for lastprivate(sum) ordered
+│           #pragma omp ordered
+│  [Tier-2] Stage 'tsan' failed: Race detected: WARNING: ThreadSanitizer: data race (pid=118879)   Write of size 8 at 0x7ffff6633008 by thread T8:     #0 kernel_s3112.omp_outlined_debug__ /tmp/dp_agent_val_quey6vsg/_dp_proj_tsan_bina
+│  [Tier-2] Assembling evidence (budget remaining: 1)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 2 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel
+│           #pragma omp barrier
+│  [Tier-2] Stage 'compile' failed (build fix — budget not charged, 0 left): /tmp/dp_agent_val_zplzrjth/_dp_proj_validate_binary/s3112.c:7:24: error: call to undeclared function 'omp_get_max_threads'; ISO C99 and later do not support implicit function declarations [-Wimplicit-
+│  [Tier-2] Assembling evidence (budget remaining: 1)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 2 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel
+│           #pragma omp barrier
+│  [Tier-2] Stage 'correctness' failed: Program output changed for input '7' — the patched program is NOT semantically equivalent to the original. This input differs from the one the profile was taken on: the rewrite is right for the profil
+│  [Tier-2] Assembling evidence (budget remaining: 0)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 2 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel
+│           #pragma omp barrier
+│  [Tier-2] Stage 'correctness' failed: Program output changed for input '7' — the patched program is NOT semantically equivalent to the original. This input differs from the one the profile was taken on: the rewrite is right for the profil
+└─ SKIPPED (budget exhausted)
+
+
+============================================================
+  PHASE B — annotate  (0 candidate pragma(s))
+============================================================
+
+  DiscoPoP proposes no applicable pattern for the final source.
+
+
+============================================================
+  SUMMARY: 0 rewrite(s) kept  |  0 pragma(s) applied  |  3 skipped
+  DiscoPoP unaided: 0 usable pragma(s) in this profile's draw  →  this run: 0   [MATCHED, informational]
+    ✗  1:2  [skipped]  depth=0
+    ✗  1:6  [skipped]  depth=0
+    ✗  0:0  [skipped]  depth=0
+
+  Results → .discopop/agent_patches/accepted.json
+============================================================
+

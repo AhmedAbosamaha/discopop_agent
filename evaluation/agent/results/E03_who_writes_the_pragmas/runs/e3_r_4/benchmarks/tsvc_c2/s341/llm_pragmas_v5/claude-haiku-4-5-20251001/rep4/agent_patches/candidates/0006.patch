@@ -1,0 +1,45 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c2/s341/llm_pragmas_v5/claude-haiku-4-5-20251001/rep4/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c2/s341/llm_pragmas_v5/claude-haiku-4-5-20251001/rep4/work/s341.c
+@@ -1,16 +1,40 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s341(void)
+ {
+     int j;
+     for (int nl = 0; nl < iterations; nl++) {
++        // Allocate array to store output positions for each input element
++        int *output_pos = malloc(LEN_1D * sizeof(int));
++
++        // Phase 1 (parallel): Mark which elements pass the filter condition
++        #pragma omp parallel for shared(b, output_pos)
++        for (int i = 0; i < LEN_1D; i++) {
++            output_pos[i] = (b[i] > (real_t)0.) ? 1 : 0;
++        }
++
++        // Phase 2 (serial): Compute prefix sum to get output positions
+         j = -1;
+         for (int i = 0; i < LEN_1D; i++) {
+-            if (b[i] > (real_t)0.) {
++            if (output_pos[i] == 1) {
+                 j++;
+-                a[j] = b[i];
++                output_pos[i] = j;
++            } else {
++                output_pos[i] = -1;
+             }
+         }
++
++        // Phase 3 (parallel): Write filtered elements to pre-computed positions
++        #pragma omp parallel for shared(b, output_pos, a)
++        for (int i = 0; i < LEN_1D; i++) {
++            if (output_pos[i] >= 0) {
++                a[output_pos[i]] = b[i];
++            }
++        }
++
++        free(output_pos);
++
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

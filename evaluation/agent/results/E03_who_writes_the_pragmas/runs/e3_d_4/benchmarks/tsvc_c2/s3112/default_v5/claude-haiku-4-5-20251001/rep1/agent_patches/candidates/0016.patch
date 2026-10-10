@@ -1,0 +1,20 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_4/benchmarks/tsvc_c2/s3112/default_v5/claude-haiku-4-5-20251001/rep1/work/s3112.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_4/benchmarks/tsvc_c2/s3112/default_v5/claude-haiku-4-5-20251001/rep1/work/s3112.c
+@@ -1,4 +1,5 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s3112(void)
+ {
+@@ -6,8 +7,9 @@
+     for (int nl = 0; nl < iterations; nl++) {
+         sum = (real_t)0.0;
+         for (int i = 0; i < LEN_1D; i++) {
+-            sum += a[i];
+-            b[i] = sum;
++            real_t partial = sum + a[i];
++            sum = partial;
++            b[i] = partial;
+         }
+         dummy(a, b, c, d, e);
+     }

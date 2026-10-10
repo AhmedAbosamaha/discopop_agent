@@ -1,0 +1,33 @@
+#include <stdlib.h>
+#include "data.h"
+
+real_t kernel_s212(void)
+{
+    // Allocate buffer once, outside outer loop, to avoid malloc/free overhead
+    real_t *a_saved = (real_t *)malloc(LEN_1D * sizeof(real_t));
+
+    for (int nl = 0; nl < iterations; nl++) {
+        // Merge copy and computation into single parallel region to reduce thread overhead
+        #pragma omp parallel shared(a, b, c, d, a_saved)
+        {
+            // Parallel copy: each thread handles assigned elements
+            #pragma omp for
+            for (int k = 0; k < LEN_1D; k++) {
+                a_saved[k] = a[k];
+            }
+            // Implicit barrier after for: all threads sync before computation
+
+            // Parallel computation using saved values to break loop-carried dependence
+            #pragma omp for
+            for (int i = 0; i < LEN_1D-1; i++) {
+                a[i] *= c[i];
+                b[i] += a_saved[i + 1] * d[i];
+            }
+        }
+
+        dummy(a, b, c, d, e);
+    }
+
+    free(a_saved);
+    return (real_t)0;
+}

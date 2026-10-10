@@ -1,0 +1,49 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_4/benchmarks/tsvc_c2/s3112/llm_pragmas_v5/claude-haiku-4-5-20251001/rep3/work/s3112.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_4/benchmarks/tsvc_c2/s3112/llm_pragmas_v5/claude-haiku-4-5-20251001/rep3/work/s3112.c
+@@ -4,11 +4,42 @@
+ {
+     real_t sum;
+     for (int nl = 0; nl < iterations; nl++) {
+-        sum = (real_t)0.0;
+-        for (int i = 0; i < LEN_1D; i++) {
+-            sum += a[i];
+-            b[i] = sum;
++        int nthreads = omp_get_max_threads();
++        real_t *chunk_sums = (real_t *)malloc(nthreads * sizeof(real_t));
++
++        #pragma omp parallel
++        {
++            int tid = omp_get_thread_num();
++
++            // Phase 1: compute partial prefix sum for each thread's chunk
++            int chunk_size = (LEN_1D + nthreads - 1) / nthreads;
++            int start_i = tid * chunk_size;
++            int end_i = (tid + 1) * chunk_size;
++            if (end_i > LEN_1D) end_i = LEN_1D;
++
++            real_t partial = 0.0;
++            for (int i = start_i; i < end_i; i++) {
++                partial += a[i];
++                b[i] = partial;
++            }
++            chunk_sums[tid] = partial;
++
++            #pragma omp barrier
++
++            // Phase 2: compute cumulative offset for this thread
++            real_t offset = 0.0;
++            for (int t = 0; t < tid; t++) {
++                offset += chunk_sums[t];
++            }
++
++            // Phase 3: adjust b[] values by offset for global cumulative sum
++            for (int i = start_i; i < end_i; i++) {
++                b[i] += offset;
++            }
+         }
++
++        sum = b[LEN_1D - 1];
++        free(chunk_sums);
+         dummy(a, b, c, d, e);
+     }
+     return sum;

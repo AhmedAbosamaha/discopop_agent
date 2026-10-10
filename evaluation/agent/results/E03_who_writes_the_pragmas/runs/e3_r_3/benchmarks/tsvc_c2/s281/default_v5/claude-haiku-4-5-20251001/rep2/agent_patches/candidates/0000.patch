@@ -1,0 +1,23 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_3/benchmarks/tsvc_c2/s281/default_v5/claude-haiku-4-5-20251001/rep2/work/s281.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_3/benchmarks/tsvc_c2/s281/default_v5/claude-haiku-4-5-20251001/rep2/work/s281.c
+@@ -4,11 +4,19 @@
+ {
+     real_t x;
+     for (int nl = 0; nl < iterations; nl++) {
++        real_t *a_tmp = (real_t *)malloc(LEN_1D * sizeof(real_t));
++        real_t *b_tmp = (real_t *)malloc(LEN_1D * sizeof(real_t));
++        for (int j = 0; j < LEN_1D; j++) {
++            a_tmp[j] = a[j];
++            b_tmp[j] = b[j];
++        }
+         for (int i = 0; i < LEN_1D; i++) {
+-            x = a[LEN_1D-i-1] + b[i] * c[i];
++            x = a_tmp[LEN_1D-i-1] + b_tmp[i] * c[i];
+             a[i] = x-(real_t)1.0;
+             b[i] = x;
+         }
++        free(a_tmp);
++        free(b_tmp);
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

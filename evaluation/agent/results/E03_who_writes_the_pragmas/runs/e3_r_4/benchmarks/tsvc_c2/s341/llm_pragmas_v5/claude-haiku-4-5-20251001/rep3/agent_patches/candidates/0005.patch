@@ -1,0 +1,44 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c2/s341/llm_pragmas_v5/claude-haiku-4-5-20251001/rep3/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c2/s341/llm_pragmas_v5/claude-haiku-4-5-20251001/rep3/work/s341.c
+@@ -1,16 +1,37 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s341(void)
+ {
+-    int j;
+     for (int nl = 0; nl < iterations; nl++) {
+-        j = -1;
++        // Allocate array to store prefix sums of filter conditions
++        int *count = (int *)malloc((LEN_1D + 1) * sizeof(int));
++        count[0] = 0;
++
++        // First parallel loop: mark which elements pass the filter
++        // Each thread writes to its own count[i+1], no conflict
++        #pragma omp parallel for shared(b, count)
++        for (int i = 0; i < LEN_1D; i++) {
++            count[i + 1] = (b[i] > (real_t)0.) ? 1 : 0;
++        }
++
++        // Sequential prefix sum: compute output indices for each element
++        for (int i = 1; i <= LEN_1D; i++) {
++            count[i] += count[i-1];
++        }
++
++        // Second parallel loop: write filtered elements to a
++        // Each element gets a unique a[idx] from the prefix sum, no race
++        #pragma omp parallel for shared(b, a, count)
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++                int idx = count[i];
++                a[idx] = b[i];
+             }
+         }
++
++        free(count);
++
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

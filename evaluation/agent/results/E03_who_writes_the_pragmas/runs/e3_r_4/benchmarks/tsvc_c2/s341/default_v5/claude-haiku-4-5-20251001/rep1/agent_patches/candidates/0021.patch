@@ -1,0 +1,37 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c2/s341/default_v5/claude-haiku-4-5-20251001/rep1/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c2/s341/default_v5/claude-haiku-4-5-20251001/rep1/work/s341.c
+@@ -1,17 +1,30 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s341(void)
+ {
+-    int j;
++    // Allocate positions array once outside the loop
++    int* positions = (int*)malloc(LEN_1D * sizeof(int));
++
+     for (int nl = 0; nl < iterations; nl++) {
+-        j = -1;
++        // Phase 1: Combined mark-and-scan — compute output position for each element
++        positions[0] = 0;
++        for (int i = 0; i < LEN_1D - 1; i++) {
++            int valid = (b[i] > (real_t)0.) ? 1 : 0;
++            positions[i + 1] = positions[i] + valid;
++        }
++
++        // Phase 2: Write marked elements to their computed positions
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++                a[positions[i]] = b[i];
+             }
+         }
++
+         dummy(a, b, c, d, e);
+     }
++
++    free(positions);
++
+     return (real_t)0;
+ }

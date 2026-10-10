@@ -1,0 +1,76 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_4/benchmarks/tsvc_c2/s3112/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/s3112.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_4/benchmarks/tsvc_c2/s3112/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/s3112.c
+@@ -5,10 +5,70 @@
+     real_t sum;
+     for (int nl = 0; nl < iterations; nl++) {
+         sum = (real_t)0.0;
+-        for (int i = 0; i < LEN_1D; i++) {
+-            sum += a[i];
+-            b[i] = sum;
++
++        int nthreads;
++        real_t *block_sums;
++
++        // Determine thread count and allocate block sums
++        #pragma omp parallel
++        {
++            #pragma omp single
++            {
++                nthreads = omp_get_num_threads();
++                block_sums = (real_t *)malloc(nthreads * sizeof(real_t));
++            }
+         }
++
++        int block_size = (LEN_1D + nthreads - 1) / nthreads;
++
++        // Phase 1: Compute local prefix sums for each block in parallel
++        // Each thread writes to different b[i] values and different block_sums[tid]
++        #pragma omp parallel shared(a, b, block_sums, block_size, nthreads, LEN_1D)
++        {
++            int tid = omp_get_thread_num();
++            int start = tid * block_size;
++            int end = (start + block_size < LEN_1D) ? start + block_size : LEN_1D;
++
++            if (start < LEN_1D) {
++                real_t local_sum = (real_t)0.0;
++                for (int i = start; i < end; i++) {
++                    local_sum += a[i];
++                    b[i] = local_sum;
++                }
++                block_sums[tid] = local_sum;
++            } else {
++                block_sums[tid] = (real_t)0.0;
++            }
++
++            #pragma omp barrier
++        }
++
++        // Phase 2: Sequential prefix sum of block totals
++        real_t prefix = (real_t)0.0;
++        for (int i = 0; i < nthreads; i++) {
++            real_t temp = block_sums[i];
++            block_sums[i] = prefix;
++            prefix += temp;
++        }
++        sum = prefix;
++
++        // Phase 3: Add cumulative block adjustments in parallel
++        // Each thread (except 0) adds its block offset to its elements
++        #pragma omp parallel shared(b, block_sums, block_size, nthreads, LEN_1D)
++        {
++            int tid = omp_get_thread_num();
++            int start = tid * block_size;
++            int end = (start + block_size < LEN_1D) ? start + block_size : LEN_1D;
++
++            if (tid > 0 && start < LEN_1D) {
++                real_t adjustment = block_sums[tid];
++                for (int i = start; i < end; i++) {
++                    b[i] += adjustment;
++                }
++            }
++        }
++
++        free(block_sums);
+         dummy(a, b, c, d, e);
+     }
+     return sum;

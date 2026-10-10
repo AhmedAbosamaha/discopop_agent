@@ -1,0 +1,38 @@
+#include "data.h"
+#include <stdlib.h>
+
+real_t kernel_s211(void)
+{
+    // Allocate temporary buffer for new b values
+    real_t *b_new = malloc(LEN_1D * sizeof(real_t));
+
+    for (int nl = 0; nl < iterations; nl++) {
+        // Compute b_new values in parallel
+        // Each iteration i reads b[i+1] (original) and writes b_new[i]
+        // No loop-carried dependence: all reads are from unmodified original b
+        #pragma omp parallel for shared(b, e, d, b_new)
+        for (int i = 1; i < LEN_1D-1; i++) {
+            b_new[i] = b[i + 1] - e[i] * d[i];
+        }
+
+        // Copy new b values back to b (synchronization point)
+        // Ensures all threads complete computation before using updated b
+        #pragma omp parallel for shared(b, b_new)
+        for (int i = 1; i < LEN_1D-1; i++) {
+            b[i] = b_new[i];
+        }
+
+        // Compute a values in parallel
+        // Each iteration i reads the now-updated b[i-1] and writes a[i]
+        // No loop-carried dependence: all reads/writes to distinct array elements
+        #pragma omp parallel for shared(a, b, c, d)
+        for (int i = 1; i < LEN_1D-1; i++) {
+            a[i] = b[i - 1] + c[i] * d[i];
+        }
+
+        dummy(a, b, c, d, e);
+    }
+
+    free(b_new);
+    return (real_t)0;
+}

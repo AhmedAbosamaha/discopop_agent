@@ -1,0 +1,41 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c2/s341/default_v5/claude-haiku-4-5-20251001/rep4/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c2/s341/default_v5/claude-haiku-4-5-20251001/rep4/work/s341.c
+@@ -1,17 +1,35 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s341(void)
+ {
+     int j;
++    int* positions = (int*)malloc(LEN_1D * sizeof(int));
++
+     for (int nl = 0; nl < iterations; nl++) {
+-        j = -1;
++        int count = 0;
++
++        // Sequential pass: compute target positions for elements passing the filter
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++                positions[i] = count;
++                count++;
++            } else {
++                positions[i] = -1;
+             }
+         }
++        j = count - 1;
++
++        // Parallel-friendly pass: write each element to its pre-computed position
++        for (int i = 0; i < LEN_1D; i++) {
++            if (positions[i] >= 0) {
++                a[positions[i]] = b[i];
++            }
++        }
++
+         dummy(a, b, c, d, e);
+     }
++
++    free(positions);
+     return (real_t)0;
+ }

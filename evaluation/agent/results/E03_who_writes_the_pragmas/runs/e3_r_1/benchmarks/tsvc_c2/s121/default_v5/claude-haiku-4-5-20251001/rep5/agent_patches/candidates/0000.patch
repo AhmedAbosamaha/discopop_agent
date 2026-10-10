@@ -1,0 +1,30 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_1/benchmarks/tsvc_c2/s121/default_v5/claude-haiku-4-5-20251001/rep5/work/s121.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_1/benchmarks/tsvc_c2/s121/default_v5/claude-haiku-4-5-20251001/rep5/work/s121.c
+@@ -1,14 +1,26 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s121(void)
+ {
+     int j;
++    real_t *temp = (real_t *)malloc((LEN_1D - 1) * sizeof(real_t));
++
+     for (int nl = 0; nl < iterations; nl++) {
++        // Phase 1: Read from a[i+1] and compute into temp (no inter-iteration dependencies)
+         for (int i = 0; i < LEN_1D-1; i++) {
+             j = i + 1;
+-            a[i] = a[j] + b[i];
++            temp[i] = a[j] + b[i];
+         }
++
++        // Phase 2: Write from temp back to a (no inter-iteration dependencies)
++        for (int i = 0; i < LEN_1D-1; i++) {
++            a[i] = temp[i];
++        }
++
+         dummy(a, b, c, d, e);
+     }
++
++    free(temp);
+     return (real_t)0;
+ }

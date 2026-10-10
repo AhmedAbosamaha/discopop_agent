@@ -1,0 +1,52 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c2/s341/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c2/s341/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/s341.c
+@@ -1,16 +1,45 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s341(void)
+ {
+     int j;
+     for (int nl = 0; nl < iterations; nl++) {
+-        j = -1;
++        int *valid = (int*)malloc(LEN_1D * sizeof(int));
++        int *offset = (int*)malloc(LEN_1D * sizeof(int));
++
++        // Pass 1 (parallel): mark valid elements by condition evaluation
++        #pragma omp parallel for
+         for (int i = 0; i < LEN_1D; i++) {
+-            if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++            valid[i] = (b[i] > (real_t)0.) ? 1 : 0;
++        }
++
++        // Pass 2 (sequential): compute prefix sum for output positions
++        offset[0] = 0;
++        for (int i = 1; i < LEN_1D; i++) {
++            offset[i] = offset[i-1] + valid[i-1];
++        }
++
++        // Pass 3 (parallel): write valid elements to a[] in order
++        #pragma omp parallel for
++        for (int i = 0; i < LEN_1D; i++) {
++            if (valid[i]) {
++                a[offset[i]] = b[i];
+             }
+         }
++
++        // Compute final j: position of last valid element
++        j = -1;
++        for (int i = LEN_1D - 1; i >= 0; i--) {
++            if (valid[i]) {
++                j = offset[i];
++                break;
++            }
++        }
++
++        free(valid);
++        free(offset);
++
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

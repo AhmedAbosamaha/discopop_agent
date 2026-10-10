@@ -1,0 +1,48 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c2/s341/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c2/s341/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/s341.c
+@@ -1,16 +1,41 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s341(void)
+ {
+-    int j;
+     for (int nl = 0; nl < iterations; nl++) {
+-        j = -1;
++        // Allocate temporary array to store target positions for each element
++        int *positions = malloc(LEN_1D * sizeof(int));
++
++        // First parallel pass: mark which elements pass the filter condition
++        // positions[i] = 1 if b[i] > 0, else 0
++        #pragma omp parallel for
++        for (int i = 0; i < LEN_1D; i++) {
++            positions[i] = (b[i] > (real_t)0.) ? 1 : 0;
++        }
++
++        // Sequential prefix sum: convert marks to exclusive cumulative positions
++        // After this loop, positions[i] contains the target index in array a
++        // for the element at b[i] (if b[i] > 0)
++        int j = 0;
++        for (int i = 0; i < LEN_1D; i++) {
++            int temp = positions[i];
++            positions[i] = j;
++            j += temp;
++        }
++
++        // Second parallel pass: scatter passing elements to their computed positions
++        // Each iteration is independent: reads b[i] and positions[i],
++        // writes to a[positions[i]] only if b[i] > 0
++        #pragma omp parallel for
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++                a[positions[i]] = b[i];
+             }
+         }
++
++        free(positions);
++
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

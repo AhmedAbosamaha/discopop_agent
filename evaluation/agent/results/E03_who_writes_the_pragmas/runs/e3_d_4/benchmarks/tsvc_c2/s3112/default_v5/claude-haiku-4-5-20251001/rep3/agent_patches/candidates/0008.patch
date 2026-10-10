@@ -1,0 +1,52 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_4/benchmarks/tsvc_c2/s3112/default_v5/claude-haiku-4-5-20251001/rep3/work/s3112.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_4/benchmarks/tsvc_c2/s3112/default_v5/claude-haiku-4-5-20251001/rep3/work/s3112.c
+@@ -4,11 +4,46 @@
+ {
+     real_t sum;
+     for (int nl = 0; nl < iterations; nl++) {
+-        sum = (real_t)0.0;
++        // Allocate buffer for parallel prefix sum computation
++        real_t* prefix = (real_t*)malloc(LEN_1D * sizeof(real_t));
++
++        // Initialize prefix array with input values
+         for (int i = 0; i < LEN_1D; i++) {
+-            sum += a[i];
+-            b[i] = sum;
++            prefix[i] = a[i];
+         }
++
++        // Calculate number of scan steps (log2 of array length)
++        int log_steps = 0;
++        int temp = LEN_1D;
++        while (temp > 1) {
++            log_steps++;
++            temp >>= 1;
++        }
++
++        // Hillis-Steele parallel prefix sum: each stage is independent across iterations
++        for (int step = 0; step < log_steps; step++) {
++            int stride = 1 << step;  // 1, 2, 4, 8, ...
++            real_t* new_prefix = (real_t*)malloc(LEN_1D * sizeof(real_t));
++
++            for (int i = 0; i < LEN_1D; i++) {
++                if (i < stride) {
++                    new_prefix[i] = prefix[i];
++                } else {
++                    new_prefix[i] = prefix[i] + prefix[i - stride];
++                }
++            }
++
++            free(prefix);
++            prefix = new_prefix;
++        }
++
++        // Copy prefix sums to output array b and extract final sum
++        for (int i = 0; i < LEN_1D; i++) {
++            b[i] = prefix[i];
++        }
++        sum = prefix[LEN_1D - 1];
++
++        free(prefix);
+         dummy(a, b, c, d, e);
+     }
+     return sum;

@@ -1,0 +1,21 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_3/benchmarks/tsvc_c2/s323/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/s323.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_3/benchmarks/tsvc_c2/s323/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/s323.c
+@@ -3,9 +3,17 @@
+ real_t kernel_s323(void)
+ {
+     for (int nl = 0; nl < iterations; nl++) {
++        // Phase 1: Compute b[i] = b[i-1] + c[i]*(d[i]+e[i])
++        // Loop-carried on b due to cumulative structure, must be sequential
++        for (int i = 1; i < LEN_1D; i++) {
++            b[i] = b[i-1] + c[i] * (d[i] + e[i]);
++        }
++        // Phase 2: Compute a[i] = b[i-1] + c[i]*d[i]
++        // No loop-carried dependence: each iteration reads different b[i-1] and writes different a[i]
++        // b is now stable (computed in phase 1), so all iterations can run in parallel
++        #pragma omp parallel for shared(a, b, c, d)
+         for (int i = 1; i < LEN_1D; i++) {
+             a[i] = b[i-1] + c[i] * d[i];
+-            b[i] = a[i] + c[i] * e[i];
+         }
+         dummy(a, b, c, d, e);
+     }

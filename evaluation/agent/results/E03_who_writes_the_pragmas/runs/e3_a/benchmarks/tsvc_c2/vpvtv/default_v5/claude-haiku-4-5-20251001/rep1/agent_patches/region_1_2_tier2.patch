@@ -1,0 +1,22 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_a/benchmarks/tsvc_c2/vpvtv/default_v5/claude-haiku-4-5-20251001/rep1/work/vpvtv.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_a/benchmarks/tsvc_c2/vpvtv/default_v5/claude-haiku-4-5-20251001/rep1/work/vpvtv.c
+@@ -1,12 +1,18 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_vpvtv(void)
+ {
++    real_t *c_local = malloc(LEN_1D * sizeof(real_t));
+     for (int nl = 0; nl < iterations; nl++) {
+         for (int i = 0; i < LEN_1D; i++) {
+-            a[i] += b[i] * c[i];
++            c_local[i] = c[i];
++        }
++        for (int i = 0; i < LEN_1D; i++) {
++            a[i] += b[i] * c_local[i];
+         }
+         dummy(a, b, c, d, e);
+     }
++    free(c_local);
+     return (real_t)0;
+ }

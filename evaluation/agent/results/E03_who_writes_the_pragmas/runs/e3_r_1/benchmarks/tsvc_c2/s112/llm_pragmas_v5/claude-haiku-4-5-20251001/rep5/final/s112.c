@@ -1,0 +1,26 @@
+#include <stdlib.h>
+#include "data.h"
+
+real_t kernel_s112(void)
+{
+    real_t *temp = malloc((LEN_1D - 1) * sizeof(real_t));
+
+    for (int nl = 0; nl < iterations; nl++) {
+        // Save original values of a[i] before parallel updates
+        #pragma omp parallel for schedule(static)
+        for (int i = 0; i < LEN_1D - 1; i++) {
+            temp[i] = a[i];
+        }
+
+        // Compute a[i+1] = temp[i] + b[i] in parallel using saved values
+        #pragma omp parallel for schedule(static)
+        for (int i = 0; i < LEN_1D - 1; i++) {
+            a[i+1] = temp[i] + b[i];
+        }
+
+        dummy(a, b, c, d, e);
+    }
+
+    free(temp);
+    return (real_t)0;
+}

@@ -1,0 +1,25 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c3/s331/default_v5/claude-haiku-4-5-20251001/rep1/work/s331.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c3/s331/default_v5/claude-haiku-4-5-20251001/rep1/work/s331.c
+@@ -5,12 +5,19 @@
+     int j;
+     real_t chksum;
+     for (int nl = 0; nl < iterations; nl++) {
++        // First pass: extract matching indices (Do-All: each iteration independent)
++        int* candidates = (int*) malloc(LEN_1D * sizeof(int));
++        for (int i = 0; i < LEN_1D; i++) {
++            candidates[i] = (a[i] < (real_t)0.) ? i : -1;
++        }
++
++        // Second pass: find maximum (Reduction)
+         j = -1;
+         for (int i = 0; i < LEN_1D; i++) {
+-            if (a[i] < (real_t)0.) {
+-                j = i;
+-            }
++            if (candidates[i] > j) j = candidates[i];
+         }
++        free(candidates);
++
+         chksum = (real_t) j;
+         dummy(a, b, c, d, e, chksum);
+     }

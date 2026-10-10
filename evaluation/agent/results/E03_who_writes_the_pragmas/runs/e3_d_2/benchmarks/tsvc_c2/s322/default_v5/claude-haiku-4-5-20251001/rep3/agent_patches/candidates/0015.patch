@@ -1,0 +1,39 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_2/benchmarks/tsvc_c2/s322/default_v5/claude-haiku-4-5-20251001/rep3/work/s322.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_2/benchmarks/tsvc_c2/s322/default_v5/claude-haiku-4-5-20251001/rep3/work/s322.c
+@@ -1,11 +1,35 @@
+ #include "data.h"
++#include <stdlib.h>
++#include <string.h>
+ 
+ real_t kernel_s322(void)
+ {
++    static real_t *a_alt = NULL;
++    static size_t allocated_size = 0;
++
++    if (a_alt == NULL) {
++        allocated_size = LEN_1D;
++        a_alt = malloc(LEN_1D * sizeof(real_t));
++        memcpy(a_alt, a, LEN_1D * sizeof(real_t));
++    }
++
++    real_t *a_in = a;
++    real_t *a_out = a_alt;
++
+     for (int nl = 0; nl < iterations; nl++) {
++        // Do-All loop: each i reads only a_in[i], a_in[i-1], a_in[i-2]; writes only a_out[i]
+         for (int i = 2; i < LEN_1D; i++) {
+-            a[i] = a[i] + a[i - 1] * b[i] + a[i - 2] * c[i];
++            a_out[i] = a_in[i] + a_in[i - 1] * b[i] + a_in[i - 2] * c[i];
+         }
++
++        // Copy result back to global a
++        memcpy(a, a_out, LEN_1D * sizeof(real_t));
++
++        // Swap buffers: next nl iteration reads what this one computed
++        real_t *tmp = a_in;
++        a_in = a_out;
++        a_out = tmp;
++
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

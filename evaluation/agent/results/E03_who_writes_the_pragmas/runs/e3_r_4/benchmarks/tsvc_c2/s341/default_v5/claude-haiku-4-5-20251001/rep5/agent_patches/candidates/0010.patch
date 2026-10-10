@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c2/s341/default_v5/claude-haiku-4-5-20251001/rep5/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c2/s341/default_v5/claude-haiku-4-5-20251001/rep5/work/s341.c
+@@ -10,6 +10,7 @@
+         int filtered_count = 0;
+ 
+         // Filter phase: collect positive values using atomic increment
++        #pragma omp parallel for shared(filtered) 
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+                 int idx = __sync_fetch_and_add(&filtered_count, 1);

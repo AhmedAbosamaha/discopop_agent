@@ -1,0 +1,50 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_1/benchmarks/tsvc_c2/s121/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/s121.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_1/benchmarks/tsvc_c2/s121/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/s121.c
+@@ -1,14 +1,42 @@
+ #include "data.h"
++#include <stdlib.h>
++#include <string.h>
+ 
+ real_t kernel_s121(void)
+ {
+     int j;
+-    for (int nl = 0; nl < iterations; nl++) {
+-        for (int i = 0; i < LEN_1D-1; i++) {
+-            j = i + 1;
+-            a[i] = a[j] + b[i];
++    // Create parallel team once to amortize thread creation overhead across all iterations
++    #pragma omp parallel
++    {
++        real_t *a_orig = NULL;
++
++        for (int nl = 0; nl < iterations; nl++) {
++            // One thread allocates and copies a to break RAW dependence
++            #pragma omp single
++            {
++                a_orig = (real_t *)malloc(LEN_1D * sizeof(real_t));
++                memcpy(a_orig, a, LEN_1D * sizeof(real_t));
++            }
++            // Ensure all threads see a_orig before computing
++            #pragma omp barrier
++
++            // All threads compute in parallel: each reads from constant a_orig,
++            // writes to independent a[i] elements
++            #pragma omp for private(j)
++            for (int i = 0; i < LEN_1D-1; i++) {
++                j = i + 1;
++                a[i] = a_orig[j] + b[i];
++            }
++
++            // One thread cleans up and calls dummy (order-sensitive side effects)
++            #pragma omp single
++            {
++                free(a_orig);
++                dummy(a, b, c, d, e);
++            }
++            // Ensure all threads see dummy's modifications before next iteration's copy
++            #pragma omp barrier
+         }
+-        dummy(a, b, c, d, e);
+     }
+     return (real_t)0;
+ }

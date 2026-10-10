@@ -1,0 +1,18 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_1/benchmarks/tsvc_c2/s121/default_v5/claude-haiku-4-5-20251001/rep1/work/s121.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_1/benchmarks/tsvc_c2/s121/default_v5/claude-haiku-4-5-20251001/rep1/work/s121.c
+@@ -7,6 +7,7 @@
+ 
+     for (int nl = 0; nl < iterations; nl++) {
+         // Copy current values of a to enable parallelization
++        #pragma omp parallel for shared(a_copy) 
+         for (int i = 0; i < LEN_1D; i++) {
+             a_copy[i] = a[i];
+         }
+@@ -14,6 +15,7 @@
+         // Compute new values reading from copy, writing to original
+         // Removes loop-carried dependence: each iteration i reads a_copy[i+1]
+         // (unchanged during loop) and writes a[i] (not read by other iterations)
++        #pragma omp parallel for shared(a_copy) 
+         for (int i = 0; i < LEN_1D-1; i++) {
+             int j = i + 1;
+             a[i] = a_copy[j] + b[i];

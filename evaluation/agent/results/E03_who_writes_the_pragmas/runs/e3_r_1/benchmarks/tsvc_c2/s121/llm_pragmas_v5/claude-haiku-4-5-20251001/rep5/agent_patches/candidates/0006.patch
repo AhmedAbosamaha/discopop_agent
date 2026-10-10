@@ -1,0 +1,36 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_1/benchmarks/tsvc_c2/s121/llm_pragmas_v5/claude-haiku-4-5-20251001/rep5/work/s121.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_1/benchmarks/tsvc_c2/s121/llm_pragmas_v5/claude-haiku-4-5-20251001/rep5/work/s121.c
+@@ -1,14 +1,28 @@
+ #include "data.h"
++#include <string.h>
++#include <stdlib.h>
+ 
+ real_t kernel_s121(void)
+ {
+     int j;
+-    for (int nl = 0; nl < iterations; nl++) {
+-        for (int i = 0; i < LEN_1D-1; i++) {
+-            j = i + 1;
+-            a[i] = a[j] + b[i];
++    real_t *a_copy = (real_t*)malloc(LEN_1D * sizeof(real_t));
++
++    #pragma omp parallel
++    {
++        for (int nl = 0; nl < iterations; nl++) {
++            #pragma omp single
++            memcpy(a_copy, a, LEN_1D * sizeof(real_t));
++
++            #pragma omp for private(j)
++            for (int i = 0; i < LEN_1D-1; i++) {
++                j = i + 1;
++                a[i] = a_copy[j] + b[i];
++            }
++
++            #pragma omp single
++            dummy(a, b, c, d, e);
+         }
+-        dummy(a, b, c, d, e);
+     }
++    free(a_copy);
+     return (real_t)0;
+ }

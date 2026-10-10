@@ -1,0 +1,19 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_2/benchmarks/tsvc_c2/s322/llm_pragmas_v5/claude-haiku-4-5-20251001/rep3/work/s322.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_2/benchmarks/tsvc_c2/s322/llm_pragmas_v5/claude-haiku-4-5-20251001/rep3/work/s322.c
+@@ -2,11 +2,15 @@
+ 
+ real_t kernel_s322(void)
+ {
++    #pragma omp parallel for shared(a, b, c, d, e)
+     for (int nl = 0; nl < iterations; nl++) {
+         for (int i = 2; i < LEN_1D; i++) {
+             a[i] = a[i] + a[i - 1] * b[i] + a[i - 2] * c[i];
+         }
+-        dummy(a, b, c, d, e);
++        #pragma omp critical
++        {
++            dummy(a, b, c, d, e);
++        }
+     }
+     return (real_t)0;
+ }

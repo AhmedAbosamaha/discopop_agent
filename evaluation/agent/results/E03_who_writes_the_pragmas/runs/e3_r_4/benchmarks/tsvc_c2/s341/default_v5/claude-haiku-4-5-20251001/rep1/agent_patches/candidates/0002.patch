@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c2/s341/default_v5/claude-haiku-4-5-20251001/rep1/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c2/s341/default_v5/claude-haiku-4-5-20251001/rep1/work/s341.c
+@@ -10,6 +10,7 @@
+         int *positions = calloc(LEN_1D, sizeof(int));
+ 
+         // Phase 1: Mark which elements satisfy the condition
++        #pragma omp parallel for shared(valid) 
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+                 valid[i] = 1;

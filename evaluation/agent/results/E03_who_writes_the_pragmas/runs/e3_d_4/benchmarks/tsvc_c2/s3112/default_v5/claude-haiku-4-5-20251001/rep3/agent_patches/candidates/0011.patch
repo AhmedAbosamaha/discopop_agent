@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_4/benchmarks/tsvc_c2/s3112/default_v5/claude-haiku-4-5-20251001/rep3/work/s3112.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_4/benchmarks/tsvc_c2/s3112/default_v5/claude-haiku-4-5-20251001/rep3/work/s3112.c
+@@ -16,6 +16,7 @@
+         }
+ 
+         // Phase 2: Copy prefix sums to output array b (this loop is do-all)
++        #pragma omp parallel for shared(prefix) 
+         for (int i = 0; i < LEN_1D; i++) {
+             b[i] = prefix[i];
+         }

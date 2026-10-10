@@ -1,0 +1,67 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c2/s341/llm_pragmas_v5/claude-haiku-4-5-20251001/rep3/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c2/s341/llm_pragmas_v5/claude-haiku-4-5-20251001/rep3/work/s341.c
+@@ -1,17 +1,57 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s341(void)
+ {
+     int j;
+-    for (int nl = 0; nl < iterations; nl++) {
+-        j = -1;
+-        for (int i = 0; i < LEN_1D; i++) {
+-            if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++    // Allocate temporary arrays once, outside all loops
++    int *satisfies = (int *)malloc(LEN_1D * sizeof(int));
++    int *position = (int *)malloc(LEN_1D * sizeof(int));
++
++    // Single parallel region wrapping all iterations—amortize startup overhead
++    #pragma omp parallel
++    {
++        for (int nl = 0; nl < iterations; nl++) {
++            // Pass 1: determine which elements satisfy the condition
++            #pragma omp for
++            for (int i = 0; i < LEN_1D; i++) {
++                satisfies[i] = (b[i] > (real_t)0.);
+             }
++            // Implicit barrier at end of for
++
++            // Pass 2: compute positions via prefix sum (single-threaded)
++            #pragma omp single
++            {
++                j = -1;
++                for (int i = 0; i < LEN_1D; i++) {
++                    if (satisfies[i]) {
++                        j++;
++                        position[i] = j;
++                    }
++                }
++            }
++            // Implicit barrier at end of single
++
++            // Pass 3: write elements to their computed positions
++            #pragma omp for
++            for (int i = 0; i < LEN_1D; i++) {
++                if (satisfies[i]) {
++                    a[position[i]] = b[i];
++                }
++            }
++            // Implicit barrier at end of for
++
++            // Call dummy after synchronizing all threads
++            #pragma omp single
++            {
++                dummy(a, b, c, d, e);
++            }
++            // Implicit barrier at end of single
+         }
+-        dummy(a, b, c, d, e);
+     }
++
++    free(satisfies);
++    free(position);
++
+     return (real_t)0;
+ }

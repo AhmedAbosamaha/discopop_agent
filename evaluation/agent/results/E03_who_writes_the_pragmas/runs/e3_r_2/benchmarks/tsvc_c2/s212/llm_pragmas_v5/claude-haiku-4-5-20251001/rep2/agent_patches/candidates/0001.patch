@@ -1,0 +1,30 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_2/benchmarks/tsvc_c2/s212/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/s212.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_2/benchmarks/tsvc_c2/s212/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/s212.c
+@@ -3,10 +3,26 @@
+ real_t kernel_s212(void)
+ {
+     for (int nl = 0; nl < iterations; nl++) {
++        // Save old a values before updating them
++        real_t *a_old = (real_t *)malloc(LEN_1D * sizeof(real_t));
++        #pragma omp parallel for shared(a, a_old)
++        for (int i = 0; i < LEN_1D; i++) {
++            a_old[i] = a[i];
++        }
++
++        // Update a in parallel
++        #pragma omp parallel for shared(a, c)
+         for (int i = 0; i < LEN_1D-1; i++) {
+             a[i] *= c[i];
+-            b[i] += a[i + 1] * d[i];
+         }
++
++        // Update b using the saved old a values in parallel
++        #pragma omp parallel for shared(a_old, b, d)
++        for (int i = 0; i < LEN_1D-1; i++) {
++            b[i] += a_old[i + 1] * d[i];
++        }
++
++        free(a_old);
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

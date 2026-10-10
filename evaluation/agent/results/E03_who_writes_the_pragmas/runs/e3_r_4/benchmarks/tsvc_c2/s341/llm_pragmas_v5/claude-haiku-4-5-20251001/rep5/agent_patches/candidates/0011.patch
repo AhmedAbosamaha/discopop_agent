@@ -1,0 +1,37 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c2/s341/llm_pragmas_v5/claude-haiku-4-5-20251001/rep5/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c2/s341/llm_pragmas_v5/claude-haiku-4-5-20251001/rep5/work/s341.c
+@@ -1,17 +1,30 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s341(void)
+ {
+-    int j;
++    int *prefix = (int *)malloc(LEN_1D * sizeof(int));
++
++    // Compute prefix sum once (independent of outer loop iterations)
++    int count = 0;
++    for (int i = 0; i < LEN_1D; i++) {
++        prefix[i] = count;
++        if (b[i] > (real_t)0.) {
++            count++;
++        }
++    }
++
+     for (int nl = 0; nl < iterations; nl++) {
+-        j = -1;
++        // Parallel loop: each thread writes its element to the correct position
++        #pragma omp parallel for shared(prefix, b, a)
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++                a[prefix[i]] = b[i];
+             }
+         }
++
+         dummy(a, b, c, d, e);
+     }
++    free(prefix);
+     return (real_t)0;
+ }

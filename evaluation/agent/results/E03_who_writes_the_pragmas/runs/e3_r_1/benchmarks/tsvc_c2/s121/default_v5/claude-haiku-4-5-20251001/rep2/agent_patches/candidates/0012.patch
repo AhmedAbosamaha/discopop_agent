@@ -1,0 +1,32 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_1/benchmarks/tsvc_c2/s121/default_v5/claude-haiku-4-5-20251001/rep2/work/s121.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_1/benchmarks/tsvc_c2/s121/default_v5/claude-haiku-4-5-20251001/rep2/work/s121.c
+@@ -1,14 +1,28 @@
+ #include "data.h"
++#include <stdlib.h>
++#include <string.h>
+ 
+ real_t kernel_s121(void)
+ {
+     int j;
++    // Allocate temporary buffer once, outside the loop
++    real_t *temp = malloc((LEN_1D-1) * sizeof(real_t));
++
+     for (int nl = 0; nl < iterations; nl++) {
++        // Compute temp from a: each iteration i reads a[i+1] (from original a),
++        // writes temp[i]. No iteration writes to a[i+1], so reads are safe.
++        // This loop is fully parallelizable without needing an up-front copy.
+         for (int i = 0; i < LEN_1D-1; i++) {
+             j = i + 1;
+-            a[i] = a[j] + b[i];
++            temp[i] = a[j] + b[i];
+         }
++
++        // Copy temp back to a in a single sequential memcpy (after parallelization completes)
++        memcpy(a, temp, (LEN_1D-1) * sizeof(real_t));
++
+         dummy(a, b, c, d, e);
+     }
++
++    free(temp);
+     return (real_t)0;
+ }

@@ -1,0 +1,22 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_2/benchmarks/tsvc_c3/s241/default_v5/claude-haiku-4-5-20251001/rep3/work/s241.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_2/benchmarks/tsvc_c3/s241/default_v5/claude-haiku-4-5-20251001/rep3/work/s241.c
+@@ -5,16 +5,19 @@
+     for (int nl = 0; nl < iterations; nl++) {
+         // Save old a values before updating (a[i+1] is needed for b computation)
+         real_t a_old[LEN_1D];
++        #pragma omp parallel for shared(a_old) 
+         for (int i = 0; i < LEN_1D; i++) {
+             a_old[i] = a[i];
+         }
+ 
+         // Phase 1: Compute new a values (Do-All)
++        #pragma omp parallel for 
+         for (int i = 0; i < LEN_1D-1; i++) {
+             a[i] = b[i] * c[i  ] * d[i];
+         }
+ 
+         // Phase 2: Compute new b values using old a[i+1] (Do-All)
++        #pragma omp parallel for shared(a_old) 
+         for (int i = 0; i < LEN_1D-1; i++) {
+             b[i] = a[i] * a_old[i+1] * d[i];
+         }

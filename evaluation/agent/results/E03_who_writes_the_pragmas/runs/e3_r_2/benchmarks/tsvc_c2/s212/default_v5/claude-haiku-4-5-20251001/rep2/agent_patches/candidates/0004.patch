@@ -1,0 +1,16 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_2/benchmarks/tsvc_c2/s212/default_v5/claude-haiku-4-5-20251001/rep2/work/s212.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_2/benchmarks/tsvc_c2/s212/default_v5/claude-haiku-4-5-20251001/rep2/work/s212.c
+@@ -10,11 +10,13 @@
+         memcpy(a_save, a, LEN_1D * sizeof(real_t));
+ 
+         // First loop: update a values
++        #pragma omp parallel for 
+         for (int i = 0; i < LEN_1D-1; i++) {
+             a[i] *= c[i];
+         }
+ 
+         // Second loop: update b using original a values
++        #pragma omp parallel for shared(a_save) 
+         for (int i = 0; i < LEN_1D-1; i++) {
+             b[i] += a_save[i + 1] * d[i];
+         }

@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_2/benchmarks/tsvc_c2/s244/default_v5/claude-haiku-4-5-20251001/rep2/work/s244.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_2/benchmarks/tsvc_c2/s244/default_v5/claude-haiku-4-5-20251001/rep2/work/s244.c
+@@ -9,6 +9,7 @@
+ 
+         // First loop: compute new values for a[i] and b[i]
+         // No dependences between iterations - each iteration processes a different i
++        #pragma omp parallel for shared(b_new,a_new) 
+         for (int i = 0; i < LEN_1D-1; ++i) {
+             a_new[i] = b[i] + c[i] * d[i];
+             b_new[i] = c[i] + b[i];

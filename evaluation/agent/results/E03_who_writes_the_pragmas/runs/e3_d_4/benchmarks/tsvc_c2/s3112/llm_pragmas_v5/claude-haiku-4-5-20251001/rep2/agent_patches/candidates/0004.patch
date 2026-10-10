@@ -1,0 +1,16 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_4/benchmarks/tsvc_c2/s3112/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/s3112.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_4/benchmarks/tsvc_c2/s3112/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/s3112.c
+@@ -4,6 +4,13 @@
+ {
+     real_t sum;
+     for (int nl = 0; nl < iterations; nl++) {
++        // Parallelize independent initialization of b
++        #pragma omp parallel for
++        for (int i = 0; i < LEN_1D; i++) {
++            b[i] = (real_t)0.0;
++        }
++
++        // Serial prefix-sum computation preserving exact FP order
+         sum = (real_t)0.0;
+         for (int i = 0; i < LEN_1D; i++) {
+             sum += a[i];

@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_2/benchmarks/tsvc_c2/s252/default_v5/claude-haiku-4-5-20251001/rep3/work/s252.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_2/benchmarks/tsvc_c2/s252/default_v5/claude-haiku-4-5-20251001/rep3/work/s252.c
+@@ -8,6 +8,7 @@
+         real_t *s_vals = (real_t *)malloc(LEN_1D * sizeof(real_t));
+ 
+         // Phase 1: compute all s values independently
++        #pragma omp parallel for shared(s_vals) 
+         for (int i = 0; i < LEN_1D; i++) {
+             s_vals[i] = b[i] * c[i];
+         }

@@ -1,0 +1,44 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_1/benchmarks/tsvc_c2/s121/llm_pragmas_v5/claude-haiku-4-5-20251001/rep3/work/s121.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_1/benchmarks/tsvc_c2/s121/llm_pragmas_v5/claude-haiku-4-5-20251001/rep3/work/s121.c
+@@ -1,14 +1,36 @@
+ #include "data.h"
++#include <stdlib.h>
++#include <string.h>
+ 
+ real_t kernel_s121(void)
+ {
+     int j;
+-    for (int nl = 0; nl < iterations; nl++) {
+-        for (int i = 0; i < LEN_1D-1; i++) {
+-            j = i + 1;
+-            a[i] = a[j] + b[i];
++    /* Allocate snapshot once; reuse across all iterations */
++    real_t *a_copy = malloc(LEN_1D * sizeof(real_t));
++
++    /* Single persistent parallel region spans all iterations;
++       reduces thread startup/teardown overhead from 48 to 1 */
++    #pragma omp parallel private(j)
++    {
++        for (int nl = 0; nl < iterations; nl++) {
++            /* One thread copies current 'a'; others wait (implicit barrier) */
++            #pragma omp single
++            memcpy(a_copy, a, LEN_1D * sizeof(real_t));
++
++            /* Parallelize inner loop across all threads;
++               each reads from snapshot, writes to 'a' independently */
++            #pragma omp for
++            for (int i = 0; i < LEN_1D-1; i++) {
++                j = i + 1;
++                a[i] = a_copy[j] + b[i];
++            }
++
++            /* One thread calls dummy(); implicit barrier before and after */
++            #pragma omp single
++            dummy(a, b, c, d, e);
+         }
+-        dummy(a, b, c, d, e);
+     }
++
++    free(a_copy);
+     return (real_t)0;
+ }

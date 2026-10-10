@@ -1,0 +1,43 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_1/benchmarks/tsvc_c2/s121/llm_pragmas_v5/claude-haiku-4-5-20251001/rep5/work/s121.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_1/benchmarks/tsvc_c2/s121/llm_pragmas_v5/claude-haiku-4-5-20251001/rep5/work/s121.c
+@@ -1,14 +1,35 @@
+ #include "data.h"
++#include <stdlib.h>
++#include <string.h>
+ 
+ real_t kernel_s121(void)
+ {
+     int j;
+-    for (int nl = 0; nl < iterations; nl++) {
+-        for (int i = 0; i < LEN_1D-1; i++) {
+-            j = i + 1;
+-            a[i] = a[j] + b[i];
++    real_t *a_copy = malloc(LEN_1D * sizeof(real_t));
++    // Create a single persistent parallel region across all outer iterations
++    // to avoid repeated thread startup overhead. memcpy and dummy() are serialized;
++    // inner loop is parallelized. Keeps threads alive across all 48 activations,
++    // amortizing startup cost against ~1.5M total inner iterations (48 × 32K).
++    #pragma omp parallel shared(a, b, c, d, e, a_copy)
++    {
++        for (int nl = 0; nl < iterations; nl++) {
++            // Snapshot current array state for safe parallel inner loop.
++            // Removes RAW: all inner iterations read unchanging a_copy,
++            // write to a at different indices. Sequential outer dependence
++            // (each iteration uses results from previous) is preserved.
++            #pragma omp single
++            memcpy(a_copy, a, LEN_1D * sizeof(real_t));
++
++            #pragma omp for private(j)
++            for (int i = 0; i < LEN_1D-1; i++) {
++                j = i + 1;
++                a[i] = a_copy[j] + b[i];
++            }
++
++            #pragma omp single
++            dummy(a, b, c, d, e);
+         }
+-        dummy(a, b, c, d, e);
+     }
++    free(a_copy);
+     return (real_t)0;
+ }

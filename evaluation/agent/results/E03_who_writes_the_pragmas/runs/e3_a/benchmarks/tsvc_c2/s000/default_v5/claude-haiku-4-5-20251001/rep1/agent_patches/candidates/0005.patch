@@ -1,0 +1,14 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_a/benchmarks/tsvc_c2/s000/default_v5/claude-haiku-4-5-20251001/rep1/work/s000.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_a/benchmarks/tsvc_c2/s000/default_v5/claude-haiku-4-5-20251001/rep1/work/s000.c
+@@ -7,9 +7,11 @@
+     if (!a_buffer) return (real_t)0;
+ 
+     for (int nl = 0; nl < iterations; nl++) {
++        #pragma omp parallel for firstprivate(nl) shared(a_buffer) 
+         for (int i = 0; i < LEN_1D; i++) {
+             a_buffer[nl * LEN_1D + i] = b[i] + 1;
+         }
++        #pragma omp parallel for firstprivate(nl) shared(a_buffer) 
+         for (int i = 0; i < LEN_1D; i++) {
+             a[i] = a_buffer[nl * LEN_1D + i];
+         }

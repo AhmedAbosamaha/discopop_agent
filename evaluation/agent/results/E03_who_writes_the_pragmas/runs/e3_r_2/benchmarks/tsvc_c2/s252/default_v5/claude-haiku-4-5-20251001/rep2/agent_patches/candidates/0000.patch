@@ -1,0 +1,32 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_2/benchmarks/tsvc_c2/s252/default_v5/claude-haiku-4-5-20251001/rep2/work/s252.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_2/benchmarks/tsvc_c2/s252/default_v5/claude-haiku-4-5-20251001/rep2/work/s252.c
+@@ -1,15 +1,24 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s252(void)
+ {
+-    real_t t, s;
+     for (int nl = 0; nl < iterations; nl++) {
+-        t = (real_t) 0.;
++        real_t *s_values = (real_t *)malloc(LEN_1D * sizeof(real_t));
++        if (!s_values) return (real_t)0;
++
++        // First loop: compute all products
+         for (int i = 0; i < LEN_1D; i++) {
+-            s = b[i] * c[i];
+-            a[i] = s + t;
+-            t = s;
++            s_values[i] = b[i] * c[i];
+         }
++
++        // Second loop: compute final values using the pre-computed products
++        a[0] = s_values[0];
++        for (int i = 1; i < LEN_1D; i++) {
++            a[i] = s_values[i] + s_values[i - 1];
++        }
++
++        free(s_values);
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

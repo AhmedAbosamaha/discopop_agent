@@ -1,0 +1,26 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_2/benchmarks/tsvc_c2/s244/default_v5/claude-haiku-4-5-20251001/rep2/work/s244.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_2/benchmarks/tsvc_c2/s244/default_v5/claude-haiku-4-5-20251001/rep2/work/s244.c
+@@ -2,13 +2,21 @@
+ 
+ real_t kernel_s244(void)
+ {
++    real_t *a_new = (real_t *)malloc(LEN_1D * sizeof(real_t));
+     for (int nl = 0; nl < iterations; nl++) {
++        for (int i = 0; i < LEN_1D; ++i) {
++            a_new[i] = a[i];
++        }
+         for (int i = 0; i < LEN_1D-1; ++i) {
+-            a[i] = b[i] + c[i] * d[i];
++            a_new[i] = b[i] + c[i] * d[i];
+             b[i] = c[i] + b[i];
+-            a[i+1] = b[i] + a[i+1] * d[i];
++            a_new[i+1] = b[i] + a_new[i+1] * d[i];
++        }
++        for (int i = 0; i < LEN_1D; ++i) {
++            a[i] = a_new[i];
+         }
+         dummy(a, b, c, d, e);
+     }
++    free(a_new);
+     return (real_t)0;
+ }

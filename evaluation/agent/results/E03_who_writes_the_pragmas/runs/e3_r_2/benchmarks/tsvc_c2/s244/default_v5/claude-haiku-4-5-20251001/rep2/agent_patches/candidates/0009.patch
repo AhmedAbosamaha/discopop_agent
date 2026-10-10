@@ -1,0 +1,46 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_2/benchmarks/tsvc_c2/s244/default_v5/claude-haiku-4-5-20251001/rep2/work/s244.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_2/benchmarks/tsvc_c2/s244/default_v5/claude-haiku-4-5-20251001/rep2/work/s244.c
+@@ -3,11 +3,40 @@
+ real_t kernel_s244(void)
+ {
+     for (int nl = 0; nl < iterations; nl++) {
++        // Allocate temporary arrays to break dependences
++        real_t a_new[LEN_1D];
++        real_t b_new[LEN_1D];
++        real_t a_saved[LEN_1D];
++
++        // Save original a and b values; initialize new arrays
++        for (int i = 0; i < LEN_1D; i++) {
++            a_saved[i] = a[i];
++            a_new[i] = a[i];
++            b_new[i] = b[i];
++        }
++
++        // First loop: compute new values for a[i] and b[i]
++        // No dependences between iterations - each iteration processes a different i
+         for (int i = 0; i < LEN_1D-1; ++i) {
+-            a[i] = b[i] + c[i] * d[i];
+-            b[i] = c[i] + b[i];
+-            a[i+1] = b[i] + a[i+1] * d[i];
++            a_new[i] = b[i] + c[i] * d[i];
++            b_new[i] = c[i] + b[i];
+         }
++
++        // Compute a[LEN_1D-1] using the newly computed b[LEN_1D-2] value
++        // This is the only line 9 computation that is not overwritten by a subsequent iteration
++        if (LEN_1D > 1) {
++            a_new[LEN_1D-1] = b_new[LEN_1D-2] + a_saved[LEN_1D-1] * d[LEN_1D-2];
++        }
++
++        // Copy computed values back to original arrays
++        for (int i = 0; i < LEN_1D-1; ++i) {
++            a[i] = a_new[i];
++            b[i] = b_new[i];
++        }
++        if (LEN_1D > 0) {
++            a[LEN_1D-1] = a_new[LEN_1D-1];
++        }
++
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

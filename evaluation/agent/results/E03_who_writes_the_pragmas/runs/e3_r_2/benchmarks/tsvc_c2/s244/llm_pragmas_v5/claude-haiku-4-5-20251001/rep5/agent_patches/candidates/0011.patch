@@ -1,0 +1,26 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_2/benchmarks/tsvc_c2/s244/llm_pragmas_v5/claude-haiku-4-5-20251001/rep5/work/s244.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_2/benchmarks/tsvc_c2/s244/llm_pragmas_v5/claude-haiku-4-5-20251001/rep5/work/s244.c
+@@ -3,11 +3,22 @@
+ real_t kernel_s244(void)
+ {
+     for (int nl = 0; nl < iterations; nl++) {
+-        for (int i = 0; i < LEN_1D-1; ++i) {
++        // Pass 1: Process even iterations — each writes disjoint array elements
++        #pragma omp parallel for shared(a, b, c, d)
++        for (int i = 0; i < LEN_1D-1; i += 2) {
+             a[i] = b[i] + c[i] * d[i];
+             b[i] = c[i] + b[i];
+             a[i+1] = b[i] + a[i+1] * d[i];
+         }
++
++        // Pass 2: Process odd iterations — each writes disjoint array elements
++        #pragma omp parallel for shared(a, b, c, d)
++        for (int i = 1; i < LEN_1D-1; i += 2) {
++            a[i] = b[i] + c[i] * d[i];
++            b[i] = c[i] + b[i];
++            a[i+1] = b[i] + a[i+1] * d[i];
++        }
++
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

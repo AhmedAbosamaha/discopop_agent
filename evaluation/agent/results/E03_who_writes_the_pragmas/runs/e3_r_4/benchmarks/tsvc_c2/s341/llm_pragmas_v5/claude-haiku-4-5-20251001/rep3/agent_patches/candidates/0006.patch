@@ -1,0 +1,53 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c2/s341/llm_pragmas_v5/claude-haiku-4-5-20251001/rep3/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c2/s341/llm_pragmas_v5/claude-haiku-4-5-20251001/rep3/work/s341.c
+@@ -1,16 +1,44 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s341(void)
+ {
+-    int j;
+     for (int nl = 0; nl < iterations; nl++) {
+-        j = -1;
+-        for (int i = 0; i < LEN_1D; i++) {
+-            if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++        // Allocate array to store prefix sums of filter conditions
++        int *count = (int *)malloc((LEN_1D + 1) * sizeof(int));
++        count[0] = 0;
++
++        // Single parallel region for all work within this nl iteration
++        #pragma omp parallel shared(b, a, count)
++        {
++            // First phase: mark which elements pass the filter (parallel)
++            #pragma omp for
++            for (int i = 0; i < LEN_1D; i++) {
++                count[i + 1] = (b[i] > (real_t)0.) ? 1 : 0;
++            }
++            // Implicit barrier after #pragma omp for
++
++            // Second phase: compute prefix sums (sequential on single thread)
++            #pragma omp single
++            {
++                for (int i = 1; i <= LEN_1D; i++) {
++                    count[i] += count[i-1];
++                }
++            }
++            // Implicit barrier after #pragma omp single
++
++            // Third phase: write filtered elements to a (parallel)
++            #pragma omp for
++            for (int i = 0; i < LEN_1D; i++) {
++                if (b[i] > (real_t)0.) {
++                    int idx = count[i];
++                    a[idx] = b[i];
++                }
+             }
+         }
++
++        free(count);
++
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

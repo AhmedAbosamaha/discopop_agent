@@ -1,0 +1,25 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_2/benchmarks/tsvc_c2/s244/default_v5/claude-haiku-4-5-20251001/rep4/work/s244.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_2/benchmarks/tsvc_c2/s244/default_v5/claude-haiku-4-5-20251001/rep4/work/s244.c
+@@ -1,14 +1,21 @@
+ #include "data.h"
++#include <stdlib.h>
++#include <string.h>
+ 
+ real_t kernel_s244(void)
+ {
++    real_t *a_initial = (real_t *)malloc(LEN_1D * sizeof(real_t));
++    memcpy(a_initial, a, LEN_1D * sizeof(real_t));
++
+     for (int nl = 0; nl < iterations; nl++) {
+         for (int i = 0; i < LEN_1D-1; ++i) {
+             a[i] = b[i] + c[i] * d[i];
+             b[i] = c[i] + b[i];
+-            a[i+1] = b[i] + a[i+1] * d[i];
++            a[i+1] = b[i] + a_initial[i+1] * d[i];
+         }
+         dummy(a, b, c, d, e);
+     }
++
++    free(a_initial);
+     return (real_t)0;
+ }

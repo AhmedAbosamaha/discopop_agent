@@ -1,0 +1,17 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_4/benchmarks/tsvc_c2/s3112/llm_pragmas_v5/claude-haiku-4-5-20251001/rep3/work/s3112.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_4/benchmarks/tsvc_c2/s3112/llm_pragmas_v5/claude-haiku-4-5-20251001/rep3/work/s3112.c
+@@ -3,12 +3,14 @@
+ real_t kernel_s3112(void)
+ {
+     real_t sum;
++    #pragma omp parallel for private(sum) lastprivate(sum)
+     for (int nl = 0; nl < iterations; nl++) {
+         sum = (real_t)0.0;
+         for (int i = 0; i < LEN_1D; i++) {
+             sum += a[i];
+             b[i] = sum;
+         }
++        #pragma omp ordered
+         dummy(a, b, c, d, e);
+     }
+     return sum;

@@ -1,0 +1,23 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_1/benchmarks/tsvc_c2/s321/default_v5/claude-haiku-4-5-20251001/rep2/work/s321.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_1/benchmarks/tsvc_c2/s321/default_v5/claude-haiku-4-5-20251001/rep2/work/s321.c
+@@ -1,12 +1,18 @@
++#include <stdlib.h>
+ #include "data.h"
+ 
+ real_t kernel_s321(void)
+ {
++    real_t *contrib = malloc(LEN_1D * sizeof(real_t));
+     for (int nl = 0; nl < iterations; nl++) {
+-        for (int i = 1; i < LEN_1D; i++) {
+-            a[i] += a[i-1] * b[i];
++        for (int i = 0; i < LEN_1D - 1; i++) {
++            contrib[i] = a[i] * b[i+1];
++        }
++        for (int i = 0; i < LEN_1D - 1; i++) {
++            a[i+1] += contrib[i];
+         }
+         dummy(a, b, c, d, e);
+     }
++    free(contrib);
+     return (real_t)0;
+ }

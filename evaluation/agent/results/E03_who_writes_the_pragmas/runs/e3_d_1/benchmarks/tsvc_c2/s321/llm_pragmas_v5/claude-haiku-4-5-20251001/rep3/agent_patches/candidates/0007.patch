@@ -1,0 +1,28 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_1/benchmarks/tsvc_c2/s321/llm_pragmas_v5/claude-haiku-4-5-20251001/rep3/work/s321.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_1/benchmarks/tsvc_c2/s321/llm_pragmas_v5/claude-haiku-4-5-20251001/rep3/work/s321.c
+@@ -1,11 +1,24 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s321(void)
+ {
+     for (int nl = 0; nl < iterations; nl++) {
++        real_t *temp = malloc(LEN_1D * sizeof(real_t));
++
++        // Phase 1: Compute a[i-1]*b[i] for all i in parallel, no writes to a
++        #pragma omp parallel for shared(a, b, temp)
+         for (int i = 1; i < LEN_1D; i++) {
+-            a[i] += a[i-1] * b[i];
++            temp[i] = a[i-1] * b[i];
+         }
++
++        // Phase 2: Update a[i] in parallel, each iteration writes to distinct element
++        #pragma omp parallel for shared(a, temp)
++        for (int i = 1; i < LEN_1D; i++) {
++            a[i] += temp[i];
++        }
++
++        free(temp);
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

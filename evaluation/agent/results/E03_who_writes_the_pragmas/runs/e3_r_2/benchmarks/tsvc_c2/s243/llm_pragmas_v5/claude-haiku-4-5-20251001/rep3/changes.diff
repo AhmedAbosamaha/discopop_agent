@@ -1,0 +1,36 @@
+--- original.c
++++ final.c
+@@ -58,18 +58,32 @@
+ }
+ 
+ /* ==== s243.c ==== */
++#include <stdlib.h>
+ #include "data.h"
+ 
+ real_t kernel_s243(void)
+ {
++    // Allocate temporary array to save original 'a' values
++    real_t *a_orig = (real_t *)malloc(LEN_1D * sizeof(real_t));
++
+     for (int nl = 0; nl < iterations; nl++) {
++        // Save original 'a' values at start of this nl iteration
++        #pragma omp parallel for shared(a_orig) 
++        for (int j = 0; j < LEN_1D; j++) {
++            a_orig[j] = a[j];
++        }
++
++        // Parallel loop: iterations are independent because a_orig is loop-invariant
++        #pragma omp parallel for shared(a, b, c, d, e, a_orig)
+         for (int i = 0; i < LEN_1D-1; i++) {
+             a[i] = b[i] + c[i  ] * d[i];
+             b[i] = a[i] + d[i  ] * e[i];
+-            a[i] = b[i] + a[i+1] * d[i];
++            a[i] = b[i] + a_orig[i+1] * d[i];
+         }
+         dummy(a, b, c, d, e);
+     }
++
++    free(a_orig);
+     return (real_t)0;
+ }
+ 

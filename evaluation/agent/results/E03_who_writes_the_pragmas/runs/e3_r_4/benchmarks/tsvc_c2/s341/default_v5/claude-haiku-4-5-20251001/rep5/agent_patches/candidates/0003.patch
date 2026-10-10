@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c2/s341/default_v5/claude-haiku-4-5-20251001/rep5/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c2/s341/default_v5/claude-haiku-4-5-20251001/rep5/work/s341.c
+@@ -12,6 +12,7 @@
+         }
+         // Phase 2: Compact marked elements into a (sequential)
+         j = -1;
++        #pragma omp parallel for shared(valid) reduction(+:j) 
+         for (int i = 0; i < LEN_1D; i++) {
+             if (valid[i]) {
+                 a[++j] = b[i];

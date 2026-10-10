@@ -1,0 +1,25 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_1/benchmarks/tsvc_c2/s121/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/s121.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_1/benchmarks/tsvc_c2/s121/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/s121.c
+@@ -3,10 +3,19 @@
+ real_t kernel_s121(void)
+ {
+     int j;
++    real_t a_copy[LEN_1D];
+     for (int nl = 0; nl < iterations; nl++) {
+-        for (int i = 0; i < LEN_1D-1; i++) {
+-            j = i + 1;
+-            a[i] = a[j] + b[i];
++        #pragma omp parallel
++        {
++            #pragma omp for
++            for (int ii = 0; ii < LEN_1D; ii++) {
++                a_copy[ii] = a[ii];
++            }
++            #pragma omp for private(j)
++            for (int i = 0; i < LEN_1D-1; i++) {
++                j = i + 1;
++                a[i] = a_copy[j] + b[i];
++            }
+         }
+         dummy(a, b, c, d, e);
+     }

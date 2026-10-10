@@ -1,0 +1,17 @@
+#include "data.h"
+
+real_t kernel_s252(void)
+{
+    for (int nl = 0; nl < iterations; nl++) {
+        #pragma omp parallel for shared(a, b, c)
+        for (int i = 0; i < LEN_1D; i++) {
+            real_t s = b[i] * c[i];
+            a[i] = s;
+            if (i > 0) {
+                a[i] += b[i-1] * c[i-1];
+            }
+        }
+        dummy(a, b, c, d, e);
+    }
+    return (real_t)0;
+}

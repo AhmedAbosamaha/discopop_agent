@@ -1,0 +1,50 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_2/benchmarks/tsvc_c2/s322/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/s322.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_2/benchmarks/tsvc_c2/s322/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/s322.c
+@@ -1,12 +1,45 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s322(void)
+ {
++    real_t *a_new = (real_t *)malloc(LEN_1D * sizeof(real_t));
++
+     for (int nl = 0; nl < iterations; nl++) {
+-        for (int i = 2; i < LEN_1D; i++) {
+-            a[i] = a[i] + a[i - 1] * b[i] + a[i - 2] * c[i];
++        // Merge initialization and copy-back into single parallel region
++        // to reduce parallel region launch overhead
++        #pragma omp parallel
++        {
++            // Parallel phase 1: initialize a_new from a
++            // No loop-carried dependence: each iteration writes to unique element
++            #pragma omp for schedule(static)
++            for (int i = 0; i < LEN_1D; i++) {
++                a_new[i] = a[i];
++            }
++            // Implicit barrier ensures a_new is fully initialized
++
++            // Sequential phase 2: update a_new with loop-carried dependence
++            // Reads updated values from a_new via a[i-1], a[i-2] dependencies
++            // Run on single thread; other threads wait at implicit barrier
++            #pragma omp single
++            {
++                for (int i = 2; i < LEN_1D; i++) {
++                    a_new[i] = a_new[i] + a_new[i - 1] * b[i] + a_new[i - 2] * c[i];
++                }
++            }
++            // Implicit barrier ensures update completes before copy-back
++
++            // Parallel phase 3: copy results back to a
++            // No loop-carried dependence: each iteration updates unique element
++            #pragma omp for schedule(static)
++            for (int i = 2; i < LEN_1D; i++) {
++                a[i] = a_new[i];
++            }
+         }
++
+         dummy(a, b, c, d, e);
+     }
++
++    free(a_new);
+     return (real_t)0;
+ }

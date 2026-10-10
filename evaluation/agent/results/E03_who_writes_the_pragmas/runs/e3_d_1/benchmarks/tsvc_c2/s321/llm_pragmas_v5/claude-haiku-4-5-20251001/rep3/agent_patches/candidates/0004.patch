@@ -1,0 +1,43 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_1/benchmarks/tsvc_c2/s321/llm_pragmas_v5/claude-haiku-4-5-20251001/rep3/work/s321.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_1/benchmarks/tsvc_c2/s321/llm_pragmas_v5/claude-haiku-4-5-20251001/rep3/work/s321.c
+@@ -1,12 +1,38 @@
+ #include "data.h"
++#include <stdlib.h>
++#include <string.h>
+ 
+ real_t kernel_s321(void)
+ {
++    #pragma omp parallel for
+     for (int nl = 0; nl < iterations; nl++) {
++        real_t *a_work = malloc(LEN_1D * sizeof(real_t));
++        real_t *b_work = malloc(LEN_1D * sizeof(real_t));
++
++        // Read snapshots in critical section: iteration nl reads state finalized by nl-1's dummy()
++        // Both a and b must be snapshotted to avoid races with parallel dummy() calls
++        #pragma omp critical
++        {
++            memcpy(a_work, a, LEN_1D * sizeof(real_t));
++            memcpy(b_work, b, LEN_1D * sizeof(real_t));
++        }
++
++        // Inner loop: sequential due to loop-carried RAW on a[i] ← a[i-1]
++        // Both a_work and b_work are private; no reads from shared arrays
+         for (int i = 1; i < LEN_1D; i++) {
+-            a[i] += a[i-1] * b[i];
++            a_work[i] += a_work[i-1] * b_work[i];
+         }
+-        dummy(a, b, c, d, e);
++
++        // Merge and apply side effects in order: critical ensures iteration nl's
++        // dummy() completes before nl+1's first critical, preserving inter-iteration RAW on b
++        #pragma omp critical
++        {
++            memcpy(a, a_work, LEN_1D * sizeof(real_t));
++            dummy(a, b, c, d, e);
++        }
++
++        free(a_work);
++        free(b_work);
+     }
+     return (real_t)0;
+ }

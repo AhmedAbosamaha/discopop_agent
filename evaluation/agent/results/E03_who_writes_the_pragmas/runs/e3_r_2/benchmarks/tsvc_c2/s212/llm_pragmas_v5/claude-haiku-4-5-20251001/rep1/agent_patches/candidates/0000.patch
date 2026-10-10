@@ -1,0 +1,26 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_2/benchmarks/tsvc_c2/s212/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/s212.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_2/benchmarks/tsvc_c2/s212/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/s212.c
+@@ -3,10 +3,22 @@
+ real_t kernel_s212(void)
+ {
+     for (int nl = 0; nl < iterations; nl++) {
++        // Save the current values of a before the inner loop
++        // to break the loop-carried dependence on a[i+1]
++        real_t *a_saved = (real_t *)malloc(LEN_1D * sizeof(real_t));
++        for (int k = 0; k < LEN_1D; k++) {
++            a_saved[k] = a[k];
++        }
++
++        // Parallelize the inner loop using saved values for reads
++        #pragma omp parallel for shared(a, b, c, d, a_saved)
+         for (int i = 0; i < LEN_1D-1; i++) {
+             a[i] *= c[i];
+-            b[i] += a[i + 1] * d[i];
++            b[i] += a_saved[i + 1] * d[i];
+         }
++
++        free(a_saved);
++
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

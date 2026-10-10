@@ -1,0 +1,32 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_1/benchmarks/tsvc_c2/s321/llm_pragmas_v5/claude-haiku-4-5-20251001/rep3/work/s321.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_1/benchmarks/tsvc_c2/s321/llm_pragmas_v5/claude-haiku-4-5-20251001/rep3/work/s321.c
+@@ -1,11 +1,28 @@
+ #include "data.h"
++#include <stdlib.h>
++#include <string.h>
+ 
+ real_t kernel_s321(void)
+ {
+     for (int nl = 0; nl < iterations; nl++) {
++        // Allocate temporary buffer for products
++        real_t *prod = (real_t *)malloc(LEN_1D * sizeof(real_t));
++
++        // Loop 1: Compute products a[i-1] * b[i] independently
++        // This loop has no loop-carried dependence and can be parallelized
++        #pragma omp parallel for schedule(static) shared(prod, a, b)
+         for (int i = 1; i < LEN_1D; i++) {
+-            a[i] += a[i-1] * b[i];
++            prod[i] = a[i-1] * b[i];
+         }
++
++        // Loop 2: Accumulate products into a[i] independently
++        // Each iteration writes only a[i], so no loop-carried dependence
++        #pragma omp parallel for schedule(static) shared(a, prod)
++        for (int i = 1; i < LEN_1D; i++) {
++            a[i] += prod[i];
++        }
++
++        free(prod);
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

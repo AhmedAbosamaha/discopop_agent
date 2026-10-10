@@ -1,0 +1,28 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c2/s341/default_v5/claude-haiku-4-5-20251001/rep2/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c2/s341/default_v5/claude-haiku-4-5-20251001/rep2/work/s341.c
+@@ -3,15 +3,24 @@
+ real_t kernel_s341(void)
+ {
+     int j;
++    int *index = (int *)malloc(LEN_1D * sizeof(int));
+     for (int nl = 0; nl < iterations; nl++) {
+         j = -1;
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+                 j++;
+-                a[j] = b[i];
++                index[i] = j;
++            } else {
++                index[i] = -1;
++            }
++        }
++        for (int i = 0; i < LEN_1D; i++) {
++            if (index[i] >= 0) {
++                a[index[i]] = b[i];
+             }
+         }
+         dummy(a, b, c, d, e);
+     }
++    free(index);
+     return (real_t)0;
+ }

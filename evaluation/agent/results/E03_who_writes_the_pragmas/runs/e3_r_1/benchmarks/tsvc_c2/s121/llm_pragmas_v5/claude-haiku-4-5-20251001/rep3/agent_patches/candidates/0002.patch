@@ -1,0 +1,50 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_1/benchmarks/tsvc_c2/s121/llm_pragmas_v5/claude-haiku-4-5-20251001/rep3/work/s121.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_1/benchmarks/tsvc_c2/s121/llm_pragmas_v5/claude-haiku-4-5-20251001/rep3/work/s121.c
+@@ -1,14 +1,42 @@
+ #include "data.h"
++#include <stdlib.h>
++#include <string.h>
+ 
+ real_t kernel_s121(void)
+ {
+     int j;
+-    for (int nl = 0; nl < iterations; nl++) {
+-        for (int i = 0; i < LEN_1D-1; i++) {
+-            j = i + 1;
+-            a[i] = a[j] + b[i];
++
++    /* Single persistent parallel region spans all 48 iterations;
++       thread team created once, not 48 times */
++    #pragma omp parallel private(j)
++    {
++        /* Each thread gets its own snapshot copy to reduce synchronization */
++        real_t *a_copy = malloc(LEN_1D * sizeof(real_t));
++
++        for (int nl = 0; nl < iterations; nl++) {
++            /* All threads copy in parallel (no serialization via #pragma omp single);
++               memory trade-off is acceptable for speed gain */
++            memcpy(a_copy, a, LEN_1D * sizeof(real_t));
++
++            /* Explicit barrier: ensure all threads have completed their memcpy
++               before any thread starts reading the snapshot */
++            #pragma omp barrier
++
++            /* Parallelize inner loop across all threads;
++               each reads from its own snapshot, writes to shared 'a' safely */
++            #pragma omp for
++            for (int i = 0; i < LEN_1D-1; i++) {
++                j = i + 1;
++                a[i] = a_copy[j] + b[i];
++            }
++
++            /* Implicit barrier after for; then one thread runs dummy() */
++            #pragma omp single
++            dummy(a, b, c, d, e);
+         }
+-        dummy(a, b, c, d, e);
++
++        free(a_copy);
+     }
++
+     return (real_t)0;
+ }

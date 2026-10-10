@@ -1,0 +1,23 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_1/benchmarks/tsvc_c2/s321/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/s321.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_1/benchmarks/tsvc_c2/s321/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/s321.c
+@@ -1,11 +1,19 @@
+ #include "data.h"
++#include <string.h>
++#include <stdlib.h>
+ 
+ real_t kernel_s321(void)
+ {
+     for (int nl = 0; nl < iterations; nl++) {
++        real_t *old_a = malloc(LEN_1D * sizeof(real_t));
++        memcpy(old_a, a, LEN_1D * sizeof(real_t));
++
++        #pragma omp parallel for shared(a, b, old_a)
+         for (int i = 1; i < LEN_1D; i++) {
+-            a[i] += a[i-1] * b[i];
++            a[i] = old_a[i] + old_a[i-1] * b[i];
+         }
++
++        free(old_a);
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

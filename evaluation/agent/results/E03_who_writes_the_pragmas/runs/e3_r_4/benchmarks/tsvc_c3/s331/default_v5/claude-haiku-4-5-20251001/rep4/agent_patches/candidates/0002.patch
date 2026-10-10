@@ -1,0 +1,31 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c3/s331/default_v5/claude-haiku-4-5-20251001/rep4/work/s331.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c3/s331/default_v5/claude-haiku-4-5-20251001/rep4/work/s331.c
+@@ -1,16 +1,26 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s331(void)
+ {
+     int j;
+     real_t chksum;
+     for (int nl = 0; nl < iterations; nl++) {
++        int *result = malloc(LEN_1D * sizeof(int));
++        for (int i = 0; i < LEN_1D; i++) {
++            if (a[i] < (real_t)0.) {
++                result[i] = i;
++            } else {
++                result[i] = -1;
++            }
++        }
+         j = -1;
+         for (int i = 0; i < LEN_1D; i++) {
+-            if (a[i] < (real_t)0.) {
+-                j = i;
++            if (result[i] > j) {
++                j = result[i];
+             }
+         }
++        free(result);
+         chksum = (real_t) j;
+         dummy(a, b, c, d, e, chksum);
+     }

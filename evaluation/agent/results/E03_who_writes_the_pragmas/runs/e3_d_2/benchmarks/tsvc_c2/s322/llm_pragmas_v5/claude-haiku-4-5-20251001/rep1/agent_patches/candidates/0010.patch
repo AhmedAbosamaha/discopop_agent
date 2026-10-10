@@ -1,0 +1,19 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_2/benchmarks/tsvc_c2/s322/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/s322.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_2/benchmarks/tsvc_c2/s322/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/s322.c
+@@ -3,8 +3,14 @@
+ real_t kernel_s322(void)
+ {
+     for (int nl = 0; nl < iterations; nl++) {
+-        for (int i = 2; i < LEN_1D; i++) {
+-            a[i] = a[i] + a[i - 1] * b[i] + a[i - 2] * c[i];
++        // Process inner loop in 3 passes with stride 3.
++        // Iteration i depends on i-1 and i-2, so iterations 3+ apart are independent.
++        // Each pass processes independent iterations in parallel, passes execute sequentially.
++        for (int offset = 0; offset < 3; offset++) {
++            #pragma omp parallel for shared(a, b, c)
++            for (int i = 2 + offset; i < LEN_1D; i += 3) {
++                a[i] = a[i] + a[i - 1] * b[i] + a[i - 2] * c[i];
++            }
+         }
+         dummy(a, b, c, d, e);
+     }

@@ -1,0 +1,67 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c2/s341/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c2/s341/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/s341.c
+@@ -1,17 +1,57 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s341(void)
+ {
+     int j;
+-    for (int nl = 0; nl < iterations; nl++) {
+-        j = -1;
+-        for (int i = 0; i < LEN_1D; i++) {
+-            if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++
++    // Allocate temporary buffers for parallel prefix-sum filtering
++    int *is_positive = (int *)malloc(sizeof(int) * LEN_1D);
++    int *pos = (int *)malloc(sizeof(int) * LEN_1D);
++
++    #pragma omp parallel
++    {
++        for (int nl = 0; nl < iterations; nl++) {
++            // Phase 1: Mark which elements are positive
++            #pragma omp for
++            for (int i = 0; i < LEN_1D; i++) {
++                is_positive[i] = (b[i] > (real_t)0.) ? 1 : 0;
++            }
++            // implicit barrier
++
++            // Phase 2: Compute prefix sum for output positions (serial)
++            #pragma omp single
++            {
++                pos[0] = 0;
++                for (int i = 1; i < LEN_1D; i++) {
++                    pos[i] = pos[i-1] + is_positive[i-1];
++                }
++            }
++            // implicit barrier
++
++            // Phase 3: Write positive elements to output array
++            #pragma omp for
++            for (int i = 0; i < LEN_1D; i++) {
++                if (is_positive[i]) {
++                    a[pos[i]] = b[i];
++                }
++            }
++            // implicit barrier
++
++            // Phase 4: Compute final j and call dummy() serially
++            #pragma omp single
++            {
++                j = -1;
++                for (int i = 0; i < LEN_1D; i++) {
++                    j += is_positive[i];
++                }
++                dummy(a, b, c, d, e);
+             }
+         }
+-        dummy(a, b, c, d, e);
+     }
++
++    free(is_positive);
++    free(pos);
++
+     return (real_t)0;
+ }

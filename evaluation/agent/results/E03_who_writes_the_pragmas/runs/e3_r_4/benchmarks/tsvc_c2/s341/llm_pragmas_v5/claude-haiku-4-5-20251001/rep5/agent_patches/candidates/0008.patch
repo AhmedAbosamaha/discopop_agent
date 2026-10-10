@@ -1,0 +1,53 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c2/s341/llm_pragmas_v5/claude-haiku-4-5-20251001/rep5/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c2/s341/llm_pragmas_v5/claude-haiku-4-5-20251001/rep5/work/s341.c
+@@ -1,17 +1,43 @@
++#include <stdlib.h>
+ #include "data.h"
+ 
+ real_t kernel_s341(void)
+ {
+-    int j;
+-    for (int nl = 0; nl < iterations; nl++) {
+-        j = -1;
+-        for (int i = 0; i < LEN_1D; i++) {
+-            if (b[i] > (real_t)0.) {
+-                j++;
++    // Create a single persistent parallel team spanning all nl iterations,
++    // amortizing thread startup cost across 48 activations.
++    #pragma omp parallel shared(a, b)
++    {
++        for (int nl = 0; nl < iterations; nl++) {
++            // Phase 1: Identify matching indices (which b[i] > 0).
++            // This eliminates redundant checks in the parallel phase.
++            int *matching_indices = (int *)malloc(LEN_1D * sizeof(int));
++            int match_count = 0;
++            for (int i = 0; i < LEN_1D; i++) {
++                if (b[i] > (real_t)0.) {
++                    matching_indices[match_count++] = i;
++                }
++            }
++
++            // Phase 2: Write matched elements to output array in parallel.
++            // Each j-th matched element goes to a[j]. Only match_count iterations,
++            // reducing parallel loop overhead relative to work.
++            #pragma omp for
++            for (int j = 0; j < match_count; j++) {
++                int i = matching_indices[j];
+                 a[j] = b[i];
+             }
++
++            // Barrier ensures all threads complete writes before dummy() reads a
++            #pragma omp barrier
++
++            // Single-threaded dummy() call to maintain sequential semantics
++            #pragma omp single
++            {
++                dummy(a, b, c, d, e);
++            }
++
++            free(matching_indices);
+         }
+-        dummy(a, b, c, d, e);
+     }
+     return (real_t)0;
+ }

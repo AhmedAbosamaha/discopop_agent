@@ -1,0 +1,50 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_1/benchmarks/tsvc_c2/s321/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/s321.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_1/benchmarks/tsvc_c2/s321/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/s321.c
+@@ -1,12 +1,46 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s321(void)
+ {
++    // Allocate private copies of 'a' for each thread to avoid races
++    // while the inner loops run in parallel.
++    real_t **a_private = (real_t**)malloc(iterations * sizeof(real_t*));
++    for (int nl_init = 0; nl_init < iterations; nl_init++) {
++        a_private[nl_init] = (real_t*)malloc(LEN_1D * sizeof(real_t));
++        // Copy current state of 'a' into each private copy
++        for (int idx = 0; idx < LEN_1D; idx++) {
++            a_private[nl_init][idx] = a[idx];
++        }
++    }
++
++    // Run all outer iterations in parallel; each thread operates on its private copy of 'a'.
++    // The inner loop has sequential dependence (a[i] depends on a[i-1]), which is preserved
++    // within each thread's private copy. Parallelizing the outer loop over the 8 activations
++    // (each with ~32k iterations) is sufficient work to overcome thread startup costs.
++    #pragma omp parallel for shared(a_private, b)
+     for (int nl = 0; nl < iterations; nl++) {
+         for (int i = 1; i < LEN_1D; i++) {
+-            a[i] += a[i-1] * b[i];
++            a_private[nl][i] += a_private[nl][i-1] * b[i];
+         }
++    }
++
++    // Apply results and dummy() calls sequentially to preserve global state.
++    // This maintains the sequential semantics of dummy()'s global counter 'n'.
++    for (int nl = 0; nl < iterations; nl++) {
++        // Copy private result back to shared 'a'
++        for (int idx = 0; idx < LEN_1D; idx++) {
++            a[idx] = a_private[nl][idx];
++        }
++        // Call dummy() in order to update global state correctly
+         dummy(a, b, c, d, e);
+     }
++
++    // Clean up
++    for (int nl_cleanup = 0; nl_cleanup < iterations; nl_cleanup++) {
++        free(a_private[nl_cleanup]);
++    }
++    free(a_private);
++
+     return (real_t)0;
+ }

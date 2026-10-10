@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c2/s341/default_v5/claude-haiku-4-5-20251001/rep5/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c2/s341/default_v5/claude-haiku-4-5-20251001/rep5/work/s341.c
+@@ -7,6 +7,7 @@
+     int *valid = (int *)malloc(LEN_1D * sizeof(int));
+     for (int nl = 0; nl < iterations; nl++) {
+         // Phase 1: Identify positive elements (parallel Do-All)
++        #pragma omp parallel for shared(valid) 
+         for (int i = 0; i < LEN_1D; i++) {
+             valid[i] = (b[i] > (real_t)0.) ? 1 : 0;
+         }

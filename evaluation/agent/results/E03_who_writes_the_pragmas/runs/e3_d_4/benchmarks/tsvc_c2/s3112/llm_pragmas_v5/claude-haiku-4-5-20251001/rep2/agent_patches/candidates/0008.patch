@@ -1,0 +1,29 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_4/benchmarks/tsvc_c2/s3112/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/s3112.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_4/benchmarks/tsvc_c2/s3112/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/s3112.c
+@@ -3,13 +3,23 @@
+ real_t kernel_s3112(void)
+ {
+     real_t sum;
++
++    // Phase 1: Parallel copy across all outer-loop iterations — amortize overhead via collapse
++    #pragma omp parallel for collapse(2)
+     for (int nl = 0; nl < iterations; nl++) {
+-        sum = (real_t)0.0;
+         for (int i = 0; i < LEN_1D; i++) {
+-            sum += a[i];
+-            b[i] = sum;
++            b[i] = a[i];
+         }
++    }
++
++    // Phase 2: Sequential prefix sum within each outer-loop iteration
++    for (int nl = 0; nl < iterations; nl++) {
++        for (int i = 1; i < LEN_1D; i++) {
++            b[i] += b[i-1];
++        }
++        sum = b[LEN_1D - 1];
+         dummy(a, b, c, d, e);
+     }
++
+     return sum;
+ }

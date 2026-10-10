@@ -1,0 +1,32 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_1/benchmarks/tsvc_c2/s112/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/s112.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_1/benchmarks/tsvc_c2/s112/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/s112.c
+@@ -1,12 +1,28 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s112(void)
+ {
++    // Allocate temporary buffer to hold snapshot of 'a' for parallel reads
++    real_t *a_orig = (real_t *)malloc(LEN_1D * sizeof(real_t));
++
+     for (int nl = 0; nl < iterations; nl++) {
++        // Save original 'a' values before the loop to break loop-carried dependence
++        // All parallel iterations will read from this snapshot
++        for (int j = 0; j < LEN_1D; j++) {
++            a_orig[j] = a[j];
++        }
++
++        // Parallelize the inner loop: each iteration i reads a_orig[i] (original value)
++        // and writes a[i+1] (unique per iteration, no race condition)
++        #pragma omp parallel for shared(a, a_orig, b)
+         for (int i = LEN_1D - 2; i >= 0; i--) {
+-            a[i+1] = a[i] + b[i];
++            a[i+1] = a_orig[i] + b[i];
+         }
++
+         dummy(a, b, c, d, e);
+     }
++
++    free(a_orig);
+     return (real_t)0;
+ }

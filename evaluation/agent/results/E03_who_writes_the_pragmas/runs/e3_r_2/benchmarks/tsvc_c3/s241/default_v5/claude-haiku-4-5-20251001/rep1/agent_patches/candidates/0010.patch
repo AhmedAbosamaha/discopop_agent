@@ -1,0 +1,18 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_2/benchmarks/tsvc_c3/s241/default_v5/claude-haiku-4-5-20251001/rep1/work/s241.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_2/benchmarks/tsvc_c3/s241/default_v5/claude-haiku-4-5-20251001/rep1/work/s241.c
+@@ -4,12 +4,15 @@
+ {
+     for (int nl = 0; nl < iterations; nl++) {
+         real_t a_next[LEN_1D-1];
++        #pragma omp parallel for shared(a_next) 
+         for (int i = 0; i < LEN_1D-1; i++) {
+             a_next[i] = a[i+1];
+         }
++        #pragma omp parallel for 
+         for (int i = 0; i < LEN_1D-1; i++) {
+             a[i] = b[i] * c[i  ] * d[i];
+         }
++        #pragma omp parallel for shared(a_next) 
+         for (int i = 0; i < LEN_1D-1; i++) {
+             b[i] = a[i] * a_next[i] * d[i];
+         }

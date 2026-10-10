@@ -1,0 +1,36 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_2/benchmarks/tsvc_c2/s322/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/s322.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_2/benchmarks/tsvc_c2/s322/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/s322.c
+@@ -1,11 +1,31 @@
+ #include "data.h"
++#include <stdlib.h>
++#include <string.h>
+ 
+ real_t kernel_s322(void)
+ {
+     for (int nl = 0; nl < iterations; nl++) {
+-        for (int i = 2; i < LEN_1D; i++) {
+-            a[i] = a[i] + a[i - 1] * b[i] + a[i - 2] * c[i];
++        // Allocate temporary buffer for phase-wise updates
++        real_t *a_temp = malloc(LEN_1D * sizeof(real_t));
++
++        // Split into 3 sequential phases: iteration i belongs to phase (i mod 3).
++        // Since iteration i depends on i-1 and i-2, iterations spaced 3+ apart
++        // are independent. Each phase computes one set of independent iterations
++        // in parallel, then subsequent phases read the updated values.
++        for (int phase = 0; phase < 3; phase++) {
++            memcpy(a_temp, a, LEN_1D * sizeof(real_t));
++
++            // Parallelize iterations in this phase (stride 3)
++            #pragma omp parallel for schedule(static)
++            for (int i = 2 + phase; i < LEN_1D; i += 3) {
++                a_temp[i] = a[i] + a[i - 1] * b[i] + a[i - 2] * c[i];
++            }
++
++            // Apply updates from this phase
++            memcpy(a, a_temp, LEN_1D * sizeof(real_t));
+         }
++
++        free(a_temp);
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

@@ -1,0 +1,87 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c2/s341/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c2/s341/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/s341.c
+@@ -1,17 +1,77 @@
+ #include "data.h"
++#include <omp.h>
++#include <stdlib.h>
+ 
+ real_t kernel_s341(void)
+ {
+     int j;
+-    for (int nl = 0; nl < iterations; nl++) {
+-        j = -1;
+-        for (int i = 0; i < LEN_1D; i++) {
+-            if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++    int num_threads;
++    real_t **thread_buffers;
++    int *thread_counts;
++
++    // Create a parallel region that spans all nl iterations to amortize thread startup cost
++    #pragma omp parallel
++    {
++        // Allocate per-thread buffers once at the start
++        #pragma omp single
++        {
++            num_threads = omp_get_num_threads();
++            thread_buffers = (real_t **)malloc(num_threads * sizeof(real_t *));
++            thread_counts = (int *)malloc(num_threads * sizeof(int));
++            for (int t = 0; t < num_threads; t++) {
++                thread_buffers[t] = (real_t *)malloc(LEN_1D * sizeof(real_t));
+             }
+         }
+-        dummy(a, b, c, d, e);
++
++        // Synchronize before main loop
++        #pragma omp barrier
++
++        // Each thread works through all nl iterations, collaborating on each iteration's i loop
++        for (int nl = 0; nl < iterations; nl++) {
++            int tid = omp_get_thread_num();     // private: thread id
++            int local_j = -1;                   // private: thread-local element counter
++
++            // Phase 1: Parallel filtering loop for this nl iteration
++            // Each thread independently processes its chunk of i values with thread-local counter
++            #pragma omp for
++            for (int i = 0; i < LEN_1D; i++) {
++                if (b[i] > (real_t)0.) {
++                    local_j++;
++                    thread_buffers[tid][local_j] = b[i];
++                }
++            }
++
++            // Each thread atomically updates its count in the shared array
++            #pragma omp critical
++            thread_counts[tid] = local_j + 1;
++
++            // Synchronize before consolidation to ensure all threads have updated thread_counts
++            #pragma omp barrier
++
++            // Phase 2: One thread consolidates filtered results into final array a
++            #pragma omp single
++            {
++                j = -1;
++                for (int t = 0; t < num_threads; t++) {
++                    for (int k = 0; k < thread_counts[t]; k++) {
++                        j++;
++                        a[j] = thread_buffers[t][k];
++                    }
++                }
++                dummy(a, b, c, d, e);
++            }
++        }
++
++        // Cleanup thread buffers
++        #pragma omp single
++        {
++            for (int t = 0; t < num_threads; t++) {
++                free(thread_buffers[t]);
++            }
++            free(thread_buffers);
++            free(thread_counts);
++        }
+     }
++
+     return (real_t)0;
+ }

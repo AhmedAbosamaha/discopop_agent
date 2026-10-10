@@ -1,0 +1,69 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_1/benchmarks/tsvc_c2/s321/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/s321.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_1/benchmarks/tsvc_c2/s321/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/s321.c
+@@ -1,11 +1,64 @@
+ #include "data.h"
++#include <stdlib.h>
++#include <string.h>
+ 
+ real_t kernel_s321(void)
+ {
+     for (int nl = 0; nl < iterations; nl++) {
+-        for (int i = 1; i < LEN_1D; i++) {
+-            a[i] += a[i-1] * b[i];
++        // Rewrite accumulation using suffix products for parallel execution.
++        // Original: a[i] += a[i-1]*b[i] loops i=1..n-1 sequentially, creating
++        // RAW chain. Rewrite as: a[i] = a_orig[i] + weighted_sum[i-1]/suffix[i+1]
++        // where suffix[i] = b[i]*b[i+1]*...*b[n-1] and weighted_sum uses Kogge-Stone.
++        int n = LEN_1D;
++        real_t *a_orig = (real_t *)malloc(n * sizeof(real_t));
++        real_t *suffix = (real_t *)malloc((n + 1) * sizeof(real_t));
++        real_t *weighted_sum = (real_t *)malloc(n * sizeof(real_t));
++        real_t *ws_tmp = (real_t *)malloc(n * sizeof(real_t));
++
++        // Save original a values
++        memcpy(a_orig, a, n * sizeof(real_t));
++
++        // Step 1: Compute suffix products b[i]*b[i+1]*...*b[n-1] (sequential)
++        suffix[n] = 1.0;
++        for (int i = n - 1; i >= 0; i--) {
++            suffix[i] = b[i] * suffix[i + 1];
+         }
++
++        // Step 2: Compute weighted prefix sum: weighted_sum[i] = sum(a_orig[j]*suffix[j+1] for j<=i)
++        // Initialize with weighted values, then scan
++        #pragma omp parallel for \
++            shared(ws_tmp, a_orig, suffix, n)
++        for (int i = 0; i < n; i++) {
++            ws_tmp[i] = a_orig[i] * suffix[i + 1];
++        }
++        memcpy(weighted_sum, ws_tmp, n * sizeof(real_t));
++
++        // Kogge-Stone parallel prefix sum on weighted values
++        for (int d = 1; d < n; d *= 2) {
++            #pragma omp parallel for \
++                shared(weighted_sum, ws_tmp, d, n)
++            for (int i = d; i < n; i++) {
++                weighted_sum[i] += ws_tmp[i - d];
++            }
++            memcpy(ws_tmp, weighted_sum, n * sizeof(real_t));
++        }
++
++        // Step 3: Compute final a values in parallel
++        #pragma omp parallel for \
++            shared(a, a_orig, weighted_sum, suffix, n)
++        for (int i = 0; i < n; i++) {
++            if (i == 0) {
++                a[i] = a_orig[i];
++            } else {
++                a[i] = a_orig[i] + weighted_sum[i - 1] / suffix[i + 1];
++            }
++        }
++
++        free(a_orig);
++        free(suffix);
++        free(weighted_sum);
++        free(ws_tmp);
++
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

@@ -1,0 +1,36 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c2/s341/default_v5/claude-haiku-4-5-20251001/rep5/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c2/s341/default_v5/claude-haiku-4-5-20251001/rep5/work/s341.c
+@@ -1,17 +1,30 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s341(void)
+ {
+     int j;
+     for (int nl = 0; nl < iterations; nl++) {
+-        j = -1;
++        // Allocate temporary buffer for filtered values
++        real_t *filtered = malloc(LEN_1D * sizeof(real_t));
++        int filtered_count = 0;
++
++        // Filter phase: collect positive values using atomic increment
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++                int idx = __sync_fetch_and_add(&filtered_count, 1);
++                filtered[idx] = b[i];
+             }
+         }
++
++        // Copy phase: transfer filtered values to output array (parallel-friendly)
++        for (int k = 0; k < filtered_count; k++) {
++            a[k] = filtered[k];
++        }
++        j = filtered_count - 1;
++
+         dummy(a, b, c, d, e);
++        free(filtered);
+     }
+     return (real_t)0;
+ }

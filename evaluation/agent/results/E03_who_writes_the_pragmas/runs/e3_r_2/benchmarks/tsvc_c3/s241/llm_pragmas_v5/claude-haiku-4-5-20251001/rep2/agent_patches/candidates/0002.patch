@@ -1,0 +1,26 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_2/benchmarks/tsvc_c3/s241/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/s241.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_2/benchmarks/tsvc_c3/s241/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/s241.c
+@@ -1,12 +1,22 @@
+ #include "data.h"
++#include <stdlib.h>
++#include <string.h>
+ 
+ real_t kernel_s241(void)
+ {
+     for (int nl = 0; nl < iterations; nl++) {
++        // Save old values of a to preserve the snapshot seen by a[i+1] reads
++        // in the original sequential code (before iteration i+1 overwrites them).
++        real_t *a_saved = (real_t*)malloc(LEN_1D * sizeof(real_t));
++        memcpy(a_saved, a, LEN_1D * sizeof(real_t));
++
++        #pragma omp parallel for shared(a, b, c, d, a_saved)
+         for (int i = 0; i < LEN_1D-1; i++) {
+             a[i] = b[i] * c[i  ] * d[i];
+-            b[i] = a[i] * a[i+1] * d[i];
++            b[i] = a[i] * a_saved[i+1] * d[i];
+         }
++
++        free(a_saved);
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

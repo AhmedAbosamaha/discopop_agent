@@ -1,0 +1,39 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c2/s341/default_v5/claude-haiku-4-5-20251001/rep1/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c2/s341/default_v5/claude-haiku-4-5-20251001/rep1/work/s341.c
+@@ -1,16 +1,31 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s341(void)
+ {
+-    int j;
+     for (int nl = 0; nl < iterations; nl++) {
+-        j = -1;
++        // Phase 1: Mark which elements pass the filter
++        int *included = malloc(LEN_1D * sizeof(int));
+         for (int i = 0; i < LEN_1D; i++) {
+-            if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++            included[i] = (b[i] > (real_t)0.) ? 1 : 0;
++        }
++
++        // Phase 2: Compute output positions via prefix sum
++        int *pos = malloc(LEN_1D * sizeof(int));
++        pos[0] = included[0] - 1;  // -1 if not included, 0 if included
++        for (int i = 1; i < LEN_1D; i++) {
++            pos[i] = pos[i-1] + included[i];
++        }
++
++        // Phase 3: Write to final positions (now parallelizable - Do-All pattern)
++        for (int i = 0; i < LEN_1D; i++) {
++            if (included[i]) {
++                a[pos[i]] = b[i];
+             }
+         }
++
++        free(included);
++        free(pos);
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

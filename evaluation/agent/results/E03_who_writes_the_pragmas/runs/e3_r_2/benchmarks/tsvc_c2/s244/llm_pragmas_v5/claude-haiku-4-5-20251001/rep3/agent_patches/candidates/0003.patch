@@ -1,0 +1,26 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_2/benchmarks/tsvc_c2/s244/llm_pragmas_v5/claude-haiku-4-5-20251001/rep3/work/s244.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_2/benchmarks/tsvc_c2/s244/llm_pragmas_v5/claude-haiku-4-5-20251001/rep3/work/s244.c
+@@ -1,13 +1,22 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s244(void)
+ {
+     for (int nl = 0; nl < iterations; nl++) {
++        real_t *a_old = malloc(LEN_1D * sizeof(real_t));
++        real_t *a_tmp = malloc(LEN_1D * sizeof(real_t));
++        for (int j = 0; j < LEN_1D; ++j) {
++            a_old[j] = a[j];
++        }
++        #pragma omp parallel for shared(a, b, c, d, a_old, a_tmp)
+         for (int i = 0; i < LEN_1D-1; ++i) {
+             a[i] = b[i] + c[i] * d[i];
+             b[i] = c[i] + b[i];
+-            a[i+1] = b[i] + a[i+1] * d[i];
++            a_tmp[i+1] = b[i] + a_old[i+1] * d[i];
+         }
++        free(a_tmp);
++        free(a_old);
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

@@ -1,0 +1,31 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_1/benchmarks/tsvc_c2/s321/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/s321.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_1/benchmarks/tsvc_c2/s321/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/s321.c
+@@ -2,11 +2,25 @@
+ 
+ real_t kernel_s321(void)
+ {
++    #pragma omp parallel for
+     for (int nl = 0; nl < iterations; nl++) {
+-        for (int i = 1; i < LEN_1D; i++) {
+-            a[i] += a[i-1] * b[i];
++        /* Serialize access to the shared arrays a and b via critical section.
++           The i loop has a loop-carried recurrence (a[i] += a[i-1] * b[i])
++           that requires sequential execution within each nl iteration.
++           Iteration i must read the updated a[i-1] from iteration i-1.
++           The critical section ensures each nl iteration's i-loop and dummy()
++           call execute atomically, preserving the data dependence through
++           dummy()'s modifications to a and b. This moves the parallelism
++           to the nl loop level: the loop iterations themselves can be
++           managed in parallel order, with synchronization ensuring
++           sequential semantics at the shared state. */
++        #pragma omp critical
++        {
++            for (int i = 1; i < LEN_1D; i++) {
++                a[i] += a[i-1] * b[i];
++            }
++            dummy(a, b, c, d, e);
+         }
+-        dummy(a, b, c, d, e);
+     }
+     return (real_t)0;
+ }

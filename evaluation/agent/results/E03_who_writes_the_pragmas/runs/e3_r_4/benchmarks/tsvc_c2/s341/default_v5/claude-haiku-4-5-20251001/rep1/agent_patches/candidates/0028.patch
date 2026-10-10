@@ -1,0 +1,38 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c2/s341/default_v5/claude-haiku-4-5-20251001/rep1/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c2/s341/default_v5/claude-haiku-4-5-20251001/rep1/work/s341.c
+@@ -1,17 +1,32 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s341(void)
+ {
+-    int j;
++    int *pos = malloc(LEN_1D * sizeof(int));
++
+     for (int nl = 0; nl < iterations; nl++) {
+-        j = -1;
++        // Scan: compute output position for each element (sequential, low overhead)
++        int j = -1;
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+                 j++;
+-                a[j] = b[i];
++                pos[i] = j;
++            } else {
++                pos[i] = -1;  // marker: not included
+             }
+         }
++
++        // Write: place elements at precomputed positions (parallelizable - Do-All)
++        for (int i = 0; i < LEN_1D; i++) {
++            if (pos[i] >= 0) {
++                a[pos[i]] = b[i];
++            }
++        }
++
+         dummy(a, b, c, d, e);
+     }
++
++    free(pos);
+     return (real_t)0;
+ }

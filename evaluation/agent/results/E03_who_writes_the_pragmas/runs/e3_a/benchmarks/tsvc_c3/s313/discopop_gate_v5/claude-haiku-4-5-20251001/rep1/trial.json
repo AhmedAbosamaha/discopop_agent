@@ -1,0 +1,242 @@
+{
+  "benchmark": "tsvc_c3/s313",
+  "kernel": "s313",
+  "source": "s313.c",
+  "arm": "discopop_gate_v5",
+  "model": "claude-haiku-4-5-20251001",
+  "arm_flags": [
+    "--require-speedup",
+    "--min-runtime-share",
+    "0.01",
+    "--budget",
+    "0",
+    "--prompt-version",
+    "5",
+    "--timing-cflags=-DLARGE_DATASET"
+  ],
+  "started_at": "2026-10-10T05:12:07",
+  "host": "rms14562",
+  "host_load_start": [
+    5.11474609375,
+    3.97998046875,
+    3.83935546875
+  ],
+  "agent_cmd": [
+    "/home/ahmedabosamaha/discopop_agent/venv/bin/python",
+    "-m",
+    "discopop_agent",
+    "--project-dir",
+    ".",
+    "--project-units",
+    "s313.c,main.c",
+    "--project-include",
+    ".",
+    "--project-editable",
+    "s313.c",
+    "--discopop-dir",
+    ".discopop",
+    "--provider",
+    "claude-agent-sdk",
+    "--model",
+    "claude-haiku-4-5-20251001",
+    "--edit-mode",
+    "direct",
+    "--require-speedup",
+    "--min-runtime-share",
+    "0.01",
+    "--budget",
+    "0",
+    "--prompt-version",
+    "5",
+    "--timing-cflags=-DLARGE_DATASET",
+    "--check-input",
+    "7",
+    "--exclude-functions",
+    "main,dummy",
+    "--explorer-timeout",
+    "60"
+  ],
+  "agent_s": 59.6,
+  "agent_rc": 0,
+  "llm_calls": 0,
+  "llm_call_failures": 0,
+  "harness_reasks": 0,
+  "harness_discards": 0,
+  "explorer_retries": 0,
+  "explorer_stalls": 0,
+  "reverts": 0,
+  "refresh_fast": 0,
+  "refresh_full": 0,
+  "refresh_fallback": 0,
+  "runtime_remeasurements": 0,
+  "phase_b_deferred": 0,
+  "phase_b_joint_kept": 0,
+  "dp_floor": null,
+  "gate_failures_phase_a": {},
+  "gate_failures_phase_b": {},
+  "gate_passes_phase_a": 0,
+  "gate_failures_d40": {},
+  "d40_verdicts": {},
+  "exposure_verdicts": {},
+  "d40_seconds": 0,
+  "requeued_regions": 0,
+  "region_verdicts": {
+    "SKIPPED": 2,
+    "DEFERRED": 1,
+    "APPLIED": 1
+  },
+  "settle_dropped": 0,
+  "baseline_claimed": 1,
+  "baseline_pragmas": 1,
+  "rewrites_kept": 0,
+  "pragmas_applied": 1,
+  "pragmas_discopop": 1,
+  "pragmas_llm": 0,
+  "regions_skipped": 2,
+  "llm_usage": null,
+  "layout": "project",
+  "files_changed": [
+    "s313.c"
+  ],
+  "source_changed": true,
+  "scaffold": {
+    "ok": true,
+    "problems": [],
+    "applies": true
+  },
+  "editable": [
+    "s313.c"
+  ],
+  "harness_sha256": "2bc58e6cf87e1d66fb56fa0a71eccd3f1c79102559f833c562372bf6b24c30de",
+  "pragmas_added": 1,
+  "pragmas_in_final": 1,
+  "hot_loop": {
+    "entry": "kernel_s313",
+    "function": "kernel_s313",
+    "line": 8,
+    "writes": [
+      "dot"
+    ]
+  },
+  "hot_loop_covered": true,
+  "hot_loop_coverage": {
+    "criterion": "v2 (27 Sep 2026)",
+    "covered": true,
+    "covering": [
+      {
+        "function": "kernel_s313",
+        "line": 8,
+        "directive": "#pragma omp parallel for reduction(+:dot)",
+        "writes": [
+          "dot"
+        ]
+      }
+    ],
+    "uncounted": [],
+    "elsewhere": []
+  },
+  "candidates_recorded": 1,
+  "verify": {
+    "verify_size": "EXTRALARGE",
+    "threads": [
+      6,
+      12
+    ],
+    "repeats": 5,
+    "compiler": "/usr/bin/clang-20",
+    "final_flags": [],
+    "dump_exact": false,
+    "dump_max_rel_err": 6.009398512266376e-15,
+    "seed": "7",
+    "dump_exact_seeded": false,
+    "dump_seeded_max_rel_err": 1.315636536639709e-15,
+    "seq_median_s": 6.7455,
+    "seq_kernel_median_s": 4.314372,
+    "timing_basis": "kernel",
+    "par": {
+      "6": {
+        "median_s": 3.5612,
+        "program_speedup": 1.894,
+        "max_rel_err": 5.742579842658995e-12,
+        "kernel_median_s": 0.949073,
+        "kernel_speedup": 4.546,
+        "speedup": 4.546
+      },
+      "12": {
+        "median_s": 3.5361,
+        "program_speedup": 1.908,
+        "max_rel_err": 5.16882441789221e-12,
+        "kernel_median_s": 0.938212,
+        "kernel_speedup": 4.599,
+        "speedup": 4.599
+      }
+    },
+    "digest_max_rel_err": 5.742579842658995e-12,
+    "stable_at_fixed_threads": true,
+    "kernel_program_disagree": false,
+    "digest_seeded_rel_err": 2.1960780464602215e-13,
+    "status": "ok",
+    "speed_measurable": true
+  },
+  "verify_s": 82.0,
+  "status": "done",
+  "outcome": "FASTER",
+  "finished_at": "2026-10-10T05:14:29",
+  "host_load_end": [
+    4.25146484375,
+    4.0341796875,
+    3.875
+  ],
+  "profile": {
+    "wrapper": "discopop_cc",
+    "layout": "project",
+    "units": [
+      "s313.c",
+      "main.c"
+    ],
+    "instrument_s": 0.21,
+    "profiled_run_s": 0.11,
+    "explore_stalls": 0,
+    "explore_s": 1.32,
+    "explore_success_s": 1.32,
+    "explore_attempts": 1,
+    "explore_timed_out": false,
+    "explore_failures": [],
+    "patterns": {
+      "optimizer_output": 0,
+      "merged_pattern": 0,
+      "task": 0,
+      "do_all": 0,
+      "reduction": 1
+    },
+    "profile_sha256": "20969b1097b8ab0a12b5dfea4bfe7ea44ce453161de19225fa54061b51c8a708"
+  },
+  "package_integrity": {
+    "before": {
+      "checked": "before trial",
+      "at": "2026-10-10T05:12:07",
+      "prepared_sha256": "92e5fd94f0c6e3bc2279290e5d6fb5afb63ae5e8901e8c3850d9557121411d38",
+      "packager_sha256": "92e5fd94f0c6e3bc2279290e5d6fb5afb63ae5e8901e8c3850d9557121411d38",
+      "harness_sha256": "2bc58e6cf87e1d66fb56fa0a71eccd3f1c79102559f833c562372bf6b24c30de",
+      "archived_sha256": "92e5fd94f0c6e3bc2279290e5d6fb5afb63ae5e8901e8c3850d9557121411d38",
+      "profile_sha256": "20969b1097b8ab0a12b5dfea4bfe7ea44ce453161de19225fa54061b51c8a708",
+      "ok": true
+    },
+    "after": {
+      "checked": "after trial",
+      "at": "2026-10-10T05:14:29",
+      "prepared_sha256": "92e5fd94f0c6e3bc2279290e5d6fb5afb63ae5e8901e8c3850d9557121411d38",
+      "packager_sha256": "92e5fd94f0c6e3bc2279290e5d6fb5afb63ae5e8901e8c3850d9557121411d38",
+      "harness_sha256": "2bc58e6cf87e1d66fb56fa0a71eccd3f1c79102559f833c562372bf6b24c30de",
+      "archived_sha256": "92e5fd94f0c6e3bc2279290e5d6fb5afb63ae5e8901e8c3850d9557121411d38",
+      "profile_sha256": "20969b1097b8ab0a12b5dfea4bfe7ea44ce453161de19225fa54061b51c8a708",
+      "ok": true
+    }
+  },
+  "speed_check_off": false,
+  "timing_flags": [
+    "--timing-cflags=-DLARGE_DATASET"
+  ],
+  "harness_edit_redos": [],
+  "repeat": 1
+}

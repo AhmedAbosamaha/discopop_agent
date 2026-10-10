@@ -1,0 +1,33 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_1/benchmarks/tsvc_c2/s1213/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/s1213.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_1/benchmarks/tsvc_c2/s1213/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/s1213.c
+@@ -2,12 +2,29 @@
+ 
+ real_t kernel_s1213(void)
+ {
++    real_t* a_old = (real_t*)malloc(LEN_1D * sizeof(real_t));
++
+     for (int nl = 0; nl < iterations; nl++) {
++        // Save old a values before they are overwritten
++        for (int i = 1; i < LEN_1D; i++) {
++            a_old[i] = a[i];
++        }
++
++        // Compute new a values based on old b values
++        #pragma omp parallel for shared(a, b, c)
+         for (int i = 1; i < LEN_1D-1; i++) {
+             a[i] = b[i-1]+c[i];
+-            b[i] = a[i+1]*d[i];
+         }
++
++        // Compute new b values based on old a values (preserved in a_old)
++        #pragma omp parallel for shared(a_old, b, d)
++        for (int i = 1; i < LEN_1D-1; i++) {
++            b[i] = a_old[i+1]*d[i];
++        }
++
+         dummy(a, b, c, d, e);
+     }
++
++    free(a_old);
+     return (real_t)0;
+ }

@@ -1,0 +1,35 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c2/s341/llm_pragmas_v5/claude-haiku-4-5-20251001/rep4/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c2/s341/llm_pragmas_v5/claude-haiku-4-5-20251001/rep4/work/s341.c
+@@ -2,15 +2,28 @@
+ 
+ real_t kernel_s341(void)
+ {
+-    int j;
+     for (int nl = 0; nl < iterations; nl++) {
+-        j = -1;
++        // First pass: compute output position for each valid element (b[i] > 0)
++        // This prefix sum eliminates the loop-carried dependence on j
++        int* position = (int*)malloc(LEN_1D * sizeof(int));
++        int count = 0;
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++                position[i] = count++;
+             }
+         }
++
++        // Second pass: parallel loop writes filtered elements to pre-assigned positions
++        // No loop-carried dependences: each iteration writes to different a[position[i]],
++        // and position values are read-only
++        #pragma omp parallel for schedule(static) shared(a, b, position)
++        for (int i = 0; i < LEN_1D; i++) {
++            if (b[i] > (real_t)0.) {
++                a[position[i]] = b[i];
++            }
++        }
++
++        free(position);
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

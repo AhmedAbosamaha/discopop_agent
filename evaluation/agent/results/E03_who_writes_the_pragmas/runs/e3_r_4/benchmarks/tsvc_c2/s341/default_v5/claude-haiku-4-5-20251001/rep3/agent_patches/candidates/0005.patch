@@ -1,0 +1,43 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c2/s341/default_v5/claude-haiku-4-5-20251001/rep3/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c2/s341/default_v5/claude-haiku-4-5-20251001/rep3/work/s341.c
+@@ -1,17 +1,36 @@
++#include <stdlib.h>
+ #include "data.h"
+ 
+ real_t kernel_s341(void)
+ {
+     int j;
++    int *pass = (int *)malloc(LEN_1D * sizeof(int));
++    int *pos = (int *)malloc(LEN_1D * sizeof(int));
++
+     for (int nl = 0; nl < iterations; nl++) {
+-        j = -1;
++        // Pass 1: Mark which elements pass the filter
+         for (int i = 0; i < LEN_1D; i++) {
+-            if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++            pass[i] = (b[i] > (real_t)0.) ? 1 : 0;
++        }
++
++        // Pass 2: Compute exclusive prefix sum to determine output positions
++        pos[0] = 0;
++        for (int i = 1; i < LEN_1D; i++) {
++            pos[i] = pos[i-1] + pass[i-1];
++        }
++
++        // Pass 3: Write elements to their precomputed positions (no loop-carried dependencies)
++        for (int i = 0; i < LEN_1D; i++) {
++            if (pass[i]) {
++                a[pos[i]] = b[i];
+             }
+         }
++
+         dummy(a, b, c, d, e);
+     }
++
++    free(pass);
++    free(pos);
++
+     return (real_t)0;
+ }

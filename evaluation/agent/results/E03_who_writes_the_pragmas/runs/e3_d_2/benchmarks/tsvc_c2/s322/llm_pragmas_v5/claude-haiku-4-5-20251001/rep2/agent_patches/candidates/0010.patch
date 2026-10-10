@@ -1,0 +1,39 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_2/benchmarks/tsvc_c2/s322/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/s322.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_2/benchmarks/tsvc_c2/s322/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/s322.c
+@@ -1,12 +1,34 @@
+ #include "data.h"
++#include <stdlib.h>
++#include <string.h>
+ 
+ real_t kernel_s322(void)
+ {
++    // Parallelize outer loop: each thread independently computes one nl iteration
++    // on a private copy of a[], preserving the inner loop's sequential recurrence.
++    // Critical section serializes updates to global a[] and dummy() calls in order.
++    #pragma omp parallel for ordered
+     for (int nl = 0; nl < iterations; nl++) {
++        real_t *a_priv = (real_t *)malloc(LEN_1D * sizeof(real_t));
++
++        // Ordered read: protected so no thread reads while another calls dummy
++        #pragma omp ordered
++        memcpy(a_priv, a, LEN_1D * sizeof(real_t));
++
++        // Compute on private copy: fully parallel, no race on shared data
+         for (int i = 2; i < LEN_1D; i++) {
+-            a[i] = a[i] + a[i - 1] * b[i] + a[i - 2] * c[i];
++            a_priv[i] = a_priv[i] + a_priv[i - 1] * b[i] + a_priv[i - 2] * c[i];
+         }
+-        dummy(a, b, c, d, e);
++
++        // Ordered write + dummy: strictly sequenced by iteration
++        #pragma omp ordered
++        {
++            memcpy(a, a_priv, LEN_1D * sizeof(real_t));
++            dummy(a, b, c, d, e);
++        }
++
++        free(a_priv);
+     }
++
+     return (real_t)0;
+ }

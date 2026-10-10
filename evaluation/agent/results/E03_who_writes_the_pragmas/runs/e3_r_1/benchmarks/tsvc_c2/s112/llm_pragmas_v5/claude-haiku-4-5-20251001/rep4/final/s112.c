@@ -1,0 +1,32 @@
+#include "data.h"
+#include <stdlib.h>
+
+real_t kernel_s112(void)
+{
+    real_t *a_copy = (real_t *)malloc(LEN_1D * sizeof(real_t));
+
+    #pragma omp parallel shared(a, a_copy, b)
+    {
+        for (int nl = 0; nl < iterations; nl++) {
+            #pragma omp for
+            for (int j = 0; j < LEN_1D; j++) {
+                a_copy[j] = a[j];
+            }
+
+            #pragma omp for
+            for (int i = LEN_1D - 2; i >= 0; i--) {
+                a[i+1] = a_copy[i] + b[i];
+            }
+
+            #pragma omp barrier
+            #pragma omp single
+            {
+                dummy(a, b, c, d, e);
+            }
+            #pragma omp barrier
+        }
+    }
+
+    free(a_copy);
+    return (real_t)0;
+}

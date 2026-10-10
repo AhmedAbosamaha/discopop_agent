@@ -1,0 +1,36 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_1/benchmarks/tsvc_c2/s321/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/s321.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_1/benchmarks/tsvc_c2/s321/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/s321.c
+@@ -1,11 +1,31 @@
+ #include "data.h"
++#include <stdlib.h>
++#include <string.h>
+ 
+ real_t kernel_s321(void)
+ {
+     for (int nl = 0; nl < iterations; nl++) {
+-        for (int i = 1; i < LEN_1D; i++) {
+-            a[i] += a[i-1] * b[i];
++        // Parallel prefix scan using Kogge-Stone algorithm.
++        // Break loop-carried RAW dependence by applying accumulated updates
++        // with strides 1, 2, 4, 8, ... across log(n) phases, each parallelizable.
++        int n = LEN_1D;
++        real_t *a_prev = (real_t *)malloc(n * sizeof(real_t));
++
++        // Copy current state to preserve read values across phases
++        memcpy(a_prev, a, n * sizeof(real_t));
++
++        // Phase d: add contribution from distance 2^d
++        for (int d = 1; d < n; d *= 2) {
++            #pragma omp parallel for \
++                shared(a, a_prev, b, n, d)
++            for (int i = d; i < n; i++) {
++                a[i] += a_prev[i - d] * b[i];
++            }
++            // Prepare a_prev for next phase with updated values
++            memcpy(a_prev, a, n * sizeof(real_t));
+         }
++
++        free(a_prev);
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

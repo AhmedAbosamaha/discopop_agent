@@ -1,0 +1,43 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_4/benchmarks/tsvc_c2/s3112/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/s3112.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_4/benchmarks/tsvc_c2/s3112/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/s3112.c
+@@ -3,13 +3,38 @@
+ real_t kernel_s3112(void)
+ {
+     real_t sum;
++    real_t *temp = malloc(LEN_1D * sizeof(real_t));
++
+     for (int nl = 0; nl < iterations; nl++) {
+         sum = (real_t)0.0;
++
++        // Parallel initialization: copy a to b
++        #pragma omp parallel for
+         for (int i = 0; i < LEN_1D; i++) {
+-            sum += a[i];
+-            b[i] = sum;
++            b[i] = a[i];
+         }
++
++        // Parallel inclusive prefix sum using up-sweep phases
++        for (int step = 1; step < LEN_1D; step *= 2) {
++            // Snapshot current b to temp (synchronized across threads)
++            #pragma omp parallel for
++            for (int i = 0; i < LEN_1D; i++) {
++                temp[i] = b[i];
++            }
++
++            // Each i in [step, LEN_1D) adds value from distance step ago.
++            // No iteration reads/writes from same i, so no race within phase.
++            #pragma omp parallel for
++            for (int i = step; i < LEN_1D; i++) {
++                b[i] = b[i] + temp[i - step];
++            }
++        }
++
++        sum = b[LEN_1D - 1];
++
+         dummy(a, b, c, d, e);
+     }
++
++    free(temp);
+     return sum;
+ }

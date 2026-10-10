@@ -1,0 +1,19 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_3/benchmarks/tsvc_c2/s323/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/s323.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_3/benchmarks/tsvc_c2/s323/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/s323.c
+@@ -3,8 +3,16 @@
+ real_t kernel_s323(void)
+ {
+     for (int nl = 0; nl < iterations; nl++) {
++        // Phase 1: Compute a[i] from current b[i-1]
++        // No loop-carried dependence: each iteration reads and writes different array elements
++        #pragma omp parallel for shared(a, b, c, d)
+         for (int i = 1; i < LEN_1D; i++) {
+             a[i] = b[i-1] + c[i] * d[i];
++        }
++        // Phase 2: Compute b[i] from the newly computed a[i]
++        // No loop-carried dependence: each iteration reads from a (which is now stable) and writes to b
++        #pragma omp parallel for shared(a, b, c, e)
++        for (int i = 1; i < LEN_1D; i++) {
+             b[i] = a[i] + c[i] * e[i];
+         }
+         dummy(a, b, c, d, e);

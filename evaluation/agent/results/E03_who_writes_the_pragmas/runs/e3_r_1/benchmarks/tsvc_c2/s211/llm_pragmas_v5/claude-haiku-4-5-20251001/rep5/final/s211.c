@@ -1,0 +1,34 @@
+#include <stdlib.h>
+#include "data.h"
+
+real_t kernel_s211(void)
+{
+    real_t *b_new = malloc(LEN_1D * sizeof(real_t));
+
+    for (int nl = 0; nl < iterations; nl++) {
+        // Phase 1: Compute all new b values in parallel, reading from stable original b
+        // Each iteration i writes b_new[i] and reads b[i+1] (never modified in this phase)
+        #pragma omp parallel for
+        for (int i = 1; i < LEN_1D-1; i++) {
+            b_new[i] = b[i + 1] - e[i] * d[i];
+        }
+
+        // Copy computed b values back to b (serial, establishes b for phase 2)
+        #pragma omp parallel for shared(b_new) 
+        for (int i = 1; i < LEN_1D-1; i++) {
+            b[i] = b_new[i];
+        }
+
+        // Phase 2: Compute all a values in parallel using updated b values
+        // Each iteration i writes a[i] and reads b[i-1] (stable since copy completed)
+        #pragma omp parallel for
+        for (int i = 1; i < LEN_1D-1; i++) {
+            a[i] = b[i - 1] + c[i] * d[i];
+        }
+
+        dummy(a, b, c, d, e);
+    }
+
+    free(b_new);
+    return (real_t)0;
+}

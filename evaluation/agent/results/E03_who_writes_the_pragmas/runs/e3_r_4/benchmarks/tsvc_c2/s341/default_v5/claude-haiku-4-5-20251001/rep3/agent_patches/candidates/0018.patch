@@ -1,0 +1,43 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c2/s341/default_v5/claude-haiku-4-5-20251001/rep3/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c2/s341/default_v5/claude-haiku-4-5-20251001/rep3/work/s341.c
+@@ -1,16 +1,38 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s341(void)
+ {
+     int j;
+     for (int nl = 0; nl < iterations; nl++) {
+         j = -1;
++
++        // Allocate array to store prefix sum of inclusion flags
++        int* pos = (int*)malloc(LEN_1D * sizeof(int));
++
++        // Phase 1: Mark which elements satisfy the condition
++        for (int i = 0; i < LEN_1D; i++) {
++            pos[i] = (b[i] > (real_t)0.) ? 1 : 0;
++        }
++
++        // Phase 2: Compute prefix sum to get target positions
++        for (int i = 1; i < LEN_1D; i++) {
++            pos[i] += pos[i-1];
++        }
++
++        // Phase 3: Write selected elements to their positions (parallel)
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++                a[pos[i] - 1] = b[i];
+             }
+         }
++
++        // Compute final j value from prefix sum
++        if (pos[LEN_1D - 1] > 0) {
++            j = pos[LEN_1D - 1] - 1;
++        }
++
++        free(pos);
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

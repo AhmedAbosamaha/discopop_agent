@@ -1,0 +1,18 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_2/benchmarks/tsvc_c2/s322/default_v5/claude-haiku-4-5-20251001/rep2/work/s322.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_2/benchmarks/tsvc_c2/s322/default_v5/claude-haiku-4-5-20251001/rep2/work/s322.c
+@@ -3,9 +3,14 @@
+ real_t kernel_s322(void)
+ {
+     for (int nl = 0; nl < iterations; nl++) {
++        real_t *a_copy = (real_t *)malloc(LEN_1D * sizeof(real_t));
++        for (int ii = 0; ii < LEN_1D; ii++) {
++            a_copy[ii] = a[ii];
++        }
+         for (int i = 2; i < LEN_1D; i++) {
+-            a[i] = a[i] + a[i - 1] * b[i] + a[i - 2] * c[i];
++            a[i] = a_copy[i] + a_copy[i - 1] * b[i] + a_copy[i - 2] * c[i];
+         }
++        free(a_copy);
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

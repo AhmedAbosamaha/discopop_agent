@@ -1,0 +1,86 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_4/benchmarks/tsvc_c2/s3112/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/s3112.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_4/benchmarks/tsvc_c2/s3112/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/s3112.c
+@@ -1,14 +1,80 @@
+ #include "data.h"
++#include <omp.h>
++#include <stdlib.h>
+ 
+ real_t kernel_s3112(void)
+ {
+     real_t sum;
+     for (int nl = 0; nl < iterations; nl++) {
+         sum = (real_t)0.0;
+-        for (int i = 0; i < LEN_1D; i++) {
+-            sum += a[i];
+-            b[i] = sum;
++
++        int num_threads = 1;
++
++        // Determine number of threads available
++        #pragma omp parallel
++        {
++            #pragma omp single
++            {
++                num_threads = omp_get_num_threads();
++            }
+         }
++
++        // Allocate array to store partial sums (one per thread)
++        real_t* partial_sums = (real_t*)malloc(num_threads * sizeof(real_t));
++
++        int chunk_size = (LEN_1D + num_threads - 1) / num_threads;
++
++        // Parallel three-phase prefix sum: compute b[i] = sum(a[0:i+1])
++        // Phase 1: Each thread sums its chunk independently
++        // Phase 2: Convert partial sums to offsets
++        // Phase 3: Each thread computes prefix within chunk, chained to previous element
++
++        #pragma omp parallel default(none) shared(partial_sums, a, b, sum, num_threads, chunk_size)
++        {
++            int tid = omp_get_thread_num();
++            int start = tid * chunk_size;
++            int end = (start + chunk_size < LEN_1D) ? (start + chunk_size) : LEN_1D;
++
++            // Phase 1: Each thread computes the sum of its assigned chunk
++            real_t thread_sum = (real_t)0.0;
++            for (int i = start; i < end; i++) {
++                thread_sum += a[i];
++            }
++            partial_sums[tid] = thread_sum;
++
++            #pragma omp barrier
++
++            // Phase 2: Single thread sequentially accumulates partial sums to compute offsets
++            #pragma omp single
++            {
++                real_t cumulative = (real_t)0.0;
++                for (int t = 0; t < num_threads; t++) {
++                    real_t temp = partial_sums[t];
++                    partial_sums[t] = cumulative;
++                    cumulative += temp;
++                }
++            }
++
++            #pragma omp barrier
++
++            // Phase 3: Each thread computes prefix sums in its chunk
++            // For each element, b[i] = b[i-1] + a[i], except first element in thread uses offset
++            for (int i = start; i < end; i++) {
++                if (i == start) {
++                    // First element in thread: use offset + a[i]
++                    b[i] = partial_sums[tid] + a[i];
++                } else {
++                    // Subsequent elements: use previous prefix + a[i]
++                    b[i] = b[i - 1] + a[i];
++                }
++            }
++        }
++
++        // Sum is the last element of the prefix sum array
++        sum = b[LEN_1D - 1];
++
++        free(partial_sums);
++
+         dummy(a, b, c, d, e);
+     }
+     return sum;

@@ -1,0 +1,24 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_4/benchmarks/tsvc_c2/s3112/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/s3112.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_4/benchmarks/tsvc_c2/s3112/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/s3112.c
+@@ -5,10 +5,20 @@
+     real_t sum;
+     for (int nl = 0; nl < iterations; nl++) {
+         sum = (real_t)0.0;
++
++        // Parallel reduction to compute total sum across all elements
++        #pragma omp parallel for reduction(+:sum)
+         for (int i = 0; i < LEN_1D; i++) {
+             sum += a[i];
+-            b[i] = sum;
+         }
++
++        // Sequential pass to fill b with cumulative sums (same order as original)
++        real_t cumulative = (real_t)0.0;
++        for (int i = 0; i < LEN_1D; i++) {
++            cumulative += a[i];
++            b[i] = cumulative;
++        }
++
+         dummy(a, b, c, d, e);
+     }
+     return sum;

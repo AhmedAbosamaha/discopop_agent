@@ -1,0 +1,31 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c3/s331/default_v5/claude-haiku-4-5-20251001/rep2/work/s331.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c3/s331/default_v5/claude-haiku-4-5-20251001/rep2/work/s331.c
+@@ -1,16 +1,27 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s331(void)
+ {
+     int j;
+     real_t chksum;
+     for (int nl = 0; nl < iterations; nl++) {
++        int* matches = (int*)malloc(LEN_1D * sizeof(int));
++
++        // First pass: check condition for each element (Do-All: each iteration writes to a different array element)
++        for (int i = 0; i < LEN_1D; i++) {
++            matches[i] = (a[i] < (real_t)0.);
++        }
++
++        // Second pass: find the last index where condition was true
+         j = -1;
+         for (int i = 0; i < LEN_1D; i++) {
+-            if (a[i] < (real_t)0.) {
++            if (matches[i]) {
+                 j = i;
+             }
+         }
++
++        free(matches);
+         chksum = (real_t) j;
+         dummy(a, b, c, d, e, chksum);
+     }

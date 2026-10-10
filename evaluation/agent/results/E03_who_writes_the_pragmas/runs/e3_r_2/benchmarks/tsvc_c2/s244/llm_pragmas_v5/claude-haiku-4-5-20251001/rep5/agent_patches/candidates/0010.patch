@@ -1,0 +1,21 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_2/benchmarks/tsvc_c2/s244/llm_pragmas_v5/claude-haiku-4-5-20251001/rep5/work/s244.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_2/benchmarks/tsvc_c2/s244/llm_pragmas_v5/claude-haiku-4-5-20251001/rep5/work/s244.c
+@@ -3,11 +3,18 @@
+ real_t kernel_s244(void)
+ {
+     for (int nl = 0; nl < iterations; nl++) {
++        // Phase 1: Compute a[i] for all i
+         for (int i = 0; i < LEN_1D-1; ++i) {
+             a[i] = b[i] + c[i] * d[i];
++        }
++
++        // Phase 2: Update b[i] and a[i+1] - independent iterations, no loop-carried dependences
++        #pragma omp parallel for shared(a, b, c, d)
++        for (int i = 0; i < LEN_1D-1; ++i) {
+             b[i] = c[i] + b[i];
+             a[i+1] = b[i] + a[i+1] * d[i];
+         }
++
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

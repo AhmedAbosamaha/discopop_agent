@@ -1,0 +1,32 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_2/benchmarks/tsvc_c2/s322/llm_pragmas_v5/claude-haiku-4-5-20251001/rep3/work/s322.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_d_2/benchmarks/tsvc_c2/s322/llm_pragmas_v5/claude-haiku-4-5-20251001/rep3/work/s322.c
+@@ -2,11 +2,28 @@
+ 
+ real_t kernel_s322(void)
+ {
++    // Allocate temporary array for parallel computation
++    real_t *a_new = (real_t *)malloc(LEN_1D * sizeof(real_t));
++
+     for (int nl = 0; nl < iterations; nl++) {
++        // Parallel phase: compute into temporary array (no inter-iteration dependencies)
++        // Each iteration reads only from original unchanging 'a', writes to distinct a_new[i]
++        #pragma omp parallel for schedule(static) \
++            shared(a, b, c, a_new) firstprivate(LEN_1D)
+         for (int i = 2; i < LEN_1D; i++) {
+-            a[i] = a[i] + a[i - 1] * b[i] + a[i - 2] * c[i];
++            a_new[i] = a[i] + a[i - 1] * b[i] + a[i - 2] * c[i];
+         }
++
++        // Copy results back to original array for next outer-loop iteration
++        #pragma omp parallel for schedule(static) \
++            shared(a, a_new) firstprivate(LEN_1D)
++        for (int i = 2; i < LEN_1D; i++) {
++            a[i] = a_new[i];
++        }
++
+         dummy(a, b, c, d, e);
+     }
++
++    free(a_new);
+     return (real_t)0;
+ }

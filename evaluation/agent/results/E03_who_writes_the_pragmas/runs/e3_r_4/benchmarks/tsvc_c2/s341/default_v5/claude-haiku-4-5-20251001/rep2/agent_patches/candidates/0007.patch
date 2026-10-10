@@ -1,0 +1,39 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c2/s341/default_v5/claude-haiku-4-5-20251001/rep2/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c2/s341/default_v5/claude-haiku-4-5-20251001/rep2/work/s341.c
+@@ -2,15 +2,31 @@
+ 
+ real_t kernel_s341(void)
+ {
+-    int j;
+     for (int nl = 0; nl < iterations; nl++) {
+-        j = -1;
++        /* Allocate temporary arrays for filtering */
++        int *mask = malloc(LEN_1D * sizeof(int));
++        int *prefix = malloc(LEN_1D * sizeof(int));
++
++        /* Phase 1: Mark elements that satisfy the condition (parallelizable) */
+         for (int i = 0; i < LEN_1D; i++) {
+-            if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++            mask[i] = (b[i] > (real_t)0.) ? 1 : 0;
++        }
++
++        /* Phase 2: Compute prefix sums to determine target positions */
++        prefix[0] = 0;
++        for (int i = 1; i < LEN_1D; i++) {
++            prefix[i] = prefix[i-1] + mask[i-1];
++        }
++
++        /* Phase 3: Place filtered elements at precomputed positions (parallelizable) */
++        for (int i = 0; i < LEN_1D; i++) {
++            if (mask[i]) {
++                a[prefix[i]] = b[i];
+             }
+         }
++
++        free(mask);
++        free(prefix);
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

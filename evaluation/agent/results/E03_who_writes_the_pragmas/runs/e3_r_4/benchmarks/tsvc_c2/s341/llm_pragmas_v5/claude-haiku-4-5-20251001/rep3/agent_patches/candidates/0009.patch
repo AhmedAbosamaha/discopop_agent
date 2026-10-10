@@ -1,0 +1,33 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c2/s341/llm_pragmas_v5/claude-haiku-4-5-20251001/rep3/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3_r_4/benchmarks/tsvc_c2/s341/llm_pragmas_v5/claude-haiku-4-5-20251001/rep3/work/s341.c
+@@ -1,16 +1,26 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s341(void)
+ {
+-    int j;
+     for (int nl = 0; nl < iterations; nl++) {
+-        j = -1;
++        // Pass 1: Collect matching elements into temporary array
++        real_t *temp = malloc(sizeof(real_t) * LEN_1D);
++        int count = 0;
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++                temp[count] = b[i];
++                count++;
+             }
+         }
++
++        // Pass 2: Copy elements to output array in parallel
++        #pragma omp parallel for shared(a, temp, count)
++        for (int i = 0; i < count; i++) {
++            a[i] = temp[i];
++        }
++
++        free(temp);
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;
