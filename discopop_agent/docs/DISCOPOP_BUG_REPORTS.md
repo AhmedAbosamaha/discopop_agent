@@ -955,9 +955,19 @@ heuristic's other weakness, B24 below, is left as it is.
 order of the entries; every other line as before (the diff of the suggested directives is exactly the three
 lines). A new end-to-end test, `test/end_to_end/reduction_pattern/positive/min_max_calls` (C, `fmax`, `fmin`,
 `fminf` with the variable as the second argument), asserts the OPERATION of each reduction — the line alone was
-right before; it fails with the explorer's half taken out. The regression on the thesis's packages and the
-server's rebuild are in the record (`evaluation/agent/docs/THESIS_EXPERIMENTS.md` §6, 10 Oct, and the results
-group B23).
+right before; it fails with the explorer's half taken out. The same on the server (LLVM 20.1.2, rebuilt from
+commit `c89952852`).
+
+**The regression (10 Oct, no model; results group B23, `analysis/b23_readout.md`).** DiscoPoP alone in three
+draws on the 44 `tsvc_c3`, the 9 `tsvc_c4` and the 31 other packages of the thesis: every class as before the
+repair, no reduction clause different, no package's reduction file with another operation or a `<` entry. (None
+of those programs stores a minimum call; where a reduction file holds several operations, every reduction
+DiscoPoP reports belongs to a `+` entry and the last entry is a `+` too.)
+
+**The loop it was found on, run again (11 Oct; `e3bc_s316`).** `tsvc_c4/s316` × 5 in the setup in which DiscoPoP
+writes the directive: 4 of 5 race-free FASTER (3 before), two of them at the model's first call with
+`x = fmin(x, a[i]);` and DiscoPoP's own `reduction(min:x)`, which the gate passed in all four candidates; no
+`reduction(max:…)` on the loop any more; 4.2 model calls a trial (9.2 before).
 
 ## B24 — candidate: any call that takes the variable is reported as a maximum reduction: `reduction(max:x)` for `x = hypot(x, a[i])` and for `x = fabs(x - a[i])` (profiler, reduction detection)
 
