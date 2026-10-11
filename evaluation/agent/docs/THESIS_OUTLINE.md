@@ -42,9 +42,9 @@ proposed here and is to be confirmed with the title.
 | RQ2 | Is every accepted change right and race-free, what does each check catch, and where are the checks blind? | C2 | H2, H3, H10, H10b, H13 | E1, E10, E7 | 7.2, 7.6 | E1, E10 done · E7 designed 9 Oct and set aside by the author the same day (not run) |
 | RQ3 | How close do the accepted programs come to an expert's version, and do they scale with threads? | C1 | H4, H11 | E1, E2, E6, E11 | 7.2, 7.5, 7.9 | partly |
 | RQ4 | What does the model need: DiscoPoP's evidence, feedback from failed attempts, or more strength? | C1 | H5, H5b, H5d, H12 | E2, E12 | 7.3, 7.5 | done |
-| RQ5 | Who should write the directive: DiscoPoP or the model? | C1, C2 | H6 (its half on the author), H6b | E3 | 7.7 | done 10 Oct: 81 of 90 fast and race-free where the model writes, 76 of 90 where DiscoPoP writes — not established (p = 0.14; four of the five trials are `s331`); no unusable program in either setup; DiscoPoP keeps writing in 7.7.2 (the author, 10 Oct); corrected for `s341`: 80 against 75; the contrast set (E3b, 7.7.1b), done 10 Oct: 30 of 30 against 24 of 30 on six chosen loops — supported as a single test (exact p = 0.009), not within the family; the model usually finds a form DiscoPoP recognises, at 3.4 times the calls and less than half the speed |
-| RQ6 | Can the model close the gap a fast refresh leaves, without making the analysis unsafe? | C3 | H7, H7b | E4 | 7.7 | planned, after E3 — one experiment with RQ7 (9 Oct) |
-| RQ7 | Can the profile be refreshed without running the program again, without changing decisions? | C3 | H6 | E4 | 7.7 | planned, after E3 (moved out of E3 by the author, 9 Oct) |
+| RQ5 | Who should write the directive: DiscoPoP or the model? | C1, C2 | H6 (its half on the author), H6b | E3 | 7.7 | done 10 Oct: 81 of 90 fast and race-free where the model writes, 76 of 90 where DiscoPoP writes — not established (p = 0.14; four of the five trials are `s331`); no unusable program in either setup; DiscoPoP keeps writing in 7.7.2 (the author, 10 Oct); corrected for `s341`: 80 against 75; the contrast set (E3b, 7.7.1b), done 10 Oct: 30 of 30 against 24 of 30 on six chosen loops (25 after a DiscoPoP defect found there was repaired and its loop run again, 11 Oct) — supported as a single test (exact p = 0.009; 0.021 corrected), not within the family; the model usually finds a form DiscoPoP recognises, at 3.4 times the calls and less than half the speed |
+| RQ6 | Can the model close the gap a fast refresh leaves, without making the analysis unsafe? | C3 | H7, H7b | E4 | 7.7 | a design is put to the author (10 Oct): a no-model replay of the 601 saved rewrites first, live trials only if it says the refresh keeps DiscoPoP's verdicts — nothing built |
+| RQ7 | Can the profile be refreshed without running the program again, without changing decisions? | C3 | H6 | E4 | 7.7 | as RQ6: one experiment, design put to the author (10 Oct); known already: no time to save on the 18 loops (the skipped run is 0.08 % of the agent's time) |
 | RQ8 | How far should restructuring be chained? | C1, C3 | H8 | E8 | 7.8 | planned |
 | RQ9 | Where should the agent look first? | C1 | H9 | E9 | 7.4 | planned |
 
@@ -453,11 +453,13 @@ result, or the expectation written down before the run.
     without a model; one loop was taken out after that measurement, and the thesis says so. One test, written
     down before the run: more fast and race-free trials where the model writes. Reported BESIDE 7.7.1, not
     instead of it.
-    - *The counts.* 30 of 30 where the model writes, 24 of 30 where DiscoPoP writes; DiscoPoP alone 0; Haiku
-      alone 27 with three unusable programs; neither setup of the agent ships an unusable program; the control
-      equal everywhere.
+    - *The counts.* 30 of 30 where the model writes, 24 of 30 where DiscoPoP writes — 25 once the DiscoPoP
+      defect found here is repaired and its loop run again (below); DiscoPoP alone 0; Haiku alone 27 with
+      three unusable programs; neither setup of the agent ships an unusable program; the control equal
+      everywhere.
     - *The test.* Supported as a single test (exact one-sided p = 0.0093; three loops differ, none the other
-      way); not established within the campaign's family of 53 tests (bound 0.49).
+      way); not established within the campaign's family of 53 tests (bound 0.49). On the corrected data:
+      30 against 25, exact p = 0.0208 — the same verdict.
     - *The premise was wrong, and the result is better for it.* The set was chosen believing that DiscoPoP has
       no directive for a maximum. It has one, found by a heuristic of the profiler that fires on
       `x = fmax(x, a[i])` and not on the suite's `if (a[i] > x) x = a[i];`. Where DiscoPoP writes, the model
@@ -470,8 +472,14 @@ result, or the expectation written down before the run.
       the strided position loop). 20 of the model's 30 wins came at its first call, one of the other setup's 24.
     - *A DiscoPoP defect found here (B23, chapter 8's list).* A minimum is reported as a maximum: on the
       smallest-value loop DiscoPoP wrote a max directive in four of the five trials, and the output check
-      refused each. At most one trial of the count; whether it is repaired and the loop run again is the
-      author's decision (open, 10 Oct).
+      refused each. Repaired on 10 Oct (the author: "Ok") in two places — the profiler reads the direction
+      from the stored call, and the explorer takes a reduction's operation from the loop's own entry instead
+      of the last one of its file, found only when the first repair was tried; no new form is recognised. A
+      no-model check on all 84 packages: every class as before. The loop run again: 4 of 5 where DiscoPoP
+      writes (3 before), twice with DiscoPoP's own `reduction(min:x)` at the first call, at 4.2 model calls a
+      trial instead of 9.2; 5 of 5 where the model writes. Both cells are given; the corrected table holds
+      trials on two DiscoPoP versions. A second weakness of the same heuristic (B24: any call that takes the
+      variable is reported as a maximum) is listed, not repaired — the author's decision (open).
     - *Limits.* Six loops chosen where a difference was expected; five trials per loop, one model; no two equal
       largest values in the data, so the position returned on a tie is not tested (at least three of the
       model's ten programs on the two position loops would return a thread-dependent one).
