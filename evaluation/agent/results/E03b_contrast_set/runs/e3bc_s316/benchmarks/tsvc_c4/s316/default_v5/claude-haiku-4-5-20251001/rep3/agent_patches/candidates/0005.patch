@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3bc_s316/benchmarks/tsvc_c4/s316/default_v5/claude-haiku-4-5-20251001/rep3/work/s316.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3bc_s316/benchmarks/tsvc_c4/s316/default_v5/claude-haiku-4-5-20251001/rep3/work/s316.c
+@@ -8,6 +8,7 @@
+     real_t* chunk_mins = (real_t*)malloc(num_chunks * sizeof(real_t));
+ 
+     for (int nl = 0; nl < iterations; nl++) {
++        #pragma omp parallel for firstprivate(num_chunks) shared(chunk_mins) 
+         for (int chunk = 0; chunk < num_chunks; ++chunk) {
+             int start = chunk * 256;
+             int end = start + 256;

@@ -1,0 +1,40 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3bc_s316/benchmarks/tsvc_c4/s316/default_v5/claude-haiku-4-5-20251001/rep1/work/s316.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3bc_s316/benchmarks/tsvc_c4/s316/default_v5/claude-haiku-4-5-20251001/rep1/work/s316.c
+@@ -1,15 +1,33 @@
++#include <stdlib.h>
+ #include "data.h"
+ 
+ real_t kernel_s316(void)
+ {
+     real_t x;
+     for (int nl = 0; nl < iterations; nl++) {
+-        x = a[0];
+-        for (int i = 1; i < LEN_1D; ++i) {
+-            if (a[i] < x) {
+-                x = a[i];
++        real_t *mins = malloc(LEN_1D * sizeof(real_t));
++
++        // Initialize buffer with array values
++        for (int i = 0; i < LEN_1D; ++i) {
++            mins[i] = a[i];
++        }
++
++        // Tree reduction: repeatedly pair up elements and take minimums
++        int current_size = LEN_1D;
++        while (current_size > 1) {
++            int pairs = current_size / 2;
++            for (int i = 0; i < pairs; ++i) {
++                mins[i] = mins[2*i] < mins[2*i+1] ? mins[2*i] : mins[2*i+1];
+             }
++            // Handle odd-sized last element by carrying it forward
++            if (current_size % 2 == 1) {
++                mins[pairs] = mins[current_size - 1];
++            }
++            current_size = (current_size + 1) / 2;
+         }
++
++        x = mins[0];
++        free(mins);
+         dummy(a, b, c, d, e, x);
+     }
+     return x;

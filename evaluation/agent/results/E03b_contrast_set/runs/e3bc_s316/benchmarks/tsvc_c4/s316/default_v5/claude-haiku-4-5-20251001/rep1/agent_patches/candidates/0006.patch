@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3bc_s316/benchmarks/tsvc_c4/s316/default_v5/claude-haiku-4-5-20251001/rep1/work/s316.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3bc_s316/benchmarks/tsvc_c4/s316/default_v5/claude-haiku-4-5-20251001/rep1/work/s316.c
+@@ -11,6 +11,7 @@
+         int chunk_size = (LEN_1D + chunks - 1) / chunks;
+ 
+         // Compute minimum for each chunk (parallel over chunks, no loop-carried dependence)
++ #pragma omp parallel for firstprivate(chunks) shared(chunk_mins) 
+         for (int c = 0; c < chunks; ++c) {
+             int start = c * chunk_size;
+             int end = (c + 1) * chunk_size;

@@ -1,0 +1,210 @@
+
+============================================================
+  DiscoPoP Agentic Controller
+============================================================
+  Source         : /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3bc_s316/benchmarks/tsvc_c4/s316/default_v5/claude-haiku-4-5-20251001/rep4/work/s316.c
+  DiscoPoP dir   : .discopop
+  Model          : claude-haiku-4-5-20251001
+  Budget         : 3 LLM retries/region (+2 free build fixes)
+  λ penalty      : 1.0
+  Min workload   : 0.0
+  Restruct. depth: 0 (Tier-2 allowed at depth 0–0)
+  Quality gate   : Tier-1 = all but speed, no escalation; Tier-2 = full
+  TSan           : barrier-aware (archer: /usr/lib/llvm-20/lib/libarcher.so)
+  Speedup gate   : require ≥ 1.1× measured
+  Dry run        : False
+  LLM mode       : claude-haiku-4-5-20251001
+  Edit mode      : direct
+  Re-profiling   : full (instrument + run + explore) after every kept rewrite
+  Explorer       : one attempt may take 60 s, then the draw is repeated (random stall, L5)
+  Pragmas        : DiscoPoP writes them in Phase B
+============================================================
+
+  Project        : /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e3bc_s316/benchmarks/tsvc_c4/s316/default_v5/claude-haiku-4-5-20251001/rep4/work  (2 unit(s): s316.c, main.c)
+
+  [ok] Captured reference output on 2 inputs (69 bytes, 712.4 ms baseline) for the correctness/performance gates.
+
+  [ok] Numerical noise floor 1.14e-15 of output scale (widest disagreement 1.14e-16 of output scale across 6 build variants, x10 margin — on input '7').
+  [note] values may move that far without failing the correctness gate; labels, line structure and integers must still match exactly.
+
+  Hotspots       : measured per-region runtimes are available — 19 region(s) measured, 2.3 ms total, ranking by predicted time saved at 48 threads
+
+  Baseline       : DiscoPoP proposes 0 applicable pattern(s) unaided; 0 of them produce a usable pragma
+                   → the run beats DiscoPoP by ending with more than 0
+
+  Initial candidates
+Region ID    Type           Saves    % run    Hot  Tier  Depth  Name
+--------------------------------------------------------------------------------------
+  1:2        loop          1.1 ms    46.8%    YES     2      0  lines 6–14
+  0:0        function      1.1 ms    46.8%    YES     2      0  kernel_s316
+  1:6        loop          1.1 ms    46.5%    YES     2      0  lines 8–12
+
+============================================================
+  FLOOR — DiscoPoP's own program, as the DiscoPoP-alone arm delivers it (D32)
+============================================================
+  [floor] DiscoPoP alone keeps nothing — the floor is the original program (D32)
+
+============================================================
+  PHASE A — restructure  (the source stays pragma-free)
+============================================================
+
+┌─ [depth=0] loop 1:2 (lines 6–14)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Original backed up → s316.c.original
+│  [Tier-2] Applied to s316.c
+│  [Tier-2] Re-profiling to refresh data and discover new candidates...
+│  [refresh] kind=full
+│  [Tier-2] Re-measured runtimes: 19 region(s), 3.1 ms total
+│  [Phase-A] Asking DiscoPoP what it now finds in the rewritten lines...
+│  [Phase-A] exposure verdict: no_pattern
+│  [Tier-2] DiscoPoP still finds no parallelism in the rewritten lines — reverting (snapshot restore)
+└─ retry (budget remaining: 2)
+
+│  [Tier-2] Assembling evidence (budget remaining: 1)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Applied to s316.c
+│  [Tier-2] Re-profiling to refresh data and discover new candidates...
+│  [refresh] kind=full
+│  [Tier-2] Re-measured runtimes: 20 region(s), 7.6 ms total
+│  [Phase-A] Asking DiscoPoP what it now finds in the rewritten lines...
+│  [Phase-A] exposure verdict: no_pattern
+│  [Tier-2] DiscoPoP still finds no parallelism in the rewritten lines — reverting (snapshot restore)
+└─ retry (budget remaining: 1)
+
+│  [Tier-2] Assembling evidence (budget remaining: 0)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Applied to s316.c
+│  [Tier-2] Re-profiling to refresh data and discover new candidates...
+│  [refresh] kind=full
+│  [Tier-2] Re-measured runtimes: 19 region(s), 2.3 ms total
+│  [Phase-A] Asking DiscoPoP what it now finds in the rewritten lines...
+│  [Phase-A] exposure verdict: no_pattern
+│  [Tier-2] DiscoPoP still finds no parallelism in the rewritten lines — reverting (snapshot restore)
+└─ retry (budget remaining: 0)
+
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] function 0:0 (lines 3–15)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Applied to s316.c
+│  [Tier-2] Re-profiling to refresh data and discover new candidates...
+│  [refresh] kind=full
+│  [Tier-2] Re-measured runtimes: 18 region(s), 7.6 ms total
+│  [Phase-A] Asking DiscoPoP what it now finds in the rewritten lines...
+│  [Phase-A] exposure verdict: no_pattern
+│  [Tier-2] DiscoPoP still finds no parallelism in the rewritten lines — reverting (snapshot restore)
+└─ retry (budget remaining: 2)
+
+│  [Tier-2] Assembling evidence (budget remaining: 1)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Stage 'compile' failed (build fix — budget not charged, 1 left): /tmp/dp_agent_val_6jcvoqxq/_dp_proj_validate_binary/s316.c:7:34: error: call to undeclared library function 'malloc' with type 'void *(unsigned long)'; ISO C99 and later do not support implicit functi
+│  [Tier-2] Assembling evidence (budget remaining: 1)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Applied to s316.c
+│  [Tier-2] Re-profiling to refresh data and discover new candidates...
+│  [refresh] kind=full
+│  [Tier-2] Re-measured runtimes: 21 region(s), 4.8 ms total
+│  [Phase-A] Asking DiscoPoP what it now finds in the rewritten lines...
+│  [Phase-A] exposure verdict: exposed
+│  [Phase-A] D40 — judging it as it will ship: DiscoPoP's pragmas for the exposed loops through the safety gate, then the program with them against the program before the rewrite (paired)
+│  [Phase-A] timing noise on this machine: 1.001 → keep at or above 0.990
+│  [Phase-A] D40: pragma for lines 11–13 passes the safety gate
+│  [Phase-A] D40 verdict: not_faster 0.32×
+│  [Phase-A] D40 time: 156.9 s
+│  [Tier-2] DiscoPoP parallelized it, but the program is not faster than before the rewrite — reverting (snapshot restore)
+└─ retry (budget remaining: 1)
+
+│  [Tier-2] Assembling evidence (budget remaining: 0)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Applied to s316.c
+│  [Tier-2] Re-profiling to refresh data and discover new candidates...
+│  [refresh] kind=full
+│  [Tier-2] Re-measured runtimes: 21 region(s), 4.7 ms total
+│  [Phase-A] Asking DiscoPoP what it now finds in the rewritten lines...
+│  [Phase-A] exposure verdict: exposed
+│  [Phase-A] D40 — judging it as it will ship: DiscoPoP's pragmas for the exposed loops through the safety gate, then the program with them against the program before the rewrite (paired)
+│  [Phase-A] D40: pragma for lines 11–13 passes the safety gate
+│  [Phase-A] D40 verdict: not_faster 0.78×
+│  [Phase-A] D40 time: 14.4 s
+│  [Tier-2] DiscoPoP parallelized it, but the program is not faster than before the rewrite — reverting (snapshot restore)
+└─ retry (budget remaining: 0)
+
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:6 (lines 8–12)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Applied to s316.c
+│  [Tier-2] Re-profiling to refresh data and discover new candidates...
+│  [refresh] kind=full
+│  [Tier-2] Re-measured runtimes: 19 region(s), 7.7 ms total
+│  [Phase-A] Asking DiscoPoP what it now finds in the rewritten lines...
+│  [Phase-A] exposure verdict: no_pattern
+│  [Tier-2] DiscoPoP still finds no parallelism in the rewritten lines — reverting (snapshot restore)
+└─ retry (budget remaining: 2)
+
+│  [Tier-2] Assembling evidence (budget remaining: 1)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Stage 'compile' failed (build fix — budget not charged, 1 left): /tmp/dp_agent_val_mm1v84av/_dp_proj_validate_binary/s316.c:11:36: error: call to undeclared library function 'malloc' with type 'void *(unsigned long)'; ISO C99 and later do not support implicit funct
+│  [Tier-2] Assembling evidence (budget remaining: 1)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Stage 'correctness' failed: Program output changed — the patched program is NOT semantically equivalent to the original. value 2 moved further than this program's own numerical noise: 160245.34450000001 -> 158463.28949999998, a 
+│  [Tier-2] Assembling evidence (budget remaining: 0)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Applied to s316.c
+│  [Tier-2] Re-profiling to refresh data and discover new candidates...
+│  [refresh] kind=full
+│  [Tier-2] Re-measured runtimes: 20 region(s), 8.6 ms total
+│  [Phase-A] Asking DiscoPoP what it now finds in the rewritten lines...
+│  [Phase-A] exposure verdict: exposed
+│  [Phase-A] D40 — judging it as it will ship: DiscoPoP's pragmas for the exposed loops through the safety gate, then the program with them against the program before the rewrite (paired)
+│  [Phase-A] D40: pragma for lines 9–11 passes the safety gate
+│  [Phase-A] D40 verdict: not_faster 0.35×
+│  [Phase-A] D40 time: 20.1 s
+│  [Tier-2] DiscoPoP parallelized it, but the program is not faster than before the rewrite — reverting (snapshot restore)
+└─ retry (budget remaining: 0)
+
+└─ SKIPPED (budget exhausted)
+
+
+============================================================
+  PHASE B — annotate  (0 candidate pragma(s))
+============================================================
+
+  DiscoPoP proposes no applicable pattern for the final source.
+
+
+============================================================
+  SUMMARY: 0 rewrite(s) kept  |  0 pragma(s) applied  |  3 skipped
+  DiscoPoP unaided: 0 usable pragma(s) in this profile's draw  →  this run: 0   [MATCHED, informational]
+    ✗  1:2  [skipped]  depth=0
+    ✗  0:0  [skipped]  depth=0
+    ✗  1:6  [skipped]  depth=0
+
+  Results → .discopop/agent_patches/accepted.json
+============================================================
+
