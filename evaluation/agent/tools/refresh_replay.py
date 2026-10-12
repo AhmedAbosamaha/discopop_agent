@@ -65,6 +65,22 @@ harness_include.install()   # every build finds prepared/_harness (D39)
 
 PREPARED = REPO / "evaluation" / "agent" / "prepared"
 VERDICT_LINE = re.compile(r"\[Phase-A\] exposure verdict: (\w+)")
+_CLAUSE = re.compile(r"(\w+)\(([^)]*)\)")
+
+
+def _clause(m: "re.Match[str]") -> str:
+    head, body = "", m.group(2)
+    if ":" in body:                       # reduction(+:a,b): the operator stays in front
+        head, body = body.split(":", 1)
+        head = head.strip() + ":"
+    return f"{m.group(1)}({head}{','.join(sorted(x.strip() for x in body.split(',')))})"
+
+
+def directive_text(line: str) -> str:
+    """One directive as it is recorded and compared: single spaces, and the names inside each clause in one order.
+    Two profiles of one program write `shared(a,b)` and `shared(b,a)`; step 1's records (the tool at `6b32c5b20`)
+    kept the text as written, and its read-out puts the names in order itself."""
+    return _CLAUSE.sub(_clause, re.sub(r"\s+", " ", line.strip()))
 
 
 def pass_digest() -> Optional[str]:
@@ -227,7 +243,7 @@ class Bench:
             exposed = []
             for c in exposed_in(cands, touched, a.source_file):
                 patch = pragma_patch(c, self.dp, a.source_file) or ""
-                prag = sorted(re.sub(r"\s+", " ", ln[1:].strip()) for ln in patch.splitlines()
+                prag = sorted(directive_text(ln[1:]) for ln in patch.splitlines()
                               if ln.startswith("+") and "#pragma" in ln)
                 exposed.append([c.region.start_line, c.region.end_line, c.pattern_type or "", prag])
         self.last = (cands, touched)
@@ -248,7 +264,7 @@ class Bench:
                 reference_outputs=self.ref[2], mode="safety",
                 dep_region=(c.region.file_id, c.region.start_line, c.region.end_line) if c is not None else None)
             checks.append({"lines": [c.region.start_line, c.region.end_line] if c is not None else None,
-                           "pragmas": sorted(re.sub(r"\s+", " ", ln[1:].strip()) for ln in diff.splitlines()
+                           "pragmas": sorted(directive_text(ln[1:]) for ln in diff.splitlines()
                                              if ln.startswith("+") and "#pragma" in ln),
                            "passed": bool(res.passed), "stage": res.stage, "from_cache": bool(cached)})
             return bool(res.passed), f"{res.stage}: {res.diagnostic or ''}"[:300]

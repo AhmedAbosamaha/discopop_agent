@@ -695,5 +695,5 @@ Status: running
 
 | run | where | what it is | status | trials | outcomes |
 |---|---|---|---|---:|---|
-| `e4_replay` | not archived yet | E4 step 1 (server, no model): `tools/refresh_replay.py` over the pragma-free rewrites that passed the checks in `e3_r_1`–`e3_r_4` and `e3_d_1`–`e3_d_4` (`default_v5`), `e3b_1`–`e3b_4` (`default_v5`) and `e1v6_r_1`–`e1v6_r_4` (`default_v4`) — each judged after a fast refresh, after a full re-profile and after a second full re-profile (the control), with the agent's own verdict and the safety half of its judgement; parts `e3_r/a`, `e3_r/b`, `e3_d/all`, `e3b/all`, `e1v6/all`; on the DiscoPoP with B23 and B24 repaired | registered |  |  |
+| `e4_replay` | [`E04_fast_refresh/runs/e4_replay/`](E04_fast_refresh/runs/e4_replay/) | E4 step 1 (server, no model; 12 Oct 19:28–20:01 UTC at `6b32c5b20`, 599 rewrites replayed): `tools/refresh_replay.py` over the pragma-free rewrites that passed the checks in `e3_r_1`–`e3_r_4` and `e3_d_1`–`e3_d_4` (`default_v5`), `e3b_1`–`e3b_4` (`default_v5`) and `e1v6_r_1`–`e1v6_r_4` (`default_v4`) — each judged after a fast refresh, after a full re-profile and after a second full re-profile (the control), with the agent's own verdict and the safety half of its judgement; parts `e3_r/a`, `e3_r/b`, `e3_d/all`, `e3b/all`, `e1v6/all`; on the DiscoPoP with B23 and B24 repaired | valid | 0 |  |
 

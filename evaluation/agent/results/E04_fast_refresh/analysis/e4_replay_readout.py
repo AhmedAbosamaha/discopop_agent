@@ -14,18 +14,24 @@ the model that passed the checks in the archived trials:
   the check     the full re-profile's verdict of the replay against the verdict the trial itself logged
   the time      seconds of one full re-profile and of one fast refresh
 
+The order of the names inside a clause is not compared: `shared(a,b)` and `shared(b,a)` are one directive, and
+two profiles of one program write them in either order. The tool's own `class` and `decision` fields compared the
+text as written, so they are computed again here from the recorded directives and checks (the tool's fields are
+kept in the records and counted in section 6).
+
     venv/bin/python evaluation/agent/results/E04_fast_refresh/analysis/e4_replay_readout.py [RUN_DIR]
 """
 import collections
 import json
+import re
 import statistics
 import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 FAMILY = 54     # the campaign's family with this test in it: the bound is p × 54
-sys.path.insert(0, str(HERE.parents[3] / "tools"))
-sys.path.insert(0, str(HERE.parents[4] / "shared"))
+sys.path.insert(0, str(HERE.parents[2] / "tools"))
+sys.path.insert(0, str(HERE.parents[3] / "shared"))
 from main_comparison_stats import wilcoxon_greater  # noqa: E402
 RUN = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else HERE.parent / "runs" / "e4_replay"
 PARTS = [("e3_r", "the pragma experiment, the 18 loops"), ("e3_d", "the pragma experiment, the recurrence loops"),
@@ -40,6 +46,92 @@ for part, _ in PARTS:
                 rows.append(r)
     for f in sorted((RUN / part).glob("**/manifest.json")):
         manifests.setdefault(part, []).append(json.loads(f.read_text()))
+
+
+CLAUSE = re.compile(r"(\w+)\(([^)]*)\)")
+
+
+def _clause(m):
+    head, body = "", m.group(2)
+    if ":" in body:                       # reduction(+:a,b): the operator stays in front
+        head, body = body.split(":", 1)
+        head = head.strip() + ":"
+    return f"{m.group(1)}({head}{','.join(sorted(x.strip() for x in body.split(',')))})"
+
+
+def norm(pragma):
+    """A directive with the names inside each clause in one order."""
+    return CLAUSE.sub(_clause, pragma)
+
+
+def no_shared(pragma):
+    """A directive without its `shared(...)` clauses: a variable declared outside the loop is shared by default, so
+    the clause changes nothing in the program — used for the sensitivity count only."""
+    return re.sub(r"\s+", " ", re.sub(r"\bshared\([^)]*\)", "", pragma)).strip()
+
+
+def exposed_set(arm):
+    return sorted(json.dumps([e[0], e[1], e[2], sorted(norm(x) for x in e[3])]) for e in arm.get("exposed", []))
+
+
+def kept_directives(arm, drop_shared=False):
+    """As `refresh_replay.kept_directives`, with the clauses' names in one order."""
+    if arm.get("status") != "exposed" or arm.get("judged") != "safe_deferred":
+        return None
+    singles = [c for c in arm.get("checks", []) if c["lines"] is not None and c["passed"]]
+    together = [c for c in arm.get("checks", []) if c["lines"] is None]
+    if together and not together[-1]["passed"]:
+        singles = singles[:1]
+    f = (lambda x: no_shared(norm(x))) if drop_shared else norm
+    return sorted((tuple(c["lines"]), tuple(sorted(f(x) for x in c["pragmas"]))) for c in singles)
+
+
+def classify(full, other, second=False):
+    if not full.get("usable"):
+        return "full re-profile failed"
+    if not other.get("usable"):
+        return "second full re-profile failed" if second else "fast refresh unusable: the agent falls back to the full re-profile"
+    fe, ue = full["status"] == "exposed", other["status"] == "exposed"
+    if fe and ue:
+        return "same: parallel in both, the same directives" if exposed_set(full) == exposed_set(other) \
+            else "parallel in both, other loops or other directives"
+    if ue and not fe:
+        return "parallel only after the fast refresh"
+    if fe and not ue:
+        return "parallel only after the full re-profile"
+    return "same: not parallel in either"
+
+
+def decide(full, other, second=False, drop_shared=False):
+    if not full.get("usable"):
+        return "full re-profile failed"
+    if not other.get("usable"):
+        return "second full re-profile failed" if second else "fast refresh unusable: the agent falls back to the full re-profile"
+    if "exposed" in (full.get("judged"), other.get("judged")):
+        return "judgement left to the final annotation after one of the two"
+    kf, ku = kept_directives(full, drop_shared), kept_directives(other, drop_shared)
+    if kf is None and ku is None:
+        return "reverted after both"
+    if kf is not None and ku is not None:
+        return "kept after both, the same directives" if kf == ku else "kept after both, other directives"
+    return "kept only after the full re-profile" if kf is not None else "kept only after the fast refresh"
+
+
+as_recorded = collections.Counter()
+for r in rows:
+    if "full" not in r:
+        continue
+    as_recorded["decision differs"] += r.get("decision") in ("kept after both, other directives", "kept only after the full re-profile", "kept only after the fast refresh")
+    as_recorded["control differs"] += r.get("control_decision") in ("kept after both, other directives", "kept only after the full re-profile", "kept only after the fast refresh")
+    as_recorded["verdict differs"] += not str(r.get("class")).startswith("same")
+    as_recorded["control verdict differs"] += not str(r.get("control_class")).startswith("same")
+    r["class"] = classify(r["full"], r["fast"])
+    r["control_class"] = classify(r["full"], r["full2"], second=True)
+    if "decision" in r:
+        r["decision"] = decide(r["full"], r["fast"])
+        r["control_decision"] = decide(r["full"], r["full2"], second=True)
+        r["decision_no_shared"] = decide(r["full"], r["fast"], drop_shared=True)
+        r["control_decision_no_shared"] = decide(r["full"], r["full2"], second=True, drop_shared=True)
 
 
 def table(head, body):
@@ -157,6 +249,53 @@ if any("decision" in r for r in rows):
     md += [f"**The {len(kept)} rewrites the trials themselves kept** (after the full re-profile, with the speed check): "
            + ", ".join(f"{k}: {v}" for k, v in sorted(kd.items(), key=lambda kv: -kv[1])) + ".", ""]
 
+    def kind(pragmas):
+        text = " ".join(pragmas)
+        m = re.search(r"reduction\(([^:]+):", text)
+        return f"reduction({m.group(1)})" if m else "lastprivate" if "lastprivate" in text else "parallel for" if "parallel for" in text else "another construct"
+
+    lost = [r for r in rows if r.get("decision") == "kept only after the full re-profile"]
+    lk = collections.Counter(" + ".join(sorted(kind(p) for _, p in kept_directives(r["full"]))) for r in lost)
+    lf = collections.Counter(("a pattern, every directive refused by the checks" if r["fast"].get("judged") == "pattern_broken"
+                              else "a pattern, no usable directive" if r["fast"]["status"] == "no_usable_pragma" else "no pattern") for r in lost)
+    md += [f"**The {len(lost)} rewrites kept only after the full re-profile** — the full profile's directives: "
+           + ", ".join(f"{k} {v}" for k, v in sorted(lk.items(), key=lambda kv: -kv[1])) + "; after the fast refresh: "
+           + ", ".join(f"{k} {v}" for k, v in sorted(lf.items(), key=lambda kv: -kv[1])) + f"; {sum(1 for r in lost if r.get('kept_in_trial'))} "
+           "of them are rewrites their trial kept; by loop: "
+           + ", ".join(f"`{k}` {v}" for k, v in sorted(collections.Counter(r["benchmark"].split("/")[1] for r in lost).items())) + ".", ""]
+    # what the fast refresh offers on the very loop the full profile's kept directive stands on
+    shape = lambda ps: re.sub(r"\s+", " ", CLAUSE.sub(
+        lambda m: f"{m.group(1)}({m.group(2).split(':')[0] + ':' if ':' in m.group(2) else ''}…)", " ".join(ps).replace("#pragma omp ", "")))
+    same_loop = collections.Counter()
+    for r in lost:
+        offered = {(e[0], e[1]): e[3] for e in r["fast"].get("exposed", [])}
+        sent = {tuple(c["lines"]): c for c in r["fast"].get("checks", []) if c["lines"] is not None}
+        for lines, pragmas in kept_directives(r["full"]):
+            o, c = offered.get(tuple(lines)), sent.get(tuple(lines))
+            same_loop[(shape(pragmas), shape(o) if o else "no directive",
+                       "not sent to the gate" if c is None else "passed" if c["passed"] else f"refused: {c['stage']}")] += 1
+    md += ["On the loop of each directive the full profile keeps there, the fast refresh offers (a directive the "
+           "agent's clause check or the OpenMP build refuses is not sent to the gate):", ""]
+    md += table(["the full profile's directive", "the fast refresh, the same loop", "the gate", "rewrites"],
+                [[f"`{k[0]}`", f"`{k[1]}`" if k[1] != "no directive" else k[1], k[2], v]
+                 for k, v in sorted(same_loop.items(), key=lambda kv: -kv[1])]) + [""]
+    only_fast = [r for r in rows if r.get("decision") == "kept only after the fast refresh"]
+    for r in only_fast:
+        md.append(f"- kept only after the fast refresh: `{r['trial']}` #{r['n']} — the full re-profile: {r['full']['status']}"
+                  + (f", {r['full'].get('judged')}" if r['full'].get('judged') else "") + "; the fast refresh keeps "
+                  + "; ".join(f"lines {a[0]}–{a[1]} `{' '.join(p)}`" for a, p in kept_directives(r["fast"])) + ".")
+    if only_fast:
+        md.append("")
+    oth = [r for r in rows if r.get("decision") == "kept after both, other directives"]
+    sp = collections.Counter()
+    for r in oth:
+        a, b = kept_directives(r["full"]), kept_directives(r["fast"])
+        la, lb = {x[0] for x in a}, {x[0] for x in b}
+        sp["the same loops with other clauses" if la == lb else "the full profile's loops and more" if la < lb
+           else "fewer loops than the full profile" if lb < la else "other loops"] += 1
+    md += [f"**The {len(oth)} rewrites kept after both with other directives:** "
+           + ", ".join(f"{k} {v}" for k, v in sorted(sp.items(), key=lambda kv: -kv[1])) + ".", ""]
+
 # ---- the registered test -------------------------------------------------------------------------------------------
 if any("decision" in r for r in rows):
     SAME = ("reverted after both", "kept after both, the same directives")
@@ -186,6 +325,25 @@ if any("decision" in r for r in rows):
     md += table(["loop", "rewrites compared", "decision differs after the fast refresh", "in the control"],
                 [[f"`{k}`", v[0], v[1], v[2]] for k, v in sorted(loops.items())])
     md.append("")
+    # the sensitivity: a directive that differs only in a `shared` clause counted as the same (not registered)
+    loops2 = collections.defaultdict(lambda: [0, 0, 0])
+    for r in rows:
+        if r.get("decision_no_shared") not in DECISIONS[:5] or r.get("control_decision_no_shared") not in DECISIONS[:5]:
+            continue
+        name = r["benchmark"].split("/")[1]
+        loops2[name][0] += 1
+        loops2[name][1] += r["decision_no_shared"] not in SAME
+        loops2[name][2] += r["control_decision_no_shared"] not in SAME
+    w2 = wilcoxon_greater([v[1] / v[0] - v[2] / v[0] for v in loops2.values() if v[0]])
+    p2 = w2.get("p_value")
+    n2 = sum(v[1] for v in loops2.values())
+    d2 = collections.Counter(r.get("decision_no_shared") for r in rows if "decision_no_shared" in r)
+    md += ["**Sensitivity, not registered:** a variable declared outside a loop is shared by default, so a directive that differs "
+           "from another only in a `shared(...)` clause is the same program. Counted that way the decision differs in "
+           f"{n2} rewrites ({d2[DECISIONS[3]]} kept only after the full re-profile, {d2[DECISIONS[4]]} only after the fast refresh, "
+           f"{d2[DECISIONS[2]]} kept after both on other loops) on {sum(1 for v in loops2.values() if v[1])} loops, in the control in "
+           f"{sum(v[2] for v in loops2.values())}; non-zero pairs {w2.get('n_nonzero')}; "
+           + (f"p = {p2:.3g}, family bound {min(1.0, p2 * FAMILY):.3g}." if p2 is not None else f"no test: {w2.get('note')}."), ""]
 
 # ---- the check against the trials ----------------------------------------------------------------------------------
 md += ["## 4 The replay's full re-profile against what the trial logged", ""]
@@ -206,6 +364,12 @@ if fs and us:
                  ["fast refresh (compile, carry over, explore)", len(us), f"{statistics.median(us):.2f}", f"{statistics.mean(us):.2f}", f"{sum(us):.0f}"]])
     js = [r["fast"].get("judge_seconds") or 0 for r in ok], [r["full"].get("judge_seconds") or 0 for r in ok]
     md += ["", f"The gate's safety checks on the directives: {sum(js[0]):.0f} s after the fast refresh, {sum(js[1]):.0f} s after the "
-           "full re-profile, summed.", ""]
+           f"full re-profile, summed. Refresh and checks together: {sum(us) + sum(js[0]):.0f} s after the fast refresh, "
+           f"{sum(fs) + sum(js[1]):.0f} s after the full re-profile.", ""]
+md += ["## 6 The tool's own fields, as recorded", "",
+       "`refresh_replay.py` compared the directives as text. Counted on its `class` and `decision` fields: the verdict differs in "
+       f"{as_recorded['verdict differs']} rewrites after the fast refresh and in {as_recorded['control verdict differs']} in the control; "
+       f"the decision in {as_recorded['decision differs']} and {as_recorded['control differs']}. Every difference between that and the "
+       "counts above is a clause whose names stand in another order.", ""]
 (HERE / "e4_replay_readout.md").write_text("\n".join(md) + "\n")
 print("\n".join(md))
