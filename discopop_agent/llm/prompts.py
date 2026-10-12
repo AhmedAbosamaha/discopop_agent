@@ -534,7 +534,7 @@ _SYSTEM_DEPS = textwrap.dedent("""\
     Every dependence below is one DiscoPoP names as the reason it will not
     parallelize a loop, and every one comes from STATIC analysis — anything it
     actually observed running is not shown to you and is not up for discussion.
-    You are given the variable, the loop it blocks, and the two source lines.
+    You are given the variable and the loop it blocks.
     Decide:
 
       REAL      the dependence genuinely occurs at run time — a value written in
@@ -550,8 +550,8 @@ _SYSTEM_DEPS = textwrap.dedent("""\
     declared inside the loop body.
 
     Judge only what the code shows.  If you cannot tell, answer REAL: a
-    dependence wrongly called spurious produces a racy parallel loop, while one
-    wrongly called real only costs a missed parallelization.
+    dependence wrongly called spurious can make a sequential loop look parallel,
+    while one wrongly called real only costs a missed parallelization.
 
     Answer with one line per dependence and nothing else:
 

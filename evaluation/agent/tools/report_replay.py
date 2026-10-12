@@ -27,7 +27,11 @@ A rewrite whose model call failed is not written to the results — a resumed ru
 in a row stop the run.
 
     venv/bin/python evaluation/agent/tools/report_replay.py --runs e3b_1,e3b_2 --arm default_v5 \\
-        --report dry --deletion dry --out /tmp/x [--select FILE] [--only SUITE/NAME] [--limit N] [--no-full]
+        --report dry --deletion dry --out /tmp/x [--select FILE] [--select-deletion FILE] [--only SUITE/NAME]
+        [--limit N] [--no-full]
+
+`--select` names the rewrites the report is asked on and `--select-deletion` those the deletion is asked on (by
+default the same); a rewrite in either list is replayed, and gets only what its list asks for.
 
 Output: `<out>/results.jsonl` (one record per rewrite), `<out>/manifest.json`, `<out>/logs/`.
 """
@@ -149,6 +153,7 @@ class ReportBench(rr.Bench):
         if dry:
             return res
         res["reply_empty"] = not reply
+        res["profile_changed"] = False                   # True only where a row was placed in the dependence file
         if reply:                                        # phase A: `if args.llm_recon and reply_text:`
             audit = self.work / "_refresh" / "llm_recon.json"
             audit.unlink(missing_ok=True)
@@ -162,7 +167,8 @@ class ReportBench(rr.Bench):
                        loops_declared_independent=list(rep.loops_declared_clean), rows=list(rep.rows),
                        unresolved=[[c.loop_line, c.dep_type, c.var, c.writer_line, c.reader_line, why]
                                    for c, why in rep.unresolved],
-                       contradicting_static=[list(x) for x in rep.contradicted], explorer_rc=explorer_rc)
+                       contradicting_static=[list(x) for x in rep.contradicted], explorer_rc=explorer_rc,
+                       profile_changed=bool(rep.rows))
         self._judge("report", rw, res)
         return res
 
@@ -186,7 +192,8 @@ class ReportBench(rr.Bench):
         with _Calls(dep_review, dry, usage_log) as calls:
             with contextlib.redirect_stdout(self.log):
                 note = dep_review._llm_dep_review(a, self.dp, rw["pre"], rw["post"], out, int(fid) if fid else 1)
-        res.update(asked=bool(calls.made), note=str(note)[:300], request=calls.made[-1] if calls.made else None)
+        res.update(asked=bool(calls.made), note=str(note)[:300], request=calls.made[-1] if calls.made else None,
+                   profile_changed="removed, recorded" in str(note))
         if (out / "llm_deps.json").is_file():
             res["reviewed"] = json.loads((out / "llm_deps.json").read_text())[-1].get("reviewed")
         if calls.made and not dry and FAILED_REVIEW in str(note):
@@ -206,6 +213,8 @@ def main() -> int:
     ap.add_argument("--report", choices=("dry", "ask"), help="the model's report of the dependences")
     ap.add_argument("--deletion", choices=("dry", "ask"), help="the model's review of static blockers")
     ap.add_argument("--select", type=Path, help="a JSON list of {trial, n}: only these rewrites")
+    ap.add_argument("--select-deletion", type=Path,
+                    help="a JSON list of {trial, n}: the rewrites the deletion is asked on (default: those of --select)")
     ap.add_argument("--only", help="one benchmark, SUITE/NAME")
     ap.add_argument("--limit", type=int, default=0, help="stop after N rewrites (a smoke)")
     ap.add_argument("--no-full", action="store_true", help="without the full re-profile (a dry pass needs none)")
@@ -216,6 +225,8 @@ def main() -> int:
     out.mkdir(parents=True, exist_ok=True)
     runs = [r for r in a.runs.split(",") if r]
     chosen = {(x["trial"], int(x["n"])) for x in json.loads(a.select.read_text())} if a.select else None
+    chosen_del = {(x["trial"], int(x["n"])) for x in json.loads(a.select_deletion.read_text())} \
+        if a.select_deletion else chosen
     results = out / "results.jsonl"
     done = {(json.loads(ln)["trial"], json.loads(ln)["n"]) for ln in results.read_text().splitlines() if ln.strip()} \
         if results.is_file() else set()
@@ -223,7 +234,8 @@ def main() -> int:
     os.environ["DP_LLM_USAGE_LOG"] = str(usage_log)
     manifest: Dict[str, Any] = {
         "tool": "report_replay.py", "runs": runs, "arm": a.arm, "only": a.only, "report": a.report,
-        "deletion": a.deletion, "select": str(a.select) if a.select else None, "host": platform.node(),
+        "deletion": a.deletion, "select": str(a.select) if a.select else None,
+        "select_deletion": str(a.select_deletion) if a.select_deletion else None, "host": platform.node(),
         "commit": subprocess.run(["git", "-C", str(rr.REPO), "rev-parse", "HEAD"], capture_output=True,
                                  text=True).stdout.strip(),
         "discopop_pass_sha256": rr.pass_digest(), "started": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
@@ -241,7 +253,8 @@ def main() -> int:
                 (str(editable).split(",")[0] if editable else f"{tj['kernel']}.c")
             rel = "/".join(trial.parts[-7:])
             rewrites, _counts = rr.rewrites_of(trial, kernel_file)
-            rewrites = [rw for rw in rewrites if chosen is None or (rel, rw["n"]) in chosen]
+            rewrites = [rw for rw in rewrites if chosen is None or (rel, rw["n"]) in chosen
+                        or (chosen_del is not None and (rel, rw["n"]) in chosen_del)]
             if not rewrites:
                 continue
             manifest["trials"] += 1
@@ -271,10 +284,11 @@ def main() -> int:
                             rec["fast"] = bench.fast(rw["pre"], rw["post"], rw["diff"])
                             if rec["fast"].get("usable"):
                                 bench.keep_refreshed()
-                                if a.report:
+                                key = (rel, rw["n"])
+                                if a.report and (chosen is None or key in chosen):
                                     rec["report"] = bench.report(rw, f"{rel}#{rw['n']}:{time.time_ns()}",
                                                                  a.report == "dry", usage_log)
-                                if a.deletion:
+                                if a.deletion and (chosen_del is None or key in chosen_del):
                                     rec["deletion"] = bench.deletion(rw, a.deletion == "dry", usage_log)
                             if not a.no_full:
                                 rec["full"] = bench.full(rw["pre"], rw["post"], rw["diff"])

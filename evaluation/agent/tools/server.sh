@@ -8,6 +8,9 @@
 #   agent/tools/server.sh run [--node N] [--allow-dirty-harness] -- ARGS
 #                                                  launch `agent/benchmark run ARGS` on NUMA node N
 #                                                  (default 1) with the Claude token from the Keychain
+#   agent/tools/server.sh tool [--node N] -- TOOL ARGS
+#                                                  the same job around `agent/tools/TOOL ARGS` (a tool
+#                                                  that calls a model): same parity check, token, sweep
 #   agent/tools/server.sh status [LINES]           running jobs, tail of the latest launcher log
 #   agent/tools/server.sh sweep                    check the server for credentials left on disk
 #   agent/tools/server.sh fetch [RUN_ID...]        copy runs back (profile trees excluded) and
@@ -97,7 +100,8 @@ parity() {
 }
 
 run_job() {
-    local node=1 allow=no token
+    local verb="$1" node=1 allow=no token
+    shift
     while [ "$#" -gt 0 ]; do
         case "$1" in
             --node) node="$2"; shift 2 ;;
@@ -110,7 +114,7 @@ run_job() {
     parity "$allow" || die "Mac and server differ — run 'sync' (and commit) before launching"
     token=$(security find-generic-password -a "$USER" -s "$KEYCHAIN_SERVICE" -w 2> /dev/null) \
         || die "no Claude token in the Keychain; see the setup lines at the top of this script"
-    printf '%s\n' "$token" | remote "$R_JOB launch $node $(printf '%q ' "$@")"
+    printf '%s\n' "$token" | remote "$R_JOB $verb $node $(printf '%q ' "$@")"
     token=""
 }
 
@@ -143,9 +147,10 @@ shift || true
 case "$cmd" in
     sync) sync_code ;;
     parity) parity no ;;
-    run) run_job "$@" ;;
+    run) run_job launch "$@" ;;
+    tool) run_job launch-tool "$@" ;;
     status) remote "$R_JOB status ${1:-25}" ;;
     sweep) remote "$R_JOB sweep" ;;
     fetch) fetch_runs "$@" ;;
-    *) sed -n '2,19p' "$0"; exit 2 ;;
+    *) sed -n '2,22p' "$0"; exit 2 ;;
 esac

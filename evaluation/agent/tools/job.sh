@@ -7,6 +7,9 @@
 #   job.sh install-wrappers       copy the compiler wrapper scripts into the venv (after a git update)
 #   job.sh launch NODE ARGS...    read the Claude token from stdin and start
 #                                 `agent/benchmark run ARGS` detached, pinned to NUMA node NODE
+#   job.sh launch-tool NODE TOOL ARGS...
+#                                 the same job — token from stdin, auth check, pinning, sweep at the
+#                                 end — around `agent/tools/TOOL ARGS` instead of the benchmark runner
 #   job.sh status [LINES]         running jobs and the tail of the latest launcher log
 #   job.sh sweep                  look for credentials left on disk (needs no token)
 #
@@ -97,10 +100,26 @@ launch() {
     touch "$LAUNCH_DIR/$stamp.start"
     # The token reaches the job only through its environment (not argv, not a file).
     CLAUDE_CODE_OAUTH_TOKEN="$token" CLAUDE_CONFIG_DIR="$cfg" DP_LAUNCH_STAMP="$stamp" \
+        DP_JOB_TOOL="${DP_JOB_TOOL:-}" \
         setsid nohup "$0" __job "$node" "$@" > "$log" 2>&1 < /dev/null &
     token=""
     echo "launched pid $! on NUMA node $node"
     echo "log: $log"
+}
+
+# A tool of agent/tools/ that calls a model (the replay of the model's dependence report) runs as the same
+# job as a benchmark: same token path, same auth check, same sweep. Only a file name is accepted.
+launch_tool() {
+    local node="$1" tool="${2:-}"
+    case "$tool" in
+        ""|*/*|.*) echo "launch-tool: TOOL is a file name in agent/tools/" >&2; return 2 ;;
+    esac
+    if [ ! -f "$HARNESS/agent/tools/$tool" ]; then
+        echo "launch-tool: agent/tools/$tool does not exist" >&2
+        return 2
+    fi
+    shift 2
+    DP_JOB_TOOL="$tool" launch "$node" "$@"
 }
 
 # Scan files written during the job for the token value. The pattern goes to grep through a
@@ -226,6 +245,15 @@ job() {
     echo "== load $(cut -d' ' -f1-3 /proc/loadavg)"
     echo "== args: $*"
     cd "$HARNESS" || exit 1
+    # What the job runs: the benchmark runner, or (launch-tool) one of the tools next to this script,
+    # with the venv first on the PATH as the runner arranges it for the agent.
+    if [ -n "${DP_JOB_TOOL:-}" ]; then
+        echo "== tool: agent/tools/$DP_JOB_TOOL"
+        export PATH="$AGENT/venv/bin:$PATH"
+        set -- "agent/tools/$DP_JOB_TOOL" "$@"
+    else
+        set -- agent/benchmark run "$@"
+    fi
     echo "== auth check"
     if ! auth_check; then
         echo "== ABORT: the model credential is rejected — not a single trial was started."
@@ -251,13 +279,13 @@ job() {
                 cpus=$(printf '%s
 ' "$cpus" | paste -sd, -)
                 echo "== lane: node $nn, cores $cpus"
-                numactl --physcpubind="$cpus" --membind="$nn" "$PY" agent/benchmark run "$@" ;;
+                numactl --physcpubind="$cpus" --membind="$nn" "$PY" "$@" ;;
             *)
-                numactl --cpunodebind="$node" --membind="$node" "$PY" agent/benchmark run "$@" ;;
+                numactl --cpunodebind="$node" --membind="$node" "$PY" "$@" ;;
         esac
     else
         echo "== WARNING: numactl missing, running unpinned"
-        "$PY" agent/benchmark run "$@"
+        "$PY" "$@"
     fi
     rc=$?
     exit "$rc"
@@ -284,8 +312,9 @@ case "$cmd" in
     update-agent) update_agent "$@" ;;
     install-wrappers) install_wrappers ;;
     launch) launch "$@" ;;
+    launch-tool) launch_tool "$@" ;;
     __job) job "$@" ;;
     status) status "$@" ;;
     sweep) sweep ;;
-    *) sed -n '2,14p' "$0"; exit 2 ;;
+    *) sed -n '2,17p' "$0"; exit 2 ;;
 esac
