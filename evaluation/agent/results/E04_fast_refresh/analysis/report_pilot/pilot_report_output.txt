@@ -1,0 +1,42 @@
+
+===== tsvc_c4/s316/default_v5/claude-haiku-4-5-20251001/rep1 #1
+FAST          : 87/101 observed dependences carried forward (14 in rewritten code, 0 no longer present; 49 without callpath state), 2/2 loop trip counts
+                {"status": "exposed", "judged": "pattern_broken", "exposed": [[7, 13, "do_all", ["#pragma omp parallel for lastprivate(x)"]], [9, 11, "do_all", ["#pragma omp parallel for firstprivate(x)"]]], "checks": [[[7, 13], ["#pragma omp parallel for lastprivate(x)"], "tsan"]]}
+reduction.txt after the fast refresh: FileID : 1 Loop Line Number : 9 Reduction Line Number : 10 Variable Name : x Operation Name : <
+static_dependencies.txt: 47 lines; doall_prevented records: 0; origins: []
+rewritten lines: [2, 10]
+REPORT [inner RAW only]: 1 claimed, 1 resolved, 0 outside the gap (correctly skipped), 0 unplaceable, 0 loop(s) declared independent | rows ['28 NOM  RAW 28|x(S-1233008927)'] | unresolved [] | contradicted [] | explorer rc 0
+                {"status": "exposed", "judged": "safe_deferred", "exposed": [[7, 13, "do_all", ["#pragma omp parallel for lastprivate(x)"]], [9, 11, "reduction", ["#pragma omp parallel for reduction(min:x)"]]], "checks": [[[7, 13], ["#pragma omp parallel for lastprivate(x)"], "tsan"], [[9, 11], ["#pragma omp parallel for reduction(min:x)"], "passed"]]}
+REPORT [inner RAW+WAW, outer WAW]: 3 claimed, 2 resolved, 1 outside the gap (correctly skipped), 0 unplaceable, 0 loop(s) declared independent | rows ['28 NOM  RAW 28|x(S-1233008927)', '28 NOM  WAW 28|x(S-1233008927)'] | unresolved [('x', "neither line was rewritten — not this arm's gap")] | contradicted [] | explorer rc 0
+                {"status": "exposed", "judged": "safe_deferred", "exposed": [[7, 13, "do_all", ["#pragma omp parallel for lastprivate(x)"]], [9, 11, "reduction", ["#pragma omp parallel for reduction(min:x)"]]], "checks": [[[7, 13], ["#pragma omp parallel for lastprivate(x)"], "tsan"], [[9, 11], ["#pragma omp parallel for reduction(min:x)"], "passed"]]}
+REPORT [says independent]: 0 claimed, 0 resolved, 0 outside the gap (correctly skipped), 0 unplaceable, 2 loop(s) declared independent, 5 CONTRADICTING static analysis | rows [] | unresolved [] | contradicted [(9, 'd', 'RAW'), (9, 'e', 'RAW'), (9, 'k', 'RAW'), (9, 'x', 'RAW'), (9, 'x', 'WAR')] | explorer rc None
+                {"status": "exposed", "judged": "pattern_broken", "exposed": [[7, 13, "do_all", ["#pragma omp parallel for lastprivate(x)"]], [9, 11, "do_all", ["#pragma omp parallel for firstprivate(x)"]]], "checks": [[[7, 13], ["#pragma omp parallel for lastprivate(x)"], "tsan"]]}
+FULL          : {"status": "exposed", "judged": "safe_deferred", "exposed": [[9, 11, "reduction", ["#pragma omp parallel for reduction(min:x)"]]], "checks": [[[9, 11], ["#pragma omp parallel for reduction(min:x)"], "passed"]]}
+reduction.txt after the full re-profile: FileID : 1 Loop Line Number : 9 Reduction Line Number : 10 Variable Name : x Operation Name : <
+
+===== tsvc_c4/s319/default_v5/claude-haiku-4-5-20251001/rep1 #2
+FAST          : 138/162 observed dependences carried forward (24 in rewritten code, 0 no longer present; 57 without callpath state), 2/2 loop trip counts
+                {"status": "no_usable_pragma", "judged": null, "exposed": [[8, 12, "do_all", ["#pragma omp parallel for firstprivate(sum)"]]], "checks": []}
+reduction.txt after the fast refresh: FileID : 1 Loop Line Number : 8 Reduction Line Number : 11 Variable Name : sum Operation Name : +
+static_dependencies.txt: 54 lines; doall_prevented records: 1; origins: ['DepOrigin.DYNAMIC_ANALYSIS']
+    prevented: {'loop_start': 6, 'loop_end': 6, 'var_name': 'GEPRESULT_d', 'dep_type': 'DepType.RAW', 'origin': 'DepOrigin.DYNAMIC_ANALYSIS'}
+rewritten lines: [11]
+REPORT [inner RAW only]: 1 claimed, 1 resolved, 0 outside the gap (correctly skipped), 0 unplaceable, 0 loop(s) declared independent | rows ['68 NOM  RAW 68|sum(S-1143568671)'] | unresolved [] | contradicted [] | explorer rc 0
+                {"status": "exposed", "judged": "safe_deferred", "exposed": [[8, 12, "reduction", ["#pragma omp parallel for reduction(+:sum)"]]], "checks": [[[8, 12], ["#pragma omp parallel for reduction(+:sum)"], "passed"]]}
+REPORT [inner RAW+WAW, outer WAW]: 5 claimed, 2 resolved, 3 outside the gap (correctly skipped), 0 unplaceable, 0 loop(s) declared independent | rows ['68 NOM  RAW 68|sum(S-1143568671)', '68 NOM  WAW 68|sum(S-1143568671)'] | unresolved [('sum', "neither line was rewritten — not this arm's gap"), ('a', "neither line was rewritten — not this arm's gap"), ('b', "neither line was rewritten — not this arm's gap")] | contradicted [] | explorer rc 0
+                {"status": "exposed", "judged": "safe_deferred", "exposed": [[8, 12, "reduction", ["#pragma omp parallel for reduction(+:sum)"]]], "checks": [[[8, 12], ["#pragma omp parallel for reduction(+:sum)"], "passed"]]}
+FULL          : {"status": "exposed", "judged": "safe_deferred", "exposed": [[8, 12, "reduction", ["#pragma omp parallel for reduction(+:sum)"]]], "checks": [[[8, 12], ["#pragma omp parallel for reduction(+:sum)"], "passed"]]}
+reduction.txt after the full re-profile: FileID : 1 Loop Line Number : 8 Reduction Line Number : 11 Variable Name : sum Operation Name : +
+
+===== tsvc_c4/s3113/default_v5/claude-haiku-4-5-20251001/rep2 #1
+FAST          : 83/108 observed dependences carried forward (25 in rewritten code, 0 no longer present; 49 without callpath state), 1/2 loop trip counts
+                {"status": "exposed", "judged": "pattern_broken", "exposed": [[6, 13, "do_all", ["#pragma omp parallel for lastprivate(max)"]], [8, 11, "do_all", ["#pragma omp parallel for firstprivate(max)"]]], "checks": [[[6, 13], ["#pragma omp parallel for lastprivate(max)"], "tsan"]]}
+reduction.txt after the fast refresh: FileID : 1 Loop Line Number : 8 Reduction Line Number : 10 Variable Name : max Operation Name : >
+static_dependencies.txt: 49 lines; doall_prevented records: 0; origins: []
+rewritten lines: [8, 9, 10]
+REPORT [inner RAW only]: 1 claimed, 1 resolved, 0 outside the gap (correctly skipped), 0 unplaceable, 0 loop(s) declared independent | rows ['39 NOM  RAW 39|max(S-1147898143)'] | unresolved [] | contradicted [] | explorer rc 0
+                {"status": "exposed", "judged": "safe_deferred", "exposed": [[6, 13, "do_all", ["#pragma omp parallel for lastprivate(max)"]], [8, 11, "reduction", ["#pragma omp parallel for reduction(max:max)"]]], "checks": [[[6, 13], ["#pragma omp parallel for lastprivate(max)"], "tsan"], [[8, 11], ["#pragma omp parallel for reduction(max:max)"], "passed"]]}
+REPORT [inner RAW+WAW, outer WAW]: 3 claimed, 2 resolved, 1 outside the gap (correctly skipped), 0 unplaceable, 0 loop(s) declared independent | rows ['39 NOM  RAW 39|max(S-1147898143)', '39 NOM  WAW 39|max(S-1147898143)'] | unresolved [('max', "neither line was rewritten — not this arm's gap")] | contradicted [] | explorer rc 0
+                {"status": "exposed", "judged": "safe_deferred", "exposed": [[6, 13, "do_all", ["#pragma omp parallel for lastprivate(max)"]], [8, 11, "reduction", ["#pragma omp parallel for reduction(max:max)"]]], "checks": [[[6, 13], ["#pragma omp parallel for lastprivate(max)"], "tsan"], [[8, 11], ["#pragma omp parallel for reduction(max:max)"], "passed"]]}
+FULL          : {"status": "exposed", "judged": "safe_deferred", "exposed": [[8, 11, "reduction", ["#pragma omp parallel for reduction(max:max)"]]], "checks": [[[8, 11], ["#pragma omp parallel for reduction(max:max)"], "passed"]]}
+reduction.txt after the full re-profile: FileID : 1 Loop Line Number : 8 Reduction Line Number : 10 Variable Name : max Operation Name : >
