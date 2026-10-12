@@ -55,6 +55,15 @@ DELETION_SYSTEM, DELETION_REQUEST = _seen["system"], _seen["prompt"]
 assert DELETION_SYSTEM == prompts._SYSTEM_DEPS
 
 
+WHATIF_HTML = ("<p><strong>A check on the saved answers, without a model.</strong> The same 116 answers were added again. Added the agent's way, every decision came out as before (116 of 116). Then with one rule changed: a reported dependence is left out where it lies inside a loop that the same answer calls independent.</p>"
+               + "@@WHATIF_TABLE@@"
+               + "<p>So the rule gives back every win the report had cost — which confirms where the damage comes from. But it loses three of the regained reductions, because there the model calls the <em>repetition</em> loop independent and the rule then throws away the dependence of the loop inside it; and three rewrites again keep a parallel loop that the full profile does not support — the agent's way had removed all four of those. It trades one error for another. A placing that is right both ways needs DiscoPoP's file to say which loop a dependence belongs to. I tried no second rule: choosing rules on these 116 rewrites until one fits would prove nothing.</p>")
+WHATIF_ROWS = [
+    ["Wins the fast refresh loses, kept again (of 22)", "20", "17"],
+    ["Wins lost among the 58 rewrites the fast refresh had right", "4", "0"],
+    ["Those 58 kept with another pragma or one loop fewer", "7", "7"],
+    ["Rewrites that keep a parallel loop the full profile does not keep (4 after the fast refresh alone)", "0", "3"],
+]
 STEP3_STATE = '<span class="st ok">done 12 Oct</span>'
 STEP3_LINE = "Where the run is long, one fast refresh saves 21 to 36 s — a third to two thirds of one refresh, and 1.5 to 7.5 % of a trial."
 STEP3_ROWS = [
@@ -117,7 +126,7 @@ th{font-weight:600;color:var(--mute);font-size:12.5px;letter-spacing:.04em;text-
 ul,ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;max-width:68ch}
 </style>
 <main>""")
-P.append("""<header><p class="k">Put to the author 10 Oct 2026 · decided 12 Oct · steps 1 and 3 done 12 Oct, no model · step 2 waits for your go</p>
+P.append("""<header><p class="k">Put to the author 10 Oct 2026 · decided 12 Oct · steps 1 to 3 done 13 Oct · three small decisions wait for you</p>
 <h1>The fast-refresh experiment</h1>
 <p class="lede">After the model rewrites a loop, the agent profiles the whole program again: it compiles it with DiscoPoP's instrumentation, runs it, and lets DiscoPoP analyse the run. The fast refresh skips the run. It compiles only, and carries the dependences of the last run over to the new code. For the lines the model just wrote there is then no measurement. The second idea is to ask the model itself which dependences those lines have.</p></header>""")
 
@@ -126,10 +135,10 @@ P.append('<h2 id="now">Where it stands</h2>')
 P.append(table(["Step", "State", "In one line"], [
     ["1. Replay, no model", '<span class="st ok">done 12 Oct</span>',
      "The fast refresh changes whether the agent keeps a rewrite in 58 of 599 rewrites; two full profiles of the same program never disagree (0 of 599). 22 wins are thrown away. No time is saved."],
-    ["2. The model's report", '<span class="st wait">waits for your go</span>',
-     "Shown without a model: a <em>correct</em> report gives the lost wins back. Whether the model writes it costs at most about $14 (137 calls)."],
+    ["2. The model's report", '<span class="st ok">done 13 Oct</span>',
+     "The model's report gives back 20 of the 22 lost wins, but damages 11 of 58 rewrites the fast refresh had right — about 100 of all 541. Deleting dependences changed nothing. 136 calls, $8.53."],
     ["3. Time on long programs, no model", STEP3_STATE, STEP3_LINE],
-    ["4. Live trials", '<span class="st">not decided</span>', "Only if 1 and 2 say the refresh keeps DiscoPoP's verdicts. Step 1 says it does not, as built."],
+    ["4. Live trials", '<span class="st wait">your decision</span>', "Planned only if 1 and 2 say the refresh keeps DiscoPoP's verdicts. They say it does not. I recommend not to run them."],
 ]))
 
 P.append("<h2>Step 1: the fast refresh changes the agent's decisions</h2>")
@@ -149,31 +158,48 @@ P.append("<p><strong>The 34 with other pragmas.</strong> In 27 the only differen
 P.append("<p><strong>No time is saved on these loops.</strong> One fast refresh takes 1.54 s against 1.75 s. But after it DiscoPoP offers many more pragmas — 1,099 against 634 — and checking them costs more than the skipped run saved: 1,758 s against 1,730 s in all.</p>")
 P.append("<p><strong>Your written-down claim that the fast refresh changes no decision is refuted</strong> by the test fixed before the run: p = 0.0003, and at most 0.018 when it is counted with every other test of the thesis. With the 27 counted as the same it is still refuted as a single test (p = 0.001), but not within that whole family (0.053).</p>")
 
-P.append("<h2>Step 2: what is known before any model call</h2>")
-P.append("<p><strong>A correct report does repair it.</strong> On three of the lost rewrites — a minimum, a sum and a maximum — I wrote by hand the one line the model would have to report (<code>LOOP 9 RAW x 10 10</code>: the loop at line 9 reads in <code>x</code> what an earlier pass wrote) and fed it through the agent's own code. In all three DiscoPoP writes the reduction again and the rewrite is kept. So the path works. What step 2 measures is whether the model writes that line — and what its reports do to the 541 rewrites the fast refresh got right.</p>")
-P.append("<p><strong>A pass without a model built every request.</strong> For the report: one request for each of the 599 rewrites. For the opposite direction — the model deletes dependences it calls unreal — there is something to ask on only 21 rewrites; everywhere else the fast refresh has left nothing to delete. None of the 21 is among the 58 that differ. So deleting cannot repair anything here; it can only add differences. That is your third claim, and those 21 are where it can be read.</p>")
-P.append("<p><strong>The fast refresh repeats itself exactly:</strong> taken a second time, it gives the same pragmas and the same decision on 599 of 599 rewrites. What a report changes is therefore the report's doing.</p>")
-P.append("<h3>The choice</h3>")
-P.append(table(["", "Rewrites the model is asked about", "Model calls", "Cost at most", "What it tells"], [
-    ["<strong>A — as designed</strong><br>(my recommendation)", "The 58 whose decision differs, 58 of the 541 whose decision is the same (drawn by a rule fixed beforehand), and the 21 for the opposite direction", "137", "about $14",
-     "Whether the model names the missing dependence — the 22 lost wins — and whether deleting does harm. <em>Not</em> whether the report helps on balance: even if it breaks none of the 58 agreeing rewrites, as many as 27 of the 541 could still be broken, more than the 22 it can repair."],
-    ["<strong>B — every rewrite</strong>", "All 599, and the 21", "620", "about $62", "Both, exactly, with the same test as step 1. Above the $15 to $40 this page named."],
+P.append('<h2 id="step2">Step 2: what the model\'s own report does</h2>')
+P.append("<p>You said “ok” to the smaller set on 12 Oct. The model that wrote the rewrites was asked 136 times, for $8.53: on 116 rewrites for its report of the dependences in its own code, and on the 20 rewrites where deleting dependences had anything to ask. No call failed. Every answer was fed through the agent's own code and the rewrite was judged again.</p>")
+P.append("<h3>On the 58 rewrites the fast refresh decides differently</h3>")
+P.append(table(["After the fast refresh alone", "Rewrites", "With the model's report"], [
+    ["A win thrown away", "22", "<strong>20 are kept again</strong>, with the full profile's pragmas — all 20 reductions. The other 2 were no reductions."],
+    ["Kept, but the full profile would not keep it", "2", "<strong>Both are no longer kept.</strong> On the loop with the hidden race the model names the dependence on <code>index</code> that no test data shows."],
+    ["Kept after both, other pragmas", "34", "6 now have the full profile's pragmas; 27 still differ (24 of them only in the <code>shared</code> clause that changes nothing); 1 loses its win."],
 ]))
-P.append("<p>“Cost at most” counts every call at $0.10. In our archive the cheapest call of this model cost $0.025 and the middle one $0.065 — for calls that write a whole program. These requests are a third of a page and the answer is a few lines, so I expect a third to a half of the ceiling.</p>")
-P.append("<p><strong>Why A first.</strong> If the model does not write the line, B is pointless and we have spent $14 at most. If it does and breaks little, I come back with the numbers and you decide on the other 483 rewrites.</p>")
-P.append("<p><strong>The honest case for B at once:</strong> one run, exact numbers, no second round with you. <strong>The honest case for no step 2 at all:</strong> step 1 already says the fast refresh is not worth adopting on these loops; step 2 only tells whether the model could patch it, and step 3 shows the refresh saves no more than a few per cent of a trial even where the run is long.</p>")
-P.append("<h3>A second text you have not seen: the opposite direction</h3>")
-P.append("<p>When the model is asked to delete dependences, it reads another text. Word for word from the agent's code; nothing has been sent.</p>")
+P.append("<h3>On 58 of the 541 rewrites the fast refresh had right</h3>")
+P.append(table(["With the model's report", "Rewrites"], [
+    ["Unchanged", "47"],
+    ["<strong>A win lost</strong> — the pragma is gone", "<strong>4</strong>"],
+    ["Still kept, with another pragma or one loop fewer", "7"],
+]))
+P.append("<p><strong>Scaled to all 541, that is about 100 damaged rewrites</strong> (between 60 and 159), against the 28 the report repairs. For wins alone: about 38 lost (between 13 and 82) against 20 regained. So the report, as the agent uses it, most likely costs more than it gives back. The ranges are wide because only 58 of the 541 were asked — that was the price of the smaller set.</p>")
+P.append("<h3>Why — and it is not the model's mistake</h3>")
+P.append("<p>In all 12 damaged rewrites the model said that the loop is independent, as the full profile does. What damages the loop is a dependence the model reported for <em>another</em> loop. One of them:</p>")
+P.append(code("10    for (int nl = 0; nl < iterations; nl++) {        the repetition loop\n12        memcpy(a_copy, a, LEN_1D * sizeof(real_t));\n14        for (int i = 0; i < LEN_1D-1; i++) {           the loop that should become parallel\n15            a[i] = a_copy[i] * c[i];\n16            b[i] += a_copy[i + 1] * d[i];\n17        }\n\nthe model's answer      LOOP 10 RAW a 15 12      true: each repetition reads what the last one wrote\n                        LOOP 10 RAW b 16 16      true, for the repetition loop\n                        LOOP 14 NONE             true: the inner loop is independent\n\nwhat the agent does     writes “line 16 depends on line 16, variable b” into DiscoPoP's file — without the loop\nwhat DiscoPoP then sees a dependence inside the inner loop; it turns the loop into reduction(+:b) on an array,\n                        which the agent's checks reject before it can run; the win is lost"))
+P.append("<p>DiscoPoP's file of dependences has no place for “this belongs to loop 10”. So my way of adding the model's answer cannot tell the two loops apart. The answer was right; the adding is what breaks it.</p>")
+P.append(WHATIF_HTML.replace("@@WHATIF_TABLE@@", table(["", "Added the agent's way", "With the changed rule"], WHATIF_ROWS)))
+P.append("<h3>The opposite direction: letting the model delete dependences</h3>")
+P.append("<p>Asked on 20 rewrites about 41 dependences that block a loop: the model called 16 real and 19 not real (6 unanswered, which count as real). All 19 are in four rewrites of one loop, and reading the code its reasons are right. <strong>No decision changed on any of the 21 rewrites.</strong></p>")
+P.append("<p><strong>Your third claim — deleting is unsafe, adding is not — is not supported by this measurement:</strong> neither direction produced a keep the full profile would not make (0 and 0). The reason is structural: after a fast refresh there is almost nothing to delete (21 of 599 rewrites), and never on the rewrites the refresh gets wrong. The claim stays an argument about the design; it is not a measured result.</p>")
+P.append("<h3>What it means</h3>")
+P.append("""<ul><li><strong>The fast refresh is not adopted</strong> — the plan's rule for this outcome. It loses wins, saves nothing on the loops, and 1.5 to 7.5 % of a trial where the run is long.</li>
+<li><strong>The model can report the dependences of its own code</strong> — it named the missing one for every reduction it built. That part of your second claim holds.</li>
+<li><strong>The report as built does not make the fast refresh usable:</strong> it repairs 28 decisions and damages at least 60. On the whole set your second claim fails.</li></ul>""")
+P.append("<h3>What I need from you</h3>")
+P.append("""<ol class="ask"><li><strong>Live trials (step 4):</strong> I recommend <em>not</em> to run them. They cost $55 to $60 and would measure a setup that steps 1 to 3 already decide against. The case for running them: only live trials ask the model inside its own conversation, where it may report better.</li>
+<li><strong>The model asked about all 599 rewrites (option B):</strong> I recommend <em>no</em>. The direction is clear; B would only narrow the range (“between 60 and 159”), for about $35. The case for it: one exact number for the thesis instead of a range.</li>
+<li><strong>Changing how the agent adds the model's answer:</strong> I recommend to <em>record it as a finding and not change the agent</em>. A real repair needs DiscoPoP's file to carry the loop, which is a change inside DiscoPoP. The case for changing it: the check above shows the lost wins come back as soon as the mis-placed dependences are gone.</li></ol>""")
+P.append("<p>If you answer “ok”, I read it as: no live trials, no option B, the agent unchanged — and this experiment is closed with the results above.</p>")
+P.append("<h3>Before the calls: what was shown without a model</h3>")
+P.append("<p>A correct report, written by hand, gave the reduction back on three of the lost rewrites (a minimum, a sum, a maximum). A pass that built every request without sending it showed 599 requests for the report and only 21 rewrites where deleting had anything to ask. The fast refresh, taken a second time, gave the same decision on 599 of 599.</p>")
+P.append("<h3>The second text, with the two sentences corrected</h3>")
+P.append("<p>What the model read when it was asked to delete dependences — word for word from the agent's code, with the two sentences corrected on 12 Oct as you approved.</p>")
 P.append('<div class="card"><h3>The instructions</h3>' + code(DELETION_SYSTEM) + "</div>")
 P.append('<div class="card"><h3>The request</h3>' + code(DELETION_REQUEST) + "</div>")
-P.append("<p><strong>Two of its sentences are not exactly what the agent does.</strong> I propose to correct them the same way as the other three, before any call:</p>")
-P.append(table(["The text says", "What the agent does", "Proposed"], [
-    ["“You are given the variable, the loop it blocks, and the two source lines.”", "The two lines are named only where DiscoPoP recorded them. It usually did not; the request then shows the loop instead.", "“You are given the variable and the loop it blocks.”"],
+P.append(table(["The text said", "What the agent does", "It says now"], [
+    ["“You are given the variable, the loop it blocks, and the two source lines.”", "The two lines are named only where DiscoPoP recorded them. It did not in any of the 21 requests; the request then shows the loop instead.", "“You are given the variable and the loop it blocks.”"],
     ["“a dependence wrongly called spurious produces a racy parallel loop”", "The loop can then look parallel to DiscoPoP; a pragma written on it still has to pass the race check and the output check.", "“a dependence wrongly called spurious can make a sequential loop look parallel”"],
 ]))
-P.append("<p>The honest case for leaving the second as it is: it is the warning that keeps the model from deleting too easily, and your third claim is about exactly that danger.</p>")
-P.append("""<ol class="ask"><li><strong>Step 2:</strong> A (my recommendation), B, or not at all.</li>
-<li><strong>The two sentences:</strong> corrected as proposed, or left.</li></ol>""")
 
 P.append('<h2 id="step3">Step 3: what one fast refresh saves where the run is long</h2>')
 P.append(STEP3_HTML.replace("@@TABLE@@", table(["Program", "Full profile", "Fast refresh", "Saved by one refresh", "Share of an agent trial"], STEP3_ROWS)))
