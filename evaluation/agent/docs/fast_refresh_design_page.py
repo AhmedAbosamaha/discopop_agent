@@ -17,9 +17,9 @@ SYSTEM = prompts._SYSTEM_RECONSTRUCT
 FOLDED = prompts._RECON_ADDENDUM
 # the follow-up request, as `ask_after_gate` builds it; every literal line is checked against the function's source
 FOLLOWUP_LINES = [
-    "Your rewrite was accepted and written to the file.",
+    "Your rewrite passed the checks and is in the file.",
     "",
-    "The profiler will NOT be run on it, so no dependence has been measured in the code you just wrote. Report what a run would have observed.",
+    "The profiler has not been run on it, so no dependence has been measured in the code you just wrote. Report what a run would have observed.",
     "",
     "IMPORTANT — the checks your rewrite just passed say nothing about whether the loop iterations are independent. If your rewrite carried no pragma, it was compiled and run SEQUENTIALLY: nothing ran in parallel, so ThreadSanitizer had nothing to race and its silence is not evidence. Report what the CODE does, not what the checks did.",
     "",
@@ -33,7 +33,7 @@ FOLLOWUP_LINES = [
 ]
 src = inspect.getsource(dep_reconstruct.ask_after_gate)
 flat = "".join(part for part in __import__("re").findall(r'"((?:[^"\\]|\\.)*)"', src))
-for probe in ("Your rewrite was accepted and written to the file.", "The profiler will NOT be run on it, so no dependence has been measured ",
+for probe in ("Your rewrite passed the checks and is in the file.", "The profiler has not been run on it, so no dependence has been measured ",
               "in the code you just wrote. Report what a run would have observed.", "whether the loop iterations are independent. If your rewrite carried no ",
               "so ThreadSanitizer had nothing to race and its silence is not evidence. ", "Report what the CODE does, not what the checks did.",
               "One line per dependence, or `LOOP <line> NONE` for an independent loop."):
@@ -75,7 +75,7 @@ th{font-weight:600;color:var(--mute);font-size:12.5px;letter-spacing:.04em;text-
 ul,ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;max-width:68ch}
 </style>
 <main>""")
-P.append("""<header><p class="k">For your decision · 10 Oct 2026 · nothing is built or run</p>
+P.append("""<header><p class="k">Put to the author 10 Oct 2026 · decided 12 Oct: the four steps, the three sentences corrected, the separate request · step 1 running since 12 Oct, no model</p>
 <h1>The fast-refresh experiment: a design</h1>
 <p class="lede">After the model rewrites a loop, the agent profiles the whole program again: it compiles it with DiscoPoP's instrumentation, runs it, and lets DiscoPoP analyse the run. The fast refresh skips the run. It compiles only, and carries the dependences of the last run over to the new code. For the lines the model just wrote there is then no measurement. The second idea is to ask the model itself which dependences those lines have.</p></header>""")
 
@@ -118,12 +118,12 @@ P.append("""<ul><li><strong>For it:</strong> it measures the whole agent, includ
 <li><strong>Against it:</strong> on these loops there is nothing to save, so the trials can only show harm or no harm; the replay shows the same on four times as many rewrites, without the noise between trials, and for a fraction of the cost. Step 4 keeps the live check for the case in which it is worth running.</li></ul>""")
 
 P.append("<h2>The texts a model would read</h2>")
-P.append("<p>Word for word from the agent's code, unchanged since September. Nothing has been sent to a model.</p>")
+P.append("<p>Word for word from the agent's code as it stands — since 12 Oct with the three sentences below corrected as approved. Nothing has been sent to a model.</p>")
 P.append('<div class="card"><h3>The instructions of the report request</h3>' + code(SYSTEM) + "</div>")
 P.append('<div class="card"><h3>The request itself, sent after a rewrite has passed the checks</h3>' + code("\n".join(FOLLOWUP_LINES)) + "</div>")
 P.append('<div class="card"><h3>The other form: the same request appended to the rewrite instructions (no extra call)</h3>' + code(FOLDED) + "<p>I propose not to use this form: it changes the text of the rewrite request itself, so the rewrites would no longer be comparable with the pragma experiment's.</p></div>")
-P.append("<p><strong>Three sentences are not exactly true of what the agent does.</strong> Your rule is that a text must be true; these are yours to decide.</p>")
-P.append(table(["The text says", "What the agent does", "I would write"], [
+P.append("<p><strong>Three sentences were not exactly true of what the agent does; corrected on 12 Oct as you approved.</strong> The texts above show the corrected wording; the table shows what was changed.</p>")
+P.append(table(["The text said", "What the agent does", "It says now"], [
     ["“Your rewrite was accepted and written to the file.”", "It has passed the checks and is in the file. Whether it is kept is decided afterwards, by what DiscoPoP finds in it and by its speed.", "“Your rewrite passed the checks and is in the file.”"],
     ["“The profiler will NOT be run on it …”", "Not now. Before the pragmas are written at the end, the whole program is profiled in full once.", "“The profiler has not been run on it …”"],
     ["“A dependence you omit makes a sequential loop look parallel, which is a race.”", "The loop can then look parallel to DiscoPoP; a pragma written on it still has to pass the race check and the output check.", "“A dependence you omit can make a sequential loop look parallel.” — and nothing about what follows."],
@@ -134,7 +134,7 @@ P.append("<h2>What I need from you</h2>")
 P.append("""<ol class="ask"><li><strong>The design:</strong> the four steps (my recommendation), or live trials from the start.</li>
 <li><strong>The three sentences:</strong> corrected as proposed, or left.</li>
 <li><strong>The form of the request:</strong> a separate request after the rewrite (my recommendation), not the appended form.</li></ol>""")
-P.append("<p>Nothing starts before your answer. The 15 trials of the repaired loop come first in any case.</p>")
+P.append("<p><strong>Decided 12 Oct (\"ok i agree go ahead\"):</strong> the four steps; the three sentences corrected; the separate request. Step 1 is running. No model is called before the exact cost of step 2 has been put to you.</p>")
 P.append("</main>")
 OUT.write_text("\n".join(P) + "\n")
 print(f"{OUT}: {OUT.stat().st_size} bytes")
