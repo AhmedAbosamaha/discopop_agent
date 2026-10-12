@@ -76,6 +76,33 @@ def followup_request(pre: str, post: str) -> Optional[Tuple[str, List[str], List
     return excerpt, loops, sorted(new)
 
 
+def without_claims_inside_independent_loops(reply: str, post: str) -> Tuple[str, List[List[Any]]]:
+    """A WHAT-IF, not the agent as built (`--placement respect-none`): the reply with every claimed dependence left
+    out whose two lines both lie inside a loop that the same reply declares independent (`LOOP <line> NONE`).
+
+    As built, a claim is placed by its two lines and its variable; the loop the model names for it is not carried
+    into the dependence file, so a dependence claimed for one loop also counts against every other loop around both
+    lines — including one the reply itself calls independent. Returns the filtered reply (in the format the agent's
+    parser reads) and the claims left out."""
+    from discopop_agent.llm.dep_reconstruct import parse_claims
+    from discopop_agent.pragmas.parse import _loop_span
+    lines = post.splitlines()
+    claims, clean = parse_claims(reply)
+    spans = []
+    for head in clean:
+        sp = _loop_span(lines, head - 1) if 1 <= head <= len(lines) else None
+        if sp is not None:
+            spans.append((sp[0] + 1, sp[1] + 1))
+    keep: List[Any] = []
+    dropped: List[Any] = []
+    for c in claims:
+        inside = any(a <= c.writer_line <= b and a <= c.reader_line <= b for a, b in spans)
+        (dropped if inside else keep).append(c)
+    text = "\n".join([f"LOOP {c.loop_line} {c.dep_type} {c.var} {c.writer_line} {c.reader_line}" for c in keep]
+                     + [f"LOOP {h} NONE" for h in clean])
+    return text, [[c.loop_line, c.dep_type, c.var, c.writer_line, c.reader_line] for c in dropped]
+
+
 class _Calls:
     """Stands in for a module's `_complete`: records each request, and in dry mode answers nothing."""
 
@@ -129,8 +156,10 @@ class ReportBench(rr.Bench):
         if self.judge and res["status"] == "exposed":
             res.update(self.judged(arm, rw["pre"]))
 
-    def report(self, rw: Dict[str, Any], key: str, dry: bool, usage_log: Path) -> Dict[str, Any]:
-        """Phase A's `--llm-recon` step in the `followup` form, on the refreshed profile now in place."""
+    def report(self, rw: Dict[str, Any], key: str, dry: bool, usage_log: Path, saved_reply: Optional[str] = None,
+               placement: str = "as-built") -> Dict[str, Any]:
+        """Phase A's `--llm-recon` step in the `followup` form, on the refreshed profile now in place. With
+        `saved_reply`, no model is called: a reply an earlier run recorded is placed again."""
         from discopop_agent.llm import dep_reconstruct
         from discopop_agent.profiling.tools import run_explorer
         a = self.args
@@ -140,18 +169,25 @@ class ReportBench(rr.Bench):
             return {"asked": False, "why": "the rewrite left no new line: the agent asks nothing"}
         excerpt, loops, new = req
         res: Dict[str, Any] = {"asked": True, "dry": dry, "new_lines": new, "loops": loops}
-        with _Calls(dep_reconstruct, dry, usage_log) as calls:
-            try:
-                with contextlib.redirect_stdout(self.log):
-                    reply = dep_reconstruct.ask_after_gate(
-                        excerpt, loops, a.model, session_key=f"replay:{key}", messages=None, api_key=a.api_key,
-                        provider=a.provider, api_base=a.api_base)
-            except Exception as e:                       # noqa: BLE001 - recorded; the rewrite is asked again
-                res.update(call_failed=True, error=str(e)[:300], request=calls.made[-1] if calls.made else None)
+        if saved_reply is not None:
+            reply = saved_reply
+            res.update(replayed=True, placement=placement, request={"reply": saved_reply})
+            if placement == "respect-none":
+                reply, left_out = without_claims_inside_independent_loops(saved_reply, rw["post"])
+                res["claims_left_out"] = left_out
+        else:
+            with _Calls(dep_reconstruct, dry, usage_log) as calls:
+                try:
+                    with contextlib.redirect_stdout(self.log):
+                        reply = dep_reconstruct.ask_after_gate(
+                            excerpt, loops, a.model, session_key=f"replay:{key}", messages=None, api_key=a.api_key,
+                            provider=a.provider, api_base=a.api_base)
+                except Exception as e:                   # noqa: BLE001 - recorded; the rewrite is asked again
+                    res.update(call_failed=True, error=str(e)[:300], request=calls.made[-1] if calls.made else None)
+                    return res
+            res["request"] = calls.made[-1] if calls.made else None
+            if dry:
                 return res
-        res["request"] = calls.made[-1] if calls.made else None
-        if dry:
-            return res
         res["reply_empty"] = not reply
         res["profile_changed"] = False                   # True only where a row was placed in the dependence file
         if reply:                                        # phase A: `if args.llm_recon and reply_text:`
@@ -210,7 +246,12 @@ def main() -> int:
     ap.add_argument("--runs", required=True, help="comma-separated run ids (found through the registry)")
     ap.add_argument("--arm", required=True)
     ap.add_argument("--out", type=Path, required=True)
-    ap.add_argument("--report", choices=("dry", "ask"), help="the model's report of the dependences")
+    ap.add_argument("--report", choices=("dry", "ask", "replay"), help="the model's report of the dependences")
+    ap.add_argument("--replies", type=Path,
+                    help="with --report replay: the directory of an earlier run whose recorded replies are placed again (no model)")
+    ap.add_argument("--placement", choices=("as-built", "respect-none"), default="as-built",
+                    help="with --report replay — respect-none (a what-if, not the agent as built): a claimed dependence is left "
+                         "out where both of its lines lie inside a loop the same reply declares independent")
     ap.add_argument("--deletion", choices=("dry", "ask"), help="the model's review of static blockers")
     ap.add_argument("--select", type=Path, help="a JSON list of {trial, n}: only these rewrites")
     ap.add_argument("--select-deletion", type=Path,
@@ -221,6 +262,17 @@ def main() -> int:
     a = ap.parse_args()
     if not a.report and not a.deletion:
         ap.error("nothing to do: give --report and/or --deletion")
+    if (a.report == "replay") != bool(a.replies):
+        ap.error("--report replay and --replies go together")
+    replies: Dict[Tuple[str, int], str] = {}
+    if a.replies:
+        for f in sorted(a.replies.resolve().glob("*/results.jsonl")):
+            for ln in f.read_text().splitlines():
+                if ln.strip():
+                    r0 = json.loads(ln)
+                    q0 = (r0.get("report") or {}).get("request") or {}
+                    if "reply" in q0:
+                        replies[(r0["trial"], int(r0["n"]))] = str(q0["reply"])
     out = a.out.resolve()
     out.mkdir(parents=True, exist_ok=True)
     runs = [r for r in a.runs.split(",") if r]
@@ -234,6 +286,7 @@ def main() -> int:
     os.environ["DP_LLM_USAGE_LOG"] = str(usage_log)
     manifest: Dict[str, Any] = {
         "tool": "report_replay.py", "runs": runs, "arm": a.arm, "only": a.only, "report": a.report,
+        "replies": str(a.replies) if a.replies else None, "placement": a.placement if a.replies else None,
         "deletion": a.deletion, "select": str(a.select) if a.select else None,
         "select_deletion": str(a.select_deletion) if a.select_deletion else None, "host": platform.node(),
         "commit": subprocess.run(["git", "-C", str(rr.REPO), "rev-parse", "HEAD"], capture_output=True,
@@ -285,7 +338,11 @@ def main() -> int:
                             if rec["fast"].get("usable"):
                                 bench.keep_refreshed()
                                 key = (rel, rw["n"])
-                                if a.report and (chosen is None or key in chosen):
+                                if a.report == "replay":
+                                    if key in replies and (chosen is None or key in chosen):
+                                        rec["report"] = bench.report(rw, "", False, usage_log, saved_reply=replies[key],
+                                                                     placement=a.placement)
+                                elif a.report and (chosen is None or key in chosen):
                                     rec["report"] = bench.report(rw, f"{rel}#{rw['n']}:{time.time_ns()}",
                                                                  a.report == "dry", usage_log)
                                 if a.deletion and (chosen_del is None or key in chosen_del):
@@ -294,7 +351,7 @@ def main() -> int:
                                 rec["full"] = bench.full(rw["pre"], rw["post"], rw["diff"])
                             for arm, count in (("report", "report_calls"), ("deletion", "deletion_calls")):
                                 part = rec.get(arm) or {}
-                                if part.get("asked") and part.get("request"):
+                                if part.get("asked") and part.get("request") and not part.get("replayed"):
                                     manifest[count] += 1
                                     manifest["cost_usd"] += float((part["request"] or {}).get("cost_usd") or 0)
                                 failed = failed or bool(part.get("call_failed"))

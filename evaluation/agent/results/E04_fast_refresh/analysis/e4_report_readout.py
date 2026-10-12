@@ -6,9 +6,10 @@ Every decision is the agent's own, speed aside (the gate's safety checks applied
 F after the fast refresh, X after the fast refresh with the report or the deletion, P after the full re-profile
 of this pass. The names inside a clause are put in one order before directives are compared.
 
-    venv/bin/python evaluation/agent/results/E04_fast_refresh/analysis/e4_report_readout.py [RUN_DIR]
+    venv/bin/python evaluation/agent/results/E04_fast_refresh/analysis/e4_report_readout.py [RUN_DIR [OUT.md]]
 
-Writes `e4_report_readout.md` beside itself.
+Writes `e4_report_readout.md` (or OUT.md) beside itself. A run made with `report_replay.py --report replay` (saved
+replies placed again, no model) is read out the same way and says so at its head.
 """
 import collections
 import json
@@ -19,6 +20,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 RUN = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else HERE.parent / "runs" / "e4_report_a"
+OUT = HERE / (sys.argv[2] if len(sys.argv) > 2 else "e4_report_readout.md")
 STEP1 = HERE.parent / "runs" / "e4_replay"
 SEL = {(e["trial"], e["n"]): e for e in json.loads((HERE / "e4_report_selection.json").read_text())}
 DEL = {(e["trial"], e["n"]): e for e in json.loads((HERE / "e4_deletion_selection.json").read_text())}
@@ -79,6 +81,14 @@ def upper95(k, n):
     return float(stats.beta.ppf(0.95, k + 1, n - k)) if k < n else 1.0
 
 
+def lower95(k, n):
+    """The exact one-sided 95 % lower bound of a share with k of n observed."""
+    if n == 0 or k == 0:
+        return 0.0
+    from scipy import stats                              # type: ignore[import-untyped]
+    return float(stats.beta.ppf(0.05, k, n - k + 1))
+
+
 def load(root):
     rows = {}
     for f in sorted(root.glob("*/results.jsonl")) + sorted(root.glob("*/*/results.jsonl")):
@@ -97,17 +107,26 @@ dele = {k: r for k, r in rows.items() if k in DEL and "deletion" in r}
 loop = lambda k: k[0].split("/benchmarks/")[1].split("/")[1]
 short = lambda k: f"`{k[0].split('/')[0]}` `{loop(k)}` repeat {k[0].rsplit('rep', 1)[1]}, rewrite {k[1]}"
 
-md = ["# E4 step 2 — the model's report and the deletion review on the saved rewrites (`e4_report_a`)", "",
+md = [f"# E4 step 2 — the model's report and the deletion review on the saved rewrites (`{RUN.name}`)", "",
       "Built by `e4_report_readout.py` from the run's records. F: the decision after the fast refresh; X: after the "
       "fast refresh with the model's report (or with the deletion); P: after the full re-profile of this pass. "
       "Decisions are the agent's own, speed aside, as in step 1.", ""]
-calls = [r["report"]["request"] for r in rep.values() if r["report"].get("request")] + \
+replayed = [r for r in rep.values() if r["report"].get("replayed")]
+if replayed:
+    placements = sorted({str(r["report"].get("placement")) for r in replayed})
+    left = sum(len(r["report"].get("claims_left_out") or []) for r in replayed)
+    md += [f"**No model was called in this run: the replies recorded by `{', '.join(sorted({Path(str(m.get('replies'))).name for m in manifests}))}` "
+           f"are placed again — placement `{', '.join(placements)}`.** "
+           + ("`respect-none` is a what-if, not the agent as built: a claimed dependence is left out where both of its lines lie inside a "
+              f"loop the same reply declares independent; {left} claims are left out, in "
+              f"{sum(1 for r in replayed if r['report'].get('claims_left_out'))} replies." if "respect-none" in placements else ""), ""]
+calls = [r["report"]["request"] for r in rep.values() if r["report"].get("request") and not r["report"].get("replayed")] + \
         [r["deletion"]["request"] for r in dele.values() if r["deletion"].get("asked") and r["deletion"].get("request")]
 cost = [c.get("cost_usd") or 0 for c in calls]
 secs = [c.get("seconds") or 0 for c in calls]
 md += [f"**{len(rep)} of the {len(SEL)} rewrites selected for the report and {len(dele)} of the {len(DEL)} selected for the "
        f"deletion are read out.** Model calls counted: {len(calls)} "
-       f"({sum(1 for r in rep.values() if r['report'].get('request'))} for the report, "
+       f"({sum(1 for r in rep.values() if r['report'].get('request') and not r['report'].get('replayed'))} for the report, "
        f"{sum(1 for r in dele.values() if r['deletion'].get('asked'))} for the deletion); calls that failed and were asked "
        f"again or are still open: {len(failed)}. Commit `{', '.join(sorted({m['commit'][:9] for m in manifests}))}`, the "
        f"DiscoPoP pass `{', '.join(sorted({str(m['discopop_pass_sha256'])[:12] for m in manifests}))}`; "
@@ -170,6 +189,13 @@ for k in lost:
         rp = dif[k]["report"]
         md.append(f"- not kept again: {short(k)} — the reply: {rp.get('summary', 'nothing the agent could read')}; "
                   f"claims {rp.get('claims')}; after it: {rp.get('status')}/{rp.get('judged')}")
+newly = [k for k in dif if against(dif[k]["fast"], dif[k]["full"]) == "kept after both, other directives"
+         and against(dif[k]["report"], dif[k]["full"]) == "kept only after the full re-profile"]
+for k in newly:
+    rp = dif[k]["report"]
+    md.append(f"- kept after both before, a win lost with the report: {short(k)} — P {kept(dif[k]['full'])}; F {kept(dif[k]['fast'])}; "
+              f"with the report {rp.get('status')}/{rp.get('judged')}; claims {rp.get('claims')}; loops the reply declared "
+              f"independent {rp.get('loops_declared_independent')}")
 md.append("")
 
 # ---- 2 the report on the rewrites whose decision is the same -------------------------------------------------------
@@ -198,15 +224,62 @@ m_loop = collections.Counter(loop(k) for k in sam if k not in odd)
 b_loop = collections.Counter(loop(k) for k in broken)
 est = sum(n_same[lp] * b_loop.get(lp, 0) / m for lp, m in m_loop.items())
 n_ok = len(sam) - len(odd)
-ub = upper95(len(broken), n_ok)
+ub, lb = upper95(len(broken), n_ok), lower95(len(broken), n_ok)
 md += [f"**Broken: {len(broken)} of {n_ok}.** For the {sum(n_same.values())} such rewrites of step 1: each loop's broken share times "
        f"its number of them gives {est:.1f}; the exact one-sided 95 % bound on the broken share is {100 * ub:.1f} %, that is "
-       f"{ub * sum(n_same.values()):.0f} rewrites (the draw is by loop, the bound is not: an indication).", ""]
+       f"{ub * sum(n_same.values()):.0f} rewrites (the draw is by loop, the bound is not: an indication). Not registered, added "
+       f"while the run was going: the same bound from below is {100 * lb:.1f} %, that is {lb * sum(n_same.values()):.0f} rewrites.", ""]
 for k in broken:
     rp = sam[k]["report"]
     md.append(f"- broken: {short(k)} — F and P: {kept(sam[k]['full'])}; with the report: {rp.get('status')}/{rp.get('judged')} "
               f"{kept(rp)}; claims {rp.get('claims')}")
 md.append("")
+
+# by kind — not registered, added while the run was going
+kinds = collections.defaultdict(list)
+for k in broken:
+    kinds[against(sam[k]["report"], sam[k]["full"], x_name="with the report")].append(k)
+N = sum(n_same.values())
+parts = []
+for kind, ks in sorted(kinds.items(), key=lambda kv: -len(kv[1])):
+    e = sum(n_same[lp] * sum(1 for k in ks if loop(k) == lp) / m for lp, m in m_loop.items())
+    parts.append(f"{kind}: {len(ks)} of {n_ok} — by loop {e:.1f} of the {N}, between {lower95(len(ks), n_ok) * N:.0f} and "
+                 f"{upper95(len(ks), n_ok) * N:.0f} by the two one-sided 95 % bounds")
+md += ["By kind (not registered): " + "; ".join(parts) + ".", ""]
+lost_before = sum(1 for k, r in step1.items() if against(r["fast"], r["full"]) == "kept only after the full re-profile")
+e_lost = sum(n_same[lp] * sum(1 for k in kinds.get("kept only after the full re-profile", []) if loop(k) == lp) / m for lp, m in m_loop.items())
+md += [f"**The balance of wins** (rewrites the full profile keeps and the other does not; not registered): after the fast refresh alone "
+       f"{lost_before} of the {len(step1)}; with the report, {len(lost) - len(back)} of those stay lost, {len(newly)} more among the rewrites that "
+       f"differed only in their directives, and {len(kinds.get('kept only after the full re-profile', []))} of the {n_ok} drawn from the "
+       f"{N} that agreed — by loop {e_lost:.1f} of the {N}.", ""]
+
+# why broken — not a registered read-out; added while the run was going, after a look at the first records
+why_broken = collections.Counter()
+detail = []
+for k in broken:
+    rp = sam[k]["report"]
+    unplaced = {tuple(u[:5]) for u in rp.get("unresolved") or []}
+    placed = [c for c in rp.get("claims") or [] if tuple(c) not in unplaced]
+    kx = dict(kept(rp) or [])
+    cats = set()
+    for lines, pragmas in kept(sam[k]["full"]) or []:
+        if kx.get(lines) == pragmas:
+            continue                                         # this loop is kept as before
+        inside = [c for c in placed if lines[0] <= c[3] <= lines[1] and lines[0] <= c[4] <= lines[1]]
+        own = [c for c in inside if c[0] == lines[0]]
+        cats.add("a dependence the model claimed for the kept loop itself" if own
+                 else "only dependences the model claimed for another loop, with both lines inside the kept loop" if inside
+                 else "no placed dependence with both lines inside the kept loop")
+        detail.append(f"- {short(k)}: the loop of lines {lines[0]}–{lines[1]} ({', '.join(pragmas)}) — claimed for it: {own}; claimed for "
+                      f"another loop, both lines inside it: {[c for c in inside if c not in own]}; loops the reply declared independent: "
+                      f"{rp.get('loops_declared_independent')}")
+    for c in cats or {"the loops of the full profile are kept; another loop differs"}:
+        why_broken[c] += 1
+if broken:
+    md += ["**What stands behind the broken ones** (a reading aid: the agent places a claimed dependence by its two lines and its "
+           "variable; the loop the model named it for is not carried into the dependence file, so a dependence claimed for the "
+           "loop around can block the loop inside): " + "; ".join(f"{k} {v}" for k, v in sorted(why_broken.items(), key=lambda kv: -kv[1]))
+           + " (a rewrite with several kept loops can count in more than one).", ""] + detail + [""]
 
 # ---- 3 keeps the full profile does not make ------------------------------------------------------------------------
 md += ["## 3 Keeps the full re-profile does not make", ""]
@@ -308,5 +381,5 @@ md += ["## 6 The two hypotheses, read as registered", "",
        f"**H7b** (deleting produces keeps the full profile does not make, adding does not; refuted if deletion produces no more "
        f"than addition): the deletion produced {len(d_only)} on {len(dele)} rewrites; the report produced {len(new)} on {len(rep)}.", ""]
 
-(HERE / "e4_report_readout.md").write_text("\n".join(md) + "\n")
+OUT.write_text("\n".join(md) + "\n")
 print("\n".join(md))
