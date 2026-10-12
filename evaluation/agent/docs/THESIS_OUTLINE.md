@@ -526,8 +526,7 @@ result, or the expectation written down before the run.
     between 60 and 159 by the one-sided 95 % bounds; for wins about 38 lost (13 to 82) against 20 regained. H7 is
     not refuted on the selected rewrites and fails on the whole set; no test, as registered. In all 12 damaged
     rewrites the reply declares the damaged loop independent and names the dependence for another loop: the agent
-    places a claimed dependence by its lines and its variable, and DiscoPoP's dependence file has no place for
-    the loop. A what-if on the saved replies (no model): placed again as built, the recorded decisions on 116 of
+    places a claimed dependence by its lines and its variable, without saying which loop carries it. A what-if on the saved replies (no model): placed again as built, the recorded decisions on 116 of
     116; with claims left out where they lie inside a loop the reply calls independent, all 5 wins the report
     cost come back, 3 of the 20 regained reductions are lost again and 3 rewrites keep a loop the full profile
     does not keep — not a repair. *The deletion,* asked on 20 rewrites about 41 static blockers: 19 called
