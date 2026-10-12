@@ -76,21 +76,31 @@ notes = {r["benchmark"]: sorted({x["fast"].get("note", "") for x in r["repeats"]
 md += ["What the fast refresh carried over: " + "; ".join(f"`{b}` — {' / '.join(n)}" for b, n in notes.items()) + ".", ""]
 
 md += ["## 3 DiscoPoP's patterns after each", "",
-       "An unchanged program: the fast refresh should give the patterns of the full profile. Where the five full "
-       "profiles differ among themselves, a difference from the fast refresh says nothing.", ""]
+       "An unchanged program: the fast refresh should give the Do-All and reduction loops of the full profile, with "
+       "the same clauses. Where the five full profiles differ among themselves, a difference from the fast refresh "
+       "says nothing. Task patterns are counted apart: their number changes from one profile to the next and no "
+       "directive of the agent comes from them.", ""]
 body = []
 for r in rows:
-    fulls = [json.dumps(x["full"]["patterns"]) for x in r["repeats"] if x["full"]["ok"]]
-    fasts = [json.dumps(x["fast"]["patterns"]) for x in r["repeats"] if x["fast"]["ok"]]
-    same_pair = sum(1 for x in r["repeats"] if x["full"]["ok"] and x["fast"]["ok"] and x["fast"]["patterns"] == x["full"]["patterns"])
-    count = lambda p: {k: sum(1 for q in p if q[0] == k) for k in ("do_all", "reduction")}
-    one = r["repeats"][0]["full"]["patterns"] if r["repeats"] else []
-    tasks = next((q[1] for q in one if q[0] == "task"), 0)
-    body.append([f"`{r['benchmark']}`", count(one)["do_all"], count(one)["reduction"], tasks, len(set(fulls)), len(set(fasts)),
-                 f"{same_pair} of {len(r['repeats'])}",
-                 f"{sum(1 for f in fasts if f in set(fulls))} of {len(fasts)}"])
-md += table(["program", "Do-All loops (first full profile)", "reductions", "task patterns", "different answers among the five full profiles",
-             "among the five fast refreshes", "pairs with the same patterns", "fast refreshes equal to some full profile"], body) + [""]
+    loops = lambda p: json.dumps([q for q in p if q[0] != "task"])
+    tasks = lambda p: next((q[1] for q in p if q[0] == "task"), 0)
+    fulls = [x["full"]["patterns"] for x in r["repeats"] if x["full"]["ok"]]
+    fasts = [x["fast"]["patterns"] for x in r["repeats"] if x["fast"]["ok"]]
+    same_pair = sum(1 for x in r["repeats"] if x["full"]["ok"] and x["fast"]["ok"]
+                    and loops(x["fast"]["patterns"]) == loops(x["full"]["patterns"]))
+    one = fulls[0] if fulls else []
+    full_set = {loops(p) for p in fulls}
+    body.append([f"`{r['benchmark']}`", sum(1 for q in one if q[0] == "do_all"), sum(1 for q in one if q[0] == "reduction"),
+                 len(full_set), len({loops(p) for p in fasts}), f"{same_pair} of {len(r['repeats'])}",
+                 f"{sum(1 for p in fasts if loops(p) in full_set)} of {len(fasts)}",
+                 f"{min(map(tasks, fulls))}–{max(map(tasks, fulls))}", f"{min(map(tasks, fasts))}–{max(map(tasks, fasts))}"])
+md += table(["program", "Do-All loops (first full profile)", "reductions", "different answers among the five full profiles",
+             "among the five fast refreshes", "pairs with the same loops and clauses", "fast refreshes equal to some full profile",
+             "task patterns, full", "task patterns, fast"], body) + [""]
+ex = {r["benchmark"]: ([x["full"].get("explore_s") for x in r["repeats"]] + [x["fast"].get("explore_s") for x in r["repeats"]]
+                       + [r["before"].get("explore_s")]) for r in rows}
+md += ["The explorer's own seconds over the eleven profiles of each program (five full, five fast, the one before): "
+       + "; ".join(f"`{b}` {min(v):.1f} to {max(v):.1f}" for b, v in ex.items()) + ".", ""]
 
 md += ["## 4 As a share of an agent trial", "",
        "The agent's trials of September on these programs (`history/E01_main_comparison`, arm `default`, the agent of "
