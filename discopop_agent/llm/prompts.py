@@ -593,10 +593,10 @@ _SYSTEM_RECONSTRUCT = textwrap.dedent("""\
     Do NOT report the loop's own induction variable: it is handled separately and
     is never a blocker.
 
-    Completeness matters more than precision here.  A dependence you omit makes a
-    sequential loop look parallel, which is a race.  A dependence you add that is
-    not real only costs a missed parallelization.  When you are unsure whether
-    iterations touch the same location, REPORT IT.
+    Completeness matters more than precision here.  A dependence you omit can make
+    a sequential loop look parallel.  A dependence you add that is not real only
+    costs a missed parallelization.  When you are unsure whether iterations touch
+    the same location, REPORT IT.
 
     Answer with one line per dependence and nothing else:
 
@@ -631,7 +631,7 @@ _RECON_ADDENDUM = textwrap.dedent("""\
 
     Use the line numbers of the code AFTER your edit.  Skip the loop's own
     induction variable.  Report anything you are unsure about: a dependence you
-    omit makes a sequential loop look parallel, which is a race, while one you
-    add that is not real costs only a missed parallelization.  These lines go
-    after your edit, not instead of it.
+    omit can make a sequential loop look parallel, while one you add that is not
+    real costs only a missed parallelization.  These lines go after your edit,
+    not instead of it.
 """)

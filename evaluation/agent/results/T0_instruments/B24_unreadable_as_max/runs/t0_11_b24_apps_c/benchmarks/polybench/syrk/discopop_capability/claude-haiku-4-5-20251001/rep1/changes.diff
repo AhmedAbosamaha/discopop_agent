@@ -1,0 +1,10 @@
+--- original.c
++++ final.c
+@@ -759,6 +759,7 @@
+   for (i = 0; i < _PB_NI; i++)
+     for (j = 0; j < _PB_NI; j++)
+       C[i][j] *= beta;
++ #pragma omp parallel for private(k,j) shared(C) 
+   for (i = 0; i < _PB_NI; i++)
+     for (j = 0; j < _PB_NI; j++)
+       for (k = 0; k < _PB_NJ; k++)

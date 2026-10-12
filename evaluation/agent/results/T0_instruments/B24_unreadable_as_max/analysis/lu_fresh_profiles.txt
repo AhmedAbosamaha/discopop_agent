@@ -1,0 +1,8 @@
+polybench/lu, twelve fresh profiles on the server with the repaired DiscoPoP (B23 and B24), 12 Oct 2026, no model
+(lu_fresh_profiles.sh, piped to the server; the patterns DiscoPoP reports on lines 60-70 of lu.c, per profile):
+
+9 [["do_all", 64, []], ["do_all", 67, []], ["reduction", 67, ["+:A"]]]
+3 [["do_all", 62, []], ["do_all", 64, []], ["do_all", 67, []]]
+
+The first answer is the one with `reduction(+:A)` on the loop of line 67 and the outer loop (line 62) blocked; the
+second calls the outer loop parallel and has no reduction. Both existed before the repairs (B21).

@@ -1,0 +1,46 @@
+{
+  "suite": "tsvc_c3",
+  "kernel": "k27",
+  "source": "constructed: ORDER-4 (THESIS_EXPERIMENTS \u00a76, 4 Oct)",
+  "category": "constructed / the order of three statements decided by hidden index tables (ORDER-4)",
+  "file": "k27.c",
+  "language": "c",
+  "layout": "project",
+  "project": {
+    "units": [
+      "k27.c",
+      "main.c"
+    ],
+    "include_dirs": [
+      "."
+    ],
+    "editable": [
+      "k27.c"
+    ]
+  },
+  "restructuring_class": "restructure (ORDER-4 chain)",
+  "transformation": "loop distribution into three loops: the second statement's, the third's, the first's",
+  "why": "kv[i] = i-1: S3 reads the element of v that S2 wrote one iteration earlier; kw[i] = i-1: S1 reads the element of w that S3 wrote one iteration earlier; ku[i] = LEN_1D+i: S2 reads u elements nothing writes",
+  "reference_solution": "agent/reference_solutions/tsvc_c3/k27.c",
+  "exclude_functions": [
+    "main",
+    "dummy"
+  ],
+  "harness": "tsvc_c3/k27.h",
+  "harness_sha256": "ae64ca14d00a0cd2c044a5aacdbf897abc6820bc1de752654906d5d9613f76be",
+  "hot_loop": {
+    "entry": "kernel_k27",
+    "function": "kernel_k27",
+    "line": 6,
+    "writes": [
+      "u",
+      "v",
+      "w"
+    ]
+  },
+  "repetitions_proven": true,
+  "agent_dataset": "SMALL",
+  "generator_version": 7,
+  "inputs_sha256": "456dd573b84b30e6f32c943bb559d80374eec67177de48223e95124a8c3fc627",
+  "output_sha256": "67114515384d637217d99a1f4ff0141729165e5f42699a0450af078115fef3dd"
+}

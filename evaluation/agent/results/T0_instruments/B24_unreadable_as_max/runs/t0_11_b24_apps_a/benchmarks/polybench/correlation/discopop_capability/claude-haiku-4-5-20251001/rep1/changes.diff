@@ -1,0 +1,10 @@
+--- original.c
++++ final.c
+@@ -104,6 +104,7 @@
+       }
+ 
+   /* Calculate the m * m correlation matrix. */
++  #pragma omp parallel for firstprivate(m,n) private(j2,i) shared(data,symmat) 
+   for (j1 = 0; j1 < _PB_M-1; j1++)
+     {
+       symmat[j1][j1] = 1.0;

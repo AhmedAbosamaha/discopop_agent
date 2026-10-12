@@ -1,0 +1,45 @@
+{
+  "suite": "tsvc_c3",
+  "kernel": "s3112",
+  "source": "benchmarks/TSVC_2/src/tsvc.c",
+  "category": "reductions / sum reduction saving running sums",
+  "file": "s3112.c",
+  "language": "c",
+  "layout": "project",
+  "project": {
+    "units": [
+      "s3112.c",
+      "main.c"
+    ],
+    "include_dirs": [
+      "."
+    ],
+    "editable": [
+      "s3112.c"
+    ]
+  },
+  "restructuring_class": "decline",
+  "transformation": "running sum saved per element (prefix sum)",
+  "why": "b[i] is the sum of a[0..i]; a parallel scan reorders the additions",
+  "reference_solution": null,
+  "exclude_functions": [
+    "main",
+    "dummy"
+  ],
+  "harness": "tsvc_c3/s3112.h",
+  "harness_sha256": "bf0837152a8a19edb18b981804e5f2ee3db622703bdd6c87f98daa8a44883b68",
+  "hot_loop": {
+    "entry": "kernel_s3112",
+    "function": "kernel_s3112",
+    "line": 8,
+    "writes": [
+      "b",
+      "sum"
+    ]
+  },
+  "repetitions_proven": true,
+  "agent_dataset": "SMALL",
+  "generator_version": 7,
+  "inputs_sha256": "456dd573b84b30e6f32c943bb559d80374eec67177de48223e95124a8c3fc627",
+  "output_sha256": "a017833b720c9e203daac65b7f0c833cd4ad4c796c6d7e130317d892bffc8b61"
+}

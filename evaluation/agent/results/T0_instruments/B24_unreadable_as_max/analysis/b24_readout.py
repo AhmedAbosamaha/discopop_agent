@@ -173,8 +173,14 @@ if bf.is_file() and af.is_file():
            f"gone and nothing else changed — **{'as predicted' if scope_ok else 'NOT as predicted'}**. Packages with a "
            f"maximum or minimum entry (`>`, `<`) after the repair: **{len(left)}**"
            + ((" — " + ", ".join(f"`{k}`" for k in left)) if left else "") + ".", ""]
-passed = all(c == 0 and r == 0 for _, c, r in verdict)
-md += ["## Verdict", "", f"**Pass criterion (no class and no reduction clause differs): {'PASSED' if passed else 'NOT passed'}.**"] \
+classes_ok = all(c == 0 for _, c, r in verdict)
+clauses_ok = all(r == 0 for _, c, r in verdict)
+md += ["## Verdict", "",
+       f"**Pass criterion, classes (no package with another class): {'PASSED' if classes_ok else 'NOT passed'}.** "
+       f"**Reduction clauses (none differs between the two sets of draws): {'PASSED' if clauses_ok else 'NOT met as written'}"
+       + ("" if clauses_ok else " — the package(s) are listed with every draw above; outside TSVC a clause that comes in some "
+          "draws and not in others is the all-or-none behaviour of B21, and `lu_fresh_profiles.txt` holds twelve fresh "
+          "profiles of `polybench/lu` on the repaired DiscoPoP") + ".**"] \
     + [f"- {t}: {c} package(s) with another class, {r} with other reduction clauses." for t, c, r in verdict] \
     + ["", "**Scope check (the reduction files changed exactly where predicted): "
        + ("as predicted" if scope_ok else "not available" if scope_ok is None else "NOT as predicted") + ".**", ""]

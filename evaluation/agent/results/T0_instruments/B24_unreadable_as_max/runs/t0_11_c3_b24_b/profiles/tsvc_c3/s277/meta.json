@@ -1,0 +1,46 @@
+{
+  "suite": "tsvc_c3",
+  "kernel": "s277",
+  "source": "benchmarks/TSVC_2/src/tsvc.c",
+  "category": "control flow / test for dependences arising from guard variable computation.",
+  "file": "s277.c",
+  "language": "c",
+  "layout": "project",
+  "project": {
+    "units": [
+      "s277.c",
+      "main.c"
+    ],
+    "include_dirs": [
+      "."
+    ],
+    "editable": [
+      "s277.c"
+    ]
+  },
+  "restructuring_class": "hidden independence (E2-B1 b)",
+  "transformation": "none: with TSVC's data the guard skips both updates in every iteration",
+  "why": "a >= 0 everywhere (TSVC: a = 1), so the b[i+1] to b[i] flow the text shows never happens",
+  "reference_solution": null,
+  "exclude_functions": [
+    "main",
+    "dummy"
+  ],
+  "harness": "tsvc_c3/s277.h",
+  "harness_sha256": "40608c0c1e6be258aa02d2dec7a73ebe1d13af2543795365b73127718cfd7f95",
+  "hot_loop": {
+    "entry": "kernel_s277",
+    "function": "kernel_s277",
+    "line": 6,
+    "writes": [
+      "a",
+      "b"
+    ]
+  },
+  "repetitions_proven": false,
+  "repetitions_note": "with TSVC's data the guard skips both statements in every iteration: the loop executes nothing, so there is nothing a skipped repetition would have done",
+  "agent_dataset": "SMALL",
+  "generator_version": 7,
+  "inputs_sha256": "456dd573b84b30e6f32c943bb559d80374eec67177de48223e95124a8c3fc627",
+  "output_sha256": "8d3951e277b3a9a0211a1d1dda001fa2c582d3dcd1525d4a628876e9b42a63d4"
+}

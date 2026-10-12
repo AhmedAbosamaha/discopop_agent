@@ -1,0 +1,44 @@
+{
+  "suite": "tsvc_c3",
+  "kernel": "s252",
+  "source": "benchmarks/TSVC_2/src/tsvc.c",
+  "category": "scalar and array expansion / loop with ambiguous scalar temporary",
+  "file": "s252.c",
+  "language": "c",
+  "layout": "project",
+  "project": {
+    "units": [
+      "s252.c",
+      "main.c"
+    ],
+    "include_dirs": [
+      "."
+    ],
+    "editable": [
+      "s252.c"
+    ]
+  },
+  "restructuring_class": "restructure",
+  "transformation": "scalar expansion (t carries the previous iteration's s)",
+  "why": "t = s of iteration i-1: substitute b[i-1]*c[i-1]",
+  "reference_solution": "agent/reference_solutions/tsvc_c3/s252.c",
+  "exclude_functions": [
+    "main",
+    "dummy"
+  ],
+  "harness": "tsvc_c3/s252.h",
+  "harness_sha256": "75cf612a7add7c8226fd94c75c60c11975a1723a1ab3425ed4eaef5d2fefd91d",
+  "hot_loop": {
+    "entry": "kernel_s252",
+    "function": "kernel_s252",
+    "line": 8,
+    "writes": [
+      "a"
+    ]
+  },
+  "repetitions_proven": true,
+  "agent_dataset": "SMALL",
+  "generator_version": 7,
+  "inputs_sha256": "456dd573b84b30e6f32c943bb559d80374eec67177de48223e95124a8c3fc627",
+  "output_sha256": "f89a2782ee7dee5dbd9e05394d8542bae87c120803394a3ae954c87aa3ca3214"
+}

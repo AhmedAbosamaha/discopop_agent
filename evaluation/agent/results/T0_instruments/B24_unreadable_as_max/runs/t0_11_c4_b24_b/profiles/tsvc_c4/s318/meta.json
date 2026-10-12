@@ -1,0 +1,44 @@
+{
+  "suite": "tsvc_c4",
+  "kernel": "s318",
+  "source": "benchmarks/TSVC_2/src/tsvc.c",
+  "category": "reductions / isamax, max absolute value, increments not equal to 1",
+  "file": "s318.c",
+  "language": "c",
+  "layout": "project",
+  "project": {
+    "units": [
+      "s318.c",
+      "main.c"
+    ],
+    "include_dirs": [
+      "."
+    ],
+    "editable": [
+      "s318.c"
+    ]
+  },
+  "restructuring_class": "restructure",
+  "transformation": "the largest absolute value at stride inc and the first index that holds it: the running position as a function of i, a pair per thread, merged",
+  "why": "k advances by inc per iteration (k = i * inc); max and index belong together",
+  "reference_solution": "agent/reference_solutions/tsvc_c4/s318.c",
+  "exclude_functions": [
+    "main",
+    "dummy"
+  ],
+  "harness": "tsvc_c4/s318.h",
+  "harness_sha256": "e179ddffd45904dd24fcdb6e2a05bdfc2e9b881905fb44038db7ae8c955f7bba",
+  "hot_loop": {
+    "entry": "kernel_s318",
+    "function": "kernel_s318",
+    "line": 12,
+    "writes": [
+      "k"
+    ]
+  },
+  "repetitions_proven": true,
+  "agent_dataset": "SMALL",
+  "generator_version": 8,
+  "inputs_sha256": "456dd573b84b30e6f32c943bb559d80374eec67177de48223e95124a8c3fc627",
+  "output_sha256": "ef025fc45f0f3c08f888331f4b940db0cbb2895e3f4f579bc035fd886fe573b8"
+}

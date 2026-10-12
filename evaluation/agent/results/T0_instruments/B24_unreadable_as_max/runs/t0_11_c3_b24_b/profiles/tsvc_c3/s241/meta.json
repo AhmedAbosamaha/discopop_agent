@@ -1,0 +1,45 @@
+{
+  "suite": "tsvc_c3",
+  "kernel": "s241",
+  "source": "benchmarks/TSVC_2/src/tsvc.c",
+  "category": "node splitting / preloading necessary to allow vectorization",
+  "file": "s241.c",
+  "language": "c",
+  "layout": "project",
+  "project": {
+    "units": [
+      "s241.c",
+      "main.c"
+    ],
+    "include_dirs": [
+      "."
+    ],
+    "editable": [
+      "s241.c"
+    ]
+  },
+  "restructuring_class": "restructure",
+  "transformation": "node splitting (preload the old a[i+1])",
+  "why": "b[i] reads a[i+1] before it is overwritten: needs a copy of the old values",
+  "reference_solution": "agent/reference_solutions/tsvc_c3/s241.c",
+  "exclude_functions": [
+    "main",
+    "dummy"
+  ],
+  "harness": "tsvc_c3/s241.h",
+  "harness_sha256": "cd5e6624976cdce44fd5eb34809fcc9a12af9715a2a20d5d4323e5f1515b8d4d",
+  "hot_loop": {
+    "entry": "kernel_s241",
+    "function": "kernel_s241",
+    "line": 6,
+    "writes": [
+      "a",
+      "b"
+    ]
+  },
+  "repetitions_proven": true,
+  "agent_dataset": "SMALL",
+  "generator_version": 7,
+  "inputs_sha256": "456dd573b84b30e6f32c943bb559d80374eec67177de48223e95124a8c3fc627",
+  "output_sha256": "8a1bfd54c2ddce081e21d147522b3b615f646d435a8cd367226f53e609f77431"
+}

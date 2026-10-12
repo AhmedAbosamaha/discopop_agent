@@ -1,0 +1,10 @@
+--- original.c
++++ final.c
+@@ -64,6 +64,7 @@
+ real_t kernel_vas(int * __restrict__ ip)
+ {
+     for (int nl = 0; nl < iterations; nl++) {
++        #pragma omp parallel for shared(ip) 
+         for (int i = 0; i < LEN_1D; i++) {
+             a[ip[i]] = b[i];
+         }

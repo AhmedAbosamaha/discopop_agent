@@ -1027,8 +1027,14 @@ example from LULESH never was.
 minima `min`, `hypot` and `fabs` of a difference now nothing). A new end-to-end test,
 `test/end_to_end/reduction_pattern/negative/min_max_unreadable` (C): `fmax(x, fabs(a[i]))` is a `max` reduction,
 and the helper, `hypot`, `fabs` of a difference, the division and the maximum with the variable in both
-arguments get no pattern at all. The regression on the thesis's packages is in the record
-(`evaluation/agent/docs/THESIS_EXPERIMENTS.md` §6, 12 Oct, and the results group B24).
+arguments get no pattern at all. The same on the server (LLVM 20.1.2).
+
+**The regression (12 Oct, no model; results group B24, `analysis/b24_readout.md`).** DiscoPoP alone in three
+draws on the 44 `tsvc_c3`, the 9 `tsvc_c4` and the 31 other packages of the thesis: every class, outcome and
+number of kept directives as before the repair; the reduction files changed in exactly the three packages named
+above, and none holds a `>` or `<` afterwards. One reduction clause differs between the two sets of draws —
+`reduction(+:A)` on `polybench/lu`, which belongs to one of the two answers DiscoPoP gives that kernel from
+profile to profile (B21): twelve fresh profiles on the repaired DiscoPoP give it nine times.
 
 ## B25 — candidate: one run in ten records no `INIT` for a stack array, and the array then gets `lastprivate` instead of `shared` (profiler runtime)
 
