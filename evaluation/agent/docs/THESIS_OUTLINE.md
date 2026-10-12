@@ -43,8 +43,8 @@ proposed here and is to be confirmed with the title.
 | RQ3 | How close do the accepted programs come to an expert's version, and do they scale with threads? | C1 | H4, H11 | E1, E2, E6, E11 | 7.2, 7.5, 7.9 | partly |
 | RQ4 | What does the model need: DiscoPoP's evidence, feedback from failed attempts, or more strength? | C1 | H5, H5b, H5d, H12 | E2, E12 | 7.3, 7.5 | done |
 | RQ5 | Who should write the directive: DiscoPoP or the model? | C1, C2 | H6 (its half on the author), H6b | E3 | 7.7 | done 10 Oct: 81 of 90 fast and race-free where the model writes, 76 of 90 where DiscoPoP writes — not established (p = 0.14; four of the five trials are `s331`); no unusable program in either setup; DiscoPoP keeps writing in 7.7.2 (the author, 10 Oct); corrected for `s341`: 80 against 75; the contrast set (E3b, 7.7.1b), done 10 Oct: 30 of 30 against 24 of 30 on six chosen loops (25 after a DiscoPoP defect found there was repaired and its loop run again, 11 Oct) — supported as a single test (exact p = 0.009; 0.021 corrected), not within the family; the model usually finds a form DiscoPoP recognises, at 3.4 times the calls and less than half the speed |
-| RQ6 | Can the model close the gap a fast refresh leaves, without making the analysis unsafe? | C3 | H7, H7b | E4 | 7.7 | a design is put to the author (10 Oct): a no-model replay of the 601 saved rewrites first, live trials only if it says the refresh keeps DiscoPoP's verdicts — nothing built |
-| RQ7 | Can the profile be refreshed without running the program again, without changing decisions? | C3 | H6 | E4 | 7.7 | as RQ6: one experiment, design put to the author (10 Oct); known already: no time to save on the 18 loops (the skipped run is 0.08 % of the agent's time) |
+| RQ6 | Can the model close the gap a fast refresh leaves, without making the analysis unsafe? | C3 | H7, H7b | E4 | 7.7 | partly (12 Oct): shown without a model that a correct report gives DiscoPoP back the reduction the fast refresh loses (three rewrites: a minimum, a sum, a maximum); the model's own reports on the saved rewrites wait for the author's go (137 calls, or 620 for all 599); deleting has something to ask on 21 of the 599 rewrites, none among the 58 the refresh changes |
+| RQ7 | Can the profile be refreshed without running the program again, without changing decisions? | C3 | H6 | E4 | 7.7 | done for the steps without a model (12 Oct): on 599 saved rewrites the fast refresh changes whether the agent keeps the rewrite in 58 (two full profiles of one program: 0) — refuted (p = 0.0003; at most 0.018 in the family); 22 wins thrown away, 20 of them reductions the model created; no time saved on the 18 loops; where the run is long one refresh saves 21 to 36 s, 1.5 to 7.5 % of a trial |
 | RQ8 | How far should restructuring be chained? | C1, C3 | H8 | E8 | 7.8 | planned |
 | RQ9 | Where should the agent look first? | C1 | H9 | E9 | 7.4 | planned |
 
@@ -499,6 +499,29 @@ result, or the expectation written down before the run.
     out: profiling seconds per kept rewrite; decisions that differ from the full re-profile, split into unsafe
     and over-cautious; extra calls. Written down before the run: the refresh can only change a decision where
     DiscoPoP, not the gate, judges the rewrite.
+    **[partly] — run in four steps, the ones without a model first (the author, 12 Oct).**
+    *Step 1, done 12 Oct, no model:* the 599 pragma-free rewrites that passed the checks in the trials of the
+    main comparison, 7.7.1 and 7.7.1b, each judged with the agent's own functions after a full re-profile, after
+    the fast refresh and after a second full re-profile (the control). The agent's decision differs after the
+    fast refresh in 58 rewrites and between the two full re-profiles in none; the registered test over 29 loops:
+    p = 0.0003, at most 0.018 in the family of 54 — the claim that the refresh changes no decision is refuted.
+    22 rewrites are kept only after the full re-profile, 20 of them reductions the model created (the rewritten
+    line has no measured dependence, DiscoPoP writes `firstprivate` of the accumulator, the agent's clause check
+    refuses it), 13 of them shipped by their trials; 2 are kept only after the fast refresh, one of them a race
+    the data cannot show (read from the code); 34 are kept after both with other directives, 27 of those differing
+    only in a redundant `shared` clause (counted as the same: 31 differ, p = 0.001, 0.053 in the family). No
+    time saved on these loops: 1.54 s against 1.75 s per refresh, 1,758 s against 1,730 s with the gate's checks
+    on the extra directives.
+    *Step 3, done 12 Oct, no model:* where the profiling run is long, one fast refresh against one full
+    re-profile after an edit that changes nothing — `hotspot` 72 s against 108 s, `is` 14 against 41, `md` 13
+    against 34, `correlation` 3.5 against 7.7; 1.5 to 7.5 % of an agent trial on those programs; the loops and
+    clauses of a full profile in all 20 refreshes.
+    *Step 2, prepared without a model, the model calls waiting for the author:* a hand-written correct report
+    gives DiscoPoP the reduction back on a minimum, a sum and a maximum; a dry pass builds every request — one
+    report request per rewrite, and 21 rewrites on which the deletion has anything to ask, none among the 58.
+    Open: the model asked on the 58 that differ, 58 that do not and the 21 (137 calls), or on all 599 (620).
+    *Step 4,* live trials, only if steps 1 and 2 say the refresh keeps DiscoPoP's verdicts; step 1 says it does
+    not, as built.
 - **7.8 Stage 5 — how far to chain restructuring** (E8; RQ8; H8). **[planned]** Depth 0, 1 and 2 with twins,
   18 loops × 3 (108 new trials). Read out per level: speed-up gained, regions seen and regions parallelized,
   re-profiles, calls and time, unusable programs, the sequential cost of kept rewrites. Written down before the

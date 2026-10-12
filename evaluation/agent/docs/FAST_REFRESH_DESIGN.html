@@ -20,12 +20,96 @@ th,td{text-align:left;vertical-align:top;padding:7px 10px;border-bottom:1px soli
 th{font-weight:600;color:var(--mute);font-size:12.5px;letter-spacing:.04em;text-transform:uppercase}
 .k{color:var(--mute);font-size:13px;letter-spacing:.04em;text-transform:uppercase}
 .ask{border-left:3px solid var(--accent);padding-left:12px}
+.st{display:inline-block;font-size:12.5px;letter-spacing:.03em;padding:1px 7px;border:1px solid var(--line);border-radius:10px;color:var(--mute);white-space:nowrap}
+.st.ok{color:var(--ok);border-color:var(--ok)}
+.st.wait{color:var(--warn);border-color:var(--warn)}
 ul,ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;max-width:68ch}
 </style>
 <main>
-<header><p class="k">Put to the author 10 Oct 2026 · decided 12 Oct: the four steps, the three sentences corrected, the separate request · step 1 running since 12 Oct, no model</p>
-<h1>The fast-refresh experiment: a design</h1>
+<header><p class="k">Put to the author 10 Oct 2026 · decided 12 Oct · steps 1 and 3 done 12 Oct, no model · step 2 waits for your go</p>
+<h1>The fast-refresh experiment</h1>
 <p class="lede">After the model rewrites a loop, the agent profiles the whole program again: it compiles it with DiscoPoP's instrumentation, runs it, and lets DiscoPoP analyse the run. The fast refresh skips the run. It compiles only, and carries the dependences of the last run over to the new code. For the lines the model just wrote there is then no measurement. The second idea is to ask the model itself which dependences those lines have.</p></header>
+<h2 id="now">Where it stands</h2>
+<div class="tw"><table><thead><tr><th>Step</th><th>State</th><th>In one line</th></tr></thead><tbody><tr><td>1. Replay, no model</td><td><span class="st ok">done 12 Oct</span></td><td>The fast refresh changes whether the agent keeps a rewrite in 58 of 599 rewrites; two full profiles of the same program never disagree (0 of 599). 22 wins are thrown away. No time is saved.</td></tr><tr><td>2. The model's report</td><td><span class="st wait">waits for your go</span></td><td>Shown without a model: a <em>correct</em> report gives the lost wins back. Whether the model writes it costs at most about $14 (137 calls).</td></tr><tr><td>3. Time on long programs, no model</td><td><span class="st ok">done 12 Oct</span></td><td>Where the run is long, one fast refresh saves 21 to 36 s — a third to two thirds of one refresh, and 1.5 to 7.5 % of a trial.</td></tr><tr><td>4. Live trials</td><td><span class="st">not decided</span></td><td>Only if 1 and 2 say the refresh keeps DiscoPoP's verdicts. Step 1 says it does not, as built.</td></tr></tbody></table></div>
+<h2>Step 1: the fast refresh changes the agent's decisions</h2>
+<p>Each of the 599 saved rewrites was judged three times on the server, without a model: after a full profile, after the fast refresh, and after a second full profile — the control, which shows how much one profile of a program differs from the next.</p>
+<div class="tw"><table><thead><tr><th>What the agent would do with the rewrite</th><th>Rewrites</th></tr></thead><tbody><tr><td>The same after the fast refresh as after the full profile</td><td>541</td></tr><tr><td><strong>Kept only after the full profile</strong> — a win the fast refresh throws away</td><td><strong>22</strong></td></tr><tr><td>Kept only after the fast refresh</td><td>2</td></tr><tr><td>Kept after both, but with other pragmas</td><td>34</td></tr><tr><td><em>The control: differs between two full profiles</em></td><td><em>0</em></td></tr></tbody></table></div>
+<p><strong>The 22 lost wins are nearly all one thing: a reduction the model created</strong> — 20 of the 22. The model rewrites the loop so that DiscoPoP can see a minimum, a maximum or a sum:</p>
+<div class="code"><pre>before the rewrite     if (a[i] &lt; x) { x = a[i]; }
+the model&#x27;s rewrite    x = fmin(x, a[i]);
+
+after a full profile   #pragma omp parallel for reduction(min:x)      passes every check; the rewrite is kept
+after a fast refresh   #pragma omp parallel for firstprivate(x)       would lose the result; refused; the rewrite is thrown away</pre></div>
+<p>After the fast refresh nothing was ever measured on the new line. DiscoPoP therefore sees a loop without any dependence and treats <code>x</code> as an input. The agent's own check on the clauses refuses that pragma in all 20 cases. <strong>13 of the 22 are rewrites that a trial shipped as its result.</strong></p>
+<p><strong>The 2 kept only after the fast refresh.</strong> One is a loop that records the position of the largest element: with two equal largest elements two threads could write the position at once, and the test data hold only one largest element, so no check can see it. The full profile reports no parallel loop there. The other looks like a correct pragma that the full profile blocks. Both are my reading of the code, not checked by a run; neither was shipped by its trial.</p>
+<p><strong>The 34 with other pragmas.</strong> In 27 the only difference is a <code>shared(...)</code> clause that the full profile writes and the fast refresh leaves out. OpenMP shares those variables anyway, so the programs are the same. Counted that way 31 rewrites differ, not 58.</p>
+<p><strong>No time is saved on these loops.</strong> One fast refresh takes 1.54 s against 1.75 s. But after it DiscoPoP offers many more pragmas — 1,099 against 634 — and checking them costs more than the skipped run saved: 1,758 s against 1,730 s in all.</p>
+<p><strong>Your written-down claim that the fast refresh changes no decision is refuted</strong> by the test fixed before the run: p = 0.0003, and at most 0.018 when it is counted with every other test of the thesis. With the 27 counted as the same it is still refuted as a single test (p = 0.001), but not within that whole family (0.053).</p>
+<h2>Step 2: what is known before any model call</h2>
+<p><strong>A correct report does repair it.</strong> On three of the lost rewrites — a minimum, a sum and a maximum — I wrote by hand the one line the model would have to report (<code>LOOP 9 RAW x 10 10</code>: the loop at line 9 reads in <code>x</code> what an earlier pass wrote) and fed it through the agent's own code. In all three DiscoPoP writes the reduction again and the rewrite is kept. So the path works. What step 2 measures is whether the model writes that line — and what its reports do to the 541 rewrites the fast refresh got right.</p>
+<p><strong>A pass without a model built every request.</strong> For the report: one request for each of the 599 rewrites. For the opposite direction — the model deletes dependences it calls unreal — there is something to ask on only 21 rewrites; everywhere else the fast refresh has left nothing to delete. None of the 21 is among the 58 that differ. So deleting cannot repair anything here; it can only add differences. That is your third claim, and those 21 are where it can be read.</p>
+<p><strong>The fast refresh repeats itself exactly:</strong> taken a second time, it gives the same pragmas and the same decision on 599 of 599 rewrites. What a report changes is therefore the report's doing.</p>
+<h3>The choice</h3>
+<div class="tw"><table><thead><tr><th></th><th>Rewrites the model is asked about</th><th>Model calls</th><th>Cost at most</th><th>What it tells</th></tr></thead><tbody><tr><td><strong>A — as designed</strong><br>(my recommendation)</td><td>The 58 whose decision differs, 58 of the 541 whose decision is the same (drawn by a rule fixed beforehand), and the 21 for the opposite direction</td><td>137</td><td>about $14</td><td>Whether the model names the missing dependence — the 22 lost wins — and whether deleting does harm. <em>Not</em> whether the report helps on balance: even if it breaks none of the 58 agreeing rewrites, as many as 27 of the 541 could still be broken, more than the 22 it can repair.</td></tr><tr><td><strong>B — every rewrite</strong></td><td>All 599, and the 21</td><td>620</td><td>about $62</td><td>Both, exactly, with the same test as step 1. Above the $15 to $40 this page named.</td></tr></tbody></table></div>
+<p>“Cost at most” counts every call at $0.10. In our archive the cheapest call of this model cost $0.025 and the middle one $0.065 — for calls that write a whole program. These requests are a third of a page and the answer is a few lines, so I expect a third to a half of the ceiling.</p>
+<p><strong>Why A first.</strong> If the model does not write the line, B is pointless and we have spent $14 at most. If it does and breaks little, I come back with the numbers and you decide on the other 483 rewrites.</p>
+<p><strong>The honest case for B at once:</strong> one run, exact numbers, no second round with you. <strong>The honest case for no step 2 at all:</strong> step 1 already says the fast refresh is not worth adopting on these loops; step 2 only tells whether the model could patch it, and step 3 shows the refresh saves no more than a few per cent of a trial even where the run is long.</p>
+<h3>A second text you have not seen: the opposite direction</h3>
+<p>When the model is asked to delete dependences, it reads another text. Word for word from the agent's code; nothing has been sent.</p>
+<div class="card"><h3>The instructions</h3><div class="code"><pre>You are reviewing DiscoPoP&#x27;s STATIC dependence analysis of C/C++ code.
+
+Static analysis is over-approximate by construction: it reports a dependence
+whenever it cannot PROVE the absence of one.  For code that was just
+rewritten there is no profiling data to settle the question, so each
+reported dependence is either real or an artefact of what the analysis
+could not prove.
+
+Every dependence below is one DiscoPoP names as the reason it will not
+parallelize a loop, and every one comes from STATIC analysis — anything it
+actually observed running is not shown to you and is not up for discussion.
+You are given the variable, the loop it blocks, and the two source lines.
+Decide:
+
+  REAL      the dependence genuinely occurs at run time — a value written in
+            one iteration is read in another, so the loop cannot run its
+            iterations in parallel
+  SPURIOUS  it cannot occur — the accesses are to disjoint memory, or they
+            never overlap between iterations, or the &quot;dependence&quot; is on a
+            location each iteration writes before reading (which
+            privatization handles)
+
+Two things are already handled and will not be asked about, so do not reason
+as if they were the issue: the loop&#x27;s own induction variable, and variables
+declared inside the loop body.
+
+Judge only what the code shows.  If you cannot tell, answer REAL: a
+dependence wrongly called spurious produces a racy parallel loop, while one
+wrongly called real only costs a missed parallelization.
+
+Answer with one line per dependence and nothing else:
+
+    &lt;number&gt;: REAL|SPURIOUS - &lt;at most 15 words of reason&gt;</pre></div></div>
+<div class="card"><h3>The request</h3><div class="code"><pre>Here is the code under review:
+
+```cpp
+&lt;the rewritten lines with three lines around them, each with its line number&gt;
+```
+
+DiscoPoP reports 1 static dependence(s) blocking parallelization of the lines that were just rewritten:
+
+1. &lt;RAW|WAR|WAW&gt; on `&lt;variable&gt;` (loop-carried), blocking the loop at lines &lt;first line&gt;-&lt;last line&gt;: carried between iterations
+&lt;the lines of that loop and the six after it, each with its line number&gt;
+
+Give your verdict for each, one per line.</pre></div></div>
+<p><strong>Two of its sentences are not exactly what the agent does.</strong> I propose to correct them the same way as the other three, before any call:</p>
+<div class="tw"><table><thead><tr><th>The text says</th><th>What the agent does</th><th>Proposed</th></tr></thead><tbody><tr><td>“You are given the variable, the loop it blocks, and the two source lines.”</td><td>The two lines are named only where DiscoPoP recorded them. It usually did not; the request then shows the loop instead.</td><td>“You are given the variable and the loop it blocks.”</td></tr><tr><td>“a dependence wrongly called spurious produces a racy parallel loop”</td><td>The loop can then look parallel to DiscoPoP; a pragma written on it still has to pass the race check and the output check.</td><td>“a dependence wrongly called spurious can make a sequential loop look parallel”</td></tr></tbody></table></div>
+<p>The honest case for leaving the second as it is: it is the warning that keeps the model from deleting too easily, and your third claim is about exactly that danger.</p>
+<ol class="ask"><li><strong>Step 2:</strong> A (my recommendation), B, or not at all.</li>
+<li><strong>The two sentences:</strong> corrected as proposed, or left.</li></ol>
+<h2 id="step3">Step 3: what one fast refresh saves where the run is long</h2>
+<p>On the three programs whose profiling run is long and on PolyBench's longest, without a model: after an edit that changes nothing (one comment line), the fast refresh and the full profile were each taken five times. Middle values:</p><div class="tw"><table><thead><tr><th>Program</th><th>Full profile</th><th>Fast refresh</th><th>Saved by one refresh</th><th>Share of an agent trial</th></tr></thead><tbody><tr><td><code>hotspot</code></td><td>108 s</td><td>72 s</td><td>36 s (33 %)</td><td>2.6 to 5.2 %</td></tr><tr><td><code>is</code></td><td>41 s</td><td>14 s</td><td>27 s (66 %)</td><td>1.5 to 7.5 %</td></tr><tr><td><code>md</code></td><td>34 s</td><td>13 s</td><td>21.5 s (63 %)</td><td>2.6 to 6.8 %</td></tr><tr><td><code>correlation</code> (PolyBench's longest)</td><td>7.7 s</td><td>3.5 s</td><td>4.2 s (54 %)</td><td>no agent trial in the archive</td></tr></tbody></table></div><p><strong>It saves the run and nothing else.</strong> Carrying the dependences over costs hundredths of a second. On <code>hotspot</code> DiscoPoP's own analysis takes anything between 52 and 129 s from one time to the next — more than the run that is skipped (50 s) — so in one of the five pairs the fast refresh was not the shorter one.</p><p><strong>It is a few per cent of a trial,</strong> because a trial on these programs is mostly model time and checks. The share comes from September's agent trials on these programs: the number of full profiles in each trial times the saving measured now, over the trial's duration.</p><p><strong>On an unchanged program the fast refresh gives the parallel loops and clauses of a full profile</strong> — in all 20 cases. On <code>md</code> and <code>correlation</code> two full profiles of the same program do not always agree with each other; there the fast refresh gives one of their answers.</p><p><strong>Together with step 1:</strong> the fast refresh saves a few per cent of a trial where the run is long and nothing on the loops, and on the model's real rewrites it throws away the wins that rest on a dependence the rewrite created.</p>
+<h2 id="design">The design as decided on 12 Oct</h2>
+<p>Below is the page as it was put to you on 10 Oct, with the decisions of 12 Oct.</p>
 <h2>What it would tell us that our runs cannot</h2>
 <ol><li><strong>Does skipping the run change what DiscoPoP says about the model's real rewrites?</strong> We only know it for three small programs written for the purpose: in 7 of 18 comparisons the fast refresh suggested a parallel loop that the full profile does not support.</li>
 <li><strong>Does the model's own report of the dependences repair that?</strong> Never measured.</li>

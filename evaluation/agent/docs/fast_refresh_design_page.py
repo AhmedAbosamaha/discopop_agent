@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""The page that puts the design of the fast-refresh experiment (E4) to the author, with the texts a model would
-read, verbatim from the agent's code (10 Oct 2026). Nothing is built or run.
+"""The page of the fast-refresh experiment (E4) for the author: where it stands, what is asked of him, the design
+as decided, and the texts a model would read, verbatim from the agent's code. First built 10 Oct 2026; since 12 Oct
+with the results of the steps that need no model.
 
     venv/bin/python <this file> OUT.html        (from the repository root)
 """
@@ -10,7 +11,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path.cwd()))
-from discopop_agent.llm import dep_reconstruct, prompts  # noqa: E402
+from discopop_agent.llm import dep_reconstruct, dep_review, prompts  # noqa: E402
 
 OUT = Path(sys.argv[1])
 SYSTEM = prompts._SYSTEM_RECONSTRUCT
@@ -38,6 +39,44 @@ for probe in ("Your rewrite passed the checks and is in the file.", "The profile
               "so ThreadSanitizer had nothing to race and its silence is not evidence. ", "Report what the CODE does, not what the checks did.",
               "One line per dependence, or `LOOP <line> NONE` for an independent loop."):
     assert probe in flat, probe
+
+
+# the request of the opposite direction, as `dep_review.review_dependences` builds it — taken from the function itself
+_seen = {}
+_real_complete = dep_review._complete
+dep_review._complete = lambda provider, client, model, convo, system, **kw: _seen.update(prompt=convo[-1]["content"], system=system) or ""
+dep_review.review_dependences(
+    [{"dep_type": "<RAW|WAR|WAW>", "var": "<variable>", "memory_region": "", "sink_line": None, "source_line": None,
+      "sink_text": "", "source_text": "", "loop": "<first line>-<last line>", "loop_carried": True,
+      "loop_lines": "<the lines of that loop and the six after it, each with its line number>"}],
+    "<the rewritten lines with three lines around them, each with its line number>", "model", provider="claude-agent-sdk")
+dep_review._complete = _real_complete
+DELETION_SYSTEM, DELETION_REQUEST = _seen["system"], _seen["prompt"]
+assert DELETION_SYSTEM == prompts._SYSTEM_DEPS
+
+
+STEP3_STATE = '<span class="st ok">done 12 Oct</span>'
+STEP3_LINE = "Where the run is long, one fast refresh saves 21 to 36 s — a third to two thirds of one refresh, and 1.5 to 7.5 % of a trial."
+STEP3_ROWS = [
+    ["<code>hotspot</code>", "108 s", "72 s", "36 s (33 %)", "2.6 to 5.2 %"],
+    ["<code>is</code>", "41 s", "14 s", "27 s (66 %)", "1.5 to 7.5 %"],
+    ["<code>md</code>", "34 s", "13 s", "21.5 s (63 %)", "2.6 to 6.8 %"],
+    ["<code>correlation</code> (PolyBench's longest)", "7.7 s", "3.5 s", "4.2 s (54 %)", "no agent trial in the archive"],
+]
+STEP3_HTML = (
+    "<p>On the three programs whose profiling run is long and on PolyBench's longest, without a model: after an edit that changes nothing "
+    "(one comment line), the fast refresh and the full profile were each taken five times. Middle values:</p>"
+    + "@@TABLE@@"
+    + "<p><strong>It saves the run and nothing else.</strong> Carrying the dependences over costs hundredths of a second. On <code>hotspot</code> "
+    "DiscoPoP's own analysis takes anything between 52 and 129 s from one time to the next — more than the run that is skipped (50 s) — so in one "
+    "of the five pairs the fast refresh was not the shorter one.</p>"
+    "<p><strong>It is a few per cent of a trial,</strong> because a trial on these programs is mostly model time and checks. The share comes from "
+    "September's agent trials on these programs: the number of full profiles in each trial times the saving measured now, over the trial's duration.</p>"
+    "<p><strong>On an unchanged program the fast refresh gives the parallel loops and clauses of a full profile</strong> — in all 20 cases. On "
+    "<code>md</code> and <code>correlation</code> two full profiles of the same program do not always agree with each other; there the fast refresh "
+    "gives one of their answers.</p>"
+    "<p><strong>Together with step 1:</strong> the fast refresh saves a few per cent of a trial where the run is long and nothing on the loops, and "
+    "on the model's real rewrites it throws away the wins that rest on a dependence the rewrite created.</p>")
 
 
 def code(text: str) -> str:
@@ -72,12 +111,75 @@ th,td{text-align:left;vertical-align:top;padding:7px 10px;border-bottom:1px soli
 th{font-weight:600;color:var(--mute);font-size:12.5px;letter-spacing:.04em;text-transform:uppercase}
 .k{color:var(--mute);font-size:13px;letter-spacing:.04em;text-transform:uppercase}
 .ask{border-left:3px solid var(--accent);padding-left:12px}
+.st{display:inline-block;font-size:12.5px;letter-spacing:.03em;padding:1px 7px;border:1px solid var(--line);border-radius:10px;color:var(--mute);white-space:nowrap}
+.st.ok{color:var(--ok);border-color:var(--ok)}
+.st.wait{color:var(--warn);border-color:var(--warn)}
 ul,ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;max-width:68ch}
 </style>
 <main>""")
-P.append("""<header><p class="k">Put to the author 10 Oct 2026 · decided 12 Oct: the four steps, the three sentences corrected, the separate request · step 1 running since 12 Oct, no model</p>
-<h1>The fast-refresh experiment: a design</h1>
+P.append("""<header><p class="k">Put to the author 10 Oct 2026 · decided 12 Oct · steps 1 and 3 done 12 Oct, no model · step 2 waits for your go</p>
+<h1>The fast-refresh experiment</h1>
 <p class="lede">After the model rewrites a loop, the agent profiles the whole program again: it compiles it with DiscoPoP's instrumentation, runs it, and lets DiscoPoP analyse the run. The fast refresh skips the run. It compiles only, and carries the dependences of the last run over to the new code. For the lines the model just wrote there is then no measurement. The second idea is to ask the model itself which dependences those lines have.</p></header>""")
+
+# ---- where it stands (12 Oct, evening): the steps that need no model ------------------------------------------------
+P.append('<h2 id="now">Where it stands</h2>')
+P.append(table(["Step", "State", "In one line"], [
+    ["1. Replay, no model", '<span class="st ok">done 12 Oct</span>',
+     "The fast refresh changes whether the agent keeps a rewrite in 58 of 599 rewrites; two full profiles of the same program never disagree (0 of 599). 22 wins are thrown away. No time is saved."],
+    ["2. The model's report", '<span class="st wait">waits for your go</span>',
+     "Shown without a model: a <em>correct</em> report gives the lost wins back. Whether the model writes it costs at most about $14 (137 calls)."],
+    ["3. Time on long programs, no model", STEP3_STATE, STEP3_LINE],
+    ["4. Live trials", '<span class="st">not decided</span>', "Only if 1 and 2 say the refresh keeps DiscoPoP's verdicts. Step 1 says it does not, as built."],
+]))
+
+P.append("<h2>Step 1: the fast refresh changes the agent's decisions</h2>")
+P.append("<p>Each of the 599 saved rewrites was judged three times on the server, without a model: after a full profile, after the fast refresh, and after a second full profile — the control, which shows how much one profile of a program differs from the next.</p>")
+P.append(table(["What the agent would do with the rewrite", "Rewrites"], [
+    ["The same after the fast refresh as after the full profile", "541"],
+    ["<strong>Kept only after the full profile</strong> — a win the fast refresh throws away", "<strong>22</strong>"],
+    ["Kept only after the fast refresh", "2"],
+    ["Kept after both, but with other pragmas", "34"],
+    ["<em>The control: differs between two full profiles</em>", "<em>0</em>"],
+]))
+P.append("<p><strong>The 22 lost wins are nearly all one thing: a reduction the model created</strong> — 20 of the 22. The model rewrites the loop so that DiscoPoP can see a minimum, a maximum or a sum:</p>")
+P.append(code("before the rewrite     if (a[i] < x) { x = a[i]; }\nthe model's rewrite    x = fmin(x, a[i]);\n\nafter a full profile   #pragma omp parallel for reduction(min:x)      passes every check; the rewrite is kept\nafter a fast refresh   #pragma omp parallel for firstprivate(x)       would lose the result; refused; the rewrite is thrown away"))
+P.append("<p>After the fast refresh nothing was ever measured on the new line. DiscoPoP therefore sees a loop without any dependence and treats <code>x</code> as an input. The agent's own check on the clauses refuses that pragma in all 20 cases. <strong>13 of the 22 are rewrites that a trial shipped as its result.</strong></p>")
+P.append("<p><strong>The 2 kept only after the fast refresh.</strong> One is a loop that records the position of the largest element: with two equal largest elements two threads could write the position at once, and the test data hold only one largest element, so no check can see it. The full profile reports no parallel loop there. The other looks like a correct pragma that the full profile blocks. Both are my reading of the code, not checked by a run; neither was shipped by its trial.</p>")
+P.append("<p><strong>The 34 with other pragmas.</strong> In 27 the only difference is a <code>shared(...)</code> clause that the full profile writes and the fast refresh leaves out. OpenMP shares those variables anyway, so the programs are the same. Counted that way 31 rewrites differ, not 58.</p>")
+P.append("<p><strong>No time is saved on these loops.</strong> One fast refresh takes 1.54 s against 1.75 s. But after it DiscoPoP offers many more pragmas — 1,099 against 634 — and checking them costs more than the skipped run saved: 1,758 s against 1,730 s in all.</p>")
+P.append("<p><strong>Your written-down claim that the fast refresh changes no decision is refuted</strong> by the test fixed before the run: p = 0.0003, and at most 0.018 when it is counted with every other test of the thesis. With the 27 counted as the same it is still refuted as a single test (p = 0.001), but not within that whole family (0.053).</p>")
+
+P.append("<h2>Step 2: what is known before any model call</h2>")
+P.append("<p><strong>A correct report does repair it.</strong> On three of the lost rewrites — a minimum, a sum and a maximum — I wrote by hand the one line the model would have to report (<code>LOOP 9 RAW x 10 10</code>: the loop at line 9 reads in <code>x</code> what an earlier pass wrote) and fed it through the agent's own code. In all three DiscoPoP writes the reduction again and the rewrite is kept. So the path works. What step 2 measures is whether the model writes that line — and what its reports do to the 541 rewrites the fast refresh got right.</p>")
+P.append("<p><strong>A pass without a model built every request.</strong> For the report: one request for each of the 599 rewrites. For the opposite direction — the model deletes dependences it calls unreal — there is something to ask on only 21 rewrites; everywhere else the fast refresh has left nothing to delete. None of the 21 is among the 58 that differ. So deleting cannot repair anything here; it can only add differences. That is your third claim, and those 21 are where it can be read.</p>")
+P.append("<p><strong>The fast refresh repeats itself exactly:</strong> taken a second time, it gives the same pragmas and the same decision on 599 of 599 rewrites. What a report changes is therefore the report's doing.</p>")
+P.append("<h3>The choice</h3>")
+P.append(table(["", "Rewrites the model is asked about", "Model calls", "Cost at most", "What it tells"], [
+    ["<strong>A — as designed</strong><br>(my recommendation)", "The 58 whose decision differs, 58 of the 541 whose decision is the same (drawn by a rule fixed beforehand), and the 21 for the opposite direction", "137", "about $14",
+     "Whether the model names the missing dependence — the 22 lost wins — and whether deleting does harm. <em>Not</em> whether the report helps on balance: even if it breaks none of the 58 agreeing rewrites, as many as 27 of the 541 could still be broken, more than the 22 it can repair."],
+    ["<strong>B — every rewrite</strong>", "All 599, and the 21", "620", "about $62", "Both, exactly, with the same test as step 1. Above the $15 to $40 this page named."],
+]))
+P.append("<p>“Cost at most” counts every call at $0.10. In our archive the cheapest call of this model cost $0.025 and the middle one $0.065 — for calls that write a whole program. These requests are a third of a page and the answer is a few lines, so I expect a third to a half of the ceiling.</p>")
+P.append("<p><strong>Why A first.</strong> If the model does not write the line, B is pointless and we have spent $14 at most. If it does and breaks little, I come back with the numbers and you decide on the other 483 rewrites.</p>")
+P.append("<p><strong>The honest case for B at once:</strong> one run, exact numbers, no second round with you. <strong>The honest case for no step 2 at all:</strong> step 1 already says the fast refresh is not worth adopting on these loops; step 2 only tells whether the model could patch it, and step 3 shows the refresh saves no more than a few per cent of a trial even where the run is long.</p>")
+P.append("<h3>A second text you have not seen: the opposite direction</h3>")
+P.append("<p>When the model is asked to delete dependences, it reads another text. Word for word from the agent's code; nothing has been sent.</p>")
+P.append('<div class="card"><h3>The instructions</h3>' + code(DELETION_SYSTEM) + "</div>")
+P.append('<div class="card"><h3>The request</h3>' + code(DELETION_REQUEST) + "</div>")
+P.append("<p><strong>Two of its sentences are not exactly what the agent does.</strong> I propose to correct them the same way as the other three, before any call:</p>")
+P.append(table(["The text says", "What the agent does", "Proposed"], [
+    ["“You are given the variable, the loop it blocks, and the two source lines.”", "The two lines are named only where DiscoPoP recorded them. It usually did not; the request then shows the loop instead.", "“You are given the variable and the loop it blocks.”"],
+    ["“a dependence wrongly called spurious produces a racy parallel loop”", "The loop can then look parallel to DiscoPoP; a pragma written on it still has to pass the race check and the output check.", "“a dependence wrongly called spurious can make a sequential loop look parallel”"],
+]))
+P.append("<p>The honest case for leaving the second as it is: it is the warning that keeps the model from deleting too easily, and your third claim is about exactly that danger.</p>")
+P.append("""<ol class="ask"><li><strong>Step 2:</strong> A (my recommendation), B, or not at all.</li>
+<li><strong>The two sentences:</strong> corrected as proposed, or left.</li></ol>""")
+
+P.append('<h2 id="step3">Step 3: what one fast refresh saves where the run is long</h2>')
+P.append(STEP3_HTML.replace("@@TABLE@@", table(["Program", "Full profile", "Fast refresh", "Saved by one refresh", "Share of an agent trial"], STEP3_ROWS)))
+
+P.append('<h2 id="design">The design as decided on 12 Oct</h2>')
+P.append("<p>Below is the page as it was put to you on 10 Oct, with the decisions of 12 Oct.</p>")
 
 P.append("<h2>What it would tell us that our runs cannot</h2>")
 P.append("""<ol><li><strong>Does skipping the run change what DiscoPoP says about the model's real rewrites?</strong> We only know it for three small programs written for the purpose: in 7 of 18 comparisons the fast refresh suggested a parallel loop that the full profile does not support.</li>
