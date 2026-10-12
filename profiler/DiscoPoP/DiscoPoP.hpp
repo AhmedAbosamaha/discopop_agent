@@ -358,6 +358,7 @@ struct container_hash {
   bool dp_reduction_init_util(std::string fmap_path);
   char dp_reduction_get_char_for_opcode(llvm::Instruction *instr); //} // namespace
   char dp_reduction_get_min_max_char(llvm::StoreInst *store_instr, llvm::LoadInst *load_instr);
+  bool dp_reduction_reads_variable(llvm::Value *value, llvm::Value *variable, std::set<llvm::Value *> &visited);
   bool dp_reduction_is_operand(llvm::Instruction *instr, llvm::Value *operand);
   int dp_reduction_get_op_order(char c);
   Type *dp_reduction_pointsToStruct(PointerType *PTy);

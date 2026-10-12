@@ -673,3 +673,19 @@ Status: done
 | `t0_11_b23_apps_b` | [`T0_instruments/B23_min_as_max/runs/t0_11_b23_apps_b/`](T0_instruments/B23_min_as_max/runs/t0_11_b23_apps_b/) | T0.11 with DiscoPoP B23 repaired (the profiler reads minimum or maximum from the stored call; the explorer records the matching reduction entry), draw b, server, no model: arm discopop_capability on the 31 packages outside TSVC | valid | 31 | FASTER 14, no-change 9, parallel-not-faster 2, parallel-speed-not-measurable 6 |
 | `t0_11_b23_apps_c` | [`T0_instruments/B23_min_as_max/runs/t0_11_b23_apps_c/`](T0_instruments/B23_min_as_max/runs/t0_11_b23_apps_c/) | T0.11 with DiscoPoP B23 repaired (the profiler reads minimum or maximum from the stored call; the explorer records the matching reduction entry), draw c, server, no model: arm discopop_capability on the 31 packages outside TSVC | valid | 31 | FASTER 14, no-change 9, parallel-not-faster 2, parallel-speed-not-measurable 6 |
 
+## [DiscoPoP B24 — everything the minimum/maximum heuristic cannot read was reported as a maximum (a helper function, `hypot`, a division, a copy): the repair and its regression check](T0_instruments/B24_unreadable_as_max/REPORT.md)
+
+Status: running
+
+| run | where | what it is | status | trials | outcomes |
+|---|---|---|---|---:|---|
+| `t0_11_c3_b24_a` | not archived yet | T0.11 with DiscoPoP B24 repaired (a minimum/maximum reduction only where the direction can be read), draw a, server, no model: arm discopop_capability on the 44 tsvc_c3 packages — the regression check against t0_11_c3_b23_a–c | registered |  |  |
+| `t0_11_c3_b24_b` | not archived yet | T0.11 with DiscoPoP B24 repaired (a minimum/maximum reduction only where the direction can be read), draw b, server, no model: arm discopop_capability on the 44 tsvc_c3 packages | registered |  |  |
+| `t0_11_c3_b24_c` | not archived yet | T0.11 with DiscoPoP B24 repaired (a minimum/maximum reduction only where the direction can be read), draw c, server, no model: arm discopop_capability on the 44 tsvc_c3 packages | registered |  |  |
+| `t0_11_c4_b24_a` | not archived yet | T0.11 with DiscoPoP B24 repaired (a minimum/maximum reduction only where the direction can be read), draw a, server, no model: arm discopop_capability on the 9 tsvc_c4 packages — against t0_11_c4_b23_a–c | registered |  |  |
+| `t0_11_c4_b24_b` | not archived yet | T0.11 with DiscoPoP B24 repaired (a minimum/maximum reduction only where the direction can be read), draw b, server, no model: arm discopop_capability on the 9 tsvc_c4 packages | registered |  |  |
+| `t0_11_c4_b24_c` | not archived yet | T0.11 with DiscoPoP B24 repaired (a minimum/maximum reduction only where the direction can be read), draw c, server, no model: arm discopop_capability on the 9 tsvc_c4 packages | registered |  |  |
+| `t0_11_b24_apps_a` | not archived yet | T0.11 with DiscoPoP B24 repaired (a minimum/maximum reduction only where the direction can be read), draw a, server, no model: arm discopop_capability on the 31 packages outside TSVC — against t0_11_b23_apps_a–c | registered |  |  |
+| `t0_11_b24_apps_b` | not archived yet | T0.11 with DiscoPoP B24 repaired (a minimum/maximum reduction only where the direction can be read), draw b, server, no model: arm discopop_capability on the 31 packages outside TSVC | registered |  |  |
+| `t0_11_b24_apps_c` | not archived yet | T0.11 with DiscoPoP B24 repaired (a minimum/maximum reduction only where the direction can be read), draw c, server, no model: arm discopop_capability on the 31 packages outside TSVC | registered |  |  |
+

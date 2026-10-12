@@ -228,15 +228,43 @@ char DiscoPoP::dp_reduction_get_char_for_opcode(llvm::Instruction *instr) {
   return ' ';
 }
 
-// returns the operation of a reduction found by the minimum / maximum heuristic of instrument_loop:
-// '<' if the stored value is the result of a call of a minimum function (fmin, fminf, fminl or one of the
-// intrinsics llvm.minnum, llvm.minimum, llvm.minimumnum, llvm.smin, llvm.umin) that takes the loaded value of the
-// variable as one of its arguments, e.g. x = fmin(x, a[i]) -- and '>' in every other case, as before.
-// (Until this function existed, every reduction found by that heuristic was reported with '>', so a minimum
-// was given reduction(max:x).)
+// returns true if 'value' is computed from the variable at the address 'variable': a load of it, or its address
+// itself (handed to a call, for example), anywhere among the operands
+bool DiscoPoP::dp_reduction_reads_variable(llvm::Value *value, llvm::Value *variable, std::set<llvm::Value *> &visited) {
+  if (!value || !variable)
+    return false;
+  if (value == variable)
+    return true;
+  if (!visited.insert(value).second)
+    return false;
+  if (llvm::LoadInst *load = llvm::dyn_cast<llvm::LoadInst>(value)) {
+    if (load->getPointerOperand() == variable)
+      return true;
+  }
+  llvm::Instruction *instr = llvm::dyn_cast<llvm::Instruction>(value);
+  if (!instr)
+    return false; // a constant, a function argument, a global
+  for (unsigned i = 0; i < instr->getNumOperands(); ++i) {
+    if (dp_reduction_reads_variable(instr->getOperand(i), variable, visited))
+      return true;
+  }
+  return false;
+}
+
+// returns the operation of a reduction found by the minimum / maximum heuristic of instrument_loop, read from the
+// stored value: '<' for a minimum, '>' for a maximum, and ' ' where the direction cannot be read -- the caller
+// then reports no reduction.
+// The direction can be read where the stored value, looked at through type conversions, is a call of a minimum or
+// maximum function (fmin / fmax, fminf / fmaxf, fminl / fmaxl or one of the intrinsics llvm.minnum / maxnum,
+// llvm.minimum / maximum, llvm.minimumnum / maximumnum, llvm.smin / smax, llvm.umin / umax), the loaded value of
+// the variable is one of its arguments (directly or through a conversion), and no other argument reads the
+// variable: x = fmin(x, a[i]), x = fmax(fabs(a[i]), x).
+// Everything else that the heuristic used to report as a maximum is not a reduction it can name: another function
+// of the variable (x = hypot(x, a[i]), a helper that computes a minimum), a division (x = x / a[i]), a copy
+// (a[i] = a[0]), a maximum with the variable in both arguments (x = fmax(x, x + a[i])).
 char DiscoPoP::dp_reduction_get_min_max_char(llvm::StoreInst *store_instr, llvm::LoadInst *load_instr) {
   if (!store_instr || !load_instr)
-    return '>';
+    return ' ';
 
   // look through type conversions of the stored value, e.g. x = (float) fmin(x, a[i])
   llvm::Value *stored_value = store_instr->getValueOperand();
@@ -246,32 +274,48 @@ char DiscoPoP::dp_reduction_get_min_max_char(llvm::StoreInst *store_instr, llvm:
 
   llvm::CallInst *call = llvm::dyn_cast<llvm::CallInst>(stored_value);
   if (!call)
-    return '>';
+    return ' ';
   llvm::Function *callee = call->getCalledFunction();
   if (!callee)
-    return '>';
+    return ' ';
 
   llvm::StringRef name = callee->getName();
   bool is_minimum = name == "fmin" || name == "fminf" || name == "fminl" || name.starts_with("llvm.minnum.") ||
                     name.starts_with("llvm.minimum.") || name.starts_with("llvm.minimumnum.") ||
                     name.starts_with("llvm.smin.") || name.starts_with("llvm.umin.");
-  if (!is_minimum)
-    return '>';
+  bool is_maximum = name == "fmax" || name == "fmaxf" || name == "fmaxl" || name.starts_with("llvm.maxnum.") ||
+                    name.starts_with("llvm.maximum.") || name.starts_with("llvm.maximumnum.") ||
+                    name.starts_with("llvm.smax.") || name.starts_with("llvm.umax.");
+  if (!is_minimum && !is_maximum)
+    return ' ';
 
-  // one of the arguments has to be the loaded value of the reduction variable
+  // exactly one of the arguments has to be the loaded value of the reduction variable ...
+  llvm::Value *variable = store_instr->getPointerOperand();
+  int carrying_argument = -1;
   for (unsigned i = 0; i < call->arg_size(); ++i) {
     llvm::Value *argument = call->getArgOperand(i);
     while (llvm::isa<llvm::CastInst>(argument)) {
       argument = llvm::cast<llvm::CastInst>(argument)->getOperand(0);
     }
-    if (argument == load_instr)
-      return '<';
-    if (llvm::LoadInst *argument_load = llvm::dyn_cast<llvm::LoadInst>(argument)) {
-      if (argument_load->getPointerOperand() == store_instr->getPointerOperand())
-        return '<';
+    llvm::LoadInst *argument_load = llvm::dyn_cast<llvm::LoadInst>(argument);
+    if (argument == load_instr || (argument_load && argument_load->getPointerOperand() == variable)) {
+      if (carrying_argument != -1)
+        return ' ';
+      carrying_argument = i;
     }
   }
-  return '>';
+  if (carrying_argument == -1)
+    return ' ';
+
+  // ... and no other argument may read the variable
+  for (unsigned i = 0; i < call->arg_size(); ++i) {
+    if ((int)i == carrying_argument)
+      continue;
+    std::set<llvm::Value *> visited;
+    if (dp_reduction_reads_variable(call->getArgOperand(i), variable, visited))
+      return ' ';
+  }
+  return is_minimum ? '<' : '>';
 }
 
 // return true if 'operand' is an operand of the instruction 'instr'

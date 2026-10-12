@@ -45,7 +45,8 @@ LLVM 19 (macOS) and LLVM 20 (Linux).
 | B21 | explorer (task graph) | candidate, 8 Oct — width measured, not traced | on ONE profile of a PolyBench kernel the explorer gives one of two answers: every loop that carries a dependence the profiler observed is blocked, or NONE of them is and all are reported Do-All — never a part (Mac, 30 kernels: 114 runs, 50 block all, 64 none, 0 some; the server's nine draws of 7 and 8 Oct, 27 kernels: the 198 profiles of the 22 kernels that block in any draw — 65 block all, 133 none, 0 some; on `md` the loops of one function flip together while another function's stay). Records without a call path (scalars) stay in both. Not Python's hash seed. The 44 TSVC packages: the loops called parallel, the reductions and the blocked loops agree in every draw; what differs is which of a loop's dependences its blocker record names — the variable on 40 of 44 packages, on `s244` also the type (RAW or WAW). The gate refuses the false directives |
 | B22 | explorer, Do-All detector (a rule of the original code, 28 Apr 2026) | candidate, 8 Oct | a write-after-read between passes never blocks Do-All ("can be privatized") — also on an array element, where it cannot: a loop whose pass reads an element a LATER pass overwrites (`x[i] = x[i + 1] * 0.5`; PolyBench `adi`'s last nest) is reported Do-All with the array `shared`, and its directive gives wrong sums. On TSVC the loops of this kind (`s121`, `s131`, `s151`, `s212`, `s241`, `s243`) are blocked all the same — through the repetition loop around them (B16): two defects that cancel. The gate refuses the directive on `adi` |
 | B23 | profiler (minimum/maximum reduction heuristic) and explorer (Do-All detector) | **FIXED 10 Oct** | a minimum is reported as a maximum — `reduction(max:x)` for `x = fmin(x, a[i])` — because the profiler never read the direction; and the explorer gives every reduction of a program the operation of the LAST entry of the reduction file. Both repaired; no new form recognised |
-| B24 | profiler (the same heuristic) | candidate, 10 Oct — measured, not repaired | any call that takes the variable is reported as a maximum reduction: `reduction(max:x)` for `x = hypot(x, a[i])` and for `x = fabs(x - a[i])`, which is no reduction |
+| B24 | profiler (the same heuristic) | **FIXED 12 Oct** | every store whose value uses the loaded variable through something that is not an arithmetic the profiler knows is reported as a maximum reduction — another function (`hypot`, a helper that computes a minimum), a division, a plain copy: `reduction(max:x)` on loops that are no maximum, or no reduction at all. Now reported only where the direction can be read |
+| B25 | profiler runtime | candidate, 12 Oct — measured on the Mac, not traced | the same instrumented binary, run again, sometimes records no `INIT` for a stack array's first writes (about one run in ten on the Mac, none of 30 on the server); the explorer then writes `lastprivate` for the array instead of `shared` |
 | B19 | explorer (data-sharing clauses of a Do-All loop) | **FIXED 8 Oct** | `lastprivate` was written for any variable a loop writes and something after it reads. Three mechanisms: a scalar assigned in only some passes (`if (a[i] < 0) j = i;`, TSVC `s331`: the clause hands back the last CHUNK's value — wrong output, refused by the gate every time) — the loop is no longer reported Do-All; a whole stack array (`lastprivate(a_old)` on the loop that fills it, `firstprivate(a_old)` on one that reads it) — an array is now `shared` where the loop reads it or writes it itself (corrected the same day: one that a called function fills keeps its private clause); a unit of the code AROUND the loop counted among the loop's (`s481`: `lastprivate(nl)`, shipped) — only the loop's own units decide its clauses |
 | L3 | explorer | limitation | NPB-CPP `mg`: with P1's fix the state assignment is fast, but the run then stays in task-pattern detection (`new_task_detector`) — a first run was read at 4 h 19 min, the same run was stopped unfinished after **11 h 24 min** at 100 % CPU on the server (19–20 Sep); the Do-All detector is not reached. Not usable per trial |
 
@@ -949,7 +950,8 @@ minimum call (`max` → `min`), and the operation of a reduction in a program wh
 with different operations (from the last entry's to its own). No loop gains or loses a pattern. Deliberately not
 done: no new form is recognised (the `if` and `?:` forms stay unreported — recognising them would be an
 extension of DiscoPoP, and would let DiscoPoP alone parallelize loops of this thesis's benchmark sets); and the
-heuristic's other weakness, B24 below, is left as it is.
+heuristic's other weakness, B24 below, was left as it was (repaired on 12 Oct, see there: the helper then returns
+"nothing" for every case that is not a minimum or maximum call with the variable as a direct argument).
 
 **Checked.** The file of thirteen loops after the rebuild: the maximum `max`, the three minima `min`, in either
 order of the entries; every other line as before (the diff of the suggested directives is exactly the three
@@ -969,28 +971,90 @@ writes the directive: 4 of 5 race-free FASTER (3 before), two of them at the mod
 `x = fmin(x, a[i]);` and DiscoPoP's own `reduction(min:x)`, which the gate passed in all four candidates; no
 `reduction(max:…)` on the loop any more; 4.2 model calls a trial (9.2 before).
 
-## B24 — candidate: any call that takes the variable is reported as a maximum reduction: `reduction(max:x)` for `x = hypot(x, a[i])` and for `x = fabs(x - a[i])` (profiler, reduction detection)
+## B24 — everything the minimum/maximum heuristic cannot read is reported as a maximum: `reduction(max:x)` for a helper function, `hypot`, a division, a copy (profiler, reduction detection)
 
-**Status: found 10 Oct 2026 while B23 was reproduced, measured on the Mac (LLVM 19), NOT repaired — a second
-change of DiscoPoP's behaviour that the author has not been asked about.** The heuristic of B23 asks only whether
-the stored value uses the loaded value of the variable through instructions that are not arithmetic. It does not
-ask what those instructions compute. So every store `x = f(x, …)` whose value is a call is recorded as a
-reduction with the operation `>` and gets `reduction(max:x)`:
+**Status: found 10 Oct 2026 while B23 was reproduced; measured in full and repaired 12 Oct (the author: "ok i
+agree go ahead").** The heuristic of B23 asks only whether the stored value uses the loaded value of the variable
+through instructions that are not the arithmetic the profiler knows (`+ - * & | ^`). It does not ask what those
+instructions compute. Every such store was recorded as a reduction with the operation `>`. First described here
+as "any call"; the measurement of 12 Oct shows it is wider — a division and a plain copy are caught as well.
 
-* `x = hypot(x, a[i]);` — `reduction(max:x)`: the loop is a reduction, but not a maximum; the directive gives a
-  wrong result;
-* `x = fabs(x - a[i]);` — `reduction(max:x)`: the loop is no reduction at all (the order of the passes decides
-  the result).
+**Measured** (the DiscoPoP with B23 repaired, LLVM 19, a second file of twelve loops,
+`evaluation/agent/results/T0_instruments/B24_unreadable_as_max/analysis/repro/mm2.c`):
 
-Both measured with the file of thirteen loops, before and after B23's repair (unchanged by it, on purpose).
-**Not unsafe in the agent:** such a directive changes the output or races, and the gate refuses it; in the
-archive of this thesis no kept directive of DiscoPoP's has this form (the 25 `max` clauses it wrote are all on
-`fmax` / `fmin` calls). A user of DiscoPoP alone is given a wrong directive.
+| the loop's statement | before the repair | after |
+|---|---|---|
+| `x = fmax(x, a[i]);` · `x = fmin(x, a[i]);` | `reduction(max:x)` · `reduction(min:x)` — right | unchanged |
+| `x = fmax(x, fabs(a[i]));` | `reduction(max:x)` — right | unchanged |
+| `float x; x = fmax(x, a[i]);` (through conversions) | `reduction(max:x)` — right | unchanged |
+| `x = fmax(fmax(x, a[i]), b[i]);` | `reduction(max:x)` — right | **nothing** (a chance given up, see below) |
+| `x = fmin(fmax(x, a[i]), 0.25);` (a clamp) | `reduction(max:x)` | nothing |
+| `x = fmax(x, x + a[i]);` | `reduction(max:x)` — **wrong** | nothing |
+| `x = min2(x, a[i]);` (a helper that returns the smaller) | `reduction(max:x)` — **wrong** | nothing |
+| `x = hypot(x, a[i]);` | `reduction(max:x)` — **wrong** | nothing |
+| `x = fabs(x - a[i]);` (no reduction at all) | `reduction(max:x)` — **wrong** | nothing |
+| `x = x / (2.0 + b[i]);` | `reduction(max:x)` — **wrong** | nothing |
+| `b[i] = b[0];` | `reduction(max:b)` AND a Do-All — **wrong** | nothing |
 
-**A repair would** report a minimum/maximum reduction only where the direction can be read — a call of one of
-the minimum or maximum functions with the loaded variable as one argument and the other argument free of the
-variable — and nothing otherwise. That removes directives DiscoPoP writes today, so it needs the author's
-decision and the regression of B23.
+The last line shows a second effect: the entry also EXCUSES the dependence it names — the Do-All detector treats a
+dependence on a reduction variable as harmless — so the copy loop, whose later passes read what its first pass
+writes, was offered as Do-All as well.
+
+**Where it stood in the thesis's packages:** eight maximum entries — six on the divisions of `polybench/adi`
+(lines 81, 85, 94, 98), one on the division of `polybench/lu` (line 65), one on the copy `a[i] = a[0];` of
+`tsvc_c3/s293`. No reduction clause came of them in any draw. In the archive of the agent's trials none of the 25
+`max` clauses DiscoPoP wrote has such a form (all are `fmax`/`fmin` with the variable as a direct argument).
+
+**Not unsafe in the agent:** such a directive changes the output or races, and the gate refuses it. A user of
+DiscoPoP alone was given a wrong directive.
+
+**The repair (12 Oct 2026).** `dp_reduction_get_min_max_char` (`dp_reduction/utils.cpp`) reports a direction only
+where it can be read: the stored value, looked at through type conversions, is a call of a minimum or maximum
+function (`fmin`/`fmax`, `fminf`/`fmaxf`, `fminl`/`fmaxl`, the intrinsics `llvm.minnum`/`maxnum`,
+`llvm.minimum`/`maximum`, `llvm.minimumnum`/`maximumnum`, `llvm.smin`/`smax`, `llvm.umin`/`umax`); the loaded
+value of the variable is exactly one of its arguments, directly or through a conversion; and no other argument
+reads the variable (`dp_reduction_reads_variable`: a load of the variable's address or the address itself
+anywhere among the operands — by address, because one source line may load the variable twice). In every other
+case it returns "nothing", and `instrument_loop` then records no reduction: the loop keeps its carried
+dependence.
+
+**Given up on purpose:** a maximum of a maximum and the clamp are no longer reported — the variable is not a
+direct argument of the outer call. A missed chance, never a wrong directive; the rule is not widened for them.
+Nothing that worked is lost besides: the `if` and `?:` forms were never reported (B23), and the heuristic's own
+example from LULESH never was.
+
+**Checked.** Both files of loops before and after (the table above; the first file: the maximum `max`, the three
+minima `min`, `hypot` and `fabs` of a difference now nothing). A new end-to-end test,
+`test/end_to_end/reduction_pattern/negative/min_max_unreadable` (C): `fmax(x, fabs(a[i]))` is a `max` reduction,
+and the helper, `hypot`, `fabs` of a difference, the division and the maximum with the variable in both
+arguments get no pattern at all. The regression on the thesis's packages is in the record
+(`evaluation/agent/docs/THESIS_EXPERIMENTS.md` §6, 12 Oct, and the results group B24).
+
+## B25 — candidate: one run in ten records no `INIT` for a stack array, and the array then gets `lastprivate` instead of `shared` (profiler runtime)
+
+**Status: candidate, found 12 Oct 2026 when one of DiscoPoP's own end-to-end tests failed once in the run of the
+whole set after B24's repair; measured on the Mac, not traced, not repaired. Not B24's doing.**
+
+**Seen:** `test/end_to_end/sharing_clauses/do_all/shared/case_4` — a stack array filled by a loop and read after
+it; the test (added with B19's repair) expects `shared(Arr)`. On the Mac (LLVM 19) it failed with
+`lastprivate(Arr)` in 2 of 24 runs.
+
+**Measured** (`evaluation/agent/results/T0_instruments/B24_unreadable_as_max/analysis/flaky_test/`):
+
+* ONE instrumented binary, run 31 times with the explorer after each run: `shared(Arr)` 28 times,
+  `lastprivate(Arr)` 3 times. In the three, `dynamic_dependencies.txt` lacks the three `INIT` lines of the array's
+  first writes (`37@20`, `37@21`, `37@22 NOM INIT 0@0|GEPRESULT_Arr(…)`); nothing else in the profile differs.
+* ONE kept profile, the explorer run 40 times with 40 hash seeds: `shared(Arr)` 40 times — the explorer is not
+  what varies.
+* The server (LLVM 20), the build before B24's repair: the test passes 30 of 30 times.
+
+So the profiler's RUNTIME gives two different profiles for one binary. The pass that B24's repair changes is not
+involved: the program's reduction file is empty, and its instrumented code is compared before and after that
+repair on the server (the record, 12 Oct). Not traced further: which part of the runtime drops the records, and
+whether the address layout of the run decides it (the array's region id differs from run to run).
+
+**Effect:** a difference from one profile of a program to the next — what the three draws of every no-model
+measurement of this thesis are there for. Seen on the Mac only, where no experiment runs.
 
 ## B22 — candidate: a write-after-read between passes never blocks Do-All, also on an array element (explorer, Do-All detector)
 
