@@ -53,9 +53,10 @@ nothing.
 * ONE kept profile, the explorer run 40 times with 40 hash seeds: `shared(Arr)` 40 times.
 
 So the difference is made by the profiler's RUNTIME from one run of the same binary to the next, not by the
-explorer and not by the pass this repair changes (the program's reduction file is empty; whether its instrumented
-code is the same before and after the repair is checked on the server, where the build before the repair is
-still installed). Entered in the bug list as a candidate, B25.
+explorer and not by the pass this repair changes: the repair only ever removes entries of the reduction file, and
+this program's reduction file is empty — before and after the repair, checked on the server, where the build
+before it was still installed and the test passed 30 of 30 times on either build (`server_checks.md`). Entered
+in the bug list as a candidate, B25.
 
 ## The two PolyBench kernels with division loops (`pilot/`)
 

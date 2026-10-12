@@ -1046,11 +1046,12 @@ it; the test (added with B19's repair) expects `shared(Arr)`. On the Mac (LLVM 1
   first writes (`37@20`, `37@21`, `37@22 NOM INIT 0@0|GEPRESULT_Arr(…)`); nothing else in the profile differs.
 * ONE kept profile, the explorer run 40 times with 40 hash seeds: `shared(Arr)` 40 times — the explorer is not
   what varies.
-* The server (LLVM 20), the build before B24's repair: the test passes 30 of 30 times.
+* The server (LLVM 20): the test passes 30 of 30 times on the build before B24's repair and 30 of 30 times on
+  the build with it.
 
 So the profiler's RUNTIME gives two different profiles for one binary. The pass that B24's repair changes is not
-involved: the program's reduction file is empty, and its instrumented code is compared before and after that
-repair on the server (the record, 12 Oct). Not traced further: which part of the runtime drops the records, and
+involved: that repair only ever removes entries of the reduction file, and this program's reduction file is empty
+before and after it (checked on the server, where both builds were at hand). Not traced further: which part of the runtime drops the records, and
 whether the address layout of the run decides it (the array's region id differs from run to run).
 
 **Effect:** a difference from one profile of a program to the next — what the three draws of every no-model
