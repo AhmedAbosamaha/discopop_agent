@@ -138,6 +138,7 @@ Status: pre-flight
 | run | where | what it is | status | trials | outcomes |
 |---|---|---|---|---:|---|
 | `e11_npbc_probe_mac` | [`E11_repoomp/preflight/e11_npbc_probe_mac/`](E11_repoomp/preflight/e11_npbc_probe_mac/) | NPB-C feasibility probe on the Mac: EP, IS, CG profiled; FT stopped (the Mac swapped) | pre-flight | 0 |  |
+| `e11_npbc_probe_server` | not archived yet | E11 pre-flight, step 1 (server, no model): `tools/npbc_probe.py` on RepoOMP's eight serial NPB-C inputs at class S, one process per kernel (parts `EP` … `LU`), at most two hours per step (D26), peak memory by `/usr/bin/time -v` — which kernels DiscoPoP profiles within the limit, the three times, NPB's own verification, the patterns found; on the DiscoPoP with B23 and B24 repaired | registered |  |  |
 
 ## [T0.1 — size calibration](T0_instruments/T0.01_sizes/REPORT.md)
 
@@ -708,4 +709,12 @@ Status: done
 
 | run | where | what it is | status | trials | outcomes |
 |---|---|---|---|---:|---|
+
+## [E6 — a real application: LULESH 2.0](E06_lulesh/)
+
+Status: pre-flight
+
+| run | where | what it is | status | trials | outcomes |
+|---|---|---|---|---:|---|
+| `e6_lulesh_smoke` | not archived yet | E6 pre-flight, step 1 (server, no model): ONE trial of the arm `discopop_capability` on `llnl/lulesh` through the run path — the first time a project-layout C++ package of six units goes through it on the repaired DiscoPoP: does it build, profile and verify, how long does it take, what does DiscoPoP alone keep | registered |  |  |
 

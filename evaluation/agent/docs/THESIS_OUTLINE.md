@@ -105,8 +105,9 @@ proposed here and is to be confirmed with the title.
    with DiscoPoP's evidence against 14 without, at the speed of an expert's version, and no stronger model alone is
    fast and right in more than 5 of 20.
 5. **Limits.** Stronger models alone reach further on plain loops (89 of 90); the agent's reach is bounded by its
-   model and by what DiscoPoP confirms; which design options pay (who writes the directive, depth, refresh) is
-   stated with the experiments that have run by submission.
+   model and by what DiscoPoP confirms; of the design options, the model writing the directive is at least as good
+   and cheaper, the fast refresh is not adopted, and a second round of rewriting has nothing new to do on these loops
+   (read from the saved trials, not run).
 
 ---
 
@@ -636,7 +637,7 @@ the results folder · F. Full result tables · G. The agent's command-line refer
 | Fig. 8 | Speed of the successes beside the expert version | 7.5 |
 | Fig. 9 | The gate against the harness: confusion matrix | 7.6 |
 | Fig. 10 | Decisions under fast refresh against the full re-profile | 7.7 |
-| Fig. 11 | Gain and cost per restructuring depth | 7.8 |
+| Fig. 11 | What a second round of rewriting would have been asked about, per setup (from the saved trials; no depth trial was run, so there is no gain per depth to draw) | 7.8 |
 | Tab. 1 | Questions, claims, hypotheses, experiments, status | 1.5, 7.12 |
 | Tab. 2 | Related systems compared | 3.7 |
 | Tab. 3 | Every setting of the agent and its role | 4.11 |
@@ -698,7 +699,7 @@ the results folder · F. Full result tables · G. The agent's command-line refer
 |---|---|---|
 | Coverage (C1) | the main comparison; the hidden-order experiments | **supported on kernels**; a large code and RepoOMP planned |
 | Trust (C2) | no unusable program in the main comparison; the speed check; the unsafe cases named | **supported**; the gate's own error rate planned |
-| Cost (C3) | calls, time and cost recorded in every run; the fast-refresh experiment (7.7.2) | **a measured negative result** on the refresh and on the model's report (not adopted; add-not-delete stays a design argument); depth and the large code planned |
+| Cost (C3) | calls, time and cost recorded in every run; the fast-refresh experiment (7.7.2) | **a measured negative result** on the refresh and on the model's report (not adopted; add-not-delete stays a design argument); depth answered from the saved trials, no depth trial run; the large code planned |
 
 Dropped, to be said in the thesis with the reason: the profiling-cost curve (26 Sep: it measures DiscoPoP, not
 the agent); the small open model as a third model; the evidence's parts and the prompt's parts given one by one

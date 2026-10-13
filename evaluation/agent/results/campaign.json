@@ -457,6 +457,16 @@
    "question": "After the agent keeps a rewrite it profiles the program again and may find new regions. At depth 0 — every experiment so far — such a region gets DiscoPoP's pragma at most, never a second rewrite; at depth 1 the model may be asked about it once more. Does a second level parallelize regions the first level's rewrites exposed, and what does it cost in calls, profiles and the speed of the result? (RQ8, H8; C1, C3)",
    "headline": "Closed 13 Oct without a trial (the author: \"ok\") — answered from the saved trials; H8 is not tested. Read from the archive instead (`preflight/depth_from_the_archive.md`, no model): at depth 0 the agent already lists what a deeper level would send to the model. On the 18 loops (the corrected table of E3), where DiscoPoP writes the pragma a deeper level would have asked the model in 80 of the 80 trials with an accepted rewrite — about the repetition loop, which the model had already been asked about in all 80, and about the function around it; about any other loop in 4 trials, on 2 loops (`s252`, `s331`). Where the model writes the pragma: in 20 of 84, about those two regions only. Two properties of depth as built, read in the code and not shown by a run: with a deeper level to come the first level no longer sends a rewrite back as not faster (at depth 0 that happens in 38 of 90 trials, 25 of which end FASTER), and a second rewrite can be credited with the first one's gain. Both are recorded as limits of depth as built; `--restructure-depth` stays in the agent at 0, not evaluated by trials, and whether it is tried on the large code is decided in E6's design. Decided with it (the same \"ok\"): the model writes the pragmas in the experiments that remain (E9, E6, E11), in the setup E3 and E3b ran.",
    "preregistered": "THESIS_EXPERIMENTS: H8 and the arms `full_depth1`, `full_depth2` (14 Sep, plan v5); the drop condition (§5: a smoke must show depth 1 ever triggers); §6 \"Plan, E8 design proposal\" (13 Oct). The kinds of region in the archive read-out were defined after the logs had been read. Closed by the author's decision of 13 Oct (§6, \"ok\": no depth trials; the model writes the pragmas in what remains)."
+  },
+  {
+   "id": "E6",
+   "folder": "E06_lulesh",
+   "title": "E6 — a real application: LULESH 2.0",
+   "kind": "experiment",
+   "status": "pre-flight",
+   "question": "Does the loop — profile, rank, restructure, check, annotate, verify — still work on a real application, where one profile takes tens of gigabytes and the program has dozens of loops: what does the agent reach beside DiscoPoP alone, the model alone and LLNL's own OpenMP version? (RQ3, C1; H4)",
+   "headline": "",
+   "preregistered": "THESIS_EXPERIMENTS §5k and §5r (the program and why), §5s (arms and the pre-flight owed), §6 13 Oct (\"the experiments that remain share one preparation without a model\"). Nothing with a model is designed yet."
   }
  ],
  "runs": {
@@ -2643,6 +2653,18 @@
    "section": "checks",
    "status": "valid",
    "role": "E4 step 2, a what-if on the saved replies (server, no model): `report_replay.py --report replay --replies runs/e4_report_a` over the 116 rewrites of the report — `as-built` (a control: the agent's own placing again) and `respect-none` (a claimed dependence left out where both of its lines lie inside a loop the same reply declares independent); exploratory, not the agent as built"
+  },
+  "e6_lulesh_smoke": {
+   "group": "E6",
+   "section": "preflight",
+   "status": "registered",
+   "role": "E6 pre-flight, step 1 (server, no model): ONE trial of the arm `discopop_capability` on `llnl/lulesh` through the run path — the first time a project-layout C++ package of six units goes through it on the repaired DiscoPoP: does it build, profile and verify, how long does it take, what does DiscoPoP alone keep"
+  },
+  "e11_npbc_probe_server": {
+   "group": "E11",
+   "section": "preflight",
+   "status": "registered",
+   "role": "E11 pre-flight, step 1 (server, no model): `tools/npbc_probe.py` on RepoOMP's eight serial NPB-C inputs at class S, one process per kernel (parts `EP` … `LU`), at most two hours per step (D26), peak memory by `/usr/bin/time -v` — which kernels DiscoPoP profiles within the limit, the three times, NPB's own verification, the patterns found; on the DiscoPoP with B23 and B24 repaired"
   }
  },
  "analysis": {
