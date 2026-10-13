@@ -70,7 +70,7 @@ Earlier versions (history):
 | [`logs/`](logs/) | Logs | done |
 | [`E03_who_writes_the_pragmas/`](E03_who_writes_the_pragmas/REPORT.md) | E3 — who writes the pragma: DiscoPoP from its analysis of the rewritten code, or the model in the same edit | done |
 | [`E03b_contrast_set/`](E03b_contrast_set/REPORT.md) | E3b — the contrast set: who writes the pragma, on loops DiscoPoP does not recognise as written | done |
-| [`E04_fast_refresh/`](E04_fast_refresh/REPORT.md) | E4 — the fast refresh: can the profile be refreshed without running the program again, and can the model's own report of the dependences close what that leaves open? | running |
+| [`E04_fast_refresh/`](E04_fast_refresh/REPORT.md) | E4 — the fast refresh: can the profile be refreshed without running the program again, and can the model's own report of the dependences close what that leaves open? | done |
 
 `history/` holds every folder a later experiment replaced, and the first pilots and harness checks (moved there on 5 Oct 2026; a path `results/E0…` in an older entry of the experiment record now starts `results/history/`). Nothing in `history/` is cited as a result.
 

@@ -691,7 +691,7 @@ Status: done
 
 ## [E4 — the fast refresh: can the profile be refreshed without running the program again, and can the model's own report of the dependences close what that leaves open?](E04_fast_refresh/REPORT.md)
 
-Status: running
+Status: done
 
 | run | where | what it is | status | trials | outcomes |
 |---|---|---|---|---:|---|

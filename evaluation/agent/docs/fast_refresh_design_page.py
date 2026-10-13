@@ -126,7 +126,7 @@ th{font-weight:600;color:var(--mute);font-size:12.5px;letter-spacing:.04em;text-
 ul,ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;max-width:68ch}
 </style>
 <main>""")
-P.append("""<header><p class="k">Put to the author 10 Oct 2026 · decided 12 Oct · steps 1 to 3 done 13 Oct · three small decisions wait for you</p>
+P.append("""<header><p class="k">Put to the author 10 Oct 2026 · decided 12 Oct · steps 1 to 3 done 13 Oct · closed 13 Oct (the author: “ok go ahead”)</p>
 <h1>The fast-refresh experiment</h1>
 <p class="lede">After the model rewrites a loop, the agent profiles the whole program again: it compiles it with DiscoPoP's instrumentation, runs it, and lets DiscoPoP analyse the run. The fast refresh skips the run. It compiles only, and carries the dependences of the last run over to the new code. For the lines the model just wrote there is then no measurement. The second idea is to ask the model itself which dependences those lines have.</p></header>""")
 
@@ -138,7 +138,7 @@ P.append(table(["Step", "State", "In one line"], [
     ["2. The model's report", '<span class="st ok">done 13 Oct</span>',
      "The model's report gives back 20 of the 22 lost wins, but damages 11 of 58 rewrites the fast refresh had right — about 100 of all 541. Deleting dependences changed nothing. 136 calls, $8.53."],
     ["3. Time on long programs, no model", STEP3_STATE, STEP3_LINE],
-    ["4. Live trials", '<span class="st wait">your decision</span>', "Planned only if 1 and 2 say the refresh keeps DiscoPoP's verdicts. They say it does not. I recommend not to run them."],
+    ["4. Live trials", '<span class="st ok">not run · decided 13 Oct</span>', "Planned only if 1 and 2 say the refresh keeps DiscoPoP's verdicts. They say it does not. Your decision of 13 Oct: not run."],
 ]))
 
 P.append("<h2>Step 1: the fast refresh changes the agent's decisions</h2>")
@@ -185,11 +185,12 @@ P.append("<h3>What it means</h3>")
 P.append("""<ul><li><strong>The fast refresh is not adopted</strong> — the plan's rule for this outcome. It loses wins, saves nothing on the loops, and 1.5 to 7.5 % of a trial where the run is long.</li>
 <li><strong>The model can report the dependences of its own code</strong> — it named the missing one for every reduction it built. That part of your second claim holds.</li>
 <li><strong>The report as built does not make the fast refresh usable:</strong> it repairs 28 decisions and damages at least 60. On the whole set your second claim fails.</li></ul>""")
-P.append("<h3>What I need from you</h3>")
-P.append("""<ol class="ask"><li><strong>Live trials (step 4):</strong> I recommend <em>not</em> to run them. They cost $55 to $60 and would measure a setup that steps 1 to 3 already decide against. The case for running them: only live trials ask the model inside its own conversation, where it may report better.</li>
-<li><strong>The model asked about all 599 rewrites (option B):</strong> I recommend <em>no</em>. The direction is clear; B would only narrow the range (“between 60 and 159”), for about $35. The case for it: one exact number for the thesis instead of a range.</li>
-<li><strong>Changing how the agent adds the model's answer:</strong> I recommend to <em>record it as a finding and not change the agent</em>. A real repair has to tell DiscoPoP which loop carries a reported dependence; I have not examined whether that can be done without changing DiscoPoP. The case for changing it: the check above shows the lost wins come back as soon as the mis-placed dependences are gone.</li></ol>""")
-P.append("<p>If you answer “ok”, I read it as: no live trials, no option B, the agent unchanged — and this experiment is closed with the results above.</p>")
+P.append("<h3>Decided on 13 Oct</h3>")
+P.append("""<p>Your answer “ok go ahead” to the three questions below, each as I had recommended. The experiment is closed with the results above.</p>
+<ol class="ask"><li><strong>Live trials (step 4): not run.</strong> They would have cost $55 to $60 and measured a setup that steps 1 to 3 already decide against. What stays unknown without them: whether the model reports better inside the conversation in which it wrote the rewrite.</li>
+<li><strong>The model asked about all 599 rewrites: no.</strong> The damage among the rewrites the fast refresh had right stays a range (“between 60 and 159” of 541), not one number.</li>
+<li><strong>How the agent adds the model's answer: recorded as a finding, the agent unchanged.</strong> A real repair has to tell DiscoPoP which loop carries a reported dependence; whether that can be done without changing DiscoPoP was not examined.</li></ol>
+<p><strong>What the thesis says from this:</strong> the fast refresh is not adopted — the full re-profile after a kept rewrite stays — with these measured reasons; the model's report as built does not rescue it; “deleting is unsafe, adding is not” stays an argument of the design, not a result.</p>""")
 P.append("<h3>Before the calls: what was shown without a model</h3>")
 P.append("<p>A correct report, written by hand, gave the reduction back on three of the lost rewrites (a minimum, a sum, a maximum). A pass that built every request without sending it showed 599 requests for the report and only 21 rewrites where deleting had anything to ask. The fast refresh, taken a second time, gave the same decision on 599 of 599.</p>")
 P.append("<h3>The second text, with the two sentences corrected</h3>")
@@ -258,11 +259,11 @@ P.append(table(["The text said", "What the agent does", "It says now"], [
 ]))
 P.append("<p>The honest case for leaving the third as it is: the warning pushes the model to report when unsure, which is the safe direction, and a softer sentence may make it report less.</p>")
 
-P.append("<h2>What I need from you</h2>")
+P.append("<h2>What I asked you on 10 Oct</h2>")
 P.append("""<ol class="ask"><li><strong>The design:</strong> the four steps (my recommendation), or live trials from the start.</li>
 <li><strong>The three sentences:</strong> corrected as proposed, or left.</li>
 <li><strong>The form of the request:</strong> a separate request after the rewrite (my recommendation), not the appended form.</li></ol>""")
-P.append("<p><strong>Decided 12 Oct (\"ok i agree go ahead\"):</strong> the four steps; the three sentences corrected; the separate request. Step 1 is running. No model is called before the exact cost of step 2 has been put to you.</p>")
+P.append("<p><strong>Decided 12 Oct (\"ok i agree go ahead\"):</strong> the four steps; the three sentences corrected; the separate request.</p>")
 P.append("</main>")
 OUT.write_text("\n".join(P) + "\n")
 print(f"{OUT}: {OUT.stat().st_size} bytes")

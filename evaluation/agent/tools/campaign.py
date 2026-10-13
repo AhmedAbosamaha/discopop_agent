@@ -441,6 +441,15 @@ def check() -> List[str]:
             continue
         if not (base / "REPORT.md").exists():
             P.append(f"{gid}: no REPORT.md (`campaign.py reports`)")
+        if gid == "E4" and g["status"] == "done":
+            # E4 has no trials of its own: its runs replay saved rewrites and time single refreshes, and its live
+            # trials were not run (the author, 13 Oct 2026 — recorded). So there is no comparison against DiscoPoP
+            # alone and no read-out of one; what it must have are its own read-outs.
+            for need in ("e4_replay_readout.md", "e4_refresh_time_readout.md", "e4_report_dry_readout.md",
+                         "e4_report_readout.md", "e4_report_placement_readout.md"):
+                if not (base / "analysis" / need).exists():
+                    P.append(f"{gid}: missing analysis/{need}")
+            continue
         if g["kind"] == "experiment" and g["status"] == "done":
             for need in ("analysis/main_comparison_stats.md", "analysis/fig_vs_discopop_alone.png", "analysis/vs_discopop_alone.md"):
                 if gid == "E10" and need.endswith("main_comparison_stats.md"):
