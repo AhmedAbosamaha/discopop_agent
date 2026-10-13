@@ -138,7 +138,7 @@ Status: pre-flight
 | run | where | what it is | status | trials | outcomes |
 |---|---|---|---|---:|---|
 | `e11_npbc_probe_mac` | [`E11_repoomp/preflight/e11_npbc_probe_mac/`](E11_repoomp/preflight/e11_npbc_probe_mac/) | NPB-C feasibility probe on the Mac: EP, IS, CG profiled; FT stopped (the Mac swapped) | pre-flight | 0 |  |
-| `e11_npbc_probe_server` | not archived yet | E11 pre-flight, step 1 (server, no model): `tools/npbc_probe.py` on RepoOMP's eight serial NPB-C inputs at class S, one process per kernel (parts `EP` … `LU`), at most two hours per step (D26), peak memory by `/usr/bin/time -v` — which kernels DiscoPoP profiles within the limit, the three times, NPB's own verification, the patterns found; on the DiscoPoP with B23 and B24 repaired | registered |  |  |
+| `e11_npbc_probe_server` | not archived yet | E11 pre-flight, step 1 (server, no model): `tools/npbc_probe.py` on RepoOMP's eight serial NPB-C inputs at class S, one process per kernel (parts `EP` … `LU`), at most two hours per step (D26), peak memory by `/usr/bin/time -v` — which kernels DiscoPoP profiles within the limit, the three times, NPB's own verification, the patterns found; on the DiscoPoP with B23 and B24 repaired | running |  |  |
 
 ## [T0.1 — size calibration](T0_instruments/T0.01_sizes/REPORT.md)
 
@@ -710,11 +710,11 @@ Status: done
 | run | where | what it is | status | trials | outcomes |
 |---|---|---|---|---:|---|
 
-## [E6 — a real application: LULESH 2.0](E06_lulesh/)
+## [E6 — a real application: LULESH 2.0](E06_lulesh/REPORT.md)
 
 Status: pre-flight
 
 | run | where | what it is | status | trials | outcomes |
 |---|---|---|---|---:|---|
-| `e6_lulesh_smoke` | not archived yet | E6 pre-flight, step 1 (server, no model): ONE trial of the arm `discopop_capability` on `llnl/lulesh` through the run path — the first time a project-layout C++ package of six units goes through it on the repaired DiscoPoP: does it build, profile and verify, how long does it take, what does DiscoPoP alone keep | registered |  |  |
+| `e6_lulesh_smoke` | [`E06_lulesh/preflight/e6_lulesh_smoke/`](E06_lulesh/preflight/e6_lulesh_smoke/) | E6 pre-flight, step 1 (server, no model): ONE trial of the arm `discopop_capability` on `llnl/lulesh` through the run path — the first time a project-layout C++ package of six units goes through it on the repaired DiscoPoP: does it build, profile and verify, how long does it take, what does DiscoPoP alone keep — launched 13 Oct 22:16 UTC at `90f9b35c4` with `--verify-size STANDARD` (no T0.1 entry yet; a first launch without it was refused before a run existed). Result: PROFILE_ERROR — `lulesh.h` has no include guard and the profile step compiles the six units as one; the package must be repaired before it can be profiled | valid | 1 | PROFILE_ERROR 1 |
 
