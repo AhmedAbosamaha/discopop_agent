@@ -692,7 +692,7 @@ Status: done
 
 ## [E4 — the fast refresh: can the profile be refreshed without running the program again, and can the model's own report of the dependences close what that leaves open?](E04_fast_refresh/REPORT.md)
 
-Status: done
+Status: running
 
 | run | where | what it is | status | trials | outcomes |
 |---|---|---|---|---:|---|
@@ -705,7 +705,7 @@ Status: done
 
 ## [E8 — restructuring depth: may the model rewrite again what a kept rewrite leaves or exposes?](E08_restructuring_depth/REPORT.md)
 
-Status: done
+Status: running
 
 | run | where | what it is | status | trials | outcomes |
 |---|---|---|---|---:|---|

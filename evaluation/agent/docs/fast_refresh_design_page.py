@@ -126,7 +126,7 @@ th{font-weight:600;color:var(--mute);font-size:12.5px;letter-spacing:.04em;text-
 ul,ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;max-width:68ch}
 </style>
 <main>""")
-P.append("""<header><p class="k">Put to the author 10 Oct 2026 · decided 12 Oct · steps 1 to 3 done 13 Oct · closed 13 Oct (the author: “ok go ahead”)</p>
+P.append("""<header><p class="k">Put to the author 10 Oct 2026 · decided 12 Oct · steps 1 to 3 done 13 Oct · live trials reopened 13 Oct (the author: “run both”) · their benchmark is being built</p>
 <h1>The fast-refresh experiment</h1>
 <p class="lede">After the model rewrites a loop, the agent profiles the whole program again: it compiles it with DiscoPoP's instrumentation, runs it, and lets DiscoPoP analyse the run. The fast refresh skips the run. It compiles only, and carries the dependences of the last run over to the new code. For the lines the model just wrote there is then no measurement. The second idea is to ask the model itself which dependences those lines have.</p></header>""")
 
@@ -138,7 +138,7 @@ P.append(table(["Step", "State", "In one line"], [
     ["2. The model's report", '<span class="st ok">done 13 Oct</span>',
      "The model's report gives back 20 of the 22 lost wins, but damages 11 of 58 rewrites the fast refresh had right — about 100 of all 541. Deleting dependences changed nothing. 136 calls, $8.53."],
     ["3. Time on long programs, no model", STEP3_STATE, STEP3_LINE],
-    ["4. Live trials", '<span class="st ok">not run · decided 13 Oct</span>', "Planned only if 1 and 2 say the refresh keeps DiscoPoP's verdicts. They say it does not. Your decision of 13 Oct: not run."],
+    ["4. Live trials", '<span class="st wait">reopened 13 Oct · benchmark being built</span>', "First dropped (your “ok go ahead”), then reopened by you the same night (“run both”). They run on the 18 loops as the reference and on programs whose profiling run is long, where a refresh can save time. That set comes to you with its cost before any model call."],
 ]))
 
 P.append("<h2>Step 1: the fast refresh changes the agent's decisions</h2>")
@@ -185,7 +185,9 @@ P.append("<h3>What it means</h3>")
 P.append("""<ul><li><strong>The fast refresh is not adopted</strong> — the plan's rule for this outcome. It loses wins, saves nothing on the loops, and 1.5 to 7.5 % of a trial where the run is long.</li>
 <li><strong>The model can report the dependences of its own code</strong> — it named the missing one for every reduction it built. That part of your second claim holds.</li>
 <li><strong>The report as built does not make the fast refresh usable:</strong> it repairs 28 decisions and damages at least 60. On the whole set your second claim fails.</li></ul>""")
-P.append("<h3>Decided on 13 Oct</h3>")
+P.append("<h3>Reopened on 13 Oct, late</h3>")
+P.append("<p>You asked why the live trials were skipped (“we just need to experiment them and see the results”) and decided: <strong>run them</strong>. You added that the fast refresh needs a benchmark that can show it saves time; on the 18 loops the run it skips is 0.08 % of the agent's time. So the live trials run on the 18 loops as the reference and on programs whose profiling run is long. I find those by measuring, without a model, what one fast refresh saves on each candidate. Nothing is launched before you have seen the set and its cost. The other two points below stand as you decided them.</p>")
+P.append("<h3>Decided on 13 Oct, evening</h3>")
 P.append("""<p>Your answer “ok go ahead” to the three questions below, each as I had recommended. The experiment is closed with the results above.</p>
 <ol class="ask"><li><strong>Live trials (step 4): not run.</strong> They would have cost $55 to $60 and measured a setup that steps 1 to 3 already decide against. What stays unknown without them: whether the model reports better inside the conversation in which it wrote the rewrite.</li>
 <li><strong>The model asked about all 599 rewrites: no.</strong> The damage among the rewrites the fast refresh had right stays a range (“between 60 and 159” of 541), not one number.</li>

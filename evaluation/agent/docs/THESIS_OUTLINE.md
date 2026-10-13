@@ -43,9 +43,9 @@ proposed here and is to be confirmed with the title.
 | RQ3 | How close do the accepted programs come to an expert's version, and do they scale with threads? | C1 | H4, H11 | E1, E2, E6, E11 | 7.2, 7.5, 7.9 | partly |
 | RQ4 | What does the model need: DiscoPoP's evidence, feedback from failed attempts, or more strength? | C1 | H5, H5b, H5d, H12 | E2, E12 | 7.3, 7.5 | done |
 | RQ5 | Who should write the directive: DiscoPoP or the model? | C1, C2 | H6 (its half on the author), H6b | E3 | 7.7 | (decided 13 Oct: the model writes it in the experiments that remain) done 10 Oct: 81 of 90 fast and race-free where the model writes, 76 of 90 where DiscoPoP writes — not established (p = 0.14; four of the five trials are `s331`); no unusable program in either setup; DiscoPoP keeps writing in 7.7.2 (the author, 10 Oct); corrected for `s341`: 80 against 75; the contrast set (E3b, 7.7.1b), done 10 Oct: 30 of 30 against 24 of 30 on six chosen loops (25 after a DiscoPoP defect found there was repaired and its loop run again, 11 Oct) — supported as a single test (exact p = 0.009; 0.021 corrected), not within the family; the model usually finds a form DiscoPoP recognises, at 3.4 times the calls and less than half the speed |
-| RQ6 | Can the model close the gap a fast refresh leaves, without making the analysis unsafe? | C3 | H7, H7b | E4 | 7.7 | done 13 Oct (on saved rewrites; live trials not run — the author's decision of 13 Oct): asked on 116 saved rewrites (136 calls, $8.53), the model's report gives back 20 of the 22 wins the fast refresh loses and removes both keeps the full profile does not make, but changes 11 of the 58 drawn rewrites the refresh had right (about 102 of the 541, at least 60 at 95 %) — H7 not refuted on the selected rewrites, fails on the whole set; in all damaged rewrites the reply calls the loop independent: the agent places a reported dependence without its loop; the deletion changed no decision on its 21 rewrites — H7b refuted as registered (0 against 0), the add-not-delete principle stays a design argument |
-| RQ7 | Can the profile be refreshed without running the program again, without changing decisions? | C3 | H6 | E4 | 7.7 | done 13 Oct (on saved rewrites, no model; live trials not run — the author's decision of 13 Oct): on 599 saved rewrites the fast refresh changes whether the agent keeps the rewrite in 58 (two full profiles of one program: 0) — refuted (p = 0.0003; at most 0.018 in the family); 22 wins thrown away, 20 of them reductions the model created; no time saved on the 18 loops; where the run is long one refresh saves 21 to 36 s, 1.5 to 7.5 % of a trial |
-| RQ8 | How far should restructuring be chained? | C1, C3 | H8 | E8 | 7.8 | done 13 Oct from the saved trials — no depth trial run (the author's decision); H8 not tested: read from the saved trials, a second level would ask the model in 80 of the 80 trials with a kept rewrite where DiscoPoP writes the directive — about the repetition loop it had already been asked about and the function around it — and about another loop in 4 trials on 2 of the 18 loops; where the model writes, in 20 of 84, with no new loop |
+| RQ6 | Can the model close the gap a fast refresh leaves, without making the analysis unsafe? | C3 | H7, H7b | E4 | 7.7 | partly — on saved rewrites (13 Oct); the live trials reopened by the author the same night, on a benchmark with a long profiling run (being fixed): asked on 116 saved rewrites (136 calls, $8.53), the model's report gives back 20 of the 22 wins the fast refresh loses and removes both keeps the full profile does not make, but changes 11 of the 58 drawn rewrites the refresh had right (about 102 of the 541, at least 60 at 95 %) — H7 not refuted on the selected rewrites, fails on the whole set; in all damaged rewrites the reply calls the loop independent: the agent places a reported dependence without its loop; the deletion changed no decision on its 21 rewrites — H7b refuted as registered (0 against 0), the add-not-delete principle stays a design argument |
+| RQ7 | Can the profile be refreshed without running the program again, without changing decisions? | C3 | H6 | E4 | 7.7 | partly — on saved rewrites, no model (13 Oct); the live trials reopened by the author the same night: on 599 saved rewrites the fast refresh changes whether the agent keeps the rewrite in 58 (two full profiles of one program: 0) — refuted (p = 0.0003; at most 0.018 in the family); 22 wins thrown away, 20 of them reductions the model created; no time saved on the 18 loops; where the run is long one refresh saves 21 to 36 s, 1.5 to 7.5 % of a trial |
+| RQ8 | How far should restructuring be chained? | C1, C3 | H8 | E8 | 7.8 | open — the depth trials reopened by the author (13 Oct, late), on a benchmark that needs two and three dependent rewrites (being built, no model); H8 not tested yet: read from the saved trials, a second level would ask the model in 80 of the 80 trials with a kept rewrite where DiscoPoP writes the directive — about the repetition loop it had already been asked about and the function around it — and about another loop in 4 trials on 2 of the 18 loops; where the model writes, in 20 of 84, with no new loop |
 | RQ9 | Where should the agent look first? | C1 | H9 | E9 | 7.4 | planned |
 
 **Contributions.**
@@ -106,8 +106,8 @@ proposed here and is to be confirmed with the title.
    fast and right in more than 5 of 20.
 5. **Limits.** Stronger models alone reach further on plain loops (89 of 90); the agent's reach is bounded by its
    model and by what DiscoPoP confirms; of the design options, the model writing the directive is at least as good
-   and cheaper, the fast refresh is not adopted, and a second round of rewriting has nothing new to do on these loops
-   (read from the saved trials, not run).
+   and cheaper; the fast refresh changes decisions on saved rewrites, and its live trials and the depth trials are
+   stated with what has run by submission.
 
 ---
 
@@ -400,7 +400,7 @@ result, or the expectation written down before the run.
     DataRaceBench from outside) is kept in the record and needs no model call — it can be run at any point and
     would turn each of these limits into a number.
 - **7.7 Stage 4 — who writes the directive, and how the evidence survives the edit** (E3, E4; RQ5–RQ7;
-  H6, H6b, H7, H7b). **[7.7.1 done 10 Oct; 7.7.2 done 13 Oct — two experiments, split by the author on 9 Oct]**
+  H6, H6b, H7, H7b). **[7.7.1 done 10 Oct; 7.7.2 partly — steps 1 to 3 done 13 Oct, the live trials reopened; two experiments, split by the author on 9 Oct]**
   - 7.7.1 Who writes the directive (E3): DiscoPoP, as the agent does now, or the model in the same edit as its
     rewrite — the whole program profiled again after every kept rewrite in both. Two setups on the main
     comparison's whole set: 18 loops that need restructuring × 5, four loops with a true recurrence × 3, three
@@ -500,7 +500,7 @@ result, or the expectation written down before the run.
     out: profiling seconds per kept rewrite; decisions that differ from the full re-profile, split into unsafe
     and over-cautious; extra calls. Written down before the run: the refresh can only change a decision where
     DiscoPoP, not the gate, judges the rewrite.
-    **[done]** **13 Oct — run in four steps, the ones without a model first (the author, 12 Oct); the fourth not run (the author, 13 Oct).**
+    **[partly]** **Run in four steps, the ones without a model first (the author, 12 Oct); the first three done 13 Oct; the fourth first dropped, then reopened by the author the same night.**
     *Step 1, done 12 Oct, no model:* the 599 pragma-free rewrites that passed the checks in the trials of the
     main comparison, 7.7.1 and 7.7.1b, each judged with the agent's own functions after a full re-profile, after
     the fast refresh and after a second full re-profile (the control). The agent's decision differs after the
@@ -536,14 +536,18 @@ result, or the expectation written down before the run.
     model's claim may enter the analysis only where an error costs a missed loop is argued in the design chapter
     and not claimed as measured.
     *Step 4,* live trials: planned only if steps 1 and 2 say the refresh keeps DiscoPoP's verdicts; they say it
-    does not. Not run (the author, 13 Oct: "ok go ahead"); nor is the model asked on all 599 rewrites, nor the
-    agent's placing of a reported dependence changed. **The fast refresh is reported as not adopted, with these
-    measured reasons.** Limits to say with it: the replay asks the model without the conversation in which it
-    wrote the rewrite (only live trials would show whether it reports better there); the damage among the
-    rewrites that agree is an estimate from 58 of 541; a placing that names the loop was not built; the saving
-    in a whole trial on a program with a long run was not measured (step 3 timed single refreshes). The large
-    code of 7.9 is where one profile is expensive: which refresh it uses is decided in its design.
-- **7.8 Stage 5 — how far to chain restructuring** (E8; RQ8; H8). **[done]** **13 Oct, from the saved trials — no depth trial run (the author: "ok").** As planned in September: depth 0, 1 and 2 with twins, 18 loops × 3 (108 new trials); read out per level:
+    does not. First not run (the author, 13 Oct: "ok go ahead"), then reopened by him the same night ("we just need
+    to experiment them and see the results"; "run both"): **the live trials are run** — the agent with the fast
+    refresh and the model's report, on the 18 loops as the reference and on a benchmark whose profiling run is long,
+    the only place a refresh can save time (his rule of 26 Sep: every experiment gets a benchmark that can show its
+    effect; on the 18 loops the run the refresh skips is 0.08 % of the agent's time). That benchmark is fixed by
+    measurement without a model before anything is launched. Standing from 13 Oct: the model is not asked on all
+    599 rewrites, and the agent's placing of a reported dependence is not changed. What the live trials are to
+    measure, which the replay could not: the count at the end of whole trials (the model can try again after a
+    rejection), the model asked inside the conversation in which it wrote the rewrite, and the saving in a whole
+    trial. Limits that remain: the damage among the rewrites that agree is an estimate from 58 of 541; a placing
+    that names the loop was not built.
+- **7.8 Stage 5 — how far to chain restructuring** (E8; RQ8; H8). **[open]** Read from the saved trials on 13 Oct; the depth trials first dropped, then reopened by the author the same night. As planned in September: depth 0, 1 and 2 with twins, 18 loops × 3 (108 new trials); read out per level:
   speed-up gained, regions seen and regions parallelized, re-profiles, calls and time, unusable programs, the sequential
   cost of kept rewrites; written down before any run: on single-nest loops depth 0 should suffice, so no difference is the
   expected result and a finding, and a first small run must show that a deeper level is ever entered, or the experiment is
@@ -563,11 +567,18 @@ result, or the expectation written down before the run.
   sends a rewrite back in 38 of 90 trials, 25 of which end faster, so depth 0 against depth 1 differs in two things; and a
   second rewrite is timed with DiscoPoP's directives on every parallel loop near the lines it touched against a program
   without directives, so it can be credited with the first rewrite's gain.
-  *Decided by the author (13 Oct, "ok"):* no depth trials. The count answers the question for these loops; H8 is not
-  tested — it is known how often a first rewrite leaves a second task (4 of 80 trials), not what a second level would do
-  with it; the two properties are stated as limits of depth as built; depth stays in the agent, at 0, described as not
-  evaluated by trials; whether it is tried on the large code is decided with 7.9. The alternatives he was shown: repair
-  depth and run about 50 trials on the few loops that leave a second loop; the 108 trials as planned, on the agent as built.
+  *The author's decisions (13 Oct):* first no depth trials ("ok" to that recommendation), then, the same night, the
+  opposite: "we just need to experiment them and see the results", "run both", and "for the depth we need a bench mark
+  that would test it for multible depths". The rule written in advance had said the same — drop the experiment only if
+  a deeper level is never entered — and the recommendation to skip had been a reading made after the logs. **The depth
+  trials are run:** on the agent as built, in the setup in which DiscoPoP writes the directive, on the 18 loops as the
+  reference and on a benchmark that has the property fixed on 26 Sep — the expert version needs two dependent
+  restructuring steps, the second on code the first created (after step 1 DiscoPoP still finds no pattern in the hot
+  region, after step 2 it does), and three for depth 2. The screening of 26 Sep lists the candidates (in TSVC `s2251`,
+  `s2111`, the family of `s341`; weaker `s221`, `s233`, `s257`; outside TSVC `nussinov`, `lu`, one of Burkardt's
+  programs); the set is fixed by reading the code and by measurement without a model, each candidate with its in or
+  out reason, and put to the author with its cost before any model call. The two properties above are stated as
+  properties of what is measured.
   *Decided with it:* the model writes the directive in 7.9 and what else remains — the setup of 7.7.1's second row (80 of
   90 on the same 18 loops, no unusable program). A decision taken after 7.7.1's result was known, recorded as that. The
   main comparison (7.2) and the evidence experiments (7.5) stay in the setup in which DiscoPoP writes; 7.7.1 is the
@@ -637,7 +648,7 @@ the results folder · F. Full result tables · G. The agent's command-line refer
 | Fig. 8 | Speed of the successes beside the expert version | 7.5 |
 | Fig. 9 | The gate against the harness: confusion matrix | 7.6 |
 | Fig. 10 | Decisions under fast refresh against the full re-profile | 7.7 |
-| Fig. 11 | What a second round of rewriting would have been asked about, per setup (from the saved trials; no depth trial was run, so there is no gain per depth to draw) | 7.8 |
+| Fig. 11 | Gain and cost per restructuring depth (trials reopened 13 Oct); beside it, what a second round would have been asked about on the 18 loops, per setup (from the saved trials) | 7.8 |
 | Tab. 1 | Questions, claims, hypotheses, experiments, status | 1.5, 7.12 |
 | Tab. 2 | Related systems compared | 3.7 |
 | Tab. 3 | Every setting of the agent and its role | 4.11 |
@@ -654,7 +665,7 @@ the results folder · F. Full result tables · G. The agent's command-line refer
    needs to know what annotation tools and language models do before the approach makes sense. The case for the
    other place: the thesis measures its neighbours (Polly, expert OpenMP, RepoOMP), so the field could be
    discussed with the numbers on the table.
-3. **The cost claim (C3).** *As it stands after the experiment of 7.7.2 (closed 13 Oct): the fast refresh loses wins
+3. **The cost claim (C3).** *As it stands after the first three steps of 7.7.2 (13 Oct; the live trials are still to run): the fast refresh loses wins
    and saves 1.5 to 7.5 % of a trial where the run is long; the model's report as built does not repair it; the
    add-not-delete principle was not measurable (after a fast refresh there was almost nothing to delete). C3 is
    therefore written as a measured negative result plus a design argument: the fast refresh and the reconstruction
@@ -665,9 +676,11 @@ the results folder · F. Full result tables · G. The agent's command-line refer
    is on saved rewrites of small loops, and no live trial ran. Still to come under C3: depth (7.8) and the
    profile of a large code (7.9).
 4. **Which planned experiments must run before submission.** Order: the two-by-two, depth, then ranking,
-   LULESH and RepoOMP as time allows. *13 Oct: the two-by-two is done as two experiments (7.7.1, 7.7.2). Depth is not run
-   by trials (the author) — the saved trials answer it for the 18 loops (7.8). The model writes the directive in what
-   remains (the author). Still to run: ranking, LULESH, RepoOMP.* The gate as a classifier was set aside by the author on 9 Oct (no model
+   LULESH and RepoOMP as time allows. *13 Oct: the two-by-two is done as two experiments (7.7.1, 7.7.2 up to its live
+   trials). The author's position, said that night: a planned experiment is run and reported whether or not it shows a
+   gain — so the fast refresh's live trials and the depth trials are run, each on a benchmark that can show its effect
+   (7.7.2, 7.8). The model writes the directive in what remains (the author). Still to run: those two, ranking, LULESH,
+   RepoOMP.* The gate as a classifier was set aside by the author on 9 Oct (no model
    calls; it can be run at any point — until then 7.6.3 states its questions as limits). Each planned section is
    written so that it can move to future work without changing the chapter's structure.
 5. **Nine chapters or six parts.** See section 12.
@@ -699,7 +712,7 @@ the results folder · F. Full result tables · G. The agent's command-line refer
 |---|---|---|
 | Coverage (C1) | the main comparison; the hidden-order experiments | **supported on kernels**; a large code and RepoOMP planned |
 | Trust (C2) | no unusable program in the main comparison; the speed check; the unsafe cases named | **supported**; the gate's own error rate planned |
-| Cost (C3) | calls, time and cost recorded in every run; the fast-refresh experiment (7.7.2) | **a measured negative result** on the refresh and on the model's report (not adopted; add-not-delete stays a design argument); depth answered from the saved trials, no depth trial run; the large code planned |
+| Cost (C3) | calls, time and cost recorded in every run; the fast-refresh experiment (7.7.2) | **a measured negative result** on the refresh and on the model's report (add-not-delete stays a design argument); the refresh's live trials and the depth trials reopened 13 Oct, their benchmarks being built; the large code planned |
 
 Dropped, to be said in the thesis with the reason: the profiling-cost curve (26 Sep: it measures DiscoPoP, not
 the agent); the small open model as a third model; the evidence's parts and the prompt's parts given one by one
