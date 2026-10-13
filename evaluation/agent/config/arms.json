@@ -1354,6 +1354,74 @@
         "restructure_depth": 0,
         "prompt_version": 5
       }
+    },
+    "fast_recon_v5": {
+      "ids": [
+        "E4-live"
+      ],
+      "description": "E4, step 4 (the author, 13 Oct: \"run both\"): the agent with DiscoPoP writing the pragma, the fast refresh after a rewrite that passed the checks, and the model's own report of the dependences of its new lines, asked in a separate request after the rewrite (`--llm-recon-mode followup`, the agent's default and the form the author chose on 12 Oct) — `default_v5` plus `--fast-refresh --llm-recon`. Otherwise exactly `default_v5`.",
+      "flags": [
+        "--prompt-version",
+        "5",
+        "--fast-refresh",
+        "--llm-recon"
+      ],
+      "settings": {
+        "budget": 3,
+        "llm_pragmas": false,
+        "require_speedup": true,
+        "hotspots": true,
+        "fast_refresh": true,
+        "restructure_depth": 0,
+        "pragma_arbitration": false,
+        "prompt_version": 5,
+        "llm_recon": true,
+        "llm_recon_mode": "followup"
+      }
+    },
+    "depth1_v5": {
+      "ids": [
+        "E8-v5"
+      ],
+      "description": "E8 (the author, 13 Oct: \"run both\"): the agent with DiscoPoP writing the pragma and `--restructure-depth 1` — a region that a kept rewrite leaves or exposes may be sent to the model once more; the agent as built (with a deeper level to come, the level before keeps every safe rewrite and the speed question is asked at the last level, D40.1). Otherwise exactly `default_v5`.",
+      "flags": [
+        "--prompt-version",
+        "5",
+        "--restructure-depth",
+        "1"
+      ],
+      "settings": {
+        "budget": 3,
+        "llm_pragmas": false,
+        "require_speedup": true,
+        "hotspots": true,
+        "fast_refresh": false,
+        "restructure_depth": 1,
+        "pragma_arbitration": false,
+        "prompt_version": 5
+      }
+    },
+    "depth2_v5": {
+      "ids": [
+        "E8-v5"
+      ],
+      "description": "E8 (the author, 13 Oct: \"run both\"): the agent with DiscoPoP writing the pragma and `--restructure-depth 2` — a region that a kept rewrite leaves or exposes may be sent to the model twice more; the agent as built (with a deeper level to come, the level before keeps every safe rewrite and the speed question is asked at the last level, D40.1). Otherwise exactly `default_v5`.",
+      "flags": [
+        "--prompt-version",
+        "5",
+        "--restructure-depth",
+        "2"
+      ],
+      "settings": {
+        "budget": 3,
+        "llm_pragmas": false,
+        "require_speedup": true,
+        "hotspots": true,
+        "fast_refresh": false,
+        "restructure_depth": 2,
+        "pragma_arbitration": false,
+        "prompt_version": 5
+      }
     }
   },
   "common_timing_size": "per_kernel",
@@ -2022,6 +2090,30 @@
       ],
       "consequences": [],
       "why": "E3's reference: DiscoPoP alone on the same cells (budget 0 means no model is called), everything else identical to the arm in which DiscoPoP writes the pragma."
+    },
+    "E4-live": {
+      "arms": [
+        "default_v5",
+        "fast_recon_v5"
+      ],
+      "variable": [
+        "fast_refresh",
+        "llm_recon"
+      ],
+      "consequences": [],
+      "why": "E4, step 4: the live trials of the fast refresh with the model's report against the full re-profile, DiscoPoP writing the pragma in both (the author, 13 Oct). The two settings are switched together: the report runs only inside the fast refresh's branch, and the pair is the setup the design of 12 Oct names. `default_v5` declares no `llm_recon_mode`; the mode is the agent's default in both."
+    },
+    "E8-v5": {
+      "arms": [
+        "default_v5",
+        "depth1_v5",
+        "depth2_v5"
+      ],
+      "variable": [
+        "restructure_depth"
+      ],
+      "consequences": [],
+      "why": "E8 at the version of everything that remains: how deep to chain restructuring (H8), DiscoPoP writing the pragma, the agent as built (the author, 13 Oct). Supersedes `E8`, whose arms inherit `default` and never ran."
     }
   }
 }
