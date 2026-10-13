@@ -32,4 +32,8 @@ $PY agent/tools/e3_tests.py --analysis "$O"
 # read the archive and test nothing) — per loop and per class, the gate's verdicts by stage, who wrote each kept pragma,
 # the floor; and E1-v6's instrument for the repetition loop on E3's programs and, for the tag added on 10 Oct, E1-v6's
 $PY $E/analysis/e3_descriptive.py > /dev/null
-$PY $E/analysis/rep_loop_readout.py $E/runs $E1/runs --md "$O/repetition_loop.md" > /dev/null
+# (13 Oct 2026: the runs are named — the script read whole folders, and the runs archived into them in the evening of
+# 10 Oct, after this read-out was written (`e3c_v8_s341`, `e1v6c_v8_agent`), would have entered a later run of it.
+# E1-v6's are the runs with programs of the agent that existed when it was written.)
+E1_RUNS="e1v6_r_1 e1v6_r_2 e1v6_r_3 e1v6_r_4 e1v6_a e1v6_d e1v6c_s241 e1v6c_s281 e1v6c_v7_agent e1v6c_v7_control"
+$PY $E/analysis/rep_loop_readout.py "$E/runs:${RUNS// /,}" "$E1/runs:${E1_RUNS// /,}" --md "$O/repetition_loop.md" > /dev/null

@@ -16,9 +16,11 @@ Categories of E1-v6's instrument, from the text of each trial's final benchmark 
   dummy != 1      the call removed or written more than once
   loops != 1      the repetition loop removed or written more than once
 
-    python3 rep_loop_readout.py RUNS_DIR [RUNS_DIR ...] [--md OUT.md]
+    python3 rep_loop_readout.py RUNS_DIR[:run,run,...] [RUNS_DIR[:run,run,...] ...] [--md OUT.md]
 
-Run on E3's runs and, for the added tag, on E1-v6's (the agent's programs there are `default_v4`).
+Run on E3's runs and, for the added tag, on E1-v6's (the agent's programs there are `default_v4`). A folder given
+alone is read whole; with its runs named (13 Oct 2026) only those are read, so a run archived into the folder later
+does not enter a read-out that was written before it — the registered `build.sh` scripts name theirs.
 """
 import collections
 import glob
@@ -106,7 +108,10 @@ before = collections.defaultdict(collections.Counter)
 cases, hoists = [], []
 seen = set()
 for base in bases:
-    for f in sorted(glob.glob(base + "/*/benchmarks/**/trial.json", recursive=True)):
+    base, _, named = base.partition(":")
+    found = [f for run in (named.split(",") if named else ["*"])
+             for f in glob.glob(f"{base}/{run}/benchmarks/**/trial.json", recursive=True)]
+    for f in sorted(found):
         t = json.load(open(f))
         if (t.get("llm_call_failures") or 0) > 0 or t["arm"] not in SETUP:
             continue

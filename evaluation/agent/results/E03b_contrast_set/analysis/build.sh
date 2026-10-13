@@ -25,4 +25,6 @@ $PY agent/tools/e3b_tests.py --analysis "$O"
 # the descriptive read-outs fixed in the pre-registration (no test): per loop — outcomes, speed-ups, calls, cost, the
 # forms of the directives and who wrote them, the gate's verdicts — and the repetition-loop instrument (E3's script)
 $PY $E/analysis/e3b_descriptive.py > /dev/null
-$PY agent/results/E03_who_writes_the_pragmas/analysis/rep_loop_readout.py $E/runs --md "$O/repetition_loop.md" > /dev/null
+# (13 Oct 2026: the runs are named — the script read the whole folder, and `e3bc_s316`, archived into it on 11 Oct,
+# would have entered a later run of this read-out.)
+$PY agent/results/E03_who_writes_the_pragmas/analysis/rep_loop_readout.py "$E/runs:${RUNS// /,}" --md "$O/repetition_loop.md" > /dev/null
