@@ -390,6 +390,17 @@ def write_indexes(reg: Optional[dict] = None) -> List[Path]:
 # the check: the definition of done, as a program
 # ---------------------------------------------------------------------------------------------
 
+# Experiments that have no trials of their own — so no comparison against DiscoPoP alone and no read-out of one. What
+# each must have instead, once it is marked done, is its own read-out (THESIS_EXPERIMENTS §6, 13 Oct 2026):
+#   E4 — its runs replay saved rewrites and time single refreshes; its live trials were not run (the author);
+#   E8 — answered from the saved trials of E3; no depth trial was run (the author).
+OWN_READOUTS: Dict[str, List[str]] = {
+    "E4": ["analysis/e4_replay_readout.md", "analysis/e4_refresh_time_readout.md", "analysis/e4_report_dry_readout.md",
+           "analysis/e4_report_readout.md", "analysis/e4_report_placement_readout.md"],
+    "E8": ["preflight/depth_from_the_archive.md"],
+}
+
+
 def check() -> List[str]:
     reg = load()
     P: List[str] = []
@@ -441,14 +452,10 @@ def check() -> List[str]:
             continue
         if not (base / "REPORT.md").exists():
             P.append(f"{gid}: no REPORT.md (`campaign.py reports`)")
-        if gid == "E4" and g["status"] == "done":
-            # E4 has no trials of its own: its runs replay saved rewrites and time single refreshes, and its live
-            # trials were not run (the author, 13 Oct 2026 — recorded). So there is no comparison against DiscoPoP
-            # alone and no read-out of one; what it must have are its own read-outs.
-            for need in ("e4_replay_readout.md", "e4_refresh_time_readout.md", "e4_report_dry_readout.md",
-                         "e4_report_readout.md", "e4_report_placement_readout.md"):
-                if not (base / "analysis" / need).exists():
-                    P.append(f"{gid}: missing analysis/{need}")
+        if gid in OWN_READOUTS and g["status"] == "done":
+            for need in OWN_READOUTS[gid]:
+                if not (base / need).exists():
+                    P.append(f"{gid}: missing {need}")
             continue
         if g["kind"] == "experiment" and g["status"] == "done":
             for need in ("analysis/main_comparison_stats.md", "analysis/fig_vs_discopop_alone.png", "analysis/vs_discopop_alone.md"):

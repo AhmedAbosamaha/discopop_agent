@@ -42,10 +42,10 @@ proposed here and is to be confirmed with the title.
 | RQ2 | Is every accepted change right and race-free, what does each check catch, and where are the checks blind? | C2 | H2, H3, H10, H10b, H13 | E1, E10, E7 | 7.2, 7.6 | E1, E10 done · E7 designed 9 Oct and set aside by the author the same day (not run) |
 | RQ3 | How close do the accepted programs come to an expert's version, and do they scale with threads? | C1 | H4, H11 | E1, E2, E6, E11 | 7.2, 7.5, 7.9 | partly |
 | RQ4 | What does the model need: DiscoPoP's evidence, feedback from failed attempts, or more strength? | C1 | H5, H5b, H5d, H12 | E2, E12 | 7.3, 7.5 | done |
-| RQ5 | Who should write the directive: DiscoPoP or the model? | C1, C2 | H6 (its half on the author), H6b | E3 | 7.7 | done 10 Oct: 81 of 90 fast and race-free where the model writes, 76 of 90 where DiscoPoP writes — not established (p = 0.14; four of the five trials are `s331`); no unusable program in either setup; DiscoPoP keeps writing in 7.7.2 (the author, 10 Oct); corrected for `s341`: 80 against 75; the contrast set (E3b, 7.7.1b), done 10 Oct: 30 of 30 against 24 of 30 on six chosen loops (25 after a DiscoPoP defect found there was repaired and its loop run again, 11 Oct) — supported as a single test (exact p = 0.009; 0.021 corrected), not within the family; the model usually finds a form DiscoPoP recognises, at 3.4 times the calls and less than half the speed |
+| RQ5 | Who should write the directive: DiscoPoP or the model? | C1, C2 | H6 (its half on the author), H6b | E3 | 7.7 | (decided 13 Oct: the model writes it in the experiments that remain) done 10 Oct: 81 of 90 fast and race-free where the model writes, 76 of 90 where DiscoPoP writes — not established (p = 0.14; four of the five trials are `s331`); no unusable program in either setup; DiscoPoP keeps writing in 7.7.2 (the author, 10 Oct); corrected for `s341`: 80 against 75; the contrast set (E3b, 7.7.1b), done 10 Oct: 30 of 30 against 24 of 30 on six chosen loops (25 after a DiscoPoP defect found there was repaired and its loop run again, 11 Oct) — supported as a single test (exact p = 0.009; 0.021 corrected), not within the family; the model usually finds a form DiscoPoP recognises, at 3.4 times the calls and less than half the speed |
 | RQ6 | Can the model close the gap a fast refresh leaves, without making the analysis unsafe? | C3 | H7, H7b | E4 | 7.7 | done 13 Oct (on saved rewrites; live trials not run — the author's decision of 13 Oct): asked on 116 saved rewrites (136 calls, $8.53), the model's report gives back 20 of the 22 wins the fast refresh loses and removes both keeps the full profile does not make, but changes 11 of the 58 drawn rewrites the refresh had right (about 102 of the 541, at least 60 at 95 %) — H7 not refuted on the selected rewrites, fails on the whole set; in all damaged rewrites the reply calls the loop independent: the agent places a reported dependence without its loop; the deletion changed no decision on its 21 rewrites — H7b refuted as registered (0 against 0), the add-not-delete principle stays a design argument |
 | RQ7 | Can the profile be refreshed without running the program again, without changing decisions? | C3 | H6 | E4 | 7.7 | done 13 Oct (on saved rewrites, no model; live trials not run — the author's decision of 13 Oct): on 599 saved rewrites the fast refresh changes whether the agent keeps the rewrite in 58 (two full profiles of one program: 0) — refuted (p = 0.0003; at most 0.018 in the family); 22 wins thrown away, 20 of them reductions the model created; no time saved on the 18 loops; where the run is long one refresh saves 21 to 36 s, 1.5 to 7.5 % of a trial |
-| RQ8 | How far should restructuring be chained? | C1, C3 | H8 | E8 | 7.8 | open (designed 13 Oct, no trial run): read from the saved trials, a second level would ask the model in 80 of the 80 trials with a kept rewrite where DiscoPoP writes the directive — about the repetition loop it had already been asked about and the function around it — and about another loop in 4 trials on 2 of the 18 loops; where the model writes, in 20 of 84, with no new loop. Put to the author: no depth trials (recommended) |
+| RQ8 | How far should restructuring be chained? | C1, C3 | H8 | E8 | 7.8 | done 13 Oct from the saved trials — no depth trial run (the author's decision); H8 not tested: read from the saved trials, a second level would ask the model in 80 of the 80 trials with a kept rewrite where DiscoPoP writes the directive — about the repetition loop it had already been asked about and the function around it — and about another loop in 4 trials on 2 of the 18 loops; where the model writes, in 20 of 84, with no new loop |
 | RQ9 | Where should the agent look first? | C1 | H9 | E9 | 7.4 | planned |
 
 **Contributions.**
@@ -542,8 +542,7 @@ result, or the expectation written down before the run.
     rewrites that agree is an estimate from 58 of 541; a placing that names the loop was not built; the saving
     in a whole trial on a program with a long run was not measured (step 3 timed single refreshes). The large
     code of 7.9 is where one profile is expensive: which refresh it uses is decided in its design.
-- **7.8 Stage 5 — how far to chain restructuring** (E8; RQ8; H8). **[open]** Designed 13 Oct, no trial run; the author's
-  decision owed. As planned in September: depth 0, 1 and 2 with twins, 18 loops × 3 (108 new trials); read out per level:
+- **7.8 Stage 5 — how far to chain restructuring** (E8; RQ8; H8). **[done]** **13 Oct, from the saved trials — no depth trial run (the author: "ok").** As planned in September: depth 0, 1 and 2 with twins, 18 loops × 3 (108 new trials); read out per level:
   speed-up gained, regions seen and regions parallelized, re-profiles, calls and time, unusable programs, the sequential
   cost of kept rewrites; written down before any run: on single-nest loops depth 0 should suffice, so no difference is the
   expected result and a finding, and a first small run must show that a deeper level is ever entered, or the experiment is
@@ -563,12 +562,15 @@ result, or the expectation written down before the run.
   sends a rewrite back in 38 of 90 trials, 25 of which end faster, so depth 0 against depth 1 differs in two things; and a
   second rewrite is timed with DiscoPoP's directives on every parallel loop near the lines it touched against a program
   without directives, so it can be credited with the first rewrite's gain.
-  *Put to the author (13 Oct):* (A, recommended) no depth trials — the count answers the question for these loops, the two
-  properties are stated as limits, depth stays in the agent, off and not evaluated by trials; (B) repair depth and run
-  about 50 trials on the few loops that leave a second loop; (C) the 108 trials as planned, on the agent as built. With it,
-  the decision deferred on 10 Oct: who writes the directive in 7.9 and what else remains (recommended: the model — the rule
-  shown before 7.7.1 is met, 80 against 75 of 90 with no unusable program; 30 against 25 of 30 on the contrast set with a
-  third of the calls; the case for DiscoPoP: one setup for the whole thesis).
+  *Decided by the author (13 Oct, "ok"):* no depth trials. The count answers the question for these loops; H8 is not
+  tested — it is known how often a first rewrite leaves a second task (4 of 80 trials), not what a second level would do
+  with it; the two properties are stated as limits of depth as built; depth stays in the agent, at 0, described as not
+  evaluated by trials; whether it is tried on the large code is decided with 7.9. The alternatives he was shown: repair
+  depth and run about 50 trials on the few loops that leave a second loop; the 108 trials as planned, on the agent as built.
+  *Decided with it:* the model writes the directive in 7.9 and what else remains — the setup of 7.7.1's second row (80 of
+  90 on the same 18 loops, no unusable program). A decision taken after 7.7.1's result was known, recorded as that. The
+  main comparison (7.2) and the evidence experiments (7.5) stay in the setup in which DiscoPoP writes; 7.7.1 is the
+  bridge between the two.
 - **7.9 Scale and the outside comparison.**
   - A large code: LULESH (E6). **[planned]** Does the loop still work when one profile takes 28 GB? Setups:
     sequential, DiscoPoP alone, the agent, the model alone, the laboratory's own OpenMP version.
@@ -662,12 +664,22 @@ the results folder · F. Full result tables · G. The agent's command-line refer
    is on saved rewrites of small loops, and no live trial ran. Still to come under C3: depth (7.8) and the
    profile of a large code (7.9).
 4. **Which planned experiments must run before submission.** Order: the two-by-two, depth, then ranking,
-   LULESH and RepoOMP as time allows. *13 Oct: the two-by-two is done as two experiments (7.7.1, 7.7.2). Depth is put to
-   the author as not to be run by trials — the saved trials answer it for the 18 loops (7.8) — and with it who writes the
-   directive in what remains (recommended: the model).* The gate as a classifier was set aside by the author on 9 Oct (no model
+   LULESH and RepoOMP as time allows. *13 Oct: the two-by-two is done as two experiments (7.7.1, 7.7.2). Depth is not run
+   by trials (the author) — the saved trials answer it for the 18 loops (7.8). The model writes the directive in what
+   remains (the author). Still to run: ranking, LULESH, RepoOMP.* The gate as a classifier was set aside by the author on 9 Oct (no model
    calls; it can be run at any point — until then 7.6.3 states its questions as limits). Each planned section is
    written so that it can move to future work without changing the chapter's structure.
 5. **Nine chapters or six parts.** See section 12.
+6. **How the thesis states its idea, now that the later experiments run with the model writing the directive** (decided
+   13 Oct). The abstract's idea — the model removes the dependence, DiscoPoP confirms that it is gone and writes the
+   directive, a gate decides — describes the main comparison and the evidence experiments. In the setup of the later
+   experiments DiscoPoP's analysis confirms almost nothing after a rewrite (a profile made after a rewrite was read for 14
+   judgments against 416); its part is the evidence shown to the model, the choice of where to look first, the gate's
+   dependence check and the directives of loops that need no rewrite. Recommended: keep the idea as stated for the design
+   chapter and the main comparison, and say in 7.7 and in the limits that who writes the directive was measured and the
+   later experiments use the setup that was at least as good, cheaper and no less safe. The case for rewording the idea
+   itself ("DiscoPoP diagnoses, the model rewrites and annotates, a gate decides"): it would describe the agent the
+   large-code results come from. The author's to settle.
 
 ## 12 Folded into the six default parts
 

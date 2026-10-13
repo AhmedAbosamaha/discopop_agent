@@ -704,7 +704,7 @@ Status: done
 
 ## [E8 — restructuring depth: may the model rewrite again what a kept rewrite leaves or exposes?](E08_restructuring_depth/REPORT.md)
 
-Status: designed 13 Oct — put to the author; no trial run
+Status: done
 
 | run | where | what it is | status | trials | outcomes |
 |---|---|---|---|---:|---|

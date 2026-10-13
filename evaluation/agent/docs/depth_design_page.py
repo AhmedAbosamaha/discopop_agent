@@ -98,11 +98,13 @@ th{font-weight:600;color:var(--mute);font-size:12.5px;letter-spacing:.04em;text-
 ul,ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;max-width:68ch}
 </style>
 <main>""")
-P.append("""<header><p class="k">Put to the author 13 Oct 2026 · nothing built, nothing run · two decisions wait for you</p>
+P.append("""<header><p class="k">Put to the author 13 Oct 2026 · decided 13 Oct (the author: “ok”) · no depth trials · the model writes the pragmas from here on</p>
 <h1>The depth experiment</h1>
 <p class="lede">When the agent keeps a rewrite, it profiles the program again and may find new regions. So far, in every experiment, such a region gets DiscoPoP's pragma at most and is never rewritten a second time. “Depth 1” would let the model be asked about it once more, “depth 2” twice. The experiment was planned to show whether that gains anything and what it costs.</p></header>""")
 
-P.append('<div class="card"><h3>The two decisions, in short</h3>')
+P.append('<div class="card"><h3>Decided on 13 Oct</h3>')
+P.append("<p>Your answer “ok” to the two questions below, each as I had recommended: <strong>no depth trials</strong> — the count from our saved trials is the answer for these loops, and the two points about depth as built are stated as limits — and <strong>the model writes the pragmas in the experiments that remain</strong>. What a second round would have done with the few loops that leave a second task stays unknown, and is said as a limit. The text below is as it was put to you.</p></div>")
+P.append('<div class="card"><h3>The two decisions, in short (as put to you)</h3>')
 P.append(f"""<ol class="ask"><li><strong>Depth:</strong> I recommend <em>no depth trials</em>. Our saved trials already show that on the 18 loops a second round has new work in {dp['other']} of {dp['ask']} trials; in the others it would only ask again about the loop over the repetitions, which the model was already asked about, and the function around it. The experiment as planned would also mix depth with two other differences. The reasons are below.</li>
 <li><strong>Who writes the pragmas in the experiments that remain</strong> (the decision you postponed on 10 Oct): I recommend <em>the model</em>. The rule shown to you before that comparison is met, the contrast set agrees, and it needs fewer calls and profiles. The case for DiscoPoP is below.</li></ol>
 <p>If you answer “ok”, I read it as: no depth trials, and the model writes the pragmas in the experiments that remain. Anything else, please say.</p></div>""")
@@ -170,7 +172,7 @@ P.append(table(["Option", "The case for it"], [
      "It would carry the comparison to a real application for the price of one more setup there. It can be decided with that experiment's design; I would propose it there if its cost allows."],
 ]))
 P.append("<h2>How I read your answer</h2>")
-P.append("<p>“ok” means: no depth trials (option A), and the model writes the pragmas in the experiments that remain. For anything else — a depth run, DiscoPoP writing, or both on the large code — please say so. No model is called for the depth experiment before you have answered.</p>")
+P.append("<p>“ok” means: no depth trials (option A), and the model writes the pragmas in the experiments that remain. For anything else — a depth run, DiscoPoP writing, or both on the large code — please say so. No model is called for the depth experiment before you have answered.</p><p><strong>Your answer, 13 Oct: “ok”.</strong> No model was called for this experiment.</p>")
 P.append("</main>")
 OUT.write_text("\n".join(P) + "\n")
 print(f"{OUT}: {OUT.stat().st_size} bytes; estimates: B ${B_COST[0]:.1f}–${B_COST[1]:.1f}, C ${C_COST[0]:.1f}–${C_COST[1]:.1f}; per call ${per_call:.3f}; "
