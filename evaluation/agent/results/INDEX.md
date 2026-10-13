@@ -702,3 +702,10 @@ Status: done
 | `e4_report_a` | [`E04_fast_refresh/runs/e4_report_a/`](E04_fast_refresh/runs/e4_report_a/) | E4 step 2 (server, Haiku, one call per rewrite and direction): `tools/report_replay.py --report ask --deletion ask` with `--select analysis/e4_report_selection.json` (the 58 rewrites whose decision differs after the fast refresh and 58 of the 541 whose decision is the same) and `--select-deletion analysis/e4_deletion_selection.json` (the 21 on which the deletion review has something to ask); parts `e3`, `e3b_a`, `e3b_b`, `e1v6` | valid | 0 |  |
 | `e4_report_a_placement` | [`E04_fast_refresh/checks/e4_report_a_placement/`](E04_fast_refresh/checks/e4_report_a_placement/) | E4 step 2, a what-if on the saved replies (server, no model): `report_replay.py --report replay --replies runs/e4_report_a` over the 116 rewrites of the report — `as-built` (a control: the agent's own placing again) and `respect-none` (a claimed dependence left out where both of its lines lie inside a loop the same reply declares independent); exploratory, not the agent as built | valid | 0 |  |
 
+## [E8 — restructuring depth: may the model rewrite again what a kept rewrite leaves or exposes?](E08_restructuring_depth/REPORT.md)
+
+Status: designed 13 Oct — put to the author; no trial run
+
+| run | where | what it is | status | trials | outcomes |
+|---|---|---|---|---:|---|
+
