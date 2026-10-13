@@ -78,8 +78,10 @@ class Loop:
                  pre: str = "", globals_: str = "", suite: str = "tsvc", emit_extra: str = "",
                  hot_function: str = "", hot_writes: Tuple[str, ...] = (),
                  hot_aliases: Tuple[str, ...] = (), body: Optional[Tuple[str, str]] = None,
-                 source: str = "") -> None:
+                 source: str = "", steps: Tuple[str, ...] = ()) -> None:
         self.name, self.expected, self.transformation, self.why = name, expected, transformation, why
+        # the depth set (suite tsvc_c5): the reference's forms BEFORE its last step, in order — `expert` is the last
+        self.steps = steps
         # `pre`: the argument declarations TSVC passes through `func_args` (set in its main), which
         # the extracted body does not contain; `globals_`: file-scope code the loop needs (TSVC's
         # `f`, the index array).  Neither may say anything about how to parallelize (D36).
@@ -1298,6 +1300,8 @@ def _v6_expert_body(loop: Loop) -> Tuple[str, str]:
         includes += "#include <stdlib.h>\n"
     if "omp_get" in body:
         includes += "#include <omp.h>\n"
+    if loop.suite == V9_SUITE and "<stdlib.h>" not in includes and re.search(r"\b(malloc|calloc|free)\s*\(", body):
+        includes = "#include <stdlib.h>\n" + includes
     return body, includes
 
 
@@ -1713,6 +1717,8 @@ def v8_mutants(loop: Loop) -> Dict[str, str]:
     out = v7_mutants(loop, render_v8_kernel(loop))
     if loop.name == "s341":
         out["hoist"] = V8_S341_HOIST
+    if loop.suite == V9_SUITE and loop.name == "s123":
+        out["hoist"] = V9_S123_HOIST
     return out
 
 
@@ -1726,6 +1732,201 @@ def _as_v8(loop: Loop) -> Loop:
 
 SUITES[V8_SUITE] = V8_NEW + [_as_v8(l) for l in SUITES[V7_SUITE] if l.name == "s341"]
 CLEAN[V8_SUITE] = (8, v8_files, render_v8_harness, render_v8_kernel, hot_loop_v8, ["main", "dummy"])
+
+
+# ---- the depth set (the author, 13 Oct 2026; record §6): loops whose reference needs two rewrites in a row ----
+# The author, on the depth experiment: "for the depth we need a bench mark that would test it for multible depths" —
+# his rule of 26 Sep (every experiment gets a benchmark that can show its effect). On the 18 loops of the main set a
+# second round of rewriting has a new loop in 4 of 80 trials (E8's read-out of the archive). This suite holds, in
+# packaging v8's form and with nothing of v8 or earlier changed, the candidates the screening of 26 Sep marked for
+# E8 — one member per chain of transformations, the first in TSVC's own order — whose reference is written out IN
+# STEPS (`steps`: the forms before the last step; `expert`: the last). What each form has to pass, without a model,
+# is the rule's clause R5 (record §6, "The depth benchmark (E8) — its inclusion rule"): after a step that is not the
+# last, DiscoPoP confirms a loop and another loop of the hot computation is still sequential.
+#   s2251  the scalar carries the OLD b[i-1] + c[i-1] into the next iteration, and b is overwritten in the same
+#          loop: (1) the old values kept in a temporary by a loop of their own — the main loop still carries the
+#          scalar; (2) the scalar replaced by the temporary's previous element.
+#   s221   (1) distribution: the a-loop has independent iterations, the b-loop is a running sum; (2) the running
+#          sum in blocks — a sum per block, the blocks' totals accumulated, each block shifted by its offset.
+#   s123   the write position depends on how many earlier elements of c are positive (the chain of s341, s342,
+#          s343; its first member in TSVC's order): (1) the positions by a loop of their own, the writes
+#          independent; (2) the positions in blocks — a count per block, the counts accumulated, the positions
+#          filled per block. Data: v8's, with the sign of c mixed and one more element of c positive in every
+#          repetition, so that positions computed once in front of the repetitions are wrong (variant `hoist`).
+# The blocks are a fixed number (not the thread count), so that every form is ordinary sequential C with the
+# pragmas removed — what DiscoPoP is given in the step check.
+V9_SUITE = "tsvc_c5"
+_V9_BLOCKS = "    enum { NB = 64 };\n"
+V9_S123_INIT = ("    for (int i = 0; i < LEN_1D; i++) if ((i * 17) % 5 < 2) c[i] = -c[i];\n"
+                f"    for (long n = 0; n < iterations; n++) c[{_V8_RAISED}] = (real_t)-0.1;")
+_V9_S2251_STEP1 = """    for (int nl = 0; nl < R; nl++) {
+        #pragma omp parallel for
+        for (int i = 0; i < LEN_1D; i++) {
+            pb_tmp[i] = b[i]+c[i];
+        }
+        real_t s = (real_t)0.0;
+        for (int i = 0; i < LEN_1D; i++) {
+            a[i] = s*e[i];
+            s = pb_tmp[i];
+            b[i] = a[i]+d[i];
+        }
+        pb_mix(nl);
+    }
+    return (real_t)0;"""
+_V9_S2251 = """    for (int nl = 0; nl < R; nl++) {
+        #pragma omp parallel for
+        for (int i = 0; i < LEN_1D; i++) {
+            pb_tmp[i] = b[i]+c[i];
+        }
+        #pragma omp parallel for
+        for (int i = 0; i < LEN_1D; i++) {
+            real_t s = (i > 0) ? pb_tmp[i-1] : (real_t)0.0;
+            a[i] = s*e[i];
+            b[i] = a[i]+d[i];
+        }
+        pb_mix(nl);
+    }
+    return (real_t)0;"""
+_V9_S221_STEP1 = """    for (int nl = 0; nl < R; nl++) {
+        #pragma omp parallel for
+        for (int i = 1; i < LEN_1D; i++) {
+            a[i] += c[i] * d[i];
+        }
+        for (int i = 1; i < LEN_1D; i++) {
+            b[i] = b[i - 1] + a[i] + d[i];
+        }
+        pb_mix(nl);
+    }
+    return (real_t)0;"""
+_V9_S221 = _V9_BLOCKS + """    for (int nl = 0; nl < R; nl++) {
+        real_t total[NB], offset[NB + 1];
+        long n = (long)LEN_1D - 1;
+        #pragma omp parallel for
+        for (int i = 1; i < LEN_1D; i++) {
+            a[i] += c[i] * d[i];
+        }
+        #pragma omp parallel for
+        for (int k = 0; k < NB; k++) {
+            long lo = 1 + n * k / NB, hi = 1 + n * (k + 1) / NB;
+            real_t run = (real_t)0.;
+            for (long i = lo; i < hi; i++) {
+                run = run + a[i] + d[i];
+                b[i] = run;
+            }
+            total[k] = run;
+        }
+        offset[0] = b[0];
+        for (int k = 0; k < NB; k++) {
+            offset[k + 1] = offset[k] + total[k];
+        }
+        #pragma omp parallel for
+        for (int k = 0; k < NB; k++) {
+            long lo = 1 + n * k / NB, hi = 1 + n * (k + 1) / NB;
+            for (long i = lo; i < hi; i++) {
+                b[i] += offset[k];
+            }
+        }
+        pb_mix(nl);
+    }
+    return (real_t)0;"""
+_V9_S123_WRITES = """        #pragma omp parallel for
+        for (int i = 0; i < (LEN_1D/2); i++) {
+            a[pos[i]] = b[i] + d[i] * e[i];
+            if (c[i] > (real_t)0.) {
+                a[pos[i] + 1] = c[i] + d[i] * e[i];
+            }
+        }
+        pb_mix(nl);
+    }
+    free(pos);
+    return (real_t)0;"""
+_V9_S123_STEP1 = """    int *pos = (int *)malloc((size_t)(LEN_1D/2) * sizeof(int));
+    for (int nl = 0; nl < R; nl++) {
+        int j = -1;
+        for (int i = 0; i < (LEN_1D/2); i++) {
+            j++;
+            pos[i] = j;
+            if (c[i] > (real_t)0.) {
+                j++;
+            }
+        }
+""" + _V9_S123_WRITES
+_V9_S123 = _V9_BLOCKS + """    int *pos = (int *)malloc((size_t)(LEN_1D/2) * sizeof(int));
+    for (int nl = 0; nl < R; nl++) {
+        long count[NB], first[NB + 1];
+        long n = (long)(LEN_1D/2);
+        #pragma omp parallel for
+        for (int k = 0; k < NB; k++) {
+            long lo = n * k / NB, hi = n * (k + 1) / NB;
+            long m = 0;
+            for (long i = lo; i < hi; i++) {
+                m++;
+                if (c[i] > (real_t)0.) {
+                    m++;
+                }
+            }
+            count[k] = m;
+        }
+        first[0] = 0;
+        for (int k = 0; k < NB; k++) {
+            first[k + 1] = first[k] + count[k];
+        }
+        #pragma omp parallel for
+        for (int k = 0; k < NB; k++) {
+            long lo = n * k / NB, hi = n * (k + 1) / NB;
+            long j = first[k] - 1;
+            for (long i = lo; i < hi; i++) {
+                j++;
+                pos[i] = (int)j;
+                if (c[i] > (real_t)0.) {
+                    j++;
+                }
+            }
+        }
+""" + _V9_S123_WRITES
+# `s123` with the positions computed once, in front of the repetitions: must not reproduce the output (as `s341`'s)
+V9_S123_HOIST = """#include <stdlib.h>
+#include "data.h"
+
+real_t kernel_s123(void)
+{
+    int *pos = (int *)malloc((size_t)(LEN_1D/2) * sizeof(int));
+    int j = -1;
+    for (int i = 0; i < (LEN_1D/2); i++) {
+        j++;
+        pos[i] = j;
+        if (c[i] > (real_t)0.) {
+            j++;
+        }
+    }
+    for (int nl = 0; nl < iterations; nl++) {
+        for (int i = 0; i < (LEN_1D/2); i++) {
+            a[pos[i]] = b[i] + d[i] * e[i];
+            if (c[i] > (real_t)0.) {
+                a[pos[i] + 1] = c[i] + d[i] * e[i];
+            }
+        }
+        dummy(a, b, c, d, e);
+    }
+    free(pos);
+    return (real_t)0;
+}
+"""
+V9_NEW: List[Loop] = [
+    Loop("s2251", "restructure", "the scalar's old values kept in a temporary by a loop of their own, then the scalar "
+         "replaced by the temporary's previous element",
+         "s carries b[i-1] + c[i-1] as they were BEFORE this repetition wrote b: substituting b[i-1] + c[i-1] in place "
+         "reads the new b", expert=_V9_S2251, steps=(_V9_S2251_STEP1,), suite=V9_SUITE, hot_writes=("a", "b")),
+    Loop("s221", "restructure", "distribution, then the running sum in blocks",
+         "a[i] is independent; b[i] = b[i-1] + … is a running sum of what the first statement produced",
+         expert=_V9_S221, steps=(_V9_S221_STEP1,), suite=V9_SUITE, hot_writes=("a", "b")),
+    Loop("s123", "restructure", "the write positions by a loop of their own, then the positions in blocks",
+         "j advances by one or two per iteration, by the sign of c[i]: the position of iteration i is i plus the number "
+         "of positive c before it", init_extra=V9_S123_INIT, expert=_V9_S123, steps=(_V9_S123_STEP1,), suite=V9_SUITE,
+         hot_writes=("a", "j")),
+]
+SUITES[V9_SUITE] = V9_NEW
+CLEAN[V9_SUITE] = (8, v8_files, render_v8_harness, render_v8_kernel, hot_loop_v8, ["main", "dummy"])
 
 
 # ---- packaging v3, kept verbatim: every run up to E2 used it, and it stays the default until T0.15 ---------
@@ -1949,7 +2150,7 @@ def _build_run_units(srcs: List[Path], include: Path, out: Path, flags: List[str
     return True, r.stdout
 
 
-def validate_v5(loop: Loop, package: Path, reference: Optional[Path]) -> List[str]:
+def validate_v5(loop: Loop, package: Path, reference: Optional[Path], steps: Tuple[Path, ...] = ()) -> List[str]:
     """v5: the package runs, its output is finite and changes with the perturbed input; it is BYTE FOR BYTE
     the output of the same loop in layout v4 — the full dump on both inputs and the digest (the layout must
     not change the program; T0.16); and the expert reference, put in the benchmark's file's place and built
@@ -1957,7 +2158,7 @@ def validate_v5(loop: Loop, package: Path, reference: Optional[Path]) -> List[st
     problems: List[str] = []
     units = [package / f"{loop.name}.c", package / V5_MAIN]
     b1 = next((l for l in B1_LOOPS if l.name == loop.name), None)      # None: a kernel v4 never had (ORDER-4)
-    v8 = loop.suite == V8_SUITE
+    v8 = loop.suite in (V8_SUITE, V9_SUITE)
     v7 = loop.suite == V7_SUITE or v8      # the output carries the two sums of the repetitions' record
     if (v7 and loop.name in V7_NEW_DATA) or v8:
         b1 = None                      # this layout gives the loop other data (v8: or a loop v4 never had): nothing to equal
@@ -1995,16 +2196,17 @@ def validate_v5(loop: Loop, package: Path, reference: Optional[Path]) -> List[st
         ok, again = _build_run_units(units, package, t / "orig", ["-DPB_FULL_DUMP", "-DSMALL_DATASET"], [], None)
         if ok and again != outs["default"]:
             problems.append("the original is not deterministic")
-        if reference is not None:
+        for what, ref_file in ([("reference", reference)] if reference is not None else []) + [
+                (f"reference, step {k}", p) for k, p in enumerate(steps, 1)]:
             for tag, args in (("default", []), ("seeded", ["7"])):
-                ok, out = _build_run_units([reference, package / V5_MAIN], package, t / "ref",
+                ok, out = _build_run_units([ref_file, package / V5_MAIN], package, t / "ref",
                                            ["-DPB_FULL_DUMP", "-DSMALL_DATASET", "-fopenmp"], args, 4)
                 if not ok:
-                    problems.append(f"reference ({tag}): {out}")
+                    problems.append(f"{what} ({tag}): {out}")
                     continue
                 err = _max_rel(outs[tag], out)
                 if err > 1e-9:
-                    problems.append(f"reference ({tag}) differs from the original: max rel err {err:.2e}")
+                    problems.append(f"{what} ({tag}) differs from the original: max rel err {err:.2e}")
         if v7:
             # every repetition is necessary: neither variant may reproduce the output, on either input
             for name, text in (v8_mutants(loop) if v8 else v7_mutants(loop)).items():
@@ -2039,6 +2241,12 @@ def write_v5(loop: Loop, out: Path, harness_root: Path, refs: Path, check: bool)
     if loop.expert is not None:
         ref = refs / f"{loop.name}.c"
         ref.write_text(kernel_of(loop, expert=True))
+    step_files: List[Path] = []
+    for k, body in enumerate(loop.steps, 1):
+        as_step = copy.copy(loop)
+        as_step.expert = body
+        step_files.append(refs / f"{loop.name}.step{k}.c")
+        step_files[-1].write_text(kernel_of(as_step, expert=True))
     (d / "meta.json").write_text(json.dumps({
         "suite": loop.suite, "kernel": loop.name,
         "source": (loop.source or ("constructed: ORDER-2 (THESIS_EXPERIMENTS §6, 28 Sep; tools/evidence_pilot.py)"
@@ -2050,6 +2258,9 @@ def write_v5(loop: Loop, out: Path, harness_root: Path, refs: Path, check: bool)
         "restructuring_class": loop.expected, "transformation": loop.transformation, "why": loop.why,
         "reference_solution": (str(ref.relative_to(HARNESS_ROOT)) if ref.is_relative_to(HARNESS_ROOT)
                                else str(ref)) if ref else None,
+        # the depth set: the reference's forms before its last step, in order
+        **({"reference_steps": [str(p.relative_to(HARNESS_ROOT)) if p.is_relative_to(HARNESS_ROOT) else str(p)
+                                for p in step_files]} if step_files else {}),
         # the functions of main.c: nothing in them is the benchmark's (the agent's queue leaves them out)
         "exclude_functions": ours,
         "harness": f"{loop.suite}/{loop.name}.h",
@@ -2064,7 +2275,7 @@ def write_v5(loop: Loop, out: Path, harness_root: Path, refs: Path, check: bool)
         "inputs_sha256": hashlib.sha256(TSVC.read_bytes()).hexdigest(),
         "output_sha256": v5_digest(files),
     }, indent=2) + "\n")
-    return (validate_v5(loop, d, ref) if check else []), check
+    return (validate_v5(loop, d, ref, tuple(step_files)) if check else []), check
 
 
 def main() -> int:
@@ -2076,22 +2287,23 @@ def main() -> int:
                          "package, D39); builds find them through CPATH (harness_include.py)")
     ap.add_argument("--references-out", type=Path, default=REFERENCES,
                     help="where the expert references go (default: the tracked agent/reference_solutions/tsvc)")
-    ap.add_argument("--layout", choices=("v3", "v4", "v5", "v6", "v7", "v8"), default="v3",
+    ap.add_argument("--layout", choices=("v3", "v4", "v5", "v6", "v7", "v8", "v9"), default="v3",
                     help="v3 (default): the one-file layout of E1 and E2; v4 (D39): the measurement in a "
                          "header outside the package — E2-B1 to E2-O3; v5 (the author, 4 Oct): the benchmark's "
                          "file holds only the loop's function, `main` in a second file (suite tsvc_c1); v6 (4 Oct, "
                          "evening): v5 with the repetition loop inside the function, as TSVC has it (suite tsvc_c2); v7 (5 Oct): "
                          "v6 with every repetition recorded by `dummy`, so that none can be skipped (suite tsvc_c3); v8 (10 Oct): v7 for "
-                         "the loops that need a clause DiscoPoP does not write, and `s341` on data that move (suite tsvc_c4)")
+                         "the loops that need a clause DiscoPoP does not write, and `s341` on data that move (suite tsvc_c4); v9 (13 Oct): "
+                         "v8's form for the depth set, the reference written out in steps (suite tsvc_c5)")
     ap.add_argument("--suite", choices=sorted(SUITES), default="tsvc",
                     help="which loops: `tsvc` (E1-E2, v3 or v4), `tsvc_b1` (v4 only), `tsvc_c1` (v5 only) or "
                          "`tsvc_c2` (v6 only)")
     ap.add_argument("--validate", action="store_true")
     a = ap.parse_args()
-    for layout, suite in (("v5", V5_SUITE), ("v6", V6_SUITE), ("v7", V7_SUITE), ("v8", V8_SUITE)):
+    for layout, suite in (("v5", V5_SUITE), ("v6", V6_SUITE), ("v7", V7_SUITE), ("v8", V8_SUITE), ("v9", V9_SUITE)):
         if (a.suite == suite) != (a.layout == layout):
             ap.error(f"layout {layout} and suite {suite} go together")
-    clean = a.layout in ("v5", "v6", "v7", "v8")
+    clean = a.layout in ("v5", "v6", "v7", "v8", "v9")
     if a.suite == "tsvc_b1" and a.layout != "v4":
         ap.error(f"--suite {a.suite} is packaged in layout v4 only")
     loops = SUITES[a.suite]

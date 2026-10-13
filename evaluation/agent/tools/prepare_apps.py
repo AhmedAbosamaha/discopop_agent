@@ -1267,7 +1267,11 @@ int main(int argc, char** argv)
                                                    '#define PB_HARNESS_HPP\n#include "pb_sizes.h"\n', 1),
         "pb_harness.cpp": ('#include "pb_harness.hpp"\n'
                            + re.sub(r"^static (void|double) (pb_\w+\()", r"\1 \2", _PRELUDE, flags=re.M)),
-        "lulesh.h": (src_dir / "lulesh.h").read_text(),
+        # The harness profiles a program of several units as ONE unit that includes each of them (D6), so the
+        # header every unit includes needs an include guard. LLNL's has none — its units are compiled one by
+        # one — and without it the profile step fails with redefinitions (found by the first trial the package
+        # ever went through, `e6_lulesh_smoke`, 13 Oct 2026). One line, the same in the reference.
+        "lulesh.h": "#pragma once\n" + (src_dir / "lulesh.h").read_text(),
     }
     for name in _LULESH_OTHER_UNITS:
         files[name] = (src_dir / name).read_text()
@@ -1277,6 +1281,7 @@ int main(int argc, char** argv)
         "main renamed to lulesh_main; its report (elapsed time, FOM, progress) goes to stderr",
         "the command-line parser is not called: -s and -i come from the dataset guard",
         "the Domain is deleted by the driver after the digest instead of at the end of lulesh_main",
+        "lulesh.h gains `#pragma once` as its first line: the profile step compiles the units as one",
         "OpenMP: none left to remove — the source is the validated serial path "
         "(benchmarks/LULESH/LULESH_SERIAL_PATH/SERIAL_PATH.json lists what that step removed)",
     ]
