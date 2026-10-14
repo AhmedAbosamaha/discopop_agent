@@ -1943,6 +1943,13 @@ V9_NEW: List[Loop] = [
 #   s257   a[i] is overwritten in every pass of the inner loop: (1) the value of each pass used directly and
 #          the last one kept — the inner loop's passes are independent, the outer loop still carries a[i-1];
 #          (2) distribution into the recurrence on a, run first, and an independent nest.
+#   s2111  every element needs its left and its upper neighbour: (1) the nest cut into tiles — the tile loops
+#          carry both dependences, nothing is parallel yet; (2) the tiles of one anti-diagonal of tiles run in
+#          parallel, the anti-diagonals in order. The one chain of the set in which the first step alone
+#          gives DiscoPoP nothing (the screening's "strict"). Its values grow by 2/1.9 per step away from
+#          the first row and column — about 1e11 across 256 elements — so the header outside the package
+#          takes that factor out of what it prints and records (V9_2D_OUT): otherwise the largest elements
+#          would hide every other value in a sum, the record of the repetitions included.
 # TSVC declares aa, bb, cc as LEN_2D x LEN_2D arrays (array_defs.h) and hands them to `dummy` after the five
 # vectors (`dummy(a, b, c, d, e, aa, bb, cc, 0.)`). Here they are rows of LEN_2D elements behind a pointer, so that
 # TSVC's `aa[j][i]` stays as written and the size can change with the dataset; `dummy` gets them as in TSVC.
@@ -1975,6 +1982,8 @@ V9_2D_INIT = """    aa = (real_t (*)[LEN_2D])malloc((size_t)LEN_2D * LEN_2D * si
       }
     }"""
 V9_2D_EMIT = "  pb_emit_2d(aa); pb_emit_2d(bb); pb_emit_2d(cc);\n"
+# the factor taken out of a printed or recorded 2-D element at (j, i), for a loop whose values grow with the position
+V9_2D_OUT: Dict[str, str] = {"s2111": "pow(1.9 / 2.0, (double)((j) + (i)))"}
 # The header outside the package: the 2-D arrays in the output, and the record of every repetition on them. A
 # loop that recomputes the interior from the first row and column (s233, s2111) leaves the SAME arrays whether or
 # not an earlier repetition ran; what tells is the interior next to the edge element the previous call changed.
@@ -2074,6 +2083,41 @@ _V9_S257 = ("""    for (int nl = 0; nl < R; nl++) {
     }
     return (real_t)0;""")
 
+_V9_S2111_TILE = """                int jlo = 1 + tj * edge;
+                int ilo = 1 + ti * edge;
+                int jhi = jlo + edge < LEN_2D ? jlo + edge : LEN_2D;
+                int ihi = ilo + edge < LEN_2D ? ilo + edge : LEN_2D;
+                for (int j = jlo; j < jhi; j++) {
+                    for (int i = ilo; i < ihi; i++) {
+                        aa[j][i] = (aa[j][i-1] + aa[j-1][i])/1.9;
+                    }
+                }
+"""
+_V9_S2111_STEP1 = ("""    enum { NT = 32 };
+    for (int nl = 0; nl < R; nl++) {
+        int edge = (LEN_2D - 1 + NT - 1) / NT;
+        for (int tj = 0; tj < NT; tj++) {
+            for (int ti = 0; ti < NT; ti++) {
+""" + _V9_S2111_TILE + """            }
+        }
+        pb_mix(nl);
+    }
+    return (real_t)0;""")
+_V9_S2111 = ("""    enum { NT = 32 };
+    for (int nl = 0; nl < R; nl++) {
+        int edge = (LEN_2D - 1 + NT - 1) / NT;
+        for (int w = 0; w < 2 * NT - 1; w++) {
+            int first = w < NT ? 0 : w - NT + 1;
+            int last = w < NT ? w : NT - 1;
+            #pragma omp parallel for
+            for (int tj = first; tj <= last; tj++) {
+                int ti = w - tj;
+""" + _V9_S2111_TILE + """            }
+        }
+        pb_mix(nl);
+    }
+    return (real_t)0;""")
+
 V9_2D_NEW = [
     Loop("s233", "restructure", "distribution, then interchange of the second nest",
            "column i of aa depends on nothing outside it; row j of bb depends on nothing outside it — the two "
@@ -2086,6 +2130,11 @@ V9_2D_NEW = [
            "the old last row of aa and a[i-1]",
            globals_=V9_2D_GLOBALS, init_extra=V9_2D_INIT, emit_extra=V9_2D_EMIT, expert=_V9_S257,
            steps=(_V9_S257_STEP1,), suite=V9_SUITE, hot_writes=("a", "aa")),
+    Loop("s2111", "restructure", "the nest cut into tiles, then the tiles of an anti-diagonal of tiles in parallel",
+         "aa[j][i] needs its left and its upper neighbour, so the rows and the columns both run in order; two "
+         "tiles on one anti-diagonal of tiles need nothing of each other",
+         globals_=V9_2D_GLOBALS, init_extra=V9_2D_INIT, emit_extra=V9_2D_EMIT, expert=_V9_S2111,
+         steps=(_V9_S2111_STEP1,), suite=V9_SUITE, hot_writes=("aa",)),
 ]
 V9_2D = tuple(l.name for l in V9_2D_NEW)
 
@@ -2125,7 +2174,9 @@ def render_v9_harness(loop: Loop) -> str:
     if not _is_2d(loop):
         return text
     anchor = "/* ---- what main.c calls: set-up before the timed region, the digest after it ------- */"
-    text = _exact(text, anchor, V9_2D_HARNESS + anchor)
+    grows = (f"#define PB_2D_OUT(j, i) {V9_2D_OUT[loop.name]}   /* the growth of this loop's values, taken out */\n"
+             if loop.name in V9_2D_OUT else "")
+    text = _exact(text, anchor, grows + V9_2D_HARNESS + anchor)
     text = _exact(text, "      e[pb_i] *= (real_t)(1.0 + 0.2 * pb_uniform(&pb_state));\n    }\n",
                     "      e[pb_i] *= (real_t)(1.0 + 0.2 * pb_uniform(&pb_state));\n    }\n" + V9_2D_SEEDED)
     text = _exact(text, "  pb_emit(pb_rep_scalar); pb_emit(pb_rep_arrays);\n",

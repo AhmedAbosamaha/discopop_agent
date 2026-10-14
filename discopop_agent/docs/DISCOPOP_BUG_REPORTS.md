@@ -48,6 +48,7 @@ LLVM 19 (macOS) and LLVM 20 (Linux).
 | B24 | profiler (the same heuristic) | **FIXED 12 Oct** | every store whose value uses the loaded variable through something that is not an arithmetic the profiler knows is reported as a maximum reduction — another function (`hypot`, a helper that computes a minimum), a division, a plain copy: `reduction(max:x)` on loops that are no maximum, or no reduction at all. Now reported only where the direction can be read |
 | B25 | profiler runtime | candidate, 12 Oct — measured on the Mac, not traced | the same instrumented binary, run again, sometimes records no `INIT` for a stack array's first writes (about one run in ten on the Mac, none of 30 on the server); the explorer then writes `lastprivate` for the array instead of `shared` |
 | B26 | explorer, `TaskGraph.__assign_loop_contexts` (the symptom of B2) | candidate, 14 Oct — measured on the server, not traced | NPB 3.0 C `FT` (RepoOMP's pragma-free input, class S): `ValueError: Invalid iteration structure found at node: Start IT 5:612` on every attempt (4 of 4 on one profile) — the program cannot be profiled |
+| B27 | profiler (call-path states) or explorer (their assignment to loop iterations) — not traced | candidate, 14 Oct — reproduced in 12 lines with two controls, on the Mac | a dependence that only the OUTER loop carries is held against the inner loop when its two ends also lie in different iterations of the inner loop: `b[t][k] = b[t-1][(k + 1) % K] + 1.0` — the `k` loop is not reported Do-All (with `b[t-1][k]` it is). A missed Do-All, never a wrong one: wavefronts of tiles, red-black sweeps, a scatter whose positions move between repetitions |
 | B19 | explorer (data-sharing clauses of a Do-All loop) | **FIXED 8 Oct** | `lastprivate` was written for any variable a loop writes and something after it reads. Three mechanisms: a scalar assigned in only some passes (`if (a[i] < 0) j = i;`, TSVC `s331`: the clause hands back the last CHUNK's value — wrong output, refused by the gate every time) — the loop is no longer reported Do-All; a whole stack array (`lastprivate(a_old)` on the loop that fills it, `firstprivate(a_old)` on one that reads it) — an array is now `shared` where the loop reads it or writes it itself (corrected the same day: one that a called function fills keeps its private clause); a unit of the code AROUND the loop counted among the loop's (`s481`: `lastprivate(nl)`, shipped) — only the loop's own units decide its clauses |
 | L3 | explorer | limitation | NPB-CPP `mg`: with P1's fix the state assignment is fast, but the run then stays in task-pattern detection (`new_task_detector`) — a first run was read at 4 h 19 min, the same run was stopped unfinished after **11 h 24 min** at 100 % CPU on the server (19–20 Sep); the Do-All detector is not reached. Not usable per trial |
 
@@ -1063,6 +1064,55 @@ whether the address layout of the run decides it (the array's region id differs 
 
 **Effect:** a difference from one profile of a program to the next — what the three draws of every no-model
 measurement of this thesis are there for. Seen on the Mac only, where no experiment runs.
+
+## B27 — candidate: a dependence carried by the outer loop blocks the inner loop when its ends lie in different iterations of both
+
+**Status: candidate, found 14 Oct 2026 on the depth set's `s2111` (the reference's wavefront of tiles got no pattern);
+reproduced in 12 lines with two controls on the Mac (LLVM 19, the build of 12 Oct with B14 to B24 repaired, the
+explorer run once per program); not traced, not repaired.**
+
+**The program** (the whole of it but `main`'s frame and the initialisation of row 0):
+
+```c
+static double b[T][K];                       /* T 40, K 500 */
+for (int t = 1; t < T; t++) {
+    for (int k = 0; k < K; k++) {
+        b[t][k] = b[t-1][(k + 1) % K] + 1.0;
+    }
+}
+```
+
+Every pass of the `k` loop writes row `t` and reads row `t-1`: within one `t` no pass needs another, and
+`#pragma omp parallel for` on the `k` loop is correct. **DiscoPoP reports no Do-All for the `k` loop**; its
+`doall_prevented.json` names a read-after-write on `b` for it (and, rightly, for the `t` loop).
+
+**Controls.** (1) The same program reading the SAME column, `b[t][k] = b[t-1][k] + 1.0`: the `k` loop is reported
+Do-All, the `t` loop blocked — as it must be. (2) The first program with `T` = 2, the `t` loop making one pass: the
+`k` loop is reported Do-All. So what blocks the inner loop is a dependence whose two ends lie in different passes
+of the outer loop AND in different passes of the inner loop — one that only the outer loop carries.
+
+**The same with a write-after-write:** `a[(k + t) % K] = b[k] + (double)t;` — within one `t` every `k` writes its
+own element; the `k` loop is not reported Do-All (`doall_prevented.json`: write-after-write on `a`); with `a[k]`
+it is.
+
+**Shapes it takes away** (each run on the Mac, each blocked on the inner loop by a read-after-write):
+a red-black sweep, `for s { for k { if ((k + s) % 2 == 0) x[k] = 0.5 * (x[k-1] + x[k+1]); } }`; a wavefront of
+tiles — `for w { for tj { …the tile (tj, w - tj)… aa[j][i] = (aa[j][i-1] + aa[j-1][i]) / 1.9; } }`, 8 × 8 tiles of
+16 × 16 elements — where the tile loop is the parallel one.
+
+**Where it shows in this project.** `tsvc_c5/s2111`: the final form of the reference (the tiles of an
+anti-diagonal in parallel) gets no pattern; the read-after-write on `aa` is named for the tile loop (Mac pilot,
+14 Oct). `tsvc_c5/s123`: DiscoPoP names a write-after-write on `a` for the loop that writes through computed
+positions, in the step-1 form and in the final form (Mac pilot, 13 Oct) — on that package's data the positions
+move from one repetition to the next, which is the second program above; not confirmed separately. To be checked
+without a model: `tsvc_c4/s341`, the main set's pack loop, whose data move the same way since packaging v8.
+
+**Effect.** DiscoPoP misses a parallel loop; it never reports a wrong one by this. Where DiscoPoP writes the
+pragmas, the agent reverts a rewrite of this shape — DiscoPoP finds nothing in the changed lines — however good
+the rewrite is: a ceiling of that setup, not of the model. A repair may also uncover loops that another rule then
+reports wrongly (B22: a write-after-read between passes never blocks) — the gate refuses those. **Not done:** the
+trace — whether the profiler's call-path states cannot tell the two cases apart or the explorer's assignment of
+states to loop iterations does not; a count over the campaign's packages.
 
 ## B26 — candidate: `Invalid iteration structure` on NPB `FT`, on every attempt (explorer, task graph)
 
