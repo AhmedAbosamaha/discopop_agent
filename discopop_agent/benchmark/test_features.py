@@ -3525,6 +3525,126 @@ def check_settle_paired(work: Path) -> Result:
                                 f"slower file rejected ({why_s[:60]})")
 
 
+def check_settle_chain(work: Path) -> Result:
+    """Settle keeps a rewrite that a later kept rewrite was built on.  (Fix 106)
+
+    E8's smoke (14 Oct): a deeper level rewrote what the first rewrite had produced, DiscoPoP's
+    pragmas landed on the LAST rewrite's loops, and the orphan rule — a rewrite stays only if a
+    kept pragma targets a region it exposed — dropped the first rewrite; the later rewrite and
+    every pragma on it then no longer applied to the original, and both trials ended with
+    nothing.  The gate on the finished file is stood in: the check is about the decision.  Four
+    change logs: (A) the chain — the later rewrite changed the region the first exposed and does
+    not apply without it — survives whole; (B) an orphan nothing was built on goes with the same
+    note as before, an unrelated pragma stays; (C) the later rewrite applies alone but changed
+    the region the first exposed, and the pragma on it needs the first (E1-v6's `s331`) — all
+    three stay; (D) a later rewrite that is itself an orphan goes, then the first, the notes in
+    log order.
+    """
+    name = "settle chain"
+    from types import SimpleNamespace
+    from ..llm import make_diff
+    from ..phases import settle as st
+    from ..plan.regions import region_fingerprint
+    from ..sources import _apply_change_log
+    d = work / "settle_chain"
+    d.mkdir(parents=True, exist_ok=True)
+    src = d / "k.c"
+    key = str(src.resolve())
+
+    def fp(text: str, a: int, b: int) -> str:
+        src.write_text(text)
+        return region_fingerprint(str(src), a, b, "k")
+
+    def rewrite(rid: str, before: str, after: str, exposed: List[str]) -> Dict[str, Any]:
+        return {"kind": "rewrite", "region_id": rid, "diff": make_diff(before, after, str(src)), "file": key,
+                "exposed": exposed, "self_annotated": False, "pragmas": 0}
+
+    def pragma(rid: str, before: str, after: str, print_: str) -> Dict[str, Any]:
+        return {"kind": "pragma", "region_id": rid, "diff": make_diff(before, after, str(src)),
+                "fingerprint": print_, "file": key}
+
+    def settle(original: str, final: str, log: List[Any]) -> Tuple[List[Any], List[Any], str]:
+        src.write_text(final)
+        args = SimpleNamespace(source_file=str(src), noise_floor=0.0, schedule_stress=True,
+                               stress_threads=None, require_speedup=False, timing_cflags=())
+        saved = getattr(st, "_check_final_source")
+        setattr(st, "_check_final_source", lambda *a, **k: (True, "stood in"))
+        try:
+            kept, notes = st._settle(original, log, args, d, None, None, None, None)   # type: ignore[arg-type]
+        finally:
+            setattr(st, "_check_final_source", saved)
+        return kept, notes, src.read_text()
+
+    omp = "    #pragma omp parallel for\n"
+    problems: List[str] = []
+
+    # (A) the depth chain: R0 splits the loop, R1 rewrites the half R0 exposed, the pragma lands on R1's loop
+    t0 = ("void k(int n, int m, double *a, double *b, double *c) {\n  for (int t = 0; t < m; t++) {\n"
+          "    for (int i = 0; i < n; i++) {\n      a[i] = b[i] + c[i];\n      c[i] = a[i] * 2.0;\n    }\n  }\n}\n")
+    t1 = t0.replace("      a[i] = b[i] + c[i];\n      c[i] = a[i] * 2.0;\n",
+                    "      a[i] = b[i] + c[i];\n    }\n    for (int i = 0; i < n; i++) {\n      c[i] = a[i] * 2.0;\n", 1)
+    t2 = t1.replace("      a[i] = b[i] + c[i];\n", "      a[i] = c[i] + b[i];\n", 1)
+    t3 = t2.replace("    for (int i = 0; i < n; i++) {\n      a[i]", omp + "    for (int i = 0; i < n; i++) {\n      a[i]", 1)
+    r0 = rewrite("1:2", t0, t1, [fp(t1, 3, 5)])
+    r1 = rewrite("1:2", t1, t2, [fp(t2, 3, 5)])
+    p = pragma("1:3", t2, t3, fp(t2, 3, 5))
+    kept, notes, body = settle(t0, t3, [r0, r1, p])
+    if [id(c) for c in kept] != [id(r0), id(r1), id(p)] or notes or body != t3:
+        problems.append(f"(A) the chain: {len(kept)} of 3 kept, notes {notes}")
+
+    # (B) no chain: an orphan rewrite of one loop, a pragma on another, far below it
+    filler = "".join(f"  s[{j}] += 1.0;\n" for j in range(8))
+    u0 = ("void k(int n, double *a, double *b, double *s) {\n  for (int i = 0; i < n; i++) {\n"
+          "    a[i] = a[i] + b[i];\n  }\n" + filler + "  for (int i = 0; i < n; i++) {\n    b[i] = 2.0 * b[i];\n  }\n}\n")
+    u1 = u0.replace("    a[i] = a[i] + b[i];\n", "    a[i] += b[i];\n", 1)
+    u2 = u1.replace("  for (int i = 0; i < n; i++) {\n    b[i]", "  #pragma omp parallel for\n"
+                    "  for (int i = 0; i < n; i++) {\n    b[i]", 1)
+    lb = u1.splitlines().index("    b[i] = 2.0 * b[i];")
+    r0 = rewrite("1:2", u0, u1, [fp(u1, 2, 4)])
+    p = pragma("1:9", u1, u2, fp(u1, lb, lb + 2))
+    kept, notes, body = settle(u0, u2, [r0, p])
+    if [id(c) for c in kept] != [id(p)] or notes != ["rewrite of 1:2 — exposed 1 region(s), none kept a pragma"]:
+        problems.append(f"(B) no chain: kept {[c['kind'] for c in kept]}, notes {notes}")
+
+    # (C) E1-v6's s331 shape: R1 applies alone, but changed the loop R0 exposed; the pragma needs R0
+    v0 = ("void k(int n, int m, double *a, double *b, double *s) {\n  double x;\n  for (int t = 0; t < m; t++) {\n"
+          + "".join(f"    s[{j}] += 1.0;\n" for j in range(6))
+          + "    for (int i = 0; i < n; i++) {\n      a[i] = a[i] + b[i];\n    }\n  }\n}\n")
+    v1 = v0.replace("  double x;\n", "  double x = 0.0;\n", 1)
+    v2 = v1.replace("      a[i] = a[i] + b[i];\n", "      a[i] += b[i];\n", 1)
+    v3 = v2.replace("  for (int t", "  #pragma omp parallel for\n  for (int t", 1)
+    r0 = rewrite("1:2", v0, v1, [fp(v1, 3, 13)])
+    r1 = rewrite("1:5", v1, v2, [fp(v2, 3, 13)])
+    p = pragma("1:2", v2, v3, fp(v2, 3, 13))
+    alone = _apply_change_log({key: v0}, [r1], SimpleNamespace(source_file=str(src)))   # type: ignore[arg-type]
+    if len(alone) != 1:
+        problems.append("(C) the shape is wrong: the later rewrite must apply without the first")
+    kept, notes, body = settle(v0, v3, [r0, r1, p])
+    if [id(c) for c in kept] != [id(r0), id(r1), id(p)] or notes or body != v3:
+        problems.append(f"(C) reshaped only: {len(kept)} of 3 kept, notes {notes}")
+
+    # (D) R1 rewrites the loop R0 exposed, but no pragma lands on R1's loop either: both go, newest first,
+    # the notes in log order; the pragma on the other loop, far below, stays
+    w2 = u1.replace("    a[i] += b[i];\n", "    a[i] = b[i] + a[i];\n", 1)
+    w3 = w2.replace("  for (int i = 0; i < n; i++) {\n    b[i]", "  #pragma omp parallel for\n"
+                    "  for (int i = 0; i < n; i++) {\n    b[i]", 1)
+    r0 = rewrite("1:2", u0, u1, [fp(u1, 2, 4)])
+    r1 = rewrite("1:4", u1, w2, [fp(w2, 2, 4)])
+    p = pragma("1:9", w2, w3, fp(w2, lb, lb + 2))
+    kept, notes, body = settle(u0, w3, [r0, r1, p])
+    want = ["rewrite of 1:2 — exposed 1 region(s), none kept a pragma",
+            "rewrite of 1:4 — exposed 1 region(s), none kept a pragma"]
+    if [id(c) for c in kept] != [id(p)] or notes != want or body != u2.replace("    a[i] += b[i];\n",
+                                                                              "    a[i] = a[i] + b[i];\n", 1):
+        problems.append(f"(D) a later orphan: kept {[c['kind'] for c in kept]}, notes {notes}")
+
+    src.write_text(t0)
+    if problems:
+        return Result(name, "fail", "; ".join(problems)[:300])
+    return Result(name, "pass", "a chain survives whole; an orphan nothing stands on goes with the old note; "
+                                "a rewrite reshaped by a later one stays; a later orphan goes, then the first")
+
+
 def check_phase_b_joint(work: Path) -> Result:
     """D33 — pragmas that do not pay ALONE are judged as a set, and the set lands as one unit.
 
@@ -5512,6 +5632,7 @@ _CHECKS: List[Tuple[str, Callable[[Path], Result]]] = [
     ("pragma-arbitration", check_pragma_arbitration),
     ("arg-dependencies", check_arg_dependencies),
     ("settle-paired", check_settle_paired),
+    ("settle-chain", check_settle_chain),
     ("phase-b-joint", check_phase_b_joint),
     ("dp-floor", check_dp_floor),
     ("shipped-prompt", check_shipped_prompt),

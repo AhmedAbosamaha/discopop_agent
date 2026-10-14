@@ -9,9 +9,10 @@ the source.
 
 Three things happen here, in one loop, because they are the same operation:
 drop rewrites no kept pragma justified (matched by region FINGERPRINT, since
-line spans drift), rebuild by RE-APPLYING survivors rather than un-applying
-anything, and re-gate the result — dropping the newest pragma and rebuilding
-while it fails, reverting the whole run if nothing is left.
+line spans drift) and no kept rewrite was built on, rebuild by RE-APPLYING
+survivors rather than un-applying anything, and re-gate the result — dropping
+the newest pragma and rebuilding while it fails, reverting the whole run if
+nothing is left.
 """
 from __future__ import annotations
 
@@ -127,6 +128,73 @@ def _check_final_source(
                                f"(kept at or above {speed_threshold:.3f})")
             return True, f"output matches, {ratio:.2f}x the original, paired"
     return True, "output matches the original"
+
+
+def _region_text_in(fingerprint: str, text: str) -> bool:
+    """Is the region a fingerprint names still in `text`, as a run of whole lines?
+
+    `region_fingerprint` is the region's lines stripped, blank and comment lines
+    dropped, behind the enclosing name and a separator; the file is normalised the
+    same way, and only whole lines may match.
+    """
+    body = fingerprint.split("␟", 1)[-1]
+    if not body:
+        return False
+    lines = [ln.strip() for ln in text.splitlines()
+             if ln.strip() and not ln.strip().startswith("//")]
+    return f"\n{body}\n" in "\n" + "\n".join(lines) + "\n"
+
+
+def _orphans_to_drop(originals: "Dict[str, str]", keep: List[Any], orphans: List[Any],
+                     args: AgentArguments) -> List[Any]:
+    """The orphans that go: those no rewrite that stays was built on.  (Fix 106)
+
+    A deeper level restructures what the level before it produced, and a region
+    sent back to the model is rewritten on top of the rewrite that exposed it, so
+    DiscoPoP's pragmas land on the LAST rewrite's regions and every earlier rewrite
+    of the chain looks as if it achieved nothing.  Dropping one took the chain with
+    it: the later rewrites, and the pragmas on them, no longer applied to the
+    original (E8's smoke, 14 Oct: both trials ended with nothing).
+
+    A later rewrite is built on an orphan when it changed a region the orphan
+    exposed — that region's text is in its file just before the rewrite and gone
+    just after it — or when it does not apply without the orphan, the replay's
+    own test of dependence.  Newest first, so an orphan that only a later orphan
+    was built on goes once that one has gone.  An orphan nothing was built on goes
+    as before.
+    """
+    if not orphans:
+        return []
+    states: Dict[int, Tuple[str, str]] = {}
+    base = _apply_change_log(originals, keep, args, states=states)
+    staying = list(keep)
+    gone: List[Any] = []
+    for orphan in reversed(orphans):
+        at = next(i for i, c in enumerate(staying) if c is orphan)
+        later = [c for c in staying[at + 1:] if c["kind"] != "pragma"]
+        prints = orphan.get("exposed", [])
+        changed = next((c for c in later
+                        if id(c) in states and c.get("file") == orphan.get("file")
+                        and any(_region_text_in(fp, states[id(c)][0])
+                                and not _region_text_in(fp, states[id(c)][1]) for fp in prints)),
+                       None)
+        if changed is not None:
+            by, how = changed, "changed a region it exposed"
+        else:
+            without = [c for c in staying if c is not orphan]
+            landed = _apply_change_log(originals, without, args)
+            needs = next((c for c in later if any(c is b for b in base)
+                          and not any(c is ld for ld in landed)), None)
+            if needs is None:
+                staying, base = without, landed
+                gone.append(orphan)
+                continue
+            by, how = needs, "does not apply without it"
+        print(f"  [keep] rewrite of {orphan['region_id']} — no kept pragma targets a region it "
+              f"exposed, but the rewrite of {by['region_id']} kept after it {how}")
+    return gone
+
+
 def _settle(
     originals: "Dict[str, str] | str", change_log: List[Any], args: AgentArguments,
     output_dir: Path, reference_output: "str | None",
@@ -144,7 +212,9 @@ def _settle(
          drift as changes land above them.  A rewrite that carries its OWN
          pragmas (--llm-pragmas) is its own justification and is never an
          orphan — the parallelism is in the change itself, not in what DiscoPoP
-         made of it afterwards.
+         made of it afterwards.  Nor is one that a kept rewrite was built on
+         (Fix 106, `_orphans_to_drop`): the pragmas of a chain land on its LAST
+         rewrite's regions, and what the chain stands on has to stay with it.
 
       2. RECONSTRUCTION.  Rebuild by re-applying survivors onto a fresh copy of
          the original rather than un-applying anything, so no patch is ever
@@ -169,18 +239,15 @@ def _settle(
         # A D33 set is one entry covering several regions: each of its fingerprints counts.
         applied_prints = {fp for c in keep if c["kind"] == "pragma"
                           for fp in (c.get("fingerprints") or [c.get("fingerprint")]) if fp}
-        pruned: List[Any] = []
-        for ch in keep:
-            if ch["kind"] == "pragma":
-                pruned.append(ch)
-            elif ch.get("self_annotated"):
-                pruned.append(ch)
-            elif applied_prints & set(ch.get("exposed", [])):
-                pruned.append(ch)
-            else:
+        orphans = [ch for ch in keep
+                   if ch["kind"] != "pragma" and not ch.get("self_annotated")
+                   and not applied_prints & set(ch.get("exposed", []))]
+        gone = _orphans_to_drop(originals, keep, orphans, args)
+        for ch in orphans:
+            if any(ch is g for g in gone):
                 notes.append(f"rewrite of {ch['region_id']} — exposed "
                              f"{len(ch.get('exposed', []))} region(s), none kept a pragma")
-        keep = pruned
+        keep = [ch for ch in keep if not any(ch is g for g in gone)]
 
         landed = _apply_change_log(originals, keep, args)
         for ch in keep:

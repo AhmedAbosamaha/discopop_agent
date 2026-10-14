@@ -11,7 +11,7 @@ apply, and that failure is the signal that it has to go too.
 """
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 
 import shutil
 import tempfile
@@ -85,7 +85,8 @@ def _apply_in_memory(diff: str, source_file: str) -> "str | None":
 
 
 def _apply_change_log(originals: "Dict[str, str]", keep: List[Any],
-                      args: AgentArguments) -> List[Any]:
+                      args: AgentArguments,
+                      states: "Dict[int, Tuple[str, str]] | None" = None) -> List[Any]:
     """Put every file back as it started, then re-apply `keep` in order.
 
     `originals` maps each file the run may have changed to its text at the start
@@ -95,6 +96,10 @@ def _apply_change_log(originals: "Dict[str, str]", keep: List[Any],
     Returns the subset that actually applied.  Nothing is ever un-applied, so a
     change that stood on one that has been dropped simply fails here — which is
     the signal that it has to go too.
+
+    `states`, when given, receives the text of each applied change's file just
+    before and just after it, keyed by the change's id(): Settle reads from it
+    whether a later rewrite changed a region an earlier one exposed (Fix 106).
     """
     default = str(Path(args.source_file).resolve())
     if len(originals) == 1:
@@ -109,11 +114,15 @@ def _apply_change_log(originals: "Dict[str, str]", keep: List[Any],
         for ch in keep:
             pf = work / "rb.patch"
             pf.write_text(fix_hunk_headers(ch["diff"]) + "\n")
+            target = Path(ch.get("file") or default)
+            before = target.read_text() if states is not None and target.exists() else ""
             # exact=True: this replay's whole logic is that a change whose
             # foundation was dropped must FAIL here.  Fuzzy matching would let
             # it apply anyway, near the right place, and the signal would be
             # lost.
-            ok, _diag = run_patch(Path(ch.get("file") or default), pf, exact=True)
+            ok, _diag = run_patch(target, pf, exact=True)
             if ok:
                 landed.append(ch)
+                if states is not None:
+                    states[id(ch)] = (before, target.read_text())
     return landed
