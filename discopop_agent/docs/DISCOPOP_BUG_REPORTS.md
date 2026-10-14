@@ -1114,6 +1114,12 @@ reports wrongly (B22: a write-after-read between passes never blocks) — the ga
 trace — whether the profiler's call-path states cannot tell the two cases apart or the explorer's assignment of
 states to loop iterations does not; a count over the campaign's packages.
 
+**Relation to B16 (noticed 14 Oct, after this entry was written).** B16's note of 8 Oct describes the same shape — a
+dependence that the surrounding loop carries, charged to the inner loop — and says it "can also block a loop that IS
+parallel" (PolyBench `gramschmidt`'s `j` loop). The programs above are that shape with controls, on both a
+read-after-write and a write-after-write. Whether B16 and B27 are one defect is for the trace; until then both
+numbers stand, each pointing at the other.
+
 ## B26 — candidate: `Invalid iteration structure` on NPB `FT`, on every attempt (explorer, task graph)
 
 **Status: candidate, found 14 Oct 2026 by the probe of RepoOMP's eight NPB programs; measured on the server (LLVM 20), not traced, no reproducer yet, not repaired.**
@@ -1228,6 +1234,8 @@ floyd-warshall. No profile of TSVC, `tsvc_b1`, LULESH or NPB is affected, and no
 (where the agent re-profiles) has a path in the range (2,395 server trials checked by path length).
 
 ## B16 — candidate: a RAW carried by the repetition loop is attributed to the inner loop (explorer)
+
+*See B27 (14 Oct): the same shape reproduced with controls; whether the two are one defect is for the trace.*
 
 **Status: candidate, not re-checked on the fixed explorer.** In the V3 pilot's profile of TSVC `s244`
 (25–26 Sep, before the B4 fix), DiscoPoP's Do-All blockers charge the RAW on `a` to the inner `i` loop,

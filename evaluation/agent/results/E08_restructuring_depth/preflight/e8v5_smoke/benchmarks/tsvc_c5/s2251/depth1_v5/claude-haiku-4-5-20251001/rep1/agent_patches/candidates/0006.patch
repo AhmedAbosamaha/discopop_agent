@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_smoke/benchmarks/tsvc_c5/s2251/depth1_v5/claude-haiku-4-5-20251001/rep1/work/s2251.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_smoke/benchmarks/tsvc_c5/s2251/depth1_v5/claude-haiku-4-5-20251001/rep1/work/s2251.c
+@@ -6,6 +6,7 @@
+     for (int nl = 0; nl < iterations; nl++) {
+         // Save snapshot of b to avoid inter-iteration dependence
+         real_t *old_b = (real_t *)malloc(LEN_1D * sizeof(real_t));
++        #pragma omp parallel for shared(old_b) 
+         for (int i = 0; i < LEN_1D; i++) {
+             old_b[i] = b[i];
+         }
