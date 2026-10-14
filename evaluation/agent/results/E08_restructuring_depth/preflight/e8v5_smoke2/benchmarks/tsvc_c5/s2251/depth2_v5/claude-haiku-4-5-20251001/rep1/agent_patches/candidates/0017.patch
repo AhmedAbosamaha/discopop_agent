@@ -1,0 +1,53 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_smoke2/benchmarks/tsvc_c5/s2251/depth2_v5/claude-haiku-4-5-20251001/rep1/work/s2251.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_smoke2/benchmarks/tsvc_c5/s2251/depth2_v5/claude-haiku-4-5-20251001/rep1/work/s2251.c
+@@ -2,26 +2,45 @@
+ 
+ real_t kernel_s2251(void)
+ {
++    // Allocate buffers to store results for each iteration
++    real_t* a_results = (real_t*)malloc(iterations * LEN_1D * sizeof(real_t));
++    real_t* b_results = (real_t*)malloc(iterations * LEN_1D * sizeof(real_t));
++
++    // Phase 1: Compute all results independently by reading current b state
++    // (each iteration reads a snapshot of b, updates global b for next iteration)
+     for (int nl = 0; nl < iterations; nl++) {
+-        // Snapshot b at the start of each iteration to break loop-carried dependence
+         real_t b_snapshot[LEN_1D];
+         for (int i = 0; i < LEN_1D; i++) {
+             b_snapshot[i] = b[i];
+         }
+ 
+-        // Pre-compute all s values using the snapshot of b
+         real_t s_vals[LEN_1D + 1];
+         s_vals[0] = (real_t)0.0;
+         for (int i = 0; i < LEN_1D; i++) {
+             s_vals[i + 1] = b_snapshot[i] + c[i];
+         }
+ 
+-        // Compute a and b using pre-computed s values (now Do-All pattern)
+         for (int i = 0; i < LEN_1D; i++) {
+-            a[i] = s_vals[i]*e[i];
+-            b[i] = a[i]+d[i];
++            a_results[nl * LEN_1D + i] = s_vals[i]*e[i];
++            b_results[nl * LEN_1D + i] = a_results[nl * LEN_1D + i] + d[i];
++        }
++
++        // Update global b for next iteration's snapshot read
++        for (int i = 0; i < LEN_1D; i++) {
++            b[i] = b_results[nl * LEN_1D + i];
++        }
++    }
++
++    // Phase 2: Apply results and call dummy() in original iteration order
++    for (int nl = 0; nl < iterations; nl++) {
++        for (int i = 0; i < LEN_1D; i++) {
++            a[i] = a_results[nl * LEN_1D + i];
++            b[i] = b_results[nl * LEN_1D + i];
+         }
+         dummy(a, b, c, d, e);
+     }
++
++    free(a_results);
++    free(b_results);
+     return (real_t)0;
+ }

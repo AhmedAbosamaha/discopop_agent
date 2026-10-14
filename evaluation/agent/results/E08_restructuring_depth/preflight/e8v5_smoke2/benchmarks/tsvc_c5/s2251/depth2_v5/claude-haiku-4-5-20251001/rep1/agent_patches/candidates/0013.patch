@@ -1,0 +1,36 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_smoke2/benchmarks/tsvc_c5/s2251/depth2_v5/claude-haiku-4-5-20251001/rep1/work/s2251.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_smoke2/benchmarks/tsvc_c5/s2251/depth2_v5/claude-haiku-4-5-20251001/rep1/work/s2251.c
+@@ -1,19 +1,16 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s2251(void)
+ {
++    // Allocate s_vals once, heap-allocated (size varies with LEN_1D)
++    real_t *s_vals = (real_t *)malloc((LEN_1D + 1) * sizeof(real_t));
++
+     for (int nl = 0; nl < iterations; nl++) {
+-        // Snapshot b at the start of each iteration to break loop-carried dependence
+-        real_t b_snapshot[LEN_1D];
+-        for (int i = 0; i < LEN_1D; i++) {
+-            b_snapshot[i] = b[i];
+-        }
+-
+-        // Pre-compute all s values using the snapshot of b
+-        real_t s_vals[LEN_1D + 1];
++        // Pre-compute all s values using the current snapshot of b
+         s_vals[0] = (real_t)0.0;
+         for (int i = 0; i < LEN_1D; i++) {
+-            s_vals[i + 1] = b_snapshot[i] + c[i];
++            s_vals[i + 1] = b[i] + c[i];
+         }
+ 
+         // Compute a and b using pre-computed s values (now Do-All pattern)
+@@ -23,5 +20,7 @@
+         }
+         dummy(a, b, c, d, e);
+     }
++
++    free(s_vals);
+     return (real_t)0;
+ }

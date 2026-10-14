@@ -1,0 +1,36 @@
+#include "data.h"
+#include <stdlib.h>
+
+real_t kernel_s2251(void)
+{
+    real_t *b_vals = (real_t *)malloc(LEN_1D * sizeof(real_t));
+    real_t *s_vals = (real_t *)malloc(LEN_1D * sizeof(real_t));
+
+    for (int nl = 0; nl < iterations; nl++) {
+        // Save snapshot of b at the start of this iteration to break loop-carried dependence
+        #pragma omp parallel for shared(b_vals) 
+        for (int i = 0; i < LEN_1D; i++) {
+            b_vals[i] = b[i];
+        }
+
+        // Pre-compute s values using the saved b snapshot
+        real_t s_tmp = (real_t)0.0;
+        for (int i = 0; i < LEN_1D; i++) {
+            s_vals[i] = s_tmp;
+            s_tmp = b_vals[i] + c[i];
+        }
+
+        // Main computation loop
+        #pragma omp parallel for shared(s_vals) 
+        for (int i = 0; i < LEN_1D; i++) {
+            a[i] = s_vals[i]*e[i];
+            b[i] = a[i]+d[i];
+        }
+
+        dummy(a, b, c, d, e);
+    }
+
+    free(s_vals);
+    free(b_vals);
+    return (real_t)0;
+}

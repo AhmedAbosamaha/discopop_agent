@@ -45,7 +45,7 @@ proposed here and is to be confirmed with the title.
 | RQ5 | Who should write the directive: DiscoPoP or the model? | C1, C2 | H6 (its half on the author), H6b | E3 | 7.7 | (decided 13 Oct: the model writes it in the experiments that remain) done 10 Oct: 81 of 90 fast and race-free where the model writes, 76 of 90 where DiscoPoP writes — not established (p = 0.14; four of the five trials are `s331`); no unusable program in either setup; DiscoPoP keeps writing in 7.7.2 (the author, 10 Oct); corrected for `s341`: 80 against 75; the contrast set (E3b, 7.7.1b), done 10 Oct: 30 of 30 against 24 of 30 on six chosen loops (25 after a DiscoPoP defect found there was repaired and its loop run again, 11 Oct) — supported as a single test (exact p = 0.009; 0.021 corrected), not within the family; the model usually finds a form DiscoPoP recognises, at 3.4 times the calls and less than half the speed |
 | RQ6 | Can the model close the gap a fast refresh leaves, without making the analysis unsafe? | C3 | H7, H7b | E4 | 7.7 | partly — on saved rewrites (13 Oct); the live trials reopened by the author the same night, on a benchmark with a long profiling run (14 Oct: NPB's EP and CG pass the screen; their package form is the author's, the trials wait): asked on 116 saved rewrites (136 calls, $8.53), the model's report gives back 20 of the 22 wins the fast refresh loses and removes both keeps the full profile does not make, but changes 11 of the 58 drawn rewrites the refresh had right (about 102 of the 541, at least 60 at 95 %) — H7 not refuted on the selected rewrites, fails on the whole set; in all damaged rewrites the reply calls the loop independent: the agent places a reported dependence without its loop; the deletion changed no decision on its 21 rewrites — H7b refuted as registered (0 against 0), the add-not-delete principle stays a design argument |
 | RQ7 | Can the profile be refreshed without running the program again, without changing decisions? | C3 | H6 | E4 | 7.7 | partly — on saved rewrites, no model (13 Oct); the live trials reopened by the author the same night: on 599 saved rewrites the fast refresh changes whether the agent keeps the rewrite in 58 (two full profiles of one program: 0) — refuted (p = 0.0003; at most 0.018 in the family); 22 wins thrown away, 20 of them reductions the model created; no time saved on the 18 loops; where the run is long one refresh saves 21 to 36 s, 1.5 to 7.5 % of a trial |
-| RQ8 | How far should restructuring be chained? | C1, C3 | H8 | E8 | 7.8 | held (14 Oct): the author's "ok" started it, and the first short run found that the agent's last check throws away a chain of rewrites when the later one reshapes what the earlier one produced (both trials ended unchanged after kept rewrites at 1.76× and 2.69×); a repair is his decision — planned on a benchmark built for it without a model: three TSVC loops whose expert version needs two rewrites in a row (`s2251`, `s221`, `s257`) at depth 0, 1 and 2 × 5, and the 18 loops at depth 1 and 2 × 3; one test of H8, on the three loops. Before any trial, read from the saved trials: a second level would ask the model in 80 of the 80 trials with a kept rewrite where DiscoPoP writes the directive — about the repetition loop it had already been asked about and the function around it — and about another loop in 4 trials on 2 of the 18 loops; where the model writes, in 20 of 84, with no new loop |
+| RQ8 | How far should restructuring be chained? | C1, C3 | H8 | E8 | 7.8 | held again (14 Oct): the author's "ok" started it; the first short run found that the agent's last check threw away a chain of rewrites when the later one reshaped what the earlier one produced — repaired with his "ok" (Fix 106); the second short run found that, with a deeper level to come, a rewrite that crashes at the timing size is kept untested and every later attempt is blamed for that crash (candidate Fix 108) — its repair is his decision — planned on a benchmark built for it without a model: three TSVC loops whose expert version needs two rewrites in a row (`s2251`, `s221`, `s257`) at depth 0, 1 and 2 × 5, and the 18 loops at depth 1 and 2 × 3; one test of H8, on the three loops. Before any trial, read from the saved trials: a second level would ask the model in 80 of the 80 trials with a kept rewrite where DiscoPoP writes the directive — about the repetition loop it had already been asked about and the function around it — and about another loop in 4 trials on 2 of the 18 loops; where the model writes, in 20 of 84, with no new loop |
 | RQ9 | Where should the agent look first? | C1 | H9 | E9 | 7.4 | planned |
 
 **Contributions.**
@@ -226,8 +226,9 @@ number of the record (D-numbers), so the text can be checked against the reposit
   checked, timed for what it adds; directives that only pay together are judged as a set (D33); a set already
   judged is reused (D41).
 - **4.10 Verifying the finished file, and the floor.** Rebuild from the change log, check the whole file again,
-  time it against the original, drop changes newest-first until it holds. Never ship a program slower than
-  DiscoPoP's own (D32).
+  time it against the original, drop changes newest-first until it holds. A rewrite no kept directive needs goes,
+  unless a kept rewrite was built on it (Fix 106, 14 Oct: a deeper level's directives land on the last rewrite of a
+  chain). Never ship a program slower than DiscoPoP's own (D32).
 - **4.11 The design space.** Each option is implemented, switchable, and measured in chapter 7.
   - **4.11.1 Who writes the directive.** DiscoPoP after a re-profile (default since D23) or the model, together
     with its rewrite (`--llm-pragmas`), with the gate as the judge. Where both claim a loop: arbitration. The two
@@ -556,7 +557,7 @@ result, or the expectation written down before the run.
     rejection), the model asked inside the conversation in which it wrote the rewrite, and the saving in a whole
     trial. Limits that remain: the damage among the rewrites that agree is an estimate from 58 of 541; a placing
     that names the loop was not built.
-- **7.8 Stage 5 — how far to chain restructuring** (E8; RQ8; H8). **[planned — pre-registered 14 Oct; held after its first short run]** Read from the saved trials on 13 Oct; the depth trials first dropped, then reopened by the author the same night; the benchmark built and checked without a model on 14 Oct. As planned in September: depth 0, 1 and 2 with twins, 18 loops × 3 (108 new trials); read out per level:
+- **7.8 Stage 5 — how far to chain restructuring** (E8; RQ8; H8). **[planned — pre-registered 14 Oct; held after its second short run]** Read from the saved trials on 13 Oct; the depth trials first dropped, then reopened by the author the same night; the benchmark built and checked without a model on 14 Oct. As planned in September: depth 0, 1 and 2 with twins, 18 loops × 3 (108 new trials); read out per level:
   speed-up gained, regions seen and regions parallelized, re-profiles, calls and time, unusable programs, the sequential
   cost of kept rewrites; written down before any run: on single-nest loops depth 0 should suffice, so no difference is the
   expected result and a finding, and a first small run must show that a deeper level is ever entered, or the experiment is
@@ -608,7 +609,14 @@ result, or the expectation written down before the run.
   that rewrite exposed, and the next rewrite has reshaped those regions, so the first counts as useless and the
   rest no longer applies. A defect of the agent, not of depth: it struck at depth 0 too where a region sent back
   to the model was rewritten on top of a kept rewrite (4 trials of the main comparison's `s331`, since replaced;
-  none of 7.7.1's 90 trials). The trials are held; repairing the check is the author's decision.
+  none of 7.7.1's 90 trials). Repaired with the author's "ok" (Fix 106, 4.10): a rewrite stays when a later kept
+  rewrite was built on it; replayed without a model, the two runs keep all six changes and the finished programs are
+  exact against the original; in the archive the repair acts in 15 trials.
+  *The second short run (14 Oct, $3.92):* with one extra round the chain reached the finished program (two rewrites,
+  two directives, about the original's speed); with two, the first rewrite had put an array as long as the loop on the
+  stack — harmless at the size the agent tests with, a crash at the timing size — and with a deeper level to come the
+  agent does not time a rewrite, so the crash surfaced only at the last level, where every new attempt was blamed for
+  it, a correct heap version included (candidate Fix 108). The trials are held again; the repair is the author's.
   *Decided with it:* the model writes the directive in 7.9 and what else remains — the setup of 7.7.1's second row (80 of
   90 on the same 18 loops, no unusable program). A decision taken after 7.7.1's result was known, recorded as that. The
   main comparison (7.2) and the evidence experiments (7.5) stay in the setup in which DiscoPoP writes; 7.7.1 is the

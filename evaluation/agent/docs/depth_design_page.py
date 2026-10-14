@@ -98,7 +98,7 @@ th{font-weight:600;color:var(--mute);font-size:12.5px;letter-spacing:.04em;text-
 ul,ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;max-width:68ch}
 </style>
 <main>""")
-P.append("""<header><p class="k">Put to the author 13 Oct 2026 · depth trials reopened 13 Oct, late (the author: “run both”) · the benchmark is built and checked (14 Oct): three loops · your “ok” (14 Oct, 07:45 UTC) · the short test run found that the agent’s last check drops a second rewrite built on the first — the trials are held · the model writes the pragmas in the later experiments</p>
+P.append("""<header><p class="k">Put to the author 13 Oct 2026 · depth trials reopened 13 Oct, late (the author: “run both”) · the benchmark is built and checked (14 Oct): three loops · your “ok” (14 Oct, 07:45 UTC) · the short test run found that the agent’s last check drops a second rewrite built on the first · your “ok” (13:23 UTC): that check repaired · the second short test run found a second defect — the trials are held again · the model writes the pragmas in the later experiments</p>
 <h1>The depth experiment</h1>
 <p class="lede">When the agent keeps a rewrite, it profiles the program again and may find new regions. So far, in every experiment, such a region gets DiscoPoP's pragma at most and is never rewritten a second time. “Depth 1” would let the model be asked about it once more, “depth 2” twice. The experiment was planned to show whether that gains anything and what it costs.</p></header>""")
 
@@ -158,6 +158,93 @@ WHY_OUT = {"s233": "DiscoPoP alone already makes it faster (3 of 3 runs): nothin
            "s2111": "DiscoPoP finds nothing after the first rewrite and nothing in the finished program either"}
 new_lo = 15 * per_trial + 15 * d1[0] + 15 * d2[0]
 new_hi = 15 * per_trial + 15 * d1[1] + 15 * d2[1]
+# ---- your second "ok" (14 Oct, 13:23 UTC): the check repaired, checked without a model, the short test run again ----
+_MAC = RES / "E08_restructuring_depth/checks/e8_fix106_verify_mac"
+_after = {c: json.loads((_MAC / "replay/after" / c / "replay.json").read_text()) for c in ("depth1_v5", "depth2_v5")}
+_before = {c: json.loads((_MAC / "replay/before" / c / "replay.json").read_text()) for c in ("depth1_v5", "depth2_v5")}
+_vrf = {c: json.loads(next((_MAC / "benchmarks/tsvc_c5/s2251").glob(f"fix106_replay_{c[:6]}/*/rep1/trial.json")).read_text())
+        for c in ("depth1_v5", "depth2_v5")}
+_tally = json.loads(re.search(r"^TALLY (.*)$", (_MAC / "replay/settle_archive.txt").read_text(), re.M).group(1))
+assert all(_before[c]["notes_equal_archived"] and not _before[c]["survivors"] for c in _before)
+assert all(len(_after[c]["survivors"]) == 6 and not _after[c]["notes"] for c in _after)
+assert all(_vrf[c]["verify"]["dump_exact"] and _vrf[c]["verify"]["dump_exact_seeded"] for c in _vrf)
+_S2 = RES / "E08_restructuring_depth/preflight/e8v5_smoke2"
+_s2 = {}
+for _tj in sorted(_S2.glob("benchmarks/*/*/*/*/rep*/trial.json")):
+    _t = json.loads(_tj.read_text())
+    _log = (_tj.parent / "agent.log").read_text(errors="replace")
+    _head, _, _settle = _log.partition("SETTLING")
+    _deeper, _depth = 0, None
+    for _ln in _head.splitlines():
+        _m = re.match(r"┌─ \[depth=(\d+)\]", _ln)
+        if _m:
+            _depth = int(_m.group(1))
+        elif _ln.startswith("└─ ACCEPTED") and _depth is not None and _depth >= 1:
+            _deeper += 1
+    _s2[_t["arm"]] = {"t": _t, "keep": len(re.findall(r"^\s+\[keep\] ", _settle, re.M)),
+                      "dropped": re.findall(r"^\s+· (.*)$", _settle, re.M),
+                      "repairs": re.findall(r"^\s+\[(?:repair|revert)\] (.*)$", _settle, re.M),
+                      "kept_deeper": _deeper}
+P.append('<div class="card"><h3>Your “ok” (14 Oct, 13:23 UTC): the check is repaired — and the second short test run found a second defect; nothing more is launched</h3>')
+P.append("<p><strong>The repair.</strong> A rewrite now stays when a rewrite kept after it was built on it — the later one changed a "
+         "loop the earlier one produced, or cannot be applied without it. Nothing else in the check changed: a rewrite that "
+         "nothing was built on is dropped as before, and the finished program is still judged against the original.</p>")
+P.append(f"<p><strong>Checked without a model.</strong> I rebuilt this morning’s two test runs from their saved files and ran them "
+         f"through the agent’s last check. As the check stood, it gives exactly what happened this morning — everything removed. "
+         f"With the repair, both keep all six changes, and the harness finds both finished programs giving exactly the original’s "
+         f"results ({_after['depth1_v5']['pragmas_in_finished']} and {_after['depth2_v5']['pragmas_in_finished']} of DiscoPoP’s "
+         f"pragmas in them). All of the agent’s own tests pass, and a new test fails on the old check and passes on the repaired one.</p>")
+P.append(f"<p><strong>In all our saved trials</strong> the old check broke something this way in {_tally['trials']} trials. In "
+         f"{_tally['either']} a later rewrite was built on the one it dropped — the repair acts there. In none of the pragma "
+         f"experiment’s 90 trials, so nothing reported so far changes. The other {_tally['neither']} (all on Rodinia "
+         f"<code>bfs</code>, in an older experiment) are a <strong>different weakness</strong>: when the agent applies DiscoPoP’s "
+         f"pragmas one after another, it identifies a loop by its text at line numbers an earlier pragma has already moved, so a "
+         f"rewrite can look useless although its loop did get a pragma. I have not repaired it — that is your decision — and wrote "
+         f"down beforehand: if it showed in the second test run, nothing more would be launched.</p>")
+if _s2:
+    _cells = []
+    for _arm in ("depth1_v5", "depth2_v5"):
+        _rec = _s2[_arm]
+        _t = _rec["t"]
+        _sp = {k: v.get("speedup") for k, v in ((_t.get("verify") or {}).get("par") or {}).items()}
+        _cells.append([f"one extra round" if _arm == "depth1_v5" else "two extra rounds", str(_rec["kept_deeper"]),
+                       f"{_t.get('rewrites_kept')} rewrite{'s' if _t.get('rewrites_kept') != 1 else ''}, "
+                       f"{_t.get('pragmas_in_final')} pragma{'s' if _t.get('pragmas_in_final') != 1 else ''}",
+                       str(len(_rec["dropped"])), f"{_t.get('outcome')}",
+                       " / ".join(f"{_sp[k]:.2f}×" for k in sorted(_sp, key=int)) if _sp else "—",
+                       f"${float((_t.get('llm_usage') or {}).get('cost_usd') or 0):.2f}"])
+    P.append(table(["Setting", "Later rewrites kept along the way", "In the finished program", "Changes the last check dropped",
+                    "The harness’s verdict", "Speed-up at 6 / 12 threads", "Cost"], _cells))
+P.append("<p><strong>One extra round:</strong> the second rewrite reached the finished program, with two of DiscoPoP’s "
+         "pragmas; the program runs at about the original’s speed.</p>")
+P.append("<p><strong>Two extra rounds: a second defect.</strong> The first rewrite moved a value into a temporary array as "
+         "long as the loop, placed on the stack — 256 KB at the small size the agent tests with, 256 MB at the size where "
+         "speed is measured, far beyond the 8 MB stack the server allows. When a deeper round is allowed, the agent does "
+         "not time the earlier rounds’ rewrites (the speed question waits for the last round), so the crash went unnoticed. "
+         "At the last round every new rewrite is timed against the program before it — which crashes — and the crash is "
+         "reported to the model as its own. The model even named the cause and moved the array to the heap; that program "
+         "gives exactly the original’s results, and it was turned back all the same. In the end no pragma could be timed, "
+         "nothing parallel was kept, and the last check rightly left the program unchanged.</p>")
+P.append("<p>The repaired check was not needed in either run — no chain this time had a kept rewrite on a dropped one — so "
+         "the replay without a model remains where it is shown. The run cost $3.92, not the $1–2 I said: the two-round run "
+         "spent 8 calls at its last round on attempts that could not pass.</p>")
+P.append(table(["Your choice", "What happens", "Cost"], [
+    ["<strong>Repair this too</strong> (recommended)",
+     "The crash check runs at every round: a rewrite that crashes at the measuring size is sent back at once, as at depth "
+     "0, and the message says which program crashed. Checked without a model first (a test that fails before and passes "
+     "after; this run’s two-round trial replayed), one more short test, then the 153 trials as planned. The repaired "
+     "agent is then the one version for everything that remains.",
+     "about $4 more, then about $110–250 (the two-round setting may cost more); 1–2 hours before the launch"],
+    ["<strong>Launch as built</strong>",
+     "The 153 trials now, with the repaired last check. It is what “the agent as built” meant, and the read-out counts "
+     "how often this happens. But wherever it does, a deeper setting loses the trial to a crash blamed on the wrong "
+     "rewrite, and the comparison on the three loops cannot be read.",
+     "about $110–250"],
+]))
+P.append("<p class=\"ask\"><strong>How I read your answer now:</strong> “ok” means repair the crash check as described, check "
+         "it without a model, run the short test once more, and then launch the 153 trials. “launch as built” means the 153 "
+         "trials now. Until you answer, no model is called.</p>")
+P.append("</div>")
 P.append('<div class="card"><h3>The short test run found a defect in the agent — nothing more is launched (14 Oct, morning)</h3>')
 P.append("<p>After your “ok” I wrote the design down before any trial and ran each new setting once on <code>s2251</code> ($1.10). "
          "<strong>The extra rounds work:</strong> with one extra round the model rewrote the loop a second time and the agent kept it "
@@ -184,7 +271,7 @@ P.append(table(["Your choice", "What happens", "Cost"], [
      "But it pays for what two runs already show, and the experiment’s question — does a second round help? — cannot be answered.",
      "about $110–250"],
 ]))
-P.append("<p class=\"ask\"><strong>How I read your answer now:</strong> “ok” means repair the check as described, check it without a "
+P.append("<p class=\"ask\"><strong>How I read your answer then (you said “ok” at 13:23 UTC):</strong> “ok” means repair the check as described, check it without a "
          "model, run the short test again, and if the extra rounds now reach the final program, launch the 153 trials. "
          "“run as built” means the 153 trials now, unchanged. Until you answer, no model is called.</p></div>")
 P.append('<div class="card"><h3>The benchmark for depth is built and checked — 14 Oct, no model, no cost</h3>')

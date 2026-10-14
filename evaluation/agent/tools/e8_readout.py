@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 """E8's read-out as pre-registered (THESIS_EXPERIMENTS §6, 14 Oct 2026), written before any counted trial was fetched.
 
-The one test and the descriptive read-outs fixed in "Plan, E8 pre-registration", with the two additions of the
-afternoon rows: where Fix 106's `[keep]` acted, and candidate Fix 107's signature, counted in every log.
+The one test and the descriptive read-outs fixed in "Plan, E8 pre-registration", with the additions of the afternoon
+rows: where Fix 106's `[keep]` acted, and the signatures of candidate Fix 107 and candidate Fix 108, counted in every
+log (Fix 108's: a trial that kept a rewrite with the speed question deferred and then met a crash at the timing size —
+its model told so, a pragma Phase B dropped as unsafe at size, or the run's noise measurement crashed; each such trial
+is listed to be read by hand: is it the program before the rewrite that crashes?).
 
   H8   on the depth set (`e8v5_set`: `tsvc_c5` s2251 s221 s257 × 5), race-free verified FASTER with `depth1_v5`
        against `default_v5` — Cochran-Mantel-Haenszel stratified by loop, one-sided (depth 1 ahead), the
@@ -146,13 +149,20 @@ def chain(t: Dict[str, Any]) -> Dict[str, Any]:
             if (m2 and m2.group(1) == last["rid"] and (int(m2.group(2)) == k if k < 3 else int(m2.group(2)) >= 3)
                     and set(last["finds"]) & set(applied)):
                 signature = True
+    req = Path(t["_dir"]) / "agent_patches" / "requests" / "requests.jsonl"
+    told = req.exists() and "CRASHED at the timing size" in req.read_text(errors="replace")
+    unsafe = len(re.findall(r"the program CRASHED at the timing size", head))
+    noise_crash = "timing noise on this machine: not measurable (run failed: non-zero exit (-" in head
+    deferred = "D40 verdict: safe_deferred" in head
     return {"blocks": dict(sorted(blocks.items())), "calls": dict(sorted(calls.items())),
             "kept": dict(sorted(kept.items())), "applied": len(applied),
             "fix106_keep": len(re.findall(r"^\s+\[keep\] ", settle, re.M)),
             "dropped": notes, "orphans": len(orphans),
             "rewrite_cascades": sum(1 for n in notes if n.startswith("rewrite for") and "depended on" in n),
             "repairs": len(re.findall(r"^\s+\[(?:repair|revert)\] ", settle, re.M)),
-            "fix107_signature": signature}
+            "fix107_signature": signature,
+            "crash_told": bool(told), "unsafe_at_size": unsafe, "noise_crash": noise_crash,
+            "fix108_signature": deferred and bool(told or unsafe or noise_crash)}
 
 
 def speedups(t: Dict[str, Any]) -> Dict[str, Optional[float]]:
@@ -256,16 +266,17 @@ def to_markdown(res: Dict[str, Any], set_cells: Dict[Tuple[str, str], Dict[str, 
                        f"{_med(c['full_profiles'])} | {_med(c['agent_s'])} |")
     out += ["", "## Each trial of the depth set: what each level did, what Settle kept, what shipped", "",
             "Model calls and rewrites kept in Phase A per level (`{depth: n}`); Settle: changes kept by Fix 106's "
-            "`[keep]`, changes dropped, repairs of the finished-program check; candidate Fix 107's signature.", "",
+            "`[keep]`, changes dropped, repairs of the finished-program check; the signatures of candidates Fix 107 and Fix 108.", "",
             "| loop | arm | rep | calls per level | rewrites kept per level | pragmas applied | Fix 106 kept | dropped "
-            "| repairs | Fix 107 | outcome | speed-up 6 / 12 | race |",
-            "|---|---|---:|---|---|---:|---:|---:|---:|---|---|---|---|"]
+            "| repairs | Fix 107 | Fix 108 | outcome | speed-up 6 / 12 | race |",
+            "|---|---|---:|---|---|---:|---:|---:|---:|---|---|---|---|---|"]
     for t in sorted(set_trials, key=lambda x: (str(x.get("benchmark")), ARMS.index(str(x.get("arm"))), int(x.get("repeat") or 0))):
         ch = chains[t["_dir"]]
         sp = speedups(t)
         out.append(f"| `{str(t.get('benchmark')).split('/')[1]}` | `{t.get('arm')}` | {t.get('repeat')} | {ch['calls']} | "
                    f"{ch['kept']} | {ch['applied']} | {ch['fix106_keep']} | {len(ch['dropped'])} | {ch['repairs']} | "
-                   f"{'yes' if ch['fix107_signature'] else 'no'} | {t.get('outcome')} | "
+                   f"{'yes' if ch['fix107_signature'] else 'no'} | {'yes' if ch['fix108_signature'] else 'no'} | "
+                   f"{t.get('outcome')} | "
                    f"{sp.get('6') or '—'} / {sp.get('12') or '—'} | {t.get('_race', 'clean')} |")
     out += ["", "## The speed question at depth 0 (the depth set): the judge's verdicts per trial", ""]
     for t in sorted([x for x in set_trials if x.get("arm") == DEPTH0], key=lambda x: (str(x.get("benchmark")), int(x.get("repeat") or 0))):
@@ -300,10 +311,15 @@ def to_markdown(res: Dict[str, Any], set_cells: Dict[Tuple[str, str], Dict[str, 
     e8_chains = [chains[t["_dir"]] for t in set_trials + [x for x in loop_trials if x.get("arm") != DEPTH0]]
     out += ["", "## Every unusable program", ""] + ([f"- {u}" for u in unusable] or ["- none"])
     out += ["", "## Trials without a verdict (left out of every rate)", ""] + ([f"- {u}" for u in missing] or ["- none"])
-    out += ["", "## Fix 106 and candidate Fix 107 in E8's trials", "",
+    out += ["", "## Fix 106 and candidates Fix 107 and Fix 108 in E8's trials", "",
             f"- trials in which Fix 106 kept a rewrite (`[keep]`): {sum(1 for c in e8_chains if c['fix106_keep'])} of "
             f"{len(e8_chains)} ({sum(c['fix106_keep'] for c in e8_chains)} rewrites)",
             f"- trials with candidate Fix 107's signature: {sum(1 for c in e8_chains if c['fix107_signature'])} of {len(e8_chains)}",
+            f"- trials with candidate Fix 108's signature: {sum(1 for c in e8_chains if c['fix108_signature'])} of "
+            f"{len(e8_chains)} — to be read by hand: "
+            + (", ".join(f"`{str(t.get('benchmark')).split('/')[1]}` {t.get('arm')} rep {t.get('repeat')}"
+                         for t in set_trials + [x for x in loop_trials if x.get('arm') != DEPTH0]
+                         if chains[t['_dir']]['fix108_signature']) or "none"),
             f"- trials in which Settle's orphan rule still dropped a rewrite: "
             f"{sum(1 for c in e8_chains if c['orphans'])}; a rewrite that no longer applied: "
             f"{sum(1 for c in e8_chains if c['rewrite_cascades'])}", "",

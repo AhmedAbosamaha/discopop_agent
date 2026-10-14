@@ -1,0 +1,18 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_smoke2/benchmarks/tsvc_c5/s2251/depth1_v5/claude-haiku-4-5-20251001/rep1/work/s2251.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_smoke2/benchmarks/tsvc_c5/s2251/depth1_v5/claude-haiku-4-5-20251001/rep1/work/s2251.c
+@@ -8,6 +8,7 @@
+ 
+     for (int nl = 0; nl < iterations; nl++) {
+         // Save snapshot of b at the start of this iteration to break loop-carried dependence
++        #pragma omp parallel for shared(b_vals) 
+         for (int i = 0; i < LEN_1D; i++) {
+             b_vals[i] = b[i];
+         }
+@@ -20,6 +21,7 @@
+         }
+ 
+         // Main computation loop
++        #pragma omp parallel for shared(s_vals) 
+         for (int i = 0; i < LEN_1D; i++) {
+             a[i] = s_vals[i]*e[i];
+             b[i] = a[i]+d[i];
