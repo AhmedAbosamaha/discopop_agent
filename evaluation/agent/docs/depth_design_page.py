@@ -98,9 +98,94 @@ th{font-weight:600;color:var(--mute);font-size:12.5px;letter-spacing:.04em;text-
 ul,ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;max-width:68ch}
 </style>
 <main>""")
-P.append("""<header><p class="k">Put to the author 13 Oct 2026 · depth trials reopened 13 Oct, late (the author: “run both”) · their benchmark is being built · the model writes the pragmas in the later experiments</p>
+P.append("""<header><p class="k">Put to the author 13 Oct 2026 · depth trials reopened 13 Oct, late (the author: “run both”) · the benchmark is built and checked (14 Oct): three loops · the model writes the pragmas in the later experiments</p>
 <h1>The depth experiment</h1>
 <p class="lede">When the agent keeps a rewrite, it profiles the program again and may find new regions. So far, in every experiment, such a region gets DiscoPoP's pragma at most and is never rewritten a second time. “Depth 1” would let the model be asked about it once more, “depth 2” twice. The experiment was planned to show whether that gains anything and what it costs.</p></header>""")
+
+# ---- the benchmark for depth, built and checked without a model (14 Oct) -------------------------------------
+import csv as _csv
+sys.path.insert(0, "evaluation/agent/tools")
+import prepare_tsvc as _pt  # noqa: E402  (the packager renders the files a model would read)
+
+_E8 = RES / "E08_restructuring_depth/preflight"
+
+
+def _trials(run):
+    r = json.loads((_E8 / run / "results.json").read_text())
+    return r.get("runs", r.get("trials", []))
+
+
+def _sp(t):
+    return {k: v["speedup"] for k, v in (t.get("verify") or {}).get("par", {}).items()}
+
+
+_draws, _refs, _steps = {}, {}, {}
+for _run in ("e8_c5_classes_a", "e8_c5_classes_b", "e8_c5_classes_c", "e8_c5_s2111_a", "e8_c5_s2111_b", "e8_c5_s2111_c"):
+    for _t in _trials(_run):
+        _draws.setdefault(_t["benchmark"].split("/")[1], []).append(_t["outcome"])
+for _run in ("e8_c5_refs", "e8_c5_s2111_refs"):
+    for _t in _trials(_run):
+        _refs[(_t["benchmark"].split("/")[1], _t["arm"])] = (_t["outcome"], _sp(_t))
+for _run in ("e8_c5_steps", "e8_c5_s2111_steps"):
+    for _r in _csv.DictReader(open(_E8 / _run / "ceiling.csv")):
+        _n = _r["loop"].split("/")[1]
+        _form = "original" if _r["source"].endswith(f"{_n}/{_n}.c") else "step1" if _r["source"].endswith(".step1.c") else "final"
+        _steps[(_n, _form)] = _r
+SET_IN, SET_OUT = ("s2251", "s221", "s257"), ("s233", "s123", "s2111")
+assert all(_draws[n] == ["no-change"] * 3 for n in SET_IN + ("s123", "s2111")) and _draws["s233"] == ["FASTER"] * 3
+assert all(_steps[(n, "step1")]["result"] == "KEPT" and _steps[(n, "final")]["result"] == "KEPT" and _refs[(n, "expert_openmp")][0] == "FASTER" for n in SET_IN)
+assert _steps[("s123", "step1")]["result"] == "NO_PATTERN" and all(_steps[("s2111", f)]["result"] == "NO_PATTERN" for f in ("original", "step1", "final"))
+
+
+def _kept(n, form):
+    r = _steps[(n, form)]
+    return "nothing" if r["result"] == "NO_PATTERN" else f"{r['applied']} loop{'s' if r['applied'] != '1' else ''}"
+
+
+def _x(n, label):
+    o, sp_ = _refs[(n, label)]
+    return f"{sp_['6']:.2f}× / {sp_['12']:.2f}×"
+
+
+WHAT = {"s2251": "a value carried from one pass to the next, while the array it comes from is overwritten",
+        "s221": "an independent statement and a running sum in one loop",
+        "s257": "a vector element overwritten in every pass of an inner loop",
+        "s233": "two inner loops that share one outer loop",
+        "s123": "a write position that depends on how many earlier elements were positive",
+        "s2111": "every element needs its left and its upper neighbour"}
+WHY_OUT = {"s233": "DiscoPoP alone already makes it faster (3 of 3 runs): nothing to restructure for a first step",
+           "s123": "after the first rewrite DiscoPoP finds nothing, although that program is correct and faster with the right pragma — the agent would undo the rewrite",
+           "s2111": "DiscoPoP finds nothing after the first rewrite and nothing in the finished program either"}
+new_lo = 15 * per_trial + 15 * d1[0] + 15 * d2[0]
+new_hi = 15 * per_trial + 15 * d1[1] + 15 * d2[1]
+P.append('<div class="card"><h3>The benchmark for depth is built and checked — 14 Oct, no model, no cost</h3>')
+P.append(f"<p>You asked for a benchmark that can test several depths. I took the loops our September screening had marked for this, packaged six of them in the same clean form as the contrast set, wrote for each the solution <em>in two steps</em>, and ran every check that needs no model on the server. <strong>Three loops qualify: <code>s2251</code>, <code>s221</code>, <code>s257</code>.</strong> On each, DiscoPoP alone changes nothing; after the first rewrite the agent's own pipeline keeps a pragma on one loop while another loop is still sequential; after the second rewrite the whole computation is parallel and clearly faster. That is exactly the situation in which a second round of asking the model can do something.</p>")
+P.append(table(["Loop", "What is in it", "DiscoPoP alone (3 runs)", "After the 1st rewrite the pipeline keeps a pragma on", "After the 2nd", "Speedup of the solution: after step 1 → finished (6 / 12 threads)", ""],
+               [[f"<code>{n}</code>", WHAT[n], _draws[n][0].replace("no-change", "no change").replace("FASTER", "already faster"), _kept(n, "step1"), _kept(n, "final"),
+                 f"{_x(n, 'step1')} → {_x(n, 'expert_openmp')}", '<span class="st ok">in</span>'] for n in SET_IN]
+               + [[f"<code>{n}</code>", WHAT[n], _draws[n][0].replace("no-change", "no change").replace("FASTER", "already faster"), _kept(n, "step1"), _kept(n, "final"),
+                   f"{_x(n, 'step1')} → {_x(n, 'expert_openmp')}", f'<span class="st wait">out</span> {WHY_OUT[n]}'] for n in SET_OUT]))
+P.append("<p>The three that are out are out by the rule I wrote down before measuring, each for a measured reason. Two of them (<code>s123</code>, <code>s2111</code>) show a limit worth a line in the thesis: the agent keeps a rewrite only if DiscoPoP then finds a parallel loop in it — so a first step that only <em>prepares</em> the second is undone, and no deeper level is ever reached. On these two, DiscoPoP misses a loop that is in fact parallel (a weakness of DiscoPoP I found on the way; it is in the bug list as candidate B27 with a 12-line example). I can run them too, to show that limit on real trials — your choice.</p>")
+P.append("<p><strong>Three loops are few.</strong> The other candidates of the screening are either the same idea as one of these, or need data the original benchmark does not have, or are weak cases in which the second step is optional, or sit in programs we have not packaged in the clean form. If you want more, I would have to build loops for the purpose, as we did once for the evidence experiment.</p></div>")
+P.append('<div class="card"><h3>The three files a model would read</h3><p>Each is an ordinary code file: the loop exactly as in TSVC, inside TSVC’s repetition loop, nothing of ours in it. These are the texts I owe you before any model sees them.</p>')
+for _n in SET_IN:
+    _loop = [l for l in _pt.SUITES[_pt.V9_SUITE] if l.name == _n][0]
+    P.append(f"<p><code>{_n}.c</code></p>" + code(_pt.v9_files(_loop)[f"{_n}.c"]))
+P.append("<p>Beside it the model can see the small header with the array declarations and sizes, and <code>main.c</code>, which holds <code>dummy</code> (it changes a few input values between repetitions, so no repetition can be skipped). For the 2-D loop the three arrays <code>aa</code>, <code>bb</code>, <code>cc</code> are passed to <code>dummy</code> as in TSVC.</p></div>")
+P.append('<div class="card"><h3>What the two steps are (the solutions I wrote; no model sees them)</h3>')
+for _n in SET_IN:
+    _body = lambda f: "\n".join((RES.parent / "reference_solutions/tsvc_c5" / f).read_text().split("{\n", 1)[1].rsplit("    return", 1)[0].rstrip().splitlines())
+    P.append(f"<p><code>{_n}</code> — after step 1:</p>" + code(_body(f"{_n}.step1.c")) + "<p>finished:</p>" + code(_body(f"{_n}.c")))
+P.append("</div>")
+P.append('<div class="card"><h3>What it would cost</h3>')
+P.append(table(["What", "Trials", "My estimate"],
+               [["The three new loops: no second round, one, two — 5 runs each", "45", f"about ${r10(new_lo)} to ${r10(new_hi)}"],
+                ["The 18 loops as the reference, as registered: one and two rounds, 3 runs each (the runs without a second round exist)", "108", f"about ${r10(C_COST[0])} to ${r10(C_COST[1])}"],
+                ["Optional: the two loops that cannot be won, to show the limit on trials", "30", f"about ${r10(new_lo * 2 / 3)} to ${r10(new_hi * 2 / 3)}"]]))
+P.append(f"<p>The estimates come from the measured cost of the pragma experiment (${per_call:.2f} per call, ${per_trial:.2f} per trial without a second round); how many extra calls a second round really makes is what the experiment will show. Before the full run I would first run each new setting once or twice (a few dollars) to see that a second round really happens and is logged.</p></div>")
+P.append('<div class="card"><h3>One thing only you can settle: does this set test two rounds, or also three?</h3>')
+P.append("<p>You asked for several depths. All three loops need <em>two</em> rewrites in a row — that tests one extra round (“depth 1”). Whether any of them tests a second extra round depends on how one counts the finished form of <code>s221</code>: its running sum is made parallel in three phases (a sum per block, the blocks’ totals added up, each block shifted by its offset). Counted as three steps, <code>s221</code> is a test of “depth 2”; counted as one known trick, no loop of this set is. The screening left that to you.</p>")
+P.append("<p>Either way I run the setting with two extra rounds on all loops, as registered: if nothing needs a third rewrite, the result is that the second extra round adds nothing here — a result, by your rule that a planned experiment is run and reported whatever it shows. A real test of three rewrites in a row would need loops built for it.</p></div>")
 
 P.append('<div class="card"><h3>Reopened on 13 Oct, late</h3>')
 P.append("<p>You asked why depth was skipped (“we just need to experiment them and see the results”) and decided: <strong>run it</strong>. The rule written in advance had said the same; my advice to skip had been my own reading of the logs. You added that depth needs a benchmark that tests several depths. That is your rule of 26 Sep: the expert's solution must need two rewrites in a row, the second on code the first created, and three for depth 2. The screening of September lists candidates (<code>s2251</code>, <code>s2111</code>, the family of <code>s341</code>, and others); I build and check that set without a model. The trials then run on it and on the 18 loops as the reference, on the agent as it is. Nothing is launched before you have seen the set and its cost. The second decision below — the model writes the pragmas in the later experiments — stands.</p></div>")
@@ -173,8 +258,10 @@ P.append(table(["Option", "The case for it"], [
     ["<strong>Both, on the large code only</strong>",
      "It would carry the comparison to a real application for the price of one more setup there. It can be decided with that experiment's design; I would propose it there if its cost allows."],
 ]))
-P.append("<h2>How I read your answer</h2>")
-P.append("<p>“ok” means: no depth trials (option A), and the model writes the pragmas in the experiments that remain. For anything else — a depth run, DiscoPoP writing, or both on the large code — please say so. No model is called for the depth experiment before you have answered.</p><p><strong>Your answer, 13 Oct: “ok”.</strong> No model was called for this experiment.</p>")
+P.append("<h2>How I read your answer (14 Oct)</h2>")
+P.append(f"""<p class="ask"><strong>“ok” means:</strong> the depth experiment starts, with DiscoPoP writing the pragmas as registered — first each new setting once on one loop, to see that a second round really happens (a few dollars); then the three new loops (45 trials) and the 18 loops (108 trials), about ${r10(new_lo + C_COST[0])} to ${r10(new_hi + C_COST[1])} together. The two loops that cannot be won are <em>not</em> run. The fast-refresh trials do <em>not</em> start — their benchmark is not ready; that is on the other page.</p>
+<p>Anything else — only the new loops, the two unwinnable loops as well, more loops built for the purpose, a different count for <code>s221</code> — please say so. Until you answer, no model is called.</p>
+<p class="lede">Earlier on this page: your “ok” of 13 Oct (no depth trials) and your “run both” later that night, which reversed it; then your remark that depth needs its own benchmark, which is what the first card answers.</p>""")
 P.append("</main>")
 OUT.write_text("\n".join(P) + "\n")
 print(f"{OUT}: {OUT.stat().st_size} bytes; estimates: B ${B_COST[0]:.1f}–${B_COST[1]:.1f}, C ${C_COST[0]:.1f}–${C_COST[1]:.1f}; per call ${per_call:.3f}; "

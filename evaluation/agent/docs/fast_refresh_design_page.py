@@ -7,6 +7,7 @@ with the results of the steps that need no model.
 """
 import html
 import inspect
+import json
 import sys
 from pathlib import Path
 
@@ -126,7 +127,7 @@ th{font-weight:600;color:var(--mute);font-size:12.5px;letter-spacing:.04em;text-
 ul,ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;max-width:68ch}
 </style>
 <main>""")
-P.append("""<header><p class="k">Put to the author 10 Oct 2026 · decided 12 Oct · steps 1 to 3 done 13 Oct · live trials reopened 13 Oct (the author: “run both”) · their benchmark is being built</p>
+P.append("""<header><p class="k">Put to the author 10 Oct 2026 · decided 12 Oct · steps 1 to 3 done 13 Oct · live trials reopened 13 Oct (the author: “run both”) · their benchmark: screened 14 Oct, two candidates, not ready</p>
 <h1>The fast-refresh experiment</h1>
 <p class="lede">After the model rewrites a loop, the agent profiles the whole program again: it compiles it with DiscoPoP's instrumentation, runs it, and lets DiscoPoP analyse the run. The fast refresh skips the run. It compiles only, and carries the dependences of the last run over to the new code. For the lines the model just wrote there is then no measurement. The second idea is to ask the model itself which dependences those lines have.</p></header>""")
 
@@ -138,8 +139,49 @@ P.append(table(["Step", "State", "In one line"], [
     ["2. The model's report", '<span class="st ok">done 13 Oct</span>',
      "The model's report gives back 20 of the 22 lost wins, but damages 11 of 58 rewrites the fast refresh had right — about 100 of all 541. Deleting dependences changed nothing. 136 calls, $8.53."],
     ["3. Time on long programs, no model", STEP3_STATE, STEP3_LINE],
-    ["4. Live trials", '<span class="st wait">reopened 13 Oct · benchmark being built</span>', "First dropped (your “ok go ahead”), then reopened by you the same night (“run both”). They run on the 18 loops as the reference and on programs whose profiling run is long, where a refresh can save time. That set comes to you with its cost before any model call."],
+    ["4. Live trials", '<span class="st wait">reopened 13 Oct · benchmark not ready (14 Oct)</span>', "First dropped (your “ok go ahead”), then reopened by you the same night (“run both”). They run on the 18 loops as the reference and on programs whose profiling run is long, where a refresh can save time. That set comes to you with its cost before any model call."],
 ]))
+
+# ---- the benchmark for the live trials: the screen of 14 Oct (no model) ---------------------------------------------
+_SCR = Path("evaluation/agent/results/E04_fast_refresh/preflight/e4_refresh_screen_npbc")
+_PRB = Path("evaluation/agent/results/E11_repoomp/preflight/e11_npbc_probe_server")
+
+
+def _cell(path):
+    j = json.loads(path.read_text())["rows"][0]
+    return j, (j.get("instrument_s", 0) + j.get("run_s", 0) + j.get("explore_s", 0))
+
+
+_rows = []
+for _k, _what in (("EP", "random pairs"), ("IS", "integer sort"), ("CG", "conjugate gradient")):
+    for _c in ("S", "W", "A", "B"):
+        _f = (_PRB / _k / "summary.json") if _c == "S" else (_SCR / _c / _k / "summary.json")
+        if not _f.exists():
+            continue
+        _j, _tot = _cell(_f)
+        if _j.get("error"):
+            _rows.append([f"<code>{_k}</code>", _c, f"crashes after {_j['run_s']:.0f} s", "—", "—", '<span class="st wait">no</span>'])
+            continue
+        _ok = _j["run_s"] >= 60 and _j["run_s"] >= _tot / 2
+        _rows.append([f"<code>{_k}</code> ({_what})" if _c == "S" else f"<code>{_k}</code>", _c, f"{_j['run_s']:.1f} s", f"{_tot:.0f} s",
+                      f"{_j['run_s'] / _tot * 100:.0f} %", '<span class="st ok">yes</span>' if _ok else '<span class="st wait">no</span>'])
+_lt = json.loads(Path("evaluation/agent/results/E06_lulesh/preflight/e6_lulesh_smoke3/results.json").read_text())
+_lp = (_lt.get("runs") or _lt.get("trials"))[0]["profile"]
+_ltot = _lp["instrument_s"] + _lp["profiled_run_s"] + _lp["explore_s"]
+_rows.append(["LULESH", "its profile size", f"{_lp['profiled_run_s']:.1f} s", f"{_ltot:.0f} s", f"{_lp['profiled_run_s'] / _ltot * 100:.0f} %", '<span class="st wait">no</span>'])
+_ep = _cell(_SCR / "B" / "EP" / "summary.json")
+_cg = _cell(_SCR / "A" / "CG" / "summary.json")
+assert _ep[0]["run_s"] > 200 and _cg[0]["run_s"] > 120
+P.append('<h2 id="bench">The benchmark for the live trials — where it stands (14 Oct, no model, no cost)</h2>')
+P.append("<p>You said the fast refresh needs a benchmark on which profiling is slow, or its effect cannot show. A refresh skips one thing: the run of the instrumented program. So a program qualifies only if that run is long <em>and</em> is the larger part of a profile. I measured the candidates I had named in advance on the server: the three NPB programs DiscoPoP can profile (EP, IS, CG), each at NPB’s input classes from the smallest up, and LULESH.</p>")
+P.append(table(["Program", "NPB input class", "The run a refresh would skip", "One whole profile", "The run’s share", "Run ≥ 1 min and ≥ half"], _rows))
+P.append(f"<p><strong>Two pass on these numbers:</strong> EP at class B (the run is {_ep[0]['run_s']:.0f} s of a {_ep[1]:.0f} s profile) and CG at class A ({_cg[0]['run_s']:.0f} s of {_cg[1]:.0f} s). IS stays under a minute at class A and its instrumented run crashes at class B. On LULESH the profile is almost all analysis, which no refresh shortens. The three programs of step 3 (<code>hotspot</code>, <code>is</code>, <code>md</code>) save 36, 27 and 21.5 s — under the minute, as said before.</p>")
+P.append('<div class="card"><h3>Why the set is not ready: two things I cannot settle without you</h3>')
+P.append("<ol><li><strong>The form of the package.</strong> In these NPB programs <code>main</code>, NPB’s own timer and its own check of the result stand in the same file as the computation. Your rule of 4 Oct says the model’s file is an ordinary code file with nothing of ours in it. Two ways: <em>(a)</em> leave the file exactly as RepoOMP ships it and let our harness read NPB’s own printed result and time — nothing of ours in the file, but the model could touch NPB’s timer or check, so the harness must refuse a trial that changes those lines; <em>(b)</em> move <code>main</code> into a second file as we did for the loops — cleaner for us, but the program is then no longer the file RepoOMP used. I would take (a): it keeps the programs identical to RepoOMP’s, which the later comparison with RepoOMP needs anyway.</li>"
+         "<li><strong>Whether the model is ever asked there.</strong> A refresh happens only after a rewrite is kept. RepoOMP made these files by deleting the pragmas from NPB’s parallel code, and DiscoPoP already reports 5 parallel loops in EP and 19 in CG. If every hot loop already has one, the agent never asks the model, nothing is profiled a second time, and a refresh has nothing to skip. That takes one run of the agent without a model on the package — so it waits for the package.</li></ol></div>")
+P.append('<div class="card"><h3>A candidate outside the list I registered — yours to allow</h3>')
+P.append("<p>The 18 loops themselves, profiled with a larger input. They need restructuring, they are packaged in the clean form, and in the pragma experiment the agent profiled them again in full 227 times — the model <em>is</em> asked there. Their profiling run is short only because the agent profiles at the smallest input size. With a larger one the run takes a minute or more, and the same trials would show what a refresh saves.</p>")
+P.append("<p><strong>The case against it,</strong> and why I did not simply do it: the list of candidates was written and closed before measuring, and this is not on it. And the input size is our choice — a reader can say we made profiling slow on purpose. The answer to that is that the saving is, by construction, as large as the run is long: the experiment would show <em>how</em> the saving grows with the input a user profiles with, not that it exists on a toy input. The NPB programs do not have this weakness — their classes are NPB’s own — but they may fail on point 2.</p></div>")
 
 P.append("<h2>Step 1: the fast refresh changes the agent's decisions</h2>")
 P.append("<p>Each of the 599 saved rewrites was judged three times on the server, without a model: after a full profile, after the fast refresh, and after a second full profile — the control, which shows how much one profile of a program differs from the next.</p>")

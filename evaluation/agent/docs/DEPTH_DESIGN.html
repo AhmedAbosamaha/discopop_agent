@@ -26,9 +26,160 @@ th{font-weight:600;color:var(--mute);font-size:12.5px;letter-spacing:.04em;text-
 ul,ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;max-width:68ch}
 </style>
 <main>
-<header><p class="k">Put to the author 13 Oct 2026 · depth trials reopened 13 Oct, late (the author: “run both”) · their benchmark is being built · the model writes the pragmas in the later experiments</p>
+<header><p class="k">Put to the author 13 Oct 2026 · depth trials reopened 13 Oct, late (the author: “run both”) · the benchmark is built and checked (14 Oct): three loops · the model writes the pragmas in the later experiments</p>
 <h1>The depth experiment</h1>
 <p class="lede">When the agent keeps a rewrite, it profiles the program again and may find new regions. So far, in every experiment, such a region gets DiscoPoP's pragma at most and is never rewritten a second time. “Depth 1” would let the model be asked about it once more, “depth 2” twice. The experiment was planned to show whether that gains anything and what it costs.</p></header>
+<div class="card"><h3>The benchmark for depth is built and checked — 14 Oct, no model, no cost</h3>
+<p>You asked for a benchmark that can test several depths. I took the loops our September screening had marked for this, packaged six of them in the same clean form as the contrast set, wrote for each the solution <em>in two steps</em>, and ran every check that needs no model on the server. <strong>Three loops qualify: <code>s2251</code>, <code>s221</code>, <code>s257</code>.</strong> On each, DiscoPoP alone changes nothing; after the first rewrite the agent's own pipeline keeps a pragma on one loop while another loop is still sequential; after the second rewrite the whole computation is parallel and clearly faster. That is exactly the situation in which a second round of asking the model can do something.</p>
+<div class="tw"><table><thead><tr><th>Loop</th><th>What is in it</th><th>DiscoPoP alone (3 runs)</th><th>After the 1st rewrite the pipeline keeps a pragma on</th><th>After the 2nd</th><th>Speedup of the solution: after step 1 → finished (6 / 12 threads)</th><th></th></tr></thead><tbody><tr><td><code>s2251</code></td><td>a value carried from one pass to the next, while the array it comes from is overwritten</td><td>no change</td><td>1 loop</td><td>2 loops</td><td>0.65× / 0.62× → 2.28× / 2.36×</td><td><span class="st ok">in</span></td></tr><tr><td><code>s221</code></td><td>an independent statement and a running sum in one loop</td><td>no change</td><td>1 loop</td><td>3 loops</td><td>0.90× / 0.90× → 2.66× / 2.98×</td><td><span class="st ok">in</span></td></tr><tr><td><code>s257</code></td><td>a vector element overwritten in every pass of an inner loop</td><td>no change</td><td>1 loop</td><td>1 loop</td><td>4.45× / 2.29× → 7.44× / 7.41×</td><td><span class="st ok">in</span></td></tr><tr><td><code>s233</code></td><td>two inner loops that share one outer loop</td><td>already faster</td><td>2 loops</td><td>2 loops</td><td>1.64× / 1.75× → 10.19× / 12.53×</td><td><span class="st wait">out</span> DiscoPoP alone already makes it faster (3 of 3 runs): nothing to restructure for a first step</td></tr><tr><td><code>s123</code></td><td>a write position that depends on how many earlier elements were positive</td><td>no change</td><td>nothing</td><td>2 loops</td><td>1.23× / 1.20× → 2.41× / 2.63×</td><td><span class="st wait">out</span> after the first rewrite DiscoPoP finds nothing, although that program is correct and faster with the right pragma — the agent would undo the rewrite</td></tr><tr><td><code>s2111</code></td><td>every element needs its left and its upper neighbour</td><td>no change</td><td>nothing</td><td>nothing</td><td>1.21× / 1.21× → 5.88× / 6.99×</td><td><span class="st wait">out</span> DiscoPoP finds nothing after the first rewrite and nothing in the finished program either</td></tr></tbody></table></div>
+<p>The three that are out are out by the rule I wrote down before measuring, each for a measured reason. Two of them (<code>s123</code>, <code>s2111</code>) show a limit worth a line in the thesis: the agent keeps a rewrite only if DiscoPoP then finds a parallel loop in it — so a first step that only <em>prepares</em> the second is undone, and no deeper level is ever reached. On these two, DiscoPoP misses a loop that is in fact parallel (a weakness of DiscoPoP I found on the way; it is in the bug list as candidate B27 with a 12-line example). I can run them too, to show that limit on real trials — your choice.</p>
+<p><strong>Three loops are few.</strong> The other candidates of the screening are either the same idea as one of these, or need data the original benchmark does not have, or are weak cases in which the second step is optional, or sit in programs we have not packaged in the clean form. If you want more, I would have to build loops for the purpose, as we did once for the evidence experiment.</p></div>
+<div class="card"><h3>The three files a model would read</h3><p>Each is an ordinary code file: the loop exactly as in TSVC, inside TSVC’s repetition loop, nothing of ours in it. These are the texts I owe you before any model sees them.</p>
+<p><code>s2251.c</code></p><div class="code"><pre>#include &quot;data.h&quot;
+
+real_t kernel_s2251(void)
+{
+    for (int nl = 0; nl &lt; iterations; nl++) {
+        real_t s = (real_t)0.0;
+        for (int i = 0; i &lt; LEN_1D; i++) {
+            a[i] = s*e[i];
+            s = b[i]+c[i];
+            b[i] = a[i]+d[i];
+        }
+        dummy(a, b, c, d, e);
+    }
+    return (real_t)0;
+}</pre></div>
+<p><code>s221.c</code></p><div class="code"><pre>#include &quot;data.h&quot;
+
+real_t kernel_s221(void)
+{
+    for (int nl = 0; nl &lt; iterations; nl++) {
+        for (int i = 1; i &lt; LEN_1D; i++) {
+            a[i] += c[i] * d[i];
+            b[i] = b[i - 1] + a[i] + d[i];
+        }
+        dummy(a, b, c, d, e);
+    }
+    return (real_t)0;
+}</pre></div>
+<p><code>s257.c</code></p><div class="code"><pre>#include &quot;data.h&quot;
+
+real_t kernel_s257(void)
+{
+    for (int nl = 0; nl &lt; iterations; nl++) {
+        for (int i = 1; i &lt; LEN_2D; i++) {
+            for (int j = 0; j &lt; LEN_2D; j++) {
+                a[i] = aa[j][i] - a[i-1];
+                aa[j][i] = a[i] + bb[j][i];
+            }
+        }
+        dummy(a, b, c, d, e, aa, bb, cc);
+    }
+    return (real_t)0;
+}</pre></div>
+<p>Beside it the model can see the small header with the array declarations and sizes, and <code>main.c</code>, which holds <code>dummy</code> (it changes a few input values between repetitions, so no repetition can be skipped). For the 2-D loop the three arrays <code>aa</code>, <code>bb</code>, <code>cc</code> are passed to <code>dummy</code> as in TSVC.</p></div>
+<div class="card"><h3>What the two steps are (the solutions I wrote; no model sees them)</h3>
+<p><code>s2251</code> — after step 1:</p><div class="code"><pre>    real_t *tmp = (real_t *)malloc((size_t)LEN_1D * sizeof(real_t));
+    for (int nl = 0; nl &lt; iterations; nl++) {
+        #pragma omp parallel for
+        for (int i = 0; i &lt; LEN_1D; i++) {
+            tmp[i] = b[i]+c[i];
+        }
+        real_t s = (real_t)0.0;
+        for (int i = 0; i &lt; LEN_1D; i++) {
+            a[i] = s*e[i];
+            s = tmp[i];
+            b[i] = a[i]+d[i];
+        }
+        dummy(a, b, c, d, e);
+    }
+    free(tmp);</pre></div><p>finished:</p><div class="code"><pre>    real_t *tmp = (real_t *)malloc((size_t)LEN_1D * sizeof(real_t));
+    for (int nl = 0; nl &lt; iterations; nl++) {
+        #pragma omp parallel for
+        for (int i = 0; i &lt; LEN_1D; i++) {
+            tmp[i] = b[i]+c[i];
+        }
+        #pragma omp parallel for
+        for (int i = 0; i &lt; LEN_1D; i++) {
+            real_t s = (i &gt; 0) ? tmp[i-1] : (real_t)0.0;
+            a[i] = s*e[i];
+            b[i] = a[i]+d[i];
+        }
+        dummy(a, b, c, d, e);
+    }
+    free(tmp);</pre></div>
+<p><code>s221</code> — after step 1:</p><div class="code"><pre>    for (int nl = 0; nl &lt; iterations; nl++) {
+        #pragma omp parallel for
+        for (int i = 1; i &lt; LEN_1D; i++) {
+            a[i] += c[i] * d[i];
+        }
+        for (int i = 1; i &lt; LEN_1D; i++) {
+            b[i] = b[i - 1] + a[i] + d[i];
+        }
+        dummy(a, b, c, d, e);
+    }</pre></div><p>finished:</p><div class="code"><pre>    enum { NB = 64 };
+    for (int nl = 0; nl &lt; iterations; nl++) {
+        real_t total[NB], offset[NB + 1];
+        long n = (long)LEN_1D - 1;
+        #pragma omp parallel for
+        for (int i = 1; i &lt; LEN_1D; i++) {
+            a[i] += c[i] * d[i];
+        }
+        #pragma omp parallel for
+        for (int k = 0; k &lt; NB; k++) {
+            long lo = 1 + n * k / NB;
+            long hi = 1 + n * (k + 1) / NB;
+            real_t run = (real_t)0.;
+            for (long i = lo; i &lt; hi; i++) {
+                run = run + a[i] + d[i];
+                b[i] = run;
+            }
+            total[k] = run;
+        }
+        offset[0] = b[0];
+        for (int k = 0; k &lt; NB; k++) {
+            offset[k + 1] = offset[k] + total[k];
+        }
+        #pragma omp parallel for
+        for (int k = 0; k &lt; NB; k++) {
+            long lo = 1 + n * k / NB;
+            long hi = 1 + n * (k + 1) / NB;
+            for (long i = lo; i &lt; hi; i++) {
+                b[i] += offset[k];
+            }
+        }
+        dummy(a, b, c, d, e);
+    }</pre></div>
+<p><code>s257</code> — after step 1:</p><div class="code"><pre>    for (int nl = 0; nl &lt; iterations; nl++) {
+        for (int i = 1; i &lt; LEN_2D; i++) {
+            real_t last = aa[LEN_2D-1][i] - a[i-1];
+            #pragma omp parallel for
+            for (int j = 0; j &lt; LEN_2D; j++) {
+                aa[j][i] = (aa[j][i] - a[i-1]) + bb[j][i];
+            }
+            a[i] = last;
+        }
+        dummy(a, b, c, d, e, aa, bb, cc);
+    }</pre></div><p>finished:</p><div class="code"><pre>    for (int nl = 0; nl &lt; iterations; nl++) {
+        for (int i = 1; i &lt; LEN_2D; i++) {
+            a[i] = aa[LEN_2D-1][i] - a[i-1];
+        }
+        #pragma omp parallel for
+        for (int i = 1; i &lt; LEN_2D; i++) {
+            for (int j = 0; j &lt; LEN_2D; j++) {
+                aa[j][i] = (aa[j][i] - a[i-1]) + bb[j][i];
+            }
+        }
+        dummy(a, b, c, d, e, aa, bb, cc);
+    }</pre></div>
+</div>
+<div class="card"><h3>What it would cost</h3>
+<div class="tw"><table><thead><tr><th>What</th><th>Trials</th><th>My estimate</th></tr></thead><tbody><tr><td>The three new loops: no second round, one, two — 5 runs each</td><td>45</td><td>about $30 to $60</td></tr><tr><td>The 18 loops as the reference, as registered: one and two rounds, 3 runs each (the runs without a second round exist)</td><td>108</td><td>about $80 to $190</td></tr><tr><td>Optional: the two loops that cannot be won, to show the limit on trials</td><td>30</td><td>about $20 to $40</td></tr></tbody></table></div>
+<p>The estimates come from the measured cost of the pragma experiment ($0.16 per call, $0.58 per trial without a second round); how many extra calls a second round really makes is what the experiment will show. Before the full run I would first run each new setting once or twice (a few dollars) to see that a second round really happens and is logged.</p></div>
+<div class="card"><h3>One thing only you can settle: does this set test two rounds, or also three?</h3>
+<p>You asked for several depths. All three loops need <em>two</em> rewrites in a row — that tests one extra round (“depth 1”). Whether any of them tests a second extra round depends on how one counts the finished form of <code>s221</code>: its running sum is made parallel in three phases (a sum per block, the blocks’ totals added up, each block shifted by its offset). Counted as three steps, <code>s221</code> is a test of “depth 2”; counted as one known trick, no loop of this set is. The screening left that to you.</p>
+<p>Either way I run the setting with two extra rounds on all loops, as registered: if nothing needs a third rewrite, the result is that the second extra round adds nothing here — a result, by your rule that a planned experiment is run and reported whatever it shows. A real test of three rewrites in a row would need loops built for it.</p></div>
 <div class="card"><h3>Reopened on 13 Oct, late</h3>
 <p>You asked why depth was skipped (“we just need to experiment them and see the results”) and decided: <strong>run it</strong>. The rule written in advance had said the same; my advice to skip had been my own reading of the logs. You added that depth needs a benchmark that tests several depths. That is your rule of 26 Sep: the expert's solution must need two rewrites in a row, the second on code the first created, and three for depth 2. The screening of September lists candidates (<code>s2251</code>, <code>s2111</code>, the family of <code>s341</code>, and others); I build and check that set without a model. The trials then run on it and on the 18 loops as the reference, on the agent as it is. Nothing is launched before you have seen the set and its cost. The second decision below — the model writes the pragmas in the later experiments — stands.</p></div>
 <div class="card"><h3>Decided on 13 Oct, evening (the depth part was reversed later)</h3>
@@ -65,6 +216,8 @@ ul,ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;max-
 <li><strong>What changes if the model writes:</strong> after a rewrite, DiscoPoP's analysis confirms almost nothing any more; the checks decide. DiscoPoP's part is then the evidence the model is shown, the choice of where to look first, the dependence check among the checks, and the pragmas of loops that need no rewrite. The sentence “the model removes the dependence, DiscoPoP confirms and writes the pragma” would describe the main comparison and the evidence experiments, not the later ones.</li>
 <li><strong>What remains to run:</strong> where to look first, the large code, and the comparison with RepoOMP. On the large code one profile takes about 44 seconds and 28 GB at the small problem size we measured, and where DiscoPoP writes the agent profiles about 2.7 times as often.</li></ul>
 <div class="tw"><table><thead><tr><th>Option</th><th>The case for it</th></tr></thead><tbody><tr><td><strong>The model writes</strong> (my recommendation)</td><td>The rule is met; the contrast set, whose loops are of the kind our record names in the large code (a minimum with its index), shows the same direction with a third of the calls; fewer profiles where one is expensive. The main comparison stays as it is, and the experiment on who writes already holds the same 18 loops in this setup, so nothing has to be run again.</td></tr><tr><td><strong>DiscoPoP writes</strong></td><td>One setup for the whole thesis — the one of every finished experiment and of the thesis's stated idea. The lead of the other setup on the 18 loops is not established, and the contrast set was chosen to show a contrast.</td></tr><tr><td><strong>Both, on the large code only</strong></td><td>It would carry the comparison to a real application for the price of one more setup there. It can be decided with that experiment's design; I would propose it there if its cost allows.</td></tr></tbody></table></div>
-<h2>How I read your answer</h2>
-<p>“ok” means: no depth trials (option A), and the model writes the pragmas in the experiments that remain. For anything else — a depth run, DiscoPoP writing, or both on the large code — please say so. No model is called for the depth experiment before you have answered.</p><p><strong>Your answer, 13 Oct: “ok”.</strong> No model was called for this experiment.</p>
+<h2>How I read your answer (14 Oct)</h2>
+<p class="ask"><strong>“ok” means:</strong> the depth experiment starts, with DiscoPoP writing the pragmas as registered — first each new setting once on one loop, to see that a second round really happens (a few dollars); then the three new loops (45 trials) and the 18 loops (108 trials), about $110 to $250 together. The two loops that cannot be won are <em>not</em> run. The fast-refresh trials do <em>not</em> start — their benchmark is not ready; that is on the other page.</p>
+<p>Anything else — only the new loops, the two unwinnable loops as well, more loops built for the purpose, a different count for <code>s221</code> — please say so. Until you answer, no model is called.</p>
+<p class="lede">Earlier on this page: your “ok” of 13 Oct (no depth trials) and your “run both” later that night, which reversed it; then your remark that depth needs its own benchmark, which is what the first card answers.</p>
 </main>
