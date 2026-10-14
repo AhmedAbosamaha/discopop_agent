@@ -98,7 +98,7 @@ th{font-weight:600;color:var(--mute);font-size:12.5px;letter-spacing:.04em;text-
 ul,ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;max-width:68ch}
 </style>
 <main>""")
-P.append("""<header><p class="k">Put to the author 13 Oct 2026 · depth trials reopened 13 Oct, late (the author: “run both”) · the benchmark is built and checked (14 Oct): three loops · your “ok” (14 Oct, 07:45 UTC) · the short test run found that the agent’s last check drops two rewrites in a row — the trials are held · the model writes the pragmas in the later experiments</p>
+P.append("""<header><p class="k">Put to the author 13 Oct 2026 · depth trials reopened 13 Oct, late (the author: “run both”) · the benchmark is built and checked (14 Oct): three loops · your “ok” (14 Oct, 07:45 UTC) · the short test run found that the agent’s last check drops a second rewrite built on the first — the trials are held · the model writes the pragmas in the later experiments</p>
 <h1>The depth experiment</h1>
 <p class="lede">When the agent keeps a rewrite, it profiles the program again and may find new regions. So far, in every experiment, such a region gets DiscoPoP's pragma at most and is never rewritten a second time. “Depth 1” would let the model be asked about it once more, “depth 2” twice. The experiment was planned to show whether that gains anything and what it costs.</p></header>""")
 
@@ -166,12 +166,13 @@ P.append("<p>After your “ok” I wrote the design down before any trial and ra
 P.append("<p><strong>Then the agent’s last check threw everything away, and both runs ended with the program unchanged.</strong> "
          "That check keeps a rewrite only if a final pragma lands on a loop that rewrite itself produced. The second rewrite "
          "reshapes those loops, so the pragmas land on <em>its</em> loops; the first rewrite then looks useless and is removed, and "
-         "the second, built on it, can no longer be applied. So the agent as built cannot deliver two rewrites in a row — "
-         "which is what this experiment is about.</p>")
+         "the second, built on it, can no longer be applied. So the agent as built cannot deliver a second rewrite that reshapes "
+         "what the first one produced — and that is what the second round does here, and on the 18 loops too, where it is "
+         "asked about the same repetition loop again.</p>")
 P.append("<p>It is not new: at depth 0 it happened where a loop sent back to the model was rewritten on top of a kept rewrite — "
          "4 trials of the main comparison on <code>s331</code> (since replaced) and a few in older runs; <strong>never in the 90 "
-         "trials of the pragma experiment</strong>, which are the depth-0 comparison for the 18 loops, so nothing reported so far "
-         "changes.</p>")
+         "trials of the pragma experiment</strong> (the last check removed nothing in any of them), which are the depth-0 "
+         "comparison for the 18 loops, so nothing reported so far changes.</p>")
 P.append(table(["Your choice", "What happens", "Cost"], [
     ["<strong>Repair the check</strong> (recommended)",
      "A rewrite stays when a later kept rewrite was built on it. Checked without a model first (the agent’s tests; the two "
