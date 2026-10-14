@@ -445,7 +445,7 @@
    "kind": "experiment",
    "status": "running",
    "question": "After the model has rewritten a loop, the agent profiles the whole program again; the fast refresh compiles only and carries the last run's dependences over, so the code the model just wrote has no measurement. Does that change whether the agent keeps a rewrite (H6's second half), does the model's own report of the dependences of its new lines repair it (H7), is adding dependences safe where deleting them is not (H7b) — and how many seconds does one refresh save where the run is long? In four steps, the cheap ones first (the author, 12 Oct): (1) the saved rewrites of the model replayed without a model, (2) the model's report on the rewrites that differ, (3) the time on programs with a long run, (4) live trials only if steps 1 and 2 say the refresh keeps DiscoPoP's verdicts. (RQ6, RQ7, C3)",
-   "headline": "Open again (13 Oct, late — the author: \"run both\", after it had been closed the same evening): steps 1 to 3 are read out, and the live trials (step 4) are run after all, on the 18 loops as the reference and on a benchmark whose profiling run is long — the only place a refresh can save time (his rule of 26 Sep); that benchmark is being fixed without a model, and nothing is launched before he has seen it with its cost. What steps 1 to 3 say: the fast refresh changes whether the agent keeps a rewrite on 58 of 599 saved rewrites and throws away 22 wins, saves nothing on the 18 loops and 1.5 to 7.5 % of an agent trial where the profiling run is long; the model's own report of the dependences, as the agent uses it, does not rescue it; and that deleting dependences is unsafe where adding them is not could not be measured. The model is not asked on all 599 rewrites and the agent is unchanged (his decisions of 13 Oct, which stand). In detail — Step 1 is read out (12 Oct; `e4_replay`, no model, 33 minutes on the server): 599 of the 601 pragma-free rewrites that passed the checks in the trials of E1-v6, E3 and E3b were judged after a fast refresh, after a full re-profile and after a second full re-profile as the control. The fast refresh changes whether the agent keeps the rewrite in 58 of 599, the control in 0 — the registered test E4-1: p = 0.000326, at most 0.0176 in the campaign's family of 54: H6's second half is refuted. 22 rewrites are kept only after the full re-profile — 20 of them loops the model turned into a reduction, for which the fast refresh makes DiscoPoP write `firstprivate` of the accumulator, a directive the agent's clause check refuses — and 13 of the 22 are rewrites their trial shipped; 2 are kept only after the fast refresh; 34 are kept after both with other directives, 27 of those differing only in a redundant `shared` clause (counted as the same, not registered: 31 differ, p = 0.000977, bound 0.0527). DiscoPoP's verdict on the rewritten lines differs in 417 of 599 (control 0). No time is saved on these loops: one refresh 1.54 s against 1.75 s, and with the gate's checks on the extra directives 1,758 s against 1,730 s in total. Step 3 is read out (12 Oct; `e4_refresh_time`, no model): where the profiling run is long one fast refresh saves 36 s on `hotspot` (33 % of a full re-profile; the explorer's own time there moves between 52 and 129 s), 27 s on `is` (66 %), 21.5 s on `md` (63 %) and 4.2 s on `correlation` (54 %) — 1.5 to 7.5 % of an agent trial on those programs — and on an unchanged program its Do-All and reduction loops are those of a full profile. Step 2 is prepared without a model: a hand-written correct report gives DiscoPoP the reduction back on three of the lost rewrites (a minimum, a sum, a maximum), and the dry pass `e4_report_dry` shows a run over all 599 rewrites sends 599 report requests while the deletion review has something to ask on 21 rewrites only, none among the 58 that differ; the fast refresh repeats itself on 599 of 599. Step 2 is read out (13 Oct; `e4_report_a`, the author's \"ok\" for the smaller set; 136 Haiku calls, $8.53): the model's report gives back 20 of the 22 lost wins (all 20 reductions) and removes both keeps the full profile does not make, but changes 11 of the 58 drawn rewrites that the fast refresh had right — about 102 of the 541 (at least 60 at 95 %), more than the 28 it repairs: H7 is not refuted on the selected set and fails on the population; in all of the damaged rewrites the reply calls the loop independent — the agent places a reported dependence without its loop. The deletion changed no decision on its 21 rewrites: H7b is refuted as registered (0 against 0). A what-if on the saved replies (`e4_report_a_placement`, no model): placed again as built they give the recorded decisions on 116 of 116; with claims left out where they lie inside a loop the reply calls independent, the 5 wins the report cost come back, 3 of the 20 regained reductions are lost again and one keep the full profile does not make returns — not a repair.",
+   "headline": "Open again (13 Oct, late — the author: \"run both\", after it had been closed the same evening): steps 1 to 3 are read out, and the live trials (step 4) are run after all, on the 18 loops as the reference and on a benchmark whose profiling run is long — the only place a refresh can save time (his rule of 26 Sep); that benchmark is being fixed without a model, and nothing is launched before he has seen it with its cost. What steps 1 to 3 say: the fast refresh changes whether the agent keeps a rewrite on 58 of 599 saved rewrites and throws away 22 wins, saves nothing on the 18 loops and 1.5 to 7.5 % of an agent trial where the profiling run is long; the model's own report of the dependences, as the agent uses it, does not rescue it; and that deleting dependences is unsafe where adding them is not could not be measured. The model is not asked on all 599 rewrites and the agent is unchanged (his decisions of 13 Oct, which stand). In detail — Step 1 is read out (12 Oct; `e4_replay`, no model, 33 minutes on the server): 599 of the 601 pragma-free rewrites that passed the checks in the trials of E1-v6, E3 and E3b were judged after a fast refresh, after a full re-profile and after a second full re-profile as the control. The fast refresh changes whether the agent keeps the rewrite in 58 of 599, the control in 0 — the registered test E4-1: p = 0.000326, at most 0.0176 in the campaign's family of 54: H6's second half is refuted. 22 rewrites are kept only after the full re-profile — 20 of them loops the model turned into a reduction, for which the fast refresh makes DiscoPoP write `firstprivate` of the accumulator, a directive the agent's clause check refuses — and 13 of the 22 are rewrites their trial shipped; 2 are kept only after the fast refresh; 34 are kept after both with other directives, 27 of those differing only in a redundant `shared` clause (counted as the same, not registered: 31 differ, p = 0.000977, bound 0.0527). DiscoPoP's verdict on the rewritten lines differs in 417 of 599 (control 0). No time is saved on these loops: one refresh 1.54 s against 1.75 s, and with the gate's checks on the extra directives 1,758 s against 1,730 s in total. Step 3 is read out (12 Oct; `e4_refresh_time`, no model): where the profiling run is long one fast refresh saves 36 s on `hotspot` (33 % of a full re-profile; the explorer's own time there moves between 52 and 129 s), 27 s on `is` (66 %), 21.5 s on `md` (63 %) and 4.2 s on `correlation` (54 %) — 1.5 to 7.5 % of an agent trial on those programs — and on an unchanged program its Do-All and reduction loops are those of a full profile. Step 2 is prepared without a model: a hand-written correct report gives DiscoPoP the reduction back on three of the lost rewrites (a minimum, a sum, a maximum), and the dry pass `e4_report_dry` shows a run over all 599 rewrites sends 599 report requests while the deletion review has something to ask on 21 rewrites only, none among the 58 that differ; the fast refresh repeats itself on 599 of 599. Step 2 is read out (13 Oct; `e4_report_a`, the author's \"ok\" for the smaller set; 136 Haiku calls, $8.53): the model's report gives back 20 of the 22 lost wins (all 20 reductions) and removes both keeps the full profile does not make, but changes 11 of the 58 drawn rewrites that the fast refresh had right — about 102 of the 541 (at least 60 at 95 %), more than the 28 it repairs: H7 is not refuted on the selected set and fails on the population; in all of the damaged rewrites the reply calls the loop independent — the agent places a reported dependence without its loop. The deletion changed no decision on its 21 rewrites: H7b is refuted as registered (0 against 0). A what-if on the saved replies (`e4_report_a_placement`, no model): placed again as built they give the recorded decisions on 116 of 116; with claims left out where they lie inside a loop the reply calls independent, the 5 wins the report cost come back, 3 of the 20 regained reductions are lost again and one keep the full profile does not make returns — not a repair. Screen (14 Oct, no model): the instrumented run passes a minute for EP at NPB class B (231 s of a 234 s profile) and CG at class A (153 s of 249 s); IS and LULESH do not pass; whether the model is ever asked on EP and CG, and the form of their package, are open — the set is not complete.",
    "preregistered": "THESIS_EXPERIMENTS §6: \"Plan, E4 design proposal\" (10 Oct), \"Decision (author), B24 and E4\" (12 Oct: the four steps, the three sentences, the separate request), \"Plan, E4 step 1 pre-registration\" (12 Oct: the population, the two units, the control, the test E4-1, expectations, limits), \"Plan, E4 step 3 pre-registration\" (12 Oct), \"Decision (author), E4 step 2\" (12 Oct: the smaller set, the two sentences), \"Plan, E4 step 2 pre-registration\" (12 Oct: the 116 and the 21 rewrites, the units, how H7 and H7b are read, no test), \"Plan, E4 step 2 what-if\" (13 Oct, written after the read-out), the decision of 13 Oct (\"ok go ahead\": no live trials, no run over all 599, the agent unchanged) and its reversal for the live trials the same night (\"run both\"; then \"ok\": held until a benchmark with a long profiling run is fixed)"
   },
   {
@@ -455,7 +455,7 @@
    "kind": "experiment",
    "status": "running",
    "question": "After the agent keeps a rewrite it profiles the program again and may find new regions. At depth 0 — every experiment so far — such a region gets DiscoPoP's pragma at most, never a second rewrite; at depth 1 the model may be asked about it once more. Does a second level parallelize regions the first level's rewrites exposed, and what does it cost in calls, profiles and the speed of the result? (RQ8, H8; C1, C3)",
-   "headline": "Open again (13 Oct, late — the author: \"run both\", after it had been closed without a trial the same evening): the depth trials are run after all, on the 18 loops as the reference and on a benchmark whose expert versions need two dependent rewrites, and three for depth 2 (his rule of 26 Sep); that benchmark is being built and checked without a model, and nothing is launched before he has seen it with its cost. What is in hand: Read from the archive instead (`preflight/depth_from_the_archive.md`, no model): at depth 0 the agent already lists what a deeper level would send to the model. On the 18 loops (the corrected table of E3), where DiscoPoP writes the pragma a deeper level would have asked the model in 80 of the 80 trials with an accepted rewrite — about the repetition loop, which the model had already been asked about in all 80, and about the function around it; about any other loop in 4 trials, on 2 loops (`s252`, `s331`). Where the model writes the pragma: in 20 of 84, about those two regions only. Two properties of depth as built, read in the code and not shown by a run: with a deeper level to come the first level no longer sends a rewrite back as not faster (at depth 0 that happens in 38 of 90 trials, 25 of which end FASTER), and a second rewrite can be credited with the first one's gain. The trials run on the agent as built, in the setup in which DiscoPoP writes the pragma; both properties are stated as properties of what is measured. Decided on 13 Oct and standing: the model writes the pragmas in E9, E6 and E11.",
+   "headline": "Open again (13 Oct, the author: \"run both\"), the launch held until a benchmark that can show depth is built (his rule of 26 Sep). Built and checked without a model (14 Oct): of six TSVC candidates in the clean form three pass the inclusion rule — s2251, s221, s257, each a chain of two dependent rewrites; s233 is parallel for DiscoPoP alone; s123's first step and no step of s2111 is confirmed by DiscoPoP (candidate B27: a dependence only the outer loop carries is held against the inner loop). The set and its cost go to the author before any model call. The read-out of the archive stands: at depth 0 a deeper level would re-ask in 80 of 80 trials and find a new loop in 4.",
    "preregistered": "THESIS_EXPERIMENTS: H8 and the arms `full_depth1`, `full_depth2` (14 Sep, plan v5); the drop condition (§5: a smoke must show depth 1 ever triggers); §6 \"Plan, E8 design proposal\" (13 Oct). The kinds of region in the archive read-out were defined after the logs had been read. First closed without a trial by the author's \"ok\" of 13 Oct, then reopened by him the same night (\"run both\"; the benchmark rule of 26 Sep applied; §6)."
   },
   {
@@ -465,7 +465,7 @@
    "kind": "experiment",
    "status": "pre-flight",
    "question": "Does the loop — profile, rank, restructure, check, annotate, verify — still work on a real application, where one profile takes tens of gigabytes and the program has dozens of loops: what does the agent reach beside DiscoPoP alone, the model alone and LLNL's own OpenMP version? (RQ3, C1; H4)",
-   "headline": "Pre-flight (13–14 Oct, no model): the September package could not be profiled through the run path (a header without an include guard) — repaired through its generator; on the repaired package LULESH profiles (compile 2.6 s, instrumented run 7.2 s, explorer 312 s; 59 Do-All patterns), and the trial then stopped on a defect of the launcher (a compile flag in a form the agent's parser rejects) — repaired; the third smoke is registered.",
+   "headline": "Pre-flight (13–14 Oct, no model): the September package could not be profiled through the run path — repaired through its generator (an include guard); a defect of the launcher (a compile flag in a form the agent's parser rejects) — repaired; since then the whole path works on LULESH: one profile costs 322 s, 312 s of them the explorer, with 59 Do-All patterns. No class yet: the size at which the serial run reaches a second (T0.1) and three draws are next.",
    "preregistered": "THESIS_EXPERIMENTS §5k and §5r (the program and why), §5s (arms and the pre-flight owed), §6 13 Oct (\"the experiments that remain share one preparation without a model\"). Nothing with a model is designed yet."
   }
  ],
@@ -2682,31 +2682,31 @@
    "group": "E8",
    "section": "preflight",
    "status": "valid",
-   "role": "The depth set, T0.11 draw a, server, no model: arm discopop_capability on the five tsvc_c5 packages — what DiscoPoP alone keeps (clause R3)"
+   "role": "The depth set, T0.11 draw a, server, no model: arm discopop_capability on the five tsvc_c5 packages — what DiscoPoP alone keeps (clause R3) — 14 Oct 01:21 UTC at `335c0bd84`: s2251, s221, s123, s257 no-change; s233 FASTER"
   },
   "e8_c5_classes_b": {
    "group": "E8",
    "section": "preflight",
    "status": "valid",
-   "role": "The depth set, T0.11 draw b, server, no model: arm discopop_capability on the five tsvc_c5 packages"
+   "role": "The depth set, T0.11 draw b, server, no model: arm discopop_capability on the five tsvc_c5 packages — 14 Oct 01:21 UTC at `335c0bd84`: s2251, s221, s123, s257 no-change; s233 FASTER"
   },
   "e8_c5_classes_c": {
    "group": "E8",
    "section": "preflight",
    "status": "valid",
-   "role": "The depth set, T0.11 draw c, server, no model: arm discopop_capability on the five tsvc_c5 packages"
+   "role": "The depth set, T0.11 draw c, server, no model: arm discopop_capability on the five tsvc_c5 packages — 14 Oct 01:21 UTC at `335c0bd84`: s2251, s221, s123, s257 no-change; s233 FASTER"
   },
   "e8_c5_refs": {
    "group": "E8",
    "section": "preflight",
    "status": "valid",
-   "role": "The depth set, the references through the harness (T0.14's method), server, no model: verify-source on each loop's reference and on its step-1 form, 6 and 12 threads (clause R4)"
+   "role": "The depth set, the references through the harness (T0.14's method), server, no model: verify-source on each loop's reference and on its step-1 form, 6 and 12 threads (clause R4) — 14 Oct 01:32–01:38 UTC at `335c0bd84`: every form correct, every final reference FASTER"
   },
   "e8_c5_steps": {
    "group": "E8",
    "section": "preflight",
    "status": "valid",
-   "role": "The depth set, the step check (T0.13's method, clause R5), server, no model: default_arm_ceiling.py with each loop's file replaced by the original, by the form after step 1 and by the final form, the pragmas removed, the speed judged"
+   "role": "The depth set, the step check (T0.13's method, clause R5), server, no model: default_arm_ceiling.py with each loop's file replaced by the original, by the form after step 1 and by the final form, the pragmas removed, the speed judged — 14 Oct 01:38–01:56 UTC at `335c0bd84`: s2251, s221, s257 keep a pragma after step 1 and on the final form; s123's step-1 form gets no pattern; s233's original already keeps one"
   },
   "e6_lulesh_smoke2": {
    "group": "E6",
@@ -2718,13 +2718,13 @@
    "group": "E4",
    "section": "preflight",
    "status": "valid",
-   "role": "The fast refresh's benchmark, a first screen (server, no model): `tools/npbc_probe.py` on RepoOMP's EP, IS and CG at class W, then class A, then class B for EP and IS (parts `W/<K>`, `A/<K>`, `B/<K>`), at most an hour per step — at which class the instrumented run exceeds a minute"
+   "role": "The fast refresh's benchmark, a first screen (server, no model): `tools/npbc_probe.py` on RepoOMP's EP, IS and CG at class W, then class A, then class B for EP and IS (parts `W/<K>`, `A/<K>`, `B/<K>`), at most an hour per step — at which class the instrumented run exceeds a minute — 14 Oct 01:32–01:42 UTC at `335c0bd84`: the instrumented run exceeds a minute for EP at class B (231 s) and CG at class A (153 s); IS 47 s at class A, a crash at class B"
   },
   "e6_lulesh_smoke3": {
    "group": "E6",
    "section": "preflight",
    "status": "valid",
-   "role": "E6 pre-flight, the smoke a third time (server, no model), after the launcher's flag form was repaired: ONE trial of the arm `discopop_capability` on `llnl/lulesh`, `--verify-size STANDARD` — what DiscoPoP alone reaches on LULESH, how long the trial takes"
+   "role": "E6 pre-flight, the smoke a third time (server, no model), after the launcher's flag form was repaired: ONE trial of the arm `discopop_capability` on `llnl/lulesh`, `--verify-size STANDARD` — what DiscoPoP alone reaches on LULESH, how long the trial takes — 14 Oct 01:22–01:31 UTC at `335c0bd84`: the path works; parallel-not-faster (0.17× / 0.09×) at a verification size of 0.068 s serial — not a class measurement"
   },
   "e8_c5_sizes_2d": {
    "group": "E8",
@@ -2741,38 +2741,38 @@
   "e8_c5_s2111_a": {
    "group": "E8",
    "section": "preflight",
-   "status": "registered",
-   "role": "The depth set's wavefront loop, T0.11 draw a, server, no model: arm discopop_capability on tsvc_c5/s2111"
+   "status": "valid",
+   "role": "The depth set's wavefront loop, T0.11 draw a, server, no model: arm discopop_capability on tsvc_c5/s2111 — 14 Oct 02:01 UTC: no-change"
   },
   "e8_c5_s2111_b": {
    "group": "E8",
    "section": "preflight",
-   "status": "registered",
-   "role": "The depth set's wavefront loop, T0.11 draw b, server, no model: arm discopop_capability on tsvc_c5/s2111"
+   "status": "valid",
+   "role": "The depth set's wavefront loop, T0.11 draw b, server, no model: arm discopop_capability on tsvc_c5/s2111 — 14 Oct 02:01 UTC: no-change"
   },
   "e8_c5_s2111_c": {
    "group": "E8",
    "section": "preflight",
-   "status": "registered",
-   "role": "The depth set's wavefront loop, T0.11 draw c, server, no model: arm discopop_capability on tsvc_c5/s2111"
+   "status": "valid",
+   "role": "The depth set's wavefront loop, T0.11 draw c, server, no model: arm discopop_capability on tsvc_c5/s2111 — 14 Oct 02:01 UTC: no-change"
   },
   "e8_c5_s2111_refs": {
    "group": "E8",
    "section": "preflight",
-   "status": "registered",
-   "role": "The depth set's wavefront loop, its reference and its step-1 form through the harness (verify-source, 6 and 12 threads), server, no model"
+   "status": "valid",
+   "role": "The depth set's wavefront loop, its reference and its step-1 form through the harness (verify-source, 6 and 12 threads), server, no model — 14 Oct 02:03 UTC: the reference FASTER 5.88× / 6.99×, both forms exact"
   },
   "e8_c5_s2111_steps": {
    "group": "E8",
    "section": "preflight",
-   "status": "registered",
-   "role": "The depth set's wavefront loop, the step check (default_arm_ceiling.py on the original, the step-1 form and the final form, pragmas removed, the speed judged), server, no model"
+   "status": "valid",
+   "role": "The depth set's wavefront loop, the step check (default_arm_ceiling.py on the original, the step-1 form and the final form, pragmas removed, the speed judged), server, no model — 14 Oct 02:04 UTC: no pattern on any of the three forms"
   },
   "e8_c4_s341_ceiling": {
    "group": "E8",
    "section": "preflight",
-   "status": "registered",
-   "role": "The 18 loops' pack loop under candidate B27 (server, no model): default_arm_ceiling.py on the reference of tsvc_c4/s341 with its pragmas removed — does the pipeline keep a pragma on the loop that writes through the computed positions"
+   "status": "valid",
+   "role": "The 18 loops' pack loop under candidate B27 (server, no model): default_arm_ceiling.py on the reference of tsvc_c4/s341 with its pragmas removed — does the pipeline keep a pragma on the loop that writes through the computed positions — 14 Oct 02:05 UTC: PROFILE_ERROR, the check could not run: the reference calls the OpenMP runtime and does not link with its pragmas removed"
   }
  },
  "analysis": {

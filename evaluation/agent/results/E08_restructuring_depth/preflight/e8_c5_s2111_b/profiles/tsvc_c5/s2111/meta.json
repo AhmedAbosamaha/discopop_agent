@@ -1,0 +1,47 @@
+{
+  "suite": "tsvc_c5",
+  "kernel": "s2111",
+  "source": "benchmarks/TSVC_2/src/tsvc.c",
+  "category": "wavefronts, it will make jump in data access",
+  "file": "s2111.c",
+  "language": "c",
+  "layout": "project",
+  "project": {
+    "units": [
+      "s2111.c",
+      "main.c"
+    ],
+    "include_dirs": [
+      "."
+    ],
+    "editable": [
+      "s2111.c"
+    ]
+  },
+  "restructuring_class": "restructure",
+  "transformation": "the nest cut into tiles, then the tiles of an anti-diagonal of tiles in parallel",
+  "why": "aa[j][i] needs its left and its upper neighbour, so the rows and the columns both run in order; two tiles on one anti-diagonal of tiles need nothing of each other",
+  "reference_solution": "agent/reference_solutions/tsvc_c5/s2111.c",
+  "reference_steps": [
+    "agent/reference_solutions/tsvc_c5/s2111.step1.c"
+  ],
+  "exclude_functions": [
+    "main",
+    "dummy"
+  ],
+  "harness": "tsvc_c5/s2111.h",
+  "harness_sha256": "500a8e80135b4d18c745a52104747de53ebd78e276e55fe2df78d01a3ec4220b",
+  "hot_loop": {
+    "entry": "kernel_s2111",
+    "function": "kernel_s2111",
+    "line": 6,
+    "writes": [
+      "aa"
+    ]
+  },
+  "repetitions_proven": true,
+  "agent_dataset": "SMALL",
+  "generator_version": 8,
+  "inputs_sha256": "456dd573b84b30e6f32c943bb559d80374eec67177de48223e95124a8c3fc627",
+  "output_sha256": "a43420a8951d0db190c0a2de3be086cc09c26bd9b8916386092d0209592d35d0"
+}
