@@ -1,0 +1,29 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6_lulesh_smoke3/profiles/llnl/lulesh/lulesh.cc	2026-10-14 00:37:55.926503078 +0000
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6_lulesh_smoke3/profiles/llnl/lulesh/lulesh.cc.discopop_patch_generator.temp	2026-10-14 01:26:59.355859370 +0000
+@@ -2426,6 +2426,10 @@
+ 
+    /* calculate nodal forces, accelerations, velocities, positions, with
+     * applied boundary conditions and slide surface considerations */
++   #pragma omp parallel
++   #pragma omp single
++   {
++   #pragma omp task
+    LagrangeNodal(domain);
+ 
+ 
+@@ -2455,6 +2459,7 @@
+ #endif
+ #endif   
+ 
++   #pragma omp task
+    CalcTimeConstraintsForElems(domain);
+ 
+ #if _ALWAYS_FALSE_CHECK_FOR_MPI   
+@@ -2463,6 +2468,7 @@
+ #endif
+ #endif   
+ }
++}
+ 
+ 
+ /******************************************/

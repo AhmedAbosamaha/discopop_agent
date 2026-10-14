@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6_lulesh_smoke3/benchmarks/llnl/lulesh/discopop_capability/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6_lulesh_smoke3/benchmarks/llnl/lulesh/discopop_capability/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -2092,6 +2092,7 @@
+    Real_t *pbvc = Allocate<Real_t>(numElemReg) ;
+  
+    //loop to add load imbalance based on region number 
++   #pragma omp parallel for firstprivate(e_cut,eosvmin,rep,emin,eosvmax,q_cut,p_cut,rho0,numElemReg,pmin) shared(vnewc,p_old,regElemList,work,pbvc,e_old,p_new,bvc,compression,e_new,qq_old,compHalfStep,q_old,delvc,ql_old,domain,q_new) 
+    for(Int_t j = 0; j < rep; j++) {
+       /* compress data, minimal set */
+       {

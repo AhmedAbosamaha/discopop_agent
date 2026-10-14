@@ -1,0 +1,17 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6_lulesh_smoke3/profiles/llnl/lulesh/lulesh.cc	2026-10-14 00:37:55.926503078 +0000
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6_lulesh_smoke3/profiles/llnl/lulesh/lulesh.cc.discopop_patch_generator.temp	2026-10-14 01:27:02.743875965 +0000
+@@ -877,8 +877,14 @@
+ {
+    Index_t numElem = domain.numElem() ;
+    Index_t numElem8 = numElem * 8 ;
++   #pragma omp parallel
++   #pragma omp single
++   {
++   #pragma omp task
+    Real_t *dvdx = Allocate<Real_t>(numElem8) ;
++   #pragma omp task
+    Real_t *dvdy = Allocate<Real_t>(numElem8) ;
++   }
+    Real_t *dvdz = Allocate<Real_t>(numElem8) ;
+    Real_t *x8n  = Allocate<Real_t>(numElem8) ;
+    Real_t *y8n  = Allocate<Real_t>(numElem8) ;

@@ -1,0 +1,48 @@
+{
+  "suite": "tsvc_c5",
+  "kernel": "s123",
+  "source": "benchmarks/TSVC_2/src/tsvc.c",
+  "category": "induction variable recognition / induction variable under an if / not vectorizable, the condition cannot be speculated",
+  "file": "s123.c",
+  "language": "c",
+  "layout": "project",
+  "project": {
+    "units": [
+      "s123.c",
+      "main.c"
+    ],
+    "include_dirs": [
+      "."
+    ],
+    "editable": [
+      "s123.c"
+    ]
+  },
+  "restructuring_class": "restructure",
+  "transformation": "the write positions by a loop of their own, then the positions in blocks",
+  "why": "j advances by one or two per iteration, by the sign of c[i]: the position of iteration i is i plus the number of positive c before it",
+  "reference_solution": "agent/reference_solutions/tsvc_c5/s123.c",
+  "reference_steps": [
+    "agent/reference_solutions/tsvc_c5/s123.step1.c"
+  ],
+  "exclude_functions": [
+    "main",
+    "dummy"
+  ],
+  "harness": "tsvc_c5/s123.h",
+  "harness_sha256": "21787e663e4f056461761bb4ff7a68a476853c564c6413d047f223ea1bd6551c",
+  "hot_loop": {
+    "entry": "kernel_s123",
+    "function": "kernel_s123",
+    "line": 8,
+    "writes": [
+      "a",
+      "j"
+    ]
+  },
+  "repetitions_proven": true,
+  "agent_dataset": "SMALL",
+  "generator_version": 8,
+  "inputs_sha256": "456dd573b84b30e6f32c943bb559d80374eec67177de48223e95124a8c3fc627",
+  "output_sha256": "d13c5fb682b2e04a7e470c3d0f865f97d1415adbb33abecb40e8497ad8ef64c5"
+}

@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6_lulesh_smoke3/benchmarks/llnl/lulesh/discopop_capability/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6_lulesh_smoke3/benchmarks/llnl/lulesh/discopop_capability/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -528,6 +528,7 @@
+                                  fx_local, fy_local, fz_local ) ;
+ 
+     // copy nodal force contributions to global force arrray.
++    #pragma omp parallel for shared(fz_local,fy_local,elemToNode,fx_local,domain) 
+     for( Index_t lnode=0 ; lnode<8 ; ++lnode ) {
+        Index_t gnode = elemToNode[lnode];
+        domain.fx(gnode) += fx_local[lnode];

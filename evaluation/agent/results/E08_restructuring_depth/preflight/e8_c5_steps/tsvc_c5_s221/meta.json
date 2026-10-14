@@ -1,0 +1,48 @@
+{
+  "suite": "tsvc_c5",
+  "kernel": "s221",
+  "source": "benchmarks/TSVC_2/src/tsvc.c",
+  "category": "loop distribution / loop that is partially recursive",
+  "file": "s221.c",
+  "language": "c",
+  "layout": "project",
+  "project": {
+    "units": [
+      "s221.c",
+      "main.c"
+    ],
+    "include_dirs": [
+      "."
+    ],
+    "editable": [
+      "s221.c"
+    ]
+  },
+  "restructuring_class": "restructure",
+  "transformation": "distribution, then the running sum in blocks",
+  "why": "a[i] is independent; b[i] = b[i-1] + \u2026 is a running sum of what the first statement produced",
+  "reference_solution": "agent/reference_solutions/tsvc_c5/s221.c",
+  "reference_steps": [
+    "agent/reference_solutions/tsvc_c5/s221.step1.c"
+  ],
+  "exclude_functions": [
+    "main",
+    "dummy"
+  ],
+  "harness": "tsvc_c5/s221.h",
+  "harness_sha256": "f57fe5c6ed2bf9bd1c706c62c4177a9ca882749180a207b4c8d818370e48d2f8",
+  "hot_loop": {
+    "entry": "kernel_s221",
+    "function": "kernel_s221",
+    "line": 6,
+    "writes": [
+      "a",
+      "b"
+    ]
+  },
+  "repetitions_proven": true,
+  "agent_dataset": "SMALL",
+  "generator_version": 8,
+  "inputs_sha256": "456dd573b84b30e6f32c943bb559d80374eec67177de48223e95124a8c3fc627",
+  "output_sha256": "8c0039fc4460a97f9a761c4a33291ceb66b09f4714fc7ce5f672898e6b2a1358"
+}

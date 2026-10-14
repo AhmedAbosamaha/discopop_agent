@@ -1,0 +1,91 @@
+{
+  "suite": "llnl",
+  "kernel": "lulesh",
+  "source": "benchmarks/LULESH/LULESH_SERIAL_PATH/lulesh.cc",
+  "category": "hydrodynamics-proxy-application",
+  "language": "cpp",
+  "exclude_functions": [
+    "main",
+    "pb_lulesh_perturb",
+    "pb_emit",
+    "pb_report",
+    "pb_seed",
+    "pb_uniform",
+    "pb_timer_start",
+    "pb_timer_stop",
+    "ParseCommandLineOptions",
+    "PrintCommandLineOptions",
+    "ParseError",
+    "StrToInt",
+    "VerifyAndWriteFinalOutput",
+    "DumpToVisit",
+    "DumpDomainToVisit",
+    "DumpMultiblockObjects",
+    "InitMeshDecomp",
+    "Domain",
+    "BuildMesh",
+    "SetupCommBuffers",
+    "CreateRegionIndexSets",
+    "SetupSymmetryPlanes",
+    "SetupElementConnectivities",
+    "SetupBoundaryConditions",
+    "AllocateElemPersistent",
+    "AllocateNodePersistent",
+    "AllocateGradients",
+    "DeallocateGradients",
+    "AllocateStrains",
+    "DeallocateStrains"
+  ],
+  "agent_dataset": "SMALL",
+  "generator_version": 1,
+  "sizes": {
+    "MINI": {
+      "PB_NX": "5",
+      "PB_ITS": "10"
+    },
+    "SMALL": {
+      "PB_NX": "8",
+      "PB_ITS": "20"
+    },
+    "STANDARD": {
+      "PB_NX": "15",
+      "PB_ITS": "50"
+    },
+    "LARGE": {
+      "PB_NX": "30",
+      "PB_ITS": "100"
+    },
+    "EXTRALARGE": {
+      "PB_NX": "45",
+      "PB_ITS": "200"
+    }
+  },
+  "note": "Sedov blast on an unstructured hex mesh; the time-step loop is the timed region",
+  "inputs_sha256": "7246f2dfd05e3321987336f38976b72c1d4daf4001ce86767f66630fffa9dc25",
+  "file": "lulesh.cc",
+  "layout": "project",
+  "project": {
+    "units": [
+      "lulesh.cc",
+      "pb_harness.cpp",
+      "lulesh-init.cc",
+      "lulesh-util.cc",
+      "lulesh-viz.cc",
+      "lulesh-comm.cc"
+    ],
+    "include_dirs": [
+      "."
+    ],
+    "cflags": [
+      "-DUSE_MPI=0"
+    ]
+  },
+  "removed": [
+    "main renamed to lulesh_main; its report (elapsed time, FOM, progress) goes to stderr",
+    "the command-line parser is not called: -s and -i come from the dataset guard",
+    "the Domain is deleted by the driver after the digest instead of at the end of lulesh_main",
+    "lulesh.h gains `#pragma once` as its first line: the profile step compiles the units as one",
+    "OpenMP: none left to remove \u2014 the source is the validated serial path (benchmarks/LULESH/LULESH_SERIAL_PATH/SERIAL_PATH.json lists what that step removed)"
+  ],
+  "output_sha256": "58a2eaeaf751a96e1d2ec163ac9c985b9e937f45663a4c999ff3b4073958d125"
+}

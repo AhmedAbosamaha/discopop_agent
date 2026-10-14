@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6_lulesh_smoke3/benchmarks/llnl/lulesh/discopop_capability/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6_lulesh_smoke3/benchmarks/llnl/lulesh/discopop_capability/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -2097,6 +2097,7 @@
+    for(Int_t j = 0; j < rep; j++) {
+       /* compress data, minimal set */
+       {
++         #pragma omp parallel for firstprivate(numElemReg) private(pbvc,q_new,p_new,bvc) shared(qq_old,q_old,regElemList,p_old,delvc,ql_old,domain,e_old) 
+          for (Index_t i=0; i<numElemReg; ++i) {
+             Index_t ielem = regElemList[i];
+             e_old[i] = domain.e(ielem) ;

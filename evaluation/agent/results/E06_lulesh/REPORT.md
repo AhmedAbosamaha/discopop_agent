@@ -14,7 +14,7 @@ Pre-flight (13–14 Oct, no model): the September package could not be profiled 
 
 ## What is in this folder
 
-- [`preflight/`](preflight/) — 2 smoke run(s) before the launch
+- [`preflight/`](preflight/) — 3 smoke run(s) before the launch
 
 ## Runs
 
@@ -22,7 +22,7 @@ Pre-flight (13–14 Oct, no model): the September package could not be profiled 
 |---|---|---|---|---:|---|
 | `e6_lulesh_smoke` | [`preflight/e6_lulesh_smoke/`](preflight/e6_lulesh_smoke/) | E6 pre-flight, step 1 (server, no model): ONE trial of the arm `discopop_capability` on `llnl/lulesh` through the run path — the first time a project-layout C++ package of six units goes through it on the repaired DiscoPoP: does it build, profile and verify, how long does it take, what does DiscoPoP alone keep — launched 13 Oct 22:16 UTC at `90f9b35c4` with `--verify-size STANDARD` (no T0.1 entry yet; a first launch without it was refused before a run existed). Result: PROFILE_ERROR — `lulesh.h` has no include guard and the profile step compiles the six units as one; the package must be repaired before it can be profiled | valid | 1 | PROFILE_ERROR 1 |
 | `e6_lulesh_smoke2` | [`preflight/e6_lulesh_smoke2/`](preflight/e6_lulesh_smoke2/) | E6 pre-flight, the smoke again on the repaired package (server, no model): ONE trial of the arm `discopop_capability` on `llnl/lulesh`, `--verify-size STANDARD` — does the profile go through with the include guard, how long, how much memory — 14 Oct 00:38–00:43 UTC at `272cd24b6`: the profile goes through (2.6 s, 7.2 s, explorer 312 s; Do-All 59); the trial then ends AGENT_ERROR on the launcher's flag form (repaired) | valid | 1 | AGENT_ERROR 1 |
-| `e6_lulesh_smoke3` | not archived yet | E6 pre-flight, the smoke a third time (server, no model), after the launcher's flag form was repaired: ONE trial of the arm `discopop_capability` on `llnl/lulesh`, `--verify-size STANDARD` — what DiscoPoP alone reaches on LULESH, how long the trial takes | registered |  |  |
+| `e6_lulesh_smoke3` | [`preflight/e6_lulesh_smoke3/`](preflight/e6_lulesh_smoke3/) | E6 pre-flight, the smoke a third time (server, no model), after the launcher's flag form was repaired: ONE trial of the arm `discopop_capability` on `llnl/lulesh`, `--verify-size STANDARD` — what DiscoPoP alone reaches on LULESH, how long the trial takes | valid | 1 | parallel-not-faster 1 |
 
 ## Change-log rows that name these runs (§6)
 

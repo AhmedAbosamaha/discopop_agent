@@ -17,7 +17,7 @@ Open again (13 Oct, late — the author: "run both", after it had been closed th
 - [`analysis/`](analysis/) — the read-out: [`e4_lost_reductions_clause_check.md`](analysis/e4_lost_reductions_clause_check.md), [`e4_refresh_time_readout.md`](analysis/e4_refresh_time_readout.md), [`e4_replay_readout.md`](analysis/e4_replay_readout.md), [`e4_report_dry_readout.md`](analysis/e4_report_dry_readout.md), [`e4_report_placement_readout.md`](analysis/e4_report_placement_readout.md), [`e4_report_readout.md`](analysis/e4_report_readout.md), [`e4_report_selection.md`](analysis/e4_report_selection.md)
 - [`runs/`](runs/) — 3 archived run(s): the evidence
 - [`checks/`](checks/) — 1 verification(s) made during the read-out
-- [`preflight/`](preflight/) — 2 smoke run(s) before the launch
+- [`preflight/`](preflight/) — 3 smoke run(s) before the launch
 
 ## Runs
 
@@ -29,7 +29,7 @@ Open again (13 Oct, late — the author: "run both", after it had been closed th
 | `e4_report_smoke` | [`preflight/e4_report_smoke/`](preflight/e4_report_smoke/) | E4 step 2 smoke, never counted (server, Haiku): `server.sh tool -- report_replay.py --runs e3bc_s316 --arm default_v5 --limit 2 --report ask --deletion ask` — two rewrites outside the population asked for the report: the first model call through the tool and through the launcher's tool mode | valid | 0 |  |
 | `e4_report_a` | [`runs/e4_report_a/`](runs/e4_report_a/) | E4 step 2 (server, Haiku, one call per rewrite and direction): `tools/report_replay.py --report ask --deletion ask` with `--select analysis/e4_report_selection.json` (the 58 rewrites whose decision differs after the fast refresh and 58 of the 541 whose decision is the same) and `--select-deletion analysis/e4_deletion_selection.json` (the 21 on which the deletion review has something to ask); parts `e3`, `e3b_a`, `e3b_b`, `e1v6` | valid | 0 |  |
 | `e4_report_a_placement` | [`checks/e4_report_a_placement/`](checks/e4_report_a_placement/) | E4 step 2, a what-if on the saved replies (server, no model): `report_replay.py --report replay --replies runs/e4_report_a` over the 116 rewrites of the report — `as-built` (a control: the agent's own placing again) and `respect-none` (a claimed dependence left out where both of its lines lie inside a loop the same reply declares independent); exploratory, not the agent as built | valid | 0 |  |
-| `e4_refresh_screen_npbc` | not archived yet | The fast refresh's benchmark, a first screen (server, no model): `tools/npbc_probe.py` on RepoOMP's EP, IS and CG at class W, then class A, then class B for EP and IS (parts `W/<K>`, `A/<K>`, `B/<K>`), at most an hour per step — at which class the instrumented run exceeds a minute | registered |  |  |
+| `e4_refresh_screen_npbc` | [`preflight/e4_refresh_screen_npbc/`](preflight/e4_refresh_screen_npbc/) | The fast refresh's benchmark, a first screen (server, no model): `tools/npbc_probe.py` on RepoOMP's EP, IS and CG at class W, then class A, then class B for EP and IS (parts `W/<K>`, `A/<K>`, `B/<K>`), at most an hour per step — at which class the instrumented run exceeds a minute | valid | 0 |  |
 
 ## Change-log rows that name these runs (§6)
 

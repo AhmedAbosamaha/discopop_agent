@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8_c5_classes_a/benchmarks/tsvc_c5/s233/discopop_capability/claude-haiku-4-5-20251001/rep1/work/s233.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8_c5_classes_a/benchmarks/tsvc_c5/s233/discopop_capability/claude-haiku-4-5-20251001/rep1/work/s233.c
+@@ -4,6 +4,7 @@
+ {
+     for (int nl = 0; nl < iterations; nl++) {
+         for (int i = 1; i < LEN_2D; i++) {
++            #pragma omp parallel for firstprivate(i) reduction(+:aa) 
+             for (int j = 1; j < LEN_2D; j++) {
+                 aa[j][i] = aa[j-1][i] + cc[j][i];
+             }

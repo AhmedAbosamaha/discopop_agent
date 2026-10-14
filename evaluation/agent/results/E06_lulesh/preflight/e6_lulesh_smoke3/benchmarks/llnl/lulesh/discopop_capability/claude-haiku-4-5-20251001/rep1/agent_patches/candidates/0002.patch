@@ -1,0 +1,11 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6_lulesh_smoke3/profiles/llnl/lulesh/lulesh.cc	2026-10-14 00:37:55.926503078 +0000
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6_lulesh_smoke3/profiles/llnl/lulesh/lulesh.cc.discopop_patch_generator.temp	2026-10-14 01:27:17.470948127 +0000
+@@ -2549,6 +2549,8 @@
+ //debug to see region sizes
+ //   for(Int_t i = 0; i < locDom->numReg(); i++)
+ //      std::cout << "region" << i + 1<< "size" << locDom->regElemSize(i) <<std::endl;
++   #pragma omp task
++   }
+    while((locDom->time() < locDom->stoptime()) && (locDom->cycle() < opts.its)) {
+ 
+       TimeIncrement(*locDom) ;

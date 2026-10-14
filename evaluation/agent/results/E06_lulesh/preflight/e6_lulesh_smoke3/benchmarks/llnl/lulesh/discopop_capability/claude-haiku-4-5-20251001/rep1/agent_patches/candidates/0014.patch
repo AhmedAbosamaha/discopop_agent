@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6_lulesh_smoke3/benchmarks/llnl/lulesh/discopop_capability/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6_lulesh_smoke3/benchmarks/llnl/lulesh/discopop_capability/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -885,6 +885,7 @@
+    Real_t *z8n  = Allocate<Real_t>(numElem8) ;
+ 
+    /* start loop over elements */
++   #pragma omp parallel for firstprivate(numElem) shared(dvdz,dvdy,z8n,determ,domain,dvdx,x8n,y8n) 
+    for (Index_t i=0 ; i<numElem ; ++i){
+       Real_t  x1[8],  y1[8],  z1[8] ;
+       Real_t pfx[8], pfy[8], pfz[8] ;

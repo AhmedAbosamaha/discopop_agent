@@ -1,0 +1,18 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6_lulesh_smoke3/profiles/llnl/lulesh/lulesh.cc	2026-10-14 00:37:55.926503078 +0000
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6_lulesh_smoke3/profiles/llnl/lulesh/lulesh.cc.discopop_patch_generator.temp	2026-10-14 01:27:06.164892724 +0000
+@@ -2282,9 +2282,15 @@
+ 
+   ApplyMaterialPropertiesForElems(domain) ;
+ 
++  #pragma omp parallel
++  #pragma omp single
++  {
++  #pragma omp task
++  #pragma omp task
+   UpdateVolumesForElems(domain, 
+                         domain.v_cut(), numElem) ;
+ }
++}
+ 
+ /******************************************/
+ 

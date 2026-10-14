@@ -1,0 +1,48 @@
+{
+  "suite": "tsvc_c5",
+  "kernel": "s2251",
+  "source": "benchmarks/TSVC_2/src/tsvc.c",
+  "category": "scalar and array expansion / scalar expansion",
+  "file": "s2251.c",
+  "language": "c",
+  "layout": "project",
+  "project": {
+    "units": [
+      "s2251.c",
+      "main.c"
+    ],
+    "include_dirs": [
+      "."
+    ],
+    "editable": [
+      "s2251.c"
+    ]
+  },
+  "restructuring_class": "restructure",
+  "transformation": "the scalar's old values kept in a temporary by a loop of their own, then the scalar replaced by the temporary's previous element",
+  "why": "s carries b[i-1] + c[i-1] as they were BEFORE this repetition wrote b: substituting b[i-1] + c[i-1] in place reads the new b",
+  "reference_solution": "agent/reference_solutions/tsvc_c5/s2251.c",
+  "reference_steps": [
+    "agent/reference_solutions/tsvc_c5/s2251.step1.c"
+  ],
+  "exclude_functions": [
+    "main",
+    "dummy"
+  ],
+  "harness": "tsvc_c5/s2251.h",
+  "harness_sha256": "3adc5acb4fd63e1c1aff191e318c56f9540b2af951f36fe5c92a9a995b727c21",
+  "hot_loop": {
+    "entry": "kernel_s2251",
+    "function": "kernel_s2251",
+    "line": 7,
+    "writes": [
+      "a",
+      "b"
+    ]
+  },
+  "repetitions_proven": true,
+  "agent_dataset": "SMALL",
+  "generator_version": 8,
+  "inputs_sha256": "456dd573b84b30e6f32c943bb559d80374eec67177de48223e95124a8c3fc627",
+  "output_sha256": "c4fccf53c9573fcb145d66516a3a2769b932feadf21eb3e9ab57f4503ada10bb"
+}

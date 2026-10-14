@@ -1,0 +1,113 @@
+--- original.cc
++++ final.cc
+@@ -3696,6 +3696,7 @@
+                                  fx_local, fy_local, fz_local ) ;
+ 
+     // copy nodal force contributions to global force arrray.
++    #pragma omp parallel for shared(fz_local,fy_local,elemToNode,fx_local,domain) 
+     for( Index_t lnode=0 ; lnode<8 ; ++lnode ) {
+        Index_t gnode = elemToNode[lnode];
+        domain.fx(gnode) += fx_local[lnode];
+@@ -4053,6 +4054,7 @@
+    Real_t *z8n  = Allocate<Real_t>(numElem8) ;
+ 
+    /* start loop over elements */
++   #pragma omp parallel for firstprivate(numElem) shared(dvdz,dvdy,z8n,determ,domain,dvdx,x8n,y8n) 
+    for (Index_t i=0 ; i<numElem ; ++i){
+       Real_t  x1[8],  y1[8],  z1[8] ;
+       Real_t pfx[8], pfy[8], pfz[8] ;
+@@ -4184,6 +4186,7 @@
+ void CalcAccelerationForNodes(Domain &domain, Index_t numNode)
+ {
+    
++   #pragma omp parallel for firstprivate(numNode) shared(domain) 
+    for (Index_t i = 0; i < numNode; ++i) {
+       domain.xdd(i) = domain.fx(i) / domain.nodalMass(i);
+       domain.ydd(i) = domain.fy(i) / domain.nodalMass(i);
+@@ -4224,6 +4227,7 @@
+                           Index_t numNode)
+ {
+ 
++   #pragma omp parallel for firstprivate(dt,numNode,u_cut) shared(domain) 
+    for ( Index_t i = 0 ; i < numNode ; ++i )
+    {
+      Real_t xdtmp, ydtmp, zdtmp ;
+@@ -4247,6 +4251,7 @@
+ static inline
+ void CalcPositionForNodes(Domain &domain, const Real_t dt, Index_t numNode)
+ {
++   #pragma omp parallel for firstprivate(numNode,dt) shared(domain) 
+    for ( Index_t i = 0 ; i < numNode ; ++i )
+    {
+      domain.x(i) += domain.xd(i) * dt ;
+@@ -4544,6 +4549,7 @@
+ {
+ 
+   // loop over all elements
++  #pragma omp parallel for firstprivate(deltaTime,numElem) shared(domain) 
+   for( Index_t k=0 ; k<numElem ; ++k )
+   {
+     Real_t B[3][8] ; /** shape function derivatives */
+@@ -4617,6 +4623,7 @@
+       CalcKinematicsForElems(domain, deltatime, numElem) ;
+ 
+       // element loop to do some stuff not included in the elemlib function.
++      #pragma omp parallel for firstprivate(numElem) shared(domain) 
+       for ( Index_t k=0 ; k<numElem ; ++k )
+       {
+          // calc strain rate and apply as constraint (only done in FB element)
+@@ -4650,6 +4657,7 @@
+ {
+    Index_t numElem = domain.numElem();
+ 
++   #pragma omp parallel for firstprivate(numElem) shared(domain) 
+    for (Index_t i = 0 ; i < numElem ; ++i ) {
+       const Real_t ptiny = Real_t(1.e-36) ;
+       Real_t ax,ay,az ;
+@@ -5058,6 +5066,7 @@
+       pbvc[i] = c1s;
+    }
+ 
++   #pragma omp parallel for firstprivate(p_cut,length,pmin,eosvmax) shared(vnewc,e_old,p_new,bvc,regElemList) 
+    for (Index_t i = 0 ; i < length ; ++i){
+       Index_t ielem = regElemList[i];
+       
+@@ -5263,6 +5272,7 @@
+    for(Int_t j = 0; j < rep; j++) {
+       /* compress data, minimal set */
+       {
++         #pragma omp parallel for firstprivate(numElemReg) private(pbvc,q_new,p_new,bvc) shared(qq_old,q_old,regElemList,p_old,delvc,ql_old,domain,e_old) 
+          for (Index_t i=0; i<numElemReg; ++i) {
+             Index_t ielem = regElemList[i];
+             e_old[i] = domain.e(ielem) ;
+@@ -5450,8 +5460,14 @@
+ 
+   ApplyMaterialPropertiesForElems(domain) ;
+ 
++  #pragma omp parallel
++  #pragma omp single
++  {
++  #pragma omp task
++  #pragma omp task
+   UpdateVolumesForElems(domain, 
+                         domain.v_cut(), numElem) ;
++}
+ }
+ 
+ /******************************************/
+@@ -5565,9 +5581,15 @@
+ void CalcTimeConstraintsForElems(Domain& domain) {
+ 
+    // Initialize conditions to a very large value
++   #pragma omp parallel
++   #pragma omp single
++   {
++   #pragma omp task
+    domain.dtcourant() = 1.0e+20;
++   #pragma omp task
+    domain.dthydro() = 1.0e+20;
+ 
++   }
+    for (Index_t r=0 ; r < domain.numReg() ; ++r) {
+       /* evaluate time constraint */
+       CalcCourantConstraintForElems(domain, domain.regElemSize(r),

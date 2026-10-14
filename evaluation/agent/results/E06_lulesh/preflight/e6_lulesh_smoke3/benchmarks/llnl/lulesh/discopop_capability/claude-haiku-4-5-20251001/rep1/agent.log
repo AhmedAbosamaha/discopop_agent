@@ -1,0 +1,454 @@
+
+============================================================
+  DiscoPoP Agentic Controller
+============================================================
+  Source         : /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6_lulesh_smoke3/benchmarks/llnl/lulesh/discopop_capability/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+  DiscoPoP dir   : .discopop
+  Model          : claude-haiku-4-5-20251001
+  Budget         : 0 LLM retries/region (+2 free build fixes)
+  λ penalty      : 1.0
+  Min workload   : 0.0
+  Restruct. depth: 0 (Tier-2 allowed at depth 0–0)
+  Quality gate   : Tier-1 = all but speed, no escalation; Tier-2 = full
+  TSan           : barrier-aware (archer: /usr/lib/llvm-20/lib/libarcher.so)
+  Speedup gate   : OFF (--no-require-speedup)
+  Dry run        : False
+  LLM mode       : claude-haiku-4-5-20251001
+  Edit mode      : direct
+  Re-profiling   : full (instrument + run + explore) after every kept rewrite
+  Explorer       : one attempt may take 3119 s, then the draw is repeated (random stall, L5)
+  Pragmas        : DiscoPoP writes them in Phase B
+============================================================
+
+  Project        : /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6_lulesh_smoke3/benchmarks/llnl/lulesh/discopop_capability/claude-haiku-4-5-20251001/rep1/work  (6 unit(s): lulesh.cc, pb_harness.cpp, lulesh-init.cc, lulesh-util.cc, lulesh-viz.cc, lulesh-comm.cc)
+
+  [ok] Captured reference output on 2 inputs (69 bytes, 64.9 ms baseline) for the correctness/performance gates.
+
+  [ok] Numerical noise floor 5.24e-15 of output scale (widest disagreement 5.24e-16 of output scale across 6 build variants, x10 margin — on input '7').
+  [note] values may move that far without failing the correctness gate; labels, line structure and integers must still match exactly.
+
+  Hotspots       : measured per-region runtimes are available — 304 region(s) measured, 8757.4 ms total, ranking by predicted time saved at 48 threads
+
+  Baseline       : DiscoPoP proposes 21 applicable pattern(s) unaided; 17 of them produce a usable pragma (4 rejected before it could run)
+                   → the run beats DiscoPoP by ending with more than 17
+
+  Initial candidates
+Region ID    Type           Saves    % run    Hot  Tier  Depth  Name
+--------------------------------------------------------------------------------------
+  1:271      loop       8538.0 ms    99.6%    YES     1      0  lines 2552–2563
+  1:458      function   8537.9 ms    99.6%    YES     1      0  _ZL16LagrangeLeapFrogR6Domain
+  2:251      function   8568.2 ms    99.9%    YES     1      0  _Z11lulesh_mainiPPc
+  1:1777     function   4640.0 ms    54.1%    YES     1      0  _ZL16LagrangeElementsR6Domaini
+  2:1756     function   3761.1 ms    43.9%    YES     2      0  _ZL13LagrangeNodalR6Domain
+  2:1825     function   3121.4 ms    36.4%    YES     2      0  _ZL17CalcForceForNodesR6Domain
+  2:1989     function   3047.3 ms    35.5%    YES     2      0  _ZL23CalcVolumeForceForElemsR6Domain
+  1:2074     function   1859.8 ms    21.7%    YES     1      0  _ZL28CalcHourglassControlForElemsR6DomainPdd
+  1:2482     function   1592.2 ms    18.6%    YES     2      0  _ZL13CalcQForElemsR6Domain
+  2:74       function   1491.0 ms    17.4%    YES     2      0  _ZL29CollectDomainNodesToElemNodesR6DomainPKiPdS3_S3_
+  2:2441     function   1485.3 ms    17.3%    YES     2      0  _ZL20CalcLagrangeElementsR6Domain
+  1:2582     loop       1470.5 ms    17.1%    YES     2      0  lines 2232–2247
+  1:3116     loop       1386.8 ms    16.2%    YES     1      0  lines 2095–2146
+  2:3066     function   1470.3 ms    17.1%    YES     2      0  _ZL15EvalEOSForElemsR6DomainPdiPii
+  1:14       loop       1383.2 ms    16.1%    YES     1      0  lines 1379–1435
+  1:11       function   1383.2 ms    16.1%    YES     2      0  _Z22CalcKinematicsForElemsR6Domaindi
+  1:2188     loop       1155.3 ms    13.5%    YES     1      0  lines 721–868
+  1:2184     function   1155.3 ms    13.5%    YES     2      0  _ZL28CalcFBHourglassForceForElemsR6DomainPdS1_S1_S1_S1_S1_S1_dii
+  1:2047     loop       1146.6 ms    13.4%    YES     1      0  lines 509–538
+  1:2044     function   1146.6 ms    13.4%    YES     2      0  _ZL23IntegrateStressForElemsR6DomainPdS1_S1_S1_ii
+  1:2674     loop       1131.5 ms    13.2%    YES     1      0  lines 1485–1622
+  2:2668     function   1131.5 ms    13.2%    YES     2      0  _ZL31CalcMonotonicQGradientsForElemsR6Domain
+  1:3119     loop        901.5 ms    10.5%    YES     1      0  lines 2098–2106
+  1:2094     loop        702.7 ms     8.2%    YES     1      0  lines 888–919
+  1:38       loop        501.5 ms     5.8%    YES     1      0  lines 1409–1415
+  1:2060     loop        494.5 ms     5.8%    YES     1      0  lines 531–536
+  2:3223     function    479.4 ms     5.6%    YES     2      0  _ZL18CalcEnergyForElemsPdS_S_S_S_S_S_S_S_S_S_S_S_dddddS_S_ddiPi
+  1:2822     loop        430.0 ms     5.0%    YES     2      0  lines 1801–1805
+  1:2877     loop        429.8 ms     5.0%    YES     2      0  lines 1636–1785
+  1:2818     function    430.0 ms     5.0%    YES     2      0  _ZL22CalcMonotonicQForElemsR6Domain
+  2:2865     function    430.0 ms     5.0%    YES     2      0  _ZL28CalcMonotonicQRegionForElemsR6Domainid
+  1:1916     loop        259.6 ms     3.0%    YES     1      0  lines 1059–1074
+  1:1913     function    259.6 ms     3.0%    YES     2      0  _ZL20CalcVelocityForNodesR6Domainddi
+  1:3351     loop        229.0 ms     2.7%  MAYBE     1      0  lines 1893–1906
+  1:3342     function    234.3 ms     2.7%  MAYBE     2      0  _ZL20CalcPressureForElemsPdS_S_S_S_S_dddiPi
+  1:1847     loop        222.4 ms     2.6%  MAYBE     1      0  lines 1019–1023
+  1:1844     function    222.4 ms     2.6%  MAYBE     2      0  _ZL24CalcAccelerationForNodesR6Domaini
+  1:1960     loop        148.3 ms     1.7%  MAYBE     1      0  lines 1082–1087
+  1:1957     function    148.3 ms     1.7%  MAYBE     2      0  _ZL20CalcPositionForNodesR6Domaindi
+  2:142      function    141.8 ms     1.7%  MAYBE     2      0  _ZL28CalcElemCharacteristicLengthPKdS0_S0_d
+  1:1797     loop        136.8 ms     1.6%  MAYBE     2      0  lines 2403–2415
+  1:1789     function    136.9 ms     1.6%  MAYBE     1      0  _ZL27CalcTimeConstraintsForElemsR6Domain
+  1:3370     loop        114.8 ms     1.3%  MAYBE     2      0  lines 2307–2326
+  1:3365     function    114.9 ms     1.3%  MAYBE     2      0  _ZL29CalcCourantConstraintForElemsR6DomainiPidRd
+  1:2454     loop        102.0 ms     1.2%  MAYBE     1      0  lines 1452–1473
+  1:2173     function     97.0 ms     1.1%  MAYBE     1      0  _ZL24CalcElemVolumeDerivativePdS_S_PKdS1_S1_
+
+============================================================
+  PHASE A — restructure  (the source stays pragma-free)
+============================================================
+
+┌─ [depth=0] loop 1:271 (lines 2552–2563)  score=8.5
+│  [Phase-A] DiscoPoP already has a pattern here (task) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] function 1:458 (lines 2421–2465)  score=8.5
+│  [Phase-A] DiscoPoP already has a pattern here (task) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] function 2:251 (lines 0–2600)  score=8.5
+│  [Phase-A] DiscoPoP already has a pattern here (task) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] function 1:1777 (lines 2276–2287)  score=4.6
+│  [Phase-A] DiscoPoP already has a pattern here (task) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] function 2:1756 (lines 1093–1137)  score=3.8
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] function 2:1825 (lines 981–1011)  score=3.1
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] function 2:1989 (lines 940–977)  score=3.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] function 1:2074 (lines 875–934)  score=1.9
+│  [Phase-A] DiscoPoP already has a pattern here (task) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] function 1:2482 (lines 1811–1875)  score=1.6
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] function 2:74 (lines 230–272)  score=1.5
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] function 2:2441 (lines 1441–1476)  score=1.5
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:2582 (lines 2232–2247)  score=1.5
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:3116 (lines 2095–2146)  score=1.4
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] function 2:3066 (lines 2062–2174)  score=1.4
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:14 (lines 1379–1435)  score=1.4
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] function 1:11 (lines 1374–1436)  score=1.4
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:2188 (lines 721–868)  score=1.2
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] function 1:2184 (lines 664–870)  score=1.2
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:2047 (lines 509–538)  score=1.1
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] function 1:2044 (lines 497–540)  score=1.1
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:2674 (lines 1485–1622)  score=1.1
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] function 2:2668 (lines 1481–1623)  score=1.1
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:3119 (lines 2098–2106)  score=0.9
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:2094 (lines 888–919)  score=0.7
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:38 (lines 1409–1415)  score=0.5
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:2060 (lines 531–536)  score=0.5
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] function 2:3223 (lines 1912–2033)  score=0.5
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:2822 (lines 1801–1805)  score=0.4
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:2877 (lines 1636–1785)  score=0.4
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] function 1:2818 (lines 1791–1806)  score=0.4
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] function 2:2865 (lines 1628–1786)  score=0.4
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:1916 (lines 1059–1074)  score=0.3
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] function 1:1913 (lines 1055–1075)  score=0.3
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:3351 (lines 1893–1906)  score=0.2
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] function 1:3342 (lines 1880–1907)  score=0.2
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:1847 (lines 1019–1023)  score=0.2
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] function 1:1844 (lines 1016–1024)  score=0.2
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:1960 (lines 1082–1087)  score=0.1
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] function 1:1957 (lines 1080–1088)  score=0.1
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] function 2:142 (lines 1264–1303)  score=0.1
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:1797 (lines 2403–2415)  score=0.1
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] function 1:1789 (lines 2397–2416)  score=0.1
+│  [Phase-A] DiscoPoP already has a pattern here (task) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:3370 (lines 2307–2326)  score=0.1
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] function 1:3365 (lines 2292–2343)  score=0.1
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:2454 (lines 1452–1473)  score=0.1
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] function 1:2173 (lines 577–616)  score=0.1
+│  [Phase-A] DiscoPoP already has a pattern here (task) — deferred to Phase B
+└─ DEFERRED
+
+
+============================================================
+  PHASE B — annotate  (21 candidate pragma(s))
+============================================================
+
+┌─ pattern #742  task @ lines 0–2600  (W=0)
+│  ['#pragma omp parallel', '#pragma omp single']
+│  gate failed at 'compile': /tmp/dp_agent_val_3fvm4oca/_dp_proj_validate_binary/lulesh.cc:2600:4: warning: non-void function does not return a value [-Wreturn-type]  2600 |    } 
+└─ DROPPED
+
+┌─ pattern #583  task @ lines 2552–2563  (W=550)
+│  ['#pragma omp parallel', '#pragma omp single']
+│  gate failed at 'openmp_compile': OpenMP compile failed (loop not in OpenMP-canonical form): /tmp/dp_agent_val_jtk37kd2/_dp_proj_tsan_binary/lulesh.cc:2557:4: error: expected statement
+└─ DROPPED
+
+   DiscoPoP reports another pattern for this loop (task) — trying it
+
+┌─ pattern #739  task @ lines 2552–2563  (W=550)
+│  ['#pragma omp parallel', '#pragma omp single']
+│  gate failed at 'compile': ions  2576 |    elapsed_time = (double)(end.tv_sec - start.tv_sec) + ((double)(end.tv_usec - start.tv_usec))/1000000 ;       |    ^ /tmp/dp_agent_val_
+└─ DROPPED
+
+┌─ pattern #82  task @ lines 2421–2465  (W=0)
+│  ['#pragma omp parallel', '#pragma omp single']
+│  gate failed at 'tsan': Race detected: WARNING: ThreadSanitizer: data race (pid=1780751)   Read of size 8 at 0x72ac00050810 by thread T1:     #0 CalcFBHourglassForceForElems(
+└─ DROPPED
+
+┌─ pattern #396  task @ lines 2276–2287  (W=0)
+│  ['#pragma omp parallel', '#pragma omp single']
+│  [Phase-B] Original backed up → lulesh.cc.original
+│  [Phase-B] Applied to lulesh.cc
+└─ APPLIED
+
+┌─ pattern #240  task @ lines 875–934  (W=0)
+│  ['#pragma omp parallel', '#pragma omp single']
+│  gate failed at 'compile': /lulesh.cc:888:12: note: 'dvdz' declared here   888 |    Real_t *dvdz = Allocate<Real_t>(numElem8) ;       |            ^ /tmp/dp_agent_val_wxxeqiuj/_
+└─ DROPPED
+
+   DiscoPoP reports another pattern for this loop (task) — trying it
+
+┌─ pattern #659  task @ lines 875–934  (W=0)
+│  ['#pragma omp parallel', '#pragma omp single']
+│  gate failed at 'compile':           x8n /tmp/dp_agent_val_dqc1o3q7/_dp_proj_validate_binary/lulesh.cc:883:12: note: 'x8n' declared here   883 |    Real_t *x8n  = Allocate<Real_
+└─ DROPPED
+
+   DiscoPoP reports another pattern for this loop (task) — trying it
+
+┌─ pattern #715  task @ lines 875–934  (W=0)
+│  ['#pragma omp parallel', '#pragma omp single']
+│  gate failed at 'compile': /tmp/dp_agent_val_9gs20jk4/_dp_proj_validate_binary/lulesh.cc:909:10: error: use of undeclared identifier 'dvdz'   909 |          dvdz[jj] = pfz[ii]; 
+└─ DROPPED
+
+┌─ pattern #865  do_all @ lines 2095–2146  (W=89250)
+│  #pragma omp parallel for
+│  gate failed at 'tsan': Race detected: WARNING: ThreadSanitizer: data race (pid=1780899)   Write of size 8 at 0x724c00001a40 by thread T1:     #0 EvalEOSForElems(Domain&, dou
+└─ DROPPED
+
+┌─ pattern #810  do_all @ lines 1379–1435  (W=9450000)
+│  #pragma omp parallel for
+│  [Phase-B] Applied to lulesh.cc
+└─ APPLIED
+
+┌─ pattern #845  do_all @ lines 721–868  (W=24806250)
+│  #pragma omp parallel for
+│  gate failed at 'tsan': Race detected: WARNING: ThreadSanitizer: data race (pid=1781037)   Write of size 8 at 0x72b0000509e0 by thread T1:     #0 CalcFBHourglassForceForElems
+└─ DROPPED
+
+┌─ pattern #839  do_all @ lines 509–538  (W=4893750)
+│  #pragma omp parallel for
+│  gate failed at 'tsan': Race detected: WARNING: ThreadSanitizer: data race (pid=1781131)   Write of size 8 at 0x72b0000509e0 by thread T1:     #0 IntegrateStressForElems(Doma
+└─ DROPPED
+
+┌─ pattern #859  do_all @ lines 1485–1622  (W=23118750)
+│  #pragma omp parallel for
+│  [Phase-B] Applied to lulesh.cc
+└─ APPLIED
+
+┌─ pattern #860  do_all @ lines 2098–2106  (W=9959600)
+│  #pragma omp parallel for
+│  [Phase-B] Applied to lulesh.cc
+└─ APPLIED
+
+┌─ pattern #841  do_all @ lines 888–919  (W=5231250)
+│  #pragma omp parallel for
+│  [Phase-B] Applied to lulesh.cc
+└─ APPLIED
+
+┌─ pattern #808  do_all @ lines 1409–1415  (W=8100000)
+│  #pragma omp parallel for
+│  nested inside the already-parallelized region at lines 1379–1435
+└─ SKIPPED (enclosing loop is already parallel)
+
+┌─ pattern #838  do_all @ lines 531–536  (W=6750000)
+│  #pragma omp parallel for
+│  [Phase-B] Applied to lulesh.cc
+└─ APPLIED
+
+┌─ pattern #834  do_all @ lines 1059–1074  (W=3072000)
+│  #pragma omp parallel for
+│  [Phase-B] Applied to lulesh.cc
+└─ APPLIED
+
+┌─ pattern #874  do_all @ lines 1893–1906  (W=48553050)
+│  #pragma omp parallel for
+│  [Phase-B] Applied to lulesh.cc
+└─ APPLIED
+
+┌─ pattern #830  do_all @ lines 1019–1023  (W=819200)
+│  #pragma omp parallel for
+│  [Phase-B] Applied to lulesh.cc
+└─ APPLIED
+
+┌─ pattern #835  do_all @ lines 1082–1087  (W=1024000)
+│  #pragma omp parallel for
+│  [Phase-B] Applied to lulesh.cc
+└─ APPLIED
+
+┌─ pattern #647  task @ lines 2397–2416  (W=0)
+│  ['#pragma omp parallel', '#pragma omp single']
+│  [Phase-B] Applied to lulesh.cc
+└─ APPLIED
+
+┌─ pattern #852  do_all @ lines 1452–1473  (W=3543750)
+│  #pragma omp parallel for
+│  [Phase-B] Applied to lulesh.cc
+└─ APPLIED
+
+┌─ pattern #727  task @ lines 577–616  (W=0)
+│  ['#pragma omp parallel', '#pragma omp single']
+│  gate failed at 'openmp_compile': OpenMP compile failed (loop not in OpenMP-canonical form): /tmp/dp_agent_val_zceb5r89/_dp_proj_tsan_binary/lulesh.cc:622:1: error: expected statement 
+└─ DROPPED
+
+============================================================
+  SETTLING — verify the finished source, drop what does not hold up
+============================================================
+  [ok] finished source verified — output matches the original
+
+
+============================================================
+  SUMMARY: 0 rewrite(s) kept  |  12 pragma(s) applied  |  25 skipped
+  DiscoPoP unaided: 17 usable pragma(s) in this profile's draw  →  this run: 12   [BELOW, informational]
+    ✓  function 1:1777  [Phase-B pragma]  depth=0
+    ✓  loop 1:14  [Phase-B pragma]  depth=0
+    ✓  loop 1:2674  [Phase-B pragma]  depth=0
+    ✓  loop 1:3119  [Phase-B pragma]  depth=0
+    ✓  loop 1:2094  [Phase-B pragma]  depth=0
+    ✓  loop 1:2060  [Phase-B pragma]  depth=0
+    ✓  loop 1:1916  [Phase-B pragma]  depth=0
+    ✓  loop 1:3351  [Phase-B pragma]  depth=0
+    ✓  loop 1:1847  [Phase-B pragma]  depth=0
+    ✓  loop 1:1960  [Phase-B pragma]  depth=0
+    ✓  function 1:1789  [Phase-B pragma]  depth=0
+    ✓  loop 1:2454  [Phase-B pragma]  depth=0
+    ✗  2:1756  [skipped]  depth=0
+    ✗  2:1825  [skipped]  depth=0
+    ✗  2:1989  [skipped]  depth=0
+    ✗  1:2482  [skipped]  depth=0
+    ✗  2:74  [skipped]  depth=0
+    ✗  2:2441  [skipped]  depth=0
+    ✗  1:2582  [skipped]  depth=0
+    ✗  2:3066  [skipped]  depth=0
+    ✗  1:11  [skipped]  depth=0
+    ✗  1:2184  [skipped]  depth=0
+    ✗  1:2044  [skipped]  depth=0
+    ✗  2:2668  [skipped]  depth=0
+    ✗  2:3223  [skipped]  depth=0
+    ✗  1:2822  [skipped]  depth=0
+    ✗  1:2877  [skipped]  depth=0
+    ✗  1:2818  [skipped]  depth=0
+    ✗  2:2865  [skipped]  depth=0
+    ✗  1:1913  [skipped]  depth=0
+    ✗  1:3342  [skipped]  depth=0
+    ✗  1:1844  [skipped]  depth=0
+    ✗  1:1957  [skipped]  depth=0
+    ✗  2:142  [skipped]  depth=0
+    ✗  1:1797  [skipped]  depth=0
+    ✗  1:3370  [skipped]  depth=0
+    ✗  1:3365  [skipped]  depth=0
+
+  Results → .discopop/agent_patches/accepted.json
+============================================================
+

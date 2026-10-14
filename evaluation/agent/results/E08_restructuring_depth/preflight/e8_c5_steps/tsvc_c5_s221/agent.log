@@ -1,0 +1,130 @@
+
+============================================================
+  DiscoPoP Agentic Controller
+============================================================
+  Source         : /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8_c5_steps/tsvc_c5_s221/s221.c
+  DiscoPoP dir   : .discopop
+  Model          : none
+  Budget         : 0 LLM retries/region (+2 free build fixes)
+  λ penalty      : 1.0
+  Min workload   : 0.0
+  Restruct. depth: 0 (Tier-2 allowed at depth 0–0)
+  Quality gate   : Tier-1 = all but speed, no escalation; Tier-2 = full
+  TSan           : barrier-aware (archer: /usr/lib/llvm-20/lib/libarcher.so)
+  Speedup gate   : require ≥ 1.1× measured
+  Dry run        : False
+  LLM mode       : none
+  Edit mode      : direct
+  Re-profiling   : full (instrument + run + explore) after every kept rewrite
+  Explorer       : one attempt may take 600 s, then the draw is repeated (random stall, L5)
+  Pragmas        : DiscoPoP writes them in Phase B
+============================================================
+
+  Project        : /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8_c5_steps/tsvc_c5_s221  (2 unit(s): s221.c, main.c)
+
+  [ok] Captured reference output on 2 inputs (69 bytes, 2440.0 ms baseline) for the correctness/performance gates.
+
+  [ok] Numerical noise floor 0 — 6 build variants agreed exactly; output is compared byte-for-byte.
+
+  Hotspots       : measured per-region runtimes are available — 24 region(s) measured, 9.0 ms total, ranking by predicted time saved at 48 threads
+
+│  [Tier-1] Repairing the generated pragma: i is declared inside the loop body, so cannot appear in a clause
+│  [Tier-1] Repairing the generated pragma: hi, i, lo are declared inside the loop body, so cannot appear in a clause
+  Baseline       : DiscoPoP proposes 4 applicable pattern(s) unaided; 4 of them produce a usable pragma
+                   → the run beats DiscoPoP by ending with more than 4
+
+  Initial candidates
+Region ID    Type           Saves    % run    Hot  Tier  Depth  Name
+--------------------------------------------------------------------------------------
+  1:2        loop          7.6 ms    86.7%    YES     2      0  lines 6–34
+  0:0        function      7.6 ms    86.7%    YES     2      0  kernel_s221
+  1:12       loop          5.0 ms    57.2%    YES     1      0  lines 12–21
+  1:16       loop          4.9 ms    55.8%    YES     2      0  lines 16–19
+  1:6        loop          1.4 ms    15.9%  MAYBE     1      0  lines 9–11
+  1:30       loop          1.2 ms    13.4%  MAYBE     1      0  lines 26–32
+  1:34       loop          1.1 ms    12.3%  MAYBE     1      0  lines 29–31
+
+============================================================
+  PHASE A — restructure  (the source stays pragma-free)
+============================================================
+
+┌─ [depth=0] loop 1:2 (lines 6–34)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] function 0:0 (lines 3–35)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:12 (lines 12–21)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:16 (lines 16–19)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:6 (lines 9–11)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:30 (lines 26–32)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 1:34 (lines 29–31)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+
+============================================================
+  PHASE B — annotate  (4 candidate pragma(s))
+============================================================
+
+  Timing noise floor on this machine: 0.993 → keep anything at or above 0.983
+
+┌─ pattern #2  do_all @ lines 12–21  (W=27648)
+│  #pragma omp parallel for
+│  [Tier-1] Repairing the generated pragma: i is declared inside the loop body, so cannot appear in a clause
+│  marginal 1.51×
+│  [Phase-B] Original backed up → s221.c.original
+│  [Phase-B] Applied to s221.c
+└─ APPLIED
+
+┌─ pattern #0  do_all @ lines 9–11  (W=3071904)
+│  #pragma omp parallel for
+│  marginal 2.03×
+│  [Phase-B] Applied to s221.c
+└─ APPLIED
+
+┌─ pattern #5  do_all @ lines 26–32  (W=18432)
+│  #pragma omp parallel for
+│  [Tier-1] Repairing the generated pragma: hi, i, lo are declared inside the loop body, so cannot appear in a clause
+│  marginal 1.64×
+│  [Phase-B] Applied to s221.c
+└─ APPLIED
+
+┌─ pattern #4  do_all @ lines 29–31  (W=3071904)
+│  #pragma omp parallel for
+│  nested inside the already-parallelized region at lines 26–32
+└─ SKIPPED (enclosing loop is already parallel)
+
+============================================================
+  SETTLING — verify the finished source, drop what does not hold up
+============================================================
+  [ok] finished source verified — output matches, 5.06x the original, paired
+
+
+============================================================
+  SUMMARY: 0 rewrite(s) kept  |  3 pragma(s) applied  |  3 skipped
+  DiscoPoP unaided: 4 usable pragma(s) in this profile's draw  →  this run: 3   [BELOW, informational]
+    ✓  loop 1:12  [Phase-B pragma]  depth=0  marginal 1.51×
+    ✓  loop 1:6  [Phase-B pragma]  depth=0  marginal 2.03×
+    ✓  loop 1:30  [Phase-B pragma]  depth=0  marginal 1.64×
+    ✗  1:2  [skipped]  depth=0
+    ✗  0:0  [skipped]  depth=0
+    ✗  1:16  [skipped]  depth=0
+
+  Results → .discopop/agent_patches/accepted.json
+============================================================
+
