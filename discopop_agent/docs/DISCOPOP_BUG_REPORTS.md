@@ -47,6 +47,7 @@ LLVM 19 (macOS) and LLVM 20 (Linux).
 | B23 | profiler (minimum/maximum reduction heuristic) and explorer (Do-All detector) | **FIXED 10 Oct** | a minimum is reported as a maximum — `reduction(max:x)` for `x = fmin(x, a[i])` — because the profiler never read the direction; and the explorer gives every reduction of a program the operation of the LAST entry of the reduction file. Both repaired; no new form recognised |
 | B24 | profiler (the same heuristic) | **FIXED 12 Oct** | every store whose value uses the loaded variable through something that is not an arithmetic the profiler knows is reported as a maximum reduction — another function (`hypot`, a helper that computes a minimum), a division, a plain copy: `reduction(max:x)` on loops that are no maximum, or no reduction at all. Now reported only where the direction can be read |
 | B25 | profiler runtime | candidate, 12 Oct — measured on the Mac, not traced | the same instrumented binary, run again, sometimes records no `INIT` for a stack array's first writes (about one run in ten on the Mac, none of 30 on the server); the explorer then writes `lastprivate` for the array instead of `shared` |
+| B26 | explorer, `TaskGraph.__assign_loop_contexts` (the symptom of B2) | candidate, 14 Oct — measured on the server, not traced | NPB 3.0 C `FT` (RepoOMP's pragma-free input, class S): `ValueError: Invalid iteration structure found at node: Start IT 5:612` on every attempt (4 of 4 on one profile) — the program cannot be profiled |
 | B19 | explorer (data-sharing clauses of a Do-All loop) | **FIXED 8 Oct** | `lastprivate` was written for any variable a loop writes and something after it reads. Three mechanisms: a scalar assigned in only some passes (`if (a[i] < 0) j = i;`, TSVC `s331`: the clause hands back the last CHUNK's value — wrong output, refused by the gate every time) — the loop is no longer reported Do-All; a whole stack array (`lastprivate(a_old)` on the loop that fills it, `firstprivate(a_old)` on one that reads it) — an array is now `shared` where the loop reads it or writes it itself (corrected the same day: one that a called function fills keeps its private clause); a unit of the code AROUND the loop counted among the loop's (`s481`: `lastprivate(nl)`, shipped) — only the loop's own units decide its clauses |
 | L3 | explorer | limitation | NPB-CPP `mg`: with P1's fix the state assignment is fast, but the run then stays in task-pattern detection (`new_task_detector`) — a first run was read at 4 h 19 min, the same run was stopped unfinished after **11 h 24 min** at 100 % CPU on the server (19–20 Sep); the Do-All detector is not reached. Not usable per trial |
 
@@ -1062,6 +1063,37 @@ whether the address layout of the run decides it (the array's region id differs 
 
 **Effect:** a difference from one profile of a program to the next — what the three draws of every no-model
 measurement of this thesis are there for. Seen on the Mac only, where no experiment runs.
+
+## B26 — candidate: `Invalid iteration structure` on NPB `FT`, on every attempt (explorer, task graph)
+
+**Status: candidate, found 14 Oct 2026 by the probe of RepoOMP's eight NPB programs; measured on the server (LLVM 20), not traced, no reproducer yet, not repaired.**
+
+**Seen:** `discopop_explorer` on the profile of NPB 3.0 C `FT` at class S (RepoOMP's `ft_#_omp.c`, the OpenMP version with every pragma removed, compiled with NPB's common units as one unit) ends after about 55 s with
+
+```
+  File ".../classes/TaskGraph/TaskGraph.py", line 1260, in __assign_contexts
+    self.__assign_loop_contexts()
+  File ".../classes/TaskGraph/TaskGraph.py", line 1434, in __assign_loop_contexts
+    raise ValueError("Invalid iteration structure found at node: " + current.get_label())
+ValueError: Invalid iteration structure found at node: Start IT 5:612
+```
+
+**Measured** (`evaluation/agent/results/E11_repoomp/preflight/e11_npbc_probe_server/FT/` — the program as compiled and the explorer's log; the repeats under `e11_npbc_explorer_repeats`): the probe's one draw, then three more attempts on the SAME kept profile (13,444,805 call-path states), the explorer's own output moved aside between attempts: the same error at the same node in 4 of 4, after 53 to 55 s. So it is not one of the explorer's draws (B3, L5), and the agent's twenty attempts would all end there. NPB's own verification of the instrumented run is successful: the profile is of a correct run.
+
+**Where:** file 5 is `ft.c`; its line 612 lies in the condition `if (d1 == 64 && d2 == 64 && d3 == 64 && nt == 6)` that opens `verify`'s chain of five branches, one per class; each branch holds one loop
+
+```c
+for (i = 1; i <= nt; i++) {
+    err = (get_real(sums[i]) - vdata_real_s[i]) / vdata_real_s[i];
+    if (fabs(err) > epsilon) { *verified = FALSE; break; }
+    err = (get_imag(sums[i]) - vdata_imag_s[i]) / vdata_imag_s[i];
+    if (fabs(err) > epsilon) { *verified = FALSE; break; }
+}
+```
+
+— a loop left through two `break`s, the first one beginning at line 616. The symptom is B2's, which was repaired for a loop with several back edges (`continue`); whether this is the same routine meeting several EXITS, the `if`/`else if` chain around the loops, or something else in the 700 lines is not known. **Not done:** a small reproducer, the trace.
+
+**Effect:** `FT` is outside what DiscoPoP can profile, so it is outside the agent's reach and out of the comparison with RepoOMP by the scope rule (D26) until this is repaired. No result of the thesis so far depends on it.
 
 ## B22 — candidate: a write-after-read between passes never blocks Do-All, also on an array element (explorer, Do-All detector)
 

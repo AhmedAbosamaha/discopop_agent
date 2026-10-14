@@ -138,7 +138,8 @@ Status: pre-flight
 | run | where | what it is | status | trials | outcomes |
 |---|---|---|---|---:|---|
 | `e11_npbc_probe_mac` | [`E11_repoomp/preflight/e11_npbc_probe_mac/`](E11_repoomp/preflight/e11_npbc_probe_mac/) | NPB-C feasibility probe on the Mac: EP, IS, CG profiled; FT stopped (the Mac swapped) | pre-flight | 0 |  |
-| `e11_npbc_probe_server` | not archived yet | E11 pre-flight, step 1 (server, no model): `tools/npbc_probe.py` on RepoOMP's eight serial NPB-C inputs at class S, one process per kernel (parts `EP` … `LU`), at most two hours per step (D26), peak memory by `/usr/bin/time -v` — which kernels DiscoPoP profiles within the limit, the three times, NPB's own verification, the patterns found; on the DiscoPoP with B23 and B24 repaired | running |  |  |
+| `e11_npbc_probe_server` | [`E11_repoomp/preflight/e11_npbc_probe_server/`](E11_repoomp/preflight/e11_npbc_probe_server/) | E11 pre-flight, step 1 (server, no model): `tools/npbc_probe.py` on RepoOMP's eight serial NPB-C inputs at class S, one process per kernel (parts `EP` … `LU`), at most two hours per step (D26), peak memory by `/usr/bin/time -v` — which kernels DiscoPoP profiles within the limit, the three times, NPB's own verification, the patterns found; on the DiscoPoP with B23 and B24 repaired — 13 Oct 22:14 UTC to 14 Oct 00:16 UTC at `90f9b35c4`. Result: EP, IS, CG profiled in seconds to a minute and a half; LU in two hours with 122 GiB; MG, BT, SP stopped at the two-hour limit in the explorer; FT's explorer ends with an error | valid | 0 |  |
+| `e11_npbc_explorer_repeats` | not archived yet | E11 pre-flight, step 1b (server, no model): DiscoPoP's explorer again on the profiles the probe kept — FT, whose explorer ended with an error, and MG, BT, SP, whose explorer was stopped at two hours — three attempts each on the unchanged profile with the agent's own limit of 600 s per attempt (parts `FT`, `MG`, `BT`, `SP`): is the one draw of the probe a draw or the rule — part `FT` ran 14 Oct 00:27–00:30 UTC at `90f9b35c4`: the same error in 3 of 3 attempts | running |  |  |
 
 ## [T0.1 — size calibration](T0_instruments/T0.01_sizes/REPORT.md)
 
@@ -702,6 +703,7 @@ Status: running
 | `e4_report_smoke` | [`E04_fast_refresh/preflight/e4_report_smoke/`](E04_fast_refresh/preflight/e4_report_smoke/) | E4 step 2 smoke, never counted (server, Haiku): `server.sh tool -- report_replay.py --runs e3bc_s316 --arm default_v5 --limit 2 --report ask --deletion ask` — two rewrites outside the population asked for the report: the first model call through the tool and through the launcher's tool mode | valid | 0 |  |
 | `e4_report_a` | [`E04_fast_refresh/runs/e4_report_a/`](E04_fast_refresh/runs/e4_report_a/) | E4 step 2 (server, Haiku, one call per rewrite and direction): `tools/report_replay.py --report ask --deletion ask` with `--select analysis/e4_report_selection.json` (the 58 rewrites whose decision differs after the fast refresh and 58 of the 541 whose decision is the same) and `--select-deletion analysis/e4_deletion_selection.json` (the 21 on which the deletion review has something to ask); parts `e3`, `e3b_a`, `e3b_b`, `e1v6` | valid | 0 |  |
 | `e4_report_a_placement` | [`E04_fast_refresh/checks/e4_report_a_placement/`](E04_fast_refresh/checks/e4_report_a_placement/) | E4 step 2, a what-if on the saved replies (server, no model): `report_replay.py --report replay --replies runs/e4_report_a` over the 116 rewrites of the report — `as-built` (a control: the agent's own placing again) and `respect-none` (a claimed dependence left out where both of its lines lie inside a loop the same reply declares independent); exploratory, not the agent as built | valid | 0 |  |
+| `e4_refresh_screen_npbc` | not archived yet | The fast refresh's benchmark, a first screen (server, no model): `tools/npbc_probe.py` on RepoOMP's EP, IS and CG at class W, then class A (parts `W/<K>`, `A/<K>`), at most an hour per step — at which class the instrumented run exceeds a minute | registered |  |  |
 
 ## [E8 — restructuring depth: may the model rewrite again what a kept rewrite leaves or exposes?](E08_restructuring_depth/REPORT.md)
 
@@ -709,6 +711,12 @@ Status: running
 
 | run | where | what it is | status | trials | outcomes |
 |---|---|---|---|---:|---|
+| `e8_c5_sizes` | not archived yet | The depth set (suite tsvc_c5), T0.1 on the server, no model: size_table.py on s2251, s221, s123 | registered |  |  |
+| `e8_c5_classes_a` | not archived yet | The depth set, T0.11 draw a, server, no model: arm discopop_capability on the three tsvc_c5 packages — what DiscoPoP alone keeps (clause R3) | registered |  |  |
+| `e8_c5_classes_b` | not archived yet | The depth set, T0.11 draw b, server, no model: arm discopop_capability on the three tsvc_c5 packages | registered |  |  |
+| `e8_c5_classes_c` | not archived yet | The depth set, T0.11 draw c, server, no model: arm discopop_capability on the three tsvc_c5 packages | registered |  |  |
+| `e8_c5_refs` | not archived yet | The depth set, the references through the harness (T0.14's method), server, no model: verify-source on each loop's reference and on its step-1 form, 6 and 12 threads (clause R4) | registered |  |  |
+| `e8_c5_steps` | not archived yet | The depth set, the step check (T0.13's method, clause R5), server, no model: default_arm_ceiling.py with each loop's file replaced by the original, by the form after step 1 and by the final form, the pragmas removed, the speed judged | registered |  |  |
 
 ## [E6 — a real application: LULESH 2.0](E06_lulesh/REPORT.md)
 
@@ -717,4 +725,5 @@ Status: pre-flight
 | run | where | what it is | status | trials | outcomes |
 |---|---|---|---|---:|---|
 | `e6_lulesh_smoke` | [`E06_lulesh/preflight/e6_lulesh_smoke/`](E06_lulesh/preflight/e6_lulesh_smoke/) | E6 pre-flight, step 1 (server, no model): ONE trial of the arm `discopop_capability` on `llnl/lulesh` through the run path — the first time a project-layout C++ package of six units goes through it on the repaired DiscoPoP: does it build, profile and verify, how long does it take, what does DiscoPoP alone keep — launched 13 Oct 22:16 UTC at `90f9b35c4` with `--verify-size STANDARD` (no T0.1 entry yet; a first launch without it was refused before a run existed). Result: PROFILE_ERROR — `lulesh.h` has no include guard and the profile step compiles the six units as one; the package must be repaired before it can be profiled | valid | 1 | PROFILE_ERROR 1 |
+| `e6_lulesh_smoke2` | not archived yet | E6 pre-flight, the smoke again on the repaired package (server, no model): ONE trial of the arm `discopop_capability` on `llnl/lulesh`, `--verify-size STANDARD` — does the profile go through with the include guard, how long, how much memory | registered |  |  |
 
