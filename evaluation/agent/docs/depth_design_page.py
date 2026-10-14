@@ -256,7 +256,7 @@ P.append(table(["Your choice", "What happens", "Cost"], [
     ["<strong>One more short run first</strong>",
      "Correct the automatic check the same way, run the two short trials again, then launch if they pass. The rule’s own path, "
      "but it would show nothing about the repair that this run did not.",
-     "about $2 more, and another round of messages"],
+     "about $2–4 more (the last two short runs cost $3.92 and $1.90), and another round of messages"],
 ]))
 P.append("<p class=\"ask\"><strong>How I read your answer:</strong> “ok” means launch the 153 trials now. “smoke again” means one "
          "more short run first. Until you answer, no model is called.</p>")
