@@ -98,7 +98,7 @@ th{font-weight:600;color:var(--mute);font-size:12.5px;letter-spacing:.04em;text-
 ul,ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;max-width:68ch}
 </style>
 <main>""")
-P.append("""<header><p class="k">Put to the author 13 Oct 2026 · depth trials reopened 13 Oct, late (the author: “run both”) · the benchmark is built and checked (14 Oct): three loops · your “ok” (14 Oct, 07:45 UTC) · the short test run found that the agent’s last check drops a second rewrite built on the first · your “ok” (13:23 UTC): that check repaired · the second short test run found a second defect · your “ok” (18:12 UTC): repaired too · the third short test run held the launch by my rule, though nothing in it is a defect — the launch is yours · the model writes the pragmas in the later experiments</p>
+P.append("""<header><p class="k">Put to the author 13 Oct 2026 · depth trials reopened 13 Oct, late (the author: “run both”) · the benchmark is built and checked (14 Oct): three loops · your “ok” (14 Oct, 07:45 UTC) · the short test run found that the agent’s last check drops a second rewrite built on the first · your “ok” (13:23 UTC): that check repaired · the second short test run found a second defect · your “ok” (18:12 UTC): repaired too · the third short test run held the launch by my rule, though nothing in it is a defect · your “ok” (20:17 UTC): the 153 trials are running · the model writes the pragmas in the later experiments</p>
 <h1>The depth experiment</h1>
 <p class="lede">When the agent keeps a rewrite, it profiles the program again and may find new regions. So far, in every experiment, such a region gets DiscoPoP's pragma at most and is never rewritten a second time. “Depth 1” would let the model be asked about it once more, “depth 2” twice. The experiment was planned to show whether that gains anything and what it costs.</p></header>""")
 
@@ -158,6 +158,19 @@ WHY_OUT = {"s233": "DiscoPoP alone already makes it faster (3 of 3 runs): nothin
            "s2111": "DiscoPoP finds nothing after the first rewrite and nothing in the finished program either"}
 new_lo = 15 * per_trial + 15 * d1[0] + 15 * d2[0]
 new_hi = 15 * per_trial + 15 * d1[1] + 15 * d2[1]
+# ---- your fourth "ok" (14 Oct, 20:17 UTC): the 153 trials launched ----
+P.append('<div class="card"><h3>Your “ok” (14 Oct, 20:17 UTC): the 153 trials are running</h3>')
+P.append("<p>Launched on the agent with both repairs (the last check keeps a chain of rewrites; the crash check runs at every "
+         "round), exactly as registered, one run per group of 12 cores and nothing queued behind them:</p>")
+P.append(table(["Run", "Loops", "Settings", "Trials"], [
+    ["the depth set", "<code>s2251</code>, <code>s221</code>, <code>s257</code>", "no extra round, one, two × 5", "45"],
+    ["the 18 loops, in three runs", "6 loops each", "one extra round, two × 3 (no extra round: the pragma experiment’s trials)", "108"],
+]))
+P.append("<p>About $110–250, and about 7–8 hours if the trials run at the third test run’s pace (7 and 17 minutes per trial). When "
+         "all four runs have ended I fetch and record them, run the race check on the server (no model), and read them out as "
+         "registered: one test, whether one extra round makes the depth set race-free faster more often than none; the 18 loops "
+         "described beside the pragma experiment’s trials. Nothing else runs on the server meanwhile.</p>")
+P.append("</div>")
 # ---- your third "ok" (14 Oct, 18:12 UTC): the crash check at every round, checked without a model, the third short run ----
 _V8 = RES / "E08_restructuring_depth/checks/e8_fix108_verify"
 _rl = json.loads((_V8 / "replay/size_replay_server_large.json").read_text())
@@ -258,7 +271,7 @@ P.append(table(["Your choice", "What happens", "Cost"], [
      "but it would show nothing about the repair that this run did not.",
      "about $2–4 more (the last two short runs cost $3.92 and $1.90), and another round of messages"],
 ]))
-P.append("<p class=\"ask\"><strong>How I read your answer:</strong> “ok” means launch the 153 trials now. “smoke again” means one "
+P.append("<p class=\"ask\"><strong>How I read your answer then (you said “ok” at 20:17 UTC):</strong> “ok” means launch the 153 trials now. “smoke again” means one "
          "more short run first. Until you answer, no model is called.</p>")
 P.append("</div>")
 # ---- your second "ok" (14 Oct, 13:23 UTC): the check repaired, checked without a model, the short test run again ----
