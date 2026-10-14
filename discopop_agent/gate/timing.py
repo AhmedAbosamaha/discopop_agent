@@ -36,6 +36,18 @@ from .patching import _compile_variant
 # D40.1 the gate's own performance stage pairs against it.
 SPEED_THRESHOLD_KEY = "__speed_threshold__"
 
+# Fix 108: what `measure_marginal(..., name_sides=True)` puts before the diagnostic when the
+# program BEFORE the change is the one that failed — so a caller never charges that failure to
+# the change it was timing.
+BEFORE_FAILED = "the program before the change: "
+
+
+def crashed(diag: str) -> bool:
+    """Did the run behind this diagnostic CRASH (killed by a signal), rather than fail some other
+    way?  The rule D40 and Phase B have used since a crash at the timing size was first told apart
+    from a failure to measure."""
+    return "non-zero exit (-" in diag or "signal" in diag.lower()
+
 
 _REGION_RE = re.compile(r"^DP_TIMED_REGION_SECONDS\s+([0-9.eE+-]+)\s*$", re.M)
 
@@ -292,7 +304,7 @@ def noise_floor(
 def measure_marginal(
     before_text: str, after_text: str, source_file: str,
     binary_args: Optional[List[str]] = None, pairs: int = 5,
-    extra_flags: Optional[List[str]] = None,
+    extra_flags: Optional[List[str]] = None, name_sides: bool = False,
 ) -> Tuple[bool, float, str]:
     """How much does the one change between these two states cost or save?
 
@@ -303,6 +315,12 @@ def measure_marginal(
 
     This is the per-region number that actually matters: what a pragma is worth
     in the program it will ship in, not in isolation.
+
+    `name_sides` (Fix 108): the BEFORE state is built and run first, so its failure
+    used to come back looking exactly like the change's — E8's second smoke told the
+    model its repaired rewrite had crashed when the program before it was the one that
+    did.  On, a failure of the before state starts with `BEFORE_FAILED`; off, the
+    diagnostic is what it always was.
     """
     import statistics
     ratios: List[float] = []
@@ -313,7 +331,7 @@ def measure_marginal(
                                                 f"before{i}", binary_args, repeats=1,
                                                 extra_flags=extra_flags)
             if not ok_b:
-                return False, 0.0, diag_b
+                return False, 0.0, (BEFORE_FAILED + diag_b) if name_sides else diag_b
             ok_a, ta, _oa, diag_a = time_source(after_text, source_file, work_dir,
                                                 f"after{i}", binary_args, repeats=1,
                                                 extra_flags=extra_flags)

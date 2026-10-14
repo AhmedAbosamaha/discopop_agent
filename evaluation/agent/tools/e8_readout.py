@@ -2,10 +2,11 @@
 """E8's read-out as pre-registered (THESIS_EXPERIMENTS §6, 14 Oct 2026), written before any counted trial was fetched.
 
 The one test and the descriptive read-outs fixed in "Plan, E8 pre-registration", with the additions of the afternoon
-rows: where Fix 106's `[keep]` acted, and the signatures of candidate Fix 107 and candidate Fix 108, counted in every
-log (Fix 108's: a trial that kept a rewrite with the speed question deferred and then met a crash at the timing size —
-its model told so, a pragma Phase B dropped as unsafe at size, or the run's noise measurement crashed; each such trial
-is listed to be read by hand: is it the program before the rewrite that crashes?).
+rows: where Fix 106's `[keep]` acted, and the signature of candidate Fix 107, counted in every log; and, since Fix 108
+(§6, 14 Oct evening), where it acted — a rewrite sent back at a level before the last because the program with
+DiscoPoP's pragmas crashed at the timing size (`D40 size run: CRASHED`) — and what would show it did not suffice:
+a failure that D40's paired timing names as the program before the rewrite's, a pragma Phase B dropped because the
+program before it crashed at the timing size, or the run's noise measurement crashing (each such trial listed).
 
   H8   on the depth set (`e8v5_set`: `tsvc_c5` s2251 s221 s257 × 5), race-free verified FASTER with `depth1_v5`
        against `default_v5` — Cochran-Mantel-Haenszel stratified by loop, one-sided (depth 1 ahead), the
@@ -150,10 +151,12 @@ def chain(t: Dict[str, Any]) -> Dict[str, Any]:
                     and set(last["finds"]) & set(applied)):
                 signature = True
     req = Path(t["_dir"]) / "agent_patches" / "requests" / "requests.jsonl"
-    told = req.exists() and "CRASHED at the timing size" in req.read_text(errors="replace")
-    unsafe = len(re.findall(r"the program CRASHED at the timing size", head))
+    told = req.read_text(errors="replace").count("CRASHED at the timing size") if req.exists() else 0
+    unsafe = len(re.findall(r"^│  the program CRASHED at the timing size", head, re.M))      # Phase B, its own pragma
+    unsafe_before = len(re.findall(r"^│  the program BEFORE this pragma CRASHED at the timing size", head, re.M))
+    before_named = len(re.findall(r"D40: the timing failed, and not on this rewrite", head))
     noise_crash = "timing noise on this machine: not measurable (run failed: non-zero exit (-" in head
-    deferred = "D40 verdict: safe_deferred" in head
+    size_crashes = len(re.findall(r"D40 size run: CRASHED", head))
     return {"blocks": dict(sorted(blocks.items())), "calls": dict(sorted(calls.items())),
             "kept": dict(sorted(kept.items())), "applied": len(applied),
             "fix106_keep": len(re.findall(r"^\s+\[keep\] ", settle, re.M)),
@@ -161,8 +164,9 @@ def chain(t: Dict[str, Any]) -> Dict[str, Any]:
             "rewrite_cascades": sum(1 for n in notes if n.startswith("rewrite for") and "depended on" in n),
             "repairs": len(re.findall(r"^\s+\[(?:repair|revert)\] ", settle, re.M)),
             "fix107_signature": signature,
-            "crash_told": bool(told), "unsafe_at_size": unsafe, "noise_crash": noise_crash,
-            "fix108_signature": deferred and bool(told or unsafe or noise_crash)}
+            "crash_told": told, "unsafe_at_size": unsafe, "unsafe_before": unsafe_before,
+            "before_named": before_named, "noise_crash": noise_crash, "fix108_acted": size_crashes,
+            "fix108_signature": bool(before_named or unsafe_before or noise_crash)}
 
 
 def speedups(t: Dict[str, Any]) -> Dict[str, Optional[float]]:
@@ -266,16 +270,19 @@ def to_markdown(res: Dict[str, Any], set_cells: Dict[Tuple[str, str], Dict[str, 
                        f"{_med(c['full_profiles'])} | {_med(c['agent_s'])} |")
     out += ["", "## Each trial of the depth set: what each level did, what Settle kept, what shipped", "",
             "Model calls and rewrites kept in Phase A per level (`{depth: n}`); Settle: changes kept by Fix 106's "
-            "`[keep]`, changes dropped, repairs of the finished-program check; the signatures of candidates Fix 107 and Fix 108.", "",
+            "`[keep]`, changes dropped, repairs of the finished-program check; candidate Fix 107's signature; Fix 108: "
+            "rewrites it sent back (a crash at the timing size before the last level) and whether its residual "
+            "signature shows.", "",
             "| loop | arm | rep | calls per level | rewrites kept per level | pragmas applied | Fix 106 kept | dropped "
-            "| repairs | Fix 107 | Fix 108 | outcome | speed-up 6 / 12 | race |",
-            "|---|---|---:|---|---|---:|---:|---:|---:|---|---|---|---|---|"]
+            "| repairs | Fix 107 | Fix 108 sent back | Fix 108 residual | outcome | speed-up 6 / 12 | race |",
+            "|---|---|---:|---|---|---:|---:|---:|---:|---|---:|---|---|---|---|"]
     for t in sorted(set_trials, key=lambda x: (str(x.get("benchmark")), ARMS.index(str(x.get("arm"))), int(x.get("repeat") or 0))):
         ch = chains[t["_dir"]]
         sp = speedups(t)
         out.append(f"| `{str(t.get('benchmark')).split('/')[1]}` | `{t.get('arm')}` | {t.get('repeat')} | {ch['calls']} | "
                    f"{ch['kept']} | {ch['applied']} | {ch['fix106_keep']} | {len(ch['dropped'])} | {ch['repairs']} | "
-                   f"{'yes' if ch['fix107_signature'] else 'no'} | {'yes' if ch['fix108_signature'] else 'no'} | "
+                   f"{'yes' if ch['fix107_signature'] else 'no'} | {ch['fix108_acted']} | "
+                   f"{'yes' if ch['fix108_signature'] else 'no'} | "
                    f"{t.get('outcome')} | "
                    f"{sp.get('6') or '—'} / {sp.get('12') or '—'} | {t.get('_race', 'clean')} |")
     out += ["", "## The speed question at depth 0 (the depth set): the judge's verdicts per trial", ""]
@@ -311,12 +318,17 @@ def to_markdown(res: Dict[str, Any], set_cells: Dict[Tuple[str, str], Dict[str, 
     e8_chains = [chains[t["_dir"]] for t in set_trials + [x for x in loop_trials if x.get("arm") != DEPTH0]]
     out += ["", "## Every unusable program", ""] + ([f"- {u}" for u in unusable] or ["- none"])
     out += ["", "## Trials without a verdict (left out of every rate)", ""] + ([f"- {u}" for u in missing] or ["- none"])
-    out += ["", "## Fix 106 and candidates Fix 107 and Fix 108 in E8's trials", "",
+    out += ["", "## Fix 106, candidate Fix 107 and Fix 108 in E8's trials", "",
             f"- trials in which Fix 106 kept a rewrite (`[keep]`): {sum(1 for c in e8_chains if c['fix106_keep'])} of "
             f"{len(e8_chains)} ({sum(c['fix106_keep'] for c in e8_chains)} rewrites)",
             f"- trials with candidate Fix 107's signature: {sum(1 for c in e8_chains if c['fix107_signature'])} of {len(e8_chains)}",
-            f"- trials with candidate Fix 108's signature: {sum(1 for c in e8_chains if c['fix108_signature'])} of "
-            f"{len(e8_chains)} — to be read by hand: "
+            f"- trials in which Fix 108 sent a rewrite back (it crashed at the timing size before the last level): "
+            f"{sum(1 for c in e8_chains if c['fix108_acted'])} of {len(e8_chains)} "
+            f"({sum(c['fix108_acted'] for c in e8_chains)} rewrites); models told of a crash at the timing size, at any "
+            f"level: {sum(1 for c in e8_chains if c['crash_told'])} trials",
+            f"- trials with Fix 108's residual signature (a failure named as the program before the rewrite's, a pragma "
+            f"dropped because the program before it crashed, the noise measurement crashing): "
+            f"{sum(1 for c in e8_chains if c['fix108_signature'])} of {len(e8_chains)}: "
             + (", ".join(f"`{str(t.get('benchmark')).split('/')[1]}` {t.get('arm')} rep {t.get('repeat')}"
                          for t in set_trials + [x for x in loop_trials if x.get('arm') != DEPTH0]
                          if chains[t['_dir']]['fix108_signature']) or "none"),

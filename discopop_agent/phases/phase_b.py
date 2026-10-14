@@ -19,6 +19,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from .. import project as project_mod
 from ..args import AgentArguments
 from ..gate import _validate_cached, measure_marginal, noise_floor
+from ..gate.timing import BEFORE_FAILED, crashed
 from ..llm import make_diff
 from ..plan import build_candidates, region_fingerprint
 from ..plan import impact as impact_mod
@@ -241,7 +242,7 @@ def _phase_b(
                 return "dropped"
             ok_m, marginal, mdiag = measure_marginal(
                 before, after, args.source_file, binary_args,
-                extra_flags=list(args.timing_cflags) or None,
+                extra_flags=list(args.timing_cflags) or None, name_sides=True,
             )
             if not ok_m:
                 # A CRASH during the timing run is not a failure to measure — it is the
@@ -249,10 +250,13 @@ def _phase_b(
                 # at the agent size; the timing runs at the kernel's measured size, which is
                 # where a rewrite that puts an N x N array on the STACK finally overflows it
                 # (polybench/floyd-warshall: fine at N=128, 8 MB and dead at N=1024). Saying
-                # "measurement failed" hid that behind a timing word.
-                crashed = "non-zero exit (-" in mdiag or "signal" in mdiag.lower()
-                if crashed:
-                    print(f"│  the program CRASHED at the timing size — the correctness gate "
+                # "measurement failed" hid that behind a timing word.  Fix 108: when it is the
+                # program BEFORE this pragma that crashes, the log says so — nothing can be
+                # timed against it, and the pragma goes either way.
+                if crashed(mdiag):
+                    print(f"│  the program BEFORE this pragma CRASHED at the timing size — an earlier "
+                          f"change, not this pragma" if mdiag.startswith(BEFORE_FAILED) else
+                          f"│  the program CRASHED at the timing size — the correctness gate "
                           f"runs at the agent size and never reached it")
                     print(f"│  {mdiag[:110]}")
                     print(f"└─ DROPPED (unsafe at size)\n")

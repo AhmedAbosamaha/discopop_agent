@@ -4540,7 +4540,7 @@ def check_shipped_run(work: Path) -> Result:
             return make_diff(src.read_text(), new, str(src)), history, "plan"
 
         def clock(before: str, after: str, source_file: str, binary_args: Any = None,
-                  pairs: int = 5, extra_flags: Any = None) -> "Tuple[bool, float, str]":
+                  pairs: int = 5, extra_flags: Any = None, name_sides: bool = False) -> "Tuple[bool, float, str]":
             timed.append({"disk_pragma": "#pragma omp" in src.read_text(),
                           "staged_pragma": "#pragma omp" in after, "before_original": before == _SHIPPED_RUN_SRC})
             return True, (0.4 if len(timed) == 1 else 1.6), ""
@@ -4618,6 +4618,191 @@ def check_shipped_run(work: Path) -> Result:
                   "disk), the retry kept and its set applied by Phase B as judged (D41, threshold reused); at "
                   "--restructure-depth 1 judged for safety only (safe_deferred); --no-phase-b-reuse-d40 times it "
                   "again; --no-judge-as-shipped keeps the first rewrite as v2 did")
+
+
+_SIZE_SRC = """#include <stdio.h>
+#include <stdlib.h>
+#ifdef DP_BIG
+#define N 4000000
+#else
+#define N 20000
+#endif
+static double a[N], b[N];
+void back(void) {
+  for (int i = N - 2; i >= 0; i--)
+    a[i + 1] = a[i] + b[i];
+}
+int main(void) {
+  for (int i = 0; i < N; i++) { a[i] = (i % 7) * 0.5; b[i] = (i % 5) * 0.25; }
+  for (int r = 0; r < 10; r++) back();
+  double s = 0;
+  for (int i = 0; i < N; i++) s += a[i];
+  printf("%.6f\\n", s);
+  return 0;
+}
+"""
+_SIZE_BACK = "void back(void) {\n  for (int i = N - 2; i >= 0; i--)\n    a[i + 1] = a[i] + b[i];\n}"
+# A copy of the loop's length on the STACK: 160 KB at the agent size, 32 MB with -DDP_BIG against an 8 MB stack.
+_SIZE_STACK = _SIZE_SRC.replace(_SIZE_BACK, "void back(void) {\n  double t[N];\n  for (int i = 0; i < N; i++)\n"
+                                "    t[i] = a[i];\n  for (int i = N - 2; i >= 0; i--)\n    a[i + 1] = t[i] + b[i];\n}")
+_SIZE_HEAP = _SIZE_SRC.replace(_SIZE_BACK, "void back(void) {\n  double *t = (double *)malloc(sizeof(double) * N);\n"
+                               "  for (int i = 0; i < N; i++)\n    t[i] = a[i];\n  for (int i = N - 2; i >= 0; i--)\n"
+                               "    a[i + 1] = t[i] + b[i];\n  free(t);\n}")
+
+
+def check_size_crash_deferred(work: Path) -> Result:
+    """Fix 108 — with a deeper level to come, D40 judged only the SAFETY of a rewrite's pragmas and left the
+    speed question for the last level; the timing run was also the only run at the timing size, so a rewrite
+    that crashes there (a stack array of the loop's length, fine at the agent size) was kept untested, and at
+    the last level every later rewrite was timed against it and told its own program had crashed (E8's second
+    smoke).  Now the program with DiscoPoP's pragmas is run once at the timing size at a deferred level, and a
+    crash sends the rewrite back with the depth-0 text, word for word; and a failure of the program BEFORE a
+    rewrite in D40's paired timing is named, and never charged to the rewrite.
+
+    Unit cases on `judge_as_shipped` and `measure_marginal` (a real build of a crashing and a heap version);
+    then end to end with DiscoPoP and the real build, the model a stand-in (first a stack-array rewrite, then
+    its heap version), `--timing-cflags=-DDP_BIG`: at `--restructure-depth 1` the stack rewrite is sent back
+    and the heap one kept; at depth 0 the model reads the same message for the same rewrite; with
+    `--no-require-speedup` nothing is run at the timing size, as at depth 0."""
+    import contextlib
+    import importlib
+    import io
+    name = "size crash at depth"
+    problems: List[str] = []
+    # ── unit cases ─────────────────────────────────────────────────────────────────────────────────
+    from ..gate import timing as timing_mod
+    from ..phases import verdicts as verdicts_mod
+    crash_text = "the program with DiscoPoP's pragmas CRASHED at the timing size, which the correctness checks never reach: "
+    before_failed = getattr(timing_mod, "BEFORE_FAILED", None)
+    d, src, cands = _ship_candidates(work)
+    dp = d / ".discopop"
+    before = _SHIP_SRC.replace("  for (int i = 0; i < n; i++)\n    t[i] = b[i] * 2.0;\n", "") \
+                      .replace("  double *t = (double *)malloc(sizeof(double) * n);\n", "")
+    ran: List[str] = []
+
+    def safe(diff: str, c: Any) -> "Tuple[bool, str]":
+        return True, ""
+
+    def size_run(ok: bool, diag: str) -> Callable[[str], "Tuple[bool, str]"]:
+        def r(staged: str) -> "Tuple[bool, str]":
+            ran.append(staged)
+            return ok, diag
+        return r
+    try:
+        r = verdicts_mod.judge_as_shipped(cands, before, dp, str(src), threshold=0.0, validate=safe, measure=None,
+                                          run_at_size=size_run(False, "run failed: non-zero exit (-11):\n"))
+        if r.status != "pattern_broken" or r.diagnostic != crash_text + "run failed: non-zero exit (-11):\n":
+            problems.append(f"a crash at the timing size with a deeper level to come gave {r.status} / "
+                            f"{r.diagnostic[:60]!r}, not pattern_broken with the depth-0 text")
+        if not ran or ran[-1].count("#pragma omp parallel for") != 2:
+            problems.append("the size run did not get the rewrite with DiscoPoP's pragmas staged")
+        r = verdicts_mod.judge_as_shipped(cands, before, dp, str(src), threshold=0.0, validate=safe, measure=None,
+                                          run_at_size=size_run(True, ""))
+        if r.status != "safe_deferred":
+            problems.append(f"a clean size run gave {r.status}")
+        r = verdicts_mod.judge_as_shipped(cands, before, dp, str(src), threshold=0.0, validate=safe, measure=None,
+                                          run_at_size=size_run(False, "run failed: run timed out (120 s)"))
+        if r.status != "safe_deferred":
+            problems.append(f"a size run that failed without a crash gave {r.status}, not safe_deferred")
+    except TypeError as e:
+        problems.append(f"judge_as_shipped has no run at the timing size with the speed half deferred ({e})")
+    if before_failed is None:
+        problems.append("measure_marginal cannot say that the program BEFORE the change failed")
+    else:
+        r = verdicts_mod.judge_as_shipped(
+            cands, before, dp, str(src), threshold=0.98, validate=safe,
+            measure=lambda b, a: (False, 0.0, before_failed + "run failed: non-zero exit (-11):\n"))
+        if r.status != "exposed" or "CRASHED" in r.diagnostic or not r.diagnostic.startswith(before_failed):
+            problems.append(f"a crash of the program before the rewrite gave {r.status} / {r.diagnostic[:60]!r} — "
+                            "it is charged to the rewrite")
+    # measure_marginal itself, on a real build: the stack version crashes at -DDP_BIG, the heap version runs.
+    md = work / "size_measure"
+    shutil.rmtree(md, ignore_errors=True)
+    md.mkdir(parents=True)
+    msrc = md / "k.c"
+    msrc.write_text(_SIZE_SRC)
+    big = ["-DDP_BIG"]
+    try:
+        ok_n, _r, plain = timing_mod.measure_marginal(_SIZE_STACK, _SIZE_HEAP, str(msrc), pairs=1, extra_flags=big)
+        ok_s, _r, named = timing_mod.measure_marginal(_SIZE_STACK, _SIZE_HEAP, str(msrc), pairs=1, extra_flags=big,
+                                                      name_sides=True)
+        ok_a, _r, after_d = timing_mod.measure_marginal(_SIZE_HEAP, _SIZE_STACK, str(msrc), pairs=1, extra_flags=big,
+                                                        name_sides=True)
+        if ok_n or ok_s or ok_a:
+            problems.append("the stack version did not crash at -DDP_BIG — the case does not arise on this machine")
+        elif before_failed and (plain.startswith(before_failed) or not named.startswith(before_failed)
+                                or after_d.startswith(before_failed) or "non-zero exit (-" not in after_d):
+            problems.append(f"measure_marginal: before {named[:50]!r} / default {plain[:40]!r} / after {after_d[:40]!r}")
+    except TypeError as e:
+        problems.append(f"measure_marginal cannot name the side that failed ({e})")
+    # ── end to end ─────────────────────────────────────────────────────────────────────────────────
+    if not Path(_venv_bin("discopop_cxx")).exists():
+        return Result(name, "fail" if problems else "skip",
+                      "; ".join(problems[:3]) or "DiscoPoP is not installed in this venv (the unit cases pass)")
+    from ..args import parse_args
+    agent_run: Any = importlib.import_module("discopop_agent.run")
+    phase_a: Any = importlib.import_module("discopop_agent.phases.phase_a")
+    feedback: Dict[str, str] = {}
+    d = work / "size_run"
+    for case in ("depth1", "depth0", "nospeed"):
+        shutil.rmtree(d, ignore_errors=True)
+        d.mkdir(parents=True)
+        src = d / "k.c"
+        src.write_text(_SIZE_SRC)
+        ok, err = _profile(d, "k.c")
+        if not ok:
+            return Result(name, "fail", f"profile: {err}")
+        calls: List[str] = []
+
+        def model(evidence: Any, model_name: str, **kw: Any) -> Any:
+            msgs = kw.get("messages")
+            calls.append(msgs[-1]["content"] if msgs else "(first request)")
+            new = _SIZE_STACK if len(calls) == 1 else _SIZE_HEAP
+            history = (msgs or [{"role": "user", "content": "request"}]) + [{"role": "assistant", "content": "plan"}]
+            return make_diff(src.read_text(), new, str(src)), history, "plan"
+
+        argv = ["x", "--discopop-dir", str(d / ".discopop"), "--source-file", str(src),
+                "--provider", "claude-agent-sdk", "--model", "m", "--edit-mode", "direct",
+                "--exclude-functions", "main", "--budget", "2", "--timing-cflags=-DDP_BIG",
+                "--restructure-depth", "0" if case == "depth0" else "1"] + (
+                    ["--no-require-speedup"] if case == "nospeed" else [])
+        saved = (phase_a.call_llm, sys.argv)
+        log = io.StringIO()
+        try:
+            phase_a.call_llm, sys.argv = model, argv
+            with contextlib.redirect_stdout(log):
+                agent_run.run(parse_args())
+        finally:
+            phase_a.call_llm, sys.argv = saved
+        text = log.getvalue()
+        verdicts = re.findall(r"D40 verdict: ([a-z_]+)", text)
+        if case == "depth1":
+            if verdicts[:1] != ["pattern_broken"]:
+                problems.append(f"depth 1: the stack-array rewrite's D40 verdict is {verdicts[:1]} — kept untested at "
+                                "the timing size")
+            if "D40 size run: CRASHED" not in text or "D40 size run: ok" not in text:
+                problems.append("depth 1: the log does not show the size run crash, then pass")
+            if "safe_deferred" not in verdicts[1:2]:
+                problems.append(f"depth 1: the heap version's D40 verdict is {verdicts[1:2]}, not safe_deferred")
+            feedback[case] = calls[1] if len(calls) > 1 else ""
+            if crash_text not in feedback[case]:
+                problems.append("depth 1: the model was not told, in the depth-0 words, that the program crashed at "
+                                "the timing size")
+        elif case == "depth0":
+            if verdicts[:1] != ["pattern_broken"] or "D40 size run" in text:
+                problems.append(f"depth 0: verdict {verdicts[:1]}, or a size run where the paired timing decides")
+            feedback[case] = calls[1] if len(calls) > 1 else ""
+        else:
+            if "D40 size run" in text or verdicts[:1] != ["safe"]:
+                problems.append(f"--no-require-speedup: verdict {verdicts[:1]}, or a size run with the speed check off")
+    if feedback.get("depth1") and feedback.get("depth1") != feedback.get("depth0"):
+        problems.append("the model's message for the same crashing rewrite differs between depth 1 and depth 0")
+    if problems:
+        return Result(name, "fail", "; ".join(problems[:8]))
+    return Result(name, "pass", "a stack array that overflows at the timing size: sent back at a level with a deeper "
+                  "one to come, in the depth-0 words (the same message as at depth 0), its heap version kept; a "
+                  "crash of the program before a rewrite named and not charged to it; nothing run with the speed "
+                  "check off")
 
 
 def check_paired_perf(work: Path) -> Result:
@@ -5641,6 +5826,7 @@ _CHECKS: List[Tuple[str, Callable[[Path], Result]]] = [
     ("request-log", check_request_log),
     ("exposed-repair", check_exposed_repair),
     ("shipped-run", check_shipped_run),
+    ("size-crash-depth", check_size_crash_deferred),
     ("paired-perf", check_paired_perf),
     ("requeue", check_requeue),
     ("b8-outside-root", check_b8_outside_root),

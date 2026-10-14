@@ -27,6 +27,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
 from collections import defaultdict
 from dataclasses import dataclass, field
@@ -37,7 +38,8 @@ from .. import project as project_mod
 from .. import viz
 from ..args import AgentArguments, gate_facts
 from ..evidence import assemble
-from ..gate import _validate_cached, fix_hunk_headers, measure_marginal, noise_floor
+from ..gate import _validate_cached, fix_hunk_headers, measure_marginal, noise_floor, time_source
+from ..gate.timing import BEFORE_FAILED, crashed
 from ..llm import LLMConnectionError, call_llm
 from ..llm.diffs import make_diff
 from ..llm.dep_review import _llm_dep_review
@@ -844,7 +846,8 @@ def phase_a(state: RunState) -> None:
                               f"the exposed loops through the safety gate"
                               + (", then the program with them against the program before the rewrite (paired)"
                                  if judge_speed else
-                                 f"; depth {depth + 1} follows, so the speed half waits for the last level"
+                                 f"; depth {depth + 1} follows, so the speed half waits for the last level, "
+                                 f"and the program with them is run once at the timing size (Fix 108)"
                                  if args.require_speedup else
                                  "; the speed check is off, so the safety half only"))
                         d40_started = time.monotonic()
@@ -870,18 +873,37 @@ def phase_a(state: RunState) -> None:
                             return False, f"{res_s.stage}: {res_s.diagnostic or ''}"[:1500]
 
                         def _time(before_text: str, after_text: str) -> "tuple[bool, float, str]":
+                            # Fix 108: a failure of the program BEFORE the rewrite comes back named.
                             return measure_marginal(before_text, after_text, args.source_file,
                                                     binary_args,
-                                                    extra_flags=list(args.timing_cflags) or None)
+                                                    extra_flags=list(args.timing_cflags) or None,
+                                                    name_sides=True)
+
+                        def _at_size(staged_text: str) -> "tuple[bool, str]":
+                            # Fix 108: with the speed half deferred this is the only run at the timing
+                            # size before the last level — a crash there is a safety failure.
+                            with tempfile.TemporaryDirectory(prefix="dp_agent_size_") as tmp:
+                                ok_s, _t, _o, sdiag = time_source(
+                                    staged_text, args.source_file, Path(tmp), "size", binary_args,
+                                    repeats=1, extra_flags=list(args.timing_cflags) or None)
+                            print(f"│  [Phase-A] D40 size run: "
+                                  + ("ok" if ok_s else
+                                     ("CRASHED — " if crashed(sdiag) else "failed without a crash — ")
+                                     + sdiag.strip().replace(chr(10), " ")[:120]))
+                            return ok_s, sdiag
 
                         outcome = judge_as_shipped(
                             exposed_in(fresh_all, _touched_span(clean_diff), args.source_file),
                             pre_patch_src, dp_dir, args.source_file,
                             threshold=(speed_threshold(args, gate_cache, binary_args) if judge_speed else 0.0),
-                            validate=_safe, measure=_time if judge_speed else None)
+                            validate=_safe, measure=_time if judge_speed else None,
+                            run_at_size=(_at_size if args.require_speedup and deeper_coming else None))
                         if outcome.status == "safe_deferred" and not args.require_speedup:
                             outcome.status = "safe"          # no speed question at all: nothing is deferred
                         ratio_txt = f" {outcome.speedup:.2f}×" if outcome.speedup is not None else ""
+                        if outcome.status == "exposed" and outcome.diagnostic.startswith(BEFORE_FAILED):
+                            print(f"│  [Phase-A] D40: the timing failed, and not on this rewrite — "
+                                  f"{outcome.diagnostic.strip().replace(chr(10), ' ')[:160]}")
                         print(f"│  [Phase-A] D40 verdict: {outcome.status}{ratio_txt}"
                               + (" — Phase B and Settle decide, as before" if outcome.status == "exposed"
                                  else " — its pragmas are safe; speed is judged at the last level"

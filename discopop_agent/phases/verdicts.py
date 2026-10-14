@@ -33,6 +33,12 @@ from ..pragmas import (_read_tier1_patch, _repair_pragma_clauses, check_pragma_c
 from ..sources import _apply_in_memory
 
 from ..gate.timing import SPEED_THRESHOLD_KEY as SPEED_THRESHOLD_KEY   # defined with the timing code
+from ..gate.timing import BEFORE_FAILED, crashed
+
+# What the model is told when the program with DiscoPoP's pragmas crashes at the timing size —
+# one text for every level (Fix 108: the levels before the last now run that program too).
+CRASH_AT_SIZE = ("the program with DiscoPoP's pragmas CRASHED at the timing size, which the "
+                 "correctness checks never reach: ")
 
 
 @dataclass
@@ -265,6 +271,7 @@ def judge_as_shipped(
     threshold: float,
     validate: Callable[[str, Any], Tuple[bool, str]],
     measure: "Callable[[str, str], Tuple[bool, float, str]] | None",
+    run_at_size: "Callable[[str], Tuple[bool, str]] | None" = None,
 ) -> RewriteOutcome:
     """D40 — judge a kept rewrite the way it will ship, while the model can still act on it.
 
@@ -293,7 +300,18 @@ def judge_as_shipped(
     level follows, and a later rewrite of another region may be what makes this one pay, so the
     speed question waits for the last level (Phase B, D33, Settle).  Safety does not wait: an
     exposed loop is Tier 1 from then on and never restructured again, so a pragma that breaks
-    here breaks for good.  Safe → "safe_deferred"; nothing safe → "pattern_broken"."""
+    here breaks for good.  Safe → "safe_deferred"; nothing safe → "pattern_broken".
+
+    `run_at_size` (Fix 108): with the speed half deferred, the timing run was also the only run
+    at the timing size, so a rewrite that crashes there — a stack array of the loop's length,
+    fine at the agent size — was kept untested, and at the last level every later rewrite was
+    timed against it and told that its own program had crashed (E8's second smoke).  A crash is
+    a safety failure and does not wait either: the staged program is run once at the timing
+    size and a crash returns "pattern_broken" with the depth-0 text.  Any other failure of that
+    run keeps "safe_deferred", as a timing that fails without a crash keeps a rewrite at depth 0.
+    `measure` names a failure of the program BEFORE the rewrite (`BEFORE_FAILED`); that one is
+    not this rewrite's, so it is "exposed" (Phase B and Settle decide) with the reason in
+    `diagnostic`, for the log — the model is told nothing."""
     label = ", ".join(f"{c.pattern_type or 'pattern'} @ lines {c.region.start_line}–{c.region.end_line}"
                       for c in exposed[:3])
     prints = [region_fingerprint(c.source_file, c.region.start_line, c.region.end_line, c.region.name)
@@ -329,13 +347,19 @@ def judge_as_shipped(
     if staged is None:
         return RewriteOutcome("exposed", pattern_label=label, exposed_prints=prints)
     if measure is None:
+        if run_at_size is not None:
+            ok_r, rdiag = run_at_size(staged)
+            if not ok_r and crashed(rdiag):
+                return RewriteOutcome("pattern_broken", pattern_label=label, exposed_prints=prints,
+                                      diagnostic=CRASH_AT_SIZE + rdiag[:300])
         return RewriteOutcome("safe_deferred", pattern_label=label, exposed_prints=prints)
     ok_m, ratio, mdiag = measure(before, staged)
     if not ok_m:
-        if "non-zero exit (-" in mdiag or "signal" in mdiag.lower():
+        if mdiag.startswith(BEFORE_FAILED):
+            return RewriteOutcome("exposed", pattern_label=label, exposed_prints=prints, diagnostic=mdiag[:300])
+        if crashed(mdiag):
             return RewriteOutcome("pattern_broken", pattern_label=label, exposed_prints=prints,
-                                  diagnostic="the program with DiscoPoP's pragmas CRASHED at the timing "
-                                             "size, which the correctness checks never reach: " + mdiag[:300])
+                                  diagnostic=CRASH_AT_SIZE + mdiag[:300])
         return RewriteOutcome("exposed", pattern_label=label, exposed_prints=prints)
     if ratio < threshold:
         return RewriteOutcome("not_faster", speedup=ratio, pattern_label=label, exposed_prints=prints,

@@ -220,7 +220,11 @@ number of the record (D-numbers), so the text can be checked against the reposit
   - Profile again and ask DiscoPoP's question: is there now a pattern in the changed lines? If not, revert and
     tell the model.
   - Judging a rewrite the way it will ship (D40): DiscoPoP's directives for the rewrite are staged, checked and
-    timed against the program before the rewrite while the model can still react.
+    timed against the program before the rewrite while the model can still react. With a deeper level to come the
+    speed question waits for the last level (D40.1); the program with the directives is still run once at the size
+    where speed is measured, since a crash there is a safety failure (Fix 108, 14 Oct: a stack array as long as the
+    loop is harmless at the size the agent tests with), and a failure of the program before a rewrite is never
+    charged to the rewrite.
   - A region whose DiscoPoP directive the gate refuses goes to the model (Fix 101).
 - **4.9 Annotation.** DiscoPoP's directives from the final profile, each derived again against the current file,
   checked, timed for what it adds; directives that only pay together are judged as a set (D33); a set already
@@ -616,7 +620,13 @@ result, or the expectation written down before the run.
   two directives, about the original's speed); with two, the first rewrite had put an array as long as the loop on the
   stack — harmless at the size the agent tests with, a crash at the timing size — and with a deeper level to come the
   agent does not time a rewrite, so the crash surfaced only at the last level, where every new attempt was blamed for
-  it, a correct heap version included (candidate Fix 108). The trials are held again; the repair is the author's.
+  it, a correct heap version included (candidate Fix 108). The trials were held again.
+  *Repaired with the author's "ok" (14 Oct, 18:12 UTC; Fix 108, 4.8):* at a level before the last, the program with
+  DiscoPoP's directives still runs once at the timing size, and a crash there sends the rewrite back as at depth 0, in
+  the same words; a failure of the program before a rewrite is no longer charged to it. Counted in the requests the
+  model was sent, the depth-0 check had sent a rewrite back for such a crash in 7 of 7.7.1's 90 trials and in 1 of
+  the contrast set's 35, every time the rewrite's own (the model's replies name a stack array in 7 of the 8): without
+  the repair the defect would not have been rare at depth; an earlier count, made in the logs, had said none.
   *Decided with it:* the model writes the directive in 7.9 and what else remains — the setup of 7.7.1's second row (80 of
   90 on the same 18 loops, no unusable program). A decision taken after 7.7.1's result was known, recorded as that. The
   main comparison (7.2) and the evidence experiments (7.5) stay in the setup in which DiscoPoP writes; 7.7.1 is the

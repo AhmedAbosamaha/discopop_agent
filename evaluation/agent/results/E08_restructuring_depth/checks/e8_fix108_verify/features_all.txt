@@ -1,0 +1,128 @@
+
+  Feature checks — working in /var/folders/cq/rp6ywwsd4hx7y0r51kcbdn4w0000gn/T/dp_features_5zgorqua
+
+  [  ok  ] impact ranking       top = 1:8 at 91.5% of runtime, 2 cold region(s) ranked below it
+  [  ok  ] min-impact filter    6 → 3 candidates at a 50 ms floor
+  [  ok  ] new-region ranking   an unmeasured region is dropped at a 1 % share floor (1:13), so runtimes are re-measured at every depth
+  [  ok  ] hotspot re-measure   6 measured lines all moved by 3, none left behind; total runtime 0.98x of the first measurement
+      [explorer] attempt 1 stalled (STALLED: no result after 2 s) — retrying on the same profile
+      [explorer] succeeded after 2 attempt(s), 1 of them stalled
+  [  ok  ] explorer stall       stalled attempt killed with its child after 2 s, the next draw succeeded (2.0 s)
+  [  ok  ] loop counts          outer loop 7, both sibling loops 6,986 — from the observed markers (loop_counter_output.txt: still wrong upstream: {7: 6986, 8: 6986, 9: 1000})
+  [  ok  ] covered skip         covering lines 20–24 removed 2 region(s); 4 outside it kept
+  [  ok  ] budget policy        9 cases: fixed unchanged, share from min to max, unmeasured at min, zero budget stays zero
+  [  ok  ] project mode         DiscoPoP unit by unit calls the recurrence(s) at kern.c:[8, 14] Do-All; through the unity unit they are blocked (clauses intact) and regions keep their real file and line; the gate built both units, passed a correct pragma in the unit without main() and caught a racy one; --build-cmd works with placeholders and with CC/CFLAGS; a refresh moved only the edited file
+  [  ok  ] pattern choice       reduction > do_all > task per loop, applicable first, alternates kept; parallel loops and blocks located, `simd` and serial loops not
+  [  ok  ] prompt truth         system prompt and task follow the gate and the pragma mode in all three edit modes; --evidence none carries no DiscoPoP data; no granularity verdict without a speed check; induction and signature noise dropped
+  [  ok  ] prompt ablation      each of 4 parts removed alone in 3 edit modes x 2 pragma modes, the pragma rule kept without the contract; external remarks shown and labelled, no DiscoPoP data beside them
+  [  ok  ] bare-LLM baseline    mirror (1196 words): the agent's contract, OpenMP rules, pragma forms, plan and checklist verbatim, no DiscoPoP / evidence / region / gate-during-the-run; minimal (87 words) and contract (E1-bare) reproducible; the edit kept unchecked
+  [  ok  ] bare speed off       speed off: no speed goal or timing step (1217 words), contract, OpenMP rules, pragma forms and checklist the agent's own speed-off text; speed on unchanged
+  [  ok  ] one editable file    the agent's queue and focus refuse every other file; the model alone edited both files and only its own was taken back; it reads the agent's sentence and no list of functions
+  [  ok  ] flow carriers        inner loop, outer loop, same iteration and previous call told apart from this build's call-path states; INIT/WAR/WAW on one line read each by its type; the recurrence called mutual and the splittable pair given its order
+  [  ok  ] workspace confined   9 paths judged right (outside, `..`, symlink, reference solutions denied; the workspace allowed); shell, web and search blocked
+  [  ok  ] twin prompt          12 configurations: the agent's system prompt and request, less only the gate during the run, the feedback clause and the earlier-turn sentence
+  [  ok  ] twin run             2 call(s); the first request is the agent's; the edit kept unchecked, re-profiled, DiscoPoP's pragmas inserted with no gate step; budget 0 = DiscoPoP alone unchecked
+  [  ok  ] harness lines        3 legitimate changes through, 6 harness edits refused (inlined, edited, duplicated, moved, include dropped, a new pb_mix call); the same block in the agent's 3 request forms, the twin's and the model alone's; v3 packages held to the judge's rules
+  [  ok  ] harness guard        the judge's rules (byte-identical copy) and the agent's words; model alone: the Fable case fixed on one re-ask in the same session, an unfixed edit discarded after 3 calls, a clean edit untouched; twin: re-asked and the fix kept
+  [  ok  ] evidence enrichment  arrays a, b tagged array in C; subscripts read from the source (incl. `(*A)[i][0] +=`); 1 loop(s) already parallel inside `kernel` reported
+  [  ok  ] dep standing         rewrite not judged by the old profile; outer Do-All survives an inner blocker; the blocked loop itself is still contradicted; below a kept pragma the profile is read at the profile's lines (both directions), and not at all when the working file is not the profiled text plus inserted lines
+  [  ok  ] schedule runtime     10 pragma shapes: clause added only to unscheduled loop constructs
+  [  ok  ] noise floor inputs   floor 0 on the default input, 2.8e-14 with the seeded one; a correct reduction passes the gate and Settle
+  [  ok  ] hotspot remap        measurements and covered spans follow the code; 0 dropped when lines vanish; a revert restores them; a rewrite's span excludes diff context
+  [  ok  ] mixed-scale ranking  measured beats unmeasured; proxy-only ordering unchanged
+  [  ok  ] fast refresh         39/39 dependences and 3/3 trip counts carried, lossless
+  [  ok  ] fast refresh ≡ full  3 vs 4 patterns; only the known new-code gap at 1:19 (nothing else diverged) — 43/65 observed dependences carried forward (22 in rewritten code, 0 no longer present; 36 without callpath state), 5/5 loop trip counts
+  [  ok  ] reduction carry      reduction.txt left to the compile; translation still correct on 1/1 record(s), both line numbers shifted with the edit
+│  [Tier-1] Repairing the generated pragma: x, t are declared inside the loop body, so cannot appear in a clause
+  [  ok  ] clause checks        8/8 verdicts correct; 16 scope cases (distance and one-line bodies) correct
+  [  ok  ] dependence review    4 dependence line(s) removed — reviewed 2 static blocker(s), discharged 2 (4 dependence line(s) removed, recorded in llm_deps.json)
+  [  ok  ] TSan barrier         real race caught, barrier-separated regions clean (archer active)
+  [  ok  ] barrier heuristic (Fix 104) the s341 race is not excused; two regions are, without archer only; with archer nothing is excused
+  [  ok  ] equivalence          9 comparison rules hold, LULESH's own OpenMP included
+  [  ok  ] noise-floor          reduction 1.5e-12, integer program 0 (stays strict)
+  [  ok  ] schedule-stress      racy=race, good=stable; race caught by repeatability, not by a diff
+  [  ok  ] anchor-vs-ref        deterministic-but-wrong caught at the anchor; correct reduction still passes
+  [  ok  ] dep-evidence         recurrence=contradicted, clean loop=no-blocker, unprofiled=no-data, no profile=unavailable
+  [  ok  ] dep-lines            1 loop-carried RAW found on line 9; 7 deps all within 13 lines
+  [FATAL] the timing build (--timing-cflags -DDP_TIMING_BREAK) of the original failed: /var/folders/cq/rp6ywwsd4hx7y0r51kcbdn4w0000gn/T/dp_agent_ref_7c2cwz5a/probe.c:5:2: error: "timing flags reached this build"
+    5 | #error "timing flags reached this build"
+      |  ^
+1 error generat
+  [  ok  ] timing size          reference 0.001 → 0.5 s, timed builds and noise/marginal builds take the flag; gate 2.0× with it, rejected at 'performance' without; correctness builds untouched
+  [  ok  ] omp include          C and C++ programs including <omp.h> build with -fopenmp and run
+  [  ok  ] omp runtime          a correct runtime-calling program passes the gate; a racy one fails at 'tsan'
+  [  ok  ] exclude c++          4 -> 2 candidates; `helper` (file-local) and `ns::nested` excluded by plain name, `kept` kept
+  [  ok  ] explorer multi-backedge explorer finished; Do-All at lines [9, 11] includes the multi-back-edge loop (9)
+  [  ok  ] profiler else-loop   6 loops, 6 loop-state positions; explorer finished 5 of 5 runs
+  [  ok  ] pragma on a sibling loop second of two identical loop headers annotated, as profiled and after a shift
+  [  ok  ] pragma arbitration (Fix 85) collision found; faster side taken; noise band, gate rejection and identical/absent pragmas handled
+  [  ok  ] argument dependencies 5 impossible combinations refused; arbitration resolves to what actually happens (False without --llm-pragmas)
+  [  ok  ] settle paired speed  faster file kept against a reference 8× too small (output matches, 1.03x the original, paired); slower file rejected (slower than the original: 0.78x, paired (kept at or above 0.)
+  [keep] rewrite of 1:2 — no kept pragma targets a region it exposed, but the rewrite of 1:2 kept after it changed a region it exposed
+  [ok] finished source verified — stood in
+  [ok] finished source verified — stood in
+  [keep] rewrite of 1:2 — no kept pragma targets a region it exposed, but the rewrite of 1:5 kept after it changed a region it exposed
+  [ok] finished source verified — stood in
+  [ok] finished source verified — stood in
+  [  ok  ] settle chain         a chain survives whole; an orphan nothing stands on goes with the old note; a rewrite reshaped by a later one stays; a later orphan goes, then the first
+┌─ D33 — 2 safe pragma(s) did not pay alone; measuring them together
+│  split.c: 2 together 2.00× — the set pays
+│    without 5–7: 0.40× the set — needed
+│    without 2–4: 0.40× the set — needed
+│  [Phase-B] Original backed up → split.c.original
+│  [Phase-B] Applied to split.c
+│  split.c: 2 pragma(s) APPLIED together
+└─ D33 done
+
+┌─ D33 — 2 safe pragma(s) did not pay alone; measuring them together
+│  split.c: 2 together 0.90× — still costs more than it saves; all dropped
+└─ D33 done
+
+┌─ D33 — 2 safe pragma(s) did not pay alone; measuring them together
+│  split.c: 2 together 2.00× — the set pays
+│    without 5–7: 1.00× the set — adds nothing, left out
+│  [Phase-B] Applied to split.c
+│  split.c: 1 pragma(s) APPLIED together
+└─ D33 done
+
+┌─ D33 — 1 safe pragma(s) did not pay alone; measuring them together
+│  split.c: fewer than two to combine — dropped as measured alone
+└─ D33 done
+
+  [  ok  ] phase-b joint        pair paying together kept as one unit; pair not paying left out; dead-weight member eliminated; a lone deferred pragma dropped as before
+  [floor] DiscoPoP alone keeps 1 pragma(s) — the agent's program must not be slower than that one (D32; details in floor/floor.log)
+
+  [floor] DiscoPoP alone keeps nothing — the floor is the original program (D32)
+
+  [floor] shipped DiscoPoP's own program (D32) — the agent's was 0.60× DiscoPoP's own, paired
+
+  [floor] kept the agent's program — 1.30× DiscoPoP's own, paired (kept at or above 0.990; D32)
+
+  [floor] the finished program is DiscoPoP's own (D32)
+
+  [floor] shipped DiscoPoP's own program (D32) — the agent's was 0.25× DiscoPoP's own, paired
+
+  [  ok  ] dp floor             floor built and original restored; none when DiscoPoP keeps nothing; slower agent program replaced by the floor, faster kept, identical not timed, s000 shape ships DiscoPoP's
+  [  ok  ] shipped prompt       v3 states the deciding comparison in the twins' words; only timing lines differ from v2, and nothing differs with the speed check off
+  [  ok  ] prompt v5            D13: the blocker note, the legend and the digest's scalar line, and nothing else where DiscoPoP writes the pragma; P1: no 'nothing re-profiles / nothing adds a pragma' where the model writes it, step 6 and the task line name the same two comparisons at the configured ratio; version 4 and the model alone's blocks unchanged
+  [  ok  ] shipped judge        ok / not_faster (naming the added loop and allocation) / pattern_broken / set fallback / crash / unmeasurable / safety only at a depth (safe_deferred, pattern_broken); outermost-first; the real file never written
+  [  ok  ] request log          system prompt once by digest; one line per call with what was sent and the reply
+│  [Tier-1] Repairing the generated pragma: tmp is declared inside the loop body, so cannot appear in a clause
+  [  ok  ] exposed repair       private(tmp) on a body-declared name fails unrepaired, is repaired, rewrite exposed
+  [  ok  ] shipped run          the slow rewrite reverted with its ratio and what it added (pragmas staged, none on disk), the retry kept and its set applied by Phase B as judged (D41, threshold reused); at --restructure-depth 1 judged for safety only (safe_deferred); --no-phase-b-reuse-d40 times it again; --no-judge-as-shipped keeps the first rewrite as v2 did
+  [  ok  ] size crash at depth  a stack array that overflows at the timing size: sent back at a level with a deeper one to come, in the depth-0 words (the same message as at depth 0), its heap version kept; a crash of the program before a rewrite named and not charged to it; nothing run with the speed check off
+  [  ok  ] paired perf          v3's gate refuses 0.80x and keeps 1.30x of the program before the rewrite, timed paired against the text the patch applies to; v2 still uses the start-up time
+  [  ok  ] requeue              a Tier-1 region whose DiscoPoP pragma the gate refuses goes to the model, told why; a safe one is deferred to Phase B; --no-requeue-rejected defers without the pre-check (v3)
+  [  ok  ] b8 outside root      a function outside the project root no longer captures the call state: the kernel's dependence on b carries the kernel's call path, and the recurrence is not Do-All
+  [  ok  ] b9 callee in loop    a callee's accesses inside a loop iteration are placed in that iteration: the loops carrying a dependence through mix and emit are not Do-All, the loop calling the pure sq still is
+  [  ok  ] b4 nested duplication inner loops are duplicated before the loops that enclose them: the recurrence is blocked in 3 of 3 explorer runs on one profile
+  [  ok  ] b10 carried scalar   the running total and the one-line recurrence are blocked on their scalar; both parallel loops, one of them on one line, stay Do-All
+  [  ok  ] b13 scatter waw      the scatter with repeated indices, plain and under a one-line if, is blocked on its WAW; the permutation scatter and the loop with a local array stay Do-All
+  [  ok  ] b15 do-while         the recurrence nested in the do-while is blocked on its RAW; the loop after it stays Do-All
+  [  ok  ] B17 profile vs cwd length 36 cwd path lengths (90-125): the same 89 dependence lines and the loop results written in every run
+  [  ok  ] b19 last value       the search loop is not Do-All and its record names the write-after-write on the variable read after it; a value every pass assigns keeps lastprivate; the stack array is in no private clause; the nest keeps its Do-All with the inner counter private; the loop with exit in its body names no variable of the loop around it
+  [  ok  ] b19 work array       a work array that a called function fills on every pass is not shared on the loop that calls it; it is in a private clause, as before the array repair
+
+  71 passed, 0 failed, 0 skipped
+
+exit 0
