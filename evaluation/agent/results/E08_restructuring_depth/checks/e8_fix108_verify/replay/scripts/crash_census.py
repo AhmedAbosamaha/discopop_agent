@@ -38,8 +38,11 @@ for label, runs_, arm in (("E3 default_v5", E3, "default_v5"), ("E3 llm_pragmas_
                 continue
             n += 1
             req = d / "agent_patches" / "requests" / "requests.jsonl"
-            sent = [json.loads(x).get("sent", "") for x in req.read_text().splitlines()] if req.exists() else []
+            rows_ = [json.loads(x) for x in req.read_text().splitlines()] if req.exists() else []
+            sent = [r.get("sent", "") for r in rows_]
             k = sum(PHRASE in s for s in sent)
+            # does the model's answer to such a message name the stack?
+            stack = any(PHRASE in r.get("sent", "") and re.search(r"stack", r.get("reply", ""), re.I) for r in rows_)
             if not k:
                 continue
             told_trials += 1
@@ -53,8 +56,10 @@ for label, runs_, arm in (("E3 default_v5", E3, "default_v5"), ("E3 llm_pragmas_
             kept_before = [e for e in events[:last_pb] if e == "└─ ACCEPTED"] if last_pb is not None else []
             verdicts_before = [e for e in events[:last_pb] if e.startswith("D40 verdict")] if last_pb is not None else []
             rows.append((r, t.get("benchmark"), t.get("repeat") or d.name, k, len(kept_before), verdicts_before,
-                         t.get("outcome"), t.get("arm_flags")))
-    print(f"\n{label}: trials {n}; trials whose model was told 'CRASHED at the timing size' {told_trials}; messages {msgs}"
-          "\n   (run, loop, rep, messages, rewrites kept before the last pattern_broken verdict, outcome)")
+                         t.get("outcome"), stack))
+    print(f"\n{label}: trials {n}; trials whose model was told 'CRASHED at the timing size' {told_trials}; messages {msgs}; "
+          f"answers naming the stack in {sum(1 for row in rows if row[7])} of those trials"
+          "\n   (run, loop, rep, messages, rewrites kept before the last pattern_broken verdict, outcome, "
+          "the model's answer names the stack)")
     for row in rows:
-        print("  ", row[:5] + row[6:7])
+        print("  ", row[:5] + row[6:8])

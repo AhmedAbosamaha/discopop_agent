@@ -141,6 +141,7 @@ def chain(t: Dict[str, Any]) -> Dict[str, Any]:
             pat = None
     notes = re.findall(r"^\s+· (.*)$", settle, re.M)
     orphans = [n for n in notes if "none kept a pragma" in n]
+    repaired = bool(re.search(r"^\s+\[(?:repair|revert)\] ", settle, re.M))
     signature = False                       # candidate Fix 107 (§6, 14 Oct): the LAST kept rewrite an orphan
     if rewrites and orphans:                # while Phase B applied a pragma on a span it exposed
         last = rewrites[-1]
@@ -150,6 +151,12 @@ def chain(t: Dict[str, Any]) -> Dict[str, Any]:
             if (m2 and m2.group(1) == last["rid"] and (int(m2.group(2)) == k if k < 3 else int(m2.group(2)) >= 3)
                     and set(last["finds"]) & set(applied)):
                 signature = True
+    # Corrected 14 Oct, evening, before any counted trial (§6, the third smoke): when Settle's check of the finished
+    # program dropped pragmas ([repair]), an orphan drop can follow from that alone — the third smoke's depth-2 trial,
+    # whose only pragma was dropped for speed (0.62x) and its three rewrites with it.  Such a match is listed to be
+    # read by hand, not counted as the signature.
+    fix107_by_hand = signature and repaired
+    signature = signature and not repaired
     req = Path(t["_dir"]) / "agent_patches" / "requests" / "requests.jsonl"
     told = req.read_text(errors="replace").count("CRASHED at the timing size") if req.exists() else 0
     unsafe = len(re.findall(r"^│  the program CRASHED at the timing size", head, re.M))      # Phase B, its own pragma
@@ -163,7 +170,7 @@ def chain(t: Dict[str, Any]) -> Dict[str, Any]:
             "dropped": notes, "orphans": len(orphans),
             "rewrite_cascades": sum(1 for n in notes if n.startswith("rewrite for") and "depended on" in n),
             "repairs": len(re.findall(r"^\s+\[(?:repair|revert)\] ", settle, re.M)),
-            "fix107_signature": signature,
+            "fix107_signature": signature, "fix107_read_by_hand": fix107_by_hand,
             "crash_told": told, "unsafe_at_size": unsafe, "unsafe_before": unsafe_before,
             "before_named": before_named, "noise_crash": noise_crash, "fix108_acted": size_crashes,
             "fix108_signature": bool(before_named or unsafe_before or noise_crash)}
@@ -321,7 +328,11 @@ def to_markdown(res: Dict[str, Any], set_cells: Dict[Tuple[str, str], Dict[str, 
     out += ["", "## Fix 106, candidate Fix 107 and Fix 108 in E8's trials", "",
             f"- trials in which Fix 106 kept a rewrite (`[keep]`): {sum(1 for c in e8_chains if c['fix106_keep'])} of "
             f"{len(e8_chains)} ({sum(c['fix106_keep'] for c in e8_chains)} rewrites)",
-            f"- trials with candidate Fix 107's signature: {sum(1 for c in e8_chains if c['fix107_signature'])} of {len(e8_chains)}",
+            f"- trials with candidate Fix 107's signature: {sum(1 for c in e8_chains if c['fix107_signature'])} of {len(e8_chains)}; "
+            f"its pattern after a repair of the finished-program check, to be read by hand: "
+            + (", ".join(f"`{str(t.get('benchmark')).split('/')[1]}` {t.get('arm')} rep {t.get('repeat')}"
+                         for t in set_trials + [x for x in loop_trials if x.get('arm') != DEPTH0]
+                         if chains[t['_dir']]['fix107_read_by_hand']) or "none"),
             f"- trials in which Fix 108 sent a rewrite back (it crashed at the timing size before the last level): "
             f"{sum(1 for c in e8_chains if c['fix108_acted'])} of {len(e8_chains)} "
             f"({sum(c['fix108_acted'] for c in e8_chains)} rewrites); models told of a crash at the timing size, at any "

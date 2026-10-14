@@ -1,0 +1,80 @@
+{
+ "trial": "evaluation/agent/results/E08_restructuring_depth/preflight/e8v5_smoke2/benchmarks/tsvc_c5/s2251/depth2_v5/claude-haiku-4-5-20251001/rep1",
+ "timing_flags": [
+  "-DLARGE_DATASET"
+ ],
+ "stack_limit_kb": "8192",
+ "agent_cmd": [
+  "--project-dir",
+  ".",
+  "--project-units",
+  "s2251.c,main.c",
+  "--project-include",
+  ".",
+  "--project-editable",
+  "s2251.c",
+  "--discopop-dir",
+  ".discopop",
+  "--provider",
+  "claude-agent-sdk",
+  "--model",
+  "claude-haiku-4-5-20251001",
+  "--edit-mode",
+  "direct",
+  "--require-speedup",
+  "--min-runtime-share",
+  "0.01",
+  "--prompt-version",
+  "5",
+  "--restructure-depth",
+  "2",
+  "--timing-cflags=-DLARGE_DATASET",
+  "--check-input",
+  "7",
+  "--exclude-functions",
+  "main,dummy",
+  "--explorer-timeout",
+  "60"
+ ],
+ "cases": [
+  {
+   "case": "A depth-0 rewrite 0000, a deeper level to come",
+   "as_it_stood": {
+    "status": "safe_deferred",
+    "diagnostic": ""
+   },
+   "repaired": {
+    "status": "pattern_broken",
+    "diagnostic": "the program with DiscoPoP's pragmas CRASHED at the timing size, which the correctness checks never reach: run failed: non-zero exit (-11):\n"
+   },
+   "size_run_got_the_trial's_staged_program": true
+  },
+  {
+   "case": "B depth-1 rewrite 0004 on it, a deeper level to come",
+   "as_it_stood": {
+    "status": "safe_deferred",
+    "diagnostic": ""
+   },
+   "repaired": {
+    "status": "pattern_broken",
+    "diagnostic": "the program with DiscoPoP's pragmas CRASHED at the timing size, which the correctness checks never reach: run failed: non-zero exit (-11):\n"
+   },
+   "size_run_got_the_trial's_staged_program": true
+  },
+  {
+   "case": "C the heap version 0013 at the last level, against the two kept rewrites",
+   "alone_at_size": {
+    "program before (0000 + 0004)": "run failed: non-zero exit (-11):",
+    "0013 with its pragmas": "runs"
+   },
+   "as_it_stood": {
+    "status": "pattern_broken",
+    "diagnostic": "the program with DiscoPoP's pragmas CRASHED at the timing size, which the correctness checks never reach: run failed: non-zero exit (-11):\n"
+   },
+   "repaired": {
+    "status": "exposed",
+    "diagnostic": "the program before the change: run failed: non-zero exit (-11):\n"
+   }
+  }
+ ]
+}
