@@ -717,7 +717,7 @@ Status: running
 | `e8_c5_classes_c` | not archived yet | The depth set, T0.11 draw c, server, no model: arm discopop_capability on the five tsvc_c5 packages | registered |  |  |
 | `e8_c5_refs` | not archived yet | The depth set, the references through the harness (T0.14's method), server, no model: verify-source on each loop's reference and on its step-1 form, 6 and 12 threads (clause R4) | registered |  |  |
 | `e8_c5_steps` | not archived yet | The depth set, the step check (T0.13's method, clause R5), server, no model: default_arm_ceiling.py with each loop's file replaced by the original, by the form after step 1 and by the final form, the pragmas removed, the speed judged | registered |  |  |
-| `e8_c5_sizes_2d` | not archived yet | The depth set's loops on the 2-D arrays, T0.1 on the server, no model: size_table.py on s233, s257 | registered |  |  |
+| `e8_c5_sizes_2d` | [`E08_restructuring_depth/preflight/e8_c5_sizes_2d/`](E08_restructuring_depth/preflight/e8_c5_sizes_2d/) | The depth set's loops on the 2-D arrays, T0.1 on the server, no model: size_table.py on s233, s257 — 14 Oct 01:18 UTC at `a6c9d756a`: verification and timing STANDARD for both | valid | 0 |  |
 
 ## [E6 — a real application: LULESH 2.0](E06_lulesh/REPORT.md)
 
