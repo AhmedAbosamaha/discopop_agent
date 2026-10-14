@@ -10,7 +10,8 @@ real_t kernel_s123(void)
         long n = (long)(LEN_1D/2);
         #pragma omp parallel for
         for (int k = 0; k < NB; k++) {
-            long lo = n * k / NB, hi = n * (k + 1) / NB;
+            long lo = n * k / NB;
+            long hi = n * (k + 1) / NB;
             long m = 0;
             for (long i = lo; i < hi; i++) {
                 m++;
@@ -26,7 +27,8 @@ real_t kernel_s123(void)
         }
         #pragma omp parallel for
         for (int k = 0; k < NB; k++) {
-            long lo = n * k / NB, hi = n * (k + 1) / NB;
+            long lo = n * k / NB;
+            long hi = n * (k + 1) / NB;
             long j = first[k] - 1;
             for (long i = lo; i < hi; i++) {
                 j++;

@@ -1755,6 +1755,10 @@ CLEAN[V8_SUITE] = (8, v8_files, render_v8_harness, render_v8_kernel, hot_loop_v8
 #          repetition, so that positions computed once in front of the repetitions are wrong (variant `hoist`).
 # The blocks are a fixed number (not the thread count), so that every form is ordinary sequential C with the
 # pragmas removed — what DiscoPoP is given in the step check.
+# One declaration per line inside a block loop: the agent's clause repair takes a loop-local name out of
+# DiscoPoP's clause only for a declaration's FIRST name (seen on the Mac pilot of 13 Oct: `long lo = …, hi = …;`
+# left `private(hi)` standing, and DiscoPoP's own pragma for the loop did not compile). Not changed in the
+# agent; recorded (§6).
 V9_SUITE = "tsvc_c5"
 _V9_BLOCKS = "    enum { NB = 64 };\n"
 V9_S123_INIT = ("    for (int i = 0; i < LEN_1D; i++) if ((i * 17) % 5 < 2) c[i] = -c[i];\n"
@@ -1807,7 +1811,8 @@ _V9_S221 = _V9_BLOCKS + """    for (int nl = 0; nl < R; nl++) {
         }
         #pragma omp parallel for
         for (int k = 0; k < NB; k++) {
-            long lo = 1 + n * k / NB, hi = 1 + n * (k + 1) / NB;
+            long lo = 1 + n * k / NB;
+            long hi = 1 + n * (k + 1) / NB;
             real_t run = (real_t)0.;
             for (long i = lo; i < hi; i++) {
                 run = run + a[i] + d[i];
@@ -1821,7 +1826,8 @@ _V9_S221 = _V9_BLOCKS + """    for (int nl = 0; nl < R; nl++) {
         }
         #pragma omp parallel for
         for (int k = 0; k < NB; k++) {
-            long lo = 1 + n * k / NB, hi = 1 + n * (k + 1) / NB;
+            long lo = 1 + n * k / NB;
+            long hi = 1 + n * (k + 1) / NB;
             for (long i = lo; i < hi; i++) {
                 b[i] += offset[k];
             }
@@ -1857,7 +1863,8 @@ _V9_S123 = _V9_BLOCKS + """    int *pos = (int *)malloc((size_t)(LEN_1D/2) * siz
         long n = (long)(LEN_1D/2);
         #pragma omp parallel for
         for (int k = 0; k < NB; k++) {
-            long lo = n * k / NB, hi = n * (k + 1) / NB;
+            long lo = n * k / NB;
+            long hi = n * (k + 1) / NB;
             long m = 0;
             for (long i = lo; i < hi; i++) {
                 m++;
@@ -1873,7 +1880,8 @@ _V9_S123 = _V9_BLOCKS + """    int *pos = (int *)malloc((size_t)(LEN_1D/2) * siz
         }
         #pragma omp parallel for
         for (int k = 0; k < NB; k++) {
-            long lo = n * k / NB, hi = n * (k + 1) / NB;
+            long lo = n * k / NB;
+            long hi = n * (k + 1) / NB;
             long j = first[k] - 1;
             for (long i = lo; i < hi; i++) {
                 j++;

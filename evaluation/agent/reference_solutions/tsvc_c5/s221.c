@@ -12,7 +12,8 @@ real_t kernel_s221(void)
         }
         #pragma omp parallel for
         for (int k = 0; k < NB; k++) {
-            long lo = 1 + n * k / NB, hi = 1 + n * (k + 1) / NB;
+            long lo = 1 + n * k / NB;
+            long hi = 1 + n * (k + 1) / NB;
             real_t run = (real_t)0.;
             for (long i = lo; i < hi; i++) {
                 run = run + a[i] + d[i];
@@ -26,7 +27,8 @@ real_t kernel_s221(void)
         }
         #pragma omp parallel for
         for (int k = 0; k < NB; k++) {
-            long lo = 1 + n * k / NB, hi = 1 + n * (k + 1) / NB;
+            long lo = 1 + n * k / NB;
+            long hi = 1 + n * (k + 1) / NB;
             for (long i = lo; i < hi; i++) {
                 b[i] += offset[k];
             }
