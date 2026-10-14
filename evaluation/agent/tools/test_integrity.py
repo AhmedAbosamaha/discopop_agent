@@ -185,8 +185,11 @@ for meta_p in sorted(PREPARED.rglob("meta.json")):
                 dirty.append(f"{f.relative_to(PREPARED)}: an include from outside the package")
         if f.name in editable and meta.get("generator_version") in (6, 7, 8):
             # v7: where TSVC's own call hands `dummy` a number, the call keeps it (`dummy(a, b, c, d, e, dot);`)
+            # the depth set's loops on the 2-D arrays: the call hands them over too, as TSVC's does
+            # (`dummy(a, b, c, d, e, aa, bb, cc);`)
             if (len(re.findall(r"for \(int nl = 0; nl < iterations; nl\+\+\)", text)) != 1
-                    or len(re.findall(r"\bdummy\(a, b, c, d, e(?:, \w+)?\);", text)) != 1 or re.search(r"\bR\b", text)):
+                    or len(re.findall(r"\bdummy\(a, b, c, d, e(?:, aa, bb, cc)?(?:, \w+)?\);", text)) != 1
+                    or re.search(r"\bR\b", text)):
                 dirty.append(f"{f.relative_to(PREPARED)}: not one repetition loop with one `dummy` call")
         elif f.name in editable and re.search(r"\bnl\b|\bR\b", text):
             dirty.append(f"{f.relative_to(PREPARED)}: the repetition loop")

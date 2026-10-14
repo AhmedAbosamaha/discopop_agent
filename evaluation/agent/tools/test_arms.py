@@ -154,6 +154,31 @@ def check_classes() -> int:
     return failures
 
 
+def check_project_flags(repo: Path) -> int:
+    """A project's compile and link flags reach the agent's parser as the package declares them.
+
+    A flag begins with `-` (`-DUSE_MPI=0`: LULESH, the only package that declares one). Handed over as a token
+    of its own, the parser takes it for another option and the agent ends before it starts — found by LULESH's
+    second smoke (14 Oct 2026); no run before it had a project with flags."""
+    import os
+    import subprocess
+    import tempfile
+    proj = {"units": ["a.c"], "include_dirs": ["."], "cflags": ["-DUSE_MPI=0", "-DX=1"], "ldflags": ["-lm"]}
+    with tempfile.TemporaryDirectory(prefix="dp_flags_") as tmp:
+        (Path(tmp) / "a.c").write_text("int main(void) { return 0; }\n")
+        (Path(tmp) / ".discopop").mkdir()
+        cmd = [str(repo / "venv" / "bin" / "python"), "-m", "discopop_agent", "--discopop-dir", ".discopop",
+               *cli._project_agent_flags(proj), "--print-config"]
+        proc = subprocess.run(cmd, capture_output=True, text=True, cwd=tmp,
+                              env={**os.environ, **cli._agent_env(repo)}, timeout=120)
+    got: dict = json.loads(proc.stdout).get("project", {}) if proc.returncode == 0 else {}
+    ok = got.get("cflags") == proj["cflags"] and got.get("ldflags") == proj["ldflags"]
+    last = (proc.stderr or proc.stdout).strip().splitlines()[-1:] if not ok else []
+    print(f"  [{'pass' if ok else 'FAIL'}] a project's compile and link flags reach the agent as declared"
+          + (f": {last}" if last else ""))
+    return 0 if ok else 1
+
+
 def main() -> int:
     doc = json.loads((HERE.parent / "config" / "arms.json").read_text())
     doc["arms"] = cli.resolve_twins(doc["arms"])      # a twin carries its agent arm's flags (D38)
@@ -178,6 +203,7 @@ def main() -> int:
     failures += check_experiments(doc, Path(repo), timeable)
     print()
     failures += check_classes()
+    failures += check_project_flags(Path(repo))
     print("\nALL PASS" if not failures else f"\nFAILURES: {failures}")
     return 1 if failures else 0
 

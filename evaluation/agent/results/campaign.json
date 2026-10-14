@@ -93,7 +93,7 @@
    "kind": "experiment",
    "status": "pre-flight",
    "question": "On identical programs and verification, are the agent's results verified correct at least as often as RepoOMP's released outputs? (H11)",
-   "headline": "Pre-flight (14 Oct, no model): of RepoOMP's eight NPB programs DiscoPoP profiles EP, IS and CG comfortably; LU needs two hours and 122 GiB of memory for one profile; on MG, BT and SP its explorer did not finish within two hours on one draw (repeats registered); on FT the explorer ends with the same error on every attempt (DiscoPoP candidate B26). As things stand the comparison can run on three programs — to be put to the author with the design."
+   "headline": "Pre-flight (14 Oct, no model): as the agent is built, DiscoPoP profiles three of RepoOMP's eight NPB programs at class S — EP, IS, CG. LU profiles in two hours with 122 GiB; on MG, BT and SP the explorer does not finish (four draws each, none within the limit); on FT it ends with the same error on every attempt (DiscoPoP candidate B26). To be put to the author with the design."
   },
   {
    "id": "T0.1",
@@ -465,7 +465,7 @@
    "kind": "experiment",
    "status": "pre-flight",
    "question": "Does the loop — profile, rank, restructure, check, annotate, verify — still work on a real application, where one profile takes tens of gigabytes and the program has dozens of loops: what does the agent reach beside DiscoPoP alone, the model alone and LLNL's own OpenMP version? (RQ3, C1; H4)",
-   "headline": "Pre-flight, step 1 (13 Oct, no model): the first trial of LULESH through the run path ends in a profile error — the package of 21 Sep cannot be compiled as one unit, which the profile step needs, because `lulesh.h` has no include guard (with one it compiles, shown on the Mac). The package is repaired before anything else is measured.",
+   "headline": "Pre-flight (13–14 Oct, no model): the September package could not be profiled through the run path (a header without an include guard) — repaired through its generator; on the repaired package LULESH profiles (compile 2.6 s, instrumented run 7.2 s, explorer 312 s; 59 Do-All patterns), and the trial then stopped on a defect of the launcher (a compile flag in a form the agent's parser rejects) — repaired; the third smoke is registered.",
    "preregistered": "THESIS_EXPERIMENTS §5k and §5r (the program and why), §5s (arms and the pre-flight owed), §6 13 Oct (\"the experiments that remain share one preparation without a model\"). Nothing with a model is designed yet."
   }
  ],
@@ -2669,32 +2669,32 @@
   "e11_npbc_explorer_repeats": {
    "group": "E11",
    "section": "preflight",
-   "status": "running",
-   "role": "E11 pre-flight, step 1b (server, no model): DiscoPoP's explorer again on the profiles the probe kept — FT, whose explorer ended with an error, and MG, BT, SP, whose explorer was stopped at two hours — three attempts each on the unchanged profile with the agent's own limit of 600 s per attempt (parts `FT`, `MG`, `BT`, `SP`): is the one draw of the probe a draw or the rule — part `FT` ran 14 Oct 00:27–00:30 UTC at `90f9b35c4`: the same error in 3 of 3 attempts"
+   "status": "valid",
+   "role": "E11 pre-flight, step 1b (server, no model): DiscoPoP's explorer again on the profiles the probe kept — FT, whose explorer ended with an error, and MG, BT, SP, whose explorer was stopped at two hours — three attempts each on the unchanged profile with the agent's own limit of 600 s per attempt (parts `FT`, `MG`, `BT`, `SP`): is the one draw of the probe a draw or the rule — part `FT` ran 14 Oct 00:27–00:30 UTC at `90f9b35c4`: the same error in 3 of 3 attempts; parts `MG`, `BT`, `SP` 00:37–01:07 UTC at `272cd24b6`: 3 of 3 attempts each stopped at the 600 s limit"
   },
   "e8_c5_sizes": {
    "group": "E8",
    "section": "preflight",
-   "status": "registered",
-   "role": "The depth set (suite tsvc_c5), T0.1 on the server, no model: size_table.py on s2251, s221, s123"
+   "status": "valid",
+   "role": "The depth set (suite tsvc_c5), T0.1 on the server, no model: size_table.py on s2251, s221, s123 — 14 Oct 00:37–00:38 UTC at `272cd24b6`: verification LARGE, LARGE, EXTRALARGE"
   },
   "e8_c5_classes_a": {
    "group": "E8",
    "section": "preflight",
    "status": "registered",
-   "role": "The depth set, T0.11 draw a, server, no model: arm discopop_capability on the three tsvc_c5 packages — what DiscoPoP alone keeps (clause R3)"
+   "role": "The depth set, T0.11 draw a, server, no model: arm discopop_capability on the five tsvc_c5 packages — what DiscoPoP alone keeps (clause R3)"
   },
   "e8_c5_classes_b": {
    "group": "E8",
    "section": "preflight",
    "status": "registered",
-   "role": "The depth set, T0.11 draw b, server, no model: arm discopop_capability on the three tsvc_c5 packages"
+   "role": "The depth set, T0.11 draw b, server, no model: arm discopop_capability on the five tsvc_c5 packages"
   },
   "e8_c5_classes_c": {
    "group": "E8",
    "section": "preflight",
    "status": "registered",
-   "role": "The depth set, T0.11 draw c, server, no model: arm discopop_capability on the three tsvc_c5 packages"
+   "role": "The depth set, T0.11 draw c, server, no model: arm discopop_capability on the five tsvc_c5 packages"
   },
   "e8_c5_refs": {
    "group": "E8",
@@ -2711,14 +2711,26 @@
   "e6_lulesh_smoke2": {
    "group": "E6",
    "section": "preflight",
-   "status": "registered",
-   "role": "E6 pre-flight, the smoke again on the repaired package (server, no model): ONE trial of the arm `discopop_capability` on `llnl/lulesh`, `--verify-size STANDARD` — does the profile go through with the include guard, how long, how much memory"
+   "status": "valid",
+   "role": "E6 pre-flight, the smoke again on the repaired package (server, no model): ONE trial of the arm `discopop_capability` on `llnl/lulesh`, `--verify-size STANDARD` — does the profile go through with the include guard, how long, how much memory — 14 Oct 00:38–00:43 UTC at `272cd24b6`: the profile goes through (2.6 s, 7.2 s, explorer 312 s; Do-All 59); the trial then ends AGENT_ERROR on the launcher's flag form (repaired)"
   },
   "e4_refresh_screen_npbc": {
    "group": "E4",
    "section": "preflight",
    "status": "registered",
-   "role": "The fast refresh's benchmark, a first screen (server, no model): `tools/npbc_probe.py` on RepoOMP's EP, IS and CG at class W, then class A (parts `W/<K>`, `A/<K>`), at most an hour per step — at which class the instrumented run exceeds a minute"
+   "role": "The fast refresh's benchmark, a first screen (server, no model): `tools/npbc_probe.py` on RepoOMP's EP, IS and CG at class W, then class A, then class B for EP and IS (parts `W/<K>`, `A/<K>`, `B/<K>`), at most an hour per step — at which class the instrumented run exceeds a minute"
+  },
+  "e6_lulesh_smoke3": {
+   "group": "E6",
+   "section": "preflight",
+   "status": "registered",
+   "role": "E6 pre-flight, the smoke a third time (server, no model), after the launcher's flag form was repaired: ONE trial of the arm `discopop_capability` on `llnl/lulesh`, `--verify-size STANDARD` — what DiscoPoP alone reaches on LULESH, how long the trial takes"
+  },
+  "e8_c5_sizes_2d": {
+   "group": "E8",
+   "section": "preflight",
+   "status": "registered",
+   "role": "The depth set's loops on the 2-D arrays, T0.1 on the server, no model: size_table.py on s233, s257"
   }
  },
  "analysis": {

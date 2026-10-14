@@ -563,8 +563,10 @@ def _project_agent_flags(proj: dict) -> List[str]:
             "--project-include", ",".join(proj.get("include_dirs") or []),
             # packaging v5: the ONE file a model's changes are taken from (agent, twin, model alone)
             *(["--project-editable", ",".join(proj["editable"])] if proj.get("editable") else []),
-            *(["--project-cflags", " ".join(proj["cflags"])] if proj.get("cflags") else []),
-            *(["--project-ldflags", " ".join(proj["ldflags"])] if proj.get("ldflags") else [])]
+            # one token each, `--option=value`: the value begins with `-` (`-DUSE_MPI=0`), and the agent's
+            # parser takes a separate token of that form for another option (LULESH's second smoke, 14 Oct)
+            *(["--project-cflags=" + " ".join(proj["cflags"])] if proj.get("cflags") else []),
+            *(["--project-ldflags=" + " ".join(proj["ldflags"])] if proj.get("ldflags") else [])]
 
 
 UNITY_NAME = "dp_harness_unity"

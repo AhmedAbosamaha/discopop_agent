@@ -1714,6 +1714,8 @@ real_t kernel_s341(void)
 
 def v8_mutants(loop: Loop) -> Dict[str, str]:
     """The variants of the benchmark's file that must NOT pass (v8): v7's two, and for `s341` the hoisted form."""
+    if _is_2d(loop):
+        return v9_2d_mutants(loop)
     out = v7_mutants(loop, render_v8_kernel(loop))
     if loop.name == "s341":
         out["hoist"] = V8_S341_HOIST
@@ -1933,8 +1935,232 @@ V9_NEW: List[Loop] = [
          "of positive c before it", init_extra=V9_S123_INIT, expert=_V9_S123, steps=(_V9_S123_STEP1,), suite=V9_SUITE,
          hot_writes=("a", "j")),
 ]
-SUITES[V9_SUITE] = V9_NEW
-CLEAN[V9_SUITE] = (8, v8_files, render_v8_harness, render_v8_kernel, hot_loop_v8, ["main", "dummy"])
+
+# ---- the depth set on TSVC's two-dimensional arrays (14 Oct 2026; record §6) -----------------------------------
+# The screening's remaining TSVC candidates for E8 are on the 2-D arrays, which no package had until now:
+#   s233   two inner loops share the i loop: (1) distribution — the first nest's columns are independent;
+#          (2) interchange of the second nest, whose dependence runs along i.
+#   s257   a[i] is overwritten in every pass of the inner loop: (1) the value of each pass used directly and
+#          the last one kept — the inner loop's passes are independent, the outer loop still carries a[i-1];
+#          (2) distribution into the recurrence on a, run first, and an independent nest.
+# TSVC declares aa, bb, cc as LEN_2D x LEN_2D arrays (array_defs.h) and hands them to `dummy` after the five
+# vectors (`dummy(a, b, c, d, e, aa, bb, cc, 0.)`). Here they are rows of LEN_2D elements behind a pointer, so that
+# TSVC's `aa[j][i]` stays as written and the size can change with the dataset; `dummy` gets them as in TSVC.
+# The vectors keep TSVC's own length above SMALL (a 2-D loop indexes them, if at all, below LEN_2D).
+SIZES_2D = {"MINI": "64", "SMALL": "256", "STANDARD": "1024", "LARGE": "2048", "EXTRALARGE": "4096"}
+LEN_1D_2D = {"MINI": SIZES["MINI"], "SMALL": SIZES["SMALL"], "STANDARD": SIZES["SMALL"], "LARGE": SIZES["SMALL"],
+             "EXTRALARGE": SIZES["SMALL"]}
+V9_2D_GLOBALS = "static real_t (*aa)[LEN_2D], (*bb)[LEN_2D], (*cc)[LEN_2D];"
+V9_2D_CALL = "        dummy(a, b, c, d, e, aa, bb, cc);"
+V9_2D_PROTO = ("int dummy(real_t *, real_t *, real_t *, real_t *, real_t *, real_t (*)[LEN_2D], real_t (*)[LEN_2D], "
+               "real_t (*)[LEN_2D]);")
+V9_2D_PARAMS = ("int dummy(real_t *a, real_t *b, real_t *c, real_t *d, real_t *e, real_t (*aa)[LEN_2D], "
+                "real_t (*bb)[LEN_2D], real_t (*cc)[LEN_2D])\n")
+# what `dummy` changes of the 2-D arrays at its n-th call: one element of the first row and one of the first column
+# of aa and bb — the values a loop over the interior reads and never writes — and one interior element of cc
+V9_2D_MIX = ("  long p = 1 + (n * 7919L + 13L) % (LEN_2D - 1);\n"
+             "  long q = 1 + (n * 104729L + 7L) % (LEN_2D - 1);\n"
+             "  aa[0][q] += (real_t)0.125; aa[p][0] += (real_t)0.125;\n"
+             "  bb[0][q] += (real_t)0.125; bb[p][0] += (real_t)0.125;\n"
+             "  cc[p][q] += (real_t)0.125;\n")
+V9_2D_INIT = """    aa = (real_t (*)[LEN_2D])malloc((size_t)LEN_2D * LEN_2D * sizeof(real_t));
+    bb = (real_t (*)[LEN_2D])malloc((size_t)LEN_2D * LEN_2D * sizeof(real_t));
+    cc = (real_t (*)[LEN_2D])malloc((size_t)LEN_2D * LEN_2D * sizeof(real_t));
+    if (!aa || !bb || !cc) { fprintf(stderr, "out of memory\\n"); exit(1); }
+    for (long j = 0; j < LEN_2D; j++) {
+      for (long i = 0; i < LEN_2D; i++) {
+        aa[j][i] = (real_t)0.75 + (real_t)((j * 37L + i * 11L) % 1000) * (real_t)0.0005;
+        bb[j][i] = (real_t)0.75 + (real_t)((j * 53L + i * 13L) % 997) * (real_t)0.0005;
+        cc[j][i] = (real_t)0.75 + (real_t)((j * 71L + i * 17L) % 991) * (real_t)0.0005;
+      }
+    }"""
+V9_2D_EMIT = "  pb_emit_2d(aa); pb_emit_2d(bb); pb_emit_2d(cc);\n"
+# The header outside the package: the 2-D arrays in the output, and the record of every repetition on them. A
+# loop that recomputes the interior from the first row and column (s233, s2111) leaves the SAME arrays whether or
+# not an earlier repetition ran; what tells is the interior next to the edge element the previous call changed.
+# `PB_2D_OUT(j, i)` is 1 unless a loop's values grow with the position (s2111: by 2/1.9 per step), where the
+# growth is taken out of what is printed and recorded, so that no element hides the others in a sum.
+V9_2D_HARNESS = """/* ---- TSVC's two-dimensional arrays in the output, and in the record of the repetitions ---- */
+#ifndef PB_2D_OUT
+# define PB_2D_OUT(j, i) 1.0
+#endif
+static void pb_emit_2d(real_t (*m)[LEN_2D])
+{
+#ifdef PB_FULL_DUMP
+  for (long j = 0; j < LEN_2D; j++) for (long i = 0; i < LEN_2D; i++) pb_emit(m[j][i] * PB_2D_OUT(j, i));
+#else
+  /* the edges, the rows and columns next to them, the middle ones and both diagonals, sampled */
+  long step = LEN_2D / 500 > 0 ? LEN_2D / 500 : 1, h = LEN_2D / 2, z = LEN_2D - 1;
+  for (long k = 0; k < LEN_2D; k += step) {
+    pb_emit(m[0][k] * PB_2D_OUT(0, k)); pb_emit(m[1][k] * PB_2D_OUT(1, k)); pb_emit(m[h][k] * PB_2D_OUT(h, k));
+    pb_emit(m[z][k] * PB_2D_OUT(z, k)); pb_emit(m[k][0] * PB_2D_OUT(k, 0)); pb_emit(m[k][1] * PB_2D_OUT(k, 1));
+    pb_emit(m[k][h] * PB_2D_OUT(k, h)); pb_emit(m[k][z] * PB_2D_OUT(k, z)); pb_emit(m[k][k] * PB_2D_OUT(k, k));
+    pb_emit(m[k][z - k] * PB_2D_OUT(k, z - k));
+  }
+#endif
+}
+
+static double pb_rep_edge = 0.0, pb_rep_inner = 0.0;
+static void pb_fold_2d(long n, real_t (*aa)[LEN_2D], real_t (*bb)[LEN_2D], real_t (*cc)[LEN_2D])
+{
+  long m = n > 0 ? n - 1 : 0;
+  long p = 1 + (m * 7919L + 13L) % (LEN_2D - 1);     /* the row and the column the previous call changed */
+  long q = 1 + (m * 104729L + 7L) % (LEN_2D - 1);
+  long h = LEN_2D / 2, z = LEN_2D - 1;
+  double w = (double)(n % 7 + 1);
+  pb_rep_edge += w * (2.0 * aa[1][q] * PB_2D_OUT(1, q) + 3.0 * aa[p][1] * PB_2D_OUT(p, 1) + 5.0 * bb[1][q] + 7.0 * bb[p][1]
+                      + 11.0 * cc[p][q] + 13.0 * aa[0][q] * PB_2D_OUT(0, q) + 17.0 * aa[p][0] * PB_2D_OUT(p, 0)
+                      + 19.0 * bb[0][q] + 23.0 * bb[p][0]);
+  pb_rep_inner += w * (29.0 * aa[p][q] * PB_2D_OUT(p, q) + 31.0 * bb[p][q] + 37.0 * aa[h][h] * PB_2D_OUT(h, h)
+                       + 41.0 * bb[h][h] + 43.0 * aa[z][z] * PB_2D_OUT(z, z) + 47.0 * bb[z][z]
+                       + 53.0 * aa[z][q] * PB_2D_OUT(z, q) + 59.0 * bb[p][z]);
+}
+
+"""
+V9_2D_SEEDED = """    for (long pb_j = 0; pb_j < LEN_2D; pb_j++) {
+      for (long pb_i = 0; pb_i < LEN_2D; pb_i++) {
+        aa[pb_j][pb_i] *= (real_t)(1.0 + 0.2 * pb_uniform(&pb_state));
+        bb[pb_j][pb_i] *= (real_t)(1.0 + 0.2 * pb_uniform(&pb_state));
+        cc[pb_j][pb_i] *= (real_t)(1.0 + 0.1 * pb_uniform(&pb_state));
+      }
+    }
+"""
+
+_V9_S233_NEST1 = """        #pragma omp parallel for
+        for (int i = 1; i < LEN_2D; i++) {
+            for (int j = 1; j < LEN_2D; j++) {
+                aa[j][i] = aa[j-1][i] + cc[j][i];
+            }
+        }
+"""
+_V9_S233_STEP1 = ("    for (int nl = 0; nl < R; nl++) {\n" + _V9_S233_NEST1 + """        for (int i = 1; i < LEN_2D; i++) {
+            for (int j = 1; j < LEN_2D; j++) {
+                bb[j][i] = bb[j][i-1] + cc[j][i];
+            }
+        }
+        pb_mix(nl);
+    }
+    return (real_t)0;""")
+_V9_S233 = ("    for (int nl = 0; nl < R; nl++) {\n" + _V9_S233_NEST1 + """        #pragma omp parallel for
+        for (int j = 1; j < LEN_2D; j++) {
+            for (int i = 1; i < LEN_2D; i++) {
+                bb[j][i] = bb[j][i-1] + cc[j][i];
+            }
+        }
+        pb_mix(nl);
+    }
+    return (real_t)0;""")
+_V9_S257_NEST = """            for (int j = 0; j < LEN_2D; j++) {
+                aa[j][i] = (aa[j][i] - a[i-1]) + bb[j][i];
+            }
+"""
+_V9_S257_STEP1 = ("""    for (int nl = 0; nl < R; nl++) {
+        for (int i = 1; i < LEN_2D; i++) {
+            real_t last = aa[LEN_2D-1][i] - a[i-1];
+            #pragma omp parallel for
+""" + _V9_S257_NEST + """            a[i] = last;
+        }
+        pb_mix(nl);
+    }
+    return (real_t)0;""")
+_V9_S257 = ("""    for (int nl = 0; nl < R; nl++) {
+        for (int i = 1; i < LEN_2D; i++) {
+            a[i] = aa[LEN_2D-1][i] - a[i-1];
+        }
+        #pragma omp parallel for
+        for (int i = 1; i < LEN_2D; i++) {
+""" + _V9_S257_NEST + """        }
+        pb_mix(nl);
+    }
+    return (real_t)0;""")
+
+V9_2D_NEW = [
+    Loop("s233", "restructure", "distribution, then interchange of the second nest",
+           "column i of aa depends on nothing outside it; row j of bb depends on nothing outside it — the two "
+           "statements share the i loop, and the second one's dependence runs along i",
+           globals_=V9_2D_GLOBALS, init_extra=V9_2D_INIT, emit_extra=V9_2D_EMIT, expert=_V9_S233,
+           steps=(_V9_S233_STEP1,), suite=V9_SUITE, hot_writes=("aa", "bb")),
+    Loop("s257", "restructure", "the value a[i] takes in each pass of the inner loop used directly, then "
+           "distribution into the recurrence on a and an independent nest",
+           "a[i] is overwritten in every pass of the inner loop; only the last value survives, and it needs only "
+           "the old last row of aa and a[i-1]",
+           globals_=V9_2D_GLOBALS, init_extra=V9_2D_INIT, emit_extra=V9_2D_EMIT, expert=_V9_S257,
+           steps=(_V9_S257_STEP1,), suite=V9_SUITE, hot_writes=("a", "aa")),
+]
+V9_2D = tuple(l.name for l in V9_2D_NEW)
+
+
+def _is_2d(loop: Loop) -> bool:
+    return loop.suite == V9_SUITE and loop.name in V9_2D
+
+
+def render_v9_header(loop: Loop) -> str:
+    """data.h of a loop on the 2-D arrays: v7's, with LEN_2D beside LEN_1D and `dummy` taking the three arrays."""
+    text = render_v7_header(loop)
+    if not _is_2d(loop):
+        return text
+    for size, n in SIZES_2D.items():
+        text = _exact(text, f"#ifdef {size}_DATASET\n# define LEN_1D {SIZES[size]}\n",
+                        f"#ifdef {size}_DATASET\n# define LEN_1D {LEN_1D_2D[size]}\n# define LEN_2D {n}\n")
+    return _exact(text, V6_PROTO, V9_2D_PROTO)
+
+
+def render_v9_kernel(loop: Loop, expert: bool = False) -> str:
+    text = render_v8_kernel(loop, expert)
+    return _exact(text, V6_CALL, V9_2D_CALL) if _is_2d(loop) else text
+
+
+def render_v9_main(loop: Loop) -> str:
+    text = render_v7_main(loop)
+    if not _is_2d(loop):
+        return text
+    text = _exact(text, "int dummy(real_t *a, real_t *b, real_t *c, real_t *d, real_t *e)\n", V9_2D_PARAMS)
+    text = _exact(text, "  pb_fold(n, a, b, c, d, e, (real_t)0);\n",
+                    "  pb_fold(n, a, b, c, d, e, (real_t)0);\n  pb_fold_2d(n, aa, bb, cc);\n")
+    return _exact(text, "\n  n++;\n  return 0;\n}\n", "\n" + V9_2D_MIX + "  n++;\n  return 0;\n}\n")
+
+
+def render_v9_harness(loop: Loop) -> str:
+    text = render_v8_harness(loop)
+    if not _is_2d(loop):
+        return text
+    anchor = "/* ---- what main.c calls: set-up before the timed region, the digest after it ------- */"
+    text = _exact(text, anchor, V9_2D_HARNESS + anchor)
+    text = _exact(text, "      e[pb_i] *= (real_t)(1.0 + 0.2 * pb_uniform(&pb_state));\n    }\n",
+                    "      e[pb_i] *= (real_t)(1.0 + 0.2 * pb_uniform(&pb_state));\n    }\n" + V9_2D_SEEDED)
+    text = _exact(text, "  pb_emit(pb_rep_scalar); pb_emit(pb_rep_arrays);\n",
+                    "  pb_emit(pb_rep_scalar); pb_emit(pb_rep_arrays);\n  pb_emit(pb_rep_edge); pb_emit(pb_rep_inner);\n")
+    return _exact(text, "  free(a); free(b); free(c); free(d); free(e);\n",
+                    "  free(a); free(b); free(c); free(d); free(e);\n  free(aa); free(bb); free(cc);\n")
+
+
+def v9_files(loop: Loop) -> Dict[str, str]:
+    return {f"{loop.name}.c": render_v9_kernel(loop), V5_HEADER: render_v9_header(loop), V5_MAIN: render_v9_main(loop)}
+
+
+def hot_loop_v9(loop: Loop) -> Dict[str, Any]:
+    entry = f"kernel_{loop.name}"
+    hot = hot_loop_coverage.describe(render_v9_kernel(loop), entry, loop.hot_function or entry)
+    if hot["writes"] != sorted(loop.hot_writes):
+        raise ValueError(f"{loop.name}: the hot loop at line {hot['line']} writes {hot['writes']}, "
+                         f"declared {sorted(loop.hot_writes)} — read the loop again")
+    return hot
+
+
+def v9_2d_mutants(loop: Loop) -> Dict[str, str]:
+    """v7's two variants for a loop on the 2-D arrays, built on its own call of `dummy`."""
+    text = render_v9_kernel(loop)
+    m = re.search(re.escape(V6_LOOP) + r"\n(?P<rep>.*?)\n" + re.escape(V9_2D_CALL) + r"\n    \}\n", text, re.S)
+    if not m:
+        raise ValueError(f"{loop.name}: the repetition loop is not `loop, statements, dummy call` any more")
+    rep = m.group("rep")
+    skip = (V6_LOOP + "\n        if (nl == 0 || nl == iterations - 1) {\n" + rep + "\n        }\n" + V9_2D_CALL + "\n    }\n")
+    reorder = (V6_LOOP + "\n" + rep + "\n    }\n" + V6_LOOP + "\n" + V9_2D_CALL + "\n    }\n")
+    return {"skip": text[:m.start()] + skip + text[m.end():], "reorder": text[:m.start()] + reorder + text[m.end():]}
+
+
+SUITES[V9_SUITE] = V9_NEW + V9_2D_NEW
+CLEAN[V9_SUITE] = (8, v9_files, render_v9_harness, render_v9_kernel, hot_loop_v9, ["main", "dummy"])
 
 
 # ---- packaging v3, kept verbatim: every run up to E2 used it, and it stays the default until T0.15 ---------
