@@ -1,0 +1,31 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c4/s341/depth1_v5/claude-haiku-4-5-20251001/rep1/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c4/s341/depth1_v5/claude-haiku-4-5-20251001/rep1/work/s341.c
+@@ -4,13 +4,25 @@
+ {
+     int j;
+     for (int nl = 0; nl < iterations; nl++) {
+-        j = -1;
++        // Phase 1: compute prefix sum of non-zero count before each position
++        int *prefix = (int *)malloc(LEN_1D * sizeof(int));
++        int count = 0;
++        for (int i = 0; i < LEN_1D; i++) {
++            prefix[i] = count;
++            if (b[i] > (real_t)0.) {
++                count++;
++            }
++        }
++
++        // Phase 2: write non-zero elements to their final positions without shared j
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++                a[prefix[i]] = b[i];
+             }
+         }
++
++        j = count - 1;
++        free(prefix);
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_2/benchmarks/tsvc_c2/s281/depth2_v5/claude-haiku-4-5-20251001/rep1/work/s281.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_2/benchmarks/tsvc_c2/s281/depth2_v5/claude-haiku-4-5-20251001/rep1/work/s281.c
+@@ -11,6 +11,7 @@
+ 
+     for (int nl = 0; nl < iterations; nl++) {
+         // Phase 1: reads from b_copy (values from previous iteration), writes to b
++        #pragma omp parallel for private(x) shared(b_copy) 
+         for (int i = 0; i < (LEN_1D + 1) / 2; i++) {
+             x = a[LEN_1D-i-1] + b_copy[i] * c[i];
+             a[i] = x-(real_t)1.0;

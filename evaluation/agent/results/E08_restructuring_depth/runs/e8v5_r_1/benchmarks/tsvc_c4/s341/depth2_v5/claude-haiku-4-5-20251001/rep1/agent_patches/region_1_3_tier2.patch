@@ -1,0 +1,43 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c4/s341/depth2_v5/claude-haiku-4-5-20251001/rep1/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c4/s341/depth2_v5/claude-haiku-4-5-20251001/rep1/work/s341.c
+@@ -3,22 +3,35 @@
+ 
+ real_t kernel_s341(void)
+ {
+-    int *indices = (int *)malloc(LEN_1D * sizeof(int));
+     for (int nl = 0; nl < iterations; nl++) {
+-        // Phase 1: Collect indices of positive elements (sequential, carries count)
++        // Count positive elements (iteration sees b after prior iteration's dummy)
+         int count = 0;
++        for (int i = 0; i < LEN_1D; i++) {
++            if (b[i] > (real_t)0.) {
++                count++;
++            }
++        }
++
++        // Allocate space for this iteration's indices
++        int *indices = (int *)malloc(count * sizeof(int));
++
++        // Collect indices of positive elements (same b state as count)
++        count = 0;
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+                 indices[count++] = i;
+             }
+         }
+-        // Phase 2: Write positive elements to consecutive positions
+-        // No cross-iteration dependencies: each iteration writes to unique a[i]
++
++        // Copy positive elements to consecutive positions in a
+         for (int i = 0; i < count; i++) {
+             a[i] = b[indices[i]];
+         }
++
++        // Update arrays via dummy
+         dummy(a, b, c, d, e);
++
++        free(indices);
+     }
+-    free(indices);
+     return (real_t)0;
+ }

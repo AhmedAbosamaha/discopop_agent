@@ -1,0 +1,44 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_set/benchmarks/tsvc_c5/s2251/depth1_v5/claude-haiku-4-5-20251001/rep3/work/s2251.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_set/benchmarks/tsvc_c5/s2251/depth1_v5/claude-haiku-4-5-20251001/rep3/work/s2251.c
+@@ -6,26 +6,35 @@
+     for (int nl = 0; nl < iterations; nl++) {
+         // Allocate temporary arrays on heap to avoid stack overflow at large sizes
+         real_t *b_saved = malloc(LEN_1D * sizeof(real_t));
++        real_t *c_saved = malloc(LEN_1D * sizeof(real_t));
++        real_t *d_saved = malloc(LEN_1D * sizeof(real_t));
++        real_t *e_saved = malloc(LEN_1D * sizeof(real_t));
+         real_t *s_values = malloc(LEN_1D * sizeof(real_t));
+ 
+-        // Save current b values before modification
++        // Save current values before dummy() could have modified them
+         for (int i = 0; i < LEN_1D; i++) {
+             b_saved[i] = b[i];
++            c_saved[i] = c[i];
++            d_saved[i] = d[i];
++            e_saved[i] = e[i];
+         }
+ 
+-        // Pre-compute s values sequentially (no parallelism here, but breaks dependence chain)
++        // Pre-compute s values sequentially using saved c values
+         s_values[0] = (real_t)0.0;
+         for (int i = 1; i < LEN_1D; i++) {
+-            s_values[i] = b_saved[i-1] + c[i-1];
++            s_values[i] = b_saved[i-1] + c_saved[i-1];
+         }
+ 
+-        // Compute a and b using pre-computed s values (parallelizable: no inter-iteration dependencies)
++        // Compute a and b using pre-computed s values and saved d, e values
+         for (int i = 0; i < LEN_1D; i++) {
+-            a[i] = s_values[i]*e[i];
+-            b[i] = a[i]+d[i];
++            a[i] = s_values[i]*e_saved[i];
++            b[i] = a[i]+d_saved[i];
+         }
+ 
+         free(b_saved);
++        free(c_saved);
++        free(d_saved);
++        free(e_saved);
+         free(s_values);
+         dummy(a, b, c, d, e);
+     }

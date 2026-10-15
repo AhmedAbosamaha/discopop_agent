@@ -1,0 +1,32 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_3/benchmarks/tsvc_c2/s291/depth1_v5/claude-haiku-4-5-20251001/rep1/work/s291.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_3/benchmarks/tsvc_c2/s291/depth1_v5/claude-haiku-4-5-20251001/rep1/work/s291.c
+@@ -1,13 +1,27 @@
+ #include "data.h"
++#include <stdlib.h>
++#include <string.h>
+ 
+ real_t kernel_s291(void)
+ {
++    real_t **b_states = (real_t **)malloc(iterations * sizeof(real_t *));
++    for (int nl = 0; nl < iterations; nl++) {
++        b_states[nl] = (real_t *)malloc(LEN_1D * sizeof(real_t));
++        memcpy(b_states[nl], b, LEN_1D * sizeof(real_t));
++        dummy(a, b, c, d, e);
++    }
++
+     for (int nl = 0; nl < iterations; nl++) {
+         for (int i = 0; i < LEN_1D; i++) {
+             int im1 = (i == 0) ? LEN_1D-1 : i-1;
+-            a[i] = (b[i] + b[im1]) * (real_t).5;
++            a[i] = (b_states[nl][i] + b_states[nl][im1]) * (real_t).5;
+         }
+-        dummy(a, b, c, d, e);
+     }
++
++    for (int nl = 0; nl < iterations; nl++) {
++        free(b_states[nl]);
++    }
++    free(b_states);
++
+     return (real_t)0;
+ }

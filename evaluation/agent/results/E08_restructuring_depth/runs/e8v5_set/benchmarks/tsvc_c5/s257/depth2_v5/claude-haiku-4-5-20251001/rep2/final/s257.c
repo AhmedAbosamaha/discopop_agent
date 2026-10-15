@@ -1,0 +1,24 @@
+#include "data.h"
+#include <stdlib.h>
+
+real_t kernel_s257(void)
+{
+    real_t a_temp[LEN_2D];
+    real_t *a_temp_storage = malloc(LEN_2D * sizeof(real_t));
+
+    for (int nl = 0; nl < iterations; nl++) {
+        for (int i = 1; i < LEN_2D; i++) {
+            #pragma omp parallel for firstprivate(i) shared(a_temp) 
+            for (int j = 0; j < LEN_2D; j++) {
+                a_temp[j] = aa[j][i] - a[i-1];
+                aa[j][i] = a_temp[j] + bb[j][i];
+            }
+            a_temp_storage[i] = a_temp[LEN_2D-1];
+            a[i] = a_temp_storage[i];
+        }
+        dummy(a, b, c, d, e, aa, bb, cc);
+    }
+
+    free(a_temp_storage);
+    return (real_t)0;
+}

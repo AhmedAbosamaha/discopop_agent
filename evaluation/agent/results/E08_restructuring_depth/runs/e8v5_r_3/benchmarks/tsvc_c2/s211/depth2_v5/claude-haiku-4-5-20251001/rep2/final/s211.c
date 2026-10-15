@@ -1,0 +1,32 @@
+#include "data.h"
+#include <stdlib.h>
+#include <string.h>
+
+real_t kernel_s211(void)
+{
+    real_t *e_copy = malloc(LEN_1D * sizeof(real_t));
+    memcpy(e_copy, e, LEN_1D * sizeof(real_t));
+    real_t *b_temp = malloc(LEN_1D * sizeof(real_t));
+
+    for (int nl = 0; nl < iterations; nl++) {
+        #pragma omp parallel for shared(e_copy,b_temp) 
+        for (int i = 1; i < LEN_1D-1; i++) {
+            b_temp[i] = b[i + 1] - e_copy[i] * d[i];
+        }
+        #pragma omp parallel for shared(b_temp) 
+        for (int i = 1; i < LEN_1D-1; i++) {
+            b[i] = b_temp[i];
+        }
+        #pragma omp parallel for 
+        for (int i = 1; i < LEN_1D-1; i++) {
+            a[i] = b[i - 1] + c[i] * d[i];
+        }
+        dummy(a, b, c, d, e);
+
+        memcpy(e_copy, e, LEN_1D * sizeof(real_t));
+    }
+
+    free(b_temp);
+    free(e_copy);
+    return (real_t)0;
+}

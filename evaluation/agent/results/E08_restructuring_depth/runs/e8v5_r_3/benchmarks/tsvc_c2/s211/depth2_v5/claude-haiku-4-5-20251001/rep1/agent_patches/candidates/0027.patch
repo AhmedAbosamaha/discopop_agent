@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_3/benchmarks/tsvc_c2/s211/depth2_v5/claude-haiku-4-5-20251001/rep1/work/s211.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_3/benchmarks/tsvc_c2/s211/depth2_v5/claude-haiku-4-5-20251001/rep1/work/s211.c
+@@ -36,6 +36,7 @@
+     // Each iteration is now independent; no loop-carried dependence on b_new
+     for (int nl = 0; nl < iterations; nl++) {
+         // Update b with pre-computed b_new
++        #pragma omp parallel for firstprivate(nl) shared(b_new_all) 
+         for (int i = 1; i < LEN_1D-1; i++) {
+             b[i] = b_new_all[nl * LEN_1D + i];
+         }

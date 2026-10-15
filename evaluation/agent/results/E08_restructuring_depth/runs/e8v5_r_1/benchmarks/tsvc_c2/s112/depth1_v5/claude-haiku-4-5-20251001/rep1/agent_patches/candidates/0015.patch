@@ -1,0 +1,30 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c2/s112/depth1_v5/claude-haiku-4-5-20251001/rep1/work/s112.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c2/s112/depth1_v5/claude-haiku-4-5-20251001/rep1/work/s112.c
+@@ -4,15 +4,24 @@
+ real_t kernel_s112(void)
+ {
+     real_t *temp = (real_t *)malloc(LEN_1D * sizeof(real_t));
++    real_t *b_copy = (real_t *)malloc(LEN_1D * sizeof(real_t));
++
++    for (int i = 0; i < LEN_1D; i++) {
++        b_copy[i] = b[i];
++    }
++
+     for (int nl = 0; nl < iterations; nl++) {
+         for (int i = LEN_1D - 2; i >= 0; i--) {
+-            temp[i] = a[i] + b[i];
+-        }
+-        for (int i = LEN_1D - 2; i >= 0; i--) {
++            temp[i] = a[i] + b_copy[i];
+             a[i+1] = temp[i];
+         }
+         dummy(a, b, c, d, e);
++
++        for (int i = 0; i < LEN_1D; i++) {
++            b_copy[i] = b[i];
++        }
+     }
+     free(temp);
++    free(b_copy);
+     return (real_t)0;
+ }

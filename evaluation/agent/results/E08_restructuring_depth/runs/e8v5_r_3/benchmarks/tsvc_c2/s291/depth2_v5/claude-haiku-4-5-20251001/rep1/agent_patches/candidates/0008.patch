@@ -1,0 +1,30 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_3/benchmarks/tsvc_c2/s291/depth2_v5/claude-haiku-4-5-20251001/rep1/work/s291.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_3/benchmarks/tsvc_c2/s291/depth2_v5/claude-haiku-4-5-20251001/rep1/work/s291.c
+@@ -5,15 +5,24 @@
+ {
+     real_t *b_local = malloc(LEN_1D * sizeof(real_t));
+ 
++    // Read b into b_local before the loop
++    for (int i = 0; i < LEN_1D; i++) {
++        b_local[i] = b[i];
++    }
++
+     for (int nl = 0; nl < iterations; nl++) {
+-        for (int i = 0; i < LEN_1D; i++) {
+-            b_local[i] = b[i];
+-        }
+         for (int i = 0; i < LEN_1D; i++) {
+             int im1 = (i == 0) ? LEN_1D-1 : i-1;
+             a[i] = (b_local[i] + b_local[im1]) * (real_t).5;
+         }
+         dummy(a, b, c, d, e);
++
++        // Re-read b after dummy in case it was modified, before next iteration
++        if (nl < iterations - 1) {
++            for (int i = 0; i < LEN_1D; i++) {
++                b_local[i] = b[i];
++            }
++        }
+     }
+ 
+     free(b_local);

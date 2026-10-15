@@ -1,0 +1,50 @@
+--- original.c
++++ final.c
+@@ -58,17 +58,45 @@
+ }
+ 
+ /* ==== s1213.c ==== */
++#include <stdlib.h>
+ #include "data.h"
+ 
+ real_t kernel_s1213(void)
+ {
+-    for (int nl = 0; nl < iterations; nl++) {
++    real_t *b_temp = (real_t *)malloc(LEN_1D * sizeof(real_t));
++
++    // Prologue: stage 1 of first iteration
++    #pragma omp parallel for shared(b_temp) 
++    for (int i = 1; i < LEN_1D-1; i++) {
++        b_temp[i] = a[i+1]*d[i];
++        b[i] = b_temp[i];
++    }
++
++    // Pipelined loop: interleave stages across iterations
++    for (int nl = 1; nl < iterations; nl++) {
++        // Stages 2 and 3 of previous iteration (nl-1) using b from previous stage 1
++        #pragma omp parallel for 
+         for (int i = 1; i < LEN_1D-1; i++) {
+             a[i] = b[i-1]+c[i];
+-            b[i] = a[i+1]*d[i];
+         }
+         dummy(a, b, c, d, e);
++
++        // Stage 1 of current iteration: compute next b values
++        #pragma omp parallel for shared(b_temp) 
++        for (int i = 1; i < LEN_1D-1; i++) {
++            b_temp[i] = a[i+1]*d[i];
++            b[i] = b_temp[i];
++        }
+     }
++
++    // Epilogue: stages 2 and 3 of last iteration
++    for (int i = 1; i < LEN_1D-1; i++) {
++        a[i] = b[i-1]+c[i];
++    }
++    dummy(a, b, c, d, e);
++
++    free(b_temp);
++
+     return (real_t)0;
+ }
+ 

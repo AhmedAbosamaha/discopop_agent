@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c2/s254/depth2_v5/claude-haiku-4-5-20251001/rep2/work/s254.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c2/s254/depth2_v5/claude-haiku-4-5-20251001/rep2/work/s254.c
+@@ -7,6 +7,7 @@
+     real_t **b_states = (real_t **)malloc((iterations + 1) * sizeof(real_t *));
+ 
+     // Pre-allocate all b_states buffers upfront
++    #pragma omp parallel for shared(b_states) 
+     for (int nl = 0; nl <= iterations; nl++) {
+         b_states[nl] = (real_t *)malloc(LEN_1D * sizeof(real_t));
+     }

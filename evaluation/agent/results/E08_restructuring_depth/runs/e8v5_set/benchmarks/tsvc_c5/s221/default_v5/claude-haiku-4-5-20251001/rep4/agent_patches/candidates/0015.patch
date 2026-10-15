@@ -1,0 +1,46 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_set/benchmarks/tsvc_c5/s221/default_v5/claude-haiku-4-5-20251001/rep4/work/s221.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_set/benchmarks/tsvc_c5/s221/default_v5/claude-haiku-4-5-20251001/rep4/work/s221.c
+@@ -1,13 +1,42 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s221(void)
+ {
++    real_t *delta = malloc(LEN_1D * sizeof(real_t));
++    real_t *temp = malloc(LEN_1D * sizeof(real_t));
++
+     for (int nl = 0; nl < iterations; nl++) {
++        // Compute a and initialize delta array with a[i] + d[i]
+         for (int i = 1; i < LEN_1D; i++) {
+             a[i] += c[i] * d[i];
+-            b[i] = b[i - 1] + a[i] + d[i];
++            delta[i] = a[i] + d[i];
+         }
++        delta[0] = 0;
++
++        // Parallel prefix sum to compute cumulative sums
++        for (int offset = 1; offset < LEN_1D; offset *= 2) {
++            for (int i = 0; i < LEN_1D; i++) {
++                if (i < offset) {
++                    temp[i] = delta[i];
++                } else {
++                    temp[i] = delta[i] + delta[i - offset];
++                }
++            }
++            for (int i = 0; i < LEN_1D; i++) {
++                delta[i] = temp[i];
++            }
++        }
++
++        // Compute b from prefix sum: b[i] = b[0] + sum(a[1..i] + d[1..i])
++        for (int i = 1; i < LEN_1D; i++) {
++            b[i] = b[0] + delta[i];
++        }
++
+         dummy(a, b, c, d, e);
+     }
++
++    free(temp);
++    free(delta);
+     return (real_t)0;
+ }

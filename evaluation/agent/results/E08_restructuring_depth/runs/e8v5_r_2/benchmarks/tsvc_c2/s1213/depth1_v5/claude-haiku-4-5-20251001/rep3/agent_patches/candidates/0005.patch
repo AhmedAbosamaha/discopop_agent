@@ -1,0 +1,26 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_2/benchmarks/tsvc_c2/s1213/depth1_v5/claude-haiku-4-5-20251001/rep3/work/s1213.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_2/benchmarks/tsvc_c2/s1213/depth1_v5/claude-haiku-4-5-20251001/rep3/work/s1213.c
+@@ -11,14 +11,18 @@
+         // Save current state of a at the start of this nl iteration
+         memcpy(a_old, a, LEN_1D * sizeof(real_t));
+ 
+-        // Phase 1: compute b_new from old a values (no loop-carried dependence on a)
++        // Initialize b_new[0]
+         b_new[0] = b[0];
+-        for (int i = 1; i < LEN_1D-1; i++) {
+-            b_new[i] = a_old[i+1]*d[i];
++
++        // Pre-seed pipeline: compute b_new[1] and use b_new[0] to start a
++        if (LEN_1D > 2) {
++            b_new[1] = a_old[2]*d[1];
++            a[1] = b_new[0]+c[1];
+         }
+ 
+-        // Phase 2: compute new a values from b_new (no loop-carried dependence on b)
+-        for (int i = 1; i < LEN_1D-1; i++) {
++        // Merged pipeline loop: compute b_new[i] (stage 1) while using b_new[i-1] (stage 2)
++        for (int i = 2; i < LEN_1D-1; i++) {
++            b_new[i] = a_old[i+1]*d[i];
+             a[i] = b_new[i-1]+c[i];
+         }
+ 

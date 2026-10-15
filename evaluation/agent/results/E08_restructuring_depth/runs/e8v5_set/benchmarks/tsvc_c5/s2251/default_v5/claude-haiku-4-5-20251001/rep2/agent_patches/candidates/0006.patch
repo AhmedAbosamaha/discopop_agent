@@ -1,0 +1,35 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_set/benchmarks/tsvc_c5/s2251/default_v5/claude-haiku-4-5-20251001/rep2/work/s2251.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_set/benchmarks/tsvc_c5/s2251/default_v5/claude-haiku-4-5-20251001/rep2/work/s2251.c
+@@ -1,15 +1,28 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s2251(void)
+ {
++    // Allocate temporary array for precomputed s values (once, outside nl loop)
++    real_t* s_vals = (real_t*)malloc((LEN_1D + 1) * sizeof(real_t));
++
+     for (int nl = 0; nl < iterations; nl++) {
+-        real_t s = (real_t)0.0;
++        s_vals[0] = (real_t)0.0;
++
++        // Phase 1: Compute all s values sequentially (loop-carried)
+         for (int i = 0; i < LEN_1D; i++) {
+-            a[i] = s*e[i];
+-            s = b[i]+c[i];
+-            b[i] = a[i]+d[i];
++            s_vals[i + 1] = b[i] + c[i];
+         }
++
++        // Phase 2: Compute all a and b values in parallel (Do-All: no inter-iteration dependence)
++        for (int i = 0; i < LEN_1D; i++) {
++            a[i] = s_vals[i] * e[i];
++            b[i] = a[i] + d[i];
++        }
++
+         dummy(a, b, c, d, e);
+     }
++
++    free(s_vals);
+     return (real_t)0;
+ }

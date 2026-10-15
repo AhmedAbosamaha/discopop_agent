@@ -1,0 +1,40 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_set/benchmarks/tsvc_c5/s257/depth2_v5/claude-haiku-4-5-20251001/rep3/work/s257.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_set/benchmarks/tsvc_c5/s257/depth2_v5/claude-haiku-4-5-20251001/rep3/work/s257.c
+@@ -12,13 +12,26 @@
+             }
+         }
+ 
++        // Buffer the original a[] values to break loop-carried dependence
++        real_t *a_old = (real_t *)malloc(LEN_2D * sizeof(real_t));
++        for (int i = 0; i < LEN_2D; i++) {
++            a_old[i] = a[i];
++        }
++
++        real_t *new_a = (real_t *)malloc(LEN_2D * sizeof(real_t));
++
+         for (int i = 1; i < LEN_2D; i++) {
+             real_t temp_a[LEN_2D];
+             for (int j = 0; j < LEN_2D; j++) {
+-                temp_a[j] = aa[j][i] - a[i-1];
++                temp_a[j] = aa[j][i] - a_old[i-1];
+                 aa_new[j][i] = temp_a[j] + bb[j][i];
+             }
+-            a[i] = temp_a[LEN_2D-1];
++            new_a[i] = temp_a[LEN_2D-1];
++        }
++
++        // Copy computed values back to a[]
++        for (int i = 1; i < LEN_2D; i++) {
++            a[i] = new_a[i];
+         }
+ 
+         for (int j = 0; j < LEN_2D; j++) {
+@@ -28,6 +41,8 @@
+         }
+ 
+         free(aa_new);
++        free(a_old);
++        free(new_a);
+ 
+         dummy(a, b, c, d, e, aa, bb, cc);
+     }

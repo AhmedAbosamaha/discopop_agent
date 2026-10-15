@@ -1,0 +1,32 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c4/s341/depth2_v5/claude-haiku-4-5-20251001/rep1/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c4/s341/depth2_v5/claude-haiku-4-5-20251001/rep1/work/s341.c
+@@ -15,13 +15,27 @@
+         // Allocate space for this iteration's indices
+         int *indices = (int *)malloc(count * sizeof(int));
+ 
+-        // Collect indices of positive elements (same b state as count)
++        // Create helper array to identify positive elements (parallel-friendly: no shared state)
++        int *helper = (int *)malloc(LEN_1D * sizeof(int));
++
++        // Mark positive elements: each thread writes to unique position based on loop index
++        for (int i = 0; i < LEN_1D; i++) {
++            if (b[i] > (real_t)0.) {
++                helper[i] = 1;
++            } else {
++                helper[i] = 0;
++            }
++        }
++
++        // Compact helper array into indices (sequential collection)
+         count = 0;
+         for (int i = 0; i < LEN_1D; i++) {
+-            if (b[i] > (real_t)0.) {
++            if (helper[i]) {
+                 indices[count++] = i;
+             }
+         }
++
++        free(helper);
+ 
+         // Copy positive elements to consecutive positions in a
+         for (int i = 0; i < count; i++) {

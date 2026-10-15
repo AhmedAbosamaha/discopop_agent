@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c4/s341/depth2_v5/claude-haiku-4-5-20251001/rep3/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c4/s341/depth2_v5/claude-haiku-4-5-20251001/rep3/work/s341.c
+@@ -30,6 +30,7 @@
+         }
+ 
+         // Phase 3b: Copy indexed elements (Do-All: each j writes to distinct a[j])
++        #pragma omp parallel for firstprivate(count,pos,mask) shared(src_idx) 
+         for (int j = 0; j < count; j++) {
+             a[j] = b[src_idx[j]];
+         }

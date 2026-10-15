@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_set/benchmarks/tsvc_c5/s257/depth1_v5/claude-haiku-4-5-20251001/rep2/work/s257.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_set/benchmarks/tsvc_c5/s257/depth1_v5/claude-haiku-4-5-20251001/rep2/work/s257.c
+@@ -14,6 +14,7 @@
+             a[i] = a_temp[LEN_2D-1];
+         }
+         // Phase 2: Update aa values using saved a_temp
++ #pragma omp parallel for shared(a_temp_saved) 
+         for (int i = 1; i < LEN_2D; i++) {
+             for (int j = 0; j < LEN_2D; j++) {
+                 aa[j][i] = a_temp_saved[i][j] + bb[j][i];

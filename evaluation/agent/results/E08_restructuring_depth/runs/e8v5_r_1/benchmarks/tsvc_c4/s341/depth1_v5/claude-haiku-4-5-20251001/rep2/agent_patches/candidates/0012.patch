@@ -1,0 +1,30 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c4/s341/depth1_v5/claude-haiku-4-5-20251001/rep2/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c4/s341/depth1_v5/claude-haiku-4-5-20251001/rep2/work/s341.c
+@@ -10,11 +10,25 @@
+             dummy(a, b, c, d, e);
+         }
+         j = -1;
++        // Phase 1: Mark which elements pass the filter (Do-All - fully parallelizable)
++        bool *filter = (bool *)malloc(LEN_1D * sizeof(bool));
+         for (int i = 0; i < LEN_1D; i++) {
+-            if (b[i] > (real_t)0.) {
+-                indices[++j] = i;
++            filter[i] = (b[i] > (real_t)0.);
++        }
++        // Phase 2: Count passing elements (Reduction - parallelizable with sum reduction)
++        int count = 0;
++        for (int i = 0; i < LEN_1D; i++) {
++            if (filter[i]) count++;
++        }
++        j = count - 1;
++        // Phase 3: Build indices array from filter (Sequential - no race condition)
++        int idx = 0;
++        for (int i = 0; i < LEN_1D; i++) {
++            if (filter[i]) {
++                indices[idx++] = i;
+             }
+         }
++        free(filter);
+         for (int k = 0; k <= j; k++) {
+             a[k] = b[indices[k]];
+         }

@@ -1,0 +1,16 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c2/s127/depth1_v5/claude-haiku-4-5-20251001/rep1/work/s127.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c2/s127/depth1_v5/claude-haiku-4-5-20251001/rep1/work/s127.c
+@@ -10,11 +10,13 @@
+         // Copy d and e to break loop-carried dependence:
+         // each iteration uses a snapshot of these arrays,
+         // independent of prior dummy() calls
++        #pragma omp parallel for shared(d_copy,e_copy) 
+         for (int j = 0; j < LEN_1D/2; j++) {
+             d_copy[j] = d[j];
+             e_copy[j] = e[j];
+         }
+ 
++        #pragma omp parallel for shared(d_copy,e_copy) 
+         for (int i = 0; i < LEN_1D/2; i++) {
+             a[2*i] = b[i] + c[i] * d_copy[i];
+             a[2*i+1] = b[i] + d_copy[i] * e_copy[i];

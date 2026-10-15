@@ -1,0 +1,20 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c4/s341/depth2_v5/claude-haiku-4-5-20251001/rep3/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c4/s341/depth2_v5/claude-haiku-4-5-20251001/rep3/work/s341.c
+@@ -19,11 +19,14 @@
+             pos[i] = pos[i-1] + mask[i-1];
+         }
+ 
+-        // Phase 3: Place elements in parallel using precomputed positions (Do-All)
+-        // Each iteration independently writes to a[pos[i]] with no dependencies
++        // Phase 3: Place elements using precomputed positions (Do-All)
++        // Extract index into local variable to make independence explicit:
++        // each iteration writes to a distinct location a[idx] determined by pos[i],
++        // with no loop-carried dependence between iterations
+         for (int i = 0; i < LEN_1D; i++) {
++            int idx = pos[i];
+             if (mask[i]) {
+-                a[pos[i]] = b[i];
++                a[idx] = b[i];
+             }
+         }
+ 

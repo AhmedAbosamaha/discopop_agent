@@ -1,0 +1,18 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_2/benchmarks/tsvc_c2/s255/depth1_v5/claude-haiku-4-5-20251001/rep2/work/s255.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_2/benchmarks/tsvc_c2/s255/depth1_v5/claude-haiku-4-5-20251001/rep2/work/s255.c
+@@ -4,6 +4,7 @@
+ {
+     real_t x, y;
+     // Compute a for iteration 0 using initial b
++    #pragma omp parallel for 
+     for (int i = 0; i < LEN_1D; i++) {
+         real_t x_local = (i > 0) ? b[i-1] : b[LEN_1D-1];
+         real_t y_local = (i > 1) ? b[i-2] : ((i == 1) ? b[LEN_1D-1] : b[LEN_1D-2]);
+@@ -14,6 +15,7 @@
+         // Update b via dummy (for next iteration's computation)
+         dummy(a, b, c, d, e);
+         // Compute a for iteration nl+1 using updated b
++ #pragma omp parallel for 
+         for (int i = 0; i < LEN_1D; i++) {
+             real_t x_local = (i > 0) ? b[i-1] : b[LEN_1D-1];
+             real_t y_local = (i > 1) ? b[i-2] : ((i == 1) ? b[LEN_1D-1] : b[LEN_1D-2]);

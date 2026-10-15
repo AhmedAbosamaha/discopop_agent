@@ -1,0 +1,30 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c4/s341/depth2_v5/claude-haiku-4-5-20251001/rep1/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c4/s341/depth2_v5/claude-haiku-4-5-20251001/rep1/work/s341.c
+@@ -34,13 +34,24 @@
+             }
+         }
+ 
+-        // Compact helper array into indices
+-        count = 0;
++        // Compute prefix sum of helper array to determine positions
++        int *prefix = (int *)malloc((LEN_1D + 1) * sizeof(int));
++        prefix[0] = 0;
++        for (int i = 0; i < LEN_1D; i++) {
++            prefix[i + 1] = prefix[i] + helper[i];
++        }
++
++        // Compact helper array into indices (each thread writes to predetermined position)
+         for (int i = 0; i < LEN_1D; i++) {
+             if (helper[i]) {
+-                indices[count++] = i;
++                indices[prefix[i]] = i;
+             }
+         }
++
++        // Recover count from prefix sum
++        count = prefix[LEN_1D];
++
++        free(prefix);
+ 
+         free(helper);
+ 

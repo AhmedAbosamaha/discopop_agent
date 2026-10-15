@@ -1,0 +1,31 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c4/s341/depth2_v5/claude-haiku-4-5-20251001/rep1/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c4/s341/depth2_v5/claude-haiku-4-5-20251001/rep1/work/s341.c
+@@ -1,17 +1,24 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s341(void)
+ {
+-    int j;
++    int *indices = (int *)malloc(LEN_1D * sizeof(int));
+     for (int nl = 0; nl < iterations; nl++) {
+-        j = -1;
++        // Phase 1: Collect indices of positive elements (sequential, carries count)
++        int count = 0;
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++                indices[count++] = i;
+             }
++        }
++        // Phase 2: Write positive elements to consecutive positions
++        // No cross-iteration dependencies: each iteration writes to unique a[i]
++        for (int i = 0; i < count; i++) {
++            a[i] = b[indices[i]];
+         }
+         dummy(a, b, c, d, e);
+     }
++    free(indices);
+     return (real_t)0;
+ }

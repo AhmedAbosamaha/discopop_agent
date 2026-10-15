@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c2/s112/depth1_v5/claude-haiku-4-5-20251001/rep2/work/s112.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c2/s112/depth1_v5/claude-haiku-4-5-20251001/rep2/work/s112.c
+@@ -10,6 +10,7 @@
+             temp_a[k] = a[k];
+         }
+         // Update a using original values, in forward order for OpenMP compatibility
++        #pragma omp parallel for shared(temp_a) 
+         for (int i = 0; i < LEN_1D - 1; i++) {
+             a[i+1] = temp_a[i] + b[i];
+         }

@@ -1,0 +1,53 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c2/s252/depth2_v5/claude-haiku-4-5-20251001/rep1/work/s252.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c2/s252/depth2_v5/claude-haiku-4-5-20251001/rep1/work/s252.c
+@@ -4,24 +4,46 @@
+ real_t kernel_s252(void)
+ {
+     real_t t, s;
+-    real_t *products = (real_t *)malloc(LEN_1D * sizeof(real_t));
+ 
++    // Allocate 2D arrays for products and local a values for each iteration
++    real_t **products = (real_t **)malloc(iterations * sizeof(real_t*));
++    real_t **a_local = (real_t **)malloc(iterations * sizeof(real_t*));
++    for (int nl = 0; nl < iterations; nl++) {
++        products[nl] = (real_t *)malloc(LEN_1D * sizeof(real_t));
++        a_local[nl] = (real_t *)malloc(LEN_1D * sizeof(real_t));
++    }
++
++    // Phase 1: Compute all products across all iterations
+     for (int nl = 0; nl < iterations; nl++) {
+         for (int i = 0; i < LEN_1D; i++) {
+-            products[i] = b[i] * c[i];
++            products[nl][i] = b[i] * c[i];
+         }
++    }
+ 
++    // Phase 2: Compute all a values across all iterations
++    for (int nl = 0; nl < iterations; nl++) {
+         for (int i = 0; i < LEN_1D; i++) {
+             if (i == 0) {
+-                a[i] = products[i];
++                a_local[nl][i] = products[nl][i];
+             } else {
+-                a[i] = products[i] + products[i-1];
++                a_local[nl][i] = products[nl][i] + products[nl][i-1];
+             }
+         }
++    }
+ 
++    // Phase 3: Call dummy for each iteration (must remain sequential due to dummy.n dependency)
++    for (int nl = 0; nl < iterations; nl++) {
++        memcpy(a, a_local[nl], LEN_1D * sizeof(real_t));
+         dummy(a, b, c, d, e);
+     }
+ 
++    // Free allocated arrays
++    for (int nl = 0; nl < iterations; nl++) {
++        free(products[nl]);
++        free(a_local[nl]);
++    }
+     free(products);
++    free(a_local);
++
+     return (real_t)0;
+ }

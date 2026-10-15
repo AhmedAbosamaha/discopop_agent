@@ -1,0 +1,38 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_2/benchmarks/tsvc_c2/s281/depth2_v5/claude-haiku-4-5-20251001/rep1/work/s281.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_2/benchmarks/tsvc_c2/s281/depth2_v5/claude-haiku-4-5-20251001/rep1/work/s281.c
+@@ -3,22 +3,32 @@
+ real_t kernel_s281(void)
+ {
+     real_t x;
++    real_t *b_copy = malloc(LEN_1D * sizeof(real_t));
++    for (int i = 0; i < LEN_1D; i++) {
++        b_copy[i] = b[i];
++    }
++
+     for (int nl = 0; nl < iterations; nl++) {
+-        // Phase 1: first half reads from unmodified upper half
++        // Phase 1: reads from b_copy (values from previous iteration), writes to b
+         for (int i = 0; i < (LEN_1D + 1) / 2; i++) {
+-            x = a[LEN_1D-i-1] + b[i] * c[i];
++            x = a[LEN_1D-i-1] + b_copy[i] * c[i];
+             a[i] = x-(real_t)1.0;
+             b[i] = x;
+         }
+ 
+-        // Phase 2: second half reads from phase 1's writes
++        // Phase 2: reads from b (Phase 1's writes in this iteration)
+         for (int i = (LEN_1D + 1) / 2; i < LEN_1D; i++) {
+             x = a[LEN_1D-i-1] + b[i] * c[i];
+             a[i] = x-(real_t)1.0;
+             b[i] = x;
+         }
+ 
++        // Update b_copy for next iteration
++        for (int i = 0; i < LEN_1D; i++) {
++            b_copy[i] = b[i];
++        }
+         dummy(a, b, c, d, e);
+     }
++    free(b_copy);
+     return (real_t)0;
+ }

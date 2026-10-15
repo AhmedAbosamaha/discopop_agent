@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_3/benchmarks/tsvc_c2/s211/depth2_v5/claude-haiku-4-5-20251001/rep1/work/s211.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_3/benchmarks/tsvc_c2/s211/depth2_v5/claude-haiku-4-5-20251001/rep1/work/s211.c
+@@ -6,6 +6,7 @@
+     real_t *b_new = (real_t *)malloc(LEN_1D * sizeof(real_t));
+ 
+     // Initialize: compute b_new for first iteration
++    #pragma omp parallel for shared(b_new) 
+     for (int i = 1; i < LEN_1D-1; i++) {
+         b_new[i] = b[i + 1] - e[i] * d[i];
+     }

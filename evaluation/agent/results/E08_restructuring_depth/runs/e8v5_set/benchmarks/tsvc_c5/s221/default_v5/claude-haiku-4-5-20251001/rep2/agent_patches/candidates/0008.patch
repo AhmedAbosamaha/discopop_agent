@@ -1,0 +1,34 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_set/benchmarks/tsvc_c5/s221/default_v5/claude-haiku-4-5-20251001/rep2/work/s221.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_set/benchmarks/tsvc_c5/s221/default_v5/claude-haiku-4-5-20251001/rep2/work/s221.c
+@@ -1,13 +1,28 @@
+ #include "data.h"
++#include <stdlib.h>
++#include <string.h>
+ 
+ real_t kernel_s221(void)
+ {
++    real_t *a_temp = (real_t*)malloc(LEN_1D * sizeof(real_t));
++    real_t *b_temp = (real_t*)malloc(LEN_1D * sizeof(real_t));
++
+     for (int nl = 0; nl < iterations; nl++) {
++        memcpy(a_temp, a, LEN_1D * sizeof(real_t));
++        memcpy(b_temp, b, LEN_1D * sizeof(real_t));
++
+         for (int i = 1; i < LEN_1D; i++) {
+-            a[i] += c[i] * d[i];
+-            b[i] = b[i - 1] + a[i] + d[i];
++            a_temp[i] += c[i] * d[i];
++            b_temp[i] = b_temp[i - 1] + a_temp[i] + d[i];
+         }
+-        dummy(a, b, c, d, e);
++
++        dummy(a_temp, b_temp, c, d, e);
++
++        memcpy(a, a_temp, LEN_1D * sizeof(real_t));
++        memcpy(b, b_temp, LEN_1D * sizeof(real_t));
+     }
++
++    free(a_temp);
++    free(b_temp);
+     return (real_t)0;
+ }

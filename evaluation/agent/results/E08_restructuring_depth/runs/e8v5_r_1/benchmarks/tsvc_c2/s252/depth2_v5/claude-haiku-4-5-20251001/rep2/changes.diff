@@ -1,0 +1,42 @@
+--- original.c
++++ final.c
+@@ -62,16 +62,32 @@
+ 
+ real_t kernel_s252(void)
+ {
+-    real_t t, s;
+-    for (int nl = 0; nl < iterations; nl++) {
+-        t = (real_t) 0.;
++    // Compute a for first iteration with original b, c
++    #pragma omp parallel for 
++    for (int i = 0; i < LEN_1D; i++) {
++        if (i == 0) {
++            a[i] = b[i] * c[i];
++        } else {
++            a[i] = b[i] * c[i] + b[i-1] * c[i-1];
++        }
++    }
++
++    // Pipeline: dummy call for previous iteration, then compute next
++    for (int nl = 1; nl < iterations; nl++) {
++        dummy(a, b, c, d, e);
++        #pragma omp parallel for 
+         for (int i = 0; i < LEN_1D; i++) {
+-            s = b[i] * c[i];
+-            a[i] = s + t;
+-            t = s;
++            if (i == 0) {
++                a[i] = b[i] * c[i];
++            } else {
++                a[i] = b[i] * c[i] + b[i-1] * c[i-1];
++            }
+         }
+-        dummy(a, b, c, d, e);
+     }
++
++    // Call dummy for final iteration
++    dummy(a, b, c, d, e);
++
+     return (real_t)0;
+ }
+ 

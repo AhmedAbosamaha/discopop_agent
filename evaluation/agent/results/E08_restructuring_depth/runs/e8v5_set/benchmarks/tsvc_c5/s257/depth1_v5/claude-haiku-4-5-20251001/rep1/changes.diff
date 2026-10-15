@@ -1,0 +1,18 @@
+--- original.c
++++ final.c
+@@ -77,10 +77,13 @@
+ {
+     for (int nl = 0; nl < iterations; nl++) {
+         for (int i = 1; i < LEN_2D; i++) {
++            real_t prev_a = a[i-1];
++            #pragma omp parallel for firstprivate(prev_a,i) 
+             for (int j = 0; j < LEN_2D; j++) {
+-                a[i] = aa[j][i] - a[i-1];
+-                aa[j][i] = a[i] + bb[j][i];
++                real_t a_j = aa[j][i] - prev_a;
++                aa[j][i] = a_j + bb[j][i];
+             }
++            a[i] = aa[LEN_2D-1][i] - bb[LEN_2D-1][i];
+         }
+         dummy(a, b, c, d, e, aa, bb, cc);
+     }

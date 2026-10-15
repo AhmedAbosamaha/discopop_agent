@@ -1,0 +1,28 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_3/benchmarks/tsvc_c2/s291/depth2_v5/claude-haiku-4-5-20251001/rep3/work/s291.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_3/benchmarks/tsvc_c2/s291/depth2_v5/claude-haiku-4-5-20251001/rep3/work/s291.c
+@@ -1,14 +1,24 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s291(void)
+ {
+     int im1;
++    real_t *b_copy = (real_t *)malloc(LEN_1D * sizeof(real_t));
++
+     for (int nl = 0; nl < iterations; nl++) {
++        // Copy b to b_copy to capture the state of b for this iteration
++        for (int j = 0; j < LEN_1D; j++) {
++            b_copy[j] = b[j];
++        }
++
+         for (int i = 0; i < LEN_1D; i++) {
+             im1 = (i == 0) ? (LEN_1D - 1) : (i - 1);
+-            a[i] = (b[i] + b[im1]) * (real_t).5;
++            a[i] = (b_copy[i] + b_copy[im1]) * (real_t).5;
+         }
+         dummy(a, b, c, d, e);
+     }
++
++    free(b_copy);
+     return (real_t)0;
+ }

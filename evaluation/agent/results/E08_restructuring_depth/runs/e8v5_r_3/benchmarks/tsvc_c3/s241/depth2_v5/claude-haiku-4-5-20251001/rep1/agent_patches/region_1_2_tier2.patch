@@ -1,0 +1,40 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_3/benchmarks/tsvc_c3/s241/depth2_v5/claude-haiku-4-5-20251001/rep1/work/s241.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_3/benchmarks/tsvc_c3/s241/depth2_v5/claude-haiku-4-5-20251001/rep1/work/s241.c
+@@ -4,24 +4,29 @@
+ 
+ real_t kernel_s241(void)
+ {
++    real_t *a_old = malloc(LEN_1D * sizeof(real_t));
++    real_t *b_old = malloc(LEN_1D * sizeof(real_t));
++    real_t *c_copy = malloc(LEN_1D * sizeof(real_t));
++
+     for (int nl = 0; nl < iterations; nl++) {
+-        real_t *a_old = malloc(LEN_1D * sizeof(real_t));
+-        real_t *b_old = malloc(LEN_1D * sizeof(real_t));
+-        real_t *c_copy = malloc(LEN_1D * sizeof(real_t));
+-
+         memcpy(a_old, a, LEN_1D * sizeof(real_t));
+         memcpy(b_old, b, LEN_1D * sizeof(real_t));
+         memcpy(c_copy, c, LEN_1D * sizeof(real_t));
+ 
+         for (int i = 0; i < LEN_1D-1; i++) {
+-            a[i] = b_old[i] * c_copy[i  ] * d[i];
++            a[i] = b_old[i] * c_copy[i] * d[i];
++        }
++
++        for (int i = 0; i < LEN_1D-1; i++) {
+             b[i] = a[i] * a_old[i+1] * d[i];
+         }
+ 
+-        free(a_old);
+-        free(b_old);
+-        free(c_copy);
+         dummy(a, b, c, d, e);
+     }
++
++    free(a_old);
++    free(b_old);
++    free(c_copy);
++
+     return (real_t)0;
+ }

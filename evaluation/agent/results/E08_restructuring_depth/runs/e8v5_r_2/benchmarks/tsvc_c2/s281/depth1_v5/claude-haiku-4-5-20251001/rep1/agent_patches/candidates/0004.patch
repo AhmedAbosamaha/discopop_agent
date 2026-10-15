@@ -1,0 +1,19 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_2/benchmarks/tsvc_c2/s281/depth1_v5/claude-haiku-4-5-20251001/rep1/work/s281.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_2/benchmarks/tsvc_c2/s281/depth1_v5/claude-haiku-4-5-20251001/rep1/work/s281.c
+@@ -5,14 +5,8 @@
+     real_t x;
+     int boundary = (LEN_1D - 1) / 2;
+     for (int nl = 0; nl < iterations; nl++) {
+-        // Stage 1: iterations with no cross-iteration dependencies
+-        for (int i = 0; i <= boundary; i++) {
+-            x = a[LEN_1D-i-1] + b[i] * c[i];
+-            a[i] = x-(real_t)1.0;
+-            b[i] = x;
+-        }
+-        // Stage 2: iterations that only depend on stage 1
+-        for (int i = boundary + 1; i < LEN_1D; i++) {
++        // Merged loop: process all array elements in a single parallel region
++        for (int i = 0; i < LEN_1D; i++) {
+             x = a[LEN_1D-i-1] + b[i] * c[i];
+             a[i] = x-(real_t)1.0;
+             b[i] = x;

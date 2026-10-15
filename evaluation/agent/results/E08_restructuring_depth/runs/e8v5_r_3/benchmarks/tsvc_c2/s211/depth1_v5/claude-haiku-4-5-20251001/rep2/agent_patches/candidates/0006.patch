@@ -1,0 +1,48 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_3/benchmarks/tsvc_c2/s211/depth1_v5/claude-haiku-4-5-20251001/rep2/work/s211.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_3/benchmarks/tsvc_c2/s211/depth1_v5/claude-haiku-4-5-20251001/rep2/work/s211.c
+@@ -4,18 +4,38 @@
+ 
+ real_t kernel_s211(void)
+ {
+-    real_t *b_new = malloc(LEN_1D * sizeof(real_t));
++    real_t **b_new_history = malloc(iterations * sizeof(real_t*));
+     for (int nl = 0; nl < iterations; nl++) {
+-        memcpy(b_new, b, LEN_1D * sizeof(real_t));
+-        for (int i = 1; i < LEN_1D-1; i++) {
+-            b_new[i] = b[i + 1] - e[i] * d[i];
++        b_new_history[nl] = malloc(LEN_1D * sizeof(real_t));
++    }
++
++    // Phase 1: Pre-compute all b_new values in sequence
++    for (int nl = 0; nl < iterations; nl++) {
++        if (nl == 0) {
++            memcpy(b_new_history[nl], b, LEN_1D * sizeof(real_t));
++        } else {
++            memcpy(b_new_history[nl], b_new_history[nl - 1], LEN_1D * sizeof(real_t));
+         }
+         for (int i = 1; i < LEN_1D-1; i++) {
+-            a[i] = b_new[i - 1] + c[i] * d[i];
++            b_new_history[nl][i] = b_new_history[nl][i + 1] - e[i] * d[i];
+         }
+-        memcpy(b, b_new, LEN_1D * sizeof(real_t));
++    }
++
++    // Update global b to final value
++    memcpy(b, b_new_history[iterations - 1], LEN_1D * sizeof(real_t));
++
++    // Phase 2: Compute a and call dummy in sequence (no inter-iteration dependencies in a-computation)
++    for (int nl = 0; nl < iterations; nl++) {
++        for (int i = 1; i < LEN_1D-1; i++) {
++            a[i] = b_new_history[nl][i - 1] + c[i] * d[i];
++        }
+         dummy(a, b, c, d, e);
+     }
+-    free(b_new);
++
++    // Free allocated memory
++    for (int nl = 0; nl < iterations; nl++) {
++        free(b_new_history[nl]);
++    }
++    free(b_new_history);
+     return (real_t)0;
+ }

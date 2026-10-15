@@ -1,0 +1,39 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c2/s127/depth1_v5/claude-haiku-4-5-20251001/rep2/work/s127.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c2/s127/depth1_v5/claude-haiku-4-5-20251001/rep2/work/s127.c
+@@ -1,13 +1,34 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s127(void)
+ {
++    // Save copies of input arrays to break loop-carried dependence on b, c, d, e
++    real_t *b_save = (real_t *)malloc((LEN_1D/2) * sizeof(real_t));
++    real_t *c_save = (real_t *)malloc((LEN_1D/2) * sizeof(real_t));
++    real_t *d_save = (real_t *)malloc((LEN_1D/2) * sizeof(real_t));
++    real_t *e_save = (real_t *)malloc((LEN_1D/2) * sizeof(real_t));
++
++    // Initialize saved arrays with original values
++    for (int init_i = 0; init_i < LEN_1D/2; init_i++) {
++        b_save[init_i] = b[init_i];
++        c_save[init_i] = c[init_i];
++        d_save[init_i] = d[init_i];
++        e_save[init_i] = e[init_i];
++    }
++
+     for (int nl = 0; nl < iterations; nl++) {
+         for (int i = 0; i < LEN_1D/2; i++) {
+-            a[2*i] = b[i] + c[i] * d[i];
+-            a[2*i+1] = b[i] + d[i] * e[i];
++            a[2*i] = b_save[i] + c_save[i] * d_save[i];
++            a[2*i+1] = b_save[i] + d_save[i] * e_save[i];
+         }
+         dummy(a, b, c, d, e);
+     }
++
++    free(b_save);
++    free(c_save);
++    free(d_save);
++    free(e_save);
++
+     return (real_t)0;
+ }

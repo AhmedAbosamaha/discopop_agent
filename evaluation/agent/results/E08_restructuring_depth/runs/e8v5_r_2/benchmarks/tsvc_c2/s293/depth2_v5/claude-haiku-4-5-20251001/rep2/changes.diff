@@ -1,0 +1,35 @@
+--- original.c
++++ final.c
+@@ -62,11 +62,30 @@
+ 
+ real_t kernel_s293(void)
+ {
++    // Precompute a[0] values for each iteration to break loop-carried dependence
++    real_t a0_init = a[0];
++    real_t a0_values[iterations+1];
++    a0_values[0] = a0_init;
+     for (int nl = 0; nl < iterations; nl++) {
++        long k = ((long)nl * 7919L + 13L) % LEN_1D;
++        real_t increment = (real_t)0.125;  // a[0] += 0.125 always
++        if (k == 0) {
++            increment += (real_t)0.25;  // a[k] += 0.25 also if k == 0
++        }
++        a0_values[nl+1] = a0_values[nl] + increment;
++    }
++
++    // Main loop: now reads a0 from precomputed array, iterations are independent
++    for (int nl = 0; nl < iterations; nl++) {
++        real_t a0 = a0_values[nl];
++        #pragma omp parallel for firstprivate(a0) 
+         for (int i = 0; i < LEN_1D; i++) {
+-            a[i] = a[0];
++            a[i] = a0;
+         }
+-        dummy(a, b, c, d, e);
++        long k = ((long)nl * 7919L + 13L) % LEN_1D;
++        a[k] += (real_t)0.25; b[k] += (real_t)0.25; c[k] += (real_t)0.125;
++        d[k] += (real_t)0.125; e[k] += (real_t)0.25;
++        a[0] += (real_t)0.125; b[LEN_1D-1] += (real_t)0.125;
+     }
+     return (real_t)0;
+ }

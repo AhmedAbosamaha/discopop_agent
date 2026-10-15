@@ -1,0 +1,29 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_set/benchmarks/tsvc_c5/s221/depth2_v5/claude-haiku-4-5-20251001/rep3/work/s221.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_set/benchmarks/tsvc_c5/s221/depth2_v5/claude-haiku-4-5-20251001/rep3/work/s221.c
+@@ -4,6 +4,7 @@
+ real_t kernel_s221(void)
+ {
+     real_t *d_local = (real_t *)malloc(LEN_1D * sizeof(real_t));
++    real_t *partial_sum = (real_t *)malloc(LEN_1D * sizeof(real_t));
+     for (int j = 0; j < LEN_1D; j++) {
+         d_local[j] = d[j];
+     }
+@@ -18,12 +19,17 @@
+         for (int i = 1; i < LEN_1D; i++) {
+             a[i] += c[i] * d_local[i];
+         }
++        partial_sum[0] = 0;
+         for (int i = 1; i < LEN_1D; i++) {
+-            b[i] = b[i - 1] + a[i] + d_local[i];
++            partial_sum[i] = partial_sum[i - 1] + a[i] + d_local[i];
++        }
++        for (int i = 1; i < LEN_1D; i++) {
++            b[i] = b[0] + partial_sum[i];
+         }
+     }
+ 
+     dummy(a, b, c, d, e);
+     free(d_local);
++    free(partial_sum);
+     return (real_t)0;
+ }

@@ -1,0 +1,17 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_2/benchmarks/tsvc_c2/s1213/depth1_v5/claude-haiku-4-5-20251001/rep3/work/s1213.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_2/benchmarks/tsvc_c2/s1213/depth1_v5/claude-haiku-4-5-20251001/rep3/work/s1213.c
+@@ -10,12 +10,14 @@
+         // Phase 1: compute b_new from current a values
+         // First i-loop reads a[i+1] (higher indices)
+         b_new[0] = b[0];
++        #pragma omp parallel for shared(b_new) 
+         for (int i = 1; i < LEN_1D-1; i++) {
+             b_new[i] = a[i+1]*d[i];
+         }
+ 
+         // Phase 2: compute new a values from b_new
+         // Second i-loop writes a[i] (lower indices), no conflict with reads above
++        #pragma omp parallel for shared(b_new) 
+         for (int i = 1; i < LEN_1D-1; i++) {
+             a[i] = b_new[i-1]+c[i];
+         }

@@ -1,0 +1,50 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c2/s127/depth2_v5/claude-haiku-4-5-20251001/rep2/work/s127.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c2/s127/depth2_v5/claude-haiku-4-5-20251001/rep2/work/s127.c
+@@ -1,28 +1,43 @@
++#include <stdlib.h>
+ #include "data.h"
+ 
+ real_t kernel_s127(void)
+ {
+-    // Initialize: compute for first iteration
++    // Allocate staging buffer for pipeline: decouples compute from dummy()
++    real_t *a_pipeline = (real_t *)malloc(LEN_1D * sizeof(real_t));
++    if (a_pipeline == NULL) return (real_t)0;
++
++    // Initialize: compute for first iteration into main array
+     if (iterations > 0) {
+         for (int i = 0; i < LEN_1D/2; i++) {
+             a[2*i] = b[i] + c[i] * d[i];
+             a[2*i+1] = b[i] + d[i] * e[i];
+         }
++        // Copy to pipeline buffer for first dummy() call
++        for (int i = 0; i < LEN_1D; i++) {
++            a_pipeline[i] = a[i];
++        }
+     }
+ 
+-    // Pipelined loop: dummy() for previous iteration, then compute for current
++    // Pipelined loop: dummy() on previous, then compute current (into a, decoupled via a_pipeline)
+     for (int nl = 1; nl < iterations; nl++) {
+-        dummy(a, b, c, d, e);
++        dummy(a_pipeline, b, c, d, e);
++        // Compute writes to a (independent of a_pipeline which dummy just read)
+         for (int i = 0; i < LEN_1D/2; i++) {
+             a[2*i] = b[i] + c[i] * d[i];
+             a[2*i+1] = b[i] + d[i] * e[i];
+         }
++        // Copy computed a to pipeline buffer for next iteration's dummy()
++        for (int i = 0; i < LEN_1D; i++) {
++            a_pipeline[i] = a[i];
++        }
+     }
+ 
+-    // Finalize: dummy() for last iteration
++    // Finalize: dummy() for last iteration (on actual a, not pipeline copy)
+     if (iterations > 0) {
+         dummy(a, b, c, d, e);
+     }
+ 
++    free(a_pipeline);
+     return (real_t)0;
+ }

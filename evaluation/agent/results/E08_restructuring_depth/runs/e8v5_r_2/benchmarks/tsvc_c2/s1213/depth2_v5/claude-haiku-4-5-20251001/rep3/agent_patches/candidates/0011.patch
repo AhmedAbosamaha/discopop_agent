@@ -1,0 +1,51 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_2/benchmarks/tsvc_c2/s1213/depth2_v5/claude-haiku-4-5-20251001/rep3/work/s1213.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_2/benchmarks/tsvc_c2/s1213/depth2_v5/claude-haiku-4-5-20251001/rep3/work/s1213.c
+@@ -1,31 +1,40 @@
++#include <stdlib.h>
+ #include "data.h"
+ 
+ real_t kernel_s1213(void)
+ {
++    real_t *b_temp = (real_t *)malloc(LEN_1D * sizeof(real_t));
++
+     // Prologue: stage 1 of first iteration
+     for (int i = 1; i < LEN_1D-1; i++) {
+-        b[i] = a[i+1]*d[i];
++        b_temp[i] = a[i+1]*d[i];
+     }
+ 
+     // Pipelined loop: interleave stages across iterations
+     for (int nl = 1; nl < iterations; nl++) {
+-        // Stages 2 and 3 of previous iteration (nl-1)
++        // Stages 2 and 3 of previous iteration (nl-1) using b from previous stage 1
+         for (int i = 1; i < LEN_1D-1; i++) {
+-            a[i] = b[i-1]+c[i];
++            a[i] = b_temp[i-1]+c[i];
+         }
+-        dummy(a, b, c, d, e);
++        dummy(a, b_temp, c, d, e);
+ 
+-        // Stage 1 of current iteration
++        // Stage 1 of current iteration: compute next b values
+         for (int i = 1; i < LEN_1D-1; i++) {
+-            b[i] = a[i+1]*d[i];
++            b_temp[i] = a[i+1]*d[i];
+         }
+     }
+ 
+     // Epilogue: stages 2 and 3 of last iteration
+     for (int i = 1; i < LEN_1D-1; i++) {
+-        a[i] = b[i-1]+c[i];
++        a[i] = b_temp[i-1]+c[i];
+     }
+-    dummy(a, b, c, d, e);
++    dummy(a, b_temp, c, d, e);
++
++    // Copy final b values back
++    for (int i = 1; i < LEN_1D-1; i++) {
++        b[i] = b_temp[i];
++    }
++    free(b_temp);
+ 
+     return (real_t)0;
+ }

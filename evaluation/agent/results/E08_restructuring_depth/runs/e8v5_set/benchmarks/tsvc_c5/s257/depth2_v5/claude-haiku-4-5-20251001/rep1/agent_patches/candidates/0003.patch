@@ -1,0 +1,46 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_set/benchmarks/tsvc_c5/s257/depth2_v5/claude-haiku-4-5-20251001/rep1/work/s257.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_set/benchmarks/tsvc_c5/s257/depth2_v5/claude-haiku-4-5-20251001/rep1/work/s257.c
+@@ -1,15 +1,40 @@
++#include <stdlib.h>
+ #include "data.h"
+ 
+ real_t kernel_s257(void)
+ {
+     for (int nl = 0; nl < iterations; nl++) {
++        // Snapshot current a values for constant reference in this iteration
++        real_t *old_a = (real_t *)malloc(LEN_2D * sizeof(real_t));
++        for (int k = 0; k < LEN_2D; k++) {
++            old_a[k] = a[k];
++        }
++
++        // Compute aa_last and update aa arrays using constant old_a
++        real_t *aa_last = (real_t *)malloc(LEN_2D * sizeof(real_t));
+         for (int i = 1; i < LEN_2D; i++) {
+-            real_t aa_last = aa[LEN_2D-1][i];
++            aa_last[i] = aa[LEN_2D-1][i];
+             for (int j = 0; j < LEN_2D; j++) {
+-                aa[j][i] = aa[j][i] + bb[j][i] - a[i-1];
++                aa[j][i] = aa[j][i] + bb[j][i] - old_a[i-1];
+             }
+-            a[i] = aa_last - a[i-1];
+         }
++
++        // Compute new a values: each iteration is independent (reads constant old_a, writes unique new_a)
++        real_t *new_a = (real_t *)malloc(LEN_2D * sizeof(real_t));
++        for (int i = 1; i < LEN_2D; i++) {
++            new_a[i] = aa_last[i] - old_a[i-1];
++        }
++
++        // Update a with new values
++        for (int i = 1; i < LEN_2D; i++) {
++            a[i] = new_a[i];
++        }
++
++        // Cleanup
++        free(old_a);
++        free(aa_last);
++        free(new_a);
++
+         dummy(a, b, c, d, e, aa, bb, cc);
+     }
+     return (real_t)0;

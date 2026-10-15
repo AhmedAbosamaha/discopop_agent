@@ -1,0 +1,39 @@
+#include "data.h"
+
+real_t kernel_s2251(void)
+{
+    // Pipeline the stages: compute a, then compute b and dummy,
+    // allowing different outer iterations' stages to overlap
+
+    // Stage 1 for iteration 0: compute a
+    real_t s = (real_t)0.0;
+    for (int i = 0; i < LEN_1D; i++) {
+        a[i] = s*e[i];
+        s = b[i]+c[i];
+    }
+
+    // Pipeline: stage 1 (compute a) and stage 2 (compute b, dummy) for each iteration
+    for (int nl = 1; nl < iterations; nl++) {
+        // Stage 2 of iteration nl-1: compute b and call dummy
+        #pragma omp parallel for 
+        for (int i = 0; i < LEN_1D; i++) {
+            b[i] = a[i]+d[i];
+        }
+        dummy(a, b, c, d, e);
+
+        // Stage 1 of iteration nl: compute a
+ #pragma omp parallel for 
+        for (int i = 0; i < LEN_1D; i++) {
+            real_t s = (i == 0) ? (real_t)0.0 : (b[i-1]+c[i-1]);
+            a[i] = s*e[i];
+        }
+    }
+
+    // Final stage 2: compute b for last iteration
+    for (int i = 0; i < LEN_1D; i++) {
+        b[i] = a[i]+d[i];
+    }
+    dummy(a, b, c, d, e);
+
+    return (real_t)0;
+}

@@ -1,0 +1,16 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_set/benchmarks/tsvc_c5/s2251/depth1_v5/claude-haiku-4-5-20251001/rep4/work/s2251.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_set/benchmarks/tsvc_c5/s2251/depth1_v5/claude-haiku-4-5-20251001/rep4/work/s2251.c
+@@ -8,11 +8,13 @@
+ 
+         // Pre-compute s values: s_vals[i] is the value s has at the start of iteration i
+         s_vals[0] = (real_t)0.0;
++        #pragma omp parallel for shared(s_vals) 
+         for (int i = 1; i < LEN_1D; i++) {
+             s_vals[i] = b[i-1] + c[i-1];
+         }
+ 
+         // Main computation using pre-computed s values
++        #pragma omp parallel for shared(s_vals) 
+         for (int i = 0; i < LEN_1D; i++) {
+             a[i] = s_vals[i]*e[i];
+             b[i] = a[i]+d[i];

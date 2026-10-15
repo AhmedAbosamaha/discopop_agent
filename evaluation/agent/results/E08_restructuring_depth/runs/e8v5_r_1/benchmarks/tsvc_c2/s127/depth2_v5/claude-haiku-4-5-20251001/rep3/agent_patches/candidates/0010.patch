@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c2/s127/depth2_v5/claude-haiku-4-5-20251001/rep3/work/s127.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c2/s127/depth2_v5/claude-haiku-4-5-20251001/rep3/work/s127.c
+@@ -20,6 +20,7 @@
+     // Phase 1: Produce and buffer b, c, d, e for each iteration
+     for (int nl = 1; nl < iterations; nl++) {
+         dummy(a, b, c, d, e);
++        #pragma omp parallel for firstprivate(nl) shared(d_buffer,e_buffer,c_buffer,b_buffer) 
+         for (int idx = 0; idx < LEN_1D; idx++) {
+             b_buffer[nl * LEN_1D + idx] = b[idx];
+             c_buffer[nl * LEN_1D + idx] = c[idx];

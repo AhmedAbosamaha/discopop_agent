@@ -1,0 +1,61 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c4/s341/depth1_v5/claude-haiku-4-5-20251001/rep3/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c4/s341/depth1_v5/claude-haiku-4-5-20251001/rep3/work/s341.c
+@@ -4,35 +4,36 @@
+ real_t kernel_s341(void)
+ {
+     int j;
++
++    // Phase 1: Mark valid elements (Do-All loop, no dependences)
++    int *valid = (int *)malloc(LEN_1D * sizeof(int));
++    for (int i = 0; i < LEN_1D; i++) {
++        valid[i] = (b[i] > (real_t)0.) ? 1 : 0;
++    }
++
++    // Phase 2: Compute prefix sum to assign positions (sequential)
++    int *positions = (int *)malloc(LEN_1D * sizeof(int));
++    j = -1;
++    for (int i = 0; i < LEN_1D; i++) {
++        if (valid[i]) {
++            j++;
++            positions[i] = j;
++        } else {
++            positions[i] = -1;
++        }
++    }
++
++    // Phase 3: Repeat scatter iterations (Do-All loop)
+     for (int nl = 0; nl < iterations; nl++) {
+-        // Phase 1: Mark valid elements (Do-All loop, no dependences)
+-        int *valid = (int *)malloc(LEN_1D * sizeof(int));
+-        for (int i = 0; i < LEN_1D; i++) {
+-            valid[i] = (b[i] > (real_t)0.) ? 1 : 0;
+-        }
+-
+-        // Phase 2: Compute prefix sum to assign positions (sequential)
+-        int *positions = (int *)malloc(LEN_1D * sizeof(int));
+-        j = -1;
+-        for (int i = 0; i < LEN_1D; i++) {
+-            if (valid[i]) {
+-                j++;
+-                positions[i] = j;
+-            } else {
+-                positions[i] = -1;
+-            }
+-        }
+-
+-        // Phase 3: Write elements to their assigned positions (Do-All loop)
+         for (int i = 0; i < LEN_1D; i++) {
+             if (positions[i] >= 0) {
+                 a[positions[i]] = b[i];
+             }
+         }
+-
+-        free(valid);
+-        free(positions);
+         dummy(a, b, c, d, e);
+     }
++
++    free(valid);
++    free(positions);
+     return (real_t)0;
+ }

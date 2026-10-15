@@ -1,0 +1,28 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_2/benchmarks/tsvc_c2/s281/depth2_v5/claude-haiku-4-5-20251001/rep1/work/s281.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_2/benchmarks/tsvc_c2/s281/depth2_v5/claude-haiku-4-5-20251001/rep1/work/s281.c
+@@ -10,7 +10,12 @@
+     }
+ 
+     for (int nl = 0; nl < iterations; nl++) {
+-        // Phase 1: reads from b_copy (values from previous iteration), writes to b
++        // Update b_copy from previous iteration's b (before dummy modifies it)
++        for (int i = 0; i < LEN_1D; i++) {
++            b_copy[i] = b[i];
++        }
++
++        // Phase 1: reads from b_copy (values computed in previous iteration), writes to b
+         for (int i = 0; i < (LEN_1D + 1) / 2; i++) {
+             x = a[LEN_1D-i-1] + b_copy[i] * c[i];
+             a[i] = x-(real_t)1.0;
+@@ -25,11 +30,6 @@
+         }
+ 
+         dummy(a, b, c, d, e);
+-
+-        // Update b_copy for next iteration (after dummy, in case it modifies b)
+-        for (int i = 0; i < LEN_1D; i++) {
+-            b_copy[i] = b[i];
+-        }
+     }
+     free(b_copy);
+     return (real_t)0;

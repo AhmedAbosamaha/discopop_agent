@@ -1,0 +1,67 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_3/benchmarks/tsvc_c3/s241/depth2_v5/claude-haiku-4-5-20251001/rep1/work/s241.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_3/benchmarks/tsvc_c3/s241/depth2_v5/claude-haiku-4-5-20251001/rep1/work/s241.c
+@@ -4,24 +4,53 @@
+ 
+ real_t kernel_s241(void)
+ {
++    // Phase 1: Buffer inputs for each iteration
++    real_t **a_old_array = malloc(iterations * sizeof(real_t*));
++    real_t **b_old_array = malloc(iterations * sizeof(real_t*));
++    real_t **c_copy_array = malloc(iterations * sizeof(real_t*));
++    real_t **a_new_array = malloc(iterations * sizeof(real_t*));
++    real_t **b_new_array = malloc(iterations * sizeof(real_t*));
++
+     for (int nl = 0; nl < iterations; nl++) {
+-        real_t *a_old = malloc(LEN_1D * sizeof(real_t));
+-        real_t *b_old = malloc(LEN_1D * sizeof(real_t));
+-        real_t *c_copy = malloc(LEN_1D * sizeof(real_t));
++        a_old_array[nl] = malloc(LEN_1D * sizeof(real_t));
++        b_old_array[nl] = malloc(LEN_1D * sizeof(real_t));
++        c_copy_array[nl] = malloc(LEN_1D * sizeof(real_t));
++        a_new_array[nl] = malloc(LEN_1D * sizeof(real_t));
++        b_new_array[nl] = malloc(LEN_1D * sizeof(real_t));
+ 
+-        memcpy(a_old, a, LEN_1D * sizeof(real_t));
+-        memcpy(b_old, b, LEN_1D * sizeof(real_t));
+-        memcpy(c_copy, c, LEN_1D * sizeof(real_t));
++        memcpy(a_old_array[nl], a, LEN_1D * sizeof(real_t));
++        memcpy(b_old_array[nl], b, LEN_1D * sizeof(real_t));
++        memcpy(c_copy_array[nl], c, LEN_1D * sizeof(real_t));
++    }
+ 
++    // Phase 2: Compute in parallel (no loop-carried dependencies on global arrays)
++    for (int nl = 0; nl < iterations; nl++) {
+         for (int i = 0; i < LEN_1D-1; i++) {
+-            a[i] = b_old[i] * c_copy[i  ] * d[i];
+-            b[i] = a[i] * a_old[i+1] * d[i];
++            a_new_array[nl][i] = b_old_array[nl][i] * c_copy_array[nl][i] * d[i];
++            b_new_array[nl][i] = a_new_array[nl][i] * a_old_array[nl][i+1] * d[i];
+         }
++    }
+ 
+-        free(a_old);
+-        free(b_old);
+-        free(c_copy);
++    // Phase 3: Apply results and call dummy() in original order
++    for (int nl = 0; nl < iterations; nl++) {
++        memcpy(a, a_new_array[nl], LEN_1D * sizeof(real_t));
++        memcpy(b, b_new_array[nl], LEN_1D * sizeof(real_t));
+         dummy(a, b, c, d, e);
+     }
++
++    // Cleanup
++    for (int nl = 0; nl < iterations; nl++) {
++        free(a_old_array[nl]);
++        free(b_old_array[nl]);
++        free(c_copy_array[nl]);
++        free(a_new_array[nl]);
++        free(b_new_array[nl]);
++    }
++    free(a_old_array);
++    free(b_old_array);
++    free(c_copy_array);
++    free(a_new_array);
++    free(b_new_array);
++
+     return (real_t)0;
+ }

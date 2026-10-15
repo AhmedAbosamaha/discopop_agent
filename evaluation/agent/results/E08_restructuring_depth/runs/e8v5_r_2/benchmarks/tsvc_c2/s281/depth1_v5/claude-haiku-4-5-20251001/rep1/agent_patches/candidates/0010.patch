@@ -1,0 +1,43 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_2/benchmarks/tsvc_c2/s281/depth1_v5/claude-haiku-4-5-20251001/rep1/work/s281.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_2/benchmarks/tsvc_c2/s281/depth1_v5/claude-haiku-4-5-20251001/rep1/work/s281.c
+@@ -1,23 +1,37 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s281(void)
+ {
+     real_t x;
+     int boundary = (LEN_1D - 1) / 2;
++    real_t *a_prev = (real_t *)malloc(LEN_1D * sizeof(real_t));
++
++    // Initialize a_prev with starting values
++    for (int i = 0; i < LEN_1D; i++) {
++        a_prev[i] = a[i];
++    }
++
+     for (int nl = 0; nl < iterations; nl++) {
+-        // Stage 1: iterations with no cross-iteration dependencies
++        // Stage 1: read from a_prev (stable), write to a
+         for (int i = 0; i <= boundary; i++) {
+-            x = a[LEN_1D-i-1] + b[i] * c[i];
++            x = a_prev[LEN_1D-i-1] + b[i] * c[i];
+             a[i] = x-(real_t)1.0;
+             b[i] = x;
+         }
+-        // Stage 2: iterations that only depend on stage 1
++        // Stage 2: read from updated a (stage 1 writes), write to a
+         for (int i = boundary + 1; i < LEN_1D; i++) {
+             x = a[LEN_1D-i-1] + b[i] * c[i];
+             a[i] = x-(real_t)1.0;
+             b[i] = x;
+         }
++        // Update a_prev with current a for next iteration
++        for (int i = 0; i < LEN_1D; i++) {
++            a_prev[i] = a[i];
++        }
+         dummy(a, b, c, d, e);
+     }
++
++    free(a_prev);
+     return (real_t)0;
+ }

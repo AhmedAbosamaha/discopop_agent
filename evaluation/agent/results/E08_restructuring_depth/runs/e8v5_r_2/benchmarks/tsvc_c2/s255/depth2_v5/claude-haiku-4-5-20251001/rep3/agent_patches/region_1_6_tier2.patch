@@ -1,0 +1,52 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_2/benchmarks/tsvc_c2/s255/depth2_v5/claude-haiku-4-5-20251001/rep3/work/s255.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_2/benchmarks/tsvc_c2/s255/depth2_v5/claude-haiku-4-5-20251001/rep3/work/s255.c
+@@ -4,23 +4,38 @@
+ real_t kernel_s255(void)
+ {
+     real_t x, y;
+-    real_t *b_saved = (real_t *)malloc(LEN_1D * sizeof(real_t));
+-    if (b_saved == NULL) return (real_t)0;
++    // Double buffer to decouple iterations: no WAR on b_saved, but value still flows through b
++    real_t *b_saved[2];
++    b_saved[0] = (real_t *)malloc(LEN_1D * sizeof(real_t));
++    b_saved[1] = (real_t *)malloc(LEN_1D * sizeof(real_t));
++    if (b_saved[0] == NULL || b_saved[1] == NULL) return (real_t)0;
++
++    // Initialize first buffer with initial b
++    for (int i = 0; i < LEN_1D; i++) {
++        b_saved[0][i] = b[i];
++    }
+ 
+     for (int nl = 0; nl < iterations; nl++) {
+-        // Save b values to decouple inner loop from dummy()'s modifications
++        int cur = nl % 2;
++        int nxt = (nl + 1) % 2;
++
++        // Compute a using current buffer (holds b from previous iteration or initial b)
+         for (int i = 0; i < LEN_1D; i++) {
+-            b_saved[i] = b[i];
+-        }
+-        // Compute a using saved b snapshot (independent of dummy's side effects)
+-        for (int i = 0; i < LEN_1D; i++) {
+-            real_t x_val = b_saved[(i + LEN_1D - 1) % LEN_1D];
+-            real_t y_val = b_saved[(i + LEN_1D - 2) % LEN_1D];
+-            a[i] = (b_saved[i] + x_val + y_val) * (real_t).333;
++            real_t x_val = b_saved[cur][(i + LEN_1D - 1) % LEN_1D];
++            real_t y_val = b_saved[cur][(i + LEN_1D - 2) % LEN_1D];
++            a[i] = (b_saved[cur][i] + x_val + y_val) * (real_t).333;
+         }
+         dummy(a, b, c, d, e);
++
++        // Copy modified b to next buffer for next iteration to read
++        if (nl < iterations - 1) {
++            for (int i = 0; i < LEN_1D; i++) {
++                b_saved[nxt][i] = b[i];
++            }
++        }
+     }
+ 
+-    free(b_saved);
++    free(b_saved[0]);
++    free(b_saved[1]);
+     return (real_t)0;
+ }

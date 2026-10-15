@@ -1,0 +1,30 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_3/benchmarks/tsvc_c3/s331/depth2_v5/claude-haiku-4-5-20251001/rep1/work/s331.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_3/benchmarks/tsvc_c3/s331/depth2_v5/claude-haiku-4-5-20251001/rep1/work/s331.c
+@@ -5,20 +5,23 @@
+ {
+     int j;
+     real_t chksum;
++
+     for (int nl = 0; nl < iterations; nl++) {
+         int *candidates = (int *)malloc(LEN_1D * sizeof(int));
+         for (int i = 0; i < LEN_1D; i++) {
+             candidates[i] = (a[i] < (real_t)0.) ? i : -1;
+         }
+-        j = -1;
++        int local_j = -1;
+         for (int i = 0; i < LEN_1D; i++) {
+-            if (candidates[i] > j) {
+-                j = candidates[i];
++            if (candidates[i] > local_j) {
++                local_j = candidates[i];
+             }
+         }
+         free(candidates);
+-        chksum = (real_t) j;
++        chksum = (real_t) local_j;
+         dummy(a, b, c, d, e, chksum);
++        j = local_j;
+     }
++
+     return j+1;
+ }

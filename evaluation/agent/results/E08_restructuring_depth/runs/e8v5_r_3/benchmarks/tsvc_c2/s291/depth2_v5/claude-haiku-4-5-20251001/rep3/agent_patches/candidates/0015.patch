@@ -1,0 +1,24 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_3/benchmarks/tsvc_c2/s291/depth2_v5/claude-haiku-4-5-20251001/rep3/work/s291.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_3/benchmarks/tsvc_c2/s291/depth2_v5/claude-haiku-4-5-20251001/rep3/work/s291.c
+@@ -7,11 +7,13 @@
+     real_t *b_copy = (real_t *)malloc(LEN_1D * sizeof(real_t));
+ 
+     // Initialize b_copy with the initial state of b
++    #pragma omp parallel for shared(b_copy) 
+     for (int j = 0; j < LEN_1D; j++) {
+         b_copy[j] = b[j];
+     }
+ 
+     for (int nl = 0; nl < iterations; nl++) {
++        #pragma omp parallel for private(im1) shared(b_copy) 
+         for (int i = 0; i < LEN_1D; i++) {
+             im1 = (i == 0) ? (LEN_1D - 1) : (i - 1);
+             a[i] = (b_copy[i] + b_copy[im1]) * (real_t).5;
+@@ -19,6 +21,7 @@
+         dummy(a, b, c, d, e);
+ 
+         // Update b_copy for the next iteration with the new state of b after dummy
++        #pragma omp parallel for shared(b_copy) 
+         for (int j = 0; j < LEN_1D; j++) {
+             b_copy[j] = b[j];
+         }

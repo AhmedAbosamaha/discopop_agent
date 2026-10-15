@@ -1,0 +1,28 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_2/benchmarks/tsvc_c2/s121/depth2_v5/claude-haiku-4-5-20251001/rep2/work/s121.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_2/benchmarks/tsvc_c2/s121/depth2_v5/claude-haiku-4-5-20251001/rep2/work/s121.c
+@@ -6,13 +6,23 @@
+     real_t *a_new = (real_t *)malloc((LEN_1D - 1) * sizeof(real_t));
+ 
+     for (int nl = 0; nl < iterations; nl++) {
+-        for (int i = 0; i < LEN_1D-1; i++) {
+-            a_new[i] = a[i + 1] + b[i];
++        // Compute a_new on first iteration
++        if (nl == 0) {
++            for (int i = 0; i < LEN_1D-1; i++) {
++                a_new[i] = a[i + 1] + b[i];
++            }
+         }
++        // Apply computed a_new
+         for (int i = 0; i < LEN_1D-1; i++) {
+             a[i] = a_new[i];
+         }
+         dummy(a, b, c, d, e);
++        // Compute a_new for next iteration
++        if (nl + 1 < iterations) {
++            for (int i = 0; i < LEN_1D-1; i++) {
++                a_new[i] = a[i + 1] + b[i];
++            }
++        }
+     }
+ 
+     free(a_new);

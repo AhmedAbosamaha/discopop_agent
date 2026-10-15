@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c2/s127/depth2_v5/claude-haiku-4-5-20251001/rep2/work/s127.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c2/s127/depth2_v5/claude-haiku-4-5-20251001/rep2/work/s127.c
+@@ -29,6 +29,7 @@
+             a[2*i+1] = b[i] + d[i] * e[i];
+         }
+         // Copy computed a to pipeline buffer for next iteration's dummy()
++        #pragma omp parallel for shared(a_pipeline) 
+         for (int i = 0; i < LEN_1D; i++) {
+             a_pipeline[i] = a[i];
+         }

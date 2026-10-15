@@ -1,0 +1,35 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c2/s212/depth2_v5/claude-haiku-4-5-20251001/rep2/work/s212.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c2/s212/depth2_v5/claude-haiku-4-5-20251001/rep2/work/s212.c
+@@ -17,13 +17,16 @@
+     for (int nl = 0; nl < iterations; nl++) {
+         // Skip temp read in first iteration; use the pre-loop initialization
+         if (nl > 0) {
++            #pragma omp parallel for shared(temp) 
+             for (int i = 0; i < LEN_1D-1; i++) {
+                 temp[i] = a[i + 1];
+             }
+         }
++        #pragma omp parallel for 
+         for (int i = 0; i < LEN_1D-1; i++) {
+             a[i] *= c[i];
+         }
++        #pragma omp parallel for firstprivate(nl) shared(temp,b_incr) 
+         for (int i = 0; i < LEN_1D-1; i++) {
+             b_incr[nl][i] = temp[i] * d[i];
+         }
+@@ -31,6 +34,7 @@
+     }
+ 
+     // Add all increments to b in a loop with parallelizable structure
++ #pragma omp parallel for shared(b_incr) 
+     for (int i = 0; i < LEN_1D-1; i++) {
+         for (int nl = 0; nl < iterations; nl++) {
+             b[i] += b_incr[nl][i];
+@@ -38,6 +42,7 @@
+     }
+ 
+     // Free b_incr
++    #pragma omp parallel for shared(b_incr) 
+     for (int nl = 0; nl < iterations; nl++) {
+         free(b_incr[nl]);
+     }

@@ -1,0 +1,44 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_set/benchmarks/tsvc_c5/s221/depth2_v5/claude-haiku-4-5-20251001/rep1/work/s221.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_set/benchmarks/tsvc_c5/s221/depth2_v5/claude-haiku-4-5-20251001/rep1/work/s221.c
+@@ -6,9 +6,40 @@
+         for (int i = 1; i < LEN_1D; i++) {
+             a[i] += c[i] * d[i];
+         }
++
++        // Parallel prefix scan to compute b
++        real_t *scan_in = (real_t *)malloc(LEN_1D * sizeof(real_t));
++        real_t *scan_out = (real_t *)malloc(LEN_1D * sizeof(real_t));
++
++        // Initialize scan input: scan_in[i] = a[i] + d[i] for i >= 1
++        scan_in[0] = 0;
+         for (int i = 1; i < LEN_1D; i++) {
+-            b[i] = b[i - 1] + a[i] + d[i];
++            scan_in[i] = a[i] + d[i];
+         }
++
++        // Parallel prefix sum: work-inefficient scan (O(n log n) work)
++        // Each level has independent iterations
++        for (int step = 1; step < LEN_1D; step *= 2) {
++            for (int i = 0; i < LEN_1D; i++) {
++                scan_out[i] = scan_in[i];
++                if (i >= step) {
++                    scan_out[i] += scan_in[i - step];
++                }
++            }
++            // Swap input and output
++            real_t *tmp = scan_in;
++            scan_in = scan_out;
++            scan_out = tmp;
++        }
++
++        // Combine scan result with b[0] to get final b values
++        for (int i = 0; i < LEN_1D; i++) {
++            b[i] = b[0] + scan_in[i];
++        }
++
++        free(scan_in);
++        free(scan_out);
++
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

@@ -1,0 +1,30 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_2/benchmarks/tsvc_c2/s244/depth2_v5/claude-haiku-4-5-20251001/rep1/work/s244.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_2/benchmarks/tsvc_c2/s244/depth2_v5/claude-haiku-4-5-20251001/rep1/work/s244.c
+@@ -1,14 +1,26 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s244(void)
+ {
++    // Allocate scratch array to hold initial values of a for each outer iteration
++    real_t *a_old = (real_t *)malloc(LEN_1D * sizeof(real_t));
++
+     for (int nl = 0; nl < iterations; nl++) {
++        // Save initial state of array a before modifying it
++        for (int i = 0; i < LEN_1D; ++i) {
++            a_old[i] = a[i];
++        }
++
++        // Compute a[i] and b[i], then use saved a values in a[i+1] computation
+         for (int i = 0; i < LEN_1D-1; ++i) {
+             a[i] = b[i] + c[i] * d[i];
+             b[i] = c[i] + b[i];
+-            a[i+1] = b[i] + a[i+1] * d[i];
++            a[i+1] = b[i] + a_old[i+1] * d[i];
+         }
+         dummy(a, b, c, d, e);
+     }
++
++    free(a_old);
+     return (real_t)0;
+ }

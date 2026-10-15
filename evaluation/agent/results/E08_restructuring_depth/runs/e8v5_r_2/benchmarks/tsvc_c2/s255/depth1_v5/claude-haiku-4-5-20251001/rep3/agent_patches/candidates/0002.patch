@@ -1,0 +1,38 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_2/benchmarks/tsvc_c2/s255/depth1_v5/claude-haiku-4-5-20251001/rep3/work/s255.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_2/benchmarks/tsvc_c2/s255/depth1_v5/claude-haiku-4-5-20251001/rep3/work/s255.c
+@@ -2,7 +2,12 @@
+ 
+ real_t kernel_s255(void)
+ {
+-    real_t x, y;
++    // Allocate buffer to store computed 'a' values for each outer iteration
++    real_t *a_buffer = (real_t *)malloc(iterations * LEN_1D * sizeof(real_t));
++    if (!a_buffer) return (real_t)0;
++
++    // Phase 1: Compute all 'a' values independently across outer loop iterations
++    // (no function calls, so loops have no inter-iteration dependences)
+     for (int nl = 0; nl < iterations; nl++) {
+         for (int i = 0; i < LEN_1D; i++) {
+             real_t x, y;
+@@ -18,7 +23,21 @@
+             }
+             a[i] = (b[i] + x + y) * (real_t).333;
+         }
++        // Save computed values before they are overwritten by dummy()
++        for (int i = 0; i < LEN_1D; i++) {
++            a_buffer[nl * LEN_1D + i] = a[i];
++        }
++    }
++
++    // Phase 2: Apply dummy() function for each iteration using buffered 'a' values
++    // (this phase must remain sequential due to dummy's side effects)
++    for (int nl = 0; nl < iterations; nl++) {
++        for (int i = 0; i < LEN_1D; i++) {
++            a[i] = a_buffer[nl * LEN_1D + i];
++        }
+         dummy(a, b, c, d, e);
+     }
++
++    free(a_buffer);
+     return (real_t)0;
+ }

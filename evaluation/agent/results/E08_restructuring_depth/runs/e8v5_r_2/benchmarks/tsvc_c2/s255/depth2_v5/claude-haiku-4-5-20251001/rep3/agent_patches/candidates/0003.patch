@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_2/benchmarks/tsvc_c2/s255/depth2_v5/claude-haiku-4-5-20251001/rep3/work/s255.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_2/benchmarks/tsvc_c2/s255/depth2_v5/claude-haiku-4-5-20251001/rep3/work/s255.c
+@@ -9,6 +9,7 @@
+ 
+     for (int nl = 0; nl < iterations; nl++) {
+         // Save b values to decouple inner loop from dummy()'s modifications
++        #pragma omp parallel for shared(b_saved) 
+         for (int i = 0; i < LEN_1D; i++) {
+             b_saved[i] = b[i];
+         }

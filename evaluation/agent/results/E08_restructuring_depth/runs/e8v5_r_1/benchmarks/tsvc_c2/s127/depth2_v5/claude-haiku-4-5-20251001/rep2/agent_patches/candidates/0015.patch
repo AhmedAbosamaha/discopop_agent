@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c2/s127/depth2_v5/claude-haiku-4-5-20251001/rep2/work/s127.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c2/s127/depth2_v5/claude-haiku-4-5-20251001/rep2/work/s127.c
+@@ -23,6 +23,7 @@
+     for (int nl = 1; nl < iterations; nl++) {
+         dummy(a_pipeline, b, c, d, e);
+         // Compute writes to a (independent of a_pipeline which dummy just read)
++        #pragma omp parallel for 
+         for (int i = 0; i < LEN_1D/2; i++) {
+             a[2*i] = b[i] + c[i] * d[i];
+             a[2*i+1] = b[i] + d[i] * e[i];

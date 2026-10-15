@@ -1,0 +1,23 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_set/benchmarks/tsvc_c5/s257/depth2_v5/claude-haiku-4-5-20251001/rep3/work/s257.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_set/benchmarks/tsvc_c5/s257/depth2_v5/claude-haiku-4-5-20251001/rep3/work/s257.c
+@@ -12,13 +12,16 @@
+             }
+         }
+ 
++        // Pass 1: Compute a[] values sequentially (preserves cascading dependency)
+         for (int i = 1; i < LEN_2D; i++) {
+-            real_t temp_a[LEN_2D];
++            a[i] = aa[LEN_2D-1][i] - a[i-1];
++        }
++
++        // Pass 2: Compute aa_new[][] in parallel (no inter-iteration dependencies now)
++        for (int i = 1; i < LEN_2D; i++) {
+             for (int j = 0; j < LEN_2D; j++) {
+-                temp_a[j] = aa[j][i] - a[i-1];
+-                aa_new[j][i] = temp_a[j] + bb[j][i];
++                aa_new[j][i] = (aa[j][i] - a[i-1]) + bb[j][i];
+             }
+-            a[i] = temp_a[LEN_2D-1];
+         }
+ 
+         for (int j = 0; j < LEN_2D; j++) {

@@ -1,0 +1,29 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_2/benchmarks/tsvc_c2/s255/depth1_v5/claude-haiku-4-5-20251001/rep2/work/s255.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_2/benchmarks/tsvc_c2/s255/depth1_v5/claude-haiku-4-5-20251001/rep2/work/s255.c
+@@ -3,13 +3,24 @@
+ real_t kernel_s255(void)
+ {
+     real_t x, y;
+-    for (int nl = 0; nl < iterations; nl++) {
++    // Compute a for iteration 0 using initial b
++    for (int i = 0; i < LEN_1D; i++) {
++        real_t x_local = (i > 0) ? b[i-1] : b[LEN_1D-1];
++        real_t y_local = (i > 1) ? b[i-2] : ((i == 1) ? b[LEN_1D-1] : b[LEN_1D-2]);
++        a[i] = (b[i] + x_local + y_local) * (real_t).333;
++    }
++    // Pipeline: interleave dummy calls with computation of subsequent iterations
++    for (int nl = 0; nl < iterations - 1; nl++) {
++        // Update b via dummy (for next iteration's computation)
++        dummy(a, b, c, d, e);
++        // Compute a for iteration nl+1 using updated b
+         for (int i = 0; i < LEN_1D; i++) {
+             real_t x_local = (i > 0) ? b[i-1] : b[LEN_1D-1];
+             real_t y_local = (i > 1) ? b[i-2] : ((i == 1) ? b[LEN_1D-1] : b[LEN_1D-2]);
+             a[i] = (b[i] + x_local + y_local) * (real_t).333;
+         }
+-        dummy(a, b, c, d, e);
+     }
++    // Final dummy call for the last iteration
++    dummy(a, b, c, d, e);
+     return (real_t)0;
+ }

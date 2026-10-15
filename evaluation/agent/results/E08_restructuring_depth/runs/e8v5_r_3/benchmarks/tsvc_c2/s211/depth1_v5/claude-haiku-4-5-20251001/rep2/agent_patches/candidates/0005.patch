@@ -1,0 +1,45 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_3/benchmarks/tsvc_c2/s211/depth1_v5/claude-haiku-4-5-20251001/rep2/work/s211.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_3/benchmarks/tsvc_c2/s211/depth1_v5/claude-haiku-4-5-20251001/rep2/work/s211.c
+@@ -5,17 +5,39 @@
+ real_t kernel_s211(void)
+ {
+     real_t *b_new = malloc(LEN_1D * sizeof(real_t));
++    real_t **b_new_history = malloc(iterations * sizeof(real_t*));
++    real_t **b_history = malloc(iterations * sizeof(real_t*));
++    for (int nl = 0; nl < iterations; nl++) {
++        b_new_history[nl] = malloc(LEN_1D * sizeof(real_t));
++        b_history[nl] = malloc(LEN_1D * sizeof(real_t));
++    }
++
++    // Phase 1: Compute b_new values and update b for each iteration
+     for (int nl = 0; nl < iterations; nl++) {
+         memcpy(b_new, b, LEN_1D * sizeof(real_t));
+         for (int i = 1; i < LEN_1D-1; i++) {
+             b_new[i] = b[i + 1] - e[i] * d[i];
+         }
++        memcpy(b_new_history[nl], b_new, LEN_1D * sizeof(real_t));
++        memcpy(b, b_new, LEN_1D * sizeof(real_t));
++        memcpy(b_history[nl], b, LEN_1D * sizeof(real_t));
++    }
++
++    // Phase 2: Compute a values for each iteration (no inter-iteration dependencies)
++    for (int nl = 0; nl < iterations; nl++) {
+         for (int i = 1; i < LEN_1D-1; i++) {
+-            a[i] = b_new[i - 1] + c[i] * d[i];
++            a[i] = b_new_history[nl][i - 1] + c[i] * d[i];
+         }
+-        memcpy(b, b_new, LEN_1D * sizeof(real_t));
+-        dummy(a, b, c, d, e);
++        dummy(a, b_history[nl], c, d, e);
+     }
++
++    // Free allocated memory
++    for (int nl = 0; nl < iterations; nl++) {
++        free(b_new_history[nl]);
++        free(b_history[nl]);
++    }
++    free(b_new_history);
++    free(b_history);
+     free(b_new);
+     return (real_t)0;
+ }

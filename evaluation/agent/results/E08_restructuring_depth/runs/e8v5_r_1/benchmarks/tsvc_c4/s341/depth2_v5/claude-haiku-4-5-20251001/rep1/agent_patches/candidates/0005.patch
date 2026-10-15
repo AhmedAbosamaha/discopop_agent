@@ -1,0 +1,58 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c4/s341/depth2_v5/claude-haiku-4-5-20251001/rep1/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c4/s341/depth2_v5/claude-haiku-4-5-20251001/rep1/work/s341.c
+@@ -3,22 +3,47 @@
+ 
+ real_t kernel_s341(void)
+ {
+-    int *indices = (int *)malloc(LEN_1D * sizeof(int));
++    int **indices_all = (int **)malloc(iterations * sizeof(int *));
++    int *counts = (int *)malloc(iterations * sizeof(int));
++
++    // Phase 1: Count positive elements for all iterations
++    // No carried dependence on b within this phase (b not modified yet)
+     for (int nl = 0; nl < iterations; nl++) {
+-        // Phase 1: Collect indices of positive elements (sequential, carries count)
+         int count = 0;
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+-                indices[count++] = i;
++                count++;
+             }
+         }
+-        // Phase 2: Write positive elements to consecutive positions
+-        // No cross-iteration dependencies: each iteration writes to unique a[i]
+-        for (int i = 0; i < count; i++) {
+-            a[i] = b[indices[i]];
++        counts[nl] = count;
++        indices_all[nl] = (int *)malloc(count * sizeof(int));
++    }
++
++    // Phase 2: Collect indices of positive elements for all iterations
++    // No carried dependence on b within this phase (b unchanged since phase 1)
++    for (int nl = 0; nl < iterations; nl++) {
++        int count = 0;
++        for (int i = 0; i < LEN_1D; i++) {
++            if (b[i] > (real_t)0.) {
++                indices_all[nl][count++] = i;
++            }
++        }
++    }
++
++    // Phase 3: Copy positive elements and update state via dummy
++    // Sequential: each iteration depends on dummy's side effects from prior iteration
++    for (int nl = 0; nl < iterations; nl++) {
++        for (int i = 0; i < counts[nl]; i++) {
++            a[i] = b[indices_all[nl][i]];
+         }
+         dummy(a, b, c, d, e);
+     }
+-    free(indices);
++
++    // Cleanup
++    for (int nl = 0; nl < iterations; nl++) {
++        free(indices_all[nl]);
++    }
++    free(indices_all);
++    free(counts);
+     return (real_t)0;
+ }

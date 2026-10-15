@@ -1,0 +1,18 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_2/benchmarks/tsvc_c2/s244/depth2_v5/claude-haiku-4-5-20251001/rep1/work/s244.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_2/benchmarks/tsvc_c2/s244/depth2_v5/claude-haiku-4-5-20251001/rep1/work/s244.c
+@@ -13,6 +13,7 @@
+ 
+     for (int nl = 0; nl < iterations; nl++) {
+         // Compute a[i] and b[i] for each iteration (no WAW conflicts)
++        #pragma omp parallel for 
+         for (int i = 0; i < LEN_1D-1; ++i) {
+             a[i] = b[i] + c[i] * d[i];
+             b[i] = c[i] + b[i];
+@@ -24,6 +25,7 @@
+         dummy(a, b, c, d, e);
+ 
+         // Save the updated state of array a for the next iteration
++        #pragma omp parallel for shared(a_old) 
+         for (int i = 0; i < LEN_1D; ++i) {
+             a_old[i] = a[i];
+         }

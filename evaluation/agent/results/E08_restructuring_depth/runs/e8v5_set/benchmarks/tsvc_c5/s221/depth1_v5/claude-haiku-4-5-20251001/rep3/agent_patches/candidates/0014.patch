@@ -1,0 +1,18 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_set/benchmarks/tsvc_c5/s221/depth1_v5/claude-haiku-4-5-20251001/rep3/work/s221.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_set/benchmarks/tsvc_c5/s221/depth1_v5/claude-haiku-4-5-20251001/rep3/work/s221.c
+@@ -7,6 +7,7 @@
+     real_t *prefix_sum = (real_t *)malloc(LEN_1D * sizeof(real_t));
+ 
+     for (int nl = 0; nl < iterations; nl++) {
++        #pragma omp parallel for 
+         for (int i = 1; i < LEN_1D; i++) {
+             a[i] += c[i] * d[i];
+         }
+@@ -14,6 +15,7 @@
+         for (int i = 1; i < LEN_1D; i++) {
+             prefix_sum[i] = (prefix_sum[i - 1] + a[i]) + d[i];
+         }
++        #pragma omp parallel for shared(prefix_sum) 
+         for (int i = 1; i < LEN_1D; i++) {
+             b[i] = prefix_sum[i];
+         }

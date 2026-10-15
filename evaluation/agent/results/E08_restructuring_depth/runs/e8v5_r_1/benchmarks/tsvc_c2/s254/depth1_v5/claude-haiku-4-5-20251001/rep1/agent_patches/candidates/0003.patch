@@ -1,0 +1,31 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c2/s254/depth1_v5/claude-haiku-4-5-20251001/rep1/work/s254.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c2/s254/depth1_v5/claude-haiku-4-5-20251001/rep1/work/s254.c
+@@ -1,13 +1,26 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s254(void)
+ {
++    real_t *b_saved = malloc(iterations * LEN_1D * sizeof(real_t));
++
++    // Phase 1: Save b state before each dummy() call and apply dummy sequentially
+     for (int nl = 0; nl < iterations; nl++) {
+         for (int i = 0; i < LEN_1D; i++) {
+-            int prev = (i == 0) ? (LEN_1D - 1) : (i - 1);
+-            a[i] = (b[i] + b[prev]) * (real_t).5;
++            b_saved[nl * LEN_1D + i] = b[i];
+         }
+         dummy(a, b, c, d, e);
+     }
++
++    // Phase 2: Compute a from saved b values - fused loop exposes Do-All parallelism
++    for (int idx = 0; idx < iterations * LEN_1D; idx++) {
++        int nl = idx / LEN_1D;
++        int i = idx % LEN_1D;
++        int prev = (i == 0) ? (LEN_1D - 1) : (i - 1);
++        a[i] = (b_saved[nl * LEN_1D + i] + b_saved[nl * LEN_1D + prev]) * (real_t).5;
++    }
++
++    free(b_saved);
+     return (real_t)0;
+ }

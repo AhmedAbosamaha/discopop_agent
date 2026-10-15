@@ -1,0 +1,35 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c2/s127/depth2_v5/claude-haiku-4-5-20251001/rep3/work/s127.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c2/s127/depth2_v5/claude-haiku-4-5-20251001/rep3/work/s127.c
+@@ -1,4 +1,5 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s127(void)
+ {
+@@ -10,14 +11,25 @@
+     }
+ 
+     // Pipelined loop: dummy() updates b,c,d,e then compute uses them
++    // Rolling buffer for c to break loop-carried dependence while keeping original structure
++    real_t *c_prev = malloc(LEN_1D * sizeof(real_t));
++    for (int idx = 0; idx < LEN_1D; idx++) {
++        c_prev[idx] = c[idx];
++    }
++
+     for (int nl = 1; nl < iterations; nl++) {
+         dummy(a, b, c, d, e);
+         for (int i = 0; i < LEN_1D/2; i++) {
+             int j = 2 * i;
+-            a[j] = b[i] + c[i] * d[i];
++            a[j] = b[i] + c_prev[i] * d[i];
+             a[j+1] = b[i] + d[i] * e[i];
+         }
++        for (int idx = 0; idx < LEN_1D; idx++) {
++            c_prev[idx] = c[idx];
++        }
+     }
++
++    free(c_prev);
+ 
+     // Final dummy() call after last computation
+     dummy(a, b, c, d, e);

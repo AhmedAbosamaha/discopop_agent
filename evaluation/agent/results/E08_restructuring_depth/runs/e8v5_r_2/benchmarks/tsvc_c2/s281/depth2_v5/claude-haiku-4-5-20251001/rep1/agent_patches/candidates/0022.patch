@@ -1,0 +1,31 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_2/benchmarks/tsvc_c2/s281/depth2_v5/claude-haiku-4-5-20251001/rep1/work/s281.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_2/benchmarks/tsvc_c2/s281/depth2_v5/claude-haiku-4-5-20251001/rep1/work/s281.c
+@@ -5,17 +5,20 @@
+ {
+     real_t x;
+     real_t *b_copy = malloc(LEN_1D * sizeof(real_t));
++    #pragma omp parallel for shared(b_copy) 
+     for (int i = 0; i < LEN_1D; i++) {
+         b_copy[i] = b[i];
+     }
+ 
+     for (int nl = 0; nl < iterations; nl++) {
+         // Update b_copy from previous iteration's b (before dummy modifies it)
++        #pragma omp parallel for shared(b_copy) 
+         for (int i = 0; i < LEN_1D; i++) {
+             b_copy[i] = b[i];
+         }
+ 
+         // Phase 1: reads from b_copy (values computed in previous iteration), writes to b
++        #pragma omp parallel for private(x) shared(b_copy) 
+         for (int i = 0; i < (LEN_1D + 1) / 2; i++) {
+             x = a[LEN_1D-i-1] + b_copy[i] * c[i];
+             a[i] = x-(real_t)1.0;
+@@ -23,6 +26,7 @@
+         }
+ 
+         // Phase 2: reads from b (Phase 1's writes in this iteration)
++        #pragma omp parallel for private(x) 
+         for (int i = (LEN_1D + 1) / 2; i < LEN_1D; i++) {
+             x = a[LEN_1D-i-1] + b[i] * c[i];
+             a[i] = x-(real_t)1.0;

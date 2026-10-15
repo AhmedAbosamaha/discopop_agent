@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_set/benchmarks/tsvc_c5/s2251/depth1_v5/claude-haiku-4-5-20251001/rep3/work/s2251.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_set/benchmarks/tsvc_c5/s2251/depth1_v5/claude-haiku-4-5-20251001/rep3/work/s2251.c
+@@ -26,6 +26,7 @@
+         }
+ 
+         // Compute a and b using pre-computed s values and saved d, e values
++        #pragma omp parallel for shared(d_saved,e_saved,s_values) 
+         for (int i = 0; i < LEN_1D; i++) {
+             a[i] = s_values[i]*e_saved[i];
+             b[i] = a[i]+d_saved[i];

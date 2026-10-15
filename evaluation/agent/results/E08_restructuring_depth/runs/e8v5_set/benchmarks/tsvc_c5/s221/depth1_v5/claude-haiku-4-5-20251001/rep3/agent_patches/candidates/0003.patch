@@ -1,0 +1,40 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_set/benchmarks/tsvc_c5/s221/depth1_v5/claude-haiku-4-5-20251001/rep3/work/s221.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_set/benchmarks/tsvc_c5/s221/depth1_v5/claude-haiku-4-5-20251001/rep3/work/s221.c
+@@ -1,4 +1,5 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s221(void)
+ {
+@@ -6,9 +7,30 @@
+         for (int i = 1; i < LEN_1D; i++) {
+             a[i] += c[i] * d[i];
+         }
++
++        // Parallel prefix sum for b[i] = b[i-1] + a[i] + d[i]
++        real_t *contrib = malloc(LEN_1D * sizeof(real_t));
++
++        // Compute contributions: a[i] + d[i]
++        contrib[0] = 0;
+         for (int i = 1; i < LEN_1D; i++) {
+-            b[i] = b[i - 1] + a[i] + d[i];
++            contrib[i] = a[i] + d[i];
+         }
++
++        // Iterative doubling: parallel prefix sum in log(n) stages
++        for (int offset = 1; offset < LEN_1D; offset *= 2) {
++            for (int i = offset; i < LEN_1D; i++) {
++                contrib[i] = contrib[i] + contrib[i - offset];
++            }
++        }
++
++        // Apply prefix sums: b[i] = b[0] + accumulated contribution
++        for (int i = 1; i < LEN_1D; i++) {
++            b[i] = b[0] + contrib[i];
++        }
++
++        free(contrib);
++
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

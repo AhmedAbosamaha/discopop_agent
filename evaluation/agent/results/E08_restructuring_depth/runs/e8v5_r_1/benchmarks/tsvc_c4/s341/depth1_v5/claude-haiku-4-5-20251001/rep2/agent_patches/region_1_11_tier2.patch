@@ -1,0 +1,23 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c4/s341/depth1_v5/claude-haiku-4-5-20251001/rep2/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c4/s341/depth1_v5/claude-haiku-4-5-20251001/rep2/work/s341.c
+@@ -10,9 +10,19 @@
+             dummy(a, b, c, d, e);
+         }
+         j = -1;
++        // Phase 1: Count elements that pass the filter (Reduction - parallelizable)
++        int count = 0;
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+-                indices[++j] = i;
++                count++;
++            }
++        }
++        j = count - 1;
++        // Phase 2: Build indices array (Sequential - no race condition, uses precomputed count)
++        int idx = 0;
++        for (int i = 0; i < LEN_1D; i++) {
++            if (b[i] > (real_t)0.) {
++                indices[idx++] = i;
+             }
+         }
+         for (int k = 0; k <= j; k++) {

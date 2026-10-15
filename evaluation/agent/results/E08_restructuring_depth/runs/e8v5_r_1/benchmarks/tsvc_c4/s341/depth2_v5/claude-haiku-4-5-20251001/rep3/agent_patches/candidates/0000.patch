@@ -1,0 +1,24 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c4/s341/depth2_v5/claude-haiku-4-5-20251001/rep3/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c4/s341/depth2_v5/claude-haiku-4-5-20251001/rep3/work/s341.c
+@@ -4,13 +4,18 @@
+ {
+     int j;
+     for (int nl = 0; nl < iterations; nl++) {
+-        j = -1;
++        int* count = (int*)malloc((LEN_1D + 1) * sizeof(int));
++        count[0] = 0;
++        for (int i = 0; i < LEN_1D; i++) {
++            count[i + 1] = count[i] + (b[i] > (real_t)0. ? 1 : 0);
++        }
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++                a[count[i]] = b[i];
+             }
+         }
++        j = count[LEN_1D] - 1;
++        free(count);
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

@@ -1,0 +1,43 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c2/s127/depth2_v5/claude-haiku-4-5-20251001/rep3/work/s127.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c2/s127/depth2_v5/claude-haiku-4-5-20251001/rep3/work/s127.c
+@@ -10,14 +10,38 @@
+     }
+ 
+     // Pipelined loop: dummy() updates b,c,d,e then compute uses them
++    // Buffer b, c, d, e across iterations to break loop-carried dependence
++    real_t *b_buffer = malloc(iterations * LEN_1D * sizeof(real_t));
++    real_t *c_buffer = malloc(iterations * LEN_1D * sizeof(real_t));
++    real_t *d_buffer = malloc(iterations * LEN_1D * sizeof(real_t));
++    real_t *e_buffer = malloc(iterations * LEN_1D * sizeof(real_t));
++
++    // Phase 1: Produce and buffer b, c, d, e for each iteration
+     for (int nl = 1; nl < iterations; nl++) {
+         dummy(a, b, c, d, e);
++        for (int idx = 0; idx < LEN_1D; idx++) {
++            b_buffer[nl * LEN_1D + idx] = b[idx];
++            c_buffer[nl * LEN_1D + idx] = c[idx];
++            d_buffer[nl * LEN_1D + idx] = d[idx];
++            e_buffer[nl * LEN_1D + idx] = e[idx];
++        }
++    }
++
++    // Phase 2: Consume using buffered values (now Do-All with no loop-carried dependences)
++    for (int nl = 1; nl < iterations; nl++) {
+         for (int i = 0; i < LEN_1D/2; i++) {
+             int j = 2 * i;
+-            a[j] = b[i] + c[i] * d[i];
+-            a[j+1] = b[i] + d[i] * e[i];
++            int buf_base = nl * LEN_1D;
++            a[j] = b_buffer[buf_base + i] + c_buffer[buf_base + i] * d_buffer[buf_base + i];
++            a[j+1] = b_buffer[buf_base + i] + d_buffer[buf_base + i] * e_buffer[buf_base + i];
+         }
+     }
++
++    // Clean up buffers
++    free(b_buffer);
++    free(c_buffer);
++    free(d_buffer);
++    free(e_buffer);
+ 
+     // Final dummy() call after last computation
+     dummy(a, b, c, d, e);

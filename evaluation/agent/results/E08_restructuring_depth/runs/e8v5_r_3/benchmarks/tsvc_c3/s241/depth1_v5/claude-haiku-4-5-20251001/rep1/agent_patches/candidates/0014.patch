@@ -1,0 +1,26 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_3/benchmarks/tsvc_c3/s241/depth1_v5/claude-haiku-4-5-20251001/rep1/work/s241.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_3/benchmarks/tsvc_c3/s241/depth1_v5/claude-haiku-4-5-20251001/rep1/work/s241.c
+@@ -6,18 +6,23 @@
+     real_t *a_old = (real_t *)malloc(LEN_1D * sizeof(real_t));
+     real_t *b_old = (real_t *)malloc(LEN_1D * sizeof(real_t));
+ 
++    #pragma omp parallel for shared(b_old) 
+     for (int i = 0; i < LEN_1D-1; i++) b_old[i] = b[i];
+ 
+     for (int nl = 0; nl < iterations; nl++) {
++        #pragma omp parallel for shared(a_old) 
+         for (int i = 0; i < LEN_1D; i++) a_old[i] = a[i];
+ 
++        #pragma omp parallel for shared(b_old) 
+         for (int i = 0; i < LEN_1D-1; i++) {
+             a[i] = b_old[i] * c[i  ] * d[i];
+         }
++        #pragma omp parallel for shared(a_old) 
+         for (int i = 0; i < LEN_1D-1; i++) {
+             b[i] = a[i] * a_old[i+1] * d[i];
+         }
+         dummy(a, b, c, d, e);
++        #pragma omp parallel for shared(b_old) 
+         for (int i = 0; i < LEN_1D-1; i++) {
+             b_old[i] = b[i];
+         }

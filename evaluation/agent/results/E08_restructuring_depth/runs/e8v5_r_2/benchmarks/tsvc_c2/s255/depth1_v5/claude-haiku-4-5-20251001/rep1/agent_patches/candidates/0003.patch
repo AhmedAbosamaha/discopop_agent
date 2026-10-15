@@ -1,0 +1,27 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_2/benchmarks/tsvc_c2/s255/depth1_v5/claude-haiku-4-5-20251001/rep1/work/s255.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_2/benchmarks/tsvc_c2/s255/depth1_v5/claude-haiku-4-5-20251001/rep1/work/s255.c
+@@ -1,14 +1,21 @@
+ #include "data.h"
++#include <stdlib.h>
++#include <string.h>
+ 
+ real_t kernel_s255(void)
+ {
++    real_t *b_snap = malloc(LEN_1D * sizeof(real_t));
++    memcpy(b_snap, b, LEN_1D * sizeof(real_t));
++
+     for (int nl = 0; nl < iterations; nl++) {
+         for (int i = 0; i < LEN_1D; i++) {
+-            real_t x = b[(i - 1 + LEN_1D) % LEN_1D];
+-            real_t y = b[(i - 2 + LEN_1D) % LEN_1D];
+-            a[i] = (b[i] + x + y) * (real_t).333;
++            real_t x = b_snap[(i - 1 + LEN_1D) % LEN_1D];
++            real_t y = b_snap[(i - 2 + LEN_1D) % LEN_1D];
++            a[i] = (b_snap[i] + x + y) * (real_t).333;
+         }
+         dummy(a, b, c, d, e);
+     }
++
++    free(b_snap);
+     return (real_t)0;
+ }

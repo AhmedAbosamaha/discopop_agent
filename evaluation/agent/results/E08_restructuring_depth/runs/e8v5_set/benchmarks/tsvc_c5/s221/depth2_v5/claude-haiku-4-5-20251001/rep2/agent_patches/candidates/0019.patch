@@ -1,0 +1,33 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_set/benchmarks/tsvc_c5/s221/depth2_v5/claude-haiku-4-5-20251001/rep2/work/s221.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_set/benchmarks/tsvc_c5/s221/depth2_v5/claude-haiku-4-5-20251001/rep2/work/s221.c
+@@ -4,6 +4,7 @@
+ real_t kernel_s221(void)
+ {
+     real_t *d_local = malloc(LEN_1D * sizeof(real_t));
++    real_t *cum = malloc(LEN_1D * sizeof(real_t));
+ 
+     for (int nl = 0; nl < iterations; nl++) {
+         for (int i = 1; i < LEN_1D; i++) {
+@@ -14,13 +15,21 @@
+             a[i] += c[i] * d_local[i];
+         }
+ 
++        // Compute cumulative sums sequentially into temporary array
++        cum[0] = b[0];
+         for (int i = 1; i < LEN_1D; i++) {
+-            b[i] = b[i - 1] + a[i] + d_local[i];
++            cum[i] = cum[i - 1] + a[i] + d_local[i];
++        }
++
++        // Copy to b in parallel (no loop-carried dependencies)
++        for (int i = 0; i < LEN_1D; i++) {
++            b[i] = cum[i];
+         }
+ 
+         dummy(a, b, c, d, e);
+     }
+ 
+     free(d_local);
++    free(cum);
+     return (real_t)0;
+ }

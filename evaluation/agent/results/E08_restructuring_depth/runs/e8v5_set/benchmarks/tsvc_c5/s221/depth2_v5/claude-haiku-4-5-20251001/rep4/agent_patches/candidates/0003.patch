@@ -1,0 +1,30 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_set/benchmarks/tsvc_c5/s221/depth2_v5/claude-haiku-4-5-20251001/rep4/work/s221.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_set/benchmarks/tsvc_c5/s221/depth2_v5/claude-haiku-4-5-20251001/rep4/work/s221.c
+@@ -1,4 +1,5 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s221(void)
+ {
+@@ -6,9 +7,20 @@
+         for (int i = 1; i < LEN_1D; i++) {
+             a[i] += c[i] * d[i];
+         }
++
++        // Compute cumulative sum of (a+d) to eliminate loop-carried dependence
++        real_t *cum = (real_t *)malloc(LEN_1D * sizeof(real_t));
++        cum[0] = 0;
+         for (int i = 1; i < LEN_1D; i++) {
+-            b[i] = b[i - 1] + a[i] + d[i];
++            cum[i] = cum[i-1] + a[i] + d[i];
+         }
++
++        // Now compute b without loop-carried dependence
++        for (int i = 1; i < LEN_1D; i++) {
++            b[i] = b[0] + cum[i];
++        }
++
++        free(cum);
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

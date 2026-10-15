@@ -1,0 +1,21 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_2/benchmarks/tsvc_c2/s244/depth2_v5/claude-haiku-4-5-20251001/rep2/work/s244.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_2/benchmarks/tsvc_c2/s244/depth2_v5/claude-haiku-4-5-20251001/rep2/work/s244.c
+@@ -7,6 +7,9 @@
+     real_t *d_copy = malloc(LEN_1D * sizeof(real_t));
+ 
+     for (int nl = 0; nl < iterations; nl++) {
++        if (nl > 0) {
++            dummy(a, b, c, d, e);
++        }
+         for (int i = 0; i < LEN_1D; i++) {
+             c_copy[i] = c[i];
+             d_copy[i] = d[i];
+@@ -18,6 +21,8 @@
+         if (LEN_1D > 1) {
+             a[LEN_1D-1] = b[LEN_1D-2] + a[LEN_1D-1] * d_copy[LEN_1D-2];
+         }
++    }
++    if (iterations > 0) {
+         dummy(a, b, c, d, e);
+     }
+ 

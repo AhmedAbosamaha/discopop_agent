@@ -1,0 +1,30 @@
+#include "data.h"
+#include <stdlib.h>
+#include <string.h>
+
+real_t kernel_s211(void)
+{
+    real_t *b_save = malloc(LEN_1D * sizeof(real_t));
+
+    for (int nl = 0; nl < iterations; nl++) {
+        memcpy(b_save, b, LEN_1D * sizeof(real_t));
+
+        #pragma omp parallel for shared(b_save) 
+        for (int i = 1; i < LEN_1D-1; i++) {
+            b[i] = b_save[i + 1] - e[i] * d[i];
+        }
+        // First iteration: b[0] is never modified by the first loop
+        a[1] = b_save[0] + c[1] * d[1];
+
+        // Remaining iterations: avoid reading modified b by using b_save formula
+        #pragma omp parallel for shared(b_save) 
+        for (int i = 2; i < LEN_1D-1; i++) {
+            a[i] = (b_save[i] - e[i - 1] * d[i - 1]) + c[i] * d[i];
+        }
+
+        dummy(a, b, c, d, e);
+    }
+
+    free(b_save);
+    return (real_t)0;
+}

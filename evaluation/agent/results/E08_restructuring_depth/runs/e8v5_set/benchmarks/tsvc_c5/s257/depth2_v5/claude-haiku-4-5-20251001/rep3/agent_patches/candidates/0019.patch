@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_set/benchmarks/tsvc_c5/s257/depth2_v5/claude-haiku-4-5-20251001/rep3/work/s257.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_set/benchmarks/tsvc_c5/s257/depth2_v5/claude-haiku-4-5-20251001/rep3/work/s257.c
+@@ -18,6 +18,7 @@
+         }
+ 
+         // Pass 2: Compute aa_new[][] in parallel (no inter-iteration dependencies now)
++ #pragma omp parallel for firstprivate(aa_new) 
+         for (int i = 1; i < LEN_2D; i++) {
+             for (int j = 0; j < LEN_2D; j++) {
+                 aa_new[j][i] = (aa[j][i] - a[i-1]) + bb[j][i];

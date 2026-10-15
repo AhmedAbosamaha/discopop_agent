@@ -1,0 +1,43 @@
+#include "data.h"
+#include <stdlib.h>
+
+real_t kernel_s255(void)
+{
+    real_t x, y;
+    // Double buffer to decouple iterations: no WAR on b_saved, but value still flows through b
+    real_t *b_saved[2];
+    b_saved[0] = (real_t *)malloc(LEN_1D * sizeof(real_t));
+    b_saved[1] = (real_t *)malloc(LEN_1D * sizeof(real_t));
+    if (b_saved[0] == NULL || b_saved[1] == NULL) return (real_t)0;
+
+    // Initialize first buffer with initial b
+    for (int i = 0; i < LEN_1D; i++) {
+        b_saved[0][i] = b[i];
+    }
+
+    for (int nl = 0; nl < iterations; nl++) {
+        int cur = nl % 2;
+        int nxt = (nl + 1) % 2;
+
+        // Compute a using current buffer (holds b from previous iteration or initial b)
+        #pragma omp parallel for firstprivate(cur) shared(b_saved) 
+        for (int i = 0; i < LEN_1D; i++) {
+            real_t x_val = b_saved[cur][(i + LEN_1D - 1) % LEN_1D];
+            real_t y_val = b_saved[cur][(i + LEN_1D - 2) % LEN_1D];
+            a[i] = (b_saved[cur][i] + x_val + y_val) * (real_t).333;
+        }
+        dummy(a, b, c, d, e);
+
+        // Copy modified b to next buffer for next iteration to read
+        if (nl < iterations - 1) {
+            #pragma omp parallel for firstprivate(nxt) shared(b_saved) 
+            for (int i = 0; i < LEN_1D; i++) {
+                b_saved[nxt][i] = b[i];
+            }
+        }
+    }
+
+    free(b_saved[0]);
+    free(b_saved[1]);
+    return (real_t)0;
+}

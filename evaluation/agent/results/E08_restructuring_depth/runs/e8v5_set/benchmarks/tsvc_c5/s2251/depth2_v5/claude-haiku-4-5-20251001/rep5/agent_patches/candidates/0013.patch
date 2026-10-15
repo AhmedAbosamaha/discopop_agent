@@ -1,0 +1,45 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_set/benchmarks/tsvc_c5/s2251/depth2_v5/claude-haiku-4-5-20251001/rep5/work/s2251.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_set/benchmarks/tsvc_c5/s2251/depth2_v5/claude-haiku-4-5-20251001/rep5/work/s2251.c
+@@ -4,27 +4,33 @@
+ 
+ real_t kernel_s2251(void)
+ {
++    // Pre-compute initial s_vals outside loop
++    real_t *s_vals = malloc(LEN_1D * sizeof(real_t));
++    s_vals[0] = (real_t)0.0;
++    for (int i = 1; i < LEN_1D; i++) {
++        s_vals[i] = b[i-1]+c[i-1];
++    }
++
+     for (int nl = 0; nl < iterations; nl++) {
+         // Snapshot e at start of iteration to isolate loop-carried dependence
+         real_t *e_snapshot = malloc(LEN_1D * sizeof(real_t));
+         memcpy(e_snapshot, e, LEN_1D * sizeof(real_t));
+ 
+-        // Precompute s values to break loop-carried dependence
+-        real_t *s_vals = malloc(LEN_1D * sizeof(real_t));
++        // Compute a and b using current s_vals (from previous iteration or init)
++        for (int i = 0; i < LEN_1D; i++) {
++            a[i] = s_vals[i]*e_snapshot[i];
++            b[i] = a[i]+d[i];
++        }
++
++        // Update s_vals based on new b values for next iteration
+         s_vals[0] = (real_t)0.0;
+         for (int i = 1; i < LEN_1D; i++) {
+             s_vals[i] = b[i-1]+c[i-1];
+         }
+ 
+-        // Inner loop uses snapshot; no loop-carried dependence on global e
+-        for (int i = 0; i < LEN_1D; i++) {
+-            a[i] = s_vals[i]*e_snapshot[i];
+-            b[i] = a[i]+d[i];
+-        }
+-
+-        free(s_vals);
+         free(e_snapshot);
+         dummy(a, b, c, d, e);
+     }
++    free(s_vals);
+     return (real_t)0;
+ }

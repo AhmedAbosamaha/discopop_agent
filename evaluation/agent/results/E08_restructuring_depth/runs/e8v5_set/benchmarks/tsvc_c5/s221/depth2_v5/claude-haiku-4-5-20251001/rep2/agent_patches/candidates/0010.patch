@@ -1,0 +1,17 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_set/benchmarks/tsvc_c5/s221/depth2_v5/claude-haiku-4-5-20251001/rep2/work/s221.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_set/benchmarks/tsvc_c5/s221/depth2_v5/claude-haiku-4-5-20251001/rep2/work/s221.c
+@@ -14,10 +14,12 @@
+             a[i] += c[i] * d_local[i];
+         }
+ 
++        // Compute b using accumulated sum to break loop-carried dependence on b[i-1]
++        real_t sum_val = 0;
+         for (int i = 1; i < LEN_1D; i++) {
+-            b[i] = b[i - 1] + a[i] + d_local[i];
++            sum_val += a[i] + d_local[i];
++            b[i] = b[0] + sum_val;
+         }
+-
+         dummy(a, b, c, d, e);
+     }
+ 

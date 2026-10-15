@@ -1,0 +1,52 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c4/s341/depth1_v5/claude-haiku-4-5-20251001/rep1/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c4/s341/depth1_v5/claude-haiku-4-5-20251001/rep1/work/s341.c
+@@ -4,6 +4,12 @@
+ real_t kernel_s341(void)
+ {
+     int j;
++    // Allocate storage for computed results from each iteration
++    real_t **a_vals = (real_t **)malloc(iterations * sizeof(real_t *));
++    int *counts = (int *)malloc(iterations * sizeof(int));
++
++    // Computation phase: parallel loop to gather indices and copy values
++    // No dependence on dummy.n, so this loop is independent across iterations
+     for (int nl = 0; nl < iterations; nl++) {
+         // Phase 1: gather indices of non-zero elements
+         int *idx = (int *)malloc(LEN_1D * sizeof(int));
+@@ -14,14 +20,34 @@
+             }
+         }
+ 
+-        // Phase 2: write non-zero elements in order (no loop-carried dependence)
++        // Phase 2: write non-zero elements into per-iteration buffer
++        counts[nl] = count;
++        a_vals[nl] = (real_t *)malloc(count * sizeof(real_t));
+         for (int i = 0; i < count; i++) {
+-            a[i] = b[idx[i]];
++            a_vals[nl][i] = b[idx[i]];
+         }
+ 
+         j = count - 1;
+         free(idx);
++    }
++
++    // Finalization phase: sequential loop to apply results and call dummy
++    // Preserves the loop-carried dependence on dummy.n by executing in order
++    for (int nl = 0; nl < iterations; nl++) {
++        // Copy this iteration's computed values to output array
++        for (int i = 0; i < counts[nl]; i++) {
++            a[i] = a_vals[nl][i];
++        }
++        j = counts[nl] - 1;
++
++        // Call dummy in original order (sequential due to dummy.n dependence)
+         dummy(a, b, c, d, e);
++
++        // Clean up temporary storage
++        free(a_vals[nl]);
+     }
++
++    free(a_vals);
++    free(counts);
+     return (real_t)0;
+ }

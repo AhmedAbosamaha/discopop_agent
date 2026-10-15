@@ -1,0 +1,49 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_set/benchmarks/tsvc_c5/s221/depth2_v5/claude-haiku-4-5-20251001/rep2/work/s221.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_set/benchmarks/tsvc_c5/s221/depth2_v5/claude-haiku-4-5-20251001/rep2/work/s221.c
+@@ -1,15 +1,44 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s221(void)
+ {
++    real_t *temp_in = malloc(LEN_1D * sizeof(real_t));
++    real_t *temp_out = malloc(LEN_1D * sizeof(real_t));
++
+     for (int nl = 0; nl < iterations; nl++) {
+         for (int i = 1; i < LEN_1D; i++) {
+             a[i] += c[i] * d[i];
+         }
+-        for (int i = 1; i < LEN_1D; i++) {
+-            b[i] = b[i - 1] + a[i] + d[i];
++
++        for (int i = 0; i < LEN_1D; i++) {
++            if (i == 0) {
++                temp_in[i] = b[0];
++            } else {
++                temp_in[i] = a[i] + d[i];
++            }
+         }
++
++        for (int step = 1; step < LEN_1D; step *= 2) {
++            for (int i = 0; i < LEN_1D; i++) {
++                temp_out[i] = temp_in[i];
++            }
++            for (int i = step; i < LEN_1D; i++) {
++                temp_out[i] = temp_out[i] + temp_in[i - step];
++            }
++            real_t *tmp = temp_in;
++            temp_in = temp_out;
++            temp_out = tmp;
++        }
++
++        for (int i = 0; i < LEN_1D; i++) {
++            b[i] = temp_in[i];
++        }
++
+         dummy(a, b, c, d, e);
+     }
++
++    free(temp_in);
++    free(temp_out);
+     return (real_t)0;
+ }

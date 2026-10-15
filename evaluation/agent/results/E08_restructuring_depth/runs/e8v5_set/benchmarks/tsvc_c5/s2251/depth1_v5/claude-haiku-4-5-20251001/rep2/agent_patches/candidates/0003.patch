@@ -1,0 +1,30 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_set/benchmarks/tsvc_c5/s2251/depth1_v5/claude-haiku-4-5-20251001/rep2/work/s2251.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_set/benchmarks/tsvc_c5/s2251/depth1_v5/claude-haiku-4-5-20251001/rep2/work/s2251.c
+@@ -1,7 +1,14 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s2251(void)
+ {
++    // Save original d values to break loop-carried dependence
++    real_t *d_original = (real_t *)malloc(LEN_1D * sizeof(real_t));
++    for (int i = 0; i < LEN_1D; i++) {
++        d_original[i] = d[i];
++    }
++
+     for (int nl = 0; nl < iterations; nl++) {
+         real_t s = (real_t)0.0;
+         for (int i = 0; i < LEN_1D; i++) {
+@@ -9,9 +16,11 @@
+             s = b[i]+c[i];
+         }
+         for (int i = 0; i < LEN_1D; i++) {
+-            b[i] = a[i]+d[i];
++            b[i] = a[i]+d_original[i];
+         }
+         dummy(a, b, c, d, e);
+     }
++
++    free(d_original);
+     return (real_t)0;
+ }

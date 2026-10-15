@@ -1,0 +1,20 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_2/benchmarks/tsvc_c2/s244/depth2_v5/claude-haiku-4-5-20251001/rep1/work/s244.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_2/benchmarks/tsvc_c2/s244/depth2_v5/claude-haiku-4-5-20251001/rep1/work/s244.c
+@@ -12,12 +12,15 @@
+             a_old[i] = a[i];
+         }
+ 
+-        // Compute a[i] and b[i], then use saved a values in a[i+1] computation
++        // Compute a[i] and b[i] for each iteration (no WAW conflicts)
+         for (int i = 0; i < LEN_1D-1; ++i) {
+             a[i] = b[i] + c[i] * d[i];
+             b[i] = c[i] + b[i];
+-            a[i+1] = b[i] + a_old[i+1] * d[i];
+         }
++
++        // Compute the last element of a using the newly updated b values
++        a[LEN_1D-1] = b[LEN_1D-2] + a_old[LEN_1D-1] * d[LEN_1D-2];
++
+         dummy(a, b, c, d, e);
+     }
+ 

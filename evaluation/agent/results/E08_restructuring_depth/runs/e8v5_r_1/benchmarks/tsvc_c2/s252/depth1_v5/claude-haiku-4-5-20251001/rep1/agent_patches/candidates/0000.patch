@@ -1,0 +1,28 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c2/s252/depth1_v5/claude-haiku-4-5-20251001/rep1/work/s252.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c2/s252/depth1_v5/claude-haiku-4-5-20251001/rep1/work/s252.c
+@@ -2,15 +2,20 @@
+ 
+ real_t kernel_s252(void)
+ {
+-    real_t t, s;
++    real_t *s_temp;
++    s_temp = (real_t *)malloc(LEN_1D * sizeof(real_t));
++
+     for (int nl = 0; nl < iterations; nl++) {
+-        t = (real_t) 0.;
+         for (int i = 0; i < LEN_1D; i++) {
+-            s = b[i] * c[i];
+-            a[i] = s + t;
+-            t = s;
++            s_temp[i] = b[i] * c[i];
++        }
++        a[0] = s_temp[0];
++        for (int i = 1; i < LEN_1D; i++) {
++            a[i] = s_temp[i] + s_temp[i-1];
+         }
+         dummy(a, b, c, d, e);
+     }
++
++    free(s_temp);
+     return (real_t)0;
+ }

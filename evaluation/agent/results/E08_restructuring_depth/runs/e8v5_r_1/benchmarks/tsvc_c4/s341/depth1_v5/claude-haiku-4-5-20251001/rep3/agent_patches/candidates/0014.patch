@@ -1,0 +1,58 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c4/s341/depth1_v5/claude-haiku-4-5-20251001/rep3/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c4/s341/depth1_v5/claude-haiku-4-5-20251001/rep3/work/s341.c
+@@ -4,41 +4,25 @@
+ real_t kernel_s341(void)
+ {
+     int j;
++
++    // Precompute prefix sum of valid elements in b (once, outside iterations)
++    // Since b is read-only, this can be computed once and reused across all nl activations
++    int *prefix = (int *)malloc(LEN_1D * sizeof(int));
++    prefix[0] = 0;
++    for (int i = 1; i < LEN_1D; i++) {
++        prefix[i] = prefix[i-1] + ((b[i-1] > (real_t)0.) ? 1 : 0);
++    }
++
+     for (int nl = 0; nl < iterations; nl++) {
+-        // Phase 1: Mark valid elements (Do-All loop, no dependences)
+-        int *valid = (int *)malloc(LEN_1D * sizeof(int));
++        // Phase 3: Write valid elements to compacted positions using precomputed prefix (Do-All)
+         for (int i = 0; i < LEN_1D; i++) {
+-            valid[i] = (b[i] > (real_t)0.) ? 1 : 0;
+-        }
+-
+-        // Phase 1b: Count valid elements (reduction over Phase 1 result)
+-        int count = 0;
+-        for (int i = 0; i < LEN_1D; i++) {
+-            count += valid[i];
+-        }
+-
+-        // Phase 2: Compute prefix sum to assign positions (sequential)
+-        int *positions = (int *)malloc(LEN_1D * sizeof(int));
+-        j = -1;
+-        for (int i = 0; i < LEN_1D; i++) {
+-            if (valid[i]) {
+-                j++;
+-                positions[i] = j;
+-            } else {
+-                positions[i] = -1;
++            if (b[i] > (real_t)0.) {
++                a[prefix[i]] = b[i];
+             }
+         }
+-
+-        // Phase 3: Write elements to their assigned positions (Do-All loop)
+-        for (int i = 0; i < LEN_1D; i++) {
+-            if (positions[i] >= 0) {
+-                a[positions[i]] = b[i];
+-            }
+-        }
+-
+-        free(valid);
+-        free(positions);
+         dummy(a, b, c, d, e);
+     }
++
++    free(prefix);
+     return (real_t)0;
+ }

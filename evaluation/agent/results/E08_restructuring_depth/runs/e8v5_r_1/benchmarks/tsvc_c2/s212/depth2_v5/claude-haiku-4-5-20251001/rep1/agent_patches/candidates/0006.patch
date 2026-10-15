@@ -1,0 +1,59 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c2/s212/depth2_v5/claude-haiku-4-5-20251001/rep1/work/s212.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c2/s212/depth2_v5/claude-haiku-4-5-20251001/rep1/work/s212.c
+@@ -3,17 +3,47 @@
+ 
+ real_t kernel_s212(void)
+ {
+-    for (int nl = 0; nl < iterations; nl++) {
+-        real_t *a_next = malloc((LEN_1D - 1) * sizeof(real_t));
+-        for (int i = 0; i < LEN_1D-1; i++) {
+-            a_next[i] = a[i + 1];
++    // Precompute c[i]^nl for each i and nl to break the outer loop dependence
++    real_t *a_orig = malloc((LEN_1D - 1) * sizeof(real_t));
++    memcpy(a_orig, a, (LEN_1D - 1) * sizeof(real_t));
++
++    real_t **c_powers = malloc((LEN_1D - 1) * sizeof(real_t*));
++    for (int i = 0; i < LEN_1D - 1; i++) {
++        c_powers[i] = malloc(iterations * sizeof(real_t));
++        real_t power = 1.0;
++        for (int nl = 0; nl < iterations; nl++) {
++            c_powers[i][nl] = power;
++            power *= c[i];
+         }
+-        for (int i = 0; i < LEN_1D-1; i++) {
+-            a[i] *= c[i];
+-            b[i] += a_next[i] * d[i];
++    }
++
++    // Nest loops with i outer: each i accumulates independently into b[i]
++    for (int i = 0; i < LEN_1D - 1; i++) {
++        for (int nl = 0; nl < iterations; nl++) {
++            // a[i+1] after nl iterations is a_orig[i+1] * c[i+1]^nl
++            // Last element never updates, so use original directly
++            real_t a_next_val;
++            if (i + 1 < LEN_1D - 1) {
++                a_next_val = a_orig[i + 1] * c_powers[i + 1][nl];
++            } else {
++                a_next_val = a_orig[i + 1];
++            }
++            b[i] += a_next_val * d[i];
+         }
+-        free(a_next);
+-        dummy(a, b, c, d, e);
+     }
++
++    // Update a to final state: a[i] = a_orig[i] * c[i]^iterations
++    for (int i = 0; i < LEN_1D - 1; i++) {
++        a[i] = a_orig[i] * c_powers[i][iterations - 1] * c[i];
++    }
++
++    // Cleanup
++    for (int i = 0; i < LEN_1D - 1; i++) {
++        free(c_powers[i]);
++    }
++    free(c_powers);
++    free(a_orig);
++
++    dummy(a, b, c, d, e);
+     return (real_t)0;
+ }

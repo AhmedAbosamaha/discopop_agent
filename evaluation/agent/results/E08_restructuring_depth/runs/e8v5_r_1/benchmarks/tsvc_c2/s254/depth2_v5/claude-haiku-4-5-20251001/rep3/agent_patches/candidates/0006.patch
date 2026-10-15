@@ -1,0 +1,26 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c2/s254/depth2_v5/claude-haiku-4-5-20251001/rep3/work/s254.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c2/s254/depth2_v5/claude-haiku-4-5-20251001/rep3/work/s254.c
+@@ -7,12 +7,18 @@
+     real_t* b_read = (real_t*)malloc(LEN_1D * sizeof(real_t));
+     memcpy(b_read, b, LEN_1D * sizeof(real_t));
+ 
+-    for (int nl = 0; nl < iterations; nl++) {
+-        for (int i = 0; i < LEN_1D; i++) {
+-            a[i] = (b_read[i] + b_read[(i + LEN_1D - 1) % LEN_1D]) * (real_t).5;
++    for (long iter = 0; iter < (long)iterations * LEN_1D; iter++) {
++        int nl = iter / LEN_1D;
++        int i = iter % LEN_1D;
++
++        a[i] = (b_read[i] + b_read[(i + LEN_1D - 1) % LEN_1D]) * (real_t).5;
++
++        if (i == LEN_1D - 1) {
++            dummy(a, b, c, d, e);
++            if (nl + 1 < iterations) {
++                memcpy(b_read, b, LEN_1D * sizeof(real_t));
++            }
+         }
+-        dummy(a, b, c, d, e);
+-        memcpy(b_read, b, LEN_1D * sizeof(real_t));
+     }
+ 
+     free(b_read);

@@ -1,0 +1,18 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c2/s112/depth1_v5/claude-haiku-4-5-20251001/rep1/work/s112.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c2/s112/depth1_v5/claude-haiku-4-5-20251001/rep1/work/s112.c
+@@ -6,6 +6,7 @@
+     real_t *temp = (real_t *)malloc(LEN_1D * sizeof(real_t));
+     real_t *b_copy = (real_t *)malloc(LEN_1D * sizeof(real_t));
+ 
++    #pragma omp parallel for shared(b_copy) 
+     for (int i = 0; i < LEN_1D; i++) {
+         b_copy[i] = b[i];
+     }
+@@ -17,6 +18,7 @@
+         }
+         dummy(a, b, c, d, e);
+ 
++        #pragma omp parallel for shared(b_copy) 
+         for (int i = 0; i < LEN_1D; i++) {
+             b_copy[i] = b[i];
+         }

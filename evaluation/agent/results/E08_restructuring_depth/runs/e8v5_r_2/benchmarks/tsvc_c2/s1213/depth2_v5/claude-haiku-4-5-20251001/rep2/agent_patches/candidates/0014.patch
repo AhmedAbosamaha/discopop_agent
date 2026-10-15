@@ -1,0 +1,26 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_2/benchmarks/tsvc_c2/s1213/depth2_v5/claude-haiku-4-5-20251001/rep2/work/s1213.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_2/benchmarks/tsvc_c2/s1213/depth2_v5/claude-haiku-4-5-20251001/rep2/work/s1213.c
+@@ -5,18 +5,21 @@
+ real_t kernel_s1213(void)
+ {
+     real_t *a_prev = (real_t *)malloc(LEN_1D * sizeof(real_t));
++    real_t *b_local = (real_t *)malloc(LEN_1D * sizeof(real_t));
+     memcpy(a_prev, a, LEN_1D * sizeof(real_t));
+ 
+     for (int nl = 0; nl < iterations; nl++) {
+         for (int i = 1; i < LEN_1D-1; i++) {
+-            b[i] = a_prev[i+1]*d[i];
++            b_local[i] = a_prev[i+1]*d[i];
+         }
+         for (int i = 1; i < LEN_1D-1; i++) {
+-            a[i] = b[i-1]+c[i];
++            a[i] = b_local[i-1]+c[i];
+         }
++        memcpy(b, b_local, LEN_1D * sizeof(real_t));
+         dummy(a, b, c, d, e);
+         memcpy(a_prev, a, LEN_1D * sizeof(real_t));
+     }
++    free(b_local);
+     free(a_prev);
+     return (real_t)0;
+ }

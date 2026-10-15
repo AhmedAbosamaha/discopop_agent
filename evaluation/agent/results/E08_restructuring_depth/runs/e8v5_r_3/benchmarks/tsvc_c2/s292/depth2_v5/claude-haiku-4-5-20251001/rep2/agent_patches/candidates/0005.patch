@@ -1,0 +1,18 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_3/benchmarks/tsvc_c2/s292/depth2_v5/claude-haiku-4-5-20251001/rep2/work/s292.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_3/benchmarks/tsvc_c2/s292/depth2_v5/claude-haiku-4-5-20251001/rep2/work/s292.c
+@@ -3,6 +3,7 @@
+ real_t kernel_s292(void)
+ {
+     // Preamble: compute for first iteration
++    #pragma omp parallel for 
+     for (int i = 0; i < LEN_1D; i++) {
+         int im1, im2;
+ 
+@@ -23,6 +24,7 @@
+     // Pipeline: dummy before compute for iterations 1 through iterations-1
+     for (int nl = 0; nl < iterations - 1; nl++) {
+         dummy(a, b, c, d, e);
++ #pragma omp parallel for 
+         for (int i = 0; i < LEN_1D; i++) {
+             int im1, im2;
+ 

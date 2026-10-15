@@ -1,0 +1,36 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_2/benchmarks/tsvc_c2/s244/depth2_v5/claude-haiku-4-5-20251001/rep1/work/s244.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_2/benchmarks/tsvc_c2/s244/depth2_v5/claude-haiku-4-5-20251001/rep1/work/s244.c
+@@ -6,22 +6,27 @@
+     // Allocate scratch array to hold initial values of a for each outer iteration
+     real_t *a_old = (real_t *)malloc(LEN_1D * sizeof(real_t));
+ 
++    // Initialize a_old with the initial state of a before the loop
++    for (int i = 0; i < LEN_1D; ++i) {
++        a_old[i] = a[i];
++    }
++
+     for (int nl = 0; nl < iterations; nl++) {
+-        // Save initial state of array a before modifying it
+-        for (int i = 0; i < LEN_1D; ++i) {
+-            a_old[i] = a[i];
+-        }
+-
+         // Compute a[i] and b[i] for each iteration (no WAW conflicts)
+         for (int i = 0; i < LEN_1D-1; ++i) {
+             a[i] = b[i] + c[i] * d[i];
+             b[i] = c[i] + b[i];
+         }
+ 
+-        // Compute the last element of a using the newly updated b values
++        // Compute the last element of a using the saved a_old values
+         a[LEN_1D-1] = b[LEN_1D-2] + a_old[LEN_1D-1] * d[LEN_1D-2];
+ 
+         dummy(a, b, c, d, e);
++
++        // Save the updated state of array a for the next iteration
++        for (int i = 0; i < LEN_1D; ++i) {
++            a_old[i] = a[i];
++        }
+     }
+ 
+     free(a_old);

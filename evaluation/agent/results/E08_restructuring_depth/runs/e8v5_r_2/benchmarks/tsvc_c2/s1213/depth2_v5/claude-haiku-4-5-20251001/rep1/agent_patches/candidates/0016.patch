@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_2/benchmarks/tsvc_c2/s1213/depth2_v5/claude-haiku-4-5-20251001/rep1/work/s1213.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_2/benchmarks/tsvc_c2/s1213/depth2_v5/claude-haiku-4-5-20251001/rep1/work/s1213.c
+@@ -14,6 +14,7 @@
+         memcpy(c_old, c, LEN_1D * sizeof(real_t));
+ 
+         // First loop: compute b using invariant a_old (Do-All pattern)
++        #pragma omp parallel for shared(a_old) 
+         for (int i = 1; i < LEN_1D-1; i++) {
+             b[i] = a_old[i+1]*d[i];
+         }

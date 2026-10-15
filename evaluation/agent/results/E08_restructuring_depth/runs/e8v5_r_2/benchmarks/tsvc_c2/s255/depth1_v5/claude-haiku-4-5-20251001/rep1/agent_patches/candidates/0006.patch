@@ -1,0 +1,29 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_2/benchmarks/tsvc_c2/s255/depth1_v5/claude-haiku-4-5-20251001/rep1/work/s255.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_2/benchmarks/tsvc_c2/s255/depth1_v5/claude-haiku-4-5-20251001/rep1/work/s255.c
+@@ -1,14 +1,20 @@
+ #include "data.h"
++#include <stdlib.h>
++#include <string.h>
+ 
+ real_t kernel_s255(void)
+ {
+-    for (int nl = 0; nl < iterations; nl++) {
+-        for (int i = 0; i < LEN_1D; i++) {
+-            real_t x = b[(i - 1 + LEN_1D) % LEN_1D];
+-            real_t y = b[(i - 2 + LEN_1D) % LEN_1D];
+-            a[i] = (b[i] + x + y) * (real_t).333;
++    for (int iter = 0; iter < iterations * LEN_1D; iter++) {
++        int nl = iter / LEN_1D;
++        int i = iter % LEN_1D;
++
++        real_t x = b[(i - 1 + LEN_1D) % LEN_1D];
++        real_t y = b[(i - 2 + LEN_1D) % LEN_1D];
++        a[i] = (b[i] + x + y) * (real_t).333;
++
++        if (i == LEN_1D - 1) {
++            dummy(a, b, c, d, e);
+         }
+-        dummy(a, b, c, d, e);
+     }
+     return (real_t)0;
+ }

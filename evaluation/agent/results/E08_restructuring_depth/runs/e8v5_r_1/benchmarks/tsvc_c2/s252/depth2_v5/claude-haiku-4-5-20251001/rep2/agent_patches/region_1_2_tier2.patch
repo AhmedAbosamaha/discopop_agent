@@ -1,0 +1,34 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c2/s252/depth2_v5/claude-haiku-4-5-20251001/rep2/work/s252.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c2/s252/depth2_v5/claude-haiku-4-5-20251001/rep2/work/s252.c
+@@ -2,7 +2,18 @@
+ 
+ real_t kernel_s252(void)
+ {
+-    for (int nl = 0; nl < iterations; nl++) {
++    // Compute a for first iteration with original b, c
++    for (int i = 0; i < LEN_1D; i++) {
++        if (i == 0) {
++            a[i] = b[i] * c[i];
++        } else {
++            a[i] = b[i] * c[i] + b[i-1] * c[i-1];
++        }
++    }
++
++    // Pipeline: dummy call for previous iteration, then compute next
++    for (int nl = 1; nl < iterations; nl++) {
++        dummy(a, b, c, d, e);
+         for (int i = 0; i < LEN_1D; i++) {
+             if (i == 0) {
+                 a[i] = b[i] * c[i];
+@@ -10,7 +21,10 @@
+                 a[i] = b[i] * c[i] + b[i-1] * c[i-1];
+             }
+         }
+-        dummy(a, b, c, d, e);
+     }
++
++    // Call dummy for final iteration
++    dummy(a, b, c, d, e);
++
+     return (real_t)0;
+ }

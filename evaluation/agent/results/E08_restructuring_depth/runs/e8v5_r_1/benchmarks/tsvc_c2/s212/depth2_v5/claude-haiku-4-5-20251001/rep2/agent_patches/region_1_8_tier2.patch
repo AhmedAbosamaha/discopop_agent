@@ -1,0 +1,39 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c2/s212/depth2_v5/claude-haiku-4-5-20251001/rep2/work/s212.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c2/s212/depth2_v5/claude-haiku-4-5-20251001/rep2/work/s212.c
+@@ -4,6 +4,10 @@
+ real_t kernel_s212(void)
+ {
+     real_t* temp = (real_t*) malloc((LEN_1D) * sizeof(real_t));
++    real_t** b_incr = (real_t**) malloc(iterations * sizeof(real_t*));
++    for (int nl = 0; nl < iterations; nl++) {
++        b_incr[nl] = (real_t*) calloc(LEN_1D, sizeof(real_t));
++    }
+ 
+     // Initialize temp with initial values of a[i+1] before the loop
+     for (int i = 0; i < LEN_1D-1; i++) {
+@@ -21,11 +25,24 @@
+             a[i] *= c[i];
+         }
+         for (int i = 0; i < LEN_1D-1; i++) {
+-            b[i] += temp[i] * d[i];
++            b_incr[nl][i] = temp[i] * d[i];
+         }
+         dummy(a, b, c, d, e);
+     }
+ 
++    // Add all increments to b in a loop with parallelizable structure
++    for (int i = 0; i < LEN_1D-1; i++) {
++        for (int nl = 0; nl < iterations; nl++) {
++            b[i] += b_incr[nl][i];
++        }
++    }
++
++    // Free b_incr
++    for (int nl = 0; nl < iterations; nl++) {
++        free(b_incr[nl]);
++    }
++    free(b_incr);
++
+     free(temp);
+     return (real_t)0;
+ }

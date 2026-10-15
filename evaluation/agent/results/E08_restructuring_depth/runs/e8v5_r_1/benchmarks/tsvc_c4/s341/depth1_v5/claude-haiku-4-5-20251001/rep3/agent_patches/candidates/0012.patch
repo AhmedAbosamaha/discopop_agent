@@ -1,0 +1,60 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c4/s341/depth1_v5/claude-haiku-4-5-20251001/rep3/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c4/s341/depth1_v5/claude-haiku-4-5-20251001/rep3/work/s341.c
+@@ -5,39 +5,34 @@
+ {
+     int j;
+     for (int nl = 0; nl < iterations; nl++) {
+-        // Phase 1: Mark valid elements (Do-All loop, no dependences)
+-        int *valid = (int *)malloc(LEN_1D * sizeof(int));
+-        for (int i = 0; i < LEN_1D; i++) {
+-            valid[i] = (b[i] > (real_t)0.) ? 1 : 0;
++        // Phase 1+2: Mark valid elements and compute prefix sum in one pass (sequential)
++        // Store both validity flag and prefix sum to avoid extra allocations
++        struct {
++            int valid;
++            int prefix;
++        } *vp = (struct { int valid; int prefix; } *)malloc(LEN_1D * sizeof(*vp));
++
++        vp[0].valid = (b[0] > (real_t)0.) ? 1 : 0;
++        vp[0].prefix = 0;
++        for (int i = 1; i < LEN_1D; i++) {
++            vp[i].valid = (b[i] > (real_t)0.) ? 1 : 0;
++            vp[i].prefix = vp[i-1].prefix + vp[i-1].valid;
+         }
+ 
+-        // Phase 1b: Count valid elements (reduction over Phase 1 result)
++        // Phase 1b: Count valid elements (reduction)
+         int count = 0;
+         for (int i = 0; i < LEN_1D; i++) {
+-            count += valid[i];
++            count += vp[i].valid;
+         }
+ 
+-        // Phase 2: Compute prefix sum to assign positions (sequential)
+-        int *positions = (int *)malloc(LEN_1D * sizeof(int));
+-        j = -1;
++        // Phase 3: Write elements to their assigned positions using prefix sums (Do-All loop)
+         for (int i = 0; i < LEN_1D; i++) {
+-            if (valid[i]) {
+-                j++;
+-                positions[i] = j;
+-            } else {
+-                positions[i] = -1;
++            if (vp[i].valid) {
++                a[vp[i].prefix] = b[i];
+             }
+         }
+ 
+-        // Phase 3: Write elements to their assigned positions (Do-All loop)
+-        for (int i = 0; i < LEN_1D; i++) {
+-            if (positions[i] >= 0) {
+-                a[positions[i]] = b[i];
+-            }
+-        }
+-
+-        free(valid);
+-        free(positions);
++        free(vp);
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

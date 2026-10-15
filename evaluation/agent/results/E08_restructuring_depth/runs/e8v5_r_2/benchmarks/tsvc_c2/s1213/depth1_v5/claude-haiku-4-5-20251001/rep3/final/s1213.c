@@ -1,0 +1,33 @@
+#include "data.h"
+#include <stdlib.h>
+#include <string.h>
+
+real_t kernel_s1213(void)
+{
+    real_t *b_new = malloc(LEN_1D * sizeof(real_t));
+
+    for (int nl = 0; nl < iterations; nl++) {
+        // Phase 1: compute b_new from current a values
+        // First i-loop reads a[i+1] (higher indices)
+        b_new[0] = b[0];
+        #pragma omp parallel for shared(b_new) 
+        for (int i = 1; i < LEN_1D-1; i++) {
+            b_new[i] = a[i+1]*d[i];
+        }
+
+        // Phase 2: compute new a values from b_new
+        // Second i-loop writes a[i] (lower indices), no conflict with reads above
+        #pragma omp parallel for shared(b_new) 
+        for (int i = 1; i < LEN_1D-1; i++) {
+            a[i] = b_new[i-1]+c[i];
+        }
+
+        // Copy b_new back to b to complete the update
+        memcpy(b + 1, b_new + 1, (LEN_1D - 2) * sizeof(real_t));
+
+        dummy(a, b, c, d, e);
+    }
+
+    free(b_new);
+    return (real_t)0;
+}

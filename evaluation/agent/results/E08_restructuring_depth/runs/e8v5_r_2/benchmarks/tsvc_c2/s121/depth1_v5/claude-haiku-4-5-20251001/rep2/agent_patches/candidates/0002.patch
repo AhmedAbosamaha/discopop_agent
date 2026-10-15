@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_2/benchmarks/tsvc_c2/s121/depth1_v5/claude-haiku-4-5-20251001/rep2/work/s121.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_2/benchmarks/tsvc_c2/s121/depth1_v5/claude-haiku-4-5-20251001/rep2/work/s121.c
+@@ -9,6 +9,7 @@
+             temp[i] = a[i+1];
+         }
+         // Compute phase: write results without loop-carried dependence
++        #pragma omp parallel for shared(temp) 
+         for (int i = 0; i < LEN_1D-1; i++) {
+             a[i] = temp[i] + b[i];
+         }

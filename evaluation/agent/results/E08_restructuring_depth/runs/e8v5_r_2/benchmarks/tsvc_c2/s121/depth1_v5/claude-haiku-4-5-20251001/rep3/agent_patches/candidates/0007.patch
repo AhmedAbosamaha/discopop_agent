@@ -1,0 +1,47 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_2/benchmarks/tsvc_c2/s121/depth1_v5/claude-haiku-4-5-20251001/rep3/work/s121.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_2/benchmarks/tsvc_c2/s121/depth1_v5/claude-haiku-4-5-20251001/rep3/work/s121.c
+@@ -3,16 +3,38 @@
+ 
+ real_t kernel_s121(void)
+ {
+-    real_t *tmp = (real_t *)malloc(sizeof(real_t) * (LEN_1D - 1));
++    real_t **a_history = (real_t **)malloc(sizeof(real_t *) * (iterations + 1));
++    for (int nl = 0; nl <= iterations; nl++) {
++        a_history[nl] = (real_t *)malloc(sizeof(real_t) * (LEN_1D - 1));
++    }
++
++    // Initialize a_history[0] with a[0..LEN_1D-2]
++    for (int i = 0; i < LEN_1D - 1; i++) {
++        a_history[0][i] = a[i];
++    }
++
++    // Compute a_history[nl+1] from a_history[nl]
++    // a_history stores a[0..LEN_1D-2] only; a[LEN_1D-1] is read from global a (unchanged)
+     for (int nl = 0; nl < iterations; nl++) {
+-        for (int i = 0; i < LEN_1D-1; i++) {
+-            tmp[i] = a[i+1] + b[i];
++        for (int i = 0; i < LEN_1D - 2; i++) {
++            a_history[nl+1][i] = a_history[nl][i+1] + b[i];
+         }
+-        for (int i = 0; i < LEN_1D-1; i++) {
+-            a[i] = tmp[i];
++        // For i = LEN_1D-2, read a[LEN_1D-1] from global array (never modified)
++        a_history[nl+1][LEN_1D - 2] = a[LEN_1D - 1] + b[LEN_1D - 2];
++    }
++
++    // Update a and call dummy for each iteration
++    for (int nl = 0; nl < iterations; nl++) {
++        for (int i = 0; i < LEN_1D - 1; i++) {
++            a[i] = a_history[nl+1][i];
+         }
+         dummy(a, b, c, d, e);
+     }
+-    free(tmp);
++
++    // Free allocated memory
++    for (int nl = 0; nl <= iterations; nl++) {
++        free(a_history[nl]);
++    }
++    free(a_history);
+     return (real_t)0;
+ }

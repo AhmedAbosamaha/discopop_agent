@@ -1,0 +1,29 @@
+#include "data.h"
+#include <stdlib.h>
+
+real_t kernel_s243(void)
+{
+    real_t* a_old = malloc(sizeof(real_t) * LEN_1D);
+    real_t* b_old = malloc(sizeof(real_t) * LEN_1D);
+
+    for (int nl = 0; nl < iterations; nl++) {
+        // Save snapshot of a[] and b[] at start of each nl iteration
+        #pragma omp parallel for shared(b_old,a_old) 
+        for (int j = 0; j < LEN_1D; j++) {
+            a_old[j] = a[j];
+            b_old[j] = b[j];
+        }
+
+        #pragma omp parallel for shared(b_old,a_old) 
+        for (int i = 0; i < LEN_1D-1; i++) {
+            a[i] = b_old[i] + c[i  ] * d[i];
+            b[i] = a[i] + d[i  ] * e[i];
+            a[i] = b[i] + a_old[i+1] * d[i];
+        }
+        dummy(a, b, c, d, e);
+    }
+
+    free(a_old);
+    free(b_old);
+    return (real_t)0;
+}

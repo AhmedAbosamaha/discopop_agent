@@ -1,0 +1,29 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c2/s212/depth2_v5/claude-haiku-4-5-20251001/rep3/work/s212.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c2/s212/depth2_v5/claude-haiku-4-5-20251001/rep3/work/s212.c
+@@ -10,6 +10,7 @@
+     }
+ 
+     // Initialize a_prev with the input array a
++    #pragma omp parallel for shared(a_prev) 
+     for (int i = 0; i < LEN_1D; i++) {
+         a_prev[i] = a[i];
+     }
+@@ -18,15 +19,18 @@
+         if (nl > 0) {
+             dummy(a, b, c, d, e);
+             // Save a after dummy() modifies it, for this iteration's first loop
++            #pragma omp parallel for shared(a_prev) 
+             for (int i = 0; i < LEN_1D; i++) {
+                 a_prev[i] = a[i];
+             }
+         }
+         // Read from a_prev (which is either the initial a or a after dummy() modified it)
++        #pragma omp parallel for shared(a_prev) 
+         for (int i = 0; i < LEN_1D-1; i++) {
+             b[i] += a_prev[i + 1] * d[i];
+         }
+         // Modify a for next iteration
++        #pragma omp parallel for 
+         for (int i = 0; i < LEN_1D-1; i++) {
+             a[i] *= c[i];
+         }

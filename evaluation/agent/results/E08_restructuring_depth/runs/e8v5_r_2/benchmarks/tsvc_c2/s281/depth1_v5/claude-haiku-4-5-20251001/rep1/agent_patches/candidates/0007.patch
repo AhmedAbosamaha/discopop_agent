@@ -1,0 +1,36 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_2/benchmarks/tsvc_c2/s281/depth1_v5/claude-haiku-4-5-20251001/rep1/work/s281.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_2/benchmarks/tsvc_c2/s281/depth1_v5/claude-haiku-4-5-20251001/rep1/work/s281.c
+@@ -1,23 +1,22 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s281(void)
+ {
+-    real_t x;
++    real_t *x_vals = malloc(LEN_1D * sizeof(real_t));
+     int boundary = (LEN_1D - 1) / 2;
+     for (int nl = 0; nl < iterations; nl++) {
+-        // Stage 1: iterations with no cross-iteration dependencies
+-        for (int i = 0; i <= boundary; i++) {
+-            x = a[LEN_1D-i-1] + b[i] * c[i];
+-            a[i] = x-(real_t)1.0;
+-            b[i] = x;
++        // Compute phase: all iterations read from old a, b independently
++        for (int i = 0; i < LEN_1D; i++) {
++            x_vals[i] = a[LEN_1D-i-1] + b[i] * c[i];
+         }
+-        // Stage 2: iterations that only depend on stage 1
+-        for (int i = boundary + 1; i < LEN_1D; i++) {
+-            x = a[LEN_1D-i-1] + b[i] * c[i];
+-            a[i] = x-(real_t)1.0;
+-            b[i] = x;
++        // Update phase: all iterations write to a, b independently
++        for (int i = 0; i < LEN_1D; i++) {
++            a[i] = x_vals[i]-(real_t)1.0;
++            b[i] = x_vals[i];
+         }
+         dummy(a, b, c, d, e);
+     }
++    free(x_vals);
+     return (real_t)0;
+ }

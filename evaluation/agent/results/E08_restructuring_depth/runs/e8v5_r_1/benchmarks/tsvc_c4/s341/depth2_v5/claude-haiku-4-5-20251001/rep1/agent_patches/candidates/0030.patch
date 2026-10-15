@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c4/s341/depth2_v5/claude-haiku-4-5-20251001/rep1/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c4/s341/depth2_v5/claude-haiku-4-5-20251001/rep1/work/s341.c
+@@ -42,6 +42,7 @@
+         }
+ 
+         // Compact helper array into indices (each thread writes to predetermined position)
++        #pragma omp parallel for shared(helper,prefix,indices) 
+         for (int i = 0; i < LEN_1D; i++) {
+             if (helper[i]) {
+                 indices[prefix[i]] = i;

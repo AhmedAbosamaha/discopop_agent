@@ -1,0 +1,24 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c4/s341/depth2_v5/claude-haiku-4-5-20251001/rep2/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c4/s341/depth2_v5/claude-haiku-4-5-20251001/rep2/work/s341.c
+@@ -15,12 +15,19 @@
+             mask[i] = (b[i] > (real_t)0.) ? 1 : 0;
+         }
+ 
+-        // Phase 2&3: Compute prefix sum position on-the-fly and write filtered elements
++        // Phase 2: Compute prefix sum positions for each element
+         int sum = 0;
+         for (int i = 0; i < LEN_1D; i++) {
+             if (mask[i]) {
+-                a[sum] = b[i];
++                positions[i] = sum;
+                 sum++;
++            }
++        }
++
++        // Phase 3: Write filtered elements using precomputed positions
++        for (int i = 0; i < LEN_1D; i++) {
++            if (mask[i]) {
++                a[positions[i]] = b[i];
+             }
+         }
+ 

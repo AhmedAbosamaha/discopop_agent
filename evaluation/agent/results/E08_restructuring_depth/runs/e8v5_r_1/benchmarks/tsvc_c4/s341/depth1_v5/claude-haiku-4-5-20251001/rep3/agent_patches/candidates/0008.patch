@@ -1,0 +1,33 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c4/s341/depth1_v5/claude-haiku-4-5-20251001/rep3/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c4/s341/depth1_v5/claude-haiku-4-5-20251001/rep3/work/s341.c
+@@ -17,17 +17,26 @@
+             count += valid[i];
+         }
+ 
+-        // Phase 2: Compute prefix sum to assign positions (sequential)
++        // Phase 2: Compute prefix sum to assign positions (sequential prefix, then parallel assignment)
+         int *positions = (int *)malloc(LEN_1D * sizeof(int));
+-        j = -1;
++        int *prefix = (int *)malloc(LEN_1D * sizeof(int));
++
++        // Compute prefix sum: prefix[i] = count of valid elements before i
++        prefix[0] = 0;
++        for (int i = 1; i < LEN_1D; i++) {
++            prefix[i] = prefix[i-1] + valid[i-1];
++        }
++
++        // Assign positions using prefix sum (Do-All: no loop-carried dependences)
+         for (int i = 0; i < LEN_1D; i++) {
+             if (valid[i]) {
+-                j++;
+-                positions[i] = j;
++                positions[i] = prefix[i];
+             } else {
+                 positions[i] = -1;
+             }
+         }
++
++        free(prefix);
+ 
+         // Phase 3: Write elements to their assigned positions (Do-All loop)
+         for (int i = 0; i < LEN_1D; i++) {

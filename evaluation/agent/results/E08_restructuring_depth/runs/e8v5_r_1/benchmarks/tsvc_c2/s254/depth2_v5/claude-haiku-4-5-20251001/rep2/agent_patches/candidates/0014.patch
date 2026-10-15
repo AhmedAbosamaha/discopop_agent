@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c2/s254/depth2_v5/claude-haiku-4-5-20251001/rep2/work/s254.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c2/s254/depth2_v5/claude-haiku-4-5-20251001/rep2/work/s254.c
+@@ -15,6 +15,7 @@
+     memcpy(b_states[0], b, LEN_1D * sizeof(real_t));
+ 
+     for (int nl = 0; nl < iterations; nl++) {
++        #pragma omp parallel for firstprivate(nl) shared(b_states) 
+         for (int i = 0; i < LEN_1D; i++) {
+             real_t x = (i == 0) ? b_states[nl][LEN_1D-1] : b_states[nl][i-1];
+             a[i] = (b_states[nl][i] + x) * (real_t).5;

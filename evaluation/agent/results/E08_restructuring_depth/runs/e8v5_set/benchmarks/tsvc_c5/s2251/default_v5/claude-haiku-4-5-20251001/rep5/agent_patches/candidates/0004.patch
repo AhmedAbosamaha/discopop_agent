@@ -1,0 +1,16 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_set/benchmarks/tsvc_c5/s2251/default_v5/claude-haiku-4-5-20251001/rep5/work/s2251.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_set/benchmarks/tsvc_c5/s2251/default_v5/claude-haiku-4-5-20251001/rep5/work/s2251.c
+@@ -8,11 +8,13 @@
+ 
+         // First pass: compute s values sequentially (s[i] depends on b[i-1], c[i-1])
+         s_array[0] = (real_t)0.0;
++        #pragma omp parallel for shared(s_array) 
+         for (int i = 1; i < LEN_1D; i++) {
+             s_array[i] = b[i-1]+c[i-1];
+         }
+ 
+         // Second pass: compute a and b using precomputed s_array (now parallel)
++        #pragma omp parallel for shared(s_array) 
+         for (int i = 0; i < LEN_1D; i++) {
+             a[i] = s_array[i]*e[i];
+             b[i] = a[i]+d[i];

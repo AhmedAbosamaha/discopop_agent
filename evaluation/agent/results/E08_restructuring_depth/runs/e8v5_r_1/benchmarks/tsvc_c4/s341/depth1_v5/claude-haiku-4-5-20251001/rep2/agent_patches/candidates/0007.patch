@@ -1,0 +1,27 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c4/s341/depth1_v5/claude-haiku-4-5-20251001/rep2/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c4/s341/depth1_v5/claude-haiku-4-5-20251001/rep2/work/s341.c
+@@ -6,16 +6,21 @@
+     int j;
+     int *indices = (int *)malloc(LEN_1D * sizeof(int));
+     for (int nl = 0; nl < iterations; nl++) {
++        real_t *b_local = (real_t *)malloc(LEN_1D * sizeof(real_t));
++        for (int i_copy = 0; i_copy < LEN_1D; i_copy++) {
++            b_local[i_copy] = b[i_copy];
++        }
+         j = -1;
+         for (int i = 0; i < LEN_1D; i++) {
+-            if (b[i] > (real_t)0.) {
++            if (b_local[i] > (real_t)0.) {
+                 indices[++j] = i;
+             }
+         }
+         for (int k = 0; k <= j; k++) {
+-            a[k] = b[indices[k]];
++            a[k] = b_local[indices[k]];
+         }
+-        dummy(a, b, c, d, e);
++        dummy(a, b_local, c, d, e);
++        free(b_local);
+     }
+     free(indices);
+     return (real_t)0;

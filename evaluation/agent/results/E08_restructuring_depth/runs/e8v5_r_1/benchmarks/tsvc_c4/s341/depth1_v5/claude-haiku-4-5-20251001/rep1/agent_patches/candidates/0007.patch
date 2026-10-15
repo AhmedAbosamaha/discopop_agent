@@ -1,0 +1,29 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c4/s341/depth1_v5/claude-haiku-4-5-20251001/rep1/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c4/s341/depth1_v5/claude-haiku-4-5-20251001/rep1/work/s341.c
+@@ -5,22 +5,17 @@
+ {
+     int j;
+     for (int nl = 0; nl < iterations; nl++) {
+-        // Phase 1: gather indices of non-zero elements
+-        int *idx = (int *)malloc(LEN_1D * sizeof(int));
++        // Gather non-zero elements and write directly to output array
++        // Simplifies structure by avoiding intermediate index array
+         int count = 0;
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+-                idx[count++] = i;
++                a[count] = b[i];
++                count++;
+             }
+         }
+ 
+-        // Phase 2: write non-zero elements in order (no loop-carried dependence)
+-        for (int i = 0; i < count; i++) {
+-            a[i] = b[idx[i]];
+-        }
+-
+         j = count - 1;
+-        free(idx);
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

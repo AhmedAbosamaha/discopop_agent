@@ -1,0 +1,26 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_set/benchmarks/tsvc_c5/s257/depth2_v5/claude-haiku-4-5-20251001/rep3/work/s257.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_set/benchmarks/tsvc_c5/s257/depth2_v5/claude-haiku-4-5-20251001/rep3/work/s257.c
+@@ -6,6 +6,7 @@
+     for (int nl = 0; nl < iterations; nl++) {
+         real_t (*aa_new)[LEN_2D] = (real_t (*)[LEN_2D])malloc(LEN_2D * LEN_2D * sizeof(real_t));
+ 
++        #pragma omp parallel for shared(aa_new) 
+         for (int j = 0; j < LEN_2D; j++) {
+             for (int i = 0; i < LEN_2D; i++) {
+                 aa_new[j][i] = aa[j][i];
+@@ -14,6 +15,7 @@
+ 
+         for (int i = 1; i < LEN_2D; i++) {
+             real_t temp_a[LEN_2D];
++            #pragma omp parallel for firstprivate(aa_new,i) shared(temp_a) 
+             for (int j = 0; j < LEN_2D; j++) {
+                 temp_a[j] = aa[j][i] - a[i-1];
+                 aa_new[j][i] = temp_a[j] + bb[j][i];
+@@ -21,6 +23,7 @@
+             a[i] = temp_a[LEN_2D-1];
+         }
+ 
++ #pragma omp parallel for shared(aa_new) 
+         for (int j = 0; j < LEN_2D; j++) {
+             for (int i = 0; i < LEN_2D; i++) {
+                 aa[j][i] = aa_new[j][i];

@@ -1,0 +1,29 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_set/benchmarks/tsvc_c5/s221/depth2_v5/claude-haiku-4-5-20251001/rep1/work/s221.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_set/benchmarks/tsvc_c5/s221/depth2_v5/claude-haiku-4-5-20251001/rep1/work/s221.c
+@@ -8,13 +8,21 @@
+             a[i] += c[i] * d[i];
+         }
+ 
+-        // Compute b with explicit accumulator to preserve floating-point order
+-        // while changing the data dependence pattern
+-        real_t b_accumulator = b[0];
++        // Compute prefix sum of (a[i] + d[i])
++        real_t *prefix = (real_t *)malloc(LEN_1D * sizeof(real_t));
++        prefix[0] = 0;
++        real_t prefix_sum = 0;
+         for (int i = 1; i < LEN_1D; i++) {
+-            b_accumulator = b_accumulator + a[i] + d[i];
+-            b[i] = b_accumulator;
++            prefix_sum = prefix_sum + a[i] + d[i];
++            prefix[i] = prefix_sum;
+         }
++
++        // Compute b[i] in parallel using precomputed prefix sums
++        for (int i = 1; i < LEN_1D; i++) {
++            b[i] = b[0] + prefix[i];
++        }
++
++        free(prefix);
+ 
+         dummy(a, b, c, d, e);
+     }

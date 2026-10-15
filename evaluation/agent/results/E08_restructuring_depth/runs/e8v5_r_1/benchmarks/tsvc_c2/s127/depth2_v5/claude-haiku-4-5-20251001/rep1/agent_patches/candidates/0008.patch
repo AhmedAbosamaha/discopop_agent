@@ -1,0 +1,25 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c2/s127/depth2_v5/claude-haiku-4-5-20251001/rep1/work/s127.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c2/s127/depth2_v5/claude-haiku-4-5-20251001/rep1/work/s127.c
+@@ -5,17 +5,20 @@
+ real_t kernel_s127(void)
+ {
+     real_t *e_local = (real_t *)malloc(LEN_1D * sizeof(real_t));
++    real_t *d_iter = (real_t *)malloc(LEN_1D * sizeof(real_t));
+ 
+     for (int nl = 0; nl < iterations; nl++) {
++        memcpy(d_iter, d, LEN_1D * sizeof(real_t));
+         memcpy(e_local, e, LEN_1D * sizeof(real_t));
+ 
+         for (int i = 0; i < LEN_1D/2; i++) {
+-            a[2*i] = b[i] + c[i] * d[i];
+-            a[2*i+1] = b[i] + d[i] * e_local[i];
++            a[2*i] = b[i] + c[i] * d_iter[i];
++            a[2*i+1] = b[i] + d_iter[i] * e_local[i];
+         }
+         dummy(a, b, c, d, e);
+     }
+ 
++    free(d_iter);
+     free(e_local);
+     return (real_t)0;
+ }

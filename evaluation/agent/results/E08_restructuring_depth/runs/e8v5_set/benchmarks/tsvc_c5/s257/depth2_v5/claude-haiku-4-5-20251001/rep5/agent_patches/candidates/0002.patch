@@ -1,0 +1,31 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_set/benchmarks/tsvc_c5/s257/depth2_v5/claude-haiku-4-5-20251001/rep5/work/s257.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_set/benchmarks/tsvc_c5/s257/depth2_v5/claude-haiku-4-5-20251001/rep5/work/s257.c
+@@ -3,14 +3,26 @@
+ real_t kernel_s257(void)
+ {
+     for (int nl = 0; nl < iterations; nl++) {
++        real_t a_final[LEN_2D];
++
++        // Phase 1: Compute a_final values based on current a state
+         for (int i = 1; i < LEN_2D; i++) {
+-            real_t a_final = aa[LEN_2D-1][i] - a[i-1];
++            a_final[i] = aa[LEN_2D-1][i] - a[i-1];
++        }
++
++        // Phase 2: Update aa using unchanged a values (parallel over i)
++        for (int i = 1; i < LEN_2D; i++) {
+             for (int j = 0; j < LEN_2D; j++) {
+                 real_t a_temp = aa[j][i] - a[i-1];
+                 aa[j][i] = a_temp + bb[j][i];
+             }
+-            a[i] = a_final;
+         }
++
++        // Phase 3: Write computed a values
++        for (int i = 1; i < LEN_2D; i++) {
++            a[i] = a_final[i];
++        }
++
+         dummy(a, b, c, d, e, aa, bb, cc);
+     }
+     return (real_t)0;

@@ -1,0 +1,21 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_3/benchmarks/tsvc_c2/s292/depth1_v5/claude-haiku-4-5-20251001/rep1/work/s292.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_3/benchmarks/tsvc_c2/s292/depth1_v5/claude-haiku-4-5-20251001/rep1/work/s292.c
+@@ -3,13 +3,17 @@
+ real_t kernel_s292(void)
+ {
+     int im1, im2;
++    real_t *b_cache = (real_t *)malloc(LEN_1D * sizeof(real_t));
++    memcpy(b_cache, b, LEN_1D * sizeof(real_t));
++
+     for (int nl = 0; nl < iterations; nl++) {
+         for (int i = 0; i < LEN_1D; i++) {
+             int im1_local = (i - 1 + LEN_1D) % LEN_1D;
+             int im2_local = (i - 2 + LEN_1D) % LEN_1D;
+-            a[i] = (b[i] + b[im1_local] + b[im2_local]) * (real_t).333;
++            a[i] = (b_cache[i] + b_cache[im1_local] + b_cache[im2_local]) * (real_t).333;
+         }
+         dummy(a, b, c, d, e);
+     }
++    free(b_cache);
+     return (real_t)0;
+ }
