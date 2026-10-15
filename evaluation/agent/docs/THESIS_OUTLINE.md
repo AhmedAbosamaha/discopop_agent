@@ -643,8 +643,9 @@ result, or the expectation written down before the run.
   0.92. Read program by program: on `s2251` the model did both steps in one rewrite at depth 0 (4 of 5); on `s257`
   depth 0 always stopped at step 1 and the deeper levels reached the final form — the outer loop parallel, 6.5× to
   7.6× against 4.4× to 4.6× — in 1 of 5 trials at depth 1 and 2 of 5 at depth 2, each by the last level's rewrite;
-  `s221` was never faster. The refutation conditions written on 14 Sep hold on their own terms (no correct speed-up
-  added; the cost rose), beside the registered verdict. On the 18 loops (a description): 34 and 28 of 54 at depth 1
+  `s221` was never faster. Of the refutation conditions written on 14 Sep, "no correct speed-up added" holds on the
+  three loops; the cost rose on `s2251` and `s257` and fell on `s221` (depth 0 spent its calls there on rewrites the
+  speed question sent back), and rose on the 18 loops — said beside the registered verdict. On the 18 loops (a description): 34 and 28 of 54 at depth 1
   and 2 against 75 of 90 at depth 0, median model calls 2 → 4 → 5 and agent time 4.7 → 9.3 → 11.8 minutes per
   trial; the programs that succeeded are no faster (median 2.16×, 2.17×, 2.36× at 6 threads). The first property
   of depth as built, measured: in 54 of the 138 deeper trials the finished program was slower than the original
@@ -796,7 +797,7 @@ the results folder · F. Full result tables · G. The agent's command-line refer
 |---|---|---|
 | Coverage (C1) | the main comparison; the hidden-order experiments | **supported on kernels**; a large code and RepoOMP planned |
 | Trust (C2) | no unusable program in the main comparison; the speed check; the unsafe cases named | **supported**; the gate's own error rate planned |
-| Cost (C3) | calls, time and cost recorded in every run; the fast-refresh experiment (7.7.2) | **a measured negative result** on the refresh and on the model's report (add-not-delete stays a design argument); the depth trials run and read out (15 Oct): extra rounds bought no more successes at two to two and a half times the calls and time, and three wrong programs the agent's checks could not see; the refresh's live trials wait for theirs (two candidates pass the screen, the package form is the author's); the large code planned |
+| Cost (C3) | calls, time and cost recorded in every run; the fast-refresh experiment (7.7.2) | **a measured negative result** on the refresh and on the model's report (add-not-delete stays a design argument); the depth trials run and read out (15 Oct): on the 18 loops extra rounds bought fewer successes at two to two and a half times the calls and time, and three wrong programs the agent's checks could not see; the refresh's live trials wait for theirs (two candidates pass the screen, the package form is the author's); the large code planned |
 
 Dropped, to be said in the thesis with the reason: the profiling-cost curve (26 Sep: it measures DiscoPoP, not
 the agent); the small open model as a third model; the evidence's parts and the prompt's parts given one by one
