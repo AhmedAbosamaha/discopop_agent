@@ -1,6 +1,6 @@
 # Agent experiment run `e8v5_set`
 
-- status: finished (created 2026-10-14T20:26:41, finished 2026-10-15T06:09:27)
+- status: finished (created 2026-10-14T20:26:41, finished 2026-10-15T06:25:28)
 - host: `rms14562`, compilers `/usr/bin/clang-20` / `/usr/bin/clang++-20`
 - agent: `305edbdef8e081e530b86f74c1f5035d4bd99122` (uncommitted diff sha256 `None`)
 - harness: `305edbdef8e081e530b86f74c1f5035d4bd99122` on `agentic_DiscoPop`
@@ -16,7 +16,7 @@ Outcomes are judged by the harness, not by the agent: `BROKEN` means the final p
 
 | Arm | Model | Trials | FASTER | parallel-not-faster | parallel-speed-not-measurable | changed-not-parallel | no-change | BROKEN | SCAFFOLD_MODIFIED | VERIFY_FAILED | AGENT_ERROR | AGENT_TIMEOUT | PROFILE_ERROR | Median agent s | LLM calls |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| default_v5 | claude-haiku-4-5-20251001 | 15 | 8 | 1 | 0 | 0 | 6 | 0 | 0 | 0 | 0 | 0 | 0 | 411 | 84 |
+| default_v5 | claude-haiku-4-5-20251001 | 15 | 9 | 1 | 0 | 0 | 5 | 0 | 0 | 0 | 0 | 0 | 0 | 411 | 73 |
 | depth1_v5 | claude-haiku-4-5-20251001 | 15 | 8 | 0 | 0 | 0 | 7 | 0 | 0 | 0 | 0 | 0 | 0 | 515 | 64 |
 | depth2_v5 | claude-haiku-4-5-20251001 | 15 | 7 | 0 | 0 | 0 | 8 | 0 | 0 | 0 | 0 | 0 | 0 | 902 | 111 |
 
@@ -57,7 +57,7 @@ Outcomes are judged by the harness, not by the agent: `BROKEN` means the final p
 | tsvc_c5/s257 | default_v5 | claude-haiku-4-5-20251001 | 1 | FASTER | 4.54x | 1+0 | 1 | 0 | 1 | 160.2 |
 | tsvc_c5/s257 | default_v5 | claude-haiku-4-5-20251001 | 2 | FASTER | 3.13x | 2+0 | 1 | 0 | 2 | 272.5 |
 | tsvc_c5/s257 | default_v5 | claude-haiku-4-5-20251001 | 3 | FASTER | 4.42x | 1+0 | 1 | 0 | 2 | 159.9 |
-| tsvc_c5/s257 | default_v5 | claude-haiku-4-5-20251001 | 4 | no-change | 1.01x | 0+0 | 0 | 0 | 12 | 225.9 |
+| tsvc_c5/s257 | default_v5 | claude-haiku-4-5-20251001 | 4 | FASTER | 4.51x | 1+0 | 1 | 0 | 1 | 177.6 |
 | tsvc_c5/s257 | default_v5 | claude-haiku-4-5-20251001 | 5 | FASTER | 4.58x | 1+0 | 1 | 0 | 1 | 169.1 |
 | tsvc_c5/s257 | depth1_v5 | claude-haiku-4-5-20251001 | 1 | FASTER | 4.54x | 1+0 | 2 | 0 | 4 | 506.5 |
 | tsvc_c5/s257 | depth1_v5 | claude-haiku-4-5-20251001 | 2 | FASTER | 4.10x | 2+0 | 2 | 0 | 4 | 296.2 |

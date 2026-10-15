@@ -7259,12 +7259,12 @@
         "2",
         "--timing-cflags=-DLARGE_DATASET"
       ],
-      "started_at": "2026-10-15T04:13:14",
+      "started_at": "2026-10-15T06:22:35",
       "host": "rms14562",
       "host_load_start": [
-        5.56396484375,
-        3.38427734375,
-        2.60986328125
+        0.7705078125,
+        0.9677734375,
+        0.8017578125
       ],
       "agent_cmd": [
         "/home/ahmedabosamaha/discopop_agent/venv/bin/python",
@@ -7301,19 +7301,19 @@
         "--explorer-timeout",
         "60"
       ],
-      "agent_s": 340.0,
+      "agent_s": 815.1,
       "agent_rc": 0,
-      "llm_calls": 9,
-      "llm_call_failures": 6,
+      "llm_calls": 5,
+      "llm_call_failures": 0,
       "harness_reasks": 0,
       "harness_discards": 0,
       "explorer_retries": 0,
       "explorer_stalls": 0,
       "reverts": 1,
       "refresh_fast": 0,
-      "refresh_full": 2,
+      "refresh_full": 4,
       "refresh_fallback": 0,
-      "runtime_remeasurements": 2,
+      "runtime_remeasurements": 4,
       "phase_b_deferred": 0,
       "phase_b_joint_kept": 0,
       "dp_floor": "original",
@@ -7321,39 +7321,40 @@
         "compile": 1
       },
       "gate_failures_phase_b": {},
-      "gate_passes_phase_a": 2,
+      "gate_passes_phase_a": 4,
       "gate_failures_d40": {},
       "d40_verdicts": {
-        "safe_deferred": 1
+        "safe_deferred": 2,
+        "not_faster": 1,
+        "ok": 1
       },
       "exposure_verdicts": {
-        "no_pattern": 1,
-        "exposed": 1
+        "exposed": 4
       },
-      "d40_seconds": 1.4,
+      "d40_seconds": 221.0,
       "requeued_regions": 0,
       "region_verdicts": {
-        "ACCEPTED": 1,
+        "ACCEPTED": 3,
+        "DEFERRED": 3,
         "SKIPPED": 2,
-        "DEFERRED": 1,
-        "APPLIED": 1
+        "APPLIED": 2
       },
       "settle_dropped": 0,
       "baseline_claimed": 0,
       "baseline_pragmas": 0,
-      "rewrites_kept": 1,
-      "pragmas_applied": 1,
-      "pragmas_discopop": 1,
+      "rewrites_kept": 3,
+      "pragmas_applied": 2,
+      "pragmas_discopop": 2,
       "pragmas_llm": 0,
-      "regions_skipped": 1,
+      "regions_skipped": 2,
       "llm_usage": {
-        "calls_recorded": 21,
-        "input_tokens": 127,
-        "output_tokens": 26603,
-        "cache_read_input_tokens": 284145,
-        "cache_creation_input_tokens": 21799,
-        "cost_usd": 0.3396,
-        "model_seconds": 231.8
+        "calls_recorded": 5,
+        "input_tokens": 178,
+        "output_tokens": 66424,
+        "cache_read_input_tokens": 538795,
+        "cache_creation_input_tokens": 78505,
+        "cost_usd": 1.0654,
+        "model_seconds": 553.0
       },
       "layout": "project",
       "files_changed": [
@@ -7369,8 +7370,8 @@
         "s254.c"
       ],
       "harness_sha256": "75e53a112d7571f6db3eb825fba7576ef686d0c99ca36e02373541823b5ae388",
-      "pragmas_added": 1,
-      "pragmas_in_final": 1,
+      "pragmas_added": 2,
+      "pragmas_in_final": 2,
       "hot_loop": {
         "entry": "kernel_s254",
         "function": "kernel_s254",
@@ -7386,7 +7387,15 @@
         "covering": [
           {
             "function": "kernel_s254",
-            "line": 6,
+            "line": 7,
+            "directive": "#pragma omp parallel for",
+            "writes": [
+              "a"
+            ]
+          },
+          {
+            "function": "kernel_s254",
+            "line": 16,
             "directive": "#pragma omp parallel for",
             "writes": [
               "a"
@@ -7396,7 +7405,7 @@
         "uncounted": [],
         "elsewhere": []
       },
-      "candidates_recorded": 6,
+      "candidates_recorded": 16,
       "verify": {
         "verify_size": "EXTRALARGE",
         "threads": [
@@ -7411,25 +7420,25 @@
         "seed": "7",
         "dump_exact_seeded": true,
         "dump_seeded_max_rel_err": 0.0,
-        "seq_median_s": 5.3371,
-        "seq_kernel_median_s": 3.027322,
+        "seq_median_s": 5.1905,
+        "seq_kernel_median_s": 2.968708,
         "timing_basis": "kernel",
         "par": {
           "6": {
-            "median_s": 3.2554,
-            "program_speedup": 1.639,
+            "median_s": 3.1803,
+            "program_speedup": 1.632,
             "max_rel_err": 0.0,
-            "kernel_median_s": 0.886562,
-            "kernel_speedup": 3.415,
-            "speedup": 3.415
+            "kernel_median_s": 0.834425,
+            "kernel_speedup": 3.558,
+            "speedup": 3.558
           },
           "12": {
-            "median_s": 3.2407,
-            "program_speedup": 1.647,
+            "median_s": 3.1764,
+            "program_speedup": 1.634,
             "max_rel_err": 0.0,
-            "kernel_median_s": 0.869983,
-            "kernel_speedup": 3.48,
-            "speedup": 3.48
+            "kernel_median_s": 0.84638,
+            "kernel_speedup": 3.508,
+            "speedup": 3.508
           }
         },
         "digest_max_rel_err": 0.0,
@@ -7439,14 +7448,14 @@
         "status": "ok",
         "speed_measurable": true
       },
-      "verify_s": 69.7,
+      "verify_s": 68.6,
       "status": "done",
       "outcome": "FASTER",
-      "finished_at": "2026-10-15T04:20:04",
+      "finished_at": "2026-10-15T06:37:18",
       "host_load_end": [
-        2.44970703125,
-        2.2490234375,
-        2.28955078125
+        3.6748046875,
+        1.79296875,
+        1.19580078125
       ],
       "profile": {
         "wrapper": "discopop_cc",
@@ -7475,7 +7484,7 @@
       "package_integrity": {
         "before": {
           "checked": "before trial",
-          "at": "2026-10-15T04:13:14",
+          "at": "2026-10-15T06:22:35",
           "prepared_sha256": "3326d0e2e3304ed6c7f107fa0a3217b4d9babfde6341809ef31f5b4ed3a25637",
           "packager_sha256": "3326d0e2e3304ed6c7f107fa0a3217b4d9babfde6341809ef31f5b4ed3a25637",
           "harness_sha256": "75e53a112d7571f6db3eb825fba7576ef686d0c99ca36e02373541823b5ae388",
@@ -7485,7 +7494,7 @@
         },
         "after": {
           "checked": "after trial",
-          "at": "2026-10-15T04:20:04",
+          "at": "2026-10-15T06:37:18",
           "prepared_sha256": "3326d0e2e3304ed6c7f107fa0a3217b4d9babfde6341809ef31f5b4ed3a25637",
           "packager_sha256": "3326d0e2e3304ed6c7f107fa0a3217b4d9babfde6341809ef31f5b4ed3a25637",
           "harness_sha256": "75e53a112d7571f6db3eb825fba7576ef686d0c99ca36e02373541823b5ae388",

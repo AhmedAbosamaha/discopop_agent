@@ -27,7 +27,7 @@
 | tsvc_c2/s254 | depth1_v5 | claude-haiku-4-5-20251001 | 1 | FASTER | 3.47x | 1+0 | 2 | 0 | 4 | 391.0 |
 | tsvc_c2/s254 | depth1_v5 | claude-haiku-4-5-20251001 | 2 | FASTER | 3.48x | 1+0 | 2 | 0 | 6 | 543.3 |
 | tsvc_c2/s254 | depth1_v5 | claude-haiku-4-5-20251001 | 3 | FASTER | 3.45x | 1+0 | 2 | 0 | 4 | 572.5 |
-| tsvc_c2/s254 | depth2_v5 | claude-haiku-4-5-20251001 | 1 | FASTER | 3.48x | 1+0 | 1 | 0 | 9 | 340.0 |
+| tsvc_c2/s254 | depth2_v5 | claude-haiku-4-5-20251001 | 1 | FASTER | 3.56x | 2+0 | 3 | 0 | 5 | 815.1 |
 | tsvc_c2/s254 | depth2_v5 | claude-haiku-4-5-20251001 | 2 | no-change | 1.01x | 0+0 | 0 | 0 | 5 | 892.7 |
 | tsvc_c2/s254 | depth2_v5 | claude-haiku-4-5-20251001 | 3 | FASTER | 3.45x | 1+0 | 3 | 0 | 9 | 1208.9 |
 | tsvc_c4/s341 | depth1_v5 | claude-haiku-4-5-20251001 | 1 | no-change | 1.01x | 0+0 | 0 | 0 | 12 | 1398.0 |

@@ -12,7 +12,7 @@
 | tsvc_c5/s2251 | default_v5 | claude-haiku-4-5-20251001 | — · — | FASTER,FASTER,FASTER,FASTER,parallel-not-faster · 2.35x | — | 5 no-baseline |
 | tsvc_c5/s2251 | depth1_v5 | claude-haiku-4-5-20251001 | — · — | FASTER,FASTER,FASTER,no-change,no-change · 2.36x | — | 5 no-baseline |
 | tsvc_c5/s2251 | depth2_v5 | claude-haiku-4-5-20251001 | — · — | FASTER,FASTER,no-change,no-change,no-change · 1.00x | — | 5 no-baseline |
-| tsvc_c5/s257 | default_v5 | claude-haiku-4-5-20251001 | — · — | FASTER,FASTER,FASTER,FASTER,no-change · 4.42x | — | 5 no-baseline |
+| tsvc_c5/s257 | default_v5 | claude-haiku-4-5-20251001 | — · — | FASTER,FASTER,FASTER,FASTER,FASTER · 4.51x | — | 5 no-baseline |
 | tsvc_c5/s257 | depth1_v5 | claude-haiku-4-5-20251001 | — · — | FASTER,FASTER,FASTER,FASTER,FASTER · 4.69x | — | 5 no-baseline |
 | tsvc_c5/s257 | depth2_v5 | claude-haiku-4-5-20251001 | — · — | FASTER,FASTER,FASTER,FASTER,FASTER · 4.50x | — | 5 no-baseline |
 

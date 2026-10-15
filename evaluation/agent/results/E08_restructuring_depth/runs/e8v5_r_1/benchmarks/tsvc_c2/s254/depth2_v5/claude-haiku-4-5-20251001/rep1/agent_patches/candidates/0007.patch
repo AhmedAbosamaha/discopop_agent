@@ -1,0 +1,44 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c2/s254/depth2_v5/claude-haiku-4-5-20251001/rep1/work/s254.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e8v5_r_1/benchmarks/tsvc_c2/s254/depth2_v5/claude-haiku-4-5-20251001/rep1/work/s254.c
+@@ -2,21 +2,33 @@
+ 
+ real_t kernel_s254(void)
+ {
+-    // Compute a for the first iteration
+-    for (int i = 0; i < LEN_1D; i++) {
+-        a[i] = (b[i] + b[(i - 1 + LEN_1D) % LEN_1D]) * (real_t).5;
++    // Allocate buffers to store b at each pipeline stage
++    real_t *b_stages = malloc(iterations * LEN_1D * sizeof(real_t));
++    real_t *a_stages = malloc(iterations * LEN_1D * sizeof(real_t));
++
++    // Store initial b state
++    memcpy(b_stages, b, LEN_1D * sizeof(real_t));
++
++    // Apply all dummy transformations sequentially, storing b state after each
++    for (int nl = 0; nl < iterations - 1; nl++) {
++        dummy(a, b, c, d, e);
++        memcpy(&b_stages[(nl + 1) * LEN_1D], b, LEN_1D * sizeof(real_t));
+     }
+ 
+-    // Pipeline: each iteration applies dummy (modifying b), then computes a for next iteration
+-    for (int nl = 0; nl < iterations - 1; nl++) {
+-        dummy(a, b, c, d, e);
++    // Compute a for each pipeline stage - iterations are independent (Do-All)
++    for (int nl = 0; nl < iterations; nl++) {
+         for (int i = 0; i < LEN_1D; i++) {
+-            a[i] = (b[i] + b[(i - 1 + LEN_1D) % LEN_1D]) * (real_t).5;
++            a_stages[nl * LEN_1D + i] = (b_stages[nl * LEN_1D + i] + b_stages[nl * LEN_1D + ((i - 1 + LEN_1D) % LEN_1D)]) * (real_t).5;
+         }
+     }
+ 
+-    // Apply dummy for the final iteration
++    // Copy final a value
++    memcpy(a, &a_stages[(iterations - 1) * LEN_1D], LEN_1D * sizeof(real_t));
++
++    // Apply final dummy transformation
+     dummy(a, b, c, d, e);
+ 
++    free(b_stages);
++    free(a_stages);
+     return (real_t)0;
+ }

@@ -8490,12 +8490,12 @@
         "5",
         "--timing-cflags=-DSTANDARD_DATASET"
       ],
-      "started_at": "2026-10-15T04:15:57",
+      "started_at": "2026-10-15T06:22:20",
       "host": "rms14562",
       "host_load_start": [
-        3.166015625,
-        2.78271484375,
-        2.4736328125
+        0.712890625,
+        0.9658203125,
+        0.7978515625
       ],
       "agent_cmd": [
         "/home/ahmedabosamaha/discopop_agent/venv/bin/python",
@@ -8530,53 +8530,62 @@
         "--explorer-timeout",
         "60"
       ],
-      "agent_s": 225.9,
+      "agent_s": 177.6,
       "agent_rc": 0,
-      "llm_calls": 12,
-      "llm_call_failures": 12,
+      "llm_calls": 1,
+      "llm_call_failures": 0,
       "harness_reasks": 0,
       "harness_discards": 0,
       "explorer_retries": 0,
       "explorer_stalls": 0,
       "reverts": 0,
       "refresh_fast": 0,
-      "refresh_full": 0,
+      "refresh_full": 1,
       "refresh_fallback": 0,
-      "runtime_remeasurements": 0,
+      "runtime_remeasurements": 1,
       "phase_b_deferred": 0,
       "phase_b_joint_kept": 0,
       "dp_floor": "original",
       "gate_failures_phase_a": {},
       "gate_failures_phase_b": {},
-      "gate_passes_phase_a": 0,
+      "gate_passes_phase_a": 1,
       "gate_failures_d40": {},
-      "d40_verdicts": {},
-      "exposure_verdicts": {},
-      "d40_seconds": 0,
+      "d40_verdicts": {
+        "ok": 1
+      },
+      "exposure_verdicts": {
+        "exposed": 1
+      },
+      "d40_seconds": 33.7,
       "requeued_regions": 0,
       "region_verdicts": {
-        "SKIPPED": 4
+        "ACCEPTED": 1,
+        "SKIPPED": 3,
+        "DEFERRED": 1,
+        "APPLIED": 1
       },
       "settle_dropped": 0,
       "baseline_claimed": 0,
       "baseline_pragmas": 0,
-      "rewrites_kept": 0,
-      "pragmas_applied": 0,
-      "pragmas_discopop": 0,
+      "rewrites_kept": 1,
+      "pragmas_applied": 1,
+      "pragmas_discopop": 1,
       "pragmas_llm": 0,
-      "regions_skipped": 4,
+      "regions_skipped": 2,
       "llm_usage": {
-        "calls_recorded": 36,
-        "input_tokens": 10,
-        "output_tokens": 12780,
-        "cache_read_input_tokens": 12189,
-        "cache_creation_input_tokens": 2697,
-        "cost_usd": 0.0734,
-        "model_seconds": 116.8
+        "calls_recorded": 1,
+        "input_tokens": 26,
+        "output_tokens": 16203,
+        "cache_read_input_tokens": 42396,
+        "cache_creation_input_tokens": 18551,
+        "cost_usd": 0.1253,
+        "model_seconds": 116.7
       },
       "layout": "project",
-      "files_changed": [],
-      "source_changed": false,
+      "files_changed": [
+        "s257.c"
+      ],
+      "source_changed": true,
       "scaffold": {
         "ok": true,
         "problems": [],
@@ -8586,8 +8595,8 @@
         "s257.c"
       ],
       "harness_sha256": "d56b42cd9b0a383813c03e899820b5446318807e66b9c4bf05338dabe6ff8c2b",
-      "pragmas_added": 0,
-      "pragmas_in_final": 0,
+      "pragmas_added": 1,
+      "pragmas_in_final": 1,
       "hot_loop": {
         "entry": "kernel_s257",
         "function": "kernel_s257",
@@ -8597,15 +8606,24 @@
           "aa"
         ]
       },
-      "hot_loop_covered": false,
+      "hot_loop_covered": true,
       "hot_loop_coverage": {
         "criterion": "v2 (27 Sep 2026)",
-        "covered": false,
-        "covering": [],
+        "covered": true,
+        "covering": [
+          {
+            "function": "kernel_s257",
+            "line": 8,
+            "directive": "#pragma omp parallel for firstprivate(i)",
+            "writes": [
+              "aa"
+            ]
+          }
+        ],
         "uncounted": [],
         "elsewhere": []
       },
-      "candidates_recorded": 0,
+      "candidates_recorded": 3,
       "verify": {
         "verify_size": "STANDARD",
         "threads": [
@@ -8615,47 +8633,47 @@
         "repeats": 5,
         "compiler": "/usr/bin/clang-20",
         "final_flags": [],
-        "dump_exact": true,
-        "dump_max_rel_err": 0.0,
+        "dump_exact": false,
+        "dump_max_rel_err": 5.627456739628273e-16,
         "seed": "7",
-        "dump_exact_seeded": true,
-        "dump_seeded_max_rel_err": 0.0,
-        "seq_median_s": 1.0071,
-        "seq_kernel_median_s": 0.997477,
+        "dump_exact_seeded": false,
+        "dump_seeded_max_rel_err": 1.4654142259270714e-15,
+        "seq_median_s": 1.0125,
+        "seq_kernel_median_s": 1.003532,
         "timing_basis": "kernel",
         "par": {
           "6": {
-            "median_s": 1.0203,
-            "program_speedup": 0.987,
-            "max_rel_err": 0.0,
-            "kernel_median_s": 1.009695,
-            "kernel_speedup": 0.988,
-            "speedup": 0.988
+            "median_s": 0.2328,
+            "program_speedup": 4.349,
+            "max_rel_err": 1.2101964838931773e-15,
+            "kernel_median_s": 0.222603,
+            "kernel_speedup": 4.508,
+            "speedup": 4.508
           },
           "12": {
-            "median_s": 0.9935,
-            "program_speedup": 1.014,
-            "max_rel_err": 0.0,
-            "kernel_median_s": 0.984115,
-            "kernel_speedup": 1.014,
-            "speedup": 1.014
+            "median_s": 0.4641,
+            "program_speedup": 2.182,
+            "max_rel_err": 1.2101964838931773e-15,
+            "kernel_median_s": 0.455058,
+            "kernel_speedup": 2.205,
+            "speedup": 2.205
           }
         },
-        "digest_max_rel_err": 0.0,
+        "digest_max_rel_err": 1.2101964838931773e-15,
         "stable_at_fixed_threads": true,
         "kernel_program_disagree": false,
         "digest_seeded_rel_err": 0.0,
         "status": "ok",
         "speed_measurable": true
       },
-      "verify_s": 18.3,
+      "verify_s": 11.2,
       "status": "done",
-      "outcome": "no-change",
-      "finished_at": "2026-10-15T04:20:02",
+      "outcome": "FASTER",
+      "finished_at": "2026-10-15T06:25:28",
       "host_load_end": [
-        2.44970703125,
-        2.2490234375,
-        2.28955078125
+        1.60595703125,
+        1.0068359375,
+        0.82666015625
       ],
       "profile": {
         "wrapper": "discopop_cc",
@@ -8684,7 +8702,7 @@
       "package_integrity": {
         "before": {
           "checked": "before trial",
-          "at": "2026-10-15T04:15:57",
+          "at": "2026-10-15T06:22:19",
           "prepared_sha256": "e5c5ffe6fc1534a66862f13eaf5abbe93294c81f0fa52b771093df47f56d4f32",
           "packager_sha256": "e5c5ffe6fc1534a66862f13eaf5abbe93294c81f0fa52b771093df47f56d4f32",
           "harness_sha256": "d56b42cd9b0a383813c03e899820b5446318807e66b9c4bf05338dabe6ff8c2b",
@@ -8694,7 +8712,7 @@
         },
         "after": {
           "checked": "after trial",
-          "at": "2026-10-15T04:20:02",
+          "at": "2026-10-15T06:25:28",
           "prepared_sha256": "e5c5ffe6fc1534a66862f13eaf5abbe93294c81f0fa52b771093df47f56d4f32",
           "packager_sha256": "e5c5ffe6fc1534a66862f13eaf5abbe93294c81f0fa52b771093df47f56d4f32",
           "harness_sha256": "d56b42cd9b0a383813c03e899820b5446318807e66b9c4bf05338dabe6ff8c2b",
