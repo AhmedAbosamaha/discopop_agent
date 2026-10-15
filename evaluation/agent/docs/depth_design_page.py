@@ -98,7 +98,7 @@ th{font-weight:600;color:var(--mute);font-size:12.5px;letter-spacing:.04em;text-
 ul,ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;max-width:68ch}
 </style>
 <main>""")
-P.append("""<header><p class="k">Put to the author 13 Oct 2026 · depth trials reopened 13 Oct, late (the author: “run both”) · the benchmark is built and checked (14 Oct): three loops · your “ok” (14 Oct, 07:45 UTC) · the short test run found that the agent’s last check drops a second rewrite built on the first · your “ok” (13:23 UTC): that check repaired · the second short test run found a second defect · your “ok” (18:12 UTC): repaired too · the third short test run held the launch by my rule, though nothing in it is a defect · your “ok” (20:17 UTC): the 153 trials are running · the model writes the pragmas in the later experiments</p>
+P.append("""<header><p class="k">Put to the author 13 Oct 2026 · depth trials reopened 13 Oct, late (the author: “run both”) · the benchmark is built and checked (14 Oct): three loops · your “ok” (14 Oct, 07:45 UTC) · the short test run found that the agent’s last check drops a second rewrite built on the first · your “ok” (13:23 UTC): that check repaired · the second short test run found a second defect · your “ok” (18:12 UTC): repaired too · the third short test run held the launch by my rule, though nothing in it is a defect · your “ok” (20:17 UTC): the 153 trials ran · read out 15 Oct: no gain from extra rounds, three wrong programs · the model writes the pragmas in the later experiments</p>
 <h1>The depth experiment</h1>
 <p class="lede">When the agent keeps a rewrite, it profiles the program again and may find new regions. So far, in every experiment, such a region gets DiscoPoP's pragma at most and is never rewritten a second time. “Depth 1” would let the model be asked about it once more, “depth 2” twice. The experiment was planned to show whether that gains anything and what it costs.</p></header>""")
 
@@ -158,8 +158,90 @@ WHY_OUT = {"s233": "DiscoPoP alone already makes it faster (3 of 3 runs): nothin
            "s2111": "DiscoPoP finds nothing after the first rewrite and nothing in the finished program either"}
 new_lo = 15 * per_trial + 15 * d1[0] + 15 * d2[0]
 new_hi = 15 * per_trial + 15 * d1[1] + 15 * d2[1]
+# ---- the result (15 Oct): the read-out as registered and what was read by hand ----
+_AN = RES / "E08_restructuring_depth/analysis"
+_R8 = json.loads((_AN / "e8_readout.json").read_text())
+_h8 = _R8["h8"]
+_sc = _R8["set_cells"]
+_lc = _R8["loop_cells"]
+_ARMS = ("default_v5", "depth1_v5", "depth2_v5")
+_rf = lambda c: f"{c['faster_race_free']} of {c['n']}"
+
+
+def _pool(arm, key):
+    return [x for k, c in _lc.items() if k.endswith("|" + arm) for x in c[key]]
+
+
+def _med(xs):
+    xs = sorted(xs)
+    n = len(xs)
+    return (xs[n // 2] if n % 2 else (xs[n // 2 - 1] + xs[n // 2]) / 2) if n else None
+
+
+_l18 = {a: (sum(c["faster_race_free"] for k, c in _lc.items() if k.endswith("|" + a)),
+            sum(c["n"] for k, c in _lc.items() if k.endswith("|" + a)),
+            sum(c["unusable"] for k, c in _lc.items() if k.endswith("|" + a))) for a in _ARMS}
+_undone = {a: sum(1 for k, c in _R8["chains"].items() if f"/{a}/" in k and c["repairs"]) for a in _ARMS}
+_spd = {int(m.group(1)): (float(m.group(2)), float(m.group(3))) for m in re.finditer(
+    r"^depth (\d): \d+ FASTER programs, median ([0-9.]+) at 6 threads, ([0-9.]+) at 12", (_AN / "by_hand/speed_by_depth.txt").read_text(), re.M)}
+_bad = [(m.group(1), int(m.group(2))) for m in re.finditer(r"^== benchmarks__tsvc_c2__(s\d+)__rep\d at SMALL\n   input shipped: digest identical; dump: (\d+) of",
+                                                        (_AN / "by_hand/broken_replay_small.txt").read_text(), re.M)]
+_f107 = re.search(r"^flagged: (\d+)", (_AN / "by_hand/fix107_by_hand.txt").read_text(), re.M)
+_forms = (_AN / "by_hand/forms_depth_set.md").read_text()
+assert _R8["h8_verdict"] == "not established" and len(_bad) == 3 and _f107 and set(_spd) == {0, 1, 2}
+assert _undone["default_v5"] == 0 and int(_f107.group(1)) == _undone["depth1_v5"] + _undone["depth2_v5"]
+_n_final = {a: len(re.findall(rf"^\| `{a}` \| \d \| FASTER \| [0-9.]+ / [0-9.]+ \| \*\*final\*\*", _forms, re.M)) for a in _ARMS}
+P.append('<div class="card"><h3>The result (15 Oct): one or two extra rounds did not make the agent succeed more often — '
+         'and three of their programs were wrong</h3>')
+P.append("<p>All 153 trials ran (two of them again, after the subscription’s session limit had cut their model calls); the race "
+         "check found no race in any changed program. Counted as registered — a trial succeeds when the harness finds its program "
+         "correct and faster and the race check finds no race:</p>")
+P.append(table(["The depth set", "No extra round", "One extra round", "Two extra rounds"], [
+    [f"<code>{n}</code>"] + [_rf(_sc[f"tsvc_c5/{n}|{a}"]) for a in _ARMS] for n in ("s2251", "s221", "s257")]
+    + [["all three"] + [f"{sum(_sc[f'tsvc_c5/{n}|{a}']['faster_race_free'] for n in ('s2251', 's221', 's257'))} of "
+                        f"{sum(_sc[f'tsvc_c5/{n}|{a}']['n'] for n in ('s2251', 's221', 's257'))}" for a in _ARMS]]))
+P.append(f"<p><strong>The one test</strong> asked whether one extra round succeeds more often than none on these three loops: "
+         f"{_h8['depth1'][0]} of {_h8['depth1'][1]} against {_h8['depth0'][0]} of {_h8['depth0'][1]}, p = {_R8['h8_p_one_sided']:.2f} — "
+         f"not shown. Only <code>s2251</code> could tell the two apart: <code>s221</code> never got faster and <code>s257</code> "
+         f"always did. On <code>s2251</code> the model already did both steps in one rewrite without an extra round (4 of 5). "
+         f"On <code>s257</code> the extra rounds did reach the second step — the outer loop parallel, about 7 times as fast "
+         f"instead of about 4.5 — in {_n_final['depth1_v5']} of 5 trials with one extra round and {_n_final['depth2_v5']} of 5 "
+         f"with two, never without; the test cannot see that, because every <code>s257</code> trial counts as a success.</p>")
+P.append(table(["The 18 loops", "No extra round (the pragma experiment)", "One extra round", "Two extra rounds"], [
+    ["succeeded"] + [f"{_l18[a][0]} of {_l18[a][1]}" for a in _ARMS],
+    ["wrong programs"] + [str(_l18[a][2]) for a in _ARMS],
+    ["model calls per trial (median)"] + [f"{_med(_pool(a, 'calls')):g}" for a in _ARMS],
+    ["agent minutes per trial (median)"] + [f"{_med(_pool(a, 'agent_s')) / 60:.1f}" for a in _ARMS],
+    ["speed-up of the successful programs, 6 / 12 threads (median)"] + [f"{_spd[k][0]:.2f}× / {_spd[k][1]:.2f}×" for k in (0, 1, 2)],
+]))
+P.append(f"<p><strong>Why fewer successes.</strong> With a deeper round to come, the agent keeps each rewrite without asking "
+         f"whether it is faster — the property we wrote down in advance. In {_undone['depth1_v5'] + _undone['depth2_v5']} of the "
+         f"138 trials with extra rounds the finished program was slower than the original, and the agent’s last check undid "
+         f"everything (no such case without an extra round). On the 18 loops, where a program did succeed, it is no faster than "
+         f"without the extra rounds.</p>")
+P.append("<p><strong>The three wrong programs</strong> (<code>s121</code> and <code>s281</code> with one extra round, <code>s127</code> "
+         "with two). Each time the last round’s rewrite copies an array to remove a dependence, but takes the copy at a moment "
+         "that misses the small change <code>dummy</code> makes to that array between two repetitions — so a few values come out "
+         "one repetition old. The agent checks a program by comparing what it prints; these programs print a checksum built from "
+         "the two ends, the middle and every 16th value at the size the agent checks. The wrong values all sit between the "
+         f"sampled ones ({', '.join(f'{n}: {k}' for n, k in _bad)} of 160,001 values wrong), so the checksum matches exactly — "
+         "that is what I told you earlier, and it is the finding, not a reassurance. The harness’s own check prints every value "
+         "and caught all three. Without extra rounds the agent shipped no wrong program in any of the pragma experiment’s 220 "
+         "trials.</p>")
+P.append(table(["Still yours", "What the result says"], [
+    ["The checksum the agent compares",
+     "Recommended: record it as a limit of the agent’s checks — it judges what a program prints — and change nothing now: the "
+     "experiments that remain run without extra rounds, where it did not happen in any of the pragma experiment’s 220 trials. The honest case for changing it: a checksum "
+     "over every value would have let the agent catch all three, at almost no cost; but it changes what every later check "
+     "sees, so the earlier experiments would no longer be comparable."],
+    ["Whether <code>s221</code>’s scan counts as three steps", "No number changes: no setting made it faster in any of its 15 trials."],
+    ["The line-shift weakness (not repaired)",
+     f"Not seen: its sign appeared in no trial; the {_f107.group(1)} trials my check listed to read by hand are all programs the "
+     f"last check undid for speed, with no pragma left that a shifted line could have hidden."],
+]))
+P.append("</div>")
 # ---- your fourth "ok" (14 Oct, 20:17 UTC): the 153 trials launched ----
-P.append('<div class="card"><h3>Your “ok” (14 Oct, 20:17 UTC): the 153 trials are running</h3>')
+P.append('<div class="card"><h3>Your “ok” (14 Oct, 20:17 UTC): the 153 trials were launched</h3>')
 P.append("<p>Launched on the agent with both repairs (the last check keeps a chain of rewrites; the crash check runs at every "
          "round), exactly as registered, one run per group of 12 cores and nothing queued behind them:</p>")
 P.append(table(["Run", "Loops", "Settings", "Trials"], [
