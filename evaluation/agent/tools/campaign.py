@@ -392,12 +392,14 @@ def write_indexes(reg: Optional[dict] = None) -> List[Path]:
 
 # Experiments without a comparison against DiscoPoP alone, so without a read-out of one. What each must have instead,
 # once it is marked done, is its own read-out (THESIS_EXPERIMENTS §6, 13 and 15 Oct 2026):
-#   E4 — its runs replay saved rewrites and time single refreshes; its live trials were not run (the author);
+#   E4 — its runs replay saved rewrites and time single refreshes; its live trials (18 Oct) compare the agent with
+#        the fast refresh and the model's report against E3's and E3b's cells, read out by `e4live_readout.py`;
 #   E8 — its arms compare restructuring depths, all with DiscoPoP writing the pragma: the read-out of the archive
 #        (13 Oct) and that of its trials as pre-registered (`e8_readout.py`, 15 Oct).
 OWN_READOUTS: Dict[str, List[str]] = {
     "E4": ["analysis/e4_replay_readout.md", "analysis/e4_refresh_time_readout.md", "analysis/e4_report_dry_readout.md",
-           "analysis/e4_report_readout.md", "analysis/e4_report_placement_readout.md"],
+           "analysis/e4_report_readout.md", "analysis/e4_report_placement_readout.md",
+           "analysis/e4live_readout.md"],
     "E8": ["preflight/depth_from_the_archive.md", "analysis/e8_readout.md"],
 }
 
