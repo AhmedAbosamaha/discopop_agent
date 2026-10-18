@@ -7,7 +7,8 @@ cd "$(git -C "$(dirname "$0")" rev-parse --show-toplevel)/evaluation" || exit 1
 S=agent/tools/server.sh
 MODEL=claude-haiku-4-5-20251001
 stamp() { date -u '+%Y-%m-%d %H:%M:%S UTC'; }
-idle() { "$S" status 1 2>/dev/null | grep -q "No job running"; }
+idle() {  # the status into a variable first: with pipefail, grep -q stopping early would fail the pipe
+    local out; out=$("$S" status 1 2>/dev/null); grep -qi "no job running" <<< "$out"; }
 echo "== $(stamp) e4live_smoke: is the server idle?"
 idle || { echo "a job is running on the server: not launching"; exit 1; }
 "$S" run --node 0.0 -- tsvc_c2/s254 tsvc_c4/s316 --arms fast_recon_v5 --models "$MODEL" --trials 1 \

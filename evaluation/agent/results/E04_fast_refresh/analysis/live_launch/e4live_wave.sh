@@ -8,7 +8,8 @@ S=agent/tools/server.sh
 MODEL=claude-haiku-4-5-20251001
 COMMON=(--arms fast_recon_v5 --models "$MODEL" --trials 5 --threads 6,12 --repeats 5)
 stamp() { date -u '+%Y-%m-%d %H:%M:%S UTC'; }
-idle() { "$S" status 1 2>/dev/null | grep -q "No job running"; }
+idle() {  # the status into a variable first: with pipefail, grep -q stopping early would fail the pipe
+    local out; out=$("$S" status 1 2>/dev/null); grep -qi "no job running" <<< "$out"; }
 echo "== $(stamp) e4live wave: is the server idle?"
 idle || { echo "a job is running on the server: not launching"; exit 1; }
 "$S" run --node 0.0 -- tsvc_c2/s212 tsvc_c2/s243 tsvc_c2/s244 tsvc_c2/s252 tsvc_c3/s241 tsvc_c4/s318 \
