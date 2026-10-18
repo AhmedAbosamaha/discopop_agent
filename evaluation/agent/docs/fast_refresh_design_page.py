@@ -127,7 +127,7 @@ th{font-weight:600;color:var(--mute);font-size:12.5px;letter-spacing:.04em;text-
 ul,ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;max-width:68ch}
 </style>
 <main>""")
-P.append("""<header><p class="k">Put to the author 10 Oct 2026 · decided 12 Oct · steps 1 to 3 done 13 Oct · live trials reopened 13 Oct (the author: “run both”) · their benchmark: screened 14 Oct, two candidates, not ready</p>
+P.append("""<header><p class="k">Put to the author 10 Oct 2026 · decided 12 Oct · steps 1 to 3 done 13 Oct · live trials reopened 13 Oct (the author: “run both”) · their benchmark: screened 14 Oct, two candidates, not ready · 18 Oct: the later experiments dropped; your go — the live trials run on the loops</p>
 <h1>The fast-refresh experiment</h1>
 <p class="lede">After the model rewrites a loop, the agent profiles the whole program again: it compiles it with DiscoPoP's instrumentation, runs it, and lets DiscoPoP analyse the run. The fast refresh skips the run. It compiles only, and carries the dependences of the last run over to the new code. For the lines the model just wrote there is then no measurement. The second idea is to ask the model itself which dependences those lines have.</p></header>""")
 
@@ -139,8 +139,18 @@ P.append(table(["Step", "State", "In one line"], [
     ["2. The model's report", '<span class="st ok">done 13 Oct</span>',
      "The model's report gives back 20 of the 22 lost wins, but damages 11 of 58 rewrites the fast refresh had right — about 100 of all 541. Deleting dependences changed nothing. 136 calls, $8.53."],
     ["3. Time on long programs, no model", STEP3_STATE, STEP3_LINE],
-    ["4. Live trials", '<span class="st wait">reopened 13 Oct · benchmark not ready (14 Oct)</span>', "First dropped (your “ok go ahead”), then reopened by you the same night (“run both”). They run on the 18 loops as the reference and on programs whose profiling run is long, where a refresh can save time. That set comes to you with its cost before any model call."],
+    ["4. Live trials", '<span class="st wait">running on the loops since 18 Oct</span>', "First dropped (your “ok go ahead”), then reopened by you the same night (“run both”). On 18 Oct you made this and depth the last experiments and said “go with the fast refresh’s live trials”: they run on the loops, as priced — see below."],
 ]))
+# ---- 18 Oct: the live trials, on the loops ----------------------------------------------------------------------------
+import base64  # noqa: E402
+_FIG10 = (Path("evaluation/agent/results/E04_fast_refresh/analysis/fig_refresh_decisions.png")).read_bytes()
+P.append('<div class="card"><h3>18 Oct — the live trials run, on the loops</h3>')
+P.append("<p>You made the fast refresh and depth the last two experiments, dropped the rest, and said “go with the fast refresh’s live trials”. I read that as the route I had priced: the agent with the fast refresh and the model’s report, five trials on each of the 18 loops and of the contrast set with its control — 125 trials, about $100 — beside the trials of the same agent with the full re-profile from the pragma experiment and the contrast set. The route through NPB’s EP and CG is not taken: its packages were the RepoOMP work that was dropped, their form was never decided, and it was not priced; it can be added if you say so.</p>")
+P.append("<p><strong>What these trials can show and what they cannot.</strong> They show whether the decisions the fast refresh changes cost the agent wins in whole trials, where the model may try again — most of the lost wins of step 1 are on the contrast loops. They cannot show time saved: on these loops the run a refresh skips is a fraction of a second, so the saving is reported as estimated from step 1 and step 3.</p>")
+P.append("<p><strong>Before the 125:</strong> two trials as a test run, with a rule written before it ran — both must finish without a failed model call, and at least one must show a fast refresh after a kept rewrite followed by the model’s answered report. If it passes, the 125 start without another question; if not, it comes back to you.</p>")
+P.append("<figure style=\"margin:16px 0 0\"><img alt=\"Fig. 10: the agent's decision after a fast refresh against the full re-profile on 599 saved rewrites, and what the model's report repaired and broke\" style=\"max-width:100%;height:auto;border:1px solid var(--line);border-radius:6px\" src=\"data:image/png;base64," + base64.b64encode(_FIG10).decode() + "\">"
+         "<figcaption style=\"font-size:14px;color:var(--mute);margin-top:6px\">The thesis’s figure for this experiment (Fig. 10, drawn 18 Oct from the saved read-outs): (a) step 1 — the agent’s decision after a fast refresh against the full re-profile, with the control; (b) step 2 — what the model’s report repaired and broke. A third panel, the live trials, is added when they are read out.</figcaption></figure>")
+P.append("</div>")
 
 # ---- the benchmark for the live trials: the screen of 14 Oct (no model) ---------------------------------------------
 _SCR = Path("evaluation/agent/results/E04_fast_refresh/preflight/e4_refresh_screen_npbc")

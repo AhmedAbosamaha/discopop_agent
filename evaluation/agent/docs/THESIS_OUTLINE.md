@@ -16,10 +16,11 @@ of their own. Section 12 shows how to fold it back into six parts if that is pre
 
 ## 0 The thesis at a glance
 
-**Working title (the author decides).**
-1. *Dependences as Diagnoses: an LLM Agent that Restructures Code so that DiscoPoP Can Parallelize It*
-2. *Beyond Annotation: Combining Dependence Profiling and a Language Model to Parallelize Loops that Need Restructuring*
-3. *Agentic DiscoPoP: Profile-Guided Restructuring of Sequential Code for OpenMP*
+**Title — decided by the author (18 Oct).** *Agentic Parallelization using Data Dependence-Aware LLM-Driven Code
+Restructuring.* (The three candidates proposed here before were *Dependences as Diagnoses: an LLM Agent that Restructures
+Code so that DiscoPoP Can Parallelize It*, *Beyond Annotation: Combining Dependence Profiling and a Language Model to
+Parallelize Loops that Need Restructuring* and *Agentic DiscoPoP: Profile-Guided Restructuring of Sequential Code for
+OpenMP*.)
 
 **The thesis in one sentence.** A dependence DiscoPoP reports is read as a diagnosis, not as a limit: a language
 model rewrites the loop so that the dependence is gone, DiscoPoP confirms it and writes the OpenMP directive, and a
@@ -43,7 +44,7 @@ proposed here and is to be confirmed with the title.
 | RQ3 | How close do the accepted programs come to an expert's version, and do they scale with threads? | C1 | H4, H11 | E1, E2, E6, E11 | 7.2, 7.5, 7.9 | partly — on kernels (E1, E2); LULESH (E6) and RepoOMP (E11) dropped for now (18 Oct) |
 | RQ4 | What does the model need: DiscoPoP's evidence, feedback from failed attempts, or more strength? | C1 | H5, H5b, H5d, H12 | E2, E12 | 7.3, 7.5 | done |
 | RQ5 | Who should write the directive: DiscoPoP or the model? | C1, C2 | H6 (its half on the author), H6b | E3 | 7.7 | (decided 13 Oct: the model writes it in the experiments that remain — since 18 Oct none remains) done 10 Oct: 81 of 90 fast and race-free where the model writes, 76 of 90 where DiscoPoP writes — not established (p = 0.14; four of the five trials are `s331`); no unusable program in either setup; DiscoPoP keeps writing in 7.7.2 (the author, 10 Oct); corrected for `s341`: 80 against 75; the contrast set (E3b, 7.7.1b), done 10 Oct: 30 of 30 against 24 of 30 on six chosen loops (25 after a DiscoPoP defect found there was repaired and its loop run again, 11 Oct) — supported as a single test (exact p = 0.009; 0.021 corrected), not within the family; the model usually finds a form DiscoPoP recognises, at 3.4 times the calls and less than half the speed |
-| RQ6 | Can the model close the gap a fast refresh leaves, without making the analysis unsafe? | C3 | H7, H7b | E4 | 7.7 | partly — on saved rewrites (13 Oct); the live trials reopened by the author the same night, on a benchmark with a long profiling run (14 Oct: NPB's EP and CG pass the screen; 18 Oct: packaging them was RepoOMP's work, dropped — whether the trials run is the author's): asked on 116 saved rewrites (136 calls, $8.53), the model's report gives back 20 of the 22 wins the fast refresh loses and removes both keeps the full profile does not make, but changes 11 of the 58 drawn rewrites the refresh had right (about 102 of the 541, at least 60 at 95 %) — H7 not refuted on the selected rewrites, fails on the whole set; in all damaged rewrites the reply calls the loop independent: the agent places a reported dependence without its loop; the deletion changed no decision on its 21 rewrites — H7b refuted as registered (0 against 0), the add-not-delete principle stays a design argument |
+| RQ6 | Can the model close the gap a fast refresh leaves, without making the analysis unsafe? | C3 | H7, H7b | E4 | 7.7 | partly — on saved rewrites (13 Oct); the live trials reopened by the author the same night, on a benchmark with a long profiling run (14 Oct: NPB's EP and CG pass the screen; 18 Oct: packaging them was RepoOMP's work, dropped; the author's go the same evening — the live trials run on the 18 loops and the contrast set, 125 trials, the NPB route not taken): asked on 116 saved rewrites (136 calls, $8.53), the model's report gives back 20 of the 22 wins the fast refresh loses and removes both keeps the full profile does not make, but changes 11 of the 58 drawn rewrites the refresh had right (about 102 of the 541, at least 60 at 95 %) — H7 not refuted on the selected rewrites, fails on the whole set; in all damaged rewrites the reply calls the loop independent: the agent places a reported dependence without its loop; the deletion changed no decision on its 21 rewrites — H7b refuted as registered (0 against 0), the add-not-delete principle stays a design argument |
 | RQ7 | Can the profile be refreshed without running the program again, without changing decisions? | C3 | H6 | E4 | 7.7 | partly — on saved rewrites, no model (13 Oct); the live trials reopened by the author the same night: on 599 saved rewrites the fast refresh changes whether the agent keeps the rewrite in 58 (two full profiles of one program: 0) — refuted (p = 0.0003; at most 0.018 in the family); 22 wins thrown away, 20 of them reductions the model created; no time saved on the 18 loops; where the run is long one refresh saves 21 to 36 s, 1.5 to 7.5 % of a trial |
 | RQ8 | How far should restructuring be chained? | C1, C3 | H8 | E8 | 7.8 | done (15 Oct): H8 not established — on the three loops built for it, one extra round race-free faster in 8 of 15 trials and none in 9 of 15 (p = 0.90; `s2251` alone tells them apart); the deeper levels made the outer loop of `s257` parallel in 3 of 10 trials (about 7× instead of 4.5×). On the 18 loops 34 and 28 of 54 at depth 1 and 2 against 75 of 90 at depth 0, with more calls and time and successful programs no faster; in 54 of the 138 deeper trials the finished program was slower than the original and the last check undid it; three programs wrong where depth 0 shipped none — the agent's checks compare the printed digest, which does not read the values they got wrong. Before: held again (14 Oct): the author's "ok" started it; the first short run found that the agent's last check threw away a chain of rewrites when the later one reshaped what the earlier one produced — repaired with his "ok" (Fix 106); the second short run found that, with a deeper level to come, a rewrite that crashes at the timing size is kept untested and every later attempt is blamed for that crash — repaired with his "ok" (Fix 108); the third shipped a chain of two rewrites faster and ran the new check where it should, but the criterion written for it held the launch (a sign of mine that did not foresee the final check removing a slower program) — launched on his "ok" (20:17 UTC) — running, on a benchmark built for it without a model: three TSVC loops whose expert version needs two rewrites in a row (`s2251`, `s221`, `s257`) at depth 0, 1 and 2 × 5, and the 18 loops at depth 1 and 2 × 3; one test of H8, on the three loops. Before any trial, read from the saved trials: a second level would ask the model in 80 of the 80 trials with a kept rewrite where DiscoPoP writes the directive — about the repetition loop it had already been asked about and the function around it — and about another loop in 4 trials on 2 of the 18 loops; where the model writes, in 20 of 84, with no new loop |
 | RQ9 | Where should the agent look first? | C1 | H9 | E9 | 7.4 | dropped for now (18 Oct, the author: the thesis is written first) — not run |
@@ -562,8 +563,10 @@ result, or the expectation written down before the run.
     a model, whether the agent ever asks the model there — where every hot region already has a pattern no rewrite
     is made and a refresh has nothing to skip. Outside the registered candidates, not adopted: the 18 loops with a
     larger profiling input. *18 Oct:* the author made the fast refresh and depth the last experiments and dropped the
-    rest — RepoOMP among them, whose packaging of EP and CG this benchmark needed; whether the live trials run is his
-    (put to him the same evening). Standing from 13 Oct: the model is not asked on all
+    rest — RepoOMP among them, whose packaging of EP and CG this benchmark needed — and then said to run the live trials:
+    they run on the loops he was priced, the 18 loops and the contrast set with its control × 5 (125 trials, `fast_recon_v5`,
+    the report as a follow-up turn of the rewrite's own session) beside the cells of 7.7.1 and 7.7.1b; they measure the
+    decision side in whole trials and cannot show a profiling saving on these loops (pre-registered 18 Oct; no test). Standing from 13 Oct: the model is not asked on all
     599 rewrites, and the agent's placing of a reported dependence is not changed. What the live trials are to
     measure, which the replay could not: the count at the end of whole trials (the model can try again after a
     rejection), the model asked inside the conversation in which it wrote the rewrite, and the saving in a whole
@@ -663,7 +666,9 @@ result, or the expectation written down before the run.
   here the harness's digest, which reads both ends, the middle and every 16th value at the check size — and the
   wrong values (46, 68 and 1 of 160,001) all sit between those positions; the harness's own verification compares
   every value and caught all three (a limit of the gate, 4.13). Candidate Fix 107 was not seen; Fix 108 sent a
-  rewrite back in 12 trials. $145.51 for the 153 counted trials.
+  rewrite back in 12 trials. $145.51 for the 153 counted trials. *Closed 18 Oct (the author: "finish the experiments"):*
+  the digest is recorded as a limit of the checks and the packages stay as they are; `s221` counts as a chain of two
+  steps; the line-shift weakness stays unrepaired, reported as not seen.
   *Decided with it (none of it runs since 18 Oct):* the model writes the directive in 7.9 and what else remains — the setup of 7.7.1's second row (80 of
   90 on the same 18 loops, no unusable program). A decision taken after 7.7.1's result was known, recorded as that. The
   main comparison (7.2) and the evidence experiments (7.5) stay in the setup in which DiscoPoP writes; 7.7.1 is the
@@ -738,8 +743,8 @@ the results folder · F. Full result tables · G. The agent's command-line refer
 | Fig. 7 | Evidence × attempts: successes of 50, with the models alone | 7.5 |
 | Fig. 8 | Speed of the successes beside the expert version | 7.5 |
 | Fig. 9 | The gate against the harness: confusion matrix | 7.6 |
-| Fig. 10 | Decisions under fast refresh against the full re-profile | 7.7 |
-| Fig. 11 | Gain and cost per restructuring depth (run and read out 15 Oct: the depth set and the 18 loops; not drawn yet); beside it, what a second round would have been asked about on the 18 loops, per setup (from the saved trials) | 7.8 |
+| Fig. 10 | Decisions under fast refresh against the full re-profile — drawn 18 Oct from steps 1 and 2 (`E04_fast_refresh/analysis/fig_refresh_decisions`); the live trials' panel is added at their read-out | 7.7 |
+| Fig. 11 | Gain and cost per restructuring depth (run and read out 15 Oct: the depth set and the 18 loops; drawn 18 Oct, `E08_restructuring_depth/analysis/fig_depth_gain_cost`); beside it, what a second round would have been asked about on the 18 loops, per setup (from the saved trials) | 7.8 |
 | Tab. 1 | Questions, claims, hypotheses, experiments, status | 1.5, 7.12 |
 | Tab. 2 | Related systems compared | 3.7 |
 | Tab. 3 | Every setting of the agent and its role | 4.11 |
@@ -750,8 +755,8 @@ the results folder · F. Full result tables · G. The agent's command-line refer
 
 ## 11 Decisions the outline needs
 
-1. **Title.** Three candidates in section 0. Recommended: the first — it says the idea, not the tool. The case
-   for the third: it names the system the way the repository and DiscoPoP's users would look for it.
+1. **Title.** *Decided by the author on 18 Oct: "Agentic Parallelization using Data Dependence-Aware LLM-Driven Code
+   Restructuring" (section 0).* The research questions' wording is confirmed when the writing is discussed.
 2. **Related work after the background or after the evaluation.** Recommended: after the background — the reader
    needs to know what annotation tools and language models do before the approach makes sense. The case for the
    other place: the thesis measures its neighbours (Polly, expert OpenMP; RepoOMP was planned and dropped), so the field could be

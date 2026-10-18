@@ -140,11 +140,16 @@ def to_markdown(fast: List[Dict[str, Any]], races: Dict[Tuple[str, str, str, int
                        f"{_med(cf['speedup_6'])} / {_med(cf['speedup_12'])} | {nfast} | {nrep} |")
         sf, sc = cell(set_f, races), cell(set_c, full_races)
         res["sets"][title] = {"fast": sf, "full": sc}
-        out += ["", "| setup | trials | race-free FASTER | unusable | calls (median) | cost $ (sum) | full profiles "
-                "(median) | agent s (median) |", "|---|---:|---:|---:|---:|---:|---:|---:|"]
-        for name, c in ((f"`{FULL}` (E3/E3b)", sc), (f"`{FAST}`", sf)):
+        # `llm_calls` counts the rewrite requests only; the follow-up report goes through another path and is in
+        # the usage log (`llm_usage.calls_recorded`) and the cost, not in `llm_calls` (seen in the smoke, 18 Oct)
+        out += ["", "| setup | trials | race-free FASTER | unusable | rewrite calls (median) | all calls, usage log "
+                "(median) | cost $ (sum) | full profiles (median) | agent s (median) |",
+                "|---|---:|---:|---:|---:|---:|---:|---:|---:|"]
+        for name, c, ts in ((f"`{FULL}` (E3/E3b)", sc, set_c), (f"`{FAST}`", sf, set_f)):
+            usage_calls = [float(((t.get("llm_usage") or {}).get("calls_recorded")) or 0) for t in ts]
             out.append(f"| {name} | {c['trials']} | {c['faster_race_free']} of {c['n']} | {c['unusable']} | "
-                       f"{_med(c['calls'])} | {sum(c['cost']):.2f} | {_med(c['full_profiles'])} | {_med(c['agent_s'])} |")
+                       f"{_med(c['calls'])} | {_med(usage_calls)} | {sum(c['cost']):.2f} | {_med(c['full_profiles'])} | "
+                       f"{_med(c['agent_s'])} |")
         out.append("")
     kinds: Counter = Counter()
     for t in fast:

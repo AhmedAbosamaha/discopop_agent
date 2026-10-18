@@ -14,7 +14,7 @@ Done (15 Oct): H8 not established — on the depth set, depth 1 race-free FASTER
 
 ## What is in this folder
 
-- [`analysis/`](analysis/) — the read-out: [`by_hand/README.md`](analysis/by_hand/README.md), [`by_hand/forms_depth_set.md`](analysis/by_hand/forms_depth_set.md), [`e8_readout.md`](analysis/e8_readout.md)
+- [`analysis/`](analysis/) — the read-out: [`by_hand/README.md`](analysis/by_hand/README.md), [`by_hand/forms_depth_set.md`](analysis/by_hand/forms_depth_set.md), [`e8_readout.md`](analysis/e8_readout.md), [`figures_e4_e8.md`](analysis/figures_e4_e8.md)
 - [`runs/`](runs/) — 4 archived run(s): the evidence
 - [`checks/`](checks/) — 3 verification(s) made during the read-out
 - [`preflight/`](preflight/) — 17 smoke run(s) before the launch

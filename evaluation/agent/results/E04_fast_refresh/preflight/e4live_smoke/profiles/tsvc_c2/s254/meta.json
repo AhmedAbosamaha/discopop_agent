@@ -1,0 +1,43 @@
+{
+  "suite": "tsvc_c2",
+  "kernel": "s254",
+  "source": "benchmarks/TSVC_2/src/tsvc.c",
+  "category": "scalar and array expansion / carry around variable",
+  "file": "s254.c",
+  "language": "c",
+  "layout": "project",
+  "project": {
+    "units": [
+      "s254.c",
+      "main.c"
+    ],
+    "include_dirs": [
+      "."
+    ],
+    "editable": [
+      "s254.c"
+    ]
+  },
+  "restructuring_class": "restructure",
+  "transformation": "carry-around variable (x = b[i-1], wrapping)",
+  "why": "x carries b[i-1]; the first iteration uses b[LEN_1D-1]",
+  "reference_solution": "agent/reference_solutions/tsvc_c2/s254.c",
+  "exclude_functions": [
+    "main",
+    "dummy"
+  ],
+  "harness": "tsvc_c2/s254.h",
+  "harness_sha256": "75e53a112d7571f6db3eb825fba7576ef686d0c99ca36e02373541823b5ae388",
+  "hot_loop": {
+    "entry": "kernel_s254",
+    "function": "kernel_s254",
+    "line": 8,
+    "writes": [
+      "a"
+    ]
+  },
+  "agent_dataset": "SMALL",
+  "generator_version": 6,
+  "inputs_sha256": "456dd573b84b30e6f32c943bb559d80374eec67177de48223e95124a8c3fc627",
+  "output_sha256": "3326d0e2e3304ed6c7f107fa0a3217b4d9babfde6341809ef31f5b4ed3a25637"
+}

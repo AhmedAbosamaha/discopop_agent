@@ -98,7 +98,7 @@ th{font-weight:600;color:var(--mute);font-size:12.5px;letter-spacing:.04em;text-
 ul,ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;max-width:68ch}
 </style>
 <main>""")
-P.append("""<header><p class="k">Put to the author 13 Oct 2026 · depth trials reopened 13 Oct, late (the author: “run both”) · the benchmark is built and checked (14 Oct): three loops · your “ok” (14 Oct, 07:45 UTC) · the short test run found that the agent’s last check drops a second rewrite built on the first · your “ok” (13:23 UTC): that check repaired · the second short test run found a second defect · your “ok” (18:12 UTC): repaired too · the third short test run held the launch by my rule, though nothing in it is a defect · your “ok” (20:17 UTC): the 153 trials ran · read out 15 Oct: no gain from extra rounds, three wrong programs · the model writes the pragmas in the later experiments</p>
+P.append("""<header><p class="k">Put to the author 13 Oct 2026 · depth trials reopened 13 Oct, late (the author: “run both”) · the benchmark is built and checked (14 Oct): three loops · your “ok” (14 Oct, 07:45 UTC) · the short test run found that the agent’s last check drops a second rewrite built on the first · your “ok” (13:23 UTC): that check repaired · the second short test run found a second defect · your “ok” (18:12 UTC): repaired too · the third short test run held the launch by my rule, though nothing in it is a defect · your “ok” (20:17 UTC): the 153 trials ran · read out 15 Oct: no gain from extra rounds, three wrong programs · 18 Oct: closed — your “finish the experiments”: the three record items as recommended, the figure drawn; the later experiments dropped for now</p>
 <h1>The depth experiment</h1>
 <p class="lede">When the agent keeps a rewrite, it profiles the program again and may find new regions. So far, in every experiment, such a region gets DiscoPoP's pragma at most and is never rewritten a second time. “Depth 1” would let the model be asked about it once more, “depth 2” twice. The experiment was planned to show whether that gains anything and what it costs.</p></header>""")
 
@@ -228,17 +228,20 @@ P.append("<p><strong>The three wrong programs</strong> (<code>s121</code> and <c
          "that is what I told you earlier, and it is the finding, not a reassurance. The harness’s own check prints every value "
          "and caught all three. Without extra rounds the agent shipped no wrong program in any of the pragma experiment’s 220 "
          "trials.</p>")
-P.append(table(["Still yours", "What the result says"], [
-    ["The checksum the agent compares",
-     "Recommended: record it as a limit of the agent’s checks — it judges what a program prints — and change nothing now: the "
-     "experiments that remain run without extra rounds, where it did not happen in any of the pragma experiment’s 220 trials. The honest case for changing it: a checksum "
-     "over every value would have let the agent catch all three, at almost no cost; but it changes what every later check "
-     "sees, so the earlier experiments would no longer be comparable."],
-    ["Whether <code>s221</code>’s scan counts as three steps", "No number changes: no setting made it faster in any of its 15 trials."],
-    ["The line-shift weakness (not repaired)",
+P.append(table(["Decided 18 Oct (your “finish the experiments”, read as my recommendations)", "What it means"], [
+    ["The checksum the agent compares: recorded as a limit, the packages unchanged",
+     "The agent judges what a program prints, and on the loop packages that is a checksum reading every 16th value; the "
+     "thesis says so where the checks are described. Without extra rounds it did not happen in any of the pragma experiment’s "
+     "220 trials, and the fast refresh’s live trials are compared with trials checked on the same checksum."],
+    ["<code>s221</code> counted as registered — a chain of two steps", "No number changes: no setting made it faster in any of its 15 trials."],
+    ["The line-shift weakness: not repaired, reported as not seen",
      f"Not seen: its sign appeared in no trial; the {_f107.group(1)} trials my check listed to read by hand are all programs the "
      f"last check undid for speed, with no pragma left that a shifted line could have hidden."],
 ]))
+import base64  # noqa: E402
+_FIG = (RES / "E08_restructuring_depth/analysis/fig_depth_gain_cost.png").read_bytes()
+P.append("<figure style=\"margin:18px 0 0\"><img alt=\"Fig. 11: race-free faster trials, wrong programs, model calls and agent minutes per depth, and what a second round would meet in the saved trials\" style=\"max-width:100%;height:auto;border:1px solid var(--line);border-radius:6px\" src=\"data:image/png;base64," + base64.b64encode(_FIG).decode() + "\">"
+         "<figcaption style=\"font-size:14px;color:var(--mute);margin-top:6px\">The thesis’s figure for this experiment (Fig. 11, drawn 18 Oct from the saved read-out): (a) the three loops built for depth; (b)–(e) the 18 loops — successes, wrong programs, model calls and agent minutes per trial; (f) what a second round would have met in the saved trials.</figcaption></figure>")
 P.append("</div>")
 # ---- your fourth "ok" (14 Oct, 20:17 UTC): the 153 trials launched ----
 P.append('<div class="card"><h3>Your “ok” (14 Oct, 20:17 UTC): the 153 trials were launched</h3>')
