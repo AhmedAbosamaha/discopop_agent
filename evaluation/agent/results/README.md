@@ -61,8 +61,8 @@ Earlier versions (history):
 | folder | what it is | status |
 |---|---|---|
 | [`E10_speed_check/`](E10_speed_check/REPORT.md) | E10 — does the speed check keep unnecessary changes out? | done |
-| [`E07_gate_as_classifier/`](E07_gate_as_classifier/REPORT.md) | E7 — the gate as a classifier: every saved candidate judged again by the harness, each check on its own, DataRaceBench as the outside ground truth for races | designed 9 Oct; set aside by the author 9 Oct (for now) — nothing built, nothing run |
-| [`E11_repoomp/`](E11_repoomp/REPORT.md) | E11 — against RepoOMP on its NPB-C kernels | pre-flight |
+| [`E07_gate_as_classifier/`](E07_gate_as_classifier/REPORT.md) | E7 — the gate as a classifier: every saved candidate judged again by the harness, each check on its own, DataRaceBench as the outside ground truth for races | dropped for now (18 Oct) — designed 9 Oct and set aside by the author the same day; nothing built, nothing run |
+| [`E11_repoomp/`](E11_repoomp/REPORT.md) | E11 — against RepoOMP on its NPB-C kernels | dropped for now (18 Oct) — pre-flight only, no model call |
 | [`T0_instruments/`](T0_instruments/) | the studies that prove the instruments before an experiment is read (sizes, classes, timing noise, package equivalence …), one sub-folder each | see each |
 | [`audit_benchmark_suitability/`](audit_benchmark_suitability/REPORT.md) | Benchmark suitability audit (§5k, D18) | done |
 | [`history/pilots/`](history/pilots/REPORT.md) | Pilots (before the campaign's design was fixed) | done |
@@ -72,7 +72,7 @@ Earlier versions (history):
 | [`E03b_contrast_set/`](E03b_contrast_set/REPORT.md) | E3b — the contrast set: who writes the pragma, on loops DiscoPoP does not recognise as written | done |
 | [`E04_fast_refresh/`](E04_fast_refresh/REPORT.md) | E4 — the fast refresh: can the profile be refreshed without running the program again, and can the model's own report of the dependences close what that leaves open? | running |
 | [`E08_restructuring_depth/`](E08_restructuring_depth/REPORT.md) | E8 — restructuring depth: may the model rewrite again what a kept rewrite leaves or exposes? | done |
-| [`E06_lulesh/`](E06_lulesh/REPORT.md) | E6 — a real application: LULESH 2.0 | pre-flight |
+| [`E06_lulesh/`](E06_lulesh/REPORT.md) | E6 — a real application: LULESH 2.0 | dropped for now (18 Oct) — pre-flight only, no model call |
 
 `history/` holds every folder a later experiment replaced, and the first pilots and harness checks (moved there on 5 Oct 2026; a path `results/E0…` in an older entry of the experiment record now starts `results/history/`). Nothing in `history/` is cited as a result.
 

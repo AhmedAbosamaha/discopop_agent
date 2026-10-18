@@ -38,15 +38,15 @@ proposed here and is to be confirmed with the title.
 
 | RQ | Question | Claim | Hypotheses | Experiments | Section | Status |
 |---|---|---|---|---|---|---|
-| RQ1 | Does restructuring parallelize loops DiscoPoP alone cannot? | C1 | H1, H11 | E1, E11 | 7.2, 7.9 | done on kernels |
-| RQ2 | Is every accepted change right and race-free, what does each check catch, and where are the checks blind? | C2 | H2, H3, H10, H10b, H13 | E1, E10, E7 | 7.2, 7.6 | E1, E10 done · E7 designed 9 Oct and set aside by the author the same day (not run) |
-| RQ3 | How close do the accepted programs come to an expert's version, and do they scale with threads? | C1 | H4, H11 | E1, E2, E6, E11 | 7.2, 7.5, 7.9 | partly |
+| RQ1 | Does restructuring parallelize loops DiscoPoP alone cannot? | C1 | H1, H11 | E1, E11 | 7.2, 7.9 | done on kernels; the comparison with RepoOMP (E11, H11) dropped for now (18 Oct) |
+| RQ2 | Is every accepted change right and race-free, what does each check catch, and where are the checks blind? | C2 | H2, H3, H10, H10b, H13 | E1, E10, E7 | 7.2, 7.6 | E1, E10 done · E7 designed 9 Oct, set aside by the author the same day and dropped for now with the rest on 18 Oct (not run) |
+| RQ3 | How close do the accepted programs come to an expert's version, and do they scale with threads? | C1 | H4, H11 | E1, E2, E6, E11 | 7.2, 7.5, 7.9 | partly — on kernels (E1, E2); LULESH (E6) and RepoOMP (E11) dropped for now (18 Oct) |
 | RQ4 | What does the model need: DiscoPoP's evidence, feedback from failed attempts, or more strength? | C1 | H5, H5b, H5d, H12 | E2, E12 | 7.3, 7.5 | done |
-| RQ5 | Who should write the directive: DiscoPoP or the model? | C1, C2 | H6 (its half on the author), H6b | E3 | 7.7 | (decided 13 Oct: the model writes it in the experiments that remain) done 10 Oct: 81 of 90 fast and race-free where the model writes, 76 of 90 where DiscoPoP writes — not established (p = 0.14; four of the five trials are `s331`); no unusable program in either setup; DiscoPoP keeps writing in 7.7.2 (the author, 10 Oct); corrected for `s341`: 80 against 75; the contrast set (E3b, 7.7.1b), done 10 Oct: 30 of 30 against 24 of 30 on six chosen loops (25 after a DiscoPoP defect found there was repaired and its loop run again, 11 Oct) — supported as a single test (exact p = 0.009; 0.021 corrected), not within the family; the model usually finds a form DiscoPoP recognises, at 3.4 times the calls and less than half the speed |
-| RQ6 | Can the model close the gap a fast refresh leaves, without making the analysis unsafe? | C3 | H7, H7b | E4 | 7.7 | partly — on saved rewrites (13 Oct); the live trials reopened by the author the same night, on a benchmark with a long profiling run (14 Oct: NPB's EP and CG pass the screen; their package form is the author's, the trials wait): asked on 116 saved rewrites (136 calls, $8.53), the model's report gives back 20 of the 22 wins the fast refresh loses and removes both keeps the full profile does not make, but changes 11 of the 58 drawn rewrites the refresh had right (about 102 of the 541, at least 60 at 95 %) — H7 not refuted on the selected rewrites, fails on the whole set; in all damaged rewrites the reply calls the loop independent: the agent places a reported dependence without its loop; the deletion changed no decision on its 21 rewrites — H7b refuted as registered (0 against 0), the add-not-delete principle stays a design argument |
+| RQ5 | Who should write the directive: DiscoPoP or the model? | C1, C2 | H6 (its half on the author), H6b | E3 | 7.7 | (decided 13 Oct: the model writes it in the experiments that remain — since 18 Oct none remains) done 10 Oct: 81 of 90 fast and race-free where the model writes, 76 of 90 where DiscoPoP writes — not established (p = 0.14; four of the five trials are `s331`); no unusable program in either setup; DiscoPoP keeps writing in 7.7.2 (the author, 10 Oct); corrected for `s341`: 80 against 75; the contrast set (E3b, 7.7.1b), done 10 Oct: 30 of 30 against 24 of 30 on six chosen loops (25 after a DiscoPoP defect found there was repaired and its loop run again, 11 Oct) — supported as a single test (exact p = 0.009; 0.021 corrected), not within the family; the model usually finds a form DiscoPoP recognises, at 3.4 times the calls and less than half the speed |
+| RQ6 | Can the model close the gap a fast refresh leaves, without making the analysis unsafe? | C3 | H7, H7b | E4 | 7.7 | partly — on saved rewrites (13 Oct); the live trials reopened by the author the same night, on a benchmark with a long profiling run (14 Oct: NPB's EP and CG pass the screen; 18 Oct: packaging them was RepoOMP's work, dropped — whether the trials run is the author's): asked on 116 saved rewrites (136 calls, $8.53), the model's report gives back 20 of the 22 wins the fast refresh loses and removes both keeps the full profile does not make, but changes 11 of the 58 drawn rewrites the refresh had right (about 102 of the 541, at least 60 at 95 %) — H7 not refuted on the selected rewrites, fails on the whole set; in all damaged rewrites the reply calls the loop independent: the agent places a reported dependence without its loop; the deletion changed no decision on its 21 rewrites — H7b refuted as registered (0 against 0), the add-not-delete principle stays a design argument |
 | RQ7 | Can the profile be refreshed without running the program again, without changing decisions? | C3 | H6 | E4 | 7.7 | partly — on saved rewrites, no model (13 Oct); the live trials reopened by the author the same night: on 599 saved rewrites the fast refresh changes whether the agent keeps the rewrite in 58 (two full profiles of one program: 0) — refuted (p = 0.0003; at most 0.018 in the family); 22 wins thrown away, 20 of them reductions the model created; no time saved on the 18 loops; where the run is long one refresh saves 21 to 36 s, 1.5 to 7.5 % of a trial |
 | RQ8 | How far should restructuring be chained? | C1, C3 | H8 | E8 | 7.8 | done (15 Oct): H8 not established — on the three loops built for it, one extra round race-free faster in 8 of 15 trials and none in 9 of 15 (p = 0.90; `s2251` alone tells them apart); the deeper levels made the outer loop of `s257` parallel in 3 of 10 trials (about 7× instead of 4.5×). On the 18 loops 34 and 28 of 54 at depth 1 and 2 against 75 of 90 at depth 0, with more calls and time and successful programs no faster; in 54 of the 138 deeper trials the finished program was slower than the original and the last check undid it; three programs wrong where depth 0 shipped none — the agent's checks compare the printed digest, which does not read the values they got wrong. Before: held again (14 Oct): the author's "ok" started it; the first short run found that the agent's last check threw away a chain of rewrites when the later one reshaped what the earlier one produced — repaired with his "ok" (Fix 106); the second short run found that, with a deeper level to come, a rewrite that crashes at the timing size is kept untested and every later attempt is blamed for that crash — repaired with his "ok" (Fix 108); the third shipped a chain of two rewrites faster and ran the new check where it should, but the criterion written for it held the launch (a sign of mine that did not foresee the final check removing a slower program) — launched on his "ok" (20:17 UTC) — running, on a benchmark built for it without a model: three TSVC loops whose expert version needs two rewrites in a row (`s2251`, `s221`, `s257`) at depth 0, 1 and 2 × 5, and the 18 loops at depth 1 and 2 × 3; one test of H8, on the three loops. Before any trial, read from the saved trials: a second level would ask the model in 80 of the 80 trials with a kept rewrite where DiscoPoP writes the directive — about the repetition loop it had already been asked about and the function around it — and about another loop in 4 trials on 2 of the 18 loops; where the model writes, in 20 of 84, with no new loop |
-| RQ9 | Where should the agent look first? | C1 | H9 | E9 | 7.4 | planned |
+| RQ9 | Where should the agent look first? | C1 | H9 | E9 | 7.4 | dropped for now (18 Oct, the author: the thesis is written first) — not run |
 
 **Contributions.**
 1. The agent: a pipeline around DiscoPoP that profiles, ranks, restructures with a language model, checks,
@@ -71,7 +71,7 @@ proposed here and is to be confirmed with the title.
 | 4 | Approach: the agent | 20–24 | yes |
 | 5 | Implementation | 8–10 | yes |
 | 6 | Evaluation method | 12–14 | yes |
-| 7 | Results | 26–32 | 7.1–7.3, 7.5, 7.6 (speed check), 7.11 now; the rest as experiments finish |
+| 7 | Results | 26–32 | now — the fast refresh's live trials (7.7.2) are the author's to decide (18 Oct); 7.4, 7.6.3 and 7.9 dropped for now, each said in 9.2 |
 | 8 | Discussion | 6–8 | after chapter 7 |
 | 9 | Conclusion and future work | 3–4 | last |
 | | Appendices A–G | as needed | mostly generated from the repository |
@@ -106,8 +106,9 @@ proposed here and is to be confirmed with the title.
    fast and right in more than 5 of 20.
 5. **Limits.** Stronger models alone reach further on plain loops (89 of 90); the agent's reach is bounded by its
    model and by what DiscoPoP confirms; of the design options, the model writing the directive is at least as good
-   and cheaper; the fast refresh changes decisions on saved rewrites, and its live trials and the depth trials are
-   stated with what has run by submission.
+   and cheaper; the fast refresh changes decisions on saved rewrites; letting the model rewrite again what a kept rewrite
+   exposed adds nothing on the loops built for it and costs successes on the 18 loops; the results are on kernels —
+   the large code and the outside comparison were dropped (18 Oct).
 
 ---
 
@@ -158,8 +159,8 @@ proposed here and is to be confirmed with the title.
 - **3.3 Learned directive prediction.** Models that predict whether and which directive a loop needs
   (PragFormer, OMPify, Graph2Par and similar): no rewriting, no verification.
 - **3.4 Language models that write or transform parallel code.** Fine-tuned and general models (HPC-Coder, OMPGPT,
-  AutoParLLM and similar), and agents with tools. The closest published system, RepoOMP (arXiv 2608.05855), is
-  compared head-to-head in 7.9.
+  AutoParLLM and similar), and agents with tools. The closest published system, RepoOMP (arXiv 2608.05855): a
+  head-to-head comparison was designed (7.9) and dropped for now (18 Oct); it is discussed from its paper and repository.
 - **3.5 Verifying parallelizations.** Race detectors and their benchmarks (DataRaceBench); equivalence testing of
   transformed code.
 - **3.6 Benchmarks.** TSVC, PolyBench, NPB, Rodinia, LULESH; the problem that models have seen public benchmarks.
@@ -300,7 +301,7 @@ number of the record (D-numbers), so the text can be checked against the reposit
 - **6.2 The comparison is three-way.** DiscoPoP alone (its suggestions through the same gate) · DiscoPoP with the
   agent · the model alone (D35, D37). For the design options: the twin of each setup (D38), so that an effect
   inside the agent can be told from an effect on the model. Outside baselines: the sequential original (the
-  reference), expert OpenMP, Polly, RepoOMP's released outputs.
+  reference), expert OpenMP, Polly; RepoOMP's released outputs were planned for 7.9 (dropped for now, 18 Oct).
 - **6.3 The harness and its verdict.** One profile per benchmark and run, shared by all setups. One outcome per
   trial, decided outside the agent: right, race-free and faster · parallel but not faster · unchanged · unusable.
   A program that changed the measurement code has no valid measurement and is listed separately. The separate
@@ -363,7 +364,9 @@ result, or the expectation written down before the run.
 - **7.3 A small model inside the pipeline against stronger models alone** (E12). **[done]** On the two
   hidden-order kernels only the Haiku agent is ever faster (20 of 20; every model alone 0); on four real loops
   the strong models alone are as good or better.
-- **7.4 Stage 1 — where to look** (E9; RQ9; H9). **[planned]**
+- **7.4 Stage 1 — where to look** (E9; RQ9; H9). **[dropped for now — 18 Oct, the author: the fast refresh and depth are the
+  last experiments, the thesis is written first; planned in the campaign's plan, its design on LULESH and NPB never
+  written, not run]** The ranking is part of the design (4.4) and stays switchable; what follows is the question as planned, said in 9.2 as not answered.
   - Question: does ranking by measured time saved spend fewer model calls before the first success than the
     static count?
   - Setups: ranking on against off, with twins. Benchmarks: LULESH and NPB kernels (a kernel with one loop has
@@ -398,7 +401,7 @@ result, or the expectation written down before the run.
     among the 14,200 candidates of the whole archive; found 8 Oct). Counted from the archive: on the loops of the
     two main experiments it only made the check silent (149 of 569 directives, no other loop read); on whole
     programs it read an inner loop's record for 19 of 248 directives. What its repair changes has not been counted (7.6.3).
-  - 7.6.3 The gate as a classifier. **[dropped for now, 9 Oct, by the author — designed, not run]** What the
+  - 7.6.3 The gate as a classifier. **[dropped for now, 9 Oct, by the author — designed, not run; kept dropped with the rest on 18 Oct]** What the
     thesis reports instead, from the runs in hand: the harness judges every final program on its own, and in the
     283 trials of the two main experiments in which the agent changed the source it found no wrong program (the
     models alone: 51 of 450 wrong or not verifiable); the race checks of the agent's final programs reported
@@ -558,7 +561,9 @@ result, or the expectation written down before the run.
     form of a package for programs whose `main`, timer and check share the file with the computation; then, without
     a model, whether the agent ever asks the model there — where every hot region already has a pattern no rewrite
     is made and a refresh has nothing to skip. Outside the registered candidates, not adopted: the 18 loops with a
-    larger profiling input. Standing from 13 Oct: the model is not asked on all
+    larger profiling input. *18 Oct:* the author made the fast refresh and depth the last experiments and dropped the
+    rest — RepoOMP among them, whose packaging of EP and CG this benchmark needed; whether the live trials run is his
+    (put to him the same evening). Standing from 13 Oct: the model is not asked on all
     599 rewrites, and the agent's placing of a reported dependence is not changed. What the live trials are to
     measure, which the replay could not: the count at the end of whole trials (the model can try again after a
     rejection), the model asked inside the conversation in which it wrote the rewrite, and the saving in a whole
@@ -659,16 +664,17 @@ result, or the expectation written down before the run.
   wrong values (46, 68 and 1 of 160,001) all sit between those positions; the harness's own verification compares
   every value and caught all three (a limit of the gate, 4.13). Candidate Fix 107 was not seen; Fix 108 sent a
   rewrite back in 12 trials. $145.51 for the 153 counted trials.
-  *Decided with it:* the model writes the directive in 7.9 and what else remains — the setup of 7.7.1's second row (80 of
+  *Decided with it (none of it runs since 18 Oct):* the model writes the directive in 7.9 and what else remains — the setup of 7.7.1's second row (80 of
   90 on the same 18 loops, no unusable program). A decision taken after 7.7.1's result was known, recorded as that. The
   main comparison (7.2) and the evidence experiments (7.5) stay in the setup in which DiscoPoP writes; 7.7.1 is the
   bridge between the two.
 - **7.9 Scale and the outside comparison.**
-  - A large code: LULESH (E6). **[planned]** Does the loop still work when one profile takes 28 GB? Setups:
+  - A large code: LULESH (E6). **[dropped for now — 18 Oct, the author; pre-flight only, no model call]** Does the loop still work when one profile takes 28 GB? Setups:
     sequential, DiscoPoP alone, the agent, the model alone, the laboratory's own OpenMP version. *Pre-flight
     (13–14 Oct, no model):* the package and the launcher each had a defect, both repaired; the whole run path
     works on LULESH (one profile 322 s, 312 of them the explorer; 59 Do-All patterns); its sizes and class are next.
-  - The closest published system: RepoOMP on its eight NPB kernels (E11; H11). **[planned]** Every contestant
+  - The closest published system: RepoOMP on its eight NPB kernels (E11; H11). **[dropped for now — 18 Oct, the author; pre-flight
+    only, nothing packaged, no model call]** Every contestant
     through one verification: the agent, RepoOMP's released outputs and baselines, NPB's expert version, DiscoPoP
     alone, Polly. *Scope measured (13–14 Oct, no model):* as the agent is built, DiscoPoP profiles three of the
     eight programs (EP, IS, CG); LU needs two hours and 122 GiB per profile, MG, BT and SP do not finish the
@@ -678,7 +684,7 @@ result, or the expectation written down before the run.
     were produced on other hardware and with other models, and their repository builds without optimisation, so
     their own reported acceptance is shown beside ours.
 - **7.10 Cost** (C3). **[partly]** Model calls, tokens, time and API-equivalent cost per success from every run
-  (recorded). Profiling time per kept rewrite from 7.7. The profile of a large code from 7.9. The separate
+  (recorded). Profiling time per kept rewrite from 7.7. The profile of a large code only as the LULESH pre-flight measured it (7.9 dropped for now). The separate
   cost-curve experiment was dropped (it measures DiscoPoP, not the agent).
 - **7.11 What the campaign found in DiscoPoP.** **[done]** The defects by their effect on results: programs held
   to half their speed and a recurrence reported as parallel (B14); verdicts that were a draw (B4); a wrong
@@ -733,7 +739,7 @@ the results folder · F. Full result tables · G. The agent's command-line refer
 | Fig. 8 | Speed of the successes beside the expert version | 7.5 |
 | Fig. 9 | The gate against the harness: confusion matrix | 7.6 |
 | Fig. 10 | Decisions under fast refresh against the full re-profile | 7.7 |
-| Fig. 11 | Gain and cost per restructuring depth (pre-registered 14 Oct: the depth set and the 18 loops; held); beside it, what a second round would have been asked about on the 18 loops, per setup (from the saved trials) | 7.8 |
+| Fig. 11 | Gain and cost per restructuring depth (run and read out 15 Oct: the depth set and the 18 loops; not drawn yet); beside it, what a second round would have been asked about on the 18 loops, per setup (from the saved trials) | 7.8 |
 | Tab. 1 | Questions, claims, hypotheses, experiments, status | 1.5, 7.12 |
 | Tab. 2 | Related systems compared | 3.7 |
 | Tab. 3 | Every setting of the agent and its role | 4.11 |
@@ -748,7 +754,7 @@ the results folder · F. Full result tables · G. The agent's command-line refer
    for the third: it names the system the way the repository and DiscoPoP's users would look for it.
 2. **Related work after the background or after the evaluation.** Recommended: after the background — the reader
    needs to know what annotation tools and language models do before the approach makes sense. The case for the
-   other place: the thesis measures its neighbours (Polly, expert OpenMP, RepoOMP), so the field could be
+   other place: the thesis measures its neighbours (Polly, expert OpenMP; RepoOMP was planned and dropped), so the field could be
    discussed with the numbers on the table.
 3. **The cost claim (C3).** *As it stands after the first three steps of 7.7.2 (13 Oct; the live trials are still to run): the fast refresh loses wins
    and saves 1.5 to 7.5 % of a trial where the run is long; the model's report as built does not repair it; the
@@ -758,14 +764,16 @@ the results folder · F. Full result tables · G. The agent's command-line refer
    design chapter, not claimed as measured.* Shown to the author on 12 and 13 Oct as his to confirm; his closing
    answer ("ok go ahead") did not name it, so it stands as shown until he says otherwise. The case for a stronger
    wording: none from the measurements. The case for a weaker one (C3 as future work only): the negative result
-   is on saved rewrites of small loops, and no live trial ran. Still to come under C3: depth (7.8) and the
-   profile of a large code (7.9).
+   is on saved rewrites of small loops, and no live trial ran. Under C3 since then: depth (7.8) is read out;
+   the profile of a large code (7.9) is dropped for now (18 Oct).
 4. **Which planned experiments must run before submission.** Order: the two-by-two, depth, then ranking,
    LULESH and RepoOMP as time allows. *13 Oct: the two-by-two is done as two experiments (7.7.1, 7.7.2 up to its live
    trials). The author's position, said that night: a planned experiment is run and reported whether or not it shows a
    gain — so the fast refresh's live trials and the depth trials are run, each on a benchmark that can show its effect
    (7.7.2, 7.8). The model writes the directive in what remains (the author). Still to run: those two, ranking, LULESH,
-   RepoOMP.* The gate as a classifier was set aside by the author on 9 Oct (no model
+   RepoOMP.* *18 Oct (the author): the fast refresh and depth are the last two experiments; ranking, LULESH, RepoOMP and the gate
+   as a classifier are dropped for now, because the thesis is written first. Depth is read out; what is left is the fast refresh's
+   live trials, his to decide.* The gate as a classifier was set aside by the author on 9 Oct (no model
    calls; it can be run at any point — until then 7.6.3 states its questions as limits). Each planned section is
    written so that it can move to future work without changing the chapter's structure.
 5. **Nine chapters or six parts.** See section 12.
@@ -778,7 +786,10 @@ the results folder · F. Full result tables · G. The agent's command-line refer
    chapter and the main comparison, and say in 7.7 and in the limits that who writes the directive was measured and the
    later experiments use the setup that was at least as good, cheaper and no less safe. The case for rewording the idea
    itself ("DiscoPoP diagnoses, the model rewrites and annotates, a gate decides"): it would describe the agent the
-   large-code results come from. The author's to settle.
+   large-code results come from. The author's to settle. *18 Oct: that case is gone with the large-code experiments — of the
+   experiments with results, the model wrote the directive only in 7.7.1 (where it is the variable) and in the speed-check
+   experiment of September (7.6.1, the default setup of that time); every other ran with DiscoPoP writing it. The idea is
+   kept as stated unless the author says otherwise.*
 
 ## 12 Folded into the six default parts
 
@@ -795,11 +806,12 @@ the results folder · F. Full result tables · G. The agent's command-line refer
 
 | Claim | Supported by | Status |
 |---|---|---|
-| Coverage (C1) | the main comparison; the hidden-order experiments | **supported on kernels**; a large code and RepoOMP planned |
-| Trust (C2) | no unusable program in the main comparison; the speed check; the unsafe cases named | **supported**; the gate's own error rate planned |
-| Cost (C3) | calls, time and cost recorded in every run; the fast-refresh experiment (7.7.2) | **a measured negative result** on the refresh and on the model's report (add-not-delete stays a design argument); the depth trials run and read out (15 Oct): on the 18 loops extra rounds bought fewer successes at two to two and a half times the calls and time, and three wrong programs the agent's checks could not see; the refresh's live trials wait for theirs (two candidates pass the screen, the package form is the author's); the large code planned |
+| Coverage (C1) | the main comparison; the hidden-order experiments | **supported on kernels**; a large code and RepoOMP dropped for now (18 Oct) |
+| Trust (C2) | no unusable program in the main comparison; the speed check; the unsafe cases named | **supported**; the gate's own error rate not measured (the gate as a classifier dropped for now) |
+| Cost (C3) | calls, time and cost recorded in every run; the fast-refresh experiment (7.7.2) | **a measured negative result** on the refresh and on the model's report (add-not-delete stays a design argument); the depth trials run and read out (15 Oct): on the 18 loops extra rounds bought fewer successes at two to two and a half times the calls and time, and three wrong programs the agent's checks could not see; the refresh's live trials have not run (two candidates passed the screen; packaging them was RepoOMP's work, dropped 18 Oct — whether they run is the author's); the large code dropped for now |
 
 Dropped, to be said in the thesis with the reason: the profiling-cost curve (26 Sep: it measures DiscoPoP, not
 the agent); the small open model as a third model; the evidence's parts and the prompt's parts given one by one
 (2 Oct: the experiment was closed); the first clean-file layout (4 Oct: stopped after eight trials, replaced by
-TSVC's own form).
+TSVC's own form); and, on 18 Oct (the author: the thesis is written first), ranking (E9), LULESH (E6), RepoOMP (E11) and the
+gate as a classifier (E7, set aside since 9 Oct) — each designed, none run with a model; their pre-flights are in the record.

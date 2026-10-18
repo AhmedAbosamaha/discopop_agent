@@ -126,14 +126,14 @@ Status: done
 
 ## [E7 — the gate as a classifier: every saved candidate judged again by the harness, each check on its own, DataRaceBench as the outside ground truth for races](E07_gate_as_classifier/REPORT.md)
 
-Status: designed 9 Oct; set aside by the author 9 Oct (for now) — nothing built, nothing run
+Status: dropped for now (18 Oct) — designed 9 Oct and set aside by the author the same day; nothing built, nothing run
 
 | run | where | what it is | status | trials | outcomes |
 |---|---|---|---|---:|---|
 
 ## [E11 — against RepoOMP on its NPB-C kernels](E11_repoomp/REPORT.md)
 
-Status: pre-flight
+Status: dropped for now (18 Oct) — pre-flight only, no model call
 
 | run | where | what it is | status | trials | outcomes |
 |---|---|---|---|---:|---|
@@ -738,7 +738,7 @@ Status: done
 
 ## [E6 — a real application: LULESH 2.0](E06_lulesh/REPORT.md)
 
-Status: pre-flight
+Status: dropped for now (18 Oct) — pre-flight only, no model call
 
 | run | where | what it is | status | trials | outcomes |
 |---|---|---|---|---:|---|
