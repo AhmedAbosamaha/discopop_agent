@@ -1,0 +1,39 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_2/benchmarks/tsvc_c4/s341/fast_recon_v5/claude-haiku-4-5-20251001/rep3/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_2/benchmarks/tsvc_c4/s341/fast_recon_v5/claude-haiku-4-5-20251001/rep3/work/s341.c
+@@ -1,17 +1,34 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s341(void)
+ {
+     int j;
++    int* indices = (int*)malloc((LEN_1D + 1) * sizeof(int));
++
+     for (int nl = 0; nl < iterations; nl++) {
+-        j = -1;
++        indices[0] = 0;
++
++        // Compute prefix sum: indices[i] = count of positive elements in b[0..i-1]
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+-                j++;
++                indices[i + 1] = indices[i] + 1;
++            } else {
++                indices[i + 1] = indices[i];
++            }
++        }
++
++        // Write filtered elements using precomputed indices (loop-independent of previous iterations)
++        for (int i = 0; i < LEN_1D; i++) {
++            if (b[i] > (real_t)0.) {
++                j = indices[i];
+                 a[j] = b[i];
+             }
+         }
++
+         dummy(a, b, c, d, e);
+     }
++
++    free(indices);
+     return (real_t)0;
+ }

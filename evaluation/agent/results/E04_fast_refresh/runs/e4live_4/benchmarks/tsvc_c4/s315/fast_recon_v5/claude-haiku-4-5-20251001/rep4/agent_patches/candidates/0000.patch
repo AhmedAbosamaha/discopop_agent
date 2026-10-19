@@ -1,0 +1,22 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_4/benchmarks/tsvc_c4/s315/fast_recon_v5/claude-haiku-4-5-20251001/rep4/work/s315.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_4/benchmarks/tsvc_c4/s315/fast_recon_v5/claude-haiku-4-5-20251001/rep4/work/s315.c
+@@ -5,11 +5,17 @@
+     real_t x, chksum;
+     int index;
+     for (int nl = 0; nl < iterations; nl++) {
++        // Find the maximum value in the array
+         x = a[0];
+-        index = 0;
+-        for (int i = 0; i < LEN_1D; ++i) {
++        for (int i = 1; i < LEN_1D; ++i) {
+             if (a[i] > x) {
+                 x = a[i];
++            }
++        }
++        // Find the index of the maximum value
++        index = 0;
++        for (int i = LEN_1D - 1; i >= 0; --i) {
++            if (a[i] == x) {
+                 index = i;
+             }
+         }

@@ -1,0 +1,16 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_3/benchmarks/tsvc_c2/s121/fast_recon_v5/claude-haiku-4-5-20251001/rep1/work/s121.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_3/benchmarks/tsvc_c2/s121/fast_recon_v5/claude-haiku-4-5-20251001/rep1/work/s121.c
+@@ -8,11 +8,13 @@
+ 
+     for (int nl = 0; nl < iterations; nl++) {
+         // Pass 1: read a[i+1] into rhs
++        #pragma omp parallel for private(j) shared(rhs) 
+         for (int i = 0; i < LEN_1D-1; i++) {
+             j = i + 1;
+             rhs[i] = a[j];
+         }
+         // Pass 2: compute a[i] from rhs and b
++        #pragma omp parallel for shared(rhs) 
+         for (int i = 0; i < LEN_1D-1; i++) {
+             a[i] = rhs[i] + b[i];
+         }

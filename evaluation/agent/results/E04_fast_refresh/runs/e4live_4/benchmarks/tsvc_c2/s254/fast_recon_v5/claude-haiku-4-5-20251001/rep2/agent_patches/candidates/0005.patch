@@ -1,0 +1,16 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_4/benchmarks/tsvc_c2/s254/fast_recon_v5/claude-haiku-4-5-20251001/rep2/work/s254.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_4/benchmarks/tsvc_c2/s254/fast_recon_v5/claude-haiku-4-5-20251001/rep2/work/s254.c
+@@ -8,11 +8,13 @@
+         // Pre-compute x values to remove carry dependence
+         real_t* x_vals = (real_t*)malloc(LEN_1D * sizeof(real_t));
+         x_vals[0] = b[LEN_1D-1];
++        #pragma omp parallel for shared(x_vals) 
+         for (int j = 1; j < LEN_1D; j++) {
+             x_vals[j] = b[j-1];
+         }
+ 
+         // Inner loop now has no carry dependence on x
++        #pragma omp parallel for shared(x_vals) 
+         for (int i = 0; i < LEN_1D; i++) {
+             a[i] = (b[i] + x_vals[i]) * (real_t).5;
+         }

@@ -1,0 +1,44 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_3/benchmarks/tsvc_c4/s316/fast_recon_v5/claude-haiku-4-5-20251001/rep5/work/s316.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_3/benchmarks/tsvc_c4/s316/fast_recon_v5/claude-haiku-4-5-20251001/rep5/work/s316.c
+@@ -1,15 +1,37 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s316(void)
+ {
+     real_t x;
+     for (int nl = 0; nl < iterations; nl++) {
+-        x = a[0];
+-        for (int i = 1; i < LEN_1D; ++i) {
+-            if (a[i] < x) {
+-                x = a[i];
++        // Tree-based reduction to find minimum: no loop-carried dependence per level
++        real_t* min_vals = malloc(LEN_1D * sizeof(real_t));
++        real_t* temp = malloc(LEN_1D * sizeof(real_t));
++
++        for (int i = 0; i < LEN_1D; ++i) {
++            min_vals[i] = a[i];
++        }
++
++        int current_size = LEN_1D;
++        while (current_size > 1) {
++            int next_size = (current_size + 1) / 2;
++            for (int i = 0; i < next_size; ++i) {
++                if (2*i + 1 < current_size) {
++                    temp[i] = min_vals[2*i] < min_vals[2*i + 1] ? min_vals[2*i] : min_vals[2*i + 1];
++                } else {
++                    temp[i] = min_vals[2*i];
++                }
+             }
++            for (int i = 0; i < next_size; ++i) {
++                min_vals[i] = temp[i];
++            }
++            current_size = next_size;
+         }
++
++        x = min_vals[0];
++        free(min_vals);
++        free(temp);
+         dummy(a, b, c, d, e, x);
+     }
+     return x;

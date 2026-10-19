@@ -1,0 +1,40 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_1/benchmarks/tsvc_c4/s318/fast_recon_v5/claude-haiku-4-5-20251001/rep3/work/s318.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_1/benchmarks/tsvc_c4/s318/fast_recon_v5/claude-haiku-4-5-20251001/rep3/work/s318.c
+@@ -2,22 +2,27 @@
+ 
+ real_t kernel_s318(void)
+ {
+-    int k, index;
++    int index;
+     real_t max, chksum;
+     for (int nl = 0; nl < iterations; nl++) {
+-        k = 0;
++        // First pass: extract all absolute values into temporary array (Do-All)
++        real_t values[LEN_1D];
++        values[0] = ABS(a[0]);
++        for (int i = 1; i < LEN_1D; i++) {
++            int k = i * inc;
++            values[i] = ABS(a[k]);
++        }
++
++        // Second pass: find maximum and its index (sequential, outside parallelizable region)
++        max = values[0];
+         index = 0;
+-        max = ABS(a[0]);
+-        k += inc;
+         for (int i = 1; i < LEN_1D; i++) {
+-            if (ABS(a[k]) <= max) {
+-                goto L5;
++            if (values[i] > max) {
++                index = i;
++                max = values[i];
+             }
+-            index = i;
+-            max = ABS(a[k]);
+-L5:
+-            k += inc;
+         }
++
+         chksum = max + (real_t) index;
+         dummy(a, b, c, d, e, chksum);
+     }

@@ -1,0 +1,20 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_2/benchmarks/tsvc_c3/s331/fast_recon_v5/claude-haiku-4-5-20251001/rep4/work/s331.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_2/benchmarks/tsvc_c3/s331/fast_recon_v5/claude-haiku-4-5-20251001/rep4/work/s331.c
+@@ -1,4 +1,5 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s331(void)
+ {
+@@ -7,8 +8,9 @@
+     for (int nl = 0; nl < iterations; nl++) {
+         j = -1;
+         for (int i = 0; i < LEN_1D; i++) {
+-            if (a[i] < (real_t)0.) {
+-                j = i;
++            int match = (a[i] < (real_t)0.) ? i : -1;
++            if (match > j) {
++                j = match;
+             }
+         }
+         chksum = (real_t) j;

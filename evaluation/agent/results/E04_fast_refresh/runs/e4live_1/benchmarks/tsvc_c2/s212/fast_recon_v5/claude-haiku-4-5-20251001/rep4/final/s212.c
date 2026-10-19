@@ -1,0 +1,19 @@
+#include "data.h"
+
+real_t kernel_s212(void)
+{
+    for (int nl = 0; nl < iterations; nl++) {
+        // Split computation: read from a before any writes to break loop-carried dependence.
+        // First loop reads a[i+1] (original values), second loop writes a[i].
+        #pragma omp parallel for 
+        for (int i = 0; i < LEN_1D-1; i++) {
+            b[i] += a[i + 1] * d[i];
+        }
+        #pragma omp parallel for 
+        for (int i = 0; i < LEN_1D-1; i++) {
+            a[i] *= c[i];
+        }
+        dummy(a, b, c, d, e);
+    }
+    return (real_t)0;
+}

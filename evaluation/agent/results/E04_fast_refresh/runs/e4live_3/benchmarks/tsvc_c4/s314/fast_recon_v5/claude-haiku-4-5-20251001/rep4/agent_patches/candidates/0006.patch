@@ -1,0 +1,31 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_3/benchmarks/tsvc_c4/s314/fast_recon_v5/claude-haiku-4-5-20251001/rep4/work/s314.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_3/benchmarks/tsvc_c4/s314/fast_recon_v5/claude-haiku-4-5-20251001/rep4/work/s314.c
+@@ -1,15 +1,25 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s314(void)
+ {
+     real_t x;
+     for (int nl = 0; nl < iterations; nl++) {
+-        x = a[0];
++        real_t *local_max = (real_t*)malloc(LEN_1D * sizeof(real_t));
+         for (int i = 0; i < LEN_1D; i++) {
+-            if (a[i] > x) {
+-                x = a[i];
++            local_max[i] = a[i];
++        }
++
++        for (int width = 1; width < LEN_1D; width *= 2) {
++            for (int i = 0; i < LEN_1D - width; i += 2 * width) {
++                if (local_max[i + width] > local_max[i]) {
++                    local_max[i] = local_max[i + width];
++                }
+             }
+         }
++
++        x = local_max[0];
++        free(local_max);
+         dummy(a, b, c, d, e, x);
+     }
+     return x;

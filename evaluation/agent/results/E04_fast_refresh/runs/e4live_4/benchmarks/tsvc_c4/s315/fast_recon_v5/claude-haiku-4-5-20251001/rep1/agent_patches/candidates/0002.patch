@@ -1,0 +1,43 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_4/benchmarks/tsvc_c4/s315/fast_recon_v5/claude-haiku-4-5-20251001/rep1/work/s315.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_4/benchmarks/tsvc_c4/s315/fast_recon_v5/claude-haiku-4-5-20251001/rep1/work/s315.c
+@@ -1,20 +1,35 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s315(void)
+ {
+     real_t x, chksum;
+     int index;
++
++    real_t *candidates = (real_t *)malloc(LEN_1D * sizeof(real_t));
++    int *indices = (int *)malloc(LEN_1D * sizeof(int));
++
+     for (int nl = 0; nl < iterations; nl++) {
+-        x = a[0];
+-        index = 0;
+         for (int i = 0; i < LEN_1D; ++i) {
+-            if (a[i] > x) {
+-                x = a[i];
+-                index = i;
++            candidates[i] = a[i];
++            indices[i] = i;
++        }
++
++        x = candidates[0];
++        index = indices[0];
++        for (int i = 1; i < LEN_1D; ++i) {
++            if (candidates[i] > x) {
++                x = candidates[i];
++                index = indices[i];
+             }
+         }
++
+         chksum = x + (real_t) index;
+         dummy(a, b, c, d, e, chksum);
+     }
++
++    free(candidates);
++    free(indices);
++
+     return index + x + 1;
+ }

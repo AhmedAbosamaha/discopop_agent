@@ -1,0 +1,25 @@
+#include "data.h"
+#include <stdlib.h>
+
+real_t kernel_s212(void)
+{
+    real_t *a_initial = malloc(LEN_1D * sizeof(real_t));
+
+    for (int nl = 0; nl < iterations; nl++) {
+        // Save initial values of a to remove loop-carried dependence
+        #pragma omp parallel for shared(a_initial) 
+        for (int i = 0; i < LEN_1D; i++) {
+            a_initial[i] = a[i];
+        }
+
+        #pragma omp parallel for shared(a_initial) 
+        for (int i = 0; i < LEN_1D-1; i++) {
+            a[i] *= c[i];
+            b[i] += a_initial[i + 1] * d[i];
+        }
+        dummy(a, b, c, d, e);
+    }
+
+    free(a_initial);
+    return (real_t)0;
+}

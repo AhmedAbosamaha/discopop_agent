@@ -1,0 +1,18 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_2/benchmarks/tsvc_c3/s331/fast_recon_v5/claude-haiku-4-5-20251001/rep2/work/s331.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_2/benchmarks/tsvc_c3/s331/fast_recon_v5/claude-haiku-4-5-20251001/rep2/work/s331.c
+@@ -5,12 +5,11 @@
+     int j;
+     real_t chksum;
+     for (int nl = 0; nl < iterations; nl++) {
+-        j = -1;
++        int max_j = -1;
+         for (int i = 0; i < LEN_1D; i++) {
+-            if (a[i] < (real_t)0.) {
+-                j = i;
+-            }
++            max_j = (a[i] < (real_t)0.) ? ((i > max_j) ? i : max_j) : max_j;
+         }
++        j = max_j;
+         chksum = (real_t) j;
+         dummy(a, b, c, d, e, chksum);
+     }

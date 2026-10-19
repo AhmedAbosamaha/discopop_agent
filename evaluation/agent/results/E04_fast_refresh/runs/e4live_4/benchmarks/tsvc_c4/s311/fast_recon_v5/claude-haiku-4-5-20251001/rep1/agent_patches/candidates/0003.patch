@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_4/benchmarks/tsvc_c4/s311/fast_recon_v5/claude-haiku-4-5-20251001/rep1/work/s311.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_4/benchmarks/tsvc_c4/s311/fast_recon_v5/claude-haiku-4-5-20251001/rep1/work/s311.c
+@@ -4,6 +4,7 @@
+ real_t kernel_s311(void)
+ {
+     real_t *sums = (real_t *)malloc(iterations * sizeof(real_t));
++    #pragma omp parallel for shared(sums) 
+     for (int nl = 0; nl < iterations; nl++) {
+         sums[nl] = (real_t)0.;
+         for (int i = 0; i < LEN_1D; i++) {

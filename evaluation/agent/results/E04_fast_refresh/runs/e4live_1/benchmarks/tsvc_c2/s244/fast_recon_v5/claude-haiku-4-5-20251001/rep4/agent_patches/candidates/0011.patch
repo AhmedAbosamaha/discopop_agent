@@ -1,0 +1,22 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_1/benchmarks/tsvc_c2/s244/fast_recon_v5/claude-haiku-4-5-20251001/rep4/work/s244.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_1/benchmarks/tsvc_c2/s244/fast_recon_v5/claude-haiku-4-5-20251001/rep4/work/s244.c
+@@ -3,11 +3,18 @@
+ real_t kernel_s244(void)
+ {
+     for (int nl = 0; nl < iterations; nl++) {
++        // Save initial values of a to break loop-carried dependence
++        real_t *a_init = (real_t *)malloc(LEN_1D * sizeof(real_t));
++        for (int j = 0; j < LEN_1D; ++j) {
++            a_init[j] = a[j];
++        }
++
+         for (int i = 0; i < LEN_1D-1; ++i) {
+             a[i] = b[i] + c[i] * d[i];
+             b[i] = c[i] + b[i];
+-            a[i+1] = b[i] + a[i+1] * d[i];
++            a[i+1] = b[i] + a_init[i+1] * d[i];
+         }
++        free(a_init);
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

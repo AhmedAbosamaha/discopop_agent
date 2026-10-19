@@ -1,0 +1,65 @@
+#include "data.h"
+#include <stdlib.h>
+
+#define NUM_SEGMENTS 256
+
+real_t kernel_s315(void)
+{
+    real_t x, chksum;
+    int index;
+    for (int nl = 0; nl < iterations; nl++) {
+        // Find maximum using segments for parallelization
+        int seg_size = (LEN_1D + NUM_SEGMENTS - 1) / NUM_SEGMENTS;
+
+        real_t *seg_max = (real_t *)malloc(NUM_SEGMENTS * sizeof(real_t));
+        int *seg_idx = (int *)malloc(NUM_SEGMENTS * sizeof(int));
+
+        // Precompute segment boundaries
+        int *seg_start = (int *)malloc(NUM_SEGMENTS * sizeof(int));
+        int *seg_end = (int *)malloc(NUM_SEGMENTS * sizeof(int));
+
+        for (int s = 0; s < NUM_SEGMENTS; ++s) {
+            seg_start[s] = s * seg_size;
+            seg_end[s] = (s + 1) * seg_size < LEN_1D ? (s + 1) * seg_size : LEN_1D;
+        }
+
+        // Each segment independently finds its local max
+        #pragma omp parallel for shared(seg_max,seg_idx,seg_end,seg_start) 
+        for (int s = 0; s < NUM_SEGMENTS; ++s) {
+            int start = seg_start[s];
+            int end = seg_end[s];
+
+            if (start < LEN_1D) {
+                seg_max[s] = a[start];
+                seg_idx[s] = start;
+
+                for (int i = start + 1; i < end; ++i) {
+                    if (a[i] > seg_max[s]) {
+                        seg_max[s] = a[i];
+                        seg_idx[s] = i;
+                    }
+                }
+            }
+        }
+
+        free(seg_start);
+        free(seg_end);
+
+        // Merge segment maxima
+        x = seg_max[0];
+        index = seg_idx[0];
+        for (int s = 1; s < NUM_SEGMENTS; ++s) {
+            if (seg_max[s] > x) {
+                x = seg_max[s];
+                index = seg_idx[s];
+            }
+        }
+
+        free(seg_max);
+        free(seg_idx);
+
+        chksum = x + (real_t) index;
+        dummy(a, b, c, d, e, chksum);
+    }
+    return index + x + 1;
+}

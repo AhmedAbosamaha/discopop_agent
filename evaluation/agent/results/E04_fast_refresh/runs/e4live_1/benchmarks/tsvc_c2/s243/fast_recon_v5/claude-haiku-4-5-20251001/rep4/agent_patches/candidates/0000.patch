@@ -1,0 +1,31 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_1/benchmarks/tsvc_c2/s243/fast_recon_v5/claude-haiku-4-5-20251001/rep4/work/s243.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_1/benchmarks/tsvc_c2/s243/fast_recon_v5/claude-haiku-4-5-20251001/rep4/work/s243.c
+@@ -1,14 +1,25 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s243(void)
+ {
++    real_t *temp_a = (real_t *)malloc(LEN_1D * sizeof(real_t));
++    real_t *temp_b = (real_t *)malloc(LEN_1D * sizeof(real_t));
++
+     for (int nl = 0; nl < iterations; nl++) {
+         for (int i = 0; i < LEN_1D-1; i++) {
+-            a[i] = b[i] + c[i  ] * d[i];
+-            b[i] = a[i] + d[i  ] * e[i];
+-            a[i] = b[i] + a[i+1] * d[i];
++            real_t a_temp = b[i] + c[i  ] * d[i];
++            real_t b_temp = a_temp + d[i  ] * e[i];
++            temp_a[i] = b_temp + a[i+1] * d[i];
++            temp_b[i] = b_temp;
++        }
++        for (int i = 0; i < LEN_1D-1; i++) {
++            a[i] = temp_a[i];
++            b[i] = temp_b[i];
+         }
+         dummy(a, b, c, d, e);
+     }
++    free(temp_a);
++    free(temp_b);
+     return (real_t)0;
+ }

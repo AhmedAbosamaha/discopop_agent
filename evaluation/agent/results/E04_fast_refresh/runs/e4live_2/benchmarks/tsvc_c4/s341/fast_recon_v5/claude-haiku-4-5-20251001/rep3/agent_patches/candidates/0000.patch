@@ -1,0 +1,37 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_2/benchmarks/tsvc_c4/s341/fast_recon_v5/claude-haiku-4-5-20251001/rep3/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_2/benchmarks/tsvc_c4/s341/fast_recon_v5/claude-haiku-4-5-20251001/rep3/work/s341.c
+@@ -4,13 +4,32 @@
+ {
+     int j;
+     for (int nl = 0; nl < iterations; nl++) {
++        // Allocate temporary arrays for filtering pass
++        int *mask = (int *)malloc(LEN_1D * sizeof(int));
++        real_t *temp = (real_t *)malloc(LEN_1D * sizeof(real_t));
++
++        // First pass: identify and collect qualifying elements (Do-All, parallelizable)
++        for (int i = 0; i < LEN_1D; i++) {
++            if (b[i] > (real_t)0.) {
++                mask[i] = 1;
++                temp[i] = b[i];
++            } else {
++                mask[i] = 0;
++            }
++        }
++
++        // Second pass: compact marked elements into array a (sequential)
+         j = -1;
+         for (int i = 0; i < LEN_1D; i++) {
+-            if (b[i] > (real_t)0.) {
++            if (mask[i]) {
+                 j++;
+-                a[j] = b[i];
++                a[j] = temp[i];
+             }
+         }
++
++        free(mask);
++        free(temp);
++
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

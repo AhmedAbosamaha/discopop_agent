@@ -1,0 +1,26 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_2/benchmarks/tsvc_c3/s331/fast_recon_v5/claude-haiku-4-5-20251001/rep3/work/s331.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_2/benchmarks/tsvc_c3/s331/fast_recon_v5/claude-haiku-4-5-20251001/rep3/work/s331.c
+@@ -6,11 +6,22 @@
+     real_t chksum;
+     for (int nl = 0; nl < iterations; nl++) {
+         j = -1;
++        int *is_negative = malloc(LEN_1D * sizeof(int));
+         for (int i = 0; i < LEN_1D; i++) {
+             if (a[i] < (real_t)0.) {
+-                j = i;
++                is_negative[i] = 1;
++            } else {
++                is_negative[i] = 0;
+             }
+         }
++        int found = 0;
++        for (int i = LEN_1D - 1; i >= 0 && !found; i--) {
++            if (is_negative[i]) {
++                j = i;
++                found = 1;
++            }
++        }
++        free(is_negative);
+         chksum = (real_t) j;
+         dummy(a, b, c, d, e, chksum);
+     }

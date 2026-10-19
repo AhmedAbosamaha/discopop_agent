@@ -1,0 +1,37 @@
+#include "data.h"
+#include <stdlib.h>
+
+real_t kernel_s314(void)
+{
+    real_t x;
+    for (int nl = 0; nl < iterations; nl++) {
+        int seg_size = 256;
+        int num_segs = (LEN_1D + seg_size - 1) / seg_size;
+        real_t *seg_max = malloc(num_segs * sizeof(real_t));
+
+ #pragma omp parallel for firstprivate(num_segs) shared(seg_max) 
+        for (int seg = 0; seg < num_segs; seg++) {
+            int start = seg * seg_size;
+            int end = (start + seg_size < LEN_1D) ? start + seg_size : LEN_1D;
+
+            real_t local_max = a[start];
+            for (int i = start + 1; i < end; i++) {
+                if (a[i] > local_max) {
+                    local_max = a[i];
+                }
+            }
+            seg_max[seg] = local_max;
+        }
+
+        x = seg_max[0];
+        for (int seg = 1; seg < num_segs; seg++) {
+            if (seg_max[seg] > x) {
+                x = seg_max[seg];
+            }
+        }
+
+        free(seg_max);
+        dummy(a, b, c, d, e, x);
+    }
+    return x;
+}

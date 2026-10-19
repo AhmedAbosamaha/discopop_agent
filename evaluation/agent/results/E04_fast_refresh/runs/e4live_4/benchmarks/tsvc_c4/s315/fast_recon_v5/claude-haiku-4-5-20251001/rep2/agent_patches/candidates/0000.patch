@@ -1,0 +1,53 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_4/benchmarks/tsvc_c4/s315/fast_recon_v5/claude-haiku-4-5-20251001/rep2/work/s315.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_4/benchmarks/tsvc_c4/s315/fast_recon_v5/claude-haiku-4-5-20251001/rep2/work/s315.c
+@@ -5,14 +5,44 @@
+     real_t x, chksum;
+     int index;
+     for (int nl = 0; nl < iterations; nl++) {
+-        x = a[0];
+-        index = 0;
+-        for (int i = 0; i < LEN_1D; ++i) {
+-            if (a[i] > x) {
+-                x = a[i];
+-                index = i;
++        // Find maximum using segments for parallelization
++        int num_segments = 256;
++        int seg_size = (LEN_1D + num_segments - 1) / num_segments;
++
++        real_t *seg_max = (real_t *)malloc(num_segments * sizeof(real_t));
++        int *seg_idx = (int *)malloc(num_segments * sizeof(int));
++
++        // Each segment independently finds its local max
++        for (int s = 0; s < num_segments; ++s) {
++            int start = s * seg_size;
++            int end = (s + 1) * seg_size < LEN_1D ? (s + 1) * seg_size : LEN_1D;
++
++            if (start < LEN_1D) {
++                seg_max[s] = a[start];
++                seg_idx[s] = start;
++
++                for (int i = start + 1; i < end; ++i) {
++                    if (a[i] > seg_max[s]) {
++                        seg_max[s] = a[i];
++                        seg_idx[s] = i;
++                    }
++                }
+             }
+         }
++
++        // Merge segment maxima
++        x = seg_max[0];
++        index = seg_idx[0];
++        for (int s = 1; s < num_segments; ++s) {
++            if (seg_max[s] > x) {
++                x = seg_max[s];
++                index = seg_idx[s];
++            }
++        }
++
++        free(seg_max);
++        free(seg_idx);
++
+         chksum = x + (real_t) index;
+         dummy(a, b, c, d, e, chksum);
+     }

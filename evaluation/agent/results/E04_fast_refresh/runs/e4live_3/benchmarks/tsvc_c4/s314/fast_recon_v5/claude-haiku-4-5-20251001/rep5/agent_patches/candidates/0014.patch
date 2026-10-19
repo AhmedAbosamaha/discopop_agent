@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_3/benchmarks/tsvc_c4/s314/fast_recon_v5/claude-haiku-4-5-20251001/rep5/work/s314.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_3/benchmarks/tsvc_c4/s314/fast_recon_v5/claude-haiku-4-5-20251001/rep5/work/s314.c
+@@ -11,6 +11,7 @@
+         real_t* segment_max = (real_t*)malloc(num_segments * sizeof(real_t));
+ 
+         // Each segment iteration is independent (Do-All pattern)
++ #pragma omp parallel for firstprivate(num_segments) shared(segment_max) 
+         for (int seg = 0; seg < num_segments; seg++) {
+             int start = seg * segment_size;
+             int end = (seg + 1) * segment_size < LEN_1D ? (seg + 1) * segment_size : LEN_1D;

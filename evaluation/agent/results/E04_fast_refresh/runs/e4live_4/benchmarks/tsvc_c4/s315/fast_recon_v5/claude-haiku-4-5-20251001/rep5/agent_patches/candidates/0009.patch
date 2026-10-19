@@ -1,0 +1,22 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_4/benchmarks/tsvc_c4/s315/fast_recon_v5/claude-haiku-4-5-20251001/rep5/work/s315.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_4/benchmarks/tsvc_c4/s315/fast_recon_v5/claude-haiku-4-5-20251001/rep5/work/s315.c
+@@ -6,11 +6,17 @@
+     int index;
+     for (int nl = 0; nl < iterations; nl++) {
+         x = a[0];
+-        index = 0;
+-        for (int i = 0; i < LEN_1D; ++i) {
++        for (int i = 1; i < LEN_1D; ++i) {
+             if (a[i] > x) {
+                 x = a[i];
++            }
++        }
++        index = 0;
++        int found = 0;
++        for (int i = 0; i < LEN_1D; ++i) {
++            if (a[i] == x && !found) {
+                 index = i;
++                found = 1;
+             }
+         }
+         chksum = x + (real_t) index;

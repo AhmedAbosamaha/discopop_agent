@@ -1,0 +1,25 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_4/benchmarks/tsvc_c2/s281/fast_recon_v5/claude-haiku-4-5-20251001/rep4/work/s281.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_4/benchmarks/tsvc_c2/s281/fast_recon_v5/claude-haiku-4-5-20251001/rep4/work/s281.c
+@@ -1,14 +1,21 @@
+ #include "data.h"
++#include <stdlib.h>
++#include <string.h>
+ 
+ real_t kernel_s281(void)
+ {
+     real_t x;
+     for (int nl = 0; nl < iterations; nl++) {
++        real_t* a_orig = malloc(LEN_1D * sizeof(real_t));
++        memcpy(a_orig, a, LEN_1D * sizeof(real_t));
++
+         for (int i = 0; i < LEN_1D; i++) {
+-            x = a[LEN_1D-i-1] + b[i] * c[i];
++            x = a_orig[LEN_1D-i-1] + b[i] * c[i];
+             a[i] = x-(real_t)1.0;
+             b[i] = x;
+         }
++
++        free(a_orig);
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

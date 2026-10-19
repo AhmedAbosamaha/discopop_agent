@@ -1,0 +1,19 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_1/benchmarks/tsvc_c2/s252/fast_recon_v5/claude-haiku-4-5-20251001/rep1/work/s252.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_1/benchmarks/tsvc_c2/s252/fast_recon_v5/claude-haiku-4-5-20251001/rep1/work/s252.c
+@@ -2,13 +2,11 @@
+ 
+ real_t kernel_s252(void)
+ {
+-    real_t t, s;
+     for (int nl = 0; nl < iterations; nl++) {
+-        t = (real_t) 0.;
+         for (int i = 0; i < LEN_1D; i++) {
+-            s = b[i] * c[i];
+-            a[i] = s + t;
+-            t = s;
++            real_t s_curr = b[i] * c[i];
++            real_t s_prev = (i > 0) ? b[i-1] * c[i-1] : (real_t)0.;
++            a[i] = s_curr + s_prev;
+         }
+         dummy(a, b, c, d, e);
+     }

@@ -1,0 +1,59 @@
+# Agent experiment run `e4live_3`
+
+- status: finished (created 2026-10-18T23:15:57, finished 2026-10-19T05:37:40)
+- host: `rms14562`, compilers `/usr/bin/clang-20` / `/usr/bin/clang++-20`
+- agent: `7bb69f79a558a5cb8041b35aaadbac39dad56839` (uncommitted diff sha256 `None`)
+- harness: `7bb69f79a558a5cb8041b35aaadbac39dad56839` on `agentic_DiscoPop`
+- verify size `per_kernel`, threads [6, 12], repeats 5
+
+Outcomes are judged by the harness, not by the agent: `BROKEN` means the final program's values differ from the original's (relative error > 1e-09) or move between repeats at a fixed thread count; `SCAFFOLD_MODIFIED` means the rewrite edited the packaging's own code (the timer, the perturbed-input machinery or the digest), so the trial measures nothing and is never counted as a result; `FASTER` means correct and ≥ 1.1× at some thread count.
+
+## Main comparison: DiscoPoP alone vs DiscoPoP + agent
+
+**MISSING — this run has no `discopop_gate` trials.** Run that arm on the same benchmarks (no model, no cost) and rebuild with `plots --runs <this>,<that>`; speedups over the sequential original alone do not show what the agent adds.
+
+## Summary
+
+| Arm | Model | Trials | FASTER | parallel-not-faster | parallel-speed-not-measurable | changed-not-parallel | no-change | BROKEN | SCAFFOLD_MODIFIED | VERIFY_FAILED | AGENT_ERROR | AGENT_TIMEOUT | PROFILE_ERROR | Median agent s | LLM calls |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| fast_recon_v5 | claude-haiku-4-5-20251001 | 35 | 31 | 0 | 0 | 0 | 4 | 0 | 0 | 0 | 0 | 0 | 0 | 396 | 118 |
+
+## Trials
+
+| Benchmark | Arm | Model | Rep | Outcome | Best speedup | Pragmas (DP+LLM) | Rewrites | Baseline | LLM calls | Agent s |
+|---|---|---|---:|---|---:|---|---:|---:|---:|---:|
+| tsvc_c2/s112 | fast_recon_v5 | claude-haiku-4-5-20251001 | 1 | FASTER | 1.40x | 2+0 | 1 | 0 | 2 | 398.0 |
+| tsvc_c2/s112 | fast_recon_v5 | claude-haiku-4-5-20251001 | 2 | FASTER | 1.47x | 2+0 | 1 | 0 | 3 | 484.6 |
+| tsvc_c2/s112 | fast_recon_v5 | claude-haiku-4-5-20251001 | 3 | FASTER | 1.50x | 2+0 | 1 | 0 | 2 | 326.7 |
+| tsvc_c2/s112 | fast_recon_v5 | claude-haiku-4-5-20251001 | 4 | FASTER | 1.36x | 2+0 | 1 | 0 | 3 | 457.8 |
+| tsvc_c2/s112 | fast_recon_v5 | claude-haiku-4-5-20251001 | 5 | no-change | 1.01x | 0+0 | 0 | 0 | 10 | 1785.4 |
+| tsvc_c2/s121 | fast_recon_v5 | claude-haiku-4-5-20251001 | 1 | FASTER | 1.53x | 2+0 | 1 | 0 | 4 | 699.2 |
+| tsvc_c2/s121 | fast_recon_v5 | claude-haiku-4-5-20251001 | 2 | FASTER | 1.50x | 2+0 | 1 | 0 | 4 | 647.6 |
+| tsvc_c2/s121 | fast_recon_v5 | claude-haiku-4-5-20251001 | 3 | FASTER | 1.50x | 2+0 | 1 | 0 | 3 | 676.2 |
+| tsvc_c2/s121 | fast_recon_v5 | claude-haiku-4-5-20251001 | 4 | no-change | 1.00x | 0+0 | 0 | 0 | 4 | 653.2 |
+| tsvc_c2/s121 | fast_recon_v5 | claude-haiku-4-5-20251001 | 5 | FASTER | 1.50x | 2+0 | 1 | 0 | 1 | 192.3 |
+| tsvc_c2/s1213 | fast_recon_v5 | claude-haiku-4-5-20251001 | 1 | FASTER | 2.64x | 2+0 | 1 | 0 | 2 | 371.1 |
+| tsvc_c2/s1213 | fast_recon_v5 | claude-haiku-4-5-20251001 | 2 | FASTER | 2.81x | 2+0 | 1 | 0 | 1 | 312.3 |
+| tsvc_c2/s1213 | fast_recon_v5 | claude-haiku-4-5-20251001 | 3 | FASTER | 2.78x | 2+0 | 1 | 0 | 1 | 325.8 |
+| tsvc_c2/s1213 | fast_recon_v5 | claude-haiku-4-5-20251001 | 4 | FASTER | 2.81x | 2+0 | 1 | 0 | 1 | 272.5 |
+| tsvc_c2/s1213 | fast_recon_v5 | claude-haiku-4-5-20251001 | 5 | FASTER | 2.65x | 2+0 | 1 | 0 | 1 | 254.2 |
+| tsvc_c2/s127 | fast_recon_v5 | claude-haiku-4-5-20251001 | 1 | FASTER | 3.95x | 1+0 | 1 | 0 | 1 | 192.7 |
+| tsvc_c2/s127 | fast_recon_v5 | claude-haiku-4-5-20251001 | 2 | FASTER | 4.00x | 1+0 | 1 | 0 | 1 | 133.5 |
+| tsvc_c2/s127 | fast_recon_v5 | claude-haiku-4-5-20251001 | 3 | FASTER | 3.97x | 1+0 | 1 | 0 | 1 | 140.3 |
+| tsvc_c2/s127 | fast_recon_v5 | claude-haiku-4-5-20251001 | 4 | FASTER | 3.91x | 1+0 | 1 | 0 | 1 | 186.9 |
+| tsvc_c2/s127 | fast_recon_v5 | claude-haiku-4-5-20251001 | 5 | FASTER | 3.95x | 1+0 | 1 | 0 | 1 | 172.4 |
+| tsvc_c2/s211 | fast_recon_v5 | claude-haiku-4-5-20251001 | 1 | FASTER | 1.24x | 1+0 | 1 | 0 | 1 | 313.7 |
+| tsvc_c2/s211 | fast_recon_v5 | claude-haiku-4-5-20251001 | 2 | FASTER | 1.16x | 1+0 | 1 | 0 | 1 | 316.2 |
+| tsvc_c2/s211 | fast_recon_v5 | claude-haiku-4-5-20251001 | 3 | FASTER | 1.15x | 1+0 | 1 | 0 | 1 | 288.1 |
+| tsvc_c2/s211 | fast_recon_v5 | claude-haiku-4-5-20251001 | 4 | FASTER | 1.25x | 1+0 | 1 | 0 | 2 | 315.2 |
+| tsvc_c2/s211 | fast_recon_v5 | claude-haiku-4-5-20251001 | 5 | FASTER | 1.27x | 1+0 | 1 | 0 | 1 | 360.2 |
+| tsvc_c4/s314 | fast_recon_v5 | claude-haiku-4-5-20251001 | 1 | FASTER | 10.28x | 1+0 | 1 | 0 | 3 | 443.9 |
+| tsvc_c4/s314 | fast_recon_v5 | claude-haiku-4-5-20251001 | 2 | FASTER | 3.36x | 1+0 | 1 | 0 | 6 | 969.2 |
+| tsvc_c4/s314 | fast_recon_v5 | claude-haiku-4-5-20251001 | 3 | FASTER | 10.39x | 1+0 | 1 | 0 | 9 | 1593.7 |
+| tsvc_c4/s314 | fast_recon_v5 | claude-haiku-4-5-20251001 | 4 | no-change | 1.00x | 0+0 | 0 | 0 | 10 | 1698.6 |
+| tsvc_c4/s314 | fast_recon_v5 | claude-haiku-4-5-20251001 | 5 | FASTER | 9.89x | 1+0 | 1 | 0 | 9 | 1120.0 |
+| tsvc_c4/s316 | fast_recon_v5 | claude-haiku-4-5-20251001 | 1 | FASTER | 3.38x | 1+0 | 1 | 0 | 2 | 505.1 |
+| tsvc_c4/s316 | fast_recon_v5 | claude-haiku-4-5-20251001 | 2 | FASTER | 3.37x | 1+0 | 1 | 0 | 3 | 441.6 |
+| tsvc_c4/s316 | fast_recon_v5 | claude-haiku-4-5-20251001 | 3 | FASTER | 10.42x | 1+0 | 1 | 0 | 10 | 1489.9 |
+| tsvc_c4/s316 | fast_recon_v5 | claude-haiku-4-5-20251001 | 4 | FASTER | 3.37x | 1+0 | 1 | 0 | 2 | 396.1 |
+| tsvc_c4/s316 | fast_recon_v5 | claude-haiku-4-5-20251001 | 5 | no-change | 1.00x | 0+0 | 0 | 0 | 11 | 1584.2 |

@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_4/benchmarks/tsvc_c4/s315/fast_recon_v5/claude-haiku-4-5-20251001/rep3/work/s315.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_4/benchmarks/tsvc_c4/s315/fast_recon_v5/claude-haiku-4-5-20251001/rep3/work/s315.c
+@@ -17,6 +17,7 @@
+         index = 0;
+ 
+         // Process each chunk independently (no loop-carried dependencies)
++        #pragma omp parallel for firstprivate(num_chunks) shared(chunk_indices,chunk_maxes) 
+         for (int chunk = 0; chunk < num_chunks; ++chunk) {
+             int chunk_start = chunk * CHUNK_SIZE;
+             int chunk_end = chunk_start + CHUNK_SIZE;

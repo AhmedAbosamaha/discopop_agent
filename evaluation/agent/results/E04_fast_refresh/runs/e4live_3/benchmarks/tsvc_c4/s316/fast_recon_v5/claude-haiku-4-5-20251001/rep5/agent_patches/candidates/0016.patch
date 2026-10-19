@@ -1,0 +1,29 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_3/benchmarks/tsvc_c4/s316/fast_recon_v5/claude-haiku-4-5-20251001/rep5/work/s316.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_3/benchmarks/tsvc_c4/s316/fast_recon_v5/claude-haiku-4-5-20251001/rep5/work/s316.c
+@@ -1,16 +1,22 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s316(void)
+ {
+     real_t x;
++    real_t results[iterations];
++
+     for (int nl = 0; nl < iterations; nl++) {
+-        x = a[0];
++        real_t local_x = a[0];
+         for (int i = 1; i < LEN_1D; ++i) {
+-            if (a[i] < x) {
+-                x = a[i];
++            if (a[i] < local_x) {
++                local_x = a[i];
+             }
+         }
+-        dummy(a, b, c, d, e, x);
++        results[nl] = local_x;
++        dummy(a, b, c, d, e, local_x);
+     }
++
++    x = results[iterations - 1];
+     return x;
+ }

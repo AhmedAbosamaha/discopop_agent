@@ -1,0 +1,15 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_3/benchmarks/tsvc_c2/s121/fast_recon_v5/claude-haiku-4-5-20251001/rep5/work/s121.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_3/benchmarks/tsvc_c2/s121/fast_recon_v5/claude-haiku-4-5-20251001/rep5/work/s121.c
+@@ -8,10 +8,12 @@
+ 
+     for (int nl = 0; nl < iterations; nl++) {
+         // Save a[i+1] before loop modifies a
++        #pragma omp parallel for shared(temp) 
+         for (int i = 0; i < LEN_1D-1; i++) {
+             temp[i] = a[i+1];
+         }
+         // Parallelize: each iteration reads from constant temp, writes to unique a[i]
++        #pragma omp parallel for private(j) shared(temp) 
+         for (int i = 0; i < LEN_1D-1; i++) {
+             j = i + 1;
+             a[i] = temp[i] + b[i];

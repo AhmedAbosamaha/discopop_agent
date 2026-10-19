@@ -1,0 +1,28 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_4/benchmarks/tsvc_c4/s311/fast_recon_v5/claude-haiku-4-5-20251001/rep1/work/s311.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_4/benchmarks/tsvc_c4/s311/fast_recon_v5/claude-haiku-4-5-20251001/rep1/work/s311.c
+@@ -2,13 +2,22 @@
+ 
+ real_t kernel_s311(void)
+ {
+-    real_t sum;
++    real_t *sums = malloc(iterations * sizeof(real_t));
++
++    // First pass: compute sums - outer loop is now Do-All (independent iterations)
+     for (int nl = 0; nl < iterations; nl++) {
+-        sum = (real_t)0.;
++        real_t sum = (real_t)0.;
+         for (int i = 0; i < LEN_1D; i++) {
+             sum += a[i];
+         }
+-        dummy(a, b, c, d, e, sum);
++        sums[nl] = sum;
+     }
++
++    // Second pass: call dummy in order to preserve sequential side effects
++    for (int nl = 0; nl < iterations; nl++) {
++        dummy(a, b, c, d, e, sums[nl]);
++    }
++
++    free(sums);
+     return (real_t)0;
+ }

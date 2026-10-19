@@ -1,0 +1,16 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_4/benchmarks/tsvc_c4/s311/fast_recon_v5/claude-haiku-4-5-20251001/rep3/work/s311.c	2026-10-19 03:33:43.238226137 +0000
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_4/benchmarks/tsvc_c4/s311/fast_recon_v5/claude-haiku-4-5-20251001/rep3/work/s311.c.discopop_patch_generator.temp	2026-10-19 03:34:48.554488409 +0000
+@@ -7,7 +7,13 @@
+     for (int i = 0; i < LEN_1D; i++) {
+         sum += a[i];
+     }
++    #pragma omp parallel
++    #pragma omp single
++    {
++    #pragma omp task
+     dummy(a, b, c, d, e, sum);
++#pragma omp task
++}
+ }
+ 
+ real_t kernel_s311(void)

@@ -1,0 +1,27 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_2/benchmarks/tsvc_c4/s3113/fast_recon_v5/claude-haiku-4-5-20251001/rep3/work/s3113.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_2/benchmarks/tsvc_c4/s3113/fast_recon_v5/claude-haiku-4-5-20251001/rep3/work/s3113.c
+@@ -3,14 +3,21 @@
+ real_t kernel_s3113(void)
+ {
+     real_t max;
++    volatile real_t sync = 0;
+     for (int nl = 0; nl < iterations; nl++) {
+         max = ABS(a[0]);
+-        for (int i = 0; i < LEN_1D; i++) {
+-            if ((ABS(a[i])) > max) {
+-                max = ABS(a[i]);
++        for (int i = 1; i < LEN_1D; i++) {
++            real_t val = ABS(a[i]);
++            if (val > max) {
++                max = val;
+             }
+         }
+         dummy(a, b, c, d, e, max);
++        // Volatile read after dummy() to force serial ordering: iteration nl+1
++        // cannot proceed until iteration nl's dummy() call completes and this
++        // read executes. Prevents parallel inner loops from reading while dummy()
++        // is still writing.
++        sync = ABS(a[0]);
+     }
+     return max;
+ }

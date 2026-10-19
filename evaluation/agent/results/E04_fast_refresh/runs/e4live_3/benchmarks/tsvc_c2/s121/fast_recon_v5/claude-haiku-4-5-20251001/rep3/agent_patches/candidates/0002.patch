@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_3/benchmarks/tsvc_c2/s121/fast_recon_v5/claude-haiku-4-5-20251001/rep3/work/s121.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_3/benchmarks/tsvc_c2/s121/fast_recon_v5/claude-haiku-4-5-20251001/rep3/work/s121.c
+@@ -7,6 +7,7 @@
+     for (int nl = 0; nl < iterations; nl++) {
+         // Create a snapshot of a to break the inner loop's RAW dependence
+         real_t *a_copy = (real_t *)malloc(LEN_1D * sizeof(real_t));
++        #pragma omp parallel for shared(a_copy) 
+         for (int k = 0; k < LEN_1D; k++) {
+             a_copy[k] = a[k];
+         }

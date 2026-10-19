@@ -1,0 +1,18 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_2/benchmarks/tsvc_c4/s341/fast_recon_v5/claude-haiku-4-5-20251001/rep1/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_2/benchmarks/tsvc_c4/s341/fast_recon_v5/claude-haiku-4-5-20251001/rep1/work/s341.c
+@@ -9,6 +9,7 @@
+ 
+         // Phase 1: Mark which elements satisfy the condition
+         int *flags = (int *)malloc(LEN_1D * sizeof(int));
++        #pragma omp parallel for shared(flags) 
+         for (int i = 0; i < LEN_1D; i++) {
+             flags[i] = (b[i] > (real_t)0.) ? 1 : 0;
+         }
+@@ -21,6 +22,7 @@
+         }
+ 
+         // Phase 3: Write elements to a using computed positions (Do-All)
++        #pragma omp parallel for shared(scan,flags) 
+         for (int i = 0; i < LEN_1D; i++) {
+             if (flags[i]) {
+                 a[scan[i]] = b[i];

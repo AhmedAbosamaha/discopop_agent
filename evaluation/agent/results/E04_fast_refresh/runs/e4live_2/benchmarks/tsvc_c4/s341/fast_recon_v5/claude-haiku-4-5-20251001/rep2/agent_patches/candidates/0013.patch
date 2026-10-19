@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_2/benchmarks/tsvc_c4/s341/fast_recon_v5/claude-haiku-4-5-20251001/rep2/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_2/benchmarks/tsvc_c4/s341/fast_recon_v5/claude-haiku-4-5-20251001/rep2/work/s341.c
+@@ -6,6 +6,7 @@
+     int j;
+     int *indices = (int *)malloc(LEN_1D * sizeof(int));
+ 
++    #pragma omp parallel for firstprivate(indices) private(j) 
+     for (int nl = 0; nl < iterations; nl++) {
+         j = -1;
+         // First pass: compute output indices for elements passing the filter

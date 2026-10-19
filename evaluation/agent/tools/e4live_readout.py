@@ -15,7 +15,9 @@ says otherwise); unusable = BROKEN, slower than the original, racy, not compilin
   R1  per loop and per set: race-free verified FASTER, unusable programs, outcomes, beside the comparison cell
   R2  the refresh in the trials: refreshes per trial by kind (fast, full, fallback, failed), rewrites kept, reverts
   R3  the report: follow-ups answered ("reconstruction: …" in the log, the audit `llm_recon.json`), calls that failed,
-      the agent's warnings that the model called a loop independent where static analysis records a dependence
+      the agent's warnings that the model called a loop independent where static analysis records a dependence —
+      the agent prints at most three per report, so beside that count the whole one from the audit (added 19 Oct,
+      before the race check: §6)
   R4  model calls, cost and agent time per trial against the comparison cells; the profiling seconds a refresh saves
       are not logged per trial — estimated as the fast refreshes × (1.75 s − 1.54 s), step 1's medians on these loops
   R5  listed to be read by hand: every unusable program, every trial without a verdict, every loop whose race-free
@@ -61,13 +63,20 @@ def trial_log(t: Dict[str, Any]) -> Dict[str, Any]:
     d = Path(t["_dir"])
     log = (d / "agent.log").read_text(errors="replace") if (d / "agent.log").exists() else ""
     audits = list(d.rglob("llm_recon.json"))
+    # the audit holds one entry per report with every contradiction; the log's `[warn]` lines are only the first three
+    # of each report (`phase_a.py`, `rep.contradicted[:3]`)
+    entries: List[Dict[str, Any]] = [e for p in audits for e in json.loads(p.read_text())]
     return {"refresh": dict(Counter(REFRESH.findall(log))),
             "reports": RECON.findall(log),
             "report_call_failed": log.count("reconstruction call failed"),
             "fast_not_usable": log.count("fast refresh not usable"),
             "independent_warnings": log.count("[warn] model called loop"),
             "explorer_broke": log.count("reconstruction broke the explorer"),
-            "audit": bool(audits)}
+            "audit": bool(audits),
+            "audit_reports": len(entries),
+            "contradicting": sum(len(e.get("contradicting_static_analysis") or []) for e in entries),
+            "reports_contradicting": sum(1 for e in entries if e.get("contradicting_static_analysis")),
+            "declared_independent": sum(len(e.get("loops_declared_independent") or []) for e in entries)}
 
 
 def comparison(loops: Sequence[str], runs: Sequence[str], replaced: set, races_rel: Sequence[str]
@@ -166,7 +175,13 @@ def to_markdown(fast: List[Dict[str, Any]], races: Dict[Tuple[str, str, str, int
             f"{sum(logs[t['_dir']]['report_call_failed'] for t in fast)}; reports that broke the explorer: "
             f"{sum(logs[t['_dir']]['explorer_broke'] for t in fast)}",
             f"- the agent's warnings that the model called a loop independent where static analysis records a "
-            f"dependence: {sum(logs[t['_dir']]['independent_warnings'] for t in fast)}",
+            f"dependence: {sum(logs[t['_dir']]['independent_warnings'] for t in fast)} (the agent prints at most three "
+            f"per report); the whole count, from the audit `llm_recon.json` (one per loop, variable and dependence "
+            f"type): {sum(logs[t['_dir']]['contradicting'] for t in fast)} in "
+            f"{sum(logs[t['_dir']]['reports_contradicting'] for t in fast)} of "
+            f"{sum(logs[t['_dir']]['audit_reports'] for t in fast)} reports, in "
+            f"{sum(1 for t in fast if logs[t['_dir']]['contradicting'])} trials; loops the model declared independent: "
+            f"{sum(logs[t['_dir']]['declared_independent'] for t in fast)}",
             f"- profiling seconds a refresh saved, estimated (step 1's medians, {STEP1_FULL_S} s against "
             f"{STEP1_FAST_S} s): {n_fast} fast refreshes × {STEP1_FULL_S - STEP1_FAST_S:.2f} s = "
             f"{n_fast * (STEP1_FULL_S - STEP1_FAST_S):.1f} s, against "

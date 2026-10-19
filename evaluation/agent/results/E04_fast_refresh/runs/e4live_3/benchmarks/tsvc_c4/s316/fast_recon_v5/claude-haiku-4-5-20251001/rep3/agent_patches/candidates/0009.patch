@@ -1,0 +1,19 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_3/benchmarks/tsvc_c4/s316/fast_recon_v5/claude-haiku-4-5-20251001/rep3/work/s316.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_3/benchmarks/tsvc_c4/s316/fast_recon_v5/claude-haiku-4-5-20251001/rep3/work/s316.c
+@@ -4,12 +4,11 @@
+ {
+     real_t x;
+     for (int nl = 0; nl < iterations; nl++) {
+-        x = a[0];
+-        for (int i = 1; i < LEN_1D; ++i) {
+-            if (a[i] < x) {
+-                x = a[i];
+-            }
++        real_t min_val = 1.8e308;
++        for (int i = 0; i < LEN_1D; ++i) {
++            min_val = a[i] < min_val ? a[i] : min_val;
+         }
++        x = min_val;
+         dummy(a, b, c, d, e, x);
+     }
+     return x;

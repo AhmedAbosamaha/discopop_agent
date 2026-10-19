@@ -1,0 +1,19 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_2/benchmarks/tsvc_c4/s341/fast_recon_v5/claude-haiku-4-5-20251001/rep4/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_2/benchmarks/tsvc_c4/s341/fast_recon_v5/claude-haiku-4-5-20251001/rep4/work/s341.c
+@@ -2,13 +2,12 @@
+ 
+ real_t kernel_s341(void)
+ {
+-    int j;
+     for (int nl = 0; nl < iterations; nl++) {
+-        j = -1;
++        int j = -1;
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++                int pos = __atomic_fetch_add(&j, 1, __ATOMIC_RELAXED) + 1;
++                a[pos] = b[i];
+             }
+         }
+         dummy(a, b, c, d, e);

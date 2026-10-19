@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_1/benchmarks/tsvc_c4/s318/fast_recon_v5/claude-haiku-4-5-20251001/rep4/work/s318.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_1/benchmarks/tsvc_c4/s318/fast_recon_v5/claude-haiku-4-5-20251001/rep4/work/s318.c
+@@ -12,6 +12,7 @@
+     for (int nl = 0; nl < iterations; nl++) {
+         // Phase 1: Compute absolute values for all array elements.
+         // No loop-carried dependences; each iteration computes a distinct element.
++        #pragma omp parallel for shared(candidates) 
+         for (int i = 0; i < LEN_1D; i++) {
+             candidates[i] = ABS(a[i * inc]);
+         }

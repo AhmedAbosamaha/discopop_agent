@@ -1,0 +1,45 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_2/benchmarks/tsvc_c4/s341/fast_recon_v5/claude-haiku-4-5-20251001/rep2/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_2/benchmarks/tsvc_c4/s341/fast_recon_v5/claude-haiku-4-5-20251001/rep2/work/s341.c
+@@ -1,17 +1,37 @@
++#include <stdlib.h>
+ #include "data.h"
+ 
+ real_t kernel_s341(void)
+ {
+-    int j;
++    int *match = (int *)malloc(LEN_1D * sizeof(int));
++    int *indices = (int *)malloc(LEN_1D * sizeof(int));
++
+     for (int nl = 0; nl < iterations; nl++) {
+-        j = -1;
++        // First pass: mark matching elements
+         for (int i = 0; i < LEN_1D; i++) {
+-            if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++            match[i] = (b[i] > (real_t)0.) ? 1 : 0;
++        }
++
++        // Second pass: compute indices for matching elements
++        int total = 0;
++        for (int i = 0; i < LEN_1D; i++) {
++            if (match[i]) {
++                indices[i] = total;
++                total++;
+             }
+         }
++
++        // Third pass: write matching elements
++        for (int i = 0; i < LEN_1D; i++) {
++            if (match[i]) {
++                a[indices[i]] = b[i];
++            }
++        }
++
+         dummy(a, b, c, d, e);
+     }
++
++    free(match);
++    free(indices);
+     return (real_t)0;
+ }

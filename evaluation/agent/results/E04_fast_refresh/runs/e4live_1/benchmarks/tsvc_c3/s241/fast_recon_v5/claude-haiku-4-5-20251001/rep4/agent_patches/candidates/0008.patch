@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_1/benchmarks/tsvc_c3/s241/fast_recon_v5/claude-haiku-4-5-20251001/rep4/work/s241.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_1/benchmarks/tsvc_c3/s241/fast_recon_v5/claude-haiku-4-5-20251001/rep4/work/s241.c
+@@ -6,6 +6,7 @@
+     for (int nl = 0; nl < iterations; nl++) {
+         // Snapshot a[i+1] values before the loop to break loop-carried dependence
+         real_t *a_snapshot = (real_t *)malloc((LEN_1D - 1) * sizeof(real_t));
++        #pragma omp parallel for shared(a_snapshot) 
+         for (int i = 0; i < LEN_1D - 1; i++) {
+             a_snapshot[i] = a[i + 1];
+         }

@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_2/benchmarks/tsvc_c4/s341/fast_recon_v5/claude-haiku-4-5-20251001/rep2/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_2/benchmarks/tsvc_c4/s341/fast_recon_v5/claude-haiku-4-5-20251001/rep2/work/s341.c
+@@ -19,6 +19,7 @@
+         }
+ 
+         // Second pass: write filtered elements to their computed indices (now parallel-safe)
++        #pragma omp parallel for shared(indices) 
+         for (int i = 0; i < LEN_1D; i++) {
+             if (indices[i] >= 0) {
+                 a[indices[i]] = b[i];

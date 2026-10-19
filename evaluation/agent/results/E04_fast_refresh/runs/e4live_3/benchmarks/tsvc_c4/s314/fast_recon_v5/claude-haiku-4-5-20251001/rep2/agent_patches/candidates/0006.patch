@@ -1,0 +1,21 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_3/benchmarks/tsvc_c4/s314/fast_recon_v5/claude-haiku-4-5-20251001/rep2/work/s314.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_3/benchmarks/tsvc_c4/s314/fast_recon_v5/claude-haiku-4-5-20251001/rep2/work/s314.c
+@@ -4,13 +4,12 @@
+ {
+     real_t x;
+     for (int nl = 0; nl < iterations; nl++) {
+-        x = a[0];
+-        for (int i = 0; i < LEN_1D; i++) {
+-            if (a[i] > x) {
+-                x = a[i];
+-            }
++        real_t x_local = a[0];
++        for (int i = 1; i < LEN_1D; i++) {
++            x_local = fmax(x_local, a[i]);
+         }
+-        dummy(a, b, c, d, e, x);
++        dummy(a, b, c, d, e, x_local);
++        x = x_local;
+     }
+     return x;
+ }

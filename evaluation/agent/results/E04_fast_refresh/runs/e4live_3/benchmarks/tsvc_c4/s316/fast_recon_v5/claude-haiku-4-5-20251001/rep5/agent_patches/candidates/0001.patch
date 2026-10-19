@@ -1,0 +1,33 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_3/benchmarks/tsvc_c4/s316/fast_recon_v5/claude-haiku-4-5-20251001/rep5/work/s316.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_3/benchmarks/tsvc_c4/s316/fast_recon_v5/claude-haiku-4-5-20251001/rep5/work/s316.c
+@@ -1,16 +1,27 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s316(void)
+ {
+     real_t x;
+     for (int nl = 0; nl < iterations; nl++) {
+-        x = a[0];
++        real_t *candidates = malloc(LEN_1D * sizeof(real_t));
++
++        // Phase 1: Gather array elements independently (Do-All pattern)
++        for (int i = 0; i < LEN_1D; ++i) {
++            candidates[i] = a[i];
++        }
++
++        // Phase 2: Find minimum among candidates (reduction)
++        x = candidates[0];
+         for (int i = 1; i < LEN_1D; ++i) {
+-            if (a[i] < x) {
+-                x = a[i];
++            if (candidates[i] < x) {
++                x = candidates[i];
+             }
+         }
++
+         dummy(a, b, c, d, e, x);
++        free(candidates);
+     }
+     return x;
+ }

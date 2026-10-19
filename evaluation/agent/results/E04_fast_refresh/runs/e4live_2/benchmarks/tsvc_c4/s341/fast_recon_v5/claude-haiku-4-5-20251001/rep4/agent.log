@@ -1,0 +1,305 @@
+
+============================================================
+  DiscoPoP Agentic Controller
+============================================================
+  Source         : /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_2/benchmarks/tsvc_c4/s341/fast_recon_v5/claude-haiku-4-5-20251001/rep4/work/s341.c
+  DiscoPoP dir   : .discopop
+  Model          : claude-haiku-4-5-20251001
+  Budget         : 3 LLM retries/region (+2 free build fixes)
+  λ penalty      : 1.0
+  Min workload   : 0.0
+  Restruct. depth: 0 (Tier-2 allowed at depth 0–0)
+  Quality gate   : Tier-1 = all but speed, no escalation; Tier-2 = full
+  TSan           : barrier-aware (archer: /usr/lib/llvm-20/lib/libarcher.so)
+  Speedup gate   : require ≥ 1.1× measured
+  Dry run        : False
+  LLM mode       : claude-haiku-4-5-20251001
+  Edit mode      : direct
+  Re-profiling   : fast refresh (compile only) between rewrites; full before a deeper level and before Phase B; LLM reports deps for the code it writes (followup)
+  Explorer       : one attempt may take 60 s, then the draw is repeated (random stall, L5)
+  Pragmas        : DiscoPoP writes them in Phase B
+============================================================
+
+  Project        : /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_2/benchmarks/tsvc_c4/s341/fast_recon_v5/claude-haiku-4-5-20251001/rep4/work  (2 unit(s): s341.c, main.c)
+
+  [ok] Captured reference output on 2 inputs (69 bytes, 401.4 ms baseline) for the correctness/performance gates.
+
+  [ok] Numerical noise floor 0 — 6 build variants agreed exactly; output is compared byte-for-byte.
+
+  Hotspots       : measured per-region runtimes are available — 20 region(s) measured, 2.5 ms total, ranking by predicted time saved at 48 threads
+
+  Baseline       : DiscoPoP proposes 0 applicable pattern(s) unaided; 0 of them produce a usable pragma
+                   → the run beats DiscoPoP by ending with more than 0
+
+  Initial candidates
+Region ID    Type           Saves    % run    Hot  Tier  Depth  Name
+--------------------------------------------------------------------------------------
+  1:2        loop          1.2 ms    49.5%    YES     2      0  lines 6–15
+  0:0        function      1.2 ms    49.5%    YES     2      0  kernel_s341
+  1:6        loop          1.2 ms    49.1%    YES     2      0  lines 8–13
+
+============================================================
+  FLOOR — DiscoPoP's own program, as the DiscoPoP-alone arm delivers it (D32)
+============================================================
+  [floor] DiscoPoP alone keeps nothing — the floor is the original program (D32)
+
+============================================================
+  PHASE A — restructure  (the source stays pragma-free)
+============================================================
+
+┌─ [depth=0] loop 1:2 (lines 6–15)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Stage 'compile' failed (build fix — budget not charged, 1 left): /tmp/dp_agent_val_2hj58aza/_dp_proj_validate_binary/s341.c:7:26: error: call to undeclared library function 'malloc' with type 'void *(unsigned long)'; ISO C99 and later do not support implicit functi
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Original backed up → s341.c.original
+│  [Tier-2] Applied to s341.c
+│  [Tier-2] Fast refresh (compile only, no instrumented run)...
+│           77/104 observed dependences carried forward (27 in rewritten code, 0 no longer present; 46 without callpath state), 2/2 loop trip counts
+│           reconstruction: 2 claimed, 2 resolved, 0 outside the gap (correctly skipped), 0 unplaceable, 1 loop(s) declared independent, 5 CONTRADICTING static analysis
+│           [warn] model called loop 16 independent, but static analysis records a RAW on argc there
+│           [warn] model called loop 16 independent, but static analysis records a RAW on argv there
+│           [warn] model called loop 16 independent, but static analysis records a RAW on pb_result there
+│  [refresh] kind=fast
+│  [Tier-2] Re-measured runtimes: 21 region(s), 4.0 ms total
+│  [Phase-A] Asking DiscoPoP what it now finds in the rewritten lines...
+│  [Phase-A] exposure verdict: exposed
+│  [Phase-A] D40 — judging it as it will ship: DiscoPoP's pragmas for the exposed loops through the safety gate, then the program with them against the program before the rewrite (paired)
+│  [Phase-A] timing noise on this machine: 0.989 → keep at or above 0.979
+│  [Phase-A] D40: pragma for lines 6–25 fails at 'tsan'
+│  [Phase-A] D40: pragma for lines 11–13 fails at 'openmp_compile'
+│  [Phase-A] D40: pragma for lines 16–20 passes the safety gate
+│  [Phase-A] D40 verdict: not_faster 0.18×
+│  [Phase-A] D40 time: 106.3 s
+│  [Tier-2] DiscoPoP parallelized it, but the program is not faster than before the rewrite — reverting (snapshot restore)
+└─ retry (budget remaining: 2)
+
+│  [Tier-2] Assembling evidence (budget remaining: 1)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Applied to s341.c
+│  [Tier-2] Fast refresh (compile only, no instrumented run)...
+│           77/104 observed dependences carried forward (27 in rewritten code, 0 no longer present; 46 without callpath state), 2/2 loop trip counts
+│           reconstruction: 1 claimed, 1 resolved, 0 outside the gap (correctly skipped), 0 unplaceable, 2 loop(s) declared independent, 7 CONTRADICTING static analysis
+│           [warn] model called loop 9 independent, but static analysis records a RAW on a there
+│           [warn] model called loop 9 independent, but static analysis records a RAW on b there
+│           [warn] model called loop 9 independent, but static analysis records a RAW on d there
+│  [refresh] kind=fast
+│  [Tier-2] Re-measured runtimes: 21 region(s), 5.0 ms total
+│  [Phase-A] Asking DiscoPoP what it now finds in the rewritten lines...
+│  [Phase-A] exposure verdict: exposed
+│  [Phase-A] D40 — judging it as it will ship: DiscoPoP's pragmas for the exposed loops through the safety gate, then the program with them against the program before the rewrite (paired)
+│  [Phase-A] D40: pragma for lines 13–15 fails at 'openmp_compile'
+│  [Phase-A] D40: pragma for lines 18–22 passes the safety gate
+│  [Phase-A] D40 verdict: not_faster 0.55×
+│  [Phase-A] D40 time: 12.0 s
+│  [Tier-2] DiscoPoP parallelized it, but the program is not faster than before the rewrite — reverting (snapshot restore)
+└─ retry (budget remaining: 1)
+
+│  [Tier-2] Assembling evidence (budget remaining: 0)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Applied to s341.c
+│  [Tier-2] Fast refresh (compile only, no instrumented run)...
+│           77/104 observed dependences carried forward (27 in rewritten code, 0 no longer present; 46 without callpath state), 2/2 loop trip counts
+│           reconstruction: 5 claimed, 5 resolved, 0 outside the gap (correctly skipped), 0 unplaceable, 1 loop(s) declared independent, 4 CONTRADICTING static analysis
+│           [warn] model called loop 20 independent, but static analysis records a RAW on pb_result there
+│           [warn] model called loop 20 independent, but static analysis records a WAW on retval there
+│           [warn] model called loop 20 independent, but static analysis records a RAW on temp there
+│  [refresh] kind=fast
+│  [Tier-2] Re-measured runtimes: 21 region(s), 3.1 ms total
+│  [Phase-A] Asking DiscoPoP what it now finds in the rewritten lines...
+│  [Phase-A] exposure verdict: exposed
+│  [Phase-A] D40 — judging it as it will ship: DiscoPoP's pragmas for the exposed loops through the safety gate, then the program with them against the program before the rewrite (paired)
+│  [Phase-A] D40: pragma for lines 9–25 fails at 'tsan'
+│  [Phase-A] D40: pragma for lines 13–17 fails at 'tsan'
+│  [Phase-A] D40: pragma for lines 20–22 passes the safety gate
+│  [Phase-A] D40 verdict: not_faster 0.64×
+│  [Phase-A] D40 time: 11.9 s
+│  [Tier-2] DiscoPoP parallelized it, but the program is not faster than before the rewrite — reverting (snapshot restore)
+└─ retry (budget remaining: 0)
+
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] function 0:0 (lines 3–16)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Stage 'compile' failed (build fix — budget not charged, 1 left): /tmp/dp_agent_val_i5317_1c/_dp_proj_validate_binary/s341.c:7:26: error: call to undeclared library function 'malloc' with type 'void *(unsigned long)'; ISO C99 and later do not support implicit functi
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Applied to s341.c
+│  [Tier-2] Fast refresh (compile only, no instrumented run)...
+│           77/104 observed dependences carried forward (27 in rewritten code, 0 no longer present; 46 without callpath state), 2/2 loop trip counts
+│           reconstruction: 5 claimed, 5 resolved, 0 outside the gap (correctly skipped), 0 unplaceable, 1 loop(s) declared independent, 5 CONTRADICTING static analysis
+│           [warn] model called loop 17 independent, but static analysis records a RAW on argc there
+│           [warn] model called loop 17 independent, but static analysis records a RAW on argv there
+│           [warn] model called loop 17 independent, but static analysis records a RAW on pb_result there
+│  [refresh] kind=fast
+│  [Tier-2] Re-measured runtimes: 21 region(s), 3.7 ms total
+│  [Phase-A] Asking DiscoPoP what it now finds in the rewritten lines...
+│  [Phase-A] exposure verdict: exposed
+│  [Phase-A] D40 — judging it as it will ship: DiscoPoP's pragmas for the exposed loops through the safety gate, then the program with them against the program before the rewrite (paired)
+│  [Phase-A] D40: pragma for lines 6–25 fails at 'tsan'
+│  [Phase-A] D40: pragma for lines 10–14 fails at 'correctness'
+│  [Phase-A] D40: pragma for lines 17–21 passes the safety gate
+│  [Phase-A] D40 verdict: not_faster 0.20×
+│  [Phase-A] D40 time: 20.7 s
+│  [Tier-2] DiscoPoP parallelized it, but the program is not faster than before the rewrite — reverting (snapshot restore)
+└─ retry (budget remaining: 2)
+
+│  [Tier-2] Assembling evidence (budget remaining: 1)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Applied to s341.c
+│  [Tier-2] Fast refresh (compile only, no instrumented run)...
+│           77/104 observed dependences carried forward (27 in rewritten code, 0 no longer present; 46 without callpath state), 2/2 loop trip counts
+│           reconstruction: 3 claimed, 3 resolved, 0 outside the gap (correctly skipped), 0 unplaceable, 1 loop(s) declared independent, 5 CONTRADICTING static analysis
+│           [warn] model called loop 18 independent, but static analysis records a RAW on argc there
+│           [warn] model called loop 18 independent, but static analysis records a RAW on argv there
+│           [warn] model called loop 18 independent, but static analysis records a RAW on pb_result there
+│  [refresh] kind=fast
+│  [Tier-2] Re-measured runtimes: 21 region(s), 3.8 ms total
+│  [Phase-A] Asking DiscoPoP what it now finds in the rewritten lines...
+│  [Phase-A] exposure verdict: exposed
+│  [Phase-A] D40 — judging it as it will ship: DiscoPoP's pragmas for the exposed loops through the safety gate, then the program with them against the program before the rewrite (paired)
+│  [Phase-A] D40: pragma for lines 8–25 fails at 'tsan'
+│  [Phase-A] D40: pragma for lines 11–15 fails at 'correctness'
+│  [Phase-A] D40: pragma for lines 18–22 passes the safety gate
+│  [Phase-A] D40 verdict: not_faster 0.58×
+│  [Phase-A] D40 time: 12.4 s
+│  [Tier-2] DiscoPoP parallelized it, but the program is not faster than before the rewrite — reverting (snapshot restore)
+└─ retry (budget remaining: 1)
+
+│  [Tier-2] Assembling evidence (budget remaining: 0)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Applied to s341.c
+│  [Tier-2] Fast refresh (compile only, no instrumented run)...
+│           77/104 observed dependences carried forward (27 in rewritten code, 0 no longer present; 46 without callpath state), 2/2 loop trip counts
+│           reconstruction: 3 claimed, 2 resolved, 0 outside the gap (correctly skipped), 1 unplaceable, 0 loop(s) declared independent
+│  [refresh] kind=fast
+│  [Tier-2] Re-measured runtimes: 20 region(s), 6.9 ms total
+│  [Phase-A] Asking DiscoPoP what it now finds in the rewritten lines...
+│  [Phase-A] exposure verdict: exposed
+│  [Phase-A] D40 — judging it as it will ship: DiscoPoP's pragmas for the exposed loops through the safety gate, then the program with them against the program before the rewrite (paired)
+│  [Phase-A] D40: pragma for lines 7–12 fails at 'schedules'
+│  [Phase-A] D40 verdict: pattern_broken
+│  [Phase-A] D40 time: 0.8 s
+│  [Tier-2] DiscoPoP found a pattern, but its pragma fails validation — reverting (snapshot restore)
+└─ retry (budget remaining: 0)
+
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:6 (lines 8–13)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Stage 'compile' failed (build fix — budget not charged, 1 left): /tmp/dp_agent_val_3p_lhd02/_dp_proj_validate_binary/s341.c:10:35: error: call to undeclared library function 'malloc' with type 'void *(unsigned long)'; ISO C99 and later do not support implicit funct
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Applied to s341.c
+│  [Tier-2] Fast refresh (compile only, no instrumented run)...
+│           68/104 observed dependences carried forward (36 in rewritten code, 0 no longer present; 46 without callpath state), 2/2 loop trip counts
+│           reconstruction: 3 claimed, 3 resolved, 0 outside the gap (correctly skipped), 0 unplaceable, 2 loop(s) declared independent, 7 CONTRADICTING static analysis
+│           [warn] model called loop 12 independent, but static analysis records a RAW on argc there
+│           [warn] model called loop 12 independent, but static analysis records a RAW on argv there
+│           [warn] model called loop 12 independent, but static analysis records a RAW on is_positive there
+│  [refresh] kind=fast
+│  [Tier-2] Re-measured runtimes: 21 region(s), 6.2 ms total
+│  [Phase-A] Asking DiscoPoP what it now finds in the rewritten lines...
+│  [Phase-A] exposure verdict: exposed
+│  [Phase-A] D40 — judging it as it will ship: DiscoPoP's pragmas for the exposed loops through the safety gate, then the program with them against the program before the rewrite (paired)
+│  [Phase-A] D40: pragma for lines 7–38 fails at 'tsan'
+│  [Phase-A] D40: pragma for lines 12–14 passes the safety gate
+│  [Phase-A] D40: pragma for lines 19–21 fails at 'openmp_compile'
+│  [Phase-A] D40: pragma for lines 24–28 passes the safety gate
+│  [Phase-A] D40: the pragmas together passes the safety gate
+│  [Phase-A] D40 verdict: not_faster 0.16×
+│  [Phase-A] D40 time: 24.1 s
+│  [Tier-2] DiscoPoP parallelized it, but the program is not faster than before the rewrite — reverting (snapshot restore)
+└─ retry (budget remaining: 2)
+
+│  [Tier-2] Assembling evidence (budget remaining: 1)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Applied to s341.c
+│  [Tier-2] Fast refresh (compile only, no instrumented run)...
+│           68/104 observed dependences carried forward (36 in rewritten code, 0 no longer present; 46 without callpath state), 2/2 loop trip counts
+│           reconstruction: 3 claimed, 3 resolved, 0 outside the gap (correctly skipped), 0 unplaceable, 2 loop(s) declared independent, 7 CONTRADICTING static analysis
+│           [warn] model called loop 15 independent, but static analysis records a RAW on argc there
+│           [warn] model called loop 15 independent, but static analysis records a RAW on argv there
+│           [warn] model called loop 15 independent, but static analysis records a RAW on is_positive there
+│  [refresh] kind=fast
+│  [Tier-2] Re-measured runtimes: 21 region(s), 4.8 ms total
+│  [Phase-A] Asking DiscoPoP what it now finds in the rewritten lines...
+│  [Phase-A] exposure verdict: exposed
+│  [Phase-A] D40 — judging it as it will ship: DiscoPoP's pragmas for the exposed loops through the safety gate, then the program with them against the program before the rewrite (paired)
+│  [Phase-A] D40: pragma for lines 15–17 passes the safety gate
+│  [Phase-A] D40: pragma for lines 21–23 fails at 'openmp_compile'
+│  [Phase-A] D40: pragma for lines 26–30 passes the safety gate
+│  [Phase-A] D40: the pragmas together passes the safety gate
+│  [Phase-A] D40 verdict: not_faster 0.58×
+│  [Phase-A] D40 time: 13.6 s
+│  [Tier-2] DiscoPoP parallelized it, but the program is not faster than before the rewrite — reverting (snapshot restore)
+└─ retry (budget remaining: 1)
+
+│  [Tier-2] Assembling evidence (budget remaining: 0)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Applied to s341.c
+│  [Tier-2] Fast refresh (compile only, no instrumented run)...
+│           78/104 observed dependences carried forward (26 in rewritten code, 0 no longer present; 46 without callpath state), 2/2 loop trip counts
+│           reconstruction: 4 claimed, 4 resolved, 0 outside the gap (correctly skipped), 0 unplaceable, 1 loop(s) declared independent, 3 CONTRADICTING static analysis
+│           [warn] model called loop 25 independent, but static analysis records a RAW on count there
+│           [warn] model called loop 25 independent, but static analysis records a WAW on j there
+│           [warn] model called loop 25 independent, but static analysis records a RAW on position there
+│  [refresh] kind=fast
+│  [Tier-2] Re-measured runtimes: 21 region(s), 3.6 ms total
+│  [Phase-A] Asking DiscoPoP what it now finds in the rewritten lines...
+│  [Phase-A] exposure verdict: exposed
+│  [Phase-A] D40 — judging it as it will ship: DiscoPoP's pragmas for the exposed loops through the safety gate, then the program with them against the program before the rewrite (paired)
+│  [Phase-A] D40: pragma for lines 10–35 fails at 'tsan'
+│  [Phase-A] D40: pragma for lines 25–29 passes the safety gate
+│  [Phase-A] D40 verdict: not_faster 0.45×
+│  [Phase-A] D40 time: 12.8 s
+│  [Tier-2] DiscoPoP parallelized it, but the program is not faster than before the rewrite — reverting (snapshot restore)
+└─ retry (budget remaining: 0)
+
+└─ SKIPPED (budget exhausted)
+
+
+============================================================
+  PHASE B — annotate  (0 candidate pragma(s))
+============================================================
+
+  DiscoPoP proposes no applicable pattern for the final source.
+
+
+============================================================
+  SUMMARY: 0 rewrite(s) kept  |  0 pragma(s) applied  |  3 skipped
+  DiscoPoP unaided: 0 usable pragma(s) in this profile's draw  →  this run: 0   [MATCHED, informational]
+    ✗  1:2  [skipped]  depth=0
+    ✗  0:0  [skipped]  depth=0
+    ✗  1:6  [skipped]  depth=0
+
+  Results → .discopop/agent_patches/accepted.json
+============================================================
+

@@ -1,0 +1,38 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_3/benchmarks/tsvc_c4/s314/fast_recon_v5/claude-haiku-4-5-20251001/rep1/work/s314.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_3/benchmarks/tsvc_c4/s314/fast_recon_v5/claude-haiku-4-5-20251001/rep1/work/s314.c
+@@ -4,12 +4,31 @@
+ {
+     real_t x;
+     for (int nl = 0; nl < iterations; nl++) {
+-        x = a[0];
+-        for (int i = 0; i < LEN_1D; i++) {
+-            if (a[i] > x) {
+-                x = a[i];
++        int seg_size = 256;
++        int num_segs = (LEN_1D + seg_size - 1) / seg_size;
++        real_t *seg_max = malloc(num_segs * sizeof(real_t));
++
++        for (int seg = 0; seg < num_segs; seg++) {
++            int start = seg * seg_size;
++            int end = (start + seg_size < LEN_1D) ? start + seg_size : LEN_1D;
++
++            real_t local_max = a[start];
++            for (int i = start + 1; i < end; i++) {
++                if (a[i] > local_max) {
++                    local_max = a[i];
++                }
++            }
++            seg_max[seg] = local_max;
++        }
++
++        x = seg_max[0];
++        for (int seg = 1; seg < num_segs; seg++) {
++            if (seg_max[seg] > x) {
++                x = seg_max[seg];
+             }
+         }
++
++        free(seg_max);
+         dummy(a, b, c, d, e, x);
+     }
+     return x;

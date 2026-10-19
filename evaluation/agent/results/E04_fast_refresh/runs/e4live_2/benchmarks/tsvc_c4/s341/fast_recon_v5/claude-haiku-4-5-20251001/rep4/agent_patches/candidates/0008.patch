@@ -1,0 +1,36 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_2/benchmarks/tsvc_c4/s341/fast_recon_v5/claude-haiku-4-5-20251001/rep4/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_2/benchmarks/tsvc_c4/s341/fast_recon_v5/claude-haiku-4-5-20251001/rep4/work/s341.c
+@@ -1,17 +1,29 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s341(void)
+ {
+-    int j;
++    // Allocate temp buffer outside the repeated loop
++    real_t* temp = malloc(LEN_1D * sizeof(real_t));
++
+     for (int nl = 0; nl < iterations; nl++) {
+-        j = -1;
++        int temp_count = 0;
++
++        // Collect elements into temp (sequential due to temp_count, but no dependency on array indices)
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++                temp[temp_count++] = b[i];
+             }
+         }
++
++        // Copy compacted elements to output (pure do-all: each iteration writes unique a[i])
++        for (int i = 0; i < temp_count; i++) {
++            a[i] = temp[i];
++        }
++
+         dummy(a, b, c, d, e);
+     }
++
++    free(temp);
+     return (real_t)0;
+ }

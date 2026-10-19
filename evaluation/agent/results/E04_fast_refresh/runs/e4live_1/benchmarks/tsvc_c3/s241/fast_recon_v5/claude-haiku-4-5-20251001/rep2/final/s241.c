@@ -1,0 +1,32 @@
+#include "data.h"
+#include <stdlib.h>
+
+real_t kernel_s241(void)
+{
+    real_t *a_saved = (real_t *)malloc(LEN_1D * sizeof(real_t));
+
+    for (int nl = 0; nl < iterations; nl++) {
+        /* Save old a values before updating them */
+        #pragma omp parallel for shared(a_saved) 
+        for (int i = 0; i < LEN_1D; i++) {
+            a_saved[i] = a[i];
+        }
+
+        /* Phase 1: Compute new a values (can be parallelized - no loop-carry) */
+        #pragma omp parallel for 
+        for (int i = 0; i < LEN_1D-1; i++) {
+            a[i] = b[i] * c[i  ] * d[i];
+        }
+
+        /* Phase 2: Compute new b values using saved a[i+1] (can be parallelized - no loop-carry) */
+        #pragma omp parallel for shared(a_saved) 
+        for (int i = 0; i < LEN_1D-1; i++) {
+            b[i] = a[i] * a_saved[i+1] * d[i];
+        }
+
+        dummy(a, b, c, d, e);
+    }
+
+    free(a_saved);
+    return (real_t)0;
+}

@@ -1,0 +1,15 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_4/benchmarks/tsvc_c2/s254/fast_recon_v5/claude-haiku-4-5-20251001/rep4/work/s254.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_4/benchmarks/tsvc_c2/s254/fast_recon_v5/claude-haiku-4-5-20251001/rep4/work/s254.c
+@@ -4,10 +4,9 @@
+ {
+     real_t x;
+     for (int nl = 0; nl < iterations; nl++) {
+-        x = b[LEN_1D-1];
+         for (int i = 0; i < LEN_1D; i++) {
+-            a[i] = (b[i] + x) * (real_t).5;
+-            x = b[i];
++            real_t x_val = (i == 0) ? b[LEN_1D-1] : b[i-1];
++            a[i] = (b[i] + x_val) * (real_t).5;
+         }
+         dummy(a, b, c, d, e);
+     }

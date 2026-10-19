@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_1/benchmarks/tsvc_c2/s212/fast_recon_v5/claude-haiku-4-5-20251001/rep3/work/s212.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_1/benchmarks/tsvc_c2/s212/fast_recon_v5/claude-haiku-4-5-20251001/rep3/work/s212.c
+@@ -16,6 +16,7 @@
+         }
+ 
+         // Update b using saved a values (removes RAW loop-carried dependence on a)
++        #pragma omp parallel for reduction(+:b) 
+         for (int i = 0; i < LEN_1D-1; i++) {
+             b[i] += a_copy[i + 1] * d[i];
+         }

@@ -1,0 +1,25 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_2/benchmarks/tsvc_c4/s319/fast_recon_v5/claude-haiku-4-5-20251001/rep1/work/s319.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_2/benchmarks/tsvc_c4/s319/fast_recon_v5/claude-haiku-4-5-20251001/rep1/work/s319.c
+@@ -2,16 +2,17 @@
+ 
+ real_t kernel_s319(void)
+ {
+-    real_t sum;
++    real_t sum = 0.;
+     for (int nl = 0; nl < iterations; nl++) {
+-        sum = 0.;
++        real_t local_sum = 0.;
+         for (int i = 0; i < LEN_1D; i++) {
+             a[i] = c[i] + d[i];
+-            sum += a[i];
+             b[i] = c[i] + e[i];
+-            sum += b[i];
++            local_sum += a[i];
++            local_sum += b[i];
+         }
+-        dummy(a, b, c, d, e, sum);
++        dummy(a, b, c, d, e, local_sum);
++        sum = local_sum;
+     }
+     return sum;
+ }

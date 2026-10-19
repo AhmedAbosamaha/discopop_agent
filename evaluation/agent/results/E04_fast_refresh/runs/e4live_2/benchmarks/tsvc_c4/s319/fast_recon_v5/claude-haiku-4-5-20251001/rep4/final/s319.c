@@ -1,0 +1,20 @@
+#include "data.h"
+
+real_t kernel_s319(void)
+{
+    real_t sum;
+    for (int nl = 0; nl < iterations; nl++) {
+        sum = 0.;
+        #pragma omp parallel for reduction(+:sum) 
+        for (int i = 0; i < LEN_1D; i++) {
+            real_t iter_sum = 0.;
+            a[i] = c[i] + d[i];
+            iter_sum += a[i];
+            b[i] = c[i] + e[i];
+            iter_sum += b[i];
+            sum += iter_sum;
+        }
+        dummy(a, b, c, d, e, sum);
+    }
+    return sum;
+}

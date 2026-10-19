@@ -1,0 +1,23 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_3/benchmarks/tsvc_c2/s112/fast_recon_v5/claude-haiku-4-5-20251001/rep3/work/s112.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_3/benchmarks/tsvc_c2/s112/fast_recon_v5/claude-haiku-4-5-20251001/rep3/work/s112.c
+@@ -2,11 +2,18 @@
+ 
+ real_t kernel_s112(void)
+ {
++    real_t *temp = (real_t *)malloc((LEN_1D - 1) * sizeof(real_t));
+     for (int nl = 0; nl < iterations; nl++) {
+-        for (int i = LEN_1D - 2; i >= 0; i--) {
+-            a[i+1] = a[i] + b[i];
++        // Read phase: snapshot array a into temp
++        for (int i = 0; i < LEN_1D - 1; i++) {
++            temp[i] = a[i];
++        }
++        // Write phase: compute results from snapshot
++        for (int i = 0; i < LEN_1D - 1; i++) {
++            a[i+1] = temp[i] + b[i];
+         }
+         dummy(a, b, c, d, e);
+     }
++    free(temp);
+     return (real_t)0;
+ }

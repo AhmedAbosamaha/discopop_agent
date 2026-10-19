@@ -1,0 +1,31 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_2/benchmarks/tsvc_c4/s341/fast_recon_v5/claude-haiku-4-5-20251001/rep4/work/s341.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_2/benchmarks/tsvc_c4/s341/fast_recon_v5/claude-haiku-4-5-20251001/rep4/work/s341.c
+@@ -2,15 +2,24 @@
+ 
+ real_t kernel_s341(void)
+ {
+-    int j;
+     for (int nl = 0; nl < iterations; nl++) {
+-        j = -1;
++        // Phase 1: Compute exclusive prefix sum for output positions
++        int* positions = malloc((LEN_1D + 1) * sizeof(int));
++        positions[0] = 0;
++
++        for (int i = 0; i < LEN_1D; i++) {
++            positions[i + 1] = positions[i] + (b[i] > (real_t)0. ? 1 : 0);
++        }
++
++        // Phase 2: Parallel scatter-write using precomputed positions (no loop-carried dependence on j)
+         for (int i = 0; i < LEN_1D; i++) {
+             if (b[i] > (real_t)0.) {
+-                j++;
+-                a[j] = b[i];
++                a[positions[i]] = b[i];
+             }
+         }
++
++        free(positions);
++
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

@@ -1,0 +1,621 @@
+[
+  {
+    "source": "/home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_1/benchmarks/tsvc_c3/s241/fast_recon_v5/claude-haiku-4-5-20251001/rep4/work/s241.c",
+    "raw_reply": "Looking at the code, I need to analyze data dependencies carried between iterations for each of the three loops: 6 (outer loop), 8 (copy loop), and 11 (computation loop).\n\n**Loop at line 6 (outer loop):**\n\nBetween iterations `nl` and `nl+1`:\n- Iteration `nl` writes to global arrays `a` (line 12) and `b` (line 13)\n- Iteration `nl+1` reads from global array `a` at line 9 and reads from `b` at line 12\n- Iteration `nl` reads from `a` at line 9, and iteration `nl+1` writes to `a` at line 12\n- Iteration `nl` reads from `b` at line 12, and iteration `nl+1` writes to `b` at line 13\n\nThis creates RAW and WAR dependencies.\n\n**Loop at line 8 (copy loop):**\n\nEach iteration `k` writes to `a_orig[k]` and reads from `a[k]`. Since `a_orig` is local to the outer iteration (allocated line 7, freed line 15), and each iteration accesses different indices, there are no carried dependencies between iterations of this loop.\n\n**Loop at line 11 (computation loop):**\n\nIteration `i` accesses `a[i]` and `b[i]`, while iteration `i+1` accesses `a[i+1]` and `b[i+1]`. Since each iteration operates on different array indices, there are no carried dependencies between iterations of this loop.\n\nLOOP 6 RAW a 12 9\nLOOP 6 RAW b 13 12\nLOOP 6 WAR a 12 9\nLOOP 6 WAR b 13 12\nLOOP 8 NONE\nLOOP 11 NONE",
+    "claims": [
+      {
+        "loop": 6,
+        "type": "RAW",
+        "var": "a",
+        "writer_line": 12,
+        "reader_line": 9
+      },
+      {
+        "loop": 6,
+        "type": "RAW",
+        "var": "b",
+        "writer_line": 13,
+        "reader_line": 12
+      },
+      {
+        "loop": 6,
+        "type": "WAR",
+        "var": "a",
+        "writer_line": 12,
+        "reader_line": 9
+      },
+      {
+        "loop": 6,
+        "type": "WAR",
+        "var": "b",
+        "writer_line": 13,
+        "reader_line": 12
+      }
+    ],
+    "loops_declared_independent": [
+      8,
+      11
+    ],
+    "rows_applied": [
+      "157 NOM  RAW 53|a(S-1677079036)",
+      "53 NOM  RAW 75|b(S-1677079035)",
+      "53 NOM  WAR 157|a(S-1677079036)",
+      "75 NOM  WAR 53|b(S-1677079035)"
+    ],
+    "unresolved": [],
+    "contradicting_static_analysis": [
+      {
+        "loop": 8,
+        "var": "a",
+        "type": "RAW"
+      },
+      {
+        "loop": 8,
+        "var": "a_orig",
+        "type": "RAW"
+      },
+      {
+        "loop": 8,
+        "var": "b",
+        "type": "RAW"
+      },
+      {
+        "loop": 8,
+        "var": "c",
+        "type": "RAW"
+      },
+      {
+        "loop": 8,
+        "var": "d",
+        "type": "RAW"
+      },
+      {
+        "loop": 8,
+        "var": "e",
+        "type": "RAW"
+      }
+    ]
+  },
+  {
+    "source": "/home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_1/benchmarks/tsvc_c3/s241/fast_recon_v5/claude-haiku-4-5-20251001/rep4/work/s241.c",
+    "raw_reply": "Looking at the code to identify loop-carried data dependences:\n\n**Outer loop (line 5):**\n\nIteration `nl` of the outer loop executes the entire inner loop, modifying:\n- Writes to `a[0..LEN_1D-2]` at line 8\n- Writes to `b[0..LEN_1D-2]` at line 9\n- Reads from `a[1..LEN_1D-1]` at line 7\n- Reads from `b[0..LEN_1D-2]` at line 8\n\nIteration `nl+1` performs the same operations on the modified arrays.\n\n**Array `a` dependences:**\n- RAW: iteration `nl` writes `a[0..LEN_1D-2]`, iteration `nl+1` reads `a[1..LEN_1D-1]` \u2192 overlap exists\n- WAR: iteration `nl` reads `a[1..LEN_1D-1]`, iteration `nl+1` writes `a[0..LEN_1D-2]` \u2192 overlap exists\n\n**Array `b` dependences:**\n- RAW: iteration `nl` writes `b[0..LEN_1D-2]` at line 9, iteration `nl+1` reads at line 8\n- WAR: iteration `nl` reads `b[0..LEN_1D-2]` at line 8, iteration `nl+1` writes at line 9\n\n**Inner loop (line 6):**\n\nIteration `i` reads `a[i+1]` at line 7 and writes `a[i]` at line 8.\nIteration `i+1` reads `a[i+2]` at line 7 and writes `a[i+1]` at line 8.\n- WAR: iteration `i` reads `a[i+1]`, iteration `i+1` writes `a[i+1]`\n\n```\nLOOP 5 RAW a 8 7\nLOOP 5 WAR a 8 7\nLOOP 5 RAW b 9 8\nLOOP 5 WAR b 9 8\nLOOP 6 WAR a 8 7\n```",
+    "claims": [
+      {
+        "loop": 5,
+        "type": "RAW",
+        "var": "a",
+        "writer_line": 8,
+        "reader_line": 7
+      },
+      {
+        "loop": 5,
+        "type": "WAR",
+        "var": "a",
+        "writer_line": 8,
+        "reader_line": 7
+      },
+      {
+        "loop": 5,
+        "type": "RAW",
+        "var": "b",
+        "writer_line": 9,
+        "reader_line": 8
+      },
+      {
+        "loop": 5,
+        "type": "WAR",
+        "var": "b",
+        "writer_line": 9,
+        "reader_line": 8
+      },
+      {
+        "loop": 6,
+        "type": "WAR",
+        "var": "a",
+        "writer_line": 8,
+        "reader_line": 7
+      }
+    ],
+    "loops_declared_independent": [],
+    "rows_applied": [
+      "24 NOM  RAW 120|a(S1236146179)",
+      "120 NOM  WAR 24|a(S1236146179)",
+      "121 NOM  RAW 132|b(S1236146180)",
+      "132 NOM  WAR 121|b(S1236146180)",
+      "120 NOM  WAR 24|a(S1236146179)"
+    ],
+    "unresolved": [],
+    "contradicting_static_analysis": []
+  },
+  {
+    "source": "/home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_1/benchmarks/tsvc_c3/s241/fast_recon_v5/claude-haiku-4-5-20251001/rep4/work/s241.c",
+    "raw_reply": "Looking at the three loops and analyzing data dependencies between iterations:\n\n**Loop 7 (line 7):** `for (int nl = 0; nl < iterations; nl++)`\n\nBetween iteration nl and nl+1:\n- Line 12 writes `a[i]`, line 9 in iteration nl+1 reads `a[k]` \u2192 RAW on a\n- Line 13 writes `b[i]`, line 12 in iteration nl+1 reads `b[i]` \u2192 RAW on b\n- Line 9 reads `a[k]`, line 12 in iteration nl+1 writes `a[i]` \u2192 WAR on a\n- Line 13 reads `a[i]`, line 12 in iteration nl+1 writes `a[i]` \u2192 WAR on a\n- Line 12 reads `b[i]`, line 13 in iteration nl+1 writes `b[i]` \u2192 WAR on b\n- Line 12 writes `a[i]`, line 12 in iteration nl+1 writes `a[i]` \u2192 WAW on a\n- Line 13 writes `b[i]`, line 13 in iteration nl+1 writes `b[i]` \u2192 WAW on b\n\n**Loop 8 (line 8):** `for (int k = 0; k < LEN_1D; k++)`\n\nEach iteration writes `a_orig[k]` and reads `a[k]`. Different iterations access different indices, no overlap.\n\n**Loop 11 (line 11):** `for (int i = 0; i < LEN_1D-1; i++)`\n\nEach iteration writes `a[i]` and `b[i]`, reads `b[i]`, `c[i]`, `d[i]`, and `a_orig[i+1]`. Different iterations access different indices (i vs i+1), no overlap.\n\nLOOP 7 RAW a 12 9\nLOOP 7 RAW b 13 12\nLOOP 7 WAR a 9 12\nLOOP 7 WAR a 13 12\nLOOP 7 WAR b 12 13\nLOOP 7 WAW a 12 12\nLOOP 7 WAW b 13 13\nLOOP 8 NONE\nLOOP 11 NONE",
+    "claims": [
+      {
+        "loop": 7,
+        "type": "RAW",
+        "var": "a",
+        "writer_line": 12,
+        "reader_line": 9
+      },
+      {
+        "loop": 7,
+        "type": "RAW",
+        "var": "b",
+        "writer_line": 13,
+        "reader_line": 12
+      },
+      {
+        "loop": 7,
+        "type": "WAR",
+        "var": "a",
+        "writer_line": 9,
+        "reader_line": 12
+      },
+      {
+        "loop": 7,
+        "type": "WAR",
+        "var": "a",
+        "writer_line": 13,
+        "reader_line": 12
+      },
+      {
+        "loop": 7,
+        "type": "WAR",
+        "var": "b",
+        "writer_line": 12,
+        "reader_line": 13
+      },
+      {
+        "loop": 7,
+        "type": "WAW",
+        "var": "a",
+        "writer_line": 12,
+        "reader_line": 12
+      },
+      {
+        "loop": 7,
+        "type": "WAW",
+        "var": "b",
+        "writer_line": 13,
+        "reader_line": 13
+      }
+    ],
+    "loops_declared_independent": [
+      8,
+      11
+    ],
+    "rows_applied": [
+      "157 NOM  RAW 53|a(S464207620)",
+      "53 NOM  RAW 75|b(S464207621)",
+      "157 NOM  WAR 53|a(S464207620)",
+      "75 NOM  WAR 53|a(S464207620)",
+      "53 NOM  WAR 75|b(S464207621)",
+      "75 NOM  WAW 75|b(S464207621)"
+    ],
+    "unresolved": [
+      {
+        "loop": 7,
+        "type": "WAW",
+        "var": "a",
+        "why": "neither line was rewritten \u2014 not this arm's gap"
+      }
+    ],
+    "contradicting_static_analysis": [
+      {
+        "loop": 8,
+        "var": "a",
+        "type": "RAW"
+      },
+      {
+        "loop": 8,
+        "var": "a_orig",
+        "type": "RAW"
+      },
+      {
+        "loop": 8,
+        "var": "b",
+        "type": "RAW"
+      },
+      {
+        "loop": 8,
+        "var": "c",
+        "type": "RAW"
+      },
+      {
+        "loop": 8,
+        "var": "d",
+        "type": "RAW"
+      },
+      {
+        "loop": 8,
+        "var": "e",
+        "type": "RAW"
+      }
+    ]
+  },
+  {
+    "source": "/home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_1/benchmarks/tsvc_c3/s241/fast_recon_v5/claude-haiku-4-5-20251001/rep4/work/s241.c",
+    "raw_reply": "Looking at the code, I need to analyze loop-carried dependences for the three loops at lines 6, 9, and 13.\n\n**Loop at line 6 (outer nl loop):**\n\nIn iteration `nl`:\n- Line 14 writes: `a[0]` through `a[LEN_1D-2]`\n- Line 15 writes: `b[0]` through `b[LEN_1D-2]`\n\nIn iteration `nl+1`:\n- Line 10 reads: `a[1]` through `a[LEN_1D-1]` (via `a[i+1]` for i in [0, LEN_1D-2])\n- Line 14 reads: `b[0]` through `b[LEN_1D-2]`\n- Line 15 writes: `b[0]` through `b[LEN_1D-2]`\n\nDependences between nl and nl+1:\n- **RAW on a**: Written at line 14 in iteration nl (`a[0]` through `a[LEN_1D-2]`), read at line 10 in iteration nl+1 (`a[1]` through `a[LEN_1D-1]`)\n- **RAW on b**: Written at line 15 in iteration nl, read at line 14 in iteration nl+1\n- **WAW on b**: Written at line 15 in both iterations\n\n**Loop at line 9 (snapshot creation):**\n\nEach iteration `i` reads `a[i+1]` and writes `a_snapshot[i]`.\nIteration `i+1` reads `a[i+2]` and writes `a_snapshot[i+1]`.\nNo overlap between consecutive iterations; array `a` is not modified in this loop.\n\n**Loop at line 13 (main computation):**\n\nEach iteration `i` accesses only `a[i]`, `b[i]`, `c[i]`, `d[i]`, `a_snapshot[i]`.\nIteration `i+1` accesses only elements at index `i+1`.\nNo overlap between consecutive iterations.\n\nLOOP 6 RAW a 14 10\nLOOP 6 RAW b 15 14\nLOOP 6 WAW b 15 15\nLOOP 9 NONE\nLOOP 13 NONE",
+    "claims": [
+      {
+        "loop": 6,
+        "type": "RAW",
+        "var": "a",
+        "writer_line": 14,
+        "reader_line": 10
+      },
+      {
+        "loop": 6,
+        "type": "RAW",
+        "var": "b",
+        "writer_line": 15,
+        "reader_line": 14
+      },
+      {
+        "loop": 6,
+        "type": "WAW",
+        "var": "b",
+        "writer_line": 15,
+        "reader_line": 15
+      }
+    ],
+    "loops_declared_independent": [
+      9,
+      13
+    ],
+    "rows_applied": [
+      "31 NOM  RAW 54|a(S678708740)",
+      "54 NOM  RAW 76|b(S678708741)",
+      "76 NOM  WAW 76|b(S678708741)"
+    ],
+    "unresolved": [],
+    "contradicting_static_analysis": [
+      {
+        "loop": 9,
+        "var": "a",
+        "type": "RAW"
+      },
+      {
+        "loop": 9,
+        "var": "a_snapshot",
+        "type": "RAW"
+      },
+      {
+        "loop": 9,
+        "var": "argc",
+        "type": "RAW"
+      },
+      {
+        "loop": 9,
+        "var": "argv",
+        "type": "RAW"
+      },
+      {
+        "loop": 9,
+        "var": "b",
+        "type": "RAW"
+      },
+      {
+        "loop": 9,
+        "var": "c",
+        "type": "RAW"
+      },
+      {
+        "loop": 9,
+        "var": "d",
+        "type": "RAW"
+      },
+      {
+        "loop": 9,
+        "var": "e",
+        "type": "RAW"
+      },
+      {
+        "loop": 9,
+        "var": "k",
+        "type": "RAW"
+      },
+      {
+        "loop": 9,
+        "var": "retval",
+        "type": "WAW"
+      }
+    ]
+  },
+  {
+    "source": "/home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_1/benchmarks/tsvc_c3/s241/fast_recon_v5/claude-haiku-4-5-20251001/rep4/work/s241.c",
+    "raw_reply": "Looking at the code to identify inter-iteration dependences for each loop:\n\n**Loop 9 (outer nl loop):**\n\nBetween iterations:\n- Line 16 writes `a[i]` for i=0..LEN_1D-2 in iteration nl\n- Line 12 reads `a[i+1]` in iteration nl+1, which covers a[1]..a[LEN_1D-1], overlapping with written values\n  \u2192 RAW on `a`\n  \n- Line 12 reads `a[1]..a[LEN_1D-1]` in iteration nl\n- Line 16 writes `a[0]..a[LEN_1D-2]` in iteration nl+1, overlapping the read values\n  \u2192 WAR on `a`\n\n- Line 17 writes `b[i]` for i=0..LEN_1D-2 in iteration nl  \n- Line 16 reads `b[i]` in iteration nl+1\n  \u2192 RAW on `b`\n\n- Line 12 writes `a_snapshot[i]` in iteration nl\n- Line 12 writes `a_snapshot[i]` again in iteration nl+1 (overwriting)\n  \u2192 WAW on `a_snapshot`\n\n**Loop 11 (snapshot update loop within single nl):**\n\nIterations i and i+1 access different array indices: a[i+1] vs a[i+2], a_snapshot[i] vs a_snapshot[i+1]. No overlap between iterations.\n\n**Loop 15 (main computation loop within single nl):**\n\nIterations i and i+1 access different array indices: a[i] vs a[i+1], b[i] vs b[i+1]. No overlap between iterations.\n\n```\nLOOP 9 RAW a 16 12\nLOOP 9 WAR a 12 16\nLOOP 9 RAW b 17 16\nLOOP 9 WAW a_snapshot 12 12\nLOOP 11 NONE\nLOOP 15 NONE\n```",
+    "claims": [
+      {
+        "loop": 9,
+        "type": "RAW",
+        "var": "a",
+        "writer_line": 16,
+        "reader_line": 12
+      },
+      {
+        "loop": 9,
+        "type": "WAR",
+        "var": "a",
+        "writer_line": 12,
+        "reader_line": 16
+      },
+      {
+        "loop": 9,
+        "type": "RAW",
+        "var": "b",
+        "writer_line": 17,
+        "reader_line": 16
+      },
+      {
+        "loop": 9,
+        "type": "WAW",
+        "var": "a_snapshot",
+        "writer_line": 12,
+        "reader_line": 12
+      }
+    ],
+    "loops_declared_independent": [
+      11,
+      15
+    ],
+    "rows_applied": [
+      "31 NOM  RAW 54|a(S-170935036)",
+      "31 NOM  WAR 54|a(S-170935036)",
+      "54 NOM  RAW 76|b(S-170935035)",
+      "37 NOM  WAW 37|a_snapshot(S-170935040)"
+    ],
+    "unresolved": [],
+    "contradicting_static_analysis": [
+      {
+        "loop": 11,
+        "var": "a",
+        "type": "RAW"
+      },
+      {
+        "loop": 11,
+        "var": "a_snapshot",
+        "type": "RAW"
+      },
+      {
+        "loop": 11,
+        "var": "b",
+        "type": "RAW"
+      },
+      {
+        "loop": 11,
+        "var": "pb_result",
+        "type": "RAW"
+      },
+      {
+        "loop": 11,
+        "var": "retval",
+        "type": "WAW"
+      }
+    ]
+  },
+  {
+    "source": "/home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_1/benchmarks/tsvc_c3/s241/fast_recon_v5/claude-haiku-4-5-20251001/rep4/work/s241.c",
+    "raw_reply": "Looking at this code, I need to analyze data dependences between iterations of the two loops at lines 10 and 14.\n\n## Outer Loop (Line 10)\n\nBetween iteration `nl` and `nl+1`:\n\n**Array `a` dependence:**\n- Iteration `nl`: Line 15 writes `a[0..LEN_1D-2]`\n- Iteration `nl+1`: Line 12 reads `a[1..LEN_1D-1]` via memcpy source\n- The overlap `a[1..LEN_1D-2]` creates a RAW dependence\n\n**Array `b` dependences:**\n- Iteration `nl`: Line 16 writes `b[0..LEN_1D-2]`\n- Iteration `nl+1`: Line 15 reads `b[0..LEN_1D-2]`\n- This creates a RAW dependence\n\nAdditionally:\n- Iteration `nl`: Line 15 reads `b[0..LEN_1D-2]`\n- Iteration `nl+1`: Line 16 writes `b[0..LEN_1D-2]`\n- This creates a WAR dependence\n\n## Inner Loop (Line 14)\n\nEach iteration `i` accesses only elements at index `i` (e.g., `a[i]`, `b[i]`, `c[i]`, `d[i]`, `a_snapshot[i]`). Different iterations access completely different array elements, so there are no data dependences between iterations.\n\n```\nLOOP 10 RAW a 15 12\nLOOP 10 RAW b 16 15\nLOOP 10 WAR b 16 15\nLOOP 14 NONE\n```",
+    "claims": [
+      {
+        "loop": 10,
+        "type": "RAW",
+        "var": "a",
+        "writer_line": 15,
+        "reader_line": 12
+      },
+      {
+        "loop": 10,
+        "type": "RAW",
+        "var": "b",
+        "writer_line": 16,
+        "reader_line": 15
+      },
+      {
+        "loop": 10,
+        "type": "WAR",
+        "var": "b",
+        "writer_line": 16,
+        "reader_line": 15
+      }
+    ],
+    "loops_declared_independent": [
+      14
+    ],
+    "rows_applied": [
+      "22 NOM  RAW 32|a(S-276603901)",
+      "32 NOM  RAW 54|b(S-276603900)",
+      "54 NOM  WAR 32|b(S-276603900)"
+    ],
+    "unresolved": [],
+    "contradicting_static_analysis": [
+      {
+        "loop": 14,
+        "var": "a_snapshot",
+        "type": "RAW"
+      },
+      {
+        "loop": 14,
+        "var": "argc",
+        "type": "RAW"
+      },
+      {
+        "loop": 14,
+        "var": "argv",
+        "type": "RAW"
+      },
+      {
+        "loop": 14,
+        "var": "pb_result",
+        "type": "RAW"
+      },
+      {
+        "loop": 14,
+        "var": "retval",
+        "type": "WAW"
+      }
+    ]
+  },
+  {
+    "source": "/home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_1/benchmarks/tsvc_c3/s241/fast_recon_v5/claude-haiku-4-5-20251001/rep4/work/s241.c",
+    "raw_reply": "```\nLOOP 8 RAW a 16 11\nLOOP 8 RAW a 16 21\nLOOP 8 RAW b 21 16\nLOOP 8 RAW a_old 11 21\nLOOP 8 WAR a 11 16\nLOOP 8 WAR a 21 16\nLOOP 8 WAR b 16 21\nLOOP 8 WAR a_old 21 11\nLOOP 8 WAW a 16 16\nLOOP 8 WAW b 21 21\nLOOP 8 WAW a_old 11 11\nLOOP 10 NONE\nLOOP 15 NONE\nLOOP 20 NONE\n```",
+    "claims": [
+      {
+        "loop": 8,
+        "type": "RAW",
+        "var": "a",
+        "writer_line": 16,
+        "reader_line": 11
+      },
+      {
+        "loop": 8,
+        "type": "RAW",
+        "var": "a",
+        "writer_line": 16,
+        "reader_line": 21
+      },
+      {
+        "loop": 8,
+        "type": "RAW",
+        "var": "b",
+        "writer_line": 21,
+        "reader_line": 16
+      },
+      {
+        "loop": 8,
+        "type": "RAW",
+        "var": "a_old",
+        "writer_line": 11,
+        "reader_line": 21
+      },
+      {
+        "loop": 8,
+        "type": "WAR",
+        "var": "a",
+        "writer_line": 11,
+        "reader_line": 16
+      },
+      {
+        "loop": 8,
+        "type": "WAR",
+        "var": "a",
+        "writer_line": 21,
+        "reader_line": 16
+      },
+      {
+        "loop": 8,
+        "type": "WAR",
+        "var": "b",
+        "writer_line": 16,
+        "reader_line": 21
+      },
+      {
+        "loop": 8,
+        "type": "WAR",
+        "var": "a_old",
+        "writer_line": 21,
+        "reader_line": 11
+      },
+      {
+        "loop": 8,
+        "type": "WAW",
+        "var": "a",
+        "writer_line": 16,
+        "reader_line": 16
+      },
+      {
+        "loop": 8,
+        "type": "WAW",
+        "var": "b",
+        "writer_line": 21,
+        "reader_line": 21
+      },
+      {
+        "loop": 8,
+        "type": "WAW",
+        "var": "a_old",
+        "writer_line": 11,
+        "reader_line": 11
+      }
+    ],
+    "loops_declared_independent": [
+      10,
+      15,
+      20
+    ],
+    "rows_applied": [
+      "202 NOM  RAW 56|a(S-10944763)",
+      "90 NOM  RAW 56|a(S-10944763)",
+      "56 NOM  RAW 90|b(S-10944762)",
+      "95 NOM  RAW 39|a_old(S-10944768)",
+      "202 NOM  WAR 56|a(S-10944763)",
+      "90 NOM  WAR 56|a(S-10944763)",
+      "56 NOM  WAR 90|b(S-10944762)",
+      "95 NOM  WAR 39|a_old(S-10944768)",
+      "90 NOM  WAW 90|b(S-10944762)",
+      "39 NOM  WAW 39|a_old(S-10944768)"
+    ],
+    "unresolved": [
+      {
+        "loop": 8,
+        "type": "WAW",
+        "var": "a",
+        "why": "neither line was rewritten \u2014 not this arm's gap"
+      }
+    ],
+    "contradicting_static_analysis": [
+      {
+        "loop": 10,
+        "var": "a",
+        "type": "RAW"
+      },
+      {
+        "loop": 10,
+        "var": "a_old",
+        "type": "RAW"
+      },
+      {
+        "loop": 10,
+        "var": "argc",
+        "type": "RAW"
+      },
+      {
+        "loop": 10,
+        "var": "argv",
+        "type": "RAW"
+      },
+      {
+        "loop": 10,
+        "var": "b",
+        "type": "RAW"
+      },
+      {
+        "loop": 10,
+        "var": "d",
+        "type": "RAW"
+      },
+      {
+        "loop": 10,
+        "var": "e",
+        "type": "RAW"
+      },
+      {
+        "loop": 10,
+        "var": "k",
+        "type": "RAW"
+      },
+      {
+        "loop": 10,
+        "var": "pb_result",
+        "type": "RAW"
+      },
+      {
+        "loop": 10,
+        "var": "retval",
+        "type": "WAW"
+      }
+    ]
+  }
+]

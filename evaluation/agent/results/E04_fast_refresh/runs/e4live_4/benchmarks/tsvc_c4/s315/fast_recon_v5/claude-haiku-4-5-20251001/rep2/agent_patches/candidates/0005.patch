@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_4/benchmarks/tsvc_c4/s315/fast_recon_v5/claude-haiku-4-5-20251001/rep2/work/s315.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_4/benchmarks/tsvc_c4/s315/fast_recon_v5/claude-haiku-4-5-20251001/rep2/work/s315.c
+@@ -24,6 +24,7 @@
+         }
+ 
+         // Each segment independently finds its local max
++        #pragma omp parallel for shared(seg_max,seg_idx,seg_end,seg_start) 
+         for (int s = 0; s < NUM_SEGMENTS; ++s) {
+             int start = seg_start[s];
+             int end = seg_end[s];

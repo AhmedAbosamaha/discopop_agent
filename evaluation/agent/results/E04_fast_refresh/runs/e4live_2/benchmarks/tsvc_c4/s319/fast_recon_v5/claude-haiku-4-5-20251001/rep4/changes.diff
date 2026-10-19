@@ -1,0 +1,19 @@
+--- original.c
++++ final.c
+@@ -66,11 +66,14 @@
+     real_t sum;
+     for (int nl = 0; nl < iterations; nl++) {
+         sum = 0.;
++        #pragma omp parallel for reduction(+:sum) 
+         for (int i = 0; i < LEN_1D; i++) {
++            real_t iter_sum = 0.;
+             a[i] = c[i] + d[i];
+-            sum += a[i];
++            iter_sum += a[i];
+             b[i] = c[i] + e[i];
+-            sum += b[i];
++            iter_sum += b[i];
++            sum += iter_sum;
+         }
+         dummy(a, b, c, d, e, sum);
+     }

@@ -1,0 +1,43 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_4/benchmarks/tsvc_c4/s315/fast_recon_v5/claude-haiku-4-5-20251001/rep5/work/s315.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_4/benchmarks/tsvc_c4/s315/fast_recon_v5/claude-haiku-4-5-20251001/rep5/work/s315.c
+@@ -5,14 +5,34 @@
+     real_t x, chksum;
+     int index;
+     for (int nl = 0; nl < iterations; nl++) {
+-        x = a[0];
+-        index = 0;
+-        for (int i = 0; i < LEN_1D; ++i) {
+-            if (a[i] > x) {
+-                x = a[i];
+-                index = i;
++        int mid = LEN_1D / 2;
++
++        real_t max1 = a[0];
++        int idx1 = 0;
++        for (int i = 1; i < mid; ++i) {
++            if (a[i] > max1) {
++                max1 = a[i];
++                idx1 = i;
+             }
+         }
++
++        real_t max2 = a[mid];
++        int idx2 = mid;
++        for (int i = mid + 1; i < LEN_1D; ++i) {
++            if (a[i] > max2) {
++                max2 = a[i];
++                idx2 = i;
++            }
++        }
++
++        if (max1 >= max2) {
++            x = max1;
++            index = idx1;
++        } else {
++            x = max2;
++            index = idx2;
++        }
++
+         chksum = x + (real_t) index;
+         dummy(a, b, c, d, e, chksum);
+     }

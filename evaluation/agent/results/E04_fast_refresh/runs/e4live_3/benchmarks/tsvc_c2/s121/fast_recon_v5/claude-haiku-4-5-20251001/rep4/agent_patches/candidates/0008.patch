@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_3/benchmarks/tsvc_c2/s121/fast_recon_v5/claude-haiku-4-5-20251001/rep4/work/s121.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e4live_3/benchmarks/tsvc_c2/s121/fast_recon_v5/claude-haiku-4-5-20251001/rep4/work/s121.c
+@@ -9,6 +9,7 @@
+     memcpy(a_temp, a, LEN_1D * sizeof(real_t));
+ 
+     real_t *a_read, *a_write;
++    #pragma omp parallel for private(j) shared(a_temp,a_read,a_write) 
+     for (int nl = 0; nl < iterations; nl++) {
+         if (nl % 2 == 0) {
+             a_read = a;

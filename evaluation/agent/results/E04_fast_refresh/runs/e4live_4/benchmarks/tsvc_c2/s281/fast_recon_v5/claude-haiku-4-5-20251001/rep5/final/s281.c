@@ -1,0 +1,24 @@
+#include "data.h"
+
+real_t kernel_s281(void)
+{
+    real_t x;
+    for (int nl = 0; nl < iterations; nl++) {
+        #pragma omp parallel for private(x) 
+        for (int i = 0; i < LEN_1D/2; i++) {
+            // Process paired indices (i, LEN_1D-i-1) sequentially
+            // Low index
+            x = a[LEN_1D-i-1] + b[i] * c[i];
+            a[i] = x-(real_t)1.0;
+            b[i] = x;
+
+            // High index (uses updated a from low index processing)
+            int j = LEN_1D-i-1;
+            x = a[i] + b[j] * c[j];
+            a[j] = x-(real_t)1.0;
+            b[j] = x;
+        }
+        dummy(a, b, c, d, e);
+    }
+    return (real_t)0;
+}
