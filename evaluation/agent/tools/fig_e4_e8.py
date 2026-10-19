@@ -233,7 +233,8 @@ def fig_refresh() -> List[Path]:
         ax.set_xlim(0, 115)
         ax.set_xlabel("race-free faster, % of trials")
         ax.set_title("(c) step 4: whole trials", loc="left")
-        ax.legend(fontsize=7, loc="lower right")
+        ax.legend(fontsize=7, loc="upper center", bbox_to_anchor=(0.5, -0.24), ncol=2,   # under the axis: inside,
+                  frameon=False)                                                  # it covered a bar
     fig.tight_layout(w_pad=2.0)
     paths = _save(fig, E4 / "analysis", "fig_refresh_decisions")
     plt.close(fig)

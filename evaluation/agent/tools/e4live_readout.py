@@ -13,7 +13,8 @@ FASTER = the harness's FASTER and the race check clean (a program the gate kept 
 says otherwise); unusable = BROKEN, slower than the original, racy, not compiling, or the measurement edited.
 
   R1  per loop and per set: race-free verified FASTER, unusable programs, outcomes, beside the comparison cell
-  R2  the refresh in the trials: refreshes per trial by kind (fast, full, fallback, failed), rewrites kept, reverts
+  R2  the refresh in the trials: refreshes per trial by kind (fast, full, fallback, failed), rewrites kept, reverts —
+      the last two, with the agent's recorded reasons, printed since 19 Oct (§6)
   R3  the report: follow-ups answered ("reconstruction: …" in the log, the audit `llm_recon.json`), calls that failed,
       the agent's warnings that the model called a loop independent where static analysis records a dependence —
       the agent prints at most three per report, so beside that count the whole one from the audit (added 19 Oct,
@@ -127,7 +128,8 @@ def to_markdown(fast: List[Dict[str, Any]], races: Dict[Tuple[str, str, str, int
            f"`{FAST}` (the fast refresh and the model's report) beside `{FULL}` (the full re-profile; E3's and E3b's "
            "corrected cells). No test, as registered."
            + ("" if races_given else " **No race file was given: every gate-kept program counts as clean.**"), ""]
-    res: Dict[str, Any] = {"sets": {}, "loops": {}}
+    res: Dict[str, Any] = {"sets": {}, "loops": {}, "r2": {}}
+    r2_rows: List[str] = []
     for title, loops in (("The 18 loops", LOOPS18), ("The contrast set and its control (`s311`)", CONTRAST)):
         out += [f"## {title}", "",
                 "| loop | full re-profile (E3/E3b) race-free FASTER | fast refresh + report | unusable full / fast | "
@@ -159,6 +161,22 @@ def to_markdown(fast: List[Dict[str, Any]], races: Dict[Tuple[str, str, str, int
             out.append(f"| {name} | {c['trials']} | {c['faster_race_free']} of {c['n']} | {c['unusable']} | "
                        f"{_med(c['calls'])} | {_med(usage_calls)} | {sum(c['cost']):.2f} | {_med(c['full_profiles'])} | "
                        f"{_med(c['agent_s'])} |")
+            # R2's rewrites kept and reverts, with the reasons the agent recorded (added 19 Oct: registered in R2, not
+            # printed by the read-out as first written; §6)
+            ex: Counter = Counter()
+            d40: Counter = Counter()
+            for t in ts:
+                ex.update(t.get("exposure_verdicts") or {})
+                d40.update(t.get("d40_verdicts") or {})
+            kept = sum(int(t.get("rewrites_kept") or 0) for t in ts)
+            reverts = sum(int(t.get("reverts") or 0) for t in ts)
+            ex_other = sum(ex.values()) - ex["exposed"] - ex["no_pattern"] - ex["no_usable_pragma"]
+            d40_other = sum(d40.values()) - d40["ok"] - d40["not_faster"] - d40["pattern_broken"]
+            r2_rows.append(f"| {title.split(' (')[0]} | {name} | {len(ts)} | {kept} | {reverts} | {ex['exposed']} | "
+                           f"{ex['no_pattern']} | {ex['no_usable_pragma']} | {ex_other} | {d40['ok']} | "
+                           f"{d40['not_faster']} | {d40['pattern_broken']} | {d40_other} |")
+            res["r2"][f"{title} / {name}"] = {"trials": len(ts), "rewrites_kept": kept, "reverts": reverts,
+                                              "exposure": dict(ex), "d40": dict(d40)}
         out.append("")
     kinds: Counter = Counter()
     for t in fast:
@@ -186,6 +204,14 @@ def to_markdown(fast: List[Dict[str, Any]], races: Dict[Tuple[str, str, str, int
             f"{STEP1_FAST_S} s): {n_fast} fast refreshes × {STEP1_FULL_S - STEP1_FAST_S:.2f} s = "
             f"{n_fast * (STEP1_FULL_S - STEP1_FAST_S):.1f} s, against "
             f"{sum(float(t.get('agent_s') or 0) for t in fast):.0f} s of agent time in these trials", ""]
+    out += ["## Rewrites kept and reverted, with the agent's recorded reasons (R2)", "",
+            "After a rewrite that passed the quality gate and its refresh: did DiscoPoP find a usable pattern in the "
+            "changed lines (the exposure verdict), and for a pattern found, D40's judgement of its pragmas — `ok` kept, "
+            "`not_faster` reverted, `pattern_broken` reverted because a pragma failed the safety gate. Sums over the "
+            "trials, from their records.", "",
+            "| set | setup | trials | rewrites kept | reverts | pattern found | no pattern | no usable pragma | other | "
+            "D40 ok | D40 not faster | D40 pragma failed the safety gate | D40 other |",
+            "|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|"] + r2_rows + [""]
     moved = [b for b, v in res["loops"].items() if abs(v["fast"]["faster_race_free"] - v["full"]["faster_race_free"]) >= 2]
     allc = [v[k] for v in res["loops"].values() for k in ("fast", "full")]
     out += ["## Every unusable program", ""] + ([f"- {u}" for c in allc for u in c["unusable_cases"]] or ["- none"])

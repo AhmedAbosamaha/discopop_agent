@@ -70,7 +70,7 @@ Earlier versions (history):
 | [`logs/`](logs/) | Logs | done |
 | [`E03_who_writes_the_pragmas/`](E03_who_writes_the_pragmas/REPORT.md) | E3 — who writes the pragma: DiscoPoP from its analysis of the rewritten code, or the model in the same edit | done |
 | [`E03b_contrast_set/`](E03b_contrast_set/REPORT.md) | E3b — the contrast set: who writes the pragma, on loops DiscoPoP does not recognise as written | done |
-| [`E04_fast_refresh/`](E04_fast_refresh/REPORT.md) | E4 — the fast refresh: can the profile be refreshed without running the program again, and can the model's own report of the dependences close what that leaves open? | running |
+| [`E04_fast_refresh/`](E04_fast_refresh/REPORT.md) | E4 — the fast refresh: can the profile be refreshed without running the program again, and can the model's own report of the dependences close what that leaves open? | done |
 | [`E08_restructuring_depth/`](E08_restructuring_depth/REPORT.md) | E8 — restructuring depth: may the model rewrite again what a kept rewrite leaves or exposes? | done |
 | [`E06_lulesh/`](E06_lulesh/REPORT.md) | E6 — a real application: LULESH 2.0 | dropped for now (18 Oct) — pre-flight only, no model call |
 
