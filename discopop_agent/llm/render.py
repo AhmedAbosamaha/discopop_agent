@@ -12,7 +12,9 @@ every scalar as `ptr (8B)` (alloca slots), which misinformed more than it helped
 """
 from __future__ import annotations
 
+import dataclasses
 import re
+from pathlib import Path
 from typing import Any, Callable, Dict, FrozenSet, List, Optional, Set, Tuple
 
 from ..types import EvidencePackage
@@ -66,6 +68,77 @@ def _signature_line(ev: EvidencePackage) -> Optional[int]:
     return ln
 
 
+# A name the program does not have (E6, 2 Nov 2026; FIXES.md Fix 109).  DiscoPoP names memory it reaches through
+# the reference a function call returns by the compiler's name for that call's value (`call11(97983300824817)` in
+# LULESH's profile): every field of LULESH's Domain is read and written through an accessor (`domain.delv_xi(i)`),
+# so 27 of the scalar names in the first request on LULESH were `callNN`.  They are real memory, never a variable
+# the model can find in the code.  They are shown as what DiscoPoP's renderer already calls memory without a name.
+UNNAMED = "*"
+_UNNAMED_TEXT = "memory DiscoPoP could not name"
+_IDENT = re.compile(r"[A-Za-z_]\w*")
+_SOURCE_EXT = (".c", ".cc", ".cpp", ".cxx", ".h", ".hh", ".hpp")
+
+
+def source_identifiers(path: "str | Path") -> Optional[Set[str]]:
+    """Every identifier in the program's source files — the directory of `path` (a file) or `path` itself (a
+    directory) — or None when none can be read, in which case no name is replaced."""
+    try:
+        here = Path(path)
+        here = here if here.is_dir() else here.resolve().parent
+        files = [f for f in here.iterdir() if f.is_file() and f.suffix in _SOURCE_EXT]
+    except OSError:
+        return None
+    names: Set[str] = set()
+    for f in files:
+        try:
+            names.update(_IDENT.findall(f.read_text(errors="replace")))
+        except OSError:
+            continue
+    return names or None
+
+
+def _has_name(var: str, names: Optional[Set[str]]) -> bool:
+    """Is `var` a name the program has?  Anything that is not a bare identifier (`*`, `a[i]`) is left as it is."""
+    return names is None or not _IDENT.fullmatch(var) or var in names
+
+
+def _join_names(vs: List[str]) -> str:
+    named = [v for v in vs if v != UNNAMED]
+    return ", ".join(named + ([_UNNAMED_TEXT] if UNNAMED in vs else []))
+
+
+def _named_view(ev: EvidencePackage) -> EvidencePackage:
+    """`ev` with every variable name that occurs nowhere in the program's source replaced by UNNAMED (in the
+    dependences and DiscoPoP's blockers) or left out (in the lists of names a clause or a note would use)."""
+    names = source_identifiers(ev.source_file)
+    if names is None:
+        return ev
+
+    def dep(d: Any) -> Any:
+        return d if _has_name(d.variable, names) else dataclasses.replace(d, variable=UNNAMED)
+
+    def blocker(b: Dict[str, Any]) -> Dict[str, Any]:
+        from ..evidence.deps import _classify_var
+        var = _classify_var(str(b.get("var_name", "")))[0]
+        var = var[:-2] if var.endswith("[]") else var
+        return b if _has_name(var, names) else {**b, "var_name": UNNAMED}
+
+    def keep(vs: List[str]) -> List[str]:
+        return [v for v in vs if _has_name(v.split()[0] if v.split() else v, names)]
+
+    return dataclasses.replace(
+        ev, raw_deps=[dep(d) for d in ev.raw_deps], war_deps=[dep(d) for d in ev.war_deps],
+        waw_deps=[dep(d) for d in ev.waw_deps], war_typed=[dep(d) for d in ev.war_typed],
+        waw_typed=[dep(d) for d in ev.waw_typed],
+        prevented_deps=[blocker(b) for b in ev.prevented_deps],
+        file_prevented_deps=[blocker(b) for b in ev.file_prevented_deps],
+        local_vars_in_region=keep(ev.local_vars_in_region), static_only_vars=keep(ev.static_only_vars),
+        static_only_typed=keep(ev.static_only_typed), shared_vars=keep(ev.shared_vars),
+        private_vars=keep(ev.private_vars), firstprivate_vars=keep(ev.firstprivate_vars),
+        lastprivate_vars=keep(ev.lastprivate_vars), classified_reduction_vars=keep(ev.classified_reduction_vars),
+        reduction_vars=keep(ev.reduction_vars))
+
+
 def _evidence_sections(ev: EvidencePackage, deps_header: str,
                        include: Optional[Set[str]] = None,
                        speed_judged: bool = True,
@@ -84,6 +157,7 @@ def _evidence_sections(ev: EvidencePackage, deps_header: str,
     `changes`: the prompt review's changes in force (prompts.PROMPT_VERSIONS); empty renders every
     section as version 1 did.
     """
+    ev = _named_view(ev)
     want = _wanted(include)
     region = (ev.start_line, ev.end_line)
     parts: List[str] = []
@@ -298,6 +372,7 @@ def _fmt_digest(ev: EvidencePackage, include: Optional[Set[str]] = None,
     evidence claim is measured against — still opened with DiscoPoP's dependence
     variables, its loop nest and the measured trip counts (review P9).  With no
     section selected there is no digest at all."""
+    ev = _named_view(ev)
     want = _wanted(include)
     ind = _induction_vars(ev)
     sig = _signature_line(ev)
@@ -312,18 +387,18 @@ def _fmt_digest(ev: EvidencePackage, include: Optional[Set[str]] = None,
     if want("deps") and "D5" in changes:
         inside, read_here, read_after = _crossing(ev, real)
         if inside:
-            out.append(f"  - RAW on array elements within these lines: {', '.join(inside)}.")
+            out.append(f"  - RAW on array elements within these lines: {_join_names(inside)}.")
         if read_here or read_after:
             out.append("  - Values that cross the region's edge only — "
-                       + "; ".join(f"{what}: {', '.join(vs)}" for what, vs in
+                       + "; ".join(f"{what}: {_join_names(vs)}" for what, vs in
                                    (("written outside and read here", read_here),
                                     ("written here and read outside the region", read_after)) if vs) + ".")
         if scalar_raw:
             # D13 (version 5): the names only.  "Usually a reused location" is a rule of thumb, and on
             # the loops of the 8 Oct finding the scalar IS a value travelling between iterations.
             out.append(
-                f"  - RAW on SCALARS: {', '.join(scalar_raw)}." if "D13" in changes else
-                f"  - RAW on SCALARS: {', '.join(scalar_raw)} — usually a reused "
+                f"  - RAW on SCALARS: {_join_names(scalar_raw)}." if "D13" in changes else
+                f"  - RAW on SCALARS: {_join_names(scalar_raw)} — usually a reused "
                 "location or an accumulator, not a value travelling between iterations.")
         if not real:
             out.append("  - No RAW dependences observed apart from loop counters and "
@@ -332,13 +407,13 @@ def _fmt_digest(ev: EvidencePackage, include: Optional[Set[str]] = None,
     elif want("deps"):
         if array_raw:
             out.append(
-                f"  - Loop-carried RAW on ARRAY ELEMENTS of: {', '.join(array_raw)} "
+                f"  - Loop-carried RAW on ARRAY ELEMENTS of: {_join_names(array_raw)} "
                 "— a value moves between iterations through the data; see 'Choosing "
                 "the fix' below."
             )
         if scalar_raw:
             out.append(
-                f"  - RAW on SCALARS: {', '.join(scalar_raw)} — usually a reused "
+                f"  - RAW on SCALARS: {_join_names(scalar_raw)} — usually a reused "
                 "location or an accumulator, not a value travelling between iterations."
             )
         if not real:
@@ -671,11 +746,21 @@ _STATIC_NOTE_V5 = ("static: DiscoPoP did not mark it as observed. For a scalar t
                    "inside the loop body")
 
 
-def fmt_blockers(prevented: List[Dict[str, Any]], changes: FrozenSet[str] = frozenset()) -> str:
+def fmt_blockers(prevented: List[Dict[str, Any]], changes: FrozenSet[str] = frozenset(),
+                 names: Optional[Set[str]] = None) -> str:
     """Render DiscoPoP's exact Do-All blockers (from doall_prevented.json).
-    Returns '' when none are available (old explorer / clean loop)."""
+    Returns '' when none are available (old explorer / clean loop).  `names`: the program's identifiers
+    (source_identifiers); a blocker on a name the program does not have is shown as memory without a name."""
     if not prevented:
         return ""
+    if names is not None:
+        from ..evidence.deps import _classify_var
+
+        def _named(b: Dict[str, Any]) -> Dict[str, Any]:
+            var = _classify_var(str(b.get("var_name", "")))[0]
+            var = var[:-2] if var.endswith("[]") else var
+            return b if _has_name(var, names) else {**b, "var_name": UNNAMED}
+        prevented = [_named(b) for b in prevented]
     if "D1" in changes:
         return _fmt_blockers_v2(prevented, changes)
     out = [
@@ -699,7 +784,7 @@ def fmt_blockers(prevented: List[Dict[str, Any]], changes: FrozenSet[str] = froz
         else:
             ls, le = b.get("loop_start"), b.get("loop_end")
             where = f"loop-carried (loop at line{'s' if ls != le else ''} {ls}" + (f"–{le}" if ls != le else "") + ")"
-        out.append(f"  - {dtype} on `{var}`  {where}  [{note}]")
+        out.append(f"  - {dtype} on {_UNNAMED_TEXT if var == UNNAMED else f'`{var}`'}  {where}  [{note}]")
     return "\n".join(out) + "\n"
 
 
@@ -723,7 +808,7 @@ def _fmt_blockers_v2(prevented: List[Dict[str, Any]], changes: FrozenSet[str]) -
         else:
             ls, le = b.get("loop_start"), b.get("loop_end")
             where = f"loop-carried (loop at line{'s' if ls != le else ''} {ls}" + (f"–{le}" if ls != le else "") + ")"
-        out.append(f"  - {dtype} on `{var}`  {where}  [{note}]")
+        out.append(f"  - {dtype} on {_UNNAMED_TEXT if var == UNNAMED else f'`{var}`'}  {where}  [{note}]")
     return "\n".join(out) + "\n"
 
 

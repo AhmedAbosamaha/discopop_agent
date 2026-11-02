@@ -1602,7 +1602,8 @@ static void pb_lulesh_finish(Domain& domain)
     return {_LULESH_C1_HARNESS: head + _guard(r.sizes) + _PRELUDE + driver + "\n#endif\n"}
 
 
-def _lulesh_c1_assemble(r: Recipe, src_dir: Optional[Path] = None) -> Tuple[Dict[str, str], List[str]]:
+def _lulesh_c1_assemble(r: Recipe, src_dir: Optional[Path] = None,
+                        fold: bool = True) -> Tuple[Dict[str, str], List[str]]:
     """The clean package; `src_dir` = LLNL's OpenMP release gives the expert reference by the same edits (its
     per-thread minimum is the real one, so it is not folded, and it has no dead MPI guard to remove)."""
     reference = src_dir is not None
@@ -1615,7 +1616,7 @@ def _lulesh_c1_assemble(r: Recipe, src_dir: Optional[Path] = None) -> Tuple[Dict
     start, end = _function_span(body, "int main(int argc, char *argv[])")
     main_fn = body[start:end]
     body = (body[:start].rstrip("\n") + "\n" + body[end:].lstrip("\n")).rstrip("\n") + "\n"
-    if not reference:
+    if not reference and fold:
         for sig in ("void CalcCourantConstraintForElems(", "void CalcHydroConstraintForElems("):
             body = _fold_per_thread_minimum(body, sig)
     # main.cc calls the two functions of the time step, which LLNL declares `static inline` in lulesh.cc: they
@@ -1643,8 +1644,8 @@ def _lulesh_c1_assemble(r: Recipe, src_dir: Optional[Path] = None) -> Tuple[Dict
         "the dead code under `#if _ALWAYS_FALSE_CHECK_FOR_MPI` (the #else branch kept); lulesh-comm.cc, MPI only",
         "LLNL's main moved to main.cc (ours, read-only): sizes from the dataset guard, the seeded input, the timer "
         "and the digest are calls into prepared/_harness/" + _LULESH_C1_HARNESS,
-        "the per-thread minimum of CalcCourantConstraintForElems and CalcHydroConstraintForElems folded to the plain "
-        "loop (one thread, the same arithmetic)",
+        *(["the per-thread minimum of CalcCourantConstraintForElems and CalcHydroConstraintForElems folded to the "
+           "plain loop (one thread, the same arithmetic)"] if fold or reference else []),
         "lulesh.h gains an include guard: the profile step compiles the units as one",
         "TimeIncrement and LagrangeLeapFrog lose `static inline` (main.cc calls them; their code is unchanged)",
         "OpenMP: none left to remove — the source is the validated serial path "
@@ -1667,6 +1668,13 @@ LULESH_C1 = replace(
 
 RECIPES: Dict[str, Recipe] = {r.name: r for r in (MD, PATHFINDER, NW, IS, MG, LU, HOTSPOT, LULESH)}
 RECIPES["lulesh_c1"] = LULESH_C1   # the clean layout of LULESH (suite llnl_c1); `lulesh` stays version 1
+# A DIAGNOSTIC variant, never an experiment's package and never read by a model: llnl_c1 with the per-thread minimum
+# left as LLNL wrote it (record §6, 2–3 Nov: which of the clean package's edits changes DiscoPoP's task patterns).
+def _lulesh_c1_nofold(r: Recipe, src_dir: Optional[Path] = None) -> Tuple[Dict[str, str], List[str]]:
+    return _lulesh_c1_assemble(r, src_dir, fold=False)
+
+
+RECIPES["lulesh_c1_nofold"] = replace(LULESH_C1, suite="llnl_c1_nofold", assemble_project=_lulesh_c1_nofold)
 
 
 # ---------------------------------------------------------------------------

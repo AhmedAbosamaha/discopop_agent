@@ -2790,6 +2790,45 @@ def _fw_evidence() -> "EvidencePackage":
         inner_patterns=[], runtime_share=0.97)
 
 
+def check_unnamed_memory(work: Path) -> Result:
+    """A name the program does not have is not shown as a variable (Fix 109, E6, 2 Nov 2026).
+
+    DiscoPoP names memory reached through the reference a call returns by the compiler's name for that call's
+    value (`call11`); on LULESH 27 of the first request's scalar names were such names, in the digest only.  The
+    record must stay — it is real memory — under the name DiscoPoP's renderer gives memory it cannot name, in the
+    digest, the dependence list, the Do-All blockers (the evidence and the feedback after a failed attempt) and
+    the lists of names a clause would use."""
+    import dataclasses as _dc
+    from ..llm.prompts import PROMPT_VERSIONS
+    from ..llm.render import _evidence_sections, _fmt_digest, fmt_blockers, source_identifiers
+    from ..types import Dependency
+    src = work / "k.cc"
+    src.write_text("void k(Domain& domain, double* p_new, int n) {\n  for (int i = 0; i < n; ++i) {\n"
+                   "    double qquad = domain.qq(i);\n    p_new[i] = qquad * 2.0;\n    domain.ql(i) = p_new[i];\n"
+                   "  }\n}\n")
+    base = _fw_evidence()
+    blocker = {"var_name": "call11", "dep_type": "RAW", "origin": "DYNAMIC", "source_line": "1:3", "sink_line": "1:5"}
+    ev = _dc.replace(base, source_file=str(src), start_line=2, end_line=6,
+                     raw_deps=[Dependency("RAW", 4, 3, "qquad"), Dependency("RAW", 5, 4, "p_new", "array"),
+                               Dependency("RAW", 3, 5, "call11"), Dependency("RAW", 9, 3, "call96")],
+                     war_deps=[], war_typed=[], waw_deps=[], local_vars_in_region=["call5", "qquad"],
+                     shared_vars=["p_new", "call7"], prevented_deps=[blocker], loop_nest=[], array_accesses={},
+                     line_text={3: "double qquad = domain.qq(i);", 4: "p_new[i] = qquad * 2.0;",
+                                5: "domain.ql(i) = p_new[i];"})
+    changes = frozenset(PROMPT_VERSIONS[5])
+    text = _fmt_digest(ev, changes=changes) + "\n".join(_evidence_sections(ev, "### deps", changes=changes))
+    feedback = fmt_blockers([blocker], changes, names=source_identifiers(work))
+    leaked = [n for n in ("call11", "call96", "call5", "call7") if n in text or n in feedback]
+    if leaked:
+        return Result("unnamed memory", "fail", f"compiler names shown as variables: {', '.join(leaked)}")
+    if "memory DiscoPoP could not name" not in text or "memory DiscoPoP could not name" not in feedback:
+        return Result("unnamed memory", "fail", "the record of the unnamed memory was dropped, not renamed")
+    if "qquad" not in text or "p_new" not in text:
+        return Result("unnamed memory", "fail", "a name the program has went missing")
+    return Result("unnamed memory", "pass", "callNN shown as memory DiscoPoP could not name in the digest, the "
+                  "dependences, the blockers (evidence and feedback); the program's own names kept")
+
+
 def check_prompt_truth(work: Path) -> Result:
     """The prompt describes the gate that runs and the evidence that is sent.
 
@@ -5778,6 +5817,7 @@ _CHECKS: List[Tuple[str, Callable[[Path], Result]]] = [
     ("project-mode", check_project_mode),
     ("pattern-choice", check_pattern_choice),
     ("prompt-truth", check_prompt_truth),
+    ("unnamed-memory", check_unnamed_memory),
     ("prompt-ablation", check_prompt_ablation),
     ("bare-llm", check_bare_llm),
     ("bare-speed-off", check_bare_speed_off),

@@ -26,6 +26,7 @@ from ..args import AgentArguments
 from ..evidence import load_prevented_deps
 from ..gate import _validate_cached, check_pragma_compiles
 from ..llm import fmt_blockers
+from ..llm.render import source_identifiers
 from ..llm.diffs import make_diff
 from ..plan import region_fingerprint
 from ..pragmas import (_read_tier1_patch, _repair_pragma_clauses, check_pragma_clauses,
@@ -406,7 +407,8 @@ def _rewrite_feedback(
             "description of what you just wrote."
         )
         blockers = fmt_blockers(
-            load_prevented_deps(dp_dir, file_id, *(touched or (1, 10**9)))[:12], changes
+            load_prevented_deps(dp_dir, file_id, *(touched or (1, 10**9)))[:12], changes,
+            names=source_identifiers(dp_dir.parent),
         )
         if blockers:
             msg += (
