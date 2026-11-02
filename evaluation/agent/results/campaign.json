@@ -463,9 +463,9 @@
    "folder": "E06_lulesh",
    "title": "E6 — a real application: LULESH 2.0",
    "kind": "experiment",
-   "status": "dropped for now (18 Oct) — pre-flight only, no model call",
+   "status": "pre-flight",
    "question": "Does the loop — profile, rank, restructure, check, annotate, verify — still work on a real application, where one profile takes tens of gigabytes and the program has dozens of loops: what does the agent reach beside DiscoPoP alone, the model alone and LLNL's own OpenMP version? (RQ3, C1; H4)",
-   "headline": "Dropped for now (18 Oct, the author: the fast refresh and depth are the last experiments, the thesis is written first) — no size calibration, no class, no model call. The pre-flight (13–14 Oct, no model): the September package could not be profiled through the run path — repaired through its generator (an include guard); a defect of the launcher (a compile flag in a form the agent's parser rejects) — repaired; since then the whole path works on LULESH: one profile costs 322 s, 312 s of them the explorer, with 59 Do-All patterns. No class yet: the size at which the serial run reaches a second (T0.1) and three draws are next.",
+   "headline": "Reopened by the author (2 Nov: \"yes do this LULESH experiment\") in two stages: the pre-flight without a model first, then the design with its cost before any model call. Stage 1 (T0.1 sizes, T0.6 patterns in main) running. The earlier pre-flight (13–14 Oct, no model): the package and the launcher were repaired; the whole path works on LULESH — one profile 322 s, 312 s of them the explorer, 59 Do-All patterns.",
    "preregistered": "THESIS_EXPERIMENTS §5k and §5r (the program and why), §5s (arms and the pre-flight owed), §6 13 Oct (\"the experiments that remain share one preparation without a model\"). Nothing with a model is designed yet."
   }
  ],
@@ -2869,6 +2869,18 @@
    "section": "checks",
    "status": "valid",
    "role": "race_check.py (server, no model) over every changed program of the four live runs — the gate's ThreadSanitizer build and schedule matrix on each finished file, one part per run; launched after the runs were fetched, archived, committed and synced — 19 Oct 08:11 UTC at `ab5efa85b`, four parts (one per run, on each run's 12-core group): 109 changed programs clean, 16 unchanged, none racy (§6, 19 Oct)"
+  },
+  "e6_t0_1_sizes": {
+   "group": "E6",
+   "section": "preflight",
+   "status": "running",
+   "role": "E6 pre-flight stage 1 (server, no model): T0.1 on llnl/lulesh — size_table.py, serial -O3 per dataset size, 3 runs, NUMA node 0: the verification size (serial ≥ 1 s) and the timing size (≥ 0.25 s) → kernel_sizes.json"
+  },
+  "e6_t0_6_dp_main": {
+   "group": "E6",
+   "section": "preflight",
+   "status": "running",
+   "role": "E6 pre-flight stage 1 (server, no model): T0.6 on llnl/lulesh — dp_main_study.py, one profile as the harness takes it, NUMA node 1: does DiscoPoP alone propose patterns inside main (D4)"
   }
  },
  "analysis": {
