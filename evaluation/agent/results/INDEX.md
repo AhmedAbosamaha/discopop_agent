@@ -744,11 +744,13 @@ Status: done
 
 ## [E6 — a real application: LULESH 2.0](E06_lulesh/REPORT.md)
 
-Status: dropped for now (18 Oct) — pre-flight only, no model call
+Status: pre-flight
 
 | run | where | what it is | status | trials | outcomes |
 |---|---|---|---|---:|---|
 | `e6_lulesh_smoke` | [`E06_lulesh/preflight/e6_lulesh_smoke/`](E06_lulesh/preflight/e6_lulesh_smoke/) | E6 pre-flight, step 1 (server, no model): ONE trial of the arm `discopop_capability` on `llnl/lulesh` through the run path — the first time a project-layout C++ package of six units goes through it on the repaired DiscoPoP: does it build, profile and verify, how long does it take, what does DiscoPoP alone keep — launched 13 Oct 22:16 UTC at `90f9b35c4` with `--verify-size STANDARD` (no T0.1 entry yet; a first launch without it was refused before a run existed). Result: PROFILE_ERROR — `lulesh.h` has no include guard and the profile step compiles the six units as one; the package must be repaired before it can be profiled | valid | 1 | PROFILE_ERROR 1 |
 | `e6_lulesh_smoke2` | [`E06_lulesh/preflight/e6_lulesh_smoke2/`](E06_lulesh/preflight/e6_lulesh_smoke2/) | E6 pre-flight, the smoke again on the repaired package (server, no model): ONE trial of the arm `discopop_capability` on `llnl/lulesh`, `--verify-size STANDARD` — does the profile go through with the include guard, how long, how much memory — 14 Oct 00:38–00:43 UTC at `272cd24b6`: the profile goes through (2.6 s, 7.2 s, explorer 312 s; Do-All 59); the trial then ends AGENT_ERROR on the launcher's flag form (repaired) | valid | 1 | AGENT_ERROR 1 |
 | `e6_lulesh_smoke3` | [`E06_lulesh/preflight/e6_lulesh_smoke3/`](E06_lulesh/preflight/e6_lulesh_smoke3/) | E6 pre-flight, the smoke a third time (server, no model), after the launcher's flag form was repaired: ONE trial of the arm `discopop_capability` on `llnl/lulesh`, `--verify-size STANDARD` — what DiscoPoP alone reaches on LULESH, how long the trial takes — 14 Oct 01:22–01:31 UTC at `335c0bd84`: the path works; parallel-not-faster (0.17× / 0.09×) at a verification size of 0.068 s serial — not a class measurement | valid | 1 | parallel-not-faster 1 |
+| `e6_t0_1_sizes` | [`E06_lulesh/preflight/e6_t0_1_sizes/`](E06_lulesh/preflight/e6_t0_1_sizes/) | E6 pre-flight stage 1 (server, no model): T0.1 on llnl/lulesh — size_table.py, serial -O3 per dataset size, 3 runs, NUMA node 0: the verification size (serial ≥ 1 s) and the timing size (≥ 0.25 s) → kernel_sizes.json | running | 0 |  |
+| `e6_t0_6_dp_main` | not archived yet | E6 pre-flight stage 1 (server, no model): T0.6 on llnl/lulesh — dp_main_study.py, one profile as the harness takes it, NUMA node 1: does DiscoPoP alone propose patterns inside main (D4) | running |  |  |
 
