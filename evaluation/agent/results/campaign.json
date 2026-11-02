@@ -465,7 +465,7 @@
    "kind": "experiment",
    "status": "pre-flight",
    "question": "Does the loop — profile, rank, restructure, check, annotate, verify — still work on a real application, where one profile takes tens of gigabytes and the program has dozens of loops: what does the agent reach beside DiscoPoP alone, the model alone and LLNL's own OpenMP version? (RQ3, C1; H4)",
-   "headline": "Reopened by the author (2 Nov: \"yes do this LULESH experiment\") in two stages: the pre-flight without a model first, then the design with its cost before any model call. Stage 1 (T0.1 sizes, T0.6 patterns in main) running. The earlier pre-flight (13–14 Oct, no model): the package and the launcher were repaired; the whole path works on LULESH — one profile 322 s, 312 s of them the explorer, 59 Do-All patterns.",
+   "headline": "Reopened by the author (2 Nov) in two stages: the pre-flight without a model, then the design with its cost before any model call. Version 1 of the package was not a clean code file (our driver and notes in lulesh.cc, LLNL's comments, a per-thread minimum, every unit editable); the clean package llnl_c1/lulesh is built and checked (every value equal to version 1's); its pre-flight is running. On version 1 (no model): LLNL's OpenMP version 2.06× faster; DiscoPoP alone correct but 0.12×–0.19× in 3 of 3 draws. The agent setup: the model writes the directives (llm_pragmas_v5), full re-profile.",
    "preregistered": "THESIS_EXPERIMENTS §5k and §5r (the program and why), §5s (arms and the pre-flight owed), §6 13 Oct (\"the experiments that remain share one preparation without a model\"). Nothing with a model is designed yet."
   }
  ],
@@ -2879,44 +2879,62 @@
   "e6_t0_6_dp_main": {
    "group": "E6",
    "section": "preflight",
-   "status": "running",
-   "role": "E6 pre-flight stage 1 (server, no model): T0.6 on llnl/lulesh — dp_main_study.py, one profile as the harness takes it, NUMA node 1: does DiscoPoP alone propose patterns inside main (D4)"
+   "status": "valid",
+   "role": "E6 pre-flight stage 1 (server, no model): T0.6 on llnl/lulesh — dp_main_study.py, one profile as the harness takes it, NUMA node 1: does DiscoPoP alone propose patterns inside main (D4) — 2 Nov 21:01–21:06 UTC: 854 patterns, 324 applicable; 6 in main, all in the package's driver (version 1)"
   },
   "e6_classes_a": {
    "group": "E6",
    "section": "preflight",
-   "status": "running",
-   "role": "E6 pre-flight stage 2 (server, no model): T0.11 draw a on llnl/lulesh — arm discopop_capability (budget 0, no model), threads 6/12, repeats 5, verification size LARGE from e6_t0_1_sizes, its own fresh profile; lane 0.0"
+   "status": "valid",
+   "role": "E6 pre-flight stage 2 (server, no model): T0.11 draw a on llnl/lulesh — arm discopop_capability (budget 0, no model), threads 6/12, repeats 5, verification size LARGE from e6_t0_1_sizes, its own fresh profile; lane 0.0 — 2 Nov 21:07–21:12 UTC: parallel-not-faster, 0.17×/0.12× at 6/12 threads (version 1)"
   },
   "e6_classes_b": {
    "group": "E6",
    "section": "preflight",
-   "status": "running",
-   "role": "E6 pre-flight stage 2 (server, no model): T0.11 draw b on llnl/lulesh — arm discopop_capability (budget 0, no model), threads 6/12, repeats 5, verification size LARGE from e6_t0_1_sizes, its own fresh profile; lane 0.1"
+   "status": "valid",
+   "role": "E6 pre-flight stage 2 (server, no model): T0.11 draw b on llnl/lulesh — arm discopop_capability (budget 0, no model), threads 6/12, repeats 5, verification size LARGE from e6_t0_1_sizes, its own fresh profile; lane 0.1 — 2 Nov 21:07–21:12 UTC: parallel-not-faster, 0.16×/0.13× at 6/12 threads (version 1)"
   },
   "e6_classes_c": {
    "group": "E6",
    "section": "preflight",
-   "status": "running",
-   "role": "E6 pre-flight stage 2 (server, no model): T0.11 draw c on llnl/lulesh — arm discopop_capability (budget 0, no model), threads 6/12, repeats 5, verification size LARGE from e6_t0_1_sizes, its own fresh profile; lane 1.0"
+   "status": "valid",
+   "role": "E6 pre-flight stage 2 (server, no model): T0.11 draw c on llnl/lulesh — arm discopop_capability (budget 0, no model), threads 6/12, repeats 5, verification size LARGE from e6_t0_1_sizes, its own fresh profile; lane 1.0 — 2 Nov 21:07–21:12 UTC: parallel-not-faster, 0.19×/0.16× at 6/12 threads (version 1)"
   },
   "e6_ref_check": {
    "group": "E6",
    "section": "preflight",
-   "status": "running",
-   "role": "E6 pre-flight stage 2 (server, no model): T0.10/T0.14 — LLNL's OpenMP LULESH (agent/reference_solutions/llnl/lulesh) through `verify-source` at the verification size LARGE, threads 6/12, repeats 5, cores 36-47: does the package accept its expert version, and how fast is it"
+   "status": "valid",
+   "role": "E6 pre-flight stage 2 (server, no model): T0.10/T0.14 — LLNL's OpenMP LULESH (agent/reference_solutions/llnl/lulesh) through `verify-source` at the verification size LARGE, threads 6/12, repeats 5, cores 36-47: does the package accept its expert version, and how fast is it — 2 Nov 21:08 UTC: correct, stable, 2.06× at 6 threads, 1.75× at 12 (version 1)"
   },
   "e6_t0_13_ceiling": {
    "group": "E6",
    "section": "preflight",
-   "status": "running",
-   "role": "E6 pre-flight stage 2 (server, no model): T0.13 — default_arm_ceiling.py on llnl/lulesh: LLNL's version with its directives removed, the agent with budget 0 — does DiscoPoP find its parallel loops and do its directives pass the gate; cores 36-47, after e6_ref_check"
+   "status": "valid",
+   "role": "E6 pre-flight stage 2 (server, no model): T0.13 — default_arm_ceiling.py on llnl/lulesh: LLNL's version with its directives removed, the agent with budget 0 — does DiscoPoP find its parallel loops and do its directives pass the gate; cores 36-47, after e6_ref_check — 2 Nov 21:08–21:14 UTC: AGENT_ABORTED, the agent could not build or run the original (version 1; cause open, run again on llnl_c1)"
   },
   "e6_t0_5_shares": {
    "group": "E6",
    "section": "preflight",
+   "status": "valid",
+   "role": "E6 pre-flight stage 2 (server, no model): T0.5 — share_study.py on llnl/lulesh at the agent size and the verification size: which regions pass --min-runtime-share 0.01, how many candidates a trial has, what share LLNL's restructured force routines hold; cores 36-47, after e6_t0_13_ceiling — 2 Nov 21:14–21:16 UTC: 101 regions in scope; 58 loops at --min-runtime-share 0.01 (version 1)"
+  },
+  "e6c_prepare": {
+   "group": "E6",
+   "section": "preflight",
    "status": "running",
-   "role": "E6 pre-flight stage 2 (server, no model): T0.5 — share_study.py on llnl/lulesh at the agent size and the verification size: which regions pass --min-runtime-share 0.01, how many candidates a trial has, what share LLNL's restructured force routines hold; cores 36-47, after e6_t0_13_ceiling"
+   "role": "E6 pre-flight on the clean package llnl_c1/lulesh (server, no model): the server builds llnl_c1/lulesh with the generator's validation (clang-20) and its digests are compared with the Mac's (package and harness)"
+  },
+  "e6c_t0_1_sizes": {
+   "group": "E6",
+   "section": "preflight",
+   "status": "running",
+   "role": "E6 pre-flight on the clean package llnl_c1/lulesh (server, no model): T0.1 on llnl_c1/lulesh — size_table.py, NUMA node 0 → kernel_sizes.json"
+  },
+  "e6c_t0_6_dp_main": {
+   "group": "E6",
+   "section": "preflight",
+   "status": "running",
+   "role": "E6 pre-flight on the clean package llnl_c1/lulesh (server, no model): T0.6 on llnl_c1/lulesh — dp_main_study.py, NUMA node 1: LLNL's main now sits in main.cc and is excluded by name; does DiscoPoP propose an applicable pattern there (D4)"
   }
  },
  "analysis": {

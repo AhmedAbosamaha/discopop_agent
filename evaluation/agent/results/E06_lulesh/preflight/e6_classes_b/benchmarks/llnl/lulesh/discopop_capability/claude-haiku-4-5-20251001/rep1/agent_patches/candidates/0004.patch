@@ -1,0 +1,17 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6_classes_b/profiles/llnl/lulesh/lulesh.cc	2026-10-14 00:37:55.926503078 +0000
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6_classes_b/profiles/llnl/lulesh/lulesh.cc.discopop_patch_generator.temp	2026-11-02 21:12:41.485415629 +0000
+@@ -2278,8 +2278,14 @@
+   CalcLagrangeElements(domain) ;
+ 
+   /* Calculate Q.  (Monotonic q option requires communication) */
++  #pragma omp parallel
++  #pragma omp single
++  {
++  #pragma omp task
+   CalcQForElems(domain) ;
+ 
++  #pragma omp task
++  }
+   ApplyMaterialPropertiesForElems(domain) ;
+ 
+   UpdateVolumesForElems(domain, 

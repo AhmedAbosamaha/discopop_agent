@@ -37,7 +37,7 @@ import subprocess
 import sys
 import tempfile
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
@@ -203,6 +203,13 @@ class Recipe:
     # percent), the package emits it under this macro alone and keeps it out of the harness's
     # comparison.
     validate_macros: List[str] = field(default_factory=list)
+    # The clean layout (LULESH's suite llnl_c1, generator version 2): the ONE file a model's changes are taken
+    # from (meta.json `project.editable`), the measurement header written OUTSIDE the package under
+    # <out>/_harness/ (D39; meta.json `harness`, `harness_sha256`), and the recipe's own generator version
+    # (0: the module's GENERATOR_VERSION).
+    project_editable: List[str] = field(default_factory=list)
+    harness: Optional[Callable[["Recipe"], Dict[str, str]]] = None
+    generator_version: int = 0
 
 
 # ---------------------------------------------------------------------------
@@ -1324,7 +1331,342 @@ LULESH = Recipe(
 )
 
 
+# ---------------------------------------------------------------------------
+# LLNL LULESH 2.0 in the clean layout — suite llnl_c1, generator version 2 (E6; the author, 2 Nov 2026)
+# ---------------------------------------------------------------------------
+# The author's rule of 4 Oct (record §6): the file a model edits is an ordinary code file, with no note and no
+# harness of ours in it, and the only preparation of a received benchmark is removing its comments. Version 1
+# (`llnl/lulesh`, above) broke it — the driver, the digest, the timer calls and five `packaging:` notes sat in
+# lulesh.cc, LLNL's comments were all there ("This will require a reduction in parallel" above the time-step
+# minimum), and every unit was editable (record §6, 2 Nov). Version 1 stays for the runs archived on it.
+# What this version changes, and nothing else:
+#   * every comment goes, in every unit (LLNL's copyright and licence stay in benchmarks/LULESH/);
+#   * the code under `#if _ALWAYS_FALSE_CHECK_FOR_MPI` goes and its `#else` stays — dead by construction: the
+#     name the group's sequential copy (LULESH_SEQ) gave LLNL's MPI guard. lulesh-comm.cc is MPI only, empty
+#     then, and not shipped;
+#   * LLNL's `main` moves out of lulesh.cc into our main.cc (read-only), unchanged but for the calls into our
+#     measurement (the author, 2 Nov);
+#   * the per-thread minimum of the two time-step constraints becomes the plain loop it computes with one
+#     thread — the same arithmetic in the same order (the author, 2 Nov; as the serial-path step did with the
+#     threaded force code);
+#   * lulesh.h gets an include guard (the profile step compiles the units as one, D6);
+#   * our measurement — sizes, seeded input, timer, digest — lives in a header OUTSIDE the package (D39),
+#     prepared/_harness/llnl_c1/lulesh_harness.h, which only main.cc includes.
+# Only lulesh.cc is editable (meta.json `project.editable`): a model can read the other files, a change to
+# them is discarded. test_integrity 1b and 1d hold the files to this.
+
+_LULESH_C1_UNITS = ["lulesh.cc", "main.cc", "lulesh-init.cc", "lulesh-util.cc", "lulesh-viz.cc"]
+_LULESH_C1_HARNESS = "llnl_c1/lulesh_harness.h"
+_DEAD_MPI = re.compile(r"^\s*#\s*if\s+_ALWAYS_FALSE_CHECK_FOR_MPI\b")
+
+
+def _no_comments_cpp(code: str) -> str:
+    """C/C++ without its comments, string and character literals left as they are. A line that held only a
+    comment goes; runs of blank lines become one."""
+    out, i, n, dropped = [], 0, len(code), set()
+    line = 0
+    while i < n:
+        c = code[i]
+        if c in "\"'":
+            j = i + 1
+            while j < n and code[j] != c:
+                j += 2 if code[j] == "\\" else 1
+            out.append(code[i:j + 1])
+            i = j + 1
+        elif code.startswith("//", i):
+            j = code.find("\n", i)
+            j = n if j < 0 else j
+            dropped.add(line)
+            i = j
+        elif code.startswith("/*", i):
+            j = code.find("*/", i + 2)
+            if j < 0:
+                raise SystemExit("lulesh_c1: an unterminated comment")
+            for k in range(code.count("\n", i, j + 2) + 1):
+                dropped.add(line + k)
+            line += code.count("\n", i, j + 2)
+            out.append("\n" * code.count("\n", i, j + 2))
+            i = j + 2
+        else:
+            if c == "\n":
+                line += 1
+            out.append(c)
+            i += 1
+    kept: List[str] = []
+    for k, l in enumerate("".join(out).split("\n")):
+        if not l.strip() and (k in dropped or (kept and not kept[-1].strip())):
+            continue
+        kept.append(l.rstrip())
+    return "\n".join(kept).strip("\n") + "\n"
+
+
+def _no_dead_mpi(code: str) -> str:
+    """The `#else` branch of every `#if _ALWAYS_FALSE_CHECK_FOR_MPI`; other conditionals are kept as written."""
+    out: List[str] = []
+    stack: List[List[Any]] = []          # [is_dead_mpi, emitting]
+    def emitting() -> bool:
+        return all(s[1] for s in stack)
+    for l in code.split("\n"):
+        d = l.strip()
+        if _DEAD_MPI.match(l):
+            stack.append([True, False])
+            continue
+        if re.match(r"#\s*if", d):
+            stack.append([False, emitting()])
+            if stack[-1][1]:
+                out.append(l)
+            continue
+        if re.match(r"#\s*elif", d) and stack and stack[-1][0]:
+            raise SystemExit("lulesh_c1: an #elif on the dead MPI guard")
+        if re.match(r"#\s*else\b", d) and stack and stack[-1][0]:
+            stack[-1][1] = True
+            continue
+        if re.match(r"#\s*endif\b", d) and stack:
+            top = stack.pop()
+            if not top[0] and top[1]:
+                out.append(l)
+            continue
+        if emitting():
+            out.append(l)
+    if stack:
+        raise SystemExit("lulesh_c1: unbalanced conditionals")
+    return "\n".join(out)
+
+
+def _function_span(code: str, signature: str) -> Tuple[int, int]:
+    """[start, end) of the function whose definition begins with `signature`, braces matched (no comments left)."""
+    if code.count(signature) != 1:
+        raise SystemExit(f"lulesh_c1: expected one `{signature}`, found {code.count(signature)}")
+    start = code.index(signature)
+    i = code.index("{", start)
+    depth = 0
+    while True:
+        if code[i] == "{":
+            depth += 1
+        elif code[i] == "}":
+            depth -= 1
+            if depth == 0:
+                return start, i + 1
+        elif code[i] in "\"'":
+            q, i = code[i], i + 1
+            while code[i] != q:
+                i += 2 if code[i] == "\\" else 1
+        i += 1
+
+
+_PER_THREAD_MIN = re.compile(
+    r"\{\n   Index_t threads = 1;\n   Index_t (?P<elem>\w+)_per_thread\[1\];\n   Real_t  (?P<dt>\w+)_per_thread\[1\];\n+"
+    r"   \{\n(?P<block>.*?)\n   \}\n+"
+    r"   for \(Index_t i = 1; i < threads; \+\+i\) \{\n.*?\n   \}\n+"
+    r"   if \((?P=elem)_per_thread\[0\] != -1\) \{\n      (?P=dt) = +(?P=dt)_per_thread\[0\] ;\n   \}\n", re.S)
+
+
+def _fold_per_thread_minimum(code: str, signature: str) -> str:
+    """LLNL's per-thread minimum, with its one thread, as the plain loop it computes: the per-thread arrays, the
+    thread number, the copy into the arrays and the loop that merges the threads' results go; the loop and the
+    final test read the one thread's own variables."""
+    start, end = _function_span(code, signature)
+    fn = code[start:end]
+    m = _PER_THREAD_MIN.search(fn)
+    if not m:
+        raise SystemExit(f"lulesh_c1: the per-thread minimum of `{signature}` is not in the expected form")
+    elem, dt = m.group("elem"), m.group("dt")
+    block = [l for l in m.group("block").split("\n")
+             if l.strip() not in ("Index_t thread_num = 0;", f"{dt}_per_thread[thread_num]    = {dt}_tmp ;",
+                                  f"{elem}_per_thread[thread_num] = {elem} ;")]
+    lines: List[str] = []
+    for l in block:
+        if not l.strip():
+            if lines and lines[-1]:
+                lines.append("")
+            continue
+        if not l.startswith("      "):
+            raise SystemExit(f"lulesh_c1: unexpected indentation in `{signature}`: {l!r}")
+        lines.append(l[3:])
+    while lines and not lines[-1]:
+        lines.pop()
+    folded = ("{\n" + "\n".join(lines) + "\n\n"
+              f"   if ({elem} != -1) {{\n      {dt} = {dt}_tmp ;\n   }}\n")
+    fn = fn[:m.start()] + folded + fn[m.end():]
+    if "thread" in fn:
+        raise SystemExit(f"lulesh_c1: `{signature}` still mentions a thread after the fold")
+    return code[:start] + fn + code[end:]
+
+
+def _lulesh_c1_main(main_fn: str) -> str:
+    """main.cc: LLNL's `main` with the calls into our measurement — the sizes from the dataset guard instead of
+    the command line, the seeded input after the mesh is built, the timer around the time-step loop, the digest
+    before the Domain is deleted — and LLNL's own report sent to stderr while it runs."""
+    body = main_fn
+
+    def once(old: str, new: str, what: str) -> None:
+        nonlocal body
+        if body.count(old) != 1:
+            raise SystemExit(f"lulesh_c1: expected exactly one `{old.strip()}` in main ({what}), found {body.count(old)}")
+        body = body.replace(old, new, 1)
+
+    once("int main(int argc, char *argv[])\n{\n", "int main(int argc, char *argv[])\n{\n   pb_lulesh_begin();\n",
+         "stdout to stderr")
+    once("   opts.its = 9999999;", "   opts.its = PB_ITS;", "iteration cap")
+    once("   opts.nx  = 30;", "   opts.nx  = PB_NX;", "problem size")
+    once("   ParseCommandLineOptions(argc, argv, myRank, &opts);\n", "", "command-line parser")
+    once("                       side, opts.numReg, opts.balance, opts.cost) ;\n",
+         "                       side, opts.numReg, opts.balance, opts.cost) ;\n"
+         "   pb_lulesh_perturb(*locDom, argc, argv);\n", "after the mesh is built")
+    once("   gettimeofday(&start, NULL) ;", "   pb_timer_start();\n   gettimeofday(&start, NULL) ;", "timer start")
+    once("   gettimeofday(&end, NULL) ;", "   gettimeofday(&end, NULL) ;\n   pb_timer_stop();", "timer stop")
+    once("   delete locDom;", "   pb_lulesh_finish(*locDom);\n   delete locDom;", "digest")
+    return ("#include <sys/time.h>\n#include <iostream>\n#include \"lulesh.h\"\n"
+            f"#include \"{_LULESH_C1_HARNESS}\"\n\n"
+            "void TimeIncrement(Domain& domain);\nvoid LagrangeLeapFrog(Domain& domain);\n\n"
+            + re.sub(r"\n{3,}", "\n\n", body) + "\n")
+
+
+def _lulesh_c1_harness(r: Recipe) -> Dict[str, str]:
+    """The measurement, outside the package: what version 1's pb_sizes.h, pb_harness.cpp and driver held."""
+    driver = r"""
+/* ---- seeded input, LLNL's report to stderr, digest -------------------------------------------------------
+   The seeded input scales the deposited energy and moves every node off the boundary planes by at most 0.1 % of
+   a cell (version 1's, unchanged): the Sedov problem is symmetric in x, y and z, so a rewrite that mixes two of
+   them up could otherwise leave every value unchanged. */
+#include <unistd.h>
+#include <iostream>
+
+static int pb_lulesh_stdout = -1;
+
+static void pb_lulesh_begin(void)
+{
+   fflush(stdout);
+   pb_lulesh_stdout = dup(1);
+   dup2(2, 1);
+}
+
+static void pb_lulesh_perturb(Domain& domain, int argc, char** argv)
+{
+   if (argc < 2) return;
+   pb_seed(argv[1]);
+   domain.e(0) *= (Real_t(1.0) + Real_t(0.05) * Real_t(pb_uniform()));
+   const Index_t edgeNodes = domain.sizeX() + 1;
+   const Real_t jitter = Real_t(1.0e-3) * Real_t(1.125) / Real_t(domain.sizeX());
+   for (Index_t plane = 1; plane < edgeNodes - 1; ++plane)
+      for (Index_t row = 1; row < edgeNodes - 1; ++row)
+         for (Index_t col = 1; col < edgeNodes - 1; ++col) {
+            const Index_t n = plane * edgeNodes * edgeNodes + row * edgeNodes + col;
+            domain.x(n) += jitter * Real_t(pb_uniform() - 0.5);
+            domain.y(n) += jitter * Real_t(pb_uniform() - 0.5);
+            domain.z(n) += jitter * Real_t(pb_uniform() - 0.5);
+         }
+}
+
+static void pb_lulesh_finish(Domain& domain)
+{
+   std::cout.flush();
+   fflush(stdout);
+   dup2(pb_lulesh_stdout, 1);
+   close(pb_lulesh_stdout);
+#ifdef PB_ORIGINAL_REPORT
+   /* For the packaging validator ONLY (as version 1): what the original prints that is deterministic. */
+   const Index_t nx = domain.sizeX();
+   Real_t maxAbsDiff = Real_t(0.0), totalAbsDiff = Real_t(0.0), maxRelDiff = Real_t(0.0);
+   for (Index_t j = 0; j < nx; ++j)
+      for (Index_t k = j + 1; k < nx; ++k) {
+         Real_t absDiff = FABS(domain.e(j * nx + k) - domain.e(k * nx + j));
+         totalAbsDiff += absDiff;
+         if (maxAbsDiff < absDiff) maxAbsDiff = absDiff;
+         Real_t relDiff = absDiff / domain.e(k * nx + j);
+         if (maxRelDiff < relDiff) maxRelDiff = relDiff;
+      }
+   pb_emit((double)domain.cycle());
+   pb_emit((double)domain.e(0));
+   pb_emit((double)maxAbsDiff);
+   pb_emit((double)totalAbsDiff);
+   pb_emit((double)maxRelDiff);
+#else
+   /* The program's RESULT (as version 1): every element's energy, pressure and relative volume, every node's
+      position and velocity. */
+   pb_emit((double)domain.cycle());
+   for (Index_t i = 0; i < domain.numElem(); ++i) {
+      pb_emit((double)domain.e(i)); pb_emit((double)domain.p(i)); pb_emit((double)domain.v(i));
+   }
+   for (Index_t i = 0; i < domain.numNode(); ++i) {
+      pb_emit((double)domain.x(i));  pb_emit((double)domain.y(i));  pb_emit((double)domain.z(i));
+      pb_emit((double)domain.xd(i)); pb_emit((double)domain.yd(i)); pb_emit((double)domain.zd(i));
+   }
+#endif
+   pb_report();
+}
+"""
+    head = ("/* Measurement harness for llnl_c1/lulesh (prepare_apps.py, generator version 2): sizes, seeded input, "
+            "timer and\n   digest. It lives OUTSIDE the package (D39): only the package's main.cc includes it, after "
+            "lulesh.h; no model's\n   working copy holds it. */\n#ifndef PB_LULESH_C1_HARNESS\n#define PB_LULESH_C1_HARNESS\n")
+    return {_LULESH_C1_HARNESS: head + _guard(r.sizes) + _PRELUDE + driver + "\n#endif\n"}
+
+
+def _lulesh_c1_assemble(r: Recipe, src_dir: Optional[Path] = None) -> Tuple[Dict[str, str], List[str]]:
+    """The clean package; `src_dir` = LLNL's OpenMP release gives the expert reference by the same edits (its
+    per-thread minimum is the real one, so it is not folded, and it has no dead MPI guard to remove)."""
+    reference = src_dir is not None
+    src_dir = src_dir or LULESH_DIR
+    texts = {u: (src_dir / u).read_text() for u in ["lulesh.cc", "lulesh.h", *_LULESH_OTHER_UNITS]}
+    texts = {u: _no_comments_cpp(_no_dead_mpi(t)) for u, t in texts.items()}
+    if not reference and texts["lulesh-comm.cc"].strip() != '#include "lulesh.h"':
+        raise SystemExit("lulesh_c1: lulesh-comm.cc holds more than its include once the MPI code is gone")
+    body = texts["lulesh.cc"]
+    start, end = _function_span(body, "int main(int argc, char *argv[])")
+    main_fn = body[start:end]
+    body = (body[:start].rstrip("\n") + "\n" + body[end:].lstrip("\n")).rstrip("\n") + "\n"
+    if not reference:
+        for sig in ("void CalcCourantConstraintForElems(", "void CalcHydroConstraintForElems("):
+            body = _fold_per_thread_minimum(body, sig)
+    # main.cc calls the two functions of the time step, which LLNL declares `static inline` in lulesh.cc: they
+    # get external linkage — the consequence of moving main, nothing in their code changes.
+    for fn in ("TimeIncrement", "LagrangeLeapFrog"):
+        old = f"static inline\nvoid {fn}(Domain& domain)\n"
+        if body.count(old) != 1:
+            raise SystemExit(f"lulesh_c1: expected `static inline void {fn}(Domain& domain)` once")
+        body = body.replace(old, f"void {fn}(Domain& domain)\n", 1)
+    guard = "LULESH_H"
+    files: Dict[str, str] = {
+        "lulesh.cc": body,
+        "main.cc": _lulesh_c1_main(main_fn),
+        "lulesh.h": f"#ifndef {guard}\n#define {guard}\n" + texts["lulesh.h"] + "#endif\n",
+    }
+    for u in ("lulesh-init.cc", "lulesh-util.cc", "lulesh-viz.cc"):
+        files[u] = texts[u]
+    if reference:
+        # LLNL's two mains differ only in MPI code (dead with USE_MPI=0) and in printing the thread count under
+        # _OPENMP, without the omp.h that the release's other units include: the reference runs the package's
+        # main.cc, so that what is compared is the computation in the units the expert changed.
+        files["main.cc"] = _lulesh_c1_assemble(r)[0]["main.cc"]
+    removed = [
+        "every comment, in every unit (LLNL's copyright and licence: benchmarks/LULESH/)",
+        "the dead code under `#if _ALWAYS_FALSE_CHECK_FOR_MPI` (the #else branch kept); lulesh-comm.cc, MPI only",
+        "LLNL's main moved to main.cc (ours, read-only): sizes from the dataset guard, the seeded input, the timer "
+        "and the digest are calls into prepared/_harness/" + _LULESH_C1_HARNESS,
+        "the per-thread minimum of CalcCourantConstraintForElems and CalcHydroConstraintForElems folded to the plain "
+        "loop (one thread, the same arithmetic)",
+        "lulesh.h gains an include guard: the profile step compiles the units as one",
+        "TimeIncrement and LagrangeLeapFrog lose `static inline` (main.cc calls them; their code is unchanged)",
+        "OpenMP: none left to remove — the source is the validated serial path "
+        "(benchmarks/LULESH/LULESH_SERIAL_PATH/SERIAL_PATH.json lists what that step removed)",
+    ]
+    return files, removed
+
+
+LULESH_C1 = replace(
+    LULESH, suite="llnl_c1", assemble_project=_lulesh_c1_assemble, project_units=list(_LULESH_C1_UNITS),
+    project_editable=["lulesh.cc"], harness=_lulesh_c1_harness, generator_version=2,
+    exclude_functions=["main", "ParseCommandLineOptions", "PrintCommandLineOptions", "ParseError", "StrToInt",
+                       "VerifyAndWriteFinalOutput", "DumpToVisit", "DumpDomainToVisit", "DumpMultiblockObjects",
+                       "InitMeshDecomp", "Domain", "BuildMesh", "SetupCommBuffers",
+                       "CreateRegionIndexSets", "SetupSymmetryPlanes", "SetupElementConnectivities",
+                       "SetupBoundaryConditions", "AllocateElemPersistent", "AllocateNodePersistent",
+                       "AllocateGradients", "DeallocateGradients", "AllocateStrains", "DeallocateStrains"],
+)
+
+
 RECIPES: Dict[str, Recipe] = {r.name: r for r in (MD, PATHFINDER, NW, IS, MG, LU, HOTSPOT, LULESH)}
+RECIPES["lulesh_c1"] = LULESH_C1   # the clean layout of LULESH (suite llnl_c1); `lulesh` stays version 1
 
 
 # ---------------------------------------------------------------------------
@@ -1402,6 +1744,7 @@ def validate(r: Recipe, packaged: Path, work: Path, cxx: str,
         if packaged.is_dir():
             inputs = ([str(packaged / u) for u in r.project_units]
                       + [f"-I{packaged / d}" for d in r.project_include_dirs]
+                      + ([f"-I{packaged.parent.parent / '_harness'}"] if r.harness is not None else [])
                       + list(r.project_cflags))
         else:
             inputs = [str(packaged)]
@@ -1504,7 +1847,7 @@ def main() -> int:
             "source": str(r.source.relative_to(HARNESS_ROOT)),
             "category": r.category, "language": r.language,
             "exclude_functions": r.exclude_functions,
-            "agent_dataset": a.size, "generator_version": GENERATOR_VERSION,
+            "agent_dataset": a.size, "generator_version": r.generator_version or GENERATOR_VERSION,
             "sizes": r.sizes, "note": r.note,
             "inputs_sha256": hashlib.sha256(r.source.read_bytes()).hexdigest(),
         }
@@ -1518,7 +1861,13 @@ def main() -> int:
             meta.update({"file": main_unit, "layout": "project",
                          "project": {"units": r.project_units,
                                      "include_dirs": r.project_include_dirs,
-                                     **({"cflags": r.project_cflags} if r.project_cflags else {})}})
+                                     **({"cflags": r.project_cflags} if r.project_cflags else {}),
+                                     **({"editable": r.project_editable} if r.project_editable else {})}})
+            if r.harness is not None:
+                for rel, text in r.harness(r).items():
+                    (a.out / "_harness" / rel).parent.mkdir(parents=True, exist_ok=True)
+                    (a.out / "_harness" / rel).write_text(text)
+                    meta.update({"harness": rel, "harness_sha256": hashlib.sha256(text.encode()).hexdigest()})
             digest_of = "".join(files[k] for k in sorted(files)).encode()
             what = f"{len(files)} files, {main_unit}"
         else:

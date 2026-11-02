@@ -72,7 +72,10 @@ for meta_p in sorted(PREPARED.rglob("meta.json")):
     meta = json.loads(meta_p.read_text())
     is_tsvc = str(meta.get("suite") or "").startswith("tsvc")   # tsvc and E2-B1's tsvc_b1
     is_b1_rodinia = meta.get("suite") == "rodinia_b1"
-    words = list(TSVC_WORDS) if is_tsvc else list(OPENMP_WORDS) if is_b1_rodinia else []
+    # E6's clean LULESH (llnl_c1, the author 2 Nov 2026: "make sure that there is no hints in the comments and
+    # the paragmas are removes") is held to the same words as the Rodinia unit: it comes from an OpenMP program.
+    is_clean_lulesh = meta.get("suite") == "llnl_c1"
+    words = (list(TSVC_WORDS) if is_tsvc else list(OPENMP_WORDS) if (is_b1_rodinia or is_clean_lulesh) else [])
     for key in ("transformation", "why", "category"):
         v = str(meta.get(key) or "").strip()
         if (is_tsvc or is_b1_rodinia) and len(v) > 12:

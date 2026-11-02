@@ -1,0 +1,21 @@
+# Agent experiment run `e6_ref_check`
+
+- status: running (created 2026-11-02T21:08:05, finished None)
+- host: `rms14562`, compilers `/usr/bin/clang-20` / `/usr/bin/clang++-20`
+- agent: `None` (uncommitted diff sha256 `None`)
+- harness: `cc7f98233d7929792bf0c0b13a8c68f7268179a7` on `agentic_DiscoPop`
+- verify size `per_kernel`, threads [6, 12], repeats 5
+
+Outcomes are judged by the harness, not by the agent: `BROKEN` means the final program's values differ from the original's (relative error > 1e-09) or move between repeats at a fixed thread count; `SCAFFOLD_MODIFIED` means the rewrite edited the packaging's own code (the timer, the perturbed-input machinery or the digest), so the trial measures nothing and is never counted as a result; `FASTER` means correct and ≥ 1.1× at some thread count.
+
+## Summary
+
+| Arm | Model | Trials | FASTER | parallel-not-faster | parallel-speed-not-measurable | changed-not-parallel | no-change | BROKEN | SCAFFOLD_MODIFIED | VERIFY_FAILED | AGENT_ERROR | AGENT_TIMEOUT | PROFILE_ERROR | Median agent s | LLM calls |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| expert_openmp | none | 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+
+## Trials
+
+| Benchmark | Arm | Model | Rep | Outcome | Best speedup | Pragmas (DP+LLM) | Rewrites | Baseline | LLM calls | Agent s |
+|---|---|---|---:|---|---:|---|---:|---:|---:|---:|
+| llnl/lulesh | expert_openmp | none | 1 | FASTER | 2.06x | —+— | — | — | 0 | — |
