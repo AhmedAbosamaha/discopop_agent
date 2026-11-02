@@ -1,0 +1,221 @@
+{
+  "benchmark": "llnl_c1/lulesh",
+  "kernel": "lulesh",
+  "source": "lulesh.cc",
+  "arm": "discopop_capability",
+  "model": "claude-haiku-4-5-20251001",
+  "arm_flags": [
+    "--require-speedup",
+    "--min-runtime-share",
+    "0.01",
+    "--budget",
+    "0",
+    "--no-require-speedup"
+  ],
+  "started_at": "2026-11-02T22:27:50",
+  "host": "rms14562",
+  "host_load_start": [
+    3.57568359375,
+    3.3583984375,
+    2.7412109375
+  ],
+  "agent_cmd": [
+    "/home/ahmedabosamaha/discopop_agent/venv/bin/python",
+    "-m",
+    "discopop_agent",
+    "--project-dir",
+    ".",
+    "--project-units",
+    "lulesh.cc,main.cc,lulesh-init.cc,lulesh-util.cc,lulesh-viz.cc",
+    "--project-include",
+    ".",
+    "--project-editable",
+    "lulesh.cc",
+    "--project-cflags=-DUSE_MPI=0",
+    "--discopop-dir",
+    ".discopop",
+    "--provider",
+    "claude-agent-sdk",
+    "--model",
+    "claude-haiku-4-5-20251001",
+    "--edit-mode",
+    "direct",
+    "--require-speedup",
+    "--min-runtime-share",
+    "0.01",
+    "--budget",
+    "0",
+    "--no-require-speedup",
+    "--check-input",
+    "7",
+    "--exclude-functions",
+    "main,ParseCommandLineOptions,PrintCommandLineOptions,ParseError,StrToInt,VerifyAndWriteFinalOutput,DumpToVisit,DumpDomainToVisit,DumpMultiblockObjects,InitMeshDecomp,Domain,BuildMesh,SetupCommBuffers,CreateRegionIndexSets,SetupSymmetryPlanes,SetupElementConnectivities,SetupBoundaryConditions,AllocateElemPersistent,AllocateNodePersistent,AllocateGradients,DeallocateGradients,AllocateStrains,DeallocateStrains",
+    "--explorer-timeout",
+    "3005"
+  ],
+  "agent_s": 211.4,
+  "agent_rc": 0,
+  "llm_calls": 0,
+  "llm_call_failures": 0,
+  "harness_reasks": 0,
+  "harness_discards": 0,
+  "explorer_retries": 0,
+  "explorer_stalls": 0,
+  "reverts": 0,
+  "refresh_fast": 0,
+  "refresh_full": 0,
+  "refresh_fallback": 0,
+  "runtime_remeasurements": 0,
+  "phase_b_deferred": 0,
+  "phase_b_joint_kept": 0,
+  "dp_floor": null,
+  "gate_failures_phase_a": {},
+  "gate_failures_phase_b": {
+    "openmp_compile": 3,
+    "compile": 7,
+    "tsan": 3
+  },
+  "gate_passes_phase_a": 0,
+  "gate_failures_d40": {},
+  "d40_verdicts": {},
+  "exposure_verdicts": {},
+  "d40_seconds": 0,
+  "requeued_regions": 0,
+  "region_verdicts": {
+    "SKIPPED": 27,
+    "DEFERRED": 18,
+    "DROPPED": 13,
+    "APPLIED": 10
+  },
+  "settle_dropped": 0,
+  "baseline_claimed": 18,
+  "baseline_pragmas": 14,
+  "rewrites_kept": 0,
+  "pragmas_applied": 10,
+  "pragmas_discopop": 10,
+  "pragmas_llm": 0,
+  "regions_skipped": 26,
+  "llm_usage": null,
+  "layout": "project",
+  "files_changed": [
+    "lulesh.cc"
+  ],
+  "source_changed": true,
+  "scaffold": {
+    "ok": true,
+    "problems": [],
+    "applies": true
+  },
+  "editable": [
+    "lulesh.cc"
+  ],
+  "harness_sha256": "16ce4a9abf108077102bf633578fec39e06002599940ecb65a3cede8b9f914ea",
+  "pragmas_added": 10,
+  "pragmas_in_final": 10,
+  "hot_loop_covered": null,
+  "candidates_recorded": 23,
+  "verify": {
+    "verify_size": "LARGE",
+    "threads": [
+      6,
+      12
+    ],
+    "repeats": 5,
+    "compiler": "/usr/bin/clang++-20",
+    "final_flags": [],
+    "dump_exact": true,
+    "dump_max_rel_err": 0.0,
+    "seed": "7",
+    "dump_exact_seeded": true,
+    "dump_seeded_max_rel_err": 0.0,
+    "seq_median_s": 1.0609,
+    "seq_kernel_median_s": 1.055302,
+    "timing_basis": "kernel",
+    "par": {
+      "6": {
+        "median_s": 5.7545,
+        "program_speedup": 0.184,
+        "max_rel_err": 0.0,
+        "kernel_median_s": 5.748515,
+        "kernel_speedup": 0.184,
+        "speedup": 0.184
+      },
+      "12": {
+        "median_s": 6.5973,
+        "program_speedup": 0.161,
+        "max_rel_err": 0.0,
+        "kernel_median_s": 6.591759,
+        "kernel_speedup": 0.16,
+        "speedup": 0.16
+      }
+    },
+    "digest_max_rel_err": 0.0,
+    "stable_at_fixed_threads": true,
+    "kernel_program_disagree": false,
+    "digest_seeded_rel_err": 0.0,
+    "status": "ok",
+    "speed_measurable": true
+  },
+  "verify_s": 84.3,
+  "status": "done",
+  "outcome": "parallel-not-faster",
+  "finished_at": "2026-11-02T22:32:46",
+  "host_load_end": [
+    25.51513671875,
+    12.90625,
+    6.6083984375
+  ],
+  "profile": {
+    "wrapper": "discopop_cxx",
+    "layout": "project",
+    "units": [
+      "lulesh.cc",
+      "main.cc",
+      "lulesh-init.cc",
+      "lulesh-util.cc",
+      "lulesh-viz.cc"
+    ],
+    "instrument_s": 2.52,
+    "profiled_run_s": 7.24,
+    "explore_stalls": 0,
+    "explore_s": 300.47,
+    "explore_success_s": 300.47,
+    "explore_attempts": 1,
+    "explore_timed_out": false,
+    "explore_failures": [],
+    "patterns": {
+      "optimizer_output": 0,
+      "merged_pattern": 0,
+      "task": 741,
+      "do_all": 55,
+      "reduction": 0
+    },
+    "profile_sha256": "51699a1866e4eda3cfde064ef93113d296b19fe49786c4f2627c2fc260da1e25"
+  },
+  "package_integrity": {
+    "before": {
+      "checked": "before trial",
+      "at": "2026-11-02T22:27:49",
+      "prepared_sha256": "813625161670db3347538b371f9788b8db1f0dba246c083d2ad6bd5572089ea6",
+      "packager_sha256": "813625161670db3347538b371f9788b8db1f0dba246c083d2ad6bd5572089ea6",
+      "harness_sha256": "16ce4a9abf108077102bf633578fec39e06002599940ecb65a3cede8b9f914ea",
+      "archived_sha256": "813625161670db3347538b371f9788b8db1f0dba246c083d2ad6bd5572089ea6",
+      "profile_sha256": "51699a1866e4eda3cfde064ef93113d296b19fe49786c4f2627c2fc260da1e25",
+      "ok": true
+    },
+    "after": {
+      "checked": "after trial",
+      "at": "2026-11-02T22:32:46",
+      "prepared_sha256": "813625161670db3347538b371f9788b8db1f0dba246c083d2ad6bd5572089ea6",
+      "packager_sha256": "813625161670db3347538b371f9788b8db1f0dba246c083d2ad6bd5572089ea6",
+      "harness_sha256": "16ce4a9abf108077102bf633578fec39e06002599940ecb65a3cede8b9f914ea",
+      "archived_sha256": "813625161670db3347538b371f9788b8db1f0dba246c083d2ad6bd5572089ea6",
+      "profile_sha256": "51699a1866e4eda3cfde064ef93113d296b19fe49786c4f2627c2fc260da1e25",
+      "ok": true
+    }
+  },
+  "speed_check_off": true,
+  "timing_flags": [],
+  "harness_edit_redos": [],
+  "repeat": 1
+}

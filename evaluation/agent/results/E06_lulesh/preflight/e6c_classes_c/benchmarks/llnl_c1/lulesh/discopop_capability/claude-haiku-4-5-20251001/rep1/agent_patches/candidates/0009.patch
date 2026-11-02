@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_classes_c/benchmarks/llnl_c1/lulesh/discopop_capability/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_classes_c/benchmarks/llnl_c1/lulesh/discopop_capability/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -1693,6 +1693,7 @@
+    Real_t *bvc = Allocate<Real_t>(numElemReg) ;
+    Real_t *pbvc = Allocate<Real_t>(numElemReg) ;
+ 
++   #pragma omp parallel for firstprivate(rep,e_cut,eosvmax,q_cut,pmin,rho0,p_cut,eosvmin,numElemReg,emin) shared(compHalfStep,e_old,bvc,q_old,domain,q_new,e_new,p_new,compression,p_old,vnewc,pbvc,qq_old,work,ql_old,delvc,regElemList) 
+    for(Int_t j = 0; j < rep; j++) {
+       {
+          for (Index_t i=0; i<numElemReg; ++i) {

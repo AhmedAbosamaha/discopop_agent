@@ -1,0 +1,22 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_classes_b/profiles/llnl_c1/lulesh/lulesh.cc	2026-11-02 22:10:50.872290256 +0000
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_classes_b/profiles/llnl_c1/lulesh/lulesh.cc.discopop_patch_generator.temp	2026-11-02 22:27:21.977686167 +0000
+@@ -828,6 +828,10 @@
+ 
+   CalcForceForNodes(domain);
+ 
++   #pragma omp parallel
++   #pragma omp single
++   {
++   #pragma omp task
+    CalcAccelerationForNodes(domain, domain.numNode());
+ 
+    ApplyAccelerationBoundaryConditionsForNodes(domain);
+@@ -836,6 +840,8 @@
+ 
+    CalcPositionForNodes( domain, delt, domain.numNode() );
+ 
++  #pragma omp task
++  }
+   return;
+ }
+ 

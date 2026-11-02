@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_classes_a/benchmarks/llnl_c1/lulesh/discopop_capability/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_classes_a/benchmarks/llnl_c1/lulesh/discopop_capability/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -812,6 +812,7 @@
+ static inline
+ void CalcPositionForNodes(Domain &domain, const Real_t dt, Index_t numNode)
+ {
++   #pragma omp parallel for firstprivate(numNode,dt) shared(domain) 
+    for ( Index_t i = 0 ; i < numNode ; ++i )
+    {
+      domain.x(i) += domain.xd(i) * dt ;

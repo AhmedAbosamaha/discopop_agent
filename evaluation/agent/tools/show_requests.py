@@ -10,7 +10,7 @@ holds them) this writes, with NO model call and with each arm's own code:
     files/                                         the files in both working copies
 
     venv/bin/python evaluation/agent/tools/show_requests.py <profile dir> <out dir>
-        [--prompt-version 4] [--no-require-speedup] [--budget 3]
+        [--prompt-version 4] [--no-require-speedup] [--llm-pragmas]
 """
 from __future__ import annotations
 
@@ -40,6 +40,8 @@ def main() -> int:
     ap.add_argument("out", type=Path)
     ap.add_argument("--prompt-version", default="4")
     ap.add_argument("--no-require-speedup", action="store_true")
+    ap.add_argument("--llm-pragmas", action="store_true",
+                    help="the mode in which the model writes the directives (E3's llm_pragmas arms, E6)")
     a = ap.parse_args()
     work = a.profile.resolve()
     meta = json.loads((work / "meta.json").read_text())
@@ -55,7 +57,7 @@ def main() -> int:
                 ",".join(units), "--project-include", ".", "--project-editable", ",".join(editable),
                 "--exclude-functions", ",".join(meta.get("exclude_functions") or []), "--min-runtime-share", "0.01",
                 "--prompt-version", a.prompt_version, "--check-input", "7", "--edit-mode", "direct",
-                "--provider", "claude-agent-sdk", *speed]
+                "--provider", "claude-agent-sdk", *speed, *(["--llm-pragmas"] if a.llm_pragmas else [])]
     try:
         args = parse_args()
     finally:
@@ -81,7 +83,7 @@ def main() -> int:
     shutil.rmtree(a.out / "files", ignore_errors=True)
     (a.out / "files").mkdir()
     for f in sorted(work.iterdir()):
-        if f.is_file() and f.suffix in (".c", ".h"):
+        if f.is_file() and f.suffix in (".c", ".h", ".cc", ".cpp", ".hpp"):
             shutil.copy2(f, a.out / "files" / f.name)
     project_mod.activate(None)
     print(f"written to {a.out}: the agent's request is for region {cands[0].region.region_type} at line "
