@@ -70,7 +70,22 @@ def main() -> int:
                              exclude_functions=args.exclude_functions)
     if not cands:
         sys.exit("the agent's queue is empty for this profile")
-    ev = assemble(cands[0], dp / "profiler", FIRST_REASON)
+    # The agent's own routing (phases/phase_a.py): a region DiscoPoP already reports with an applicable pattern
+    # (Tier 1) is deferred to Phase B and never sent; the first region the model is sent is the first other one,
+    # with FIRST_REASON as its reason. (A deferred region the gate then refutes can be re-queued to the model in
+    # the trial itself, with another reason; that needs the gate and is not rendered here.)
+    def _deferred(c: object) -> bool:
+        pat = getattr(c, "pattern", None)
+        return getattr(c, "tier", None) == 1 and bool(pat) and bool(pat.get("applicable_pattern"))  # type: ignore[union-attr]
+    first = next((c for c in cands if not _deferred(c)), None)
+    if first is None:
+        sys.exit("every region of the agent's queue is deferred to DiscoPoP: the model is sent nothing at first")
+    a.out.mkdir(parents=True, exist_ok=True)
+    (a.out / "queue.txt").write_text("".join(
+        f"{n:3d}  {'deferred to DiscoPoP' if _deferred(c) else 'sent to the model'}  {c.region.region_type} "
+        f"lines {c.region.start_line}-{c.region.end_line} of {Path(c.source_file).name}\n"
+        for n, c in enumerate(cands, 1)))
+    ev = assemble(first, dp / "profiler", FIRST_REASON)
     gate = gate_facts(args)
     a.out.mkdir(parents=True, exist_ok=True)
     ws = Path("/workspace") / editable[0]
@@ -86,8 +101,8 @@ def main() -> int:
         if f.is_file() and f.suffix in (".c", ".h", ".cc", ".cpp", ".hpp"):
             shutil.copy2(f, a.out / "files" / f.name)
     project_mod.activate(None)
-    print(f"written to {a.out}: the agent's request is for region {cands[0].region.region_type} at line "
-          f"{cands[0].region.start_line} of {Path(cands[0].source_file).name}")
+    print(f"written to {a.out}: the agent's request is for region {first.region.region_type} at line "
+          f"{first.region.start_line} of {Path(first.source_file).name}")
     return 0
 
 
