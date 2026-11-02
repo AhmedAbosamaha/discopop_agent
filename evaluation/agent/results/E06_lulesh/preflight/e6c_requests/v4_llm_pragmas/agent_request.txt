@@ -1,0 +1,104 @@
+## File to edit: /workspace/lulesh.cc
+## This file is `lulesh.cc` of a multi-file program.  The directory it sits in is a copy of the whole program — read its headers and the other units (main.cc, lulesh-init.cc, lulesh-util.cc, lulesh-viz.cc) for context.  Only your changes to `lulesh.cc` are used; an edit to any other file is discarded.
+## Function containing the target region: CalcPressureForElems  (lines 1491–1518)
+## Target region: loop 1:3209 at lines 1504–1517
+
+### Evidence digest (details in the sections below)
+  - RAW on array elements within these lines: p_new.
+  - Values that cross the region's edge only — written outside and read here: bvc, e_old, vnewc; written here and read outside the region: pHalfStep, pnewc.
+  - RAW on SCALARS: ielem — usually a reused location or an accumulator, not a value travelling between iterations.
+  - `p_new` is written as [i] and read as [i].
+  - Loop lines 1504–1517 (index: i): 5250 activation(s) × ~711 iterations.
+  - DiscoPoP ALREADY reports parallel loop(s) inside this region (line 1504) — those need a pragma, not a rewrite.
+  - The region CALLS other functions: FABS() — their side effects must stay correct under any restructuring.
+
+### The function as it currently stands in the file (excerpt — read the file itself before editing; line numbers here are the file's own):
+```cpp
+void CalcPressureForElems(Real_t* p_new, Real_t* bvc,
+                          Real_t* pbvc, Real_t* e_old,
+                          Real_t* compression, Real_t *vnewc,
+                          Real_t pmin,
+                          Real_t p_cut, Real_t eosvmax,
+                          Index_t length, Index_t *regElemList)
+{
+   for (Index_t i = 0; i < length ; ++i) {
+      Real_t c1s = Real_t(2.0)/Real_t(3.0) ;
+      bvc[i] = c1s * (compression[i] + Real_t(1.));
+      pbvc[i] = c1s;
+   }
+
+   for (Index_t i = 0 ; i < length ; ++i){
+      Index_t ielem = regElemList[i];
+
+      p_new[i] = bvc[i] * e_old[i] ;
+
+      if    (FABS(p_new[i]) <  p_cut   )
+         p_new[i] = Real_t(0.0) ;
+
+      if    ( vnewc[ielem] >= eosvmax )
+         p_new[i] = Real_t(0.0) ;
+
+      if    (p_new[i]       <  pmin)
+         p_new[i]   = pmin ;
+   }
+}
+```
+
+### Array accesses in the region (index expressions, read from the source)
+  regElemList:  written as —  |  read as [i]   (read-only here: never a source of a dependence)
+  p_new:  written as [i]  |  read as [i]
+  bvc:  written as —  |  read as [i]   (read-only here: never a source of a dependence)
+  e_old:  written as —  |  read as [i]   (read-only here: never a source of a dependence)
+  vnewc:  written as —  |  read as [ielem]   (read-only here: never a source of a dependence)
+  A loop whose index appears identically in every subscript that touches an array visits a different element on each of its iterations, so THAT loop does not carry a dependence through the array.  A dependence is carried by the loop whose index differs between a write and a read (`a[i]` written, `a[i-1]` read).
+
+### Runtime data dependences in the target region (observed)
+(grouped per variable, each tagged [array element] or [scalar]; each pair is the earlier access → the later one)
+  RAW — read-after-write (a value written by one access and read by a later one):
+    `p_new` [array element]: line 1507 writes → line 1509 reads; line 1507 writes → line 1515 reads; line 1510 writes → line 1515 reads  (+8 read outside the region)
+        line 1507: `p_new[i] = bvc[i] * e_old[i] ;`
+        line 1509: `if    (FABS(p_new[i]) <  p_cut   )`
+        line 1510: `p_new[i] = Real_t(0.0) ;`
+        line 1515: `if    (p_new[i]       <  pmin)`
+    `ielem` [scalar]: line 1505 writes → line 1512 reads
+        line 1505: `Index_t ielem = regElemList[i];`
+        line 1512: `if    ( vnewc[ielem] >= eosvmax )`
+
+  WAR — write-after-read:
+    `p_new` [array element]: line 1515 reads → line 1507 overwrites; line 1509 reads → line 1510 overwrites
+    `ielem` [scalar]: line 1512 reads → line 1505 overwrites
+
+  WAW — write-after-write: none within these lines
+
+  (Not listed: dependences on the induction variable(s) i — they are never what blocks a loop; see 'Loop structure' for which of them a pragma has to privatise.)
+
+### DiscoPoP variable classification (from its own analysis)
+  shared        : bvc, e_old, p_new, regElemList, vnewc   (the data structures — a loop-carried dep on these is ALGORITHMIC, not removable by privatizing/renaming)
+  firstprivate  : p_cut, eosvmax, length, pmin
+
+### Loop structure (nesting, induction variables, observed iterations)
+  - loop at lines 1504–1517  induction variable(s): i  |  5250 activation(s) × ~711 iterations = 3,734,850 total (max 1412)  <-- too fine-grained on its own (~711 per activation)
+  (Marked against ~1000 iterations per activation — below that, thread startup costs more than the loop saves.)
+
+### Function calls inside the region
+  - line 1509: calls FABS()
+  Iterations that call a function are independent only if the calls do not touch overlapping shared state; check the callee's side effects before assuming Do-All.
+
+### Already parallel according to DiscoPoP (inside this region)
+  - loop at line 1504: Do-All  with firstprivate(p_cut, eosvmax, length, pmin)
+  These loops need no restructuring and DiscoPoP annotates them itself, after you are done.  Do NOT put a pragma on them: write pragmas only for loops you restructure or create.  What is asked of you is whatever stops a loop OUTSIDE them from running in parallel; if nothing can be done there, say so — leaving these loops to DiscoPoP is a valid answer.
+
+### Why this region is here
+DiscoPoP found no applicable parallelism pattern for this region
+
+### Task
+Edit `/workspace/lulesh.cc`: the loop (lines 1504–1517) inside `CalcPressureForElems` is to be restructured so that its iterations are independent, and ANNOTATED BY YOU: every loop you make parallel carries its own `#pragma omp` with explicit data-sharing clauses.  The result has to be code that compiles, is race-free under ThreadSanitizer, gives the same result at every thread count and schedule, reproduces the original program's results, and runs faster than the original sequential program.  Nothing re-profiles your rewrite, and nothing adds a pragma for you.
+
+Worth settling before you write:
+  - Which dependence is actually blocking this, and is it a value moving
+    between iterations or just a location being reused?
+  - Does the loop you are making parallel have enough work per activation
+    to be worth it?  The loop structure above says which do.
+  - Re-derive any bound the old execution order made safe.
+
+>>> Read the file, give the short plan, then APPLY the rewrite with the Edit tool. Do not print a diff or the rewritten code — the file's content is what is used. Keep the function's name and signature.
