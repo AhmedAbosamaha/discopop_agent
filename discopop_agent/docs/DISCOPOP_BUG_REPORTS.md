@@ -1139,6 +1139,8 @@ Any instrumentation (`faulthandler.dump_traceback_later`, `PYTHONFAULTHANDLER=1`
 the order-dependence already recorded under B4 and T0.7 — sets iterated in an order that hash seeds and object
 addresses decide — with an order in which the insertion becomes combinatorial.
 
+**Where the memory goes (read, not yet confirmed by a trace).** For a dynamic dependence the insertion registers an edge for EVERY pair of source and target contexts, once per variable (`TaskGraph.py` ≈ line 3323: "register dependencies between all pairs of source and target contexts"); the contexts come from `__get_work_contexts_by_location_and_state_id`, which DiscoPoP's own comment there calls incorrect ("a result of incorrect behavior of __get_work_contexts_by_location_and_state_id, which should be fixed!"). Which contexts carry a state id follows from how the task graph copies loop iterations — the order B4 is about — so in some orders one location and state match many contexts and the pairs multiply. Seen again in E6's main run `e6c_r3` (3 Nov): five attempts, seeds free and 2–5, all stopped, at "Source locations 230/265"; `e6c_r1` and `e6c_r2` needed two and three attempts.
+
 **Mitigated, not repaired** (harness Fix 111, harness and agent Fix 112): no empty `PYTHONPATH` entry; and a retry
 after a stall is a different draw — attempt k runs with `PYTHONHASHSEED=k` — where before it repeated the same order
 and so the same runaway.

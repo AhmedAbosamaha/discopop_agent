@@ -744,7 +744,7 @@ Status: done
 
 ## [E6 — a real application: LULESH 2.0](E06_lulesh/REPORT.md)
 
-Status: pre-flight
+Status: running
 
 | run | where | what it is | status | trials | outcomes |
 |---|---|---|---|---:|---|
@@ -773,5 +773,10 @@ Status: pre-flight
 | `e6c_smoke_bare` | [`E06_lulesh/preflight/e6c_smoke_bare/`](E06_lulesh/preflight/e6c_smoke_bare/) | E6 smoke (server, MODEL): one trial of bare_llm_v4 on llnl_c1/lulesh, Haiku 4.5, --threads 6,12 --repeats 5 --timeout 43200, lane 0.1 — the pre-registered criterion of 3 Nov — 3 Nov 00:06–00:17 UTC: VERIFY_FAILED, 63 directives, the program does not compile (loop-body names in clauses); 1 call, $0.77 | valid | 1 | VERIFY_FAILED 1 |
 | `e6c_requests_fix109` | [`E06_lulesh/preflight/e6c_requests_fix109/`](E06_lulesh/preflight/e6c_requests_fix109/) | E6 pre-flight (server, no model): show_requests.py on e6c_classes_a's profile of llnl_c1/lulesh again, at the commit with Fix 109 — the agent's first request (version 5, the model writes the directives) as it is now sent: the digest without compiler names — 3 Nov: no compiler name left; the digest ends 'memory DiscoPoP could not name' | valid | 0 |  |
 | `e6c_smoke2` | [`E06_lulesh/preflight/e6c_smoke2/`](E06_lulesh/preflight/e6c_smoke2/) | E6 smoke again (server, MODEL): one trial of llm_pragmas_v5 on llnl_c1/lulesh, Haiku 4.5, --threads 6,12 --repeats 5 --timeout 43200, lane 0.0, with Fix 110 (the explorer limit 910 s) — the pre-registered criterion of 3 Nov — PROFILE_ERROR 3 Nov 03:0x UTC: the explorer ran away in all five attempts (B28); no model call (§6) | valid | 1 | PROFILE_ERROR 1 |
-| `e6c_smoke3` | [`E06_lulesh/preflight/e6c_smoke3/`](E06_lulesh/preflight/e6c_smoke3/) | E6 smoke, third run (server, MODEL): one trial of llm_pragmas_v5 on llnl_c1/lulesh, Haiku 4.5, --threads 6,12 --repeats 5 --timeout 43200, lane 0.0, with Fixes 110-112 — the pre-registered criterion of 3 Nov | running | 1 | BROKEN 1 |
+| `e6c_smoke3` | [`E06_lulesh/preflight/e6c_smoke3/`](E06_lulesh/preflight/e6c_smoke3/) | E6 smoke, third run (server, MODEL): one trial of llm_pragmas_v5 on llnl_c1/lulesh, Haiku 4.5, --threads 6,12 --repeats 5 --timeout 43200, lane 0.0, with Fixes 110-112 — the pre-registered criterion of 3 Nov — 3 Nov 03:11–08:35 UTC: BROKEN (values within 8.3e-14, 1.99× at 6 threads, but not reproducible at fixed threads: per-thread force arrays added under critical); 40 calls, $9.97; criterion held (§6) | valid | 1 | BROKEN 1 |
+| `e6c_r1` | not archived yet | E6 main run (server, MODEL), pre-registered 3 Nov: discopop_gate_v5 and llm_pragmas_v5 (Haiku 4.5) on llnl_c1/lulesh, --trials 2 --threads 6,12 --repeats 5 --timeout 43200, lane 0.0 | running |  |  |
+| `e6c_r2` | not archived yet | E6 main run (server, MODEL), pre-registered 3 Nov: discopop_gate_v5 and llm_pragmas_v5 (Haiku 4.5) on llnl_c1/lulesh, --trials 2, lane 0.1 | running |  |  |
+| `e6c_r3` | [`E06_lulesh/runs/e6c_r3/`](E06_lulesh/runs/e6c_r3/) | E6 main run (server, MODEL), pre-registered 3 Nov: discopop_gate_v5 and llm_pragmas_v5 (Haiku 4.5) on llnl_c1/lulesh, --trials 1, lane 1.0 — PROFILE_ERROR 3 Nov ~09:30 UTC: the first profile's explorer stopped in all five attempts (B28); no trial, no call (§6) | valid | 2 | PROFILE_ERROR 2 |
+| `e6c_bare` | not archived yet | E6 main run (server, MODEL), pre-registered 3 Nov: bare_llm_v4 on llnl_c1/lulesh for claude-haiku-4-5-20251001, claude-sonnet-5, claude-opus-5-5, claude-fable-5-1, --trials 5 --threads 6,12 --repeats 5 --timeout 43200, lane 1.1 | running |  |  |
+| `e6c_r3b` | not archived yet | E6 main run (server, MODEL), replacing e6c_r3 on a new profile: discopop_gate_v5 and llm_pragmas_v5 (Haiku 4.5) on llnl_c1/lulesh, --trials 1 --threads 6,12 --repeats 5 --timeout 43200, lane 1.0 | running |  |  |
 
