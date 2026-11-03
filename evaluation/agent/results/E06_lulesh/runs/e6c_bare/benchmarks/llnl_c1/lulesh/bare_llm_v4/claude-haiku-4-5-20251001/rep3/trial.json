@@ -1,0 +1,180 @@
+{
+  "benchmark": "llnl_c1/lulesh",
+  "kernel": "lulesh",
+  "source": "lulesh.cc",
+  "arm": "bare_llm_v4",
+  "model": "claude-haiku-4-5-20251001",
+  "arm_flags": [
+    "--require-speedup",
+    "--min-runtime-share",
+    "0.01",
+    "--prompt-version",
+    "4",
+    "--timing-cflags=-DLARGE_DATASET"
+  ],
+  "started_at": "2026-11-03T09:02:22",
+  "host": "rms14562",
+  "host_load_start": [
+    7.25634765625,
+    5.60302734375,
+    4.0029296875
+  ],
+  "agent_cmd": [
+    "/home/ahmedabosamaha/discopop_agent/venv/bin/python",
+    "-m",
+    "discopop_agent.bare_llm",
+    "--project-dir",
+    ".",
+    "--project-units",
+    "lulesh.cc,main.cc,lulesh-init.cc,lulesh-util.cc,lulesh-viz.cc",
+    "--project-include",
+    ".",
+    "--project-editable",
+    "lulesh.cc",
+    "--project-cflags=-DUSE_MPI=0",
+    "--model",
+    "claude-haiku-4-5-20251001",
+    "--prompt-version",
+    "4",
+    "--exclude-functions",
+    "main,ParseCommandLineOptions,PrintCommandLineOptions,ParseError,StrToInt,VerifyAndWriteFinalOutput,DumpToVisit,DumpDomainToVisit,DumpMultiblockObjects,InitMeshDecomp,Domain,BuildMesh,SetupCommBuffers,CreateRegionIndexSets,SetupSymmetryPlanes,SetupElementConnectivities,SetupBoundaryConditions,AllocateElemPersistent,AllocateNodePersistent,AllocateGradients,DeallocateGradients,AllocateStrains,DeallocateStrains"
+  ],
+  "agent_s": 406.8,
+  "agent_rc": 0,
+  "llm_calls": 1,
+  "llm_call_failures": 0,
+  "harness_reasks": 0,
+  "harness_discards": 0,
+  "explorer_retries": 0,
+  "explorer_stalls": 0,
+  "reverts": 0,
+  "refresh_fast": 0,
+  "refresh_full": 0,
+  "refresh_fallback": 0,
+  "runtime_remeasurements": 0,
+  "phase_b_deferred": 0,
+  "phase_b_joint_kept": 0,
+  "dp_floor": null,
+  "gate_failures_phase_a": {},
+  "gate_failures_phase_b": {},
+  "gate_passes_phase_a": 0,
+  "gate_failures_d40": {},
+  "d40_verdicts": {},
+  "exposure_verdicts": {},
+  "d40_seconds": 0,
+  "requeued_regions": 0,
+  "region_verdicts": {},
+  "settle_dropped": 0,
+  "llm_usage": {
+    "calls_recorded": 3,
+    "input_tokens": 534,
+    "output_tokens": 55931,
+    "cache_read_input_tokens": 3624682,
+    "cache_creation_input_tokens": 177635,
+    "cost_usd": 1.0019,
+    "model_seconds": 398.7
+  },
+  "layout": "project",
+  "files_changed": [
+    "lulesh.cc"
+  ],
+  "source_changed": true,
+  "scaffold": {
+    "ok": true,
+    "problems": [],
+    "applies": true
+  },
+  "editable": [
+    "lulesh.cc"
+  ],
+  "harness_sha256": "16ce4a9abf108077102bf633578fec39e06002599940ecb65a3cede8b9f914ea",
+  "pragmas_added": 64,
+  "pragmas_in_final": 64,
+  "hot_loop_covered": null,
+  "candidates_recorded": 0,
+  "verify": {
+    "verify_size": "LARGE",
+    "threads": [
+      6,
+      12
+    ],
+    "repeats": 5,
+    "compiler": "/usr/bin/clang++-20",
+    "final_flags": [],
+    "build_errors": {
+      "final_dump": "maha/discopop_agent/evaluation/agent/runs/e6c_bare/benchmarks/llnl_c1/lulesh/bare_llm_v4/claude-haiku-4-5-20251001/rep3/final/lulesh.cc:1539:34: error: use of undeclared identifier 'i'\n 1539 | #pragma omp parallel for private(i) shared(bvc, pbvc, compression, length)\n      |                                  ^\nfatal error: too many errors emitted, stopping now [-ferror-limit=]\n20 errors generated.\n",
+      "final_par": "maha/discopop_agent/evaluation/agent/runs/e6c_bare/benchmarks/llnl_c1/lulesh/bare_llm_v4/claude-haiku-4-5-20251001/rep3/final/lulesh.cc:1539:34: error: use of undeclared identifier 'i'\n 1539 | #pragma omp parallel for private(i) shared(bvc, pbvc, compression, length)\n      |                                  ^\nfatal error: too many errors emitted, stopping now [-ferror-limit=]\n20 errors generated.\n"
+    },
+    "dump_exact": null,
+    "dump_max_rel_err": null,
+    "status": "verify_build_failed",
+    "speed_measurable": true
+  },
+  "verify_s": 5.2,
+  "status": "done",
+  "outcome": "VERIFY_FAILED",
+  "finished_at": "2026-11-03T09:09:14",
+  "host_load_end": [
+    7.06787109375,
+    6.4912109375,
+    5.0263671875
+  ],
+  "profile": {
+    "wrapper": "discopop_cxx",
+    "layout": "project",
+    "units": [
+      "lulesh.cc",
+      "main.cc",
+      "lulesh-init.cc",
+      "lulesh-util.cc",
+      "lulesh-viz.cc"
+    ],
+    "instrument_s": 2.47,
+    "profiled_run_s": 7.09,
+    "explore_stalls": 0,
+    "explore_s": 300.55,
+    "explore_success_s": 300.55,
+    "explore_attempts": 1,
+    "explore_hash_seeds": [
+      "free"
+    ],
+    "explore_timed_out": false,
+    "explore_failures": [],
+    "patterns": {
+      "optimizer_output": 0,
+      "merged_pattern": 0,
+      "task": 744,
+      "do_all": 55,
+      "reduction": 0
+    },
+    "profile_sha256": "900589de4ddeb1c008ea97d1fbd956d4d9dd60df5db555011e6689e91ecd4688"
+  },
+  "package_integrity": {
+    "before": {
+      "checked": "before trial",
+      "at": "2026-11-03T09:02:21",
+      "prepared_sha256": "813625161670db3347538b371f9788b8db1f0dba246c083d2ad6bd5572089ea6",
+      "packager_sha256": "813625161670db3347538b371f9788b8db1f0dba246c083d2ad6bd5572089ea6",
+      "harness_sha256": "16ce4a9abf108077102bf633578fec39e06002599940ecb65a3cede8b9f914ea",
+      "archived_sha256": "813625161670db3347538b371f9788b8db1f0dba246c083d2ad6bd5572089ea6",
+      "profile_sha256": "900589de4ddeb1c008ea97d1fbd956d4d9dd60df5db555011e6689e91ecd4688",
+      "ok": true
+    },
+    "after": {
+      "checked": "after trial",
+      "at": "2026-11-03T09:09:14",
+      "prepared_sha256": "813625161670db3347538b371f9788b8db1f0dba246c083d2ad6bd5572089ea6",
+      "packager_sha256": "813625161670db3347538b371f9788b8db1f0dba246c083d2ad6bd5572089ea6",
+      "harness_sha256": "16ce4a9abf108077102bf633578fec39e06002599940ecb65a3cede8b9f914ea",
+      "archived_sha256": "813625161670db3347538b371f9788b8db1f0dba246c083d2ad6bd5572089ea6",
+      "profile_sha256": "900589de4ddeb1c008ea97d1fbd956d4d9dd60df5db555011e6689e91ecd4688",
+      "ok": true
+    }
+  },
+  "speed_check_off": false,
+  "timing_flags": [
+    "--timing-cflags=-DLARGE_DATASET"
+  ],
+  "harness_edit_redos": [],
+  "repeat": 3
+}
