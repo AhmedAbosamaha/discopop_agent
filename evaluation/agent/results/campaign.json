@@ -463,9 +463,9 @@
    "folder": "E06_lulesh",
    "title": "E6 — a real application: LULESH 2.0",
    "kind": "experiment",
-   "status": "pre-flight",
+   "status": "running",
    "question": "Does the loop — profile, rank, restructure, check, annotate, verify — still work on a real application, where one profile takes tens of gigabytes and the program has dozens of loops: what does the agent reach beside DiscoPoP alone, the model alone and LLNL's own OpenMP version? (RQ3, C1; H4)",
-   "headline": "Reopened by the author (2 Nov) in two stages: the pre-flight without a model, then the design with its cost before any model call. Version 1 of the package was not a clean code file (our driver and notes in lulesh.cc, LLNL's comments, a per-thread minimum, every unit editable); the clean package llnl_c1/lulesh is built and checked (every value equal to version 1's); its pre-flight is running. On version 1 (no model): LLNL's OpenMP version 2.06× faster; DiscoPoP alone correct but 0.12×–0.19× in 3 of 3 draws. The agent setup: the model writes the directives (llm_pragmas_v5), full re-profile.",
+   "headline": "Reopened by the author (2 Nov) in two stages: the pre-flight without a model, then the design with its cost before any model call. Version 1 of the package was not a clean code file (our driver and notes in lulesh.cc, LLNL's comments, a per-thread minimum, every unit editable); the clean package llnl_c1/lulesh is built and checked (every value equal to version 1's); its pre-flight is running. On version 1 (no model): LLNL's OpenMP version 2.06× faster; DiscoPoP alone correct but 0.12×–0.19× in 3 of 3 draws. The agent setup: the model writes the directives (llm_pragmas_v5), full re-profile. Main runs launched 3 Nov (e6c_r1–r3, e6c_bare) after the smoke (agent BROKEN on reproducibility alone: 1.99×, values within 8.3e-14).",
    "preregistered": "THESIS_EXPERIMENTS §5k and §5r (the program and why), §5s (arms and the pre-flight owed), §6 13 Oct (\"the experiments that remain share one preparation without a model\"). Nothing with a model is designed yet."
   }
  ],
@@ -3005,8 +3005,32 @@
   "e6c_smoke3": {
    "group": "E6",
    "section": "preflight",
+   "status": "valid",
+   "role": "E6 smoke, third run (server, MODEL): one trial of llm_pragmas_v5 on llnl_c1/lulesh, Haiku 4.5, --threads 6,12 --repeats 5 --timeout 43200, lane 0.0, with Fixes 110-112 — the pre-registered criterion of 3 Nov — 3 Nov 03:11–08:35 UTC: BROKEN (values within 8.3e-14, 1.99× at 6 threads, but not reproducible at fixed threads: per-thread force arrays added under critical); 40 calls, $9.97; criterion held (§6)"
+  },
+  "e6c_r1": {
+   "group": "E6",
+   "section": "runs",
    "status": "running",
-   "role": "E6 smoke, third run (server, MODEL): one trial of llm_pragmas_v5 on llnl_c1/lulesh, Haiku 4.5, --threads 6,12 --repeats 5 --timeout 43200, lane 0.0, with Fixes 110-112 — the pre-registered criterion of 3 Nov"
+   "role": "E6 main run (server, MODEL), pre-registered 3 Nov: discopop_gate_v5 and llm_pragmas_v5 (Haiku 4.5) on llnl_c1/lulesh, --trials 2 --threads 6,12 --repeats 5 --timeout 43200, lane 0.0"
+  },
+  "e6c_r2": {
+   "group": "E6",
+   "section": "runs",
+   "status": "running",
+   "role": "E6 main run (server, MODEL), pre-registered 3 Nov: discopop_gate_v5 and llm_pragmas_v5 (Haiku 4.5) on llnl_c1/lulesh, --trials 2, lane 0.1"
+  },
+  "e6c_r3": {
+   "group": "E6",
+   "section": "runs",
+   "status": "running",
+   "role": "E6 main run (server, MODEL), pre-registered 3 Nov: discopop_gate_v5 and llm_pragmas_v5 (Haiku 4.5) on llnl_c1/lulesh, --trials 1, lane 1.0"
+  },
+  "e6c_bare": {
+   "group": "E6",
+   "section": "runs",
+   "status": "running",
+   "role": "E6 main run (server, MODEL), pre-registered 3 Nov: bare_llm_v4 on llnl_c1/lulesh for claude-haiku-4-5-20251001, claude-sonnet-5, claude-opus-5-5, claude-fable-5-1, --trials 5 --threads 6,12 --repeats 5 --timeout 43200, lane 1.1"
   }
  },
  "analysis": {

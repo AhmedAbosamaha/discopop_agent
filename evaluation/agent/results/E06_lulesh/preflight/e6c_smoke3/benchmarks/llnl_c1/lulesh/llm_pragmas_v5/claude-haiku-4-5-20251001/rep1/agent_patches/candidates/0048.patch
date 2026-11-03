@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_smoke3/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_smoke3/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -1736,6 +1736,7 @@
+                           Real_t p_cut, Real_t eosvmax,
+                           Index_t length, Index_t *regElemList)
+ {
++   #pragma omp parallel for firstprivate(p_cut,eosvmax,pmin,length) shared(e_old,pbvc,compression,bvc,regElemList,vnewc,p_new) 
+    for (Index_t i = 0 ; i < length ; ++i) {
+       Real_t c1s = Real_t(2.0)/Real_t(3.0) ;
+       bvc[i] = c1s * (compression[i] + Real_t(1.));

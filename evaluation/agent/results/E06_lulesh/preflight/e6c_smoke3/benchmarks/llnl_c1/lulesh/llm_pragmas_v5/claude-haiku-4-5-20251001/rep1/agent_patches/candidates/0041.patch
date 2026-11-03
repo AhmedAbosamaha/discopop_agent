@@ -1,0 +1,76 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_smoke3/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_smoke3/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -1624,6 +1624,9 @@
+ {
+    Real_t *pHalfStep = Allocate<Real_t>(length) ;
+ 
++   /* Loop 1: Initialize e_new from e_old, work, p_old, q_old.
++      No loop-carried dependencies on i; each iteration i is independent.
++      Kept sequential due to fine granularity (711 iterations alone). */
+    for (Index_t i = 0 ; i < length ; ++i) {
+       e_new[i] = e_old[i] - Real_t(0.5) * delvc[i] * (p_old[i] + q_old[i])
+          + Real_t(0.5) * work[i];
+@@ -1636,7 +1639,16 @@
+    CalcPressureForElems(pHalfStep, bvc, pbvc, e_new, compHalfStep, vnewc,
+                         pmin, p_cut, eosvmax, length, regElemList);
+ 
++   /* Merged Loops 2+3: Compute q_new, update and clamp e_new.
++      Loop 2 operations: compute q_new[i] using pHalfStep, update e_new[i].
++      Loop 3 operations: clamp e_new[i] to physical bounds.
++      Both have no loop-carried dependencies on i; merged for 1422 iterations (>1000 threshold).
++      Scalar temporaries vhalf, ssc are per-iteration. */
++   #pragma omp parallel for default(none) \
++      shared(q_new, e_new, compHalfStep, pbvc, bvc, pHalfStep, rho0, delvc, p_old, q_old, ql_old, qq_old, work, length) \
++      firstprivate(emin, e_cut)
+    for (Index_t i = 0 ; i < length ; ++i) {
++      /* Loop 2 body: Compute q_new and update e_new using pHalfStep. */
+       Real_t vhalf = Real_t(1.) / (Real_t(1.) + compHalfStep[i]) ;
+ 
+       if ( delvc[i] > Real_t(0.) ) {
+@@ -1658,10 +1670,8 @@
+       e_new[i] = e_new[i] + Real_t(0.5) * delvc[i]
+          * (  Real_t(3.0)*(p_old[i]     + q_old[i])
+               - Real_t(4.0)*(pHalfStep[i] + q_new[i])) ;
+-   }
+-
+-   for (Index_t i = 0 ; i < length ; ++i) {
+-
++
++      /* Loop 3 body: Clamp e_new to ensure bounds and physical validity. */
+       e_new[i] += Real_t(0.5) * work[i];
+ 
+       if (FABS(e_new[i]) < e_cut) {
+@@ -1675,7 +1685,16 @@
+    CalcPressureForElems(p_new, bvc, pbvc, e_new, compression, vnewc,
+                         pmin, p_cut, eosvmax, length, regElemList);
+ 
++   /* Merged Loops 4+5: Update e_new with q_tilde, then final update to q_new.
++      Loop 4 operations: update e_new[i] using p_new and computed q_tilde.
++      Loop 5 operations: final update to q_new[i] using p_new.
++      Both have no loop-carried dependencies on i; merged for 1422 iterations (>1000 threshold).
++      Scalar temporaries sixth, ielem, q_tilde, ssc are per-iteration. */
++   #pragma omp parallel for default(none) \
++      shared(e_new, q_new, pbvc, bvc, p_new, rho0, delvc, p_old, q_old, pHalfStep, ql_old, qq_old, regElemList, vnewc, length) \
++      firstprivate(emin, e_cut, q_cut)
+    for (Index_t i = 0 ; i < length ; ++i){
++      /* Loop 4 body: Update e_new using p_new from prior pressure call; compute q_tilde as intermediate. */
+       const Real_t sixth = Real_t(1.0) / Real_t(6.0) ;
+       Index_t ielem = regElemList[i];
+       Real_t q_tilde ;
+@@ -1706,14 +1725,8 @@
+       if (     e_new[i]  < emin ) {
+          e_new[i] = emin ;
+       }
+-   }
+-
+-   CalcPressureForElems(p_new, bvc, pbvc, e_new, compression, vnewc,
+-                        pmin, p_cut, eosvmax, length, regElemList);
+-
+-   for (Index_t i = 0 ; i < length ; ++i){
+-      Index_t ielem = regElemList[i];
+-
++
++      /* Loop 5 body: Final update to q_new using latest p_new. */
+       if ( delvc[i] <= Real_t(0.) ) {
+          Real_t ssc = ( pbvc[i] * e_new[i]
+                  + vnewc[ielem] * vnewc[ielem] * bvc[i] * p_new[i] ) / rho0 ;

@@ -1,0 +1,67 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_smoke3/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_smoke3/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -1624,6 +1624,12 @@
+ {
+    Real_t *pHalfStep = Allocate<Real_t>(length) ;
+ 
++   /* Loop 1: Initialize e_new from e_old, work, p_old, q_old.
++      No loop-carried dependencies on i; each iteration i is independent.
++      Use schedule(static) to minimize context switching with fixed loop granularity. */
++   #pragma omp parallel for default(none) schedule(static) \
++      shared(e_new, e_old, delvc, p_old, q_old, work, length) \
++      firstprivate(emin)
+    for (Index_t i = 0 ; i < length ; ++i) {
+       e_new[i] = e_old[i] - Real_t(0.5) * delvc[i] * (p_old[i] + q_old[i])
+          + Real_t(0.5) * work[i];
+@@ -1636,6 +1642,12 @@
+    CalcPressureForElems(pHalfStep, bvc, pbvc, e_new, compHalfStep, vnewc,
+                         pmin, p_cut, eosvmax, length, regElemList);
+ 
++   /* Loop 2: Compute q_new and update e_new using pHalfStep from prior pressure call.
++      No loop-carried dependencies on i; each iteration operates on independent e_new[i].
++      Use schedule(static) to minimize context switching overhead. */
++   #pragma omp parallel for default(none) schedule(static) \
++      shared(q_new, e_new, compHalfStep, pbvc, bvc, pHalfStep, rho0, delvc, p_old, q_old, ql_old, qq_old, length) \
++      firstprivate(emin)
+    for (Index_t i = 0 ; i < length ; ++i) {
+       Real_t vhalf = Real_t(1.) / (Real_t(1.) + compHalfStep[i]) ;
+ 
+@@ -1660,6 +1672,12 @@
+               - Real_t(4.0)*(pHalfStep[i] + q_new[i])) ;
+    }
+ 
++   /* Loop 3: Clamp e_new to ensure bounds and physical validity.
++      No loop-carried dependencies on i; each iteration operates on independent e_new[i].
++      Use schedule(static) to minimize context switching overhead. */
++   #pragma omp parallel for default(none) schedule(static) \
++      shared(e_new, work, length) \
++      firstprivate(emin, e_cut)
+    for (Index_t i = 0 ; i < length ; ++i) {
+ 
+       e_new[i] += Real_t(0.5) * work[i];
+@@ -1675,6 +1693,12 @@
+    CalcPressureForElems(p_new, bvc, pbvc, e_new, compression, vnewc,
+                         pmin, p_cut, eosvmax, length, regElemList);
+ 
++   /* Loop 4: Update e_new using p_new from prior pressure call; compute q_tilde as intermediate.
++      No loop-carried dependencies on i; each iteration operates on independent e_new[i].
++      Use schedule(static) to minimize context switching overhead. */
++   #pragma omp parallel for default(none) schedule(static) \
++      shared(e_new, pbvc, bvc, p_new, rho0, delvc, p_old, q_old, pHalfStep, q_new, ql_old, qq_old, regElemList, vnewc, length) \
++      firstprivate(emin, e_cut)
+    for (Index_t i = 0 ; i < length ; ++i){
+       const Real_t sixth = Real_t(1.0) / Real_t(6.0) ;
+       Index_t ielem = regElemList[i];
+@@ -1711,6 +1735,12 @@
+    CalcPressureForElems(p_new, bvc, pbvc, e_new, compression, vnewc,
+                         pmin, p_cut, eosvmax, length, regElemList);
+ 
++   /* Loop 5: Final update to q_new using latest p_new.
++      No loop-carried dependencies on i; each iteration operates on independent q_new[i].
++      Use schedule(static) to minimize context switching overhead. */
++   #pragma omp parallel for default(none) schedule(static) \
++      shared(q_new, pbvc, bvc, p_new, rho0, delvc, ql_old, qq_old, regElemList, vnewc, e_new, length) \
++      firstprivate(q_cut)
+    for (Index_t i = 0 ; i < length ; ++i){
+       Index_t ielem = regElemList[i];
+ 

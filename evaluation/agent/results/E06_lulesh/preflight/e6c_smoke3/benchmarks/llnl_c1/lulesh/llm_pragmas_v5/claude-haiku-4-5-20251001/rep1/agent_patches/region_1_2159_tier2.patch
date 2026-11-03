@@ -1,0 +1,114 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_smoke3/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_smoke3/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -526,7 +526,24 @@
+    gamma[3][6] = Real_t( 1.);
+    gamma[3][7] = Real_t(-1.);
+ 
+-   for(Index_t i2=0;i2<numElem;++i2){
++   #pragma omp parallel shared(domain, determ, x8n, y8n, z8n, dvdx, dvdy, dvdz, gamma) \
++      firstprivate(hourg, numElem, numNode)
++   {
++      // Each thread allocates its own accumulator buffers (thread-private)
++      Real_t *fx_accum = Allocate<Real_t>(numNode);
++      Real_t *fy_accum = Allocate<Real_t>(numNode);
++      Real_t *fz_accum = Allocate<Real_t>(numNode);
++
++      // Initialize thread-local accumulators to zero
++      for( Index_t i=0 ; i<numNode ; ++i )
++      {
++         fx_accum[i] = Real_t(0.0);
++         fy_accum[i] = Real_t(0.0);
++         fz_accum[i] = Real_t(0.0);
++      }
++
++      #pragma omp for schedule(static)
++      for(Index_t i2=0;i2<numElem;++i2){
+       Real_t hgfx[8], hgfy[8], hgfz[8] ;
+ 
+       Real_t coefficient;
+@@ -638,38 +655,53 @@
+                       hourgam,
+                       coefficient, hgfx, hgfy, hgfz);
+ 
+-      domain.fx(n0si2) += hgfx[0];
+-      domain.fy(n0si2) += hgfy[0];
+-      domain.fz(n0si2) += hgfz[0];
+-
+-      domain.fx(n1si2) += hgfx[1];
+-      domain.fy(n1si2) += hgfy[1];
+-      domain.fz(n1si2) += hgfz[1];
+-
+-      domain.fx(n2si2) += hgfx[2];
+-      domain.fy(n2si2) += hgfy[2];
+-      domain.fz(n2si2) += hgfz[2];
+-
+-      domain.fx(n3si2) += hgfx[3];
+-      domain.fy(n3si2) += hgfy[3];
+-      domain.fz(n3si2) += hgfz[3];
+-
+-      domain.fx(n4si2) += hgfx[4];
+-      domain.fy(n4si2) += hgfy[4];
+-      domain.fz(n4si2) += hgfz[4];
+-
+-      domain.fx(n5si2) += hgfx[5];
+-      domain.fy(n5si2) += hgfy[5];
+-      domain.fz(n5si2) += hgfz[5];
+-
+-      domain.fx(n6si2) += hgfx[6];
+-      domain.fy(n6si2) += hgfy[6];
+-      domain.fz(n6si2) += hgfz[6];
+-
+-      domain.fx(n7si2) += hgfx[7];
+-      domain.fy(n7si2) += hgfy[7];
+-      domain.fz(n7si2) += hgfz[7];
+-
++      // Accumulate forces into thread-local buffers (no synchronization needed)
++      fx_accum[n0si2] += hgfx[0];
++      fy_accum[n0si2] += hgfy[0];
++      fz_accum[n0si2] += hgfz[0];
++
++      fx_accum[n1si2] += hgfx[1];
++      fy_accum[n1si2] += hgfy[1];
++      fz_accum[n1si2] += hgfz[1];
++
++      fx_accum[n2si2] += hgfx[2];
++      fy_accum[n2si2] += hgfy[2];
++      fz_accum[n2si2] += hgfz[2];
++
++      fx_accum[n3si2] += hgfx[3];
++      fy_accum[n3si2] += hgfy[3];
++      fz_accum[n3si2] += hgfz[3];
++
++      fx_accum[n4si2] += hgfx[4];
++      fy_accum[n4si2] += hgfy[4];
++      fz_accum[n4si2] += hgfz[4];
++
++      fx_accum[n5si2] += hgfx[5];
++      fy_accum[n5si2] += hgfy[5];
++      fz_accum[n5si2] += hgfz[5];
++
++      fx_accum[n6si2] += hgfx[6];
++      fy_accum[n6si2] += hgfy[6];
++      fz_accum[n6si2] += hgfz[6];
++
++      fx_accum[n7si2] += hgfx[7];
++      fy_accum[n7si2] += hgfy[7];
++      fz_accum[n7si2] += hgfz[7];
++
++      }
++
++      // Combine thread-local accumulators into domain (protected by critical section)
++      #pragma omp critical
++      for( Index_t i=0 ; i<numNode ; ++i )
++      {
++         domain.fx(i) += fx_accum[i];
++         domain.fy(i) += fy_accum[i];
++         domain.fz(i) += fz_accum[i];
++      }
++
++      Release(&fz_accum);
++      Release(&fy_accum);
++      Release(&fx_accum);
+    }
+ 
+ }

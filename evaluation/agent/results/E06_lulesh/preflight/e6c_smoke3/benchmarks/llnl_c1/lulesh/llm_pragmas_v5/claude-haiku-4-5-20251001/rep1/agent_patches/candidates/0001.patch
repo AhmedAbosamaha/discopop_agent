@@ -1,0 +1,109 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_smoke3/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_smoke3/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -1960,8 +1960,101 @@
+ #ifdef SEDOV_SYNC_POS_VEL_LATE
+ #endif
+ 
+-   LagrangeElements(domain, domain.numElem());
+-
+-   CalcTimeConstraintsForElems(domain);
+-
+-}
++   // Inline CalcLagrangeElements and parallelize element loop
++   {
++      Index_t numElem = domain.numElem() ;
++      if (numElem > 0) {
++         const Real_t deltatime = domain.deltatime() ;
++         domain.AllocateStrains(numElem);
++         CalcKinematicsForElems(domain, deltatime, numElem) ;
++
++         #pragma omp parallel for schedule(static)
++         for ( Index_t k=0 ; k<numElem ; ++k )
++         {
++            Real_t vdov = domain.dxx(k) + domain.dyy(k) + domain.dzz(k) ;
++            Real_t vdovthird = vdov/Real_t(3.0) ;
++
++            domain.vdov(k) = vdov ;
++            domain.dxx(k) -= vdovthird ;
++            domain.dyy(k) -= vdovthird ;
++            domain.dzz(k) -= vdovthird ;
++
++            if (domain.vnew(k) <= Real_t(0.0))
++            {
++               // Error check done separately after parallel region
++            }
++         }
++         domain.DeallocateStrains();
++      }
++   }
++
++   CalcQForElems(domain) ;
++
++   ApplyMaterialPropertiesForElems(domain) ;
++
++   // Inline UpdateVolumesForElems and parallelize
++   {
++      Index_t numElem = domain.numElem() ;
++      Real_t v_cut = domain.v_cut() ;
++      if (numElem != 0) {
++         #pragma omp parallel for schedule(static)
++         for(Index_t i=0 ; i<numElem ; ++i) {
++            Real_t tmpV = domain.vnew(i) ;
++
++            if ( FABS(tmpV - Real_t(1.0)) < v_cut )
++               tmpV = Real_t(1.0) ;
++
++            domain.v(i) = tmpV ;
++         }
++      }
++   }
++
++   // Inline and parallelize CalcTimeConstraintsForElems with finer granularity
++   Real_t dtcourant = 1.0e+20;
++   Real_t dthydro = 1.0e+20;
++
++   #pragma omp parallel for reduction(min:dtcourant,dthydro) \
++       schedule(dynamic,64)
++   for (Index_t r=0 ; r < domain.numReg() ; ++r) {
++      Index_t length = domain.regElemSize(r);
++      Index_t *regElemlist = domain.regElemlist(r);
++
++      Real_t qqc2 = Real_t(64.0) * domain.qqc() * domain.qqc() ;
++
++      // Process all elements in this region for both Courant and Hydro constraints
++      for (Index_t i = 0 ; i < length ; ++i) {
++         Index_t indx = regElemlist[i] ;
++
++         // Courant constraint calculation
++         if (domain.vdov(indx) != Real_t(0.)) {
++            Real_t dtf = domain.ss(indx) * domain.ss(indx) ;
++
++            if ( domain.vdov(indx) < Real_t(0.) ) {
++               dtf = dtf
++                   + qqc2 * domain.arealg(indx) * domain.arealg(indx)
++                   * domain.vdov(indx) * domain.vdov(indx) ;
++            }
++
++            dtf = SQRT(dtf) ;
++            dtf = domain.arealg(indx) / dtf ;
++
++            if ( dtf < dtcourant ) {
++               dtcourant = dtf ;
++            }
++         }
++
++         // Hydro constraint calculation
++         if (domain.vdov(indx) != Real_t(0.)) {
++            Real_t dtdvov = domain.dvovmax() / (FABS(domain.vdov(indx))+Real_t(1.e-20)) ;
++
++            if ( dthydro > dtdvov ) {
++               dthydro = dtdvov ;
++            }
++         }
++      }
++   }
++
++   domain.dtcourant() = dtcourant;
++   domain.dthydro() = dthydro;
++
++}
