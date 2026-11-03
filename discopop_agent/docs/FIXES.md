@@ -1705,3 +1705,13 @@ The author (26 Sep): E2-B1 runs with the speed check OFF in every arm, the model
 **Fix.** Before rendering, a name that occurs nowhere in the program's source files (the directory of the region's file; for the feedback, the directory of the DiscoPoP folder) is shown as DiscoPoP's renderer already showed memory it could not name — "(memory DiscoPoP could not name)" in the dependence list, "memory DiscoPoP could not name" in the digest and in the Do-All blockers — so the record of the dependence stays; such a name is left out of the lists a clause or a note would use (loop-local, static-only, DiscoPoP's classification, reductions). Anything that is not a bare identifier is untouched; when no source can be read, nothing is replaced. The first form proposed to the author — not showing such a name at all — would have dropped real dependences on the Domain's arrays (the record of 2 Nov says why the form changed).
 
 **Verified:** `unnamed-memory` (passes with the fix, fails without it); `prompt_manifest.py diff`: no arm's text changed; `test_prompt_v2.py` ALL PASS; the prompt feature checks (`prompt-truth`, `prompt-ablation`, `bare-llm`, `bare-speed-off`, `twin-prompt`, `shipped-prompt`) pass; mypy on the agent; the first LULESH request rendered again on the server with the fix (`e6c_requests`).
+
+## Fix 110 — The agent's explorer limit is bounded by the benchmark's own run plus the harness's stall limit (harness, E6, 3 Nov 2026)
+
+**Files:** `evaluation/agent/tools/cli.py` (`_agent_explorer_limit`, the comment at `AGENT_EXPLORER_FACTOR`).
+
+**Problem.** E6's first agent smoke on LULESH (`e6c_smoke`, record §6 3 Nov): the re-profile after a kept rewrite stalled in DiscoPoP's explorer at "Source locations 3 %" and the agent waited its whole limit, 3,127 s, before repeating the draw. The limit is the harness's rule of 23 Sep — 10 × the benchmark's own successful explorer run, at least 60 s — chosen when a run took seconds (a median of 3.5 s, at most 33 s over 166 draws); LULESH's run takes 310 s.
+
+**Fix.** At most the benchmark's own run plus `EXPLORER_STALL_S` (600 s, the harness's own limit for a first profile): `max(60, min(10 × t, t + 600))`. LULESH: 910 s instead of 3,097 s. Over the 2,657 archived profiles of 260 benchmarks the limit changes only where a run exceeds 66.7 s (LULESH in both packagings, Rodinia's `hotspot`, one `s291` draw); the experiments that ran under the old rule are not run again (D34).
+
+**Verified:** the limit computed for runs of 3.5, 33.1, 46.3, 66.0, 70.0, 309.7 and 319.8 s (60, 331, 463, 660, 670, 910, 920 s); mypy (68 files), `test_integrity` ALL PASS, `test_scaffold` 0 failures.

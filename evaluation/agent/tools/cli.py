@@ -103,6 +103,10 @@ EXPLORER_STALL_ATTEMPTS = 5
 # of a benchmark has nothing to scale from and keeps EXPLORER_STALL_S.
 AGENT_EXPLORER_FLOOR_S = 60
 AGENT_EXPLORER_FACTOR = 10
+# Fix 110 (E6, 3 Nov 2026): ... and at most this benchmark's own run plus EXPLORER_STALL_S. The factor was chosen when
+# a run took seconds; LULESH's takes 310 s, so 10x made every random stall cost 52 minutes inside a trial (E6's first
+# smoke, record §6 3 Nov). Unchanged wherever a run is under 600/9 = 66.7 s — every archived benchmark but LULESH,
+# Rodinia's hotspot (320 s) and one s291 draw.
 
 # Same preference order as the agent's gate/toolchain.py, so the harness verifies
 # with the compiler the agent validated with.
@@ -1229,7 +1233,8 @@ def classify(t: dict) -> str:
 
 def _agent_explorer_limit(profile_dir: Path) -> int:
     """The agent's explorer limit for this benchmark: AGENT_EXPLORER_FACTOR x its own measured
-    explorer run, at least AGENT_EXPLORER_FLOOR_S; EXPLORER_STALL_S when nothing was measured.
+    explorer run, at least AGENT_EXPLORER_FLOOR_S and at most that run plus EXPLORER_STALL_S (Fix 110);
+    EXPLORER_STALL_S when nothing was measured.
     Profiles taken before the field existed: the total minus the stalled draws' limits."""
     try:
         prof = json.loads((profile_dir / "profile.json").read_text())
@@ -1240,7 +1245,8 @@ def _agent_explorer_limit(profile_dir: Path) -> int:
         t = float(prof["explore_s"]) - EXPLORER_STALL_S * int(prof.get("explore_stalls") or 0)
     if not t or t <= 0:
         return EXPLORER_STALL_S
-    return int(max(AGENT_EXPLORER_FLOOR_S, math.ceil(AGENT_EXPLORER_FACTOR * float(t))))
+    return int(max(AGENT_EXPLORER_FLOOR_S,
+                   math.ceil(min(AGENT_EXPLORER_FACTOR * float(t), float(t) + EXPLORER_STALL_S))))
 
 
 def _editable_judgement(trial: Path, editable: List[str], verdict: Dict[str, Any],
