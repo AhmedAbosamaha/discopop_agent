@@ -1,0 +1,47 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
+@@ -1865,18 +1865,34 @@
+        }
+     }
+ 
+-    for (Int_t r=0 ; r<domain.numReg() ; r++) {
+-       Index_t numElemReg = domain.regElemSize(r);
+-       Index_t *regElemList = domain.regElemlist(r);
+-       Int_t rep;
+-       if(r < domain.numReg()/2)
+-	 rep = 1;
+-       else if(r < (domain.numReg() - (domain.numReg()+15)/20))
+-         rep = 1 + domain.cost();
++    // Pre-compute region metadata serially to eliminate loop-carried scalar dependencies
++    // and function call contention on domain state
++    Int_t numReg = domain.numReg();
++    Index_t *numElemReg_cache = Allocate<Index_t>(numReg);
++    Index_t **regElemList_cache = Allocate<Index_t*>(numReg);
++    Int_t *rep_cache = Allocate<Int_t>(numReg);
++
++    for (Int_t r=0 ; r<numReg ; r++) {
++       numElemReg_cache[r] = domain.regElemSize(r);
++       regElemList_cache[r] = domain.regElemlist(r);
++
++       if(r < numReg/2)
++         rep_cache[r] = 1;
++       else if(r < (numReg - (numReg+15)/20))
++         rep_cache[r] = 1 + domain.cost();
+        else
+-	 rep = 10 * (1+ domain.cost());
+-       EvalEOSForElems(domain, vnewc, numElemReg, regElemList, rep);
++         rep_cache[r] = 10 * (1+ domain.cost());
+     }
++
++    // Parallel loop: each region processes disjoint elements from vnewc via regElemList indexing
++    #pragma omp parallel for shared(domain, vnewc, numElemReg_cache, regElemList_cache, rep_cache)
++    for (Int_t r=0 ; r<numReg ; r++) {
++       EvalEOSForElems(domain, vnewc, numElemReg_cache[r], regElemList_cache[r], rep_cache[r]);
++    }
++
++    Release(&rep_cache);
++    Release(&regElemList_cache);
++    Release(&numElemReg_cache);
+ 
+     Release(&vnewc) ;
+   }

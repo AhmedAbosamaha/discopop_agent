@@ -1,0 +1,72 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
+@@ -1855,14 +1855,66 @@
+ static inline
+ void LagrangeElements(Domain& domain, Index_t numElem)
+ {
+-  CalcLagrangeElements(domain) ;
++  // CalcLagrangeElements: inlined and parallelized
++  {
++    Index_t numElemLocal = numElem;
++    if (numElemLocal > 0) {
++      const Real_t deltatime = domain.deltatime();
++
++      domain.AllocateStrains(numElemLocal);
++
++      CalcKinematicsForElems(domain, deltatime, numElemLocal);
++
++      // Normalize strain rates per element — independent loop
++      bool volume_error = false;
++      #pragma omp parallel for \
++        shared(domain, numElemLocal, volume_error) \
++        private(k, vdov, vdovthird)
++      for ( Index_t k=0 ; k<numElemLocal ; ++k )
++      {
++         Real_t vdov = domain.dxx(k) + domain.dyy(k) + domain.dzz(k) ;
++         Real_t vdovthird = vdov/Real_t(3.0) ;
++
++         domain.vdov(k) = vdov ;
++         domain.dxx(k) -= vdovthird ;
++         domain.dyy(k) -= vdovthird ;
++         domain.dzz(k) -= vdovthird ;
++
++         if (domain.vnew(k) <= Real_t(0.0))
++         {
++            volume_error = true;
++         }
++      }
++      domain.DeallocateStrains();
++
++      if (volume_error) {
++        exit(VolumeError);
++      }
++    }
++  }
+ 
+   CalcQForElems(domain) ;
+ 
+   ApplyMaterialPropertiesForElems(domain) ;
+ 
+-  UpdateVolumesForElems(domain,
+-                        domain.v_cut(), numElem) ;
++  // UpdateVolumesForElems: inlined and parallelized
++  {
++    if (numElem != 0) {
++      Real_t v_cut_val = domain.v_cut();
++      // Update element volumes per element — independent loop
++      #pragma omp parallel for \
++        shared(domain, numElem, v_cut_val) \
++        private(i, tmpV)
++      for(Index_t i=0 ; i<numElem ; ++i) {
++         Real_t tmpV = domain.vnew(i) ;
++
++         if ( FABS(tmpV - Real_t(1.0)) < v_cut_val )
++            tmpV = Real_t(1.0) ;
++
++         domain.v(i) = tmpV ;
++      }
++    }
++  }
+ }
+ 
+ static inline

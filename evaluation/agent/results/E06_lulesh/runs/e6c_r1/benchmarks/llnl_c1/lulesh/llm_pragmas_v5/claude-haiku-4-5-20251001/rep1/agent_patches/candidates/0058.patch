@@ -1,0 +1,50 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -2115,17 +2115,36 @@
+    domain.dtcourant() = 1.0e+20;
+    domain.dthydro() = 1.0e+20;
+ 
+-   for (Index_t r=0 ; r < domain.numReg() ; ++r) {
+-      CalcCourantConstraintForElems(domain, domain.regElemSize(r),
+-                                    domain.regElemlist(r),
+-                                    domain.qqc(),
+-                                    domain.dtcourant()) ;
+-
+-      CalcHydroConstraintForElems(domain, domain.regElemSize(r),
+-                                  domain.regElemlist(r),
+-                                  domain.dvovmax(),
+-                                  domain.dthydro()) ;
+-   }
++   Real_t dtcourant = 1.0e+20;
++   Real_t dthydro = 1.0e+20;
++
++   #pragma omp parallel
++   {
++      Real_t dtcourant_local = 1.0e+20;
++      Real_t dthydro_local = 1.0e+20;
++
++      #pragma omp for
++      for (Index_t r=0 ; r < domain.numReg() ; ++r) {
++         CalcCourantConstraintForElems(domain, domain.regElemSize(r),
++                                       domain.regElemlist(r),
++                                       domain.qqc(),
++                                       dtcourant_local) ;
++
++         CalcHydroConstraintForElems(domain, domain.regElemSize(r),
++                                     domain.regElemlist(r),
++                                     domain.dvovmax(),
++                                     dthydro_local) ;
++      }
++
++      #pragma omp critical
++      {
++         if (dtcourant_local < dtcourant) dtcourant = dtcourant_local;
++         if (dthydro_local < dthydro) dthydro = dthydro_local;
++      }
++   }
++
++   domain.dtcourant() = dtcourant;
++   domain.dthydro() = dthydro;
+ }
+ 
+ void LagrangeLeapFrog(Domain& domain)

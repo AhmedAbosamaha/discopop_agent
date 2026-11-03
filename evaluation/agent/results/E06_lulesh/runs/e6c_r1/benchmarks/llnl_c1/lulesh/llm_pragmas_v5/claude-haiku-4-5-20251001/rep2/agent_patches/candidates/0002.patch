@@ -1,0 +1,48 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
+@@ -1955,13 +1955,39 @@
+    Domain_member fieldData[6] ;
+ #endif
+ 
+-   LagrangeNodal(domain);
++   /* Sequential execution required: cross-iteration RAW dependences exist:
++      - LagrangeNodal writes node velocities (xd,yd,zd) read by LagrangeElements
++      - LagrangeElements writes element properties (vnew,vdov) read by CalcTimeConstraintsForElems
++      These three phases must execute in strict order for correctness */
++
++#pragma omp parallel shared(domain)
++   {
++      /* Phase 1: Update nodal properties (forces, accelerations, velocity, position) */
++#pragma omp single
++      {
++         LagrangeNodal(domain);
++      }
++
++      /* Synchronize: LagrangeElements reads node data from phase 1 (xd,yd,zd) */
++#pragma omp barrier
+ 
+ #ifdef SEDOV_SYNC_POS_VEL_LATE
+ #endif
+ 
+-   LagrangeElements(domain, domain.numElem());
+-
+-   CalcTimeConstraintsForElems(domain);
+-
+-}
++      /* Phase 2: Update element properties based on new node positions */
++#pragma omp single
++      {
++         LagrangeElements(domain, domain.numElem());
++      }
++
++      /* Synchronize: CalcTimeConstraintsForElems reads element data from phase 2 */
++#pragma omp barrier
++
++      /* Phase 3: Compute time constraints from element properties */
++#pragma omp single
++      {
++         CalcTimeConstraintsForElems(domain);
++      }
++   }
++
++}

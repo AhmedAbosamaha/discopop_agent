@@ -1,0 +1,136 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -498,6 +498,22 @@
+    gamma[3][6] = Real_t( 1.);
+    gamma[3][7] = Real_t(-1.);
+ 
++   /* Allocate temporary buffers to accumulate forces per node.
++      Different elements can share nodes, so direct parallel accumulation
++      into domain.fx/fy/fz would cause races. These buffers are accumulated
++      into sequentially after the parallel loop. */
++   Real_t *fx_temp = Allocate<Real_t>(numNode);
++   Real_t *fy_temp = Allocate<Real_t>(numNode);
++   Real_t *fz_temp = Allocate<Real_t>(numNode);
++
++   memset(fx_temp, 0, numNode * sizeof(Real_t));
++   memset(fy_temp, 0, numNode * sizeof(Real_t));
++   memset(fz_temp, 0, numNode * sizeof(Real_t));
++
++   #pragma omp parallel for schedule(static) \
++      private(i2) \
++      shared(gamma, numElem, numNode, determ, x8n, y8n, z8n, \
++             dvdx, dvdy, dvdz, hourg, domain, fx_temp, fy_temp, fz_temp)
+    for(Index_t i2=0;i2<numElem;++i2){
+       Real_t hgfx[8], hgfy[8], hgfz[8] ;
+ 
+@@ -610,39 +626,77 @@
+                       hourgam,
+                       coefficient, hgfx, hgfy, hgfz);
+ 
+-      domain.fx(n0si2) += hgfx[0];
+-      domain.fy(n0si2) += hgfy[0];
+-      domain.fz(n0si2) += hgfz[0];
+-
+-      domain.fx(n1si2) += hgfx[1];
+-      domain.fy(n1si2) += hgfy[1];
+-      domain.fz(n1si2) += hgfz[1];
+-
+-      domain.fx(n2si2) += hgfx[2];
+-      domain.fy(n2si2) += hgfy[2];
+-      domain.fz(n2si2) += hgfz[2];
+-
+-      domain.fx(n3si2) += hgfx[3];
+-      domain.fy(n3si2) += hgfy[3];
+-      domain.fz(n3si2) += hgfz[3];
+-
+-      domain.fx(n4si2) += hgfx[4];
+-      domain.fy(n4si2) += hgfy[4];
+-      domain.fz(n4si2) += hgfz[4];
+-
+-      domain.fx(n5si2) += hgfx[5];
+-      domain.fy(n5si2) += hgfy[5];
+-      domain.fz(n5si2) += hgfz[5];
+-
+-      domain.fx(n6si2) += hgfx[6];
+-      domain.fy(n6si2) += hgfy[6];
+-      domain.fz(n6si2) += hgfz[6];
+-
+-      domain.fx(n7si2) += hgfx[7];
+-      domain.fy(n7si2) += hgfy[7];
+-      domain.fz(n7si2) += hgfz[7];
+-
+-   }
++      /* Accumulate forces into temporary buffers indexed by node.
++         Using atomic operations to safely handle shared nodes across elements. */
++      #pragma omp atomic
++      fx_temp[n0si2] += hgfx[0];
++      #pragma omp atomic
++      fy_temp[n0si2] += hgfy[0];
++      #pragma omp atomic
++      fz_temp[n0si2] += hgfz[0];
++
++      #pragma omp atomic
++      fx_temp[n1si2] += hgfx[1];
++      #pragma omp atomic
++      fy_temp[n1si2] += hgfy[1];
++      #pragma omp atomic
++      fz_temp[n1si2] += hgfz[1];
++
++      #pragma omp atomic
++      fx_temp[n2si2] += hgfx[2];
++      #pragma omp atomic
++      fy_temp[n2si2] += hgfy[2];
++      #pragma omp atomic
++      fz_temp[n2si2] += hgfz[2];
++
++      #pragma omp atomic
++      fx_temp[n3si2] += hgfx[3];
++      #pragma omp atomic
++      fy_temp[n3si2] += hgfy[3];
++      #pragma omp atomic
++      fz_temp[n3si2] += hgfz[3];
++
++      #pragma omp atomic
++      fx_temp[n4si2] += hgfx[4];
++      #pragma omp atomic
++      fy_temp[n4si2] += hgfy[4];
++      #pragma omp atomic
++      fz_temp[n4si2] += hgfz[4];
++
++      #pragma omp atomic
++      fx_temp[n5si2] += hgfx[5];
++      #pragma omp atomic
++      fy_temp[n5si2] += hgfy[5];
++      #pragma omp atomic
++      fz_temp[n5si2] += hgfz[5];
++
++      #pragma omp atomic
++      fx_temp[n6si2] += hgfx[6];
++      #pragma omp atomic
++      fy_temp[n6si2] += hgfy[6];
++      #pragma omp atomic
++      fz_temp[n6si2] += hgfz[6];
++
++      #pragma omp atomic
++      fx_temp[n7si2] += hgfx[7];
++      #pragma omp atomic
++      fy_temp[n7si2] += hgfy[7];
++      #pragma omp atomic
++      fz_temp[n7si2] += hgfz[7];
++
++   }
++
++   /* Merge accumulated forces from temporary buffers into domain.
++      This is sequential; the bulk of computation was parallelized above. */
++   for(Index_t i=0; i<numNode; ++i) {
++      domain.fx(i) += fx_temp[i];
++      domain.fy(i) += fy_temp[i];
++      domain.fz(i) += fz_temp[i];
++   }
++
++   Release(&fx_temp);
++   Release(&fy_temp);
++   Release(&fz_temp);
+ 
+ }
+ 

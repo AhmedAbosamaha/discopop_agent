@@ -1,0 +1,99 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -8,6 +8,7 @@
+ #include <sys/time.h>
+ #include <iostream>
+ #include <unistd.h>
++#include <omp.h>
+ 
+ #include "lulesh.h"
+ 
+@@ -1765,6 +1766,7 @@
+    Real_t emin    = domain.emin() ;
+    Real_t rho0    = domain.refdens() ;
+ 
++   // Allocate temporary arrays for use in the parallel regions
+    Real_t *e_old = Allocate<Real_t>(numElemReg) ;
+    Real_t *delvc = Allocate<Real_t>(numElemReg) ;
+    Real_t *p_old = Allocate<Real_t>(numElemReg) ;
+@@ -1774,14 +1776,20 @@
+    Real_t *qq_old = Allocate<Real_t>(numElemReg) ;
+    Real_t *ql_old = Allocate<Real_t>(numElemReg) ;
+    Real_t *work = Allocate<Real_t>(numElemReg) ;
++
+    Real_t *p_new = Allocate<Real_t>(numElemReg) ;
+    Real_t *e_new = Allocate<Real_t>(numElemReg) ;
+    Real_t *q_new = Allocate<Real_t>(numElemReg) ;
+    Real_t *bvc = Allocate<Real_t>(numElemReg) ;
+    Real_t *pbvc = Allocate<Real_t>(numElemReg) ;
+ 
++   // Keep j loop serial; parallelize the i-loops within each j iteration
++   // This gives substantial work per parallel region (711 iterations per loop)
+    for(Int_t j = 0; j < rep; j++) {
++      #pragma omp parallel
+       {
++         // Fill temporary arrays from domain - parallelize over i
++         #pragma omp for
+          for (Index_t i=0; i<numElemReg; ++i) {
+             Index_t ielem = regElemList[i];
+             e_old[i] = domain.e(ielem) ;
+@@ -1792,6 +1800,8 @@
+             ql_old[i] = domain.ql(ielem) ;
+          }
+ 
++         // Compute compression and compHalfStep - parallelize over i
++         #pragma omp for
+          for (Index_t i = 0; i < numElemReg ; ++i) {
+             Index_t ielem = regElemList[i];
+             Real_t vchalf ;
+@@ -1800,7 +1810,9 @@
+             compHalfStep[i] = Real_t(1.) / vchalf - Real_t(1.);
+          }
+ 
++         // Conditional modifications - parallelize over i
+          if ( eosvmin != Real_t(0.) ) {
++            #pragma omp for
+             for(Index_t i=0 ; i<numElemReg ; ++i) {
+                Index_t ielem = regElemList[i];
+                if (vnewc[ielem] <= eosvmin) {
+@@ -1808,7 +1820,9 @@
+                }
+             }
+          }
++
+          if ( eosvmax != Real_t(0.) ) {
++            #pragma omp for
+             for(Index_t i=0 ; i<numElemReg ; ++i) {
+                Index_t ielem = regElemList[i];
+                if (vnewc[ielem] >= eosvmax) {
+@@ -1819,16 +1833,23 @@
+             }
+          }
+ 
++         // Initialize work array - parallelize over i
++         #pragma omp for
+          for (Index_t i = 0 ; i < numElemReg ; ++i) {
+             work[i] = Real_t(0.) ;
+          }
+-      }
+-      CalcEnergyForElems(p_new, e_new, q_new, bvc, pbvc,
+-                         p_old, e_old,  q_old, compression, compHalfStep,
+-                         vnewc, work,  delvc, pmin,
+-                         p_cut, e_cut, q_cut, emin,
+-                         qq_old, ql_old, rho0, eosvmax,
+-                         numElemReg, regElemList);
++
++         // Only one thread calls the heavy computation
++         #pragma omp single
++         {
++            CalcEnergyForElems(p_new, e_new, q_new, bvc, pbvc,
++                               p_old, e_old,  q_old, compression, compHalfStep,
++                               vnewc, work,  delvc, pmin,
++                               p_cut, e_cut, q_cut, emin,
++                               qq_old, ql_old, rho0, eosvmax,
++                               numElemReg, regElemList);
++         }
++      }
+    }
+ 
+    for (Index_t i=0; i<numElemReg; ++i) {

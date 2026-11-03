@@ -1,0 +1,23 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc	2026-11-03 13:56:43.567744919 +0000
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc.discopop_patch_generator.temp	2026-11-03 14:03:21.893090790 +0000
+@@ -531,7 +531,12 @@
+       into domain.fx/fy/fz would cause races. These buffers are accumulated
+       into sequentially after the parallel loop. */
+    Real_t *fx_temp = Allocate<Real_t>(numNode);
++   #pragma omp parallel
++   #pragma omp single
++   {
++   #pragma omp task
+    Real_t *fy_temp = Allocate<Real_t>(numNode);
++   #pragma omp task
+    Real_t *fz_temp = Allocate<Real_t>(numNode);
+ 
+    memset(fx_temp, 0, numNode * sizeof(Real_t));
+@@ -539,6 +544,7 @@
+    memset(fz_temp, 0, numNode * sizeof(Real_t));
+ 
+    #pragma omp parallel for schedule(static) shared(gamma, numElem, numNode, determ, x8n, y8n, z8n, dvdx, dvdy, dvdz, hourg, domain, fx_temp, fy_temp, fz_temp)
++   }
+    for(Index_t i2=0;i2<numElem;++i2){
+       Real_t hgfx[8], hgfy[8], hgfz[8] ;
+ 

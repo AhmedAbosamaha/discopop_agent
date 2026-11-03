@@ -1,0 +1,82 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
+@@ -67,42 +67,12 @@
+                                    Real_t elemY[8],
+                                    Real_t elemZ[8])
+ {
+-   Index_t nd0i = elemToNode[0] ;
+-   Index_t nd1i = elemToNode[1] ;
+-   Index_t nd2i = elemToNode[2] ;
+-   Index_t nd3i = elemToNode[3] ;
+-   Index_t nd4i = elemToNode[4] ;
+-   Index_t nd5i = elemToNode[5] ;
+-   Index_t nd6i = elemToNode[6] ;
+-   Index_t nd7i = elemToNode[7] ;
+-
+-   elemX[0] = domain.x(nd0i);
+-   elemX[1] = domain.x(nd1i);
+-   elemX[2] = domain.x(nd2i);
+-   elemX[3] = domain.x(nd3i);
+-   elemX[4] = domain.x(nd4i);
+-   elemX[5] = domain.x(nd5i);
+-   elemX[6] = domain.x(nd6i);
+-   elemX[7] = domain.x(nd7i);
+-
+-   elemY[0] = domain.y(nd0i);
+-   elemY[1] = domain.y(nd1i);
+-   elemY[2] = domain.y(nd2i);
+-   elemY[3] = domain.y(nd3i);
+-   elemY[4] = domain.y(nd4i);
+-   elemY[5] = domain.y(nd5i);
+-   elemY[6] = domain.y(nd6i);
+-   elemY[7] = domain.y(nd7i);
+-
+-   elemZ[0] = domain.z(nd0i);
+-   elemZ[1] = domain.z(nd1i);
+-   elemZ[2] = domain.z(nd2i);
+-   elemZ[3] = domain.z(nd3i);
+-   elemZ[4] = domain.z(nd4i);
+-   elemZ[5] = domain.z(nd5i);
+-   elemZ[6] = domain.z(nd6i);
+-   elemZ[7] = domain.z(nd7i);
+-
++   for (Index_t i = 0; i < 8; ++i) {
++      Index_t ndi = elemToNode[i];
++      elemX[i] = domain.x(ndi);
++      elemY[i] = domain.y(ndi);
++      elemZ[i] = domain.z(ndi);
++   }
+ }
+ 
+ static inline
+@@ -305,13 +275,13 @@
+                               Real_t *sigxx, Real_t *sigyy, Real_t *sigzz,
+                               Real_t *determ, Index_t numElem, Index_t numNode)
+ {
+-
+-   Real_t fx_local[8] ;
+-   Real_t fy_local[8] ;
+-   Real_t fz_local[8] ;
+-
++  #pragma omp parallel for shared(domain, sigxx, sigyy, sigzz, determ) firstprivate(numElem)
+   for( Index_t k=0 ; k<numElem ; ++k )
+   {
++    Real_t fx_local[8] ;
++    Real_t fy_local[8] ;
++    Real_t fz_local[8] ;
++
+     const Index_t* const elemToNode = domain.nodelist(k);
+     Real_t B[3][8] ;
+     Real_t x_local[8] ;
+@@ -331,8 +301,11 @@
+ 
+     for( Index_t lnode=0 ; lnode<8 ; ++lnode ) {
+        Index_t gnode = elemToNode[lnode];
++       #pragma omp atomic
+        domain.fx(gnode) += fx_local[lnode];
++       #pragma omp atomic
+        domain.fy(gnode) += fy_local[lnode];
++       #pragma omp atomic
+        domain.fz(gnode) += fz_local[lnode];
+     }
+ 

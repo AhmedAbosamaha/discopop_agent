@@ -1,0 +1,18 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r1/profiles/llnl_c1/lulesh/lulesh.cc	2026-11-02 22:10:50.872290256 +0000
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r1/profiles/llnl_c1/lulesh/lulesh.cc.discopop_patch_generator.temp	2026-11-03 08:56:02.160572950 +0000
+@@ -655,9 +655,15 @@
+    Real_t *dvdy = Allocate<Real_t>(numElem8) ;
+    Real_t *dvdz = Allocate<Real_t>(numElem8) ;
+    Real_t *x8n  = Allocate<Real_t>(numElem8) ;
++   #pragma omp parallel
++   #pragma omp single
++   {
++   #pragma omp task
+    Real_t *y8n  = Allocate<Real_t>(numElem8) ;
++   #pragma omp task
+    Real_t *z8n  = Allocate<Real_t>(numElem8) ;
+ 
++   }
+    for (Index_t i=0 ; i<numElem ; ++i){
+       Real_t  x1[8],  y1[8],  z1[8] ;
+       Real_t pfx[8], pfy[8], pfz[8] ;

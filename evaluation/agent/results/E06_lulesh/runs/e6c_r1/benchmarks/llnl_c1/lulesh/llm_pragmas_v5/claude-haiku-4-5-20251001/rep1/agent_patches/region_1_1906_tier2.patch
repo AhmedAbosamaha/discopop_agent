@@ -1,0 +1,53 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -311,6 +311,19 @@
+    Real_t fy_local[8] ;
+    Real_t fz_local[8] ;
+ 
++   /* Allocate temporary buffers to accumulate stress forces per node.
++      Different elements can share nodes, so direct parallel accumulation
++      into domain.fx/fy/fz would cause races. These buffers accumulate safely
++      with atomic operations, then are merged sequentially into domain. */
++   Real_t *fx_temp = Allocate<Real_t>(numNode);
++   Real_t *fy_temp = Allocate<Real_t>(numNode);
++   Real_t *fz_temp = Allocate<Real_t>(numNode);
++
++   memset(fx_temp, 0, numNode * sizeof(Real_t));
++   memset(fy_temp, 0, numNode * sizeof(Real_t));
++   memset(fz_temp, 0, numNode * sizeof(Real_t));
++
++  #pragma omp parallel for schedule(static) private(fx_local, fy_local, fz_local)
+   for( Index_t k=0 ; k<numElem ; ++k )
+   {
+     const Index_t* const elemToNode = domain.nodelist(k);
+@@ -332,12 +345,27 @@
+ 
+     for( Index_t lnode=0 ; lnode<8 ; ++lnode ) {
+        Index_t gnode = elemToNode[lnode];
+-       domain.fx(gnode) += fx_local[lnode];
+-       domain.fy(gnode) += fy_local[lnode];
+-       domain.fz(gnode) += fz_local[lnode];
++       #pragma omp atomic
++       fx_temp[gnode] += fx_local[lnode];
++       #pragma omp atomic
++       fy_temp[gnode] += fy_local[lnode];
++       #pragma omp atomic
++       fz_temp[gnode] += fz_local[lnode];
+     }
+ 
+   }
++
++   /* Merge accumulated stress forces from temporary buffers into domain.
++      This sequential merge is safe and the bulk of computation was parallelized above. */
++   for(Index_t i=0; i<numNode; ++i) {
++      domain.fx(i) += fx_temp[i];
++      domain.fy(i) += fy_temp[i];
++      domain.fz(i) += fz_temp[i];
++   }
++
++   Release(&fx_temp);
++   Release(&fy_temp);
++   Release(&fz_temp);
+ 
+ }
+ 

@@ -1,0 +1,46 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -1523,6 +1523,8 @@
+    }
+ }
+ 
++static int g_violation_found = 0;
++
+ static inline
+ void CalcMonotonicQForElems(Domain& domain)
+ {
+@@ -1531,6 +1533,17 @@
+    for (Index_t r=0 ; r<domain.numReg() ; ++r) {
+       if (domain.regElemSize(r) > 0) {
+          CalcMonotonicQRegionForElems(domain, r, ptiny) ;
++      }
++   }
++
++   // Search for Q violations in parallel with a single pass over all elements
++   // Merged with existing function to reduce parallel region overhead
++   g_violation_found = 0;
++   Index_t numElem = domain.numElem();
++   #pragma omp parallel for reduction(||:g_violation_found)
++   for (Index_t i=0; i<numElem; ++i) {
++      if ( domain.q(i) > domain.qstop() ) {
++         g_violation_found = 1;
+       }
+    }
+ }
+@@ -1555,15 +1568,7 @@
+ 
+       domain.DeallocateGradients();
+ 
+-      Index_t idx = -1;
+-      for (Index_t i=0; i<numElem; ++i) {
+-         if ( domain.q(i) > domain.qstop() ) {
+-            idx = i ;
+-            break ;
+-         }
+-      }
+-
+-      if(idx >= 0) {
++      if(g_violation_found) {
+          exit(QStopError);
+       }
+    }

@@ -1,0 +1,67 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -1709,7 +1709,53 @@
+    CalcPressureForElems(pHalfStep, bvc, pbvc, e_new, compHalfStep, vnewc,
+                         pmin, p_cut, eosvmax, length, regElemList);
+ 
+-   for (Index_t i = 0 ; i < length ; ++i) {
++   // Manually unroll loop iterations by 8 to increase work per OpenMP iteration,
++   // amortizing parallel overhead over coarser-grained chunks (from ~1400 to ~5600 work units per iteration)
++   Index_t iter_limit = (length / 8) * 8;
++
++   #pragma omp parallel for schedule(static) \
++      shared(e_new, q_new, compHalfStep, delvc, pbvc, bvc, pHalfStep, p_old, q_old, \
++             ql_old, qq_old, rho0, work, e_cut, emin, length, iter_limit)
++   for (Index_t base = 0 ; base < iter_limit ; base += 8) {
++      // Process 8 consecutive elements per OpenMP iteration
++      for (Index_t offset = 0; offset < 8; ++offset) {
++         Index_t i = base + offset;
++         Real_t vhalf = Real_t(1.) / (Real_t(1.) + compHalfStep[i]) ;
++
++         if ( delvc[i] > Real_t(0.) ) {
++            q_new[i]  = Real_t(0.) ;
++         }
++         else {
++            Real_t ssc = ( pbvc[i] * e_new[i]
++                    + vhalf * vhalf * bvc[i] * pHalfStep[i] ) / rho0 ;
++
++            if ( ssc <= Real_t(.1111111e-36) ) {
++               ssc = Real_t(.3333333e-18) ;
++            } else {
++               ssc = SQRT(ssc) ;
++            }
++
++            q_new[i] = (ssc*ql_old[i] + qq_old[i]) ;
++         }
++
++         e_new[i] = e_new[i] + Real_t(0.5) * delvc[i]
++            * (  Real_t(3.0)*(p_old[i]     + q_old[i])
++                 - Real_t(4.0)*(pHalfStep[i] + q_new[i])) ;
++
++         // Merged from former loop 3 (line 1736-1746 in original)
++         e_new[i] += Real_t(0.5) * work[i];
++
++         if (FABS(e_new[i]) < e_cut) {
++            e_new[i] = Real_t(0.)  ;
++         }
++         if (     e_new[i]  < emin ) {
++            e_new[i] = emin ;
++         }
++      }
++   }
++
++   // Handle remainder elements not processed by unrolled loop (when length is not a multiple of 8)
++   for (Index_t i = iter_limit; i < length; ++i) {
+       Real_t vhalf = Real_t(1.) / (Real_t(1.) + compHalfStep[i]) ;
+ 
+       if ( delvc[i] > Real_t(0.) ) {
+@@ -1731,9 +1777,6 @@
+       e_new[i] = e_new[i] + Real_t(0.5) * delvc[i]
+          * (  Real_t(3.0)*(p_old[i]     + q_old[i])
+               - Real_t(4.0)*(pHalfStep[i] + q_new[i])) ;
+-   }
+-
+-   for (Index_t i = 0 ; i < length ; ++i) {
+ 
+       e_new[i] += Real_t(0.5) * work[i];
+ 

@@ -1,0 +1,15 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc	2026-11-03 13:56:43.567744919 +0000
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc.discopop_patch_generator.temp	2026-11-03 14:03:27.438123464 +0000
+@@ -957,6 +957,12 @@
+             domain.ydd(domain.symmY(i)) = Real_t(0.0) ;
+       }
+ 
++      #pragma omp parallel
++      #pragma omp single
++      {
++      #pragma omp task
++      #pragma omp task
++      }
+       if (!domain.symmZempty() != 0) {
+          #pragma omp for schedule(static)
+          for(Index_t i=0 ; i<numNodeBC ; ++i)

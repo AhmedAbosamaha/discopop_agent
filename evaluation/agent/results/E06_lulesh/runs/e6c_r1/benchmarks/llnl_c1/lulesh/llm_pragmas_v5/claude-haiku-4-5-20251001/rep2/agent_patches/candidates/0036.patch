@@ -1,0 +1,15 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
+@@ -1519,8 +1519,10 @@
+ void CalcMonotonicQForElems(Domain& domain)
+ {
+    const Real_t ptiny = Real_t(1.e-36) ;
+-
+-   for (Index_t r=0 ; r<domain.numReg() ; ++r) {
++   Index_t numReg = domain.numReg();
++
++   #pragma omp parallel for shared(domain) firstprivate(ptiny, numReg)
++   for (Index_t r=0 ; r<numReg ; ++r) {
+       if (domain.regElemSize(r) > 0) {
+          CalcMonotonicQRegionForElems(domain, r, ptiny) ;
+       }

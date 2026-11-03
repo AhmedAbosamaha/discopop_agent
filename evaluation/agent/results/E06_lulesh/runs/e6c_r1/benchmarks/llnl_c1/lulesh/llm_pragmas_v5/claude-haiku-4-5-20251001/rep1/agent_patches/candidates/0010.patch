@@ -1,0 +1,79 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -836,13 +836,69 @@
+ 
+   CalcForceForNodes(domain);
+ 
+-   CalcAccelerationForNodes(domain, domain.numNode());
+-
+-   ApplyAccelerationBoundaryConditionsForNodes(domain);
+-
+-   CalcVelocityForNodes( domain, delt, u_cut, domain.numNode()) ;
+-
+-   CalcPositionForNodes( domain, delt, domain.numNode() );
++   Index_t numNode = domain.numNode();
++   Index_t size = domain.sizeX();
++   Index_t numNodeBC = (size+1)*(size+1);
++
++   // Combine remaining loops in a single parallel region to reduce synchronization overhead
++   #pragma omp parallel
++   {
++      // CalcAccelerationForNodes - compute accelerations from forces
++      #pragma omp for schedule(static) nowait
++      for (Index_t i = 0; i < numNode; ++i) {
++         domain.xdd(i) = domain.fx(i) / domain.nodalMass(i);
++         domain.ydd(i) = domain.fy(i) / domain.nodalMass(i);
++         domain.zdd(i) = domain.fz(i) / domain.nodalMass(i);
++      }
++
++      // ApplyAccelerationBoundaryConditionsForNodes - apply boundary conditions
++      // Each symmetric plane is independent
++      if (!domain.symmXempty() != 0) {
++         #pragma omp for schedule(static) nowait
++         for(Index_t i=0 ; i<numNodeBC ; ++i)
++            domain.xdd(domain.symmX(i)) = Real_t(0.0) ;
++      }
++
++      if (!domain.symmYempty() != 0) {
++         #pragma omp for schedule(static) nowait
++         for(Index_t i=0 ; i<numNodeBC ; ++i)
++            domain.ydd(domain.symmY(i)) = Real_t(0.0) ;
++      }
++
++      if (!domain.symmZempty() != 0) {
++         #pragma omp for schedule(static) nowait
++         for(Index_t i=0 ; i<numNodeBC ; ++i)
++            domain.zdd(domain.symmZ(i)) = Real_t(0.0) ;
++      }
++
++      // CalcVelocityForNodes - update velocities from accelerations
++      #pragma omp for schedule(static) nowait
++      for ( Index_t i = 0 ; i < numNode ; ++i )
++      {
++        Real_t xdtmp, ydtmp, zdtmp ;
++
++        xdtmp = domain.xd(i) + domain.xdd(i) * delt ;
++        if( FABS(xdtmp) < u_cut ) xdtmp = Real_t(0.0);
++        domain.xd(i) = xdtmp ;
++
++        ydtmp = domain.yd(i) + domain.ydd(i) * delt ;
++        if( FABS(ydtmp) < u_cut ) ydtmp = Real_t(0.0);
++        domain.yd(i) = ydtmp ;
++
++        zdtmp = domain.zd(i) + domain.zdd(i) * delt ;
++        if( FABS(zdtmp) < u_cut ) zdtmp = Real_t(0.0);
++        domain.zd(i) = zdtmp ;
++      }
++
++      // CalcPositionForNodes - update positions from velocities
++      #pragma omp for schedule(static)
++      for ( Index_t i = 0 ; i < numNode ; ++i )
++      {
++        domain.x(i) += domain.xd(i) * delt ;
++        domain.y(i) += domain.yd(i) * delt ;
++        domain.z(i) += domain.zd(i) * delt ;
++      }
++   }
+ 
+   return;
+ }

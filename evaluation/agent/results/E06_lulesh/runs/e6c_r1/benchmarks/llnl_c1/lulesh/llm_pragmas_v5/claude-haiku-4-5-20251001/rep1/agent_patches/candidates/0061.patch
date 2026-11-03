@@ -1,0 +1,58 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -2053,23 +2053,38 @@
+    Real_t   dtcourant_tmp = dtcourant;
+    Index_t  courant_elem  = -1 ;
+ 
+-   for (Index_t i = 0 ; i < length ; ++i) {
+-      Index_t indx = regElemlist[i] ;
+-      Real_t dtf = domain.ss(indx) * domain.ss(indx) ;
+-
+-      if ( domain.vdov(indx) < Real_t(0.) ) {
+-         dtf = dtf
+-             + qqc2 * domain.arealg(indx) * domain.arealg(indx)
+-             * domain.vdov(indx) * domain.vdov(indx) ;
+-      }
+-
+-      dtf = SQRT(dtf) ;
+-      dtf = domain.arealg(indx) / dtf ;
+-
+-      if (domain.vdov(indx) != Real_t(0.)) {
+-         if ( dtf < dtcourant_tmp ) {
+-            dtcourant_tmp = dtf ;
+-            courant_elem  = indx ;
++   #pragma omp parallel
++   {
++      Real_t   local_dtcourant_tmp = dtcourant_tmp ;
++      Index_t  local_courant_elem  = -1 ;
++
++      #pragma omp for
++      for (Index_t i = 0 ; i < length ; ++i) {
++         Index_t indx = regElemlist[i] ;
++         Real_t dtf = domain.ss(indx) * domain.ss(indx) ;
++
++         if ( domain.vdov(indx) < Real_t(0.) ) {
++            dtf = dtf
++                + qqc2 * domain.arealg(indx) * domain.arealg(indx)
++                * domain.vdov(indx) * domain.vdov(indx) ;
++         }
++
++         dtf = SQRT(dtf) ;
++         dtf = domain.arealg(indx) / dtf ;
++
++         if (domain.vdov(indx) != Real_t(0.)) {
++            if ( dtf < local_dtcourant_tmp ) {
++               local_dtcourant_tmp = dtf ;
++               local_courant_elem  = indx ;
++            }
++         }
++      }
++
++      #pragma omp critical
++      {
++         if ( local_courant_elem != -1 && local_dtcourant_tmp < dtcourant_tmp ) {
++            dtcourant_tmp = local_dtcourant_tmp ;
++            courant_elem  = local_courant_elem ;
+          }
+       }
+    }

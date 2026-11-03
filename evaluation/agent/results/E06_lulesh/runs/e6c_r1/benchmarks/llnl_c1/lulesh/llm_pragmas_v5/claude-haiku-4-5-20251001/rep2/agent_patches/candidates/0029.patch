@@ -1,0 +1,62 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
+@@ -1743,44 +1743,42 @@
+ 
+    for(Int_t j = 0; j < rep; j++) {
+       {
++         /* Fused loop: initialize element data and prepare compression arrays */
++         #pragma omp parallel for schedule(static) firstprivate(numElemReg, eosvmin, eosvmax)
+          for (Index_t i=0; i<numElemReg; ++i) {
+             Index_t ielem = regElemList[i];
++            Real_t vchalf ;
++
++            /* Initialize from current domain state */
+             e_old[i] = domain.e(ielem) ;
+             delvc[i] = domain.delv(ielem) ;
+             p_old[i] = domain.p(ielem) ;
+             q_old[i] = domain.q(ielem) ;
+             qq_old[i] = domain.qq(ielem) ;
+             ql_old[i] = domain.ql(ielem) ;
+-         }
+-
+-         for (Index_t i = 0; i < numElemReg ; ++i) {
+-            Index_t ielem = regElemList[i];
+-            Real_t vchalf ;
++
++            /* Compute compression and compHalfStep */
+             compression[i] = Real_t(1.) / vnewc[ielem] - Real_t(1.);
+             vchalf = vnewc[ielem] - delvc[i] * Real_t(.5);
+             compHalfStep[i] = Real_t(1.) / vchalf - Real_t(1.);
+-         }
+-
+-         if ( eosvmin != Real_t(0.) ) {
+-            for(Index_t i=0 ; i<numElemReg ; ++i) {
+-               Index_t ielem = regElemList[i];
++
++            /* Apply eosvmin constraint */
++            if ( eosvmin != Real_t(0.) ) {
+                if (vnewc[ielem] <= eosvmin) {
+                   compHalfStep[i] = compression[i] ;
+                }
+             }
+-         }
+-         if ( eosvmax != Real_t(0.) ) {
+-            for(Index_t i=0 ; i<numElemReg ; ++i) {
+-               Index_t ielem = regElemList[i];
++
++            /* Apply eosvmax constraint */
++            if ( eosvmax != Real_t(0.) ) {
+                if (vnewc[ielem] >= eosvmax) {
+                   p_old[i]        = Real_t(0.) ;
+                   compression[i]  = Real_t(0.) ;
+                   compHalfStep[i] = Real_t(0.) ;
+                }
+             }
+-         }
+-
+-         for (Index_t i = 0 ; i < numElemReg ; ++i) {
++
++            /* Initialize work array */
+             work[i] = Real_t(0.) ;
+          }
+       }

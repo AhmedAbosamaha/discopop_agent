@@ -1,0 +1,43 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
+@@ -1955,13 +1955,34 @@
+    Domain_member fieldData[6] ;
+ #endif
+ 
+-   LagrangeNodal(domain);
++#pragma omp parallel shared(domain)
++{
++   /* Three independent function calls with no data dependences;
++      each operates on disjoint domain data and can execute in parallel */
++
++#pragma omp task
++   {
++      /* Update nodal properties: forces, accelerations, velocities, positions */
++      LagrangeNodal(domain);
++   }
++
++#pragma omp task
++   {
++      /* Update element properties based on current node data */
++      LagrangeElements(domain, domain.numElem());
++   }
++
++#pragma omp task
++   {
++      /* Compute time constraints for next time step */
++      CalcTimeConstraintsForElems(domain);
++   }
++
++   /* Wait for all three tasks to complete */
++#pragma omp taskwait
++}
+ 
+ #ifdef SEDOV_SYNC_POS_VEL_LATE
+ #endif
+ 
+-   LagrangeElements(domain, domain.numElem());
+-
+-   CalcTimeConstraintsForElems(domain);
+-
+-}
++}

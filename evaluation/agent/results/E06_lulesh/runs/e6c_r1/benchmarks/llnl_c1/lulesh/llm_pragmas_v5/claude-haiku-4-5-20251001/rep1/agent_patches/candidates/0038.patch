@@ -1,0 +1,178 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -8,6 +8,7 @@
+ #include <sys/time.h>
+ #include <iostream>
+ #include <unistd.h>
++#include <omp.h>
+ 
+ #include "lulesh.h"
+ 
+@@ -1765,70 +1766,90 @@
+    Real_t emin    = domain.emin() ;
+    Real_t rho0    = domain.refdens() ;
+ 
+-   Real_t *e_old = Allocate<Real_t>(numElemReg) ;
+-   Real_t *delvc = Allocate<Real_t>(numElemReg) ;
+-   Real_t *p_old = Allocate<Real_t>(numElemReg) ;
+-   Real_t *q_old = Allocate<Real_t>(numElemReg) ;
+-   Real_t *compression = Allocate<Real_t>(numElemReg) ;
+-   Real_t *compHalfStep = Allocate<Real_t>(numElemReg) ;
+-   Real_t *qq_old = Allocate<Real_t>(numElemReg) ;
+-   Real_t *ql_old = Allocate<Real_t>(numElemReg) ;
+-   Real_t *work = Allocate<Real_t>(numElemReg) ;
++   // Output buffers and temporary arrays pre-allocated for all threads
++   // to avoid allocation overhead inside parallel region
++   Int_t max_threads = omp_get_max_threads();
++   Real_t *e_old_all = Allocate<Real_t>(numElemReg * max_threads) ;
++   Real_t *delvc_all = Allocate<Real_t>(numElemReg * max_threads) ;
++   Real_t *p_old_all = Allocate<Real_t>(numElemReg * max_threads) ;
++   Real_t *q_old_all = Allocate<Real_t>(numElemReg * max_threads) ;
++   Real_t *compression_all = Allocate<Real_t>(numElemReg * max_threads) ;
++   Real_t *compHalfStep_all = Allocate<Real_t>(numElemReg * max_threads) ;
++   Real_t *qq_old_all = Allocate<Real_t>(numElemReg * max_threads) ;
++   Real_t *ql_old_all = Allocate<Real_t>(numElemReg * max_threads) ;
++   Real_t *work_all = Allocate<Real_t>(numElemReg * max_threads) ;
++
+    Real_t *p_new = Allocate<Real_t>(numElemReg) ;
+    Real_t *e_new = Allocate<Real_t>(numElemReg) ;
+    Real_t *q_new = Allocate<Real_t>(numElemReg) ;
+    Real_t *bvc = Allocate<Real_t>(numElemReg) ;
+    Real_t *pbvc = Allocate<Real_t>(numElemReg) ;
+ 
+-   for(Int_t j = 0; j < rep; j++) {
+-      {
+-         for (Index_t i=0; i<numElemReg; ++i) {
+-            Index_t ielem = regElemList[i];
+-            e_old[i] = domain.e(ielem) ;
+-            delvc[i] = domain.delv(ielem) ;
+-            p_old[i] = domain.p(ielem) ;
+-            q_old[i] = domain.q(ielem) ;
+-            qq_old[i] = domain.qq(ielem) ;
+-            ql_old[i] = domain.ql(ielem) ;
+-         }
+-
+-         for (Index_t i = 0; i < numElemReg ; ++i) {
+-            Index_t ielem = regElemList[i];
+-            Real_t vchalf ;
+-            compression[i] = Real_t(1.) / vnewc[ielem] - Real_t(1.);
+-            vchalf = vnewc[ielem] - delvc[i] * Real_t(.5);
+-            compHalfStep[i] = Real_t(1.) / vchalf - Real_t(1.);
+-         }
+-
+-         if ( eosvmin != Real_t(0.) ) {
+-            for(Index_t i=0 ; i<numElemReg ; ++i) {
++   // Parallelize over rep iterations using thread-local slices of pre-allocated arrays
++   #pragma omp parallel
++   {
++      Int_t tid = omp_get_thread_num();
++      Real_t *e_old = e_old_all + tid * numElemReg ;
++      Real_t *delvc = delvc_all + tid * numElemReg ;
++      Real_t *p_old = p_old_all + tid * numElemReg ;
++      Real_t *q_old = q_old_all + tid * numElemReg ;
++      Real_t *compression = compression_all + tid * numElemReg ;
++      Real_t *compHalfStep = compHalfStep_all + tid * numElemReg ;
++      Real_t *qq_old = qq_old_all + tid * numElemReg ;
++      Real_t *ql_old = ql_old_all + tid * numElemReg ;
++      Real_t *work = work_all + tid * numElemReg ;
++
++      #pragma omp for schedule(static)
++      for(Int_t j = 0; j < rep; j++) {
++         {
++            for (Index_t i=0; i<numElemReg; ++i) {
+                Index_t ielem = regElemList[i];
+-               if (vnewc[ielem] <= eosvmin) {
+-                  compHalfStep[i] = compression[i] ;
++               e_old[i] = domain.e(ielem) ;
++               delvc[i] = domain.delv(ielem) ;
++               p_old[i] = domain.p(ielem) ;
++               q_old[i] = domain.q(ielem) ;
++               qq_old[i] = domain.qq(ielem) ;
++               ql_old[i] = domain.ql(ielem) ;
++            }
++
++            for (Index_t i = 0; i < numElemReg ; ++i) {
++               Index_t ielem = regElemList[i];
++               Real_t vchalf ;
++               compression[i] = Real_t(1.) / vnewc[ielem] - Real_t(1.);
++               vchalf = vnewc[ielem] - delvc[i] * Real_t(.5);
++               compHalfStep[i] = Real_t(1.) / vchalf - Real_t(1.);
++            }
++
++            if ( eosvmin != Real_t(0.) ) {
++               for(Index_t i=0 ; i<numElemReg ; ++i) {
++                  Index_t ielem = regElemList[i];
++                  if (vnewc[ielem] <= eosvmin) {
++                     compHalfStep[i] = compression[i] ;
++                  }
+                }
+             }
+-         }
+-         if ( eosvmax != Real_t(0.) ) {
+-            for(Index_t i=0 ; i<numElemReg ; ++i) {
+-               Index_t ielem = regElemList[i];
+-               if (vnewc[ielem] >= eosvmax) {
+-                  p_old[i]        = Real_t(0.) ;
+-                  compression[i]  = Real_t(0.) ;
+-                  compHalfStep[i] = Real_t(0.) ;
++            if ( eosvmax != Real_t(0.) ) {
++               for(Index_t i=0 ; i<numElemReg ; ++i) {
++                  Index_t ielem = regElemList[i];
++                  if (vnewc[ielem] >= eosvmax) {
++                     p_old[i]        = Real_t(0.) ;
++                     compression[i]  = Real_t(0.) ;
++                     compHalfStep[i] = Real_t(0.) ;
++                  }
+                }
+             }
++
++            for (Index_t i = 0 ; i < numElemReg ; ++i) {
++               work[i] = Real_t(0.) ;
++            }
+          }
+-
+-         for (Index_t i = 0 ; i < numElemReg ; ++i) {
+-            work[i] = Real_t(0.) ;
+-         }
+-      }
+-      CalcEnergyForElems(p_new, e_new, q_new, bvc, pbvc,
+-                         p_old, e_old,  q_old, compression, compHalfStep,
+-                         vnewc, work,  delvc, pmin,
+-                         p_cut, e_cut, q_cut, emin,
+-                         qq_old, ql_old, rho0, eosvmax,
+-                         numElemReg, regElemList);
++         CalcEnergyForElems(p_new, e_new, q_new, bvc, pbvc,
++                            p_old, e_old,  q_old, compression, compHalfStep,
++                            vnewc, work,  delvc, pmin,
++                            p_cut, e_cut, q_cut, emin,
++                            qq_old, ql_old, rho0, eosvmax,
++                            numElemReg, regElemList);
++      }
+    }
+ 
+    for (Index_t i=0; i<numElemReg; ++i) {
+@@ -1848,15 +1869,15 @@
+    Release(&q_new) ;
+    Release(&e_new) ;
+    Release(&p_new) ;
+-   Release(&work) ;
+-   Release(&ql_old) ;
+-   Release(&qq_old) ;
+-   Release(&compHalfStep) ;
+-   Release(&compression) ;
+-   Release(&q_old) ;
+-   Release(&p_old) ;
+-   Release(&delvc) ;
+-   Release(&e_old) ;
++   Release(&work_all) ;
++   Release(&ql_old_all) ;
++   Release(&qq_old_all) ;
++   Release(&compHalfStep_all) ;
++   Release(&compression_all) ;
++   Release(&q_old_all) ;
++   Release(&p_old_all) ;
++   Release(&delvc_all) ;
++   Release(&e_old_all) ;
+ }
+ 
+ static inline

@@ -1,0 +1,50 @@
+--- original.cc
++++ final.cc
+@@ -1650,6 +1650,7 @@
+    Real_t *y8n  = Allocate<Real_t>(numElem8) ;
+    Real_t *z8n  = Allocate<Real_t>(numElem8) ;
+ 
++   #pragma omp parallel for firstprivate(numElem) shared(domain,x8n,dvdy,determ,dvdx,z8n,dvdz,y8n) 
+    for (Index_t i=0 ; i<numElem ; ++i){
+       Real_t  x1[8],  y1[8],  z1[8] ;
+       Real_t pfx[8], pfy[8], pfz[8] ;
+@@ -1779,6 +1780,7 @@
+                           Index_t numNode)
+ {
+ 
++   #pragma omp parallel for firstprivate(numNode,dt,u_cut) shared(domain) 
+    for ( Index_t i = 0 ; i < numNode ; ++i )
+    {
+      Real_t xdtmp, ydtmp, zdtmp ;
+@@ -1800,6 +1802,7 @@
+ static inline
+ void CalcPositionForNodes(Domain &domain, const Real_t dt, Index_t numNode)
+ {
++   #pragma omp parallel for firstprivate(numNode,dt) shared(domain) 
+    for ( Index_t i = 0 ; i < numNode ; ++i )
+    {
+      domain.x(i) += domain.xd(i) * dt ;
+@@ -2055,6 +2058,7 @@
+                              Real_t deltaTime, Index_t numElem )
+ {
+ 
++  #pragma omp parallel for firstprivate(deltaTime,numElem) shared(domain) 
+   for( Index_t k=0 ; k<numElem ; ++k )
+   {
+     Real_t B[3][8] ;
+@@ -2120,6 +2124,7 @@
+ 
+       CalcKinematicsForElems(domain, deltatime, numElem) ;
+ 
++      #pragma omp parallel for firstprivate(numElem) shared(domain) 
+       for ( Index_t k=0 ; k<numElem ; ++k )
+       {
+          Real_t vdov = domain.dxx(k) + domain.dyy(k) + domain.dzz(k) ;
+@@ -2144,6 +2149,7 @@
+ {
+    Index_t numElem = domain.numElem();
+ 
++   #pragma omp parallel for firstprivate(numElem) shared(domain) 
+    for (Index_t i = 0 ; i < numElem ; ++i ) {
+       const Real_t ptiny = Real_t(1.e-36) ;
+       Real_t ax,ay,az ;

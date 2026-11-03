@@ -1,0 +1,50 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -1697,6 +1697,8 @@
+ {
+    Real_t *pHalfStep = Allocate<Real_t>(length) ;
+ 
++   #pragma omp parallel for schedule(static) \
++      shared(e_new, e_old, delvc, p_old, q_old, work, emin, length)
+    for (Index_t i = 0 ; i < length ; ++i) {
+       e_new[i] = e_old[i] - Real_t(0.5) * delvc[i] * (p_old[i] + q_old[i])
+          + Real_t(0.5) * work[i];
+@@ -1709,6 +1711,9 @@
+    CalcPressureForElems(pHalfStep, bvc, pbvc, e_new, compHalfStep, vnewc,
+                         pmin, p_cut, eosvmax, length, regElemList);
+ 
++   #pragma omp parallel for schedule(static) \
++      shared(e_new, q_new, compHalfStep, delvc, pbvc, bvc, pHalfStep, p_old, q_old, \
++             ql_old, qq_old, rho0, length)
+    for (Index_t i = 0 ; i < length ; ++i) {
+       Real_t vhalf = Real_t(1.) / (Real_t(1.) + compHalfStep[i]) ;
+ 
+@@ -1733,6 +1738,8 @@
+               - Real_t(4.0)*(pHalfStep[i] + q_new[i])) ;
+    }
+ 
++   #pragma omp parallel for schedule(static) \
++      shared(e_new, work, e_cut, emin, length)
+    for (Index_t i = 0 ; i < length ; ++i) {
+ 
+       e_new[i] += Real_t(0.5) * work[i];
+@@ -1748,6 +1755,9 @@
+    CalcPressureForElems(p_new, bvc, pbvc, e_new, compression, vnewc,
+                         pmin, p_cut, eosvmax, length, regElemList);
+ 
++   #pragma omp parallel for schedule(static) \
++      shared(delvc, regElemList, pbvc, e_new, vnewc, bvc, p_new, pHalfStep, q_new, \
++             p_old, q_old, ql_old, qq_old, rho0, e_cut, emin, length)
+    for (Index_t i = 0 ; i < length ; ++i){
+       const Real_t sixth = Real_t(1.0) / Real_t(6.0) ;
+       Index_t ielem = regElemList[i];
+@@ -1784,6 +1794,9 @@
+    CalcPressureForElems(p_new, bvc, pbvc, e_new, compression, vnewc,
+                         pmin, p_cut, eosvmax, length, regElemList);
+ 
++   #pragma omp parallel for schedule(static) \
++      shared(delvc, regElemList, pbvc, e_new, vnewc, bvc, p_new, rho0, ql_old, qq_old, \
++             q_cut, q_new, length)
+    for (Index_t i = 0 ; i < length ; ++i){
+       Index_t ielem = regElemList[i];
+ 

@@ -1,0 +1,22 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -1555,15 +1555,15 @@
+ 
+       domain.DeallocateGradients();
+ 
+-      Index_t idx = -1;
++      int found = 0;
++      #pragma omp parallel for reduction(||:found)
+       for (Index_t i=0; i<numElem; ++i) {
+          if ( domain.q(i) > domain.qstop() ) {
+-            idx = i ;
+-            break ;
++            found = 1;
+          }
+       }
+ 
+-      if(idx >= 0) {
++      if(found) {
+          exit(QStopError);
+       }
+    }

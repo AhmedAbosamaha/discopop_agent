@@ -1,0 +1,859 @@
+
+============================================================
+  DiscoPoP Agentic Controller
+============================================================
+  Source         : /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+  DiscoPoP dir   : .discopop
+  Model          : claude-haiku-4-5-20251001
+  Budget         : 3 LLM retries/region (+2 free build fixes)
+  λ penalty      : 1.0
+  Min workload   : 0.0
+  Restruct. depth: 0 (Tier-2 allowed at depth 0–0)
+  Quality gate   : Tier-1 = all but speed, no escalation; Tier-2 = full
+  TSan           : barrier-aware (archer: /usr/lib/llvm-20/lib/libarcher.so)
+  Speedup gate   : require ≥ 1.1× measured
+  Dry run        : False
+  LLM mode       : claude-haiku-4-5-20251001
+  Edit mode      : direct
+  Re-profiling   : full (instrument + run + explore) after every kept rewrite
+  Explorer       : one attempt may take 897 s, then the draw is repeated (random stall, L5)
+  Pragmas        : LLM writes them with the rewrite, gate decides (--llm-pragmas)
+============================================================
+
+  Project        : /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work  (5 unit(s): lulesh.cc, main.cc, lulesh-init.cc, lulesh-util.cc, lulesh-viz.cc)
+
+  [ok] Captured reference output on 2 inputs (69 bytes, 1046.5 ms baseline) for the correctness/performance gates.
+
+  [ok] Numerical noise floor 3.49e-14 of output scale (widest disagreement 3.49e-15 of output scale across 6 build variants, x10 margin — on input '7').
+  [note] values may move that far without failing the correctness gate; labels, line structure and integers must still match exactly.
+
+  Hotspots       : measured per-region runtimes are available — 301 region(s) measured, 8754.4 ms total, ranking by predicted time saved at 48 threads
+
+  Baseline       : DiscoPoP proposes 18 applicable pattern(s) unaided; 14 of them produce a usable pragma (4 rejected before it could run)
+                   → the run beats DiscoPoP by ending with more than 14
+
+  Initial candidates
+Region ID    Type           Saves    % run    Hot  Tier  Depth  Name
+--------------------------------------------------------------------------------------
+  2:355      function   8534.8 ms    99.6%    YES     2      0  _Z16LagrangeLeapFrogR6Domain
+  1:377      function   4636.0 ms    54.1%    YES     1      0  _ZL16LagrangeElementsR6Domaini
+  1:362      function   3762.0 ms    43.9%    YES     1      0  _ZL13LagrangeNodalR6Domain
+  2:1683     function   3122.8 ms    36.4%    YES     2      0  _ZL17CalcForceForNodesR6Domain
+  2:1847     function   3048.7 ms    35.6%    YES     2      0  _ZL23CalcVolumeForceForElemsR6Domain
+  1:1932     function   1856.1 ms    21.7%    YES     1      0  _ZL28CalcHourglassControlForElemsR6DomainPdd
+  1:2340     function   1598.0 ms    18.6%    YES     2      0  _ZL13CalcQForElemsR6Domain
+  2:178      function   1482.8 ms    17.3%    YES     2      0  _ZL29CollectDomainNodesToElemNodesR6DomainPKiPdS3_S3_
+  2:2299     function   1475.7 ms    17.2%    YES     2      0  _ZL20CalcLagrangeElementsR6Domain
+  1:2440     loop       1470.3 ms    17.2%    YES     2      0  lines 1820–1831
+  1:2974     loop       1386.6 ms    16.2%    YES     1      0  lines 1696–1745
+  2:2924     function   1470.1 ms    17.1%    YES     2      0  _ZL15EvalEOSForElemsR6DomainPdiPii
+  1:118      loop       1373.7 ms    16.0%    YES     1      0  lines 1066–1117
+  1:115      function   1373.7 ms    16.0%    YES     2      0  _Z22CalcKinematicsForElemsR6Domaindi
+  1:2046     loop       1153.9 ms    13.5%    YES     1      0  lines 500–644
+  1:2042     function   1153.9 ms    13.5%    YES     2      0  _ZL28CalcFBHourglassForceForElemsR6DomainPdS1_S1_S1_S1_S1_S1_dii
+  1:1905     loop       1151.7 ms    13.4%    YES     1      0  lines 313–339
+  1:1902     function   1151.7 ms    13.4%    YES     2      0  _ZL23IntegrateStressForElemsR6DomainPdS1_S1_S1_ii
+  1:2532     loop       1137.6 ms    13.3%    YES     1      0  lines 1155–1286
+  2:2526     function   1137.6 ms    13.3%    YES     2      0  _ZL31CalcMonotonicQGradientsForElemsR6Domain
+  1:2977     loop        901.3 ms    10.5%    YES     1      0  lines 1698–1706
+  1:1952     loop        700.3 ms     8.2%    YES     1      0  lines 661–686
+  1:142      loop        499.5 ms     5.8%    YES     1      0  lines 1092–1098
+  1:1918     loop        498.6 ms     5.8%    YES     1      0  lines 332–337
+  2:3081     function    479.3 ms     5.6%    YES     2      0  _ZL18CalcEnergyForElemsPdS_S_S_S_S_S_S_S_S_S_S_S_dddddS_S_ddiPi
+  1:2680     loop        429.8 ms     5.0%    YES     2      0  lines 1449–1453
+  1:2735     loop        429.6 ms     5.0%    YES     2      0  lines 1298–1441
+  1:2676     function    429.8 ms     5.0%    YES     2      0  _ZL22CalcMonotonicQForElemsR6Domain
+  2:2723     function    429.7 ms     5.0%    YES     2      0  _ZL28CalcMonotonicQRegionForElemsR6Domainid
+  1:1774     loop        259.4 ms     3.0%    YES     1      0  lines 790–805
+  1:1771     function    259.4 ms     3.0%    YES     2      0  _ZL20CalcVelocityForNodesR6Domainddi
+  1:3209     loop        229.1 ms     2.7%    YES     1      0  lines 1504–1517
+  1:3200     function    234.3 ms     2.7%    YES     2      0  _ZL20CalcPressureForElemsPdS_S_S_S_S_dddiPi
+  1:1705     loop        222.2 ms     2.6%  MAYBE     1      0  lines 754–758
+  1:1702     function    222.3 ms     2.6%  MAYBE     2      0  _ZL24CalcAccelerationForNodesR6Domaini
+  1:1818     loop        148.2 ms     1.7%  MAYBE     1      0  lines 811–816
+  1:1815     function    148.2 ms     1.7%  MAYBE     2      0  _ZL20CalcPositionForNodesR6Domaindi
+  2:246      function    141.3 ms     1.6%  MAYBE     2      0  _ZL28CalcElemCharacteristicLengthPKdS0_S0_d
+  1:396      loop        136.8 ms     1.6%  MAYBE     2      0  lines 1939–1949
+  2:388      function    136.8 ms     1.6%  MAYBE     2      0  _ZL27CalcTimeConstraintsForElemsR6Domain
+  1:3227     loop        114.8 ms     1.3%  MAYBE     2      0  lines 1877–1896
+  1:3223     function    114.9 ms     1.3%  MAYBE     2      0  _ZL29CalcCourantConstraintForElemsR6DomainiPidRd
+  1:2312     loop        102.0 ms     1.2%  MAYBE     1      0  lines 1131–1145
+  1:2031     function     96.9 ms     1.1%  MAYBE     1      0  _ZL24CalcElemVolumeDerivativePdS_S_PKdS1_S1_
+
+============================================================
+  FLOOR — DiscoPoP's own program, as the DiscoPoP-alone arm delivers it (D32)
+============================================================
+  [floor] DiscoPoP alone keeps 7 pragma(s) — the agent's program must not be slower than that one (D32; details in floor/floor.log)
+
+============================================================
+  PHASE A — restructure  (the source stays pragma-free)
+============================================================
+
+┌─ [depth=0] function 2:355 (lines 1952–1967)  score=8.5
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 2 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for reduction(min:dtcourant_tmp) private(courant_elem)
+│           #pragma omp parallel for reduction(min:dthydro_tmp) private(hydro_elem)
+│  [Tier-2] Stage 'clause' failed: `#pragma omp parallel for reduction(min:dtcourant_tmp) private(courant_elem)` — clause names `courant_elem`, which the loop writes and later code reads — private/firstprivate discard those writes, so 
+│  [Tier-2] Assembling evidence (budget remaining: 1)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 2 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for reduction(min:dtcourant_tmp) lastprivate(courant_elem)
+│           #pragma omp parallel for reduction(min:dthydro_tmp) lastprivate(hydro_elem)
+│  [Tier-2] Stage 'performance' failed: No speedup from parallelization: measured 0.62× (same binary, median of interleaved pairs; best at 1 thread 1066.0 ms vs best at all threads 1598.7 ms), below the required 1.10×.
+│  [Tier-2] Assembling evidence (budget remaining: 0)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 4 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for reduction(min:dtcourant_tmp) lastprivate(courant_elem)
+│           #pragma omp parallel for reduction(min:dthydro_tmp) lastprivate(hydro_elem)
+│           #pragma omp parallel reduction(min:dtcourant_tmp, dthydro_tmp)
+│           #pragma omp for
+│  [Tier-2] Stage 'performance' failed: No speedup from parallelization: measured 0.82× (same binary, median of interleaved pairs; best at 1 thread 1077.2 ms vs best at all threads 1221.8 ms), below the required 1.10×.
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] function 1:377 (lines 1856–1866)  score=4.6
+│  [Phase-A] DiscoPoP reports this region parallel (task), but its pragma fails the gate at 'openmp_compile' — requeued for the model
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 17 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for schedule(static) private(i)
+│           #pragma omp parallel for schedule(static) private(i)
+│           #pragma omp parallel for schedule(static) private(i)
+│           #pragma omp parallel for schedule(static) private(i)
+│  [Tier-2] Stage 'clause' failed: `#pragma omp parallel for schedule(static) private(i, xdtmp, ydtmp, zdtmp)` — clause names `xdtmp`, which is declared inside the loop body — it is already per-iteration and is not in scope at the prag
+│  [Tier-2] Assembling evidence (budget remaining: 1)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 17 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for schedule(static) private(i)
+│           #pragma omp parallel for schedule(static) private(i)
+│           #pragma omp parallel for schedule(static) private(i)
+│           #pragma omp parallel for schedule(static) private(i)
+│  [Tier-2] Stage 'openmp_compile' failed (build fix — budget not charged, 1 left): OpenMP compile failed (loop not in OpenMP-canonical form):  /tmp/dp_agent_val_c_j6ewqm/_dp_proj_tsan_binary/lulesh.cc:1804:61: error: use of undeclared identifier 'i'  1804 |           #pragma omp par
+│  [Tier-2] Assembling evidence (budget remaining: 1)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 17 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for schedule(static)
+│           #pragma omp parallel for schedule(static)
+│           #pragma omp parallel for schedule(static)
+│           #pragma omp parallel for schedule(static)
+│  [Tier-2] Stage 'openmp_compile' failed (build fix — budget not charged, 0 left): OpenMP compile failed (loop not in OpenMP-canonical form): /tmp/dp_agent_val_4mg8d11i/_dp_proj_tsan_binary/lulesh.cc:796:54: error: use of undeclared identifier 'i'   796 |    #pragma omp parallel for
+│  [Tier-2] Assembling evidence (budget remaining: 1)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 17 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for schedule(static)
+│           #pragma omp parallel for schedule(static)
+│           #pragma omp parallel for schedule(static)
+│           #pragma omp parallel for schedule(static)
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Original backed up → lulesh.cc.original
+│  [Tier-2] Applied to lulesh.cc
+│  [Tier-2] Re-profiling to refresh data and discover new candidates...
+│  [refresh] kind=full
+│  [Tier-2] Re-measured runtimes: 310 region(s), 8740.2 ms total
+│  [Tier-2] 26 survivor(s) rebuilt, 2 new at depth 1
+│  [Tier-2] Kept on its own pragmas: 17 annotated loop(s), gate passed end to end
+│  [Tier-2] Restructuring pays off (measured 1.19×)
+└─ ACCEPTED
+
+┌─ [depth=0] function 1:362 (lines 828–847)  score=3.8
+│  [Phase-A] DiscoPoP reports this region parallel (task), but its pragma fails the gate at 'openmp_compile' — requeued for the model
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 7 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel
+│           #pragma omp for schedule(static) nowait
+│           #pragma omp for schedule(static) nowait
+│           #pragma omp for schedule(static) nowait
+│  [Tier-2] Stage 'tsan' failed: Race detected: WARNING: ThreadSanitizer: data race (pid=579553)   Write of size 8 at 0x72b00003ab00 by thread T3:     #0 LagrangeNodal(Domain&) (.omp_outlined_debug__) /tmp/dp_agent_val_1lymk376/_dp_p
+│  [Tier-2] Assembling evidence (budget remaining: 1)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 7 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel
+│           #pragma omp for schedule(static)
+│           #pragma omp for schedule(static)
+│           #pragma omp for schedule(static)
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Applied to lulesh.cc
+│  [Tier-2] Re-profiling to refresh data and discover new candidates...
+│  [refresh] kind=full
+│  [Tier-2] Re-measured runtimes: 297 region(s), 8745.9 ms total
+│  [Tier-2] 27 survivor(s) rebuilt, 1 new at depth 1
+│  [Tier-2] Kept on its own pragmas: 7 annotated loop(s), gate passed end to end
+│  [Tier-2] Restructuring pays off (measured 1.21×)
+└─ ACCEPTED
+
+┌─ [depth=0] function 2:1855 (lines 706–735)  score=0.5
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 2 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for shared(error_found)
+│           #pragma omp atomic write
+│  [Tier-2] Stage 'performance' failed: Net regression: the program with this rewrite runs at 0.97x the speed of the program before it (the two timed in turn, paired; kept at or above 0.99x). The 1.15x scaling is real but starts from a slow
+│  [Tier-2] Assembling evidence (budget remaining: 1)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 3 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel
+│           #pragma omp for
+│           #pragma omp critical
+│  [Tier-2] Stage 'performance' failed: Net regression: the program with this rewrite runs at 0.97x the speed of the program before it (the two timed in turn, paired; kept at or above 0.99x). The 1.16x scaling is real but starts from a slow
+│  [Tier-2] Assembling evidence (budget remaining: 0)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 3 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel
+│           #pragma omp for
+│           #pragma omp critical
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Applied to lulesh.cc
+│  [Tier-2] Re-profiling to refresh data and discover new candidates...
+      [explorer] attempt 1 stalled (STALLED: no result after 897 s) — retrying on the same profile (hash seed 2)
+      [explorer] succeeded after 2 attempt(s), 1 of them stalled
+│  [refresh] kind=full
+│  [Tier-2] Re-measured runtimes: 301 region(s), 8745.7 ms total
+│  [Tier-2] 25 survivor(s) rebuilt, 2 new at depth 1
+│  [Tier-2] Kept on its own pragmas: 3 annotated loop(s), gate passed end to end
+│  [Tier-2] Restructuring pays off (measured 1.46×)
+└─ ACCEPTED
+
+┌─ [depth=0] function 1:2322 (lines 1539–1570)  score=0.3
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 1 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for reduction(||:found)
+│  [Tier-2] Stage 'performance' failed: Net regression: the program with this rewrite runs at 0.99x the speed of the program before it (the two timed in turn, paired; kept at or above 0.99x). The 1.42x scaling is real but starts from a slow
+│  [Tier-2] Assembling evidence (budget remaining: 1)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 1 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for reduction(||:g_violation_found)
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Applied to lulesh.cc
+│  [Tier-2] Re-profiling to refresh data and discover new candidates...
+│  [refresh] kind=full
+│  [Tier-2] Re-measured runtimes: 298 region(s), 8768.6 ms total
+│  [Tier-2] 25 survivor(s) rebuilt, 2 new at depth 1
+│  [Tier-2] Kept on its own pragmas: 1 annotated loop(s), gate passed end to end
+│  [Tier-2] Restructuring pays off (measured 1.45×)
+└─ ACCEPTED
+
+┌─ [depth=0] function 2:178 (lines 64–106)  score=0.3
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 1 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for shared(domain, elemToNode, elemX, elemY, elemZ)
+│  [Tier-2] Stage 'performance' failed: No speedup from parallelization: measured 0.46× (same binary, median of interleaved pairs; best at 1 thread 3261.1 ms vs best at all threads 7025.8 ms), below the required 1.10×.
+│  [Tier-2] Assembling evidence (budget remaining: 1)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Applied to lulesh.cc
+│  [Tier-2] Re-profiling to refresh data and discover new candidates...
+      [explorer] attempt 1 stalled (STALLED: no result after 897 s) — retrying on the same profile (hash seed 2)
+      [explorer] attempt 2 stalled (STALLED: no result after 897 s) — retrying on the same profile (hash seed 3)
+      [explorer] succeeded after 3 attempt(s), 2 of them stalled
+│  [refresh] kind=full
+│  [Tier-2] Re-measured runtimes: 302 region(s), 8766.0 ms total
+│  [Phase-A] Asking DiscoPoP what it now finds in the rewritten lines...
+│  [Phase-A] exposure verdict: exposed
+│  [Phase-A] D40 — judging it as it will ship: DiscoPoP's pragmas for the exposed loops through the safety gate, then the program with them against the program before the rewrite (paired)
+│  [Phase-A] D40: pragma for lines 70–75 passes the safety gate
+│  [Phase-A] D40 verdict: not_faster 0.10×
+│  [Phase-A] D40 time: 69.2 s
+│  [Tier-2] DiscoPoP parallelized it, but the program is not faster than before the rewrite — reverting (snapshot restore)
+└─ retry (budget remaining: 1)
+
+│  [Tier-2] Assembling evidence (budget remaining: 0)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Applied to lulesh.cc
+│  [Tier-2] Re-profiling to refresh data and discover new candidates...
+│  [refresh] kind=full
+│  [Tier-2] Re-measured runtimes: 306 region(s), 8523.6 ms total
+│  [Phase-A] Asking DiscoPoP what it now finds in the rewritten lines...
+│  [Phase-A] exposure verdict: exposed
+│  [Phase-A] D40 — judging it as it will ship: DiscoPoP's pragmas for the exposed loops through the safety gate, then the program with them against the program before the rewrite (paired)
+│  [Phase-A] D40: pragma for lines 70–75 passes the safety gate
+│  [Phase-A] D40: pragma for lines 285–311 fails at 'tsan'
+│  [Phase-A] D40: pragma for lines 304–309 passes the safety gate
+│  [Phase-A] D40: pragma for lines 346–385 fails at 'openmp_compile'
+│  [Phase-A] D40: pragma for lines 472–616 fails at 'tsan'
+│  [Phase-A] D40: pragma for lines 621–691 fails at 'compile'
+│  [Phase-A] D40: pragma for lines 811–888 fails at 'compile'
+│  [Phase-A] D40: pragma for lines 1523–1546 fails at 'openmp_compile'
+│  [Phase-A] D40: pragma for lines 1562–1575 passes the safety gate
+│  [Tier-1] Repairing the generated pragma: ielem, i are declared inside the loop body, so cannot appear in a clause
+│  [Phase-A] D40: pragma for lines 1761–1808 fails at 'tsan'
+│  [Tier-1] Repairing the generated pragma: ielem is declared inside the loop body, so cannot appear in a clause
+│  [Phase-A] D40: pragma for lines 1763–1769 passes the safety gate
+│  [Tier-1] Repairing the generated pragma: ielem is declared inside the loop body, so cannot appear in a clause
+│  [Phase-A] D40: the pragmas together passes the safety gate
+│  [Phase-A] D40 verdict: not_faster 0.06×
+│  [Phase-A] D40 time: 171.5 s
+│  [Tier-2] DiscoPoP parallelized it, but the program is not faster than before the rewrite — reverting (snapshot restore)
+└─ retry (budget remaining: 0)
+
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:2410 (lines 1911–1922)  score=0.3
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 1 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for schedule(static) \
+│  [Tier-2] Stage 'openmp_compile' failed (build fix — budget not charged, 1 left): OpenMP compile failed (loop not in OpenMP-canonical form): /tmp/dp_agent_val_2qrz8pu_/_dp_proj_tsan_binary/lulesh.cc:1916:16: error: use of undeclared identifier 'numElemReg'; did you mean 'numElem'? 
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 1 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for schedule(static)
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Applied to lulesh.cc
+│  [Tier-2] Re-profiling to refresh data and discover new candidates...
+│  [refresh] kind=full
+│  [Tier-2] Re-measured runtimes: 300 region(s), 8730.5 ms total
+│  [Tier-2] 25 survivor(s) rebuilt, 0 new at depth 1
+│  [Tier-2] Kept on its own pragmas: 1 annotated loop(s), gate passed end to end
+│  [Tier-2] Restructuring pays off (measured 1.50×)
+└─ ACCEPTED
+
+┌─ [depth=0] loop 1:2952 (lines 1783–1832)  score=0.3
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] function 2:2902 (lines 1754–1860)  score=0.3
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 2 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel
+│           #pragma omp for schedule(static)
+│  [Tier-2] Stage 'performance' failed: Net regression: the program with this rewrite runs at 0.98x the speed of the program before it (the two timed in turn, paired; kept at or above 0.99x). The 1.55x scaling is real but starts from a slow
+│  [Tier-2] Assembling evidence (budget remaining: 1)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 2 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel
+│           #pragma omp for schedule(static)
+│  [Tier-2] Stage 'compile' failed (build fix — budget not charged, 1 left): /tmp/dp_agent_val_woahg39v/_dp_proj_validate_binary/lulesh.cc:1770:24: error: use of undeclared identifier 'omp_get_max_threads'  1770 |    Int_t max_threads = omp_get_max_threads();       |          
+│  [Tier-2] Assembling evidence (budget remaining: 1)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 2 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel
+│           #pragma omp for schedule(static)
+│  [Tier-2] Stage 'performance' failed: Net regression: the program with this rewrite runs at 0.98x the speed of the program before it (the two timed in turn, paired; kept at or above 0.99x). The 1.54x scaling is real but starts from a slow
+│  [Tier-2] Assembling evidence (budget remaining: 0)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 7 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel
+│           #pragma omp for
+│           #pragma omp for
+│           #pragma omp for
+│  [Tier-2] Stage 'performance' failed: Net regression: the program with this rewrite runs at 0.97x the speed of the program before it (the two timed in turn, paired; kept at or above 0.99x). The 1.53x scaling is real but starts from a slow
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:2052 (lines 501–645)  score=0.3
+│  [Phase-A] DiscoPoP reports this region parallel (do_all), but its pragma fails the gate at 'tsan' — requeued for the model
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 25 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for schedule(static) \
+│           #pragma omp atomic
+│           #pragma omp atomic
+│           #pragma omp atomic
+│  [Tier-2] Stage 'openmp_compile' failed (build fix — budget not charged, 1 left): OpenMP compile failed (loop not in OpenMP-canonical form): /tmp/dp_agent_val_yd3ejd_a/_dp_proj_tsan_binary/lulesh.cc:514:15: error: use of undeclared identifier 'i2'   514 |       private(i2) \       
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 25 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for schedule(static) shared(gamma, numElem, numNode, determ, x8n, y8n, z8n, dvdx, dvdy, dvdz, hourg, domain, fx_temp, fy_temp, fz_temp)
+│           #pragma omp atomic
+│           #pragma omp atomic
+│           #pragma omp atomic
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Applied to lulesh.cc
+│  [Tier-2] Re-profiling to refresh data and discover new candidates...
+│  [refresh] kind=full
+│  [Tier-2] Re-measured runtimes: 300 region(s), 8310.1 ms total
+│  [Tier-2] 21 survivor(s) rebuilt, 1 new at depth 1
+│  [Tier-2] Kept on its own pragmas: 25 annotated loop(s), gate passed end to end
+│  [Tier-2] Restructuring pays off (measured 2.27×)
+└─ ACCEPTED
+
+┌─ [depth=0] loop 1:1906 (lines 314–340)  score=0.4
+│  [Phase-A] DiscoPoP reports this region parallel (do_all), but its pragma fails the gate at 'tsan' — requeued for the model
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 4 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for schedule(static) private(fx_local, fy_local, fz_local)
+│           #pragma omp atomic
+│           #pragma omp atomic
+│           #pragma omp atomic
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Applied to lulesh.cc
+│  [Tier-2] Re-profiling to refresh data and discover new candidates...
+      [explorer] attempt 1 stalled (STALLED: no result after 897 s) — retrying on the same profile (hash seed 2)
+      [explorer] attempt 2 stalled (STALLED: no result after 897 s) — retrying on the same profile (hash seed 3)
+      [explorer] attempt 3 stalled (STALLED: no result after 897 s) — retrying on the same profile (hash seed 4)
+      [explorer] succeeded after 4 attempt(s), 3 of them stalled
+│  [refresh] kind=full
+│  [Tier-2] Re-measured runtimes: 301 region(s), 7878.0 ms total
+│  [Tier-2] 19 survivor(s) rebuilt, 6 new at depth 1
+│  [Tier-2] Kept on its own pragmas: 4 annotated loop(s), gate passed end to end
+│  [Tier-2] Restructuring pays off (measured 3.34×)
+└─ ACCEPTED
+
+┌─ [depth=0] loop 1:2953 (lines 1864–1872)  score=0.3
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] function 2:3057 (lines 1687–1808)  score=0.2
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 5 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for schedule(static) \
+│           #pragma omp parallel for schedule(static) \
+│           #pragma omp parallel for schedule(static) \
+│           #pragma omp parallel for schedule(static) \
+│  [Tier-2] Stage 'performance' failed: Net regression: the program with this rewrite runs at 0.94x the speed of the program before it (the two timed in turn, paired; kept at or above 0.99x). The 3.14x scaling is real but starts from a slow
+│  [Tier-2] Assembling evidence (budget remaining: 1)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 1 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for schedule(static) \
+│  [Tier-2] Stage 'performance' failed: Net regression: the program with this rewrite runs at 0.98x the speed of the program before it (the two timed in turn, paired; kept at or above 0.99x). The 3.14x scaling is real but starts from a slow
+│  [Tier-2] Assembling evidence (budget remaining: 0)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 1 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for schedule(static) \
+│  [Tier-2] Stage 'performance' failed: Net regression: the program with this rewrite runs at 0.96x the speed of the program before it (the two timed in turn, paired; kept at or above 0.99x). The 3.30x scaling is real but starts from a slow
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:2642 (lines 1612–1616)  score=0.1
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 1 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for shared(domain, ptiny)
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Applied to lulesh.cc
+│  [Tier-2] Re-profiling to refresh data and discover new candidates...
+│  [refresh] kind=full
+│  [Tier-2] Re-measured runtimes: 301 region(s), 7888.3 ms total
+│  [Tier-2] 20 survivor(s) rebuilt, 0 new at depth 1
+│  [Tier-2] Kept on its own pragmas: 1 annotated loop(s), gate passed end to end
+│  [Tier-2] Restructuring pays off (measured 3.46×)
+└─ ACCEPTED
+
+┌─ [depth=0] loop 1:3185 (lines 1671–1684)  score=0.1
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] function 1:3176 (lines 1658–1685)  score=0.1
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 1 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for firstprivate(compression, e_old, vnewc, regElemList, pmin, p_cut, eosvmax, length)
+│  [Tier-2] Stage 'performance' failed: Net regression: the program with this rewrite runs at 0.98x the speed of the program before it (the two timed in turn, paired; kept at or above 0.99x). The 3.53x scaling is real but starts from a slow
+│  [Tier-2] Assembling evidence (budget remaining: 1)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Applied to lulesh.cc
+│  [Tier-2] Re-profiling to refresh data and discover new candidates...
+      [explorer] attempt 1 stalled (STALLED: no result after 897 s) — retrying on the same profile (hash seed 2)
+      [explorer] succeeded after 2 attempt(s), 1 of them stalled
+│  [refresh] kind=full
+│  [Tier-2] Re-measured runtimes: 302 region(s), 7891.4 ms total
+│  [Phase-A] Asking DiscoPoP what it now finds in the rewritten lines...
+│  [Phase-A] exposure verdict: exposed
+│  [Phase-A] D40 — judging it as it will ship: DiscoPoP's pragmas for the exposed loops through the safety gate, then the program with them against the program before the rewrite (paired)
+│  [Phase-A] D40: pragma for lines 1665–1682 passes the safety gate
+│  [Phase-A] D40 verdict: not_faster 0.94×
+│  [Phase-A] D40 time: 27.4 s
+│  [Tier-2] DiscoPoP parallelized it, but the program is not faster than before the rewrite — reverting (snapshot restore)
+└─ retry (budget remaining: 1)
+
+│  [Tier-2] Assembling evidence (budget remaining: 0)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 1 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for firstprivate(length, pmin, p_cut, eosvmax, regElemList, e_old, vnewc)
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Applied to lulesh.cc
+│  [Tier-2] Re-profiling to refresh data and discover new candidates...
+│  [refresh] kind=full
+│  [Tier-2] Re-measured runtimes: 305 region(s), 7887.7 ms total
+│  [Tier-2] 18 survivor(s) rebuilt, 0 new at depth 1
+│  [Tier-2] Kept on its own pragmas: 1 annotated loop(s), gate passed end to end
+│  [Tier-2] Restructuring pays off (measured 3.42×)
+└─ ACCEPTED
+
+┌─ [depth=0] function 2:246 (lines 1114–1153)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 1 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for reduction(max:charLength) schedule(static)
+│  [Tier-2] Stage 'performance' failed: Net regression: the program with this rewrite runs at 0.82x the speed of the program before it (the two timed in turn, paired; kept at or above 0.99x). The 4.33x scaling is real but starts from a slow
+│  [Tier-2] Assembling evidence (budget remaining: 1)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 1 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp simd reduction(max:charLength)
+│  [Tier-2] Stage 'performance' failed: Net regression: the program with this rewrite runs at 0.97x the speed of the program before it (the two timed in turn, paired; kept at or above 0.99x). The 3.52x scaling is real but starts from a slow
+│  [Tier-2] Assembling evidence (budget remaining: 0)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Applied to lulesh.cc
+│  [Tier-2] Re-profiling to refresh data and discover new candidates...
+│  [refresh] kind=full
+│  [Tier-2] Re-measured runtimes: 307 region(s), 7886.1 ms total
+│  [Phase-A] Asking DiscoPoP what it now finds in the rewritten lines...
+│  [Phase-A] exposure verdict: no_pattern
+│  [Tier-2] DiscoPoP still finds no parallelism in the rewritten lines — reverting (snapshot restore)
+└─ retry (budget remaining: 0)
+
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 1:513 (lines 2118–2128)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 3 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel
+│           #pragma omp for
+│           #pragma omp critical
+│  [Tier-2] Stage 'performance' failed: Net regression: the program with this rewrite runs at 0.96x the speed of the program before it (the two timed in turn, paired; kept at or above 0.99x). The 3.51x scaling is real but starts from a slow
+│  [Tier-2] Assembling evidence (budget remaining: 1)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 1 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for reduction(min:dtcourant,dthydro)
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Applied to lulesh.cc
+│  [Tier-2] Re-profiling to refresh data and discover new candidates...
+│  [refresh] kind=full
+│  [Tier-2] Re-measured runtimes: 308 region(s), 7902.6 ms total
+│  [Tier-2] 15 survivor(s) rebuilt, 1 new at depth 1
+│  [Tier-2] Kept on its own pragmas: 1 annotated loop(s), gate passed end to end
+│  [Tier-2] Restructuring pays off (measured 3.64×)
+└─ ACCEPTED
+
+┌─ [depth=0] loop 1:3203 (lines 2056–2075)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 3 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel
+│           #pragma omp for private(indx, dtf)
+│           #pragma omp critical
+│  [Tier-2] Stage 'clause' failed: `#pragma omp for private(indx, dtf)` — clause names `indx`, which is declared inside the loop body — it is already per-iteration and is not in scope at the pragma
+│  [Tier-2] Assembling evidence (budget remaining: 1)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 3 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel
+│           #pragma omp for
+│           #pragma omp critical
+│  [Tier-2] Stage 'performance' failed: Net regression: the program with this rewrite runs at 0.98x the speed of the program before it (the two timed in turn, paired; kept at or above 0.99x). The 3.63x scaling is real but starts from a slow
+│  [Tier-2] Assembling evidence (budget remaining: 0)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 2 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for
+│           #pragma omp critical
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Applied to lulesh.cc
+│  [Tier-2] Re-profiling to refresh data and discover new candidates...
+│  [refresh] kind=full
+│  [Tier-2] Re-measured runtimes: 303 region(s), 7893.6 ms total
+│  [Tier-2] 13 survivor(s) rebuilt, 0 new at depth 1
+│  [Tier-2] Kept on its own pragmas: 2 annotated loop(s), gate passed end to end
+│  [Tier-2] Restructuring pays off (measured 3.34×)
+└─ ACCEPTED
+
+┌─ [depth=0] function 1:2054 (lines 403–442)  score=0.0
+│  [Phase-A] DiscoPoP reports this region parallel (task), but its pragma fails the gate at 'openmp_compile' — requeued for the model
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 1 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for schedule(static) \
+│  [Tier-2] Stage 'openmp_compile' failed (build fix — budget not charged, 1 left): OpenMP compile failed (loop not in OpenMP-canonical form): /tmp/dp_agent_val_v1r3yaxy/_dp_proj_tsan_binary/lulesh.cc:427:15: error: use of undeclared identifier 'i'   427 |       private(i)       |   
+│  [Tier-2] Assembling evidence (budget remaining: 2)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 1 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for schedule(static) \
+│  [Tier-2] Stage 'performance' failed: Net regression: the program with this rewrite runs at 0.81x the speed of the program before it (the two timed in turn, paired; kept at or above 0.99x). The 4.40x scaling is real but starts from a slow
+│  [Tier-2] Assembling evidence (budget remaining: 1)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received — running quality gate (apply/compile/correctness)
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Applied to lulesh.cc
+│  [Tier-2] Re-profiling to refresh data and discover new candidates...
+│  [refresh] kind=full
+│  [Tier-2] Re-measured runtimes: 301 region(s), 7913.9 ms total
+│  [Phase-A] Asking DiscoPoP what it now finds in the rewritten lines...
+│  [Phase-A] exposure verdict: exposed
+│  [Phase-A] D40 — judging it as it will ship: DiscoPoP's pragmas for the exposed loops through the safety gate, then the program with them against the program before the rewrite (paired)
+│  [Phase-A] D40: pragma for lines 425–438 passes the safety gate
+│  [Phase-A] D40 verdict: not_faster 0.87×
+│  [Phase-A] D40 time: 28.1 s
+│  [Tier-2] DiscoPoP parallelized it, but the program is not faster than before the rewrite — reverting (snapshot restore)
+└─ retry (budget remaining: 1)
+
+│  [Tier-2] Assembling evidence (budget remaining: 0)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Diff received with 1 pragma(s) — running quality gate (apply/compile/openmp/TSan/output/speed)
+│           #pragma omp parallel for schedule(static) shared(dvdx, dvdy, dvdz, x, y, z)
+│  [Tier-2] Stage 'performance' failed: Net regression: the program with this rewrite runs at 0.82x the speed of the program before it (the two timed in turn, paired; kept at or above 0.99x). The 4.19x scaling is real but starts from a slow
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=1] function 2:1800 (lines 828–841)  score=1.1
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Restructuring not allowed at depth 1 (--restructure-depth=0) → SKIP
+└─ SKIPPED
+
+┌─ [depth=1] function 1:2279 (lines 1279–1307)  score=0.7
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Restructuring not allowed at depth 1 (--restructure-depth=0) → SKIP
+└─ SKIPPED
+
+┌─ [depth=1] function 1:362 (lines 919–996)  score=1.3
+│  [Phase-A] DiscoPoP already has a pattern here (task) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=1] function 2:1855 (lines 803–826)  score=1.1
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Restructuring not allowed at depth 1 (--restructure-depth=0) → SKIP
+└─ SKIPPED
+
+┌─ [depth=1] function 1:1950 (lines 729–799)  score=0.4
+│  [Phase-A] DiscoPoP already has a pattern here (task) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=1] function 1:2320 (lines 1632–1655)  score=0.8
+│  [Phase-A] DiscoPoP already has a pattern here (task) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=1] function 2:2018 (lines 240–288)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Restructuring not allowed at depth 1 (--restructure-depth=0) → SKIP
+└─ SKIPPED
+
+┌─ [depth=1] function 1:115 (lines 1219–1276)  score=0.1
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Restructuring not allowed at depth 1 (--restructure-depth=0) → SKIP
+└─ SKIPPED
+
+┌─ [depth=1] function 2:2488 (lines 1310–1447)  score=0.1
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Restructuring not allowed at depth 1 (--restructure-depth=0) → SKIP
+└─ SKIPPED
+
+┌─ [depth=1] function 1:2065 (lines 486–726)  score=0.1
+│  [Phase-A] DiscoPoP already has a pattern here (task) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=1] loop 1:3108 (lines 1753–1784)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=1] loop 1:3136 (lines 1789–1806)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+
+============================================================
+  PHASE B — annotate  (10 candidate pragma(s))
+============================================================
+
+  Timing noise: reusing the run's threshold → keep anything at or above 0.990
+
+  27 loop(s) are already parallel in the source; nothing is nested inside them.
+
+┌─ pattern #302  task @ lines 2035–2045  (W=0)
+│  ['#pragma omp parallel', '#pragma omp single']
+│  gate failed at 'openmp_compile': OpenMP compile failed (loop not in OpenMP-canonical form): /tmp/dp_agent_val_75ugqz0q/_dp_proj_tsan_binary/lulesh.cc:2050:1: error: expected statement
+└─ DROPPED
+
+┌─ pattern #107  task @ lines 919–996  (W=0)
+│  ['#pragma omp parallel', '#pragma omp single']
+│  gate failed at 'compile': /tmp/dp_agent_val_bco5915z/_dp_proj_validate_binary/lulesh.cc:946:31: error: use of undeclared identifier 'numNode'; did you mean 'numNodeBC'?   946 |
+└─ DROPPED
+
+   DiscoPoP reports another pattern for this loop (task) — trying it
+
+┌─ pattern #134  task @ lines 919–996  (W=0)
+│  ['#pragma omp parallel', '#pragma omp single']
+│  gate failed at 'compile': /tmp/dp_agent_val_g0r9uiij/_dp_proj_validate_binary/lulesh.cc:979:48: error: use of undeclared identifier 'delt'   979 |         xdtmp = domain.xd(i) 
+└─ DROPPED
+
+   DiscoPoP reports another pattern for this loop (task) — trying it
+
+┌─ pattern #433  task @ lines 919–996  (W=0)
+│  ['#pragma omp parallel', '#pragma omp single']
+│  gate failed at 'openmp_compile': OpenMP compile failed (loop not in OpenMP-canonical form): /tmp/dp_agent_val_xzmf0oj5/_dp_proj_tsan_binary/lulesh.cc:965:7: error: expected statement 
+└─ DROPPED
+
+   DiscoPoP reports another pattern for this loop (task) — trying it
+
+┌─ pattern #662  task @ lines 919–996  (W=0)
+│  ['#pragma omp parallel', '#pragma omp single']
+│  gate failed at 'openmp_compile': OpenMP compile failed (loop not in OpenMP-canonical form): /tmp/dp_agent_val_mwvufbkj/_dp_proj_tsan_binary/lulesh.cc:959:7: error: expected statement 
+└─ DROPPED
+
+   DiscoPoP reports another pattern for this loop (task) — trying it
+
+┌─ pattern #719  task @ lines 919–996  (W=0)
+│  ['#pragma omp parallel', '#pragma omp single']
+│  gate failed at 'openmp_compile': OpenMP compile failed (loop not in OpenMP-canonical form): /tmp/dp_agent_val__5g12pan/_dp_proj_tsan_binary/lulesh.cc:953:7: error: expected statement 
+└─ DROPPED
+
+   DiscoPoP reports another pattern for this loop (task) — trying it
+
+┌─ pattern #794  task @ lines 919–996  (W=0)
+│  ['#pragma omp parallel', '#pragma omp single']
+│  gate failed at 'compile': /tmp/dp_agent_val_py5402dy/_dp_proj_validate_binary/lulesh.cc:979:48: error: use of undeclared identifier 'delt'   979 |         xdtmp = domain.xd(i) 
+└─ DROPPED
+
+   DiscoPoP reports another pattern for this loop (task) — trying it
+
+┌─ pattern #797  task @ lines 919–996  (W=0)
+│  ['#pragma omp parallel', '#pragma omp single']
+│  gate failed at 'compile': /tmp/dp_agent_val_4fm_i482/_dp_proj_validate_binary/lulesh.cc:946:31: error: use of undeclared identifier 'numNode'; did you mean 'numNodeBC'?   946 |
+└─ DROPPED
+
+┌─ pattern #77  task @ lines 1632–1655  (W=0)
+│  ['#pragma omp parallel', '#pragma omp single']
+│  gate failed at 'openmp_compile': OpenMP compile failed (loop not in OpenMP-canonical form): /tmp/dp_agent_val_sm8t157w/_dp_proj_tsan_binary/lulesh.cc:1660:1: error: expected statement
+└─ DROPPED
+
+┌─ pattern #916  do_all @ lines 1864–1913  (W=85750)
+│  #pragma omp parallel for
+│  marginal 1.03×
+│  [Phase-B] Applied to lulesh.cc
+└─ APPLIED
+
+┌─ pattern #911  do_all @ lines 1866–1874  (W=9959600)
+│  #pragma omp parallel for
+│  nested inside the already-parallelized region at lines 1864–1913
+└─ SKIPPED (enclosing loop is already parallel)
+
+┌─ pattern #35  task @ lines 729–799  (W=0)
+│  ['#pragma omp parallel', '#pragma omp single']
+│  gate failed at 'compile': /tmp/dp_agent_val_7r1v77lr/_dp_proj_validate_binary/lulesh.cc:771:13: error: use of undeclared identifier 'dvdx'   771 |             dvdx[jj] = pfx[ii
+└─ DROPPED
+
+   DiscoPoP reports another pattern for this loop (task) — trying it
+
+┌─ pattern #38  task @ lines 729–799  (W=0)
+│  ['#pragma omp parallel', '#pragma omp single']
+│  gate failed at 'compile': numElem8) ;       |            ^ /tmp/dp_agent_val_6nsy0tam/_dp_proj_validate_binary/lulesh.cc:775:13: error: use of undeclared identifier 'y8n'   775
+└─ DROPPED
+
+   DiscoPoP reports another pattern for this loop (task) — trying it
+
+┌─ pattern #47  task @ lines 729–799  (W=0)
+│  ['#pragma omp parallel', '#pragma omp single']
+│  gate failed at 'compile':  'dvdx' declared here   734 |    Real_t *dvdx = Allocate<Real_t>(numElem8) ;       |            ^ /tmp/dp_agent_val_7df1s5fz/_dp_proj_validate_binary/
+└─ DROPPED
+
+   DiscoPoP reports another pattern for this loop (task) — trying it
+
+┌─ pattern #101  task @ lines 729–799  (W=0)
+│  ['#pragma omp parallel', '#pragma omp single']
+│  gate failed at 'compile': /tmp/dp_agent_val_wbplu623/_dp_proj_validate_binary/lulesh.cc:771:13: error: use of undeclared identifier 'dvdx'   771 |             dvdx[jj] = pfx[ii
+└─ DROPPED
+
+   DiscoPoP reports another pattern for this loop (task) — trying it
+
+┌─ pattern #537  task @ lines 729–799  (W=0)
+│  ['#pragma omp parallel', '#pragma omp single']
+│  gate failed at 'compile': numElem8) ;       |            ^ /tmp/dp_agent_val_dibmgruq/_dp_proj_validate_binary/lulesh.cc:775:13: error: use of undeclared identifier 'y8n'   775
+└─ DROPPED
+
+   DiscoPoP reports another pattern for this loop (task) — trying it
+
+┌─ pattern #578  task @ lines 729–799  (W=0)
+│  ['#pragma omp parallel', '#pragma omp single']
+│  gate failed at 'compile':  'dvdx' declared here   734 |    Real_t *dvdx = Allocate<Real_t>(numElem8) ;       |            ^ /tmp/dp_agent_val_mir7o2km/_dp_proj_validate_binary/
+└─ DROPPED
+
+┌─ pattern #116  task @ lines 486–726  (W=0)
+│  ['#pragma omp parallel', '#pragma omp single']
+│  gate failed at 'compile': += hgfy[7];       |       ^~~~~~~       |       fx_temp /tmp/dp_agent_val_zvgg3xbt/_dp_proj_validate_binary/lulesh.cc:533:12: note: 'fx_temp' declared
+└─ DROPPED
+
+   DiscoPoP reports another pattern for this loop (task) — trying it
+
+┌─ pattern #233  task @ lines 486–726  (W=0)
+│  ['#pragma omp parallel', '#pragma omp single']
+│  gate failed at 'compile': /tmp/dp_agent_val_m5c477wz/_dp_proj_validate_binary/lulesh.cc:543:11: error: use of undeclared identifier 'fx_temp'   543 |    memset(fx_temp, 0, numN
+└─ DROPPED
+
+   DiscoPoP reports another pattern for this loop (task) — trying it
+
+┌─ pattern #672  task @ lines 486–726  (W=0)
+│  ['#pragma omp parallel', '#pragma omp single']
+│  gate failed at 'openmp_compile': OpenMP compile failed (loop not in OpenMP-canonical form): /tmp/dp_agent_val_cx4a3ykq/_dp_proj_tsan_binary/lulesh.cc:731:1: error: expected statement 
+└─ DROPPED
+
+┌─ pattern #239  task @ lines 403–442  (W=0)
+│  ['#pragma omp parallel', '#pragma omp single']
+│  gate failed at 'openmp_compile': OpenMP compile failed (loop not in OpenMP-canonical form): /tmp/dp_agent_val_sqvr5x3a/_dp_proj_tsan_binary/lulesh.cc:447:1: error: expected statement 
+└─ DROPPED
+
+┌─ pattern #921  do_all @ lines 1753–1784  (W=38593450)
+│  #pragma omp parallel for
+│  [Tier-1] Repairing the generated pragma: ssc, ql_old are declared inside the loop body, so cannot appear in a clause
+│  marginal 0.95× alone — deferred: judged together with the other pragmas that do not pay alone (D33)
+└─ DEFERRED (slower alone)
+
+┌─ pattern #922  do_all @ lines 1789–1806  (W=21164150)
+│  #pragma omp parallel for
+│  [Tier-1] Repairing the generated pragma: ielem, ssc, ql_old are declared inside the loop body, so cannot appear in a clause
+│  marginal 1.04×
+│  [Phase-B] Applied to lulesh.cc
+└─ APPLIED
+
+┌─ D33 — 1 safe pragma(s) did not pay alone; measuring them together
+│  lulesh.cc: fewer than two to combine — dropped as measured alone
+└─ D33 done
+
+============================================================
+  SETTLING — verify the finished source, drop what does not hold up
+============================================================
+  [ok] finished source verified — output matches, 2.16x the original, paired
+
+  [floor] kept the agent's program — 1.57× DiscoPoP's own, paired (kept at or above 0.990; D32)
+
+
+============================================================
+  SUMMARY: 11 rewrite(s) kept  |  65 pragma(s) applied (2 DiscoPoP + 63 LLM)  |  11 skipped
+  DiscoPoP unaided: 14 usable pragma(s) in this profile's draw  →  this run: 65   [BEAT, informational]
+    ✓  function 1:377  [Tier-2]  depth=0  17 own pragma(s), 1.19×
+    ✓  function 1:362  [Tier-2]  depth=0  7 own pragma(s), 1.21×
+    ✓  function 2:1855  [Tier-2]  depth=0  3 own pragma(s), 1.46×
+    ✓  function 1:2322  [Tier-2]  depth=0  1 own pragma(s), 1.45×
+    ✓  loop 1:2410  [Tier-2]  depth=0  1 own pragma(s), 1.50×
+    ✓  loop 1:2052  [Tier-2]  depth=0  25 own pragma(s), 2.27×
+    ✓  loop 1:1906  [Tier-2]  depth=0  4 own pragma(s), 3.34×
+    ✓  loop 1:2642  [Tier-2]  depth=0  1 own pragma(s), 3.46×
+    ✓  function 1:3176  [Tier-2]  depth=0  1 own pragma(s), 3.42×
+    ✓  loop 1:513  [Tier-2]  depth=0  1 own pragma(s), 3.64×
+    ✓  loop 1:3203  [Tier-2]  depth=0  2 own pragma(s), 3.34×
+    ✓  loop 1:2950  [Phase-B pragma]  depth=0  marginal 1.03×
+    ✓  loop 1:3136  [Phase-B pragma]  depth=0  marginal 1.04×
+    ✗  2:355  [skipped]  depth=0
+    ✗  2:178  [skipped]  depth=0
+    ✗  2:2902  [skipped]  depth=0
+    ✗  2:3057  [skipped]  depth=0
+    ✗  2:246  [skipped]  depth=0
+    ✗  1:2054  [skipped]  depth=0
+    ✗  2:1800  [skipped]  depth=1
+    ✗  1:2279  [skipped]  depth=1
+    ✗  2:2018  [skipped]  depth=1
+    ✗  1:115  [skipped]  depth=1
+    ✗  2:2488  [skipped]  depth=1
+
+  Results → .discopop/agent_patches/accepted.json
+============================================================
+

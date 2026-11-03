@@ -1,0 +1,32 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -1908,16 +1908,24 @@
+        }
+     }
+ 
+-    for (Int_t r=0 ; r<domain.numReg() ; r++) {
++    Int_t numReg = domain.numReg();
++    Int_t numReg_half = numReg / 2;
++    Int_t numReg_threshold = numReg - (numReg + 15) / 20;
++
++    #pragma omp parallel for schedule(static) \
++       private(numElemReg, regElemList, rep) \
++       shared(domain, vnewc, numReg, numReg_half, numReg_threshold)
++    for (Int_t r=0 ; r<numReg ; r++) {
+        Index_t numElemReg = domain.regElemSize(r);
+        Index_t *regElemList = domain.regElemlist(r);
+        Int_t rep;
+-       if(r < domain.numReg()/2)
++       Int_t costVal = domain.cost();
++       if(r < numReg_half)
+ 	 rep = 1;
+-       else if(r < (domain.numReg() - (domain.numReg()+15)/20))
+-         rep = 1 + domain.cost();
++       else if(r < numReg_threshold)
++         rep = 1 + costVal;
+        else
+-	 rep = 10 * (1+ domain.cost());
++	 rep = 10 * (1 + costVal);
+        EvalEOSForElems(domain, vnewc, numElemReg, regElemList, rep);
+     }
+ 

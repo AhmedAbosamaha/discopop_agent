@@ -1,0 +1,23 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc	2026-11-03 13:56:43.567744919 +0000
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc.discopop_patch_generator.temp	2026-11-03 14:03:23.834102227 +0000
+@@ -493,6 +493,10 @@
+ 
+    Real_t  gamma[4][8];
+ 
++   #pragma omp parallel
++   #pragma omp single
++   {
++   #pragma omp task
+    gamma[0][0] = Real_t( 1.);
+    gamma[0][1] = Real_t( 1.);
+    gamma[0][2] = Real_t(-1.);
+@@ -530,7 +534,9 @@
+       Different elements can share nodes, so direct parallel accumulation
+       into domain.fx/fy/fz would cause races. These buffers are accumulated
+       into sequentially after the parallel loop. */
++   #pragma omp task
+    Real_t *fx_temp = Allocate<Real_t>(numNode);
++   }
+    Real_t *fy_temp = Allocate<Real_t>(numNode);
+    Real_t *fz_temp = Allocate<Real_t>(numNode);
+ 
