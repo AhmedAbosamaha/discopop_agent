@@ -1422,6 +1422,30 @@
         "pragma_arbitration": false,
         "prompt_version": 5
       }
+    },
+    "llm_pragmas_v5_exact": {
+      "ids": [
+        "E6-exact"
+      ],
+      "description": "E6, second configuration (the author, 3 Nov: \"yes go with option 2\"): `llm_pragmas_v5` with --no-numeric-tolerance — the agent measures no numerical noise floor, so its contract tells the model what the model alone's mirror tells it (\"The program's output must stay byte-identical … byte for byte\") and its gate compares exactly, at every thread count and schedule as against the original: a result that moves between runs at a fixed thread count is refused. Nothing else differs.",
+      "flags": [
+        "--llm-pragmas",
+        "--no-pragma-arbitration",
+        "--prompt-version",
+        "5",
+        "--no-numeric-tolerance"
+      ],
+      "settings": {
+        "budget": 3,
+        "llm_pragmas": true,
+        "require_speedup": true,
+        "hotspots": true,
+        "fast_refresh": false,
+        "restructure_depth": 0,
+        "pragma_arbitration": false,
+        "prompt_version": 5,
+        "numeric_tolerance": false
+      }
     }
   },
   "common_timing_size": "per_kernel",
@@ -2141,6 +2165,32 @@
       "check": "runner",
       "agent": "llm_pragmas_v5",
       "why": "E6 on the clean package: the model alone (Haiku, Sonnet, Opus, Fable) beside the agent (D35). The mirror at prompt version 4, as in every comparison so far: the mirror has no version 5 (bare_llm raises 'prompt anchor not found', record §6 2 Nov). Both take back lulesh.cc only (meta.json project.editable)."
+    },
+    "E6-c1-exact": {
+      "arms": [
+        "llm_pragmas_v5",
+        "llm_pragmas_v5_exact"
+      ],
+      "variable": [
+        "numeric_tolerance"
+      ],
+      "consequences": [],
+      "why": "E6's second configuration: the agent told and gated as the model alone is told (byte-identical output), against E6's first, in which the agent's measured noise floor let its contract and gate allow rounding differences while the model alone's said byte-identical (record §6, 3 Nov: the reproducibility contrast was confounded by the instructions)."
+    },
+    "E6-c1-exact-floor": {
+      "arms": [
+        "discopop_gate_v5",
+        "llm_pragmas_v5_exact"
+      ],
+      "variable": [
+        "budget",
+        "numeric_tolerance"
+      ],
+      "consequences": [
+        "llm_pragmas",
+        "pragma_arbitration"
+      ],
+      "why": "E6's second configuration beside DiscoPoP alone, run in the same runs (D19): budget 0 calls no model, so who would write a directive is inert; DiscoPoP alone keeps E6's arm unchanged (its programs printed values identical to the original's in every draw)."
     }
   }
 }
