@@ -130,7 +130,8 @@ def run_explorer(discopop_dir: Path, env: "dict[str, str] | None" = None
     `TaskGraph.recursive_assignment` on some attempts and not others (Rodinia
     `pathfinder`: 15 crashes in 20 attempts on one profile, so 20 attempts
     leave a 0.75^20 ≈ 0.3 % chance of losing the step). Fixing PYTHONHASHSEED does not change
-    that. So a crash is a draw, not a verdict on the code: treating it as one
+    that; but a retry with the SAME environment can repeat a runaway (B28), so each retry runs with its own
+    seed. So a crash is a draw, not a verdict on the code: treating it as one
     reverted rewrites and discarded the dependence review for no reason. A STALL is a draw
     too (see EXPLORER_STALL_S above), limited separately: at most EXPLORER_STALL_ATTEMPTS
     stalls, since each costs the full limit. The profile is never touched between attempts;
@@ -145,10 +146,14 @@ def run_explorer(discopop_dir: Path, env: "dict[str, str] | None" = None
     while r.returncode != 0 and attempt < EXPLORER_ATTEMPTS and stalls < EXPLORER_STALL_ATTEMPTS:
         last = (r.stderr.strip().splitlines() or ["no output"])[-1][:120]
         what = "stalled" if r.returncode == -9 else "failed"
-        print(f"      [explorer] attempt {attempt} {what} ({last}) — retrying on the same profile")
-        shutil.rmtree(discopop_dir / "explorer", ignore_errors=True)
         attempt += 1
-        r = _explore_once(discopop_dir, use_env)
+        # Fix 112 (E6, 3 Nov 2026): the retry is a different draw of the explorer's set orders — attempt k runs with
+        # PYTHONHASHSEED=k. With the seed left as it was, LULESH's runaway (DiscoPoP candidate B28) repeated at the
+        # same item in every attempt on one profile.
+        print(f"      [explorer] attempt {attempt - 1} {what} ({last}) — retrying on the same profile "
+              f"(hash seed {attempt})")
+        shutil.rmtree(discopop_dir / "explorer", ignore_errors=True)
+        r = _explore_once(discopop_dir, {**use_env, "PYTHONHASHSEED": str(attempt)})
         stalls += int(r.returncode == -9)
     if attempt > 1:
         outcome = "succeeded" if r.returncode == 0 else "failed every time"

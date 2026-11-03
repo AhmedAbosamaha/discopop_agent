@@ -1715,3 +1715,19 @@ The author (26 Sep): E2-B1 runs with the speed check OFF in every arm, the model
 **Fix.** At most the benchmark's own run plus `EXPLORER_STALL_S` (600 s, the harness's own limit for a first profile): `max(60, min(10 × t, t + 600))`. LULESH: 910 s instead of 3,097 s. Over the 2,657 archived profiles of 260 benchmarks the limit changes only where a run exceeds 66.7 s (LULESH in both packagings, Rodinia's `hotspot`, one `s291` draw); the experiments that ran under the old rule are not run again (D34).
 
 **Verified:** the limit computed for runs of 3.5, 33.1, 46.3, 66.0, 70.0, 309.7 and 319.8 s (60, 331, 463, 660, 670, 910, 920 s); mypy (68 files), `test_integrity` ALL PASS, `test_scaffold` 0 failures.
+
+## Fix 111 — No empty entry in the PYTHONPATH the harness gives the agent and DiscoPoP (harness, E6, 3 Nov 2026)
+
+**Files:** `evaluation/agent/tools/cli.py` (`_agent_env`).
+
+**Problem.** `_agent_env` joined the repository root and the existing `PYTHONPATH` with the path separator; with no `PYTHONPATH` before, the result ended in an empty entry, which Python reads as the current directory — for the explorer, the profile's `.discopop` folder, which holds folders named `explorer` and `profiler`. Under that environment LULESH's explorer ran away (DiscoPoP candidate B28) in 9 of 11 runs on one profile, without it in none of 5 (E6, record §6 3 Nov). The entry was never intended.
+
+**Fix.** Only non-empty entries are kept. **Verified:** the same profile explored to the end under the harness's environment without the entry (5 of 5); mypy, `test_integrity`, `test_scaffold`.
+
+## Fix 112 — A retry of the explorer is a different draw: attempt k runs with PYTHONHASHSEED=k (harness and agent, E6, 3 Nov 2026)
+
+**Files:** `evaluation/agent/tools/cli.py` (`profile_once`: the seed per attempt, `explore_hash_seeds` in the profile record), `discopop_agent/profiling/tools.py` (`run_explorer`).
+
+**Problem.** A stalled or crashed explorer is retried "on the same profile" in the same environment; on LULESH's runaway (B28) all five of the harness's attempts stopped at the same item (`e6c_smoke2`, PROFILE_ERROR), so the retries could not succeed. Explicit seeds change the outcome (seed 1 hung, seed 3 finished, on that profile and environment).
+
+**Fix.** The first attempt is unchanged (the seed left free); attempt k ≥ 2 runs with `PYTHONHASHSEED=k`, printed in the agent's log and recorded by the harness. No effect where the first attempt succeeds. **Verified:** feature checks `explorer-stall`, `explorer-multi-backedge`; mypy; the harness tests.

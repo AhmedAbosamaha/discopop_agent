@@ -1120,6 +1120,37 @@ parallel" (PolyBench `gramschmidt`'s `j` loop). The programs above are that shap
 read-after-write and a write-after-write. Whether B16 and B27 are one defect is for the trace; until then both
 numbers stand, each pointing at the other.
 
+## B28 — candidate: the explorer's dependence insertion can run away on a LULESH profile, depending on the order of its sets
+
+**Status: candidate, found 3 Nov 2026 in E6 (record §6, 3 Nov); reproduced on the server (LLVM 20, the explorer of
+`80976f320c`), not traced to a line, not repaired.**
+
+**Symptom.** On one profile of the clean LULESH package (`llnl_c1/lulesh`, run `e6c_smoke2`), the explorer stops
+advancing at "Source locations 96/1140" of `TaskGraph.__init__`'s "Inserting data dependencies" (`TaskGraph.py`
+≈ line 3239) after about 3½ minutes, at 100 % of one core, while its memory grows (106 GB after about 7 minutes);
+the harness's five attempts all stopped at the same item. A normal run of the same step passes it in seconds and the
+whole explorer finishes in about 5 minutes.
+
+**What decides it.** Not the profile alone: the same profile, copied, explored to the end in some runs and hung in
+others. Under the harness's environment (`PYTHONPATH` ending in an empty entry, which puts the working directory —
+the `.discopop` folder — on Python's import path; see the harness's Fix 111) it hung in 9 of 11 runs; without that
+entry in 0 of 5; with explicit `PYTHONHASHSEED` values under the harness's environment, seed 1 hung, seed 3 finished.
+Any instrumentation (`faulthandler.dump_traceback_later`, `PYTHONFAULTHANDLER=1`) made it finish. The pattern fits
+the order-dependence already recorded under B4 and T0.7 — sets iterated in an order that hash seeds and object
+addresses decide — with an order in which the insertion becomes combinatorial.
+
+**Mitigated, not repaired** (harness Fix 111, harness and agent Fix 112): no empty `PYTHONPATH` entry; and a retry
+after a stall is a different draw — attempt k runs with `PYTHONHASHSEED=k` — where before it repeated the same order
+and so the same runaway.
+
+## B29 — candidate: explorers started together race on DiscoPoP's update-check file
+
+**Status: candidate, found 3 Nov 2026 (E6, three explorers started in the same second on the server).** One of them
+ended with `FileNotFoundError: … ~/.discopop_config/auto_updater/modules.json.tmp -> … modules.json`
+(`discopop_library/tools/update_notifications/update_notifier.py:149`, `check_for_updates`): each process writes the
+same temporary file and renames it, so a second rename finds it gone. A crash, so the harness and the agent retry
+it; worth knowing where several lanes start explorers at once. Not repaired.
+
 ## B26 — candidate: `Invalid iteration structure` on NPB `FT`, on every attempt (explorer, task graph)
 
 **Status: candidate, found 14 Oct 2026 by the probe of RepoOMP's eight NPB programs; measured on the server (LLVM 20), not traced, no reproducer yet, not repaired.**

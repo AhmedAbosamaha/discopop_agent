@@ -196,7 +196,10 @@ def _agent_env(agent_repo: Path) -> Dict[str, str]:
     venv_bin = agent_repo / "venv" / "bin"
     extra = [str(venv_bin), str(Path.home() / ".local" / "bin")]
     env["PATH"] = os.pathsep.join(extra + [env.get("PATH", "")])
-    env["PYTHONPATH"] = os.pathsep.join([str(agent_repo), env.get("PYTHONPATH", "")])
+    # Fix 111 (E6, 3 Nov 2026): no empty entry — "repo:" with no PYTHONPATH before put the working directory (a
+    # profile's .discopop folder, for the explorer) on Python's import path, under which LULESH's explorer ran away
+    # (DiscoPoP candidate B28) in 9 of 11 runs and in none of 5 without it.
+    env["PYTHONPATH"] = os.pathsep.join([str(agent_repo)] + [p for p in env.get("PYTHONPATH", "").split(os.pathsep) if p])
     env["PYTHONUNBUFFERED"] = "1"
     return env
 
@@ -896,9 +899,14 @@ def profile_once(bench_dir: Path, src_name: str, dest: Path, agent_repo: Path, t
     total = 0.0
     stalls = 0
     stall_limit = min(timeout, EXPLORER_STALL_S) if EXPLORER_STALL_S > 0 else timeout
+    seeds: List[str] = []
     for attempt in range(1, EXPLORER_ATTEMPTS + 1):
         shutil.rmtree(dest / ".discopop" / "explorer", ignore_errors=True)
-        rc, secs, tail = _run(["discopop_explorer"], dest / ".discopop", env, int(stall_limit),
+        # Fix 112 (E6, 3 Nov 2026): a retry is a different draw — attempt k runs with PYTHONHASHSEED=k. With the seed
+        # left free, LULESH's runaway (B28) repeated in all five attempts on one profile, at the same item.
+        attempt_env = env if attempt == 1 else {**env, "PYTHONHASHSEED": str(attempt)}
+        seeds.append("free" if attempt == 1 else str(attempt))
+        rc, secs, tail = _run(["discopop_explorer"], dest / ".discopop", attempt_env, int(stall_limit),
                               log=dest / f"explore_{attempt}.log")
         total += secs
         if rc == 0:
@@ -914,6 +922,7 @@ def profile_once(bench_dir: Path, src_name: str, dest: Path, agent_repo: Path, t
     rec["explore_s"] = round(total, 2)
     rec["explore_success_s"] = round(secs, 2) if rc == 0 else None   # the draw that finished
     rec["explore_attempts"] = attempt
+    rec["explore_hash_seeds"] = seeds
     rec["explore_timed_out"] = timed_out
     rec["explore_failures"] = failures
     if rc != 0:
