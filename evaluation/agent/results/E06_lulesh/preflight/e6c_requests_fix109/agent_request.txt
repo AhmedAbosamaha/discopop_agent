@@ -1,0 +1,328 @@
+## File to edit: /workspace/lulesh.cc
+## This file is `lulesh.cc` of a multi-file program.  The directory it sits in is a copy of the whole program — read its headers and the other units (main.cc, lulesh-init.cc, lulesh-util.cc, lulesh-viz.cc) for context.  Only your changes to `lulesh.cc` are used; an edit to any other file is discarded.
+## Function containing the target region: CalcMonotonicQRegionForElems  (lines 1290–1442)
+## Target region: loop 1:2735 at lines 1298–1441
+
+### Evidence digest (details in the sections below)
+  - RAW on SCALARS: bcMask, delvm, delvp, delvxeta, delvxxi, delvxzeta, ielem, monoq_limiter_mult, monoq_max_slope, norm, phieta, phixi, phizeta, qlc_monoq, qlin, qqc_monoq, qquad, rho, memory DiscoPoP could not name.
+  - Loop lines 1298–1441 (index: i): 550 activation(s) × ~306 iterations.
+  - The region CALLS other functions: regElemSize(), regElemlist(), elemBC(), delv_xi(), lxim(), delv_xi(), delv_xi(), lxip(), delv_xi(), delv_xi(), delv_eta(), letam(), delv_eta(), delv_eta(), letap(), delv_eta(), delv_eta(), delv_zeta(), lzetam(), delv_zeta(), delv_zeta(), lzetap(), delv_zeta(), delv_zeta(), vdov(), delv_xi(), delx_xi(), delv_eta(), delx_eta(), delv_zeta(), delx_zeta(), elemMass(), volo(), vnew(), qq(), ql() — their side effects must stay correct under any restructuring.
+
+### The function as it currently stands in the file (excerpt — read the file itself before editing; line numbers here are the file's own):
+```cpp
+void CalcMonotonicQRegionForElems(Domain &domain, Int_t r,
+                                  Real_t ptiny)
+{
+   Real_t monoq_limiter_mult = domain.monoq_limiter_mult();
+   Real_t monoq_max_slope = domain.monoq_max_slope();
+   Real_t qlc_monoq = domain.qlc_monoq();
+   Real_t qqc_monoq = domain.qqc_monoq();
+
+   for ( Index_t i = 0 ; i < domain.regElemSize(r); ++i ) {
+      Index_t ielem = domain.regElemlist(r,i);
+      Real_t qlin, qquad ;
+      Real_t phixi, phieta, phizeta ;
+      Int_t bcMask = domain.elemBC(ielem) ;
+      Real_t delvm = 0.0, delvp =0.0;
+
+      Real_t norm = Real_t(1.) / (domain.delv_xi(ielem)+ ptiny ) ;
+
+      switch (bcMask & XI_M) {
+         case XI_M_COMM:
+         case 0:         delvm = domain.delv_xi(domain.lxim(ielem)); break ;
+         case XI_M_SYMM: delvm = domain.delv_xi(ielem) ;       break ;
+         case XI_M_FREE: delvm = Real_t(0.0) ;      break ;
+         default:          fprintf(stderr, "Error in switch at %s line %d\n",
+                                   __FILE__, __LINE__);
+            delvm = 0;
+            break;
+      }
+      switch (bcMask & XI_P) {
+         case XI_P_COMM:
+         case 0:         delvp = domain.delv_xi(domain.lxip(ielem)) ; break ;
+         case XI_P_SYMM: delvp = domain.delv_xi(ielem) ;       break ;
+         case XI_P_FREE: delvp = Real_t(0.0) ;      break ;
+         default:          fprintf(stderr, "Error in switch at %s line %d\n",
+                                   __FILE__, __LINE__);
+            delvp = 0;
+            break;
+      }
+
+      delvm = delvm * norm ;
+      delvp = delvp * norm ;
+
+      phixi = Real_t(.5) * ( delvm + delvp ) ;
+
+      delvm *= monoq_limiter_mult ;
+      delvp *= monoq_limiter_mult ;
+
+      if ( delvm < phixi ) phixi = delvm ;
+      if ( delvp < phixi ) phixi = delvp ;
+      if ( phixi < Real_t(0.)) phixi = Real_t(0.) ;
+      if ( phixi > monoq_max_slope) phixi = monoq_max_slope;
+
+      norm = Real_t(1.) / ( domain.delv_eta(ielem) + ptiny ) ;
+
+      switch (bcMask & ETA_M) {
+         case ETA_M_COMM:
+         case 0:          delvm = domain.delv_eta(domain.letam(ielem)) ; break ;
+         case ETA_M_SYMM: delvm = domain.delv_eta(ielem) ;        break ;
+         case ETA_M_FREE: delvm = Real_t(0.0) ;        break ;
+         default:          fprintf(stderr, "Error in switch at %s line %d\n",
+                                   __FILE__, __LINE__);
+            delvm = 0;
+            break;
+      }
+      switch (bcMask & ETA_P) {
+         case ETA_P_COMM:
+         case 0:          delvp = domain.delv_eta(domain.letap(ielem)) ; break ;
+         case ETA_P_SYMM: delvp = domain.delv_eta(ielem) ;        break ;
+         case ETA_P_FREE: delvp = Real_t(0.0) ;        break ;
+         default:          fprintf(stderr, "Error in switch at %s line %d\n",
+                                   __FILE__, __LINE__);
+            delvp = 0;
+            break;
+      }
+
+      delvm = delvm * norm ;
+      delvp = delvp * norm ;
+
+      phieta = Real_t(.5) * ( delvm + delvp ) ;
+
+      delvm *= monoq_limiter_mult ;
+      delvp *= monoq_limiter_mult ;
+
+      if ( delvm  < phieta ) phieta = delvm ;
+      if ( delvp  < phieta ) phieta = delvp ;
+      if ( phieta < Real_t(0.)) phieta = Real_t(0.) ;
+      if ( phieta > monoq_max_slope)  phieta = monoq_max_slope;
+
+      norm = Real_t(1.) / ( domain.delv_zeta(ielem) + ptiny ) ;
+
+      switch (bcMask & ZETA_M) {
+         case ZETA_M_COMM:
+         case 0:           delvm = domain.delv_zeta(domain.lzetam(ielem)) ; break ;
+         case ZETA_M_SYMM: delvm = domain.delv_zeta(ielem) ;         break ;
+         case ZETA_M_FREE: delvm = Real_t(0.0) ;          break ;
+         default:          fprintf(stderr, "Error in switch at %s line %d\n",
+                                   __FILE__, __LINE__);
+            delvm = 0;
+            break;
+      }
+      switch (bcMask & ZETA_P) {
+         case ZETA_P_COMM:
+         case 0:           delvp = domain.delv_zeta(domain.lzetap(ielem)) ; break ;
+         case ZETA_P_SYMM: delvp = domain.delv_zeta(ielem) ;         break ;
+         case ZETA_P_FREE: delvp = Real_t(0.0) ;          break ;
+         default:          fprintf(stderr, "Error in switch at %s line %d\n",
+                                   __FILE__, __LINE__);
+            delvp = 0;
+            break;
+      }
+
+      delvm = delvm * norm ;
+      delvp = delvp * norm ;
+
+      phizeta = Real_t(.5) * ( delvm + delvp ) ;
+
+      delvm *= monoq_limiter_mult ;
+      delvp *= monoq_limiter_mult ;
+
+      if ( delvm   < phizeta ) phizeta = delvm ;
+      if ( delvp   < phizeta ) phizeta = delvp ;
+      if ( phizeta < Real_t(0.)) phizeta = Real_t(0.);
+      if ( phizeta > monoq_max_slope  ) phizeta = monoq_max_slope;
+
+      if ( domain.vdov(ielem) > Real_t(0.) )  {
+         qlin  = Real_t(0.) ;
+         qquad = Real_t(0.) ;
+      }
+      else {
+         Real_t delvxxi   = domain.delv_xi(ielem)   * domain.delx_xi(ielem)   ;
+         Real_t delvxeta  = domain.delv_eta(ielem)  * domain.delx_eta(ielem)  ;
+         Real_t delvxzeta = domain.delv_zeta(ielem) * domain.delx_zeta(ielem) ;
+
+         if ( delvxxi   > Real_t(0.) ) delvxxi   = Real_t(0.) ;
+         if ( delvxeta  > Real_t(0.) ) delvxeta  = Real_t(0.) ;
+         if ( delvxzeta > Real_t(0.) ) delvxzeta = Real_t(0.) ;
+
+         Real_t rho = domain.elemMass(ielem) / (domain.volo(ielem) * domain.vnew(ielem)) ;
+
+         qlin = -qlc_monoq * rho *
+            (  delvxxi   * (Real_t(1.) - phixi) +
+               delvxeta  * (Real_t(1.) - phieta) +
+               delvxzeta * (Real_t(1.) - phizeta)  ) ;
+
+         qquad = qqc_monoq * rho *
+            (  delvxxi*delvxxi     * (Real_t(1.) - phixi*phixi) +
+               delvxeta*delvxeta   * (Real_t(1.) - phieta*phieta) +
+               delvxzeta*delvxzeta * (Real_t(1.) - phizeta*phizeta)  ) ;
+      }
+
+      domain.qq(ielem) = qquad ;
+      domain.ql(ielem) = qlin  ;
+   }
+}
+```
+
+### Runtime data dependences in the target region (observed)
+(grouped per variable, each tagged [array element] or [scalar]; each pair is the earlier access → the later one)
+  RAW — read-after-write (a value written by one access and read by a later one):
+    `delvp` [scalar]: line 1319 writes → line 1329 reads; line 1321 writes → line 1329 reads; line 1329 writes → line 1331 reads; line 1329 writes → line 1334 reads; line 1334 writes → line 1337 reads; line 1355 writes → line 1365 reads; line 1357 writes → line 1365 reads; line 1365 writes → line 1367 reads  (+7 more)
+        line 1319: `case 0:         delvp = domain.delv_xi(domain.lxip(ielem)) ; break ;`
+        line 1321: `case XI_P_FREE: delvp = Real_t(0.0) ;      break ;`
+        line 1329: `delvp = delvp * norm ;`
+        line 1331: `phixi = Real_t(.5) * ( delvm + delvp ) ;`
+        line 1334: `delvp *= monoq_limiter_mult ;`
+        line 1337: `if ( delvp < phixi ) phixi = delvp ;`
+        line 1355: `case 0:          delvp = domain.delv_eta(domain.letap(ielem)) ; break ;`
+        line 1357: `case ETA_P_FREE: delvp = Real_t(0.0) ;        break ;`
+        line 1365: `delvp = delvp * norm ;`
+        line 1367: `phieta = Real_t(.5) * ( delvm + delvp ) ;`
+    `qquad` [scalar]: line 1415 writes → line 1439 reads; line 1433 writes → line 1439 reads
+        line 1415: `qquad = Real_t(0.) ;`
+        line 1433: `qquad = qqc_monoq * rho *`
+        line 1439: `domain.qq(ielem) = qquad ;`
+    `phixi` [scalar]: line 1331 writes → line 1336 reads; line 1331 writes → line 1337 reads; line 1336 writes → line 1337 reads; line 1331 writes → line 1338 reads; line 1336 writes → line 1338 reads; line 1337 writes → line 1338 reads; line 1331 writes → line 1339 reads; line 1336 writes → line 1339 reads  (+12 more)
+        line 1336: `if ( delvm < phixi ) phixi = delvm ;`
+        line 1338: `if ( phixi < Real_t(0.)) phixi = Real_t(0.) ;`
+        line 1339: `if ( phixi > monoq_max_slope) phixi = monoq_max_slope;`
+    `rho` [scalar]: line 1426 writes → line 1428 reads; line 1426 writes → line 1433 reads
+        line 1426: `Real_t rho = domain.elemMass(ielem) / (domain.volo(ielem) * domain.vnew(ielem)) ;`
+        line 1428: `qlin = -qlc_monoq * rho *`
+    `phieta` [scalar]: line 1367 writes → line 1372 reads; line 1367 writes → line 1373 reads; line 1372 writes → line 1373 reads; line 1367 writes → line 1374 reads; line 1372 writes → line 1374 reads; line 1373 writes → line 1374 reads; line 1367 writes → line 1375 reads; line 1372 writes → line 1375 reads  (+12 more)
+        line 1372: `if ( delvm  < phieta ) phieta = delvm ;`
+        line 1373: `if ( delvp  < phieta ) phieta = delvp ;`
+        line 1374: `if ( phieta < Real_t(0.)) phieta = Real_t(0.) ;`
+        line 1375: `if ( phieta > monoq_max_slope)  phieta = monoq_max_slope;`
+    `delvm` [scalar]: line 1309 writes → line 1328 reads; line 1310 writes → line 1328 reads; line 1328 writes → line 1331 reads; line 1328 writes → line 1333 reads; line 1333 writes → line 1336 reads; line 1345 writes → line 1364 reads; line 1346 writes → line 1364 reads; line 1364 writes → line 1367 reads  (+7 more)
+        line 1309: `case 0:         delvm = domain.delv_xi(domain.lxim(ielem)); break ;`
+        line 1310: `case XI_M_SYMM: delvm = domain.delv_xi(ielem) ;       break ;`
+        line 1328: `delvm = delvm * norm ;`
+        line 1333: `delvm *= monoq_limiter_mult ;`
+        line 1345: `case 0:          delvm = domain.delv_eta(domain.letam(ielem)) ; break ;`
+        line 1346: `case ETA_M_SYMM: delvm = domain.delv_eta(ielem) ;        break ;`
+        line 1364: `delvm = delvm * norm ;`
+    `norm` [scalar]: line 1305 writes → line 1328 reads; line 1305 writes → line 1329 reads; line 1341 writes → line 1364 reads; line 1341 writes → line 1365 reads; line 1377 writes → line 1400 reads; line 1377 writes → line 1401 reads
+        line 1305: `Real_t norm = Real_t(1.) / (domain.delv_xi(ielem)+ ptiny ) ;`
+        line 1341: `norm = Real_t(1.) / ( domain.delv_eta(ielem) + ptiny ) ;`
+        line 1377: `norm = Real_t(1.) / ( domain.delv_zeta(ielem) + ptiny ) ;`
+        line 1400: `delvm = delvm * norm ;`
+        line 1401: `delvp = delvp * norm ;`
+    `phizeta` [scalar]: line 1403 writes → line 1408 reads; line 1403 writes → line 1409 reads; line 1408 writes → line 1409 reads; line 1403 writes → line 1410 reads; line 1408 writes → line 1410 reads; line 1409 writes → line 1410 reads; line 1403 writes → line 1411 reads; line 1408 writes → line 1411 reads  (+12 more)
+        line 1403: `phizeta = Real_t(.5) * ( delvm + delvp ) ;`
+        line 1408: `if ( delvm   < phizeta ) phizeta = delvm ;`
+        line 1409: `if ( delvp   < phizeta ) phizeta = delvp ;`
+        line 1410: `if ( phizeta < Real_t(0.)) phizeta = Real_t(0.);`
+        line 1411: `if ( phizeta > monoq_max_slope  ) phizeta = monoq_max_slope;`
+    `ielem` [scalar]: line 1299 writes → line 1302 reads; line 1299 writes → line 1305 reads; line 1299 writes → line 1309 reads; line 1299 writes → line 1310 reads; line 1299 writes → line 1319 reads; line 1299 writes → line 1341 reads; line 1299 writes → line 1345 reads; line 1299 writes → line 1346 reads  (+12 more)
+        line 1299: `Index_t ielem = domain.regElemlist(r,i);`
+        line 1302: `Int_t bcMask = domain.elemBC(ielem) ;`
+    `delvxzeta` [scalar]: line 1420 writes → line 1424 reads; line 1420 writes → line 1431 reads; line 1424 writes → line 1431 reads; line 1420 writes → line 1436 reads; line 1424 writes → line 1436 reads
+        line 1420: `Real_t delvxzeta = domain.delv_zeta(ielem) * domain.delx_zeta(ielem) ;`
+        line 1424: `if ( delvxzeta > Real_t(0.) ) delvxzeta = Real_t(0.) ;`
+        line 1431: `delvxzeta * (Real_t(1.) - phizeta)  ) ;`
+        line 1436: `delvxzeta*delvxzeta * (Real_t(1.) - phizeta*phizeta)  ) ;`
+    `bcMask` [scalar]: line 1302 writes → line 1307 reads; line 1302 writes → line 1317 reads; line 1302 writes → line 1343 reads; line 1302 writes → line 1353 reads; line 1302 writes → line 1379 reads; line 1302 writes → line 1389 reads
+        line 1307: `switch (bcMask & XI_M) {`
+        line 1317: `switch (bcMask & XI_P) {`
+        line 1343: `switch (bcMask & ETA_M) {`
+        line 1353: `switch (bcMask & ETA_P) {`
+        line 1379: `switch (bcMask & ZETA_M) {`
+        line 1389: `switch (bcMask & ZETA_P) {`
+    `delvxeta` [scalar]: line 1419 writes → line 1423 reads; line 1419 writes → line 1430 reads; line 1423 writes → line 1430 reads; line 1419 writes → line 1435 reads; line 1423 writes → line 1435 reads
+        line 1419: `Real_t delvxeta  = domain.delv_eta(ielem)  * domain.delx_eta(ielem)  ;`
+        line 1423: `if ( delvxeta  > Real_t(0.) ) delvxeta  = Real_t(0.) ;`
+        line 1430: `delvxeta  * (Real_t(1.) - phieta) +`
+        line 1435: `delvxeta*delvxeta   * (Real_t(1.) - phieta*phieta) +`
+    `delvxxi` [scalar]: line 1418 writes → line 1422 reads; line 1418 writes → line 1429 reads; line 1422 writes → line 1429 reads; line 1418 writes → line 1434 reads; line 1422 writes → line 1434 reads
+        line 1418: `Real_t delvxxi   = domain.delv_xi(ielem)   * domain.delx_xi(ielem)   ;`
+        line 1422: `if ( delvxxi   > Real_t(0.) ) delvxxi   = Real_t(0.) ;`
+        line 1429: `(  delvxxi   * (Real_t(1.) - phixi) +`
+        line 1434: `(  delvxxi*delvxxi     * (Real_t(1.) - phixi*phixi) +`
+    `qlin` [scalar]: line 1414 writes → line 1440 reads; line 1428 writes → line 1440 reads
+        line 1414: `qlin  = Real_t(0.) ;`
+        line 1440: `domain.ql(ielem) = qlin  ;`
+
+  WAR — write-after-read:
+    `phixi` [scalar]: line 1339 reads → line 1331 overwrites; line 1434 reads → line 1331 overwrites; line 1336 reads → line 1336 overwrites; line 1337 reads → line 1337 overwrites; line 1338 reads → line 1338 overwrites; line 1339 reads → line 1339 overwrites
+    `qquad` [scalar]: line 1439 reads → line 1415 overwrites; line 1439 reads → line 1433 overwrites
+    `phizeta` [scalar]: line 1411 reads → line 1403 overwrites; line 1436 reads → line 1403 overwrites; line 1408 reads → line 1408 overwrites; line 1409 reads → line 1409 overwrites; line 1410 reads → line 1410 overwrites; line 1411 reads → line 1411 overwrites
+    `phieta` [scalar]: line 1375 reads → line 1367 overwrites; line 1435 reads → line 1367 overwrites; line 1372 reads → line 1372 overwrites; line 1373 reads → line 1373 overwrites; line 1374 reads → line 1374 overwrites; line 1375 reads → line 1375 overwrites
+    `delvxzeta` [scalar]: line 1436 reads → line 1420 overwrites; line 1424 reads → line 1424 overwrites
+    `delvp` [scalar]: line 1409 reads → line 1303 overwrites; line 1329 reads → line 1329 overwrites; line 1334 reads → line 1334 overwrites; line 1337 reads → line 1355 overwrites; line 1337 reads → line 1357 overwrites; line 1365 reads → line 1365 overwrites; line 1370 reads → line 1370 overwrites; line 1373 reads → line 1391 overwrites  (+3 more)
+    `delvm` [scalar]: line 1408 reads → line 1303 overwrites; line 1328 reads → line 1328 overwrites; line 1333 reads → line 1333 overwrites; line 1336 reads → line 1345 overwrites; line 1336 reads → line 1346 overwrites; line 1364 reads → line 1364 overwrites; line 1369 reads → line 1369 overwrites; line 1372 reads → line 1381 overwrites  (+3 more)
+    `norm` [scalar]: line 1401 reads → line 1305 overwrites; line 1329 reads → line 1341 overwrites; line 1365 reads → line 1377 overwrites
+    `qlin` [scalar]: line 1440 reads → line 1414 overwrites; line 1440 reads → line 1428 overwrites
+    `delvxxi` [scalar]: line 1434 reads → line 1418 overwrites; line 1422 reads → line 1422 overwrites
+    `bcMask` [scalar]: line 1389 reads → line 1302 overwrites
+    `rho` [scalar]: line 1433 reads → line 1426 overwrites
+    `ielem` [scalar]: line 1440 reads → line 1299 overwrites
+    `delvxeta` [scalar]: line 1435 reads → line 1419 overwrites; line 1423 reads → line 1423 overwrites
+
+  WAW — write-after-write:
+    `phieta` [scalar]: line 1375 writes → line 1367 overwrites
+    `delvm` [scalar]: line 1303 writes → line 1309 overwrites; line 1303 writes → line 1310 overwrites
+    `phixi` [scalar]: line 1339 writes → line 1331 overwrites
+    `delvp` [scalar]: line 1303 writes → line 1319 overwrites; line 1303 writes → line 1321 overwrites
+    `phizeta` [scalar]: line 1411 writes → line 1403 overwrites
+
+  (Not listed: dependences on the induction variable(s) i — they are never what blocks a loop; see 'Loop structure' for which of them a pragma has to privatise.)
+
+### Loop structure (nesting, induction variables, observed iterations)
+  - loop at lines 1298–1441  induction variable(s): i  |  550 activation(s) × ~306 iterations = 168,750 total (max 1412)  <-- too fine-grained on its own (~306 per activation)
+  (Marked against ~1000 iterations per activation — below that, thread startup costs more than the loop saves.)
+
+### Function calls inside the region
+  - line 1298: calls regElemSize()
+  - line 1299: calls regElemlist()
+  - line 1302: calls elemBC()
+  - line 1305: calls delv_xi()
+  - line 1309: calls lxim()
+  - line 1309: calls delv_xi()
+  - line 1310: calls delv_xi()
+  - line 1319: calls lxip()
+  - line 1319: calls delv_xi()
+  - line 1320: calls delv_xi()
+  - line 1341: calls delv_eta()
+  - line 1345: calls letam()
+  - line 1345: calls delv_eta()
+  - line 1346: calls delv_eta()
+  - line 1355: calls letap()
+  - line 1355: calls delv_eta()
+  - line 1356: calls delv_eta()
+  - line 1377: calls delv_zeta()
+  - line 1381: calls lzetam()
+  - line 1381: calls delv_zeta()
+  - line 1382: calls delv_zeta()
+  - line 1391: calls lzetap()
+  - line 1391: calls delv_zeta()
+  - line 1392: calls delv_zeta()
+  - line 1413: calls vdov()
+  - line 1418: calls delv_xi()
+  - line 1418: calls delx_xi()
+  - line 1419: calls delv_eta()
+  - line 1419: calls delx_eta()
+  - line 1420: calls delv_zeta()
+  - line 1420: calls delx_zeta()
+  - line 1426: calls elemMass()
+  - line 1426: calls volo()
+  - line 1426: calls vnew()
+  - line 1439: calls qq()
+  - line 1440: calls ql()
+  Iterations that call a function are independent only if the calls do not touch overlapping shared state; check the callee's side effects before assuming Do-All.
+
+### Why this region is here
+DiscoPoP found no applicable parallelism pattern for this region
+
+### Task
+Edit `/workspace/lulesh.cc`: the loop (lines 1298–1441) inside `CalcMonotonicQRegionForElems` is to be restructured so that its iterations are independent, and ANNOTATED BY YOU: every loop you make parallel carries its own `#pragma omp` with explicit data-sharing clauses.  The result has to be code that compiles, is race-free under ThreadSanitizer, gives the same result at every thread count and schedule, reproduces the original program's results, and runs at least 1.1× faster than the same build pinned to one thread and no slower than the program as it stood before your rewrite.
+
+Worth settling before you write:
+  - Which dependence is actually blocking this, and is it a value moving
+    between iterations or just a location being reused?
+  - Does the loop you are making parallel have enough work per activation
+    to be worth it?  The loop structure above says which do.
+  - Re-derive any bound the old execution order made safe.
+
+>>> Read the file, give the short plan, then APPLY the rewrite with the Edit tool. Do not print a diff or the rewritten code — the file's content is what is used. Keep the function's name and signature.
