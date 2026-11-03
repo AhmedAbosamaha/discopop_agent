@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -418,6 +418,7 @@
+       writes to disjoint indices of dvdx,dvdy,dvdz. No loop-carried dependences.
+       Pragma removed to avoid nested parallel region overhead; parallelism comes from
+       the outer element loop in CalcHourglassControlForElems. */
++   #pragma omp parallel for shared(dvdx,z,x,dvdz,y,dvdy) 
+    for (int i = 0; i < 8; ++i) {
+       VoluDer(x[xi[i][0]], x[xi[i][1]], x[xi[i][2]], x[xi[i][3]], x[xi[i][4]], x[xi[i][5]],
+               y[yi[i][0]], y[yi[i][1]], y[yi[i][2]], y[yi[i][3]], y[yi[i][4]], y[yi[i][5]],

@@ -1,0 +1,57 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
+@@ -1720,6 +1720,7 @@
+    for(Int_t j = 0; j < rep; j++) {
+       {
+          for (Index_t i=0; i<numElemReg; ++i) {
++            // Read from domain
+             Index_t ielem = regElemList[i];
+             e_old[i] = domain.e(ielem) ;
+             delvc[i] = domain.delv(ielem) ;
+@@ -1727,36 +1728,30 @@
+             q_old[i] = domain.q(ielem) ;
+             qq_old[i] = domain.qq(ielem) ;
+             ql_old[i] = domain.ql(ielem) ;
+-         }
+-
+-         for (Index_t i = 0; i < numElemReg ; ++i) {
+-            Index_t ielem = regElemList[i];
++
++            // Compute compression
+             Real_t vchalf ;
+             compression[i] = Real_t(1.) / vnewc[ielem] - Real_t(1.);
+             vchalf = vnewc[ielem] - delvc[i] * Real_t(.5);
+             compHalfStep[i] = Real_t(1.) / vchalf - Real_t(1.);
+-         }
+-
+-         if ( eosvmin != Real_t(0.) ) {
+-            for(Index_t i=0 ; i<numElemReg ; ++i) {
+-               Index_t ielem = regElemList[i];
++
++            // Conditional update for eosvmin
++            if ( eosvmin != Real_t(0.) ) {
+                if (vnewc[ielem] <= eosvmin) {
+                   compHalfStep[i] = compression[i] ;
+                }
+             }
+-         }
+-         if ( eosvmax != Real_t(0.) ) {
+-            for(Index_t i=0 ; i<numElemReg ; ++i) {
+-               Index_t ielem = regElemList[i];
++
++            // Conditional update for eosvmax
++            if ( eosvmax != Real_t(0.) ) {
+                if (vnewc[ielem] >= eosvmax) {
+                   p_old[i]        = Real_t(0.) ;
+                   compression[i]  = Real_t(0.) ;
+                   compHalfStep[i] = Real_t(0.) ;
+                }
+             }
+-         }
+-
+-         for (Index_t i = 0 ; i < numElemReg ; ++i) {
++
++            // Initialize work
+             work[i] = Real_t(0.) ;
+          }
+       }

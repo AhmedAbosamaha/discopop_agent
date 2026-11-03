@@ -1,0 +1,23 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc	2026-11-03 13:56:10.659551254 +0000
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc.discopop_patch_generator.temp	2026-11-03 14:01:08.063302330 +0000
+@@ -463,6 +463,10 @@
+ {
+    Real_t  gamma[4][8];
+ 
++   #pragma omp parallel
++   #pragma omp single
++   {
++   #pragma omp task
+    gamma[0][0] = Real_t( 1.);
+    gamma[0][1] = Real_t( 1.);
+    gamma[0][2] = Real_t(-1.);
+@@ -497,7 +501,9 @@
+    gamma[3][7] = Real_t(-1.);
+ 
+    /* Allocate per-element buffers to store computed hourglass forces (flat arrays) */
++   #pragma omp task
+    Real_t *hgfx_elem = Allocate<Real_t>(numElem * 8);
++   }
+    Real_t *hgfy_elem = Allocate<Real_t>(numElem * 8);
+    Real_t *hgfz_elem = Allocate<Real_t>(numElem * 8);
+ 

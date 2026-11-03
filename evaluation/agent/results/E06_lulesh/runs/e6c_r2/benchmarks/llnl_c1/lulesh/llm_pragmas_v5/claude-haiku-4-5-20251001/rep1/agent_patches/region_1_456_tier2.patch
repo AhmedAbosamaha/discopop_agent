@@ -1,0 +1,43 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -2171,17 +2171,37 @@
+    domain.dtcourant() = 1.0e+20;
+    domain.dthydro() = 1.0e+20;
+ 
++   Real_t dtcourant_min = 1.0e+20;
++   Real_t dthydro_min = 1.0e+20;
++
++   #pragma omp parallel for shared(domain, dtcourant_min, dthydro_min)
+    for (Index_t r=0 ; r < domain.numReg() ; ++r) {
++      Real_t local_dtcourant = 1.0e+20;
++      Real_t local_dthydro = 1.0e+20;
++
+       CalcCourantConstraintForElems(domain, domain.regElemSize(r),
+                                     domain.regElemlist(r),
+                                     domain.qqc(),
+-                                    domain.dtcourant()) ;
++                                    local_dtcourant) ;
+ 
+       CalcHydroConstraintForElems(domain, domain.regElemSize(r),
+                                   domain.regElemlist(r),
+                                   domain.dvovmax(),
+-                                  domain.dthydro()) ;
+-   }
++                                  local_dthydro) ;
++
++      #pragma omp critical(update_time_constraints)
++      {
++         if (local_dtcourant < dtcourant_min) {
++            dtcourant_min = local_dtcourant;
++         }
++         if (local_dthydro < dthydro_min) {
++            dthydro_min = local_dthydro;
++         }
++      }
++   }
++
++   domain.dtcourant() = dtcourant_min;
++   domain.dthydro() = dthydro_min;
+ }
+ 
+ void LagrangeLeapFrog(Domain& domain)

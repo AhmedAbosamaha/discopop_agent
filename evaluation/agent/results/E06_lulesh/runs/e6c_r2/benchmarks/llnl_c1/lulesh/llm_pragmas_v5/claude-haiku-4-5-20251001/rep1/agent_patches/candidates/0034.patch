@@ -1,0 +1,48 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -1196,20 +1196,32 @@
+ 
+       CalcKinematicsForElems(domain, deltatime, numElem) ;
+ 
+-      for ( Index_t k=0 ; k<numElem ; ++k )
++      int errorCount = 0;
++      #pragma omp parallel shared(domain)
+       {
+-         Real_t vdov = domain.dxx(k) + domain.dyy(k) + domain.dzz(k) ;
+-         Real_t vdovthird = vdov/Real_t(3.0) ;
+-
+-         domain.vdov(k) = vdov ;
+-         domain.dxx(k) -= vdovthird ;
+-         domain.dyy(k) -= vdovthird ;
+-         domain.dzz(k) -= vdovthird ;
+-
+-         if (domain.vnew(k) <= Real_t(0.0))
+-        {
+-           exit(VolumeError);
+-        }
++         #pragma omp for firstprivate(numElem)
++         for ( Index_t k=0 ; k<numElem ; ++k )
++         {
++            Real_t vdov = domain.dxx(k) + domain.dyy(k) + domain.dzz(k) ;
++            Real_t vdovthird = vdov/Real_t(3.0) ;
++
++            domain.vdov(k) = vdov ;
++            domain.dxx(k) -= vdovthird ;
++            domain.dyy(k) -= vdovthird ;
++            domain.dzz(k) -= vdovthird ;
++         }
++
++         #pragma omp for firstprivate(numElem) reduction(+:errorCount)
++         for ( Index_t k=0 ; k<numElem ; ++k )
++         {
++            if (domain.vnew(k) <= Real_t(0.0))
++            {
++               errorCount++;
++            }
++         }
++      }
++      if (errorCount > 0) {
++         exit(VolumeError);
+       }
+       domain.DeallocateStrains();
+    }

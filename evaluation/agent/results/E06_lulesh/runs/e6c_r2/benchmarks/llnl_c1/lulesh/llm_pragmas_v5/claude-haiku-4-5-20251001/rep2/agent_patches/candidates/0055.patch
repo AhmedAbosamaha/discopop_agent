@@ -1,0 +1,20 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/lulesh.cc	2026-11-03 20:14:57.663921952 +0000
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/lulesh.cc.discopop_patch_generator.temp	2026-11-03 20:34:47.195219369 +0000
+@@ -847,11 +847,17 @@
+       domain.zdd(i) = domain.fz(i) / domain.nodalMass(i);
+    }
+ 
++   #pragma omp parallel
++   #pragma omp single
++   {
++   #pragma omp task
+    ApplyAccelerationBoundaryConditionsForNodes(domain);
+ 
+    // Parallelize velocity calculation: each node updates its velocity independently.
+    // Both delt and u_cut are loop-invariant scalars used for computations.
+    #pragma omp parallel for schedule(static) shared(domain, numNode) firstprivate(delt, u_cut)
++   #pragma omp task
++   }
+    for ( Index_t i = 0 ; i < numNode ; ++i )
+    {
+      Real_t xdtmp, ydtmp, zdtmp ;

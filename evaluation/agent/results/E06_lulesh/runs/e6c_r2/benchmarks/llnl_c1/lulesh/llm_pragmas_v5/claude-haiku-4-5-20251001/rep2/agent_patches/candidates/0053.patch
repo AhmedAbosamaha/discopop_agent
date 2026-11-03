@@ -1,0 +1,20 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/lulesh.cc	2026-11-03 20:14:57.663921952 +0000
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/lulesh.cc.discopop_patch_generator.temp	2026-11-03 20:34:48.401226206 +0000
+@@ -1919,11 +1919,17 @@
+ 
+   CalcQForElems(domain) ;
+ 
++  #pragma omp parallel
++  #pragma omp single
++  {
++  #pragma omp task
+   ApplyMaterialPropertiesForElems(domain) ;
+ 
+   // Parallel phase: inlined UpdateVolumesForElems loop
+   // Each element's volume is independent: reads vnew(i), writes v(i)
+   // No race conditions because each thread updates a unique element index
++  #pragma omp task
++  }
+   if (numElem != 0) {
+     Real_t v_cut = domain.v_cut();
+     #pragma omp parallel for schedule(static) shared(domain, numElem) firstprivate(v_cut)

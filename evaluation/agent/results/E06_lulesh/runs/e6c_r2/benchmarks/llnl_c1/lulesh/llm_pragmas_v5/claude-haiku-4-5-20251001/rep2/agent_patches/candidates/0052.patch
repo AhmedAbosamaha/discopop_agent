@@ -1,0 +1,17 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/lulesh.cc	2026-11-03 20:14:57.663921952 +0000
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/lulesh.cc.discopop_patch_generator.temp	2026-11-03 20:34:41.666188026 +0000
+@@ -1915,8 +1915,14 @@
+ {
+   // Sequential phase: all three functions must execute in order
+   // because they communicate through domain state updates
++  #pragma omp parallel
++  #pragma omp single
++  {
++  #pragma omp task
+   CalcLagrangeElements(domain) ;
+ 
++  #pragma omp task
++  }
+   CalcQForElems(domain) ;
+ 
+   ApplyMaterialPropertiesForElems(domain) ;

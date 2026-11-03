@@ -1,0 +1,18 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r2/profiles/llnl_c1/lulesh/lulesh.cc	2026-11-02 22:10:50.872290256 +0000
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r2/profiles/llnl_c1/lulesh/lulesh.cc.discopop_patch_generator.temp	2026-11-03 09:06:28.519727828 +0000
+@@ -823,9 +823,15 @@
+    Domain_member fieldData[6] ;
+ #endif
+ 
++   #pragma omp parallel
++   #pragma omp single
++   {
++   #pragma omp task
+    const Real_t delt = domain.deltatime() ;
++   #pragma omp task
+    Real_t u_cut = domain.u_cut() ;
+ 
++  }
+   CalcForceForNodes(domain);
+ 
+    CalcAccelerationForNodes(domain, domain.numNode());

@@ -1,0 +1,94 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -1962,6 +1962,88 @@
+ 
+    LagrangeElements(domain, domain.numElem());
+ 
+-   CalcTimeConstraintsForElems(domain);
+-
+-}
++   // Inline and parallelize CalcTimeConstraintsForElems
++   // Initialize global time step bounds
++   domain.dtcourant() = 1.0e+20;
++   domain.dthydro() = 1.0e+20;
++
++   // Compute time constraints in parallel over regions
++   // Each region computes local mins, then combined with reduction
++   Real_t qqc = domain.qqc();
++   Real_t dvovmax = domain.dvovmax();
++   Real_t dtcourant_local = 1.0e+20;
++   Real_t dthydro_local = 1.0e+20;
++
++#pragma omp parallel for \
++   reduction(min:dtcourant_local, dthydro_local) \
++   schedule(dynamic)
++   for (Index_t r = 0 ; r < domain.numReg() ; ++r) {
++      // Courant constraint calculation for this region
++      {
++         Index_t length = domain.regElemSize(r);
++         Index_t *regElemlist = domain.regElemlist(r);
++         Real_t qqc2 = Real_t(64.0) * qqc * qqc ;
++         Real_t dtcourant_tmp = dtcourant_local;
++         Index_t courant_elem = -1 ;
++
++         for (Index_t i = 0 ; i < length ; ++i) {
++            Index_t indx = regElemlist[i] ;
++            Real_t dtf = domain.ss(indx) * domain.ss(indx) ;
++
++            if ( domain.vdov(indx) < Real_t(0.) ) {
++               dtf = dtf
++                   + qqc2 * domain.arealg(indx) * domain.arealg(indx)
++                   * domain.vdov(indx) * domain.vdov(indx) ;
++            }
++
++            dtf = SQRT(dtf) ;
++            dtf = domain.arealg(indx) / dtf ;
++
++            if (domain.vdov(indx) != Real_t(0.)) {
++               if ( dtf < dtcourant_tmp ) {
++                  dtcourant_tmp = dtf ;
++                  courant_elem = indx ;
++               }
++            }
++         }
++
++         if (courant_elem != -1) {
++            dtcourant_local = dtcourant_tmp ;
++         }
++      }
++
++      // Hydro constraint calculation for this region
++      {
++         Index_t length = domain.regElemSize(r);
++         Index_t *regElemlist = domain.regElemlist(r);
++         Real_t dthydro_tmp = dthydro_local ;
++         Index_t hydro_elem = -1 ;
++
++         for (Index_t i = 0 ; i < length ; ++i) {
++            Index_t indx = regElemlist[i] ;
++
++            if (domain.vdov(indx) != Real_t(0.)) {
++               Real_t dtdvov = dvovmax / (FABS(domain.vdov(indx))+Real_t(1.e-20)) ;
++
++               if ( dthydro_tmp > dtdvov ) {
++                  dthydro_tmp = dtdvov ;
++                  hydro_elem = indx ;
++               }
++            }
++         }
++
++         if (hydro_elem != -1) {
++            dthydro_local = dthydro_tmp ;
++         }
++      }
++   }
++
++   // Update domain with computed minimums
++   if (dtcourant_local < 1.0e+20) {
++      domain.dtcourant() = dtcourant_local ;
++   }
++   if (dthydro_local < 1.0e+20) {
++      domain.dthydro() = dthydro_local ;
++   }
++
++}

@@ -1,0 +1,179 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -1539,19 +1539,166 @@
+ 
+       CalcMonotonicQGradientsForElems(domain);
+ 
+-      CalcMonotonicQForElems(domain);
++      // Inline CalcMonotonicQForElems and merge qstop check into the existing parallel loop
++      const Real_t ptiny = Real_t(1.e-36) ;
++      Real_t monoq_limiter_mult = domain.monoq_limiter_mult();
++      Real_t monoq_max_slope = domain.monoq_max_slope();
++      Real_t qlc_monoq = domain.qlc_monoq();
++      Real_t qqc_monoq = domain.qqc_monoq();
++      bool qstop_violation = false;
++
++      for (Index_t r=0 ; r<domain.numReg() ; ++r) {
++         if (domain.regElemSize(r) > 0) {
++            #pragma omp parallel for reduction(||:qstop_violation) shared(domain, r, ptiny, monoq_limiter_mult, monoq_max_slope, qlc_monoq, qqc_monoq)
++            for ( Index_t i = 0 ; i < domain.regElemSize(r); ++i ) {
++               Index_t ielem = domain.regElemlist(r,i);
++               Real_t qlin, qquad ;
++               Real_t phixi, phieta, phizeta ;
++               Int_t bcMask = domain.elemBC(ielem) ;
++               Real_t delvm = 0.0, delvp = 0.0;
++
++               Real_t norm = Real_t(1.) / (domain.delv_xi(ielem)+ ptiny ) ;
++
++               switch (bcMask & XI_M) {
++                  case XI_M_COMM:
++                  case 0:         delvm = domain.delv_xi(domain.lxim(ielem)); break ;
++                  case XI_M_SYMM: delvm = domain.delv_xi(ielem) ;       break ;
++                  case XI_M_FREE: delvm = Real_t(0.0) ;      break ;
++                  default:          fprintf(stderr, "Error in switch at %s line %d\n",
++                                            __FILE__, __LINE__);
++                     delvm = 0;
++                     break;
++               }
++               switch (bcMask & XI_P) {
++                  case XI_P_COMM:
++                  case 0:         delvp = domain.delv_xi(domain.lxip(ielem)) ; break ;
++                  case XI_P_SYMM: delvp = domain.delv_xi(ielem) ;       break ;
++                  case XI_P_FREE: delvp = Real_t(0.0) ;      break ;
++                  default:          fprintf(stderr, "Error in switch at %s line %d\n",
++                                            __FILE__, __LINE__);
++                     delvp = 0;
++                     break;
++               }
++
++               delvm = delvm * norm ;
++               delvp = delvp * norm ;
++
++               phixi = Real_t(.5) * ( delvm + delvp ) ;
++
++               delvm *= monoq_limiter_mult ;
++               delvp *= monoq_limiter_mult ;
++
++               if ( delvm < phixi ) phixi = delvm ;
++               if ( delvp < phixi ) phixi = delvp ;
++               if ( phixi < Real_t(0.)) phixi = Real_t(0.) ;
++               if ( phixi > monoq_max_slope) phixi = monoq_max_slope;
++
++               norm = Real_t(1.) / ( domain.delv_eta(ielem) + ptiny ) ;
++
++               switch (bcMask & ETA_M) {
++                  case ETA_M_COMM:
++                  case 0:          delvm = domain.delv_eta(domain.letam(ielem)) ; break ;
++                  case ETA_M_SYMM: delvm = domain.delv_eta(ielem) ;        break ;
++                  case ETA_M_FREE: delvm = Real_t(0.0) ;        break ;
++                  default:          fprintf(stderr, "Error in switch at %s line %d\n",
++                                            __FILE__, __LINE__);
++                     delvm = 0;
++                     break;
++               }
++               switch (bcMask & ETA_P) {
++                  case ETA_P_COMM:
++                  case 0:          delvp = domain.delv_eta(domain.letap(ielem)) ; break ;
++                  case ETA_P_SYMM: delvp = domain.delv_eta(ielem) ;        break ;
++                  case ETA_P_FREE: delvp = Real_t(0.0) ;        break ;
++                  default:          fprintf(stderr, "Error in switch at %s line %d\n",
++                                            __FILE__, __LINE__);
++                     delvp = 0;
++                     break;
++               }
++
++               delvm = delvm * norm ;
++               delvp = delvp * norm ;
++
++               phieta = Real_t(.5) * ( delvm + delvp ) ;
++
++               delvm *= monoq_limiter_mult ;
++               delvp *= monoq_limiter_mult ;
++
++               if ( delvm  < phieta ) phieta = delvm ;
++               if ( delvp  < phieta ) phieta = delvp ;
++               if ( phieta < Real_t(0.)) phieta = Real_t(0.) ;
++               if ( phieta > monoq_max_slope)  phieta = monoq_max_slope;
++
++               norm = Real_t(1.) / ( domain.delv_zeta(ielem) + ptiny ) ;
++
++               switch (bcMask & ZETA_M) {
++                  case ZETA_M_COMM:
++                  case 0:           delvm = domain.delv_zeta(domain.lzetam(ielem)) ; break ;
++                  case ZETA_M_SYMM: delvm = domain.delv_zeta(ielem) ;         break ;
++                  case ZETA_M_FREE: delvm = Real_t(0.0) ;          break ;
++                  default:          fprintf(stderr, "Error in switch at %s line %d\n",
++                                            __FILE__, __LINE__);
++                     delvm = 0;
++                     break;
++               }
++               switch (bcMask & ZETA_P) {
++                  case ZETA_P_COMM:
++                  case 0:           delvp = domain.delv_zeta(domain.lzetap(ielem)) ; break ;
++                  case ZETA_P_SYMM: delvp = domain.delv_zeta(ielem) ;         break ;
++                  case ZETA_P_FREE: delvp = Real_t(0.0) ;          break ;
++                  default:          fprintf(stderr, "Error in switch at %s line %d\n",
++                                            __FILE__, __LINE__);
++                     delvp = 0;
++                     break;
++               }
++
++               delvm = delvm * norm ;
++               delvp = delvp * norm ;
++
++               phizeta = Real_t(.5) * ( delvm + delvp ) ;
++
++               delvm *= monoq_limiter_mult ;
++               delvp *= monoq_limiter_mult ;
++
++               if ( delvm < phizeta ) phizeta = delvm ;
++               if ( delvp < phizeta ) phizeta = delvp ;
++               if ( phizeta < Real_t(0.)) phizeta = Real_t(0.) ;
++               if ( phizeta > monoq_max_slope)  phizeta = monoq_max_slope;
++
++               if (domain.volo(ielem) != Real_t(0.0)) {
++                  Real_t qlin, qquad ;
++                  Real_t delvxxi   = domain.delv_xi(ielem)   * domain.delv_xi(ielem) ;
++                  Real_t delvxeta  = domain.delv_eta(ielem)  * domain.delv_eta(ielem) ;
++                  Real_t delvxzeta = domain.delv_zeta(ielem) * domain.delv_zeta(ielem) ;
++
++                  qlin = qlc_monoq * domain.rho(ielem) * (
++                       domain.delv_xi(ielem)   * (Real_t(1.) - phixi) +
++                       domain.delv_eta(ielem)  * (Real_t(1.) - phieta) +
++                       domain.delv_zeta(ielem) * (Real_t(1.) - phizeta)  ) ;
++
++                  qquad = qqc_monoq * domain.rho(ielem) *
++                     (  delvxxi*delvxxi     * (Real_t(1.) - phixi*phixi) +
++                        delvxeta*delvxeta   * (Real_t(1.) - phieta*phieta) +
++                        delvxzeta*delvxzeta * (Real_t(1.) - phizeta*phizeta)  ) ;
++               } else {
++                  qlin = Real_t(0.);
++                  qquad = Real_t(0.);
++               }
++
++               domain.qq(ielem) = qquad ;
++               domain.ql(ielem) = qlin  ;
++
++               // Check for qstop violation merged into computation loop
++               if ( domain.q(ielem) > domain.qstop() ) {
++                  qstop_violation = true;
++               }
++            }
++         }
++      }
+ 
+       domain.DeallocateGradients();
+ 
+-      Index_t idx = -1;
+-      for (Index_t i=0; i<numElem; ++i) {
+-         if ( domain.q(i) > domain.qstop() ) {
+-            idx = i ;
+-            break ;
+-         }
+-      }
+-
+-      if(idx >= 0) {
++      if(qstop_violation) {
+          exit(QStopError);
+       }
+    }

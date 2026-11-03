@@ -1,0 +1,168 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -8,6 +8,7 @@
+ #include <sys/time.h>
+ #include <iostream>
+ #include <unistd.h>
++#include <omp.h>
+ 
+ #include "lulesh.h"
+ 
+@@ -497,6 +498,29 @@
+    gamma[3][6] = Real_t( 1.);
+    gamma[3][7] = Real_t(-1.);
+ 
++   Index_t nthreads = omp_get_max_threads();
++   Real_t **thread_fx = NULL;
++   Real_t **thread_fy = NULL;
++   Real_t **thread_fz = NULL;
++
++   /* Only allocate thread-local buffers if actually parallelizing */
++   if (nthreads > 1) {
++      thread_fx = Allocate<Real_t*>(nthreads);
++      thread_fy = Allocate<Real_t*>(nthreads);
++      thread_fz = Allocate<Real_t*>(nthreads);
++      for (Index_t t = 0; t < nthreads; ++t) {
++         thread_fx[t] = Allocate<Real_t>(numNode);
++         thread_fy[t] = Allocate<Real_t>(numNode);
++         thread_fz[t] = Allocate<Real_t>(numNode);
++         for (Index_t n = 0; n < numNode; ++n) {
++            thread_fx[t][n] = Real_t(0.0);
++            thread_fy[t][n] = Real_t(0.0);
++            thread_fz[t][n] = Real_t(0.0);
++         }
++      }
++   }
++
++   #pragma omp parallel for shared(determ, x8n, y8n, z8n, dvdx, dvdy, dvdz, gamma, thread_fx, thread_fy, thread_fz, nthreads) firstprivate(hourg, numElem)
+    for(Index_t i2=0;i2<numElem;++i2){
+       Real_t hgfx[8], hgfy[8], hgfz[8] ;
+ 
+@@ -609,38 +633,95 @@
+                       hourgam,
+                       coefficient, hgfx, hgfy, hgfz);
+ 
+-      domain.fx(n0si2) += hgfx[0];
+-      domain.fy(n0si2) += hgfy[0];
+-      domain.fz(n0si2) += hgfz[0];
+-
+-      domain.fx(n1si2) += hgfx[1];
+-      domain.fy(n1si2) += hgfy[1];
+-      domain.fz(n1si2) += hgfz[1];
+-
+-      domain.fx(n2si2) += hgfx[2];
+-      domain.fy(n2si2) += hgfy[2];
+-      domain.fz(n2si2) += hgfz[2];
+-
+-      domain.fx(n3si2) += hgfx[3];
+-      domain.fy(n3si2) += hgfy[3];
+-      domain.fz(n3si2) += hgfz[3];
+-
+-      domain.fx(n4si2) += hgfx[4];
+-      domain.fy(n4si2) += hgfy[4];
+-      domain.fz(n4si2) += hgfz[4];
+-
+-      domain.fx(n5si2) += hgfx[5];
+-      domain.fy(n5si2) += hgfy[5];
+-      domain.fz(n5si2) += hgfz[5];
+-
+-      domain.fx(n6si2) += hgfx[6];
+-      domain.fy(n6si2) += hgfy[6];
+-      domain.fz(n6si2) += hgfz[6];
+-
+-      domain.fx(n7si2) += hgfx[7];
+-      domain.fy(n7si2) += hgfy[7];
+-      domain.fz(n7si2) += hgfz[7];
+-
++      /* Accumulate forces to thread-local buffer or directly to domain */
++      if (nthreads > 1) {
++         Index_t tid = omp_get_thread_num();
++         thread_fx[tid][n0si2] += hgfx[0];
++         thread_fy[tid][n0si2] += hgfy[0];
++         thread_fz[tid][n0si2] += hgfz[0];
++
++         thread_fx[tid][n1si2] += hgfx[1];
++         thread_fy[tid][n1si2] += hgfy[1];
++         thread_fz[tid][n1si2] += hgfz[1];
++
++         thread_fx[tid][n2si2] += hgfx[2];
++         thread_fy[tid][n2si2] += hgfy[2];
++         thread_fz[tid][n2si2] += hgfz[2];
++
++         thread_fx[tid][n3si2] += hgfx[3];
++         thread_fy[tid][n3si2] += hgfy[3];
++         thread_fz[tid][n3si2] += hgfz[3];
++
++         thread_fx[tid][n4si2] += hgfx[4];
++         thread_fy[tid][n4si2] += hgfy[4];
++         thread_fz[tid][n4si2] += hgfz[4];
++
++         thread_fx[tid][n5si2] += hgfx[5];
++         thread_fy[tid][n5si2] += hgfy[5];
++         thread_fz[tid][n5si2] += hgfz[5];
++
++         thread_fx[tid][n6si2] += hgfx[6];
++         thread_fy[tid][n6si2] += hgfy[6];
++         thread_fz[tid][n6si2] += hgfz[6];
++
++         thread_fx[tid][n7si2] += hgfx[7];
++         thread_fy[tid][n7si2] += hgfy[7];
++         thread_fz[tid][n7si2] += hgfz[7];
++      } else {
++         domain.fx(n0si2) += hgfx[0];
++         domain.fy(n0si2) += hgfy[0];
++         domain.fz(n0si2) += hgfz[0];
++
++         domain.fx(n1si2) += hgfx[1];
++         domain.fy(n1si2) += hgfy[1];
++         domain.fz(n1si2) += hgfz[1];
++
++         domain.fx(n2si2) += hgfx[2];
++         domain.fy(n2si2) += hgfy[2];
++         domain.fz(n2si2) += hgfz[2];
++
++         domain.fx(n3si2) += hgfx[3];
++         domain.fy(n3si2) += hgfy[3];
++         domain.fz(n3si2) += hgfz[3];
++
++         domain.fx(n4si2) += hgfx[4];
++         domain.fy(n4si2) += hgfy[4];
++         domain.fz(n4si2) += hgfz[4];
++
++         domain.fx(n5si2) += hgfx[5];
++         domain.fy(n5si2) += hgfy[5];
++         domain.fz(n5si2) += hgfz[5];
++
++         domain.fx(n6si2) += hgfx[6];
++         domain.fy(n6si2) += hgfy[6];
++         domain.fz(n6si2) += hgfz[6];
++
++         domain.fx(n7si2) += hgfx[7];
++         domain.fy(n7si2) += hgfy[7];
++         domain.fz(n7si2) += hgfz[7];
++      }
++
++   }
++
++   /* Merge thread-local buffers into domain force arrays */
++   if (nthreads > 1) {
++      for (Index_t n = 0; n < numNode; ++n) {
++         for (Index_t t = 0; t < nthreads; ++t) {
++            domain.fx(n) += thread_fx[t][n];
++            domain.fy(n) += thread_fy[t][n];
++            domain.fz(n) += thread_fz[t][n];
++         }
++      }
++
++      /* Free thread-local buffers */
++      for (Index_t t = 0; t < nthreads; ++t) {
++         Release(&thread_fx[t]);
++         Release(&thread_fy[t]);
++         Release(&thread_fz[t]);
++      }
++      Release(&thread_fx);
++      Release(&thread_fy);
++      Release(&thread_fz);
+    }
+ 
+ }

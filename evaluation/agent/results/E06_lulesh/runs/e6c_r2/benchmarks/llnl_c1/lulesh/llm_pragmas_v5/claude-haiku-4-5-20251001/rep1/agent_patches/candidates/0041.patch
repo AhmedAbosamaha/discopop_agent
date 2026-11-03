@@ -1,0 +1,82 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -497,6 +497,7 @@
+    gamma[3][6] = Real_t( 1.);
+    gamma[3][7] = Real_t(-1.);
+ 
++   #pragma omp parallel for firstprivate(hourg, numElem)
+    for(Index_t i2=0;i2<numElem;++i2){
+       Real_t hgfx[8], hgfy[8], hgfz[8] ;
+ 
+@@ -609,37 +610,40 @@
+                       hourgam,
+                       coefficient, hgfx, hgfy, hgfz);
+ 
+-      domain.fx(n0si2) += hgfx[0];
+-      domain.fy(n0si2) += hgfy[0];
+-      domain.fz(n0si2) += hgfz[0];
+-
+-      domain.fx(n1si2) += hgfx[1];
+-      domain.fy(n1si2) += hgfy[1];
+-      domain.fz(n1si2) += hgfz[1];
+-
+-      domain.fx(n2si2) += hgfx[2];
+-      domain.fy(n2si2) += hgfy[2];
+-      domain.fz(n2si2) += hgfz[2];
+-
+-      domain.fx(n3si2) += hgfx[3];
+-      domain.fy(n3si2) += hgfy[3];
+-      domain.fz(n3si2) += hgfz[3];
+-
+-      domain.fx(n4si2) += hgfx[4];
+-      domain.fy(n4si2) += hgfy[4];
+-      domain.fz(n4si2) += hgfz[4];
+-
+-      domain.fx(n5si2) += hgfx[5];
+-      domain.fy(n5si2) += hgfy[5];
+-      domain.fz(n5si2) += hgfz[5];
+-
+-      domain.fx(n6si2) += hgfx[6];
+-      domain.fy(n6si2) += hgfy[6];
+-      domain.fz(n6si2) += hgfz[6];
+-
+-      domain.fx(n7si2) += hgfx[7];
+-      domain.fy(n7si2) += hgfy[7];
+-      domain.fz(n7si2) += hgfz[7];
++      #pragma omp critical(hg_force)
++      {
++         domain.fx(n0si2) += hgfx[0];
++         domain.fy(n0si2) += hgfy[0];
++         domain.fz(n0si2) += hgfz[0];
++
++         domain.fx(n1si2) += hgfx[1];
++         domain.fy(n1si2) += hgfy[1];
++         domain.fz(n1si2) += hgfz[1];
++
++         domain.fx(n2si2) += hgfx[2];
++         domain.fy(n2si2) += hgfy[2];
++         domain.fz(n2si2) += hgfz[2];
++
++         domain.fx(n3si2) += hgfx[3];
++         domain.fy(n3si2) += hgfy[3];
++         domain.fz(n3si2) += hgfz[3];
++
++         domain.fx(n4si2) += hgfx[4];
++         domain.fy(n4si2) += hgfy[4];
++         domain.fz(n4si2) += hgfz[4];
++
++         domain.fx(n5si2) += hgfx[5];
++         domain.fy(n5si2) += hgfy[5];
++         domain.fz(n5si2) += hgfz[5];
++
++         domain.fx(n6si2) += hgfx[6];
++         domain.fy(n6si2) += hgfy[6];
++         domain.fz(n6si2) += hgfz[6];
++
++         domain.fx(n7si2) += hgfx[7];
++         domain.fy(n7si2) += hgfy[7];
++         domain.fz(n7si2) += hgfz[7];
++      }
+ 
+    }
+ 

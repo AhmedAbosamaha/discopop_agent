@@ -1,0 +1,61 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -712,16 +712,51 @@
+       Real_t *sigzz  = Allocate<Real_t>(numElem) ;
+       Real_t *determ = Allocate<Real_t>(numElem) ;
+ 
+-      InitStressTermsForElems(domain, sigxx, sigyy, sigzz, numElem);
+-
+-      IntegrateStressForElems( domain,
+-                               sigxx, sigyy, sigzz, determ, numElem,
+-                               domain.numNode()) ;
+-
++      Int_t errorFlag = 0 ;
++      #pragma omp parallel for reduction(|:errorFlag)
+       for ( Index_t k=0 ; k<numElem ; ++k ) {
++         Real_t fx_local[8] ;
++         Real_t fy_local[8] ;
++         Real_t fz_local[8] ;
++
++         // Initialize stress for this element
++         sigxx[k] = sigyy[k] = sigzz[k] = - domain.p(k) - domain.q(k) ;
++
++         // Integrate stress for this element
++         const Index_t* const elemToNode = domain.nodelist(k);
++         Real_t B[3][8] ;
++         Real_t x_local[8] ;
++         Real_t y_local[8] ;
++         Real_t z_local[8] ;
++
++         CollectDomainNodesToElemNodes(domain, elemToNode, x_local, y_local, z_local);
++
++         CalcElemShapeFunctionDerivatives(x_local, y_local, z_local,
++                                              B, &determ[k]);
++
++         CalcElemNodeNormals( B[0] , B[1], B[2],
++                               x_local, y_local, z_local );
++
++         SumElemStressesToNodeForces( B, sigxx[k], sigyy[k], sigzz[k],
++                                      fx_local, fy_local, fz_local ) ;
++
++         for( Index_t lnode=0 ; lnode<8 ; ++lnode ) {
++            Index_t gnode = elemToNode[lnode];
++            #pragma omp atomic
++            domain.fx(gnode) += fx_local[lnode];
++            #pragma omp atomic
++            domain.fy(gnode) += fy_local[lnode];
++            #pragma omp atomic
++            domain.fz(gnode) += fz_local[lnode];
++         }
++
++         // Validate determinant
+          if (determ[k] <= Real_t(0.0)) {
+-            exit(VolumeError);
++            errorFlag = 1 ;
+          }
++      }
++      if (errorFlag) {
++         exit(VolumeError);
+       }
+ 
+       CalcHourglassControlForElems(domain, determ, hgcoef) ;

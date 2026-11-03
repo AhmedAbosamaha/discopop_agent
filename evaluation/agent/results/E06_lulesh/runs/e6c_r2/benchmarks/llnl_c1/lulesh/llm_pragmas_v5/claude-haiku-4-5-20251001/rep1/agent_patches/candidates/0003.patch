@@ -1,0 +1,129 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -1955,13 +1955,116 @@
+    Domain_member fieldData[6] ;
+ #endif
+ 
+-   LagrangeNodal(domain);
+-
+-#ifdef SEDOV_SYNC_POS_VEL_LATE
+-#endif
+-
+-   LagrangeElements(domain, domain.numElem());
+-
+-   CalcTimeConstraintsForElems(domain);
+-
+-}
++   // Inline and parallelize all stages into one large parallel region to amortize thread startup
++   // Stage 1: Calculate forces on nodes (sequential, complex accumulation)
++   {
++      Index_t numNode = domain.numNode();
++      for (Index_t i = 0; i < numNode; ++i) {
++         domain.fx(i) = Real_t(0.0);
++         domain.fy(i) = Real_t(0.0);
++         domain.fz(i) = Real_t(0.0);
++      }
++      CalcVolumeForceForElems(domain);
++   }
++
++   // Stage 2: Kinematics on elements (sequential, complex calculations)
++   CalcLagrangeElements(domain);
++
++   const Real_t delt = domain.deltatime();
++   Real_t u_cut = domain.u_cut();
++   Index_t numNode = domain.numNode();
++   Real_t qqc = domain.qqc();
++   Real_t dvovmax = domain.dvovmax();
++   Real_t qqc2 = Real_t(64.0) * qqc * qqc;
++   Real_t dtcourant_local = 1.0e+20;
++   Real_t dthydro_local = 1.0e+20;
++
++   // Stages 3-7: Node updates (acceleration, velocity, position) and element/constraint computations
++   // Parallelize with one large region over nodes and elements
++#pragma omp parallel
++   {
++      // Stage 3: Acceleration and velocity update on all nodes
++#pragma omp for schedule(static)
++      for (Index_t i = 0; i < numNode; ++i) {
++         domain.xdd(i) = domain.fx(i) / domain.nodalMass(i);
++         domain.ydd(i) = domain.fy(i) / domain.nodalMass(i);
++         domain.zdd(i) = domain.fz(i) / domain.nodalMass(i);
++
++         Real_t xdtmp = domain.xd(i) + domain.xdd(i) * delt;
++         if (FABS(xdtmp) < u_cut) xdtmp = Real_t(0.0);
++         domain.xd(i) = xdtmp;
++
++         Real_t ydtmp = domain.yd(i) + domain.ydd(i) * delt;
++         if (FABS(ydtmp) < u_cut) ydtmp = Real_t(0.0);
++         domain.yd(i) = ydtmp;
++
++         Real_t zdtmp = domain.zd(i) + domain.zdd(i) * delt;
++         if (FABS(zdtmp) < u_cut) zdtmp = Real_t(0.0);
++         domain.zd(i) = zdtmp;
++
++         domain.x(i) += domain.xd(i) * delt;
++         domain.y(i) += domain.yd(i) * delt;
++         domain.z(i) += domain.zd(i) * delt;
++      }
++
++#pragma omp single
++      {
++         ApplyAccelerationBoundaryConditionsForNodes(domain);
++      }
++
++      // Stage 4: Apply material properties (regions with complex inner loops)
++#pragma omp for schedule(dynamic)
++      for (Index_t i = 0; i < domain.numElem(); ++i) {
++         Real_t vdov = domain.dxx(i) + domain.dyy(i) + domain.dzz(i);
++         Real_t vdovthird = vdov / Real_t(3.0);
++         domain.vdov(i) = vdov;
++         domain.dxx(i) -= vdovthird;
++         domain.dyy(i) -= vdovthird;
++         domain.dzz(i) -= vdovthird;
++      }
++
++      // Stage 5: Time constraints over all elements
++#pragma omp for reduction(min:dtcourant_local, dthydro_local) schedule(dynamic)
++      for (Index_t k = 0; k < domain.numElem(); ++k) {
++         // Courant constraint
++         if (domain.vdov(k) != Real_t(0.)) {
++            Real_t dtf = domain.ss(k) * domain.ss(k);
++            if (domain.vdov(k) < Real_t(0.)) {
++               dtf = dtf + qqc2 * domain.arealg(k) * domain.arealg(k) *
++                     domain.vdov(k) * domain.vdov(k);
++            }
++            dtf = SQRT(dtf);
++            dtf = domain.arealg(k) / dtf;
++            if (dtf < dtcourant_local) {
++               dtcourant_local = dtf;
++            }
++         }
++
++         // Hydro constraint
++         if (domain.vdov(k) != Real_t(0.)) {
++            Real_t dtdvov = dvovmax / (FABS(domain.vdov(k)) + Real_t(1.e-20));
++            if (dtdvov < dthydro_local) {
++               dthydro_local = dtdvov;
++            }
++         }
++      }
++
++#pragma omp single
++      {
++         domain.dtcourant() = 1.0e+20;
++         domain.dthydro() = 1.0e+20;
++         if (dtcourant_local < 1.0e+20) {
++            domain.dtcourant() = dtcourant_local;
++         }
++         if (dthydro_local < 1.0e+20) {
++            domain.dthydro() = dthydro_local;
++         }
++      }
++   }
++
++   // Complete remaining element operations sequentially
++   CalcQForElems(domain);
++   ApplyMaterialPropertiesForElems(domain);
++   UpdateVolumesForElems(domain, domain.v_cut(), domain.numElem());
++
++}

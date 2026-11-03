@@ -1,0 +1,18 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/lulesh.cc	2026-11-03 20:14:57.663921952 +0000
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/lulesh.cc.discopop_patch_generator.temp	2026-11-03 20:34:57.789279445 +0000
+@@ -833,9 +833,15 @@
+ #endif
+ 
+    const Real_t delt = domain.deltatime() ;
++   #pragma omp parallel
++   #pragma omp single
++   {
++   #pragma omp task
+    const Real_t u_cut = domain.u_cut() ;
++   #pragma omp task
+    Index_t numNode = domain.numNode();
+ 
++   }
+    CalcForceForNodes(domain);
+ 
+    // Parallelize acceleration calculation: each node computes its own acceleration

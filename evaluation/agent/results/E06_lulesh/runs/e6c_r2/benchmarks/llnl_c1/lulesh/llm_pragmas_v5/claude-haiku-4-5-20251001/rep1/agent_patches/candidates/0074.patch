@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -626,6 +626,7 @@
+    /* Apply all accumulated hourglass forces to domain nodes (serial or with minimal critical section) */
+    #pragma omp critical(hg_force_apply)
+    {
++ #pragma omp parallel for firstprivate(numElem) shared(hgfy_elem,hgfz_elem,hgfx_elem,domain) 
+       for(Index_t i2=0; i2<numElem; ++i2) {
+          const Index_t *nodeList = domain.nodelist(i2);
+          for(Index_t j=0; j<8; ++j) {

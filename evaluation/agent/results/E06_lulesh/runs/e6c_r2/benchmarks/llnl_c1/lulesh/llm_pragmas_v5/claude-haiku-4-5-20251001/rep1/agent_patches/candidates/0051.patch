@@ -1,0 +1,40 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -2109,6 +2109,13 @@
+    Real_t   dtcourant_tmp = dtcourant;
+    Index_t  courant_elem  = -1 ;
+ 
++   // Allocate buffer to store computed constraint values for each element
++   Real_t *dtf_buffer = new Real_t[length];
++
++   // Phase 1: Parallel computation of Courant constraint for each element
++   // indx and dtf are declared inside the loop and implicitly private per thread
++   // qqc2, domain, and regElemlist are read-only (shared)
++   #pragma omp parallel for schedule(static)
+    for (Index_t i = 0 ; i < length ; ++i) {
+       Index_t indx = regElemlist[i] ;
+       Real_t dtf = domain.ss(indx) * domain.ss(indx) ;
+@@ -2121,6 +2128,14 @@
+ 
+       dtf = SQRT(dtf) ;
+       dtf = domain.arealg(indx) / dtf ;
++
++      dtf_buffer[i] = dtf ;
++   }
++
++   // Phase 2: Serial reduction to find minimum constraint value and corresponding element
++   for (Index_t i = 0 ; i < length ; ++i) {
++      Index_t indx = regElemlist[i] ;
++      Real_t dtf = dtf_buffer[i] ;
+ 
+       if (domain.vdov(indx) != Real_t(0.)) {
+          if ( dtf < dtcourant_tmp ) {
+@@ -2133,6 +2148,8 @@
+    if (courant_elem != -1) {
+       dtcourant = dtcourant_tmp ;
+    }
++
++   delete[] dtf_buffer ;
+ 
+    return ;
+ 

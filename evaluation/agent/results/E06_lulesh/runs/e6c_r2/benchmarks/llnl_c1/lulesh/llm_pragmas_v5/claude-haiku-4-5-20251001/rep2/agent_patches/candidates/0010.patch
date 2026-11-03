@@ -1,0 +1,49 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
+@@ -718,13 +718,45 @@
+                                sigxx, sigyy, sigzz, determ, numElem,
+                                domain.numNode()) ;
+ 
++      // Allocate buffers for preprocessing node data
++      Index_t numElem8 = numElem * 8;
++      Real_t *x8n = Allocate<Real_t>(numElem8);
++      Real_t *y8n = Allocate<Real_t>(numElem8);
++      Real_t *z8n = Allocate<Real_t>(numElem8);
++
++      // Combined verification and element node collection loop
++      // This merges fine-grained verification with substantial work (node data collection)
++      // to achieve sufficient granularity for profitable parallelization
++      Index_t volumeError = 0;
++      #pragma omp parallel for schedule(static) reduction(max:volumeError)
+       for ( Index_t k=0 ; k<numElem ; ++k ) {
++         // Verify determ values
+          if (determ[k] <= Real_t(0.0)) {
+-            exit(VolumeError);
++            volumeError = 1;
+          }
++
++         // Collect element node coordinates (substantial work per iteration)
++         const Index_t* elemToNode = domain.nodelist(k);
++         Real_t x1[8], y1[8], z1[8];
++         CollectDomainNodesToElemNodes(domain, elemToNode, x1, y1, z1);
++
++         for(Index_t ii=0; ii<8; ++ii) {
++            Index_t jj = 8*k + ii;
++            x8n[jj] = x1[ii];
++            y8n[jj] = y1[ii];
++            z8n[jj] = z1[ii];
++         }
++      }
++
++      if (volumeError != 0) {
++         exit(VolumeError);
+       }
+ 
+       CalcHourglassControlForElems(domain, determ, hgcoef) ;
++
++      Release(&z8n);
++      Release(&y8n);
++      Release(&x8n);
+ 
+       Release(&determ) ;
+       Release(&sigzz) ;

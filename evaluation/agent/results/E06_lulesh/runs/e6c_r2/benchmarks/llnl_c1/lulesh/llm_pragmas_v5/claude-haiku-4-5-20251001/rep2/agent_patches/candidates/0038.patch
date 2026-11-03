@@ -1,0 +1,24 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
+@@ -1547,13 +1547,18 @@
+                           Real_t p_cut, Real_t eosvmax,
+                           Index_t length, Index_t *regElemList)
+ {
++   /* Merged loop: each iteration processes element i through both phases.
++      Eliminates inter-loop RAW dependence on bvc[i] by computing and reading
++      it within the same iteration. Iterations are now independent and can
++      execute in parallel. */
++#pragma omp parallel for
+    for (Index_t i = 0; i < length ; ++i) {
++      /* Phase 1: compute bvc and pbvc for element i */
+       Real_t c1s = Real_t(2.0)/Real_t(3.0) ;
+       bvc[i] = c1s * (compression[i] + Real_t(1.));
+       pbvc[i] = c1s;
+-   }
+-
+-   for (Index_t i = 0 ; i < length ; ++i){
++
++      /* Phase 2: compute p_new for element i using the bvc just computed */
+       Index_t ielem = regElemList[i];
+ 
+       p_new[i] = bvc[i] * e_old[i] ;

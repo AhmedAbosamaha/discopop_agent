@@ -1,0 +1,69 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
+@@ -1002,37 +1002,35 @@
+                                      const Real_t z[8],
+                                      const Real_t volume)
+ {
+-   Real_t a, charLength = Real_t(0.0);
+-
+-   a = AreaFace(x[0],x[1],x[2],x[3],
+-                y[0],y[1],y[2],y[3],
+-                z[0],z[1],z[2],z[3]) ;
+-   charLength = std::max(a,charLength) ;
+-
+-   a = AreaFace(x[4],x[5],x[6],x[7],
+-                y[4],y[5],y[6],y[7],
+-                z[4],z[5],z[6],z[7]) ;
+-   charLength = std::max(a,charLength) ;
+-
+-   a = AreaFace(x[0],x[1],x[5],x[4],
+-                y[0],y[1],y[5],y[4],
+-                z[0],z[1],z[5],z[4]) ;
+-   charLength = std::max(a,charLength) ;
+-
+-   a = AreaFace(x[1],x[2],x[6],x[5],
+-                y[1],y[2],y[6],y[5],
+-                z[1],z[2],z[6],z[5]) ;
+-   charLength = std::max(a,charLength) ;
+-
+-   a = AreaFace(x[2],x[3],x[7],x[6],
+-                y[2],y[3],y[7],y[6],
+-                z[2],z[3],z[7],z[6]) ;
+-   charLength = std::max(a,charLength) ;
+-
+-   a = AreaFace(x[3],x[0],x[4],x[7],
+-                y[3],y[0],y[4],y[7],
+-                z[3],z[0],z[4],z[7]) ;
+-   charLength = std::max(a,charLength) ;
++   Real_t areas[6];
++
++   // Index pairs for the 6 faces: each row holds the 4 corner indices for that face.
++   // Each iteration of the loop independently computes one face area from a different
++   // set of coordinates; no iteration carries a value to a later one.
++   const int faceIndices[6][4] = {
++      {0, 1, 2, 3},  // Face 0
++      {4, 5, 6, 7},  // Face 1
++      {0, 1, 5, 4},  // Face 2
++      {1, 2, 6, 5},  // Face 3
++      {2, 3, 7, 6},  // Face 4
++      {3, 0, 4, 7}   // Face 5
++   };
++
++   // Compute all 6 face areas; each iteration is independent.
++   for (int face = 0; face < 6; ++face) {
++      areas[face] = AreaFace(x[faceIndices[face][0]], x[faceIndices[face][1]],
++                             x[faceIndices[face][2]], x[faceIndices[face][3]],
++                             y[faceIndices[face][0]], y[faceIndices[face][1]],
++                             y[faceIndices[face][2]], y[faceIndices[face][3]],
++                             z[faceIndices[face][0]], z[faceIndices[face][1]],
++                             z[faceIndices[face][2]], z[faceIndices[face][3]]) ;
++   }
++
++   // Find the maximum face area.
++   Real_t charLength = areas[0];
++   for (int i = 1; i < 6; ++i) {
++      charLength = std::max(charLength, areas[i]) ;
++   }
+ 
+    charLength = Real_t(4.0) * volume / SQRT(charLength);
+ 

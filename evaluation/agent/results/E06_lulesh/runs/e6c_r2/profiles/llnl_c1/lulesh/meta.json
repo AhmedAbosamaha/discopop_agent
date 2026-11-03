@@ -1,0 +1,90 @@
+{
+  "suite": "llnl_c1",
+  "kernel": "lulesh",
+  "source": "benchmarks/LULESH/LULESH_SERIAL_PATH/lulesh.cc",
+  "category": "hydrodynamics-proxy-application",
+  "language": "cpp",
+  "exclude_functions": [
+    "main",
+    "ParseCommandLineOptions",
+    "PrintCommandLineOptions",
+    "ParseError",
+    "StrToInt",
+    "VerifyAndWriteFinalOutput",
+    "DumpToVisit",
+    "DumpDomainToVisit",
+    "DumpMultiblockObjects",
+    "InitMeshDecomp",
+    "Domain",
+    "BuildMesh",
+    "SetupCommBuffers",
+    "CreateRegionIndexSets",
+    "SetupSymmetryPlanes",
+    "SetupElementConnectivities",
+    "SetupBoundaryConditions",
+    "AllocateElemPersistent",
+    "AllocateNodePersistent",
+    "AllocateGradients",
+    "DeallocateGradients",
+    "AllocateStrains",
+    "DeallocateStrains"
+  ],
+  "agent_dataset": "SMALL",
+  "generator_version": 2,
+  "sizes": {
+    "MINI": {
+      "PB_NX": "5",
+      "PB_ITS": "10"
+    },
+    "SMALL": {
+      "PB_NX": "8",
+      "PB_ITS": "20"
+    },
+    "STANDARD": {
+      "PB_NX": "15",
+      "PB_ITS": "50"
+    },
+    "LARGE": {
+      "PB_NX": "30",
+      "PB_ITS": "100"
+    },
+    "EXTRALARGE": {
+      "PB_NX": "45",
+      "PB_ITS": "200"
+    }
+  },
+  "note": "Sedov blast on an unstructured hex mesh; the time-step loop is the timed region",
+  "inputs_sha256": "7246f2dfd05e3321987336f38976b72c1d4daf4001ce86767f66630fffa9dc25",
+  "file": "lulesh.cc",
+  "layout": "project",
+  "project": {
+    "units": [
+      "lulesh.cc",
+      "main.cc",
+      "lulesh-init.cc",
+      "lulesh-util.cc",
+      "lulesh-viz.cc"
+    ],
+    "include_dirs": [
+      "."
+    ],
+    "cflags": [
+      "-DUSE_MPI=0"
+    ],
+    "editable": [
+      "lulesh.cc"
+    ]
+  },
+  "harness": "llnl_c1/lulesh_harness.h",
+  "harness_sha256": "16ce4a9abf108077102bf633578fec39e06002599940ecb65a3cede8b9f914ea",
+  "removed": [
+    "every comment, in every unit (LLNL's copyright and licence: benchmarks/LULESH/)",
+    "the dead code under `#if _ALWAYS_FALSE_CHECK_FOR_MPI` (the #else branch kept); lulesh-comm.cc, MPI only",
+    "LLNL's main moved to main.cc (ours, read-only): sizes from the dataset guard, the seeded input, the timer and the digest are calls into prepared/_harness/llnl_c1/lulesh_harness.h",
+    "the per-thread minimum of CalcCourantConstraintForElems and CalcHydroConstraintForElems folded to the plain loop (one thread, the same arithmetic)",
+    "lulesh.h gains an include guard: the profile step compiles the units as one",
+    "TimeIncrement and LagrangeLeapFrog lose `static inline` (main.cc calls them; their code is unchanged)",
+    "OpenMP: none left to remove \u2014 the source is the validated serial path (benchmarks/LULESH/LULESH_SERIAL_PATH/SERIAL_PATH.json lists what that step removed)"
+  ],
+  "output_sha256": "813625161670db3347538b371f9788b8db1f0dba246c083d2ad6bd5572089ea6"
+}

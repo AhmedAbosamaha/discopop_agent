@@ -1,0 +1,63 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -1962,6 +1962,57 @@
+ 
+    LagrangeElements(domain, domain.numElem());
+ 
+-   CalcTimeConstraintsForElems(domain);
+-
+-}
++   // Inline and parallelize CalcTimeConstraintsForElems
++   // Initialize global time step bounds
++   domain.dtcourant() = 1.0e+20;
++   domain.dthydro() = 1.0e+20;
++
++   // Compute time constraints in parallel over all elements
++   // Flatten region hierarchy to loop over all elements directly for coarser parallelization grain
++   Real_t qqc = domain.qqc();
++   Real_t dvovmax = domain.dvovmax();
++   Real_t qqc2 = Real_t(64.0) * qqc * qqc;
++   Real_t dtcourant_local = 1.0e+20;
++   Real_t dthydro_local = 1.0e+20;
++
++#pragma omp parallel for \
++   reduction(min:dtcourant_local, dthydro_local) \
++   schedule(dynamic)
++   for (Index_t k = 0 ; k < domain.numElem() ; ++k) {
++      // Courant constraint for this element
++      if (domain.vdov(k) != Real_t(0.)) {
++         Real_t dtf = domain.ss(k) * domain.ss(k);
++
++         if (domain.vdov(k) < Real_t(0.)) {
++            dtf = dtf
++                + qqc2 * domain.arealg(k) * domain.arealg(k)
++                * domain.vdov(k) * domain.vdov(k);
++         }
++
++         dtf = SQRT(dtf);
++         dtf = domain.arealg(k) / dtf;
++
++         if (dtf < dtcourant_local) {
++            dtcourant_local = dtf;
++         }
++      }
++
++      // Hydro constraint for this element
++      if (domain.vdov(k) != Real_t(0.)) {
++         Real_t dtdvov = dvovmax / (FABS(domain.vdov(k)) + Real_t(1.e-20));
++
++         if (dtdvov < dthydro_local) {
++            dthydro_local = dtdvov;
++         }
++      }
++   }
++
++   // Update domain with computed minimums
++   if (dtcourant_local < 1.0e+20) {
++      domain.dtcourant() = dtcourant_local;
++   }
++   if (dthydro_local < 1.0e+20) {
++      domain.dthydro() = dthydro_local;
++   }
++
++}

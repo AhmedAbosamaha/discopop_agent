@@ -1,0 +1,52 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
+@@ -1945,6 +1945,15 @@
+    Real_t   dtcourant_tmp = dtcourant;
+    Index_t  courant_elem  = -1 ;
+ 
++   /* Allocate temporary arrays to decouple compute phase from reduction.
++      Each iteration [i] stores its computed dtf, element index, and validity flag. */
++   Real_t   *dtf_computed = (Real_t *)malloc(length * sizeof(Real_t)) ;
++   Index_t  *elem_computed = (Index_t *)malloc(length * sizeof(Index_t)) ;
++   bool     *is_valid = (bool *)malloc(length * sizeof(bool)) ;
++
++   /* Parallel phase: compute dtf for each element independently.
++      No loop-carried dependences: each iteration writes only to position [i]. */
++   #pragma omp parallel for schedule(static)
+    for (Index_t i = 0 ; i < length ; ++i) {
+       Index_t indx = regElemlist[i] ;
+       Real_t dtf = domain.ss(indx) * domain.ss(indx) ;
+@@ -1958,10 +1967,18 @@
+       dtf = SQRT(dtf) ;
+       dtf = domain.arealg(indx) / dtf ;
+ 
+-      if (domain.vdov(indx) != Real_t(0.)) {
+-         if ( dtf < dtcourant_tmp ) {
+-            dtcourant_tmp = dtf ;
+-            courant_elem  = indx ;
++      dtf_computed[i] = dtf ;
++      elem_computed[i] = indx ;
++      is_valid[i] = (domain.vdov(indx) != Real_t(0.)) ;
++   }
++
++   /* Sequential phase: find the minimum across all computed values.
++      This maintains the original semantics of tracking both min value and source element. */
++   for (Index_t i = 0 ; i < length ; ++i) {
++      if (is_valid[i]) {
++         if ( dtf_computed[i] < dtcourant_tmp ) {
++            dtcourant_tmp = dtf_computed[i] ;
++            courant_elem  = elem_computed[i] ;
+          }
+       }
+    }
+@@ -1969,6 +1986,10 @@
+    if (courant_elem != -1) {
+       dtcourant = dtcourant_tmp ;
+    }
++
++   free(dtf_computed) ;
++   free(elem_computed) ;
++   free(is_valid) ;
+ 
+    return ;
+ 
