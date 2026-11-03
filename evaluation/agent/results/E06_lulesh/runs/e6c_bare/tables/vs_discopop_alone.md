@@ -8,7 +8,7 @@
 | Benchmark | Arm | Model | DiscoPoP alone (outcomes · x over seq.) | Agent (outcomes · median x over seq.) | Agent / DiscoPoP alone | Verdicts |
 |---|---|---|---|---|---:|---|
 | llnl_c1/lulesh | bare_llm_v4 | claude-fable-5-1 | — · — | FASTER,FASTER,FASTER,FASTER,FASTER · 2.02x | — | 5 no-baseline |
-| llnl_c1/lulesh | bare_llm_v4 | claude-haiku-4-5-20251001 | — · — | AGENT_ERROR,FASTER,VERIFY_FAILED,VERIFY_FAILED,VERIFY_FAILED · 1.95x | — | 5 no-baseline |
+| llnl_c1/lulesh | bare_llm_v4 | claude-haiku-4-5-20251001 | — · — | FASTER,VERIFY_FAILED,VERIFY_FAILED,VERIFY_FAILED,VERIFY_FAILED · 1.95x | — | 5 no-baseline |
 | llnl_c1/lulesh | bare_llm_v4 | claude-opus-5-5 | — · — | FASTER,FASTER,FASTER,FASTER,FASTER · 2.16x | — | 5 no-baseline |
 | llnl_c1/lulesh | bare_llm_v4 | claude-sonnet-5 | — · — | FASTER,VERIFY_FAILED,VERIFY_FAILED,VERIFY_FAILED,VERIFY_FAILED · 1.99x | — | 5 no-baseline |
 
