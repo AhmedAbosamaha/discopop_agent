@@ -1,0 +1,43 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r3b/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r3b/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -1794,25 +1794,21 @@
+     Real_t *vnewc = Allocate<Real_t>(numElem) ;
+ 
+     {
++       /* Merged element loops into single parallel region to reduce thread startup overhead */
++#pragma omp parallel for shared(domain, numElem, vnewc, eosvmin, eosvmax) schedule(static)
+        for(Index_t i=0 ; i<numElem ; ++i) {
+           vnewc[i] = domain.vnew(i) ;
+-       }
+-
+-       if (eosvmin != Real_t(0.)) {
+-          for(Index_t i=0 ; i<numElem ; ++i) {
++
++          if (eosvmin != Real_t(0.)) {
+              if (vnewc[i] < eosvmin)
+                 vnewc[i] = eosvmin ;
+           }
+-       }
+-
+-       if (eosvmax != Real_t(0.)) {
+-          for(Index_t i=0 ; i<numElem ; ++i) {
++
++          if (eosvmax != Real_t(0.)) {
+              if (vnewc[i] > eosvmax)
+                 vnewc[i] = eosvmax ;
+           }
+-       }
+-
+-       for (Index_t i=0; i<numElem; ++i) {
++
+           Real_t vc = domain.v(i) ;
+           if (eosvmin != Real_t(0.)) {
+              if (vc < eosvmin)
+@@ -1850,6 +1846,7 @@
+                            Real_t v_cut, Index_t length)
+ {
+    if (length != 0) {
++#pragma omp parallel for shared(domain, v_cut) schedule(static)
+       for(Index_t i=0 ; i<length ; ++i) {
+          Real_t tmpV = domain.vnew(i) ;
+ 

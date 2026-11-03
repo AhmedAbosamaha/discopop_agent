@@ -1,0 +1,122 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r3b/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r3b/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -737,6 +737,7 @@
+ {
+   Index_t numNode = domain.numNode() ;
+ 
++#pragma omp parallel for shared(domain) schedule(static)
+   for (Index_t i=0; i<numNode; ++i) {
+      domain.fx(i) = Real_t(0.0) ;
+      domain.fy(i) = Real_t(0.0) ;
+@@ -751,6 +752,7 @@
+ void CalcAccelerationForNodes(Domain &domain, Index_t numNode)
+ {
+ 
++#pragma omp parallel for shared(domain) schedule(static)
+    for (Index_t i = 0; i < numNode; ++i) {
+       domain.xdd(i) = domain.fx(i) / domain.nodalMass(i);
+       domain.ydd(i) = domain.fy(i) / domain.nodalMass(i);
+@@ -766,16 +768,19 @@
+ 
+    {
+       if (!domain.symmXempty() != 0) {
++#pragma omp parallel for shared(domain) schedule(static)
+          for(Index_t i=0 ; i<numNodeBC ; ++i)
+             domain.xdd(domain.symmX(i)) = Real_t(0.0) ;
+       }
+ 
+       if (!domain.symmYempty() != 0) {
++#pragma omp parallel for shared(domain) schedule(static)
+          for(Index_t i=0 ; i<numNodeBC ; ++i)
+             domain.ydd(domain.symmY(i)) = Real_t(0.0) ;
+       }
+ 
+       if (!domain.symmZempty() != 0) {
++#pragma omp parallel for shared(domain) schedule(static)
+          for(Index_t i=0 ; i<numNodeBC ; ++i)
+             domain.zdd(domain.symmZ(i)) = Real_t(0.0) ;
+       }
+@@ -787,6 +792,7 @@
+                           Index_t numNode)
+ {
+ 
++#pragma omp parallel for shared(domain, dt, u_cut) schedule(static)
+    for ( Index_t i = 0 ; i < numNode ; ++i )
+    {
+      Real_t xdtmp, ydtmp, zdtmp ;
+@@ -808,6 +814,7 @@
+ static inline
+ void CalcPositionForNodes(Domain &domain, const Real_t dt, Index_t numNode)
+ {
++#pragma omp parallel for shared(domain, dt) schedule(static)
+    for ( Index_t i = 0 ; i < numNode ; ++i )
+    {
+      domain.x(i) += domain.xd(i) * dt ;
+@@ -1063,6 +1070,7 @@
+                              Real_t deltaTime, Index_t numElem )
+ {
+ 
++#pragma omp parallel for shared(domain, deltaTime) schedule(static)
+   for( Index_t k=0 ; k<numElem ; ++k )
+   {
+     Real_t B[3][8] ;
+@@ -1128,6 +1136,7 @@
+ 
+       CalcKinematicsForElems(domain, deltatime, numElem) ;
+ 
++#pragma omp parallel for shared(domain) schedule(static)
+       for ( Index_t k=0 ; k<numElem ; ++k )
+       {
+          Real_t vdov = domain.dxx(k) + domain.dyy(k) + domain.dzz(k) ;
+@@ -1152,6 +1161,7 @@
+ {
+    Index_t numElem = domain.numElem();
+ 
++#pragma omp parallel for shared(domain, numElem) schedule(static)
+    for (Index_t i = 0 ; i < numElem ; ++i ) {
+       const Real_t ptiny = Real_t(1.e-36) ;
+       Real_t ax,ay,az ;
+@@ -1446,6 +1456,7 @@
+ {
+    const Real_t ptiny = Real_t(1.e-36) ;
+ 
++#pragma omp parallel for shared(domain, ptiny) schedule(static)
+    for (Index_t r=0 ; r<domain.numReg() ; ++r) {
+       if (domain.regElemSize(r) > 0) {
+          CalcMonotonicQRegionForElems(domain, r, ptiny) ;
+@@ -1936,17 +1947,32 @@
+    domain.dtcourant() = 1.0e+20;
+    domain.dthydro() = 1.0e+20;
+ 
++   Real_t dtcourant = 1.0e+20;
++   Real_t dthydro = 1.0e+20;
++
++#pragma omp parallel for reduction(min:dtcourant,dthydro) schedule(static)
+    for (Index_t r=0 ; r < domain.numReg() ; ++r) {
++      Real_t local_courant = 1.0e+20;
++      Real_t local_hydro = 1.0e+20;
++
+       CalcCourantConstraintForElems(domain, domain.regElemSize(r),
+                                     domain.regElemlist(r),
+                                     domain.qqc(),
+-                                    domain.dtcourant()) ;
++                                    local_courant) ;
+ 
+       CalcHydroConstraintForElems(domain, domain.regElemSize(r),
+                                   domain.regElemlist(r),
+                                   domain.dvovmax(),
+-                                  domain.dthydro()) ;
+-   }
++                                  local_hydro) ;
++
++      if (local_courant < dtcourant)
++         dtcourant = local_courant;
++      if (local_hydro < dthydro)
++         dthydro = local_hydro;
++   }
++
++   domain.dtcourant() = dtcourant;
++   domain.dthydro() = dthydro;
+ }
+ 
+ void LagrangeLeapFrog(Domain& domain)

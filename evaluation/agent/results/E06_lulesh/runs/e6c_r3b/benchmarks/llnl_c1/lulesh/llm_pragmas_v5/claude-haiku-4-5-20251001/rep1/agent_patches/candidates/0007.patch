@@ -1,0 +1,35 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r3b/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r3b/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -833,15 +833,23 @@
+    const Real_t delt = domain.deltatime() ;
+    Real_t u_cut = domain.u_cut() ;
+ 
+-  CalcForceForNodes(domain);
+-
+-   CalcAccelerationForNodes(domain, domain.numNode());
+-
+-   ApplyAccelerationBoundaryConditionsForNodes(domain);
+-
+-   CalcVelocityForNodes( domain, delt, u_cut, domain.numNode()) ;
+-
+-   CalcPositionForNodes( domain, delt, domain.numNode() );
++#pragma omp parallel shared(domain, delt, u_cut)
++   {
++   #pragma omp single
++      CalcForceForNodes(domain);
++
++   #pragma omp single
++      CalcAccelerationForNodes(domain, domain.numNode());
++
++   #pragma omp single
++      ApplyAccelerationBoundaryConditionsForNodes(domain);
++
++   #pragma omp single
++      CalcVelocityForNodes( domain, delt, u_cut, domain.numNode()) ;
++
++   #pragma omp single
++      CalcPositionForNodes( domain, delt, domain.numNode() );
++   }
+ 
+   return;
+ }

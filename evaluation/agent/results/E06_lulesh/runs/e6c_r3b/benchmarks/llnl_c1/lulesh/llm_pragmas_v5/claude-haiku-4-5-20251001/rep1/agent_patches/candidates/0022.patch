@@ -1,0 +1,21 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r3b/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r3b/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -1857,13 +1857,15 @@
+        }
+     }
+ 
+-    for (Int_t r=0 ; r<domain.numReg() ; r++) {
++    Int_t numReg = domain.numReg();
++#pragma omp parallel for shared(domain, vnewc, numReg) schedule(static)
++    for (Int_t r=0 ; r<numReg ; r++) {
+        Index_t numElemReg = domain.regElemSize(r);
+        Index_t *regElemList = domain.regElemlist(r);
+        Int_t rep;
+-       if(r < domain.numReg()/2)
++       if(r < numReg/2)
+ 	 rep = 1;
+-       else if(r < (domain.numReg() - (domain.numReg()+15)/20))
++       else if(r < (numReg - (numReg+15)/20))
+          rep = 1 + domain.cost();
+        else
+ 	 rep = 10 * (1+ domain.cost());

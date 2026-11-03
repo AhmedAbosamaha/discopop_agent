@@ -1,0 +1,22 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r3b/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc	2026-11-03 10:11:40.590363881 +0000
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r3b/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc.discopop_patch_generator.temp	2026-11-03 10:16:41.562213186 +0000
+@@ -1866,6 +1866,10 @@
+ static inline
+ void LagrangeElements(Domain& domain, Index_t numElem)
+ {
++  #pragma omp parallel
++  #pragma omp single
++  {
++  #pragma omp task
+   CalcLagrangeElements(domain) ;
+ 
+   CalcQForElems(domain) ;
+@@ -1874,6 +1878,8 @@
+ 
+   UpdateVolumesForElems(domain,
+                         domain.v_cut(), numElem) ;
++#pragma omp task
++}
+ }
+ 
+ static inline

@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r3b/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r3b/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -67,6 +67,7 @@
+                                    Real_t elemY[8],
+                                    Real_t elemZ[8])
+ {
++   #pragma omp parallel for shared(elemX,elemZ,elemToNode,domain,elemY) 
+    for (int i = 0; i < 8; ++i) {
+       Index_t ndi = elemToNode[i];
+       elemX[i] = domain.x(ndi);

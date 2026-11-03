@@ -1,0 +1,151 @@
+
+============================================================
+  PHASE B — annotate  (18 candidate pragma(s))
+============================================================
+
+  Timing noise floor on this machine: 0.998 → keep anything at or above 0.988
+
+┌─ pattern #561  task @ lines 1856–1866  (W=0)
+│  ['#pragma omp parallel', '#pragma omp single']
+│  gate failed at 'openmp_compile': OpenMP compile failed (loop not in OpenMP-canonical form): /tmp/dp_agent_val_d8_2wpb_/_dp_proj_tsan_binary/lulesh.cc:1871:1: error: expected statement
+└─ DROPPED
+
+┌─ pattern #534  task @ lines 820–839  (W=0)
+│  ['#pragma omp parallel', '#pragma omp single']
+│  gate failed at 'openmp_compile': OpenMP compile failed (loop not in OpenMP-canonical form): /tmp/dp_agent_val_9lk4bfbk/_dp_proj_tsan_binary/lulesh.cc:844:3: error: expected statement 
+└─ DROPPED
+
+   DiscoPoP reports another pattern for this loop (task) — trying it
+
+┌─ pattern #564  task @ lines 820–839  (W=0)
+│  ['#pragma omp parallel', '#pragma omp single']
+│  gate failed at 'compile': /tmp/dp_agent_val_z4stvjqa/_dp_proj_validate_binary/lulesh.cc:841:34: error: use of undeclared identifier 'delt'   841 |    CalcVelocityForNodes( doma
+└─ DROPPED
+
+┌─ pattern #5  task @ lines 649–701  (W=0)
+│  ['#pragma omp parallel', '#pragma omp single']
+│  gate failed at 'compile': /tmp/dp_agent_val_44avtg79/_dp_proj_validate_binary/lulesh.cc:679:10: error: use of undeclared identifier 'dvdx'   679 |          dvdx[jj] = pfx[ii]; 
+└─ DROPPED
+
+   DiscoPoP reports another pattern for this loop (task) — trying it
+
+┌─ pattern #8  task @ lines 649–701  (W=0)
+│  ['#pragma omp parallel', '#pragma omp single']
+│  gate failed at 'compile':           x8n /tmp/dp_agent_val_svrcxuft/_dp_proj_validate_binary/lulesh.cc:657:12: note: 'x8n' declared here   657 |    Real_t *x8n  = Allocate<Real_
+└─ DROPPED
+
+   DiscoPoP reports another pattern for this loop (task) — trying it
+
+┌─ pattern #11  task @ lines 649–701  (W=0)
+│  ['#pragma omp parallel', '#pragma omp single']
+│  gate failed at 'compile': /tmp/dp_agent_val_6p5dl9xa/_dp_proj_validate_binary/lulesh.cc:681:10: error: use of undeclared identifier 'dvdz'   681 |          dvdz[jj] = pfz[ii]; 
+└─ DROPPED
+
+   DiscoPoP reports another pattern for this loop (task) — trying it
+
+┌─ pattern #470  task @ lines 649–701  (W=0)
+│  ['#pragma omp parallel', '#pragma omp single']
+│  gate failed at 'compile':           x8n /tmp/dp_agent_val_5tfkmyx6/_dp_proj_validate_binary/lulesh.cc:657:12: note: 'x8n' declared here   657 |    Real_t *x8n  = Allocate<Real_
+└─ DROPPED
+
+   DiscoPoP reports another pattern for this loop (task) — trying it
+
+┌─ pattern #499  task @ lines 649–701  (W=0)
+│  ['#pragma omp parallel', '#pragma omp single']
+│  gate failed at 'compile': /tmp/dp_agent_val_wfefwwyg/_dp_proj_validate_binary/lulesh.cc:681:10: error: use of undeclared identifier 'dvdz'   681 |          dvdz[jj] = pfz[ii]; 
+└─ DROPPED
+
+   DiscoPoP reports another pattern for this loop (task) — trying it
+
+┌─ pattern #579  task @ lines 649–701  (W=0)
+│  ['#pragma omp parallel', '#pragma omp single']
+│  gate failed at 'compile': /lulesh.cc:662:12: note: 'dvdz' declared here   662 |    Real_t *dvdz = Allocate<Real_t>(numElem8) ;       |            ^ /tmp/dp_agent_val_fwg2v3gz/_
+└─ DROPPED
+
+┌─ pattern #782  do_all @ lines 1066–1117  (W=8606250)
+│  #pragma omp parallel for
+│  marginal 1.12×
+│  [Phase-B] Original backed up → lulesh.cc.original
+│  [Phase-B] Applied to lulesh.cc
+└─ APPLIED
+
+┌─ pattern #835  do_all @ lines 1696–1745  (W=85750)
+│  #pragma omp parallel for
+│  gate failed at 'tsan': Race detected: WARNING: ThreadSanitizer: data race (pid=598166)   Write of size 8 at 0x724c00001a40 by thread T1:     #0 EvalEOSForElems(Domain&, doub
+└─ DROPPED
+
+┌─ pattern #809  do_all @ lines 313–339  (W=4387500)
+│  #pragma omp parallel for
+│  gate failed at 'tsan': Race detected: WARNING: ThreadSanitizer: data race (pid=598223)   Write of size 8 at 0x72b0000545a8 by thread T7:     #0 IntegrateStressForElems(Domai
+└─ DROPPED
+
+┌─ pattern #815  do_all @ lines 500–644  (W=24300000)
+│  #pragma omp parallel for
+│  gate failed at 'tsan': Race detected: WARNING: ThreadSanitizer: data race (pid=598307)   Write of size 8 at 0x72b0000509e0 by main thread:     #0 CalcFBHourglassForceForElem
+└─ DROPPED
+
+┌─ pattern #829  do_all @ lines 1155–1286  (W=22106250)
+│  #pragma omp parallel for
+│  marginal 1.05×
+│  [Phase-B] Applied to lulesh.cc
+└─ APPLIED
+
+┌─ pattern #830  do_all @ lines 1698–1706  (W=9959600)
+│  #pragma omp parallel for
+│  marginal 0.94× alone — deferred: judged together with the other pragmas that do not pay alone (D33)
+└─ DEFERRED (slower alone)
+
+┌─ pattern #811  do_all @ lines 661–686  (W=4218750)
+│  #pragma omp parallel for
+│  marginal 1.13×
+│  [Phase-B] Applied to lulesh.cc
+└─ APPLIED
+
+┌─ pattern #780  do_all @ lines 1092–1098  (W=8100000)
+│  #pragma omp parallel for
+│  nested inside the already-parallelized region at lines 1066–1117
+└─ SKIPPED (enclosing loop is already parallel)
+
+┌─ pattern #808  do_all @ lines 332–337  (W=6750000)
+│  #pragma omp parallel for
+│  marginal 0.12× alone — deferred: judged together with the other pragmas that do not pay alone (D33)
+└─ DEFERRED (slower alone)
+
+┌─ pattern #804  do_all @ lines 790–805  (W=3072000)
+│  #pragma omp parallel for
+│  marginal 1.00×
+│  [Phase-B] Applied to lulesh.cc
+└─ APPLIED
+
+┌─ pattern #844  do_all @ lines 1504–1517  (W=48553050)
+│  #pragma omp parallel for
+│  marginal 0.78× alone — deferred: judged together with the other pragmas that do not pay alone (D33)
+└─ DEFERRED (slower alone)
+
+┌─ pattern #800  do_all @ lines 754–758  (W=819200)
+│  #pragma omp parallel for
+│  marginal 0.99×
+│  [Phase-B] Applied to lulesh.cc
+└─ APPLIED
+
+┌─ pattern #805  do_all @ lines 811–816  (W=1024000)
+│  #pragma omp parallel for
+│  marginal 1.02×
+│  [Phase-B] Applied to lulesh.cc
+└─ APPLIED
+
+┌─ pattern #822  do_all @ lines 1131–1145  (W=2362500)
+│  #pragma omp parallel for
+│  marginal 0.99× alone — deferred: judged together with the other pragmas that do not pay alone (D33)
+└─ DEFERRED (slower alone)
+
+┌─ pattern #549  task @ lines 374–413  (W=0)
+│  ['#pragma omp parallel', '#pragma omp single']
+│  gate failed at 'openmp_compile': OpenMP compile failed (loop not in OpenMP-canonical form): /tmp/dp_agent_val_bhgjedpj/_dp_proj_tsan_binary/lulesh.cc:418:1: error: expected statement 
+└─ DROPPED
+
+┌─ D33 — 4 safe pragma(s) did not pay alone; measuring them together
+│  lulesh.cc: 4 together 0.11× — still costs more than it saves; all dropped
+└─ D33 done
+
+  [ok] finished source verified — output matches, 1.37x the original, paired

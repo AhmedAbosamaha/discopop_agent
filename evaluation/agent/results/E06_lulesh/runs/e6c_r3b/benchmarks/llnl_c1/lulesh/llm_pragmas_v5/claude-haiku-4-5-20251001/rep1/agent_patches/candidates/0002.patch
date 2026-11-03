@@ -1,0 +1,40 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r3b/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r3b/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -1866,14 +1866,29 @@
+ static inline
+ void LagrangeElements(Domain& domain, Index_t numElem)
+ {
+-  CalcLagrangeElements(domain) ;
+-
+-  CalcQForElems(domain) ;
+-
+-  ApplyMaterialPropertiesForElems(domain) ;
+-
+-  UpdateVolumesForElems(domain,
+-                        domain.v_cut(), numElem) ;
++  /* Four independent phases of Lagrange calculation, each operating on the full domain.
++     No data dependencies between phases (confirmed by DiscoPoP).
++     Each phase can execute in parallel. */
++
++#pragma omp parallel for shared(domain, numElem) schedule(static)
++  for (int phase = 0; phase < 4; ++phase) {
++    if (phase == 0) {
++      /* Phase 0: Calculate Lagrangian strains and kinematics */
++      CalcLagrangeElements(domain);
++    }
++    else if (phase == 1) {
++      /* Phase 1: Calculate artificial viscosity Q */
++      CalcQForElems(domain);
++    }
++    else if (phase == 2) {
++      /* Phase 2: Apply material properties */
++      ApplyMaterialPropertiesForElems(domain);
++    }
++    else if (phase == 3) {
++      /* Phase 3: Update element volumes */
++      UpdateVolumesForElems(domain, domain.v_cut(), numElem);
++    }
++  }
+ }
+ 
+ static inline

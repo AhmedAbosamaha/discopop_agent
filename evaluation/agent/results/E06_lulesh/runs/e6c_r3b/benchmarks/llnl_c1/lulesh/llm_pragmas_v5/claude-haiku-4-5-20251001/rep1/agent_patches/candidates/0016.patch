@@ -1,0 +1,34 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r3b/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6c_r3b/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -1500,12 +1500,30 @@
+       domain.DeallocateGradients();
+ 
+       Index_t idx = -1;
++
++      // Allocate array to track violations (one per element)
++      bool* violations = (bool*)malloc(numElem * sizeof(bool));
++
++      // Parallel loop: check which elements violate the condition
++      // idx: loop counter (private, implicit from loop)
++      // numElem: loop bound (shared, read-only)
++      // domain: shared, accessed read-only via q() and qstop()
++      // violations: shared, written once per iteration to violations[i]
++      #pragma omp parallel for private(i) shared(domain, violations, numElem)
+       for (Index_t i=0; i<numElem; ++i) {
+-         if ( domain.q(i) > domain.qstop() ) {
++         violations[i] = (domain.q(i) > domain.qstop());
++      }
++
++      // Sequential scan: find first violation and set idx
++      for (Index_t i=0; i<numElem; ++i) {
++         if (violations[i]) {
+             idx = i ;
+             break ;
+          }
+       }
++
++      // Clean up
++      free(violations);
+ 
+       if(idx >= 0) {
+          exit(QStopError);
