@@ -1,0 +1,18 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
+@@ -1624,13 +1624,12 @@
+                           Real_t p_cut, Real_t eosvmax,
+                           Index_t length, Index_t *regElemList)
+ {
++   #pragma omp parallel for schedule(static) shared(p_new, bvc, pbvc, e_old, compression, vnewc, pmin, p_cut, eosvmax, regElemList, length)
+    for (Index_t i = 0; i < length ; ++i) {
+       Real_t c1s = Real_t(2.0)/Real_t(3.0) ;
+       bvc[i] = c1s * (compression[i] + Real_t(1.));
+       pbvc[i] = c1s;
+-   }
+-
+-   for (Index_t i = 0 ; i < length ; ++i){
++
+       Index_t ielem = regElemList[i];
+ 
+       p_new[i] = bvc[i] * e_old[i] ;

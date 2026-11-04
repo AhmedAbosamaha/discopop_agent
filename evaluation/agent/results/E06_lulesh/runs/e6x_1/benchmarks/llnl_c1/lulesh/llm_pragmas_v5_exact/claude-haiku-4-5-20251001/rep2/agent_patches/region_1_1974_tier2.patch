@@ -1,0 +1,92 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
+@@ -306,37 +306,58 @@
+                               Real_t *determ, Index_t numElem, Index_t numNode)
+ {
+ 
+-   Real_t fx_local[8] ;
+-   Real_t fy_local[8] ;
+-   Real_t fz_local[8] ;
+-
+-  for( Index_t k=0 ; k<numElem ; ++k )
+-  {
+-    const Index_t* const elemToNode = domain.nodelist(k);
+-    Real_t B[3][8] ;
+-    Real_t x_local[8] ;
+-    Real_t y_local[8] ;
+-    Real_t z_local[8] ;
+-
+-    CollectDomainNodesToElemNodes(domain, elemToNode, x_local, y_local, z_local);
+-
+-    CalcElemShapeFunctionDerivatives(x_local, y_local, z_local,
+-                                         B, &determ[k]);
+-
+-    CalcElemNodeNormals( B[0] , B[1], B[2],
+-                          x_local, y_local, z_local );
+-
+-    SumElemStressesToNodeForces( B, sigxx[k], sigyy[k], sigzz[k],
+-                                 fx_local, fy_local, fz_local ) ;
+-
+-    for( Index_t lnode=0 ; lnode<8 ; ++lnode ) {
+-       Index_t gnode = elemToNode[lnode];
+-       domain.fx(gnode) += fx_local[lnode];
+-       domain.fy(gnode) += fy_local[lnode];
+-       domain.fz(gnode) += fz_local[lnode];
+-    }
+-
+-  }
++   Real_t *elem_fx = Allocate<Real_t>(numElem * 8);
++   Real_t *elem_fy = Allocate<Real_t>(numElem * 8);
++   Real_t *elem_fz = Allocate<Real_t>(numElem * 8);
++
++   // Phase 1: Parallel computation of per-element forces (independent writes to buffer)
++   #pragma omp parallel for shared(domain, sigxx, sigyy, sigzz, determ, numNode, elem_fx, elem_fy, elem_fz, numElem)
++   for( Index_t k=0 ; k<numElem ; ++k )
++   {
++      Real_t fx_local[8] ;
++      Real_t fy_local[8] ;
++      Real_t fz_local[8] ;
++
++      const Index_t* const elemToNode = domain.nodelist(k);
++      Real_t B[3][8] ;
++      Real_t x_local[8] ;
++      Real_t y_local[8] ;
++      Real_t z_local[8] ;
++
++      CollectDomainNodesToElemNodes(domain, elemToNode, x_local, y_local, z_local);
++
++      CalcElemShapeFunctionDerivatives(x_local, y_local, z_local,
++                                           B, &determ[k]);
++
++      CalcElemNodeNormals( B[0] , B[1], B[2],
++                            x_local, y_local, z_local );
++
++      SumElemStressesToNodeForces( B, sigxx[k], sigyy[k], sigzz[k],
++                                   fx_local, fy_local, fz_local ) ;
++
++      // Store forces in per-element buffer (each thread writes to independent k*8+lnode locations)
++      for( Index_t lnode=0 ; lnode<8 ; ++lnode ) {
++         elem_fx[k*8+lnode] = fx_local[lnode];
++         elem_fy[k*8+lnode] = fy_local[lnode];
++         elem_fz[k*8+lnode] = fz_local[lnode];
++      }
++   }
++
++   // Phase 2: Sequential accumulation of buffered forces to shared nodes
++   for( Index_t k=0 ; k<numElem ; ++k )
++   {
++      const Index_t* const elemToNode = domain.nodelist(k);
++      for( Index_t lnode=0 ; lnode<8 ; ++lnode ) {
++         Index_t gnode = elemToNode[lnode];
++         domain.fx(gnode) += elem_fx[k*8+lnode];
++         domain.fy(gnode) += elem_fy[k*8+lnode];
++         domain.fz(gnode) += elem_fz[k*8+lnode];
++      }
++   }
++
++   Release(&elem_fz);
++   Release(&elem_fy);
++   Release(&elem_fx);
+ 
+ }
+ 

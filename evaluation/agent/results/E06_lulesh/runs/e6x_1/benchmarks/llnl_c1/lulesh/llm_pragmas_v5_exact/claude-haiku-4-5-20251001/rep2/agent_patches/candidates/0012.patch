@@ -1,0 +1,48 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
+@@ -1522,15 +1522,37 @@
+ 
+       domain.DeallocateGradients();
+ 
+-      Index_t idx = -1;
+-      for (Index_t i=0; i<numElem; ++i) {
+-         if ( domain.q(i) > domain.qstop() ) {
+-            idx = i ;
+-            break ;
++      Real_t qstop_threshold = domain.qstop();
++      int found = 0;
++      #pragma omp parallel for reduction(|:found) firstprivate(numElem, qstop_threshold)
++      for (Index_t i=0; i<numElem; i+=8) {
++         if ( domain.q(i) > qstop_threshold ) {
++            found = 1 ;
+          }
+-      }
+-
+-      if(idx >= 0) {
++         if ( i+1 < numElem && domain.q(i+1) > qstop_threshold ) {
++            found = 1 ;
++         }
++         if ( i+2 < numElem && domain.q(i+2) > qstop_threshold ) {
++            found = 1 ;
++         }
++         if ( i+3 < numElem && domain.q(i+3) > qstop_threshold ) {
++            found = 1 ;
++         }
++         if ( i+4 < numElem && domain.q(i+4) > qstop_threshold ) {
++            found = 1 ;
++         }
++         if ( i+5 < numElem && domain.q(i+5) > qstop_threshold ) {
++            found = 1 ;
++         }
++         if ( i+6 < numElem && domain.q(i+6) > qstop_threshold ) {
++            found = 1 ;
++         }
++         if ( i+7 < numElem && domain.q(i+7) > qstop_threshold ) {
++            found = 1 ;
++         }
++      }
++
++      if(found) {
+          exit(QStopError);
+       }
+    }

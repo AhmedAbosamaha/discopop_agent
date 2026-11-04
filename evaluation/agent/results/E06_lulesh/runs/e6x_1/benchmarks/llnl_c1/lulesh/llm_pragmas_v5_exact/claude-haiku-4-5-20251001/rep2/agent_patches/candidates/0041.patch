@@ -1,0 +1,71 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
+@@ -1624,13 +1624,12 @@
+                           Real_t p_cut, Real_t eosvmax,
+                           Index_t length, Index_t *regElemList)
+ {
++   #pragma omp parallel for schedule(static) if(length > 512) shared(p_new, bvc, pbvc, e_old, compression, vnewc, pmin, p_cut, eosvmax, regElemList, length)
+    for (Index_t i = 0; i < length ; ++i) {
+       Real_t c1s = Real_t(2.0)/Real_t(3.0) ;
+       bvc[i] = c1s * (compression[i] + Real_t(1.));
+       pbvc[i] = c1s;
+-   }
+-
+-   for (Index_t i = 0 ; i < length ; ++i){
++
+       Index_t ielem = regElemList[i];
+ 
+       p_new[i] = bvc[i] * e_old[i] ;
+@@ -1699,42 +1698,6 @@
+    for (Index_t i = 0 ; i < length ; ++i) {
+ 
+       e_new[i] += Real_t(0.5) * work[i];
+-
+-      if (FABS(e_new[i]) < e_cut) {
+-         e_new[i] = Real_t(0.)  ;
+-      }
+-      if (     e_new[i]  < emin ) {
+-         e_new[i] = emin ;
+-      }
+-   }
+-
+-   CalcPressureForElems(p_new, bvc, pbvc, e_new, compression, vnewc,
+-                        pmin, p_cut, eosvmax, length, regElemList);
+-
+-   for (Index_t i = 0 ; i < length ; ++i){
+-      const Real_t sixth = Real_t(1.0) / Real_t(6.0) ;
+-      Index_t ielem = regElemList[i];
+-      Real_t q_tilde ;
+-
+-      if (delvc[i] > Real_t(0.)) {
+-         q_tilde = Real_t(0.) ;
+-      }
+-      else {
+-         Real_t ssc = ( pbvc[i] * e_new[i]
+-                 + vnewc[ielem] * vnewc[ielem] * bvc[i] * p_new[i] ) / rho0 ;
+-
+-         if ( ssc <= Real_t(.1111111e-36) ) {
+-            ssc = Real_t(.3333333e-18) ;
+-         } else {
+-            ssc = SQRT(ssc) ;
+-         }
+-
+-         q_tilde = (ssc*ql_old[i] + qq_old[i]) ;
+-      }
+-
+-      e_new[i] = e_new[i] - (  Real_t(7.0)*(p_old[i]     + q_old[i])
+-                               - Real_t(8.0)*(pHalfStep[i] + q_new[i])
+-                               + (p_new[i] + q_tilde)) * delvc[i]*sixth ;
+ 
+       if (FABS(e_new[i]) < e_cut) {
+          e_new[i] = Real_t(0.)  ;
+@@ -1946,6 +1909,9 @@
+        }
+     }
+ 
++    /* Parallelize over regions; each thread handles one or more regions sequentially.
++       Element-level parallelism within CalcPressureForElems will be nested but
++       with sufficient work per activation (~711 iterations) to justify overhead. */
+     #pragma omp parallel for schedule(guided) shared(domain, vnewc)
+     for (Int_t r=0 ; r<domain.numReg() ; r++) {
+        Index_t numElemReg = domain.regElemSize(r);

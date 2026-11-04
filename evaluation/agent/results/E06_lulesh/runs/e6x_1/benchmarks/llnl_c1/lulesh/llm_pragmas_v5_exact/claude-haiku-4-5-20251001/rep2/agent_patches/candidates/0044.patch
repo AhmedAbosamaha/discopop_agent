@@ -1,0 +1,93 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
+@@ -1076,37 +1076,51 @@
+                                      const Real_t z[8],
+                                      const Real_t volume)
+ {
+-   Real_t a, charLength = Real_t(0.0);
+-
+-   a = AreaFace(x[0],x[1],x[2],x[3],
+-                y[0],y[1],y[2],y[3],
+-                z[0],z[1],z[2],z[3]) ;
+-   charLength = std::max(a,charLength) ;
+-
+-   a = AreaFace(x[4],x[5],x[6],x[7],
+-                y[4],y[5],y[6],y[7],
+-                z[4],z[5],z[6],z[7]) ;
+-   charLength = std::max(a,charLength) ;
+-
+-   a = AreaFace(x[0],x[1],x[5],x[4],
+-                y[0],y[1],y[5],y[4],
+-                z[0],z[1],z[5],z[4]) ;
+-   charLength = std::max(a,charLength) ;
+-
+-   a = AreaFace(x[1],x[2],x[6],x[5],
+-                y[1],y[2],y[6],y[5],
+-                z[1],z[2],z[6],z[5]) ;
+-   charLength = std::max(a,charLength) ;
+-
+-   a = AreaFace(x[2],x[3],x[7],x[6],
+-                y[2],y[3],y[7],y[6],
+-                z[2],z[3],z[7],z[6]) ;
+-   charLength = std::max(a,charLength) ;
+-
+-   a = AreaFace(x[3],x[0],x[4],x[7],
+-                y[3],y[0],y[4],y[7],
+-                z[3],z[0],z[4],z[7]) ;
+-   charLength = std::max(a,charLength) ;
++   Real_t areas[6];
++
++   /* Compute all 6 face areas; each independently reads from x, y, z with
++      fixed indices and writes to a unique array element.
++      (Parallelization moved to outer loop in CalcKinematicsForElems) */
++   for (int i = 0; i < 6; i++) {
++      switch(i) {
++         case 0:
++            areas[i] = AreaFace(x[0],x[1],x[2],x[3],
++                               y[0],y[1],y[2],y[3],
++                               z[0],z[1],z[2],z[3]);
++            break;
++         case 1:
++            areas[i] = AreaFace(x[4],x[5],x[6],x[7],
++                               y[4],y[5],y[6],y[7],
++                               z[4],z[5],z[6],z[7]);
++            break;
++         case 2:
++            areas[i] = AreaFace(x[0],x[1],x[5],x[4],
++                               y[0],y[1],y[5],y[4],
++                               z[0],z[1],z[5],z[4]);
++            break;
++         case 3:
++            areas[i] = AreaFace(x[1],x[2],x[6],x[5],
++                               y[1],y[2],y[6],y[5],
++                               z[1],z[2],z[6],z[5]);
++            break;
++         case 4:
++            areas[i] = AreaFace(x[2],x[3],x[7],x[6],
++                               y[2],y[3],y[7],y[6],
++                               z[2],z[3],z[7],z[6]);
++            break;
++         case 5:
++            areas[i] = AreaFace(x[3],x[0],x[4],x[7],
++                               y[3],y[0],y[4],y[7],
++                               z[3],z[0],z[4],z[7]);
++            break;
++      }
++   }
++
++   /* Find maximum face area */
++   Real_t charLength = areas[0];
++   for (int i = 1; i < 6; i++) {
++      charLength = std::max(areas[i], charLength);
++   }
+ 
+    charLength = Real_t(4.0) * volume / SQRT(charLength);
+ 
+@@ -1180,6 +1194,7 @@
+                              Real_t deltaTime, Index_t numElem )
+ {
+ 
++  #pragma omp parallel for shared(domain, deltaTime, numElem)
+   for( Index_t k=0 ; k<numElem ; ++k )
+   {
+     Real_t B[3][8] ;

@@ -1,0 +1,22 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc	2026-11-03 22:16:50.866267341 +0000
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc.discopop_patch_generator.temp	2026-11-03 22:21:56.477813698 +0000
+@@ -828,6 +828,10 @@
+ 
+   CalcForceForNodes(domain);
+ 
++   #pragma omp parallel
++   #pragma omp single
++   {
++   #pragma omp task
+    CalcAccelerationForNodes(domain, domain.numNode());
+ 
+    ApplyAccelerationBoundaryConditionsForNodes(domain);
+@@ -836,6 +840,8 @@
+ 
+    CalcPositionForNodes( domain, delt, domain.numNode() );
+ 
++  #pragma omp task
++  }
+   return;
+ }
+ 

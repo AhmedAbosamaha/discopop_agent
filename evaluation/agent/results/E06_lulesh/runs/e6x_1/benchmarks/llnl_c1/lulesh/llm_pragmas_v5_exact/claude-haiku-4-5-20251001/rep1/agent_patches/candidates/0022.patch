@@ -1,0 +1,42 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -1783,6 +1783,7 @@
+             q_old[i] = domain.q(ielem) ;
+             qq_old[i] = domain.qq(ielem) ;
+             ql_old[i] = domain.ql(ielem) ;
++            work[i] = Real_t(0.) ;
+          }
+ 
+          for (Index_t i = 0; i < numElemReg ; ++i) {
+@@ -1793,27 +1794,20 @@
+             compHalfStep[i] = Real_t(1.) / vchalf - Real_t(1.);
+          }
+ 
+-         if ( eosvmin != Real_t(0.) ) {
+-            for(Index_t i=0 ; i<numElemReg ; ++i) {
+-               Index_t ielem = regElemList[i];
++         for (Index_t i=0 ; i<numElemReg ; ++i) {
++            Index_t ielem = regElemList[i];
++            if ( eosvmin != Real_t(0.) ) {
+                if (vnewc[ielem] <= eosvmin) {
+                   compHalfStep[i] = compression[i] ;
+                }
+             }
+-         }
+-         if ( eosvmax != Real_t(0.) ) {
+-            for(Index_t i=0 ; i<numElemReg ; ++i) {
+-               Index_t ielem = regElemList[i];
++            if ( eosvmax != Real_t(0.) ) {
+                if (vnewc[ielem] >= eosvmax) {
+                   p_old[i]        = Real_t(0.) ;
+                   compression[i]  = Real_t(0.) ;
+                   compHalfStep[i] = Real_t(0.) ;
+                }
+             }
+-         }
+-
+-         for (Index_t i = 0 ; i < numElemReg ; ++i) {
+-            work[i] = Real_t(0.) ;
+          }
+       }
+       CalcEnergyForElems(p_new, e_new, q_new, bvc, pbvc,

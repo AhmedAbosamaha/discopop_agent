@@ -1,0 +1,48 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
+@@ -2162,17 +2162,41 @@
+    domain.dtcourant() = 1.0e+20;
+    domain.dthydro() = 1.0e+20;
+ 
+-   for (Index_t r=0 ; r < domain.numReg() ; ++r) {
++   Index_t numReg = domain.numReg();
++   Real_t* courant_vals = Allocate<Real_t>(numReg);
++   Real_t* hydro_vals = Allocate<Real_t>(numReg);
++
++   /* Each region computes constraints independently into separate array elements.
++      This eliminates inter-iteration WAW dependences on dtcourant/dthydro scalars. */
++#pragma omp parallel for \
++  default(none) shared(domain, courant_vals, hydro_vals, numReg)
++   for (Index_t r=0 ; r < numReg ; ++r) {
++      courant_vals[r] = 1.0e+20;
++      hydro_vals[r] = 1.0e+20;
++
+       CalcCourantConstraintForElems(domain, domain.regElemSize(r),
+                                     domain.regElemlist(r),
+                                     domain.qqc(),
+-                                    domain.dtcourant()) ;
++                                    courant_vals[r]) ;
+ 
+       CalcHydroConstraintForElems(domain, domain.regElemSize(r),
+                                   domain.regElemlist(r),
+                                   domain.dvovmax(),
+-                                  domain.dthydro()) ;
+-   }
++                                  hydro_vals[r]) ;
++   }
++
++   /* Find global minimums across all regions (reduction semantics). */
++   for (Index_t r=0 ; r < numReg ; ++r) {
++      if (courant_vals[r] < domain.dtcourant()) {
++         domain.dtcourant() = courant_vals[r];
++      }
++      if (hydro_vals[r] < domain.dthydro()) {
++         domain.dthydro() = hydro_vals[r];
++      }
++   }
++
++   Release(&courant_vals);
++   Release(&hydro_vals);
+ }
+ 
+ void LagrangeLeapFrog(Domain& domain)

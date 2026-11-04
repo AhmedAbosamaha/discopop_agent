@@ -1,0 +1,160 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
+@@ -1737,23 +1737,35 @@
+    Real_t emin    = domain.emin() ;
+    Real_t rho0    = domain.refdens() ;
+ 
+-   Real_t *e_old = Allocate<Real_t>(numElemReg) ;
+-   Real_t *delvc = Allocate<Real_t>(numElemReg) ;
+-   Real_t *p_old = Allocate<Real_t>(numElemReg) ;
+-   Real_t *q_old = Allocate<Real_t>(numElemReg) ;
+-   Real_t *compression = Allocate<Real_t>(numElemReg) ;
+-   Real_t *compHalfStep = Allocate<Real_t>(numElemReg) ;
+-   Real_t *qq_old = Allocate<Real_t>(numElemReg) ;
+-   Real_t *ql_old = Allocate<Real_t>(numElemReg) ;
+-   Real_t *work = Allocate<Real_t>(numElemReg) ;
+-   Real_t *p_new = Allocate<Real_t>(numElemReg) ;
+-   Real_t *e_new = Allocate<Real_t>(numElemReg) ;
+-   Real_t *q_new = Allocate<Real_t>(numElemReg) ;
+-   Real_t *bvc = Allocate<Real_t>(numElemReg) ;
+-   Real_t *pbvc = Allocate<Real_t>(numElemReg) ;
++   // Allocate 2D output arrays to hold results from all rep iterations
++   Real_t **p_new_rep = Allocate<Real_t*>(rep) ;
++   Real_t **e_new_rep = Allocate<Real_t*>(rep) ;
++   Real_t **q_new_rep = Allocate<Real_t*>(rep) ;
++   Real_t **bvc_rep = Allocate<Real_t*>(rep) ;
++   Real_t **pbvc_rep = Allocate<Real_t*>(rep) ;
++   Real_t **work_rep = Allocate<Real_t*>(rep) ;
++   for(Int_t jr = 0; jr < rep; jr++) {
++      p_new_rep[jr] = Allocate<Real_t>(numElemReg) ;
++      e_new_rep[jr] = Allocate<Real_t>(numElemReg) ;
++      q_new_rep[jr] = Allocate<Real_t>(numElemReg) ;
++      bvc_rep[jr] = Allocate<Real_t>(numElemReg) ;
++      pbvc_rep[jr] = Allocate<Real_t>(numElemReg) ;
++      work_rep[jr] = Allocate<Real_t>(numElemReg) ;
++   }
+ 
+    for(Int_t j = 0; j < rep; j++) {
++      Real_t *e_old = Allocate<Real_t>(numElemReg) ;
++      Real_t *delvc = Allocate<Real_t>(numElemReg) ;
++      Real_t *p_old = Allocate<Real_t>(numElemReg) ;
++      Real_t *q_old = Allocate<Real_t>(numElemReg) ;
++      Real_t *compression = Allocate<Real_t>(numElemReg) ;
++      Real_t *compHalfStep = Allocate<Real_t>(numElemReg) ;
++      Real_t *qq_old = Allocate<Real_t>(numElemReg) ;
++      Real_t *ql_old = Allocate<Real_t>(numElemReg) ;
++
+       {
++         #pragma omp parallel for shared(numElemReg, regElemList, domain, \
++                                         e_old, delvc, p_old, q_old, qq_old, ql_old)
+          for (Index_t i=0; i<numElemReg; ++i) {
+             Index_t ielem = regElemList[i];
+             e_old[i] = domain.e(ielem) ;
+@@ -1764,6 +1776,8 @@
+             ql_old[i] = domain.ql(ielem) ;
+          }
+ 
++         #pragma omp parallel for shared(numElemReg, regElemList, vnewc, delvc, \
++                                         compression, compHalfStep)
+          for (Index_t i = 0; i < numElemReg ; ++i) {
+             Index_t ielem = regElemList[i];
+             Real_t vchalf ;
+@@ -1773,6 +1787,8 @@
+          }
+ 
+          if ( eosvmin != Real_t(0.) ) {
++            #pragma omp parallel for shared(numElemReg, regElemList, vnewc, eosvmin, \
++                                            compression, compHalfStep)
+             for(Index_t i=0 ; i<numElemReg ; ++i) {
+                Index_t ielem = regElemList[i];
+                if (vnewc[ielem] <= eosvmin) {
+@@ -1781,6 +1797,8 @@
+             }
+          }
+          if ( eosvmax != Real_t(0.) ) {
++            #pragma omp parallel for shared(numElemReg, regElemList, vnewc, eosvmax, \
++                                            p_old, compression, compHalfStep)
+             for(Index_t i=0 ; i<numElemReg ; ++i) {
+                Index_t ielem = regElemList[i];
+                if (vnewc[ielem] >= eosvmax) {
+@@ -1791,44 +1809,56 @@
+             }
+          }
+ 
++         #pragma omp parallel for shared(numElemReg, work_rep, j)
+          for (Index_t i = 0 ; i < numElemReg ; ++i) {
+-            work[i] = Real_t(0.) ;
++            work_rep[j][i] = Real_t(0.) ;
+          }
+       }
+-      CalcEnergyForElems(p_new, e_new, q_new, bvc, pbvc,
++      CalcEnergyForElems(p_new_rep[j], e_new_rep[j], q_new_rep[j], bvc_rep[j], pbvc_rep[j],
+                          p_old, e_old,  q_old, compression, compHalfStep,
+-                         vnewc, work,  delvc, pmin,
++                         vnewc, work_rep[j],  delvc, pmin,
+                          p_cut, e_cut, q_cut, emin,
+                          qq_old, ql_old, rho0, eosvmax,
+                          numElemReg, regElemList);
+-   }
+-
++
++      Release(&ql_old) ;
++      Release(&qq_old) ;
++      Release(&compHalfStep) ;
++      Release(&compression) ;
++      Release(&q_old) ;
++      Release(&p_old) ;
++      Release(&delvc) ;
++      Release(&e_old) ;
++   }
++
++   // Write results from last j iteration
+    for (Index_t i=0; i<numElemReg; ++i) {
+       Index_t ielem = regElemList[i];
+-      domain.p(ielem) = p_new[i] ;
+-      domain.e(ielem) = e_new[i] ;
+-      domain.q(ielem) = q_new[i] ;
++      domain.p(ielem) = p_new_rep[rep-1][i] ;
++      domain.e(ielem) = e_new_rep[rep-1][i] ;
++      domain.q(ielem) = q_new_rep[rep-1][i] ;
+    }
+ 
+    CalcSoundSpeedForElems(domain,
+-                          vnewc, rho0, e_new, p_new,
+-                          pbvc, bvc, ss4o3,
++                          vnewc, rho0, e_new_rep[rep-1], p_new_rep[rep-1],
++                          pbvc_rep[rep-1], bvc_rep[rep-1], ss4o3,
+                           numElemReg, regElemList) ;
+ 
+-   Release(&pbvc) ;
+-   Release(&bvc) ;
+-   Release(&q_new) ;
+-   Release(&e_new) ;
+-   Release(&p_new) ;
+-   Release(&work) ;
+-   Release(&ql_old) ;
+-   Release(&qq_old) ;
+-   Release(&compHalfStep) ;
+-   Release(&compression) ;
+-   Release(&q_old) ;
+-   Release(&p_old) ;
+-   Release(&delvc) ;
+-   Release(&e_old) ;
++   // Release 2D arrays
++   for(Int_t jr = 0; jr < rep; jr++) {
++      Release(&pbvc_rep[jr]) ;
++      Release(&bvc_rep[jr]) ;
++      Release(&q_new_rep[jr]) ;
++      Release(&e_new_rep[jr]) ;
++      Release(&p_new_rep[jr]) ;
++      Release(&work_rep[jr]) ;
++   }
++   Release(&work_rep) ;
++   Release(&pbvc_rep) ;
++   Release(&bvc_rep) ;
++   Release(&q_new_rep) ;
++   Release(&e_new_rep) ;
++   Release(&p_new_rep) ;
+ }
+ 
+ static inline

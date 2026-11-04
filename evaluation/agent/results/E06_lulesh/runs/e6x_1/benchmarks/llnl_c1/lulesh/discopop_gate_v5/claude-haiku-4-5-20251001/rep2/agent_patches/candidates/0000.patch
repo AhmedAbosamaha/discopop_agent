@@ -1,0 +1,22 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_1/profiles/llnl_c1/lulesh/lulesh.cc	2026-11-02 22:10:50.872290256 +0000
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_1/profiles/llnl_c1/lulesh/lulesh.cc.discopop_patch_generator.temp	2026-11-03 21:38:01.231778115 +0000
+@@ -1855,6 +1855,10 @@
+ static inline
+ void LagrangeElements(Domain& domain, Index_t numElem)
+ {
++  #pragma omp parallel
++  #pragma omp single
++  {
++  #pragma omp task
+   CalcLagrangeElements(domain) ;
+ 
+   CalcQForElems(domain) ;
+@@ -1863,6 +1867,8 @@
+ 
+   UpdateVolumesForElems(domain,
+                         domain.v_cut(), numElem) ;
++#pragma omp task
++}
+ }
+ 
+ static inline

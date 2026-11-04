@@ -1,0 +1,17 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep2/work/lulesh.cc	2026-11-04 06:57:23.511929514 +0000
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep2/work/lulesh.cc.discopop_patch_generator.temp	2026-11-04 07:33:10.396935753 +0000
+@@ -306,8 +306,14 @@
+                               Real_t *determ, Index_t numElem, Index_t numNode)
+ {
+ 
++   #pragma omp parallel
++   #pragma omp single
++   {
++   #pragma omp task
+    Real_t *elem_fx = Allocate<Real_t>(numElem * 8);
++   #pragma omp task
+    Real_t *elem_fy = Allocate<Real_t>(numElem * 8);
++   }
+    Real_t *elem_fz = Allocate<Real_t>(numElem * 8);
+ 
+    // Phase 1: Parallel computation of per-element forces (independent writes to buffer)

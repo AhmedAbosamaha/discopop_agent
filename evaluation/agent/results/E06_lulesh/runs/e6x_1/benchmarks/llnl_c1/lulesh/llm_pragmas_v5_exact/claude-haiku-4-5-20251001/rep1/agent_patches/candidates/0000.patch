@@ -1,0 +1,76 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -1962,6 +1962,70 @@
+ 
+    LagrangeElements(domain, domain.numElem());
+ 
+-   CalcTimeConstraintsForElems(domain);
+-
+-}
++   /* CalcTimeConstraintsForElems inlined and parallelized */
++   Real_t dtcourant = 1.0e+20;
++   Real_t dthydro = 1.0e+20;
++
++   #pragma omp parallel for schedule(static) \
++      reduction(min:dtcourant, dthydro)
++   for (Index_t r=0 ; r < domain.numReg() ; ++r) {
++      /* Inline CalcCourantConstraintForElems */
++      {
++         Real_t   qqc2 = Real_t(64.0) * domain.qqc() * domain.qqc() ;
++         Real_t   dtcourant_tmp = dtcourant;
++         Index_t  courant_elem  = -1 ;
++
++         for (Index_t i = 0 ; i < domain.regElemSize(r) ; ++i) {
++            Index_t indx = domain.regElemlist(r, i) ;
++            Real_t dtf = domain.ss(indx) * domain.ss(indx) ;
++
++            if ( domain.vdov(indx) < Real_t(0.) ) {
++               dtf = dtf
++                   + qqc2 * domain.arealg(indx) * domain.arealg(indx)
++                   * domain.vdov(indx) * domain.vdov(indx) ;
++            }
++
++            dtf = SQRT(dtf) ;
++            dtf = domain.arealg(indx) / dtf ;
++
++            if (domain.vdov(indx) != Real_t(0.)) {
++               if ( dtf < dtcourant_tmp ) {
++                  dtcourant_tmp = dtf ;
++                  courant_elem  = indx ;
++               }
++            }
++         }
++
++         if (courant_elem != -1) {
++            dtcourant = dtcourant_tmp ;
++         }
++      }
++
++      /* Inline CalcHydroConstraintForElems */
++      {
++         Real_t dthydro_tmp = dthydro ;
++         Index_t hydro_elem = -1 ;
++
++         for (Index_t i = 0 ; i < domain.regElemSize(r) ; ++i) {
++            Index_t indx = domain.regElemlist(r, i) ;
++
++            if (domain.vdov(indx) != Real_t(0.)) {
++               Real_t dtdvov = domain.dvovmax() / (FABS(domain.vdov(indx))+Real_t(1.e-20)) ;
++
++               if ( dthydro_tmp > dtdvov ) {
++                     dthydro_tmp = dtdvov ;
++                     hydro_elem = indx ;
++               }
++            }
++         }
++
++         if (hydro_elem != -1) {
++            dthydro = dthydro_tmp ;
++         }
++      }
++   }
++
++   domain.dtcourant() = dtcourant ;
++   domain.dthydro() = dthydro ;
++
++}

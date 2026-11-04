@@ -1,0 +1,42 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
+@@ -1518,19 +1518,29 @@
+ 
+       CalcMonotonicQGradientsForElems(domain);
+ 
+-      CalcMonotonicQForElems(domain);
++      Real_t qstop_threshold = domain.qstop();
++      int found = 0;
++      const Real_t ptiny = Real_t(1.e-36) ;
++
++      /* Parallelize at region level: compute Q and check together for each region */
++      #pragma omp parallel for reduction(|:found) firstprivate(ptiny, qstop_threshold)
++      for (Index_t r=0; r<domain.numReg(); ++r) {
++         if (domain.regElemSize(r) > 0) {
++            CalcMonotonicQRegionForElems(domain, r, ptiny) ;
++
++            /* Check elements in this region immediately after computation */
++            for (Index_t i=0; i<domain.regElemSize(r); ++i) {
++               Index_t ielem = domain.regElemlist(r, i) ;
++               if (domain.q(ielem) > qstop_threshold) {
++                  found = 1 ;
++               }
++            }
++         }
++      }
+ 
+       domain.DeallocateGradients();
+ 
+-      Index_t idx = -1;
+-      for (Index_t i=0; i<numElem; ++i) {
+-         if ( domain.q(i) > domain.qstop() ) {
+-            idx = i ;
+-            break ;
+-         }
+-      }
+-
+-      if(idx >= 0) {
++      if(found) {
+          exit(QStopError);
+       }
+    }

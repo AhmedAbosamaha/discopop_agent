@@ -1,0 +1,129 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
+@@ -497,6 +497,11 @@
+    gamma[3][6] = Real_t( 1.);
+    gamma[3][7] = Real_t(-1.);
+ 
++   Real_t *hgfx_buf = Allocate<Real_t>(numElem * 8);
++   Real_t *hgfy_buf = Allocate<Real_t>(numElem * 8);
++   Real_t *hgfz_buf = Allocate<Real_t>(numElem * 8);
++
++   #pragma omp parallel for firstprivate(numElem, hourg)
+    for(Index_t i2=0;i2<numElem;++i2){
+       Real_t hgfx[8], hgfy[8], hgfz[8] ;
+ 
+@@ -609,39 +614,81 @@
+                       hourgam,
+                       coefficient, hgfx, hgfy, hgfz);
+ 
+-      domain.fx(n0si2) += hgfx[0];
+-      domain.fy(n0si2) += hgfy[0];
+-      domain.fz(n0si2) += hgfz[0];
+-
+-      domain.fx(n1si2) += hgfx[1];
+-      domain.fy(n1si2) += hgfy[1];
+-      domain.fz(n1si2) += hgfz[1];
+-
+-      domain.fx(n2si2) += hgfx[2];
+-      domain.fy(n2si2) += hgfy[2];
+-      domain.fz(n2si2) += hgfz[2];
+-
+-      domain.fx(n3si2) += hgfx[3];
+-      domain.fy(n3si2) += hgfy[3];
+-      domain.fz(n3si2) += hgfz[3];
+-
+-      domain.fx(n4si2) += hgfx[4];
+-      domain.fy(n4si2) += hgfy[4];
+-      domain.fz(n4si2) += hgfz[4];
+-
+-      domain.fx(n5si2) += hgfx[5];
+-      domain.fy(n5si2) += hgfy[5];
+-      domain.fz(n5si2) += hgfz[5];
+-
+-      domain.fx(n6si2) += hgfx[6];
+-      domain.fy(n6si2) += hgfy[6];
+-      domain.fz(n6si2) += hgfz[6];
+-
+-      domain.fx(n7si2) += hgfx[7];
+-      domain.fy(n7si2) += hgfy[7];
+-      domain.fz(n7si2) += hgfz[7];
+-
+-   }
++      hgfx_buf[i2*8+0] = hgfx[0];
++      hgfx_buf[i2*8+1] = hgfx[1];
++      hgfx_buf[i2*8+2] = hgfx[2];
++      hgfx_buf[i2*8+3] = hgfx[3];
++      hgfx_buf[i2*8+4] = hgfx[4];
++      hgfx_buf[i2*8+5] = hgfx[5];
++      hgfx_buf[i2*8+6] = hgfx[6];
++      hgfx_buf[i2*8+7] = hgfx[7];
++
++      hgfy_buf[i2*8+0] = hgfy[0];
++      hgfy_buf[i2*8+1] = hgfy[1];
++      hgfy_buf[i2*8+2] = hgfy[2];
++      hgfy_buf[i2*8+3] = hgfy[3];
++      hgfy_buf[i2*8+4] = hgfy[4];
++      hgfy_buf[i2*8+5] = hgfy[5];
++      hgfy_buf[i2*8+6] = hgfy[6];
++      hgfy_buf[i2*8+7] = hgfy[7];
++
++      hgfz_buf[i2*8+0] = hgfz[0];
++      hgfz_buf[i2*8+1] = hgfz[1];
++      hgfz_buf[i2*8+2] = hgfz[2];
++      hgfz_buf[i2*8+3] = hgfz[3];
++      hgfz_buf[i2*8+4] = hgfz[4];
++      hgfz_buf[i2*8+5] = hgfz[5];
++      hgfz_buf[i2*8+6] = hgfz[6];
++      hgfz_buf[i2*8+7] = hgfz[7];
++   }
++
++   for(Index_t i2=0;i2<numElem;++i2){
++      const Index_t *elemToNode = domain.nodelist(i2);
++      Index_t n0si2 = elemToNode[0];
++      Index_t n1si2 = elemToNode[1];
++      Index_t n2si2 = elemToNode[2];
++      Index_t n3si2 = elemToNode[3];
++      Index_t n4si2 = elemToNode[4];
++      Index_t n5si2 = elemToNode[5];
++      Index_t n6si2 = elemToNode[6];
++      Index_t n7si2 = elemToNode[7];
++
++      domain.fx(n0si2) += hgfx_buf[i2*8+0];
++      domain.fy(n0si2) += hgfy_buf[i2*8+0];
++      domain.fz(n0si2) += hgfz_buf[i2*8+0];
++
++      domain.fx(n1si2) += hgfx_buf[i2*8+1];
++      domain.fy(n1si2) += hgfy_buf[i2*8+1];
++      domain.fz(n1si2) += hgfz_buf[i2*8+1];
++
++      domain.fx(n2si2) += hgfx_buf[i2*8+2];
++      domain.fy(n2si2) += hgfy_buf[i2*8+2];
++      domain.fz(n2si2) += hgfz_buf[i2*8+2];
++
++      domain.fx(n3si2) += hgfx_buf[i2*8+3];
++      domain.fy(n3si2) += hgfy_buf[i2*8+3];
++      domain.fz(n3si2) += hgfz_buf[i2*8+3];
++
++      domain.fx(n4si2) += hgfx_buf[i2*8+4];
++      domain.fy(n4si2) += hgfy_buf[i2*8+4];
++      domain.fz(n4si2) += hgfz_buf[i2*8+4];
++
++      domain.fx(n5si2) += hgfx_buf[i2*8+5];
++      domain.fy(n5si2) += hgfy_buf[i2*8+5];
++      domain.fz(n5si2) += hgfz_buf[i2*8+5];
++
++      domain.fx(n6si2) += hgfx_buf[i2*8+6];
++      domain.fy(n6si2) += hgfy_buf[i2*8+6];
++      domain.fz(n6si2) += hgfz_buf[i2*8+6];
++
++      domain.fx(n7si2) += hgfx_buf[i2*8+7];
++      domain.fy(n7si2) += hgfy_buf[i2*8+7];
++      domain.fz(n7si2) += hgfz_buf[i2*8+7];
++   }
++
++   Release(&hgfx_buf);
++   Release(&hgfy_buf);
++   Release(&hgfz_buf);
+ 
+ }
+ 

@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -1673,6 +1673,7 @@
+    CalcPressureForElems(p_new, bvc, pbvc, e_new, compression, vnewc,
+                         pmin, p_cut, eosvmax, length, regElemList);
+ 
++ #pragma omp parallel for firstprivate(e_old,emin,e_cut,work,compression,length,compHalfStep,rho0) lastprivate(e_old) shared(p_old,p_new,bvc,e_new,q_new,regElemList,q_old,pHalfStep,qq_old,delvc,vnewc,pbvc) 
+    for (Index_t i = 0 ; i < length ; ++i){
+       const Real_t sixth = Real_t(1.0) / Real_t(6.0) ;
+       Index_t ielem = regElemList[i];

@@ -1,0 +1,76 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -1062,7 +1062,12 @@
+ void CalcKinematicsForElems( Domain &domain,
+                              Real_t deltaTime, Index_t numElem )
+ {
+-
++  Real_t dt2 = Real_t(0.5) * deltaTime;
++
++  #pragma omp parallel for \
++      schedule(static) \
++      firstprivate(dt2) \
++      shared(domain)
+   for( Index_t k=0 ; k<numElem ; ++k )
+   {
+     Real_t B[3][8] ;
+@@ -1097,7 +1102,6 @@
+       zd_local[lnode] = domain.zd(gnode);
+     }
+ 
+-    Real_t dt2 = Real_t(0.5) * deltaTime;
+     for ( Index_t j=0 ; j<8 ; ++j )
+     {
+        x_local[j] -= dt2 * xd_local[j];
+@@ -1151,9 +1155,13 @@
+ void CalcMonotonicQGradientsForElems(Domain& domain)
+ {
+    Index_t numElem = domain.numElem();
+-
++   const Real_t ptiny = Real_t(1.e-36) ;
++
++   #pragma omp parallel for \
++       schedule(static) \
++       firstprivate(ptiny) \
++       shared(domain)
+    for (Index_t i = 0 ; i < numElem ; ++i ) {
+-      const Real_t ptiny = Real_t(1.e-36) ;
+       Real_t ax,ay,az ;
+       Real_t dxv,dyv,dzv ;
+ 
+@@ -1295,6 +1303,10 @@
+    Real_t qlc_monoq = domain.qlc_monoq();
+    Real_t qqc_monoq = domain.qqc_monoq();
+ 
++   #pragma omp parallel for \
++       schedule(static) \
++       firstprivate(monoq_limiter_mult, monoq_max_slope, qlc_monoq, qqc_monoq, ptiny) \
++       shared(domain)
+    for ( Index_t i = 0 ; i < domain.regElemSize(r); ++i ) {
+       Index_t ielem = domain.regElemlist(r,i);
+       Real_t qlin, qquad ;
+@@ -1861,8 +1873,22 @@
+ 
+   ApplyMaterialPropertiesForElems(domain) ;
+ 
+-  UpdateVolumesForElems(domain,
+-                        domain.v_cut(), numElem) ;
++  // Inline and parallelize UpdateVolumesForElems since it has element-level independence
++  if (numElem != 0) {
++    Real_t v_cut = domain.v_cut();
++    #pragma omp parallel for \
++        schedule(static) \
++        firstprivate(v_cut) \
++        shared(domain)
++    for(Index_t i=0 ; i<numElem ; ++i) {
++       Real_t tmpV = domain.vnew(i) ;
++
++       if ( FABS(tmpV - Real_t(1.0)) < v_cut )
++          tmpV = Real_t(1.0) ;
++
++       domain.v(i) = tmpV ;
++    }
++  }
+ }
+ 
+ static inline

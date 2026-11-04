@@ -1,0 +1,26 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -329,6 +329,7 @@
+     SumElemStressesToNodeForces( B, sigxx[k], sigyy[k], sigzz[k],
+                                  fx_local, fy_local, fz_local ) ;
+ 
++    #pragma omp parallel for shared(fx_local,fz_local,elemToNode,fy_local,domain) 
+     for( Index_t lnode=0 ; lnode<8 ; ++lnode ) {
+        Index_t gnode = elemToNode[lnode];
+        domain.fx(gnode) += fx_local[lnode];
+@@ -1508,6 +1509,7 @@
+       pbvc[i] = c1s;
+    }
+ 
++   #pragma omp parallel for firstprivate(p_cut,pmin,length,eosvmax) shared(regElemList,e_old,vnewc,bvc,p_new) 
+    for (Index_t i = 0 ; i < length ; ++i){
+       Index_t ielem = regElemList[i];
+ 
+@@ -1702,6 +1704,7 @@
+ 
+    for(Int_t j = 0; j < rep; j++) {
+       {
++         #pragma omp parallel for firstprivate(numElemReg) private(bvc,work,q_new,p_new,pbvc) shared(e_old,regElemList,q_old,domain,qq_old,delvc,ql_old,p_old) 
+          for (Index_t i=0; i<numElemReg; ++i) {
+             Index_t ielem = regElemList[i];
+             e_old[i] = domain.e(ielem) ;

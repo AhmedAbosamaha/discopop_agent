@@ -1,0 +1,56 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -1962,6 +1962,50 @@
+ 
+    LagrangeElements(domain, domain.numElem());
+ 
+-   CalcTimeConstraintsForElems(domain);
+-
+-}
++   /* CalcTimeConstraintsForElems inlined and parallelized */
++   Real_t dtcourant = 1.0e+20;
++   Real_t dthydro = 1.0e+20;
++
++   Real_t qqc2 = Real_t(64.0) * domain.qqc() * domain.qqc() ;
++   Real_t dvovmax = domain.dvovmax() ;
++   Index_t numElem = domain.numElem() ;
++
++   #pragma omp parallel for schedule(static) \
++      reduction(min:dtcourant, dthydro)
++   for (Index_t indx=0 ; indx < numElem ; ++indx) {
++      /* Courant constraint: compute time step limit from this element */
++      {
++         Real_t dtf = domain.ss(indx) * domain.ss(indx) ;
++
++         if ( domain.vdov(indx) < Real_t(0.) ) {
++            dtf = dtf
++                + qqc2 * domain.arealg(indx) * domain.arealg(indx)
++                * domain.vdov(indx) * domain.vdov(indx) ;
++         }
++
++         dtf = SQRT(dtf) ;
++         dtf = domain.arealg(indx) / dtf ;
++
++         if (domain.vdov(indx) != Real_t(0.)) {
++            if ( dtf < dtcourant ) {
++               dtcourant = dtf ;
++            }
++         }
++      }
++
++      /* Hydro constraint: compute time step limit from this element */
++      {
++         if (domain.vdov(indx) != Real_t(0.)) {
++            Real_t dtdvov = dvovmax / (FABS(domain.vdov(indx))+Real_t(1.e-20)) ;
++
++            if ( dthydro > dtdvov ) {
++               dthydro = dtdvov ;
++            }
++         }
++      }
++   }
++
++   domain.dtcourant() = dtcourant ;
++   domain.dthydro() = dthydro ;
++
++}

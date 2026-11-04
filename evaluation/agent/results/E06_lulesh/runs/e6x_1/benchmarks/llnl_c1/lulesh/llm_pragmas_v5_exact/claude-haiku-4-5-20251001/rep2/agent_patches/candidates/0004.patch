@@ -1,0 +1,106 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
+@@ -1855,14 +1855,95 @@
+ static inline
+ void LagrangeElements(Domain& domain, Index_t numElem)
+ {
+-  CalcLagrangeElements(domain) ;
+-
+-  CalcQForElems(domain) ;
+-
+-  ApplyMaterialPropertiesForElems(domain) ;
+-
+-  UpdateVolumesForElems(domain,
+-                        domain.v_cut(), numElem) ;
++  /* Restructured to expose parallelizable loops.
++     Element-wise computation from CalcLagrangeElements and UpdateVolumesForElems
++     are merged into a single parallel loop.  CalcQForElems and ApplyMaterialPropertiesForElems
++     are kept sequential as they depend on the output of the kinematics loop. */
++
++  Index_t numElemLocal = domain.numElem();
++  if (numElemLocal > 0) {
++    const Real_t deltatime = domain.deltatime();
++    Real_t v_cut = domain.v_cut();
++
++    domain.AllocateStrains(numElemLocal);
++
++    /* Kinematics and volume update: element-wise independent operations. */
++#pragma omp parallel for collapse(1) \
++  default(none) shared(domain, numElemLocal, deltatime, v_cut) private()
++    for (Index_t k = 0; k < numElemLocal; ++k) {
++      /* CalcKinematicsForElems inlined: compute strain tensors for element k */
++      Real_t B[3][8];
++      Real_t D[6];
++      Real_t x_local[8];
++      Real_t y_local[8];
++      Real_t z_local[8];
++      Real_t xd_local[8];
++      Real_t yd_local[8];
++      Real_t zd_local[8];
++      Real_t detJ = Real_t(0.0);
++
++      Real_t volume;
++      Real_t relativeVolume;
++      const Index_t* const elemToNode = domain.nodelist(k);
++
++      CollectDomainNodesToElemNodes(domain, elemToNode, x_local, y_local, z_local);
++
++      volume = CalcElemVolume(x_local, y_local, z_local);
++      relativeVolume = volume / domain.volo(k);
++      domain.vnew(k) = relativeVolume;
++      domain.delv(k) = relativeVolume - domain.v(k);
++
++      domain.arealg(k) = CalcElemCharacteristicLength(x_local, y_local, z_local,
++                                                      volume);
++
++      for (Index_t lnode = 0; lnode < 8; ++lnode) {
++        Index_t gnode = elemToNode[lnode];
++        xd_local[lnode] = domain.xd(gnode);
++        yd_local[lnode] = domain.yd(gnode);
++        zd_local[lnode] = domain.zd(gnode);
++      }
++
++      Real_t dt2 = Real_t(0.5) * deltatime;
++      for (Index_t j = 0; j < 8; ++j) {
++        x_local[j] -= dt2 * xd_local[j];
++        y_local[j] -= dt2 * yd_local[j];
++        z_local[j] -= dt2 * zd_local[j];
++      }
++
++      CalcElemShapeFunctionDerivatives(x_local, y_local, z_local, B, &detJ);
++
++      CalcElemVelocityGradient(xd_local, yd_local, zd_local, B, detJ, D);
++
++      domain.dxx(k) = D[0];
++      domain.dyy(k) = D[1];
++      domain.dzz(k) = D[2];
++
++      /* Strain processing from CalcLagrangeElements inlined */
++      Real_t vdov = domain.dxx(k) + domain.dyy(k) + domain.dzz(k);
++      Real_t vdovthird = vdov / Real_t(3.0);
++
++      domain.vdov(k) = vdov;
++      domain.dxx(k) -= vdovthird;
++      domain.dyy(k) -= vdovthird;
++      domain.dzz(k) -= vdovthird;
++
++      if (domain.vnew(k) <= Real_t(0.0)) {
++        exit(VolumeError);
++      }
++
++      /* UpdateVolumesForElems inlined: finalize volumes */
++      Real_t tmpV = domain.vnew(k);
++      if (FABS(tmpV - Real_t(1.0)) < v_cut)
++        tmpV = Real_t(1.0);
++      domain.v(k) = tmpV;
++    }
++
++    domain.DeallocateStrains();
++  }
++
++  CalcQForElems(domain);
++
++  ApplyMaterialPropertiesForElems(domain);
+ }
+ 
+ static inline

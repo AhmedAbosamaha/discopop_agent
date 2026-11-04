@@ -1,0 +1,49 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
+@@ -658,9 +658,16 @@
+    Real_t *y8n  = Allocate<Real_t>(numElem8) ;
+    Real_t *z8n  = Allocate<Real_t>(numElem8) ;
+ 
++   int badDeterm = 0;
++   #pragma omp parallel for reduction(+:badDeterm) firstprivate(numElem)
+    for (Index_t i=0 ; i<numElem ; ++i){
+       Real_t  x1[8],  y1[8],  z1[8] ;
+       Real_t pfx[8], pfy[8], pfz[8] ;
++
++      // Check old determ value from IntegrateStressForElems
++      if (determ[i] <= Real_t(0.0)) {
++         badDeterm++;
++      }
+ 
+       Index_t* elemToNode = domain.nodelist(i);
+       CollectDomainNodesToElemNodes(domain, elemToNode, x1, y1, z1);
+@@ -680,9 +687,14 @@
+ 
+       determ[i] = domain.volo(i) * domain.v(i);
+ 
++      // Check new determ value
+       if ( domain.v(i) <= Real_t(0.0) ) {
+-         exit(VolumeError);
+-      }
++         badDeterm++;
++      }
++   }
++
++   if (badDeterm > 0) {
++      exit(VolumeError);
+    }
+ 
+    if ( hgcoef > Real_t(0.) ) {
+@@ -717,12 +729,6 @@
+       IntegrateStressForElems( domain,
+                                sigxx, sigyy, sigzz, determ, numElem,
+                                domain.numNode()) ;
+-
+-      for ( Index_t k=0 ; k<numElem ; ++k ) {
+-         if (determ[k] <= Real_t(0.0)) {
+-            exit(VolumeError);
+-         }
+-      }
+ 
+       CalcHourglassControlForElems(domain, determ, hgcoef) ;
+ 

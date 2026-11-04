@@ -1,0 +1,17 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep2/work/lulesh.cc	2026-11-04 06:57:23.511929514 +0000
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep2/work/lulesh.cc.discopop_patch_generator.temp	2026-11-04 07:33:10.497936366 +0000
+@@ -509,8 +509,14 @@
+    gamma[3][6] = Real_t( 1.);
+    gamma[3][7] = Real_t(-1.);
+ 
++   #pragma omp parallel
++   #pragma omp single
++   {
++   #pragma omp task
+    Real_t *hgfx_buf = Allocate<Real_t>(numElem * 8);
++   #pragma omp task
+    Real_t *hgfy_buf = Allocate<Real_t>(numElem * 8);
++   }
+    Real_t *hgfz_buf = Allocate<Real_t>(numElem * 8);
+ 
+    #pragma omp parallel for firstprivate(numElem, hourg)

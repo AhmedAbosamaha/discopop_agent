@@ -1,0 +1,21 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -1573,15 +1573,14 @@
+ 
+       domain.DeallocateGradients();
+ 
+-      Index_t idx = -1;
++      bool violation_found = false;
+       for (Index_t i=0; i<numElem; ++i) {
+          if ( domain.q(i) > domain.qstop() ) {
+-            idx = i ;
+-            break ;
++            violation_found = true;
+          }
+       }
+ 
+-      if(idx >= 0) {
++      if(violation_found) {
+          exit(QStopError);
+       }
+    }

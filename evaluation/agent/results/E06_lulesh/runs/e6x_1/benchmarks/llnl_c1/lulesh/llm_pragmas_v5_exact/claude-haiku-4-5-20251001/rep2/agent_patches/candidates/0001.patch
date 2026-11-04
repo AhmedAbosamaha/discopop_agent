@@ -1,0 +1,204 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
+@@ -111,6 +111,7 @@
+                              Index_t numElem)
+ {
+ 
++   #pragma omp parallel for private(i) schedule(static)
+    for (Index_t i = 0 ; i < numElem ; ++i){
+       sigxx[i] = sigyy[i] = sigzz[i] =  - domain.p(i) - domain.q(i) ;
+    }
+@@ -658,6 +659,7 @@
+    Real_t *y8n  = Allocate<Real_t>(numElem8) ;
+    Real_t *z8n  = Allocate<Real_t>(numElem8) ;
+ 
++   #pragma omp parallel for private(i, x1, y1, z1, pfx, pfy, pfz, elemToNode, ii, jj) schedule(static)
+    for (Index_t i=0 ; i<numElem ; ++i){
+       Real_t  x1[8],  y1[8],  z1[8] ;
+       Real_t pfx[8], pfy[8], pfz[8] ;
+@@ -737,6 +739,7 @@
+ {
+   Index_t numNode = domain.numNode() ;
+ 
++  #pragma omp parallel for private(i) schedule(static)
+   for (Index_t i=0; i<numNode; ++i) {
+      domain.fx(i) = Real_t(0.0) ;
+      domain.fy(i) = Real_t(0.0) ;
+@@ -751,6 +754,7 @@
+ void CalcAccelerationForNodes(Domain &domain, Index_t numNode)
+ {
+ 
++   #pragma omp parallel for private(i) schedule(static)
+    for (Index_t i = 0; i < numNode; ++i) {
+       domain.xdd(i) = domain.fx(i) / domain.nodalMass(i);
+       domain.ydd(i) = domain.fy(i) / domain.nodalMass(i);
+@@ -766,16 +770,19 @@
+ 
+    {
+       if (!domain.symmXempty() != 0) {
++         #pragma omp parallel for private(i) schedule(static)
+          for(Index_t i=0 ; i<numNodeBC ; ++i)
+             domain.xdd(domain.symmX(i)) = Real_t(0.0) ;
+       }
+ 
+       if (!domain.symmYempty() != 0) {
++         #pragma omp parallel for private(i) schedule(static)
+          for(Index_t i=0 ; i<numNodeBC ; ++i)
+             domain.ydd(domain.symmY(i)) = Real_t(0.0) ;
+       }
+ 
+       if (!domain.symmZempty() != 0) {
++         #pragma omp parallel for private(i) schedule(static)
+          for(Index_t i=0 ; i<numNodeBC ; ++i)
+             domain.zdd(domain.symmZ(i)) = Real_t(0.0) ;
+       }
+@@ -787,6 +794,7 @@
+                           Index_t numNode)
+ {
+ 
++   #pragma omp parallel for private(i, xdtmp, ydtmp, zdtmp) schedule(static)
+    for ( Index_t i = 0 ; i < numNode ; ++i )
+    {
+      Real_t xdtmp, ydtmp, zdtmp ;
+@@ -808,6 +816,7 @@
+ static inline
+ void CalcPositionForNodes(Domain &domain, const Real_t dt, Index_t numNode)
+ {
++   #pragma omp parallel for private(i) schedule(static)
+    for ( Index_t i = 0 ; i < numNode ; ++i )
+    {
+      domain.x(i) += domain.xd(i) * dt ;
+@@ -1063,6 +1072,7 @@
+                              Real_t deltaTime, Index_t numElem )
+ {
+ 
++  #pragma omp parallel for private(k, B, D, x_local, y_local, z_local, xd_local, yd_local, zd_local, detJ, volume, relativeVolume, elemToNode, lnode, gnode, dt2, j) schedule(static)
+   for( Index_t k=0 ; k<numElem ; ++k )
+   {
+     Real_t B[3][8] ;
+@@ -1128,6 +1138,7 @@
+ 
+       CalcKinematicsForElems(domain, deltatime, numElem) ;
+ 
++      #pragma omp parallel for private(k, vdov, vdovthird) schedule(static)
+       for ( Index_t k=0 ; k<numElem ; ++k )
+       {
+          Real_t vdov = domain.dxx(k) + domain.dyy(k) + domain.dzz(k) ;
+@@ -1152,6 +1163,7 @@
+ {
+    Index_t numElem = domain.numElem();
+ 
++   #pragma omp parallel for schedule(static)
+    for (Index_t i = 0 ; i < numElem ; ++i ) {
+       const Real_t ptiny = Real_t(1.e-36) ;
+       Real_t ax,ay,az ;
+@@ -1649,6 +1661,7 @@
+                             Real_t *bvc, Real_t ss4o3,
+                             Index_t len, Index_t *regElemList)
+ {
++   #pragma omp parallel for private(i, ielem, ssTmp) schedule(static)
+    for (Index_t i = 0; i < len ; ++i) {
+       Index_t ielem = regElemList[i];
+       Real_t ssTmp = (pbvc[i] * enewc[i] + vnewc[ielem] * vnewc[ielem] *
+@@ -1783,11 +1796,13 @@
+     Real_t *vnewc = Allocate<Real_t>(numElem) ;
+ 
+     {
++       #pragma omp parallel for private(i) schedule(static)
+        for(Index_t i=0 ; i<numElem ; ++i) {
+           vnewc[i] = domain.vnew(i) ;
+        }
+ 
+        if (eosvmin != Real_t(0.)) {
++          #pragma omp parallel for private(i) schedule(static)
+           for(Index_t i=0 ; i<numElem ; ++i) {
+              if (vnewc[i] < eosvmin)
+                 vnewc[i] = eosvmin ;
+@@ -1795,12 +1810,14 @@
+        }
+ 
+        if (eosvmax != Real_t(0.)) {
++          #pragma omp parallel for private(i) schedule(static)
+           for(Index_t i=0 ; i<numElem ; ++i) {
+              if (vnewc[i] > eosvmax)
+                 vnewc[i] = eosvmax ;
+           }
+        }
+ 
++       #pragma omp parallel for private(i, vc) schedule(static)
+        for (Index_t i=0; i<numElem; ++i) {
+           Real_t vc = domain.v(i) ;
+           if (eosvmin != Real_t(0.)) {
+@@ -1839,6 +1856,7 @@
+                            Real_t v_cut, Index_t length)
+ {
+    if (length != 0) {
++      #pragma omp parallel for private(i, tmpV) schedule(static)
+       for(Index_t i=0 ; i<length ; ++i) {
+          Real_t tmpV = domain.vnew(i) ;
+ 
+@@ -1874,6 +1892,7 @@
+    Real_t   dtcourant_tmp = dtcourant;
+    Index_t  courant_elem  = -1 ;
+ 
++   #pragma omp parallel for private(i, indx, dtf) reduction(min:dtcourant_tmp) schedule(static)
+    for (Index_t i = 0 ; i < length ; ++i) {
+       Index_t indx = regElemlist[i] ;
+       Real_t dtf = domain.ss(indx) * domain.ss(indx) ;
+@@ -1895,7 +1914,7 @@
+       }
+    }
+ 
+-   if (courant_elem != -1) {
++   if (dtcourant_tmp < dtcourant) {
+       dtcourant = dtcourant_tmp ;
+    }
+ 
+@@ -1910,6 +1929,7 @@
+    Real_t dthydro_tmp = dthydro ;
+    Index_t hydro_elem = -1 ;
+ 
++   #pragma omp parallel for private(i, indx, dtdvov) reduction(min:dthydro_tmp) schedule(static)
+    for (Index_t i = 0 ; i < length ; ++i) {
+       Index_t indx = regElemlist[i] ;
+ 
+@@ -1923,7 +1943,7 @@
+       }
+    }
+ 
+-   if (hydro_elem != -1) {
++   if (dthydro_tmp < dthydro) {
+       dthydro = dthydro_tmp ;
+    }
+ 
+@@ -1933,20 +1953,24 @@
+ static inline
+ void CalcTimeConstraintsForElems(Domain& domain) {
+ 
+-   domain.dtcourant() = 1.0e+20;
+-   domain.dthydro() = 1.0e+20;
+-
++   Real_t dtcourant = 1.0e+20;
++   Real_t dthydro = 1.0e+20;
++
++   #pragma omp parallel for private(r) reduction(min:dtcourant,dthydro) schedule(static)
+    for (Index_t r=0 ; r < domain.numReg() ; ++r) {
+       CalcCourantConstraintForElems(domain, domain.regElemSize(r),
+                                     domain.regElemlist(r),
+                                     domain.qqc(),
+-                                    domain.dtcourant()) ;
++                                    dtcourant) ;
+ 
+       CalcHydroConstraintForElems(domain, domain.regElemSize(r),
+                                   domain.regElemlist(r),
+                                   domain.dvovmax(),
+-                                  domain.dthydro()) ;
+-   }
++                                  dthydro) ;
++   }
++
++   domain.dtcourant() = dtcourant;
++   domain.dthydro() = dthydro;
+ }
+ 
+ void LagrangeLeapFrog(Domain& domain)

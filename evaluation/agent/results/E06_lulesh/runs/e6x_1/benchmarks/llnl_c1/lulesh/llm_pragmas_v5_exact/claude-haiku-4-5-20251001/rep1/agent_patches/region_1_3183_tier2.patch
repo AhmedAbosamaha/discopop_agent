@@ -1,0 +1,26 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -1974,6 +1974,7 @@
+    Real_t   dtcourant_tmp = dtcourant;
+    Index_t  courant_elem  = -1 ;
+ 
++   #pragma omp parallel for shared(dtcourant_tmp, courant_elem)
+    for (Index_t i = 0 ; i < length ; ++i) {
+       Index_t indx = regElemlist[i] ;
+       Real_t dtf = domain.ss(indx) * domain.ss(indx) ;
+@@ -1988,9 +1989,12 @@
+       dtf = domain.arealg(indx) / dtf ;
+ 
+       if (domain.vdov(indx) != Real_t(0.)) {
+-         if ( dtf < dtcourant_tmp ) {
+-            dtcourant_tmp = dtf ;
+-            courant_elem  = indx ;
++         #pragma omp critical
++         {
++            if ( dtf < dtcourant_tmp ) {
++               dtcourant_tmp = dtf ;
++               courant_elem  = indx ;
++            }
+          }
+       }
+    }

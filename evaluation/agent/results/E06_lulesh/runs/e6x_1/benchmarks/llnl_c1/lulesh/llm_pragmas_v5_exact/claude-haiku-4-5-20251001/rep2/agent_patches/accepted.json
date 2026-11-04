@@ -1,0 +1,421 @@
+[
+  {
+    "region_id": "1:377",
+    "region_type": "function",
+    "tier": 2,
+    "patch_file": ".discopop/agent_patches/region_1_377_tier2.patch",
+    "reprofiled": true,
+    "discovery_depth": 0,
+    "evidence": {
+      "comparison": "exact",
+      "dependences": "rewritten-code",
+      "dependences_detail": "the patch rewrites code, so the profile predates what is being parallelised; the sanitizer and the schedule matrix carry it",
+      "schedule_runtime_loops": 1,
+      "schedules": [
+        "T4/static#1",
+        "T4/static#2",
+        "T4/static#3",
+        "T1/static",
+        "T2/static",
+        "T4/dynamic,1",
+        "T4/guided"
+      ],
+      "reordered": false
+    },
+    "exposed_pattern": "1 LLM pragma(s): #pragma omp parallel for \\",
+    "refresh": "full",
+    "pragmas": 1,
+    "pragma_text": [
+      "#pragma omp parallel for \\"
+    ],
+    "self_annotated": true,
+    "exposed_speedup": 1.1479668402760181
+  },
+  {
+    "region_id": "1:362",
+    "region_type": "function",
+    "tier": 2,
+    "patch_file": ".discopop/agent_patches/region_1_362_tier2.patch",
+    "reprofiled": true,
+    "discovery_depth": 0,
+    "evidence": {
+      "comparison": "exact",
+      "dependences": "rewritten-code",
+      "dependences_detail": "the patch rewrites code, so the profile predates what is being parallelised; the sanitizer and the schedule matrix carry it",
+      "schedule_runtime_loops": 1,
+      "schedules": [
+        "T4/static#1",
+        "T4/static#2",
+        "T4/static#3",
+        "T1/static",
+        "T2/static",
+        "T4/dynamic,1",
+        "T4/guided"
+      ],
+      "reordered": false
+    },
+    "exposed_pattern": "4 LLM pragma(s): #pragma omp parallel for schedule(guided) \\; #pragma omp parallel for schedule(guided) \\",
+    "refresh": "full",
+    "pragmas": 4,
+    "pragma_text": [
+      "#pragma omp parallel for schedule(guided) \\",
+      "#pragma omp parallel for schedule(guided) \\",
+      "#pragma omp parallel for schedule(guided) \\",
+      "#pragma omp parallel for schedule(guided) \\"
+    ],
+    "self_annotated": true,
+    "exposed_speedup": 1.1570238470691676
+  },
+  {
+    "region_id": "2:1883",
+    "region_type": "function",
+    "tier": 2,
+    "patch_file": ".discopop/agent_patches/region_2_1883_tier2.patch",
+    "reprofiled": true,
+    "discovery_depth": 0,
+    "evidence": {
+      "comparison": "exact",
+      "dependences": "rewritten-code",
+      "dependences_detail": "the patch rewrites code, so the profile predates what is being parallelised; the sanitizer and the schedule matrix carry it",
+      "schedule_runtime_loops": 2,
+      "schedules": [
+        "T4/static#1",
+        "T4/static#2",
+        "T4/static#3",
+        "T1/static",
+        "T2/static",
+        "T4/dynamic,1",
+        "T4/guided"
+      ],
+      "reordered": false
+    },
+    "exposed_pattern": "1 LLM pragma(s): #pragma omp parallel for reduction(+:badDeterm) firstprivate(numElem)",
+    "refresh": "full",
+    "pragmas": 1,
+    "pragma_text": [
+      "#pragma omp parallel for reduction(+:badDeterm) firstprivate(numElem)"
+    ],
+    "self_annotated": true,
+    "exposed_speedup": 1.3565732991328745
+  },
+  {
+    "region_id": "2:2397",
+    "region_type": "function",
+    "tier": 2,
+    "patch_file": ".discopop/agent_patches/region_2_2397_tier2.patch",
+    "reprofiled": true,
+    "discovery_depth": 0,
+    "evidence": {
+      "comparison": "exact",
+      "dependences": "rewritten-code",
+      "dependences_detail": "the patch rewrites code, so the profile predates what is being parallelised; the sanitizer and the schedule matrix carry it",
+      "schedule_runtime_loops": 3,
+      "schedules": [
+        "T4/static#1",
+        "T4/static#2",
+        "T4/static#3",
+        "T1/static",
+        "T2/static",
+        "T4/dynamic,1",
+        "T4/guided"
+      ],
+      "reordered": false
+    },
+    "exposed_pattern": "1 LLM pragma(s): #pragma omp parallel for reduction(|:found) firstprivate(ptiny, qstop_threshold)",
+    "refresh": "full",
+    "pragmas": 1,
+    "pragma_text": [
+      "#pragma omp parallel for reduction(|:found) firstprivate(ptiny, qstop_threshold)"
+    ],
+    "self_annotated": true,
+    "exposed_speedup": 1.3276721264576667
+  },
+  {
+    "region_id": "1:2513",
+    "region_type": "loop",
+    "tier": 2,
+    "patch_file": ".discopop/agent_patches/region_1_2513_tier2.patch",
+    "reprofiled": true,
+    "discovery_depth": 0,
+    "evidence": {
+      "comparison": "exact",
+      "dependences": "no-blocker",
+      "dependences_detail": "the profiler covered lines 1879-1890 (20 RAW, 11 WAR, 0 WAW observed) and the Do-All detector recorded no blocker. Not proof the pragma is safe \u2014 the detector rules out what it can prove \u2014 so this neither passes nor fails the patch on its own",
+      "schedule_runtime_loops": 3,
+      "schedules": [
+        "T4/static#1",
+        "T4/static#2",
+        "T4/static#3",
+        "T1/static",
+        "T2/static",
+        "T4/dynamic,1",
+        "T4/guided"
+      ],
+      "reordered": false
+    },
+    "exposed_pattern": "1 LLM pragma(s): #pragma omp parallel for schedule(guided) shared(domain, vnewc)",
+    "refresh": "full",
+    "pragmas": 1,
+    "pragma_text": [
+      "#pragma omp parallel for schedule(guided) shared(domain, vnewc)"
+    ],
+    "self_annotated": true,
+    "exposed_speedup": 1.3758634702899992
+  },
+  {
+    "region_id": "1:2123",
+    "region_type": "loop",
+    "tier": 2,
+    "patch_file": ".discopop/agent_patches/region_1_2123_tier2.patch",
+    "reprofiled": true,
+    "discovery_depth": 0,
+    "evidence": {
+      "comparison": "exact",
+      "dependences": "rewritten-code",
+      "dependences_detail": "the patch rewrites code, so the profile predates what is being parallelised; the sanitizer and the schedule matrix carry it",
+      "schedule_runtime_loops": 4,
+      "schedules": [
+        "T4/static#1",
+        "T4/static#2",
+        "T4/static#3",
+        "T1/static",
+        "T2/static",
+        "T4/dynamic,1",
+        "T4/guided"
+      ],
+      "reordered": false
+    },
+    "exposed_pattern": "1 LLM pragma(s): #pragma omp parallel for firstprivate(numElem, hourg)",
+    "refresh": "full",
+    "pragmas": 1,
+    "pragma_text": [
+      "#pragma omp parallel for firstprivate(numElem, hourg)"
+    ],
+    "self_annotated": true,
+    "exposed_speedup": 1.6558236972277156
+  },
+  {
+    "region_id": "1:1974",
+    "region_type": "function",
+    "tier": 2,
+    "patch_file": ".discopop/agent_patches/region_1_1974_tier2.patch",
+    "reprofiled": true,
+    "discovery_depth": 0,
+    "evidence": {
+      "comparison": "exact",
+      "dependences": "rewritten-code",
+      "dependences_detail": "the patch rewrites code, so the profile predates what is being parallelised; the sanitizer and the schedule matrix carry it",
+      "schedule_runtime_loops": 5,
+      "schedules": [
+        "T4/static#1",
+        "T4/static#2",
+        "T4/static#3",
+        "T1/static",
+        "T2/static",
+        "T4/dynamic,1",
+        "T4/guided"
+      ],
+      "reordered": false
+    },
+    "exposed_pattern": "1 LLM pragma(s): #pragma omp parallel for shared(domain, sigxx, sigyy, sigzz, determ, numNode, elem_fx, elem_fy, elem_fz, numElem)",
+    "refresh": "full",
+    "pragmas": 1,
+    "pragma_text": [
+      "#pragma omp parallel for shared(domain, sigxx, sigyy, sigzz, determ, numNode, elem_fx, elem_fy, elem_fz, numElem)"
+    ],
+    "self_annotated": true,
+    "exposed_speedup": 2.070771538131834
+  },
+  {
+    "region_id": "2:2621",
+    "region_type": "function",
+    "tier": 2,
+    "patch_file": ".discopop/agent_patches/region_2_2621_tier2.patch",
+    "reprofiled": true,
+    "discovery_depth": 0,
+    "evidence": {
+      "comparison": "exact",
+      "dependences": "no-blocker",
+      "dependences_detail": "the profiler covered lines 1268-1404 (394 RAW, 200 WAR, 5 WAW observed) and the Do-All detector recorded no blocker. Not proof the pragma is safe \u2014 the detector rules out what it can prove \u2014 so this neither passes nor fails the patch on its own",
+      "schedule_runtime_loops": 6,
+      "schedules": [
+        "T4/static#1",
+        "T4/static#2",
+        "T4/static#3",
+        "T1/static",
+        "T2/static",
+        "T4/dynamic,1",
+        "T4/guided"
+      ],
+      "reordered": false
+    },
+    "exposed_pattern": "1 LLM pragma(s): #pragma omp parallel for",
+    "refresh": "full",
+    "pragmas": 1,
+    "pragma_text": [
+      "#pragma omp parallel for"
+    ],
+    "self_annotated": true,
+    "exposed_speedup": 2.234290657028519
+  },
+  {
+    "region_id": "1:2786",
+    "region_type": "loop",
+    "tier": 2,
+    "patch_file": ".discopop/agent_patches/region_1_2786_tier2.patch",
+    "reprofiled": true,
+    "discovery_depth": 0,
+    "evidence": {
+      "comparison": "exact",
+      "dependences": "no-blocker",
+      "dependences_detail": "the profiler covered lines 1416-1559 (217 RAW, 90 WAR, 5 WAW observed) and the Do-All detector recorded no blocker. Not proof the pragma is safe \u2014 the detector rules out what it can prove \u2014 so this neither passes nor fails the patch on its own",
+      "schedule_runtime_loops": 7,
+      "schedules": [
+        "T4/static#1",
+        "T4/static#2",
+        "T4/static#3",
+        "T1/static",
+        "T2/static",
+        "T4/dynamic,1",
+        "T4/guided"
+      ],
+      "reordered": false
+    },
+    "exposed_pattern": "1 LLM pragma(s): #pragma omp parallel for shared(domain, r, ptiny, monoq_limiter_mult, monoq_max_slope, qlc_monoq, qqc_monoq)",
+    "refresh": "full",
+    "pragmas": 1,
+    "pragma_text": [
+      "#pragma omp parallel for shared(domain, r, ptiny, monoq_limiter_mult, monoq_max_slope, qlc_monoq, qqc_monoq)"
+    ],
+    "self_annotated": true,
+    "exposed_speedup": 2.2842573728451496
+  },
+  {
+    "region_id": "2:246",
+    "region_type": "function",
+    "tier": 2,
+    "patch_file": ".discopop/agent_patches/region_2_246_tier2.patch",
+    "reprofiled": true,
+    "discovery_depth": 0,
+    "evidence": {
+      "comparison": "exact",
+      "dependences": "rewritten-code",
+      "dependences_detail": "the patch rewrites code, so the profile predates what is being parallelised; the sanitizer and the schedule matrix carry it",
+      "schedule_runtime_loops": 8,
+      "schedules": [
+        "T4/static#1",
+        "T4/static#2",
+        "T4/static#3",
+        "T1/static",
+        "T2/static",
+        "T4/dynamic,1",
+        "T4/guided"
+      ],
+      "reordered": false
+    },
+    "exposed_pattern": "1 LLM pragma(s): #pragma omp parallel for shared(domain, deltaTime, numElem)",
+    "refresh": "full",
+    "pragmas": 1,
+    "pragma_text": [
+      "#pragma omp parallel for shared(domain, deltaTime, numElem)"
+    ],
+    "self_annotated": true,
+    "exposed_speedup": 2.287930822050394
+  },
+  {
+    "region_id": "1:591",
+    "region_type": "loop",
+    "tier": 2,
+    "patch_file": ".discopop/agent_patches/region_1_591_tier2.patch",
+    "reprofiled": true,
+    "discovery_depth": 0,
+    "evidence": {
+      "comparison": "exact",
+      "dependences": "rewritten-code",
+      "dependences_detail": "the patch rewrites code, so the profile predates what is being parallelised; the sanitizer and the schedule matrix carry it",
+      "schedule_runtime_loops": 9,
+      "schedules": [
+        "T4/static#1",
+        "T4/static#2",
+        "T4/static#3",
+        "T1/static",
+        "T2/static",
+        "T4/dynamic,1",
+        "T4/guided"
+      ],
+      "reordered": false
+    },
+    "exposed_pattern": "1 LLM pragma(s): #pragma omp parallel for \\",
+    "refresh": "full",
+    "pragmas": 1,
+    "pragma_text": [
+      "#pragma omp parallel for \\"
+    ],
+    "self_annotated": true,
+    "exposed_speedup": 2.3392223328514743
+  },
+  {
+    "region_id": "1:3334",
+    "region_type": "loop",
+    "tier": 2,
+    "patch_file": ".discopop/agent_patches/region_1_3334_tier2.patch",
+    "reprofiled": true,
+    "discovery_depth": 0,
+    "evidence": {
+      "comparison": "exact",
+      "dependences": "rewritten-code",
+      "dependences_detail": "the patch rewrites code, so the profile predates what is being parallelised; the sanitizer and the schedule matrix carry it",
+      "schedule_runtime_loops": 10,
+      "schedules": [
+        "T4/static#1",
+        "T4/static#2",
+        "T4/static#3",
+        "T1/static",
+        "T2/static",
+        "T4/dynamic,1",
+        "T4/guided"
+      ],
+      "reordered": false
+    },
+    "exposed_pattern": "1 LLM pragma(s): #pragma omp parallel for \\",
+    "refresh": "full",
+    "pragmas": 1,
+    "pragma_text": [
+      "#pragma omp parallel for \\"
+    ],
+    "self_annotated": true,
+    "exposed_speedup": 2.2925783561954405
+  },
+  {
+    "region_id": "1:2160",
+    "region_type": "function",
+    "tier": 2,
+    "patch_file": ".discopop/agent_patches/region_1_2160_tier2.patch",
+    "reprofiled": true,
+    "discovery_depth": 0,
+    "evidence": {
+      "comparison": "exact",
+      "dependences": "rewritten-code",
+      "dependences_detail": "the patch rewrites code, so the profile predates what is being parallelised; the sanitizer and the schedule matrix carry it",
+      "schedule_runtime_loops": 11,
+      "schedules": [
+        "T4/static#1",
+        "T4/static#2",
+        "T4/static#3",
+        "T1/static",
+        "T2/static",
+        "T4/dynamic,1",
+        "T4/guided"
+      ],
+      "reordered": false
+    },
+    "exposed_pattern": "1 LLM pragma(s): #pragma omp parallel for shared(dvdx, dvdy, dvdz, x, y, z)",
+    "refresh": "full",
+    "pragmas": 1,
+    "pragma_text": [
+      "#pragma omp parallel for shared(dvdx, dvdy, dvdz, x, y, z)"
+    ],
+    "self_annotated": true,
+    "exposed_speedup": 3.7374067712709795
+  }
+]

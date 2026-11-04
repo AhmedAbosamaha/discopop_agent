@@ -1,0 +1,64 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -1026,37 +1026,30 @@
+                                      const Real_t z[8],
+                                      const Real_t volume)
+ {
+-   Real_t a, charLength = Real_t(0.0);
+-
+-   a = AreaFace(x[0],x[1],x[2],x[3],
+-                y[0],y[1],y[2],y[3],
+-                z[0],z[1],z[2],z[3]) ;
+-   charLength = std::max(a,charLength) ;
+-
+-   a = AreaFace(x[4],x[5],x[6],x[7],
+-                y[4],y[5],y[6],y[7],
+-                z[4],z[5],z[6],z[7]) ;
+-   charLength = std::max(a,charLength) ;
+-
+-   a = AreaFace(x[0],x[1],x[5],x[4],
+-                y[0],y[1],y[5],y[4],
+-                z[0],z[1],z[5],z[4]) ;
+-   charLength = std::max(a,charLength) ;
+-
+-   a = AreaFace(x[1],x[2],x[6],x[5],
+-                y[1],y[2],y[6],y[5],
+-                z[1],z[2],z[6],z[5]) ;
+-   charLength = std::max(a,charLength) ;
+-
+-   a = AreaFace(x[2],x[3],x[7],x[6],
+-                y[2],y[3],y[7],y[6],
+-                z[2],z[3],z[7],z[6]) ;
+-   charLength = std::max(a,charLength) ;
+-
+-   a = AreaFace(x[3],x[0],x[4],x[7],
+-                y[3],y[0],y[4],y[7],
+-                z[3],z[0],z[4],z[7]) ;
+-   charLength = std::max(a,charLength) ;
++   /* Lookup table: each face defined by 4 vertex indices */
++   static const int face_indices[6][4] = {
++      {0,1,2,3}, {4,5,6,7}, {0,1,5,4}, {1,2,6,5}, {2,3,7,6}, {3,0,4,7}
++   };
++
++   Real_t areas[6];
++   Real_t charLength = Real_t(0.0);
++
++   /* Compute all 6 face areas. The loop has simple form (i < 6, no if-else):
++      each iteration i reads face_indices[i] and calls AreaFace with the
++      4 vertices, storing the result in areas[i]. Iterations are independent
++      (each writes to distinct areas[i]), breaking the false loop-carry
++      dependency on the reused 'a' location in the original code. */
++   for (int i = 0; i < 6; ++i) {
++      const int *idx = face_indices[i];
++      areas[i] = AreaFace(x[idx[0]], x[idx[1]], x[idx[2]], x[idx[3]],
++                          y[idx[0]], y[idx[1]], y[idx[2]], y[idx[3]],
++                          z[idx[0]], z[idx[1]], z[idx[2]], z[idx[3]]);
++   }
++
++   /* Find the maximum of the 6 face areas. */
++   for (int i = 0; i < 6; ++i) {
++      charLength = std::max(charLength, areas[i]);
++   }
+ 
+    charLength = Real_t(4.0) * volume / SQRT(charLength);
+ 

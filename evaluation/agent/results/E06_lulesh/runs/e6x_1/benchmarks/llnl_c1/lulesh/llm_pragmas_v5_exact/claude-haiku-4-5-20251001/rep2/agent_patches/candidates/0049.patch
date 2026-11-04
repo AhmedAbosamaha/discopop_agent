@@ -1,0 +1,22 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep2/work/lulesh.cc	2026-11-04 06:49:06.157242041 +0000
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep2/work/lulesh.cc.discopop_patch_generator.temp	2026-11-04 06:54:48.520075665 +0000
+@@ -399,6 +399,10 @@
+                               const Real_t y[8],
+                               const Real_t z[8])
+ {
++   #pragma omp parallel
++   #pragma omp single
++   {
++   #pragma omp task
+    VoluDer(x[1], x[2], x[3], x[4], x[5], x[7],
+            y[1], y[2], y[3], y[4], y[5], y[7],
+            z[1], z[2], z[3], z[4], z[5], z[7],
+@@ -431,6 +435,8 @@
+            y[6], y[5], y[4], y[3], y[2], y[0],
+            z[6], z[5], z[4], z[3], z[2], z[0],
+            &dvdx[7], &dvdy[7], &dvdz[7]);
++#pragma omp task
++}
+ }
+ 
+ static inline

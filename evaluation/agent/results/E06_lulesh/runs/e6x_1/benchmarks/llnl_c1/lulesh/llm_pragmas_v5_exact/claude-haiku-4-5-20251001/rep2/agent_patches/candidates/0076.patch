@@ -1,0 +1,26 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
+@@ -347,6 +347,7 @@
+    for( Index_t k=0 ; k<numElem ; ++k )
+    {
+       const Index_t* const elemToNode = domain.nodelist(k);
++      #pragma omp parallel for firstprivate(k) shared(elem_fz,elemToNode,elem_fy,elem_fx,domain) 
+       for( Index_t lnode=0 ; lnode<8 ; ++lnode ) {
+          Index_t gnode = elemToNode[lnode];
+          domain.fx(gnode) += elem_fx[k*8+lnode];
+@@ -1636,6 +1637,7 @@
+       pbvc[i] = c1s;
+    }
+ 
++   #pragma omp parallel for firstprivate(length,pmin,p_cut,eosvmax) shared(p_new,e_old,bvc,regElemList,vnewc) 
+    for (Index_t i = 0 ; i < length ; ++i){
+       Index_t ielem = regElemList[i];
+ 
+@@ -1828,6 +1830,7 @@
+    Real_t *bvc = Allocate<Real_t>(numElemReg) ;
+    Real_t *pbvc = Allocate<Real_t>(numElemReg) ;
+ 
++   #pragma omp parallel for firstprivate(numElemReg,pmin,eosvmin,rho0,e_cut,eosvmax,q_cut,p_cut,rep,emin) shared(e_old,q_new,q_old,vnewc,p_new,delvc,p_old,ql_old,compression,work,compHalfStep,bvc,regElemList,pbvc,domain,qq_old,e_new) 
+    for(Int_t j = 0; j < rep; j++) {
+       {
+          for (Index_t i=0; i<numElemReg; ++i) {

@@ -1,0 +1,73 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -718,13 +718,66 @@
+                                sigxx, sigyy, sigzz, determ, numElem,
+                                domain.numNode()) ;
+ 
++      // Inline and parallelize hourglass control loop to increase work granularity
++      Index_t numElem8 = numElem * 8 ;
++      Real_t *dvdx = Allocate<Real_t>(numElem8) ;
++      Real_t *dvdy = Allocate<Real_t>(numElem8) ;
++      Real_t *dvdz = Allocate<Real_t>(numElem8) ;
++      Real_t *x8n  = Allocate<Real_t>(numElem8) ;
++      Real_t *y8n  = Allocate<Real_t>(numElem8) ;
++      Real_t *z8n  = Allocate<Real_t>(numElem8) ;
++
++      bool error = false;
++      #pragma omp parallel for reduction(||:error) firstprivate(numElem, numElem8) shared(domain, determ, dvdx, dvdy, dvdz, x8n, y8n, z8n)
+       for ( Index_t k=0 ; k<numElem ; ++k ) {
++         // Check determinant from IntegrateStressForElems
+          if (determ[k] <= Real_t(0.0)) {
+-            exit(VolumeError);
++            error = error || true;
+          }
+-      }
+-
+-      CalcHourglassControlForElems(domain, determ, hgcoef) ;
++
++         // Hourglass control initialization for element k
++         Real_t  x1[8],  y1[8],  z1[8] ;
++         Real_t pfx[8], pfy[8], pfz[8] ;
++
++         Index_t* elemToNode = domain.nodelist(k);
++         CollectDomainNodesToElemNodes(domain, elemToNode, x1, y1, z1);
++
++         CalcElemVolumeDerivative(pfx, pfy, pfz, x1, y1, z1);
++
++         for(Index_t ii=0;ii<8;++ii){
++            Index_t jj=8*k+ii;
++
++            dvdx[jj] = pfx[ii];
++            dvdy[jj] = pfy[ii];
++            dvdz[jj] = pfz[ii];
++            x8n[jj]  = x1[ii];
++            y8n[jj]  = y1[ii];
++            z8n[jj]  = z1[ii];
++         }
++
++         determ[k] = domain.volo(k) * domain.v(k);
++
++         if ( domain.v(k) <= Real_t(0.0) ) {
++            error = error || true;
++         }
++      }
++
++      if (error) {
++         exit(VolumeError);
++      }
++
++      if ( hgcoef > Real_t(0.) ) {
++         CalcFBHourglassForceForElems( domain,
++                                       determ, x8n, y8n, z8n, dvdx, dvdy, dvdz,
++                                       hgcoef, numElem, domain.numNode()) ;
++      }
++
++      Release(&z8n) ;
++      Release(&y8n) ;
++      Release(&x8n) ;
++      Release(&dvdz) ;
++      Release(&dvdy) ;
++      Release(&dvdx) ;
+ 
+       Release(&determ) ;
+       Release(&sigzz) ;

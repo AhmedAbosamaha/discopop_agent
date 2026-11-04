@@ -1,0 +1,71 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
+@@ -497,6 +497,7 @@
+    gamma[3][6] = Real_t( 1.);
+    gamma[3][7] = Real_t(-1.);
+ 
++   #pragma omp parallel for firstprivate(numElem, hourg)
+    for(Index_t i2=0;i2<numElem;++i2){
+       Real_t hgfx[8], hgfy[8], hgfz[8] ;
+ 
+@@ -609,36 +610,60 @@
+                       hourgam,
+                       coefficient, hgfx, hgfy, hgfz);
+ 
++      #pragma omp atomic
+       domain.fx(n0si2) += hgfx[0];
++      #pragma omp atomic
+       domain.fy(n0si2) += hgfy[0];
++      #pragma omp atomic
+       domain.fz(n0si2) += hgfz[0];
+ 
++      #pragma omp atomic
+       domain.fx(n1si2) += hgfx[1];
++      #pragma omp atomic
+       domain.fy(n1si2) += hgfy[1];
++      #pragma omp atomic
+       domain.fz(n1si2) += hgfz[1];
+ 
++      #pragma omp atomic
+       domain.fx(n2si2) += hgfx[2];
++      #pragma omp atomic
+       domain.fy(n2si2) += hgfy[2];
++      #pragma omp atomic
+       domain.fz(n2si2) += hgfz[2];
+ 
++      #pragma omp atomic
+       domain.fx(n3si2) += hgfx[3];
++      #pragma omp atomic
+       domain.fy(n3si2) += hgfy[3];
++      #pragma omp atomic
+       domain.fz(n3si2) += hgfz[3];
+ 
++      #pragma omp atomic
+       domain.fx(n4si2) += hgfx[4];
++      #pragma omp atomic
+       domain.fy(n4si2) += hgfy[4];
++      #pragma omp atomic
+       domain.fz(n4si2) += hgfz[4];
+ 
++      #pragma omp atomic
+       domain.fx(n5si2) += hgfx[5];
++      #pragma omp atomic
+       domain.fy(n5si2) += hgfy[5];
++      #pragma omp atomic
+       domain.fz(n5si2) += hgfz[5];
+ 
++      #pragma omp atomic
+       domain.fx(n6si2) += hgfx[6];
++      #pragma omp atomic
+       domain.fy(n6si2) += hgfy[6];
++      #pragma omp atomic
+       domain.fz(n6si2) += hgfz[6];
+ 
++      #pragma omp atomic
+       domain.fx(n7si2) += hgfx[7];
++      #pragma omp atomic
+       domain.fy(n7si2) += hgfy[7];
++      #pragma omp atomic
+       domain.fz(n7si2) += hgfz[7];
+ 
+    }

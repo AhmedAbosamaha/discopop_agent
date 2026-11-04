@@ -1,0 +1,27 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -1861,8 +1861,22 @@
+ 
+   ApplyMaterialPropertiesForElems(domain) ;
+ 
+-  UpdateVolumesForElems(domain,
+-                        domain.v_cut(), numElem) ;
++  // Inline and parallelize UpdateVolumesForElems since it has element-level independence
++  if (numElem != 0) {
++    Real_t v_cut = domain.v_cut();
++    #pragma omp parallel for \
++        schedule(static) \
++        firstprivate(v_cut) \
++        shared(domain)
++    for(Index_t i=0 ; i<numElem ; ++i) {
++       Real_t tmpV = domain.vnew(i) ;
++
++       if ( FABS(tmpV - Real_t(1.0)) < v_cut )
++          tmpV = Real_t(1.0) ;
++
++       domain.v(i) = tmpV ;
++    }
++  }
+ }
+ 
+ static inline

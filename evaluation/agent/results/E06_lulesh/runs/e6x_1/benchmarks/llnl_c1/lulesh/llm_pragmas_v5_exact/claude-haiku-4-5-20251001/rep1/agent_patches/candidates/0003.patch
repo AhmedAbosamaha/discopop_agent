@@ -1,0 +1,141 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -1960,8 +1960,133 @@
+ #ifdef SEDOV_SYNC_POS_VEL_LATE
+ #endif
+ 
+-   LagrangeElements(domain, domain.numElem());
+-
+-   CalcTimeConstraintsForElems(domain);
+-
+-}
++   /* Inline LagrangeElements -> CalcLagrangeElements with parallelization */
++   Index_t numElem = domain.numElem() ;
++   if (numElem > 0) {
++      const Real_t deltatime = domain.deltatime() ;
++
++      domain.AllocateStrains(numElem);
++
++      /* Inline CalcKinematicsForElems loop - parallelized for coarse granularity */
++      #pragma omp parallel for schedule(static)
++      for( Index_t k=0 ; k<numElem ; ++k )
++      {
++         Real_t B[3][8] ;
++         Real_t D[6] ;
++         Real_t x_local[8] ;
++         Real_t y_local[8] ;
++         Real_t z_local[8] ;
++         Real_t xd_local[8] ;
++         Real_t yd_local[8] ;
++         Real_t zd_local[8] ;
++         Real_t detJ = Real_t(0.0) ;
++
++         Real_t volume ;
++         Real_t relativeVolume ;
++         const Index_t* const elemToNode = domain.nodelist(k) ;
++
++         CollectDomainNodesToElemNodes(domain, elemToNode, x_local, y_local, z_local);
++
++         volume = CalcElemVolume(x_local, y_local, z_local );
++         relativeVolume = volume / domain.volo(k) ;
++         domain.vnew(k) = relativeVolume ;
++         domain.delv(k) = relativeVolume - domain.v(k) ;
++
++         domain.arealg(k) = CalcElemCharacteristicLength(x_local, y_local, z_local,
++                                                  volume);
++
++         for( Index_t lnode=0 ; lnode<8 ; ++lnode )
++         {
++            Index_t gnode = elemToNode[lnode];
++            xd_local[lnode] = domain.xd(gnode);
++            yd_local[lnode] = domain.yd(gnode);
++            zd_local[lnode] = domain.zd(gnode);
++         }
++
++         CalcElemShapeFunctionDerivatives( x_local, y_local, z_local,
++                                              B, &detJ );
++
++         CalcElemVelocityGradient( xd_local, yd_local, zd_local,
++                                    B, detJ, D );
++
++         domain.dxx(k) = D[0];
++         domain.dyy(k) = D[1];
++         domain.dzz(k) = D[2];
++      }
++
++      /* Implicit barrier here, then vdov loop - still parallelized */
++      bool volume_error = false;
++      #pragma omp parallel for schedule(static) reduction(||:volume_error)
++      for ( Index_t k=0 ; k<numElem ; ++k )
++      {
++         Real_t vdov = domain.dxx(k) + domain.dyy(k) + domain.dzz(k) ;
++         Real_t vdovthird = vdov/Real_t(3.0) ;
++
++         domain.vdov(k) = vdov ;
++         domain.dxx(k) -= vdovthird ;
++         domain.dyy(k) -= vdovthird ;
++         domain.dzz(k) -= vdovthird ;
++
++         if (domain.vnew(k) <= Real_t(0.0))
++         {
++            volume_error = true ;
++         }
++      }
++      if (volume_error) {
++         exit(VolumeError);
++      }
++
++      domain.DeallocateStrains();
++   }
++
++   /* Complete LagrangeElements with remaining sequential calls */
++   CalcQForElems(domain) ;
++   ApplyMaterialPropertiesForElems(domain) ;
++   UpdateVolumesForElems(domain, domain.v_cut(), numElem) ;
++
++   /* CalcTimeConstraintsForElems inlined and parallelized */
++   Real_t dtcourant = 1.0e+20;
++   Real_t dthydro = 1.0e+20;
++
++   Real_t qqc2 = Real_t(64.0) * domain.qqc() * domain.qqc() ;
++   Real_t dvovmax = domain.dvovmax() ;
++
++   #pragma omp parallel for schedule(static) \
++      reduction(min:dtcourant, dthydro)
++   for (Index_t indx=0 ; indx < domain.numElem() ; ++indx) {
++      /* Courant constraint: compute time step limit from this element */
++      {
++         Real_t dtf = domain.ss(indx) * domain.ss(indx) ;
++
++         if ( domain.vdov(indx) < Real_t(0.) ) {
++            dtf = dtf
++                + qqc2 * domain.arealg(indx) * domain.arealg(indx)
++                * domain.vdov(indx) * domain.vdov(indx) ;
++         }
++
++         dtf = SQRT(dtf) ;
++         dtf = domain.arealg(indx) / dtf ;
++
++         if (domain.vdov(indx) != Real_t(0.)) {
++            if ( dtf < dtcourant ) {
++               dtcourant = dtf ;
++            }
++         }
++      }
++
++      /* Hydro constraint: compute time step limit from this element */
++      {
++         if (domain.vdov(indx) != Real_t(0.)) {
++            Real_t dtdvov = dvovmax / (FABS(domain.vdov(indx))+Real_t(1.e-20)) ;
++
++            if ( dthydro > dtdvov ) {
++               dthydro = dtdvov ;
++            }
++         }
++      }
++   }
++
++   domain.dtcourant() = dtcourant ;
++   domain.dthydro() = dthydro ;
++
++}

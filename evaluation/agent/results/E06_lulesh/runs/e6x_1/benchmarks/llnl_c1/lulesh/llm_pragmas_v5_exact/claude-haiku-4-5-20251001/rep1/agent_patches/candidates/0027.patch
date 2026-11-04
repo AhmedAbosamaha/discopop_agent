@@ -1,0 +1,18 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -1774,6 +1774,7 @@
+    Real_t *pbvc = Allocate<Real_t>(numElemReg) ;
+ 
+    {
++      #pragma omp parallel for firstprivate(numElemReg) private(q_new,p_new,bvc,pbvc) shared(e_old,work,q_old,delvc,regElemList,domain,p_old,qq_old,ql_old) 
+       for (Index_t i=0; i<numElemReg; ++i) {
+          Index_t ielem = regElemList[i];
+          e_old[i] = domain.e(ielem) ;
+@@ -1809,6 +1810,7 @@
+          }
+       }
+    }
++   #pragma omp parallel for firstprivate(numElemReg,pmin,rho0,e_cut,eosvmax,q_cut,p_cut,rep,emin) shared(e_old,q_new,q_old,vnewc,p_new,delvc,p_old,ql_old,compression,work,compHalfStep,bvc,regElemList,pbvc,qq_old,e_new) 
+    for(Int_t j = 0; j < rep; j++) {
+       CalcEnergyForElems(p_new, e_new, q_new, bvc, pbvc,
+                          p_old, e_old,  q_old, compression, compHalfStep,
