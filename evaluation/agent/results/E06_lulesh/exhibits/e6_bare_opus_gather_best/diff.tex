@@ -1,0 +1,608 @@
+\begin{lstlisting}[language=diff,basicstyle=\ttfamily\scriptsize,breaklines=true,caption={llnl_c1/lulesh — FASTER (e6c_bare)}]
+--- original.cc
++++ final.cc
+@@ -1103,6 +1103,8 @@
+                              Index_t numElem)
+ {
+ 
++#pragma omp parallel for schedule(static) firstprivate(numElem) \
++        shared(domain, sigxx, sigyy, sigzz)
+    for (Index_t i = 0 ; i < numElem ; ++i){
+       sigxx[i] = sigyy[i] = sigzz[i] =  - domain.p(i) - domain.q(i) ;
+    }
+@@ -1292,16 +1294,89 @@
+    }
+ }
+ 
++/* Node -> element-corner map (corners listed in increasing element order),
++   built once and cached: the mesh connectivity never changes. */
++static Index_t *s_nodeElemStart = NULL ;
++static Index_t *s_nodeElemCorner = NULL ;
++static Index_t  s_mapNumNode = -1 ;
++static Index_t  s_mapNumElem = -1 ;
++static const Index_t *s_mapNodelist = NULL ;
++
++static void GetNodeElemMap(Domain &domain, Index_t numElem, Index_t numNode,
++                           Index_t **start, Index_t **corner)
++{
++   const Index_t *nl = domain.nodelist(0) ;
++   if (s_nodeElemStart == NULL || s_mapNumNode != numNode ||
++       s_mapNumElem != numElem || s_mapNodelist != nl) {
++      Release(&s_nodeElemStart) ;
++      Release(&s_nodeElemCorner) ;
++      s_nodeElemStart  = Allocate<Index_t>(numNode + 1) ;
++      s_nodeElemCorner = Allocate<Index_t>(8 * numElem + 1) ;
++      Index_t *fill = Allocate<Index_t>(numNode + 1) ;
++      for (Index_t n = 0 ; n <= numNode ; ++n) {
++         s_nodeElemStart[n] = 0 ;
++      }
++      for (Index_t c = 0 ; c < 8 * numElem ; ++c) {
++         s_nodeElemStart[nl[c] + 1]++ ;
++      }
++      for (Index_t n = 0 ; n < numNode ; ++n) {
++         s_nodeElemStart[n + 1] += s_nodeElemStart[n] ;
++      }
++      for (Index_t n = 0 ; n < numNode ; ++n) {
++         fill[n] = s_nodeElemStart[n] ;
++      }
++      for (Index_t c = 0 ; c < 8 * numElem ; ++c) {
++         s_nodeElemCorner[fill[nl[c]]++] = c ;
++      }
++      Release(&fill) ;
++      s_mapNumNode = numNode ;
++      s_mapNumElem = numElem ;
++      s_mapNodelist = nl ;
++   }
++   *start = s_nodeElemStart ;
++   *corner = s_nodeElemCorner ;
++}
++
++/* Adds per-corner forces to the nodal forces, in element order per node
++   (same floating-point summation order as the original scatter). */
++static void GatherCornerForces(Domain &domain, Index_t numNode,
++                               Index_t *nodeElemStart, Index_t *nodeElemCorner,
++                               Real_t *fx_elem, Real_t *fy_elem, Real_t *fz_elem)
++{
++#pragma omp parallel for schedule(static) firstprivate(numNode) \
++        shared(domain, nodeElemStart, nodeElemCorner, fx_elem, fy_elem, fz_elem)
++   for (Index_t n = 0 ; n < numNode ; ++n) {
++      Real_t fx = domain.fx(n) ;
++      Real_t fy = domain.fy(n) ;
++      Real_t fz = domain.fz(n) ;
++      Index_t cEnd = nodeElemStart[n + 1] ;
++      for (Index_t c = nodeElemStart[n] ; c < cEnd ; ++c) {
++         Index_t ci = nodeElemCorner[c] ;
++         fx += fx_elem[ci] ;
++         fy += fy_elem[ci] ;
++         fz += fz_elem[ci] ;
++      }
++      domain.fx(n) = fx ;
++      domain.fy(n) = fy ;
++      domain.fz(n) = fz ;
++   }
++}
++
+ static inline
+ void IntegrateStressForElems( Domain &domain,
+                               Real_t *sigxx, Real_t *sigyy, Real_t *sigzz,
+                               Real_t *determ, Index_t numElem, Index_t numNode)
+ {
+-
+-   Real_t fx_local[8] ;
+-   Real_t fy_local[8] ;
+-   Real_t fz_local[8] ;
+-
++  Index_t *nodeElemStart ;
++  Index_t *nodeElemCorner ;
++  GetNodeElemMap(domain, numElem, numNode, &nodeElemStart, &nodeElemCorner) ;
++
++  Real_t *fx_elem = Allocate<Real_t>(8 * numElem) ;
++  Real_t *fy_elem = Allocate<Real_t>(8 * numElem) ;
++  Real_t *fz_elem = Allocate<Real_t>(8 * numElem) ;
++
++#pragma omp parallel for schedule(static) firstprivate(numElem) \
++        shared(domain, sigxx, sigyy, sigzz, determ, fx_elem, fy_elem, fz_elem)
+   for( Index_t k=0 ; k<numElem ; ++k )
+   {
+     const Index_t* const elemToNode = domain.nodelist(k);
+@@ -1309,6 +1384,9 @@
+     Real_t x_local[8] ;
+     Real_t y_local[8] ;
+     Real_t z_local[8] ;
++    Real_t fx_local[8] ;
++    Real_t fy_local[8] ;
++    Real_t fz_local[8] ;
+ 
+     CollectDomainNodesToElemNodes(domain, elemToNode, x_local, y_local, z_local);
+ 
+@@ -1322,14 +1400,19 @@
+                                  fx_local, fy_local, fz_local ) ;
+ 
+     for( Index_t lnode=0 ; lnode<8 ; ++lnode ) {
+-       Index_t gnode = elemToNode[lnode];
+-       domain.fx(gnode) += fx_local[lnode];
+-       domain.fy(gnode) += fy_local[lnode];
+-       domain.fz(gnode) += fz_local[lnode];
++       fx_elem[8*k + lnode] = fx_local[lnode];
++       fy_elem[8*k + lnode] = fy_local[lnode];
++       fz_elem[8*k + lnode] = fz_local[lnode];
+     }
+ 
+   }
+ 
++  GatherCornerForces(domain, numNode, nodeElemStart, nodeElemCorner,
++                     fx_elem, fy_elem, fz_elem) ;
++
++  Release(&fz_elem) ;
++  Release(&fy_elem) ;
++  Release(&fx_elem) ;
+ }
+ 
+ static inline
+@@ -1489,6 +1572,17 @@
+    gamma[3][6] = Real_t( 1.);
+    gamma[3][7] = Real_t(-1.);
+ 
++   Index_t *nodeElemStart ;
++   Index_t *nodeElemCorner ;
++   GetNodeElemMap(domain, numElem, numNode, &nodeElemStart, &nodeElemCorner) ;
++
++   Real_t *fx_elem = Allocate<Real_t>(8 * numElem) ;
++   Real_t *fy_elem = Allocate<Real_t>(8 * numElem) ;
++   Real_t *fz_elem = Allocate<Real_t>(8 * numElem) ;
++
++#pragma omp parallel for schedule(static) firstprivate(numElem, hourg) \
++        shared(domain, gamma, determ, x8n, y8n, z8n, dvdx, dvdy, dvdz, \
++               fx_elem, fy_elem, fz_elem)
+    for(Index_t i2=0;i2<numElem;++i2){
+       Real_t hgfx[8], hgfy[8], hgfz[8] ;
+ 
+@@ -1601,40 +1695,20 @@
+                       hourgam,
+                       coefficient, hgfx, hgfy, hgfz);
+ 
+-      domain.fx(n0si2) += hgfx[0];
+-      domain.fy(n0si2) += hgfy[0];
+-      domain.fz(n0si2) += hgfz[0];
+-
+-      domain.fx(n1si2) += hgfx[1];
+-      domain.fy(n1si2) += hgfy[1];
+-      domain.fz(n1si2) += hgfz[1];
+-
+-      domain.fx(n2si2) += hgfx[2];
+-      domain.fy(n2si2) += hgfy[2];
+-      domain.fz(n2si2) += hgfz[2];
+-
+-      domain.fx(n3si2) += hgfx[3];
+-      domain.fy(n3si2) += hgfy[3];
+-      domain.fz(n3si2) += hgfz[3];
+-
+-      domain.fx(n4si2) += hgfx[4];
+-      domain.fy(n4si2) += hgfy[4];
+-      domain.fz(n4si2) += hgfz[4];
+-
+-      domain.fx(n5si2) += hgfx[5];
+-      domain.fy(n5si2) += hgfy[5];
+-      domain.fz(n5si2) += hgfz[5];
+-
+-      domain.fx(n6si2) += hgfx[6];
+-      domain.fy(n6si2) += hgfy[6];
+-      domain.fz(n6si2) += hgfz[6];
+-
+-      domain.fx(n7si2) += hgfx[7];
+-      domain.fy(n7si2) += hgfy[7];
+-      domain.fz(n7si2) += hgfz[7];
+-
+-   }
+-
++      for (Index_t l = 0 ; l < 8 ; ++l) {
++         fx_elem[i3 + l] = hgfx[l];
++         fy_elem[i3 + l] = hgfy[l];
++         fz_elem[i3 + l] = hgfz[l];
++      }
++
++   }
++
++   GatherCornerForces(domain, numNode, nodeElemStart, nodeElemCorner,
++                      fx_elem, fy_elem, fz_elem) ;
++
++   Release(&fz_elem) ;
++   Release(&fy_elem) ;
++   Release(&fx_elem) ;
+ }
+ 
+ static inline
+@@ -1649,7 +1723,11 @@
+    Real_t *x8n  = Allocate<Real_t>(numElem8) ;
+    Real_t *y8n  = Allocate<Real_t>(numElem8) ;
+    Real_t *z8n  = Allocate<Real_t>(numElem8) ;
+-
++   bool volError = false ;
++
++#pragma omp parallel for schedule(static) firstprivate(numElem) \
++        shared(domain, determ, dvdx, dvdy, dvdz, x8n, y8n, z8n) \
++        reduction(||:volError)
+    for (Index_t i=0 ; i<numElem ; ++i){
+       Real_t  x1[8],  y1[8],  z1[8] ;
+       Real_t pfx[8], pfy[8], pfz[8] ;
+@@ -1673,8 +1751,12 @@
+       determ[i] = domain.volo(i) * domain.v(i);
+ 
+       if ( domain.v(i) <= Real_t(0.0) ) {
+-         exit(VolumeError);
+-      }
++         volError = true ;
++      }
++   }
++
++   if (volError) {
++      exit(VolumeError);
+    }
+ 
+    if ( hgcoef > Real_t(0.) ) {
+@@ -1710,10 +1792,16 @@
+                                sigxx, sigyy, sigzz, determ, numElem,
+                                domain.numNode()) ;
+ 
++      bool detError = false ;
++#pragma omp parallel for schedule(static) firstprivate(numElem) \
++        shared(determ) reduction(||:detError)
+       for ( Index_t k=0 ; k<numElem ; ++k ) {
+          if (determ[k] <= Real_t(0.0)) {
+-            exit(VolumeError);
++            detError = true ;
+          }
++      }
++      if (detError) {
++         exit(VolumeError);
+       }
+ 
+       CalcHourglassControlForElems(domain, determ, hgcoef) ;
+@@ -1729,6 +1817,7 @@
+ {
+   Index_t numNode = domain.numNode() ;
+ 
++#pragma omp parallel for schedule(static) firstprivate(numNode) shared(domain)
+   for (Index_t i=0; i<numNode; ++i) {
+      domain.fx(i) = Real_t(0.0) ;
+      domain.fy(i) = Real_t(0.0) ;
+@@ -1743,6 +1832,7 @@
+ void CalcAccelerationForNodes(Domain &domain, Index_t numNode)
+ {
+ 
++#pragma omp parallel for schedule(static) firstprivate(numNode) shared(domain)
+    for (Index_t i = 0; i < numNode; ++i) {
+       domain.xdd(i) = domain.fx(i) / domain.nodalMass(i);
+       domain.ydd(i) = domain.fy(i) / domain.nodalMass(i);
+@@ -1758,16 +1848,19 @@
+ 
+    {
+       if (!domain.symmXempty() != 0) {
++#pragma omp parallel for schedule(static) firstprivate(numNodeBC) shared(domain)
+          for(Index_t i=0 ; i<numNodeBC ; ++i)
+             domain.xdd(domain.symmX(i)) = Real_t(0.0) ;
+       }
+ 
+       if (!domain.symmYempty() != 0) {
++#pragma omp parallel for schedule(static) firstprivate(numNodeBC) shared(domain)
+          for(Index_t i=0 ; i<numNodeBC ; ++i)
+             domain.ydd(domain.symmY(i)) = Real_t(0.0) ;
+       }
+ 
+       if (!domain.symmZempty() != 0) {
++#pragma omp parallel for schedule(static) firstprivate(numNodeBC) shared(domain)
+          for(Index_t i=0 ; i<numNodeBC ; ++i)
+             domain.zdd(domain.symmZ(i)) = Real_t(0.0) ;
+       }
+@@ -1779,6 +1872,7 @@
+                           Index_t numNode)
+ {
+ 
++#pragma omp parallel for schedule(static) firstprivate(numNode) shared(domain)
+    for ( Index_t i = 0 ; i < numNode ; ++i )
+    {
+      Real_t xdtmp, ydtmp, zdtmp ;
+@@ -1800,6 +1894,7 @@
+ static inline
+ void CalcPositionForNodes(Domain &domain, const Real_t dt, Index_t numNode)
+ {
++#pragma omp parallel for schedule(static) firstprivate(numNode) shared(domain)
+    for ( Index_t i = 0 ; i < numNode ; ++i )
+    {
+      domain.x(i) += domain.xd(i) * dt ;
+@@ -2055,6 +2150,8 @@
+                              Real_t deltaTime, Index_t numElem )
+ {
+ 
++#pragma omp parallel for schedule(static) firstprivate(numElem, deltaTime) \
++        shared(domain)
+   for( Index_t k=0 ; k<numElem ; ++k )
+   {
+     Real_t B[3][8] ;
+@@ -2120,6 +2217,9 @@
+ 
+       CalcKinematicsForElems(domain, deltatime, numElem) ;
+ 
++      bool volError = false ;
++#pragma omp parallel for schedule(static) firstprivate(numElem) \
++        shared(domain) reduction(||:volError)
+       for ( Index_t k=0 ; k<numElem ; ++k )
+       {
+          Real_t vdov = domain.dxx(k) + domain.dyy(k) + domain.dzz(k) ;
+@@ -2132,8 +2232,11 @@
+ 
+          if (domain.vnew(k) <= Real_t(0.0))
+         {
+-           exit(VolumeError);
++           volError = true ;
+         }
++      }
++      if (volError) {
++         exit(VolumeError);
+       }
+       domain.DeallocateStrains();
+    }
+@@ -2144,6 +2247,7 @@
+ {
+    Index_t numElem = domain.numElem();
+ 
++#pragma omp parallel for schedule(static) firstprivate(numElem) shared(domain)
+    for (Index_t i = 0 ; i < numElem ; ++i ) {
+       const Real_t ptiny = Real_t(1.e-36) ;
+       Real_t ax,ay,az ;
+@@ -2286,8 +2390,12 @@
+    Real_t monoq_max_slope = domain.monoq_max_slope();
+    Real_t qlc_monoq = domain.qlc_monoq();
+    Real_t qqc_monoq = domain.qqc_monoq();
+-
+-   for ( Index_t i = 0 ; i < domain.regElemSize(r); ++i ) {
++   Index_t regSize = domain.regElemSize(r);
++
++#pragma omp parallel for schedule(static) \
++        firstprivate(regSize, r, ptiny, monoq_limiter_mult, monoq_max_slope, \
++                     qlc_monoq, qqc_monoq) shared(domain)
++   for ( Index_t i = 0 ; i < regSize; ++i ) {
+       Index_t ielem = domain.regElemlist(r,i);
+       Real_t qlin, qquad ;
+       Real_t phixi, phieta, phizeta ;
+@@ -2465,15 +2573,16 @@
+ 
+       domain.DeallocateGradients();
+ 
+-      Index_t idx = -1;
++      bool qError = false;
++#pragma omp parallel for schedule(static) firstprivate(numElem) \
++        shared(domain) reduction(||:qError)
+       for (Index_t i=0; i<numElem; ++i) {
+          if ( domain.q(i) > domain.qstop() ) {
+-            idx = i ;
+-            break ;
++            qError = true ;
+          }
+       }
+ 
+-      if(idx >= 0) {
++      if(qError) {
+          exit(QStopError);
+       }
+    }
+@@ -2685,9 +2794,27 @@
+    Real_t *bvc = Allocate<Real_t>(numElemReg) ;
+    Real_t *pbvc = Allocate<Real_t>(numElemReg) ;
+ 
++   /* Every element of the region is independent (the rep sweeps only
++      re-read domain state that is written after them), so the region is
++      processed in independent blocks, each running all rep sweeps. */
++   const Index_t eosBlock = 128 ;
++   Index_t numBlocks = (numElemReg + eosBlock - 1) / eosBlock ;
++
++#pragma omp parallel for schedule(static) \
++        firstprivate(numBlocks, numElemReg, rep, e_cut, p_cut, ss4o3, q_cut, \
++                     eosvmax, eosvmin, pmin, emin, rho0) \
++        shared(domain, vnewc, regElemList, e_old, delvc, p_old, q_old, \
++               compression, compHalfStep, qq_old, ql_old, work, p_new, \
++               e_new, q_new, bvc, pbvc)
++   for (Index_t b = 0 ; b < numBlocks ; ++b) {
++   Index_t lo = b * eosBlock ;
++   Index_t hi = lo + eosBlock ;
++   if (hi > numElemReg) hi = numElemReg ;
++   Index_t len = hi - lo ;
++
+    for(Int_t j = 0; j < rep; j++) {
+       {
+-         for (Index_t i=0; i<numElemReg; ++i) {
++         for (Index_t i=lo; i<hi; ++i) {
+             Index_t ielem = regElemList[i];
+             e_old[i] = domain.e(ielem) ;
+             delvc[i] = domain.delv(ielem) ;
+@@ -2697,7 +2824,7 @@
+             ql_old[i] = domain.ql(ielem) ;
+          }
+ 
+-         for (Index_t i = 0; i < numElemReg ; ++i) {
++         for (Index_t i = lo; i < hi ; ++i) {
+             Index_t ielem = regElemList[i];
+             Real_t vchalf ;
+             compression[i] = Real_t(1.) / vnewc[ielem] - Real_t(1.);
+@@ -2706,7 +2833,7 @@
+          }
+ 
+          if ( eosvmin != Real_t(0.) ) {
+-            for(Index_t i=0 ; i<numElemReg ; ++i) {
++            for(Index_t i=lo ; i<hi ; ++i) {
+                Index_t ielem = regElemList[i];
+                if (vnewc[ielem] <= eosvmin) {
+                   compHalfStep[i] = compression[i] ;
+@@ -2714,7 +2841,7 @@
+             }
+          }
+          if ( eosvmax != Real_t(0.) ) {
+-            for(Index_t i=0 ; i<numElemReg ; ++i) {
++            for(Index_t i=lo ; i<hi ; ++i) {
+                Index_t ielem = regElemList[i];
+                if (vnewc[ielem] >= eosvmax) {
+                   p_old[i]        = Real_t(0.) ;
+@@ -2724,19 +2851,20 @@
+             }
+          }
+ 
+-         for (Index_t i = 0 ; i < numElemReg ; ++i) {
++         for (Index_t i = lo ; i < hi ; ++i) {
+             work[i] = Real_t(0.) ;
+          }
+       }
+-      CalcEnergyForElems(p_new, e_new, q_new, bvc, pbvc,
+-                         p_old, e_old,  q_old, compression, compHalfStep,
+-                         vnewc, work,  delvc, pmin,
++      CalcEnergyForElems(p_new + lo, e_new + lo, q_new + lo, bvc + lo, pbvc + lo,
++                         p_old + lo, e_old + lo,  q_old + lo,
++                         compression + lo, compHalfStep + lo,
++                         vnewc, work + lo,  delvc + lo, pmin,
+                          p_cut, e_cut, q_cut, emin,
+-                         qq_old, ql_old, rho0, eosvmax,
+-                         numElemReg, regElemList);
+-   }
+-
+-   for (Index_t i=0; i<numElemReg; ++i) {
++                         qq_old + lo, ql_old + lo, rho0, eosvmax,
++                         len, regElemList + lo);
++   }
++
++   for (Index_t i=lo; i<hi; ++i) {
+       Index_t ielem = regElemList[i];
+       domain.p(ielem) = p_new[i] ;
+       domain.e(ielem) = e_new[i] ;
+@@ -2744,9 +2872,10 @@
+    }
+ 
+    CalcSoundSpeedForElems(domain,
+-                          vnewc, rho0, e_new, p_new,
+-                          pbvc, bvc, ss4o3,
+-                          numElemReg, regElemList) ;
++                          vnewc, rho0, e_new + lo, p_new + lo,
++                          pbvc + lo, bvc + lo, ss4o3,
++                          len, regElemList + lo) ;
++   }
+ 
+    Release(&pbvc) ;
+    Release(&bvc) ;
+@@ -2775,24 +2904,24 @@
+     Real_t *vnewc = Allocate<Real_t>(numElem) ;
+ 
+     {
++#pragma omp parallel for schedule(static) firstprivate(numElem, eosvmin, eosvmax) \
++        shared(domain, vnewc)
+        for(Index_t i=0 ; i<numElem ; ++i) {
+-          vnewc[i] = domain.vnew(i) ;
++          Real_t vn = domain.vnew(i) ;
++          if (eosvmin != Real_t(0.)) {
++             if (vn < eosvmin)
++                vn = eosvmin ;
++          }
++          if (eosvmax != Real_t(0.)) {
++             if (vn > eosvmax)
++                vn = eosvmax ;
++          }
++          vnewc[i] = vn ;
+        }
+ 
+-       if (eosvmin != Real_t(0.)) {
+-          for(Index_t i=0 ; i<numElem ; ++i) {
+-             if (vnewc[i] < eosvmin)
+-                vnewc[i] = eosvmin ;
+-          }
+-       }
+-
+-       if (eosvmax != Real_t(0.)) {
+-          for(Index_t i=0 ; i<numElem ; ++i) {
+-             if (vnewc[i] > eosvmax)
+-                vnewc[i] = eosvmax ;
+-          }
+-       }
+-
++       bool volError = false ;
++#pragma omp parallel for schedule(static) firstprivate(numElem, eosvmin, eosvmax) \
++        shared(domain) reduction(||:volError)
+        for (Index_t i=0; i<numElem; ++i) {
+           Real_t vc = domain.v(i) ;
+           if (eosvmin != Real_t(0.)) {
+@@ -2804,8 +2933,11 @@
+                 vc = eosvmax ;
+           }
+           if (vc <= 0.) {
+-             exit(VolumeError);
++             volError = true ;
+           }
++       }
++       if (volError) {
++          exit(VolumeError);
+        }
+     }
+ 
+@@ -2831,6 +2963,7 @@
+                            Real_t v_cut, Index_t length)
+ {
+    if (length != 0) {
++#pragma omp parallel for schedule(static) firstprivate(length, v_cut) shared(domain)
+       for(Index_t i=0 ; i<length ; ++i) {
+          Real_t tmpV = domain.vnew(i) ;
+ 
+@@ -2864,8 +2997,9 @@
+ {
+    Real_t   qqc2 = Real_t(64.0) * qqc * qqc ;
+    Real_t   dtcourant_tmp = dtcourant;
+-   Index_t  courant_elem  = -1 ;
+-
++
++#pragma omp parallel for schedule(static) firstprivate(length, qqc2) \
++        shared(domain, regElemlist) reduction(min:dtcourant_tmp)
+    for (Index_t i = 0 ; i < length ; ++i) {
+       Index_t indx = regElemlist[i] ;
+       Real_t dtf = domain.ss(indx) * domain.ss(indx) ;
+@@ -2882,14 +3016,13 @@
+       if (domain.vdov(indx) != Real_t(0.)) {
+          if ( dtf < dtcourant_tmp ) {
+             dtcourant_tmp = dtf ;
+-            courant_elem  = indx ;
+          }
+       }
+    }
+ 
+-   if (courant_elem != -1) {
+-      dtcourant = dtcourant_tmp ;
+-   }
++   /* dtcourant_tmp == min(incoming dtcourant, accepted dtf values):
++      equal to the incoming value when nothing smaller was found. */
++   dtcourant = dtcourant_tmp ;
+ 
+    return ;
+ 
+@@ -2900,8 +3033,9 @@
+                                  Index_t *regElemlist, Real_t dvovmax, Real_t& dthydro)
+ {
+    Real_t dthydro_tmp = dthydro ;
+-   Index_t hydro_elem = -1 ;
+-
++
++#pragma omp parallel for schedule(static) firstprivate(length, dvovmax) \
++        shared(domain, regElemlist) reduction(min:dthydro_tmp)
+    for (Index_t i = 0 ; i < length ; ++i) {
+       Index_t indx = regElemlist[i] ;
+ 
+@@ -2910,14 +3044,11 @@
+ 
+          if ( dthydro_tmp > dtdvov ) {
+                dthydro_tmp = dtdvov ;
+-               hydro_elem = indx ;
+          }
+       }
+    }
+ 
+-   if (hydro_elem != -1) {
+-      dthydro = dthydro_tmp ;
+-   }
++   dthydro = dthydro_tmp ;
+ 
+    return ;
+ }
+\end{lstlisting}

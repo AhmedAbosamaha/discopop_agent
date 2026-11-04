@@ -26,7 +26,7 @@ archived patches), or else the first rewrite the gate rejected, with the gate's 
         pilot4:polybench/jacobi-2d-imper/full pilot3:polybench/floyd-warshall/full ...
     python3 agent/tools/thesis_material.py --rebuild          # every exhibit, from its facts.json
 
-A spec is `<run>:<suite>/<kernel>/<arm>[@<rep>][:<label>]`; the first model is taken, rep1 unless given.
+A spec is `<run>:<suite>/<kernel>/<arm>[/<model>][@<rep>][:<label>]`; the first model is taken unless one is named, rep1 unless given.
 Nothing is measured here — every number comes from the archived trial record.
 """
 from __future__ import annotations
@@ -455,7 +455,9 @@ def build_spec(spec: str, out: Path, baseline_runs: Optional[List[str]] = None) 
     if root is None:
         raise SystemExit(f"run {run} is not in the archive")
     arm_dir = root / "benchmarks" / path
-    trials = sorted(arm_dir.glob(f"*/rep{rep or 1}"))
+    # `<arm>/<model>` names a model other than the first (a model-alone run holds several).
+    direct = arm_dir / f"rep{rep or 1}"
+    trials = [direct] if (direct / "trial.json").exists() else sorted(arm_dir.glob(f"*/rep{rep or 1}"))
     if not trials:
         raise SystemExit(f"no trial under {arm_dir}")
     return build(run, trials[0], label or f"{run}_{path.replace('/', '_')}", out, baseline_runs)
@@ -467,9 +469,12 @@ def main() -> int:
                     help="default: the exhibits/ folder of the run's experiment (results/campaign.json)")
     ap.add_argument("--baseline-runs", default=None,
                     help="comma-separated runs holding the DiscoPoP-alone trials when the exhibit's own run has none")
+    ap.add_argument("--baseline-arm", default=figures.BASELINE_ARM,
+                    help="the DiscoPoP-alone arm the verdict pairs with (default %(default)s; E3 and E6: discopop_gate_v5)")
     ap.add_argument("--rebuild", action="store_true", help="rebuild every exhibit in --out from its facts.json")
     ap.add_argument("specs", nargs="*")
     a = ap.parse_args()
+    figures.BASELINE_ARM = a.baseline_arm
     baselines = [r for r in a.baseline_runs.split(",") if r] if a.baseline_runs else None
     reg = campaign.load()
     for spec in a.specs:

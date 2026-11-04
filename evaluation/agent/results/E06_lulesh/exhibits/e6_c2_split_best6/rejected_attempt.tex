@@ -1,0 +1,12 @@
+\begin{lstlisting}[language=diff,basicstyle=\ttfamily\scriptsize,breaklines=true,caption={llnl_c1/lulesh — attempt 20 of 77, rejected by the gate at 'tsan': Race detected: / WARNING: ThreadSanitizer: data race (pid=1238128)}]
+--- original/lulesh.cc
++++ rejected/lulesh.cc
+@@ -310,6 +310,7 @@
+    Real_t fy_local[8] ;
+    Real_t fz_local[8] ;
+ 
++  #pragma omp parallel for firstprivate(fy_local,fx_local,fz_local,numElem) shared(determ,sigxx,sigzz,domain,sigyy) 
+   for( Index_t k=0 ; k<numElem ; ++k )
+   {
+     const Index_t* const elemToNode = domain.nodelist(k);
+\end{lstlisting}

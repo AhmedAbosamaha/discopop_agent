@@ -463,10 +463,10 @@
    "folder": "E06_lulesh",
    "title": "E6 — a real application: LULESH 2.0",
    "kind": "experiment",
-   "status": "running",
+   "status": "done",
    "question": "Does the loop — profile, rank, restructure, check, annotate, verify — still work on a real application, where one profile takes tens of gigabytes and the program has dozens of loops: what does the agent reach beside DiscoPoP alone, the model alone and LLNL's own OpenMP version? (RQ3, C1; H4)",
-   "headline": "Reopened by the author (2 Nov) in two stages: the pre-flight without a model, then the design with its cost before any model call. Version 1 of the package was not a clean code file (our driver and notes in lulesh.cc, LLNL's comments, a per-thread minimum, every unit editable); the clean package llnl_c1/lulesh is built and checked (every value equal to version 1's); its pre-flight is running. On version 1 (no model): LLNL's OpenMP version 2.06× faster; DiscoPoP alone correct but 0.12×–0.19× in 3 of 3 draws. The agent setup: the model writes the directives (llm_pragmas_v5), full re-profile. Main runs launched 3 Nov (e6c_r1–r3, e6c_bare) after the smoke (agent BROKEN on reproducibility alone: 1.99×, values within 8.3e-14).",
-   "preregistered": "THESIS_EXPERIMENTS §5k and §5r (the program and why), §5s (arms and the pre-flight owed), §6 13 Oct (\"the experiments that remain share one preparation without a model\"). Nothing with a model is designed yet."
+   "headline": "On LULESH 2.0 (one program, five trials per setup, descriptive), DiscoPoP alone reached a race-free FASTER program in 10 of 10 trials (median 1.26× at 6 threads, 1.34× at 12; 7 directives). The agent with Haiku 4.5, its gate tolerating rounding within the measured noise floor (first configuration), was faster in 4 of 5 trials (1.55×–1.86×) but each of those programs is BROKEN — Haiku's atomic/critical accumulation on the two node-force loops makes the output unrepeatable at a fixed thread count (values within 1e-11); the fifth shipped DiscoPoP's own program after DiscoPoP's explorer stopped its queue (B28). Told and gated byte-identical, as the model alone is told (second configuration, the author's decision after the first result), the agent reached a usable program in 5 of 5 trials, every value identical: 1.38×–1.56× at 6 threads, 1.48×–1.93× at 12, 1.08×–1.42× DiscoPoP alone's own (paired) — the gate refused the atomic scatter on a last-digit change, and in 4 of 5 trials Haiku then split each force loop into a parallel compute phase and a sequential scatter. LLNL's own OpenMP version: 2.00× / 1.96×. Models alone: Opus 5.5 and Fable 5.1 usable 5 of 5 (median 1.99× and 2.02× at 6 threads; LLNL-like gather names, probable recall), Sonnet 5 1 of 5, Haiku 4.5 0 of 5 (4 do not compile, 1 racy). The reproducibility check detects atomics by chance: Sonnet's atomic program passed it.",
+   "preregistered": "THESIS_EXPERIMENTS §6 3 Nov (\"E6 pre-registered\": population, setups, read-out, expectations, limits, cost) and §6 3 Nov (\"E6, second configuration\", the author's decision after the first configuration's result); earlier: §5k, §5r, §5s."
   }
  ],
  "runs": {
@@ -3341,6 +3341,50 @@
   "k53_v6b_retries_add_a_loop": {
    "group": "E2-v6b",
    "shows": "E2-v6b, three attempts with evidence on the unit that has to be left alone: after rejected rewrites the model adds loops it can make parallel and leaves the kernel's own loop sequential — a parallel program that gains nothing (0.98×), 10 model calls; 10 of 20 three-attempt trials end like this, none of 20 at one attempt. The pressure of the retries, not the profiler's defect."
+  },
+  "e6_c1_atomic_broken_r1a": {
+   "group": "E6",
+   "shows": "First configuration, e6c_r1 rep 1: the agent with Haiku parallelizes LULESH's force scatter with 27 atomic and 2 critical directives, 1.86×/2.10×, every value within 4.8e-14 — BROKEN because the output is not repeatable at a fixed thread count, the gate having accepted it within the measured noise floor."
+  },
+  "e6_c1_atomic_broken_r1b": {
+   "group": "E6",
+   "shows": "First configuration, e6c_r1 rep 2: the same atomic force scatter, 1.55×/1.84×, values within 2.8e-13, BROKEN on reproducibility alone; B28 cut its queue."
+  },
+  "e6_c1_atomic_broken_r2a": {
+   "group": "E6",
+   "shows": "First configuration, e6c_r2 rep 1: atomic/critical on the hourglass scatter only, 1.67×/1.86×, values within 3.2e-12, BROKEN on reproducibility alone."
+  },
+  "e6_c1_atomic_broken_r2b": {
+   "group": "E6",
+   "shows": "First configuration, e6c_r2 rep 2: atomic force scatter (27 atomic, 2 critical), 1.79×/2.08× — faster than LLNL's version at 12 threads, yet BROKEN on reproducibility alone."
+  },
+  "e6_c1_queue_cut_floor_r3b": {
+   "group": "E6",
+   "shows": "First configuration, e6c_r3b: DiscoPoP's explorer stalls in every retry after the 8th rewrite (B28), 22 regions are never attempted, and the agent's program at 0.95× DiscoPoP alone's is replaced by DiscoPoP's own (floor, D32)."
+  },
+  "e6_c2_atomic_refused_sequential": {
+   "group": "E6",
+   "shows": "Second configuration, e6x_1 rep 1: told byte-identical, Haiku writes the atomic scatter again, the gate refuses it on a last-digit change (pb_sum …267 vs …272), the model withdraws it — force loops sequential, 1.38×/1.48×, every value identical."
+  },
+  "e6_c2_split_best6": {
+   "group": "E6",
+   "shows": "Second configuration, e6x_3: after the atomic scatter is refused, Haiku splits each force loop into a parallel loop computing every element's corner forces into buffers and a sequential loop adding them in element order — every value identical, 1.56×/1.78×, the best at 6 threads."
+  },
+  "e6_c2_split_best12": {
+   "group": "E6",
+   "shows": "Second configuration, e6x_2 rep 2: the same split after refused attempts on both force loops, 1.54×/1.93× (LLNL: 1.96× at 12 threads), 1.42× DiscoPoP alone's own, every value identical."
+  },
+  "e6_bare_haiku_racy": {
+   "group": "E6",
+   "shows": "Haiku 4.5 alone, rep 5: the one model-alone Haiku program the harness scores FASTER (1.95×/1.69×) has a data race — courant_elem is left shared in the Courant minimum loop — found only by the race check."
+  },
+  "e6_bare_sonnet_atomic_passes": {
+   "group": "E6",
+   "shows": "Sonnet 5 alone, rep 1: atomic updates on both force scatters, the construction that made the agent's programs BROKEN, yet its digest is identical in all 5 runs at 6 and 12 threads — FASTER (1.99×/1.99×): the reproducibility check detects by chance."
+  },
+  "e6_bare_opus_gather_best": {
+   "group": "E6",
+   "shows": "Opus 5.5 alone, rep 4: a node-to-corner gather in element order, every value identical, 2.53×/2.84× — the fastest E6 program, above LLNL's own 2.00×/1.96× (LLNL-like names: probable recall)."
   }
  },
  "lines": [

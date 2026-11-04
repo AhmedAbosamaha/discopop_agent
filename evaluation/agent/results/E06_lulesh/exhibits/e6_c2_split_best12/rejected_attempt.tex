@@ -1,0 +1,73 @@
+\begin{lstlisting}[language=diff,basicstyle=\ttfamily\scriptsize,breaklines=true,caption={llnl_c1/lulesh — attempt 1 of 87, rejected by the gate at 'correctness': Program output changed under the parallel build at a fixed thread count — the patched program is NOT semantically equivalent to the original. / output differs a}]
+--- original/lulesh.cc
++++ rejected/lulesh.cc
+@@ -1962,6 +1962,66 @@
+ 
+    LagrangeElements(domain, domain.numElem());
+ 
+-   CalcTimeConstraintsForElems(domain);
+-
+-}
++   /* Parallelize time constraints calculation loop over regions */
++   Real_t dtcourant = Real_t(1.0e+20);
++   Real_t dthydro = Real_t(1.0e+20);
++
++#pragma omp parallel for collapse(1) reduction(min:dtcourant,dthydro) \
++    schedule(static) shared(domain)
++   for (Index_t r = 0; r < domain.numReg(); ++r) {
++      /* Courant constraint computation for region r */
++      Real_t qqc2 = Real_t(64.0) * domain.qqc() * domain.qqc();
++      Real_t dtcourant_tmp = Real_t(1.0e+20);
++      Index_t courant_elem = -1;
++
++      for (Index_t i = 0; i < domain.regElemSize(r); ++i) {
++         Index_t indx = domain.regElemlist(r, i);
++         Real_t dtf = domain.ss(indx) * domain.ss(indx);
++
++         if (domain.vdov(indx) < Real_t(0.)) {
++            dtf = dtf
++                + qqc2 * domain.arealg(indx) * domain.arealg(indx)
++                * domain.vdov(indx) * domain.vdov(indx);
++         }
++
++         dtf = SQRT(dtf);
++         dtf = domain.arealg(indx) / dtf;
++
++         if (domain.vdov(indx) != Real_t(0.)) {
++            if (dtf < dtcourant_tmp) {
++               dtcourant_tmp = dtf;
++               courant_elem = indx;
++            }
++         }
++      }
++
++      if (courant_elem != -1) {
++         dtcourant = dtcourant_tmp;
++      }
++
++      /* Hydro constraint computation for region r */
++      Real_t dthydro_tmp = Real_t(1.0e+20);
++      Index_t hydro_elem = -1;
++
++      for (Index_t i = 0; i < domain.regElemSize(r); ++i) {
++         Index_t indx = domain.regElemlist(r, i);
++
++         if (domain.vdov(indx) != Real_t(0.)) {
++            Real_t dtdvov = domain.dvovmax() / (FABS(domain.vdov(indx)) + Real_t(1.e-20));
++
++            if (dthydro_tmp > dtdvov) {
++               dthydro_tmp = dtdvov;
++               hydro_elem = indx;
++            }
++         }
++      }
++
++      if (hydro_elem != -1) {
++         dthydro = dthydro_tmp;
++      }
++   }
++
++   domain.dtcourant() = dtcourant;
++   domain.dthydro() = dthydro;
++
++}\end{lstlisting}

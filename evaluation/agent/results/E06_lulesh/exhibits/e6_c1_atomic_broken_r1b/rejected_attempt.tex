@@ -1,0 +1,44 @@
+\begin{lstlisting}[language=diff,basicstyle=\ttfamily\scriptsize,breaklines=true,caption={llnl_c1/lulesh — attempt 1 of 41, rejected by the gate at 'tsan': Race detected: / WARNING: ThreadSanitizer: data race (pid=801950)}]
+--- original/lulesh.cc
++++ rejected/lulesh.cc
+@@ -1955,13 +1955,34 @@
+    Domain_member fieldData[6] ;
+ #endif
+ 
+-   LagrangeNodal(domain);
++#pragma omp parallel shared(domain)
++{
++   /* Three independent function calls with no data dependences;
++      each operates on disjoint domain data and can execute in parallel */
++
++#pragma omp task
++   {
++      /* Update nodal properties: forces, accelerations, velocities, positions */
++      LagrangeNodal(domain);
++   }
++
++#pragma omp task
++   {
++      /* Update element properties based on current node data */
++      LagrangeElements(domain, domain.numElem());
++   }
++
++#pragma omp task
++   {
++      /* Compute time constraints for next time step */
++      CalcTimeConstraintsForElems(domain);
++   }
++
++   /* Wait for all three tasks to complete */
++#pragma omp taskwait
++}
+ 
+ #ifdef SEDOV_SYNC_POS_VEL_LATE
+ #endif
+ 
+-   LagrangeElements(domain, domain.numElem());
+-
+-   CalcTimeConstraintsForElems(domain);
+-
+-}
++}\end{lstlisting}

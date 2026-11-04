@@ -154,3 +154,28 @@
 - [`k53_v6b_retries_add_a_loop`](E02v6b_hidden_order_fixed_discopop/exhibits/k53_v6b_retries_add_a_loop/) — E2-v6b, three attempts with evidence on the unit that has to be left alone: after rejected rewrites the model adds loops it can make parallel and leaves the kernel's own loop sequential — a parallel program that gains nothing (0.98×), 10 model calls; 10 of 20 three-attempt trials end like this, none of 20 at one attempt. The pressure of the retries, not the profiler's defect.  
   no DiscoPoP-alone trial to pair with · tsvc_c2/k53, `full_nospeed_v4`, e2v6b_fb_3 rep 1 · pictures: `before_after.png`, `rejected_attempt.png`, `console.png`
 
+## [E6 — a real application: LULESH 2.0](E06_lulesh/REPORT.md)
+
+- [`e6_bare_haiku_racy`](E06_lulesh/exhibits/e6_bare_haiku_racy/) — Haiku 4.5 alone, rep 5: the one model-alone Haiku program the harness scores FASTER (1.95×/1.69×) has a data race — courant_elem is left shared in the Courant minimum loop — found only by the race check.  
+  **better** vs DiscoPoP alone (1.34× → 1.95×) · llnl_c1/lulesh, `bare_llm_v4`, e6c_bare rep 5 · pictures: `before_after.png`, `console.png`
+- [`e6_bare_opus_gather_best`](E06_lulesh/exhibits/e6_bare_opus_gather_best/) — Opus 5.5 alone, rep 4: a node-to-corner gather in element order, every value identical, 2.53×/2.84× — the fastest E6 program, above LLNL's own 2.00×/1.96× (LLNL-like names: probable recall).  
+  **better** vs DiscoPoP alone (1.34× → 2.84×) · llnl_c1/lulesh, `bare_llm_v4`, e6c_bare rep 4 · pictures: `before_after.png`, `console.png`
+- [`e6_bare_sonnet_atomic_passes`](E06_lulesh/exhibits/e6_bare_sonnet_atomic_passes/) — Sonnet 5 alone, rep 1: atomic updates on both force scatters, the construction that made the agent's programs BROKEN, yet its digest is identical in all 5 runs at 6 and 12 threads — FASTER (1.99×/1.99×): the reproducibility check detects by chance.  
+  **better** vs DiscoPoP alone (1.34× → 1.99×) · llnl_c1/lulesh, `bare_llm_v4`, e6c_bare rep 1 · pictures: `before_after.png`, `console.png`
+- [`e6_c1_atomic_broken_r1a`](E06_lulesh/exhibits/e6_c1_atomic_broken_r1a/) — First configuration, e6c_r1 rep 1: the agent with Haiku parallelizes LULESH's force scatter with 27 atomic and 2 critical directives, 1.86×/2.10×, every value within 4.8e-14 — BROKEN because the output is not repeatable at a fixed thread count, the gate having accepted it within the measured noise floor.  
+  **unsafe** vs DiscoPoP alone (1.34× → 1.00×) · llnl_c1/lulesh, `llm_pragmas_v5`, e6c_r1 rep 1 · pictures: `before_after.png`, `rejected_attempt.png`, `console.png`
+- [`e6_c1_atomic_broken_r1b`](E06_lulesh/exhibits/e6_c1_atomic_broken_r1b/) — First configuration, e6c_r1 rep 2: the same atomic force scatter, 1.55×/1.84×, values within 2.8e-13, BROKEN on reproducibility alone; B28 cut its queue.  
+  **unsafe** vs DiscoPoP alone (1.34× → 1.00×) · llnl_c1/lulesh, `llm_pragmas_v5`, e6c_r1 rep 2 · pictures: `before_after.png`, `rejected_attempt.png`, `console.png`
+- [`e6_c1_atomic_broken_r2a`](E06_lulesh/exhibits/e6_c1_atomic_broken_r2a/) — First configuration, e6c_r2 rep 1: atomic/critical on the hourglass scatter only, 1.67×/1.86×, values within 3.2e-12, BROKEN on reproducibility alone.  
+  **unsafe** vs DiscoPoP alone (1.31× → 1.00×) · llnl_c1/lulesh, `llm_pragmas_v5`, e6c_r2 rep 1 · pictures: `before_after.png`, `rejected_attempt.png`, `console.png`
+- [`e6_c1_atomic_broken_r2b`](E06_lulesh/exhibits/e6_c1_atomic_broken_r2b/) — First configuration, e6c_r2 rep 2: atomic force scatter (27 atomic, 2 critical), 1.79×/2.08× — faster than LLNL's version at 12 threads, yet BROKEN on reproducibility alone.  
+  **unsafe** vs DiscoPoP alone (1.31× → 1.00×) · llnl_c1/lulesh, `llm_pragmas_v5`, e6c_r2 rep 2 · pictures: `before_after.png`, `rejected_attempt.png`, `console.png`
+- [`e6_c1_queue_cut_floor_r3b`](E06_lulesh/exhibits/e6_c1_queue_cut_floor_r3b/) — First configuration, e6c_r3b: DiscoPoP's explorer stalls in every retry after the 8th rewrite (B28), 22 regions are never attempted, and the agent's program at 0.95× DiscoPoP alone's is replaced by DiscoPoP's own (floor, D32).  
+  **equal** vs DiscoPoP alone (1.35× → 1.35×) · llnl_c1/lulesh, `llm_pragmas_v5`, e6c_r3b rep 1 · pictures: `before_after.png`, `rejected_attempt.png`, `console.png`
+- [`e6_c2_atomic_refused_sequential`](E06_lulesh/exhibits/e6_c2_atomic_refused_sequential/) — Second configuration, e6x_1 rep 1: told byte-identical, Haiku writes the atomic scatter again, the gate refuses it on a last-digit change (pb_sum …267 vs …272), the model withdraws it — force loops sequential, 1.38×/1.48×, every value identical.  
+  **equal** vs DiscoPoP alone (1.34× → 1.48×) · llnl_c1/lulesh, `llm_pragmas_v5_exact`, e6x_1 rep 1 · pictures: `before_after.png`, `rejected_attempt.png`, `console.png`
+- [`e6_c2_split_best12`](E06_lulesh/exhibits/e6_c2_split_best12/) — Second configuration, e6x_2 rep 2: the same split after refused attempts on both force loops, 1.54×/1.93× (LLNL: 1.96× at 12 threads), 1.42× DiscoPoP alone's own, every value identical.  
+  **better** vs DiscoPoP alone (1.32× → 1.93×) · llnl_c1/lulesh, `llm_pragmas_v5_exact`, e6x_2 rep 2 · pictures: `before_after.png`, `rejected_attempt.png`, `console.png`
+- [`e6_c2_split_best6`](E06_lulesh/exhibits/e6_c2_split_best6/) — Second configuration, e6x_3: after the atomic scatter is refused, Haiku splits each force loop into a parallel loop computing every element's corner forces into buffers and a sequential loop adding them in element order — every value identical, 1.56×/1.78×, the best at 6 threads.  
+  **better** vs DiscoPoP alone (1.32× → 1.78×) · llnl_c1/lulesh, `llm_pragmas_v5_exact`, e6x_3 rep 1 · pictures: `before_after.png`, `rejected_attempt.png`, `console.png`
+

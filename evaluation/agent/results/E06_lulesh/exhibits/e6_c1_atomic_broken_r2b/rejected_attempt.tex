@@ -1,0 +1,50 @@
+\begin{lstlisting}[language=diff,basicstyle=\ttfamily\scriptsize,breaklines=true,caption={llnl_c1/lulesh — attempt 2 of 71, rejected by the gate at 'correctness': parallel run failed: non-zero exit (-6): / Assertion failure at kmp_dispatch.cpp(1618): vnew.p.ub * (UT)chunk <= trip.}]
+--- original/lulesh.cc
++++ rejected/lulesh.cc
+@@ -1962,6 +1962,43 @@
+ 
+    LagrangeElements(domain, domain.numElem());
+ 
+-   CalcTimeConstraintsForElems(domain);
+-
+-}
++   /* Parallelize time constraint calculation with explicit reductions */
++   domain.dtcourant() = 1.0e+20;
++   domain.dthydro() = 1.0e+20;
++
++   Real_t qqc2 = Real_t(64.0) * domain.qqc() * domain.qqc();
++   Real_t dtcourant_min = 1.0e+20;
++   Real_t dthydro_min = 1.0e+20;
++
++   /* Flatten to iterate over all elements for better work distribution and reduced overhead */
++#pragma omp parallel for reduction(min:dtcourant_min, dthydro_min) schedule(dynamic, 256)
++   for (Index_t elemIdx = 0; elemIdx < domain.numElem(); ++elemIdx) {
++      Index_t indx = elemIdx;
++
++      /* Courant constraint calculation */
++      Real_t dtf = domain.ss(indx) * domain.ss(indx);
++      if (domain.vdov(indx) < Real_t(0.)) {
++         dtf = dtf + qqc2 * domain.arealg(indx) * domain.arealg(indx)
++                   * domain.vdov(indx) * domain.vdov(indx);
++      }
++      dtf = SQRT(dtf);
++      dtf = domain.arealg(indx) / dtf;
++      if (domain.vdov(indx) != Real_t(0.)) {
++         if (dtf < dtcourant_min) {
++            dtcourant_min = dtf;
++         }
++      }
++
++      /* Hydro constraint calculation */
++      if (domain.vdov(indx) != Real_t(0.)) {
++         Real_t dtdvov = domain.dvovmax() / (FABS(domain.vdov(indx)) + Real_t(1.e-20));
++         if (dthydro_min > dtdvov) {
++            dthydro_min = dtdvov;
++         }
++      }
++   }
++
++   domain.dtcourant() = dtcourant_min;
++   domain.dthydro() = dthydro_min;
++
++}\end{lstlisting}

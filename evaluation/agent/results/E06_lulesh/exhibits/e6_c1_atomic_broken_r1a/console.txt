@@ -1,0 +1,292 @@
+  Initial candidates
+Region ID    Type           Saves    % run    Hot  Tier  Depth  Name
+  2:355      function   8534.8 ms    99.6%    YES     2      0  _Z16LagrangeLeapFrogR6Domain
+  1:377      function   4636.0 ms    54.1%    YES     1      0  _ZL16LagrangeElementsR6Domaini
+  1:362      function   3762.0 ms    43.9%    YES     1      0  _ZL13LagrangeNodalR6Domain
+  2:1683     function   3122.8 ms    36.4%    YES     2      0  _ZL17CalcForceForNodesR6Domain
+  2:1847     function   3048.7 ms    35.6%    YES     2      0  _ZL23CalcVolumeForceForElemsR6Domain
+  1:1932     function   1856.1 ms    21.7%    YES     1      0  _ZL28CalcHourglassControlForElemsR6DomainPdd
+  1:2340     function   1598.0 ms    18.6%    YES     2      0  _ZL13CalcQForElemsR6Domain
+  2:178      function   1482.8 ms    17.3%    YES     2      0  _ZL29CollectDomainNodesToElemNodesR6DomainPKiPdS3_S3_
+  2:2299     function   1475.7 ms    17.2%    YES     2      0  _ZL20CalcLagrangeElementsR6Domain
+  1:2440     loop       1470.3 ms    17.2%    YES     2      0  lines 1820–1831
+  1:2974     loop       1386.6 ms    16.2%    YES     1      0  lines 1696–1745
+  PHASE A — restructure  (the source stays pragma-free)
+┌─ [depth=0] function 2:355 (lines 1952–1967)  score=8.5
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+└─ SKIPPED (budget exhausted)
+┌─ [depth=0] function 1:377 (lines 1856–1866)  score=4.6
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Applied to lulesh.cc
+│  [Tier-2] Re-measured runtimes: 310 region(s), 8740.2 ms total
+└─ ACCEPTED
+┌─ [depth=0] function 1:362 (lines 828–847)  score=3.8
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Applied to lulesh.cc
+│  [Tier-2] Re-measured runtimes: 297 region(s), 8745.9 ms total
+└─ ACCEPTED
+┌─ [depth=0] function 2:1855 (lines 706–735)  score=0.5
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Applied to lulesh.cc
+│  [Tier-2] Re-measured runtimes: 301 region(s), 8745.7 ms total
+└─ ACCEPTED
+┌─ [depth=0] function 1:2322 (lines 1539–1570)  score=0.3
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Applied to lulesh.cc
+│  [Tier-2] Re-measured runtimes: 298 region(s), 8768.6 ms total
+└─ ACCEPTED
+┌─ [depth=0] function 2:178 (lines 64–106)  score=0.3
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Applied to lulesh.cc
+│  [Tier-2] Re-measured runtimes: 302 region(s), 8766.0 ms total
+│  [Tier-2] DiscoPoP parallelized it, but the program is not faster than before the rewrite — reverting (snapshot restore)
+└─ retry (budget remaining: 1)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Applied to lulesh.cc
+│  [Tier-2] Re-measured runtimes: 306 region(s), 8523.6 ms total
+│  [Tier-2] DiscoPoP parallelized it, but the program is not faster than before the rewrite — reverting (snapshot restore)
+└─ retry (budget remaining: 0)
+└─ SKIPPED (budget exhausted)
+┌─ [depth=0] loop 1:2410 (lines 1911–1922)  score=0.3
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Applied to lulesh.cc
+│  [Tier-2] Re-measured runtimes: 300 region(s), 8730.5 ms total
+└─ ACCEPTED
+┌─ [depth=0] loop 1:2952 (lines 1783–1832)  score=0.3
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+┌─ [depth=0] function 2:2902 (lines 1754–1860)  score=0.3
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+└─ SKIPPED (budget exhausted)
+┌─ [depth=0] loop 1:2052 (lines 501–645)  score=0.3
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Applied to lulesh.cc
+│  [Tier-2] Re-measured runtimes: 300 region(s), 8310.1 ms total
+└─ ACCEPTED
+┌─ [depth=0] loop 1:1906 (lines 314–340)  score=0.4
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Applied to lulesh.cc
+│  [Tier-2] Re-measured runtimes: 301 region(s), 7878.0 ms total
+└─ ACCEPTED
+┌─ [depth=0] loop 1:2953 (lines 1864–1872)  score=0.3
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+┌─ [depth=0] function 2:3057 (lines 1687–1808)  score=0.2
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+└─ SKIPPED (budget exhausted)
+┌─ [depth=0] loop 1:2642 (lines 1612–1616)  score=0.1
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Applied to lulesh.cc
+│  [Tier-2] Re-measured runtimes: 301 region(s), 7888.3 ms total
+└─ ACCEPTED
+┌─ [depth=0] loop 1:3185 (lines 1671–1684)  score=0.1
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+┌─ [depth=0] function 1:3176 (lines 1658–1685)  score=0.1
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Applied to lulesh.cc
+│  [Tier-2] Re-measured runtimes: 302 region(s), 7891.4 ms total
+│  [Tier-2] DiscoPoP parallelized it, but the program is not faster than before the rewrite — reverting (snapshot restore)
+└─ retry (budget remaining: 1)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Applied to lulesh.cc
+│  [Tier-2] Re-measured runtimes: 305 region(s), 7887.7 ms total
+└─ ACCEPTED
+┌─ [depth=0] function 2:246 (lines 1114–1153)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Applied to lulesh.cc
+│  [Tier-2] Re-measured runtimes: 307 region(s), 7886.1 ms total
+│  [Tier-2] DiscoPoP still finds no parallelism in the rewritten lines — reverting (snapshot restore)
+└─ retry (budget remaining: 0)
+└─ SKIPPED (budget exhausted)
+┌─ [depth=0] loop 1:513 (lines 2118–2128)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Applied to lulesh.cc
+│  [Tier-2] Re-measured runtimes: 308 region(s), 7902.6 ms total
+└─ ACCEPTED
+┌─ [depth=0] loop 1:3203 (lines 2056–2075)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Applied to lulesh.cc
+│  [Tier-2] Re-measured runtimes: 303 region(s), 7893.6 ms total
+└─ ACCEPTED
+┌─ [depth=0] function 1:2054 (lines 403–442)  score=0.0
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+│  [Tier-2] Quality gate PASSED
+│  [Tier-2] Applied to lulesh.cc
+│  [Tier-2] Re-measured runtimes: 301 region(s), 7913.9 ms total
+│  [Tier-2] DiscoPoP parallelized it, but the program is not faster than before the rewrite — reverting (snapshot restore)
+└─ retry (budget remaining: 1)
+│  [Tier-2] Calling claude-haiku-4-5-20251001...
+└─ SKIPPED (budget exhausted)
+┌─ [depth=1] function 2:1800 (lines 828–841)  score=1.1
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Restructuring not allowed at depth 1 (--restructure-depth=0) → SKIP
+└─ SKIPPED
+┌─ [depth=1] function 1:2279 (lines 1279–1307)  score=0.7
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Restructuring not allowed at depth 1 (--restructure-depth=0) → SKIP
+└─ SKIPPED
+┌─ [depth=1] function 1:362 (lines 919–996)  score=1.3
+│  [Phase-A] DiscoPoP already has a pattern here (task) — deferred to Phase B
+└─ DEFERRED
+┌─ [depth=1] function 2:1855 (lines 803–826)  score=1.1
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Restructuring not allowed at depth 1 (--restructure-depth=0) → SKIP
+└─ SKIPPED
+┌─ [depth=1] function 1:1950 (lines 729–799)  score=0.4
+│  [Phase-A] DiscoPoP already has a pattern here (task) — deferred to Phase B
+└─ DEFERRED
+┌─ [depth=1] function 1:2320 (lines 1632–1655)  score=0.8
+│  [Phase-A] DiscoPoP already has a pattern here (task) — deferred to Phase B
+└─ DEFERRED
+┌─ [depth=1] function 2:2018 (lines 240–288)  score=0.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Restructuring not allowed at depth 1 (--restructure-depth=0) → SKIP
+└─ SKIPPED
+┌─ [depth=1] function 1:115 (lines 1219–1276)  score=0.1
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Restructuring not allowed at depth 1 (--restructure-depth=0) → SKIP
+└─ SKIPPED
+┌─ [depth=1] function 2:2488 (lines 1310–1447)  score=0.1
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+│  [Tier-2] Restructuring not allowed at depth 1 (--restructure-depth=0) → SKIP
+└─ SKIPPED
+┌─ [depth=1] function 1:2065 (lines 486–726)  score=0.1
+│  [Phase-A] DiscoPoP already has a pattern here (task) — deferred to Phase B
+└─ DEFERRED
+┌─ [depth=1] loop 1:3108 (lines 1753–1784)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+┌─ [depth=1] loop 1:3136 (lines 1789–1806)  score=0.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+  PHASE B — annotate  (10 candidate pragma(s))
+┌─ pattern #302  task @ lines 2035–2045  (W=0)
+│  gate failed at 'openmp_compile': OpenMP compile failed (loop not in OpenMP-canonical form): /tmp/dp_agent_val_75ugqz0q/_dp_proj_tsan_binary/lulesh.cc:2050:1: error: expected statement
+└─ DROPPED
+┌─ pattern #107  task @ lines 919–996  (W=0)
+│  gate failed at 'compile': /tmp/dp_agent_val_bco5915z/_dp_proj_validate_binary/lulesh.cc:946:31: error: use of undeclared identifier 'numNode'; did you mean 'numNodeBC'?   946 |
+└─ DROPPED
+┌─ pattern #134  task @ lines 919–996  (W=0)
+│  gate failed at 'compile': /tmp/dp_agent_val_g0r9uiij/_dp_proj_validate_binary/lulesh.cc:979:48: error: use of undeclared identifier 'delt'   979 |         xdtmp = domain.xd(i) 
+└─ DROPPED
+┌─ pattern #433  task @ lines 919–996  (W=0)
+│  gate failed at 'openmp_compile': OpenMP compile failed (loop not in OpenMP-canonical form): /tmp/dp_agent_val_xzmf0oj5/_dp_proj_tsan_binary/lulesh.cc:965:7: error: expected statement 
+└─ DROPPED
+┌─ pattern #662  task @ lines 919–996  (W=0)
+│  gate failed at 'openmp_compile': OpenMP compile failed (loop not in OpenMP-canonical form): /tmp/dp_agent_val_mwvufbkj/_dp_proj_tsan_binary/lulesh.cc:959:7: error: expected statement 
+└─ DROPPED
+┌─ pattern #719  task @ lines 919–996  (W=0)
+│  gate failed at 'openmp_compile': OpenMP compile failed (loop not in OpenMP-canonical form): /tmp/dp_agent_val__5g12pan/_dp_proj_tsan_binary/lulesh.cc:953:7: error: expected statement 
+└─ DROPPED
+┌─ pattern #794  task @ lines 919–996  (W=0)
+│  gate failed at 'compile': /tmp/dp_agent_val_py5402dy/_dp_proj_validate_binary/lulesh.cc:979:48: error: use of undeclared identifier 'delt'   979 |         xdtmp = domain.xd(i) 
+└─ DROPPED
+┌─ pattern #797  task @ lines 919–996  (W=0)
+│  gate failed at 'compile': /tmp/dp_agent_val_4fm_i482/_dp_proj_validate_binary/lulesh.cc:946:31: error: use of undeclared identifier 'numNode'; did you mean 'numNodeBC'?   946 |
+└─ DROPPED
+┌─ pattern #77  task @ lines 1632–1655  (W=0)
+│  gate failed at 'openmp_compile': OpenMP compile failed (loop not in OpenMP-canonical form): /tmp/dp_agent_val_sm8t157w/_dp_proj_tsan_binary/lulesh.cc:1660:1: error: expected statement
+└─ DROPPED
+┌─ pattern #916  do_all @ lines 1864–1913  (W=85750)
+│  marginal 1.03×
+│  [Phase-B] Applied to lulesh.cc
+└─ APPLIED
+┌─ pattern #911  do_all @ lines 1866–1874  (W=9959600)
+└─ SKIPPED (enclosing loop is already parallel)
+┌─ pattern #35  task @ lines 729–799  (W=0)
+│  gate failed at 'compile': /tmp/dp_agent_val_7r1v77lr/_dp_proj_validate_binary/lulesh.cc:771:13: error: use of undeclared identifier 'dvdx'   771 |             dvdx[jj] = pfx[ii
+└─ DROPPED
+┌─ pattern #38  task @ lines 729–799  (W=0)
+│  gate failed at 'compile': numElem8) ;       |            ^ /tmp/dp_agent_val_6nsy0tam/_dp_proj_validate_binary/lulesh.cc:775:13: error: use of undeclared identifier 'y8n'   775
+└─ DROPPED
+┌─ pattern #47  task @ lines 729–799  (W=0)
+│  gate failed at 'compile':  'dvdx' declared here   734 |    Real_t *dvdx = Allocate<Real_t>(numElem8) ;       |            ^ /tmp/dp_agent_val_7df1s5fz/_dp_proj_validate_binary/
+└─ DROPPED
+┌─ pattern #101  task @ lines 729–799  (W=0)
+│  gate failed at 'compile': /tmp/dp_agent_val_wbplu623/_dp_proj_validate_binary/lulesh.cc:771:13: error: use of undeclared identifier 'dvdx'   771 |             dvdx[jj] = pfx[ii
+└─ DROPPED
+┌─ pattern #537  task @ lines 729–799  (W=0)
+│  gate failed at 'compile': numElem8) ;       |            ^ /tmp/dp_agent_val_dibmgruq/_dp_proj_validate_binary/lulesh.cc:775:13: error: use of undeclared identifier 'y8n'   775
+└─ DROPPED
+┌─ pattern #578  task @ lines 729–799  (W=0)
+│  gate failed at 'compile':  'dvdx' declared here   734 |    Real_t *dvdx = Allocate<Real_t>(numElem8) ;       |            ^ /tmp/dp_agent_val_mir7o2km/_dp_proj_validate_binary/
+└─ DROPPED
+┌─ pattern #116  task @ lines 486–726  (W=0)
+│  gate failed at 'compile': += hgfy[7];       |       ^~~~~~~       |       fx_temp /tmp/dp_agent_val_zvgg3xbt/_dp_proj_validate_binary/lulesh.cc:533:12: note: 'fx_temp' declared
+└─ DROPPED
+┌─ pattern #233  task @ lines 486–726  (W=0)
+│  gate failed at 'compile': /tmp/dp_agent_val_m5c477wz/_dp_proj_validate_binary/lulesh.cc:543:11: error: use of undeclared identifier 'fx_temp'   543 |    memset(fx_temp, 0, numN
+└─ DROPPED
+┌─ pattern #672  task @ lines 486–726  (W=0)
+│  gate failed at 'openmp_compile': OpenMP compile failed (loop not in OpenMP-canonical form): /tmp/dp_agent_val_cx4a3ykq/_dp_proj_tsan_binary/lulesh.cc:731:1: error: expected statement 
+└─ DROPPED
+┌─ pattern #239  task @ lines 403–442  (W=0)
+│  gate failed at 'openmp_compile': OpenMP compile failed (loop not in OpenMP-canonical form): /tmp/dp_agent_val_sqvr5x3a/_dp_proj_tsan_binary/lulesh.cc:447:1: error: expected statement 
+└─ DROPPED
+┌─ pattern #921  do_all @ lines 1753–1784  (W=38593450)
+│  marginal 0.95× alone — deferred: judged together with the other pragmas that do not pay alone (D33)
+└─ DEFERRED (slower alone)
+┌─ pattern #922  do_all @ lines 1789–1806  (W=21164150)
+│  marginal 1.04×
+│  [Phase-B] Applied to lulesh.cc
+└─ APPLIED
+┌─ D33 — 1 safe pragma(s) did not pay alone; measuring them together
+└─ D33 done
+  SETTLING — verify the finished source, drop what does not hold up
+  [ok] finished source verified — output matches, 2.16x the original, paired
+  SUMMARY: 11 rewrite(s) kept  |  65 pragma(s) applied (2 DiscoPoP + 63 LLM)  |  11 skipped
+    ✓  loop 1:2950  [Phase-B pragma]  depth=0  marginal 1.03×
+    ✓  loop 1:3136  [Phase-B pragma]  depth=0  marginal 1.04×

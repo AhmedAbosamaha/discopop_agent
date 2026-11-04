@@ -1,0 +1,78 @@
+{
+  "run": "e6c_r1",
+  "trial": "E06_lulesh/runs/e6c_r1/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep2",
+  "benchmark": "llnl_c1/lulesh",
+  "arm": "llm_pragmas_v5",
+  "model": "claude-haiku-4-5-20251001",
+  "repeat": 2,
+  "outcome": "BROKEN",
+  "vs_discopop_alone": {
+    "verdict": "unsafe",
+    "class": "",
+    "dp_alone_trials": 2,
+    "dp_alone_outcomes": "FASTER,FASTER",
+    "dp_alone_speedup_vs_seq": 1.34,
+    "agent_outcome": "BROKEN",
+    "agent_speedup_vs_seq": null,
+    "agent_vs_dp_alone": null,
+    "timing_comparable": true,
+    "baseline_runs": [
+      "e6c_r1"
+    ]
+  },
+  "llm_calls": 29,
+  "agent_s": 17110.8,
+  "verify_size": "LARGE",
+  "verify_status": "ok",
+  "seq_kernel_s": 1.053492,
+  "kernel_speedup_by_threads": {
+    "6": 1.553,
+    "12": 1.845
+  },
+  "dump_max_rel_err": 2.778956155926484e-13,
+  "dump_seeded_max_rel_err": 3.001141836486707e-15,
+  "pragmas_discopop": 0,
+  "pragmas_llm": 51,
+  "rewrites_kept": 13,
+  "scaffold_ok": true,
+  "package_integrity_ok": true,
+  "change": {
+    "file": "lulesh.cc",
+    "change_kind": "restructuring",
+    "code_lines_added": 286,
+    "code_lines_removed": 190,
+    "lines_before": 1967,
+    "lines_after": 2162,
+    "lines_removed": 218,
+    "lines_added": 413,
+    "pragmas_added": 51,
+    "candidates_judged": 41,
+    "candidates_kept": 17,
+    "rejected_at": [
+      "clause",
+      "compile",
+      "openmp_compile",
+      "performance",
+      "tsan"
+    ],
+    "deepest_restructuring_level_kept": 0
+  },
+  "shown": {
+    "what": "the final program",
+    "rejected_attempt": {
+      "attempt": 1,
+      "of": 41,
+      "stage": "tsan",
+      "diagnostic": [
+        "Race detected:",
+        "WARNING: ThreadSanitizer: data race (pid=801950)",
+        "  Write of size 8 at 0x726800000478 by thread T1:"
+      ],
+      "rejected_at": {
+        "correctness": 0,
+        "tsan": 4,
+        "schedules": 0
+      }
+    }
+  }
+}

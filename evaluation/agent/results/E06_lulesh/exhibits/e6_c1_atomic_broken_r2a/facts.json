@@ -1,0 +1,77 @@
+{
+  "run": "e6c_r2",
+  "trial": "E06_lulesh/runs/e6c_r2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5/claude-haiku-4-5-20251001/rep1",
+  "benchmark": "llnl_c1/lulesh",
+  "arm": "llm_pragmas_v5",
+  "model": "claude-haiku-4-5-20251001",
+  "repeat": 1,
+  "outcome": "BROKEN",
+  "vs_discopop_alone": {
+    "verdict": "unsafe",
+    "class": "",
+    "dp_alone_trials": 2,
+    "dp_alone_outcomes": "FASTER,FASTER",
+    "dp_alone_speedup_vs_seq": 1.309,
+    "agent_outcome": "BROKEN",
+    "agent_speedup_vs_seq": null,
+    "agent_vs_dp_alone": null,
+    "timing_comparable": true,
+    "baseline_runs": [
+      "e6c_r2"
+    ]
+  },
+  "llm_calls": 43,
+  "agent_s": 18709.1,
+  "verify_size": "LARGE",
+  "verify_status": "ok",
+  "seq_kernel_s": 1.058821,
+  "kernel_speedup_by_threads": {
+    "6": 1.674,
+    "12": 1.859
+  },
+  "dump_max_rel_err": 3.2355196754313425e-12,
+  "dump_seeded_max_rel_err": 1.672117878089022e-15,
+  "pragmas_discopop": 1,
+  "pragmas_llm": 30,
+  "rewrites_kept": 11,
+  "scaffold_ok": true,
+  "package_integrity_ok": true,
+  "change": {
+    "file": "lulesh.cc",
+    "change_kind": "restructuring",
+    "code_lines_added": 232,
+    "code_lines_removed": 44,
+    "lines_before": 1967,
+    "lines_after": 2240,
+    "lines_removed": 53,
+    "lines_added": 326,
+    "pragmas_added": 31,
+    "candidates_judged": 80,
+    "candidates_kept": 26,
+    "rejected_at": [
+      "compile",
+      "openmp_compile",
+      "performance",
+      "tsan"
+    ],
+    "deepest_restructuring_level_kept": 0
+  },
+  "shown": {
+    "what": "the final program",
+    "rejected_attempt": {
+      "attempt": 4,
+      "of": 80,
+      "stage": "tsan",
+      "diagnostic": [
+        "TSan run exited non-zero (66) without a race report:",
+        "x000014d000000700  rbp = 0x0000000000000000  rsp = 0x00007ffff2ab8690  ",
+        " r8 = 0x0000026800000380   r9 = 0x00007ffff5f0d1e8  r10 = 0x00007ffff5f0d1f0  r11 = 0x0000000000080260  "
+      ],
+      "rejected_at": {
+        "correctness": 0,
+        "tsan": 3,
+        "schedules": 0
+      }
+    }
+  }
+}
