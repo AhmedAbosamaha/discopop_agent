@@ -36,6 +36,7 @@ import hashlib
 import json
 import os
 import platform
+import shlex
 import shutil
 import subprocess
 import sys
@@ -87,6 +88,19 @@ def _project_units(t: Dict[str, Any]) -> List[str]:
     trial's recorded command)."""
     cmd = [str(x) for x in t.get("agent_cmd") or []]
     return cmd[cmd.index("--project-units") + 1].split(",") if "--project-units" in cmd else []
+
+
+def _project_flags(t: Dict[str, Any], name: str) -> List[str]:
+    """`--project-cflags` / `--project-ldflags` of a multi-file trial, split as the agent splits them (shlex).
+    The runner records them as one `--name=value` word (LULESH: `--project-cflags=-DUSE_MPI=0`); without them
+    every unit of such a program fails to compile here although it built in the trial (E6, 4 Nov)."""
+    cmd = [str(x) for x in t.get("agent_cmd") or []]
+    for i, a in enumerate(cmd):
+        if a.startswith(name + "="):
+            return shlex.split(a[len(name) + 1:])
+        if a == name and i + 1 < len(cmd):
+            return shlex.split(cmd[i + 1])
+    return []
 
 
 def main() -> int:
@@ -154,8 +168,9 @@ def main() -> int:
                 root = Path(tmp) / "program"
                 shutil.copytree(d / "original", root)
                 src = root / editable[0]
-                project_mod.activate(project_mod.Project.discover(root, units=units, include_dirs=["."],
-                                                                  editable=editable))
+                project_mod.activate(project_mod.Project.discover(
+                    root, units=units, include_dirs=["."], editable=editable,
+                    cflags=_project_flags(t, "--project-cflags"), ldflags=_project_flags(t, "--project-ldflags")))
                 project_mod.set_focus(str(src))
                 diff = _unified_diff(src, d / "final" / editable[0])
             else:
