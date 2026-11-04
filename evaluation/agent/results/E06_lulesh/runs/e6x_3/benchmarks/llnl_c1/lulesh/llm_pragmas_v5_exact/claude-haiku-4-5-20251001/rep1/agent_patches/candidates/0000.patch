@@ -1,0 +1,40 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_3/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_3/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -1962,6 +1962,34 @@
+ 
+    LagrangeElements(domain, domain.numElem());
+ 
+-   CalcTimeConstraintsForElems(domain);
+-
+-}
++   // Inline CalcTimeConstraintsForElems with exposed parallelism over regions
++   Real_t dtcourant_result = 1.0e+20;
++   Real_t dthydro_result = 1.0e+20;
++
++   #pragma omp parallel for shared(domain) \
++       reduction(min: dtcourant_result, dthydro_result) \
++       schedule(static)
++   for (Int_t r=0 ; r < domain.numReg() ; ++r) {
++      Real_t local_dtcourant = 1.0e+20;
++      Real_t local_dthydro = 1.0e+20;
++
++      // Independent region calculations: each thread computes constraints for its regions
++      CalcCourantConstraintForElems(domain, domain.regElemSize(r),
++                                    domain.regElemlist(r),
++                                    domain.qqc(),
++                                    local_dtcourant);
++
++      CalcHydroConstraintForElems(domain, domain.regElemSize(r),
++                                  domain.regElemlist(r),
++                                  domain.dvovmax(),
++                                  local_dthydro);
++
++      // Reduction: collect minimum values across all threads/regions
++      dtcourant_result = std::min(dtcourant_result, local_dtcourant);
++      dthydro_result = std::min(dthydro_result, local_dthydro);
++   }
++
++   domain.dtcourant() = dtcourant_result;
++   domain.dthydro() = dthydro_result;
++
++}

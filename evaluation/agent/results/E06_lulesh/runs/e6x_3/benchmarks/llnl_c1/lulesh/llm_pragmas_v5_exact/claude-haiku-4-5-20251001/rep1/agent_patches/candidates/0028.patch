@@ -1,0 +1,47 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_3/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_3/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -1573,6 +1573,8 @@
+ {
+    Real_t *pHalfStep = Allocate<Real_t>(length) ;
+ 
++#pragma omp parallel for shared(e_new, e_old, delvc, p_old, q_old, work) \
++   firstprivate(emin)
+    for (Index_t i = 0 ; i < length ; ++i) {
+       e_new[i] = e_old[i] - Real_t(0.5) * delvc[i] * (p_old[i] + q_old[i])
+          + Real_t(0.5) * work[i];
+@@ -1585,6 +1587,8 @@
+    CalcPressureForElems(pHalfStep, bvc, pbvc, e_new, compHalfStep, vnewc,
+                         pmin, p_cut, eosvmax, length, regElemList);
+ 
++#pragma omp parallel for shared(q_new, e_new, delvc, pbvc, compHalfStep, \
++   bvc, pHalfStep, ql_old, qq_old, p_old, q_old) firstprivate(rho0)
+    for (Index_t i = 0 ; i < length ; ++i) {
+       Real_t vhalf = Real_t(1.) / (Real_t(1.) + compHalfStep[i]) ;
+ 
+@@ -1609,6 +1613,7 @@
+               - Real_t(4.0)*(pHalfStep[i] + q_new[i])) ;
+    }
+ 
++#pragma omp parallel for shared(e_new, work) firstprivate(e_cut, emin)
+    for (Index_t i = 0 ; i < length ; ++i) {
+ 
+       e_new[i] += Real_t(0.5) * work[i];
+@@ -1624,6 +1629,9 @@
+    CalcPressureForElems(p_new, bvc, pbvc, e_new, compression, vnewc,
+                         pmin, p_cut, eosvmax, length, regElemList);
+ 
++#pragma omp parallel for shared(e_new, delvc, vnewc, bvc, p_new, pbvc, \
++   ql_old, qq_old, p_old, q_old, pHalfStep, q_new, regElemList) \
++   firstprivate(rho0, e_cut, emin)
+    for (Index_t i = 0 ; i < length ; ++i){
+       const Real_t sixth = Real_t(1.0) / Real_t(6.0) ;
+       Index_t ielem = regElemList[i];
+@@ -1660,6 +1668,8 @@
+    CalcPressureForElems(p_new, bvc, pbvc, e_new, compression, vnewc,
+                         pmin, p_cut, eosvmax, length, regElemList);
+ 
++#pragma omp parallel for shared(q_new, delvc, pbvc, e_new, vnewc, bvc, \
++   p_new, ql_old, qq_old, regElemList) firstprivate(rho0, q_cut)
+    for (Index_t i = 0 ; i < length ; ++i){
+       Index_t ielem = regElemList[i];
+ 

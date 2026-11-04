@@ -1,0 +1,22 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_3/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_3/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -1585,6 +1585,9 @@
+    CalcPressureForElems(pHalfStep, bvc, pbvc, e_new, compHalfStep, vnewc,
+                         pmin, p_cut, eosvmax, length, regElemList);
+ 
++#pragma omp parallel for shared(q_new, e_new, delvc, pbvc, compHalfStep, \
++   bvc, pHalfStep, ql_old, qq_old, p_old, q_old, work) \
++   firstprivate(rho0, e_cut, emin)
+    for (Index_t i = 0 ; i < length ; ++i) {
+       Real_t vhalf = Real_t(1.) / (Real_t(1.) + compHalfStep[i]) ;
+ 
+@@ -1607,9 +1610,6 @@
+       e_new[i] = e_new[i] + Real_t(0.5) * delvc[i]
+          * (  Real_t(3.0)*(p_old[i]     + q_old[i])
+               - Real_t(4.0)*(pHalfStep[i] + q_new[i])) ;
+-   }
+-
+-   for (Index_t i = 0 ; i < length ; ++i) {
+ 
+       e_new[i] += Real_t(0.5) * work[i];
+ 

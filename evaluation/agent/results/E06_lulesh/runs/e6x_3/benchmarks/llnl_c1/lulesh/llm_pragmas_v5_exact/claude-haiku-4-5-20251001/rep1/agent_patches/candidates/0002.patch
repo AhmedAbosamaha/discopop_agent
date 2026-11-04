@@ -1,0 +1,44 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_3/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_3/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -1962,6 +1962,38 @@
+ 
+    LagrangeElements(domain, domain.numElem());
+ 
+-   CalcTimeConstraintsForElems(domain);
+-
+-}
++   // Inline CalcTimeConstraintsForElems with single merged parallel region over all elements
++   // This minimizes thread startup overhead by processing all work in one parallel team
++   Real_t dtcourant_result = 1.0e+20;
++   Real_t dthydro_result = 1.0e+20;
++   Real_t qqc2 = Real_t(64.0) * domain.qqc() * domain.qqc();
++
++   #pragma omp parallel for reduction(min: dtcourant_result, dthydro_result) \
++       shared(domain) schedule(static)
++   for (Index_t elem=0 ; elem < domain.numElem() ; ++elem) {
++      // Courant constraint: find minimum time step from element dynamics
++      Real_t dtf = domain.ss(elem) * domain.ss(elem);
++
++      if (domain.vdov(elem) < Real_t(0.)) {
++         dtf = dtf + qqc2 * domain.arealg(elem) * domain.arealg(elem)
++                          * domain.vdov(elem) * domain.vdov(elem);
++      }
++
++      dtf = SQRT(dtf);
++      dtf = domain.arealg(elem) / dtf;
++
++      if (domain.vdov(elem) != Real_t(0.)) {
++         dtcourant_result = std::min(dtcourant_result, dtf);
++      }
++
++      // Hydro constraint: find minimum time step from volume change
++      if (domain.vdov(elem) != Real_t(0.)) {
++         Real_t dtdvov = domain.dvovmax() / (FABS(domain.vdov(elem))+Real_t(1.e-20));
++         dthydro_result = std::min(dthydro_result, dtdvov);
++      }
++   }
++
++   domain.dtcourant() = dtcourant_result;
++   domain.dthydro() = dthydro_result;
++
++}

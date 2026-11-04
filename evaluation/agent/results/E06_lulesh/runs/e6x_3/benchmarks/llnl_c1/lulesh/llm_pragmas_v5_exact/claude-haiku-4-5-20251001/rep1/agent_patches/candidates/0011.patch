@@ -1,0 +1,47 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_3/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_3/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -658,6 +658,8 @@
+    Real_t *y8n  = Allocate<Real_t>(numElem8) ;
+    Real_t *z8n  = Allocate<Real_t>(numElem8) ;
+ 
++   Index_t error_count = 0;
++   #pragma omp parallel for reduction(+:error_count) schedule(static)
+    for (Index_t i=0 ; i<numElem ; ++i){
+       Real_t  x1[8],  y1[8],  z1[8] ;
+       Real_t pfx[8], pfy[8], pfz[8] ;
+@@ -680,9 +682,16 @@
+ 
+       determ[i] = domain.volo(i) * domain.v(i);
+ 
++      if ( determ[i] <= Real_t(0.0) ) {
++         error_count++;
++      }
+       if ( domain.v(i) <= Real_t(0.0) ) {
+-         exit(VolumeError);
+-      }
++         error_count++;
++      }
++   }
++
++   if (error_count > 0) {
++      exit(VolumeError);
+    }
+ 
+    if ( hgcoef > Real_t(0.) ) {
+@@ -718,10 +727,15 @@
+                                sigxx, sigyy, sigzz, determ, numElem,
+                                domain.numNode()) ;
+ 
++      Index_t error_count = 0;
+       for ( Index_t k=0 ; k<numElem ; ++k ) {
+          if (determ[k] <= Real_t(0.0)) {
+-            exit(VolumeError);
++            error_count++;
+          }
++      }
++
++      if (error_count > 0) {
++         exit(VolumeError);
+       }
+ 
+       CalcHourglassControlForElems(domain, determ, hgcoef) ;

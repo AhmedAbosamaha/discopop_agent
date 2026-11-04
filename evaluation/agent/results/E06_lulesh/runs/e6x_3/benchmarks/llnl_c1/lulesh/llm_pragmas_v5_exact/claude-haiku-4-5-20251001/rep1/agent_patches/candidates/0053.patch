@@ -1,0 +1,16 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_3/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc	2026-11-04 03:56:03.109297118 +0000
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_3/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc.discopop_patch_generator.temp	2026-11-04 04:01:08.343364783 +0000
+@@ -2012,7 +2012,13 @@
+ 
+   CalcQForElems(domain) ;
+ 
++  #pragma omp parallel
++  #pragma omp single
++  {
++  #pragma omp task
+   ApplyMaterialPropertiesForElems(domain) ;
++#pragma omp task
++}
+ }
+ 
+ static inline

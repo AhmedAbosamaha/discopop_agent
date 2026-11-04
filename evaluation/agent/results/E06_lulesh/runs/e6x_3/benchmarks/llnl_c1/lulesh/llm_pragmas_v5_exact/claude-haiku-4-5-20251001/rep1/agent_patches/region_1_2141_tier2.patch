@@ -1,0 +1,85 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_3/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_3/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -494,6 +494,15 @@
+    gamma[3][6] = Real_t( 1.);
+    gamma[3][7] = Real_t(-1.);
+ 
++   // Allocate temporary buffers for storing forces per element and per node
++   Index_t numElemNodes = numElem * 8;
++   Real_t *elem_fx = Allocate<Real_t>(numElemNodes);
++   Real_t *elem_fy = Allocate<Real_t>(numElemNodes);
++   Real_t *elem_fz = Allocate<Real_t>(numElemNodes);
++   Index_t *elem_nodes = Allocate<Index_t>(numElemNodes);
++
++   // Parallel loop: compute forces and store them (no shared writes to domain)
++   #pragma omp parallel for schedule(static) shared(domain, determ, x8n, y8n, z8n, dvdx, dvdy, dvdz, gamma, elem_fx, elem_fy, elem_fz, elem_nodes)
+    for(Index_t i2=0;i2<numElem;++i2){
+       Real_t hgfx[8], hgfy[8], hgfz[8] ;
+ 
+@@ -606,39 +615,33 @@
+                       hourgam,
+                       coefficient, hgfx, hgfy, hgfz);
+ 
+-      domain.fx(n0si2) += hgfx[0];
+-      domain.fy(n0si2) += hgfy[0];
+-      domain.fz(n0si2) += hgfz[0];
+-
+-      domain.fx(n1si2) += hgfx[1];
+-      domain.fy(n1si2) += hgfy[1];
+-      domain.fz(n1si2) += hgfz[1];
+-
+-      domain.fx(n2si2) += hgfx[2];
+-      domain.fy(n2si2) += hgfy[2];
+-      domain.fz(n2si2) += hgfz[2];
+-
+-      domain.fx(n3si2) += hgfx[3];
+-      domain.fy(n3si2) += hgfy[3];
+-      domain.fz(n3si2) += hgfz[3];
+-
+-      domain.fx(n4si2) += hgfx[4];
+-      domain.fy(n4si2) += hgfy[4];
+-      domain.fz(n4si2) += hgfz[4];
+-
+-      domain.fx(n5si2) += hgfx[5];
+-      domain.fy(n5si2) += hgfy[5];
+-      domain.fz(n5si2) += hgfz[5];
+-
+-      domain.fx(n6si2) += hgfx[6];
+-      domain.fy(n6si2) += hgfy[6];
+-      domain.fz(n6si2) += hgfz[6];
+-
+-      domain.fx(n7si2) += hgfx[7];
+-      domain.fy(n7si2) += hgfy[7];
+-      domain.fz(n7si2) += hgfz[7];
+-
+-   }
++      // Store forces and node indices for later sequential application
++      Index_t base = i2 * 8;
++      for(Index_t lnode=0; lnode<8; ++lnode) {
++         elem_fx[base + lnode] = hgfx[lnode];
++         elem_fy[base + lnode] = hgfy[lnode];
++         elem_fz[base + lnode] = hgfz[lnode];
++         elem_nodes[base + lnode] = elemToNode[lnode];
++      }
++   }
++
++   // Sequential loop: apply forces in element order to preserve floating-point order
++   for(Index_t i2=0; i2<numElem; ++i2) {
++      Index_t base = i2 * 8;
++      for(Index_t lnode=0; lnode<8; ++lnode) {
++         Index_t idx = base + lnode;
++         Index_t gnode = elem_nodes[idx];
++         domain.fx(gnode) += elem_fx[idx];
++         domain.fy(gnode) += elem_fy[idx];
++         domain.fz(gnode) += elem_fz[idx];
++      }
++   }
++
++   // Free temporary buffers
++   Release(&elem_nodes);
++   Release(&elem_fz);
++   Release(&elem_fy);
++   Release(&elem_fx);
+ 
+ }
+ 

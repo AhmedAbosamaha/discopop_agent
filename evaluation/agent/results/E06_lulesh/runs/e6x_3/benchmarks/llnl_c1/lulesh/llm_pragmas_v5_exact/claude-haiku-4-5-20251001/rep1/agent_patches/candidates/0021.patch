@@ -1,0 +1,69 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_3/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_3/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -275,13 +275,21 @@
+                               Real_t *sigxx, Real_t *sigyy, Real_t *sigzz,
+                               Real_t *determ, Index_t numElem, Index_t numNode)
+ {
+-
+-   Real_t fx_local[8] ;
+-   Real_t fy_local[8] ;
+-   Real_t fz_local[8] ;
+-
++  // Allocate temporary buffers for storing forces per element
++  Index_t numElemNodes = numElem * 8;
++  Real_t *elem_fx = Allocate<Real_t>(numElemNodes);
++  Real_t *elem_fy = Allocate<Real_t>(numElemNodes);
++  Real_t *elem_fz = Allocate<Real_t>(numElemNodes);
++  Index_t *elem_nodes = Allocate<Index_t>(numElemNodes);
++
++  // Parallel loop: compute forces and store them (no shared writes)
++  #pragma omp parallel for
+   for( Index_t k=0 ; k<numElem ; ++k )
+   {
++    Real_t fx_local[8] ;
++    Real_t fy_local[8] ;
++    Real_t fz_local[8] ;
++
+     const Index_t* const elemToNode = domain.nodelist(k);
+     Real_t B[3][8] ;
+     Real_t x_local[8] ;
+@@ -299,15 +307,34 @@
+     SumElemStressesToNodeForces( B, sigxx[k], sigyy[k], sigzz[k],
+                                  fx_local, fy_local, fz_local ) ;
+ 
++    // Store forces and node indices for later sequential application
++    Index_t base = k * 8 ;
+     for( Index_t lnode=0 ; lnode<8 ; ++lnode ) {
+-       Index_t gnode = elemToNode[lnode];
+-       domain.fx(gnode) += fx_local[lnode];
+-       domain.fy(gnode) += fy_local[lnode];
+-       domain.fz(gnode) += fz_local[lnode];
++       elem_fx[base + lnode] = fx_local[lnode] ;
++       elem_fy[base + lnode] = fy_local[lnode] ;
++       elem_fz[base + lnode] = fz_local[lnode] ;
++       elem_nodes[base + lnode] = elemToNode[lnode] ;
+     }
+-
+   }
+ 
++  // Sequential loop: apply forces in element order to preserve floating-point order
++  for( Index_t k=0 ; k<numElem ; ++k )
++  {
++    Index_t base = k * 8 ;
++    for( Index_t lnode=0 ; lnode<8 ; ++lnode ) {
++       Index_t idx = base + lnode ;
++       Index_t gnode = elem_nodes[idx] ;
++       domain.fx(gnode) += elem_fx[idx] ;
++       domain.fy(gnode) += elem_fy[idx] ;
++       domain.fz(gnode) += elem_fz[idx] ;
++    }
++  }
++
++  // Free temporary buffers
++  Release(&elem_nodes) ;
++  Release(&elem_fz) ;
++  Release(&elem_fy) ;
++  Release(&elem_fx) ;
+ }
+ 
+ static inline

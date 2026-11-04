@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_3/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_3/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -321,6 +321,7 @@
+   for( Index_t k=0 ; k<numElem ; ++k )
+   {
+     Index_t base = k * 8 ;
++    #pragma omp parallel for firstprivate(base) shared(elem_nodes,elem_fy,elem_fz,domain,elem_fx) 
+     for( Index_t lnode=0 ; lnode<8 ; ++lnode ) {
+        Index_t idx = base + lnode ;
+        Index_t gnode = elem_nodes[idx] ;

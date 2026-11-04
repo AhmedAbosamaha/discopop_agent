@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_3/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_3/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -329,6 +329,7 @@
+     SumElemStressesToNodeForces( B, sigxx[k], sigyy[k], sigzz[k],
+                                  fx_local, fy_local, fz_local ) ;
+ 
++    #pragma omp parallel for shared(elemToNode,fz_local,domain,fy_local,fx_local) 
+     for( Index_t lnode=0 ; lnode<8 ; ++lnode ) {
+        Index_t gnode = elemToNode[lnode];
+        domain.fx(gnode) += fx_local[lnode];

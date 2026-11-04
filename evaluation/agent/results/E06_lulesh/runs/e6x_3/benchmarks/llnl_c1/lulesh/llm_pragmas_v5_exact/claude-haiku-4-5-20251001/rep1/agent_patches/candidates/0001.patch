@@ -1,0 +1,61 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_3/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_3/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -1962,6 +1962,55 @@
+ 
+    LagrangeElements(domain, domain.numElem());
+ 
+-   CalcTimeConstraintsForElems(domain);
+-
+-}
++   // Inline CalcTimeConstraintsForElems with element-level parallelism for sufficient granularity
++   domain.dtcourant() = 1.0e+20;
++   domain.dthydro() = 1.0e+20;
++
++   for (Int_t r=0 ; r < domain.numReg() ; ++r) {
++      Real_t qqc2 = Real_t(64.0) * domain.qqc() * domain.qqc();
++      Real_t dtcourant_local = 1.0e+20;
++      Real_t dthydro_local = 1.0e+20;
++
++      Index_t length = domain.regElemSize(r);
++      Index_t *regElemlist = domain.regElemlist(r);
++
++      // Parallelize over elements in this region for Courant constraint
++      #pragma omp parallel for reduction(min: dtcourant_local) shared(domain, regElemlist)
++      for (Index_t i=0 ; i < length ; ++i) {
++         Index_t indx = regElemlist[i];
++         Real_t dtf = domain.ss(indx) * domain.ss(indx);
++
++         if (domain.vdov(indx) < Real_t(0.)) {
++            dtf = dtf + qqc2 * domain.arealg(indx) * domain.arealg(indx)
++                             * domain.vdov(indx) * domain.vdov(indx);
++         }
++
++         dtf = SQRT(dtf);
++         dtf = domain.arealg(indx) / dtf;
++
++         if (domain.vdov(indx) != Real_t(0.)) {
++            dtcourant_local = std::min(dtcourant_local, dtf);
++         }
++      }
++
++      // Parallelize over elements in this region for Hydro constraint
++      #pragma omp parallel for reduction(min: dthydro_local) shared(domain, regElemlist)
++      for (Index_t i=0 ; i < length ; ++i) {
++         Index_t indx = regElemlist[i];
++
++         if (domain.vdov(indx) != Real_t(0.)) {
++            Real_t dtdvov = domain.dvovmax() / (FABS(domain.vdov(indx))+Real_t(1.e-20));
++            dthydro_local = std::min(dthydro_local, dtdvov);
++         }
++      }
++
++      // Update global minima
++      if (dtcourant_local < domain.dtcourant()) {
++         domain.dtcourant() = dtcourant_local;
++      }
++      if (dthydro_local < domain.dthydro()) {
++         domain.dthydro() = dthydro_local;
++      }
++   }
++
++}

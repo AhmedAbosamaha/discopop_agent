@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_3/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_3/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -768,6 +768,7 @@
+ void CalcAccelerationForNodes(Domain &domain, Index_t numNode)
+ {
+ 
++   #pragma omp parallel for firstprivate(numNode) shared(domain) 
+    for (Index_t i = 0; i < numNode; ++i) {
+       domain.xdd(i) = domain.fx(i) / domain.nodalMass(i);
+       domain.ydd(i) = domain.fy(i) / domain.nodalMass(i);

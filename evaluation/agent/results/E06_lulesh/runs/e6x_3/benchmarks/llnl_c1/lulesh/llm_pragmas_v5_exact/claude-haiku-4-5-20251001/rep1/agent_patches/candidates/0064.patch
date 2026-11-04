@@ -1,0 +1,20 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_3/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc	2026-11-04 03:56:03.109297118 +0000
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_3/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc.discopop_patch_generator.temp	2026-11-04 04:01:16.746419496 +0000
+@@ -638,11 +638,17 @@
+    }
+ 
+    // Free temporary buffers
++   #pragma omp parallel
++   #pragma omp single
++   {
++   #pragma omp task
+    Release(&elem_nodes);
+    Release(&elem_fz);
+    Release(&elem_fy);
+    Release(&elem_fx);
+ 
++#pragma omp task
++}
+ }
+ 
+ static inline
