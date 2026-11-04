@@ -313,6 +313,7 @@ def _main_comparison(run: str, t: dict, baseline_runs: List[str]) -> dict:
             "agent_outcome", "agent_speedup_vs_seq", "agent_vs_dp_alone", "timing_comparable")
     out = {k: rows[0].get(k) for k in keep}
     out["baseline_runs"] = sorted({str(x["run_id"]) for x in trials if x.get("arm") == figures.BASELINE_ARM})
+    out["baseline_arm"] = figures.BASELINE_ARM   # read back by --rebuild: E3/E6 pair with discopop_gate_v5
     return out
 
 
@@ -493,6 +494,9 @@ def main() -> int:
             f = json.loads((d / "facts.json").read_text())
             kept = (f.get("vs_discopop_alone") or {}).get("baseline_runs")
             runs = [r for r in (kept or []) if r != f["run"]] or None
+            # the arm the exhibit was paired with, not this invocation's default — else a rebuild turns
+            # every E6 verdict into `no-baseline`; exhibits made before the field existed keep the default
+            figures.BASELINE_ARM = str((f.get("vs_discopop_alone") or {}).get("baseline_arm") or a.baseline_arm)
             build(f["run"], campaign.trial_path(f["run"], f["trial"], reg), d.name, d.parent, runs)
             print(f"rebuilt {d.relative_to(AGENT_DIR)}")
     for p in campaign.write_indexes(reg):
