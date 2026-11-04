@@ -156,7 +156,7 @@
 
 ## [E6 — a real application: LULESH 2.0](E06_lulesh/REPORT.md)
 
-- [`e6_bare_haiku_racy`](E06_lulesh/exhibits/e6_bare_haiku_racy/) — Haiku 4.5 alone, rep 5: the one model-alone Haiku program the harness scores FASTER (1.95×/1.69×) has a data race — courant_elem is left shared in the Courant minimum loop — found only by the race check.  
+- [`e6_bare_haiku_racy`](E06_lulesh/exhibits/e6_bare_haiku_racy/) — Haiku 4.5 alone, rep 5: the one model-alone Haiku program the harness scores FASTER (1.95×/1.69×) has a data race — courant_elem is left shared in the Courant minimum loop — found only by the race check; it also puts atomic additions on both force loops and still passed the repeatability check.  
   **better** vs DiscoPoP alone (1.34× → 1.95×) · llnl_c1/lulesh, `bare_llm_v4`, e6c_bare rep 5 · pictures: `before_after.png`, `console.png`
 - [`e6_bare_opus_gather_best`](E06_lulesh/exhibits/e6_bare_opus_gather_best/) — Opus 5.5 alone, rep 4: a node-to-corner gather in element order, every value identical, 2.53×/2.84× — the fastest E6 program, above LLNL's own 2.00×/1.96× (LLNL-like names: probable recall).  
   **better** vs DiscoPoP alone (1.34× → 2.84×) · llnl_c1/lulesh, `bare_llm_v4`, e6c_bare rep 4 · pictures: `before_after.png`, `console.png`

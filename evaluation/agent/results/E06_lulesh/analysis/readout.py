@@ -7,12 +7,16 @@ calls, cost and time; and by hand what each agent trial kept. No test: one progr
 The second configuration (record §6, 3 Nov, "E6, second configuration") is read out the same way.
 
     python3 evaluation/agent/results/E06_lulesh/analysis/readout.py > evaluation/agent/results/E06_lulesh/analysis/readout.md
+    python3 evaluation/agent/results/E06_lulesh/analysis/readout.py --json evaluation/agent/results/E06_lulesh/analysis/readout.json
+
+The JSON holds the same per-trial facts for the thesis's figure and table (thesis/tools/make_figures.py, make_tables.py).
 """
 from __future__ import annotations
 
 import json
 import re
 import statistics
+import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -95,8 +99,10 @@ def force_loops(d: Path) -> str:
         body = function_span(text, name)
         if "#pragma omp parallel" not in body:
             kinds.append("sequential")
-        elif "omp atomic" in body or "omp critical" in body:
-            kinds.append("atomic/critical")
+        elif "omp atomic" in body:
+            kinds.append("atomic")
+        elif "omp critical" in body:
+            kinds.append("critical")
         else:
             kinds.append("parallel, no atomic")
     return " / ".join(kinds)
@@ -192,7 +198,7 @@ def main() -> None:
     print()
     print("## 3. What each agent trial kept (by hand, from its log and its program)\n")
     print("*Force loops*: the two node-force accumulations (`IntegrateStressForElems` / `CalcFBHourglassForceForElems`) in "
-          "the shipped program — sequential, parallel with `atomic`/`critical` on the scatter, or parallel without them. "
+          "the shipped program — sequential, parallel with `atomic` or with a `critical` section, or parallel without either. "
           "*Repeatable*: the harness's digest identical over 5 runs at each fixed thread count; *values*: the largest "
           "relative difference from the original on the shipped input.\n")
     print("| configuration | trial | rewrites; directives (who) | directives in file (atomic, critical) | force loops | "
@@ -223,5 +229,44 @@ def main() -> None:
                   f"${cost(t):.2f} | {float(t.get('agent_s') or 0) / 60:.0f} min |")
 
 
+def trial_record(setup: str, d: Path) -> Dict[str, Any]:
+    t = json.loads((d / "trial.json").read_text())
+    s6, s12 = speed(t, "6"), speed(t, "12")
+    verdict = race_verdict(d)
+    out = t["outcome"]
+    if out == "FASTER" and verdict == "clean":
+        kind = "faster"
+    elif out == "FASTER":
+        kind = "racy"
+    elif out == "BROKEN":
+        kind = "not repeatable" if (t.get("verify") or {}).get("dump_max_rel_err", 1.0) <= 1e-9 else "wrong values"
+    elif out == "VERIFY_FAILED":
+        kind = "does not compile"
+    else:
+        kind = out
+    n, at, cr = directives(d)
+    return {"setup": setup, "trial": rel(d), "model": d.parent.name, "rep": int(d.name[3:]), "outcome": out,
+            "race_check": verdict, "kind": kind, "speedup_6": s6, "speedup_12": s12,
+            "best": max([x for x in (s6, s12) if x is not None], default=None),
+            "force_loops": force_loops(d), "directives": n, "atomic": at, "critical": cr,
+            "calls": t.get("llm_calls"), "cost_usd": round(cost(t), 4), "hours": round(float(t.get("agent_s") or 0) / 3600, 2),
+            "floor": floor_ratio(d)}
+
+
+def write_json(path: Path) -> None:
+    ref = json.loads(REFERENCE.read_text())
+    rows = [trial_record("DiscoPoP alone", d) for run in CONFIG1 + CONFIG2 for d in trials(run, "discopop_gate_v5")]
+    rows += [trial_record("agent, first configuration", d) for run in CONFIG1 for d in trials(run, "llm_pragmas_v5")]
+    rows += [trial_record("agent, second configuration", d) for run in CONFIG2 for d in trials(run, "llm_pragmas_v5_exact")]
+    for m in MODELS:
+        rows += [trial_record("model alone", d) for d in trials("e6c_bare", "bare_llm_v4", m)]
+    path.write_text(json.dumps({"reference": {"speedup_6": speed(ref, "6"), "speedup_12": speed(ref, "12"),
+                                              "dump_max_rel_err": ref["verify"].get("dump_max_rel_err")},
+                                "trials": rows}, indent=1) + "\n")
+
+
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) == 3 and sys.argv[1] == "--json":
+        write_json(Path(sys.argv[2]))
+    else:
+        main()

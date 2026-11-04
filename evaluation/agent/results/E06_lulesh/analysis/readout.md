@@ -37,14 +37,14 @@ Each agent trial beside the DiscoPoP-alone trial of the same run and repetition 
 
 ## 3. What each agent trial kept (by hand, from its log and its program)
 
-*Force loops*: the two node-force accumulations (`IntegrateStressForElems` / `CalcFBHourglassForceForElems`) in the shipped program — sequential, parallel with `atomic`/`critical` on the scatter, or parallel without them. *Repeatable*: the harness's digest identical over 5 runs at each fixed thread count; *values*: the largest relative difference from the original on the shipped input.
+*Force loops*: the two node-force accumulations (`IntegrateStressForElems` / `CalcFBHourglassForceForElems`) in the shipped program — sequential, parallel with `atomic` or with a `critical` section, or parallel without either. *Repeatable*: the harness's digest identical over 5 runs at each fixed thread count; *values*: the largest relative difference from the original on the shipped input.
 
 | configuration | trial | rewrites; directives (who) | directives in file (atomic, critical) | force loops | repeatable | values | calls | cost | time | explorer stalls |
 |---|---|---|---|---|---|---|---:|---:|---:|---:|
-| first | `e6c_r1` rep1 | 11 kept; 65 applied (2 DiscoPoP + 63 model) | 65 (27, 2) | atomic/critical / atomic/critical | no | 4.8e-14 | 45 | $12.07 | 5.1 h | 7 |
-| first | `e6c_r1` rep2 | 13 kept; 51 applied (0 DiscoPoP + 51 model) | 51 (27, 1) | atomic/critical / atomic/critical | no | 2.8e-13 | 29 | $7.26 | 4.8 h | 8 |
-| first | `e6c_r2` rep1 | 11 kept; 31 applied (1 DiscoPoP + 30 model) | 31 (3, 2) | sequential / atomic/critical | no | 3.2e-12 | 43 | $11.13 | 5.2 h | 8 |
-| first | `e6c_r2` rep2 | 15 kept; 54 applied (2 DiscoPoP + 52 model) | 54 (27, 2) | atomic/critical / atomic/critical | no | 2.8e-13 | 35 | $6.66 | 6.8 h | 14 |
+| first | `e6c_r1` rep1 | 11 kept; 65 applied (2 DiscoPoP + 63 model) | 65 (27, 2) | atomic / atomic | no | 4.8e-14 | 45 | $12.07 | 5.1 h | 7 |
+| first | `e6c_r1` rep2 | 13 kept; 51 applied (0 DiscoPoP + 51 model) | 51 (27, 1) | atomic / atomic | no | 2.8e-13 | 29 | $7.26 | 4.8 h | 8 |
+| first | `e6c_r2` rep1 | 11 kept; 31 applied (1 DiscoPoP + 30 model) | 31 (3, 2) | sequential / critical | no | 3.2e-12 | 43 | $11.13 | 5.2 h | 8 |
+| first | `e6c_r2` rep2 | 15 kept; 54 applied (2 DiscoPoP + 52 model) | 54 (27, 2) | atomic / atomic | no | 2.8e-13 | 35 | $6.66 | 6.8 h | 14 |
 | first | `e6c_r3b` rep1 | 0 kept; 6 applied | 6 (0, 0) | sequential / sequential | yes | 0.0e+00 | 15 | $4.21 | 3.3 h | 6 |
 | second | `e6x_1` rep1 | 14 kept; 22 applied (3 DiscoPoP + 19 model) | 22 (0, 2) | sequential / sequential | yes | 0.0e+00 | 30 | $6.52 | 6.0 h | 12 |
 | second | `e6x_1` rep2 | 13 kept; 16 applied (0 DiscoPoP + 16 model) | 16 (0, 0) | parallel, no atomic / parallel, no atomic | yes | 0.0e+00 | 40 | $8.57 | 3.7 h | 4 |
@@ -66,13 +66,13 @@ Each agent trial beside the DiscoPoP-alone trial of the same run and repetition 
 | opus-5-5 | rep3 | FASTER | clean | 1.84 / 2.16 | 0.0e+00 | yes | parallel, no atomic / parallel, no atomic | $1.21 | 4 min |
 | opus-5-5 | rep4 | FASTER | clean | 2.53 / 2.84 | 0.0e+00 | yes | parallel, no atomic / parallel, no atomic | $1.30 | 3 min |
 | opus-5-5 | rep5 | FASTER | clean | 1.99 / 1.61 | 0.0e+00 | yes | parallel, no atomic / parallel, no atomic | $1.19 | 3 min |
-| sonnet-5 | rep1 | FASTER | clean | 1.99 / 1.99 | 3.2e-12 | yes | atomic/critical / atomic/critical | $1.95 | 10 min |
+| sonnet-5 | rep1 | FASTER | clean | 1.99 / 1.99 | 3.2e-12 | yes | atomic / atomic | $1.95 | 10 min |
 | sonnet-5 | rep2 | VERIFY_FAILED | compile | — / — | — | — | parallel, no atomic / parallel, no atomic | $2.18 | 12 min |
 | sonnet-5 | rep3 | VERIFY_FAILED | compile | — / — | — | — | parallel, no atomic / parallel, no atomic | $1.91 | 10 min |
 | sonnet-5 | rep4 | VERIFY_FAILED | openmp_compile | — / — | — | — | parallel, no atomic / parallel, no atomic | $1.67 | 8 min |
-| sonnet-5 | rep5 | VERIFY_FAILED | openmp_compile | — / — | — | — | atomic/critical / atomic/critical | $1.70 | 9 min |
-| haiku-4-5-20251001 | rep1 | VERIFY_FAILED | openmp_compile | — / — | — | — | atomic/critical / parallel, no atomic | $0.58 | 3 min |
-| haiku-4-5-20251001 | rep2 | VERIFY_FAILED | compile | — / — | — | — | atomic/critical / atomic/critical | $0.95 | 7 min |
-| haiku-4-5-20251001 | rep3 | VERIFY_FAILED | openmp_compile | — / — | — | — | atomic/critical / atomic/critical | $1.00 | 7 min |
-| haiku-4-5-20251001 | rep4 | VERIFY_FAILED | openmp_compile | — / — | — | — | atomic/critical / parallel, no atomic | $0.64 | 4 min |
-| haiku-4-5-20251001 | rep5 | FASTER | tsan | 1.95 / 1.69 | 5.9e-15 | yes | atomic/critical / atomic/critical | $0.71 | 5 min |
+| sonnet-5 | rep5 | VERIFY_FAILED | openmp_compile | — / — | — | — | atomic / atomic | $1.70 | 9 min |
+| haiku-4-5-20251001 | rep1 | VERIFY_FAILED | openmp_compile | — / — | — | — | atomic / parallel, no atomic | $0.58 | 3 min |
+| haiku-4-5-20251001 | rep2 | VERIFY_FAILED | compile | — / — | — | — | atomic / atomic | $0.95 | 7 min |
+| haiku-4-5-20251001 | rep3 | VERIFY_FAILED | openmp_compile | — / — | — | — | atomic / atomic | $1.00 | 7 min |
+| haiku-4-5-20251001 | rep4 | VERIFY_FAILED | openmp_compile | — / — | — | — | atomic / parallel, no atomic | $0.64 | 4 min |
+| haiku-4-5-20251001 | rep5 | FASTER | tsan | 1.95 / 1.69 | 5.9e-15 | yes | atomic / atomic | $0.71 | 5 min |
