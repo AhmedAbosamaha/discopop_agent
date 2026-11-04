@@ -1,0 +1,37 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -712,16 +712,30 @@
+       Real_t *sigzz  = Allocate<Real_t>(numElem) ;
+       Real_t *determ = Allocate<Real_t>(numElem) ;
+ 
+-      InitStressTermsForElems(domain, sigxx, sigyy, sigzz, numElem);
++      bool volumeError = false;
++
++      #pragma omp parallel for shared(domain, sigxx, sigyy, sigzz, numElem) schedule(static)
++      for ( Index_t i=0 ; i<numElem ; ++i ) {
++         sigxx[i] = sigyy[i] = sigzz[i] = - domain.p(i) - domain.q(i) ;
++      }
+ 
+       IntegrateStressForElems( domain,
+                                sigxx, sigyy, sigzz, determ, numElem,
+                                domain.numNode()) ;
+ 
+-      for ( Index_t k=0 ; k<numElem ; ++k ) {
+-         if (determ[k] <= Real_t(0.0)) {
+-            exit(VolumeError);
++      const Index_t grain_size = 128;
++      #pragma omp parallel for shared(determ, numElem) reduction(||:volumeError) schedule(dynamic, 1)
++      for ( Index_t b=0 ; b<numElem ; b+=grain_size ) {
++         Index_t end = (b + grain_size < numElem) ? b + grain_size : numElem;
++         for ( Index_t k=b ; k<end ; ++k ) {
++            if (determ[k] <= Real_t(0.0)) {
++               volumeError = true;
++            }
+          }
++      }
++
++      if (volumeError) {
++         exit(VolumeError);
+       }
+ 
+       CalcHourglassControlForElems(domain, determ, hgcoef) ;

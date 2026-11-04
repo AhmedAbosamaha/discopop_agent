@@ -1,0 +1,32 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
+@@ -306,12 +306,13 @@
+                               Real_t *determ, Index_t numElem, Index_t numNode)
+ {
+ 
+-   Real_t fx_local[8] ;
+-   Real_t fy_local[8] ;
+-   Real_t fz_local[8] ;
+-
++  #pragma omp parallel for shared(domain, sigxx, sigyy, sigzz, determ)
+   for( Index_t k=0 ; k<numElem ; ++k )
+   {
++    Real_t fx_local[8] ;
++    Real_t fy_local[8] ;
++    Real_t fz_local[8] ;
++
+     const Index_t* const elemToNode = domain.nodelist(k);
+     Real_t B[3][8] ;
+     Real_t x_local[8] ;
+@@ -331,8 +332,11 @@
+ 
+     for( Index_t lnode=0 ; lnode<8 ; ++lnode ) {
+        Index_t gnode = elemToNode[lnode];
++       #pragma omp atomic
+        domain.fx(gnode) += fx_local[lnode];
++       #pragma omp atomic
+        domain.fy(gnode) += fy_local[lnode];
++       #pragma omp atomic
+        domain.fz(gnode) += fz_local[lnode];
+     }
+ 

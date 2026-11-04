@@ -1,0 +1,23 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc	2026-11-04 04:08:17.999067464 +0000
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc.discopop_patch_generator.temp	2026-11-04 04:13:45.874047814 +0000
+@@ -504,6 +504,10 @@
+ 
+    Real_t  gamma[4][8];
+ 
++   #pragma omp parallel
++   #pragma omp single
++   {
++   #pragma omp task
+    gamma[0][0] = Real_t( 1.);
+    gamma[0][1] = Real_t( 1.);
+    gamma[0][2] = Real_t(-1.);
+@@ -538,7 +542,9 @@
+    gamma[3][7] = Real_t(-1.);
+ 
+    /* Allocate per-element force buffers for computation phase */
++   #pragma omp task
+    Real_t *elemfx = Allocate<Real_t>(numElem * 8);
++   }
+    Real_t *elemfy = Allocate<Real_t>(numElem * 8);
+    Real_t *elemfz = Allocate<Real_t>(numElem * 8);
+ 

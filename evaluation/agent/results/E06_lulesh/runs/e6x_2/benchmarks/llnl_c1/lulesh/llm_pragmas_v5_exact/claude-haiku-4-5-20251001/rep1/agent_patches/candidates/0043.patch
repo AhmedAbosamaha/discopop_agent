@@ -1,0 +1,124 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -275,39 +275,88 @@
+                               Real_t *sigxx, Real_t *sigyy, Real_t *sigzz,
+                               Real_t *determ, Index_t numElem, Index_t numNode)
+ {
+-
+-   Real_t fx_local[8] ;
+-   Real_t fy_local[8] ;
+-   Real_t fz_local[8] ;
+-
+-  for( Index_t k=0 ; k<numElem ; ++k )
+-  {
+-    const Index_t* const elemToNode = domain.nodelist(k);
+-    Real_t B[3][8] ;
+-    Real_t x_local[8] ;
+-    Real_t y_local[8] ;
+-    Real_t z_local[8] ;
+-
+-    CollectDomainNodesToElemNodes(domain, elemToNode, x_local, y_local, z_local);
+-
+-    CalcElemShapeFunctionDerivatives(x_local, y_local, z_local,
+-                                         B, &determ[k]);
+-
+-    CalcElemNodeNormals( B[0] , B[1], B[2],
+-                          x_local, y_local, z_local );
+-
+-    SumElemStressesToNodeForces( B, sigxx[k], sigyy[k], sigzz[k],
+-                                 fx_local, fy_local, fz_local ) ;
+-
+-    for( Index_t lnode=0 ; lnode<8 ; ++lnode ) {
+-       Index_t gnode = elemToNode[lnode];
+-       domain.fx(gnode) += fx_local[lnode];
+-       domain.fy(gnode) += fy_local[lnode];
+-       domain.fz(gnode) += fz_local[lnode];
+-    }
+-
+-  }
+-
++   /* Allocate per-element force buffers for parallel computation phase */
++   Real_t *elemfx = Allocate<Real_t>(numElem * 8);
++   Real_t *elemfy = Allocate<Real_t>(numElem * 8);
++   Real_t *elemfz = Allocate<Real_t>(numElem * 8);
++
++   /* Phase 1: Parallel computation of element forces to buffers */
++   #pragma omp parallel for shared(elemfx, elemfy, elemfz, sigxx, sigyy, sigzz, determ, domain) firstprivate(numElem)
++   for( Index_t k=0 ; k<numElem ; ++k )
++   {
++      Real_t fx_local[8] ;
++      Real_t fy_local[8] ;
++      Real_t fz_local[8] ;
++
++      const Index_t* const elemToNode = domain.nodelist(k);
++      Real_t B[3][8] ;
++      Real_t x_local[8] ;
++      Real_t y_local[8] ;
++      Real_t z_local[8] ;
++
++      CollectDomainNodesToElemNodes(domain, elemToNode, x_local, y_local, z_local);
++
++      CalcElemShapeFunctionDerivatives(x_local, y_local, z_local,
++                                           B, &determ[k]);
++
++      CalcElemNodeNormals( B[0] , B[1], B[2],
++                            x_local, y_local, z_local );
++
++      SumElemStressesToNodeForces( B, sigxx[k], sigyy[k], sigzz[k],
++                                   fx_local, fy_local, fz_local ) ;
++
++      /* Store computed forces in element buffers (no contention) */
++      Index_t bufidx = k * 8;
++      elemfx[bufidx+0] = fx_local[0];
++      elemfy[bufidx+0] = fy_local[0];
++      elemfz[bufidx+0] = fz_local[0];
++
++      elemfx[bufidx+1] = fx_local[1];
++      elemfy[bufidx+1] = fy_local[1];
++      elemfz[bufidx+1] = fz_local[1];
++
++      elemfx[bufidx+2] = fx_local[2];
++      elemfy[bufidx+2] = fy_local[2];
++      elemfz[bufidx+2] = fz_local[2];
++
++      elemfx[bufidx+3] = fx_local[3];
++      elemfy[bufidx+3] = fy_local[3];
++      elemfz[bufidx+3] = fz_local[3];
++
++      elemfx[bufidx+4] = fx_local[4];
++      elemfy[bufidx+4] = fy_local[4];
++      elemfz[bufidx+4] = fz_local[4];
++
++      elemfx[bufidx+5] = fx_local[5];
++      elemfy[bufidx+5] = fy_local[5];
++      elemfz[bufidx+5] = fz_local[5];
++
++      elemfx[bufidx+6] = fx_local[6];
++      elemfy[bufidx+6] = fy_local[6];
++      elemfz[bufidx+6] = fz_local[6];
++
++      elemfx[bufidx+7] = fx_local[7];
++      elemfy[bufidx+7] = fy_local[7];
++      elemfz[bufidx+7] = fz_local[7];
++   }
++
++   /* Phase 2: Sequential application of forces to domain (deterministic order) */
++   for( Index_t k=0 ; k<numElem ; ++k )
++   {
++      const Index_t* const elemToNode = domain.nodelist(k);
++      Index_t bufidx = k * 8;
++
++      for( Index_t lnode=0 ; lnode<8 ; ++lnode ) {
++         Index_t gnode = elemToNode[lnode];
++         domain.fx(gnode) += elemfx[bufidx+lnode];
++         domain.fy(gnode) += elemfy[bufidx+lnode];
++         domain.fz(gnode) += elemfz[bufidx+lnode];
++      }
++   }
++
++   Release(&elemfz);
++   Release(&elemfy);
++   Release(&elemfx);
+ }
+ 
+ static inline

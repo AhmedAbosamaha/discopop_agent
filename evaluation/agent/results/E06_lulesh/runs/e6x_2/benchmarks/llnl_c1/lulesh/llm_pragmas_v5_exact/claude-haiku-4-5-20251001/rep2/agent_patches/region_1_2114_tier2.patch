@@ -1,0 +1,102 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
+@@ -497,6 +497,12 @@
+    gamma[3][6] = Real_t( 1.);
+    gamma[3][7] = Real_t(-1.);
+ 
++   Real_t *hgfx_all = Allocate<Real_t>(numElem * 8);
++   Real_t *hgfy_all = Allocate<Real_t>(numElem * 8);
++   Real_t *hgfz_all = Allocate<Real_t>(numElem * 8);
++
++   #pragma omp parallel for shared(domain, determ, x8n, y8n, z8n, dvdx, dvdy, dvdz, gamma, hgfx_all, hgfy_all, hgfz_all) \
++      firstprivate(hourg, numElem, numNode)
+    for(Index_t i2=0;i2<numElem;++i2){
+       Real_t hgfx[8], hgfy[8], hgfz[8] ;
+ 
+@@ -609,39 +615,53 @@
+                       hourgam,
+                       coefficient, hgfx, hgfy, hgfz);
+ 
+-      domain.fx(n0si2) += hgfx[0];
+-      domain.fy(n0si2) += hgfy[0];
+-      domain.fz(n0si2) += hgfz[0];
+-
+-      domain.fx(n1si2) += hgfx[1];
+-      domain.fy(n1si2) += hgfy[1];
+-      domain.fz(n1si2) += hgfz[1];
+-
+-      domain.fx(n2si2) += hgfx[2];
+-      domain.fy(n2si2) += hgfy[2];
+-      domain.fz(n2si2) += hgfz[2];
+-
+-      domain.fx(n3si2) += hgfx[3];
+-      domain.fy(n3si2) += hgfy[3];
+-      domain.fz(n3si2) += hgfz[3];
+-
+-      domain.fx(n4si2) += hgfx[4];
+-      domain.fy(n4si2) += hgfy[4];
+-      domain.fz(n4si2) += hgfz[4];
+-
+-      domain.fx(n5si2) += hgfx[5];
+-      domain.fy(n5si2) += hgfy[5];
+-      domain.fz(n5si2) += hgfz[5];
+-
+-      domain.fx(n6si2) += hgfx[6];
+-      domain.fy(n6si2) += hgfy[6];
+-      domain.fz(n6si2) += hgfz[6];
+-
+-      domain.fx(n7si2) += hgfx[7];
+-      domain.fy(n7si2) += hgfy[7];
+-      domain.fz(n7si2) += hgfz[7];
+-
+-   }
++      for(Index_t i=0;i<8;++i){
++         hgfx_all[i2*8+i] = hgfx[i];
++         hgfy_all[i2*8+i] = hgfy[i];
++         hgfz_all[i2*8+i] = hgfz[i];
++      }
++
++   }
++
++   for(Index_t i2=0;i2<numElem;++i2){
++      const Index_t *elemToNode = domain.nodelist(i2);
++
++      domain.fx(elemToNode[0]) += hgfx_all[i2*8+0];
++      domain.fy(elemToNode[0]) += hgfy_all[i2*8+0];
++      domain.fz(elemToNode[0]) += hgfz_all[i2*8+0];
++
++      domain.fx(elemToNode[1]) += hgfx_all[i2*8+1];
++      domain.fy(elemToNode[1]) += hgfy_all[i2*8+1];
++      domain.fz(elemToNode[1]) += hgfz_all[i2*8+1];
++
++      domain.fx(elemToNode[2]) += hgfx_all[i2*8+2];
++      domain.fy(elemToNode[2]) += hgfy_all[i2*8+2];
++      domain.fz(elemToNode[2]) += hgfz_all[i2*8+2];
++
++      domain.fx(elemToNode[3]) += hgfx_all[i2*8+3];
++      domain.fy(elemToNode[3]) += hgfy_all[i2*8+3];
++      domain.fz(elemToNode[3]) += hgfz_all[i2*8+3];
++
++      domain.fx(elemToNode[4]) += hgfx_all[i2*8+4];
++      domain.fy(elemToNode[4]) += hgfy_all[i2*8+4];
++      domain.fz(elemToNode[4]) += hgfz_all[i2*8+4];
++
++      domain.fx(elemToNode[5]) += hgfx_all[i2*8+5];
++      domain.fy(elemToNode[5]) += hgfy_all[i2*8+5];
++      domain.fz(elemToNode[5]) += hgfz_all[i2*8+5];
++
++      domain.fx(elemToNode[6]) += hgfx_all[i2*8+6];
++      domain.fy(elemToNode[6]) += hgfy_all[i2*8+6];
++      domain.fz(elemToNode[6]) += hgfz_all[i2*8+6];
++
++      domain.fx(elemToNode[7]) += hgfx_all[i2*8+7];
++      domain.fy(elemToNode[7]) += hgfy_all[i2*8+7];
++      domain.fz(elemToNode[7]) += hgfz_all[i2*8+7];
++   }
++
++   Release(&hgfx_all);
++   Release(&hgfy_all);
++   Release(&hgfz_all);
+ 
+ }
+ 

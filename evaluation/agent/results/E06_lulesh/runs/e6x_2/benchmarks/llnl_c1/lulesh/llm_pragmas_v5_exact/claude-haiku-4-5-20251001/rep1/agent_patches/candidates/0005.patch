@@ -1,0 +1,44 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -1855,7 +1855,40 @@
+ static inline
+ void LagrangeElements(Domain& domain, Index_t numElem)
+ {
+-  CalcLagrangeElements(domain) ;
++  /* Inline CalcLagrangeElements with parallelized loop for more work per iteration */
++  {
++    Index_t numElemLocal = domain.numElem() ;
++    if (numElemLocal > 0) {
++      const Real_t deltatime = domain.deltatime() ;
++
++      domain.AllocateStrains(numElemLocal);
++
++      CalcKinematicsForElems(domain, deltatime, numElemLocal) ;
++
++      int error_found = 0;
++      #pragma omp parallel for shared(domain) reduction(+:error_found)
++      for ( Index_t k=0 ; k<numElemLocal ; ++k )
++      {
++         Real_t vdov = domain.dxx(k) + domain.dyy(k) + domain.dzz(k) ;
++         Real_t vdovthird = vdov/Real_t(3.0) ;
++
++         domain.vdov(k) = vdov ;
++         domain.dxx(k) -= vdovthird ;
++         domain.dyy(k) -= vdovthird ;
++         domain.dzz(k) -= vdovthird ;
++
++         if (domain.vnew(k) <= Real_t(0.0))
++         {
++            error_found = 1;
++         }
++      }
++      domain.DeallocateStrains();
++
++      if (error_found) {
++         exit(VolumeError);
++      }
++    }
++  }
+ 
+   CalcQForElems(domain) ;
+ 

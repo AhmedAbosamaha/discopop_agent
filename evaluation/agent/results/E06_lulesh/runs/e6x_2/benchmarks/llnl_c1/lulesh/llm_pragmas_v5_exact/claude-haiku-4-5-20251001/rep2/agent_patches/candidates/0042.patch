@@ -1,0 +1,23 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
+@@ -1633,6 +1633,7 @@
+    CalcPressureForElems(pHalfStep, bvc, pbvc, e_new, compHalfStep, vnewc,
+                         pmin, p_cut, eosvmax, length, regElemList);
+ 
++   #pragma omp parallel for
+    for (Index_t i = 0 ; i < length ; ++i) {
+       Real_t vhalf = Real_t(1.) / (Real_t(1.) + compHalfStep[i]) ;
+ 
+@@ -1655,10 +1656,8 @@
+       e_new[i] = e_new[i] + Real_t(0.5) * delvc[i]
+          * (  Real_t(3.0)*(p_old[i]     + q_old[i])
+               - Real_t(4.0)*(pHalfStep[i] + q_new[i])) ;
+-   }
+-
+-   for (Index_t i = 0 ; i < length ; ++i) {
+-
++
++      // Merged from original loop 3: update e_new again
+       e_new[i] += Real_t(0.5) * work[i];
+ 
+       if (FABS(e_new[i]) < e_cut) {

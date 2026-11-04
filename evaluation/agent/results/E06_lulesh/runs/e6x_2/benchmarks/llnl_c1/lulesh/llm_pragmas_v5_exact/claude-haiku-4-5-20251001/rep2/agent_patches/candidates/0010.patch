@@ -1,0 +1,56 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
+@@ -828,13 +828,49 @@
+ 
+   CalcForceForNodes(domain);
+ 
+-   CalcAccelerationForNodes(domain, domain.numNode());
++   Index_t numNode = domain.numNode() ;
++
++   /* Parallelized acceleration computation loop.
++    * CalcAccelerationForNodes: compute xdd, ydd, zdd = force / mass for each node.
++    */
++   #pragma omp parallel for schedule(static) shared(domain, numNode)
++   for ( Index_t i = 0 ; i < numNode ; ++i )
++   {
++      domain.xdd(i) = domain.fx(i) / domain.nodalMass(i);
++      domain.ydd(i) = domain.fy(i) / domain.nodalMass(i);
++      domain.zdd(i) = domain.fz(i) / domain.nodalMass(i);
++   }
+ 
+    ApplyAccelerationBoundaryConditionsForNodes(domain);
+ 
+-   CalcVelocityForNodes( domain, delt, u_cut, domain.numNode()) ;
+-
+-   CalcPositionForNodes( domain, delt, domain.numNode() );
++   /* Fused and parallelized loop combining:
++    * - CalcVelocityForNodes: update velocity with acceleration
++    * - CalcPositionForNodes: update position with velocity
++    * All operations are per-node independent (boundary-conditioned accelerations are now fixed).
++    */
++   #pragma omp parallel for schedule(static) shared(domain, numNode, delt, u_cut)
++   for ( Index_t i = 0 ; i < numNode ; ++i )
++   {
++      Real_t xdtmp, ydtmp, zdtmp ;
++
++      /* CalcVelocityForNodes */
++      xdtmp = domain.xd(i) + domain.xdd(i) * delt ;
++      if( FABS(xdtmp) < u_cut ) xdtmp = Real_t(0.0);
++      domain.xd(i) = xdtmp ;
++
++      ydtmp = domain.yd(i) + domain.ydd(i) * delt ;
++      if( FABS(ydtmp) < u_cut ) ydtmp = Real_t(0.0);
++      domain.yd(i) = ydtmp ;
++
++      zdtmp = domain.zd(i) + domain.zdd(i) * delt ;
++      if( FABS(zdtmp) < u_cut ) zdtmp = Real_t(0.0);
++      domain.zd(i) = zdtmp ;
++
++      /* CalcPositionForNodes */
++      domain.x(i) += domain.xd(i) * delt ;
++      domain.y(i) += domain.yd(i) * delt ;
++      domain.z(i) += domain.zd(i) * delt ;
++   }
+ 
+   return;
+ }

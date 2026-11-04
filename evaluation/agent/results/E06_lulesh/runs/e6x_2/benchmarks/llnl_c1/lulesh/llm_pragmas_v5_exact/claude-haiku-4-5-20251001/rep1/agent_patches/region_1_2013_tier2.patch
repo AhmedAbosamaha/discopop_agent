@@ -1,0 +1,132 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -467,6 +467,13 @@
+    gamma[3][6] = Real_t( 1.);
+    gamma[3][7] = Real_t(-1.);
+ 
++   /* Allocate per-element force buffers for computation phase */
++   Real_t *elemfx = Allocate<Real_t>(numElem * 8);
++   Real_t *elemfy = Allocate<Real_t>(numElem * 8);
++   Real_t *elemfz = Allocate<Real_t>(numElem * 8);
++
++   /* Phase 1: Parallel computation of element forces to buffers */
++   #pragma omp parallel for shared(elemfx, elemfy, elemfz, determ, x8n, y8n, z8n, dvdx, dvdy, dvdz, gamma) firstprivate(hourg)
+    for(Index_t i2=0;i2<numElem;++i2){
+       Real_t hgfx[8], hgfy[8], hgfz[8] ;
+ 
+@@ -579,39 +586,82 @@
+                       hourgam,
+                       coefficient, hgfx, hgfy, hgfz);
+ 
+-      domain.fx(n0si2) += hgfx[0];
+-      domain.fy(n0si2) += hgfy[0];
+-      domain.fz(n0si2) += hgfz[0];
+-
+-      domain.fx(n1si2) += hgfx[1];
+-      domain.fy(n1si2) += hgfy[1];
+-      domain.fz(n1si2) += hgfz[1];
+-
+-      domain.fx(n2si2) += hgfx[2];
+-      domain.fy(n2si2) += hgfy[2];
+-      domain.fz(n2si2) += hgfz[2];
+-
+-      domain.fx(n3si2) += hgfx[3];
+-      domain.fy(n3si2) += hgfy[3];
+-      domain.fz(n3si2) += hgfz[3];
+-
+-      domain.fx(n4si2) += hgfx[4];
+-      domain.fy(n4si2) += hgfy[4];
+-      domain.fz(n4si2) += hgfz[4];
+-
+-      domain.fx(n5si2) += hgfx[5];
+-      domain.fy(n5si2) += hgfy[5];
+-      domain.fz(n5si2) += hgfz[5];
+-
+-      domain.fx(n6si2) += hgfx[6];
+-      domain.fy(n6si2) += hgfy[6];
+-      domain.fz(n6si2) += hgfz[6];
+-
+-      domain.fx(n7si2) += hgfx[7];
+-      domain.fy(n7si2) += hgfy[7];
+-      domain.fz(n7si2) += hgfz[7];
+-
+-   }
++      /* Store computed forces in element buffers (no contention) */
++      Index_t bufidx = i2 * 8;
++      elemfx[bufidx+0] = hgfx[0];
++      elemfy[bufidx+0] = hgfy[0];
++      elemfz[bufidx+0] = hgfz[0];
++
++      elemfx[bufidx+1] = hgfx[1];
++      elemfy[bufidx+1] = hgfy[1];
++      elemfz[bufidx+1] = hgfz[1];
++
++      elemfx[bufidx+2] = hgfx[2];
++      elemfy[bufidx+2] = hgfy[2];
++      elemfz[bufidx+2] = hgfz[2];
++
++      elemfx[bufidx+3] = hgfx[3];
++      elemfy[bufidx+3] = hgfy[3];
++      elemfz[bufidx+3] = hgfz[3];
++
++      elemfx[bufidx+4] = hgfx[4];
++      elemfy[bufidx+4] = hgfy[4];
++      elemfz[bufidx+4] = hgfz[4];
++
++      elemfx[bufidx+5] = hgfx[5];
++      elemfy[bufidx+5] = hgfy[5];
++      elemfz[bufidx+5] = hgfz[5];
++
++      elemfx[bufidx+6] = hgfx[6];
++      elemfy[bufidx+6] = hgfy[6];
++      elemfz[bufidx+6] = hgfz[6];
++
++      elemfx[bufidx+7] = hgfx[7];
++      elemfy[bufidx+7] = hgfy[7];
++      elemfz[bufidx+7] = hgfz[7];
++   }
++
++   /* Phase 2: Sequential application of forces to domain (deterministic order) */
++   for(Index_t i2=0;i2<numElem;++i2){
++      const Index_t *elemToNode = domain.nodelist(i2);
++      Index_t bufidx = i2 * 8;
++
++      domain.fx(elemToNode[0]) += elemfx[bufidx+0];
++      domain.fy(elemToNode[0]) += elemfy[bufidx+0];
++      domain.fz(elemToNode[0]) += elemfz[bufidx+0];
++
++      domain.fx(elemToNode[1]) += elemfx[bufidx+1];
++      domain.fy(elemToNode[1]) += elemfy[bufidx+1];
++      domain.fz(elemToNode[1]) += elemfz[bufidx+1];
++
++      domain.fx(elemToNode[2]) += elemfx[bufidx+2];
++      domain.fy(elemToNode[2]) += elemfy[bufidx+2];
++      domain.fz(elemToNode[2]) += elemfz[bufidx+2];
++
++      domain.fx(elemToNode[3]) += elemfx[bufidx+3];
++      domain.fy(elemToNode[3]) += elemfy[bufidx+3];
++      domain.fz(elemToNode[3]) += elemfz[bufidx+3];
++
++      domain.fx(elemToNode[4]) += elemfx[bufidx+4];
++      domain.fy(elemToNode[4]) += elemfy[bufidx+4];
++      domain.fz(elemToNode[4]) += elemfz[bufidx+4];
++
++      domain.fx(elemToNode[5]) += elemfx[bufidx+5];
++      domain.fy(elemToNode[5]) += elemfy[bufidx+5];
++      domain.fz(elemToNode[5]) += elemfz[bufidx+5];
++
++      domain.fx(elemToNode[6]) += elemfx[bufidx+6];
++      domain.fy(elemToNode[6]) += elemfy[bufidx+6];
++      domain.fz(elemToNode[6]) += elemfz[bufidx+6];
++
++      domain.fx(elemToNode[7]) += elemfx[bufidx+7];
++      domain.fy(elemToNode[7]) += elemfy[bufidx+7];
++      domain.fz(elemToNode[7]) += elemfz[bufidx+7];
++   }
++
++   Release(&elemfz);
++   Release(&elemfy);
++   Release(&elemfx);
+ 
+ }
+ 

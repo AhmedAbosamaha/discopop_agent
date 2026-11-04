@@ -1,0 +1,50 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -706,17 +706,30 @@
+ {
+    Index_t numElem = domain.numElem() ;
+    if (numElem != 0) {
++      Index_t numNode = domain.numNode() ;
+       Real_t  hgcoef = domain.hgcoef() ;
+       Real_t *sigxx  = Allocate<Real_t>(numElem) ;
+       Real_t *sigyy  = Allocate<Real_t>(numElem) ;
+       Real_t *sigzz  = Allocate<Real_t>(numElem) ;
+       Real_t *determ = Allocate<Real_t>(numElem) ;
+ 
+-      InitStressTermsForElems(domain, sigxx, sigyy, sigzz, numElem);
++      /* Initialize forces and stress terms in parallel loop to amortize startup cost */
++      Index_t maxSize = (numNode > numElem) ? numNode : numElem;
++      #pragma omp parallel for shared(domain, sigxx, sigyy, sigzz, numElem, numNode)
++      for (Index_t i = 0; i < maxSize; ++i) {
++         if (i < numNode) {
++            domain.fx(i) = Real_t(0.0) ;
++            domain.fy(i) = Real_t(0.0) ;
++            domain.fz(i) = Real_t(0.0) ;
++         }
++         if (i < numElem) {
++            sigxx[i] = sigyy[i] = sigzz[i] = - domain.p(i) - domain.q(i) ;
++         }
++      }
+ 
+       IntegrateStressForElems( domain,
+                                sigxx, sigyy, sigzz, determ, numElem,
+-                               domain.numNode()) ;
++                               numNode) ;
+ 
+       for ( Index_t k=0 ; k<numElem ; ++k ) {
+          if (determ[k] <= Real_t(0.0)) {
+@@ -735,14 +748,6 @@
+ 
+ static inline void CalcForceForNodes(Domain& domain)
+ {
+-  Index_t numNode = domain.numNode() ;
+-
+-  for (Index_t i=0; i<numNode; ++i) {
+-     domain.fx(i) = Real_t(0.0) ;
+-     domain.fy(i) = Real_t(0.0) ;
+-     domain.fz(i) = Real_t(0.0) ;
+-  }
+-
+   CalcVolumeForceForElems(domain) ;
+ 
+ }

@@ -1,0 +1,65 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -712,16 +712,54 @@
+       Real_t *sigzz  = Allocate<Real_t>(numElem) ;
+       Real_t *determ = Allocate<Real_t>(numElem) ;
+ 
+-      InitStressTermsForElems(domain, sigxx, sigyy, sigzz, numElem);
+-
+-      IntegrateStressForElems( domain,
+-                               sigxx, sigyy, sigzz, determ, numElem,
+-                               domain.numNode()) ;
+-
+-      for ( Index_t k=0 ; k<numElem ; ++k ) {
++      bool volumeError = false;
++
++      // Initialize stress terms
++      for ( Index_t i=0 ; i<numElem ; ++i ) {
++         sigxx[i] = sigyy[i] = sigzz[i] = - domain.p(i) - domain.q(i) ;
++      }
++
++      // Integrate stress AND validate in a single parallel merged pass
++      #pragma omp parallel for shared(domain, sigxx, sigyy, sigzz, determ, numElem) reduction(||:volumeError) collapse(1)
++      for( Index_t k=0 ; k<numElem ; ++k ) {
++         const Index_t* const elemToNode = domain.nodelist(k);
++         Real_t B[3][8] ;
++         Real_t x_local[8] ;
++         Real_t y_local[8] ;
++         Real_t z_local[8] ;
++
++         CollectDomainNodesToElemNodes(domain, elemToNode, x_local, y_local, z_local);
++
++         CalcElemShapeFunctionDerivatives(x_local, y_local, z_local,
++                                              B, &determ[k]);
++
++         CalcElemNodeNormals( B[0] , B[1], B[2],
++                               x_local, y_local, z_local );
++
++         Real_t fx_local[8] ;
++         Real_t fy_local[8] ;
++         Real_t fz_local[8] ;
++         SumElemStressesToNodeForces( B, sigxx[k], sigyy[k], sigzz[k],
++                                      fx_local, fy_local, fz_local ) ;
++
++         for( Index_t lnode=0 ; lnode<8 ; ++lnode ) {
++            Index_t gnode = elemToNode[lnode];
++            #pragma omp atomic
++            domain.fx(gnode) += fx_local[lnode];
++            #pragma omp atomic
++            domain.fy(gnode) += fy_local[lnode];
++            #pragma omp atomic
++            domain.fz(gnode) += fz_local[lnode];
++         }
++
++         // Validation check inline
+          if (determ[k] <= Real_t(0.0)) {
+-            exit(VolumeError);
++            volumeError = true;
+          }
++      }
++
++      if (volumeError) {
++         exit(VolumeError);
+       }
+ 
+       CalcHourglassControlForElems(domain, determ, hgcoef) ;

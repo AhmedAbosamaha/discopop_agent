@@ -1,0 +1,20 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -718,10 +718,16 @@
+                                sigxx, sigyy, sigzz, determ, numElem,
+                                domain.numNode()) ;
+ 
++      bool volumeError = false;
++      #pragma omp parallel for shared(determ, numElem) reduction(||:volumeError)
+       for ( Index_t k=0 ; k<numElem ; ++k ) {
+          if (determ[k] <= Real_t(0.0)) {
+-            exit(VolumeError);
++            volumeError = true;
+          }
++      }
++
++      if (volumeError) {
++         exit(VolumeError);
+       }
+ 
+       CalcHourglassControlForElems(domain, determ, hgcoef) ;

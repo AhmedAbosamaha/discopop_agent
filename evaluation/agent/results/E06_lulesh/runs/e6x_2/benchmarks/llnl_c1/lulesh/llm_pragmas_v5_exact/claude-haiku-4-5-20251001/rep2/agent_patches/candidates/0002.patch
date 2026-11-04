@@ -1,0 +1,88 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
+@@ -1960,7 +1960,84 @@
+ #ifdef SEDOV_SYNC_POS_VEL_LATE
+ #endif
+ 
+-   LagrangeElements(domain, domain.numElem());
++   /* Inline and parallelize LagrangeElements with EOS loop over regions */
++   Index_t numElem = domain.numElem() ;
++   if (numElem > 0) {
++      const Real_t deltatime = domain.deltatime() ;
++      domain.AllocateStrains(numElem);
++      CalcKinematicsForElems(domain, deltatime, numElem) ;
++
++      for ( Index_t k=0 ; k<numElem ; ++k ) {
++         Real_t vdov = domain.dxx(k) + domain.dyy(k) + domain.dzz(k) ;
++         Real_t vdovthird = vdov/Real_t(3.0) ;
++         domain.vdov(k) = vdov ;
++         domain.dxx(k) -= vdovthird ;
++         domain.dyy(k) -= vdovthird ;
++         domain.dzz(k) -= vdovthird ;
++         if (domain.vnew(k) <= Real_t(0.0)) {
++            exit(VolumeError);
++         }
++      }
++      domain.DeallocateStrains();
++
++      CalcQForElems(domain) ;
++
++      /* Parallelize material properties EOS loop over regions */
++      Real_t eosvmin = domain.eosvmin() ;
++      Real_t eosvmax = domain.eosvmax() ;
++      Real_t *vnewc = Allocate<Real_t>(numElem) ;
++
++      for(Index_t i=0 ; i<numElem ; ++i) {
++         vnewc[i] = domain.vnew(i) ;
++      }
++
++      if (eosvmin != Real_t(0.)) {
++         for(Index_t i=0 ; i<numElem ; ++i) {
++            if (vnewc[i] < eosvmin)
++               vnewc[i] = eosvmin ;
++         }
++      }
++
++      if (eosvmax != Real_t(0.)) {
++         for(Index_t i=0 ; i<numElem ; ++i) {
++            if (vnewc[i] > eosvmax)
++               vnewc[i] = eosvmax ;
++         }
++      }
++
++      for (Index_t i=0; i<numElem; ++i) {
++         Real_t vc = domain.v(i) ;
++         if (eosvmin != Real_t(0.)) {
++            if (vc < eosvmin)
++               vc = eosvmin ;
++         }
++         if (eosvmax != Real_t(0.)) {
++            if (vc > eosvmax)
++               vc = eosvmax ;
++         }
++         if (vc <= 0.) {
++            exit(VolumeError);
++         }
++      }
++
++#pragma omp parallel for schedule(static) shared(domain, vnewc)
++      for (Int_t r=0 ; r<domain.numReg() ; ++r) {
++         Index_t numElemReg = domain.regElemSize(r);
++         Index_t *regElemList = domain.regElemlist(r);
++         Int_t rep;
++         if(r < domain.numReg()/2)
++            rep = 1;
++         else if(r < (domain.numReg() - (domain.numReg()+15)/20))
++            rep = 1 + domain.cost();
++         else
++            rep = 10 * (1+ domain.cost());
++         EvalEOSForElems(domain, vnewc, numElemReg, regElemList, rep);
++      }
++
++      Release(&vnewc) ;
++
++      UpdateVolumesForElems(domain, domain.v_cut(), numElem) ;
++   }
+ 
+    CalcTimeConstraintsForElems(domain);
+ 

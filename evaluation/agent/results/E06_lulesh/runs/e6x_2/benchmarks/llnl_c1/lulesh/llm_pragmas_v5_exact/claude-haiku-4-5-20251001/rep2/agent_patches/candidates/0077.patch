@@ -1,0 +1,19 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep2/work/lulesh.cc	2026-11-04 10:08:28.214039373 +0000
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep2/work/lulesh.cc.discopop_patch_generator.temp	2026-11-04 10:17:14.958638513 +0000
+@@ -353,10 +353,16 @@
+     }
+   }
+ 
++  #pragma omp parallel
++  #pragma omp single
++  {
++  #pragma omp task
+   Release(&fx_all);
+   Release(&fy_all);
+   Release(&fz_all);
+ 
++#pragma omp task
++}
+ }
+ 
+ static inline

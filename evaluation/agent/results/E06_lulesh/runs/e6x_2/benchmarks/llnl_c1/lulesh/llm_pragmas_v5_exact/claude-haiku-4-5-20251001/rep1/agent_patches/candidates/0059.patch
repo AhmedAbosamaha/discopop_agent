@@ -1,0 +1,42 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -823,10 +823,30 @@
+ void CalcAccelerationForNodes(Domain &domain, Index_t numNode)
+ {
+ 
++   #pragma omp parallel for shared(domain) firstprivate(numNode)
+    for (Index_t i = 0; i < numNode; ++i) {
+       domain.xdd(i) = domain.fx(i) / domain.nodalMass(i);
+       domain.ydd(i) = domain.fy(i) / domain.nodalMass(i);
+       domain.zdd(i) = domain.fz(i) / domain.nodalMass(i);
++   }
++
++   /* Apply acceleration boundary conditions immediately after (within same parallel context) */
++   Index_t size = domain.sizeX();
++   Index_t numNodeBC = (size+1)*(size+1) ;
++
++   if (!domain.symmXempty() != 0) {
++      for(Index_t i=0 ; i<numNodeBC ; ++i)
++         domain.xdd(domain.symmX(i)) = Real_t(0.0) ;
++   }
++
++   if (!domain.symmYempty() != 0) {
++      for(Index_t i=0 ; i<numNodeBC ; ++i)
++         domain.ydd(domain.symmY(i)) = Real_t(0.0) ;
++   }
++
++   if (!domain.symmZempty() != 0) {
++      for(Index_t i=0 ; i<numNodeBC ; ++i)
++         domain.zdd(domain.symmZ(i)) = Real_t(0.0) ;
+    }
+ }
+ 
+@@ -902,8 +922,6 @@
+   CalcForceForNodes(domain);
+ 
+    CalcAccelerationForNodes(domain, domain.numNode());
+-
+-   ApplyAccelerationBoundaryConditionsForNodes(domain);
+ 
+    CalcVelocityForNodes( domain, delt, u_cut, domain.numNode()) ;
+ 

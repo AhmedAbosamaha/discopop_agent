@@ -1,0 +1,46 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
+@@ -310,6 +310,12 @@
+    Real_t fy_local[8] ;
+    Real_t fz_local[8] ;
+ 
++   Real_t *fx_all = Allocate<Real_t>(numElem * 8);
++   Real_t *fy_all = Allocate<Real_t>(numElem * 8);
++   Real_t *fz_all = Allocate<Real_t>(numElem * 8);
++
++  #pragma omp parallel for shared(domain, sigxx, sigyy, sigzz, determ, fx_all, fy_all, fz_all, numElem) \
++      firstprivate(fx_local, fy_local, fz_local)
+   for( Index_t k=0 ; k<numElem ; ++k )
+   {
+     const Index_t* const elemToNode = domain.nodelist(k);
+@@ -330,13 +336,26 @@
+                                  fx_local, fy_local, fz_local ) ;
+ 
+     for( Index_t lnode=0 ; lnode<8 ; ++lnode ) {
++       fx_all[k*8+lnode] = fx_local[lnode];
++       fy_all[k*8+lnode] = fy_local[lnode];
++       fz_all[k*8+lnode] = fz_local[lnode];
++    }
++
++  }
++
++  for( Index_t k=0 ; k<numElem ; ++k ) {
++    const Index_t* const elemToNode = domain.nodelist(k);
++    for( Index_t lnode=0 ; lnode<8 ; ++lnode ) {
+        Index_t gnode = elemToNode[lnode];
+-       domain.fx(gnode) += fx_local[lnode];
+-       domain.fy(gnode) += fy_local[lnode];
+-       domain.fz(gnode) += fz_local[lnode];
++       domain.fx(gnode) += fx_all[k*8+lnode];
++       domain.fy(gnode) += fy_all[k*8+lnode];
++       domain.fz(gnode) += fz_all[k*8+lnode];
+     }
+-
+   }
++
++  Release(&fx_all);
++  Release(&fy_all);
++  Release(&fz_all);
+ 
+ }
+ 

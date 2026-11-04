@@ -1,0 +1,254 @@
+{
+  "benchmark": "llnl_c1/lulesh",
+  "kernel": "lulesh",
+  "source": "lulesh.cc",
+  "arm": "llm_pragmas_v5_exact",
+  "model": "claude-haiku-4-5-20251001",
+  "arm_flags": [
+    "--require-speedup",
+    "--min-runtime-share",
+    "0.01",
+    "--llm-pragmas",
+    "--no-pragma-arbitration",
+    "--prompt-version",
+    "5",
+    "--no-numeric-tolerance",
+    "--timing-cflags=-DLARGE_DATASET"
+  ],
+  "started_at": "2026-11-03T21:58:47",
+  "host": "rms14562",
+  "host_load_start": [
+    14.3134765625,
+    14.34375,
+    10.47216796875
+  ],
+  "agent_cmd": [
+    "/home/ahmedabosamaha/discopop_agent/venv/bin/python",
+    "-m",
+    "discopop_agent",
+    "--project-dir",
+    ".",
+    "--project-units",
+    "lulesh.cc,main.cc,lulesh-init.cc,lulesh-util.cc,lulesh-viz.cc",
+    "--project-include",
+    ".",
+    "--project-editable",
+    "lulesh.cc",
+    "--project-cflags=-DUSE_MPI=0",
+    "--discopop-dir",
+    ".discopop",
+    "--provider",
+    "claude-agent-sdk",
+    "--model",
+    "claude-haiku-4-5-20251001",
+    "--edit-mode",
+    "direct",
+    "--require-speedup",
+    "--min-runtime-share",
+    "0.01",
+    "--llm-pragmas",
+    "--no-pragma-arbitration",
+    "--prompt-version",
+    "5",
+    "--no-numeric-tolerance",
+    "--timing-cflags=-DLARGE_DATASET",
+    "--check-input",
+    "7",
+    "--exclude-functions",
+    "main,ParseCommandLineOptions,PrintCommandLineOptions,ParseError,StrToInt,VerifyAndWriteFinalOutput,DumpToVisit,DumpDomainToVisit,DumpMultiblockObjects,InitMeshDecomp,Domain,BuildMesh,SetupCommBuffers,CreateRegionIndexSets,SetupSymmetryPlanes,SetupElementConnectivities,SetupBoundaryConditions,AllocateElemPersistent,AllocateNodePersistent,AllocateGradients,DeallocateGradients,AllocateStrains,DeallocateStrains",
+    "--explorer-timeout",
+    "900"
+  ],
+  "agent_s": 22832.9,
+  "agent_rc": 0,
+  "llm_calls": 51,
+  "llm_call_failures": 0,
+  "harness_reasks": 0,
+  "harness_discards": 0,
+  "explorer_retries": 0,
+  "explorer_stalls": 11,
+  "reverts": 3,
+  "refresh_fast": 0,
+  "refresh_full": 19,
+  "refresh_fallback": 0,
+  "runtime_remeasurements": 19,
+  "phase_b_deferred": 2,
+  "phase_b_joint_kept": 0,
+  "dp_floor": "agent",
+  "gate_failures_phase_a": {
+    "clause": 5,
+    "performance": 20,
+    "tsan": 2,
+    "correctness": 4,
+    "openmp_compile": 1
+  },
+  "gate_failures_phase_b": {
+    "openmp_compile": 5,
+    "compile": 13,
+    "tsan": 2
+  },
+  "gate_passes_phase_a": 19,
+  "gate_failures_d40": {},
+  "d40_verdicts": {
+    "not_faster": 1
+  },
+  "exposure_verdicts": {
+    "exposed": 1,
+    "no_pattern": 2
+  },
+  "d40_seconds": 106.2,
+  "requeued_regions": 6,
+  "region_verdicts": {
+    "SKIPPED": 16,
+    "ACCEPTED": 16,
+    "DEFERRED": 16,
+    "COVERED": 2,
+    "DROPPED": 20,
+    "APPLIED": 2,
+    "D": 1
+  },
+  "settle_dropped": 0,
+  "baseline_claimed": 18,
+  "baseline_pragmas": 14,
+  "rewrites_kept": 16,
+  "pragmas_applied": 18,
+  "pragmas_discopop": 2,
+  "pragmas_llm": 16,
+  "regions_skipped": 12,
+  "llm_usage": {
+    "calls_recorded": 55,
+    "input_tokens": 2630,
+    "output_tokens": 516736,
+    "cache_read_input_tokens": 15620542,
+    "cache_creation_input_tokens": 1264360,
+    "cost_usd": 13.2852,
+    "model_seconds": 4046.8
+  },
+  "layout": "project",
+  "files_changed": [
+    "lulesh.cc"
+  ],
+  "source_changed": true,
+  "scaffold": {
+    "ok": true,
+    "problems": [],
+    "applies": true
+  },
+  "editable": [
+    "lulesh.cc"
+  ],
+  "harness_sha256": "16ce4a9abf108077102bf633578fec39e06002599940ecb65a3cede8b9f914ea",
+  "pragmas_added": 18,
+  "pragmas_in_final": 18,
+  "hot_loop_covered": null,
+  "candidates_recorded": 96,
+  "verify": {
+    "verify_size": "LARGE",
+    "threads": [
+      6,
+      12
+    ],
+    "repeats": 5,
+    "compiler": "/usr/bin/clang++-20",
+    "final_flags": [],
+    "dump_exact": true,
+    "dump_max_rel_err": 0.0,
+    "seed": "7",
+    "dump_exact_seeded": true,
+    "dump_seeded_max_rel_err": 0.0,
+    "seq_median_s": 1.0589,
+    "seq_kernel_median_s": 1.053101,
+    "timing_basis": "kernel",
+    "par": {
+      "6": {
+        "median_s": 0.7177,
+        "program_speedup": 1.475,
+        "max_rel_err": 0.0,
+        "kernel_median_s": 0.711704,
+        "kernel_speedup": 1.48,
+        "speedup": 1.48
+      },
+      "12": {
+        "median_s": 0.6144,
+        "program_speedup": 1.723,
+        "max_rel_err": 0.0,
+        "kernel_median_s": 0.607121,
+        "kernel_speedup": 1.735,
+        "speedup": 1.735
+      }
+    },
+    "digest_max_rel_err": 0.0,
+    "stable_at_fixed_threads": true,
+    "kernel_program_disagree": false,
+    "digest_seeded_rel_err": 0.0,
+    "status": "ok",
+    "speed_measurable": true
+  },
+  "verify_s": 20.1,
+  "status": "done",
+  "outcome": "FASTER",
+  "finished_at": "2026-11-04T04:19:40",
+  "host_load_end": [
+    6.3671875,
+    7.7099609375,
+    7.03662109375
+  ],
+  "profile": {
+    "wrapper": "discopop_cxx",
+    "layout": "project",
+    "units": [
+      "lulesh.cc",
+      "main.cc",
+      "lulesh-init.cc",
+      "lulesh-util.cc",
+      "lulesh-viz.cc"
+    ],
+    "instrument_s": 2.52,
+    "profiled_run_s": 7.29,
+    "explore_stalls": 0,
+    "explore_s": 299.56,
+    "explore_success_s": 299.56,
+    "explore_attempts": 1,
+    "explore_hash_seeds": [
+      "free"
+    ],
+    "explore_timed_out": false,
+    "explore_failures": [],
+    "patterns": {
+      "optimizer_output": 0,
+      "merged_pattern": 0,
+      "task": 738,
+      "do_all": 55,
+      "reduction": 0
+    },
+    "profile_sha256": "2f270a5123bcf8366c4dbd3a5d3bb13ea50d50b0ab1bac54d009acc8f17c203e"
+  },
+  "package_integrity": {
+    "before": {
+      "checked": "before trial",
+      "at": "2026-11-03T21:58:46",
+      "prepared_sha256": "813625161670db3347538b371f9788b8db1f0dba246c083d2ad6bd5572089ea6",
+      "packager_sha256": "813625161670db3347538b371f9788b8db1f0dba246c083d2ad6bd5572089ea6",
+      "harness_sha256": "16ce4a9abf108077102bf633578fec39e06002599940ecb65a3cede8b9f914ea",
+      "archived_sha256": "813625161670db3347538b371f9788b8db1f0dba246c083d2ad6bd5572089ea6",
+      "profile_sha256": "2f270a5123bcf8366c4dbd3a5d3bb13ea50d50b0ab1bac54d009acc8f17c203e",
+      "ok": true
+    },
+    "after": {
+      "checked": "after trial",
+      "at": "2026-11-04T04:19:40",
+      "prepared_sha256": "813625161670db3347538b371f9788b8db1f0dba246c083d2ad6bd5572089ea6",
+      "packager_sha256": "813625161670db3347538b371f9788b8db1f0dba246c083d2ad6bd5572089ea6",
+      "harness_sha256": "16ce4a9abf108077102bf633578fec39e06002599940ecb65a3cede8b9f914ea",
+      "archived_sha256": "813625161670db3347538b371f9788b8db1f0dba246c083d2ad6bd5572089ea6",
+      "profile_sha256": "2f270a5123bcf8366c4dbd3a5d3bb13ea50d50b0ab1bac54d009acc8f17c203e",
+      "ok": true
+    }
+  },
+  "speed_check_off": false,
+  "timing_flags": [
+    "--timing-cflags=-DLARGE_DATASET"
+  ],
+  "harness_edit_redos": [],
+  "repeat": 1
+}

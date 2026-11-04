@@ -1,0 +1,56 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
+@@ -1621,19 +1621,34 @@
+ {
+    Real_t *pHalfStep = Allocate<Real_t>(length) ;
+ 
++   #pragma omp parallel for
+    for (Index_t i = 0 ; i < length ; ++i) {
++      // Original loop 1: compute e_new
+       e_new[i] = e_old[i] - Real_t(0.5) * delvc[i] * (p_old[i] + q_old[i])
+          + Real_t(0.5) * work[i];
+ 
+       if (e_new[i]  < emin ) {
+          e_new[i] = emin ;
+       }
+-   }
+-
+-   CalcPressureForElems(pHalfStep, bvc, pbvc, e_new, compHalfStep, vnewc,
+-                        pmin, p_cut, eosvmax, length, regElemList);
+-
+-   for (Index_t i = 0 ; i < length ; ++i) {
++
++      // Inlined CalcPressureForElems: compute pHalfStep, bvc, pbvc for this element
++      Real_t c1s = Real_t(2.0)/Real_t(3.0) ;
++      bvc[i] = c1s * (compHalfStep[i] + Real_t(1.));
++      pbvc[i] = c1s;
++
++      pHalfStep[i] = bvc[i] * e_new[i] ;
++
++      if (FABS(pHalfStep[i]) <  p_cut)
++         pHalfStep[i] = Real_t(0.0) ;
++
++      Index_t ielem = regElemList[i];
++      if (vnewc[ielem] >= eosvmax)
++         pHalfStep[i] = Real_t(0.0) ;
++
++      if (pHalfStep[i] < pmin)
++         pHalfStep[i] = pmin ;
++
++      // Merged original loop 2: compute q_new and update e_new
+       Real_t vhalf = Real_t(1.) / (Real_t(1.) + compHalfStep[i]) ;
+ 
+       if ( delvc[i] > Real_t(0.) ) {
+@@ -1655,10 +1670,8 @@
+       e_new[i] = e_new[i] + Real_t(0.5) * delvc[i]
+          * (  Real_t(3.0)*(p_old[i]     + q_old[i])
+               - Real_t(4.0)*(pHalfStep[i] + q_new[i])) ;
+-   }
+-
+-   for (Index_t i = 0 ; i < length ; ++i) {
+-
++
++      // Merged original loop 3: update e_new again
+       e_new[i] += Real_t(0.5) * work[i];
+ 
+       if (FABS(e_new[i]) < e_cut) {

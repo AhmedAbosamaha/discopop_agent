@@ -1,0 +1,19 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc	2026-11-04 04:08:17.999067464 +0000
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc.discopop_patch_generator.temp	2026-11-04 04:13:33.438973477 +0000
+@@ -745,10 +745,16 @@
+    Real_t *dvdy = Allocate<Real_t>(numElem8) ;
+    Real_t *dvdz = Allocate<Real_t>(numElem8) ;
+    Real_t *x8n  = Allocate<Real_t>(numElem8) ;
++   #pragma omp parallel
++   #pragma omp single
++   {
++   #pragma omp task
+    Real_t *y8n  = Allocate<Real_t>(numElem8) ;
++   #pragma omp task
+    Real_t *z8n  = Allocate<Real_t>(numElem8) ;
+ 
+    #pragma omp parallel for shared(dvdx, dvdy, dvdz, x8n, y8n, z8n, determ, domain)
++   }
+    for (Index_t i=0 ; i<numElem ; ++i){
+       Real_t  x1[8],  y1[8],  z1[8] ;
+       Real_t pfx[8], pfy[8], pfz[8] ;

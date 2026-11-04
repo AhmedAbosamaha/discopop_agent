@@ -1,0 +1,24 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
+@@ -1173,6 +1173,8 @@
+ 
+       CalcKinematicsForElems(domain, deltatime, numElem) ;
+ 
++      bool volumeError = false;
++      #pragma omp parallel for reduction(||:volumeError)
+       for ( Index_t k=0 ; k<numElem ; ++k )
+       {
+          Real_t vdov = domain.dxx(k) + domain.dyy(k) + domain.dzz(k) ;
+@@ -1185,8 +1187,11 @@
+ 
+          if (domain.vnew(k) <= Real_t(0.0))
+         {
+-           exit(VolumeError);
++           volumeError = true;
+         }
++      }
++      if (volumeError) {
++         exit(VolumeError);
+       }
+       domain.DeallocateStrains();
+    }

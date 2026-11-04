@@ -1,0 +1,267 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -111,6 +111,7 @@
+                              Index_t numElem)
+ {
+ 
++#pragma omp parallel for collapse(1) schedule(static) shared(domain, sigxx, sigyy, sigzz, numElem) private(i)
+    for (Index_t i = 0 ; i < numElem ; ++i){
+       sigxx[i] = sigyy[i] = sigzz[i] =  - domain.p(i) - domain.q(i) ;
+    }
+@@ -310,6 +311,7 @@
+    Real_t fy_local[8] ;
+    Real_t fz_local[8] ;
+ 
++#pragma omp parallel for collapse(1) schedule(static) shared(domain, sigxx, sigyy, sigzz, determ, numElem) private(fx_local, fy_local, fz_local)
+   for( Index_t k=0 ; k<numElem ; ++k )
+   {
+     const Index_t* const elemToNode = domain.nodelist(k);
+@@ -331,8 +333,11 @@
+ 
+     for( Index_t lnode=0 ; lnode<8 ; ++lnode ) {
+        Index_t gnode = elemToNode[lnode];
++#pragma omp atomic
+        domain.fx(gnode) += fx_local[lnode];
++#pragma omp atomic
+        domain.fy(gnode) += fy_local[lnode];
++#pragma omp atomic
+        domain.fz(gnode) += fz_local[lnode];
+     }
+ 
+@@ -497,6 +502,7 @@
+    gamma[3][6] = Real_t( 1.);
+    gamma[3][7] = Real_t(-1.);
+ 
++#pragma omp parallel for collapse(1) schedule(static) shared(domain, numElem, determ, x8n, y8n, z8n, dvdx, dvdy, dvdz, gamma, hourg) private(i2, hgfx, hgfy, hgfz, coefficient, hourgam, xd1, yd1, zd1, elemToNode, i3, volinv, ss1, mass1, volume13, i1, hourmodx, hourmody, hourmodz, n0si2, n1si2, n2si2, n3si2, n4si2, n5si2, n6si2, n7si2)
+    for(Index_t i2=0;i2<numElem;++i2){
+       Real_t hgfx[8], hgfy[8], hgfz[8] ;
+ 
+@@ -609,36 +615,60 @@
+                       hourgam,
+                       coefficient, hgfx, hgfy, hgfz);
+ 
++#pragma omp atomic
+       domain.fx(n0si2) += hgfx[0];
++#pragma omp atomic
+       domain.fy(n0si2) += hgfy[0];
++#pragma omp atomic
+       domain.fz(n0si2) += hgfz[0];
+ 
++#pragma omp atomic
+       domain.fx(n1si2) += hgfx[1];
++#pragma omp atomic
+       domain.fy(n1si2) += hgfy[1];
++#pragma omp atomic
+       domain.fz(n1si2) += hgfz[1];
+ 
++#pragma omp atomic
+       domain.fx(n2si2) += hgfx[2];
++#pragma omp atomic
+       domain.fy(n2si2) += hgfy[2];
++#pragma omp atomic
+       domain.fz(n2si2) += hgfz[2];
+ 
++#pragma omp atomic
+       domain.fx(n3si2) += hgfx[3];
++#pragma omp atomic
+       domain.fy(n3si2) += hgfy[3];
++#pragma omp atomic
+       domain.fz(n3si2) += hgfz[3];
+ 
++#pragma omp atomic
+       domain.fx(n4si2) += hgfx[4];
++#pragma omp atomic
+       domain.fy(n4si2) += hgfy[4];
++#pragma omp atomic
+       domain.fz(n4si2) += hgfz[4];
+ 
++#pragma omp atomic
+       domain.fx(n5si2) += hgfx[5];
++#pragma omp atomic
+       domain.fy(n5si2) += hgfy[5];
++#pragma omp atomic
+       domain.fz(n5si2) += hgfz[5];
+ 
++#pragma omp atomic
+       domain.fx(n6si2) += hgfx[6];
++#pragma omp atomic
+       domain.fy(n6si2) += hgfy[6];
++#pragma omp atomic
+       domain.fz(n6si2) += hgfz[6];
+ 
++#pragma omp atomic
+       domain.fx(n7si2) += hgfx[7];
++#pragma omp atomic
+       domain.fy(n7si2) += hgfy[7];
++#pragma omp atomic
+       domain.fz(n7si2) += hgfz[7];
+ 
+    }
+@@ -658,6 +688,7 @@
+    Real_t *y8n  = Allocate<Real_t>(numElem8) ;
+    Real_t *z8n  = Allocate<Real_t>(numElem8) ;
+ 
++#pragma omp parallel for collapse(1) schedule(static) shared(domain, numElem, dvdx, dvdy, dvdz, x8n, y8n, z8n, determ) private(i, x1, y1, z1, pfx, pfy, pfz, elemToNode, ii, jj)
+    for (Index_t i=0 ; i<numElem ; ++i){
+       Real_t  x1[8],  y1[8],  z1[8] ;
+       Real_t pfx[8], pfy[8], pfz[8] ;
+@@ -737,6 +768,7 @@
+ {
+   Index_t numNode = domain.numNode() ;
+ 
++#pragma omp parallel for collapse(1) schedule(static) shared(domain) private(i)
+   for (Index_t i=0; i<numNode; ++i) {
+      domain.fx(i) = Real_t(0.0) ;
+      domain.fy(i) = Real_t(0.0) ;
+@@ -751,6 +783,7 @@
+ void CalcAccelerationForNodes(Domain &domain, Index_t numNode)
+ {
+ 
++#pragma omp parallel for collapse(1) schedule(static) shared(domain, numNode) private(i)
+    for (Index_t i = 0; i < numNode; ++i) {
+       domain.xdd(i) = domain.fx(i) / domain.nodalMass(i);
+       domain.ydd(i) = domain.fy(i) / domain.nodalMass(i);
+@@ -766,16 +799,19 @@
+ 
+    {
+       if (!domain.symmXempty() != 0) {
++#pragma omp parallel for collapse(1) schedule(static) shared(domain, numNodeBC) private(i)
+          for(Index_t i=0 ; i<numNodeBC ; ++i)
+             domain.xdd(domain.symmX(i)) = Real_t(0.0) ;
+       }
+ 
+       if (!domain.symmYempty() != 0) {
++#pragma omp parallel for collapse(1) schedule(static) shared(domain, numNodeBC) private(i)
+          for(Index_t i=0 ; i<numNodeBC ; ++i)
+             domain.ydd(domain.symmY(i)) = Real_t(0.0) ;
+       }
+ 
+       if (!domain.symmZempty() != 0) {
++#pragma omp parallel for collapse(1) schedule(static) shared(domain, numNodeBC) private(i)
+          for(Index_t i=0 ; i<numNodeBC ; ++i)
+             domain.zdd(domain.symmZ(i)) = Real_t(0.0) ;
+       }
+@@ -787,6 +823,7 @@
+                           Index_t numNode)
+ {
+ 
++#pragma omp parallel for collapse(1) schedule(static) shared(domain, dt, u_cut, numNode) private(i, xdtmp, ydtmp, zdtmp)
+    for ( Index_t i = 0 ; i < numNode ; ++i )
+    {
+      Real_t xdtmp, ydtmp, zdtmp ;
+@@ -808,6 +845,7 @@
+ static inline
+ void CalcPositionForNodes(Domain &domain, const Real_t dt, Index_t numNode)
+ {
++#pragma omp parallel for collapse(1) schedule(static) shared(domain, dt, numNode) private(i)
+    for ( Index_t i = 0 ; i < numNode ; ++i )
+    {
+      domain.x(i) += domain.xd(i) * dt ;
+@@ -1063,6 +1101,7 @@
+                              Real_t deltaTime, Index_t numElem )
+ {
+ 
++#pragma omp parallel for collapse(1) schedule(static) shared(domain, deltaTime, numElem) private(k, B, D, x_local, y_local, z_local, xd_local, yd_local, zd_local, detJ, volume, relativeVolume, elemToNode, lnode, gnode, dt2, j)
+   for( Index_t k=0 ; k<numElem ; ++k )
+   {
+     Real_t B[3][8] ;
+@@ -1128,6 +1167,8 @@
+ 
+       CalcKinematicsForElems(domain, deltatime, numElem) ;
+ 
++      Index_t error_flag = 0;
++#pragma omp parallel for collapse(1) schedule(static) shared(domain, numElem) private(k, vdov, vdovthird)
+       for ( Index_t k=0 ; k<numElem ; ++k )
+       {
+          Real_t vdov = domain.dxx(k) + domain.dyy(k) + domain.dzz(k) ;
+@@ -1140,9 +1181,14 @@
+ 
+          if (domain.vnew(k) <= Real_t(0.0))
+         {
+-           exit(VolumeError);
++#pragma omp atomic
++           error_flag = 1;
+         }
+       }
++      if (error_flag)
++      {
++         exit(VolumeError);
++      }
+       domain.DeallocateStrains();
+    }
+ }
+@@ -1152,6 +1198,7 @@
+ {
+    Index_t numElem = domain.numElem();
+ 
++#pragma omp parallel for collapse(1) schedule(static) shared(domain, numElem) private(i, ptiny, ax, ay, az, dxv, dyv, dzv, elemToNode, n0, n1, n2, n3, n4, n5, n6, n7, x0, x1, x2, x3, x4, x5, x6, x7, y0, y1, y2, y3, y4, y5, y6, y7, z0, z1, z2, z3, z4, z5, z6, z7, xv0, xv1, xv2, xv3, xv4, xv5, xv6, xv7, yv0, yv1, yv2, yv3, yv4, yv5, yv6, yv7, zv0, zv1, zv2, zv3, zv4, zv5, zv6, zv7, vol, norm, dxj, dyj, dzj, dxi, dyi, dzi, dxk, dyk, dzk)
+    for (Index_t i = 0 ; i < numElem ; ++i ) {
+       const Real_t ptiny = Real_t(1.e-36) ;
+       Real_t ax,ay,az ;
+@@ -1295,6 +1342,7 @@
+    Real_t qlc_monoq = domain.qlc_monoq();
+    Real_t qqc_monoq = domain.qqc_monoq();
+ 
++#pragma omp parallel for collapse(1) schedule(static) shared(domain, r, ptiny, monoq_limiter_mult, monoq_max_slope, qlc_monoq, qqc_monoq) private(i, ielem, qlin, qquad, phixi, phieta, phizeta, bcMask, delvm, delvp, norm, delvxxi, delvxeta, delvxzeta, rho)
+    for ( Index_t i = 0 ; i < domain.regElemSize(r); ++i ) {
+       Index_t ielem = domain.regElemlist(r,i);
+       Real_t qlin, qquad ;
+@@ -1839,6 +1887,7 @@
+                            Real_t v_cut, Index_t length)
+ {
+    if (length != 0) {
++#pragma omp parallel for collapse(1) schedule(static) shared(domain, v_cut, length) private(i, tmpV)
+       for(Index_t i=0 ; i<length ; ++i) {
+          Real_t tmpV = domain.vnew(i) ;
+ 
+@@ -1874,6 +1923,7 @@
+    Real_t   dtcourant_tmp = dtcourant;
+    Index_t  courant_elem  = -1 ;
+ 
++#pragma omp parallel for collapse(1) schedule(static) shared(domain, length, regElemlist, qqc2) private(i, indx, dtf) reduction(min:dtcourant_tmp)
+    for (Index_t i = 0 ; i < length ; ++i) {
+       Index_t indx = regElemlist[i] ;
+       Real_t dtf = domain.ss(indx) * domain.ss(indx) ;
+@@ -1910,6 +1960,7 @@
+    Real_t dthydro_tmp = dthydro ;
+    Index_t hydro_elem = -1 ;
+ 
++#pragma omp parallel for collapse(1) schedule(static) shared(domain, length, regElemlist, dvovmax) private(i, indx, dtdvov) reduction(min:dthydro_tmp)
+    for (Index_t i = 0 ; i < length ; ++i) {
+       Index_t indx = regElemlist[i] ;
+ 
+@@ -1962,6 +2013,31 @@
+ 
+    LagrangeElements(domain, domain.numElem());
+ 
+-   CalcTimeConstraintsForElems(domain);
+-
+-}
++   /* Time constraint calculations: inlined and restructured to parallelize
++    * the two independent constraint calculations (Courant and Hydro) for each
++    * region. Each calculation updates a different global variable (dtcourant
++    * vs dthydro) and processes the same region elements, so they can run in
++    * parallel via sections. The region loop itself remains sequential to
++    * maintain the accumulation of minimum time step across all regions.
++    */
++   domain.dtcourant() = 1.0e+20;
++   domain.dthydro() = 1.0e+20;
++
++   for (Index_t r=0 ; r < domain.numReg() ; ++r) {
++#pragma omp parallel sections shared(domain)
++      {
++#pragma omp section
++         CalcCourantConstraintForElems(domain, domain.regElemSize(r),
++                                       domain.regElemlist(r),
++                                       domain.qqc(),
++                                       domain.dtcourant()) ;
++
++#pragma omp section
++         CalcHydroConstraintForElems(domain, domain.regElemSize(r),
++                                     domain.regElemlist(r),
++                                     domain.dvovmax(),
++                                     domain.dthydro()) ;
++      }
++   }
++
++}

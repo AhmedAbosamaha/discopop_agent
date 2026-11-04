@@ -1,0 +1,44 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -1965,6 +1965,11 @@
+    Real_t   dtcourant_tmp = dtcourant;
+    Index_t  courant_elem  = -1 ;
+ 
++   // Allocate temporary buffer for dtf values
++   Real_t* dtf_array = (Real_t*)malloc(length * sizeof(Real_t));
++
++   // Parallel pass: compute dtf for each element, no synchronization
++   #pragma omp parallel for
+    for (Index_t i = 0 ; i < length ; ++i) {
+       Index_t indx = regElemlist[i] ;
+       Real_t dtf = domain.ss(indx) * domain.ss(indx) ;
+@@ -1978,13 +1983,23 @@
+       dtf = SQRT(dtf) ;
+       dtf = domain.arealg(indx) / dtf ;
+ 
++      // Store dtf if valid, else mark with sentinel
+       if (domain.vdov(indx) != Real_t(0.)) {
+-         if ( dtf < dtcourant_tmp ) {
+-            dtcourant_tmp = dtf ;
+-            courant_elem  = indx ;
+-         }
+-      }
+-   }
++         dtf_array[i] = dtf;
++      } else {
++         dtf_array[i] = Real_t(1.0e+20);
++      }
++   }
++
++   // Sequential pass: find minimum among computed values
++   for (Index_t i = 0 ; i < length ; ++i) {
++      if (dtf_array[i] < dtcourant_tmp) {
++         dtcourant_tmp = dtf_array[i];
++         courant_elem = regElemlist[i];
++      }
++   }
++
++   free(dtf_array);
+ 
+    if (courant_elem != -1) {
+       dtcourant = dtcourant_tmp ;

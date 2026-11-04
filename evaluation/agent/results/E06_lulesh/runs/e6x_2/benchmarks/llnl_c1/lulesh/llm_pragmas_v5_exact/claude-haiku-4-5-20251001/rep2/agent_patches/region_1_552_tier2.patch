@@ -1,0 +1,54 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
+@@ -2091,17 +2091,40 @@
+    domain.dtcourant() = 1.0e+20;
+    domain.dthydro() = 1.0e+20;
+ 
+-   for (Index_t r=0 ; r < domain.numReg() ; ++r) {
+-      CalcCourantConstraintForElems(domain, domain.regElemSize(r),
+-                                    domain.regElemlist(r),
+-                                    domain.qqc(),
+-                                    domain.dtcourant()) ;
+-
+-      CalcHydroConstraintForElems(domain, domain.regElemSize(r),
+-                                  domain.regElemlist(r),
+-                                  domain.dvovmax(),
+-                                  domain.dthydro()) ;
+-   }
++   Real_t global_dtcourant = 1.0e+20;
++   Real_t global_dthydro = 1.0e+20;
++
++   #pragma omp parallel
++   {
++      Real_t thread_dtcourant = 1.0e+20;
++      Real_t thread_dthydro = 1.0e+20;
++
++      #pragma omp for nowait schedule(static)
++      for (Index_t r=0 ; r < domain.numReg() ; ++r) {
++         CalcCourantConstraintForElems(domain, domain.regElemSize(r),
++                                       domain.regElemlist(r),
++                                       domain.qqc(),
++                                       thread_dtcourant) ;
++
++         CalcHydroConstraintForElems(domain, domain.regElemSize(r),
++                                     domain.regElemlist(r),
++                                     domain.dvovmax(),
++                                     thread_dthydro) ;
++      }
++
++      #pragma omp critical
++      {
++         if (thread_dtcourant < global_dtcourant) {
++            global_dtcourant = thread_dtcourant;
++         }
++         if (thread_dthydro < global_dthydro) {
++            global_dthydro = thread_dthydro;
++         }
++      }
++   }
++
++   domain.dtcourant() = global_dtcourant;
++   domain.dthydro() = global_dthydro;
+ }
+ 
+ void LagrangeLeapFrog(Domain& domain)

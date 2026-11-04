@@ -1,0 +1,94 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -828,6 +828,25 @@
+       domain.ydd(i) = domain.fy(i) / domain.nodalMass(i);
+       domain.zdd(i) = domain.fz(i) / domain.nodalMass(i);
+    }
++
++   /* Apply acceleration boundary conditions (moved to CalcVelocityForNodes for merged parallelization) */
++   Index_t size = domain.sizeX();
++   Index_t numNodeBC = (size+1)*(size+1) ;
++
++   if (!domain.symmXempty() != 0) {
++      for(Index_t i=0 ; i<numNodeBC ; ++i)
++         domain.xdd(domain.symmX(i)) = Real_t(0.0) ;
++   }
++
++   if (!domain.symmYempty() != 0) {
++      for(Index_t i=0 ; i<numNodeBC ; ++i)
++         domain.ydd(domain.symmY(i)) = Real_t(0.0) ;
++   }
++
++   if (!domain.symmZempty() != 0) {
++      for(Index_t i=0 ; i<numNodeBC ; ++i)
++         domain.zdd(domain.symmZ(i)) = Real_t(0.0) ;
++   }
+ }
+ 
+ static inline
+@@ -858,23 +877,52 @@
+ void CalcVelocityForNodes(Domain &domain, const Real_t dt, const Real_t u_cut,
+                           Index_t numNode)
+ {
+-
++   /* Merged parallel region: compute accelerations and update velocities together
++      to amortize parallelization overhead over more work per iteration */
+    #pragma omp parallel for shared(domain) firstprivate(dt, u_cut, numNode)
+    for ( Index_t i = 0 ; i < numNode ; ++i )
+    {
++     /* Compute acceleration from forces and mass (moved from CalcAccelerationForNodes) */
++     Real_t xdd = domain.fx(i) / domain.nodalMass(i);
++     Real_t ydd = domain.fy(i) / domain.nodalMass(i);
++     Real_t zdd = domain.fz(i) / domain.nodalMass(i);
++     domain.xdd(i) = xdd;
++     domain.ydd(i) = ydd;
++     domain.zdd(i) = zdd;
++
++     /* Update velocity using freshly computed acceleration */
+      Real_t xdtmp, ydtmp, zdtmp ;
+ 
+-     xdtmp = domain.xd(i) + domain.xdd(i) * dt ;
++     xdtmp = domain.xd(i) + xdd * dt ;
+      if( FABS(xdtmp) < u_cut ) xdtmp = Real_t(0.0);
+      domain.xd(i) = xdtmp ;
+ 
+-     ydtmp = domain.yd(i) + domain.ydd(i) * dt ;
++     ydtmp = domain.yd(i) + ydd * dt ;
+      if( FABS(ydtmp) < u_cut ) ydtmp = Real_t(0.0);
+      domain.yd(i) = ydtmp ;
+ 
+-     zdtmp = domain.zd(i) + domain.zdd(i) * dt ;
++     zdtmp = domain.zd(i) + zdd * dt ;
+      if( FABS(zdtmp) < u_cut ) zdtmp = Real_t(0.0);
+      domain.zd(i) = zdtmp ;
++   }
++
++   /* Apply boundary conditions to accelerations (serial post-loop, small work) */
++   Index_t size = domain.sizeX();
++   Index_t numNodeBC = (size+1)*(size+1) ;
++
++   if (!domain.symmXempty() != 0) {
++      for(Index_t i=0 ; i<numNodeBC ; ++i)
++         domain.xdd(domain.symmX(i)) = Real_t(0.0) ;
++   }
++
++   if (!domain.symmYempty() != 0) {
++      for(Index_t i=0 ; i<numNodeBC ; ++i)
++         domain.ydd(domain.symmY(i)) = Real_t(0.0) ;
++   }
++
++   if (!domain.symmZempty() != 0) {
++      for(Index_t i=0 ; i<numNodeBC ; ++i)
++         domain.zdd(domain.symmZ(i)) = Real_t(0.0) ;
+    }
+ }
+ 
+@@ -902,8 +950,6 @@
+   CalcForceForNodes(domain);
+ 
+    CalcAccelerationForNodes(domain, domain.numNode());
+-
+-   ApplyAccelerationBoundaryConditionsForNodes(domain);
+ 
+    CalcVelocityForNodes( domain, delt, u_cut, domain.numNode()) ;
+ 

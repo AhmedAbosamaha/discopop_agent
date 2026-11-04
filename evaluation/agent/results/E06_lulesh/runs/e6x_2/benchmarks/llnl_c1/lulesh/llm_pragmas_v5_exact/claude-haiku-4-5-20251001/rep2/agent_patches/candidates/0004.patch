@@ -1,0 +1,91 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep2/work/lulesh.cc
+@@ -1063,6 +1063,7 @@
+                              Real_t deltaTime, Index_t numElem )
+ {
+ 
++  #pragma omp parallel for schedule(static) shared(domain)
+   for( Index_t k=0 ; k<numElem ; ++k )
+   {
+     Real_t B[3][8] ;
+@@ -1855,14 +1856,76 @@
+ static inline
+ void LagrangeElements(Domain& domain, Index_t numElem)
+ {
++  // Stage 1: Calculate Lagrange strain rates
+   CalcLagrangeElements(domain) ;
+ 
++  // Stage 2: Calculate artificial viscosity (Q)
+   CalcQForElems(domain) ;
+ 
+-  ApplyMaterialPropertiesForElems(domain) ;
+-
+-  UpdateVolumesForElems(domain,
+-                        domain.v_cut(), numElem) ;
++  // Stage 3 & 4: Apply material properties and update volumes
++  // These are parallelized as a combined region loop to handle
++  // the EOS calculations and volume updates efficiently
++  Index_t numReg = domain.numReg();
++
++  if (numElem != 0) {
++    Real_t eosvmin = domain.eosvmin() ;
++    Real_t eosvmax = domain.eosvmax() ;
++    Real_t *vnewc = Allocate<Real_t>(numElem) ;
++
++    // Copy and clip vnew values
++    for(Index_t i=0 ; i<numElem ; ++i) {
++       vnewc[i] = domain.vnew(i) ;
++    }
++
++    if (eosvmin != Real_t(0.)) {
++       for(Index_t i=0 ; i<numElem ; ++i) {
++          if (vnewc[i] < eosvmin)
++             vnewc[i] = eosvmin ;
++       }
++    }
++
++    if (eosvmax != Real_t(0.)) {
++       for(Index_t i=0 ; i<numElem ; ++i) {
++          if (vnewc[i] > eosvmax)
++             vnewc[i] = eosvmax ;
++       }
++    }
++
++    for (Index_t i=0; i<numElem; ++i) {
++       Real_t vc = domain.v(i) ;
++       if (eosvmin != Real_t(0.)) {
++          if (vc < eosvmin)
++             vc = eosvmin ;
++       }
++       if (eosvmax != Real_t(0.)) {
++          if (vc > eosvmax)
++             vc = eosvmax ;
++       }
++       if (vc <= 0.) {
++          exit(VolumeError);
++       }
++    }
++
++    // Parallelize region loop: each thread processes complete EOS + volume update for assigned regions
++    #pragma omp parallel for schedule(static) shared(domain, vnewc, eosvmin, eosvmax)
++    for (Int_t r=0 ; r<numReg ; ++r) {
++       Index_t numElemReg = domain.regElemSize(r);
++       Index_t *regElemList = domain.regElemlist(r);
++       Int_t rep;
++       if(r < numReg/2)
++         rep = 1;
++       else if(r < (numReg - (numReg+15)/20))
++         rep = 1 + domain.cost();
++       else
++         rep = 10 * (1+ domain.cost());
++       EvalEOSForElems(domain, vnewc, numElemReg, regElemList, rep);
++    }
++
++    Release(&vnewc) ;
++  }
++
++  // Stage 4: Update volumes
++  UpdateVolumesForElems(domain, domain.v_cut(), numElem) ;
+ }
+ 
+ static inline

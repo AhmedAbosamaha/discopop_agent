@@ -1,0 +1,230 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -1615,109 +1615,124 @@
+ {
+    Real_t *pHalfStep = Allocate<Real_t>(length) ;
+ 
+-   for (Index_t i = 0 ; i < length ; ++i) {
+-      e_new[i] = e_old[i] - Real_t(0.5) * delvc[i] * (p_old[i] + q_old[i])
+-         + Real_t(0.5) * work[i];
+-
+-      if (e_new[i]  < emin ) {
+-         e_new[i] = emin ;
+-      }
+-   }
+-
+-   CalcPressureForElems(pHalfStep, bvc, pbvc, e_new, compHalfStep, vnewc,
+-                        pmin, p_cut, eosvmax, length, regElemList);
+-
+-   for (Index_t i = 0 ; i < length ; ++i) {
+-      Real_t vhalf = Real_t(1.) / (Real_t(1.) + compHalfStep[i]) ;
+-
+-      if ( delvc[i] > Real_t(0.) ) {
+-         q_new[i]  = Real_t(0.) ;
+-      }
+-      else {
+-         Real_t ssc = ( pbvc[i] * e_new[i]
+-                 + vhalf * vhalf * bvc[i] * pHalfStep[i] ) / rho0 ;
+-
+-         if ( ssc <= Real_t(.1111111e-36) ) {
+-            ssc = Real_t(.3333333e-18) ;
+-         } else {
+-            ssc = SQRT(ssc) ;
+-         }
+-
+-         q_new[i] = (ssc*ql_old[i] + qq_old[i]) ;
+-      }
+-
+-      e_new[i] = e_new[i] + Real_t(0.5) * delvc[i]
+-         * (  Real_t(3.0)*(p_old[i]     + q_old[i])
+-              - Real_t(4.0)*(pHalfStep[i] + q_new[i])) ;
+-   }
+-
+-   for (Index_t i = 0 ; i < length ; ++i) {
+-
+-      e_new[i] += Real_t(0.5) * work[i];
+-
+-      if (FABS(e_new[i]) < e_cut) {
+-         e_new[i] = Real_t(0.)  ;
+-      }
+-      if (     e_new[i]  < emin ) {
+-         e_new[i] = emin ;
+-      }
+-   }
+-
+-   CalcPressureForElems(p_new, bvc, pbvc, e_new, compression, vnewc,
+-                        pmin, p_cut, eosvmax, length, regElemList);
+-
+-   for (Index_t i = 0 ; i < length ; ++i){
+-      const Real_t sixth = Real_t(1.0) / Real_t(6.0) ;
+-      Index_t ielem = regElemList[i];
+-      Real_t q_tilde ;
+-
+-      if (delvc[i] > Real_t(0.)) {
+-         q_tilde = Real_t(0.) ;
+-      }
+-      else {
+-         Real_t ssc = ( pbvc[i] * e_new[i]
+-                 + vnewc[ielem] * vnewc[ielem] * bvc[i] * p_new[i] ) / rho0 ;
+-
+-         if ( ssc <= Real_t(.1111111e-36) ) {
+-            ssc = Real_t(.3333333e-18) ;
+-         } else {
+-            ssc = SQRT(ssc) ;
+-         }
+-
+-         q_tilde = (ssc*ql_old[i] + qq_old[i]) ;
+-      }
+-
+-      e_new[i] = e_new[i] - (  Real_t(7.0)*(p_old[i]     + q_old[i])
+-                               - Real_t(8.0)*(pHalfStep[i] + q_new[i])
+-                               + (p_new[i] + q_tilde)) * delvc[i]*sixth ;
+-
+-      if (FABS(e_new[i]) < e_cut) {
+-         e_new[i] = Real_t(0.)  ;
+-      }
+-      if (     e_new[i]  < emin ) {
+-         e_new[i] = emin ;
+-      }
+-   }
+-
+-   CalcPressureForElems(p_new, bvc, pbvc, e_new, compression, vnewc,
+-                        pmin, p_cut, eosvmax, length, regElemList);
+-
+-   for (Index_t i = 0 ; i < length ; ++i){
+-      Index_t ielem = regElemList[i];
+-
+-      if ( delvc[i] <= Real_t(0.) ) {
+-         Real_t ssc = ( pbvc[i] * e_new[i]
+-                 + vnewc[ielem] * vnewc[ielem] * bvc[i] * p_new[i] ) / rho0 ;
+-
+-         if ( ssc <= Real_t(.1111111e-36) ) {
+-            ssc = Real_t(.3333333e-18) ;
+-         } else {
+-            ssc = SQRT(ssc) ;
+-         }
+-
+-         q_new[i] = (ssc*ql_old[i] + qq_old[i]) ;
+-
+-         if (FABS(q_new[i]) < q_cut) q_new[i] = Real_t(0.) ;
++   #pragma omp parallel
++   {
++      #pragma omp for nowait
++      for (Index_t i = 0 ; i < length ; ++i) {
++         e_new[i] = e_old[i] - Real_t(0.5) * delvc[i] * (p_old[i] + q_old[i])
++            + Real_t(0.5) * work[i];
++
++         if (e_new[i]  < emin ) {
++            e_new[i] = emin ;
++         }
++      }
++
++      #pragma omp single
++      CalcPressureForElems(pHalfStep, bvc, pbvc, e_new, compHalfStep, vnewc,
++                           pmin, p_cut, eosvmax, length, regElemList);
++
++      #pragma omp for nowait
++      for (Index_t i = 0 ; i < length ; ++i) {
++         Real_t vhalf = Real_t(1.) / (Real_t(1.) + compHalfStep[i]) ;
++
++         if ( delvc[i] > Real_t(0.) ) {
++            q_new[i]  = Real_t(0.) ;
++         }
++         else {
++            Real_t ssc = ( pbvc[i] * e_new[i]
++                    + vhalf * vhalf * bvc[i] * pHalfStep[i] ) / rho0 ;
++
++            if ( ssc <= Real_t(.1111111e-36) ) {
++               ssc = Real_t(.3333333e-18) ;
++            } else {
++               ssc = SQRT(ssc) ;
++            }
++
++            q_new[i] = (ssc*ql_old[i] + qq_old[i]) ;
++         }
++
++         e_new[i] = e_new[i] + Real_t(0.5) * delvc[i]
++            * (  Real_t(3.0)*(p_old[i]     + q_old[i])
++                 - Real_t(4.0)*(pHalfStep[i] + q_new[i])) ;
++      }
++
++      #pragma omp single
++      CalcPressureForElems(p_new, bvc, pbvc, e_new, compression, vnewc,
++                           pmin, p_cut, eosvmax, length, regElemList);
++
++      #pragma omp for nowait
++      for (Index_t i = 0 ; i < length ; ++i) {
++
++         e_new[i] += Real_t(0.5) * work[i];
++
++         if (FABS(e_new[i]) < e_cut) {
++            e_new[i] = Real_t(0.)  ;
++         }
++         if (     e_new[i]  < emin ) {
++            e_new[i] = emin ;
++         }
++      }
++
++      #pragma omp single
++      CalcPressureForElems(p_new, bvc, pbvc, e_new, compression, vnewc,
++                           pmin, p_cut, eosvmax, length, regElemList);
++
++      #pragma omp for nowait
++      for (Index_t i = 0 ; i < length ; ++i){
++         const Real_t sixth = Real_t(1.0) / Real_t(6.0) ;
++         Index_t ielem = regElemList[i];
++         Real_t q_tilde ;
++
++         if (delvc[i] > Real_t(0.)) {
++            q_tilde = Real_t(0.) ;
++         }
++         else {
++            Real_t ssc = ( pbvc[i] * e_new[i]
++                    + vnewc[ielem] * vnewc[ielem] * bvc[i] * p_new[i] ) / rho0 ;
++
++            if ( ssc <= Real_t(.1111111e-36) ) {
++               ssc = Real_t(.3333333e-18) ;
++            } else {
++               ssc = SQRT(ssc) ;
++            }
++
++            q_tilde = (ssc*ql_old[i] + qq_old[i]) ;
++         }
++
++         e_new[i] = e_new[i] - (  Real_t(7.0)*(p_old[i]     + q_old[i])
++                                  - Real_t(8.0)*(pHalfStep[i] + q_new[i])
++                                  + (p_new[i] + q_tilde)) * delvc[i]*sixth ;
++
++         if (FABS(e_new[i]) < e_cut) {
++            e_new[i] = Real_t(0.)  ;
++         }
++         if (     e_new[i]  < emin ) {
++            e_new[i] = emin ;
++         }
++      }
++
++      #pragma omp single
++      CalcPressureForElems(p_new, bvc, pbvc, e_new, compression, vnewc,
++                           pmin, p_cut, eosvmax, length, regElemList);
++
++      #pragma omp for
++      for (Index_t i = 0 ; i < length ; ++i){
++         Index_t ielem = regElemList[i];
++
++         if ( delvc[i] <= Real_t(0.) ) {
++            Real_t ssc = ( pbvc[i] * e_new[i]
++                    + vnewc[ielem] * vnewc[ielem] * bvc[i] * p_new[i] ) / rho0 ;
++
++            if ( ssc <= Real_t(.1111111e-36) ) {
++               ssc = Real_t(.3333333e-18) ;
++            } else {
++               ssc = SQRT(ssc) ;
++            }
++
++            q_new[i] = (ssc*ql_old[i] + qq_old[i]) ;
++
++            if (FABS(q_new[i]) < q_cut) q_new[i] = Real_t(0.) ;
++         }
+       }
+    }
+ 

@@ -1,0 +1,71 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e6x_2/benchmarks/llnl_c1/lulesh/llm_pragmas_v5_exact/claude-haiku-4-5-20251001/rep1/work/lulesh.cc
+@@ -1662,22 +1662,34 @@
+    Real_t emin    = domain.emin() ;
+    Real_t rho0    = domain.refdens() ;
+ 
+-   Real_t *e_old = Allocate<Real_t>(numElemReg) ;
+-   Real_t *delvc = Allocate<Real_t>(numElemReg) ;
+-   Real_t *p_old = Allocate<Real_t>(numElemReg) ;
+-   Real_t *q_old = Allocate<Real_t>(numElemReg) ;
+-   Real_t *compression = Allocate<Real_t>(numElemReg) ;
+-   Real_t *compHalfStep = Allocate<Real_t>(numElemReg) ;
+-   Real_t *qq_old = Allocate<Real_t>(numElemReg) ;
+-   Real_t *ql_old = Allocate<Real_t>(numElemReg) ;
+-   Real_t *work = Allocate<Real_t>(numElemReg) ;
++   Real_t *e_old_all = Allocate<Real_t>(numElemReg * rep) ;
++   Real_t *delvc_all = Allocate<Real_t>(numElemReg * rep) ;
++   Real_t *p_old_all = Allocate<Real_t>(numElemReg * rep) ;
++   Real_t *q_old_all = Allocate<Real_t>(numElemReg * rep) ;
++   Real_t *compression_all = Allocate<Real_t>(numElemReg * rep) ;
++   Real_t *compHalfStep_all = Allocate<Real_t>(numElemReg * rep) ;
++   Real_t *qq_old_all = Allocate<Real_t>(numElemReg * rep) ;
++   Real_t *ql_old_all = Allocate<Real_t>(numElemReg * rep) ;
++   Real_t *work_all = Allocate<Real_t>(numElemReg * rep) ;
+    Real_t *p_new = Allocate<Real_t>(numElemReg) ;
+    Real_t *e_new = Allocate<Real_t>(numElemReg) ;
+    Real_t *q_new = Allocate<Real_t>(numElemReg) ;
+    Real_t *bvc = Allocate<Real_t>(numElemReg) ;
+    Real_t *pbvc = Allocate<Real_t>(numElemReg) ;
+ 
++   #pragma omp parallel for firstprivate(numElemReg, rep, regElemList, vnewc, domain, eosvmin, eosvmax, pmin, p_cut, e_cut, q_cut, emin, rho0) shared(e_old_all, delvc_all, p_old_all, q_old_all, compression_all, compHalfStep_all, qq_old_all, ql_old_all, work_all, p_new, e_new, q_new, bvc, pbvc)
+    for(Int_t j = 0; j < rep; j++) {
++      Index_t offset = j * numElemReg;
++      Real_t *e_old = e_old_all + offset;
++      Real_t *delvc = delvc_all + offset;
++      Real_t *p_old = p_old_all + offset;
++      Real_t *q_old = q_old_all + offset;
++      Real_t *compression = compression_all + offset;
++      Real_t *compHalfStep = compHalfStep_all + offset;
++      Real_t *qq_old = qq_old_all + offset;
++      Real_t *ql_old = ql_old_all + offset;
++      Real_t *work = work_all + offset;
++
+       {
+          for (Index_t i=0; i<numElemReg; ++i) {
+             Index_t ielem = regElemList[i];
+@@ -1745,15 +1757,15 @@
+    Release(&q_new) ;
+    Release(&e_new) ;
+    Release(&p_new) ;
+-   Release(&work) ;
+-   Release(&ql_old) ;
+-   Release(&qq_old) ;
+-   Release(&compHalfStep) ;
+-   Release(&compression) ;
+-   Release(&q_old) ;
+-   Release(&p_old) ;
+-   Release(&delvc) ;
+-   Release(&e_old) ;
++   Release(&work_all) ;
++   Release(&ql_old_all) ;
++   Release(&qq_old_all) ;
++   Release(&compHalfStep_all) ;
++   Release(&compression_all) ;
++   Release(&q_old_all) ;
++   Release(&p_old_all) ;
++   Release(&delvc_all) ;
++   Release(&e_old_all) ;
+ }
+ 
+ static inline
