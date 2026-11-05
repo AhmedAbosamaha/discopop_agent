@@ -1,0 +1,315 @@
+
+============================================================
+  DiscoPoP Agentic Controller
+============================================================
+  Source         : /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e11_classes_c/benchmarks/npbc_c1/cg/discopop_capability/claude-sonnet-4-5-20250929/rep1/work/cg.c
+  DiscoPoP dir   : .discopop
+  Model          : claude-sonnet-4-5-20250929
+  Budget         : 0 LLM retries/region (+2 free build fixes)
+  λ penalty      : 1.0
+  Min workload   : 0.0
+  Restruct. depth: 0 (Tier-2 allowed at depth 0–0)
+  Quality gate   : Tier-1 = all but speed, no escalation; Tier-2 = full
+  TSan           : barrier-aware (archer: /usr/lib/llvm-20/lib/libarcher.so)
+  Speedup gate   : OFF (--no-require-speedup)
+  Dry run        : False
+  LLM mode       : claude-sonnet-4-5-20250929
+  Edit mode      : direct
+  Re-profiling   : full (instrument + run + explore) after every kept rewrite
+  Explorer       : one attempt may take 676 s, then the draw is repeated (random stall, L5)
+  Pragmas        : DiscoPoP writes them in Phase B
+============================================================
+
+  Project        : /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e11_classes_c/benchmarks/npbc_c1/cg/discopop_capability/claude-sonnet-4-5-20250929/rep1/work  (5 unit(s): c_print_results.c, c_randdp.c, c_timers.c, wtime.c, cg.c)
+
+  [ok] Captured reference output on 2 inputs (66 bytes, 10.6 ms baseline) for the correctness/performance gates.
+
+  [ok] Numerical noise floor 0 — 6 build variants agreed exactly; output is compared byte-for-byte.
+
+  [warn] hotspot detection unavailable: the hotspot-instrumented program failed: 
+  Hotspots       : the hotspot-instrumented program failed:  — falling back to the static workload proxy for ranking
+
+│  [Tier-1] Repairing the generated pragma: p is declared inside the loop body, so cannot appear in a clause
+│  [Tier-1] Repairing the generated pragma: q, p are declared inside the loop body, so cannot appear in a clause
+│  [Tier-1] Repairing the generated pragma: d is declared inside the loop body, so cannot appear in a clause
+  Baseline       : DiscoPoP proposes 20 applicable pattern(s) unaided; 20 of them produce a usable pragma
+                   → the run beats DiscoPoP by ending with more than 20
+
+  Initial candidates
+Region ID    Type         Score  Tier  Depth      Workload  Name
+----------------------------------------------------------------------------
+  3:243      loop          23.3     1      0    62,518,400  lines 215–217
+  3:239      loop          21.9     1      0     3,920,000  lines 213–220
+  3:268      loop          20.1     1      0     1,120,000  lines 233–235
+  3:258      loop          19.3     1      0     2,800,000  lines 225–230
+  3:281      loop          19.1     1      0     2,500,736  lines 243–245
+  3:251      loop          18.1     1      0     1,120,000  lines 221–223
+  3:65       loop          17.3     1      0       156,296  lines 89–91
+  3:223      loop          17.0     1      0       134,496  lines 197–203
+  3:277      loop          17.0     1      0       134,400  lines 241–247
+  3:129      loop          15.4     1      0        42,000  lines 137–139
+  3:289      loop          14.4     1      0        67,200  lines 248–251
+  3:117      loop          14.3     1      0        63,000  lines 127–130
+  3:229      loop          13.9     1      0        44,800  lines 204–206
+  3:77       loop          12.8     1      0         7,000  lines 96–101
+  3:62       loop          12.5     1      0         5,600  lines 88–92
+  3:72       loop          11.5     1      0         2,802  lines 93–95
+  3:104      loop          11.5     1      0         2,802  lines 117–119
+  3:97       loop          11.5     1      0         2,800  lines 113–115
+  3:88       loop          10.8     1      0         4,200  lines 108–111
+  3:112      loop           8.0     1      0           255  lines 123–140
+  3:235      loop           3.1     2      0        12,000  lines 208–238
+  3:83       loop           0.1     2      0            12  lines 104–116
+  3:219      function      -1.0     2      0             0  conj_grad
+  2:52       function      -1.0     2      0             0  main
+  3:421      function      -1.0     2      0             0  icnvrt
+
+============================================================
+  PHASE A — restructure  (the source stays pragma-free)
+============================================================
+
+┌─ [depth=0] loop 3:243 (lines 215–217)  score=23.3
+│  [Phase-A] DiscoPoP already has a pattern here (reduction) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 3:239 (lines 213–220)  score=21.9
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 3:268 (lines 233–235)  score=20.1
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 3:258 (lines 225–230)  score=19.3
+│  [Phase-A] DiscoPoP already has a pattern here (reduction) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 3:281 (lines 243–245)  score=19.1
+│  [Phase-A] DiscoPoP already has a pattern here (reduction) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 3:251 (lines 221–223)  score=18.1
+│  [Phase-A] DiscoPoP already has a pattern here (reduction) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 3:65 (lines 89–91)  score=17.3
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 3:223 (lines 197–203)  score=17.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 3:277 (lines 241–247)  score=17.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 3:129 (lines 137–139)  score=15.4
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 3:289 (lines 248–251)  score=14.4
+│  [Phase-A] DiscoPoP already has a pattern here (reduction) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 3:117 (lines 127–130)  score=14.3
+│  [Phase-A] DiscoPoP already has a pattern here (reduction) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 3:229 (lines 204–206)  score=13.9
+│  [Phase-A] DiscoPoP already has a pattern here (reduction) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 3:77 (lines 96–101)  score=12.8
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 3:62 (lines 88–92)  score=12.5
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 3:72 (lines 93–95)  score=11.5
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 3:104 (lines 117–119)  score=11.5
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 3:97 (lines 113–115)  score=11.5
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 3:88 (lines 108–111)  score=10.8
+│  [Phase-A] DiscoPoP already has a pattern here (reduction) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 3:112 (lines 123–140)  score=8.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 3:235 (lines 208–238)  score=3.1
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 3:83 (lines 104–116)  score=0.1
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] function 3:219 (lines 179–254)  score=-1.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] function 2:52 (lines 163–178)  score=-1.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] function 3:421 (lines 444–445)  score=-1.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+
+============================================================
+  PHASE B — annotate  (20 candidate pragma(s))
+============================================================
+
+┌─ pattern #76  reduction @ lines 215–217  (W=62518400)
+│  #pragma omp parallel for
+│  [Phase-B] Original backed up → cg.c.original
+│  [Phase-B] Applied to cg.c
+└─ APPLIED
+
+┌─ pattern #77  do_all @ lines 213–220  (W=3920000)
+│  #pragma omp parallel for
+│  [Phase-B] Applied to cg.c
+└─ APPLIED
+
+┌─ pattern #79  reduction @ lines 225–230  (W=2800000)
+│  #pragma omp parallel for
+│  [Tier-1] Repairing the generated pragma: q, p are declared inside the loop body, so cannot appear in a clause
+│  [Phase-B] Applied to cg.c
+└─ APPLIED
+
+┌─ pattern #82  reduction @ lines 243–245  (W=2500736)
+│  #pragma omp parallel for
+│  [Phase-B] Applied to cg.c
+└─ APPLIED
+
+┌─ pattern #80  do_all @ lines 233–235  (W=1120000)
+│  #pragma omp parallel for
+│  [Tier-1] Repairing the generated pragma: p is declared inside the loop body, so cannot appear in a clause
+│  [Phase-B] Applied to cg.c
+└─ APPLIED
+
+┌─ pattern #78  reduction @ lines 221–223  (W=1120000)
+│  #pragma omp parallel for
+│  [Phase-B] Applied to cg.c
+└─ APPLIED
+
+┌─ pattern #57  do_all @ lines 89–91  (W=156296)
+│  #pragma omp parallel for
+│  [Phase-B] Applied to cg.c
+└─ APPLIED
+
+┌─ pattern #74  do_all @ lines 197–203  (W=134496)
+│  #pragma omp parallel for
+│  [Phase-B] Applied to cg.c
+└─ APPLIED
+
+┌─ pattern #83  do_all @ lines 241–247  (W=134400)
+│  #pragma omp parallel for
+│  [Phase-B] Applied to cg.c
+└─ APPLIED
+
+┌─ pattern #84  reduction @ lines 248–251  (W=67200)
+│  #pragma omp parallel for
+│  [Tier-1] Repairing the generated pragma: d is declared inside the loop body, so cannot appear in a clause
+│  gate failed at 'tsan': Race detected: WARNING: ThreadSanitizer: data race (pid=4187295)   Write of size 8 at 0x7fffffffe5b8 by thread T3:     #0 conj_grad.omp_outlined_debug
+└─ DROPPED
+
+┌─ pattern #65  reduction @ lines 127–130  (W=63000)
+│  #pragma omp parallel for
+│  [Phase-B] Applied to cg.c
+└─ APPLIED
+
+┌─ pattern #75  reduction @ lines 204–206  (W=44800)
+│  #pragma omp parallel for
+│  [Phase-B] Applied to cg.c
+└─ APPLIED
+
+┌─ pattern #66  do_all @ lines 137–139  (W=42000)
+│  #pragma omp parallel for
+│  [Phase-B] Applied to cg.c
+└─ APPLIED
+
+┌─ pattern #60  do_all @ lines 96–101  (W=7000)
+│  #pragma omp parallel for
+│  [Phase-B] Applied to cg.c
+└─ APPLIED
+
+┌─ pattern #58  do_all @ lines 88–92  (W=5600)
+│  #pragma omp parallel for
+│  [Phase-B] Applied to cg.c
+└─ APPLIED
+
+┌─ pattern #61  reduction @ lines 108–111  (W=4200)
+│  #pragma omp parallel for
+│  [Phase-B] Applied to cg.c
+└─ APPLIED
+
+┌─ pattern #59  do_all @ lines 93–95  (W=2802)
+│  #pragma omp parallel for
+│  [Phase-B] Applied to cg.c
+└─ APPLIED
+
+┌─ pattern #64  do_all @ lines 117–119  (W=2802)
+│  #pragma omp parallel for
+│  [Phase-B] Applied to cg.c
+└─ APPLIED
+
+┌─ pattern #62  do_all @ lines 113–115  (W=2800)
+│  #pragma omp parallel for
+│  [Phase-B] Applied to cg.c
+└─ APPLIED
+
+┌─ pattern #67  do_all @ lines 123–140  (W=255)
+│  #pragma omp parallel for
+│  gate failed at 'tsan': Race detected: WARNING: ThreadSanitizer: data race (pid=4189765)   Write of size 8 at 0x555556cb4f88 by thread T3:     #0 conj_grad.omp_outlined_debug
+└─ DROPPED
+
+============================================================
+  SETTLING — verify the finished source, drop what does not hold up
+============================================================
+  [ok] finished source verified — output matches the original
+
+
+============================================================
+  SUMMARY: 0 rewrite(s) kept  |  18 pragma(s) applied  |  5 skipped
+  DiscoPoP unaided: 20 usable pragma(s) in this profile's draw  →  this run: 18   [BELOW, informational]
+    ✓  loop 3:243  [Phase-B pragma]  depth=0
+    ✓  loop 3:239  [Phase-B pragma]  depth=0
+    ✓  loop 3:258  [Phase-B pragma]  depth=0
+    ✓  loop 3:281  [Phase-B pragma]  depth=0
+    ✓  loop 3:268  [Phase-B pragma]  depth=0
+    ✓  loop 3:251  [Phase-B pragma]  depth=0
+    ✓  loop 3:65  [Phase-B pragma]  depth=0
+    ✓  loop 3:223  [Phase-B pragma]  depth=0
+    ✓  loop 3:277  [Phase-B pragma]  depth=0
+    ✓  loop 3:117  [Phase-B pragma]  depth=0
+    ✓  loop 3:229  [Phase-B pragma]  depth=0
+    ✓  loop 3:129  [Phase-B pragma]  depth=0
+    ✓  loop 3:77  [Phase-B pragma]  depth=0
+    ✓  loop 3:62  [Phase-B pragma]  depth=0
+    ✓  loop 3:88  [Phase-B pragma]  depth=0
+    ✓  loop 3:72  [Phase-B pragma]  depth=0
+    ✓  loop 3:104  [Phase-B pragma]  depth=0
+    ✓  loop 3:97  [Phase-B pragma]  depth=0
+    ✗  3:235  [skipped]  depth=0
+    ✗  3:83  [skipped]  depth=0
+    ✗  3:219  [skipped]  depth=0
+    ✗  2:52  [skipped]  depth=0
+    ✗  3:421  [skipped]  depth=0
+
+  Results → .discopop/agent_patches/accepted.json
+============================================================
+

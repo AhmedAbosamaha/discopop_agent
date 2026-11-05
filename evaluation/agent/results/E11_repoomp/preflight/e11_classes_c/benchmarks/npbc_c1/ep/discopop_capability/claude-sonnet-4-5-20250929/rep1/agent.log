@@ -1,0 +1,146 @@
+
+============================================================
+  DiscoPoP Agentic Controller
+============================================================
+  Source         : /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e11_classes_c/benchmarks/npbc_c1/ep/discopop_capability/claude-sonnet-4-5-20250929/rep1/work/ep.c
+  DiscoPoP dir   : .discopop
+  Model          : claude-sonnet-4-5-20250929
+  Budget         : 0 LLM retries/region (+2 free build fixes)
+  λ penalty      : 1.0
+  Min workload   : 0.0
+  Restruct. depth: 0 (Tier-2 allowed at depth 0–0)
+  Quality gate   : Tier-1 = all but speed, no escalation; Tier-2 = full
+  TSan           : barrier-aware (archer: /usr/lib/llvm-20/lib/libarcher.so)
+  Speedup gate   : OFF (--no-require-speedup)
+  Dry run        : False
+  LLM mode       : claude-sonnet-4-5-20250929
+  Edit mode      : direct
+  Re-profiling   : full (instrument + run + explore) after every kept rewrite
+  Explorer       : one attempt may take 60 s, then the draw is repeated (random stall, L5)
+  Pragmas        : DiscoPoP writes them in Phase B
+============================================================
+
+  Project        : /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e11_classes_c/benchmarks/npbc_c1/ep/discopop_capability/claude-sonnet-4-5-20250929/rep1/work  (5 unit(s): c_print_results.c, c_randdp.c, c_timers.c, wtime.c, ep.c)
+
+  [ok] Captured reference output on 2 inputs (33 bytes, 575.2 ms baseline) for the correctness/performance gates.
+
+  [ok] Numerical noise floor 0 — output holds no non-integer number; the floor is 0 by construction, so the remaining build variants were skipped; output is compared byte-for-byte.
+
+  [warn] hotspot detection unavailable: the hotspot-instrumented program failed: 
+  Hotspots       : the hotspot-instrumented program failed:  — falling back to the static workload proxy for ranking
+
+  Baseline       : DiscoPoP proposes 5 applicable pattern(s) unaided; 5 of them produce a usable pragma
+                   → the run beats DiscoPoP by ending with more than 5
+
+  Initial candidates
+Region ID    Type         Score  Tier  Depth      Workload  Name
+----------------------------------------------------------------------------
+  3:68       loop          17.0     1      0       131,072  lines 40–40
+  3:114      loop           7.3     2      0   218,103,808  lines 103–116
+  3:56       loop           4.8     1      0            26  lines 28–30
+  3:88       loop           4.4     1      0            20  lines 65–67
+  3:151      loop           4.0     1      0            20  lines 125–127
+  3:94       loop           3.5     1      0            10  lines 77–77
+  3:99       loop           3.0     2      0         9,984  lines 79–118
+  3:103      loop           3.0     2      0         9,228  lines 86–92
+  3:80       loop           0.5     2      0            34  lines 55–57
+  2:52       function      -1.0     2      0             0  main
+
+============================================================
+  PHASE A — restructure  (the source stays pragma-free)
+============================================================
+
+┌─ [depth=0] loop 3:68 (lines 40–40)  score=17.0
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 3:114 (lines 103–116)  score=7.3
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 3:56 (lines 28–30)  score=4.8
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 3:88 (lines 65–67)  score=4.4
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 3:151 (lines 125–127)  score=4.0
+│  [Phase-A] DiscoPoP already has a pattern here (reduction) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 3:94 (lines 77–77)  score=3.5
+│  [Phase-A] DiscoPoP already has a pattern here (do_all) — deferred to Phase B
+└─ DEFERRED
+
+┌─ [depth=0] loop 3:99 (lines 79–118)  score=3.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 3:103 (lines 86–92)  score=3.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] loop 3:80 (lines 55–57)  score=0.5
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+┌─ [depth=0] function 2:52 (lines 17–170)  score=-1.0
+│  [Tier-1] No applicable pattern → Tier-2 (LLM)
+└─ SKIPPED (budget exhausted)
+
+
+============================================================
+  PHASE B — annotate  (5 candidate pragma(s))
+============================================================
+
+┌─ pattern #25  do_all @ lines 40–40  (W=131072)
+│  #pragma omp parallel for
+│  [Phase-B] Original backed up → ep.c.original
+│  [Phase-B] Applied to ep.c
+└─ APPLIED
+
+┌─ pattern #24  do_all @ lines 28–30  (W=26)
+│  #pragma omp parallel for
+│  [Phase-B] Applied to ep.c
+└─ APPLIED
+
+┌─ pattern #26  do_all @ lines 65–67  (W=20)
+│  #pragma omp parallel for
+│  [Phase-B] Applied to ep.c
+└─ APPLIED
+
+┌─ pattern #29  reduction @ lines 125–127  (W=20)
+│  #pragma omp parallel for
+│  [Phase-B] Applied to ep.c
+└─ APPLIED
+
+┌─ pattern #27  do_all @ lines 77–77  (W=10)
+│  #pragma omp parallel for
+│  [Phase-B] Applied to ep.c
+└─ APPLIED
+
+============================================================
+  SETTLING — verify the finished source, drop what does not hold up
+============================================================
+  [ok] finished source verified — output matches the original
+
+
+============================================================
+  SUMMARY: 0 rewrite(s) kept  |  5 pragma(s) applied  |  5 skipped
+  DiscoPoP unaided: 5 usable pragma(s) in this profile's draw  →  this run: 5   [MATCHED, informational]
+    ✓  loop 3:68  [Phase-B pragma]  depth=0
+    ✓  loop 3:56  [Phase-B pragma]  depth=0
+    ✓  loop 3:88  [Phase-B pragma]  depth=0
+    ✓  loop 3:151  [Phase-B pragma]  depth=0
+    ✓  loop 3:94  [Phase-B pragma]  depth=0
+    ✗  3:114  [skipped]  depth=0
+    ✗  3:99  [skipped]  depth=0
+    ✗  3:103  [skipped]  depth=0
+    ✗  3:80  [skipped]  depth=0
+    ✗  2:52  [skipped]  depth=0
+
+  Results → .discopop/agent_patches/accepted.json
+============================================================
+

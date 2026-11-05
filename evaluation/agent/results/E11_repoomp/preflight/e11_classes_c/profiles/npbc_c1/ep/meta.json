@@ -1,0 +1,54 @@
+{
+  "suite": "npbc_c1",
+  "kernel": "ep",
+  "source": "benchmarks/RepoOMP/benchmark/NPB3.0-omp-C/EP/ep_#_omp.c",
+  "category": "nas-parallel-benchmarks",
+  "language": "c",
+  "exclude_functions": [],
+  "agent_dataset": "SMALL",
+  "generator_version": 1,
+  "sizes": {
+    "MINI": {},
+    "SMALL": {},
+    "STANDARD": {},
+    "LARGE": {},
+    "EXTRALARGE": {}
+  },
+  "note": "NPB EP as RepoOMP ships it: Gaussian pairs by the linear congruential generator",
+  "inputs_sha256": "8e7c7ccd284a9ba5e5e643f40e403938d007ac5d891e147de144a5e92de31861",
+  "file": "ep.c",
+  "layout": "project",
+  "project": {
+    "units": [
+      "c_print_results.c",
+      "c_randdp.c",
+      "c_timers.c",
+      "wtime.c",
+      "ep.c"
+    ],
+    "include_dirs": [
+      "."
+    ],
+    "cflags": [
+      "-fopenmp",
+      "-std=gnu89",
+      "-w"
+    ],
+    "editable": [
+      "ep.c"
+    ]
+  },
+  "harness": "npbc_c1/npbc_harness.h",
+  "harness_sha256": "41d9ef05a75d964c023c962edc6961fa6bb64c95eabca1dec0f1ab0675f1138b",
+  "removed": [
+    "nothing in the program file: RepoOMP's input byte for byte (it keeps RepoOMP's `#pragma omp threadprivate(x)`)",
+    "NPB's c_timers.c and c_print_results.c replaced by two lines that include the harness (outside the package)",
+    "NPB's npb-C.h, c_randdp.c, wtime.c and wtime.h: comments removed; every file in one directory",
+    "npbparams.h: NPB's setparams output for classes S, W, A, B behind the dataset macro, COMPILETIME fixed, comments removed"
+  ],
+  "timed_region": [
+    "\\btimer_start\\s*\\(\\s*1\\s*\\)",
+    "\\btimer_stop\\s*\\(\\s*1\\s*\\)"
+  ],
+  "output_sha256": "019c95a6988ca2a9a80baaca4fab64e3d149ccae21dcdbebad6ff7b80b864d04"
+}
