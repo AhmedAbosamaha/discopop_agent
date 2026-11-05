@@ -173,6 +173,13 @@ def stress_schedules(
                     f"thread count ({t_max}) printed different output. That is a "
                     f"data race, independent of how small the difference is.\n"
                     f"{m.diagnostic}"
+                    if exact_repeat or floor <= 0.0 else
+                    # Fix 113: without --exact-repeat the repeats are compared within the floor, so a
+                    # difference that stayed under it was let through — the message may not claim otherwise.
+                    f"the program does not repeat itself: two runs at the SAME "
+                    f"thread count ({t_max}) printed output that differs by more "
+                    f"than the rounding the check allows. That is a data race.\n"
+                    f"{m.diagnostic}"
                 ),
             )
     assert anchor is not None
