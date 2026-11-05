@@ -1,0 +1,208 @@
+## File to edit: /workspace/cg.c
+## This file is `cg.c` of a multi-file program.  The directory it sits in is a copy of the whole program — read its headers and the other units (c_print_results.c, c_randdp.c, c_timers.c, wtime.c) for context.  Only your changes to `cg.c` are used; an edit to any other file is discarded.
+## Function containing the target region: conj_grad  (lines 179–254)
+## Target region: loop 3:235 at lines 208–238
+
+### Evidence digest (details in the sections below)
+  - RAW on array elements within these lines: p, q, r, z.
+  - Values that cross the region's edge only — written outside and read here: a, colidx.
+  - RAW on SCALARS: alpha, beta, cgitmax, conj_grad.callcount, d, rho, rho0, sum.
+  - `p` is written as [j] and read as [colidx[k]], [j].
+  - Loop lines 208–238 (index: cgit): 16 activation(s) × ~25 iterations.
+  -   Loop lines 213–220 (index: j): 400 activation(s) × ~1400 iterations.
+  -     Loop lines 215–217 (index: k): 560000 activation(s) × ~55 iterations.
+  -   Loop lines 221–223 (index: j): 400 activation(s) × ~1400 iterations.
+  -   Loop lines 225–230 (index: j): 400 activation(s) × ~1400 iterations.
+  -   Loop lines 233–235 (index: j): 400 activation(s) × ~1400 iterations.
+  - DiscoPoP ALREADY reports parallel loop(s) inside this region (line 213, line 215, line 221, line 225, line 233) — those need a pragma, not a rewrite.
+
+### The function as it currently stands in the file (excerpt — read the file itself before editing; line numbers here are the file's own):
+```cpp
+static void conj_grad (
+    int colidx[],	
+    int rowstr[],	
+    double x[],		
+    double z[],		
+    double a[],		
+    double p[],		
+    double q[],		
+    double r[],		
+    
+    double *rnorm )
+{
+    static int callcount = 0;
+    double d, sum, rho, rho0, alpha, beta;
+    int i, j, k;
+    int cgit, cgitmax = 25;
+    rho = 0.0;
+{
+    for (j = 1; j <= naa+1; j++) {
+	q[j] = 0.0;
+	z[j] = 0.0;
+	r[j] = x[j];
+	p[j] = r[j];
+	
+    }
+    for (j = 1; j <= lastcol-firstcol+1; j++) {
+	rho = rho + r[j]*r[j];
+    }
+}
+    for (cgit = 1; cgit <= cgitmax; cgit++) {
+      rho0 = rho;
+      d = 0.0;
+      rho = 0.0;
+{
+	for (j = 1; j <= lastrow-firstrow+1; j++) {
+            sum = 0.0;
+	    for (k = rowstr[j]; k < rowstr[j+1]; k++) {
+		sum = sum + a[k]*p[colidx[k]];
+	    }
+            
+            q[j] = sum;
+	}
+	for (j = 1; j <= lastcol-firstcol+1; j++) {
+            d = d + p[j]*q[j];
+	}	
+	alpha = rho0 / d;
+	for (j = 1; j <= lastcol-firstcol+1; j++) {
+            z[j] = z[j] + alpha*p[j];
+            r[j] = r[j] - alpha*q[j];
+
+            rho = rho + r[j]*r[j];
+	}
+	
+	beta = rho / rho0;
+	for (j = 1; j <= lastcol-firstcol+1; j++) {
+            p[j] = r[j] + beta*p[j];
+	}
+    callcount++;
+    } 
+    } 
+    sum = 0.0;
+{
+    for (j = 1; j <= lastrow-firstrow+1; j++) {
+	d = 0.0;
+	for (k = rowstr[j]; k <= rowstr[j+1]-1; k++) {
+            d = d + a[k]*z[colidx[k]];
+	}
+	r[j] = d;
+    }
+    for (j = 1; j <= lastcol-firstcol+1; j++) {
+	d = x[j] - r[j];
+	sum = sum + d*d;
+    }
+} 
+    (*rnorm) = sqrt(sum);
+}
+```
+
+### Array accesses in the region (index expressions, read from the source)
+  rowstr:  written as —  |  read as [j], [j+1]   (read-only here: never a source of a dependence)
+  a:  written as —  |  read as [k]   (read-only here: never a source of a dependence)
+  p:  written as [j]  |  read as [colidx[k]], [j]
+  colidx:  written as —  |  read as [k]   (read-only here: never a source of a dependence)
+  q:  written as [j]  |  read as [j]
+  z:  written as [j]  |  read as [j]
+  r:  written as [j]  |  read as [j]
+  A loop whose index appears identically in every subscript that touches an array visits a different element on each of its iterations, so THAT loop does not carry a dependence through the array.  A dependence is carried by the loop whose index differs between a write and a read (`a[i]` written, `a[i-1]` read).
+
+### Runtime data dependences in the target region (observed)
+(grouped per variable, each tagged [array element] or [scalar]; each pair is the earlier access → the later one)
+  RAW — read-after-write (a value written by one access and read by a later one):
+    `z` [array element]: line 226 writes → line 226 reads  (+1 read outside the region)  (+1 written outside the region and read here)
+        line 226: `z[j] = z[j] + alpha*p[j];`
+    `r` [array element]: line 227 writes → line 227 reads; line 227 writes → line 229 reads; line 227 writes → line 234 reads  (+1 written outside the region and read here)
+        line 227: `r[j] = r[j] - alpha*q[j];`
+        line 229: `rho = rho + r[j]*r[j];`
+        line 234: `p[j] = r[j] + beta*p[j];`
+    `p` [array element]: line 234 writes → line 216 reads  (+1 written outside the region and read here)
+        line 216: `sum = sum + a[k]*p[colidx[k]];`
+    `q` [array element]: line 219 writes → line 222 reads; line 219 writes → line 227 reads
+        line 219: `q[j] = sum;`
+        line 222: `d = d + p[j]*q[j];`
+    `conj_grad.callcount` [scalar]: line 236 writes → line 236 reads
+        line 236: `callcount++;`
+    `alpha` [scalar]: line 224 writes → line 226 reads; line 224 writes → line 227 reads
+        line 224: `alpha = rho0 / d;`
+    `d` [scalar]: line 210 writes → line 222 reads; line 222 writes → line 222 reads; line 210 writes → line 224 reads; line 222 writes → line 224 reads
+        line 210: `d = 0.0;`
+    `sum` [scalar]: line 214 writes → line 216 reads; line 216 writes → line 216 reads; line 214 writes → line 219 reads; line 216 writes → line 219 reads
+        line 214: `sum = 0.0;`
+    `rho` [scalar]: line 211 writes → line 209 reads; line 229 writes → line 209 reads; line 211 writes → line 229 reads; line 229 writes → line 229 reads; line 211 writes → line 232 reads; line 229 writes → line 232 reads  (+2 written outside the region and read here)
+        line 209: `rho0 = rho;`
+        line 211: `rho = 0.0;`
+        line 232: `beta = rho / rho0;`
+    `beta` [scalar]: line 232 writes → line 234 reads
+    `rho0` [scalar]: line 209 writes → line 224 reads; line 209 writes → line 232 reads
+
+  WAR — write-after-read:
+    `q` [array element]: line 227 reads → line 219 overwrites
+    `alpha` [scalar]: line 227 reads → line 224 overwrites
+    `sum` [scalar]: line 219 reads → line 214 overwrites; line 216 reads → line 216 overwrites
+    `rho0` [scalar]: line 232 reads → line 209 overwrites
+    `d` [scalar]: line 224 reads → line 210 overwrites; line 222 reads → line 222 overwrites
+    `rho` [scalar]: line 209 reads → line 211 overwrites; line 229 reads → line 229 overwrites
+    `beta` [scalar]: line 234 reads → line 232 overwrites
+
+  WAW — write-after-write: none within these lines
+
+  (Not listed: dependences on the induction variable(s) cgit, j, k — they are never what blocks a loop; see 'Loop structure' for which of them a pragma has to privatise.)
+
+### Loop structure (nesting, induction variables, observed iterations)
+  - loop at lines 208–238  induction variable(s): cgit  |  16 activation(s) × ~25 iterations = 400 total (max 25)  <-- too fine-grained on its own (~25 per activation)
+    - loop at lines 213–220  induction variable(s): j  |  400 activation(s) × ~1400 iterations = 560,000 total (max 1400)  <-- enough work per activation to be worth it
+      - loop at lines 215–217  induction variable(s): k  |  560000 activation(s) × ~55 iterations = 31,259,200 total (max 127)  <-- too fine-grained on its own (~55 per activation)
+    - loop at lines 221–223  induction variable(s): j  |  400 activation(s) × ~1400 iterations = 560,000 total (max 1400)  <-- enough work per activation to be worth it
+    - loop at lines 225–230  induction variable(s): j  |  400 activation(s) × ~1400 iterations = 560,000 total (max 1400)  <-- enough work per activation to be worth it
+    - loop at lines 233–235  induction variable(s): j  |  400 activation(s) × ~1400 iterations = 560,000 total (max 1400)  <-- enough work per activation to be worth it
+  (Marked against ~1000 iterations per activation — below that, thread startup costs more than the loop saves.)
+  NOTE: the indices j, k are each declared outside the `for` that counts with it.  OpenMP privatises only the index of the loop the pragma is ON, so a pragma has to name in `private(...)` the index of every loop nested inside it — otherwise all threads share one counter, which is a race.
+
+### Why DiscoPoP could not parallelize (Do-All blockers)
+DiscoPoP's Do-All check stopped at these.  Each names the variable and the loop it blocks; the line pairs are in the dependence list, when it is shown.
+  - RAW on `rho`  loop-carried (loop at line 208)  [static: DiscoPoP did not mark it as observed. For a scalar that does not mean it did not occur on the profiling input — the dependence list, when it is shown, has what was observed. A scalar every iteration writes before reading is removed by declaring it inside the loop body]
+  - RAW on `rho`  loop-carried (loop at line 208)  [static: DiscoPoP did not mark it as observed. For a scalar that does not mean it did not occur on the profiling input — the dependence list, when it is shown, has what was observed. A scalar every iteration writes before reading is removed by declaring it inside the loop body]
+  - RAW on `rho`  loop-carried (loop at line 208)  [static: DiscoPoP did not mark it as observed. For a scalar that does not mean it did not occur on the profiling input — the dependence list, when it is shown, has what was observed. A scalar every iteration writes before reading is removed by declaring it inside the loop body]
+  - RAW on `rho`  loop-carried (loop at line 208)  [static: DiscoPoP did not mark it as observed. For a scalar that does not mean it did not occur on the profiling input — the dependence list, when it is shown, has what was observed. A scalar every iteration writes before reading is removed by declaring it inside the loop body]
+  - RAW on `rho`  loop-carried (loop at line 208)  [static: DiscoPoP did not mark it as observed. For a scalar that does not mean it did not occur on the profiling input — the dependence list, when it is shown, has what was observed. A scalar every iteration writes before reading is removed by declaring it inside the loop body]
+  - RAW on `rho`  loop-carried (loop at line 208)  [static: DiscoPoP did not mark it as observed. For a scalar that does not mean it did not occur on the profiling input — the dependence list, when it is shown, has what was observed. A scalar every iteration writes before reading is removed by declaring it inside the loop body]
+  - RAW on `rho`  loop-carried (loop at line 208)  [static: DiscoPoP did not mark it as observed. For a scalar that does not mean it did not occur on the profiling input — the dependence list, when it is shown, has what was observed. A scalar every iteration writes before reading is removed by declaring it inside the loop body]
+  - RAW on `rho`  loop-carried (loop at line 208)  [static: DiscoPoP did not mark it as observed. For a scalar that does not mean it did not occur on the profiling input — the dependence list, when it is shown, has what was observed. A scalar every iteration writes before reading is removed by declaring it inside the loop body]
+  - RAW on `rho`  loop-carried (loop at line 208)  [static: DiscoPoP did not mark it as observed. For a scalar that does not mean it did not occur on the profiling input — the dependence list, when it is shown, has what was observed. A scalar every iteration writes before reading is removed by declaring it inside the loop body]
+  - RAW on `rho`  loop-carried (loop at line 208)  [static: DiscoPoP did not mark it as observed. For a scalar that does not mean it did not occur on the profiling input — the dependence list, when it is shown, has what was observed. A scalar every iteration writes before reading is removed by declaring it inside the loop body]
+  - RAW on `rho`  loop-carried (loop at line 208)  [static: DiscoPoP did not mark it as observed. For a scalar that does not mean it did not occur on the profiling input — the dependence list, when it is shown, has what was observed. A scalar every iteration writes before reading is removed by declaring it inside the loop body]
+  - RAW on `rho`  loop-carried (loop at line 208)  [static: DiscoPoP did not mark it as observed. For a scalar that does not mean it did not occur on the profiling input — the dependence list, when it is shown, has what was observed. A scalar every iteration writes before reading is removed by declaring it inside the loop body]
+  - RAW on `rho`  loop-carried (loop at line 208)  [static: DiscoPoP did not mark it as observed. For a scalar that does not mean it did not occur on the profiling input — the dependence list, when it is shown, has what was observed. A scalar every iteration writes before reading is removed by declaring it inside the loop body]
+  - RAW on `rho`  loop-carried (loop at line 208)  [static: DiscoPoP did not mark it as observed. For a scalar that does not mean it did not occur on the profiling input — the dependence list, when it is shown, has what was observed. A scalar every iteration writes before reading is removed by declaring it inside the loop body]
+  - RAW on `rho`  loop-carried (loop at line 208)  [static: DiscoPoP did not mark it as observed. For a scalar that does not mean it did not occur on the profiling input — the dependence list, when it is shown, has what was observed. A scalar every iteration writes before reading is removed by declaring it inside the loop body]
+  - RAW on `rho`  loop-carried (loop at line 208)  [static: DiscoPoP did not mark it as observed. For a scalar that does not mean it did not occur on the profiling input — the dependence list, when it is shown, has what was observed. A scalar every iteration writes before reading is removed by declaring it inside the loop body]
+  - RAW on `rho`  loop-carried (loop at line 208)  [static: DiscoPoP did not mark it as observed. For a scalar that does not mean it did not occur on the profiling input — the dependence list, when it is shown, has what was observed. A scalar every iteration writes before reading is removed by declaring it inside the loop body]
+  - RAW on `rho`  loop-carried (loop at line 208)  [static: DiscoPoP did not mark it as observed. For a scalar that does not mean it did not occur on the profiling input — the dependence list, when it is shown, has what was observed. A scalar every iteration writes before reading is removed by declaring it inside the loop body]
+  - RAW on `rho`  loop-carried (loop at line 208)  [static: DiscoPoP did not mark it as observed. For a scalar that does not mean it did not occur on the profiling input — the dependence list, when it is shown, has what was observed. A scalar every iteration writes before reading is removed by declaring it inside the loop body]
+  - RAW on `rho`  loop-carried (loop at line 208)  [static: DiscoPoP did not mark it as observed. For a scalar that does not mean it did not occur on the profiling input — the dependence list, when it is shown, has what was observed. A scalar every iteration writes before reading is removed by declaring it inside the loop body]
+
+### Already parallel according to DiscoPoP (inside this region)
+  - loop at line 213: Do-All  with private(sum, k)
+  - loop at line 215: Reduction  with reduction(+:sum) firstprivate(j)
+  - loop at line 221: Reduction  with reduction(+:d)
+  - loop at line 225: Reduction  with reduction(+:rho) firstprivate(alpha)
+  - loop at line 233: Do-All  with firstprivate(beta)
+  These loops need no restructuring and DiscoPoP annotates them itself, after you are done.  Do NOT put a pragma on them: write pragmas only for loops you restructure or create.  What is asked of you is whatever stops a loop OUTSIDE them from running in parallel; if nothing can be done there, say so — leaving these loops to DiscoPoP is a valid answer.
+
+### Why this region is here
+DiscoPoP found no applicable parallelism pattern for this region
+
+### What the observed flow means for a rewrite (from DiscoPoP's records)
+  - Line 216 (`sum = sum + a[k]*p[colidx[k]];`) reads an element of `p` that line 234 (`p[j] = r[j] + beta*p[j];`) writes; DiscoPoP names the loop at line 208 as carrying this dependence.  The value must flow from line 234 to line 216: if you split that loop, the loop holding line 234 has to run completely before the loop holding line 216; reading `p`'s values from before the loop would change the result.
+
+### Task
+Edit `/workspace/cg.c`: the loop (lines 208–238) inside `conj_grad` is to be restructured so that its iterations are independent, and ANNOTATED BY YOU: every loop you make parallel carries its own `#pragma omp` with explicit data-sharing clauses.  The result has to be code that compiles, is race-free under ThreadSanitizer, gives the same result at every thread count and schedule, reproduces the original program's results, and runs at least 1.1× faster than the same build pinned to one thread and no slower than the program as it stood before your rewrite.
+
+Worth settling before you write:
+  - Which dependence is actually blocking this, and is it a value moving
+    between iterations or just a location being reused?
+  - Does the loop you are making parallel have enough work per activation
+    to be worth it?  The loop structure above says which do.
+  - Re-derive any bound the old execution order made safe.
+
+>>> Read the file, give the short plan, then APPLY the rewrite with the Edit tool. Do not print a diff or the rewritten code — the file's content is what is used. Keep the function's name and signature.

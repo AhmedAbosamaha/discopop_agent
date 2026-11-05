@@ -1176,6 +1176,29 @@ def check_exact_repeat(work: Path) -> Result:
                   "sub-floor drift at one thread count: passes tolerant, race with --exact-repeat")
 
 
+def check_project_default_source(work: Path) -> Result:
+    """Fix 115 (E11): with no --source-file, a project run starts on the first file it may change, not on the
+    first unit — NPB-C's packages list NPB's shared units first, and every DiscoPoP-alone run stopped there."""
+    import sys as _sys
+    from ..args import parse_args
+    d = work / "project_default_source"
+    (d / ".discopop").mkdir(parents=True, exist_ok=True)
+    (d / "a.c").write_text("int f(void){return 1;}\n")
+    (d / "b.c").write_text("int f(void);\nint main(void){return f()-1;}\n")
+    saved = _sys.argv
+    try:
+        _sys.argv = ["x", "--project-dir", str(d), "--project-units", "a.c,b.c", "--project-editable", "b.c",
+                     "--discopop-dir", str(d / ".discopop")]
+        with_editable = Path(parse_args().source_file).name
+        _sys.argv = ["x", "--project-dir", str(d), "--project-units", "a.c,b.c", "--discopop-dir", str(d / ".discopop")]
+        without = Path(parse_args().source_file).name
+    finally:
+        _sys.argv = saved
+    if (with_editable, without) != ("b.c", "a.c"):
+        return Result("project-default-source", "fail", f"editable b.c -> {with_editable}; none -> {without}")
+    return Result("project-default-source", "pass", "starts on the editable file; without one, on the first unit")
+
+
 def check_anchor_correctness(work: Path) -> Result:
     """The schedule matrix must be checked against the REFERENCE, not only itself.
 
@@ -5855,6 +5878,7 @@ _CHECKS: List[Tuple[str, Callable[[Path], Result]]] = [
     ("covered-skip", check_covered_skip),
     ("budget-policy", check_budget_policy),
     ("project-mode", check_project_mode),
+    ("project-default-source", check_project_default_source),
     ("pattern-choice", check_pattern_choice),
     ("prompt-truth", check_prompt_truth),
     ("unnamed-memory", check_unnamed_memory),

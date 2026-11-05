@@ -684,7 +684,9 @@ def parse_args() -> AgentArguments:
         if a.source_file and not project.contains(a.source_file):
             p.error(f"--source-file {a.source_file} is not inside --project-dir")
         if not a.source_file:
-            a.source_file = str(project.root / project.units[0])
+            # The first file the agent may change (Fix 115, E11): the first unit is not always one — NPB-C's
+            # packages list NPB's shared units first, and starting there stopped every run before its first step.
+            a.source_file = str(project.root / (project.editable[0] if project.editable else project.units[0]))
     elif not a.source_file:
         p.error("--source-file is required (or give --project-dir for a multi-file program)")
     elif a.build_cmd or a.project_units or a.project_include is not None or a.project_editable:
