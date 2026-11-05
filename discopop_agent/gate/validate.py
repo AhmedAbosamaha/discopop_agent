@@ -81,6 +81,7 @@ def validate(
     mode: str = "full",
     noise_floor: float = 0.0,
     stress: bool = True,
+    exact_repeat: bool = False,
     stress_threads: Optional[Tuple[int, ...]] = None,
     discopop_dir: Optional[str] = None,
     dep_region: Optional[Tuple[int, int, int]] = None,
@@ -273,6 +274,7 @@ def validate(
                 stress_bin, work_dir, binary_args, floor=noise_floor,
                 threads=stress_threads or DEFAULT_THREADS,
                 schedules=DEFAULT_SCHEDULES, repeats=DEFAULT_REPEATS,
+                exact_repeat=exact_repeat,
             )
             evidence["schedules"] = st.covered
             evidence["reordered"] = st.reordered
@@ -545,6 +547,7 @@ def _validate_cached(
             profiled_source=profiled_source,
             timing_flags=list(getattr(args, "timing_cflags", ()) or ()) or None,
             stress=getattr(args, "schedule_stress", True),
+            exact_repeat=getattr(args, "exact_repeat", False),
             stress_threads=tuple(getattr(args, "stress_threads", None) or ())
             or None,
             # D40.1: v3's gate judges "not slower" as D40 does, paired against the program

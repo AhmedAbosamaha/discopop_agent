@@ -127,12 +127,20 @@ def stress_schedules(
     threads: Sequence[int] = DEFAULT_THREADS,
     schedules: Sequence[str] = DEFAULT_SCHEDULES,
     repeats: int = DEFAULT_REPEATS,
+    exact_repeat: bool = False,
 ) -> ScheduleStress:
     """Run `binary` across a small matrix of OpenMP schedules and thread counts.
 
     The binary must be the `-fopenmp` build; on a build without it every
     configuration is the same single-threaded program and the stage proves
     nothing (it will simply pass).
+
+    `exact_repeat` (`--exact-repeat`, E11): the runs at ONE thread count must print identical
+    output; `floor` then applies only across thread counts and schedules. Without it the
+    repeats are compared within `floor` too, so a program whose result depends on the order
+    in which threads finish (an atomic or critical update of a floating-point sum) passes
+    whenever the difference stays under the floor (E6: four such programs, every value within
+    1e-11, refused only by the harness's repeatability check).
     """
     thread_list = [t for t in threads if t >= 1] or [1]
     t_max = max(thread_list)
@@ -155,7 +163,7 @@ def stress_schedules(
         if anchor is None:
             anchor = out
             continue
-        m = compare_outputs(anchor, out, floor)
+        m = compare_outputs(anchor, out, 0.0 if exact_repeat else floor)
         if not m.equal:
             return ScheduleStress(
                 ok=False, verdict="race", hard=True, covered=covered,

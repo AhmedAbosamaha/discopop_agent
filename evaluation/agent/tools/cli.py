@@ -1387,7 +1387,10 @@ def run_trial(bench: str, bench_dir: Path, profile_dir: Path, trial: Path, arm: 
     if _meta.get("protected"):            # packaging v4 (D39): kept with the trial for re-scoring
         rec["protected"] = list(_meta["protected"])
         rec["harness_sha256"] = _meta.get("harness_sha256")
-    rec["scaffold"] = scaffold.check(original_text, final_text, rec.get("protected") or ())
+    if _meta.get("timed_region"):         # E11: a program that keeps its own timer (NPB's timer 1)
+        rec["timed_region"] = list(_meta["timed_region"])
+    rec["scaffold"] = scaffold.check(original_text, final_text, rec.get("protected") or (),
+                                     rec.get("timed_region"))
     _editable = list((proj or {}).get("editable") or [])
     if _editable:                         # packaging v5: kept with the trial for re-scoring
         rec["editable"] = _editable
@@ -2051,7 +2054,7 @@ def cmd_rescore(a: argparse.Namespace) -> int:
                 print(f"  {p.parent}: no original/final source kept — skipped")
                 continue
             orig_text, final_text = orig.read_text(), final.read_text()
-        t["scaffold"] = scaffold.check(orig_text, final_text, t.get("protected") or ())
+        t["scaffold"] = scaffold.check(orig_text, final_text, t.get("protected") or (), t.get("timed_region"))
         t["scaffold"], hot_text = _editable_judgement(p.parent, t.get("editable") or [], t["scaffold"], final_text)
         if t.get("hot_loop"):
             # Only a record that carries its hot loop (made since the coverage check exists) is
@@ -2180,6 +2183,15 @@ def cmd_verify_source(a: argparse.Namespace) -> int:
     }
     # the same coverage verdict as an agent trial's (E2-B1; null for a package without a hot loop)
     _editable = list((proj or {}).get("editable") or [])
+    _vmeta = json.loads((bench_dir / "meta.json").read_text())
+    if _vmeta.get("timed_region"):
+        # E11: where the program keeps its own timer in the benchmark's file, another system's program faces the
+        # same check of it as a trial does (a moved `timer_stop(1)` is a shorter measurement, not a speedup), and
+        # no file but the benchmark's may differ. Other baselines are left as before: an expert version may
+        # replace several files (LLNL's LULESH).
+        rec["timed_region"] = list(_vmeta["timed_region"])
+        rec["scaffold"] = _editable_judgement(trial, _editable, scaffold.check(orig_text, text, (), rec["timed_region"]),
+                                              text)[0]
     rec.update(hot_loop_coverage.trial_fields(
         json.loads((bench_dir / "meta.json").read_text()).get("hot_loop"),
         _editable_judgement(trial, _editable, {}, text)[1] if _editable else text))

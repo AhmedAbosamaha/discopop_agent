@@ -191,6 +191,12 @@ class Recipe:
     # Compile flags the packaged PROJECT needs on every build (LULESH: -DUSE_MPI=0). They go
     # into meta.json's `project.cflags`, which the harness and the agent pass to every build.
     project_cflags: List[str] = field(default_factory=list)
+    # The ORIGINAL takes its size from the package's dataset macro too (NPB-C: npbparams.h is chosen by it), so the
+    # validator builds it with -D<SIZE>_DATASET and the package directory on its include path.
+    original_dataset_macro: bool = False
+    # E11: the calls that start and stop the timed region when the program keeps its own timer in the benchmark's
+    # file (NPB's timer 1); written to meta.json, where the harness's scaffolding check reads them.
+    timed_region: Optional[List[str]] = None
     # The benchmark's own EXPERT parallel version, unmodified, when the package can be derived
     # from it by the same edits (LULESH: LLNL's release). `--references` writes it in package
     # form under agent/reference_solutions/<suite>/<name>/ for `verify-source --source DIR`.
@@ -1666,8 +1672,295 @@ LULESH_C1 = replace(
 )
 
 
+
+# ---------------------------------------------------------------------------
+# NPB 3.0 C as RepoOMP ships it — the RepoOMP comparison (E11 in its simple form; the author, 5 Nov 2026), suite npbc_c1
+# ---------------------------------------------------------------------------
+# Every program is judged as a WHOLE file with NPB's own main: the file a model may change is RepoOMP's input
+# `<k>_#_omp.c` byte for byte (it carries no comment to strip), so the agent and RepoOMP start from the same file and
+# every candidate — RepoOMP's, its Claude Code baseline's, NPB's own OpenMP version, the agent's — is dropped into the
+# same package unchanged. The measurement lives only in NPB's shared units, which no candidate edits:
+#   * common/c_timers.c: timer_read returns 1.0 to the program, so what it prints is the same in every run; the real
+#     elapsed time of timer 1 — the region NPB reports as the benchmark's time — goes to stderr;
+#   * common/c_print_results.c: what NPB's main printed is captured, and its numbers, then the size, iteration count
+#     and verdict that c_print_results receives, become the dump or the digest;
+#   * npbparams.h: NPB's own setparams output for each class, chosen by the harness's dataset macro.
+# NPB's header, c_randdp.c and wtime.c are NPB's own. NPB reads no input, so there is no second input (perturbable
+# False). Residues are kept out on both sides: CG's ||r|| (near 1e-13) and its printed difference from the reference
+# zeta move by large relative amounts under any correct reordering of a sum, as LULESH's symmetry differences do.
+NPBC_DIR = BENCHMARKS / "RepoOMP" / "benchmark" / "NPB3.0-omp-C"
+_NPBC_CLASSES = {"MINI": "S", "SMALL": "S", "STANDARD": "W", "LARGE": "A", "EXTRALARGE": "B"}
+_NPBC_UNITS = ["c_print_results.c", "c_randdp.c", "c_timers.c", "wtime.c"]
+_NPBC_NUMBER = re.compile(r"[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?")
+
+
+def _npbc_line_values(line: str) -> List[str]:
+    """The numbers one line of NPB's own printing contributes (the C harness applies the same rule)."""
+    if "Error is" in line:
+        return []
+    nums = _NPBC_NUMBER.findall(line)
+    if len(nums) == 3 and not _NPBC_NUMBER.sub("", line).strip():
+        return [nums[0], nums[2]]          # CG's iteration line: the iteration and zeta, not ||r||
+    return nums
+
+
+def _npbc_deterministic(out: str) -> str:
+    """The original's printing reduced to what the packaged dump emits: main's numbers (residues dropped), then the
+    size, iteration count and verdict from NPB's summary block."""
+    lines = out.splitlines()
+    k = next((i for i, l in enumerate(lines) if re.match(r"^ \w+ Benchmark Completed\s*$", l)), len(lines))
+    vals = [v for l in lines[:k] for v in _npbc_line_values(l)]
+    for l in lines[k:]:
+        if l.lstrip().startswith(("Size", "Iterations")):
+            vals += _NPBC_NUMBER.findall(l.split("=", 1)[1])
+        elif l.lstrip().startswith("Verification"):
+            vals.append("0" if "UNSUCCESSFUL" in l else "1")
+    return "\n".join(vals) + ("\n" if vals else "")
+
+
+def _npbc_params(kernel: str) -> str:
+    """npbparams.h for every class, chosen by the dataset macro; COMPILETIME fixed so the package is reproducible."""
+    branches = []
+    with tempfile.TemporaryDirectory(prefix="npbc_setparams_") as tmp:
+        work = Path(tmp)
+        cc = _find(["clang-20", "/usr/local/Cellar/llvm@19/19.1.7/bin/clang", "clang", "cc"]) or "cc"
+        subprocess.run([cc, "-O1", "-w", *_sysroot(), "-o", str(work / "setparams"), str(NPBC_DIR / "sys" / "setparams.c")],
+                       check=True)
+        shutil.copytree(NPBC_DIR / "config", work / "config")
+        seen: Dict[str, str] = {}
+        for size, cls in _NPBC_CLASSES.items():
+            if cls not in seen:
+                d = work / cls
+                d.mkdir()
+                subprocess.run([str(work / "setparams"), kernel.lower(), cls], cwd=d, capture_output=True, check=False)
+                text = (d / "npbparams.h").read_text()
+                seen[cls] = re.sub(r'#define COMPILETIME "[^"]*"', '#define COMPILETIME "packaged"', text)
+            branches.append((size, seen[cls]))
+    out = []
+    for i, (size, text) in enumerate(branches):
+        out.append(("#if" if i == 0 else "#elif") + f" defined({size}_DATASET)\n" + text.rstrip("\n") + "\n")
+    out.append("#else\n" + seen["S"].rstrip("\n") + "\n#endif\n")
+    return _no_comments_cpp("".join(out))
+
+
+def _npbc_assemble(r: Recipe, src_dir: Optional[Path] = None) -> Tuple[Dict[str, str], List[str]]:
+    """The package: RepoOMP's input (or, with `src_dir`, NPB's own OpenMP version `<k>_ori.c`) byte for byte, NPB's
+    header and its own random-number and clock units, and the two units that carry the measurement."""
+    k = r.name
+    main_file = f"{k}.c"
+    if src_dir is not None and src_dir.is_file():
+        src = src_dir                                   # a third party's whole program file (_NPBC_THIRD_PARTY)
+    else:
+        src = (src_dir / f"{k}_ori.c") if src_dir is not None else r.source
+    files: Dict[str, str] = {
+        main_file: src.read_text(),
+        "npbparams.h": _npbc_params(k),
+        # NPB's shared files, without their comments (the author, 4 Oct: a file a model can read is an ordinary code
+        # file), in the package's one directory beside the program, which includes them by bare name.
+        **{u: _no_comments_cpp((NPBC_DIR / "common" / u).read_text())
+           for u in ("npb-C.h", "c_randdp.c", "wtime.c", "wtime.h")},
+        "c_timers.c": '#define NPBC_TIMERS\n#include "npbc_c1/npbc_harness.h"\n',
+        "c_print_results.c": '#define NPBC_RESULTS\n#include "npbc_c1/npbc_harness.h"\n',
+    }
+    removed = ["nothing in the program file: RepoOMP's input byte for byte"
+               + (" (it keeps RepoOMP's `#pragma omp threadprivate(x)`)" if k == "ep" else ""),
+               "NPB's c_timers.c and c_print_results.c replaced by two lines that include the harness (outside the package)",
+               "NPB's npb-C.h, c_randdp.c, wtime.c and wtime.h: comments removed; every file in one directory",
+               "npbparams.h: NPB's setparams output for classes S, W, A, B behind the dataset macro, COMPILETIME fixed, "
+               "comments removed"]
+    return files, removed
+
+
+# E11: the other systems' programs, each a whole `<k>.c` as its authors released it (RepoOMP's release, PROVENANCE.txt),
+# judged in the same package as the agent's: only the program file differs. `--references` writes them under
+# agent/comparison_programs/<label>/npbc_c1/<k>/ beside NPB's own OpenMP version under reference_solutions/.
+_NPBC_THIRD_PARTY: Dict[str, str] = {
+    "repoomp_claude": "method_data/NPB/NPB_RepoOMP/{k}_reclaude.c",   # RepoOMP with Claude Sonnet 4.5
+    "claude_code": "method_data/NPB/NPB_cc/{k}_claude.c",             # its Claude Code baseline
+}
+
+
+def _npbc_harness(r: Recipe) -> Dict[str, str]:
+    """The measurement, outside the package: NPB's timer and result-printing units, rewritten."""
+    return {"npbc_c1/npbc_harness.h": r"""/* Measurement harness for suite npbc_c1 (prepare_apps.py): NPB 3.0 C as RepoOMP ships it, judged as whole files.
+   It replaces NPB's c_timers.c and c_print_results.c and nothing else; it lives OUTSIDE the package (D39), included by
+   the package's two one-line units. */
+#ifdef NPBC_TIMERS
+#ifndef NPBC_TIMERS_DONE
+#define NPBC_TIMERS_DONE
+#include <stdio.h>
+#include <time.h>
+/* The program sees a fixed time, so what it prints is the same in every run; the real elapsed time of timer 1, the
+   region NPB reports as the benchmark's time, goes to stderr as "DP_TIMED_REGION_SECONDS <s>". */
+static double pbn_start[64], pbn_elapsed[64];
+static double pbn_now(void)
+{
+  struct timespec t;
+  clock_gettime(CLOCK_MONOTONIC, &t);
+  return (double)t.tv_sec + 1e-9 * (double)t.tv_nsec;
+}
+double elapsed_time(void) { return pbn_now(); }
+void timer_clear(int n) { pbn_elapsed[n] = 0.0; }
+void timer_start(int n) { pbn_start[n] = pbn_now(); }
+void timer_stop(int n)
+{
+  double d = pbn_now() - pbn_start[n];
+  pbn_elapsed[n] += d;
+  if (n == 1) fprintf(stderr, "DP_TIMED_REGION_SECONDS %.9f\n", d);
+}
+double timer_read(int n) { (void)n; return 1.0; }
+#endif
+#endif
+
+#ifdef NPBC_RESULTS
+#ifndef NPBC_RESULTS_DONE
+#define NPBC_RESULTS_DONE
+#include <ctype.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
+#ifdef PB_FULL_DUMP
+#ifndef PB_DUMP_FORMAT
+# define PB_DUMP_FORMAT "%.17g\n"
+#endif
+static void pb_emit(double v) { fprintf(stdout, PB_DUMP_FORMAT, v); }
+static void pb_report(void) { }
+#else
+static unsigned long long pb_count = 0;
+static double pb_sum = 0.0;
+static double pb_wsum = 0.0;
+static void pb_emit(double v)
+{
+  pb_count++;
+  pb_sum += v;
+  pb_wsum += v * (double)((pb_count % 9973) + 1);
+}
+static void pb_report(void)
+{
+  printf("pb_values %llu\n", pb_count);
+  printf("pb_sum %.17g\n", pb_sum);
+  printf("pb_wsum %.17g\n", pb_wsum);
+}
+#endif
+
+/* Everything NPB's main prints is captured from the start and shown on stderr at the end; stdout carries only the
+   dump or the digest. */
+static FILE *pbn_capture = NULL;
+static int pbn_stdout = -1;
+__attribute__((constructor)) static void pbn_begin(void)
+{
+  fflush(stdout);
+  pbn_capture = tmpfile();
+  if (pbn_capture == NULL) return;
+  pbn_stdout = dup(1);
+  dup2(fileno(pbn_capture), 1);
+}
+
+/* One line's numbers, by the rule prepare_apps.py's _npbc_line_values applies to the original: a line with
+   "Error is" contributes none; a line of exactly three numbers and nothing else (CG's iteration line) contributes
+   the first and the third (the iteration and zeta, not ||r||); any other line contributes every number. */
+static int pbn_starts_number(const char *p)
+{
+  if (isdigit((unsigned char)p[0])) return 1;
+  if (p[0] == '.' && isdigit((unsigned char)p[1])) return 1;
+  if ((p[0] == '-' || p[0] == '+') &&
+      (isdigit((unsigned char)p[1]) || (p[1] == '.' && isdigit((unsigned char)p[2])))) return 1;
+  return 0;
+}
+static void pbn_line(const char *line)
+{
+  double v[64];
+  int n = 0, other = 0;
+  const char *p = line;
+  char *end;
+  if (strstr(line, "Error is") != NULL) return;
+  while (*p) {
+    if (pbn_starts_number(p)) {
+      double x = strtod(p, &end);
+      if (end != p) { if (n < 64) v[n] = x; n++; p = end; continue; }
+    }
+    if (!isspace((unsigned char)*p)) other = 1;
+    p++;
+  }
+  if (n == 3 && !other) { pb_emit(v[0]); pb_emit(v[2]); return; }
+  for (int i = 0; i < n && i < 64; i++) pb_emit(v[i]);
+}
+
+void c_print_results(char *name, char class, int n1, int n2, int n3, int niter, int nthreads, double t, double mops,
+                     char *optype, int passed_verification, char *npbversion, char *compiletime, char *cc,
+                     char *clink, char *c_lib, char *c_inc, char *cflags, char *clinkflags, char *rand)
+{
+  char line[8192];
+  (void)nthreads; (void)t; (void)mops; (void)optype; (void)npbversion; (void)compiletime; (void)cc; (void)clink;
+  (void)c_lib; (void)c_inc; (void)cflags; (void)clinkflags; (void)rand;
+  fflush(stdout);
+  if (pbn_capture != NULL && pbn_stdout >= 0) {
+    dup2(pbn_stdout, 1);
+    close(pbn_stdout);
+    pbn_stdout = -1;
+    rewind(pbn_capture);
+    while (fgets(line, sizeof line, pbn_capture) != NULL) {
+      fputs(line, stderr);
+      pbn_line(line);
+    }
+  }
+  fprintf(stderr, " %s Benchmark Completed (class %c, verification %s)\n", name, class,
+          passed_verification ? "SUCCESSFUL" : "UNSUCCESSFUL");
+  pb_emit((double)n1);
+  if (!(n2 == 0 && n3 == 0)) { pb_emit((double)n2); pb_emit((double)n3); }
+  pb_emit((double)niter);
+  pb_emit(passed_verification ? 1.0 : 0.0);
+  pb_report();
+  fflush(stdout);
+}
+#endif
+#endif
+"""}
+
+
+def _npbc_recipe(kernel: str, exclude: List[str], note: str) -> Recipe:
+    k = kernel.lower()
+    return Recipe(
+        name=k, suite="npbc_c1", category="nas-parallel-benchmarks",
+        source=NPBC_DIR / kernel / f"{k}_#_omp.c", language="c",
+        sizes={size: {} for size in _NPBC_CLASSES},
+        original_args={size: [] for size in _NPBC_CLASSES},
+        # The serial inputs still call the OpenMP runtime (omp_get_num_threads) and npb-C.h includes omp.h, so
+        # every build, the serial one included, has -fopenmp, as RepoOMP's Makefile does; NPB 3.0 is pre-C99.
+        original_build=["-fopenmp", "-std=gnu89", "-w"],
+        deterministic=_npbc_deterministic,
+        assemble=lambda r: (_ for _ in ()).throw(SystemExit("npbc_* is packaged as a project only")),
+        exclude_functions=exclude,
+        note=note,
+        perturbable=False,
+        original_sources=lambda rr: [str(NPBC_DIR / "common" / u) for u in
+                                     ("c_print_results.c", "c_randdp.c", "c_timers.c", "wtime.c")],
+        original_includes=lambda rr: [str(NPBC_DIR / "common")],
+        original_dataset_macro=True,
+        assemble_project=_npbc_assemble,
+        project_units=[*_NPBC_UNITS, f"{k}.c"],
+        project_include_dirs=["."],
+        project_cflags=["-fopenmp", "-std=gnu89", "-w"],
+        project_editable=[f"{k}.c"],
+        harness=_npbc_harness,
+        timed_region=[r"\btimer_start\s*\(\s*1\s*\)", r"\btimer_stop\s*\(\s*1\s*\)"],
+        generator_version=1,
+        reference_dir=NPBC_DIR / kernel,
+    )
+
+
+# CG's setup (the matrix generator and its helpers) runs before the timed region; like LULESH's mesh setup and a
+# kernel's init_array it is out of the agent's scope. EP has no setup function: its main is the computation.
+NPBC_EP = _npbc_recipe("EP", [], "NPB EP as RepoOMP ships it: Gaussian pairs by the linear congruential generator")
+NPBC_CG = _npbc_recipe("CG", ["makea", "sparse", "sprnvc", "vecset"],
+                       "NPB CG as RepoOMP ships it: conjugate gradient on a random sparse matrix")
+
 RECIPES: Dict[str, Recipe] = {r.name: r for r in (MD, PATHFINDER, NW, IS, MG, LU, HOTSPOT, LULESH)}
 RECIPES["lulesh_c1"] = LULESH_C1   # the clean layout of LULESH (suite llnl_c1); `lulesh` stays version 1
+RECIPES["npbc_ep"] = NPBC_EP     # the RepoOMP comparison (suite npbc_c1)
+RECIPES["npbc_cg"] = NPBC_CG
 # A DIAGNOSTIC variant, never an experiment's package and never read by a model: llnl_c1 with the per-thread minimum
 # left as LLNL wrote it (record §6, 2–3 Nov: which of the clean package's edits changes DiscoPoP's task patterns).
 def _lulesh_c1_nofold(r: Recipe, src_dir: Optional[Path] = None) -> Tuple[Dict[str, str], List[str]]:
@@ -1702,6 +1995,13 @@ def _sysroot() -> List[str]:
     if libomp.exists():
         flags += [f"-I{libomp / 'include'}", f"-L{libomp / 'lib'}"]
     return flags
+
+
+def _omp_mac(flags: List[str]) -> List[str]:
+    """On macOS a Homebrew clang finds libomp only when told where (the harness does the same); elsewhere nothing."""
+    if sys.platform == "darwin" and "-fopenmp" in flags and Path("/usr/local/opt/libomp").exists():
+        return ["-I/usr/local/opt/libomp/include", "-L/usr/local/opt/libomp/lib"]
+    return []
 
 
 def _build(cmd: List[str], cwd: Path) -> Optional[str]:
@@ -1742,7 +2042,8 @@ def validate(r: Recipe, packaged: Path, work: Path, cxx: str,
             if rc_i != 0:
                 row[size] = f"input generator failed: {err_i.strip()[:120]}"
                 continue
-        err = _build([cxx, "-O2", *r.original_build, *_sysroot(),
+        sized = ([f"-D{size}_DATASET", f"-I{packaged}"] if r.original_dataset_macro and packaged.is_dir() else [])
+        err = _build([cxx, "-O2", *r.original_build, *_sysroot(), *_omp_mac(r.original_build), *sized,
                       *[f"-I{d}" for d in r.original_includes(r)],
                       str(r.source), *r.original_sources(r),
                       "-o", str(orig_bin), "-lm"], work)
@@ -1758,10 +2059,10 @@ def validate(r: Recipe, packaged: Path, work: Path, cxx: str,
             inputs = [str(packaged)]
         err = _build([cxx, "-O2", f"-D{size}_DATASET", "-DPB_FULL_DUMP",
                       *[f"-D{m}" for m in r.validate_macros],
-                      f'-DPB_DUMP_FORMAT="{r.dump_format}"', *_sysroot(),
-                      *inputs, "-o", str(dump_bin)], work)
-        err = err or _build([cxx, "-O2", f"-D{size}_DATASET", *_sysroot(), *inputs,
-                             "-o", str(digest_bin)], work)
+                      f'-DPB_DUMP_FORMAT="{r.dump_format}"', *_sysroot(), *_omp_mac(inputs),
+                      *inputs, "-o", str(dump_bin), "-lm"], work)
+        err = err or _build([cxx, "-O2", f"-D{size}_DATASET", *_sysroot(), *_omp_mac(inputs), *inputs,
+                             "-o", str(digest_bin), "-lm"], work)
         if err:
             row[size] = f"packaged build failed: {err.strip().splitlines()[-1][:120]}"
             continue
@@ -1838,8 +2139,12 @@ def main() -> int:
     if unknown:
         sys.exit(f"unknown app(s): {', '.join(unknown)} — known: {', '.join(RECIPES)}")
     cxx = a.cxx or _find(["clang++-20", "clang++", "g++"])
+    # C recipes (NPB-C) need a C compiler with OpenMP: the server's clang-20, on the Mac Homebrew's clang
+    cc = _find(["clang-20", "/usr/local/Cellar/llvm@19/19.1.7/bin/clang", "clang", "gcc"]) or ""
     if a.validate and not cxx:
         sys.exit("no C++ compiler found for --validate (pass --cxx)")
+    if a.validate and not cc and any(RECIPES[n].language == "c" for n in names):
+        sys.exit("no C compiler found for --validate of a C recipe")
 
     rows = []
     for name in names:
@@ -1865,7 +2170,9 @@ def main() -> int:
                 (out_dir / rel).parent.mkdir(parents=True, exist_ok=True)
                 (out_dir / rel).write_text(text)
             packaged = out_dir
-            main_unit = r.project_units[0]
+            # the unit a trial is about: the editable file where there is one (NPB-C lists NPB's shared units
+            # first, as a unity build needs them, so the first unit is not that file)
+            main_unit = r.project_editable[0] if r.project_editable else r.project_units[0]
             meta.update({"file": main_unit, "layout": "project",
                          "project": {"units": r.project_units,
                                      "include_dirs": r.project_include_dirs,
@@ -1893,7 +2200,19 @@ def main() -> int:
                 (ref_out / rel).parent.mkdir(parents=True, exist_ok=True)
                 (ref_out / rel).write_text(text)
             print(f"    expert reference ({r.reference_dir.name}, same edits) -> {ref_out.relative_to(HARNESS_ROOT)}")
+            if r.suite == "npbc_c1":
+                for label, rel_pattern in _NPBC_THIRD_PARTY.items():
+                    tp_src = BENCHMARKS / "RepoOMP" / rel_pattern.format(k=r.name)
+                    tp_files, _ = r.assemble_project(r, tp_src)            # type: ignore[call-arg]
+                    tp_out = AGENT_DIR / "comparison_programs" / label / r.suite / r.name
+                    shutil.rmtree(tp_out, ignore_errors=True)
+                    for rel, text in tp_files.items():
+                        (tp_out / rel).parent.mkdir(parents=True, exist_ok=True)
+                        (tp_out / rel).write_text(text)
+                    print(f"    {label} ({tp_src.name}) -> {tp_out.relative_to(HARNESS_ROOT)}")
         meta["removed"] = removed
+        if r.timed_region:
+            meta["timed_region"] = list(r.timed_region)
         meta["output_sha256"] = hashlib.sha256(digest_of).hexdigest()
         (out_dir / "meta.json").write_text(json.dumps(meta, indent=2) + "\n")
         print(f"{r.name:14s} -> {out_dir.relative_to(a.out)}  ({what})")
@@ -1902,7 +2221,7 @@ def main() -> int:
         if a.validate:
             assert cxx is not None
             with tempfile.TemporaryDirectory(prefix=f"apps_{r.name}_") as tmp:
-                rows.append(validate(r, packaged, Path(tmp), cxx,
+                rows.append(validate(r, packaged, Path(tmp), cxx if r.language == "cpp" else cc,
                                      [s for s in a.validate_sizes.split(",") if s]))
                 print("    " + json.dumps(rows[-1], indent=None)[:400])
     if rows:

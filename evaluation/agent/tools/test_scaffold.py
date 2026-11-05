@@ -27,7 +27,14 @@ for meta in sorted(glob.glob(f"{R}/prepared/*/*/meta.json")):
     if m.get("suite") == "calibration":
         continue
     f = f"{meta[:-len('meta.json')]}{m['file']}"      # the unit holding main and the harness code
-    t = open(f).read(); r = S.check(t, t); n_self += 1
+    t = open(f).read(); n_self += 1
+    if m.get("timed_region"):
+        # E11 (npbc_c1): the program keeps its own timer (NPB's timer 1) in the benchmark's file, so the check
+        # applies to that file itself, with the timer calls meta.json names; the harness lives outside the package.
+        r = S.check(t, t, (), m["timed_region"])
+        if not (r["ok"] and r["applies"]): fails += 1; print("  FAIL self (own timer)", f, r)
+        continue
+    r = S.check(t, t)
     if (m.get("project") or {}).get("editable"):
         # packaging v5 (4 Oct 2026): `file` is the benchmark's OWN file and holds nothing of the measurement,
         # so the check has nothing to apply to there; it applies to the program as a whole (main.c has the
@@ -39,6 +46,20 @@ for meta in sorted(glob.glob(f"{R}/prepared/*/*/meta.json")):
         continue
     if not (r["ok"] and r["applies"]): fails += 1; print("  FAIL self", f, r)
 print(f"  {n_self} unchanged sources checked")
+# E11: a program's own timer (npbc_c1, NPB's timer 1). Moving `timer_stop(1)` up shortens the measurement and must
+# fail; moving `timer_start(1)` earlier lengthens it and passes (a whole-file program from another system pairs
+# repeated lines across the timer, so only lines that LEFT the region count).
+_own = [m for m in glob.glob(f"{R}/prepared/npbc_c1/ep/meta.json")]
+if _own:
+    import re as _re
+    _m = json.load(open(_own[0])); _reg = _m["timed_region"]
+    _t = open(_own[0][:-len("meta.json")] + _m["file"]).read(); _ls = _t.splitlines(keepends=True)
+    _a = next(i for i, x in enumerate(_ls) if _re.search(_reg[0], x)); _b = next(i for i, x in enumerate(_ls) if _re.search(_reg[1], x))
+    _mv = _ls[:]; _mv.insert(_a + 3, _mv.pop(_b))
+    _er = _ls[:]; _er.insert(_a - 4, _er.pop(_a))
+    expect("own timer: timer_stop(1) moved up", S.check(_t, "".join(_mv), (), _reg), False)
+    expect("own timer: timer_start(1) moved earlier", S.check(_t, "".join(_er), (), _reg), True)
+    expect("own timer: timer_stop(1) removed", S.check(_t, "".join(_ls[:_b] + _ls[_b + 1:]), (), _reg), False)
 for run, name, want in [  # recorded runs: skipped when absent
 ("pilot2", "seidel-2d", False), ("local_obs1", "seidel-2d", False),
                         ("local_obs1", "2mm", True), ("local_obs1", "jacobi-2d-imper", True)]:

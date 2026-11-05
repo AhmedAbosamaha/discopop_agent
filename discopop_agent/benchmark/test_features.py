@@ -1136,6 +1136,46 @@ def check_schedule_stress(work: Path) -> Result:
                   f"{', '.join(out)}; race caught by repeatability, not by a diff")
 
 
+def check_exact_repeat(work: Path) -> Result:
+    """`--exact-repeat` (E11): output that moves between runs at ONE thread count, by less than the
+    noise floor, passes the schedule matrix without it and fails as a race with it.
+
+    The program moves deterministically rather than by a real race, so the check cannot be flaky:
+    each run adds an amount derived from its process id, between 1e-15 and 1e-12, to a value of 1, under a floor of 1e-9 — the
+    shape of E6's four atomic-scatter LULESH programs (every value within 1e-11, a different last
+    digit on every run), which the gate passed and the harness's repeatability check refused.
+    """
+    from ..gate.patching import _compile_variant
+    from ..gate.schedules import stress_schedules
+    from ..gate.toolchain import _find_clangpp
+    clangpp = _find_clangpp()
+    if clangpp is None:
+        return Result("exact-repeat", "skip", "no supported clang++ found")
+    d = work / "exact_repeat"
+    d.mkdir(parents=True, exist_ok=True)
+    src = d / "drift.cpp"
+    src.write_text(
+        "#include <cstdio>\n#include <unistd.h>\n"
+        "int main(){\n"
+        "double v=1.0+(double)(getpid()%997+1)*1e-15;\n"
+        "printf(\"count %d\\nvalue %.17e\\n\",3,v);return 0;}\n"
+    )
+    ok_b, diag, binary = _compile_variant(src, clangpp, d, "b_drift", openmp=True)
+    if not ok_b or binary is None:
+        return Result("exact-repeat", "skip",
+                      f"no working -fopenmp build ({diag.splitlines()[0][:60] if diag else '?'})")
+    tolerant = stress_schedules(binary, d, None, floor=1e-9)
+    exact = stress_schedules(binary, d, None, floor=1e-9, exact_repeat=True)
+    if not tolerant.ok:
+        return Result("exact-repeat", "fail",
+                      f"without --exact-repeat a sub-floor drift must pass; got {tolerant.verdict}")
+    if exact.ok or exact.verdict != "race" or not exact.hard:
+        return Result("exact-repeat", "fail",
+                      f"with --exact-repeat the drift must be a hard race; got {exact.verdict}")
+    return Result("exact-repeat", "pass",
+                  "sub-floor drift at one thread count: passes tolerant, race with --exact-repeat")
+
+
 def check_anchor_correctness(work: Path) -> Result:
     """The schedule matrix must be checked against the REFERENCE, not only itself.
 
@@ -5844,6 +5884,7 @@ _CHECKS: List[Tuple[str, Callable[[Path], Result]]] = [
     ("equivalence", check_output_equivalence),
     ("noise-floor", check_noise_floor),
     ("schedule-stress", check_schedule_stress),
+    ("exact-repeat", check_exact_repeat),
     ("anchor-vs-ref", check_anchor_correctness),
     ("dep-evidence", check_dependence_evidence),
     ("dep-lines", check_dep_line_resolution),

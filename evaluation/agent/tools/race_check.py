@@ -111,6 +111,8 @@ def main() -> int:
     ap.add_argument("--outcomes", default=None, help="only trials the harness gave one of these outcomes")
     ap.add_argument("--only", default=None, help="comma-separated benchmarks or benchmark@repeat (a smoke test)")
     ap.add_argument("--out", type=Path, required=True)
+    ap.add_argument("--exact-repeat", action="store_true",
+                    help="the gate's --exact-repeat: repeats at one thread count must print identical output (E11)")
     a = ap.parse_args()
 
     from discopop_agent import project as project_mod
@@ -132,7 +134,7 @@ def main() -> int:
         "clangpp": _find_clangpp(), "archer": find_archer(),
         "cpus_available": len(os.sched_getaffinity(0)) if hasattr(os, "sched_getaffinity") else os.cpu_count(),
         "gate": "validate(mode='safety'): apply, compile, -fopenmp + TSan, schedule matrix, output vs original",
-        "check_inputs": CHECK_INPUTS,
+        "check_inputs": CHECK_INPUTS, "exact_repeat": a.exact_repeat,
     }
     (a.out / "manifest.json").write_text(json.dumps(manifest, indent=1) + "\n")
     print(f"{len(trials)} trial(s); clang++ {manifest['clangpp']}; archer {manifest['archer'] or 'NOT FOUND'}")
@@ -185,7 +187,8 @@ def main() -> int:
                 if sha not in floors:
                     floors[sha] = numerical_noise_floor(str(src), None, extra_inputs=CHECK_INPUTS).value
                 res = validate(diff, str(src), reference_output=ref_out, reference_outputs=ref_pairs,
-                               binary_args=None, mode="safety", noise_floor=floors[sha], stress=True)
+                               binary_args=None, mode="safety", noise_floor=floors[sha], stress=True,
+                               exact_repeat=a.exact_repeat)
                 barrier_fp = (not res.passed and res.stage == "tsan"
                               and _is_omp_barrier_false_positive(res.diagnostic, src.read_text() + "\n" + diff))
                 rec.update(verdict="clean" if res.passed else res.stage, passed=res.passed, stage=res.stage,

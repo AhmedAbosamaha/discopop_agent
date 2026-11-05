@@ -37,7 +37,7 @@ from __future__ import annotations
 
 import difflib
 import re
-from typing import Dict, List, Sequence, Tuple
+from typing import Dict, List, Optional, Sequence, Tuple
 
 # `\b` before the prefix keeps PolyBench's own `_PB_NI` bound macros out.
 TOKEN = re.compile(r"\b(?:pb|PB)_[A-Za-z0-9_]+\b")
@@ -80,10 +80,16 @@ def _norm(line: str) -> str:
     return re.sub(r"\s+", " ", line.strip())
 
 
-def _analyse(text: str) -> Tuple[List[Tuple[str, str]], List[str], List[List[str]],
-                                  List[str], List[bool]]:
+def _analyse(text: str, region: Optional[Sequence[str]] = None
+             ) -> Tuple[List[Tuple[str, str]], List[str], List[List[str]], List[str], List[bool]]:
     """(definitions, uses outside definitions, timed windows, normalised lines,
-    whether each line lies inside a timed window) of one source."""
+    whether each line lies inside a timed window) of one source.
+
+    ``region``: two regular expressions for the calls that start and stop the timed region, in place
+    of ``pb_timer_start``/``pb_timer_stop`` — for a program that keeps its own timer (E11, NPB's
+    ``timer_start(1)``/``timer_stop(1)``, meta.json ``timed_region``). A line holding one counts as a
+    scaffolding use as well, so removing, adding or reordering it is found like a ``pb_`` line."""
+    start_re, stop_re = (re.compile(region[0]), re.compile(region[1])) if region else (_START, _STOP)
     lines = _strip_comments(text).splitlines()
     defs: List[Tuple[str, str]] = []
     in_def = [False] * len(lines)
@@ -118,15 +124,16 @@ def _analyse(text: str) -> Tuple[List[Tuple[str, str]], List[str], List[List[str
         i += 1
 
     uses = [_norm(lines[k]) for k in range(len(lines))
-            if not in_def[k] and TOKEN.search(lines[k])]
+            if not in_def[k] and (TOKEN.search(lines[k])
+                                  or (region and (start_re.search(lines[k]) or stop_re.search(lines[k]))))]
 
     windows: List[List[str]] = []
     inside = [False] * len(lines)
     k = 0
     while k < len(lines):
-        if not in_def[k] and _START.search(lines[k]):
+        if not in_def[k] and start_re.search(lines[k]):
             j = k + 1
-            while j < len(lines) and not (not in_def[j] and _STOP.search(lines[j])):
+            while j < len(lines) and not (not in_def[j] and stop_re.search(lines[j])):
                 j += 1
             windows.append([_norm(x) for x in lines[k + 1:j] if x.strip()])
             for idx in range(k + 1, min(j, len(lines))):
@@ -185,7 +192,8 @@ def _protected_seq(text: str, protected: Sequence[str]) -> List[str]:
     return [ln.strip() for ln in text.splitlines() if ln.strip() in wanted]
 
 
-def check(original: str, final: str, protected: Sequence[str] = ()) -> Dict[str, object]:
+def check(original: str, final: str, protected: Sequence[str] = (),
+          region: Optional[Sequence[str]] = None) -> Dict[str, object]:
     """Compare the scaffolding of two versions of one packaged source.
 
     ``protected`` (packaging v4, D39): the lines the package's meta.json lists as shared with
@@ -195,8 +203,8 @@ def check(original: str, final: str, protected: Sequence[str] = ()) -> Dict[str,
 
     Returns ``{"ok": bool, "problems": [str, ...], "applies": bool}``. ``applies`` is
     False for a source with no scaffolding at all (nothing to protect)."""
-    d0, u0, w0, l0, in0 = _analyse(original)
-    d1, u1, w1, l1, in1 = _analyse(final)
+    d0, u0, w0, l0, in0 = _analyse(original, region)
+    d1, u1, w1, l1, in1 = _analyse(final, region)
     problems: List[str] = []
     if protected:
         p0, p1 = _protected_seq(original, protected), _protected_seq(final, protected)
@@ -260,8 +268,16 @@ def check(original: str, final: str, protected: Sequence[str] = ()) -> Dict[str,
             if (re.search(r"[A-Za-z0-9]", line) and in0[blk.a + off] != in1[blk.b + off]
                     and not TOKEN.search(line)):
                 crossed.append((line, in0[blk.a + off]))
+    if region:
+        # A program's own timer (E11): only a line that LEFT the region shortens the measurement. A line that
+        # entered it lengthens it, and another system's whole-file program pairs a repeated line (`for (j = 1; …`)
+        # with its namesake on the other side of the timer (NPB's own OpenMP CG: 2 such lines, the same region).
+        notes = [f"{sum(1 for _, was_in in crossed if not was_in)} unchanged line(s) entered the timed region"]
+        crossed = [c for c in crossed if c[1]]
     if crossed:
         out = sum(1 for _, was_in in crossed if was_in)
         problems.append(f"timed region boundary moved: {out} unchanged line(s) left the region, "
                         f"{len(crossed) - out} entered it (first: {crossed[0][0][:80]})")
+    if region:
+        return {"ok": not problems, "problems": problems, "applies": True, "notes": notes}
     return {"ok": not problems, "problems": problems, "applies": True}

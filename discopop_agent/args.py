@@ -72,6 +72,7 @@ class AgentArguments:
     protected_note: str = ""
     numeric_tolerance: bool = True   # measure the program's numerical noise floor
     schedule_stress: bool = True     # vary threads/schedule instead of one run
+    exact_repeat: bool = False       # E11: repeats at one thread count must be identical
     stress_threads: Tuple[int, ...] = (1, 2, 4)  # thread counts the matrix covers
     # Computed at startup by run.py, not parsed: how far this program's own
     # numbers move under legal build variation.  0.0 means byte-exact.
@@ -523,9 +524,19 @@ def parse_args() -> AgentArguments:
                          "OpenMP schedules instead of once (default: on). A single run "
                          "samples a single interleaving, which is why an output diff "
                          "alone cannot catch a race. Output that moves between runs at "
-                         "the SAME thread count is a race and fails at any magnitude; "
-                         "output stable at fixed threads that moves across thread counts "
-                         "is reordered arithmetic and is judged against the noise floor."))
+                         "the SAME thread count beyond the noise floor is a race (at any "
+                         "magnitude with --exact-repeat); output that moves across thread "
+                         "counts is reordered arithmetic and is judged against the noise "
+                         "floor."))
+    p.add_argument("--exact-repeat", action=argparse.BooleanOptionalAction, default=False,
+                   help=("Require the schedule matrix's repeated runs at ONE thread count to "
+                         "print identical output; the noise floor then applies only across "
+                         "thread counts and schedules (default: off — the repeats are "
+                         "compared within the floor too). A result that depends on the order "
+                         "in which threads finish, such as an atomic or critical update of a "
+                         "floating-point sum, moves between two such runs; without this flag "
+                         "it passes whenever the movement stays under the floor (E6). The "
+                         "texts the model reads do not change."))
     p.add_argument("--stress-threads", default="1,2,4",
                    help=("Thread counts the schedule matrix covers (default: 1,2,4). "
                          "Small on purpose — a race needs more than one thread, not many "
@@ -729,6 +740,7 @@ def parse_args() -> AgentArguments:
         verbose=a.verbose,
         numeric_tolerance=a.numeric_tolerance,
         schedule_stress=a.schedule_stress,
+        exact_repeat=a.exact_repeat,
         stress_threads=tuple(
             int(x) for x in str(a.stress_threads).split(",") if x.strip()
         ) or (1, 2, 4),
