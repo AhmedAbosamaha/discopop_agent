@@ -1,0 +1,35 @@
+{
+ "_comment": "E11 part 2, DESCRIPTIVE (not registered; added 6 Nov after the read-out, so that the release's PROPOSED level is read in full): the hot-loop class (the population file's classes) of every model file of RepoOMP's release that differs from its input \u2014 `<unit>_llm_fixed.c`, the file its step 3 builds and checks. Copied read-only from the server's work/ folders (server.sh fetch excludes work/) into repoomp_model_files/, with every candidate of every attempt (`*.candidateN.c`). 19 of these files never built (k19 4, k27 5, k48 5, k53 5: clang-20 stops at the undeclared `free`/`malloc`; the file includes only data.h); s161's 5 built, passed the release's check and shipped (the read-out's 5 racy programs). Every one of the 19 keeps a per-thread copy of u (`local_u`, in 5 of them declared `long *`) merged under `critical` \u2014 the pattern RepoOMP's validation asks for on a `+=` into a shared array; the class is read from the statement order: parallel-as-written = S1 (into local_u) and S2 still in one parallel loop; split-textual = the S1 loop, the merge, then the S2 (and S3) loop. In k19, k27, k53 the textual order is the wrong one (direction a / decline), and in k48 the two statements are left in one loop.",
+ "files": {
+  "repoomp_release/tsvc_c2/k19/rep1": "split-textual",
+  "repoomp_release/tsvc_c2/k19/rep3": "split-textual",
+  "repoomp_release/tsvc_c2/k19/rep4": "split-textual",
+  "repoomp_release/tsvc_c2/k19/rep5": "split-textual",
+  "repoomp_release/tsvc_c2/k27/rep1": "parallel-as-written",
+  "repoomp_release/tsvc_c2/k27/rep2": "parallel-as-written",
+  "repoomp_release/tsvc_c2/k27/rep3": "split-textual",
+  "repoomp_release/tsvc_c2/k27/rep4": "split-textual",
+  "repoomp_release/tsvc_c2/k27/rep5": "split-textual",
+  "repoomp_release/tsvc_c2/k48/rep1": "parallel-as-written",
+  "repoomp_release/tsvc_c2/k48/rep2": "parallel-as-written",
+  "repoomp_release/tsvc_c2/k48/rep3": "parallel-as-written",
+  "repoomp_release/tsvc_c2/k48/rep4": "parallel-as-written",
+  "repoomp_release/tsvc_c2/k48/rep5": "parallel-as-written",
+  "repoomp_release/tsvc_c2/k53/rep1": "split-textual",
+  "repoomp_release/tsvc_c2/k53/rep2": "split-textual",
+  "repoomp_release/tsvc_c2/k53/rep3": "split-textual",
+  "repoomp_release/tsvc_c2/k53/rep4": "parallel-as-written",
+  "repoomp_release/tsvc_c2/k53/rep5": "split-textual",
+  "repoomp_release/tsvc_c2/s161/rep1": "parallel-as-written",
+  "repoomp_release/tsvc_c2/s161/rep2": "parallel-as-written",
+  "repoomp_release/tsvc_c2/s161/rep3": "parallel-as-written",
+  "repoomp_release/tsvc_c2/s161/rep4": "parallel-as-written",
+  "repoomp_release/tsvc_c2/s161/rep5": "parallel-as-written"
+ },
+ "counts": {
+  "split-textual": 11,
+  "parallel-as-written": 13
+ },
+ "candidates_all_attempts": "Every candidate of every attempt (166 files, repoomp_model_files/**/work/*.candidateN.c) summarised by the order of its statements per loop: none places the S2 loop before the S1 loop (split-reordered); k23's 20 are parallel-as-written; k31's are parallel-as-written (13), split-textual (6) or a snapshot of u and v into buffers (1); k19 rep2's 4th keeps S2 in the parallel loop and defers S1's sums. So no candidate RepoOMP's validation rejected was a legal program.",
+ "validation_long_counter": "validator_long_counter_test.py / .txt: RepoOMP's validate_candidate rejects all 20 k23 candidates and 16 of 20 k31 candidates with `shared-scalar-in-for(i)` as written, and accepts all 40 when the loop counter `long i` is written `int i` in both the original and the candidate: its counter pattern (`for\\s*\\(\\s*(?:int\\s+)?(\\w+)\\s*=`) does not recognise `for (long i = ...)`, so `i` is taken for a shared scalar. The rejections on k23 and k31 are therefore a misfire on our kernels' `long` counter; the candidates it rejected are parallel-as-written or split in the textual order, wrong on both units, so it cost the release no correct program."
+}
