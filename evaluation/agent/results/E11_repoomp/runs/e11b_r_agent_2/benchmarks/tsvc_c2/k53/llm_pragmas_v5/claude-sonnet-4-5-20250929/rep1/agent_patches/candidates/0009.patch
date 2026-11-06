@@ -1,0 +1,52 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e11b_r_agent_2/benchmarks/tsvc_c2/k53/llm_pragmas_v5/claude-sonnet-4-5-20250929/rep1/work/k53.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e11b_r_agent_2/benchmarks/tsvc_c2/k53/llm_pragmas_v5/claude-sonnet-4-5-20250929/rep1/work/k53.c
+@@ -1,12 +1,47 @@
+ #include "data.h"
++#include <stdlib.h>
++#include <string.h>
+ 
+ real_t kernel_k53(void)
+ {
+     for (int nl = 0; nl < iterations; nl++) {
++        // Snapshot v to avoid read-write races: reads from snapshot, writes to v
++        double *v_snapshot = malloc(LEN_1D * sizeof(double));
++        memcpy(v_snapshot, v, LEN_1D * sizeof(double));
++
++        // Buffer u increments to apply after v computations
++        double *u_delta = calloc(LEN_1D, sizeof(double));
++
++        // Determine which iteration should write to each v element (highest i wins)
++        long *v_last_writer = calloc(LEN_1D, sizeof(long));
+         for (long i = 1; i < LEN_1D; i++) {
+-            u[ju[i]] += v[kv[i]] * c[i];
+-            v[jv[i]] = u[ku[i]] * d[i] + c[i];
++            if (i > v_last_writer[jv[i]]) {
++                v_last_writer[jv[i]] = i;
++            }
+         }
++
++        // Single parallel pass: read from v_snapshot, write to v and u_delta
++        #pragma omp parallel for
++        for (long i = 1; i < LEN_1D; i++) {
++            // Read from v_snapshot (avoiding race), accumulate u increment
++            double increment = v_snapshot[kv[i]] * c[i];
++            #pragma omp atomic
++            u_delta[ju[i]] += increment;
++
++            // Write to v using current u (before this loop's buffered updates)
++            if (i == v_last_writer[jv[i]]) {
++                v[jv[i]] = u[ku[i]] * d[i] + c[i];
++            }
++        }
++
++        // Apply all u increments
++        for (long idx = 0; idx < LEN_1D; idx++) {
++            u[idx] += u_delta[idx];
++        }
++
++        free(v_snapshot);
++        free(u_delta);
++        free(v_last_writer);
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

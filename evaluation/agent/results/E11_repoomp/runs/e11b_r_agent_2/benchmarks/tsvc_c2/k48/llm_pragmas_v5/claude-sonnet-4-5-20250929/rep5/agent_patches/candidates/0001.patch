@@ -1,0 +1,29 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e11b_r_agent_2/benchmarks/tsvc_c2/k48/llm_pragmas_v5/claude-sonnet-4-5-20250929/rep5/work/k48.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e11b_r_agent_2/benchmarks/tsvc_c2/k48/llm_pragmas_v5/claude-sonnet-4-5-20250929/rep5/work/k48.c
+@@ -2,12 +2,21 @@
+ 
+ real_t kernel_k48(void)
+ {
+-    for (int nl = 0; nl < iterations; nl++) {
+-        for (long i = 1; i < LEN_1D; i++) {
+-            u[ju[i]] += v[kv[i]] * c[i];
+-            v[jv[i]] = u[ku[i]] * d[i] + c[i];
++    #pragma omp parallel shared(u, v, c, d, ju, jv, ku, kv, a, b, e)
++    {
++        for (int nl = 0; nl < iterations; nl++) {
++            #pragma omp for
++            for (long i = 1; i < LEN_1D; i++) {
++                #pragma omp atomic
++                u[ju[i]] += v[kv[i]] * c[i];
++            }
++            #pragma omp for
++            for (long i = 1; i < LEN_1D; i++) {
++                v[jv[i]] = u[ku[i]] * d[i] + c[i];
++            }
++            #pragma omp single
++            dummy(a, b, c, d, e);
+         }
+-        dummy(a, b, c, d, e);
+     }
+     return (real_t)0;
+ }

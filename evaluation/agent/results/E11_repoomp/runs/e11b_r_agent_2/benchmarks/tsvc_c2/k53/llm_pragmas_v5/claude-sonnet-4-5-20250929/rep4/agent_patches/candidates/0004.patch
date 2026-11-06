@@ -1,0 +1,46 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e11b_r_agent_2/benchmarks/tsvc_c2/k53/llm_pragmas_v5/claude-sonnet-4-5-20250929/rep4/work/k53.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e11b_r_agent_2/benchmarks/tsvc_c2/k53/llm_pragmas_v5/claude-sonnet-4-5-20250929/rep4/work/k53.c
+@@ -1,13 +1,41 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_k53(void)
+ {
++    // Allocate buffers once for all iterations
++    real_t *v_old = (real_t *)malloc(LEN_1D * sizeof(real_t));
++    long *last_writer = (long *)malloc(LEN_1D * sizeof(long));
++
+     for (int nl = 0; nl < iterations; nl++) {
++        // Save current v values before loop modifies them
++        for (long idx = 0; idx < LEN_1D; idx++) {
++            v_old[idx] = v[idx];
++        }
++
++        // Determine which iteration is the last writer to each v element
++        for (long idx = 0; idx < LEN_1D; idx++) {
++            last_writer[idx] = -1;
++        }
+         for (long i = 1; i < LEN_1D; i++) {
+-            u[ju[i]] += v[kv[i]] * c[i];
+-            v[jv[i]] = u[ku[i]] * d[i] + c[i];
++            last_writer[jv[i]] = i;
+         }
++
++        // Parallel loop: read v from saved values, write only if last writer
++        #pragma omp parallel for
++        for (long i = 1; i < LEN_1D; i++) {
++            real_t tmp = v_old[kv[i]] * c[i];
++            #pragma omp atomic
++            u[ju[i]] += tmp;
++            if (last_writer[jv[i]] == i) {
++                v[jv[i]] = u[ku[i]] * d[i] + c[i];
++            }
++        }
++
+         dummy(a, b, c, d, e);
+     }
++
++    free(v_old);
++    free(last_writer);
+     return (real_t)0;
+ }

@@ -1,0 +1,38 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e11b_r_agent_2/benchmarks/tsvc_c2/k53/llm_pragmas_v5/claude-sonnet-4-5-20250929/rep4/work/k53.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e11b_r_agent_2/benchmarks/tsvc_c2/k53/llm_pragmas_v5/claude-sonnet-4-5-20250929/rep4/work/k53.c
+@@ -2,12 +2,33 @@
+ 
+ real_t kernel_k53(void)
+ {
++    real_t *v_temp = (real_t *)malloc(LEN_1D * sizeof(real_t));
++
+     for (int nl = 0; nl < iterations; nl++) {
++        // Phase 1: Update u array in parallel
++        // Use atomic operations to handle potential conflicts when ju[i] == ju[j]
++        #pragma omp parallel for
+         for (long i = 1; i < LEN_1D; i++) {
+-            u[ju[i]] += v[kv[i]] * c[i];
+-            v[jv[i]] = u[ku[i]] * d[i] + c[i];
++            real_t increment = v[kv[i]] * c[i];
++            #pragma omp atomic
++            u[ju[i]] += increment;
+         }
++
++        // Phase 2: Compute new values for v in parallel
++        #pragma omp parallel for
++        for (long i = 1; i < LEN_1D; i++) {
++            v_temp[i] = u[ku[i]] * d[i] + c[i];
++        }
++
++        // Apply v updates sequentially to preserve lastprivate semantics
++        // when jv[i] == jv[j] for i < j, iteration j must win
++        for (long i = 1; i < LEN_1D; i++) {
++            v[jv[i]] = v_temp[i];
++        }
++
+         dummy(a, b, c, d, e);
+     }
++
++    free(v_temp);
+     return (real_t)0;
+ }

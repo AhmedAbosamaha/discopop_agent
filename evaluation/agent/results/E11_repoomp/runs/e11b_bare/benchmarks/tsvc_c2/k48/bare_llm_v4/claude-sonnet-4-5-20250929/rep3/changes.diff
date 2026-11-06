@@ -1,0 +1,17 @@
+--- original.c
++++ final.c
+@@ -40,8 +40,14 @@
+ real_t kernel_k48(void)
+ {
+     for (int nl = 0; nl < iterations; nl++) {
++        #pragma omp parallel for
+         for (long i = 1; i < LEN_1D; i++) {
++            #pragma omp atomic
+             u[ju[i]] += v[kv[i]] * c[i];
++        }
++        #pragma omp parallel for
++        for (long i = 1; i < LEN_1D; i++) {
++            #pragma omp atomic write
+             v[jv[i]] = u[ku[i]] * d[i] + c[i];
+         }
+         dummy(a, b, c, d, e);

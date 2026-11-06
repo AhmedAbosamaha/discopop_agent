@@ -1,0 +1,49 @@
+--- original.c
++++ final.c
+@@ -59,23 +59,39 @@
+ 
+ /* ==== s161.c ==== */
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_s161(void)
+ {
++    // Allocate temporary array to break loop-carried dependency
++    real_t *temp = (real_t *)malloc(LEN_1D * sizeof(real_t));
++
+     for (int nl = 0; nl < iterations; nl++) {
++        // First pass: compute values to be written to c[i+1] when b[i] < 0
++        #pragma omp parallel for shared(b, temp, a, d)
+         for (int i = 0; i < LEN_1D-1; ++i) {
+             if (b[i] < (real_t)0.) {
+-                goto L20;
++                temp[i+1] = a[i] + d[i] * d[i];
+             }
+-            a[i] = c[i] + d[i] * e[i];
+-            goto L10;
+-L20:
+-            c[i+1] = a[i] + d[i] * d[i];
+-L10:
+-            ;
+         }
++
++        // Second pass: update c from temp, then compute a
++        #pragma omp parallel for shared(b, temp, c, a, d, e)
++        for (int i = 0; i < LEN_1D-1; ++i) {
++            // Update c[i] from temp if it was written in first pass
++            if (i > 0 && b[i-1] < (real_t)0.) {
++                c[i] = temp[i];
++            }
++            // Compute a[i] if b[i] >= 0
++            if (b[i] >= (real_t)0.) {
++                a[i] = c[i] + d[i] * e[i];
++            }
++        }
++
+         dummy(a, b, c, d, e);
+     }
++
++    free(temp);
+     return (real_t)0;
+ }
+ 

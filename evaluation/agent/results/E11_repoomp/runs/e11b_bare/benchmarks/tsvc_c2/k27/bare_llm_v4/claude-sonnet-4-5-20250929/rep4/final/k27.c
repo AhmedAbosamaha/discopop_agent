@@ -1,0 +1,29 @@
+#include "data.h"
+
+real_t kernel_k27(void)
+{
+    for (int nl = 0; nl < iterations; nl++) {
+        // Loop 1: Update u with atomic accumulation
+        #pragma omp parallel for
+        for (long i = 1; i < LEN_1D; i++) {
+            real_t temp = w[kw[i]] * c[i];
+            #pragma omp atomic
+            u[ju[i]] += temp;
+        }
+
+        // Loop 2: Update v using updated u
+        #pragma omp parallel for
+        for (long i = 1; i < LEN_1D; i++) {
+            v[jv[i]] = u[ku[i]] * d[i] + c[i];
+        }
+
+        // Loop 3: Update w using updated v
+        #pragma omp parallel for
+        for (long i = 1; i < LEN_1D; i++) {
+            w[jw[i]] = v[kv[i]] * e[i] + d[i];
+        }
+
+        dummy(a, b, c, d, e);
+    }
+    return (real_t)0;
+}

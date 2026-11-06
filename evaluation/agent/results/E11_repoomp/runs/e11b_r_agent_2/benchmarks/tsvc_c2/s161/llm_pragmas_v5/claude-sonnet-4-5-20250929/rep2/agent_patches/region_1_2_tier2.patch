@@ -1,0 +1,32 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e11b_r_agent_2/benchmarks/tsvc_c2/s161/llm_pragmas_v5/claude-sonnet-4-5-20250929/rep2/work/s161.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e11b_r_agent_2/benchmarks/tsvc_c2/s161/llm_pragmas_v5/claude-sonnet-4-5-20250929/rep2/work/s161.c
+@@ -3,17 +3,22 @@
+ real_t kernel_s161(void)
+ {
+     for (int nl = 0; nl < iterations; nl++) {
++        // Pass 1: handle all b[i] < 0 cases (write c[i+1])
++        #pragma omp parallel for
+         for (int i = 0; i < LEN_1D-1; ++i) {
+             if (b[i] < (real_t)0.) {
+-                goto L20;
++                c[i+1] = a[i] + d[i] * d[i];
+             }
+-            a[i] = c[i] + d[i] * e[i];
+-            goto L10;
+-L20:
+-            c[i+1] = a[i] + d[i] * d[i];
+-L10:
+-            ;
+         }
++
++        // Pass 2: handle all b[i] >= 0 cases (read c[i], write a[i])
++        #pragma omp parallel for
++        for (int i = 0; i < LEN_1D-1; ++i) {
++            if (b[i] >= (real_t)0.) {
++                a[i] = c[i] + d[i] * e[i];
++            }
++        }
++
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

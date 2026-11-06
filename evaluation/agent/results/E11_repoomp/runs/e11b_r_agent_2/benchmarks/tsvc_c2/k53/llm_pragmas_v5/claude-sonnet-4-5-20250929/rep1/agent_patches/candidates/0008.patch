@@ -1,0 +1,47 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e11b_r_agent_2/benchmarks/tsvc_c2/k53/llm_pragmas_v5/claude-sonnet-4-5-20250929/rep1/work/k53.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e11b_r_agent_2/benchmarks/tsvc_c2/k53/llm_pragmas_v5/claude-sonnet-4-5-20250929/rep1/work/k53.c
+@@ -1,12 +1,42 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_k53(void)
+ {
+     for (int nl = 0; nl < iterations; nl++) {
++        // Buffer u increments to apply them after v reads the current u state
++        double *u_delta = calloc(LEN_1D, sizeof(double));
++
++        // Determine which iteration should write to each v element (highest i wins)
++        long *v_last_writer = calloc(LEN_1D, sizeof(long));
+         for (long i = 1; i < LEN_1D; i++) {
+-            u[ju[i]] += v[kv[i]] * c[i];
+-            v[jv[i]] = u[ku[i]] * d[i] + c[i];
++            if (i > v_last_writer[jv[i]]) {
++                v_last_writer[jv[i]] = i;
++            }
+         }
++
++        // Single parallel pass: compute u increments and v updates together,
++        // but buffer u increments so each iteration reads u in its pre-loop state
++        #pragma omp parallel for
++        for (long i = 1; i < LEN_1D; i++) {
++            // Compute u increment (don't apply yet - v needs to read old u)
++            double increment = v[kv[i]] * c[i];
++            #pragma omp atomic
++            u_delta[ju[i]] += increment;
++
++            // Compute and write v using u in its current state (before this loop's updates)
++            if (i == v_last_writer[jv[i]]) {
++                v[jv[i]] = u[ku[i]] * d[i] + c[i];
++            }
++        }
++
++        // Apply all u increments after all v values have been computed
++        for (long idx = 0; idx < LEN_1D; idx++) {
++            u[idx] += u_delta[idx];
++        }
++
++        free(u_delta);
++        free(v_last_writer);
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

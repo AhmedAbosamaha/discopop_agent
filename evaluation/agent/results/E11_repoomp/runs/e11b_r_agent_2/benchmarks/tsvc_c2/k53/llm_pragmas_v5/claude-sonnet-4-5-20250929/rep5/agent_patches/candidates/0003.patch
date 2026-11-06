@@ -1,0 +1,31 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e11b_r_agent_2/benchmarks/tsvc_c2/k53/llm_pragmas_v5/claude-sonnet-4-5-20250929/rep5/work/k53.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e11b_r_agent_2/benchmarks/tsvc_c2/k53/llm_pragmas_v5/claude-sonnet-4-5-20250929/rep5/work/k53.c
+@@ -1,11 +1,26 @@
+ #include "data.h"
++#include <stdlib.h>
+ 
+ real_t kernel_k53(void)
+ {
+     for (int nl = 0; nl < iterations; nl++) {
++        #pragma omp parallel for shared(u, v, c, d, kv, ku, jv, ju)
+         for (long i = 1; i < LEN_1D; i++) {
+-            u[ju[i]] += v[kv[i]] * c[i];
+-            v[jv[i]] = u[ku[i]] * d[i] + c[i];
++            real_t v_val, u_val;
++
++            #pragma omp atomic read
++            v_val = v[kv[i]];
++
++            real_t temp = v_val * c[i];
++            #pragma omp atomic
++            u[ju[i]] += temp;
++
++            #pragma omp atomic read
++            u_val = u[ku[i]];
++
++            real_t v_new = u_val * d[i] + c[i];
++            #pragma omp atomic write
++            v[jv[i]] = v_new;
+         }
+         dummy(a, b, c, d, e);
+     }

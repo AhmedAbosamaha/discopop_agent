@@ -1,0 +1,22 @@
+#include "data.h"
+
+real_t kernel_k48(void)
+{
+    #pragma omp parallel shared(u, v, c, d, ju, jv, ku, kv, a, b, e)
+    {
+        for (int nl = 0; nl < iterations; nl++) {
+            #pragma omp for
+            for (long i = 1; i < LEN_1D; i++) {
+                #pragma omp atomic
+                u[ju[i]] += v[kv[i]] * c[i];
+            }
+            #pragma omp for
+            for (long i = 1; i < LEN_1D; i++) {
+                v[jv[i]] = u[ku[i]] * d[i] + c[i];
+            }
+            #pragma omp single
+            dummy(a, b, c, d, e);
+        }
+    }
+    return (real_t)0;
+}

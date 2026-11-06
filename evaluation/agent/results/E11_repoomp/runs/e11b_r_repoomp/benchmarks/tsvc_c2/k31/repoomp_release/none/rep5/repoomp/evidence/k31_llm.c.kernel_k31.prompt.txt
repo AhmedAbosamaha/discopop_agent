@@ -1,0 +1,359 @@
+You are an OpenMP optimization expert. Add OpenMP pragmas to the
+C function below to maximize performance on a 4-thread Xeon. The result must
+be numerically identical (verification must pass) and faster than serial.
+
+HOTSPOT ANALYSIS (functions above the self-time threshold):
+  kernel_k31: self=1000.0ms (100.0%) calls=1
+
+The self-time threshold is ? ms.
+Only the functions listed above are worth optimizing. The hottest is
+?. Focus parallelization there.
+
+LOOP CLASSIFICATION (expert rules, line numbers are 1-indexed):
+  L3 UNSAFE sequential red=[] | for (int nl = 0; nl < iterations; nl++) {
+  L4 SAFE independent red=[] | for (long i = 1; i < LEN_1D; i++) {
+
+DEPENDENCY SUMMARY:
+- functions: 1
+- loops: 2
+- parallelizable: 1
+- reduction loops: 0
+
+EXPERT RULES (must follow):
+1. A loop that accumulates into a scalar (x += ... or x = x + ...) is a
+   REDUCTION. Parallelize with `#pragma omp for reduction(+:x)` (or
+   appropriate op). Do NOT use critical sections for reductions.
+2. A loop that writes arr[j] = ... where each j is distinct is INDEPENDENT.
+   Parallelize with `#pragma omp for`. Add `nowait` only if the next loop
+   does not read the written values.
+3. A scalar used across loop iterations with a true cross-iteration
+   dependency (e.g. alpha = rho0/d where rho0 comes from previous iter)
+   is SEQUENTIAL. Do NOT parallelize that loop. Instead parallelize the
+   inner independent/reduction loops and use `#pragma omp single` or a
+   barrier to compute the scalar between parallel loops.
+4. Group consecutive parallel loops inside ONE `#pragma omp parallel`
+   region to avoid fork/join overhead. Use `#pragma omp for` (with
+   reduction clause if needed) for each loop inside.
+5. For the CG conj_grad cgit loop: the cgit loop itself is sequential
+   (rho0=rho, alpha=rho0/d, beta=rho/rho0 are cross-iteration deps). But
+   each inner loop over j is parallel. The `#pragma omp parallel` region
+   goes INSIDE the cgit for loop body, wrapping the inner j loops of ONE
+   cgit iteration. Do NOT put the parallel region around the cgit loop.
+   If you wrap the cgit loop itself in a parallel region, all threads
+   execute the cgit loop redundantly and the loop counter cgit races,
+   causing deadlock or wrong results. Correct structure:
+     for (cgit = ...) {        // sequential, outside any parallel region
+         rho0 = rho; d = 0.0; rho = 0.0;
+         #pragma omp parallel private(sum, k, alpha, beta)
+         {
+             #pragma omp for ...
+             for (j ...) { ... }
+             #pragma omp for reduction(+:d)
+             for (j ...) { ... }
+             alpha = rho0 / d;   // redundant, all threads compute
+             #pragma omp for reduction(+:rho)
+             for (j ...) { ... }
+             beta = rho / rho0;  // redundant
+             #pragma omp for
+             for (j ...) { ... }
+         }
+     }
+   Compute alpha and beta redundantly (all threads compute the same value)
+   by declaring them private. This avoids omp single overhead.
+6. Remove redundant barriers: a `#pragma omp for reduction(...)` already
+   has an implicit barrier at the end. Do not add an explicit
+   `#pragma omp barrier` right after it.
+7. Fix nthreads detection: omp_get_num_threads() must be called inside a
+   parallel region (use #pragma omp master inside #pragma omp parallel).
+8. Preserve all computation, only add OpenMP pragmas. Do not change
+   numerical results. Verification must still pass.
+9. CRITICAL: Every `#pragma omp for` whose loop body contains an inner
+   `for (k = ...)` loop MUST list `k` in its private clause. Example:
+   `#pragma omp for private(sum, k)`. Forgetting `k` causes a data race
+   on the shared loop counter k and produces wrong results. This is the
+   most common OpenMP bug. Always check inner loop variables.
+10. LOOP SAFETY: The LOOP CLASSIFICATION above marks each loop SAFE or
+    UNSAFE based on dependency analysis. SAFE loops have no cross-iteration
+    dependencies and can be parallelized directly. UNSAFE loops were flagged
+    because the analyzer detected a possible stencil read, indirect write
+    (arr[non-loop-var] = ...), or function call in the body. You MAY
+    parallelize an UNSAFE loop ONLY IF you can prove it is actually safe:
+    - The body writes arr[loopvar] = ... via a macro (e.g. crmul(c, a, b)
+      expands to c.real = a.real * b). Each iteration writes a distinct
+      element, so it is independent.
+    - The body declares local arrays inside the loop and writes only to
+      them and to arr[loopvar] slices. Each iteration's locals are private.
+    - The body calls a function that only reads shared data and writes to
+      per-iteration-local or arr[loopvar] storage.
+    If you cannot prove safety, leave the loop serial. Parallelizing a
+    truly unsafe loop causes data races and NaN. When in doubt, do NOT
+    parallelize.
+11. REDUNDANT EXECUTION DANGER: A `for` loop inside a `#pragma omp
+    parallel` region but WITHOUT a `#pragma omp for` is executed by ALL
+    threads redundantly. If that loop updates shared variables (e.g.
+    ku = ku + ln, ln = 2 * ln), all threads race on them, causing wrong
+    results or hangs. NEVER put a sequential loop with cross-iteration
+    state inside a parallel region unless it is wrapped in `#pragma omp
+    single`. If a loop has cross-iteration scalar dependencies, leave it
+    OUTSIDE the parallel region entirely.
+12. For FFT functions (cffts1/cffts2/cffts3): the outer `for (k = 0; k <
+    d[2]; k++)` loop is parallelizable. Each iteration writes a distinct
+    xout[k] slice. The y0/y1 arrays used as scratch buffers MUST be declared
+    INSIDE the k loop body so each iteration (and thus each thread) gets its
+    own private copy. If y0/y1 are declared OUTSIDE the k loop, all threads
+    share them and race, producing wrong results. Move the `dcomplex y0[...]`
+    and `dcomplex y1[...]` declarations to just inside the k loop, right
+    after the `for (k = 0; k < d[2]; k++) {` line. Then add `#pragma omp
+    parallel for private(k, jj, j, i)` before the k loop. The inner jj, j, i
+    loops stay serial inside. Do NOT parallelize the inner loops.
+13. For the FT evolve function: the triple-nested k/j/i loop writes
+    u1[k][j][i] via the crmul macro (distinct element per iteration).
+    Parallelize with `#pragma omp parallel for collapse(3) private(i,j,k)`.
+    Do NOT list loop variables in both parallel private AND collapse for
+    private clauses. Use `collapse(3)` to flatten all three loops.
+14. REFACTOR MODE: When the prompt asks for a full refactored function
+    (not INSERT lines), you may rewrite the function body to eliminate
+    loop-carried dependencies that block parallelization. This applies to
+    three structural patterns that pragma insertion alone cannot fix:
+    (a) Indirect accumulation: a loop body does arr[data[i]]++ where the
+    index is data-dependent (contains a nested array access), so two
+    iterations can hit the same element. Fix by giving each thread a
+    private local array, parallelizing the counting loop, then merging
+    the per-thread arrays into the shared one inside a
+    `#pragma omp critical` block.
+    (b) Shared static scratch buffer: a loop writes through a pointer
+    into a `static` scratch array whose seed advances across iterations
+    via a randlc-style call. Fix by recomputing each iteration's seed
+    directly from the loop counter (not advancing a running seed) and
+    making the scratch array a per-iteration local.
+    (c) Unsafe-loop with a parallelizable inner loop: the analyzer
+    flagged the function unsafe but an inner loop is genuinely
+    independent. Fix by restructuring so the independent loop runs in a
+    `#pragma omp for` and any sequential state stays outside the
+    parallel region or under `#pragma omp single`.
+    (d) Loop reordering for stencil solvers (SP/BT/LU x_solve, y_solve,
+    z_solve, and similar ADI solver functions): a nest of 3 loops where
+    ONE loop has a loop-carried dependency and the other two are
+    independent. The dependent loop writes arr[v+1] or arr[v+2] (via
+    v1=v+1, v2=v+2) which the next iteration of that same loop reads.
+    To parallelize, you must FIRST identify which loop is dependent:
+    - x_solve: the i loop is dependent (i1=i+1, i2=i+2, writes lhs[][i1]).
+      j and k are independent. Move j to the outermost position.
+    - y_solve: the j loop is dependent (j1=j+1, j2=j+2, writes lhs[][j1]).
+      i and k are independent. Move i to the outermost position.
+    - z_solve: the k loop is dependent (k1=k+1, k2=k+2, writes lhs[][k1]).
+      i and j are independent. Move j (or i) to the outermost position.
+    Then SWAP loops so the independent loop becomes outermost, and put
+    `#pragma omp parallel for` on it. The dependent loop stays serial
+    inside. Example for x_solve (i dependent, j independent):
+      BEFORE:
+        for (i = 0; i < N-3; i++) {        // dependent: writes lhs[i+1]
+          i1 = i+1; i2 = i+2;
+          for (j = 1; j < M-2; j++) {     // independent
+            for (k = 1; k < P-2; k++) { ... }
+          }
+        }
+      AFTER (j outer parallel, i middle serial):
+        #pragma omp parallel for private(i, k, i1, i2, m, fac1, fac2)
+        for (j = 1; j < M-2; j++) {
+          for (i = 0; i < N-3; i++) {
+            i1 = i+1; i2 = i+2;
+            for (k = 1; k < P-2; k++) { ... }
+          }
+        }
+    For y_solve the SAME swap but i becomes outer (i is independent, j
+    is dependent). For z_solve j becomes outer (j is independent, k is
+    dependent). The parallel loop's iterations touch disjoint slices so
+    they never race. The dependent loop still runs serial within each
+    parallel iteration, preserving its dependency. Apply this swap to
+    EVERY dependent-outer/independent-middle nest in the function. Do
+    NOT parallelize the dependent loop itself. CRITICAL: list ALL scalar
+    temporaries written in the body (fac1, fac2, i1, i2, j1, j2, k1, k2,
+    m) in the private clause. Forgetting any causes a data race.
+    (e) BT solver cells (x_solve_cell, y_solve_cell, z_solve_cell and
+    their backsubstitute partners): these have a nest of 2-3 loops where
+    ONE loop has a cross-iteration dependency because the body reads
+    rhs[v-1] or lhs[v-1] from the previous iteration of that same loop.
+    The dependent axis is DIFFERENT for each function, you must identify
+    it from the body (look for which index appears as [v-1] or [v+1]):
+    - x_solve_cell and x_backsubstitute: the i loop is dependent (body
+      reads rhs[i-1] or rhs[i+1]). j and k are independent. Parallelize
+      the j loop (move j outermost, add `#pragma omp parallel for`).
+    - y_solve_cell and y_backsubstitute: the j loop is dependent (body
+      reads rhs[j-1] or rhs[j+1]). i and k are independent. Parallelize
+      the i loop (move i outermost, add `#pragma omp parallel for`).
+    - z_solve_cell and z_backsubstitute: the k loop is dependent (body
+      reads rhs[k-1] or rhs[k+1]). i and j are independent. Parallelize
+      the i loop (move i outermost, add `#pragma omp parallel for`).
+    NEVER parallelize the dependent loop. The dependent loop stays serial
+    inside the parallel outer loop. The body calls helper functions
+    (binvcrhs, matvec_sub, matmul_sub) that write to arr[i][j][k] slices;
+    each parallel iteration touches a distinct slice so they are safe.
+    CRITICAL: the private clause must list EVERY loop variable that is
+    NOT the parallelized outer loop, INCLUDING the dependent loop
+    variable. The dependent loop runs serially inside each thread, but
+    it is still a per-iteration variable that each thread must own
+    privately; if it is shared, all threads write to one variable at
+    once and you get a race that produces NaN or wrong results. The exact
+    private clauses are, by function:
+      x_solve_cell:        parallelize j, private(i, k)
+      y_solve_cell:        parallelize i, private(j, k)
+      z_solve_cell:        parallelize i, private(j, k)
+      x_backsubstitute:    parallelize j, private(i, k, m, n)
+      y_backsubstitute:    parallelize i, private(j, k, m, n)
+      z_backsubstitute:    parallelize i, private(j, k, m, n)
+    Use these EXACT clauses. Do not list the parallelized loop variable
+    in private() (it is private automatically). Do not omit the dependent
+    loop variable from private(). After reordering, the loop order for
+    x_solve_cell is j outer, i middle (dependent), k inner. For
+    y_solve_cell and z_solve_cell it is i outer, then the dependent loop,
+    then the remaining independent loop. For x_backsubstitute the order is
+    j outer, i middle (dependent, runs downward from grid-2), k inner.
+    For y_backsubstitute the order is i outer, j middle (dependent), k
+    inner. For z_backsubstitute the order is i outer, j middle, k inner
+    (dependent). Keep the dependent loop's original bounds and direction.
+    In refactor mode you may move declarations, add per-thread local
+    arrays, rewrite seed or index computation, and add
+    critical/single/barrier pragmas. You MUST keep the function
+    signature (name, parameters, return type) unchanged and the
+    numerical results identical. Verification will compile and run the
+    full workload, so correctness is enforced by execution, not by
+    line-by-line diff.
+    (f) Function-scope scratch arrays that race when the outer loop is
+    parallelized. A function declares `double cv[N], rhon[N];` (or any
+    fixed-size buffer) at function scope and fills it inside a
+    (j,k,i)-nest, then reads it in a sibling loop over the SAME j,k:
+        double cv[IMAX], rhon[IMAX];          // function scope
+        for (j=...) { for (k=...) {
+            for (i=...) { cv[i] = ...; rhon[i] = ...; }   // fill
+            for (i=...) { lhs[..][i][j][k] = ...cv[i-1]..rhon[i]..; }  // read
+        }}
+    If you parallelize the j loop, different j-threads write the SAME
+    cv[i]/rhon[i] (indexed by i, not j) and the read loop sees torn
+    values -> NaN. The fix is to MOVE the scratch declarations INSIDE
+    the parallelized loop body so each iteration owns its own copy:
+        #pragma omp parallel for private(i, k, ru1)
+        for (j = 1; j <= grid_points[1]-2; j++) {
+          double cv[IMAX], rhon[IMAX];        // per-iteration, auto-private
+          for (k = 1; k <= grid_points[2]-2; k++) {
+            for (i = 0; i <= grid_points[0]-1; i++) { cv[i] = ...; rhon[i] = ...; }
+            for (i = 1; i <= grid_points[0]-2; i++) { lhs[..][i][j][k] = ...cv[i]..; }
+          }
+        }
+    This applies to SP lhsx/lhsy/lhsz (cv, rhon) and any function with
+    the same shape: a function-scope buffer filled and consumed within
+    one outer iteration, indexed by a loop variable that is NOT the
+    parallelized one. Never leave such a buffer at function scope when
+    parallelizing the loop that fills it.
+    (g) Cache-friendly loop reordering for fully-independent nests. When
+    a nest of 3+ loops has NO loop-carried dependency on any axis (every
+    axis is dep-proven parallelizable, e.g. SP compute_rhs forcing/rhs
+    loops over i,j,k writing u/rho_i/us/vs/ws/qss/speed/ainv), the
+    choice of which loop to parallelize affects cache locality, not
+    correctness. The C array is `arr[i][j][k]` with k innermost
+    (contiguous), so the LAST index advances fastest in memory. To get
+    contiguous access per parallel iteration, move the MIDDLE index
+    outermost and parallelize it, keeping the fastest-varying and
+    slowest indices inner. For `for(i){for(j){for(k){ arr[i][j][k]... }}}`
+    reorder to `for(j){ for(i){ for(k){ arr[i][j][k]... }}}` and put
+    `#pragma omp parallel for private(i, k, ...)` on the j loop. Each
+    j-slice then walks contiguous k-memory. This recovers the 2-3x cache
+    benefit of the expert reference on grid kernels like SP compute_rhs.
+    Only reorder when ALL axes are independent; never reorder a nest
+    that has a dependent axis (use rule (d)/(e) for those).
+
+
+TARGET FUNCTION (with 1-indexed line numbers):
+ 1: real_t kernel_k31(void)
+ 2: {
+ 3:     for (int nl = 0; nl < iterations; nl++) {
+ 4:         for (long i = 1; i < LEN_1D; i++) {
+ 5:             u[i] += v[i + off] * c[i];
+ 6:             v[i] = u[i + far] * d[i] + c[i];
+ 7:         }
+ 8:         dummy(a, b, c, d, e);
+ 9:     }
+10:     return (real_t)0;
+11: }
+
+OUTPUT FORMAT. This function has a loop-carried
+dependency that pragma insertion alone cannot fix (indirect accumulation,
+shared static scratch buffer, an unsafe loop with a parallelizable inner
+loop, or a dependent outer loop with an independent middle loop needing
+reordering). You must REFACTOR the function body to eliminate the dependency,
+then add OpenMP pragmas. Return the COMPLETE refactored function inside a
+single fenced ```c code block. Do NOT output INSERT lines.
+
+Refactor rules:
+- You may move declarations, add per-thread local arrays, rewrite seed or
+  index computation, and add critical/single/barrier pragmas.
+- You MUST keep the function signature (name, parameters, return type)
+  unchanged.
+- You MUST keep numerical results identical. Verification runs the full
+  workload, so correctness is enforced by execution.
+- Goal: eliminate the loop-carried dependency so the loop can run in a
+  `#pragma omp for`, then add the pragma.
+- Concrete refactor techniques:
+  * Indirect accumulation (arr[data[i]]++): give each thread a private
+    local array, parallelize the counting loop with `#pragma omp for`, then
+    merge per-thread arrays into the shared one inside
+    `#pragma omp critical`. If the local array is large (thousands of
+    elements or more), allocate it with `malloc` inside the parallel region
+    and `free` it after the merge, NOT as a stack array (stack overflow).
+    Initialize it with a loop, not memset, unless the element type is bytes.
+  * Shared static scratch with advancing seed: recompute each iteration's
+    seed directly from the loop counter (not advancing a running seed) and
+    make the scratch array a per-iteration local.
+  * Unsafe loop with parallelizable inner loop: run the independent loop in
+    `#pragma omp for`, keep sequential state outside the parallel region or
+    under `#pragma omp single`.
+  * Stencil nest (nested loops writing distinct array slices, e.g.
+    arr[outer][inner] = f(arr[outer-1]...)): the outermost loop is
+    parallelizable because each iteration writes a distinct slice. Move any
+    scratch arrays (declared at function scope, e.g. `double r1[M]`) INSIDE
+    the `#pragma omp parallel` region so each thread gets a private copy,
+    then parallelize the outermost loop with `#pragma omp for`. Do NOT list
+    scratch arrays in the `private` clause if you moved their declaration
+    inside the region (they are already private). Do NOT delete their
+    declaration. Variables used as inner loop counters or scratch indices
+    (i2, i1, etc.) that are declared at function scope MUST be listed in
+    the `#pragma omp parallel private(...)` clause or they race.
+  * Recursive function (calls itself): the recursive calls are independent
+    sub-problems. Wrap each recursive call in `#pragma omp task` and add
+    `#pragma omp taskwait` after the calls to join. Add a cutoff: when the
+    problem size is small (below a threshold), fall through to direct
+    computation to avoid spawning tiny tasks. Use `firstprivate` for the
+    arguments of each task so each task gets its own copy. The parallel
+    region is opened by the caller, not inside this function.
+  * Entry caller of a recursive function: this function calls a recursive
+    callee that will spawn tasks. Open a parallel region with
+    `#pragma omp parallel` followed by `#pragma omp single` (or
+    `#pragma omp parallel single`), then call the recursive function once
+    inside it. Do NOT add `#pragma omp task` here; the callee does that.
+    Keep all non-recursive setup (allocation, factorization) outside the
+    parallel region.
+- CRITICAL THREAD-SAFETY: Inside a `#pragma omp parallel` region, any loop
+  variable used in a per-thread loop (initializing a private array, merging
+  in a critical section) MUST be a variable declared INSIDE the parallel
+  region, NOT a variable declared outside it. A variable declared outside
+  the parallel region is shared; using it as a loop counter in two
+  per-thread loops races across threads and corrupts results. Declare a
+  fresh local (e.g. `int li;`) inside the parallel region and use it for
+  all per-thread loops. The `#pragma omp for` loop may reuse the outer
+  variable because the pragma makes it private for that loop only.
+- REDUCTION VARIABLES: If a scalar is accumulated in a loop and you
+  parallelize that loop with `#pragma omp for reduction(+:v)` (or any
+  reduction op), write the accumulation DIRECTLY to `v`. Do NOT introduce a
+  per-thread `local_v` and write to that instead. The reduction clause
+  already gives each thread a private copy of `v` and merges them at the
+  end. Writing to `local_v` means the reduction never sees the values and
+  the result is wrong (typically zero). The ONLY variables that need a
+  per-thread local copy are array accumulators (e.g. `arr[idx]++` where
+  `arr` is an array), which use a per-thread local array plus a
+  `#pragma omp critical` merge. Scalar sums, max, min use the reduction
+  clause directly, no local copy.
+- Output ONLY the fenced code block containing the full refactored function.
+  No explanation, no INSERT lines, no FUNCTION_NAME marker.
+
+
+FUNCTION: kernel_k31

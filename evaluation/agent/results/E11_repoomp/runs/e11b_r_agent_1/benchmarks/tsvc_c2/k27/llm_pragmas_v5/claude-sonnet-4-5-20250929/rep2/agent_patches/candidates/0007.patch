@@ -1,0 +1,26 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e11b_r_agent_1/benchmarks/tsvc_c2/k27/llm_pragmas_v5/claude-sonnet-4-5-20250929/rep2/work/k27.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e11b_r_agent_1/benchmarks/tsvc_c2/k27/llm_pragmas_v5/claude-sonnet-4-5-20250929/rep2/work/k27.c
+@@ -3,11 +3,21 @@
+ real_t kernel_k27(void)
+ {
+     for (int nl = 0; nl < iterations; nl++) {
++        #pragma omp parallel for shared(v, u, jv, ku, d, c)
++        for (long i = 1; i < LEN_1D; i++) {
++            v[jv[i]] = u[ku[i]] * d[i] + c[i];
++        }
++
++        #pragma omp parallel for shared(w, v, jw, kv, e, d)
++        for (long i = 1; i < LEN_1D; i++) {
++            w[jw[i]] = v[kv[i]] * e[i] + d[i];
++        }
++
++        #pragma omp parallel for shared(u, w, ju, kw, c)
+         for (long i = 1; i < LEN_1D; i++) {
+             u[ju[i]] += w[kw[i]] * c[i];
+-            v[jv[i]] = u[ku[i]] * d[i] + c[i];
+-            w[jw[i]] = v[kv[i]] * e[i] + d[i];
+         }
++
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

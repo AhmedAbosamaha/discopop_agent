@@ -1,0 +1,34 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e11b_r_agent_2/benchmarks/tsvc_c2/k53/llm_pragmas_v5/claude-sonnet-4-5-20250929/rep3/work/k53.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e11b_r_agent_2/benchmarks/tsvc_c2/k53/llm_pragmas_v5/claude-sonnet-4-5-20250929/rep3/work/k53.c
+@@ -3,10 +3,29 @@
+ real_t kernel_k53(void)
+ {
+     for (int nl = 0; nl < iterations; nl++) {
++        real_t *v_snap = (real_t*)malloc(LEN_1D * sizeof(real_t));
++        real_t *u_snap = (real_t*)malloc(LEN_1D * sizeof(real_t));
++
++        #pragma omp parallel for
++        for (long idx = 0; idx < LEN_1D; idx++) {
++            v_snap[idx] = v[idx];
++            u_snap[idx] = u[idx];
++        }
++
++        #pragma omp parallel for
+         for (long i = 1; i < LEN_1D; i++) {
+-            u[ju[i]] += v[kv[i]] * c[i];
+-            v[jv[i]] = u[ku[i]] * d[i] + c[i];
++            real_t u_incr = v_snap[kv[i]] * c[i];
++            #pragma omp atomic
++            u[ju[i]] += u_incr;
+         }
++
++        #pragma omp parallel for
++        for (long i = 1; i < LEN_1D; i++) {
++            v[jv[i]] = u_snap[ku[i]] * d[i] + c[i];
++        }
++
++        free(v_snap);
++        free(u_snap);
+         dummy(a, b, c, d, e);
+     }
+     return (real_t)0;

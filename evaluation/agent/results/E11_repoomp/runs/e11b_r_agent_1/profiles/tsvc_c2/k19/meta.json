@@ -1,0 +1,44 @@
+{
+  "suite": "tsvc_c2",
+  "kernel": "k19",
+  "source": "constructed: ORDER-2 (THESIS_EXPERIMENTS \u00a76, 28 Sep; tools/evidence_pilot.py)",
+  "category": "constructed / statement order decided by hidden index tables (ORDER-2b)",
+  "file": "k19.c",
+  "language": "c",
+  "layout": "project",
+  "project": {
+    "units": [
+      "k19.c",
+      "main.c"
+    ],
+    "include_dirs": [
+      "."
+    ],
+    "editable": [
+      "k19.c"
+    ]
+  },
+  "restructuring_class": "restructure (ORDER-2b X)",
+  "transformation": "loop distribution with the second statement's loop first",
+  "why": "kv[i] = i-1: S1 reads the element of v that S2 wrote one iteration earlier; ku[i] = LEN_1D+i: S2 reads u elements nothing writes",
+  "reference_solution": "agent/reference_solutions/tsvc_c2/k19.c",
+  "exclude_functions": [
+    "main",
+    "dummy"
+  ],
+  "harness": "tsvc_c2/k19.h",
+  "harness_sha256": "0ab0450c59874556887c045eb601fb206f95995763059bd47b961b42ecc753c4",
+  "hot_loop": {
+    "entry": "kernel_k19",
+    "function": "kernel_k19",
+    "line": 6,
+    "writes": [
+      "u",
+      "v"
+    ]
+  },
+  "agent_dataset": "SMALL",
+  "generator_version": 6,
+  "inputs_sha256": "456dd573b84b30e6f32c943bb559d80374eec67177de48223e95124a8c3fc627",
+  "output_sha256": "1091eece1d8bf4f8ab93cbf49523812fcadc4287399f10c46b8bb180b68fd575"
+}

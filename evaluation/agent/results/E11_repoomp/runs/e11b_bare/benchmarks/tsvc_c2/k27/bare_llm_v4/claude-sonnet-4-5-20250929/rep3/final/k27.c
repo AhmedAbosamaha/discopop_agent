@@ -1,0 +1,26 @@
+#include "data.h"
+
+real_t kernel_k27(void)
+{
+    for (int nl = 0; nl < iterations; nl++) {
+        #pragma omp parallel for default(none) shared(u, w, c, ju, kw)
+        for (long i = 1; i < LEN_1D; i++) {
+            real_t temp = w[kw[i]] * c[i];
+            #pragma omp atomic
+            u[ju[i]] += temp;
+        }
+
+        #pragma omp parallel for default(none) shared(v, u, d, c, jv, ku)
+        for (long i = 1; i < LEN_1D; i++) {
+            v[jv[i]] = u[ku[i]] * d[i] + c[i];
+        }
+
+        #pragma omp parallel for default(none) shared(w, v, e, d, jw, kv)
+        for (long i = 1; i < LEN_1D; i++) {
+            w[jw[i]] = v[kv[i]] * e[i] + d[i];
+        }
+
+        dummy(a, b, c, d, e);
+    }
+    return (real_t)0;
+}
