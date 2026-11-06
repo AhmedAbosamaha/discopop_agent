@@ -1,0 +1,17 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e11_r_cg/benchmarks/npbc_c1/cg/llm_pragmas_v5/claude-sonnet-4-5-20250929/rep3/work/cg.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e11_r_cg/benchmarks/npbc_c1/cg/llm_pragmas_v5/claude-sonnet-4-5-20250929/rep3/work/cg.c
+@@ -201,6 +201,7 @@
+ 	p[j] = r[j];
+ 	
+     }
++    #pragma omp parallel for shared(r) reduction(+:rho) 
+     for (j = 1; j <= lastcol-firstcol+1; j++) {
+ 	rho = rho + r[j]*r[j];
+     }
+@@ -466,4 +467,4 @@
+ 	v[*nzv] = val;
+ 	iv[*nzv] = i;
+     }
+-}
+\ No newline at end of file
++}

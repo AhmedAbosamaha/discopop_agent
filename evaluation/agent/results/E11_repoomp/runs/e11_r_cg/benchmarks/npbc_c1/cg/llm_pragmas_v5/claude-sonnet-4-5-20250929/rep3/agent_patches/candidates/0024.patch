@@ -1,0 +1,48 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e11_r_cg/benchmarks/npbc_c1/cg/llm_pragmas_v5/claude-sonnet-4-5-20250929/rep3/work/cg.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e11_r_cg/benchmarks/npbc_c1/cg/llm_pragmas_v5/claude-sonnet-4-5-20250929/rep3/work/cg.c
+@@ -120,24 +120,35 @@
+     zeta  = 0.0;
+     timer_clear( 1 );
+     timer_start( 1 );
++#pragma omp parallel private(j)
++{
+     for (it = 1; it <= NITER; it++) {
+-	conj_grad(colidx, rowstr, x, z, a, p, q, r, &rnorm);
+-	norm_temp11 = 0.0;
+-	norm_temp12 = 0.0;
++#pragma omp single
++	{
++	    conj_grad(colidx, rowstr, x, z, a, p, q, r, &rnorm);
++	    norm_temp11 = 0.0;
++	    norm_temp12 = 0.0;
++	}
++#pragma omp for reduction(+:norm_temp11,norm_temp12)
+ 	for (j = 1; j <= lastcol-firstcol+1; j++) {
+             norm_temp11 = norm_temp11 + x[j]*z[j];
+             norm_temp12 = norm_temp12 + z[j]*z[j];
+ 	}
+-	norm_temp12 = 1.0 / sqrt( norm_temp12 );
+-	zeta = SHIFT + 1.0 / norm_temp11;
+-	if( it == 1 ) {
+-	  printf("   iteration           ||r||                 zeta\n");
+-	}
+-	printf("    %5d       %20.14e%20.13e\n", it, rnorm, zeta);
++#pragma omp single
++	{
++	    norm_temp12 = 1.0 / sqrt( norm_temp12 );
++	    zeta = SHIFT + 1.0 / norm_temp11;
++	    if( it == 1 ) {
++	      printf("   iteration           ||r||                 zeta\n");
++	    }
++	    printf("    %5d       %20.14e%20.13e\n", it, rnorm, zeta);
++	}
++#pragma omp for
+ 	for (j = 1; j <= lastcol-firstcol+1; j++) {
+             x[j] = norm_temp12*z[j];
+ 	}
+-    } 
++    }
++} 
+ {
+ #if defined(_OPENMP)
+     nthreads = omp_get_num_threads();

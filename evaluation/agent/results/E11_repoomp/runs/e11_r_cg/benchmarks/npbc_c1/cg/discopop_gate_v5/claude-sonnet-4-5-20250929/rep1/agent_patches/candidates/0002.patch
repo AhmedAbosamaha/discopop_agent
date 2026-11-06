@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e11_r_cg/benchmarks/npbc_c1/cg/discopop_gate_v5/claude-sonnet-4-5-20250929/rep1/work/cg.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e11_r_cg/benchmarks/npbc_c1/cg/discopop_gate_v5/claude-sonnet-4-5-20250929/rep1/work/cg.c
+@@ -223,6 +223,7 @@
+             d = d + p[j]*q[j];
+ 	}	
+ 	alpha = rho0 / d;
++	#pragma omp parallel for firstprivate(alpha) shared(r,z) reduction(+:rho) 
+ 	for (j = 1; j <= lastcol-firstcol+1; j++) {
+             z[j] = z[j] + alpha*p[j];
+             r[j] = r[j] - alpha*q[j];

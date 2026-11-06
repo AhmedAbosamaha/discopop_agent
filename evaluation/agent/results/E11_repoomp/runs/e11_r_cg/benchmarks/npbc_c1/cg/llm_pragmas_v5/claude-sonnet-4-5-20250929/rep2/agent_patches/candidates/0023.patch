@@ -1,0 +1,46 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e11_r_cg/benchmarks/npbc_c1/cg/llm_pragmas_v5/claude-sonnet-4-5-20250929/rep2/work/cg.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e11_r_cg/benchmarks/npbc_c1/cg/llm_pragmas_v5/claude-sonnet-4-5-20250929/rep2/work/cg.c
+@@ -120,13 +120,21 @@
+     zeta  = 0.0;
+     timer_clear( 1 );
+     timer_start( 1 );
++#pragma omp parallel
++{
++    double *z_local = (double *)malloc((NA+2+1) * sizeof(double));
++    double *p_local = (double *)malloc((NA+2+1) * sizeof(double));
++    double *q_local = (double *)malloc((NA+2+1) * sizeof(double));
++    double *r_local = (double *)malloc((NA+2+1) * sizeof(double));
++
++#pragma omp for private(norm_temp12, norm_temp11, rnorm, j) lastprivate(zeta) schedule(static)
+     for (it = 1; it <= NITER; it++) {
+-	conj_grad(colidx, rowstr, x, z, a, p, q, r, &rnorm);
++	conj_grad(colidx, rowstr, x, z_local, a, p_local, q_local, r_local, &rnorm);
+ 	norm_temp11 = 0.0;
+ 	norm_temp12 = 0.0;
+ 	for (j = 1; j <= lastcol-firstcol+1; j++) {
+-            norm_temp11 = norm_temp11 + x[j]*z[j];
+-            norm_temp12 = norm_temp12 + z[j]*z[j];
++            norm_temp11 = norm_temp11 + x[j]*z_local[j];
++            norm_temp12 = norm_temp12 + z_local[j]*z_local[j];
+ 	}
+ 	norm_temp12 = 1.0 / sqrt( norm_temp12 );
+ 	zeta = SHIFT + 1.0 / norm_temp11;
+@@ -135,9 +143,15 @@
+ 	}
+ 	printf("    %5d       %20.14e%20.13e\n", it, rnorm, zeta);
+ 	for (j = 1; j <= lastcol-firstcol+1; j++) {
+-            x[j] = norm_temp12*z[j];
+-	}
+-    } 
++            x[j] = norm_temp12*z_local[j];
++	}
++    }
++
++    free(z_local);
++    free(p_local);
++    free(q_local);
++    free(r_local);
++} 
+ {
+ #if defined(_OPENMP)
+     nthreads = omp_get_num_threads();

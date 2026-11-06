@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e11_r_cg/benchmarks/npbc_c1/cg/discopop_gate_v5/claude-sonnet-4-5-20250929/rep4/work/cg.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e11_r_cg/benchmarks/npbc_c1/cg/discopop_gate_v5/claude-sonnet-4-5-20250929/rep4/work/cg.c
+@@ -219,6 +219,7 @@
+             
+             q[j] = sum;
+ 	}
++	#pragma omp parallel for shared(p,q) reduction(+:d) 
+ 	for (j = 1; j <= lastcol-firstcol+1; j++) {
+             d = d + p[j]*q[j];
+ 	}	

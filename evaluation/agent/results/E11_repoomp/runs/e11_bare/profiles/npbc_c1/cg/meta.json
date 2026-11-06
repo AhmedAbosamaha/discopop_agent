@@ -1,0 +1,59 @@
+{
+  "suite": "npbc_c1",
+  "kernel": "cg",
+  "source": "benchmarks/RepoOMP/benchmark/NPB3.0-omp-C/CG/cg_#_omp.c",
+  "category": "nas-parallel-benchmarks",
+  "language": "c",
+  "exclude_functions": [
+    "makea",
+    "sparse",
+    "sprnvc",
+    "vecset"
+  ],
+  "agent_dataset": "SMALL",
+  "generator_version": 1,
+  "sizes": {
+    "MINI": {},
+    "SMALL": {},
+    "STANDARD": {},
+    "LARGE": {},
+    "EXTRALARGE": {}
+  },
+  "note": "NPB CG as RepoOMP ships it: conjugate gradient on a random sparse matrix",
+  "inputs_sha256": "9daf241e8cfb3367143bbf5ea8dfb9e94b1473b65b603cf614ca81a03169f3ab",
+  "file": "cg.c",
+  "layout": "project",
+  "project": {
+    "units": [
+      "c_print_results.c",
+      "c_randdp.c",
+      "c_timers.c",
+      "wtime.c",
+      "cg.c"
+    ],
+    "include_dirs": [
+      "."
+    ],
+    "cflags": [
+      "-fopenmp",
+      "-std=gnu89",
+      "-w"
+    ],
+    "editable": [
+      "cg.c"
+    ]
+  },
+  "harness": "npbc_c1/npbc_harness.h",
+  "harness_sha256": "41d9ef05a75d964c023c962edc6961fa6bb64c95eabca1dec0f1ab0675f1138b",
+  "removed": [
+    "nothing in the program file: RepoOMP's input byte for byte",
+    "NPB's c_timers.c and c_print_results.c replaced by two lines that include the harness (outside the package)",
+    "NPB's npb-C.h, c_randdp.c, wtime.c and wtime.h: comments removed; every file in one directory",
+    "npbparams.h: NPB's setparams output for classes S, W, A, B behind the dataset macro, COMPILETIME fixed, comments removed"
+  ],
+  "timed_region": [
+    "\\btimer_start\\s*\\(\\s*1\\s*\\)",
+    "\\btimer_stop\\s*\\(\\s*1\\s*\\)"
+  ],
+  "output_sha256": "d2aae0c1bc9e0289294ea36845e4a00a1a57e6340b34481cc24d4fb9288ea054"
+}

@@ -1,0 +1,331 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e11_r_cg/benchmarks/npbc_c1/cg/llm_pragmas_v5/claude-sonnet-4-5-20250929/rep2/work/cg.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e11_r_cg/benchmarks/npbc_c1/cg/llm_pragmas_v5/claude-sonnet-4-5-20250929/rep2/work/cg.c
+@@ -7,25 +7,25 @@
+ static int lastrow;
+ static int firstcol;
+ static int lastcol;
+-static int colidx[NZ+1];	
+-static int rowstr[NA+1+1];	
+-static int iv[2*NA+1+1];	
+-static int arow[NZ+1];		
+-static int acol[NZ+1];		
+-static double v[NA+1+1];	
+-static double aelt[NZ+1];	
+-static double a[NZ+1];		
+-static double x[NA+2+1];	
+-static double z[NA+2+1];	
+-static double p[NA+2+1];	
+-static double q[NA+2+1];	
+-static double r[NA+2+1];	
++static int colidx[NZ+1];
++static int rowstr[NA+1+1];
++static int iv[2*NA+1+1];
++static int arow[NZ+1];
++static int acol[NZ+1];
++static double v[NA+1+1];
++static double aelt[NZ+1];
++static double a[NZ+1];
++static double x[NA+2+1];
++static double z[NA+2+1];
++static double p[NA+2+1];
++static double q[NA+2+1];
++static double r[NA+2+1];
+ 
+ static double amult;
+ static double tran;
+ static void conj_grad (int colidx[], int rowstr[], double x[], double z[],
+ 		       double a[], double p[], double q[], double r[],
+-		       
++
+ 		       double *rnorm);
+ static void makea(int n, int nz, double a[], int colidx[], int rowstr[],
+ 		  int nonzer, int firstrow, int lastrow, int firstcol,
+@@ -82,9 +82,9 @@
+     amult   = 1220703125.0;
+     zeta    = randlc( &tran, amult );
+     makea(naa, nzz, a, colidx, rowstr, NONZER,
+-	  firstrow, lastrow, firstcol, lastcol, 
++	  firstrow, lastrow, firstcol, lastcol,
+ 	  RCOND, arow, acol, aelt, v, iv, SHIFT);
+-{	
++{
+     for (j = 1; j <= lastrow - firstrow + 1; j++) {
+ 	for (k = rowstr[j]; k < rowstr[j+1]; k++) {
+             colidx[k] = colidx[k] - firstcol + 1;
+@@ -113,36 +113,47 @@
+ 	for (j = 1; j <= lastcol-firstcol+1; j++) {
+             x[j] = norm_temp12*z[j];
+ 	}
+-    } 
++    }
+     for (i = 1; i <= NA+1; i++) {
+          x[i] = 1.0;
+-    }  
++    }
+     zeta  = 0.0;
+     timer_clear( 1 );
+     timer_start( 1 );
++#pragma omp parallel private(j)
++{
+     for (it = 1; it <= NITER; it++) {
+ 	conj_grad(colidx, rowstr, x, z, a, p, q, r, &rnorm);
+-	norm_temp11 = 0.0;
+-	norm_temp12 = 0.0;
++#pragma omp single
++	{
++	    norm_temp11 = 0.0;
++	    norm_temp12 = 0.0;
++	}
++#pragma omp for reduction(+:norm_temp11,norm_temp12)
+ 	for (j = 1; j <= lastcol-firstcol+1; j++) {
+             norm_temp11 = norm_temp11 + x[j]*z[j];
+             norm_temp12 = norm_temp12 + z[j]*z[j];
+ 	}
+-	norm_temp12 = 1.0 / sqrt( norm_temp12 );
+-	zeta = SHIFT + 1.0 / norm_temp11;
+-	if( it == 1 ) {
+-	  printf("   iteration           ||r||                 zeta\n");
+-	}
+-	printf("    %5d       %20.14e%20.13e\n", it, rnorm, zeta);
++#pragma omp single
++	{
++	    norm_temp12 = 1.0 / sqrt( norm_temp12 );
++	    zeta = SHIFT + 1.0 / norm_temp11;
++	    if( it == 1 ) {
++	        printf("   iteration           ||r||                 zeta\n");
++	    }
++	    printf("    %5d       %20.14e%20.13e\n", it, rnorm, zeta);
++	}
++#pragma omp for firstprivate(norm_temp12)
+ 	for (j = 1; j <= lastcol-firstcol+1; j++) {
+             x[j] = norm_temp12*z[j];
+ 	}
+-    } 
++    }
++}
+ {
+ #if defined(_OPENMP)
+     nthreads = omp_get_num_threads();
+-#endif 
+-} 
++#endif
++}
+     timer_stop( 1 );
+     t = timer_read( 1 );
+     printf(" Benchmark completed\n");
+@@ -171,21 +182,21 @@
+     } else {
+ 	mflops = 0.0;
+     }
+-    c_print_results("CG", class, NA, 0, 0, NITER, nthreads, t, 
+-		    mflops, "          floating point", 
++    c_print_results("CG", class, NA, 0, 0, NITER, nthreads, t,
++		    mflops, "          floating point",
+ 		    verified, NPBVERSION, COMPILETIME,
+ 		    CS1, CS2, CS3, CS4, CS5, CS6, CS7);
+ }
+ static void conj_grad (
+-    int colidx[],	
+-    int rowstr[],	
+-    double x[],		
+-    double z[],		
+-    double a[],		
+-    double p[],		
+-    double q[],		
+-    double r[],		
+-    
++    int colidx[],
++    int rowstr[],
++    double x[],
++    double z[],
++    double a[],
++    double p[],
++    double q[],
++    double r[],
++
+     double *rnorm )
+ {
+     static int callcount = 0;
+@@ -194,50 +205,71 @@
+     int cgit, cgitmax = 25;
+     rho = 0.0;
+ {
++#pragma omp for nowait
+     for (j = 1; j <= naa+1; j++) {
+ 	q[j] = 0.0;
+ 	z[j] = 0.0;
+ 	r[j] = x[j];
+ 	p[j] = r[j];
+-	
+-    }
++
++    }
++#pragma omp for reduction(+:rho)
+     for (j = 1; j <= lastcol-firstcol+1; j++) {
+ 	rho = rho + r[j]*r[j];
+     }
+ }
+     for (cgit = 1; cgit <= cgitmax; cgit++) {
++#pragma omp single
++      {
+       rho0 = rho;
+       d = 0.0;
+       rho = 0.0;
+-{
++      }
++{
++#pragma omp for private(sum,k)
+ 	for (j = 1; j <= lastrow-firstrow+1; j++) {
+             sum = 0.0;
+ 	    for (k = rowstr[j]; k < rowstr[j+1]; k++) {
+ 		sum = sum + a[k]*p[colidx[k]];
+ 	    }
+-            
++
+             q[j] = sum;
+ 	}
++#pragma omp for reduction(+:d)
+ 	for (j = 1; j <= lastcol-firstcol+1; j++) {
+             d = d + p[j]*q[j];
+-	}	
++	}
++#pragma omp single
++	{
+ 	alpha = rho0 / d;
++	}
++#pragma omp for reduction(+:rho) nowait
+ 	for (j = 1; j <= lastcol-firstcol+1; j++) {
+             z[j] = z[j] + alpha*p[j];
+             r[j] = r[j] - alpha*q[j];
+ 
+             rho = rho + r[j]*r[j];
+ 	}
+-	
++#pragma omp single
++	{
+ 	beta = rho / rho0;
++	}
++#pragma omp for nowait
+ 	for (j = 1; j <= lastcol-firstcol+1; j++) {
+             p[j] = r[j] + beta*p[j];
+ 	}
++#pragma omp single
++    {
+     callcount++;
+-    } 
+-    } 
++    }
++    }
++    }
++#pragma omp single
++    {
+     sum = 0.0;
+-{
++    }
++{
++#pragma omp for private(d,k)
+     for (j = 1; j <= lastrow-firstrow+1; j++) {
+ 	d = 0.0;
+ 	for (k = rowstr[j]; k <= rowstr[j+1]-1; k++) {
+@@ -245,30 +277,31 @@
+ 	}
+ 	r[j] = d;
+     }
++#pragma omp for reduction(+:sum)
+     for (j = 1; j <= lastcol-firstcol+1; j++) {
+ 	d = x[j] - r[j];
+ 	sum = sum + d*d;
+     }
+-} 
++}
+     (*rnorm) = sqrt(sum);
+ }
+ static void makea(
+     int n,
+     int nz,
+-    double a[],		
+-    int colidx[],	
+-    int rowstr[],	
++    double a[],
++    int colidx[],
++    int rowstr[],
+     int nonzer,
+     int firstrow,
+     int lastrow,
+     int firstcol,
+     int lastcol,
+     double rcond,
+-    int arow[],		
+-    int acol[],		
+-    double aelt[],	
+-    double v[],		
+-    int iv[],		
++    int arow[],
++    int acol[],
++    double aelt[],
++    double v[],
++    int iv[],
+     double shift )
+ {
+     int i, nnza, iouter, ivelt, ivelt1, irow, nzv;
+@@ -327,18 +360,18 @@
+ 	   firstrow, lastrow, v, &(iv[0]), &(iv[n]), nnza);
+ }
+ static void sparse(
+-    double a[],		
+-    int colidx[],	
+-    int rowstr[],	
++    double a[],
++    int colidx[],
++    int rowstr[],
+     int n,
+-    int arow[],		
+-    int acol[],		
+-    double aelt[],	
++    int arow[],
++    int acol[],
++    double aelt[],
+     int firstrow,
+     int lastrow,
+-    double x[],		
+-    boolean mark[],	
+-    int nzloc[],	
++    double x[],
++    boolean mark[],
++    int nzloc[],
+     int nnza)
+ {
+     int nrows;
+@@ -408,10 +441,10 @@
+ static void sprnvc(
+     int n,
+     int nz,
+-    double v[],		
+-    int iv[],		
+-    int nzloc[],	
+-    int mark[] ) 	
++    double v[],
++    int iv[],
++    int nzloc[],
++    int mark[] )
+ {
+     int nn1;
+     int nzrow, nzv, ii, i;
+@@ -446,8 +479,8 @@
+ }
+ static void vecset(
+     int n,
+-    double v[],	
+-    int iv[],	
++    double v[],
++    int iv[],
+     int *nzv,
+     int i,
+     double val)
+@@ -466,4 +499,4 @@
+ 	v[*nzv] = val;
+ 	iv[*nzv] = i;
+     }
+-}
+\ No newline at end of file
++}

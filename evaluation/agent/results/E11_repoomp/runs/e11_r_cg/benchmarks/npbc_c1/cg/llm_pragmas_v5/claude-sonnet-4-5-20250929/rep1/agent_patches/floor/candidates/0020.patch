@@ -1,0 +1,52 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e11_r_cg/benchmarks/npbc_c1/cg/llm_pragmas_v5/claude-sonnet-4-5-20250929/rep1/work/cg.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e11_r_cg/benchmarks/npbc_c1/cg/llm_pragmas_v5/claude-sonnet-4-5-20250929/rep1/work/cg.c
+@@ -85,6 +85,7 @@
+ 	  firstrow, lastrow, firstcol, lastcol, 
+ 	  RCOND, arow, acol, aelt, v, iv, SHIFT);
+ {	
++    #pragma omp parallel for private(k) 
+     for (j = 1; j <= lastrow - firstrow + 1; j++) {
+ 	#pragma omp parallel for firstprivate(j) 
+ 	for (k = rowstr[j]; k < rowstr[j+1]; k++) {
+@@ -114,10 +115,12 @@
+             norm_temp12 = norm_temp12 + z[j]*z[j];
+ 	}
+ 	norm_temp12 = 1.0 / sqrt( norm_temp12 );
++	#pragma omp parallel for firstprivate(norm_temp12) 
+ 	for (j = 1; j <= lastcol-firstcol+1; j++) {
+             x[j] = norm_temp12*z[j];
+ 	}
+     } 
++    #pragma omp parallel for 
+     for (i = 1; i <= NA+1; i++) {
+          x[i] = 1.0;
+     }  
+@@ -208,6 +211,7 @@
+ 	p[j] = r[j];
+ 	
+     }
++    #pragma omp parallel for shared(r) reduction(+:rho) 
+     for (j = 1; j <= lastcol-firstcol+1; j++) {
+ 	rho = rho + r[j]*r[j];
+     }
+@@ -226,10 +230,12 @@
+             
+             q[j] = sum;
+ 	}
++	#pragma omp parallel for shared(p,q) reduction(+:d) 
+ 	for (j = 1; j <= lastcol-firstcol+1; j++) {
+             d = d + p[j]*q[j];
+ 	}	
+ 	alpha = rho0 / d;
++	#pragma omp parallel for firstprivate(alpha) shared(r,z) reduction(+:rho) 
+ 	for (j = 1; j <= lastcol-firstcol+1; j++) {
+             z[j] = z[j] + alpha*p[j];
+             r[j] = r[j] - alpha*q[j];
+@@ -238,6 +244,7 @@
+ 	}
+ 	
+ 	beta = rho / rho0;
++	#pragma omp parallel for firstprivate(beta) shared(r) 
+ 	for (j = 1; j <= lastcol-firstcol+1; j++) {
+             p[j] = r[j] + beta*p[j];
+ 	}

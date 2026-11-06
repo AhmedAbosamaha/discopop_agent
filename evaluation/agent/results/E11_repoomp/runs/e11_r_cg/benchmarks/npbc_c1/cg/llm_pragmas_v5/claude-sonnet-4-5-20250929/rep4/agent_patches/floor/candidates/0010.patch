@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e11_r_cg/benchmarks/npbc_c1/cg/llm_pragmas_v5/claude-sonnet-4-5-20250929/rep4/work/cg.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e11_r_cg/benchmarks/npbc_c1/cg/llm_pragmas_v5/claude-sonnet-4-5-20250929/rep4/work/cg.c
+@@ -125,6 +125,7 @@
+ 	conj_grad(colidx, rowstr, x, z, a, p, q, r, &rnorm);
+ 	norm_temp11 = 0.0;
+ 	norm_temp12 = 0.0;
++	#pragma omp parallel for reduction(+:norm_temp12,norm_temp11) 
+ 	for (j = 1; j <= lastcol-firstcol+1; j++) {
+             norm_temp11 = norm_temp11 + x[j]*z[j];
+             norm_temp12 = norm_temp12 + z[j]*z[j];

@@ -1,0 +1,10 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e11_r_cg/benchmarks/npbc_c1/cg/llm_pragmas_v5/claude-sonnet-4-5-20250929/rep2/work/cg.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e11_r_cg/benchmarks/npbc_c1/cg/llm_pragmas_v5/claude-sonnet-4-5-20250929/rep2/work/cg.c
+@@ -241,6 +241,7 @@
+ {
+     for (j = 1; j <= lastrow-firstrow+1; j++) {
+ 	d = 0.0;
++	#pragma omp parallel for firstprivate(j) shared(colidx,rowstr,a,z) reduction(+:d) 
+ 	for (k = rowstr[j]; k <= rowstr[j+1]-1; k++) {
+             d = d + a[k]*z[colidx[k]];
+ 	}

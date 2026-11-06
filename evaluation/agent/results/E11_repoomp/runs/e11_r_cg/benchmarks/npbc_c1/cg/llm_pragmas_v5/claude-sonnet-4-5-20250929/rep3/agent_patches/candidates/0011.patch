@@ -1,0 +1,34 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e11_r_cg/benchmarks/npbc_c1/cg/llm_pragmas_v5/claude-sonnet-4-5-20250929/rep3/work/cg.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e11_r_cg/benchmarks/npbc_c1/cg/llm_pragmas_v5/claude-sonnet-4-5-20250929/rep3/work/cg.c
+@@ -234,9 +234,10 @@
+             p[j] = r[j] + beta*p[j];
+ 	}
+     callcount++;
+-    } 
+-    } 
+-    sum = 0.0;
++    }
++    }
++    double norm_sum;
++    norm_sum = 0.0;
+ {
+     for (j = 1; j <= lastrow-firstrow+1; j++) {
+ 	d = 0.0;
+@@ -245,12 +246,13 @@
+ 	}
+ 	r[j] = d;
+     }
++    #pragma omp parallel for reduction(+:norm_sum) private(d)
+     for (j = 1; j <= lastcol-firstcol+1; j++) {
+ 	d = x[j] - r[j];
+-	sum = sum + d*d;
+-    }
+-} 
+-    (*rnorm) = sqrt(sum);
++	norm_sum = norm_sum + d*d;
++    }
++}
++    (*rnorm) = sqrt(norm_sum);
+ }
+ static void makea(
+     int n,

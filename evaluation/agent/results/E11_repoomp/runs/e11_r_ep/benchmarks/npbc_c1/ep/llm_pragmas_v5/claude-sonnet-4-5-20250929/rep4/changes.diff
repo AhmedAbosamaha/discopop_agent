@@ -1,0 +1,43 @@
+--- original.c
++++ final.c
+@@ -145,6 +145,12 @@
+ 
+     for (i = 0; i < NQ; i++) qq[i] = 0.0;
+ 
++#pragma omp parallel private(kk,t1,t2,t3,t4,x1,x2,ik,l,i) reduction(+:sx,sy,qq[:NQ])
++{
++#pragma omp single
++    nthreads = omp_get_num_threads();
++
++#pragma omp for
+     for (k = 1; k <= np; k++) {
+ 	kk = k_offset + k;
+ 	t1 = S;
+@@ -175,20 +181,20 @@
+             t1 = pow2(x1) + pow2(x2);
+             if (t1 <= 1.0) {
+ 		t2 = sqrt(-2.0 * log(t1) / t1);
+-		t3 = (x1 * t2);				
+-		t4 = (x2 * t2);				
++		t3 = (x1 * t2);
++		t4 = (x2 * t2);
+ 		l = max(fabs(t3), fabs(t4));
+-		qq[l] += 1.0;				
+-		sx = sx + t3;				
+-		sy = sy + t4;				
++		qq[l] += 1.0;
++		sx = sx + t3;
++		sy = sy + t4;
+             }
+ 	}
+ 	if (TIMERS_ENABLED == TRUE) timer_stop(2);
+     }
++}
+     {
+       for (i = 0; i <= NQ - 1; i++) q[i] += qq[i];
+-    }
+-    nthreads = omp_get_num_threads();    
++    }    
+ }     
+ 
+     for (i = 0; i <= NQ-1; i++) {

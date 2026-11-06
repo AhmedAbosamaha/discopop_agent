@@ -1,0 +1,18 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e11_r_cg/benchmarks/npbc_c1/cg/discopop_gate_v5/claude-sonnet-4-5-20250929/rep2/work/cg.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e11_r_cg/benchmarks/npbc_c1/cg/discopop_gate_v5/claude-sonnet-4-5-20250929/rep2/work/cg.c
+@@ -85,6 +85,7 @@
+ 	  firstrow, lastrow, firstcol, lastcol, 
+ 	  RCOND, arow, acol, aelt, v, iv, SHIFT);
+ {	
++    #pragma omp parallel for private(k) 
+     for (j = 1; j <= lastrow - firstrow + 1; j++) {
+ 	#pragma omp parallel for firstprivate(j) 
+ 	for (k = rowstr[j]; k < rowstr[j+1]; k++) {
+@@ -108,6 +109,7 @@
+ 	conj_grad (colidx, rowstr, x, z, a, p, q, r, &rnorm);
+ 	norm_temp11 = 0.0;
+ 	norm_temp12 = 0.0;
++	#pragma omp parallel for reduction(+:norm_temp11,norm_temp12) 
+ 	for (j = 1; j <= lastcol-firstcol+1; j++) {
+             norm_temp11 = norm_temp11 + x[j]*z[j];
+             norm_temp12 = norm_temp12 + z[j]*z[j];

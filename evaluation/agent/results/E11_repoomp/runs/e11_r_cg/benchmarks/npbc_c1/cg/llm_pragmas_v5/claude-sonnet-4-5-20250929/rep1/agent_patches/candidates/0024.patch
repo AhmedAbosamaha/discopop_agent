@@ -1,0 +1,60 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e11_r_cg/benchmarks/npbc_c1/cg/llm_pragmas_v5/claude-sonnet-4-5-20250929/rep1/work/cg.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e11_r_cg/benchmarks/npbc_c1/cg/llm_pragmas_v5/claude-sonnet-4-5-20250929/rep1/work/cg.c
+@@ -15,10 +15,10 @@
+ static double v[NA+1+1];	
+ static double aelt[NZ+1];	
+ static double a[NZ+1];		
+-static double x[NA+2+1];	
+-static double z[NA+2+1];	
+-static double p[NA+2+1];	
+-static double q[NA+2+1];	
++static double x[NA+2+1];
++static double z[NA+2+1];
++static double p[NA+2+1];
++static double q[NA+2+1];
+ static double r[NA+2+1];	
+ 
+ static double amult;
+@@ -120,13 +120,20 @@
+     zeta  = 0.0;
+     timer_clear( 1 );
+     timer_start( 1 );
++    #pragma omp parallel
++    {
++    double *my_z = (double*)malloc((NA+2+1)*sizeof(double));
++    double *my_p = (double*)malloc((NA+2+1)*sizeof(double));
++    double *my_q = (double*)malloc((NA+2+1)*sizeof(double));
++    double *my_r = (double*)malloc((NA+2+1)*sizeof(double));
++    #pragma omp for private(norm_temp12, norm_temp11, rnorm, j) lastprivate(zeta)
+     for (it = 1; it <= NITER; it++) {
+-	conj_grad(colidx, rowstr, x, z, a, p, q, r, &rnorm);
++	conj_grad(colidx, rowstr, x, my_z, a, my_p, my_q, my_r, &rnorm);
+ 	norm_temp11 = 0.0;
+ 	norm_temp12 = 0.0;
+ 	for (j = 1; j <= lastcol-firstcol+1; j++) {
+-            norm_temp11 = norm_temp11 + x[j]*z[j];
+-            norm_temp12 = norm_temp12 + z[j]*z[j];
++            norm_temp11 = norm_temp11 + x[j]*my_z[j];
++            norm_temp12 = norm_temp12 + my_z[j]*my_z[j];
+ 	}
+ 	norm_temp12 = 1.0 / sqrt( norm_temp12 );
+ 	zeta = SHIFT + 1.0 / norm_temp11;
+@@ -135,9 +142,15 @@
+ 	}
+ 	printf("    %5d       %20.14e%20.13e\n", it, rnorm, zeta);
+ 	for (j = 1; j <= lastcol-firstcol+1; j++) {
+-            x[j] = norm_temp12*z[j];
+-	}
+-    } 
++            x[j] = norm_temp12*my_z[j];
++	}
++    }
++    free(my_z);
++    free(my_p);
++    free(my_q);
++    free(my_r);
++    }
++ 
+ {
+ #if defined(_OPENMP)
+     nthreads = omp_get_num_threads();

@@ -1,0 +1,17 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e11_r_cg/benchmarks/npbc_c1/cg/llm_pragmas_v5/claude-sonnet-4-5-20250929/rep2/work/cg.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e11_r_cg/benchmarks/npbc_c1/cg/llm_pragmas_v5/claude-sonnet-4-5-20250929/rep2/work/cg.c
+@@ -238,6 +238,7 @@
+     } 
+     sum = 0.0;
+ {
++    #pragma omp parallel for private(d,k) shared(r,colidx,rowstr,a,z) 
+     for (j = 1; j <= lastrow-firstrow+1; j++) {
+ 	d = 0.0;
+ 	for (k = rowstr[j]; k <= rowstr[j+1]-1; k++) {
+@@ -466,4 +467,4 @@
+ 	v[*nzv] = val;
+ 	iv[*nzv] = i;
+     }
+-}
+\ No newline at end of file
++}
