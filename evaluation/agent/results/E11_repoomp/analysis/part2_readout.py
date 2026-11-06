@@ -39,6 +39,7 @@ HERE = Path(__file__).resolve().parent
 TOOLS = HERE.parents[2] / "tools"
 sys.path.insert(0, str(TOOLS))
 import e2b1_stats  # noqa: E402
+import figures  # noqa: E402
 from main_comparison_stats import load_races, wilson  # noqa: E402
 
 POPULATION = HERE.parents[2] / "config" / "e11b_population.json"
@@ -50,6 +51,25 @@ TESTS = [("E11b-i", "successes: the agent against RepoOMP's release", "llm_pragm
 
 # The pre-registered change to E2's judge: every setup's race verdict from the race check (see the docstring).
 e2b1_stats._model_only = lambda arm: True  # type: ignore[assignment]
+
+
+def runner_label(t: dict) -> dict:
+    """RepoOMP's release judged with the label the runner gives the agent's own trials.
+
+    `verify-source` records `kind: baseline`, and the runner's `classify` never gives a baseline `no-change` or
+    `changed-not-parallel` ("a parallelization by construction": an expert's directives, a compiler flag) — so an
+    unchanged program is `parallel-not-faster`. RepoOMP's release is not one by construction: with no rule and no
+    model program accepted (`opt_method: none`) it ships the original unchanged (the probe's k19, 6 Nov). Its trials
+    therefore take `classify`'s rule for the agent's trials, in `classify`'s order (after BROKEN, before speed): the
+    source unchanged → `no-change`; changed without an added directive → `changed-not-parallel`. The label the
+    judge printed is kept as `outcome_verify_source`."""
+    if t.get("arm") != "repoomp_release" or t.get("outcome") not in figures.PARALLEL_OK:
+        return t
+    if not t.get("source_changed"):
+        return dict(t, outcome="no-change", outcome_verify_source=t.get("outcome"))
+    if int(t.get("pragmas_in_final") or 0) == 0:
+        return dict(t, outcome="changed-not-parallel", outcome_verify_source=t.get("outcome"))
+    return t
 
 
 def load_population(path: Path) -> Tuple[Dict[str, str], str]:
@@ -90,6 +110,7 @@ def analyse(trials: List[dict], role: Dict[str, str], model: Optional[str],
     for t in trials:
         if t.get("benchmark") not in role or t.get("arm") not in SETUPS or not _model_ok(t, model):
             continue
+        t = runner_label(t)
         j = e2b1_stats.judge(t, races)
         j["role"] = role[str(t["benchmark"])]
         j["calls"] = int(t.get("llm_calls") or 0)
