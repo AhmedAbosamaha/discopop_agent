@@ -22,7 +22,7 @@ import subprocess
 import sys
 from collections import defaultdict
 
-FUNC_RE = re.compile(r"(?:^|\n)\s*(?:static\s+|extern\s+|inline\s+|const\s+|unsigned\s+|signed\s+|long\s+|short\s+|double\s+|float\s+|int\s+|void\s+|char\s+|struct\s+\w+\s+)+([A-Za-z_]\w*)\s*\([^;{}]*\)\s*\{")
+FUNC_RE = re.compile(r"(?:^|\n)\s*(?:static\s+|real_t\s+|extern\s+|inline\s+|const\s+|unsigned\s+|signed\s+|long\s+|short\s+|double\s+|float\s+|int\s+|void\s+|char\s+|struct\s+\w+\s+)+([A-Za-z_]\w*)\s*\([^;{}]*\)\s*\{")
 
 
 def stable_key(*parts):

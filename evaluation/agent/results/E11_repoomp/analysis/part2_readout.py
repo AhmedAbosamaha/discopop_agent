@@ -97,9 +97,12 @@ def levels(t: dict) -> Dict[str, Any]:
     rules, model, on_rules = r.get("rules") or {}, r.get("model") or {}, r.get("model_on_rules") or {}
     return {"rules_proposed": int(r.get("rules_changes") or 0) > 0,
             "rules_passed_own_check": rules.get("verified") if "skipped" not in rules else None,
-            "model_proposed": bool(model) and "skipped" not in model,
+            # a model file byte-equal to its input is no proposal (primitive_adder writes the input back when it
+            # accepts no function), even where the release then accepts it on timing noise (6 Nov)
+            "model_proposed": bool(model) and "skipped" not in model and not model.get("candidate_equals_source"),
             "model_passed_own_check": model.get("verified") if model and "skipped" not in model else None,
             "model_on_rules_run": bool(on_rules),
+            "model_on_rules_proposed": bool(on_rules) and not on_rules.get("candidate_equals_source"),
             "accepted": str(r.get("opt_method") or "none"),
             "own_speedup": r.get("speedup_own_check")}
 

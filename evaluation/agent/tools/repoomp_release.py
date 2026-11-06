@@ -231,7 +231,7 @@ def main() -> int:
 
     log: List[Dict[str, Any]] = []
     res: Dict[str, Any] = {"benchmark": a.benchmark, "tool": "repoomp_release.py", "repoomp_commit": "45a1b9f",
-                           "model": a.model if a.api_base else None, "threads": a.threads, "runs": a.runs,
+                           "model_id": a.model if a.api_base else None, "threads": a.threads, "runs": a.runs,
                            "agent_size": pkg.agent_size, "timing_size": pkg.timing_size, "cc": a.cc,
                            "started_at": time.strftime("%Y-%m-%dT%H:%M:%S")}
 
@@ -278,6 +278,9 @@ def main() -> int:
                                  a.repoomp_python, log)
             if lr is not None:
                 r = check_and_time(pkg, lr, ref_dump)
+                # primitive_adder writes its input back when it accepts no function (no hotspot, or every candidate
+                # rejected): then nothing was proposed, whatever the check and the timing say (6 Nov)
+                r["candidate_equals_source"] = _sha(lr) == _sha(cand)
                 res["model_on_rules"] = r
                 if r.get("verified") and r.get("time") is not None and (opt_time is None or r["time"] < opt_time):
                     opt, opt_method, opt_time = lr, "rules+model", r["time"]
@@ -288,6 +291,7 @@ def main() -> int:
             lc_fixed = work / f"{name}_llm_fixed.c"
             lc_fixed.write_text(run_all._fix_thread_report(lc.read_text(errors="replace")))
             r = check_and_time(pkg, lc_fixed, ref_dump)
+            r["candidate_equals_source"] = _sha(lc_fixed) == _sha(source)
             res["model"] = r
             if r.get("verified") and r.get("time") is not None and r["time"] < serial_time \
                     and (opt_time is None or r["time"] < opt_time):
@@ -311,7 +315,8 @@ def _finish(out: Path, source: Path, opt: Optional[Path], method: str, res: Dict
     editable = Path(source).name
     if opt is not None:
         shutil.copy2(opt, final / editable)
-    res["final_changed"] = opt is not None
+    # from the content: the release may "accept" a model file byte-equal to the original on timing noise (6 Nov)
+    res["final_changed"] = opt is not None and _sha(opt) != _sha(source)
     res["finished_at"] = time.strftime("%Y-%m-%dT%H:%M:%S")
     (out / "repoomp_result.json").write_text(json.dumps(res, indent=1, default=str) + "\n")
     (out / "repoomp_log.json").write_text(json.dumps(log, indent=1, default=str) + "\n")
