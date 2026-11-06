@@ -62,7 +62,7 @@ Earlier versions (history):
 |---|---|---|
 | [`E10_speed_check/`](E10_speed_check/REPORT.md) | E10 — does the speed check keep unnecessary changes out? | done |
 | [`E07_gate_as_classifier/`](E07_gate_as_classifier/REPORT.md) | E7 — the gate as a classifier: every saved candidate judged again by the harness, each check on its own, DataRaceBench as the outside ground truth for races | dropped for now (18 Oct) — designed 9 Oct and set aside by the author the same day; nothing built, nothing run |
-| [`E11_repoomp/`](E11_repoomp/REPORT.md) | E11 — against RepoOMP on its NPB-C kernels | dropped for now (18 Oct) — pre-flight only, no model call |
+| [`E11_repoomp/`](E11_repoomp/REPORT.md) | E11 — against RepoOMP: its NPB-C kernels EP and CG, and the hidden-order units | done 6 Nov — both parts read out (thesis §6.8); part 1 left as run (the author, 6 Nov: "Leave part 1 as run") |
 | [`T0_instruments/`](T0_instruments/) | the studies that prove the instruments before an experiment is read (sizes, classes, timing noise, package equivalence …), one sub-folder each | see each |
 | [`audit_benchmark_suitability/`](audit_benchmark_suitability/REPORT.md) | Benchmark suitability audit (§5k, D18) | done |
 | [`history/pilots/`](history/pilots/REPORT.md) | Pilots (before the campaign's design was fixed) | done |

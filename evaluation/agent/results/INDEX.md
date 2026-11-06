@@ -131,9 +131,9 @@ Status: dropped for now (18 Oct) — designed 9 Oct and set aside by the author 
 | run | where | what it is | status | trials | outcomes |
 |---|---|---|---|---:|---|
 
-## [E11 — against RepoOMP on its NPB-C kernels](E11_repoomp/REPORT.md)
+## [E11 — against RepoOMP: its NPB-C kernels EP and CG, and the hidden-order units](E11_repoomp/REPORT.md)
 
-Status: reopened 5 Nov (the author) — simple form: EP, CG, Claude Sonnet 4.5; package built, stage A of the pre-flight registered
+Status: done 6 Nov — both parts read out (thesis §6.8); part 1 left as run (the author, 6 Nov: "Leave part 1 as run")
 
 | run | where | what it is | status | trials | outcomes |
 |---|---|---|---|---:|---|
@@ -162,7 +162,7 @@ Status: reopened 5 Nov (the author) — simple form: EP, CG, Claude Sonnet 4.5; 
 | `e11b_r_agent_1` | [`E11_repoomp/runs/e11b_r_agent_1/`](E11_repoomp/runs/e11b_r_agent_1/) | E11 part 2 main run (server, MODEL), pre-registered 6 Nov: discopop_gate_v5 and llm_pragmas_v5 on tsvc_c2/k19 k23 k31 k27, --trials 5 --threads 6,12 --repeats 5 --timeout 43200, Sonnet 4.5 (claude-sonnet-4-5-20250929), lane 0.1 — 6 Nov 09:03–13:19 UTC at 4077730ec: agent FASTER 5, 5, 3, 5 (k19, k23, k27, k31), 2 no-change on k27; DiscoPoP alone 20/20 no-change; 0 failed calls, 62 calls, $31.38 | valid | 40 | FASTER 18, no-change 22 |
 | `e11b_r_agent_2` | [`E11_repoomp/runs/e11b_r_agent_2/`](E11_repoomp/runs/e11b_r_agent_2/) | E11 part 2 main run (server, MODEL), pre-registered 6 Nov: discopop_gate_v5 and llm_pragmas_v5 on tsvc_c2/s161 k48 k53, --trials 5 --threads 6,12 --repeats 5 --timeout 43200, Sonnet 4.5 (claude-sonnet-4-5-20250929), lane 1.1 — 6 Nov 09:03–12:35 UTC at 4077730ec: agent FASTER 5 (s161), 5 (k48), 0 (k53: 5 no-change); DiscoPoP alone 15/15 no-change; 0 failed calls, 64 calls, $37.44 | valid | 30 | FASTER 10, no-change 20 |
 | `e11b_bare` | [`E11_repoomp/runs/e11b_bare/`](E11_repoomp/runs/e11b_bare/) | E11 part 2 main run (server, MODEL), pre-registered 6 Nov: bare_llm_v4 on the seven tsvc_c2 units, --trials 5 --threads 6,12 --repeats 5 --timeout 43200, Sonnet 4.5 (claude-sonnet-4-5-20250929), lane 1.0 — 6 Nov 09:03–10:47 UTC at 4077730ec: FASTER 8/35 (k19 1, k48 5, s161 2), BROKEN 27; 0 failed calls, 35 calls, $7.63 | valid | 35 | BROKEN 27, FASTER 8 |
-| `e11b_race_check` | [`E11_repoomp/checks/e11b_race_check/`](E11_repoomp/checks/e11b_race_check/) | E11 part 2 race check (server, no model), pre-registered 6 Nov: race_check.py on every program of repoomp_release, llm_pragmas_v5, bare_llm_v4 and discopop_gate_v5 (the positive control) of the part-2 main runs | registered | 0 |  |
+| `e11b_race_check` | [`E11_repoomp/checks/e11b_race_check/`](E11_repoomp/checks/e11b_race_check/) | E11 part 2 race check (server, no model), pre-registered 6 Nov: race_check.py on every program of repoomp_release, llm_pragmas_v5, bare_llm_v4 and discopop_gate_v5 (the positive control) of the part-2 main runs — 6 Nov 13:31–13:32 UTC at 41f019415 (e11b_checks.sh, four 12-core groups): RepoOMP's release 30 unchanged, 5 tsan (s161); the agent 28 clean, 7 unchanged; Sonnet alone 8 clean, 18 correctness, 7 tsan, 2 schedules; DiscoPoP alone 35 unchanged (the positive control changed nothing, so it checks nothing here) | valid | 0 |  |
 
 ## [T0.1 — size calibration](T0_instruments/T0.01_sizes/REPORT.md)
 

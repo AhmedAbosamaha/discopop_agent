@@ -202,8 +202,9 @@ number of the record (D-numbers), so the text can be checked against the reposit
   - The order statement: when the measured dependences fix the order in which two statements must run, this is
     said as a fact. Why it was introduced (the first wording named the dependence but not what follows from it).
   - Evidence as a switch (`--evidence`: none, location only, another tool's remarks, full) and the prompt
-    versions 1 to 4, with what changed in each and why (the prompt review).
-  - What the model is not told: no name of a transformation, no solution vocabulary, no note of ours in the file.
+    versions 1 to 5, with what changed in each and why (the prompt review).
+  - What the model is not told: no text names the transformation a region needs (the general texts say what a measured
+    dependence allows; the order statement says only what a split would have to respect); no note of ours in the file.
 - **4.6 The model call.**
   - Editing modes: the model edits a private copy of the file (default), returns a diff, or returns a function.
   - Confinement: file tools restricted to the working copy; shell, web and search blocked.
@@ -275,7 +276,8 @@ number of the record (D-numbers), so the text can be checked against the reposit
 - **5.4 Toolchain.** LLVM 19 and 20; building Archer where the system ships none; what the race detector reports
   around OpenMP barriers and how the agent treats it (Fix 104).
 - **5.5 Timing inside the agent.** Interleaved paired runs, the noise threshold, the timing size.
-- **5.6 Testing the agent.** The deterministic feature checks (68, no model), unit and end-to-end tests, type checks.
+- **5.6 Testing the agent.** The deterministic feature checks (74, no model); checks of the texts a model reads and of
+  every setup's options against the agent's own parser; type checks.
 - **5.7 What was fixed in DiscoPoP.** Table of the defects with cause, effect and how each was found: a Do-All
   verdict that changed between runs (B4); a call into code outside the project (B8); a callee's accesses lost
   (B9); a carried scalar reported Do-All (B10); a failed instrumented build reported as success (B12); a
