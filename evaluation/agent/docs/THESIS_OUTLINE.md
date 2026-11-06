@@ -39,9 +39,9 @@ proposed here and is to be confirmed with the title.
 
 | RQ | Question | Claim | Hypotheses | Experiments | Section | Status |
 |---|---|---|---|---|---|---|
-| RQ1 | Does restructuring parallelize loops DiscoPoP alone cannot? | C1 | H1, H11 | E1, E11 | 7.2, 7.9 | done on kernels; the comparison with RepoOMP (E11, H11) dropped for now (18 Oct) |
+| RQ1 | Does restructuring parallelize loops DiscoPoP alone cannot? | C1 | H1, H11 | E1, E11 | 7.2, 7.9 | done on kernels; the comparison with RepoOMP (E11, H11) reopened and run 5–6 Nov — thesis §6.8 |
 | RQ2 | Is every accepted change right and race-free, what does each check catch, and where are the checks blind? | C2 | H2, H3, H10, H10b, H13 | E1, E10, E7 | 7.2, 7.6 | E1, E10 done · E7 designed 9 Oct, set aside by the author the same day and dropped for now with the rest on 18 Oct (not run) |
-| RQ3 | How close do the accepted programs come to an expert's version, and do they scale with threads? | C1 | H4, H11 | E1, E2, E6, E11 | 7.2, 7.5, 7.9 | partly — on kernels (E1, E2); LULESH (E6) and RepoOMP (E11) dropped for now (18 Oct) |
+| RQ3 | How close do the accepted programs come to an expert's version, and do they scale with threads? | C1 | H4, H11 | E1, E2, E6, E11 | 7.2, 7.5, 7.9 | on kernels (E1, E2); LULESH (E6, run 4 Nov — thesis §6.7) and RepoOMP (E11, run 5–6 Nov — thesis §6.8), both reopened after 18 Oct |
 | RQ4 | What does the model need: DiscoPoP's evidence, feedback from failed attempts, or more strength? | C1 | H5, H5b, H5d, H12 | E2, E12 | 7.3, 7.5 | done |
 | RQ5 | Who should write the directive: DiscoPoP or the model? | C1, C2 | H6 (its half on the author), H6b | E3 | 7.7 | (decided 13 Oct: the model writes it in the experiments that remain — since 18 Oct none remains) done 10 Oct: 81 of 90 fast and race-free where the model writes, 76 of 90 where DiscoPoP writes — not established (p = 0.14; four of the five trials are `s331`); no unusable program in either setup; DiscoPoP keeps writing in 7.7.2 (the author, 10 Oct); corrected for `s341`: 80 against 75; the contrast set (E3b, 7.7.1b), done 10 Oct: 30 of 30 against 24 of 30 on six chosen loops (25 after a DiscoPoP defect found there was repaired and its loop run again, 11 Oct) — supported as a single test (exact p = 0.009; 0.021 corrected), not within the family; the model usually finds a form DiscoPoP recognises, at 3.4 times the calls and less than half the speed |
 | RQ6 | Can the model close the gap a fast refresh leaves, without making the analysis unsafe? | C3 | H7, H7b | E4 | 7.7 | done (19 Oct) — on saved rewrites (13 Oct): asked on 116 saved rewrites (136 calls, $8.53), the model's report gives back 20 of the 22 wins the fast refresh loses and removes both keeps the full profile does not make, but changes 11 of the 58 drawn rewrites the refresh had right (about 102 of the 541, at least 60 at 95 %) — H7 not refuted on the selected rewrites, fails on the whole set; in all damaged rewrites the reply calls the loop independent: the agent places a reported dependence without its loop; the deletion changed no decision on its 21 rewrites — H7b refuted as registered (0 against 0), the add-not-delete principle stays a design argument; in whole trials (19 Oct; the fast refresh and the report, 125 trials on the 18 loops and the contrast set; the route through NPB not taken): race-free faster in 78 of 90 against 75 and 30 of 35 against 30 with the full re-profile, nothing racy or wrong — what the report leaves is absorbed by further attempts and the safety gate, which refused 62 of DiscoPoP's pragmas against 22; no test |
@@ -302,7 +302,7 @@ number of the record (D-numbers), so the text can be checked against the reposit
 - **6.2 The comparison is three-way.** DiscoPoP alone (its suggestions through the same gate) · DiscoPoP with the
   agent · the model alone (D35, D37). For the design options: the twin of each setup (D38), so that an effect
   inside the agent can be told from an effect on the model. Outside baselines: the sequential original (the
-  reference), expert OpenMP, Polly; RepoOMP's released outputs were planned for 7.9 (dropped for now, 18 Oct).
+  reference), expert OpenMP, Polly; RepoOMP's released outputs were planned for 7.9 (dropped 18 Oct; reopened and run 5–6 Nov: its published programs on NPB EP and CG, its released pipeline on the hidden-order kernels — thesis §6.8).
 - **6.3 The harness and its verdict.** One profile per benchmark and run, shared by all setups. One outcome per
   trial, decided outside the agent: right, race-free and faster · parallel but not faster · unchanged · unusable.
   A program that changed the measurement code has no valid measurement and is listed separately. The separate
@@ -678,8 +678,8 @@ result, or the expectation written down before the run.
     sequential, DiscoPoP alone, the agent, the model alone, the laboratory's own OpenMP version. *Pre-flight
     (13–14 Oct, no model):* the package and the launcher each had a defect, both repaired; the whole run path
     works on LULESH (one profile 322 s, 312 of them the explorer; 59 Do-All patterns); its sizes and class are next.
-  - The closest published system: RepoOMP on its eight NPB kernels (E11; H11). **[dropped for now — 18 Oct, the author; pre-flight
-    only, nothing packaged, no model call]** Every contestant
+  - The closest published system: RepoOMP on its eight NPB kernels (E11; H11). **[dropped 18 Oct; reopened by the author 5 Nov in a simpler form and run 5–6 Nov — thesis §6.8: NPB EP and CG
+    against RepoOMP's published programs, and RepoOMP's released pipeline on the hidden-order kernels; record §6, 5–6 Nov]** Every contestant
     through one verification: the agent, RepoOMP's released outputs and baselines, NPB's expert version, DiscoPoP
     alone, Polly. *Scope measured (13–14 Oct, no model):* as the agent is built, DiscoPoP profiles three of the
     eight programs (EP, IS, CG); LU needs two hours and 122 GiB per profile, MG, BT and SP do not finish the
@@ -815,7 +815,7 @@ the results folder · F. Full result tables · G. The agent's command-line refer
 
 | Claim | Supported by | Status |
 |---|---|---|
-| Coverage (C1) | the main comparison; the hidden-order experiments | **supported on kernels**; a large code and RepoOMP dropped for now (18 Oct) |
+| Coverage (C1) | the main comparison; the hidden-order experiments | **supported on kernels**; LULESH and RepoOMP dropped 18 Oct, reopened and run (4 Nov, 5–6 Nov — thesis §6.7, §6.8) |
 | Trust (C2) | no unusable program in the main comparison; the speed check; the unsafe cases named | **supported**; the gate's own error rate not measured (the gate as a classifier dropped for now) |
 | Cost (C3) | calls, time and cost recorded in every run; the fast-refresh experiment (7.7.2) | **a measured negative result** on the refresh and on the model's report (add-not-delete stays a design argument); the depth trials run and read out (15 Oct): on the 18 loops extra rounds bought fewer successes at two to two and a half times the calls and time, and three wrong programs the agent's checks could not see; the refresh's live trials read out (19 Oct): as many race-free wins as with the full re-profile on the 18 loops and the contrast set (78 against 75 of 90, 30 against 30 of 35), nothing racy or wrong, at a higher cost — the time saving where the profiling run is long rests on step 3's measurement alone; the large code dropped for now |
 
@@ -823,4 +823,5 @@ Dropped, to be said in the thesis with the reason: the profiling-cost curve (26 
 the agent); the small open model as a third model; the evidence's parts and the prompt's parts given one by one
 (2 Oct: the experiment was closed); the first clean-file layout (4 Oct: stopped after eight trials, replaced by
 TSVC's own form); and, on 18 Oct (the author: the thesis is written first), ranking (E9), LULESH (E6), RepoOMP (E11) and the
-gate as a classifier (E7, set aside since 9 Oct) — each designed, none run with a model; their pre-flights are in the record.
+gate as a classifier (E7, set aside since 9 Oct) — each designed, none run with a model; their pre-flights are in the record. *Later:* LULESH (E6)
+was reopened and run on 4 Nov (thesis §6.7) and RepoOMP (E11) on 5–6 Nov (thesis §6.8).
