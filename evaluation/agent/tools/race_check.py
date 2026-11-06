@@ -103,6 +103,39 @@ def _project_flags(t: Dict[str, Any], name: str) -> List[str]:
     return []
 
 
+PREPARED = HERE.parent / "prepared"
+
+
+def _baseline_project(t: Dict[str, Any], d: Path) -> tuple[Optional[Dict[str, Any]], str]:
+    """The package's own `project` block (its meta.json) for a multi-file trial that ran no agent, with the reason
+    when it cannot stand in for the trial's record.
+
+    Another system's program or an expert's, judged by `cli.py verify-source` (kind `baseline`), has no agent
+    command to read the units and flags from, nor (before 6 Nov) an `editable` field: the race check marked every
+    such trial not-checked (E11's judged NPB programs, 6 Nov). The package defines what the trial was built from
+    only if its units are still byte-equal to the trial's `original/`, and the patch of the one editable file is the
+    whole change only if no other file of `final/` differs from `original/`; otherwise the trial stays not-checked."""
+    if t.get("agent_cmd") or t.get("kind") != "baseline":
+        return None, ""
+    meta = PREPARED / str(t.get("benchmark")) / "meta.json"
+    if not meta.is_file():
+        return None, f"no package {t.get('benchmark')} to read the project from"
+    proj = dict(json.loads(meta.read_text()).get("project") or {})
+    units, editable = list(proj.get("units") or []), list(proj.get("editable") or [])
+    if not units or len(editable) != 1:
+        return None, "the package defines no project with one editable file"
+    for u in units:
+        if not (d / "original" / u).is_file() or (d / "original" / u).read_bytes() != (meta.parent / u).read_bytes():
+            return None, f"the package's {u} differs from the trial's original — the package changed since the trial"
+    for f in sorted((d / "final").rglob("*")):
+        rel = f.relative_to(d / "final")
+        if f.is_file() and str(rel) != editable[0]:
+            o = d / "original" / rel
+            if not o.is_file() or o.read_bytes() != f.read_bytes():
+                return None, f"{rel} differs between original and final, not only the editable {editable[0]}"
+    return proj, ""
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--runs", required=True, help="comma-separated archived runs")
@@ -162,8 +195,14 @@ def main() -> int:
                 # and the patch is the change to the ONE file that is the benchmark's (trial.json `editable`).
                 editable = list(t.get("editable") or [])
                 units = _project_units(t)
+                cflags, ldflags = _project_flags(t, "--project-cflags"), _project_flags(t, "--project-ldflags")
+                pkg, why = _baseline_project(t, d)
+                if pkg is not None:      # a program judged by verify-source: the package's project (E11, 6 Nov)
+                    editable, units = list(pkg["editable"]), list(pkg["units"])
+                    cflags, ldflags = list(pkg.get("cflags") or []), list(pkg.get("ldflags") or [])
+                    rec["project_from"] = "package"
                 if len(editable) != 1 or not units:
-                    rec.update(verdict="not-checked", note="a multi-file trial without one editable file")
+                    rec.update(verdict="not-checked", note=why or "a multi-file trial without one editable file")
                     with results_path.open("a") as f:
                         f.write(json.dumps(rec, default=str) + "\n")
                     continue
@@ -171,8 +210,7 @@ def main() -> int:
                 shutil.copytree(d / "original", root)
                 src = root / editable[0]
                 project_mod.activate(project_mod.Project.discover(
-                    root, units=units, include_dirs=["."], editable=editable,
-                    cflags=_project_flags(t, "--project-cflags"), ldflags=_project_flags(t, "--project-ldflags")))
+                    root, units=units, include_dirs=["."], editable=editable, cflags=cflags, ldflags=ldflags))
                 project_mod.set_focus(str(src))
                 diff = _unified_diff(src, d / "final" / editable[0])
             else:
