@@ -1,0 +1,129 @@
+
+============================================================
+  PHASE B — annotate  (20 candidate pragma(s))
+============================================================
+
+  Timing noise floor on this machine: 0.993 → keep anything at or above 0.983
+
+┌─ pattern #73  reduction @ lines 215–217  (W=62518400)
+│  #pragma omp parallel for
+│  marginal 0.01× alone — deferred: judged together with the other pragmas that do not pay alone (D33)
+└─ DEFERRED (slower alone)
+
+┌─ pattern #74  do_all @ lines 213–220  (W=3920000)
+│  #pragma omp parallel for
+│  marginal 2.68×
+│  [Phase-B] Original backed up → cg.c.original
+│  [Phase-B] Applied to cg.c
+└─ APPLIED
+
+┌─ pattern #76  reduction @ lines 225–230  (W=2800000)
+│  #pragma omp parallel for
+│  [Tier-1] Repairing the generated pragma: q, p are declared inside the loop body, so cannot appear in a clause
+│  marginal 0.79× alone — deferred: judged together with the other pragmas that do not pay alone (D33)
+└─ DEFERRED (slower alone)
+
+┌─ pattern #79  reduction @ lines 243–245  (W=2500736)
+│  #pragma omp parallel for
+│  marginal 0.10× alone — deferred: judged together with the other pragmas that do not pay alone (D33)
+└─ DEFERRED (slower alone)
+
+┌─ pattern #77  do_all @ lines 233–235  (W=1120000)
+│  #pragma omp parallel for
+│  [Tier-1] Repairing the generated pragma: p is declared inside the loop body, so cannot appear in a clause
+│  marginal 0.81× alone — deferred: judged together with the other pragmas that do not pay alone (D33)
+└─ DEFERRED (slower alone)
+
+┌─ pattern #75  reduction @ lines 221–223  (W=1120000)
+│  #pragma omp parallel for
+│  marginal 0.94× alone — deferred: judged together with the other pragmas that do not pay alone (D33)
+└─ DEFERRED (slower alone)
+
+┌─ pattern #54  do_all @ lines 89–91  (W=156296)
+│  #pragma omp parallel for
+│  marginal 1.54×
+│  [Phase-B] Applied to cg.c
+└─ APPLIED
+
+┌─ pattern #71  do_all @ lines 197–203  (W=134496)
+│  #pragma omp parallel for
+│  marginal 1.01×
+│  [Phase-B] Applied to cg.c
+└─ APPLIED
+
+┌─ pattern #80  do_all @ lines 241–247  (W=134400)
+│  #pragma omp parallel for
+│  marginal 1.28×
+│  [Phase-B] Applied to cg.c
+└─ APPLIED
+
+┌─ pattern #81  reduction @ lines 248–251  (W=67200)
+│  #pragma omp parallel for
+│  [Tier-1] Repairing the generated pragma: d is declared inside the loop body, so cannot appear in a clause
+│  gate failed at 'tsan': Race detected: WARNING: ThreadSanitizer: data race (pid=856724)   Write of size 8 at 0x7fffffffe560 by thread T7:     #0 conj_grad.omp_outlined_debug_
+└─ DROPPED
+
+┌─ pattern #62  reduction @ lines 127–130  (W=63000)
+│  #pragma omp parallel for
+│  marginal 1.00×
+│  [Phase-B] Applied to cg.c
+└─ APPLIED
+
+┌─ pattern #72  reduction @ lines 204–206  (W=44800)
+│  #pragma omp parallel for
+│  marginal 0.78× alone — deferred: judged together with the other pragmas that do not pay alone (D33)
+└─ DEFERRED (slower alone)
+
+┌─ pattern #63  do_all @ lines 137–139  (W=42000)
+│  #pragma omp parallel for
+│  marginal 1.01×
+│  [Phase-B] Applied to cg.c
+└─ APPLIED
+
+┌─ pattern #57  do_all @ lines 96–101  (W=7000)
+│  #pragma omp parallel for
+│  marginal 1.00×
+│  [Phase-B] Applied to cg.c
+└─ APPLIED
+
+┌─ pattern #55  do_all @ lines 88–92  (W=5600)
+│  #pragma omp parallel for
+│  marginal 0.55× alone — deferred: judged together with the other pragmas that do not pay alone (D33)
+└─ DEFERRED (slower alone)
+
+┌─ pattern #58  reduction @ lines 108–111  (W=4200)
+│  #pragma omp parallel for
+│  marginal 1.00×
+│  [Phase-B] Applied to cg.c
+└─ APPLIED
+
+┌─ pattern #56  do_all @ lines 93–95  (W=2802)
+│  #pragma omp parallel for
+│  marginal 1.00×
+│  [Phase-B] Applied to cg.c
+└─ APPLIED
+
+┌─ pattern #61  do_all @ lines 117–119  (W=2802)
+│  #pragma omp parallel for
+│  marginal 0.99×
+│  [Phase-B] Applied to cg.c
+└─ APPLIED
+
+┌─ pattern #59  do_all @ lines 113–115  (W=2800)
+│  #pragma omp parallel for
+│  marginal 1.00×
+│  [Phase-B] Applied to cg.c
+└─ APPLIED
+
+┌─ pattern #64  do_all @ lines 123–140  (W=255)
+│  #pragma omp parallel for
+│  gate failed at 'tsan': Race detected: WARNING: ThreadSanitizer: data race (pid=859996)   Write of size 8 at 0x55977d8d5f88 by thread T1:     #0 conj_grad.omp_outlined_debug_
+└─ DROPPED
+
+┌─ D33 — 7 safe pragma(s) did not pay alone; measuring them together
+│  [Tier-1] Repairing the generated pragma: q, p are declared inside the loop body, so cannot appear in a clause
+│  [Tier-1] Repairing the generated pragma: p is declared inside the loop body, so cannot appear in a clause
+│  cg.c: 5 together 0.38× — still costs more than it saves; all dropped
+└─ D33 done
+
+  [ok] finished source verified — output matches, 8.20x the original, paired

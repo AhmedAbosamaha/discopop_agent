@@ -1,0 +1,23 @@
+--- /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e11_smoke/benchmarks/npbc_c1/cg/llm_pragmas_v5/claude-sonnet-4-5-20250929/rep1/work/cg.c
++++ /home/ahmedabosamaha/discopop_agent/evaluation/agent/runs/e11_smoke/benchmarks/npbc_c1/cg/llm_pragmas_v5/claude-sonnet-4-5-20250929/rep1/work/cg.c
+@@ -245,10 +245,17 @@
+ 	}
+ 	r[j] = d;
+     }
++    double *temp = malloc((lastcol-firstcol+2) * sizeof(double));
++    #pragma omp parallel for
+     for (j = 1; j <= lastcol-firstcol+1; j++) {
+-	d = x[j] - r[j];
+-	sum = sum + d*d;
+-    }
++	double d_local = x[j] - r[j];
++	temp[j] = d_local * d_local;
++    }
++    sum = 0.0;
++    for (j = 1; j <= lastcol-firstcol+1; j++) {
++	sum += temp[j];
++    }
++    free(temp);
+ } 
+     (*rnorm) = sqrt(sum);
+ }
