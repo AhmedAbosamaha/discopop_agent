@@ -14,7 +14,8 @@ by the same route. What it does with a request, and nothing more:
   * `temperature` and `max_tokens` cannot be set through the SDK and are not applied (RepoOMP asks for 0 and a
     length bound): a repeated request may get a different answer, where RepoOMP's API would repeat itself;
   * the answer comes back whole, as one streamed chunk when `stream` is set, then `[DONE]`;
-  * every call's usage (tokens, cost, time) and any failure is appended to `--log`.
+  * every call's usage (tokens, cost, time), any failure, and the full text of the prompt and of the answer are
+    appended to `--log` (what the model read and wrote is archived with the trial: the rule of 4 Oct).
 
     venv/bin/python evaluation/agent/tools/claude_openai_shim.py --port 18765 --log RUN/shim_calls.jsonl
     REPOOMP_API_BASE=http://127.0.0.1:18765/v1 REPOOMP_API_KEY=local REPOOMP_MODEL=claude-sonnet-4-5-20250929 ...
@@ -89,6 +90,7 @@ class Handler(BaseHTTPRequestHandler):
         except Exception as e:   # the failure goes back to RepoOMP as an API error, and into the log
             text, rec["ok"], rec["error"] = "", False, f"{type(e).__name__}: {e}"[:500]
         rec["seconds"] = round(time.time() - t0, 1)
+        rec["system"], rec["prompt"], rec["answer"] = system, prompt, text
         with LOCK, self.log_path.open("a") as f:
             f.write(json.dumps(rec, default=str) + "\n")
         if not rec["ok"]:

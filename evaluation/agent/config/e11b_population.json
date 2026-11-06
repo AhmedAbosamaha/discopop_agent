@@ -1,0 +1,54 @@
+{
+  "_comment": "E11 part 2's population (6 Nov, the author: \"we should also run both on the benchmark form E2 ... like we compared on thier benchmark we should aslo how they will perfom on ours\"): E2-v6b's seven tsvc_c2 units, unchanged (config/e2v6b_population.json), each with the outcome that is correct on it, written before any part-2 trial. Read by results/E11_repoomp/analysis/part2_readout.py.",
+  "recorded": "THESIS_EXPERIMENTS.md §6, 2026-11-06, \"E11 part 2 pre-registered\"",
+  "frozen": "before part 2's first trial (e11b_rules_probe)",
+  "setups": {
+    "repoomp_release": "RepoOMP's released pipeline (RepoOMP_Simplified 45a1b9f) through tools/repoomp_runs.py, its model calls to Sonnet 4.5 through tools/claude_openai_shim.py, 12 threads; judged by verify-source",
+    "llm_pragmas_v5": "the agent, the model writes the directives (part 1's setting), Sonnet 4.5",
+    "bare_llm_v4": "Sonnet 4.5 alone (part 1's setting)",
+    "discopop_gate_v5": "DiscoPoP alone, no model (part 1's setting)"
+  },
+  "model": "claude-sonnet-4-5-20250929",
+  "trials_per_cell": 5,
+  "directions": {
+    "a": {
+      "what": "the loop is parallel only after a split in an order other than the textual one; the fact that decides it is set with the data in the harness header the package's main.c includes (`_harness/tsvc_c2/<unit>.h`), not in the one file a setup changes and RepoOMP's analyzer reads (`<unit>.c`)",
+      "correct": "a race-free verified parallel program covering the hot loop (necessarily split in the legal order), or the loop left alone (safe, no gain)",
+      "wrong": "the loop parallelized as written, or a split in the textual order: a race (the harness's check, the race check) — unsafe",
+      "role": "confirmatory (pooled over the five units, stratified by unit)",
+      "units": [
+        {"benchmark": "tsvc_c2/k19", "fact_sits": "the harness's index tables (kv[i] = i-1, ku[i] = LEN_1D+i)"},
+        {"benchmark": "tsvc_c2/k23", "fact_sits": "an offset pointer set with the data (v = w + 1)"},
+        {"benchmark": "tsvc_c2/k31", "fact_sits": "an offset variable set with the data (off = -1)"},
+        {"benchmark": "tsvc_c2/k27", "fact_sits": "index tables; three statements whose only legal order is second, third, first"},
+        {"benchmark": "tsvc_c2/s161", "fact_sits": "the sign pattern of b, set with the data (a real TSVC loop)"}
+      ]
+    },
+    "b": {
+      "what": "the textual order is the legal one: a split in the textual order makes the loop parallel",
+      "correct": "a race-free verified parallel program covering the hot loop",
+      "wrong": "a race, a wrong output",
+      "role": "descriptive (the control)",
+      "units": [
+        {"benchmark": "tsvc_c2/k48", "fact_sits": "the harness's index tables (ku[i] = i-1)"}
+      ]
+    }
+  },
+  "decline_units": [
+    {
+      "benchmark": "tsvc_c2/k53",
+      "fact_sits": "index tables that make the two statements feed each other (k19's text, word for word)",
+      "correct": "the hot loop left sequential (a parallel directive on another loop the setup added is reported apart)",
+      "wrong": "any parallel construct over the recurrence: unsafe",
+      "role": "descriptive"
+    }
+  ],
+  "by_hand_classes": {
+    "_what": "applied by hand, after the runs, to the hot loop of every program the harness found parallel or BROKEN in the three setups that change code with a model (repoomp_release, llm_pragmas_v5, bare_llm_v4); the classes are fixed here, before any trial",
+    "unchanged": "the hot loop's statements and their order as in the original, no directive on it",
+    "parallel-as-written": "a parallel directive on the hot loop (or on a loop around it) with its statements unsplit and in the original order",
+    "split-reordered": "the hot loop split into loops in an order other than the textual one, at least one of them parallel",
+    "split-textual": "the hot loop split in the textual order, at least one of the loops parallel",
+    "other": "any other change to the hot loop (another algorithm, a reduction, a scheduler, ...)"
+  }
+}
