@@ -177,6 +177,9 @@ def model_transform(pkg: Package, source: Path, out_dir: Path, name: str, dep_js
         n_acc = sum(1 for b in status.get("batches", []) if b.get("accepted"))
         log.append({"step": "model_on_rules" if base else "model", "attempt": attempt + 1, "rc": rc,
                     "accepted_batches": n_acc, "seconds": round(time.time() - t0, 1),
+                    # primitive_adder's own verdict per function (accepted, or the reason it rejected the model's
+                    # candidate); its status file is overwritten by the next attempt, so it is kept here (6 Nov)
+                    "status": status,
                     "stderr_tail": err[-600:], "stdout_tail": out[-600:]})
         if rc != 0 or not candidate.exists():
             continue
@@ -299,6 +302,10 @@ def main() -> int:
         else:
             res["model"] = {"skipped": "no candidate from the model"}
     res["opt_method"], res["opt_time"] = opt_method, opt_time
+    for step in ("model_on_rules", "model"):
+        att = [{k: x.get(k) for k in ("attempt", "rc", "accepted_batches", "status")} for x in log if x.get("step") == step]
+        if att:
+            res[f"{step}_attempts"] = att
     res["speedup_own_check"] = (serial_time / opt_time) if opt_time else None
     return _finish(out, source, opt, opt_method, res, log)
 
@@ -312,6 +319,14 @@ def _finish(out: Path, source: Path, opt: Optional[Path], method: str, res: Dict
     """final/ = the package with RepoOMP's accepted file, or the original (step 3b: nothing passed)."""
     final = out / "final"
     shutil.copytree(out / "original", final)
+    # RepoOMP's own small records leave work/ (which the fetch skips): its dependence and hotspot files, the rules'
+    # file and audit, the model's candidate functions and prompts, primitive_adder's last status (6 Nov)
+    work, ev = out / "work", out / "evidence"
+    if work.is_dir():
+        ev.mkdir(exist_ok=True)
+        for f in sorted(work.iterdir()):
+            if f.is_file() and f.suffix in (".json", ".c", ".txt"):
+                shutil.copy2(f, ev / f.name)
     editable = Path(source).name
     if opt is not None:
         shutil.copy2(opt, final / editable)

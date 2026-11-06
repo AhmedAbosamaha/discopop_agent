@@ -92,18 +92,30 @@ def _model_ok(t: dict, model: Optional[str]) -> bool:
 
 
 def levels(t: dict) -> Dict[str, Any]:
-    """RepoOMP's release on one trial: proposed, accepted by its own check (repoomp_result.json)."""
+    """RepoOMP's release on one trial, step by step (repoomp_result.json): what its rules proposed and whether that passed
+    its check; for its model (step 3, the original): whether the model answered, whether primitive_adder's own
+    validation kept a candidate (`model_attempts`, recorded from 6 Nov), whether a CHANGED file reached the release's
+    check — a file byte-equal to its input is no proposal (primitive_adder writes its input back when it keeps no
+    candidate; the release may then accept that copy on timing noise) — and whether it passed; what the release
+    accepted (`opt_method`)."""
     r = t.get("repoomp") or {}
     rules, model, on_rules = r.get("rules") or {}, r.get("model") or {}, r.get("model_on_rules") or {}
+    att = r.get("model_attempts") or []
+    reasons = [str(b.get("reason")) for a in att for b in ((a.get("status") or {}).get("batches") or [])
+               if not b.get("accepted")]
+    file_proposed = bool(model) and "skipped" not in model and not model.get("candidate_equals_source")
     return {"rules_proposed": int(r.get("rules_changes") or 0) > 0,
             "rules_passed_own_check": rules.get("verified") if "skipped" not in rules else None,
-            # a model file byte-equal to its input is no proposal (primitive_adder writes the input back when it
-            # accepts no function), even where the release then accepts it on timing noise (6 Nov)
-            "model_proposed": bool(model) and "skipped" not in model and not model.get("candidate_equals_source"),
-            "model_passed_own_check": model.get("verified") if model and "skipped" not in model else None,
+            "model_answered": int(t.get("llm_calls") or 0) - int(t.get("llm_call_failures") or 0) > 0,
+            "model_kept_by_its_validation": (any(int(a.get("accepted_batches") or 0) > 0 for a in att)
+                                             if att else None),
+            "model_rejection_reasons": reasons,
+            "model_proposed": file_proposed,
+            "model_passed_own_check": model.get("verified") if file_proposed else None,
             "model_on_rules_run": bool(on_rules),
             "model_on_rules_proposed": bool(on_rules) and not on_rules.get("candidate_equals_source"),
             "accepted": str(r.get("opt_method") or "none"),
+            "accepted_a_copy": str(r.get("opt_method")) in ("model", "rules+model") and not r.get("final_changed"),
             "own_speedup": r.get("speedup_own_check")}
 
 
@@ -163,8 +175,12 @@ def analyse(trials: List[dict], role: Dict[str, str], model: Optional[str],
             L = [j["levels"] for j in cell]
             rel[b] = {"trials": len(cell), "rules_proposed": sum(x["rules_proposed"] for x in L),
                       "rules_passed_own_check": sum(x["rules_passed_own_check"] is True for x in L),
+                      "model_answered": sum(x["model_answered"] for x in L),
+                      "model_kept_by_its_validation": sum(x["model_kept_by_its_validation"] is True for x in L),
+                      "model_rejection_reasons": dict(Counter(y for x in L for y in x["model_rejection_reasons"])),
                       "model_proposed": sum(x["model_proposed"] for x in L),
                       "model_passed_own_check": sum(x["model_passed_own_check"] is True for x in L),
+                      "accepted_a_copy": sum(x["accepted_a_copy"] for x in L),
                       "accepted": dict(Counter(x["accepted"] for x in L)),
                       "judged": dict(Counter(j["bucket"] for j in cell))}
     hand: Dict[str, Dict[str, int]] = {}
@@ -212,13 +228,18 @@ def to_markdown(r: Dict[str, Any]) -> str:
         ci = f" [{mh['ci95'][0]:.2f}, {mh['ci95'][1]:.2f}]" if mh.get("ci95") else ""
         L.append(f"| {k} | {t['what']} | {_p(t.get('p_exact_one_sided'))} | {_p(t.get('p_holm'))} | {o}{ci} |")
     L += ["", "## RepoOMP's release at its three levels", "",
-          "| unit | trials | rules proposed | rules passed its check | model proposed | model passed its check | accepted (opt_method) | judged |",
-          "|---|---|---|---|---|---|---|---|"]
+          "Model: answered = at least one call answered; kept = primitive_adder's own validation kept a candidate; "
+          "file = a CHANGED file reached the release's check; passed = that file passed it. An accepted copy is the "
+          "release accepting a model file byte-equal to its input (timing noise).", "",
+          "| unit | trials | rules proposed | rules passed its check | model answered | kept by its validation | model file | passed its check | accepted (opt_method) | of which a copy | judged | its validation's reasons |",
+          "|---|---|---|---|---|---|---|---|---|---|---|---|"]
     for b, c in r["repoomp_levels"].items():
         acc = ", ".join(f"{k} {v}" for k, v in sorted(c["accepted"].items()))
         jd = ", ".join(f"{k} {v}" for k, v in sorted(c["judged"].items()))
-        L.append(f"| {b} | {c['trials']} | {c['rules_proposed']} | {c['rules_passed_own_check']} | {c['model_proposed']} "
-                 f"| {c['model_passed_own_check']} | {acc} | {jd} |")
+        rs = ", ".join(f"{k} {v}" for k, v in sorted(c["model_rejection_reasons"].items())) or "—"
+        L.append(f"| {b} | {c['trials']} | {c['rules_proposed']} | {c['rules_passed_own_check']} | {c['model_answered']} "
+                 f"| {c['model_kept_by_its_validation']} | {c['model_proposed']} | {c['model_passed_own_check']} | {acc} "
+                 f"| {c['accepted_a_copy']} | {jd} | {rs} |")
     L += ["", "## The hot loop by hand", ""]
     for s, c in r["by_hand"].items():
         L.append(f"- {NAMES[s]}: " + ", ".join(f"{k} {v}" for k, v in sorted(c.items())))
