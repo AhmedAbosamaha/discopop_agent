@@ -93,6 +93,34 @@ def broken_cause(t: Dict[str, Any]) -> str:
     return "not repeatable" if isinstance(err, (int, float)) and err <= 1e-9 else "values outside 1e-9"
 
 
+def tsan_state(rc: Dict[str, Any]) -> str:
+    """Whether ThreadSanitizer ran on the program and what it found. The race check's verdict names the FIRST stage
+    that failed (apply, compile, openmp_compile/tsan, dependences, schedules, correctness), so a later stage's
+    failure means TSan ran and found nothing, unless it was skipped."""
+    v = rc.get("verdict")
+    if not rc or v in (None, "not-checked", "unchanged", "apply", "compile", "openmp_compile"):
+        return "not run"
+    if v == "tsan":
+        return "race"
+    return "not run" if "tsan" in (rc.get("skipped_stages") or []) else "clean"
+
+
+def race_location(rc: Dict[str, Any], d: Path, editable: str) -> str:
+    """For a TSan verdict: the variable ThreadSanitizer names, the lines of the editable file in its report, and every
+    line of the final file the name stands on (whether the program ever reads it is then a matter of those lines)."""
+    if rc.get("verdict") != "tsan":
+        return ""
+    diag = str(rc.get("diagnostic") or "")
+    m = re.search(r"Location is global '([^']+)'", diag)
+    name = m.group(1).split(".")[-1] if m else ""
+    lines = sorted(set(re.findall(re.escape(editable) + r":(\d+):\d+", diag)), key=int)
+    f = d / "final" / editable
+    uses = ([i + 1 for i, x in enumerate(f.read_text(errors="replace").splitlines())
+             if re.search(r"\b" + re.escape(name) + r"\b", x)] if name and f.exists() else [])
+    return (f"`{name or '?'}` — {editable} line(s) {', '.join(lines) or '?'} in the report; the name stands on line(s) "
+            f"{', '.join(map(str, uses)) or '—'} of the final {editable}")
+
+
 def directives(d: Path, editable: str) -> List[str]:
     """Each directive of the final file with the line it stands on and the loop header after it."""
     f = d / "final" / editable
@@ -109,12 +137,14 @@ def directives(d: Path, editable: str) -> List[str]:
 
 def record(setup: str, label: str, d: Path, editable: str) -> Dict[str, Any]:
     t = json.loads((d / "trial.json").read_text())
-    race = (RACES.get(key(d)) or {}).get("verdict", "not checked")
+    rc = RACES.get(key(d)) or {}
+    race = rc.get("verdict", "not checked")
     second = (SECOND.get(key(d)) or {}).get("verdict", "not checked")
     usable = t.get("outcome") == "FASTER" and race == "clean" and second == "SUCCESSFUL"
     s6, s12 = speed(t, "6"), speed(t, "12")
     return {"setup": setup, "label": label, "trial": key(d), "rep": int(d.name[3:]), "outcome": t.get("outcome"),
-            "race_check": race, "second_class": second, "usable": usable, "broken_cause": broken_cause(t),
+            "race_check": race, "tsan": tsan_state(rc), "race_location": race_location(rc, d, editable),
+            "second_class": second, "usable": usable, "broken_cause": broken_cause(t),
             "speedup_6": s6, "speedup_12": s12, "best": max([x for x in (s6, s12) if x is not None], default=None),
             "calls": int(t.get("llm_calls") or 0), "call_failures": int(t.get("llm_call_failures") or 0),
             "cost_usd": round(cost(t), 4), "agent_s": t.get("agent_s"),
@@ -169,7 +199,16 @@ def markdown(rows: Dict[str, List[Dict[str, Any]]]) -> str:
             e = exp[0]
             L += ["", f"NPB's OpenMP EP: harness outcome {e['outcome']} ({e['broken_cause'] or '—'}; it prints NPB's full "
                   f"report, so the output comparison does not apply), NPB's verification at the second class "
-                  f"{e['second_class']}, measured speedup {_f(e['speedup_6'])} / {_f(e['speedup_12'])} at 6 / 12 threads."]
+                  f"{e['second_class']}, measured speedup {_f(e['speedup_6'])} / {_f(e['speedup_12'])} at 6 / 12 threads; "
+                  f"race check: ThreadSanitizer {e['tsan']}, its verdict `{e['race_check']}` the first stage that failed "
+                  f"(the race check's last stages compare the output with the package's sequential program, as the "
+                  f"harness does)."]
+        flagged = [r for r in rs if r["race_check"] != "clean"]
+        if flagged:
+            L += ["", "Race check, every program not clean (verdict = the first stage that failed; ThreadSanitizer's "
+                  "own result beside it):", ""]
+            L += [f"- {r['label']} rep{r['rep']}: `{r['race_check']}`, ThreadSanitizer {r['tsan']}"
+                  + (f"; the race: {r['race_location']}" if r["race_location"] else "") for r in flagged]
         ag = [r for r in rs if r["setup"] == "llm_pragmas_v5"]
         ro = [r for r in rs if r["setup"] == "repoomp_claude"]
         ua = [r for r in ag if r["usable"]]
