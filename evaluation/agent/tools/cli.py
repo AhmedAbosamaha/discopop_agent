@@ -2142,7 +2142,7 @@ def cmd_verify_source(a: argparse.Namespace) -> int:
             "cc": cc, "cxx": cxx, "host": socket.gethostname(), "platform": platform.platform(),
             "harness_git": _git_state(HARNESS_ROOT), "argv": sys.argv,
         })
-    trial = store.run_dir(run_id) / "benchmarks" / a.benchmark / a.label / "none" / "rep1"
+    trial = store.run_dir(run_id) / "benchmarks" / a.benchmark / a.label / "none" / f"rep{a.repeat}"
     trial.mkdir(parents=True, exist_ok=True)
     proj = _project_of(bench_dir)
     if proj is None:
@@ -2170,7 +2170,7 @@ def cmd_verify_source(a: argparse.Namespace) -> int:
 
     rec: dict = {
         "benchmark": a.benchmark, "kernel": bench_dir.name, "source": src_name,
-        "arm": a.label, "model": "none", "repeat": 1, "kind": "baseline",
+        "arm": a.label, "model": "none", "repeat": a.repeat, "kind": "baseline",
         "candidate": str(candidate),
         "candidate_sha256": (_tree_digest(candidate) if candidate.is_dir()
                              else hashlib.sha256(candidate.read_bytes()).hexdigest()),
@@ -2285,6 +2285,9 @@ def main() -> None:
     sp.add_argument("--repeats", type=int, default=3)
     sp.add_argument("--check-seed", default="7")
     sp.add_argument("--run-id", default=None, help="reuse a run id to collect baselines together")
+    sp.add_argument("--repeat", type=int, default=1,
+                    help="which trial of this label the source is (E11: five runs of RepoOMP's release per kernel); "
+                         "each is judged and stored as its own trial, rep<N>")
     sp.set_defaults(func=cmd_verify_source)
 
     sp = sub.add_parser("plots", help="trials.csv, gate_failures.csv and thesis figures")
