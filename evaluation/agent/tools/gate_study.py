@@ -355,6 +355,7 @@ def cmd_judge(a: argparse.Namespace) -> int:
         wanted = sorted({str(x["program"]) for x in _sample(c, a.sample, a.seed)})
     else:
         wanted = _slice(sorted({str(x["program"]) for x in c["candidates"]}), a.part)
+    wanted = [h for h in wanted if not progs[h]["original"]]     # the original is right by definition
     run_dir = EVAL / "agent" / "runs" / a.run_id
     side = run_dir / "gate_study"
     side.mkdir(parents=True, exist_ok=True)
@@ -524,6 +525,463 @@ def cmd_checks(a: argparse.Namespace) -> int:
     return 0
 
 
+# ------------------------------------------------------------------------------------------------ Part B: DataRaceBench
+
+
+DRB = EVAL / "benchmarks" / "LLNL_DataRaceBench" / "micro-benchmarks"
+OMP_DIRECTIVE = re.compile(r"\s*#\s*pragma\s+omp\b")
+THREADS = re.compile(r"\b(parallel|task|taskloop|sections|teams|target)\b")
+
+def _strip_omp(text: str) -> str:
+    """The file with every OpenMP directive line removed (a directive continued with a backslash goes whole)."""
+    out: List[str] = []
+    skipping = False
+    for ln in text.splitlines(keepends=True):
+        if skipping or OMP_DIRECTIVE.match(ln):
+            skipping = ln.rstrip().endswith("\\")
+            continue
+        out.append(ln)
+    return "".join(out)
+
+
+def _drb_class(text: str) -> str:
+    """What kind of construct the kernel's directives are: only a kernel that starts threads on the host is the
+    gate's case; offloading and SIMD-only kernels get rows of their own."""
+    lines = [ln for ln in text.splitlines() if OMP_DIRECTIVE.match(ln)]
+    if any(re.search(r"\btarget\b", ln) for ln in lines):
+        return "offloading"
+    if not any(THREADS.search(ln) for ln in lines):
+        return "simd-only" if lines else "no-directive"
+    return "threads"
+
+
+def cmd_drb(a: argparse.Namespace) -> int:
+    """Each kernel as one candidate: the reference is the file without its directive lines, the candidate the file
+    as shipped, judged by the gate's safety validation as `race_check.py` calls it; `--runs` times per kernel."""
+    import importlib
+
+    from discopop_agent import project as project_mod
+    from discopop_agent.gate.equivalence import numerical_noise_floor
+    from discopop_agent.gate.timing import capture_reference
+    from discopop_agent.gate.validate import validate
+
+    gv: Any = importlib.import_module("discopop_agent.gate.validate")
+    seen: List[Any] = []
+    real_stress = gv.stress_schedules
+
+    def spy(*args: Any, **kw: Any) -> Any:
+        r = real_stress(*args, **kw)
+        seen.append(r)
+        return r
+
+    gv.stress_schedules = spy
+    kernels = _slice(sorted(p.name for p in DRB.iterdir() if p.suffix in (".c", ".cpp")), a.part)
+    if a.only:
+        kernels = [k for k in kernels if any(k.startswith(o) for o in a.only.split(","))]
+    a.out.mkdir(parents=True, exist_ok=True)
+    _manifest(a.out, {"step": "drb", "part": a.part, "kernels": len(kernels), "runs": a.runs,
+                      "source": (DRB.parent / "PROVENANCE.txt").read_text()[:400]})
+    res_path = a.out / "drb.jsonl"
+    done = _done(res_path, "kernel")
+    print(f"{len(kernels)} kernel(s) → {a.out}", flush=True)
+    for i, name in enumerate(kernels, 1):
+        if name in done:
+            continue
+        shipped = (DRB / name).read_text(errors="replace")
+        label = "yes" if "-yes." in name else "no" if "-no." in name else "?"
+        rec: Dict[str, Any] = {"kernel": name, "label": label, "class": _drb_class(shipped), "runs": []}
+        t0 = time.time()
+        with tempfile.TemporaryDirectory(prefix="e7_drb_") as tmp:
+            root = Path(tmp) / "k"
+            root.mkdir()
+            src = root / name
+            src.write_text(_strip_omp(shipped))
+            (root / "shipped").mkdir()
+            (root / "shipped" / name).write_text(shipped)
+            project_mod.activate(None)
+            diff = _unified_diff(src, root / "shipped" / name)
+            poly = "polybench/" in shipped
+            ref_out, _t, ref_pairs = (None, None, None) if poly else capture_reference(str(src), None)
+            if poly:
+                # six kernels: DataRaceBench builds them from two files (its utilities/polybench.c) with a timer that
+                # prints the run time, another number in every run — no single program text with a comparable output
+                rec["note"] = "a PolyBench kernel of DataRaceBench: two source files and a printed run time"
+            elif ref_out is None:
+                rec["note"] = "the file without its directives does not build or run here"
+            elif not diff:
+                rec["note"] = "the file holds no directive line"
+            else:
+                floor = numerical_noise_floor(str(src), None).value
+                rec["noise_floor"] = floor
+                for _ in range(a.runs):
+                    seen.clear()
+                    r = validate(diff, str(src), reference_output=ref_out, reference_outputs=ref_pairs, mode="safety",
+                                 noise_floor=floor, stress=True)
+                    d: Dict[str, Any] = {"passed": r.passed, "stage": r.stage, "diagnostic": r.diagnostic[:300]}
+                    if seen:
+                        d["matrix"] = {"verdict": seen[-1].verdict, "hard": seen[-1].hard}
+                    rec["runs"].append(d)
+        project_mod.activate(None)
+        rec["seconds"] = round(time.time() - t0, 1)
+        _append(res_path, rec)
+        shown = [("accepted" if x["passed"] else x["stage"]) for x in rec["runs"]] or rec.get("note")
+        print(f"[{i}/{len(kernels)}] {name} ({label}, {rec['class']}): {shown}  {rec['seconds']} s", flush=True)
+    m = json.loads((a.out / "manifest.json").read_text())
+    m["finished"] = time.strftime("%Y-%m-%dT%H:%M:%S%z")
+    (a.out / "manifest.json").write_text(json.dumps(m, indent=1) + "\n")
+    return 0
+
+
+def cmd_readout_drb(a: argparse.Namespace) -> int:
+    d = _run_dir(a.run)
+    if d is None:
+        sys.exit(f"run {a.run}: neither archived nor fetched")
+    recs: Dict[str, Dict[str, Any]] = {}
+    for f in sorted(d.rglob("drb.jsonl")):
+        for ln in f.read_text().splitlines():
+            if ln.strip():
+                r = json.loads(ln)
+                recs[str(r["kernel"])] = r
+    out: List[str] = [f"# E7, Part B — the gate on DataRaceBench 1.4.1 ({len(recs)} kernels)\n",
+                      f"*Generated by `tools/gate_study.py readout-drb` from run `{a.run}`. Each kernel is one candidate: the file "
+                      "without its OpenMP directive lines is the reference, the file as shipped the candidate, judged by the "
+                      "gate's safety validation several times. A kernel named `-yes` holds a documented data race, one named "
+                      "`-no` none.*\n"]
+    data: Dict[str, Any] = {"run": a.run, "kernels": len(recs)}
+    out.append("| class | label | kernels | judged | refused in the first run | refused in at least one run | refused in every run |")
+    out.append("|---|---|---:|---:|---:|---:|---:|")
+    table: Dict[str, Any] = {}
+    for cls in ("threads", "simd-only", "offloading", "no-directive"):
+        for label in ("yes", "no"):
+            sel = [r for r in recs.values() if r["class"] == cls and r["label"] == label]
+            if not sel:
+                continue
+            judged = [r for r in sel if r["runs"]]
+            first = [r for r in judged if not r["runs"][0]["passed"]]
+            some = [r for r in judged if any(not x["passed"] for x in r["runs"])]
+            every = [r for r in judged if all(not x["passed"] for x in r["runs"])]
+            out.append(f"| {cls} | {label} | {len(sel)} | {len(judged)} | {len(first)} | {len(some)} | {len(every)} |")
+            table[f"{cls} {label}"] = {"kernels": len(sel), "judged": len(judged), "first": len(first), "any": len(some),
+                                       "every": len(every),
+                                       "never_refused": sorted(str(r["kernel"]) for r in judged if r not in some),
+                                       "refused": sorted(str(r["kernel"]) for r in some),
+                                       "not_judged": sorted(f"{r['kernel']}: {r.get('note')}" for r in sel if not r["runs"])}
+    data["table"] = table
+    out.append("")
+    th_yes, th_no = table.get("threads yes") or {}, table.get("threads no") or {}
+    if th_yes:
+        out.append(f"**Kernels that start threads on the host, with a documented race:** refused by one call of the gate "
+                   f"{_wilson(th_yes['first'], th_yes['judged'])}; in at least one of the runs {_wilson(th_yes['any'], th_yes['judged'])}.")
+    if th_no:
+        out.append(f"**Without a race:** refused by one call of the gate {_wilson(th_no['first'], th_no['judged'])}; "
+                   f"in at least one of the runs {_wilson(th_no['any'], th_no['judged'])}.\n")
+    stages: collections.Counter[str] = collections.Counter()
+    for r in recs.values():
+        if r["class"] == "threads" and r["runs"] and not r["runs"][0]["passed"]:
+            stages[f"{r['label']}: {r['runs'][0]['stage']}"] += 1
+    out.append("First run's refusals by check (kernels that start threads): "
+               + (", ".join(f"{k} {v}" for k, v in sorted(stages.items())) or "none") + ".\n")
+    data["first_run_stage"] = dict(stages)
+    for title, key, field in (("Racy kernels the gate never refused", "threads yes", "never_refused"),
+                              ("Race-free kernels the gate refused at least once", "threads no", "refused"),
+                              ("Kernels not judged", None, "not_judged")):
+        names: List[str] = []
+        for k, v in table.items():
+            if key is None or k == key:
+                names += v[field]
+        out.append(f"### {title}: {len(names)}\n")
+        for nme in names:
+            r = recs.get(nme.split(":")[0])
+            why = ""
+            if r is not None and r["runs"] and field == "refused":
+                why = " — " + ", ".join(sorted({str(x["stage"]) for x in r["runs"] if not x["passed"]}))
+            out.append(f"- `{nme}`{why}")
+        out.append("")
+    a.out.mkdir(parents=True, exist_ok=True)
+    (a.out / "readout_drb.md").write_text("\n".join(out) + "\n")
+    (a.out / "readout_drb.json").write_text(json.dumps(data, indent=1, sort_keys=True) + "\n")
+    print("\n".join(out[:40]))
+    return 0
+
+
+# ------------------------------------------------------------------------------------------------ readout
+
+
+def _wilson(k: int, n: int) -> str:
+    """95 % Wilson interval of k/n; with no event (or only events) the one-sided 95 % bound."""
+    if n == 0:
+        return "—"
+    if k == 0:
+        return f"0 of {n} (one-sided 95 % bound: at most {100 * (1 - 0.05 ** (1 / n)):.1f} %)"
+    if k == n:
+        return f"{n} of {n} (one-sided 95 % bound: at least {100 * 0.05 ** (1 / n):.1f} %)"
+    z, ph = 1.959964, k / n
+    den = 1 + z * z / n
+    mid = (ph + z * z / (2 * n)) / den
+    half = z * ((ph * (1 - ph) / n + z * z / (4 * n * n)) ** 0.5) / den
+    return f"{k} of {n} ({100 * ph:.1f} %, 95 % interval {100 * (mid - half):.1f}–{100 * (mid + half):.1f} %)"
+
+
+def _run_dir(run_id: str) -> Optional[Path]:
+    d = campaign.find_run(run_id)
+    if d is not None:
+        return d
+    local = EVAL / "agent" / "runs" / run_id
+    return local if local.is_dir() else None
+
+
+def _j1_class(rec: Dict[str, Any]) -> Tuple[str, str]:
+    """The harness's verdict on a program, from its verification record. `verify-source` files a program that
+    crashes or does not finish under VERIFY_FAILED with a build that fails (its records are baselines); here the
+    two are kept apart: a program that does not run where the original runs is wrong."""
+    if (rec.get("scaffold") or {}).get("ok") is False:
+        return "not-judgeable", "the candidate changed the measuring code"
+    v = rec.get("verify") or {}
+    st = str(v.get("status"))
+    if st == "verify_build_failed":
+        return "no-build", st
+    if st.startswith("final_run_failed"):
+        f = v.get("final_run_failure") or {}
+        return "wrong", st + (" (timed out)" if f.get("timed_out") else f" (rc {f.get('rc')})")
+    if st != "ok":
+        return "not-judged", st
+    if rec.get("outcome") == "BROKEN":
+        why = []
+        if (v.get("dump_max_rel_err") or 0) > 1e-9:
+            why.append(f"values differ on the shipped input (max rel. {v.get('dump_max_rel_err'):.2e})")
+        if (v.get("dump_seeded_max_rel_err") or 0) > 1e-9:
+            why.append(f"values differ on the perturbed input (max rel. {v.get('dump_seeded_max_rel_err'):.2e})")
+        if (v.get("digest_max_rel_err") or 0) > 1e-9:
+            why.append(f"digest differs at the verification size (max rel. {v.get('digest_max_rel_err'):.2e})")
+        if (v.get("digest_seeded_rel_err") or 0) > 1e-9:
+            why.append("digest differs on the perturbed input at the verification size")
+        if v.get("stable_at_fixed_threads") is False:
+            why.append("result changes from run to run at a fixed thread count")
+        return "wrong", "; ".join(why) or "BROKEN"
+    return "right", str(rec.get("outcome"))
+
+
+def cmd_readout(a: argparse.Namespace) -> int:
+    c = _load(a.corpus)
+    progs, cands = c["programs"], c["candidates"]
+    # ---- the judge, per distinct program
+    j1: Dict[str, Tuple[str, str]] = {}
+    j2: Dict[str, Dict[str, Any]] = {}
+    by_key = {(str(v["benchmark"]), int(v["index"])): h for h, v in progs.items()}
+    for run_id in [r for r in a.judge.split(",") if r]:
+        d = _run_dir(run_id)
+        if d is None:
+            sys.exit(f"judge run {run_id}: neither archived nor fetched")
+        for tj in d.glob("benchmarks/*/*/e7/none/rep*/trial.json"):
+            rec = json.loads(tj.read_text())
+            h = by_key.get((str(rec["benchmark"]), int(rec["repeat"])))
+            if h is not None:
+                j1[h] = _j1_class(rec)
+        f = d / "gate_study" / "j2.jsonl"
+        for ln in (f.read_text().splitlines() if f.is_file() else []):
+            if ln.strip():
+                r = json.loads(ln)
+                j2[str(r["program"])] = r
+
+    def judge(h: str) -> Tuple[str, str]:
+        if progs[h]["original"]:
+            return "right", "the original"
+        if h not in j1:
+            return "not-judged", "no record"
+        cls, why = j1[h]
+        r = j2.get(h)
+        if cls == "right" and r is not None and r["verdict"] == "race":
+            return "wrong", "data race reported at the verification size"
+        return cls, why
+
+    # ---- the checks, per (base, program) pair
+    checks: Dict[str, Dict[str, Any]] = {}
+    for run_id in [r for r in a.checks.split(",") if r]:
+        d = _run_dir(run_id)
+        if d is None:
+            sys.exit(f"checks run {run_id}: neither archived nor fetched")
+        for f in sorted(d.rglob("checks.jsonl")):
+            for ln in f.read_text().splitlines():
+                if ln.strip():
+                    r = json.loads(ln)
+                    checks[str(r["pair"])] = r
+
+    rows: List[Dict[str, Any]] = []
+    for x in cands:
+        cls, why = judge(str(x["program"]))
+        base_cls, _ = judge(str(x["base"]))
+        rows.append({**x, "judge": cls, "why": why, "base_judge": base_cls,
+                     "accepted": x["gate"] == "accepted", "pre_program": x["gate"] in ("compile", "openmp_compile", "apply"),
+                     "checks": checks.get(f"{x['base']} {x['program']}")})
+    out: List[str] = []
+    data: Dict[str, Any] = {"corpus": c["name"], "judge_runs": a.judge, "checks_runs": a.checks}
+    out.append(f"# E7 — the gate against the harness, corpus {c['name'].upper()}\n")
+    out.append(f"*Generated by `tools/gate_study.py readout` from the corpus (`corpus/{c['name']}/corpus.json`), the judge's runs "
+               f"({a.judge}) and the replayed checks ({a.checks or 'none'}). Definitions: the record's row of 11 Nov 2026.*\n")
+    n_j = sum(1 for h in {str(x["program"]) for x in cands} if judge(h)[0] != "not-judged")
+    out.append(f"{len(cands)} candidates on {len({str(x['program']) for x in cands})} distinct programs "
+               f"({n_j} with a verdict of the judge); {len(c['not_rebuilt'])} candidate(s) could not be rebuilt and are left out by name.\n")
+
+    # ---- R1: gate x judge
+    out.append("## R1 — what the gate decided against what the judge found\n")
+    r1: Dict[str, Any] = {}
+    for unit in ("candidate", "program"):
+        out.append(f"### per {unit}\n")
+        out.append("| | judge: right | judge: wrong | does not build | base fails | not judged or not judgeable |")
+        out.append("|---|---:|---:|---:|---:|---:|")
+        for kind in ("rewrite", "directive"):
+            for acc in (True, False):
+                sel = [r for r in rows if r["kind"] == kind and r["accepted"] == acc]
+                if unit == "program":
+                    seen: Dict[str, Dict[str, Any]] = {}
+                    for r in sel:
+                        seen.setdefault(str(r["program"]), r)
+                    sel = list(seen.values())
+                cnt = collections.Counter(
+                    "base fails" if r["base_judge"] not in ("right",) and r["judge"] in ("right", "wrong")
+                    else {"right": "right", "wrong": "wrong", "no-build": "no build"}.get(r["judge"], "other") for r in sel)
+                label = f"{kind}, gate {'accepted' if acc else 'refused'}"
+                out.append(f"| {label} | {cnt['right']} | {cnt['wrong']} | {cnt['no build']} | {cnt['base fails']} | {cnt['other']} |")
+                r1[f"{unit} | {label}"] = dict(cnt)
+        out.append("")
+    data["R1"] = r1
+
+    def clean(kind: str) -> List[Dict[str, Any]]:      # the candidates that enter a rate
+        return [r for r in rows if r["kind"] == kind and r["base_judge"] == "right" and r["judge"] in ("right", "wrong")
+                and not r["pre_program"]]
+
+    out.append("### the two error rates (candidates on a base that passes, with a program and a verdict)\n")
+    rates: Dict[str, Any] = {}
+    for kind in ("rewrite", "directive"):
+        sel = clean(kind)
+        right, wrong = [r for r in sel if r["judge"] == "right"], [r for r in sel if r["judge"] == "wrong"]
+        fr = [r for r in right if not r["accepted"]]
+        fa = [r for r in wrong if r["accepted"]]
+        out.append(f"- **{kind}s** — right candidates the gate refused (false refusals): {_wilson(len(fr), len(right))}; "
+                   f"wrong candidates the gate accepted (false accepts): {_wilson(len(fa), len(wrong))}.")
+        loops_fr = sorted({str(r["benchmark"]) for r in fr})
+        loops_fa = sorted({str(r["benchmark"]) for r in fa})
+        n_loops = len({str(r["benchmark"]) for r in sel})
+        out.append(f"  Per loop (the conservative unit): a false refusal on {len(loops_fr)} of {n_loops} loops"
+                   + (f" ({', '.join(x.split('/')[-1] for x in loops_fr)})" if loops_fr else "")
+                   + f"; a false accept on {len(loops_fa)} of {n_loops}"
+                   + (f" ({', '.join(x.split('/')[-1] for x in loops_fa)})" if loops_fa else "") + ".")
+        rates[kind] = {"right": len(right), "false_refusals": len(fr), "wrong": len(wrong), "false_accepts": len(fa),
+                       "false_refusal_programs": len({str(r["program"]) for r in fr}),
+                       "false_accept_programs": len({str(r["program"]) for r in fa}),
+                       "loops": n_loops, "loops_false_refusal": loops_fr, "loops_false_accept": loops_fa}
+    data["rates"] = rates
+    out.append("")
+    pre = [r for r in rows if r["pre_program"]]
+    agree = sum(1 for r in pre if r["judge"] == "no-build")
+    out.append(f"Refused before a program exists (`compile`, `openmp_compile`): {len(pre)} candidates; the judge's own build fails "
+               f"for {agree} of them" + ("." if agree == len(pre) else "; the others: "
+               + ", ".join(sorted({f"{r['id']} → {r['judge']}" for r in pre if r["judge"] != "no-build"})[:12]) + ".") + "\n")
+    data["pre_program"] = {"candidates": len(pre), "judge_build_fails": agree}
+
+    for title, pick in (("False accepts — the gate accepted, the judge found the program wrong",
+                         lambda r: r["accepted"] and r["judge"] == "wrong"),
+                        ("False refusals — the gate refused, the judge found the program right",
+                         lambda r: (not r["accepted"]) and r["judge"] == "right")):
+        sel = [r for r in rows if r["base_judge"] == "right" and not r["pre_program"] and pick(r)]
+        out.append(f"### {title}: {len(sel)} candidate(s) on {len({str(r['program']) for r in sel})} distinct program(s)\n")
+        if sel:
+            out.append("| candidate | kind | the gate | the judge | program |")
+            out.append("|---|---|---|---|---|")
+            for r in sorted(sel, key=lambda r: (str(r["benchmark"]), str(r["id"]))):
+                out.append(f"| `{r['id']}` | {r['kind']} ({r['phase']}) | {r['gate']} | {r['why']} | "
+                           f"`{progs[str(r['program'])]['path']}` |")
+            out.append("")
+    data["false_accepts"] = [r["id"] for r in rows if r["base_judge"] == "right" and r["accepted"] and r["judge"] == "wrong"]
+    data["false_refusals"] = [r["id"] for r in rows if r["base_judge"] == "right" and not r["pre_program"]
+                              and (not r["accepted"]) and r["judge"] == "right"]
+
+    # ---- the judge against the trials' own verdicts (its repeatability)
+    finals = [h for h, v in progs.items() if v["final_of"] and not v["original"]]
+    fin_cnt = collections.Counter(judge(h)[0] for h in finals)
+    out.append(f"**The judge beside the trials.** {len(finals)} distinct programs are a trial's final file, which the harness "
+               f"verified in that trial; judged again here: " + ", ".join(f"{k} {v}" for k, v in sorted(fin_cnt.items())) + ".\n")
+    data["finals_rejudged"] = dict(fin_cnt)
+
+    # ---- R2 / R3: each check alone, and the gate replayed
+    have = [r for r in rows if r["checks"] is not None and "G" in r["checks"]]
+    if have:
+        out.append("## Fidelity — the whole safety gate replayed against the recorded verdict\n")
+        fid: collections.Counter[str] = collections.Counter()
+        dis: List[str] = []
+        for r in have:
+            g = r["checks"]["G"]
+            replay = "accepted" if g["passed"] else str(g["stage"])
+            fid["same" if replay == r["gate"] else "different"] += 1
+            if replay != r["gate"]:
+                dis.append(f"`{r['id']}`: recorded {r['gate']}, replayed {replay} (judge: {r['judge']})")
+        out.append(f"{fid['same']} of {len(have)} candidates get the recorded verdict again; {fid['different']} differ"
+                   + (":" if dis else "."))
+        out += [f"- {x}" for x in sorted(dis)]
+        out.append("")
+        data["fidelity"] = {"same": fid["same"], "different": fid["different"], "disagreements": sorted(dis)}
+
+        def refuses(r: Dict[str, Any], name: str, mode: str = "any") -> Optional[bool]:
+            runs = r["checks"].get(name)
+            if not runs:
+                return None
+            bad = [not x["passed"] for x in runs]
+            return any(bad) if mode == "any" else all(bad)
+
+        out.append("## R2 — each check on its own\n")
+        out.append("A check *refuses* a candidate when it fails in at least one of its runs (run-dependent checks ran three times; "
+                   "in brackets: in all of them). T: ThreadSanitizer alone; S: the schedule matrix alone, the sanitizer not run "
+                   "(soft: only a difference between thread counts beyond the noise, which the gate lets stand on a clean "
+                   "sanitizer run); O1: the output on the shipped input alone; O2: on the perturbed input alone.\n")
+        r2: Dict[str, Any] = {}
+        for kind, names in (("directive", ("T", "S", "O1", "O2")), ("rewrite", ("O1", "O2"))):
+            sel = [r for r in have if r["kind"] == kind and r["base_judge"] == "right" and r["judge"] in ("right", "wrong")]
+            wrong, right = [r for r in sel if r["judge"] == "wrong"], [r for r in sel if r["judge"] == "right"]
+            out.append(f"### {kind}s — {len(wrong)} wrong and {len(right)} right candidates with every check replayed\n")
+            out.append("| check | wrong candidates it refuses | wrong candidates ONLY it refuses | right candidates it refuses |")
+            out.append("|---|---:|---:|---:|")
+            for nme in names:
+                w_any = [r for r in wrong if refuses(r, nme)]
+                w_all = [r for r in wrong if refuses(r, nme, "all")]
+                only = [r for r in w_any if not any(refuses(r, o) for o in names if o != nme)]
+                rt = [r for r in right if refuses(r, nme)]
+                rt_all = [r for r in right if refuses(r, nme, "all")]
+                out.append(f"| {nme} | {len(w_any)} [{len(w_all)}] of {len(wrong)} | {len(only)} | {len(rt)} [{len(rt_all)}] of {len(right)} |")
+                r2[f"{kind} {nme}"] = {"wrong": len(wrong), "refuses_wrong": len(w_any), "refuses_wrong_all_runs": len(w_all),
+                                       "only_it": len(only), "only_it_ids": sorted(str(r["id"]) for r in only),
+                                       "right": len(right), "refuses_right": len(rt), "refuses_right_all_runs": len(rt_all),
+                                       "refuses_right_ids": sorted(str(r["id"]) for r in rt)}
+            none = [r for r in wrong if not any(refuses(r, o) for o in names)]
+            out.append(f"\nWrong candidates that no check alone refuses: {len(none)}"
+                       + (" — " + ", ".join(f"`{r['id']}`" for r in none[:20]) if none else "") + ".")
+            if kind == "directive":
+                soft = [r for r in sel if any((x.get("matrix") or {}).get("verdict") == "beyond-floor" for x in r["checks"].get("S") or [])]
+                out.append(f"The matrix's soft verdict (a difference between thread counts beyond the noise): on {len(soft)} "
+                           f"candidates — {sum(1 for r in soft if r['judge'] == 'wrong')} wrong, "
+                           f"{sum(1 for r in soft if r['judge'] == 'right')} right.")
+            out.append("")
+        data["R2"] = r2
+        out.append("## R3 — the second input\n")
+        r3: Dict[str, Any] = {}
+        for kind in ("rewrite", "directive"):
+            sel = [r for r in have if r["kind"] == kind and r["base_judge"] == "right" and r["judge"] == "wrong"]
+            only2 = [r for r in sel if refuses(r, "O2") and not refuses(r, "O1")]
+            only1 = [r for r in sel if refuses(r, "O1") and not refuses(r, "O2")]
+            both = [r for r in sel if refuses(r, "O1") and refuses(r, "O2")]
+            out.append(f"- **{kind}s**, {len(sel)} wrong candidates: the output check refuses {len(both)} on both inputs, "
+                       f"{len(only1)} on the shipped input only, **{len(only2)} on the perturbed input only**"
+                       + (" (" + ", ".join(sorted({str(r['benchmark']).split('/')[-1] for r in only2})) + ")" if only2 else "") + ".")
+            r3[kind] = {"wrong": len(sel), "both": len(both), "shipped_only": len(only1), "perturbed_only": len(only2),
+                        "perturbed_only_ids": sorted(str(r["id"]) for r in only2)}
+        data["R3"] = r3
+        out.append("")
+    a.out.mkdir(parents=True, exist_ok=True)
+    (a.out / f"readout_{c['name']}.md").write_text("\n".join(out) + "\n")
+    (a.out / f"readout_{c['name']}.json").write_text(json.dumps(data, indent=1, sort_keys=True) + "\n")
+    print("\n".join(out[:60]))
+    return 0
+
+
 # ------------------------------------------------------------------------------------------------ main
 
 
@@ -555,6 +1013,22 @@ def main() -> int:
         else:
             sp.add_argument("--out", type=Path, required=True)
         sp.set_defaults(fn=fn)
+    sp = sub.add_parser("drb", help="Part B: the gate's safety validation on every DataRaceBench kernel")
+    sp.add_argument("--part", default="1/1")
+    sp.add_argument("--runs", type=int, default=5)
+    sp.add_argument("--only", default="", help="kernel name prefixes, comma-separated (a tooling test)")
+    sp.add_argument("--out", type=Path, required=True)
+    sp.set_defaults(fn=cmd_drb)
+    sp = sub.add_parser("readout-drb", help="Part B's table")
+    sp.add_argument("--run", required=True)
+    sp.add_argument("--out", type=Path, required=True)
+    sp.set_defaults(fn=cmd_readout_drb)
+    sp = sub.add_parser("readout", help="the tables: gate x judge, each check alone, the second input")
+    sp.add_argument("--corpus", type=Path, required=True)
+    sp.add_argument("--judge", required=True, help="comma-separated judge run ids")
+    sp.add_argument("--checks", default="", help="comma-separated checks run ids")
+    sp.add_argument("--out", type=Path, required=True)
+    sp.set_defaults(fn=cmd_readout)
     a = ap.parse_args()
     return int(a.fn(a))
 
