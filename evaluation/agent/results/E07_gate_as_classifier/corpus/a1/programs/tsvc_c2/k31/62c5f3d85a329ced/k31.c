@@ -1,0 +1,37 @@
+#include "data.h"
+
+real_t kernel_k31(void)
+{
+    real_t *u_buf = (real_t *)malloc(LEN_1D * sizeof(real_t));
+    real_t *v_buf = (real_t *)malloc(LEN_1D * sizeof(real_t));
+
+    for (int nl = 0; nl < iterations; nl++) {
+        // Copy current state to buffers
+        for (long i = 1; i < LEN_1D; i++) {
+            u_buf[i] = u[i];
+            v_buf[i] = v[i];
+        }
+
+        // First statement: accumulate u using current v
+        for (long i = 1; i < LEN_1D; i++) {
+            u_buf[i] += v[i + off] * c[i];
+        }
+
+        // Second statement: compute v using updated u_buf
+        for (long i = 1; i < LEN_1D; i++) {
+            v_buf[i] = u_buf[i + far] * d[i] + c[i];
+        }
+
+        // Copy buffers back
+        for (long i = 1; i < LEN_1D; i++) {
+            u[i] = u_buf[i];
+            v[i] = v_buf[i];
+        }
+
+        dummy(a, b, c, d, e);
+    }
+
+    free(u_buf);
+    free(v_buf);
+    return (real_t)0;
+}

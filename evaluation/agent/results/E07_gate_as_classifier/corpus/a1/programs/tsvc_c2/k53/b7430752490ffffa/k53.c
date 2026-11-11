@@ -1,0 +1,21 @@
+#include "data.h"
+#include <stdlib.h>
+
+real_t kernel_k53(void)
+{
+    real_t *u_values = malloc(LEN_1D * sizeof(real_t));
+
+    for (int nl = 0; nl < iterations; nl++) {
+        for (long i = 1; i < LEN_1D; i++) {
+            u[ju[i]] += v[kv[i]] * c[i];
+            u_values[i] = u[ku[i]];
+        }
+        for (long i = 1; i < LEN_1D; i++) {
+            v[jv[i]] = u_values[i] * d[i] + c[i];
+        }
+        dummy(a, b, c, d, e);
+    }
+
+    free(u_values);
+    return (real_t)0;
+}

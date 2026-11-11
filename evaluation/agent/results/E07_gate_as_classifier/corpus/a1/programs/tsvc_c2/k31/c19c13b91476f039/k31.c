@@ -1,0 +1,27 @@
+#include "data.h"
+#include <stdlib.h>
+
+real_t kernel_k31(void)
+{
+    for (int nl = 0; nl < iterations; nl++) {
+        // Save v state before modifications to preserve RAW flow
+        real_t *v_copy = malloc(LEN_1D * sizeof(real_t));
+        for (long i = 0; i < LEN_1D; i++) {
+            v_copy[i] = v[i];
+        }
+
+        // Phase 1: Compute new v values (line 8, independent iterations)
+        for (long i = 1; i < LEN_1D; i++) {
+            v[i] = u[i + far] * d[i] + c[i];
+        }
+
+        // Phase 2: Update u using saved v values (line 7, independent iterations)
+        for (long i = 1; i < LEN_1D; i++) {
+            u[i] += v_copy[i + off] * c[i];
+        }
+
+        free(v_copy);
+        dummy(a, b, c, d, e);
+    }
+    return (real_t)0;
+}

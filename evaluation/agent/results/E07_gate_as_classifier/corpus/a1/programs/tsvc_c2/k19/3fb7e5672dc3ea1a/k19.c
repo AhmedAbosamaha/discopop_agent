@@ -1,0 +1,21 @@
+#include "data.h"
+#include <stdlib.h>
+
+real_t kernel_k19(void)
+{
+    for (int nl = 0; nl < iterations; nl++) {
+        real_t *u_delta = calloc(LEN_1D, sizeof(real_t));
+        for (long i = 1; i < LEN_1D; i++) {
+            u_delta[ju[i]] += v[kv[i]] * c[i];
+        }
+        for (long i = 1; i < LEN_1D; i++) {
+            v[jv[i]] = (u[ku[i]] + u_delta[ku[i]]) * d[i] + c[i];
+        }
+        for (long j = 0; j < LEN_1D; j++) {
+            u[j] += u_delta[j];
+        }
+        free(u_delta);
+        dummy(a, b, c, d, e);
+    }
+    return (real_t)0;
+}

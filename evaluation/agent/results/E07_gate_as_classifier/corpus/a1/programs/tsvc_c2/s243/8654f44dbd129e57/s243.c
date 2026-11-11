@@ -1,0 +1,29 @@
+#include "data.h"
+#include <stdlib.h>
+
+real_t kernel_s243(void)
+{
+    real_t *a_old = (real_t *)malloc(sizeof(real_t) * LEN_1D);
+
+    for (int nl = 0; nl < iterations; nl++) {
+        // Save a[i+1] values before modifying a
+        for (int i = 0; i < LEN_1D-1; i++) {
+            a_old[i+1] = a[i+1];
+        }
+
+        // Pass 1: compute a[i] and b[i] from lines 7-8
+        for (int i = 0; i < LEN_1D-1; i++) {
+            a[i] = b[i] + c[i  ] * d[i];
+            b[i] = a[i] + d[i  ] * e[i];
+        }
+
+        // Pass 2: compute final a[i] from line 9 using saved a values
+        for (int i = 0; i < LEN_1D-1; i++) {
+            a[i] = b[i] + a_old[i+1] * d[i];
+        }
+
+        dummy(a, b, c, d, e);
+    }
+    free(a_old);
+    return (real_t)0;
+}

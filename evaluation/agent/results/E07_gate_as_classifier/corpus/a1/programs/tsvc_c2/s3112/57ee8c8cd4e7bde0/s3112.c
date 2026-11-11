@@ -1,0 +1,18 @@
+#include "data.h"
+
+real_t kernel_s3112(void)
+{
+    real_t sum;
+    for (int nl = 0; nl < iterations; nl++) {
+        real_t sum_prev = (real_t)0.0;
+        #pragma omp parallel for reduction(+:sum_prev) 
+        for (int i = 0; i < LEN_1D; i++) {
+            real_t sum_curr = sum_prev + a[i];
+            b[i] = sum_curr;
+            sum_prev = sum_curr;
+        }
+        sum = sum_prev;
+        dummy(a, b, c, d, e);
+    }
+    return sum;
+}

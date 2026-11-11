@@ -1,0 +1,24 @@
+#include <stdlib.h>
+#include "data.h"
+
+real_t kernel_s281(void)
+{
+    real_t x;
+    real_t *a_new = (real_t *)malloc(LEN_1D * sizeof(real_t));
+    real_t *b_new = (real_t *)malloc(LEN_1D * sizeof(real_t));
+    for (int nl = 0; nl < iterations; nl++) {
+        for (int i = 0; i < LEN_1D; i++) {
+            x = a[LEN_1D-i-1] + b[i] * c[i];
+            a_new[i] = x-(real_t)1.0;
+            b_new[i] = x;
+        }
+        for (int i = 0; i < LEN_1D; i++) {
+            a[i] = a_new[i];
+            b[i] = b_new[i];
+        }
+        dummy(a, b, c, d, e);
+    }
+    free(a_new);
+    free(b_new);
+    return (real_t)0;
+}
