@@ -396,11 +396,14 @@ def write_indexes(reg: Optional[dict] = None) -> List[Path]:
 #        the fast refresh and the model's report against E3's and E3b's cells, read out by `e4live_readout.py`;
 #   E8 — its arms compare restructuring depths, all with DiscoPoP writing the pragma: the read-out of the archive
 #        (13 Oct) and that of its trials as pre-registered (`e8_readout.py`, 15 Oct).
+#   E7 — no trial and no arm: every saved candidate judged again by the harness, the gate's checks replayed one at a
+#        time, DataRaceBench's labelled kernels (`gate_study.py readout`, `readout-drb`, 11 Nov).
 OWN_READOUTS: Dict[str, List[str]] = {
     "E4": ["analysis/e4_replay_readout.md", "analysis/e4_refresh_time_readout.md", "analysis/e4_report_dry_readout.md",
            "analysis/e4_report_readout.md", "analysis/e4_report_placement_readout.md",
            "analysis/e4live_readout.md"],
     "E8": ["preflight/depth_from_the_archive.md", "analysis/e8_readout.md"],
+    "E7": ["analysis/readout_a1.md", "analysis/readout_a2.md", "analysis/readout_drb.md"],
 }
 
 
