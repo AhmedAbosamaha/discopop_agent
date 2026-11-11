@@ -20,7 +20,10 @@ What is read out, in this order:
        E11b-ii  unsafe programs, RepoOMP's release against the agent (more);
   5. descriptive only: the same two counts against Sonnet alone and DiscoPoP alone; k48 and k53 apart;
   6. the by-hand class of the hot loop (classes fixed in the population file) where `--by-hand` is given;
-  7. model calls and cost per setup.
+  7. model calls and cost per setup;
+  8. descriptive only, added on 11 Nov 2026 after the read-out (the author asked for the speedups; not part of the
+     pre-registration, and it changes nothing above it): the speed of what each setup shipped — per unit the median
+     speedup of its successes at each thread count as the harness measured it, and apart that of its racy programs.
 
     venv/bin/python evaluation/agent/results/E11_repoomp/analysis/part2_readout.py \
         e11b_r_repoomp e11b_r_agent_1 e11b_r_agent_2 e11b_bare \
@@ -30,6 +33,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import statistics
 import sys
 from collections import Counter
 from pathlib import Path
@@ -131,6 +135,8 @@ def analyse(trials: List[dict], role: Dict[str, str], model: Optional[str],
         j["calls"] = int(t.get("llm_calls") or 0)
         j["cost"] = float((t.get("llm_usage") or {}).get("cost_usd") or 0.0)
         j["by_hand"] = by_hand.get(f"{j['arm']}/{j['benchmark']}/rep{j['repeat']}")
+        par = (t.get("verify") or {}).get("par") or {}
+        j["speedup"] = {str(k): v["speedup"] for k, v in par.items() if isinstance(v, dict) and v.get("speedup") is not None}
         if j["arm"] == "repoomp_release":
             j["levels"] = levels(t)
         js.append(j)
@@ -194,9 +200,29 @@ def analyse(trials: List[dict], role: Dict[str, str], model: Optional[str],
                 need.append(f"{j['arm']}/{j['benchmark']}/rep{j['repeat']}")
     cost = {s: {"trials": sum(1 for j in js if j["arm"] == s), "calls": sum(j["calls"] for j in js if j["arm"] == s),
                 "cost_usd": round(sum(j["cost"] for j in js if j["arm"] == s), 2)} for s in SETUPS}
+
+    def speed_of(cell: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Median, lowest and highest speedup of some programs at each thread count the harness timed."""
+        out: Dict[str, Any] = {"programs": len(cell)}
+        for thr in sorted({k for j in cell for k in j["speedup"]}, key=int):
+            xs = [float(j["speedup"][thr]) for j in cell if thr in j["speedup"]]
+            out[thr] = {"median": round(statistics.median(xs), 3), "min": round(min(xs), 3), "max": round(max(xs), 3)}
+        return out
+
+    speed: Dict[str, Any] = {"per_unit": {}, "pooled_a": {}}
+    for b in units:
+        for s in SETUPS:
+            for kind in ("success", "racy"):
+                cell = [j for j in js if j["benchmark"] == b and j["arm"] == s and j["bucket"] == kind]
+                if cell:
+                    speed["per_unit"].setdefault(b, {})[f"{s} | {kind}"] = speed_of(cell)
+    for s in SETUPS:
+        cell = [j for j in js if j["arm"] == s and j["role"] == "a" and j["bucket"] == "success"]
+        if cell:
+            speed["pooled_a"][s] = speed_of(cell)
     return {"units": units, "role": role, "per_unit": per_unit, "pooled_a": pooled, "tests": tests,
             "repoomp_levels": rel, "by_hand": {k: dict(v) for k, v in hand.items()}, "by_hand_missing": sorted(need),
-            "cost": cost, "trials": js}
+            "cost": cost, "speed": speed, "trials": js}
 
 
 def _p(x: Optional[float]) -> str:
@@ -249,6 +275,28 @@ def to_markdown(r: Dict[str, Any]) -> str:
     for s, c in r["cost"].items():
         if c["trials"]:
             L.append(f"| {NAMES[s]} | {c['trials']} | {c['calls']} | {c['cost_usd']:.2f} |")
+    sp = r.get("speed") or {}
+    if sp.get("per_unit"):
+        thr = sorted({k for u in sp["per_unit"].values() for c in u.values() for k in c if k != "programs"}, key=int)
+        L += ["", "## The speed of what was shipped (descriptive; added 11 Nov 2026, not pre-registered)", "",
+              "Speedup over the original as the harness measured it at the verification size: the median over a setup's "
+              "successful trials of a unit, and apart over its racy programs. A setup that shipped the original program "
+              "has no row.", "",
+              "| unit | setup | programs | " + " | ".join(f"median at {t} threads (lowest–highest)" for t in thr) + " |",
+              "|---|---|---|" + "---|" * len(thr)]
+
+        def cells(c: Dict[str, Any]) -> str:
+            return " | ".join(f"{c[t]['median']:.2f}× ({c[t]['min']:.2f}–{c[t]['max']:.2f})" if t in c else "—" for t in thr)
+
+        for b in r["units"]:
+            for key, c in (sp["per_unit"].get(b) or {}).items():
+                s, kind = key.split(" | ")
+                what = "racy" if kind != "success" else "success" if c["programs"] == 1 else "successes"
+                L.append(f"| {b} | {NAMES[s]} | {c['programs']} {what} | {cells(c)} |")
+        L += ["", "Direction (a), the five units pooled, successes only:", ""]
+        for s, c in sp["pooled_a"].items():
+            L.append(f"- {NAMES[s]}: {c['programs']} successes, "
+                     + ", ".join(f"{c[t]['median']:.2f}× at {t} threads" for t in thr if t in c) + ".")
     return "\n".join(L) + "\n"
 
 

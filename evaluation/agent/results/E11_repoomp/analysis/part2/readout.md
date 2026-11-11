@@ -79,3 +79,25 @@ Model: answered = at least one call answered; kept = primitive_adder's own valid
 | the agent | 35 | 126 | 68.82 |
 | Sonnet 4.5 alone | 35 | 35 | 7.63 |
 | DiscoPoP alone | 35 | 0 | 0.00 |
+
+## The speed of what was shipped (descriptive; added 11 Nov 2026, not pre-registered)
+
+Speedup over the original as the harness measured it at the verification size: the median over a setup's successful trials of a unit, and apart over its racy programs. A setup that shipped the original program has no row.
+
+| unit | setup | programs | median at 6 threads (lowest–highest) | median at 12 threads (lowest–highest) |
+|---|---|---|---|---|
+| tsvc_c2/k19 | the agent | 5 successes | 1.49× (1.48–3.94) | 2.32× (2.28–4.26) |
+| tsvc_c2/k19 | Sonnet 4.5 alone | 1 success | 0.83× (0.83–0.83) | 1.18× (1.18–1.18) |
+| tsvc_c2/k23 | the agent | 5 successes | 3.37× (2.37–3.74) | 3.41× (2.61–4.15) |
+| tsvc_c2/k27 | the agent | 3 successes | 3.94× (1.95–4.12) | 4.19× (2.80–4.24) |
+| tsvc_c2/k31 | the agent | 5 successes | 3.18× (3.11–3.29) | 3.26× (3.06–3.32) |
+| tsvc_c2/s161 | RepoOMP's release | 5 racy | 3.77× (3.72–3.83) | 3.96× (3.63–4.02) |
+| tsvc_c2/s161 | the agent | 5 successes | 2.27× (2.22–2.34) | 2.27× (2.20–2.30) |
+| tsvc_c2/s161 | Sonnet 4.5 alone | 2 successes | 1.97× (1.87–2.07) | 2.25× (2.10–2.40) |
+| tsvc_c2/k48 | the agent | 5 successes | 1.50× (1.33–3.84) | 2.37× (2.07–4.08) |
+| tsvc_c2/k48 | Sonnet 4.5 alone | 5 successes | 1.48× (1.47–1.50) | 2.38× (2.36–2.40) |
+
+Direction (a), the five units pooled, successes only:
+
+- the agent: 23 successes, 3.11× at 6 threads, 3.24× at 12 threads.
+- Sonnet 4.5 alone: 3 successes, 1.87× at 6 threads, 2.10× at 12 threads.
