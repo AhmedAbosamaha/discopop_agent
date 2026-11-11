@@ -1127,13 +1127,23 @@ def cmd_readout(a: argparse.Namespace) -> int:
             def nc2(rs: List[Dict[str, Any]]) -> str:
                 return f"{len(rs)} ({sum(r['n_candidates'] for r in rs)} candidates)"
 
+            # with a directive the output can depend on the run: "in every run" = refused on that input in all three runs
+            # and passed on the other in all three
+            steady2 = [r for r in only2 if refuses(r, "O2", "all")]
+            steady1 = [r for r in only1 if refuses(r, "O1", "all")]
             out.append(f"- **{kind}s**, {nc2(sel)} wrong pairs: the output check refuses {nc2(both)} on both inputs, "
-                       f"{nc2(only1)} on the shipped input only, **{nc2(only2)} on the perturbed input only**"
-                       + (" (" + ", ".join(sorted({name(str(r['program'])) for r in only2})) + ")" if only2 else "")
-                       + f", {nc2(neither)} on neither.")
+                       f"{nc2(only1)} on the shipped input only"
+                       + (f" (in every run: {len(steady1)})" if kind == "directive" and only1 else "")
+                       + f", **{nc2(only2)} on the perturbed input only**"
+                       + (f" (in every run: {len(steady2)})" if kind == "directive" and only2 else "")
+                       + (" — " + ", ".join(sorted({name(str(r['program'])) for r in only2})[:25])
+                          + (" …" if len(only2) > 25 else "") if only2 else "")
+                       + f"; {nc2(neither)} on neither.")
             r3[kind] = {"wrong": len(sel), "both": len(both), "shipped_only": len(only1), "perturbed_only": len(only2),
                         "neither": len(neither), "perturbed_only_programs": sorted(name(str(r["program"])) for r in only2),
                         "shipped_only_programs": sorted(name(str(r["program"])) for r in only1),
+                        "neither_programs": sorted(name(str(r["program"])) for r in neither),
+                        "perturbed_only_every_run": len(steady2), "shipped_only_every_run": len(steady1),
                         "perturbed_only_candidates": sum(r["n_candidates"] for r in only2)}
         data["R3"] = r3
         out.append("")
