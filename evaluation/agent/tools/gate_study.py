@@ -676,6 +676,27 @@ def cmd_readout_drb(a: argparse.Namespace) -> int:
                       "gate's safety validation several times. A kernel named `-yes` holds a documented data race, one named "
                       "`-no` none.*\n"]
     data: Dict[str, Any] = {"run": a.run, "kernels": len(recs)}
+
+    def why_not(r: Dict[str, Any]) -> str:
+        """Why a kernel has no verdict, in the read-out's words."""
+        note = str(r.get("note") or "")
+        if note.startswith("a PolyBench kernel"):
+            return "one of DataRaceBench's PolyBench kernels: two source files and a printed run time"
+        if note.startswith("the file without its directives"):
+            text = (DRB / str(r["kernel"])).read_text(errors="replace") if (DRB / str(r["kernel"])).is_file() else ""
+            if re.search(r"#\s*error\b", text):
+                return ("its own `#error` demands an OpenMP 4.5 compiler, and the reference is built without OpenMP")
+            return ("without its directives it is no sequential program: it does not end, crashes, fails its own assertion "
+                    "or exits with an error code")
+        if note:
+            return note
+        if any("timed out" in str(x.get("diagnostic")) for x in r["runs"]):
+            return "a run exceeds the gate's time limit (120 s plain, 300 s under the sanitizer)"
+        return ""
+
+    for r in recs.values():
+        r["why_not"] = why_not(r)
+        r["judged"] = bool(r["runs"]) and not r["why_not"]
     out.append("| class | label | kernels | judged | refused in the first run | refused in at least one run | refused in every run |")
     out.append("|---|---|---:|---:|---:|---:|---:|")
     table: Dict[str, Any] = {}
@@ -684,7 +705,7 @@ def cmd_readout_drb(a: argparse.Namespace) -> int:
             sel = [r for r in recs.values() if r["class"] == cls and r["label"] == label]
             if not sel:
                 continue
-            judged = [r for r in sel if r["runs"]]
+            judged = [r for r in sel if r["judged"]]
             first = [r for r in judged if not r["runs"][0]["passed"]]
             some = [r for r in judged if any(not x["passed"] for x in r["runs"])]
             every = [r for r in judged if all(not x["passed"] for x in r["runs"])]
@@ -693,7 +714,7 @@ def cmd_readout_drb(a: argparse.Namespace) -> int:
                                        "every": len(every),
                                        "never_refused": sorted(str(r["kernel"]) for r in judged if r not in some),
                                        "refused": sorted(str(r["kernel"]) for r in some),
-                                       "not_judged": sorted(f"{r['kernel']}: {r.get('note')}" for r in sel if not r["runs"])}
+                                       "not_judged": sorted(f"{r['kernel']}: {r['why_not']}" for r in sel if not r["judged"])}
     data["table"] = table
     out.append("")
     th_yes, th_no = table.get("threads yes") or {}, table.get("threads no") or {}
@@ -705,26 +726,42 @@ def cmd_readout_drb(a: argparse.Namespace) -> int:
                    f"in at least one of the runs {_wilson(th_no['any'], th_no['judged'])}.\n")
     stages: collections.Counter[str] = collections.Counter()
     for r in recs.values():
-        if r["class"] == "threads" and r["runs"] and not r["runs"][0]["passed"]:
+        if r["class"] == "threads" and r["judged"] and not r["runs"][0]["passed"]:
             stages[f"{r['label']}: {r['runs'][0]['stage']}"] += 1
     out.append("First run's refusals by check (kernels that start threads): "
                + (", ".join(f"{k} {v}" for k, v in sorted(stages.items())) or "none") + ".\n")
     data["first_run_stage"] = dict(stages)
-    for title, key, field in (("Racy kernels the gate never refused", "threads yes", "never_refused"),
-                              ("Race-free kernels the gate refused at least once", "threads no", "refused"),
-                              ("Kernels not judged", None, "not_judged")):
-        names: List[str] = []
-        for k, v in table.items():
-            if key is None or k == key:
-                names += v[field]
-        out.append(f"### {title}: {len(names)}\n")
-        for nme in names:
-            r = recs.get(nme.split(":")[0])
-            why = ""
-            if r is not None and r["runs"] and field == "refused":
-                why = " — " + ", ".join(sorted({str(x["stage"]) for x in r["runs"] if not x["passed"]}))
-            out.append(f"- `{nme}`{why}")
-        out.append("")
+    def pattern(r: Dict[str, Any]) -> str:
+        return " ".join("accepted" if x["passed"] else str(x["stage"]) for x in r["runs"])
+
+    th = [r for r in recs.values() if r["class"] == "threads" and r["judged"]]
+    some_not_all = [r for r in th if r["label"] == "yes" and any(not x["passed"] for x in r["runs"])
+                    and any(x["passed"] for x in r["runs"])]
+    out.append(f"### Racy kernels the gate refused in some runs and accepted in others: {len(some_not_all)}\n")
+    out += [f"- `{r['kernel']}` — {pattern(r)}" for r in sorted(some_not_all, key=lambda r: str(r["kernel"]))] + [""]
+    never = [r for r in th if r["label"] == "yes" and all(x["passed"] for x in r["runs"])]
+    out.append(f"### Racy kernels the gate never refused: {len(never)}\n")
+    out += [f"- `{r['kernel']}`" for r in sorted(never, key=lambda r: str(r["kernel"]))] + [""]
+    wrongly = [r for r in th if r["label"] == "no" and any(not x["passed"] for x in r["runs"])]
+    out.append(f"### Race-free kernels the gate refused at least once: {len(wrongly)}\n")
+    by_check: collections.Counter[str] = collections.Counter()
+    for r in sorted(wrongly, key=lambda r: str(r["kernel"])):
+        stages_r = sorted({str(x["stage"]) for x in r["runs"] if not x["passed"]})
+        by_check[" + ".join(stages_r)] += 1
+        out.append(f"- `{r['kernel']}` — {pattern(r)}")
+    out.append("")
+    out.append("By check: " + (", ".join(f"{k} {v}" for k, v in sorted(by_check.items())) or "none") + ".\n")
+    data["no_refused_by_check"] = dict(by_check)
+    data["yes_some_runs"] = {str(r["kernel"]): pattern(r) for r in some_not_all}
+    not_j = [r for r in recs.values() if not r["judged"]]
+    reasons: Dict[str, List[str]] = collections.defaultdict(list)
+    for r in not_j:
+        reasons[str(r["why_not"]) or "no run recorded"].append(f"{r['kernel']} ({r['label']}, {r['class']})")
+    out.append(f"### Kernels not judged: {len(not_j)}\n")
+    for why, names in sorted(reasons.items(), key=lambda kv: -len(kv[1])):
+        out.append(f"- **{len(names)}** — {why}: " + ", ".join(f"`{n}`" for n in sorted(names)))
+    out.append("")
+    data["not_judged"] = {k: sorted(v) for k, v in reasons.items()}
     a.out.mkdir(parents=True, exist_ok=True)
     (a.out / "readout_drb.md").write_text("\n".join(out) + "\n")
     (a.out / "readout_drb.json").write_text(json.dumps(data, indent=1, sort_keys=True) + "\n")
