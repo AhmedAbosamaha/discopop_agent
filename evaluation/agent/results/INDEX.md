@@ -130,8 +130,8 @@ Status: running
 
 | run | where | what it is | status | trials | outcomes |
 |---|---|---|---|---:|---|
-| `e7_pilot` | not archived yet | E7 pilot, judge (server, no model): 40 candidates of corpus A1 drawn with seed 7 (20 rewrites, 20 directives), each distinct program through verify-source (verification size, threads 6/12, 5 repeats, both inputs) and, with a directive, ThreadSanitizer with archer at the verification size (12 threads, 3 runs) — the tooling and the seconds per candidate | running |  |  |
-| `e7_pilot_checks` | not archived yet | E7 pilot, checks (server, no model): the same draw's (base, program) pairs through the gate at its own size — the whole safety gate (fidelity against the recorded verdict) and each check alone | running |  |  |
+| `e7_pilot` | [`E07_gate_as_classifier/preflight/e7_pilot/`](E07_gate_as_classifier/preflight/e7_pilot/) | E7 pilot, judge (server, no model): 40 candidates of corpus A1 drawn with seed 7 (20 rewrites, 20 directives), each distinct program through verify-source (verification size, threads 6/12, 5 repeats, both inputs) and, with a directive, ThreadSanitizer with archer at the verification size (12 threads, 3 runs) — the tooling and the seconds per candidate | running | 36 | BROKEN 8, FASTER 10, VERIFY_FAILED 2, parallel-not-faster 16 |
+| `e7_pilot_checks` | [`E07_gate_as_classifier/preflight/e7_pilot_checks/`](E07_gate_as_classifier/preflight/e7_pilot_checks/) | E7 pilot, checks (server, no model): the same draw's (base, program) pairs through the gate at its own size — the whole safety gate (fidelity against the recorded verdict) and each check alone | running | 0 |  |
 | `e7_a1_judge_1` | not archived yet | E7 Part A, corpus A1, share 1 of 4 (server, no model): the harness on each distinct program (J1 verify-source; J2 ThreadSanitizer at the verification size for programs with a directive) | running |  |  |
 | `e7_a1_judge_2` | not archived yet | E7 Part A, corpus A1, share 2 of 4 (server, no model): J1 and J2 as e7_a1_judge_1 | running |  |  |
 | `e7_a1_judge_3` | not archived yet | E7 Part A, corpus A1, share 3 of 4 (server, no model): J1 and J2 as e7_a1_judge_1 | running |  |  |
@@ -140,6 +140,7 @@ Status: running
 | `e7_a2_judge_1` | not archived yet | E7 Part A, corpus A2 (DiscoPoP alone's directives, six no-model draws), share 1 of 2 (server, no model): J1 and J2 | running |  |  |
 | `e7_a2_judge_2` | not archived yet | E7 Part A, corpus A2, share 2 of 2 (server, no model): J1 and J2 | running |  |  |
 | `e7_a2_checks` | not archived yet | E7 Part A, corpus A2 (server, no model, two shares): the gate again on every (base, program) pair — fidelity and each check alone | running |  |  |
+| `e7_drb` | not archived yet | E7 Part B (server, no model, four shares): the gate's safety validation, five runs, on each of the 201 C and C++ kernels of DataRaceBench 1.4.1 — the reference is the file without its directive lines, the candidate the file as shipped | running |  |  |
 
 ## [E11 — against RepoOMP: its NPB-C kernels EP and CG, and the hidden-order units](E11_repoomp/REPORT.md)
 

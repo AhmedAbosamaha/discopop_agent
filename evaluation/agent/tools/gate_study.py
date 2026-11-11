@@ -267,6 +267,26 @@ def _sample(c: Dict[str, Any], spec: str, seed: int) -> List[Dict[str, Any]]:
     return out
 
 
+def _per_benchmark(c: Dict[str, Any], n: int) -> List[Dict[str, Any]]:
+    """The second pilot's draw: of every benchmark the candidates of its first n distinct programs (by hash), so
+    that every package of a corpus goes through each step once."""
+    by_bench: Dict[str, List[str]] = collections.defaultdict(list)
+    for h in sorted({str(x["program"]) for x in c["candidates"]}):
+        if not c["programs"][h]["original"]:
+            by_bench[str(c["programs"][h]["benchmark"])].append(h)
+    keep = {h for hs in by_bench.values() for h in hs[:n]}
+    return [x for x in c["candidates"] if str(x["program"]) in keep]
+
+
+def _draw(c: Dict[str, Any], a: argparse.Namespace) -> Optional[List[Dict[str, Any]]]:
+    """A pilot's candidates (`--sample` or `--per-benchmark`), or None for the whole corpus."""
+    if a.sample:
+        return _sample(c, a.sample, a.seed)
+    if a.per_benchmark:
+        return _per_benchmark(c, a.per_benchmark)
+    return None
+
+
 def _pairs(cands: Iterable[Dict[str, Any]]) -> List[Tuple[str, str]]:
     """The distinct (base, program) pairs of some candidates: the gate judges a patch on a base."""
     return sorted({(str(x["base"]), str(x["program"])) for x in cands})
@@ -295,7 +315,7 @@ def _manifest(out: Path, extra: Dict[str, Any]) -> None:
 # ------------------------------------------------------------------------------------------------ judge
 
 
-def _tsan_at_size(bench: str, prog_file: Path, runs: int, threads: int) -> Dict[str, Any]:
+def _tsan_at_size(bench: str, prog_file: Path, runs: int, threads: int, limit: int = 1800) -> Dict[str, Any]:
     """J2: the harness's build of the program at the verification size, under ThreadSanitizer with archer.
 
     The build is `cli.verify`'s own (`-O2`, the size flag, every unit of a multi-file package, the harness's
@@ -311,7 +331,7 @@ def _tsan_at_size(bench: str, prog_file: Path, runs: int, threads: int) -> Dict[
                 else cli._find_tool(None, "AGENT_CXX", cli._CXX_CANDIDATES, "clang++"))
     vsize, _ = cli._verify_size("per_kernel", bench)
     proj = cli._project_of(bench_dir)
-    rec: Dict[str, Any] = {"verify_size": vsize, "threads": threads, "runs": []}
+    rec: Dict[str, Any] = {"verify_size": vsize, "threads": threads, "limit_s": limit, "runs": []}
     with tempfile.TemporaryDirectory(prefix="e7_tsan_") as tmp:
         work = Path(tmp)
         if proj is None:
@@ -334,7 +354,7 @@ def _tsan_at_size(bench: str, prog_file: Path, runs: int, threads: int) -> Dict[
         for _ in range(runs):
             t0 = time.time()
             try:
-                r = subprocess.run([str(work / "tsan_par")], capture_output=True, text=True, cwd=work, env=env, timeout=1800)
+                r = subprocess.run([str(work / "tsan_par")], capture_output=True, text=True, cwd=work, env=env, timeout=limit)
                 err, rc, timed_out = r.stderr, r.returncode, False
             except subprocess.TimeoutExpired:
                 err, rc, timed_out = "", -9, True
@@ -351,17 +371,17 @@ def _tsan_at_size(bench: str, prog_file: Path, runs: int, threads: int) -> Dict[
 def cmd_judge(a: argparse.Namespace) -> int:
     c = _load(a.corpus)
     progs = c["programs"]
-    if a.sample:
-        wanted = sorted({str(x["program"]) for x in _sample(c, a.sample, a.seed)})
-    else:
-        wanted = _slice(sorted({str(x["program"]) for x in c["candidates"]}), a.part)
+    draw = _draw(c, a)
+    wanted = _slice(sorted({str(x["program"]) for x in (draw if draw is not None else c["candidates"])}), a.part)
     wanted = [h for h in wanted if not progs[h]["original"]]     # the original is right by definition
     run_dir = EVAL / "agent" / "runs" / a.run_id
     side = run_dir / "gate_study"
     side.mkdir(parents=True, exist_ok=True)
     _manifest(side, {"step": "judge", "corpus": c["name"], "corpus_commit": c["commit"], "part": a.part,
-                     "sample": a.sample, "seed": a.seed, "programs": len(wanted), "threads": a.threads,
-                     "repeats": a.repeats, "tsan_runs": a.tsan_runs, "tsan_threads": a.tsan_threads})
+                     "sample": a.sample, "seed": a.seed, "per_benchmark": a.per_benchmark, "programs": len(wanted),
+                     "threads": a.threads,
+                     "repeats": a.repeats, "tsan_runs": a.tsan_runs, "tsan_threads": a.tsan_threads,
+                     "tsan_limit": a.tsan_limit})
     j2_path = side / "j2.jsonl"
     j2_done = _done(j2_path, "program")
     print(f"{len(wanted)} program(s) of corpus {c['name']} → run {a.run_id}", flush=True)
@@ -387,7 +407,10 @@ def cmd_judge(a: argparse.Namespace) -> int:
         if pr["directive"] and not a.skip_j2:
             if h not in j2_done:
                 t1 = time.time()
-                rec = _tsan_at_size(bench, prog_file, a.tsan_runs, a.tsan_threads)
+                try:
+                    rec = _tsan_at_size(bench, prog_file, a.tsan_runs, a.tsan_threads, a.tsan_limit)
+                except Exception as e:      # one program must not end a lane: no race verdict, listed by the read-out
+                    rec = {"verdict": "error", "error": f"{type(e).__name__}: {e}"[:600], "runs": []}
                 rec.update(program=h, benchmark=bench, index=idx, seconds=round(time.time() - t1, 1))
                 _append(j2_path, rec)
                 j2 = str(rec["verdict"])
@@ -444,11 +467,13 @@ def cmd_checks(a: argparse.Namespace) -> int:
 
     c = _load(a.corpus)
     progs = c["programs"]
-    pairs = _pairs(_sample(c, a.sample, a.seed)) if a.sample else _slice([f"{b} {p}" for b, p in _pairs(c["candidates"])], a.part)
-    todo = [tuple(x.split(" ")) if isinstance(x, str) else x for x in pairs]
+    draw = _draw(c, a)
+    todo = [tuple(x.split(" ")) for x in _slice([f"{b} {p}" for b, p in _pairs(draw if draw is not None else c["candidates"])],
+                                                a.part)]
     a.out.mkdir(parents=True, exist_ok=True)
     _manifest(a.out, {"step": "checks", "corpus": c["name"], "corpus_commit": c["commit"], "part": a.part,
-                      "sample": a.sample, "seed": a.seed, "pairs": len(todo), "check_inputs": [[SEED]],
+                      "sample": a.sample, "seed": a.seed, "per_benchmark": a.per_benchmark, "pairs": len(todo),
+                      "check_inputs": [[SEED]],
                       "gate": "validate(): G whole safety gate; T tsan alone; S matrix alone; O1/O2 one input alone"})
     res_path = a.out / "checks.jsonl"
     done = _done(res_path, "pair")
@@ -465,54 +490,57 @@ def cmd_checks(a: argparse.Namespace) -> int:
         fname = str(meta["file"])
         t0 = time.time()
         rec: Dict[str, Any] = {"pair": key, "base": hb, "program": hp, "benchmark": bench}
-        with tempfile.TemporaryDirectory(prefix="e7_checks_") as tmp:
-            project_mod.activate(None)
-            if proj:
-                root = Path(tmp) / "program"
-                shutil.copytree(PREPARED / bench, root)
-                src = root / fname
-                project_mod.activate(project_mod.Project.discover(
-                    root, units=list(proj["units"]), include_dirs=list(proj.get("include_dirs") or ["."]),
-                    editable=list(proj.get("editable") or [fname]), cflags=list(proj.get("cflags") or []),
-                    ldflags=list(proj.get("ldflags") or [])))
-                project_mod.set_focus(str(src))
-            else:
-                src = Path(tmp) / fname
-                shutil.copy2(PREPARED / bench / fname, src)
-            if bench not in refs:                     # on the ORIGINAL, once per benchmark
-                ref_out, _t, ref_pairs = capture_reference(str(src), None, extra_inputs=[[SEED]])
-                refs[bench] = (ref_out, ref_pairs, numerical_noise_floor(str(src), None, extra_inputs=[[SEED]]).value)
-            ref_out, ref_pairs, floor = refs[bench]
-            rec["noise_floor"], rec["reference_inputs"] = floor, len(ref_pairs or [])
-            src.write_text((a.corpus / str(pb["path"])).read_text())            # the base the gate judged on
-            diff = _unified_diff(src, a.corpus / str(pp["path"]))
-            has_pragma = "pragma omp" in diff
-            rec["has_pragma"] = has_pragma
+        try:                                   # one pair must not end a lane: the record keeps the error
+            with tempfile.TemporaryDirectory(prefix="e7_checks_") as tmp:
+                project_mod.activate(None)
+                if proj:
+                    root = Path(tmp) / "program"
+                    shutil.copytree(PREPARED / bench, root)
+                    src = root / fname
+                    project_mod.activate(project_mod.Project.discover(
+                        root, units=list(proj["units"]), include_dirs=list(proj.get("include_dirs") or ["."]),
+                        editable=list(proj.get("editable") or [fname]), cflags=list(proj.get("cflags") or []),
+                        ldflags=list(proj.get("ldflags") or [])))
+                    project_mod.set_focus(str(src))
+                else:
+                    src = Path(tmp) / fname
+                    shutil.copy2(PREPARED / bench / fname, src)
+                if bench not in refs:                     # on the ORIGINAL, once per benchmark
+                    ref_out, _t, ref_pairs = capture_reference(str(src), None, extra_inputs=[[SEED]])
+                    refs[bench] = (ref_out, ref_pairs, numerical_noise_floor(str(src), None, extra_inputs=[[SEED]]).value)
+                ref_out, ref_pairs, floor = refs[bench]
+                rec["noise_floor"], rec["reference_inputs"] = floor, len(ref_pairs or [])
+                src.write_text((a.corpus / str(pb["path"])).read_text())            # the base the gate judged on
+                diff = _unified_diff(src, a.corpus / str(pp["path"]))
+                has_pragma = "pragma omp" in diff
+                rec["has_pragma"] = has_pragma
 
-            def one(**kw: Any) -> Dict[str, Any]:
-                seen.clear()
-                r = validate(diff, str(src), mode="safety", noise_floor=floor, **kw)
-                d: Dict[str, Any] = {"passed": r.passed, "stage": r.stage, "diagnostic": r.diagnostic[:400],
-                                     "evidence": {k: v for k, v in r.evidence.items() if k != "schedules"}}
-                if seen:
-                    d["matrix"] = {"ok": seen[-1].ok, "verdict": seen[-1].verdict, "hard": seen[-1].hard,
-                                   "max_deviation": seen[-1].max_deviation}
-                return d
+                def one(**kw: Any) -> Dict[str, Any]:
+                    seen.clear()
+                    r = validate(diff, str(src), mode="safety", noise_floor=floor, **kw)
+                    d: Dict[str, Any] = {"passed": r.passed, "stage": r.stage, "diagnostic": r.diagnostic[:400],
+                                         "evidence": {k: v for k, v in r.evidence.items() if k != "schedules"}}
+                    if seen:
+                        d["matrix"] = {"ok": seen[-1].ok, "verdict": seen[-1].verdict, "hard": seen[-1].hard,
+                                       "max_deviation": seen[-1].max_deviation}
+                    return d
 
-            if not diff:
-                rec["note"] = "the program equals its base"
-            elif ref_out is None or not ref_pairs or len(ref_pairs) < 2:
-                rec["note"] = "no reference output on both inputs for the original"
-            else:
-                reps = 3 if has_pragma else 1
-                rec["G"] = one(reference_output=ref_out, reference_outputs=ref_pairs, stress=True)
-                if has_pragma:
-                    rec["T"] = [one(reference_output=None, stress=False) for _ in range(reps)]
-                    rec["S"] = [one(reference_output=None, stress=True, skip_race_check=True) for _ in range(reps)]
-                rec["O1"] = [one(reference_output=ref_out, reference_outputs=[ref_pairs[0]], stress=False,
-                                 skip_race_check=True) for _ in range(reps)]
-                rec["O2"] = [one(reference_output=ref_out, reference_outputs=[ref_pairs[1]], stress=False,
-                                 skip_race_check=True) for _ in range(reps)]
+                if not diff:
+                    rec["note"] = "the program equals its base"
+                elif ref_out is None or not ref_pairs or len(ref_pairs) < 2:
+                    rec["note"] = "no reference output on both inputs for the original"
+                else:
+                    reps = 3 if has_pragma else 1
+                    rec["G"] = one(reference_output=ref_out, reference_outputs=ref_pairs, stress=True)
+                    if has_pragma:
+                        rec["T"] = [one(reference_output=None, stress=False) for _ in range(reps)]
+                        rec["S"] = [one(reference_output=None, stress=True, skip_race_check=True) for _ in range(reps)]
+                    rec["O1"] = [one(reference_output=ref_out, reference_outputs=[ref_pairs[0]], stress=False,
+                                     skip_race_check=True) for _ in range(reps)]
+                    rec["O2"] = [one(reference_output=ref_out, reference_outputs=[ref_pairs[1]], stress=False,
+                                     skip_race_check=True) for _ in range(reps)]
+        except Exception as e:
+            rec["error"] = f"{type(e).__name__}: {e}"[:600]
         project_mod.activate(None)
         rec["seconds"] = round(time.time() - t0, 1)
         _append(res_path, rec)
@@ -1003,12 +1031,15 @@ def main() -> int:
         sp.add_argument("--part", default="1/1", help="k/n: this lane's share")
         sp.add_argument("--sample", default="", help="the pilot: REWRITES,DIRECTIVES candidates drawn with --seed")
         sp.add_argument("--seed", type=int, default=7)
+        sp.add_argument("--per-benchmark", type=int, default=0,
+                        help="a pilot: the first N distinct programs of every benchmark (by hash)")
         if name == "judge":
             sp.add_argument("--run-id", required=True)
             sp.add_argument("--threads", default="6,12")
             sp.add_argument("--repeats", type=int, default=5)
             sp.add_argument("--tsan-runs", type=int, default=3)
             sp.add_argument("--tsan-threads", type=int, default=12)
+            sp.add_argument("--tsan-limit", type=int, default=1800, help="seconds one sanitizer run may take")
             sp.add_argument("--skip-j2", action="store_true")
         else:
             sp.add_argument("--out", type=Path, required=True)
