@@ -1,0 +1,25 @@
+#include "data.h"
+
+real_t kernel_k27(void)
+{
+    real_t *w_old = malloc(LEN_1D * sizeof(real_t));
+    real_t *v_old = malloc(LEN_1D * sizeof(real_t));
+
+    memcpy(w_old, w, LEN_1D * sizeof(real_t));
+    memcpy(v_old, v, LEN_1D * sizeof(real_t));
+
+    for (int nl = 0; nl < iterations; nl++) {
+        for (long i = 1; i < LEN_1D; i++) {
+            u[ju[i]] += w_old[kw[i]] * c[i];
+            v[jv[i]] = u[ku[i]] * d[i] + c[i];
+            w[jw[i]] = v_old[kv[i]] * e[i] + d[i];
+        }
+        memcpy(w_old, w, LEN_1D * sizeof(real_t));
+        memcpy(v_old, v, LEN_1D * sizeof(real_t));
+        dummy(a, b, c, d, e);
+    }
+
+    free(w_old);
+    free(v_old);
+    return (real_t)0;
+}

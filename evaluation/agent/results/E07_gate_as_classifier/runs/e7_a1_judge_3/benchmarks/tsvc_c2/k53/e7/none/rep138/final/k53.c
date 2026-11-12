@@ -1,0 +1,17 @@
+#include "data.h"
+
+real_t kernel_k53(void)
+{
+    real_t *v_local = (real_t *)malloc(LEN_1D * sizeof(real_t));
+    for (int nl = 0; nl < iterations; nl++) {
+        memcpy(v_local, v, LEN_1D * sizeof(real_t));
+        for (long i = 1; i < LEN_1D; i++) {
+            u[ju[i]] += v_local[kv[i]] * c[i];
+            v_local[jv[i]] = u[ku[i]] * d[i] + c[i];
+        }
+        memcpy(v, v_local, LEN_1D * sizeof(real_t));
+        dummy(a, b, c, d, e);
+    }
+    free(v_local);
+    return (real_t)0;
+}

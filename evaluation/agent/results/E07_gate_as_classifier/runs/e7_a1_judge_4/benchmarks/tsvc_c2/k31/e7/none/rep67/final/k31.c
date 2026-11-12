@@ -1,0 +1,24 @@
+#include <stdlib.h>
+#include "data.h"
+
+real_t kernel_k31(void)
+{
+    real_t *old_u = (real_t *)malloc(LEN_1D * sizeof(real_t));
+    if (!old_u) return (real_t)0;
+
+    for (int nl = 0; nl < iterations; nl++) {
+        for (long i = 1; i < LEN_1D; i++) {
+            old_u[i] = u[i];
+        }
+        for (long i = 1; i < LEN_1D; i++) {
+            u[i] += v[i + off] * c[i];
+        }
+        for (long i = 1; i < LEN_1D; i++) {
+            v[i] = old_u[i + far] * d[i] + c[i];
+        }
+        dummy(a, b, c, d, e);
+    }
+
+    free(old_u);
+    return (real_t)0;
+}

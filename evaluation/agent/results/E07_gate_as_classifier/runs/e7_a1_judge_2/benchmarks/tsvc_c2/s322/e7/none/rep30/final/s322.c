@@ -1,0 +1,23 @@
+#include "data.h"
+#include <stdlib.h>
+
+real_t kernel_s322(void)
+{
+    real_t *a_computed = (real_t*) malloc(LEN_1D * sizeof(real_t));
+
+    for (int nl = 0; nl < iterations; nl++) {
+        // Phase 1: Compute all updates independently (Do-All loop)
+        // Each iteration reads a[i-1], a[i-2] which do not depend on iteration order
+        for (int i = 2; i < LEN_1D; i++) {
+            a_computed[i] = a[i] + a[i - 1] * b[i] + a[i - 2] * c[i];
+        }
+        // Phase 2: Atomically apply all computed values
+        for (int i = 2; i < LEN_1D; i++) {
+            a[i] = a_computed[i];
+        }
+        dummy(a, b, c, d, e);
+    }
+
+    free(a_computed);
+    return (real_t)0;
+}
