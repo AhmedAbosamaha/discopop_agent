@@ -12,6 +12,9 @@ this file (run from `evaluation/`, with the project's `venv`).
 | `fate19.py [--full]` | for each accepted rewrite the judge finds wrong: the log block of the step that reverted it |
 | `exact_check.py a1\|a2` | every candidate whose archived patch does not apply exactly to the base the corpus gives it |
 | `nv_trials.py a1 [filter]` | the trials whose replayed history does not end in the archived final file, candidate by candidate, beside the log |
+| `pairs_table.py a1\|a2 [--all]` | one line per directive pair: the recorded verdict, the judge's two instruments, and each check's runs (a refusal by a time limit marked apart); then the pairs counted by kind of check, and the judge's race check beside the gate's |
+| `md_dump_test.py` | (server, piped on stdin) which of `md`'s dumped values differ for the directive with `reduction(+:pe,ke)` |
+| `tsan_test.py`, `tsan_test2.py` | (server, piped on stdin) a program under ThreadSanitizer at the gate's size and at the verification size, built with `-O1` and with `-O2`; the second with the sanitizer's history at its default and at its largest setting |
 | `stack_test.py`, `stack_test2.py` | (server, piped on stdin, nothing left behind) a program built as the harness builds it, run under the default stack limit and with the limit raised; the second also without optimisation |
 
 `readout_a1_before_repair.md` is the first read-out of A1, on the corpus as first built. It is kept because it is
@@ -91,3 +94,120 @@ identical values on both inputs, an identical digest at the verification size, t
 and no report in three sanitizer runs at EXTRALARGE. By the registered definition it counts as a right program
 the gate refused; read by hand the gate is right and the judge's instruments did not show the fault. Why they did
 not was not tested.
+
+## 5. A2: refused directives the judge finds right: 7, two causes, neither a judgment of the program
+
+`pairs_table.py a2`; `inspect_prog.py a2 burkardt/md <n> --diff`.
+
+- **Six were refused by a time limit** (`burkardt/md` #4 #5 #7 #9 #12 #13). Each is DiscoPoP's directive on a loop
+  of three iterations (`nd`, the number of dimensions) that is entered for every pair of particles: the force
+  update in `compute` (#4 #5 #13) and the distance in `dist`, with `reduction(+:d)` (#7 #9 #12). The judge finds
+  the values exact on both inputs, the digest exact at STANDARD and the result stable, and no report in three
+  sanitizer runs (305 to 860 s each); it measures the program at 0.01 to 0.02 of the original's speed. In the
+  replay every sanitizer run of the gate ended at its limit of 300 s and every run of the schedule matrix at 120 s
+  (`t` in the table); the output runs ended at 120 s in some or all runs. The verdict recorded in the trial is
+  the same limit (`tsan`, "TSan run timed out (300 s)").
+- **One was refused by the dependence stage** (`polybench/mvt` #3, trial `t0_11_b19r_apps_a`, 8 Oct, agent at
+  `b6297e53b`): "DiscoPoP OBSERVED 1 loop-carried dependence(s) in lines 79-81 … RAW on x2[] in the loop at line
+  80". The directive sits on the outer loop; the dependence belongs to the inner one. This is the defect that
+  Fix 105 repaired on 9 Oct (`d1fb3b144`, after this trial): with a directive already inserted above, the stage
+  read the profile one line off. The two other draws, run the same evening on the same agent, accepted the
+  directive on that loop (`mvt` #1, #5); their profiles hold no blocker for the inner loop. The replay
+  gives the stage no profile and accepts; the judge finds the program right and free of races. The one fidelity
+  difference of A2 is this pair.
+
+## 6. A2: the 71 wrong directive programs, none accepted
+
+`pairs_table.py a2`. No refusal of a wrong pair is a time limit. By kind of check (each alone, at least one run;
+the generated read-out counts the two inputs as two checks, this count is an addition made after the result was
+seen):
+
+| refused by | pairs | which |
+|---|---:|---|
+| the sanitizer, the matrix and the output | 33 | |
+| the sanitizer and the output, on the perturbed input only | 22 | `dynprog` #1 #3 #4 #5 #7 #8, `gramschmidt` #2 #4 #7, `jacobi-2d-imper` #3, `lu` #4, `ludcmp` #4 #6 #8 #9, `seidel-2d` #1 #3 #4, `trisolv` #1 #3 #4 #5 |
+| the sanitizer only | 8 | `doitgen` #3 #12, `floyd-warshall` #1 #3 #4, `reg_detect` #2 #7 #12 |
+| the matrix and the output | 5 | `burkardt/md` #8 #10 #11, `rodinia-3.1/pathfinder` #1 #2 |
+| the output only | 3 | `burkardt/md` #1 #2 #3 |
+
+- **The sanitizer only (8).** The printed values are exact in every run of the gate and of the judge; the judge
+  counts the program wrong on its own sanitizer report. The racing accesses, from the judge's reports and the
+  source: in `doitgen` #3 #12 the counter `s` of an inner loop is missing from the directive's private list, and
+  every thread writes the one `s` on the main thread's stack (line 74); in `reg_detect` #2 #7 #12 the same with
+  the counter `cnt` (line 76); in `floyd-warshall` #1 #3 #4 one thread reads `path[i][k]` or `path[k][j]` while
+  another writes that element (line 67).
+- **The perturbed input only (22).** The output comparison passes on the shipped input in all three runs and
+  fails on the perturbed one in all three. The shipped inputs of these PolyBench kernels are regular:
+  `seidel-2d` and `jacobi-2d-imper` start from `(i*(j+2)+2)/n`, which the stencil's average leaves unchanged, and
+  `lu`, `ludcmp`, `gramschmidt` and `trisolv` from a matrix that is the product of the row and the column index.
+  The packages' own note says why the second input exists ("A shipped input can be one the kernel leaves
+  unchanged …"). The sanitizer reports all 22.
+- **`pathfinder` #1 #2.** The directive is on the loop that fills the grid with `rand()`. The C library locks
+  the generator, so the sanitizer has nothing to report, and the numbers land in another order in every run:
+  the matrix finds two runs at the same thread count that differ, and the output differs from the original's on
+  the shipped input. On the perturbed input the output is the same in all runs.
+- **`md` #1 #2 #3.** The directive makes `nd` private, so every thread reads it uninitialised; the printed sums
+  are NaN. No race, and the same wrong output at every thread count, so only the output comparison refuses.
+- **`md` #8 #10 #11 are correct up to the order of two sums.** The directive is the textbook one for this
+  program (`reduction(+:pe,ke)`, the work arrays private), and the judge measures it 5.6 to 7.3 times faster.
+  `md_dump_test.py` (server, 12 Nov): against the original, the potential and the kinetic energy differ by at
+  most 7.5·10⁻¹⁵ relative; the only values beyond the harness's tolerance are the third column of the energy
+  table, the relative energy error `(potential + kinetic - e0) / e0`, a difference of nearly equal numbers
+  (1.75·10⁻¹¹) that moves by up to 5·10⁻⁴ of itself. The gate refuses on the last digit of the digest; the
+  judge on that column. By the registered definition the three count as wrong and refused; read by hand both
+  instruments refuse a correct program here, for the reason of section 3.
+
+## 7. The judge's race check beside the gate's (both corpora)
+
+`pairs_table.py a1`, `pairs_table.py a2`, last lines. The gate runs ThreadSanitizer at the package's small size on
+a build with `-O1`; the judge's race check (J2) runs it at the verification size on the harness's build with `-O2`,
+three runs at 12 threads. On the pairs where the gate's sanitizer, run alone, reports a race in each of its three
+runs, J2 reports one
+
+- in A1 on 2 of 13 (`s341` #18, `s481` #3; silent on `s211` #8, `s241` #20, `s3112` #15 #30, `s321` #14 #26 #30,
+  `s322` #5 #6, `s323` #16 and on `s341` #16 of section 4),
+- in A2 on 57 of 63 (silent on `adi` #3 #5 #14 #16 #17 and `seidel-2d` #3).
+
+In 16 of the 17 silent cases the judge's value comparison finds the program wrong, so the race is real and the
+program is counted wrong all the same; the seventeenth is `s341` #16.
+
+*Tested* (`tsan_test.py`, `tsan_test2.py`, server, 12 Nov, clang 20.1.2, archer loaded, 12 threads) on `adi` #3,
+`seidel-2d` #3 and `s341` #16:
+
+| size | build | runs with a report |
+|---|---|---|
+| the package's small size | `-O1` | 6 of 6 |
+| the package's small size | `-O2` | 6 of 6 |
+| the verification size | `-O1` | 1 of 6 (`adi`, one of two runs) |
+| the verification size | `-O2` | 0 of 13 |
+| the verification size | `-O2`, `history_size=7` | 0 of 7 |
+
+So the size decides and the optimisation level does not. Why the larger size hides the report was not established:
+the sanitizer's largest history did not bring it back. What follows for the read-outs: the judge calls a directive
+program right on its values (every value on both inputs at the small size, the digest at the verification size,
+repeated runs) and on a race check that is weak at that size; "no wrong directive accepted" means none the judge
+could see. The gate's own sanitizer passed each accepted directive at the small size in the trial and again in
+each of the replay's runs.
+
+## 8. The run the repair added (A1, `e7_a1_judge_5`, `e7_a1_checks_2`)
+
+14 programs and 15 pairs, all of trial family `e1v6_r_4 tsvc_c2/s331 default_v4` (rep2 to rep5) except `s244` #10.
+No disagreement between the gate and the judge among them: the five rewrites the gate accepted are right
+(`s331` #40 #43 #47 #50 #51), the five directive programs it accepted are right and faster (`s331` #41 #44 #45 #46,
+`s244` #10), and the four directive programs it refused at `correctness` are wrong (`s331` #42 #48 #49 #52).
+`s331` #41 #44 #45 #46 are the texts on which the gate had judged the directives that the first build of the corpus
+had placed on another text (section 1).
+
+## 9. The named cases of the registration (R5)
+
+- *The clause refusal.* The registration names "the `s281` clause refusal in A1". A1 holds one refusal by the
+  clause check, and it is on `tsvc_c3/s331` (#75, `e1v6c_v7_agent` rep2): DiscoPoP's
+  `parallel for firstprivate(j) private(chksum,nl)` on a loop that holds a `break`. The clause check refused it
+  in the trial; the replay, which does not hold that check, refuses it at the OpenMP build, and the judge's build
+  fails too. The naming in the registration was an error of mine; no `s281` candidate was refused by that check.
+- *`mvt`.* Section 5.
+- *`floyd-warshall`.* Five directive programs, all refused by the gate's sanitizer: #1 #3 #4 print the right
+  values in every run (section 6), #5 #6 print wrong ones.
+- *`hotspot`.* The three draws that hold it recorded no candidate for it (outcome no-change, no directive
+  judged), so A2 holds none.
+
