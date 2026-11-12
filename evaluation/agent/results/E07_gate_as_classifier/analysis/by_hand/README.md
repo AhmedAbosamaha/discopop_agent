@@ -103,7 +103,7 @@ not was not tested.
   of three iterations (`nd`, the number of dimensions) that is entered for every pair of particles: the force
   update in `compute` (#4 #5 #13) and the distance in `dist`, with `reduction(+:d)` (#7 #9 #12). The judge finds
   the values exact on both inputs, the digest exact at STANDARD and the result stable, and no report in three
-  sanitizer runs (305 to 860 s each); it measures the program at 0.01 to 0.02 of the original's speed. In the
+  sanitizer runs (305 to 860 s each); it measures the program at 0.006 to 0.021 of the original's speed. In the
   replay every sanitizer run of the gate ended at its limit of 300 s and every run of the schedule matrix at 120 s
   (`t` in the table); the output runs ended at 120 s in some or all runs. The verdict recorded in the trial is
   the same limit (`tsan`, "TSan run timed out (300 s)").
@@ -112,7 +112,9 @@ not was not tested.
   80". The directive sits on the outer loop; the dependence belongs to the inner one. This is the defect that
   Fix 105 repaired on 9 Oct (`d1fb3b144`, after this trial): with a directive already inserted above, the stage
   read the profile one line off. The two other draws, run the same evening on the same agent, accepted the
-  directive on that loop (`mvt` #1, #5); their profiles hold no blocker for the inner loop. The replay
+  directive on that loop: `mvt` #5 was judged on the original, where no line had shifted, and `mvt` #1 in the
+  same shifted position, in a draw where DiscoPoP reports the inner loop itself as parallel (its pattern at lines
+  80–81). Whether that draw's profile holds a blocker at the line the stage read was not looked up. The replay
   gives the stage no profile and accepts; the judge finds the program right and free of races. The one fidelity
   difference of A2 is this pair.
 
