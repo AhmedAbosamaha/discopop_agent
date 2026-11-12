@@ -1150,8 +1150,9 @@ def cmd_readout(a: argparse.Namespace) -> int:
         out.append("|---|---|---|")
         for unit, (kfr, nr, kfa, nw) in per.items():
             out.append(f"| per {unit} | {_wilson(kfr, nr)} | {_wilson(kfa, nw)} |")
-        loops_fr = sorted({str(r["benchmark"]).split("/")[-1] for r in sel if r["judge"] == "right" and not r["accepted"]})
-        loops_fa = sorted({str(r["benchmark"]).split("/")[-1] for r in sel if r["judge"] == "wrong" and r["accepted"]})
+        # with the suite: the unit above is the benchmark, and `s241` is one in tsvc_c2 and another in tsvc_c3
+        loops_fr = sorted({str(r["benchmark"]) for r in sel if r["judge"] == "right" and not r["accepted"]})
+        loops_fa = sorted({str(r["benchmark"]) for r in sel if r["judge"] == "wrong" and r["accepted"]})
         if loops_fr or loops_fa:
             out.append("")
             out.append((f"Loops with a false refusal: {', '.join(loops_fr)}. " if loops_fr else "")
