@@ -80,18 +80,75 @@ def _apply(base: str, patch_text: str, name: str, exact: bool, tmp: Path) -> Opt
     return dst.read_text() if ok else None
 
 
-def build_corpus(runs: List[str], out: Path, name: str) -> Dict[str, Any]:
+GATE_RUN = "Diff received — running quality gate"      # the log's line for every model rewrite that reaches the gate
+LATER = (("settle", re.compile(r"^\s*Dropped \d+ change", re.M)),        # the agent's last steps, which change the file
+         ("floor", re.compile(r"\[floor\] shipped DiscoPoP's own program")),   # after every candidate was judged
+         ("joint", re.compile(r"^┌─ D33", re.M)))
+
+
+def _history(log: str, entries: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    """What the agent did with each candidate AT THE TIME, read from the trial's own log: the indexes (into
+    `entries`) of the model rewrites it kept when it had judged them (`└─ ACCEPTED`, no `reverting`), and of the
+    final-pass directives it applied (`└─ APPLIED`). The agent's last steps can undo these afterwards — Settle
+    drops a rewrite none of whose loops kept a directive, the floor ships DiscoPoP's own program when the agent's
+    is slower, a directive that does not pay alone is deferred — and `accepted.json` holds only what is left
+    then. But a later candidate was judged on the file as it stood, so the replay has to follow the log (found
+    reading E7's false accepts by hand, 12 Nov 2026: with `accepted.json` as the rule, the candidates that
+    followed a later-dropped rewrite were put on the wrong base). None when log and records do not line up one
+    for one; `later` names the last steps the log reports."""
+    a_idx = [i for i, e in enumerate(entries) if e.get("phase") == "A"]
+    b_idx = [i for i, e in enumerate(entries) if e.get("phase") == "B"]
+    kept: set[int] = set()
+    applied: set[int] = set()
+    head, _, rest = log.partition("PHASE B")
+    k, reverted = -1, False
+    for ln in head.splitlines():
+        if GATE_RUN in ln:
+            k, reverted = k + 1, False
+        elif "reverting" in ln:
+            reverted = True
+        elif ln.startswith("└─ ACCEPTED") and 0 <= k < len(a_idx) and not reverted:
+            kept.add(a_idx[k])
+    if k + 1 != len(a_idx) or any(not entries[i].get("passed") for i in kept):
+        return None
+    endings: List[str] = []
+    inside = False
+    for ln in rest.splitlines():
+        if ln.startswith("┌─ pattern #"):
+            inside = True
+        elif inside and ln.startswith("└─ "):
+            endings.append(ln[3:].strip())
+            inside = False
+    judged = [e for e in endings if not e.startswith("SKIPPED")]      # skipped before the gate: no candidate
+    if len(judged) != len(b_idx):
+        return None
+    for i, ending in zip(b_idx, judged):
+        if ending.startswith(("APPLIED", "DEFERRED")) != bool(entries[i].get("passed")):
+            return None
+        if ending.startswith("APPLIED"):
+            applied.add(i)
+    return {"kept": kept, "applied": applied, "later": [nm for nm, rx in LATER if rx.search(log)]}
+
+
+def build_corpus(runs: List[str], out: Path, name: str, previous: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Replay every trial's candidates in the order the agent judged them (the pre-flight's replay, 9 Oct):
-    a model's rewrite (phase A) on the kept state; DiscoPoP's directives for it (A-D40) on the rewritten text; the
-    rewrite then kept exactly when `accepted.json` holds its patch; the final pass (B) and the floor step one
-    directive after the other. A trial's history counts as verified when its end state equals the archived final
-    file byte for byte."""
+    a model's rewrite (phase A) on the file as it stood; DiscoPoP's directives for it (A-D40) on the rewritten
+    text; the rewrite then kept exactly when the agent kept it at the time, and a final-pass directive (B) applied
+    exactly when the agent applied it (`_history`: the trial's own log; `accepted.json`, the end state, only
+    where a log does not line up); the floor step one directive after the other. Every patch has to apply
+    exactly. A trial's history counts as verified when its end state equals the archived final file byte for
+    byte; where the log names a last step that changed the file afterwards, the trial is listed under
+    `ended_later` instead. `previous` is an earlier build of the same corpus: its programs keep their numbers,
+    under which the harness has judged them, and new programs get numbers above them."""
     tmp = Path(tempfile.mkdtemp(prefix="e7_corpus_"))
     programs: Dict[str, Dict[str, Any]] = {}
     texts: Dict[str, str] = {}
     cands: List[Dict[str, Any]] = []
     not_rebuilt: List[str] = []
     not_verified: List[str] = []
+    ended_later: List[str] = []               # replayed in full; the agent's last step changed the file afterwards
+    no_log_history: List[str] = []            # log and records do not line up: `accepted.json` is the rule there
+    inexact: List[str] = []                   # placed although the patch does not apply exactly: named, never silent
     package_differs: set[str] = set()         # the harness judges against the package: it must be the trial's original
     n_trials = 0
 
@@ -141,20 +198,25 @@ def build_corpus(runs: List[str], out: Path, name: str) -> Dict[str, Any]:
             programs[h_orig]["original"] = True
             state, tentative, keep_it, complete = orig, None, False, True
             trial_id = f"{run} {bench} {arm} {rep}" + (" floor" if floor else "")
+            log_file = trial / "agent.log"
+            hist = _history(log_file.read_text(errors="replace"), entries) if not floor and log_file.is_file() else None
+            if hist is None and not floor:
+                no_log_history.append(trial_id)
+            kept_then = hist["kept"] if hist is not None else kept
+            applied_then = hist["applied"] if hist is not None else {i for i, e in enumerate(entries) if e.get("passed")}
             for i, e in enumerate(entries):
                 ph = "floor" if floor else str(e.get("phase"))
                 kind = "directive" if OMP_ADDED.search(ptexts[i]) else "rewrite"
                 verdict = "accepted" if e.get("passed") else str(e.get("stage"))
-                if ph in ("A", "B") and tentative is not None:        # the rewrite before this one is settled
+                if ph != "A-D40" and tentative is not None:           # the rewrite before this one is settled
                     state, tentative = (tentative if keep_it else state), None
-                bases = [tentative] if ph == "A-D40" else ([state] if tentative is None else [state, tentative])
-                prog, base_used = None, None
-                for b in (x for x in bases if x is not None):
-                    prog = _apply(b, ptexts[i], fname, True, tmp) or _apply(b, ptexts[i], fname, False, tmp)
-                    if prog is not None:
-                        base_used = b
-                        break
+                base_used = tentative if ph == "A-D40" else state
                 cid = f"{trial_id} n{e['n']}"
+                prog = _apply(base_used, ptexts[i], fname, True, tmp) if base_used is not None else None
+                if prog is None and base_used is not None:
+                    prog = _apply(base_used, ptexts[i], fname, False, tmp)
+                    if prog is not None:
+                        inexact.append(f"{cid} ({ph}, {kind}, {verdict})")
                 if prog is None or base_used is None:
                     not_rebuilt.append(f"{cid} ({ph}, {kind}, {verdict})")
                     complete = False
@@ -164,8 +226,10 @@ def build_corpus(runs: List[str], out: Path, name: str) -> Dict[str, Any]:
                               "base": keep(bench, fname, base_used), "program": keep(bench, fname, prog),
                               "patch": str((index.parent / e["patch"]).relative_to(campaign.RESULTS))})
                 if ph == "A" and e.get("passed"):
-                    tentative, keep_it = prog, i in kept
-                elif ph in ("B", "floor") and e.get("passed"):
+                    tentative, keep_it = prog, i in kept_then
+                elif ph == "floor" and e.get("passed"):
+                    state = prog
+                elif ph == "B" and e.get("passed") and i in applied_then:
                     state = prog
             if tentative is not None and keep_it:
                 state = tentative
@@ -175,7 +239,10 @@ def build_corpus(runs: List[str], out: Path, name: str) -> Dict[str, Any]:
             if fin.is_file():
                 programs[keep(bench, fname, fin.read_text())]["final_of"].append(trial_id)
             if not (fin.is_file() and fin.read_text() == state and complete):
-                not_verified.append(trial_id)
+                if complete and hist is not None and hist["later"]:
+                    ended_later.append(f"{trial_id} ({', '.join(hist['later'])})")
+                else:
+                    not_verified.append(trial_id)
     shutil.rmtree(tmp, ignore_errors=True)
 
     # the distinct programs as files: a directory that holds the benchmark's own file, which is what
@@ -184,18 +251,27 @@ def build_corpus(runs: List[str], out: Path, name: str) -> Dict[str, Any]:
     by_bench: Dict[str, List[str]] = collections.defaultdict(list)
     for h in sorted(programs):
         by_bench[programs[h]["benchmark"]].append(h)
+    before: Dict[str, Any] = dict((previous or {}).get("programs") or {})
     for bench, hs in by_bench.items():
+        taken = [int(v["index"]) for v in before.values() if v["benchmark"] == bench]
+        nxt = max(taken + [0]) + 1                    # a number once given is never given to another program
         for k, h in enumerate(hs, 1):
             d = out / "programs" / bench / h[:16]
             d.mkdir(parents=True, exist_ok=True)
             (d / programs[h]["file"]).write_text(texts[h])
-            programs[h]["index"] = k                  # the `--repeat` under which the harness judges it
+            if previous is None:
+                programs[h]["index"] = k              # the `--repeat` under which the harness judges it
+            elif h in before:
+                programs[h]["index"] = int(before[h]["index"])
+            else:
+                programs[h]["index"], nxt = nxt, nxt + 1
             programs[h]["path"] = str((d / programs[h]["file"]).relative_to(out))
     judged = {c["program"] for c in cands}
     corpus = {
         "name": name, "runs": runs, "trials": n_trials, "seed": SEED,
         "commit": subprocess.run(["git", "-C", str(REPO), "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip(),
         "programs": programs, "candidates": cands, "not_rebuilt": not_rebuilt, "not_verified": not_verified,
+        "ended_later": ended_later, "no_log_history": no_log_history, "inexact": inexact,
         "package_differs": sorted(package_differs),
         "summary": {
             "candidates": len(cands) + len(not_rebuilt), "rebuilt": len(cands),
@@ -220,7 +296,8 @@ def cmd_corpus(a: argparse.Namespace) -> int:
                   if v.get("status") == "valid" and (v.get("group") in groups or r in named) and r not in left_out)
     if not runs:
         sys.exit("no valid run matches --groups / --runs")
-    c = build_corpus(runs, a.out, a.name)
+    previous = dict(json.loads(a.previous.read_text())) if a.previous else None
+    c = build_corpus(runs, a.out, a.name, previous)
     s = c["summary"]
     print(f"{a.name}: {len(runs)} run(s), {c['trials']} trial(s) with candidates; candidates {s['candidates']}, "
           f"rebuilt {s['rebuilt']}; distinct programs judged {s['distinct_programs_judged']} "
@@ -228,6 +305,9 @@ def cmd_corpus(a: argparse.Namespace) -> int:
           f"{s['distinct_refused']}; bases that are no candidate: {s['bases_only']}")
     print("by kind and the gate's verdict: " + ", ".join(f"{k} {v}" for k, v in s["by_kind_and_verdict"].items()))
     for label, rows in (("not rebuilt", c["not_rebuilt"]), ("history not verified", c["not_verified"]),
+                        ("replayed in full, the agent's last step changed the file afterwards", c["ended_later"]),
+                        ("log and records do not line up (accepted.json is the rule)", c["no_log_history"]),
+                        ("placed although the patch does not apply exactly", c["inexact"]),
                         ("the trial's original differs from today's package", c["package_differs"])):
         print(f"{label}: {len(rows)}")
         for r in rows:
@@ -396,13 +476,18 @@ def cmd_judge(a: argparse.Namespace) -> int:
     c = _load(a.corpus)
     progs = c["programs"]
     draw = _draw(c, a)
-    wanted = _slice(sorted({str(x["program"]) for x in (draw if draw is not None else c["candidates"])}), a.part)
+    wanted = sorted({str(x["program"]) for x in (draw if draw is not None else c["candidates"])})
+    if a.added_since:                                            # a repaired corpus: only what the earlier build lacks
+        had = {str(x["program"]) for x in json.loads(a.added_since.read_text())["candidates"]}
+        wanted = [h for h in wanted if h not in had]
+    wanted = _slice(wanted, a.part)
     wanted = [h for h in wanted if not progs[h]["original"]]     # the original is right by definition
     run_dir = EVAL / "agent" / "runs" / a.run_id
     side = run_dir / "gate_study"
     side.mkdir(parents=True, exist_ok=True)
     _manifest(side, {"step": "judge", "corpus": c["name"], "corpus_commit": c["commit"], "part": a.part,
                      "sample": a.sample, "seed": a.seed, "per_benchmark": a.per_benchmark, "programs": len(wanted),
+                     "added_since": str(a.added_since) if a.added_since else None,
                      "threads": a.threads,
                      "repeats": a.repeats, "tsan_runs": a.tsan_runs, "tsan_threads": a.tsan_threads,
                      "tsan_limit": a.tsan_limit})
@@ -492,11 +577,15 @@ def cmd_checks(a: argparse.Namespace) -> int:
     c = _load(a.corpus)
     progs = c["programs"]
     draw = _draw(c, a)
-    todo = [tuple(x.split(" ")) for x in _slice([f"{b} {p}" for b, p in _pairs(draw if draw is not None else c["candidates"])],
-                                                a.part)]
+    all_pairs = [f"{b} {p}" for b, p in _pairs(draw if draw is not None else c["candidates"])]
+    if a.added_since:                                            # a repaired corpus: only what the earlier build lacks
+        had = {f"{x['base']} {x['program']}" for x in json.loads(a.added_since.read_text())["candidates"]}
+        all_pairs = [x for x in all_pairs if x not in had]
+    todo = [tuple(x.split(" ")) for x in _slice(all_pairs, a.part)]
     a.out.mkdir(parents=True, exist_ok=True)
     _manifest(a.out, {"step": "checks", "corpus": c["name"], "corpus_commit": c["commit"], "part": a.part,
                       "sample": a.sample, "seed": a.seed, "per_benchmark": a.per_benchmark, "pairs": len(todo),
+                      "added_since": str(a.added_since) if a.added_since else None,
                       "check_inputs": [[SEED]],
                       "gate": "validate(): G whole safety gate; T tsan alone; S matrix alone; O1/O2 one input alone"})
     res_path = a.out / "checks.jsonl"
@@ -864,6 +953,7 @@ def cmd_readout(a: argparse.Namespace) -> int:
     j2: Dict[str, Dict[str, Any]] = {}
     foreign: List[str] = []
     unreadable: List[str] = []
+    not_held: List[str] = []        # judged under a number this corpus does not hold (a program a repair removed)
     by_key = {(str(v["benchmark"]), int(v["index"])): h for h, v in progs.items()}
     digest: Dict[str, str] = {}
     for run_id in [r for r in a.judge.split(",") if r]:
@@ -878,6 +968,7 @@ def cmd_readout(a: argparse.Namespace) -> int:
             rec = rec_or_none
             h = by_key.get((str(rec["benchmark"]), int(rec["repeat"])))
             if h is None:
+                not_held.append(f"{rec['benchmark']} #{rec['repeat']}")
                 continue
             if h not in digest:
                 f = a.corpus / str(progs[h]["path"])
@@ -949,6 +1040,15 @@ def cmd_readout(a: argparse.Namespace) -> int:
     out.append("## What is counted\n")
     out.append(f"- {len(cands)} candidates on {len(wanted)} distinct programs in {len({str(x['benchmark']) for x in cands})} "
                f"benchmarks; {len(c['not_rebuilt'])} candidate(s) could not be rebuilt and are left out by name (`corpus.json`).")
+    later = list(c.get("ended_later") or [])
+    odd = len(c.get("not_verified") or []) + len(c.get("no_log_history") or []) + len(c.get("inexact") or [])
+    if "ended_later" in c:
+        out.append(f"- Every candidate sits on the file as it stood when the gate judged it: each trial's history is replayed "
+                   f"from its own log, every patch applies exactly, and the replay ends in the archived final file"
+                   + (f", except in {len(later)} trial(s) whose last step changed the file after the last candidate "
+                      f"(Settle dropped a rewrite, or the floor shipped DiscoPoP's own program)" if later else "")
+                   + (f"; **{odd} trial(s) or candidate(s) fall outside this** (`corpus.json`: `not_verified`, "
+                      f"`no_log_history`, `inexact`)." if odd else "."))
     out.append(f"- The harness judged {len(wanted) - len(no_j1)} of the {len(wanted)} programs"
                + ("." if not no_j1 else f"; **without a record: {len(no_j1)}** — " + ", ".join(name(h) for h in no_j1[:15])
                   + (" …" if len(no_j1) > 15 else "") + "."))
@@ -962,6 +1062,13 @@ def cmd_readout(a: argparse.Namespace) -> int:
             else str((checks.get(p) or {}).get("note") or "not replayed") for p in no_replay)
         out.append(f"- The gate was replayed on {len(pairs_all) - len(no_replay)} of the {len(pairs_all)} (base, program) pairs"
                    + ("." if not no_replay else "; **without a replay: " + "; ".join(f"{v} × {k}" for k, v in why_none.most_common()) + "**."))
+    pairs_set = set(pairs_all)
+    stale_pairs = sorted(p_ for p_ in checks if p_ not in pairs_set)
+    if not_held or stale_pairs:
+        out.append(f"- Not read: {len(not_held)} record(s) of the harness and {len(stale_pairs)} replay(s) that belong to no "
+                   f"candidate of this corpus (programs of an earlier build of it, which its repair removed)"
+                   + (": " + ", ".join(sorted(set(not_held))[:12]) + (" …" if len(set(not_held)) > 12 else "") if not_held else "")
+                   + ".")
     if foreign:
         out.append(f"- {len(foreign)} record(s) of the given runs judged another file than this corpus's and are ignored: "
                    + ", ".join(foreign[:8]) + (" …" if len(foreign) > 8 else "") + ".")
@@ -976,7 +1083,9 @@ def cmd_readout(a: argparse.Namespace) -> int:
                         "programs_without_record": [name(h) for h in no_j1], "programs_with_directive": len(with_dir),
                         "right_without_race_verdict": {name(h): race(h) for h in no_j2},
                         "pairs": len(pairs_all), "pairs_replayed": len(pairs_all) - len(no_replay),
-                        "foreign_records": foreign, "unreadable_records": unreadable, "complete": complete}
+                        "foreign_records": foreign, "unreadable_records": unreadable, "complete": complete,
+                        "records_of_no_candidate": sorted(set(not_held)), "replays_of_no_candidate": len(stale_pairs),
+                        "trials_ended_later": later, "outside_the_replay": odd}
 
     def by_program(sel: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """One row per distinct program. A program's verdicts are its own; its base passes when it does in one candidate."""
@@ -1233,6 +1342,8 @@ def main() -> int:
     sp.add_argument("--exclude-runs", default="", help="runs of those groups to leave out, by name")
     sp.add_argument("--name", required=True)
     sp.add_argument("--out", type=Path, required=True)
+    sp.add_argument("--previous", type=Path, default=None,
+                    help="an earlier corpus.json of this corpus: its programs keep their numbers")
     sp.set_defaults(fn=cmd_corpus)
 
     for name, fn, hlp in (("judge", cmd_judge, "the harness on each distinct program (J1, J2)"),
@@ -1242,6 +1353,8 @@ def main() -> int:
         sp.add_argument("--part", default="1/1", help="k/n: this lane's share")
         sp.add_argument("--sample", default="", help="the pilot: REWRITES,DIRECTIVES candidates drawn with --seed")
         sp.add_argument("--seed", type=int, default=7)
+        sp.add_argument("--added-since", type=Path, default=None,
+                        help="an earlier corpus.json of this corpus: only the programs (pairs) that build did not hold")
         sp.add_argument("--per-benchmark", type=int, default=0,
                         help="a pilot: the first N distinct programs of every benchmark (by hash)")
         if name == "judge":
