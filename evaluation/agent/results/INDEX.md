@@ -126,7 +126,7 @@ Status: done
 
 ## [E7 — the gate as a classifier: every saved candidate judged again by the harness, each check on its own, DataRaceBench as the outside ground truth for races](E07_gate_as_classifier/REPORT.md)
 
-Status: done 12 Nov — Part A (both corpora) and Part B read out (thesis §6.3)
+Status: done 12 Nov — Part A (both corpora) and Part B read out (thesis, section 'How often the gate is wrong')
 
 | run | where | what it is | status | trials | outcomes |
 |---|---|---|---|---:|---|
@@ -151,7 +151,7 @@ Status: done 12 Nov — Part A (both corpora) and Part B read out (thesis §6.3)
 
 ## [E11 — against RepoOMP: its NPB-C kernels EP and CG, and the hidden-order units](E11_repoomp/REPORT.md)
 
-Status: done 6 Nov — both parts read out (thesis §6.8); part 1 left as run (the author, 6 Nov: "Leave part 1 as run")
+Status: done 6 Nov — both parts read out (thesis, section 'The closest published system: RepoOMP'); part 1 left as run (the author, 6 Nov: "Leave part 1 as run")
 
 | run | where | what it is | status | trials | outcomes |
 |---|---|---|---|---:|---|
