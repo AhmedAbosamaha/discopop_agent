@@ -28,3 +28,7 @@ for m in haiku sonnet opus fable; do
         $DROPS --drop e1v6_bare_$m:tsvc_c2/s331 --drop e1v6_bare_$m:tsvc_c2/s313 --drop e1v6_bare_$m:tsvc_c2/s341 --out "$O/$m" > "$O/$m.log" 2>&1
 done
 $PY agent/tools/e1f_tests.py --analysis "$O" --name E1-v6 --registered "5 Oct 2026" --family 52 --out-name e1v6_tests_corrected_3.md
+# Descriptive, added 15 Nov 2026: the speed of each setup's faster and race-free trials, and the models alone against the
+# agent on the loops both solved (writes speed_of_faster_trials.md and .json into this folder; stops if it does not
+# reproduce the counts and medians of the read-out above).
+$PY $E/analysis/corrected_3/speed_of_faster_trials.py > /dev/null
