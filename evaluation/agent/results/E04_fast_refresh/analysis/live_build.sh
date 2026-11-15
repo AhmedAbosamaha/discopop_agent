@@ -9,3 +9,6 @@ for p in "$E"/checks/e4live_race_check/*/results.jsonl; do races+=(--races "$p")
 venv/bin/python evaluation/agent/tools/e4live_readout.py --out "$E/analysis" "${races[@]}"
 # Fig. 10 only (fig_e4_e8.py's main also redraws E8's Fig. 11, whose PDF would change by its timestamp alone)
 venv/bin/python -c "import sys; sys.path.insert(0, 'evaluation/agent/tools'); import fig_e4_e8; print(*fig_e4_e8.fig_refresh(), sep='\n')"
+# Descriptive, added 15 Nov 2026: where the time of the whole trials goes (model calls against everything else), per set
+# and setup; stops unless it reproduces the read-out above (writes e4live_time_split.md and .json).
+venv/bin/python "$E/analysis/e4live_time_split.py" > /dev/null

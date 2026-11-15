@@ -32,3 +32,6 @@ $PY agent/tools/e1f_tests.py --analysis "$O" --name E1-v6 --registered "5 Oct 20
 # agent on the loops both solved (writes speed_of_faster_trials.md and .json into this folder; stops if it does not
 # reproduce the counts and medians of the read-out above).
 $PY $E/analysis/corrected_3/speed_of_faster_trials.py > /dev/null
+# Descriptive, added 15 Nov 2026: how much of the agent's time is spent in model calls, from trials.csv of this folder
+# (writes time_in_model_calls.md and .json).
+$PY $E/analysis/corrected_3/time_in_model_calls.py > /dev/null

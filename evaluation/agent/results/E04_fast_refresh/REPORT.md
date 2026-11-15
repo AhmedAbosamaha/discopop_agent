@@ -14,7 +14,7 @@ Done (19 Oct): in whole trials (step 4: `fast_recon_v5`, the fast refresh and th
 
 ## What is in this folder
 
-- [`analysis/`](analysis/) — the read-out: [`e4_lost_reductions_clause_check.md`](analysis/e4_lost_reductions_clause_check.md), [`e4_refresh_time_readout.md`](analysis/e4_refresh_time_readout.md), [`e4_replay_readout.md`](analysis/e4_replay_readout.md), [`e4_report_dry_readout.md`](analysis/e4_report_dry_readout.md), [`e4_report_placement_readout.md`](analysis/e4_report_placement_readout.md), [`e4_report_readout.md`](analysis/e4_report_readout.md), [`e4_report_selection.md`](analysis/e4_report_selection.md), [`e4live_readout.md`](analysis/e4live_readout.md), [`figures_e4_e8.md`](analysis/figures_e4_e8.md)
+- [`analysis/`](analysis/) — the read-out: [`e4_lost_reductions_clause_check.md`](analysis/e4_lost_reductions_clause_check.md), [`e4_refresh_time_readout.md`](analysis/e4_refresh_time_readout.md), [`e4_replay_readout.md`](analysis/e4_replay_readout.md), [`e4_report_dry_readout.md`](analysis/e4_report_dry_readout.md), [`e4_report_placement_readout.md`](analysis/e4_report_placement_readout.md), [`e4_report_readout.md`](analysis/e4_report_readout.md), [`e4_report_selection.md`](analysis/e4_report_selection.md), [`e4live_readout.md`](analysis/e4live_readout.md), [`e4live_time_split.md`](analysis/e4live_time_split.md), [`figures_e4_e8.md`](analysis/figures_e4_e8.md)
 - [`runs/`](runs/) — 7 archived run(s): the evidence
 - [`checks/`](checks/) — 2 verification(s) made during the read-out
 - [`preflight/`](preflight/) — 4 smoke run(s) before the launch
